@@ -6,7 +6,7 @@ use forc::test::{forc_build, BuildCommand};
 use forc::util::helpers::{find_manifest_dir, read_manifest};
 use forc::util::{constants, start_fuel_core};
 use fuel_client::client::FuelClient;
-use fuel_tx::{Input, Output, Receipt, Salt, Transaction};
+use fuel_tx::{Input, Output, Salt, Transaction};
 use fuel_vm::prelude::Contract as FuelContract;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -82,14 +82,14 @@ impl Contract {
     pub async fn launch_and_deploy(
         compiled_contract: CompiledContract,
         stop_node: bool,
-    ) -> Result<(Option<Child>, ContractID, Vec<Receipt>), Error> {
+    ) -> Result<(Option<Child>, ContractID), Error> {
         let client = FuelClient::new(compiled_contract.target_network_url.clone())?;
 
         match client.health().await {
             // Network already up-and-running
             Ok(_) => {
-                let (contract_id, receipts) = Self::deploy(compiled_contract, client).await?;
-                Ok((None, contract_id, receipts))
+                let contract_id = Self::deploy(compiled_contract, client).await?;
+                Ok((None, contract_id))
             }
             Err(_) => {
                 // Launch network
@@ -101,13 +101,13 @@ impl Contract {
                             e
                         ))
                     })?;
-                let (contract_id, receipts) = Self::deploy(compiled_contract, client).await?;
+                let contract_id = Self::deploy(compiled_contract, client).await?;
 
                 if stop_node {
                     node.kill().await.expect("Node should be killed");
                 }
 
-                Ok((Some(node), contract_id, receipts))
+                Ok((Some(node), contract_id))
             }
         }
     }
@@ -116,11 +116,11 @@ impl Contract {
     pub async fn deploy(
         compiled_contract: CompiledContract,
         fuel_client: FuelClient,
-    ) -> Result<(ContractID, Vec<Receipt>), Error> {
+    ) -> Result<ContractID, Error> {
         let (tx, contract_id) = Self::contract_deployment_transaction(compiled_contract);
 
-        match fuel_client.transact(&tx).await {
-            Ok(logs) => Ok((contract_id, logs)),
+        match fuel_client.submit(&tx).await {
+            Ok(_) => Ok(contract_id),
             Err(e) => Err(Error::TransactionError(e.to_string())),
         }
     }

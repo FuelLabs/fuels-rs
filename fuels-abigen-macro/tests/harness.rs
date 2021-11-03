@@ -520,10 +520,9 @@ async fn example_workflow() {
     // This is useful in case of long-lived local tests, spanning
     // across different contracts being deployed and interacted with in
     // the same session.
-    let (_, contract_id, logs) = Contract::launch_and_deploy(compiled, true).await.unwrap();
+    let (_, contract_id) = Contract::launch_and_deploy(compiled, true).await.unwrap();
 
     println!("Contract deployed @ 0x{}", contract_id);
-    println!("logs: {:?}\n", logs);
 
     let contract_instance = MyContract::new(contract_id);
 
