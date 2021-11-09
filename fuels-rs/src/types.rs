@@ -5,7 +5,6 @@ use fuel_types::bytes::padded_len;
 use fuel_types::Word;
 use proc_macro2::TokenStream;
 use quote::quote;
-use serde::{Deserialize, Serialize};
 use strum_macros::{EnumString, ToString};
 
 pub type ByteArray = [u8; 8];
@@ -39,27 +38,6 @@ impl Default for ParamType {
     fn default() -> Self {
         ParamType::U8
     }
-}
-
-pub type JsonABI = Vec<Function>;
-
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Function {
-    #[serde(rename = "type")]
-    pub type_field: String,
-    pub inputs: Vec<Property>,
-    pub name: String,
-    pub outputs: Vec<Property>,
-}
-
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Property {
-    pub name: String,
-    #[serde(rename = "type")]
-    pub type_field: String,
-    pub components: Option<Vec<Property>>, // Used for custom types
 }
 
 /// Expands a [`ParamType`] into a TokenStream.

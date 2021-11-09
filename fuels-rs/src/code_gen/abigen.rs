@@ -6,8 +6,8 @@ use crate::code_gen::functions_gen::expand_function;
 use crate::errors::Error;
 use crate::json_abi::ABIParser;
 use crate::source::Source;
-use crate::types::{JsonABI, Property};
 use crate::utils::ident;
+use core_types::{JsonABI, Property};
 
 use inflector::Inflector;
 use proc_macro2::{Ident, TokenStream};

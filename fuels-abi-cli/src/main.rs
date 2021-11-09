@@ -1,6 +1,8 @@
+use core_types::Property;
 use fuels_rs::json_abi::parse_param;
 use fuels_rs::json_abi::ABIParser;
-use fuels_rs::types::{ParamType, Property};
+use fuels_rs::types::ParamType;
+
 use std::fs;
 use structopt::StructOpt;
 

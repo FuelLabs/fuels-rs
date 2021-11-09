@@ -1,7 +1,8 @@
 use crate::errors::Error;
 use crate::json_abi::parse_param;
-use crate::types::{expand_type, ParamType, Property};
+use crate::types::{expand_type, ParamType};
 use crate::utils::ident;
+use core_types::Property;
 use inflector::Inflector;
 use proc_macro2::TokenStream;
 use quote::quote;

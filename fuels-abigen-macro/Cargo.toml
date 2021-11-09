@@ -11,11 +11,9 @@ proc-macro = true
 
 [dependencies]
 anyhow = "1"
-blake2 = "0.9"
 bytes = { version = "1.0.1", features = ["serde"] }
 fuel-types = {git = "ssh://git@github.com/FuelLabs/fuel-types.git"}
 fuels-rs = {path = "../fuels-rs"}
-glob = { version = "0.3.0", default-features = false }
 hex = { version = "0.4.3", default-features = false, features = ["std"] }
 Inflector = "0.11"
 itertools = "0.10.1"

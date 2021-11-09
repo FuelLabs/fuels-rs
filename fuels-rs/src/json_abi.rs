@@ -6,12 +6,11 @@ use std::str;
 use std::str::FromStr;
 
 use crate::{
-    abi_decoder::ABIDecoder,
-    abi_encoder::ABIEncoder,
-    errors::Error,
-    tokens::Token,
-    types::{JsonABI, ParamType, Property},
+    abi_decoder::ABIDecoder, abi_encoder::ABIEncoder, errors::Error, tokens::Token,
+    types::ParamType,
 };
+
+use core_types::{JsonABI, Property};
 
 use serde_json;
 
