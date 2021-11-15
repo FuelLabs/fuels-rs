@@ -23,10 +23,16 @@ pub fn expand_internal_struct(name: &str, prop: &Property) -> Result<TokenStream
     // creating a [`Token`] and pushing it a vector of Tokens.
     let mut struct_fields_tokens = Vec::new();
 
+    // Holds the TokenStream representing the process
+    // of creating a Self struct from each `Token`.
+    // Used when creating a struct from tokens with
+    // `MyStruct::new_from_tokens()`.
+    let mut args = Vec::new();
+
     // For each component, we create two TokenStreams:
     // 1. A struct field declaration like `pub #field_name: #component_name`
     // 2. The creation of a token and its insertion into a vector of Tokens.
-    for component in components {
+    for (idx, component) in components.iter().enumerate() {
         let component_name = ident(&component.name.to_class_case());
         let field_name = ident(&component.name.to_snake_case());
         let param_type = parse_param(&component)?;
@@ -35,6 +41,7 @@ pub fn expand_internal_struct(name: &str, prop: &Property) -> Result<TokenStream
             // Case where a struct takes another struct
             ParamType::Struct(_params) => {
                 fields.push(quote! {pub #field_name: #component_name});
+                args.push(quote! {#field_name: #component_name::new_from_tokens(&tokens[#idx..])});
                 struct_fields_tokens.push(quote! { tokens.push(self.#field_name.into_token()) });
             }
             // Elementary type
@@ -44,6 +51,11 @@ pub fn expand_internal_struct(name: &str, prop: &Property) -> Result<TokenStream
 
                 // Field declaration
                 fields.push(quote! { pub #field_name: #ty});
+
+                // `new_from_token()` instantiations
+                args.push(quote! {
+                    #field_name: #ty::from_token(tokens[#idx].clone()).expect("Failed to run `new_from_tokens()` for custom struct, make sure to pass tokens in the right order and right types" )
+                });
 
                 // Token creation and insertion
                 struct_fields_tokens
@@ -70,6 +82,13 @@ pub fn expand_internal_struct(name: &str, prop: &Property) -> Result<TokenStream
 
                 Token::Struct(tokens)
             }
+
+            pub fn new_from_tokens(tokens: &[Token]) -> Self {
+                Self {
+                    #( #args ),*
+                }
+            }
+
         }
     })
 }

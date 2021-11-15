@@ -1,5 +1,6 @@
 use fuels_abigen_macro::abigen;
 use fuels_rs::contract::Contract;
+use fuels_rs::tokens::Token;
 use sha2::{Digest, Sha256};
 
 const MOCK_CONTRACT_ADDRESS: &'static str =
@@ -530,4 +531,127 @@ async fn example_workflow() {
 
     // TODO: Send the actual transaction
     // contract_call.send().await?;
+}
+
+#[test]
+fn create_struct_from_decoded_tokens() {
+    // Generates the bindings from the an ABI definition inline.
+    // The generated bindings can be accessed through `SimpleContract`.
+    abigen!(
+        SimpleContract,
+        r#"
+        [
+            {
+                "type":"contract",
+                "inputs":[
+                    {
+                        "name":"MyStruct",
+                        "type":"struct",
+                        "components": [
+                            {
+                                "name": "foo",
+                                "type": "u8"
+                            },
+                            {
+                                "name": "bar",
+                                "type": "bool"
+                            }
+                        ]
+                    }
+                ],
+                "name":"takes_struct",
+                "outputs":[]
+            }
+        ]
+        "#
+    );
+
+    // Decoded tokens
+    let foo = Token::U8(10);
+    let bar = Token::Bool(true);
+
+    // Create the struct using the decoded tokens.
+    // `struct_from_tokens` is of type `MyStruct`.
+    let struct_from_tokens = MyStruct::new_from_tokens(&[foo, bar]);
+
+    assert_eq!(10 as u8, struct_from_tokens.foo);
+    assert_eq!(true, struct_from_tokens.bar);
+
+    let contract_instance = SimpleContract::new(MOCK_CONTRACT_ADDRESS.into());
+
+    let contract_call = contract_instance.takes_struct(struct_from_tokens);
+
+    let encoded = format!(
+        "{}{}",
+        contract_call.encoded_selector, contract_call.encoded_params
+    );
+
+    assert_eq!("00000000f5957fce000000000000000a0000000000000001", encoded);
+}
+
+#[test]
+fn create_nested_struct_from_decoded_tokens() {
+    // Generates the bindings from the an ABI definition inline.
+    // The generated bindings can be accessed through `SimpleContract`.
+    abigen!(
+        SimpleContract,
+        r#"
+        [
+            {
+                "type":"contract",
+                "inputs":[
+                    {
+                        "name":"MyNestedStruct",
+                        "type":"struct",
+                        "components": [
+                            {
+                                "name": "x",
+                                "type": "u16"
+                            },
+                            {
+                                "name": "inner_struct",
+                                "type": "struct",
+                                "components": [
+                                    {
+                                        "name":"a",
+                                        "type": "bool"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                "name":"takes_nested_struct",
+                "outputs":[]
+            }
+        ]
+        "#
+    );
+
+    // Creating just the InnerStruct is possible
+    let a = Token::Bool(true);
+    let inner_struct_from_tokens = InnerStruct::new_from_tokens(&[a.clone()]);
+    assert_eq!(true, inner_struct_from_tokens.a);
+
+    // Creating the whole nested struct `MyNestedStruct`
+    // from tokens.
+    // `x` is the token for the field `x` in `MyNestedStruct`
+    // `a` is the token for the field `a` in `InnerStruct`
+    let x = Token::U16(10);
+
+    let nested_struct_from_tokens = MyNestedStruct::new_from_tokens(&[x, a]);
+
+    assert_eq!(10 as u16, nested_struct_from_tokens.x);
+    assert_eq!(true, nested_struct_from_tokens.inner_struct.a);
+
+    let contract_instance = SimpleContract::new(MOCK_CONTRACT_ADDRESS.into());
+
+    let contract_call = contract_instance.takes_nested_struct(nested_struct_from_tokens);
+
+    let encoded = format!(
+        "{}{}",
+        contract_call.encoded_selector, contract_call.encoded_params
+    );
+
+    assert_eq!("00000000e8a04d9c000000000000000a0000000000000001", encoded);
 }
