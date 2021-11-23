@@ -89,15 +89,17 @@ impl Abigen {
                 #![allow(dead_code)]
                 #![allow(unused_imports)]
 
-                use fuels_rs::contract::{Contract, ContractCall};
+                use fuels_rs::contract::{Contract, ContractCall, CompiledContract};
                 use fuels_rs::tokens::{Tokenizable, Token};
-                use fuels_rs::types::EnumSelector;
+                use fuels_rs::types::{EnumSelector};
 
-                pub struct #name { contract_id: String }
+                pub struct #name {
+                    compiled: CompiledContract
+                }
 
                 impl #name {
-                    pub fn new(contract_id: String) -> Self {
-                        Self{contract_id}
+                    pub fn new(compiled: CompiledContract) -> Self {
+                        Self{ compiled }
                     }
 
                     #contract_functions
