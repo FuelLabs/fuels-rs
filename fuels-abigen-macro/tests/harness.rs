@@ -668,7 +668,7 @@ async fn example_workflow() {
     // This is useful in case of long-lived local tests, spanning
     // across different contracts being deployed and interacted with in
     // the same session.
-    let (_, contract_id) = Contract::launch_and_deploy(&compiled, true).await.unwrap();
+    let (fuel_client, contract_id) = Contract::launch_and_deploy(&compiled).await.unwrap();
 
     println!("Contract deployed @ {:x}", contract_id);
 
@@ -680,6 +680,6 @@ async fn example_workflow() {
     // Soon it will be able to generate/craft the
     // `script_data` on the fly and dynamically call a
     // contract's function.
-    let res = contract_call.call().await.unwrap();
+    let res = contract_call.call(&fuel_client).await.unwrap();
     println!("res: {:?}\n", res);
 }

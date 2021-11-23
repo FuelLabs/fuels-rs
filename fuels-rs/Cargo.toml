@@ -13,6 +13,7 @@ core-types = { git = "ssh://git@github.com/FuelLabs/sway.git" }
 forc = { git = "ssh://git@github.com/FuelLabs/sway.git", features = ["test", "util"], default-features = false }
 fuel-asm = { git = "ssh://git@github.com/FuelLabs/fuel-asm.git", features = ["serde-types"] }
 fuel-client = { git = "ssh://git@github.com/FuelLabs/fuel-core", default-features = false}
+fuel-core = { git = "ssh://git@github.com/FuelLabs/fuel-core", default-features = false}
 fuel-tx = { git = "ssh://git@github.com/FuelLabs/fuel-tx.git" }
 fuel-types = { git = "ssh://git@github.com/FuelLabs/fuel-types.git" }
 fuel-vm = { git = "ssh://git@github.com/FuelLabs/fuel-vm.git" }

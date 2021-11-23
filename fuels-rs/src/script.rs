@@ -10,7 +10,6 @@ use std::path::PathBuf;
 /// extra functionalities needed and provided by the SDK.
 pub struct Script {
     pub tx: Transaction,
-    pub node_addr: String,
 }
 
 #[derive(Debug, Clone)]
@@ -22,17 +21,14 @@ pub struct CompiledScript {
 }
 
 impl Script {
-    pub fn new(tx: Transaction, node_addr: String) -> Self {
-        Self { tx, node_addr }
+    pub fn new(tx: Transaction) -> Self {
+        Self { tx }
     }
 
-    pub async fn call(self) -> Result<Vec<Receipt>, Error> {
-        // @todo improve error handling in here.
-        let client = FuelClient::new(self.node_addr)?;
+    pub async fn call(self, fuel_client: &FuelClient) -> Result<Vec<Receipt>, Error> {
+        let tx_id = fuel_client.submit(&self.tx).await.unwrap();
 
-        let tx_id = client.submit(&self.tx).await.unwrap();
-
-        let receipts = client.receipts(&tx_id.0.to_string()).await.unwrap();
+        let receipts = fuel_client.receipts(&tx_id.0.to_string()).await.unwrap();
 
         Ok(receipts)
     }

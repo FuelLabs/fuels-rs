@@ -6,19 +6,17 @@ use crate::types::Selector;
 use core_types::Function;
 use forc::test::{forc_build, BuildCommand};
 use forc::util::helpers::{find_manifest_dir, read_manifest};
-use forc::util::{constants, start_fuel_core};
 use fuel_asm::Opcode;
 use fuel_client::client::FuelClient;
+use fuel_core::service::{Config, FuelService};
 use fuel_tx::{ContractId, Input, Output, Receipt, Transaction};
 use fuel_types::{Address, Bytes32, Immediate12, Salt, Word};
 use fuel_vm::consts::{REG_ZERO, VM_TX_MEMORY};
 use fuel_vm::prelude::Contract as FuelContract;
 use serde::{Deserialize, Serialize};
+use std::marker::PhantomData;
 use std::mem;
 use std::path::PathBuf;
-use tokio::process::Child;
-
-use std::marker::PhantomData;
 
 const WORD_SIZE: usize = mem::size_of::<Word>();
 
@@ -28,7 +26,6 @@ pub struct CompiledContract {
     pub salt: Salt,
     pub inputs: Vec<Input>,
     pub outputs: Vec<Output>,
-    pub target_network_url: String,
 }
 
 /// Contract is a struct to interface with a contract. That includes things such as
@@ -57,6 +54,7 @@ impl Contract {
     /// and it doesn't, yet, call a specific ABI function in that contract.
     pub async fn call(
         contract_id: ContractId,
+        fuel_client: &FuelClient,
         utxo_id: Bytes32,
         balance_root: Bytes32,
         state_root: Bytes32,
@@ -116,9 +114,9 @@ impl Contract {
             _ => unreachable!(),
         }
 
-        let script = Script::new(tx, constants::DEFAULT_NODE_URL.to_string());
+        let script = Script::new(tx);
 
-        Ok(script.call().await.unwrap())
+        Ok(script.call(&fuel_client).await.unwrap())
     }
 
     /// Creates an ABI call based on a function selector and
@@ -182,48 +180,22 @@ impl Contract {
     /// Launches a local `fuel-core` network and deploys a contract to it.
     /// If you want to deploy a contract against another network of
     /// your choosing, use the `deploy` function instead.
-    /// Be careful when passing `false` to `stop_node` as it might leak.
-    /// In case you want to test many deployments and interactions against the same
-    /// network session, pass `true` to `stop_node` and make sure to
-    /// stop running the node once you're done by unwrapping the `Option<Child>` returned
-    /// and calling its `.kill()` method.
     pub async fn launch_and_deploy(
         compiled_contract: &CompiledContract,
-        stop_node: bool,
-    ) -> Result<(Option<Child>, ContractId), Error> {
-        let client = FuelClient::new(compiled_contract.target_network_url.clone())?;
+    ) -> Result<(FuelClient, ContractId), Error> {
+        let srv = FuelService::new_node(Config::local_node()).await.unwrap();
 
-        match client.health().await {
-            // Network already up-and-running
-            Ok(_) => {
-                let contract_id = Self::deploy(compiled_contract, client).await?;
-                Ok((None, contract_id))
-            }
-            Err(_) => {
-                // Launch network
-                let mut node = start_fuel_core(&compiled_contract.target_network_url, &client)
-                    .await
-                    .map_err(|e| {
-                        Error::InfrastructureError(format!(
-                            "{}. Make sure you have `fuel-core` locally installed",
-                            e
-                        ))
-                    })?;
-                let contract_id = Self::deploy(compiled_contract, client).await?;
+        let fuel_client = FuelClient::from(srv.bound_address);
 
-                if stop_node {
-                    node.kill().await.expect("Node should be killed");
-                }
+        let contract_id = Self::deploy(compiled_contract, &fuel_client).await?;
 
-                Ok((Some(node), contract_id))
-            }
-        }
+        Ok((fuel_client, contract_id))
     }
 
     /// Deploys a compiled contract to a running node
     pub async fn deploy(
         compiled_contract: &CompiledContract,
-        fuel_client: FuelClient,
+        fuel_client: &FuelClient,
     ) -> Result<ContractId, Error> {
         let (tx, contract_id) = Self::contract_deployment_transaction(compiled_contract);
 
@@ -262,17 +234,11 @@ impl Contract {
             ))
         })?;
 
-        let node_url = match &manifest.network {
-            Some(network) => &network.url,
-            _ => constants::DEFAULT_NODE_URL,
-        };
-
         Ok(CompiledContract {
             salt,
             raw,
             inputs,
             outputs,
-            target_network_url: node_url.to_string(),
         })
     }
 
@@ -340,9 +306,9 @@ impl<D> ContractCall<D>
 where
     D: Detokenize,
 {
-    pub async fn call(self) -> Result<Vec<Receipt>, Error> {
-        let script = Script::new(self.tx, self.compiled_contract.target_network_url);
+    pub async fn call(self, fuel_client: &FuelClient) -> Result<Vec<Receipt>, Error> {
+        let script = Script::new(self.tx);
 
-        Ok(script.call().await.unwrap())
+        Ok(script.call(fuel_client).await.unwrap())
     }
 }
