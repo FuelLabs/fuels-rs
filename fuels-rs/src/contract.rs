@@ -1,37 +1,125 @@
 use crate::abi_encoder::ABIEncoder;
 use crate::errors::Error;
+use crate::script::Script;
 use crate::tokens::{Detokenize, Token};
 use crate::types::Selector;
 use core_types::Function;
 use forc::test::{forc_build, BuildCommand};
 use forc::util::helpers::{find_manifest_dir, read_manifest};
-use forc::util::{constants, start_fuel_core};
+use fuel_asm::Opcode;
 use fuel_client::client::FuelClient;
-use fuel_tx::{Input, Output, Salt, Transaction};
+use fuel_core::service::{Config, FuelService};
+use fuel_tx::{ContractId, Input, Output, Receipt, Transaction};
+use fuel_types::{Address, Bytes32, Immediate12, Salt, Word};
+use fuel_vm::consts::{REG_ZERO, VM_TX_MEMORY};
 use fuel_vm::prelude::Contract as FuelContract;
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
-use tokio::process::Child;
-
 use std::marker::PhantomData;
+use std::mem;
+use std::path::PathBuf;
 
-pub type ContractID = String;
+const WORD_SIZE: usize = mem::size_of::<Word>();
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Default)]
 pub struct CompiledContract {
-    raw: Vec<u8>,
-    inputs: Vec<Input>,
-    outputs: Vec<Output>,
-    target_network_url: String,
+    pub raw: Vec<u8>,
+    pub salt: Salt,
+    pub inputs: Vec<Input>,
+    pub outputs: Vec<Output>,
 }
 
 /// Contract is a struct to interface with a contract. That includes things such as
 /// compiling, deploying, and running transactions against a contract.
-pub struct Contract {}
+pub struct Contract {
+    pub compiled_contract: CompiledContract,
+}
 
 impl Contract {
-    pub fn new() -> Self {
-        Self {}
+    pub fn new(compiled_contract: CompiledContract) -> Self {
+        Self { compiled_contract }
+    }
+
+    pub fn compute_contract_id(compiled_contract: &CompiledContract) -> ContractId {
+        let fuel_contract = FuelContract::from(compiled_contract.raw.clone());
+        let root = fuel_contract.root();
+        fuel_contract.id(&compiled_contract.salt, &root)
+    }
+
+    /// Calls an already-deployed contract code.
+    /// Note that this is a "generic" call to a contract
+    /// and it doesn't, yet, call a specific ABI function in that contract.
+    pub async fn call(
+        contract_id: ContractId,
+        fuel_client: &FuelClient,
+        utxo_id: Bytes32,
+        balance_root: Bytes32,
+        state_root: Bytes32,
+        input_index: u8,
+        gas_price: Word,
+        gas_limit: Word,
+        maturity: Word,
+    ) -> Result<Vec<Receipt>, String> {
+        // Setup the script that will call a contract.
+        // Register `0x10` will hold the beginning of the `script_data`
+        // which will be computed below.
+        let mut script_ops = vec![
+            Opcode::ADDI(0x10, REG_ZERO, 0x00),
+            Opcode::ADDI(0x11, 0x10, ContractId::LEN as Immediate12),
+            Opcode::CALL(0x10, REG_ZERO, 0x10, 0x10),
+            Opcode::RET(0x30),
+        ];
+
+        // @todo continue from here.
+        // Try deploying a contract with proper functions
+        // Then, try crafting `script_data` to contain
+        // the function selector and the arguments.
+        // Do it manually at first to validate that it works
+        // Then try and generalize it.
+
+        let script = script_ops.iter().copied().collect();
+
+        // To call a contract, `script_data` should be
+        // the ID of the contract we're trying to call
+        // followed by 2 words.
+        // Note that there are no arguments here yet. If we had,
+        // we'd be extending `script_data` with it at the end.
+        let mut script_data = contract_id.to_vec();
+        script_data.extend(&[0u8; WORD_SIZE * 2]);
+
+        // Inputs/outputs
+        let input = Input::contract(utxo_id, balance_root, state_root, contract_id);
+        let output = Output::contract(input_index, balance_root, state_root);
+
+        let mut tx = Transaction::script(
+            gas_price,
+            gas_limit,
+            maturity,
+            script,
+            script_data,
+            vec![input],
+            vec![output],
+            vec![],
+        );
+
+        // Now that we know the length of the transaction `tx`
+        // we can compute the script_data offset and update the script
+        // `script_ops` with the proper Opcode.
+        let script_data_offset = VM_TX_MEMORY + tx.script_data_offset().unwrap();
+        script_ops[0] = Opcode::ADDI(0x10, REG_ZERO, script_data_offset as Immediate12);
+
+        let script_mem: Vec<u8> = script_ops.iter().copied().collect();
+
+        // Update the `script` property of the transaction.
+        match &mut tx {
+            Transaction::Script { script, .. } => {
+                script.as_mut_slice().copy_from_slice(script_mem.as_slice())
+            }
+            _ => unreachable!(),
+        }
+
+        let script = Script::new(tx);
+
+        Ok(script.call(&fuel_client).await.unwrap())
     }
 
     /// Creates an ABI call based on a function selector and
@@ -48,6 +136,8 @@ impl Contract {
     /// }
     /// For more details see `code_gen/functions_gen.rs`.
     pub fn method_hash<D: Detokenize>(
+        fuel_client: &FuelClient,
+        compiled_contract: &CompiledContract,
         signature: Selector,
         args: &[Token],
     ) -> Result<ContractCall<D>, Error> {
@@ -56,16 +146,36 @@ impl Contract {
         let encoded_params = hex::encode(encoder.encode(args).unwrap());
         let encoded_selector = hex::encode(signature);
 
-        // Temporarily printing the encoded selector+params to stdout for
-        // debugging purposes.
-        println!("encoded: {}{}\n", encoded_selector, encoded_params);
+        // @todo soon, this method will make use of `self::call()`
+        // to craft a call to a contract's function.
+        // Right now this is an "empty" contract call.
+        let tx = Transaction::Script {
+            gas_price: 0,
+            gas_limit: 1_000_000,
+            maturity: 0,
+            receipts_root: Default::default(),
+            script: vec![],
+            script_data: vec![],
+            inputs: vec![Input::Coin {
+                utxo_id: Bytes32::new([0u8; 32]),
+                owner: Address::new([0u8; 32]),
+                amount: 1,
+                color: Default::default(),
+                witness_index: 0,
+                maturity: 0,
+                predicate: vec![],
+                predicate_data: vec![],
+            }],
+            outputs: vec![],
+            witnesses: vec![vec![].into()],
+            metadata: None,
+        };
 
-        // TODO: this is where we'll craft the transaction, using the actual fuel-tx
-        // The actual call will likely happen in `ContractCall`.
-        let tx = TransactionRequest { data: None };
         Ok(ContractCall {
+            compiled_contract: compiled_contract.clone(),
             encoded_params,
             encoded_selector,
+            fuel_client: fuel_client.clone(), // cheap clone behind the Arc
             tx,
             function: None,
             datatype: PhantomData,
@@ -75,49 +185,23 @@ impl Contract {
     /// Launches a local `fuel-core` network and deploys a contract to it.
     /// If you want to deploy a contract against another network of
     /// your choosing, use the `deploy` function instead.
-    /// Be careful when passing `false` to `stop_node` as it might leak.
-    /// In case you want to test many deployments and interactions against the same
-    /// network session, pass `true` to `stop_node` and make sure to
-    /// stop running the node once you're done by unwrapping the `Option<Child>` returned
-    /// and calling its `.kill()` method.
     pub async fn launch_and_deploy(
-        compiled_contract: CompiledContract,
-        stop_node: bool,
-    ) -> Result<(Option<Child>, ContractID), Error> {
-        let client = FuelClient::new(compiled_contract.target_network_url.clone())?;
+        compiled_contract: &CompiledContract,
+    ) -> Result<(FuelClient, ContractId), Error> {
+        let srv = FuelService::new_node(Config::local_node()).await.unwrap();
 
-        match client.health().await {
-            // Network already up-and-running
-            Ok(_) => {
-                let contract_id = Self::deploy(compiled_contract, client).await?;
-                Ok((None, contract_id))
-            }
-            Err(_) => {
-                // Launch network
-                let mut node = start_fuel_core(&compiled_contract.target_network_url, &client)
-                    .await
-                    .map_err(|e| {
-                        Error::InfrastructureError(format!(
-                            "{}. Make sure you have `fuel-core` locally installed",
-                            e
-                        ))
-                    })?;
-                let contract_id = Self::deploy(compiled_contract, client).await?;
+        let fuel_client = FuelClient::from(srv.bound_address);
 
-                if stop_node {
-                    node.kill().await.expect("Node should be killed");
-                }
+        let contract_id = Self::deploy(compiled_contract, &fuel_client).await?;
 
-                Ok((Some(node), contract_id))
-            }
-        }
+        Ok((fuel_client, contract_id))
     }
 
     /// Deploys a compiled contract to a running node
     pub async fn deploy(
-        compiled_contract: CompiledContract,
-        fuel_client: FuelClient,
-    ) -> Result<ContractID, Error> {
+        compiled_contract: &CompiledContract,
+        fuel_client: &FuelClient,
+    ) -> Result<ContractId, Error> {
         let (tx, contract_id) = Self::contract_deployment_transaction(compiled_contract);
 
         match fuel_client.submit(&tx).await {
@@ -127,7 +211,10 @@ impl Contract {
     }
 
     /// Compiles a Sway contract
-    pub fn compile_sway_contract(project_path: &str) -> Result<CompiledContract, Error> {
+    pub fn compile_sway_contract(
+        project_path: &str,
+        salt: Salt,
+    ) -> Result<CompiledContract, Error> {
         let build_command = BuildCommand {
             path: Some(project_path.into()),
             print_finalized_asm: false,
@@ -152,55 +239,45 @@ impl Contract {
             ))
         })?;
 
-        let node_url = match &manifest.network {
-            Some(network) => &network.url,
-            _ => constants::DEFAULT_NODE_URL,
-        };
-
         Ok(CompiledContract {
+            salt,
             raw,
             inputs,
             outputs,
-            target_network_url: node_url.to_string(),
         })
     }
 
     /// Crafts a transaction used to deploy a contract
     pub fn contract_deployment_transaction(
-        compiled_contract: CompiledContract,
-    ) -> (Transaction, ContractID) {
+        compiled_contract: &CompiledContract,
+    ) -> (Transaction, ContractId) {
+        // @todo get these configurations from
+        // params of this function.
         let gas_price = 0;
-        let gas_limit = 10000000;
+        let gas_limit = 1000000;
         let maturity = 0;
         let bytecode_witness_index = 0;
         let witnesses = vec![compiled_contract.raw.clone().into()];
 
-        let salt = Salt::new([0; 32]);
         let static_contracts = vec![];
 
-        let contract = FuelContract::from(compiled_contract.raw);
-        let root = contract.root();
-        let id = contract.id(&salt, &root);
-        let contract_id_str = hex::encode(id);
-        let outputs = [
-            &[Output::ContractCreated { contract_id: id }],
-            &compiled_contract.outputs[..],
-        ]
-        .concat();
+        let contract_id = Self::compute_contract_id(compiled_contract);
+
+        let output = Output::contract_created(contract_id);
 
         let tx = Transaction::create(
             gas_price,
             gas_limit,
             maturity,
             bytecode_witness_index,
-            salt,
+            compiled_contract.salt,
             static_contracts,
-            compiled_contract.inputs,
-            outputs,
+            compiled_contract.inputs.clone(),
+            vec![output],
             witnesses,
         );
 
-        (tx, contract_id_str)
+        (tx, contract_id)
     }
 }
 
@@ -213,17 +290,19 @@ pub struct TransactionRequest {
     // More later
 }
 
-#[derive(Debug, Clone)]
-#[must_use = "contract calls do nothing unless you `send` or `call` them"]
+#[derive(Debug)]
+#[must_use = "contract calls do nothing unless you `call` them"]
 /// Helper for managing a transaction before submitting it to a node
 pub struct ContractCall<D> {
     /// The raw transaction object
-    pub tx: TransactionRequest, // Maybe not necessary?
+    pub tx: Transaction,
+
+    pub fuel_client: FuelClient,
+
+    pub compiled_contract: CompiledContract,
     /// The ABI of the function being called
     pub function: Option<Function>, // Temporarily an option
-    // To be used in the future:
-    // pub block: Option<BlockId>,
-    // pub(crate) client: Arc<M>,
+
     pub datatype: PhantomData<D>,
 
     pub encoded_params: String,
@@ -234,7 +313,9 @@ impl<D> ContractCall<D>
 where
     D: Detokenize,
 {
-    pub fn call(&self) -> Result<D, Error> {
-        unimplemented!()
+    pub async fn call(self) -> Result<Vec<Receipt>, Error> {
+        let script = Script::new(self.tx);
+
+        Ok(script.call(&self.fuel_client).await.unwrap())
     }
 }

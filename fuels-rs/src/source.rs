@@ -56,8 +56,12 @@ impl Source {
         P: AsRef<Path>,
         S: AsRef<str>,
     {
-        let base = Url::from_directory_path(root)
-            .map_err(|_| anyhow!("root path '{}' is not absolute"))?;
+        let base = Url::from_directory_path(&root).map_err(|_| {
+            anyhow!(
+                "root path '{:?}' is not absolute",
+                root.as_ref().as_os_str()
+            )
+        })?;
         let url = base.join(source.as_ref())?;
 
         match url.scheme() {
