@@ -49,7 +49,7 @@ pub fn expand_function(
     Ok(quote! {
         #doc
         pub fn #name(&self #input) -> #result {
-            Contract::method_hash(&self.compiled,
+            Contract::method_hash(&self.fuel_client, &self.compiled,
                 #tokenized_signature, #arg).expect("method not found (this should never happen)")
         }
     })

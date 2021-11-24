@@ -1,3 +1,5 @@
+use fuel_client::client::FuelClient;
+use fuel_core::service::{Config, FuelService};
 use fuel_tx::Salt;
 use fuels_abigen_macro::abigen;
 use fuels_rs::contract::Contract;
@@ -6,8 +8,13 @@ use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 use sha2::{Digest, Sha256};
 
-#[test]
-fn compile_bindings_from_contract_file() {
+async fn setup_local_node() -> FuelClient {
+    let srv = FuelService::new_node(Config::local_node()).await.unwrap();
+    FuelClient::from(srv.bound_address)
+}
+
+#[tokio::test]
+async fn compile_bindings_from_contract_file() {
     // Generates the bindings from an ABI definition in a JSON file
     // The generated bindings can be accessed through `SimpleContract`.
     abigen!(
@@ -15,8 +22,10 @@ fn compile_bindings_from_contract_file() {
         "fuels-abigen-macro/tests/takes_ints_returns_bool.json"
     );
 
+    let fuel_client = setup_local_node().await;
+
     // `SimpleContract` is the name of the contract
-    let contract_instance = SimpleContract::new(Default::default());
+    let contract_instance = SimpleContract::new(Default::default(), fuel_client);
 
     // Calls the function defined in the JSON ABI.
     // Note that this is type-safe, if the function does exist
@@ -39,8 +48,8 @@ fn compile_bindings_from_contract_file() {
     assert_eq!("0000000003b568d4000000000000002a000000000000000a", encoded);
 }
 
-#[test]
-fn compile_bindings_from_inline_contract() {
+#[tokio::test]
+async fn compile_bindings_from_inline_contract() {
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `SimpleContract`.
     abigen!(
@@ -71,7 +80,9 @@ fn compile_bindings_from_inline_contract() {
         "#
     );
 
-    let contract_instance = SimpleContract::new(Default::default());
+    let fuel_client = setup_local_node().await;
+
+    let contract_instance = SimpleContract::new(Default::default(), fuel_client);
 
     let contract_call = contract_instance.takes_ints_returns_bool(42 as u32, 10 as u16);
 
@@ -83,8 +94,8 @@ fn compile_bindings_from_inline_contract() {
     assert_eq!("0000000003b568d4000000000000002a000000000000000a", encoded);
 }
 
-#[test]
-fn compile_bindings_single_param() {
+#[tokio::test]
+async fn compile_bindings_single_param() {
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `SimpleContract`.
     abigen!(
@@ -111,7 +122,9 @@ fn compile_bindings_single_param() {
         "#
     );
 
-    let contract_instance = SimpleContract::new(Default::default());
+    let fuel_client = setup_local_node().await;
+
+    let contract_instance = SimpleContract::new(Default::default(), fuel_client);
 
     let contract_call = contract_instance.takes_ints_returns_bool(42 as u32);
 
@@ -123,8 +136,8 @@ fn compile_bindings_single_param() {
     assert_eq!("000000009593586c000000000000002a", encoded);
 }
 
-#[test]
-fn compile_bindings_array_input() {
+#[tokio::test]
+async fn compile_bindings_array_input() {
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `SimpleContract`.
     abigen!(
@@ -148,7 +161,9 @@ fn compile_bindings_array_input() {
         "#
     );
 
-    let contract_instance = SimpleContract::new(Default::default());
+    let fuel_client = setup_local_node().await;
+
+    let contract_instance = SimpleContract::new(Default::default(), fuel_client);
 
     let input: Vec<u16> = vec![1, 2, 3, 4];
     let contract_call = contract_instance.takes_array(input);
@@ -164,8 +179,8 @@ fn compile_bindings_array_input() {
     );
 }
 
-#[test]
-fn compile_bindings_bool_array_input() {
+#[tokio::test]
+async fn compile_bindings_bool_array_input() {
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `SimpleContract`.
     abigen!(
@@ -189,7 +204,9 @@ fn compile_bindings_bool_array_input() {
         "#
     );
 
-    let contract_instance = SimpleContract::new(Default::default());
+    let fuel_client = setup_local_node().await;
+
+    let contract_instance = SimpleContract::new(Default::default(), fuel_client);
 
     let input: Vec<bool> = vec![true, false, true];
     let contract_call = contract_instance.takes_array(input);
@@ -205,8 +222,8 @@ fn compile_bindings_bool_array_input() {
     );
 }
 
-#[test]
-fn compile_bindings_byte_input() {
+#[tokio::test]
+async fn compile_bindings_byte_input() {
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `SimpleContract`.
     abigen!(
@@ -230,7 +247,9 @@ fn compile_bindings_byte_input() {
         "#
     );
 
-    let contract_instance = SimpleContract::new(Default::default());
+    let fuel_client = setup_local_node().await;
+
+    let contract_instance = SimpleContract::new(Default::default(), fuel_client);
 
     let contract_call = contract_instance.takes_byte(10 as u8);
 
@@ -242,8 +261,8 @@ fn compile_bindings_byte_input() {
     assert_eq!("00000000a4bd3861000000000000000a", encoded);
 }
 
-#[test]
-fn compile_bindings_string_input() {
+#[tokio::test]
+async fn compile_bindings_string_input() {
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `SimpleContract`.
     abigen!(
@@ -267,7 +286,9 @@ fn compile_bindings_string_input() {
         "#
     );
 
-    let contract_instance = SimpleContract::new(Default::default());
+    let fuel_client = setup_local_node().await;
+
+    let contract_instance = SimpleContract::new(Default::default(), fuel_client);
 
     let contract_call = contract_instance.takes_string("This is a full sentence".into());
 
@@ -282,8 +303,8 @@ fn compile_bindings_string_input() {
     );
 }
 
-#[test]
-fn compile_bindings_b256_input() {
+#[tokio::test]
+async fn compile_bindings_b256_input() {
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `SimpleContract`.
     abigen!(
@@ -307,7 +328,9 @@ fn compile_bindings_b256_input() {
         "#
     );
 
-    let contract_instance = SimpleContract::new(Default::default());
+    let fuel_client = setup_local_node().await;
+
+    let contract_instance = SimpleContract::new(Default::default(), fuel_client);
 
     let mut hasher = Sha256::new();
     hasher.update("test string".as_bytes());
@@ -327,8 +350,8 @@ fn compile_bindings_b256_input() {
     );
 }
 
-#[test]
-fn compile_bindings_struct_input() {
+#[tokio::test]
+async fn compile_bindings_struct_input() {
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `SimpleContract`.
     abigen!(
@@ -360,6 +383,8 @@ fn compile_bindings_struct_input() {
         "#
     );
 
+    let fuel_client = setup_local_node().await;
+
     // Because of the abigen! macro, `MyStruct` is now in scope
     // and can be used!
     let input = MyStruct {
@@ -367,7 +392,7 @@ fn compile_bindings_struct_input() {
         bar: true,
     };
 
-    let contract_instance = SimpleContract::new(Default::default());
+    let contract_instance = SimpleContract::new(Default::default(), fuel_client);
 
     let contract_call = contract_instance.takes_struct(input);
 
@@ -379,8 +404,8 @@ fn compile_bindings_struct_input() {
     assert_eq!("00000000f5957fce000000000000000a0000000000000001", encoded);
 }
 
-#[test]
-fn compile_bindings_nested_struct_input() {
+#[tokio::test]
+async fn compile_bindings_nested_struct_input() {
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `SimpleContract`.
     abigen!(
@@ -425,7 +450,9 @@ fn compile_bindings_nested_struct_input() {
         inner_struct,
     };
 
-    let contract_instance = SimpleContract::new(Default::default());
+    let fuel_client = setup_local_node().await;
+
+    let contract_instance = SimpleContract::new(Default::default(), fuel_client);
 
     let contract_call = contract_instance.takes_nested_struct(input);
 
@@ -437,8 +464,8 @@ fn compile_bindings_nested_struct_input() {
     assert_eq!("00000000e8a04d9c000000000000000a0000000000000001", encoded);
 }
 
-#[test]
-fn compile_bindings_enum_input() {
+#[tokio::test]
+async fn compile_bindings_enum_input() {
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `SimpleContract`.
     abigen!(
@@ -472,7 +499,9 @@ fn compile_bindings_enum_input() {
 
     let variant = MyEnum::X(42);
 
-    let contract_instance = SimpleContract::new(Default::default());
+    let fuel_client = setup_local_node().await;
+
+    let contract_instance = SimpleContract::new(Default::default(), fuel_client);
 
     let contract_call = contract_instance.takes_enum(variant);
 
@@ -484,8 +513,8 @@ fn compile_bindings_enum_input() {
     assert_eq!("000000009542a3c90000000000000000000000000000002a", encoded);
 }
 
-#[test]
-fn create_struct_from_decoded_tokens() {
+#[tokio::test]
+async fn create_struct_from_decoded_tokens() {
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `SimpleContract`.
     abigen!(
@@ -528,7 +557,9 @@ fn create_struct_from_decoded_tokens() {
     assert_eq!(10 as u8, struct_from_tokens.foo);
     assert_eq!(true, struct_from_tokens.bar);
 
-    let contract_instance = SimpleContract::new(Default::default());
+    let fuel_client = setup_local_node().await;
+
+    let contract_instance = SimpleContract::new(Default::default(), fuel_client);
 
     let contract_call = contract_instance.takes_struct(struct_from_tokens);
 
@@ -540,8 +571,8 @@ fn create_struct_from_decoded_tokens() {
     assert_eq!("00000000f5957fce000000000000000a0000000000000001", encoded);
 }
 
-#[test]
-fn create_nested_struct_from_decoded_tokens() {
+#[tokio::test]
+async fn create_nested_struct_from_decoded_tokens() {
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `SimpleContract`.
     abigen!(
@@ -595,7 +626,9 @@ fn create_nested_struct_from_decoded_tokens() {
     assert_eq!(10 as u16, nested_struct_from_tokens.x);
     assert_eq!(true, nested_struct_from_tokens.inner_struct.a);
 
-    let contract_instance = SimpleContract::new(Default::default());
+    let fuel_client = setup_local_node().await;
+
+    let contract_instance = SimpleContract::new(Default::default(), fuel_client);
 
     let contract_call = contract_instance.takes_nested_struct(nested_struct_from_tokens);
 
@@ -672,7 +705,7 @@ async fn example_workflow() {
 
     println!("Contract deployed @ {:x}", contract_id);
 
-    let contract_instance = MyContract::new(compiled);
+    let contract_instance = MyContract::new(compiled, fuel_client);
 
     let contract_call = contract_instance.initialize(42);
 
@@ -680,6 +713,6 @@ async fn example_workflow() {
     // Soon it will be able to generate/craft the
     // `script_data` on the fly and dynamically call a
     // contract's function.
-    let res = contract_call.call(&fuel_client).await.unwrap();
+    let res = contract_call.call().await.unwrap();
     println!("res: {:?}\n", res);
 }

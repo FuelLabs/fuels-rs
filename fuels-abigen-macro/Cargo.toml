@@ -14,6 +14,8 @@ anyhow = "1"
 bytes = { version = "1.0.1", features = ["serde"] }
 forc = { git = "ssh://git@github.com/FuelLabs/sway.git", features = ["test", "util"], default-features = false }
 fuel-asm = { git = "ssh://git@github.com/FuelLabs/fuel-asm.git", features = ["serde-types"] }
+fuel-client = { git = "ssh://git@github.com/FuelLabs/fuel-core", default-features = false}
+fuel-core = { git = "ssh://git@github.com/FuelLabs/fuel-core", default-features = false}
 fuel-types = {git = "ssh://git@github.com/FuelLabs/fuel-types.git"}
 fuels-rs = {path = "../fuels-rs"}
 fuel-tx = { git = "ssh://git@github.com/FuelLabs/fuel-tx.git" }

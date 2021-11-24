@@ -92,14 +92,16 @@ impl Abigen {
                 use fuels_rs::contract::{Contract, ContractCall, CompiledContract};
                 use fuels_rs::tokens::{Tokenizable, Token};
                 use fuels_rs::types::{EnumSelector};
+                use fuel_client::client::FuelClient;
 
                 pub struct #name {
-                    compiled: CompiledContract
+                    compiled: CompiledContract,
+                    fuel_client: FuelClient
                 }
 
                 impl #name {
-                    pub fn new(compiled: CompiledContract) -> Self {
-                        Self{ compiled }
+                    pub fn new(compiled: CompiledContract, fuel_client: FuelClient) -> Self {
+                        Self{ compiled, fuel_client }
                     }
 
                     #contract_functions

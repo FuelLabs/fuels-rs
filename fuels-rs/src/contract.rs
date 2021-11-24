@@ -31,16 +31,12 @@ pub struct CompiledContract {
 /// Contract is a struct to interface with a contract. That includes things such as
 /// compiling, deploying, and running transactions against a contract.
 pub struct Contract {
-    pub contract_id: String,
     pub compiled_contract: CompiledContract,
 }
 
 impl Contract {
-    pub fn new(contract_id: String, compiled_contract: CompiledContract) -> Self {
-        Self {
-            contract_id,
-            compiled_contract,
-        }
+    pub fn new(compiled_contract: CompiledContract) -> Self {
+        Self { compiled_contract }
     }
 
     pub fn compute_contract_id(compiled_contract: &CompiledContract) -> ContractId {
@@ -72,6 +68,13 @@ impl Contract {
             Opcode::CALL(0x10, REG_ZERO, 0x10, 0x10),
             Opcode::RET(0x30),
         ];
+
+        // @todo continue from here.
+        // Try deploying a contract with proper functions
+        // Then, try crafting `script_data` to contain
+        // the function selector and the arguments.
+        // Do it manually at first to validate that it works
+        // Then try and generalize it.
 
         let script = script_ops.iter().copied().collect();
 
@@ -133,6 +136,7 @@ impl Contract {
     /// }
     /// For more details see `code_gen/functions_gen.rs`.
     pub fn method_hash<D: Detokenize>(
+        fuel_client: &FuelClient,
         compiled_contract: &CompiledContract,
         signature: Selector,
         args: &[Token],
@@ -171,6 +175,7 @@ impl Contract {
             compiled_contract: compiled_contract.clone(),
             encoded_params,
             encoded_selector,
+            fuel_client: fuel_client.clone(), // cheap clone behind the Arc
             tx,
             function: None,
             datatype: PhantomData,
@@ -292,6 +297,8 @@ pub struct ContractCall<D> {
     /// The raw transaction object
     pub tx: Transaction,
 
+    pub fuel_client: FuelClient,
+
     pub compiled_contract: CompiledContract,
     /// The ABI of the function being called
     pub function: Option<Function>, // Temporarily an option
@@ -306,9 +313,9 @@ impl<D> ContractCall<D>
 where
     D: Detokenize,
 {
-    pub async fn call(self, fuel_client: &FuelClient) -> Result<Vec<Receipt>, Error> {
+    pub async fn call(self) -> Result<Vec<Receipt>, Error> {
         let script = Script::new(self.tx);
 
-        Ok(script.call(fuel_client).await.unwrap())
+        Ok(script.call(&self.fuel_client).await.unwrap())
     }
 }
