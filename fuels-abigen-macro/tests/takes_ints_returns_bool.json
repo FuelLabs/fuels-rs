@@ -3,6 +3,18 @@
         "type": "function",
         "inputs": [
             {
+                "name": "gas",
+                "type": "u64"
+            },
+            {
+                "name": "coin",
+                "type": "u64"
+            },
+            {
+                "name": "color",
+                "type": "b256"
+            },
+            {
                 "name": "arg",
                 "type": "u32"
             },
