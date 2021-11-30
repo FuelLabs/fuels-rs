@@ -3,22 +3,21 @@ authors = ["digorithm <rodrigo.araujo@fuel.sh>"]
 name = "fuels-rs"
 version = "0.1.0"
 edition = "2018"
-
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+Inflector = "0.11"
 anyhow = "1"
 bytes = { version = "1.0.1", features = ["serde"] }
 core-types = { git = "ssh://git@github.com/FuelLabs/sway.git" }
 forc = { git = "ssh://git@github.com/FuelLabs/sway.git", features = ["test", "util"], default-features = false }
 fuel-asm = { git = "ssh://git@github.com/FuelLabs/fuel-asm.git", features = ["serde-types"] }
-fuel-client = { git = "ssh://git@github.com/FuelLabs/fuel-core", default-features = false}
-fuel-core = { git = "ssh://git@github.com/FuelLabs/fuel-core", default-features = false}
+fuel-client = { git = "ssh://git@github.com/FuelLabs/fuel-core", default-features = false }
+fuel-core = { git = "ssh://git@github.com/FuelLabs/fuel-core", default-features = false }
 fuel-tx = { git = "ssh://git@github.com/FuelLabs/fuel-tx.git" }
 fuel-types = { git = "ssh://git@github.com/FuelLabs/fuel-types.git" }
 fuel-vm = { git = "ssh://git@github.com/FuelLabs/fuel-vm.git" }
 hex = { version = "0.4.3", default-features = false, features = ["std"] }
-Inflector = "0.11"
 itertools = "0.10.1"
 proc-macro2 = "1.0"
 quote = "1.0"
