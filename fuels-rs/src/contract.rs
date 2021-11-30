@@ -64,7 +64,14 @@ impl Contract {
         let script_data_offset = VM_TX_MEMORY + Transaction::script_offset() + script_len;
         let script_data_offset = script_data_offset as Immediate12;
 
-        // Script to call the contract
+        // Script to call the contract.
+        // The offset that points to the `script_data`
+        // is loaded at the register `0x10`. Note that
+        // we're picking `0x10` simply because
+        // it could be any non-reserved register.
+        // Then, we use the Opcode to call a contract: `CALL`
+        // pointing at the register that we loaded the
+        // `script_data` at.
         let script = vec![
             Opcode::ADDI(0x10, REG_ZERO, script_data_offset),
             Opcode::CALL(0x10, REG_ZERO, 0x10, REG_CGAS),
@@ -74,6 +81,8 @@ impl Contract {
         .iter()
         .copied()
         .collect::<Vec<u8>>();
+
+        assert!(script.len() == script_len, "Script length *must* be 16");
 
         // `script_data` consists of:
         // 1. The contract ID

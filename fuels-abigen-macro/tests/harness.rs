@@ -655,7 +655,6 @@ async fn create_nested_struct_from_decoded_tokens() {
 
 #[tokio::test]
 async fn example_workflow() {
-    // @todo continue from here. Perform some more clean-up, uncomment the tests above, etc.
     let rng = &mut StdRng::seed_from_u64(2322u64);
 
     // Generates the bindings from the an ABI definition inline.
