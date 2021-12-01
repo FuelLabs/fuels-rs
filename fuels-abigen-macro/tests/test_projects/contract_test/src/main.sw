@@ -1,19 +1,23 @@
 contract;
 
-use increment_abi::Incrementor;
 use std::storage::store_u64;
 use std::storage::get_u64;
 
-const key = 0x0000000000000000000000000000000000000000000000000000000000000000;
+abi TestContract {
+  fn initialize_counter(gas_: u64, amount_: u64, coin_: b256, value: u64) -> u64;
+  fn increment_counter(gas_: u64, amount_: u64, coin_: b256, amount: u64) -> u64;
+}
 
-impl Incrementor for Contract {
-  fn initialize(gas: u64, amt: u64, color: b256, initial_value: u64) -> u64 {
-    store_u64(key, initial_value);
-    initial_value
+const COUNTER_KEY = 0x0000000000000000000000000000000000000000000000000000000000000000;
+
+impl TestContract for Contract {
+  fn initialize_counter(gas_: u64, amount_: u64, color_: b256, value: u64) -> u64 {
+    store_u64(COUNTER_KEY, value);
+    value
   }
-  fn increment(gas: u64, amt: u64, color: b256, increment_by: u64) -> u64 {
-    let new_val = get_u64(key) + 1;
-    store_u64(key, new_val);
-    new_val
+  fn increment_counter(gas_: u64, amount_: u64, color_: b256, amount: u64) -> u64 {
+    let value = get_u64(COUNTER_KEY) + amount;
+    store_u64(COUNTER_KEY, value);
+    value
   }
 }

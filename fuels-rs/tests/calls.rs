@@ -90,6 +90,8 @@ async fn contract_call() {
 
     let receipts = Contract::call(
         contract_id,
+        None,
+        None,
         &fuel_client,
         utxo_id,
         balance_root,

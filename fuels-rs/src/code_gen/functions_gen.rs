@@ -93,6 +93,21 @@ fn expand_function_arguments(
     // 1. The name of the argument;
     // 2. The type of the argument;
     for (i, param) in fun.inputs.iter().enumerate() {
+        // This is a (likely) temporary workaround the fact that
+        // Sway ABI functions require gas, coin amount, and color arguments
+        // pre-pending the user-defined function arguments.
+        // Since these values (gas, coin, color) are configured elsewhere when
+        // creating a contract instance in the SDK, it would be noisy to keep them
+        // in the signature of the function that we're expanding here.
+        // It's the difference between being forced to write:
+        // contract_instance.increment_counter($gas, $coin, $color, 42)
+        // versus simply writing:
+        // contract_instance.increment_counter(42)
+        // Note that _any_ significant change in the way the JSON ABI is generated
+        // could affect this function expansion.
+        if param.name == "gas" || param.name == "coin" || param.name == "color" {
+            continue;
+        }
         // TokenStream representing the name of the argument
         let name = expand_input_name(i, &param.name);
 

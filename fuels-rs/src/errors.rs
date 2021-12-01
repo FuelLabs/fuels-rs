@@ -31,4 +31,6 @@ pub enum Error {
     TransactionError(String),
     #[error("Infrastructure error: {0}")]
     InfrastructureError(String),
+    #[error("Contract call error: {0}")]
+    ContractCallError(String),
 }

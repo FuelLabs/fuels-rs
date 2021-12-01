@@ -42,10 +42,11 @@ async fn compile_bindings_from_contract_file() {
 
     let encoded = format!(
         "{}{}",
-        contract_call.encoded_selector, contract_call.encoded_params
+        hex::encode(contract_call.encoded_selector),
+        hex::encode(contract_call.encoded_args)
     );
 
-    assert_eq!("0000000003b568d4000000000000002a000000000000000a", encoded);
+    assert_eq!("00000000c39ba1e9000000000000002a000000000000000a", encoded);
 }
 
 #[tokio::test]
@@ -88,7 +89,8 @@ async fn compile_bindings_from_inline_contract() {
 
     let encoded = format!(
         "{}{}",
-        contract_call.encoded_selector, contract_call.encoded_params
+        hex::encode(contract_call.encoded_selector),
+        hex::encode(contract_call.encoded_args)
     );
 
     assert_eq!("0000000003b568d4000000000000002a000000000000000a", encoded);
@@ -130,7 +132,8 @@ async fn compile_bindings_single_param() {
 
     let encoded = format!(
         "{}{}",
-        contract_call.encoded_selector, contract_call.encoded_params
+        hex::encode(contract_call.encoded_selector),
+        hex::encode(contract_call.encoded_args)
     );
 
     assert_eq!("000000009593586c000000000000002a", encoded);
@@ -170,7 +173,8 @@ async fn compile_bindings_array_input() {
 
     let encoded = format!(
         "{}{}",
-        contract_call.encoded_selector, contract_call.encoded_params
+        hex::encode(contract_call.encoded_selector),
+        hex::encode(contract_call.encoded_args)
     );
 
     assert_eq!(
@@ -213,7 +217,8 @@ async fn compile_bindings_bool_array_input() {
 
     let encoded = format!(
         "{}{}",
-        contract_call.encoded_selector, contract_call.encoded_params
+        hex::encode(contract_call.encoded_selector),
+        hex::encode(contract_call.encoded_args)
     );
 
     assert_eq!(
@@ -255,7 +260,8 @@ async fn compile_bindings_byte_input() {
 
     let encoded = format!(
         "{}{}",
-        contract_call.encoded_selector, contract_call.encoded_params
+        hex::encode(contract_call.encoded_selector),
+        hex::encode(contract_call.encoded_args)
     );
 
     assert_eq!("00000000a4bd3861000000000000000a", encoded);
@@ -294,7 +300,8 @@ async fn compile_bindings_string_input() {
 
     let encoded = format!(
         "{}{}",
-        contract_call.encoded_selector, contract_call.encoded_params
+        hex::encode(contract_call.encoded_selector),
+        hex::encode(contract_call.encoded_args)
     );
 
     assert_eq!(
@@ -341,7 +348,8 @@ async fn compile_bindings_b256_input() {
 
     let encoded = format!(
         "{}{}",
-        contract_call.encoded_selector, contract_call.encoded_params
+        hex::encode(contract_call.encoded_selector),
+        hex::encode(contract_call.encoded_args)
     );
 
     assert_eq!(
@@ -398,7 +406,8 @@ async fn compile_bindings_struct_input() {
 
     let encoded = format!(
         "{}{}",
-        contract_call.encoded_selector, contract_call.encoded_params
+        hex::encode(contract_call.encoded_selector),
+        hex::encode(contract_call.encoded_args)
     );
 
     assert_eq!("00000000f5957fce000000000000000a0000000000000001", encoded);
@@ -458,7 +467,8 @@ async fn compile_bindings_nested_struct_input() {
 
     let encoded = format!(
         "{}{}",
-        contract_call.encoded_selector, contract_call.encoded_params
+        hex::encode(contract_call.encoded_selector),
+        hex::encode(contract_call.encoded_args)
     );
 
     assert_eq!("00000000e8a04d9c000000000000000a0000000000000001", encoded);
@@ -507,7 +517,8 @@ async fn compile_bindings_enum_input() {
 
     let encoded = format!(
         "{}{}",
-        contract_call.encoded_selector, contract_call.encoded_params
+        hex::encode(contract_call.encoded_selector),
+        hex::encode(contract_call.encoded_args)
     );
 
     assert_eq!("000000009542a3c90000000000000000000000000000002a", encoded);
@@ -565,7 +576,8 @@ async fn create_struct_from_decoded_tokens() {
 
     let encoded = format!(
         "{}{}",
-        contract_call.encoded_selector, contract_call.encoded_params
+        hex::encode(contract_call.encoded_selector),
+        hex::encode(contract_call.encoded_args)
     );
 
     assert_eq!("00000000f5957fce000000000000000a0000000000000001", encoded);
@@ -634,7 +646,8 @@ async fn create_nested_struct_from_decoded_tokens() {
 
     let encoded = format!(
         "{}{}",
-        contract_call.encoded_selector, contract_call.encoded_params
+        hex::encode(contract_call.encoded_selector),
+        hex::encode(contract_call.encoded_args)
     );
 
     assert_eq!("00000000e8a04d9c000000000000000a0000000000000001", encoded);
@@ -654,11 +667,23 @@ async fn example_workflow() {
                 "type": "function",
                 "inputs": [
                     {
+                        "name": "gas",
+                        "type": "u64"
+                    },
+                    {
+                        "name": "coin",
+                        "type": "u64"
+                    },
+                    {
+                        "name": "color",
+                        "type": "b256"
+                    },
+                    {
                         "name": "arg",
                         "type": "u64"
                     }
                 ],
-                "name": "initialize",
+                "name": "initialize_counter",
                 "outputs": [
                     {
                         "name": "arg",
@@ -670,11 +695,23 @@ async fn example_workflow() {
                 "type": "function",
                 "inputs": [
                     {
+                        "name": "gas",
+                        "type": "u64"
+                    },
+                    {
+                        "name": "coin",
+                        "type": "u64"
+                    },
+                    {
+                        "name": "color",
+                        "type": "b256"
+                    },
+                    {
                         "name": "arg",
                         "type": "u64"
                     }
                 ],
-                "name": "increment",
+                "name": "increment_counter",
                 "outputs": [
                     {
                         "name": "arg",
@@ -693,26 +730,25 @@ async fn example_workflow() {
     let compiled =
         Contract::compile_sway_contract("tests/test_projects/contract_test", salt).unwrap();
 
-    // Launch local network and deploy contract to testnet.
-    // Note that if `false` was passed to `stop_node`,
-    // `launch_and_deploy` would return a child process
-    // and we would be responsible for killing this process once
-    // we're done with testing.
-    // This is useful in case of long-lived local tests, spanning
-    // across different contracts being deployed and interacted with in
-    // the same session.
-    let (fuel_client, contract_id) = Contract::launch_and_deploy(&compiled).await.unwrap();
+    let (client, contract_id) = Contract::launch_and_deploy(&compiled).await.unwrap();
 
     println!("Contract deployed @ {:x}", contract_id);
 
-    let contract_instance = MyContract::new(compiled, fuel_client);
+    let contract_instance = MyContract::new(compiled, client);
 
-    let contract_call = contract_instance.initialize(42);
+    let result = contract_instance
+        .initialize_counter(42) // Build the ABI call
+        .call() // Perform the network call
+        .await
+        .unwrap();
 
-    // Currently, contract calls are empty script calls.
-    // Soon it will be able to generate/craft the
-    // `script_data` on the fly and dynamically call a
-    // contract's function.
-    let res = contract_call.call().await.unwrap();
-    println!("res: {:?}\n", res);
+    assert_eq!(42, result.unwrap());
+
+    let result = contract_instance
+        .increment_counter(10)
+        .call()
+        .await
+        .unwrap();
+
+    assert_eq!(52, result.unwrap());
 }

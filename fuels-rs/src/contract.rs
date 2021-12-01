@@ -3,22 +3,19 @@ use crate::errors::Error;
 use crate::script::Script;
 use crate::tokens::{Detokenize, Token};
 use crate::types::Selector;
-use core_types::Function;
 use forc::test::{forc_build, BuildCommand};
 use forc::util::helpers::{find_manifest_dir, read_manifest};
 use fuel_asm::Opcode;
 use fuel_client::client::FuelClient;
 use fuel_core::service::{Config, FuelService};
 use fuel_tx::{ContractId, Input, Output, Receipt, Transaction};
-use fuel_types::{Address, Bytes32, Immediate12, Salt, Word};
-use fuel_vm::consts::{REG_ZERO, VM_TX_MEMORY};
+use fuel_types::{Bytes32, Immediate12, Salt, Word};
+use fuel_vm::consts::{REG_CGAS, REG_RET, REG_ZERO, VM_TX_MEMORY};
 use fuel_vm::prelude::Contract as FuelContract;
-use serde::{Deserialize, Serialize};
+use rand::rngs::StdRng;
+use rand::{Rng, SeedableRng};
 use std::marker::PhantomData;
-use std::mem;
 use std::path::PathBuf;
-
-const WORD_SIZE: usize = mem::size_of::<Word>();
 
 #[derive(Debug, Clone, Default)]
 pub struct CompiledContract {
@@ -50,6 +47,8 @@ impl Contract {
     /// and it doesn't, yet, call a specific ABI function in that contract.
     pub async fn call(
         contract_id: ContractId,
+        encoded_selector: Option<Selector>,
+        encoded_args: Option<Vec<u8>>,
         fuel_client: &FuelClient,
         utxo_id: Bytes32,
         balance_root: Bytes32,
@@ -59,38 +58,54 @@ impl Contract {
         gas_limit: Word,
         maturity: Word,
     ) -> Result<Vec<Receipt>, String> {
-        // Setup the script that will call a contract.
-        // Register `0x10` will hold the beginning of the `script_data`
-        // which will be computed below.
-        let mut script_ops = vec![
-            Opcode::ADDI(0x10, REG_ZERO, 0x00),
-            Opcode::ADDI(0x11, 0x10, ContractId::LEN as Immediate12),
-            Opcode::CALL(0x10, REG_ZERO, 0x10, 0x10),
-            Opcode::RET(0x30),
-        ];
+        // Based on the defined script length,
+        // we set the appropriate data offset.
+        let script_len = 16;
+        let script_data_offset = VM_TX_MEMORY + Transaction::script_offset() + script_len;
+        let script_data_offset = script_data_offset as Immediate12;
 
-        // @todo continue from here.
-        // Try deploying a contract with proper functions
-        // Then, try crafting `script_data` to contain
-        // the function selector and the arguments.
-        // Do it manually at first to validate that it works
-        // Then try and generalize it.
+        // Script to call the contract.
+        // The offset that points to the `script_data`
+        // is loaded at the register `0x10`. Note that
+        // we're picking `0x10` simply because
+        // it could be any non-reserved register.
+        // Then, we use the Opcode to call a contract: `CALL`
+        // pointing at the register that we loaded the
+        // `script_data` at.
+        let script = vec![
+            Opcode::ADDI(0x10, REG_ZERO, script_data_offset),
+            Opcode::CALL(0x10, REG_ZERO, 0x10, REG_CGAS),
+            Opcode::RET(REG_RET),
+            Opcode::NOOP,
+        ]
+        .iter()
+        .copied()
+        .collect::<Vec<u8>>();
 
-        let script = script_ops.iter().copied().collect();
+        assert!(script.len() == script_len, "Script length *must* be 16");
 
-        // To call a contract, `script_data` should be
-        // the ID of the contract we're trying to call
-        // followed by 2 words.
-        // Note that there are no arguments here yet. If we had,
-        // we'd be extending `script_data` with it at the end.
-        let mut script_data = contract_id.to_vec();
-        script_data.extend(&[0u8; WORD_SIZE * 2]);
+        // `script_data` consists of:
+        // 1. The contract ID
+        // 2. The function selector
+        // 3. The encoded arguments, in order
+        let mut script_data: Vec<u8> = vec![];
+        script_data.extend(contract_id.as_ref());
+
+        match encoded_selector {
+            Some(e) => script_data.extend(e),
+            None => (),
+        };
+
+        match encoded_args {
+            Some(e) => script_data.extend(e),
+            None => (),
+        };
 
         // Inputs/outputs
         let input = Input::contract(utxo_id, balance_root, state_root, contract_id);
         let output = Output::contract(input_index, balance_root, state_root);
 
-        let mut tx = Transaction::script(
+        let tx = Transaction::script(
             gas_price,
             gas_limit,
             maturity,
@@ -100,22 +115,6 @@ impl Contract {
             vec![output],
             vec![],
         );
-
-        // Now that we know the length of the transaction `tx`
-        // we can compute the script_data offset and update the script
-        // `script_ops` with the proper Opcode.
-        let script_data_offset = VM_TX_MEMORY + tx.script_data_offset().unwrap();
-        script_ops[0] = Opcode::ADDI(0x10, REG_ZERO, script_data_offset as Immediate12);
-
-        let script_mem: Vec<u8> = script_ops.iter().copied().collect();
-
-        // Update the `script` property of the transaction.
-        match &mut tx {
-            Transaction::Script { script, .. } => {
-                script.as_mut_slice().copy_from_slice(script_mem.as_slice())
-            }
-            _ => unreachable!(),
-        }
 
         let script = Script::new(tx);
 
@@ -143,41 +142,38 @@ impl Contract {
     ) -> Result<ContractCall<D>, Error> {
         let mut encoder = ABIEncoder::new();
 
-        let encoded_params = hex::encode(encoder.encode(args).unwrap());
-        let encoded_selector = hex::encode(signature);
+        let rng = &mut StdRng::seed_from_u64(2322u64);
 
-        // @todo soon, this method will make use of `self::call()`
-        // to craft a call to a contract's function.
-        // Right now this is an "empty" contract call.
-        let tx = Transaction::Script {
-            gas_price: 0,
-            gas_limit: 1_000_000,
-            maturity: 0,
-            receipts_root: Default::default(),
-            script: vec![],
-            script_data: vec![],
-            inputs: vec![Input::Coin {
-                utxo_id: Bytes32::new([0u8; 32]),
-                owner: Address::new([0u8; 32]),
-                amount: 1,
-                color: Default::default(),
-                witness_index: 0,
-                maturity: 0,
-                predicate: vec![],
-                predicate_data: vec![],
-            }],
-            outputs: vec![],
-            witnesses: vec![vec![].into()],
-            metadata: None,
-        };
+        let encoded_args = encoder.encode(args).unwrap();
+        let encoded_selector = signature;
+
+        // Temporarily generating these parameters here.
+        // Eventually we might want to take these from the caller.
+        let utxo_id: [u8; 32] = rng.gen();
+        let balance_root: [u8; 32] = rng.gen();
+        let state_root: [u8; 32] = rng.gen();
+
+        let utxo_id = Bytes32::from(utxo_id);
+        let balance_root = Bytes32::from(balance_root);
+        let state_root = Bytes32::from(state_root);
+        let gas_price = 0;
+        let gas_limit = 1_000_000;
+        let maturity = 0;
+        let input_index = 0;
 
         Ok(ContractCall {
             compiled_contract: compiled_contract.clone(),
-            encoded_params,
+            contract_id: Self::compute_contract_id(compiled_contract),
+            encoded_args,
+            gas_price,
+            gas_limit,
+            maturity,
             encoded_selector,
-            fuel_client: fuel_client.clone(), // cheap clone behind the Arc
-            tx,
-            function: None,
+            utxo_id,
+            balance_root,
+            state_root,
+            input_index,
+            fuel_client: fuel_client.clone(),
             datatype: PhantomData,
         })
     }
@@ -281,41 +277,60 @@ impl Contract {
     }
 }
 
-/// Parameters for sending a transaction
-#[derive(Clone, Default, Serialize, Deserialize, PartialEq, Eq, Debug)]
-pub struct TransactionRequest {
-    /// The compiled code of a contract OR the first 4 bytes of the hash of the
-    /// invoked method signature and encoded parameters. For details see Ethereum Contract ABI
-    pub data: Option<Vec<u8>>,
-    // More later
-}
-
 #[derive(Debug)]
 #[must_use = "contract calls do nothing unless you `call` them"]
 /// Helper for managing a transaction before submitting it to a node
 pub struct ContractCall<D> {
-    /// The raw transaction object
-    pub tx: Transaction,
-
     pub fuel_client: FuelClient,
-
     pub compiled_contract: CompiledContract,
-    /// The ABI of the function being called
-    pub function: Option<Function>, // Temporarily an option
-
+    pub encoded_args: Vec<u8>,
+    pub encoded_selector: Selector,
+    pub balance_root: Bytes32,
+    pub state_root: Bytes32,
+    pub utxo_id: Bytes32,
+    pub input_index: u8,
+    pub contract_id: ContractId,
+    pub gas_price: u64,
+    pub gas_limit: u64,
+    pub maturity: u64,
     pub datatype: PhantomData<D>,
-
-    pub encoded_params: String,
-    pub encoded_selector: String,
 }
 
 impl<D> ContractCall<D>
 where
     D: Detokenize,
 {
-    pub async fn call(self) -> Result<Vec<Receipt>, Error> {
-        let script = Script::new(self.tx);
+    pub async fn call(self) -> Result<Option<u64>, Error> {
+        let receipts = Contract::call(
+            self.contract_id,
+            Some(self.encoded_selector),
+            Some(self.encoded_args),
+            &self.fuel_client,
+            self.utxo_id,
+            self.balance_root,
+            self.state_root,
+            self.input_index,
+            self.gas_price,
+            self.gas_limit,
+            self.maturity,
+        )
+        .await
+        .unwrap();
 
-        Ok(script.call(&self.fuel_client).await.unwrap())
+        // @todo right now, we're returning whatever is logged in the Receipt's `val`.
+        // It would be more user-friendly to return only the value(s)
+        // wrapped in the type(s) that a given ABI function returns.
+        // This would be a QoL improvement and can be left as future improvements.
+
+        Ok(Self::get_receipt_value(&receipts))
+    }
+
+    fn get_receipt_value(receipts: &[Receipt]) -> Option<u64> {
+        for receipt in receipts {
+            if receipt.val().is_some() {
+                return receipt.val();
+            }
+        }
+        None
     }
 }
