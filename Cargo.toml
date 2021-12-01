@@ -2,6 +2,6 @@
 resolver = "2"
 members = [
     "fuels-abi-cli",
-    "fuels-rs",
     "fuels-abigen-macro",
+    "fuels-rs",
 ]
