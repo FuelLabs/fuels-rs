@@ -12,9 +12,9 @@ Rust SDK for Fuel. It can be used for a variety of things, including but not lim
 
 This section describes how to use the basic functionalities of the SDK.
 
-### Instantiating a fuel client
+### Instantiating a Fuel client
 
-You can instantiate a fuel client, pointing to a local fuel node by using [Fuel Core](https://github.com/FuelLabs/fuel-core): 
+You can instantiate a Fuel client, pointing to a local Fuel node by using [Fuel Core](https://github.com/FuelLabs/fuel-core):
 
 ```Rust
 use fuel_core::service::{Config, FuelService};
@@ -25,13 +25,13 @@ let server = FuelService::new_node(Config::local_node()).await.unwrap();
 let client = FuelClient::from(srv.bound_address);
 ```
 
-Alternatively, if you have a fuel node running separately, you can pass in the `SocketAddr` to `FuelClient::from()`.
+Alternatively, if you have a Fuel node running separately, you can pass in the `SocketAddr` to `FuelClient::from()`.
 
 It's important to setup this client, as it will be needed later when instantiating contracts. More on that on the section below.
 
 ### Compiling Sway code
 
-In order to instantiate fuel contracts in Rust, you'll also need to compile a Sway contract. Which is done with the SDK's `Contract`:
+In order to instantiate Fuel contracts in Rust, you'll also need to compile a Sway contract. Which is done with the SDK's `Contract`:
 
 ```Rust
 let salt: [u8; 32] = rng.gen();
@@ -39,7 +39,6 @@ let salt = Salt::from(salt);
 
 let compiled =
     Contract::compile_sway_contract("path/to/your/fuel/project", salt).unwrap();
-
 ```
 
 If you're running a `script` instead of a `contract`, use the SDK's `Script`:
@@ -52,7 +51,7 @@ let compiled =
 
 ### Deploying a Sway contract
 
-Once you have an instance of the fuel client and the compiled contract in hands, it's time to deploy it to a node:
+Once you have a Fuel node running and the compiled contract in hands, it's time to deploy the contract:
 
 ```Rust
 // Setup a local node
@@ -80,7 +79,7 @@ let salt = Salt::from(salt);
 let compiled =
     Contract::compile_sway_contract("path/to/your/fuel/project", salt).unwrap();
 
-// Now you get both the fuel client _and_ the contract_id back.
+// Now you get both the Fuel client _and_ the contract_id back.
 let (client, contract_id) = Contract::launch_and_deploy(&compiled).await.unwrap();
 ```
 
@@ -253,7 +252,7 @@ abigen!(
 
 ### Calling a Sway script
 
-In case you want to hand-craft a fuel transaction with a Sway script, you can use the SDK's `Script`:
+In case you want to hand-craft a Fuel transaction with a Sway script, you can use the SDK's `Script`:
 
 ```Rust
  let compiled =
