@@ -64,7 +64,7 @@ pub fn expand_internal_struct(name: &str, prop: &Property) -> Result<TokenStream
         }
     }
 
-    let name = ident(name);
+    let name = ident(&name.to_class_case());
 
     // Actual creation of the struct, using the inner TokenStreams from above
     // to produce the TokenStream that represents the whole struct + methods
@@ -103,7 +103,7 @@ pub fn expand_internal_enum(name: &str, prop: &Property) -> Result<TokenStream, 
     // creating an enum [`Token`].
     let mut enum_selector_builder = Vec::new();
 
-    let name = ident(name);
+    let name = ident(&name.to_class_case());
 
     for (discriminant, component) in components.iter().enumerate() {
         let field_name = ident(&component.name.to_class_case());
