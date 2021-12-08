@@ -32,7 +32,7 @@ pub fn expand_function(
     let name = safe_ident(&function.name);
     let fn_signature = abi_parser.build_fn_selector(&function.name, &function.inputs);
 
-    let encoded = ABIEncoder::encode_function_selector(fn_signature.as_bytes());
+    let encoded = ABIEncoder::encode_function_selector(fn_signature?.as_bytes());
 
     let tokenized_signature = expand_selector(encoded);
     let tokenized_output = expand_fn_outputs(&function.outputs)?;
@@ -177,11 +177,11 @@ fn expand_input_param(
             })
         }
         ParamType::Enum(_) => {
-            let ident = ident(&rust_enum_name.unwrap().name);
+            let ident = ident(&rust_enum_name.unwrap().name.to_class_case());
             Ok(quote! { #ident })
         }
         ParamType::Struct(_) => {
-            let ident = ident(&rust_struct_name.unwrap().name);
+            let ident = ident(&rust_struct_name.unwrap().name.to_class_case());
             Ok(quote! { #ident })
         }
         // Primitive type

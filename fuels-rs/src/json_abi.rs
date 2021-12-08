@@ -79,7 +79,7 @@ impl ABIParser {
         let entry = entry.unwrap();
 
         let mut encoder = ABIEncoder::new_with_fn_selector(
-            self.build_fn_selector(fn_name, &entry.inputs).as_bytes(),
+            self.build_fn_selector(fn_name, &entry.inputs)?.as_bytes(),
         );
 
         // Update the fn_selector field with the encoded selector.
@@ -472,7 +472,7 @@ impl ABIParser {
 
     /// Builds a string representation of a function selector,
     /// i.e: <fn_name>(<type_1>, <type_2>, ..., <type_n>)
-    pub fn build_fn_selector(&self, fn_name: &str, params: &[Property]) -> String {
+    pub fn build_fn_selector(&self, fn_name: &str, params: &[Property]) -> Result<String, Error> {
         let mut fn_selector = fn_name.to_owned().clone();
         let mut args = String::new();
         let mut types: Vec<&str> = Vec::new();
@@ -485,7 +485,24 @@ impl ABIParser {
                 arg.push_str(",");
             }
             args.push_str(&arg);
-            types.push(&params[i].type_field);
+
+            // Check for type name. It's either a custom type
+            // following the format `enum | struct <custom_type_name>`
+            // or a simple `type_name`.
+            // If it's custom, we want to store only the name
+            // of the custom type.
+            if params[i].type_field.contains("struct ") || params[i].type_field.contains("enum ") {
+                let custom_type_name: Vec<&str> = params[i].type_field.split(" ").collect();
+                if custom_type_name.len() != 2 {
+                    return Err(Error::InvalidName(format!(
+                        "Custom type should be defined as `struct <custom_type_name>. Found: {}",
+                        params[i].type_field
+                    )));
+                }
+                types.push(custom_type_name[1]);
+            } else {
+                types.push(&params[i].type_field);
+            }
         }
 
         let args = format!("({})", args);
@@ -493,7 +510,7 @@ impl ABIParser {
         // Replace the placeholders "($0, $1, ..., $n)" with the types
         fn_selector.push_str(&self.template_replace(&args, &types));
 
-        fn_selector
+        Ok(fn_selector)
     }
 
     fn template_replace(&self, template: &str, values: &[&str]) -> String {
@@ -563,11 +580,14 @@ pub fn parse_custom_type_param(param: &Property) -> Result<ParamType, Error> {
             ))
         }
     }
-    match &*param.type_field {
-        "struct" => return Ok(ParamType::Struct(params)),
-        "enum" => return Ok(ParamType::Enum(params)),
-        _ => return Err(Error::InvalidType(param.type_field.clone())),
+
+    if param.type_field.contains("struct ") {
+        return Ok(ParamType::Struct(params));
     }
+    if param.type_field.contains("enum ") {
+        return Ok(ParamType::Enum(params));
+    }
+    return Err(Error::InvalidType(param.type_field.clone()));
 }
 
 #[cfg(test)]
@@ -938,8 +958,8 @@ mod tests {
                 "type":"contract",
                 "inputs":[
                     {
-                        "name":"MyStruct",
-                        "type":"struct",
+                        "name":"my_struct",
+                        "type":"struct MyStruct",
                         "components": [
                             {
                                 "name": "foo",
@@ -969,7 +989,7 @@ mod tests {
             .unwrap();
         println!("encoded: {:?}\n", encoded);
 
-        let expected_encode = "00000000f5957fce000000000000002a0000000000000001";
+        let expected_encode = "00000000dba1aa14000000000000002a0000000000000001";
         assert_eq!(encoded, expected_encode);
     }
 
@@ -981,8 +1001,8 @@ mod tests {
                 "type":"contract",
                 "inputs":[
                     {
-                        "name":"MyNestedStruct",
-                        "type":"struct",
+                        "name":"my_nested_struct",
+                        "type":"struct MyNestedStruct",
                         "components": [
                             {
                                 "name": "x",
@@ -990,7 +1010,7 @@ mod tests {
                             },
                             {
                                 "name": "y",
-                                "type": "struct",
+                                "type": "struct Y",
                                 "components": [
                                     {
                                         "name":"a",
@@ -1023,7 +1043,7 @@ mod tests {
         println!("encoded: {:?}\n", encoded);
 
         let expected_encode =
-            "00000000e8a04d9c000000000000000a000000000000000100000000000000010000000000000002";
+            "0000000000b6189a000000000000000a000000000000000100000000000000010000000000000002";
         assert_eq!(encoded, expected_encode);
 
         let json_abi = r#"
@@ -1032,12 +1052,12 @@ mod tests {
                 "type":"contract",
                 "inputs":[
                     {
-                        "name":"MyNestedStruct",
-                        "type":"struct",
+                        "name":"my_nested_struct",
+                        "type":"struct MyNestedStruct",
                         "components": [
                             {
                                 "name": "x",
-                                "type": "struct",
+                                "type": "struct X",
                                 "components": [
                                     {
                                         "name":"a",
@@ -1070,7 +1090,7 @@ mod tests {
         println!("encoded: {:?}\n", encoded);
 
         let expected_encode =
-            "00000000e8a04d9c000000000000000100000000000000010000000000000002000000000000000a";
+            "0000000000b6189a000000000000000100000000000000010000000000000002000000000000000a";
         assert_eq!(encoded, expected_encode);
     }
 
@@ -1082,8 +1102,8 @@ mod tests {
                 "type":"contract",
                 "inputs":[
                     {
-                        "name":"MyEnum",
-                        "type":"enum",
+                        "name":"my_enum",
+                        "type":"enum MyEnum",
                         "components": [
                             {
                                 "name": "x",
@@ -1113,7 +1133,7 @@ mod tests {
             .unwrap();
         println!("encoded: {:?}\n", encoded);
 
-        let expected_encode = "000000009542a3c90000000000000000000000000000002a";
+        let expected_encode = "00000000f13c1c590000000000000000000000000000002a";
         assert_eq!(encoded, expected_encode);
     }
 }

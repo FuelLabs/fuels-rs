@@ -9,7 +9,6 @@ use crate::source::Source;
 use crate::utils::ident;
 use core_types::{JsonABI, Property};
 
-use inflector::Inflector;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
@@ -161,10 +160,10 @@ impl Abigen {
 
         for function in abi {
             for prop in &function.inputs {
-                if prop.type_field.eq_ignore_ascii_case(type_string) {
+                if prop.type_field.contains(type_string) {
                     // Top level struct
                     if !structs.contains_key(&prop.name) {
-                        structs.insert(prop.name.clone().to_class_case(), prop.clone());
+                        structs.insert(prop.name.clone(), prop.clone());
                     }
 
                     // Find inner structs in case of nested custom types
@@ -180,8 +179,7 @@ impl Abigen {
 
         for inner_struct in inner_structs {
             if !structs.contains_key(&inner_struct.name) {
-                let struct_name = inner_struct.name.to_class_case();
-                structs.insert(struct_name, inner_struct);
+                structs.insert(inner_struct.name.clone(), inner_struct);
             }
         }
 
@@ -192,7 +190,7 @@ impl Abigen {
     fn get_inner_custom_properties(prop: &Property, ty: &str) -> Vec<Property> {
         let mut props = Vec::new();
 
-        if prop.type_field.eq_ignore_ascii_case(ty) {
+        if prop.type_field.contains(ty) {
             props.push(prop.clone());
 
             for inner_prop in prop.components.as_ref().unwrap() {
@@ -275,8 +273,8 @@ mod tests {
                 "type":"contract",
                 "inputs":[
                     {
-                        "name":"MyStruct",
-                        "type":"struct",
+                        "name":"my_struct",
+                        "type":"struct MyStruct",
                         "components": [
                             {
                                 "name": "foo",
@@ -299,7 +297,7 @@ mod tests {
 
         assert_eq!(1, contract.custom_structs.len());
 
-        assert_eq!(true, contract.custom_structs.contains_key("MyStruct"));
+        assert_eq!(true, contract.custom_structs.contains_key("my_struct"));
 
         let bindings = contract.generate().unwrap();
         bindings.write(std::io::stdout()).unwrap();
@@ -313,8 +311,8 @@ mod tests {
                 "type":"contract",
                 "inputs":[
                 {
-                    "name":"MyNestedStruct",
-                    "type":"struct",
+                    "name":"my_nested_struct",
+                    "type":"struct MyNestedStruct",
                     "components":[
                     {
                         "name":"x",
@@ -322,7 +320,7 @@ mod tests {
                     },
                     {
                         "name":"inner_struct",
-                        "type":"struct",
+                        "type":"struct InnerStruct",
                         "components":[
                         {
                             "name":"a",
@@ -337,8 +335,8 @@ mod tests {
                     ]
                 },
                 {
-                    "name":"MySecondNestedStruct",
-                    "type":"struct",
+                    "name":"my_second_nested_struct",
+                    "type":"struct MySecondNestedStruct",
                     "components":[
                     {
                         "name":"x",
@@ -346,11 +344,11 @@ mod tests {
                     },
                     {
                         "name":"second_inner_struct",
-                        "type":"struct",
+                        "type":"struct SecondInnerStruct",
                         "components":[
                         {
                             "name":"third_inner_struct",
-                            "type":"struct",
+                            "type":"struct ThirdInnerStruct",
                             "components":[
                             {
                                 "name":"foo",
@@ -376,11 +374,11 @@ mod tests {
         assert_eq!(5, contract.custom_structs.len());
 
         let expected_custom_struct_names = vec![
-            "MyNestedStruct",
-            "InnerStruct",
-            "ThirdInnerStruct",
-            "SecondInnerStruct",
-            "MySecondNestedStruct",
+            "my_nested_struct",
+            "inner_struct",
+            "third_inner_struct",
+            "second_inner_struct",
+            "my_second_nested_struct",
         ];
 
         for name in expected_custom_struct_names {
@@ -399,8 +397,8 @@ mod tests {
                 "type":"contract",
                 "inputs":[
                     {
-                        "name":"MyEnum",
-                        "type":"enum",
+                        "name":"my_enum",
+                        "type":"enum MyEnum",
                         "components": [
                             {
                                 "name": "x",
@@ -424,7 +422,7 @@ mod tests {
         assert_eq!(1, contract.custom_enums.len());
         assert_eq!(0, contract.custom_structs.len());
 
-        assert_eq!(true, contract.custom_enums.contains_key("MyEnum"));
+        assert_eq!(true, contract.custom_enums.contains_key("my_enum"));
 
         let bindings = contract.generate().unwrap();
         bindings.write(std::io::stdout()).unwrap();

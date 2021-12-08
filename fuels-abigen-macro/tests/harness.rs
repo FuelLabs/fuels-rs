@@ -370,8 +370,8 @@ async fn compile_bindings_struct_input() {
                 "type":"contract",
                 "inputs":[
                     {
-                        "name":"MyStruct",
-                        "type":"struct",
+                        "name":"my_struct",
+                        "type":"struct MyStruct",
                         "components": [
                             {
                                 "name": "foo",
@@ -410,7 +410,7 @@ async fn compile_bindings_struct_input() {
         hex::encode(contract_call.encoded_args)
     );
 
-    assert_eq!("00000000f5957fce000000000000000a0000000000000001", encoded);
+    assert_eq!("00000000dba1aa14000000000000000a0000000000000001", encoded);
 }
 
 #[tokio::test]
@@ -425,8 +425,8 @@ async fn compile_bindings_nested_struct_input() {
                 "type":"contract",
                 "inputs":[
                     {
-                        "name":"MyNestedStruct",
-                        "type":"struct",
+                        "name":"my_nested_struct",
+                        "type":"struct MyNestedStruct",
                         "components": [
                             {
                                 "name": "x",
@@ -434,7 +434,7 @@ async fn compile_bindings_nested_struct_input() {
                             },
                             {
                                 "name": "inner_struct",
-                                "type": "struct",
+                                "type": "struct InnerStruct",
                                 "components": [
                                     {
                                         "name":"a",
@@ -471,7 +471,7 @@ async fn compile_bindings_nested_struct_input() {
         hex::encode(contract_call.encoded_args)
     );
 
-    assert_eq!("00000000e8a04d9c000000000000000a0000000000000001", encoded);
+    assert_eq!("0000000000b6189a000000000000000a0000000000000001", encoded);
 }
 
 #[tokio::test]
@@ -486,8 +486,8 @@ async fn compile_bindings_enum_input() {
                 "type":"contract",
                 "inputs":[
                     {
-                        "name":"MyEnum",
-                        "type":"enum",
+                        "name":"my_enum",
+                        "type":"enum MyEnum",
                         "components": [
                             {
                                 "name": "x",
@@ -521,7 +521,7 @@ async fn compile_bindings_enum_input() {
         hex::encode(contract_call.encoded_args)
     );
 
-    assert_eq!("000000009542a3c90000000000000000000000000000002a", encoded);
+    assert_eq!("00000000f13c1c590000000000000000000000000000002a", encoded);
 }
 
 #[tokio::test]
@@ -536,8 +536,8 @@ async fn create_struct_from_decoded_tokens() {
                 "type":"contract",
                 "inputs":[
                     {
-                        "name":"MyStruct",
-                        "type":"struct",
+                        "name":"my_struct",
+                        "type":"struct MyStruct",
                         "components": [
                             {
                                 "name": "foo",
@@ -580,7 +580,7 @@ async fn create_struct_from_decoded_tokens() {
         hex::encode(contract_call.encoded_args)
     );
 
-    assert_eq!("00000000f5957fce000000000000000a0000000000000001", encoded);
+    assert_eq!("00000000dba1aa14000000000000000a0000000000000001", encoded);
 }
 
 #[tokio::test]
@@ -595,8 +595,8 @@ async fn create_nested_struct_from_decoded_tokens() {
                 "type":"contract",
                 "inputs":[
                     {
-                        "name":"MyNestedStruct",
-                        "type":"struct",
+                        "name":"my_nested_struct",
+                        "type":"struct MyNestedStruct",
                         "components": [
                             {
                                 "name": "x",
@@ -604,7 +604,7 @@ async fn create_nested_struct_from_decoded_tokens() {
                             },
                             {
                                 "name": "inner_struct",
-                                "type": "struct",
+                                "type": "struct InnerStruct",
                                 "components": [
                                     {
                                         "name":"a",
@@ -650,7 +650,7 @@ async fn create_nested_struct_from_decoded_tokens() {
         hex::encode(contract_call.encoded_args)
     );
 
-    assert_eq!("00000000e8a04d9c000000000000000a0000000000000001", encoded);
+    assert_eq!("0000000000b6189a000000000000000a0000000000000001", encoded);
 }
 
 #[tokio::test]
@@ -719,7 +719,7 @@ async fn example_workflow() {
                     }
                 ]
             }
-        ] 
+        ]
         "#
     );
 
