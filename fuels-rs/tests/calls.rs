@@ -107,7 +107,7 @@ async fn contract_call() {
     assert_eq!(true, receipts.len() > 0);
 
     // Grab the receipt of type `Log`
-    let receipt = receipts[1];
+    let receipt = &receipts[1];
 
     assert_eq!(receipt.ra().expect("Receipt value failed"), 0x2a);
     assert_eq!(receipt.rb().expect("Receipt value failed"), 0x2a);
