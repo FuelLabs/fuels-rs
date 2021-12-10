@@ -1,6 +1,5 @@
 use hex::FromHex;
 use itertools::Itertools;
-use regex::{Captures, Regex};
 use std::convert::TryInto;
 use std::str;
 use std::str::FromStr;
@@ -473,57 +472,43 @@ impl ABIParser {
     /// Builds a string representation of a function selector,
     /// i.e: <fn_name>(<type_1>, <type_2>, ..., <type_n>)
     pub fn build_fn_selector(&self, fn_name: &str, params: &[Property]) -> Result<String, Error> {
-        let mut fn_selector = fn_name.to_owned().clone();
-        let mut args = String::new();
-        let mut types: Vec<&str> = Vec::new();
+        let fn_selector = fn_name.to_owned().clone();
 
-        // Start by building a template with placeholders "($0, $1, ..., $n)"
-        for i in 0..params.len() {
-            let mut arg = "$".to_owned();
-            arg.push_str(&i.to_string());
-            if i + 1 < params.len() {
-                arg.push_str(",");
-            }
-            args.push_str(&arg);
+        let mut result: String = format!("{}(", fn_selector);
 
-            // Check for type name. It's either a custom type
-            // following the format `enum | struct <custom_type_name>`
-            // or a simple `type_name`.
-            // If it's custom, we want to store only the name
-            // of the custom type.
-            if params[i].type_field.contains("struct ") || params[i].type_field.contains("enum ") {
-                let custom_type_name: Vec<&str> = params[i].type_field.split(" ").collect();
-                if custom_type_name.len() != 2 {
-                    return Err(Error::InvalidName(format!(
-                        "Custom type should be defined as `struct <custom_type_name>. Found: {}",
-                        params[i].type_field
-                    )));
-                }
-                types.push(custom_type_name[1]);
-            } else {
-                types.push(&params[i].type_field);
+        for (idx, param) in params.iter().enumerate() {
+            result.push_str(&self.build_fn_selector_params(param));
+            if idx + 1 < params.len() {
+                result.push(',');
             }
         }
 
-        let args = format!("({})", args);
+        result.push(')');
 
-        // Replace the placeholders "($0, $1, ..., $n)" with the types
-        fn_selector.push_str(&self.template_replace(&args, &types));
-
-        Ok(fn_selector)
+        Ok(result)
     }
 
-    fn template_replace(&self, template: &str, values: &[&str]) -> String {
-        let regex = Regex::new(r#"\$(\d+)"#).unwrap();
-        regex
-            .replace_all(template, |captures: &Captures| {
-                values.get(self.index(captures)).unwrap_or(&"")
-            })
-            .to_string()
-    }
+    fn build_fn_selector_params(&self, param: &Property) -> String {
+        let mut result: String = String::new();
 
-    fn index(&self, captures: &Captures) -> usize {
-        captures.get(1).unwrap().as_str().parse().unwrap()
+        if param.type_field.contains("struct ") || param.type_field.contains("enum ") {
+            // Custom type, need to break down inner fields
+            // Will return `"s(field_1,field_2,...,field_n)"`.
+            result.push_str("s(");
+
+            for (idx, component) in param.components.as_ref().unwrap().iter().enumerate() {
+                let res = self.build_fn_selector_params(component);
+                result.push_str(&res);
+
+                if idx + 1 < param.components.as_ref().unwrap().len() {
+                    result.push(',');
+                }
+            }
+            result.push(')');
+        } else {
+            result.push_str(&param.type_field);
+        }
+        result
     }
 }
 
@@ -989,7 +974,7 @@ mod tests {
             .unwrap();
         println!("encoded: {:?}\n", encoded);
 
-        let expected_encode = "00000000dba1aa14000000000000002a0000000000000001";
+        let expected_encode = "00000000cb0b2f05000000000000002a0000000000000001";
         assert_eq!(encoded, expected_encode);
     }
 
@@ -1043,7 +1028,7 @@ mod tests {
         println!("encoded: {:?}\n", encoded);
 
         let expected_encode =
-            "0000000000b6189a000000000000000a000000000000000100000000000000010000000000000002";
+            "00000000ff25eb48000000000000000a000000000000000100000000000000010000000000000002";
         assert_eq!(encoded, expected_encode);
 
         let json_abi = r#"
@@ -1090,7 +1075,7 @@ mod tests {
         println!("encoded: {:?}\n", encoded);
 
         let expected_encode =
-            "0000000000b6189a000000000000000100000000000000010000000000000002000000000000000a";
+            "000000007728cb9e000000000000000100000000000000010000000000000002000000000000000a";
         assert_eq!(encoded, expected_encode);
     }
 
@@ -1133,7 +1118,109 @@ mod tests {
             .unwrap();
         println!("encoded: {:?}\n", encoded);
 
-        let expected_encode = "00000000f13c1c590000000000000000000000000000002a";
+        let expected_encode = "00000000082e0dfa0000000000000000000000000000002a";
         assert_eq!(encoded, expected_encode);
+    }
+
+    #[test]
+    fn fn_selector_single_primitive() {
+        let abi = ABIParser::new();
+        let p = Property {
+            name: "foo".into(),
+            type_field: "u64".into(),
+            components: None,
+        };
+        let params = vec![p];
+        let selector = abi.build_fn_selector("my_func", &params).unwrap();
+
+        assert_eq!(selector, "my_func(u64)");
+    }
+
+    #[test]
+    fn fn_selector_multiple_primitives() {
+        let abi = ABIParser::new();
+        let p1 = Property {
+            name: "foo".into(),
+            type_field: "u64".into(),
+            components: None,
+        };
+        let p2 = Property {
+            name: "bar".into(),
+            type_field: "bool".into(),
+            components: None,
+        };
+        let params = vec![p1, p2];
+        let selector = abi.build_fn_selector("my_func", &params).unwrap();
+
+        assert_eq!(selector, "my_func(u64,bool)");
+    }
+
+    #[test]
+    fn fn_selector_custom_type() {
+        let abi = ABIParser::new();
+
+        let inner_foo = Property {
+            name: "foo".into(),
+            type_field: "bool".into(),
+            components: None,
+        };
+
+        let inner_bar = Property {
+            name: "bar".into(),
+            type_field: "u64".into(),
+            components: None,
+        };
+
+        let p = Property {
+            name: "my_struct".into(),
+            type_field: "struct MyStruct".into(),
+            components: Some(vec![inner_foo, inner_bar]),
+        };
+
+        let params = vec![p];
+        let selector = abi.build_fn_selector("my_func", &params).unwrap();
+
+        assert_eq!(selector, "my_func(s(bool,u64))");
+    }
+
+    #[test]
+    fn fn_selector_nested_custom_type() {
+        let abi = ABIParser::new();
+
+        let inner_foo = Property {
+            name: "foo".into(),
+            type_field: "bool".into(),
+            components: None,
+        };
+
+        let inner_a = Property {
+            name: "a".into(),
+            type_field: "u64".into(),
+            components: None,
+        };
+
+        let inner_b = Property {
+            name: "b".into(),
+            type_field: "u32".into(),
+            components: None,
+        };
+
+        let inner_bar = Property {
+            name: "bar".into(),
+            type_field: "struct InnerStruct".into(),
+            components: Some(vec![inner_a, inner_b]),
+        };
+
+        let p = Property {
+            name: "my_struct".into(),
+            type_field: "struct MyStruct".into(),
+            components: Some(vec![inner_foo, inner_bar]),
+        };
+
+        let params = vec![p];
+        println!("params: {:?}\n", params);
+        let selector = abi.build_fn_selector("my_func", &params).unwrap();
+
+        assert_eq!(selector, "my_func(s(bool,s(u64,u32)))");
     }
 }
