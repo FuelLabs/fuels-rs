@@ -410,7 +410,7 @@ async fn compile_bindings_struct_input() {
         hex::encode(contract_call.encoded_args)
     );
 
-    assert_eq!("00000000dba1aa14000000000000000a0000000000000001", encoded);
+    assert_eq!("00000000cb0b2f05000000000000000a0000000000000001", encoded);
 }
 
 #[tokio::test]
@@ -471,7 +471,7 @@ async fn compile_bindings_nested_struct_input() {
         hex::encode(contract_call.encoded_args)
     );
 
-    assert_eq!("0000000000b6189a000000000000000a0000000000000001", encoded);
+    assert_eq!("0000000088bf8a1b000000000000000a0000000000000001", encoded);
 }
 
 #[tokio::test]
@@ -521,7 +521,7 @@ async fn compile_bindings_enum_input() {
         hex::encode(contract_call.encoded_args)
     );
 
-    assert_eq!("00000000f13c1c590000000000000000000000000000002a", encoded);
+    assert_eq!("00000000082e0dfa0000000000000000000000000000002a", encoded);
 }
 
 #[tokio::test]
@@ -580,7 +580,7 @@ async fn create_struct_from_decoded_tokens() {
         hex::encode(contract_call.encoded_args)
     );
 
-    assert_eq!("00000000dba1aa14000000000000000a0000000000000001", encoded);
+    assert_eq!("00000000cb0b2f05000000000000000a0000000000000001", encoded);
 }
 
 #[tokio::test]
@@ -650,7 +650,7 @@ async fn create_nested_struct_from_decoded_tokens() {
         hex::encode(contract_call.encoded_args)
     );
 
-    assert_eq!("0000000000b6189a000000000000000a0000000000000001", encoded);
+    assert_eq!("0000000088bf8a1b000000000000000a0000000000000001", encoded);
 }
 
 #[tokio::test]
