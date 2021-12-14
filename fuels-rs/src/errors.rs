@@ -1,4 +1,5 @@
 use core::str::Utf8Error;
+use fuels_core::errors::CodecError;
 use thiserror::Error;
 pub type Result<T> = core::result::Result<T, Error>;
 use std::net;
@@ -33,4 +34,13 @@ pub enum Error {
     InfrastructureError(String),
     #[error("Contract call error: {0}")]
     ContractCallError(String),
+}
+
+impl From<CodecError> for Error {
+    fn from(err: CodecError) -> Error {
+        match err {
+            CodecError::InvalidData => Error::InvalidData,
+            CodecError::Utf8Error(e) => Error::Utf8Error(e),
+        }
+    }
 }

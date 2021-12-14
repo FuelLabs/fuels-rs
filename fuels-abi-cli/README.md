@@ -16,6 +16,7 @@ FLAGS:
     -V, --version    Prints version information
 
 SUBCOMMANDS:
+    codegen   Output Rust types file
     decode    Decode ABI call result
     encode    Encode ABI call
     help      Prints this message or the help of the given subcommand(s)

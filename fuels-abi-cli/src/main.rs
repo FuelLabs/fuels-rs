@@ -1,18 +1,33 @@
 use core_types::Property;
+use fuels_core::ParamType;
+use fuels_rs::code_gen::abigen::Abigen;
 use fuels_rs::json_abi::parse_param;
 use fuels_rs::json_abi::ABIParser;
-use fuels_rs::types::ParamType;
 
 use std::fs;
+use std::path::PathBuf;
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
 /// Sway/Fuel ABI coder.
 enum Opt {
+    /// Output Rust types file.
+    Codegen(Codegen),
     /// Encode ABI call.
     Encode(Encode),
     /// Decode ABI call result.
     Decode(Decode),
+}
+
+#[derive(StructOpt, Debug)]
+struct Codegen {
+    name: String,
+    #[structopt(parse(from_os_str))]
+    input: PathBuf,
+    #[structopt(parse(from_os_str))]
+    output: Option<PathBuf>,
+    #[structopt(short = "n", long = "no-std")]
+    no_std: bool,
 }
 
 #[derive(StructOpt, Debug)]
@@ -63,6 +78,7 @@ where
     let opt = Opt::from_iter(args);
 
     match opt {
+        Opt::Codegen(code) => code_gen(code),
         Opt::Encode(Encode::Function {
             abi_path,
             function_name,
@@ -77,6 +93,30 @@ where
             data,
         }) => decode_call_output(&abi_path, &function_name, &data),
     }
+}
+
+fn code_gen(code: Codegen) -> anyhow::Result<String> {
+    let Codegen {
+        name,
+        input,
+        output,
+        no_std,
+    } = code;
+
+    let contract = fs::read_to_string(input)?;
+    let mut abi = Abigen::new(&name, contract)?;
+
+    if no_std {
+        abi = abi.no_std();
+    }
+
+    let c = abi.generate()?;
+
+    let outfile = output.unwrap_or("./abi_code.rs".into());
+    let mut f = fs::File::create(outfile)?;
+    c.write(&mut f)?;
+
+    Ok("File generated".into())
 }
 
 fn encode_params(params: &[String]) -> anyhow::Result<String> {

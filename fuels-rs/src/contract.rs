@@ -1,8 +1,6 @@
 use crate::abi_encoder::ABIEncoder;
 use crate::errors::Error;
 use crate::script::Script;
-use crate::tokens::{Detokenize, Token};
-use crate::types::Selector;
 use forc::test::{forc_build, BuildCommand};
 use forc::util::helpers::{find_manifest_dir, read_manifest};
 use fuel_asm::Opcode;
@@ -12,6 +10,7 @@ use fuel_tx::{ContractId, Input, Output, Receipt, Transaction};
 use fuel_types::{Bytes32, Immediate12, Salt, Word};
 use fuel_vm::consts::{REG_CGAS, REG_RET, REG_ZERO, VM_TX_MEMORY};
 use fuel_vm::prelude::Contract as FuelContract;
+use fuels_core::{Detokenize, Selector, Token};
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 use std::marker::PhantomData;

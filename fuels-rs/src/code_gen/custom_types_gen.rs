@@ -1,8 +1,9 @@
 use crate::errors::Error;
 use crate::json_abi::parse_param;
-use crate::types::{expand_type, ParamType};
+use crate::types::expand_type;
 use crate::utils::ident;
 use core_types::Property;
+use fuels_core::ParamType;
 use inflector::Inflector;
 use proc_macro2::TokenStream;
 use quote::quote;
@@ -22,6 +23,7 @@ pub fn expand_internal_struct(name: &str, prop: &Property) -> Result<TokenStream
     // Holds a TokenStream representing the process of
     // creating a [`Token`] and pushing it a vector of Tokens.
     let mut struct_fields_tokens = Vec::new();
+    let mut param_types = Vec::new();
 
     // Holds the TokenStream representing the process
     // of creating a Self struct from each `Token`.
@@ -43,6 +45,7 @@ pub fn expand_internal_struct(name: &str, prop: &Property) -> Result<TokenStream
                 fields.push(quote! {pub #field_name: #component_name});
                 args.push(quote! {#field_name: #component_name::new_from_tokens(&tokens[#idx..])});
                 struct_fields_tokens.push(quote! { tokens.push(self.#field_name.into_token()) });
+                param_types.push(quote! { types.push(#component_name::param_types()) });
             }
             // Elementary type
             _ => {
@@ -54,12 +57,13 @@ pub fn expand_internal_struct(name: &str, prop: &Property) -> Result<TokenStream
 
                 // `new_from_token()` instantiations
                 args.push(quote! {
-                    #field_name: #ty::from_token(tokens[#idx].clone()).expect("Failed to run `new_from_tokens()` for custom struct, make sure to pass tokens in the right order and right types" )
+                    #field_name: <#ty>::from_token(tokens[#idx].clone()).expect("Failed to run `new_from_tokens()` for custom struct, make sure to pass tokens in the right order and right types" )
                 });
 
                 // Token creation and insertion
                 struct_fields_tokens
-                    .push(quote! {tokens.push(Token::#param_type_string(self.#field_name))})
+                    .push(quote! {tokens.push(Token::#param_type_string(self.#field_name))});
+                param_types.push(quote! { types.push(ParamType::#param_type_string) });
             }
         }
     }
@@ -76,6 +80,12 @@ pub fn expand_internal_struct(name: &str, prop: &Property) -> Result<TokenStream
         }
 
         impl #name {
+            pub fn param_types() -> ParamType {
+                let mut types = Vec::new();
+                #( #param_types; )*
+                ParamType::Struct(types)
+            }
+
             pub fn into_token(self) -> Token {
                 let mut tokens = Vec::new();
                 #( #struct_fields_tokens; )*

@@ -28,6 +28,9 @@ pub struct Abigen {
 
     /// Format the code using a locally installed copy of `rustfmt`.
     rustfmt: bool,
+
+    /// Generate no-std safe code
+    no_std: bool,
 }
 
 enum CustomType {
@@ -48,7 +51,13 @@ impl Abigen {
             contract_name: ident(contract_name),
             abi_parser: ABIParser::new(),
             rustfmt: true,
+            no_std: false,
         })
+    }
+
+    pub fn no_std(mut self) -> Self {
+        self.no_std = true;
+        self
     }
 
     /// Generates the contract bindings.
@@ -79,6 +88,36 @@ impl Abigen {
         let abi_structs = self.abi_structs()?;
         let abi_enums = self.abi_enums()?;
 
+        let (includes, code) = if self.no_std {
+            (
+                quote! {
+                    use alloc::vec::Vec;
+                },
+                quote! {},
+            )
+        } else {
+            (
+                quote! {
+                    use fuels_rs::contract::{Contract, ContractCall, CompiledContract};
+                    use fuel_client::client::FuelClient;
+                },
+                quote! {
+                    pub struct #name {
+                        compiled: CompiledContract,
+                        fuel_client: FuelClient
+                    }
+
+                    impl #name {
+                        pub fn new(compiled: CompiledContract, fuel_client: FuelClient) -> Self {
+                            Self{ compiled, fuel_client }
+                        }
+
+                        #contract_functions
+                    }
+                },
+            )
+        };
+
         Ok(quote! {
             pub use #name_mod::*;
 
@@ -88,23 +127,10 @@ impl Abigen {
                 #![allow(dead_code)]
                 #![allow(unused_imports)]
 
-                use fuels_rs::contract::{Contract, ContractCall, CompiledContract};
-                use fuels_rs::tokens::{Tokenizable, Token};
-                use fuels_rs::types::{EnumSelector};
-                use fuel_client::client::FuelClient;
+                #includes
+                use fuels_core::{EnumSelector, ParamType, Tokenizable, Token};
 
-                pub struct #name {
-                    compiled: CompiledContract,
-                    fuel_client: FuelClient
-                }
-
-                impl #name {
-                    pub fn new(compiled: CompiledContract, fuel_client: FuelClient) -> Self {
-                        Self{ compiled, fuel_client }
-                    }
-
-                    #contract_functions
-                }
+                #code
 
                 #abi_structs
                 #abi_enums

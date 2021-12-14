@@ -2,9 +2,10 @@ use crate::abi_encoder::ABIEncoder;
 use crate::code_gen::docs_gen::expand_doc;
 use crate::errors::Error;
 use crate::json_abi::{parse_param, ABIParser};
-use crate::types::{expand_type, ParamType, Selector};
+use crate::types::expand_type;
 use crate::utils::{ident, safe_ident};
 use core_types::{Function, Property};
+use fuels_core::{ParamType, Selector};
 use inflector::Inflector;
 
 use proc_macro2::{Literal, TokenStream};

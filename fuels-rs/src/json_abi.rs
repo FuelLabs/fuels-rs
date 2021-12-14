@@ -1,13 +1,10 @@
+use crate::{abi_decoder::ABIDecoder, abi_encoder::ABIEncoder, errors::Error};
+use fuels_core::{ParamType, Token};
 use hex::FromHex;
 use itertools::Itertools;
 use std::convert::TryInto;
 use std::str;
 use std::str::FromStr;
-
-use crate::{
-    abi_decoder::ABIDecoder, abi_encoder::ABIEncoder, errors::Error, tokens::Token,
-    types::ParamType,
-};
 
 use core_types::{JsonABI, Property};
 
@@ -566,10 +563,10 @@ pub fn parse_custom_type_param(param: &Property) -> Result<ParamType, Error> {
         }
     }
 
-    if param.type_field.contains("struct ") {
+    if param.type_field.contains("struct") {
         return Ok(ParamType::Struct(params));
     }
-    if param.type_field.contains("enum ") {
+    if param.type_field.contains("enum") {
         return Ok(ParamType::Enum(params));
     }
     return Err(Error::InvalidType(param.type_field.clone()));
