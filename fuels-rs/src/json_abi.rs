@@ -1,12 +1,10 @@
+use crate::{abi_decoder::ABIDecoder, abi_encoder::ABIEncoder, errors::Error};
+use fuels_core::{ParamType, Token};
 use hex::FromHex;
 use itertools::Itertools;
 use std::convert::TryInto;
 use std::str;
 use std::str::FromStr;
-use fuels_core::{ParamType, Token};
-use crate::{
-    abi_decoder::ABIDecoder, abi_encoder::ABIEncoder, errors::Error,
-};
 
 use core_types::{JsonABI, Property};
 

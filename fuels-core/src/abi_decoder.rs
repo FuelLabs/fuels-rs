@@ -1,8 +1,8 @@
-use crate::{Bits256, ByteArray, ParamType, Token, WORD_SIZE};
 use crate::errors::CodecError;
-use fuel_types::bytes::padded_len;
+use crate::{Bits256, ByteArray, ParamType, Token, WORD_SIZE};
 use core::convert::TryInto;
 use core::str;
+use fuel_types::bytes::padded_len;
 
 #[derive(Debug, Clone)]
 struct DecodeResult {
@@ -23,7 +23,11 @@ impl ABIDecoder {
     /// Note that the order of the types in the `types` array needs to match the order
     /// of the expected values/types in `data`.
     /// You can find comprehensive examples in the tests for this module.
-    pub fn decode<'a>(&mut self, types: &[ParamType], data: &'a [u8]) -> Result<Vec<Token>, CodecError> {
+    pub fn decode<'a>(
+        &mut self,
+        types: &[ParamType],
+        data: &'a [u8],
+    ) -> Result<Vec<Token>, CodecError> {
         let mut tokens: Vec<Token> = Vec::new();
         let mut offset = 0;
         for param in types {

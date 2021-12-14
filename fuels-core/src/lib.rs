@@ -14,7 +14,6 @@ pub type Bits256 = [u8; 32];
 pub type EnumSelector = (u8, Token);
 pub const WORD_SIZE: usize = core::mem::size_of::<Word>();
 
-
 #[derive(Debug, Clone, EnumString, ToString, PartialEq, Eq)]
 #[strum(ascii_case_insensitive)]
 pub enum ParamType {

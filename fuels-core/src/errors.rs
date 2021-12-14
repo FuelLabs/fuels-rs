@@ -18,4 +18,3 @@ impl From<Utf8Error> for CodecError {
         CodecError::Utf8Error(e)
     }
 }
-

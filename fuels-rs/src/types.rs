@@ -5,7 +5,6 @@ use quote::quote;
 
 use fuels_core::ParamType;
 
-
 /// Expands a [`ParamType`] into a TokenStream.
 /// Used to expand functions when generating type-safe bindings of a JSON ABI.
 pub fn expand_type(kind: &ParamType) -> Result<TokenStream, Error> {

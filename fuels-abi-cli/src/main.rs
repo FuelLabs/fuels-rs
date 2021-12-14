@@ -1,8 +1,8 @@
 use core_types::Property;
+use fuels_core::ParamType;
 use fuels_rs::code_gen::abigen::Abigen;
 use fuels_rs::json_abi::parse_param;
 use fuels_rs::json_abi::ABIParser;
-use fuels_core::ParamType;
 
 use std::fs;
 use std::path::PathBuf;
@@ -96,7 +96,12 @@ where
 }
 
 fn code_gen(code: Codegen) -> anyhow::Result<String> {
-    let Codegen { name, input, output, no_std } = code;
+    let Codegen {
+        name,
+        input,
+        output,
+        no_std,
+    } = code;
 
     let contract = fs::read_to_string(input)?;
     let mut abi = Abigen::new(&name, contract)?;

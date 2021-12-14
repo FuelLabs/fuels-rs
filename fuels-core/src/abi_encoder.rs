@@ -1,6 +1,6 @@
-use sha2::{Digest, Sha256};
-use crate::{ByteArray, Token, pad_u8, pad_u16, pad_u32, pad_string};
 use crate::errors::CodecError;
+use crate::{pad_string, pad_u16, pad_u32, pad_u8, ByteArray, Token};
+use sha2::{Digest, Sha256};
 
 pub struct ABIEncoder {
     pub function_selector: ByteArray,
@@ -43,9 +43,7 @@ impl ABIEncoder {
                     // Recursively encode the array of Tokens
                     self.encode(arg_array)?;
                 }
-                Token::String(arg_string) => {
-                    self.encoded_args.extend(pad_string(arg_string))
-                }
+                Token::String(arg_string) => self.encoded_args.extend(pad_string(arg_string)),
                 Token::Struct(arg_struct) => {
                     for property in arg_struct.into_iter() {
                         self.encode(&[property.to_owned()])?;

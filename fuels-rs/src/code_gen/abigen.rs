@@ -93,7 +93,7 @@ impl Abigen {
                 quote! {
                     use alloc::vec::Vec;
                 },
-                quote! {}
+                quote! {},
             )
         } else {
             (

@@ -38,9 +38,9 @@ pub enum Error {
 
 impl From<CodecError> for Error {
     fn from(err: CodecError) -> Error {
-       match err {
-           CodecError::InvalidData => Error::InvalidData,
-           CodecError::Utf8Error(e) => Error::Utf8Error(e),
-       }
+        match err {
+            CodecError::InvalidData => Error::InvalidData,
+            CodecError::Utf8Error(e) => Error::Utf8Error(e),
+        }
     }
 }
