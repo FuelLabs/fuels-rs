@@ -1,9 +1,6 @@
-use crate::tokens::Token;
-use crate::types;
 use sha2::{Digest, Sha256};
-use types::ByteArray;
-
-use crate::errors::Error;
+use crate::{ByteArray, Token, pad_u8, pad_u16, pad_u32, pad_string};
+use crate::errors::CodecError;
 
 pub struct ABIEncoder {
     pub function_selector: ByteArray,
@@ -29,17 +26,17 @@ impl ABIEncoder {
     /// raw bytes (as a Vec<u8>) that represent the encoded tokens.
     /// The encoding follows the ABI specs defined
     /// [here](https://github.com/FuelLabs/fuel-specs/blob/master/specs/protocol/abi.md)
-    pub fn encode(&mut self, args: &[Token]) -> Result<Vec<u8>, Error> {
+    pub fn encode(&mut self, args: &[Token]) -> Result<Vec<u8>, CodecError> {
         for arg in args {
             match arg {
-                Token::U8(arg_u8) => self.encoded_args.extend(types::pad_u8(arg_u8)),
-                Token::U16(arg_u16) => self.encoded_args.extend(types::pad_u16(arg_u16)),
-                Token::U32(arg_u32) => self.encoded_args.extend(types::pad_u32(arg_u32)),
+                Token::U8(arg_u8) => self.encoded_args.extend(pad_u8(arg_u8)),
+                Token::U16(arg_u16) => self.encoded_args.extend(pad_u16(arg_u16)),
+                Token::U32(arg_u32) => self.encoded_args.extend(pad_u32(arg_u32)),
                 Token::U64(arg_u64) => self.encoded_args.extend(arg_u64.to_be_bytes()),
-                Token::Byte(arg_byte) => self.encoded_args.extend(types::pad_u8(arg_byte)),
+                Token::Byte(arg_byte) => self.encoded_args.extend(pad_u8(arg_byte)),
                 Token::Bool(arg_bool) => {
                     self.encoded_args
-                        .extend(types::pad_u8(if *arg_bool { &1 } else { &0 }))
+                        .extend(pad_u8(if *arg_bool { &1 } else { &0 }))
                 }
                 Token::B256(arg_bits256) => self.encoded_args.extend(arg_bits256),
                 Token::Array(arg_array) => {
@@ -47,7 +44,7 @@ impl ABIEncoder {
                     self.encode(arg_array)?;
                 }
                 Token::String(arg_string) => {
-                    self.encoded_args.extend(types::pad_string(arg_string))
+                    self.encoded_args.extend(pad_string(arg_string))
                 }
                 Token::Struct(arg_struct) => {
                     for property in arg_struct.into_iter() {
@@ -56,7 +53,7 @@ impl ABIEncoder {
                 }
                 Token::Enum(arg_enum) => {
                     // Encode the discriminant of the enum
-                    self.encoded_args.extend(types::pad_u8(&arg_enum.0));
+                    self.encoded_args.extend(pad_u8(&arg_enum.0));
                     // Encode the Token within the enum
                     self.encode(&[arg_enum.1.to_owned()])?;
                 }
@@ -70,7 +67,7 @@ impl ABIEncoder {
         hasher.update(signature);
         let result = hasher.finalize();
 
-        let mut output = types::ByteArray::default();
+        let mut output = ByteArray::default();
 
         (&mut output[4..]).copy_from_slice(&result[..4]);
 

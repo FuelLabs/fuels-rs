@@ -1,8 +1,7 @@
 use crate::abi_encoder::ABIEncoder;
 use crate::errors::Error;
 use crate::script::Script;
-use crate::tokens::{Detokenize, Token};
-use crate::types::Selector;
+use fuels_core::{Detokenize, Selector, Token};
 use forc::test::{forc_build, BuildCommand};
 use forc::util::helpers::{find_manifest_dir, read_manifest};
 use fuel_asm::Opcode;

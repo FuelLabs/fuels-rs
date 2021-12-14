@@ -7,6 +7,7 @@ edition = "2018"
 [dependencies]
 anyhow = "1"
 core-types = { git = "ssh://git@github.com/FuelLabs/sway.git" }
+fuels-core = { path = "../fuels-core" }
 fuels-rs = { path = "../fuels-rs" }
 hex = "0.4"
 itertools = "0.10"

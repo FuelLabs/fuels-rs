@@ -3,7 +3,7 @@ use fuel_core::service::{Config, FuelService};
 use fuel_tx::Salt;
 use fuels_abigen_macro::abigen;
 use fuels_rs::contract::Contract;
-use fuels_rs::tokens::Token;
+use fuels_core::Token;
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 use sha2::{Digest, Sha256};

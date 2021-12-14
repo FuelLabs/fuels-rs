@@ -1,9 +1,8 @@
-use crate::errors::Error;
-use crate::tokens::Token;
-use crate::types::{Bits256, ByteArray, ParamType, WORD_SIZE};
+use crate::{Bits256, ByteArray, ParamType, Token, WORD_SIZE};
+use crate::errors::CodecError;
 use fuel_types::bytes::padded_len;
-use std::convert::TryInto;
-use std::str;
+use core::convert::TryInto;
+use core::str;
 
 #[derive(Debug, Clone)]
 struct DecodeResult {
@@ -24,7 +23,7 @@ impl ABIDecoder {
     /// Note that the order of the types in the `types` array needs to match the order
     /// of the expected values/types in `data`.
     /// You can find comprehensive examples in the tests for this module.
-    pub fn decode<'a>(&mut self, types: &[ParamType], data: &'a [u8]) -> Result<Vec<Token>, Error> {
+    pub fn decode<'a>(&mut self, types: &[ParamType], data: &'a [u8]) -> Result<Vec<Token>, CodecError> {
         let mut tokens: Vec<Token> = Vec::new();
         let mut offset = 0;
         for param in types {
@@ -41,7 +40,7 @@ impl ABIDecoder {
         param: &ParamType,
         data: &'a [u8],
         offset: usize,
-    ) -> Result<DecodeResult, Error> {
+    ) -> Result<DecodeResult, CodecError> {
         match &*param {
             ParamType::U8 => {
                 let slice = peek_word(data, offset)?;
@@ -184,15 +183,15 @@ impl ABIDecoder {
     }
 }
 
-fn peek(data: &[u8], offset: usize, len: usize) -> Result<&[u8], Error> {
+fn peek(data: &[u8], offset: usize, len: usize) -> Result<&[u8], CodecError> {
     if offset + len > data.len() {
-        Err(Error::InvalidData)
+        Err(CodecError::InvalidData)
     } else {
         Ok(&data[offset..(offset + len)])
     }
 }
 
-fn peek_word(data: &[u8], offset: usize) -> Result<ByteArray, Error> {
+fn peek_word(data: &[u8], offset: usize) -> Result<ByteArray, CodecError> {
     peek(data, offset, WORD_SIZE as usize).map(|x| {
         let mut out: ByteArray = [0u8; 8];
         out.copy_from_slice(&x[0..8]);
