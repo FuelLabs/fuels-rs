@@ -57,7 +57,7 @@ pub fn expand_internal_struct(name: &str, prop: &Property) -> Result<TokenStream
 
                 // `new_from_token()` instantiations
                 args.push(quote! {
-                    #field_name: #ty::from_token(tokens[#idx].clone()).expect("Failed to run `new_from_tokens()` for custom struct, make sure to pass tokens in the right order and right types" )
+                    #field_name: <#ty>::from_token(tokens[#idx].clone()).expect("Failed to run `new_from_tokens()` for custom struct, make sure to pass tokens in the right order and right types" )
                 });
 
                 // Token creation and insertion
