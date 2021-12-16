@@ -47,7 +47,8 @@ pub fn expand_internal_struct(prop: &Property) -> Result<TokenStream, Error> {
                 fields.push(quote! {pub #field_name: #struct_name});
                 args.push(quote! {#field_name: #struct_name::new_from_tokens(&tokens[#idx..])});
                 struct_fields_tokens.push(quote! { tokens.push(self.#field_name.into_token()) });
-                param_types.push(quote! { types.push(#struct_name::param_types()) });
+                param_types
+                    .push(quote! { types.push(ParamType::Struct(#struct_name::param_types())) });
             }
             // Elementary type
             _ => {
@@ -82,10 +83,10 @@ pub fn expand_internal_struct(prop: &Property) -> Result<TokenStream, Error> {
         }
 
         impl #name {
-            pub fn param_types() -> ParamType {
+            pub fn param_types() -> Vec<ParamType> {
                 let mut types = Vec::new();
                 #( #param_types; )*
-                ParamType::Struct(types)
+                types
             }
 
             pub fn into_token(self) -> Token {
