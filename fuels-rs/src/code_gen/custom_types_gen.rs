@@ -80,10 +80,10 @@ pub fn expand_internal_struct(name: &str, prop: &Property) -> Result<TokenStream
         }
 
         impl #name {
-            pub fn param_types() -> ParamType {
+            pub fn param_types() -> Vec<ParamType> {
                 let mut types = Vec::new();
                 #( #param_types; )*
-                ParamType::Struct(types)
+                types
             }
 
             pub fn into_token(self) -> Token {
