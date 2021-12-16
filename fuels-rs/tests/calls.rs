@@ -104,7 +104,7 @@ async fn contract_call() {
     .await
     .unwrap();
 
-    assert_eq!(true, receipts.len() > 0);
+    assert!(receipts.len() > 0);
 
     // Grab the receipt of type `Log`
     let receipt = &receipts[1];
