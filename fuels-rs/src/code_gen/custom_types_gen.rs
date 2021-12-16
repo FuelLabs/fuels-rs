@@ -45,7 +45,7 @@ pub fn expand_internal_struct(name: &str, prop: &Property) -> Result<TokenStream
                 fields.push(quote! {pub #field_name: #component_name});
                 args.push(quote! {#field_name: #component_name::new_from_tokens(&tokens[#idx..])});
                 struct_fields_tokens.push(quote! { tokens.push(self.#field_name.into_token()) });
-                param_types.push(quote! { types.push(#component_name::param_types()) });
+                param_types.push(quote! { types.push(ParamType::Struct(#component_name::param_types())) });
             }
             // Elementary type
             _ => {
