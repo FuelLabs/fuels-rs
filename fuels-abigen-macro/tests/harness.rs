@@ -371,7 +371,7 @@ async fn compile_bindings_struct_input() {
                 "inputs":[
                     {
                         "name":"value",
-                        "type":"struct MyStruct<u8, bool>",
+                        "type":"struct MyStruct",
                         "components": [
                             {
                                 "name": "foo",
@@ -423,7 +423,7 @@ async fn compile_bindings_nested_struct_input() {
                 "inputs":[
                     {
                         "name":"top_value",
-                        "type":"struct MyNestedStruct<u16, struct InnerStruct<bool>>",
+                        "type":"struct MyNestedStruct",
                         "components": [
                             {
                                 "name": "x",
@@ -431,7 +431,7 @@ async fn compile_bindings_nested_struct_input() {
                             },
                             {
                                 "name": "foo",
-                                "type": "struct InnerStruct<bool>",
+                                "type": "struct InnerStruct",
                                 "components": [
                                     {
                                         "name":"a",
@@ -534,7 +534,7 @@ async fn create_struct_from_decoded_tokens() {
                 "inputs":[
                     {
                         "name":"my_val",
-                        "type":"struct MyStruct<u8, bool>",
+                        "type":"struct MyStruct",
                         "components": [
                             {
                                 "name": "foo",
@@ -593,7 +593,7 @@ async fn create_nested_struct_from_decoded_tokens() {
                 "inputs":[
                     {
                         "name":"input",
-                        "type":"struct MyNestedStruct<u16, InnerStruct>",
+                        "type":"struct MyNestedStruct",
                         "components": [
                             {
                                 "name": "x",
@@ -601,7 +601,7 @@ async fn create_nested_struct_from_decoded_tokens() {
                             },
                             {
                                 "name": "y",
-                                "type": "struct InnerStruct<bool>",
+                                "type": "struct InnerStruct",
                                 "components": [
                                     {
                                         "name":"a",

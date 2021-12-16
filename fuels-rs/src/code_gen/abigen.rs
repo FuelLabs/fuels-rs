@@ -300,7 +300,7 @@ mod tests {
                 "inputs":[
                     {
                         "name":"value",
-                        "type":"struct MyStruct<u8, bool>",
+                        "type":"struct MyStruct",
                         "components": [
                             {
                                 "name": "foo",
@@ -338,7 +338,7 @@ mod tests {
                 "inputs":[
                 {
                     "name":"input",
-                    "type":"struct MyNestedStruct<u16, struct InnerStruct<bool, u8[2]>>",
+                    "type":"struct MyNestedStruct",
                     "components":[
                     {
                         "name":"x",
@@ -346,7 +346,7 @@ mod tests {
                     },
                     {
                         "name":"foo",
-                        "type":"struct InnerStruct<bool, u8[2]>",
+                        "type":"struct InnerStruct",
                         "components":[
                         {
                             "name":"a",
@@ -362,7 +362,7 @@ mod tests {
                 },
                 {
                     "name":"y",
-                    "type":"struct MySecondNestedStruct<u16, struct SecondInnerStruct<struct ThirdInnerStruct<u8>>>",
+                    "type":"struct MySecondNestedStruct",
                     "components":[
                     {
                         "name":"x",
@@ -418,7 +418,7 @@ mod tests {
                 "inputs":[
                     {
                         "name":"top_value",
-                        "type":"struct MyNestedStruct<u16, struct InnerStruct<bool>>",
+                        "type":"struct MyNestedStruct",
                         "components": [
                             {
                                 "name": "x",
@@ -426,7 +426,7 @@ mod tests {
                             },
                             {
                                 "name": "foo",
-                                "type": "struct InnerStruct<bool>",
+                                "type": "struct InnerStruct",
                                 "components": [
                                     {
                                         "name":"a",

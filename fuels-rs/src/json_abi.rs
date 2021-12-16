@@ -944,7 +944,7 @@ mod tests {
                 "inputs":[
                     {
                         "name":"my_struct",
-                        "type":"struct MyStruct<u8, bool>",
+                        "type":"struct MyStruct",
                         "components": [
                             {
                                 "name": "foo",
@@ -987,7 +987,7 @@ mod tests {
                 "inputs":[
                     {
                         "name":"my_struct",
-                        "type":"struct MyStruct<u8, bool>",
+                        "type":"struct MyStruct",
                         "components": [
                             {
                                 "name": "foo",
@@ -1034,7 +1034,7 @@ mod tests {
                 "inputs":[
                     {
                         "name":"top_value",
-                        "type":"struct MyNestedStruct<u16, struct Y<bool, u8[2]>>",
+                        "type":"struct MyNestedStruct",
                         "components": [
                             {
                                 "name": "x",
@@ -1085,7 +1085,7 @@ mod tests {
                 "inputs":[
                     {
                         "name":"top_value",
-                        "type":"struct MyNestedStruct<struct X<bool, u8[2]>, u16>",
+                        "type":"struct MyNestedStruct",
                         "components": [
                             {
                                 "name": "inner",
@@ -1339,7 +1339,7 @@ mod tests {
                             }
                         ],
                         "name": "value",
-                        "type": "struct TestStruct<bool, u64>"
+                        "type": "struct TestStruct"
                     }
                 ],
                 "name": "boo",
@@ -1358,7 +1358,7 @@ mod tests {
                             }
                         ],
                         "name": "",
-                        "type": "struct TestStruct<bool, u64>"
+                        "type": "struct TestStruct"
                     }
                 ],
                 "type": "function"

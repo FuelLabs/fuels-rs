@@ -166,17 +166,8 @@ pub fn expand_internal_enum(name: &str, prop: &Property) -> Result<TokenStream, 
     })
 }
 
-// A custom type name is coming in as `struct $name<$inner_types>
+// A custom type name is coming in as `struct $name
 // We want to grab its `$name`.
-// We split into `struct $name` and `<$inner_types>`
-// Then `struct $name` into `struct` and `$name`.
 pub fn extract_struct_name_from_abi_property(prop: &Property) -> String {
-    prop.type_field
-        .split('<')
-        .collect::<Vec<&str>>()
-        .first()
-        .unwrap()
-        .split_whitespace()
-        .collect::<Vec<&str>>()[1]
-        .to_string()
+    prop.type_field.split_whitespace().collect::<Vec<&str>>()[1].to_string()
 }
