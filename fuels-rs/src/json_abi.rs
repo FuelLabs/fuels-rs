@@ -90,7 +90,7 @@ impl ABIParser {
 
         let tokens = self.parse_tokens(&params)?;
 
-        return Ok(hex::encode(encoder.encode(&tokens)?));
+        Ok(hex::encode(encoder.encode(&tokens)?))
     }
 
     /// Similar to `encode`, but includes the function selector in the
@@ -227,7 +227,7 @@ impl ABIParser {
                 let discriminant = self.get_enum_discriminant_from_string(&value);
                 let value = self.get_enum_value_from_string(&value);
 
-                let token = self.tokenize(&s[discriminant], value.to_owned())?;
+                let token = self.tokenize(&s[discriminant], value)?;
 
                 Ok(Token::Enum(Box::new((discriminant as u8, token))))
             }
@@ -287,7 +287,7 @@ impl ABIParser {
                     let sub = &value[last_item..pos];
                     // If we've encountered an array within a struct property
                     // keep iterating until we see the end of it "]".
-                    if sub.contains("[") && !sub.contains("]") {
+                    if sub.contains('[') && !sub.contains(']') {
                         continue;
                     }
 
@@ -418,7 +418,7 @@ impl ABIParser {
             .unwrap()
             .outputs
             .iter()
-            .map(|param| parse_param(&param))
+            .map(|param| parse_param(param))
             .collect();
 
         match params_result {
@@ -439,14 +439,14 @@ impl ABIParser {
     }
 
     fn is_array(&self, ele: &str) -> bool {
-        ele.starts_with("[") && ele.ends_with("]")
+        ele.starts_with('[') && ele.ends_with(']')
     }
 
     fn get_enum_discriminant_from_string(&self, ele: &str) -> usize {
         let mut chars = ele.chars();
         chars.next(); // Remove "("
         chars.next_back(); // Remove ")"
-        let v: Vec<_> = chars.as_str().split(",").collect();
+        let v: Vec<_> = chars.as_str().split(',').collect();
         v[0].parse().unwrap()
     }
 
@@ -454,7 +454,7 @@ impl ABIParser {
         let mut chars = ele.chars();
         chars.next(); // Remove "("
         chars.next_back(); // Remove ")"
-        let v: Vec<_> = chars.as_str().split(",").collect();
+        let v: Vec<_> = chars.as_str().split(',').collect();
         v[1].to_string()
     }
 
@@ -462,14 +462,13 @@ impl ABIParser {
         let mut chars = ele.chars();
         chars.next();
         chars.next_back();
-        let stripped: Vec<_> = chars.as_str().split(",").collect();
-        stripped.len()
+        chars.as_str().split(',').count()
     }
 
     /// Builds a string representation of a function selector,
     /// i.e: <fn_name>(<type_1>, <type_2>, ..., <type_n>)
     pub fn build_fn_selector(&self, fn_name: &str, params: &[Property]) -> Result<String, Error> {
-        let fn_selector = fn_name.to_owned().clone();
+        let fn_selector = fn_name.to_owned();
 
         let mut result: String = format!("{}(", fn_selector);
 
@@ -515,11 +514,16 @@ pub fn parse_param(param: &Property) -> Result<ParamType, Error> {
         // Simple case (primitive types, no arrays, including string)
         Ok(param_type) => Ok(param_type),
         Err(_) => {
-            match param.type_field.contains("[") && param.type_field.contains("]") {
-                // Try to parse array (T[M]) or string (str[M])
-                true => Ok(parse_array_param(param)?),
-                // Try to parse enum or struct
-                false => Ok(parse_custom_type_param(param)?),
+            match param.type_field.contains("struct") || param.type_field.contains("enum") {
+                true => Ok(parse_custom_type_param(param)?),
+                false => {
+                    match param.type_field.contains('[') && param.type_field.contains(']') {
+                        // Try to parse array (T[M]) or string (str[M])
+                        true => Ok(parse_array_param(param)?),
+                        // Try to parse enum or struct
+                        false => Ok(parse_custom_type_param(param)?),
+                    }
+                }
             }
         }
     }
@@ -527,7 +531,7 @@ pub fn parse_param(param: &Property) -> Result<ParamType, Error> {
 
 pub fn parse_array_param(param: &Property) -> Result<ParamType, Error> {
     // Split "T[n]" string into "T" and "[n]"
-    let split: Vec<&str> = param.type_field.split("[").collect();
+    let split: Vec<&str> = param.type_field.split('[').collect();
     if split.len() != 2 {
         return Err(Error::MissingData(format!(
             "invalid parameter type: {}",
@@ -553,7 +557,7 @@ pub fn parse_custom_type_param(param: &Property) -> Result<ParamType, Error> {
     match param.components.as_ref() {
         Some(components) => {
             for component in components {
-                params.push(parse_param(&component)?)
+                params.push(parse_param(component)?)
             }
         }
         None => {
@@ -569,7 +573,7 @@ pub fn parse_custom_type_param(param: &Property) -> Result<ParamType, Error> {
     if param.type_field.contains("enum") {
         return Ok(ParamType::Enum(params));
     }
-    return Err(Error::InvalidType(param.type_field.clone()));
+    Err(Error::InvalidType(param.type_field.clone()))
 }
 
 #[cfg(test)]
@@ -721,9 +725,8 @@ mod tests {
         let decoded_return = abi.decode(json_abi, function_name, &return_value).unwrap();
 
         let s: [u8; 32] = return_value.as_slice().try_into().unwrap();
-        let b256 = s.try_into().unwrap();
 
-        let expected_return = vec![Token::B256(b256)];
+        let expected_return = vec![Token::B256(s)];
 
         assert_eq!(decoded_return, expected_return);
     }
@@ -976,6 +979,53 @@ mod tests {
     }
 
     #[test]
+    fn struct_and_primitive_encode_and_decode() {
+        let json_abi = r#"
+        [
+            {
+                "type":"contract",
+                "inputs":[
+                    {
+                        "name":"my_struct",
+                        "type":"struct MyStruct",
+                        "components": [
+                            {
+                                "name": "foo",
+                                "type": "u8"
+                            },
+                            {
+                                "name": "bar",
+                                "type": "bool"
+                            }
+                        ]
+                    },
+                    {
+                        "name":"foo",
+                        "type":"u32"
+                    }
+                ],
+                "name":"takes_struct_and_primitive",
+                "outputs":[]
+            }
+        ]
+        "#;
+
+        let values: Vec<String> = vec!["(42, true)".to_string(), "10".to_string()];
+
+        let mut abi = ABIParser::new();
+
+        let function_name = "takes_struct_and_primitive";
+
+        let encoded = abi
+            .encode_with_function_selector(json_abi, function_name, &values)
+            .unwrap();
+        println!("encoded: {:?}\n", encoded);
+
+        let expected_encode = "000000005c445838000000000000002a0000000000000001000000000000000a";
+        assert_eq!(encoded, expected_encode);
+    }
+
+    #[test]
     fn nested_struct_encode_and_decode() {
         let json_abi = r#"
         [
@@ -983,7 +1033,7 @@ mod tests {
                 "type":"contract",
                 "inputs":[
                     {
-                        "name":"my_nested_struct",
+                        "name":"top_value",
                         "type":"struct MyNestedStruct",
                         "components": [
                             {
@@ -991,7 +1041,7 @@ mod tests {
                                 "type": "u16"
                             },
                             {
-                                "name": "y",
+                                "name": "inner",
                                 "type": "struct Y",
                                 "components": [
                                     {
@@ -1034,11 +1084,11 @@ mod tests {
                 "type":"contract",
                 "inputs":[
                     {
-                        "name":"my_nested_struct",
+                        "name":"top_value",
                         "type":"struct MyNestedStruct",
                         "components": [
                             {
-                                "name": "x",
+                                "name": "inner",
                                 "type": "struct X",
                                 "components": [
                                     {
@@ -1219,5 +1269,120 @@ mod tests {
         let selector = abi.build_fn_selector("my_func", &params).unwrap();
 
         assert_eq!(selector, "my_func(s(bool,s(u64,u32)))");
+    }
+
+    #[test]
+    fn compiler_generated_abi_test() {
+        let json_abi = r#"
+        [
+            {
+                "inputs": [
+                    {
+                        "components": null,
+                        "name": "gas",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "amount",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "color",
+                        "type": "b256"
+                    },
+                    {
+                        "components": null,
+                        "name": "value",
+                        "type": "u64"
+                    }
+                ],
+                "name": "foo",
+                "outputs": [
+                    {
+                        "components": null,
+                        "name": "",
+                        "type": "u64"
+                    }
+                ],
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {
+                        "components": null,
+                        "name": "gas",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "amount",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "color",
+                        "type": "b256"
+                    },
+                    {
+                        "components": [
+                            {
+                                "components": null,
+                                "name": "a",
+                                "type": "bool"
+                            },
+                            {
+                                "components": null,
+                                "name": "b",
+                                "type": "u64"
+                            }
+                        ],
+                        "name": "value",
+                        "type": "struct TestStruct"
+                    }
+                ],
+                "name": "boo",
+                "outputs": [
+                    {
+                        "components": [
+                            {
+                                "components": null,
+                                "name": "a",
+                                "type": "bool"
+                            },
+                            {
+                                "components": null,
+                                "name": "b",
+                                "type": "u64"
+                            }
+                        ],
+                        "name": "",
+                        "type": "struct TestStruct"
+                    }
+                ],
+                "type": "function"
+            }
+        ]
+                "#;
+
+        let gas = "1000000".to_string();
+        let coins = "0".to_string();
+        let color = "0000000000000000000000000000000000000000000000000000000000000000".to_string();
+        let s = "(true, 42)".to_string();
+
+        let values: Vec<String> = vec![gas, coins, color, s];
+
+        let mut abi = ABIParser::new();
+
+        let function_name = "boo";
+
+        let encoded = abi
+            .encode_with_function_selector(json_abi, function_name, &values)
+            .unwrap();
+        println!("encoded: {:?}\n", encoded);
+
+        let expected_encode = "0000000087f27a3900000000000f4240000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001000000000000002a";
+        assert_eq!(encoded, expected_encode);
     }
 }

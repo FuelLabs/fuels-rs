@@ -157,8 +157,8 @@ impl Abigen {
     fn abi_structs(&self) -> Result<TokenStream, Error> {
         let mut structs = TokenStream::new();
 
-        for (name, prop) in &self.custom_structs {
-            structs.extend(expand_internal_struct(name, prop)?);
+        for prop in self.custom_structs.values() {
+            structs.extend(expand_internal_struct(prop)?);
         }
 
         Ok(structs)
@@ -299,7 +299,7 @@ mod tests {
                 "type":"contract",
                 "inputs":[
                     {
-                        "name":"my_struct",
+                        "name":"value",
                         "type":"struct MyStruct",
                         "components": [
                             {
@@ -323,7 +323,7 @@ mod tests {
 
         assert_eq!(1, contract.custom_structs.len());
 
-        assert_eq!(true, contract.custom_structs.contains_key("my_struct"));
+        assert!(contract.custom_structs.contains_key("value"));
 
         let bindings = contract.generate().unwrap();
         bindings.write(std::io::stdout()).unwrap();
@@ -337,7 +337,7 @@ mod tests {
                 "type":"contract",
                 "inputs":[
                 {
-                    "name":"my_nested_struct",
+                    "name":"input",
                     "type":"struct MyNestedStruct",
                     "components":[
                     {
@@ -345,7 +345,7 @@ mod tests {
                         "type":"u16"
                     },
                     {
-                        "name":"inner_struct",
+                        "name":"foo",
                         "type":"struct InnerStruct",
                         "components":[
                         {
@@ -361,7 +361,7 @@ mod tests {
                     ]
                 },
                 {
-                    "name":"my_second_nested_struct",
+                    "name":"y",
                     "type":"struct MySecondNestedStruct",
                     "components":[
                     {
@@ -369,11 +369,11 @@ mod tests {
                         "type":"u16"
                     },
                     {
-                        "name":"second_inner_struct",
+                        "name":"bar",
                         "type":"struct SecondInnerStruct",
                         "components":[
                         {
-                            "name":"third_inner_struct",
+                            "name":"inner_bar",
                             "type":"struct ThirdInnerStruct",
                             "components":[
                             {
@@ -399,17 +399,56 @@ mod tests {
 
         assert_eq!(5, contract.custom_structs.len());
 
-        let expected_custom_struct_names = vec![
-            "my_nested_struct",
-            "inner_struct",
-            "third_inner_struct",
-            "second_inner_struct",
-            "my_second_nested_struct",
-        ];
+        let expected_custom_struct_names = vec!["input", "foo", "y", "bar", "inner_bar"];
 
         for name in expected_custom_struct_names {
-            assert_eq!(true, contract.custom_structs.contains_key(name));
+            assert!(contract.custom_structs.contains_key(name));
         }
+
+        let bindings = contract.generate().unwrap();
+        bindings.write(std::io::stdout()).unwrap();
+    }
+
+    #[test]
+    fn single_nested_struct() {
+        let contract = r#"
+        [
+            {
+                "type":"contract",
+                "inputs":[
+                    {
+                        "name":"top_value",
+                        "type":"struct MyNestedStruct",
+                        "components": [
+                            {
+                                "name": "x",
+                                "type": "u16"
+                            },
+                            {
+                                "name": "foo",
+                                "type": "struct InnerStruct",
+                                "components": [
+                                    {
+                                        "name":"a",
+                                        "type": "bool"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                "name":"takes_nested_struct",
+                "outputs":[]
+            }
+        ]
+        "#;
+
+        let contract = Abigen::new("custom", contract).unwrap();
+
+        assert_eq!(2, contract.custom_structs.len());
+
+        assert!(contract.custom_structs.contains_key("top_value"));
+        assert!(contract.custom_structs.contains_key("foo"));
 
         let bindings = contract.generate().unwrap();
         bindings.write(std::io::stdout()).unwrap();
@@ -448,7 +487,7 @@ mod tests {
         assert_eq!(1, contract.custom_enums.len());
         assert_eq!(0, contract.custom_structs.len());
 
-        assert_eq!(true, contract.custom_enums.contains_key("my_enum"));
+        assert!(contract.custom_enums.contains_key("my_enum"));
 
         let bindings = contract.generate().unwrap();
         bindings.write(std::io::stdout()).unwrap();

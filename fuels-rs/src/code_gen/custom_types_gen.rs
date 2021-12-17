@@ -16,7 +16,7 @@ use quote::quote;
 
 /// Transforms a custom type defined in [`Property`] into a [`TokenStream`]
 /// that represents that same type as a Rust-native struct.
-pub fn expand_internal_struct(name: &str, prop: &Property) -> Result<TokenStream, Error> {
+pub fn expand_internal_struct(prop: &Property) -> Result<TokenStream, Error> {
     let components = prop.components.as_ref().unwrap();
     let mut fields = Vec::with_capacity(components.len());
 
@@ -35,18 +35,20 @@ pub fn expand_internal_struct(name: &str, prop: &Property) -> Result<TokenStream
     // 1. A struct field declaration like `pub #field_name: #component_name`
     // 2. The creation of a token and its insertion into a vector of Tokens.
     for (idx, component) in components.iter().enumerate() {
-        let component_name = ident(&component.name.to_class_case());
         let field_name = ident(&component.name.to_snake_case());
-        let param_type = parse_param(&component)?;
+        let param_type = parse_param(component)?;
 
         match param_type {
             // Case where a struct takes another struct
             ParamType::Struct(_params) => {
-                fields.push(quote! {pub #field_name: #component_name});
-                args.push(quote! {#field_name: #component_name::new_from_tokens(&tokens[#idx..])});
+                let struct_name =
+                    ident(&extract_struct_name_from_abi_property(component).to_class_case());
+
+                fields.push(quote! {pub #field_name: #struct_name});
+                args.push(quote! {#field_name: #struct_name::new_from_tokens(&tokens[#idx..])});
                 struct_fields_tokens.push(quote! { tokens.push(self.#field_name.into_token()) });
                 param_types
-                    .push(quote! { types.push(ParamType::Struct(#component_name::param_types())) });
+                    .push(quote! { types.push(ParamType::Struct(#struct_name::param_types())) });
             }
             // Elementary type
             _ => {
@@ -69,7 +71,7 @@ pub fn expand_internal_struct(name: &str, prop: &Property) -> Result<TokenStream
         }
     }
 
-    let name = ident(&name.to_class_case());
+    let name = ident(&extract_struct_name_from_abi_property(prop).to_class_case());
 
     // Actual creation of the struct, using the inner TokenStreams from above
     // to produce the TokenStream that represents the whole struct + methods
@@ -119,7 +121,7 @@ pub fn expand_internal_enum(name: &str, prop: &Property) -> Result<TokenStream, 
     for (discriminant, component) in components.iter().enumerate() {
         let field_name = ident(&component.name.to_class_case());
 
-        let param_type = parse_param(&component)?;
+        let param_type = parse_param(component)?;
         match param_type {
             // Case where an enum takes another enum
             ParamType::Enum(_params) => {
@@ -163,4 +165,10 @@ pub fn expand_internal_enum(name: &str, prop: &Property) -> Result<TokenStream, 
             }
         }
     })
+}
+
+// A custom type name is coming in as `struct $name
+// We want to grab its `$name`.
+pub fn extract_struct_name_from_abi_property(prop: &Property) -> String {
+    prop.type_field.split_whitespace().collect::<Vec<&str>>()[1].to_string()
 }

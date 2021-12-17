@@ -370,7 +370,7 @@ async fn compile_bindings_struct_input() {
                 "type":"contract",
                 "inputs":[
                     {
-                        "name":"my_struct",
+                        "name":"value",
                         "type":"struct MyStruct",
                         "components": [
                             {
@@ -395,10 +395,7 @@ async fn compile_bindings_struct_input() {
 
     // Because of the abigen! macro, `MyStruct` is now in scope
     // and can be used!
-    let input = MyStruct {
-        foo: 10 as u8,
-        bar: true,
-    };
+    let input = MyStruct { foo: 10, bar: true };
 
     let contract_instance = SimpleContract::new(Default::default(), fuel_client);
 
@@ -425,7 +422,7 @@ async fn compile_bindings_nested_struct_input() {
                 "type":"contract",
                 "inputs":[
                     {
-                        "name":"my_nested_struct",
+                        "name":"top_value",
                         "type":"struct MyNestedStruct",
                         "components": [
                             {
@@ -433,7 +430,7 @@ async fn compile_bindings_nested_struct_input() {
                                 "type": "u16"
                             },
                             {
-                                "name": "inner_struct",
+                                "name": "foo",
                                 "type": "struct InnerStruct",
                                 "components": [
                                     {
@@ -455,8 +452,8 @@ async fn compile_bindings_nested_struct_input() {
     let inner_struct = InnerStruct { a: true };
 
     let input = MyNestedStruct {
-        x: 10 as u16,
-        inner_struct,
+        x: 10,
+        foo: inner_struct,
     };
 
     let fuel_client = setup_local_node().await;
@@ -536,7 +533,7 @@ async fn create_struct_from_decoded_tokens() {
                 "type":"contract",
                 "inputs":[
                     {
-                        "name":"my_struct",
+                        "name":"my_val",
                         "type":"struct MyStruct",
                         "components": [
                             {
@@ -565,8 +562,8 @@ async fn create_struct_from_decoded_tokens() {
     // `struct_from_tokens` is of type `MyStruct`.
     let struct_from_tokens = MyStruct::new_from_tokens(&[foo, bar]);
 
-    assert_eq!(10 as u8, struct_from_tokens.foo);
-    assert_eq!(true, struct_from_tokens.bar);
+    assert_eq!(10, struct_from_tokens.foo);
+    assert!(struct_from_tokens.bar);
 
     let fuel_client = setup_local_node().await;
 
@@ -595,7 +592,7 @@ async fn create_nested_struct_from_decoded_tokens() {
                 "type":"contract",
                 "inputs":[
                     {
-                        "name":"my_nested_struct",
+                        "name":"input",
                         "type":"struct MyNestedStruct",
                         "components": [
                             {
@@ -603,7 +600,7 @@ async fn create_nested_struct_from_decoded_tokens() {
                                 "type": "u16"
                             },
                             {
-                                "name": "inner_struct",
+                                "name": "y",
                                 "type": "struct InnerStruct",
                                 "components": [
                                     {
@@ -625,7 +622,7 @@ async fn create_nested_struct_from_decoded_tokens() {
     // Creating just the InnerStruct is possible
     let a = Token::Bool(true);
     let inner_struct_from_tokens = InnerStruct::new_from_tokens(&[a.clone()]);
-    assert_eq!(true, inner_struct_from_tokens.a);
+    assert!(inner_struct_from_tokens.a);
 
     // Creating the whole nested struct `MyNestedStruct`
     // from tokens.
@@ -635,8 +632,8 @@ async fn create_nested_struct_from_decoded_tokens() {
 
     let nested_struct_from_tokens = MyNestedStruct::new_from_tokens(&[x, a]);
 
-    assert_eq!(10 as u16, nested_struct_from_tokens.x);
-    assert_eq!(true, nested_struct_from_tokens.inner_struct.a);
+    assert_eq!(10, nested_struct_from_tokens.x);
+    assert!(nested_struct_from_tokens.y.a);
 
     let fuel_client = setup_local_node().await;
 
@@ -664,60 +661,70 @@ async fn example_workflow() {
         r#"
         [
             {
-                "type": "function",
                 "inputs": [
-                    {
-                        "name": "gas",
-                        "type": "u64"
-                    },
-                    {
-                        "name": "coin",
-                        "type": "u64"
-                    },
-                    {
-                        "name": "color",
-                        "type": "b256"
-                    },
-                    {
-                        "name": "arg",
-                        "type": "u64"
-                    }
+                {
+                    "components": null,
+                    "name": "gas",
+                    "type": "u64"
+                },
+                {
+                    "components": null,
+                    "name": "coin",
+                    "type": "u64"
+                },
+                {
+                    "components": null,
+                    "name": "color",
+                    "type": "b256"
+                },
+                {
+                    "components": null,
+                    "name": "value",
+                    "type": "u64"
+                }
                 ],
                 "name": "initialize_counter",
                 "outputs": [
-                    {
-                        "name": "arg",
-                        "type": "u64"
-                    }
-                ]
+                {
+                    "components": null,
+                    "name": "",
+                    "type": "u64"
+                }
+                ],
+                "type": "function"
             },
             {
-                "type": "function",
                 "inputs": [
-                    {
-                        "name": "gas",
-                        "type": "u64"
-                    },
-                    {
-                        "name": "coin",
-                        "type": "u64"
-                    },
-                    {
-                        "name": "color",
-                        "type": "b256"
-                    },
-                    {
-                        "name": "arg",
-                        "type": "u64"
-                    }
+                {
+                    "components": null,
+                    "name": "gas",
+                    "type": "u64"
+                },
+                {
+                    "components": null,
+                    "name": "coin",
+                    "type": "u64"
+                },
+                {
+                    "components": null,
+                    "name": "color",
+                    "type": "b256"
+                },
+                {
+                    "components": null,
+                    "name": "amount",
+                    "type": "u64"
+                }
                 ],
                 "name": "increment_counter",
                 "outputs": [
-                    {
-                        "name": "arg",
-                        "type": "u64"
-                    }
-                ]
+                {
+                    "components": null,
+                    "name": "",
+                    "type": "u64"
+                }
+                ],
+                "type": "function"
             }
         ]
         "#

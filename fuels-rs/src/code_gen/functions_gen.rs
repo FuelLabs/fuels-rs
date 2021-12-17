@@ -1,4 +1,5 @@
 use crate::abi_encoder::ABIEncoder;
+use crate::code_gen::custom_types_gen::extract_struct_name_from_abi_property;
 use crate::code_gen::docs_gen::expand_doc;
 use crate::errors::Error;
 use crate::json_abi::{parse_param, ABIParser};
@@ -178,11 +179,15 @@ fn expand_input_param(
             })
         }
         ParamType::Enum(_) => {
-            let ident = ident(&rust_enum_name.unwrap().name.to_class_case());
+            let ident = ident(
+                &extract_struct_name_from_abi_property(rust_enum_name.unwrap()).to_class_case(),
+            );
             Ok(quote! { #ident })
         }
         ParamType::Struct(_) => {
-            let ident = ident(&rust_struct_name.unwrap().name.to_class_case());
+            let ident = ident(
+                &extract_struct_name_from_abi_property(rust_struct_name.unwrap()).to_class_case(),
+            );
             Ok(quote! { #ident })
         }
         // Primitive type
