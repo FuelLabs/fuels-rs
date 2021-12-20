@@ -8,6 +8,18 @@ Rust SDK for Fuel. It can be used for a variety of things, including but not lim
 - Generating type-safe Rust bindings of contract methods;
 - And more, `fuels-rs` is still in active development.
 
+## Features
+
+- [x] Programmatically compile Sway code
+- [x] Launch Fuel nodes
+- [x] Deploy contracts
+- [x] Interact with deployed contracts
+- [x] Type-safe Sway contracts bindings code generation
+- [x] Run Sway scripts
+- [x] CLI for common operations
+- [ ] Wallet integration
+- [ ] Events querying/monitoring
+
 ## Using the SDK
 
 This section describes how to use the basic functionalities of the SDK.
