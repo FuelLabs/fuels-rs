@@ -17,6 +17,15 @@ pub fn abigen(input: TokenStream) -> TokenStream {
     c.expand().unwrap().into()
 }
 
+#[proc_macro]
+pub fn wasm_abigen(input: TokenStream) -> TokenStream {
+    let args = parse_macro_input!(input as Spanned<ContractArgs>);
+
+    let c = Abigen::new(&args.name, &args.abi).unwrap().no_std();
+
+    c.expand().unwrap().into()
+}
+
 /// Trait that abstracts functionality for inner data that can be parsed and
 /// wrapped with a specific `Span`.
 trait ParseInner: Sized {
