@@ -17,7 +17,6 @@ pub fn abigen(input: TokenStream) -> TokenStream {
     c.expand().unwrap().into()
 }
 
-
 #[proc_macro]
 pub fn wasm_abigen(input: TokenStream) -> TokenStream {
     let args = parse_macro_input!(input as Spanned<ContractArgs>);
