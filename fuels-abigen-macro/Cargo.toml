@@ -1,5 +1,5 @@
 [package]
-authors = ["digorithm <rodrigo.araujo@fuel.sh>"]
+authors = ["Fuel Labs <contact@fuel.sh>"]
 name = "fuels-abigen-macro"
 version = "0.1.0"
 edition = "2018"

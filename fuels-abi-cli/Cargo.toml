@@ -1,6 +1,6 @@
 [package]
 name = "fuels-abi-cli"
-authors = ["digorithm <rodrigo.araujo@fuel.sh>"]
+authors = ["Fuel Labs <contact@fuel.sh>"]
 version = "0.1.0"
 edition = "2018"
 
