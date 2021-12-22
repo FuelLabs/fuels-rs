@@ -3,6 +3,10 @@ name = "fuels-core"
 version = "0.1.0"
 authors = ["Fuel Labs <contact@fuel.sh>"]
 edition = "2021"
+homepage = "https://fuel.network/"
+license = "Apache-2.0"
+repository = "https://github.com/FuelLabs/fuels-rs"
+description = "Fuel Rust SDK core."
 
 [dependencies]
 fuel-types = { git = "ssh://git@github.com/FuelLabs/fuel-types.git", default-features = false }
