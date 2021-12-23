@@ -1,3 +1,4 @@
+use crate::abi_decoder::ABIDecoder;
 use crate::abi_encoder::ABIEncoder;
 use crate::errors::Error;
 use crate::script::Script;
@@ -10,6 +11,7 @@ use fuel_tx::{ContractId, Input, Output, Receipt, Transaction};
 use fuel_types::{Bytes32, Immediate12, Salt, Word};
 use fuel_vm::consts::{REG_CGAS, REG_RET, REG_ZERO, VM_TX_MEMORY};
 use fuel_vm::prelude::Contract as FuelContract;
+use fuels_core::ParamType;
 use fuels_core::{Detokenize, Selector, Token};
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
@@ -90,15 +92,13 @@ impl Contract {
         let mut script_data: Vec<u8> = vec![];
         script_data.extend(contract_id.as_ref());
 
-        match encoded_selector {
-            Some(e) => script_data.extend(e),
-            None => (),
-        };
+        if let Some(e) = encoded_selector {
+            script_data.extend(e)
+        }
 
-        match encoded_args {
-            Some(e) => script_data.extend(e),
-            None => (),
-        };
+        if let Some(e) = encoded_args {
+            script_data.extend(e)
+        }
 
         // Inputs/outputs
         let input = Input::contract(utxo_id, balance_root, state_root, contract_id);
@@ -117,7 +117,7 @@ impl Contract {
 
         let script = Script::new(tx);
 
-        Ok(script.call(&fuel_client).await.unwrap())
+        Ok(script.call(fuel_client).await.unwrap())
     }
 
     /// Creates an ABI call based on a function selector and
@@ -137,6 +137,7 @@ impl Contract {
         fuel_client: &FuelClient,
         compiled_contract: &CompiledContract,
         signature: Selector,
+        output_params: &[ParamType],
         args: &[Token],
     ) -> Result<ContractCall<D>, Error> {
         let mut encoder = ABIEncoder::new();
@@ -174,6 +175,7 @@ impl Contract {
             input_index,
             fuel_client: fuel_client.clone(),
             datatype: PhantomData,
+            output_params: output_params.to_vec(),
         })
     }
 
@@ -293,13 +295,20 @@ pub struct ContractCall<D> {
     pub gas_limit: u64,
     pub maturity: u64,
     pub datatype: PhantomData<D>,
+    pub output_params: Vec<ParamType>,
 }
 
 impl<D> ContractCall<D>
 where
     D: Detokenize,
 {
-    pub async fn call(self) -> Result<Option<u64>, Error> {
+    /// Call a contract's method. Note that it will return
+    /// the method's value as an actual typed value `D`.
+    /// For instance, if your method returns a `bool`, this will be a
+    /// `Result<bool, Error>`. Also works for structs! If your method
+    /// returns `MyStruct`, `MyStruct` will be generated through the `abigen!()`
+    /// and this will return `Result<MyStruct, Error>`.
+    pub async fn call(self) -> Result<D, Error> {
         let receipts = Contract::call(
             self.contract_id,
             Some(self.encoded_selector),
@@ -316,12 +325,13 @@ where
         .await
         .unwrap();
 
-        // @todo right now, we're returning whatever is logged in the Receipt's `val`.
-        // It would be more user-friendly to return only the value(s)
-        // wrapped in the type(s) that a given ABI function returns.
-        // This would be a QoL improvement and can be left as future improvements.
+        let returned_value = Self::get_receipt_value(&receipts).unwrap().to_be_bytes();
 
-        Ok(Self::get_receipt_value(&receipts))
+        let mut decoder = ABIDecoder::new();
+
+        let decoded = decoder.decode(&self.output_params, &returned_value)?;
+
+        Ok(D::from_tokens(decoded)?)
     }
 
     fn get_receipt_value(receipts: &[Receipt]) -> Option<u64> {

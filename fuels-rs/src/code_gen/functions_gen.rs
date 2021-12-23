@@ -48,11 +48,27 @@ pub fn expand_function(
         hex::encode(encoded)
     ));
 
+    // Here we turn `ParamType`s into a custom stringified version that's identical
+    // to how we would declare a `ParamType` in Rust code. Which will then
+    // be used to be tokenized and passed onto `method_hash()`.
+    let mut output_params = vec![];
+    for output in &function.outputs {
+        let mut param_type_str: String = "ParamType::".to_owned();
+        let p = parse_param(output).unwrap();
+        param_type_str.push_str(&p.to_string());
+
+        let tok: proc_macro2::TokenStream = param_type_str.parse().unwrap();
+
+        output_params.push(tok);
+    }
+
+    let output_params_token = quote! { &[#( #output_params ),*] };
+
     Ok(quote! {
         #doc
         pub fn #name(&self #input) -> #result {
             Contract::method_hash(&self.fuel_client, &self.compiled,
-                #tokenized_signature, #arg).expect("method not found (this should never happen)")
+                #tokenized_signature, #output_params_token, #arg).expect("method not found (this should never happen)")
         }
     })
 }
@@ -65,10 +81,21 @@ fn expand_selector(selector: Selector) -> TokenStream {
 /// Expands the output of a function, i.e. what comes after `->` in a function
 /// signature.
 fn expand_fn_outputs(outputs: &[Property]) -> Result<TokenStream, Error> {
-    // TODO: future, support struct outputs
     match outputs.len() {
         0 => Ok(quote! { () }),
-        1 => expand_type(&parse_param(&outputs[0])?),
+        1 => {
+            // If it's a struct as the type of a function's output, use its
+            // tokenized name only. Otherwise, parse and expand.
+            if outputs[0].type_field.contains("struct ") {
+                let tok: proc_macro2::TokenStream =
+                    extract_struct_name_from_abi_property(&outputs[0])
+                        .parse()
+                        .unwrap();
+                Ok(tok)
+            } else {
+                expand_type(&parse_param(&outputs[0])?)
+            }
+        }
         _ => {
             let types = outputs
                 .iter()

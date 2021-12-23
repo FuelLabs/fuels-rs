@@ -1,5 +1,6 @@
 use core::str::Utf8Error;
 use fuels_core::errors::CodecError;
+use fuels_core::InvalidOutputType;
 use thiserror::Error;
 pub type Result<T> = core::result::Result<T, Error>;
 use std::net;
@@ -42,5 +43,11 @@ impl From<CodecError> for Error {
             CodecError::InvalidData => Error::InvalidData,
             CodecError::Utf8Error(e) => Error::Utf8Error(e),
         }
+    }
+}
+
+impl From<InvalidOutputType> for Error {
+    fn from(err: InvalidOutputType) -> Error {
+        Error::ContractCallError(err.0)
     }
 }

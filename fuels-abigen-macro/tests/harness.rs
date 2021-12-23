@@ -115,7 +115,7 @@ async fn compile_bindings_single_param() {
                 "name": "takes_ints_returns_bool",
                 "outputs": [
                     {
-                        "name": "",
+                        "name": "ret",
                         "type": "bool"
                     }
                 ]
@@ -128,7 +128,7 @@ async fn compile_bindings_single_param() {
 
     let contract_instance = SimpleContract::new(Default::default(), fuel_client);
 
-    let contract_call = contract_instance.takes_ints_returns_bool(42 as u32);
+    let contract_call = contract_instance.takes_ints_returns_bool(42);
 
     let encoded = format!(
         "{}{}",
@@ -375,11 +375,11 @@ async fn compile_bindings_struct_input() {
                         "components": [
                             {
                                 "name": "foo",
-                                "type": "u8"
+                                "type": "u8[2]"
                             },
                             {
                                 "name": "bar",
-                                "type": "bool"
+                                "type": "str[4]"
                             }
                         ]
                     }
@@ -395,7 +395,10 @@ async fn compile_bindings_struct_input() {
 
     // Because of the abigen! macro, `MyStruct` is now in scope
     // and can be used!
-    let input = MyStruct { foo: 10, bar: true };
+    let input = MyStruct {
+        foo: vec![10, 2],
+        bar: "fuel".to_string(),
+    };
 
     let contract_instance = SimpleContract::new(Default::default(), fuel_client);
 
@@ -407,7 +410,10 @@ async fn compile_bindings_struct_input() {
         hex::encode(contract_call.encoded_args)
     );
 
-    assert_eq!("00000000cb0b2f05000000000000000a0000000000000001", encoded);
+    assert_eq!(
+        "00000000f427d499000000000000000a00000000000000026675656c00000000",
+        encoded
+    );
 }
 
 #[tokio::test]
@@ -749,7 +755,7 @@ async fn example_workflow() {
         .await
         .unwrap();
 
-    assert_eq!(42, result.unwrap());
+    assert_eq!(42, result);
 
     let result = contract_instance
         .increment_counter(10)
@@ -757,5 +763,167 @@ async fn example_workflow() {
         .await
         .unwrap();
 
-    assert_eq!(52, result.unwrap());
+    assert_eq!(52, result);
+}
+
+#[tokio::test]
+async fn type_safe_output_values() {
+    let rng = &mut StdRng::seed_from_u64(2322u64);
+
+    // Generates the bindings from the an ABI definition inline.
+    // The generated bindings can be accessed through `SimpleContract`.
+    abigen!(
+        MyContract,
+        r#"
+        [
+            {
+                "type":"contract",
+                "inputs":[
+                    {
+                        "components": null,
+                        "name": "gas",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "coin",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "color",
+                        "type": "b256"
+                    },
+                    {
+                        "name":"value",
+                        "type":"u64",
+                        "components": []
+                    }
+                ],
+                "name":"is_even",
+                "outputs":[
+                    {
+                        "name":"ret",
+                        "type":"bool",
+                        "components": []
+                    }
+                ]
+            },
+            {
+                "type":"contract",
+                "inputs":[
+                    {
+                        "components": null,
+                        "name": "gas",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "coin",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "color",
+                        "type": "b256"
+                    },
+                    {
+                        "name":"value",
+                        "type":"str[4]",
+                        "components": []
+                    }
+                ],
+                "name":"return_my_string",
+                "outputs":[
+                    {
+                        "name":"ret",
+                        "type":"str[4]",
+                        "components": []
+                    }
+                ]
+            },
+            {
+                "type":"contract",
+                "inputs":[
+                    {
+                        "components": null,
+                        "name": "gas",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "coin",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "color",
+                        "type": "b256"
+                    },
+                    {
+                        "name":"value",
+                        "type":"struct MyStruct",
+                        "components": [
+                            {
+                                "name": "foo",
+                                "type": "u8"
+                            },
+                            {
+                                "name": "bar",
+                                "type": "bool"
+                            }
+                        ]
+                    }
+                ],                                    
+                "name":"return_my_struct",
+                "outputs":[
+                    {
+                        "name":"ret",
+                        "type":"struct MyStruct",
+                        "components": [
+                            {
+                                "name": "foo",
+                                "type": "u8"
+                            },
+                            {
+                                "name": "bar",
+                                "type": "bool"
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+        "#
+    );
+
+    // Build the contract
+    let salt: [u8; 32] = rng.gen();
+    let salt = Salt::from(salt);
+
+    let compiled =
+        Contract::compile_sway_contract("tests/test_projects/contract_output_test", salt).unwrap();
+
+    let (client, contract_id) = Contract::launch_and_deploy(&compiled).await.unwrap();
+
+    println!("Contract deployed @ {:x}", contract_id);
+
+    let contract_instance = MyContract::new(compiled, client);
+
+    // `response`'s type matches the return type of `is_event()`
+    let response = contract_instance.is_even(10).call().await.unwrap();
+    assert!(response);
+
+    // `response`'s type matches the return type of `return_my_string()`
+    let response = contract_instance
+        .return_my_string("fuel".to_string())
+        .call()
+        .await
+        .unwrap();
+
+    assert_eq!(response, "fuel");
+
+    let my_struct = MyStruct { foo: 10, bar: true };
+
+    let _response = contract_instance.return_my_struct(my_struct).call().await;
 }
