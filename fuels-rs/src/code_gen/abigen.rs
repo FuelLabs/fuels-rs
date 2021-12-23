@@ -157,8 +157,14 @@ impl Abigen {
     fn abi_structs(&self) -> Result<TokenStream, Error> {
         let mut structs = TokenStream::new();
 
+        // Prevent expanding the same struct more than once
+        let mut seen_struct: Vec<&str> = vec![];
+
         for prop in self.custom_structs.values() {
-            structs.extend(expand_internal_struct(prop)?);
+            if !seen_struct.contains(&prop.type_field.as_str()) {
+                structs.extend(expand_internal_struct(prop)?);
+                seen_struct.push(&prop.type_field);
+            }
         }
 
         Ok(structs)
@@ -184,21 +190,29 @@ impl Abigen {
             CustomType::Struct => "struct",
         };
 
+        let mut all_properties: Vec<&Property> = vec![];
         for function in abi {
             for prop in &function.inputs {
-                if prop.type_field.contains(type_string) {
-                    // Top level struct
-                    if !structs.contains_key(&prop.name) {
-                        structs.insert(prop.name.clone(), prop.clone());
-                    }
+                all_properties.push(prop);
+            }
+            for prop in &function.outputs {
+                all_properties.push(prop);
+            }
+        }
 
-                    // Find inner structs in case of nested custom types
-                    for inner_component in prop.components.as_ref().unwrap() {
-                        inner_structs.extend(Abigen::get_inner_custom_properties(
-                            inner_component,
-                            type_string,
-                        ));
-                    }
+        for prop in all_properties {
+            if prop.type_field.contains(type_string) {
+                // Top level struct
+                if !structs.contains_key(&prop.name) {
+                    structs.insert(prop.name.clone(), prop.clone());
+                }
+
+                // Find inner structs in case of nested custom types
+                for inner_component in prop.components.as_ref().unwrap() {
+                    inner_structs.extend(Abigen::get_inner_custom_properties(
+                        inner_component,
+                        type_string,
+                    ));
                 }
             }
         }
@@ -489,6 +503,61 @@ mod tests {
 
         assert!(contract.custom_enums.contains_key("my_enum"));
 
+        let bindings = contract.generate().unwrap();
+        bindings.write(std::io::stdout()).unwrap();
+    }
+    #[test]
+    fn output_types() {
+        let contract = r#"
+        [
+            {
+                "type":"contract",
+                "inputs":[
+                    {
+                        "name":"value",
+                        "type":"struct MyStruct",
+                        "components": [
+                            {
+                                "name": "a",
+                                "type": "str[4]"
+                            },
+                            {
+                                "name": "foo",
+                                "type": "u8[2]"
+                            },
+                            {
+                                "name": "bar",
+                                "type": "bool"
+                            }
+                        ]
+                    }
+                ],
+                "name":"takes_enum",
+                "outputs":[
+                    {
+                        "name":"ret",
+                        "type":"struct MyStruct",
+                        "components": [
+                            {
+                                "name": "a",
+                                "type": "str[4]"
+                            },
+                            {
+                                "name": "foo",
+                                "type": "u8[2]"
+                            },
+                            {
+                                "name": "bar",
+                                "type": "bool"
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+        "#;
+
+        let contract = Abigen::new("custom", contract).unwrap();
         let bindings = contract.generate().unwrap();
         bindings.write(std::io::stdout()).unwrap();
     }

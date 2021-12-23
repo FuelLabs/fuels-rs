@@ -1,7 +1,7 @@
 use core::fmt;
 use fuel_types::bytes::padded_len;
 use fuel_types::Word;
-use strum_macros::{EnumString, ToString};
+use strum_macros::EnumString;
 
 pub mod abi_decoder;
 #[cfg(not(feature = "no-std"))]
@@ -14,7 +14,7 @@ pub type Bits256 = [u8; 32];
 pub type EnumSelector = (u8, Token);
 pub const WORD_SIZE: usize = core::mem::size_of::<Word>();
 
-#[derive(Debug, Clone, EnumString, ToString, PartialEq, Eq)]
+#[derive(Debug, Clone, EnumString, PartialEq, Eq)]
 #[strum(ascii_case_insensitive)]
 pub enum ParamType {
     U8,
@@ -27,8 +27,6 @@ pub enum ParamType {
     Array(Box<ParamType>, usize),
     #[strum(serialize = "str")]
     String(usize),
-    // Disabling EnumString on these 2 types because
-    // they are more complex to parse
     #[strum(disabled)]
     Struct(Vec<ParamType>),
     #[strum(disabled)]
@@ -38,6 +36,34 @@ pub enum ParamType {
 impl Default for ParamType {
     fn default() -> Self {
         ParamType::U8
+    }
+}
+
+impl fmt::Display for ParamType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            ParamType::String(size) => {
+                let t = format!("String({})", size);
+                write!(f, "{}", t)
+            }
+            ParamType::Array(t, size) => {
+                let boxed_type_str = format!("Box::new(ParamType::{})", t.to_string());
+                let arr_str = format!("Array({},{})", boxed_type_str, size);
+                write!(f, "{}", arr_str)
+            }
+            ParamType::Struct(inner) => {
+                let inner_strings: Vec<String> = inner
+                    .iter()
+                    .map(|p| format!("ParamType::{}", p.to_string()))
+                    .collect();
+
+                let s = format!("Struct(vec![{}])", inner_strings.join(","));
+                write!(f, "{}", s)
+            }
+            _ => {
+                write!(f, "{:?}", self)
+            }
+        }
     }
 }
 

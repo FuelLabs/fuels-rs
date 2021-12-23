@@ -50,10 +50,24 @@ pub fn expand_internal_struct(prop: &Property) -> Result<TokenStream, Error> {
                 param_types
                     .push(quote! { types.push(ParamType::Struct(#struct_name::param_types())) });
             }
-            // Elementary type
             _ => {
                 let ty = expand_type(&param_type)?;
-                let param_type_string = ident(&param_type.to_string());
+
+                let mut param_type_string = param_type.to_string();
+
+                let param_type_string_ident_tok: proc_macro2::TokenStream =
+                    param_type_string.parse().unwrap();
+
+                param_types.push(quote! { types.push(ParamType::#param_type_string_ident_tok) });
+
+                if let ParamType::Array(..) = param_type {
+                    param_type_string = "Array".to_string();
+                }
+                if let ParamType::String(..) = param_type {
+                    param_type_string = "String".to_string();
+                }
+
+                let param_type_string_ident = ident(&param_type_string);
 
                 // Field declaration
                 fields.push(quote! { pub #field_name: #ty});
@@ -64,9 +78,20 @@ pub fn expand_internal_struct(prop: &Property) -> Result<TokenStream, Error> {
                 });
 
                 // Token creation and insertion
-                struct_fields_tokens
-                    .push(quote! {tokens.push(Token::#param_type_string(self.#field_name))});
-                param_types.push(quote! { types.push(ParamType::#param_type_string) });
+                match param_type {
+                    ParamType::Array(_t, _s) => {
+                        struct_fields_tokens.push(
+                            quote! {tokens.push(Token::#param_type_string_ident(vec![self.#field_name.into_token()]))},
+                        );
+                    }
+                    // Primitive type
+                    _ => {
+                        // Token creation and insertion
+                        struct_fields_tokens.push(
+                            quote! {tokens.push(Token::#param_type_string_ident(self.#field_name))},
+                        );
+                    }
+                }
             }
         }
     }
@@ -102,6 +127,18 @@ pub fn expand_internal_struct(prop: &Property) -> Result<TokenStream, Error> {
                 }
             }
 
+        }
+
+        impl fuels_core::Detokenize for #name {
+            fn from_tokens(mut tokens: Vec<Token>) -> Result<Self, fuels_core::InvalidOutputType> {
+                let token = match tokens.len() {
+                    0 => Token::Struct(vec![]),
+                    1 => tokens.remove(0),
+                    _ => Token::Struct(tokens),
+                };
+
+                Ok(#name::new_from_tokens(&[token]))
+            }
         }
     })
 }
