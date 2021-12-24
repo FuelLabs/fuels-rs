@@ -2,7 +2,7 @@ use crate::errors::Error;
 use forc::test::{forc_build, BuildCommand};
 use forc::util::constants;
 use forc::util::helpers::{find_manifest_dir, read_manifest};
-use fuel_client::client::FuelClient;
+use fuel_gql_client::client::FuelClient;
 use fuel_tx::{Input, Output, Receipt, Transaction};
 use std::path::PathBuf;
 

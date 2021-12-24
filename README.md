@@ -35,7 +35,7 @@ You can instantiate a Fuel client, pointing to a local Fuel node by using [Fuel 
 
 ```Rust
 use fuel_core::service::{Config, FuelService};
-use fuel_client::client::FuelClient;
+use fuel_gql_client::client::FuelClient;
 
 let server = FuelService::new_node(Config::local_node()).await.unwrap();
 

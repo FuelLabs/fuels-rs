@@ -1,5 +1,5 @@
-use fuel_client::client::FuelClient;
 use fuel_core::service::{Config, FuelService};
+use fuel_gql_client::client::FuelClient;
 use fuel_tx::Salt;
 use fuels_abigen_macro::abigen;
 use fuels_core::Token;
