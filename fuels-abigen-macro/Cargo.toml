@@ -1,9 +1,12 @@
 [package]
-authors = ["digorithm <rodrigo.araujo@fuel.sh>"]
 name = "fuels-abigen-macro"
 version = "0.1.0"
+authors = ["Fuel Labs <contact@fuel.sh>"]
 edition = "2018"
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+homepage = "https://fuel.network/"
+license = "Apache-2.0"
+repository = "https://github.com/FuelLabs/fuels-rs"
+description = "Fuel Rust SDK marcros to generate types from ABI."
 
 [lib]
 proc-macro = true
