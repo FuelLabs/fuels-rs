@@ -15,14 +15,14 @@ proc-macro = true
 Inflector = "0.11"
 anyhow = "1"
 bytes = { version = "1.0.1", features = ["serde"] }
-forc = { git = "ssh://git@github.com/FuelLabs/sway.git", features = ["test", "util"], default-features = false }
+forc = { version = "0.1", features = ["test", "util"], default-features = false }
 fuels-core = { path = "../fuels-core" }
-fuel-asm = { git = "ssh://git@github.com/FuelLabs/fuel-asm.git", features = ["serde-types"] }
-fuel-client = { git = "ssh://git@github.com/FuelLabs/fuel-core", default-features = false }
-fuel-core = { git = "ssh://git@github.com/FuelLabs/fuel-core", default-features = false }
-fuel-tx = { git = "ssh://git@github.com/FuelLabs/fuel-tx.git" }
-fuel-types = { git = "ssh://git@github.com/FuelLabs/fuel-types.git" }
-fuel-vm = { git = "ssh://git@github.com/FuelLabs/fuel-vm.git" }
+fuel-asm = { version = "0.1", features = ["serde-types"] }
+fuel-client = { version = "0.1", default-features = false }
+fuel-core = { version = "0.1", default-features = false }
+fuel-tx = "0.1"
+fuel-types = "0.1"
+fuel-vm = "0.1"
 fuels-rs = { path = "../fuels-rs" }
 hex = { version = "0.4.3", default-features = false, features = ["std"] }
 itertools = "0.10.1"
