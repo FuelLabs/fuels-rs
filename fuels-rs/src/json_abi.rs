@@ -6,7 +6,7 @@ use std::convert::TryInto;
 use std::str;
 use std::str::FromStr;
 
-use core_types::{JsonABI, Property};
+use sway_types::{JsonABI, Property};
 
 use serde_json;
 
