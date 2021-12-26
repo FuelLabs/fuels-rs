@@ -1,6 +1,6 @@
 use fuel_asm::Opcode;
-use fuel_client::client::FuelClient;
 use fuel_core::service::{Config, FuelService};
+use fuel_gql_client::client::FuelClient;
 use fuel_tx::{Receipt, Salt, Transaction};
 use fuel_types::{Bytes32, ContractId};
 use fuel_vm::consts::REG_ZERO;

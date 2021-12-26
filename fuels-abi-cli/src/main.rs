@@ -1,8 +1,8 @@
-use core_types::Property;
 use fuels_core::ParamType;
 use fuels_rs::code_gen::abigen::Abigen;
 use fuels_rs::json_abi::parse_param;
 use fuels_rs::json_abi::ABIParser;
+use sway_types::Property;
 
 use std::fs;
 use std::path::PathBuf;

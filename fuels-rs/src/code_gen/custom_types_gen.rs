@@ -2,11 +2,11 @@ use crate::errors::Error;
 use crate::json_abi::parse_param;
 use crate::types::expand_type;
 use crate::utils::ident;
-use core_types::Property;
 use fuels_core::ParamType;
 use inflector::Inflector;
 use proc_macro2::TokenStream;
 use quote::quote;
+use sway_types::Property;
 
 /// Functions used by the Abigen to expand custom types defined in an ABI spec.
 

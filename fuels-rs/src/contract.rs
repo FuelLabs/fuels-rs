@@ -3,10 +3,10 @@ use crate::abi_encoder::ABIEncoder;
 use crate::errors::Error;
 use crate::script::Script;
 use forc::test::{forc_build, BuildCommand};
-use forc::util::helpers::{find_manifest_dir, read_manifest};
+use forc::util::helpers::read_manifest;
 use fuel_asm::Opcode;
-use fuel_client::client::FuelClient;
 use fuel_core::service::{Config, FuelService};
+use fuel_gql_client::client::FuelClient;
 use fuel_tx::{ContractId, Input, Output, Receipt, Transaction};
 use fuel_types::{Bytes32, Immediate12, Salt, Word};
 use fuel_vm::consts::{REG_CGAS, REG_RET, REG_ZERO, VM_TX_MEMORY};
@@ -17,6 +17,7 @@ use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 use std::marker::PhantomData;
 use std::path::PathBuf;
+use sway_utils::find_manifest_dir;
 
 #[derive(Debug, Clone, Default)]
 pub struct CompiledContract {

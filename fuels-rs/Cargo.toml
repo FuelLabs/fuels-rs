@@ -12,15 +12,14 @@ description = "Fuel Rust SDK."
 Inflector = "0.11"
 anyhow = "1"
 bytes = { version = "1.0.1", features = ["serde"] }
-core-types = { git = "ssh://git@github.com/FuelLabs/sway.git" }
-forc = { git = "ssh://git@github.com/FuelLabs/sway.git", features = ["test", "util"], default-features = false }
-fuels-core = { path = "../fuels-core" }
-fuel-asm = { git = "ssh://git@github.com/FuelLabs/fuel-asm.git", features = ["serde-types"] }
-fuel-client = { git = "ssh://git@github.com/FuelLabs/fuel-core", default-features = false }
-fuel-core = { git = "ssh://git@github.com/FuelLabs/fuel-core", default-features = false }
-fuel-tx = { git = "ssh://git@github.com/FuelLabs/fuel-tx.git" }
-fuel-types = { git = "ssh://git@github.com/FuelLabs/fuel-types.git" }
-fuel-vm = { git = "ssh://git@github.com/FuelLabs/fuel-vm.git" }
+forc = { version = "0.1", features = ["test", "util"], default-features = false }
+fuels-core = { version = "0.1.0", path = "../fuels-core" }
+fuel-asm = { version = "0.1", features = ["serde-types"] }
+fuel-gql-client = { version = "0.1", default-features = false }
+fuel-core = { version = "0.1", default-features = false }
+fuel-tx = "0.1"
+fuel-types = "0.1"
+fuel-vm = "0.1"
 hex = { version = "0.4.3", default-features = false, features = ["std"] }
 itertools = "0.10.1"
 proc-macro2 = "1.0"
@@ -32,6 +31,8 @@ serde_json = { version = "1.0.64", default-features = true }
 sha2 = "0.9.5"
 strum = "0.21"
 strum_macros = "0.21"
+sway-types = { version = "0.1" }
+sway-utils = { version = "0.1" }
 syn = "1.0.12"
 thiserror = { version = "1.0.26", default-features = false }
 tokio = "1.12"

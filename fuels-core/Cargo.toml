@@ -9,7 +9,7 @@ repository = "https://github.com/FuelLabs/fuels-rs"
 description = "Fuel Rust SDK core."
 
 [dependencies]
-fuel-types = { git = "ssh://git@github.com/FuelLabs/fuel-types.git", default-features = false }
+fuel-types = { version = "0.1", default-features = false }
 sha2 = { version = "0.9.5", optional = true }
 strum = "0.21"
 strum_macros = "0.21"

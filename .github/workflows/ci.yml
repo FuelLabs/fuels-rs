@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+  release:
+    types: [published]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.9.1
+        with:
+          access_token: ${{ github.token }}
+
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+
+      - name: Install rustfmt
+        run: rustup component add rustfmt
+
+      - name: Set git config
+        run: |
+          git config --global core.bigfilethreshold 100m
+
+      - name: Check formatting
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all --verbose -- --check
+
+      - name: Build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --verbose
+        env:
+          RUSTFLAGS: "-D warnings"
+
+      - name: Run tests
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --verbose
+
+  publish:
+    # Only do this job if publishing a release
+    needs: build
+    if: github.event_name == 'release' && github.event.action == 'published'
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Install toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        override: true
+
+    - name: Verify tag version
+      run: |
+        cargo install toml-cli
+        ./.github/workflows/scripts/verify_tag.sh ${{ github.ref_name }} fuels-rs/Cargo.toml
+        ./.github/workflows/scripts/verify_tag.sh ${{ github.ref_name }} fuels-core/Cargo.toml
+        ./.github/workflows/scripts/verify_tag.sh ${{ github.ref_name }} fuels-abigen-macro/Cargo.toml
+        ./.github/workflows/scripts/verify_tag.sh ${{ github.ref_name }} fuels-abi-cli/Cargo.toml
+    - name: Publish crate
+      uses: katyo/publish-crates@v1
+      with:
+          registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}

@@ -5,9 +5,9 @@ use crate::errors::Error;
 use crate::json_abi::{parse_param, ABIParser};
 use crate::types::expand_type;
 use crate::utils::{ident, safe_ident};
-use core_types::{Function, Property};
 use fuels_core::{ParamType, Selector};
 use inflector::Inflector;
+use sway_types::{Function, Property};
 
 use proc_macro2::{Literal, TokenStream};
 use quote::quote;

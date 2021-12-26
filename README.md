@@ -1,5 +1,10 @@
 # fuels-rs
 
+[![build](https://github.com/FuelLabs/fuels-rs/actions/workflows/ci.yml/badge.svg)](https://github.com/FuelLabs/fuels-rs/actions/workflows/ci.yml)
+[![crates.io](https://img.shields.io/crates/v/fuels-rs?label=latest)](https://crates.io/crates/fuels-rs)
+[![docs](https://docs.rs/fuels-rs/badge.svg)](https://docs.rs/fuels-rs)
+[![discord](https://img.shields.io/badge/chat%20on-discord-orange?&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2)](https://discord.gg/xfpK4Pe)
+
 Rust SDK for Fuel. It can be used for a variety of things, including but not limited to:
 
 - Compiling, deploying, and testing [Sway](https://github.com/FuelLabs/sway) contracts;
@@ -30,7 +35,7 @@ You can instantiate a Fuel client, pointing to a local Fuel node by using [Fuel 
 
 ```Rust
 use fuel_core::service::{Config, FuelService};
-use fuel_client::client::FuelClient;
+use fuel_gql_client::client::FuelClient;
 
 let server = FuelService::new_node(Config::local_node()).await.unwrap();
 

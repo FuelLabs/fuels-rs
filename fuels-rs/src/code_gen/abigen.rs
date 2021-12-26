@@ -7,7 +7,7 @@ use crate::errors::Error;
 use crate::json_abi::ABIParser;
 use crate::source::Source;
 use crate::utils::ident;
-use core_types::{JsonABI, Property};
+use sway_types::{JsonABI, Property};
 
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
@@ -99,7 +99,7 @@ impl Abigen {
             (
                 quote! {
                     use fuels_rs::contract::{Contract, ContractCall, CompiledContract};
-                    use fuel_client::client::FuelClient;
+                    use fuel_gql_client::client::FuelClient;
                 },
                 quote! {
                     pub struct #name {

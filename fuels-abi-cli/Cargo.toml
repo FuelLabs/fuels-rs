@@ -10,9 +10,9 @@ description = "Fuel Rust SDK CLI tool to parse ABI."
 
 [dependencies]
 anyhow = "1"
-core-types = { git = "ssh://git@github.com/FuelLabs/sway.git" }
-fuels-core = { path = "../fuels-core" }
-fuels-rs = { path = "../fuels-rs" }
+fuels-core = { version = "0.1.0", path = "../fuels-core" }
+fuels-rs = { version = "0.1.0", path = "../fuels-rs" }
 hex = "0.4"
 itertools = "0.10"
 structopt = "0.3"
+sway-types = { version = "0.1" }
