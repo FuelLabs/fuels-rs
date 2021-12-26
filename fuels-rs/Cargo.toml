@@ -32,6 +32,7 @@ sha2 = "0.9.5"
 strum = "0.21"
 strum_macros = "0.21"
 sway-types = { version = "0.1" }
+sway-utils = { version = "0.1" }
 syn = "1.0.12"
 thiserror = { version = "1.0.26", default-features = false }
 tokio = "1.12"
