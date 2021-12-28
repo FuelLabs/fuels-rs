@@ -1,6 +1,6 @@
 [package]
 name = "fuels-abigen-macro"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Fuel Labs <contact@fuel.sh>"]
 edition = "2018"
 homepage = "https://fuel.network/"
@@ -16,14 +16,14 @@ Inflector = "0.11"
 anyhow = "1"
 bytes = { version = "1.0.1", features = ["serde"] }
 forc = { version = "0.1", features = ["test", "util"], default-features = false }
-fuels-core = { version = "0.1.0", path = "../fuels-core" }
+fuels-core = { version = "0.1.1", path = "../fuels-core" }
 fuel-asm = { version = "0.1", features = ["serde-types"] }
 fuel-gql-client = { version = "0.1", default-features = false }
 fuel-core = { version = "0.1", default-features = false }
 fuel-tx = "0.1"
 fuel-types = "0.1"
 fuel-vm = "0.1"
-fuels-rs = { version = "0.1.0", path = "../fuels-rs" }
+fuels-rs = { version = "0.1.1", path = "../fuels-rs" }
 hex = { version = "0.4.3", default-features = false, features = ["std"] }
 itertools = "0.10.1"
 proc-macro2 = "1.0"
