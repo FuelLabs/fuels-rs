@@ -3,15 +3,15 @@
         "type": "function",
         "inputs": [
             {
-                "name": "gas",
+                "name": "gas_",
                 "type": "u64"
             },
             {
-                "name": "coin",
+                "name": "amount_",
                 "type": "u64"
             },
             {
-                "name": "color",
+                "name": "color_",
                 "type": "b256"
             },
             {

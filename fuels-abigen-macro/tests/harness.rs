@@ -33,7 +33,7 @@ async fn compile_bindings_from_contract_file() {
     // Currently this prints `0000000003b568d4000000000000002a000000000000000a`
     // The encoded contract call. Soon it'll be able to perform the
     // actual call.
-    let contract_call = contract_instance.takes_ints_returns_bool(42 as u32, 10 as u16);
+    let contract_call = contract_instance.takes_ints_returns_bool(42, 10);
 
     // Then you'll be able to use `.call()` to actually call the contract with the
     // specified function:
@@ -670,17 +670,17 @@ async fn example_workflow() {
                 "inputs": [
                 {
                     "components": null,
-                    "name": "gas",
+                    "name": "gas_",
                     "type": "u64"
                 },
                 {
                     "components": null,
-                    "name": "coin",
+                    "name": "amount_",
                     "type": "u64"
                 },
                 {
                     "components": null,
-                    "name": "color",
+                    "name": "color_",
                     "type": "b256"
                 },
                 {
@@ -703,22 +703,22 @@ async fn example_workflow() {
                 "inputs": [
                 {
                     "components": null,
-                    "name": "gas",
+                    "name": "gas_",
                     "type": "u64"
                 },
                 {
                     "components": null,
-                    "name": "coin",
+                    "name": "amount_",
                     "type": "u64"
                 },
                 {
                     "components": null,
-                    "name": "color",
+                    "name": "color_",
                     "type": "b256"
                 },
                 {
                     "components": null,
-                    "name": "amount",
+                    "name": "value",
                     "type": "u64"
                 }
                 ],
@@ -781,17 +781,17 @@ async fn type_safe_output_values() {
                 "inputs":[
                     {
                         "components": null,
-                        "name": "gas",
+                        "name": "gas_",
                         "type": "u64"
                     },
                     {
                         "components": null,
-                        "name": "coin",
+                        "name": "amount_",
                         "type": "u64"
                     },
                     {
                         "components": null,
-                        "name": "color",
+                        "name": "color_",
                         "type": "b256"
                     },
                     {
@@ -814,17 +814,17 @@ async fn type_safe_output_values() {
                 "inputs":[
                     {
                         "components": null,
-                        "name": "gas",
+                        "name": "gas_",
                         "type": "u64"
                     },
                     {
                         "components": null,
-                        "name": "coin",
+                        "name": "amount_",
                         "type": "u64"
                     },
                     {
                         "components": null,
-                        "name": "color",
+                        "name": "color_",
                         "type": "b256"
                     },
                     {
@@ -847,17 +847,17 @@ async fn type_safe_output_values() {
                 "inputs":[
                     {
                         "components": null,
-                        "name": "gas",
+                        "name": "gas_",
                         "type": "u64"
                     },
                     {
                         "components": null,
-                        "name": "coin",
+                        "name": "amount_",
                         "type": "u64"
                     },
                     {
                         "components": null,
-                        "name": "color",
+                        "name": "color_",
                         "type": "b256"
                     },
                     {

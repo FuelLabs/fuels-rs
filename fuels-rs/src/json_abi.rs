@@ -1279,17 +1279,17 @@ mod tests {
                 "inputs": [
                     {
                         "components": null,
-                        "name": "gas",
+                        "name": "gas_",
                         "type": "u64"
                     },
                     {
                         "components": null,
-                        "name": "amount",
+                        "name": "amount_",
                         "type": "u64"
                     },
                     {
                         "components": null,
-                        "name": "color",
+                        "name": "color_",
                         "type": "b256"
                     },
                     {
@@ -1312,17 +1312,17 @@ mod tests {
                 "inputs": [
                     {
                         "components": null,
-                        "name": "gas",
+                        "name": "gas_",
                         "type": "u64"
                     },
                     {
                         "components": null,
-                        "name": "amount",
+                        "name": "amount_",
                         "type": "u64"
                     },
                     {
                         "components": null,
-                        "name": "color",
+                        "name": "color_",
                         "type": "b256"
                     },
                     {
