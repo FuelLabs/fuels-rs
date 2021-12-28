@@ -134,7 +134,7 @@ fn expand_function_arguments(
         // contract_instance.increment_counter(42)
         // Note that _any_ significant change in the way the JSON ABI is generated
         // could affect this function expansion.
-        if param.name == "gas" || param.name == "coin" || param.name == "color" {
+        if param.name == "gas_" || param.name == "amount_" || param.name == "color_" {
             continue;
         }
         // TokenStream representing the name of the argument
