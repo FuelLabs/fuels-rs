@@ -91,7 +91,7 @@ impl Abigen {
         let (includes, code) = if self.no_std {
             (
                 quote! {
-                    use alloc::vec::Vec;
+                    use alloc::{vec, vec::Vec};
                 },
                 quote! {},
             )
@@ -161,7 +161,7 @@ impl Abigen {
         let mut seen_struct: Vec<&str> = vec![];
 
         for prop in self.custom_structs.values() {
-            if !seen_struct.contains(&prop.type_field.as_str()) {
+            if !seen_struct.contains(&prop.name.as_str()) {
                 structs.extend(expand_internal_struct(prop)?);
                 seen_struct.push(&prop.type_field);
             }
