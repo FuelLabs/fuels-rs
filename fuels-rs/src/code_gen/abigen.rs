@@ -91,7 +91,7 @@ impl Abigen {
         let (includes, code) = if self.no_std {
             (
                 quote! {
-                    use alloc::vec::Vec;
+                    use alloc::{vec, vec::Vec};
                 },
                 quote! {},
             )
