@@ -15,7 +15,7 @@ proc-macro = true
 Inflector = "0.11"
 anyhow = "1"
 bytes = { version = "1.0.1", features = ["serde"] }
-forc = { version = "0.1", features = ["test", "util"], default-features = false }
+forc = { version = "0.2", features = ["test", "util"], default-features = false }
 fuels-core = { version = "0.1.1", path = "../fuels-core" }
 fuel-asm = { version = "0.1", features = ["serde-types"] }
 fuel-gql-client = { version = "0.1", default-features = false }
