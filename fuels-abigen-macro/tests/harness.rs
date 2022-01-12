@@ -927,3 +927,130 @@ async fn type_safe_output_values() {
 
     let _response = contract_instance.return_my_struct(my_struct).call().await;
 }
+
+#[tokio::test]
+async fn call_with_structs() {
+    let rng = &mut StdRng::seed_from_u64(2322u64);
+
+    // Generates the bindings from the an ABI definition inline.
+    // The generated bindings can be accessed through `MyContract`.
+    abigen!(
+        MyContract,
+        r#"
+        [
+            {
+                "inputs": [
+                    {
+                        "components": null,
+                        "name": "gas_",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "amount_",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "color_",
+                        "type": "b256"
+                    },
+                    {
+                        "components": [
+                            {
+                                "components": null,
+                                "name": "dummy",
+                                "type": "bool"
+                            },
+                            {
+                                "components": null,
+                                "name": "initial_value",
+                                "type": "u64"
+                            }
+                        ],
+                        "name": "config",
+                        "type": "struct CounterConfig"
+                    }
+                ],
+                "name": "initialize_counter",
+                "outputs": [
+                    {
+                        "components": null,
+                        "name": "",
+                        "type": "u64"
+                    }
+                ],
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {
+                        "components": null,
+                        "name": "gas_",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "amount_",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "color_",
+                        "type": "b256"
+                    },
+                    {
+                        "components": null,
+                        "name": "amount",
+                        "type": "u64"
+                    }
+                ],
+                "name": "increment_counter",
+                "outputs": [
+                    {
+                        "components": null,
+                        "name": "",
+                        "type": "u64"
+                    }
+                ],
+                "type": "function"
+            }
+        ]
+        "#
+    );
+
+    // Build the contract
+    let salt: [u8; 32] = rng.gen();
+    let salt = Salt::from(salt);
+
+    let compiled =
+        Contract::compile_sway_contract("tests/test_projects/complex_types_contract", salt)
+            .unwrap();
+
+    let (client, contract_id) = Contract::launch_and_deploy(&compiled).await.unwrap();
+
+    println!("Contract deployed @ {:x}", contract_id);
+
+    let contract_instance = MyContract::new(compiled, client);
+
+    let counter_config = CounterConfig {
+        dummy: true,
+        initial_value: 42,
+    };
+
+    let result = contract_instance
+        .initialize_counter(counter_config) // Build the ABI call
+        .call() // Perform the network call
+        .await
+        .unwrap();
+
+    assert_eq!(42, result);
+
+    let result = contract_instance
+        .increment_counter(10)
+        .call()
+        .await
+        .unwrap();
+
+    assert_eq!(52, result);
+}

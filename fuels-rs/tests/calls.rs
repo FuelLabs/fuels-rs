@@ -100,6 +100,7 @@ async fn contract_call() {
         gas_price,
         gas_limit,
         maturity,
+        false,
     )
     .await
     .unwrap();
