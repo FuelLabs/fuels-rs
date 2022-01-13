@@ -12,7 +12,7 @@ use fuel_types::{Bytes32, Immediate12, Salt, Word};
 use fuel_vm::consts::{REG_CGAS, REG_RET, REG_ZERO, VM_TX_MEMORY};
 use fuel_vm::prelude::Contract as FuelContract;
 use fuels_core::ParamType;
-use fuels_core::{Detokenize, Selector, Token};
+use fuels_core::{Detokenize, Selector, Token, WORD_SIZE};
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 use std::marker::PhantomData;
@@ -59,6 +59,7 @@ impl Contract {
         gas_price: Word,
         gas_limit: Word,
         maturity: Word,
+        custom_inputs: bool,
     ) -> Result<Vec<Receipt>, String> {
         // Based on the defined script length,
         // we set the appropriate data offset.
@@ -87,16 +88,35 @@ impl Contract {
         assert!(script.len() == script_len, "Script length *must* be 16");
 
         // `script_data` consists of:
-        // 1. The contract ID
-        // 2. The function selector
-        // 3. The encoded arguments, in order
+        // 1. Contract ID (ContractID::LEN);
+        // 2. Function selector (1 * WORD_SIZE);
+        // 3. Calldata offset, if it has structs as input,
+        // computed as `script_data_offset` + ContractId::LEN
+        //                                  + 2 * WORD_SIZE;
+        // 4. Encoded arguments.
         let mut script_data: Vec<u8> = vec![];
+
+        // Insert contract_id
         script_data.extend(contract_id.as_ref());
 
+        // Insert encoded function selector, if any
         if let Some(e) = encoded_selector {
             script_data.extend(e)
         }
 
+        // If the method call takes custom inputs, such as structs or enums,
+        // we need to calculate the `call_data_offset`, which points to
+        // where the data for the custom types start in the transaction.
+        // If it doesn't take any custom inputs, this isn't necessary.
+        if custom_inputs {
+            // Offset of the script data relative to the call data
+            let call_data_offset = script_data_offset as usize + ContractId::LEN + 2 * WORD_SIZE;
+            let call_data_offset = call_data_offset as Word;
+
+            script_data.extend(&call_data_offset.to_be_bytes());
+        }
+
+        // Insert encoded arguments, if any
         if let Some(e) = encoded_args {
             script_data.extend(e)
         }
@@ -162,6 +182,8 @@ impl Contract {
         let maturity = 0;
         let input_index = 0;
 
+        let custom_inputs = args.iter().any(|t| matches!(t, Token::Struct(_)));
+
         Ok(ContractCall {
             compiled_contract: compiled_contract.clone(),
             contract_id: Self::compute_contract_id(compiled_contract),
@@ -177,6 +199,7 @@ impl Contract {
             fuel_client: fuel_client.clone(),
             datatype: PhantomData,
             output_params: output_params.to_vec(),
+            custom_inputs,
         })
     }
 
@@ -297,6 +320,7 @@ pub struct ContractCall<D> {
     pub maturity: u64,
     pub datatype: PhantomData<D>,
     pub output_params: Vec<ParamType>,
+    pub custom_inputs: bool,
 }
 
 impl<D> ContractCall<D>
@@ -322,6 +346,7 @@ where
             self.gas_price,
             self.gas_limit,
             self.maturity,
+            self.custom_inputs,
         )
         .await
         .unwrap();
