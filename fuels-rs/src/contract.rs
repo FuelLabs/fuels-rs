@@ -88,14 +88,12 @@ impl Contract {
         assert!(script.len() == script_len, "Script length *must* be 16");
 
         // `script_data` consists of:
-        // Primitive types as input:
-        // ┌─────────────┬─────────────┬──────────────┐
-        // │ contract_id │ fn selector │ encoded args │
-        // └─────────────┴─────────────┴──────────────┘
-        // Structs as input:
-        // ┌─────────────┬─────────────┬─────────────────┬──────────────┐
-        // │ contract_id │ fn selector │call_data_offset │ encoded args │
-        // └─────────────┴─────────────┴─────────────────┴──────────────┘
+        // 1. Contract ID (ContractID::LEN);
+        // 2. Function selector (1 * WORD_SIZE);
+        // 3. Calldata offset, if it has structs as input,
+        // computed as `script_data_offset` + ContractId::LEN
+        //                                  + 2 * WORD_SIZE;
+        // 4. Encoded arguments.
         let mut script_data: Vec<u8> = vec![];
 
         // Insert contract_id
