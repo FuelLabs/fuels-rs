@@ -74,7 +74,7 @@ impl Signature {
         Ok(())
     }
 
-    /// Recovers the Ethereum address which was used
+    /// Recovers the Fuel address which was used
     /// to sign the given message. Note that this message
     /// can be either the original message or its digest (hashed message).
     /// Both can be used to recover the address of the signature.
