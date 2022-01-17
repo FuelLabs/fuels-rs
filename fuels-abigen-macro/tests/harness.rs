@@ -1054,3 +1054,70 @@ async fn call_with_structs() {
 
     assert_eq!(52, result);
 }
+
+#[tokio::test]
+async fn call_with_empty_return() {
+    let rng = &mut StdRng::seed_from_u64(2322u64);
+
+    // Generates the bindings from the an ABI definition inline.
+    // The generated bindings can be accessed through `MyContract`.
+    abigen!(
+        MyContract,
+        r#"
+        [
+            {
+                "inputs": [
+                    {
+                        "components": null,
+                        "name": "gas_",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "amount_",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "color_",
+                        "type": "b256"
+                    },
+                    {
+                        "components": null,
+                        "name": "val",
+                        "type": "u64"
+                    }
+                ],
+                "name": "store_value",
+                "outputs": [
+                    {
+                        "components": null,
+                        "name": "",
+                        "type": "()"
+                    }
+                ],
+                "type": "function"
+            }
+        ]
+        "#
+    );
+
+    // Build the contract
+    let salt: [u8; 32] = rng.gen();
+    let salt = Salt::from(salt);
+
+    let compiled =
+        Contract::compile_sway_contract("tests/test_projects/call_empty_return", salt).unwrap();
+
+    let (client, contract_id) = Contract::launch_and_deploy(&compiled).await.unwrap();
+
+    println!("Contract deployed @ {:x}", contract_id);
+
+    let contract_instance = MyContract::new(compiled, client);
+
+    let _result = contract_instance
+        .store_value(42) // Build the ABI call
+        .call() // Perform the network call
+        .await
+        .unwrap();
+}
