@@ -351,7 +351,10 @@ where
         .await
         .unwrap();
 
-        let returned_value = Self::get_receipt_value(&receipts).unwrap().to_be_bytes();
+        let returned_value = match Self::get_receipt_value(&receipts) {
+            Some(val) => val.to_be_bytes(),
+            None => [0u8; 8],
+        };
 
         let mut decoder = ABIDecoder::new();
 
