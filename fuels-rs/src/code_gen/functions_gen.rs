@@ -25,6 +25,8 @@ use std::collections::HashMap;
 /// The actual logic inside the function is the function `method_hash` under
 /// [`Contract`], which is responsible for encoding the function selector
 /// and the function parameters that will be used in the actual contract call.
+///
+/// [`Contract`]: crate::contract::Contract
 pub fn expand_function(
     function: &Function,
     abi_parser: &ABIParser,

@@ -69,11 +69,11 @@ impl Abigen {
     }
 
     /// Entry point of the Abigen's expansion logic.
-    /// The high-level goal of this function is to expand[0] a contract
+    /// The high-level goal of this function is to expand* a contract
     /// defined as a JSON into type-safe bindings of that contract that can be
     /// used after it is brought into scope after a successful generation.
     ///
-    /// [0]: To expand, in procedural macro terms, means to automatically generate
+    /// *: To expand, in procedural macro terms, means to automatically generate
     /// Rust code after a transformation of `TokenStream` to another
     /// set of `TokenStream`. This generated Rust code is the brought into scope
     /// after it is called through a procedural macro (`abigen!()` in our case).

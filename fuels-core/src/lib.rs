@@ -7,6 +7,7 @@ pub mod abi_decoder;
 #[cfg(not(feature = "no-std"))]
 pub mod abi_encoder;
 pub mod errors;
+pub mod signature;
 
 pub type ByteArray = [u8; 8];
 pub type Selector = ByteArray;
