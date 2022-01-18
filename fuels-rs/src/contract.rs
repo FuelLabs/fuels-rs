@@ -1,22 +1,34 @@
+#[cfg(feature = "fuel-gql-client")]
 use crate::abi_decoder::ABIDecoder;
+#[cfg(feature = "fuel-gql-client")]
 use crate::abi_encoder::ABIEncoder;
 use crate::errors::Error;
 #[cfg(feature = "fuel-gql-client")]
 use crate::script::Script;
 use forc::test::{forc_build, BuildCommand};
 use forc::util::helpers::read_manifest;
+#[cfg(feature = "fuel-gql-client")]
 use fuel_asm::Opcode;
 #[cfg(feature = "fuel-core")]
 use fuel_core::service::{Config, FuelService};
 #[cfg(feature = "fuel-gql-client")]
 use fuel_gql_client::client::FuelClient;
-use fuel_tx::{ContractId, Input, Output, Receipt, Transaction};
-use fuel_types::{Bytes32, Immediate12, Salt, Word};
+#[cfg(feature = "fuel-gql-client")]
+use fuel_tx::Receipt;
+use fuel_tx::{ContractId, Input, Output, Transaction};
+use fuel_types::{Bytes32, Salt};
+#[cfg(feature = "fuel-gql-client")]
+use fuel_types::{Immediate12, Word};
+#[cfg(feature = "fuel-gql-client")]
 use fuel_vm::consts::{REG_CGAS, REG_RET, REG_ZERO, VM_TX_MEMORY};
 use fuel_vm::prelude::Contract as FuelContract;
 use fuels_core::ParamType;
-use fuels_core::{Detokenize, Selector, Token, WORD_SIZE};
+use fuels_core::{Detokenize, Selector};
+#[cfg(feature = "fuel-gql-client")]
+use fuels_core::{Token, WORD_SIZE};
+#[cfg(feature = "fuel-gql-client")]
 use rand::rngs::StdRng;
+#[cfg(feature = "fuel-gql-client")]
 use rand::{Rng, SeedableRng};
 use std::marker::PhantomData;
 use std::path::PathBuf;
@@ -372,6 +384,7 @@ where
         Ok(D::from_tokens(decoded)?)
     }
 
+    #[cfg(feature = "fuel-gql-client")]
     fn get_receipt_value(receipts: &[Receipt]) -> Option<u64> {
         for receipt in receipts {
             if receipt.val().is_some() {
