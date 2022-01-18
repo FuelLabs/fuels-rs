@@ -1,5 +1,5 @@
 [project]
-author  = "Rodrigo Araujo"
-license = "MIT"
+author  = "Fuel Labs <contact@fuel.sh>"
+license = "Apache-2.0"
 name = "contract_test"
 entry = "main.sw"
