@@ -1,11 +1,14 @@
 use crate::abi_decoder::ABIDecoder;
 use crate::abi_encoder::ABIEncoder;
 use crate::errors::Error;
+#[cfg(feature = "fuel-gql-client")]
 use crate::script::Script;
 use forc::test::{forc_build, BuildCommand};
 use forc::util::helpers::read_manifest;
 use fuel_asm::Opcode;
+#[cfg(feature = "fuel-core")]
 use fuel_core::service::{Config, FuelService};
+#[cfg(feature = "fuel-gql-client")]
 use fuel_gql_client::client::FuelClient;
 use fuel_tx::{ContractId, Input, Output, Receipt, Transaction};
 use fuel_types::{Bytes32, Immediate12, Salt, Word};
@@ -47,6 +50,7 @@ impl Contract {
     /// Calls an already-deployed contract code.
     /// Note that this is a "generic" call to a contract
     /// and it doesn't, yet, call a specific ABI function in that contract.
+    #[cfg(feature = "fuel-gql-client")]
     pub async fn call(
         contract_id: ContractId,
         encoded_selector: Option<Selector>,
@@ -154,6 +158,7 @@ impl Contract {
     ///     }
     /// }
     /// For more details see `code_gen/functions_gen.rs`.
+    #[cfg(feature = "fuel-gql-client")]
     pub fn method_hash<D: Detokenize>(
         fuel_client: &FuelClient,
         compiled_contract: &CompiledContract,
@@ -206,6 +211,7 @@ impl Contract {
     /// Launches a local `fuel-core` network and deploys a contract to it.
     /// If you want to deploy a contract against another network of
     /// your choosing, use the `deploy` function instead.
+    #[cfg(all(feature = "fuel-core", feature = "fuel-gql-client"))]
     pub async fn launch_and_deploy(
         compiled_contract: &CompiledContract,
     ) -> Result<(FuelClient, ContractId), Error> {
@@ -219,6 +225,7 @@ impl Contract {
     }
 
     /// Deploys a compiled contract to a running node
+    #[cfg(feature = "fuel-gql-client")]
     pub async fn deploy(
         compiled_contract: &CompiledContract,
         fuel_client: &FuelClient,
@@ -306,6 +313,7 @@ impl Contract {
 #[must_use = "contract calls do nothing unless you `call` them"]
 /// Helper for managing a transaction before submitting it to a node
 pub struct ContractCall<D> {
+    #[cfg(feature = "fuel-gql-client")]
     pub fuel_client: FuelClient,
     pub compiled_contract: CompiledContract,
     pub encoded_args: Vec<u8>,
@@ -333,6 +341,7 @@ where
     /// `Result<bool, Error>`. Also works for structs! If your method
     /// returns `MyStruct`, `MyStruct` will be generated through the `abigen!()`
     /// and this will return `Result<MyStruct, Error>`.
+    #[cfg(feature = "fuel-gql-client")]
     pub async fn call(self) -> Result<D, Error> {
         let receipts = Contract::call(
             self.contract_id,

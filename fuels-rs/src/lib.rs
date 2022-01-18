@@ -3,6 +3,7 @@ pub mod contract;
 pub mod errors;
 pub mod json_abi;
 pub mod rustfmt;
+#[cfg(feature = "fuel-core")]
 pub mod script;
 pub mod source;
 pub mod types;
