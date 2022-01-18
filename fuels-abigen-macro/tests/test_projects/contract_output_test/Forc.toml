@@ -6,5 +6,5 @@ entry = "main.sw"
 
 [dependencies]
 increment_abi = { path = "../library_test" }
-std = { path = "../lib-std" }
-core = { path = "../lib-core" }
+std = { git = "https://github.com/FuelLabs/sway-lib-std"}
+core = { git = "https://github.com/FuelLabs/sway-lib-core/" }
