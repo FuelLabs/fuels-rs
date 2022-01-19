@@ -33,6 +33,14 @@ pub struct Contract {
     pub compiled_contract: CompiledContract,
 }
 
+/// CallResponse is a struct that is returned by a call to the contract. Its first
+/// value is the value of interest, and the other one are receipts, are per FuelVM specs
+#[derive(Debug)]
+pub struct CallResponse<D> {
+    pub value: D,
+    pub receipts: Vec<Receipt>,
+}
+
 impl Contract {
     pub fn new(compiled_contract: CompiledContract) -> Self {
         Self { compiled_contract }
@@ -335,7 +343,7 @@ where
     /// `Result<bool, Error>`. Also works for structs! If your method
     /// returns `MyStruct`, `MyStruct` will be generated through the `abigen!()`
     /// and this will return `Result<MyStruct, Error>`.
-    pub async fn call(self) -> Result<D, Error> {
+    pub async fn call(self) -> Result<CallResponse<D>, Error> {
         let receipts = Contract::call(
             self.contract_id,
             Some(self.encoded_selector),
@@ -353,24 +361,26 @@ where
         .await
         .unwrap();
 
-        let returned_value = match Self::get_receipt_value(&receipts) {
+        let mut encoded_value = None;
+        let mut contract_receipts = Vec::new();
+        for receipt in receipts {
+            if receipt.val().is_some() {
+                if encoded_value.is_some() {
+                    contract_receipts.push(receipt)
+                } else {
+                    encoded_value = receipt.val();
+                }
+            }
+        }
+        let encoded_value = match encoded_value {
             Some(val) => val.to_be_bytes(),
             None => [0u8; 8],
         };
-
         let mut decoder = ABIDecoder::new();
-
-        let decoded = decoder.decode(&self.output_params, &returned_value)?;
-
-        Ok(D::from_tokens(decoded)?)
-    }
-
-    fn get_receipt_value(receipts: &[Receipt]) -> Option<u64> {
-        for receipt in receipts {
-            if receipt.val().is_some() {
-                return receipt.val();
-            }
-        }
-        None
+        let decoded_value = decoder.decode(&self.output_params, &encoded_value)?;
+        Ok(CallResponse {
+            value: D::from_tokens(decoded_value)?,
+            receipts: contract_receipts,
+        })
     }
 }
