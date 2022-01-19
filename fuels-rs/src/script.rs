@@ -43,8 +43,8 @@ impl Script {
             binary_outfile: None,
             offline_mode: false,
             silent_mode: true,
-            print_ir: false,
             use_ir: false,
+            print_ir: false,
         };
 
         let raw =
