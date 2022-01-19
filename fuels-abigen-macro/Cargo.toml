@@ -15,14 +15,14 @@ proc-macro = true
 Inflector = "0.11"
 anyhow = "1"
 bytes = { version = "1.0.1", features = ["serde"] }
-forc = { version = "0.2", features = ["test", "util"], default-features = false }
+forc = { version = "0.3", features = ["test", "util"], default-features = false }
 fuels-core = { version = "0.1.3", path = "../fuels-core" }
 fuel-asm = { version = "0.1", features = ["serde-types"] }
-fuel-gql-client = { version = "0.1", default-features = false }
-fuel-core = { version = "0.1", default-features = false }
-fuel-tx = "0.1"
+fuel-gql-client = { version = "0.2", default-features = false }
+fuel-core = { version = "0.2", default-features = false }
+fuel-tx = "0.2"
 fuel-types = "0.1"
-fuel-vm = "0.1"
+fuel-vm = "0.2"
 fuels-rs = { version = "0.1.3", path = "../fuels-rs" }
 hex = { version = "0.4.3", default-features = false, features = ["std"] }
 itertools = "0.10.1"

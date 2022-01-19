@@ -7,7 +7,7 @@ use forc::util::helpers::read_manifest;
 use fuel_asm::Opcode;
 use fuel_core::service::{Config, FuelService};
 use fuel_gql_client::client::FuelClient;
-use fuel_tx::{ContractId, Input, Output, Receipt, Transaction};
+use fuel_tx::{ContractId, Input, Output, Receipt, Transaction, UtxoId};
 use fuel_types::{Bytes32, Immediate12, Salt, Word};
 use fuel_vm::consts::{REG_CGAS, REG_RET, REG_ZERO, VM_TX_MEMORY};
 use fuel_vm::prelude::Contract as FuelContract;
@@ -52,7 +52,7 @@ impl Contract {
         encoded_selector: Option<Selector>,
         encoded_args: Option<Vec<u8>>,
         fuel_client: &FuelClient,
-        utxo_id: Bytes32,
+        utxo_id: UtxoId,
         balance_root: Bytes32,
         state_root: Bytes32,
         input_index: u8,
@@ -174,7 +174,7 @@ impl Contract {
         let balance_root: [u8; 32] = rng.gen();
         let state_root: [u8; 32] = rng.gen();
 
-        let utxo_id = Bytes32::from(utxo_id);
+        let utxo_id = UtxoId::new(Bytes32::from(utxo_id), 0);
         let balance_root = Bytes32::from(balance_root);
         let state_root = Bytes32::from(state_root);
         let gas_price = 0;
@@ -243,6 +243,8 @@ impl Contract {
             binary_outfile: None,
             offline_mode: false,
             silent_mode: true,
+            print_ir: false,
+            use_ir: false,
         };
 
         let raw =
@@ -312,7 +314,7 @@ pub struct ContractCall<D> {
     pub encoded_selector: Selector,
     pub balance_root: Bytes32,
     pub state_root: Bytes32,
-    pub utxo_id: Bytes32,
+    pub utxo_id: UtxoId,
     pub input_index: u8,
     pub contract_id: ContractId,
     pub gas_price: u64,
