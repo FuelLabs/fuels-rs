@@ -33,8 +33,9 @@ pub struct Contract {
     pub compiled_contract: CompiledContract,
 }
 
-/// CallResponse is a struct that is returned by a call to the contract. Its first
-/// value is the value of interest, and the other one are receipts, are per FuelVM specs
+/// CallResponse is a struct that is returned by a call to the contract. Its value field
+/// holds the decoded typed value returned by the contract's method. The other field
+/// holds all the receipts returned by the call.
 #[derive(Debug)]
 pub struct CallResponse<D> {
     pub value: D,
@@ -361,26 +362,15 @@ where
         .await
         .unwrap();
 
-        let mut encoded_value = None;
-        let mut contract_receipts = Vec::new();
-        for receipt in receipts {
-            if receipt.val().is_some() {
-                if encoded_value.is_some() {
-                    contract_receipts.push(receipt)
-                } else {
-                    encoded_value = receipt.val();
-                }
-            }
-        }
-        let encoded_value = match encoded_value {
-            Some(val) => val.to_be_bytes(),
+        let encoded_value = match receipts.iter().find(|&receipts| receipt.val().is_some()) {
+            Some(r) => r.val().unwrap().to_be_bytes(),
             None => [0u8; 8],
         };
         let mut decoder = ABIDecoder::new();
         let decoded_value = decoder.decode(&self.output_params, &encoded_value)?;
         Ok(CallResponse {
             value: D::from_tokens(decoded_value)?,
-            receipts: contract_receipts,
+            receipts,
         })
     }
 }
