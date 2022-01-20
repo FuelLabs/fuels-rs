@@ -362,7 +362,7 @@ where
         .await
         .unwrap();
 
-        let encoded_value = match receipts.iter().find(|&receipts| receipt.val().is_some()) {
+        let encoded_value = match receipts.iter().find(|&receipt| receipt.val().is_some()) {
             Some(r) => r.val().unwrap().to_be_bytes(),
             None => [0u8; 8],
         };
