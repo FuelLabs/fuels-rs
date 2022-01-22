@@ -1,10 +1,10 @@
 [project]
-author  = "Rodrigo Araujo"
-license = "MIT"
+author  = "Fuel Labs <contact@fuel.sh>"
+license = "Apache-2.0"
 name = "script_test"
 entry = "main.sw"
 
 
 [dependencies]
-std = { path = "../stdlib" }
+core = { git = "https://github.com/FuelLabs/sway-lib-core" }
 increment_abi = { path = "../library_test" }

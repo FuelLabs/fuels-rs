@@ -38,7 +38,7 @@ async fn script_call() {
     let expected_receipt = Receipt::Return {
         id: ContractId::new([0u8; 32]),
         val: 0,
-        pc: 2360,
+        pc: result[0].pc().unwrap(),
         is: 464,
     };
 
