@@ -345,7 +345,7 @@ where
     /// returns `MyStruct`, `MyStruct` will be generated through the `abigen!()`
     /// and this will return `Result<MyStruct, Error>`.
     pub async fn call(self) -> Result<CallResponse<D>, Error> {
-        let receipts = Contract::call(
+        let mut receipts = Contract::call(
             self.contract_id,
             Some(self.encoded_selector),
             Some(self.encoded_args),
@@ -362,10 +362,17 @@ where
         .await
         .unwrap();
 
-        let encoded_value = match receipts.iter().find(|&receipt| receipt.val().is_some()) {
-            Some(r) => r.val().unwrap().to_be_bytes(),
-            None => [0u8; 8],
+        let (encoded_value, index) = match receipts.iter().find(|&receipt| receipt.val().is_some())
+        {
+            Some(r) => {
+                let index = receipts.iter().position(|elt| elt == r).unwrap();
+                (r.val().unwrap().to_be_bytes(), Some(index))
+            }
+            None => ([0u8; 8], None),
         };
+        if index.is_some() {
+            receipts.remove(index.unwrap());
+        }
         let mut decoder = ABIDecoder::new();
         let decoded_value = decoder.decode(&self.output_params, &encoded_value)?;
         Ok(CallResponse {
