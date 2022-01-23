@@ -3,7 +3,6 @@ use crate::abi_encoder::ABIEncoder;
 use crate::errors::Error;
 use crate::script::Script;
 use forc::test::{forc_build, BuildCommand};
-use forc::util::helpers::read_manifest;
 use fuel_asm::Opcode;
 use fuel_core::service::{Config, FuelService};
 use fuel_gql_client::client::FuelClient;
@@ -16,15 +15,11 @@ use fuels_core::{Detokenize, Selector, Token, WORD_SIZE};
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 use std::marker::PhantomData;
-use std::path::PathBuf;
-use sway_utils::find_manifest_dir;
 
 #[derive(Debug, Clone, Default)]
 pub struct CompiledContract {
     pub raw: Vec<u8>,
     pub salt: Salt,
-    pub inputs: Vec<Input>,
-    pub outputs: Vec<Output>,
 }
 
 /// Contract is a struct to interface with a contract. That includes things such as
@@ -250,24 +245,7 @@ impl Contract {
         let raw =
             forc_build::build(build_command).map_err(|message| Error::CompilationError(message))?;
 
-        let manifest_dir = find_manifest_dir(&PathBuf::from(project_path)).unwrap();
-        let manifest = read_manifest(&manifest_dir).map_err(|e| {
-            Error::CompilationError(format!("Failed to find manifest for contract: {}", e))
-        })?;
-
-        let (inputs, outputs) = manifest.get_tx_inputs_and_outputs().map_err(|e| {
-            Error::CompilationError(format!(
-                "Failed to find contract's inputs and outputs: {}",
-                e
-            ))
-        })?;
-
-        Ok(CompiledContract {
-            salt,
-            raw,
-            inputs,
-            outputs,
-        })
+        Ok(CompiledContract { salt, raw })
     }
 
     /// Crafts a transaction used to deploy a contract
@@ -295,7 +273,7 @@ impl Contract {
             bytecode_witness_index,
             compiled_contract.salt,
             static_contracts,
-            compiled_contract.inputs.clone(),
+            vec![],
             vec![output],
             witnesses,
         );

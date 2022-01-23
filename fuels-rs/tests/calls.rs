@@ -67,8 +67,6 @@ async fn contract_call() {
     let compiled_contract = CompiledContract {
         salt: Salt::from(salt),
         raw: program,
-        inputs: vec![],
-        outputs: vec![],
     };
 
     let contract_id = Contract::deploy(&compiled_contract, &fuel_client)
