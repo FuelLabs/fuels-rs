@@ -12,8 +12,6 @@ use fuel_vm::consts::{REG_CGAS, REG_RET, REG_ZERO, VM_TX_MEMORY};
 use fuel_vm::prelude::Contract as FuelContract;
 use fuels_core::ParamType;
 use fuels_core::{Detokenize, Selector, Token, WORD_SIZE};
-use rand::rngs::StdRng;
-use rand::{Rng, SeedableRng};
 use std::marker::PhantomData;
 
 #[derive(Debug, Clone, Default)]
@@ -47,10 +45,6 @@ impl Contract {
         encoded_selector: Option<Selector>,
         encoded_args: Option<Vec<u8>>,
         fuel_client: &FuelClient,
-        utxo_id: UtxoId,
-        balance_root: Bytes32,
-        state_root: Bytes32,
-        input_index: u8,
         gas_price: Word,
         gas_limit: Word,
         maturity: Word,
@@ -117,8 +111,15 @@ impl Contract {
         }
 
         // Inputs/outputs
-        let input = Input::contract(utxo_id, balance_root, state_root, contract_id);
-        let output = Output::contract(input_index, balance_root, state_root);
+        let input = Input::contract(
+            UtxoId::new(Bytes32::zeroed(), 0),
+            Bytes32::zeroed(),
+            Bytes32::zeroed(),
+            contract_id,
+        );
+        // TODO: for now, assume there is only a single input and output, so input_index is 0.
+        // This needs to be changed to support multiple contract IDs.
+        let output = Output::contract(0, Bytes32::zeroed(), Bytes32::zeroed());
 
         let tx = Transaction::script(
             gas_price,
@@ -158,24 +159,12 @@ impl Contract {
     ) -> Result<ContractCall<D>, Error> {
         let mut encoder = ABIEncoder::new();
 
-        let rng = &mut StdRng::seed_from_u64(2322u64);
-
         let encoded_args = encoder.encode(args).unwrap();
         let encoded_selector = signature;
 
-        // Temporarily generating these parameters here.
-        // Eventually we might want to take these from the caller.
-        let utxo_id: [u8; 32] = rng.gen();
-        let balance_root: [u8; 32] = rng.gen();
-        let state_root: [u8; 32] = rng.gen();
-
-        let utxo_id = UtxoId::new(Bytes32::from(utxo_id), 0);
-        let balance_root = Bytes32::from(balance_root);
-        let state_root = Bytes32::from(state_root);
         let gas_price = 0;
         let gas_limit = 1_000_000;
         let maturity = 0;
-        let input_index = 0;
 
         let custom_inputs = args.iter().any(|t| matches!(t, Token::Struct(_)));
 
@@ -187,10 +176,6 @@ impl Contract {
             gas_limit,
             maturity,
             encoded_selector,
-            utxo_id,
-            balance_root,
-            state_root,
-            input_index,
             fuel_client: fuel_client.clone(),
             datatype: PhantomData,
             output_params: output_params.to_vec(),
@@ -290,10 +275,6 @@ pub struct ContractCall<D> {
     pub compiled_contract: CompiledContract,
     pub encoded_args: Vec<u8>,
     pub encoded_selector: Selector,
-    pub balance_root: Bytes32,
-    pub state_root: Bytes32,
-    pub utxo_id: UtxoId,
-    pub input_index: u8,
     pub contract_id: ContractId,
     pub gas_price: u64,
     pub gas_limit: u64,
@@ -319,10 +300,6 @@ where
             Some(self.encoded_selector),
             Some(self.encoded_args),
             &self.fuel_client,
-            self.utxo_id,
-            self.balance_root,
-            self.state_root,
-            self.input_index,
             self.gas_price,
             self.gas_limit,
             self.maturity,
