@@ -50,6 +50,10 @@ pub fn expand_internal_struct(prop: &Property) -> Result<TokenStream, Error> {
                 param_types
                     .push(quote! { types.push(ParamType::Struct(#struct_name::param_types())) });
             }
+            ParamType::Enum(_params) => {
+                // TODO: Support enums inside structs
+                unimplemented!()
+            }
             _ => {
                 let ty = expand_type(&param_type)?;
 
@@ -166,6 +170,10 @@ pub fn expand_internal_enum(name: &str, prop: &Property) -> Result<TokenStream, 
                 unimplemented!()
             }
             // Elementary type
+            ParamType::Struct(_params) => {
+                // TODO: Support structs inside enums
+                unimplemented!()
+            }
             _ => {
                 let ty = expand_type(&param_type)?;
                 let param_type_string = ident(&param_type.to_string());
