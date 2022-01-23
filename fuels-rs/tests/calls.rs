@@ -1,8 +1,8 @@
 use fuel_asm::Opcode;
 use fuel_core::service::{Config, FuelService};
 use fuel_gql_client::client::FuelClient;
-use fuel_tx::{Receipt, Salt, Transaction, UtxoId};
-use fuel_types::{Bytes32, ContractId};
+use fuel_tx::{Receipt, Salt, Transaction};
+use fuel_types::ContractId;
 use fuel_vm::consts::REG_ZERO;
 use fuels_rs::contract::{CompiledContract, Contract};
 use fuels_rs::script::Script;
@@ -74,27 +74,15 @@ async fn contract_call() {
         .unwrap();
 
     // Call contract
-    let utxo_id: [u8; 32] = rng.gen();
-    let balance_root: [u8; 32] = rng.gen();
-    let state_root: [u8; 32] = rng.gen();
-
-    let utxo_id = UtxoId::new(Bytes32::from(utxo_id), 0);
-    let balance_root = Bytes32::from(balance_root);
-    let state_root = Bytes32::from(state_root);
     let gas_price = 0;
     let gas_limit = 1_000_000;
     let maturity = 0;
-    let input_index = 0;
 
     let receipts = Contract::call(
         contract_id,
         None,
         None,
         &fuel_client,
-        utxo_id,
-        balance_root,
-        state_root,
-        input_index,
         gas_price,
         gas_limit,
         maturity,
