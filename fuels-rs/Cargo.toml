@@ -1,6 +1,6 @@
 [package]
 name = "fuels-rs"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Fuel Labs <contact@fuel.sh>"]
 edition = "2018"
 homepage = "https://fuel.network/"
@@ -13,7 +13,7 @@ Inflector = "0.11"
 anyhow = "1"
 bytes = { version = "1.0.1", features = ["serde"] }
 forc = { version = "0.3", features = ["test", "util"], default-features = false }
-fuels-core = { version = "0.2.0", path = "../fuels-core" }
+fuels-core = { version = "0.2.1", path = "../fuels-core" }
 fuel-asm = { version = "0.1", features = ["serde-types"] }
 fuel-gql-client = { version = "0.2", default-features = false }
 fuel-core = { version = "0.2", default-features = false }
