@@ -297,12 +297,12 @@ impl<D> ContractCall<D>
 where
     D: Detokenize,
 {
-    /// Call a contract's method. Note that it will return
-    /// the method's value as an actual typed value `D`.
-    /// For instance, if your method returns a `bool`, this will be a
-    /// `Result<bool, Error>`. Also works for structs! If your method
-    /// returns `MyStruct`, `MyStruct` will be generated through the `abigen!()`
-    /// and this will return `Result<MyStruct, Error>`.
+    /// Call a contract's method. Return a Result<CallResponse, Error>.
+    /// The CallResponse structs contains the method's value in its `value`
+    /// field as an actual typed value `D` (if your method returns `bool`, it will
+    /// be a bool, works also for structs thanks to the `abigen!()`).
+    /// The other field of CallResponse, `receipts`, contains the receipts of the
+    /// transaction
     pub async fn call(self) -> Result<CallResponse<D>, Error> {
         let mut receipts = Contract::call(
             self.contract_id,
