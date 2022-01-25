@@ -7,7 +7,7 @@ use fuel_types::Word;
 use strum_macros::EnumString;
 
 pub mod abi_decoder;
-#[cfg(any(feature = "std"))]
+#[cfg(feature = "std")]
 pub mod abi_encoder;
 pub mod errors;
 pub mod signature;
