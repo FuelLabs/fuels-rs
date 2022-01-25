@@ -10,6 +10,7 @@ use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 
 #[tokio::test]
+#[ignore]
 async fn script_call() {
     let fuel_client = setup_local_node().await;
 
