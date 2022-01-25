@@ -65,24 +65,24 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
+    - name: Checkout repository
+      uses: actions/checkout@v2
 
-      - name: Install toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
+    - name: Install toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        override: true
 
-      - name: Verify tag version
-        run: |
-          cargo install toml-cli
-          ./.github/workflows/scripts/verify_tag.sh ${{ github.ref_name }} fuels-rs/Cargo.toml
-          ./.github/workflows/scripts/verify_tag.sh ${{ github.ref_name }} fuels-core/Cargo.toml
-          ./.github/workflows/scripts/verify_tag.sh ${{ github.ref_name }} fuels-abigen-macro/Cargo.toml
-          ./.github/workflows/scripts/verify_tag.sh ${{ github.ref_name }} fuels-abi-cli/Cargo.toml
-      - name: Publish crate
-        uses: katyo/publish-crates@v1
-        with:
+    - name: Verify tag version
+      run: |
+        cargo install toml-cli
+        ./.github/workflows/scripts/verify_tag.sh ${{ github.ref_name }} fuels-rs/Cargo.toml
+        ./.github/workflows/scripts/verify_tag.sh ${{ github.ref_name }} fuels-core/Cargo.toml
+        ./.github/workflows/scripts/verify_tag.sh ${{ github.ref_name }} fuels-abigen-macro/Cargo.toml
+        ./.github/workflows/scripts/verify_tag.sh ${{ github.ref_name }} fuels-abi-cli/Cargo.toml
+    - name: Publish crate
+      uses: katyo/publish-crates@v1
+      with:
           publish-delay: 30000
           registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
