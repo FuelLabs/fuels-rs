@@ -1,13 +1,9 @@
-//! This can be compiled with `#[no_std]`, ready for Wasm.
-#![cfg_attr(not(feature = "std"), no_std)]
-
 use core::fmt;
 use fuel_types::bytes::padded_len;
 use fuel_types::Word;
 use strum_macros::EnumString;
 
 pub mod abi_decoder;
-#[cfg(feature = "std")]
 pub mod abi_encoder;
 pub mod errors;
 pub mod signature;

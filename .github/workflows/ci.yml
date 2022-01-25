@@ -31,17 +31,6 @@ jobs:
           toolchain: stable
           override: true
 
-      # Using thumbv6m-none-eabi as ARMv6-M arbitrary common choice for a bare-minimum target.
-      # More info: https://docs.rs/cortex-m-rt/latest/cortex_m_rt/
-      #
-      # Can be replaced by other targets that guarantee bare-minimum no-std
-      - name: Install toolchain no-std
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          target: thumbv6m-none-eabi
-          override: true
-
       - name: Install rustfmt
         run: rustup component add rustfmt
 
@@ -59,27 +48,15 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --verbose
+          args: --verbose --all-features
         env:
           RUSTFLAGS: "-D warnings"
-
-      - name: Build no-std
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --verbose --target thumbv6m-none-eabi --no-default-features
 
       - name: Run tests
         uses: actions-rs/cargo@v1
         with:
           command: test
           args: --verbose
-
-      - name: Run tests no-std
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --verbose --no-default-features
 
   publish:
     # Only do this job if publishing a release
