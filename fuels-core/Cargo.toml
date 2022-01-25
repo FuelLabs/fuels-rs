@@ -18,11 +18,11 @@ serde = { version = "1.0.124", default-features = true, features = ["derive"] }
 sha2 = { version = "0.9.5", optional = true }
 strum = "0.21"
 strum_macros = "0.21"
-thiserror = { version = "1.0.30", default-features = false }
+thiserror = { version = "1.0.30", default-features = false, optional = true }
 
 [dev-dependencies]
 hex = { version = "0.4.3", default-features = false, features = ["std"] }
 
 [features]
 default = ["fuel-types/default", "sha2", "std"]
-std = []
+std = ["hex/std", "fuel-tx/std", "fuel-types/std", "thiserror"]
