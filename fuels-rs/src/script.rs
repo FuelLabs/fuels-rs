@@ -3,7 +3,7 @@ use forc::test::{forc_build, BuildCommand};
 use forc::util::constants;
 use forc::util::helpers::read_manifest;
 use fuel_gql_client::client::FuelClient;
-use fuel_tx::{Input, Output, Receipt, Transaction};
+use fuel_tx::{Receipt, Transaction};
 use std::path::PathBuf;
 use sway_utils::find_manifest_dir;
 
@@ -16,8 +16,6 @@ pub struct Script {
 #[derive(Debug, Clone)]
 pub struct CompiledScript {
     pub raw: Vec<u8>,
-    pub inputs: Vec<Input>,
-    pub outputs: Vec<Output>,
     pub target_network_url: String,
 }
 
@@ -55,13 +53,6 @@ impl Script {
             Error::CompilationError(format!("Failed to find manifest for contract: {}", e))
         })?;
 
-        let (inputs, outputs) = manifest.get_tx_inputs_and_outputs().map_err(|e| {
-            Error::CompilationError(format!(
-                "Failed to find contract's inputs and outputs: {}",
-                e
-            ))
-        })?;
-
         let node_url = match &manifest.network {
             Some(network) => &network.url,
             _ => constants::DEFAULT_NODE_URL,
@@ -69,8 +60,6 @@ impl Script {
 
         Ok(CompiledScript {
             raw,
-            inputs,
-            outputs,
             target_network_url: node_url.to_string(),
         })
     }
