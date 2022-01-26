@@ -48,7 +48,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --verbose --all-features
+          args: --verbose --workspace --all-targets --all-features
         env:
           RUSTFLAGS: "-D warnings"
 
