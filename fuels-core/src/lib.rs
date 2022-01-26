@@ -4,7 +4,6 @@ use fuel_types::Word;
 use strum_macros::EnumString;
 
 pub mod abi_decoder;
-#[cfg(not(feature = "no-std"))]
 pub mod abi_encoder;
 pub mod errors;
 pub mod signature;
