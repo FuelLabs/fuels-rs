@@ -15,10 +15,6 @@ use std::collections::HashMap;
 
 /// Functions used by the Abigen to expand functions defined in an ABI spec.
 
-// TODO: Right now we have an "end-to-end" test suite for the Abigen!
-// under `fuels-abigen/tests/harness.rs`. But it would be nice to have
-// tests at the level of this component.
-
 /// Transforms a function defined in [`Function`] into a [`TokenStream`]
 /// that represents that same function signature as a Rust-native function
 /// declaration.
