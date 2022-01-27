@@ -10,10 +10,6 @@ use sway_types::Property;
 
 /// Functions used by the Abigen to expand custom types defined in an ABI spec.
 
-// TODO: Right now we have an "end-to-end" test suite for the Abigen!
-// under `fuels-abigen/tests/harness.rs`. But it would be nice to have
-// tests at the level of this component.
-
 /// Transforms a custom type defined in [`Property`] into a [`TokenStream`]
 /// that represents that same type as a Rust-native struct.
 pub fn expand_internal_struct(prop: &Property) -> Result<TokenStream, Error> {
@@ -49,6 +45,10 @@ pub fn expand_internal_struct(prop: &Property) -> Result<TokenStream, Error> {
                 struct_fields_tokens.push(quote! { tokens.push(self.#field_name.into_token()) });
                 param_types
                     .push(quote! { types.push(ParamType::Struct(#struct_name::param_types())) });
+            }
+            ParamType::Enum(_params) => {
+                // TODO: Support enums inside structs
+                unimplemented!()
             }
             _ => {
                 let ty = expand_type(&param_type)?;
@@ -166,6 +166,10 @@ pub fn expand_internal_enum(name: &str, prop: &Property) -> Result<TokenStream, 
                 unimplemented!()
             }
             // Elementary type
+            ParamType::Struct(_params) => {
+                // TODO: Support structs inside enums
+                unimplemented!()
+            }
             _ => {
                 let ty = expand_type(&param_type)?;
                 let param_type_string = ident(&param_type.to_string());
@@ -204,8 +208,302 @@ pub fn expand_internal_enum(name: &str, prop: &Property) -> Result<TokenStream, 
     })
 }
 
-// A custom type name is coming in as `struct $name
+// A custom type name is coming in as `struct $name`
 // We want to grab its `$name`.
 pub fn extract_struct_name_from_abi_property(prop: &Property) -> String {
     prop.type_field.split_whitespace().collect::<Vec<&str>>()[1].to_string()
+}
+
+// Doing string -> TokenStream -> string isn't pretty but gives us the opportunity to
+// have a better understanding of the generated code so we consider it ok.
+// To generate the expected examples, output of the functions were taken
+// with code @9ca376, and formatted in-IDE using rustfmt. It should be noted that
+// rustfmt added an extra `,` after the last struct/enum field, which is not added
+// by the `expand_internal_*` functions, and so was removed from the expected string.
+// TODO(vnepveu): append extra `,` to last enum/struct field so it is aligned with rustfmt
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::str::FromStr;
+
+    #[test]
+    #[should_panic(expected = "index out of bounds")]
+    fn test_extract_struct_name_from_abi_property_default() {
+        let p: Property = Default::default();
+        let _ = extract_struct_name_from_abi_property(&p);
+    }
+
+    #[test]
+    #[should_panic(expected = "index out of bounds")]
+    fn test_extract_struct_name_from_abi_property_nowhitespace() {
+        let p = Property {
+            name: String::from("foo"),
+            type_field: String::from("nowhitespacehere"),
+            components: None,
+        };
+        let _ = extract_struct_name_from_abi_property(&p);
+    }
+
+    #[test]
+    fn test_extract_struct_name_from_abi_property() {
+        let p = Property {
+            name: String::from("foo"),
+            type_field: String::from("struct useful"),
+            components: None,
+        };
+        let name = extract_struct_name_from_abi_property(&p);
+        assert_eq!(name, "useful");
+    }
+
+    #[test]
+    fn test_expand_internal_enum() {
+        let p = Property {
+            name: String::from("unused"),
+            type_field: String::from("unused"),
+            components: Some(vec![
+                Property {
+                    name: String::from("long_island"),
+                    type_field: String::from("u64"),
+                    components: None,
+                },
+                Property {
+                    name: String::from("moscow_mule"),
+                    type_field: String::from("bool"),
+                    components: None,
+                },
+            ]),
+        };
+        let result = expand_internal_enum("matcha_tea", &p);
+        let expected = TokenStream::from_str(
+            r#"
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum MatchaTea {
+    LongIsland(u64),
+    MoscowMule(bool)
+}
+impl MatchaTea {
+    pub fn into_token(self) -> Token {
+        let (dis, tok) = match self {
+            MatchaTea::LongIsland(value) => (0usize as u8, Token::U64(value)),
+            MatchaTea::MoscowMule(value) => (1usize as u8, Token::Bool(value)),
+        };
+        let selector = (dis, tok);
+        Token::Enum(Box::new(selector))
+    }
+}
+"#,
+        );
+        let expected = expected.unwrap().to_string();
+        assert_eq!(result.unwrap().to_string(), expected);
+    }
+
+    #[test]
+    #[should_panic(expected = "not implemented")]
+    // Enum cannot contain struct at the moment
+    fn test_expand_internal_enum_with_struct() {
+        let p = Property {
+            name: String::from("unused"),
+            type_field: String::from("unused"),
+            components: Some(vec![Property {
+                name: String::from("long_island"),
+                type_field: String::from("struct cocktail"),
+                components: Some(vec![Property {
+                    name: String::from("cosmopolitan"),
+                    type_field: String::from("bool"),
+                    components: None,
+                }]),
+            }]),
+        };
+        let _ = expand_internal_enum("dragon", &p);
+    }
+
+    #[test]
+    #[should_panic(expected = "not implemented")]
+    // Enum cannot contain enum at the moment
+    fn test_expand_internal_enum_with_enum() {
+        let p = Property {
+            name: String::from("unused"),
+            type_field: String::from("unused"),
+            components: Some(vec![Property {
+                name: String::from("long_island"),
+                type_field: String::from("enum cocktail"),
+                components: Some(vec![Property {
+                    name: String::from("cosmopolitan"),
+                    type_field: String::from("bool"),
+                    components: None,
+                }]),
+            }]),
+        };
+        let _ = expand_internal_enum("dragon", &p);
+    }
+
+    #[test]
+    fn test_expand_internal_struct() {
+        let p = Property {
+            name: String::from("unused"),
+            type_field: String::from("struct cocktail"),
+            components: Some(vec![
+                Property {
+                    name: String::from("long_island"),
+                    type_field: String::from("bool"),
+                    components: None,
+                },
+                Property {
+                    name: String::from("cosmopolitan"),
+                    type_field: String::from("u64"),
+                    components: None,
+                },
+                Property {
+                    name: String::from("mojito"),
+                    type_field: String::from("u32"),
+                    components: None,
+                },
+            ]),
+        };
+        let expected = TokenStream::from_str(
+            r#"
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct Cocktail {
+    pub long_island: bool,
+    pub cosmopolitan: u64,
+    pub mojito: u32
+}
+impl Cocktail {
+    pub fn param_types() -> Vec<ParamType> {
+        let mut types = Vec::new();
+        types.push(ParamType::Bool);
+        types.push(ParamType::U64);
+        types.push(ParamType::U32);
+        types
+    }
+    pub fn into_token(self) -> Token {
+        let mut tokens = Vec::new();
+        tokens.push(Token::Bool(self.long_island));
+        tokens.push(Token::U64(self.cosmopolitan));
+        tokens.push(Token::U32(self.mojito));
+        Token::Struct(tokens)
+    }
+    pub fn new_from_tokens(tokens: &[Token]) -> Self {
+        Self { long_island : < bool > :: from_token (tokens [0usize] . clone ()) . expect ("Failed to run `new_from_tokens()` for custom struct, make sure to pass tokens in the right order and right types") , cosmopolitan : < u64 > :: from_token (tokens [1usize] . clone ()) . expect ("Failed to run `new_from_tokens()` for custom struct, make sure to pass tokens in the right order and right types") , mojito : < u32 > :: from_token (tokens [2usize] . clone ()) . expect ("Failed to run `new_from_tokens()` for custom struct, make sure to pass tokens in the right order and right types") }
+    }
+}
+impl fuels_core::Detokenize for Cocktail {
+    fn from_tokens(mut tokens: Vec<Token>) -> Result<Self, fuels_core::InvalidOutputType> {
+        let token = match tokens.len() {
+            0 => Token::Struct(vec![]),
+            1 => tokens.remove(0),
+            _ => Token::Struct(tokens),
+        };
+        Ok(Cocktail::new_from_tokens(&[token]))
+    }
+}
+        "#,
+        );
+        let expected = expected.unwrap().to_string();
+        let result = expand_internal_struct(&p);
+        assert_eq!(result.unwrap().to_string(), expected);
+    }
+
+    #[test]
+    fn test_expand_internal_struct_with_struct() {
+        let p = Property {
+            name: String::from("unused"),
+            type_field: String::from("struct cocktail"),
+            components: Some(vec![
+                Property {
+                    name: String::from("long_island"),
+                    type_field: String::from("struct shaker"),
+                    components: Some(vec![
+                        Property {
+                            name: String::from("cosmopolitan"),
+                            type_field: String::from("bool"),
+                            components: None,
+                        },
+                        Property {
+                            name: String::from("bimbap"),
+                            type_field: String::from("u64"),
+                            components: None,
+                        },
+                    ]),
+                },
+                Property {
+                    name: String::from("mojito"),
+                    type_field: String::from("u32"),
+                    components: None,
+                },
+            ]),
+        };
+        let expected = TokenStream::from_str(
+            r#"
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct Cocktail {
+    pub long_island: Shaker,
+    pub mojito: u32
+}
+impl Cocktail {
+    pub fn param_types() -> Vec<ParamType> {
+        let mut types = Vec::new();
+        types.push(ParamType::Struct(Shaker::param_types()));
+        types.push(ParamType::U32);
+        types
+    }
+    pub fn into_token(self) -> Token {
+        let mut tokens = Vec::new();
+        tokens.push(self.long_island.into_token());
+        tokens.push(Token::U32(self.mojito));
+        Token::Struct(tokens)
+    }
+    pub fn new_from_tokens(tokens: &[Token]) -> Self {
+        Self { long_island : Shaker :: new_from_tokens (& tokens [0usize ..]) , mojito : < u32 > :: from_token (tokens [1usize] . clone ()) . expect ("Failed to run `new_from_tokens()` for custom struct, make sure to pass tokens in the right order and right types") }
+    }
+}
+impl fuels_core::Detokenize for Cocktail {
+    fn from_tokens(mut tokens: Vec<Token>) -> Result<Self, fuels_core::InvalidOutputType> {
+        let token = match tokens.len() {
+            0 => Token::Struct(vec![]),
+            1 => tokens.remove(0),
+            _ => Token::Struct(tokens),
+        };
+        Ok(Cocktail::new_from_tokens(&[token]))
+    }
+}
+        "#,
+        );
+        let expected = expected.unwrap().to_string();
+        let result = expand_internal_struct(&p);
+        assert_eq!(result.unwrap().to_string(), expected);
+    }
+
+    #[test]
+    #[should_panic(expected = "not implemented")]
+    fn test_expand_internal_struct_with_enum() {
+        let p = Property {
+            name: String::from("unused"),
+            type_field: String::from("struct cocktail"),
+            components: Some(vec![
+                Property {
+                    name: String::from("long_island"),
+                    type_field: String::from("enum shaker"),
+                    components: Some(vec![
+                        Property {
+                            name: String::from("cosmopolitan"),
+                            type_field: String::from("bool"),
+                            components: None,
+                        },
+                        Property {
+                            name: String::from("bimbap"),
+                            type_field: String::from("u64"),
+                            components: None,
+                        },
+                    ]),
+                },
+                Property {
+                    name: String::from("mojito"),
+                    type_field: String::from("u32"),
+                    components: None,
+                },
+            ]),
+        };
+        let _ = expand_internal_struct(&p);
+    }
 }
