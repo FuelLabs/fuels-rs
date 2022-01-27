@@ -1,7 +1,7 @@
+use fuels_core::code_gen::abigen::Abigen;
+use fuels_core::json_abi::parse_param;
+use fuels_core::json_abi::ABIParser;
 use fuels_core::ParamType;
-use fuels_rs::code_gen::abigen::Abigen;
-use fuels_rs::json_abi::parse_param;
-use fuels_rs::json_abi::ABIParser;
 use sway_types::Property;
 
 use std::fs;

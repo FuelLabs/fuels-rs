@@ -9,13 +9,23 @@ repository = "https://github.com/FuelLabs/fuels-rs"
 description = "Fuel Rust SDK core."
 
 [dependencies]
+anyhow = "1"
 fuel-tx = "0.2"
 fuel-types = "0.1"
 fuel-vm = "0.2"
 hex = { version = "0.4.3", features = ["std"] }
+sway-types = { version = "0.1" }
+sway-utils = { version = "0.1" }
+proc-macro2 = "1.0"
+itertools = "0.10.1"
+serde_json = { version = "1.0.64", default-features = true }
+Inflector = "0.11"
+syn = "1.0.12"
+quote = "1.0"
 rand = { version = "0.8.4" }
 serde = { version = "1.0.124", features = ["derive"] }
 sha2 = "0.9.5"
 strum = "0.21"
 strum_macros = "0.21"
 thiserror = "1.0.30"
+url = "2.1"

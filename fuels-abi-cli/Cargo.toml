@@ -11,7 +11,7 @@ description = "Fuel Rust SDK CLI tool to parse ABI."
 [dependencies]
 anyhow = "1"
 fuels-core = { version = "0.2.1", path = "../fuels-core" }
-fuels-rs = { version = "0.2.1", path = "../fuels-rs" }
+fuels-contract = { version = "0.2.1", path = "../fuels-contract" }
 hex = "0.4"
 itertools = "0.10"
 structopt = "0.3"
