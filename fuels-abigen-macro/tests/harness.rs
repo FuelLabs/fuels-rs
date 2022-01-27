@@ -755,7 +755,7 @@ async fn example_workflow() {
         .await
         .unwrap();
 
-    assert_eq!(42, result);
+    assert_eq!(42, result.value);
 
     let result = contract_instance
         .increment_counter(10)
@@ -763,7 +763,7 @@ async fn example_workflow() {
         .await
         .unwrap();
 
-    assert_eq!(52, result);
+    assert_eq!(52, result.value);
 }
 
 #[tokio::test]
@@ -912,7 +912,7 @@ async fn type_safe_output_values() {
 
     // `response`'s type matches the return type of `is_event()`
     let response = contract_instance.is_even(10).call().await.unwrap();
-    assert!(response);
+    assert!(response.value);
 
     // `response`'s type matches the return type of `return_my_string()`
     let response = contract_instance
@@ -921,7 +921,7 @@ async fn type_safe_output_values() {
         .await
         .unwrap();
 
-    assert_eq!(response, "fuel");
+    assert_eq!(response.value, "fuel");
 
     let my_struct = MyStruct { foo: 10, bar: true };
 
@@ -1044,7 +1044,7 @@ async fn call_with_structs() {
         .await
         .unwrap();
 
-    assert_eq!(42, result);
+    assert_eq!(42, result.value);
 
     let result = contract_instance
         .increment_counter(10)
@@ -1052,7 +1052,7 @@ async fn call_with_structs() {
         .await
         .unwrap();
 
-    assert_eq!(52, result);
+    assert_eq!(52, result.value);
 }
 
 #[tokio::test]

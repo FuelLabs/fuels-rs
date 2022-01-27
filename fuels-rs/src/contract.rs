@@ -26,6 +26,15 @@ pub struct Contract {
     pub compiled_contract: CompiledContract,
 }
 
+/// CallResponse is a struct that is returned by a call to the contract. Its value field
+/// holds the decoded typed value returned by the contract's method. The other field
+/// holds all the receipts returned by the call.
+#[derive(Debug)]
+pub struct CallResponse<D> {
+    pub value: D,
+    pub receipts: Vec<Receipt>,
+}
+
 impl Contract {
     pub fn new(compiled_contract: CompiledContract) -> Self {
         Self { compiled_contract }
@@ -288,14 +297,14 @@ impl<D> ContractCall<D>
 where
     D: Detokenize,
 {
-    /// Call a contract's method. Note that it will return
-    /// the method's value as an actual typed value `D`.
-    /// For instance, if your method returns a `bool`, this will be a
-    /// `Result<bool, Error>`. Also works for structs! If your method
-    /// returns `MyStruct`, `MyStruct` will be generated through the `abigen!()`
-    /// and this will return `Result<MyStruct, Error>`.
-    pub async fn call(self) -> Result<D, Error> {
-        let receipts = Contract::call(
+    /// Call a contract's method. Return a Result<CallResponse, Error>.
+    /// The CallResponse structs contains the method's value in its `value`
+    /// field as an actual typed value `D` (if your method returns `bool`, it will
+    /// be a bool, works also for structs thanks to the `abigen!()`).
+    /// The other field of CallResponse, `receipts`, contains the receipts of the
+    /// transaction
+    pub async fn call(self) -> Result<CallResponse<D>, Error> {
+        let mut receipts = Contract::call(
             self.contract_id,
             Some(self.encoded_selector),
             Some(self.encoded_args),
@@ -308,24 +317,22 @@ where
         .await
         .unwrap();
 
-        let returned_value = match Self::get_receipt_value(&receipts) {
-            Some(val) => val.to_be_bytes(),
-            None => [0u8; 8],
-        };
-
-        let mut decoder = ABIDecoder::new();
-
-        let decoded = decoder.decode(&self.output_params, &returned_value)?;
-
-        Ok(D::from_tokens(decoded)?)
-    }
-
-    fn get_receipt_value(receipts: &[Receipt]) -> Option<u64> {
-        for receipt in receipts {
-            if receipt.val().is_some() {
-                return receipt.val();
+        let (encoded_value, index) = match receipts.iter().find(|&receipt| receipt.val().is_some())
+        {
+            Some(r) => {
+                let index = receipts.iter().position(|elt| elt == r).unwrap();
+                (r.val().unwrap().to_be_bytes(), Some(index))
             }
+            None => ([0u8; 8], None),
+        };
+        if index.is_some() {
+            receipts.remove(index.unwrap());
         }
-        None
+        let mut decoder = ABIDecoder::new();
+        let decoded_value = decoder.decode(&self.output_params, &encoded_value)?;
+        Ok(CallResponse {
+            value: D::from_tokens(decoded_value)?,
+            receipts,
+        })
     }
 }
