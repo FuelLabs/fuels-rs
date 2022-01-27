@@ -563,7 +563,7 @@ pub fn HelloWorld(
         // TODO: this should panic after the function is refactored
         assert_eq!(
             result.unwrap().to_string(),
-            "((u64 , bool,) , (u64, bool,))"
+            "((u64 , bool ,) , (u64 , bool ,))"
         )
     }
 
