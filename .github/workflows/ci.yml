@@ -14,7 +14,6 @@ env:
 jobs:
   publish:
     # Only do this job if publishing a release
-    needs: build
     runs-on: ubuntu-latest
 
     steps:
