@@ -59,9 +59,7 @@ jobs:
           args: --verbose
 
   publish:
-    # Only do this job if publishing a release
     needs: build
-    if: github.event_name == 'release' && github.event.action == 'published'
     runs-on: ubuntu-latest
 
     steps:
@@ -78,9 +76,7 @@ jobs:
       run: |
         cargo install toml-cli
         ./.github/workflows/scripts/verify_tag.sh ${{ github.ref_name }} fuels-contract/Cargo.toml
-        ./.github/workflows/scripts/verify_tag.sh ${{ github.ref_name }} fuels-core/Cargo.toml
-        ./.github/workflows/scripts/verify_tag.sh ${{ github.ref_name }} fuels-abigen-macro/Cargo.toml
-        ./.github/workflows/scripts/verify_tag.sh ${{ github.ref_name }} fuels-abi-cli/Cargo.toml
+
     - name: Publish crate
       uses: katyo/publish-crates@v1
       with:
