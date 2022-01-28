@@ -72,11 +72,6 @@ jobs:
         toolchain: stable
         override: true
 
-    - name: Verify tag version
-      run: |
-        cargo install toml-cli
-        ./.github/workflows/scripts/verify_tag.sh ${{ github.ref_name }} fuels-contract/Cargo.toml
-
     - name: Publish crate
       uses: katyo/publish-crates@v1
       with:
