@@ -1,4 +1,4 @@
-use crate::Signature;
+use crate::signature::Signature;
 use crate::Signer;
 use async_trait::async_trait;
 use fuel_tx::crypto::Hasher;

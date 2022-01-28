@@ -5,7 +5,7 @@ use crate::errors::Error;
 use crate::json_abi::{parse_param, ABIParser};
 use crate::types::expand_type;
 use crate::utils::{ident, safe_ident};
-use fuels_core::{ParamType, Selector};
+use crate::{ParamType, Selector};
 use inflector::Inflector;
 use sway_types::{Function, Property};
 

@@ -112,7 +112,7 @@ impl Abigen {
         } else {
             (
                 quote! {
-                    use fuels_rs::contract::{Contract, ContractCall, CompiledContract};
+                    use fuels_contract::contract::{Contract, ContractCall, CompiledContract};
                     use fuel_gql_client::client::FuelClient;
                 },
                 quote! {

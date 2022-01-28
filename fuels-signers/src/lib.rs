@@ -1,11 +1,13 @@
 mod wallet;
 
 pub use wallet::Wallet;
+pub mod signature;
+
+use signature::Signature;
 
 use async_trait::async_trait;
 use fuel_tx::Transaction;
 use fuel_types::Address;
-use fuels_core::signature::Signature;
 use std::error::Error;
 
 /// A wallet instantiated with a locally stored private key

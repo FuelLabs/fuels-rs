@@ -3,7 +3,7 @@ use anyhow::Result;
 use proc_macro2::TokenStream;
 use quote::quote;
 
-use fuels_core::ParamType;
+use crate::ParamType;
 
 /// Expands a [`ParamType`] into a TokenStream.
 /// Used to expand functions when generating type-safe bindings of a JSON ABI.

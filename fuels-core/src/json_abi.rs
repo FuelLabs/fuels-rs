@@ -1,5 +1,5 @@
-use crate::{abi_decoder::ABIDecoder, abi_encoder::ABIEncoder, errors::Error};
-use fuels_core::{ParamType, Token};
+use crate::Token;
+use crate::{abi_decoder::ABIDecoder, abi_encoder::ABIEncoder, errors::Error, ParamType};
 use hex::FromHex;
 use itertools::Itertools;
 use std::convert::TryInto;
@@ -29,7 +29,7 @@ impl ABIParser {
     ///
     /// # Examples
     /// ```
-    /// use fuels_rs::json_abi::ABIParser;
+    /// use fuels_core::json_abi::ABIParser;
     /// let json_abi = r#"
     ///     [
     ///         {
@@ -98,7 +98,7 @@ impl ABIParser {
     ///
     /// # Examples
     /// ```
-    /// use fuels_rs::json_abi::ABIParser;
+    /// use fuels_core::json_abi::ABIParser;
     /// let json_abi = r#"
     ///     [
     ///         {

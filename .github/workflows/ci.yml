@@ -77,7 +77,7 @@ jobs:
     - name: Verify tag version
       run: |
         cargo install toml-cli
-        ./.github/workflows/scripts/verify_tag.sh ${{ github.ref_name }} fuels-rs/Cargo.toml
+        ./.github/workflows/scripts/verify_tag.sh ${{ github.ref_name }} fuels-contract/Cargo.toml
         ./.github/workflows/scripts/verify_tag.sh ${{ github.ref_name }} fuels-core/Cargo.toml
         ./.github/workflows/scripts/verify_tag.sh ${{ github.ref_name }} fuels-abigen-macro/Cargo.toml
         ./.github/workflows/scripts/verify_tag.sh ${{ github.ref_name }} fuels-abi-cli/Cargo.toml
