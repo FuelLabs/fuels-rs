@@ -1,5 +1,5 @@
 use crate::abi_encoder::ABIEncoder;
-use crate::code_gen::custom_types_gen::extract_struct_name_from_abi_property;
+use crate::code_gen::custom_types_gen::extract_custom_type_name_from_abi_property;
 use crate::code_gen::docs_gen::expand_doc;
 use crate::errors::Error;
 use crate::json_abi::{parse_param, ABIParser};
@@ -86,7 +86,7 @@ fn expand_fn_outputs(outputs: &[Property]) -> Result<TokenStream, Error> {
             // tokenized name only. Otherwise, parse and expand.
             if outputs[0].type_field.contains("struct ") {
                 let tok: proc_macro2::TokenStream =
-                    extract_struct_name_from_abi_property(&outputs[0])
+                    extract_custom_type_name_from_abi_property(&outputs[0], "struct")?
                         .parse()
                         .unwrap();
                 Ok(tok)
@@ -206,13 +206,15 @@ fn expand_input_param(
         }
         ParamType::Enum(_) => {
             let ident = ident(
-                &extract_struct_name_from_abi_property(rust_enum_name.unwrap()).to_class_case(),
+                &extract_custom_type_name_from_abi_property(rust_enum_name.unwrap(), "enum")?
+                    .to_class_case(),
             );
             Ok(quote! { #ident })
         }
         ParamType::Struct(_) => {
             let ident = ident(
-                &extract_struct_name_from_abi_property(rust_struct_name.unwrap()).to_class_case(),
+                &extract_custom_type_name_from_abi_property(rust_struct_name.unwrap(), "struct")?
+                    .to_class_case(),
             );
             Ok(quote! { #ident })
         }
@@ -719,7 +721,6 @@ pub fn HelloWorld(
         assert_eq!(result.unwrap().to_string(), "Baby");
     }
     #[test]
-    #[should_panic(expected = "the len is 1 but the index is 1")]
     fn test_expand_input_param_struct_wrong_name() {
         let def = Function::default();
         let struct_type = ParamType::Struct(vec![ParamType::Bool, ParamType::U64]);
@@ -729,12 +730,10 @@ pub fn HelloWorld(
             components: None,
         };
         let struct_name = Some(&struct_prop);
-        let _ = expand_input_param(&def, "unused", &struct_type, &None, &struct_name);
+        let result = expand_input_param(&def, "unused", &struct_type, &None, &struct_name);
+        assert!(matches!(result, Err(Error::MissingData(_))));
     }
-    #[ignore]
     #[test]
-    #[should_panic(expected = "declared a struct but gave an enum name")]
-    // This should panic but it doesn't because we don't check concrete vs intended type
     fn test_expand_input_param_struct_with_enum_name() {
         let def = Function::default();
         let struct_type = ParamType::Struct(vec![ParamType::Bool, ParamType::U64]);
@@ -744,6 +743,7 @@ pub fn HelloWorld(
             components: None,
         };
         let struct_name = Some(&struct_prop);
-        let _ = expand_input_param(&def, "unused", &struct_type, &None, &struct_name);
+        let result = expand_input_param(&def, "unused", &struct_type, &None, &struct_name);
+        assert!(matches!(result, Err(Error::InvalidType(_))));
     }
 }
