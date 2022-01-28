@@ -12,29 +12,17 @@ description = "Fuel Rust SDK marcros to generate types from ABI."
 proc-macro = true
 
 [dependencies]
-Inflector = "0.11"
-anyhow = "1"
-bytes = { version = "1.0.1", features = ["serde"] }
-forc = { version = "0.3", features = ["test", "util"], default-features = false }
 fuels-core = { version = "0.2.1", path = "../fuels-core" }
-fuel-asm = { version = "0.1", features = ["serde-types"] }
-fuel-gql-client = { version = "0.2", default-features = false }
-fuel-core = { version = "0.2", default-features = false }
 fuel-tx = "0.2"
-fuel-types = "0.1"
-fuel-vm = "0.2"
-fuels-rs = { version = "0.2.1", path = "../fuels-rs" }
-hex = { version = "0.4.3", default-features = false, features = ["std"] }
-itertools = "0.10.1"
 proc-macro2 = "1.0"
 quote = "1.0"
 rand = "0.8"
-regex = "1.5.4"
-serde = { version = "1.0.124", default-features = false, features = ["derive"] }
-serde_json = { version = "1.0.64", default-features = true }
-sha2 = "0.9.5"
-strum = "0.21"
-strum_macros = "0.21"
 syn = "1.0.12"
-thiserror = { version = "1.0.26", default-features = false }
+
+[dev-dependencies]
+fuel-core = { version = "0.2", default-features = false }
+fuel-gql-client = { version = "0.2", default-features = false }
 tokio = "1.15.0"
+fuels-contract = { version = "0.2.1", path = "../fuels-contract" }
+hex = { version = "0.4.3", default-features = false, features = ["std"] }
+sha2 = "0.9.5"

@@ -1,7 +1,7 @@
-use crate::Bits256;
 use fuel_tx::{crypto::Hasher, Bytes64};
 use fuel_types::Address;
 use fuel_vm::crypto::secp256k1_sign_compact_recover;
+use fuels_core::Bits256;
 use std::{convert::TryFrom, fmt, str::FromStr};
 use thiserror::Error;
 

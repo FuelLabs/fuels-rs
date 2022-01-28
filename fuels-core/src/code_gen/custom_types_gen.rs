@@ -2,7 +2,7 @@ use crate::errors::Error;
 use crate::json_abi::parse_param;
 use crate::types::expand_type;
 use crate::utils::ident;
-use fuels_core::ParamType;
+use crate::ParamType;
 use inflector::Inflector;
 use proc_macro2::TokenStream;
 use quote::quote;

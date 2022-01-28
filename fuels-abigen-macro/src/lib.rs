@@ -1,4 +1,4 @@
-use fuels_rs::code_gen::abigen::Abigen;
+use fuels_core::code_gen::abigen::Abigen;
 use proc_macro::TokenStream;
 use proc_macro2::Span;
 

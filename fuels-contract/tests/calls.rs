@@ -4,8 +4,8 @@ use fuel_gql_client::client::FuelClient;
 use fuel_tx::{Receipt, Salt, Transaction};
 use fuel_types::ContractId;
 use fuel_vm::consts::REG_ZERO;
-use fuels_rs::contract::{CompiledContract, Contract};
-use fuels_rs::script::Script;
+use fuels_contract::contract::{CompiledContract, Contract};
+use fuels_contract::script::Script;
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 

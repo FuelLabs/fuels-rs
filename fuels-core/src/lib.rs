@@ -5,8 +5,13 @@ use strum_macros::EnumString;
 
 pub mod abi_decoder;
 pub mod abi_encoder;
+pub mod code_gen;
 pub mod errors;
-pub mod signature;
+pub mod json_abi;
+pub mod rustfmt;
+pub mod source;
+pub mod types;
+pub mod utils;
 
 pub type ByteArray = [u8; 8];
 pub type Selector = ByteArray;

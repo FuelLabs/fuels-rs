@@ -296,4 +296,4 @@ let result = script.call(&fuel_client).await.unwrap();
 
 ## More examples
 
-You can find runnable examples under `fuels-abigen-macro/tests/harness.rs` and  `fuels-rs/tests/calls.rs`.
+You can find runnable examples under `fuels-abigen-macro/tests/harness.rs` and  `fuels-contract/tests/calls.rs`.
