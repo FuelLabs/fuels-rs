@@ -12,52 +12,6 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.9.1
-        with:
-          access_token: ${{ github.token }}
-
-      - name: Checkout repository
-        uses: actions/checkout@v2
-
-      - name: Install toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-
-      - name: Install rustfmt
-        run: rustup component add rustfmt
-
-      - name: Set git config
-        run: |
-          git config --global core.bigfilethreshold 100m
-
-      - name: Check formatting
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all --verbose -- --check
-
-      - name: Build
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --verbose --workspace --all-targets --all-features
-        env:
-          RUSTFLAGS: "-D warnings"
-
-      - name: Run tests
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --verbose
-
   publish:
     # Only do this job if publishing a release
     needs: build
@@ -77,7 +31,7 @@ jobs:
       uses: katyo/publish-crates@v1
       with:
           path: './fuels-contract'
-          args: --no-verify
+          check-repo: false
           dry-run: true
-          publish-delay: 30000
+          args: --no-verify
           registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
