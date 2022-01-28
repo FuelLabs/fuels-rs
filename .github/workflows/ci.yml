@@ -29,7 +29,6 @@ jobs:
     - name: Publish crate
       uses: katyo/publish-crates@v1
       with:
-          path: 'fuels-contract/'
           check-repo: false
           dry-run: true
           args: --no-verify
