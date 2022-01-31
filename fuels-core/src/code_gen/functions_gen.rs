@@ -84,6 +84,7 @@ fn expand_fn_outputs(outputs: &[Property]) -> Result<TokenStream, Error> {
         1 => {
             // If it's a struct as the type of a function's output, use its
             // tokenized name only. Otherwise, parse and expand.
+            // The non-expansion should happen to enums as well
             if outputs[0].type_field.contains("struct ") {
                 let tok: proc_macro2::TokenStream =
                     extract_custom_type_name_from_abi_property(&outputs[0], CustomType::Struct)?
@@ -95,7 +96,7 @@ fn expand_fn_outputs(outputs: &[Property]) -> Result<TokenStream, Error> {
             }
         }
         _ => {
-            // TODO: inconsistent behavior especially between structs and enum
+            // There, everything will be expanded, which goes against the `1` case
             let types = outputs
                 .iter()
                 .map(|param| expand_type(&parse_param(param)?))
