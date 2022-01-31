@@ -1,5 +1,5 @@
 use crate::abi_encoder::ABIEncoder;
-use crate::code_gen::custom_types_gen::extract_custom_type_name_from_abi_property;
+use crate::code_gen::custom_types_gen::{extract_custom_type_name_from_abi_property, CustomType};
 use crate::code_gen::docs_gen::expand_doc;
 use crate::errors::Error;
 use crate::json_abi::{parse_param, ABIParser};
@@ -86,7 +86,7 @@ fn expand_fn_outputs(outputs: &[Property]) -> Result<TokenStream, Error> {
             // tokenized name only. Otherwise, parse and expand.
             if outputs[0].type_field.contains("struct ") {
                 let tok: proc_macro2::TokenStream =
-                    extract_custom_type_name_from_abi_property(&outputs[0], "struct")?
+                    extract_custom_type_name_from_abi_property(&outputs[0], CustomType::Struct)?
                         .parse()
                         .unwrap();
                 Ok(tok)
@@ -206,15 +206,21 @@ fn expand_input_param(
         }
         ParamType::Enum(_) => {
             let ident = ident(
-                &extract_custom_type_name_from_abi_property(rust_enum_name.unwrap(), "enum")?
-                    .to_class_case(),
+                &extract_custom_type_name_from_abi_property(
+                    rust_enum_name.unwrap(),
+                    CustomType::Enum,
+                )?
+                .to_class_case(),
             );
             Ok(quote! { #ident })
         }
         ParamType::Struct(_) => {
             let ident = ident(
-                &extract_custom_type_name_from_abi_property(rust_struct_name.unwrap(), "struct")?
-                    .to_class_case(),
+                &extract_custom_type_name_from_abi_property(
+                    rust_struct_name.unwrap(),
+                    CustomType::Struct,
+                )?
+                .to_class_case(),
             );
             Ok(quote! { #ident })
         }
@@ -263,7 +269,6 @@ pub fn HelloWorld(&self, bimbam: bool) -> ContractCall<()> {
         "#,
         );
         let expected = expected.unwrap().to_string();
-        // println!("{}", result.unwrap().to_string());
         assert_eq!(result.unwrap().to_string(), expected);
     }
     #[test]
