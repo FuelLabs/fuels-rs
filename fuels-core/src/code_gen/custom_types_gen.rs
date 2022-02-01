@@ -6,6 +6,7 @@ use crate::ParamType;
 use inflector::Inflector;
 use proc_macro2::TokenStream;
 use quote::quote;
+use strum_macros::ToString;
 use sway_types::Property;
 
 /// Functions used by the Abigen to expand custom types defined in an ABI spec.
@@ -37,8 +38,10 @@ pub fn expand_internal_struct(prop: &Property) -> Result<TokenStream, Error> {
         match param_type {
             // Case where a struct takes another struct
             ParamType::Struct(_params) => {
-                let struct_name =
-                    ident(&extract_struct_name_from_abi_property(component).to_class_case());
+                let struct_name = ident(
+                    &extract_custom_type_name_from_abi_property(component, CustomType::Struct)?
+                        .to_class_case(),
+                );
 
                 fields.push(quote! {pub #field_name: #struct_name});
                 args.push(quote! {#field_name: #struct_name::new_from_tokens(&tokens[#idx..])});
@@ -96,7 +99,9 @@ pub fn expand_internal_struct(prop: &Property) -> Result<TokenStream, Error> {
         }
     }
 
-    let name = ident(&extract_struct_name_from_abi_property(prop).to_class_case());
+    let name = ident(
+        &extract_custom_type_name_from_abi_property(prop, CustomType::Struct)?.to_class_case(),
+    );
 
     // Actual creation of the struct, using the inner TokenStreams from above
     // to produce the TokenStream that represents the whole struct + methods
@@ -208,10 +213,36 @@ pub fn expand_internal_enum(name: &str, prop: &Property) -> Result<TokenStream, 
     })
 }
 
-// A custom type name is coming in as `struct $name`
+#[derive(Debug, Clone, ToString, PartialEq, Eq)]
+#[strum(serialize_all = "lowercase")]
+pub enum CustomType {
+    Struct,
+    Enum,
+}
+
+// A custom type name is coming in as `struct $name` or `enum $name`.
 // We want to grab its `$name`.
-pub fn extract_struct_name_from_abi_property(prop: &Property) -> String {
-    prop.type_field.split_whitespace().collect::<Vec<&str>>()[1].to_string()
+pub fn extract_custom_type_name_from_abi_property(
+    prop: &Property,
+    expected: CustomType,
+) -> Result<String, Error> {
+    let type_field: Vec<&str> = prop.type_field.split_whitespace().collect();
+    if type_field.len() != 2 {
+        return Err(Error::MissingData(
+            r#"The declared type was not in the format `{enum,struct} name`"#
+                .parse()
+                .unwrap(),
+        ));
+    }
+    let (declared_type, type_name) = (type_field[0], type_field[1]);
+    if declared_type != expected.to_string() {
+        return Err(Error::InvalidType(format!(
+            "Expected {} but {} was declared",
+            expected.to_string(),
+            declared_type
+        )));
+    }
+    Ok(String::from(type_name))
 }
 
 // Doing string -> TokenStream -> string isn't pretty but gives us the opportunity to
@@ -227,32 +258,53 @@ mod tests {
     use std::str::FromStr;
 
     #[test]
-    #[should_panic(expected = "index out of bounds")]
-    fn test_extract_struct_name_from_abi_property_default() {
+    fn test_extract_custom_type_name_from_abi_property_bad_data() {
         let p: Property = Default::default();
-        let _ = extract_struct_name_from_abi_property(&p);
-    }
-
-    #[test]
-    #[should_panic(expected = "index out of bounds")]
-    fn test_extract_struct_name_from_abi_property_nowhitespace() {
+        let result = extract_custom_type_name_from_abi_property(&p, CustomType::Enum);
+        assert!(matches!(result, Err(Error::MissingData(_))));
         let p = Property {
             name: String::from("foo"),
             type_field: String::from("nowhitespacehere"),
             components: None,
         };
-        let _ = extract_struct_name_from_abi_property(&p);
+        let result = extract_custom_type_name_from_abi_property(&p, CustomType::Enum);
+        assert!(matches!(result, Err(Error::MissingData(_))));
     }
 
     #[test]
-    fn test_extract_struct_name_from_abi_property() {
+    fn test_extract_struct_name_from_abi_property_wrong_type() {
         let p = Property {
             name: String::from("foo"),
-            type_field: String::from("struct useful"),
+            type_field: String::from("enum something"),
             components: None,
         };
-        let name = extract_struct_name_from_abi_property(&p);
-        assert_eq!(name, "useful");
+        let result = extract_custom_type_name_from_abi_property(&p, CustomType::Struct);
+        assert!(matches!(result, Err(Error::InvalidType(_))));
+        let p = Property {
+            name: String::from("foo"),
+            type_field: String::from("struct somethingelse"),
+            components: None,
+        };
+        let result = extract_custom_type_name_from_abi_property(&p, CustomType::Enum);
+        assert!(matches!(result, Err(Error::InvalidType(_))));
+    }
+
+    #[test]
+    fn test_extract_custom_type_name_from_abi_property() {
+        let p = Property {
+            name: String::from("foo"),
+            type_field: String::from("struct bar"),
+            components: None,
+        };
+        let result = extract_custom_type_name_from_abi_property(&p, CustomType::Struct);
+        assert_eq!(result.unwrap(), "bar");
+        let p = Property {
+            name: String::from("foo"),
+            type_field: String::from("enum bar"),
+            components: None,
+        };
+        let result = extract_custom_type_name_from_abi_property(&p, CustomType::Enum);
+        assert_eq!(result.unwrap(), "bar");
     }
 
     #[test]

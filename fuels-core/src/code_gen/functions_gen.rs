@@ -1,5 +1,5 @@
 use crate::abi_encoder::ABIEncoder;
-use crate::code_gen::custom_types_gen::extract_struct_name_from_abi_property;
+use crate::code_gen::custom_types_gen::{extract_custom_type_name_from_abi_property, CustomType};
 use crate::code_gen::docs_gen::expand_doc;
 use crate::errors::Error;
 use crate::json_abi::{parse_param, ABIParser};
@@ -14,10 +14,6 @@ use quote::quote;
 use std::collections::HashMap;
 
 /// Functions used by the Abigen to expand functions defined in an ABI spec.
-
-// TODO: Right now we have an "end-to-end" test suite for the Abigen!
-// under `fuels-abigen/tests/harness.rs`. But it would be nice to have
-// tests at the level of this component.
 
 /// Transforms a function defined in [`Function`] into a [`TokenStream`]
 /// that represents that same function signature as a Rust-native function
@@ -88,9 +84,10 @@ fn expand_fn_outputs(outputs: &[Property]) -> Result<TokenStream, Error> {
         1 => {
             // If it's a struct as the type of a function's output, use its
             // tokenized name only. Otherwise, parse and expand.
+            // The non-expansion should happen to enums as well
             if outputs[0].type_field.contains("struct ") {
                 let tok: proc_macro2::TokenStream =
-                    extract_struct_name_from_abi_property(&outputs[0])
+                    extract_custom_type_name_from_abi_property(&outputs[0], CustomType::Struct)?
                         .parse()
                         .unwrap();
                 Ok(tok)
@@ -209,17 +206,546 @@ fn expand_input_param(
         }
         ParamType::Enum(_) => {
             let ident = ident(
-                &extract_struct_name_from_abi_property(rust_enum_name.unwrap()).to_class_case(),
+                &extract_custom_type_name_from_abi_property(
+                    rust_enum_name.unwrap(),
+                    CustomType::Enum,
+                )?
+                .to_class_case(),
             );
             Ok(quote! { #ident })
         }
         ParamType::Struct(_) => {
             let ident = ident(
-                &extract_struct_name_from_abi_property(rust_struct_name.unwrap()).to_class_case(),
+                &extract_custom_type_name_from_abi_property(
+                    rust_struct_name.unwrap(),
+                    CustomType::Struct,
+                )?
+                .to_class_case(),
             );
             Ok(quote! { #ident })
         }
         // Primitive type
         _ => expand_type(kind),
+    }
+}
+
+// Regarding string->TokenStream->string, refer to `custom_types_gen` tests for more details.
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::str::FromStr;
+    // --- expand_function ---
+    #[test]
+    fn test_expand_function_simple() {
+        let f = Function {
+            type_field: "unused".to_string(),
+            inputs: vec![Property {
+                name: String::from("bimbam"),
+                type_field: String::from("bool"),
+                components: None,
+            }],
+            name: "HelloWorld".to_string(),
+            outputs: vec![],
+        };
+        let result = expand_function(
+            &f,
+            &ABIParser::new(),
+            &Default::default(),
+            &Default::default(),
+        );
+        let expected = TokenStream::from_str(
+            r#"
+#[doc = "Calls the contract's `HelloWorld` (0x0000000097d4de45) function"]
+pub fn HelloWorld(&self, bimbam: bool) -> ContractCall<()> {
+    Contract::method_hash(
+        &self.fuel_client,
+        &self.compiled,
+        [0, 0, 0, 0, 151, 212, 222, 69],
+        &[],
+        &[bimbam.into_token(), ]
+    )
+    .expect("method not found (this should never happen)")
+}
+        "#,
+        );
+        let expected = expected.unwrap().to_string();
+        assert_eq!(result.unwrap().to_string(), expected);
+    }
+    #[test]
+    fn test_expand_function_complex() {
+        let the_function = Function {
+            type_field: "unused".to_string(),
+            name: "HelloWorld".to_string(),
+            inputs: vec![
+                Property {
+                    name: String::from("BimBapStruct"),
+                    type_field: String::from("struct UnusedName"),
+                    components: Some(vec![
+                        Property {
+                            name: String::from("Meat"),
+                            type_field: String::from("bool"),
+                            components: None,
+                        },
+                        Property {
+                            name: String::from("Rice"),
+                            type_field: String::from("u64"),
+                            components: None,
+                        },
+                    ]),
+                },
+                Property {
+                    name: String::from("BurgundyBeefEnum"),
+                    type_field: String::from("enum NameNotUsed"),
+                    components: Some(vec![
+                        Property {
+                            name: String::from("Beef"),
+                            type_field: String::from("bool"),
+                            components: None,
+                        },
+                        Property {
+                            name: String::from("BurgundyWine"),
+                            type_field: String::from("u64"),
+                            components: None,
+                        },
+                    ]),
+                },
+            ],
+            outputs: vec![
+                Property {
+                    name: String::from("CoolIndieGame"),
+                    type_field: String::from("struct ThisNameIsNotUsed"),
+                    components: Some(vec![
+                        Property {
+                            name: String::from("SuperMeat"),
+                            type_field: String::from("bool"),
+                            components: None,
+                        },
+                        Property {
+                            name: String::from("BoyOrGirl"),
+                            type_field: String::from("u64"),
+                            components: None,
+                        },
+                    ]),
+                },
+                Property {
+                    name: String::from("EntropyCirclesEnum"),
+                    type_field: String::from("enum StillNotUsedName"),
+                    components: Some(vec![
+                        Property {
+                            name: String::from("Postcard"),
+                            type_field: String::from("bool"),
+                            components: None,
+                        },
+                        Property {
+                            name: String::from("Teacup"),
+                            type_field: String::from("u64"),
+                            components: None,
+                        },
+                    ]),
+                },
+            ],
+        };
+        let mut custom_structs = HashMap::new();
+        custom_structs.insert(
+            "BimBapStruct".to_string(),
+            Property {
+                name: "unused".to_string(),
+                type_field: "struct BikeHelmet".to_string(),
+                components: None,
+            },
+        );
+        custom_structs.insert(
+            "CoolIndieGame".to_string(),
+            Property {
+                name: "unused".to_string(),
+                type_field: "struct RedStickySquare".to_string(),
+                components: None,
+            },
+        );
+        let mut custom_enums = HashMap::new();
+        custom_enums.insert(
+            "EntropyCirclesEnum".to_string(),
+            Property {
+                name: "unused".to_string(),
+                type_field: "enum ComingUpWithThings".to_string(),
+                components: None,
+            },
+        );
+        custom_enums.insert(
+            "BurgundyBeefEnum".to_string(),
+            Property {
+                name: "unused".to_string(),
+                type_field: "enum SomeFrenchCuisine".to_string(),
+                components: None,
+            },
+        );
+        let abi_parser = ABIParser::new();
+        let result = expand_function(&the_function, &abi_parser, &custom_enums, &custom_structs);
+        // Some more editing was required because it is not rustfmt-compatible (adding/removing parentheses or commas)
+        let expected = TokenStream::from_str(
+            r#"
+#[doc = "Calls the contract's `HelloWorld` (0x00000000b6425163) function"]
+pub fn HelloWorld(
+    &self,
+    bim_bap_struct: BikeHelmet,
+    burgundy_beef_enum: SomeFrenchCuisine
+) -> ContractCall<((bool , u64 ,) , (bool, u64 ,))> {
+    Contract::method_hash(
+        &self.fuel_client,
+        &self.compiled,
+        [0, 0, 0, 0, 182, 66, 81, 99],
+        &[
+            ParamType::Struct(vec![ParamType::Bool, ParamType::U64]),
+            ParamType::Enum([Bool , U64])] , 
+            &[bim_bap_struct.into_token(), burgundy_beef_enum.into_token(),]
+    )
+    .expect("method not found (this should never happen)")
+}
+        "#,
+        );
+        let expected = expected.unwrap().to_string();
+        assert_eq!(result.unwrap().to_string(), expected);
+    }
+
+    // --- expand_selector ---
+    #[test]
+    fn test_expand_selector() {
+        let result = expand_selector(Selector::default());
+        assert_eq!(result.to_string(), "[0 , 0 , 0 , 0 , 0 , 0 , 0 , 0]");
+        let result = expand_selector(Selector::from([1, 2, 3, 4, 5, 6, 7, 8]));
+        assert_eq!(result.to_string(), "[1 , 2 , 3 , 4 , 5 , 6 , 7 , 8]");
+    }
+
+    // --- expand_fn_outputs ---
+    #[test]
+    fn test_expand_fn_outputs_zero_one_arg() {
+        let result = expand_fn_outputs(&[]);
+        assert_eq!(result.unwrap().to_string(), "()");
+        let result = expand_fn_outputs(&[Property {
+            name: "unused".to_string(),
+            type_field: "bool".to_string(),
+            components: None,
+        }]);
+        assert_eq!(result.unwrap().to_string(), "bool");
+        let result = expand_fn_outputs(&[Property {
+            name: "unused".to_string(),
+            type_field: String::from("struct streaming_services"),
+            components: Some(vec![
+                Property {
+                    name: String::from("unused"),
+                    type_field: String::from("thistypedoesntexist"),
+                    components: None,
+                },
+                Property {
+                    name: String::from("unused"),
+                    type_field: String::from("thistypedoesntexist"),
+                    components: None,
+                },
+            ]),
+        }]);
+
+        // the function has inconsistent  behavior for enum compared to struct:
+        // here we have to provide actual types in the components, not with the struct
+        assert_eq!(result.unwrap().to_string(), "streaming_services");
+        let result = expand_fn_outputs(&[Property {
+            name: "unused".to_string(),
+            type_field: String::from("enum unused"),
+            components: Some(vec![
+                Property {
+                    name: String::from("unused"),
+                    type_field: String::from("bool"),
+                    components: None,
+                },
+                Property {
+                    name: String::from("unused"),
+                    type_field: String::from("u64"),
+                    components: None,
+                },
+            ]),
+        }]);
+        assert_eq!(result.unwrap().to_string(), "(bool , u64 ,)");
+    }
+    #[test]
+    fn test_expand_fn_outputs_no_components() {
+        let result = expand_fn_outputs(&[Property {
+            name: "unused".to_string(),
+            type_field: String::from("struct carmaker"),
+            components: Some(vec![
+                Property {
+                    name: String::from("unused"),
+                    type_field: String::from("nonexistingtype"),
+                    components: None,
+                },
+                Property {
+                    name: String::from("unused"),
+                    type_field: String::from("anotherunexistingtype"),
+                    components: None,
+                },
+            ]),
+        }]);
+        // TODO: this should panic after the function is refactored
+        assert_eq!(result.unwrap().to_string(), "carmaker");
+
+        let result = expand_fn_outputs(&[Property {
+            name: "unused".to_string(),
+            type_field: String::from("enum unused"),
+            components: Some(vec![
+                Property {
+                    name: String::from("unused"),
+                    type_field: String::from("nonexistingtype"),
+                    components: None,
+                },
+                Property {
+                    name: String::from("unused"),
+                    type_field: String::from("anotherunexistingtype"),
+                    components: None,
+                },
+            ]),
+        }]);
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "Missing data: cannot parse custom type with no components"
+        )
+    }
+    #[test]
+    fn test_expand_fn_outputs_two_more_components() {
+        let result = expand_fn_outputs(&[
+            Property {
+                name: "unused".to_string(),
+                type_field: String::from("bool"),
+                components: None,
+            },
+            Property {
+                name: "unused".to_string(),
+                type_field: String::from("u64"),
+                components: None,
+            },
+            Property {
+                name: "unused".to_string(),
+                type_field: String::from("u32"),
+                components: None,
+            },
+        ]);
+        assert_eq!(result.unwrap().to_string(), "(bool , u64 , u32)");
+
+        let some_enum = Property {
+            name: "unused".to_string(),
+            type_field: String::from("enum unused"),
+            components: Some(vec![
+                Property {
+                    name: String::from("unused"),
+                    type_field: String::from("nonexistingtype"),
+                    components: None,
+                },
+                Property {
+                    name: String::from("unused"),
+                    type_field: String::from("anotherunexistingtype"),
+                    components: None,
+                },
+            ]),
+        };
+        let result = expand_fn_outputs(&[some_enum.clone(), some_enum]);
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "Missing data: cannot parse custom type with no components"
+        );
+
+        let some_struct = Property {
+            name: "unused".to_string(),
+            type_field: String::from("struct carmaker"),
+            components: Some(vec![
+                Property {
+                    name: String::from("unused"),
+                    type_field: String::from("u64"),
+                    components: None,
+                },
+                Property {
+                    name: String::from("unused"),
+                    type_field: String::from("bool"),
+                    components: None,
+                },
+            ]),
+        };
+        let result = expand_fn_outputs(&[some_struct.clone(), some_struct]);
+        assert_eq!(
+            result.unwrap().to_string(),
+            "((u64 , bool ,) , (u64 , bool ,))"
+        )
+    }
+
+    // --- expand_function_argument ---
+    #[test]
+    fn test_expand_function_arguments_workaround() {
+        let function = Function {
+            type_field: "".to_string(),
+            inputs: vec![
+                Property {
+                    name: "gas_".to_string(),
+                    type_field: String::from("bool"),
+                    components: None,
+                },
+                Property {
+                    name: "amount_".to_string(),
+                    type_field: String::from("u64"),
+                    components: None,
+                },
+                Property {
+                    name: "color_".to_string(),
+                    type_field: String::from("u32"),
+                    components: None,
+                },
+            ],
+            name: "".to_string(),
+            outputs: vec![],
+        };
+        let hm: HashMap<String, Property> = HashMap::new();
+        let result = expand_function_arguments(&function, &hm, &hm);
+        let (args, call_args) = result.unwrap();
+        let result = format!("({},{})", args.to_string(), call_args.to_string());
+        assert_eq!(result, "(,())");
+    }
+    #[test]
+    fn test_expand_function_arguments_primitive() {
+        let function = Function {
+            type_field: "ZigZag".to_string(),
+            inputs: vec![
+                Property {
+                    name: "BimBam".to_string(),
+                    type_field: String::from("bool"),
+                    components: None,
+                },
+                Property {
+                    name: "".to_string(),
+                    type_field: String::from("u64"),
+                    components: None,
+                },
+            ],
+            name: "PipPop".to_string(),
+            outputs: vec![],
+        };
+        let hm: HashMap<String, Property> = HashMap::new();
+        let result = expand_function_arguments(&function, &hm, &hm);
+        let (args, call_args) = result.unwrap();
+        let result = format!("({},{})", args.to_string(), call_args.to_string());
+        assert_eq!(
+            result,
+            "(, bim_bam : bool , p1 : u64,& [bim_bam . into_token () , p1 . into_token () ,])"
+        );
+    }
+    #[test]
+    fn test_expand_function_arguments_composite() {
+        let function = Function {
+            type_field: "ZigZag".to_string(),
+            inputs: vec![
+                Property {
+                    name: "BimBam".to_string(),
+                    type_field: String::from("struct nameunused"),
+                    // Not parsed, so can be empty but not None
+                    components: Some(vec![]),
+                },
+                Property {
+                    name: "PimPoum".to_string(),
+                    type_field: String::from("enum nameunused"),
+                    // Not parsed, so can be empty but not None
+                    components: Some(vec![]),
+                },
+            ],
+            name: "PipPopFunction".to_string(),
+            outputs: vec![],
+        };
+        let mut custom_structs = HashMap::new();
+        custom_structs.insert(
+            "BimBam".to_string(),
+            Property {
+                name: "unused".to_string(),
+                type_field: "struct CarMaker".to_string(),
+                components: None,
+            },
+        );
+        let mut custom_enums = HashMap::new();
+        custom_enums.insert(
+            "PimPoum".to_string(),
+            Property {
+                name: "unused".to_string(),
+                type_field: "enum Bank".to_string(),
+                components: None,
+            },
+        );
+        let result = expand_function_arguments(&function, &custom_enums, &custom_structs);
+        let (args, call_args) = result.unwrap();
+        let result = format!("({},{})", args.to_string(), call_args.to_string());
+        let expected = r#"(, bim_bam : CarMaker , pim_poum : Bank,& [bim_bam . into_token () , pim_poum . into_token () ,])"#;
+        assert_eq!(result, expected);
+    }
+
+    // --- expand_input_name ---
+    #[test]
+    fn test_expand_input_name() {
+        let result = expand_input_name(0, "CamelCaseHello");
+        assert_eq!(result.to_string(), "camel_case_hello");
+        let result = expand_input_name(1080, "");
+        assert_eq!(result.to_string(), "p1080");
+        let result = expand_input_name(0, "if");
+        assert_eq!(result.to_string(), "if_");
+        let result = expand_input_name(0, "let");
+        assert_eq!(result.to_string(), "let_");
+    }
+
+    // --- expand_input_param ---
+    #[test]
+    fn test_expand_input_param_primitive() {
+        let def = Function::default();
+        let result = expand_input_param(&def, "unused", &ParamType::Bool, &None, &None);
+        assert_eq!(result.unwrap().to_string(), "bool");
+        let result = expand_input_param(&def, "unused", &ParamType::U64, &None, &None);
+        assert_eq!(result.unwrap().to_string(), "u64");
+        let result = expand_input_param(&def, "unused", &ParamType::String(10), &None, &None);
+        assert_eq!(result.unwrap().to_string(), "String");
+    }
+    #[test]
+    fn test_expand_input_param_array() {
+        let array_type = ParamType::Array(Box::new(ParamType::U64), 10);
+        let result = expand_input_param(&Function::default(), "unused", &array_type, &None, &None);
+        assert_eq!(result.unwrap().to_string(), ":: std :: vec :: Vec < u64 >");
+    }
+    #[test]
+    fn test_expand_input_param_struct_name() {
+        let def = Function::default();
+        let struct_type = ParamType::Struct(vec![ParamType::Bool, ParamType::U64]);
+        let struct_prop = Property {
+            name: String::from("unused"),
+            type_field: String::from("struct babies"),
+            components: None,
+        };
+        let struct_name = Some(&struct_prop);
+        let result = expand_input_param(&def, "unused", &struct_type, &None, &struct_name);
+        // Notice the removed plural!
+        assert_eq!(result.unwrap().to_string(), "Baby");
+    }
+    #[test]
+    fn test_expand_input_param_struct_wrong_name() {
+        let def = Function::default();
+        let struct_type = ParamType::Struct(vec![ParamType::Bool, ParamType::U64]);
+        let struct_prop = Property {
+            name: String::from("unused"),
+            type_field: String::from("not_the_right_format"),
+            components: None,
+        };
+        let struct_name = Some(&struct_prop);
+        let result = expand_input_param(&def, "unused", &struct_type, &None, &struct_name);
+        assert!(matches!(result, Err(Error::MissingData(_))));
+    }
+    #[test]
+    fn test_expand_input_param_struct_with_enum_name() {
+        let def = Function::default();
+        let struct_type = ParamType::Struct(vec![ParamType::Bool, ParamType::U64]);
+        let struct_prop = Property {
+            name: String::from("unused"),
+            type_field: String::from("enum butitsastruct"),
+            components: None,
+        };
+        let struct_name = Some(&struct_prop);
+        let result = expand_input_param(&def, "unused", &struct_type, &None, &struct_name);
+        assert!(matches!(result, Err(Error::InvalidType(_))));
     }
 }
