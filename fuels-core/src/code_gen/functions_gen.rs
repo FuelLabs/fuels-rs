@@ -96,7 +96,6 @@ fn expand_fn_outputs(outputs: &[Property]) -> Result<TokenStream, Error> {
             }
         }
         _ => {
-            // There, everything will be expanded, which goes against the `1` case
             let types = outputs
                 .iter()
                 .map(|param| expand_type(&parse_param(param)?))
@@ -568,7 +567,6 @@ pub fn HelloWorld(
             ]),
         };
         let result = expand_fn_outputs(&[some_struct.clone(), some_struct]);
-        // TODO: this should panic after the function is refactored
         assert_eq!(
             result.unwrap().to_string(),
             "((u64 , bool ,) , (u64 , bool ,))"
@@ -656,7 +654,6 @@ pub fn HelloWorld(
             outputs: vec![],
         };
         let mut custom_structs = HashMap::new();
-        // TODO: inconsistent behavior
         custom_structs.insert(
             "BimBam".to_string(),
             Property {
@@ -665,7 +662,6 @@ pub fn HelloWorld(
                 components: None,
             },
         );
-        // TODO: inconsistent behavior
         let mut custom_enums = HashMap::new();
         custom_enums.insert(
             "PimPoum".to_string(),
