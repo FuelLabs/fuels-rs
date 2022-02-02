@@ -1,7 +1,9 @@
 use std::collections::HashMap;
 
 use crate::code_gen::bindings::ContractBindings;
-use crate::code_gen::custom_types_gen::{expand_internal_enum, expand_internal_struct};
+use crate::code_gen::custom_types_gen::{
+    expand_internal_enum, expand_internal_struct, extract_custom_type_name_from_abi_property,
+};
 use crate::code_gen::functions_gen::expand_function;
 use crate::errors::Error;
 use crate::json_abi::ABIParser;
@@ -11,6 +13,8 @@ use sway_types::{JsonABI, Property};
 
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
+
+use super::custom_types_gen::CustomType;
 
 pub struct Abigen {
     /// The parsed ABI.
@@ -31,11 +35,6 @@ pub struct Abigen {
 
     /// Generate no-std safe code
     no_std: bool,
-}
-
-enum CustomType {
-    Enum,
-    Struct,
 }
 
 impl Abigen {
@@ -217,9 +216,11 @@ impl Abigen {
         for prop in all_properties {
             if prop.type_field.contains(type_string) {
                 // Top level struct
-                if !structs.contains_key(&prop.name) {
-                    structs.insert(prop.name.clone(), prop.clone());
-                }
+                let custom_type_name = extract_custom_type_name_from_abi_property(prop, ty)
+                    .expect("failed to extract custom type name");
+                structs
+                    .entry(custom_type_name)
+                    .or_insert_with(|| prop.clone());
 
                 // Find inner structs in case of nested custom types
                 for inner_component in prop.components.as_ref().unwrap() {
@@ -232,9 +233,12 @@ impl Abigen {
         }
 
         for inner_struct in inner_structs {
-            if !structs.contains_key(&inner_struct.name) {
-                structs.insert(inner_struct.name.clone(), inner_struct);
-            }
+            let inner_custom_type_name =
+                extract_custom_type_name_from_abi_property(&inner_struct, ty)
+                    .expect("failed to extract custom type name");
+            structs
+                .entry(inner_custom_type_name)
+                .or_insert(inner_struct);
         }
 
         structs
@@ -351,7 +355,7 @@ mod tests {
 
         assert_eq!(1, contract.custom_structs.len());
 
-        assert!(contract.custom_structs.contains_key("value"));
+        assert!(contract.custom_structs.contains_key("MyStruct"));
 
         let bindings = contract.generate().unwrap();
         bindings.write(std::io::stdout()).unwrap();
@@ -427,7 +431,13 @@ mod tests {
 
         assert_eq!(5, contract.custom_structs.len());
 
-        let expected_custom_struct_names = vec!["input", "foo", "y", "bar", "inner_bar"];
+        let expected_custom_struct_names = vec![
+            "MyNestedStruct",
+            "InnerStruct",
+            "MySecondNestedStruct",
+            "SecondInnerStruct",
+            "ThirdInnerStruct",
+        ];
 
         for name in expected_custom_struct_names {
             assert!(contract.custom_structs.contains_key(name));
@@ -475,8 +485,8 @@ mod tests {
 
         assert_eq!(2, contract.custom_structs.len());
 
-        assert!(contract.custom_structs.contains_key("top_value"));
-        assert!(contract.custom_structs.contains_key("foo"));
+        assert!(contract.custom_structs.contains_key("MyNestedStruct"));
+        assert!(contract.custom_structs.contains_key("InnerStruct"));
 
         let bindings = contract.generate().unwrap();
         bindings.write(std::io::stdout()).unwrap();
@@ -515,7 +525,7 @@ mod tests {
         assert_eq!(1, contract.custom_enums.len());
         assert_eq!(0, contract.custom_structs.len());
 
-        assert!(contract.custom_enums.contains_key("my_enum"));
+        assert!(contract.custom_enums.contains_key("MyEnum"));
 
         let bindings = contract.generate().unwrap();
         bindings.write(std::io::stdout()).unwrap();

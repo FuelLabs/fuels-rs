@@ -87,7 +87,7 @@ fn expand_fn_outputs(outputs: &[Property]) -> Result<TokenStream, Error> {
             // The non-expansion should happen to enums as well
             if outputs[0].type_field.contains("struct ") {
                 let tok: proc_macro2::TokenStream =
-                    extract_custom_type_name_from_abi_property(&outputs[0], CustomType::Struct)?
+                    extract_custom_type_name_from_abi_property(&outputs[0], &CustomType::Struct)?
                         .parse()
                         .unwrap();
                 Ok(tok)
@@ -139,17 +139,33 @@ fn expand_function_arguments(
         // TokenStream representing the name of the argument
         let name = expand_input_name(i, &param.name);
 
-        let rust_enum_name = custom_enums.get(&param.name);
-        let rust_struct_name = custom_structs.get(&param.name);
+        let opt_custom_type = match param.type_field.split_whitespace().collect::<Vec<_>>()[0] {
+            "enum" => Some(&CustomType::Enum),
+            "struct" => Some(&CustomType::Struct),
+            _ => None,
+        };
+
+        let rust_custom_name = if let Some(c) = opt_custom_type {
+            match c {
+                CustomType::Enum => {
+                    let name =
+                        extract_custom_type_name_from_abi_property(param, opt_custom_type.unwrap())
+                            .unwrap();
+                    custom_enums.get(&name)
+                }
+                CustomType::Struct => {
+                    let name =
+                        extract_custom_type_name_from_abi_property(param, opt_custom_type.unwrap())
+                            .unwrap();
+                    custom_structs.get(&name)
+                }
+            }
+        } else {
+            None
+        };
 
         // TokenStream representing the type of the argument
-        let ty = expand_input_param(
-            fun,
-            &param.name,
-            &parse_param(param)?,
-            &rust_enum_name,
-            &rust_struct_name,
-        )?;
+        let ty = expand_input_param(fun, &param.name, &parse_param(param)?, &rust_custom_name)?;
 
         // Add the TokenStream to argument declarations
         args.push(quote! { #name: #ty });
@@ -194,12 +210,11 @@ fn expand_input_param(
     fun: &Function,
     param: &str,
     kind: &ParamType,
-    rust_enum_name: &Option<&Property>,
-    rust_struct_name: &Option<&Property>,
+    custom_struct_name: &Option<&Property>,
 ) -> Result<TokenStream, Error> {
     match kind {
         ParamType::Array(ty, _) => {
-            let ty = expand_input_param(fun, param, ty, rust_enum_name, rust_struct_name)?;
+            let ty = expand_input_param(fun, param, ty, custom_struct_name)?;
             Ok(quote! {
                 ::std::vec::Vec<#ty>
             })
@@ -207,8 +222,8 @@ fn expand_input_param(
         ParamType::Enum(_) => {
             let ident = ident(
                 &extract_custom_type_name_from_abi_property(
-                    rust_enum_name.unwrap(),
-                    CustomType::Enum,
+                    custom_struct_name.unwrap(),
+                    &CustomType::Enum,
                 )?
                 .to_class_case(),
             );
@@ -217,8 +232,8 @@ fn expand_input_param(
         ParamType::Struct(_) => {
             let ident = ident(
                 &extract_custom_type_name_from_abi_property(
-                    rust_struct_name.unwrap(),
-                    CustomType::Struct,
+                    custom_struct_name.unwrap(),
+                    &CustomType::Struct,
                 )?
                 .to_class_case(),
             );
@@ -274,12 +289,12 @@ pub fn HelloWorld(&self, bimbam: bool) -> ContractCall<()> {
     #[test]
     fn test_expand_function_complex() {
         let the_function = Function {
-            type_field: "unused".to_string(),
-            name: "HelloWorld".to_string(),
+            type_field: "function".to_string(),
+            name: "hello_world".to_string(),
             inputs: vec![
                 Property {
-                    name: String::from("BimBapStruct"),
-                    type_field: String::from("struct UnusedName"),
+                    name: String::from("input"),
+                    type_field: String::from("struct BimBapStruct"),
                     components: Some(vec![
                         Property {
                             name: String::from("Meat"),
@@ -294,8 +309,8 @@ pub fn HelloWorld(&self, bimbam: bool) -> ContractCall<()> {
                     ]),
                 },
                 Property {
-                    name: String::from("BurgundyBeefEnum"),
-                    type_field: String::from("enum NameNotUsed"),
+                    name: String::from("another_input"),
+                    type_field: String::from("enum BurgundyBeefEnum"),
                     components: Some(vec![
                         Property {
                             name: String::from("Beef"),
@@ -312,8 +327,8 @@ pub fn HelloWorld(&self, bimbam: bool) -> ContractCall<()> {
             ],
             outputs: vec![
                 Property {
-                    name: String::from("CoolIndieGame"),
-                    type_field: String::from("struct ThisNameIsNotUsed"),
+                    name: String::from("notused"),
+                    type_field: String::from("struct CoolIndieGame"),
                     components: Some(vec![
                         Property {
                             name: String::from("SuperMeat"),
@@ -328,8 +343,8 @@ pub fn HelloWorld(&self, bimbam: bool) -> ContractCall<()> {
                     ]),
                 },
                 Property {
-                    name: String::from("EntropyCirclesEnum"),
-                    type_field: String::from("enum StillNotUsedName"),
+                    name: String::from("stillnotused"),
+                    type_field: String::from("enum EntropyCirclesEnum"),
                     components: Some(vec![
                         Property {
                             name: String::from("Postcard"),
@@ -350,7 +365,7 @@ pub fn HelloWorld(&self, bimbam: bool) -> ContractCall<()> {
             "BimBapStruct".to_string(),
             Property {
                 name: "unused".to_string(),
-                type_field: "struct BikeHelmet".to_string(),
+                type_field: "struct BimBapStruct".to_string(),
                 components: None,
             },
         );
@@ -358,7 +373,7 @@ pub fn HelloWorld(&self, bimbam: bool) -> ContractCall<()> {
             "CoolIndieGame".to_string(),
             Property {
                 name: "unused".to_string(),
-                type_field: "struct RedStickySquare".to_string(),
+                type_field: "struct CoolIndieGame".to_string(),
                 components: None,
             },
         );
@@ -367,7 +382,7 @@ pub fn HelloWorld(&self, bimbam: bool) -> ContractCall<()> {
             "EntropyCirclesEnum".to_string(),
             Property {
                 name: "unused".to_string(),
-                type_field: "enum ComingUpWithThings".to_string(),
+                type_field: "enum EntropyCirclesEnum".to_string(),
                 components: None,
             },
         );
@@ -375,7 +390,7 @@ pub fn HelloWorld(&self, bimbam: bool) -> ContractCall<()> {
             "BurgundyBeefEnum".to_string(),
             Property {
                 name: "unused".to_string(),
-                type_field: "enum SomeFrenchCuisine".to_string(),
+                type_field: "enum BurgundyBeefEnum".to_string(),
                 components: None,
             },
         );
@@ -384,20 +399,20 @@ pub fn HelloWorld(&self, bimbam: bool) -> ContractCall<()> {
         // Some more editing was required because it is not rustfmt-compatible (adding/removing parentheses or commas)
         let expected = TokenStream::from_str(
             r#"
-#[doc = "Calls the contract's `HelloWorld` (0x00000000b6425163) function"]
-pub fn HelloWorld(
+#[doc = "Calls the contract's `hello_world` (0x000000004d65f217) function"]
+pub fn hello_world(
     &self,
-    bim_bap_struct: BikeHelmet,
-    burgundy_beef_enum: SomeFrenchCuisine
+    input: BimBapStruct,
+    another_input: BurgundyBeefEnum
 ) -> ContractCall<((bool , u64 ,) , (bool, u64 ,))> {
     Contract::method_hash(
         &self.fuel_client,
         &self.compiled,
-        [0, 0, 0, 0, 182, 66, 81, 99],
+        [0, 0, 0, 0, 77, 101, 242, 23],
         &[
             ParamType::Struct(vec![ParamType::Bool, ParamType::U64]),
             ParamType::Enum([Bool , U64])] , 
-            &[bim_bap_struct.into_token(), burgundy_beef_enum.into_token(),]
+            &[input.into_token(), another_input.into_token(),]
     )
     .expect("method not found (this should never happen)")
 }
@@ -412,7 +427,7 @@ pub fn HelloWorld(
     fn test_expand_selector() {
         let result = expand_selector(Selector::default());
         assert_eq!(result.to_string(), "[0 , 0 , 0 , 0 , 0 , 0 , 0 , 0]");
-        let result = expand_selector(Selector::from([1, 2, 3, 4, 5, 6, 7, 8]));
+        let result = expand_selector([1, 2, 3, 4, 5, 6, 7, 8]);
         assert_eq!(result.to_string(), "[1 , 2 , 3 , 4 , 5 , 6 , 7 , 8]");
     }
 
@@ -601,16 +616,16 @@ pub fn HelloWorld(
         let hm: HashMap<String, Property> = HashMap::new();
         let result = expand_function_arguments(&function, &hm, &hm);
         let (args, call_args) = result.unwrap();
-        let result = format!("({},{})", args.to_string(), call_args.to_string());
+        let result = format!("({},{})", args, call_args);
         assert_eq!(result, "(,())");
     }
     #[test]
     fn test_expand_function_arguments_primitive() {
         let function = Function {
-            type_field: "ZigZag".to_string(),
+            type_field: "function".to_string(),
             inputs: vec![
                 Property {
-                    name: "BimBam".to_string(),
+                    name: "bim_bam".to_string(),
                     type_field: String::from("bool"),
                     components: None,
                 },
@@ -620,13 +635,13 @@ pub fn HelloWorld(
                     components: None,
                 },
             ],
-            name: "PipPop".to_string(),
+            name: "pip_pop".to_string(),
             outputs: vec![],
         };
         let hm: HashMap<String, Property> = HashMap::new();
         let result = expand_function_arguments(&function, &hm, &hm);
         let (args, call_args) = result.unwrap();
-        let result = format!("({},{})", args.to_string(), call_args.to_string());
+        let result = format!("({},{})", args, call_args);
         assert_eq!(
             result,
             "(, bim_bam : bool , p1 : u64,& [bim_bam . into_token () , p1 . into_token () ,])"
@@ -635,17 +650,17 @@ pub fn HelloWorld(
     #[test]
     fn test_expand_function_arguments_composite() {
         let function = Function {
-            type_field: "ZigZag".to_string(),
+            type_field: "zig_zag".to_string(),
             inputs: vec![
                 Property {
-                    name: "BimBam".to_string(),
-                    type_field: String::from("struct nameunused"),
+                    name: "bim_bam".to_string(),
+                    type_field: String::from("struct CarMaker"),
                     // Not parsed, so can be empty but not None
                     components: Some(vec![]),
                 },
                 Property {
-                    name: "PimPoum".to_string(),
-                    type_field: String::from("enum nameunused"),
+                    name: "pim_poum".to_string(),
+                    type_field: String::from("enum Bank"),
                     // Not parsed, so can be empty but not None
                     components: Some(vec![]),
                 },
@@ -655,16 +670,17 @@ pub fn HelloWorld(
         };
         let mut custom_structs = HashMap::new();
         custom_structs.insert(
-            "BimBam".to_string(),
+            "CarMaker".to_string(),
             Property {
                 name: "unused".to_string(),
                 type_field: "struct CarMaker".to_string(),
                 components: None,
             },
         );
+
         let mut custom_enums = HashMap::new();
         custom_enums.insert(
-            "PimPoum".to_string(),
+            "Bank".to_string(),
             Property {
                 name: "unused".to_string(),
                 type_field: "enum Bank".to_string(),
@@ -673,7 +689,7 @@ pub fn HelloWorld(
         );
         let result = expand_function_arguments(&function, &custom_enums, &custom_structs);
         let (args, call_args) = result.unwrap();
-        let result = format!("({},{})", args.to_string(), call_args.to_string());
+        let result = format!("({},{})", args, call_args);
         let expected = r#"(, bim_bam : CarMaker , pim_poum : Bank,& [bim_bam . into_token () , pim_poum . into_token () ,])"#;
         assert_eq!(result, expected);
     }
@@ -695,17 +711,17 @@ pub fn HelloWorld(
     #[test]
     fn test_expand_input_param_primitive() {
         let def = Function::default();
-        let result = expand_input_param(&def, "unused", &ParamType::Bool, &None, &None);
+        let result = expand_input_param(&def, "unused", &ParamType::Bool, &None);
         assert_eq!(result.unwrap().to_string(), "bool");
-        let result = expand_input_param(&def, "unused", &ParamType::U64, &None, &None);
+        let result = expand_input_param(&def, "unused", &ParamType::U64, &None);
         assert_eq!(result.unwrap().to_string(), "u64");
-        let result = expand_input_param(&def, "unused", &ParamType::String(10), &None, &None);
+        let result = expand_input_param(&def, "unused", &ParamType::String(10), &None);
         assert_eq!(result.unwrap().to_string(), "String");
     }
     #[test]
     fn test_expand_input_param_array() {
         let array_type = ParamType::Array(Box::new(ParamType::U64), 10);
-        let result = expand_input_param(&Function::default(), "unused", &array_type, &None, &None);
+        let result = expand_input_param(&Function::default(), "unused", &array_type, &None);
         assert_eq!(result.unwrap().to_string(), ":: std :: vec :: Vec < u64 >");
     }
     #[test]
@@ -718,7 +734,7 @@ pub fn HelloWorld(
             components: None,
         };
         let struct_name = Some(&struct_prop);
-        let result = expand_input_param(&def, "unused", &struct_type, &None, &struct_name);
+        let result = expand_input_param(&def, "unused", &struct_type, &struct_name);
         // Notice the removed plural!
         assert_eq!(result.unwrap().to_string(), "Baby");
     }
@@ -732,7 +748,7 @@ pub fn HelloWorld(
             components: None,
         };
         let struct_name = Some(&struct_prop);
-        let result = expand_input_param(&def, "unused", &struct_type, &None, &struct_name);
+        let result = expand_input_param(&def, "unused", &struct_type, &struct_name);
         assert!(matches!(result, Err(Error::MissingData(_))));
     }
     #[test]
@@ -745,7 +761,7 @@ pub fn HelloWorld(
             components: None,
         };
         let struct_name = Some(&struct_prop);
-        let result = expand_input_param(&def, "unused", &struct_type, &None, &struct_name);
+        let result = expand_input_param(&def, "unused", &struct_type, &struct_name);
         assert!(matches!(result, Err(Error::InvalidType(_))));
     }
 }
