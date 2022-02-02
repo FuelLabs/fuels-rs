@@ -874,7 +874,7 @@ async fn type_safe_output_values() {
                             }
                         ]
                     }
-                ],                                    
+                ],
                 "name":"return_my_struct",
                 "outputs":[
                     {
@@ -1120,4 +1120,42 @@ async fn call_with_empty_return() {
         .call() // Perform the network call
         .await
         .unwrap();
+}
+
+#[tokio::test]
+async fn abigen_different_structs_same_arg_name() {
+    let rng = &mut StdRng::seed_from_u64(2322u64);
+
+    abigen!(
+        MyContract,
+        "fuels-abigen-macro/tests/test_projects/two-structs/abi.json"
+    );
+
+    // Build the contract
+    let salt: [u8; 32] = rng.gen();
+    let salt = Salt::from(salt);
+
+    let compiled =
+        Contract::compile_sway_contract("tests/test_projects/two-structs", salt).unwrap();
+
+    let (client, contract_id) = Contract::launch_and_deploy(&compiled).await.unwrap();
+
+    println!("Contract deployed @ {:x}", contract_id);
+
+    let contract_instance = MyContract::new(compiled, client);
+
+    let param_one = StructOne { foo: 42 };
+    let param_two = StructTwo { bar: 42 };
+
+    let res_one = contract_instance.something(param_one).call().await.unwrap();
+
+    assert_eq!(res_one.value, 43);
+
+    let res_two = contract_instance
+        .something_else(param_two)
+        .call()
+        .await
+        .unwrap();
+
+    assert_eq!(res_two.value, 41);
 }
