@@ -1,7 +1,7 @@
 [package]
 name = "demo"
 version = "0.1.0"
-authors = ["Rodrigo Araujo"]
+authors = ["Fuel Labs"]
 edition = "2021"
 license = "Apache-2.0"
 
