@@ -1,6 +1,6 @@
 [package]
 name = "fuels-abigen-macro"
-version = "0.3.0"
+version = "0.3.1"
 authors = ["Fuel Labs <contact@fuel.sh>"]
 edition = "2018"
 homepage = "https://fuel.network/"
@@ -12,7 +12,7 @@ description = "Fuel Rust SDK marcros to generate types from ABI."
 proc-macro = true
 
 [dependencies]
-fuels-core = { version = "0.3.0", path = "../fuels-core" }
+fuels-core = { version = "0.3.1", path = "../fuels-core" }
 fuel-tx = "0.2"
 proc-macro2 = "1.0"
 quote = "1.0"
@@ -23,6 +23,6 @@ syn = "1.0.12"
 fuel-core = { version = "0.2", default-features = false }
 fuel-gql-client = { version = "0.2", default-features = false }
 tokio = "1.15.0"
-fuels-contract = { version = "0.3.0", path = "../fuels-contract" }
+fuels-contract = { version = "0.3.1", path = "../fuels-contract" }
 hex = { version = "0.4.3", default-features = false, features = ["std"] }
 sha2 = "0.9.5"
