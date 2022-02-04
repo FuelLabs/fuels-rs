@@ -10,9 +10,9 @@ description = "Fuel Rust SDK core."
 
 [dependencies]
 anyhow = "1"
-fuel-tx = "0.2"
+fuel-tx = "0.5"
 fuel-types = "0.1"
-fuel-vm = "0.2"
+fuel-vm = "0.4"
 hex = { version = "0.4.3", features = ["std"] }
 sway-types = { version = "0.1" }
 sway-utils = { version = "0.1" }

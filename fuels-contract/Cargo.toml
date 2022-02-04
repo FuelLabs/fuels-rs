@@ -15,9 +15,9 @@ fuels-core = { version = "0.3.1", path = "../fuels-core" }
 fuel-asm = { version = "0.1", features = ["serde-types"] }
 fuel-gql-client = { version = "0.2", default-features = false }
 fuel-core = { version = "0.2", default-features = false }
-fuel-tx = "0.2"
+fuel-tx = "0.5"
 fuel-types = "0.1"
-fuel-vm = "0.2"
+fuel-vm = "0.4"
 hex = { version = "0.4.3", default-features = false, features = ["std"] }
 proc-macro2 = "1.0"
 quote = "1.0"

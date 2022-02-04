@@ -13,7 +13,7 @@ proc-macro = true
 
 [dependencies]
 fuels-core = { version = "0.3.1", path = "../fuels-core" }
-fuel-tx = "0.2"
+fuel-tx = "0.5"
 proc-macro2 = "1.0"
 quote = "1.0"
 rand = "0.8"
