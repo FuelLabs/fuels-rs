@@ -43,7 +43,11 @@ pub struct Abigen {
 
 impl Abigen {
     /// Creates a new contract with the given ABI JSON source.
-    pub fn new<S: AsRef<str>>(contract_name: &str, abi_source: S) -> Result<Self, Error> {
+    pub fn new<S: AsRef<str>>(
+        contract_name: &str,
+        abi_source: S,
+        strict_checking: bool,
+    ) -> Result<Self, Error> {
         let source = Source::parse(abi_source).unwrap();
         let mut parsed_abi: JsonABI = serde_json::from_str(&source.get().unwrap())?;
 
@@ -69,7 +73,7 @@ impl Abigen {
             abi_parser: ABIParser::new(),
             rustfmt: true,
             no_std: false,
-            strict_checking: false,
+            strict_checking,
         })
     }
 
@@ -170,7 +174,7 @@ impl Abigen {
                 &self.abi_parser,
                 &self.custom_enums,
                 &self.custom_structs,
-                &self.strict_checking,
+                self.strict_checking,
             )?;
             tokenized_functions.push(tokenized_fn);
         }
@@ -299,7 +303,10 @@ mod tests {
         ]
         "#;
 
-        let bindings = Abigen::new("test", contract).unwrap().generate().unwrap();
+        let bindings = Abigen::new("test", contract, false)
+            .unwrap()
+            .generate()
+            .unwrap();
         bindings.write(std::io::stdout()).unwrap();
     }
 
@@ -330,7 +337,10 @@ mod tests {
         ]
         "#;
 
-        let bindings = Abigen::new("test", contract).unwrap().generate().unwrap();
+        let bindings = Abigen::new("test", contract, false)
+            .unwrap()
+            .generate()
+            .unwrap();
         bindings.write(std::io::stdout()).unwrap();
     }
 
@@ -362,7 +372,7 @@ mod tests {
         ]
         "#;
 
-        let contract = Abigen::new("custom", contract).unwrap();
+        let contract = Abigen::new("custom", contract, false).unwrap();
 
         assert_eq!(1, contract.custom_structs.len());
 
@@ -438,7 +448,7 @@ mod tests {
         ]
         "#;
 
-        let contract = Abigen::new("custom", contract).unwrap();
+        let contract = Abigen::new("custom", contract, false).unwrap();
 
         assert_eq!(5, contract.custom_structs.len());
 
@@ -492,7 +502,7 @@ mod tests {
         ]
         "#;
 
-        let contract = Abigen::new("custom", contract).unwrap();
+        let contract = Abigen::new("custom", contract, false).unwrap();
 
         assert_eq!(2, contract.custom_structs.len());
 
@@ -531,7 +541,7 @@ mod tests {
         ]
         "#;
 
-        let contract = Abigen::new("custom", contract).unwrap();
+        let contract = Abigen::new("custom", contract, false).unwrap();
 
         assert_eq!(1, contract.custom_enums.len());
         assert_eq!(0, contract.custom_structs.len());
@@ -592,7 +602,7 @@ mod tests {
         ]
         "#;
 
-        let contract = Abigen::new("custom", contract).unwrap();
+        let contract = Abigen::new("custom", contract, false).unwrap();
         let bindings = contract.generate().unwrap();
         bindings.write(std::io::stdout()).unwrap();
     }

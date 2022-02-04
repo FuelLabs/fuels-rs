@@ -19,7 +19,8 @@ async fn compile_bindings_from_contract_file() {
     // The generated bindings can be accessed through `SimpleContract`.
     abigen!(
         SimpleContract,
-        "fuels-abigen-macro/tests/takes_ints_returns_bool.json"
+        "fuels-abigen-macro/tests/takes_ints_returns_bool.json",
+        true,
     );
 
     let fuel_client = setup_local_node().await;
@@ -33,7 +34,7 @@ async fn compile_bindings_from_contract_file() {
     // Currently this prints `0000000003b568d4000000000000002a000000000000000a`
     // The encoded contract call. Soon it'll be able to perform the
     // actual call.
-    let contract_call = contract_instance.takes_ints_returns_bool(42, 10);
+    let contract_call = contract_instance.takes_ints_returns_bool(42);
 
     // Then you'll be able to use `.call()` to actually call the contract with the
     // specified function:
@@ -46,7 +47,7 @@ async fn compile_bindings_from_contract_file() {
         hex::encode(contract_call.encoded_args)
     );
 
-    assert_eq!("00000000c39ba1e9000000000000002a000000000000000a", encoded);
+    assert_eq!("00000000155799f1000000000000002a", encoded);
 }
 
 #[tokio::test]
@@ -78,7 +79,8 @@ async fn compile_bindings_from_inline_contract() {
                 ]
             }
         ]
-        "#
+        "#,
+        false,
     );
 
     let fuel_client = setup_local_node().await;
@@ -121,7 +123,8 @@ async fn compile_bindings_single_param() {
                 ]
             }
         ]
-        "#
+        "#,
+        false,
     );
 
     let fuel_client = setup_local_node().await;
@@ -161,7 +164,8 @@ async fn compile_bindings_array_input() {
                 ]
             }
         ]
-        "#
+        "#,
+        false,
     );
 
     let fuel_client = setup_local_node().await;
@@ -205,7 +209,8 @@ async fn compile_bindings_bool_array_input() {
                 ]
             }
         ]
-        "#
+        "#,
+        false,
     );
 
     let fuel_client = setup_local_node().await;
@@ -249,7 +254,8 @@ async fn compile_bindings_byte_input() {
                 ]
             }
         ]
-        "#
+        "#,
+        false,
     );
 
     let fuel_client = setup_local_node().await;
@@ -289,7 +295,8 @@ async fn compile_bindings_string_input() {
                 ]
             }
         ]
-        "#
+        "#,
+        false,
     );
 
     let fuel_client = setup_local_node().await;
@@ -332,7 +339,8 @@ async fn compile_bindings_b256_input() {
                 ]
             }
         ]
-        "#
+        "#,
+        false,
     );
 
     let fuel_client = setup_local_node().await;
@@ -388,7 +396,8 @@ async fn compile_bindings_struct_input() {
                 "outputs":[]
             }
         ]
-        "#
+        "#,
+        false,
     );
 
     let fuel_client = setup_local_node().await;
@@ -452,7 +461,8 @@ async fn compile_bindings_nested_struct_input() {
                 "outputs":[]
             }
         ]
-        "#
+        "#,
+        false,
     );
 
     let inner_struct = InnerStruct { a: true };
@@ -507,7 +517,8 @@ async fn compile_bindings_enum_input() {
                 "outputs":[]
             }
         ]
-        "#
+        "#,
+        false,
     );
 
     let variant = MyEnum::X(42);
@@ -557,7 +568,8 @@ async fn create_struct_from_decoded_tokens() {
                 "outputs":[]
             }
         ]
-        "#
+        "#,
+        false,
     );
 
     // Decoded tokens
@@ -622,7 +634,8 @@ async fn create_nested_struct_from_decoded_tokens() {
                 "outputs":[]
             }
         ]
-        "#
+        "#,
+        false,
     );
 
     // Creating just the InnerStruct is possible
@@ -733,7 +746,8 @@ async fn example_workflow() {
                 "type": "function"
             }
         ]
-        "#
+        "#,
+        true,
     );
 
     // Build the contract
@@ -894,7 +908,8 @@ async fn type_safe_output_values() {
                 ]
             }
         ]
-        "#
+        "#,
+        true
     );
 
     // Build the contract
@@ -1016,7 +1031,8 @@ async fn call_with_structs() {
                 "type": "function"
             }
         ]
-        "#
+        "#,
+        true,
     );
 
     // Build the contract
@@ -1099,7 +1115,8 @@ async fn call_with_empty_return() {
                 "type": "function"
             }
         ]
-        "#
+        "#,
+        true,
     );
 
     // Build the contract
@@ -1128,7 +1145,8 @@ async fn abigen_different_structs_same_arg_name() {
 
     abigen!(
         MyContract,
-        "fuels-abigen-macro/tests/test_projects/two-structs/abi.json"
+        "fuels-abigen-macro/tests/test_projects/two-structs/abi.json",
+        true
     );
 
     // Build the contract

@@ -28,7 +28,7 @@ pub fn expand_function(
     abi_parser: &ABIParser,
     custom_enums: &HashMap<String, Property>,
     custom_structs: &HashMap<String, Property>,
-    strict_checking: &bool,
+    strict_checking: bool,
 ) -> Result<TokenStream, Error> {
     let name = safe_ident(&function.name);
     let fn_signature = abi_parser.build_fn_selector(&function.name, &function.inputs);
@@ -119,7 +119,6 @@ fn expand_function_arguments(
 ) -> Result<(TokenStream, TokenStream), Error> {
     let n_inputs = fun.inputs.len();
     let mut first_index = 0;
-    println!("Function {} has {} arguments", fun.name, n_inputs);
     // Check that we have the expected types
     if strict_checking {
         if n_inputs != 4 {
@@ -128,7 +127,7 @@ fn expand_function_arguments(
                 n_inputs
             )));
         }
-        let given_types: Vec<String> = fun.inputs[..2]
+        let given_types: Vec<String> = fun.inputs[..3]
             .iter()
             .map(|x| x.type_field.clone())
             .collect();
@@ -148,14 +147,9 @@ fn expand_function_arguments(
     // For each [`Property`] in a function input we expand:
     // 1. The name of the argument;
     // 2. The type of the argument;
-    let mut total_args = 0;
     for (i, param) in fun.inputs[first_index..].iter().enumerate() {
         // Note that _any_ significant change in the way the JSON ABI is generated
         // could affect this function expansion.
-        if param.name == "gas_" || param.name == "amount_" || param.name == "color_" {
-            total_args += 1;
-            continue;
-        }
         // TokenStream representing the name of the argument
         let name = expand_input_name(i, &param.name);
 
@@ -193,7 +187,6 @@ fn expand_function_arguments(
         // This `name` TokenStream is also added to the call arguments
         call_args.push(name);
     }
-    println!("Including {} expected arguments", total_args);
 
     // The final TokenStream of the argument declaration in a function declaration
     let args = quote! { #( , #args )* };
@@ -288,6 +281,7 @@ mod tests {
             &ABIParser::new(),
             &Default::default(),
             &Default::default(),
+            false,
         );
         let expected = TokenStream::from_str(
             r#"
@@ -416,7 +410,13 @@ pub fn HelloWorld(&self, bimbam: bool) -> ContractCall<()> {
             },
         );
         let abi_parser = ABIParser::new();
-        let result = expand_function(&the_function, &abi_parser, &custom_enums, &custom_structs);
+        let result = expand_function(
+            &the_function,
+            &abi_parser,
+            &custom_enums,
+            &custom_structs,
+            false,
+        );
         // Some more editing was required because it is not rustfmt-compatible (adding/removing parentheses or commas)
         let expected = TokenStream::from_str(
             r#"

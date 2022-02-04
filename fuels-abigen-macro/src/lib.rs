@@ -4,7 +4,7 @@ use proc_macro2::Span;
 
 use std::ops::Deref;
 use syn::parse::{Parse, ParseStream, Result as ParseResult};
-use syn::{parse_macro_input, Ident, LitStr, Token};
+use syn::{parse_macro_input, Ident, LitBool, LitStr, Token};
 
 /// Abigen proc macro definition and helper functions/types.
 
@@ -12,7 +12,7 @@ use syn::{parse_macro_input, Ident, LitStr, Token};
 pub fn abigen(input: TokenStream) -> TokenStream {
     let args = parse_macro_input!(input as Spanned<ContractArgs>);
 
-    let c = Abigen::new(&args.name, &args.abi).unwrap();
+    let c = Abigen::new(&args.name, &args.abi, args.strict_checking).unwrap();
 
     c.expand().unwrap().into()
 }
@@ -21,7 +21,9 @@ pub fn abigen(input: TokenStream) -> TokenStream {
 pub fn wasm_abigen(input: TokenStream) -> TokenStream {
     let args = parse_macro_input!(input as Spanned<ContractArgs>);
 
-    let c = Abigen::new(&args.name, &args.abi).unwrap().no_std();
+    let c = Abigen::new(&args.name, &args.abi, args.strict_checking)
+        .unwrap()
+        .no_std();
 
     c.expand().unwrap().into()
 }
@@ -76,6 +78,7 @@ impl<T> Deref for Spanned<T> {
 pub(crate) struct ContractArgs {
     name: String,
     abi: String,
+    strict_checking: bool,
 }
 
 impl ParseInner for ContractArgs {
@@ -90,11 +93,20 @@ impl ParseInner for ContractArgs {
             let literal = input.parse::<LitStr>()?;
             (literal.span(), literal.value())
         };
+        input.parse::<Token![,]>()?;
+        let strict_checking = input.parse::<LitBool>()?.value();
 
         if !input.is_empty() {
             input.parse::<Token![,]>()?;
         }
 
-        Ok((span, ContractArgs { name, abi }))
+        Ok((
+            span,
+            ContractArgs {
+                name,
+                abi,
+                strict_checking,
+            },
+        ))
     }
 }
