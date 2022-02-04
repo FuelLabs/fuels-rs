@@ -611,40 +611,64 @@ pub fn hello_world(
 
     // --- expand_function_argument ---
     #[test]
-    fn test_expand_function_strict_check() {
+    fn test_expand_function_arguments_strict_checks() {
+        let hm: HashMap<String, Property> = HashMap::new();
+        let mut gas_prop = Property {
+            name: "gas_".to_string(),
+            type_field: String::from("u64"),
+            components: None,
+        };
+        let amount_prop = Property {
+            name: "amount_".to_string(),
+            type_field: String::from("u64"),
+            components: None,
+        };
+        let color_prop = Property {
+            name: "color_".to_string(),
+            type_field: String::from("b256"),
+            components: None,
+        };
+        let arg_prop = Property {
+            name: "some_argument".to_string(),
+            type_field: String::from("u32"),
+            components: None,
+        };
+
         let function = Function {
             type_field: "".to_string(),
             inputs: vec![
-                Property {
-                    name: "gas_".to_string(),
-                    type_field: String::from("u64"),
-                    components: None,
-                },
-                Property {
-                    name: "amount_".to_string(),
-                    type_field: String::from("u64"),
-                    components: None,
-                },
-                Property {
-                    name: "color_".to_string(),
-                    type_field: String::from("b256"),
-                    components: None,
-                },
-                Property {
-                    name: "some_argument".to_string(),
-                    type_field: String::from("u32"),
-                    components: None,
-                },
+                gas_prop.clone(),
+                amount_prop.clone(),
+                color_prop.clone(),
+                arg_prop.clone(),
             ],
             name: "".to_string(),
             outputs: vec![],
         };
-        let hm: HashMap<String, Property> = HashMap::new();
         let result = expand_function_arguments(&function, &hm, &hm, true);
         let (args, call_args) = result.unwrap();
         let result = format!("({},{})", args, call_args);
         let expected = "(, some_argument : u32,& [some_argument . into_token () ,])";
         assert_eq!(result, expected);
+
+        let function = Function {
+            type_field: "".to_string(),
+            inputs: vec![gas_prop.clone(), amount_prop.clone(), color_prop.clone()],
+            name: "".to_string(),
+            outputs: vec![],
+        };
+        let result = expand_function_arguments(&function, &hm, &hm, true);
+        assert!(matches!(result, Err(Error::MissingData(_))));
+
+        gas_prop.type_field = String::from("bool");
+        let function = Function {
+            type_field: "".to_string(),
+            inputs: vec![gas_prop, amount_prop, color_prop, arg_prop],
+            name: "".to_string(),
+            outputs: vec![],
+        };
+        let result = expand_function_arguments(&function, &hm, &hm, true);
+        assert!(matches!(result, Err(Error::InvalidType(_))));
     }
     #[test]
     fn test_expand_function_arguments_primitive() {
