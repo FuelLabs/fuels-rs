@@ -611,13 +611,13 @@ pub fn hello_world(
 
     // --- expand_function_argument ---
     #[test]
-    fn test_expand_function_arguments_workaround() {
+    fn test_expand_function_strict_check() {
         let function = Function {
             type_field: "".to_string(),
             inputs: vec![
                 Property {
                     name: "gas_".to_string(),
-                    type_field: String::from("bool"),
+                    type_field: String::from("u64"),
                     components: None,
                 },
                 Property {
@@ -627,7 +627,7 @@ pub fn hello_world(
                 },
                 Property {
                     name: "color_".to_string(),
-                    type_field: String::from("u32"),
+                    type_field: String::from("b256"),
                     components: None,
                 },
                 Property {
@@ -643,7 +643,8 @@ pub fn hello_world(
         let result = expand_function_arguments(&function, &hm, &hm, true);
         let (args, call_args) = result.unwrap();
         let result = format!("({},{})", args, call_args);
-        assert_eq!(result, "(,())");
+        let expected = "(, some_argument : u32,& [some_argument . into_token () ,])";
+        assert_eq!(result, expected);
     }
     #[test]
     fn test_expand_function_arguments_primitive() {
