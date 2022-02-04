@@ -28,6 +28,7 @@ pub fn expand_function(
     abi_parser: &ABIParser,
     custom_enums: &HashMap<String, Property>,
     custom_structs: &HashMap<String, Property>,
+    strict_checking: &bool,
 ) -> Result<TokenStream, Error> {
     let name = safe_ident(&function.name);
     let fn_signature = abi_parser.build_fn_selector(&function.name, &function.inputs);
@@ -38,7 +39,8 @@ pub fn expand_function(
     let tokenized_output = expand_fn_outputs(&function.outputs)?;
     let result = quote! { ContractCall<#tokenized_output> };
 
-    let (input, arg) = expand_function_arguments(function, custom_enums, custom_structs)?;
+    let (input, arg) =
+        expand_function_arguments(function, custom_enums, custom_structs, strict_checking)?;
 
     let doc = expand_doc(&format!(
         "Calls the contract's `{}` (0x{}) function",
@@ -113,6 +115,7 @@ fn expand_function_arguments(
     fun: &Function,
     custom_enums: &HashMap<String, Property>,
     custom_structs: &HashMap<String, Property>,
+    strict_checking: bool,
 ) -> Result<(TokenStream, TokenStream), Error> {
     let mut args = Vec::with_capacity(fun.inputs.len());
     let mut call_args = Vec::with_capacity(fun.inputs.len());

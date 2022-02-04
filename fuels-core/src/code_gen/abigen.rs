@@ -35,6 +35,10 @@ pub struct Abigen {
 
     /// Generate no-std safe code
     no_std: bool,
+
+    /// Check that the arguments are exactly as follows:
+    /// [gas_(u64), amount_(u64), color_(b256), custom(T)]
+    strict_checking: bool,
 }
 
 impl Abigen {
@@ -65,11 +69,17 @@ impl Abigen {
             abi_parser: ABIParser::new(),
             rustfmt: true,
             no_std: false,
+            strict_checking: false,
         })
     }
 
     pub fn no_std(mut self) -> Self {
         self.no_std = true;
+        self
+    }
+
+    pub fn strict_checking(mut self) -> Self {
+        self.strict_checking = true;
         self
     }
 
@@ -160,6 +170,7 @@ impl Abigen {
                 &self.abi_parser,
                 &self.custom_enums,
                 &self.custom_structs,
+                &self.strict_checking,
             )?;
             tokenized_functions.push(tokenized_fn);
         }
