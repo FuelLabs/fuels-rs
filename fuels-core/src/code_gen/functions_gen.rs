@@ -117,26 +117,43 @@ fn expand_function_arguments(
     custom_structs: &HashMap<String, Property>,
     strict_checking: bool,
 ) -> Result<(TokenStream, TokenStream), Error> {
-    let mut args = Vec::with_capacity(fun.inputs.len());
-    let mut call_args = Vec::with_capacity(fun.inputs.len());
-
+    let n_inputs = fun.inputs.len();
+    let mut first_index = 0;
+    println!("Function {} has {} arguments", fun.name, n_inputs);
+    // Check that we have the expected types
+    if strict_checking {
+        if n_inputs != 4 {
+            return Err(Error::MissingData(format!(
+                "Expected 4 inputs because `strict_checking` is true, found {}",
+                n_inputs
+            )));
+        }
+        let given_types: Vec<String> = fun.inputs[..2]
+            .iter()
+            .map(|x| x.type_field.clone())
+            .collect();
+        let expected = ["u64", "u64", "b256"];
+        if given_types != expected {
+            return Err(Error::InvalidType(format!(
+                "Expected the 3 first types to be {:?}, found {:?}",
+                expected, given_types
+            )));
+        };
+        // Ignore the first three arguments so we don't have to provide them when calling
+        // the contracts' methods
+        first_index = 3
+    }
+    let mut args = Vec::with_capacity(n_inputs);
+    let mut call_args = Vec::with_capacity(n_inputs);
     // For each [`Property`] in a function input we expand:
     // 1. The name of the argument;
     // 2. The type of the argument;
-    for (i, param) in fun.inputs.iter().enumerate() {
-        // This is a (likely) temporary workaround the fact that
-        // Sway ABI functions require gas, coin amount, and color arguments
-        // pre-pending the user-defined function arguments.
-        // Since these values (gas, coin, color) are configured elsewhere when
-        // creating a contract instance in the SDK, it would be noisy to keep them
-        // in the signature of the function that we're expanding here.
-        // It's the difference between being forced to write:
-        // contract_instance.increment_counter($gas, $coin, $color, 42)
-        // versus simply writing:
-        // contract_instance.increment_counter(42)
+    let mut total_args = 0;
+    for (i, param) in fun.inputs[first_index..].iter().enumerate() {
         // Note that _any_ significant change in the way the JSON ABI is generated
         // could affect this function expansion.
         if param.name == "gas_" || param.name == "amount_" || param.name == "color_" {
+            total_args += 1;
             continue;
         }
         // TokenStream representing the name of the argument
@@ -176,6 +193,7 @@ fn expand_function_arguments(
         // This `name` TokenStream is also added to the call arguments
         call_args.push(name);
     }
+    println!("Including {} expected arguments", total_args);
 
     // The final TokenStream of the argument declaration in a function declaration
     let args = quote! { #( , #args )* };
@@ -612,12 +630,17 @@ pub fn hello_world(
                     type_field: String::from("u32"),
                     components: None,
                 },
+                Property {
+                    name: "some_argument".to_string(),
+                    type_field: String::from("u32"),
+                    components: None,
+                },
             ],
             name: "".to_string(),
             outputs: vec![],
         };
         let hm: HashMap<String, Property> = HashMap::new();
-        let result = expand_function_arguments(&function, &hm, &hm);
+        let result = expand_function_arguments(&function, &hm, &hm, true);
         let (args, call_args) = result.unwrap();
         let result = format!("({},{})", args, call_args);
         assert_eq!(result, "(,())");
@@ -642,7 +665,7 @@ pub fn hello_world(
             outputs: vec![],
         };
         let hm: HashMap<String, Property> = HashMap::new();
-        let result = expand_function_arguments(&function, &hm, &hm);
+        let result = expand_function_arguments(&function, &hm, &hm, false);
         let (args, call_args) = result.unwrap();
         let result = format!("({},{})", args, call_args);
         assert_eq!(
@@ -690,7 +713,7 @@ pub fn hello_world(
                 components: None,
             },
         );
-        let result = expand_function_arguments(&function, &custom_enums, &custom_structs);
+        let result = expand_function_arguments(&function, &custom_enums, &custom_structs, false);
         let (args, call_args) = result.unwrap();
         let result = format!("({},{})", args, call_args);
         let expected = r#"(, bim_bam : CarMaker , pim_poum : Bank,& [bim_bam . into_token () , pim_poum . into_token () ,])"#;
