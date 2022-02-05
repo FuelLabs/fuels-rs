@@ -35,19 +35,11 @@ pub struct Abigen {
 
     /// Generate no-std safe code
     no_std: bool,
-
-    /// Check that the arguments are exactly as follows:
-    /// [gas_(u64), amount_(u64), color_(b256), custom(T)]
-    strict_checking: bool,
 }
 
 impl Abigen {
     /// Creates a new contract with the given ABI JSON source.
-    pub fn new<S: AsRef<str>>(
-        contract_name: &str,
-        abi_source: S,
-        strict_checking: bool,
-    ) -> Result<Self, Error> {
+    pub fn new<S: AsRef<str>>(contract_name: &str, abi_source: S) -> Result<Self, Error> {
         let source = Source::parse(abi_source).unwrap();
         let mut parsed_abi: JsonABI = serde_json::from_str(&source.get().unwrap())?;
 
@@ -73,17 +65,11 @@ impl Abigen {
             abi_parser: ABIParser::new(),
             rustfmt: true,
             no_std: false,
-            strict_checking,
         })
     }
 
     pub fn no_std(mut self) -> Self {
         self.no_std = true;
-        self
-    }
-
-    pub fn strict_checking(mut self) -> Self {
-        self.strict_checking = true;
         self
     }
 
@@ -174,7 +160,6 @@ impl Abigen {
                 &self.abi_parser,
                 &self.custom_enums,
                 &self.custom_structs,
-                self.strict_checking,
             )?;
             tokenized_functions.push(tokenized_fn);
         }
@@ -288,6 +273,21 @@ mod tests {
                 "type":"contract",
                 "inputs":[
                     {
+                        "components": null,
+                        "name": "gas_",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "amount_",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "color_",
+                        "type": "b256"
+                    },
+                    {
                         "name":"arg",
                         "type":"u32"
                     }
@@ -303,10 +303,7 @@ mod tests {
         ]
         "#;
 
-        let bindings = Abigen::new("test", contract, false)
-            .unwrap()
-            .generate()
-            .unwrap();
+        let bindings = Abigen::new("test", contract).unwrap().generate().unwrap();
         bindings.write(std::io::stdout()).unwrap();
     }
 
@@ -317,6 +314,21 @@ mod tests {
             {
                 "type":"contract",
                 "inputs":[
+                    {
+                        "components": null,
+                        "name": "gas_",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "amount_",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "color_",
+                        "type": "b256"
+                    },
                     {
                         "name":"arg",
                         "type":"u32"
@@ -337,11 +349,8 @@ mod tests {
         ]
         "#;
 
-        let bindings = Abigen::new("test", contract, false)
-            .unwrap()
-            .generate()
-            .unwrap();
-        bindings.write(std::io::stdout()).unwrap();
+        let bindings = Abigen::new("test", contract).unwrap().generate();
+        assert!(matches!(bindings, Err(Error::MissingData(_))));
     }
 
     #[test]
@@ -351,6 +360,21 @@ mod tests {
             {
                 "type":"contract",
                 "inputs":[
+                    {
+                        "components": null,
+                        "name": "gas_",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "amount_",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "color_",
+                        "type": "b256"
+                    },
                     {
                         "name":"value",
                         "type":"struct MyStruct",
@@ -372,7 +396,7 @@ mod tests {
         ]
         "#;
 
-        let contract = Abigen::new("custom", contract, false).unwrap();
+        let contract = Abigen::new("custom", contract).unwrap();
 
         assert_eq!(1, contract.custom_structs.len());
 
@@ -389,6 +413,21 @@ mod tests {
             {
                 "type":"contract",
                 "inputs":[
+                    {
+                        "components": null,
+                        "name": "gas_",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "amount_",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "color_",
+                        "type": "b256"
+                    },
                 {
                     "name":"input",
                     "type":"struct MyNestedStruct",
@@ -448,7 +487,7 @@ mod tests {
         ]
         "#;
 
-        let contract = Abigen::new("custom", contract, false).unwrap();
+        let contract = Abigen::new("custom", contract).unwrap();
 
         assert_eq!(5, contract.custom_structs.len());
 
@@ -464,8 +503,8 @@ mod tests {
             assert!(contract.custom_structs.contains_key(name));
         }
 
-        let bindings = contract.generate().unwrap();
-        bindings.write(std::io::stdout()).unwrap();
+        let bindings = contract.generate();
+        assert!(matches!(bindings, Err(Error::MissingData(_))));
     }
 
     #[test]
@@ -475,6 +514,21 @@ mod tests {
             {
                 "type":"contract",
                 "inputs":[
+                    {
+                        "components": null,
+                        "name": "gas_",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "amount_",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "color_",
+                        "type": "b256"
+                    },
                     {
                         "name":"top_value",
                         "type":"struct MyNestedStruct",
@@ -502,7 +556,7 @@ mod tests {
         ]
         "#;
 
-        let contract = Abigen::new("custom", contract, false).unwrap();
+        let contract = Abigen::new("custom", contract).unwrap();
 
         assert_eq!(2, contract.custom_structs.len());
 
@@ -520,6 +574,21 @@ mod tests {
             {
                 "type":"contract",
                 "inputs":[
+                    {
+                        "components": null,
+                        "name": "gas_",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "amount_",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "color_",
+                        "type": "b256"
+                    },
                     {
                         "name":"my_enum",
                         "type":"enum MyEnum",
@@ -541,7 +610,7 @@ mod tests {
         ]
         "#;
 
-        let contract = Abigen::new("custom", contract, false).unwrap();
+        let contract = Abigen::new("custom", contract).unwrap();
 
         assert_eq!(1, contract.custom_enums.len());
         assert_eq!(0, contract.custom_structs.len());
@@ -558,6 +627,21 @@ mod tests {
             {
                 "type":"contract",
                 "inputs":[
+                    {
+                        "components": null,
+                        "name": "gas_",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "amount_",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "color_",
+                        "type": "b256"
+                    },
                     {
                         "name":"value",
                         "type":"struct MyStruct",
@@ -602,7 +686,7 @@ mod tests {
         ]
         "#;
 
-        let contract = Abigen::new("custom", contract, false).unwrap();
+        let contract = Abigen::new("custom", contract).unwrap();
         let bindings = contract.generate().unwrap();
         bindings.write(std::io::stdout()).unwrap();
     }
