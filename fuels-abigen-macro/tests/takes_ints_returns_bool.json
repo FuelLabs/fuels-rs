@@ -15,7 +15,7 @@
                 "type": "b256"
             },
             {
-                "name": "first_arg",
+                "name": "only_argument",
                 "type": "u32"
             }
         ],

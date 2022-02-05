@@ -104,7 +104,7 @@ fn code_gen(code: Codegen) -> anyhow::Result<String> {
     } = code;
 
     let contract = fs::read_to_string(input)?;
-    let mut abi = Abigen::new(&name, contract, false)?;
+    let mut abi = Abigen::new(&name, contract)?;
 
     if no_std {
         abi = abi.no_std();
