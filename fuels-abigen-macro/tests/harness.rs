@@ -19,7 +19,7 @@ async fn compile_bindings_from_contract_file() {
     // The generated bindings can be accessed through `SimpleContract`.
     abigen!(
         SimpleContract,
-        "fuels-abigen-macro/tests/takes_ints_returns_bool.json"
+        "fuels-abigen-macro/tests/takes_ints_returns_bool.json",
     );
 
     let fuel_client = setup_local_node().await;
@@ -33,7 +33,7 @@ async fn compile_bindings_from_contract_file() {
     // Currently this prints `0000000003b568d4000000000000002a000000000000000a`
     // The encoded contract call. Soon it'll be able to perform the
     // actual call.
-    let contract_call = contract_instance.takes_ints_returns_bool(42, 10);
+    let contract_call = contract_instance.takes_ints_returns_bool(42);
 
     // Then you'll be able to use `.call()` to actually call the contract with the
     // specified function:
@@ -46,7 +46,7 @@ async fn compile_bindings_from_contract_file() {
         hex::encode(contract_call.encoded_args)
     );
 
-    assert_eq!("00000000c39ba1e9000000000000002a000000000000000a", encoded);
+    assert_eq!("00000000155799f1000000000000002a", encoded);
 }
 
 #[tokio::test]
@@ -61,12 +61,23 @@ async fn compile_bindings_from_inline_contract() {
                 "type": "function",
                 "inputs": [
                     {
-                        "name": "arg",
-                        "type": "u32"
+                        "components": null,
+                        "name": "gas_",
+                        "type": "u64"
                     },
                     {
-                        "name": "second_arg",
-                        "type": "u16"
+                        "components": null,
+                        "name": "amount_",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "color_",
+                        "type": "b256"
+                    },
+                    {
+                        "name": "only_argument",
+                        "type": "u32"
                     }
                 ],
                 "name": "takes_ints_returns_bool",
@@ -78,14 +89,14 @@ async fn compile_bindings_from_inline_contract() {
                 ]
             }
         ]
-        "#
+        "#,
     );
 
     let fuel_client = setup_local_node().await;
 
     let contract_instance = SimpleContract::new(Default::default(), fuel_client);
 
-    let contract_call = contract_instance.takes_ints_returns_bool(42 as u32, 10 as u16);
+    let contract_call = contract_instance.takes_ints_returns_bool(42 as u32);
 
     let encoded = format!(
         "{}{}",
@@ -93,7 +104,7 @@ async fn compile_bindings_from_inline_contract() {
         hex::encode(contract_call.encoded_args)
     );
 
-    assert_eq!("0000000003b568d4000000000000002a000000000000000a", encoded);
+    assert_eq!("00000000155799f1000000000000002a", encoded);
 }
 
 #[tokio::test]
@@ -108,6 +119,21 @@ async fn compile_bindings_single_param() {
                 "type": "function",
                 "inputs": [
                     {
+                        "components": null,
+                        "name": "gas_",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "amount_",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "color_",
+                        "type": "b256"
+                    },
+                    {
                         "name": "arg",
                         "type": "u32"
                     }
@@ -121,7 +147,7 @@ async fn compile_bindings_single_param() {
                 ]
             }
         ]
-        "#
+        "#,
     );
 
     let fuel_client = setup_local_node().await;
@@ -136,7 +162,7 @@ async fn compile_bindings_single_param() {
         hex::encode(contract_call.encoded_args)
     );
 
-    assert_eq!("000000009593586c000000000000002a", encoded);
+    assert_eq!("00000000155799f1000000000000002a", encoded);
 }
 
 #[tokio::test]
@@ -151,6 +177,21 @@ async fn compile_bindings_array_input() {
                 "type":"contract",
                 "inputs":[
                     {
+                        "components": null,
+                        "name": "gas_",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "amount_",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "color_",
+                        "type": "b256"
+                    },
+                    {
                         "name":"arg",
                         "type":"u16[3]"
                     }
@@ -161,7 +202,7 @@ async fn compile_bindings_array_input() {
                 ]
             }
         ]
-        "#
+        "#,
     );
 
     let fuel_client = setup_local_node().await;
@@ -178,7 +219,7 @@ async fn compile_bindings_array_input() {
     );
 
     assert_eq!(
-        "00000000f0b878640000000000000001000000000000000200000000000000030000000000000004",
+        "00000000530300750000000000000001000000000000000200000000000000030000000000000004",
         encoded
     );
 }
@@ -195,6 +236,21 @@ async fn compile_bindings_bool_array_input() {
                 "type":"contract",
                 "inputs":[
                     {
+                        "components": null,
+                        "name": "gas_",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "amount_",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "color_",
+                        "type": "b256"
+                    },
+                    {
                         "name":"arg",
                         "type":"bool[3]"
                     }
@@ -205,7 +261,7 @@ async fn compile_bindings_bool_array_input() {
                 ]
             }
         ]
-        "#
+        "#,
     );
 
     let fuel_client = setup_local_node().await;
@@ -222,7 +278,7 @@ async fn compile_bindings_bool_array_input() {
     );
 
     assert_eq!(
-        "00000000f8fe942c000000000000000100000000000000000000000000000001",
+        "000000000abaed98000000000000000100000000000000000000000000000001",
         encoded
     );
 }
@@ -239,6 +295,21 @@ async fn compile_bindings_byte_input() {
                 "type":"contract",
                 "inputs":[
                     {
+                        "components": null,
+                        "name": "gas_",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "amount_",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "color_",
+                        "type": "b256"
+                    },
+                    {
                         "name":"arg",
                         "type":"byte"
                     }
@@ -249,7 +320,7 @@ async fn compile_bindings_byte_input() {
                 ]
             }
         ]
-        "#
+        "#,
     );
 
     let fuel_client = setup_local_node().await;
@@ -264,7 +335,7 @@ async fn compile_bindings_byte_input() {
         hex::encode(contract_call.encoded_args)
     );
 
-    assert_eq!("00000000a4bd3861000000000000000a", encoded);
+    assert_eq!("000000001be28a53000000000000000a", encoded);
 }
 
 #[tokio::test]
@@ -279,6 +350,21 @@ async fn compile_bindings_string_input() {
                 "type":"contract",
                 "inputs":[
                     {
+                        "components": null,
+                        "name": "gas_",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "amount_",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "color_",
+                        "type": "b256"
+                    },
+                    {
                         "name":"arg",
                         "type":"str[23]"
                     }
@@ -289,7 +375,7 @@ async fn compile_bindings_string_input() {
                 ]
             }
         ]
-        "#
+        "#,
     );
 
     let fuel_client = setup_local_node().await;
@@ -305,7 +391,7 @@ async fn compile_bindings_string_input() {
     );
 
     assert_eq!(
-        "00000000d56e76515468697320697320612066756c6c2073656e74656e636500",
+        "00000000da2c7a675468697320697320612066756c6c2073656e74656e636500",
         encoded
     );
 }
@@ -322,6 +408,21 @@ async fn compile_bindings_b256_input() {
                 "type":"contract",
                 "inputs":[
                     {
+                        "components": null,
+                        "name": "gas_",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "amount_",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "color_",
+                        "type": "b256"
+                    },
+                    {
                         "name":"arg",
                         "type":"b256"
                     }
@@ -332,7 +433,7 @@ async fn compile_bindings_b256_input() {
                 ]
             }
         ]
-        "#
+        "#,
     );
 
     let fuel_client = setup_local_node().await;
@@ -353,7 +454,7 @@ async fn compile_bindings_b256_input() {
     );
 
     assert_eq!(
-        "0000000054992852d5579c46dfcc7f18207013e65b44e4cb4e2c2298f4ac457ba8f82743f31e930b",
+        "00000000250fb0f2d5579c46dfcc7f18207013e65b44e4cb4e2c2298f4ac457ba8f82743f31e930b",
         encoded
     );
 }
@@ -369,6 +470,21 @@ async fn compile_bindings_struct_input() {
             {
                 "type":"contract",
                 "inputs":[
+                    {
+                        "components": null,
+                        "name": "gas_",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "amount_",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "color_",
+                        "type": "b256"
+                    },
                     {
                         "name":"value",
                         "type":"struct MyStruct",
@@ -388,7 +504,7 @@ async fn compile_bindings_struct_input() {
                 "outputs":[]
             }
         ]
-        "#
+        "#,
     );
 
     let fuel_client = setup_local_node().await;
@@ -411,7 +527,7 @@ async fn compile_bindings_struct_input() {
     );
 
     assert_eq!(
-        "00000000f427d499000000000000000a00000000000000026675656c00000000",
+        "0000000081dae8d1000000000000000a00000000000000026675656c00000000",
         encoded
     );
 }
@@ -427,6 +543,21 @@ async fn compile_bindings_nested_struct_input() {
             {
                 "type":"contract",
                 "inputs":[
+                    {
+                        "components": null,
+                        "name": "gas_",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "amount_",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "color_",
+                        "type": "b256"
+                    },
                     {
                         "name":"top_value",
                         "type":"struct MyNestedStruct",
@@ -452,7 +583,7 @@ async fn compile_bindings_nested_struct_input() {
                 "outputs":[]
             }
         ]
-        "#
+        "#,
     );
 
     let inner_struct = InnerStruct { a: true };
@@ -474,7 +605,7 @@ async fn compile_bindings_nested_struct_input() {
         hex::encode(contract_call.encoded_args)
     );
 
-    assert_eq!("0000000088bf8a1b000000000000000a0000000000000001", encoded);
+    assert_eq!("0000000074c481ed000000000000000a0000000000000001", encoded);
 }
 
 #[tokio::test]
@@ -488,6 +619,21 @@ async fn compile_bindings_enum_input() {
             {
                 "type":"contract",
                 "inputs":[
+                    {
+                        "components": null,
+                        "name": "gas_",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "amount_",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "color_",
+                        "type": "b256"
+                    },
                     {
                         "name":"my_enum",
                         "type":"enum MyEnum",
@@ -507,7 +653,7 @@ async fn compile_bindings_enum_input() {
                 "outputs":[]
             }
         ]
-        "#
+        "#,
     );
 
     let variant = MyEnum::X(42);
@@ -524,7 +670,7 @@ async fn compile_bindings_enum_input() {
         hex::encode(contract_call.encoded_args)
     );
 
-    assert_eq!("00000000082e0dfa0000000000000000000000000000002a", encoded);
+    assert_eq!("0000000085dab9fc0000000000000000000000000000002a", encoded);
 }
 
 #[tokio::test]
@@ -538,6 +684,21 @@ async fn create_struct_from_decoded_tokens() {
             {
                 "type":"contract",
                 "inputs":[
+                    {
+                        "components": null,
+                        "name": "gas_",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "amount_",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "color_",
+                        "type": "b256"
+                    },
                     {
                         "name":"my_val",
                         "type":"struct MyStruct",
@@ -557,7 +718,7 @@ async fn create_struct_from_decoded_tokens() {
                 "outputs":[]
             }
         ]
-        "#
+        "#,
     );
 
     // Decoded tokens
@@ -583,7 +744,7 @@ async fn create_struct_from_decoded_tokens() {
         hex::encode(contract_call.encoded_args)
     );
 
-    assert_eq!("00000000cb0b2f05000000000000000a0000000000000001", encoded);
+    assert_eq!("0000000087e388fd000000000000000a0000000000000001", encoded);
 }
 
 #[tokio::test]
@@ -597,6 +758,21 @@ async fn create_nested_struct_from_decoded_tokens() {
             {
                 "type":"contract",
                 "inputs":[
+                    {
+                        "components": null,
+                        "name": "gas_",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "amount_",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "color_",
+                        "type": "b256"
+                    },
                     {
                         "name":"input",
                         "type":"struct MyNestedStruct",
@@ -622,7 +798,7 @@ async fn create_nested_struct_from_decoded_tokens() {
                 "outputs":[]
             }
         ]
-        "#
+        "#,
     );
 
     // Creating just the InnerStruct is possible
@@ -653,7 +829,7 @@ async fn create_nested_struct_from_decoded_tokens() {
         hex::encode(contract_call.encoded_args)
     );
 
-    assert_eq!("0000000088bf8a1b000000000000000a0000000000000001", encoded);
+    assert_eq!("0000000074c481ed000000000000000a0000000000000001", encoded);
 }
 
 #[tokio::test]
@@ -733,7 +909,7 @@ async fn example_workflow() {
                 "type": "function"
             }
         ]
-        "#
+        "#,
     );
 
     // Build the contract
@@ -894,7 +1070,7 @@ async fn type_safe_output_values() {
                 ]
             }
         ]
-        "#
+        "#,
     );
 
     // Build the contract
@@ -1016,7 +1192,7 @@ async fn call_with_structs() {
                 "type": "function"
             }
         ]
-        "#
+        "#,
     );
 
     // Build the contract
@@ -1099,7 +1275,7 @@ async fn call_with_empty_return() {
                 "type": "function"
             }
         ]
-        "#
+        "#,
     );
 
     // Build the contract
@@ -1128,7 +1304,7 @@ async fn abigen_different_structs_same_arg_name() {
 
     abigen!(
         MyContract,
-        "fuels-abigen-macro/tests/test_projects/two-structs/abi.json"
+        "fuels-abigen-macro/tests/test_projects/two-structs/abi.json",
     );
 
     // Build the contract

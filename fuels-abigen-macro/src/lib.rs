@@ -90,7 +90,6 @@ impl ParseInner for ContractArgs {
             let literal = input.parse::<LitStr>()?;
             (literal.span(), literal.value())
         };
-
         if !input.is_empty() {
             input.parse::<Token![,]>()?;
         }

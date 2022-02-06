@@ -114,28 +114,38 @@ fn expand_function_arguments(
     custom_enums: &HashMap<String, Property>,
     custom_structs: &HashMap<String, Property>,
 ) -> Result<(TokenStream, TokenStream), Error> {
-    let mut args = Vec::with_capacity(fun.inputs.len());
-    let mut call_args = Vec::with_capacity(fun.inputs.len());
-
-    // For each [`Property`] in a function input we expand:
-    // 1. The name of the argument;
-    // 2. The type of the argument;
-    for (i, param) in fun.inputs.iter().enumerate() {
-        // This is a (likely) temporary workaround the fact that
-        // Sway ABI functions require gas, coin amount, and color arguments
-        // pre-pending the user-defined function arguments.
-        // Since these values (gas, coin, color) are configured elsewhere when
-        // creating a contract instance in the SDK, it would be noisy to keep them
-        // in the signature of the function that we're expanding here.
-        // It's the difference between being forced to write:
-        // contract_instance.increment_counter($gas, $coin, $color, 42)
-        // versus simply writing:
-        // contract_instance.increment_counter(42)
+    let n_inputs = fun.inputs.len();
+    // Check that we have the expected types
+    if n_inputs != 4 {
+        return Err(Error::MissingData(format!(
+            "Expected exactly 4 inputs, found {}",
+            n_inputs
+        )));
+    }
+    let given_types: Vec<String> = fun.inputs[..3]
+        .iter()
+        .map(|x| x.type_field.clone())
+        .collect();
+    let expected = ["u64", "u64", "b256"];
+    if given_types != expected {
+        return Err(Error::InvalidType(format!(
+            "Expected the 3 first types to be {:?}, found {:?}",
+            expected, given_types
+        )));
+    };
+    // Ignore the first three arguments so we don't have to provide them when calling
+    // the contracts' methods
+    let first_index = 3;
+    let mut args = Vec::with_capacity(1);
+    let mut call_args = Vec::with_capacity(1);
+    // We use a for loop because we expect exactly 4 arguments (so len(fun.inputs)==4)
+    // but we might extend the number of authorized inputs in the future
+    for (i, param) in fun.inputs[first_index..].iter().enumerate() {
+        // For each [`Property`] in a function input we expand:
+        // 1. The name of the argument;
+        // 2. The type of the argument;
         // Note that _any_ significant change in the way the JSON ABI is generated
         // could affect this function expansion.
-        if param.name == "gas_" || param.name == "amount_" || param.name == "color_" {
-            continue;
-        }
         // TokenStream representing the name of the argument
         let name = expand_input_name(i, &param.name);
 
@@ -249,35 +259,55 @@ fn expand_input_param(
 mod tests {
     use super::*;
     use std::str::FromStr;
+    fn generate_base_inputs() -> Vec<Property> {
+        let mut inputs = Vec::with_capacity(4);
+        inputs.push(Property {
+            name: "gas_".to_string(),
+            type_field: String::from("u64"),
+            components: None,
+        });
+        inputs.push(Property {
+            name: "amount_".to_string(),
+            type_field: String::from("u64"),
+            components: None,
+        });
+        inputs.push(Property {
+            name: "color_".to_string(),
+            type_field: String::from("b256"),
+            components: None,
+        });
+        inputs
+    }
     // --- expand_function ---
     #[test]
     fn test_expand_function_simple() {
-        let f = Function {
+        let mut the_function = Function {
             type_field: "unused".to_string(),
-            inputs: vec![Property {
-                name: String::from("bimbam"),
-                type_field: String::from("bool"),
-                components: None,
-            }],
+            inputs: generate_base_inputs(),
             name: "HelloWorld".to_string(),
             outputs: vec![],
         };
+        the_function.inputs.push(Property {
+            name: String::from("bimbam"),
+            type_field: String::from("bool"),
+            components: None,
+        });
         let result = expand_function(
-            &f,
+            &the_function,
             &ABIParser::new(),
             &Default::default(),
             &Default::default(),
         );
         let expected = TokenStream::from_str(
             r#"
-#[doc = "Calls the contract's `HelloWorld` (0x0000000097d4de45) function"]
+#[doc = "Calls the contract's `HelloWorld` (0x000000007e387733) function"]
 pub fn HelloWorld(&self, bimbam: bool) -> ContractCall<()> {
     Contract::method_hash(
         &self.fuel_client,
         &self.compiled,
-        [0, 0, 0, 0, 151, 212, 222, 69],
+        [0, 0, 0, 0, 126, 56, 119, 51],
         &[],
-        &[bimbam.into_token(), ]
+        &[bimbam.into_token() ,]
     )
     .expect("method not found (this should never happen)")
 }
@@ -288,43 +318,10 @@ pub fn HelloWorld(&self, bimbam: bool) -> ContractCall<()> {
     }
     #[test]
     fn test_expand_function_complex() {
-        let the_function = Function {
+        let mut the_function = Function {
             type_field: "function".to_string(),
             name: "hello_world".to_string(),
-            inputs: vec![
-                Property {
-                    name: String::from("input"),
-                    type_field: String::from("struct BimBapStruct"),
-                    components: Some(vec![
-                        Property {
-                            name: String::from("Meat"),
-                            type_field: String::from("bool"),
-                            components: None,
-                        },
-                        Property {
-                            name: String::from("Rice"),
-                            type_field: String::from("u64"),
-                            components: None,
-                        },
-                    ]),
-                },
-                Property {
-                    name: String::from("another_input"),
-                    type_field: String::from("enum BurgundyBeefEnum"),
-                    components: Some(vec![
-                        Property {
-                            name: String::from("Beef"),
-                            type_field: String::from("bool"),
-                            components: None,
-                        },
-                        Property {
-                            name: String::from("BurgundyWine"),
-                            type_field: String::from("u64"),
-                            components: None,
-                        },
-                    ]),
-                },
-            ],
+            inputs: generate_base_inputs(),
             outputs: vec![
                 Property {
                     name: String::from("notused"),
@@ -360,12 +357,28 @@ pub fn HelloWorld(&self, bimbam: bool) -> ContractCall<()> {
                 },
             ],
         };
+        the_function.inputs.push(Property {
+            name: String::from("the_only_allowed_input"),
+            type_field: String::from("struct BurgundyBeefStruct"),
+            components: Some(vec![
+                Property {
+                    name: String::from("Beef"),
+                    type_field: String::from("bool"),
+                    components: None,
+                },
+                Property {
+                    name: String::from("BurgundyWine"),
+                    type_field: String::from("u64"),
+                    components: None,
+                },
+            ]),
+        });
         let mut custom_structs = HashMap::new();
         custom_structs.insert(
-            "BimBapStruct".to_string(),
+            "BurgundyBeefStruct".to_string(),
             Property {
                 name: "unused".to_string(),
-                type_field: "struct BimBapStruct".to_string(),
+                type_field: "struct SomeWeirdFrenchCuisine".to_string(),
                 components: None,
             },
         );
@@ -386,33 +399,24 @@ pub fn HelloWorld(&self, bimbam: bool) -> ContractCall<()> {
                 components: None,
             },
         );
-        custom_enums.insert(
-            "BurgundyBeefEnum".to_string(),
-            Property {
-                name: "unused".to_string(),
-                type_field: "enum BurgundyBeefEnum".to_string(),
-                components: None,
-            },
-        );
         let abi_parser = ABIParser::new();
         let result = expand_function(&the_function, &abi_parser, &custom_enums, &custom_structs);
         // Some more editing was required because it is not rustfmt-compatible (adding/removing parentheses or commas)
         let expected = TokenStream::from_str(
             r#"
-#[doc = "Calls the contract's `hello_world` (0x000000004d65f217) function"]
+#[doc = "Calls the contract's `hello_world` (0x000000001f51690a) function"]
 pub fn hello_world(
     &self,
-    input: BimBapStruct,
-    another_input: BurgundyBeefEnum
+    the_only_allowed_input: SomeWeirdFrenchCuisine
 ) -> ContractCall<((bool , u64 ,) , (bool, u64 ,))> {
     Contract::method_hash(
         &self.fuel_client,
         &self.compiled,
-        [0, 0, 0, 0, 77, 101, 242, 23],
+        [0, 0, 0, 0, 31, 81, 105, 10],
         &[
             ParamType::Struct(vec![ParamType::Bool, ParamType::U64]),
             ParamType::Enum([Bool , U64])] , 
-            &[input.into_token(), another_input.into_token(),]
+            &[the_only_allowed_input . into_token () ,]
     )
     .expect("method not found (this should never happen)")
 }
@@ -590,84 +594,84 @@ pub fn hello_world(
 
     // --- expand_function_argument ---
     #[test]
-    fn test_expand_function_arguments_workaround() {
-        let function = Function {
+    fn test_expand_function_arguments() {
+        let hm: HashMap<String, Property> = HashMap::new();
+        let the_argument = Property {
+            name: "some_argument".to_string(),
+            type_field: String::from("u32"),
+            components: None,
+        };
+
+        // All arguments are here
+        let mut the_function = Function {
             type_field: "".to_string(),
-            inputs: vec![
-                Property {
-                    name: "gas_".to_string(),
-                    type_field: String::from("bool"),
-                    components: None,
-                },
-                Property {
-                    name: "amount_".to_string(),
-                    type_field: String::from("u64"),
-                    components: None,
-                },
-                Property {
-                    name: "color_".to_string(),
-                    type_field: String::from("u32"),
-                    components: None,
-                },
-            ],
+            inputs: generate_base_inputs(),
             name: "".to_string(),
             outputs: vec![],
         };
-        let hm: HashMap<String, Property> = HashMap::new();
-        let result = expand_function_arguments(&function, &hm, &hm);
+        the_function.inputs.push(the_argument.clone());
+        let result = expand_function_arguments(&the_function, &hm, &hm);
         let (args, call_args) = result.unwrap();
         let result = format!("({},{})", args, call_args);
-        assert_eq!(result, "(,())");
+        let expected = "(, some_argument : u32,& [some_argument . into_token () ,])";
+        assert_eq!(result, expected);
+
+        // Missing the last argument
+        let mut the_function = Function {
+            type_field: "".to_string(),
+            inputs: generate_base_inputs(),
+            name: "".to_string(),
+            outputs: vec![],
+        };
+        let result = expand_function_arguments(&the_function, &hm, &hm);
+        assert!(matches!(result, Err(Error::MissingData(_))));
+
+        // Change the `gas_` argument type
+        the_function.inputs[0].type_field = String::from("bool");
+        the_function.inputs.push(the_argument);
+        let result = expand_function_arguments(&the_function, &hm, &hm);
+        assert!(matches!(result, Err(Error::InvalidType(_))));
     }
     #[test]
     fn test_expand_function_arguments_primitive() {
-        let function = Function {
+        let hm: HashMap<String, Property> = HashMap::new();
+        let mut the_function = Function {
             type_field: "function".to_string(),
-            inputs: vec![
-                Property {
-                    name: "bim_bam".to_string(),
-                    type_field: String::from("bool"),
-                    components: None,
-                },
-                Property {
-                    name: "".to_string(),
-                    type_field: String::from("u64"),
-                    components: None,
-                },
-            ],
+            inputs: generate_base_inputs(),
             name: "pip_pop".to_string(),
             outputs: vec![],
         };
-        let hm: HashMap<String, Property> = HashMap::new();
-        let result = expand_function_arguments(&function, &hm, &hm);
+
+        the_function.inputs.push(Property {
+            name: "bim_bam".to_string(),
+            type_field: String::from("u64"),
+            components: None,
+        });
+        let result = expand_function_arguments(&the_function, &hm, &hm);
         let (args, call_args) = result.unwrap();
         let result = format!("({},{})", args, call_args);
-        assert_eq!(
-            result,
-            "(, bim_bam : bool , p1 : u64,& [bim_bam . into_token () , p1 . into_token () ,])"
-        );
+        assert_eq!(result, "(, bim_bam : u64,& [bim_bam . into_token () ,])");
+
+        the_function.inputs[3].name = String::from("");
+        let result = expand_function_arguments(&the_function, &hm, &hm);
+        let (args, call_args) = result.unwrap();
+        let result = format!("({},{})", args, call_args);
+        assert_eq!(result, "(, p0 : u64,& [p0 . into_token () ,])");
     }
     #[test]
     fn test_expand_function_arguments_composite() {
-        let function = Function {
+        let mut function = Function {
             type_field: "zig_zag".to_string(),
-            inputs: vec![
-                Property {
-                    name: "bim_bam".to_string(),
-                    type_field: String::from("struct CarMaker"),
-                    // Not parsed, so can be empty but not None
-                    components: Some(vec![]),
-                },
-                Property {
-                    name: "pim_poum".to_string(),
-                    type_field: String::from("enum Bank"),
-                    // Not parsed, so can be empty but not None
-                    components: Some(vec![]),
-                },
-            ],
+            inputs: generate_base_inputs(),
             name: "PipPopFunction".to_string(),
             outputs: vec![],
         };
+        function.inputs.push(Property {
+            name: "bim_bam".to_string(),
+            type_field: String::from("struct CarMaker"),
+            // Not parsed, so can be empty but not None
+            components: Some(vec![]),
+        });
         let mut custom_structs = HashMap::new();
         custom_structs.insert(
             "CarMaker".to_string(),
@@ -678,19 +682,10 @@ pub fn hello_world(
             },
         );
 
-        let mut custom_enums = HashMap::new();
-        custom_enums.insert(
-            "Bank".to_string(),
-            Property {
-                name: "unused".to_string(),
-                type_field: "enum Bank".to_string(),
-                components: None,
-            },
-        );
-        let result = expand_function_arguments(&function, &custom_enums, &custom_structs);
+        let result = expand_function_arguments(&function, &custom_structs, &custom_structs);
         let (args, call_args) = result.unwrap();
         let result = format!("({},{})", args, call_args);
-        let expected = r#"(, bim_bam : CarMaker , pim_poum : Bank,& [bim_bam . into_token () , pim_poum . into_token () ,])"#;
+        let expected = r#"(, bim_bam : CarMaker,& [bim_bam . into_token () ,])"#;
         assert_eq!(result, expected);
     }
 

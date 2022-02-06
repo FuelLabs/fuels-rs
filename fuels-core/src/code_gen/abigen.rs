@@ -273,6 +273,21 @@ mod tests {
                 "type":"contract",
                 "inputs":[
                     {
+                        "components": null,
+                        "name": "gas_",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "amount_",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "color_",
+                        "type": "b256"
+                    },
+                    {
                         "name":"arg",
                         "type":"u32"
                     }
@@ -300,6 +315,21 @@ mod tests {
                 "type":"contract",
                 "inputs":[
                     {
+                        "components": null,
+                        "name": "gas_",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "amount_",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "color_",
+                        "type": "b256"
+                    },
+                    {
                         "name":"arg",
                         "type":"u32"
                     },
@@ -319,8 +349,11 @@ mod tests {
         ]
         "#;
 
-        let bindings = Abigen::new("test", contract).unwrap().generate().unwrap();
-        bindings.write(std::io::stdout()).unwrap();
+        // We are expecting a MissingData error because at the moment, the
+        // ABIgen expects exactly 4 arguments (see `expand_function_arguments`), here
+        // there are 5
+        let bindings = Abigen::new("test", contract).unwrap().generate();
+        assert!(matches!(bindings, Err(Error::MissingData(_))));
     }
 
     #[test]
@@ -330,6 +363,21 @@ mod tests {
             {
                 "type":"contract",
                 "inputs":[
+                    {
+                        "components": null,
+                        "name": "gas_",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "amount_",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "color_",
+                        "type": "b256"
+                    },
                     {
                         "name":"value",
                         "type":"struct MyStruct",
@@ -368,6 +416,21 @@ mod tests {
             {
                 "type":"contract",
                 "inputs":[
+                    {
+                        "components": null,
+                        "name": "gas_",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "amount_",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "color_",
+                        "type": "b256"
+                    },
                 {
                     "name":"input",
                     "type":"struct MyNestedStruct",
@@ -443,8 +506,11 @@ mod tests {
             assert!(contract.custom_structs.contains_key(name));
         }
 
-        let bindings = contract.generate().unwrap();
-        bindings.write(std::io::stdout()).unwrap();
+        // We are expecting a MissingData error because at the moment, the
+        // ABIgen expects exactly 4 arguments (see `expand_function_arguments`), here
+        // there are 5
+        let bindings = contract.generate();
+        assert!(matches!(bindings, Err(Error::MissingData(_))));
     }
 
     #[test]
@@ -454,6 +520,21 @@ mod tests {
             {
                 "type":"contract",
                 "inputs":[
+                    {
+                        "components": null,
+                        "name": "gas_",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "amount_",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "color_",
+                        "type": "b256"
+                    },
                     {
                         "name":"top_value",
                         "type":"struct MyNestedStruct",
@@ -500,6 +581,21 @@ mod tests {
                 "type":"contract",
                 "inputs":[
                     {
+                        "components": null,
+                        "name": "gas_",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "amount_",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "color_",
+                        "type": "b256"
+                    },
+                    {
                         "name":"my_enum",
                         "type":"enum MyEnum",
                         "components": [
@@ -537,6 +633,21 @@ mod tests {
             {
                 "type":"contract",
                 "inputs":[
+                    {
+                        "components": null,
+                        "name": "gas_",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "amount_",
+                        "type": "u64"
+                    },
+                    {
+                        "components": null,
+                        "name": "color_",
+                        "type": "b256"
+                    },
                     {
                         "name":"value",
                         "type":"struct MyStruct",
