@@ -12,17 +12,17 @@ description = "Fuel Rust SDK marcros to generate types from ABI."
 proc-macro = true
 
 [dependencies]
+fuel-tx = "0.5"
 fuels-core = { version = "0.3.1", path = "../fuels-core" }
-fuel-tx = "0.2"
 proc-macro2 = "1.0"
 quote = "1.0"
 rand = "0.8"
 syn = "1.0.12"
 
 [dev-dependencies]
-fuel-core = { version = "0.2", default-features = false }
-fuel-gql-client = { version = "0.2", default-features = false }
-tokio = "1.15.0"
+fuel-core = { version = "0.3", default-features = false }
+fuel-gql-client = { version = "0.3", default-features = false }
 fuels-contract = { version = "0.3.1", path = "../fuels-contract" }
 hex = { version = "0.4.3", default-features = false, features = ["std"] }
 sha2 = "0.9.5"
+tokio = "1.15.0"

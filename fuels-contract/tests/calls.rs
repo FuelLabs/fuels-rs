@@ -24,6 +24,7 @@ async fn script_call() {
     let tx = Transaction::Script {
         gas_price: 0,
         gas_limit: 1_000_000,
+        byte_price: 0,
         maturity: 0,
         receipts_root: Default::default(),
         script: compiled.raw, // Here we pass the compiled script into the transaction
@@ -78,6 +79,7 @@ async fn contract_call() {
 
     // Call contract
     let gas_price = 0;
+    let byte_price = 0;
     let gas_limit = 1_000_000;
     let maturity = 0;
 
@@ -88,6 +90,7 @@ async fn contract_call() {
         &fuel_client,
         gas_price,
         gas_limit,
+        byte_price,
         maturity,
         false,
     )
