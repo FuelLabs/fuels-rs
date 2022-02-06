@@ -20,7 +20,7 @@ rand = "0.8"
 syn = "1.0.12"
 
 [dev-dependencies]
-fuel-core = { version = "0.2", default-features = false }
+fuel-core = { version = "0.3", default-features = false }
 fuel-gql-client = { version = "0.3", default-features = false }
 tokio = "1.15.0"
 fuels-contract = { version = "0.3.1", path = "../fuels-contract" }
