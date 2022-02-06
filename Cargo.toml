@@ -4,6 +4,6 @@ members = [
     "fuels-abi-cli",
     "fuels-abigen-macro",
     "fuels-contract",
-    "fuels-signers",
     "fuels-core",
+    "fuels-signers",
 ]
