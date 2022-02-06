@@ -349,6 +349,9 @@ mod tests {
         ]
         "#;
 
+        // We are expecting a MissingData error because at the moment, the
+        // ABIgen expects exactly 4 arguments (see `expand_function_arguments`), here
+        // there are 5
         let bindings = Abigen::new("test", contract).unwrap().generate();
         assert!(matches!(bindings, Err(Error::MissingData(_))));
     }
@@ -503,6 +506,9 @@ mod tests {
             assert!(contract.custom_structs.contains_key(name));
         }
 
+        // We are expecting a MissingData error because at the moment, the
+        // ABIgen expects exactly 4 arguments (see `expand_function_arguments`), here
+        // there are 5
         let bindings = contract.generate();
         assert!(matches!(bindings, Err(Error::MissingData(_))));
     }

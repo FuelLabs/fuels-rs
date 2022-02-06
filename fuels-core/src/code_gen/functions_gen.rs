@@ -138,10 +138,12 @@ fn expand_function_arguments(
     let first_index = 3;
     let mut args = Vec::with_capacity(1);
     let mut call_args = Vec::with_capacity(1);
-    // For each [`Property`] in a function input we expand:
-    // 1. The name of the argument;
-    // 2. The type of the argument;
+    // We use a for loop because we expect exactly 4 arguments (so len(fun.inputs)==4)
+    // but we might extend the number of authorized inputs in the future
     for (i, param) in fun.inputs[first_index..].iter().enumerate() {
+        // For each [`Property`] in a function input we expand:
+        // 1. The name of the argument;
+        // 2. The type of the argument;
         // Note that _any_ significant change in the way the JSON ABI is generated
         // could affect this function expansion.
         // TokenStream representing the name of the argument
