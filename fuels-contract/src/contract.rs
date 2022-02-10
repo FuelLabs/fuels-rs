@@ -6,12 +6,15 @@ use forc::test::{forc_build, BuildCommand};
 use fuel_asm::Opcode;
 use fuel_core::service::{Config, FuelService};
 use fuel_gql_client::client::FuelClient;
-use fuel_tx::{ContractId, Input, Output, Receipt, StorageSlot, Transaction, UtxoId};
+use fuel_tx::{
+    Address, Color, ContractId, Input, Output, Receipt, StorageSlot, Transaction, UtxoId, Witness,
+};
 use fuel_types::{Bytes32, Immediate12, Salt, Word};
 use fuel_vm::consts::{REG_CGAS, REG_RET, REG_ZERO, VM_TX_MEMORY};
 use fuel_vm::prelude::Contract as FuelContract;
 use fuels_core::ParamType;
 use fuels_core::{Detokenize, Selector, Token, WORD_SIZE};
+use rand::{Rng, RngCore};
 use std::marker::PhantomData;
 
 #[derive(Debug, Clone, Default)]
@@ -135,6 +138,23 @@ impl Contract {
         // This needs to be changed to support multiple contract IDs.
         let output = Output::contract(0, Bytes32::zeroed(), Bytes32::zeroed());
 
+        // Important: this is a temporary workaround, for full context:
+        // https://github.com/FuelLabs/fuels-rs/issues/90
+        // Here we generate a random coin input to prevent transaction id
+        // collision in method calls that could be view-only.
+        let mut rng = rand::thread_rng();
+
+        let random_coin = Input::coin(
+            UtxoId::new(Bytes32::from(rng.gen::<[u8; 32]>()), 0),
+            Address::from(rng.gen::<[u8; 32]>()),
+            rng.next_u64(),
+            Color::from([0u8; 32]),
+            0,
+            0,
+            vec![],
+            vec![],
+        );
+
         let tx = Transaction::script(
             gas_price,
             gas_limit,
@@ -142,9 +162,9 @@ impl Contract {
             maturity,
             script,
             script_data,
-            vec![input],
+            vec![input, random_coin],
             vec![output],
-            vec![],
+            vec![Witness::from(vec![0u8, 0u8])],
         );
 
         let script = Script::new(tx);
