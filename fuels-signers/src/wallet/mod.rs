@@ -105,7 +105,10 @@ impl Signer for Wallet {
     }
 
     async fn sign_transaction(&self, _tx: &Transaction) -> Result<Signature, Self::Error> {
-        todo!()
+        let id = _tx.id();
+        let sig = secp256k1_sign_compact_recoverable(self.private_key.as_ref(), &*id).unwrap();
+
+        Ok(Signature { compact: sig })
     }
 
     fn address(&self) -> Address {
