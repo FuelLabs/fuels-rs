@@ -114,7 +114,7 @@ mod tests {
         // Check if signature is what we expect it to be
         assert_eq!(signature.compact, Signature::from_str("0xa1287a24af13fc102cb9e60988b558d5575d7870032f64bafcc2deda2c99125fb25eca55a29a169de156cb30700965e2b26278fcc7ad375bc720440ea50ba3cb").unwrap().compact);
 
-        // Recover address that signed the message
+        // Recover address that signed the transaction
         let recovered_address = signature.recover(&tx.id()).unwrap();
 
         assert_eq!(wallet.address, recovered_address);
