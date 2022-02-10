@@ -931,8 +931,6 @@ async fn example_workflow() {
         .await
         .unwrap();
 
-    println!("result: {:?}\n", result);
-
     assert_eq!(42, result.value);
 
     let result = contract_instance
