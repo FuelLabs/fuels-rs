@@ -1,4 +1,4 @@
-use fuel_tx::{crypto::Hasher, Bytes64};
+use fuel_tx::{crypto::Hasher, Bytes32, Bytes64};
 use fuel_types::Address;
 use fuel_vm::crypto::secp256k1_sign_compact_recover;
 use fuels_core::Bits256;
@@ -77,7 +77,13 @@ impl Signature {
     /// Recovers the Fuel address which was used
     /// to sign the given message. Note that this message
     /// can be either the original message or its digest (hashed message).
-    /// Both can be used to recover the address of the signature.
+    /// Both can be used to recover the address of the signature. E.g.:
+    ///
+    /// `let recovered_address = signature.recover(message).unwrap();`
+    /// Where `message` is a `&str`. Or
+    ///
+    /// `let recovered_address = signature.recover(&tx.id()).unwrap();`
+    /// Where `&tx.id()` is a `&Bytes32` representing the hash of the tx.
     pub fn recover<M>(&self, message: M) -> Result<Address, SignatureError>
     where
         M: Into<RecoveryMessage>,
@@ -148,6 +154,12 @@ impl From<String> for RecoveryMessage {
 impl From<[u8; 32]> for RecoveryMessage {
     fn from(hash: [u8; 32]) -> Self {
         RecoveryMessage::Hash(hash)
+    }
+}
+
+impl From<&Bytes32> for RecoveryMessage {
+    fn from(hash: &Bytes32) -> Self {
+        RecoveryMessage::Hash(**hash)
     }
 }
 
