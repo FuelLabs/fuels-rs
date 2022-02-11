@@ -147,7 +147,7 @@ fn expand_function_arguments(
         // Note that _any_ significant change in the way the JSON ABI is generated
         // could affect this function expansion.
         // TokenStream representing the name of the argument
-        if param.type_field == "()" {
+        if param.type_field == "()" || param.type_field == "" {
             // This is necessary to handle methods with no user input
             continue;
         }
@@ -195,10 +195,7 @@ fn expand_function_arguments(
     // It'll look like `&[my_arg.into_token(), another_arg.into_token()]`
     // as the [`Contract`] `method_hash` function expects a slice of Tokens
     // in order to encode the call.
-    let call_args = match call_args.len() {
-        0 => quote! { () },
-        _ => quote! { &[ #(#call_args.into_token(), )* ] },
-    };
+    let call_args = quote! { &[ #(#call_args.into_token(), )* ] };
 
     Ok((args, call_args))
 }
@@ -710,7 +707,7 @@ pub fn hello_world(
         let result = expand_function_arguments(&function, &custom_structs, &custom_structs);
         let (args, call_args) = result.unwrap();
         let result = format!("({},{})", args, call_args);
-        let expected = r#"(,())"#;
+        let expected = r#"(,& [])"#;
         assert_eq!(result, expected);
     }
 
