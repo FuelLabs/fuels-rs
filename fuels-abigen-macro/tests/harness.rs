@@ -1335,3 +1335,36 @@ async fn abigen_different_structs_same_arg_name() {
 
     assert_eq!(res_two.value, 41);
 }
+
+#[tokio::test]
+async fn multiple_read_calls() {
+    let rng = &mut StdRng::seed_from_u64(2322u64);
+
+    abigen!(
+        MyContract,
+        "fuels-abigen-macro/tests/test_projects/multiple-read-calls/abi.json"
+    );
+
+    // Build the contract
+    let salt: [u8; 32] = rng.gen();
+    let salt = Salt::from(salt);
+
+    let compiled =
+        Contract::compile_sway_contract("tests/test_projects/multiple-read-calls", salt).unwrap();
+
+    let (client, contract_id) = Contract::launch_and_deploy(&compiled).await.unwrap();
+
+    println!("Contract deployed @ {:x}", contract_id);
+
+    let contract_instance = MyContract::new(compiled, client);
+
+    contract_instance.store(42).call().await.unwrap();
+
+    let stored = contract_instance.read(0).call().await.unwrap();
+
+    assert!(stored.value == 42);
+
+    let stored = contract_instance.read(0).call().await.unwrap();
+
+    assert!(stored.value == 42);
+}
