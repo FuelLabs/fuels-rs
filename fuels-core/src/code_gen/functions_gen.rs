@@ -147,7 +147,7 @@ fn expand_function_arguments(
         // Note that _any_ significant change in the way the JSON ABI is generated
         // could affect this function expansion.
         // TokenStream representing the name of the argument
-        if param.type_field == "()" || param.type_field == "" {
+        if param.type_field == "()" {
             // This is necessary to handle methods with no user input
             continue;
         }
