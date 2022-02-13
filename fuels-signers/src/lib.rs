@@ -37,6 +37,7 @@ pub trait Signer: std::fmt::Debug + Send + Sync {
 mod tests {
     use std::str::FromStr;
 
+    use fuel_tx::{Bytes32, Color, Input, Output, UtxoId};
     use rand::{rngs::StdRng, RngCore, SeedableRng};
     use secp256k1::SecretKey;
 
@@ -67,5 +68,58 @@ mod tests {
 
         // Verify signature
         signature.verify(message, recovered_address).unwrap();
+    }
+
+    #[tokio::test]
+    async fn sign_tx_and_verify() {
+        let secret =
+            SecretKey::from_str("5f70feeff1f229e4a95e1056e8b4d80d0b24b565674860cc213bdb07127ce1b1")
+                .unwrap();
+
+        let wallet = LocalWallet::new_from_private_key(secret).unwrap();
+
+        let input_coin = Input::coin(
+            UtxoId::new(Bytes32::zeroed(), 0),
+            Address::from_str("0xf1e92c42b90934aa6372e30bc568a326f6e66a1a0288595e6e3fbd392a4f3e6e")
+                .unwrap(),
+            10000000,
+            Color::from([0u8; 32]),
+            0,
+            0,
+            vec![],
+            vec![],
+        );
+
+        let output_coin = Output::coin(
+            Address::from_str("0xc7862855b418ba8f58878db434b21053a61a2025209889cc115989e8040ff077")
+                .unwrap(),
+            1,
+            Color::from([0u8; 32]),
+        );
+
+        let tx = Transaction::script(
+            0,
+            1000000,
+            0,
+            0,
+            hex::decode("24400000").unwrap(),
+            vec![],
+            vec![input_coin],
+            vec![output_coin],
+            vec![],
+        );
+
+        let signature = wallet.sign_transaction(&tx).await.unwrap();
+
+        // Check if signature is what we expect it to be
+        assert_eq!(signature.compact, Signature::from_str("0xa1287a24af13fc102cb9e60988b558d5575d7870032f64bafcc2deda2c99125fb25eca55a29a169de156cb30700965e2b26278fcc7ad375bc720440ea50ba3cb").unwrap().compact);
+
+        // Recover address that signed the transaction
+        let recovered_address = signature.recover(&tx.id()).unwrap();
+
+        assert_eq!(wallet.address, recovered_address);
+
+        // Verify signature
+        signature.verify(&tx.id(), recovered_address).unwrap();
     }
 }
