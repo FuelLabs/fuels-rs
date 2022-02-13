@@ -53,7 +53,7 @@
       {
         "components": null,
         "name": "another_argument_name",
-        "type": ""
+        "type": "()"
       }
     ],
     "outputs": [
@@ -85,8 +85,8 @@
       },
       {
         "components": null,
-        "name": "",
-        "type": ""
+        "name": "bimbam",
+        "type": "()"
       }
     ],
     "outputs": [
