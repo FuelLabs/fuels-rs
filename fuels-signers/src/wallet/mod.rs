@@ -1,12 +1,18 @@
+use crate::provider::{Provider, ProviderError};
 use crate::signature::Signature;
 use crate::Signer;
 use async_trait::async_trait;
+use fuel_gql_client::client::schema::coin::Coin;
+use fuel_gql_client::client::{FuelClient, PageDirection, PaginationRequest};
 use fuel_tx::crypto::Hasher;
-use fuel_tx::{Bytes64, Transaction};
+use fuel_tx::{Bytes32, Bytes64, Input, Output, Transaction, UtxoId};
 use fuel_types::Address;
 use fuel_vm::crypto::secp256k1_sign_compact_recoverable;
+use fuel_vm::prelude::Opcode;
+use rand::prelude::StdRng;
+use rand::{Rng, SeedableRng};
 use secp256k1::{PublicKey, Secp256k1, SecretKey};
-use std::fmt;
+use std::{fmt, io};
 use thiserror::Error;
 
 /// A FuelVM-compatible private-public key pair which can be used for signing messages.
@@ -56,6 +62,8 @@ pub struct Wallet {
     /// The wallet's address. The wallet's address is derived
     /// from the first 32 bytes of SHA-256 hash of the wallet's public key.
     pub(crate) address: Address,
+
+    pub provider: Option<Provider>,
 }
 
 #[derive(Error, Debug)]
@@ -70,6 +78,10 @@ pub enum WalletError {
     /// Error propagated by parsing of a slice
     #[error("Failed to parse slice")]
     Parsing(#[from] std::array::TryFromSliceError),
+    #[error("No provider was setup: make sure to set_provider in your wallet!")]
+    NoProvider,
+    #[error("Provider error: {0}")]
+    ProviderError(#[from] ProviderError),
 }
 
 impl Wallet {
@@ -83,7 +95,31 @@ impl Wallet {
         Ok(Self {
             private_key,
             address: Address::new(*hashed),
+            provider: None,
         })
+    }
+
+    pub fn set_provider(&mut self, provider: Provider) {
+        self.provider = Some(provider)
+    }
+
+    /// Transfer funds from this wallet to `Address`.
+    pub async fn transfer(&self, to: &Address, amount: u64, utxo: UtxoId) -> io::Result<Bytes32> {
+        self.provider
+            .as_ref()
+            .unwrap()
+            .transfer(&self.address(), to, amount, utxo)
+            .await
+            .map(Into::into)
+    }
+
+    /// Gets coins from this wallet
+    pub async fn get_coins(&self) -> Result<Vec<Coin>, WalletError> {
+        if let Some(provider) = &self.provider {
+            Ok(provider.get_coins(&self.address()).await?)
+        } else {
+            Err(WalletError::NoProvider)
+        }
     }
 }
 

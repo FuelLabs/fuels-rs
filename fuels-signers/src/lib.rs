@@ -1,6 +1,13 @@
 mod wallet;
 
+use fuel_core::service::{Config, FuelService};
+use fuel_gql_client::client::FuelClient;
+
+use provider::Provider;
+use rand::{prelude::StdRng, Rng, RngCore, SeedableRng};
+use secp256k1::SecretKey;
 pub use wallet::Wallet;
+pub mod provider;
 pub mod signature;
 
 use signature::Signature;
@@ -42,6 +49,29 @@ mod tests {
     use secp256k1::SecretKey;
 
     use super::*;
+
+    async fn setup_local_node() -> FuelClient {
+        let srv = FuelService::new_node(Config::local_node()).await.unwrap();
+        FuelClient::from(srv.bound_address)
+    }
+
+    fn setup_random_wallet(client: &FuelClient) -> Wallet {
+        let mut rng = rand::thread_rng();
+        let secret_seed = rng.gen::<[u8; 32]>();
+
+        let secret =
+            SecretKey::from_slice(&secret_seed).expect("Failed to generate random secret!");
+
+        let mut wallet = LocalWallet::new_from_private_key(secret).unwrap();
+
+        let provider = Provider {
+            client: client.clone(),
+        };
+
+        wallet.set_provider(provider);
+
+        wallet
+    }
 
     #[tokio::test]
     async fn sign_and_verify() {
@@ -121,5 +151,35 @@ mod tests {
 
         // Verify signature
         signature.verify(&tx.id(), recovered_address).unwrap();
+    }
+
+    #[tokio::test]
+    async fn send_transaction() {
+        // @todo Next:
+        // 1. What about signatures / signing this transaction?
+        // 2. Read more `fuel-core` tests to see what we can do about
+        // having that `utxo` field in `transfer`. Can we just not have it?
+        // How do we know which coin we can transfer?
+
+        let node = setup_local_node().await;
+
+        let wallet_1 = setup_random_wallet(&node);
+        let wallet_2 = setup_random_wallet(&node);
+
+        let initial_coins = wallet_2.get_coins().await.unwrap();
+
+        assert_eq!(initial_coins.len(), 0);
+
+        let _res = wallet_1
+            .transfer(
+                &wallet_2.address(),
+                1,
+                UtxoId::new(Bytes32::from([1_u8; 32]), 0),
+            )
+            .await
+            .unwrap();
+
+        let final_coins = wallet_2.get_coins().await.unwrap();
+        assert_eq!(final_coins.len(), 1);
     }
 }
