@@ -66,7 +66,7 @@ impl Contract {
         byte_price: Word,
         maturity: Word,
         custom_inputs: bool,
-    ) -> Result<Vec<Receipt>, String> {
+    ) -> Result<Vec<Receipt>, Error> {
         // Based on the defined script length,
         // we set the appropriate data offset.
         let script_len = 16;
@@ -169,7 +169,7 @@ impl Contract {
 
         let script = Script::new(tx);
 
-        Ok(script.call(fuel_client).await.unwrap())
+        script.call(fuel_client).await
     }
 
     /// Creates an ABI call based on a function selector and
@@ -348,8 +348,7 @@ where
             self.maturity,
             self.custom_inputs,
         )
-        .await
-        .unwrap();
+        .await?;
 
         let (encoded_value, index) = match receipts.iter().find(|&receipt| receipt.val().is_some())
         {
