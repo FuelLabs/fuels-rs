@@ -1386,6 +1386,7 @@ async fn test_methods_typeless_argument() {
     let compiled =
         Contract::compile_sway_contract("tests/test_projects/empty-arguments", salt).unwrap();
     let (client, contract_id) = Contract::launch_and_deploy(&compiled).await.unwrap();
+    println!("Contract deployed @ {:x}", contract_id);
     let contract_instance = MyContract::new(compiled, client);
     let result = contract_instance
         .method_with_empty_parenthesis_argument()
