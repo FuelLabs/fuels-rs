@@ -1354,7 +1354,6 @@ async fn test_reverting_transaction() {
             .unwrap();
 
     let (client, contract_id) = Contract::launch_and_deploy(&compiled).await.unwrap();
-    println!("Contract deployed @ {:x}", contract_id);
     let contract_instance = RevertingContract::new(compiled, client);
 
     let result = contract_instance.make_transaction_fail(0).call().await;
