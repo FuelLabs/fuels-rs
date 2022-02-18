@@ -1368,3 +1368,42 @@ async fn multiple_read_calls() {
 
     assert!(stored.value == 42);
 }
+
+#[tokio::test]
+async fn test_methods_typeless_argument() {
+    let rng = &mut StdRng::seed_from_u64(2322u64);
+
+    // Generates the bindings from the an ABI definition inline.
+    // The generated bindings can be accessed through `MyContract`.
+    abigen!(
+        MyContract,
+        "fuels-abigen-macro/tests/test_projects/empty-arguments/abi.json"
+    );
+    // Build the contract
+    let salt: [u8; 32] = rng.gen();
+    let salt = Salt::from(salt);
+
+    let compiled =
+        Contract::compile_sway_contract("tests/test_projects/empty-arguments", salt).unwrap();
+    let (client, contract_id) = Contract::launch_and_deploy(&compiled).await.unwrap();
+    println!("Contract deployed @ {:x}", contract_id);
+    let contract_instance = MyContract::new(compiled, client);
+    let result = contract_instance
+        .method_with_empty_parenthesis_argument()
+        .call()
+        .await
+        .unwrap();
+    assert_eq!(result.value, 21);
+    let result = contract_instance
+        .method_with_empty_string_argument()
+        .call()
+        .await
+        .unwrap();
+    assert_eq!(result.value, 42);
+    let result = contract_instance
+        .method_with_empty_argument()
+        .call()
+        .await
+        .unwrap();
+    assert_eq!(result.value, 63);
+}
