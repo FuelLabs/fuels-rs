@@ -4,9 +4,8 @@ use std::{
     path::{Path, PathBuf},
     str::FromStr,
 };
-use url::Url;
 
-use anyhow::{anyhow, Context, Error, Result};
+use anyhow::{Context, Error, Result};
 
 /// A source of a Truffle artifact JSON.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -16,8 +15,6 @@ pub enum Source {
 
     /// An ABI located on the local file system.
     Local(PathBuf),
-    // In the future we can have an ABI to be retrieved over HTTP(S) or block explorer
-    // Http(Url),
 }
 
 impl Source {
@@ -32,9 +29,7 @@ impl Source {
     /// This relative path is rooted in the current working directory.
     /// To specify the root for relative paths, use `Source::with_root`.
     ///
-    /// - `/absolute/path/to/Contract.json` or
-    ///   `file:///absolute/path/to/Contract.json`: an absolute path or file URL
-    ///   to an ABI JSON file.
+    /// - `/absolute/path/to/Contract.json to an ABI JSON file.
     pub fn parse<S>(source: S) -> Result<Self, Error>
     where
         S: AsRef<str>,
@@ -45,30 +40,18 @@ impl Source {
             return Ok(Source::String(source.to_owned()));
         }
         let root = env::current_dir()?.canonicalize()?;
-        Source::with_root(root, source)
+        Ok(Source::with_root(root, source))
     }
 
     /// Parses an artifact source from a string and a specified root directory
     /// for resolving relative paths. See `Source::with_root` for more details
     /// on supported source strings.
-    fn with_root<P, S>(root: P, source: S) -> Result<Self, Error>
+    fn with_root<P, S>(root: P, source: S) -> Self
     where
         P: AsRef<Path>,
         S: AsRef<str>,
     {
-        let base = Url::from_directory_path(&root).map_err(|_| {
-            anyhow!(
-                "root path '{:?}' is not absolute",
-                root.as_ref().as_os_str()
-            )
-        })?;
-        let url = base.join(source.as_ref())?;
-
-        match url.scheme() {
-            "file" => Ok(Source::local(url.path())),
-            // TODO: support other URL schemes (http, etc)
-            _ => Err(anyhow!("unsupported URL '{}'", url)),
-        }
+        Source::local(root.as_ref().join(source.as_ref()))
     }
 
     /// Creates a local filesystem source from a path string.

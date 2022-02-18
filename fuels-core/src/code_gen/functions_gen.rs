@@ -147,6 +147,10 @@ fn expand_function_arguments(
         // Note that _any_ significant change in the way the JSON ABI is generated
         // could affect this function expansion.
         // TokenStream representing the name of the argument
+        if param.type_field == "()" {
+            // This is necessary to handle methods with no user input
+            continue;
+        }
         let name = expand_input_name(i, &param.name);
 
         let opt_custom_type = match param.type_field.split_whitespace().collect::<Vec<_>>()[0] {
@@ -191,10 +195,7 @@ fn expand_function_arguments(
     // It'll look like `&[my_arg.into_token(), another_arg.into_token()]`
     // as the [`Contract`] `method_hash` function expects a slice of Tokens
     // in order to encode the call.
-    let call_args = match call_args.len() {
-        0 => quote! { () },
-        _ => quote! { &[ #(#call_args.into_token(), )* ] },
-    };
+    let call_args = quote! { &[ #(#call_args.into_token(), )* ] };
 
     Ok((args, call_args))
 }
@@ -686,6 +687,27 @@ pub fn hello_world(
         let (args, call_args) = result.unwrap();
         let result = format!("({},{})", args, call_args);
         let expected = r#"(, bim_bam : CarMaker,& [bim_bam . into_token () ,])"#;
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_expand_function_argument_empty_fourth() {
+        let mut function = Function {
+            type_field: "zig_zag".to_string(),
+            inputs: generate_base_inputs(),
+            name: "PipPopFunction".to_string(),
+            outputs: vec![],
+        };
+        function.inputs.push(Property {
+            name: "".to_string(),
+            type_field: "()".to_string(),
+            components: None,
+        });
+        let custom_structs = HashMap::new();
+        let result = expand_function_arguments(&function, &custom_structs, &custom_structs);
+        let (args, call_args) = result.unwrap();
+        let result = format!("({},{})", args, call_args);
+        let expected = r#"(,& [])"#;
         assert_eq!(result, expected);
     }
 
