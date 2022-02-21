@@ -3,6 +3,7 @@ use fuel_gql_client::client::FuelClient;
 use fuel_tx::Salt;
 use fuels_abigen_macro::abigen;
 use fuels_contract::contract::Contract;
+use fuels_contract::errors::Error;
 use fuels_core::Token;
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
@@ -1334,6 +1335,29 @@ async fn abigen_different_structs_same_arg_name() {
         .unwrap();
 
     assert_eq!(res_two.value, 41);
+}
+#[tokio::test]
+async fn test_reverting_transaction() {
+    let rng = &mut StdRng::seed_from_u64(2322u64);
+
+    abigen!(
+        RevertingContract,
+        "fuels-abigen-macro/tests/test_projects/revert_transaction_error/abi.json"
+    );
+
+    // Build the contract
+    let salt: [u8; 32] = rng.gen();
+    let salt = Salt::from(salt);
+
+    let compiled =
+        Contract::compile_sway_contract("tests/test_projects/revert_transaction_error", salt)
+            .unwrap();
+
+    let (client, _) = Contract::launch_and_deploy(&compiled).await.unwrap();
+    let contract_instance = RevertingContract::new(compiled, client);
+
+    let result = contract_instance.make_transaction_fail(0).call().await;
+    assert!(matches!(result, Err(Error::ContractCallError(_))));
 }
 
 #[tokio::test]

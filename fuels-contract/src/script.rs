@@ -2,7 +2,7 @@ use crate::errors::Error;
 use forc::test::{forc_build, BuildCommand};
 use forc::util::constants;
 use forc::util::helpers::read_manifest;
-use fuel_gql_client::client::FuelClient;
+use fuel_gql_client::client::{types::TransactionStatus, FuelClient};
 use fuel_tx::{Receipt, Transaction};
 use std::path::PathBuf;
 use sway_utils::find_manifest_dir;
@@ -25,11 +25,14 @@ impl Script {
     }
 
     pub async fn call(self, fuel_client: &FuelClient) -> Result<Vec<Receipt>, Error> {
-        let tx_id = fuel_client.submit(&self.tx).await.unwrap();
+        let tx_id = fuel_client.submit(&self.tx).await.unwrap().0.to_string();
 
-        let receipts = fuel_client.receipts(&tx_id.0.to_string()).await.unwrap();
-
-        Ok(receipts)
+        let receipts = fuel_client.receipts(&tx_id).await?;
+        let status = fuel_client.transaction_status(&tx_id).await?;
+        match status {
+            TransactionStatus::Failure { reason, .. } => Err(Error::ContractCallError(reason)),
+            _ => Ok(receipts),
+        }
     }
 
     /// Compiles a Sway script
