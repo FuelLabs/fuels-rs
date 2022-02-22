@@ -1429,3 +1429,69 @@ async fn test_methods_typeless_argument() {
         .unwrap();
     assert_eq!(result.value, 63);
 }
+#[tokio::test]
+async fn test_connect_to_deployed_contract() {
+    let rng = &mut StdRng::seed_from_u64(2322u64);
+
+    // Load the abigen
+    abigen!(
+        MyContract,
+        "fuels-abigen-macro/tests/test_projects/contract_test/abi.json"
+    );
+    // Build the "deployed" contract we will connect to
+    let salt: [u8; 32] = rng.gen();
+    let salt = Salt::from(salt);
+    let compiled =
+        Contract::compile_sway_contract("tests/test_projects/contract_test", salt).unwrap();
+    let (client, contract_id) = Contract::launch_and_deploy(&compiled).await.unwrap();
+    println!("Contract deployed @ {:x}", contract_id);
+    let deployed_contract_instance = MyContract::new(contract_id.to_string(), client.clone());
+    // Check that the deployed contract works as expected
+    let result = deployed_contract_instance
+        .initialize_counter(21)
+        .call()
+        .await
+        .unwrap();
+    assert_eq!(result.value, 21);
+    let result = deployed_contract_instance
+        .increment_counter(21)
+        .call()
+        .await
+        .unwrap();
+    assert_eq!(result.value, 42);
+    let result = deployed_contract_instance
+        .get_counter()
+        .call()
+        .await
+        .unwrap();
+    assert_eq!(result.value, 42);
+
+    // Create a new contract that is just "connected" to the deployed one
+    let connected_contract_instance = MyContract::new(contract_id.to_string(), client);
+    // Check that it works as expected
+    let result = connected_contract_instance
+        .initialize_counter(111)
+        .call()
+        .await
+        .unwrap();
+    assert_eq!(result.value, 111);
+    let result = connected_contract_instance
+        .increment_counter(9)
+        .call()
+        .await
+        .unwrap();
+    assert_eq!(result.value, 120);
+    let result = connected_contract_instance
+        .get_counter()
+        .call()
+        .await
+        .unwrap();
+    assert_eq!(result.value, 120);
+    // Check that the deployed contract is in the same state
+    let result = deployed_contract_instance
+        .get_counter()
+        .call()
+        .await
+        .unwrap();
+    assert_eq!(result.value, 120);
+}
