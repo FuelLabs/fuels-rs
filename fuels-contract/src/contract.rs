@@ -205,7 +205,6 @@ impl Contract {
         let custom_inputs = args.iter().any(|t| matches!(t, Token::Struct(_)));
 
         Ok(ContractCall {
-            compiled_contract: compiled_contract.clone(),
             contract_id: Self::compute_contract_id(compiled_contract),
             encoded_args,
             gas_price,
@@ -313,7 +312,6 @@ impl Contract {
 /// Helper for managing a transaction before submitting it to a node
 pub struct ContractCall<D> {
     pub fuel_client: FuelClient,
-    pub compiled_contract: CompiledContract,
     pub encoded_args: Vec<u8>,
     pub encoded_selector: Selector,
     pub contract_id: ContractId,
