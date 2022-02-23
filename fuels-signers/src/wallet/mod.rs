@@ -3,19 +3,15 @@ use crate::signature::Signature;
 use crate::Signer;
 use async_trait::async_trait;
 use fuel_gql_client::client::schema::coin::Coin;
-use fuel_gql_client::client::{FuelClient, PageDirection, PaginationRequest};
 use fuel_tx::crypto::Hasher;
-use fuel_tx::{Bytes32, Bytes64, Input, Output, Transaction, UtxoId};
+use fuel_tx::{Bytes64, Color, Input, Output, Receipt, Transaction, UtxoId, Witness};
 use fuel_types::Address;
 use fuel_vm::crypto::secp256k1_sign_compact_recoverable;
-use fuel_vm::prelude::Opcode;
-use rand::prelude::StdRng;
-use rand::{Rng, SeedableRng};
 use secp256k1::{PublicKey, Secp256k1, SecretKey};
 use std::{fmt, io};
 use thiserror::Error;
 
-/// A FuelVM-compatible private-public key pair which can be used for signing messages.
+/// A FuelVM-compatible wallet which can be used for signing, sending transactions, and more.
 ///
 /// # Examples
 ///
@@ -28,6 +24,8 @@ use thiserror::Error;
 /// use fuels_signers::{LocalWallet, Signer};
 /// use secp256k1::SecretKey;
 /// use rand::{rngs::StdRng, RngCore, SeedableRng};
+/// use fuels_signers::provider::Provider;
+/// use fuels_signers::util::test_helpers::setup_local_node;
 ///
 /// # async fn foo() -> Result<(), Box<dyn std::error::Error>> {
 /// // Generate your secret key
@@ -38,8 +36,12 @@ use thiserror::Error;
 /// let secret =
 ///     SecretKey::from_slice(&secret_seed).expect("Failed to generate random secret!");
 ///
+/// // Setup local test node
+///
+/// let provider = Provider::new(setup_local_node(vec![]).await);
+///
 /// // Create a new local wallet with the newly generated key
-/// let wallet = LocalWallet::new_from_private_key(secret)?;
+/// let wallet = LocalWallet::new_from_private_key(secret, provider)?;
 ///
 /// let message = "my message";
 /// let signature = wallet.sign_message(message.as_bytes()).await?;
@@ -63,7 +65,7 @@ pub struct Wallet {
     /// from the first 32 bytes of SHA-256 hash of the wallet's public key.
     pub(crate) address: Address,
 
-    pub provider: Option<Provider>,
+    pub provider: Provider,
 }
 
 #[derive(Error, Debug)]
@@ -85,7 +87,10 @@ pub enum WalletError {
 }
 
 impl Wallet {
-    pub fn new_from_private_key(private_key: SecretKey) -> Result<Self, WalletError> {
+    pub fn new_from_private_key(
+        private_key: SecretKey,
+        provider: Provider,
+    ) -> Result<Self, WalletError> {
         let secp = Secp256k1::new();
 
         let public = PublicKey::from_secret_key(&secp, &private_key).serialize_uncompressed();
@@ -95,31 +100,143 @@ impl Wallet {
         Ok(Self {
             private_key,
             address: Address::new(*hashed),
-            provider: None,
+            provider,
         })
     }
 
     pub fn set_provider(&mut self, provider: Provider) {
-        self.provider = Some(provider)
+        self.provider = provider
     }
 
-    /// Transfer funds from this wallet to `Address`.
-    pub async fn transfer(&self, to: &Address, amount: u64, utxo: UtxoId) -> io::Result<Bytes32> {
-        self.provider
-            .as_ref()
-            .unwrap()
-            .transfer(&self.address(), to, amount, utxo)
-            .await
-            .map(Into::into)
+    /// Append the witnesses (signatures) for the transaction.
+    /// Note that it mutates the `Transaction` being passed into it
+    /// effectively updating its `Witness` field with the `Signature`s.
+    /// Previous witnesses in this `Transaction` are preserved, allowing
+    /// the caller to implement multisig (transactions with many signatures).
+    pub fn append_signatures(&self, tx: &mut Transaction, sigs: &[Signature]) {
+        let new_witnesses: Vec<Witness> = sigs
+            .iter()
+            .map(|sig| Witness::from(sig.compact.as_ref()))
+            .collect();
+
+        let mut witnesses: Vec<Witness> = tx.witnesses().to_vec();
+        match witnesses.len() {
+            0 => tx.set_witnesses(new_witnesses),
+            _ => {
+                witnesses.extend(new_witnesses);
+                tx.set_witnesses(witnesses)
+            }
+        }
+    }
+
+    /// Transfer funds from this wallet to another `Address`.
+    /// Fails if amount for color is larger than address's spendable coins.
+    ///
+    /// # Examples
+    /// ```
+    /// use fuels_signers::provider::Provider;
+    /// use fuels_signers::{LocalWallet, Signer};
+    /// use fuels_signers::util::test_helpers::{
+    ///     setup_address_and_coins, setup_local_node, setup_test_provider,
+    /// };
+    /// use fuel_tx::{Bytes32, Color, Input, Output, UtxoId};
+    /// use rand::{rngs::StdRng, RngCore, SeedableRng};
+    /// use secp256k1::SecretKey;
+    /// use std::str::FromStr;
+    ///
+    /// async fn foo() -> Result<(), Box<dyn std::error::Error>> {
+    ///   // Setup test wallets with 1 coin each
+    ///   let (pk_1, mut coins_1) = setup_address_and_coins(1, 1);
+    ///   let (pk_2, coins_2) = setup_address_and_coins(1, 1);
+    ///   coins_1.extend(coins_2);
+    ///
+    ///   // Setup a provider and node with both set of coins
+    ///   let provider = setup_test_provider(coins_1).await;
+    ///
+    ///   // Create the actual wallets/signers
+    ///   let wallet_1 = LocalWallet::new_from_private_key(pk_1, provider.clone()).unwrap();
+    ///   let wallet_2 = LocalWallet::new_from_private_key(pk_2, provider).unwrap();
+    ///
+    ///   // Transfer 1 from wallet 1 to wallet 2
+    ///   let _receipts = wallet_1
+    ///        .transfer(&wallet_2.address(), 1, Default::default())
+    ///        .await
+    ///        .unwrap();
+    ///
+    ///   let wallet_2_final_coins = wallet_2.get_coins().await.unwrap();
+    ///
+    ///   // Check that wallet two now has two coins
+    ///   assert_eq!(wallet_2_final_coins.len(), 2);
+    ///   Ok(())
+    /// }
+    /// ```
+    pub async fn transfer(
+        &self,
+        to: &Address,
+        amount: u64,
+        color: Color,
+    ) -> io::Result<Vec<Receipt>> {
+        let spendable = self.get_spendable_coins(&color, amount).await?;
+
+        let mut inputs: Vec<Input> = vec![];
+        let mut outputs: Vec<Output> = vec![];
+
+        let mut amount_to_send = 0;
+
+        let output_coin = Output::coin(*to, amount, color);
+        outputs.push(output_coin);
+
+        for coin in spendable {
+            if amount_to_send >= amount {
+                break;
+            }
+
+            let input_coin = Input::coin(
+                UtxoId::from(coin.utxo_id),
+                coin.owner.into(),
+                coin.amount.0,
+                color,
+                0,
+                0,
+                vec![],
+                vec![],
+            );
+
+            inputs.push(input_coin);
+
+            amount_to_send += coin.amount.0;
+        }
+
+        // Calculate change, if applicable
+        if amount_to_send > amount {
+            let change = Output::change(self.address(), amount_to_send - amount, color);
+            outputs.push(change);
+        }
+
+        // Build transaction and sign it
+        let mut tx = self.provider.build_transfer_tx(&inputs, &outputs);
+        let sig = self.sign_transaction(&tx).await.unwrap();
+        self.append_signatures(&mut tx, &[sig]);
+
+        // Note that currently coins being sent aren't marked as spent by the client.
+        // This will be coming up soon.
+        self.provider.send_transaction(&tx).await.map(Into::into)
     }
 
     /// Gets coins from this wallet
+    /// Note that this is a simple wrapper on provider's `get_coins`.
     pub async fn get_coins(&self) -> Result<Vec<Coin>, WalletError> {
-        if let Some(provider) = &self.provider {
-            Ok(provider.get_coins(&self.address()).await?)
-        } else {
-            Err(WalletError::NoProvider)
-        }
+        Ok(self.provider.get_coins(&self.address()).await?)
+    }
+
+    /// Gets spendable coins from this wallet.
+    /// Note that this is a simple wrapper on provider's
+    /// `get_spendable_coins`.
+    pub async fn get_spendable_coins(&self, color: &Color, amount: u64) -> io::Result<Vec<Coin>> {
+        Ok(self
+            .provider
+            .get_spendable_coins(&self.address(), *color, amount)
+            .await?)
     }
 }
 

@@ -1,8 +1,8 @@
-use std::io;
-
 use fuel_gql_client::client::schema::coin::Coin;
-use fuel_gql_client::client::{schema::HexString256, FuelClient, PageDirection, PaginationRequest};
-use fuel_tx::{Address, Bytes32, Bytes64, Input, Output, Transaction, UtxoId};
+use fuel_gql_client::client::{FuelClient, PageDirection, PaginationRequest};
+use fuel_tx::Receipt;
+use fuel_tx::{Address, Color, Input, Output, Transaction};
+use std::io;
 
 use fuel_vm::prelude::Opcode;
 use thiserror::Error;
@@ -19,6 +19,7 @@ pub enum ProviderError {
 /// Encapsulates common client operations in the SDK.
 /// Note that you may also use `client`, which is an instance
 /// of `FuelClient`, directly, which providers a broader API.
+#[derive(Debug, Clone)]
 pub struct Provider {
     pub client: FuelClient,
 }
@@ -28,38 +29,65 @@ impl Provider {
         Self { client }
     }
 
-    /// Shallow wrapper on client's submit
-    pub async fn send_transaction(&self, tx: &Transaction) -> io::Result<HexString256> {
-        self.client.submit(tx).await
+    /// Shallow wrapper on client's submit.
+    pub async fn send_transaction(&self, tx: &Transaction) -> io::Result<Vec<Receipt>> {
+        let tx_id = self.client.submit(tx).await?;
+
+        Ok(self.client.receipts(&tx_id.0.to_string()).await?)
     }
 
+    /// Shallow wrapper on client's coins API.
     pub async fn get_coins(&self, from: &Address) -> Result<Vec<Coin>, ProviderError> {
+        let mut coins: Vec<Coin> = vec![];
+
+        let mut cursor = None;
+
+        loop {
+            let res = self
+                .client
+                .coins(
+                    &from.to_string(),
+                    None,
+                    PaginationRequest {
+                        cursor: cursor.clone(),
+                        results: 100,
+                        direction: PageDirection::Forward,
+                    },
+                )
+                .await?;
+
+            if res.results.is_empty() {
+                break;
+            }
+            coins.extend(res.results);
+            cursor = res.cursor;
+        }
+
+        Ok(coins)
+    }
+
+    pub async fn get_spendable_coins(
+        &self,
+        from: &Address,
+        color: Color,
+        amount: u64,
+    ) -> io::Result<Vec<Coin>> {
         let res = self
             .client
-            .coins(
+            .coins_to_spend(
                 &from.to_string(),
+                vec![(format!("{:#x}", color).as_str(), amount)],
                 None,
-                PaginationRequest {
-                    cursor: None,
-                    results: 100,
-                    direction: PageDirection::Forward,
-                },
             )
             .await?;
 
-        Ok(res.results)
+        Ok(res)
     }
 
-    /// Transfer funds between `from` and `to`.
-    pub async fn transfer(
-        &self,
-        from: &Address,
-        to: &Address,
-        amount: u64,
-        utxo: UtxoId,
-    ) -> io::Result<Bytes32> {
+    /// Craft a transaction used to transfer funds between two addresses.
+    pub fn build_transfer_tx(&self, inputs: &[Input], outputs: &[Output]) -> Transaction {
         let script = Opcode::RET(0x10).to_bytes().to_vec();
-        let tx = Transaction::Script {
+        Transaction::Script {
             gas_price: 0,
             gas_limit: 1_000_000,
             byte_price: 0,
@@ -67,25 +95,11 @@ impl Provider {
             receipts_root: Default::default(),
             script,
             script_data: vec![],
-            inputs: vec![Input::Coin {
-                utxo_id: utxo, // <--- temp
-                owner: *from,
-                amount,
-                color: Default::default(),
-                witness_index: 0,
-                maturity: 0,
-                predicate: vec![],
-                predicate_data: vec![],
-            }],
-            outputs: vec![Output::Coin {
-                amount,
-                to: *to,
-                color: Default::default(),
-            }],
-            witnesses: vec![vec![].into()],
+            inputs: inputs.to_vec(),
+            outputs: outputs.to_vec(),
+            witnesses: vec![],
             metadata: None,
-        };
-        self.send_transaction(&tx).await.map(Into::into)
+        }
     }
 
     // @todo
