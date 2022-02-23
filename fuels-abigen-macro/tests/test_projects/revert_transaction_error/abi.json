@@ -1,0 +1,36 @@
+[
+  {
+    "inputs": [
+      {
+        "components": null,
+        "name": "gas_",
+        "type": "u64"
+      },
+      {
+        "components": null,
+        "name": "amount_",
+        "type": "u64"
+      },
+      {
+        "components": null,
+        "name": "color_",
+        "type": "b256"
+      },
+      {
+        "components": null,
+        "name": "input",
+        "type": "u64"
+      }
+    ],
+    "name": "make_transaction_fail",
+    "outputs": [
+      {
+        "components": null,
+        "name": "value",
+        "type": "u64"
+      }
+    ],
+    "type": "function"
+  }
+
+]

@@ -6,12 +6,15 @@ use forc::test::{forc_build, BuildCommand};
 use fuel_asm::Opcode;
 use fuel_core::service::{Config, FuelService};
 use fuel_gql_client::client::FuelClient;
-use fuel_tx::{ContractId, Input, Output, Receipt, Transaction, UtxoId};
+use fuel_tx::{
+    Address, Color, ContractId, Input, Output, Receipt, StorageSlot, Transaction, UtxoId, Witness,
+};
 use fuel_types::{Bytes32, Immediate12, Salt, Word};
 use fuel_vm::consts::{REG_CGAS, REG_RET, REG_ZERO, VM_TX_MEMORY};
 use fuel_vm::prelude::Contract as FuelContract;
 use fuels_core::ParamType;
 use fuels_core::{Detokenize, Selector, Token, WORD_SIZE};
+use rand::{Rng, RngCore};
 use std::marker::PhantomData;
 
 #[derive(Debug, Clone, Default)]
@@ -43,7 +46,11 @@ impl Contract {
     pub fn compute_contract_id(compiled_contract: &CompiledContract) -> ContractId {
         let fuel_contract = FuelContract::from(compiled_contract.raw.clone());
         let root = fuel_contract.root();
-        fuel_contract.id(&compiled_contract.salt, &root)
+        fuel_contract.id(
+            &compiled_contract.salt,
+            &root,
+            &FuelContract::default_state_root(),
+        )
     }
 
     /// Calls an already-deployed contract code.
@@ -56,9 +63,10 @@ impl Contract {
         fuel_client: &FuelClient,
         gas_price: Word,
         gas_limit: Word,
+        byte_price: Word,
         maturity: Word,
         custom_inputs: bool,
-    ) -> Result<Vec<Receipt>, String> {
+    ) -> Result<Vec<Receipt>, Error> {
         // Based on the defined script length,
         // we set the appropriate data offset.
         let script_len = 16;
@@ -130,20 +138,38 @@ impl Contract {
         // This needs to be changed to support multiple contract IDs.
         let output = Output::contract(0, Bytes32::zeroed(), Bytes32::zeroed());
 
+        // Important: this is a temporary workaround, for full context:
+        // https://github.com/FuelLabs/fuels-rs/issues/90
+        // Here we generate a random coin input to prevent transaction id
+        // collision in method calls that could be view-only.
+        let mut rng = rand::thread_rng();
+
+        let random_coin = Input::coin(
+            UtxoId::new(Bytes32::from(rng.gen::<[u8; 32]>()), 0),
+            Address::from(rng.gen::<[u8; 32]>()),
+            rng.next_u64(),
+            Color::from([0u8; 32]),
+            0,
+            0,
+            vec![],
+            vec![],
+        );
+
         let tx = Transaction::script(
             gas_price,
             gas_limit,
+            byte_price,
             maturity,
             script,
             script_data,
-            vec![input],
+            vec![input, random_coin],
             vec![output],
-            vec![],
+            vec![Witness::from(vec![0u8, 0u8])],
         );
 
         let script = Script::new(tx);
 
-        Ok(script.call(fuel_client).await.unwrap())
+        script.call(fuel_client).await
     }
 
     /// Creates an ABI call based on a function selector and
@@ -172,6 +198,7 @@ impl Contract {
         let encoded_selector = signature;
 
         let gas_price = 0;
+        let byte_price = 0;
         let gas_limit = 1_000_000;
         let maturity = 0;
 
@@ -183,6 +210,7 @@ impl Contract {
             encoded_args,
             gas_price,
             gas_limit,
+            byte_price,
             maturity,
             encoded_selector,
             fuel_client: fuel_client.clone(),
@@ -249,24 +277,28 @@ impl Contract {
         // @todo get these configurations from
         // params of this function.
         let gas_price = 0;
+        let byte_price = 0;
         let gas_limit = 1000000;
         let maturity = 0;
         let bytecode_witness_index = 0;
+        let storage_slots: Vec<StorageSlot> = vec![];
         let witnesses = vec![compiled_contract.raw.clone().into()];
 
         let static_contracts = vec![];
 
         let contract_id = Self::compute_contract_id(compiled_contract);
 
-        let output = Output::contract_created(contract_id);
+        let output = Output::contract_created(contract_id, FuelContract::default_state_root());
 
         let tx = Transaction::create(
             gas_price,
             gas_limit,
+            byte_price,
             maturity,
             bytecode_witness_index,
             compiled_contract.salt,
             static_contracts,
+            storage_slots,
             vec![],
             vec![output],
             witnesses,
@@ -288,6 +320,7 @@ pub struct ContractCall<D> {
     pub gas_price: u64,
     pub gas_limit: u64,
     pub maturity: u64,
+    pub byte_price: u64,
     pub datatype: PhantomData<D>,
     pub output_params: Vec<ParamType>,
     pub custom_inputs: bool,
@@ -311,11 +344,11 @@ where
             &self.fuel_client,
             self.gas_price,
             self.gas_limit,
+            self.byte_price,
             self.maturity,
             self.custom_inputs,
         )
-        .await
-        .unwrap();
+        .await?;
 
         let (encoded_value, index) = match receipts.iter().find(|&receipt| receipt.val().is_some())
         {

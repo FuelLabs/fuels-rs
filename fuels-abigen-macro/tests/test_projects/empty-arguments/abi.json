@@ -1,0 +1,101 @@
+[
+  {
+    "name": "method_with_empty_parenthesis_argument",
+    "inputs": [
+      {
+        "components": null,
+        "name": "gas_",
+        "type": "u64"
+      },
+      {
+        "components": null,
+        "name": "amount_",
+        "type": "u64"
+      },
+      {
+        "components": null,
+        "name": "color_",
+        "type": "b256"
+      },
+      {
+        "components": null,
+        "name": "an_argument_name",
+        "type": "()"
+      }
+    ],
+    "outputs": [
+      {
+        "components": null,
+        "name": "",
+        "type": "u64"
+      }
+    ],
+    "type": "function"
+  },
+  {
+    "name": "method_with_empty_string_argument",
+    "inputs": [
+      {
+        "components": null,
+        "name": "gas_",
+        "type": "u64"
+      },
+      {
+        "components": null,
+        "name": "amount_",
+        "type": "u64"
+      },
+      {
+        "components": null,
+        "name": "color_",
+        "type": "b256"
+      },
+      {
+        "components": null,
+        "name": "another_argument_name",
+        "type": "()"
+      }
+    ],
+    "outputs": [
+      {
+        "components": null,
+        "name": "",
+        "type": "u64"
+      }
+    ],
+    "type": "function"
+  },
+  {
+    "name": "method_with_empty_argument",
+    "inputs": [
+      {
+        "components": null,
+        "name": "gas_",
+        "type": "u64"
+      },
+      {
+        "components": null,
+        "name": "amount_",
+        "type": "u64"
+      },
+      {
+        "components": null,
+        "name": "color_",
+        "type": "b256"
+      },
+      {
+        "components": null,
+        "name": "bimbam",
+        "type": "()"
+      }
+    ],
+    "outputs": [
+      {
+        "components": null,
+        "name": "",
+        "type": "u64"
+      }
+    ],
+    "type": "function"
+  }
+]
