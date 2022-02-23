@@ -14,7 +14,7 @@ bytes = { version = "1.1.0", features = ["serde"] }
 fuel-core = { version = "0.3.2", default-features = false, features = ["test-helpers"] }
 fuel-gql-client = { version = "0.3.2", default-features = false }
 fuel-tx = "0.5"
-fuel-types = { version = "0.1", default-features = false, features = ["random"] }
+fuel-types = { version = "0.1", default-features = false }
 fuel-vm = "0.4"
 fuels-core = { version = "0.4.0", path = "../fuels-core" }
 hex = { version = "0.4.3", default-features = false, features = ["std"] }
@@ -27,3 +27,4 @@ tokio = { version = "1.10.1", features = ["full"] }
 
 [dev-dependencies]
 hex = { version = "0.4.3", default-features = false, features = ["std"] }
+fuel-types = { version = "0.1", default-features = false, features = ["random"] }
