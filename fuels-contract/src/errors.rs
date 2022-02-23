@@ -45,6 +45,11 @@ impl From<CodecError> for Error {
         }
     }
 }
+impl From<std::io::Error> for Error {
+    fn from(err: std::io::Error) -> Error {
+        Error::ContractCallError(err.to_string())
+    }
+}
 
 impl From<InvalidOutputType> for Error {
     fn from(err: InvalidOutputType) -> Error {

@@ -1,6 +1,6 @@
 [package]
 name = "fuels-core"
-version = "0.3.1"
+version = "0.4.0"
 authors = ["Fuel Labs <contact@fuel.sh>"]
 edition = "2021"
 homepage = "https://fuel.network/"
@@ -28,4 +28,3 @@ sway-types = { version = "0.1" }
 sway-utils = { version = "0.1" }
 syn = "1.0.12"
 thiserror = "1.0.30"
-url = "2.1"

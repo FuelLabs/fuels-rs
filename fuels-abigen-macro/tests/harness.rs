@@ -3,6 +3,7 @@ use fuel_gql_client::client::FuelClient;
 use fuel_tx::Salt;
 use fuels_abigen_macro::abigen;
 use fuels_contract::contract::Contract;
+use fuels_contract::errors::Error;
 use fuels_core::Token;
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
@@ -1335,6 +1336,29 @@ async fn abigen_different_structs_same_arg_name() {
 
     assert_eq!(res_two.value, 41);
 }
+#[tokio::test]
+async fn test_reverting_transaction() {
+    let rng = &mut StdRng::seed_from_u64(2322u64);
+
+    abigen!(
+        RevertingContract,
+        "fuels-abigen-macro/tests/test_projects/revert_transaction_error/abi.json"
+    );
+
+    // Build the contract
+    let salt: [u8; 32] = rng.gen();
+    let salt = Salt::from(salt);
+
+    let compiled =
+        Contract::compile_sway_contract("tests/test_projects/revert_transaction_error", salt)
+            .unwrap();
+
+    let (client, _) = Contract::launch_and_deploy(&compiled).await.unwrap();
+    let contract_instance = RevertingContract::new(compiled, client);
+
+    let result = contract_instance.make_transaction_fail(0).call().await;
+    assert!(matches!(result, Err(Error::ContractCallError(_))));
+}
 
 #[tokio::test]
 async fn multiple_read_calls() {
@@ -1367,4 +1391,43 @@ async fn multiple_read_calls() {
     let stored = contract_instance.read(0).call().await.unwrap();
 
     assert!(stored.value == 42);
+}
+
+#[tokio::test]
+async fn test_methods_typeless_argument() {
+    let rng = &mut StdRng::seed_from_u64(2322u64);
+
+    // Generates the bindings from the an ABI definition inline.
+    // The generated bindings can be accessed through `MyContract`.
+    abigen!(
+        MyContract,
+        "fuels-abigen-macro/tests/test_projects/empty-arguments/abi.json"
+    );
+    // Build the contract
+    let salt: [u8; 32] = rng.gen();
+    let salt = Salt::from(salt);
+
+    let compiled =
+        Contract::compile_sway_contract("tests/test_projects/empty-arguments", salt).unwrap();
+    let (client, contract_id) = Contract::launch_and_deploy(&compiled).await.unwrap();
+    println!("Contract deployed @ {:x}", contract_id);
+    let contract_instance = MyContract::new(compiled, client);
+    let result = contract_instance
+        .method_with_empty_parenthesis_argument()
+        .call()
+        .await
+        .unwrap();
+    assert_eq!(result.value, 21);
+    let result = contract_instance
+        .method_with_empty_string_argument()
+        .call()
+        .await
+        .unwrap();
+    assert_eq!(result.value, 42);
+    let result = contract_instance
+        .method_with_empty_argument()
+        .call()
+        .await
+        .unwrap();
+    assert_eq!(result.value, 63);
 }
