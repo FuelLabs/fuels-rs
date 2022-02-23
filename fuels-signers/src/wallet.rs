@@ -108,27 +108,6 @@ impl Wallet {
         self.provider = provider
     }
 
-    /// Append the witnesses (signatures) for the transaction.
-    /// Note that it mutates the `Transaction` being passed into it
-    /// effectively updating its `Witness` field with the `Signature`s.
-    /// Previous witnesses in this `Transaction` are preserved, allowing
-    /// the caller to implement multisig (transactions with many signatures).
-    pub fn append_signatures(&self, tx: &mut Transaction, sigs: &[Signature]) {
-        let new_witnesses: Vec<Witness> = sigs
-            .iter()
-            .map(|sig| Witness::from(sig.compact.as_ref()))
-            .collect();
-
-        let mut witnesses: Vec<Witness> = tx.witnesses().to_vec();
-        match witnesses.len() {
-            0 => tx.set_witnesses(new_witnesses),
-            _ => {
-                witnesses.extend(new_witnesses);
-                tx.set_witnesses(witnesses)
-            }
-        }
-    }
-
     /// Transfer funds from this wallet to another `Address`.
     /// Fails if amount for color is larger than address's spendable coins.
     ///
