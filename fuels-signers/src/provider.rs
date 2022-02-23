@@ -86,6 +86,8 @@ impl Provider {
 
     /// Craft a transaction used to transfer funds between two addresses.
     pub fn build_transfer_tx(&self, inputs: &[Input], outputs: &[Output]) -> Transaction {
+        // This script contains a single Opcode that returns immediately (RET)
+        // since all this transaction does is move Inputs and Outputs around.
         let script = Opcode::RET(0x10).to_bytes().to_vec();
         Transaction::Script {
             gas_price: 0,
