@@ -56,7 +56,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --verbose
+          args: --all-features --verbose
 
   publish:
     # Only do this job if publishing a release
