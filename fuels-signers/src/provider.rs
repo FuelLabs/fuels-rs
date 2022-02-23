@@ -2,6 +2,7 @@ use fuel_gql_client::client::schema::coin::Coin;
 use fuel_gql_client::client::{FuelClient, PageDirection, PaginationRequest};
 use fuel_tx::Receipt;
 use fuel_tx::{Address, Color, Input, Output, Transaction};
+use fuel_vm::consts::REG_ONE;
 use std::io;
 
 use fuel_vm::prelude::Opcode;
@@ -88,7 +89,7 @@ impl Provider {
     pub fn build_transfer_tx(&self, inputs: &[Input], outputs: &[Output]) -> Transaction {
         // This script contains a single Opcode that returns immediately (RET)
         // since all this transaction does is move Inputs and Outputs around.
-        let script = Opcode::RET(0x10).to_bytes().to_vec();
+        let script = Opcode::RET(REG_ONE).to_bytes().to_vec();
         Transaction::Script {
             gas_price: 0,
             gas_limit: 1_000_000,

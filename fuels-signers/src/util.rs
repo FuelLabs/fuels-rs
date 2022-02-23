@@ -1,4 +1,5 @@
 #[allow(missing_docs)]
+#[cfg(feature = "test-helpers")]
 /// Testing utilities
 pub mod test_helpers {
     use crate::provider::Provider;

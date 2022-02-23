@@ -1,9 +1,7 @@
-mod wallet;
-
-pub use wallet::Wallet;
 pub mod provider;
 pub mod signature;
 pub mod util;
+pub mod wallet;
 
 use signature::Signature;
 
@@ -13,7 +11,7 @@ use fuel_types::Address;
 use std::error::Error;
 
 /// A wallet instantiated with a locally stored private key
-pub type LocalWallet = Wallet;
+pub type LocalWallet = wallet::Wallet;
 
 /// Trait for signing transactions and messages
 ///

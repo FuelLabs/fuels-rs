@@ -27,34 +27,34 @@ use thiserror::Error;
 /// use fuels_signers::provider::Provider;
 /// use fuels_signers::util::test_helpers::setup_local_node;
 ///
-/// # async fn foo() -> Result<(), Box<dyn std::error::Error>> {
-/// // Generate your secret key
-/// let mut rng = StdRng::seed_from_u64(2322u64);
-/// let mut secret_seed = [0u8; 32];
-/// rng.fill_bytes(&mut secret_seed);
+/// async fn foo() -> Result<(), Box<dyn std::error::Error>> {
+///   // Generate your secret key
+///   let mut rng = StdRng::seed_from_u64(2322u64);
+///   let mut secret_seed = [0u8; 32];
+///   rng.fill_bytes(&mut secret_seed);
 ///
-/// let secret =
-///     SecretKey::from_slice(&secret_seed).expect("Failed to generate random secret!");
+///   let secret =
+///       SecretKey::from_slice(&secret_seed).expect("Failed to generate random secret!");
 ///
-/// // Setup local test node
+///   // Setup local test node
 ///
-/// let provider = Provider::new(setup_local_node(vec![]).await);
+///   let provider = Provider::new(setup_local_node(vec![]).await);
 ///
-/// // Create a new local wallet with the newly generated key
-/// let wallet = LocalWallet::new_from_private_key(secret, provider)?;
+///   // Create a new local wallet with the newly generated key
+///   let wallet = LocalWallet::new_from_private_key(secret, provider)?;
 ///
-/// let message = "my message";
-/// let signature = wallet.sign_message(message.as_bytes()).await?;
+///   let message = "my message";
+///   let signature = wallet.sign_message(message.as_bytes()).await?;
 ///
-/// // Recover address that signed the message
-/// let recovered_address = signature.recover(message).unwrap();
+///   // Recover address that signed the message
+///   let recovered_address = signature.recover(message).unwrap();
 ///
-/// assert_eq!(wallet.address(), recovered_address);
+///   assert_eq!(wallet.address(), recovered_address);
 ///
-/// // Verify signature
-/// signature.verify(message, recovered_address).unwrap();
-/// # Ok(())
-/// # }
+///   // Verify signature
+///   signature.verify(message, recovered_address).unwrap();
+///   Ok(())
+/// }
 /// ```
 ///
 /// [`Signature`]: fuels_core::signature::Signature
@@ -179,18 +179,12 @@ impl Wallet {
         let spendable = self.get_spendable_coins(&color, amount).await?;
 
         let mut inputs: Vec<Input> = vec![];
-        let mut outputs: Vec<Output> = vec![];
-
-        let mut amount_to_send = 0;
-
-        let output_coin = Output::coin(*to, amount, color);
-        outputs.push(output_coin);
+        let outputs: Vec<Output> = vec![
+            Output::coin(*to, amount, color),
+            Output::change(self.address(), 0, color),
+        ];
 
         for coin in spendable {
-            if amount_to_send >= amount {
-                break;
-            }
-
             let input_coin = Input::coin(
                 UtxoId::from(coin.utxo_id),
                 coin.owner.into(),
@@ -203,14 +197,6 @@ impl Wallet {
             );
 
             inputs.push(input_coin);
-
-            amount_to_send += coin.amount.0;
-        }
-
-        // Calculate change, if applicable
-        if amount_to_send > amount {
-            let change = Output::change(self.address(), amount_to_send - amount, color);
-            outputs.push(change);
         }
 
         // Build transaction and sign it
