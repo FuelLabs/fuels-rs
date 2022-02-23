@@ -27,7 +27,7 @@ pub trait Signer: std::fmt::Debug + Send + Sync {
     ) -> Result<Signature, Self::Error>;
 
     /// Signs the transaction
-    async fn sign_transaction(&self, message: &Transaction) -> Result<Signature, Self::Error>;
+    async fn sign_transaction(&self, message: &mut Transaction) -> Result<Signature, Self::Error>;
 
     /// Returns the signer's Fuel Address
     fn address(&self) -> Address;
@@ -102,7 +102,7 @@ mod tests {
             Color::from([0u8; 32]),
         );
 
-        let tx = Transaction::script(
+        let mut tx = Transaction::script(
             0,
             1000000,
             0,
@@ -114,7 +114,7 @@ mod tests {
             vec![],
         );
 
-        let signature = wallet.sign_transaction(&tx).await.unwrap();
+        let signature = wallet.sign_transaction(&mut tx).await.unwrap();
 
         // Check if signature is what we expect it to be
         assert_eq!(signature.compact, Signature::from_str("0xa1287a24af13fc102cb9e60988b558d5575d7870032f64bafcc2deda2c99125fb25eca55a29a169de156cb30700965e2b26278fcc7ad375bc720440ea50ba3cb").unwrap().compact);

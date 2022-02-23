@@ -181,6 +181,8 @@ impl Wallet {
         let mut inputs: Vec<Input> = vec![];
         let outputs: Vec<Output> = vec![
             Output::coin(*to, amount, color),
+            // Note that the change will be computed by the node.
+            // Here we only have to tell the node who will own the change and its color.
             Output::change(self.address(), 0, color),
         ];
 
@@ -201,8 +203,7 @@ impl Wallet {
 
         // Build transaction and sign it
         let mut tx = self.provider.build_transfer_tx(&inputs, &outputs);
-        let sig = self.sign_transaction(&tx).await.unwrap();
-        self.append_signatures(&mut tx, &[sig]);
+        let _sig = self.sign_transaction(&mut tx).await.unwrap();
 
         // Note that currently coins being sent aren't marked as spent by the client.
         // This will be coming up soon.
@@ -243,11 +244,23 @@ impl Signer for Wallet {
         Ok(Signature { compact: sig })
     }
 
-    async fn sign_transaction(&self, _tx: &Transaction) -> Result<Signature, Self::Error> {
-        let id = _tx.id();
+    async fn sign_transaction(&self, tx: &mut Transaction) -> Result<Signature, Self::Error> {
+        let id = tx.id();
         let sig = secp256k1_sign_compact_recoverable(self.private_key.as_ref(), &*id).unwrap();
+        let sig = Signature { compact: sig };
 
-        Ok(Signature { compact: sig })
+        let witness = vec![Witness::from(sig.compact.as_ref())];
+
+        let mut witnesses: Vec<Witness> = tx.witnesses().to_vec();
+        match witnesses.len() {
+            0 => tx.set_witnesses(witness),
+            _ => {
+                witnesses.extend(witness);
+                tx.set_witnesses(witnesses)
+            }
+        }
+
+        Ok(sig)
     }
 
     fn address(&self) -> Address {
