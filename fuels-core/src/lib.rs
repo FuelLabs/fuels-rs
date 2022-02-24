@@ -44,6 +44,25 @@ impl Default for ParamType {
     }
 }
 
+impl ParamType {
+    // Checks whether the `ParamType` is bigger than a `WORD`
+    pub fn bigger_than_word(&self) -> bool {
+        match *self {
+            Self::B256 => true,
+            Self::String(size) => {
+                if size > 8 {
+                    return true;
+                }
+                false
+            }
+            _ => false,
+            // More types will be handled later.
+            // Currently, the support for arrays in the SDK is broken
+            // due to a change to the array definition in Sway.
+        }
+    }
+}
+
 impl fmt::Display for ParamType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {

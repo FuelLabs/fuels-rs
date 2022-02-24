@@ -1431,3 +1431,42 @@ async fn test_methods_typeless_argument() {
         .unwrap();
     assert_eq!(result.value, 63);
 }
+
+#[tokio::test]
+async fn test_large_return_data() {
+    let rng = &mut StdRng::seed_from_u64(2322u64);
+
+    abigen!(
+        MyContract,
+        "fuels-abigen-macro/tests/test_projects/large-return-data/abi.json"
+    );
+
+    let salt: [u8; 32] = rng.gen();
+    let salt = Salt::from(salt);
+
+    let compiled =
+        Contract::compile_sway_contract("tests/test_projects/large-return-data", salt).unwrap();
+
+    let (client, _contract_id) = Contract::launch_and_deploy(&compiled).await.unwrap();
+
+    let contract_instance = MyContract::new(compiled, client);
+
+    let res = contract_instance.get_id().call().await.unwrap();
+    println!("res: {:?}\n", res);
+
+    assert_eq!(
+        res.value,
+        [
+            255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+            255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255
+        ]
+    );
+
+    // One word-sized string
+    let res = contract_instance.get_small_string().call().await.unwrap();
+    assert_eq!(res.value, "gggggggg");
+
+    // Two word-sized string
+    let res = contract_instance.get_large_string().call().await.unwrap();
+    assert_eq!(res.value, "ggggggggg");
+}

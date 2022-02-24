@@ -350,14 +350,38 @@ where
         )
         .await?;
 
-        let (encoded_value, index) = match receipts.iter().find(|&receipt| receipt.val().is_some())
-        {
-            Some(r) => {
-                let index = receipts.iter().position(|elt| elt == r).unwrap();
-                (r.val().unwrap().to_be_bytes(), Some(index))
-            }
-            None => ([0u8; 8], None),
+        // If it's an ABI method without a return value, exit early.
+        if self.output_params.is_empty() {
+            return Ok(CallResponse {
+                value: D::from_tokens(vec![])?,
+                receipts,
+            });
+        }
+
+        // Right now we only support methods with a single return type.
+        // Soon we'll support tuple as a return type and we'll have to update the logic in here.
+        let output_param = &self.output_params[0];
+
+        // If the method's return type is bigger than a single `WORD`, the returned value
+        // is stored in `ReturnData.data`, otherwise, it's stored in `Return.val`.
+        // Here we're checking for that.
+        let (encoded_value, index) = match output_param.bigger_than_word() {
+            true => match receipts.iter().find(|&receipt| receipt.data().is_some()) {
+                Some(r) => {
+                    let index = receipts.iter().position(|elt| elt == r).unwrap();
+                    (r.data().unwrap().to_vec(), Some(index))
+                }
+                None => (vec![], None),
+            },
+            false => match receipts.iter().find(|&receipt| receipt.val().is_some()) {
+                Some(r) => {
+                    let index = receipts.iter().position(|elt| elt == r).unwrap();
+                    (r.val().unwrap().to_be_bytes().to_vec(), Some(index))
+                }
+                None => (vec![], None),
+            },
         };
+
         if index.is_some() {
             receipts.remove(index.unwrap());
         }
