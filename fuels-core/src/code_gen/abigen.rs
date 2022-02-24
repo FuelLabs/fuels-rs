@@ -13,6 +13,7 @@ use sway_types::{JsonABI, Property};
 
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
+use std::str::FromStr;
 
 use super::custom_types_gen::CustomType;
 
@@ -111,18 +112,25 @@ impl Abigen {
         } else {
             (
                 quote! {
-                    use fuels_contract::contract::{Contract, ContractCall, CompiledContract};
+                    use fuels_contract::contract::{Contract, ContractCall};
                     use fuel_gql_client::client::FuelClient;
+                    use fuel_tx::ContractId;
+                    use std::str::FromStr;
                 },
                 quote! {
                     pub struct #name {
-                        compiled: CompiledContract,
+                        contract_id: ContractId,
                         fuel_client: FuelClient
                     }
 
                     impl #name {
-                        pub fn new(compiled: CompiledContract, fuel_client: FuelClient) -> Self {
-                            Self{ compiled, fuel_client }
+                        pub fn new(contract_id: String, fuel_client: FuelClient) -> Self {
+                            let contract_id = ContractId::from_str(&contract_id).unwrap();
+                            Self{ contract_id, fuel_client }
+                        }
+                        pub fn new_default(fuel_client: FuelClient) -> Self {
+                            let contract_id = ContractId::new([0xFFu8;32]);
+                            Self{ contract_id, fuel_client }
                         }
 
                         #contract_functions

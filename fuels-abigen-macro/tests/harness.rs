@@ -26,7 +26,7 @@ async fn compile_bindings_from_contract_file() {
     let fuel_client = setup_local_node().await;
 
     // `SimpleContract` is the name of the contract
-    let contract_instance = SimpleContract::new(Default::default(), fuel_client);
+    let contract_instance = SimpleContract::new_default(fuel_client);
 
     // Calls the function defined in the JSON ABI.
     // Note that this is type-safe, if the function does exist
@@ -95,7 +95,7 @@ async fn compile_bindings_from_inline_contract() {
 
     let fuel_client = setup_local_node().await;
 
-    let contract_instance = SimpleContract::new(Default::default(), fuel_client);
+    let contract_instance = SimpleContract::new_default(fuel_client);
 
     let contract_call = contract_instance.takes_ints_returns_bool(42 as u32);
 
@@ -153,7 +153,7 @@ async fn compile_bindings_single_param() {
 
     let fuel_client = setup_local_node().await;
 
-    let contract_instance = SimpleContract::new(Default::default(), fuel_client);
+    let contract_instance = SimpleContract::new_default(fuel_client);
 
     let contract_call = contract_instance.takes_ints_returns_bool(42);
 
@@ -208,7 +208,7 @@ async fn compile_bindings_array_input() {
 
     let fuel_client = setup_local_node().await;
 
-    let contract_instance = SimpleContract::new(Default::default(), fuel_client);
+    let contract_instance = SimpleContract::new_default(fuel_client);
 
     let input: Vec<u16> = vec![1, 2, 3, 4];
     let contract_call = contract_instance.takes_array(input);
@@ -267,7 +267,7 @@ async fn compile_bindings_bool_array_input() {
 
     let fuel_client = setup_local_node().await;
 
-    let contract_instance = SimpleContract::new(Default::default(), fuel_client);
+    let contract_instance = SimpleContract::new_default(fuel_client);
 
     let input: Vec<bool> = vec![true, false, true];
     let contract_call = contract_instance.takes_array(input);
@@ -326,7 +326,7 @@ async fn compile_bindings_byte_input() {
 
     let fuel_client = setup_local_node().await;
 
-    let contract_instance = SimpleContract::new(Default::default(), fuel_client);
+    let contract_instance = SimpleContract::new_default(fuel_client);
 
     let contract_call = contract_instance.takes_byte(10 as u8);
 
@@ -381,7 +381,7 @@ async fn compile_bindings_string_input() {
 
     let fuel_client = setup_local_node().await;
 
-    let contract_instance = SimpleContract::new(Default::default(), fuel_client);
+    let contract_instance = SimpleContract::new_default(fuel_client);
 
     let contract_call = contract_instance.takes_string("This is a full sentence".into());
 
@@ -439,7 +439,7 @@ async fn compile_bindings_b256_input() {
 
     let fuel_client = setup_local_node().await;
 
-    let contract_instance = SimpleContract::new(Default::default(), fuel_client);
+    let contract_instance = SimpleContract::new_default(fuel_client);
 
     let mut hasher = Sha256::new();
     hasher.update("test string".as_bytes());
@@ -517,7 +517,7 @@ async fn compile_bindings_struct_input() {
         bar: "fuel".to_string(),
     };
 
-    let contract_instance = SimpleContract::new(Default::default(), fuel_client);
+    let contract_instance = SimpleContract::new_default(fuel_client);
 
     let contract_call = contract_instance.takes_struct(input);
 
@@ -596,7 +596,7 @@ async fn compile_bindings_nested_struct_input() {
 
     let fuel_client = setup_local_node().await;
 
-    let contract_instance = SimpleContract::new(Default::default(), fuel_client);
+    let contract_instance = SimpleContract::new_default(fuel_client);
 
     let contract_call = contract_instance.takes_nested_struct(input);
 
@@ -661,7 +661,7 @@ async fn compile_bindings_enum_input() {
 
     let fuel_client = setup_local_node().await;
 
-    let contract_instance = SimpleContract::new(Default::default(), fuel_client);
+    let contract_instance = SimpleContract::new_default(fuel_client);
 
     let contract_call = contract_instance.takes_enum(variant);
 
@@ -735,7 +735,7 @@ async fn create_struct_from_decoded_tokens() {
 
     let fuel_client = setup_local_node().await;
 
-    let contract_instance = SimpleContract::new(Default::default(), fuel_client);
+    let contract_instance = SimpleContract::new_default(fuel_client);
 
     let contract_call = contract_instance.takes_struct(struct_from_tokens);
 
@@ -820,7 +820,7 @@ async fn create_nested_struct_from_decoded_tokens() {
 
     let fuel_client = setup_local_node().await;
 
-    let contract_instance = SimpleContract::new(Default::default(), fuel_client);
+    let contract_instance = SimpleContract::new_default(fuel_client);
 
     let contract_call = contract_instance.takes_nested_struct(nested_struct_from_tokens);
 
@@ -923,8 +923,7 @@ async fn example_workflow() {
     let (client, contract_id) = Contract::launch_and_deploy(&compiled).await.unwrap();
 
     println!("Contract deployed @ {:x}", contract_id);
-
-    let contract_instance = MyContract::new(compiled, client);
+    let contract_instance = MyContract::new(contract_id.to_string(), client);
 
     let result = contract_instance
         .initialize_counter(42) // Build the ABI call
@@ -1084,8 +1083,7 @@ async fn type_safe_output_values() {
     let (client, contract_id) = Contract::launch_and_deploy(&compiled).await.unwrap();
 
     println!("Contract deployed @ {:x}", contract_id);
-
-    let contract_instance = MyContract::new(compiled, client);
+    let contract_instance = MyContract::new(contract_id.to_string(), client);
 
     // `response`'s type matches the return type of `is_event()`
     let response = contract_instance.is_even(10).call().await.unwrap();
@@ -1208,7 +1206,7 @@ async fn call_with_structs() {
 
     println!("Contract deployed @ {:x}", contract_id);
 
-    let contract_instance = MyContract::new(compiled, client);
+    let contract_instance = MyContract::new(contract_id.to_string(), client);
 
     let counter_config = CounterConfig {
         dummy: true,
@@ -1290,7 +1288,7 @@ async fn call_with_empty_return() {
 
     println!("Contract deployed @ {:x}", contract_id);
 
-    let contract_instance = MyContract::new(compiled, client);
+    let contract_instance = MyContract::new(contract_id.to_string(), client);
 
     let _result = contract_instance
         .store_value(42) // Build the ABI call
@@ -1319,7 +1317,7 @@ async fn abigen_different_structs_same_arg_name() {
 
     println!("Contract deployed @ {:x}", contract_id);
 
-    let contract_instance = MyContract::new(compiled, client);
+    let contract_instance = MyContract::new(contract_id.to_string(), client);
 
     let param_one = StructOne { foo: 42 };
     let param_two = StructTwo { bar: 42 };
@@ -1353,8 +1351,8 @@ async fn test_reverting_transaction() {
         Contract::compile_sway_contract("tests/test_projects/revert_transaction_error", salt)
             .unwrap();
 
-    let (client, _) = Contract::launch_and_deploy(&compiled).await.unwrap();
-    let contract_instance = RevertingContract::new(compiled, client);
+    let (client, contract_id) = Contract::launch_and_deploy(&compiled).await.unwrap();
+    let contract_instance = RevertingContract::new(contract_id.to_string(), client);
 
     let result = contract_instance.make_transaction_fail(0).call().await;
     assert!(matches!(result, Err(Error::ContractCallError(_))));
@@ -1380,7 +1378,7 @@ async fn multiple_read_calls() {
 
     println!("Contract deployed @ {:x}", contract_id);
 
-    let contract_instance = MyContract::new(compiled, client);
+    let contract_instance = MyContract::new(contract_id.to_string(), client);
 
     contract_instance.store(42).call().await.unwrap();
 
@@ -1411,7 +1409,7 @@ async fn test_methods_typeless_argument() {
         Contract::compile_sway_contract("tests/test_projects/empty-arguments", salt).unwrap();
     let (client, contract_id) = Contract::launch_and_deploy(&compiled).await.unwrap();
     println!("Contract deployed @ {:x}", contract_id);
-    let contract_instance = MyContract::new(compiled, client);
+    let contract_instance = MyContract::new(contract_id.to_string(), client);
     let result = contract_instance
         .method_with_empty_parenthesis_argument()
         .call()

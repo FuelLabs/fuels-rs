@@ -187,7 +187,7 @@ impl Contract {
     /// For more details see `code_gen/functions_gen.rs`.
     pub fn method_hash<D: Detokenize>(
         fuel_client: &FuelClient,
-        compiled_contract: &CompiledContract,
+        contract_id: ContractId,
         signature: Selector,
         output_params: &[ParamType],
         args: &[Token],
@@ -205,7 +205,7 @@ impl Contract {
         let custom_inputs = args.iter().any(|t| matches!(t, Token::Struct(_)));
 
         Ok(ContractCall {
-            contract_id: Self::compute_contract_id(compiled_contract),
+            contract_id,
             encoded_args,
             gas_price,
             gas_limit,

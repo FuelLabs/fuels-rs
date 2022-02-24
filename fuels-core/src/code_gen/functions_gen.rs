@@ -65,7 +65,7 @@ pub fn expand_function(
     Ok(quote! {
         #doc
         pub fn #name(&self #input) -> #result {
-            Contract::method_hash(&self.fuel_client, &self.compiled,
+            Contract::method_hash(&self.fuel_client, self.contract_id,
                 #tokenized_signature, #output_params_token, #arg).expect("method not found (this should never happen)")
         }
     })
@@ -305,7 +305,7 @@ mod tests {
 pub fn HelloWorld(&self, bimbam: bool) -> ContractCall<()> {
     Contract::method_hash(
         &self.fuel_client,
-        &self.compiled,
+        self.contract_id,
         [0, 0, 0, 0, 126, 56, 119, 51],
         &[],
         &[bimbam.into_token() ,]
@@ -412,7 +412,7 @@ pub fn hello_world(
 ) -> ContractCall<((bool , u64 ,) , (bool, u64 ,))> {
     Contract::method_hash(
         &self.fuel_client,
-        &self.compiled,
+        self.contract_id,
         [0, 0, 0, 0, 31, 81, 105, 10],
         &[
             ParamType::Struct(vec![ParamType::Bool, ParamType::U64]),

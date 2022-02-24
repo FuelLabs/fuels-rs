@@ -163,7 +163,7 @@ impl MyContract {
     pub fn initialize_counter(&self, arg: u64) -> ContractCall<u64> {
         Contract::method_hash(
             &self.fuel_client,
-            &self.compiled,
+            &self.contrat_id,
             [0, 0, 0, 0, 2, 218, 221, 84],
             &[arg.into_token()],
         )
@@ -173,7 +173,7 @@ impl MyContract {
     pub fn increment_counter(&self, arg: u64) -> ContractCall<u64> {
         Contract::method_hash(
             &self.fuel_client,
-            &self.compiled,
+            &self.contrat_id,
             [0, 0, 0, 0, 231, 248, 153, 146],
             &[arg.into_token()],
         )
