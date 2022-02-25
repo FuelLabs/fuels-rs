@@ -220,19 +220,10 @@ impl Contract {
         })
     }
 
-    /// Launches a local `fuel-core` network and deploys a contract to it.
-    /// If you want to deploy a contract against another network of
-    /// your choosing, use the `deploy` function instead.
-    pub async fn launch_and_deploy(
-        compiled_contract: &CompiledContract,
-    ) -> Result<(FuelClient, ContractId), Error> {
-        let srv = FuelService::new_node(Config::local_node()).await.unwrap();
-
-        let fuel_client = FuelClient::from(srv.bound_address);
-
-        let contract_id = Self::deploy(compiled_contract, &fuel_client).await?;
-
-        Ok((fuel_client, contract_id))
+    /// Launches a local `fuel-core` network based on provided config.
+    pub async fn launch(config: Config) -> Result<FuelClient, Error> {
+        let srv = FuelService::new_node(config).await.unwrap();
+        Ok(FuelClient::from(srv.bound_address))
     }
 
     /// Deploys a compiled contract to a running node
