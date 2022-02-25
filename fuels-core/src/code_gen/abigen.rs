@@ -13,7 +13,6 @@ use sway_types::{JsonABI, Property};
 
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
-use std::str::FromStr;
 
 use super::custom_types_gen::CustomType;
 
