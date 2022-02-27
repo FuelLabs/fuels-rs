@@ -14,6 +14,12 @@ pub struct ABIParser {
     fn_selector: Option<Vec<u8>>,
 }
 
+impl Default for ABIParser {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ABIParser {
     pub fn new() -> Self {
         ABIParser { fn_selector: None }
@@ -204,7 +210,7 @@ impl ABIParser {
     /// Takes a ParamType and a value string and joins them as a single
     /// Token that holds the value within it. This Token is used
     /// in the encoding process.
-    pub fn tokenize<'a>(&self, param: &ParamType, value: String) -> Result<Token, Error> {
+    pub fn tokenize(&self, param: &ParamType, value: String) -> Result<Token, Error> {
         let trimmed_value = value.trim();
         match &*param {
             ParamType::U8 => Ok(Token::U8(trimmed_value.parse::<u8>()?)),
@@ -414,12 +420,8 @@ impl ABIParser {
             )));
         }
 
-        let params_result: Result<Vec<_>, _> = entry
-            .unwrap()
-            .outputs
-            .iter()
-            .map(|param| parse_param(param))
-            .collect();
+        let params_result: Result<Vec<_>, _> =
+            entry.unwrap().outputs.iter().map(parse_param).collect();
 
         match params_result {
             Ok(params) => {

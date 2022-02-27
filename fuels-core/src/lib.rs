@@ -44,6 +44,20 @@ impl Default for ParamType {
     }
 }
 
+impl ParamType {
+    // Checks whether the `ParamType` is bigger than a `WORD`
+    pub fn bigger_than_word(&self) -> bool {
+        match *self {
+            Self::B256 => true,
+            Self::String(size) => size > 8,
+            _ => false,
+            // More types will be handled later.
+            // Currently, the support for arrays in the SDK is broken
+            // due to a change to the array definition in Sway.
+        }
+    }
+}
+
 impl fmt::Display for ParamType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
@@ -52,15 +66,13 @@ impl fmt::Display for ParamType {
                 write!(f, "{}", t)
             }
             ParamType::Array(t, size) => {
-                let boxed_type_str = format!("Box::new(ParamType::{})", t.to_string());
+                let boxed_type_str = format!("Box::new(ParamType::{})", t);
                 let arr_str = format!("Array({},{})", boxed_type_str, size);
                 write!(f, "{}", arr_str)
             }
             ParamType::Struct(inner) => {
-                let inner_strings: Vec<String> = inner
-                    .iter()
-                    .map(|p| format!("ParamType::{}", p.to_string()))
-                    .collect();
+                let inner_strings: Vec<String> =
+                    inner.iter().map(|p| format!("ParamType::{}", p)).collect();
 
                 let s = format!("Struct(vec![{}])", inner_strings.join(","));
                 write!(f, "{}", s)
