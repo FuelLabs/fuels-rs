@@ -17,7 +17,7 @@ async fn harness() {
     let compiled = Contract::compile_sway_contract("./", salt).unwrap();
 
     // Launch a local network and deploy the contract
-    let client = Contract::launch(Config::local_node()).await.unwrap();
+    let client = Provider::launch(Config::local_node()).await.unwrap();
     let contract_id = Contract::deployed(&compiled, &client).await.unwrap();
 
     let contract_instance = MyContract::new(compiled, client);

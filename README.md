@@ -88,7 +88,7 @@ let contract_id = Contract::deploy(compiled_contract, fuel_client).await.unwrap(
 
 Alternatively, if you want to launch a local node for every deployment, which is usually 
 useful for smaller tests where you don't want to keep state between each test, you can use 
-`Contract::launch(Config::local_node())`:
+`Provider::launch(Config::local_node())`:
 
 ```Rust
 // Build the contract
@@ -99,7 +99,7 @@ let compiled =
     Contract::compile_sway_contract("path/to/your/fuel/project", salt).unwrap();
 
 // Now get the Fuel client _and_ contract_id back.
-let client = Contract::launch(Config::local_node()).await.unwrap();
+let client = Provider::launch(Config::local_node()).await.unwrap();
 let contract_id = Contract::deploy(&compiled, &client).await.unwrap();
 ```
 
