@@ -1549,3 +1549,44 @@ async fn test_large_return_data() {
     let res = contract_instance.get_large_string().call().await.unwrap();
     assert_eq!(res.value, "ggggggggg");
 }
+
+#[tokio::test]
+async fn test_provider_node_launch_and_connect() {
+    let rng = &mut StdRng::seed_from_u64(2322u64);
+
+    abigen!(
+        MyContract,
+        "fuels-abigen-macro/tests/test_projects/contract_test/abi.json"
+    );
+
+    let salt: [u8; 32] = rng.gen();
+    let salt = Salt::from(salt);
+
+    let compiled =
+        Contract::compile_sway_contract("tests/test_projects/contract_test", salt).unwrap();
+
+    let config = Config::local_node();
+    let srv = FuelService::new_node(config).await.unwrap();
+    let launched_client = FuelClient::from(srv.bound_address);
+    let connected_client = Provider::connect(srv.bound_address).await.unwrap();
+    let contract_id = Contract::deploy(&compiled, &connected_client)
+        .await
+        .unwrap();
+    println!("Contract deployed @ {:x}", contract_id);
+    let contract_instance_connected = MyContract::new(contract_id.to_string(), connected_client);
+    let contract_instance_launched = MyContract::new(contract_id.to_string(), launched_client);
+
+    let result = contract_instance_connected
+        .initialize_counter(42) // Build the ABI call
+        .call() // Perform the network call
+        .await
+        .unwrap();
+    assert_eq!(42, result.value);
+
+    let result = contract_instance_launched
+        .increment_counter(10)
+        .call()
+        .await
+        .unwrap();
+    assert_eq!(52, result.value);
+}
