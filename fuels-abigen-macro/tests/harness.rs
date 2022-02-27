@@ -1497,6 +1497,7 @@ async fn test_connect_to_deployed_contract() {
         .await
         .unwrap();
     assert_eq!(result.value, 120);
+}
 
 #[tokio::test]
 async fn test_large_return_data() {
