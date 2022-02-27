@@ -1433,6 +1433,7 @@ async fn test_methods_typeless_argument() {
         .unwrap();
     assert_eq!(result.value, 63);
 }
+#[tokio::test]
 async fn test_connect_to_deployed_contract() {
     let rng = &mut StdRng::seed_from_u64(2322u64);
 
@@ -1514,9 +1515,9 @@ async fn test_large_return_data() {
     let compiled =
         Contract::compile_sway_contract("tests/test_projects/large-return-data", salt).unwrap();
 
-    let (client, _contract_id) = Contract::launch_and_deploy(&compiled).await.unwrap();
+    let (client, contract_id) = Contract::launch_and_deploy(&compiled).await.unwrap();
 
-    let contract_instance = MyContract::new(compiled, client);
+    let contract_instance = MyContract::new(contract_id.to_string(), client);
 
     let res = contract_instance.get_id().call().await.unwrap();
     println!("res: {:?}\n", res);
