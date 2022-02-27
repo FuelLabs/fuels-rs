@@ -127,11 +127,6 @@ impl Abigen {
                             let contract_id = ContractId::from_str(&contract_id).unwrap();
                             Self{ contract_id, fuel_client }
                         }
-                        pub fn new_default(fuel_client: FuelClient) -> Self {
-                            let contract_id = ContractId::new([0xFFu8;32]);
-                            Self{ contract_id, fuel_client }
-                        }
-
                         #contract_functions
                     }
                 },

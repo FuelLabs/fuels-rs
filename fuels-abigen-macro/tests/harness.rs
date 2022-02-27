@@ -13,6 +13,10 @@ async fn setup_local_node() -> FuelClient {
     let srv = FuelService::new_node(Config::local_node()).await.unwrap();
     FuelClient::from(srv.bound_address)
 }
+fn null_contract_id() -> String {
+    // a null contract address ~[0u8;32]
+    String::from("0000000000000000000000000000000000000000000000000000000000000000")
+}
 
 #[tokio::test]
 async fn compile_bindings_from_contract_file() {
@@ -26,7 +30,7 @@ async fn compile_bindings_from_contract_file() {
     let fuel_client = setup_local_node().await;
 
     // `SimpleContract` is the name of the contract
-    let contract_instance = SimpleContract::new_default(fuel_client);
+    let contract_instance = SimpleContract::new(null_contract_id(), fuel_client);
 
     // Calls the function defined in the JSON ABI.
     // Note that this is type-safe, if the function does exist
@@ -95,7 +99,7 @@ async fn compile_bindings_from_inline_contract() {
 
     let fuel_client = setup_local_node().await;
 
-    let contract_instance = SimpleContract::new_default(fuel_client);
+    let contract_instance = SimpleContract::new(null_contract_id(), fuel_client);
 
     let contract_call = contract_instance.takes_ints_returns_bool(42 as u32);
 
@@ -153,7 +157,7 @@ async fn compile_bindings_single_param() {
 
     let fuel_client = setup_local_node().await;
 
-    let contract_instance = SimpleContract::new_default(fuel_client);
+    let contract_instance = SimpleContract::new(null_contract_id(), fuel_client);
 
     let contract_call = contract_instance.takes_ints_returns_bool(42);
 
@@ -208,7 +212,7 @@ async fn compile_bindings_array_input() {
 
     let fuel_client = setup_local_node().await;
 
-    let contract_instance = SimpleContract::new_default(fuel_client);
+    let contract_instance = SimpleContract::new(null_contract_id(), fuel_client);
 
     let input: Vec<u16> = vec![1, 2, 3, 4];
     let contract_call = contract_instance.takes_array(input);
@@ -267,7 +271,7 @@ async fn compile_bindings_bool_array_input() {
 
     let fuel_client = setup_local_node().await;
 
-    let contract_instance = SimpleContract::new_default(fuel_client);
+    let contract_instance = SimpleContract::new(null_contract_id(), fuel_client);
 
     let input: Vec<bool> = vec![true, false, true];
     let contract_call = contract_instance.takes_array(input);
@@ -326,7 +330,7 @@ async fn compile_bindings_byte_input() {
 
     let fuel_client = setup_local_node().await;
 
-    let contract_instance = SimpleContract::new_default(fuel_client);
+    let contract_instance = SimpleContract::new(null_contract_id(), fuel_client);
 
     let contract_call = contract_instance.takes_byte(10 as u8);
 
@@ -381,7 +385,7 @@ async fn compile_bindings_string_input() {
 
     let fuel_client = setup_local_node().await;
 
-    let contract_instance = SimpleContract::new_default(fuel_client);
+    let contract_instance = SimpleContract::new(null_contract_id(), fuel_client);
 
     let contract_call = contract_instance.takes_string("This is a full sentence".into());
 
@@ -439,7 +443,7 @@ async fn compile_bindings_b256_input() {
 
     let fuel_client = setup_local_node().await;
 
-    let contract_instance = SimpleContract::new_default(fuel_client);
+    let contract_instance = SimpleContract::new(null_contract_id(), fuel_client);
 
     let mut hasher = Sha256::new();
     hasher.update("test string".as_bytes());
@@ -517,7 +521,7 @@ async fn compile_bindings_struct_input() {
         bar: "fuel".to_string(),
     };
 
-    let contract_instance = SimpleContract::new_default(fuel_client);
+    let contract_instance = SimpleContract::new(null_contract_id(), fuel_client);
 
     let contract_call = contract_instance.takes_struct(input);
 
@@ -596,7 +600,7 @@ async fn compile_bindings_nested_struct_input() {
 
     let fuel_client = setup_local_node().await;
 
-    let contract_instance = SimpleContract::new_default(fuel_client);
+    let contract_instance = SimpleContract::new(null_contract_id(), fuel_client);
 
     let contract_call = contract_instance.takes_nested_struct(input);
 
@@ -661,7 +665,7 @@ async fn compile_bindings_enum_input() {
 
     let fuel_client = setup_local_node().await;
 
-    let contract_instance = SimpleContract::new_default(fuel_client);
+    let contract_instance = SimpleContract::new(null_contract_id(), fuel_client);
 
     let contract_call = contract_instance.takes_enum(variant);
 
@@ -735,7 +739,7 @@ async fn create_struct_from_decoded_tokens() {
 
     let fuel_client = setup_local_node().await;
 
-    let contract_instance = SimpleContract::new_default(fuel_client);
+    let contract_instance = SimpleContract::new(null_contract_id(), fuel_client);
 
     let contract_call = contract_instance.takes_struct(struct_from_tokens);
 
@@ -820,7 +824,7 @@ async fn create_nested_struct_from_decoded_tokens() {
 
     let fuel_client = setup_local_node().await;
 
-    let contract_instance = SimpleContract::new_default(fuel_client);
+    let contract_instance = SimpleContract::new(null_contract_id(), fuel_client);
 
     let contract_call = contract_instance.takes_nested_struct(nested_struct_from_tokens);
 
