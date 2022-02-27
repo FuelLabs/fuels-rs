@@ -56,7 +56,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --verbose
+          args: --all-features --verbose
 
   publish:
     # Only do this job if publishing a release
@@ -85,5 +85,4 @@ jobs:
       uses: katyo/publish-crates@v1
       with:
           publish-delay: 30000
-          args: --no-verify
           registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
