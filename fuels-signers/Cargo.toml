@@ -1,6 +1,6 @@
 [package]
 name = "fuels-signers"
-version = "0.4.2"
+version = "0.4.3"
 authors = ["Fuel Labs <contact@fuel.sh>"]
 edition = "2021"
 homepage = "https://fuel.network/"
@@ -16,7 +16,7 @@ fuel-gql-client = { version = "0.3.2", default-features = false }
 fuel-tx = "0.5"
 fuel-types = { version = "0.1", default-features = false }
 fuel-vm = "0.4"
-fuels-core = { version = "0.4.2", path = "../fuels-core" }
+fuels-core = { version = "0.4.3", path = "../fuels-core" }
 hex = { version = "0.4.3", default-features = false, features = ["std"] }
 rand = { version = "0.8.4", default-features = false }
 secp256k1 = { version = "0.20", features = ["recovery"] }
