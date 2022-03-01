@@ -23,6 +23,7 @@ syn = "1.0.12"
 fuel-core = { version = "0.3", default-features = false }
 fuel-gql-client = { version = "0.3", default-features = false }
 fuels-contract = { version = "0.4.3", path = "../fuels-contract" }
+fuels-signers = { version = "0.4.3", path = "../fuels-signers", features=["test-helpers"] }
 hex = { version = "0.4.3", default-features = false, features = ["std"] }
 sha2 = "0.9.5"
 tokio = "1.15.0"
