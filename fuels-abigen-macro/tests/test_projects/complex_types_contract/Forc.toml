@@ -1,8 +1,8 @@
 [project]
 author = "Fuel Labs <contact@fuel.sh>"
 license = "Apache-2.0"
-name = "fuel-example-project"
-
+name = "contract_test"
+entry = "main.sw"
 
 [dependencies]
 core = { git = "https://github.com/FuelLabs/sway-lib-core" }

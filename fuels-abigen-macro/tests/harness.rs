@@ -919,7 +919,7 @@ async fn example_workflow() {
     let salt = Salt::from(salt);
 
     let compiled =
-        Contract::compile_sway_contract("tests/test_projects/contract-test", salt).unwrap();
+        Contract::compile_sway_contract("tests/test_projects/contract_test", salt).unwrap();
 
     let client = Provider::launch(Config::local_node()).await.unwrap();
     let contract_id = Contract::deploy(&compiled, &client).await.unwrap();
@@ -1081,7 +1081,7 @@ async fn type_safe_output_values() {
     let salt = Salt::from(salt);
 
     let compiled =
-        Contract::compile_sway_contract("tests/test_projects/contract-output-test", salt).unwrap();
+        Contract::compile_sway_contract("tests/test_projects/contract_output_test", salt).unwrap();
 
     let client = Provider::launch(Config::local_node()).await.unwrap();
     let contract_id = Contract::deploy(&compiled, &client).await.unwrap();
@@ -1204,7 +1204,7 @@ async fn call_with_structs() {
     let salt = Salt::from(salt);
 
     let compiled =
-        Contract::compile_sway_contract("tests/test_projects/complex-types-contract", salt)
+        Contract::compile_sway_contract("tests/test_projects/complex_types_contract", salt)
             .unwrap();
 
     let client = Provider::launch(Config::local_node()).await.unwrap();
@@ -1288,7 +1288,7 @@ async fn call_with_empty_return() {
     let salt = Salt::from(salt);
 
     let compiled =
-        Contract::compile_sway_contract("tests/test_projects/call-empty-return", salt).unwrap();
+        Contract::compile_sway_contract("tests/test_projects/call_empty_return", salt).unwrap();
 
     let client = Provider::launch(Config::local_node()).await.unwrap();
     let contract_id = Contract::deploy(&compiled, &client).await.unwrap();
@@ -1348,7 +1348,7 @@ async fn test_reverting_transaction() {
 
     abigen!(
         RevertingContract,
-        "fuels-abigen-macro/tests/test_projects/revert-transaction-error/abi.json"
+        "fuels-abigen-macro/tests/test_projects/revert_transaction_error/abi.json"
     );
 
     // Build the contract
@@ -1356,7 +1356,7 @@ async fn test_reverting_transaction() {
     let salt = Salt::from(salt);
 
     let compiled =
-        Contract::compile_sway_contract("tests/test_projects/revert-transaction-error", salt)
+        Contract::compile_sway_contract("tests/test_projects/revert_transaction_error", salt)
             .unwrap();
 
     let client = Provider::launch(Config::local_node()).await.unwrap();
