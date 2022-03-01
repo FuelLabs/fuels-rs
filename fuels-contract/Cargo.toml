@@ -10,7 +10,7 @@ description = "Fuel Rust SDK contracts."
 
 [dependencies]
 bytes = { version = "1.0.1", features = ["serde"] }
-forc = { version = "0.3", features = ["test", "util"], default-features = false }
+forc = { version = "0.5", features = ["test", "util"], default-features = false }
 fuel-asm = { version = "0.1", features = ["serde-types"] }
 fuel-core = { version = "0.3", default-features = false }
 fuel-gql-client = { version = "0.3", default-features = false }
