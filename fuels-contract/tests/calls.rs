@@ -18,7 +18,7 @@ async fn script_call() {
 
     // Compile the script we will be calling
     let compiled =
-        Script::compile_sway_script("../fuels-abigen-macro/tests/test_projects/simple_script")
+        Script::compile_sway_script("../fuels-abigen-macro/tests/test_projects/simple-script")
             .unwrap();
 
     let tx = Transaction::Script {
