@@ -46,9 +46,12 @@ impl Script {
             silent_mode: true,
             use_ir: false,
             print_ir: false,
+            debug_outfile: None,
+            minify_json_abi: false,
+            output_directory: None,
         };
 
-        let raw =
+        let (raw, _) =
             forc_build::build(build_command).map_err(|message| Error::CompilationError(message))?;
 
         let manifest_dir = find_manifest_dir(&PathBuf::from(project_path)).unwrap();
