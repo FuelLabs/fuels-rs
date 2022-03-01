@@ -254,17 +254,20 @@ impl Contract {
         salt: Salt,
     ) -> Result<CompiledContract, Error> {
         let build_command = BuildCommand {
+            debug_outfile: None,
+            minify_json_abi: false,
             path: Some(project_path.into()),
             print_finalized_asm: false,
             print_intermediate_asm: false,
             binary_outfile: None,
             offline_mode: false,
+            output_directory: None,
             silent_mode: true,
             print_ir: false,
             use_ir: false,
         };
 
-        let raw =
+        let (raw, _) =
             forc_build::build(build_command).map_err(|message| Error::CompilationError(message))?;
 
         Ok(CompiledContract { salt, raw })
