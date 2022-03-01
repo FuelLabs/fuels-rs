@@ -14,6 +14,7 @@ proc-macro = true
 [dependencies]
 fuel-tx = "0.5"
 fuels-core = { version = "0.4.3", path = "../fuels-core" }
+fuels-signers = { version = "0.4.3", path = "../fuels-signers", features=["test-helpers"] }
 proc-macro2 = "1.0"
 quote = "1.0"
 rand = "0.8"
