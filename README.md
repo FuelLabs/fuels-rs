@@ -1,8 +1,8 @@
 # fuels-rs
 
 [![build](https://github.com/FuelLabs/fuels-rs/actions/workflows/ci.yml/badge.svg)](https://github.com/FuelLabs/fuels-rs/actions/workflows/ci.yml)
-[![crates.io](https://img.shields.io/crates/v/fuels-rs?label=latest)](https://crates.io/crates/fuels-rs)
-[![docs](https://docs.rs/fuels-rs/badge.svg)](https://docs.rs/fuels-rs)
+[![crates.io](https://img.shields.io/crates/v/fuels-contract?label=latest)](https://crates.io/crates/fuels-contract)
+[![docs](https://docs.rs/fuels-contract/badge.svg)](https://docs.rs/fuels-contract)
 [![discord](https://img.shields.io/badge/chat%20on-discord-orange?&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2)](https://discord.gg/xfpK4Pe)
 
 Rust SDK for Fuel. It can be used for a variety of things, including but not limited to:
@@ -86,7 +86,9 @@ let compiled =
 let contract_id = Contract::deploy(compiled_contract, fuel_client).await.unwrap();
 ```
 
-Alternatively, if you want to launch a local node for every deployment, which is usually useful for smaller tests where you don't want to keep state between each test, you can use `Contract::launch_and_deploy()`:
+Alternatively, if you want to launch a local node for every deployment, which is usually 
+useful for smaller tests where you don't want to keep state between each test, you can use 
+`Provider::launch(Config::local_node())`:
 
 ```Rust
 // Build the contract
@@ -96,8 +98,9 @@ let salt = Salt::from(salt);
 let compiled =
     Contract::compile_sway_contract("path/to/your/fuel/project", salt).unwrap();
 
-// Now you get both the Fuel client _and_ the contract_id back.
-let (client, contract_id) = Contract::launch_and_deploy(&compiled).await.unwrap();
+// Now get the Fuel client _and_ contract_id back.
+let client = Provider::launch(Config::local_node()).await.unwrap();
+let contract_id = Contract::deploy(&compiled, &client).await.unwrap();
 ```
 
 ### Generating type-safe Rust bindings

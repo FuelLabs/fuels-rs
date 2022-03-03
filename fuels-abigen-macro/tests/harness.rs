@@ -5,6 +5,7 @@ use fuels_abigen_macro::abigen;
 use fuels_contract::contract::Contract;
 use fuels_contract::errors::Error;
 use fuels_core::Token;
+use fuels_signers::provider::Provider;
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 use sha2::{Digest, Sha256};
@@ -924,7 +925,8 @@ async fn example_workflow() {
     let compiled =
         Contract::compile_sway_contract("tests/test_projects/contract_test", salt).unwrap();
 
-    let (client, contract_id) = Contract::launch_and_deploy(&compiled).await.unwrap();
+    let client = Provider::launch(Config::local_node()).await.unwrap();
+    let contract_id = Contract::deploy(&compiled, &client).await.unwrap();
 
     println!("Contract deployed @ {:x}", contract_id);
     let contract_instance = MyContract::new(contract_id.to_string(), client);
@@ -1084,7 +1086,8 @@ async fn type_safe_output_values() {
     let compiled =
         Contract::compile_sway_contract("tests/test_projects/contract_output_test", salt).unwrap();
 
-    let (client, contract_id) = Contract::launch_and_deploy(&compiled).await.unwrap();
+    let client = Provider::launch(Config::local_node()).await.unwrap();
+    let contract_id = Contract::deploy(&compiled, &client).await.unwrap();
 
     println!("Contract deployed @ {:x}", contract_id);
     let contract_instance = MyContract::new(contract_id.to_string(), client);
@@ -1206,7 +1209,8 @@ async fn call_with_structs() {
         Contract::compile_sway_contract("tests/test_projects/complex_types_contract", salt)
             .unwrap();
 
-    let (client, contract_id) = Contract::launch_and_deploy(&compiled).await.unwrap();
+    let client = Provider::launch(Config::local_node()).await.unwrap();
+    let contract_id = Contract::deploy(&compiled, &client).await.unwrap();
 
     println!("Contract deployed @ {:x}", contract_id);
 
@@ -1288,7 +1292,8 @@ async fn call_with_empty_return() {
     let compiled =
         Contract::compile_sway_contract("tests/test_projects/call_empty_return", salt).unwrap();
 
-    let (client, contract_id) = Contract::launch_and_deploy(&compiled).await.unwrap();
+    let client = Provider::launch(Config::local_node()).await.unwrap();
+    let contract_id = Contract::deploy(&compiled, &client).await.unwrap();
 
     println!("Contract deployed @ {:x}", contract_id);
 
@@ -1317,7 +1322,8 @@ async fn abigen_different_structs_same_arg_name() {
     let compiled =
         Contract::compile_sway_contract("tests/test_projects/two-structs", salt).unwrap();
 
-    let (client, contract_id) = Contract::launch_and_deploy(&compiled).await.unwrap();
+    let client = Provider::launch(Config::local_node()).await.unwrap();
+    let contract_id = Contract::deploy(&compiled, &client).await.unwrap();
 
     println!("Contract deployed @ {:x}", contract_id);
 
@@ -1355,9 +1361,10 @@ async fn test_reverting_transaction() {
         Contract::compile_sway_contract("tests/test_projects/revert_transaction_error", salt)
             .unwrap();
 
-    let (client, contract_id) = Contract::launch_and_deploy(&compiled).await.unwrap();
+    let client = Provider::launch(Config::local_node()).await.unwrap();
+    let contract_id = Contract::deploy(&compiled, &client).await.unwrap();
     let contract_instance = RevertingContract::new(contract_id.to_string(), client);
-
+    println!("Contract deployed @ {:x}", contract_id);
     let result = contract_instance.make_transaction_fail(0).call().await;
     assert!(matches!(result, Err(Error::ContractCallError(_))));
 }
@@ -1378,7 +1385,8 @@ async fn multiple_read_calls() {
     let compiled =
         Contract::compile_sway_contract("tests/test_projects/multiple-read-calls", salt).unwrap();
 
-    let (client, contract_id) = Contract::launch_and_deploy(&compiled).await.unwrap();
+    let client = Provider::launch(Config::local_node()).await.unwrap();
+    let contract_id = Contract::deploy(&compiled, &client).await.unwrap();
 
     println!("Contract deployed @ {:x}", contract_id);
 
@@ -1411,7 +1419,8 @@ async fn test_methods_typeless_argument() {
 
     let compiled =
         Contract::compile_sway_contract("tests/test_projects/empty-arguments", salt).unwrap();
-    let (client, contract_id) = Contract::launch_and_deploy(&compiled).await.unwrap();
+    let client = Provider::launch(Config::local_node()).await.unwrap();
+    let contract_id = Contract::deploy(&compiled, &client).await.unwrap();
     println!("Contract deployed @ {:x}", contract_id);
     let contract_instance = MyContract::new(contract_id.to_string(), client);
     let result = contract_instance
@@ -1447,7 +1456,8 @@ async fn test_connect_to_deployed_contract() {
     let salt = Salt::from(salt);
     let compiled =
         Contract::compile_sway_contract("tests/test_projects/contract_test", salt).unwrap();
-    let (client, contract_id) = Contract::launch_and_deploy(&compiled).await.unwrap();
+    let client = Provider::launch(Config::local_node()).await.unwrap();
+    let contract_id = Contract::deploy(&compiled, &client).await.unwrap();
     println!("Contract deployed @ {:x}", contract_id);
     let deployed_contract_instance = MyContract::new(contract_id.to_string(), client.clone());
     // Check that the deployed contract works as expected
@@ -1515,8 +1525,9 @@ async fn test_large_return_data() {
     let compiled =
         Contract::compile_sway_contract("tests/test_projects/large-return-data", salt).unwrap();
 
-    let (client, contract_id) = Contract::launch_and_deploy(&compiled).await.unwrap();
-
+    let client = Provider::launch(Config::local_node()).await.unwrap();
+    let contract_id = Contract::deploy(&compiled, &client).await.unwrap();
+    println!("Contract deployed @ {:x}", contract_id);
     let contract_instance = MyContract::new(contract_id.to_string(), client);
 
     let res = contract_instance.get_id().call().await.unwrap();

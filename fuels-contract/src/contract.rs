@@ -4,7 +4,6 @@ use crate::errors::Error;
 use crate::script::Script;
 use forc::test::{forc_build, BuildCommand};
 use fuel_asm::Opcode;
-use fuel_core::service::{Config, FuelService};
 use fuel_gql_client::client::FuelClient;
 use fuel_tx::{
     Address, Color, ContractId, Input, Output, Receipt, StorageSlot, Transaction, UtxoId, Witness,
@@ -219,21 +218,6 @@ impl Contract {
         })
     }
 
-    /// Launches a local `fuel-core` network and deploys a contract to it.
-    /// If you want to deploy a contract against another network of
-    /// your choosing, use the `deploy` function instead.
-    pub async fn launch_and_deploy(
-        compiled_contract: &CompiledContract,
-    ) -> Result<(FuelClient, ContractId), Error> {
-        let srv = FuelService::new_node(Config::local_node()).await.unwrap();
-
-        let fuel_client = FuelClient::from(srv.bound_address);
-
-        let contract_id = Self::deploy(compiled_contract, &fuel_client).await?;
-
-        Ok((fuel_client, contract_id))
-    }
-
     /// Deploys a compiled contract to a running node
     pub async fn deploy(
         compiled_contract: &CompiledContract,
@@ -253,17 +237,20 @@ impl Contract {
         salt: Salt,
     ) -> Result<CompiledContract, Error> {
         let build_command = BuildCommand {
+            debug_outfile: None,
+            minify_json_abi: false,
             path: Some(project_path.into()),
             print_finalized_asm: false,
             print_intermediate_asm: false,
             binary_outfile: None,
             offline_mode: false,
+            output_directory: None,
             silent_mode: true,
             print_ir: false,
             use_ir: false,
         };
 
-        let raw =
+        let (raw, _) =
             forc_build::build(build_command).map_err(|message| Error::CompilationError(message))?;
 
         Ok(CompiledContract { salt, raw })

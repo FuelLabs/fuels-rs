@@ -1,6 +1,6 @@
 [package]
 name = "fuels-contract"
-version = "0.4.0"
+version = "0.4.3"
 authors = ["Fuel Labs <contact@fuel.sh>"]
 edition = "2018"
 homepage = "https://fuel.network/"
@@ -10,14 +10,14 @@ description = "Fuel Rust SDK contracts."
 
 [dependencies]
 bytes = { version = "1.0.1", features = ["serde"] }
-forc = { version = "0.3", features = ["test", "util"], default-features = false }
+forc = { version = "0.5", features = ["test", "util"], default-features = false }
 fuel-asm = { version = "0.1", features = ["serde-types"] }
 fuel-core = { version = "0.3", default-features = false }
 fuel-gql-client = { version = "0.3", default-features = false }
 fuel-tx = "0.5"
 fuel-types = "0.1"
 fuel-vm = "0.4"
-fuels-core = { version = "0.4.0", path = "../fuels-core" }
+fuels-core = { version = "0.4.3", path = "../fuels-core" }
 hex = { version = "0.4.3", default-features = false, features = ["std"] }
 proc-macro2 = "1.0"
 quote = "1.0"

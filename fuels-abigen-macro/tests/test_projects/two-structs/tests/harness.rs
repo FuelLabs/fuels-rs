@@ -1,3 +1,4 @@
+use fuel_core::service::{Config, FuelService};
 use fuel_tx::Salt;
 use fuels_abigen_macro::abigen;
 use fuels_rs::contract::Contract;
@@ -16,7 +17,8 @@ async fn harness() {
     let compiled = Contract::compile_sway_contract("./", salt).unwrap();
 
     // Launch a local network and deploy the contract
-    let (client, _contract_id) = Contract::launch_and_deploy(&compiled).await.unwrap();
+    let client = Provider::launch(Config::local_node()).await.unwrap();
+    let contract_id = Contract::deployed(&compiled, &client).await.unwrap();
 
     let contract_instance = MyContract::new(compiled, client);
 }
