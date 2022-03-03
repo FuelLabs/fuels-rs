@@ -1470,3 +1470,54 @@ async fn test_large_return_data() {
     let res = contract_instance.get_large_string().call().await.unwrap();
     assert_eq!(res.value, "ggggggggg");
 }
+
+#[tokio::test]
+async fn test_contract_calling_contract() {
+    let rng = &mut StdRng::seed_from_u64(2322u64);
+
+    abigen!(
+        FooContract,
+        "fuels-abigen-macro/tests/test_projects/foo-contract/out/debug/foo-contract-abi.json"
+    );
+
+    abigen!(
+        FooCaller,
+        "fuels-abigen-macro/tests/test_projects/foo-caller-contract/out/debug/foo-caller-contract-abi.json"
+    );
+
+    let salt: [u8; 32] = rng.gen();
+    let salt = Salt::from(salt);
+
+    let compiled =
+        Contract::compile_sway_contract("tests/test_projects/foo-contract", salt).unwrap();
+
+    let (client, foo_contract_id) = Contract::launch_and_deploy(&compiled).await.unwrap();
+    println!("foo contract id: {:?}\n", foo_contract_id);
+
+    let foo_contract_instance = FooContract::new(compiled, client.clone());
+
+    // Just flips the bool value that's passed
+    let res = foo_contract_instance.foo(true).call().await.unwrap();
+
+    assert!(!res.value);
+
+    // Compile and deploy second contract
+    let compiled =
+        Contract::compile_sway_contract("tests/test_projects/foo-caller-contract", salt).unwrap();
+
+    let _foo_caller_contract_id = Contract::deploy(&compiled, &client).await.unwrap();
+
+    let foo_caller_contract_instance = FooCaller::new(compiled, client);
+
+    // @todo continue from here: work to make this a reality!
+    // foo_caller_contract_instance.set_contracts(vec![foo_contract_id]);
+
+    // Calls the contract above that flips the passed bool.
+    let res = foo_caller_contract_instance
+        .call_foo_contract(true)
+        .call()
+        .await
+        .unwrap();
+
+    assert!(!res.value);
+}
