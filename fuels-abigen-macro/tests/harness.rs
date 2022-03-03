@@ -1554,6 +1554,7 @@ async fn test_large_return_data() {
 async fn test_contract_calling_contract() {
     let rng = &mut StdRng::seed_from_u64(2322u64);
 
+    // Tests a contract call that calls another contract (FooCaller calls FooContract underneath)
     abigen!(
         FooContract,
         "fuels-abigen-macro/tests/test_projects/foo-contract/out/debug/foo-contract-abi.json"
@@ -1570,30 +1571,28 @@ async fn test_contract_calling_contract() {
     let compiled =
         Contract::compile_sway_contract("tests/test_projects/foo-contract", salt).unwrap();
 
-    let (client, foo_contract_id) = Contract::launch_and_deploy(&compiled).await.unwrap();
-    println!("foo contract id: {:?}\n", foo_contract_id);
+    let client = Provider::launch(Config::local_node()).await.unwrap();
+    let foo_contract_id = Contract::deploy(&compiled, &client.clone()).await.unwrap();
 
-    let foo_contract_instance = FooContract::new(compiled, client.clone());
+    let foo_contract_instance = FooContract::new(foo_contract_id.to_string(), client.clone());
 
-    // Just flips the bool value that's passed
+    // Call the contract directly; it just flips the bool value that's passed.
     let res = foo_contract_instance.foo(true).call().await.unwrap();
-
     assert!(!res.value);
 
     // Compile and deploy second contract
     let compiled =
         Contract::compile_sway_contract("tests/test_projects/foo-caller-contract", salt).unwrap();
 
-    let _foo_caller_contract_id = Contract::deploy(&compiled, &client).await.unwrap();
+    let foo_caller_contract_id = Contract::deploy(&compiled, &client).await.unwrap();
 
-    let foo_caller_contract_instance = FooCaller::new(compiled, client);
+    let foo_caller_contract_instance = FooCaller::new(foo_caller_contract_id.to_string(), client);
 
-    // @todo continue from here: work to make this a reality!
-    // foo_caller_contract_instance.set_contracts(vec![foo_contract_id]);
-
-    // Calls the contract above that flips the passed bool.
+    // Calls the contract that calls the `FooContract` contract, also just
+    // flips the bool value passed to it.
     let res = foo_caller_contract_instance
         .call_foo_contract(true)
+        .set_contracts(&[foo_contract_id]) // Sets the external contract
         .call()
         .await
         .unwrap();

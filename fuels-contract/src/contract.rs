@@ -65,6 +65,7 @@ impl Contract {
         byte_price: Word,
         maturity: Word,
         custom_inputs: bool,
+        external_contracts: Option<Vec<ContractId>>,
     ) -> Result<Vec<Receipt>, Error> {
         // Based on the defined script length,
         // we set the appropriate data offset.
@@ -126,16 +127,38 @@ impl Contract {
             script_data.extend(e)
         }
 
-        // Inputs/outputs
-        let input = Input::contract(
+        let mut inputs: Vec<Input> = vec![];
+        let mut outputs: Vec<Output> = vec![];
+
+        let self_contract_input = Input::contract(
             UtxoId::new(Bytes32::zeroed(), 0),
             Bytes32::zeroed(),
             Bytes32::zeroed(),
             contract_id,
         );
-        // TODO: for now, assume there is only a single input and output, so input_index is 0.
-        // This needs to be changed to support multiple contract IDs.
-        let output = Output::contract(0, Bytes32::zeroed(), Bytes32::zeroed());
+        inputs.push(self_contract_input);
+
+        let self_contract_output = Output::contract(0, Bytes32::zeroed(), Bytes32::zeroed());
+        outputs.push(self_contract_output);
+
+        // Add external contract IDs to Input/Output pair, if applicable.
+        if let Some(external_contract_ids) = external_contracts {
+            for (idx, external_contract_id) in external_contract_ids.iter().enumerate() {
+                let external_contract_input = Input::contract(
+                    UtxoId::new(Bytes32::zeroed(), idx as u8 + 1),
+                    Bytes32::zeroed(),
+                    Bytes32::zeroed(),
+                    *external_contract_id,
+                );
+
+                inputs.push(external_contract_input);
+
+                let external_contract_output =
+                    Output::contract(idx as u8 + 1, Bytes32::zeroed(), Bytes32::zeroed());
+
+                outputs.push(external_contract_output);
+            }
+        }
 
         // Important: this is a temporary workaround, for full context:
         // https://github.com/FuelLabs/fuels-rs/issues/90
@@ -154,6 +177,8 @@ impl Contract {
             vec![],
         );
 
+        inputs.push(random_coin);
+
         let tx = Transaction::script(
             gas_price,
             gas_limit,
@@ -161,8 +186,8 @@ impl Contract {
             maturity,
             script,
             script_data,
-            vec![input, random_coin],
-            vec![output],
+            inputs,
+            outputs,
             vec![Witness::from(vec![0u8, 0u8])],
         );
 
@@ -215,6 +240,7 @@ impl Contract {
             datatype: PhantomData,
             output_params: output_params.to_vec(),
             custom_inputs,
+            external_contracts: None,
         })
     }
 
@@ -309,12 +335,23 @@ pub struct ContractCall<D> {
     pub datatype: PhantomData<D>,
     pub output_params: Vec<ParamType>,
     pub custom_inputs: bool,
+    external_contracts: Option<Vec<ContractId>>,
 }
 
 impl<D> ContractCall<D>
 where
     D: Detokenize,
 {
+    /// Sets external contracts as dependencies to this contract's call.
+    /// Effectively, this will be used to create Input::Contract/Output::Contract
+    /// pairs and set them into the transaction.
+    /// Note that this is a builder method, i.e. use it as a chain:
+    /// `my_contract_instance.my_method(...).set_contracts(&[another_contract_id]).call()`.
+    pub fn set_contracts(mut self, contract_ids: &[ContractId]) -> Self {
+        self.external_contracts = Some(contract_ids.to_vec());
+        self
+    }
+
     /// Call a contract's method. Return a Result<CallResponse, Error>.
     /// The CallResponse structs contains the method's value in its `value`
     /// field as an actual typed value `D` (if your method returns `bool`, it will
@@ -332,6 +369,7 @@ where
             self.byte_price,
             self.maturity,
             self.custom_inputs,
+            self.external_contracts,
         )
         .await?;
 
