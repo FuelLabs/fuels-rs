@@ -14,6 +14,10 @@ async fn setup_local_node() -> FuelClient {
     let srv = FuelService::new_node(Config::local_node()).await.unwrap();
     FuelClient::from(srv.bound_address)
 }
+fn null_contract_id() -> String {
+    // a null contract address ~[0u8;32]
+    String::from("0000000000000000000000000000000000000000000000000000000000000000")
+}
 
 #[tokio::test]
 async fn compile_bindings_from_contract_file() {
@@ -27,7 +31,7 @@ async fn compile_bindings_from_contract_file() {
     let fuel_client = setup_local_node().await;
 
     // `SimpleContract` is the name of the contract
-    let contract_instance = SimpleContract::new(Default::default(), fuel_client);
+    let contract_instance = SimpleContract::new(null_contract_id(), fuel_client);
 
     // Calls the function defined in the JSON ABI.
     // Note that this is type-safe, if the function does exist
@@ -96,7 +100,7 @@ async fn compile_bindings_from_inline_contract() {
 
     let fuel_client = setup_local_node().await;
 
-    let contract_instance = SimpleContract::new(Default::default(), fuel_client);
+    let contract_instance = SimpleContract::new(null_contract_id(), fuel_client);
 
     let contract_call = contract_instance.takes_ints_returns_bool(42 as u32);
 
@@ -154,7 +158,7 @@ async fn compile_bindings_single_param() {
 
     let fuel_client = setup_local_node().await;
 
-    let contract_instance = SimpleContract::new(Default::default(), fuel_client);
+    let contract_instance = SimpleContract::new(null_contract_id(), fuel_client);
 
     let contract_call = contract_instance.takes_ints_returns_bool(42);
 
@@ -209,7 +213,7 @@ async fn compile_bindings_array_input() {
 
     let fuel_client = setup_local_node().await;
 
-    let contract_instance = SimpleContract::new(Default::default(), fuel_client);
+    let contract_instance = SimpleContract::new(null_contract_id(), fuel_client);
 
     let input: Vec<u16> = vec![1, 2, 3, 4];
     let contract_call = contract_instance.takes_array(input);
@@ -268,7 +272,7 @@ async fn compile_bindings_bool_array_input() {
 
     let fuel_client = setup_local_node().await;
 
-    let contract_instance = SimpleContract::new(Default::default(), fuel_client);
+    let contract_instance = SimpleContract::new(null_contract_id(), fuel_client);
 
     let input: Vec<bool> = vec![true, false, true];
     let contract_call = contract_instance.takes_array(input);
@@ -327,7 +331,7 @@ async fn compile_bindings_byte_input() {
 
     let fuel_client = setup_local_node().await;
 
-    let contract_instance = SimpleContract::new(Default::default(), fuel_client);
+    let contract_instance = SimpleContract::new(null_contract_id(), fuel_client);
 
     let contract_call = contract_instance.takes_byte(10 as u8);
 
@@ -382,7 +386,7 @@ async fn compile_bindings_string_input() {
 
     let fuel_client = setup_local_node().await;
 
-    let contract_instance = SimpleContract::new(Default::default(), fuel_client);
+    let contract_instance = SimpleContract::new(null_contract_id(), fuel_client);
 
     let contract_call = contract_instance.takes_string("This is a full sentence".into());
 
@@ -440,7 +444,7 @@ async fn compile_bindings_b256_input() {
 
     let fuel_client = setup_local_node().await;
 
-    let contract_instance = SimpleContract::new(Default::default(), fuel_client);
+    let contract_instance = SimpleContract::new(null_contract_id(), fuel_client);
 
     let mut hasher = Sha256::new();
     hasher.update("test string".as_bytes());
@@ -518,7 +522,7 @@ async fn compile_bindings_struct_input() {
         bar: "fuel".to_string(),
     };
 
-    let contract_instance = SimpleContract::new(Default::default(), fuel_client);
+    let contract_instance = SimpleContract::new(null_contract_id(), fuel_client);
 
     let contract_call = contract_instance.takes_struct(input);
 
@@ -597,7 +601,7 @@ async fn compile_bindings_nested_struct_input() {
 
     let fuel_client = setup_local_node().await;
 
-    let contract_instance = SimpleContract::new(Default::default(), fuel_client);
+    let contract_instance = SimpleContract::new(null_contract_id(), fuel_client);
 
     let contract_call = contract_instance.takes_nested_struct(input);
 
@@ -662,7 +666,7 @@ async fn compile_bindings_enum_input() {
 
     let fuel_client = setup_local_node().await;
 
-    let contract_instance = SimpleContract::new(Default::default(), fuel_client);
+    let contract_instance = SimpleContract::new(null_contract_id(), fuel_client);
 
     let contract_call = contract_instance.takes_enum(variant);
 
@@ -736,7 +740,7 @@ async fn create_struct_from_decoded_tokens() {
 
     let fuel_client = setup_local_node().await;
 
-    let contract_instance = SimpleContract::new(Default::default(), fuel_client);
+    let contract_instance = SimpleContract::new(null_contract_id(), fuel_client);
 
     let contract_call = contract_instance.takes_struct(struct_from_tokens);
 
@@ -821,7 +825,7 @@ async fn create_nested_struct_from_decoded_tokens() {
 
     let fuel_client = setup_local_node().await;
 
-    let contract_instance = SimpleContract::new(Default::default(), fuel_client);
+    let contract_instance = SimpleContract::new(null_contract_id(), fuel_client);
 
     let contract_call = contract_instance.takes_nested_struct(nested_struct_from_tokens);
 
@@ -925,8 +929,7 @@ async fn example_workflow() {
     let contract_id = Contract::deploy(&compiled, &client).await.unwrap();
 
     println!("Contract deployed @ {:x}", contract_id);
-
-    let contract_instance = MyContract::new(compiled, client);
+    let contract_instance = MyContract::new(contract_id.to_string(), client);
 
     let result = contract_instance
         .initialize_counter(42) // Build the ABI call
@@ -1087,8 +1090,7 @@ async fn type_safe_output_values() {
     let contract_id = Contract::deploy(&compiled, &client).await.unwrap();
 
     println!("Contract deployed @ {:x}", contract_id);
-
-    let contract_instance = MyContract::new(compiled, client);
+    let contract_instance = MyContract::new(contract_id.to_string(), client);
 
     // `response`'s type matches the return type of `is_event()`
     let response = contract_instance.is_even(10).call().await.unwrap();
@@ -1212,7 +1214,7 @@ async fn call_with_structs() {
 
     println!("Contract deployed @ {:x}", contract_id);
 
-    let contract_instance = MyContract::new(compiled, client);
+    let contract_instance = MyContract::new(contract_id.to_string(), client);
 
     let counter_config = CounterConfig {
         dummy: true,
@@ -1295,7 +1297,7 @@ async fn call_with_empty_return() {
 
     println!("Contract deployed @ {:x}", contract_id);
 
-    let contract_instance = MyContract::new(compiled, client);
+    let contract_instance = MyContract::new(contract_id.to_string(), client);
 
     let _result = contract_instance
         .store_value(42) // Build the ABI call
@@ -1325,7 +1327,7 @@ async fn abigen_different_structs_same_arg_name() {
 
     println!("Contract deployed @ {:x}", contract_id);
 
-    let contract_instance = MyContract::new(compiled, client);
+    let contract_instance = MyContract::new(contract_id.to_string(), client);
 
     let param_one = StructOne { foo: 42 };
     let param_two = StructTwo { bar: 42 };
@@ -1360,8 +1362,9 @@ async fn test_reverting_transaction() {
             .unwrap();
 
     let client = Provider::launch(Config::local_node()).await.unwrap();
-    let contract_instance = RevertingContract::new(compiled, client);
-
+    let contract_id = Contract::deploy(&compiled, &client).await.unwrap();
+    let contract_instance = RevertingContract::new(contract_id.to_string(), client);
+    println!("Contract deployed @ {:x}", contract_id);
     let result = contract_instance.make_transaction_fail(0).call().await;
     assert!(matches!(result, Err(Error::ContractCallError(_))));
 }
@@ -1387,7 +1390,7 @@ async fn multiple_read_calls() {
 
     println!("Contract deployed @ {:x}", contract_id);
 
-    let contract_instance = MyContract::new(compiled, client);
+    let contract_instance = MyContract::new(contract_id.to_string(), client);
 
     contract_instance.store(42).call().await.unwrap();
 
@@ -1419,7 +1422,7 @@ async fn test_methods_typeless_argument() {
     let client = Provider::launch(Config::local_node()).await.unwrap();
     let contract_id = Contract::deploy(&compiled, &client).await.unwrap();
     println!("Contract deployed @ {:x}", contract_id);
-    let contract_instance = MyContract::new(compiled, client);
+    let contract_instance = MyContract::new(contract_id.to_string(), client);
     let result = contract_instance
         .method_with_empty_parenthesis_argument()
         .call()
@@ -1438,6 +1441,73 @@ async fn test_methods_typeless_argument() {
         .await
         .unwrap();
     assert_eq!(result.value, 63);
+}
+#[tokio::test]
+async fn test_connect_to_deployed_contract() {
+    let rng = &mut StdRng::seed_from_u64(2322u64);
+
+    // Load the abigen
+    abigen!(
+        MyContract,
+        "fuels-abigen-macro/tests/test_projects/contract_test/abi.json"
+    );
+    // Build the "deployed" contract we will connect to
+    let salt: [u8; 32] = rng.gen();
+    let salt = Salt::from(salt);
+    let compiled =
+        Contract::compile_sway_contract("tests/test_projects/contract_test", salt).unwrap();
+    let client = Provider::launch(Config::local_node()).await.unwrap();
+    let contract_id = Contract::deploy(&compiled, &client).await.unwrap();
+    println!("Contract deployed @ {:x}", contract_id);
+    let deployed_contract_instance = MyContract::new(contract_id.to_string(), client.clone());
+    // Check that the deployed contract works as expected
+    let result = deployed_contract_instance
+        .initialize_counter(21)
+        .call()
+        .await
+        .unwrap();
+    assert_eq!(result.value, 21);
+    let result = deployed_contract_instance
+        .increment_counter(21)
+        .call()
+        .await
+        .unwrap();
+    assert_eq!(result.value, 42);
+    let result = deployed_contract_instance
+        .get_counter()
+        .call()
+        .await
+        .unwrap();
+    assert_eq!(result.value, 42);
+
+    // Create a new contract that is just "connected" to the deployed one
+    let connected_contract_instance = MyContract::new(contract_id.to_string(), client);
+    // Check that it works as expected
+    let result = connected_contract_instance
+        .initialize_counter(111)
+        .call()
+        .await
+        .unwrap();
+    assert_eq!(result.value, 111);
+    let result = connected_contract_instance
+        .increment_counter(9)
+        .call()
+        .await
+        .unwrap();
+    assert_eq!(result.value, 120);
+    let result = connected_contract_instance
+        .get_counter()
+        .call()
+        .await
+        .unwrap();
+    assert_eq!(result.value, 120);
+    // Check that the deployed contract is in the same state
+    let result = deployed_contract_instance
+        .get_counter()
+        .call()
+        .await
+        .unwrap();
+    assert_eq!(result.value, 120);
 }
 
 #[tokio::test]
@@ -1458,7 +1528,7 @@ async fn test_large_return_data() {
     let client = Provider::launch(Config::local_node()).await.unwrap();
     let contract_id = Contract::deploy(&compiled, &client).await.unwrap();
     println!("Contract deployed @ {:x}", contract_id);
-    let contract_instance = MyContract::new(compiled, client);
+    let contract_instance = MyContract::new(contract_id.to_string(), client);
 
     let res = contract_instance.get_id().call().await.unwrap();
     println!("res: {:?}\n", res);
