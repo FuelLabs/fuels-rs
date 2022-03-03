@@ -88,5 +88,4 @@ jobs:
       uses: katyo/publish-crates@v1
       with:
           publish-delay: 30000
-          no-verify: true
           registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
