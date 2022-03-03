@@ -1467,7 +1467,7 @@ dependencies = [
 
 [[package]]
 name = "fuels-abi-cli"
-version = "0.4.3"
+version = "0.5.0"
 dependencies = [
  "anyhow",
  "fuels-contract",
@@ -1480,7 +1480,7 @@ dependencies = [
 
 [[package]]
 name = "fuels-abigen-macro"
-version = "0.4.3"
+version = "0.5.0"
 dependencies = [
  "fuel-core",
  "fuel-gql-client",
@@ -1499,7 +1499,7 @@ dependencies = [
 
 [[package]]
 name = "fuels-contract"
-version = "0.4.3"
+version = "0.5.0"
 dependencies = [
  "bytes 1.1.0",
  "forc",
@@ -1528,7 +1528,7 @@ dependencies = [
 
 [[package]]
 name = "fuels-core"
-version = "0.4.3"
+version = "0.5.0"
 dependencies = [
  "Inflector",
  "anyhow",
@@ -1553,7 +1553,7 @@ dependencies = [
 
 [[package]]
 name = "fuels-signers"
-version = "0.4.3"
+version = "0.5.0"
 dependencies = [
  "async-trait",
  "bytes 1.1.0",
