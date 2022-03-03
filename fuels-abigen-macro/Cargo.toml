@@ -22,6 +22,7 @@ syn = "1.0.12"
 [dev-dependencies]
 fuel-core = { version = "0.3", default-features = false }
 fuel-gql-client = { version = "0.3", default-features = false }
+fuels-signers = { version = "0.4.3", path = "../fuels-signers", features=["test-helpers"]}
 fuels-contract = { version = "0.4.3", path = "../fuels-contract" }
 fuels-signers = { version = "0.4.3", path = "../fuels-signers", features=["test-helpers"] }
 hex = { version = "0.4.3", default-features = false, features = ["std"] }

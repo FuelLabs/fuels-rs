@@ -4,7 +4,6 @@ use crate::errors::Error;
 use crate::script::Script;
 use forc::test::{forc_build, BuildCommand};
 use fuel_asm::Opcode;
-use fuel_core::service::{Config, FuelService};
 use fuel_gql_client::client::FuelClient;
 use fuel_tx::{
     Address, Color, ContractId, Input, Output, Receipt, StorageSlot, Transaction, UtxoId, Witness,
@@ -218,21 +217,6 @@ impl Contract {
             output_params: output_params.to_vec(),
             custom_inputs,
         })
-    }
-
-    /// Launches a local `fuel-core` network and deploys a contract to it.
-    /// If you want to deploy a contract against another network of
-    /// your choosing, use the `deploy` function instead.
-    pub async fn launch_and_deploy(
-        compiled_contract: &CompiledContract,
-    ) -> Result<(FuelClient, ContractId), Error> {
-        let srv = FuelService::new_node(Config::local_node()).await.unwrap();
-
-        let fuel_client = FuelClient::from(srv.bound_address);
-
-        let contract_id = Self::deploy(compiled_contract, &fuel_client).await?;
-
-        Ok((fuel_client, contract_id))
     }
 
     /// Deploys a compiled contract to a running node
