@@ -1,3 +1,4 @@
+use fuel_core::service::{Config, FuelService};
 use fuel_gql_client::client::schema::coin::Coin;
 use fuel_gql_client::client::{FuelClient, PageDirection, PaginationRequest};
 use fuel_tx::Receipt;
@@ -6,6 +7,7 @@ use fuel_vm::consts::REG_ONE;
 use std::io;
 
 use fuel_vm::prelude::Opcode;
+use fuels_core::errors::Error;
 use thiserror::Error;
 
 /// An error involving a signature.
@@ -35,6 +37,12 @@ impl Provider {
         let tx_id = self.client.submit(tx).await?;
 
         Ok(self.client.receipts(&tx_id.0.to_string()).await?)
+    }
+
+    /// Launches a local `fuel-core` network based on provided config.
+    pub async fn launch(config: Config) -> Result<FuelClient, Error> {
+        let srv = FuelService::new_node(config).await.unwrap();
+        Ok(FuelClient::from(srv.bound_address))
     }
 
     /// Shallow wrapper on client's coins API.
