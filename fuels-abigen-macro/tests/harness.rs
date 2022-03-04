@@ -199,7 +199,7 @@ async fn compile_bindings_array_input() {
                     },
                     {
                         "name":"arg",
-                        "type":"u16[3]"
+                        "type":"[u16; 3]"
                     }
                 ],
                 "name":"takes_array",
@@ -225,7 +225,7 @@ async fn compile_bindings_array_input() {
     );
 
     assert_eq!(
-        "00000000530300750000000000000001000000000000000200000000000000030000000000000004",
+        "00000000b12194620000000000000001000000000000000200000000000000030000000000000004",
         encoded
     );
 }
@@ -258,7 +258,7 @@ async fn compile_bindings_bool_array_input() {
                     },
                     {
                         "name":"arg",
-                        "type":"bool[3]"
+                        "type":"[bool; 3]"
                     }
                 ],
                 "name":"takes_array",
@@ -284,7 +284,7 @@ async fn compile_bindings_bool_array_input() {
     );
 
     assert_eq!(
-        "000000000abaed98000000000000000100000000000000000000000000000001",
+        "00000000ab7bd321000000000000000100000000000000000000000000000001",
         encoded
     );
 }
@@ -497,7 +497,7 @@ async fn compile_bindings_struct_input() {
                         "components": [
                             {
                                 "name": "foo",
-                                "type": "u8[2]"
+                                "type": "[u8; 2]"
                             },
                             {
                                 "name": "bar",
@@ -533,7 +533,7 @@ async fn compile_bindings_struct_input() {
     );
 
     assert_eq!(
-        "0000000081dae8d1000000000000000a00000000000000026675656c00000000",
+        "000000004d313d82000000000000000a00000000000000026675656c00000000",
         encoded
     );
 }
