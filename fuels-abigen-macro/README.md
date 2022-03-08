@@ -40,7 +40,8 @@ fn compile_bindings_from_inline_contract() {
         "#
     );
 
-    let contract_instance = SimpleContract::new();
+    let dummy_client = FuelClient::new("").unwrap();
+    let contract_instance = SimpleContract::new(contract_id.to_string(),dummy_client);
 
     let contract_call = contract_instance.takes_ints_returns_bool(42 as u32, 10 as u16);
 
