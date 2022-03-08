@@ -5,6 +5,7 @@ use fuel_tx::Receipt;
 use fuel_tx::{Address, Color, Input, Output, Transaction};
 use fuel_vm::consts::REG_ONE;
 use std::io;
+use std::net::SocketAddr;
 
 use fuel_vm::prelude::Opcode;
 use fuels_core::errors::Error;
@@ -43,6 +44,11 @@ impl Provider {
     pub async fn launch(config: Config) -> Result<FuelClient, Error> {
         let srv = FuelService::new_node(config).await.unwrap();
         Ok(FuelClient::from(srv.bound_address))
+    }
+
+    /// Connects to an existing node at the given address
+    pub async fn connect(socket: SocketAddr) -> Result<FuelClient, Error> {
+        Ok(FuelClient::from(socket))
     }
 
     /// Shallow wrapper on client's coins API.
