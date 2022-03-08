@@ -1598,12 +1598,12 @@ async fn test_contract_calling_contract() {
     // Tests a contract call that calls another contract (FooCaller calls FooContract underneath)
     abigen!(
         FooContract,
-        "fuels-abigen-macro/tests/test_projects/foo-contract/out/debug/foo-contract-abi.json"
+        "fuels-abigen-macro/tests/test_projects/foo-contract/foo-contract-abi.json"
     );
 
     abigen!(
         FooCaller,
-        "fuels-abigen-macro/tests/test_projects/foo-caller-contract/out/debug/foo-caller-contract-abi.json"
+        "fuels-abigen-macro/tests/test_projects/foo-caller-contract/foo-caller-contract-abi.json"
     );
 
     let salt: [u8; 32] = rng.gen();
