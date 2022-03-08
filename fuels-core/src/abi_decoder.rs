@@ -39,10 +39,10 @@ impl ABIDecoder {
         Ok(tokens)
     }
 
-    fn decode_param<'a>(
+    fn decode_param(
         self,
         param: &ParamType,
-        data: &'a [u8],
+        data: &[u8],
         offset: usize,
     ) -> Result<DecodeResult, CodecError> {
         match &*param {
@@ -80,7 +80,7 @@ impl ABIDecoder {
                 let slice = peek_word(data, offset)?;
 
                 let result = DecodeResult {
-                    token: Token::U64(u64::from_be_bytes(slice.try_into().unwrap())),
+                    token: Token::U64(u64::from_be_bytes(slice)),
                     new_offset: offset + 8,
                 };
 
@@ -99,7 +99,7 @@ impl ABIDecoder {
             }
             ParamType::Byte => {
                 // Grab last byte of the word and compare it to 0x00
-                let byte = peek_word(data, offset)?.last().unwrap().clone();
+                let byte = *peek_word(data, offset)?.last().unwrap();
 
                 let result = DecodeResult {
                     token: Token::Byte(byte),
@@ -119,7 +119,7 @@ impl ABIDecoder {
                 Ok(result)
             }
             ParamType::String(length) => {
-                let encoded_str = peek(data, offset, *length)?.try_into().unwrap();
+                let encoded_str = peek(data, offset, *length)?;
 
                 let decoded = str::from_utf8(encoded_str)?;
 
@@ -184,6 +184,12 @@ impl ABIDecoder {
                 Ok(result)
             }
         }
+    }
+}
+
+impl Default for ABIDecoder {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
