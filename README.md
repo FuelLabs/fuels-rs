@@ -189,7 +189,7 @@ And, then, you're able to use to call the actual methods on the deployed contrac
 
 ```Rust
 //...
-let contract_instance = MyContract::new(compiled, client);
+let contract_instance = MyContract::new(contract_id.to_string(), client);
 
 let result = contract_instance
     .initialize_counter(42) // Build the ABI call

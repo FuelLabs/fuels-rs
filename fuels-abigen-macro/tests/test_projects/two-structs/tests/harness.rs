@@ -20,5 +20,5 @@ async fn harness() {
     let client = Provider::launch(Config::local_node()).await.unwrap();
     let contract_id = Contract::deployed(&compiled, &client).await.unwrap();
 
-    let contract_instance = MyContract::new(compiled, client);
+    let contract_instance = MyContract::new(contract_id.to_string(), client);
 }
