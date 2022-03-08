@@ -592,6 +592,36 @@ pub fn parse_custom_type_param(param: &Property) -> Result<ParamType, Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ParamType;
+
+    #[test]
+    fn parse_string_and_array_param() {
+        let array_prop = Property {
+            name: "some_array".to_string(),
+            type_field: "[bool; 4]".to_string(),
+            components: None,
+        };
+        let expected = "Array(Box::new(ParamType::Bool),4)";
+        let result = parse_array_param(&array_prop).unwrap().to_string();
+        assert_eq!(result, expected);
+
+        let string_prop = Property {
+            name: "some_array".to_string(),
+            type_field: "str[5]".to_string(),
+            components: None,
+        };
+        let expected = "String(5)";
+        let result = parse_string_param(&string_prop).unwrap().to_string();
+        assert_eq!(result, expected);
+
+        let expected = "Invalid type: Expected parameter type `str[n]`, found `[bool; 4]`";
+        let result = parse_string_param(&array_prop).unwrap_err().to_string();
+        assert_eq!(result, expected);
+
+        let expected = "Invalid type: Expected parameter type `[T; n]`, found `str[5]`";
+        let result = parse_array_param(&string_prop).unwrap_err().to_string();
+        assert_eq!(result, expected);
+    }
 
     #[test]
     fn simple_encode_and_decode_no_selector() {
