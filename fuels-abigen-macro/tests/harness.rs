@@ -1590,3 +1590,53 @@ async fn test_provider_node_launch_and_connect() {
         .unwrap();
     assert_eq!(52, result.value);
 }
+
+#[tokio::test]
+async fn test_contract_calling_contract() {
+    let rng = &mut StdRng::seed_from_u64(2322u64);
+
+    // Tests a contract call that calls another contract (FooCaller calls FooContract underneath)
+    abigen!(
+        FooContract,
+        "fuels-abigen-macro/tests/test_projects/foo-contract/foo-contract-abi.json"
+    );
+
+    abigen!(
+        FooCaller,
+        "fuels-abigen-macro/tests/test_projects/foo-caller-contract/foo-caller-contract-abi.json"
+    );
+
+    let salt: [u8; 32] = rng.gen();
+    let salt = Salt::from(salt);
+
+    let compiled =
+        Contract::compile_sway_contract("tests/test_projects/foo-contract", salt).unwrap();
+
+    let client = Provider::launch(Config::local_node()).await.unwrap();
+    let foo_contract_id = Contract::deploy(&compiled, &client.clone()).await.unwrap();
+
+    let foo_contract_instance = FooContract::new(foo_contract_id.to_string(), client.clone());
+
+    // Call the contract directly; it just flips the bool value that's passed.
+    let res = foo_contract_instance.foo(true).call().await.unwrap();
+    assert!(!res.value);
+
+    // Compile and deploy second contract
+    let compiled =
+        Contract::compile_sway_contract("tests/test_projects/foo-caller-contract", salt).unwrap();
+
+    let foo_caller_contract_id = Contract::deploy(&compiled, &client).await.unwrap();
+
+    let foo_caller_contract_instance = FooCaller::new(foo_caller_contract_id.to_string(), client);
+
+    // Calls the contract that calls the `FooContract` contract, also just
+    // flips the bool value passed to it.
+    let res = foo_caller_contract_instance
+        .call_foo_contract(true)
+        .set_contracts(&[foo_contract_id]) // Sets the external contract
+        .call()
+        .await
+        .unwrap();
+
+    assert!(!res.value);
+}

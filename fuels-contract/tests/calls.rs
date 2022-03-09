@@ -93,6 +93,7 @@ async fn contract_call() {
         byte_price,
         maturity,
         false,
+        None,
     )
     .await
     .unwrap();
