@@ -26,7 +26,7 @@ pub fn expand_type(kind: &ParamType) -> Result<TokenStream, Error> {
             }
             let members = members
                 .iter()
-                .map(|member| expand_type(member))
+                .map(expand_type)
                 .collect::<Result<Vec<_>, _>>()?;
             Ok(quote! { (#(#members,)*) })
         }
@@ -36,7 +36,7 @@ pub fn expand_type(kind: &ParamType) -> Result<TokenStream, Error> {
             }
             let members = members
                 .iter()
-                .map(|member| expand_type(member))
+                .map(expand_type)
                 .collect::<Result<Vec<_>, _>>()?;
             Ok(quote! { (#(#members,)*) })
         }

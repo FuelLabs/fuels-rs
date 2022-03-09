@@ -188,7 +188,7 @@ impl<T: Tokenizable> Tokenizable for Vec<T> {
                 for tok in data {
                     v.push(T::from_token(tok.clone()).unwrap());
                 }
-                return Ok(v);
+                Ok(v)
             }
             other => Err(InvalidOutputType(format!("Expected `T`, got {:?}", other))),
         }

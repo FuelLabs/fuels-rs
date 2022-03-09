@@ -51,8 +51,7 @@ impl Script {
             output_directory: None,
         };
 
-        let (raw, _) =
-            forc_build::build(build_command).map_err(|message| Error::CompilationError(message))?;
+        let (raw, _) = forc_build::build(build_command).map_err(Error::CompilationError)?;
 
         let manifest_dir = find_manifest_dir(&PathBuf::from(project_path)).unwrap();
         let manifest = read_manifest(&manifest_dir).map_err(|e| {

@@ -112,7 +112,7 @@ fn code_gen(code: Codegen) -> anyhow::Result<String> {
 
     let c = abi.generate()?;
 
-    let outfile = output.unwrap_or("./abi_code.rs".into());
+    let outfile = output.unwrap_or_else(|| "./abi_code.rs".into());
     let mut f = fs::File::create(outfile)?;
     c.write(&mut f)?;
 
@@ -126,7 +126,7 @@ fn encode_params(params: &[String]) -> anyhow::Result<String> {
 }
 
 fn encode_input(path: &str, function_name: &str, values: &[String]) -> anyhow::Result<String> {
-    if values.len() == 0 {
+    if values.is_empty() {
         anyhow::bail!("Values to be encoded shouldn't be empty")
     }
 
@@ -159,7 +159,7 @@ fn decode_params(types: &[String], data: &str) -> anyhow::Result<String> {
 
     let mut result: String = String::new();
     for token in decoded {
-        let format = format!("{}\n", token.to_string());
+        let format = format!("{}\n", token);
         result.push_str(&format);
     }
 
@@ -171,11 +171,11 @@ fn decode_call_output(path: &str, function_name: &str, data: &str) -> anyhow::Re
 
     let abi_coder = ABIParser::new();
 
-    let decoded = abi_coder.decode(&contract, function_name, &data.as_bytes())?;
+    let decoded = abi_coder.decode(&contract, function_name, data.as_bytes())?;
 
     let mut result: String = String::new();
     for res in decoded {
-        let format = format!("{}\n", res.to_string());
+        let format = format!("{}\n", res);
         result.push_str(&format);
     }
 

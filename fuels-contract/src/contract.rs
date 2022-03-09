@@ -55,6 +55,7 @@ impl Contract {
     /// Calls an already-deployed contract code.
     /// Note that this is a "generic" call to a contract
     /// and it doesn't, yet, call a specific ABI function in that contract.
+    #[allow(clippy::too_many_arguments)] // We need that many arguments for now
     pub async fn call(
         contract_id: ContractId,
         encoded_selector: Option<Selector>,
@@ -67,20 +68,18 @@ impl Contract {
         custom_inputs: bool,
         external_contracts: Option<Vec<ContractId>>,
     ) -> Result<Vec<Receipt>, Error> {
-        // Based on the defined script length,
-        // we set the appropriate data offset.
+        // Based on the defined script length, we set the appropriate data offset.
         let script_len = 16;
         let script_data_offset = VM_TX_MEMORY + Transaction::script_offset() + script_len;
         let script_data_offset = script_data_offset as Immediate12;
 
-        // Script to call the contract.
-        // The offset that points to the `script_data`
-        // is loaded at the register `0x10`. Note that
-        // we're picking `0x10` simply because
-        // it could be any non-reserved register.
-        // Then, we use the Opcode to call a contract: `CALL`
-        // pointing at the register that we loaded the
-        // `script_data` at.
+        // Script to call the contract. The offset that points to the `script_data` is loaded at the
+        // register `0x10`. Note that we're picking `0x10` simply because it could be any
+        // non-reserved register. Then, we use the Opcode to call a contract: `CALL` pointing at the
+        // register that we loaded the `script_data` at.
+
+        // The `iter().collect()` does the Opcode->u8 conversion
+        #[allow(clippy::iter_cloned_collect)]
         let script = vec![
             Opcode::ADDI(0x10, REG_ZERO, script_data_offset),
             Opcode::CALL(0x10, REG_ZERO, 0x10, REG_CGAS),
@@ -110,10 +109,9 @@ impl Contract {
             script_data.extend(e)
         }
 
-        // If the method call takes custom inputs, such as structs or enums,
-        // we need to calculate the `call_data_offset`, which points to
-        // where the data for the custom types start in the transaction.
-        // If it doesn't take any custom inputs, this isn't necessary.
+        // If the method call takes custom inputs, such as structs or enums, we need to calculate
+        // the `call_data_offset`, which points to where the data for the custom types start in the
+        // transaction. If it doesn't take any custom inputs, this isn't necessary.
         if custom_inputs {
             // Offset of the script data relative to the call data
             let call_data_offset = script_data_offset as usize + ContractId::LEN + 2 * WORD_SIZE;
@@ -276,8 +274,7 @@ impl Contract {
             use_ir: false,
         };
 
-        let (raw, _) =
-            forc_build::build(build_command).map_err(|message| Error::CompilationError(message))?;
+        let (raw, _) = forc_build::build(build_command).map_err(Error::CompilationError)?;
 
         Ok(CompiledContract { salt, raw })
     }

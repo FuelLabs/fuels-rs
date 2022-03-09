@@ -45,7 +45,7 @@ impl ABIEncoder {
                 }
                 Token::String(arg_string) => self.encoded_args.extend(pad_string(arg_string)),
                 Token::Struct(arg_struct) => {
-                    for property in arg_struct.into_iter() {
+                    for property in arg_struct.iter() {
                         self.encode(&[property.to_owned()])?;
                     }
                 }
@@ -57,7 +57,7 @@ impl ABIEncoder {
                 }
             };
         }
-        Ok(self.encoded_args.clone().into())
+        Ok(self.encoded_args.clone())
     }
 
     pub fn encode_function_selector(signature: &[u8]) -> ByteArray {
@@ -70,6 +70,12 @@ impl ABIEncoder {
         (&mut output[4..]).copy_from_slice(&result[..4]);
 
         output
+    }
+}
+
+impl Default for ABIEncoder {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
