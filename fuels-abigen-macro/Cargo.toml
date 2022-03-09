@@ -12,7 +12,7 @@ description = "Fuel Rust SDK marcros to generate types from ABI."
 proc-macro = true
 
 [dependencies]
-fuel-tx = "0.5"
+fuel-tx = "0.6"
 fuels-core = { version = "0.5.2", path = "../fuels-core" }
 proc-macro2 = "1.0"
 quote = "1.0"
@@ -20,8 +20,8 @@ rand = "0.8"
 syn = "1.0.12"
 
 [dev-dependencies]
-fuel-core = { version = "0.3", default-features = false }
-fuel-gql-client = { version = "0.3", default-features = false }
+fuel-core = { version = "0.4", default-features = false }
+fuel-gql-client = { version = "0.4", default-features = false }
 fuels-contract = { version = "0.5.2", path = "../fuels-contract" }
 fuels-signers = { version = "0.5.2", path = "../fuels-signers", features = ["test-helpers"] }
 hex = { version = "0.4.3", default-features = false, features = ["std"] }

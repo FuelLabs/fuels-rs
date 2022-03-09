@@ -2,7 +2,7 @@ use fuel_core::service::{Config, FuelService};
 use fuel_gql_client::client::schema::coin::Coin;
 use fuel_gql_client::client::{FuelClient, PageDirection, PaginationRequest};
 use fuel_tx::Receipt;
-use fuel_tx::{Address, Color, Input, Output, Transaction};
+use fuel_tx::{Address, AssetId, Input, Output, Transaction};
 use fuel_vm::consts::REG_ONE;
 use std::io;
 use std::net::SocketAddr;
@@ -84,7 +84,7 @@ impl Provider {
     pub async fn get_spendable_coins(
         &self,
         from: &Address,
-        color: Color,
+        color: AssetId,
         amount: u64,
     ) -> io::Result<Vec<Coin>> {
         let res = self

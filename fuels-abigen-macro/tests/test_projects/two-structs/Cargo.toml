@@ -6,8 +6,8 @@ edition = "2021"
 license = "Apache-2.0"
 
 [dependencies]
-fuel-gql-client = { version = "0.3", default-features = false }
-fuel-tx = "0.5"
+fuel-gql-client = { version = "0.4", default-features = false }
+fuel-tx = "0.6"
 fuels-abigen-macro = "0.2"
 fuels-core = "0.2"
 fuels-rs = "0.2"

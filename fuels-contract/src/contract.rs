@@ -6,7 +6,7 @@ use forc::test::{forc_build, BuildCommand};
 use fuel_asm::Opcode;
 use fuel_gql_client::client::FuelClient;
 use fuel_tx::{
-    Address, Color, ContractId, Input, Output, Receipt, StorageSlot, Transaction, UtxoId, Witness,
+    Address, AssetId, ContractId, Input, Output, Receipt, StorageSlot, Transaction, UtxoId, Witness,
 };
 use fuel_types::{Bytes32, Immediate12, Salt, Word};
 use fuel_vm::consts::{REG_CGAS, REG_RET, REG_ZERO, VM_TX_MEMORY};
@@ -168,7 +168,7 @@ impl Contract {
             UtxoId::new(Bytes32::from(rng.gen::<[u8; 32]>()), 0),
             Address::from(rng.gen::<[u8; 32]>()),
             rng.next_u64(),
-            Color::from([0u8; 32]),
+            AssetId::from([0u8; 32]),
             0,
             0,
             vec![],

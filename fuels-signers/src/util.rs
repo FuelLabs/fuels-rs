@@ -8,8 +8,8 @@ pub mod test_helpers {
         database::Database,
         model::coin::{Coin, CoinStatus},
     };
+    use fuel_crypto::Hasher;
     use fuel_gql_client::client::FuelClient;
-    use fuel_tx::crypto::Hasher;
     use fuel_tx::{Address, Bytes32, Bytes64, UtxoId};
     use fuel_vm::prelude::Storage;
     use rand::{Fill, Rng};
@@ -49,7 +49,7 @@ pub mod test_helpers {
                 let coin = Coin {
                     owner: Address::from(*hashed),
                     amount,
-                    color: Default::default(),
+                    asset_id: Default::default(),
                     maturity: Default::default(),
                     status: CoinStatus::Unspent,
                     block_created: Default::default(),
