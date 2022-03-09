@@ -1,5 +1,5 @@
-use fuel_tx::{crypto::Hasher, Bytes32, Bytes64};
-use fuel_types::Address;
+use fuel_crypto::Hasher;
+use fuel_tx::{Address, Bytes32, Bytes64};
 use fuel_vm::crypto::secp256k1_sign_compact_recover;
 use fuels_core::Bits256;
 use std::{convert::TryFrom, fmt, str::FromStr};

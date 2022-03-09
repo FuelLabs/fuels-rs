@@ -6,8 +6,7 @@ pub mod wallet;
 use signature::Signature;
 
 use async_trait::async_trait;
-use fuel_tx::Transaction;
-use fuel_types::Address;
+use fuel_tx::{Address, Transaction};
 use std::error::Error;
 
 /// A wallet instantiated with a locally stored private key
@@ -39,7 +38,7 @@ mod tests {
     use crate::util::test_helpers::{
         setup_address_and_coins, setup_local_node, setup_test_provider,
     };
-    use fuel_tx::{Bytes32, Color, Input, Output, UtxoId};
+    use fuel_tx::{AssetId, Bytes32, Input, Output, UtxoId};
     use rand::{rngs::StdRng, RngCore, SeedableRng};
     use secp256k1::SecretKey;
     use std::str::FromStr;
@@ -88,7 +87,7 @@ mod tests {
             Address::from_str("0xf1e92c42b90934aa6372e30bc568a326f6e66a1a0288595e6e3fbd392a4f3e6e")
                 .unwrap(),
             10000000,
-            Color::from([0u8; 32]),
+            AssetId::from([0u8; 32]),
             0,
             0,
             vec![],
@@ -99,7 +98,7 @@ mod tests {
             Address::from_str("0xc7862855b418ba8f58878db434b21053a61a2025209889cc115989e8040ff077")
                 .unwrap(),
             1,
-            Color::from([0u8; 32]),
+            AssetId::from([0u8; 32]),
         );
 
         let mut tx = Transaction::script(
@@ -191,9 +190,7 @@ mod tests {
         assert_eq!(wallet_1_initial_coins.len(), 1);
         assert_eq!(wallet_2_initial_coins.len(), 1);
 
-        // Transferring 2 from wallet 1 to wallet 2.
-        // Wallet 1 has one coin with amount 5.
-        // This means wallet 1 should receive a change of 3.
+        // Transfer 2 from wallet 1 to wallet 2.
         let _receipts = wallet_1
             .transfer(&wallet_2.address(), 2, Default::default())
             .await
@@ -201,8 +198,9 @@ mod tests {
 
         let wallet_1_final_coins = wallet_1.get_coins().await.unwrap();
 
-        // New UTXO coming from a change
-        assert_eq!(wallet_1_final_coins.len(), 2);
+        // Assert that we've sent 2 from wallet 1, resulting in an amount of 3 in wallet 1.
+        let resulting_amount = wallet_1_final_coins.first().unwrap();
+        assert_eq!(resulting_amount.amount.0, 3);
 
         let wallet_2_final_coins = wallet_2.get_coins().await.unwrap();
         assert_eq!(wallet_2_final_coins.len(), 2);

@@ -2,10 +2,9 @@ use crate::provider::{Provider, ProviderError};
 use crate::signature::Signature;
 use crate::Signer;
 use async_trait::async_trait;
+use fuel_crypto::Hasher;
 use fuel_gql_client::client::schema::coin::Coin;
-use fuel_tx::crypto::Hasher;
-use fuel_tx::{Bytes64, Color, Input, Output, Receipt, Transaction, UtxoId, Witness};
-use fuel_types::Address;
+use fuel_tx::{Address, AssetId, Bytes64, Input, Output, Receipt, Transaction, UtxoId, Witness};
 use fuel_vm::crypto::secp256k1_sign_compact_recoverable;
 use secp256k1::{PublicKey, Secp256k1, SecretKey};
 use std::{fmt, io};
@@ -118,7 +117,7 @@ impl Wallet {
     /// use fuels_signers::util::test_helpers::{
     ///     setup_address_and_coins, setup_local_node, setup_test_provider,
     /// };
-    /// use fuel_tx::{Bytes32, Color, Input, Output, UtxoId};
+    /// use fuel_tx::{Bytes32, AssetId, Input, Output, UtxoId};
     /// use rand::{rngs::StdRng, RngCore, SeedableRng};
     /// use secp256k1::SecretKey;
     /// use std::str::FromStr;
@@ -153,7 +152,7 @@ impl Wallet {
         &self,
         to: &Address,
         amount: u64,
-        color: Color,
+        color: AssetId,
     ) -> io::Result<Vec<Receipt>> {
         let spendable = self.get_spendable_coins(&color, amount).await?;
 
@@ -198,7 +197,7 @@ impl Wallet {
     /// Gets spendable coins from this wallet.
     /// Note that this is a simple wrapper on provider's
     /// `get_spendable_coins`.
-    pub async fn get_spendable_coins(&self, color: &Color, amount: u64) -> io::Result<Vec<Coin>> {
+    pub async fn get_spendable_coins(&self, color: &AssetId, amount: u64) -> io::Result<Vec<Coin>> {
         Ok(self
             .provider
             .get_spendable_coins(&self.address(), *color, amount)
