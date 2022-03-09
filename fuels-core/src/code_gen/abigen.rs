@@ -663,7 +663,7 @@ mod tests {
                             },
                             {
                                 "name": "foo",
-                                "type": "u8[2]"
+                                "type": "[u8; 2]"
                             },
                             {
                                 "name": "bar",
@@ -684,7 +684,7 @@ mod tests {
                             },
                             {
                                 "name": "foo",
-                                "type": "u8[2]"
+                                "type": "[u8; 2]"
                             },
                             {
                                 "name": "bar",

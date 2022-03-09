@@ -516,41 +516,52 @@ pub fn parse_param(param: &Property) -> Result<ParamType, Error> {
         // Simple case (primitive types, no arrays, including string)
         Ok(param_type) => Ok(param_type),
         Err(_) => {
-            match param.type_field.contains("struct") || param.type_field.contains("enum") {
-                true => Ok(parse_custom_type_param(param)?),
-                false => {
-                    match param.type_field.contains('[') && param.type_field.contains(']') {
-                        // Try to parse array (T[M]) or string (str[M])
-                        true => Ok(parse_array_param(param)?),
-                        // Try to parse enum or struct
-                        false => Ok(parse_custom_type_param(param)?),
-                    }
-                }
+            if param.type_field.contains("struct") || param.type_field.contains("enum") {
+                return parse_custom_type_param(param);
             }
+            if param.type_field.contains('[') && param.type_field.contains(']') {
+                // Try to parse array ([T; M]) or string (str[M])
+                if param.type_field.contains("str[") {
+                    return parse_string_param(param);
+                }
+                return parse_array_param(param);
+            }
+            // Try to parse enum or struct
+            return parse_custom_type_param(param);
         }
     }
 }
 
-pub fn parse_array_param(param: &Property) -> Result<ParamType, Error> {
-    // Split "T[n]" string into "T" and "[n]"
+pub fn parse_string_param(param: &Property) -> Result<ParamType, Error> {
+    // Split "str[n]" string into "str" and "[n]"
     let split: Vec<&str> = param.type_field.split('[').collect();
-    if split.len() != 2 {
-        return Err(Error::MissingData(format!(
-            "invalid parameter type: {}",
+    if split.len() != 2 || !split[0].eq("str") {
+        return Err(Error::InvalidType(format!(
+            "Expected parameter type `str[n]`, found `{}`",
             param.type_field
         )));
     }
-
-    let param_type = ParamType::from_str(split[0]).unwrap();
-
     // Grab size in between brackets, i.e the `n` in "[n]"
-    let size: usize = split[1][..split[1].len() - 1].parse().unwrap();
+    let size: usize = split[1][..split[1].len() - 1].parse()?;
+    Ok(ParamType::String(size))
+}
 
-    if let ParamType::String(_) = param_type {
-        Ok(ParamType::String(size))
-    } else {
-        Ok(ParamType::Array(Box::new(param_type), size))
+pub fn parse_array_param(param: &Property) -> Result<ParamType, Error> {
+    // Split "[T; n]" string into "T" and "n"
+    let split: Vec<&str> = param.type_field.split("; ").collect();
+    if split.len() != 2 {
+        return Err(Error::InvalidType(format!(
+            "Expected parameter type `[T; n]`, found `{}`",
+            param.type_field
+        )));
     }
+    let (type_field, size) = (split[0], split[1]);
+    let type_field = type_field[1..].to_string();
+    let param_type = ParamType::from_str(&type_field)?;
+
+    // Grab size the `n` in "[T; n]"
+    let size: usize = size[..size.len() - 1].parse()?;
+    Ok(ParamType::Array(Box::new(param_type), size))
 }
 
 pub fn parse_custom_type_param(param: &Property) -> Result<ParamType, Error> {
@@ -581,6 +592,36 @@ pub fn parse_custom_type_param(param: &Property) -> Result<ParamType, Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ParamType;
+
+    #[test]
+    fn parse_string_and_array_param() {
+        let array_prop = Property {
+            name: "some_array".to_string(),
+            type_field: "[bool; 4]".to_string(),
+            components: None,
+        };
+        let expected = "Array(Box::new(ParamType::Bool),4)";
+        let result = parse_array_param(&array_prop).unwrap().to_string();
+        assert_eq!(result, expected);
+
+        let string_prop = Property {
+            name: "some_array".to_string(),
+            type_field: "str[5]".to_string(),
+            components: None,
+        };
+        let expected = "String(5)";
+        let result = parse_string_param(&string_prop).unwrap().to_string();
+        assert_eq!(result, expected);
+
+        let expected = "Invalid type: Expected parameter type `str[n]`, found `[bool; 4]`";
+        let result = parse_string_param(&array_prop).unwrap_err().to_string();
+        assert_eq!(result, expected);
+
+        let expected = "Invalid type: Expected parameter type `[T; n]`, found `str[5]`";
+        let result = parse_array_param(&string_prop).unwrap_err().to_string();
+        assert_eq!(result, expected);
+    }
 
     #[test]
     fn simple_encode_and_decode_no_selector() {
@@ -742,14 +783,14 @@ mod tests {
                 "inputs":[
                     {
                         "name":"arg",
-                        "type":"u16[3]"
+                        "type":"[u16; 3]"
                     }
                 ],
                 "name":"takes_array",
                 "outputs":[
                     {
                         "name":"",
-                        "type":"u16[2]"
+                        "type":"[u16; 2]"
                     }
                 ]
             }
@@ -767,7 +808,7 @@ mod tests {
             .unwrap();
         println!("encoded: {:?}\n", encoded);
 
-        let expected_encode = "00000000f0b87864000000000000000100000000000000020000000000000003";
+        let expected_encode = "00000000058734b9000000000000000100000000000000020000000000000003";
         assert_eq!(encoded, expected_encode);
 
         let return_value = [
@@ -848,14 +889,14 @@ mod tests {
                 "inputs":[
                     {
                         "name":"arg",
-                        "type":"u16[3]"
+                        "type":"[u16; 3]"
                     }
                 ],
                 "name":"takes_nested_array",
                 "outputs":[
                     {
                         "name":"",
-                        "type":"u16[2]"
+                        "type":"[u16; 2]"
                     }
                 ]
             }
@@ -874,7 +915,7 @@ mod tests {
         println!("encoded: {:?}\n", encoded);
 
         let expected_encode =
-            "00000000e5d521030000000000000001000000000000000200000000000000030000000000000004";
+            "00000000507abc250000000000000001000000000000000200000000000000030000000000000004";
         assert_eq!(encoded, expected_encode);
 
         let return_value = [
@@ -1052,7 +1093,7 @@ mod tests {
                                     },
                                     {
                                         "name":"b",
-                                        "type": "u8[2]"
+                                        "type": "[u8; 2]"
                                     }
                                 ]
                             }
@@ -1077,7 +1118,7 @@ mod tests {
         println!("encoded: {:?}\n", encoded);
 
         let expected_encode =
-            "00000000ff25eb48000000000000000a000000000000000100000000000000010000000000000002";
+            "00000000c0e6f721000000000000000a000000000000000100000000000000010000000000000002";
         assert_eq!(encoded, expected_encode);
 
         let json_abi = r#"
@@ -1099,7 +1140,7 @@ mod tests {
                                     },
                                     {
                                         "name":"b",
-                                        "type": "u8[2]"
+                                        "type": "[u8; 2]"
                                     }
                                 ]
                             },
@@ -1124,7 +1165,7 @@ mod tests {
         println!("encoded: {:?}\n", encoded);
 
         let expected_encode =
-            "000000007728cb9e000000000000000100000000000000010000000000000002000000000000000a";
+            "0000000058c95826000000000000000100000000000000010000000000000002000000000000000a";
         assert_eq!(encoded, expected_encode);
     }
 
