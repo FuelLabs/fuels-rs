@@ -2,6 +2,7 @@ use core::fmt;
 use core::str::Utf8Error;
 pub type Result<T> = core::result::Result<T, Error>;
 use std::net;
+use strum::ParseError;
 use thiserror::Error;
 
 use crate::InvalidOutputType;
@@ -62,6 +63,12 @@ impl From<CodecError> for Error {
             CodecError::InvalidData => Error::InvalidData,
             CodecError::Utf8Error(e) => Error::Utf8Error(e),
         }
+    }
+}
+
+impl From<ParseError> for Error {
+    fn from(err: ParseError) -> Error {
+        Error::InvalidType(err.to_string())
     }
 }
 

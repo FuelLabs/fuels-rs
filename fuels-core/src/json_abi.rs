@@ -542,7 +542,7 @@ pub fn parse_string_param(param: &Property) -> Result<ParamType, Error> {
         )));
     }
     // Grab size in between brackets, i.e the `n` in "[n]"
-    let size: usize = split[1][..split[1].len() - 1].parse().unwrap();
+    let size: usize = split[1][..split[1].len() - 1].parse()?;
     Ok(ParamType::String(size))
 }
 
@@ -557,10 +557,10 @@ pub fn parse_array_param(param: &Property) -> Result<ParamType, Error> {
     }
     let (type_field, size) = (split[0], split[1]);
     let type_field = type_field[1..].to_string();
-    let param_type = ParamType::from_str(&type_field).unwrap();
+    let param_type = ParamType::from_str(&type_field)?;
 
     // Grab size the `n` in "[T; n]"
-    let size: usize = size[..size.len() - 1].parse().unwrap();
+    let size: usize = size[..size.len() - 1].parse()?;
     Ok(ParamType::Array(Box::new(param_type), size))
 }
 
