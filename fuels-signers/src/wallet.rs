@@ -108,7 +108,7 @@ impl Wallet {
     }
 
     /// Transfer funds from this wallet to another `Address`.
-    /// Fails if amount for color is larger than address's spendable coins.
+    /// Fails if amount for asset ID is larger than address's spendable coins.
     ///
     /// # Examples
     /// ```
@@ -152,16 +152,16 @@ impl Wallet {
         &self,
         to: &Address,
         amount: u64,
-        color: AssetId,
+        asset_id: AssetId,
     ) -> io::Result<Vec<Receipt>> {
-        let spendable = self.get_spendable_coins(&color, amount).await?;
+        let spendable = self.get_spendable_coins(&asset_id, amount).await?;
 
         let mut inputs: Vec<Input> = vec![];
         let outputs: Vec<Output> = vec![
-            Output::coin(*to, amount, color),
+            Output::coin(*to, amount, asset_id),
             // Note that the change will be computed by the node.
-            // Here we only have to tell the node who will own the change and its color.
-            Output::change(self.address(), 0, color),
+            // Here we only have to tell the node who will own the change and its asset ID.
+            Output::change(self.address(), 0, asset_id),
         ];
 
         for coin in spendable {
@@ -169,7 +169,7 @@ impl Wallet {
                 UtxoId::from(coin.utxo_id),
                 coin.owner.into(),
                 coin.amount.0,
-                color,
+                asset_id,
                 0,
                 0,
                 vec![],
@@ -197,10 +197,14 @@ impl Wallet {
     /// Gets spendable coins from this wallet.
     /// Note that this is a simple wrapper on provider's
     /// `get_spendable_coins`.
-    pub async fn get_spendable_coins(&self, color: &AssetId, amount: u64) -> io::Result<Vec<Coin>> {
+    pub async fn get_spendable_coins(
+        &self,
+        asset_id: &AssetId,
+        amount: u64,
+    ) -> io::Result<Vec<Coin>> {
         Ok(self
             .provider
-            .get_spendable_coins(&self.address(), *color, amount)
+            .get_spendable_coins(&self.address(), *asset_id, amount)
             .await?)
     }
 }

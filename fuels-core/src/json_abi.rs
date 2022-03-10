@@ -1411,10 +1411,11 @@ mod tests {
 
         let gas = "1000000".to_string();
         let coins = "0".to_string();
-        let color = "0000000000000000000000000000000000000000000000000000000000000000".to_string();
+        let asset_id =
+            "0000000000000000000000000000000000000000000000000000000000000000".to_string();
         let s = "(true, 42)".to_string();
 
-        let values: Vec<String> = vec![gas, coins, color, s];
+        let values: Vec<String> = vec![gas, coins, asset_id, s];
 
         let mut abi = ABIParser::new();
 

@@ -84,14 +84,14 @@ impl Provider {
     pub async fn get_spendable_coins(
         &self,
         from: &Address,
-        color: AssetId,
+        asset_id: AssetId,
         amount: u64,
     ) -> io::Result<Vec<Coin>> {
         let res = self
             .client
             .coins_to_spend(
                 &from.to_string(),
-                vec![(format!("{:#x}", color).as_str(), amount)],
+                vec![(format!("{:#x}", asset_id).as_str(), amount)],
                 None,
             )
             .await?;
