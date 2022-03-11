@@ -9,8 +9,8 @@ repository = "https://github.com/FuelLabs/fuels-rs"
 description = "Fuel Rust SDK contracts."
 
 [dependencies]
+anyhow = "1"
 bytes = { version = "1.0.1", features = ["serde"] }
-forc = { version = "0.5", features = ["test", "util"], default-features = false }
 fuel-asm = { version = "0.1", features = ["serde-types"] }
 fuel-core = { version = "0.4", default-features = false }
 fuel-gql-client = { version = "0.4", default-features = false }
@@ -32,8 +32,3 @@ sway-types = { version = "0.1" }
 sway-utils = { version = "0.1" }
 thiserror = { version = "1.0.26", default-features = false }
 tokio = "1.12"
-
-[[test]]
-name = "integration_tests"
-path = "tests/lib.rs"
-harness = true

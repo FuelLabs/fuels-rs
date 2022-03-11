@@ -7,4 +7,4 @@ name = "foo-caller-contract"
 [dependencies]
 core = { git = "http://github.com/FuelLabs/sway-lib-core" }
 std = { git = "http://github.com/FuelLabs/sway-lib-std" }
-foo = { path = "../foo-contract-abi/src/" }
+foo = { path = "../foo-contract-abi" }

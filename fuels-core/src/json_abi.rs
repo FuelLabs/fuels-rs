@@ -1322,21 +1322,6 @@ mod tests {
                 "inputs": [
                     {
                         "components": null,
-                        "name": "gas_",
-                        "type": "u64"
-                    },
-                    {
-                        "components": null,
-                        "name": "amount_",
-                        "type": "u64"
-                    },
-                    {
-                        "components": null,
-                        "name": "color_",
-                        "type": "b256"
-                    },
-                    {
-                        "components": null,
                         "name": "value",
                         "type": "u64"
                     }
@@ -1353,21 +1338,6 @@ mod tests {
             },
             {
                 "inputs": [
-                    {
-                        "components": null,
-                        "name": "gas_",
-                        "type": "u64"
-                    },
-                    {
-                        "components": null,
-                        "name": "amount_",
-                        "type": "u64"
-                    },
-                    {
-                        "components": null,
-                        "name": "color_",
-                        "type": "b256"
-                    },
                     {
                         "components": [
                             {
@@ -1409,13 +1379,9 @@ mod tests {
         ]
                 "#;
 
-        let gas = "1000000".to_string();
-        let coins = "0".to_string();
-        let asset_id =
-            "0000000000000000000000000000000000000000000000000000000000000000".to_string();
         let s = "(true, 42)".to_string();
 
-        let values: Vec<String> = vec![gas, coins, asset_id, s];
+        let values: Vec<String> = vec![s];
 
         let mut abi = ABIParser::new();
 
@@ -1426,7 +1392,7 @@ mod tests {
             .unwrap();
         println!("encoded: {:?}\n", encoded);
 
-        let expected_encode = "0000000087f27a3900000000000f4240000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001000000000000002a";
+        let expected_encode = "00000000e33a11ce0000000000000001000000000000002a";
         assert_eq!(encoded, expected_encode);
     }
 }
