@@ -114,10 +114,8 @@ fn expand_function_arguments(
     custom_enums: &HashMap<String, Property>,
     custom_structs: &HashMap<String, Property>,
 ) -> Result<(TokenStream, TokenStream), Error> {
-    // Ignore the first three arguments so we don't have to provide them when calling
-    // the contracts' methods
-    let mut args = Vec::with_capacity(1);
-    let mut call_args = Vec::with_capacity(1);
+    let mut args = vec![];
+    let mut call_args = vec![];
 
     for (i, param) in fun.inputs.iter().enumerate() {
         // For each [`Property`] in a function input we expand:
