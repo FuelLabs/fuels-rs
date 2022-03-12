@@ -1,0 +1,38 @@
+[
+  {
+    "type": "function",
+    "inputs": [
+      {
+        "name": "input",
+        "type": "u64",
+        "components": null
+      }
+    ],
+    "name": "store",
+    "outputs": [
+      {
+        "name": "",
+        "type": "()",
+        "components": null
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "inputs": [
+      {
+        "name": "input",
+        "type": "u64",
+        "components": null
+      }
+    ],
+    "name": "read",
+    "outputs": [
+      {
+        "name": "",
+        "type": "u64",
+        "components": null
+      }
+    ]
+  }
+]

@@ -1,0 +1,78 @@
+[
+  {
+    "type": "function",
+    "inputs": [
+      {
+        "name": "value",
+        "type": "u64",
+        "components": null
+      }
+    ],
+    "name": "is_even",
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "components": null
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "inputs": [
+      {
+        "name": "value",
+        "type": "str[4]",
+        "components": null
+      }
+    ],
+    "name": "return_my_string",
+    "outputs": [
+      {
+        "name": "",
+        "type": "str[4]",
+        "components": null
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "inputs": [
+      {
+        "name": "value",
+        "type": "struct MyStruct",
+        "components": [
+          {
+            "name": "foo",
+            "type": "u8",
+            "components": null
+          },
+          {
+            "name": "bar",
+            "type": "bool",
+            "components": null
+          }
+        ]
+      }
+    ],
+    "name": "return_my_struct",
+    "outputs": [
+      {
+        "name": "",
+        "type": "struct MyStruct",
+        "components": [
+          {
+            "name": "foo",
+            "type": "u8",
+            "components": null
+          },
+          {
+            "name": "bar",
+            "type": "bool",
+            "components": null
+          }
+        ]
+      }
+    ]
+  }
+]

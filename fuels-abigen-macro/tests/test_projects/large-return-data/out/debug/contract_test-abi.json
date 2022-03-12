@@ -1,0 +1,38 @@
+[
+  {
+    "type": "function",
+    "inputs": [],
+    "name": "get_id",
+    "outputs": [
+      {
+        "name": "",
+        "type": "b256",
+        "components": null
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "inputs": [],
+    "name": "get_small_string",
+    "outputs": [
+      {
+        "name": "",
+        "type": "str[8]",
+        "components": null
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "inputs": [],
+    "name": "get_large_string",
+    "outputs": [
+      {
+        "name": "",
+        "type": "str[9]",
+        "components": null
+      }
+    ]
+  }
+]

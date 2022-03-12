@@ -2,7 +2,7 @@ use crate::abi_decoder::ABIDecoder;
 use crate::abi_encoder::ABIEncoder;
 use crate::errors::Error;
 use crate::script::Script;
-use forc::test::{forc_build, BuildCommand};
+use anyhow::Result;
 use fuel_asm::Opcode;
 use fuel_gql_client::client::FuelClient;
 use fuel_tx::{
@@ -255,28 +255,9 @@ impl Contract {
         }
     }
 
-    /// Compiles a Sway contract
-    pub fn compile_sway_contract(
-        project_path: &str,
-        salt: Salt,
-    ) -> Result<CompiledContract, Error> {
-        let build_command = BuildCommand {
-            debug_outfile: None,
-            minify_json_abi: false,
-            path: Some(project_path.into()),
-            print_finalized_asm: false,
-            print_intermediate_asm: false,
-            binary_outfile: None,
-            offline_mode: false,
-            output_directory: None,
-            silent_mode: true,
-            print_ir: false,
-            use_ir: false,
-        };
-
-        let (raw, _) = forc_build::build(build_command).map_err(Error::CompilationError)?;
-
-        Ok(CompiledContract { salt, raw })
+    pub fn load_sway_contract(binary_filepath: &str, salt: Salt) -> Result<CompiledContract> {
+        let bin = std::fs::read(binary_filepath)?;
+        Ok(CompiledContract { raw: bin, salt })
     }
 
     /// Crafts a transaction used to deploy a contract

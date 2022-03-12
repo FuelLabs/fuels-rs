@@ -4,13 +4,19 @@ use foo::FooContract;
 use std::constants::ETH_ID;
 
 abi FooCaller {
-    fn call_foo_contract(gas_: u64, amount_: u64, color_: b256, value: bool) -> bool;
+    fn call_foo_contract(value: bool) -> bool;
 }
 
 impl FooCaller for Contract {
-    fn call_foo_contract(gas_: u64, amount_: u64, color_: b256, value: bool) -> bool {
-        let foo_contract = abi(FooContract, 0x7b4837e641d659a0662183f0fdfeca3fb4fa1248d62e4721ff28808bf11bd8c7);
-        let response = foo_contract.foo(10000, 0, ETH_ID, value);
+    fn call_foo_contract(value: bool) -> bool {
+        let foo_contract = abi(FooContract, 0xa3f8fc82d771bfee4622534d3d0437655af45ed7ed75af188b63aaa401801208);
+        let response = foo_contract.foo{
+            gas: 10000, 
+            coins: 0, 
+            asset_id: ETH_ID
+        }
+        (value);
+
         response
     }
 }

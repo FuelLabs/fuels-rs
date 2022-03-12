@@ -114,43 +114,16 @@ fn expand_function_arguments(
     custom_enums: &HashMap<String, Property>,
     custom_structs: &HashMap<String, Property>,
 ) -> Result<(TokenStream, TokenStream), Error> {
-    let n_inputs = fun.inputs.len();
-    // Check that we have the expected types
-    if n_inputs != 4 {
-        return Err(Error::MissingData(format!(
-            "Expected exactly 4 inputs, found {}",
-            n_inputs
-        )));
-    }
-    let given_types: Vec<String> = fun.inputs[..3]
-        .iter()
-        .map(|x| x.type_field.clone())
-        .collect();
-    let expected = ["u64", "u64", "b256"];
-    if given_types != expected {
-        return Err(Error::InvalidType(format!(
-            "Expected the 3 first types to be {:?}, found {:?}",
-            expected, given_types
-        )));
-    };
-    // Ignore the first three arguments so we don't have to provide them when calling
-    // the contracts' methods
-    let first_index = 3;
-    let mut args = Vec::with_capacity(1);
-    let mut call_args = Vec::with_capacity(1);
-    // We use a for loop because we expect exactly 4 arguments (so len(fun.inputs)==4)
-    // but we might extend the number of authorized inputs in the future
-    for (i, param) in fun.inputs[first_index..].iter().enumerate() {
+    let mut args = vec![];
+    let mut call_args = vec![];
+
+    for (i, param) in fun.inputs.iter().enumerate() {
         // For each [`Property`] in a function input we expand:
         // 1. The name of the argument;
         // 2. The type of the argument;
         // Note that _any_ significant change in the way the JSON ABI is generated
         // could affect this function expansion.
         // TokenStream representing the name of the argument
-        if param.type_field == "()" {
-            // This is necessary to handle methods with no user input
-            continue;
-        }
         let name = expand_input_name(i, &param.name);
 
         let opt_custom_type = match param.type_field.split_whitespace().collect::<Vec<_>>()[0] {
@@ -260,31 +233,11 @@ fn expand_input_param(
 mod tests {
     use super::*;
     use std::str::FromStr;
-    fn generate_base_inputs() -> Vec<Property> {
-        let mut inputs = Vec::with_capacity(4);
-        inputs.push(Property {
-            name: "gas_".to_string(),
-            type_field: String::from("u64"),
-            components: None,
-        });
-        inputs.push(Property {
-            name: "amount_".to_string(),
-            type_field: String::from("u64"),
-            components: None,
-        });
-        inputs.push(Property {
-            name: "color_".to_string(),
-            type_field: String::from("b256"),
-            components: None,
-        });
-        inputs
-    }
-    // --- expand_function ---
     #[test]
     fn test_expand_function_simple() {
         let mut the_function = Function {
             type_field: "unused".to_string(),
-            inputs: generate_base_inputs(),
+            inputs: vec![],
             name: "HelloWorld".to_string(),
             outputs: vec![],
         };
@@ -301,12 +254,12 @@ mod tests {
         );
         let expected = TokenStream::from_str(
             r#"
-#[doc = "Calls the contract's `HelloWorld` (0x000000007e387733) function"]
+#[doc = "Calls the contract's `HelloWorld` (0x0000000097d4de45) function"]
 pub fn HelloWorld(&self, bimbam: bool) -> ContractCall<()> {
     Contract::method_hash(
         &self.fuel_client,
         self.contract_id,
-        [0, 0, 0, 0, 126, 56, 119, 51],
+        [0, 0, 0, 0, 151, 212, 222, 69],
         &[],
         &[bimbam.into_token() ,]
     )
@@ -322,7 +275,7 @@ pub fn HelloWorld(&self, bimbam: bool) -> ContractCall<()> {
         let mut the_function = Function {
             type_field: "function".to_string(),
             name: "hello_world".to_string(),
-            inputs: generate_base_inputs(),
+            inputs: vec![],
             outputs: vec![
                 Property {
                     name: String::from("notused"),
@@ -405,7 +358,7 @@ pub fn HelloWorld(&self, bimbam: bool) -> ContractCall<()> {
         // Some more editing was required because it is not rustfmt-compatible (adding/removing parentheses or commas)
         let expected = TokenStream::from_str(
             r#"
-#[doc = "Calls the contract's `hello_world` (0x000000001f51690a) function"]
+#[doc = "Calls the contract's `hello_world` (0x0000000076b25a24) function"]
 pub fn hello_world(
     &self,
     the_only_allowed_input: SomeWeirdFrenchCuisine
@@ -413,7 +366,7 @@ pub fn hello_world(
     Contract::method_hash(
         &self.fuel_client,
         self.contract_id,
-        [0, 0, 0, 0, 31, 81, 105, 10],
+        [0, 0, 0, 0, 118, 178, 90, 36],
         &[
             ParamType::Struct(vec![ParamType::Bool, ParamType::U64]),
             ParamType::Enum([Bool , U64])] , 
@@ -606,39 +559,24 @@ pub fn hello_world(
         // All arguments are here
         let mut the_function = Function {
             type_field: "".to_string(),
-            inputs: generate_base_inputs(),
+            inputs: vec![],
             name: "".to_string(),
             outputs: vec![],
         };
-        the_function.inputs.push(the_argument.clone());
+        the_function.inputs.push(the_argument);
+
         let result = expand_function_arguments(&the_function, &hm, &hm);
         let (args, call_args) = result.unwrap();
         let result = format!("({},{})", args, call_args);
         let expected = "(, some_argument : u32,& [some_argument . into_token () ,])";
         assert_eq!(result, expected);
-
-        // Missing the last argument
-        let mut the_function = Function {
-            type_field: "".to_string(),
-            inputs: generate_base_inputs(),
-            name: "".to_string(),
-            outputs: vec![],
-        };
-        let result = expand_function_arguments(&the_function, &hm, &hm);
-        assert!(matches!(result, Err(Error::MissingData(_))));
-
-        // Change the `gas_` argument type
-        the_function.inputs[0].type_field = String::from("bool");
-        the_function.inputs.push(the_argument);
-        let result = expand_function_arguments(&the_function, &hm, &hm);
-        assert!(matches!(result, Err(Error::InvalidType(_))));
     }
     #[test]
     fn test_expand_function_arguments_primitive() {
         let hm: HashMap<String, Property> = HashMap::new();
         let mut the_function = Function {
             type_field: "function".to_string(),
-            inputs: generate_base_inputs(),
+            inputs: vec![],
             name: "pip_pop".to_string(),
             outputs: vec![],
         };
@@ -653,7 +591,7 @@ pub fn hello_world(
         let result = format!("({},{})", args, call_args);
         assert_eq!(result, "(, bim_bam : u64,& [bim_bam . into_token () ,])");
 
-        the_function.inputs[3].name = String::from("");
+        the_function.inputs[0].name = String::from("");
         let result = expand_function_arguments(&the_function, &hm, &hm);
         let (args, call_args) = result.unwrap();
         let result = format!("({},{})", args, call_args);
@@ -663,7 +601,7 @@ pub fn hello_world(
     fn test_expand_function_arguments_composite() {
         let mut function = Function {
             type_field: "zig_zag".to_string(),
-            inputs: generate_base_inputs(),
+            inputs: vec![],
             name: "PipPopFunction".to_string(),
             outputs: vec![],
         };
@@ -687,27 +625,6 @@ pub fn hello_world(
         let (args, call_args) = result.unwrap();
         let result = format!("({},{})", args, call_args);
         let expected = r#"(, bim_bam : CarMaker,& [bim_bam . into_token () ,])"#;
-        assert_eq!(result, expected);
-    }
-
-    #[test]
-    fn test_expand_function_argument_empty_fourth() {
-        let mut function = Function {
-            type_field: "zig_zag".to_string(),
-            inputs: generate_base_inputs(),
-            name: "PipPopFunction".to_string(),
-            outputs: vec![],
-        };
-        function.inputs.push(Property {
-            name: "".to_string(),
-            type_field: "()".to_string(),
-            components: None,
-        });
-        let custom_structs = HashMap::new();
-        let result = expand_function_arguments(&function, &custom_structs, &custom_structs);
-        let (args, call_args) = result.unwrap();
-        let result = format!("({},{})", args, call_args);
-        let expected = r#"(,& [])"#;
         assert_eq!(result, expected);
     }
 

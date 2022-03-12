@@ -15,13 +15,13 @@ Rust SDK for Fuel. It can be used for a variety of things, including but not lim
 
 ## Features
 
-- [x] Programmatically compile Sway code
 - [x] Launch Fuel nodes
 - [x] Deploy contracts
 - [x] Interact with deployed contracts
 - [x] Type-safe Sway contracts bindings code generation
 - [x] Run Sway scripts
 - [x] CLI for common operations
+- [x] Local test wallets
 - [ ] Wallet integration
 - [ ] Events querying/monitoring
 
@@ -46,26 +46,6 @@ Alternatively, if you have a Fuel node running separately, you can pass in the `
 
 It's important to setup this client, as it will be needed later when instantiating contracts. More on that on the section below.
 
-### Compiling Sway code
-
-In order to instantiate Fuel contracts in Rust, you'll also need to compile a Sway contract. Which is done with the SDK's `Contract`:
-
-```Rust
-let salt: [u8; 32] = rng.gen();
-let salt = Salt::from(salt);
-
-let compiled =
-    Contract::compile_sway_contract("path/to/your/fuel/project", salt).unwrap();
-```
-
-If you're running a `script` instead of a `contract`, use the SDK's `Script`:
-
-```Rust
-let compiled =
-    Script::compile_sway_script("path/to/your/fuel/project")
-        .unwrap();
-```
-
 ### Deploying a Sway contract
 
 Once you have a Fuel node running and the compiled contract in hands, it's time to deploy the contract:
@@ -75,28 +55,32 @@ Once you have a Fuel node running and the compiled contract in hands, it's time 
 let server = FuelService::new_node(Config::local_node()).await.unwrap();
 let client = FuelClient::from(srv.bound_address);
 
-// Compile the contract
 let salt: [u8; 32] = rng.gen();
 let salt = Salt::from(salt);
 
-let compiled =
-    Contract::compile_sway_contract("path/to/your/fuel/project", salt).unwrap();
+// Load the compiled Sway contract (this is the output from `forc build`)
+let compiled = Contract::load_sway_contract(
+        "your_project/out/debug/contract_test.bin",
+        salt,
+    )
+    .unwrap();
 
 // Deploy the contract
 let contract_id = Contract::deploy(compiled_contract, fuel_client).await.unwrap();
 ```
 
-Alternatively, if you want to launch a local node for every deployment, which is usually 
-useful for smaller tests where you don't want to keep state between each test, you can use 
-`Provider::launch(Config::local_node())`:
+Alternatively, if you want to launch a local node for every deployment, which is usually useful for smaller tests where you don't want to keep state between each test, you can use `Provider::launch(Config::local_node())`:
 
 ```Rust
 // Build the contract
 let salt: [u8; 32] = rng.gen();
 let salt = Salt::from(salt);
 
-let compiled =
-    Contract::compile_sway_contract("path/to/your/fuel/project", salt).unwrap();
+let compiled = Contract::load_sway_contract(
+        "your_project/out/debug/contract_test.bin",
+        salt,
+    )
+    .unwrap();
 
 // Now get the Fuel client _and_ contract_id back.
 let client = Provider::launch(Config::local_node()).await.unwrap();
@@ -302,8 +286,9 @@ abigen!(
 let salt: [u8; 32] = rng.gen();
 let salt = Salt::from(salt);
 
+// Load the first compiled contract
 let compiled =
-    Contract::compile_sway_contract("tests/test_projects/foo-contract", salt).unwrap();
+    Contract::load_sway_contract("tests/test_projects/foo-contract/out/debug/foo-contract.bin", salt).unwrap();
 
 let client = Provider::launch(Config::local_node()).await.unwrap();
 let foo_contract_id = Contract::deploy(&compiled, &client.clone()).await.unwrap();
@@ -314,9 +299,9 @@ let foo_contract_instance = FooContract::new(foo_contract_id.to_string(), client
 let res = foo_contract_instance.foo(true).call().await.unwrap();
 assert!(!res.value);
 
-// Compile and deploy second contract
+// Load and deploy second contract
 let compiled =
-    Contract::compile_sway_contract("tests/test_projects/foo-caller-contract", salt).unwrap();
+    Contract::load_sway_contract("tests/test_projects/foo-caller-contract/out/debug/foo-caller-contract.bin", salt).unwrap();
 
 let foo_caller_contract_id = Contract::deploy(&compiled, &client).await.unwrap();
 
@@ -332,33 +317,6 @@ let res = foo_caller_contract_instance
     .unwrap();
 
 assert!(!res.value);
-```
-
-### Calling a Sway script
-
-In case you want to hand-craft a Fuel transaction with a Sway script, you can use the SDK's `Script`:
-
-```Rust
- let compiled =
-    Script::compile_sway_script("path/to/fuel/project")
-        .unwrap();
-
-let tx = Transaction::Script {
-    gas_price: 0,
-    gas_limit: 1_000_000,
-    maturity: 0,
-    receipts_root: Default::default(),
-    script: compiled.raw, // Here we pass the compiled script into the transaction
-    script_data: vec![],
-    inputs: vec![],
-    outputs: vec![],
-    witnesses: vec![vec![].into()],
-    metadata: None,
-};
-
-let script = Script::new(tx);
-
-let result = script.call(&fuel_client).await.unwrap();
 ```
 
 ## More examples
