@@ -113,22 +113,24 @@ impl Abigen {
                 quote! {
                     use fuels_contract::contract::{Contract, ContractCall};
                     use fuel_gql_client::client::FuelClient;
-                    // aliasing to `FuelContractId` to prevent conflicts
-                    // between `fuel_tx::ContractId` and user-defined structs
-                    // named `ContractId`.
+                    use fuels_signers::LocalWallet;
+                    // aliasing to `FuelContractId` to prevent conflicts between
+                    // `fuel_tx::ContractId` and user-defined structs named `ContractId`.
                     use fuel_tx::ContractId as FuelContractId;
                     use std::str::FromStr;
                 },
                 quote! {
                     pub struct #name {
                         contract_id: FuelContractId,
-                        fuel_client: FuelClient
+                        fuel_client: FuelClient,
+                        wallet: LocalWallet
                     }
 
                     impl #name {
-                        pub fn new(contract_id: String, fuel_client: FuelClient) -> Self {
+                        pub fn new(contract_id: String, fuel_client: FuelClient, wallet: LocalWallet)
+                        -> Self {
                             let contract_id = FuelContractId::from_str(&contract_id).unwrap();
-                            Self{ contract_id, fuel_client }
+                            Self{ contract_id, fuel_client, wallet}
                         }
                         #contract_functions
                     }
