@@ -130,7 +130,7 @@ impl Abigen {
                         pub fn new(contract_id: String, fuel_client: FuelClient, wallet: LocalWallet)
                         -> Self {
                             let contract_id = FuelContractId::from_str(&contract_id).unwrap();
-                            Self{ contract_id, fuel_client, wallet}
+                            Self{ contract_id, fuel_client, wallet }
                         }
                         #contract_functions
                     }

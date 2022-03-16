@@ -159,10 +159,6 @@ impl Contract {
 
             inputs.push(input_coin);
         }
-
-        // let self_contract_output = Output::contract(0, Bytes32::zeroed(), Bytes32::zeroed());
-        // outputs.push(self_contract_output);
-
         let self_contract_output = Output::contract(0, Bytes32::zeroed(), Bytes32::zeroed());
         outputs.push(self_contract_output);
         let change_output = Output::change(wallet.address(), 0, AssetId::default());
