@@ -37,7 +37,7 @@ use thiserror::Error;
 ///
 ///   // Setup local test node
 ///
-///   let provider = setup_test_provider(vec![]).await;
+///   let (provider, _) = setup_test_provider(vec![]).await;
 ///
 ///   // Create a new local wallet with the newly generated key
 ///   let wallet = LocalWallet::new_from_private_key(secret, provider)?;
@@ -130,7 +130,7 @@ impl Wallet {
     ///   coins_1.extend(coins_2);
     ///
     ///   // Setup a provider and node with both set of coins
-    ///   let provider = setup_test_provider(coins_1).await;
+    ///   let (provider, _) = setup_test_provider(coins_1).await;
     ///
     ///   // Create the actual wallets/signers
     ///   let wallet_1 = LocalWallet::new_from_private_key(pk_1, provider.clone()).unwrap();

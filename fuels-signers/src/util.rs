@@ -15,11 +15,12 @@ pub mod test_helpers {
     use fuel_vm::prelude::Storage;
     use rand::{Fill, Rng};
     use secp256k1::{PublicKey, Secp256k1, SecretKey};
+    use std::net::SocketAddr;
 
     pub async fn setup_test_provider_and_wallet() -> (Provider, LocalWallet) {
         let (pk, coins) = setup_address_and_coins(10, 10);
         // Setup a provider and node with the given coins
-        let provider = setup_test_provider(coins).await;
+        let (provider, _) = setup_test_provider(coins).await;
 
         let wallet = LocalWallet::new_from_private_key(pk, provider.clone()).unwrap();
         (provider, wallet)
@@ -63,7 +64,7 @@ pub mod test_helpers {
         (secret, coins)
     }
 
-    pub async fn setup_test_provider(coins: Vec<(UtxoId, Coin)>) -> Provider {
+    pub async fn setup_test_provider(coins: Vec<(UtxoId, Coin)>) -> (Provider, SocketAddr) {
         let mut db = Database::default();
         for (utxo_id, coin) in coins {
             Storage::<UtxoId, Coin>::insert(&mut db, &utxo_id, &coin).unwrap();
@@ -74,6 +75,6 @@ pub mod test_helpers {
             .unwrap();
         let client = FuelClient::from(srv.bound_address);
 
-        Provider::new(client)
+        (Provider::new(client), srv.bound_address)
     }
 }

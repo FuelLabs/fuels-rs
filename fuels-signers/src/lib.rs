@@ -51,7 +51,7 @@ mod tests {
         let secret =
             SecretKey::from_slice(&secret_seed).expect("Failed to generate random secret!");
 
-        let provider = setup_test_provider(vec![]).await;
+        let (provider, _) = setup_test_provider(vec![]).await;
         let wallet = LocalWallet::new_from_private_key(secret, provider).unwrap();
 
         let message = "my message";
@@ -76,7 +76,7 @@ mod tests {
             SecretKey::from_str("5f70feeff1f229e4a95e1056e8b4d80d0b24b565674860cc213bdb07127ce1b1")
                 .unwrap();
 
-        let provider = setup_test_provider(vec![]).await;
+        let (provider, _) = setup_test_provider(vec![]).await;
         let wallet = LocalWallet::new_from_private_key(secret, provider).unwrap();
 
         let input_coin = Input::coin(
@@ -133,7 +133,7 @@ mod tests {
         coins_1.extend(coins_2);
 
         // Setup a provider and node with both set of coins
-        let provider = setup_test_provider(coins_1).await;
+        let (provider, _) = setup_test_provider(coins_1).await;
 
         let wallet_1 = LocalWallet::new_from_private_key(pk_1, provider.clone()).unwrap();
         let wallet_2 = LocalWallet::new_from_private_key(pk_2, provider).unwrap();
@@ -176,7 +176,7 @@ mod tests {
 
         coins_1.extend(coins_2);
 
-        let provider = setup_test_provider(coins_1).await;
+        let (provider, _) = setup_test_provider(coins_1).await;
 
         let wallet_1 = LocalWallet::new_from_private_key(pk_1, provider.clone()).unwrap();
         let wallet_2 = LocalWallet::new_from_private_key(pk_2, provider).unwrap();
