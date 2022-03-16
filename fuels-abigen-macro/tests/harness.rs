@@ -1,16 +1,15 @@
-use fuel_core::database::Database;
-use fuel_core::model::coin::Coin;
-use fuel_core::service::{Config, FuelService};
-use fuel_gql_client::client::FuelClient;
-use fuel_tx::{Salt, UtxoId};
+use fuel_tx::Salt;
 use fuels_abigen_macro::abigen;
 use fuels_contract::contract::Contract;
 use fuels_contract::errors::Error;
 use fuels_core::Token;
 use fuels_signers::provider::Provider;
-use fuels_signers::util::test_helpers::{setup_address_and_coins, setup_test_provider_and_wallet};
+use fuels_signers::util::test_helpers::{
+    setup_address_and_coins, setup_test_provider, setup_test_provider_and_wallet,
+};
+use fuels_signers::LocalWallet;
 use rand::rngs::StdRng;
-use rand::{Rng, RngCore, SeedableRng};
+use rand::{Rng, SeedableRng};
 use sha2::{Digest, Sha256};
 
 fn null_contract_id() -> String {
@@ -1077,59 +1076,56 @@ async fn test_large_return_data() {
     assert_eq!(res.value, "ggggggggg");
 }
 
-// #[tokio::test]
-// async fn test_provider_node_launch_and_connect() {
-//     let rng = &mut StdRng::seed_from_u64(2322u64);
-//
-//     abigen!(
-//         MyContract,
-//         "fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
-//     );
-//
-//     // Build and deploy contract
-//     let salt: [u8; 32] = rng.gen();
-//     let salt = Salt::from(salt);
-//
-//     let compiled = Contract::load_sway_contract(
-//         "tests/test_projects/contract_test/out/debug/contract_test.bin",
-//         salt,
-//     )
-//     .unwrap();
-//
-//     let config = Config::local_node();
-//     let mut db = Database::default();
-//     for (utxo_id, coin) in coins {
-//         Storage::<UtxoId, Coin>::insert(&mut db, &utxo_id, &coin).unwrap();
-//     }
-//     let srv = FuelService::new_node(config).await.unwrap();
-//     let (pk, coins) = setup_address_and_coins(10, 10);
-//
-//     let launched_client = FuelClient::from(srv.bound_address);
-//     let connected_client = Provider::connect(srv.bound_address).await.unwrap();
-//     let contract_id = Contract::deploy(&compiled, &connected_client, wallet)
-//         .await
-//         .unwrap();
-//     println!("Contract deployed @ {:x}", contract_id);
-//
-//     let contract_instance_connected = MyContract::new(contract_id.to_string(), connected_client);
-//
-//     let contract_instance_launched = MyContract::new(contract_id.to_string(), launched_client);
-//
-//     let result = contract_instance_connected
-//         .initialize_counter(42) // Build the ABI call
-//         .call() // Perform the network call
-//         .await
-//         .unwrap();
-//     assert_eq!(42, result.value);
-//
-//     let result = contract_instance_launched
-//         .increment_counter(10)
-//         .call()
-//         .await
-//         .unwrap();
-//     assert_eq!(52, result.value);
-// }
-//
+#[tokio::test]
+async fn test_provider_node_launch_and_connect() {
+    let rng = &mut StdRng::seed_from_u64(2322u64);
+
+    abigen!(
+        MyContract,
+        "fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+    );
+
+    // Build and deploy contract
+    let salt: [u8; 32] = rng.gen();
+    let salt = Salt::from(salt);
+
+    let compiled = Contract::load_sway_contract(
+        "tests/test_projects/contract_test/out/debug/contract_test.bin",
+        salt,
+    )
+    .unwrap();
+
+    let (pk, coins) = setup_address_and_coins(10, 10);
+    let (launched_provider, address) = setup_test_provider(coins).await;
+    let connected_client = Provider::connect(address).await.unwrap();
+
+    let wallet = LocalWallet::new_from_private_key(pk, launched_provider.clone()).unwrap();
+    let contract_id = Contract::deploy(&compiled, &connected_client, &wallet)
+        .await
+        .unwrap();
+    println!("Contract deployed @ {:x}", contract_id);
+
+    let contract_instance_connected =
+        MyContract::new(contract_id.to_string(), connected_client, wallet.clone());
+
+    let contract_instance_launched =
+        MyContract::new(contract_id.to_string(), launched_provider.client, wallet);
+
+    let result = contract_instance_connected
+        .initialize_counter(42) // Build the ABI call
+        .call() // Perform the network call
+        .await
+        .unwrap();
+    assert_eq!(42, result.value);
+
+    let result = contract_instance_launched
+        .increment_counter(10)
+        .call()
+        .await
+        .unwrap();
+    assert_eq!(52, result.value);
+}
+
 #[tokio::test]
 #[ignore]
 async fn test_contract_calling_contract() {
