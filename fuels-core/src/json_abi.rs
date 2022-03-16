@@ -527,7 +527,7 @@ pub fn parse_param(param: &Property) -> Result<ParamType, Error> {
                 return parse_array_param(param);
             }
             // Try to parse enum or struct
-            return parse_custom_type_param(param);
+            parse_custom_type_param(param)
         }
     }
 }
