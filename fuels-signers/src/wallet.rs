@@ -57,6 +57,7 @@ use thiserror::Error;
 /// ```
 ///
 /// [`Signature`]: fuels_core::signature::Signature
+#[derive(Clone)]
 pub struct Wallet {
     /// The Wallet's private key
     pub(crate) private_key: SecretKey,
@@ -153,10 +154,8 @@ impl Wallet {
         to: &Address,
         amount: u64,
         asset_id: AssetId,
-    ) -> io::Result<Vec<Receipt>> {
-        let spendable = self.get_spendable_coins(&asset_id, amount).await?;
-
-        let mut inputs: Vec<Input> = vec![];
+    ) -> Result<Vec<Receipt>, WalletError> {
+        let inputs = self.get_asset_inputs_for_amount(asset_id, amount).await?;
         let outputs: Vec<Output> = vec![
             Output::coin(*to, amount, asset_id),
             // Note that the change will be computed by the node.
@@ -164,6 +163,22 @@ impl Wallet {
             Output::change(self.address(), 0, asset_id),
         ];
 
+        // Build transaction and sign it
+        let mut tx = self.provider.build_transfer_tx(&inputs, &outputs);
+        let _sig = self.sign_transaction(&mut tx).await.unwrap();
+
+        // Note that currently coins being sent aren't marked as spent by the client.
+        // This will be coming up soon.
+        Ok(self.provider.send_transaction(&tx).await?)
+    }
+
+    pub async fn get_asset_inputs_for_amount(
+        &self,
+        asset_id: AssetId,
+        amount: u64,
+    ) -> Result<Vec<Input>, WalletError> {
+        let spendable = self.get_spendable_coins(&asset_id, amount).await?;
+        let mut inputs = vec![];
         for coin in spendable {
             let input_coin = Input::coin(
                 UtxoId::from(coin.utxo_id),
@@ -175,17 +190,9 @@ impl Wallet {
                 vec![],
                 vec![],
             );
-
             inputs.push(input_coin);
         }
-
-        // Build transaction and sign it
-        let mut tx = self.provider.build_transfer_tx(&inputs, &outputs);
-        let _sig = self.sign_transaction(&mut tx).await.unwrap();
-
-        // Note that currently coins being sent aren't marked as spent by the client.
-        // This will be coming up soon.
-        self.provider.send_transaction(&tx).await.map(Into::into)
+        Ok(inputs)
     }
 
     /// Gets coins from this wallet

@@ -14,6 +14,7 @@ bytes = { version = "1.0.1", features = ["serde"] }
 fuel-asm = { version = "0.1", features = ["serde-types"] }
 fuel-core = { version = "0.4", default-features = false }
 fuel-gql-client = { version = "0.4", default-features = false }
+fuels-signers = { version = "0.6.0", path = "../fuels-signers", features = ["test-helpers"] }
 fuel-tx = "0.6"
 fuel-types = "0.3"
 fuel-vm = "0.5"
