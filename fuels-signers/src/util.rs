@@ -67,6 +67,8 @@ pub mod test_helpers {
         (secret, coins)
     }
 
+    // Setup a test provider with the given coins. We return the SocketAddr so the launched node
+    // client can be connected to more easily (even though it is often ignored).
     pub async fn setup_test_provider(coins: Vec<(UtxoId, Coin)>) -> (Provider, SocketAddr) {
         let mut db = Database::default();
         for (utxo_id, coin) in coins {
