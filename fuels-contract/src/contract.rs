@@ -12,7 +12,7 @@ use fuel_types::{Bytes32, Immediate12, Salt, Word};
 use fuel_vm::consts::{REG_CGAS, REG_RET, REG_ZERO, VM_TX_MEMORY};
 use fuel_vm::prelude::Contract as FuelContract;
 use fuels_core::ParamType;
-use fuels_core::{Detokenize, Selector, Token, WORD_SIZE};
+use fuels_core::{Detokenize, Selector, Token, DEFAULT_COIN_AMOUNT, WORD_SIZE};
 use fuels_signers::{LocalWallet, Signer};
 use std::marker::PhantomData;
 
@@ -142,7 +142,7 @@ impl Contract {
         inputs.push(self_contract_input);
 
         let spendables = wallet
-            .get_spendable_coins(&AssetId::default(), 10)
+            .get_spendable_coins(&AssetId::default(), DEFAULT_COIN_AMOUNT as u64)
             .await
             .unwrap();
         for coin in spendables {
@@ -302,7 +302,7 @@ impl Contract {
             Output::change(wallet.address(), 0, eth_id),
         ];
         let inputs = wallet
-            .get_asset_inputs_for_amount(AssetId::default(), 10)
+            .get_asset_inputs_for_amount(AssetId::default(), DEFAULT_COIN_AMOUNT)
             .await?;
 
         let tx = Transaction::create(
