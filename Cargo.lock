@@ -1264,6 +1264,7 @@ dependencies = [
  "fuel-types 0.3.0",
  "fuel-vm",
  "fuels-core",
+ "fuels-signers",
  "hex",
  "proc-macro2",
  "quote",
