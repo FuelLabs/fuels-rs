@@ -3,6 +3,7 @@
 /// Testing utilities
 pub mod test_helpers {
     use crate::provider::Provider;
+    use crate::LocalWallet;
     use fuel_core::service::{Config, FuelService};
     use fuel_core::{
         database::Database,
@@ -15,16 +16,13 @@ pub mod test_helpers {
     use rand::{Fill, Rng};
     use secp256k1::{PublicKey, Secp256k1, SecretKey};
 
-    pub async fn setup_local_node(coins: Vec<(UtxoId, Coin)>) -> FuelClient {
-        let mut db = Database::default();
-        for (utxo_id, coin) in coins {
-            Storage::<UtxoId, Coin>::insert(&mut db, &utxo_id, &coin).unwrap();
-        }
+    pub async fn setup_test_provider_and_wallet() -> (Provider, LocalWallet) {
+        let (pk, coins) = setup_address_and_coins(10, 10);
+        // Setup a provider and node with the given coins
+        let provider = setup_test_provider(coins).await;
 
-        let srv = FuelService::from_database(db, Config::local_node())
-            .await
-            .unwrap();
-        FuelClient::from(srv.bound_address)
+        let wallet = LocalWallet::new_from_private_key(pk, provider.clone()).unwrap();
+        (provider, wallet)
     }
 
     pub fn setup_address_and_coins(
