@@ -167,8 +167,6 @@ impl Wallet {
         let mut tx = self.provider.build_transfer_tx(&inputs, &outputs);
         let _sig = self.sign_transaction(&mut tx).await.unwrap();
 
-        // Note that currently coins being sent aren't marked as spent by the client.
-        // This will be coming up soon.
         Ok(self.provider.send_transaction(&tx).await?)
     }
 

@@ -183,11 +183,6 @@ impl Contract {
             }
         }
 
-        // Important: this is a temporary workaround, for full context:
-        // https://github.com/FuelLabs/fuels-rs/issues/90
-        // Here we generate a random coin input to prevent transaction id
-        // collision in method calls that could be view-only.
-
         let tx = Transaction::script(
             gas_price,
             gas_limit,
