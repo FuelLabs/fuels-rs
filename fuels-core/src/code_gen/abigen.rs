@@ -293,8 +293,7 @@ mod tests {
         ]
         "#;
 
-        let bindings = Abigen::new("test", contract).unwrap().generate().unwrap();
-        bindings.write(std::io::stdout()).unwrap();
+        let _bindings = Abigen::new("test", contract).unwrap().generate().unwrap();
     }
 
     #[test]
@@ -327,8 +326,7 @@ mod tests {
         // We are expecting a MissingData error because at the moment, the
         // ABIgen expects exactly 4 arguments (see `expand_function_arguments`), here
         // there are 5
-        let bindings = Abigen::new("test", contract).unwrap().generate().unwrap();
-        bindings.write(std::io::stdout()).unwrap();
+        let _bindings = Abigen::new("test", contract).unwrap().generate().unwrap();
     }
 
     #[test]
@@ -365,8 +363,7 @@ mod tests {
 
         assert!(contract.custom_structs.contains_key("MyStruct"));
 
-        let bindings = contract.generate().unwrap();
-        bindings.write(std::io::stdout()).unwrap();
+        let _bindings = contract.generate().unwrap();
     }
 
     #[test]
@@ -493,8 +490,7 @@ mod tests {
         assert!(contract.custom_structs.contains_key("MyNestedStruct"));
         assert!(contract.custom_structs.contains_key("InnerStruct"));
 
-        let bindings = contract.generate().unwrap();
-        bindings.write(std::io::stdout()).unwrap();
+        let _bindings = contract.generate().unwrap();
     }
 
     #[test]
@@ -532,8 +528,7 @@ mod tests {
 
         assert!(contract.custom_enums.contains_key("MyEnum"));
 
-        let bindings = contract.generate().unwrap();
-        bindings.write(std::io::stdout()).unwrap();
+        let _bindings = contract.generate().unwrap();
     }
     #[test]
     fn output_types() {
@@ -587,7 +582,6 @@ mod tests {
         "#;
 
         let contract = Abigen::new("custom", contract).unwrap();
-        let bindings = contract.generate().unwrap();
-        bindings.write(std::io::stdout()).unwrap();
+        let _bindings = contract.generate().unwrap();
     }
 }
