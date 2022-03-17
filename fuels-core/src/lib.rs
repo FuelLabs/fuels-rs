@@ -1,6 +1,6 @@
 use core::fmt;
 use fuel_types::bytes::padded_len;
-use fuel_types::Word;
+use fuel_types::{AssetId, Word};
 use strum_macros::EnumString;
 
 pub mod abi_decoder;
@@ -20,6 +20,7 @@ pub type EnumSelector = (u8, Token);
 pub const WORD_SIZE: usize = core::mem::size_of::<Word>();
 // This constant is used to determine the amount in the 1 UTXO when initializing wallets for now
 pub const DEFAULT_COIN_AMOUNT: u64 = 1;
+pub const NATIVE_ASSET_ID: AssetId = AssetId::from([0u8; 32]);
 
 #[derive(Debug, Clone, EnumString, PartialEq, Eq)]
 #[strum(ascii_case_insensitive)]
