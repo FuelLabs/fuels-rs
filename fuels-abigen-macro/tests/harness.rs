@@ -1122,7 +1122,6 @@ async fn test_provider_launch_and_connect() {
 }
 
 #[tokio::test]
-#[ignore]
 async fn test_contract_calling_contract() {
     let rng = &mut StdRng::seed_from_u64(2322u64);
 

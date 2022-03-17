@@ -160,6 +160,7 @@ impl Contract {
 
             inputs.push(input_coin);
         }
+        let n_inputs = inputs.len();
         let self_contract_output = Output::contract(0, Bytes32::zeroed(), Bytes32::zeroed());
         outputs.push(self_contract_output);
         let change_output = Output::change(wallet.address(), 0, AssetId::default());
@@ -168,8 +169,9 @@ impl Contract {
         // Add external contract IDs to Input/Output pair, if applicable.
         if let Some(external_contract_ids) = external_contracts {
             for (idx, external_contract_id) in external_contract_ids.iter().enumerate() {
+                let out_index: u8 = (idx + n_inputs) as u8;
                 let external_contract_input = Input::contract(
-                    UtxoId::new(Bytes32::zeroed(), idx as u8 + 1),
+                    UtxoId::new(Bytes32::zeroed(), out_index),
                     Bytes32::zeroed(),
                     Bytes32::zeroed(),
                     *external_contract_id,
@@ -178,7 +180,7 @@ impl Contract {
                 inputs.push(external_contract_input);
 
                 let external_contract_output =
-                    Output::contract(idx as u8 + 1, Bytes32::zeroed(), Bytes32::zeroed());
+                    Output::contract(out_index, Bytes32::zeroed(), Bytes32::zeroed());
 
                 outputs.push(external_contract_output);
             }
