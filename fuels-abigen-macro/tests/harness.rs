@@ -1139,6 +1139,7 @@ async fn test_contract_calling_contract() {
     let salt: [u8; 32] = rng.gen();
     let salt = Salt::from(salt);
 
+    // Load the first compiled contract
     let compiled = Contract::load_sway_contract(
         "tests/test_projects/foo-contract/out/debug/foo-contract.bin",
         salt,
