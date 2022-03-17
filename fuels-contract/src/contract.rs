@@ -1,6 +1,7 @@
 use crate::abi_decoder::ABIDecoder;
 use crate::abi_encoder::ABIEncoder;
 use crate::errors::Error;
+use crate::parameters::Parameters;
 use crate::script::Script;
 use anyhow::Result;
 use fuel_asm::Opcode;
@@ -69,9 +70,7 @@ impl Contract {
         encoded_selector: Option<Selector>,
         encoded_args: Option<Vec<u8>>,
         fuel_client: &FuelClient,
-        gas_price: Word,
-        gas_limit: Word,
-        byte_price: Word,
+        call_parameters: Parameters,
         maturity: Word,
         custom_inputs: bool,
         external_contracts: Option<Vec<ContractId>>,
@@ -91,6 +90,11 @@ impl Contract {
         #[allow(clippy::iter_cloned_collect)]
         let script = vec![
             Opcode::ADDI(0x10, REG_ZERO, script_data_offset),
+            // @todo currently there's no way to forward an amount.
+            // This would be done by programmatically changing
+            // $rB (`REG_ZERO` right now) to actually point to an
+            // amount. This would forward the amount in $rB using
+            // $rC as the asset_id.
             Opcode::CALL(0x10, REG_ZERO, 0x10, REG_CGAS),
             Opcode::RET(REG_RET),
             Opcode::NOOP,
@@ -149,6 +153,7 @@ impl Contract {
             .get_spendable_coins(&AssetId::default(), DEFAULT_COIN_AMOUNT as u64)
             .await
             .unwrap();
+
         for coin in spendables {
             let input_coin = Input::coin(
                 UtxoId::from(coin.utxo_id),
@@ -163,9 +168,12 @@ impl Contract {
 
             inputs.push(input_coin);
         }
+
         let n_inputs = inputs.len();
+
         let self_contract_output = Output::contract(0, Bytes32::zeroed(), Bytes32::zeroed());
         outputs.push(self_contract_output);
+
         let change_output = Output::change(wallet.address(), 0, AssetId::default());
         outputs.push(change_output);
 
@@ -193,9 +201,9 @@ impl Contract {
         }
 
         let tx = Transaction::script(
-            gas_price,
-            gas_limit,
-            byte_price,
+            call_parameters.gas_price,
+            call_parameters.gas_limit,
+            call_parameters.byte_price,
             maturity,
             script,
             script_data,
@@ -236,19 +244,15 @@ impl Contract {
         let encoded_args = encoder.encode(args).unwrap();
         let encoded_selector = signature;
 
-        let gas_price = 0;
-        let byte_price = 0;
-        let gas_limit = 1_000_000;
-        let maturity = 0;
+        let params = Parameters::default();
 
         let custom_inputs = args.iter().any(|t| matches!(t, Token::Struct(_)));
 
+        let maturity = 0;
         Ok(ContractCall {
             contract_id,
             encoded_args,
-            gas_price,
-            gas_limit,
-            byte_price,
+            call_parameters: params,
             maturity,
             encoded_selector,
             fuel_client: provider.client.clone(),
@@ -267,9 +271,10 @@ impl Contract {
         compiled_contract: &CompiledContract,
         provider: &Provider,
         wallet: &LocalWallet,
+        params: Parameters,
     ) -> Result<ContractId, Error> {
         let (tx, contract_id) =
-            Self::contract_deployment_transaction(compiled_contract, wallet).await?;
+            Self::contract_deployment_transaction(compiled_contract, wallet, params).await?;
 
         match provider.client.submit(&tx).await {
             Ok(_) => Ok(contract_id),
@@ -286,12 +291,8 @@ impl Contract {
     pub async fn contract_deployment_transaction(
         compiled_contract: &CompiledContract,
         wallet: &LocalWallet,
+        params: Parameters,
     ) -> Result<(Transaction, ContractId), Error> {
-        // @todo get these configurations from
-        // params of this function.
-        let gas_price = 0;
-        let byte_price = 0;
-        let gas_limit = 1000000;
         let maturity = 0;
         let bytecode_witness_index = 0;
         let storage_slots: Vec<StorageSlot> = vec![];
@@ -313,9 +314,9 @@ impl Contract {
             .await?;
 
         let tx = Transaction::create(
-            gas_price,
-            gas_limit,
-            byte_price,
+            params.gas_price,
+            params.gas_limit,
+            params.byte_price,
             maturity,
             bytecode_witness_index,
             compiled_contract.salt,
@@ -338,10 +339,8 @@ pub struct ContractCall<D> {
     pub encoded_args: Vec<u8>,
     pub encoded_selector: Selector,
     pub contract_id: ContractId,
-    pub gas_price: u64,
-    pub gas_limit: u64,
+    pub call_parameters: Parameters,
     pub maturity: u64,
-    pub byte_price: u64,
     pub datatype: PhantomData<D>,
     pub output_params: Vec<ParamType>,
     pub custom_inputs: bool,
@@ -363,6 +362,15 @@ where
         self
     }
 
+    /// Sets the parameters for a given contract call.
+    /// Note that this is a builder method, i.e. use it as a chain:
+    /// let params = Parameters { gas_price: 100, gas_limit: 1000000, byte_price: 100 };
+    /// `my_contract_instance.my_method(...).with_params(params).call()`.
+    pub fn with_params(mut self, params: Parameters) -> Self {
+        self.call_parameters = params;
+        self
+    }
+
     /// Call a contract's method. Return a Result<CallResponse, Error>.
     /// The CallResponse structs contains the method's value in its `value`
     /// field as an actual typed value `D` (if your method returns `bool`, it will
@@ -375,9 +383,7 @@ where
             Some(self.encoded_selector),
             Some(self.encoded_args),
             &self.fuel_client,
-            self.gas_price,
-            self.gas_limit,
-            self.byte_price,
+            self.call_parameters,
             self.maturity,
             self.custom_inputs,
             self.external_contracts,
