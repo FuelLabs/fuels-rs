@@ -1,7 +1,7 @@
 use crate::abi_decoder::ABIDecoder;
 use crate::abi_encoder::ABIEncoder;
 use crate::errors::Error;
-use crate::parameters::Parameters;
+use crate::parameters::TxParameters;
 use crate::script::Script;
 use anyhow::Result;
 use fuel_asm::Opcode;
@@ -70,7 +70,7 @@ impl Contract {
         encoded_selector: Option<Selector>,
         encoded_args: Option<Vec<u8>>,
         fuel_client: &FuelClient,
-        call_parameters: Parameters,
+        call_parameters: TxParameters,
         maturity: Word,
         custom_inputs: bool,
         external_contracts: Option<Vec<ContractId>>,
@@ -244,7 +244,7 @@ impl Contract {
         let encoded_args = encoder.encode(args).unwrap();
         let encoded_selector = signature;
 
-        let params = Parameters::default();
+        let params = TxParameters::default();
 
         let custom_inputs = args.iter().any(|t| matches!(t, Token::Struct(_)));
 
@@ -271,7 +271,7 @@ impl Contract {
         compiled_contract: &CompiledContract,
         provider: &Provider,
         wallet: &LocalWallet,
-        params: Parameters,
+        params: TxParameters,
     ) -> Result<ContractId, Error> {
         let (tx, contract_id) =
             Self::contract_deployment_transaction(compiled_contract, wallet, params).await?;
@@ -291,7 +291,7 @@ impl Contract {
     pub async fn contract_deployment_transaction(
         compiled_contract: &CompiledContract,
         wallet: &LocalWallet,
-        params: Parameters,
+        params: TxParameters,
     ) -> Result<(Transaction, ContractId), Error> {
         let maturity = 0;
         let bytecode_witness_index = 0;
@@ -339,7 +339,7 @@ pub struct ContractCall<D> {
     pub encoded_args: Vec<u8>,
     pub encoded_selector: Selector,
     pub contract_id: ContractId,
-    pub call_parameters: Parameters,
+    pub call_parameters: TxParameters,
     pub maturity: u64,
     pub datatype: PhantomData<D>,
     pub output_params: Vec<ParamType>,
@@ -364,9 +364,9 @@ where
 
     /// Sets the parameters for a given contract call.
     /// Note that this is a builder method, i.e. use it as a chain:
-    /// let params = Parameters { gas_price: 100, gas_limit: 1000000, byte_price: 100 };
-    /// `my_contract_instance.my_method(...).with_params(params).call()`.
-    pub fn with_params(mut self, params: Parameters) -> Self {
+    /// let params = TxParameters { gas_price: 100, gas_limit: 1000000, byte_price: 100 };
+    /// `my_contract_instance.my_method(...).tx_params(params).call()`.
+    pub fn tx_params(mut self, params: TxParameters) -> Self {
         self.call_parameters = params;
         self
     }

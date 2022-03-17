@@ -2,7 +2,7 @@ use fuel_tx::Salt;
 use fuels_abigen_macro::abigen;
 use fuels_contract::contract::Contract;
 use fuels_contract::errors::Error;
-use fuels_contract::parameters::Parameters;
+use fuels_contract::parameters::TxParameters;
 use fuels_core::Token;
 use fuels_signers::util::test_helpers::{
     setup_address_and_coins, setup_test_provider, setup_test_provider_and_wallet,
@@ -644,17 +644,21 @@ async fn example_workflow() {
     .unwrap();
 
     let (provider, wallet) = setup_test_provider_and_wallet().await;
-    let contract_id =
-        Contract::deploy(&compiled, &provider.clone(), &wallet, Parameters::default())
-            .await
-            .unwrap();
+    let contract_id = Contract::deploy(
+        &compiled,
+        &provider.clone(),
+        &wallet,
+        TxParameters::default(),
+    )
+    .await
+    .unwrap();
 
     println!("Contract deployed @ {:x}", contract_id);
     let contract_instance = MyContract::new(contract_id.to_string(), provider, wallet);
 
     let result = contract_instance
         .initialize_counter(42) // Build the ABI call
-        .with_params(Parameters::new(None, Some(1_000_000), None))
+        .tx_params(TxParameters::new(None, Some(1_000_000), None))
         .call() // Perform the network call
         .await
         .unwrap();
@@ -696,7 +700,7 @@ async fn type_safe_output_values() {
     .unwrap();
 
     let (provider, wallet) = setup_test_provider_and_wallet().await;
-    let contract_id = Contract::deploy(&compiled, &provider, &wallet, Parameters::default())
+    let contract_id = Contract::deploy(&compiled, &provider, &wallet, TxParameters::default())
         .await
         .unwrap();
     println!("Contract deployed @ {:x}", contract_id);
@@ -743,7 +747,7 @@ async fn call_with_structs() {
     .unwrap();
 
     let (provider, wallet) = setup_test_provider_and_wallet().await;
-    let contract_id = Contract::deploy(&compiled, &provider, &wallet, Parameters::default())
+    let contract_id = Contract::deploy(&compiled, &provider, &wallet, TxParameters::default())
         .await
         .unwrap();
     println!("Contract deployed @ {:x}", contract_id);
@@ -793,7 +797,7 @@ async fn call_with_empty_return() {
     .unwrap();
 
     let (provider, wallet) = setup_test_provider_and_wallet().await;
-    let contract_id = Contract::deploy(&compiled, &provider, &wallet, Parameters::default())
+    let contract_id = Contract::deploy(&compiled, &provider, &wallet, TxParameters::default())
         .await
         .unwrap();
     println!("Contract deployed @ {:x}", contract_id);
@@ -825,7 +829,7 @@ async fn abigen_different_structs_same_arg_name() {
             .unwrap();
 
     let (provider, wallet) = setup_test_provider_and_wallet().await;
-    let contract_id = Contract::deploy(&compiled, &provider, &wallet, Parameters::default())
+    let contract_id = Contract::deploy(&compiled, &provider, &wallet, TxParameters::default())
         .await
         .unwrap();
     println!("Contract deployed @ {:x}", contract_id);
@@ -866,7 +870,7 @@ async fn test_reverting_transaction() {
         .unwrap();
 
     let (provider, wallet) = setup_test_provider_and_wallet().await;
-    let contract_id = Contract::deploy(&compiled, &provider, &wallet, Parameters::default())
+    let contract_id = Contract::deploy(&compiled, &provider, &wallet, TxParameters::default())
         .await
         .unwrap();
     let contract_instance = RevertingContract::new(contract_id.to_string(), provider, wallet);
@@ -893,7 +897,7 @@ async fn multiple_read_calls() {
     .unwrap();
 
     let (provider, wallet) = setup_test_provider_and_wallet().await;
-    let contract_id = Contract::deploy(&compiled, &provider, &wallet, Parameters::default())
+    let contract_id = Contract::deploy(&compiled, &provider, &wallet, TxParameters::default())
         .await
         .unwrap();
     println!("Contract deployed @ {:x}", contract_id);
@@ -932,7 +936,7 @@ async fn test_methods_typeless_argument() {
     .unwrap();
 
     let (provider, wallet) = setup_test_provider_and_wallet().await;
-    let contract_id = Contract::deploy(&compiled, &provider, &wallet, Parameters::default())
+    let contract_id = Contract::deploy(&compiled, &provider, &wallet, TxParameters::default())
         .await
         .unwrap();
     println!("Contract deployed @ {:x}", contract_id);
@@ -967,7 +971,7 @@ async fn test_connect_to_deployed_contract() {
     .unwrap();
 
     let (provider, wallet) = setup_test_provider_and_wallet().await;
-    let contract_id = Contract::deploy(&compiled, &provider, &wallet, Parameters::default())
+    let contract_id = Contract::deploy(&compiled, &provider, &wallet, TxParameters::default())
         .await
         .unwrap();
     println!("Contract deployed @ {:x}", contract_id);
@@ -1051,7 +1055,7 @@ async fn test_large_return_data() {
     .unwrap();
 
     let (provider, wallet) = setup_test_provider_and_wallet().await;
-    let contract_id = Contract::deploy(&compiled, &provider, &wallet, Parameters::default())
+    let contract_id = Contract::deploy(&compiled, &provider, &wallet, TxParameters::default())
         .await
         .unwrap();
     println!("Contract deployed @ {:x}", contract_id);
@@ -1106,7 +1110,7 @@ async fn test_provider_launch_and_connect() {
         &compiled,
         &connected_provider,
         &wallet,
-        Parameters::default(),
+        TxParameters::default(),
     )
     .await
     .unwrap();
@@ -1160,7 +1164,7 @@ async fn test_contract_calling_contract() {
 
     let (provider, wallet) = setup_test_provider_and_wallet().await;
 
-    let foo_contract_id = Contract::deploy(&compiled, &provider, &wallet, Parameters::default())
+    let foo_contract_id = Contract::deploy(&compiled, &provider, &wallet, TxParameters::default())
         .await
         .unwrap();
     println!("Foo contract deployed @ {:x}", foo_contract_id);
@@ -1183,7 +1187,7 @@ async fn test_contract_calling_contract() {
     .unwrap();
 
     let foo_caller_contract_id =
-        Contract::deploy(&compiled, &provider, &wallet, Parameters::default())
+        Contract::deploy(&compiled, &provider, &wallet, TxParameters::default())
             .await
             .unwrap();
     println!(
@@ -1231,17 +1235,21 @@ async fn test_gas_errors() {
     .unwrap();
 
     let (provider, wallet) = setup_test_provider_and_wallet().await;
-    let contract_id =
-        Contract::deploy(&compiled, &provider.clone(), &wallet, Parameters::default())
-            .await
-            .unwrap();
+    let contract_id = Contract::deploy(
+        &compiled,
+        &provider.clone(),
+        &wallet,
+        TxParameters::default(),
+    )
+    .await
+    .unwrap();
 
     let contract_instance = MyContract::new(contract_id.to_string(), provider, wallet);
 
     // Test for insufficient gas.
     let result = contract_instance
         .initialize_counter(42) // Build the ABI call
-        .with_params(Parameters::new(Some(1_000), Some(100), None))
+        .tx_params(TxParameters::new(Some(1_000), Some(100), None))
         .call() // Perform the network call
         .await
         .expect_err("should error");
@@ -1252,7 +1260,7 @@ async fn test_gas_errors() {
     // Gas limit will be 100, this call will use more than 100 gas.
     let result = contract_instance
         .initialize_counter(42) // Build the ABI call
-        .with_params(Parameters::new(None, Some(100), None))
+        .tx_params(TxParameters::new(None, Some(100), None))
         .call() // Perform the network call
         .await
         .expect_err("should error");
@@ -1276,7 +1284,7 @@ async fn token_ops() {
 
     let (provider, wallet) = setup_test_provider_and_wallet().await;
 
-    let id = Contract::deploy(&compiled, &provider, &wallet, Parameters::default())
+    let id = Contract::deploy(&compiled, &provider, &wallet, TxParameters::default())
         .await
         .unwrap();
 
