@@ -11,8 +11,8 @@ use fuel_tx::{
 use fuel_types::{Bytes32, Immediate12, Salt, Word};
 use fuel_vm::consts::{REG_CGAS, REG_RET, REG_ZERO, VM_TX_MEMORY};
 use fuel_vm::prelude::Contract as FuelContract;
-use fuels_core::ParamType;
 use fuels_core::{Detokenize, Selector, Token, DEFAULT_COIN_AMOUNT, WORD_SIZE};
+use fuels_core::{ParamType, NATIVE_ASSET_ID};
 use fuels_signers::provider::Provider;
 use fuels_signers::{LocalWallet, Signer};
 use std::marker::PhantomData;
@@ -25,6 +25,8 @@ pub struct CompiledContract {
 
 /// Contract is a struct to interface with a contract. That includes things such as
 /// compiling, deploying, and running transactions against a contract.
+/// The contract has a wallet attribute, used to pay for transactions and sign them.
+/// It allows doing calls without passing a wallet/signer each time.
 pub struct Contract {
     pub compiled_contract: CompiledContract,
     pub wallet: LocalWallet,
@@ -60,6 +62,7 @@ impl Contract {
     /// Calls an already-deployed contract code.
     /// Note that this is a "generic" call to a contract
     /// and it doesn't, yet, call a specific ABI function in that contract.
+    /// We need a wallet to pay for the transaction fees (even though they are 0 right now)
     #[allow(clippy::too_many_arguments)] // We need that many arguments for now
     pub async fn call(
         contract_id: ContractId,
@@ -216,6 +219,7 @@ impl Contract {
     ///     }
     /// }
     /// For more details see `code_gen/functions_gen.rs`.
+    /// Note that this needs a wallet because the contract instance needs a wallet for the calls
     pub fn method_hash<D: Detokenize>(
         provider: &Provider,
         contract_id: ContractId,
@@ -254,6 +258,8 @@ impl Contract {
     }
 
     /// Deploys a compiled contract to a running node
+    /// To deploy a contract, you need a wallet with enough assets to pay for deployment. This
+    /// wallet will also receive the change.
     pub async fn deploy(
         compiled_contract: &CompiledContract,
         provider: &Provider,
@@ -292,12 +298,12 @@ impl Contract {
 
         let contract_id = Self::compute_contract_id(compiled_contract);
 
-        let eth_id = AssetId::from([0u8; 32]);
         let outputs: Vec<Output> = vec![
             Output::contract_created(contract_id, FuelContract::default_state_root()),
             // Note that the change will be computed by the node.
             // Here we only have to tell the node who will own the change and its asset ID.
-            Output::change(wallet.address(), 0, eth_id),
+            // For now we use the NATIVE_ASSET_ID constant
+            Output::change(wallet.address(), 0, NATIVE_ASSET_ID),
         ];
         let inputs = wallet
             .get_asset_inputs_for_amount(AssetId::default(), DEFAULT_COIN_AMOUNT)
