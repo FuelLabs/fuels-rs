@@ -171,9 +171,12 @@ impl Contract {
         // Add external contract IDs to Input/Output pair, if applicable.
         if let Some(external_contract_ids) = external_contracts {
             for (idx, external_contract_id) in external_contract_ids.iter().enumerate() {
-                let out_index: u8 = (idx + n_inputs) as u8;
+                // We must associate the right external contract input to the corresponding external
+                // output index (TXO). We add the `n_inputs` offset because we added some inputs
+                // above.
+                let output_index: u8 = (idx + n_inputs) as u8;
                 let external_contract_input = Input::contract(
-                    UtxoId::new(Bytes32::zeroed(), out_index),
+                    UtxoId::new(Bytes32::zeroed(), output_index),
                     Bytes32::zeroed(),
                     Bytes32::zeroed(),
                     *external_contract_id,
@@ -182,7 +185,7 @@ impl Contract {
                 inputs.push(external_contract_input);
 
                 let external_contract_output =
-                    Output::contract(out_index, Bytes32::zeroed(), Bytes32::zeroed());
+                    Output::contract(output_index, Bytes32::zeroed(), Bytes32::zeroed());
 
                 outputs.push(external_contract_output);
             }
