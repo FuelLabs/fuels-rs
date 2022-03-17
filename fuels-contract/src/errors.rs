@@ -1,6 +1,7 @@
 use core::str::Utf8Error;
 use fuels_core::errors::CodecError;
 use fuels_core::InvalidOutputType;
+use fuels_signers::wallet::WalletError;
 use thiserror::Error;
 pub type Result<T> = core::result::Result<T, Error>;
 use std::net;
@@ -35,6 +36,8 @@ pub enum Error {
     InfrastructureError(String),
     #[error("Contract call error: {0}")]
     ContractCallError(String),
+    #[error("Wallet error: {0}")]
+    WalletError(#[from] WalletError),
 }
 
 impl From<CodecError> for Error {

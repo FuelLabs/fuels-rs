@@ -24,7 +24,7 @@ use thiserror::Error;
 /// use secp256k1::SecretKey;
 /// use rand::{rngs::StdRng, RngCore, SeedableRng};
 /// use fuels_signers::provider::Provider;
-/// use fuels_signers::util::test_helpers::setup_local_node;
+/// use fuels_signers::util::test_helpers::setup_test_provider;
 ///
 /// async fn foo() -> Result<(), Box<dyn std::error::Error>> {
 ///   // Generate your secret key
@@ -37,7 +37,7 @@ use thiserror::Error;
 ///
 ///   // Setup local test node
 ///
-///   let provider = Provider::new(setup_local_node(vec![]).await);
+///   let (provider, _) = setup_test_provider(vec![]).await;
 ///
 ///   // Create a new local wallet with the newly generated key
 ///   let wallet = LocalWallet::new_from_private_key(secret, provider)?;
@@ -57,6 +57,7 @@ use thiserror::Error;
 /// ```
 ///
 /// [`Signature`]: fuels_core::signature::Signature
+#[derive(Clone)]
 pub struct Wallet {
     /// The Wallet's private key
     pub(crate) private_key: SecretKey,
@@ -115,7 +116,7 @@ impl Wallet {
     /// use fuels_signers::provider::Provider;
     /// use fuels_signers::{LocalWallet, Signer};
     /// use fuels_signers::util::test_helpers::{
-    ///     setup_address_and_coins, setup_local_node, setup_test_provider,
+    ///     setup_address_and_coins, setup_test_provider,
     /// };
     /// use fuel_tx::{Bytes32, AssetId, Input, Output, UtxoId};
     /// use rand::{rngs::StdRng, RngCore, SeedableRng};
@@ -129,7 +130,7 @@ impl Wallet {
     ///   coins_1.extend(coins_2);
     ///
     ///   // Setup a provider and node with both set of coins
-    ///   let provider = setup_test_provider(coins_1).await;
+    ///   let (provider, _) = setup_test_provider(coins_1).await;
     ///
     ///   // Create the actual wallets/signers
     ///   let wallet_1 = LocalWallet::new_from_private_key(pk_1, provider.clone()).unwrap();
@@ -153,10 +154,8 @@ impl Wallet {
         to: &Address,
         amount: u64,
         asset_id: AssetId,
-    ) -> io::Result<Vec<Receipt>> {
-        let spendable = self.get_spendable_coins(&asset_id, amount).await?;
-
-        let mut inputs: Vec<Input> = vec![];
+    ) -> Result<Vec<Receipt>, WalletError> {
+        let inputs = self.get_asset_inputs_for_amount(asset_id, amount).await?;
         let outputs: Vec<Output> = vec![
             Output::coin(*to, amount, asset_id),
             // Note that the change will be computed by the node.
@@ -164,6 +163,20 @@ impl Wallet {
             Output::change(self.address(), 0, asset_id),
         ];
 
+        // Build transaction and sign it
+        let mut tx = self.provider.build_transfer_tx(&inputs, &outputs);
+        let _sig = self.sign_transaction(&mut tx).await.unwrap();
+
+        Ok(self.provider.send_transaction(&tx).await?)
+    }
+
+    pub async fn get_asset_inputs_for_amount(
+        &self,
+        asset_id: AssetId,
+        amount: u64,
+    ) -> Result<Vec<Input>, WalletError> {
+        let spendable = self.get_spendable_coins(&asset_id, amount).await?;
+        let mut inputs = vec![];
         for coin in spendable {
             let input_coin = Input::coin(
                 UtxoId::from(coin.utxo_id),
@@ -175,17 +188,9 @@ impl Wallet {
                 vec![],
                 vec![],
             );
-
             inputs.push(input_coin);
         }
-
-        // Build transaction and sign it
-        let mut tx = self.provider.build_transfer_tx(&inputs, &outputs);
-        let _sig = self.sign_transaction(&mut tx).await.unwrap();
-
-        // Note that currently coins being sent aren't marked as spent by the client.
-        // This will be coming up soon.
-        self.provider.send_transaction(&tx).await.map(Into::into)
+        Ok(inputs)
     }
 
     /// Gets coins from this wallet

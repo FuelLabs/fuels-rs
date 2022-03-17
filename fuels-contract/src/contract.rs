@@ -6,14 +6,15 @@ use anyhow::Result;
 use fuel_asm::Opcode;
 use fuel_gql_client::client::FuelClient;
 use fuel_tx::{
-    Address, AssetId, ContractId, Input, Output, Receipt, StorageSlot, Transaction, UtxoId, Witness,
+    AssetId, ContractId, Input, Output, Receipt, StorageSlot, Transaction, UtxoId, Witness,
 };
 use fuel_types::{Bytes32, Immediate12, Salt, Word};
 use fuel_vm::consts::{REG_CGAS, REG_RET, REG_ZERO, VM_TX_MEMORY};
 use fuel_vm::prelude::Contract as FuelContract;
-use fuels_core::ParamType;
-use fuels_core::{Detokenize, Selector, Token, WORD_SIZE};
-use rand::{Rng, RngCore};
+use fuels_core::{Detokenize, Selector, Token, DEFAULT_COIN_AMOUNT, WORD_SIZE};
+use fuels_core::{ParamType, NATIVE_ASSET_ID};
+use fuels_signers::provider::Provider;
+use fuels_signers::{LocalWallet, Signer};
 use std::marker::PhantomData;
 
 #[derive(Debug, Clone, Default)]
@@ -24,8 +25,11 @@ pub struct CompiledContract {
 
 /// Contract is a struct to interface with a contract. That includes things such as
 /// compiling, deploying, and running transactions against a contract.
+/// The contract has a wallet attribute, used to pay for transactions and sign them.
+/// It allows doing calls without passing a wallet/signer each time.
 pub struct Contract {
     pub compiled_contract: CompiledContract,
+    pub wallet: LocalWallet,
 }
 
 /// CallResponse is a struct that is returned by a call to the contract. Its value field
@@ -38,8 +42,11 @@ pub struct CallResponse<D> {
 }
 
 impl Contract {
-    pub fn new(compiled_contract: CompiledContract) -> Self {
-        Self { compiled_contract }
+    pub fn new(compiled_contract: CompiledContract, wallet: LocalWallet) -> Self {
+        Self {
+            compiled_contract,
+            wallet,
+        }
     }
 
     pub fn compute_contract_id(compiled_contract: &CompiledContract) -> ContractId {
@@ -55,6 +62,7 @@ impl Contract {
     /// Calls an already-deployed contract code.
     /// Note that this is a "generic" call to a contract
     /// and it doesn't, yet, call a specific ABI function in that contract.
+    /// We need a wallet to pay for the transaction fees (even though they are 0 right now)
     #[allow(clippy::too_many_arguments)] // We need that many arguments for now
     pub async fn call(
         contract_id: ContractId,
@@ -67,6 +75,7 @@ impl Contract {
         maturity: Word,
         custom_inputs: bool,
         external_contracts: Option<Vec<ContractId>>,
+        wallet: LocalWallet,
     ) -> Result<Vec<Receipt>, Error> {
         // Based on the defined script length, we set the appropriate data offset.
         let script_len = 16;
@@ -136,14 +145,39 @@ impl Contract {
         );
         inputs.push(self_contract_input);
 
+        let spendables = wallet
+            .get_spendable_coins(&AssetId::default(), DEFAULT_COIN_AMOUNT as u64)
+            .await
+            .unwrap();
+        for coin in spendables {
+            let input_coin = Input::coin(
+                UtxoId::from(coin.utxo_id),
+                coin.owner.into(),
+                coin.amount.0,
+                AssetId::default(),
+                0,
+                0,
+                vec![],
+                vec![],
+            );
+
+            inputs.push(input_coin);
+        }
+        let n_inputs = inputs.len();
         let self_contract_output = Output::contract(0, Bytes32::zeroed(), Bytes32::zeroed());
         outputs.push(self_contract_output);
+        let change_output = Output::change(wallet.address(), 0, AssetId::default());
+        outputs.push(change_output);
 
         // Add external contract IDs to Input/Output pair, if applicable.
         if let Some(external_contract_ids) = external_contracts {
             for (idx, external_contract_id) in external_contract_ids.iter().enumerate() {
+                // We must associate the right external contract input to the corresponding external
+                // output index (TXO). We add the `n_inputs` offset because we added some inputs
+                // above.
+                let output_index: u8 = (idx + n_inputs) as u8;
                 let external_contract_input = Input::contract(
-                    UtxoId::new(Bytes32::zeroed(), idx as u8 + 1),
+                    UtxoId::new(Bytes32::zeroed(), output_index),
                     Bytes32::zeroed(),
                     Bytes32::zeroed(),
                     *external_contract_id,
@@ -152,30 +186,11 @@ impl Contract {
                 inputs.push(external_contract_input);
 
                 let external_contract_output =
-                    Output::contract(idx as u8 + 1, Bytes32::zeroed(), Bytes32::zeroed());
+                    Output::contract(output_index, Bytes32::zeroed(), Bytes32::zeroed());
 
                 outputs.push(external_contract_output);
             }
         }
-
-        // Important: this is a temporary workaround, for full context:
-        // https://github.com/FuelLabs/fuels-rs/issues/90
-        // Here we generate a random coin input to prevent transaction id
-        // collision in method calls that could be view-only.
-        let mut rng = rand::thread_rng();
-
-        let random_coin = Input::coin(
-            UtxoId::new(Bytes32::from(rng.gen::<[u8; 32]>()), 0),
-            Address::from(rng.gen::<[u8; 32]>()),
-            rng.next_u64(),
-            AssetId::from([0u8; 32]),
-            0,
-            0,
-            vec![],
-            vec![],
-        );
-
-        inputs.push(random_coin);
 
         let tx = Transaction::script(
             gas_price,
@@ -207,9 +222,11 @@ impl Contract {
     ///     }
     /// }
     /// For more details see `code_gen/functions_gen.rs`.
+    /// Note that this needs a wallet because the contract instance needs a wallet for the calls
     pub fn method_hash<D: Detokenize>(
-        fuel_client: &FuelClient,
+        provider: &Provider,
         contract_id: ContractId,
+        wallet: &LocalWallet,
         signature: Selector,
         output_params: &[ParamType],
         args: &[Token],
@@ -234,22 +251,27 @@ impl Contract {
             byte_price,
             maturity,
             encoded_selector,
-            fuel_client: fuel_client.clone(),
+            fuel_client: provider.client.clone(),
             datatype: PhantomData,
             output_params: output_params.to_vec(),
             custom_inputs,
             external_contracts: None,
+            wallet: wallet.clone(),
         })
     }
 
     /// Deploys a compiled contract to a running node
+    /// To deploy a contract, you need a wallet with enough assets to pay for deployment. This
+    /// wallet will also receive the change.
     pub async fn deploy(
         compiled_contract: &CompiledContract,
-        fuel_client: &FuelClient,
+        provider: &Provider,
+        wallet: &LocalWallet,
     ) -> Result<ContractId, Error> {
-        let (tx, contract_id) = Self::contract_deployment_transaction(compiled_contract);
+        let (tx, contract_id) =
+            Self::contract_deployment_transaction(compiled_contract, wallet).await?;
 
-        match fuel_client.submit(&tx).await {
+        match provider.client.submit(&tx).await {
             Ok(_) => Ok(contract_id),
             Err(e) => Err(Error::TransactionError(e.to_string())),
         }
@@ -261,9 +283,10 @@ impl Contract {
     }
 
     /// Crafts a transaction used to deploy a contract
-    pub fn contract_deployment_transaction(
+    pub async fn contract_deployment_transaction(
         compiled_contract: &CompiledContract,
-    ) -> (Transaction, ContractId) {
+        wallet: &LocalWallet,
+    ) -> Result<(Transaction, ContractId), Error> {
         // @todo get these configurations from
         // params of this function.
         let gas_price = 0;
@@ -278,7 +301,16 @@ impl Contract {
 
         let contract_id = Self::compute_contract_id(compiled_contract);
 
-        let output = Output::contract_created(contract_id, FuelContract::default_state_root());
+        let outputs: Vec<Output> = vec![
+            Output::contract_created(contract_id, FuelContract::default_state_root()),
+            // Note that the change will be computed by the node.
+            // Here we only have to tell the node who will own the change and its asset ID.
+            // For now we use the NATIVE_ASSET_ID constant
+            Output::change(wallet.address(), 0, AssetId::from(NATIVE_ASSET_ID)),
+        ];
+        let inputs = wallet
+            .get_asset_inputs_for_amount(AssetId::default(), DEFAULT_COIN_AMOUNT)
+            .await?;
 
         let tx = Transaction::create(
             gas_price,
@@ -289,12 +321,12 @@ impl Contract {
             compiled_contract.salt,
             static_contracts,
             storage_slots,
-            vec![],
-            vec![output],
+            inputs,
+            outputs,
             witnesses,
         );
 
-        (tx, contract_id)
+        Ok((tx, contract_id))
     }
 }
 
@@ -313,6 +345,7 @@ pub struct ContractCall<D> {
     pub datatype: PhantomData<D>,
     pub output_params: Vec<ParamType>,
     pub custom_inputs: bool,
+    pub wallet: LocalWallet,
     external_contracts: Option<Vec<ContractId>>,
 }
 
@@ -348,6 +381,7 @@ where
             self.maturity,
             self.custom_inputs,
             self.external_contracts,
+            self.wallet,
         )
         .await?;
 

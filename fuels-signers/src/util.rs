@@ -3,6 +3,7 @@
 /// Testing utilities
 pub mod test_helpers {
     use crate::provider::Provider;
+    use crate::LocalWallet;
     use fuel_core::service::{Config, FuelService};
     use fuel_core::{
         database::Database,
@@ -12,19 +13,20 @@ pub mod test_helpers {
     use fuel_gql_client::client::FuelClient;
     use fuel_tx::{Address, Bytes32, Bytes64, UtxoId};
     use fuel_vm::prelude::Storage;
+    use fuels_core::DEFAULT_COIN_AMOUNT;
     use rand::{Fill, Rng};
     use secp256k1::{PublicKey, Secp256k1, SecretKey};
+    use std::net::SocketAddr;
 
-    pub async fn setup_local_node(coins: Vec<(UtxoId, Coin)>) -> FuelClient {
-        let mut db = Database::default();
-        for (utxo_id, coin) in coins {
-            Storage::<UtxoId, Coin>::insert(&mut db, &utxo_id, &coin).unwrap();
-        }
+    pub async fn setup_test_provider_and_wallet() -> (Provider, LocalWallet) {
+        //  We build only 1 coin with amount TEST_COIN_AMOUNT, empirically determined to be
+        //  sufficient right now
+        let (pk, coins) = setup_address_and_coins(1, DEFAULT_COIN_AMOUNT);
+        // Setup a provider and node with the given coins
+        let (provider, _) = setup_test_provider(coins).await;
 
-        let srv = FuelService::from_database(db, Config::local_node())
-            .await
-            .unwrap();
-        FuelClient::from(srv.bound_address)
+        let wallet = LocalWallet::new_from_private_key(pk, provider.clone()).unwrap();
+        (provider, wallet)
     }
 
     pub fn setup_address_and_coins(
@@ -65,7 +67,9 @@ pub mod test_helpers {
         (secret, coins)
     }
 
-    pub async fn setup_test_provider(coins: Vec<(UtxoId, Coin)>) -> Provider {
+    // Setup a test provider with the given coins. We return the SocketAddr so the launched node
+    // client can be connected to more easily (even though it is often ignored).
+    pub async fn setup_test_provider(coins: Vec<(UtxoId, Coin)>) -> (Provider, SocketAddr) {
         let mut db = Database::default();
         for (utxo_id, coin) in coins {
             Storage::<UtxoId, Coin>::insert(&mut db, &utxo_id, &coin).unwrap();
@@ -76,6 +80,6 @@ pub mod test_helpers {
             .unwrap();
         let client = FuelClient::from(srv.bound_address);
 
-        Provider::new(client)
+        (Provider::new(client), srv.bound_address)
     }
 }

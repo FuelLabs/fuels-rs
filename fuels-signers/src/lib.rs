@@ -34,10 +34,7 @@ pub trait Signer: std::fmt::Debug + Send + Sync {
 
 #[cfg(test)]
 mod tests {
-    use crate::provider::Provider;
-    use crate::util::test_helpers::{
-        setup_address_and_coins, setup_local_node, setup_test_provider,
-    };
+    use crate::util::test_helpers::{setup_address_and_coins, setup_test_provider};
     use fuel_tx::{AssetId, Bytes32, Input, Output, UtxoId};
     use rand::{rngs::StdRng, RngCore, SeedableRng};
     use secp256k1::SecretKey;
@@ -54,7 +51,7 @@ mod tests {
         let secret =
             SecretKey::from_slice(&secret_seed).expect("Failed to generate random secret!");
 
-        let provider = Provider::new(setup_local_node(vec![]).await);
+        let (provider, _) = setup_test_provider(vec![]).await;
         let wallet = LocalWallet::new_from_private_key(secret, provider).unwrap();
 
         let message = "my message";
@@ -79,7 +76,7 @@ mod tests {
             SecretKey::from_str("5f70feeff1f229e4a95e1056e8b4d80d0b24b565674860cc213bdb07127ce1b1")
                 .unwrap();
 
-        let provider = Provider::new(setup_local_node(vec![]).await);
+        let (provider, _) = setup_test_provider(vec![]).await;
         let wallet = LocalWallet::new_from_private_key(secret, provider).unwrap();
 
         let input_coin = Input::coin(
@@ -136,7 +133,7 @@ mod tests {
         coins_1.extend(coins_2);
 
         // Setup a provider and node with both set of coins
-        let provider = setup_test_provider(coins_1).await;
+        let (provider, _) = setup_test_provider(coins_1).await;
 
         let wallet_1 = LocalWallet::new_from_private_key(pk_1, provider.clone()).unwrap();
         let wallet_2 = LocalWallet::new_from_private_key(pk_2, provider).unwrap();
@@ -179,7 +176,7 @@ mod tests {
 
         coins_1.extend(coins_2);
 
-        let provider = setup_test_provider(coins_1).await;
+        let (provider, _) = setup_test_provider(coins_1).await;
 
         let wallet_1 = LocalWallet::new_from_private_key(pk_1, provider.clone()).unwrap();
         let wallet_2 = LocalWallet::new_from_private_key(pk_2, provider).unwrap();

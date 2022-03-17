@@ -51,12 +51,11 @@ It's important to setup this client, as it will be needed later when instantiati
 Once you have a Fuel node running and the compiled contract in hands, it's time to deploy the contract:
 
 ```Rust
-// Setup a local node
-let server = FuelService::new_node(Config::local_node()).await.unwrap();
-let client = FuelClient::from(srv.bound_address);
-
 let salt: [u8; 32] = rng.gen();
 let salt = Salt::from(salt);
+// Setup a local node
+let server = FuelService::new_node(Config::local_node()).await.unwrap();
+let (provider, wallet) = setup_test_provider_and_wallet().await;
 
 // Load the compiled Sway contract (this is the output from `forc build`)
 let compiled = Contract::load_sway_contract(
@@ -66,7 +65,7 @@ let compiled = Contract::load_sway_contract(
     .unwrap();
 
 // Deploy the contract
-let contract_id = Contract::deploy(compiled_contract, fuel_client).await.unwrap();
+let contract_id = Contract::deploy(&compiled, provider, wallet).await.unwrap();
 ```
 
 Alternatively, if you want to launch a local node for every deployment, which is usually useful for smaller tests where you don't want to keep state between each test, you can use `Provider::launch(Config::local_node())`:
@@ -82,9 +81,12 @@ let compiled = Contract::load_sway_contract(
     )
     .unwrap();
 
-// Now get the Fuel client _and_ contract_id back.
+// Now get the Fuel client provider _and_ contract_id back.
+let (pk, coins) = setup_address_and_coins(1, DEFAULT_COIN_AMOUNT);
 let client = Provider::launch(Config::local_node()).await.unwrap();
-let contract_id = Contract::deploy(&compiled, &client).await.unwrap();
+let provider = Provider::new(client);
+let wallet = LocalWallet::new_from_private_key(pk, provider.clone()).unwrap();
+let contract_id = Contract::deploy(&compiled, &provider,&wallet).await.unwrap();
 ```
 
 ### Generating type-safe Rust bindings
@@ -135,36 +137,42 @@ Can become this (shortened for brevity's sake):
 ```Rust
 // Note that is all GENERATED code. No need to write any of that. Ever.
 pub struct MyContract {
-    compiled: CompiledContract,
-    fuel_client: FuelClient,
+    contract_id: FuelContractId,
+    provider: Provider,
+    wallet: LocalWallet,
 }
-
 impl MyContract {
-    pub fn new(compiled: CompiledContract, fuel_client: FuelClient) -> Self {
+    pub fn new(contract_id: String, provider: Provider, wallet: LocalWallet) -> Self {
+        let contract_id = FuelContractId::from_str(&contract_id).unwrap();
         Self {
-            compiled,
-            fuel_client,
+            contract_id,
+            provider,
+            wallet,
         }
     }
-    #[doc = "Calls the contract\'s `initialize_counter` (0x0000000002dadd54) function"]
-    pub fn initialize_counter(&self, arg: u64) -> ContractCall<u64> {
+    #[doc = "Calls the contract\'s `initialize_counter` (0x00000000ab64e5f2) function"]
+    pub fn initialize_counter(&self, value: u64) -> ContractCall<u64> {
         Contract::method_hash(
-            &self.fuel_client,
-            &self.contract_id,
-            [0, 0, 0, 0, 2, 218, 221, 84],
-            &[arg.into_token()],
+            &self.provider,
+            self.contract_id,
+            &self.wallet,
+            [0, 0, 0, 0, 171, 100, 229, 242],
+            &[ParamType::U64],
+            &[value.into_token()],
         )
-        .expect("method not found (this should never happen)")
+            .expect("method not found (this should never happen)")
     }
-    #[doc = "Calls the contract\'s `increment_counter` (0x00000000e7f89992) function"]
-    pub fn increment_counter(&self, arg: u64) -> ContractCall<u64> {
+    #[doc = "Calls the contract\'s `increment_counter` (0x00000000faf90dd3) function"]
+    pub fn increment_counter(&self, value: u64) -> ContractCall<u64> {
         Contract::method_hash(
-            &self.fuel_client,
-            &self.contract_id,
-            [0, 0, 0, 0, 231, 248, 153, 146],
-            &[arg.into_token()],
+            &self.provider,
+            self.contract_id,
+            &self.wallet,
+            [0, 0, 0, 0, 250, 249, 13, 211],
+            &[ParamType::U64],
+            &[value.into_token()],
         )
-        .expect("method not found (this should never happen)")
+            .expect("method not found (this should never happen)")
     }
 }
 ```
@@ -173,7 +181,7 @@ And, then, you're able to use to call the actual methods on the deployed contrac
 
 ```Rust
 //...
-let contract_instance = MyContract::new(contract_id.to_string(), client);
+let contract_instance = MyContract::new(contract_id.to_string(), provider, wallet);
 
 let result = contract_instance
     .initialize_counter(42) // Build the ABI call
@@ -267,57 +275,8 @@ let response = my_contract
     .unwrap();
 ```
 
-Here's a more concrete example:
-
-```Rust
-let rng = &mut StdRng::seed_from_u64(2322u64);
-
-// Tests a contract call that calls another contract (FooCaller calls FooContract underneath)
-abigen!(
-    FooContract,
-    "fuels-abigen-macro/tests/test_projects/foo-contract/out/debug/foo-contract-abi.json"
-);
-
-abigen!(
-    FooCaller,
-    "fuels-abigen-macro/tests/test_projects/foo-caller-contract/out/debug/foo-caller-contract-abi.json"
-);
-
-let salt: [u8; 32] = rng.gen();
-let salt = Salt::from(salt);
-
-// Load the first compiled contract
-let compiled =
-    Contract::load_sway_contract("tests/test_projects/foo-contract/out/debug/foo-contract.bin", salt).unwrap();
-
-let client = Provider::launch(Config::local_node()).await.unwrap();
-let foo_contract_id = Contract::deploy(&compiled, &client.clone()).await.unwrap();
-
-let foo_contract_instance = FooContract::new(foo_contract_id.to_string(), client.clone());
-
-// Call the contract directly; it just flips the bool value that's passed.
-let res = foo_contract_instance.foo(true).call().await.unwrap();
-assert!(!res.value);
-
-// Load and deploy second contract
-let compiled =
-    Contract::load_sway_contract("tests/test_projects/foo-caller-contract/out/debug/foo-caller-contract.bin", salt).unwrap();
-
-let foo_caller_contract_id = Contract::deploy(&compiled, &client).await.unwrap();
-
-let foo_caller_contract_instance = FooCaller::new(foo_caller_contract_id.to_string(), client);
-
-// Calls the contract that calls the `FooContract` contract, also just
-// flips the bool value passed to it.
-let res = foo_caller_contract_instance
-    .call_foo_contract(true)
-    .set_contracts(&[foo_contract_id]) // Sets the external contract
-    .call()
-    .await
-    .unwrap();
-
-assert!(!res.value);
-```
+For a more concrete example, see the `test_contract_calling_contract` function in
+`fuels-abigen-macro/tests/harness.rs`
 
 ## More examples
 
