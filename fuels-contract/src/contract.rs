@@ -13,6 +13,7 @@ use fuel_vm::consts::{REG_CGAS, REG_RET, REG_ZERO, VM_TX_MEMORY};
 use fuel_vm::prelude::Contract as FuelContract;
 use fuels_core::ParamType;
 use fuels_core::{Detokenize, Selector, Token, DEFAULT_COIN_AMOUNT, WORD_SIZE};
+use fuels_signers::provider::Provider;
 use fuels_signers::{LocalWallet, Signer};
 use std::marker::PhantomData;
 
@@ -214,7 +215,7 @@ impl Contract {
     /// }
     /// For more details see `code_gen/functions_gen.rs`.
     pub fn method_hash<D: Detokenize>(
-        fuel_client: &FuelClient,
+        provider: &Provider,
         contract_id: ContractId,
         wallet: &LocalWallet,
         signature: Selector,
@@ -241,7 +242,7 @@ impl Contract {
             byte_price,
             maturity,
             encoded_selector,
-            fuel_client: fuel_client.clone(),
+            fuel_client: provider.client.clone(),
             datatype: PhantomData,
             output_params: output_params.to_vec(),
             custom_inputs,
@@ -253,13 +254,13 @@ impl Contract {
     /// Deploys a compiled contract to a running node
     pub async fn deploy(
         compiled_contract: &CompiledContract,
-        fuel_client: &FuelClient,
+        provider: &Provider,
         wallet: &LocalWallet,
     ) -> Result<ContractId, Error> {
         let (tx, contract_id) =
             Self::contract_deployment_transaction(compiled_contract, wallet).await?;
 
-        match fuel_client.submit(&tx).await {
+        match provider.client.submit(&tx).await {
             Ok(_) => Ok(contract_id),
             Err(e) => Err(Error::TransactionError(e.to_string())),
         }

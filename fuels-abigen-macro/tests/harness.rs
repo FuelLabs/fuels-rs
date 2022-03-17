@@ -3,11 +3,10 @@ use fuels_abigen_macro::abigen;
 use fuels_contract::contract::Contract;
 use fuels_contract::errors::Error;
 use fuels_core::Token;
-use fuels_signers::provider::Provider;
 use fuels_signers::util::test_helpers::{
     setup_address_and_coins, setup_test_provider, setup_test_provider_and_wallet,
 };
-use fuels_signers::LocalWallet;
+use fuels_signers::{provider::Provider, LocalWallet};
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 use sha2::{Digest, Sha256};
@@ -29,7 +28,7 @@ async fn compile_bindings_from_contract_file() {
     let (provider, wallet) = setup_test_provider_and_wallet().await;
 
     // `SimpleContract` is the name of the contract
-    let contract_instance = SimpleContract::new(null_contract_id(), provider.client, wallet);
+    let contract_instance = SimpleContract::new(null_contract_id(), provider, wallet);
 
     // Calls the function defined in the JSON ABI.
     // Note that this is type-safe, if the function does exist
@@ -83,7 +82,7 @@ async fn compile_bindings_from_inline_contract() {
 
     let (provider, wallet) = setup_test_provider_and_wallet().await;
     //`SimpleContract` is the name of the contract
-    let contract_instance = SimpleContract::new(null_contract_id(), provider.client, wallet);
+    let contract_instance = SimpleContract::new(null_contract_id(), provider, wallet);
 
     let contract_call = contract_instance.takes_ints_returns_bool(42_u32);
 
@@ -124,7 +123,7 @@ async fn compile_bindings_array_input() {
     let (provider, wallet) = setup_test_provider_and_wallet().await;
 
     // `SimpleContract` is the name of the contract
-    let contract_instance = SimpleContract::new(null_contract_id(), provider.client, wallet);
+    let contract_instance = SimpleContract::new(null_contract_id(), provider, wallet);
 
     let input: Vec<u16> = vec![1, 2, 3, 4];
     let contract_call = contract_instance.takes_array(input);
@@ -169,7 +168,7 @@ async fn compile_bindings_bool_array_input() {
     let (provider, wallet) = setup_test_provider_and_wallet().await;
 
     // `SimpleContract` is the name of the contract
-    let contract_instance = SimpleContract::new(null_contract_id(), provider.client, wallet);
+    let contract_instance = SimpleContract::new(null_contract_id(), provider, wallet);
 
     let input: Vec<bool> = vec![true, false, true];
     let contract_call = contract_instance.takes_array(input);
@@ -214,7 +213,7 @@ async fn compile_bindings_byte_input() {
     let (provider, wallet) = setup_test_provider_and_wallet().await;
 
     // `SimpleContract` is the name of the contract
-    let contract_instance = SimpleContract::new(null_contract_id(), provider.client, wallet);
+    let contract_instance = SimpleContract::new(null_contract_id(), provider, wallet);
 
     let contract_call = contract_instance.takes_byte(10 as u8);
 
@@ -255,7 +254,7 @@ async fn compile_bindings_string_input() {
     let (provider, wallet) = setup_test_provider_and_wallet().await;
 
     // `SimpleContract` is the name of the contract
-    let contract_instance = SimpleContract::new(null_contract_id(), provider.client, wallet);
+    let contract_instance = SimpleContract::new(null_contract_id(), provider, wallet);
 
     let contract_call = contract_instance.takes_string("This is a full sentence".into());
 
@@ -299,7 +298,7 @@ async fn compile_bindings_b256_input() {
     let (provider, wallet) = setup_test_provider_and_wallet().await;
 
     // `SimpleContract` is the name of the contract
-    let contract_instance = SimpleContract::new(null_contract_id(), provider.client, wallet);
+    let contract_instance = SimpleContract::new(null_contract_id(), provider, wallet);
 
     let mut hasher = Sha256::new();
     hasher.update("test string".as_bytes());
@@ -362,7 +361,7 @@ async fn compile_bindings_struct_input() {
     let (provider, wallet) = setup_test_provider_and_wallet().await;
 
     // `SimpleContract` is the name of the contract
-    let contract_instance = SimpleContract::new(null_contract_id(), provider.client, wallet);
+    let contract_instance = SimpleContract::new(null_contract_id(), provider, wallet);
 
     let contract_call = contract_instance.takes_struct(input);
 
@@ -427,7 +426,7 @@ async fn compile_bindings_nested_struct_input() {
     let (provider, wallet) = setup_test_provider_and_wallet().await;
 
     // `SimpleContract` is the name of the contract
-    let contract_instance = SimpleContract::new(null_contract_id(), provider.client, wallet);
+    let contract_instance = SimpleContract::new(null_contract_id(), provider, wallet);
 
     let contract_call = contract_instance.takes_nested_struct(input);
 
@@ -478,7 +477,7 @@ async fn compile_bindings_enum_input() {
     let (provider, wallet) = setup_test_provider_and_wallet().await;
 
     // `SimpleContract` is the name of the contract
-    let contract_instance = SimpleContract::new(null_contract_id(), provider.client, wallet);
+    let contract_instance = SimpleContract::new(null_contract_id(), provider, wallet);
 
     let contract_call = contract_instance.takes_enum(variant);
 
@@ -538,7 +537,7 @@ async fn create_struct_from_decoded_tokens() {
     let (provider, wallet) = setup_test_provider_and_wallet().await;
 
     // `SimpleContract` is the name of the contract
-    let contract_instance = SimpleContract::new(null_contract_id(), provider.client, wallet);
+    let contract_instance = SimpleContract::new(null_contract_id(), provider, wallet);
 
     let contract_call = contract_instance.takes_struct(struct_from_tokens);
 
@@ -609,7 +608,7 @@ async fn create_nested_struct_from_decoded_tokens() {
     let (provider, wallet) = setup_test_provider_and_wallet().await;
 
     // `SimpleContract` is the name of the contract
-    let contract_instance = SimpleContract::new(null_contract_id(), provider.client, wallet);
+    let contract_instance = SimpleContract::new(null_contract_id(), provider, wallet);
 
     let contract_call = contract_instance.takes_nested_struct(nested_struct_from_tokens);
 
@@ -644,12 +643,12 @@ async fn example_workflow() {
     .unwrap();
 
     let (provider, wallet) = setup_test_provider_and_wallet().await;
-    let contract_id = Contract::deploy(&compiled, &provider.client.clone(), &wallet)
+    let contract_id = Contract::deploy(&compiled, &provider.clone(), &wallet)
         .await
         .unwrap();
 
     println!("Contract deployed @ {:x}", contract_id);
-    let contract_instance = MyContract::new(contract_id.to_string(), provider.client, wallet);
+    let contract_instance = MyContract::new(contract_id.to_string(), provider, wallet);
 
     let result = contract_instance
         .initialize_counter(42) // Build the ABI call
@@ -690,12 +689,12 @@ async fn type_safe_output_values() {
     .unwrap();
 
     let (provider, wallet) = setup_test_provider_and_wallet().await;
-    let contract_id = Contract::deploy(&compiled, &provider.client, &wallet)
+    let contract_id = Contract::deploy(&compiled, &provider, &wallet)
         .await
         .unwrap();
     println!("Contract deployed @ {:x}", contract_id);
 
-    let contract_instance = MyContract::new(contract_id.to_string(), provider.client, wallet);
+    let contract_instance = MyContract::new(contract_id.to_string(), provider, wallet);
 
     // `response`'s type matches the return type of `is_event()`
     let response = contract_instance.is_even(10).call().await.unwrap();
@@ -737,12 +736,12 @@ async fn call_with_structs() {
     .unwrap();
 
     let (provider, wallet) = setup_test_provider_and_wallet().await;
-    let contract_id = Contract::deploy(&compiled, &provider.client, &wallet)
+    let contract_id = Contract::deploy(&compiled, &provider, &wallet)
         .await
         .unwrap();
     println!("Contract deployed @ {:x}", contract_id);
 
-    let contract_instance = MyContract::new(contract_id.to_string(), provider.client, wallet);
+    let contract_instance = MyContract::new(contract_id.to_string(), provider, wallet);
     let counter_config = CounterConfig {
         dummy: true,
         initial_value: 42,
@@ -787,12 +786,12 @@ async fn call_with_empty_return() {
     .unwrap();
 
     let (provider, wallet) = setup_test_provider_and_wallet().await;
-    let contract_id = Contract::deploy(&compiled, &provider.client, &wallet)
+    let contract_id = Contract::deploy(&compiled, &provider, &wallet)
         .await
         .unwrap();
     println!("Contract deployed @ {:x}", contract_id);
 
-    let contract_instance = MyContract::new(contract_id.to_string(), provider.client, wallet);
+    let contract_instance = MyContract::new(contract_id.to_string(), provider, wallet);
 
     let _result = contract_instance
         .store_value(42) // Build the ABI call
@@ -819,12 +818,12 @@ async fn abigen_different_structs_same_arg_name() {
             .unwrap();
 
     let (provider, wallet) = setup_test_provider_and_wallet().await;
-    let contract_id = Contract::deploy(&compiled, &provider.client, &wallet)
+    let contract_id = Contract::deploy(&compiled, &provider, &wallet)
         .await
         .unwrap();
     println!("Contract deployed @ {:x}", contract_id);
 
-    let contract_instance = MyContract::new(contract_id.to_string(), provider.client, wallet);
+    let contract_instance = MyContract::new(contract_id.to_string(), provider, wallet);
 
     let param_one = StructOne { foo: 42 };
     let param_two = StructTwo { bar: 42 };
@@ -860,11 +859,10 @@ async fn test_reverting_transaction() {
         .unwrap();
 
     let (provider, wallet) = setup_test_provider_and_wallet().await;
-    let contract_id = Contract::deploy(&compiled, &provider.client, &wallet)
+    let contract_id = Contract::deploy(&compiled, &provider, &wallet)
         .await
         .unwrap();
-    let contract_instance =
-        RevertingContract::new(contract_id.to_string(), provider.client, wallet);
+    let contract_instance = RevertingContract::new(contract_id.to_string(), provider, wallet);
     println!("Contract deployed @ {:x}", contract_id);
     let result = contract_instance.make_transaction_fail(0).call().await;
     assert!(matches!(result, Err(Error::ContractCallError(_))));
@@ -888,11 +886,11 @@ async fn multiple_read_calls() {
     .unwrap();
 
     let (provider, wallet) = setup_test_provider_and_wallet().await;
-    let contract_id = Contract::deploy(&compiled, &provider.client, &wallet)
+    let contract_id = Contract::deploy(&compiled, &provider, &wallet)
         .await
         .unwrap();
     println!("Contract deployed @ {:x}", contract_id);
-    let contract_instance = MyContract::new(contract_id.to_string(), provider.client, wallet);
+    let contract_instance = MyContract::new(contract_id.to_string(), provider, wallet);
 
     contract_instance.store(42).call().await.unwrap();
 
@@ -927,12 +925,12 @@ async fn test_methods_typeless_argument() {
     .unwrap();
 
     let (provider, wallet) = setup_test_provider_and_wallet().await;
-    let contract_id = Contract::deploy(&compiled, &provider.client, &wallet)
+    let contract_id = Contract::deploy(&compiled, &provider, &wallet)
         .await
         .unwrap();
     println!("Contract deployed @ {:x}", contract_id);
 
-    let contract_instance = MyContract::new(contract_id.to_string(), provider.client, wallet);
+    let contract_instance = MyContract::new(contract_id.to_string(), provider, wallet);
 
     let result = contract_instance
         .method_with_empty_argument()
@@ -962,16 +960,13 @@ async fn test_connect_to_deployed_contract() {
     .unwrap();
 
     let (provider, wallet) = setup_test_provider_and_wallet().await;
-    let contract_id = Contract::deploy(&compiled, &provider.client, &wallet)
+    let contract_id = Contract::deploy(&compiled, &provider, &wallet)
         .await
         .unwrap();
     println!("Contract deployed @ {:x}", contract_id);
 
-    let deployed_contract_instance = MyContract::new(
-        contract_id.to_string(),
-        provider.client.clone(),
-        wallet.clone(),
-    );
+    let deployed_contract_instance =
+        MyContract::new(contract_id.to_string(), provider.clone(), wallet.clone());
 
     // Check that the deployed contract works as expected.
     let result = deployed_contract_instance
@@ -997,8 +992,7 @@ async fn test_connect_to_deployed_contract() {
 
     // Create a new contract instance by connecting to
     // the previously deployed contract.
-    let connected_contract_instance =
-        MyContract::new(contract_id.to_string(), provider.client, wallet);
+    let connected_contract_instance = MyContract::new(contract_id.to_string(), provider, wallet);
 
     // Check that it works as expected.
     let result = connected_contract_instance
@@ -1050,12 +1044,12 @@ async fn test_large_return_data() {
     .unwrap();
 
     let (provider, wallet) = setup_test_provider_and_wallet().await;
-    let contract_id = Contract::deploy(&compiled, &provider.client, &wallet)
+    let contract_id = Contract::deploy(&compiled, &provider, &wallet)
         .await
         .unwrap();
     println!("Contract deployed @ {:x}", contract_id);
 
-    let contract_instance = MyContract::new(contract_id.to_string(), provider.client, wallet);
+    let contract_instance = MyContract::new(contract_id.to_string(), provider, wallet);
 
     let res = contract_instance.get_id().call().await.unwrap();
 
@@ -1077,6 +1071,7 @@ async fn test_large_return_data() {
 }
 
 #[tokio::test]
+#[ignore]
 async fn test_provider_node_launch_and_connect() {
     let rng = &mut StdRng::seed_from_u64(2322u64);
 
@@ -1097,19 +1092,19 @@ async fn test_provider_node_launch_and_connect() {
 
     let (pk, coins) = setup_address_and_coins(10, 10);
     let (launched_provider, address) = setup_test_provider(coins).await;
-    let connected_client = Provider::connect(address).await.unwrap();
+    let connected_provider = Provider::new(Provider::connect(address).await.unwrap());
 
     let wallet = LocalWallet::new_from_private_key(pk, launched_provider.clone()).unwrap();
-    let contract_id = Contract::deploy(&compiled, &connected_client, &wallet)
+    let contract_id = Contract::deploy(&compiled, &connected_provider, &wallet)
         .await
         .unwrap();
     println!("Contract deployed @ {:x}", contract_id);
 
     let contract_instance_connected =
-        MyContract::new(contract_id.to_string(), connected_client, wallet.clone());
+        MyContract::new(contract_id.to_string(), connected_provider, wallet.clone());
 
     let contract_instance_launched =
-        MyContract::new(contract_id.to_string(), launched_provider.client, wallet);
+        MyContract::new(contract_id.to_string(), launched_provider, wallet);
 
     let result = contract_instance_connected
         .initialize_counter(42) // Build the ABI call
@@ -1153,14 +1148,14 @@ async fn test_contract_calling_contract() {
 
     let (provider, wallet) = setup_test_provider_and_wallet().await;
 
-    let foo_contract_id = Contract::deploy(&compiled, &provider.client, &wallet)
+    let foo_contract_id = Contract::deploy(&compiled, &provider, &wallet)
         .await
         .unwrap();
     println!("Foo contract deployed @ {:x}", foo_contract_id);
 
     let foo_contract_instance = FooContract::new(
         foo_contract_id.to_string(),
-        provider.client.clone(),
+        provider.clone(),
         wallet.clone(),
     );
 
@@ -1175,7 +1170,7 @@ async fn test_contract_calling_contract() {
     )
     .unwrap();
 
-    let foo_caller_contract_id = Contract::deploy(&compiled, &provider.client, &wallet)
+    let foo_caller_contract_id = Contract::deploy(&compiled, &provider, &wallet)
         .await
         .unwrap();
     println!(
@@ -1185,7 +1180,7 @@ async fn test_contract_calling_contract() {
 
     let foo_caller_contract_instance = FooCaller::new(
         foo_caller_contract_id.to_string(),
-        provider.client.clone(),
+        provider.clone(),
         wallet.clone(),
     );
 
