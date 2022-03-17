@@ -47,8 +47,10 @@ impl Provider {
     }
 
     /// Connects to an existing node at the given address
-    pub async fn connect(socket: SocketAddr) -> Result<FuelClient, Error> {
-        Ok(FuelClient::from(socket))
+    pub async fn connect(socket: SocketAddr) -> Result<Provider, Error> {
+        Ok(Self {
+            client: FuelClient::from(socket),
+        })
     }
 
     /// Shallow wrapper on client's coins API.

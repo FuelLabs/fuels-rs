@@ -1072,7 +1072,7 @@ async fn test_large_return_data() {
 
 #[tokio::test]
 #[ignore]
-async fn test_provider_node_launch_and_connect() {
+async fn test_provider_launch_and_connect() {
     let rng = &mut StdRng::seed_from_u64(2322u64);
 
     abigen!(
@@ -1092,7 +1092,7 @@ async fn test_provider_node_launch_and_connect() {
 
     let (pk, coins) = setup_address_and_coins(10, 10);
     let (launched_provider, address) = setup_test_provider(coins).await;
-    let connected_provider = Provider::new(Provider::connect(address).await.unwrap());
+    let connected_provider = Provider::connect(address).await.unwrap();
 
     let wallet = LocalWallet::new_from_private_key(pk, launched_provider.clone()).unwrap();
     let contract_id = Contract::deploy(&compiled, &connected_provider, &wallet)
