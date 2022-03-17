@@ -11,8 +11,7 @@ use fuel_tx::{
 use fuel_types::{Bytes32, Immediate12, Salt, Word};
 use fuel_vm::consts::{REG_CGAS, REG_RET, REG_ZERO, VM_TX_MEMORY};
 use fuel_vm::prelude::Contract as FuelContract;
-use fuels_core::{Detokenize, Selector, Token, DEFAULT_COIN_AMOUNT, WORD_SIZE};
-use fuels_core::{ParamType, NATIVE_ASSET_ID};
+use fuels_core::{Detokenize, ParamType, Selector, Token, DEFAULT_COIN_AMOUNT, WORD_SIZE};
 use fuels_signers::provider::Provider;
 use fuels_signers::{LocalWallet, Signer};
 use std::marker::PhantomData;
@@ -298,12 +297,13 @@ impl Contract {
 
         let contract_id = Self::compute_contract_id(compiled_contract);
 
+        let native_asset_id = AssetId::from([0u8; 32]);
         let outputs: Vec<Output> = vec![
             Output::contract_created(contract_id, FuelContract::default_state_root()),
             // Note that the change will be computed by the node.
-            // Here we only have to tell the node who will own the change and its asset ID.
-            // For now we use the NATIVE_ASSET_ID constant
-            Output::change(wallet.address(), 0, NATIVE_ASSET_ID),
+            // Here we only have to tell the node who will own the change and its asset ID (the
+            // default is the null asset id for now)
+            Output::change(wallet.address(), 0, native_asset_id),
         ];
         let inputs = wallet
             .get_asset_inputs_for_amount(AssetId::default(), DEFAULT_COIN_AMOUNT)
