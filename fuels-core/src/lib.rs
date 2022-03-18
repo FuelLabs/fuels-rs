@@ -47,7 +47,7 @@ impl ParamType {
     // Checks if the `ParamType` is bigger than a `WORD`.
     // This is important because, depending on whether its
     // bigger or smaller than a `WORD`, the returned data
-    // will be inside a `ReturnData` recipe or a `Return` recipe.
+    // will be inside a `ReturnData` receipt or a `Return` receipt.
     pub fn bigger_than_word(&self) -> bool {
         match &*self {
             // Bits256 Always bigger than one `WORD`.
