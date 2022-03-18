@@ -718,7 +718,14 @@ async fn type_safe_output_values() {
 
     let my_struct = MyStruct { foo: 10, bar: true };
 
-    let _response = contract_instance.return_my_struct(my_struct).call().await;
+    let response = contract_instance
+        .return_my_struct(my_struct)
+        .call()
+        .await
+        .unwrap();
+
+    assert_eq!(response.value.foo, 10);
+    assert!(response.value.bar);
 }
 
 #[tokio::test]
@@ -1075,6 +1082,27 @@ async fn test_large_return_data() {
     // Two word-sized string
     let res = contract_instance.get_large_string().call().await.unwrap();
     assert_eq!(res.value, "ggggggggg");
+
+    // Large struct will be bigger than a `WORD`.
+    let res = contract_instance.get_large_struct().call().await.unwrap();
+    assert_eq!(res.value.foo, 12);
+    assert_eq!(res.value.bar, 42);
+
+    // Array will be returned in `ReturnData`.
+    let res = contract_instance.get_large_array().call().await.unwrap();
+    assert_eq!(res.value, &[1, 2]);
+
+    let res = contract_instance.get_contract_id().call().await.unwrap();
+
+    // First `value` is from `CallResponse`.
+    // Second `value` is from Sway `ContractId` type.
+    assert_eq!(
+        res.value.value,
+        [
+            255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+            255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255
+        ]
+    );
 }
 
 #[tokio::test]

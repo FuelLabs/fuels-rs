@@ -149,7 +149,11 @@ pub fn expand_internal_struct(prop: &Property) -> Result<TokenStream, Error> {
                     _ => Token::Struct(tokens),
                 };
 
-                Ok(#name::new_from_tokens(&[token]))
+                if let Token::Struct(tokens) = token.clone() {
+                    Ok(#name::new_from_tokens(&tokens))
+                } else {
+                    Err(fuels_core::InvalidOutputType("Struct token doesn't contain inner tokens. This shouldn't happen.".to_string()))
+                }
             }
         }
     })
@@ -446,7 +450,11 @@ impl fuels_core::Detokenize for Cocktail {
             1 => tokens.remove(0),
             _ => Token::Struct(tokens),
         };
-        Ok(Cocktail::new_from_tokens(&[token]))
+        if let Token::Struct(tokens) = token.clone() {
+            Ok(Cocktail::new_from_tokens(&tokens))
+        } else {
+            Err(fuels_core::InvalidOutputType("Struct token doesn't contain inner tokens. This shouldn't happen.".to_string()))
+        }
     }
 }
         "#,
@@ -516,7 +524,11 @@ impl fuels_core::Detokenize for Cocktail {
             1 => tokens.remove(0),
             _ => Token::Struct(tokens),
         };
-        Ok(Cocktail::new_from_tokens(&[token]))
+        if let Token::Struct(tokens) = token.clone() {
+            Ok(Cocktail::new_from_tokens(&tokens))
+        } else {
+            Err(fuels_core::InvalidOutputType("Struct token doesn't contain inner tokens. This shouldn't happen.".to_string()))
+        }
     }
 }
         "#,
