@@ -663,8 +663,6 @@ async fn example_workflow() {
         .await
         .unwrap();
 
-    println!("result: {:?}\n", result);
-
     assert_eq!(42, result.value);
 
     let result = contract_instance
@@ -672,8 +670,6 @@ async fn example_workflow() {
         .call()
         .await
         .unwrap();
-
-    println!("result: {:?}\n", result);
 
     assert_eq!(52, result.value);
 }
@@ -1288,7 +1284,6 @@ async fn token_ops() {
         .await
         .unwrap();
 
-    println!("id: {:?}\n", id);
     let instance = TestFuelCoinContract::new(id.to_string(), provider.clone(), wallet.clone());
 
     let target = testfuelcoincontract_mod::ContractId { value: id.into() };
