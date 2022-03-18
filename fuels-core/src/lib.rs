@@ -1,6 +1,5 @@
 use core::fmt;
 use fuel_types::bytes::padded_len;
-use fuel_types::Word;
 use strum_macros::EnumString;
 
 pub mod abi_decoder;
