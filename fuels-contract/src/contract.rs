@@ -105,7 +105,7 @@ impl Contract {
         .copied()
         .collect::<Vec<u8>>();
 
-        assert!(script.len() == script_len, "Script length *must* be 16");
+        assert_eq!(script.len(), script_len, "Script length *must* be 16");
 
         // `script_data` consists of:
         // 1. Contract ID (ContractID::LEN);
@@ -202,7 +202,7 @@ impl Contract {
             }
         }
 
-        let tx = Transaction::script(
+        let mut tx = Transaction::script(
             tx_parameters.gas_price,
             tx_parameters.gas_limit,
             tx_parameters.byte_price,
@@ -213,6 +213,7 @@ impl Contract {
             outputs,
             vec![Witness::from(vec![0u8, 0u8])],
         );
+        wallet.sign_transaction(&mut tx).await?;
 
         let script = Script::new(tx);
 
@@ -275,8 +276,9 @@ impl Contract {
         wallet: &LocalWallet,
         params: TxParameters,
     ) -> Result<ContractId, Error> {
-        let (tx, contract_id) =
+        let (mut tx, contract_id) =
             Self::contract_deployment_transaction(compiled_contract, wallet, params).await?;
+        wallet.sign_transaction(&mut tx).await?;
 
         match provider.client.submit(&tx).await {
             Ok(_) => Ok(contract_id),

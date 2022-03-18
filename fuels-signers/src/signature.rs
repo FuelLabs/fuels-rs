@@ -207,4 +207,24 @@ mod tests {
 
         assert_eq!(s1, s2);
     }
+
+    #[test]
+    fn check_invalid_signature() {
+        let msg = RecoveryMessage::Data("Some data".into());
+        let address =
+            Address::from_str("0x014587212741268ad0b1bc727efce9711dbde69c484a9db38bd83bb1b3017c05")
+                .unwrap();
+        let mut signature = Signature::from_str(
+            "64d8b60c08a7ecab307cb11a31a7153ec7e4ff06a8fb78b4fe9c982d44c731efe63303ec5c7686a56445bacdd4ee89f592f1b3e68bded25ea404cd6806205db4"
+        ).expect("could not parse signature");
+        assert_eq!(signature.verify(msg.clone(), address).unwrap(), ());
+        signature.compact[0] = 0xFF;
+        let result = signature
+            .verify(msg.clone(), address)
+            .unwrap_err()
+            .to_string();
+        let recovered = signature.recover(msg).unwrap();
+        let expected = SignatureError::VerificationError(address, recovered).to_string();
+        assert_eq!(expected, result);
+    }
 }
