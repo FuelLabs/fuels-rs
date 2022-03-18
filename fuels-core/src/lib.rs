@@ -1,11 +1,11 @@
 use core::fmt;
 use fuel_types::bytes::padded_len;
-use fuel_types::Word;
 use strum_macros::EnumString;
 
 pub mod abi_decoder;
 pub mod abi_encoder;
 pub mod code_gen;
+pub mod constants;
 pub mod errors;
 pub mod json_abi;
 pub mod rustfmt;
@@ -17,12 +17,6 @@ pub type ByteArray = [u8; 8];
 pub type Selector = ByteArray;
 pub type Bits256 = [u8; 32];
 pub type EnumSelector = (u8, Token);
-pub const WORD_SIZE: usize = core::mem::size_of::<Word>();
-// This constant is used to determine the amount in the 1 UTXO when initializing wallets for now
-pub const DEFAULT_COIN_AMOUNT: u64 = 1;
-// This constant is the bytes representation of the asset ID of Ethereum right now, the "native"
-// token used for gas fees
-pub const NATIVE_ASSET_ID: [u8; 32] = [0u8; 32];
 
 #[derive(Debug, Clone, EnumString, PartialEq, Eq)]
 #[strum(ascii_case_insensitive)]

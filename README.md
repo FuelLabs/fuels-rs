@@ -64,8 +64,15 @@ let compiled = Contract::load_sway_contract(
     )
     .unwrap();
 
+// Configure deployment parameters.
+// Alternatively you can use the defaults through `TxParameters::default()`.
+let gas_price = 0;
+let gas_limit = 1_000_000;
+let byte_price = 0;
+
 // Deploy the contract
-let contract_id = Contract::deploy(&compiled, provider, wallet).await.unwrap();
+let contract_id = Contract::deploy(&compiled, provider, wallet, 
+TxParameters::new(gas_price, gas_limit, byte_price)).await.unwrap();
 ```
 
 Alternatively, if you want to launch a local node for every deployment, which is usually useful for smaller tests where you don't want to keep state between each test, you can use `Provider::launch(Config::local_node())`:
@@ -86,7 +93,7 @@ let (pk, coins) = setup_address_and_coins(1, DEFAULT_COIN_AMOUNT);
 let client = Provider::launch(Config::local_node()).await.unwrap();
 let provider = Provider::new(client);
 let wallet = LocalWallet::new_from_private_key(pk, provider.clone()).unwrap();
-let contract_id = Contract::deploy(&compiled, &provider,&wallet).await.unwrap();
+let contract_id = Contract::deploy(&compiled, &provider,&wallet, TxParameters::default()).await.unwrap();
 ```
 
 ### Generating type-safe Rust bindings
@@ -185,7 +192,9 @@ let contract_instance = MyContract::new(contract_id.to_string(), provider, walle
 
 let result = contract_instance
     .initialize_counter(42) // Build the ABI call
-    .call() // Perform the network call
+    // Perform the network call, this will use the default values for
+    // gas price (0), gas limit (1_000_000), and byte price (0).
+    .call() 
     .await
     .unwrap();
 
@@ -194,6 +203,8 @@ assert_eq!(42, result.unwrap());
 let result = contract_instance
     .increment_counter(10)
     .call()
+    // You can configure the parameters for a specific contract call:
+    .tx_params(TxParameters::new(Some(100), Some(1_000_000), Some(0)))
     .await
     .unwrap();
 

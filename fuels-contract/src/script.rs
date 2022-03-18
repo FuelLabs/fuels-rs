@@ -21,7 +21,7 @@ impl Script {
     }
 
     pub async fn call(self, fuel_client: &FuelClient) -> Result<Vec<Receipt>, Error> {
-        let tx_id = fuel_client.submit(&self.tx).await.unwrap().0.to_string();
+        let tx_id = fuel_client.submit(&self.tx).await?.0.to_string();
 
         let receipts = fuel_client.receipts(&tx_id).await?;
         let status = fuel_client.transaction_status(&tx_id).await?;
