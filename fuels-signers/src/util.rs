@@ -13,7 +13,7 @@ pub mod test_helpers {
     use fuel_gql_client::client::FuelClient;
     use fuel_tx::{Address, Bytes32, Bytes64, UtxoId};
     use fuel_vm::prelude::Storage;
-    use fuels_core::DEFAULT_COIN_AMOUNT;
+    use fuels_core::constants::DEFAULT_COIN_AMOUNT;
     use rand::{Fill, Rng};
     use secp256k1::{PublicKey, Secp256k1, SecretKey};
     use std::net::SocketAddr;

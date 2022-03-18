@@ -1,4 +1,4 @@
-use crate::constants::{BYTE_PRICE, GAS_LIMIT, GAS_PRICE};
+use fuels_core::constants::{DEFAULT_BYTE_PRICE, DEFAULT_GAS_LIMIT, DEFAULT_GAS_PRICE};
 
 #[derive(Debug)]
 pub struct TxParameters {
@@ -10,9 +10,9 @@ pub struct TxParameters {
 impl Default for TxParameters {
     fn default() -> Self {
         Self {
-            gas_price: GAS_PRICE,
-            gas_limit: GAS_LIMIT,
-            byte_price: BYTE_PRICE,
+            gas_price: DEFAULT_GAS_PRICE,
+            gas_limit: DEFAULT_GAS_LIMIT,
+            byte_price: DEFAULT_BYTE_PRICE,
         }
     }
 }
@@ -20,9 +20,9 @@ impl Default for TxParameters {
 impl TxParameters {
     pub fn new(gas_price: Option<u64>, gas_limit: Option<u64>, byte_price: Option<u64>) -> Self {
         Self {
-            gas_price: gas_price.unwrap_or(GAS_PRICE),
-            gas_limit: gas_limit.unwrap_or(GAS_LIMIT),
-            byte_price: byte_price.unwrap_or(BYTE_PRICE),
+            gas_price: gas_price.unwrap_or(DEFAULT_GAS_PRICE),
+            gas_limit: gas_limit.unwrap_or(DEFAULT_GAS_LIMIT),
+            byte_price: byte_price.unwrap_or(DEFAULT_BYTE_PRICE),
         }
     }
 }

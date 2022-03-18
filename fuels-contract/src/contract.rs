@@ -12,8 +12,10 @@ use fuel_tx::{
 use fuel_types::{Bytes32, Immediate12, Salt, Word};
 use fuel_vm::consts::{REG_CGAS, REG_RET, REG_ZERO, VM_TX_MEMORY};
 use fuel_vm::prelude::Contract as FuelContract;
-use fuels_core::{Detokenize, Selector, Token, DEFAULT_COIN_AMOUNT, WORD_SIZE};
-use fuels_core::{ParamType, NATIVE_ASSET_ID};
+use fuels_core::{
+    constants::DEFAULT_COIN_AMOUNT, constants::WORD_SIZE, Detokenize, Selector, Token,
+};
+use fuels_core::{constants::NATIVE_ASSET_ID, ParamType};
 use fuels_signers::provider::Provider;
 use fuels_signers::{LocalWallet, Signer};
 use std::marker::PhantomData;
@@ -70,7 +72,7 @@ impl Contract {
         encoded_selector: Option<Selector>,
         encoded_args: Option<Vec<u8>>,
         fuel_client: &FuelClient,
-        call_parameters: TxParameters,
+        tx_parameters: TxParameters,
         maturity: Word,
         custom_inputs: bool,
         external_contracts: Option<Vec<ContractId>>,
@@ -201,9 +203,9 @@ impl Contract {
         }
 
         let tx = Transaction::script(
-            call_parameters.gas_price,
-            call_parameters.gas_limit,
-            call_parameters.byte_price,
+            tx_parameters.gas_price,
+            tx_parameters.gas_limit,
+            tx_parameters.byte_price,
             maturity,
             script,
             script_data,
@@ -252,7 +254,7 @@ impl Contract {
         Ok(ContractCall {
             contract_id,
             encoded_args,
-            call_parameters: params,
+            tx_parameters: params,
             maturity,
             encoded_selector,
             fuel_client: provider.client.clone(),
@@ -339,7 +341,7 @@ pub struct ContractCall<D> {
     pub encoded_args: Vec<u8>,
     pub encoded_selector: Selector,
     pub contract_id: ContractId,
-    pub call_parameters: TxParameters,
+    pub tx_parameters: TxParameters,
     pub maturity: u64,
     pub datatype: PhantomData<D>,
     pub output_params: Vec<ParamType>,
@@ -367,7 +369,7 @@ where
     /// let params = TxParameters { gas_price: 100, gas_limit: 1000000, byte_price: 100 };
     /// `my_contract_instance.my_method(...).tx_params(params).call()`.
     pub fn tx_params(mut self, params: TxParameters) -> Self {
-        self.call_parameters = params;
+        self.tx_parameters = params;
         self
     }
 
@@ -383,7 +385,7 @@ where
             Some(self.encoded_selector),
             Some(self.encoded_args),
             &self.fuel_client,
-            self.call_parameters,
+            self.tx_parameters,
             self.maturity,
             self.custom_inputs,
             self.external_contracts,

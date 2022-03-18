@@ -1,5 +1,5 @@
 use crate::errors::CodecError;
-use crate::{Bits256, ByteArray, ParamType, Token, WORD_SIZE};
+use crate::{constants::WORD_SIZE, Bits256, ByteArray, ParamType, Token};
 use core::convert::TryInto;
 use core::str;
 use fuel_types::bytes::padded_len;
