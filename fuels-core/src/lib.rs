@@ -44,15 +44,29 @@ impl Default for ParamType {
 }
 
 impl ParamType {
-    // Checks whether the `ParamType` is bigger than a `WORD`
+    // Checks if the `ParamType` is bigger than a `WORD`.
+    // This is important because, depending on whether it's
+    // bigger or smaller than a `WORD`, the returned data
+    // will be inside a `ReturnData` receipt or a `Return` receipt.
     pub fn bigger_than_word(&self) -> bool {
-        match *self {
+        match &*self {
+            // Bits256 Always bigger than one `WORD`.
             Self::B256 => true,
-            Self::String(size) => size > 8,
+            // Strings are bigger than one `WORD` when its size > 8.
+            Self::String(size) => size > &8,
+            Self::Struct(params) => match params.len() {
+                // If only one component in this struct
+                // check if this element itself is bigger than a `WORD`.
+                1 => params[0].bigger_than_word(),
+                _ => true,
+            },
+            // Enums are always in `ReturnData`.
+            Self::Enum(_params) => true,
+            // Arrays seem to always be inside `ReturnData`.
+            Self::Array(_params, _l) => true,
+            // The other primitive types are inside `Return`,
+            // thus smaller than one `WORD`.
             _ => false,
-            // More types will be handled later.
-            // Currently, the support for arrays in the SDK is broken
-            // due to a change to the array definition in Sway.
         }
     }
 }

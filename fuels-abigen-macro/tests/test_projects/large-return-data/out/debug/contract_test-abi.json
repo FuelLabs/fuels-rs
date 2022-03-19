@@ -34,5 +34,76 @@
         "components": null
       }
     ]
+  },
+  {
+    "type": "function",
+    "inputs": [],
+    "name": "get_small_struct",
+    "outputs": [
+      {
+        "name": "",
+        "type": "struct SmallStruct",
+        "components": [
+          {
+            "name": "foo",
+            "type": "u32",
+            "components": null
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "inputs": [],
+    "name": "get_large_struct",
+    "outputs": [
+      {
+        "name": "",
+        "type": "struct LargeStruct",
+        "components": [
+          {
+            "name": "foo",
+            "type": "u8",
+            "components": null
+          },
+          {
+            "name": "bar",
+            "type": "u8",
+            "components": null
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "inputs": [],
+    "name": "get_large_array",
+    "outputs": [
+      {
+        "name": "",
+        "type": "[u32; 2]",
+        "components": null
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "inputs": [],
+    "name": "get_contract_id",
+    "outputs": [
+      {
+        "name": "",
+        "type": "struct ContractId",
+        "components": [
+          {
+            "name": "value",
+            "type": "b256",
+            "components": null
+          }
+        ]
+      }
+    ]
   }
 ]
