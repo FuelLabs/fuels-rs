@@ -9,9 +9,9 @@ pub mod test_helpers {
         model::coin::{Coin, CoinStatus},
         service::{Config, DbType, FuelService},
     };
-    use fuel_crypto::{Hasher, PublicKey, SecretKey};
+    use fuel_crypto::{PublicKey, SecretKey};
     use fuel_gql_client::client::FuelClient;
-    use fuel_tx::{Address, Bytes32, Bytes64, UtxoId};
+    use fuel_tx::{Address, Bytes32, UtxoId};
     use fuels_core::constants::DEFAULT_INITIAL_BALANCE;
     use rand::{Fill, Rng};
     use std::net::SocketAddr;
@@ -23,7 +23,7 @@ pub mod test_helpers {
         // Setup a provider and node with the given coins
         let (provider, _) = setup_test_provider(coins).await;
 
-        let wallet = LocalWallet::new_from_private_key(pk, provider.clone()).unwrap();
+        let wallet = LocalWallet::new_from_private_key(pk, provider.clone());
         (provider, wallet)
     }
 
@@ -38,8 +38,7 @@ pub mod test_helpers {
         let secret = unsafe { SecretKey::from_bytes_unchecked(secret_seed) };
 
         let public = PublicKey::from(&secret);
-        let public = Bytes64::try_from(&public[1..]).unwrap();
-        let hashed = Hasher::hash(public);
+        let hashed = public.hash();
 
         let coins: Vec<(UtxoId, Coin)> = (1..=num_of_coins)
             .map(|_i| {

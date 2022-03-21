@@ -49,20 +49,20 @@ mod tests {
         let secret = unsafe { SecretKey::from_bytes_unchecked(secret_seed) };
 
         let (provider, _) = setup_test_provider(vec![]).await;
-        let wallet = LocalWallet::new_from_private_key(secret, provider).unwrap();
+        let wallet = LocalWallet::new_from_private_key(secret, provider);
 
-        let message = Message::new("my message");
+        let message = "my message";
 
         let signature = wallet.sign_message(message).await.unwrap();
 
-        // TODO(oleksii): impl FromStr for fuel_crypto::Signature
         // Check if signature is what we expect it to be
-        // assert_eq!(signature.as_ref(), Signature::from_str("0x8eeb238db1adea4152644f1cd827b552dfa9ab3f4939718bb45ca476d167c6512a656f4d4c7356bfb9561b14448c230c6e7e4bd781df5ee9e5999faa6495163d").unwrap().compact);
+        assert_eq!(signature, Signature::from_str("0x8eeb238db1adea4152644f1cd827b552dfa9ab3f4939718bb45ca476d167c6512a656f4d4c7356bfb9561b14448c230c6e7e4bd781df5ee9e5999faa6495163d").unwrap());
 
         // Recover address that signed the message
+        let message = Message::new(message);
         let recovered_address = signature.recover(&message).unwrap();
 
-        assert_eq!(wallet.address.as_ref(), recovered_address.as_ref());
+        assert_eq!(wallet.address.as_ref(), recovered_address.hash().as_ref());
 
         // Verify signature
         signature.verify(&recovered_address, &message).unwrap();
@@ -75,7 +75,7 @@ mod tests {
                 .unwrap();
 
         let (provider, _) = setup_test_provider(vec![]).await;
-        let wallet = LocalWallet::new_from_private_key(secret, provider).unwrap();
+        let wallet = LocalWallet::new_from_private_key(secret, provider);
 
         let input_coin = Input::coin(
             UtxoId::new(Bytes32::zeroed(), 0),
@@ -111,14 +111,13 @@ mod tests {
         let signature = wallet.sign_transaction(&mut tx).await.unwrap();
         let message = Message::new(tx.id());
 
-        // TODO(oleksii): impl FromStr for fuel_crypto::Signature
         // Check if signature is what we expect it to be
-        // assert_eq!(signature.compact, Signature::from_str("0xa1287a24af13fc102cb9e60988b558d5575d7870032f64bafcc2deda2c99125fb25eca55a29a169de156cb30700965e2b26278fcc7ad375bc720440ea50ba3cb").unwrap().compact);
+        assert_eq!(signature, Signature::from_str("0x87493a4e6e02e70e6a380f9c9ad2167cc01ccd6cf058c371316911c80e2415c8b7a406268b09b985581ebbe70de81ff59bba99d24dae5295d0a137b7b9a8507c").unwrap());
 
         // Recover address that signed the transaction
         let recovered_address = signature.recover(&message).unwrap();
 
-        assert_eq!(wallet.address.as_ref(), recovered_address.as_ref());
+        assert_eq!(wallet.address.as_ref(), recovered_address.hash().as_ref());
 
         // Verify signature
         signature.verify(&recovered_address, &message).unwrap();
@@ -135,8 +134,8 @@ mod tests {
         // Setup a provider and node with both set of coins
         let (provider, _) = setup_test_provider(coins_1).await;
 
-        let wallet_1 = LocalWallet::new_from_private_key(pk_1, provider.clone()).unwrap();
-        let wallet_2 = LocalWallet::new_from_private_key(pk_2, provider).unwrap();
+        let wallet_1 = LocalWallet::new_from_private_key(pk_1, provider.clone());
+        let wallet_2 = LocalWallet::new_from_private_key(pk_2, provider);
 
         let wallet_1_initial_coins = wallet_1.get_coins().await.unwrap();
         let wallet_2_initial_coins = wallet_2.get_coins().await.unwrap();
@@ -178,8 +177,8 @@ mod tests {
 
         let (provider, _) = setup_test_provider(coins_1).await;
 
-        let wallet_1 = LocalWallet::new_from_private_key(pk_1, provider.clone()).unwrap();
-        let wallet_2 = LocalWallet::new_from_private_key(pk_2, provider).unwrap();
+        let wallet_1 = LocalWallet::new_from_private_key(pk_1, provider.clone());
+        let wallet_2 = LocalWallet::new_from_private_key(pk_2, provider);
 
         let wallet_1_initial_coins = wallet_1.get_coins().await.unwrap();
         let wallet_2_initial_coins = wallet_2.get_coins().await.unwrap();

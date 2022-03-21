@@ -1,9 +1,9 @@
 use crate::provider::{Provider, ProviderError};
 use crate::Signer;
 use async_trait::async_trait;
-use fuel_crypto::{Hasher, Message, PublicKey, SecretKey, Signature};
+use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
 use fuel_gql_client::client::schema::coin::Coin;
-use fuel_tx::{Address, AssetId, Bytes64, Input, Output, Receipt, Transaction, UtxoId, Witness};
+use fuel_tx::{Address, AssetId, Input, Output, Receipt, Transaction, UtxoId, Witness};
 use fuels_core::errors::Error;
 use std::{fmt, io};
 use thiserror::Error;
@@ -19,7 +19,7 @@ use thiserror::Error;
 ///
 /// ```
 /// use fuels_signers::{LocalWallet, Signer};
-/// use secp256k1::SecretKey;
+/// use fuel_crypto::{Message, SecretKey};
 /// use rand::{rngs::StdRng, RngCore, SeedableRng};
 /// use fuels_signers::provider::Provider;
 /// use fuels_signers::util::test_helpers::setup_test_provider;
@@ -30,8 +30,7 @@ use thiserror::Error;
 ///   let mut secret_seed = [0u8; 32];
 ///   rng.fill_bytes(&mut secret_seed);
 ///
-///   let secret =
-///       SecretKey::from_slice(&secret_seed).expect("Failed to generate random secret!");
+///   let secret = unsafe { SecretKey::from_bytes_unchecked(secret_seed) };
 ///
 ///   // Setup local test node
 ///
@@ -44,12 +43,13 @@ use thiserror::Error;
 ///   let signature = wallet.sign_message(message.as_bytes()).await?;
 ///
 ///   // Recover address that signed the message
-///   let recovered_address = signature.recover(message).unwrap();
+///   let message = Message::new(message);
+///   let recovered_address = signature.recover(&message).unwrap();
 ///
-///   assert_eq!(wallet.address(), recovered_address);
+///   assert_eq!(wallet.address().as_ref(), recovered_address.hash().as_ref());
 ///
 ///   // Verify signature
-///   signature.verify(message, recovered_address).unwrap();
+///   signature.verify(&recovered_address, &message).unwrap();
 ///   Ok(())
 /// }
 /// ```
@@ -91,19 +91,15 @@ impl From<WalletError> for Error {
 }
 
 impl Wallet {
-    pub fn new_from_private_key(
-        private_key: SecretKey,
-        provider: Provider,
-    ) -> Result<Self, WalletError> {
+    pub fn new_from_private_key(private_key: SecretKey, provider: Provider) -> Self {
         let public = PublicKey::from(&private_key);
-        let public = Bytes64::try_from(&public[1..])?;
-        let hashed = Hasher::hash(public);
+        let hashed = public.hash();
 
-        Ok(Self {
+        Self {
             private_key,
             address: Address::new(*hashed),
             provider,
-        })
+        }
     }
 
     pub fn set_provider(&mut self, provider: Provider) {
@@ -122,7 +118,6 @@ impl Wallet {
     /// };
     /// use fuel_tx::{Bytes32, AssetId, Input, Output, UtxoId};
     /// use rand::{rngs::StdRng, RngCore, SeedableRng};
-    /// use secp256k1::SecretKey;
     /// use std::str::FromStr;
     ///
     /// async fn foo() -> Result<(), Box<dyn std::error::Error>> {
