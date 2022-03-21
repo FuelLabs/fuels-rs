@@ -1,13 +1,10 @@
 use crate::provider::{Provider, ProviderError};
-use crate::signature::Signature;
 use crate::Signer;
 use async_trait::async_trait;
-use fuel_crypto::Hasher;
+use fuel_crypto::{Hasher, Message, PublicKey, SecretKey, Signature};
 use fuel_gql_client::client::schema::coin::Coin;
 use fuel_tx::{Address, AssetId, Bytes64, Input, Output, Receipt, Transaction, UtxoId, Witness};
-use fuel_vm::crypto::secp256k1_sign_compact_recoverable;
 use fuels_core::errors::Error;
-use secp256k1::{PublicKey, Secp256k1, SecretKey};
 use std::{fmt, io};
 use thiserror::Error;
 
@@ -98,9 +95,7 @@ impl Wallet {
         private_key: SecretKey,
         provider: Provider,
     ) -> Result<Self, WalletError> {
-        let secp = Secp256k1::new();
-
-        let public = PublicKey::from_secret_key(&secp, &private_key).serialize_uncompressed();
+        let public = PublicKey::from(&private_key);
         let public = Bytes64::try_from(&public[1..])?;
         let hashed = Hasher::hash(public);
 
@@ -239,20 +234,16 @@ impl Signer for Wallet {
         &self,
         message: S,
     ) -> Result<Signature, Self::Error> {
-        let message = message.as_ref();
-        let message_hash = Hasher::hash(message);
-
-        let sig =
-            secp256k1_sign_compact_recoverable(self.private_key.as_ref(), &*message_hash).unwrap();
-        Ok(Signature { compact: sig })
+        let message = Message::new(message);
+        let sig = Signature::sign(&self.private_key, &message);
+        Ok(sig)
     }
 
     async fn sign_transaction(&self, tx: &mut Transaction) -> Result<Signature, Self::Error> {
         let id = tx.id();
-        let sig = secp256k1_sign_compact_recoverable(self.private_key.as_ref(), &*id).unwrap();
-        let sig = Signature { compact: sig };
+        let sig = Signature::sign(&self.private_key, &Message::new(&id));
 
-        let witness = vec![Witness::from(sig.compact.as_ref())];
+        let witness = vec![Witness::from(sig.as_ref())];
 
         let mut witnesses: Vec<Witness> = tx.witnesses().to_vec();
         match witnesses.len() {

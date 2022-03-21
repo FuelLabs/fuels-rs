@@ -9,12 +9,11 @@ pub mod test_helpers {
         model::coin::{Coin, CoinStatus},
         service::{Config, DbType, FuelService},
     };
-    use fuel_crypto::Hasher;
+    use fuel_crypto::{Hasher, PublicKey, SecretKey};
     use fuel_gql_client::client::FuelClient;
     use fuel_tx::{Address, Bytes32, Bytes64, UtxoId};
     use fuels_core::constants::DEFAULT_INITIAL_BALANCE;
     use rand::{Fill, Rng};
-    use secp256k1::{PublicKey, Secp256k1, SecretKey};
     use std::net::SocketAddr;
 
     pub async fn setup_test_provider_and_wallet() -> (Provider, LocalWallet) {
@@ -36,12 +35,9 @@ pub mod test_helpers {
 
         let secret_seed = rng.gen::<[u8; 32]>();
 
-        let secret =
-            SecretKey::from_slice(&secret_seed).expect("Failed to generate random secret!");
+        let secret = unsafe { SecretKey::from_bytes_unchecked(secret_seed) };
 
-        let secp = Secp256k1::new();
-
-        let public = PublicKey::from_secret_key(&secp, &secret).serialize_uncompressed();
+        let public = PublicKey::from(&secret);
         let public = Bytes64::try_from(&public[1..]).unwrap();
         let hashed = Hasher::hash(public);
 

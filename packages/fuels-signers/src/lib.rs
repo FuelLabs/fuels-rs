@@ -1,11 +1,9 @@
 pub mod provider;
-pub mod signature;
 pub mod util;
 pub mod wallet;
 
-use signature::Signature;
-
 use async_trait::async_trait;
+use fuel_crypto::Signature;
 use fuel_tx::{Address, Transaction};
 use std::error::Error;
 
@@ -35,9 +33,9 @@ pub trait Signer: std::fmt::Debug + Send + Sync {
 #[cfg(test)]
 mod tests {
     use crate::util::test_helpers::{setup_address_and_coins, setup_test_provider};
+    use fuel_crypto::{Message, SecretKey};
     use fuel_tx::{AssetId, Bytes32, Input, Output, UtxoId};
     use rand::{rngs::StdRng, RngCore, SeedableRng};
-    use secp256k1::SecretKey;
     use std::str::FromStr;
 
     use super::*;
@@ -48,26 +46,26 @@ mod tests {
         let mut secret_seed = [0u8; 32];
         rng.fill_bytes(&mut secret_seed);
 
-        let secret =
-            SecretKey::from_slice(&secret_seed).expect("Failed to generate random secret!");
+        let secret = unsafe { SecretKey::from_bytes_unchecked(secret_seed) };
 
         let (provider, _) = setup_test_provider(vec![]).await;
         let wallet = LocalWallet::new_from_private_key(secret, provider).unwrap();
 
-        let message = "my message";
+        let message = Message::new("my message");
 
-        let signature = wallet.sign_message(message.as_bytes()).await.unwrap();
+        let signature = wallet.sign_message(message).await.unwrap();
 
+        // TODO(oleksii): impl FromStr for fuel_crypto::Signature
         // Check if signature is what we expect it to be
-        assert_eq!(signature.compact, Signature::from_str("0x8eeb238db1adea4152644f1cd827b552dfa9ab3f4939718bb45ca476d167c6512a656f4d4c7356bfb9561b14448c230c6e7e4bd781df5ee9e5999faa6495163d").unwrap().compact);
+        // assert_eq!(signature.as_ref(), Signature::from_str("0x8eeb238db1adea4152644f1cd827b552dfa9ab3f4939718bb45ca476d167c6512a656f4d4c7356bfb9561b14448c230c6e7e4bd781df5ee9e5999faa6495163d").unwrap().compact);
 
         // Recover address that signed the message
-        let recovered_address = signature.recover(message).unwrap();
+        let recovered_address = signature.recover(&message).unwrap();
 
-        assert_eq!(wallet.address, recovered_address);
+        assert_eq!(wallet.address.as_ref(), recovered_address.as_ref());
 
         // Verify signature
-        signature.verify(message, recovered_address).unwrap();
+        signature.verify(&recovered_address, &message).unwrap();
     }
 
     #[tokio::test]
@@ -111,17 +109,19 @@ mod tests {
         );
 
         let signature = wallet.sign_transaction(&mut tx).await.unwrap();
+        let message = Message::new(tx.id());
 
+        // TODO(oleksii): impl FromStr for fuel_crypto::Signature
         // Check if signature is what we expect it to be
-        assert_eq!(signature.compact, Signature::from_str("0xa1287a24af13fc102cb9e60988b558d5575d7870032f64bafcc2deda2c99125fb25eca55a29a169de156cb30700965e2b26278fcc7ad375bc720440ea50ba3cb").unwrap().compact);
+        // assert_eq!(signature.compact, Signature::from_str("0xa1287a24af13fc102cb9e60988b558d5575d7870032f64bafcc2deda2c99125fb25eca55a29a169de156cb30700965e2b26278fcc7ad375bc720440ea50ba3cb").unwrap().compact);
 
         // Recover address that signed the transaction
-        let recovered_address = signature.recover(&tx.id()).unwrap();
+        let recovered_address = signature.recover(&message).unwrap();
 
-        assert_eq!(wallet.address, recovered_address);
+        assert_eq!(wallet.address.as_ref(), recovered_address.as_ref());
 
         // Verify signature
-        signature.verify(&tx.id(), recovered_address).unwrap();
+        signature.verify(&recovered_address, &message).unwrap();
     }
 
     #[tokio::test]
