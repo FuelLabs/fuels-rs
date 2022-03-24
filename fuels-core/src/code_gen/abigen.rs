@@ -114,8 +114,8 @@ impl Abigen {
                     // aliasing to `FuelContractId` to prevent conflicts between
                     // `fuel_tx::ContractId` and user-defined structs named `ContractId`.
                     use fuel_tx::ContractId as FuelContractId;
-                    use fuels_contract::contract::{Contract, ContractCall};
-                    use fuels_signers::{provider::Provider, LocalWallet};
+                    use fuels_rs::contract::contract::{Contract, ContractCall};
+                    use fuels_rs::signers::{provider::Provider, LocalWallet};
                     use std::str::FromStr;
                 },
                 quote! {
@@ -147,7 +147,7 @@ impl Abigen {
                 #![allow(unused_imports)]
 
                 #includes
-                use fuels_core::{EnumSelector, ParamType, Tokenizable, Token};
+                use fuels_rs::core::{EnumSelector, ParamType, Tokenizable, Token};
 
                 #code
 

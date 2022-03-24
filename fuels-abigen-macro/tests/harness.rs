@@ -1,14 +1,6 @@
 use fuel_tx::{AssetId, Receipt, Salt};
 use fuels_abigen_macro::abigen;
-use fuels_contract::contract::Contract;
-use fuels_contract::errors::Error;
-use fuels_contract::parameters::{CallParameters, TxParameters};
-use fuels_core::constants::NATIVE_ASSET_ID;
-use fuels_core::Token;
-use fuels_signers::util::test_helpers::{
-    setup_address_and_coins, setup_test_provider, setup_test_provider_and_wallet,
-};
-use fuels_signers::{provider::Provider, LocalWallet};
+use fuels_rs::prelude::*;
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 use sha2::{Digest, Sha256};

@@ -28,7 +28,7 @@ tokio = { version = "1.10.1", features = ["full"] }
 
 [dev-dependencies]
 hex = { version = "0.4.3", default-features = false, features = ["std"] }
-fuel-types = { version = "0.1", default-features = false, features = ["random"] }
+fuel-types = { version = "0.3", default-features = false, features = ["random"] }
 
 [features]
 test-helpers = ["fuel-core/test-helpers"]

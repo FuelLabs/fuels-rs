@@ -24,7 +24,7 @@ serde_json = { version = "1.0.64", default-features = true }
 sha2 = "0.9.5"
 strum = "0.21"
 strum_macros = "0.21"
-sway-types = { version = "0.1" }
-sway-utils = { version = "0.1" }
+sway-types = { version = "0.7" }
+sway-utils = { version = "0.7" }
 syn = "1.0.12"
 thiserror = "1.0.30"
