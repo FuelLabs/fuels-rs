@@ -1,7 +1,7 @@
 use crate::abi_decoder::ABIDecoder;
 use crate::abi_encoder::ABIEncoder;
 use crate::errors::Error;
-use crate::parameters::TxParameters;
+use crate::parameters::{CallParameters, TxParameters};
 use crate::script::Script;
 use anyhow::Result;
 use fuel_asm::Opcode;
@@ -73,6 +73,7 @@ impl Contract {
         encoded_args: Option<Vec<u8>>,
         fuel_client: &FuelClient,
         tx_parameters: TxParameters,
+        call_parameters: CallParameters,
         maturity: Word,
         custom_inputs: bool,
         external_contracts: Option<Vec<ContractId>>,
@@ -97,7 +98,7 @@ impl Contract {
             // Setting `0x10` to point to the 32-byte asset ID of the amount to forward.
             Opcode::ADDI(0x10, REG_ZERO, asset_id_offset),
             // Setting `0x11` to hold the amount of of coins to forward.
-            Opcode::ADDI(0x11, REG_ZERO, tx_parameters.amount as Immediate12),
+            Opcode::ADDI(0x11, REG_ZERO, call_parameters.amount as Immediate12),
             // Setting `0x12` to the `script_data`, defined down below but
             // we already know its length.
             Opcode::ADDI(0x12, REG_ZERO, script_data_offset),
@@ -125,7 +126,7 @@ impl Contract {
         // 5. Encoded arguments.
         let mut script_data: Vec<u8> = vec![];
 
-        script_data.extend(tx_parameters.asset_id.to_vec());
+        script_data.extend(call_parameters.asset_id.to_vec());
 
         // Insert contract_id
         script_data.extend(contract_id.as_ref());
@@ -258,7 +259,8 @@ impl Contract {
         let encoded_args = encoder.encode(args).unwrap();
         let encoded_selector = signature;
 
-        let params = TxParameters::default();
+        let tx_parameters = TxParameters::default();
+        let call_parameters = CallParameters::default();
 
         let custom_inputs = args.iter().any(|t| matches!(t, Token::Struct(_)));
 
@@ -266,7 +268,8 @@ impl Contract {
         Ok(ContractCall {
             contract_id,
             encoded_args,
-            tx_parameters: params,
+            tx_parameters,
+            call_parameters,
             maturity,
             encoded_selector,
             fuel_client: provider.client.clone(),
@@ -355,6 +358,7 @@ pub struct ContractCall<D> {
     pub encoded_selector: Selector,
     pub contract_id: ContractId,
     pub tx_parameters: TxParameters,
+    pub call_parameters: CallParameters,
     pub maturity: u64,
     pub datatype: PhantomData<D>,
     pub output_params: Vec<ParamType>,
@@ -377,12 +381,21 @@ where
         self
     }
 
-    /// Sets the parameters for a given contract call.
+    /// Sets the transaction parameters for a given transaction.
     /// Note that this is a builder method, i.e. use it as a chain:
     /// let params = TxParameters { gas_price: 100, gas_limit: 1000000, byte_price: 100 };
     /// `my_contract_instance.my_method(...).tx_params(params).call()`.
     pub fn tx_params(mut self, params: TxParameters) -> Self {
         self.tx_parameters = params;
+        self
+    }
+
+    /// Sets the call parameters for a given contract call.
+    /// Note that this is a builder method, i.e. use it as a chain:
+    /// let params = CallParameters { amount: 1, asset_id: NATIVE_ASSET_ID };
+    /// `my_contract_instance.my_method(...).call_params(params).call()`.
+    pub fn call_params(mut self, params: CallParameters) -> Self {
+        self.call_parameters = params;
         self
     }
 
@@ -399,6 +412,7 @@ where
             Some(self.encoded_args),
             &self.fuel_client,
             self.tx_parameters,
+            self.call_parameters,
             self.maturity,
             self.custom_inputs,
             self.external_contracts,

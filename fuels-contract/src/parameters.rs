@@ -8,8 +8,30 @@ pub struct TxParameters {
     pub gas_price: u64,
     pub gas_limit: u64,
     pub byte_price: u64,
+}
+
+#[derive(Debug)]
+pub struct CallParameters {
     pub amount: u64,
     pub asset_id: AssetId,
+}
+
+impl CallParameters {
+    pub fn new(amount: Option<u64>, asset_id: Option<AssetId>) -> Self {
+        Self {
+            amount: amount.unwrap_or(0),
+            asset_id: asset_id.unwrap_or_else(|| NATIVE_ASSET_ID.into()),
+        }
+    }
+}
+
+impl Default for CallParameters {
+    fn default() -> Self {
+        Self {
+            amount: 0,
+            asset_id: NATIVE_ASSET_ID.into(),
+        }
+    }
 }
 
 impl Default for TxParameters {
@@ -18,26 +40,16 @@ impl Default for TxParameters {
             gas_price: DEFAULT_GAS_PRICE,
             gas_limit: DEFAULT_GAS_LIMIT,
             byte_price: DEFAULT_BYTE_PRICE,
-            amount: 0,
-            asset_id: NATIVE_ASSET_ID.into(),
         }
     }
 }
 
 impl TxParameters {
-    pub fn new(
-        gas_price: Option<u64>,
-        gas_limit: Option<u64>,
-        byte_price: Option<u64>,
-        amount: Option<u64>,
-        asset_id: Option<AssetId>,
-    ) -> Self {
+    pub fn new(gas_price: Option<u64>, gas_limit: Option<u64>, byte_price: Option<u64>) -> Self {
         Self {
             gas_price: gas_price.unwrap_or(DEFAULT_GAS_PRICE),
             gas_limit: gas_limit.unwrap_or(DEFAULT_GAS_LIMIT),
             byte_price: byte_price.unwrap_or(DEFAULT_BYTE_PRICE),
-            amount: amount.unwrap_or(0),
-            asset_id: asset_id.unwrap_or_else(|| NATIVE_ASSET_ID.into()),
         }
     }
 }
