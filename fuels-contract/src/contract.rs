@@ -1,7 +1,7 @@
 use crate::abi_decoder::ABIDecoder;
 use crate::abi_encoder::ABIEncoder;
 use crate::errors::Error;
-use crate::parameters::TxParameters;
+use crate::parameters::{CallParameters, TxParameters};
 use crate::script::Script;
 use anyhow::Result;
 use fuel_asm::Opcode;
@@ -73,31 +73,36 @@ impl Contract {
         encoded_args: Option<Vec<u8>>,
         fuel_client: &FuelClient,
         tx_parameters: TxParameters,
+        call_parameters: CallParameters,
         maturity: Word,
         custom_inputs: bool,
         external_contracts: Option<Vec<ContractId>>,
         wallet: LocalWallet,
     ) -> Result<Vec<Receipt>, Error> {
-        // Based on the defined script length, we set the appropriate data offset.
-        let script_len = 16;
+        // The script len is defined by the 6 Opcodes in the `script`, which is `24`
+        // plus `asset_id_offset`, which is `32`, totalling 56.
+        let script_len = 56;
         let script_data_offset = VM_TX_MEMORY + Transaction::script_offset() + script_len;
         let script_data_offset = script_data_offset as Immediate12;
 
+        // The offset that locates the asset ID in the script data.
+        // It goes from the beginning of `script_data` to `32`.
+        let asset_id_offset = 32;
+
         // Script to call the contract. The offset that points to the `script_data` is loaded at the
-        // register `0x10`. Note that we're picking `0x10` simply because it could be any
+        // register `0x12`. Note that we're picking `0x12` simply because it could be any
         // non-reserved register. Then, we use the Opcode to call a contract: `CALL` pointing at the
         // register that we loaded the `script_data` at.
-
-        // The `iter().collect()` does the Opcode->u8 conversion
         #[allow(clippy::iter_cloned_collect)]
         let script = vec![
-            Opcode::ADDI(0x10, REG_ZERO, script_data_offset),
-            // @todo currently there's no way to forward an amount.
-            // This would be done by programmatically changing
-            // $rB (`REG_ZERO` right now) to actually point to an
-            // amount. This would forward the amount in $rB using
-            // $rC as the asset_id.
-            Opcode::CALL(0x10, REG_ZERO, 0x10, REG_CGAS),
+            // Setting `0x10` to point to the 32-byte asset ID of the amount to forward.
+            Opcode::ADDI(0x10, REG_ZERO, asset_id_offset),
+            // Setting `0x11` to hold the amount of of coins to forward.
+            Opcode::ADDI(0x11, REG_ZERO, call_parameters.amount as Immediate12),
+            // Setting `0x12` to the `script_data`, defined down below but
+            // we already know its length.
+            Opcode::ADDI(0x12, REG_ZERO, script_data_offset),
+            Opcode::CALL(0x12, 0x11, 0x10, REG_CGAS),
             Opcode::RET(REG_RET),
             Opcode::NOOP,
         ]
@@ -105,16 +110,23 @@ impl Contract {
         .copied()
         .collect::<Vec<u8>>();
 
-        assert_eq!(script.len(), script_len, "Script length *must* be 16");
+        assert_eq!(
+            script.len(),
+            script_len - asset_id_offset as usize,
+            "Script length *must* be 24"
+        );
 
         // `script_data` consists of:
-        // 1. Contract ID (ContractID::LEN);
-        // 2. Function selector (1 * WORD_SIZE);
-        // 3. Calldata offset, if it has structs as input,
+        // 1. Asset ID to be forwarded
+        // 2. Contract ID (ContractID::LEN);
+        // 3. Function selector (1 * WORD_SIZE);
+        // 4. Calldata offset, if it has structs as input,
         // computed as `script_data_offset` + ContractId::LEN
         //                                  + 2 * WORD_SIZE;
-        // 4. Encoded arguments.
+        // 5. Encoded arguments.
         let mut script_data: Vec<u8> = vec![];
+
+        script_data.extend(call_parameters.asset_id.to_vec());
 
         // Insert contract_id
         script_data.extend(contract_id.as_ref());
@@ -247,7 +259,8 @@ impl Contract {
         let encoded_args = encoder.encode(args).unwrap();
         let encoded_selector = signature;
 
-        let params = TxParameters::default();
+        let tx_parameters = TxParameters::default();
+        let call_parameters = CallParameters::default();
 
         let custom_inputs = args.iter().any(|t| matches!(t, Token::Struct(_)));
 
@@ -255,7 +268,8 @@ impl Contract {
         Ok(ContractCall {
             contract_id,
             encoded_args,
-            tx_parameters: params,
+            tx_parameters,
+            call_parameters,
             maturity,
             encoded_selector,
             fuel_client: provider.client.clone(),
@@ -344,6 +358,7 @@ pub struct ContractCall<D> {
     pub encoded_selector: Selector,
     pub contract_id: ContractId,
     pub tx_parameters: TxParameters,
+    pub call_parameters: CallParameters,
     pub maturity: u64,
     pub datatype: PhantomData<D>,
     pub output_params: Vec<ParamType>,
@@ -366,12 +381,21 @@ where
         self
     }
 
-    /// Sets the parameters for a given contract call.
+    /// Sets the transaction parameters for a given transaction.
     /// Note that this is a builder method, i.e. use it as a chain:
     /// let params = TxParameters { gas_price: 100, gas_limit: 1000000, byte_price: 100 };
     /// `my_contract_instance.my_method(...).tx_params(params).call()`.
     pub fn tx_params(mut self, params: TxParameters) -> Self {
         self.tx_parameters = params;
+        self
+    }
+
+    /// Sets the call parameters for a given contract call.
+    /// Note that this is a builder method, i.e. use it as a chain:
+    /// let params = CallParameters { amount: 1, asset_id: NATIVE_ASSET_ID };
+    /// `my_contract_instance.my_method(...).call_params(params).call()`.
+    pub fn call_params(mut self, params: CallParameters) -> Self {
+        self.call_parameters = params;
         self
     }
 
@@ -388,6 +412,7 @@ where
             Some(self.encoded_args),
             &self.fuel_client,
             self.tx_parameters,
+            self.call_parameters,
             self.maturity,
             self.custom_inputs,
             self.external_contracts,

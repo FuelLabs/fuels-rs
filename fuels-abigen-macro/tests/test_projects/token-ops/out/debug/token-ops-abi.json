@@ -120,8 +120,14 @@
     "inputs": [
       {
         "name": "target",
-        "type": "b256",
-        "components": null
+        "type": "struct ContractId",
+        "components": [
+          {
+            "name": "value",
+            "type": "b256",
+            "components": null
+          }
+        ]
       },
       {
         "name": "asset_id",
