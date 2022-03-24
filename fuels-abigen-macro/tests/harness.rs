@@ -1,8 +1,9 @@
-use fuel_tx::Salt;
+use fuel_tx::{AssetId, Receipt, Salt};
 use fuels_abigen_macro::abigen;
 use fuels_contract::contract::Contract;
 use fuels_contract::errors::Error;
 use fuels_contract::parameters::TxParameters;
+use fuels_core::constants::NATIVE_ASSET_ID;
 use fuels_core::Token;
 use fuels_signers::util::test_helpers::{
     setup_address_and_coins, setup_test_provider, setup_test_provider_and_wallet,
@@ -658,7 +659,7 @@ async fn example_workflow() {
 
     let result = contract_instance
         .initialize_counter(42) // Build the ABI call
-        .tx_params(TxParameters::new(None, Some(1_000_000), None))
+        .tx_params(TxParameters::new(None, Some(1_000_000), None, None, None))
         .call() // Perform the network call
         .await
         .unwrap();
@@ -1273,18 +1274,18 @@ async fn test_gas_errors() {
     // Test for insufficient gas.
     let result = contract_instance
         .initialize_counter(42) // Build the ABI call
-        .tx_params(TxParameters::new(Some(1_000), Some(100), None))
+        .tx_params(TxParameters::new(Some(1_000), Some(100), None, None, None))
         .call() // Perform the network call
         .await
         .expect_err("should error");
 
-    assert_eq!("Contract call error: Response errors; unexpected block execution error InsufficientGas { provided: 1, required: 100000 }", result.to_string());
+    assert_eq!("Contract call error: Response errors; unexpected block execution error InsufficientGas { provided: 100, required: 100000 }", result.to_string());
 
     // Test for running out of gas. Gas price as `None` will be 0.
     // Gas limit will be 100, this call will use more than 100 gas.
     let result = contract_instance
         .initialize_counter(42) // Build the ABI call
-        .tx_params(TxParameters::new(None, Some(100), None))
+        .tx_params(TxParameters::new(None, Some(100), None, None, None))
         .call() // Perform the network call
         .await
         .expect_err("should error");
@@ -1293,7 +1294,7 @@ async fn test_gas_errors() {
 }
 
 #[tokio::test]
-async fn token_ops() {
+async fn test_amount_and_asset_forwarding() {
     abigen!(
         TestFuelCoinContract,
         "fuels-abigen-macro/tests/test_projects/token-ops/out/debug/token-ops-abi.json"
@@ -1314,26 +1315,28 @@ async fn token_ops() {
 
     let instance = TestFuelCoinContract::new(id.to_string(), provider.clone(), wallet.clone());
 
-    let target = testfuelcoincontract_mod::ContractId { value: id.into() };
-    let asset_id = testfuelcoincontract_mod::ContractId { value: id.into() };
+    // Forward 1 coin of native asset_id
+    let params = TxParameters::new(None, Some(1_000_000), None, Some(1), None);
 
-    let mut balance_result = instance
-        .get_balance(target.value, asset_id.clone())
+    let response = instance
+        .get_msg_amount()
+        .tx_params(params)
         .call()
         .await
         .unwrap();
-    assert_eq!(balance_result.value, 0);
 
-    instance.mint_coins(11).call().await.unwrap();
+    assert_eq!(response.value, 1);
 
-    balance_result = instance
-        .get_balance(target.value, asset_id)
-        .call()
-        .await
-        .unwrap();
-    assert_eq!(balance_result.value, 11);
+    let call_response = response
+        .receipts
+        .iter()
+        .find(|&r| matches!(r, Receipt::Call { .. }));
 
-    // This is just a setup for a future work on forwarding amounts of
-    // a given asset_id to a contract call.
-    let _msg_amount = instance.get_msg_amount().call().await.unwrap();
+    assert!(call_response.is_some());
+
+    assert_eq!(call_response.unwrap().amount().unwrap(), 1);
+    assert_eq!(
+        call_response.unwrap().asset_id().unwrap(),
+        &AssetId::from(NATIVE_ASSET_ID)
+    );
 }

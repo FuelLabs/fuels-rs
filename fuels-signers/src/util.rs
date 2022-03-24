@@ -13,7 +13,7 @@ pub mod test_helpers {
     use fuel_gql_client::client::FuelClient;
     use fuel_tx::{Address, Bytes32, Bytes64, UtxoId};
     use fuel_vm::prelude::Storage;
-    use fuels_core::constants::DEFAULT_COIN_AMOUNT;
+    use fuels_core::constants::DEFAULT_INITIAL_BALANCE;
     use rand::{Fill, Rng};
     use secp256k1::{PublicKey, Secp256k1, SecretKey};
     use std::net::SocketAddr;
@@ -21,7 +21,7 @@ pub mod test_helpers {
     pub async fn setup_test_provider_and_wallet() -> (Provider, LocalWallet) {
         //  We build only 1 coin with amount TEST_COIN_AMOUNT, empirically determined to be
         //  sufficient right now
-        let (pk, coins) = setup_address_and_coins(1, DEFAULT_COIN_AMOUNT);
+        let (pk, coins) = setup_address_and_coins(1, DEFAULT_INITIAL_BALANCE);
         // Setup a provider and node with the given coins
         let (provider, _) = setup_test_provider(coins).await;
 
