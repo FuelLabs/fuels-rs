@@ -89,9 +89,12 @@ impl Contract {
             data_offset,
             vec![
                 // Load call data to 0x10.
-                Opcode::MOVI(0x10, data_offset + 32),
+                Opcode::MOVI(0x10, data_offset + 40),
                 // Load gas forward to 0x11.
-                Opcode::MOVI(0x12, call_parameters.amount as Immediate18),
+                // Load word into 0x12
+                Opcode::MOVI(0x12, data_offset + 32),
+                // Load the amount into 0x12
+                Opcode::LW(0x12, 0x12, 0),
                 // Load the asset id to use to 0x13.
                 Opcode::MOVI(0x13, data_offset),
                 // Call the transfer contract.
@@ -104,15 +107,21 @@ impl Contract {
 
         // `script_data` consists of:
         // 1. Asset ID to be forwarded
-        // 2. Contract ID (ContractID::LEN);
-        // 3. Function selector (1 * WORD_SIZE);
-        // 4. Calldata offset, if it has structs as input,
+        // 2. Amount to be forwarded
+        // 3. Contract ID (ContractID::LEN);
+        // 4. Function selector (1 * WORD_SIZE);
+        // 5. Calldata offset, if it has structs as input,
         // computed as `script_data_offset` + ContractId::LEN
         //                                  + 2 * WORD_SIZE;
-        // 5. Encoded arguments.
+        // 6. Encoded arguments.
         let mut script_data: Vec<u8> = vec![];
 
+        // Insert assent_id to be forwarded
         script_data.extend(call_parameters.asset_id.to_vec());
+
+        // Insert amount to be forwarded
+        let amount = call_parameters.amount as Word;
+        script_data.extend(amount.to_be_bytes());
 
         // Insert contract_id
         script_data.extend(contract_id.as_ref());
@@ -128,7 +137,7 @@ impl Contract {
         // transaction. If it doesn't take any custom inputs, this isn't necessary.
         if compute_calldata_offset {
             // Offset of the script data relative to the call data
-            let call_data_offset = (offset + 32) as usize + ContractId::LEN + 2 * WORD_SIZE;
+            let call_data_offset = (offset + 40) as usize + ContractId::LEN + 2 * WORD_SIZE;
             let call_data_offset = call_data_offset as Word;
 
             script_data.extend(&call_data_offset.to_be_bytes());
