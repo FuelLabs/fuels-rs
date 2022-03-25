@@ -19,7 +19,7 @@ members = [
 ]
 
 [dependencies]
-fuels-abigen-macro = { version = "0.7.0", path = "./fuels-abigen-macro"}
-fuels-contract = { version = "0.7.0", path = "./fuels-contract"}
-fuels-core = { version = "0.7.0", path = "./fuels-core"}
-fuels-signers = { version = "0.7.0", path = "./fuels-signers"}
+fuels-abigen-macro = { version = "0.7.1", path = "./fuels-abigen-macro"}
+fuels-contract = { version = "0.7.1", path = "./fuels-contract"}
+fuels-core = { version = "0.7.1", path = "./fuels-core"}
+fuels-signers = { version = "0.7.1", path = "./fuels-signers"}
