@@ -9,9 +9,10 @@ use fuel_gql_client::client::FuelClient;
 use fuel_tx::{
     AssetId, ContractId, Input, Output, Receipt, StorageSlot, Transaction, UtxoId, Witness,
 };
-use fuel_types::{Bytes32, Immediate12, Salt, Word};
-use fuel_vm::consts::{REG_CGAS, REG_RET, REG_ZERO, VM_TX_MEMORY};
+use fuel_types::{Bytes32, Salt, Word};
+use fuel_vm::consts::{REG_CGAS, REG_ONE, REG_ZERO};
 use fuel_vm::prelude::Contract as FuelContract;
+use fuel_vm::script_with_data_offset;
 use fuels_core::{
     constants::DEFAULT_COIN_AMOUNT, constants::WORD_SIZE, Detokenize, Selector, Token,
 };
@@ -79,42 +80,26 @@ impl Contract {
         external_contracts: Option<Vec<ContractId>>,
         wallet: LocalWallet,
     ) -> Result<Vec<Receipt>, Error> {
-        // The script len is defined by the 6 Opcodes in the `script`, which is `24`
-        // plus `asset_id_offset`, which is `32`, totalling 56.
-        let script_len = 56;
-        let script_data_offset = VM_TX_MEMORY + Transaction::script_offset() + script_len;
-        let script_data_offset = script_data_offset as Immediate12;
-
-        // The offset that locates the asset ID in the script data.
-        // It goes from the beginning of `script_data` to `32`.
-        let asset_id_offset = 32;
-
         // Script to call the contract. The offset that points to the `script_data` is loaded at the
         // register `0x12`. Note that we're picking `0x12` simply because it could be any
         // non-reserved register. Then, we use the Opcode to call a contract: `CALL` pointing at the
         // register that we loaded the `script_data` at.
-        #[allow(clippy::iter_cloned_collect)]
-        let script = vec![
-            // Setting `0x10` to point to the 32-byte asset ID of the amount to forward.
-            Opcode::ADDI(0x10, REG_ZERO, asset_id_offset),
-            // Setting `0x11` to hold the amount of of coins to forward.
-            Opcode::ADDI(0x11, REG_ZERO, call_parameters.amount as Immediate12),
-            // Setting `0x12` to the `script_data`, defined down below but
-            // we already know its length.
-            Opcode::ADDI(0x12, REG_ZERO, script_data_offset),
-            Opcode::CALL(0x12, 0x11, 0x10, REG_CGAS),
-            Opcode::RET(REG_RET),
-            Opcode::NOOP,
-        ]
-        .iter()
-        .copied()
-        .collect::<Vec<u8>>();
-
-        assert_eq!(
-            script.len(),
-            script_len - asset_id_offset as usize,
-            "Script length *must* be 24"
+        let (script, offset) = script_with_data_offset!(
+            data_offset,
+            vec![
+                // Load call data to 0x10.
+                Opcode::ADDI(0x10, REG_ZERO, data_offset + 32),
+                // Load gas forward to 0x11.
+                Opcode::ADDI(0x12, REG_ZERO, call_parameters.amount as Immediate12),
+                // Load the asset id to use to 0x13.
+                Opcode::ADDI(0x13, REG_ZERO, data_offset),
+                // Call the transfer contract.
+                Opcode::CALL(0x10, 0x12, 0x13, REG_CGAS),
+                Opcode::RET(REG_ONE),
+            ]
         );
+
+        let script = script.iter().copied().collect::<Vec<u8>>();
 
         // `script_data` consists of:
         // 1. Asset ID to be forwarded
@@ -142,7 +127,7 @@ impl Contract {
         // transaction. If it doesn't take any custom inputs, this isn't necessary.
         if compute_calldata_offset {
             // Offset of the script data relative to the call data
-            let call_data_offset = script_data_offset as usize + ContractId::LEN + 2 * WORD_SIZE;
+            let call_data_offset = (offset + 32) as usize + ContractId::LEN + 2 * WORD_SIZE;
             let call_data_offset = call_data_offset as Word;
 
             script_data.extend(&call_data_offset.to_be_bytes());
