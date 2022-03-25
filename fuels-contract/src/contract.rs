@@ -404,7 +404,9 @@ where
         self
     }
 
-    /// Sets the variable outputs transaction.
+    /// Appends `num` `Output::Variable`s to the transaction.
+    /// Note that this is a builder method, i.e. use it as a chain:
+    /// `my_contract_instance.my_method(...).add_variable_outputs(num).call()`.
     pub fn append_variable_outputs(mut self, num: u64) -> Self {
         let new_outputs: Vec<Output> = (0..num)
             .map(|_| Output::Variable {
