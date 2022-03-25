@@ -1312,8 +1312,21 @@ async fn test_amount_and_asset_forwarding() {
     let id = Contract::deploy(&compiled, &provider, &wallet, TxParameters::default())
         .await
         .unwrap();
-
+    let target = testfuelcoincontract_mod::ContractId { value: id.into() };
+    let asset_id = testfuelcoincontract_mod::ContractId { value: id.into() };
     let instance = TestFuelCoinContract::new(id.to_string(), provider.clone(), wallet.clone());
+
+    let mut balance_result = instance
+        .get_balance(target.clone(), asset_id.clone())
+        .call()
+        .await
+        .unwrap();
+    assert_eq!(balance_result.value, 0);
+
+    instance.mint_coins(11).call().await.unwrap();
+
+    balance_result = instance.get_balance(target, asset_id).call().await.unwrap();
+    assert_eq!(balance_result.value, 11);
 
     // Forward 1 coin of native asset_id
     let tx_params = TxParameters::new(None, Some(1_000_000), None);
@@ -1340,6 +1353,36 @@ async fn test_amount_and_asset_forwarding() {
     assert_eq!(
         call_response.unwrap().asset_id().unwrap(),
         &AssetId::from(NATIVE_ASSET_ID)
+    );
+
+    // Trying to forward `amount` of a different asset_id.
+    // Currently, if we use this asset_id in the forwarding, the VM will
+    // return `AssetIdNotFound` if amount is larger than 0.
+    let asset: [u8; 32] = id.into();
+    let call_params = CallParameters::new(None, Some(AssetId::from(asset)));
+    let tx_params = TxParameters::new(None, Some(1_000_000), None);
+
+    let response = instance
+        .get_msg_amount()
+        .tx_params(tx_params)
+        .call_params(call_params)
+        .call()
+        .await
+        .unwrap();
+
+    assert_eq!(response.value, 0);
+
+    let call_response = response
+        .receipts
+        .iter()
+        .find(|&r| matches!(r, Receipt::Call { .. }));
+
+    assert!(call_response.is_some());
+
+    assert_eq!(call_response.unwrap().amount().unwrap(), 0);
+    assert_eq!(
+        call_response.unwrap().asset_id().unwrap(),
+        &AssetId::from(asset)
     );
 }
 
