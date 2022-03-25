@@ -75,7 +75,7 @@ impl Contract {
         tx_parameters: TxParameters,
         call_parameters: CallParameters,
         maturity: Word,
-        custom_inputs: bool,
+        compute_calldata_offset: bool,
         external_contracts: Option<Vec<ContractId>>,
         wallet: LocalWallet,
     ) -> Result<Vec<Receipt>, Error> {
@@ -136,10 +136,11 @@ impl Contract {
             script_data.extend(e)
         }
 
-        // If the method call takes custom inputs, such as structs or enums, we need to calculate
-        // the `call_data_offset`, which points to where the data for the custom types start in the
+        // If the method call takes custom inputs or has more than
+        // one argument, we need to calculate the `call_data_offset`,
+        // which points to where the data for the custom types start in the
         // transaction. If it doesn't take any custom inputs, this isn't necessary.
-        if custom_inputs {
+        if compute_calldata_offset {
             // Offset of the script data relative to the call data
             let call_data_offset = script_data_offset as usize + ContractId::LEN + 2 * WORD_SIZE;
             let call_data_offset = call_data_offset as Word;
@@ -262,7 +263,7 @@ impl Contract {
         let tx_parameters = TxParameters::default();
         let call_parameters = CallParameters::default();
 
-        let custom_inputs = args.iter().any(|t| matches!(t, Token::Struct(_)));
+        let compute_calldata_offset = Contract::should_compute_call_data_offset(args);
 
         let maturity = 0;
         Ok(ContractCall {
@@ -275,10 +276,21 @@ impl Contract {
             fuel_client: provider.client.clone(),
             datatype: PhantomData,
             output_params: output_params.to_vec(),
-            custom_inputs,
+            compute_calldata_offset,
             external_contracts: None,
             wallet: wallet.clone(),
         })
+    }
+
+    // Returns true if the method call takes custom inputs or has more than one argument. This is used to determine whether we need to compute the `call_data_offset`.
+    fn should_compute_call_data_offset(args: &[Token]) -> bool {
+        match args
+            .iter()
+            .any(|t| matches!(t, Token::Struct(_) | Token::Enum(_)))
+        {
+            true => true,
+            false => args.len() > 1,
+        }
     }
 
     /// Deploys a compiled contract to a running node
@@ -362,7 +374,7 @@ pub struct ContractCall<D> {
     pub maturity: u64,
     pub datatype: PhantomData<D>,
     pub output_params: Vec<ParamType>,
-    pub custom_inputs: bool,
+    pub compute_calldata_offset: bool,
     pub wallet: LocalWallet,
     external_contracts: Option<Vec<ContractId>>,
 }
@@ -414,7 +426,7 @@ where
             self.tx_parameters,
             self.call_parameters,
             self.maturity,
-            self.custom_inputs,
+            self.compute_calldata_offset,
             self.external_contracts,
             self.wallet,
         )

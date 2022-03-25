@@ -1342,3 +1342,43 @@ async fn test_amount_and_asset_forwarding() {
         &AssetId::from(NATIVE_ASSET_ID)
     );
 }
+
+#[tokio::test]
+async fn test_multiple_args() {
+    let mut rng = StdRng::seed_from_u64(2322u64);
+
+    abigen!(
+        MyContract,
+        "fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+    );
+
+    // Build the contract
+    let salt: [u8; 32] = rng.gen();
+    let salt = Salt::from(salt);
+
+    let compiled = Contract::load_sway_contract(
+        "tests/test_projects/contract_test/out/debug/contract_test.bin",
+        salt,
+    )
+    .unwrap();
+
+    let (provider, wallet) = setup_test_provider_and_wallet().await;
+
+    let id = Contract::deploy(&compiled, &provider, &wallet, TxParameters::default())
+        .await
+        .unwrap();
+
+    let instance = MyContract::new(id.to_string(), provider.clone(), wallet.clone());
+
+    // Make sure we can call the contract with multiple arguments
+    let response = instance.get(5, 6).call().await.unwrap();
+
+    assert_eq!(response.value, 5);
+
+    let t = MyType { x: 5, y: 6 };
+    let response = instance.get_alt(t).call().await.unwrap();
+    assert_eq!(response.value, 5);
+
+    let response = instance.get_single(5).call().await.unwrap();
+    assert_eq!(response.value, 5);
+}

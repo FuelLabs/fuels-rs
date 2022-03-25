@@ -46,5 +46,75 @@
         "components": null
       }
     ]
+  },
+  {
+    "type": "function",
+    "inputs": [
+      {
+        "name": "x",
+        "type": "u64",
+        "components": null
+      },
+      {
+        "name": "y",
+        "type": "u64",
+        "components": null
+      }
+    ],
+    "name": "get",
+    "outputs": [
+      {
+        "name": "",
+        "type": "u64",
+        "components": null
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "inputs": [
+      {
+        "name": "t",
+        "type": "struct MyType",
+        "components": [
+          {
+            "name": "x",
+            "type": "u64",
+            "components": null
+          },
+          {
+            "name": "y",
+            "type": "u64",
+            "components": null
+          }
+        ]
+      }
+    ],
+    "name": "get_alt",
+    "outputs": [
+      {
+        "name": "",
+        "type": "u64",
+        "components": null
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "inputs": [
+      {
+        "name": "x",
+        "type": "u64",
+        "components": null
+      }
+    ],
+    "name": "get_single",
+    "outputs": [
+      {
+        "name": "",
+        "type": "u64",
+        "components": null
+      }
+    ]
   }
 ]
