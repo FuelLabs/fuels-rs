@@ -3,9 +3,7 @@ use fuels_abigen_macro::abigen;
 use fuels_contract::contract::Contract;
 use fuels_contract::errors::Error;
 use fuels_contract::parameters::{CallParameters, TxParameters};
-use fuels_core::constants::{
-    NATIVE_ASSET_ID, DEFAULT_INITIAL_BALANCE
-};
+use fuels_core::constants::{DEFAULT_INITIAL_BALANCE, NATIVE_ASSET_ID};
 use fuels_core::Token;
 use fuels_signers::util::test_helpers::{
     setup_address_and_coins, setup_test_provider, setup_test_provider_and_wallet,
@@ -1276,7 +1274,11 @@ async fn test_gas_errors() {
     // Test for insufficient gas.
     let result = contract_instance
         .initialize_counter(42) // Build the ABI call
-        .tx_params(TxParameters::new(Some(DEFAULT_INITIAL_BALANCE), Some(100), None))
+        .tx_params(TxParameters::new(
+            Some(DEFAULT_INITIAL_BALANCE),
+            Some(100),
+            None,
+        ))
         .call() // Perform the network call
         .await
         .expect_err("should error");
