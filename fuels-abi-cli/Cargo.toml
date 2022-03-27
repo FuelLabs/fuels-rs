@@ -15,4 +15,4 @@ fuels-core = { version = "0.7.1", path = "../fuels-core" }
 hex = "0.4"
 itertools = "0.10"
 structopt = "0.3"
-sway-types = { version = "0.1" }
+sway-types = { version = "0.8" }

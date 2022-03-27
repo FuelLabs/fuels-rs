@@ -10,7 +10,7 @@ use fuel_tx::{
     Address, AssetId, ContractId, Input, Output, Receipt, StorageSlot, Transaction, UtxoId, Witness,
 };
 use fuel_types::{Bytes32, Salt, Word};
-use fuel_vm::consts::{REG_CGAS, REG_ONE, REG_ZERO};
+use fuel_vm::consts::{REG_CGAS, REG_ONE};
 use fuel_vm::prelude::Contract as FuelContract;
 use fuel_vm::script_with_data_offset;
 use fuels_core::{
@@ -89,11 +89,11 @@ impl Contract {
             data_offset,
             vec![
                 // Load call data to 0x10.
-                Opcode::ADDI(0x10, REG_ZERO, data_offset + 32),
+                Opcode::MOVI(0x10, data_offset + 32),
                 // Load gas forward to 0x11.
-                Opcode::ADDI(0x12, REG_ZERO, call_parameters.amount as Immediate12),
+                Opcode::MOVI(0x12, call_parameters.amount as Immediate18),
                 // Load the asset id to use to 0x13.
-                Opcode::ADDI(0x13, REG_ZERO, data_offset),
+                Opcode::MOVI(0x13, data_offset),
                 // Call the transfer contract.
                 Opcode::CALL(0x10, 0x12, 0x13, REG_CGAS),
                 Opcode::RET(REG_ONE),

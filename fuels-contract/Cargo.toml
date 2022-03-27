@@ -11,12 +11,12 @@ description = "Fuel Rust SDK contracts."
 [dependencies]
 anyhow = "1"
 bytes = { version = "1.0.1", features = ["serde"] }
-fuel-asm = { version = "0.1", features = ["serde-types"] }
-fuel-core = { version = "0.4", default-features = false }
-fuel-gql-client = { version = "0.4", default-features = false }
-fuel-tx = "0.6"
+fuel-asm = { version = "0.3", features = ["serde-types"] }
+fuel-core = { version = "0.5", default-features = false }
+fuel-gql-client = { version = "0.5", default-features = false }
+fuel-tx = "0.7"
 fuel-types = "0.3"
-fuel-vm = "0.5"
+fuel-vm = "0.6"
 fuels-core = { version = "0.7.1", path = "../fuels-core" }
 fuels-signers = { version = "0.7.1", path = "../fuels-signers", features = ["test-helpers"] }
 hex = { version = "0.4.3", default-features = false, features = ["std"] }
@@ -29,7 +29,7 @@ serde_json = { version = "1.0.64", default-features = true }
 sha2 = "0.9.5"
 strum = "0.21"
 strum_macros = "0.21"
-sway-types = { version = "0.1" }
-sway-utils = { version = "0.1" }
+sway-types = { version = "0.8" }
+sway-utils = { version = "0.8" }
 thiserror = { version = "1.0.26", default-features = false }
 tokio = "1.12"
