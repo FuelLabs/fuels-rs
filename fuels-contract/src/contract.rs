@@ -7,7 +7,7 @@ use anyhow::Result;
 use fuel_asm::Opcode;
 use fuel_gql_client::client::FuelClient;
 use fuel_tx::{
-    AssetId, ContractId, Input, Output, Receipt, StorageSlot, Transaction, UtxoId, Witness,
+    Address, AssetId, ContractId, Input, Output, Receipt, StorageSlot, Transaction, UtxoId, Witness,
 };
 use fuel_types::{Bytes32, Salt, Word};
 use fuel_vm::consts::{REG_CGAS, REG_ONE, REG_ZERO};
@@ -75,6 +75,7 @@ impl Contract {
         fuel_client: &FuelClient,
         tx_parameters: TxParameters,
         call_parameters: CallParameters,
+        variable_outputs: Option<Vec<Output>>,
         maturity: Word,
         compute_calldata_offset: bool,
         external_contracts: Option<Vec<ContractId>>,
@@ -200,6 +201,11 @@ impl Contract {
             }
         }
 
+        // Add outputs to the transaction.
+        if let Some(v) = variable_outputs {
+            outputs.extend(v);
+        };
+
         let mut tx = Transaction::script(
             tx_parameters.gas_price,
             tx_parameters.gas_limit,
@@ -261,6 +267,7 @@ impl Contract {
             fuel_client: provider.client.clone(),
             datatype: PhantomData,
             output_params: output_params.to_vec(),
+            variable_outputs: None,
             compute_calldata_offset,
             external_contracts: None,
             wallet: wallet.clone(),
@@ -361,6 +368,7 @@ pub struct ContractCall<D> {
     pub output_params: Vec<ParamType>,
     pub compute_calldata_offset: bool,
     pub wallet: LocalWallet,
+    pub variable_outputs: Option<Vec<Output>>,
     external_contracts: Option<Vec<ContractId>>,
 }
 
@@ -396,6 +404,26 @@ where
         self
     }
 
+    /// Appends `num` `Output::Variable`s to the transaction.
+    /// Note that this is a builder method, i.e. use it as a chain:
+    /// `my_contract_instance.my_method(...).add_variable_outputs(num).call()`.
+    pub fn append_variable_outputs(mut self, num: u64) -> Self {
+        let new_outputs: Vec<Output> = (0..num)
+            .map(|_| Output::Variable {
+                amount: 0,
+                to: Address::zeroed(),
+                asset_id: AssetId::default(),
+            })
+            .collect();
+
+        match self.variable_outputs {
+            Some(ref mut outputs) => outputs.extend(new_outputs),
+            None => self.variable_outputs = Some(new_outputs),
+        }
+
+        self
+    }
+
     /// Call a contract's method. Return a Result<CallResponse, Error>.
     /// The CallResponse structs contains the method's value in its `value`
     /// field as an actual typed value `D` (if your method returns `bool`, it will
@@ -410,6 +438,7 @@ where
             &self.fuel_client,
             self.tx_parameters,
             self.call_parameters,
+            self.variable_outputs,
             self.maturity,
             self.compute_calldata_offset,
             self.external_contracts,
