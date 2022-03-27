@@ -85,14 +85,18 @@ impl Contract {
         // register `0x13`. Note that we're picking `0x13` simply because it could be any
         // non-reserved register. Then, we use the Opcode to call a contract: `CALL` pointing at the
         // register that we loaded the `script_data` at.
+        let forward_data_offset = ContractId::LEN + WORD_SIZE;
         let (script, offset) = script_with_data_offset!(
             data_offset,
             vec![
                 // Load call data to 0x10.
-                Opcode::MOVI(0x10, data_offset + 40),
+                Opcode::MOVI(0x10, data_offset + forward_data_offset as Immediate18),
                 // Load gas forward to 0x11.
                 // Load word into 0x12
-                Opcode::MOVI(0x12, data_offset + 32),
+                Opcode::MOVI(
+                    0x12,
+                    ((data_offset as usize) + ContractId::LEN) as Immediate18
+                ),
                 // Load the amount into 0x12
                 Opcode::LW(0x12, 0x12, 0),
                 // Load the asset id to use to 0x13.
@@ -137,7 +141,8 @@ impl Contract {
         // transaction. If it doesn't take any custom inputs, this isn't necessary.
         if compute_calldata_offset {
             // Offset of the script data relative to the call data
-            let call_data_offset = (offset + 40) as usize + ContractId::LEN + 2 * WORD_SIZE;
+            let call_data_offset =
+                ((offset as usize) + forward_data_offset) + ContractId::LEN + 2 * WORD_SIZE;
             let call_data_offset = call_data_offset as Word;
 
             script_data.extend(&call_data_offset.to_be_bytes());
