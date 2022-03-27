@@ -82,7 +82,7 @@ impl Contract {
         wallet: LocalWallet,
     ) -> Result<Vec<Receipt>, Error> {
         // Script to call the contract. The offset that points to the `script_data` is loaded at the
-        // register `0x12`. Note that we're picking `0x12` simply because it could be any
+        // register `0x13`. Note that we're picking `0x13` simply because it could be any
         // non-reserved register. Then, we use the Opcode to call a contract: `CALL` pointing at the
         // register that we loaded the `script_data` at.
         let (script, offset) = script_with_data_offset!(
@@ -116,7 +116,7 @@ impl Contract {
         // 6. Encoded arguments.
         let mut script_data: Vec<u8> = vec![];
 
-        // Insert assent_id to be forwarded
+        // Insert asset_id to be forwarded
         script_data.extend(call_parameters.asset_id.to_vec());
 
         // Insert amount to be forwarded
