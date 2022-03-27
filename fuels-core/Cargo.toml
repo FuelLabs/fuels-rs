@@ -11,9 +11,9 @@ description = "Fuel Rust SDK core."
 [dependencies]
 Inflector = "0.11"
 anyhow = "1"
-fuel-tx = "0.6"
+fuel-tx = "0.7"
 fuel-types = "0.3"
-fuel-vm = "0.5"
+fuel-vm = "0.6"
 hex = { version = "0.4.3", features = ["std"] }
 itertools = "0.10.1"
 proc-macro2 = "1.0"
@@ -24,7 +24,7 @@ serde_json = { version = "1.0.64", default-features = true }
 sha2 = "0.9.5"
 strum = "0.21"
 strum_macros = "0.21"
-sway-types = { version = "0.1" }
-sway-utils = { version = "0.1" }
+sway-types = { version = "0.8" }
+sway-utils = { version = "0.8" }
 syn = "1.0.12"
 thiserror = "1.0.30"
