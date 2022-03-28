@@ -909,11 +909,13 @@ async fn multiple_read_calls() {
 
     contract_instance.store(42).send().await.unwrap();
 
-    let stored = contract_instance.read(0).send().await.unwrap();
+    // Use "call" because the methods don't actually run a transaction, but just a dry-run
+    let stored = contract_instance.read(0).call().await.unwrap();
 
     assert!(stored.value == 42);
 
-    let stored = contract_instance.read(0).send().await.unwrap();
+    // Same here
+    let stored = contract_instance.read(0).call().await.unwrap();
 
     assert!(stored.value == 42);
 }

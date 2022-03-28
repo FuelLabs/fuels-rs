@@ -294,12 +294,14 @@ impl Contract {
             call_parameters,
             compute_calldata_offset,
         )?;
+        let zeroes = Bytes32::zeroed();
         let self_contract_input = Input::contract(
-            UtxoId::new(Bytes32::zeroed(), 0),
-            Bytes32::zeroed(),
-            Bytes32::zeroed(),
+            UtxoId::new(zeroes.clone(), 0),
+            zeroes.clone(),
+            zeroes.clone(),
             contract_id,
         );
+        let self_contract_output = Output::contract(0, zeroes.clone(), zeroes.clone());
         let tx_parameters = TxParameters::default();
         let tx = Transaction::script(
             tx_parameters.gas_price,
@@ -309,12 +311,12 @@ impl Contract {
             script,
             script_data,
             vec![self_contract_input],
-            vec![],
+            vec![self_contract_output],
             vec![],
         );
         let script = Script::new(tx);
 
-        script.send(fuel_client).await
+        script.call(fuel_client).await
     }
 
     /// Creates an ABI call based on a function selector and
@@ -517,14 +519,13 @@ where
         self
     }
 
-    /// Call a contract's method. Return a Result<CallResponse, Error>.
-    /// The CallResponse structs contains the method's value in its `value`
-    /// field as an actual typed value `D` (if your method returns `bool`, it will
-    /// be a bool, works also for structs thanks to the `abigen!()`).
-    /// The other field of CallResponse, `receipts`, contains the receipts of the
-    /// transaction
+    /// Call a contract's method on the node, in a state-modifying manner. Return a
+    /// Result<CallResponse, Error>. The CallResponse structs contains the method's value in its
+    /// `value` field as an actual typed value `D` (if your method returns `bool`, it will be a
+    /// bool, works also for structs thanks to the `abigen!()`). The other field of CallResponse,
+    /// `receipts`, contains the receipts of the transaction
     pub async fn send(self) -> Result<CallResponse<D>, Error> {
-        let mut receipts = Contract::send(
+        let receipts = Contract::send(
             self.contract_id,
             Some(self.encoded_selector),
             Some(self.encoded_args),
@@ -547,10 +548,48 @@ where
             });
         }
 
+        let (decoded_value, receipts) = Self::get_decoded_output(receipts, &self.output_params)?;
+        Ok(CallResponse {
+            value: D::from_tokens(decoded_value)?,
+            receipts,
+        })
+    }
+
+    /// Call a contract's method on the node, in a read-only manner. Return a
+    /// Result<CallResponse, Error>. The CallResponse structs contains the method's value in its
+    /// `value` field as an actual typed value `D` (if your method returns `bool`, it will be a
+    /// bool, works also for structs thanks to the `abigen!()`). The other field of CallResponse,
+    /// `receipts`, contains the receipts of the transaction
+    pub async fn call(self) -> Result<CallResponse<D>, Error> {
+        let receipts = Contract::call(
+            self.contract_id,
+            Some(self.encoded_selector),
+            Some(self.encoded_args),
+            &self.fuel_client,
+            self.call_parameters,
+            self.maturity,
+            self.compute_calldata_offset,
+        )
+        .await?;
+
         // Right now we only support methods with a single return type.
         // Soon we'll support tuple as a return type and we'll have to update the logic in here.
-        let output_param = &self.output_params[0];
+        let (decoded_value, receipts) = Self::get_decoded_output(receipts, &self.output_params)?;
+        Ok(CallResponse {
+            value: D::from_tokens(decoded_value)?,
+            receipts,
+        })
+    }
 
+    /// Based on the returned Contract's output_params and the receipts returned from the call,
+    /// decode the values and return them.
+    pub fn get_decoded_output(
+        mut receipts: Vec<Receipt>,
+        output_params: &[ParamType],
+    ) -> Result<(Vec<Token>, Vec<Receipt>), Error> {
+        // Right now we only support methods with a single return type.
+        // Soon we'll support tuple as a return type and we'll have to update the logic in here.
+        let output_param = output_params[0].clone();
         // If the method's return type is bigger than a single `WORD`, the returned value
         // is stored in `ReturnData.data`, otherwise, it's stored in `Return.val`.
         // Here we're checking for that.
@@ -570,15 +609,11 @@ where
                 None => (vec![], None),
             },
         };
-
         if index.is_some() {
             receipts.remove(index.unwrap());
         }
         let mut decoder = ABIDecoder::new();
-        let decoded_value = decoder.decode(&self.output_params, &encoded_value)?;
-        Ok(CallResponse {
-            value: D::from_tokens(decoded_value)?,
-            receipts,
-        })
+        let decoded_value = decoder.decode(output_params, &encoded_value)?;
+        Ok((decoded_value, receipts))
     }
 }
