@@ -491,7 +491,7 @@ where
     /// your method returns `bool`, it will be a bool, works also for structs thanks to the
     /// `abigen!()`). The other field of CallResponse, `receipts`, contains the receipts of the
     /// transaction.
-    pub async fn call_or_simulate(self, simulate: bool) -> Result<CallResponse<D>, Error> {
+    async fn call_or_simulate(self, simulate: bool) -> Result<CallResponse<D>, Error> {
         let receipts = Contract::call(
             self.contract_id,
             Some(self.encoded_selector),
