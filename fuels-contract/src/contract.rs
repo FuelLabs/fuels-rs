@@ -168,6 +168,7 @@ impl Contract {
         compute_calldata_offset: bool,
         external_contracts: Option<Vec<ContractId>>,
         wallet: LocalWallet,
+        simulate: bool,
     ) -> Result<Vec<Receipt>, Error> {
         let (script, script_data) = Self::build_script(
             contract_id,
@@ -277,43 +278,11 @@ impl Contract {
 
         let script = Script::new(tx);
 
-        script.call(fuel_client).await
-    }
-    pub async fn simulate(
-        contract_id: ContractId,
-        encoded_selector: Option<Selector>,
-        encoded_args: Option<Vec<u8>>,
-        fuel_client: &FuelClient,
-        call_parameters: CallParameters,
-        maturity: Word,
-        compute_calldata_offset: bool,
-    ) -> Result<Vec<Receipt>, Error> {
-        let (script, script_data) = Self::build_script(
-            contract_id,
-            encoded_selector,
-            encoded_args,
-            call_parameters,
-            compute_calldata_offset,
-        )?;
-        let zeroes = Bytes32::zeroed();
-        let self_contract_input =
-            Input::contract(UtxoId::new(zeroes, 0), zeroes, zeroes, contract_id);
-        let self_contract_output = Output::contract(0, zeroes, zeroes);
-        let tx_parameters = TxParameters::default();
-        let tx = Transaction::script(
-            tx_parameters.gas_price,
-            tx_parameters.gas_limit,
-            tx_parameters.byte_price,
-            maturity,
-            script,
-            script_data,
-            vec![self_contract_input],
-            vec![self_contract_output],
-            vec![],
-        );
-        let script = Script::new(tx);
-
-        script.simulate(fuel_client).await
+        if simulate {
+            script.simulate(fuel_client).await
+        } else {
+            script.call(fuel_client).await
+        }
     }
 
     /// Creates an ABI call based on a function selector and
@@ -516,12 +485,13 @@ where
         self
     }
 
-    /// Call a contract's method on the node, in a state-modifying manner. Return a
-    /// Result<CallResponse, Error>. The CallResponse structs contains the method's value in its
-    /// `value` field as an actual typed value `D` (if your method returns `bool`, it will be a
-    /// bool, works also for structs thanks to the `abigen!()`). The other field of CallResponse,
-    /// `receipts`, contains the receipts of the transaction
-    pub async fn call(self) -> Result<CallResponse<D>, Error> {
+    /// Call a contract's method on the node. If `simulate==true`, then the call is done in a
+    /// read-only manner, using a `dry-run`. Return a Result<CallResponse, Error>. The CallResponse
+    /// structs contains the method's value in its `value` field as an actual typed value `D` (if
+    /// your method returns `bool`, it will be a bool, works also for structs thanks to the
+    /// `abigen!()`). The other field of CallResponse, `receipts`, contains the receipts of the
+    /// transaction.
+    pub async fn call_or_simulate(self, simulate: bool) -> Result<CallResponse<D>, Error> {
         let receipts = Contract::call(
             self.contract_id,
             Some(self.encoded_selector),
@@ -534,6 +504,7 @@ where
             self.compute_calldata_offset,
             self.external_contracts,
             self.wallet,
+            simulate,
         )
         .await?;
 
@@ -552,27 +523,16 @@ where
         })
     }
 
-    /// Call a contract's method on the node, in a read-only manner, which means only using a
-    /// `dry-run`. Return a Result<CallResponse, Error>. The CallResponse structs contains the
-    /// method's value in its `value` field as an actual typed value `D` (if your method returns
-    /// `bool`, it will be a bool, works also for structs thanks to the `abigen!()`). The other
-    /// field of CallResponse, `receipts`, contains the receipts of the transaction
+    /// Call a contract's method on the node, in a state-modifying manner.
+    pub async fn call(self) -> Result<CallResponse<D>, Error> {
+        Ok(Self::call_or_simulate(self, false).await?)
+    }
+
+    /// Call a contract's method on the node, in a simulated manner, meaning the state of the
+    /// blockchain is *not* modified but simulated.
+    /// It is the same as the `call` method because the API is more user-friendly this way.
     pub async fn simulate(self) -> Result<CallResponse<D>, Error> {
-        let receipts = Contract::simulate(
-            self.contract_id,
-            Some(self.encoded_selector),
-            Some(self.encoded_args),
-            &self.fuel_client,
-            self.call_parameters,
-            self.maturity,
-            self.compute_calldata_offset,
-        )
-        .await?;
-        let (decoded_value, receipts) = Self::get_decoded_output(receipts, &self.output_params)?;
-        Ok(CallResponse {
-            value: D::from_tokens(decoded_value)?,
-            receipts,
-        })
+        Ok(Self::call_or_simulate(self, true).await?)
     }
 
     /// Based on the returned Contract's output_params and the receipts returned from the call,

@@ -20,11 +20,9 @@ impl Script {
         Self { tx }
     }
 
-    // Sending a transactions means spending tokens to execute the transaction. It is
-    // generally meant for executing state-modifying transactions.
+    // Calling the contract executes the transaction, and is thus state-modifying
     pub async fn call(self, fuel_client: &FuelClient) -> Result<Vec<Receipt>, Error> {
         let tx_id = fuel_client.submit(&self.tx).await?.0.to_string();
-
         let receipts = fuel_client.receipts(&tx_id).await?;
         let status = fuel_client.transaction_status(&tx_id).await?;
         match status {
@@ -33,8 +31,8 @@ impl Script {
         }
     }
 
-    // Calling a contract means that the state of the contract is not modified, this can
-    // be seen as being a "read-only" transaction on the state of the contract
+    // Simulating a call to the contract means that the actual state of the blockchain is not
+    // modified, it is only simulated using a "dry-run".
     pub async fn simulate(self, fuel_client: &FuelClient) -> Result<Vec<Receipt>, Error> {
         let receipts = fuel_client.dry_run(&self.tx).await?;
         Ok(receipts)
