@@ -13,6 +13,10 @@ Rust SDK for Fuel. It can be used for a variety of things, including but not lim
 - Generating type-safe Rust bindings of contract methods;
 - And more, `fuels-rs` is still in active development.
 
+## Documentation
+
+See [the `fuels-rs` book](https://fuellabs.github.io/fuels-rs/latest/)
+
 ## Features
 
 - [x] Launch Fuel nodes
