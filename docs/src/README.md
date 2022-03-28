@@ -9,5 +9,4 @@ Rust SDK for Fuel. It can be used for a variety of things, including but not lim
 - And more, `fuels-rs` is still in active development.
 
 
-This book is an overview of the different things one can achieve using the Rust SDK, and how 
-to implement them. Keep in mind that both the SDK and the documentation are works-in-progress!
+This book is an overview of the different things one can achieve using the Rust SDK, and how to implement them. Keep in mind that both the SDK and the documentation are works-in-progress!

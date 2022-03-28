@@ -1,11 +1,8 @@
 ### Generating type-safe Rust bindings
 
-The SDK lets you transform ABI methods of a contract call, specified as JSON objects (which you
-can get from [Forc](https://github.com/FuelLabs/sway/tree/master/forc)) into Rust structs and
-methods that are type-checked at compile time.
+The SDK lets you transform ABI methods of a contract call, specified as JSON objects (which you can get from [Forc](https://github.com/FuelLabs/sway/tree/master/forc)) into Rust structs and methods that are type-checked at compile time.
 
-For instance, a contract with two methods: `initialize_counter(arg: u64) -> u64`
-and `increment_counter(arg: u64) -> u64`, with the following JSON ABI:
+For instance, a contract with two methods: `initialize_counter(arg: u64) -> u64` and `increment_counter(arg: u64) -> u64`, with the following JSON ABI:
 
 ```json
 [
@@ -128,8 +125,7 @@ abigen!(
 );
 ```
 
-And this `abigen!` macro will _expand_ the code with the type-safe Rust bindings. It takes 2
-arguments:
+And this `abigen!` macro will _expand_ the code with the type-safe Rust bindings. It takes 2 arguments:
 
 1. The name of the struct that will be generated (`MyContractName`);
 2. Either a path as string to the JSON ABI file or the JSON ABI as a multiline string directly.
