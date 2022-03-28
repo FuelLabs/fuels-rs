@@ -3,7 +3,7 @@ use fuels_abigen_macro::abigen;
 use fuels_contract::contract::Contract;
 use fuels_contract::errors::Error;
 use fuels_contract::parameters::{CallParameters, TxParameters};
-use fuels_core::constants::NATIVE_ASSET_ID;
+use fuels_core::constants::{DEFAULT_INITIAL_BALANCE, NATIVE_ASSET_ID};
 use fuels_core::Token;
 use fuels_signers::util::test_helpers::{
     setup_address_and_coins, setup_test_provider, setup_test_provider_and_wallet,
@@ -1274,12 +1274,16 @@ async fn test_gas_errors() {
     // Test for insufficient gas.
     let result = contract_instance
         .initialize_counter(42) // Build the ABI call
-        .tx_params(TxParameters::new(Some(1_000), Some(100), None))
+        .tx_params(TxParameters::new(
+            Some(DEFAULT_INITIAL_BALANCE),
+            Some(100),
+            None,
+        ))
         .call() // Perform the network call
         .await
         .expect_err("should error");
 
-    assert_eq!("Contract call error: Response errors; unexpected block execution error InsufficientGas { provided: 100, required: 100000 }", result.to_string());
+    assert_eq!("Contract call error: Response errors; unexpected block execution error InsufficientGas { provided: 1000000000, required: 100000000000 }", result.to_string());
 
     // Test for running out of gas. Gas price as `None` will be 0.
     // Gas limit will be 100, this call will use more than 100 gas.
@@ -1323,14 +1327,15 @@ async fn test_amount_and_asset_forwarding() {
         .unwrap();
     assert_eq!(balance_result.value, 0);
 
-    instance.mint_coins(11).call().await.unwrap();
+    instance.mint_coins(5_000_000).call().await.unwrap();
 
     balance_result = instance.get_balance(target, asset_id).call().await.unwrap();
-    assert_eq!(balance_result.value, 11);
+    assert_eq!(balance_result.value, 5_000_000);
 
-    // Forward 1 coin of native asset_id
     let tx_params = TxParameters::new(None, Some(1_000_000), None);
-    let call_params = CallParameters::new(Some(1), None);
+    // Forward 1_000_000 coin amount of native asset_id
+    // this is a big number for checking that amount can be a u64
+    let call_params = CallParameters::new(Some(1_000_000), None);
 
     let response = instance
         .get_msg_amount()
@@ -1340,7 +1345,7 @@ async fn test_amount_and_asset_forwarding() {
         .await
         .unwrap();
 
-    assert_eq!(response.value, 1);
+    assert_eq!(response.value, 1_000_000);
 
     let call_response = response
         .receipts
@@ -1349,7 +1354,7 @@ async fn test_amount_and_asset_forwarding() {
 
     assert!(call_response.is_some());
 
-    assert_eq!(call_response.unwrap().amount().unwrap(), 1);
+    assert_eq!(call_response.unwrap().amount().unwrap(), 1_000_000);
     assert_eq!(
         call_response.unwrap().asset_id().unwrap(),
         &AssetId::from(NATIVE_ASSET_ID)
