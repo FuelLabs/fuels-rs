@@ -7,7 +7,7 @@ use anyhow::Result;
 use fuel_asm::Opcode;
 use fuel_gql_client::client::FuelClient;
 use fuel_tx::{
-    Address, AssetId, ContractId, Input, Output, Receipt, StorageSlot, Transaction, UtxoId, Witness,
+    Address, AssetId, ContractId, Input, Output, Receipt, StorageSlot, Transaction, UtxoId,
 };
 use fuel_types::{Bytes32, Salt, Word};
 use fuel_vm::consts::{REG_CGAS, REG_ONE};
@@ -236,7 +236,7 @@ impl Contract {
             script_data,
             inputs,
             outputs,
-            vec![Witness::from(vec![0u8, 0u8])],
+            vec![],
         );
         wallet.sign_transaction(&mut tx).await?;
 
