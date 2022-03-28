@@ -236,7 +236,7 @@ impl Contract {
             script_data,
             inputs,
             outputs,
-            vec![Witness::from(vec![0u8, 0u8])],
+            vec![],
         );
         wallet.sign_transaction(&mut tx).await?;
 
