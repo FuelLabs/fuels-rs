@@ -277,9 +277,9 @@ impl Contract {
 
         let script = Script::new(tx);
 
-        script.send(fuel_client).await
+        script.call(fuel_client).await
     }
-    pub async fn call(
+    pub async fn simulate(
         contract_id: ContractId,
         encoded_selector: Option<Selector>,
         encoded_args: Option<Vec<u8>>,
@@ -313,7 +313,7 @@ impl Contract {
         );
         let script = Script::new(tx);
 
-        script.call(fuel_client).await
+        script.simulate(fuel_client).await
     }
 
     /// Creates an ABI call based on a function selector and
@@ -472,7 +472,7 @@ where
     /// Effectively, this will be used to create Input::Contract/Output::Contract
     /// pairs and set them into the transaction.
     /// Note that this is a builder method, i.e. use it as a chain:
-    /// `my_contract_instance.my_method(...).set_contracts(&[another_contract_id]).send()`.
+    /// `my_contract_instance.my_method(...).set_contracts(&[another_contract_id]).call()`.
     pub fn set_contracts(mut self, contract_ids: &[ContractId]) -> Self {
         self.external_contracts = Some(contract_ids.to_vec());
         self
@@ -481,7 +481,7 @@ where
     /// Sets the transaction parameters for a given transaction.
     /// Note that this is a builder method, i.e. use it as a chain:
     /// let params = TxParameters { gas_price: 100, gas_limit: 1000000, byte_price: 100 };
-    /// `my_contract_instance.my_method(...).tx_params(params).send()`.
+    /// `my_contract_instance.my_method(...).tx_params(params).call()`.
     pub fn tx_params(mut self, params: TxParameters) -> Self {
         self.tx_parameters = params;
         self
@@ -490,7 +490,7 @@ where
     /// Sets the call parameters for a given contract call.
     /// Note that this is a builder method, i.e. use it as a chain:
     /// let params = CallParameters { amount: 1, asset_id: NATIVE_ASSET_ID };
-    /// `my_contract_instance.my_method(...).call_params(params).send()`.
+    /// `my_contract_instance.my_method(...).call_params(params).call()`.
     pub fn call_params(mut self, params: CallParameters) -> Self {
         self.call_parameters = params;
         self
@@ -498,7 +498,7 @@ where
 
     /// Appends `num` `Output::Variable`s to the transaction.
     /// Note that this is a builder method, i.e. use it as a chain:
-    /// `my_contract_instance.my_method(...).add_variable_outputs(num).send()`.
+    /// `my_contract_instance.my_method(...).add_variable_outputs(num).call()`.
     pub fn append_variable_outputs(mut self, num: u64) -> Self {
         let new_outputs: Vec<Output> = (0..num)
             .map(|_| Output::Variable {
@@ -521,7 +521,7 @@ where
     /// `value` field as an actual typed value `D` (if your method returns `bool`, it will be a
     /// bool, works also for structs thanks to the `abigen!()`). The other field of CallResponse,
     /// `receipts`, contains the receipts of the transaction
-    pub async fn send(self) -> Result<CallResponse<D>, Error> {
+    pub async fn call(self) -> Result<CallResponse<D>, Error> {
         let receipts = Contract::send(
             self.contract_id,
             Some(self.encoded_selector),
@@ -552,13 +552,13 @@ where
         })
     }
 
-    /// Call a contract's method on the node, in a read-only manner. Return a
-    /// Result<CallResponse, Error>. The CallResponse structs contains the method's value in its
-    /// `value` field as an actual typed value `D` (if your method returns `bool`, it will be a
-    /// bool, works also for structs thanks to the `abigen!()`). The other field of CallResponse,
-    /// `receipts`, contains the receipts of the transaction
-    pub async fn call(self) -> Result<CallResponse<D>, Error> {
-        let receipts = Contract::call(
+    /// Call a contract's method on the node, in a read-only manner, which means only using a
+    /// `dry-run`. Return a Result<CallResponse, Error>. The CallResponse structs contains the
+    /// method's value in its `value` field as an actual typed value `D` (if your method returns
+    /// `bool`, it will be a bool, works also for structs thanks to the `abigen!()`). The other
+    /// field of CallResponse, `receipts`, contains the receipts of the transaction
+    pub async fn simulate(self) -> Result<CallResponse<D>, Error> {
+        let receipts = Contract::simulate(
             self.contract_id,
             Some(self.encoded_selector),
             Some(self.encoded_args),
@@ -568,9 +568,6 @@ where
             self.compute_calldata_offset,
         )
         .await?;
-
-        // Right now we only support methods with a single return type.
-        // Soon we'll support tuple as a return type and we'll have to update the logic in here.
         let (decoded_value, receipts) = Self::get_decoded_output(receipts, &self.output_params)?;
         Ok(CallResponse {
             value: D::from_tokens(decoded_value)?,

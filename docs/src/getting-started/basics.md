@@ -84,7 +84,7 @@ instance:
 let response = my_contract
 .my_method(...)
 .set_contracts( & [another_contract_id]) // Add this to set the external contract
-.send()
+.call()
 .await
 .unwrap();
 ```
