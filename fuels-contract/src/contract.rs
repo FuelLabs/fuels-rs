@@ -102,6 +102,7 @@ impl Contract {
             ]
         );
 
+        #[allow(clippy::iter_cloned_collect)]
         let script = script.iter().copied().collect::<Vec<u8>>();
 
         // `script_data` consists of:
@@ -240,17 +241,17 @@ impl Contract {
                 // output index (TXO). We add the `n_inputs` offset because we added some inputs
                 // above.
                 let output_index: u8 = (idx + n_inputs) as u8;
+                let zeroes = Bytes32::zeroed();
                 let external_contract_input = Input::contract(
                     UtxoId::new(Bytes32::zeroed(), output_index),
-                    Bytes32::zeroed(),
-                    Bytes32::zeroed(),
+                    zeroes,
+                    zeroes,
                     *external_contract_id,
                 );
 
                 inputs.push(external_contract_input);
 
-                let external_contract_output =
-                    Output::contract(output_index, Bytes32::zeroed(), Bytes32::zeroed());
+                let external_contract_output = Output::contract(output_index, zeroes, zeroes);
 
                 outputs.push(external_contract_output);
             }
@@ -295,13 +296,9 @@ impl Contract {
             compute_calldata_offset,
         )?;
         let zeroes = Bytes32::zeroed();
-        let self_contract_input = Input::contract(
-            UtxoId::new(zeroes.clone(), 0),
-            zeroes.clone(),
-            zeroes.clone(),
-            contract_id,
-        );
-        let self_contract_output = Output::contract(0, zeroes.clone(), zeroes.clone());
+        let self_contract_input =
+            Input::contract(UtxoId::new(zeroes, 0), zeroes, zeroes, contract_id);
+        let self_contract_output = Output::contract(0, zeroes, zeroes);
         let tx_parameters = TxParameters::default();
         let tx = Transaction::script(
             tx_parameters.gas_price,
@@ -609,8 +606,8 @@ where
                 None => (vec![], None),
             },
         };
-        if index.is_some() {
-            receipts.remove(index.unwrap());
+        if let Some(i) = index {
+            receipts.remove(i);
         }
         let mut decoder = ABIDecoder::new();
         let decoded_value = decoder.decode(output_params, &encoded_value)?;

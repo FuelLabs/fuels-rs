@@ -910,6 +910,8 @@ async fn multiple_read_calls() {
     contract_instance.store(42).send().await.unwrap();
 
     // Use "call" because the methods don't actually run a transaction, but just a dry-run
+    // We can notice here that, thanks to this, we don't generate a TransactonId collision,
+    // even if the transactions are theoritically the same.
     let stored = contract_instance.read(0).call().await.unwrap();
 
     assert!(stored.value == 42);
