@@ -68,7 +68,7 @@ impl Contract {
     /// and it doesn't, yet, call a specific ABI function in that contract.
     /// We need a wallet to pay for the transaction fees (even though they are 0 right now)
     #[allow(clippy::too_many_arguments)] // We need that many arguments for now
-    pub async fn call(
+    pub async fn send(
         contract_id: ContractId,
         encoded_selector: Option<Selector>,
         encoded_args: Option<Vec<u8>>,
@@ -261,7 +261,7 @@ impl Contract {
 
         let script = Script::new(tx);
 
-        script.call(fuel_client).await
+        script.send(fuel_client).await
     }
 
     /// Creates an ABI call based on a function selector and
@@ -471,7 +471,7 @@ where
     /// The other field of CallResponse, `receipts`, contains the receipts of the
     /// transaction
     pub async fn call(self) -> Result<CallResponse<D>, Error> {
-        let mut receipts = Contract::call(
+        let mut receipts = Contract::send(
             self.contract_id,
             Some(self.encoded_selector),
             Some(self.encoded_args),

@@ -20,7 +20,9 @@ impl Script {
         Self { tx }
     }
 
-    pub async fn call(self, fuel_client: &FuelClient) -> Result<Vec<Receipt>, Error> {
+    // Sending a transactions means spending tokens to execute the transaction. It is
+    // generally meant for executing state-modifying transactions.
+    pub async fn send(self, fuel_client: &FuelClient) -> Result<Vec<Receipt>, Error> {
         let tx_id = fuel_client.submit(&self.tx).await?.0.to_string();
 
         let receipts = fuel_client.receipts(&tx_id).await?;
@@ -29,5 +31,12 @@ impl Script {
             TransactionStatus::Failure { reason, .. } => Err(Error::ContractCallError(reason)),
             _ => Ok(receipts),
         }
+    }
+
+    // Calling a contract means that the state of the contract is not modified, this can
+    // be seen as being a "read-only" transaction on the state of the contract
+    pub async fn call(self, fuel_client: &FuelClient) -> Result<Vec<Receipt>, Error> {
+        let receipts = fuel_client.dry_run(&self.tx).await?;
+        Ok(receipts)
     }
 }
