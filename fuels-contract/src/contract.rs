@@ -81,10 +81,17 @@ impl Contract {
         external_contracts: Option<Vec<ContractId>>,
         wallet: LocalWallet,
     ) -> Result<Vec<Receipt>, Error> {
-        // Script to call the contract. The offset that points to the `script_data` is loaded at the
-        // register `0x13`. Note that we're picking `0x13` simply because it could be any
-        // non-reserved register. Then, we use the Opcode to call a contract: `CALL` pointing at the
-        // register that we loaded the `script_data` at.
+        // Script to call the contract.
+        // We use the Opcode to call a contract: `CALL` pointing at the
+        // following registers;
+        //
+        // 0x10 Script data offset
+        // TODO: 0x11 Gas price
+        // 0x12 Coin amount
+        // 0x13 Asset ID
+        //
+        // Note that these are soft rules as we're picking this addresses simply because they
+        // non-reserved register.
         let forward_data_offset = ContractId::LEN + WORD_SIZE;
         let (script, offset) = script_with_data_offset!(
             data_offset,
