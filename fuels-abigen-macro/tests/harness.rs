@@ -40,10 +40,10 @@ async fn compile_bindings_from_contract_file() {
     // actual call.
     let contract_call = contract_instance.takes_ints_returns_bool(42);
 
-    // Then you'll be able to use `.call()` to actually call the contract with the
+    // Then you'll be able to use `.send()` to actually call the contract with the
     // specified function:
-    // function.call().unwrap();
-    // Or you might want to just `contract_instance.takes_u32_returns_bool(42 as u32).call()?`
+    // function.send().unwrap();
+    // Or you might want to just `contract_instance.takes_u32_returns_bool(42 as u32).send()?`
 
     let encoded = format!(
         "{}{}",
@@ -660,7 +660,7 @@ async fn example_workflow() {
     let result = contract_instance
         .initialize_counter(42) // Build the ABI call
         .tx_params(TxParameters::new(None, Some(1_000_000), None))
-        .call() // Perform the network call
+        .send() // Perform the network call
         .await
         .unwrap();
 
@@ -668,7 +668,7 @@ async fn example_workflow() {
 
     let result = contract_instance
         .increment_counter(10)
-        .call()
+        .send()
         .await
         .unwrap();
 
@@ -705,13 +705,13 @@ async fn type_safe_output_values() {
     let contract_instance = MyContract::new(contract_id.to_string(), provider, wallet);
 
     // `response`'s type matches the return type of `is_event()`
-    let response = contract_instance.is_even(10).call().await.unwrap();
+    let response = contract_instance.is_even(10).send().await.unwrap();
     assert!(response.value);
 
     // `response`'s type matches the return type of `return_my_string()`
     let response = contract_instance
         .return_my_string("fuel".to_string())
-        .call()
+        .send()
         .await
         .unwrap();
 
@@ -721,7 +721,7 @@ async fn type_safe_output_values() {
 
     let response = contract_instance
         .return_my_struct(my_struct)
-        .call()
+        .send()
         .await
         .unwrap();
 
@@ -764,7 +764,7 @@ async fn call_with_structs() {
 
     let result = contract_instance
         .initialize_counter(counter_config) // Build the ABI call
-        .call() // Perform the network call
+        .send() // Perform the network call
         .await
         .unwrap();
 
@@ -772,7 +772,7 @@ async fn call_with_structs() {
 
     let result = contract_instance
         .increment_counter(10)
-        .call()
+        .send()
         .await
         .unwrap();
 
@@ -810,7 +810,7 @@ async fn call_with_empty_return() {
 
     let _result = contract_instance
         .store_value(42) // Build the ABI call
-        .call() // Perform the network call
+        .send() // Perform the network call
         .await
         .unwrap();
 }
@@ -843,13 +843,13 @@ async fn abigen_different_structs_same_arg_name() {
     let param_one = StructOne { foo: 42 };
     let param_two = StructTwo { bar: 42 };
 
-    let res_one = contract_instance.something(param_one).call().await.unwrap();
+    let res_one = contract_instance.something(param_one).send().await.unwrap();
 
     assert_eq!(res_one.value, 43);
 
     let res_two = contract_instance
         .something_else(param_two)
-        .call()
+        .send()
         .await
         .unwrap();
 
@@ -879,7 +879,7 @@ async fn test_reverting_transaction() {
         .unwrap();
     let contract_instance = RevertingContract::new(contract_id.to_string(), provider, wallet);
     println!("Contract deployed @ {:x}", contract_id);
-    let result = contract_instance.make_transaction_fail(0).call().await;
+    let result = contract_instance.make_transaction_fail(0).send().await;
     assert!(matches!(result, Err(Error::ContractCallError(_))));
 }
 
@@ -907,13 +907,13 @@ async fn multiple_read_calls() {
     println!("Contract deployed @ {:x}", contract_id);
     let contract_instance = MyContract::new(contract_id.to_string(), provider, wallet);
 
-    contract_instance.store(42).call().await.unwrap();
+    contract_instance.store(42).send().await.unwrap();
 
-    let stored = contract_instance.read(0).call().await.unwrap();
+    let stored = contract_instance.read(0).send().await.unwrap();
 
     assert!(stored.value == 42);
 
-    let stored = contract_instance.read(0).call().await.unwrap();
+    let stored = contract_instance.read(0).send().await.unwrap();
 
     assert!(stored.value == 42);
 }
@@ -949,7 +949,7 @@ async fn test_methods_typeless_argument() {
 
     let result = contract_instance
         .method_with_empty_argument()
-        .call()
+        .send()
         .await
         .unwrap();
     assert_eq!(result.value, 63);
@@ -986,21 +986,21 @@ async fn test_connect_to_deployed_contract() {
     // Check that the deployed contract works as expected.
     let result = deployed_contract_instance
         .initialize_counter(21)
-        .call()
+        .send()
         .await
         .unwrap();
     assert_eq!(result.value, 21);
 
     let result = deployed_contract_instance
         .increment_counter(21)
-        .call()
+        .send()
         .await
         .unwrap();
     assert_eq!(result.value, 42);
 
     let result = deployed_contract_instance
         .get_counter()
-        .call()
+        .send()
         .await
         .unwrap();
     assert_eq!(result.value, 42);
@@ -1012,21 +1012,21 @@ async fn test_connect_to_deployed_contract() {
     // Check that it works as expected.
     let result = connected_contract_instance
         .initialize_counter(111)
-        .call()
+        .send()
         .await
         .unwrap();
     assert_eq!(result.value, 111);
 
     let result = connected_contract_instance
         .increment_counter(9)
-        .call()
+        .send()
         .await
         .unwrap();
     assert_eq!(result.value, 120);
 
     let result = connected_contract_instance
         .get_counter()
-        .call()
+        .send()
         .await
         .unwrap();
     assert_eq!(result.value, 120);
@@ -1034,7 +1034,7 @@ async fn test_connect_to_deployed_contract() {
     // Check that the originally deployed contract is in the same state.
     let result = deployed_contract_instance
         .get_counter()
-        .call()
+        .send()
         .await
         .unwrap();
     assert_eq!(result.value, 120);
@@ -1066,7 +1066,7 @@ async fn test_large_return_data() {
 
     let contract_instance = MyContract::new(contract_id.to_string(), provider, wallet);
 
-    let res = contract_instance.get_id().call().await.unwrap();
+    let res = contract_instance.get_id().send().await.unwrap();
 
     assert_eq!(
         res.value,
@@ -1077,23 +1077,23 @@ async fn test_large_return_data() {
     );
 
     // One word-sized string
-    let res = contract_instance.get_small_string().call().await.unwrap();
+    let res = contract_instance.get_small_string().send().await.unwrap();
     assert_eq!(res.value, "gggggggg");
 
     // Two word-sized string
-    let res = contract_instance.get_large_string().call().await.unwrap();
+    let res = contract_instance.get_large_string().send().await.unwrap();
     assert_eq!(res.value, "ggggggggg");
 
     // Large struct will be bigger than a `WORD`.
-    let res = contract_instance.get_large_struct().call().await.unwrap();
+    let res = contract_instance.get_large_struct().send().await.unwrap();
     assert_eq!(res.value.foo, 12);
     assert_eq!(res.value.bar, 42);
 
     // Array will be returned in `ReturnData`.
-    let res = contract_instance.get_large_array().call().await.unwrap();
+    let res = contract_instance.get_large_array().send().await.unwrap();
     assert_eq!(res.value, &[1, 2]);
 
-    let res = contract_instance.get_contract_id().call().await.unwrap();
+    let res = contract_instance.get_contract_id().send().await.unwrap();
 
     // First `value` is from `CallResponse`.
     // Second `value` is from Sway `ContractId` type.
@@ -1149,14 +1149,14 @@ async fn test_provider_launch_and_connect() {
 
     let result = contract_instance_connected
         .initialize_counter(42) // Build the ABI call
-        .call() // Perform the network call
+        .send() // Perform the network call
         .await
         .unwrap();
     assert_eq!(42, result.value);
 
     let result = contract_instance_launched
         .increment_counter(10)
-        .call()
+        .send()
         .await
         .unwrap();
     assert_eq!(52, result.value);
@@ -1201,7 +1201,7 @@ async fn test_contract_calling_contract() {
     );
 
     // Call the contract directly; it just flips the bool value that's passed.
-    let res = foo_contract_instance.foo(true).call().await.unwrap();
+    let res = foo_contract_instance.foo(true).send().await.unwrap();
     assert!(!res.value);
 
     // Compile and deploy second contract
@@ -1231,7 +1231,7 @@ async fn test_contract_calling_contract() {
     let res = foo_caller_contract_instance
         .call_foo_contract(true)
         .set_contracts(&[foo_contract_id]) // Sets the external contract
-        .call()
+        .send()
         .await
         .unwrap();
 
@@ -1279,7 +1279,7 @@ async fn test_gas_errors() {
             Some(100),
             None,
         ))
-        .call() // Perform the network call
+        .send() // Perform the network call
         .await
         .expect_err("should error");
 
@@ -1290,7 +1290,7 @@ async fn test_gas_errors() {
     let result = contract_instance
         .initialize_counter(42) // Build the ABI call
         .tx_params(TxParameters::new(None, Some(100), None))
-        .call() // Perform the network call
+        .send() // Perform the network call
         .await
         .expect_err("should error");
 
@@ -1322,14 +1322,14 @@ async fn test_amount_and_asset_forwarding() {
 
     let mut balance_result = instance
         .get_balance(target.clone(), asset_id.clone())
-        .call()
+        .send()
         .await
         .unwrap();
     assert_eq!(balance_result.value, 0);
 
-    instance.mint_coins(5_000_000).call().await.unwrap();
+    instance.mint_coins(5_000_000).send().await.unwrap();
 
-    balance_result = instance.get_balance(target, asset_id).call().await.unwrap();
+    balance_result = instance.get_balance(target, asset_id).send().await.unwrap();
     assert_eq!(balance_result.value, 5_000_000);
 
     let tx_params = TxParameters::new(None, Some(1_000_000), None);
@@ -1341,7 +1341,7 @@ async fn test_amount_and_asset_forwarding() {
         .get_msg_amount()
         .tx_params(tx_params)
         .call_params(call_params)
-        .call()
+        .send()
         .await
         .unwrap();
 
@@ -1385,7 +1385,7 @@ async fn test_amount_and_asset_forwarding() {
         .get_msg_amount()
         .tx_params(tx_params)
         .call_params(call_params)
-        .call()
+        .send()
         .await
         .unwrap();
 
@@ -1433,14 +1433,14 @@ async fn test_multiple_args() {
     let instance = MyContract::new(id.to_string(), provider.clone(), wallet.clone());
 
     // Make sure we can call the contract with multiple arguments
-    let response = instance.get(5, 6).call().await.unwrap();
+    let response = instance.get(5, 6).send().await.unwrap();
 
     assert_eq!(response.value, 5);
 
     let t = MyType { x: 5, y: 6 };
-    let response = instance.get_alt(t).call().await.unwrap();
+    let response = instance.get_alt(t).send().await.unwrap();
     assert_eq!(response.value, 5);
 
-    let response = instance.get_single(5).call().await.unwrap();
+    let response = instance.get_single(5).send().await.unwrap();
     assert_eq!(response.value, 5);
 }

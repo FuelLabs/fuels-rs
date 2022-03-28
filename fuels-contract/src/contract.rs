@@ -278,6 +278,44 @@ impl Contract {
 
         script.send(fuel_client).await
     }
+    pub async fn call(
+        contract_id: ContractId,
+        encoded_selector: Option<Selector>,
+        encoded_args: Option<Vec<u8>>,
+        fuel_client: &FuelClient,
+        call_parameters: CallParameters,
+        maturity: Word,
+        compute_calldata_offset: bool,
+    ) -> Result<Vec<Receipt>, Error> {
+        let (script, script_data) = Self::build_script(
+            contract_id,
+            encoded_selector,
+            encoded_args,
+            call_parameters,
+            compute_calldata_offset,
+        )?;
+        let self_contract_input = Input::contract(
+            UtxoId::new(Bytes32::zeroed(), 0),
+            Bytes32::zeroed(),
+            Bytes32::zeroed(),
+            contract_id,
+        );
+        let tx_parameters = TxParameters::default();
+        let tx = Transaction::script(
+            tx_parameters.gas_price,
+            tx_parameters.gas_limit,
+            tx_parameters.byte_price,
+            maturity,
+            script,
+            script_data,
+            vec![self_contract_input],
+            vec![],
+            vec![],
+        );
+        let script = Script::new(tx);
+
+        script.send(fuel_client).await
+    }
 
     /// Creates an ABI call based on a function selector and
     /// the encoding of its call arguments, which is a slice of Tokens.
@@ -435,7 +473,7 @@ where
     /// Effectively, this will be used to create Input::Contract/Output::Contract
     /// pairs and set them into the transaction.
     /// Note that this is a builder method, i.e. use it as a chain:
-    /// `my_contract_instance.my_method(...).set_contracts(&[another_contract_id]).call()`.
+    /// `my_contract_instance.my_method(...).set_contracts(&[another_contract_id]).send()`.
     pub fn set_contracts(mut self, contract_ids: &[ContractId]) -> Self {
         self.external_contracts = Some(contract_ids.to_vec());
         self
@@ -444,7 +482,7 @@ where
     /// Sets the transaction parameters for a given transaction.
     /// Note that this is a builder method, i.e. use it as a chain:
     /// let params = TxParameters { gas_price: 100, gas_limit: 1000000, byte_price: 100 };
-    /// `my_contract_instance.my_method(...).tx_params(params).call()`.
+    /// `my_contract_instance.my_method(...).tx_params(params).send()`.
     pub fn tx_params(mut self, params: TxParameters) -> Self {
         self.tx_parameters = params;
         self
@@ -453,7 +491,7 @@ where
     /// Sets the call parameters for a given contract call.
     /// Note that this is a builder method, i.e. use it as a chain:
     /// let params = CallParameters { amount: 1, asset_id: NATIVE_ASSET_ID };
-    /// `my_contract_instance.my_method(...).call_params(params).call()`.
+    /// `my_contract_instance.my_method(...).call_params(params).send()`.
     pub fn call_params(mut self, params: CallParameters) -> Self {
         self.call_parameters = params;
         self
@@ -461,7 +499,7 @@ where
 
     /// Appends `num` `Output::Variable`s to the transaction.
     /// Note that this is a builder method, i.e. use it as a chain:
-    /// `my_contract_instance.my_method(...).add_variable_outputs(num).call()`.
+    /// `my_contract_instance.my_method(...).add_variable_outputs(num).send()`.
     pub fn append_variable_outputs(mut self, num: u64) -> Self {
         let new_outputs: Vec<Output> = (0..num)
             .map(|_| Output::Variable {
@@ -485,7 +523,7 @@ where
     /// be a bool, works also for structs thanks to the `abigen!()`).
     /// The other field of CallResponse, `receipts`, contains the receipts of the
     /// transaction
-    pub async fn call(self) -> Result<CallResponse<D>, Error> {
+    pub async fn send(self) -> Result<CallResponse<D>, Error> {
         let mut receipts = Contract::send(
             self.contract_id,
             Some(self.encoded_selector),

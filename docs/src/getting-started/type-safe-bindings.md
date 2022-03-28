@@ -97,7 +97,7 @@ let result = contract_instance
 .initialize_counter(42) // Build the ABI call
 // Perform the network call, this will use the default values for
 // gas price (0), gas limit (1_000_000), and byte price (0).
-.call()
+.send()
 .await
 .unwrap();
 
@@ -105,7 +105,7 @@ assert_eq!(42, result.unwrap());
 
 let result = contract_instance
 .increment_counter(10)
-.call()
+.send()
 // You can configure the parameters for a specific contract call:
 .tx_params(TxParameters::new(Some(100), Some(1_000_000), Some(0)))
 .await
