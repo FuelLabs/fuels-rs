@@ -62,25 +62,13 @@ impl Contract {
             &FuelContract::default_state_root(),
         )
     }
-
-    /// Calls an already-deployed contract code.
-    /// Note that this is a "generic" call to a contract
-    /// and it doesn't, yet, call a specific ABI function in that contract.
-    /// We need a wallet to pay for the transaction fees (even though they are 0 right now)
-    #[allow(clippy::too_many_arguments)] // We need that many arguments for now
-    pub async fn send(
+    pub fn build_script(
         contract_id: ContractId,
         encoded_selector: Option<Selector>,
         encoded_args: Option<Vec<u8>>,
-        fuel_client: &FuelClient,
-        tx_parameters: TxParameters,
         call_parameters: CallParameters,
-        variable_outputs: Option<Vec<Output>>,
-        maturity: Word,
         compute_calldata_offset: bool,
-        external_contracts: Option<Vec<ContractId>>,
-        wallet: LocalWallet,
-    ) -> Result<Vec<Receipt>, Error> {
+    ) -> Result<(Vec<u8>, Vec<u8>), Error> {
         // Script to call the contract.
         // We use the Opcode to call a contract: `CALL` pointing at the
         // following registers;
@@ -159,7 +147,34 @@ impl Contract {
         if let Some(e) = encoded_args {
             script_data.extend(e)
         }
+        Ok((script, script_data))
+    }
 
+    /// Calls an already-deployed contract code.
+    /// Note that this is a "generic" call to a contract
+    /// and it doesn't, yet, call a specific ABI function in that contract.
+    /// We need a wallet to pay for the transaction fees (even though they are 0 right now)
+    #[allow(clippy::too_many_arguments)] // We need that many arguments for now
+    pub async fn send(
+        contract_id: ContractId,
+        encoded_selector: Option<Selector>,
+        encoded_args: Option<Vec<u8>>,
+        fuel_client: &FuelClient,
+        tx_parameters: TxParameters,
+        call_parameters: CallParameters,
+        variable_outputs: Option<Vec<Output>>,
+        maturity: Word,
+        compute_calldata_offset: bool,
+        external_contracts: Option<Vec<ContractId>>,
+        wallet: LocalWallet,
+    ) -> Result<Vec<Receipt>, Error> {
+        let (script, script_data) = Self::build_script(
+            contract_id,
+            encoded_selector,
+            encoded_args,
+            call_parameters,
+            compute_calldata_offset,
+        )?;
         let mut inputs: Vec<Input> = vec![];
         let mut outputs: Vec<Output> = vec![];
 
