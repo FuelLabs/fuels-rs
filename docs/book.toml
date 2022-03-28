@@ -6,7 +6,7 @@ src = "src"
 title = "The Fuel Rust SDK"
 
 [output.html]
-git-repository-url = "https://github.com/FuelLabs/sway"
+git-repository-url = "https://github.com/FuelLabs/fuels-rs"
 
 [rust]
 edition = "2021"
