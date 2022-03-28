@@ -1332,7 +1332,6 @@ async fn test_amount_and_asset_forwarding() {
     balance_result = instance.get_balance(target, asset_id).call().await.unwrap();
     assert_eq!(balance_result.value, 5_000_000);
 
-    // Forward 1_000_000 gas_limit of native asset_id
     let tx_params = TxParameters::new(None, Some(1_000_000), None);
     // Forward 1_000_000 coin amount of native asset_id
     // this is a big number for checking that amount can a u64
