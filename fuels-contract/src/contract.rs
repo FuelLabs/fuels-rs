@@ -86,7 +86,7 @@ impl Contract {
         // following registers;
         //
         // 0x10 Script data offset
-        // TODO: 0x11 Gas price
+        // 0x11 Gas price  TODO: https://github.com/FuelLabs/fuels-rs/issues/184
         // 0x12 Coin amount
         // 0x13 Asset ID
         //
