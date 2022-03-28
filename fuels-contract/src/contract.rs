@@ -156,7 +156,7 @@ impl Contract {
     /// and it doesn't, yet, call a specific ABI function in that contract.
     /// We need a wallet to pay for the transaction fees (even though they are 0 right now)
     #[allow(clippy::too_many_arguments)] // We need that many arguments for now
-    pub async fn send(
+    pub async fn call(
         contract_id: ContractId,
         encoded_selector: Option<Selector>,
         encoded_args: Option<Vec<u8>>,
@@ -522,7 +522,7 @@ where
     /// bool, works also for structs thanks to the `abigen!()`). The other field of CallResponse,
     /// `receipts`, contains the receipts of the transaction
     pub async fn call(self) -> Result<CallResponse<D>, Error> {
-        let receipts = Contract::send(
+        let receipts = Contract::call(
             self.contract_id,
             Some(self.encoded_selector),
             Some(self.encoded_args),
