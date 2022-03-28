@@ -1335,7 +1335,7 @@ async fn test_amount_and_asset_forwarding() {
     // Forward 1_000_000 gas_limit of native asset_id
     let tx_params = TxParameters::new(None, Some(1_000_000), None);
     // Forward 1_000_000 coin amount of native asset_id
-    // this is a big number for checking that amount can a u64
+    // this is a big number for checking that amount can be a u64
     let call_params = CallParameters::new(Some(1_000_000), None);
 
     let response = instance
