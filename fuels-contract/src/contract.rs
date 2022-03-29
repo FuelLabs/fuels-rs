@@ -371,8 +371,18 @@ impl Contract {
             // For now we use the NATIVE_ASSET_ID constant
             Output::change(wallet.address(), 0, AssetId::from(NATIVE_ASSET_ID)),
         ];
+
+        // The first witness is the bytecode we're deploying.
+        // So, the signature will be appended at position 1 of
+        // the witness list.
+        let coin_witness_index = 1;
+
         let inputs = wallet
-            .get_asset_inputs_for_amount(AssetId::default(), DEFAULT_COIN_AMOUNT)
+            .get_asset_inputs_for_amount(
+                AssetId::default(),
+                DEFAULT_COIN_AMOUNT,
+                coin_witness_index,
+            )
             .await?;
 
         let tx = Transaction::create(

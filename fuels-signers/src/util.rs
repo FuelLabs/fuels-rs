@@ -4,15 +4,14 @@
 pub mod test_helpers {
     use crate::provider::Provider;
     use crate::LocalWallet;
-    use fuel_core::service::{Config, FuelService};
     use fuel_core::{
-        database::Database,
+        chain_config::{ChainConfig, CoinConfig, StateConfig},
         model::coin::{Coin, CoinStatus},
+        service::{Config, DbType, FuelService},
     };
     use fuel_crypto::Hasher;
     use fuel_gql_client::client::FuelClient;
     use fuel_tx::{Address, Bytes32, Bytes64, UtxoId};
-    use fuel_vm::prelude::Storage;
     use fuels_core::constants::DEFAULT_INITIAL_BALANCE;
     use rand::{Fill, Rng};
     use secp256k1::{PublicKey, Secp256k1, SecretKey};
@@ -70,14 +69,34 @@ pub mod test_helpers {
     // Setup a test provider with the given coins. We return the SocketAddr so the launched node
     // client can be connected to more easily (even though it is often ignored).
     pub async fn setup_test_provider(coins: Vec<(UtxoId, Coin)>) -> (Provider, SocketAddr) {
-        let mut db = Database::default();
-        for (utxo_id, coin) in coins {
-            Storage::<UtxoId, Coin>::insert(&mut db, &utxo_id, &coin).unwrap();
-        }
+        let coin_configs = coins
+            .into_iter()
+            .map(|(utxo_id, coin)| CoinConfig {
+                tx_id: Some(*utxo_id.tx_id()),
+                output_index: Some(utxo_id.output_index() as u64),
+                block_created: Some(coin.block_created),
+                maturity: Some(coin.maturity),
+                owner: coin.owner,
+                amount: coin.amount,
+                asset_id: coin.asset_id,
+            })
+            .collect();
 
-        let srv = FuelService::from_database(db, Config::local_node())
-            .await
-            .unwrap();
+        // Setup node config with genesis coins and utxo_validation enabled
+        let config = Config {
+            chain_conf: ChainConfig {
+                initial_state: Some(StateConfig {
+                    coins: Some(coin_configs),
+                    ..StateConfig::default()
+                }),
+                ..ChainConfig::local_testnet()
+            },
+            database_type: DbType::InMemory,
+            utxo_validation: true,
+            ..Config::local_node()
+        };
+
+        let srv = FuelService::new_node(config).await.unwrap();
         let client = FuelClient::from(srv.bound_address);
 
         (Provider::new(client), srv.bound_address)

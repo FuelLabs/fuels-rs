@@ -155,7 +155,9 @@ impl Wallet {
         amount: u64,
         asset_id: AssetId,
     ) -> Result<Vec<Receipt>, WalletError> {
-        let inputs = self.get_asset_inputs_for_amount(asset_id, amount).await?;
+        let inputs = self
+            .get_asset_inputs_for_amount(asset_id, amount, 0)
+            .await?;
         let outputs: Vec<Output> = vec![
             Output::coin(*to, amount, asset_id),
             // Note that the change will be computed by the node.
@@ -170,10 +172,17 @@ impl Wallet {
         Ok(self.provider.send_transaction(&tx).await?)
     }
 
+    /// Returns a proper vector of `Input::Coin`s for the given asset ID, amount, and witness index.
+    /// The `witness_index` is the position of the witness
+    /// (signature) in the transaction's list of witnesses.
+    /// Meaning that, in the validation process, the node will
+    /// use the witness at this index to validate the coins returned
+    /// by this method.
     pub async fn get_asset_inputs_for_amount(
         &self,
         asset_id: AssetId,
         amount: u64,
+        witness_index: u8,
     ) -> Result<Vec<Input>, WalletError> {
         let spendable = self.get_spendable_coins(&asset_id, amount).await?;
         let mut inputs = vec![];
@@ -183,7 +192,7 @@ impl Wallet {
                 coin.owner.into(),
                 coin.amount.0,
                 asset_id,
-                0,
+                witness_index,
                 0,
                 vec![],
                 vec![],
