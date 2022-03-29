@@ -75,9 +75,11 @@ pub mod test_helpers {
             Storage::<UtxoId, Coin>::insert(&mut db, &utxo_id, &coin).unwrap();
         }
 
-        let srv = FuelService::from_database(db, Config::local_node())
-            .await
-            .unwrap();
+        // Turn on UTXO validation.
+        let mut config = Config::local_node();
+        config.utxo_validation = true;
+
+        let srv = FuelService::from_database(db, config).await.unwrap();
         let client = FuelClient::from(srv.bound_address);
 
         (Provider::new(client), srv.bound_address)
