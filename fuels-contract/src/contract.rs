@@ -176,6 +176,12 @@ impl Contract {
             .await
             .unwrap();
 
+        // add default asset change if any inputs are being spent
+        if !spendables.is_empty() {
+            let change_output = Output::change(wallet.address(), 0, AssetId::default());
+            outputs.push(change_output);
+        }
+
         if call_parameters.asset_id != AssetId::default() {
             let alt_spendables = wallet
                 .get_spendable_coins(&call_parameters.asset_id, call_parameters.amount)
@@ -211,9 +217,6 @@ impl Contract {
 
         let self_contract_output = Output::contract(0, Bytes32::zeroed(), Bytes32::zeroed());
         outputs.push(self_contract_output);
-
-        let change_output = Output::change(wallet.address(), 0, AssetId::default());
-        outputs.push(change_output);
 
         // Add external contract IDs to Input/Output pair, if applicable.
         if let Some(external_contract_ids) = external_contracts {
