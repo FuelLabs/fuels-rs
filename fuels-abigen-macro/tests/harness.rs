@@ -1378,7 +1378,7 @@ async fn test_amount_and_asset_forwarding() {
         .await
         .unwrap();
 
-    let call_params = CallParameters::new(None, Some(AssetId::from(asset)));
+    let call_params = CallParameters::new(Some(0), Some(AssetId::from(asset)));
     let tx_params = TxParameters::new(None, Some(1_000_000), None);
 
     let response = instance
