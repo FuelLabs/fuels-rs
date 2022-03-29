@@ -62,6 +62,11 @@ impl Contract {
             &FuelContract::default_state_root(),
         )
     }
+
+    /// Given the necessary arguments, create a script that will be submitted to the node to call
+    /// the contract. The script is the actual opcodes used to call the contract, and the script
+    /// data is for instance the function selector. (script, script_data) is returned as a tuple
+    /// of hex-encoded value vectors
     pub fn build_script(
         contract_id: ContractId,
         encoded_selector: Option<Selector>,
@@ -151,10 +156,8 @@ impl Contract {
         Ok((script, script_data))
     }
 
-    /// Calls an already-deployed contract code.
-    /// Note that this is a "generic" call to a contract
-    /// and it doesn't, yet, call a specific ABI function in that contract.
-    /// We need a wallet to pay for the transaction fees (even though they are 0 right now)
+    /// Calls a contract method with the given ABI function.
+    /// The wallet is here to pay for the transaction fees (even though they are 0 right now)
     #[allow(clippy::too_many_arguments)] // We need that many arguments for now
     async fn call(
         contract_id: ContractId,
@@ -279,10 +282,9 @@ impl Contract {
         let script = Script::new(tx);
 
         if simulate {
-            script.simulate(fuel_client).await
-        } else {
-            script.call(fuel_client).await
+            return script.simulate(fuel_client).await;
         }
+        script.call(fuel_client).await
     }
 
     /// Creates an ABI call based on a function selector and
@@ -487,7 +489,7 @@ where
 
     /// Call a contract's method on the node. If `simulate==true`, then the call is done in a
     /// read-only manner, using a `dry-run`. Return a Result<CallResponse, Error>. The CallResponse
-    /// structs contains the method's value in its `value` field as an actual typed value `D` (if
+    /// struct contains the method's value in its `value` field as an actual typed value `D` (if
     /// your method returns `bool`, it will be a bool, works also for structs thanks to the
     /// `abigen!()`). The other field of CallResponse, `receipts`, contains the receipts of the
     /// transaction.
