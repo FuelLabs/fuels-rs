@@ -171,17 +171,39 @@ impl Contract {
         );
         inputs.push(self_contract_input);
 
-        let spendables = wallet
+        let mut spendables = wallet
             .get_spendable_coins(&AssetId::default(), DEFAULT_COIN_AMOUNT as u64)
             .await
             .unwrap();
+
+        // add default asset change if any inputs are being spent
+        if !spendables.is_empty() {
+            let change_output = Output::change(wallet.address(), 0, AssetId::default());
+            outputs.push(change_output);
+        }
+
+        if call_parameters.asset_id != AssetId::default() {
+            let alt_spendables = wallet
+                .get_spendable_coins(&call_parameters.asset_id, call_parameters.amount)
+                .await
+                .unwrap();
+
+            // add alt change if inputs are being spent
+            if !alt_spendables.is_empty() {
+                let change_output = Output::change(wallet.address(), 0, call_parameters.asset_id);
+                outputs.push(change_output);
+            }
+
+            // add alt coins to inputs
+            spendables.extend(alt_spendables.into_iter());
+        }
 
         for coin in spendables {
             let input_coin = Input::coin(
                 UtxoId::from(coin.utxo_id),
                 coin.owner.into(),
                 coin.amount.0,
-                AssetId::default(),
+                coin.asset_id.into(),
                 0,
                 0,
                 vec![],
@@ -195,9 +217,6 @@ impl Contract {
 
         let self_contract_output = Output::contract(0, Bytes32::zeroed(), Bytes32::zeroed());
         outputs.push(self_contract_output);
-
-        let change_output = Output::change(wallet.address(), 0, AssetId::default());
-        outputs.push(change_output);
 
         // Add external contract IDs to Input/Output pair, if applicable.
         if let Some(external_contract_ids) = external_contracts {

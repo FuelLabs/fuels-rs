@@ -8,7 +8,7 @@ use fuels_core::Token;
 use fuels_signers::util::test_helpers::{
     setup_address_and_coins, setup_test_provider, setup_test_provider_and_wallet,
 };
-use fuels_signers::{provider::Provider, LocalWallet};
+use fuels_signers::{provider::Provider, LocalWallet, Signer};
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 use sha2::{Digest, Sha256};
@@ -1363,8 +1363,22 @@ async fn test_amount_and_asset_forwarding() {
     // Trying to forward `amount` of a different asset_id.
     // Currently, if we use this asset_id in the forwarding, the VM will
     // return `AssetIdNotFound` if amount is larger than 0.
-    let asset: [u8; 32] = id.into();
-    let call_params = CallParameters::new(None, Some(AssetId::from(asset)));
+    let asset: [u8; 32] = id.clone().into();
+
+    // withdraw some tokens to wallet
+    let c_id = testfuelcoincontract_mod::ContractId { value: id.into() };
+    let address = wallet.address();
+    let address = testfuelcoincontract_mod::Address {
+        value: address.into(),
+    };
+    instance
+        .transfer_coins_to_output(1_000_000, c_id, address)
+        .append_variable_outputs(1)
+        .call()
+        .await
+        .unwrap();
+
+    let call_params = CallParameters::new(Some(0), Some(AssetId::from(asset)));
     let tx_params = TxParameters::new(None, Some(1_000_000), None);
 
     let response = instance
