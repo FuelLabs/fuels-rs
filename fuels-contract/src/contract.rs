@@ -171,17 +171,26 @@ impl Contract {
         );
         inputs.push(self_contract_input);
 
-        let spendables = wallet
+        let mut spendables = wallet
             .get_spendable_coins(&AssetId::default(), DEFAULT_COIN_AMOUNT as u64)
             .await
             .unwrap();
+
+        if call_parameters.asset_id != AssetId::default() {
+            let alt_spendables = wallet
+                .get_spendable_coins(&call_parameters.asset_id, call_parameters.amount)
+                .await
+                .unwrap();
+
+            spendables.extend(alt_spendables.into_iter());
+        }
 
         for coin in spendables {
             let input_coin = Input::coin(
                 UtxoId::from(coin.utxo_id),
                 coin.owner.into(),
                 coin.amount.0,
-                AssetId::default(),
+                coin.asset_id.into(),
                 0,
                 0,
                 vec![],
