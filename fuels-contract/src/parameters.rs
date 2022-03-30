@@ -20,7 +20,7 @@ impl CallParameters {
     pub fn new(amount: Option<u64>, asset_id: Option<AssetId>) -> Self {
         Self {
             amount: amount.unwrap_or(0),
-            asset_id: asset_id.unwrap_or_else(|| NATIVE_ASSET_ID.into()),
+            asset_id: asset_id.unwrap_or(NATIVE_ASSET_ID),
         }
     }
 }
@@ -29,7 +29,7 @@ impl Default for CallParameters {
     fn default() -> Self {
         Self {
             amount: 0,
-            asset_id: NATIVE_ASSET_ID.into(),
+            asset_id: NATIVE_ASSET_ID,
         }
     }
 }

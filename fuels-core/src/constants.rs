@@ -1,4 +1,5 @@
 use fuel_tx::Word;
+use fuel_types::AssetId;
 
 pub const DEFAULT_GAS_LIMIT: u64 = 1_000_000;
 pub const DEFAULT_GAS_PRICE: u64 = 0;
@@ -16,4 +17,4 @@ pub const DEFAULT_INITIAL_BALANCE: u64 = 1_000_000_000;
 
 // This constant is the bytes representation of the asset ID of
 // Ethereum right now, the "native" token used for gas fees.
-pub const NATIVE_ASSET_ID: [u8; 32] = [0u8; 32];
+pub const NATIVE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);

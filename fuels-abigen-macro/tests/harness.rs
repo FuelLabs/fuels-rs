@@ -909,13 +909,16 @@ async fn multiple_read_calls() {
 
     contract_instance.store(42).call().await.unwrap();
 
-    let stored = contract_instance.read(0).call().await.unwrap();
+    // Use "simulate" because the methods don't actually run a transaction, but just a dry-run
+    // We can notice here that, thanks to this, we don't generate a TransactionId collision,
+    // even if the transactions are theoretically the same.
+    let stored = contract_instance.read(0).simulate().await.unwrap();
 
-    assert!(stored.value == 42);
+    assert_eq!(stored.value, 42);
 
-    let stored = contract_instance.read(0).call().await.unwrap();
+    let stored = contract_instance.read(0).simulate().await.unwrap();
 
-    assert!(stored.value == 42);
+    assert_eq!(stored.value, 42);
 }
 
 #[tokio::test]

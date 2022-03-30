@@ -63,24 +63,17 @@ impl Contract {
         )
     }
 
-    /// Calls an already-deployed contract code.
-    /// Note that this is a "generic" call to a contract
-    /// and it doesn't, yet, call a specific ABI function in that contract.
-    /// We need a wallet to pay for the transaction fees (even though they are 0 right now)
-    #[allow(clippy::too_many_arguments)] // We need that many arguments for now
-    pub async fn call(
-        contract_id: ContractId,
-        encoded_selector: Option<Selector>,
-        encoded_args: Option<Vec<u8>>,
-        fuel_client: &FuelClient,
-        tx_parameters: TxParameters,
-        call_parameters: CallParameters,
-        variable_outputs: Option<Vec<Output>>,
-        maturity: Word,
+    /// Given the necessary arguments, create a script that will be submitted to the node to call
+    /// the contract. The script is the actual opcodes used to call the contract, and the script
+    /// data is for instance the function selector. (script, script_data) is returned as a tuple
+    /// of hex-encoded value vectors
+    pub fn build_script(
+        contract_id: &ContractId,
+        encoded_selector: &Option<Selector>,
+        encoded_args: &Option<Vec<u8>>,
+        call_parameters: &CallParameters,
         compute_calldata_offset: bool,
-        external_contracts: Option<Vec<ContractId>>,
-        wallet: LocalWallet,
-    ) -> Result<Vec<Receipt>, Error> {
+    ) -> Result<(Vec<u8>, Vec<u8>), Error> {
         // Script to call the contract.
         // We use the Opcode to call a contract: `CALL` pointing at the
         // following registers;
@@ -114,6 +107,7 @@ impl Contract {
             ]
         );
 
+        #[allow(clippy::iter_cloned_collect)]
         let script = script.iter().copied().collect::<Vec<u8>>();
 
         // `script_data` consists of:
@@ -159,7 +153,33 @@ impl Contract {
         if let Some(e) = encoded_args {
             script_data.extend(e)
         }
+        Ok((script, script_data))
+    }
 
+    /// Calls a contract method with the given ABI function.
+    /// The wallet is here to pay for the transaction fees (even though they are 0 right now)
+    #[allow(clippy::too_many_arguments)] // We need that many arguments for now
+    async fn call(
+        contract_id: ContractId,
+        encoded_selector: Option<Selector>,
+        encoded_args: Option<Vec<u8>>,
+        fuel_client: &FuelClient,
+        tx_parameters: TxParameters,
+        call_parameters: CallParameters,
+        variable_outputs: Option<Vec<Output>>,
+        maturity: Word,
+        compute_calldata_offset: bool,
+        external_contracts: Option<Vec<ContractId>>,
+        wallet: LocalWallet,
+        simulate: bool,
+    ) -> Result<Vec<Receipt>, Error> {
+        let (script, script_data) = Self::build_script(
+            &contract_id,
+            &encoded_selector,
+            &encoded_args,
+            &call_parameters,
+            compute_calldata_offset,
+        )?;
         let mut inputs: Vec<Input> = vec![];
         let mut outputs: Vec<Output> = vec![];
 
@@ -225,17 +245,17 @@ impl Contract {
                 // output index (TXO). We add the `n_inputs` offset because we added some inputs
                 // above.
                 let output_index: u8 = (idx + n_inputs) as u8;
+                let zeroes = Bytes32::zeroed();
                 let external_contract_input = Input::contract(
                     UtxoId::new(Bytes32::zeroed(), output_index),
-                    Bytes32::zeroed(),
-                    Bytes32::zeroed(),
+                    zeroes,
+                    zeroes,
                     *external_contract_id,
                 );
 
                 inputs.push(external_contract_input);
 
-                let external_contract_output =
-                    Output::contract(output_index, Bytes32::zeroed(), Bytes32::zeroed());
+                let external_contract_output = Output::contract(output_index, zeroes, zeroes);
 
                 outputs.push(external_contract_output);
             }
@@ -261,6 +281,9 @@ impl Contract {
 
         let script = Script::new(tx);
 
+        if simulate {
+            return script.simulate(fuel_client).await;
+        }
         script.call(fuel_client).await
     }
 
@@ -369,7 +392,7 @@ impl Contract {
             // Note that the change will be computed by the node.
             // Here we only have to tell the node who will own the change and its asset ID.
             // For now we use the NATIVE_ASSET_ID constant
-            Output::change(wallet.address(), 0, AssetId::from(NATIVE_ASSET_ID)),
+            Output::change(wallet.address(), 0, NATIVE_ASSET_ID),
         ];
 
         // The first witness is the bytecode we're deploying.
@@ -474,14 +497,14 @@ where
         self
     }
 
-    /// Call a contract's method. Return a Result<CallResponse, Error>.
-    /// The CallResponse structs contains the method's value in its `value`
-    /// field as an actual typed value `D` (if your method returns `bool`, it will
-    /// be a bool, works also for structs thanks to the `abigen!()`).
-    /// The other field of CallResponse, `receipts`, contains the receipts of the
-    /// transaction
-    pub async fn call(self) -> Result<CallResponse<D>, Error> {
-        let mut receipts = Contract::call(
+    /// Call a contract's method on the node. If `simulate==true`, then the call is done in a
+    /// read-only manner, using a `dry-run`. Return a Result<CallResponse, Error>. The CallResponse
+    /// struct contains the method's value in its `value` field as an actual typed value `D` (if
+    /// your method returns `bool`, it will be a bool, works also for structs thanks to the
+    /// `abigen!()`). The other field of CallResponse, `receipts`, contains the receipts of the
+    /// transaction.
+    async fn call_or_simulate(self, simulate: bool) -> Result<CallResponse<D>, Error> {
+        let receipts = Contract::call(
             self.contract_id,
             Some(self.encoded_selector),
             Some(self.encoded_args),
@@ -493,6 +516,7 @@ where
             self.compute_calldata_offset,
             self.external_contracts,
             self.wallet,
+            simulate,
         )
         .await?;
 
@@ -504,10 +528,34 @@ where
             });
         }
 
+        let (decoded_value, receipts) = Self::get_decoded_output(receipts, &self.output_params)?;
+        Ok(CallResponse {
+            value: D::from_tokens(decoded_value)?,
+            receipts,
+        })
+    }
+
+    /// Call a contract's method on the node, in a state-modifying manner.
+    pub async fn call(self) -> Result<CallResponse<D>, Error> {
+        Ok(Self::call_or_simulate(self, false).await?)
+    }
+
+    /// Call a contract's method on the node, in a simulated manner, meaning the state of the
+    /// blockchain is *not* modified but simulated.
+    /// It is the same as the `call` method because the API is more user-friendly this way.
+    pub async fn simulate(self) -> Result<CallResponse<D>, Error> {
+        Ok(Self::call_or_simulate(self, true).await?)
+    }
+
+    /// Based on the returned Contract's output_params and the receipts returned from the call,
+    /// decode the values and return them.
+    pub fn get_decoded_output(
+        mut receipts: Vec<Receipt>,
+        output_params: &[ParamType],
+    ) -> Result<(Vec<Token>, Vec<Receipt>), Error> {
         // Right now we only support methods with a single return type.
         // Soon we'll support tuple as a return type and we'll have to update the logic in here.
-        let output_param = &self.output_params[0];
-
+        let output_param = output_params[0].clone();
         // If the method's return type is bigger than a single `WORD`, the returned value
         // is stored in `ReturnData.data`, otherwise, it's stored in `Return.val`.
         // Here we're checking for that.
@@ -527,15 +575,11 @@ where
                 None => (vec![], None),
             },
         };
-
-        if index.is_some() {
-            receipts.remove(index.unwrap());
+        if let Some(i) = index {
+            receipts.remove(i);
         }
         let mut decoder = ABIDecoder::new();
-        let decoded_value = decoder.decode(&self.output_params, &encoded_value)?;
-        Ok(CallResponse {
-            value: D::from_tokens(decoded_value)?,
-            receipts,
-        })
+        let decoded_value = decoder.decode(output_params, &encoded_value)?;
+        Ok((decoded_value, receipts))
     }
 }
