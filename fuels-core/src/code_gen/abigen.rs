@@ -111,16 +111,14 @@ impl Abigen {
         } else {
             (
                 quote! {
-                    // aliasing to `FuelContractId` to prevent conflicts between
-                    // `fuel_tx::ContractId` and user-defined structs named `ContractId`.
-                    use fuel_tx::ContractId as FuelContractId;
+                    use fuel_tx::{ContractId, Address};
                     use fuels_contract::contract::{Contract, ContractCall};
                     use fuels_signers::{provider::Provider, LocalWallet};
                     use std::str::FromStr;
                 },
                 quote! {
                     pub struct #name {
-                        contract_id: FuelContractId,
+                        contract_id: ContractId,
                         provider: Provider,
                         wallet: LocalWallet
                     }
@@ -128,7 +126,7 @@ impl Abigen {
                     impl #name {
                         pub fn new(contract_id: String, provider: Provider, wallet: LocalWallet)
                         -> Self {
-                            let contract_id = FuelContractId::from_str(&contract_id).unwrap();
+                            let contract_id = ContractId::from_str(&contract_id).unwrap();
                             Self{ contract_id, provider, wallet }
                         }
                         #contract_functions
@@ -180,6 +178,13 @@ impl Abigen {
         let mut seen_struct: Vec<&str> = vec![];
 
         for prop in self.custom_structs.values() {
+            // Skip custom type generation if the custom type is a Sway-native type.
+            // This means ABI methods receiving or returning a Sway-native type
+            // can receive or return that native type directly.
+            if prop.type_field.contains("ContractId") || prop.type_field.contains("Address") {
+                continue;
+            }
+
             if !seen_struct.contains(&prop.type_field.as_str()) {
                 structs.extend(expand_internal_struct(prop)?);
                 seen_struct.push(&prop.type_field);
