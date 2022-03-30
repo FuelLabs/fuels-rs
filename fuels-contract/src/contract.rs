@@ -68,10 +68,10 @@ impl Contract {
     /// data is for instance the function selector. (script, script_data) is returned as a tuple
     /// of hex-encoded value vectors
     pub fn build_script(
-        contract_id: ContractId,
-        encoded_selector: Option<Selector>,
-        encoded_args: Option<Vec<u8>>,
-        call_parameters: CallParameters,
+        contract_id: &ContractId,
+        encoded_selector: &Option<Selector>,
+        encoded_args: &Option<Vec<u8>>,
+        call_parameters: &CallParameters,
         compute_calldata_offset: bool,
     ) -> Result<(Vec<u8>, Vec<u8>), Error> {
         // Script to call the contract.
@@ -174,10 +174,10 @@ impl Contract {
         simulate: bool,
     ) -> Result<Vec<Receipt>, Error> {
         let (script, script_data) = Self::build_script(
-            contract_id,
-            encoded_selector,
-            encoded_args,
-            call_parameters,
+            &contract_id,
+            &encoded_selector,
+            &encoded_args,
+            &call_parameters,
             compute_calldata_offset,
         )?;
         let mut inputs: Vec<Input> = vec![];
