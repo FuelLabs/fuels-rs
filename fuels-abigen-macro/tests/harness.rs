@@ -901,13 +901,16 @@ async fn multiple_read_calls() {
 
     contract_instance.store(42).call().await.unwrap();
 
-    let stored = contract_instance.read(0).call().await.unwrap();
+    // Use "simulate" because the methods don't actually run a transaction, but just a dry-run
+    // We can notice here that, thanks to this, we don't generate a TransactionId collision,
+    // even if the transactions are theoretically the same.
+    let stored = contract_instance.read(0).simulate().await.unwrap();
 
-    assert!(stored.value == 42);
+    assert_eq!(stored.value, 42);
 
-    let stored = contract_instance.read(0).call().await.unwrap();
+    let stored = contract_instance.read(0).simulate().await.unwrap();
 
-    assert!(stored.value == 42);
+    assert_eq!(stored.value, 42);
 }
 
 #[tokio::test]
@@ -1266,12 +1269,16 @@ async fn test_gas_errors() {
     // Test for insufficient gas.
     let result = contract_instance
         .initialize_counter(42) // Build the ABI call
-        .tx_params(TxParameters::new(Some(1_000), Some(100), None))
+        .tx_params(TxParameters::new(
+            Some(DEFAULT_INITIAL_BALANCE),
+            Some(100),
+            None,
+        ))
         .call() // Perform the network call
         .await
         .expect_err("should error");
 
-    assert_eq!("Contract call error: Response errors; unexpected block execution error InsufficientGas { provided: 100, required: 100000 }", result.to_string());
+    assert_eq!("Contract call error: Response errors; unexpected block execution error InsufficientGas { provided: 1000000000, required: 100000000000 }", result.to_string());
 
     // Test for running out of gas. Gas price as `None` will be 0.
     // Gas limit will be 100, this call will use more than 100 gas.
@@ -1304,12 +1311,26 @@ async fn test_amount_and_asset_forwarding() {
     let id = Contract::deploy(&compiled, &provider, &wallet, TxParameters::default())
         .await
         .unwrap();
-
+    let target = testfuelcoincontract_mod::ContractId { value: id.into() };
+    let asset_id = testfuelcoincontract_mod::ContractId { value: id.into() };
     let instance = TestFuelCoinContract::new(id.to_string(), provider.clone(), wallet.clone());
 
-    // Forward 1 coin of native asset_id
+    let mut balance_result = instance
+        .get_balance(target.clone(), asset_id.clone())
+        .call()
+        .await
+        .unwrap();
+    assert_eq!(balance_result.value, 0);
+
+    instance.mint_coins(5_000_000).call().await.unwrap();
+
+    balance_result = instance.get_balance(target, asset_id).call().await.unwrap();
+    assert_eq!(balance_result.value, 5_000_000);
+
     let tx_params = TxParameters::new(None, Some(1_000_000), None);
-    let call_params = CallParameters::new(Some(1), None);
+    // Forward 1_000_000 coin amount of native asset_id
+    // this is a big number for checking that amount can be a u64
+    let call_params = CallParameters::new(Some(1_000_000), None);
 
     let response = instance
         .get_msg_amount()
@@ -1319,7 +1340,7 @@ async fn test_amount_and_asset_forwarding() {
         .await
         .unwrap();
 
-    assert_eq!(response.value, 1);
+    assert_eq!(response.value, 1_000_000);
 
     let call_response = response
         .receipts
@@ -1328,10 +1349,54 @@ async fn test_amount_and_asset_forwarding() {
 
     assert!(call_response.is_some());
 
-    assert_eq!(call_response.unwrap().amount().unwrap(), 1);
+    assert_eq!(call_response.unwrap().amount().unwrap(), 1_000_000);
     assert_eq!(
         call_response.unwrap().asset_id().unwrap(),
         &AssetId::from(NATIVE_ASSET_ID)
+    );
+
+    // Trying to forward `amount` of a different asset_id.
+    // Currently, if we use this asset_id in the forwarding, the VM will
+    // return `AssetIdNotFound` if amount is larger than 0.
+    let asset: [u8; 32] = id.clone().into();
+
+    // withdraw some tokens to wallet
+    let c_id = testfuelcoincontract_mod::ContractId { value: id.into() };
+    let address = wallet.address();
+    let address = testfuelcoincontract_mod::Address {
+        value: address.into(),
+    };
+    instance
+        .transfer_coins_to_output(1_000_000, c_id, address)
+        .append_variable_outputs(1)
+        .call()
+        .await
+        .unwrap();
+
+    let call_params = CallParameters::new(Some(0), Some(AssetId::from(asset)));
+    let tx_params = TxParameters::new(None, Some(1_000_000), None);
+
+    let response = instance
+        .get_msg_amount()
+        .tx_params(tx_params)
+        .call_params(call_params)
+        .call()
+        .await
+        .unwrap();
+
+    assert_eq!(response.value, 0);
+
+    let call_response = response
+        .receipts
+        .iter()
+        .find(|&r| matches!(r, Receipt::Call { .. }));
+
+    assert!(call_response.is_some());
+
+    assert_eq!(call_response.unwrap().amount().unwrap(), 0);
+    assert_eq!(
+        call_response.unwrap().asset_id().unwrap(),
+        &AssetId::from(asset)
     );
 }
 

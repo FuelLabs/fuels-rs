@@ -44,8 +44,8 @@ pub mod prelude {
     pub use super::contract::errors::Error;
     pub use super::contract::parameters::*;
     pub use super::core::constants::*;
-    pub use super::core::Token;
+    pub use super::core::{Token, Tokenizable};
     pub use super::signers::provider::*;
     pub use super::signers::util::test_helpers::*;
-    pub use super::signers::LocalWallet;
+    pub use super::signers::{LocalWallet, Signer};
 }

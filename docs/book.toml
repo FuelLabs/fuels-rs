@@ -1,0 +1,12 @@
+[book]
+authors = ["Fuel Labs <contact@fuel.sh>"]
+language = "en"
+multilingual = false
+src = "src"
+title = "The Fuel Rust SDK"
+
+[output.html]
+git-repository-url = "https://github.com/FuelLabs/fuels-rs"
+
+[rust]
+edition = "2021"
