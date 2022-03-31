@@ -1,0 +1,13 @@
+[package]
+name = "fuels-example-wallet-transfer"
+publish = false
+version = "0.1.0"
+authors = ["Fuel Labs <contact@fuel.sh>"]
+edition = "2021"
+homepage = "https://fuel.network/"
+license = "Apache-2.0"
+repository = "https://github.com/FuelLabs/fuels-rs"
+
+[dependencies]
+fuels-rs = { path = "../../packages/fuels-rs" }
+tokio = { version = "1.10.1", features = ["full"] }
