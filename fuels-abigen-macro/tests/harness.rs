@@ -1,4 +1,4 @@
-use fuel_tx::{AssetId, Receipt, Salt};
+use fuel_tx::{AssetId, ContractId, Receipt, Salt};
 use fuels_abigen_macro::abigen;
 use fuels_contract::contract::Contract;
 use fuels_contract::errors::Error;
@@ -1101,11 +1101,11 @@ async fn test_large_return_data() {
     // First `value` is from `CallResponse`.
     // Second `value` is from Sway `ContractId` type.
     assert_eq!(
-        res.value.value,
-        [
+        res.value,
+        ContractId::from([
             255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
             255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255
-        ]
+        ])
     );
 }
 
@@ -1319,20 +1319,15 @@ async fn test_amount_and_asset_forwarding() {
     let id = Contract::deploy(&compiled, &provider, &wallet, TxParameters::default())
         .await
         .unwrap();
-    let target = testfuelcoincontract_mod::ContractId { value: id.into() };
-    let asset_id = testfuelcoincontract_mod::ContractId { value: id.into() };
+
     let instance = TestFuelCoinContract::new(id.to_string(), provider.clone(), wallet.clone());
 
-    let mut balance_result = instance
-        .get_balance(target.clone(), asset_id.clone())
-        .call()
-        .await
-        .unwrap();
+    let mut balance_result = instance.get_balance(id, id).call().await.unwrap();
     assert_eq!(balance_result.value, 0);
 
     instance.mint_coins(5_000_000).call().await.unwrap();
 
-    balance_result = instance.get_balance(target, asset_id).call().await.unwrap();
+    balance_result = instance.get_balance(id, id).call().await.unwrap();
     assert_eq!(balance_result.value, 5_000_000);
 
     let tx_params = TxParameters::new(None, Some(1_000_000), None);
@@ -1358,30 +1353,19 @@ async fn test_amount_and_asset_forwarding() {
     assert!(call_response.is_some());
 
     assert_eq!(call_response.unwrap().amount().unwrap(), 1_000_000);
-    assert_eq!(
-        call_response.unwrap().asset_id().unwrap(),
-        &AssetId::from(NATIVE_ASSET_ID)
-    );
+    assert_eq!(call_response.unwrap().asset_id().unwrap(), &NATIVE_ASSET_ID);
 
-    // Trying to forward `amount` of a different asset_id.
-    // Currently, if we use this asset_id in the forwarding, the VM will
-    // return `AssetIdNotFound` if amount is larger than 0.
-    let asset: [u8; 32] = id.clone().into();
+    let address = wallet.address();
 
     // withdraw some tokens to wallet
-    let c_id = testfuelcoincontract_mod::ContractId { value: id.into() };
-    let address = wallet.address();
-    let address = testfuelcoincontract_mod::Address {
-        value: address.into(),
-    };
     instance
-        .transfer_coins_to_output(1_000_000, c_id, address)
+        .transfer_coins_to_output(1_000_000, id, address)
         .append_variable_outputs(1)
         .call()
         .await
         .unwrap();
 
-    let call_params = CallParameters::new(Some(0), Some(AssetId::from(asset)));
+    let call_params = CallParameters::new(Some(0), Some(AssetId::from(*id)));
     let tx_params = TxParameters::new(None, Some(1_000_000), None);
 
     let response = instance
@@ -1404,7 +1388,7 @@ async fn test_amount_and_asset_forwarding() {
     assert_eq!(call_response.unwrap().amount().unwrap(), 0);
     assert_eq!(
         call_response.unwrap().asset_id().unwrap(),
-        &AssetId::from(asset)
+        &AssetId::from(*id)
     );
 }
 

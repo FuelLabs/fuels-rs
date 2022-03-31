@@ -302,6 +302,29 @@ impl<T: Tokenizable> Detokenize for T {
     }
 }
 
+impl Detokenize for fuel_tx::ContractId {
+    fn from_tokens(t: Vec<Token>) -> std::result::Result<Self, InvalidOutputType>
+    where
+        Self: Sized,
+    {
+        if let Token::Struct(tokens) = &t[0] {
+            if let Token::B256(id) = &tokens[0] {
+                Ok(fuel_tx::ContractId::from(*id))
+            } else {
+                Err(InvalidOutputType(format!(
+                    "Expected `b256`, got {:?}",
+                    tokens[0]
+                )))
+            }
+        } else {
+            Err(InvalidOutputType(format!(
+                "Expected `ContractId`, got {:?}",
+                t
+            )))
+        }
+    }
+}
+
 /// Converts a u8 to a right aligned array of 8 bytes.
 pub fn pad_u8(value: &u8) -> ByteArray {
     let mut padded = ByteArray::default();
