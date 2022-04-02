@@ -204,16 +204,7 @@ impl Abigen {
         Ok(enums)
     }
 
-    /// Reads the parsed ABI and returns the custom structs found in it.
-    fn get_custom_types(abi: &JsonABI, ty: &CustomType) -> HashMap<String, Property> {
-        let mut structs = HashMap::new();
-        let mut inner_structs: Vec<Property> = Vec::new();
-
-        let type_string = match ty {
-            CustomType::Enum => "enum",
-            CustomType::Struct => "struct",
-        };
-
+    fn get_all_properties(abi: &JsonABI) -> Vec<&Property> {
         let mut all_properties: Vec<&Property> = vec![];
         for function in abi {
             for prop in &function.inputs {
@@ -223,19 +214,33 @@ impl Abigen {
                 all_properties.push(prop);
             }
         }
+        all_properties
+    }
+
+    /// Reads the parsed ABI and returns the custom types (of kind `ty`, either `struct` or `enum`)
+    /// found in it.
+    fn get_custom_types(abi: &JsonABI, ty: &CustomType) -> HashMap<String, Property> {
+        let mut custom_types = HashMap::new();
+        let mut inner_custom_types: Vec<Property> = Vec::new();
+
+        let type_string = match ty {
+            CustomType::Enum => "enum",
+            CustomType::Struct => "struct",
+        };
+        let all_properties = Abigen::get_all_properties(abi);
 
         for prop in all_properties {
             if prop.type_field.contains(type_string) {
                 // Top level struct
                 let custom_type_name = extract_custom_type_name_from_abi_property(prop, ty)
                     .expect("failed to extract custom type name");
-                structs
+                custom_types
                     .entry(custom_type_name)
                     .or_insert_with(|| prop.clone());
 
                 // Find inner structs in case of nested custom types
                 for inner_component in prop.components.as_ref().unwrap() {
-                    inner_structs.extend(Abigen::get_inner_custom_properties(
+                    inner_custom_types.extend(Abigen::get_inner_custom_properties(
                         inner_component,
                         type_string,
                     ));
@@ -243,16 +248,16 @@ impl Abigen {
             }
         }
 
-        for inner_struct in inner_structs {
+        for inner_custom_type in inner_custom_types {
             let inner_custom_type_name =
-                extract_custom_type_name_from_abi_property(&inner_struct, ty)
+                extract_custom_type_name_from_abi_property(&inner_custom_type, ty)
                     .expect("failed to extract custom type name");
-            structs
+            custom_types
                 .entry(inner_custom_type_name)
-                .or_insert(inner_struct);
+                .or_insert(inner_custom_type);
         }
 
-        structs
+        custom_types
     }
 
     // Recursively gets inner properties defined in nested structs or nested enums
