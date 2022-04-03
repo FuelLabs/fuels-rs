@@ -55,6 +55,8 @@ pub enum Error {
     InfrastructureError(String),
     #[error("Contract call error: {0}")]
     ContractCallError(String),
+    #[error("Wallet error: {0}")]
+    WalletError(String),
 }
 
 impl From<CodecError> for Error {
@@ -75,5 +77,10 @@ impl From<ParseError> for Error {
 impl From<InvalidOutputType> for Error {
     fn from(err: InvalidOutputType) -> Error {
         Error::ContractCallError(err.0)
+    }
+}
+impl From<std::io::Error> for Error {
+    fn from(err: std::io::Error) -> Error {
+        Error::ContractCallError(err.to_string())
     }
 }
