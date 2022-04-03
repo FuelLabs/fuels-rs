@@ -6,6 +6,7 @@ use fuel_crypto::Hasher;
 use fuel_gql_client::client::schema::coin::Coin;
 use fuel_tx::{Address, AssetId, Bytes64, Input, Output, Receipt, Transaction, UtxoId, Witness};
 use fuel_vm::crypto::secp256k1_sign_compact_recoverable;
+use fuels_core::errors::Error;
 use secp256k1::{PublicKey, Secp256k1, SecretKey};
 use std::{fmt, io};
 use thiserror::Error;
@@ -84,6 +85,12 @@ pub enum WalletError {
     NoProvider,
     #[error("Provider error: {0}")]
     ProviderError(#[from] ProviderError),
+}
+
+impl From<WalletError> for Error {
+    fn from(e: WalletError) -> Self {
+        Error::WalletError(e.to_string())
+    }
 }
 
 impl Wallet {

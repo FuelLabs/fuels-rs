@@ -1,9 +1,9 @@
 use fuel_tx::{AssetId, ContractId, Receipt, Salt};
 use fuels_abigen_macro::abigen;
 use fuels_contract::contract::Contract;
-use fuels_contract::errors::Error;
 use fuels_contract::parameters::{CallParameters, TxParameters};
 use fuels_core::constants::{DEFAULT_INITIAL_BALANCE, NATIVE_ASSET_ID};
+use fuels_core::errors::Error;
 use fuels_core::Token;
 use fuels_signers::util::test_helpers::{
     setup_address_and_coins, setup_test_provider, setup_test_provider_and_wallet,
