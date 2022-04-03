@@ -1,6 +1,6 @@
 use fuel_tx::AssetId;
 use fuels_core::constants::{
-    DEFAULT_BYTE_PRICE, DEFAULT_GAS_LIMIT, DEFAULT_GAS_PRICE, NATIVE_ASSET_ID,
+    DEFAULT_BYTE_PRICE, DEFAULT_GAS_LIMIT, DEFAULT_GAS_PRICE, DEFAULT_MATURITY, NATIVE_ASSET_ID,
 };
 
 #[derive(Debug)]
@@ -8,7 +8,6 @@ pub struct TxParameters {
     pub gas_price: u64,
     pub gas_limit: u64,
     pub byte_price: u64,
-    // Use u32 as per the spec
     pub maturity: u32,
 }
 
@@ -43,7 +42,7 @@ impl Default for TxParameters {
             gas_limit: DEFAULT_GAS_LIMIT,
             byte_price: DEFAULT_BYTE_PRICE,
             // By default, transaction is immediately valid
-            maturity: 0,
+            maturity: DEFAULT_MATURITY,
         }
     }
 }
@@ -59,7 +58,7 @@ impl TxParameters {
             gas_price: gas_price.unwrap_or(DEFAULT_GAS_PRICE),
             gas_limit: gas_limit.unwrap_or(DEFAULT_GAS_LIMIT),
             byte_price: byte_price.unwrap_or(DEFAULT_BYTE_PRICE),
-            maturity: maturity.unwrap_or(0),
+            maturity: maturity.unwrap_or(DEFAULT_MATURITY),
         }
     }
 }
