@@ -1,6 +1,5 @@
 use crate::abi_decoder::ABIDecoder;
 use crate::abi_encoder::ABIEncoder;
-use crate::errors::Error;
 use crate::parameters::{CallParameters, TxParameters};
 use crate::script::Script;
 use anyhow::Result;
@@ -13,6 +12,7 @@ use fuel_types::{Bytes32, Salt, Word};
 use fuel_vm::consts::{REG_CGAS, REG_ONE};
 use fuel_vm::prelude::Contract as FuelContract;
 use fuel_vm::script_with_data_offset;
+use fuels_core::errors::Error;
 use fuels_core::{
     constants::DEFAULT_COIN_AMOUNT, constants::WORD_SIZE, Detokenize, Selector, Token,
 };
