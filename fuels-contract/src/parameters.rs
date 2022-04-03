@@ -8,6 +8,8 @@ pub struct TxParameters {
     pub gas_price: u64,
     pub gas_limit: u64,
     pub byte_price: u64,
+    // Use u32 as per the spec
+    pub maturity: u32,
 }
 
 #[derive(Debug)]
@@ -40,16 +42,24 @@ impl Default for TxParameters {
             gas_price: DEFAULT_GAS_PRICE,
             gas_limit: DEFAULT_GAS_LIMIT,
             byte_price: DEFAULT_BYTE_PRICE,
+            // By default, transaction is immediately valid
+            maturity: 0,
         }
     }
 }
 
 impl TxParameters {
-    pub fn new(gas_price: Option<u64>, gas_limit: Option<u64>, byte_price: Option<u64>) -> Self {
+    pub fn new(
+        gas_price: Option<u64>,
+        gas_limit: Option<u64>,
+        byte_price: Option<u64>,
+        maturity: Option<u32>,
+    ) -> Self {
         Self {
             gas_price: gas_price.unwrap_or(DEFAULT_GAS_PRICE),
             gas_limit: gas_limit.unwrap_or(DEFAULT_GAS_LIMIT),
             byte_price: byte_price.unwrap_or(DEFAULT_BYTE_PRICE),
+            maturity: maturity.unwrap_or(0),
         }
     }
 }
