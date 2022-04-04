@@ -1,9 +1,9 @@
 [workspace]
 resolver = "2"
 members = [
-    "fuels-abi-cli",
-    "fuels-abigen-macro",
-    "fuels-contract",
-    "fuels-core",
-    "fuels-signers",
+    "packages/fuels-abigen-macro",
+    "packages/fuels-contract",
+    "packages/fuels-core",
+    "packages/fuels-signers",
+    "tools/fuels-abi-cli",
 ]
