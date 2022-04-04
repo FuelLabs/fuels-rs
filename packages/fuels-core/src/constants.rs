@@ -4,6 +4,7 @@ use fuel_types::AssetId;
 pub const DEFAULT_GAS_LIMIT: u64 = 1_000_000;
 pub const DEFAULT_GAS_PRICE: u64 = 0;
 pub const DEFAULT_BYTE_PRICE: u64 = 0;
+pub const DEFAULT_MATURITY: u32 = 0;
 
 pub const WORD_SIZE: usize = core::mem::size_of::<Word>();
 

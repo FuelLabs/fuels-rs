@@ -651,7 +651,7 @@ async fn example_workflow() {
 
     let result = contract_instance
         .initialize_counter(42) // Build the ABI call
-        .tx_params(TxParameters::new(None, Some(1_000_000), None))
+        .tx_params(TxParameters::new(None, Some(1_000_000), None, None))
         .call() // Perform the network call
         .await
         .unwrap();
@@ -1273,6 +1273,7 @@ async fn test_gas_errors() {
             Some(DEFAULT_INITIAL_BALANCE),
             Some(100),
             None,
+            None,
         ))
         .call() // Perform the network call
         .await
@@ -1284,7 +1285,7 @@ async fn test_gas_errors() {
     // Gas limit will be 100, this call will use more than 100 gas.
     let result = contract_instance
         .initialize_counter(42) // Build the ABI call
-        .tx_params(TxParameters::new(None, Some(100), None))
+        .tx_params(TxParameters::new(None, Some(100), None, None))
         .call() // Perform the network call
         .await
         .expect_err("should error");
@@ -1322,7 +1323,7 @@ async fn test_amount_and_asset_forwarding() {
     balance_result = instance.get_balance(id, id).call().await.unwrap();
     assert_eq!(balance_result.value, 5_000_000);
 
-    let tx_params = TxParameters::new(None, Some(1_000_000), None);
+    let tx_params = TxParameters::new(None, Some(1_000_000), None, None);
     // Forward 1_000_000 coin amount of native asset_id
     // this is a big number for checking that amount can be a u64
     let call_params = CallParameters::new(Some(1_000_000), None);
@@ -1358,7 +1359,7 @@ async fn test_amount_and_asset_forwarding() {
         .unwrap();
 
     let call_params = CallParameters::new(Some(0), Some(AssetId::from(*id)));
-    let tx_params = TxParameters::new(None, Some(1_000_000), None);
+    let tx_params = TxParameters::new(None, Some(1_000_000), None, None);
 
     let response = instance
         .get_msg_amount()
