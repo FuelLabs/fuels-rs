@@ -12,7 +12,6 @@ description = "Fuel Rust SDK contracts."
 anyhow = "1"
 bytes = { version = "1.0.1", features = ["serde"] }
 fuel-asm = { version = "0.3", features = ["serde-types"] }
-fuel-core = { version = "0.5", default-features = false }
 fuel-gql-client = { version = "0.5", default-features = false }
 fuel-tx = "0.7"
 fuel-types = "0.3"

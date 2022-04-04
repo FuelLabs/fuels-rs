@@ -1,14 +1,6 @@
 use fuel_tx::{AssetId, ContractId, Receipt, Salt};
 use fuels_abigen_macro::abigen;
-use fuels_contract::contract::Contract;
-use fuels_contract::parameters::{CallParameters, TxParameters};
-use fuels_core::constants::{DEFAULT_INITIAL_BALANCE, NATIVE_ASSET_ID};
-use fuels_core::errors::Error;
-use fuels_core::Token;
-use fuels_signers::util::test_helpers::{
-    setup_address_and_coins, setup_test_provider, setup_test_provider_and_wallet,
-};
-use fuels_signers::{provider::Provider, LocalWallet, Signer};
+use fuels_rs::prelude::*;
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 use sha2::{Digest, Sha256};
@@ -24,7 +16,7 @@ async fn compile_bindings_from_contract_file() {
     // The generated bindings can be accessed through `SimpleContract`.
     abigen!(
         SimpleContract,
-        "fuels-abigen-macro/tests/takes_ints_returns_bool.json",
+        "packages/fuels-abigen-macro/tests/takes_ints_returns_bool.json",
     );
 
     let (provider, wallet) = setup_test_provider_and_wallet().await;
@@ -631,7 +623,7 @@ async fn example_workflow() {
     // The generated bindings can be accessed through `MyContract`.
     abigen!(
         MyContract,
-        "fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+        "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
 
     // Build the contract
@@ -683,7 +675,7 @@ async fn type_safe_output_values() {
     // The generated bindings can be accessed through `SimpleContract`.
     abigen!(
         MyContract,
-        "fuels-abigen-macro/tests/test_projects/contract_output_test/out/debug/contract_test-abi.json"
+        "packages/fuels-abigen-macro/tests/test_projects/contract_output_test/out/debug/contract_test-abi.json"
     );
 
     // Build the contract
@@ -737,7 +729,7 @@ async fn call_with_structs() {
     // The generated bindings can be accessed through `MyContract`.
     abigen!(
         MyContract,
-        "fuels-abigen-macro/tests/test_projects/complex_types_contract/out/debug/contract_test-abi.json"
+        "packages/fuels-abigen-macro/tests/test_projects/complex_types_contract/out/debug/contract_test-abi.json"
     );
 
     // Build the contract
@@ -787,7 +779,7 @@ async fn call_with_empty_return() {
     // The generated bindings can be accessed through `MyContract`.
     abigen!(
         MyContract,
-        "fuels-abigen-macro/tests/test_projects/call_empty_return/out/debug/contract_test-abi.json"
+        "packages/fuels-abigen-macro/tests/test_projects/call_empty_return/out/debug/contract_test-abi.json"
     );
 
     // Build the contract
@@ -821,7 +813,7 @@ async fn abigen_different_structs_same_arg_name() {
 
     abigen!(
         MyContract,
-        "fuels-abigen-macro/tests/test_projects/two-structs/out/debug/demo-abi.json",
+        "packages/fuels-abigen-macro/tests/test_projects/two-structs/out/debug/demo-abi.json",
     );
 
     // Build the contract
@@ -862,7 +854,7 @@ async fn test_reverting_transaction() {
 
     abigen!(
         RevertingContract,
-        "fuels-abigen-macro/tests/test_projects/revert_transaction_error/out/debug/capture-revert-transaction-error-abi.json"
+        "packages/fuels-abigen-macro/tests/test_projects/revert_transaction_error/out/debug/capture-revert-transaction-error-abi.json"
     );
 
     // Build the contract
@@ -888,7 +880,7 @@ async fn multiple_read_calls() {
     let rng = &mut StdRng::seed_from_u64(2322u64);
     abigen!(
         MyContract,
-        "fuels-abigen-macro/tests/test_projects/multiple-read-calls/out/debug/demo-abi.json"
+        "packages/fuels-abigen-macro/tests/test_projects/multiple-read-calls/out/debug/demo-abi.json"
     );
 
     // Build the contract
@@ -929,7 +921,7 @@ async fn test_methods_typeless_argument() {
     // The generated bindings can be accessed through `MyContract`.
     abigen!(
         MyContract,
-        "fuels-abigen-macro/tests/test_projects/empty-arguments/out/debug/method_four_arguments-abi.json"
+        "packages/fuels-abigen-macro/tests/test_projects/empty-arguments/out/debug/method_four_arguments-abi.json"
     );
 
     // Build the contract
@@ -964,7 +956,7 @@ async fn test_connect_to_deployed_contract() {
 
     abigen!(
         MyContract,
-        "fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+        "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
 
     // Build and deploy contract
@@ -1049,7 +1041,7 @@ async fn test_large_return_data() {
 
     abigen!(
         MyContract,
-        "fuels-abigen-macro/tests/test_projects/large-return-data/out/debug/contract_test-abi.json"
+        "packages/fuels-abigen-macro/tests/test_projects/large-return-data/out/debug/contract_test-abi.json"
     );
 
     let salt: [u8; 32] = rng.gen();
@@ -1116,7 +1108,7 @@ async fn test_provider_launch_and_connect() {
 
     abigen!(
         MyContract,
-        "fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+        "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
 
     // Build and deploy contract
@@ -1172,12 +1164,12 @@ async fn test_contract_calling_contract() {
     // Tests a contract call that calls another contract (FooCaller calls FooContract underneath)
     abigen!(
         FooContract,
-        "fuels-abigen-macro/tests/test_projects/foo-contract/out/debug/foo-contract-abi.json"
+        "packages/fuels-abigen-macro/tests/test_projects/foo-contract/out/debug/foo-contract-abi.json"
     );
 
     abigen!(
         FooCaller,
-        "fuels-abigen-macro/tests/test_projects/foo-caller-contract/out/debug/foo-caller-contract-abi.json"
+        "packages/fuels-abigen-macro/tests/test_projects/foo-caller-contract/out/debug/foo-caller-contract-abi.json"
     );
 
     let salt: [u8; 32] = rng.gen();
@@ -1249,7 +1241,7 @@ async fn test_gas_errors() {
     // The generated bindings can be accessed through `MyContract`.
     abigen!(
         MyContract,
-        "fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+        "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
 
     // Build the contract
@@ -1304,7 +1296,7 @@ async fn test_gas_errors() {
 async fn test_amount_and_asset_forwarding() {
     abigen!(
         TestFuelCoinContract,
-        "fuels-abigen-macro/tests/test_projects/token-ops/out/debug/token-ops-abi.json"
+        "packages/fuels-abigen-macro/tests/test_projects/token-ops/out/debug/token-ops-abi.json"
     );
 
     let salt = Salt::from([0u8; 32]);
@@ -1398,7 +1390,7 @@ async fn test_multiple_args() {
 
     abigen!(
         MyContract,
-        "fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+        "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
 
     // Build the contract

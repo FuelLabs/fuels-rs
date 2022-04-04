@@ -112,8 +112,8 @@ impl Abigen {
             (
                 quote! {
                     use fuel_tx::{ContractId, Address};
-                    use fuels_contract::contract::{Contract, ContractCall};
-                    use fuels_signers::{provider::Provider, LocalWallet};
+                    use fuels_rs::contract::contract::{Contract, ContractCall};
+                    use fuels_rs::signers::{provider::Provider, LocalWallet};
                     use std::str::FromStr;
                 },
                 quote! {
@@ -145,7 +145,7 @@ impl Abigen {
                 #![allow(unused_imports)]
 
                 #includes
-                use fuels_core::{EnumSelector, ParamType, Tokenizable, Token};
+                use fuels_rs::core::{EnumSelector, ParamType, Tokenizable, Token};
 
                 #code
 
