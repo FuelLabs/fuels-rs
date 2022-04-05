@@ -10,4 +10,4 @@ repository = "https://github.com/FuelLabs/fuels-rs"
 
 [dependencies]
 fuels-rs = { version = "0.9.1", path = "../../packages/fuels-rs" }
-tokio = { version = "1.10.1", features = ["full"] }
+tokio = { version = "1.10", features = ["full"] }
