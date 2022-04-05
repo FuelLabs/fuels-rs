@@ -183,6 +183,23 @@ impl ABIDecoder {
 
                 Ok(result)
             }
+            ParamType::Tuple(types) => {
+                let mut tokens = vec![];
+                let mut new_offset = offset;
+
+                for t in types {
+                    let res = self.decode_param(t, data, new_offset)?;
+                    new_offset = res.new_offset;
+                    tokens.push(res.token);
+                }
+
+                let result = DecodeResult {
+                    token: Token::Tuple(tokens),
+                    new_offset,
+                };
+
+                Ok(result)
+            }
         }
     }
 }

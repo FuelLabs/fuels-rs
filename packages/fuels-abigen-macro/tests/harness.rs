@@ -129,7 +129,7 @@ async fn compile_bindings_array_input() {
     );
 
     assert_eq!(
-        "00000000058734b90000000000000001000000000000000200000000000000030000000000000004",
+        "000000005898d3a40000000000000001000000000000000200000000000000030000000000000004",
         encoded
     );
 }
@@ -174,7 +174,7 @@ async fn compile_bindings_bool_array_input() {
     );
 
     assert_eq!(
-        "0000000065c2f43b000000000000000100000000000000000000000000000001",
+        "000000006fc82450000000000000000100000000000000000000000000000001",
         encoded
     );
 }
@@ -366,7 +366,7 @@ async fn compile_bindings_struct_input() {
     );
 
     assert_eq!(
-        "000000007f373abe000000000000000a00000000000000026675656c00000000",
+        "00000000ef5aac44000000000000000a00000000000000026675656c00000000",
         encoded
     );
 }
@@ -1423,4 +1423,33 @@ async fn test_multiple_args() {
 
     let response = instance.get_single(5).call().await.unwrap();
     assert_eq!(response.value, 5);
+}
+
+#[tokio::test]
+async fn test_tuples() {
+    let mut rng = StdRng::seed_from_u64(2322u64);
+
+    abigen!(
+        MyContract,
+        "packages/fuels-abigen-macro/tests/test_projects/tuples/out/debug/tuples-abi.json"
+    );
+
+    // Build the contract
+    let salt: [u8; 32] = rng.gen();
+    let salt = Salt::from(salt);
+
+    let compiled =
+        Contract::load_sway_contract("tests/test_projects/tuples/out/debug/tuples.bin", salt)
+            .unwrap();
+
+    let (provider, wallet) = setup_test_provider_and_wallet().await;
+
+    let id = Contract::deploy(&compiled, &provider, &wallet, TxParameters::default())
+        .await
+        .unwrap();
+
+    let instance = MyContract::new(id.to_string(), provider.clone(), wallet.clone());
+
+    let response = instance.returns_tuple((1, 2)).call().await.unwrap();
+    assert_eq!(response.value, (1, 2));
 }
