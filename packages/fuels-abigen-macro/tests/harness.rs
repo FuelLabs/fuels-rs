@@ -1424,3 +1424,37 @@ async fn test_multiple_args() {
     let response = instance.get_single(5).call().await.unwrap();
     assert_eq!(response.value, 5);
 }
+
+#[tokio::test]
+async fn test_auth_msg_sender_from_sdk() {
+    let mut rng = StdRng::seed_from_u64(2322u64);
+
+    abigen!(
+        AuthContract,
+        "packages/fuels-abigen-macro/tests/test_projects/auth_testing_contract/out/debug/auth_testing_contract-abi.json"
+    );
+
+    let salt: [u8; 32] = rng.gen();
+    let salt = Salt::from(salt);
+
+    let (provider, wallet) = setup_test_provider_and_wallet().await;
+    let compiled = Contract::load_sway_contract(
+        "tests/test_projects/auth_testing_contract/out/debug/auth_testing_contract.bin",
+        salt,
+    )
+    .unwrap();
+
+    let id = Contract::deploy(&compiled, &provider, &wallet, TxParameters::default())
+        .await
+        .unwrap();
+
+    let auth_instance = AuthContract::new(id.to_string(), provider.clone(), wallet.clone());
+
+    let result = auth_instance
+        .returns_msg_sender_address(wallet.address())
+        .call()
+        .await
+        .unwrap();
+
+    assert!(result.value);
+}
