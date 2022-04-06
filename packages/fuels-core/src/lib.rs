@@ -35,6 +35,7 @@ pub enum ParamType {
     Struct(Vec<ParamType>),
     #[strum(disabled)]
     Enum(Vec<ParamType>),
+    Tuple(Vec<ParamType>),
 }
 
 impl Default for ParamType {
@@ -66,6 +67,12 @@ impl ParamType {
             Self::Array(_params, _l) => true,
             // The other primitive types are inside `Return`,
             // thus smaller than one `WORD`.
+            Self::Tuple(params) => {
+                if params.len() > 1 {
+                    return true;
+                }
+                false
+            }
             _ => false,
         }
     }
@@ -90,6 +97,13 @@ impl fmt::Display for ParamType {
                 let s = format!("Struct(vec![{}])", inner_strings.join(","));
                 write!(f, "{}", s)
             }
+            ParamType::Tuple(inner) => {
+                let inner_strings: Vec<String> =
+                    inner.iter().map(|p| format!("ParamType::{}", p)).collect();
+
+                let s = format!("Tuple(vec![{}])", inner_strings.join(","));
+                write!(f, "{}", s)
+            }
             _ => {
                 write!(f, "{:?}", self)
             }
@@ -112,6 +126,7 @@ pub enum Token {
     String(String),
     Struct(Vec<Token>),
     Enum(Box<EnumSelector>),
+    Tuple(Vec<Token>),
 }
 
 impl fmt::Display for Token {
@@ -272,6 +287,60 @@ impl Tokenizable for u64 {
         Token::U64(self)
     }
 }
+
+// Here we implement `Tokenizable` for a given tuple of a given length.
+// This is done this way because we can't use `impl<T> Tokenizable for (T,)`.
+// So we implement `Tokenizable` for each tuple length, covering
+// a reasonable range of tuple lengths.
+macro_rules! impl_tuples {
+    ($num: expr, $( $ty: ident : $no: tt, )+) => {
+        impl<$($ty, )+> Tokenizable for ($($ty,)+) where
+            $(
+                $ty: Tokenizable,
+            )+
+        {
+            fn from_token(token: Token) -> Result<Self, InvalidOutputType> {
+                match token {
+                    Token::Tuple(mut tokens) => {
+                        let mut it = tokens.drain(..);
+                        Ok(($(
+                          $ty::from_token(it.next().expect("All elements are in vector."))?,
+                        )+))
+                    },
+                    other => Err(InvalidOutputType(format!(
+                        "Expected `Tuple`, got {:?}",
+                        other,
+                    ))),
+                }
+            }
+
+            fn into_token(self) -> Token {
+                Token::Tuple(vec![
+                    $( self.$no.into_token(), )+
+                ])
+            }
+        }
+    }
+}
+
+// And where we actually implement the `Tokenizable` for tuples
+// from size 1 to size 16.
+impl_tuples!(1, A:0, );
+impl_tuples!(2, A:0, B:1, );
+impl_tuples!(3, A:0, B:1, C:2, );
+impl_tuples!(4, A:0, B:1, C:2, D:3, );
+impl_tuples!(5, A:0, B:1, C:2, D:3, E:4, );
+impl_tuples!(6, A:0, B:1, C:2, D:3, E:4, F:5, );
+impl_tuples!(7, A:0, B:1, C:2, D:3, E:4, F:5, G:6, );
+impl_tuples!(8, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, );
+impl_tuples!(9, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, );
+impl_tuples!(10, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, );
+impl_tuples!(11, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, );
+impl_tuples!(12, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, );
+impl_tuples!(13, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, );
+impl_tuples!(14, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13, );
+impl_tuples!(15, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13, O:14, );
+impl_tuples!(16, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13, O:14, P:15, );
 
 /// Output type possible to deserialize from Contract ABI
 pub trait Detokenize {

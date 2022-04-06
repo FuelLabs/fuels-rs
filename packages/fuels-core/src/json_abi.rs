@@ -237,6 +237,9 @@ impl ABIParser {
 
                 Ok(Token::Enum(Box::new((discriminant as u8, token))))
             }
+            ParamType::Tuple(_tuple_params) => {
+                todo!("Tuple tokenization for the ABI CLI tool not implemented yet")
+            }
         }
     }
 
@@ -504,7 +507,12 @@ impl ABIParser {
             }
             result.push(')');
         } else {
-            result.push_str(&param.type_field);
+            let param_str_no_whitespace: String = param
+                .type_field
+                .chars()
+                .filter(|c| !c.is_whitespace())
+                .collect();
+            result.push_str(&param_str_no_whitespace);
         }
         result
     }
@@ -526,10 +534,33 @@ pub fn parse_param(param: &Property) -> Result<ParamType, Error> {
                 }
                 return parse_array_param(param);
             }
+            if param.type_field.starts_with('(') && param.type_field.ends_with(')') {
+                // Try to parse tuple (T, T, ..., T)
+                return parse_tuple_param(param);
+            }
             // Try to parse enum or struct
             parse_custom_type_param(param)
         }
     }
+}
+
+pub fn parse_tuple_param(param: &Property) -> Result<ParamType, Error> {
+    let mut params: Vec<ParamType> = Vec::new();
+
+    let mut chars = param.type_field.chars();
+    chars.next(); // Remove "("
+    chars.next_back(); // Remove ")"
+
+    for ele in chars.as_str().split(',') {
+        let tuple_type = Property {
+            name: "".to_owned(),
+            type_field: ele.trim().to_owned(),
+            components: None,
+        };
+        params.push(parse_param(&tuple_type)?);
+    }
+
+    Ok(ParamType::Tuple(params))
 }
 
 pub fn parse_string_param(param: &Property) -> Result<ParamType, Error> {
@@ -808,7 +839,7 @@ mod tests {
             .unwrap();
         println!("encoded: {:?}\n", encoded);
 
-        let expected_encode = "00000000058734b9000000000000000100000000000000020000000000000003";
+        let expected_encode = "000000005898d3a4000000000000000100000000000000020000000000000003";
         assert_eq!(encoded, expected_encode);
 
         let return_value = [
@@ -915,7 +946,7 @@ mod tests {
         println!("encoded: {:?}\n", encoded);
 
         let expected_encode =
-            "00000000507abc250000000000000001000000000000000200000000000000030000000000000004";
+            "000000007456abeb0000000000000001000000000000000200000000000000030000000000000004";
         assert_eq!(encoded, expected_encode);
 
         let return_value = [
@@ -1118,7 +1149,7 @@ mod tests {
         println!("encoded: {:?}\n", encoded);
 
         let expected_encode =
-            "00000000c0e6f721000000000000000a000000000000000100000000000000010000000000000002";
+            "000000001c6b7bb9000000000000000a000000000000000100000000000000010000000000000002";
         assert_eq!(encoded, expected_encode);
 
         let json_abi = r#"
@@ -1165,7 +1196,7 @@ mod tests {
         println!("encoded: {:?}\n", encoded);
 
         let expected_encode =
-            "0000000058c95826000000000000000100000000000000010000000000000002000000000000000a";
+            "00000000f40ff3b5000000000000000100000000000000010000000000000002000000000000000a";
         assert_eq!(encoded, expected_encode);
     }
 

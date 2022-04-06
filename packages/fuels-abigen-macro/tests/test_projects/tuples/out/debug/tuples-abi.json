@@ -1,0 +1,20 @@
+[
+  {
+    "type": "function",
+    "inputs": [
+      {
+        "name": "input",
+        "type": "(u64, u64)",
+        "components": null
+      }
+    ],
+    "name": "returns_tuple",
+    "outputs": [
+      {
+        "name": "",
+        "type": "(u64, u64)",
+        "components": null
+      }
+    ]
+  }
+]
