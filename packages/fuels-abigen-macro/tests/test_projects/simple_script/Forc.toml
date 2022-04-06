@@ -5,5 +5,4 @@ name = "Fuel example project"
 
 
 [dependencies]
-core = { git = "https://github.com/FuelLabs/sway-lib-core" }
-std = { git = "https://github.com/FuelLabs/sway-lib-std" }
+std = { git = "https://github.com/FuelLabs/sway", branch = "master" }
