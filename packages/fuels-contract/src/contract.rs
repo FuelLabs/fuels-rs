@@ -55,6 +55,7 @@ pub struct ContractCallArguments {
     external_contracts: Option<Vec<ContractId>>,
     simulate: bool,
 }
+
 impl ContractCallArguments {
     pub fn new(
         contract_id: ContractId,
