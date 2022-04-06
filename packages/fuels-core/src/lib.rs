@@ -67,7 +67,12 @@ impl ParamType {
             Self::Array(_params, _l) => true,
             // The other primitive types are inside `Return`,
             // thus smaller than one `WORD`.
-            Self::Tuple(_) => true,
+            Self::Tuple(params) => {
+                if params.len() > 1 {
+                    return true;
+                }
+                false
+            }
             _ => false,
         }
     }
