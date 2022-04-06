@@ -6,4 +6,4 @@ name = "foo-caller-contract"
 
 [dependencies]
 std = { git = "https://github.com/FuelLabs/sway", branch = "master" }
-foo = { path = "../foo-contract-abi" }
+foo = { path = "../foo-contract-abi/", package = "foo_contract_abi" }

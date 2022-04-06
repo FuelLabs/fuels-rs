@@ -1,26 +1,19 @@
 [[package]]
 name = 'contract_test'
 dependencies = [
-    'core git+https://github.com/FuelLabs/sway-lib-core?reference=master#c331ed20ebc9d646acec6b8ee8f408627ce3b573',
-    'increment_abi',
-    'std git+https://github.com/FuelLabs/sway-lib-std?reference=master#4eb73be7be90e40099ba9fe34cd2d5f1faa01c6f',
+    '(increment_abi) library_test',
+    'std git+https://github.com/FuelLabs/sway?branch=master#8bff08606ec3d9707d0052cc91ff86071f1f4ad5',
 ]
 
 [[package]]
 name = 'core'
-source = 'git+http://github.com/FuelLabs/sway-lib-core?reference=master#c331ed20ebc9d646acec6b8ee8f408627ce3b573'
 dependencies = []
 
 [[package]]
-name = 'core'
-source = 'git+https://github.com/FuelLabs/sway-lib-core?reference=master#c331ed20ebc9d646acec6b8ee8f408627ce3b573'
-dependencies = []
-
-[[package]]
-name = 'increment_abi'
-dependencies = []
+name = 'library_test'
+dependencies = ['std git+https://github.com/FuelLabs/sway?branch=master#8bff08606ec3d9707d0052cc91ff86071f1f4ad5']
 
 [[package]]
 name = 'std'
-source = 'git+https://github.com/FuelLabs/sway-lib-std?reference=master#4eb73be7be90e40099ba9fe34cd2d5f1faa01c6f'
-dependencies = ['core git+http://github.com/FuelLabs/sway-lib-core?reference=master#c331ed20ebc9d646acec6b8ee8f408627ce3b573']
+source = 'git+https://github.com/FuelLabs/sway?branch=master#8bff08606ec3d9707d0052cc91ff86071f1f4ad5'
+dependencies = ['core']

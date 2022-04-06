@@ -1,6 +1,6 @@
 [project]
-name = "demo"
-authors = ["Fuel Labs"]
+name = "two-structs"
+authors = ["Fuel Labs <contact@fuel.sh>"]
 entry = "main.sw"
 license = "Apache-2.0"
 

@@ -7,4 +7,4 @@ entry = "main.sw"
 
 [dependencies]
 std = { git = "https://github.com/FuelLabs/sway", branch = "master" }
-increment_abi = { path = "../library_test" }
+increment_abi = { path = "../library_test", package = "library_test" }
