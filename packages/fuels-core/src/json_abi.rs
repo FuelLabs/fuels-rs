@@ -237,7 +237,9 @@ impl ABIParser {
 
                 Ok(Token::Enum(Box::new((discriminant as u8, token))))
             }
-            _ => Err(Error::InvalidType(param.to_string())),
+            ParamType::Tuple(_tuple_params) => {
+                todo!("Tuple tokenization for the ABI CLI tool not implemented yet")
+            }
         }
     }
 
