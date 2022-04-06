@@ -341,7 +341,7 @@ impl Contract {
     fn should_compute_call_data_offset(args: &[Token]) -> bool {
         match args
             .iter()
-            .any(|t| matches!(t, Token::Struct(_) | Token::Enum(_)))
+            .any(|t| matches!(t, Token::Struct(_) | Token::Enum(_) | Token::Tuple(_)))
         {
             true => true,
             false => args.len() > 1,

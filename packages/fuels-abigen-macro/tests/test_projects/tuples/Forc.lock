@@ -1,0 +1,12 @@
+[[package]]
+name = 'core'
+dependencies = []
+
+[[package]]
+name = 'std'
+source = 'git+https://github.com/FuelLabs/sway?branch=master#1549a1f84cdbfd05bdce809ae81a131dcd6968ec'
+dependencies = ['core']
+
+[[package]]
+name = 'tuples'
+dependencies = ['std git+https://github.com/FuelLabs/sway?branch=master#1549a1f84cdbfd05bdce809ae81a131dcd6968ec']

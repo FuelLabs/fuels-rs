@@ -40,5 +40,16 @@ pub fn expand_type(kind: &ParamType) -> Result<TokenStream, Error> {
                 .collect::<Result<Vec<_>, _>>()?;
             Ok(quote! { (#(#members,)*) })
         }
+        ParamType::Tuple(members) => {
+            if members.is_empty() {
+                return Err(Error::InvalidData);
+            }
+
+            let members = members
+                .iter()
+                .map(expand_type)
+                .collect::<Result<Vec<_>, _>>()?;
+            Ok(quote! { (#(#members,)*) })
+        }
     }
 }
