@@ -12,11 +12,9 @@ use fuel_types::{Bytes32, Salt, Word};
 use fuel_vm::consts::{REG_CGAS, REG_ONE};
 use fuel_vm::prelude::Contract as FuelContract;
 use fuel_vm::script_with_data_offset;
+use fuels_core::constants::{DEFAULT_COIN_AMOUNT, DEFAULT_MATURITY, NATIVE_ASSET_ID, WORD_SIZE};
 use fuels_core::errors::Error;
-use fuels_core::{
-    constants::DEFAULT_COIN_AMOUNT, constants::WORD_SIZE, Detokenize, Selector, Token,
-};
-use fuels_core::{constants::NATIVE_ASSET_ID, ParamType};
+use fuels_core::{Detokenize, ParamType, Selector, Token};
 use fuels_signers::provider::Provider;
 use fuels_signers::{LocalWallet, Signer};
 use std::marker::PhantomData;
@@ -43,6 +41,56 @@ pub struct Contract {
 pub struct CallResponse<D> {
     pub value: D,
     pub receipts: Vec<Receipt>,
+}
+
+pub struct ContractCallArguments {
+    contract_id: ContractId,
+    encoded_selector: Option<Selector>,
+    encoded_args: Option<Vec<u8>>,
+    tx_parameters: TxParameters,
+    call_parameters: CallParameters,
+    variable_outputs: Option<Vec<Output>>,
+    maturity: Word,
+    compute_calldata_offset: bool,
+    external_contracts: Option<Vec<ContractId>>,
+    simulate: bool,
+}
+impl ContractCallArguments {
+    pub fn new(
+        contract_id: ContractId,
+        encoded_selector: Option<Selector>,
+        encoded_args: Option<Vec<u8>>,
+        variable_outputs: Option<Vec<Output>>,
+        compute_calldata_offset: bool,
+        external_contracts: Option<Vec<ContractId>>,
+    ) -> Self {
+        Self {
+            contract_id,
+            encoded_selector,
+            encoded_args,
+            tx_parameters: TxParameters::default(),
+            call_parameters: CallParameters::default(),
+            variable_outputs,
+            maturity: DEFAULT_MATURITY as Word,
+            compute_calldata_offset,
+            external_contracts,
+            // TODO: the fact that transactions are not simulated by default should be a flag
+            simulate: false,
+        }
+    }
+
+    pub fn set_tx_parameters(&mut self, tx_params: TxParameters) {
+        self.tx_parameters = tx_params
+    }
+    pub fn set_call_parameters(&mut self, call_params: CallParameters) {
+        self.call_parameters = call_params
+    }
+    pub fn set_maturity(&mut self, maturity: Word) {
+        self.maturity = maturity
+    }
+    pub fn set_simulate(&mut self, simulate: bool) {
+        self.simulate = simulate
+    }
 }
 
 impl Contract {
@@ -160,25 +208,16 @@ impl Contract {
     /// The wallet is here to pay for the transaction fees (even though they are 0 right now)
     #[allow(clippy::too_many_arguments)] // We need that many arguments for now
     async fn call(
-        contract_id: ContractId,
-        encoded_selector: Option<Selector>,
-        encoded_args: Option<Vec<u8>>,
+        args: ContractCallArguments,
         fuel_client: &FuelClient,
-        tx_parameters: TxParameters,
-        call_parameters: CallParameters,
-        variable_outputs: Option<Vec<Output>>,
-        maturity: Word,
-        compute_calldata_offset: bool,
-        external_contracts: Option<Vec<ContractId>>,
         wallet: LocalWallet,
-        simulate: bool,
     ) -> Result<Vec<Receipt>, Error> {
         let (script, script_data) = Self::build_script(
-            &contract_id,
-            &encoded_selector,
-            &encoded_args,
-            &call_parameters,
-            compute_calldata_offset,
+            &args.contract_id,
+            &args.encoded_selector,
+            &args.encoded_args,
+            &args.call_parameters,
+            args.compute_calldata_offset,
         )?;
         let mut inputs: Vec<Input> = vec![];
         let mut outputs: Vec<Output> = vec![];
@@ -187,7 +226,7 @@ impl Contract {
             UtxoId::new(Bytes32::zeroed(), 0),
             Bytes32::zeroed(),
             Bytes32::zeroed(),
-            contract_id,
+            args.contract_id,
         );
         inputs.push(self_contract_input);
 
@@ -202,15 +241,16 @@ impl Contract {
             outputs.push(change_output);
         }
 
-        if call_parameters.asset_id != AssetId::default() {
+        if args.call_parameters.asset_id != AssetId::default() {
             let alt_spendables = wallet
-                .get_spendable_coins(&call_parameters.asset_id, call_parameters.amount)
+                .get_spendable_coins(&args.call_parameters.asset_id, args.call_parameters.amount)
                 .await
                 .unwrap();
 
             // add alt change if inputs are being spent
             if !alt_spendables.is_empty() {
-                let change_output = Output::change(wallet.address(), 0, call_parameters.asset_id);
+                let change_output =
+                    Output::change(wallet.address(), 0, args.call_parameters.asset_id);
                 outputs.push(change_output);
             }
 
@@ -239,7 +279,7 @@ impl Contract {
         outputs.push(self_contract_output);
 
         // Add external contract IDs to Input/Output pair, if applicable.
-        if let Some(external_contract_ids) = external_contracts {
+        if let Some(external_contract_ids) = args.external_contracts {
             for (idx, external_contract_id) in external_contract_ids.iter().enumerate() {
                 // We must associate the right external contract input to the corresponding external
                 // output index (TXO). We add the `n_inputs` offset because we added some inputs
@@ -262,15 +302,15 @@ impl Contract {
         }
 
         // Add outputs to the transaction.
-        if let Some(v) = variable_outputs {
+        if let Some(v) = args.variable_outputs {
             outputs.extend(v);
         };
 
         let mut tx = Transaction::script(
-            tx_parameters.gas_price,
-            tx_parameters.gas_limit,
-            tx_parameters.byte_price,
-            maturity,
+            args.tx_parameters.gas_price,
+            args.tx_parameters.gas_limit,
+            args.tx_parameters.byte_price,
+            args.maturity,
             script,
             script_data,
             inputs,
@@ -281,7 +321,7 @@ impl Contract {
 
         let script = Script::new(tx);
 
-        if simulate {
+        if args.simulate {
             return script.simulate(fuel_client).await;
         }
         script.call(fuel_client).await
@@ -504,21 +544,19 @@ where
     /// `abigen!()`). The other field of CallResponse, `receipts`, contains the receipts of the
     /// transaction.
     async fn call_or_simulate(self, simulate: bool) -> Result<CallResponse<D>, Error> {
-        let receipts = Contract::call(
+        let mut args = ContractCallArguments::new(
             self.contract_id,
             Some(self.encoded_selector),
             Some(self.encoded_args),
-            &self.fuel_client,
-            self.tx_parameters,
-            self.call_parameters,
             self.variable_outputs,
-            self.maturity,
             self.compute_calldata_offset,
             self.external_contracts,
-            self.wallet,
-            simulate,
-        )
-        .await?;
+        );
+        args.set_simulate(simulate);
+        args.set_call_parameters(self.call_parameters);
+        args.set_tx_parameters(self.tx_parameters);
+        args.set_maturity(self.maturity);
+        let receipts = Contract::call(args, &self.fuel_client, self.wallet).await?;
 
         // If it's an ABI method without a return value, exit early.
         if self.output_params.is_empty() {
