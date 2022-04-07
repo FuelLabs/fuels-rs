@@ -1,0 +1,9 @@
+[project]
+authors = ["Fuel Labs <contact@fuel.sh>"]
+entry = "main.sw"
+license = "Apache-2.0"
+name = "foo_contract"
+
+[dependencies]
+std = { git = "https://github.com/FuelLabs/sway", branch = "master" }
+foo = { path = "../foo_contract_abi/", package = "foo_contract_abi" }

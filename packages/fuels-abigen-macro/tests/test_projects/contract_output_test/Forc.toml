@@ -1,10 +1,9 @@
 [project]
 authors = ["Fuel Labs <contact@fuel.sh>"]
 license = "Apache-2.0"
-name = "contract_test"
+name = "contract_output_test"
 entry = "main.sw"
 
 [dependencies]
-core = { git = "https://github.com/FuelLabs/sway-lib-core" }
-increment_abi = { path = "../library_test" }
-std = { git = "https://github.com/FuelLabs/sway-lib-std" }
+increment_abi = { path = "../library_test", package = "library_test" }
+std = { git = "https://github.com/FuelLabs/sway", branch = "master" }
