@@ -339,10 +339,12 @@ impl Contract {
 
     // Returns true if the method call takes custom inputs or has more than one argument. This is used to determine whether we need to compute the `call_data_offset`.
     fn should_compute_call_data_offset(args: &[Token]) -> bool {
-        match args
-            .iter()
-            .any(|t| matches!(t, Token::Struct(_) | Token::Enum(_) | Token::Tuple(_)))
-        {
+        match args.iter().any(|t| {
+            matches!(
+                t,
+                Token::Struct(_) | Token::Enum(_) | Token::B256(_) | Token::Tuple(_)
+            )
+        }) {
             true => true,
             false => args.len() > 1,
         }

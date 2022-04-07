@@ -1,0 +1,12 @@
+[[package]]
+name = 'auth_testing_abi'
+dependencies = ['std git+https://github.com/FuelLabs/sway?branch=master#b0ab3f8a67f71f6697266c36394ef56d429637aa']
+
+[[package]]
+name = 'core'
+dependencies = []
+
+[[package]]
+name = 'std'
+source = 'git+https://github.com/FuelLabs/sway?branch=master#b0ab3f8a67f71f6697266c36394ef56d429637aa'
+dependencies = ['core']

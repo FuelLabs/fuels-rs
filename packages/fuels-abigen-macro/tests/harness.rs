@@ -1458,3 +1458,38 @@ async fn test_tuples() {
     let response = instance.returns_tuple((1, 2)).call().await.unwrap();
     assert_eq!(response.value, (1, 2));
 }
+
+#[tokio::test]
+async fn test_auth_msg_sender_from_sdk() {
+    let mut rng = StdRng::seed_from_u64(2322u64);
+
+    abigen!(
+        AuthContract,
+        "packages/fuels-abigen-macro/tests/test_projects/auth_testing_contract/out/debug/auth_testing_contract-abi.json"
+    );
+
+    let salt: [u8; 32] = rng.gen();
+    let salt = Salt::from(salt);
+
+    let (provider, wallet) = setup_test_provider_and_wallet().await;
+    let compiled = Contract::load_sway_contract(
+        "tests/test_projects/auth_testing_contract/out/debug/auth_testing_contract.bin",
+        salt,
+    )
+    .unwrap();
+
+    let id = Contract::deploy(&compiled, &provider, &wallet, TxParameters::default())
+        .await
+        .unwrap();
+
+    let auth_instance = AuthContract::new(id.to_string(), provider.clone(), wallet.clone());
+
+    // Contract returns true if `msg_sender()` matches `wallet.address()`.
+    let result = auth_instance
+        .check_msg_sender(wallet.address())
+        .call()
+        .await
+        .unwrap();
+
+    assert!(result.value);
+}
