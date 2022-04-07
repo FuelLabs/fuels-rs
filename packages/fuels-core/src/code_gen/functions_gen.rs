@@ -85,10 +85,12 @@ fn expand_fn_outputs(outputs: &[Property]) -> Result<TokenStream, Error> {
             // tokenized name only. Otherwise, parse and expand.
             // The non-expansion should happen to enums as well
             if outputs[0].type_field.contains("struct ") {
-                let tok: proc_macro2::TokenStream =
-                    extract_custom_type_name_from_abi_property(&outputs[0], &CustomType::Struct)?
-                        .parse()
-                        .unwrap();
+                let tok: proc_macro2::TokenStream = extract_custom_type_name_from_abi_property(
+                    &outputs[0],
+                    Some(CustomType::Struct),
+                )?
+                .parse()
+                .unwrap();
                 Ok(tok)
             } else {
                 expand_type(&parse_param(&outputs[0])?)
@@ -126,8 +128,8 @@ fn expand_function_arguments(
         let name = expand_input_name(i, &param.name);
 
         let opt_custom_type = match param.type_field.split_whitespace().collect::<Vec<_>>()[0] {
-            "enum" => Some(&CustomType::Enum),
-            "struct" => Some(&CustomType::Struct),
+            "enum" => Some(CustomType::Enum),
+            "struct" => Some(CustomType::Struct),
             _ => None,
         };
 
@@ -135,13 +137,13 @@ fn expand_function_arguments(
             match c {
                 CustomType::Enum => {
                     let name =
-                        extract_custom_type_name_from_abi_property(param, opt_custom_type.unwrap())
+                        extract_custom_type_name_from_abi_property(param, Some(CustomType::Enum))
                             .unwrap();
                     custom_enums.get(&name)
                 }
                 CustomType::Struct => {
                     let name =
-                        extract_custom_type_name_from_abi_property(param, opt_custom_type.unwrap())
+                        extract_custom_type_name_from_abi_property(param, Some(CustomType::Struct))
                             .unwrap();
                     custom_structs.get(&name)
                 }
@@ -193,11 +195,11 @@ fn expand_input_param(
     fun: &Function,
     param: &str,
     kind: &ParamType,
-    custom_struct_name: &Option<&Property>,
+    custom_type_name: &Option<&Property>,
 ) -> Result<TokenStream, Error> {
     match kind {
         ParamType::Array(ty, _) => {
-            let ty = expand_input_param(fun, param, ty, custom_struct_name)?;
+            let ty = expand_input_param(fun, param, ty, custom_type_name)?;
             Ok(quote! {
                 ::std::vec::Vec<#ty>
             })
@@ -205,8 +207,8 @@ fn expand_input_param(
         ParamType::Enum(_) => {
             let ident = ident(
                 &extract_custom_type_name_from_abi_property(
-                    custom_struct_name.unwrap(),
-                    &CustomType::Enum,
+                    custom_type_name.unwrap(),
+                    Some(CustomType::Enum),
                 )?
                 .to_class_case(),
             );
@@ -215,8 +217,8 @@ fn expand_input_param(
         ParamType::Struct(_) => {
             let ident = ident(
                 &extract_custom_type_name_from_abi_property(
-                    custom_struct_name.unwrap(),
-                    &CustomType::Struct,
+                    custom_type_name.unwrap(),
+                    Some(CustomType::Struct),
                 )?
                 .to_class_case(),
             );

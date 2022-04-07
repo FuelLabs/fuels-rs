@@ -46,8 +46,11 @@ pub fn expand_internal_struct(prop: &Property) -> Result<TokenStream, Error> {
             // Case where a struct takes another struct
             ParamType::Struct(_params) => {
                 let struct_name = ident(
-                    &extract_custom_type_name_from_abi_property(component, &CustomType::Struct)?
-                        .to_class_case(),
+                    &extract_custom_type_name_from_abi_property(
+                        component,
+                        Some(CustomType::Struct),
+                    )?
+                    .to_class_case(),
                 );
 
                 fields.push(quote! {pub #field_name: #struct_name});
@@ -56,6 +59,7 @@ pub fn expand_internal_struct(prop: &Property) -> Result<TokenStream, Error> {
                 param_types
                     .push(quote! { types.push(ParamType::Struct(#struct_name::param_types())) });
             }
+            // The struct contains a nested enum
             ParamType::Enum(_params) => {
                 // TODO: Support enums inside structs
                 unimplemented!()
@@ -107,7 +111,8 @@ pub fn expand_internal_struct(prop: &Property) -> Result<TokenStream, Error> {
     }
 
     let name = ident(
-        &extract_custom_type_name_from_abi_property(prop, &CustomType::Struct)?.to_class_case(),
+        &extract_custom_type_name_from_abi_property(prop, Some(CustomType::Struct))?
+            .to_class_case(),
     );
 
     // Actual creation of the struct, using the inner TokenStreams from above
@@ -228,7 +233,7 @@ pub fn expand_internal_enum(name: &str, prop: &Property) -> Result<TokenStream, 
 // We want to grab its `$name`.
 pub fn extract_custom_type_name_from_abi_property(
     prop: &Property,
-    expected: &CustomType,
+    expected: Option<CustomType>,
 ) -> Result<String, Error> {
     let type_field: Vec<&str> = prop.type_field.split_whitespace().collect();
     if type_field.len() != 2 {
@@ -239,12 +244,14 @@ pub fn extract_custom_type_name_from_abi_property(
         ));
     }
     let (declared_type, type_name) = (type_field[0], type_field[1]);
-    if declared_type != expected.to_string() {
-        return Err(Error::InvalidType(format!(
-            "Expected {} but {} was declared",
-            expected.to_string(),
-            declared_type
-        )));
+    if let Some(expected_type) = expected {
+        if expected_type.to_string() != declared_type {
+            return Err(Error::InvalidType(format!(
+                "Expected {} but {} was declared",
+                expected_type.to_string(),
+                declared_type
+            )));
+        }
     }
     Ok(String::from(type_name))
 }
@@ -264,14 +271,14 @@ mod tests {
     #[test]
     fn test_extract_custom_type_name_from_abi_property_bad_data() {
         let p: Property = Default::default();
-        let result = extract_custom_type_name_from_abi_property(&p, &CustomType::Enum);
+        let result = extract_custom_type_name_from_abi_property(&p, Some(CustomType::Enum));
         assert!(matches!(result, Err(Error::MissingData(_))));
         let p = Property {
             name: String::from("foo"),
             type_field: String::from("nowhitespacehere"),
             components: None,
         };
-        let result = extract_custom_type_name_from_abi_property(&p, &CustomType::Enum);
+        let result = extract_custom_type_name_from_abi_property(&p, Some(CustomType::Enum));
         assert!(matches!(result, Err(Error::MissingData(_))));
     }
 
@@ -282,14 +289,14 @@ mod tests {
             type_field: String::from("enum something"),
             components: None,
         };
-        let result = extract_custom_type_name_from_abi_property(&p, &CustomType::Struct);
+        let result = extract_custom_type_name_from_abi_property(&p, Some(CustomType::Struct));
         assert!(matches!(result, Err(Error::InvalidType(_))));
         let p = Property {
             name: String::from("foo"),
             type_field: String::from("struct somethingelse"),
             components: None,
         };
-        let result = extract_custom_type_name_from_abi_property(&p, &CustomType::Enum);
+        let result = extract_custom_type_name_from_abi_property(&p, Some(CustomType::Enum));
         assert!(matches!(result, Err(Error::InvalidType(_))));
     }
 
@@ -300,14 +307,14 @@ mod tests {
             type_field: String::from("struct bar"),
             components: None,
         };
-        let result = extract_custom_type_name_from_abi_property(&p, &CustomType::Struct);
+        let result = extract_custom_type_name_from_abi_property(&p, Some(CustomType::Struct));
         assert_eq!(result.unwrap(), "bar");
         let p = Property {
             name: String::from("foo"),
             type_field: String::from("enum bar"),
             components: None,
         };
-        let result = extract_custom_type_name_from_abi_property(&p, &CustomType::Enum);
+        let result = extract_custom_type_name_from_abi_property(&p, Some(CustomType::Enum));
         assert_eq!(result.unwrap(), "bar");
     }
 

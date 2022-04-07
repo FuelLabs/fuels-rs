@@ -1,3 +1,4 @@
+use crate::constants::{ENUM_KEYWORD, STRUCT_KEYWORD};
 use crate::Token;
 use crate::{abi_decoder::ABIDecoder, abi_encoder::ABIEncoder, errors::Error, ParamType};
 use fuels_types::{JsonABI, Property};
@@ -7,6 +8,7 @@ use serde_json;
 use std::convert::TryInto;
 use std::str;
 use std::str::FromStr;
+use sway_types::{JsonABI, Property};
 
 pub struct ABIParser {
     fn_selector: Option<Vec<u8>>,
@@ -522,7 +524,8 @@ pub fn parse_param(param: &Property) -> Result<ParamType, Error> {
         // Simple case (primitive types, no arrays, including string)
         Ok(param_type) => Ok(param_type),
         Err(_) => {
-            if param.type_field.contains("struct") || param.type_field.contains("enum") {
+            if param.type_field.contains(STRUCT_KEYWORD) || param.type_field.contains(ENUM_KEYWORD)
+            {
                 return parse_custom_type_param(param);
             }
             if param.type_field.contains('[') && param.type_field.contains(']') {
