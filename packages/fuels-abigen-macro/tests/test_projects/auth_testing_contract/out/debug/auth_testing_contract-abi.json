@@ -16,30 +16,6 @@
     "inputs": [
       {
         "name": "expected_id",
-        "type": "struct ContractId",
-        "components": [
-          {
-            "name": "value",
-            "type": "b256",
-            "components": null
-          }
-        ]
-      }
-    ],
-    "name": "returns_msg_sender",
-    "outputs": [
-      {
-        "name": "",
-        "type": "bool",
-        "components": null
-      }
-    ]
-  },
-  {
-    "type": "function",
-    "inputs": [
-      {
-        "name": "expected_id",
         "type": "struct Address",
         "components": [
           {
@@ -50,7 +26,7 @@
         ]
       }
     ],
-    "name": "returns_msg_sender_address",
+    "name": "check_msg_sender",
     "outputs": [
       {
         "name": "",

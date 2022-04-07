@@ -1484,8 +1484,9 @@ async fn test_auth_msg_sender_from_sdk() {
 
     let auth_instance = AuthContract::new(id.to_string(), provider.clone(), wallet.clone());
 
+    // Contract returns true if `msg_sender()` matches `wallet.address()`.
     let result = auth_instance
-        .returns_msg_sender_address(wallet.address())
+        .check_msg_sender(wallet.address())
         .call()
         .await
         .unwrap();
