@@ -1,16 +1,12 @@
 [[package]]
-name = 'capture-revert-transaction-error'
-dependencies = [
-    'core git+http://github.com/FuelLabs/sway-lib-core?reference=master#c331ed20ebc9d646acec6b8ee8f408627ce3b573',
-    'std git+http://github.com/FuelLabs/sway-lib-std?reference=master#84143e90c6ba83ea4825f7bb696b268eb28ff6b8',
-]
+name = 'capture_revert_transaction_error'
+dependencies = ['std git+https://github.com/FuelLabs/sway?branch=master#df39c3913602558a38bed5ddb20dae11b38227fa']
 
 [[package]]
 name = 'core'
-source = 'git+http://github.com/FuelLabs/sway-lib-core?reference=master#c331ed20ebc9d646acec6b8ee8f408627ce3b573'
 dependencies = []
 
 [[package]]
 name = 'std'
-source = 'git+http://github.com/FuelLabs/sway-lib-std?reference=master#84143e90c6ba83ea4825f7bb696b268eb28ff6b8'
-dependencies = ['core git+http://github.com/FuelLabs/sway-lib-core?reference=master#c331ed20ebc9d646acec6b8ee8f408627ce3b573']
+source = 'git+https://github.com/FuelLabs/sway?branch=master#df39c3913602558a38bed5ddb20dae11b38227fa'
+dependencies = ['core']

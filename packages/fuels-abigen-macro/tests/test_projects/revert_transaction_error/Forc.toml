@@ -1,9 +1,8 @@
 [project]
-authors = ["FuelLabs"]
+authors = ["Fuel Labs <contact@fuel.sh>"]
 entry = "main.sw"
 license = "Apache-2.0"
-name = "capture-revert-transaction-error"
+name = "capture_revert_transaction_error"
 
 [dependencies]
-core = { git = "http://github.com/FuelLabs/sway-lib-core" }
-std = { git = "http://github.com/FuelLabs/sway-lib-std" }
+std = { git = "https://github.com/FuelLabs/sway", branch = "master" }

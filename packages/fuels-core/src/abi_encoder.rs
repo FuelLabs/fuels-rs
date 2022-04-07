@@ -55,6 +55,9 @@ impl ABIEncoder {
                     // Encode the Token within the enum
                     self.encode(&[arg_enum.1.to_owned()])?;
                 }
+                Token::Tuple(arg_tuple) => {
+                    self.encode(arg_tuple)?;
+                }
             };
         }
         Ok(self.encoded_args.clone())

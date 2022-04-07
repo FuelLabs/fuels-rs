@@ -1,0 +1,19 @@
+[[package]]
+name = 'core'
+dependencies = []
+
+[[package]]
+name = 'foo_contract'
+dependencies = [
+    '(foo) foo_contract_abi',
+    'std git+https://github.com/FuelLabs/sway?branch=master#df39c3913602558a38bed5ddb20dae11b38227fa',
+]
+
+[[package]]
+name = 'foo_contract_abi'
+dependencies = ['std git+https://github.com/FuelLabs/sway?branch=master#df39c3913602558a38bed5ddb20dae11b38227fa']
+
+[[package]]
+name = 'std'
+source = 'git+https://github.com/FuelLabs/sway?branch=master#df39c3913602558a38bed5ddb20dae11b38227fa'
+dependencies = ['core']

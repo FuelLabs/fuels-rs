@@ -1,0 +1,12 @@
+[[package]]
+name = 'core'
+dependencies = []
+
+[[package]]
+name = 'std'
+source = 'git+https://github.com/FuelLabs/sway?branch=master#df39c3913602558a38bed5ddb20dae11b38227fa'
+dependencies = ['core']
+
+[[package]]
+name = 'token_ops'
+dependencies = ['std git+https://github.com/FuelLabs/sway?branch=master#df39c3913602558a38bed5ddb20dae11b38227fa']
