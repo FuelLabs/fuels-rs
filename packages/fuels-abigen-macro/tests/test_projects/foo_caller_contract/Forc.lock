@@ -3,7 +3,7 @@ name = 'core'
 dependencies = []
 
 [[package]]
-name = 'foo-caller-contract'
+name = 'foo_caller_contract'
 dependencies = [
     '(foo) foo_contract_abi',
     'std git+https://github.com/FuelLabs/sway?branch=master#df39c3913602558a38bed5ddb20dae11b38227fa',
