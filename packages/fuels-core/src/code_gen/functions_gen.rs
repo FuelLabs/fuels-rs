@@ -370,7 +370,7 @@ pub fn hello_world(
         [0, 0, 0, 0, 118, 178, 90, 36],
         &[
             ParamType::Struct(vec![ParamType::Bool, ParamType::U64]),
-            ParamType::Enum([Bool , U64])] ,
+            ParamType::Enum(vec![ParamType::Bool , ParamType::U64])] , 
             &[the_only_allowed_input . into_token () ,]
     )
     .expect("method not found (this should never happen)")
