@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::code_gen::bindings::ContractBindings;
 use crate::code_gen::custom_types_gen::{
-    expand_internal_enum, expand_internal_struct, extract_custom_type_name_from_abi_property,
+    expand_custom_enum, expand_custom_struct, extract_custom_type_name_from_abi_property,
 };
 use crate::code_gen::functions_gen::expand_function;
 use crate::errors::Error;
@@ -36,7 +36,7 @@ pub struct Abigen {
     no_std: bool,
 }
 
-fn is_custom_type(p: &Property) -> bool {
+pub fn is_custom_type(p: &Property) -> bool {
     p.type_field.contains(ENUM_KEYWORD) || p.type_field.contains(STRUCT_KEYWORD)
 }
 
@@ -196,7 +196,7 @@ impl Abigen {
             }
 
             if !seen_struct.contains(&prop.type_field.as_str()) {
-                structs.extend(expand_internal_struct(prop)?);
+                structs.extend(expand_custom_struct(prop)?);
                 seen_struct.push(&prop.type_field);
             }
         }
@@ -208,7 +208,7 @@ impl Abigen {
         let mut enums = TokenStream::new();
 
         for (name, prop) in &self.custom_enums {
-            enums.extend(expand_internal_enum(name, prop)?);
+            enums.extend(expand_custom_enum(name, prop)?);
         }
 
         Ok(enums)

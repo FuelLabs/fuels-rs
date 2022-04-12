@@ -20,7 +20,7 @@ pub enum CustomType {
 
 /// Transforms a custom type defined in [`Property`] into a [`TokenStream`]
 /// that represents that same type as a Rust-native struct.
-pub fn expand_internal_struct(prop: &Property) -> Result<TokenStream, Error> {
+pub fn expand_custom_struct(prop: &Property) -> Result<TokenStream, Error> {
     let components = prop.components.as_ref().unwrap();
     let mut fields = Vec::with_capacity(components.len());
 
@@ -166,7 +166,7 @@ pub fn expand_internal_struct(prop: &Property) -> Result<TokenStream, Error> {
 
 /// Transforms a custom enum defined in [`Property`] into a [`TokenStream`]
 /// that represents that same type as a Rust-native enum.
-pub fn expand_internal_enum(name: &str, prop: &Property) -> Result<TokenStream, Error> {
+pub fn expand_custom_enum(name: &str, prop: &Property) -> Result<TokenStream, Error> {
     let components = prop.components.as_ref().unwrap();
     let mut fields = Vec::with_capacity(components.len());
 
@@ -261,7 +261,7 @@ pub fn extract_custom_type_name_from_abi_property(
 // To generate the expected examples, output of the functions were taken
 // with code @9ca376, and formatted in-IDE using rustfmt. It should be noted that
 // rustfmt added an extra `,` after the last struct/enum field, which is not added
-// by the `expand_internal_*` functions, and so was removed from the expected string.
+// by the `expand_custom_*` functions, and so was removed from the expected string.
 // TODO(vnepveu): append extra `,` to last enum/struct field so it is aligned with rustfmt
 #[cfg(test)]
 mod tests {
@@ -319,7 +319,7 @@ mod tests {
     }
 
     #[test]
-    fn test_expand_internal_enum() {
+    fn test_expand_custom_enum() {
         let p = Property {
             name: String::from("unused"),
             type_field: String::from("unused"),
@@ -336,7 +336,7 @@ mod tests {
                 },
             ]),
         };
-        let result = expand_internal_enum("matcha_tea", &p);
+        let result = expand_custom_enum("matcha_tea", &p);
         let expected = TokenStream::from_str(
             r#"
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -363,7 +363,7 @@ impl MatchaTea {
     #[test]
     #[should_panic(expected = "not implemented")]
     // Enum cannot contain struct at the moment
-    fn test_expand_internal_enum_with_struct() {
+    fn test_expand_custom_enum_with_struct() {
         let p = Property {
             name: String::from("unused"),
             type_field: String::from("unused"),
@@ -377,13 +377,13 @@ impl MatchaTea {
                 }]),
             }]),
         };
-        let _ = expand_internal_enum("dragon", &p);
+        let _ = expand_custom_enum("dragon", &p);
     }
 
     #[test]
     #[should_panic(expected = "not implemented")]
     // Enum cannot contain enum at the moment
-    fn test_expand_internal_enum_with_enum() {
+    fn test_expand_custom_enum_with_enum() {
         let p = Property {
             name: String::from("unused"),
             type_field: String::from("unused"),
@@ -397,11 +397,11 @@ impl MatchaTea {
                 }]),
             }]),
         };
-        let _ = expand_internal_enum("dragon", &p);
+        let _ = expand_custom_enum("dragon", &p);
     }
 
     #[test]
-    fn test_expand_internal_struct() {
+    fn test_expand_custom_struct() {
         let p = Property {
             name: String::from("unused"),
             type_field: String::from("struct cocktail"),
@@ -467,12 +467,12 @@ impl fuels_core::Detokenize for Cocktail {
         "#,
         );
         let expected = expected.unwrap().to_string();
-        let result = expand_internal_struct(&p);
+        let result = expand_custom_struct(&p);
         assert_eq!(result.unwrap().to_string(), expected);
     }
 
     #[test]
-    fn test_expand_internal_struct_with_struct() {
+    fn test_expand_custom_struct_with_struct() {
         let p = Property {
             name: String::from("unused"),
             type_field: String::from("struct cocktail"),
@@ -541,13 +541,13 @@ impl fuels_core::Detokenize for Cocktail {
         "#,
         );
         let expected = expected.unwrap().to_string();
-        let result = expand_internal_struct(&p);
+        let result = expand_custom_struct(&p);
         assert_eq!(result.unwrap().to_string(), expected);
     }
 
     #[test]
     #[should_panic(expected = "not implemented")]
-    fn test_expand_internal_struct_with_enum() {
+    fn test_expand_custom_struct_with_enum() {
         let p = Property {
             name: String::from("unused"),
             type_field: String::from("struct cocktail"),
@@ -575,6 +575,6 @@ impl fuels_core::Detokenize for Cocktail {
                 },
             ]),
         };
-        let _ = expand_internal_struct(&p);
+        let _ = expand_custom_struct(&p);
     }
 }
