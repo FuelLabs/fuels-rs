@@ -35,6 +35,8 @@ pub fn expand_custom_struct(prop: &Property) -> Result<TokenStream, Error> {
     // `MyStruct::new_from_tokens()`.
     let mut args = Vec::new();
 
+    let mut contains_enums = false;
+
     // For each component, we create two TokenStreams:
     // 1. A struct field declaration like `pub #field_name: #component_name`
     // 2. The creation of a token and its insertion into a vector of Tokens.
@@ -62,6 +64,7 @@ pub fn expand_custom_struct(prop: &Property) -> Result<TokenStream, Error> {
             // The struct contains a nested enum
             ParamType::Enum(_params) => {
                 // TODO: Support enums inside structs
+                contains_enums = true;
                 unimplemented!()
             }
             _ => {
@@ -114,12 +117,17 @@ pub fn expand_custom_struct(prop: &Property) -> Result<TokenStream, Error> {
         &extract_custom_type_name_from_abi_property(prop, Some(CustomType::Struct))?
             .to_class_case(),
     );
+    // If the struct contains an `Enum` type, don't derive the `Default` trait
+    let derive_statement = if contains_enums {
+        quote! {#[derive(Clone, Debug, Eq, PartialEq)]}
+    } else {
+        quote! {#[derive(Clone, Debug, Default, Eq, PartialEq)]}
+    };
 
-    // Actual creation of the struct, using the inner TokenStreams from above
-    // to produce the TokenStream that represents the whole struct + methods
-    // declaration.
+    // Actual creation of the struct, using the inner TokenStreams from above to produce the
+    // TokenStream that represents the whole struct + methods declaration.
     Ok(quote! {
-        #[derive(Clone, Debug, Default, Eq, PartialEq)]
+        #derive_statement
         pub struct #name {
             #( #fields ),*
         }
