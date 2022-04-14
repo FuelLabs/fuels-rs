@@ -1,0 +1,8 @@
+[project]
+authors = ["lulwat"]
+entry = "main.sw"
+license = "Apache-2.0"
+name = "struct_inside_enum"
+
+[dependencies]
+std = { git = "https://github.com/FuelLabs/sway-lib-std" }
