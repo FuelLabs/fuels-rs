@@ -230,7 +230,7 @@ impl Abigen {
     /// Reads the parsed ABI and returns the custom types (either `struct` or `enum`) found in it.
     fn get_custom_types(abi: &JsonABI) -> HashMap<String, Property> {
         let mut custom_types = HashMap::new();
-        let mut inner_custom_types: Vec<Property> = Vec::new();
+        let mut nested_custom_types: Vec<Property> = Vec::new();
 
         let all_properties = Abigen::get_all_properties(abi);
 
@@ -245,20 +245,21 @@ impl Abigen {
 
                 // Find inner {structs, enums} in case of nested custom types
                 for inner_component in prop.components.as_ref().unwrap() {
-                    inner_custom_types.extend(Abigen::get_inner_custom_properties(inner_component));
+                    nested_custom_types
+                        .extend(Abigen::get_nested_custom_properties(inner_component));
                 }
             }
         }
 
-        for inner_custom_type in inner_custom_types {
-            if is_custom_type(&inner_custom_type) {
+        for nested_custom_type in nested_custom_types {
+            if is_custom_type(&nested_custom_type) {
                 // A {struct, enum} can contain another {struct, enum}
-                let inner_custom_type_name =
-                    extract_custom_type_name_from_abi_property(&inner_custom_type, None)
+                let nested_custom_type_name =
+                    extract_custom_type_name_from_abi_property(&nested_custom_type, None)
                         .expect("failed to extract nested custom type name");
                 custom_types
-                    .entry(inner_custom_type_name)
-                    .or_insert(inner_custom_type);
+                    .entry(nested_custom_type_name)
+                    .or_insert(nested_custom_type);
             }
         }
 
@@ -266,14 +267,14 @@ impl Abigen {
     }
 
     // Recursively gets inner properties defined in nested structs or nested enums
-    fn get_inner_custom_properties(prop: &Property) -> Vec<Property> {
+    fn get_nested_custom_properties(prop: &Property) -> Vec<Property> {
         let mut props = Vec::new();
 
         if is_custom_type(prop) {
             props.push(prop.clone());
 
             for inner_prop in prop.components.as_ref().unwrap() {
-                let inner = Abigen::get_inner_custom_properties(inner_prop);
+                let inner = Abigen::get_nested_custom_properties(inner_prop);
                 props.extend(inner);
             }
         }
@@ -645,10 +646,10 @@ mod tests {
         assert_eq!(contract.custom_structs.len(), 1);
         assert_eq!(contract.custom_enums.len(), 1);
     }
-}
-#[test]
-fn test_abigen_enum_inside_struct() {
-    let contract = r#"
+
+    #[test]
+    fn test_get_custom_types_nested_structs_and_enums() {
+        let contract = r#"
 [
   {
     "type": "function",
@@ -663,8 +664,30 @@ fn test_abigen_enum_inside_struct() {
             "components": [
               {
                 "name": "Cosmopolitan",
-                "type": "bool",
-                "components": null
+                "type": "struct Recipe",
+                "components": [
+                      {
+                        "name": "vodka",
+                        "type": "enum PolishAlcohol",
+                        "components": [
+                              {
+                                "name": "potatoes",
+                                "type": "u64",
+                                "components": null
+                              },
+                              {
+                                "name": "alcohol",
+                                "type": "u64",
+                                "components": null
+                              }
+                        ]
+                      },
+                      {
+                        "name": "cramberry",
+                        "type": "u64",
+                        "components": null
+                      }
+                ]
               },
               {
                 "name": "Mojito",
@@ -687,7 +710,12 @@ fn test_abigen_enum_inside_struct() {
 ]
         "#;
 
-    let contract = Abigen::new("custom", contract).unwrap();
-    assert_eq!(contract.custom_structs.len(), 1);
-    assert_eq!(contract.custom_enums.len(), 1);
+        let contract = Abigen::new("custom", contract).unwrap();
+        assert!(contract.custom_structs.contains_key("Cocktail"));
+        assert!(contract.custom_structs.contains_key("Recipe"));
+        assert_eq!(contract.custom_structs.len(), 2);
+        assert!(contract.custom_enums.contains_key("Shaker"));
+        assert!(contract.custom_enums.contains_key("PolishAlcohol"));
+        assert_eq!(contract.custom_enums.len(), 2);
+    }
 }
