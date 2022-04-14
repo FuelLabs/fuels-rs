@@ -1,3 +1,5 @@
+#![allow(unused_imports)]
+#![allow(unused_variables)]
 use crate::errors::Error;
 use crate::json_abi::parse_param;
 use crate::types::expand_type;
@@ -63,9 +65,15 @@ pub fn expand_custom_struct(prop: &Property) -> Result<TokenStream, Error> {
             }
             // The struct contains a nested enum
             ParamType::Enum(_params) => {
-                // TODO: Support enums inside structs
                 contains_enums = true;
-                unimplemented!()
+                let enum_name = ident(
+                    &extract_custom_type_name_from_abi_property(component, Some(CustomType::Enum))?
+                        .to_class_case(),
+                );
+                fields.push(quote! {pub #field_name: #enum_name});
+                args.push(quote! {#field_name: #enum_name::new_from_tokens(&tokens[#idx..])});
+                struct_fields_tokens.push(quote! { tokens.push(self.#field_name.into_token()) });
+                param_types.push(quote! { types.push(ParamType::Enum(#enum_name::param_types())) });
             }
             _ => {
                 let ty = expand_type(&param_type)?;
@@ -178,11 +186,15 @@ pub fn expand_custom_enum(name: &str, prop: &Property) -> Result<TokenStream, Er
     let components = prop.components.as_ref().unwrap();
     let mut fields = Vec::with_capacity(components.len());
 
-    // Holds a TokenStream representing the process of
-    // creating an enum [`Token`].
+    // Holds a TokenStream representing the process of creating an enum [`Token`].
     let mut enum_selector_builder = Vec::new();
 
+    // Holds the TokenStream representing the process of creating a Self enum from each `Token`.
+    // Used when creating a struct from tokens with `MyEnum::new_from_tokens()`.
+    // let mut args: Vec<TokenStream> = Vec::new();
+
     let name = ident(&name.to_class_case());
+    let mut param_types = Vec::new();
 
     for (discriminant, component) in components.iter().enumerate() {
         let field_name = ident(&component.name.to_class_case());
@@ -209,7 +221,9 @@ pub fn expand_custom_enum(name: &str, prop: &Property) -> Result<TokenStream, Er
                 // Token creation
                 enum_selector_builder.push(quote! {
                     #name::#field_name(value) => (#discriminant as u8, Token::#param_type_string(value))
-                })
+                });
+                param_types.push(quote! { types.push(ParamType::#param_type_string) });
+                // args.push(quote! {#ty::new_from_tokens(Token::Enum(vec![]))});
             }
         }
     }
@@ -224,6 +238,12 @@ pub fn expand_custom_enum(name: &str, prop: &Property) -> Result<TokenStream, Er
         }
 
         impl #name {
+            pub fn param_types() -> Vec<ParamType> {
+                let mut types = Vec::new();
+                #( #param_types; )*
+                types
+            }
+
             pub fn into_token(self) -> Token {
 
                 let (dis, tok) = match self {
@@ -233,6 +253,28 @@ pub fn expand_custom_enum(name: &str, prop: &Property) -> Result<TokenStream, Er
                 let selector = (dis, tok);
                 Token::Enum(Box::new(selector))
             }
+
+            pub fn new_from_tokens(tokens: &[Token]) -> Self {
+                match tokens[0].clone() {
+                    Token::Enum(content) => {
+                        if let enum_selector = *content {
+                            return match enum_selector {
+                                (0, token) => Shaker::Cosmopolitan(<u64>::from_token(token).expect
+                                    ("0")),
+                                (1, token) => Shaker::Mojito(<u64>::from_token(token).expect
+                                    ("1")),
+                                // (0, token) => Shaker::Cosmopolitan(9999),
+                                // (1, token) => Shaker::Mojito(7777),
+                                (_, token) => panic!("not the right discriminant"),
+                            }
+                        } else {
+                            panic!("This should not happen bruh");
+                        }
+                    },
+                    _ => panic!("This should contain an `Enum` token"),
+                }
+            }
+
         }
     })
 }
@@ -554,8 +596,7 @@ impl fuels_core::Detokenize for Cocktail {
     }
 
     #[test]
-    #[should_panic(expected = "not implemented")]
-    fn test_expand_custom_struct_with_enum() {
+    fn test_expand_internal_struct_with_enum() {
         let p = Property {
             name: String::from("unused"),
             type_field: String::from("struct cocktail"),
@@ -583,6 +624,7 @@ impl fuels_core::Detokenize for Cocktail {
                 },
             ]),
         };
-        let _ = expand_custom_struct(&p);
+        let result = expand_custom_struct(&p);
+        println!("{}", result.unwrap().to_string());
     }
 }

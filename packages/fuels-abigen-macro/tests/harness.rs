@@ -1493,3 +1493,36 @@ async fn test_auth_msg_sender_from_sdk() {
 
     assert!(result.value);
 }
+
+#[tokio::test]
+async fn workflow_enum_inside_struct() {
+    let mut rng = StdRng::seed_from_u64(2322u64);
+    abigen!(
+        MyContract,
+        "packages/fuels-abigen-macro/tests/test_projects/enum_inside_struct/out/debug\
+        /enum_inside_struct-abi.json"
+    );
+    // Build the contract
+    let salt: [u8; 32] = rng.gen();
+    let salt = Salt::from(salt);
+    let compiled = Contract::load_sway_contract(
+        "tests/test_projects/enum_inside_struct/out/debug/enum_inside_struct.bin",
+        salt,
+    )
+    .unwrap();
+    let (provider, wallet) = setup_test_provider_and_wallet().await;
+    let id = Contract::deploy(&compiled, &provider, &wallet, TxParameters::default())
+        .await
+        .unwrap();
+    let instance = MyContract::new(id.to_string(), provider.clone(), wallet.clone());
+    let result = instance
+        .give_and_return_enum_inside_struct(11)
+        .call()
+        .await
+        .unwrap();
+    let expected = Cocktail {
+        the_thing_you_mix_in: Shaker::Mojito(222),
+        glass: 333,
+    };
+    assert_eq!(result.value, expected);
+}
