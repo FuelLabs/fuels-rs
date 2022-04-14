@@ -23,6 +23,9 @@ pub enum CustomType {
 /// Transforms a custom type defined in [`Property`] into a [`TokenStream`]
 /// that represents that same type as a Rust-native struct.
 pub fn expand_custom_struct(prop: &Property) -> Result<TokenStream, Error> {
+    let struct_name = &extract_custom_type_name_from_abi_property(prop, Some(CustomType::Struct))?
+        .to_class_case();
+    let struct_ident = ident(struct_name);
     let components = prop.components.as_ref().unwrap();
     let mut fields = Vec::with_capacity(components.len());
 
@@ -49,7 +52,7 @@ pub fn expand_custom_struct(prop: &Property) -> Result<TokenStream, Error> {
         match param_type {
             // Case where a struct takes another struct
             ParamType::Struct(_params) => {
-                let struct_name = ident(
+                let inner_struct_ident = ident(
                     &extract_custom_type_name_from_abi_property(
                         component,
                         Some(CustomType::Struct),
@@ -57,11 +60,14 @@ pub fn expand_custom_struct(prop: &Property) -> Result<TokenStream, Error> {
                     .to_class_case(),
                 );
 
-                fields.push(quote! {pub #field_name: #struct_name});
-                args.push(quote! {#field_name: #struct_name::new_from_tokens(&tokens[#idx..])});
+                fields.push(quote! {pub #field_name: #inner_struct_ident});
+                args.push(
+                    quote! {#field_name: #inner_struct_ident::new_from_tokens(&tokens[#idx..])},
+                );
                 struct_fields_tokens.push(quote! { tokens.push(self.#field_name.into_token()) });
-                param_types
-                    .push(quote! { types.push(ParamType::Struct(#struct_name::param_types())) });
+                param_types.push(
+                    quote! { types.push(ParamType::Struct(#inner_struct_ident::param_types())) },
+                );
             }
             // The struct contains a nested enum
             ParamType::Enum(_params) => {
@@ -98,8 +104,13 @@ pub fn expand_custom_struct(prop: &Property) -> Result<TokenStream, Error> {
                 fields.push(quote! { pub #field_name: #ty});
 
                 // `new_from_token()` instantiations
+                let expected_str = format!(
+                    "Failed to run `new_from_tokens()` for custom {} struct \
+                (tokens have wrong order and/or wrong types)",
+                    struct_name
+                );
                 args.push(quote! {
-                    #field_name: <#ty>::from_token(tokens[#idx].clone()).expect("Failed to run `new_from_tokens()` for custom struct, make sure to pass tokens in the right order and right types" )
+                    #field_name: <#ty>::from_token(tokens[#idx].clone()).expect(#expected_str)
                 });
 
                 // Token creation and insertion
@@ -121,10 +132,6 @@ pub fn expand_custom_struct(prop: &Property) -> Result<TokenStream, Error> {
         }
     }
 
-    let name = ident(
-        &extract_custom_type_name_from_abi_property(prop, Some(CustomType::Struct))?
-            .to_class_case(),
-    );
     // If the struct contains an `Enum` type, don't derive the `Default` trait
     let derive_statement = if contains_enums {
         quote! {#[derive(Clone, Debug, Eq, PartialEq)]}
@@ -136,11 +143,11 @@ pub fn expand_custom_struct(prop: &Property) -> Result<TokenStream, Error> {
     // TokenStream that represents the whole struct + methods declaration.
     Ok(quote! {
         #derive_statement
-        pub struct #name {
+        pub struct #struct_ident {
             #( #fields ),*
         }
 
-        impl #name {
+        impl #struct_ident {
             pub fn param_types() -> Vec<ParamType> {
                 let mut types = Vec::new();
                 #( #param_types; )*
@@ -162,7 +169,7 @@ pub fn expand_custom_struct(prop: &Property) -> Result<TokenStream, Error> {
 
         }
 
-        impl fuels_core::Detokenize for #name {
+        impl fuels_core::Detokenize for #struct_ident {
             fn from_tokens(mut tokens: Vec<Token>) -> Result<Self, fuels_core::InvalidOutputType> {
                 let token = match tokens.len() {
                     0 => Token::Struct(vec![]),
@@ -171,7 +178,7 @@ pub fn expand_custom_struct(prop: &Property) -> Result<TokenStream, Error> {
                 };
 
                 if let Token::Struct(tokens) = token.clone() {
-                    Ok(#name::new_from_tokens(&tokens))
+                    Ok(#struct_ident::new_from_tokens(&tokens))
                 } else {
                     Err(fuels_core::InvalidOutputType("Struct token doesn't contain inner tokens. This shouldn't happen.".to_string()))
                 }
@@ -184,20 +191,22 @@ pub fn expand_custom_struct(prop: &Property) -> Result<TokenStream, Error> {
 /// that represents that same type as a Rust-native enum.
 pub fn expand_custom_enum(name: &str, prop: &Property) -> Result<TokenStream, Error> {
     let components = prop.components.as_ref().unwrap();
-    let mut fields = Vec::with_capacity(components.len());
+    let mut enum_variants = Vec::with_capacity(components.len());
 
     // Holds a TokenStream representing the process of creating an enum [`Token`].
     let mut enum_selector_builder = Vec::new();
 
     // Holds the TokenStream representing the process of creating a Self enum from each `Token`.
     // Used when creating a struct from tokens with `MyEnum::new_from_tokens()`.
-    // let mut args: Vec<TokenStream> = Vec::new();
+    let mut args = Vec::new();
 
-    let name = ident(&name.to_class_case());
+    let enum_name = String::from(name.clone().to_class_case());
+    let enum_identifier = ident(&enum_name);
     let mut param_types = Vec::new();
 
     for (discriminant, component) in components.iter().enumerate() {
-        let field_name = ident(&component.name.to_class_case());
+        let variant_name = ident(&component.name.to_class_case());
+        let dis = discriminant as u8;
 
         let param_type = parse_param(component)?;
         match param_type {
@@ -216,14 +225,18 @@ pub fn expand_custom_enum(name: &str, prop: &Property) -> Result<TokenStream, Er
                 let param_type_string = ident(&param_type.to_string());
 
                 // Enum variant declaration
-                fields.push(quote! { #field_name(#ty)});
+                enum_variants.push(quote! { #variant_name(#ty)});
 
                 // Token creation
                 enum_selector_builder.push(quote! {
-                    #name::#field_name(value) => (#discriminant as u8, Token::#param_type_string(value))
+                    #enum_identifier::#variant_name(value) => (#dis, Token::#param_type_string(value))
                 });
                 param_types.push(quote! { types.push(ParamType::#param_type_string) });
-                // args.push(quote! {#ty::new_from_tokens(Token::Enum(vec![]))});
+                args.push(
+                    quote! {(#dis, token) => #enum_identifier::#variant_name(<#ty>::from_tokens(vec![token])
+                    .expect(&format!("Failed to run `new_from_tokens` for custom {} enum type",
+                            #enum_name))),},
+                );
             }
         }
     }
@@ -233,11 +246,11 @@ pub fn expand_custom_enum(name: &str, prop: &Property) -> Result<TokenStream, Er
     // declaration.
     Ok(quote! {
         #[derive(Clone, Debug, Eq, PartialEq)]
-        pub enum #name {
-            #( #fields ),*
+        pub enum #enum_identifier {
+            #( #enum_variants ),*
         }
 
-        impl #name {
+        impl #enum_identifier {
             pub fn param_types() -> Vec<ParamType> {
                 let mut types = Vec::new();
                 #( #param_types; )*
@@ -255,23 +268,20 @@ pub fn expand_custom_enum(name: &str, prop: &Property) -> Result<TokenStream, Er
             }
 
             pub fn new_from_tokens(tokens: &[Token]) -> Self {
+                // I don't currently understand why but inside `tokens` we receive tokens that are
+                // *not* enum tokens, but are part of the containing struct, so we take the 1st one
                 match tokens[0].clone() {
                     Token::Enum(content) => {
                         if let enum_selector = *content {
                             return match enum_selector {
-                                (0, token) => Shaker::Cosmopolitan(<u64>::from_token(token).expect
-                                    ("0")),
-                                (1, token) => Shaker::Mojito(<u64>::from_token(token).expect
-                                    ("1")),
-                                // (0, token) => Shaker::Cosmopolitan(9999),
-                                // (1, token) => Shaker::Mojito(7777),
-                                (_, token) => panic!("not the right discriminant"),
-                            }
+                                #( #args )*
+                                (_, _) => panic!("Failed to match with discriminant selector {:?}", enum_selector)
+                            };
                         } else {
-                            panic!("This should not happen bruh");
+                            panic!("The EnumSelector `{:?}` didn't have a match", content);
                         }
-                    },
-                    _ => panic!("This should contain an `Enum` token"),
+                     },
+                    _ => panic!("This should contain an `Enum` token, found `{:?}`", tokens),
                 }
             }
 
@@ -395,13 +405,50 @@ pub enum MatchaTea {
     MoscowMule(bool)
 }
 impl MatchaTea {
+    pub fn param_types() -> Vec<ParamType> {
+        let mut types = Vec::new();
+        types.push(ParamType::U64);
+        types.push(ParamType::Bool);
+        types
+    }
     pub fn into_token(self) -> Token {
         let (dis, tok) = match self {
-            MatchaTea::LongIsland(value) => (0usize as u8, Token::U64(value)),
-            MatchaTea::MoscowMule(value) => (1usize as u8, Token::Bool(value)),
+            MatchaTea::LongIsland(value) => (0u8, Token::U64(value)),
+            MatchaTea::MoscowMule(value) => (1u8, Token::Bool(value)),
         };
         let selector = (dis, tok);
         Token::Enum(Box::new(selector))
+    }
+    pub fn new_from_tokens(tokens: &[Token]) -> Self {
+        match tokens[0].clone() {
+            Token::Enum(content) => {
+                if let enum_selector = *content {
+                    return match enum_selector {
+                        (0u8, token) => MatchaTea::LongIsland(
+                            <u64> ::from_tokens(vec![token])
+                                .expect(
+                                &format!("Failed to run `new_from_tokens` for custom {} enum type",
+                                "MatchaTea")
+                                )
+                        ),
+                        (1u8, token) => MatchaTea::MoscowMule(
+                            <bool> ::from_tokens(vec![token])
+                                .expect(
+                                &format!("Failed to run `new_from_tokens` for custom {} enum type",
+                                "MatchaTea")
+                                )
+                        ),
+                        (_, _) => panic!(
+                            "Failed to match with discriminant selector {:?}",
+                            enum_selector
+                        )
+                    };
+                } else {
+                    panic!("The EnumSelector `{:?}` didn't have a match", content);
+                }
+            },
+            _ => panic!("This should contain an `Enum` token, found `{:?}`", tokens),
+        }
     }
 }
 "#,
@@ -497,7 +544,8 @@ impl Cocktail {
         Token::Struct(tokens)
     }
     pub fn new_from_tokens(tokens: &[Token]) -> Self {
-        Self { long_island : < bool > :: from_token (tokens [0usize] . clone ()) . expect ("Failed to run `new_from_tokens()` for custom struct, make sure to pass tokens in the right order and right types") , cosmopolitan : < u64 > :: from_token (tokens [1usize] . clone ()) . expect ("Failed to run `new_from_tokens()` for custom struct, make sure to pass tokens in the right order and right types") , mojito : < u32 > :: from_token (tokens [2usize] . clone ()) . expect ("Failed to run `new_from_tokens()` for custom struct, make sure to pass tokens in the right order and right types") }
+        Self { 
+        long_island : < bool > :: from_token (tokens [0usize] . clone ()) . expect ("Failed to run `new_from_tokens()` for custom Cocktail struct (tokens have wrong order and/or wrong types)") , cosmopolitan : < u64 > :: from_token (tokens [1usize] . clone ()) . expect ("Failed to run `new_from_tokens()` for custom Cocktail struct (tokens have wrong order and/or wrong types)") , mojito : < u32 > :: from_token (tokens [2usize] . clone ()) . expect ("Failed to run `new_from_tokens()` for custom Cocktail struct (tokens have wrong order and/or wrong types)") }
     }
 }
 impl fuels_core::Detokenize for Cocktail {
@@ -571,7 +619,8 @@ impl Cocktail {
         Token::Struct(tokens)
     }
     pub fn new_from_tokens(tokens: &[Token]) -> Self {
-        Self { long_island : Shaker :: new_from_tokens (& tokens [0usize ..]) , mojito : < u32 > :: from_token (tokens [1usize] . clone ()) . expect ("Failed to run `new_from_tokens()` for custom struct, make sure to pass tokens in the right order and right types") }
+        Self { 
+        long_island : Shaker :: new_from_tokens (& tokens [0usize ..]) , mojito : < u32 > :: from_token (tokens [1usize] . clone ()) . expect ("Failed to run `new_from_tokens()` for custom Cocktail struct (tokens have wrong order and/or wrong types)") }
     }
 }
 impl fuels_core::Detokenize for Cocktail {
@@ -593,38 +642,5 @@ impl fuels_core::Detokenize for Cocktail {
         let expected = expected.unwrap().to_string();
         let result = expand_custom_struct(&p);
         assert_eq!(result.unwrap().to_string(), expected);
-    }
-
-    #[test]
-    fn test_expand_internal_struct_with_enum() {
-        let p = Property {
-            name: String::from("unused"),
-            type_field: String::from("struct cocktail"),
-            components: Some(vec![
-                Property {
-                    name: String::from("long_island"),
-                    type_field: String::from("enum shaker"),
-                    components: Some(vec![
-                        Property {
-                            name: String::from("cosmopolitan"),
-                            type_field: String::from("bool"),
-                            components: None,
-                        },
-                        Property {
-                            name: String::from("bimbap"),
-                            type_field: String::from("u64"),
-                            components: None,
-                        },
-                    ]),
-                },
-                Property {
-                    name: String::from("mojito"),
-                    type_field: String::from("u32"),
-                    components: None,
-                },
-            ]),
-        };
-        let result = expand_custom_struct(&p);
-        println!("{}", result.unwrap().to_string());
     }
 }
