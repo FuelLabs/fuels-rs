@@ -5,12 +5,12 @@
 
 use serde::{Deserialize, Serialize};
 
-/// Fuel/Sway ABI representation in JSON, originally specified here:
+/// Fuel ABI representation in JSON, originally specified here:
 ///
 /// https://github.com/FuelLabs/fuel-specs/blob/master/specs/protocol/abi.md
 ///
-/// This type is used by the compiler and the tooling around it convert an ABI representation into
-/// native Rust structs and vice-versa.
+/// This type may be used by compilers (e.g. Sway) and related tooling to convert an ABI
+/// representation into native Rust structs and vice-versa.
 pub type JsonABI = Vec<Function>;
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
