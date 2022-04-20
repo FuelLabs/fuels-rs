@@ -84,6 +84,7 @@ jobs:
         ./.github/workflows/scripts/verify_tag.sh ${{ github.ref_name }} packages/fuels-core/Cargo.toml
         ./.github/workflows/scripts/verify_tag.sh ${{ github.ref_name }} packages/fuels-abigen-macro/Cargo.toml
         ./.github/workflows/scripts/verify_tag.sh ${{ github.ref_name }} packages/fuels-rs/Cargo.toml
+        ./.github/workflows/scripts/verify_tag.sh ${{ github.ref_name }} packages/fuels-types/Cargo.toml
         ./.github/workflows/scripts/verify_tag.sh ${{ github.ref_name }} tools/fuels-abi-cli/Cargo.toml
     - name: Publish crate
       uses: katyo/publish-crates@v1
