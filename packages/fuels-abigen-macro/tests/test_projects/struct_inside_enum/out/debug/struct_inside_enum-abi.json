@@ -20,53 +20,20 @@
             "components": [
               {
                 "name": "ice",
-                "type": "enum Chemical",
-                "components": [
-                  {
-                    "name": "Oxygen",
-                    "type": "u64",
-                    "components": null
-                  },
-                  {
-                    "name": "Hydrogen",
-                    "type": "u64",
-                    "components": null
-                  }
-                ]
+                "type": "u8",
+                "components": null
               },
               {
                 "name": "sugar",
-                "type": "u64",
+                "type": "u16",
                 "components": null
               }
             ]
           },
           {
             "name": "Mojito",
-            "type": "struct Cocktail",
-            "components": [
-              {
-                "name": "alcohol",
-                "type": "enum Ethanol",
-                "components": [
-                  {
-                    "name": "Hydrogen",
-                    "type": "u64",
-                    "components": null
-                  },
-                  {
-                    "name": "Carbon",
-                    "type": "u64",
-                    "components": null
-                  }
-                ]
-              },
-              {
-                "name": "glass",
-                "type": "u64",
-                "components": null
-              }
-            ]
+            "type": "u32",
+            "components": null
           }
         ]
       }
