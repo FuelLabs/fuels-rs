@@ -209,17 +209,49 @@ pub fn expand_custom_enum(name: &str, prop: &Property) -> Result<TokenStream, Er
         let dis = discriminant as u8;
 
         let param_type = parse_param(component)?;
-        match param_type {
+        match param_type.clone() {
             // Case where an enum takes another enum
             ParamType::Enum(_params) => {
                 // TODO: Support nested enums
                 unimplemented!()
             }
-            // Elementary type
             ParamType::Struct(_params) => {
-                // TODO: Support structs inside enums
-                unimplemented!()
+                let ty = expand_type(&param_type)?;
+                let inner_struct_name = &extract_custom_type_name_from_abi_property(
+                    component,
+                    Some(CustomType::Struct),
+                )?
+                .to_class_case();
+                let inner_struct_ident = ident(inner_struct_name);
+                // Enum variant declaration
+                enum_variants.push(quote! { #variant_name(#inner_struct_ident)});
+
+                // Token creation
+                enum_selector_builder.push(quote! {
+                    #enum_identifier::#variant_name(inner_struct) =>
+                    (#dis, inner_struct.into_token())
+                });
+
+                // This is used for creating a new instance with `inner_struct::new_from_tokens()`
+                // based on tokens received
+                let expected_str = format!(
+                    "Failed to run `new_from_tokens` for custom {} enum type",
+                    enum_name
+                );
+                args.push(quote! {
+                    (#dis, token) => {
+                        let variant_content = <#inner_struct_ident>::from_tokens(vec![token]).expect(#expected_str);
+                    #enum_identifier::#variant_name(variant_content)
+                        }
+                });
+
+                // This is used to get the correct nested types of the enum
+                param_types.push(
+                    quote! { types.push(ParamType::Struct(#inner_struct_ident::param_types()))
+                    },
+                );
             }
+            // Elementary type
             _ => {
                 let ty = expand_type(&param_type)?;
                 let param_type_string = ident(&param_type.to_string());
@@ -458,8 +490,8 @@ impl MatchaTea {
     }
 
     #[test]
-    #[should_panic(expected = "not implemented")]
-    // Enum cannot contain struct at the moment
+    #[ignore]
+    // TODO: actually test the expansion
     fn test_expand_custom_enum_with_struct() {
         let p = Property {
             name: String::from("unused"),
