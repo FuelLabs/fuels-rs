@@ -6,9 +6,8 @@ use crate::json_abi::{parse_param, ABIParser};
 use crate::types::expand_type;
 use crate::utils::{ident, safe_ident};
 use crate::{ParamType, Selector};
+use fuels_types::{Function, Property};
 use inflector::Inflector;
-use sway_types::{Function, Property};
-
 use proc_macro2::{Literal, TokenStream};
 use quote::quote;
 use std::collections::HashMap;
@@ -371,7 +370,7 @@ pub fn hello_world(
         [0, 0, 0, 0, 118, 178, 90, 36],
         &[
             ParamType::Struct(vec![ParamType::Bool, ParamType::U64]),
-            ParamType::Enum([Bool , U64])] , 
+            ParamType::Enum([Bool , U64])] ,
             &[the_only_allowed_input . into_token () ,]
     )
     .expect("method not found (this should never happen)")

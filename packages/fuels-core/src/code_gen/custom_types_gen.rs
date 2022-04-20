@@ -3,11 +3,11 @@ use crate::json_abi::parse_param;
 use crate::types::expand_type;
 use crate::utils::ident;
 use crate::ParamType;
+use fuels_types::Property;
 use inflector::Inflector;
 use proc_macro2::TokenStream;
 use quote::quote;
 use strum_macros::ToString;
-use sway_types::Property;
 
 /// Functions used by the Abigen to expand custom types defined in an ABI spec.
 

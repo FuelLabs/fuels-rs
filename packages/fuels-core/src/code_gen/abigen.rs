@@ -9,7 +9,7 @@ use crate::errors::Error;
 use crate::json_abi::ABIParser;
 use crate::source::Source;
 use crate::utils::ident;
-use sway_types::{JsonABI, Property};
+use fuels_types::{JsonABI, Property};
 
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
@@ -432,7 +432,7 @@ mod tests {
                 ],
                 "name":"takes_nested_struct",
                 "outputs":[
-                
+
                 ]
             }
         ]
