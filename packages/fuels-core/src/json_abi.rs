@@ -8,7 +8,6 @@ use serde_json;
 use std::convert::TryInto;
 use std::str;
 use std::str::FromStr;
-use sway_types::{JsonABI, Property};
 
 pub struct ABIParser {
     fn_selector: Option<Vec<u8>>,

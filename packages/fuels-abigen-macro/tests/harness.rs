@@ -1527,32 +1527,30 @@ async fn workflow_enum_inside_struct() {
     assert_eq!(result.value, expected);
 }
 
-// --- This test cannot compile yet ---
-// #[tokio::test]
-// async fn workflow_struct_inside_enum() {
-//     let mut rng = StdRng::seed_from_u64(2322u64);
-//     abigen!(
-//         MyContract,
-//         "packages/fuels-abigen-macro/tests/test_projects/struct_inside_enum/out/debug\
-//         /struct_inside_enum-abi.json"
-//     );
-//     // Build the contract
-//     let salt: [u8; 32] = rng.gen();
-//     let salt = Salt::from(salt);
-//     let compiled = Contract::load_sway_contract(
-//         "tests/test_projects/struct_inside_enum/out/debug/struct_inside_enum.bin",
-//         salt,
-//     )
-//     .unwrap();
-//     let (provider, wallet) = setup_test_provider_and_wallet().await;
-//     let id = Contract::deploy(&compiled, &provider, &wallet, TxParameters::default())
-//         .await
-//         .unwrap();
-//     let instance = MyContract::new(id.to_string(), provider.clone(), wallet.clone());
-//     let result = instance
-//         .give_and_return_struct_inside_enum(11)
-//         .call()
-//         .await
-//         .unwrap();
-//     assert_eq!(result.value, expected);
-// }
+#[tokio::test]
+async fn workflow_struct_inside_enum() {
+    let mut rng = StdRng::seed_from_u64(2322u64);
+    abigen!(
+        MyContract,
+        "packages/fuels-abigen-macro/tests/test_projects/struct_inside_enum/out/debug/struct_inside_enum-abi.json"
+    );
+    // Build the contract
+    let salt: [u8; 32] = rng.gen();
+    let salt = Salt::from(salt);
+    let compiled = Contract::load_sway_contract(
+        "tests/test_projects/struct_inside_enum/out/debug/struct_inside_enum.bin",
+        salt,
+    )
+    .unwrap();
+    let (provider, wallet) = setup_test_provider_and_wallet().await;
+    let id = Contract::deploy(&compiled, &provider, &wallet, TxParameters::default())
+        .await
+        .unwrap();
+
+    let instance = MyContract::new(id.to_string(), provider.clone(), wallet.clone());
+    let result = instance.give_and_return_struct_inside_enum(11).call().await;
+    // The result inside this is an error, even though the `ContractCall` returned from
+    // `call_or_simulate` does *not* contain an error.
+    println!("{:?}", result);
+    // assert_eq!(result.value, expected);
+}
