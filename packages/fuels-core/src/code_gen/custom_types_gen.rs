@@ -300,14 +300,19 @@ pub fn expand_custom_enum(name: &str, prop: &Property) -> Result<TokenStream, Er
             }
 
             pub fn new_from_tokens(tokens: &[Token]) -> Self {
-                // I don't currently understand why but inside `tokens` we receive tokens that are
-                // *not* enum tokens, but are part of the containing struct, so we take the 1st one
+                if tokens.is_empty() {
+                    panic!("Empty tokens array received in `{}::new_from_tokens`",
+                        #enum_name);
+                }
+                // For some reason sometimes we receive arrays that have multiple elements, with the
+                // first token being a `Token::Enum`. We only consider that `Enum` token in that
+                // case
+                // TODO: figure out what is actually happening and if this is normal
                 match tokens[0].clone() {
                     Token::Enum(content) => {
                         if let enum_selector = *content {
                             return match enum_selector {
-                                #( #args )*
-                                (_, _) => panic!("Failed to match with discriminant selector {:?}", enum_selector)
+                                #( #args )*(_, _) => panic!("Failed to match with discriminant selector {:?}", enum_selector)
                             };
                         } else {
                             panic!("The EnumSelector `{:?}` didn't have a match", content);
@@ -452,6 +457,9 @@ impl MatchaTea {
         Token::Enum(Box::new(selector))
     }
     pub fn new_from_tokens(tokens: &[Token]) -> Self {
+        if tokens.is_empty() {
+            panic!("Empty tokens array received in `{}::new_from_tokens`", "MatchaTea");
+        }
         match tokens[0].clone() {
             Token::Enum(content) => {
                 if let enum_selector = *content {
@@ -490,23 +498,96 @@ impl MatchaTea {
     }
 
     #[test]
-    #[ignore]
-    // TODO: actually test the expansion
-    fn test_expand_custom_enum_with_struct() {
-        let p = Property {
-            name: String::from("unused"),
-            type_field: String::from("unused"),
-            components: Some(vec![Property {
-                name: String::from("long_island"),
-                type_field: String::from("struct cocktail"),
-                components: Some(vec![Property {
-                    name: String::from("cosmopolitan"),
-                    type_field: String::from("bool"),
+    fn test_expand_struct_inside_enum() {
+        let inner_struct = Property {
+            name: String::from("infrastructure"),
+            type_field: String::from("struct Building"),
+            components: Some(vec![
+                Property {
+                    name: String::from("rooms"),
+                    type_field: String::from("u8"),
                     components: None,
-                }]),
-            }]),
+                },
+                Property {
+                    name: String::from("floors"),
+                    type_field: String::from("u16"),
+                    components: None,
+                },
+            ]),
         };
-        let _ = expand_custom_enum("dragon", &p);
+        let enum_components = vec![
+            inner_struct,
+            Property {
+                name: "service".to_string(),
+                type_field: "u32".to_string(),
+                components: None,
+            },
+        ];
+        let p = Property {
+            name: String::from("CityComponent"),
+            type_field: String::from("enum CityComponent"),
+            components: Some(enum_components),
+        };
+        let result = expand_custom_enum("Amsterdam", &p).unwrap();
+
+        let expected = TokenStream::from_str(
+            r#"
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum Amsterdam {
+    Infrastructure(Building),
+    Service(u32)
+}
+impl Amsterdam {
+    pub fn param_types() -> Vec<ParamType> {
+        let mut types = Vec::new();
+        types.push(ParamType::Struct(Building::param_types()));
+        types.push(ParamType::U32);
+        types
+    }
+    pub fn into_token(self) -> Token {
+        let (dis, tok) = match self {
+            Amsterdam::Infrastructure(inner_struct) => (0u8, inner_struct.into_token()),
+            Amsterdam::Service(value) => (1u8, Token::U32(value)),
+        };
+        let selector = (dis, tok);
+        Token::Enum(Box::new(selector))
+    }
+    pub fn new_from_tokens(tokens: &[Token]) -> Self {
+        if tokens.is_empty() {
+            panic!("Empty tokens array received in `{}::new_from_tokens`", "Amsterdam");
+        }
+        match tokens[0].clone() {
+            Token::Enum(content) => {
+                if let enum_selector = *content {
+                    return match enum_selector {
+                        (0u8, token) => {
+                            let variant_content = <Building> ::from_tokens(vec![token]).expect(
+                                "Failed to run `new_from_tokens` for custom Amsterdam enum type"
+                            );
+                            Amsterdam::Infrastructure(variant_content)
+                        }
+                        (1u8, token) => 
+                            Amsterdam::Service(<u32> ::from_tokens(vec![token]).expect(&format!(
+                                "Failed to run `new_from_tokens` for custom {} enum type",
+                                "Amsterdam"
+                            ))),
+                        (_, _) => panic!(
+                            "Failed to match with discriminant selector {:?}",
+                            enum_selector
+                        )
+                    };
+                } else {
+                    panic!("The EnumSelector `{:?}` didn't have a match", content);
+                }
+            },
+            _ => panic!("This should contain an `Enum` token, found `{:?}`", tokens),
+        }
+    }
+}
+            "#,
+        )
+        .unwrap();
+        assert_eq!(result.to_string(), expected.to_string())
     }
 
     #[test]
