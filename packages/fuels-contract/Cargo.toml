@@ -28,7 +28,5 @@ serde_json = { version = "1.0.64", default-features = true }
 sha2 = "0.9.5"
 strum = "0.21"
 strum_macros = "0.21"
-sway-types = { version = "0.8" }
-sway-utils = { version = "0.8" }
 thiserror = { version = "1.0.26", default-features = false }
 tokio = "1.12"

@@ -2,7 +2,7 @@ use fuels_core::code_gen::abigen::Abigen;
 use fuels_core::json_abi::parse_param;
 use fuels_core::json_abi::ABIParser;
 use fuels_core::ParamType;
-use sway_types::Property;
+use fuels_types::Property;
 
 use std::fs;
 use std::path::PathBuf;
