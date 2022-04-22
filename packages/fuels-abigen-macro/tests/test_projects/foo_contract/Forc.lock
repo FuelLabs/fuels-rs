@@ -6,14 +6,14 @@ dependencies = []
 name = 'foo_contract'
 dependencies = [
     '(foo) foo_contract_abi',
-    'std git+https://github.com/FuelLabs/sway?branch=master#df39c3913602558a38bed5ddb20dae11b38227fa',
+    'std git+https://github.com/fuellabs/sway?tag=v0.10.3#e7676db6f4ebc7a3885f87514d16a703a99410d7',
 ]
 
 [[package]]
 name = 'foo_contract_abi'
-dependencies = ['std git+https://github.com/FuelLabs/sway?branch=master#df39c3913602558a38bed5ddb20dae11b38227fa']
+dependencies = ['std git+https://github.com/fuellabs/sway?tag=v0.10.3#e7676db6f4ebc7a3885f87514d16a703a99410d7']
 
 [[package]]
 name = 'std'
-source = 'git+https://github.com/FuelLabs/sway?branch=master#df39c3913602558a38bed5ddb20dae11b38227fa'
+source = 'git+https://github.com/fuellabs/sway?tag=v0.10.3#e7676db6f4ebc7a3885f87514d16a703a99410d7'
 dependencies = ['core']

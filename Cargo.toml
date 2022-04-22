@@ -5,5 +5,6 @@ members = [
     "packages/fuels-contract",
     "packages/fuels-core",
     "packages/fuels-signers",
+    "scripts/build-test-projects",
     "tools/fuels-abi-cli",
 ]
