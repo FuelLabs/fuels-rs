@@ -491,7 +491,9 @@ impl ABIParser {
     fn build_fn_selector_params(&self, param: &Property) -> String {
         let mut result: String = String::new();
 
-        if param.type_field.contains("struct ") || param.type_field.contains("enum ") {
+        if param.type_field.starts_with(STRUCT_KEYWORD)
+            || param.type_field.starts_with(ENUM_KEYWORD)
+        {
             // Custom type, need to break down inner fields
             // Will return `"s(field_1,field_2,...,field_n)"`.
             result.push_str("s(");
@@ -523,7 +525,8 @@ pub fn parse_param(param: &Property) -> Result<ParamType, Error> {
         // Simple case (primitive types, no arrays, including string)
         Ok(param_type) => Ok(param_type),
         Err(_) => {
-            if param.type_field.contains(STRUCT_KEYWORD) || param.type_field.contains(ENUM_KEYWORD)
+            if param.type_field.starts_with(STRUCT_KEYWORD)
+                || param.type_field.starts_with(ENUM_KEYWORD)
             {
                 return parse_custom_type_param(param);
             }
@@ -602,10 +605,10 @@ pub fn parse_custom_type_param(param: &Property) -> Result<ParamType, Error> {
             for component in c {
                 params.push(parse_param(&component)?)
             }
-            if param.type_field.contains(STRUCT_KEYWORD) {
+            if param.type_field.starts_with(STRUCT_KEYWORD) {
                 return Ok(ParamType::Struct(params));
             }
-            if param.type_field.contains(ENUM_KEYWORD) {
+            if param.type_field.starts_with(ENUM_KEYWORD) {
                 return Ok(ParamType::Enum(params));
             }
             Err(Error::InvalidType(param.type_field.clone()))

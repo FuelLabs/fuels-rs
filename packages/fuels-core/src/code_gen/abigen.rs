@@ -37,7 +37,7 @@ pub struct Abigen {
 }
 
 pub fn is_custom_type(p: &Property) -> bool {
-    p.type_field.contains(ENUM_KEYWORD) || p.type_field.contains(STRUCT_KEYWORD)
+    p.type_field.starts_with(ENUM_KEYWORD) || p.type_field.starts_with(STRUCT_KEYWORD)
 }
 
 impl Abigen {
@@ -64,11 +64,11 @@ impl Abigen {
             custom_structs: custom_types
                 .clone()
                 .into_iter()
-                .filter(|(_, p)| p.type_field.contains(STRUCT_KEYWORD))
+                .filter(|(_, p)| p.type_field.starts_with(STRUCT_KEYWORD))
                 .collect(),
             custom_enums: custom_types
                 .into_iter()
-                .filter(|(_, p)| p.type_field.contains(ENUM_KEYWORD))
+                .filter(|(_, p)| p.type_field.starts_with(ENUM_KEYWORD))
                 .collect(),
             abi: parsed_abi,
             contract_name: ident(contract_name),
