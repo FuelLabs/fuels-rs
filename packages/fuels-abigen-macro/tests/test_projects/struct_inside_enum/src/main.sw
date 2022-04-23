@@ -15,12 +15,12 @@ struct Recipe {
 }
 
 abi TestContract {
-    fn give_and_return_struct_inside_enum(c: u64) -> Shaker;
+    fn return_struct_inside_enum(c: u64) -> Shaker;
 }
 
 
 impl TestContract for Contract {
-    fn give_and_return_struct_inside_enum(c: u64) -> Shaker {
+    fn return_struct_inside_enum(c: u64) -> Shaker {
         let s = Shaker::Cosmopolitan(
             Recipe{
                 ice: 22,

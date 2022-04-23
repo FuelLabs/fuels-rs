@@ -1,5 +1,11 @@
+#![allow(unused_imports)]
+#![allow(unused_variables)]
+#![allow(unreachable_code)]
+
 use fuel_tx::{AssetId, ContractId, Receipt, Salt};
 use fuels_abigen_macro::abigen;
+use fuels_core::EnumSelector;
+use fuels_rs::contract::contract::ContractCall;
 use fuels_rs::prelude::*;
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
@@ -1548,9 +1554,7 @@ async fn workflow_struct_inside_enum() {
         .unwrap();
 
     let instance = MyContract::new(id.to_string(), provider.clone(), wallet.clone());
-    let result = instance.give_and_return_struct_inside_enum(11).call().await;
-    // The result inside this is an error, even though the `ContractCall` returned from
-    // `call_or_simulate` does *not* contain an error.
-    println!("{:?}", result);
-    // assert_eq!(result.value, expected);
+    let result = instance.return_struct_inside_enum(11).call().await.unwrap();
+    let expected = Shaker::Cosmopolitan(Recipe { ice: 22, sugar: 99 });
+    assert_eq!(result.value, expected);
 }
