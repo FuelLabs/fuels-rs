@@ -1,5 +1,3 @@
-#![allow(unused_imports)]
-#![allow(unused_variables)]
 use crate::errors::Error;
 use crate::json_abi::parse_param;
 use crate::types::expand_type;
@@ -200,7 +198,7 @@ pub fn expand_custom_enum(name: &str, prop: &Property) -> Result<TokenStream, Er
     // Used when creating a struct from tokens with `MyEnum::new_from_tokens()`.
     let mut args = Vec::new();
 
-    let enum_name = String::from(name.clone().to_class_case());
+    let enum_name = name.to_class_case();
     let enum_ident = ident(&enum_name);
     let mut param_types = Vec::new();
 
@@ -216,7 +214,6 @@ pub fn expand_custom_enum(name: &str, prop: &Property) -> Result<TokenStream, Er
                 unimplemented!()
             }
             ParamType::Struct(_params) => {
-                let ty = expand_type(&param_type)?;
                 let inner_struct_name = &extract_custom_type_name_from_abi_property(
                     component,
                     Some(CustomType::Struct),

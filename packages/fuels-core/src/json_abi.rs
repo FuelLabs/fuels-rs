@@ -603,7 +603,7 @@ pub fn parse_custom_type_param(param: &Property) -> Result<ParamType, Error> {
     match &param.components {
         Some(c) => {
             for component in c {
-                params.push(parse_param(&component)?)
+                params.push(parse_param(component)?)
             }
             if param.type_field.starts_with(STRUCT_KEYWORD) {
                 return Ok(ParamType::Struct(params));
@@ -613,11 +613,9 @@ pub fn parse_custom_type_param(param: &Property) -> Result<ParamType, Error> {
             }
             Err(Error::InvalidType(param.type_field.clone()))
         }
-        None => {
-            return Err(Error::MissingData(
-                "cannot parse custom type with no components".into(),
-            ))
-        }
+        None => Err(Error::MissingData(
+            "cannot parse custom type with no components".into(),
+        )),
     }
 }
 
