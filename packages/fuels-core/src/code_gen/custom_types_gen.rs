@@ -201,7 +201,7 @@ pub fn expand_custom_enum(name: &str, prop: &Property) -> Result<TokenStream, Er
     let mut args = Vec::new();
 
     let enum_name = String::from(name.clone().to_class_case());
-    let enum_identifier = ident(&enum_name);
+    let enum_ident = ident(&enum_name);
     let mut param_types = Vec::new();
 
     for (discriminant, component) in components.iter().enumerate() {
@@ -228,7 +228,7 @@ pub fn expand_custom_enum(name: &str, prop: &Property) -> Result<TokenStream, Er
 
                 // Token creation
                 enum_selector_builder.push(quote! {
-                    #enum_identifier::#variant_name(inner_struct) =>
+                    #enum_ident::#variant_name(inner_struct) =>
                     (#dis, inner_struct.into_token())
                 });
 
@@ -241,7 +241,7 @@ pub fn expand_custom_enum(name: &str, prop: &Property) -> Result<TokenStream, Er
                 args.push(quote! {
                     (#dis, token) => {
                         let variant_content = <#inner_struct_ident>::from_tokens(vec![token]).expect(#expected_str);
-                    #enum_identifier::#variant_name(variant_content)
+                    #enum_ident::#variant_name(variant_content)
                         }
                 });
 
@@ -261,11 +261,11 @@ pub fn expand_custom_enum(name: &str, prop: &Property) -> Result<TokenStream, Er
 
                 // Token creation
                 enum_selector_builder.push(quote! {
-                    #enum_identifier::#variant_name(value) => (#dis, Token::#param_type_string(value))
+                    #enum_ident::#variant_name(value) => (#dis, Token::#param_type_string(value))
                 });
                 param_types.push(quote! { types.push(ParamType::#param_type_string) });
                 args.push(
-                    quote! {(#dis, token) => #enum_identifier::#variant_name(<#ty>::from_tokens(vec![token])
+                    quote! {(#dis, token) => #enum_ident::#variant_name(<#ty>::from_tokens(vec![token])
                     .expect(&format!("Failed to run `new_from_tokens` for custom {} enum type",
                             #enum_name))),},
                 );
@@ -278,11 +278,11 @@ pub fn expand_custom_enum(name: &str, prop: &Property) -> Result<TokenStream, Er
     // declaration.
     Ok(quote! {
         #[derive(Clone, Debug, Eq, PartialEq)]
-        pub enum #enum_identifier {
+        pub enum #enum_ident {
             #( #enum_variants ),*
         }
 
-        impl #enum_identifier {
+        impl #enum_ident {
             pub fn param_types() -> Vec<ParamType> {
                 let mut types = Vec::new();
                 #( #param_types; )*
@@ -312,7 +312,8 @@ pub fn expand_custom_enum(name: &str, prop: &Property) -> Result<TokenStream, Er
                     Token::Enum(content) => {
                         if let enum_selector = *content {
                             return match enum_selector {
-                                #( #args )*(_, _) => panic!("Failed to match with discriminant selector {:?}", enum_selector)
+                                #( #args )*
+                                (_, _) => panic!("Failed to match with discriminant selector {:?}", enum_selector)
                             };
                         } else {
                             panic!("The EnumSelector `{:?}` didn't have a match", content);
@@ -323,6 +324,22 @@ pub fn expand_custom_enum(name: &str, prop: &Property) -> Result<TokenStream, Er
             }
 
         }
+
+        impl fuels_core::Detokenize for #enum_ident {
+            fn from_tokens(mut tokens: Vec<Token>) -> Result<Self, fuels_core::InvalidOutputType> {
+                let token = match tokens.len() {
+                    1 => tokens.remove(0),
+                    _ => panic!("Received invalid number of tokens for creating {} enum (got {} expected 1)", #enum_name, tokens.len()),
+                };
+                if let Token::Enum(_) = token {
+                    Ok(#enum_ident::new_from_tokens(&[token]))
+                } else {
+                    Err(fuels_core::InvalidOutputType("Enum token doesn't contain inner tokens."
+                        .to_string()))
+                }
+            }
+        }
+
     })
 }
 
@@ -491,6 +508,20 @@ impl MatchaTea {
         }
     }
 }
+impl fuels_core::Detokenize for MatchaTea{
+    fn from_tokens(mut tokens: Vec<Token>) -> Result<Self, fuels_core::InvalidOutputType> {
+        let token = match tokens.len() {
+            1 => tokens.remove(0),
+            _ => panic!("Received invalid number of tokens for creating {} enum (got {} expected 1)", "MatchaTea", tokens.len()),
+        };
+        if let Token::Enum(_) = token {
+            Ok(MatchaTea::new_from_tokens(&[token]))
+        } else {
+            Err(fuels_core::InvalidOutputType("Enum token doesn't contain inner tokens."
+                .to_string()))
+        }
+    }
+}
 "#,
         );
         let expected = expected.unwrap().to_string();
@@ -581,6 +612,20 @@ impl Amsterdam {
                 }
             },
             _ => panic!("This should contain an `Enum` token, found `{:?}`", tokens),
+        }
+    }
+}
+impl fuels_core::Detokenize for Amsterdam{
+    fn from_tokens(mut tokens: Vec<Token>) -> Result<Self, fuels_core::InvalidOutputType> {
+        let token = match tokens.len() {
+            1 => tokens.remove(0),
+            _ => panic!("Received invalid number of tokens for creating {} enum (got {} expected 1)", "Amsterdam", tokens.len()),
+        };
+        if let Token::Enum(_) = token {
+            Ok(Amsterdam::new_from_tokens(&[token]))
+        } else {
+            Err(fuels_core::InvalidOutputType("Enum token doesn't contain inner tokens."
+                .to_string()))
         }
     }
 }
