@@ -1515,11 +1515,7 @@ async fn workflow_enum_inside_struct() {
         .await
         .unwrap();
     let instance = MyContract::new(id.to_string(), provider.clone(), wallet.clone());
-    let result = instance
-        .give_and_return_enum_inside_struct(11)
-        .call()
-        .await
-        .unwrap();
+    let result = instance.return_enum_inside_struct(11).call().await.unwrap();
     let expected = Cocktail {
         the_thing_you_mix_in: Shaker::Mojito(222),
         glass: 333,

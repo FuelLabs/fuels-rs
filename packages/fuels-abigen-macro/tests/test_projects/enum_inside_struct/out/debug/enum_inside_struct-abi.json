@@ -8,7 +8,7 @@
         "components": null
       }
     ],
-    "name": "give_and_return_enum_inside_struct",
+    "name": "return_enum_inside_struct",
     "outputs": [
       {
         "name": "",

@@ -15,12 +15,12 @@ struct Cocktail {
 }
 
 abi TestContract {
-    fn give_and_return_enum_inside_struct(a: u64) -> Cocktail;
+    fn return_enum_inside_struct(a: u64) -> Cocktail;
 }
 
 
 impl TestContract for Contract {
-    fn give_and_return_enum_inside_struct(a: u64) -> Cocktail {
+    fn return_enum_inside_struct(a: u64) -> Cocktail {
         let b = Cocktail {
             the_thing_you_mix_in: Shaker::Mojito(222),
             glass: 333
