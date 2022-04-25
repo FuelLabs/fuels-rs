@@ -492,7 +492,7 @@ impl ABIParser {
     fn build_fn_selector_params(&self, param: &Property) -> String {
         let mut result: String = String::new();
 
-        if is_custom_type(&param) {
+        if is_custom_type(param) {
             // Custom type, need to break down inner fields
             // Will return `"s(field_1,field_2,...,field_n)"`.
             result.push_str("s(");
@@ -524,7 +524,7 @@ pub fn parse_param(param: &Property) -> Result<ParamType, Error> {
         // Simple case (primitive types, no arrays, including string)
         Ok(param_type) => Ok(param_type),
         Err(_) => {
-            if is_custom_type(&param) {
+            if is_custom_type(param) {
                 return parse_custom_type_param(param);
             }
             if param.type_field.contains('[') && param.type_field.contains(']') {
