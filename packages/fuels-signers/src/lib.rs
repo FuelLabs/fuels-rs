@@ -1,6 +1,5 @@
 pub mod provider;
 pub mod signature;
-pub mod util;
 pub mod wallet;
 
 use signature::Signature;
@@ -34,8 +33,8 @@ pub trait Signer: std::fmt::Debug + Send + Sync {
 
 #[cfg(test)]
 mod tests {
-    use crate::util::test_helpers::{setup_address_and_coins, setup_test_provider};
     use fuel_tx::{AssetId, Bytes32, Input, Output, UtxoId};
+    use fuels_test_helpers::{setup_address_and_coins, setup_test_provider};
     use rand::{rngs::StdRng, RngCore, SeedableRng};
     use secp256k1::SecretKey;
     use std::str::FromStr;
