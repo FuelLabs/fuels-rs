@@ -2,6 +2,9 @@ pub mod provider;
 pub mod util;
 pub mod wallet;
 
+#[doc(no_inline)]
+pub use fuel_crypto;
+
 use async_trait::async_trait;
 use fuel_crypto::Signature;
 use fuel_tx::{Address, Transaction};
