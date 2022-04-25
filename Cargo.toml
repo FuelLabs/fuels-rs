@@ -1,5 +1,4 @@
 [workspace]
-resolver = "2"
 members = [
     "packages/fuels-abigen-macro",
     "packages/fuels-contract",

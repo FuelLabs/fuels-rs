@@ -4,7 +4,6 @@ use fuels_types::{JsonABI, Property};
 use hex::FromHex;
 use itertools::Itertools;
 use serde_json;
-use std::convert::TryInto;
 use std::str;
 use std::str::FromStr;
 
