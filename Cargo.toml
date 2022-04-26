@@ -1,10 +1,10 @@
 [workspace]
-resolver = "2"
 members = [
     "packages/fuels-abigen-macro",
     "packages/fuels-contract",
     "packages/fuels-core",
     "packages/fuels-signers",
-    "scripts/build-test-projects",
+    "packages/fuels-types",
     "tools/fuels-abi-cli",
+    "scripts/build-test-projects",
 ]
