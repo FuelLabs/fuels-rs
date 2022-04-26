@@ -13,25 +13,20 @@ use fuel_core::{
 use fuel_crypto::Hasher;
 use fuel_gql_client::client::FuelClient;
 use fuel_tx::{Address, Bytes32, Bytes64, UtxoId};
-#[cfg(feature = "fuels-signers")]
-use fuels_signers::provider::Provider;
-#[cfg(feature = "fuels-signers")]
-use fuels_signers::LocalWallet;
 
-/// Default initial balance for wallets.
+#[cfg(feature = "fuels-signers")]
+mod signers;
+
+#[cfg(feature = "fuels-signers")]
+pub use signers::*;
+
+// This constant is used to determine the amount in the 1 UTXO
+// when initializing wallets for now.
+pub const DEFAULT_COIN_AMOUNT: u64 = 1_000_000;
+
+// This constant is used to set a initial balance on wallets
+// mainly used on tests
 pub const DEFAULT_INITIAL_BALANCE: u64 = 1_000_000_000;
-
-#[cfg(feature = "fuels-signers")]
-pub async fn setup_test_provider_and_wallet() -> (Provider, LocalWallet) {
-    //  We build only 1 coin with amount TEST_COIN_AMOUNT, empirically determined to be
-    //  sufficient right now
-    let (pk, coins) = setup_address_and_coins(1, DEFAULT_INITIAL_BALANCE);
-    // Setup a provider and node with the given coins
-    let (provider, _) = setup_test_provider(coins).await;
-
-    let wallet = LocalWallet::new_from_private_key(pk, provider.clone()).unwrap();
-    (provider, wallet)
-}
 
 pub fn setup_address_and_coins(
     num_of_coins: usize,
@@ -68,14 +63,6 @@ pub fn setup_address_and_coins(
         .collect();
 
     (secret, coins)
-}
-
-// Setup a test provider with the given coins. We return the SocketAddr so the launched node
-// client can be connected to more easily (even though it is often ignored).
-#[cfg(feature = "fuels-signers")]
-pub async fn setup_test_provider(coins: Vec<(UtxoId, Coin)>) -> (Provider, SocketAddr) {
-    let (client, addr) = setup_test_client(coins).await;
-    (Provider::new(client), addr)
 }
 
 // Setup a test client with the given coins. We return the SocketAddr so the launched node

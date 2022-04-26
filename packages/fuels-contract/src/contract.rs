@@ -13,12 +13,11 @@ use fuel_vm::consts::{REG_CGAS, REG_ONE};
 use fuel_vm::prelude::Contract as FuelContract;
 use fuel_vm::script_with_data_offset;
 use fuels_core::errors::Error;
-use fuels_core::{
-    constants::DEFAULT_COIN_AMOUNT, constants::WORD_SIZE, Detokenize, Selector, Token,
-};
 use fuels_core::{constants::NATIVE_ASSET_ID, ParamType};
+use fuels_core::{constants::WORD_SIZE, Detokenize, Selector, Token};
 use fuels_signers::provider::Provider;
 use fuels_signers::{LocalWallet, Signer};
+use fuels_test_helpers::DEFAULT_COIN_AMOUNT;
 use std::marker::PhantomData;
 
 #[derive(Debug, Clone, Default)]
