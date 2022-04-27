@@ -667,9 +667,7 @@ async fn example_workflow() {
     assert_eq!(52, result.value);
 }
 
-// TODO https://github.com/FuelLabs/fuels-rs/issues/201
 #[tokio::test]
-#[ignore]
 async fn type_safe_output_values() {
     let rng = &mut StdRng::seed_from_u64(2322u64);
 
@@ -677,7 +675,7 @@ async fn type_safe_output_values() {
     // The generated bindings can be accessed through `SimpleContract`.
     abigen!(
         MyContract,
-        "packages/fuels-abigen-macro/tests/test_projects/contract_output_test/out/debug/contract_test-abi.json"
+        "packages/fuels-abigen-macro/tests/test_projects/contract_output_test/out/debug/contract_output_test-abi.json"
     );
 
     // Build the contract
@@ -685,7 +683,7 @@ async fn type_safe_output_values() {
     let salt = Salt::from(salt);
 
     let compiled = Contract::load_sway_contract(
-        "tests/test_projects/contract_output_test/out/debug/contract_test.bin",
+        "tests/test_projects/contract_output_test/out/debug/contract_output_test.bin",
         salt,
     )
     .unwrap();
@@ -1075,10 +1073,8 @@ async fn test_large_return_data() {
         ]
     );
 
-    // TODO https://github.com/FuelLabs/fuels-rs/issues/201
-    // One word-sized string
-    // let res = contract_instance.get_small_string().call().await.unwrap();
-    // assert_eq!(res.value, "gggggggg");
+    let res = contract_instance.get_small_string().call().await.unwrap();
+    assert_eq!(res.value, "gggggggg");
 
     // Two word-sized string
     let res = contract_instance.get_large_string().call().await.unwrap();

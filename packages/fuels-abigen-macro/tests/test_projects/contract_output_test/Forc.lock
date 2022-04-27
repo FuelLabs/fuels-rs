@@ -2,7 +2,7 @@
 name = 'contract_output_test'
 dependencies = [
     '(increment_abi) library_test',
-    'std git+https://github.com/FuelLabs/sway?branch=master#8bff08606ec3d9707d0052cc91ff86071f1f4ad5',
+    'std git+https://github.com/fuellabs/sway?tag=v0.11.0#95816e4e41aae1d3425ba6ff5e7266076d8400fa',
 ]
 
 [[package]]
@@ -11,9 +11,14 @@ dependencies = []
 
 [[package]]
 name = 'library_test'
-dependencies = ['std git+https://github.com/FuelLabs/sway?branch=master#8bff08606ec3d9707d0052cc91ff86071f1f4ad5']
+dependencies = ['std git+https://github.com/FuelLabs/sway?branch=master#95816e4e41aae1d3425ba6ff5e7266076d8400fa']
 
 [[package]]
 name = 'std'
-source = 'git+https://github.com/FuelLabs/sway?branch=master#8bff08606ec3d9707d0052cc91ff86071f1f4ad5'
+source = 'git+https://github.com/FuelLabs/sway?branch=master#95816e4e41aae1d3425ba6ff5e7266076d8400fa'
+dependencies = ['core']
+
+[[package]]
+name = 'std'
+source = 'git+https://github.com/fuellabs/sway?tag=v0.11.0#95816e4e41aae1d3425ba6ff5e7266076d8400fa'
 dependencies = ['core']

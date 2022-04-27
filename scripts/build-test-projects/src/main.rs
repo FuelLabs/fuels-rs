@@ -1,4 +1,5 @@
-//! Runs `forc build` for all projects under the Sway `examples` directory.
+//! Runs `forc build` for all projects under the
+//! `fuels-abigen-macro/tests/test_projects` directory.
 //!
 //! NOTE: This expects both `forc` and `cargo` to be available in `PATH`.
 
