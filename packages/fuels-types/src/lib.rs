@@ -35,8 +35,8 @@ pub struct Property {
 
 // Both those constants are used to determine if a type field represents an `Enum` or a `Struct`.
 // Since it would have the format `struct foo` or `enum bar`, there is a whitespace.
-pub const STRUCT_KEYWORD: &str = "struct ";
-pub const ENUM_KEYWORD: &str = "enum ";
+const STRUCT_KEYWORD: &str = "struct ";
+const ENUM_KEYWORD: &str = "enum ";
 
 impl Property {
     pub fn is_enum_type(&self) -> bool {
