@@ -5,6 +5,11 @@ use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 use sha2::{Digest, Sha256};
 
+/// Note: all the tests and examples below require pre-compiled Sway projects.
+/// To compile these projects, run `cargo run --bin build-test-projects`.
+/// It will build all test projects, creating their respective binaries,
+/// ABI files, and lock files. These are not to be committed to the repository.
+
 fn null_contract_id() -> String {
     // a null contract address ~[0u8;32]
     String::from("0000000000000000000000000000000000000000000000000000000000000000")
