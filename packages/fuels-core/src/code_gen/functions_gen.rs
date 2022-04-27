@@ -1,6 +1,7 @@
 use crate::abi_encoder::ABIEncoder;
 use crate::code_gen::custom_types_gen::{extract_custom_type_name_from_abi_property, CustomType};
 use crate::code_gen::docs_gen::expand_doc;
+use crate::constants::{ENUM_KEYWORD, STRUCT_KEYWORD};
 use crate::errors::Error;
 use crate::json_abi::{parse_param, ABIParser};
 use crate::types::expand_type;
@@ -75,29 +76,38 @@ fn expand_selector(selector: Selector) -> TokenStream {
     quote! { [#( #bytes ),*] }
 }
 
-/// Expands the output of a function, i.e. what comes after `->` in a function
-/// signature.
+/// Expands the output of a function, i.e. what comes after `->` in a function signature.
 fn expand_fn_outputs(outputs: &[Property]) -> Result<TokenStream, Error> {
     match outputs.len() {
         0 => Ok(quote! { () }),
         1 => {
-            // If it's a struct as the type of a function's output, use its
-            // tokenized name only. Otherwise, parse and expand.
-            // The non-expansion should happen to enums as well
-            if outputs[0].type_field.contains("struct ") {
-                let tok: proc_macro2::TokenStream =
-                    extract_custom_type_name_from_abi_property(&outputs[0], &CustomType::Struct)?
-                        .parse()
-                        .unwrap();
-                Ok(tok)
-            } else {
-                expand_type(&parse_param(&outputs[0])?)
+            // If it's a {struct, enum} as the type of a function's output, use its tokenized name
+            // only. Otherwise, parse and expand.
+            if outputs[0].type_field.starts_with(STRUCT_KEYWORD) {
+                let tok: proc_macro2::TokenStream = extract_custom_type_name_from_abi_property(
+                    &outputs[0],
+                    Some(CustomType::Struct),
+                )?
+                .parse()
+                .unwrap();
+                return Ok(tok);
             }
+            if outputs[0].type_field.starts_with(ENUM_KEYWORD) {
+                let tok: proc_macro2::TokenStream = extract_custom_type_name_from_abi_property(
+                    &outputs[0],
+                    Some(CustomType::Enum),
+                )?
+                .parse()
+                .unwrap();
+                return Ok(tok);
+            }
+            expand_type(&parse_param(&outputs[0])?)
         }
+        // Recursively expand the outputs
         _ => {
             let types = outputs
                 .iter()
-                .map(|param| expand_type(&parse_param(param)?))
+                .map(|param| expand_fn_outputs(&[param.clone()]))
                 .collect::<Result<Vec<_>, Error>>()?;
             Ok(quote! { (#( #types ),*) })
         }
@@ -126,8 +136,8 @@ fn expand_function_arguments(
         let name = expand_input_name(i, &param.name);
 
         let opt_custom_type = match param.type_field.split_whitespace().collect::<Vec<_>>()[0] {
-            "enum" => Some(&CustomType::Enum),
-            "struct" => Some(&CustomType::Struct),
+            "enum" => Some(CustomType::Enum),
+            "struct" => Some(CustomType::Struct),
             _ => None,
         };
 
@@ -135,13 +145,13 @@ fn expand_function_arguments(
             match c {
                 CustomType::Enum => {
                     let name =
-                        extract_custom_type_name_from_abi_property(param, opt_custom_type.unwrap())
+                        extract_custom_type_name_from_abi_property(param, Some(CustomType::Enum))
                             .unwrap();
                     custom_enums.get(&name)
                 }
                 CustomType::Struct => {
                     let name =
-                        extract_custom_type_name_from_abi_property(param, opt_custom_type.unwrap())
+                        extract_custom_type_name_from_abi_property(param, Some(CustomType::Struct))
                             .unwrap();
                     custom_structs.get(&name)
                 }
@@ -193,11 +203,11 @@ fn expand_input_param(
     fun: &Function,
     param: &str,
     kind: &ParamType,
-    custom_struct_name: &Option<&Property>,
+    custom_type_name: &Option<&Property>,
 ) -> Result<TokenStream, Error> {
     match kind {
         ParamType::Array(ty, _) => {
-            let ty = expand_input_param(fun, param, ty, custom_struct_name)?;
+            let ty = expand_input_param(fun, param, ty, custom_type_name)?;
             Ok(quote! {
                 ::std::vec::Vec<#ty>
             })
@@ -205,8 +215,8 @@ fn expand_input_param(
         ParamType::Enum(_) => {
             let ident = ident(
                 &extract_custom_type_name_from_abi_property(
-                    custom_struct_name.unwrap(),
-                    &CustomType::Enum,
+                    custom_type_name.unwrap(),
+                    Some(CustomType::Enum),
                 )?
                 .to_class_case(),
             );
@@ -215,8 +225,8 @@ fn expand_input_param(
         ParamType::Struct(_) => {
             let ident = ident(
                 &extract_custom_type_name_from_abi_property(
-                    custom_struct_name.unwrap(),
-                    &CustomType::Struct,
+                    custom_type_name.unwrap(),
+                    Some(CustomType::Struct),
                 )?
                 .to_class_case(),
             );
@@ -362,7 +372,7 @@ pub fn HelloWorld(&self, bimbam: bool) -> ContractCall<()> {
 pub fn hello_world(
     &self,
     the_only_allowed_input: SomeWeirdFrenchCuisine
-) -> ContractCall<((bool , u64 ,) , (bool, u64 ,))> {
+) -> ContractCall<(CoolIndieGame , EntropyCirclesEnum)> {
     Contract::method_hash(
         &self.provider,
         self.contract_id,
@@ -370,7 +380,7 @@ pub fn hello_world(
         [0, 0, 0, 0, 118, 178, 90, 36],
         &[
             ParamType::Struct(vec![ParamType::Bool, ParamType::U64]),
-            ParamType::Enum([Bool , U64])] ,
+            ParamType::Enum(vec![ParamType::Bool , ParamType::U64])] , 
             &[the_only_allowed_input . into_token () ,]
     )
     .expect("method not found (this should never happen)")
@@ -392,15 +402,19 @@ pub fn hello_world(
 
     // --- expand_fn_outputs ---
     #[test]
-    fn test_expand_fn_outputs_zero_one_arg() {
+    fn test_expand_fn_outputs() {
         let result = expand_fn_outputs(&[]);
         assert_eq!(result.unwrap().to_string(), "()");
+
+        // Primitive type
         let result = expand_fn_outputs(&[Property {
             name: "unused".to_string(),
             type_field: "bool".to_string(),
             components: None,
         }]);
         assert_eq!(result.unwrap().to_string(), "bool");
+
+        // Struct type
         let result = expand_fn_outputs(&[Property {
             name: "unused".to_string(),
             type_field: String::from("struct streaming_services"),
@@ -417,13 +431,12 @@ pub fn hello_world(
                 },
             ]),
         }]);
-
-        // the function has inconsistent  behavior for enum compared to struct:
-        // here we have to provide actual types in the components, not with the struct
         assert_eq!(result.unwrap().to_string(), "streaming_services");
+
+        // Enum type
         let result = expand_fn_outputs(&[Property {
             name: "unused".to_string(),
-            type_field: String::from("enum unused"),
+            type_field: String::from("enum StreamingServices"),
             components: Some(vec![
                 Property {
                     name: String::from("unused"),
@@ -437,52 +450,10 @@ pub fn hello_world(
                 },
             ]),
         }]);
-        assert_eq!(result.unwrap().to_string(), "(bool , u64 ,)");
+        assert_eq!(result.unwrap().to_string(), "StreamingServices");
     }
     #[test]
-    fn test_expand_fn_outputs_no_components() {
-        let result = expand_fn_outputs(&[Property {
-            name: "unused".to_string(),
-            type_field: String::from("struct carmaker"),
-            components: Some(vec![
-                Property {
-                    name: String::from("unused"),
-                    type_field: String::from("nonexistingtype"),
-                    components: None,
-                },
-                Property {
-                    name: String::from("unused"),
-                    type_field: String::from("anotherunexistingtype"),
-                    components: None,
-                },
-            ]),
-        }]);
-        // TODO: this should panic after the function is refactored
-        assert_eq!(result.unwrap().to_string(), "carmaker");
-
-        let result = expand_fn_outputs(&[Property {
-            name: "unused".to_string(),
-            type_field: String::from("enum unused"),
-            components: Some(vec![
-                Property {
-                    name: String::from("unused"),
-                    type_field: String::from("nonexistingtype"),
-                    components: None,
-                },
-                Property {
-                    name: String::from("unused"),
-                    type_field: String::from("anotherunexistingtype"),
-                    components: None,
-                },
-            ]),
-        }]);
-        assert_eq!(
-            result.unwrap_err().to_string(),
-            "Missing data: cannot parse custom type with no components"
-        )
-    }
-    #[test]
-    fn test_expand_fn_outputs_two_more_components() {
+    fn test_expand_fn_outputs_two_more_arguments() {
         let result = expand_fn_outputs(&[
             Property {
                 name: "unused".to_string(),
@@ -502,49 +473,34 @@ pub fn hello_world(
         ]);
         assert_eq!(result.unwrap().to_string(), "(bool , u64 , u32)");
 
+        let two_empty_components = vec![
+            Property {
+                name: String::from("unused"),
+                type_field: String::from("nonexistingtype"),
+                components: None,
+            },
+            Property {
+                name: String::from("unused"),
+                type_field: String::from("anotherunexistingtype"),
+                components: None,
+            },
+        ];
+
         let some_enum = Property {
             name: "unused".to_string(),
-            type_field: String::from("enum unused"),
-            components: Some(vec![
-                Property {
-                    name: String::from("unused"),
-                    type_field: String::from("nonexistingtype"),
-                    components: None,
-                },
-                Property {
-                    name: String::from("unused"),
-                    type_field: String::from("anotherunexistingtype"),
-                    components: None,
-                },
-            ]),
+            type_field: String::from("enum Carmaker"),
+            components: Some(two_empty_components.clone()),
         };
         let result = expand_fn_outputs(&[some_enum.clone(), some_enum]);
-        assert_eq!(
-            result.unwrap_err().to_string(),
-            "Missing data: cannot parse custom type with no components"
-        );
+        assert_eq!(result.unwrap().to_string(), "(Carmaker , Carmaker)");
 
         let some_struct = Property {
             name: "unused".to_string(),
-            type_field: String::from("struct carmaker"),
-            components: Some(vec![
-                Property {
-                    name: String::from("unused"),
-                    type_field: String::from("u64"),
-                    components: None,
-                },
-                Property {
-                    name: String::from("unused"),
-                    type_field: String::from("bool"),
-                    components: None,
-                },
-            ]),
+            type_field: String::from("struct Carmaker"),
+            components: Some(two_empty_components),
         };
         let result = expand_fn_outputs(&[some_struct.clone(), some_struct]);
-        assert_eq!(
-            result.unwrap().to_string(),
-            "((u64 , bool ,) , (u64 , bool ,))"
-        )
+        assert_eq!(result.unwrap().to_string(), "(Carmaker , Carmaker)")
     }
 
     // --- expand_function_argument ---

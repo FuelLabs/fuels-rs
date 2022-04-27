@@ -6,6 +6,11 @@ pub const DEFAULT_GAS_PRICE: u64 = 0;
 pub const DEFAULT_BYTE_PRICE: u64 = 0;
 pub const DEFAULT_MATURITY: u32 = 0;
 
+// Both those constants are used to determine if a type field represents an `Enum` or a `Struct`.
+// Since it would have the format `struct foo` or `enum bar`, there is a whitespace.
+pub const STRUCT_KEYWORD: &str = "struct ";
+pub const ENUM_KEYWORD: &str = "enum ";
+
 pub const WORD_SIZE: usize = core::mem::size_of::<Word>();
 
 // This constant is used to determine the amount in the 1 UTXO
