@@ -252,15 +252,13 @@ impl Abigen {
         }
 
         for nested_custom_type in nested_custom_types {
-            if is_custom_type(&nested_custom_type) {
-                // A {struct, enum} can contain another {struct, enum}
-                let nested_custom_type_name =
-                    extract_custom_type_name_from_abi_property(&nested_custom_type, None)
-                        .expect("failed to extract nested custom type name");
-                custom_types
-                    .entry(nested_custom_type_name)
-                    .or_insert(nested_custom_type);
-            }
+            // A {struct, enum} can contain another {struct, enum}
+            let nested_custom_type_name =
+                extract_custom_type_name_from_abi_property(&nested_custom_type, None)
+                    .expect("failed to extract nested custom type name");
+            custom_types
+                .entry(nested_custom_type_name)
+                .or_insert(nested_custom_type);
         }
 
         custom_types

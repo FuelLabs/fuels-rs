@@ -38,8 +38,6 @@ pub fn expand_custom_struct(prop: &Property) -> Result<TokenStream, Error> {
     // `MyStruct::new_from_tokens()`.
     let mut args = Vec::new();
 
-    let mut contains_enums = false;
-
     // For each component, we create two TokenStreams:
     // 1. A struct field declaration like `pub #field_name: #component_name`
     // 2. The creation of a token and its insertion into a vector of Tokens.
@@ -69,7 +67,6 @@ pub fn expand_custom_struct(prop: &Property) -> Result<TokenStream, Error> {
             }
             // The struct contains a nested enum
             ParamType::Enum(_params) => {
-                contains_enums = true;
                 let enum_name = ident(
                     &extract_custom_type_name_from_abi_property(component, Some(CustomType::Enum))?
                         .to_class_case(),
@@ -130,17 +127,10 @@ pub fn expand_custom_struct(prop: &Property) -> Result<TokenStream, Error> {
         }
     }
 
-    // If the struct contains an `Enum` type, don't derive the `Default` trait
-    let derive_statement = if contains_enums {
-        quote! {#[derive(Clone, Debug, Eq, PartialEq)]}
-    } else {
-        quote! {#[derive(Clone, Debug, Default, Eq, PartialEq)]}
-    };
-
     // Actual creation of the struct, using the inner TokenStreams from above to produce the
     // TokenStream that represents the whole struct + methods declaration.
     Ok(quote! {
-        #derive_statement
+        #[derive(Clone, Debug, Eq, PartialEq)]
         pub struct #struct_ident {
             #( #fields ),*
         }
@@ -207,7 +197,7 @@ pub fn expand_custom_enum(name: &str, prop: &Property) -> Result<TokenStream, Er
         let dis = discriminant as u8;
 
         let param_type = parse_param(component)?;
-        match param_type.clone() {
+        match param_type {
             // Case where an enum takes another enum
             ParamType::Enum(_params) => {
                 // TODO: Support nested enums
@@ -677,7 +667,7 @@ impl fuels_core::Detokenize for Amsterdam{
         };
         let expected = TokenStream::from_str(
             r#"
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Cocktail {
     pub long_island: bool,
     pub cosmopolitan: u64,
@@ -755,7 +745,7 @@ impl fuels_core::Detokenize for Cocktail {
         };
         let expected = TokenStream::from_str(
             r#"
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Cocktail {
     pub long_island: Shaker,
     pub mojito: u32
