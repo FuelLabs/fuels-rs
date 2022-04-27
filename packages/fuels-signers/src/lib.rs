@@ -1,6 +1,5 @@
 pub mod provider;
 pub mod signature;
-pub mod util;
 pub mod wallet;
 
 use signature::Signature;
@@ -34,11 +33,13 @@ pub trait Signer: std::fmt::Debug + Send + Sync {
 
 #[cfg(test)]
 mod tests {
-    use crate::util::test_helpers::{setup_address_and_coins, setup_test_provider};
     use fuel_tx::{AssetId, Bytes32, Input, Output, UtxoId};
+    use fuels_test_helpers::{setup_address_and_coins, setup_test_client};
     use rand::{rngs::StdRng, RngCore, SeedableRng};
     use secp256k1::SecretKey;
     use std::str::FromStr;
+
+    use crate::provider::Provider;
 
     use super::*;
 
@@ -51,8 +52,8 @@ mod tests {
         let secret =
             SecretKey::from_slice(&secret_seed).expect("Failed to generate random secret!");
 
-        let (provider, _) = setup_test_provider(vec![]).await;
-        let wallet = LocalWallet::new_from_private_key(secret, provider).unwrap();
+        let (client, _) = setup_test_client(vec![]).await;
+        let wallet = LocalWallet::new_from_private_key(secret, Provider::new(client)).unwrap();
 
         let message = "my message";
 
@@ -76,8 +77,8 @@ mod tests {
             SecretKey::from_str("5f70feeff1f229e4a95e1056e8b4d80d0b24b565674860cc213bdb07127ce1b1")
                 .unwrap();
 
-        let (provider, _) = setup_test_provider(vec![]).await;
-        let wallet = LocalWallet::new_from_private_key(secret, provider).unwrap();
+        let (client, _) = setup_test_client(vec![]).await;
+        let wallet = LocalWallet::new_from_private_key(secret, Provider::new(client)).unwrap();
 
         let input_coin = Input::coin(
             UtxoId::new(Bytes32::zeroed(), 0),
@@ -133,7 +134,8 @@ mod tests {
         coins_1.extend(coins_2);
 
         // Setup a provider and node with both set of coins
-        let (provider, _) = setup_test_provider(coins_1).await;
+        let (client, _) = setup_test_client(coins_1).await;
+        let provider = Provider::new(client);
 
         let wallet_1 = LocalWallet::new_from_private_key(pk_1, provider.clone()).unwrap();
         let wallet_2 = LocalWallet::new_from_private_key(pk_2, provider).unwrap();
@@ -176,7 +178,8 @@ mod tests {
 
         coins_1.extend(coins_2);
 
-        let (provider, _) = setup_test_provider(coins_1).await;
+        let (client, _) = setup_test_client(coins_1).await;
+        let provider = Provider::new(client);
 
         let wallet_1 = LocalWallet::new_from_private_key(pk_1, provider.clone()).unwrap();
         let wallet_2 = LocalWallet::new_from_private_key(pk_2, provider).unwrap();

@@ -97,6 +97,13 @@ impl fmt::Display for ParamType {
                 let s = format!("Struct(vec![{}])", inner_strings.join(","));
                 write!(f, "{}", s)
             }
+            ParamType::Enum(inner) => {
+                let inner_strings: Vec<String> =
+                    inner.iter().map(|p| format!("ParamType::{}", p)).collect();
+
+                let s = format!("Enum(vec![{}])", inner_strings.join(","));
+                write!(f, "{}", s)
+            }
             ParamType::Tuple(inner) => {
                 let inner_strings: Vec<String> =
                     inner.iter().map(|p| format!("ParamType::{}", p)).collect();

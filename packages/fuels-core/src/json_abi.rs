@@ -1,3 +1,5 @@
+use crate::code_gen::abigen::is_custom_type;
+use crate::constants::{ENUM_KEYWORD, STRUCT_KEYWORD};
 use crate::Token;
 use crate::{abi_decoder::ABIDecoder, abi_encoder::ABIEncoder, errors::Error, ParamType};
 use fuels_types::{JsonABI, Property};
@@ -489,7 +491,7 @@ impl ABIParser {
     fn build_fn_selector_params(&self, param: &Property) -> String {
         let mut result: String = String::new();
 
-        if param.type_field.contains("struct ") || param.type_field.contains("enum ") {
+        if is_custom_type(param) {
             // Custom type, need to break down inner fields
             // Will return `"s(field_1,field_2,...,field_n)"`.
             result.push_str("s(");
@@ -521,7 +523,7 @@ pub fn parse_param(param: &Property) -> Result<ParamType, Error> {
         // Simple case (primitive types, no arrays, including string)
         Ok(param_type) => Ok(param_type),
         Err(_) => {
-            if param.type_field.contains("struct") || param.type_field.contains("enum") {
+            if is_custom_type(param) {
                 return parse_custom_type_param(param);
             }
             if param.type_field.contains('[') && param.type_field.contains(']') {
@@ -594,27 +596,23 @@ pub fn parse_array_param(param: &Property) -> Result<ParamType, Error> {
 
 pub fn parse_custom_type_param(param: &Property) -> Result<ParamType, Error> {
     let mut params: Vec<ParamType> = vec![];
-
-    match param.components.as_ref() {
-        Some(components) => {
-            for component in components {
+    match &param.components {
+        Some(c) => {
+            for component in c {
                 params.push(parse_param(component)?)
             }
+            if param.type_field.starts_with(STRUCT_KEYWORD) {
+                return Ok(ParamType::Struct(params));
+            }
+            if param.type_field.starts_with(ENUM_KEYWORD) {
+                return Ok(ParamType::Enum(params));
+            }
+            Err(Error::InvalidType(param.type_field.clone()))
         }
-        None => {
-            return Err(Error::MissingData(
-                "cannot parse custom type with no components".into(),
-            ))
-        }
+        None => Err(Error::MissingData(
+            "cannot parse custom type with no components".into(),
+        )),
     }
-
-    if param.type_field.contains("struct") {
-        return Ok(ParamType::Struct(params));
-    }
-    if param.type_field.contains("enum") {
-        return Ok(ParamType::Enum(params));
-    }
-    Err(Error::InvalidType(param.type_field.clone()))
 }
 
 #[cfg(test)]
@@ -649,6 +647,50 @@ mod tests {
         let expected = "Invalid type: Expected parameter type `[T; n]`, found `str[5]`";
         let result = parse_array_param(&string_prop).unwrap_err().to_string();
         assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_parse_custom_type_params() {
+        let components = vec![
+            Property {
+                name: "vodka".to_string(),
+                type_field: "u64".to_string(),
+                components: None,
+            },
+            Property {
+                name: "redbull".to_string(),
+                type_field: "bool".to_string(),
+                components: None,
+            },
+        ];
+
+        // STRUCT
+        let some_struct = Property {
+            name: String::from("something_you_drink"),
+            type_field: String::from("struct Cocktail"),
+            components: Some(components.clone()),
+        };
+        let struct_result = parse_custom_type_param(&some_struct).unwrap();
+        // Underlying value comparison
+        let expected = ParamType::Struct(vec![ParamType::U64, ParamType::Bool]);
+        assert_eq!(struct_result, expected);
+        let expected_string = "Struct(vec![ParamType::U64,ParamType::Bool])";
+        // String format comparison
+        assert_eq!(struct_result.to_string(), expected_string);
+
+        // ENUM
+        let some_enum = Property {
+            name: String::from("something_you_drink"),
+            type_field: String::from("enum Cocktail"),
+            components: Some(components),
+        };
+        let enum_result = parse_custom_type_param(&some_enum).unwrap();
+        // Underlying value comparison
+        let expected = ParamType::Enum(vec![ParamType::U64, ParamType::Bool]);
+        assert_eq!(enum_result, expected);
+        let expected_string = "Enum(vec![ParamType::U64,ParamType::Bool])";
+        // String format comparison
+        assert_eq!(enum_result.to_string(), expected_string);
     }
 
     #[test]
