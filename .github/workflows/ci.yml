@@ -41,6 +41,18 @@ jobs:
         run: |
           git config --global core.bigfilethreshold 100m
 
+      - name: Install Forc
+        uses: actions-rs/cargo@v1
+        with:
+          command: install
+          args: forc
+
+      - name: Build Sway Examples
+        uses: actions-rs/cargo@v1
+        with:
+          command: run
+          args: --bin build-test-projects
+
       - name: Check formatting
         uses: actions-rs/cargo@v1
         with:
@@ -54,18 +66,6 @@ jobs:
           args: --verbose --workspace --all-targets --all-features
         env:
           RUSTFLAGS: "-D warnings"
-
-      - name: Install Forc
-        uses: actions-rs/cargo@v1
-        with:
-          command: install
-          args: forc
-
-      - name: Build Sway Examples
-        uses: actions-rs/cargo@v1
-        with:
-          command: run
-          args: --bin build-test-projects
 
       - name: Run tests
         uses: actions-rs/cargo@v1
