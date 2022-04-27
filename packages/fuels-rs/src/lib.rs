@@ -28,6 +28,10 @@ pub mod signers {
     pub use fuels_signers::*;
 }
 
+pub mod test_helpers {
+    pub use fuels_test_helpers::*;
+}
+
 /// Easy imports of frequently used
 #[doc(hidden)]
 pub mod prelude {
@@ -46,6 +50,6 @@ pub mod prelude {
     pub use super::core::errors::Error;
     pub use super::core::{Token, Tokenizable};
     pub use super::signers::provider::*;
-    pub use super::signers::util::test_helpers::*;
     pub use super::signers::{LocalWallet, Signer};
+    pub use super::test_helpers::*;
 }

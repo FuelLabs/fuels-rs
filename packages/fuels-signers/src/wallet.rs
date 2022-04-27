@@ -25,7 +25,7 @@ use thiserror::Error;
 /// use secp256k1::SecretKey;
 /// use rand::{rngs::StdRng, RngCore, SeedableRng};
 /// use fuels_signers::provider::Provider;
-/// use fuels_signers::util::test_helpers::setup_test_provider;
+/// use fuels_test_helpers::setup_test_provider;
 ///
 /// async fn foo() -> Result<(), Box<dyn std::error::Error>> {
 ///   // Generate your secret key
@@ -122,9 +122,7 @@ impl Wallet {
     /// ```
     /// use fuels_signers::provider::Provider;
     /// use fuels_signers::{LocalWallet, Signer};
-    /// use fuels_signers::util::test_helpers::{
-    ///     setup_address_and_coins, setup_test_provider,
-    /// };
+    /// use fuels_test_helpers::{setup_address_and_coins, setup_test_provider};
     /// use fuel_tx::{Bytes32, AssetId, Input, Output, UtxoId};
     /// use rand::{rngs::StdRng, RngCore, SeedableRng};
     /// use secp256k1::SecretKey;
