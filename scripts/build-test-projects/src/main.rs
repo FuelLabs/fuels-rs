@@ -10,11 +10,6 @@ use std::{
 };
 
 fn main() {
-    let proj_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let examples_dir = proj_dir
-        .parent()
-        .expect("failed to find examples directory");
-
     let path = Path::new("packages/fuels-abigen-macro/tests/test_projects");
     let cwd = env::current_dir().unwrap();
     let final_path = cwd.join(path);
