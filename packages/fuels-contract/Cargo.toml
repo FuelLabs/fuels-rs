@@ -18,7 +18,6 @@ fuel-types = "0.3"
 fuel-vm = "0.6"
 fuels-core = { version = "0.9.1", path = "../fuels-core" }
 fuels-signers = { version = "0.9.1", path = "../fuels-signers", features = ["test-helpers"] }
-fuels-test-helpers = { version = "0.9.1", path = "../fuels-test-helpers", default-features = false }
 hex = { version = "0.4.3", default-features = false, features = ["std"] }
 proc-macro2 = "1.0"
 quote = "1.0"

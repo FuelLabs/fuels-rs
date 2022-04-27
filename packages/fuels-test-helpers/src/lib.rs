@@ -20,10 +20,6 @@ mod signers;
 #[cfg(feature = "fuels-signers")]
 pub use signers::*;
 
-// This constant is used to determine the amount in the 1 UTXO
-// when initializing wallets for now.
-pub const DEFAULT_COIN_AMOUNT: u64 = 1_000_000;
-
 // This constant is used to set a initial balance on wallets
 // mainly used on tests
 pub const DEFAULT_INITIAL_BALANCE: u64 = 1_000_000_000;
