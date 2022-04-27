@@ -1,10 +1,5 @@
 //! Testing helpers/utilities for Fuel SDK.
 
-use std::net::SocketAddr;
-
-use rand::{Fill, Rng};
-use secp256k1::{PublicKey, Secp256k1, SecretKey};
-
 use fuel_core::{
     chain_config::{ChainConfig, CoinConfig, StateConfig},
     model::coin::{Coin, CoinStatus},
@@ -13,10 +8,12 @@ use fuel_core::{
 use fuel_crypto::Hasher;
 use fuel_gql_client::client::FuelClient;
 use fuel_tx::{Address, Bytes32, Bytes64, UtxoId};
+use rand::{Fill, Rng};
+use secp256k1::{PublicKey, Secp256k1, SecretKey};
+use std::net::SocketAddr;
 
 #[cfg(feature = "fuels-signers")]
 mod signers;
-
 #[cfg(feature = "fuels-signers")]
 pub use signers::*;
 

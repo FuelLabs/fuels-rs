@@ -9,9 +9,8 @@ repository = "https://github.com/FuelLabs/fuels-rs"
 description = "Fuel Rust SDK."
 
 [dependencies]
-fuels-abigen-macro = { version = "0.9.0", path = "../fuels-abigen-macro" }
-fuels-contract = { version = "0.9.0", path = "../fuels-contract" }
-fuels-core = { version = "0.9.0", path = "../fuels-core" }
-fuels-signers = { version = "0.9.0", path = "../fuels-signers" }
-# This probably shouldn't be here, SDK users should put it in their dev-dependencies.
-fuels-test-helpers = { version = "0.9.0", path = "../fuels-test-helpers" }
+fuels-abigen-macro = { version = "0.9.1", path = "../fuels-abigen-macro" }
+fuels-contract = { version = "0.9.1", path = "../fuels-contract" }
+fuels-core = { version = "0.9.1", path = "../fuels-core" }
+fuels-signers = { version = "0.9.1", path = "../fuels-signers" }
+fuels-test-helpers = { version = "0.9.1", path = "../fuels-test-helpers" }
