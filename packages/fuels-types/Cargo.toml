@@ -1,0 +1,12 @@
+[package]
+name = "fuels-types"
+version = "0.9.1"
+authors = ["Fuel Labs <contact@fuel.sh>"]
+edition = "2021"
+homepage = "https://fuel.network/"
+license = "Apache-2.0"
+repository = "https://github.com/FuelLabs/fuels-rs"
+description = "Serializable type representation for working with the Fuel VM ABI."
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }

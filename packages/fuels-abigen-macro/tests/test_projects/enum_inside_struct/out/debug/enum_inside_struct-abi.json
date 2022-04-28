@@ -1,0 +1,42 @@
+[
+  {
+    "type": "function",
+    "inputs": [
+      {
+        "name": "a",
+        "type": "u64",
+        "components": null
+      }
+    ],
+    "name": "return_enum_inside_struct",
+    "outputs": [
+      {
+        "name": "",
+        "type": "struct Cocktail",
+        "components": [
+          {
+            "name": "the_thing_you_mix_in",
+            "type": "enum Shaker",
+            "components": [
+              {
+                "name": "Cosmopolitan",
+                "type": "u64",
+                "components": null
+              },
+              {
+                "name": "Mojito",
+                "type": "u64",
+                "components": null
+              }
+            ]
+          },
+          {
+            "name": "glass",
+            "type": "u64",
+            "components": null
+          }
+        ]
+      }
+    ]
+  }
+]
