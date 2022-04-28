@@ -16,9 +16,7 @@ impl MyContract for Contract {
     }
 
     fn read(input: u64) -> u64 {
-        let v = get(COUNTER_KEY);
+        let v = get::<u64>(COUNTER_KEY);
         v
     }
 }
-
-

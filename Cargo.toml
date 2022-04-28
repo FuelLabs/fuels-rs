@@ -7,4 +7,5 @@ members = [
     "packages/fuels-test-helpers",
     "packages/fuels-types",
     "tools/fuels-abi-cli",
+    "scripts/build-test-projects",
 ]
