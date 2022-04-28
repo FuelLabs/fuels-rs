@@ -211,10 +211,9 @@ impl Wallet {
         asset_id: &AssetId,
         amount: u64,
     ) -> io::Result<Vec<Coin>> {
-        Ok(self
-            .provider
+        self.provider
             .get_spendable_coins(&self.address(), *asset_id, amount)
-            .await?)
+            .await
     }
 }
 
