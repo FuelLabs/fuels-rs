@@ -626,10 +626,6 @@ async fn example_workflow() {
         "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
 
-    // Build the contract
-    let salt: [u8; 32] = rng.gen();
-    let salt = Salt::from(salt);
-
     let compiled = Contract::load_sway_contract(
         "tests/test_projects/contract_test/out/debug/contract_test.bin",
     )
@@ -678,10 +674,6 @@ async fn type_safe_output_values() {
         MyContract,
         "packages/fuels-abigen-macro/tests/test_projects/contract_output_test/out/debug/contract_test-abi.json"
     );
-
-    // Build the contract
-    let salt: [u8; 32] = rng.gen();
-    let salt = Salt::from(salt);
 
     let compiled = Contract::load_sway_contract(
         "tests/test_projects/contract_output_test/out/debug/contract_test.bin",
@@ -732,10 +724,6 @@ async fn call_with_structs() {
         "packages/fuels-abigen-macro/tests/test_projects/complex_types_contract/out/debug/contract_test-abi.json"
     );
 
-    // Build the contract
-    let salt: [u8; 32] = rng.gen();
-    let salt = Salt::from(salt);
-
     let compiled = Contract::load_sway_contract(
         "tests/test_projects/complex_types_contract/out/debug/contract_test.bin",
     )
@@ -781,10 +769,6 @@ async fn call_with_empty_return() {
         "packages/fuels-abigen-macro/tests/test_projects/call_empty_return/out/debug/contract_test-abi.json"
     );
 
-    // Build the contract
-    let salt: [u8; 32] = rng.gen();
-    let salt = Salt::from(salt);
-
     let compiled = Contract::load_sway_contract(
         "tests/test_projects/call_empty_return/out/debug/contract_test.bin",
     )
@@ -813,10 +797,6 @@ async fn abigen_different_structs_same_arg_name() {
         MyContract,
         "packages/fuels-abigen-macro/tests/test_projects/two_structs/out/debug/two_structs-abi.json",
     );
-
-    // Build the contract
-    let salt: [u8; 32] = rng.gen();
-    let salt = Salt::from(salt);
 
     let compiled =
         Contract::load_sway_contract("tests/test_projects/two_structs/out/debug/two_structs.bin")
@@ -855,10 +835,6 @@ async fn test_reverting_transaction() {
         "packages/fuels-abigen-macro/tests/test_projects/revert_transaction_error/out/debug/capture_revert_transaction_error-abi.json"
     );
 
-    // Build the contract
-    let salt: [u8; 32] = rng.gen();
-    let salt = Salt::from(salt);
-
     let compiled =
     Contract::load_sway_contract("tests/test_projects/revert_transaction_error/out/debug/capture_revert_transaction_error.bin")
         .unwrap();
@@ -881,9 +857,6 @@ async fn multiple_read_calls() {
         "packages/fuels-abigen-macro/tests/test_projects/multiple_read_calls/out/debug/demo-abi.json"
     );
 
-    // Build the contract
-    let salt: [u8; 32] = rng.gen();
-    let salt = Salt::from(salt);
     let compiled =
         Contract::load_sway_contract("tests/test_projects/multiple_read_calls/out/debug/demo.bin")
             .unwrap();
@@ -920,10 +893,6 @@ async fn test_methods_typeless_argument() {
         "packages/fuels-abigen-macro/tests/test_projects/empty_arguments/out/debug/method_four_arguments-abi.json"
     );
 
-    // Build the contract
-    let salt: [u8; 32] = rng.gen();
-    let salt = Salt::from(salt);
-
     let compiled = Contract::load_sway_contract(
         "tests/test_projects/empty_arguments/out/debug/method_four_arguments.bin",
     )
@@ -953,10 +922,6 @@ async fn test_connect_to_deployed_contract() {
         MyContract,
         "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
-
-    // Build and deploy contract
-    let salt: [u8; 32] = rng.gen();
-    let salt = Salt::from(salt);
 
     let compiled = Contract::load_sway_contract(
         "tests/test_projects/contract_test/out/debug/contract_test.bin",
@@ -1038,9 +1003,6 @@ async fn test_large_return_data() {
         "packages/fuels-abigen-macro/tests/test_projects/large_return_data/out/debug/contract_test-abi.json"
     );
 
-    let salt: [u8; 32] = rng.gen();
-    let salt = Salt::from(salt);
-
     let compiled = Contract::load_sway_contract(
         "tests/test_projects/large_return_data/out/debug/contract_test.bin",
     )
@@ -1105,10 +1067,6 @@ async fn test_provider_launch_and_connect() {
         "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
 
-    // Build and deploy contract
-    let salt: [u8; 32] = rng.gen();
-    let salt = Salt::from(salt);
-
     let compiled = Contract::load_sway_contract(
         "tests/test_projects/contract_test/out/debug/contract_test.bin",
     )
@@ -1164,9 +1122,6 @@ async fn test_contract_calling_contract() {
         FooCaller,
         "packages/fuels-abigen-macro/tests/test_projects/foo_caller_contract/out/debug/foo_caller_contract-abi.json"
     );
-
-    let salt: [u8; 32] = rng.gen();
-    let salt = Salt::from(salt);
 
     // Load the first compiled contract
     let compiled =
@@ -1234,10 +1189,6 @@ async fn test_gas_errors() {
         "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
 
-    // Build the contract
-    let salt: [u8; 32] = rng.gen();
-    let salt = Salt::from(salt);
-
     let compiled = Contract::load_sway_contract(
         "tests/test_projects/contract_test/out/debug/contract_test.bin",
     )
@@ -1289,7 +1240,6 @@ async fn test_amount_and_asset_forwarding() {
         "packages/fuels-abigen-macro/tests/test_projects/token_ops/out/debug/token_ops-abi.json"
     );
 
-    let salt = Salt::from([0u8; 32]);
     let compiled =
         Contract::load_sway_contract("tests/test_projects/token_ops/out/debug/token_ops.bin")
             .unwrap();
@@ -1381,10 +1331,6 @@ async fn test_multiple_args() {
         "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
 
-    // Build the contract
-    let salt: [u8; 32] = rng.gen();
-    let salt = Salt::from(salt);
-
     let compiled = Contract::load_sway_contract(
         "tests/test_projects/contract_test/out/debug/contract_test.bin",
     )
@@ -1420,10 +1366,6 @@ async fn test_tuples() {
         "packages/fuels-abigen-macro/tests/test_projects/tuples/out/debug/tuples-abi.json"
     );
 
-    // Build the contract
-    let salt: [u8; 32] = rng.gen();
-    let salt = Salt::from(salt);
-
     let compiled =
         Contract::load_sway_contract("tests/test_projects/tuples/out/debug/tuples.bin").unwrap();
 
@@ -1447,9 +1389,6 @@ async fn test_auth_msg_sender_from_sdk() {
         AuthContract,
         "packages/fuels-abigen-macro/tests/test_projects/auth_testing_contract/out/debug/auth_testing_contract-abi.json"
     );
-
-    let salt: [u8; 32] = rng.gen();
-    let salt = Salt::from(salt);
 
     let (provider, wallet) = setup_test_provider_and_wallet().await;
     let compiled = Contract::load_sway_contract(
@@ -1481,9 +1420,6 @@ async fn workflow_enum_inside_struct() {
         "packages/fuels-abigen-macro/tests/test_projects/enum_inside_struct/out/debug\
         /enum_inside_struct-abi.json"
     );
-    // Build the contract
-    let salt: [u8; 32] = rng.gen();
-    let salt = Salt::from(salt);
     let compiled = Contract::load_sway_contract(
         "tests/test_projects/enum_inside_struct/out/debug/enum_inside_struct.bin",
     )
@@ -1508,9 +1444,7 @@ async fn workflow_struct_inside_enum() {
         MyContract,
         "packages/fuels-abigen-macro/tests/test_projects/struct_inside_enum/out/debug/struct_inside_enum-abi.json"
     );
-    // Build the contract
-    let salt: [u8; 32] = rng.gen();
-    let salt = Salt::from(salt);
+
     let compiled = Contract::load_sway_contract(
         "tests/test_projects/struct_inside_enum/out/debug/struct_inside_enum.bin",
     )
