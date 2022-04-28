@@ -632,7 +632,6 @@ async fn example_workflow() {
 
     let compiled = Contract::load_sway_contract(
         "tests/test_projects/contract_test/out/debug/contract_test.bin",
-        salt,
     )
     .unwrap();
 
@@ -686,7 +685,6 @@ async fn type_safe_output_values() {
 
     let compiled = Contract::load_sway_contract(
         "tests/test_projects/contract_output_test/out/debug/contract_test.bin",
-        salt,
     )
     .unwrap();
 
@@ -740,7 +738,6 @@ async fn call_with_structs() {
 
     let compiled = Contract::load_sway_contract(
         "tests/test_projects/complex_types_contract/out/debug/contract_test.bin",
-        salt,
     )
     .unwrap();
 
@@ -790,7 +787,6 @@ async fn call_with_empty_return() {
 
     let compiled = Contract::load_sway_contract(
         "tests/test_projects/call_empty_return/out/debug/contract_test.bin",
-        salt,
     )
     .unwrap();
 
@@ -822,11 +818,9 @@ async fn abigen_different_structs_same_arg_name() {
     let salt: [u8; 32] = rng.gen();
     let salt = Salt::from(salt);
 
-    let compiled = Contract::load_sway_contract(
-        "tests/test_projects/two_structs/out/debug/two_structs.bin",
-        salt,
-    )
-    .unwrap();
+    let compiled =
+        Contract::load_sway_contract("tests/test_projects/two_structs/out/debug/two_structs.bin")
+            .unwrap();
 
     let (provider, wallet) = setup_test_provider_and_wallet().await;
     let contract_id = Contract::deploy(&compiled, &provider, &wallet, TxParameters::default())
@@ -866,7 +860,7 @@ async fn test_reverting_transaction() {
     let salt = Salt::from(salt);
 
     let compiled =
-    Contract::load_sway_contract("tests/test_projects/revert_transaction_error/out/debug/capture_revert_transaction_error.bin", salt)
+    Contract::load_sway_contract("tests/test_projects/revert_transaction_error/out/debug/capture_revert_transaction_error.bin")
         .unwrap();
 
     let (provider, wallet) = setup_test_provider_and_wallet().await;
@@ -890,11 +884,9 @@ async fn multiple_read_calls() {
     // Build the contract
     let salt: [u8; 32] = rng.gen();
     let salt = Salt::from(salt);
-    let compiled = Contract::load_sway_contract(
-        "tests/test_projects/multiple_read_calls/out/debug/demo.bin",
-        salt,
-    )
-    .unwrap();
+    let compiled =
+        Contract::load_sway_contract("tests/test_projects/multiple_read_calls/out/debug/demo.bin")
+            .unwrap();
 
     let (provider, wallet) = setup_test_provider_and_wallet().await;
     let contract_id = Contract::deploy(&compiled, &provider, &wallet, TxParameters::default())
@@ -934,7 +926,6 @@ async fn test_methods_typeless_argument() {
 
     let compiled = Contract::load_sway_contract(
         "tests/test_projects/empty_arguments/out/debug/method_four_arguments.bin",
-        salt,
     )
     .unwrap();
 
@@ -969,7 +960,6 @@ async fn test_connect_to_deployed_contract() {
 
     let compiled = Contract::load_sway_contract(
         "tests/test_projects/contract_test/out/debug/contract_test.bin",
-        salt,
     )
     .unwrap();
 
@@ -1053,7 +1043,6 @@ async fn test_large_return_data() {
 
     let compiled = Contract::load_sway_contract(
         "tests/test_projects/large_return_data/out/debug/contract_test.bin",
-        salt,
     )
     .unwrap();
 
@@ -1122,7 +1111,6 @@ async fn test_provider_launch_and_connect() {
 
     let compiled = Contract::load_sway_contract(
         "tests/test_projects/contract_test/out/debug/contract_test.bin",
-        salt,
     )
     .unwrap();
 
@@ -1181,11 +1169,9 @@ async fn test_contract_calling_contract() {
     let salt = Salt::from(salt);
 
     // Load the first compiled contract
-    let compiled = Contract::load_sway_contract(
-        "tests/test_projects/foo_contract/out/debug/foo_contract.bin",
-        salt,
-    )
-    .unwrap();
+    let compiled =
+        Contract::load_sway_contract("tests/test_projects/foo_contract/out/debug/foo_contract.bin")
+            .unwrap();
 
     let (provider, wallet) = setup_test_provider_and_wallet().await;
 
@@ -1207,7 +1193,6 @@ async fn test_contract_calling_contract() {
     // Compile and deploy second contract
     let compiled = Contract::load_sway_contract(
         "tests/test_projects/foo_caller_contract/out/debug/foo_caller_contract.bin",
-        salt,
     )
     .unwrap();
 
@@ -1255,7 +1240,6 @@ async fn test_gas_errors() {
 
     let compiled = Contract::load_sway_contract(
         "tests/test_projects/contract_test/out/debug/contract_test.bin",
-        salt,
     )
     .unwrap();
 
@@ -1306,11 +1290,9 @@ async fn test_amount_and_asset_forwarding() {
     );
 
     let salt = Salt::from([0u8; 32]);
-    let compiled = Contract::load_sway_contract(
-        "tests/test_projects/token_ops/out/debug/token_ops.bin",
-        salt,
-    )
-    .unwrap();
+    let compiled =
+        Contract::load_sway_contract("tests/test_projects/token_ops/out/debug/token_ops.bin")
+            .unwrap();
 
     let (provider, wallet) = setup_test_provider_and_wallet().await;
 
@@ -1405,7 +1387,6 @@ async fn test_multiple_args() {
 
     let compiled = Contract::load_sway_contract(
         "tests/test_projects/contract_test/out/debug/contract_test.bin",
-        salt,
     )
     .unwrap();
 
@@ -1444,8 +1425,7 @@ async fn test_tuples() {
     let salt = Salt::from(salt);
 
     let compiled =
-        Contract::load_sway_contract("tests/test_projects/tuples/out/debug/tuples.bin", salt)
-            .unwrap();
+        Contract::load_sway_contract("tests/test_projects/tuples/out/debug/tuples.bin").unwrap();
 
     let (provider, wallet) = setup_test_provider_and_wallet().await;
 
@@ -1474,7 +1454,6 @@ async fn test_auth_msg_sender_from_sdk() {
     let (provider, wallet) = setup_test_provider_and_wallet().await;
     let compiled = Contract::load_sway_contract(
         "tests/test_projects/auth_testing_contract/out/debug/auth_testing_contract.bin",
-        salt,
     )
     .unwrap();
 
@@ -1507,7 +1486,6 @@ async fn workflow_enum_inside_struct() {
     let salt = Salt::from(salt);
     let compiled = Contract::load_sway_contract(
         "tests/test_projects/enum_inside_struct/out/debug/enum_inside_struct.bin",
-        salt,
     )
     .unwrap();
     let (provider, wallet) = setup_test_provider_and_wallet().await;
@@ -1535,7 +1513,6 @@ async fn workflow_struct_inside_enum() {
     let salt = Salt::from(salt);
     let compiled = Contract::load_sway_contract(
         "tests/test_projects/struct_inside_enum/out/debug/struct_inside_enum.bin",
-        salt,
     )
     .unwrap();
     let (provider, wallet) = setup_test_provider_and_wallet().await;
