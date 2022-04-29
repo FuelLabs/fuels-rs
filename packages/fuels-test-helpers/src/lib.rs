@@ -2,7 +2,7 @@
 
 use fuel_core::{
     chain_config::{ChainConfig, CoinConfig, StateConfig},
-    model::coin::{Coin, CoinStatus},
+    model::{Coin, CoinStatus},
     service::{Config, DbType, FuelService},
 };
 use fuel_crypto::Hasher;

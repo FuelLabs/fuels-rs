@@ -11,11 +11,11 @@ description = "Fuel Rust SDK contracts."
 [dependencies]
 anyhow = "1"
 bytes = { version = "1.0.1", features = ["serde"] }
-fuel-asm = { version = "0.3", features = ["serde-types"] }
-fuel-gql-client = { version = "0.5", default-features = false }
-fuel-tx = "0.7"
+fuel-asm = { version = "0.4", features = ["serde-types"] }
+fuel-gql-client = { version = "0.6", default-features = false }
+fuel-tx = "0.9"
 fuel-types = "0.3"
-fuel-vm = "0.6"
+fuel-vm = "0.8"
 fuels-core = { version = "0.9.1", path = "../fuels-core" }
 fuels-signers = { version = "0.9.1", path = "../fuels-signers", features = ["test-helpers"] }
 hex = { version = "0.4.3", default-features = false, features = ["std"] }
