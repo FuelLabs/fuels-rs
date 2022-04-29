@@ -1,6 +1,6 @@
 use fuel_tx::{AssetId, ContractId, Receipt, Salt};
+use fuels::prelude::*;
 use fuels_abigen_macro::abigen;
-use fuels_rs::prelude::*;
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 use sha2::{Digest, Sha256};
