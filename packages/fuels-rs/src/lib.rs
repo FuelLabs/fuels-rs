@@ -6,11 +6,11 @@
 //!
 //! ```no_run
 //! # #[allow(unused)]
-//! use fuels_rs::prelude::*;
+//! use fuels::prelude::*;
 //! use fuels_abigen_macro::abigen;
 //! ```
 //!
-//! Note that `fuels_abigen_macro` isn't included in the `fuels_rs` crate because
+//! Note that `fuels_abigen_macro` isn't included in the `fuels` crate because
 //! it is a `proc_macro` package.
 //!
 //! Examples on how you can use the types imported by the prelude can be found in
@@ -41,7 +41,7 @@ pub mod prelude {
     //!
     //! ```
     //! # #![allow(unused_imports)]
-    //! use fuels_rs::prelude::*;
+    //! use fuels::prelude::*;
     //! ```
 
     pub use super::contract::contract::Contract;

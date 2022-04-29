@@ -1,5 +1,5 @@
 [package]
-name = "fuels-rs"
+name = "fuels"
 version = "0.9.1"
 authors = ["Fuel Labs <contact@fuel.sh>"]
 edition = "2021"
