@@ -555,8 +555,14 @@ where
         mut receipts: Vec<Receipt>,
         output_params: &[ParamType],
     ) -> Result<(Vec<Token>, Vec<Receipt>), Error> {
-        // Right now we only support methods with a single return type.
-        // Soon we'll support tuple as a return type and we'll have to update the logic in here.
+        // Multiple returns are handled as one `Tuple` (which has its own `ParamType`), so getting
+        // more than one output param is an error.
+        if output_params.len() != 1 {
+            return Err(Error::InvalidType(format!(
+                "Received too many output params (expected 1 got {})",
+                output_params.len()
+            )));
+        }
         let output_param = output_params[0].clone();
         // If the method's return type is bigger than a single `WORD`, the returned value
         // is stored in `ReturnData.data`, otherwise, it's stored in `Return.val`.
