@@ -10,8 +10,6 @@ use crate::json_abi::ABIParser;
 use crate::source::Source;
 use crate::utils::ident;
 use fuels_types::{JsonABI, Property};
-
-use crate::constants::{ENUM_KEYWORD, STRUCT_KEYWORD};
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
@@ -34,10 +32,6 @@ pub struct Abigen {
 
     /// Generate no-std safe code
     no_std: bool,
-}
-
-pub fn is_custom_type(p: &Property) -> bool {
-    p.type_field.starts_with(ENUM_KEYWORD) || p.type_field.starts_with(STRUCT_KEYWORD)
 }
 
 impl Abigen {
@@ -64,11 +58,11 @@ impl Abigen {
             custom_structs: custom_types
                 .clone()
                 .into_iter()
-                .filter(|(_, p)| p.type_field.starts_with(STRUCT_KEYWORD))
+                .filter(|(_, p)| p.is_struct_type())
                 .collect(),
             custom_enums: custom_types
                 .into_iter()
-                .filter(|(_, p)| p.type_field.starts_with(ENUM_KEYWORD))
+                .filter(|(_, p)| p.is_enum_type())
                 .collect(),
             abi: parsed_abi,
             contract_name: ident(contract_name),
@@ -235,7 +229,7 @@ impl Abigen {
         let all_properties = Abigen::get_all_properties(abi);
 
         for prop in all_properties {
-            if is_custom_type(prop) {
+            if prop.is_custom_type() {
                 // Top level custom type
                 let custom_type_name = extract_custom_type_name_from_abi_property(prop, None)
                     .expect("failed to extract custom type name");
@@ -268,7 +262,7 @@ impl Abigen {
     fn get_nested_custom_properties(prop: &Property) -> Vec<Property> {
         let mut props = Vec::new();
 
-        if is_custom_type(prop) {
+        if prop.is_custom_type() {
             props.push(prop.clone());
 
             for inner_prop in prop.components.as_ref().unwrap() {

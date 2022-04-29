@@ -95,6 +95,7 @@ impl Provider {
                 &from.to_string(),
                 vec![(format!("{:#x}", asset_id).as_str(), amount)],
                 None,
+                None,
             )
             .await?;
 

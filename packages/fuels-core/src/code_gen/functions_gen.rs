@@ -1,13 +1,12 @@
 use crate::abi_encoder::ABIEncoder;
-use crate::code_gen::custom_types_gen::{extract_custom_type_name_from_abi_property, CustomType};
+use crate::code_gen::custom_types_gen::extract_custom_type_name_from_abi_property;
 use crate::code_gen::docs_gen::expand_doc;
-use crate::constants::{ENUM_KEYWORD, STRUCT_KEYWORD};
 use crate::errors::Error;
 use crate::json_abi::{parse_param, ABIParser};
 use crate::types::expand_type;
 use crate::utils::{ident, safe_ident};
 use crate::{ParamType, Selector};
-use fuels_types::{Function, Property};
+use fuels_types::{CustomType, Function, Property};
 use inflector::Inflector;
 use proc_macro2::{Literal, TokenStream};
 use quote::quote;
@@ -83,23 +82,18 @@ fn expand_fn_outputs(outputs: &[Property]) -> Result<TokenStream, Error> {
         1 => {
             // If it's a {struct, enum} as the type of a function's output, use its tokenized name
             // only. Otherwise, parse and expand.
-            if outputs[0].type_field.starts_with(STRUCT_KEYWORD) {
-                let tok: proc_macro2::TokenStream = extract_custom_type_name_from_abi_property(
-                    &outputs[0],
-                    Some(CustomType::Struct),
-                )?
-                .parse()
-                .unwrap();
-                return Ok(tok);
-            }
-            if outputs[0].type_field.starts_with(ENUM_KEYWORD) {
-                let tok: proc_macro2::TokenStream = extract_custom_type_name_from_abi_property(
-                    &outputs[0],
-                    Some(CustomType::Enum),
-                )?
-                .parse()
-                .unwrap();
-                return Ok(tok);
+            if outputs[0].is_custom_type() {
+                let custom_type_name = match outputs[0].is_struct_type() {
+                    true => extract_custom_type_name_from_abi_property(
+                        &outputs[0],
+                        Some(CustomType::Struct),
+                    ),
+                    false => extract_custom_type_name_from_abi_property(
+                        &outputs[0],
+                        Some(CustomType::Enum),
+                    ),
+                }?;
+                return Ok(custom_type_name.parse().unwrap());
             }
             expand_type(&parse_param(&outputs[0])?)
         }
