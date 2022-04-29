@@ -1,5 +1,3 @@
-use crate::code_gen::abigen::is_custom_type;
-use crate::constants::{ENUM_KEYWORD, STRUCT_KEYWORD};
 use crate::Token;
 use crate::{abi_decoder::ABIDecoder, abi_encoder::ABIEncoder, errors::Error, ParamType};
 use fuels_types::{JsonABI, Property};
@@ -491,7 +489,7 @@ impl ABIParser {
     fn build_fn_selector_params(&self, param: &Property) -> String {
         let mut result: String = String::new();
 
-        if is_custom_type(param) {
+        if param.is_custom_type() {
             // Custom type, need to break down inner fields
             // Will return `"s(field_1,field_2,...,field_n)"`.
             result.push_str("s(");
@@ -523,7 +521,7 @@ pub fn parse_param(param: &Property) -> Result<ParamType, Error> {
         // Simple case (primitive types, no arrays, including string)
         Ok(param_type) => Ok(param_type),
         Err(_) => {
-            if is_custom_type(param) {
+            if param.is_custom_type() {
                 return parse_custom_type_param(param);
             }
             if param.type_field.contains('[') && param.type_field.contains(']') {
@@ -601,10 +599,10 @@ pub fn parse_custom_type_param(param: &Property) -> Result<ParamType, Error> {
             for component in c {
                 params.push(parse_param(component)?)
             }
-            if param.type_field.starts_with(STRUCT_KEYWORD) {
+            if param.is_struct_type() {
                 return Ok(ParamType::Struct(params));
             }
-            if param.type_field.starts_with(ENUM_KEYWORD) {
+            if param.is_enum_type() {
                 return Ok(ParamType::Enum(params));
             }
             Err(Error::InvalidType(param.type_field.clone()))
