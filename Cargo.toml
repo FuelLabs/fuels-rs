@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "packages/fuels",
     "packages/fuels-abigen-macro",
     "packages/fuels-contract",
     "packages/fuels-core",
