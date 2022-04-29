@@ -6,6 +6,7 @@ edition = "2021"
 homepage = "https://fuel.network/"
 license = "Apache-2.0"
 repository = "https://github.com/FuelLabs/fuels-rs"
+rust-version = "1.58.0"
 description = "Fuel Rust SDK."
 
 [dependencies]
