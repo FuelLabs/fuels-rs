@@ -11,9 +11,9 @@ description = "Fuel Rust SDK core."
 [dependencies]
 Inflector = "0.11"
 anyhow = "1"
-fuel-tx = "0.7"
+fuel-tx = "0.9"
 fuel-types = "0.3"
-fuel-vm = "0.6"
+fuel-vm = "0.8"
 fuels-types = { version = "0.9.1", path = "../fuels-types" }
 hex = { version = "0.4.3", features = ["std"] }
 itertools = "0.10.1"
