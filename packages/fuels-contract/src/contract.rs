@@ -43,6 +43,25 @@ pub struct Contract {
 pub struct CallResponse<D> {
     pub value: D,
     pub receipts: Vec<Receipt>,
+    pub logs: Option<Vec<String>>,
+}
+impl<D> CallResponse<D> {
+    pub fn new(value: D, receipts: Vec<Receipt>) -> Self {
+        // Get all the logs from LogData receipts and put them in the `logs` property
+        let logs_vec = receipts
+            .iter()
+            .filter(|r| matches!(r, Receipt::LogData { .. }))
+            .map(|r| hex::encode(r.data().unwrap()))
+            .collect::<Vec<String>>();
+        Self {
+            value,
+            receipts,
+            logs: match logs_vec.is_empty() {
+                true => None,
+                false => Some(logs_vec),
+            },
+        }
+    }
 }
 
 impl Contract {
@@ -524,17 +543,11 @@ where
 
         // If it's an ABI method without a return value, exit early.
         if self.output_params.is_empty() {
-            return Ok(CallResponse {
-                value: D::from_tokens(vec![])?,
-                receipts,
-            });
+            return Ok(CallResponse::new(D::from_tokens(vec![])?, receipts));
         }
 
         let (decoded_value, receipts) = Self::get_decoded_output(receipts, &self.output_params)?;
-        Ok(CallResponse {
-            value: D::from_tokens(decoded_value)?,
-            receipts,
-        })
+        Ok(CallResponse::new(D::from_tokens(decoded_value)?, receipts))
     }
 
     /// Call a contract's method on the node, in a state-modifying manner.
@@ -564,10 +577,10 @@ where
             )));
         }
         let output_param = output_params[0].clone();
-        // If the method's return type is bigger than a single `WORD`, the returned value
-        // is stored in `ReturnData.data`, otherwise, it's stored in `Return.val`.
-        // Here we're checking for that.
-        let (encoded_value, index) = match output_param.bigger_than_word() {
+        // If the method's return type is bigger than a single `WORD`, the returned value is stored
+        // in `ReturnData.data`, otherwise, it's stored in `Return.val`. Here we're checking for
+        // that. There is only one receipt that has non-None `data` or `val`.
+        let (encoded_value, index) = match output_param.is_bigger_than_word() {
             true => match receipts.iter().find(|&receipt| receipt.data().is_some()) {
                 Some(r) => {
                     let index = receipts.iter().position(|elt| elt == r).unwrap();

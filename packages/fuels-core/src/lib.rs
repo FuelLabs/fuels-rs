@@ -49,7 +49,7 @@ impl ParamType {
     // This is important because, depending on whether it's
     // bigger or smaller than a `WORD`, the returned data
     // will be inside a `ReturnData` receipt or a `Return` receipt.
-    pub fn bigger_than_word(&self) -> bool {
+    pub fn is_bigger_than_word(&self) -> bool {
         match &*self {
             // Bits256 Always bigger than one `WORD`.
             Self::B256 => true,
@@ -58,7 +58,7 @@ impl ParamType {
             Self::Struct(params) => match params.len() {
                 // If only one component in this struct
                 // check if this element itself is bigger than a `WORD`.
-                1 => params[0].bigger_than_word(),
+                1 => params[0].is_bigger_than_word(),
                 _ => true,
             },
             // Enums are always in `ReturnData`.

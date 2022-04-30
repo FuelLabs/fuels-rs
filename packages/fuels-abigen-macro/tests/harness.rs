@@ -1549,3 +1549,55 @@ async fn workflow_struct_inside_enum() {
     let expected = Shaker::Cosmopolitan(Recipe { ice: 22, sugar: 99 });
     assert_eq!(result.value, expected);
 }
+
+#[tokio::test]
+async fn test_logd_receipts() {
+    let mut rng = StdRng::seed_from_u64(2322u64);
+
+    abigen!(
+        LoggingContract,
+        "packages/fuels-abigen-macro/tests/test_projects/contract_logdata/out/debug/contract_logdata-abi.json"
+    );
+
+    let salt: [u8; 32] = rng.gen();
+    let salt = Salt::from(salt);
+
+    let (provider, wallet) = setup_test_provider_and_wallet().await;
+    let compiled = Contract::load_sway_contract(
+        "tests/test_projects/contract_logdata/out/debug/contract_logdata.bin",
+        salt,
+    )
+    .unwrap();
+
+    let id = Contract::deploy(&compiled, &provider, &wallet, TxParameters::default())
+        .await
+        .unwrap();
+    let contract_instance = LoggingContract::new(id.to_string(), provider.clone(), wallet.clone());
+    let mut value = [0u8; 32];
+    value[0] = 0xFF;
+    value[1] = 0xEE;
+    value[2] = 0xDD;
+    value[12] = 0xAA;
+    value[13] = 0xBB;
+    value[14] = 0xCC;
+    let result = contract_instance
+        .use_logd_opcode(value, 3, 6)
+        .call()
+        .await
+        .unwrap();
+    assert_eq!(result.logs.unwrap(), vec!["ffeedd", "ffeedd000000"]);
+    let result = contract_instance
+        .use_logd_opcode(value, 14, 15)
+        .call()
+        .await
+        .unwrap();
+    assert_eq!(
+        result.logs.unwrap(),
+        vec![
+            "ffeedd000000000000000000aabb",
+            "ffeedd000000000000000000aabbcc"
+        ]
+    );
+    let result = contract_instance.dont_use_logd().call().await.unwrap();
+    assert_eq!(result.logs, None);
+}
