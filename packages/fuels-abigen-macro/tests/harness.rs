@@ -1,8 +1,6 @@
-use fuel_tx::{AssetId, ContractId, Receipt, Salt};
+use fuel_tx::{AssetId, ContractId, Receipt};
 use fuels_abigen_macro::abigen;
 use fuels_rs::prelude::*;
-use rand::rngs::StdRng;
-use rand::{Rng, SeedableRng};
 use sha2::{Digest, Sha256};
 
 fn null_contract_id() -> String {
@@ -617,8 +615,6 @@ async fn create_nested_struct_from_decoded_tokens() {
 
 #[tokio::test]
 async fn example_workflow() {
-    let mut rng = StdRng::seed_from_u64(2322u64);
-
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `MyContract`.
     abigen!(
@@ -666,8 +662,6 @@ async fn example_workflow() {
 #[tokio::test]
 #[ignore]
 async fn type_safe_output_values() {
-    let rng = &mut StdRng::seed_from_u64(2322u64);
-
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `SimpleContract`.
     abigen!(
@@ -715,8 +709,6 @@ async fn type_safe_output_values() {
 
 #[tokio::test]
 async fn call_with_structs() {
-    let rng = &mut StdRng::seed_from_u64(2322u64);
-
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `MyContract`.
     abigen!(
@@ -760,8 +752,6 @@ async fn call_with_structs() {
 
 #[tokio::test]
 async fn call_with_empty_return() {
-    let rng = &mut StdRng::seed_from_u64(2322u64);
-
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `MyContract`.
     abigen!(
@@ -791,8 +781,6 @@ async fn call_with_empty_return() {
 
 #[tokio::test]
 async fn abigen_different_structs_same_arg_name() {
-    let rng = &mut StdRng::seed_from_u64(2322u64);
-
     abigen!(
         MyContract,
         "packages/fuels-abigen-macro/tests/test_projects/two_structs/out/debug/two_structs-abi.json",
@@ -828,8 +816,6 @@ async fn abigen_different_structs_same_arg_name() {
 
 #[tokio::test]
 async fn test_reverting_transaction() {
-    let rng = &mut StdRng::seed_from_u64(2322u64);
-
     abigen!(
         RevertingContract,
         "packages/fuels-abigen-macro/tests/test_projects/revert_transaction_error/out/debug/capture_revert_transaction_error-abi.json"
@@ -851,7 +837,6 @@ async fn test_reverting_transaction() {
 
 #[tokio::test]
 async fn multiple_read_calls() {
-    let rng = &mut StdRng::seed_from_u64(2322u64);
     abigen!(
         MyContract,
         "packages/fuels-abigen-macro/tests/test_projects/multiple_read_calls/out/debug/demo-abi.json"
@@ -884,8 +869,6 @@ async fn multiple_read_calls() {
 
 #[tokio::test]
 async fn test_methods_typeless_argument() {
-    let rng = &mut StdRng::seed_from_u64(2322u64);
-
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `MyContract`.
     abigen!(
@@ -916,8 +899,6 @@ async fn test_methods_typeless_argument() {
 
 #[tokio::test]
 async fn test_connect_to_deployed_contract() {
-    let rng = &mut StdRng::seed_from_u64(2322u64);
-
     abigen!(
         MyContract,
         "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
@@ -996,8 +977,6 @@ async fn test_connect_to_deployed_contract() {
 
 #[tokio::test]
 async fn test_large_return_data() {
-    let rng = &mut StdRng::seed_from_u64(2322u64);
-
     abigen!(
         MyContract,
         "packages/fuels-abigen-macro/tests/test_projects/large_return_data/out/debug/contract_test-abi.json"
@@ -1060,8 +1039,6 @@ async fn test_large_return_data() {
 #[tokio::test]
 #[ignore]
 async fn test_provider_launch_and_connect() {
-    let rng = &mut StdRng::seed_from_u64(2322u64);
-
     abigen!(
         MyContract,
         "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
@@ -1110,8 +1087,6 @@ async fn test_provider_launch_and_connect() {
 
 #[tokio::test]
 async fn test_contract_calling_contract() {
-    let rng = &mut StdRng::seed_from_u64(2322u64);
-
     // Tests a contract call that calls another contract (FooCaller calls FooContract underneath)
     abigen!(
         FooContract,
@@ -1180,8 +1155,6 @@ async fn test_contract_calling_contract() {
 
 #[tokio::test]
 async fn test_gas_errors() {
-    let mut rng = StdRng::seed_from_u64(2322u64);
-
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `MyContract`.
     abigen!(
@@ -1324,8 +1297,6 @@ async fn test_amount_and_asset_forwarding() {
 
 #[tokio::test]
 async fn test_multiple_args() {
-    let mut rng = StdRng::seed_from_u64(2322u64);
-
     abigen!(
         MyContract,
         "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
@@ -1359,8 +1330,6 @@ async fn test_multiple_args() {
 
 #[tokio::test]
 async fn test_tuples() {
-    let mut rng = StdRng::seed_from_u64(2322u64);
-
     abigen!(
         MyContract,
         "packages/fuels-abigen-macro/tests/test_projects/tuples/out/debug/tuples-abi.json"
@@ -1383,8 +1352,6 @@ async fn test_tuples() {
 
 #[tokio::test]
 async fn test_auth_msg_sender_from_sdk() {
-    let mut rng = StdRng::seed_from_u64(2322u64);
-
     abigen!(
         AuthContract,
         "packages/fuels-abigen-macro/tests/test_projects/auth_testing_contract/out/debug/auth_testing_contract-abi.json"
@@ -1414,7 +1381,6 @@ async fn test_auth_msg_sender_from_sdk() {
 
 #[tokio::test]
 async fn workflow_enum_inside_struct() {
-    let mut rng = StdRng::seed_from_u64(2322u64);
     abigen!(
         MyContract,
         "packages/fuels-abigen-macro/tests/test_projects/enum_inside_struct/out/debug\
@@ -1439,7 +1405,6 @@ async fn workflow_enum_inside_struct() {
 
 #[tokio::test]
 async fn workflow_struct_inside_enum() {
-    let mut rng = StdRng::seed_from_u64(2322u64);
     abigen!(
         MyContract,
         "packages/fuels-abigen-macro/tests/test_projects/struct_inside_enum/out/debug/struct_inside_enum-abi.json"
