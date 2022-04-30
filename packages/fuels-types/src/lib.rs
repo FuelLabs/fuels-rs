@@ -4,6 +4,7 @@
 //! consume or generate these ABI-compatible types without needing to pull in the rest of the SDK.
 
 use serde::{Deserialize, Serialize};
+use strum_macros::ToString;
 
 /// Fuel ABI representation in JSON, originally specified here:
 ///
@@ -30,4 +31,28 @@ pub struct Property {
     #[serde(rename = "type")]
     pub type_field: String,
     pub components: Option<Vec<Property>>, // Used for custom types
+}
+
+// Both those constants are used to determine if a type field represents an `Enum` or a `Struct`.
+// Since it would have the format `struct foo` or `enum bar`, there is a whitespace.
+const STRUCT_KEYWORD: &str = "struct ";
+const ENUM_KEYWORD: &str = "enum ";
+
+impl Property {
+    pub fn is_enum_type(&self) -> bool {
+        self.type_field.starts_with(ENUM_KEYWORD)
+    }
+    pub fn is_struct_type(&self) -> bool {
+        self.type_field.starts_with(STRUCT_KEYWORD)
+    }
+    pub fn is_custom_type(&self) -> bool {
+        self.is_enum_type() || self.is_struct_type()
+    }
+}
+
+#[derive(Debug, Clone, ToString, PartialEq, Eq)]
+#[strum(serialize_all = "lowercase")]
+pub enum CustomType {
+    Struct,
+    Enum,
 }

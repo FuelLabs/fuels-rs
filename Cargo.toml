@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "packages/fuels",
     "packages/fuels-abigen-macro",
     "packages/fuels-contract",
     "packages/fuels-core",
@@ -7,4 +8,5 @@ members = [
     "packages/fuels-test-helpers",
     "packages/fuels-types",
     "tools/fuels-abi-cli",
+    "scripts/build-test-projects",
 ]
