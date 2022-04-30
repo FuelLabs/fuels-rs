@@ -363,9 +363,6 @@ impl Contract {
             Self::contract_deployment_transaction(compiled_contract, wallet, params).await?;
         wallet.sign_transaction(&mut tx).await?;
 
-        // let _a = Transaction::create(0,0,0,0,0,
-        // Salt::from([0u8; 32]), vec![], vec![],vec![],vec![],vec![]);
-
         match provider.client.submit(&tx).await {
             Ok(_) => Ok(contract_id),
             Err(e) => Err(Error::TransactionError(format!(
