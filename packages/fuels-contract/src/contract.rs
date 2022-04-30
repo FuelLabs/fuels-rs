@@ -384,11 +384,7 @@ impl Contract {
 
         match provider.client.submit(&tx).await {
             Ok(_) => Ok(contract_id),
-            Err(e) => Err(Error::TransactionError(format!(
-                "{} {}",
-                e.to_string(),
-                "-> maybe use load_sway_contract_with_salt",
-            ))),
+            Err(e) => Err(Error::TransactionError(e.to_string())),
         }
     }
 

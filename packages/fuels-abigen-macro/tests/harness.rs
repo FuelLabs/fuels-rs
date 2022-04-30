@@ -1,7 +1,18 @@
 use fuel_tx::{AssetId, ContractId, Receipt};
+use fuels::prelude::Error;
+use fuels::prelude::{
+    setup_address_and_coins, setup_test_provider, setup_test_provider_and_wallet, CallParameters,
+    Contract, LocalWallet, Provider, Signer, TxParameters, DEFAULT_INITIAL_BALANCE,
+};
 use fuels_abigen_macro::abigen;
-use fuels_rs::prelude::*;
+use fuels_core::constants::NATIVE_ASSET_ID;
+use fuels_core::Token;
 use sha2::{Digest, Sha256};
+
+/// Note: all the tests and examples below require pre-compiled Sway projects.
+/// To compile these projects, run `cargo run --bin build-test-projects`.
+/// It will build all test projects, creating their respective binaries,
+/// ABI files, and lock files. These are not to be committed to the repository.
 
 fn null_contract_id() -> String {
     // a null contract address ~[0u8;32]
@@ -658,19 +669,17 @@ async fn example_workflow() {
     assert_eq!(52, result.value);
 }
 
-// TODO https://github.com/FuelLabs/fuels-rs/issues/201
 #[tokio::test]
-#[ignore]
 async fn type_safe_output_values() {
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `SimpleContract`.
     abigen!(
         MyContract,
-        "packages/fuels-abigen-macro/tests/test_projects/contract_output_test/out/debug/contract_test-abi.json"
+        "packages/fuels-abigen-macro/tests/test_projects/contract_output_test/out/debug/contract_output_test-abi.json"
     );
 
     let compiled = Contract::load_sway_contract(
-        "tests/test_projects/contract_output_test/out/debug/contract_test.bin",
+        "tests/test_projects/contract_output_test/out/debug/contract_output_test.bin",
     )
     .unwrap();
 
@@ -1005,10 +1014,9 @@ async fn test_large_return_data() {
         ]
     );
 
-    // TODO https://github.com/FuelLabs/fuels-rs/issues/201
     // One word-sized string
-    // let res = contract_instance.get_small_string().call().await.unwrap();
-    // assert_eq!(res.value, "gggggggg");
+    let res = contract_instance.get_small_string().call().await.unwrap();
+    assert_eq!(res.value, "gggggggg");
 
     // Two word-sized string
     let res = contract_instance.get_large_string().call().await.unwrap();
