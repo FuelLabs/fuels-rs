@@ -113,10 +113,10 @@ mod tests {
         );
 
         let signature = wallet.sign_transaction(&mut tx).await.unwrap();
-        let message = Message::new(tx.id());
+        let message = unsafe { Message::from_bytes_unchecked(*tx.id()) };
 
         // Check if signature is what we expect it to be
-        assert_eq!(signature, Signature::from_str("0x87493a4e6e02e70e6a380f9c9ad2167cc01ccd6cf058c371316911c80e2415c8b7a406268b09b985581ebbe70de81ff59bba99d24dae5295d0a137b7b9a8507c").unwrap());
+        assert_eq!(signature, Signature::from_str("a1287a24af13fc102cb9e60988b558d5575d7870032f64bafcc2deda2c99125fb25eca55a29a169de156cb30700965e2b26278fcc7ad375bc720440ea50ba3cb").unwrap());
 
         // Recover address that signed the transaction
         let recovered_address = signature.recover(&message).unwrap();

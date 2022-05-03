@@ -18,11 +18,9 @@ use thiserror::Error;
 /// then verified.
 ///
 /// ```
-/// use fuels_signers::{LocalWallet, Signer};
 /// use fuel_crypto::{Message, SecretKey};
 /// use rand::{rngs::StdRng, RngCore, SeedableRng};
-/// use fuels_signers::provider::Provider;
-/// use fuels_test_helpers::setup_test_provider;
+/// use fuels::prelude::*;
 ///
 /// async fn foo() -> Result<(), Box<dyn std::error::Error>> {
 ///   // Generate your secret key
@@ -37,7 +35,7 @@ use thiserror::Error;
 ///   let (provider, _) = setup_test_provider(vec![]).await;
 ///
 ///   // Create a new local wallet with the newly generated key
-///   let wallet = LocalWallet::new_from_private_key(secret, provider)?;
+///   let wallet = LocalWallet::new_from_private_key(secret, provider);
 ///
 ///   let message = "my message";
 ///   let signature = wallet.sign_message(message.as_bytes()).await?;
@@ -111,9 +109,7 @@ impl Wallet {
     ///
     /// # Examples
     /// ```
-    /// use fuels_signers::provider::Provider;
-    /// use fuels_signers::{LocalWallet, Signer};
-    /// use fuels_test_helpers::{setup_address_and_coins, setup_test_provider};
+    /// use fuels::prelude::*;
     /// use fuel_tx::{Bytes32, AssetId, Input, Output, UtxoId};
     /// use rand::{rngs::StdRng, RngCore, SeedableRng};
     /// use std::str::FromStr;
@@ -128,8 +124,8 @@ impl Wallet {
     ///   let (provider, _) = setup_test_provider(coins_1).await;
     ///
     ///   // Create the actual wallets/signers
-    ///   let wallet_1 = LocalWallet::new_from_private_key(pk_1, provider.clone()).unwrap();
-    ///   let wallet_2 = LocalWallet::new_from_private_key(pk_2, provider).unwrap();
+    ///   let wallet_1 = LocalWallet::new_from_private_key(pk_1, provider.clone());
+    ///   let wallet_2 = LocalWallet::new_from_private_key(pk_2, provider);
     ///
     ///   // Transfer 1 from wallet 1 to wallet 2
     ///   let _receipts = wallet_1
@@ -233,7 +229,14 @@ impl Signer for Wallet {
 
     async fn sign_transaction(&self, tx: &mut Transaction) -> Result<Signature, Self::Error> {
         let id = tx.id();
-        let sig = Signature::sign(&self.private_key, &Message::new(&id));
+
+        // Safety: `Message::from_bytes_unchecked` is unsafe because
+        // it can't guarantee that the provided bytes will be the product
+        // of a cryptographically secure hash. However, the bytes are
+        // coming from `tx.id()`, which already uses `Hasher::hash()`
+        // to hash it using a secure hash mechanism.
+        let message = unsafe { Message::from_bytes_unchecked(*id) };
+        let sig = Signature::sign(&self.private_key, &message);
 
         let witness = vec![Witness::from(sig.as_ref())];
 
