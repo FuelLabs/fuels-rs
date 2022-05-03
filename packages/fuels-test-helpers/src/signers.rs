@@ -1,5 +1,5 @@
 use crate::{setup_address_and_coins, setup_test_client, DEFAULT_INITIAL_BALANCE};
-use fuel_core::model::coin::Coin;
+use fuel_core::model::Coin;
 use fuel_tx::UtxoId;
 use fuels_signers::provider::Provider;
 use fuels_signers::LocalWallet;
