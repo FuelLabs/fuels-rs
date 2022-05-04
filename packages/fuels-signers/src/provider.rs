@@ -1,3 +1,4 @@
+#[cfg(feature = "fuel-core")]
 use fuel_core::service::{Config, FuelService};
 use fuel_gql_client::client::schema::coin::Coin;
 use fuel_gql_client::client::{FuelClient, PageDirection, PaginationRequest};
@@ -40,6 +41,7 @@ impl Provider {
         Ok(self.client.receipts(&tx_id.0.to_string()).await?)
     }
 
+    #[cfg(feature = "fuel-core")]
     /// Launches a local `fuel-core` network based on provided config.
     pub async fn launch(config: Config) -> Result<FuelClient, Error> {
         let srv = FuelService::new_node(config).await.unwrap();
