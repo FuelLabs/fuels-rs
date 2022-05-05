@@ -1,4 +1,10 @@
 [workspace]
+# Use the new resolver to prevent dev-deps and build-deps from enabling debugging or test features in production.
+#
+# > If you are using a virtual workspace, you will still need to explicitly set the resolver field in the [workspace]
+#   definition if you want to opt-in to the new resolver.
+# https://doc.rust-lang.org/edition-guide/rust-2021/default-cargo-resolver.html#details
+resolver = "2"
 members = [
     "packages/fuels",
     "packages/fuels-abigen-macro",
