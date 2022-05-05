@@ -388,7 +388,18 @@ impl Contract {
         }
     }
 
-    pub fn load_sway_contract(binary_filepath: &str, salt: Salt) -> Result<CompiledContract> {
+    pub fn load_sway_contract(binary_filepath: &str) -> Result<CompiledContract> {
+        let bin = std::fs::read(binary_filepath)?;
+        Ok(CompiledContract {
+            raw: bin,
+            salt: Salt::from([0u8; 32]),
+        })
+    }
+
+    pub fn load_sway_contract_with_salt(
+        binary_filepath: &str,
+        salt: Salt,
+    ) -> Result<CompiledContract> {
         let bin = std::fs::read(binary_filepath)?;
         Ok(CompiledContract { raw: bin, salt })
     }

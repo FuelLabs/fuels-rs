@@ -1,8 +1,12 @@
-use fuel_tx::{AssetId, ContractId, Receipt, Salt};
-use fuels::prelude::*;
+use fuel_tx::{AssetId, ContractId, Receipt};
+use fuels::prelude::Error;
+use fuels::prelude::{
+    setup_address_and_coins, setup_test_provider, setup_test_provider_and_wallet, CallParameters,
+    Contract, LocalWallet, Provider, Signer, TxParameters, DEFAULT_INITIAL_BALANCE,
+};
 use fuels_abigen_macro::abigen;
-use rand::rngs::StdRng;
-use rand::{Rng, SeedableRng};
+use fuels_core::constants::NATIVE_ASSET_ID;
+use fuels_core::Token;
 use sha2::{Digest, Sha256};
 
 /// Note: all the tests and examples below require pre-compiled Sway projects.
@@ -622,8 +626,6 @@ async fn create_nested_struct_from_decoded_tokens() {
 
 #[tokio::test]
 async fn example_workflow() {
-    let mut rng = StdRng::seed_from_u64(2322u64);
-
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `MyContract`.
     abigen!(
@@ -631,13 +633,8 @@ async fn example_workflow() {
         "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
 
-    // Build the contract
-    let salt: [u8; 32] = rng.gen();
-    let salt = Salt::from(salt);
-
     let compiled = Contract::load_sway_contract(
         "tests/test_projects/contract_test/out/debug/contract_test.bin",
-        salt,
     )
     .unwrap();
 
@@ -674,8 +671,6 @@ async fn example_workflow() {
 
 #[tokio::test]
 async fn type_safe_output_values() {
-    let rng = &mut StdRng::seed_from_u64(2322u64);
-
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `SimpleContract`.
     abigen!(
@@ -683,13 +678,8 @@ async fn type_safe_output_values() {
         "packages/fuels-abigen-macro/tests/test_projects/contract_output_test/out/debug/contract_output_test-abi.json"
     );
 
-    // Build the contract
-    let salt: [u8; 32] = rng.gen();
-    let salt = Salt::from(salt);
-
     let compiled = Contract::load_sway_contract(
         "tests/test_projects/contract_output_test/out/debug/contract_output_test.bin",
-        salt,
     )
     .unwrap();
 
@@ -728,8 +718,6 @@ async fn type_safe_output_values() {
 
 #[tokio::test]
 async fn call_with_structs() {
-    let rng = &mut StdRng::seed_from_u64(2322u64);
-
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `MyContract`.
     abigen!(
@@ -737,13 +725,8 @@ async fn call_with_structs() {
         "packages/fuels-abigen-macro/tests/test_projects/complex_types_contract/out/debug/contract_test-abi.json"
     );
 
-    // Build the contract
-    let salt: [u8; 32] = rng.gen();
-    let salt = Salt::from(salt);
-
     let compiled = Contract::load_sway_contract(
         "tests/test_projects/complex_types_contract/out/debug/contract_test.bin",
-        salt,
     )
     .unwrap();
 
@@ -778,8 +761,6 @@ async fn call_with_structs() {
 
 #[tokio::test]
 async fn call_with_empty_return() {
-    let rng = &mut StdRng::seed_from_u64(2322u64);
-
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `MyContract`.
     abigen!(
@@ -787,13 +768,8 @@ async fn call_with_empty_return() {
         "packages/fuels-abigen-macro/tests/test_projects/call_empty_return/out/debug/contract_test-abi.json"
     );
 
-    // Build the contract
-    let salt: [u8; 32] = rng.gen();
-    let salt = Salt::from(salt);
-
     let compiled = Contract::load_sway_contract(
         "tests/test_projects/call_empty_return/out/debug/contract_test.bin",
-        salt,
     )
     .unwrap();
 
@@ -814,22 +790,14 @@ async fn call_with_empty_return() {
 
 #[tokio::test]
 async fn abigen_different_structs_same_arg_name() {
-    let rng = &mut StdRng::seed_from_u64(2322u64);
-
     abigen!(
         MyContract,
         "packages/fuels-abigen-macro/tests/test_projects/two_structs/out/debug/two_structs-abi.json",
     );
 
-    // Build the contract
-    let salt: [u8; 32] = rng.gen();
-    let salt = Salt::from(salt);
-
-    let compiled = Contract::load_sway_contract(
-        "tests/test_projects/two_structs/out/debug/two_structs.bin",
-        salt,
-    )
-    .unwrap();
+    let compiled =
+        Contract::load_sway_contract("tests/test_projects/two_structs/out/debug/two_structs.bin")
+            .unwrap();
 
     let (provider, wallet) = setup_test_provider_and_wallet().await;
     let contract_id = Contract::deploy(&compiled, &provider, &wallet, TxParameters::default())
@@ -857,19 +825,13 @@ async fn abigen_different_structs_same_arg_name() {
 
 #[tokio::test]
 async fn test_reverting_transaction() {
-    let rng = &mut StdRng::seed_from_u64(2322u64);
-
     abigen!(
         RevertingContract,
         "packages/fuels-abigen-macro/tests/test_projects/revert_transaction_error/out/debug/capture_revert_transaction_error-abi.json"
     );
 
-    // Build the contract
-    let salt: [u8; 32] = rng.gen();
-    let salt = Salt::from(salt);
-
     let compiled =
-    Contract::load_sway_contract("tests/test_projects/revert_transaction_error/out/debug/capture_revert_transaction_error.bin", salt)
+    Contract::load_sway_contract("tests/test_projects/revert_transaction_error/out/debug/capture_revert_transaction_error.bin")
         .unwrap();
 
     let (provider, wallet) = setup_test_provider_and_wallet().await;
@@ -884,20 +846,14 @@ async fn test_reverting_transaction() {
 
 #[tokio::test]
 async fn multiple_read_calls() {
-    let rng = &mut StdRng::seed_from_u64(2322u64);
     abigen!(
         MyContract,
         "packages/fuels-abigen-macro/tests/test_projects/multiple_read_calls/out/debug/demo-abi.json"
     );
 
-    // Build the contract
-    let salt: [u8; 32] = rng.gen();
-    let salt = Salt::from(salt);
-    let compiled = Contract::load_sway_contract(
-        "tests/test_projects/multiple_read_calls/out/debug/demo.bin",
-        salt,
-    )
-    .unwrap();
+    let compiled =
+        Contract::load_sway_contract("tests/test_projects/multiple_read_calls/out/debug/demo.bin")
+            .unwrap();
 
     let (provider, wallet) = setup_test_provider_and_wallet().await;
     let contract_id = Contract::deploy(&compiled, &provider, &wallet, TxParameters::default())
@@ -922,8 +878,6 @@ async fn multiple_read_calls() {
 
 #[tokio::test]
 async fn test_methods_typeless_argument() {
-    let rng = &mut StdRng::seed_from_u64(2322u64);
-
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `MyContract`.
     abigen!(
@@ -931,13 +885,8 @@ async fn test_methods_typeless_argument() {
         "packages/fuels-abigen-macro/tests/test_projects/empty_arguments/out/debug/method_four_arguments-abi.json"
     );
 
-    // Build the contract
-    let salt: [u8; 32] = rng.gen();
-    let salt = Salt::from(salt);
-
     let compiled = Contract::load_sway_contract(
         "tests/test_projects/empty_arguments/out/debug/method_four_arguments.bin",
-        salt,
     )
     .unwrap();
 
@@ -959,20 +908,13 @@ async fn test_methods_typeless_argument() {
 
 #[tokio::test]
 async fn test_connect_to_deployed_contract() {
-    let rng = &mut StdRng::seed_from_u64(2322u64);
-
     abigen!(
         MyContract,
         "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
 
-    // Build and deploy contract
-    let salt: [u8; 32] = rng.gen();
-    let salt = Salt::from(salt);
-
     let compiled = Contract::load_sway_contract(
         "tests/test_projects/contract_test/out/debug/contract_test.bin",
-        salt,
     )
     .unwrap();
 
@@ -1044,19 +986,13 @@ async fn test_connect_to_deployed_contract() {
 
 #[tokio::test]
 async fn test_large_return_data() {
-    let rng = &mut StdRng::seed_from_u64(2322u64);
-
     abigen!(
         MyContract,
         "packages/fuels-abigen-macro/tests/test_projects/large_return_data/out/debug/contract_test-abi.json"
     );
 
-    let salt: [u8; 32] = rng.gen();
-    let salt = Salt::from(salt);
-
     let compiled = Contract::load_sway_contract(
         "tests/test_projects/large_return_data/out/debug/contract_test.bin",
-        salt,
     )
     .unwrap();
 
@@ -1078,6 +1014,7 @@ async fn test_large_return_data() {
         ]
     );
 
+    // One word-sized string
     let res = contract_instance.get_small_string().call().await.unwrap();
     assert_eq!(res.value, "gggggggg");
 
@@ -1110,20 +1047,13 @@ async fn test_large_return_data() {
 #[tokio::test]
 #[ignore]
 async fn test_provider_launch_and_connect() {
-    let rng = &mut StdRng::seed_from_u64(2322u64);
-
     abigen!(
         MyContract,
         "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
 
-    // Build and deploy contract
-    let salt: [u8; 32] = rng.gen();
-    let salt = Salt::from(salt);
-
     let compiled = Contract::load_sway_contract(
         "tests/test_projects/contract_test/out/debug/contract_test.bin",
-        salt,
     )
     .unwrap();
 
@@ -1165,8 +1095,6 @@ async fn test_provider_launch_and_connect() {
 
 #[tokio::test]
 async fn test_contract_calling_contract() {
-    let rng = &mut StdRng::seed_from_u64(2322u64);
-
     // Tests a contract call that calls another contract (FooCaller calls FooContract underneath)
     abigen!(
         FooContract,
@@ -1178,15 +1106,10 @@ async fn test_contract_calling_contract() {
         "packages/fuels-abigen-macro/tests/test_projects/foo_caller_contract/out/debug/foo_caller_contract-abi.json"
     );
 
-    let salt: [u8; 32] = rng.gen();
-    let salt = Salt::from(salt);
-
     // Load the first compiled contract
-    let compiled = Contract::load_sway_contract(
-        "tests/test_projects/foo_contract/out/debug/foo_contract.bin",
-        salt,
-    )
-    .unwrap();
+    let compiled =
+        Contract::load_sway_contract("tests/test_projects/foo_contract/out/debug/foo_contract.bin")
+            .unwrap();
 
     let (provider, wallet) = setup_test_provider_and_wallet().await;
 
@@ -1208,7 +1131,6 @@ async fn test_contract_calling_contract() {
     // Compile and deploy second contract
     let compiled = Contract::load_sway_contract(
         "tests/test_projects/foo_caller_contract/out/debug/foo_caller_contract.bin",
-        salt,
     )
     .unwrap();
 
@@ -1241,8 +1163,6 @@ async fn test_contract_calling_contract() {
 
 #[tokio::test]
 async fn test_gas_errors() {
-    let mut rng = StdRng::seed_from_u64(2322u64);
-
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `MyContract`.
     abigen!(
@@ -1250,13 +1170,8 @@ async fn test_gas_errors() {
         "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
 
-    // Build the contract
-    let salt: [u8; 32] = rng.gen();
-    let salt = Salt::from(salt);
-
     let compiled = Contract::load_sway_contract(
         "tests/test_projects/contract_test/out/debug/contract_test.bin",
-        salt,
     )
     .unwrap();
 
@@ -1306,12 +1221,9 @@ async fn test_amount_and_asset_forwarding() {
         "packages/fuels-abigen-macro/tests/test_projects/token_ops/out/debug/token_ops-abi.json"
     );
 
-    let salt = Salt::from([0u8; 32]);
-    let compiled = Contract::load_sway_contract(
-        "tests/test_projects/token_ops/out/debug/token_ops.bin",
-        salt,
-    )
-    .unwrap();
+    let compiled =
+        Contract::load_sway_contract("tests/test_projects/token_ops/out/debug/token_ops.bin")
+            .unwrap();
 
     let (provider, wallet) = setup_test_provider_and_wallet().await;
 
@@ -1393,20 +1305,13 @@ async fn test_amount_and_asset_forwarding() {
 
 #[tokio::test]
 async fn test_multiple_args() {
-    let mut rng = StdRng::seed_from_u64(2322u64);
-
     abigen!(
         MyContract,
         "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
 
-    // Build the contract
-    let salt: [u8; 32] = rng.gen();
-    let salt = Salt::from(salt);
-
     let compiled = Contract::load_sway_contract(
         "tests/test_projects/contract_test/out/debug/contract_test.bin",
-        salt,
     )
     .unwrap();
 
@@ -1433,20 +1338,13 @@ async fn test_multiple_args() {
 
 #[tokio::test]
 async fn test_tuples() {
-    let mut rng = StdRng::seed_from_u64(2322u64);
-
     abigen!(
         MyContract,
         "packages/fuels-abigen-macro/tests/test_projects/tuples/out/debug/tuples-abi.json"
     );
 
-    // Build the contract
-    let salt: [u8; 32] = rng.gen();
-    let salt = Salt::from(salt);
-
     let compiled =
-        Contract::load_sway_contract("tests/test_projects/tuples/out/debug/tuples.bin", salt)
-            .unwrap();
+        Contract::load_sway_contract("tests/test_projects/tuples/out/debug/tuples.bin").unwrap();
 
     let (provider, wallet) = setup_test_provider_and_wallet().await;
 
@@ -1462,20 +1360,14 @@ async fn test_tuples() {
 
 #[tokio::test]
 async fn test_auth_msg_sender_from_sdk() {
-    let mut rng = StdRng::seed_from_u64(2322u64);
-
     abigen!(
         AuthContract,
         "packages/fuels-abigen-macro/tests/test_projects/auth_testing_contract/out/debug/auth_testing_contract-abi.json"
     );
 
-    let salt: [u8; 32] = rng.gen();
-    let salt = Salt::from(salt);
-
     let (provider, wallet) = setup_test_provider_and_wallet().await;
     let compiled = Contract::load_sway_contract(
         "tests/test_projects/auth_testing_contract/out/debug/auth_testing_contract.bin",
-        salt,
     )
     .unwrap();
 
@@ -1497,18 +1389,13 @@ async fn test_auth_msg_sender_from_sdk() {
 
 #[tokio::test]
 async fn workflow_enum_inside_struct() {
-    let mut rng = StdRng::seed_from_u64(2322u64);
     abigen!(
         MyContract,
         "packages/fuels-abigen-macro/tests/test_projects/enum_inside_struct/out/debug\
         /enum_inside_struct-abi.json"
     );
-    // Build the contract
-    let salt: [u8; 32] = rng.gen();
-    let salt = Salt::from(salt);
     let compiled = Contract::load_sway_contract(
         "tests/test_projects/enum_inside_struct/out/debug/enum_inside_struct.bin",
-        salt,
     )
     .unwrap();
     let (provider, wallet) = setup_test_provider_and_wallet().await;
@@ -1526,17 +1413,13 @@ async fn workflow_enum_inside_struct() {
 
 #[tokio::test]
 async fn workflow_struct_inside_enum() {
-    let mut rng = StdRng::seed_from_u64(2322u64);
     abigen!(
         MyContract,
         "packages/fuels-abigen-macro/tests/test_projects/struct_inside_enum/out/debug/struct_inside_enum-abi.json"
     );
-    // Build the contract
-    let salt: [u8; 32] = rng.gen();
-    let salt = Salt::from(salt);
+
     let compiled = Contract::load_sway_contract(
         "tests/test_projects/struct_inside_enum/out/debug/struct_inside_enum.bin",
-        salt,
     )
     .unwrap();
     let (provider, wallet) = setup_test_provider_and_wallet().await;
@@ -1548,56 +1431,4 @@ async fn workflow_struct_inside_enum() {
     let result = instance.return_struct_inside_enum(11).call().await.unwrap();
     let expected = Shaker::Cosmopolitan(Recipe { ice: 22, sugar: 99 });
     assert_eq!(result.value, expected);
-}
-
-#[tokio::test]
-async fn test_logd_receipts() {
-    let mut rng = StdRng::seed_from_u64(2322u64);
-
-    abigen!(
-        LoggingContract,
-        "packages/fuels-abigen-macro/tests/test_projects/contract_logdata/out/debug/contract_logdata-abi.json"
-    );
-
-    let salt: [u8; 32] = rng.gen();
-    let salt = Salt::from(salt);
-
-    let (provider, wallet) = setup_test_provider_and_wallet().await;
-    let compiled = Contract::load_sway_contract(
-        "tests/test_projects/contract_logdata/out/debug/contract_logdata.bin",
-        salt,
-    )
-    .unwrap();
-
-    let id = Contract::deploy(&compiled, &provider, &wallet, TxParameters::default())
-        .await
-        .unwrap();
-    let contract_instance = LoggingContract::new(id.to_string(), provider.clone(), wallet.clone());
-    let mut value = [0u8; 32];
-    value[0] = 0xFF;
-    value[1] = 0xEE;
-    value[2] = 0xDD;
-    value[12] = 0xAA;
-    value[13] = 0xBB;
-    value[14] = 0xCC;
-    let result = contract_instance
-        .use_logd_opcode(value, 3, 6)
-        .call()
-        .await
-        .unwrap();
-    assert_eq!(result.logs.unwrap(), vec!["ffeedd", "ffeedd000000"]);
-    let result = contract_instance
-        .use_logd_opcode(value, 14, 15)
-        .call()
-        .await
-        .unwrap();
-    assert_eq!(
-        result.logs.unwrap(),
-        vec![
-            "ffeedd000000000000000000aabb",
-            "ffeedd000000000000000000aabbcc"
-        ]
-    );
-    let result = contract_instance.dont_use_logd().call().await.unwrap();
-    assert_eq!(result.logs, None);
 }
