@@ -31,8 +31,18 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: 1.58.0
+          toolchain: stable
           override: true
+
+      # Ensure CI is using the same minimum toolchain specified in fuels Cargo.toml
+      - name: Verify Rust Version
+      - run: |
+          curl -sSLf "https://github.com/TomWright/dasel/releases/download/v1.24.3/dasel_linux_amd64" -L -o dasel && chmod +x dasel
+          mv ./dasel /usr/local/bin/dasel
+          MIN_VERSION=$(cat packages/fuels/Cargo.toml | dasel -r toml 'package.rust-version')
+          RUSTC_VERSION=$(rustc --version -v | grep "release" | cut -d " " -f 2)
+          echo "Comparing minimum supported toolchain ($MIN_VERSION) with ci toolchain $(RUSTC_VERSION)"
+          test "$MIN_VERSION" == "$RUSTC_VERSION"
 
       - name: Install rustfmt
         run: rustup component add rustfmt
