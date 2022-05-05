@@ -10,6 +10,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  DASEL_VERSION: https://github.com/TomWright/dasel/releases/download/v1.24.3/dasel_linux_amd64
 
 jobs:
   build:
@@ -24,15 +25,26 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-        # Build caching action
-      - uses: Swatinem/rust-cache@v1
-
       - name: Install toolchain
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: stable
+          toolchain: 1.58.0
           override: true
+
+      # Ensure CI is using the same minimum toolchain specified in fuels Cargo.toml
+      - name: Verify Rust Version
+        run: |
+          curl -sSLf "$DASEL_VERSION" -L -o dasel && chmod +x dasel
+          mv ./dasel /usr/local/bin/dasel
+          MIN_VERSION=$(cat packages/fuels/Cargo.toml | dasel -r toml 'package.rust-version')
+          RUSTC_VERSION=$(rustc --version -v | grep "release" | cut -d " " -f 2)
+          echo "Comparing minimum supported toolchain ($MIN_VERSION) with ci toolchain ($RUSTC_VERSION)"
+          test "$MIN_VERSION" == "$RUSTC_VERSION"
+
+        # selecting a toolchain either by action or manual `rustup` calls should happen
+        # before the cache plugin, as it uses the current rustc version as its cache key
+      - uses: Swatinem/rust-cache@v1
 
       - name: Install rustfmt
         run: rustup component add rustfmt
