@@ -24,9 +24,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-        # Build caching action
-      - uses: Swatinem/rust-cache@v1
-
       - name: Install toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -34,9 +31,13 @@ jobs:
           toolchain: stable
           override: true
 
+        # selecting a toolchain either by action or manual `rustup` calls should happen
+        # before the cache plugin, as it uses the current rustc version as its cache key
+      - uses: Swatinem/rust-cache@v1
+
       # Ensure CI is using the same minimum toolchain specified in fuels Cargo.toml
       - name: Verify Rust Version
-      - run: |
+        run: |
           curl -sSLf "https://github.com/TomWright/dasel/releases/download/v1.24.3/dasel_linux_amd64" -L -o dasel && chmod +x dasel
           mv ./dasel /usr/local/bin/dasel
           MIN_VERSION=$(cat packages/fuels/Cargo.toml | dasel -r toml 'package.rust-version')
