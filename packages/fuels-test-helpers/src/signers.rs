@@ -13,7 +13,7 @@ pub async fn setup_test_provider_and_wallet() -> (Provider, LocalWallet) {
     // Setup a provider and node with the given coins
     let (provider, _) = setup_test_provider(coins).await;
 
-    let wallet = LocalWallet::new_from_private_key(pk, provider.clone()).unwrap();
+    let wallet = LocalWallet::new_from_private_key(pk, provider.clone());
     (provider, wallet)
 }
 

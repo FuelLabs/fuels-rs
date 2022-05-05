@@ -5,11 +5,10 @@ use fuel_core::{
     model::{Coin, CoinStatus},
     service::{Config, DbType, FuelService},
 };
-use fuel_crypto::Hasher;
+use fuel_crypto::{PublicKey, SecretKey};
 use fuel_gql_client::client::FuelClient;
-use fuel_tx::{Address, Bytes32, Bytes64, UtxoId};
-use rand::{Fill, Rng};
-use secp256k1::{PublicKey, Secp256k1, SecretKey};
+use fuel_tx::{Address, Bytes32, UtxoId};
+use rand::Fill;
 use std::net::SocketAddr;
 
 #[cfg(feature = "fuels-signers")]
@@ -27,15 +26,10 @@ pub fn setup_address_and_coins(
 ) -> (SecretKey, Vec<(UtxoId, Coin)>) {
     let mut rng = rand::thread_rng();
 
-    let secret_seed = rng.gen::<[u8; 32]>();
+    let secret = SecretKey::random(&mut rng);
 
-    let secret = SecretKey::from_slice(&secret_seed).expect("Failed to generate random secret!");
-
-    let secp = Secp256k1::new();
-
-    let public = PublicKey::from_secret_key(&secp, &secret).serialize_uncompressed();
-    let public = Bytes64::try_from(&public[1..]).unwrap();
-    let hashed = Hasher::hash(public);
+    let public = PublicKey::from(&secret);
+    let hashed = public.hash();
 
     let coins: Vec<(UtxoId, Coin)> = (1..=num_of_coins)
         .map(|_i| {

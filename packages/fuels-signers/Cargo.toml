@@ -20,7 +20,6 @@ fuel-vm = "0.8"
 fuels-core = { version = "0.10.1", path = "../fuels-core" }
 hex = { version = "0.4.3", default-features = false, features = ["std"] }
 rand = { version = "0.8.4", default-features = false }
-secp256k1 = { version = "0.20", features = ["recovery"] }
 serde = { version = "1.0.124", default-features = true, features = ["derive"] }
 sha2 = { version = "0.9.8", default-features = false }
 thiserror = { version = "1.0.30", default-features = false }
@@ -29,6 +28,7 @@ tokio = { version = "1.10.1", features = ["full"] }
 [dev-dependencies]
 hex = { version = "0.4.3", default-features = false, features = ["std"] }
 fuel-types = { version = "0.3", default-features = false, features = ["random"] }
+fuels = { path = "../fuels" }
 fuels-test-helpers = { path = "../fuels-test-helpers", default-features = false }
 
 [features]

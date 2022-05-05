@@ -1061,7 +1061,7 @@ async fn test_provider_launch_and_connect() {
     let (launched_provider, address) = setup_test_provider(coins).await;
     let connected_provider = Provider::connect(address).await.unwrap();
 
-    let wallet = LocalWallet::new_from_private_key(pk, launched_provider.clone()).unwrap();
+    let wallet = LocalWallet::new_from_private_key(pk, launched_provider.clone());
     let contract_id = Contract::deploy(
         &compiled,
         &connected_provider,

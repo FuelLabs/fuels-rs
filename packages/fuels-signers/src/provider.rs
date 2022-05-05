@@ -38,7 +38,7 @@ impl Provider {
     pub async fn send_transaction(&self, tx: &Transaction) -> io::Result<Vec<Receipt>> {
         let tx_id = self.client.submit(tx).await?;
 
-        Ok(self.client.receipts(&tx_id.0.to_string()).await?)
+        self.client.receipts(&tx_id.0.to_string()).await
     }
 
     #[cfg(feature = "fuel-core")]

@@ -1,13 +1,10 @@
 use crate::provider::{Provider, ProviderError};
-use crate::signature::Signature;
 use crate::Signer;
 use async_trait::async_trait;
-use fuel_crypto::Hasher;
+use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
 use fuel_gql_client::client::schema::coin::Coin;
-use fuel_tx::{Address, AssetId, Bytes64, Input, Output, Receipt, Transaction, UtxoId, Witness};
-use fuel_vm::crypto::secp256k1_sign_compact_recoverable;
+use fuel_tx::{Address, AssetId, Input, Output, Receipt, Transaction, UtxoId, Witness};
 use fuels_core::errors::Error;
-use secp256k1::{PublicKey, Secp256k1, SecretKey};
 use std::{fmt, io};
 use thiserror::Error;
 
@@ -21,11 +18,9 @@ use thiserror::Error;
 /// then verified.
 ///
 /// ```
-/// use fuels_signers::{LocalWallet, Signer};
-/// use secp256k1::SecretKey;
+/// use fuel_crypto::{Message, SecretKey};
 /// use rand::{rngs::StdRng, RngCore, SeedableRng};
-/// use fuels_signers::provider::Provider;
-/// use fuels_test_helpers::setup_test_provider;
+/// use fuels::prelude::*;
 ///
 /// async fn foo() -> Result<(), Box<dyn std::error::Error>> {
 ///   // Generate your secret key
@@ -33,26 +28,26 @@ use thiserror::Error;
 ///   let mut secret_seed = [0u8; 32];
 ///   rng.fill_bytes(&mut secret_seed);
 ///
-///   let secret =
-///       SecretKey::from_slice(&secret_seed).expect("Failed to generate random secret!");
+///   let secret = unsafe { SecretKey::from_bytes_unchecked(secret_seed) };
 ///
 ///   // Setup local test node
 ///
 ///   let (provider, _) = setup_test_provider(vec![]).await;
 ///
 ///   // Create a new local wallet with the newly generated key
-///   let wallet = LocalWallet::new_from_private_key(secret, provider)?;
+///   let wallet = LocalWallet::new_from_private_key(secret, provider);
 ///
 ///   let message = "my message";
 ///   let signature = wallet.sign_message(message.as_bytes()).await?;
 ///
 ///   // Recover address that signed the message
-///   let recovered_address = signature.recover(message).unwrap();
+///   let message = Message::new(message);
+///   let recovered_address = signature.recover(&message).unwrap();
 ///
-///   assert_eq!(wallet.address(), recovered_address);
+///   assert_eq!(wallet.address().as_ref(), recovered_address.hash().as_ref());
 ///
 ///   // Verify signature
-///   signature.verify(message, recovered_address).unwrap();
+///   signature.verify(&recovered_address, &message).unwrap();
 ///   Ok(())
 /// }
 /// ```
@@ -94,21 +89,15 @@ impl From<WalletError> for Error {
 }
 
 impl Wallet {
-    pub fn new_from_private_key(
-        private_key: SecretKey,
-        provider: Provider,
-    ) -> Result<Self, WalletError> {
-        let secp = Secp256k1::new();
+    pub fn new_from_private_key(private_key: SecretKey, provider: Provider) -> Self {
+        let public = PublicKey::from(&private_key);
+        let hashed = public.hash();
 
-        let public = PublicKey::from_secret_key(&secp, &private_key).serialize_uncompressed();
-        let public = Bytes64::try_from(&public[1..])?;
-        let hashed = Hasher::hash(public);
-
-        Ok(Self {
+        Self {
             private_key,
             address: Address::new(*hashed),
             provider,
-        })
+        }
     }
 
     pub fn set_provider(&mut self, provider: Provider) {
@@ -120,12 +109,9 @@ impl Wallet {
     ///
     /// # Examples
     /// ```
-    /// use fuels_signers::provider::Provider;
-    /// use fuels_signers::{LocalWallet, Signer};
-    /// use fuels_test_helpers::{setup_address_and_coins, setup_test_provider};
+    /// use fuels::prelude::*;
     /// use fuel_tx::{Bytes32, AssetId, Input, Output, UtxoId};
     /// use rand::{rngs::StdRng, RngCore, SeedableRng};
-    /// use secp256k1::SecretKey;
     /// use std::str::FromStr;
     ///
     /// async fn foo() -> Result<(), Box<dyn std::error::Error>> {
@@ -138,8 +124,8 @@ impl Wallet {
     ///   let (provider, _) = setup_test_provider(coins_1).await;
     ///
     ///   // Create the actual wallets/signers
-    ///   let wallet_1 = LocalWallet::new_from_private_key(pk_1, provider.clone()).unwrap();
-    ///   let wallet_2 = LocalWallet::new_from_private_key(pk_2, provider).unwrap();
+    ///   let wallet_1 = LocalWallet::new_from_private_key(pk_1, provider.clone());
+    ///   let wallet_2 = LocalWallet::new_from_private_key(pk_2, provider);
     ///
     ///   // Transfer 1 from wallet 1 to wallet 2
     ///   let _receipts = wallet_1
@@ -221,10 +207,9 @@ impl Wallet {
         asset_id: &AssetId,
         amount: u64,
     ) -> io::Result<Vec<Coin>> {
-        Ok(self
-            .provider
+        self.provider
             .get_spendable_coins(&self.address(), *asset_id, amount)
-            .await?)
+            .await
     }
 }
 
@@ -237,20 +222,23 @@ impl Signer for Wallet {
         &self,
         message: S,
     ) -> Result<Signature, Self::Error> {
-        let message = message.as_ref();
-        let message_hash = Hasher::hash(message);
-
-        let sig =
-            secp256k1_sign_compact_recoverable(self.private_key.as_ref(), &*message_hash).unwrap();
-        Ok(Signature { compact: sig })
+        let message = Message::new(message);
+        let sig = Signature::sign(&self.private_key, &message);
+        Ok(sig)
     }
 
     async fn sign_transaction(&self, tx: &mut Transaction) -> Result<Signature, Self::Error> {
         let id = tx.id();
-        let sig = secp256k1_sign_compact_recoverable(self.private_key.as_ref(), &*id).unwrap();
-        let sig = Signature { compact: sig };
 
-        let witness = vec![Witness::from(sig.compact.as_ref())];
+        // Safety: `Message::from_bytes_unchecked` is unsafe because
+        // it can't guarantee that the provided bytes will be the product
+        // of a cryptographically secure hash. However, the bytes are
+        // coming from `tx.id()`, which already uses `Hasher::hash()`
+        // to hash it using a secure hash mechanism.
+        let message = unsafe { Message::from_bytes_unchecked(*id) };
+        let sig = Signature::sign(&self.private_key, &message);
+
+        let witness = vec![Witness::from(sig.as_ref())];
 
         let mut witnesses: Vec<Witness> = tx.witnesses().to_vec();
         match witnesses.len() {
