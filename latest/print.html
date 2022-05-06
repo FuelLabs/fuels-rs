@@ -191,7 +191,7 @@ development.</p>
 <h2 id="what-you-will-need-on-your-machine"><a class="header" href="#what-you-will-need-on-your-machine">What you will need on your machine</a></h2>
 <ul>
 <li>Rust 2021 (<a href="https://doc.rust-lang.org/cargo/getting-started/installation.html">see here</a>)</li>
-<li>A clone of the <code>fuels-rs</code> repository: </li>
+<li>A clone of the <code>fuels-rs</code> repository:</li>
 </ul>
 <pre><code class="language-sh">git clone https://github.com/FuelLabs/fuels-rs
 </code></pre>
@@ -205,8 +205,26 @@ development.</p>
 <li><code>fuel-core</code> is the crate that contains the Fuel node software and execution</li>
 </ul>
 <p>Now you're up and ready to develop with the Fuel Rust SDK!</p>
-<h2 id="basic-usage-of-the-sdk"><a class="header" href="#basic-usage-of-the-sdk">Basic usage of the SDK</a></h2>
-<h3 id="instantiating-a-fuel-client"><a class="header" href="#instantiating-a-fuel-client">Instantiating a Fuel client</a></h3>
+<h2 id="importing-the-fuel-rust-sdk"><a class="header" href="#importing-the-fuel-rust-sdk">Importing the Fuel Rust SDK</a></h2>
+<p>all you need is to declare these two dependencies on your <code>Cargo.toml</code>:</p>
+<pre><code class="language-toml">fuels-abigen-macro = &quot;0.10&quot;
+fuels = &quot;0.10&quot;
+</code></pre>
+<p><em>Note that we're using <code>0.10</code>, which is the latest version at the time of this writing.</em></p>
+<p>And then, in your Rust file that's going to make use of the SDK:</p>
+<pre><code class="language-Rust">use fuels::prelude::*;
+use fuels_abigen_macro::abigen;
+</code></pre>
+<h1 id="basic-usage-of-the-sdk"><a class="header" href="#basic-usage-of-the-sdk">Basic usage of the SDK</a></h1>
+<p>At a high level, the Fuel Rust SDK can be used to build Rust-based applications that can run computations on the Fuel Virtual Machine through interactions with contracts written in Sway.</p>
+<p>For this interaction to work, the SDK must be able to communicate to a <code>fuel-core</code> node; you have two options at your disposal:</p>
+<ol>
+<li>Use the SDK's native <code>setup_test_provider_and_wallet()</code> that runs a short-lived test Fuel node;</li>
+<li>Run a Fuel node outside your SDK code (using <code>fuel-core</code>) and point your SDK to that node's IP and port.</li>
+</ol>
+<p>The first option is ideal for contract testing, as you can quickly spin up and tear down nodes between specific test cases.</p>
+<p>For application building, you probably want to go with the second option.</p>
+<h2 id="instantiating-a-fuel-client"><a class="header" href="#instantiating-a-fuel-client">Instantiating a Fuel client</a></h2>
 <p>You can instantiate a Fuel client, pointing to a local Fuel node by
 using <a href="https://github.com/FuelLabs/fuel-core">Fuel Core</a>:</p>
 <pre><code class="language-Rust">use fuel_core::service::{Config, FuelService};
@@ -216,25 +234,26 @@ let server = FuelService::new_node(Config::local_node()).await.unwrap();
 
 let client = FuelClient::from(srv.bound_address);
 </code></pre>
-<p>Alternatively, if you have a Fuel node running separately, you can pass in the <code>SocketAddr</code>
-to <code>FuelClient::from()</code>.</p>
-<p>It's important to setup this client, as it will be needed later when instantiating contracts. More
-on that on the section below.</p>
-<h3 id="deploying-a-sway-contract"><a class="header" href="#deploying-a-sway-contract">Deploying a Sway contract</a></h3>
-<p>Once you have a Fuel node running and the compiled contract in hands, it's time to deploy the
-contract:</p>
-<pre><code class="language-Rust">let salt: [u8; 32] = rng.gen();
-let salt = Salt::from(salt);
-// Setup a local node
-let server = FuelService::new_node(Config::local_node()).await.unwrap();
+<p>Alternatively, if you have a Fuel node running separately, you can pass in the <code>SocketAddr</code> to <code>FuelClient::from()</code>.</p>
+<h2 id="deploying-a-sway-contract"><a class="header" href="#deploying-a-sway-contract">Deploying a Sway contract</a></h2>
+<p>Once you have compiled your contract, here's how to deploy it:</p>
+<pre><code class="language-Rust">use fuels::prelude::*;
+use fuels_abigen_macro::abigen;
+
+// This will generate your contract's methods onto `MyContract`.
+// This means an instance of `MyContract` will have access to all
+// your contract's methods that are running on-chain!
+abigen!(
+    MyContract,
+    &quot;your_project/out/debug/contract_test-abi.json&quot;,
+);
+
+// This helper will setup a local node/provider and a test wallet.
 let (provider, wallet) = setup_test_provider_and_wallet().await;
 
 // Load the compiled Sway contract (this is the output from `forc build`)
 let compiled = Contract::load_sway_contract(
-&quot;your_project/out/debug/contract_test.bin&quot;,
-salt,
-)
-.unwrap();
+    &quot;your_project/out/debug/contract_test.bin&quot;).unwrap();
 
 // Configure deployment parameters.
 // Alternatively you can use the defaults through `TxParameters::default()`.
@@ -243,35 +262,129 @@ let gas_limit = 1_000_000;
 let byte_price = 0;
 
 // Deploy the contract
-let contract_id = Contract::deploy( &amp; compiled, provider, wallet,
+let contract_id = Contract::deploy(&amp;compiled, provider, wallet,
 TxParameters::new(gas_price, gas_limit, byte_price)).await.unwrap();
 </code></pre>
-<p>Alternatively, if you want to launch a local node for every deployment, which is usually useful
-for smaller tests where you don't want to keep state between each test, you can
-use <code>Provider::launch(Config::local_node())</code>:</p>
-<pre><code class="language-Rust">// Build the contract
-let salt: [u8; 32] = rng.gen();
-let salt = Salt::from(salt);
-
-let compiled = Contract::load_sway_contract(
-&quot;your_project/out/debug/contract_test.bin&quot;,
-salt,
-)
-.unwrap();
-
-// Now get the Fuel client provider _and_ contract_id back.
-let (pk, coins) = setup_address_and_coins(1, DEFAULT_COIN_AMOUNT);
-let client = Provider::launch(Config::local_node()).await.unwrap();
-let provider = Provider::new(client);
-let wallet = LocalWallet::new_from_private_key(pk, provider.clone()).unwrap();
-let contract_id = Contract::deploy( &amp; compiled, &amp; provider, &amp; wallet, TxParameters::default ()).await.unwrap();
+<h2 id="calling-and-configuring-contract-calls"><a class="header" href="#calling-and-configuring-contract-calls">Calling and configuring contract calls</a></h2>
+<p>Once you've deployed your contract, as seen in the previous section, you'll likely want to call contract methods and configure some parameters such as gas price, byte price, gas limit, and forward coins in your contract call.</p>
+<p>Start by creating an instance of your contract once you have a provider and wallet set up:</p>
+<pre><code class="language-Rust">let contract_instance = MyContract::new(contract_id.to_string(), provider, wallet);
 </code></pre>
-<h3 id="multi-contract-calls"><a class="header" href="#multi-contract-calls">Multi-contract calls</a></h3>
-<p>Sometimes, you might need to call your contract, which calls other contracts. To do so, you must
-feed the external contract IDs that your contract depends on to the method you're calling. You do
-it by chaining <code>.set_contracts(&amp;[external_contract_id, ...])</code> to the method you want to call. For
-instance:</p>
-<pre><code class="language-Rust">let response = my_contract
+<p>Then we move to configuring contract calls.</p>
+<h3 id="txparameters"><a class="header" href="#txparameters"><code>TxParameters</code></a></h3>
+<p>Transaction parameters are:</p>
+<ol>
+<li>Gas price;</li>
+<li>Gas limit;</li>
+<li>Byte price;</li>
+<li>Maturity.</li>
+</ol>
+<p>These parameters can be configured by creating an instance of <a href="https://github.com/FuelLabs/fuels-rs/blob/adf81bd451d7637ce0976363bd7784408430031a/packages/fuels-contract/src/parameters.rs#L7"><code>TxParameters</code></a> and passing it to a chain method called <code>tx_params</code>:</p>
+<pre><code class="language-Rust">// In order: gas_price, gas_limit, byte_price, and maturity
+let my_tx_params = TxParameters::new(None, Some(1_000_000), None, None);
+
+let result = contract_instance
+        .initialize_counter(42)  // Our contract method.
+        .tx_params(my_tx_params) // Chain the tx params setting method.
+        .call()                  // Perform the contract call.
+        .await                   // This is an async call, `.await` for it.
+        .unwrap();               // It returns a `Result&lt;CallResponse&lt;D&gt;, Error&gt;,
+                                 // unwrap or handle it in any other preferable way.
+</code></pre>
+<p>You can also use <code>TxParameters::default()</code> to use the <a href="https://github.com/FuelLabs/fuels-rs/blob/adf81bd451d7637ce0976363bd7784408430031a/packages/fuels-core/src/constants.rs#L4-L7">default values</a>.</p>
+<h3 id="callparameters"><a class="header" href="#callparameters"><code>CallParameters</code></a></h3>
+<p>Call parameters are:</p>
+<ol>
+<li>Amount;</li>
+<li>Asset ID;</li>
+</ol>
+<p>This is commonly used to forward coins to a contract. These parameters can be configured by creating an instance of <a href="https://github.com/FuelLabs/fuels-rs/blob/adf81bd451d7637ce0976363bd7784408430031a/packages/fuels-contract/src/parameters.rs#L15"><code>CallParameters</code></a> and passing it to a chain method called <code>call_params</code>.</p>
+<p>For instance, suppose the following contract that makes use of Sway's <code>msg_amount()</code> to return the amount sent in that message to the contract:</p>
+<pre><code class="language-Rust">abi FuelTest {
+    fn get_msg_amount() -&gt; u64;
+}
+
+impl FuelTest for Contract {
+    fn get_msg_amount() -&gt; u64 {
+        msg_amount()
+    }
+}
+</code></pre>
+<p>Then, in Rust, after setting up and deploying the above contract, you can configure the amount being sent to the <code>get_msg_amount()</code> method like this:</p>
+<pre><code class="language-Rust">let tx_params = TxParameters::new(None, Some(1_000_000), None, None);
+
+// Forward 1_000_000 coin amount of native asset_id
+// this is a big number for checking that amount can be a u64
+let call_params = CallParameters::new(Some(1_000_000), None);
+
+let response = contract_instance
+    .get_msg_amount()          // Our contract method.
+    .tx_params(tx_params)      // Chain the tx params setting method.
+    .call_params(call_params)  // Chain the call params setting method.
+    .call()                    // Perform the contract call.
+    .await
+    .unwrap();
+</code></pre>
+<p>You can also use <code>CallParameters::default()</code> to use the default values:</p>
+<pre><code class="language-Rust">pub const DEFAULT_COIN_AMOUNT: u64 = 1_000_000;
+pub const NATIVE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
+</code></pre>
+<h3 id="callresponse-reading-returned-values"><a class="header" href="#callresponse-reading-returned-values"><code>CallResponse</code>: Reading returned values</a></h3>
+<p>You've probably noticed that you're often chaining `.call().await.unwrap(). That's because:</p>
+<ol>
+<li>You have to choose between <code>.call()</code> and <code>.simulate()</code> (more on this in the next section);</li>
+<li>Contract calls are asynchronous, so you can choose to either <code>.await</code> it or perform concurrent tasks, making full use of Rust's async;</li>
+<li><code>.unwrap()</code> the <code>Result&lt;CallResponse, Error&gt;</code> returned by the contract call.</li>
+</ol>
+<p>Once you unwrap the <code>CallResponse</code>, you have access to this struct:</p>
+<pre><code class="language-Rust">pub struct CallResponse&lt;D&gt; {
+    pub value: D,
+    pub receipts: Vec&lt;Receipt&gt;,
+    pub logs: Option&lt;Vec&lt;String&gt;&gt;,
+}
+</code></pre>
+<p>Where <code>value</code> will hold the value returned by its respective contract method, represented by the exact type returned by the FuelVM. E.g., if your contract returns a FuelVM's <code>u64</code>, <code>value</code>'s <code>D</code> will be a <code>u64</code>. If it's a FuelVM's tuple <code>(u8,bool)</code>, then <code>D</code> will be a <code>(u8,bool)</code>. If it's a custom type, for instance, a Sway struct <code>MyStruct</code> containing 2 components, a <code>u64</code> and a <code>b256</code>, <code>D</code> will be a struct generated at compile-time, called <code>MyStruct</code> with <code>u64</code> and a <code>[u8; 32]</code> (the equivalent of <code>b256</code> in Rust-land).</p>
+<p><code>receipts</code> will hold all <a href="https://github.com/FuelLabs/fuel-specs/blob/master/specs/protocol/abi.md#receipt">receipts</a> generated by that specific contract call.</p>
+<p>And lastly, <code>logs</code> will hold all logs that happened within that specific contract call.</p>
+<h3 id="read-only-contract-calls"><a class="header" href="#read-only-contract-calls">Read-only contract calls</a></h3>
+<p>Sometimes you want to call a contract method that doesn't change the state of the blockchain. For instance, a method that only reads a value from storage and returns it.</p>
+<p>In this case, there's no need to generate an actual blockchain transaction; you only want to quickly read a value.</p>
+<p>You can do this with the SDK by, instead of <code>.call()</code>ing the method, using <code>.simulate()</code> instead:</p>
+<pre><code class="language-Rust">let my_balance = contract_instance.return_my_balance().simulate().await.unwrap();
+</code></pre>
+<p>Note that if you use <code>.simulate()</code> on a method that <em>does</em> change the state of the blockchain, it won't work properly; it will just <code>dry-run</code> it.</p>
+<p>At the moment, it's up to you to know whether a contract method changes state or not, and use <code>.call()</code> or <code>.simulate()</code> accordingly.</p>
+<h3 id="variable-outputs"><a class="header" href="#variable-outputs">Variable outputs</a></h3>
+<p>In some cases, you might want to send funds to the output of a transaction. Sway has a specific method for that: <code>transfer_to_output(coins, asset_id, recipient)</code>. So, if you have a contract that does something like this:</p>
+<pre><code class="language-Rust">contract;
+
+use std::{address::Address, context::balance_of, context::msg_amount, contract_id::ContractId, token::*};
+
+abi FuelTest {
+    fn transfer_coins_to_output(coins: u64, asset_id: ContractId, recipient: Address);
+}
+
+impl FuelTest for Contract {
+    fn transfer_coins_to_output(coins: u64, asset_id: ContractId, recipient: Address) {
+        transfer_to_output(coins, asset_id, recipient);
+    }
+}
+</code></pre>
+<p>With the SDK, you can call <code>transfer_coins_to_output</code>, by chaining <code>append_variable_outputs(amount)</code> to your contract call. Like this:</p>
+<pre><code class="language-Rust">let address = wallet.address();
+
+// withdraw some tokens to wallet
+contract_instance
+    .transfer_coins_to_output(1_000_000, id, address)
+    .append_variable_outputs(1)
+    .call()
+    .await
+    .unwrap();
+</code></pre>
+<p><code>append_variable_outputs</code> effectively appends a given amount of <code>Output::Variable</code>s to the transaction's list of outputs. This output type indicates that the output's amount and owner may vary based on transaction execution.</p>
+<h3 id="contract-calls-calling-other-contracts"><a class="header" href="#contract-calls-calling-other-contracts">Contract calls calling other contracts</a></h3>
+<p>Sometimes, you might need to call your contract, which calls other contracts. To do so, you must feed the external contract IDs that your contract depends on to the method you're calling. You do it by chaining <code>.set_contracts(&amp;[external_contract_id, ...])</code> to the method you want to call. For instance:</p>
+<pre><code class="language-Rust">let response = contract_instance
 .my_method(...)
 .set_contracts( &amp; [another_contract_id]) // Add this to set the external contract
 .call()
@@ -280,9 +393,21 @@ instance:</p>
 </code></pre>
 <p>For a more concrete example, see the <code>test_contract_calling_contract</code> function in
 <code>fuels-abigen-macro/tests/harness.rs</code></p>
+<h2 id="connecting-to-existing-contracts"><a class="header" href="#connecting-to-existing-contracts">Connecting to existing contracts</a></h2>
+<p>If you already have a deployed contract and want to call its methods using the SDK,  but without deploying it again, all you need is the contract ID of your deployed contract. You can skip the whole deployment setup and call <code>::new(contract_id, provider, wallet)</code> directly. For example:</p>
+<pre><code class="language-Rust">abigen!(
+    MyContract,
+    &quot;path/to/abi.json&quot;
+);
+
+let (provider, wallet) = setup_test_provider_and_wallet().await;
+
+let contract_id = &quot;0x0123...&quot; // Your contract ID as a string.
+
+let connected_contract_instance = MyContract::new(contract_id, provider, wallet);
+</code></pre>
 <h2 id="more-examples"><a class="header" href="#more-examples">More examples</a></h2>
-<p>You can find runnable examples under <code>fuels-abigen-macro/tests/harness.rs</code>
-and  <code>fuels-contract/tests/calls.rs</code>.</p>
+<p>You can find runnable examples under <code>fuels-abigen-macro/tests/harness.rs</code>.</p>
 <h3 id="generating-type-safe-rust-bindings"><a class="header" href="#generating-type-safe-rust-bindings">Generating type-safe Rust bindings</a></h3>
 <p>The SDK lets you transform ABI methods of a contract call, specified as JSON objects (which you can get from <a href="https://github.com/FuelLabs/sway/tree/master/forc">Forc</a>) into Rust structs and methods that are type-checked at compile time.</p>
 <p>For instance, a contract with two methods: <code>initialize_counter(arg: u64) -&gt; u64</code> and <code>increment_counter(arg: u64) -&gt; u64</code>, with the following JSON ABI:</p>

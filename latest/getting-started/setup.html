@@ -171,7 +171,7 @@
 <h2 id="what-you-will-need-on-your-machine"><a class="header" href="#what-you-will-need-on-your-machine">What you will need on your machine</a></h2>
 <ul>
 <li>Rust 2021 (<a href="https://doc.rust-lang.org/cargo/getting-started/installation.html">see here</a>)</li>
-<li>A clone of the <code>fuels-rs</code> repository: </li>
+<li>A clone of the <code>fuels-rs</code> repository:</li>
 </ul>
 <pre><code class="language-sh">git clone https://github.com/FuelLabs/fuels-rs
 </code></pre>
@@ -185,6 +185,16 @@
 <li><code>fuel-core</code> is the crate that contains the Fuel node software and execution</li>
 </ul>
 <p>Now you're up and ready to develop with the Fuel Rust SDK!</p>
+<h2 id="importing-the-fuel-rust-sdk"><a class="header" href="#importing-the-fuel-rust-sdk">Importing the Fuel Rust SDK</a></h2>
+<p>all you need is to declare these two dependencies on your <code>Cargo.toml</code>:</p>
+<pre><code class="language-toml">fuels-abigen-macro = &quot;0.10&quot;
+fuels = &quot;0.10&quot;
+</code></pre>
+<p><em>Note that we're using <code>0.10</code>, which is the latest version at the time of this writing.</em></p>
+<p>And then, in your Rust file that's going to make use of the SDK:</p>
+<pre><code class="language-Rust">use fuels::prelude::*;
+use fuels_abigen_macro::abigen;
+</code></pre>
 
                     </main>
 
