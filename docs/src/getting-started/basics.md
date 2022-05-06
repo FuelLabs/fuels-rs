@@ -74,7 +74,7 @@ Transaction parameters are:
 3. Byte price;
 4. Maturity.
 
-These parameters can be configured by creating an instance of [`TxParameters`](https://github.com/FuelLabs/fuels-rs/blob/master/packages/fuels-contract/src/parameters.rs#L7) and passing it to a chain method called `tx_params`:
+These parameters can be configured by creating an instance of [`TxParameters`](https://github.com/FuelLabs/fuels-rs/blob/adf81bd451d7637ce0976363bd7784408430031a/packages/fuels-contract/src/parameters.rs#L7) and passing it to a chain method called `tx_params`:
 
 ```Rust
 // In order: gas_price, gas_limit, byte_price, and maturity
@@ -105,7 +105,7 @@ Call parameters are:
 1. Amount;
 2. Asset ID;
 
-This is commonly used to forward coins to a contract. These parameters can be configured by creating an instance of [`CallParameters`](https://github.com/FuelLabs/fuels-rs/blob/master/packages/fuels-contract/src/parameters.rs#L15) and passing it to a chain method called `call_params`.
+This is commonly used to forward coins to a contract. These parameters can be configured by creating an instance of [`CallParameters`](https://github.com/FuelLabs/fuels-rs/blob/adf81bd451d7637ce0976363bd7784408430031a/packages/fuels-contract/src/parameters.rs#L15) and passing it to a chain method called `call_params`.
 
 For instance, suppose the following contract that makes use of Sway's `msg_amount()` to return the amount sent in that message to the contract:
 
