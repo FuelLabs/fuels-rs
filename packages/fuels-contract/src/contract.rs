@@ -13,6 +13,7 @@ use fuel_vm::consts::{REG_CGAS, REG_ONE};
 use fuel_vm::prelude::Contract as FuelContract;
 use fuel_vm::script_with_data_offset;
 use fuels_core::errors::Error;
+use fuels_core::ReturnLocation;
 use fuels_core::{
     constants::DEFAULT_COIN_AMOUNT, constants::WORD_SIZE, Detokenize, Selector, Token,
 };
@@ -356,17 +357,24 @@ impl Contract {
         })
     }
 
-    // Returns true if the method call takes custom inputs or has more than one argument. This is used to determine whether we need to compute the `call_data_offset`.
+    // If the data passed into the contract method is an integer or a
+    // boolean, then the data itself should be passed. Otherwise, it
+    // should simply pass a pointer to the data in memory. For more
+    // information, see https://github.com/FuelLabs/sway/issues/1368.
     fn should_compute_call_data_offset(args: &[Token]) -> bool {
-        match args.iter().any(|t| {
-            matches!(
-                t,
-                Token::Struct(_) | Token::Enum(_) | Token::B256(_) | Token::Tuple(_)
-            )
-        }) {
-            true => true,
-            false => args.len() > 1,
-        }
+        args.len() > 1
+            || args.iter().any(|t| {
+                matches!(
+                    t,
+                    Token::String(_)
+                        | Token::Struct(_)
+                        | Token::Enum(_)
+                        | Token::B256(_)
+                        | Token::Tuple(_)
+                        | Token::Array(_)
+                        | Token::Byte(_)
+                )
+            })
     }
 
     /// Deploys a compiled contract to a running node
@@ -588,24 +596,26 @@ where
             )));
         }
         let output_param = output_params[0].clone();
-        // If the method's return type is bigger than a single `WORD`, the returned value is stored
-        // in `ReturnData.data`, otherwise, it's stored in `Return.val`. Here we're checking for
-        // that. There is only one receipt that has non-None `data` or `val`.
-        let (encoded_value, index) = match output_param.is_bigger_than_word() {
-            true => match receipts.iter().find(|&receipt| receipt.data().is_some()) {
-                Some(r) => {
-                    let index = receipts.iter().position(|elt| elt == r).unwrap();
-                    (r.data().unwrap().to_vec(), Some(index))
+
+        let (encoded_value, index) = match output_param.get_return_location() {
+            ReturnLocation::ReturnData => {
+                match receipts.iter().find(|&receipt| receipt.data().is_some()) {
+                    Some(r) => {
+                        let index = receipts.iter().position(|elt| elt == r).unwrap();
+                        (r.data().unwrap().to_vec(), Some(index))
+                    }
+                    None => (vec![], None),
                 }
-                None => (vec![], None),
-            },
-            false => match receipts.iter().find(|&receipt| receipt.val().is_some()) {
-                Some(r) => {
-                    let index = receipts.iter().position(|elt| elt == r).unwrap();
-                    (r.val().unwrap().to_be_bytes().to_vec(), Some(index))
+            }
+            ReturnLocation::Return => {
+                match receipts.iter().find(|&receipt| receipt.val().is_some()) {
+                    Some(r) => {
+                        let index = receipts.iter().position(|elt| elt == r).unwrap();
+                        (r.val().unwrap().to_be_bytes().to_vec(), Some(index))
+                    }
+                    None => (vec![], None),
                 }
-                None => (vec![], None),
-            },
+            }
         };
         if let Some(i) = index {
             receipts.remove(i);

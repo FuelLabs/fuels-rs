@@ -44,36 +44,20 @@ impl Default for ParamType {
     }
 }
 
+pub enum ReturnLocation {
+    Return,
+    ReturnData,
+}
+
 impl ParamType {
-    // Checks if the `ParamType` is bigger than a `WORD`.
-    // This is important because, depending on whether it's
-    // bigger or smaller than a `WORD`, the returned data
-    // will be inside a `ReturnData` receipt or a `Return` receipt.
-    pub fn is_bigger_than_word(&self) -> bool {
+    // Depending on the type, the returned value will be stored
+    // either in `Return` or `ReturnData`. For more information,
+    // see https://github.com/FuelLabs/sway/issues/1368.
+    pub fn get_return_location(&self) -> ReturnLocation {
         match &*self {
-            // Bits256 Always bigger than one `WORD`.
-            Self::B256 => true,
-            // Strings are bigger than one `WORD` when its size > 8.
-            Self::String(size) => size > &8,
-            Self::Struct(params) => match params.len() {
-                // If only one component in this struct
-                // check if this element itself is bigger than a `WORD`.
-                1 => params[0].is_bigger_than_word(),
-                _ => true,
-            },
-            // Enums are always in `ReturnData`.
-            Self::Enum(_params) => true,
-            // Arrays seem to always be inside `ReturnData`.
-            Self::Array(_params, _l) => true,
-            // The other primitive types are inside `Return`,
-            // thus smaller than one `WORD`.
-            Self::Tuple(params) => {
-                if params.len() > 1 {
-                    return true;
-                }
-                false
-            }
-            _ => false,
+            Self::U8 | Self::U16 | Self::U32 | Self::U64 | Self::Bool => ReturnLocation::Return,
+
+            _ => ReturnLocation::ReturnData,
         }
     }
 }

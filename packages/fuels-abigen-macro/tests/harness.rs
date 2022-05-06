@@ -1152,7 +1152,7 @@ async fn test_contract_calling_contract() {
     // Calls the contract that calls the `FooContract` contract, also just
     // flips the bool value passed to it.
     let res = foo_caller_contract_instance
-        .call_foo_contract(true)
+        .call_foo_contract(*foo_contract_id, true)
         .set_contracts(&[foo_contract_id]) // Sets the external contract
         .call()
         .await
