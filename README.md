@@ -29,3 +29,10 @@ See [the `fuels-rs` book](https://fuellabs.github.io/fuels-rs/latest/)
 - [ ] Wallet integration
 - [ ] Events querying/monitoring
 
+
+## FAQ
+
+### Why is the prefix `fuels` and not `fuel`?
+
+In order to make the SDK for Fuel feel familiar with those coming from the [ethers.js](https://github.com/ethers-io/ethers.js) ecosystem, this project opted for an `s` at the end. The `fuels-*` family of SDKs is inspired by The Ethers Project.
+
