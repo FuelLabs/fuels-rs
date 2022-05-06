@@ -65,6 +65,14 @@ TxParameters::new(gas_price, gas_limit, byte_price)).await.unwrap();
 
 Once you've deployed your contract, as seen in the previous section, you'll likely want to call contract methods and configure some parameters such as gas price, byte price, gas limit, and forward coins in your contract call.
 
+Start by creating an instance of your contract once you have a provider and wallet set up:
+
+```Rust
+let contract_instance = MyContract::new(contract_id.to_string(), provider, wallet);
+```
+
+Then we move to configuring contract calls.
+
 ### `TxParameters`
 
 Transaction parameters are:
@@ -89,14 +97,7 @@ let result = contract_instance
                                  // unwrap or handle it in any other preferable way.
 ```
 
-You can also use `TxParameters::default()` to use the default values:
-
-```Rust
-pub const DEFAULT_GAS_LIMIT: u64 = 1_000_000;
-pub const DEFAULT_GAS_PRICE: u64 = 0;
-pub const DEFAULT_BYTE_PRICE: u64 = 0;
-pub const DEFAULT_MATURITY: u32 = 0;
-```
+You can also use `TxParameters::default()` to use the [default values](https://github.com/FuelLabs/fuels-rs/blob/adf81bd451d7637ce0976363bd7784408430031a/packages/fuels-core/src/constants.rs#L4-L7).
 
 ### `CallParameters`
 
@@ -130,7 +131,7 @@ let tx_params = TxParameters::new(None, Some(1_000_000), None, None);
 // this is a big number for checking that amount can be a u64
 let call_params = CallParameters::new(Some(1_000_000), None);
 
-let response = instance
+let response = contract_instance
     .get_msg_amount()          // Our contract method.
     .tx_params(tx_params)      // Chain the tx params setting method.
     .call_params(call_params)  // Chain the call params setting method.
@@ -212,7 +213,7 @@ With the SDK, you can call `transfer_coins_to_output`, by chaining `append_varia
 let address = wallet.address();
 
 // withdraw some tokens to wallet
-instance
+contract_instance
     .transfer_coins_to_output(1_000_000, id, address)
     .append_variable_outputs(1)
     .call()
@@ -227,7 +228,7 @@ instance
 Sometimes, you might need to call your contract, which calls other contracts. To do so, you must feed the external contract IDs that your contract depends on to the method you're calling. You do it by chaining `.set_contracts(&[external_contract_id, ...])` to the method you want to call. For instance:
 
 ```Rust
-let response = my_contract
+let response = contract_instance
 .my_method(...)
 .set_contracts( & [another_contract_id]) // Add this to set the external contract
 .call()
