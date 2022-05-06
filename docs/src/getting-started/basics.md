@@ -47,7 +47,7 @@ abigen!(
 let (provider, wallet) = setup_test_provider_and_wallet().await;
 
 // Load the compiled Sway contract (this is the output from `forc build`)
-let compiled = MyContract::load_sway_contract(
+let compiled = Contract::load_sway_contract(
     "your_project/out/debug/contract_test.bin").unwrap();
 
 // Configure deployment parameters.
@@ -57,7 +57,7 @@ let gas_limit = 1_000_000;
 let byte_price = 0;
 
 // Deploy the contract
-let contract_id = MyContract::deploy(&compiled, provider, wallet,
+let contract_id = Contract::deploy(&compiled, provider, wallet,
 TxParameters::new(gas_price, gas_limit, byte_price)).await.unwrap();
 ```
 
