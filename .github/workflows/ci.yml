@@ -57,7 +57,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: install
-          args: forc --version 0.11.0
+          args: forc --version 0.12.1
 
       - name: Build Sway Examples
         uses: actions-rs/cargo@v1
