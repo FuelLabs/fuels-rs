@@ -16,7 +16,7 @@ fuel-types = "0.3"
 fuel-vm = "0.8"
 fuels-types = { version = "0.11.0", path = "../fuels-types" }
 hex = { version = "0.4.3", features = ["std"] }
-itertools = "0.11.0"
+itertools = "0.10"
 proc-macro2 = "1.0"
 quote = "1.0"
 rand = { version = "0.8.4" }
