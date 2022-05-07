@@ -14,5 +14,5 @@ fuels-contract = { version = "0.11.0", path = "../../packages/fuels-contract" }
 fuels-core = { version = "0.11.0", path = "../../packages/fuels-core" }
 fuels-types = { version = "0.11.0", path = "../../packages/fuels-types" }
 hex = "0.4"
-itertools = "0.10.1"
+itertools = "0.10"
 structopt = "0.3"
