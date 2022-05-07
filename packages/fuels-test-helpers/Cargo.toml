@@ -1,6 +1,6 @@
 [package]
 name = "fuels-test-helpers"
-version = "0.10.1"
+version = "0.11.0"
 authors = ["Fuel Labs <contact@fuel.sh>"]
 edition = "2021"
 homepage = "https://fuel.network/"
@@ -13,7 +13,7 @@ fuel-core = { version = "0.6", default-features = false }
 fuel-crypto = "0.4"
 fuel-gql-client = { version = "0.6", default-features = false }
 fuel-types = { version = "0.3", default-features = false }
-fuels-signers = { version = "0.10.1", path = "../fuels-signers", optional = true }
+fuels-signers = { version = "0.11.0", path = "../fuels-signers", optional = true }
 fuel-tx = "0.9"
 rand = { version = "0.8.4", default-features = false }
 
