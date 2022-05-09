@@ -1,6 +1,7 @@
 #[cfg(feature = "fuel-core")]
 use fuel_core::service::{Config, FuelService};
 use fuel_gql_client::client::schema::coin::Coin;
+use fuel_gql_client::client::types::TransactionResponse;
 use fuel_gql_client::client::{FuelClient, PageDirection, PaginationRequest};
 use fuel_tx::Receipt;
 use fuel_tx::{Address, AssetId, Input, Output, Transaction};
@@ -128,6 +129,11 @@ impl Provider {
             witnesses: vec![],
             metadata: None,
         }
+    }
+
+    /// Get transaction by id.
+    pub async fn get_transaction_by_id(&self, tx_id: &str) -> io::Result<TransactionResponse> {
+        Ok(self.client.transaction(tx_id).await.unwrap().unwrap())
     }
 
     // @todo

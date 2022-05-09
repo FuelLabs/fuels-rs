@@ -136,7 +136,7 @@ mod tests {
 
         coins_1.extend(coins_2);
 
-        // Setup a provider and node with both set of coins
+        // Setup a provider and node with both set of coins.
         let (client, _) = setup_test_client(coins_1).await;
         let provider = Provider::new(client);
 
@@ -146,29 +146,49 @@ mod tests {
         let wallet_1_initial_coins = wallet_1.get_coins().await.unwrap();
         let wallet_2_initial_coins = wallet_2.get_coins().await.unwrap();
 
-        // Check initial wallet state
+        // Check initial wallet state.
         assert_eq!(wallet_1_initial_coins.len(), 1);
         assert_eq!(wallet_2_initial_coins.len(), 1);
 
-        // Transfer 1 from wallet 1 to wallet 2
-        let _receipts = wallet_1
-            .transfer(
-                &wallet_2.address(),
-                1,
-                Default::default(),
-                TxParameters::default(),
-            )
+        // Configure transaction parameters.
+        let gas_price = 0;
+        let gas_limit = 1_000_000;
+        let byte_price = 0;
+        let maturity = 0;
+
+        let tx_params = TxParameters {
+            gas_price,
+            gas_limit,
+            byte_price,
+            maturity,
+        };
+
+        // Transfer 1 from wallet 1 to wallet 2.
+        let (tx_id, _receipts) = wallet_1
+            .transfer(&wallet_2.address(), 1, Default::default(), tx_params)
             .await
             .unwrap();
 
-        // Currently ignoring the effect on wallet 1, as coins aren't being marked as spent for now
+        // Assert that the transaction was properly configured.
+        let res = wallet_1
+            .provider
+            .get_transaction_by_id(&tx_id)
+            .await
+            .unwrap();
+
+        assert_eq!(res.transaction.byte_price(), byte_price);
+        assert_eq!(res.transaction.gas_limit(), gas_limit);
+        assert_eq!(res.transaction.gas_price(), gas_price);
+        assert_eq!(res.transaction.maturity(), maturity);
+
+        // Currently ignoring the effect on wallet 1, as coins aren't being marked as spent for now.
         let _wallet_1_final_coins = wallet_1.get_coins().await.unwrap();
         let wallet_2_final_coins = wallet_2.get_coins().await.unwrap();
 
-        // Check that wallet two now has two coins
+        // Check that wallet two now has two coins.
         assert_eq!(wallet_2_final_coins.len(), 2);
 
-        // Transferring more than balance should fail
+        // Transferring more than balance should fail.
         let result = wallet_1
             .transfer(
                 &wallet_2.address(),

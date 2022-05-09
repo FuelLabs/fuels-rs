@@ -107,6 +107,7 @@ impl Wallet {
 
     /// Transfer funds from this wallet to another `Address`.
     /// Fails if amount for asset ID is larger than address's spendable coins.
+    /// Returns the transaction ID that was sent and the list of receipts.
     ///
     /// # Examples
     /// ```
@@ -147,7 +148,7 @@ impl Wallet {
         amount: u64,
         asset_id: AssetId,
         tx_parameters: TxParameters,
-    ) -> Result<Vec<Receipt>, WalletError> {
+    ) -> Result<(String, Vec<Receipt>), WalletError> {
         let inputs = self
             .get_asset_inputs_for_amount(asset_id, amount, 0)
             .await?;
@@ -164,7 +165,9 @@ impl Wallet {
             .build_transfer_tx(&inputs, &outputs, tx_parameters);
         let _sig = self.sign_transaction(&mut tx).await.unwrap();
 
-        Ok(self.provider.send_transaction(&tx).await?)
+        let receipts = self.provider.send_transaction(&tx).await?;
+
+        Ok((tx.id().to_string(), receipts))
     }
 
     /// Returns a proper vector of `Input::Coin`s for the given asset ID, amount, and witness index.
