@@ -1,6 +1,5 @@
 use crate::abi_decoder::ABIDecoder;
 use crate::abi_encoder::ABIEncoder;
-use crate::parameters::{CallParameters, TxParameters};
 use crate::script::Script;
 use anyhow::Result;
 use fuel_asm::Opcode;
@@ -15,7 +14,10 @@ use fuel_vm::script_with_data_offset;
 use fuels_core::errors::Error;
 use fuels_core::ReturnLocation;
 use fuels_core::{
-    constants::DEFAULT_COIN_AMOUNT, constants::WORD_SIZE, Detokenize, Selector, Token,
+    constants::DEFAULT_COIN_AMOUNT,
+    constants::WORD_SIZE,
+    parameters::{CallParameters, TxParameters},
+    Detokenize, Selector, Token,
 };
 use fuels_core::{constants::NATIVE_ASSET_ID, ParamType};
 use fuels_signers::provider::Provider;

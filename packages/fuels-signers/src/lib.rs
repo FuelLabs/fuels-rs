@@ -36,6 +36,7 @@ pub trait Signer: std::fmt::Debug + Send + Sync {
 mod tests {
     use fuel_crypto::{Message, SecretKey};
     use fuel_tx::{AssetId, Bytes32, Input, Output, UtxoId};
+    use fuels_core::parameters::TxParameters;
     use fuels_test_helpers::{setup_address_and_coins, setup_test_client};
     use rand::{rngs::StdRng, RngCore, SeedableRng};
     use std::str::FromStr;
@@ -151,7 +152,12 @@ mod tests {
 
         // Transfer 1 from wallet 1 to wallet 2
         let _receipts = wallet_1
-            .transfer(&wallet_2.address(), 1, Default::default())
+            .transfer(
+                &wallet_2.address(),
+                1,
+                Default::default(),
+                TxParameters::default(),
+            )
             .await
             .unwrap();
 
@@ -164,7 +170,12 @@ mod tests {
 
         // Transferring more than balance should fail
         let result = wallet_1
-            .transfer(&wallet_2.address(), 2, Default::default())
+            .transfer(
+                &wallet_2.address(),
+                2,
+                Default::default(),
+                TxParameters::default(),
+            )
             .await;
 
         assert!(result.is_err());
@@ -194,7 +205,12 @@ mod tests {
 
         // Transfer 2 from wallet 1 to wallet 2.
         let _receipts = wallet_1
-            .transfer(&wallet_2.address(), 2, Default::default())
+            .transfer(
+                &wallet_2.address(),
+                2,
+                Default::default(),
+                TxParameters::default(),
+            )
             .await
             .unwrap();
 

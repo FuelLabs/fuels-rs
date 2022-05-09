@@ -8,6 +8,7 @@ pub mod code_gen;
 pub mod constants;
 pub mod errors;
 pub mod json_abi;
+pub mod parameters;
 pub mod rustfmt;
 pub mod source;
 pub mod types;

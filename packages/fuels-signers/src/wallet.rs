@@ -5,6 +5,7 @@ use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
 use fuel_gql_client::client::schema::coin::Coin;
 use fuel_tx::{Address, AssetId, Input, Output, Receipt, Transaction, UtxoId, Witness};
 use fuels_core::errors::Error;
+use fuels_core::parameters::TxParameters;
 use std::{fmt, io};
 use thiserror::Error;
 
@@ -129,7 +130,7 @@ impl Wallet {
     ///
     ///   // Transfer 1 from wallet 1 to wallet 2
     ///   let _receipts = wallet_1
-    ///        .transfer(&wallet_2.address(), 1, Default::default())
+    ///        .transfer(&wallet_2.address(), 1, Default::default(), TxParameters::default())
     ///        .await
     ///        .unwrap();
     ///
@@ -145,6 +146,7 @@ impl Wallet {
         to: &Address,
         amount: u64,
         asset_id: AssetId,
+        tx_parameters: TxParameters,
     ) -> Result<Vec<Receipt>, WalletError> {
         let inputs = self
             .get_asset_inputs_for_amount(asset_id, amount, 0)
@@ -157,7 +159,9 @@ impl Wallet {
         ];
 
         // Build transaction and sign it
-        let mut tx = self.provider.build_transfer_tx(&inputs, &outputs);
+        let mut tx = self
+            .provider
+            .build_transfer_tx(&inputs, &outputs, tx_parameters);
         let _sig = self.sign_transaction(&mut tx).await.unwrap();
 
         Ok(self.provider.send_transaction(&tx).await?)
