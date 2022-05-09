@@ -617,7 +617,7 @@ pub fn hello_world(
         assert_eq!(result.unwrap().to_string(), ":: std :: vec :: Vec < u64 >");
     }
     #[test]
-    fn test_expand_input_param_struct_name() {
+    fn test_expand_input_param_custom_type() {
         let def = Function::default();
         let struct_type = ParamType::Struct(vec![ParamType::Bool, ParamType::U64]);
         let struct_prop = Property {
@@ -627,6 +627,17 @@ pub fn hello_world(
         };
         let struct_name = Some(&struct_prop);
         let result = expand_input_param(&def, "unused", &struct_type, &struct_name);
+        // Notice the removed plural!
+        assert_eq!(result.unwrap().to_string(), "Baby");
+
+        let enum_type = ParamType::Enum(vec![ParamType::U8, ParamType::U32]);
+        let enum_prop = Property {
+            name: String::from("unused"),
+            type_field: String::from("enum babies"),
+            components: None,
+        };
+        let enum_name = Some(&enum_prop);
+        let result = expand_input_param(&def, "unused", &enum_type, &enum_name);
         // Notice the removed plural!
         assert_eq!(result.unwrap().to_string(), "Baby");
     }
