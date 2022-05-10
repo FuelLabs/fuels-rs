@@ -1,14 +1,14 @@
-use fuel_tx::AssetId;
-use fuels_core::constants::{
+use crate::constants::{
     DEFAULT_BYTE_PRICE, DEFAULT_GAS_LIMIT, DEFAULT_GAS_PRICE, DEFAULT_MATURITY, NATIVE_ASSET_ID,
 };
+use fuel_tx::AssetId;
 
 #[derive(Debug)]
 pub struct TxParameters {
     pub gas_price: u64,
     pub gas_limit: u64,
     pub byte_price: u64,
-    pub maturity: u32,
+    pub maturity: u64,
 }
 
 #[derive(Debug)]
@@ -52,7 +52,7 @@ impl TxParameters {
         gas_price: Option<u64>,
         gas_limit: Option<u64>,
         byte_price: Option<u64>,
-        maturity: Option<u32>,
+        maturity: Option<u64>,
     ) -> Self {
         Self {
             gas_price: gas_price.unwrap_or(DEFAULT_GAS_PRICE),
