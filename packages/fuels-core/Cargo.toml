@@ -1,6 +1,6 @@
 [package]
 name = "fuels-core"
-version = "0.11.0"
+version = "0.12.0"
 authors = ["Fuel Labs <contact@fuel.sh>"]
 edition = "2021"
 homepage = "https://fuel.network/"
@@ -14,7 +14,7 @@ anyhow = "1"
 fuel-tx = "0.9"
 fuel-types = "0.3"
 fuel-vm = "0.8"
-fuels-types = { version = "0.11.0", path = "../fuels-types" }
+fuels-types = { version = "0.12.0", path = "../fuels-types" }
 hex = { version = "0.4.3", features = ["std"] }
 itertools = "0.10"
 proc-macro2 = "1.0"
