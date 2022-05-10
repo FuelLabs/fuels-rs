@@ -22,14 +22,15 @@ Now you're up and ready to develop with the Fuel Rust SDK!
 
 ## Importing the Fuel Rust SDK
 
-all you need is to declare these two dependencies on your `Cargo.toml`:
+all you need is to declare these three dependencies on your `Cargo.toml`:
 
 ```toml
-fuels-abigen-macro = "0.10"
-fuels = "0.10"
+fuel-tx = "0.9"
+fuels-abigen-macro = "0.12"
+fuels = "0.12"
 ```
 
-_Note that we're using `0.10`, which is the latest version at the time of this writing._
+_Note that we're using `0.12`, which is the latest version at the time of this writing._
 
 And then, in your Rust file that's going to make use of the SDK:
 
