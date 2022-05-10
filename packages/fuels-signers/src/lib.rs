@@ -131,8 +131,8 @@ mod tests {
     #[tokio::test]
     async fn send_transaction() {
         // Setup two sets of coins, one for each wallet, each containing 1 coin with 1 amount.
-        let (pk_1, mut coins_1) = setup_address_and_coins(1, 1);
-        let (pk_2, coins_2) = setup_address_and_coins(1, 1);
+        let (pk_1, mut coins_1) = setup_address_and_coins(1, 1000000);
+        let (pk_2, coins_2) = setup_address_and_coins(1, 1000000);
 
         coins_1.extend(coins_2);
 
@@ -151,9 +151,9 @@ mod tests {
         assert_eq!(wallet_2_initial_coins.len(), 1);
 
         // Configure transaction parameters.
-        let gas_price = 0;
-        let gas_limit = 1_000_000;
-        let byte_price = 0;
+        let gas_price = 1;
+        let gas_limit = 500_000;
+        let byte_price = 1;
         let maturity = 0;
 
         let tx_params = TxParameters {
@@ -192,7 +192,7 @@ mod tests {
         let result = wallet_1
             .transfer(
                 &wallet_2.address(),
-                2,
+                2000000,
                 Default::default(),
                 TxParameters::default(),
             )
