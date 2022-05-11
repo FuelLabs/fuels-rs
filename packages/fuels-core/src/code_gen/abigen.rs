@@ -117,21 +117,20 @@ impl Abigen {
                 quote! {
                     use fuel_tx::{ContractId, Address};
                     use fuels::contract::contract::{Contract, ContractCall};
-                    use fuels::signers::{provider::Provider, LocalWallet};
+                    use fuels::signers::LocalWallet;
                     use std::str::FromStr;
                 },
                 quote! {
                     pub struct #name {
                         contract_id: ContractId,
-                        provider: Provider,
                         wallet: LocalWallet
                     }
 
                     impl #name {
-                        pub fn new(contract_id: String, provider: Provider, wallet: LocalWallet)
+                        pub fn new(contract_id: String, wallet: LocalWallet)
                         -> Self {
                             let contract_id = ContractId::from_str(&contract_id).unwrap();
-                            Self{ contract_id, provider, wallet }
+                            Self{ contract_id, wallet }
                         }
                         #contract_functions
                     }
