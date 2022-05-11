@@ -1200,7 +1200,7 @@ async fn test_gas_errors() {
         .await
         .expect_err("should error");
 
-    assert_eq!("Contract call error: Response errors; unexpected block execution error InsufficientGas { provided: 1000000000, required: 100000000000 }", result.to_string());
+    assert_eq!("Contract call error: Response errors; unexpected block execution error InsufficientFeeAmount { provided: 1000000000, required: 100000000000 }", result.to_string());
 
     // Test for running out of gas. Gas price as `None` will be 0.
     // Gas limit will be 100, this call will use more than 100 gas.
