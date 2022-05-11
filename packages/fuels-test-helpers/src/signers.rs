@@ -6,6 +6,13 @@ use fuels_signers::LocalWallet;
 use std::net::SocketAddr;
 
 #[cfg(feature = "fuels-signers")]
+pub async fn setup_test_wallet() -> LocalWallet {
+    let (_, wallet) = setup_test_provider_and_wallet().await;
+
+    wallet
+}
+
+#[cfg(feature = "fuels-signers")]
 pub async fn setup_test_provider_and_wallet() -> (Provider, LocalWallet) {
     //  We build only 1 coin with amount DEFAULT_INITIAL_BALANCE, empirically determined to be
     //  sufficient right now
