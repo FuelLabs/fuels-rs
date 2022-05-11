@@ -5,6 +5,7 @@ use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
 use fuel_gql_client::client::schema::coin::Coin;
 use fuel_tx::{Address, AssetId, Input, Output, Receipt, Transaction, UtxoId, Witness};
 use fuels_core::errors::Error;
+use fuels_core::parameters::TxParameters;
 use std::{fmt, io};
 use thiserror::Error;
 
@@ -106,6 +107,7 @@ impl Wallet {
 
     /// Transfer funds from this wallet to another `Address`.
     /// Fails if amount for asset ID is larger than address's spendable coins.
+    /// Returns the transaction ID that was sent and the list of receipts.
     ///
     /// # Examples
     /// ```
@@ -129,7 +131,7 @@ impl Wallet {
     ///
     ///   // Transfer 1 from wallet 1 to wallet 2
     ///   let _receipts = wallet_1
-    ///        .transfer(&wallet_2.address(), 1, Default::default())
+    ///        .transfer(&wallet_2.address(), 1, Default::default(), TxParameters::default())
     ///        .await
     ///        .unwrap();
     ///
@@ -145,7 +147,8 @@ impl Wallet {
         to: &Address,
         amount: u64,
         asset_id: AssetId,
-    ) -> Result<Vec<Receipt>, WalletError> {
+        tx_parameters: TxParameters,
+    ) -> Result<(String, Vec<Receipt>), WalletError> {
         let inputs = self
             .get_asset_inputs_for_amount(asset_id, amount, 0)
             .await?;
@@ -157,10 +160,14 @@ impl Wallet {
         ];
 
         // Build transaction and sign it
-        let mut tx = self.provider.build_transfer_tx(&inputs, &outputs);
+        let mut tx = self
+            .provider
+            .build_transfer_tx(&inputs, &outputs, tx_parameters);
         let _sig = self.sign_transaction(&mut tx).await.unwrap();
 
-        Ok(self.provider.send_transaction(&tx).await?)
+        let receipts = self.provider.send_transaction(&tx).await?;
+
+        Ok((tx.id().to_string(), receipts))
     }
 
     /// Returns a proper vector of `Input::Coin`s for the given asset ID, amount, and witness index.
