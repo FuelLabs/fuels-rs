@@ -16,6 +16,7 @@ struct Recipe {
 
 abi TestContract {
     fn return_struct_inside_enum(c: u64) -> Shaker;
+    fn take_struct_inside_enum(s: Shaker) -> u64;
 }
 
 
@@ -28,5 +29,8 @@ impl TestContract for Contract {
             }
         );
         s
+    }
+    fn take_struct_inside_enum(s: Shaker) -> u64 {
+        8888
     }
 }
