@@ -489,8 +489,8 @@ async fn compile_bindings_enum_input() {
         hex::encode(contract_call.encoded_selector),
         hex::encode(contract_call.encoded_args)
     );
-
-    assert_eq!("00000000082e0dfa0000000000000000000000000000002a", encoded);
+    let expected = "0000000021b2784f0000000000000000000000000000002a";
+    assert_eq!(encoded, expected);
 }
 
 #[tokio::test]

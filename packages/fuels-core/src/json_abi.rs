@@ -491,8 +491,13 @@ impl ABIParser {
 
         if param.is_custom_type() {
             // Custom type, need to break down inner fields
-            // Will return `"s(field_1,field_2,...,field_n)"`.
-            result.push_str("s(");
+            // Will return `"e(field_1,field_2,...,field_n)"` if the type is an `Enum`
+            // and return `"s(field_1,field_2,...,field_n)"` if the type is a `Struct`
+            if param.is_struct_type() {
+                result.push_str("s(");
+            } else {
+                result.push_str("e(");
+            }
 
             for (idx, component) in param.components.as_ref().unwrap().iter().enumerate() {
                 let res = self.build_fn_selector_params(component);
@@ -1276,7 +1281,7 @@ mod tests {
             .unwrap();
         println!("encoded: {:?}\n", encoded);
 
-        let expected_encode = "00000000082e0dfa0000000000000000000000000000002a";
+        let expected_encode = "0000000021b2784f0000000000000000000000000000002a";
         assert_eq!(encoded, expected_encode);
     }
 
@@ -1348,7 +1353,7 @@ mod tests {
         let params = vec![p_enum];
         let selector = abi.build_fn_selector("my_func", &params).unwrap();
 
-        assert_eq!(selector, "my_func(s(bool,u64))");
+        assert_eq!(selector, "my_func(e(bool,u64))");
     }
 
     #[test]
@@ -1430,7 +1435,57 @@ mod tests {
         println!("params: {:?}\n", params);
         let selector = abi.build_fn_selector("my_func", &params).unwrap();
 
-        assert_eq!(selector, "my_func(s(bool,s(u64,u32)))");
+        assert_eq!(selector, "my_func(e(bool,e(u64,u32)))");
+    }
+
+    #[test]
+    fn fn_selector_nested_custom_types() {
+        let abi = ABIParser::new();
+
+        let inner_foo = Property {
+            name: "foo".into(),
+            type_field: "bool".into(),
+            components: None,
+        };
+
+        let inner_a = Property {
+            name: "a".into(),
+            type_field: "u64".into(),
+            components: None,
+        };
+
+        let inner_b = Property {
+            name: "b".into(),
+            type_field: "u32".into(),
+            components: None,
+        };
+
+        let mut inner_custom = Property {
+            name: "bar".into(),
+            type_field: "enum InnerEnum".into(),
+            components: Some(vec![inner_a, inner_b]),
+        };
+
+        let p = Property {
+            name: "my_struct".into(),
+            type_field: "struct MyStruct".into(),
+            components: Some(vec![inner_foo.clone(), inner_custom.clone()]),
+        };
+
+        let params = vec![p.clone()];
+        let selector = abi.build_fn_selector("my_func", &params).unwrap();
+
+        assert_eq!(selector, "my_func(s(bool,e(u64,u32)))");
+
+        inner_custom.type_field = "struct InnerStruct".to_string();
+        let p = Property {
+            name: "my_enum".into(),
+            type_field: "enum MyEnum".into(),
+            components: Some(vec![inner_foo, inner_custom]),
+        };
+        let params = vec![p];
+        let selector = abi.build_fn_selector("my_func", &params).unwrap();
+        assert_eq!(selector, "my_func(e(bool,s(u64,u32)))");
     }
 
     #[test]
