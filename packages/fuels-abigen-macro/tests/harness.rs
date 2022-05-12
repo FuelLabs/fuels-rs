@@ -1401,11 +1401,15 @@ async fn workflow_use_enum_input() {
         MyContract,
         "packages/fuels-abigen-macro/tests/test_projects/use_enum_input/out/debug/use_enum_input-abi.json"
     );
-    
+
     let wallet = setup_test_provider_and_wallet().await;
-    let id = Contract::deploy("tests/test_projects/use_enum_input/out/debug/use_enum_input.bin", &wallet, TxParameters::default())
-        .await
-        .unwrap();
+    let id = Contract::deploy(
+        "tests/test_projects/use_enum_input/out/debug/use_enum_input.bin",
+        &wallet,
+        TxParameters::default(),
+    )
+    .await
+    .unwrap();
 
     let instance = MyContract::new(id.to_string(), wallet.clone());
     let enum_input = Shaker::Cosmopolitan(255);
