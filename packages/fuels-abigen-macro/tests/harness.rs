@@ -1434,6 +1434,28 @@ async fn workflow_struct_inside_enum() {
 }
 
 #[tokio::test]
+async fn workflow_use_enum_input() {
+    abigen!(
+        MyContract,
+        "packages/fuels-abigen-macro/tests/test_projects/use_enum_input/out/debug/use_enum_input-abi.json"
+    );
+
+    let compiled = Contract::load_sway_contract(
+        "tests/test_projects/use_enum_input/out/debug/use_enum_input.bin",
+    )
+    .unwrap();
+    let (provider, wallet) = setup_test_provider_and_wallet().await;
+    let id = Contract::deploy(&compiled, &provider, &wallet, TxParameters::default())
+        .await
+        .unwrap();
+
+    let instance = MyContract::new(id.to_string(), provider.clone(), wallet.clone());
+    let enum_input = Shaker::Cosmopolitan(255);
+    let result = instance.use_enum_as_input(enum_input).call().await.unwrap();
+    assert_eq!(result.value, 9876);
+}
+
+#[tokio::test]
 async fn test_logd_receipts() {
     abigen!(
         LoggingContract,
