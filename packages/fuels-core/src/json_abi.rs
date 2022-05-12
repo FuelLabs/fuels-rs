@@ -1329,20 +1329,30 @@ mod tests {
             components: None,
         };
 
-        let p = Property {
+        let p_struct = Property {
             name: "my_struct".into(),
             type_field: "struct MyStruct".into(),
-            components: Some(vec![inner_foo, inner_bar]),
+            components: Some(vec![inner_foo.clone(), inner_bar.clone()]),
         };
 
-        let params = vec![p];
+        let params = vec![p_struct];
+        let selector = abi.build_fn_selector("my_func", &params).unwrap();
+
+        assert_eq!(selector, "my_func(s(bool,u64))");
+
+        let p_enum = Property {
+            name: "my_enum".into(),
+            type_field: "enum MyStruct".into(),
+            components: Some(vec![inner_foo, inner_bar]),
+        };
+        let params = vec![p_enum];
         let selector = abi.build_fn_selector("my_func", &params).unwrap();
 
         assert_eq!(selector, "my_func(s(bool,u64))");
     }
 
     #[test]
-    fn fn_selector_nested_custom_type() {
+    fn fn_selector_nested_struct() {
         let abi = ABIParser::new();
 
         let inner_foo = Property {
@@ -1372,6 +1382,47 @@ mod tests {
         let p = Property {
             name: "my_struct".into(),
             type_field: "struct MyStruct".into(),
+            components: Some(vec![inner_foo, inner_bar]),
+        };
+
+        let params = vec![p];
+        println!("params: {:?}\n", params);
+        let selector = abi.build_fn_selector("my_func", &params).unwrap();
+
+        assert_eq!(selector, "my_func(s(bool,s(u64,u32)))");
+    }
+
+    #[test]
+    fn fn_selector_nested_enum() {
+        let abi = ABIParser::new();
+
+        let inner_foo = Property {
+            name: "foo".into(),
+            type_field: "bool".into(),
+            components: None,
+        };
+
+        let inner_a = Property {
+            name: "a".into(),
+            type_field: "u64".into(),
+            components: None,
+        };
+
+        let inner_b = Property {
+            name: "b".into(),
+            type_field: "u32".into(),
+            components: None,
+        };
+
+        let inner_bar = Property {
+            name: "bar".into(),
+            type_field: "enum InnerEnum".into(),
+            components: Some(vec![inner_a, inner_b]),
+        };
+
+        let p = Property {
+            name: "my_enum".into(),
+            type_field: "enum MyEnum".into(),
             components: Some(vec![inner_foo, inner_bar]),
         };
 
