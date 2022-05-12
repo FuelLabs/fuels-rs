@@ -1353,6 +1353,16 @@ mod tests {
         let params = vec![p_enum];
         let selector = abi.build_fn_selector("my_func", &params).unwrap();
 
+        assert_eq!(selector, "my_func(s(bool,u64))");
+
+        let p_enum = Property {
+            name: "my_enum".into(),
+            type_field: "enum MyStruct".into(),
+            components: Some(vec![inner_foo, inner_bar]),
+        };
+        let params = vec![p_enum];
+        let selector = abi.build_fn_selector("my_func", &params).unwrap();
+
         assert_eq!(selector, "my_func(e(bool,u64))");
     }
 
