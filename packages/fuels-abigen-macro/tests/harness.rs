@@ -489,8 +489,8 @@ async fn compile_bindings_enum_input() {
         hex::encode(contract_call.encoded_selector),
         hex::encode(contract_call.encoded_args)
     );
-
-    assert_eq!("00000000082e0dfa0000000000000000000000000000002a", encoded);
+    let expected = "0000000021b2784f0000000000000000000000000000002a";
+    assert_eq!(encoded, expected);
 }
 
 #[tokio::test]
@@ -1431,6 +1431,28 @@ async fn workflow_struct_inside_enum() {
     let result = instance.return_struct_inside_enum(11).call().await.unwrap();
     let expected = Shaker::Cosmopolitan(Recipe { ice: 22, sugar: 99 });
     assert_eq!(result.value, expected);
+}
+
+#[tokio::test]
+async fn workflow_use_enum_input() {
+    abigen!(
+        MyContract,
+        "packages/fuels-abigen-macro/tests/test_projects/use_enum_input/out/debug/use_enum_input-abi.json"
+    );
+
+    let compiled = Contract::load_sway_contract(
+        "tests/test_projects/use_enum_input/out/debug/use_enum_input.bin",
+    )
+    .unwrap();
+    let (provider, wallet) = setup_test_provider_and_wallet().await;
+    let id = Contract::deploy(&compiled, &provider, &wallet, TxParameters::default())
+        .await
+        .unwrap();
+
+    let instance = MyContract::new(id.to_string(), provider.clone(), wallet.clone());
+    let enum_input = Shaker::Cosmopolitan(255);
+    let result = instance.use_enum_as_input(enum_input).call().await.unwrap();
+    assert_eq!(result.value, 9876);
 }
 
 #[tokio::test]

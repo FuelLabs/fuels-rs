@@ -569,14 +569,14 @@ where
 
     /// Call a contract's method on the node, in a state-modifying manner.
     pub async fn call(self) -> Result<CallResponse<D>, Error> {
-        Ok(Self::call_or_simulate(self, false).await?)
+        Self::call_or_simulate(self, false).await
     }
 
     /// Call a contract's method on the node, in a simulated manner, meaning the state of the
     /// blockchain is *not* modified but simulated.
     /// It is the same as the `call` method because the API is more user-friendly this way.
     pub async fn simulate(self) -> Result<CallResponse<D>, Error> {
-        Ok(Self::call_or_simulate(self, true).await?)
+        Self::call_or_simulate(self, true).await
     }
 
     /// Based on the returned Contract's output_params and the receipts returned from the call,

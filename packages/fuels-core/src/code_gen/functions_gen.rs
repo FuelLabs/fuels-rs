@@ -129,33 +129,25 @@ fn expand_function_arguments(
         // TokenStream representing the name of the argument
         let name = expand_input_name(i, &param.name);
 
-        let opt_custom_type = match param.type_field.split_whitespace().collect::<Vec<_>>()[0] {
-            "enum" => Some(CustomType::Enum),
-            "struct" => Some(CustomType::Struct),
-            _ => None,
-        };
-
-        let rust_custom_name = if let Some(c) = opt_custom_type {
-            match c {
-                CustomType::Enum => {
+        let custom_property = match param.is_custom_type() {
+            false => None,
+            true => {
+                if param.is_enum_type() {
                     let name =
                         extract_custom_type_name_from_abi_property(param, Some(CustomType::Enum))
                             .unwrap();
                     custom_enums.get(&name)
-                }
-                CustomType::Struct => {
+                } else {
                     let name =
                         extract_custom_type_name_from_abi_property(param, Some(CustomType::Struct))
                             .unwrap();
                     custom_structs.get(&name)
                 }
             }
-        } else {
-            None
         };
 
         // TokenStream representing the type of the argument
-        let ty = expand_input_param(fun, &param.name, &parse_param(param)?, &rust_custom_name)?;
+        let ty = expand_input_param(fun, &param.name, &parse_param(param)?, &custom_property)?;
 
         // Add the TokenStream to argument declarations
         args.push(quote! { #name: #ty });
@@ -197,11 +189,11 @@ fn expand_input_param(
     fun: &Function,
     param: &str,
     kind: &ParamType,
-    custom_type_name: &Option<&Property>,
+    custom_type_property: &Option<&Property>,
 ) -> Result<TokenStream, Error> {
     match kind {
         ParamType::Array(ty, _) => {
-            let ty = expand_input_param(fun, param, ty, custom_type_name)?;
+            let ty = expand_input_param(fun, param, ty, custom_type_property)?;
             Ok(quote! {
                 ::std::vec::Vec<#ty>
             })
@@ -209,7 +201,7 @@ fn expand_input_param(
         ParamType::Enum(_) => {
             let ident = ident(
                 &extract_custom_type_name_from_abi_property(
-                    custom_type_name.unwrap(),
+                    custom_type_property.unwrap(),
                     Some(CustomType::Enum),
                 )?
                 .to_class_case(),
@@ -219,7 +211,7 @@ fn expand_input_param(
         ParamType::Struct(_) => {
             let ident = ident(
                 &extract_custom_type_name_from_abi_property(
-                    custom_type_name.unwrap(),
+                    custom_type_property.unwrap(),
                     Some(CustomType::Struct),
                 )?
                 .to_class_case(),
@@ -571,11 +563,26 @@ pub fn hello_world(
                 components: None,
             },
         );
+        let mut custom_enums = HashMap::new();
+        custom_enums.insert(
+            "Cocktail".to_string(),
+            Property {
+                name: "Cocktail".to_string(),
+                type_field: "enum Cocktail".to_string(),
+                components: None,
+            },
+        );
 
-        let result = expand_function_arguments(&function, &custom_structs, &custom_structs);
+        let result = expand_function_arguments(&function, &custom_enums, &custom_structs);
         let (args, call_args) = result.unwrap();
         let result = format!("({},{})", args, call_args);
         let expected = r#"(, bim_bam : CarMaker,& [bim_bam . into_token () ,])"#;
+        assert_eq!(result, expected);
+        function.inputs[0].type_field = "enum Cocktail".to_string();
+        let result = expand_function_arguments(&function, &custom_enums, &custom_structs);
+        let (args, call_args) = result.unwrap();
+        let result = format!("({},{})", args, call_args);
+        let expected = r#"(, bim_bam : Cocktail,& [bim_bam . into_token () ,])"#;
         assert_eq!(result, expected);
     }
 
@@ -610,7 +617,7 @@ pub fn hello_world(
         assert_eq!(result.unwrap().to_string(), ":: std :: vec :: Vec < u64 >");
     }
     #[test]
-    fn test_expand_input_param_struct_name() {
+    fn test_expand_input_param_custom_type() {
         let def = Function::default();
         let struct_type = ParamType::Struct(vec![ParamType::Bool, ParamType::U64]);
         let struct_prop = Property {
@@ -620,6 +627,17 @@ pub fn hello_world(
         };
         let struct_name = Some(&struct_prop);
         let result = expand_input_param(&def, "unused", &struct_type, &struct_name);
+        // Notice the removed plural!
+        assert_eq!(result.unwrap().to_string(), "Baby");
+
+        let enum_type = ParamType::Enum(vec![ParamType::U8, ParamType::U32]);
+        let enum_prop = Property {
+            name: String::from("unused"),
+            type_field: String::from("enum babies"),
+            components: None,
+        };
+        let enum_name = Some(&enum_prop);
+        let result = expand_input_param(&def, "unused", &enum_type, &enum_name);
         // Notice the removed plural!
         assert_eq!(result.unwrap().to_string(), "Baby");
     }
