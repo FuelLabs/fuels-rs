@@ -1028,14 +1028,13 @@ async fn test_large_return_data() {
 }
 
 #[tokio::test]
-#[ignore]
 async fn test_provider_launch_and_connect() {
     abigen!(
         MyContract,
         "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
 
-    let (pk, coins) = setup_address_and_coins(10, 10);
+    let (pk, coins) = setup_address_and_coins(1, DEFAULT_INITIAL_BALANCE);
     let (launched_provider, address) = setup_test_provider(coins).await;
     let connected_provider = Provider::connect(address).await.unwrap();
 
