@@ -1409,6 +1409,16 @@ async fn workflow_enum_inside_struct() {
         glass: 333,
     };
     assert_eq!(result.value, expected);
+    let enum_inside_struct = Cocktail {
+        the_thing_you_mix_in: Shaker::Cosmopolitan(444),
+        glass: 555,
+    };
+    let result = instance
+        .take_enum_inside_struct(enum_inside_struct)
+        .call()
+        .await
+        .unwrap();
+    assert_eq!(result.value, 6666)
 }
 
 #[tokio::test]
@@ -1431,6 +1441,13 @@ async fn workflow_struct_inside_enum() {
     let result = instance.return_struct_inside_enum(11).call().await.unwrap();
     let expected = Shaker::Cosmopolitan(Recipe { ice: 22, sugar: 99 });
     assert_eq!(result.value, expected);
+    let struct_inside_enum = Shaker::Cosmopolitan(Recipe { ice: 22, sugar: 66 });
+    let result = instance
+        .take_struct_inside_enum(struct_inside_enum)
+        .call()
+        .await
+        .unwrap();
+    assert_eq!(result.value, 8888);
 }
 
 #[tokio::test]

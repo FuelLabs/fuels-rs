@@ -16,6 +16,7 @@ struct Cocktail {
 
 abi TestContract {
     fn return_enum_inside_struct(a: u64) -> Cocktail;
+    fn take_enum_inside_struct(c: Cocktail) -> u64;
 }
 
 
@@ -26,5 +27,8 @@ impl TestContract for Contract {
             glass: 333
         };
         b
+    }
+    fn take_enum_inside_struct(c: Cocktail) -> u64{
+        6666
     }
 }
