@@ -379,7 +379,7 @@ impl Contract {
             })
     }
 
-    pub async fn load_and_deploy(
+    pub async fn deploy(
         binary_filepath: &str,
         wallet: &LocalWallet,
         params: TxParameters,
