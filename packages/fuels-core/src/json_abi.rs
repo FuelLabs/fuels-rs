@@ -1347,7 +1347,7 @@ mod tests {
 
         let p_enum = Property {
             name: "my_enum".into(),
-            type_field: "enum MyStruct".into(),
+            type_field: "enum MyEnum".into(),
             components: Some(vec![inner_foo, inner_bar]),
         };
         let params = vec![p_enum];
