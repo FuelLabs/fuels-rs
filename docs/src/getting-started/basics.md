@@ -4,7 +4,7 @@ At a high level, the Fuel Rust SDK can be used to build Rust-based applications 
 
 For this interaction to work, the SDK must be able to communicate to a `fuel-core` node; you have two options at your disposal:
 
-1. Use the SDK's native `setup_test_provider_and_wallet()` that runs a short-lived test Fuel node;
+1. Use the SDK's native `launch_provider_and_get_wallet()` that runs a short-lived test Fuel node;
 2. Run a Fuel node outside your SDK code (using `fuel-core`) and point your SDK to that node's IP and port.
 
 The first option is ideal for contract testing, as you can quickly spin up and tear down nodes between specific test cases.
@@ -43,8 +43,8 @@ abigen!(
     "your_project/out/debug/contract_test-abi.json",
 );
 
-// This helper will setup a test wallet linked to a local node/provider.
-let wallet = setup_test_provider_and_wallet().await;
+// This helper will will launch a local node and provide a test wallet linked to it
+let wallet = launch_provider_and_get_wallet().await;
 
 // Load the compiled Sway contract (this is the output from `forc build`)
 let compiled = Contract::load_sway_contract(
@@ -249,7 +249,7 @@ abigen!(
     "path/to/abi.json"
 );
 
-let wallet = setup_test_provider_and_wallet().await;
+let wallet = launch_provider_and_get_wallet().await;
 
 let contract_id = "0x0123..." // Your contract ID as a string.
 

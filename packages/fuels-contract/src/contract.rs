@@ -379,6 +379,7 @@ impl Contract {
             })
     }
 
+    /// Deploys a compiled contract to a running node
     pub async fn deploy(
         binary_filepath: &str,
         wallet: &LocalWallet,
