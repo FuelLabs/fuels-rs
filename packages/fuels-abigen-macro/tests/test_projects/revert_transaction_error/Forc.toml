@@ -5,4 +5,4 @@ license = "Apache-2.0"
 name = "capture_revert_transaction_error"
 
 [dependencies]
-std = { git = "https://github.com/FuelLabs/sway", branch = "master" }
+

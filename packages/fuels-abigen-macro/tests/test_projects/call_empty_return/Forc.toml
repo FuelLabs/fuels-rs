@@ -5,4 +5,4 @@ name = "contract_test"
 entry = "main.sw"
 
 [dependencies]
-std = { git = "https://github.com/FuelLabs/sway", branch = "master" }
+
