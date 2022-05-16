@@ -29,6 +29,8 @@ pub enum ParamType {
     Bool,
     Byte,
     B256,
+    // The Unit paramtype is used for unit variants in Enums. The corresponding type field is `()`,
+    // similar to Rust.
     Unit,
     Array(Box<ParamType>, usize),
     #[strum(serialize = "str")]
@@ -111,6 +113,8 @@ impl fmt::Display for ParamType {
 #[derive(Debug, Clone, PartialEq, EnumString)]
 #[strum(ascii_case_insensitive)]
 pub enum Token {
+    // Used for unit type variants in Enum. An "empty" enum is not represented as Enum<empty box>,
+    // because this way we can have both unit and non-unit type variants.
     Unit,
     U8(u8),
     U16(u16),
