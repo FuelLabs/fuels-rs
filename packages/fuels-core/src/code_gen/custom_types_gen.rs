@@ -230,6 +230,17 @@ pub fn expand_custom_enum(name: &str, prop: &Property) -> Result<TokenStream, Er
                     },
                 );
             }
+            // Unit type
+            ParamType::Unit => {
+                // Enum variant declaration
+                enum_variants.push(quote! {#variant_name()});
+                // Token creation
+                enum_selector_builder.push(quote! {
+                    #enum_ident::#variant_name() => (#dis, Token::Unit)
+                });
+                param_types.push(quote! { types.push(ParamType::Unit) });
+                args.push(quote! {(#dis, token) => #enum_ident::#variant_name(),});
+            }
             // Elementary type
             _ => {
                 let ty = expand_type(&param_type)?;

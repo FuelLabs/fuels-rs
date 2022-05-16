@@ -58,6 +58,7 @@ impl ABIEncoder {
                 Token::Tuple(arg_tuple) => {
                     self.encode(arg_tuple)?;
                 }
+                Token::Unit => {}
             };
         }
         Ok(self.encoded_args.clone())

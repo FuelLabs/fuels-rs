@@ -29,6 +29,7 @@ pub enum ParamType {
     Bool,
     Byte,
     B256,
+    Unit,
     Array(Box<ParamType>, usize),
     #[strum(serialize = "str")]
     String(usize),
@@ -56,7 +57,9 @@ impl ParamType {
     // see https://github.com/FuelLabs/sway/issues/1368.
     pub fn get_return_location(&self) -> ReturnLocation {
         match &*self {
-            Self::U8 | Self::U16 | Self::U32 | Self::U64 | Self::Bool => ReturnLocation::Return,
+            Self::Unit | Self::U8 | Self::U16 | Self::U32 | Self::U64 | Self::Bool => {
+                ReturnLocation::Return
+            }
 
             _ => ReturnLocation::ReturnData,
         }
@@ -96,6 +99,7 @@ impl fmt::Display for ParamType {
                 let s = format!("Tuple(vec![{}])", inner_strings.join(","));
                 write!(f, "{}", s)
             }
+            ParamType::Unit => write! {f, "Unit"},
             _ => {
                 write!(f, "{:?}", self)
             }
@@ -107,6 +111,7 @@ impl fmt::Display for ParamType {
 #[derive(Debug, Clone, PartialEq, EnumString)]
 #[strum(ascii_case_insensitive)]
 pub enum Token {
+    Unit,
     U8(u8),
     U16(u16),
     U32(u32),
