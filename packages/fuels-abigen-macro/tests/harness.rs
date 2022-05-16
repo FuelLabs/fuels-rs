@@ -1401,3 +1401,29 @@ async fn test_logd_receipts() {
     let result = contract_instance.dont_use_logd().call().await.unwrap();
     assert_eq!(result.logs, None);
 }
+
+#[tokio::test]
+async fn unit_type_enums() {
+    abigen!(
+        MyContract,
+        "packages/fuels-abigen-macro/tests/test_projects/use_enum_input/out/debug/use_enum_input-abi.json"
+    );
+
+    let wallet = launch_provider_and_get_wallet().await;
+    let id = Contract::deploy(
+        "tests/test_projects/use_enum_input/out/debug/use_enum_input.bin",
+        &wallet,
+        TxParameters::default(),
+    )
+    .await
+    .unwrap();
+
+    let instance = MyContract::new(id.to_string(), wallet.clone());
+    let unit_type_enum = BimBamBoum::Bim();
+    let result = instance
+        .use_unit_type_enum(unit_type_enum)
+        .call()
+        .await
+        .unwrap();
+    assert_eq!(result.value, BimBamBoum::Boum());
+}

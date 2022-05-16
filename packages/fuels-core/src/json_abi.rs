@@ -210,6 +210,7 @@ impl ABIParser {
     pub fn tokenize(&self, param: &ParamType, value: String) -> Result<Token, Error> {
         let trimmed_value = value.trim();
         match &*param {
+            ParamType::Unit => Ok(Token::Unit),
             ParamType::U8 => Ok(Token::U8(trimmed_value.parse::<u8>()?)),
             ParamType::U16 => Ok(Token::U16(trimmed_value.parse::<u16>()?)),
             ParamType::U32 => Ok(Token::U32(trimmed_value.parse::<u32>()?)),
@@ -526,6 +527,9 @@ pub fn parse_param(param: &Property) -> Result<ParamType, Error> {
         // Simple case (primitive types, no arrays, including string)
         Ok(param_type) => Ok(param_type),
         Err(_) => {
+            if param.type_field == "()" {
+                return Ok(ParamType::Unit);
+            }
             if param.is_custom_type() {
                 return parse_custom_type_param(param);
             }
