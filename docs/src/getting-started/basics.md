@@ -4,7 +4,7 @@ At a high level, the Fuel Rust SDK can be used to build Rust-based applications 
 
 For this interaction to work, the SDK must be able to communicate to a `fuel-core` node; you have two options at your disposal:
 
-1. Use the SDK's native `setup_test_provider_and_wallet()` that runs a short-lived test Fuel node;
+1. Use the SDK's native `launch_provider_and_get_wallet()` that runs a short-lived test Fuel node;
 2. Run a Fuel node outside your SDK code (using `fuel-core`) and point your SDK to that node's IP and port.
 
 The first option is ideal for contract testing, as you can quickly spin up and tear down nodes between specific test cases.
@@ -43,8 +43,8 @@ abigen!(
     "your_project/out/debug/contract_test-abi.json",
 );
 
-// This helper will setup a local node/provider and a test wallet.
-let (provider, wallet) = setup_test_provider_and_wallet().await;
+// This helper will will launch a local node and provide a test wallet linked to it
+let wallet = launch_provider_and_get_wallet().await;
 
 // Load the compiled Sway contract (this is the output from `forc build`)
 let compiled = Contract::load_sway_contract(
@@ -56,19 +56,19 @@ let gas_price = 0;
 let gas_limit = 1_000_000;
 let byte_price = 0;
 
-// Deploy the contract
-let contract_id = Contract::deploy(&compiled, provider, wallet,
-TxParameters::new(gas_price, gas_limit, byte_price)).await.unwrap();
+// Deploy the compiled Sway contract (this is the output from `forc build`)
+let contract_id = Contract::deploy("your_project/out/debug/contract_test.bin", wallet,
+    TxParameters::new(gas_price, gas_limit, byte_price)).await.unwrap();
 ```
 
 ## Calling and configuring contract calls
 
 Once you've deployed your contract, as seen in the previous section, you'll likely want to call contract methods and configure some parameters such as gas price, byte price, gas limit, and forward coins in your contract call.
 
-Start by creating an instance of your contract once you have a provider and wallet set up:
+Start by creating an instance of your contract once you have a wallet set up:
 
 ```Rust
-let contract_instance = MyContract::new(contract_id.to_string(), provider, wallet);
+let contract_instance = MyContract::new(contract_id.to_string(), wallet);
 ```
 
 Then we move to configuring contract calls.
@@ -241,7 +241,7 @@ For a more concrete example, see the `test_contract_calling_contract` function i
 
 ## Connecting to existing contracts
 
-If you already have a deployed contract and want to call its methods using the SDK,  but without deploying it again, all you need is the contract ID of your deployed contract. You can skip the whole deployment setup and call `::new(contract_id, provider, wallet)` directly. For example:
+If you already have a deployed contract and want to call its methods using the SDK,  but without deploying it again, all you need is the contract ID of your deployed contract. You can skip the whole deployment setup and call `::new(contract_id, wallet)` directly. For example:
 
 ```Rust
 abigen!(
@@ -249,11 +249,11 @@ abigen!(
     "path/to/abi.json"
 );
 
-let (provider, wallet) = setup_test_provider_and_wallet().await;
+let wallet = launch_provider_and_get_wallet().await;
 
 let contract_id = "0x0123..." // Your contract ID as a string.
 
-let connected_contract_instance = MyContract::new(contract_id, provider, wallet);
+let connected_contract_instance = MyContract::new(contract_id, wallet);
 ```
 
 ## More examples

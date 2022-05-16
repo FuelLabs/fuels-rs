@@ -383,16 +383,17 @@ impl Contract {
     /// To deploy a contract, you need a wallet with enough assets to pay for deployment. This
     /// wallet will also receive the change.
     pub async fn deploy(
-        compiled_contract: &CompiledContract,
-        provider: &Provider,
+        binary_filepath: &str,
         wallet: &LocalWallet,
         params: TxParameters,
     ) -> Result<ContractId, Error> {
+        let compiled_contract = Contract::load_sway_contract(binary_filepath).unwrap();
+
         let (mut tx, contract_id) =
-            Self::contract_deployment_transaction(compiled_contract, wallet, params).await?;
+            Self::contract_deployment_transaction(&compiled_contract, wallet, params).await?;
         wallet.sign_transaction(&mut tx).await?;
 
-        match provider.client.submit(&tx).await {
+        match wallet.provider.client.submit(&tx).await {
             Ok(_) => Ok(contract_id),
             Err(e) => Err(Error::TransactionError(e.to_string())),
         }

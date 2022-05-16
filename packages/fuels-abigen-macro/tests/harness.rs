@@ -1,7 +1,7 @@
 use fuel_tx::{AssetId, ContractId, Receipt};
 use fuels::prelude::Error;
 use fuels::prelude::{
-    setup_address_and_coins, setup_test_provider, setup_test_provider_and_wallet, CallParameters,
+    launch_provider_and_get_wallet, setup_address_and_coins, setup_test_provider, CallParameters,
     Contract, LocalWallet, Provider, Signer, TxParameters, DEFAULT_INITIAL_BALANCE,
 };
 use fuels_abigen_macro::abigen;
@@ -28,10 +28,10 @@ async fn compile_bindings_from_contract_file() {
         "packages/fuels-abigen-macro/tests/takes_ints_returns_bool.json",
     );
 
-    let (provider, wallet) = setup_test_provider_and_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await;
 
     // `SimpleContract` is the name of the contract
-    let contract_instance = SimpleContract::new(null_contract_id(), provider, wallet);
+    let contract_instance = SimpleContract::new(null_contract_id(), wallet);
 
     // Calls the function defined in the JSON ABI.
     // Note that this is type-safe, if the function does exist
@@ -83,9 +83,9 @@ async fn compile_bindings_from_inline_contract() {
         "#,
     );
 
-    let (provider, wallet) = setup_test_provider_and_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await;
     //`SimpleContract` is the name of the contract
-    let contract_instance = SimpleContract::new(null_contract_id(), provider, wallet);
+    let contract_instance = SimpleContract::new(null_contract_id(), wallet);
 
     let contract_call = contract_instance.takes_ints_returns_bool(42_u32);
 
@@ -123,10 +123,10 @@ async fn compile_bindings_array_input() {
         "#,
     );
 
-    let (provider, wallet) = setup_test_provider_and_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await;
 
     // `SimpleContract` is the name of the contract
-    let contract_instance = SimpleContract::new(null_contract_id(), provider, wallet);
+    let contract_instance = SimpleContract::new(null_contract_id(), wallet);
 
     let input: Vec<u16> = vec![1, 2, 3, 4];
     let contract_call = contract_instance.takes_array(input);
@@ -168,10 +168,10 @@ async fn compile_bindings_bool_array_input() {
         "#,
     );
 
-    let (provider, wallet) = setup_test_provider_and_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await;
 
     // `SimpleContract` is the name of the contract
-    let contract_instance = SimpleContract::new(null_contract_id(), provider, wallet);
+    let contract_instance = SimpleContract::new(null_contract_id(), wallet);
 
     let input: Vec<bool> = vec![true, false, true];
     let contract_call = contract_instance.takes_array(input);
@@ -213,10 +213,10 @@ async fn compile_bindings_byte_input() {
         "#,
     );
 
-    let (provider, wallet) = setup_test_provider_and_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await;
 
     // `SimpleContract` is the name of the contract
-    let contract_instance = SimpleContract::new(null_contract_id(), provider, wallet);
+    let contract_instance = SimpleContract::new(null_contract_id(), wallet);
 
     let contract_call = contract_instance.takes_byte(10 as u8);
 
@@ -254,10 +254,10 @@ async fn compile_bindings_string_input() {
         "#,
     );
 
-    let (provider, wallet) = setup_test_provider_and_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await;
 
     // `SimpleContract` is the name of the contract
-    let contract_instance = SimpleContract::new(null_contract_id(), provider, wallet);
+    let contract_instance = SimpleContract::new(null_contract_id(), wallet);
 
     let contract_call = contract_instance.takes_string("This is a full sentence".into());
 
@@ -298,10 +298,10 @@ async fn compile_bindings_b256_input() {
         "#,
     );
 
-    let (provider, wallet) = setup_test_provider_and_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await;
 
     // `SimpleContract` is the name of the contract
-    let contract_instance = SimpleContract::new(null_contract_id(), provider, wallet);
+    let contract_instance = SimpleContract::new(null_contract_id(), wallet);
 
     let mut hasher = Sha256::new();
     hasher.update("test string".as_bytes());
@@ -361,10 +361,10 @@ async fn compile_bindings_struct_input() {
         bar: "fuel".to_string(),
     };
 
-    let (provider, wallet) = setup_test_provider_and_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await;
 
     // `SimpleContract` is the name of the contract
-    let contract_instance = SimpleContract::new(null_contract_id(), provider, wallet);
+    let contract_instance = SimpleContract::new(null_contract_id(), wallet);
 
     let contract_call = contract_instance.takes_struct(input);
 
@@ -426,10 +426,10 @@ async fn compile_bindings_nested_struct_input() {
         foo: inner_struct,
     };
 
-    let (provider, wallet) = setup_test_provider_and_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await;
 
     // `SimpleContract` is the name of the contract
-    let contract_instance = SimpleContract::new(null_contract_id(), provider, wallet);
+    let contract_instance = SimpleContract::new(null_contract_id(), wallet);
 
     let contract_call = contract_instance.takes_nested_struct(input);
 
@@ -477,10 +477,10 @@ async fn compile_bindings_enum_input() {
 
     let variant = MyEnum::X(42);
 
-    let (provider, wallet) = setup_test_provider_and_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await;
 
     // `SimpleContract` is the name of the contract
-    let contract_instance = SimpleContract::new(null_contract_id(), provider, wallet);
+    let contract_instance = SimpleContract::new(null_contract_id(), wallet);
 
     let contract_call = contract_instance.takes_enum(variant);
 
@@ -537,10 +537,10 @@ async fn create_struct_from_decoded_tokens() {
     assert_eq!(10, struct_from_tokens.foo);
     assert!(struct_from_tokens.bar);
 
-    let (provider, wallet) = setup_test_provider_and_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await;
 
     // `SimpleContract` is the name of the contract
-    let contract_instance = SimpleContract::new(null_contract_id(), provider, wallet);
+    let contract_instance = SimpleContract::new(null_contract_id(), wallet);
 
     let contract_call = contract_instance.takes_struct(struct_from_tokens);
 
@@ -608,10 +608,10 @@ async fn create_nested_struct_from_decoded_tokens() {
     assert_eq!(10, nested_struct_from_tokens.x);
     assert!(nested_struct_from_tokens.y.a);
 
-    let (provider, wallet) = setup_test_provider_and_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await;
 
     // `SimpleContract` is the name of the contract
-    let contract_instance = SimpleContract::new(null_contract_id(), provider, wallet);
+    let contract_instance = SimpleContract::new(null_contract_id(), wallet);
 
     let contract_call = contract_instance.takes_nested_struct(nested_struct_from_tokens);
 
@@ -633,15 +633,9 @@ async fn example_workflow() {
         "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
 
-    let compiled = Contract::load_sway_contract(
-        "tests/test_projects/contract_test/out/debug/contract_test.bin",
-    )
-    .unwrap();
-
-    let (provider, wallet) = setup_test_provider_and_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await;
     let contract_id = Contract::deploy(
-        &compiled,
-        &provider.clone(),
+        "tests/test_projects/contract_test/out/debug/contract_test.bin",
         &wallet,
         TxParameters::default(),
     )
@@ -649,7 +643,7 @@ async fn example_workflow() {
     .unwrap();
 
     println!("Contract deployed @ {:x}", contract_id);
-    let contract_instance = MyContract::new(contract_id.to_string(), provider, wallet);
+    let contract_instance = MyContract::new(contract_id.to_string(), wallet);
 
     let result = contract_instance
         .initialize_counter(42) // Build the ABI call
@@ -678,18 +672,17 @@ async fn type_safe_output_values() {
         "packages/fuels-abigen-macro/tests/test_projects/contract_output_test/out/debug/contract_output_test-abi.json"
     );
 
-    let compiled = Contract::load_sway_contract(
+    let wallet = launch_provider_and_get_wallet().await;
+    let contract_id = Contract::deploy(
         "tests/test_projects/contract_output_test/out/debug/contract_output_test.bin",
+        &wallet,
+        TxParameters::default(),
     )
+    .await
     .unwrap();
-
-    let (provider, wallet) = setup_test_provider_and_wallet().await;
-    let contract_id = Contract::deploy(&compiled, &provider, &wallet, TxParameters::default())
-        .await
-        .unwrap();
     println!("Contract deployed @ {:x}", contract_id);
 
-    let contract_instance = MyContract::new(contract_id.to_string(), provider, wallet);
+    let contract_instance = MyContract::new(contract_id.to_string(), wallet);
 
     // `response`'s type matches the return type of `is_event()`
     let response = contract_instance.is_even(10).call().await.unwrap();
@@ -725,18 +718,17 @@ async fn call_with_structs() {
         "packages/fuels-abigen-macro/tests/test_projects/complex_types_contract/out/debug/contract_test-abi.json"
     );
 
-    let compiled = Contract::load_sway_contract(
+    let wallet = launch_provider_and_get_wallet().await;
+    let contract_id = Contract::deploy(
         "tests/test_projects/complex_types_contract/out/debug/contract_test.bin",
+        &wallet,
+        TxParameters::default(),
     )
+    .await
     .unwrap();
-
-    let (provider, wallet) = setup_test_provider_and_wallet().await;
-    let contract_id = Contract::deploy(&compiled, &provider, &wallet, TxParameters::default())
-        .await
-        .unwrap();
     println!("Contract deployed @ {:x}", contract_id);
 
-    let contract_instance = MyContract::new(contract_id.to_string(), provider, wallet);
+    let contract_instance = MyContract::new(contract_id.to_string(), wallet);
     let counter_config = CounterConfig {
         dummy: true,
         initial_value: 42,
@@ -768,18 +760,17 @@ async fn call_with_empty_return() {
         "packages/fuels-abigen-macro/tests/test_projects/call_empty_return/out/debug/contract_test-abi.json"
     );
 
-    let compiled = Contract::load_sway_contract(
+    let wallet = launch_provider_and_get_wallet().await;
+    let contract_id = Contract::deploy(
         "tests/test_projects/call_empty_return/out/debug/contract_test.bin",
+        &wallet,
+        TxParameters::default(),
     )
+    .await
     .unwrap();
-
-    let (provider, wallet) = setup_test_provider_and_wallet().await;
-    let contract_id = Contract::deploy(&compiled, &provider, &wallet, TxParameters::default())
-        .await
-        .unwrap();
     println!("Contract deployed @ {:x}", contract_id);
 
-    let contract_instance = MyContract::new(contract_id.to_string(), provider, wallet);
+    let contract_instance = MyContract::new(contract_id.to_string(), wallet);
 
     let _result = contract_instance
         .store_value(42) // Build the ABI call
@@ -795,17 +786,17 @@ async fn abigen_different_structs_same_arg_name() {
         "packages/fuels-abigen-macro/tests/test_projects/two_structs/out/debug/two_structs-abi.json",
     );
 
-    let compiled =
-        Contract::load_sway_contract("tests/test_projects/two_structs/out/debug/two_structs.bin")
-            .unwrap();
-
-    let (provider, wallet) = setup_test_provider_and_wallet().await;
-    let contract_id = Contract::deploy(&compiled, &provider, &wallet, TxParameters::default())
-        .await
-        .unwrap();
+    let wallet = launch_provider_and_get_wallet().await;
+    let contract_id = Contract::deploy(
+        "tests/test_projects/two_structs/out/debug/two_structs.bin",
+        &wallet,
+        TxParameters::default(),
+    )
+    .await
+    .unwrap();
     println!("Contract deployed @ {:x}", contract_id);
 
-    let contract_instance = MyContract::new(contract_id.to_string(), provider, wallet);
+    let contract_instance = MyContract::new(contract_id.to_string(), wallet);
 
     let param_one = StructOne { foo: 42 };
     let param_two = StructTwo { bar: 42 };
@@ -830,15 +821,11 @@ async fn test_reverting_transaction() {
         "packages/fuels-abigen-macro/tests/test_projects/revert_transaction_error/out/debug/capture_revert_transaction_error-abi.json"
     );
 
-    let compiled =
-    Contract::load_sway_contract("tests/test_projects/revert_transaction_error/out/debug/capture_revert_transaction_error.bin")
-        .unwrap();
-
-    let (provider, wallet) = setup_test_provider_and_wallet().await;
-    let contract_id = Contract::deploy(&compiled, &provider, &wallet, TxParameters::default())
+    let wallet = launch_provider_and_get_wallet().await;
+    let contract_id = Contract::deploy("tests/test_projects/revert_transaction_error/out/debug/capture_revert_transaction_error.bin", &wallet, TxParameters::default())
         .await
         .unwrap();
-    let contract_instance = RevertingContract::new(contract_id.to_string(), provider, wallet);
+    let contract_instance = RevertingContract::new(contract_id.to_string(), wallet);
     println!("Contract deployed @ {:x}", contract_id);
     let result = contract_instance.make_transaction_fail(0).call().await;
     assert!(matches!(result, Err(Error::ContractCallError(_))));
@@ -851,16 +838,16 @@ async fn multiple_read_calls() {
         "packages/fuels-abigen-macro/tests/test_projects/multiple_read_calls/out/debug/demo-abi.json"
     );
 
-    let compiled =
-        Contract::load_sway_contract("tests/test_projects/multiple_read_calls/out/debug/demo.bin")
-            .unwrap();
-
-    let (provider, wallet) = setup_test_provider_and_wallet().await;
-    let contract_id = Contract::deploy(&compiled, &provider, &wallet, TxParameters::default())
-        .await
-        .unwrap();
+    let wallet = launch_provider_and_get_wallet().await;
+    let contract_id = Contract::deploy(
+        "tests/test_projects/multiple_read_calls/out/debug/demo.bin",
+        &wallet,
+        TxParameters::default(),
+    )
+    .await
+    .unwrap();
     println!("Contract deployed @ {:x}", contract_id);
-    let contract_instance = MyContract::new(contract_id.to_string(), provider, wallet);
+    let contract_instance = MyContract::new(contract_id.to_string(), wallet);
 
     contract_instance.store(42).call().await.unwrap();
 
@@ -885,18 +872,17 @@ async fn test_methods_typeless_argument() {
         "packages/fuels-abigen-macro/tests/test_projects/empty_arguments/out/debug/method_four_arguments-abi.json"
     );
 
-    let compiled = Contract::load_sway_contract(
+    let wallet = launch_provider_and_get_wallet().await;
+    let contract_id = Contract::deploy(
         "tests/test_projects/empty_arguments/out/debug/method_four_arguments.bin",
+        &wallet,
+        TxParameters::default(),
     )
+    .await
     .unwrap();
-
-    let (provider, wallet) = setup_test_provider_and_wallet().await;
-    let contract_id = Contract::deploy(&compiled, &provider, &wallet, TxParameters::default())
-        .await
-        .unwrap();
     println!("Contract deployed @ {:x}", contract_id);
 
-    let contract_instance = MyContract::new(contract_id.to_string(), provider, wallet);
+    let contract_instance = MyContract::new(contract_id.to_string(), wallet);
 
     let result = contract_instance
         .method_with_empty_argument()
@@ -907,102 +893,23 @@ async fn test_methods_typeless_argument() {
 }
 
 #[tokio::test]
-async fn test_connect_to_deployed_contract() {
-    abigen!(
-        MyContract,
-        "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
-    );
-
-    let compiled = Contract::load_sway_contract(
-        "tests/test_projects/contract_test/out/debug/contract_test.bin",
-    )
-    .unwrap();
-
-    let (provider, wallet) = setup_test_provider_and_wallet().await;
-    let contract_id = Contract::deploy(&compiled, &provider, &wallet, TxParameters::default())
-        .await
-        .unwrap();
-    println!("Contract deployed @ {:x}", contract_id);
-
-    let deployed_contract_instance =
-        MyContract::new(contract_id.to_string(), provider.clone(), wallet.clone());
-
-    // Check that the deployed contract works as expected.
-    let result = deployed_contract_instance
-        .initialize_counter(21)
-        .call()
-        .await
-        .unwrap();
-    assert_eq!(result.value, 21);
-
-    let result = deployed_contract_instance
-        .increment_counter(21)
-        .call()
-        .await
-        .unwrap();
-    assert_eq!(result.value, 42);
-
-    let result = deployed_contract_instance
-        .get_counter()
-        .call()
-        .await
-        .unwrap();
-    assert_eq!(result.value, 42);
-
-    // Create a new contract instance by connecting to
-    // the previously deployed contract.
-    let connected_contract_instance = MyContract::new(contract_id.to_string(), provider, wallet);
-
-    // Check that it works as expected.
-    let result = connected_contract_instance
-        .initialize_counter(111)
-        .call()
-        .await
-        .unwrap();
-    assert_eq!(result.value, 111);
-
-    let result = connected_contract_instance
-        .increment_counter(9)
-        .call()
-        .await
-        .unwrap();
-    assert_eq!(result.value, 120);
-
-    let result = connected_contract_instance
-        .get_counter()
-        .call()
-        .await
-        .unwrap();
-    assert_eq!(result.value, 120);
-
-    // Check that the originally deployed contract is in the same state.
-    let result = deployed_contract_instance
-        .get_counter()
-        .call()
-        .await
-        .unwrap();
-    assert_eq!(result.value, 120);
-}
-
-#[tokio::test]
 async fn test_large_return_data() {
     abigen!(
         MyContract,
         "packages/fuels-abigen-macro/tests/test_projects/large_return_data/out/debug/contract_test-abi.json"
     );
 
-    let compiled = Contract::load_sway_contract(
+    let wallet = launch_provider_and_get_wallet().await;
+    let contract_id = Contract::deploy(
         "tests/test_projects/large_return_data/out/debug/contract_test.bin",
+        &wallet,
+        TxParameters::default(),
     )
+    .await
     .unwrap();
-
-    let (provider, wallet) = setup_test_provider_and_wallet().await;
-    let contract_id = Contract::deploy(&compiled, &provider, &wallet, TxParameters::default())
-        .await
-        .unwrap();
     println!("Contract deployed @ {:x}", contract_id);
 
-    let contract_instance = MyContract::new(contract_id.to_string(), provider, wallet);
+    let contract_instance = MyContract::new(contract_id.to_string(), wallet);
 
     let res = contract_instance.get_id().call().await.unwrap();
 
@@ -1045,26 +952,19 @@ async fn test_large_return_data() {
 }
 
 #[tokio::test]
-#[ignore]
 async fn test_provider_launch_and_connect() {
     abigen!(
         MyContract,
         "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
 
-    let compiled = Contract::load_sway_contract(
-        "tests/test_projects/contract_test/out/debug/contract_test.bin",
-    )
-    .unwrap();
-
-    let (pk, coins) = setup_address_and_coins(10, 10);
+    let (pk, coins) = setup_address_and_coins(1, DEFAULT_INITIAL_BALANCE);
     let (launched_provider, address) = setup_test_provider(coins).await;
     let connected_provider = Provider::connect(address).await.unwrap();
 
-    let wallet = LocalWallet::new_from_private_key(pk, launched_provider.clone());
+    let mut wallet = LocalWallet::new_from_private_key(pk, connected_provider.clone());
     let contract_id = Contract::deploy(
-        &compiled,
-        &connected_provider,
+        "tests/test_projects/contract_test/out/debug/contract_test.bin",
         &wallet,
         TxParameters::default(),
     )
@@ -1072,11 +972,7 @@ async fn test_provider_launch_and_connect() {
     .unwrap();
     println!("Contract deployed @ {:x}", contract_id);
 
-    let contract_instance_connected =
-        MyContract::new(contract_id.to_string(), connected_provider, wallet.clone());
-
-    let contract_instance_launched =
-        MyContract::new(contract_id.to_string(), launched_provider, wallet);
+    let contract_instance_connected = MyContract::new(contract_id.to_string(), wallet.clone());
 
     let result = contract_instance_connected
         .initialize_counter(42) // Build the ABI call
@@ -1084,6 +980,9 @@ async fn test_provider_launch_and_connect() {
         .await
         .unwrap();
     assert_eq!(42, result.value);
+
+    wallet.set_provider(launched_provider);
+    let contract_instance_launched = MyContract::new(contract_id.to_string(), wallet);
 
     let result = contract_instance_launched
         .increment_counter(10)
@@ -1106,48 +1005,39 @@ async fn test_contract_calling_contract() {
         "packages/fuels-abigen-macro/tests/test_projects/foo_caller_contract/out/debug/foo_caller_contract-abi.json"
     );
 
-    // Load the first compiled contract
-    let compiled =
-        Contract::load_sway_contract("tests/test_projects/foo_contract/out/debug/foo_contract.bin")
-            .unwrap();
+    let wallet = launch_provider_and_get_wallet().await;
 
-    let (provider, wallet) = setup_test_provider_and_wallet().await;
-
-    let foo_contract_id = Contract::deploy(&compiled, &provider, &wallet, TxParameters::default())
-        .await
-        .unwrap();
+    // Load and deploy the first compiled contract
+    let foo_contract_id = Contract::deploy(
+        "tests/test_projects/foo_contract/out/debug/foo_contract.bin",
+        &wallet,
+        TxParameters::default(),
+    )
+    .await
+    .unwrap();
     println!("Foo contract deployed @ {:x}", foo_contract_id);
 
-    let foo_contract_instance = FooContract::new(
-        foo_contract_id.to_string(),
-        provider.clone(),
-        wallet.clone(),
-    );
+    let foo_contract_instance = FooContract::new(foo_contract_id.to_string(), wallet.clone());
 
     // Call the contract directly; it just flips the bool value that's passed.
     let res = foo_contract_instance.foo(true).call().await.unwrap();
     assert!(!res.value);
 
-    // Compile and deploy second contract
-    let compiled = Contract::load_sway_contract(
+    // Load and deploy the second compiled contract
+    let foo_caller_contract_id = Contract::deploy(
         "tests/test_projects/foo_caller_contract/out/debug/foo_caller_contract.bin",
+        &wallet,
+        TxParameters::default(),
     )
+    .await
     .unwrap();
-
-    let foo_caller_contract_id =
-        Contract::deploy(&compiled, &provider, &wallet, TxParameters::default())
-            .await
-            .unwrap();
     println!(
         "Foo caller contract deployed @ {:x}",
         foo_caller_contract_id
     );
 
-    let foo_caller_contract_instance = FooCaller::new(
-        foo_caller_contract_id.to_string(),
-        provider.clone(),
-        wallet.clone(),
-    );
+    let foo_caller_contract_instance =
+        FooCaller::new(foo_caller_contract_id.to_string(), wallet.clone());
 
     // Calls the contract that calls the `FooContract` contract, also just
     // flips the bool value passed to it.
@@ -1170,22 +1060,16 @@ async fn test_gas_errors() {
         "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
 
-    let compiled = Contract::load_sway_contract(
-        "tests/test_projects/contract_test/out/debug/contract_test.bin",
-    )
-    .unwrap();
-
-    let (provider, wallet) = setup_test_provider_and_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await;
     let contract_id = Contract::deploy(
-        &compiled,
-        &provider.clone(),
+        "tests/test_projects/contract_test/out/debug/contract_test.bin",
         &wallet,
         TxParameters::default(),
     )
     .await
     .unwrap();
 
-    let contract_instance = MyContract::new(contract_id.to_string(), provider, wallet);
+    let contract_instance = MyContract::new(contract_id.to_string(), wallet);
 
     // Test for insufficient gas.
     let result = contract_instance
@@ -1221,17 +1105,17 @@ async fn test_amount_and_asset_forwarding() {
         "packages/fuels-abigen-macro/tests/test_projects/token_ops/out/debug/token_ops-abi.json"
     );
 
-    let compiled =
-        Contract::load_sway_contract("tests/test_projects/token_ops/out/debug/token_ops.bin")
-            .unwrap();
+    let wallet = launch_provider_and_get_wallet().await;
 
-    let (provider, wallet) = setup_test_provider_and_wallet().await;
+    let id = Contract::deploy(
+        "tests/test_projects/token_ops/out/debug/token_ops.bin",
+        &wallet,
+        TxParameters::default(),
+    )
+    .await
+    .unwrap();
 
-    let id = Contract::deploy(&compiled, &provider, &wallet, TxParameters::default())
-        .await
-        .unwrap();
-
-    let instance = TestFuelCoinContract::new(id.to_string(), provider.clone(), wallet.clone());
+    let instance = TestFuelCoinContract::new(id.to_string(), wallet.clone());
 
     let mut balance_result = instance.get_balance(id, id).call().await.unwrap();
     assert_eq!(balance_result.value, 0);
@@ -1310,18 +1194,17 @@ async fn test_multiple_args() {
         "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
 
-    let compiled = Contract::load_sway_contract(
+    let wallet = launch_provider_and_get_wallet().await;
+
+    let id = Contract::deploy(
         "tests/test_projects/contract_test/out/debug/contract_test.bin",
+        &wallet,
+        TxParameters::default(),
     )
+    .await
     .unwrap();
 
-    let (provider, wallet) = setup_test_provider_and_wallet().await;
-
-    let id = Contract::deploy(&compiled, &provider, &wallet, TxParameters::default())
-        .await
-        .unwrap();
-
-    let instance = MyContract::new(id.to_string(), provider.clone(), wallet.clone());
+    let instance = MyContract::new(id.to_string(), wallet.clone());
 
     // Make sure we can call the contract with multiple arguments
     let response = instance.get(5, 6).call().await.unwrap();
@@ -1343,16 +1226,17 @@ async fn test_tuples() {
         "packages/fuels-abigen-macro/tests/test_projects/tuples/out/debug/tuples-abi.json"
     );
 
-    let compiled =
-        Contract::load_sway_contract("tests/test_projects/tuples/out/debug/tuples.bin").unwrap();
+    let wallet = launch_provider_and_get_wallet().await;
 
-    let (provider, wallet) = setup_test_provider_and_wallet().await;
+    let id = Contract::deploy(
+        "tests/test_projects/tuples/out/debug/tuples.bin",
+        &wallet,
+        TxParameters::default(),
+    )
+    .await
+    .unwrap();
 
-    let id = Contract::deploy(&compiled, &provider, &wallet, TxParameters::default())
-        .await
-        .unwrap();
-
-    let instance = MyContract::new(id.to_string(), provider.clone(), wallet.clone());
+    let instance = MyContract::new(id.to_string(), wallet.clone());
 
     let response = instance.returns_tuple((1, 2)).call().await.unwrap();
     assert_eq!(response.value, (1, 2));
@@ -1365,17 +1249,17 @@ async fn test_auth_msg_sender_from_sdk() {
         "packages/fuels-abigen-macro/tests/test_projects/auth_testing_contract/out/debug/auth_testing_contract-abi.json"
     );
 
-    let (provider, wallet) = setup_test_provider_and_wallet().await;
-    let compiled = Contract::load_sway_contract(
+    let wallet = launch_provider_and_get_wallet().await;
+
+    let id = Contract::deploy(
         "tests/test_projects/auth_testing_contract/out/debug/auth_testing_contract.bin",
+        &wallet,
+        TxParameters::default(),
     )
+    .await
     .unwrap();
 
-    let id = Contract::deploy(&compiled, &provider, &wallet, TxParameters::default())
-        .await
-        .unwrap();
-
-    let auth_instance = AuthContract::new(id.to_string(), provider.clone(), wallet.clone());
+    let auth_instance = AuthContract::new(id.to_string(), wallet.clone());
 
     // Contract returns true if `msg_sender()` matches `wallet.address()`.
     let result = auth_instance
@@ -1394,15 +1278,16 @@ async fn workflow_enum_inside_struct() {
         "packages/fuels-abigen-macro/tests/test_projects/enum_inside_struct/out/debug\
         /enum_inside_struct-abi.json"
     );
-    let compiled = Contract::load_sway_contract(
+
+    let wallet = launch_provider_and_get_wallet().await;
+    let id = Contract::deploy(
         "tests/test_projects/enum_inside_struct/out/debug/enum_inside_struct.bin",
+        &wallet,
+        TxParameters::default(),
     )
+    .await
     .unwrap();
-    let (provider, wallet) = setup_test_provider_and_wallet().await;
-    let id = Contract::deploy(&compiled, &provider, &wallet, TxParameters::default())
-        .await
-        .unwrap();
-    let instance = MyContract::new(id.to_string(), provider.clone(), wallet.clone());
+    let instance = MyContract::new(id.to_string(), wallet.clone());
     let result = instance.return_enum_inside_struct(11).call().await.unwrap();
     let expected = Cocktail {
         the_thing_you_mix_in: Shaker::Mojito(222),
@@ -1428,16 +1313,16 @@ async fn workflow_struct_inside_enum() {
         "packages/fuels-abigen-macro/tests/test_projects/struct_inside_enum/out/debug/struct_inside_enum-abi.json"
     );
 
-    let compiled = Contract::load_sway_contract(
+    let wallet = launch_provider_and_get_wallet().await;
+    let id = Contract::deploy(
         "tests/test_projects/struct_inside_enum/out/debug/struct_inside_enum.bin",
+        &wallet,
+        TxParameters::default(),
     )
+    .await
     .unwrap();
-    let (provider, wallet) = setup_test_provider_and_wallet().await;
-    let id = Contract::deploy(&compiled, &provider, &wallet, TxParameters::default())
-        .await
-        .unwrap();
 
-    let instance = MyContract::new(id.to_string(), provider.clone(), wallet.clone());
+    let instance = MyContract::new(id.to_string(), wallet.clone());
     let result = instance.return_struct_inside_enum(11).call().await.unwrap();
     let expected = Shaker::Cosmopolitan(Recipe { ice: 22, sugar: 99 });
     assert_eq!(result.value, expected);
@@ -1457,16 +1342,16 @@ async fn workflow_use_enum_input() {
         "packages/fuels-abigen-macro/tests/test_projects/use_enum_input/out/debug/use_enum_input-abi.json"
     );
 
-    let compiled = Contract::load_sway_contract(
+    let wallet = launch_provider_and_get_wallet().await;
+    let id = Contract::deploy(
         "tests/test_projects/use_enum_input/out/debug/use_enum_input.bin",
+        &wallet,
+        TxParameters::default(),
     )
+    .await
     .unwrap();
-    let (provider, wallet) = setup_test_provider_and_wallet().await;
-    let id = Contract::deploy(&compiled, &provider, &wallet, TxParameters::default())
-        .await
-        .unwrap();
 
-    let instance = MyContract::new(id.to_string(), provider.clone(), wallet.clone());
+    let instance = MyContract::new(id.to_string(), wallet.clone());
     let enum_input = Shaker::Cosmopolitan(255);
     let result = instance.use_enum_as_input(enum_input).call().await.unwrap();
     assert_eq!(result.value, 9876);
@@ -1478,16 +1363,16 @@ async fn test_logd_receipts() {
         LoggingContract,
         "packages/fuels-abigen-macro/tests/test_projects/contract_logdata/out/debug/contract_logdata-abi.json"
     );
-    let (provider, wallet) = setup_test_provider_and_wallet().await;
-    let compiled = Contract::load_sway_contract(
-        "tests/test_projects/contract_logdata/out/debug/contract_logdata.bin",
-    )
-    .unwrap();
+    let wallet = launch_provider_and_get_wallet().await;
 
-    let id = Contract::deploy(&compiled, &provider, &wallet, TxParameters::default())
-        .await
-        .unwrap();
-    let contract_instance = LoggingContract::new(id.to_string(), provider.clone(), wallet.clone());
+    let id = Contract::deploy(
+        "tests/test_projects/contract_logdata/out/debug/contract_logdata.bin",
+        &wallet,
+        TxParameters::default(),
+    )
+    .await
+    .unwrap();
+    let contract_instance = LoggingContract::new(id.to_string(), wallet.clone());
     let mut value = [0u8; 32];
     value[0] = 0xFF;
     value[1] = 0xEE;

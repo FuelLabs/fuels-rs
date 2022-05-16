@@ -64,7 +64,7 @@ pub fn expand_function(
     Ok(quote! {
         #doc
         pub fn #name(&self #input) -> #result {
-            Contract::method_hash(&self.provider, self.contract_id, &self.wallet,
+            Contract::method_hash(&self.wallet.provider, self.contract_id, &self.wallet,
                 #tokenized_signature, #output_params_token, #arg).expect("method not found (this should never happen)")
         }
     })
@@ -252,7 +252,7 @@ mod tests {
 #[doc = "Calls the contract's `HelloWorld` (0x0000000097d4de45) function"]
 pub fn HelloWorld(&self, bimbam: bool) -> ContractCall<()> {
     Contract::method_hash(
-        &self.provider,
+        &self.wallet.provider,
         self.contract_id,
         &self.wallet,
         [0, 0, 0, 0, 151, 212, 222, 69],
@@ -360,7 +360,7 @@ pub fn hello_world(
     the_only_allowed_input: SomeWeirdFrenchCuisine
 ) -> ContractCall<(CoolIndieGame , EntropyCirclesEnum)> {
     Contract::method_hash(
-        &self.provider,
+        &self.wallet.provider,
         self.contract_id,
         &self.wallet,
         [0, 0, 0, 0, 118, 178, 90, 36],
