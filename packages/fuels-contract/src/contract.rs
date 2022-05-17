@@ -21,7 +21,8 @@ use fuels_core::{
 };
 use fuels_core::{constants::NATIVE_ASSET_ID, ParamType};
 use fuels_signers::provider::Provider;
-use fuels_signers::{LocalWallet, Signer};
+use fuels_signers::LocalWallet;
+use fuels_signers::wallet::Signer;
 use std::marker::PhantomData;
 
 #[derive(Debug, Clone, Default)]

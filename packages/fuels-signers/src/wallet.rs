@@ -1,5 +1,4 @@
 use crate::provider::{Provider, ProviderError};
-use crate::Signer;
 use async_trait::async_trait;
 use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
 use fuel_gql_client::client::schema::coin::Coin;
@@ -8,6 +7,26 @@ use fuels_core::errors::Error;
 use fuels_core::parameters::TxParameters;
 use std::{fmt, io};
 use thiserror::Error;
+
+/// Trait for signing transactions and messages
+///
+/// Implement this trait to support different signing modes, e.g. Ledger, hosted etc.
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+pub trait Signer: std::fmt::Debug + Send + Sync {
+    type Error: std::error::Error + Send + Sync;
+    /// Signs the hash of the provided message
+    async fn sign_message<S: Send + Sync + AsRef<[u8]>>(
+        &self,
+        message: S,
+    ) -> Result<Signature, Self::Error>;
+
+    /// Signs the transaction
+    async fn sign_transaction(&self, message: &mut Transaction) -> Result<Signature, Self::Error>;
+
+    /// Returns the signer's Fuel Address
+    fn address(&self) -> Address;
+}
 
 /// A FuelVM-compatible wallet which can be used for signing, sending transactions, and more.
 ///
@@ -22,6 +41,7 @@ use thiserror::Error;
 /// use fuel_crypto::{Message, SecretKey};
 /// use rand::{rngs::StdRng, RngCore, SeedableRng};
 /// use fuels::prelude::*;
+/// use fuels_signers::wallet::Signer;
 ///
 /// async fn foo() -> Result<(), Box<dyn std::error::Error>> {
 ///   // Generate your secret key
@@ -117,17 +137,11 @@ impl Wallet {
     /// use std::str::FromStr;
     ///
     /// async fn foo() -> Result<(), Box<dyn std::error::Error>> {
-    ///   // Setup test wallets with 1 coin each
-    ///   let (pk_1, mut coins_1) = setup_address_and_coins(1, 1);
-    ///   let (pk_2, coins_2) = setup_address_and_coins(1, 1);
-    ///   coins_1.extend(coins_2);
+    ///   // Setup a test provider and node with 10 wallets
+    ///   let (provider, wallets) = setup_test_provider_and_wallets(WalletsConfig::default());
     ///
-    ///   // Setup a provider and node with both set of coins
-    ///   let (provider, _) = setup_test_provider(coins_1).await;
-    ///
-    ///   // Create the actual wallets/signers
-    ///   let wallet_1 = LocalWallet::new_from_private_key(pk_1, provider.clone());
-    ///   let wallet_2 = LocalWallet::new_from_private_key(pk_2, provider);
+    ///   let wallet_1 = wallets[0];
+    ///   let wallet_2 = wallets[1];
     ///
     ///   // Transfer 1 from wallet 1 to wallet 2
     ///   let _receipts = wallet_1

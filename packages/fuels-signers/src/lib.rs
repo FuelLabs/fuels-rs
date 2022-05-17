@@ -12,38 +12,17 @@ use std::error::Error;
 /// A wallet instantiated with a locally stored private key
 pub type LocalWallet = wallet::Wallet;
 
-/// Trait for signing transactions and messages
-///
-/// Implement this trait to support different signing modes, e.g. Ledger, hosted etc.
-#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
-#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
-pub trait Signer: std::fmt::Debug + Send + Sync {
-    type Error: Error + Send + Sync;
-    /// Signs the hash of the provided message
-    async fn sign_message<S: Send + Sync + AsRef<[u8]>>(
-        &self,
-        message: S,
-    ) -> Result<Signature, Self::Error>;
-
-    /// Signs the transaction
-    async fn sign_transaction(&self, message: &mut Transaction) -> Result<Signature, Self::Error>;
-
-    /// Returns the signer's Fuel Address
-    fn address(&self) -> Address;
-}
-
 #[cfg(test)]
 mod tests {
     use fuel_crypto::{Message, SecretKey};
     use fuel_tx::{AssetId, Bytes32, Input, Output, UtxoId};
     use fuels_core::parameters::TxParameters;
-    use fuels_test_helpers::{setup_address_and_coins, setup_test_client};
+    use fuels_test_helpers::{setup_test_provider_and_wallets, WalletsConfig};
     use rand::{rngs::StdRng, RngCore, SeedableRng};
     use std::str::FromStr;
 
-    use crate::provider::Provider;
-
     use super::*;
+    use crate::wallet::Signer;
 
     #[tokio::test]
     async fn sign_and_verify() {
@@ -53,8 +32,9 @@ mod tests {
 
         let secret = unsafe { SecretKey::from_bytes_unchecked(secret_seed) };
 
-        let (client, _) = setup_test_client(vec![]).await;
-        let wallet = LocalWallet::new_from_private_key(secret, Provider::new(client));
+        let (provider, mut wallets) =
+            setup_test_provider_and_wallets(WalletsConfig::default()).await;
+        let wallet = wallets[0];
 
         let message = "my message";
 
@@ -79,8 +59,9 @@ mod tests {
             SecretKey::from_str("5f70feeff1f229e4a95e1056e8b4d80d0b24b565674860cc213bdb07127ce1b1")
                 .unwrap();
 
-        let (client, _) = setup_test_client(vec![]).await;
-        let wallet = LocalWallet::new_from_private_key(secret, Provider::new(client));
+        let (provider, mut wallets) =
+            setup_test_provider_and_wallets(WalletsConfig::default()).await;
+        let wallet = wallets[0];
 
         let input_coin = Input::coin(
             UtxoId::new(Bytes32::zeroed(), 0),
@@ -130,18 +111,12 @@ mod tests {
 
     #[tokio::test]
     async fn send_transaction() {
-        // Setup two sets of coins, one for each wallet, each containing 1 coin with 1 amount.
-        let (pk_1, mut coins_1) = setup_address_and_coins(1, 1000000);
-        let (pk_2, coins_2) = setup_address_and_coins(1, 1000000);
+        // Setup two wallets, each containing 1 coin with 1000000 amount.
+        let config = WalletsConfig::new(Some(2), Some(1), Some(1000000));
+        let (provider, mut wallets) = setup_test_provider_and_wallets(config).await;
 
-        coins_1.extend(coins_2);
-
-        // Setup a provider and node with both set of coins.
-        let (client, _) = setup_test_client(coins_1).await;
-        let provider = Provider::new(client);
-
-        let wallet_1 = LocalWallet::new_from_private_key(pk_1, provider.clone());
-        let wallet_2 = LocalWallet::new_from_private_key(pk_2, provider);
+        let wallet_1 = wallets[0];
+        let wallet_2 = wallets[1];
 
         let wallet_1_initial_coins = wallet_1.get_coins().await.unwrap();
         let wallet_2_initial_coins = wallet_2.get_coins().await.unwrap();
@@ -205,17 +180,12 @@ mod tests {
 
     #[tokio::test]
     async fn transfer_coins_with_change() {
-        // Setup two sets of coins, one for each wallet, each containing 1 coin with 5 amounts each.
-        let (pk_1, mut coins_1) = setup_address_and_coins(1, 5);
-        let (pk_2, coins_2) = setup_address_and_coins(1, 5);
+        // Setup two wallets, each containing 1 coin with 5 amounts each.
+        let config = WalletsConfig::new(Some(2), Some(1), Some(5));
+        let (provider, mut wallets) = setup_test_provider_and_wallets(config).await;
 
-        coins_1.extend(coins_2);
-
-        let (client, _) = setup_test_client(coins_1).await;
-        let provider = Provider::new(client);
-
-        let wallet_1 = LocalWallet::new_from_private_key(pk_1, provider.clone());
-        let wallet_2 = LocalWallet::new_from_private_key(pk_2, provider);
+        let wallet_1 = wallets[0];
+        let wallet_2 = wallets[1];
 
         let wallet_1_initial_coins = wallet_1.get_coins().await.unwrap();
         let wallet_2_initial_coins = wallet_2.get_coins().await.unwrap();
