@@ -21,8 +21,7 @@ use fuels_core::{
 };
 use fuels_core::{constants::NATIVE_ASSET_ID, ParamType};
 use fuels_signers::provider::Provider;
-use fuels_signers::LocalWallet;
-use fuels_signers::wallet::Signer;
+use fuels_signers::{LocalWallet, Signer};
 use std::marker::PhantomData;
 
 #[derive(Debug, Clone, Default)]
@@ -394,7 +393,7 @@ impl Contract {
             Self::contract_deployment_transaction(&compiled_contract, wallet, params).await?;
         wallet.sign_transaction(&mut tx).await?;
 
-        match wallet.provider.client.submit(&tx).await {
+        match wallet.get_provider().unwrap().client.submit(&tx).await {
             Ok(_) => Ok(contract_id),
             Err(e) => Err(Error::TransactionError(e.to_string())),
         }

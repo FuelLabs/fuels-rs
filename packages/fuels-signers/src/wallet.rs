@@ -1,4 +1,5 @@
 use crate::provider::{Provider, ProviderError};
+use crate::Signer;
 use async_trait::async_trait;
 use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
 use fuel_gql_client::client::schema::coin::Coin;
@@ -7,26 +8,6 @@ use fuels_core::errors::Error;
 use fuels_core::parameters::TxParameters;
 use std::{fmt, io};
 use thiserror::Error;
-
-/// Trait for signing transactions and messages
-///
-/// Implement this trait to support different signing modes, e.g. Ledger, hosted etc.
-#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
-#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
-pub trait Signer: std::fmt::Debug + Send + Sync {
-    type Error: std::error::Error + Send + Sync;
-    /// Signs the hash of the provided message
-    async fn sign_message<S: Send + Sync + AsRef<[u8]>>(
-        &self,
-        message: S,
-    ) -> Result<Signature, Self::Error>;
-
-    /// Signs the transaction
-    async fn sign_transaction(&self, message: &mut Transaction) -> Result<Signature, Self::Error>;
-
-    /// Returns the signer's Fuel Address
-    fn address(&self) -> Address;
-}
 
 /// A FuelVM-compatible wallet which can be used for signing, sending transactions, and more.
 ///
@@ -38,25 +19,15 @@ pub trait Signer: std::fmt::Debug + Send + Sync {
 /// then verified.
 ///
 /// ```
-/// use fuel_crypto::{Message, SecretKey};
-/// use rand::{rngs::StdRng, RngCore, SeedableRng};
+/// use fuel_crypto::Message;
 /// use fuels::prelude::*;
-/// use fuels_signers::wallet::Signer;
 ///
 /// async fn foo() -> Result<(), Box<dyn std::error::Error>> {
-///   // Generate your secret key
-///   let mut rng = StdRng::seed_from_u64(2322u64);
-///   let mut secret_seed = [0u8; 32];
-///   rng.fill_bytes(&mut secret_seed);
-///
-///   let secret = unsafe { SecretKey::from_bytes_unchecked(secret_seed) };
-///
 ///   // Setup local test node
-///
 ///   let (provider, _) = setup_test_provider(vec![]).await;
 ///
 ///   // Create a new local wallet with the newly generated key
-///   let wallet = LocalWallet::new_from_private_key(secret, provider);
+///   let wallet = LocalWallet::new(Some(provider));
 ///
 ///   let message = "my message";
 ///   let signature = wallet.sign_message(message.as_bytes()).await?;
@@ -82,7 +53,7 @@ pub struct Wallet {
     /// from the first 32 bytes of SHA-256 hash of the wallet's public key.
     pub(crate) address: Address,
 
-    pub provider: Provider,
+    pub(crate) provider: Option<Provider>,
 }
 
 #[derive(Error, Debug)]
@@ -110,7 +81,10 @@ impl From<WalletError> for Error {
 }
 
 impl Wallet {
-    pub fn new_from_private_key(private_key: SecretKey, provider: Provider) -> Self {
+    pub fn new(provider: Option<Provider>) -> Self {
+        let mut rng = rand::thread_rng();
+
+        let private_key = SecretKey::random(&mut rng);
         let public = PublicKey::from(&private_key);
         let hashed = public.hash();
 
@@ -121,8 +95,12 @@ impl Wallet {
         }
     }
 
+    pub fn get_provider(&self) -> Result<&Provider, WalletError> {
+        self.provider.as_ref().ok_or(WalletError::NoProvider)
+    }
+
     pub fn set_provider(&mut self, provider: Provider) {
-        self.provider = provider
+        self.provider = Some(provider)
     }
 
     /// Transfer funds from this wallet to another `Address`.
@@ -133,15 +111,24 @@ impl Wallet {
     /// ```
     /// use fuels::prelude::*;
     /// use fuel_tx::{Bytes32, AssetId, Input, Output, UtxoId};
-    /// use rand::{rngs::StdRng, RngCore, SeedableRng};
     /// use std::str::FromStr;
     ///
     /// async fn foo() -> Result<(), Box<dyn std::error::Error>> {
-    ///   // Setup a test provider and node with 10 wallets
-    ///   let (provider, wallets) = setup_test_provider_and_wallets(WalletsConfig::default());
+    ///  // Create the actual wallets/signers
+    ///  let mut wallet_1 = LocalWallet::new(None);
+    ///  let mut wallet_2 = LocalWallet::new(None);
     ///
-    ///   let wallet_1 = wallets[0];
-    ///   let wallet_2 = wallets[1];
+    ///   // Setup a coin for each wallet
+    ///   let mut coins_1 = setup_coins(wallet_1.address(), 1, 1);
+    ///   let coins_2 = setup_coins(wallet_2.address(), 1, 1);
+    ///   coins_1.extend(coins_2);
+    ///
+    ///   // Setup a provider and node with both set of coins
+    ///   let (provider, _) = setup_test_provider(coins_1).await;
+    ///
+    ///   // Set provider for wallets
+    ///   wallet_1.set_provider(provider.clone());
+    ///   wallet_2.set_provider(provider);
     ///
     ///   // Transfer 1 from wallet 1 to wallet 2
     ///   let _receipts = wallet_1
@@ -174,12 +161,13 @@ impl Wallet {
         ];
 
         // Build transaction and sign it
-        let mut tx = self
-            .provider
-            .build_transfer_tx(&inputs, &outputs, tx_parameters);
+        let mut tx =
+            self.get_provider()
+                .unwrap()
+                .build_transfer_tx(&inputs, &outputs, tx_parameters);
         let _sig = self.sign_transaction(&mut tx).await.unwrap();
 
-        let receipts = self.provider.send_transaction(&tx).await?;
+        let receipts = self.get_provider().unwrap().send_transaction(&tx).await?;
 
         Ok((tx.id().to_string(), receipts))
     }
@@ -217,7 +205,11 @@ impl Wallet {
     /// Gets coins from this wallet
     /// Note that this is a simple wrapper on provider's `get_coins`.
     pub async fn get_coins(&self) -> Result<Vec<Coin>, WalletError> {
-        Ok(self.provider.get_coins(&self.address()).await?)
+        Ok(self
+            .get_provider()
+            .unwrap()
+            .get_coins(&self.address())
+            .await?)
     }
 
     /// Gets spendable coins from this wallet.
@@ -228,7 +220,8 @@ impl Wallet {
         asset_id: &AssetId,
         amount: u64,
     ) -> io::Result<Vec<Coin>> {
-        self.provider
+        self.get_provider()
+            .unwrap()
             .get_spendable_coins(&self.address(), *asset_id, amount)
             .await
     }

@@ -50,7 +50,6 @@ pub mod prelude {
     pub use super::core::parameters::*;
     pub use super::core::{Token, Tokenizable};
     pub use super::signers::provider::*;
-    pub use super::signers::LocalWallet;
-    pub use super::signers::wallet::Signer;
+    pub use super::signers::{LocalWallet, Signer};
     pub use super::test_helpers::*;
 }

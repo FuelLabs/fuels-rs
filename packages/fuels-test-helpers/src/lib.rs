@@ -5,7 +5,6 @@ use fuel_core::{
     model::{Coin, CoinStatus},
     service::{Config, DbType, FuelService},
 };
-use fuel_crypto::{PublicKey, SecretKey};
 use fuel_gql_client::client::FuelClient;
 use fuel_tx::{Address, Bytes32, UtxoId};
 use rand::Fill;
@@ -19,23 +18,10 @@ mod wallets_config;
 pub use signers::*;
 pub use wallets_config::*;
 
-// This constant is used to set a initial balance on wallets
-// mainly used on tests
-pub const DEFAULT_INITIAL_BALANCE: u64 = 1_000_000_000;
-
-fn generate_pk() -> SecretKey {
+pub fn setup_coins(owner: Address, num_coins: u64, amount: u64) -> Vec<(UtxoId, Coin)> {
     let mut rng = rand::thread_rng();
 
-    SecretKey::random(&mut rng)
-}
-
-pub fn setup_coins(owner_pk: &SecretKey, num_of_coins: u64, amount: u64) -> Vec<(UtxoId, Coin)> {
-    let mut rng = rand::thread_rng();
-
-    let public = PublicKey::from(owner_pk);
-    let owner = Address::from(*public.hash());
-
-    let coins: Vec<(UtxoId, Coin)> = (1..=num_of_coins)
+    let coins: Vec<(UtxoId, Coin)> = (1..=num_coins)
         .map(|_i| {
             let coin = Coin {
                 owner,
