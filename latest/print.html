@@ -97,7 +97,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded affix "><a href="index.html">The Fuel Rust SDK</a></li><li class="chapter-item expanded "><a href="getting-started/index.html"><strong aria-hidden="true">1.</strong> Getting Started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="getting-started/setup.html"><strong aria-hidden="true">1.1.</strong> Setting up</a></li><li class="chapter-item expanded "><a href="getting-started/basics.html"><strong aria-hidden="true">1.2.</strong> Basic usage</a></li><li class="chapter-item expanded "><a href="getting-started/type-safe-bindings.html"><strong aria-hidden="true">1.3.</strong> Generating type-safe Rust bindings</a></li></ol></li><li class="chapter-item expanded "><a href="workspaces/index.html"><strong aria-hidden="true">2.</strong> Rust workspaces</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="workspaces/fuels-abigen-macro.html"><strong aria-hidden="true">2.1.</strong> Fuel Abigen macro</a></li><li class="chapter-item expanded "><a href="workspaces/fuels-abi-cli.html"><strong aria-hidden="true">2.2.</strong> Fuel Abi CLI</a></li></ol></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="index.html">The Fuel Rust SDK</a></li><li class="chapter-item expanded "><a href="getting-started/index.html"><strong aria-hidden="true">1.</strong> Getting Started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="getting-started/setup.html"><strong aria-hidden="true">1.1.</strong> Setting up</a></li><li class="chapter-item expanded "><a href="getting-started/basics.html"><strong aria-hidden="true">1.2.</strong> Basic usage</a></li><li class="chapter-item expanded "><a href="getting-started/wallets.html"><strong aria-hidden="true">1.3.</strong> Wallets</a></li><li class="chapter-item expanded "><a href="getting-started/type-safe-bindings.html"><strong aria-hidden="true">1.4.</strong> Generating type-safe Rust bindings</a></li></ol></li><li class="chapter-item expanded "><a href="workspaces/index.html"><strong aria-hidden="true">2.</strong> Rust workspaces</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="workspaces/fuels-abigen-macro.html"><strong aria-hidden="true">2.1.</strong> Fuel Abigen macro</a></li><li class="chapter-item expanded "><a href="workspaces/fuels-abi-cli.html"><strong aria-hidden="true">2.2.</strong> Fuel Abi CLI</a></li></ol></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -409,6 +409,96 @@ let connected_contract_instance = MyContract::new(contract_id, wallet);
 </code></pre>
 <h2 id="more-examples"><a class="header" href="#more-examples">More examples</a></h2>
 <p>You can find runnable examples under <code>fuels-abigen-macro/tests/harness.rs</code>.</p>
+<h1 id="managing-wallets"><a class="header" href="#managing-wallets">Managing wallets</a></h1>
+<p>Wallets are used for many important things, for instance:</p>
+<ol>
+<li>Checking your balance;</li>
+<li>Transferring coins to a destination address;</li>
+<li>Signing messages and transactions;</li>
+<li>Paying for network fees when sending transactions or deploying smart contracts.</li>
+</ol>
+<p>The SDK gives you many different ways to create wallets. Let's explore these different ways.</p>
+<h2 id="creating-a-wallet-from-a-private-key"><a class="header" href="#creating-a-wallet-from-a-private-key">Creating a wallet from a Private Key</a></h2>
+<p>You can use <code>fuel_crypto</code> to generate a random <code>SecretKey</code> and use it to create a wallet from it:</p>
+<pre><code class="language-Rust">use fuel_crypto::{SecretKey};
+
+// Generate a random private/secret key.
+let mut rng = rand::thread_rng();
+let secret = SecretKey::random(&amp;mut rng);
+
+// Use the test helper to setup a test provider.
+let (provider, _address) = setup_test_provider(vec![]).await;
+
+// Create the wallet.
+let wallet = LocalWallet::new_from_private_key(secret, provider);
+</code></pre>
+<h2 id="creating-a-wallet-from-a-mnemonic-phrase"><a class="header" href="#creating-a-wallet-from-a-mnemonic-phrase">Creating a wallet from a mnemonic phrase</a></h2>
+<p>A mnemonic phrase is a cryptographically-generated sequence of words that's used to derive a private key. For instance: <code>&quot;oblige salon price punch saddle immune slogan rare snap desert retire surprise&quot;;</code> would generate the address <code>0xdf9d0e6c6c5f5da6e82e5e1a77974af6642bdb450a10c43f0c6910a212600185</code>. </p>
+<p>In addition to that, we also support <a href="https://www.ledger.com/academy/crypto/what-are-hierarchical-deterministic-hd-wallets">Hierarchical Deterministic Wallets</a> and <a href="https://learnmeabitcoin.com/technical/derivation-paths">derivation paths</a>. You may recognize the string <code>&quot;m/44'/60'/0'/0/0&quot;</code> from somewhere; that's a derivation path. In simple terms, it's a way to derive many wallets from a single root wallet.</p>
+<p>The SDK gives you two wallet from mnemonic instantiation methods: one that takes a derivation path (<code>Wallet::new_from_mnemonic_phrase_with_path</code>) and one that uses the default derivation path, in case you don't want or don't need to configure that (<code>Wallet::new_from_mnemonic_phrase</code>).</p>
+<p>Here's how you can create wallets with both mnemonic phrases and derivation paths:</p>
+<pre><code class="language-Rust">let phrase = &quot;oblige salon price punch saddle immune slogan rare snap desert retire surprise&quot;;
+
+// Use the test helper to setup a test provider.
+let (provider, _address) = setup_test_provider(vec![]).await;
+
+// Create first account from mnemonic phrase.
+let wallet =
+    Wallet::new_from_mnemonic_phrase_with_path(phrase, provider, &quot;m/44'/60'/0'/0/0&quot;)
+        .unwrap();
+
+// Or with the default derivation path
+let wallet = Wallet::new_from_mnemonic_phrase(phrase, provider).unwrap();
+
+let expected_address = &quot;df9d0e6c6c5f5da6e82e5e1a77974af6642bdb450a10c43f0c6910a212600185&quot;;
+
+assert_eq!(wallet.address().to_string(), expected_address);
+</code></pre>
+<h2 id="creating-a-wallet-and-storing-an-encrypted-json-wallet-to-disk"><a class="header" href="#creating-a-wallet-and-storing-an-encrypted-json-wallet-to-disk">Creating a wallet and storing an encrypted JSON wallet to disk</a></h2>
+<p>You can also manage a wallet using <a href="https://cryptobook.nakov.com/symmetric-key-ciphers/ethereum-wallet-encryption">JSON wallets</a> -- wallets that are securely encrypted and stored on disk. This makes it easier to manage multiple wallets, especially for testing purposes.</p>
+<p>You can create a random wallet and, at the same time, encrypto and store it:</p>
+<pre><code class="language-Rust">let dir = tempdir().unwrap();
+let mut rng = rand::thread_rng();
+
+// Use the test helper to setup a test provider.
+let (provider, _address) = setup_test_provider(vec![]).await;
+
+let password = &quot;my_master_password&quot;;
+
+// Create a wallet to be stored in the keystore.
+let (wallet, uuid) =
+    Wallet::new_from_keystore(&amp;dir, &amp;mut rng, password, provider.clone()).unwrap();
+</code></pre>
+<p>Then, later, you can recover the wallet if you know the master password:</p>
+<pre><code class="language-Rust">// Use the test helper to setup a test provider.
+let (provider, _address) = setup_test_provider(vec![]).await;
+
+let path = Path::new(dir.path()).join(uuid);
+let password = &quot;my_master_password&quot;;
+
+let recovered_wallet = Wallet::load_keystore(&amp;path, password, provider).unwrap();
+</code></pre>
+<h2 id="encrypting-and-storing-a-wallet-created-from-mnemonic-or-private-key"><a class="header" href="#encrypting-and-storing-a-wallet-created-from-mnemonic-or-private-key">Encrypting and storing a wallet created from mnemonic or private key</a></h2>
+<p>If you had already created a wallet using a mnemonic phrase or a private key, you can also encrypt it and save it to disk:</p>
+<pre><code class="language-Rust">let dir = tempdir().unwrap();
+
+let phrase =
+    &quot;oblige salon price punch saddle immune slogan rare snap desert retire surprise&quot;;
+
+// Use the test helper to setup a test provider.
+let (provider, _address) = setup_test_provider(vec![]).await;
+
+// Create first account from mnemonic phrase.
+let wallet = Wallet::new_from_mnemonic_phrase(phrase, provider).unwrap();
+
+let password = &quot;my_master_password&quot;;
+
+// Encrypts and stores it on disk. Can be recovered using `Wallet::load_keystore`.
+let uuid = wallet.encrypt(&amp;dir, password).unwrap();
+</code></pre>
+<h2 id="security"><a class="header" href="#security">Security</a></h2>
+<p>Keep in mind that you should never share your private/secret key. And in the case of wallets that were derived from a mnemonic phrase, never share your mnemonic phrase.</p>
+<p>If you're planning on storing the wallet on disk, do not store the plain private/secret key and do not store the plain mnemonic phrase. Instead, use <code>Wallet::encrypt</code> to encrypt its content first before saving it to disk. </p>
 <h3 id="generating-type-safe-rust-bindings"><a class="header" href="#generating-type-safe-rust-bindings">Generating type-safe Rust bindings</a></h3>
 <p>The SDK lets you transform ABI methods of a contract call, specified as JSON objects (which you can get from <a href="https://github.com/FuelLabs/sway/tree/master/forc">Forc</a>) into Rust structs and methods that are type-checked at compile time.</p>
 <p>For instance, a contract with two methods: <code>initialize_counter(arg: u64) -&gt; u64</code> and <code>increment_counter(arg: u64) -&gt; u64</code>, with the following JSON ABI:</p>
