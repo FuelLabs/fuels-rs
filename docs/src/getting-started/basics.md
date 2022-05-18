@@ -43,8 +43,8 @@ abigen!(
     "your_project/out/debug/contract_test-abi.json",
 );
 
-// This helper will will launch a local node and provide a test wallet linked to it
-let wallet = launch_provider_and_get_wallet().await;
+// This helper will will launch a local node and provide 10 test wallets linked to it
+let wallet = launch_provider_and_get_wallets(WalletConfig::default()).await;
 
 // Load the compiled Sway contract (this is the output from `forc build`)
 let compiled = Contract::load_sway_contract(
