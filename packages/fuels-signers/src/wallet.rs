@@ -102,8 +102,12 @@ impl From<WalletError> for Error {
 impl Wallet {
     pub fn new(provider: Option<Provider>) -> Self {
         let mut rng = rand::thread_rng();
-
         let private_key = SecretKey::random(&mut rng);
+
+        Self::new_from_private_key(private_key, provider)
+    }
+
+    pub(crate) fn new_from_private_key(private_key: SecretKey, provider: Option<Provider>) -> Self {
         let public = PublicKey::from(&private_key);
         let hashed = public.hash();
 
@@ -116,10 +120,14 @@ impl Wallet {
 
     pub fn get_provider(&self) -> Result<&Provider, WalletError> {
         self.provider.as_ref().ok_or(WalletError::NoProvider)
+    }
 
     /// Creates a new wallet from a mnemonic phrase.
     /// The default derivation path is used.
-    pub fn new_from_mnemonic_phrase(phrase: &str, provider: Provider) -> Result<Self, WalletError> {
+    pub fn new_from_mnemonic_phrase(
+        phrase: &str,
+        provider: Option<Provider>,
+    ) -> Result<Self, WalletError> {
         let path = format!("{}{}", DEFAULT_DERIVATION_PATH_PREFIX, 0);
         Wallet::new_from_mnemonic_phrase_with_path(phrase, provider, &path)
     }
@@ -128,7 +136,7 @@ impl Wallet {
     /// It takes a path to a BIP32 derivation path.
     pub fn new_from_mnemonic_phrase_with_path(
         phrase: &str,
-        provider: Provider,
+        provider: Option<Provider>,
         path: &str,
     ) -> Result<Self, WalletError> {
         let mnemonic = Mnemonic::<W>::new_from_phrase(phrase)?;
@@ -147,7 +155,7 @@ impl Wallet {
         dir: P,
         rng: &mut R,
         password: S,
-        provider: Provider,
+        provider: Option<Provider>,
     ) -> Result<(Self, String), WalletError>
     where
         P: AsRef<Path>,
@@ -193,7 +201,7 @@ impl Wallet {
     pub fn load_keystore<P, S>(
         keypath: P,
         password: S,
-        provider: Provider,
+        provider: Option<Provider>,
     ) -> Result<Self, WalletError>
     where
         P: AsRef<Path>,

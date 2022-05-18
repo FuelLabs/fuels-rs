@@ -1,9 +1,9 @@
 use fuel_tx::{AssetId, ContractId, Receipt};
 use fuels::prelude::{
-    launch_provider_and_get_wallets, setup_test_provider, CallParameters, Contract, Error,
-    LocalWallet, Provider, Signer, TxParameters,
+    launch_provider_and_get_wallets, setup_coins, setup_test_provider, CallParameters, Contract,
+    Error, LocalWallet, Provider, Signer, TxParameters, WalletsConfig, DEFAULT_COIN_AMOUNT,
+    DEFAULT_NUM_COINS,
 };
-use fuels::test_helpers::{setup_coins, WalletsConfig, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS};
 use fuels_abigen_macro::abigen;
 use fuels_core::constants::NATIVE_ASSET_ID;
 use fuels_core::Token;
@@ -1433,7 +1433,7 @@ async fn unit_type_enums() {
         "packages/fuels-abigen-macro/tests/test_projects/use_enum_input/out/debug/use_enum_input-abi.json"
     );
 
-    let wallet = launch_provider_and_get_wallet().await;
+    let wallet = get_single_wallet().await;
     let id = Contract::deploy(
         "tests/test_projects/use_enum_input/out/debug/use_enum_input.bin",
         &wallet,
