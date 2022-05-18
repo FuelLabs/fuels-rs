@@ -48,6 +48,7 @@ pub mod prelude {
     pub use super::core::constants::*;
     pub use super::core::errors::Error;
     pub use super::core::parameters::*;
+    pub use super::core::{Detokenize, InvalidOutputType};
     pub use super::core::{Token, Tokenizable};
     pub use super::signers::provider::*;
     pub use super::signers::{LocalWallet, Signer};

@@ -149,8 +149,8 @@ pub fn expand_custom_struct(prop: &Property) -> Result<TokenStream, Error> {
 
         }
 
-        impl fuels_core::Detokenize for #struct_ident {
-            fn from_tokens(mut tokens: Vec<Token>) -> Result<Self, fuels_core::InvalidOutputType> {
+        impl Detokenize for #struct_ident {
+            fn from_tokens(mut tokens: Vec<Token>) -> Result<Self, InvalidOutputType> {
                 let token = match tokens.len() {
                     0 => Token::Struct(vec![]),
                     1 => tokens.remove(0),
@@ -160,7 +160,7 @@ pub fn expand_custom_struct(prop: &Property) -> Result<TokenStream, Error> {
                 if let Token::Struct(tokens) = token.clone() {
                     Ok(#struct_ident::new_from_tokens(&tokens))
                 } else {
-                    Err(fuels_core::InvalidOutputType("Struct token doesn't contain inner tokens. This shouldn't happen.".to_string()))
+                    Err(InvalidOutputType("Struct token doesn't contain inner tokens. This shouldn't happen.".to_string()))
                 }
             }
         }
@@ -229,6 +229,17 @@ pub fn expand_custom_enum(name: &str, prop: &Property) -> Result<TokenStream, Er
                     quote! { types.push(ParamType::Struct(#inner_struct_ident::param_types()))
                     },
                 );
+            }
+            // Unit type
+            ParamType::Unit => {
+                // Enum variant declaration
+                enum_variants.push(quote! {#variant_name()});
+                // Token creation
+                enum_selector_builder.push(quote! {
+                    #enum_ident::#variant_name() => (#dis, Token::Unit)
+                });
+                param_types.push(quote! { types.push(ParamType::Unit) });
+                args.push(quote! {(#dis, token) => #enum_ident::#variant_name(),});
             }
             // Elementary type
             _ => {
@@ -304,8 +315,8 @@ pub fn expand_custom_enum(name: &str, prop: &Property) -> Result<TokenStream, Er
 
         }
 
-        impl fuels_core::Detokenize for #enum_ident {
-            fn from_tokens(mut tokens: Vec<Token>) -> Result<Self, fuels_core::InvalidOutputType> {
+        impl Detokenize for #enum_ident {
+            fn from_tokens(mut tokens: Vec<Token>) -> Result<Self, InvalidOutputType> {
                 let token = match tokens.len() {
                     1 => tokens.remove(0),
                     _ => panic!("Received invalid number of tokens for creating {} enum (got {} expected 1)", #enum_name, tokens.len()),
@@ -313,7 +324,7 @@ pub fn expand_custom_enum(name: &str, prop: &Property) -> Result<TokenStream, Er
                 if let Token::Enum(_) = token {
                     Ok(#enum_ident::new_from_tokens(&[token]))
                 } else {
-                    Err(fuels_core::InvalidOutputType("Enum token doesn't contain inner tokens."
+                    Err(InvalidOutputType("Enum token doesn't contain inner tokens."
                         .to_string()))
                 }
             }
@@ -487,8 +498,8 @@ impl MatchaTea {
         }
     }
 }
-impl fuels_core::Detokenize for MatchaTea{
-    fn from_tokens(mut tokens: Vec<Token>) -> Result<Self, fuels_core::InvalidOutputType> {
+impl Detokenize for MatchaTea{
+    fn from_tokens(mut tokens: Vec<Token>) -> Result<Self, InvalidOutputType> {
         let token = match tokens.len() {
             1 => tokens.remove(0),
             _ => panic!("Received invalid number of tokens for creating {} enum (got {} expected 1)", "MatchaTea", tokens.len()),
@@ -496,7 +507,7 @@ impl fuels_core::Detokenize for MatchaTea{
         if let Token::Enum(_) = token {
             Ok(MatchaTea::new_from_tokens(&[token]))
         } else {
-            Err(fuels_core::InvalidOutputType("Enum token doesn't contain inner tokens."
+            Err(InvalidOutputType("Enum token doesn't contain inner tokens."
                 .to_string()))
         }
     }
@@ -594,8 +605,8 @@ impl Amsterdam {
         }
     }
 }
-impl fuels_core::Detokenize for Amsterdam{
-    fn from_tokens(mut tokens: Vec<Token>) -> Result<Self, fuels_core::InvalidOutputType> {
+impl Detokenize for Amsterdam{
+    fn from_tokens(mut tokens: Vec<Token>) -> Result<Self, InvalidOutputType> {
         let token = match tokens.len() {
             1 => tokens.remove(0),
             _ => panic!("Received invalid number of tokens for creating {} enum (got {} expected 1)", "Amsterdam", tokens.len()),
@@ -603,7 +614,7 @@ impl fuels_core::Detokenize for Amsterdam{
         if let Token::Enum(_) = token {
             Ok(Amsterdam::new_from_tokens(&[token]))
         } else {
-            Err(fuels_core::InvalidOutputType("Enum token doesn't contain inner tokens."
+            Err(InvalidOutputType("Enum token doesn't contain inner tokens."
                 .to_string()))
         }
     }
@@ -685,8 +696,8 @@ impl Cocktail {
         long_island : < bool > :: from_token (tokens [0usize] . clone ()) . expect ("Failed to run `new_from_tokens()` for custom Cocktail struct (tokens have wrong order and/or wrong types)") , cosmopolitan : < u64 > :: from_token (tokens [1usize] . clone ()) . expect ("Failed to run `new_from_tokens()` for custom Cocktail struct (tokens have wrong order and/or wrong types)") , mojito : < u32 > :: from_token (tokens [2usize] . clone ()) . expect ("Failed to run `new_from_tokens()` for custom Cocktail struct (tokens have wrong order and/or wrong types)") }
     }
 }
-impl fuels_core::Detokenize for Cocktail {
-    fn from_tokens(mut tokens: Vec<Token>) -> Result<Self, fuels_core::InvalidOutputType> {
+impl Detokenize for Cocktail {
+    fn from_tokens(mut tokens: Vec<Token>) -> Result<Self, InvalidOutputType> {
         let token = match tokens.len() {
             0 => Token::Struct(vec![]),
             1 => tokens.remove(0),
@@ -695,7 +706,7 @@ impl fuels_core::Detokenize for Cocktail {
         if let Token::Struct(tokens) = token.clone() {
             Ok(Cocktail::new_from_tokens(&tokens))
         } else {
-            Err(fuels_core::InvalidOutputType("Struct token doesn't contain inner tokens. This shouldn't happen.".to_string()))
+            Err(InvalidOutputType("Struct token doesn't contain inner tokens. This shouldn't happen.".to_string()))
         }
     }
 }
@@ -760,8 +771,8 @@ impl Cocktail {
         long_island : Shaker :: new_from_tokens (& tokens [0usize ..]) , mojito : < u32 > :: from_token (tokens [1usize] . clone ()) . expect ("Failed to run `new_from_tokens()` for custom Cocktail struct (tokens have wrong order and/or wrong types)") }
     }
 }
-impl fuels_core::Detokenize for Cocktail {
-    fn from_tokens(mut tokens: Vec<Token>) -> Result<Self, fuels_core::InvalidOutputType> {
+impl Detokenize for Cocktail {
+    fn from_tokens(mut tokens: Vec<Token>) -> Result<Self, InvalidOutputType> {
         let token = match tokens.len() {
             0 => Token::Struct(vec![]),
             1 => tokens.remove(0),
@@ -770,7 +781,7 @@ impl fuels_core::Detokenize for Cocktail {
         if let Token::Struct(tokens) = token.clone() {
             Ok(Cocktail::new_from_tokens(&tokens))
         } else {
-            Err(fuels_core::InvalidOutputType("Struct token doesn't contain inner tokens. This shouldn't happen.".to_string()))
+            Err(InvalidOutputType("Struct token doesn't contain inner tokens. This shouldn't happen.".to_string()))
         }
     }
 }

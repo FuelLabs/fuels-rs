@@ -46,6 +46,13 @@ impl ABIDecoder {
         offset: usize,
     ) -> Result<DecodeResult, CodecError> {
         match &*param {
+            ParamType::Unit => {
+                let result = DecodeResult {
+                    token: Token::Unit,
+                    new_offset: offset,
+                };
+                Ok(result)
+            }
             ParamType::U8 => {
                 let slice = peek_word(data, offset)?;
 

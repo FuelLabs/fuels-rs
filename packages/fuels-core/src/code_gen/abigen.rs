@@ -119,6 +119,7 @@ impl Abigen {
                     use fuels::contract::contract::{Contract, ContractCall};
                     use fuels::signers::LocalWallet;
                     use std::str::FromStr;
+                    use fuels::prelude::InvalidOutputType;
                 },
                 quote! {
                     pub struct #name {
