@@ -1,13 +1,23 @@
 use crate::provider::{Provider, ProviderError};
 use crate::Signer;
 use async_trait::async_trait;
+use coins_bip32::{path::DerivationPath, Bip32Error};
+use coins_bip39::{English, Mnemonic, MnemonicError};
+use elliptic_curve::rand_core;
+use eth_keystore::KeystoreError;
 use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
 use fuel_gql_client::client::schema::coin::Coin;
 use fuel_tx::{Address, AssetId, Input, Output, Receipt, Transaction, UtxoId, Witness};
 use fuels_core::errors::Error;
 use fuels_core::parameters::TxParameters;
+use rand::{CryptoRng, Rng};
+use std::path::Path;
+use std::str::FromStr;
 use std::{fmt, io};
 use thiserror::Error;
+
+const DEFAULT_DERIVATION_PATH_PREFIX: &str = "m/44'/60'/0'/0/";
+type W = English;
 
 /// A FuelVM-compatible wallet which can be used for signing, sending transactions, and more.
 ///
@@ -81,6 +91,15 @@ pub enum WalletError {
     NoProvider,
     #[error("Provider error: {0}")]
     ProviderError(#[from] ProviderError),
+    /// Keystore error
+    #[error(transparent)]
+    KeystoreError(#[from] KeystoreError),
+    #[error("invalid mnemonic word count (expected 12, 15, 18, 21, 24, found `{0}`")]
+    InvalidMnemonicWordCount(usize),
+    #[error(transparent)]
+    MnemonicError(#[from] MnemonicError),
+    #[error(transparent)]
+    Bip32Error(#[from] Bip32Error),
 }
 
 impl From<WalletError> for Error {
@@ -90,6 +109,7 @@ impl From<WalletError> for Error {
 }
 
 impl Wallet {
+    /// Create a new wallet from a private key.
     pub fn new_from_private_key(private_key: SecretKey, provider: Provider) -> Self {
         let public = PublicKey::from(&private_key);
         let hashed = public.hash();
@@ -99,6 +119,93 @@ impl Wallet {
             address: Address::new(*hashed),
             provider,
         }
+    }
+
+    /// Creates a new wallet from a mnemonic phrase.
+    /// The default derivation path is used.
+    pub fn new_from_mnemonic_phrase(phrase: &str, provider: Provider) -> Result<Self, WalletError> {
+        let path = format!("{}{}", DEFAULT_DERIVATION_PATH_PREFIX, 0);
+        Wallet::new_from_mnemonic_phrase_with_path(phrase, provider, &path)
+    }
+
+    /// Creates a new wallet from a mnemonic phrase.
+    /// It takes a path to a BIP32 derivation path.
+    pub fn new_from_mnemonic_phrase_with_path(
+        phrase: &str,
+        provider: Provider,
+        path: &str,
+    ) -> Result<Self, WalletError> {
+        let mnemonic = Mnemonic::<W>::new_from_phrase(phrase)?;
+
+        let path = DerivationPath::from_str(path)?;
+
+        let derived_priv_key = mnemonic.derive_key(path, None)?;
+        let key: &coins_bip32::prelude::SigningKey = derived_priv_key.as_ref();
+        let secret_key = unsafe { SecretKey::from_slice_unchecked(key.to_bytes().as_ref()) };
+
+        Ok(Self::new_from_private_key(secret_key, provider))
+    }
+
+    /// Creates a new wallet and stores its encrypted version in the given path.
+    pub fn new_from_keystore<P, R, S>(
+        dir: P,
+        rng: &mut R,
+        password: S,
+        provider: Provider,
+    ) -> Result<(Self, String), WalletError>
+    where
+        P: AsRef<Path>,
+        R: Rng + CryptoRng + rand_core::CryptoRng,
+        S: AsRef<[u8]>,
+    {
+        let (secret, uuid) = eth_keystore::new(dir, rng, password)?;
+
+        let secret_key = unsafe { SecretKey::from_slice_unchecked(&secret) };
+
+        let wallet = Self::new_from_private_key(secret_key, provider);
+
+        Ok((wallet, uuid))
+    }
+
+    /// Generates a random mnemonic phrase given a random number generator and
+    /// the number of words to generate, `count`.
+    pub fn generate_mnemonic_phrase<R: Rng>(
+        rng: &mut R,
+        count: usize,
+    ) -> Result<String, WalletError> {
+        Ok(Mnemonic::<W>::new_with_count(rng, count)?.to_phrase()?)
+    }
+
+    /// Encrypts the wallet's private key with the given password and saves it
+    /// to the given path.
+    pub fn encrypt<P, S>(&self, dir: P, password: S) -> Result<String, WalletError>
+    where
+        P: AsRef<Path>,
+        S: AsRef<[u8]>,
+    {
+        let mut rng = rand::thread_rng();
+
+        Ok(eth_keystore::encrypt_key(
+            dir,
+            &mut rng,
+            *self.private_key,
+            password,
+        )?)
+    }
+
+    /// Recreates a wallet from an encrypted JSON wallet given the provided path and password.
+    pub fn load_keystore<P, S>(
+        keypath: P,
+        password: S,
+        provider: Provider,
+    ) -> Result<Self, WalletError>
+    where
+        P: AsRef<Path>,
+        S: AsRef<[u8]>,
+    {
+        let secret = eth_keystore::decrypt_key(keypath, password)?;
+        let secret_key = unsafe { SecretKey::from_slice_unchecked(&secret) };
+        Ok(Self::new_from_private_key(secret_key, provider))
     }
 
     pub fn set_provider(&mut self, provider: Provider) {
@@ -163,7 +270,7 @@ impl Wallet {
         let mut tx = self
             .provider
             .build_transfer_tx(&inputs, &outputs, tx_parameters);
-        let _sig = self.sign_transaction(&mut tx).await.unwrap();
+        let _sig = self.sign_transaction(&mut tx).await?;
 
         let receipts = self.provider.send_transaction(&tx).await?;
 
@@ -269,5 +376,117 @@ impl fmt::Debug for Wallet {
         f.debug_struct("Wallet")
             .field("address", &self.address)
             .finish()
+    }
+}
+
+#[cfg(test)]
+#[cfg(feature = "test-helpers")]
+mod tests {
+    use super::*;
+    use fuel_core::service::{Config, FuelService};
+    use fuel_gql_client::client::FuelClient;
+    use tempfile::tempdir;
+
+    #[tokio::test]
+    async fn encrypted_json_keystore() {
+        let dir = tempdir().unwrap();
+        let mut rng = rand::thread_rng();
+
+        let provider = setup().await;
+
+        // Create a wallet to be stored in the keystore.
+        let (wallet, uuid) =
+            Wallet::new_from_keystore(&dir, &mut rng, "password".to_string(), provider.clone())
+                .unwrap();
+
+        // sign a message using the above key.
+        let message = "Hello there!";
+        let signature = wallet.sign_message(message).await.unwrap();
+
+        // Read from the encrypted JSON keystore and decrypt it.
+        let path = Path::new(dir.path()).join(uuid);
+        let recovered_wallet =
+            Wallet::load_keystore(&path.clone(), "password", provider.clone()).unwrap();
+
+        // Sign the same message as before and assert that the signature is the same.
+        let signature2 = recovered_wallet.sign_message(message).await.unwrap();
+        assert_eq!(signature, signature2);
+
+        // Remove tempdir.
+        assert!(std::fs::remove_file(&path).is_ok());
+    }
+
+    #[tokio::test]
+    async fn mnemonic_generation() {
+        let provider = setup().await;
+
+        let mnemonic = Wallet::generate_mnemonic_phrase(&mut rand::thread_rng(), 12).unwrap();
+
+        let _wallet = Wallet::new_from_mnemonic_phrase(&mnemonic, provider).unwrap();
+    }
+
+    #[tokio::test]
+    async fn wallet_from_mnemonic_phrase() {
+        let phrase =
+            "oblige salon price punch saddle immune slogan rare snap desert retire surprise";
+
+        let provider = setup().await;
+
+        // Create first account from mnemonic phrase.
+        let wallet = Wallet::new_from_mnemonic_phrase_with_path(
+            phrase,
+            provider.clone(),
+            "m/44'/60'/0'/0/0",
+        )
+        .unwrap();
+
+        let expected_address = "df9d0e6c6c5f5da6e82e5e1a77974af6642bdb450a10c43f0c6910a212600185";
+
+        assert_eq!(wallet.address().to_string(), expected_address);
+
+        // Create a second account from the same phrase.
+        let wallet2 =
+            Wallet::new_from_mnemonic_phrase_with_path(phrase, provider, "m/44'/60'/1'/0/0")
+                .unwrap();
+
+        let expected_second_address =
+            "261191b0164a24fd0fd51566ec5e5b0b9ba8fb2d42dc9cf7dbbd6f23d2742759";
+
+        assert_eq!(wallet2.address().to_string(), expected_second_address);
+    }
+
+    #[tokio::test]
+    async fn encrypt_and_store_wallet_from_mnemonic() {
+        let dir = tempdir().unwrap();
+
+        let phrase =
+            "oblige salon price punch saddle immune slogan rare snap desert retire surprise";
+
+        let provider = setup().await;
+
+        // Create first account from mnemonic phrase.
+        let wallet = Wallet::new_from_mnemonic_phrase_with_path(
+            phrase,
+            provider.clone(),
+            "m/44'/60'/0'/0/0",
+        )
+        .unwrap();
+
+        let uuid = wallet.encrypt(&dir, "password").unwrap();
+
+        let path = Path::new(dir.path()).join(uuid);
+
+        let recovered_wallet = Wallet::load_keystore(&path, "password", provider).unwrap();
+
+        assert_eq!(wallet.address(), recovered_wallet.address());
+
+        // Remove tempdir.
+        assert!(std::fs::remove_file(&path).is_ok());
+    }
+
+    async fn setup() -> Provider {
+        let srv = FuelService::new_node(Config::local_node()).await.unwrap();
+        let client = FuelClient::from(srv.bound_address);
+        Provider::new(client)
     }
 }
