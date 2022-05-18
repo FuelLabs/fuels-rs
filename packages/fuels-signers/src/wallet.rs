@@ -91,9 +91,9 @@ pub enum WalletError {
     NoProvider,
     #[error("Provider error: {0}")]
     ProviderError(#[from] ProviderError),
-    /// Eth keystore error
+    /// Keystore error
     #[error(transparent)]
-    EthKeystoreError(#[from] KeystoreError),
+    KeystoreError(#[from] KeystoreError),
     #[error("invalid mnemonic word count (expected 12, 15, 18, 21, 24, found `{0}`")]
     InvalidMnemonicWordCount(usize),
     #[error(transparent)]
