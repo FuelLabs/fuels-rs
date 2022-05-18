@@ -33,7 +33,8 @@ pub mod test_helpers {
 }
 
 pub mod tx {
-    pub use fuels_tx::*;
+    #[doc(no_inline)]
+    pub use fuel_tx::*;
 }
 
 /// Easy imports of frequently used
