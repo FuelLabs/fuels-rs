@@ -122,19 +122,22 @@ impl Wallet {
     }
 
     /// Creates a new wallet from a mnemonic phrase.
-    /// It takes an optional path to a BIP32 derivation path.
-    /// If no path is provided, the default path is used.
-    pub fn new_from_mnemonic_phrase(
+    /// The default derivation path is used.
+    pub fn new_from_mnemonic_phrase(phrase: &str, provider: Provider) -> Result<Self, WalletError> {
+        let path = format!("{}{}", DEFAULT_DERIVATION_PATH_PREFIX, 0);
+        Wallet::new_from_mnemonic_phrase_with_path(phrase, provider, &path)
+    }
+
+    /// Creates a new wallet from a mnemonic phrase.
+    /// It takes a path to a BIP32 derivation path.
+    pub fn new_from_mnemonic_phrase_with_path(
         phrase: &str,
         provider: Provider,
-        path: Option<&str>,
+        path: &str,
     ) -> Result<Self, WalletError> {
         let mnemonic = Mnemonic::<W>::new_from_phrase(phrase)?;
 
-        let path = match path {
-            Some(path) => DerivationPath::from_str(path)?,
-            None => DerivationPath::from_str(&format!("{}{}", DEFAULT_DERIVATION_PATH_PREFIX, 0))?,
-        };
+        let path = DerivationPath::from_str(path)?;
 
         let derived_priv_key = mnemonic.derive_key(path, None)?;
         let key: &coins_bip32::prelude::SigningKey = derived_priv_key.as_ref();
@@ -419,7 +422,7 @@ mod tests {
 
         let mnemonic = Wallet::generate_mnemonic_phrase(&mut rand::thread_rng(), 12).unwrap();
 
-        let _wallet = Wallet::new_from_mnemonic_phrase(&mnemonic, provider, None).unwrap();
+        let _wallet = Wallet::new_from_mnemonic_phrase(&mnemonic, provider).unwrap();
     }
 
     #[tokio::test]
@@ -430,9 +433,12 @@ mod tests {
         let provider = setup().await;
 
         // Create first account from mnemonic phrase.
-        let wallet =
-            Wallet::new_from_mnemonic_phrase(phrase, provider.clone(), Some("m/44'/60'/0'/0/0"))
-                .unwrap();
+        let wallet = Wallet::new_from_mnemonic_phrase_with_path(
+            phrase,
+            provider.clone(),
+            "m/44'/60'/0'/0/0",
+        )
+        .unwrap();
 
         let expected_address = "df9d0e6c6c5f5da6e82e5e1a77974af6642bdb450a10c43f0c6910a212600185";
 
@@ -440,7 +446,8 @@ mod tests {
 
         // Create a second account from the same phrase.
         let wallet2 =
-            Wallet::new_from_mnemonic_phrase(phrase, provider, Some("m/44'/60'/1'/0/0")).unwrap();
+            Wallet::new_from_mnemonic_phrase_with_path(phrase, provider, "m/44'/60'/1'/0/0")
+                .unwrap();
 
         let expected_second_address =
             "261191b0164a24fd0fd51566ec5e5b0b9ba8fb2d42dc9cf7dbbd6f23d2742759";
@@ -458,11 +465,14 @@ mod tests {
         let provider = setup().await;
 
         // Create first account from mnemonic phrase.
-        let wallet =
-            Wallet::new_from_mnemonic_phrase(phrase, provider.clone(), Some("m/44'/60'/0'/0/0"))
-                .unwrap();
+        let wallet = Wallet::new_from_mnemonic_phrase_with_path(
+            phrase,
+            provider.clone(),
+            "m/44'/60'/0'/0/0",
+        )
+        .unwrap();
 
-        let uuid = wallet.encrypt(&dir, "password".to_string()).unwrap();
+        let uuid = wallet.encrypt(&dir, "password").unwrap();
 
         let path = Path::new(dir.path()).join(uuid);
 
