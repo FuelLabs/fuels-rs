@@ -9,5 +9,5 @@ license = "Apache-2.0"
 repository = "https://github.com/FuelLabs/fuels-rs"
 
 [dependencies]
-fuels-rs = { version = "0.9.1", path = "../../packages/fuels-rs" }
+fuels = { version = "0.12.0", path = "../../packages/fuels" }
 tokio = { version = "1.10", features = ["full"] }
