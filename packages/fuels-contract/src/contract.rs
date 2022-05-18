@@ -22,8 +22,8 @@ use fuels_core::{
 use fuels_core::{constants::NATIVE_ASSET_ID, ParamType};
 use fuels_signers::provider::Provider;
 use fuels_signers::{LocalWallet, Signer};
+use log::debug;
 use std::marker::PhantomData;
-use log::{debug};
 
 #[derive(Debug, Clone, Default)]
 pub struct CompiledContract {
