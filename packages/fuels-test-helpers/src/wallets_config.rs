@@ -13,12 +13,12 @@ impl WalletsConfig {
     pub fn new(
         num_wallets: Option<u64>,
         coins_per_wallet: Option<u64>,
-        amount_per_coin: Option<u64>,
+        coin_amount: Option<u64>,
     ) -> Self {
         Self {
             num_wallets: num_wallets.unwrap_or(DEFAULT_NUM_WALLETS),
-            coins_per_wallet: amount_per_coin.unwrap_or(DEFAULT_NUM_COINS),
-            coin_amount: coins_per_wallet.unwrap_or(DEFAULT_COIN_AMOUNT),
+            coins_per_wallet: coins_per_wallet.unwrap_or(DEFAULT_NUM_COINS),
+            coin_amount: coin_amount.unwrap_or(DEFAULT_COIN_AMOUNT),
         }
     }
 }

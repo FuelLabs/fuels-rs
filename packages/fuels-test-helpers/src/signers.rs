@@ -37,3 +37,32 @@ pub async fn setup_test_provider(coins: Vec<(UtxoId, Coin)>) -> (Provider, Socke
     let (client, addr) = setup_test_client(coins).await;
     (Provider::new(client), addr)
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::WalletsConfig;
+
+    use super::*;
+
+    #[tokio::test]
+    async fn config() {
+        let num_wallets = 2;
+        let num_coins = 3;
+        let amount = 100;
+        let config = WalletsConfig::new(Some(num_wallets), Some(num_coins), Some(amount));
+
+        let wallets = launch_provider_and_get_wallets(config).await;
+
+        assert_eq!(wallets.len(), num_wallets as usize);
+
+        for wallet in &wallets {
+            let coins = wallet.get_coins().await.unwrap();
+
+            assert_eq!(coins.len(), num_coins as usize);
+
+            for coin in &coins {
+                assert_eq!(coin.amount.0, amount);
+            }
+        }
+    }
+}
