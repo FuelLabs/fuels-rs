@@ -14,17 +14,17 @@ proc-macro = true
 [dependencies]
 fuel-tx = "0.9"
 fuels-core = { version = "0.13.0", path = "../fuels-core" }
+log = "0.4.17"
 proc-macro2 = "1.0"
 quote = "1.0"
 rand = "0.8"
 syn = "1.0.12"
-log = "0.4.17"
 
 [dev-dependencies]
+env_logger = "0.9.0"
 fuel-core = { version = "0.6", default-features = false }
 fuel-gql-client = { version = "0.6", default-features = false }
 fuels = { path = "../fuels" }
 hex = { version = "0.4.3", default-features = false, features = ["std"] }
 sha2 = "0.9.5"
 tokio = "1.15.0"
-env_logger = "0.9.0"
