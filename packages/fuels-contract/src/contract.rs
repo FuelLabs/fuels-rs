@@ -23,6 +23,7 @@ use fuels_core::{constants::NATIVE_ASSET_ID, ParamType};
 use fuels_signers::provider::Provider;
 use fuels_signers::{LocalWallet, Signer};
 use std::marker::PhantomData;
+use log::{debug};
 
 #[derive(Debug, Clone, Default)]
 pub struct CompiledContract {
@@ -306,7 +307,9 @@ impl Contract {
         if simulate {
             return script.simulate(fuel_client).await;
         }
-        script.call(fuel_client).await
+        let receipts = script.call(fuel_client).await;
+        debug!("RECEIPTS : {:?}", receipts);
+        receipts
     }
 
     /// Creates an ABI call based on a function selector and

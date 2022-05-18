@@ -8,11 +8,18 @@ use fuels_abigen_macro::abigen;
 use fuels_core::constants::NATIVE_ASSET_ID;
 use fuels_core::Token;
 use sha2::{Digest, Sha256};
+use std::env;
 
 /// Note: all the tests and examples below require pre-compiled Sway projects.
 /// To compile these projects, run `cargo run --bin build-test-projects`.
 /// It will build all test projects, creating their respective binaries,
 /// ABI files, and lock files. These are not to be committed to the repository.
+
+fn setup_logger() {
+        let _ = env_logger::builder().parse_env(&env::var("RUST_LOG").unwrap_or_default())
+            .is_test(true)
+            .try_init();
+}
 
 fn null_contract_id() -> String {
     // a null contract address ~[0u8;32]
@@ -639,8 +646,8 @@ async fn example_workflow() {
         &wallet,
         TxParameters::default(),
     )
-    .await
-    .unwrap();
+        .await
+        .unwrap();
 
     println!("Contract deployed @ {:x}", contract_id);
     let contract_instance = MyContract::new(contract_id.to_string(), wallet);
@@ -678,8 +685,8 @@ async fn type_safe_output_values() {
         &wallet,
         TxParameters::default(),
     )
-    .await
-    .unwrap();
+        .await
+        .unwrap();
     println!("Contract deployed @ {:x}", contract_id);
 
     let contract_instance = MyContract::new(contract_id.to_string(), wallet);
@@ -724,8 +731,8 @@ async fn call_with_structs() {
         &wallet,
         TxParameters::default(),
     )
-    .await
-    .unwrap();
+        .await
+        .unwrap();
     println!("Contract deployed @ {:x}", contract_id);
 
     let contract_instance = MyContract::new(contract_id.to_string(), wallet);
@@ -766,8 +773,8 @@ async fn call_with_empty_return() {
         &wallet,
         TxParameters::default(),
     )
-    .await
-    .unwrap();
+        .await
+        .unwrap();
     println!("Contract deployed @ {:x}", contract_id);
 
     let contract_instance = MyContract::new(contract_id.to_string(), wallet);
@@ -792,8 +799,8 @@ async fn abigen_different_structs_same_arg_name() {
         &wallet,
         TxParameters::default(),
     )
-    .await
-    .unwrap();
+        .await
+        .unwrap();
     println!("Contract deployed @ {:x}", contract_id);
 
     let contract_instance = MyContract::new(contract_id.to_string(), wallet);
@@ -844,8 +851,8 @@ async fn multiple_read_calls() {
         &wallet,
         TxParameters::default(),
     )
-    .await
-    .unwrap();
+        .await
+        .unwrap();
     println!("Contract deployed @ {:x}", contract_id);
     let contract_instance = MyContract::new(contract_id.to_string(), wallet);
 
@@ -878,8 +885,8 @@ async fn test_methods_typeless_argument() {
         &wallet,
         TxParameters::default(),
     )
-    .await
-    .unwrap();
+        .await
+        .unwrap();
     println!("Contract deployed @ {:x}", contract_id);
 
     let contract_instance = MyContract::new(contract_id.to_string(), wallet);
@@ -905,8 +912,8 @@ async fn test_large_return_data() {
         &wallet,
         TxParameters::default(),
     )
-    .await
-    .unwrap();
+        .await
+        .unwrap();
     println!("Contract deployed @ {:x}", contract_id);
 
     let contract_instance = MyContract::new(contract_id.to_string(), wallet);
@@ -968,8 +975,8 @@ async fn test_provider_launch_and_connect() {
         &wallet,
         TxParameters::default(),
     )
-    .await
-    .unwrap();
+        .await
+        .unwrap();
     println!("Contract deployed @ {:x}", contract_id);
 
     let contract_instance_connected = MyContract::new(contract_id.to_string(), wallet.clone());
@@ -1013,8 +1020,8 @@ async fn test_contract_calling_contract() {
         &wallet,
         TxParameters::default(),
     )
-    .await
-    .unwrap();
+        .await
+        .unwrap();
     println!("Foo contract deployed @ {:x}", foo_contract_id);
 
     let foo_contract_instance = FooContract::new(foo_contract_id.to_string(), wallet.clone());
@@ -1029,8 +1036,8 @@ async fn test_contract_calling_contract() {
         &wallet,
         TxParameters::default(),
     )
-    .await
-    .unwrap();
+        .await
+        .unwrap();
     println!(
         "Foo caller contract deployed @ {:x}",
         foo_caller_contract_id
@@ -1066,8 +1073,8 @@ async fn test_gas_errors() {
         &wallet,
         TxParameters::default(),
     )
-    .await
-    .unwrap();
+        .await
+        .unwrap();
 
     let contract_instance = MyContract::new(contract_id.to_string(), wallet);
 
@@ -1112,8 +1119,8 @@ async fn test_amount_and_asset_forwarding() {
         &wallet,
         TxParameters::default(),
     )
-    .await
-    .unwrap();
+        .await
+        .unwrap();
 
     let instance = TestFuelCoinContract::new(id.to_string(), wallet.clone());
 
@@ -1201,8 +1208,8 @@ async fn test_multiple_args() {
         &wallet,
         TxParameters::default(),
     )
-    .await
-    .unwrap();
+        .await
+        .unwrap();
 
     let instance = MyContract::new(id.to_string(), wallet.clone());
 
@@ -1221,6 +1228,9 @@ async fn test_multiple_args() {
 
 #[tokio::test]
 async fn test_tuples() {
+
+    setup_logger();
+
     abigen!(
         MyContract,
         "packages/fuels-abigen-macro/tests/test_projects/tuples/out/debug/tuples-abi.json"
@@ -1233,12 +1243,13 @@ async fn test_tuples() {
         &wallet,
         TxParameters::default(),
     )
-    .await
-    .unwrap();
+        .await
+        .unwrap();
 
     let instance = MyContract::new(id.to_string(), wallet.clone());
 
     let response = instance.returns_tuple((1, 2)).call().await.unwrap();
+
     assert_eq!(response.value, (1, 2));
 }
 
@@ -1256,8 +1267,8 @@ async fn test_auth_msg_sender_from_sdk() {
         &wallet,
         TxParameters::default(),
     )
-    .await
-    .unwrap();
+        .await
+        .unwrap();
 
     let auth_instance = AuthContract::new(id.to_string(), wallet.clone());
 
@@ -1285,8 +1296,8 @@ async fn workflow_enum_inside_struct() {
         &wallet,
         TxParameters::default(),
     )
-    .await
-    .unwrap();
+        .await
+        .unwrap();
     let instance = MyContract::new(id.to_string(), wallet.clone());
     let result = instance.return_enum_inside_struct(11).call().await.unwrap();
     let expected = Cocktail {
@@ -1319,8 +1330,8 @@ async fn workflow_struct_inside_enum() {
         &wallet,
         TxParameters::default(),
     )
-    .await
-    .unwrap();
+        .await
+        .unwrap();
 
     let instance = MyContract::new(id.to_string(), wallet.clone());
     let result = instance.return_struct_inside_enum(11).call().await.unwrap();
@@ -1348,8 +1359,8 @@ async fn workflow_use_enum_input() {
         &wallet,
         TxParameters::default(),
     )
-    .await
-    .unwrap();
+        .await
+        .unwrap();
 
     let instance = MyContract::new(id.to_string(), wallet.clone());
     let enum_input = Shaker::Cosmopolitan(255);
@@ -1370,8 +1381,8 @@ async fn test_logd_receipts() {
         &wallet,
         TxParameters::default(),
     )
-    .await
-    .unwrap();
+        .await
+        .unwrap();
     let contract_instance = LoggingContract::new(id.to_string(), wallet.clone());
     let mut value = [0u8; 32];
     value[0] = 0xFF;
@@ -1415,8 +1426,8 @@ async fn unit_type_enums() {
         &wallet,
         TxParameters::default(),
     )
-    .await
-    .unwrap();
+        .await
+        .unwrap();
 
     let instance = MyContract::new(id.to_string(), wallet.clone());
     let unit_type_enum = BimBamBoum::Bim();
