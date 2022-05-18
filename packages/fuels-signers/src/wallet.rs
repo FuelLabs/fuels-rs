@@ -408,9 +408,13 @@ mod tests {
         let provider = setup().await;
 
         // Create a wallet to be stored in the keystore.
-        let (wallet, uuid) =
-            Wallet::new_from_keystore(&dir, &mut rng, "password".to_string(), provider.clone())
-                .unwrap();
+        let (wallet, uuid) = Wallet::new_from_keystore(
+            &dir,
+            &mut rng,
+            "password".to_string(),
+            Some(provider.clone()),
+        )
+        .unwrap();
 
         // sign a message using the above key.
         let message = "Hello there!";
@@ -419,7 +423,7 @@ mod tests {
         // Read from the encrypted JSON keystore and decrypt it.
         let path = Path::new(dir.path()).join(uuid);
         let recovered_wallet =
-            Wallet::load_keystore(&path.clone(), "password", provider.clone()).unwrap();
+            Wallet::load_keystore(&path.clone(), "password", Some(provider.clone())).unwrap();
 
         // Sign the same message as before and assert that the signature is the same.
         let signature2 = recovered_wallet.sign_message(message).await.unwrap();
@@ -435,7 +439,7 @@ mod tests {
 
         let mnemonic = Wallet::generate_mnemonic_phrase(&mut rand::thread_rng(), 12).unwrap();
 
-        let _wallet = Wallet::new_from_mnemonic_phrase(&mnemonic, provider).unwrap();
+        let _wallet = Wallet::new_from_mnemonic_phrase(&mnemonic, Some(provider)).unwrap();
     }
 
     #[tokio::test]
@@ -448,7 +452,7 @@ mod tests {
         // Create first account from mnemonic phrase.
         let wallet = Wallet::new_from_mnemonic_phrase_with_path(
             phrase,
-            provider.clone(),
+            Some(provider.clone()),
             "m/44'/60'/0'/0/0",
         )
         .unwrap();
@@ -459,7 +463,7 @@ mod tests {
 
         // Create a second account from the same phrase.
         let wallet2 =
-            Wallet::new_from_mnemonic_phrase_with_path(phrase, provider, "m/44'/60'/1'/0/0")
+            Wallet::new_from_mnemonic_phrase_with_path(phrase, Some(provider), "m/44'/60'/1'/0/0")
                 .unwrap();
 
         let expected_second_address =
@@ -480,7 +484,7 @@ mod tests {
         // Create first account from mnemonic phrase.
         let wallet = Wallet::new_from_mnemonic_phrase_with_path(
             phrase,
-            provider.clone(),
+            Some(provider.clone()),
             "m/44'/60'/0'/0/0",
         )
         .unwrap();
@@ -489,7 +493,7 @@ mod tests {
 
         let path = Path::new(dir.path()).join(uuid);
 
-        let recovered_wallet = Wallet::load_keystore(&path, "password", provider).unwrap();
+        let recovered_wallet = Wallet::load_keystore(&path, "password", Some(provider)).unwrap();
 
         assert_eq!(wallet.address(), recovered_wallet.address());
 
