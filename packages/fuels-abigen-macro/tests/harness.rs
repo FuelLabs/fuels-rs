@@ -16,7 +16,7 @@ use sha2::{Digest, Sha256};
 
 #[cfg(test)]
 #[ctor::ctor]
-fn init() {
+fn init_tracing() {
     let _ = tracing_subscriber::fmt::try_init();
 }
 
@@ -1227,8 +1227,6 @@ async fn test_multiple_args() {
 
 #[tokio::test]
 async fn test_tuples() {
-    // init_logger();
-
     abigen!(
         MyContract,
         "packages/fuels-abigen-macro/tests/test_projects/tuples/out/debug/tuples-abi.json"
