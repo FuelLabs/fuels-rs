@@ -2,8 +2,6 @@ contract;
 
 use std::storage::store;
 use std::storage::get;
-use std::chain::log_u64;
-use std::chain::log_u8;
 
 struct CounterConfig {
   dummy: bool,
