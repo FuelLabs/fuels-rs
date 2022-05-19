@@ -11,17 +11,27 @@ The SDK gives you many different ways to create wallets. Let's explore these dif
 
 ## Creating a wallet
 
-A new wallet can be created from `Option<Provider>`.
+A new wallet with a randomly generated private key can be created by supplying `Option<Provider>`.
 
 ```Rust
 // Use the test helper to setup a test provider.
 let (provider, _address) = setup_test_provider(vec![]).await;
 
 // Create the wallet.
-let wallet = LocalWallet::new_from_private_key(Some(provider));
+let wallet = LocalWallet::new_random(Some(provider));
 ```
 
-> Note: if `None` is supplied instead, any transaction related to the wallet will result 
+Alternatively, you can create a wallet from a predefined `SecretKey`.
+
+```Rust
+// Setup the private key
+let secret = SecretKey::from_str("your_key_string").unwrap();
+
+// Create the wallet.
+let wallet = LocalWallet::new_from_private_key(secret, Some(provider));
+```
+
+> Note: if `None` is supplied instead of a provider, any transaction related to the wallet will result 
 > in an error until a provider is linked with `set_provider()`. The optional parameter
 > enables defining owners (wallet addresses) of genesis coins before a provider is launched.
 
