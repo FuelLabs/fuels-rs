@@ -14,7 +14,9 @@ use sha2::{Digest, Sha256};
 /// It will build all test projects, creating their respective binaries,
 /// ABI files, and lock files. These are not to be committed to the repository.
 
-fn init_logger() {
+#[cfg(test)]
+#[ctor::ctor]
+fn init() {
     let _ = tracing_subscriber::fmt::try_init();
 }
 
@@ -1225,7 +1227,7 @@ async fn test_multiple_args() {
 
 #[tokio::test]
 async fn test_tuples() {
-    init_logger();
+    // init_logger();
 
     abigen!(
         MyContract,
