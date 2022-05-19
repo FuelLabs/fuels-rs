@@ -29,24 +29,15 @@ type W = English;
 /// then verified.
 ///
 /// ```
-/// use fuel_crypto::{Message, SecretKey};
-/// use rand::{rngs::StdRng, RngCore, SeedableRng};
+/// use fuel_crypto::Message;
 /// use fuels::prelude::*;
 ///
 /// async fn foo() -> Result<(), Box<dyn std::error::Error>> {
-///   // Generate your secret key
-///   let mut rng = StdRng::seed_from_u64(2322u64);
-///   let mut secret_seed = [0u8; 32];
-///   rng.fill_bytes(&mut secret_seed);
-///
-///   let secret = unsafe { SecretKey::from_bytes_unchecked(secret_seed) };
-///
 ///   // Setup local test node
-///
 ///   let (provider, _) = setup_test_provider(vec![]).await;
 ///
 ///   // Create a new local wallet with the newly generated key
-///   let wallet = LocalWallet::new_from_private_key(secret, provider);
+///   let wallet = LocalWallet::new_random(Some(provider));
 ///
 ///   let message = "my message";
 ///   let signature = wallet.sign_message(message.as_bytes()).await?;
@@ -72,7 +63,7 @@ pub struct Wallet {
     /// from the first 32 bytes of SHA-256 hash of the wallet's public key.
     pub(crate) address: Address,
 
-    pub provider: Provider,
+    pub(crate) provider: Option<Provider>,
 }
 
 #[derive(Error, Debug)]
@@ -109,8 +100,14 @@ impl From<WalletError> for Error {
 }
 
 impl Wallet {
-    /// Create a new wallet from a private key.
-    pub fn new_from_private_key(private_key: SecretKey, provider: Provider) -> Self {
+    pub fn new_random(provider: Option<Provider>) -> Self {
+        let mut rng = rand::thread_rng();
+        let private_key = SecretKey::random(&mut rng);
+
+        Self::new_from_private_key(private_key, provider)
+    }
+
+    pub fn new_from_private_key(private_key: SecretKey, provider: Option<Provider>) -> Self {
         let public = PublicKey::from(&private_key);
         let hashed = public.hash();
 
@@ -121,9 +118,16 @@ impl Wallet {
         }
     }
 
+    pub fn get_provider(&self) -> Result<&Provider, WalletError> {
+        self.provider.as_ref().ok_or(WalletError::NoProvider)
+    }
+
     /// Creates a new wallet from a mnemonic phrase.
     /// The default derivation path is used.
-    pub fn new_from_mnemonic_phrase(phrase: &str, provider: Provider) -> Result<Self, WalletError> {
+    pub fn new_from_mnemonic_phrase(
+        phrase: &str,
+        provider: Option<Provider>,
+    ) -> Result<Self, WalletError> {
         let path = format!("{}{}", DEFAULT_DERIVATION_PATH_PREFIX, 0);
         Wallet::new_from_mnemonic_phrase_with_path(phrase, provider, &path)
     }
@@ -132,7 +136,7 @@ impl Wallet {
     /// It takes a path to a BIP32 derivation path.
     pub fn new_from_mnemonic_phrase_with_path(
         phrase: &str,
-        provider: Provider,
+        provider: Option<Provider>,
         path: &str,
     ) -> Result<Self, WalletError> {
         let mnemonic = Mnemonic::<W>::new_from_phrase(phrase)?;
@@ -151,7 +155,7 @@ impl Wallet {
         dir: P,
         rng: &mut R,
         password: S,
-        provider: Provider,
+        provider: Option<Provider>,
     ) -> Result<(Self, String), WalletError>
     where
         P: AsRef<Path>,
@@ -197,7 +201,7 @@ impl Wallet {
     pub fn load_keystore<P, S>(
         keypath: P,
         password: S,
-        provider: Provider,
+        provider: Option<Provider>,
     ) -> Result<Self, WalletError>
     where
         P: AsRef<Path>,
@@ -209,7 +213,7 @@ impl Wallet {
     }
 
     pub fn set_provider(&mut self, provider: Provider) {
-        self.provider = provider
+        self.provider = Some(provider)
     }
 
     /// Transfer funds from this wallet to another `Address`.
@@ -220,21 +224,24 @@ impl Wallet {
     /// ```
     /// use fuels::prelude::*;
     /// use fuel_tx::{Bytes32, AssetId, Input, Output, UtxoId};
-    /// use rand::{rngs::StdRng, RngCore, SeedableRng};
     /// use std::str::FromStr;
     ///
     /// async fn foo() -> Result<(), Box<dyn std::error::Error>> {
-    ///   // Setup test wallets with 1 coin each
-    ///   let (pk_1, mut coins_1) = setup_address_and_coins(1, 1);
-    ///   let (pk_2, coins_2) = setup_address_and_coins(1, 1);
+    ///  // Create the actual wallets/signers
+    ///  let mut wallet_1 = LocalWallet::new_random(None);
+    ///  let mut wallet_2 = LocalWallet::new_random(None);
+    ///
+    ///   // Setup a coin for each wallet
+    ///   let mut coins_1 = setup_coins(wallet_1.address(), 1, 1);
+    ///   let coins_2 = setup_coins(wallet_2.address(), 1, 1);
     ///   coins_1.extend(coins_2);
     ///
     ///   // Setup a provider and node with both set of coins
     ///   let (provider, _) = setup_test_provider(coins_1).await;
     ///
-    ///   // Create the actual wallets/signers
-    ///   let wallet_1 = LocalWallet::new_from_private_key(pk_1, provider.clone());
-    ///   let wallet_2 = LocalWallet::new_from_private_key(pk_2, provider);
+    ///   // Set provider for wallets
+    ///   wallet_1.set_provider(provider.clone());
+    ///   wallet_2.set_provider(provider);
     ///
     ///   // Transfer 1 from wallet 1 to wallet 2
     ///   let _receipts = wallet_1
@@ -267,12 +274,13 @@ impl Wallet {
         ];
 
         // Build transaction and sign it
-        let mut tx = self
-            .provider
-            .build_transfer_tx(&inputs, &outputs, tx_parameters);
-        let _sig = self.sign_transaction(&mut tx).await?;
+        let mut tx =
+            self.get_provider()
+                .unwrap()
+                .build_transfer_tx(&inputs, &outputs, tx_parameters);
+        let _sig = self.sign_transaction(&mut tx).await.unwrap();
 
-        let receipts = self.provider.send_transaction(&tx).await?;
+        let receipts = self.get_provider().unwrap().send_transaction(&tx).await?;
 
         Ok((tx.id().to_string(), receipts))
     }
@@ -310,7 +318,11 @@ impl Wallet {
     /// Gets coins from this wallet
     /// Note that this is a simple wrapper on provider's `get_coins`.
     pub async fn get_coins(&self) -> Result<Vec<Coin>, WalletError> {
-        Ok(self.provider.get_coins(&self.address()).await?)
+        Ok(self
+            .get_provider()
+            .unwrap()
+            .get_coins(&self.address())
+            .await?)
     }
 
     /// Gets spendable coins from this wallet.
@@ -321,7 +333,8 @@ impl Wallet {
         asset_id: &AssetId,
         amount: u64,
     ) -> io::Result<Vec<Coin>> {
-        self.provider
+        self.get_provider()
+            .unwrap()
             .get_spendable_coins(&self.address(), *asset_id, amount)
             .await
     }
@@ -395,9 +408,13 @@ mod tests {
         let provider = setup().await;
 
         // Create a wallet to be stored in the keystore.
-        let (wallet, uuid) =
-            Wallet::new_from_keystore(&dir, &mut rng, "password".to_string(), provider.clone())
-                .unwrap();
+        let (wallet, uuid) = Wallet::new_from_keystore(
+            &dir,
+            &mut rng,
+            "password".to_string(),
+            Some(provider.clone()),
+        )
+        .unwrap();
 
         // sign a message using the above key.
         let message = "Hello there!";
@@ -406,7 +423,7 @@ mod tests {
         // Read from the encrypted JSON keystore and decrypt it.
         let path = Path::new(dir.path()).join(uuid);
         let recovered_wallet =
-            Wallet::load_keystore(&path.clone(), "password", provider.clone()).unwrap();
+            Wallet::load_keystore(&path.clone(), "password", Some(provider.clone())).unwrap();
 
         // Sign the same message as before and assert that the signature is the same.
         let signature2 = recovered_wallet.sign_message(message).await.unwrap();
@@ -422,7 +439,7 @@ mod tests {
 
         let mnemonic = Wallet::generate_mnemonic_phrase(&mut rand::thread_rng(), 12).unwrap();
 
-        let _wallet = Wallet::new_from_mnemonic_phrase(&mnemonic, provider).unwrap();
+        let _wallet = Wallet::new_from_mnemonic_phrase(&mnemonic, Some(provider)).unwrap();
     }
 
     #[tokio::test]
@@ -435,7 +452,7 @@ mod tests {
         // Create first account from mnemonic phrase.
         let wallet = Wallet::new_from_mnemonic_phrase_with_path(
             phrase,
-            provider.clone(),
+            Some(provider.clone()),
             "m/44'/60'/0'/0/0",
         )
         .unwrap();
@@ -446,7 +463,7 @@ mod tests {
 
         // Create a second account from the same phrase.
         let wallet2 =
-            Wallet::new_from_mnemonic_phrase_with_path(phrase, provider, "m/44'/60'/1'/0/0")
+            Wallet::new_from_mnemonic_phrase_with_path(phrase, Some(provider), "m/44'/60'/1'/0/0")
                 .unwrap();
 
         let expected_second_address =
@@ -467,7 +484,7 @@ mod tests {
         // Create first account from mnemonic phrase.
         let wallet = Wallet::new_from_mnemonic_phrase_with_path(
             phrase,
-            provider.clone(),
+            Some(provider.clone()),
             "m/44'/60'/0'/0/0",
         )
         .unwrap();
@@ -476,7 +493,7 @@ mod tests {
 
         let path = Path::new(dir.path()).join(uuid);
 
-        let recovered_wallet = Wallet::load_keystore(&path, "password", provider).unwrap();
+        let recovered_wallet = Wallet::load_keystore(&path, "password", Some(provider)).unwrap();
 
         assert_eq!(wallet.address(), recovered_wallet.address());
 

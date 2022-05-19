@@ -14,7 +14,7 @@ use fuel_vm::script_with_data_offset;
 use fuels_core::errors::Error;
 use fuels_core::ReturnLocation;
 use fuels_core::{
-    constants::DEFAULT_COIN_AMOUNT,
+    constants::DEFAULT_SPENDABLE_COIN_AMOUNT,
     constants::WORD_SIZE,
     parameters::{CallParameters, TxParameters},
     Detokenize, Selector, Token,
@@ -214,7 +214,7 @@ impl Contract {
         inputs.push(self_contract_input);
 
         let mut spendables = wallet
-            .get_spendable_coins(&AssetId::default(), DEFAULT_COIN_AMOUNT as u64)
+            .get_spendable_coins(&AssetId::default(), DEFAULT_SPENDABLE_COIN_AMOUNT as u64)
             .await
             .unwrap();
 
@@ -393,7 +393,7 @@ impl Contract {
             Self::contract_deployment_transaction(&compiled_contract, wallet, params).await?;
         wallet.sign_transaction(&mut tx).await?;
 
-        match wallet.provider.client.submit(&tx).await {
+        match wallet.get_provider().unwrap().client.submit(&tx).await {
             Ok(_) => Ok(contract_id),
             Err(e) => Err(Error::TransactionError(e.to_string())),
         }
@@ -442,7 +442,7 @@ impl Contract {
         let inputs = wallet
             .get_asset_inputs_for_amount(
                 AssetId::default(),
-                DEFAULT_COIN_AMOUNT,
+                DEFAULT_SPENDABLE_COIN_AMOUNT,
                 coin_witness_index,
             )
             .await?;

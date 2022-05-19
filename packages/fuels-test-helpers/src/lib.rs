@@ -5,7 +5,6 @@ use fuel_core::{
     model::{Coin, CoinStatus},
     service::{Config, DbType, FuelService},
 };
-use fuel_crypto::{PublicKey, SecretKey};
 use fuel_gql_client::client::FuelClient;
 use fuel_tx::{Address, Bytes32, UtxoId};
 use rand::Fill;
@@ -13,28 +12,19 @@ use std::net::SocketAddr;
 
 #[cfg(feature = "fuels-signers")]
 mod signers;
+mod wallets_config;
+
 #[cfg(feature = "fuels-signers")]
 pub use signers::*;
+pub use wallets_config::*;
 
-// This constant is used to set a initial balance on wallets
-// mainly used on tests
-pub const DEFAULT_INITIAL_BALANCE: u64 = 1_000_000_000;
-
-pub fn setup_address_and_coins(
-    num_of_coins: usize,
-    amount: u64,
-) -> (SecretKey, Vec<(UtxoId, Coin)>) {
+pub fn setup_coins(owner: Address, num_coins: u64, amount: u64) -> Vec<(UtxoId, Coin)> {
     let mut rng = rand::thread_rng();
 
-    let secret = SecretKey::random(&mut rng);
-
-    let public = PublicKey::from(&secret);
-    let hashed = public.hash();
-
-    let coins: Vec<(UtxoId, Coin)> = (1..=num_of_coins)
+    let coins: Vec<(UtxoId, Coin)> = (1..=num_coins)
         .map(|_i| {
             let coin = Coin {
-                owner: Address::from(*hashed),
+                owner,
                 amount,
                 asset_id: Default::default(),
                 maturity: Default::default(),
@@ -49,7 +39,7 @@ pub fn setup_address_and_coins(
         })
         .collect();
 
-    (secret, coins)
+    coins
 }
 
 // Setup a test client with the given coins. We return the SocketAddr so the launched node

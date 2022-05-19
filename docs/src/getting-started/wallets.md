@@ -9,23 +9,31 @@ Wallets are used for many important things, for instance:
 
 The SDK gives you many different ways to create wallets. Let's explore these different ways.
 
-## Creating a wallet from a Private Key
+## Creating a wallet
 
-You can use `fuel_crypto` to generate a random `SecretKey` and use it to create a wallet from it:
+A new wallet with a randomly generated private key can be created by supplying `Option<Provider>`.
 
 ```Rust
-use fuel_crypto::{SecretKey};
-
-// Generate a random private/secret key.
-let mut rng = rand::thread_rng();
-let secret = SecretKey::random(&mut rng);
-
 // Use the test helper to setup a test provider.
 let (provider, _address) = setup_test_provider(vec![]).await;
 
 // Create the wallet.
-let wallet = LocalWallet::new_from_private_key(secret, provider);
+let wallet = LocalWallet::new_random(Some(provider));
 ```
+
+Alternatively, you can create a wallet from a predefined `SecretKey`.
+
+```Rust
+// Setup the private key
+let secret = SecretKey::from_str("your_key_string").unwrap();
+
+// Create the wallet.
+let wallet = LocalWallet::new_from_private_key(secret, Some(provider));
+```
+
+> Note: if `None` is supplied instead of a provider, any transaction related to the wallet will result 
+> in an error until a provider is linked with `set_provider()`. The optional parameter
+> enables defining owners (wallet addresses) of genesis coins before a provider is launched.
 
 ## Creating a wallet from a mnemonic phrase
 
@@ -45,11 +53,11 @@ let (provider, _address) = setup_test_provider(vec![]).await;
 
 // Create first account from mnemonic phrase.
 let wallet =
-    Wallet::new_from_mnemonic_phrase_with_path(phrase, provider, "m/44'/60'/0'/0/0")
+    Wallet::new_from_mnemonic_phrase_with_path(phrase, Some(provider), "m/44'/60'/0'/0/0")
         .unwrap();
 
 // Or with the default derivation path
-let wallet = Wallet::new_from_mnemonic_phrase(phrase, provider).unwrap();
+let wallet = Wallet::new_from_mnemonic_phrase(phrase, Some(provider)).unwrap();
 
 let expected_address = "df9d0e6c6c5f5da6e82e5e1a77974af6642bdb450a10c43f0c6910a212600185";
 
@@ -73,7 +81,7 @@ let password = "my_master_password";
 
 // Create a wallet to be stored in the keystore.
 let (wallet, uuid) =
-    Wallet::new_from_keystore(&dir, &mut rng, password, provider.clone()).unwrap();
+    Wallet::new_from_keystore(&dir, &mut rng, password, Some(provider.clone())).unwrap();
 ```
 
 Then, later, you can recover the wallet if you know the master password:
@@ -85,7 +93,7 @@ let (provider, _address) = setup_test_provider(vec![]).await;
 let path = Path::new(dir.path()).join(uuid);
 let password = "my_master_password";
 
-let recovered_wallet = Wallet::load_keystore(&path, password, provider).unwrap();
+let recovered_wallet = Wallet::load_keystore(&path, password, Some(provider)).unwrap();
 ```
 
 ## Encrypting and storing a wallet created from mnemonic or private key
@@ -102,7 +110,7 @@ let phrase =
 let (provider, _address) = setup_test_provider(vec![]).await;
 
 // Create first account from mnemonic phrase.
-let wallet = Wallet::new_from_mnemonic_phrase(phrase, provider).unwrap();
+let wallet = Wallet::new_from_mnemonic_phrase(phrase, Some(provider)).unwrap();
 
 let password = "my_master_password";
 

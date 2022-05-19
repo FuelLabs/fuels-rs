@@ -4,7 +4,7 @@ At a high level, the Fuel Rust SDK can be used to build Rust-based applications 
 
 For this interaction to work, the SDK must be able to communicate to a `fuel-core` node; you have two options at your disposal:
 
-1. Use the SDK's native `launch_provider_and_get_wallet()` that runs a short-lived test Fuel node;
+1. Use the SDK's native `launch_provider_and_get_single_wallet()` that runs a short-lived test Fuel node;
 2. Run a Fuel node outside your SDK code (using `fuel-core`) and point your SDK to that node's IP and port.
 
 The first option is ideal for contract testing, as you can quickly spin up and tear down nodes between specific test cases.
@@ -44,7 +44,7 @@ abigen!(
 );
 
 // This helper will will launch a local node and provide a test wallet linked to it
-let wallet = launch_provider_and_get_wallet().await;
+let wallets = launch_provider_and_get_single_wallet().await;
 
 // Load the compiled Sway contract (this is the output from `forc build`)
 let compiled = Contract::load_sway_contract(
@@ -59,6 +59,37 @@ let byte_price = 0;
 // Deploy the compiled Sway contract (this is the output from `forc build`)
 let contract_id = Contract::deploy("your_project/out/debug/contract_test.bin", wallet,
     TxParameters::new(gas_price, gas_limit, byte_price)).await.unwrap();
+```
+
+## Setting up multiple test wallets
+
+If you need multiple test wallets, they can be setup as follows:
+
+
+```Rust
+
+// This helper will will launch a local node and provide 10 test wallets linked to it.
+// The initial balance defaults to 1 coin per wallet with an amount of 1_000_000_000
+let wallets = launch_provider_and_get_wallets(WalletsConfig::default()).await;
+
+```
+
+The returned test wallets can be customized via `WalletsConfig`
+
+```Rust
+let num_wallets = 5;
+let coins_per_wallet = 3;
+let amount_per_coin = 100;
+
+let config = WalletsConfig::new(
+    Some(num_wallets), 
+    Some(coins_per_wallet), 
+    Some(amount_per_coin)
+);
+
+// Launches a local node and provides test wallets as specified by the config
+let wallets = launch_provider_and_get_wallets(WalletsConfig::default()).await;
+
 ```
 
 ## Calling and configuring contract calls
@@ -249,7 +280,7 @@ abigen!(
     "path/to/abi.json"
 );
 
-let wallet = launch_provider_and_get_wallet().await;
+let wallet = launch_provider_and_get_single_wallet().await;
 
 let contract_id = "0x0123..." // Your contract ID as a string.
 

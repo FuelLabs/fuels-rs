@@ -16,6 +16,7 @@ fuel-types = { version = "0.3", default-features = false }
 fuels-signers = { version = "0.13.0", path = "../fuels-signers", optional = true }
 fuel-tx = "0.9"
 rand = { version = "0.8.4", default-features = false }
+tokio = "1.15"
 
 [features]
 default = ["fuels-signers"]
