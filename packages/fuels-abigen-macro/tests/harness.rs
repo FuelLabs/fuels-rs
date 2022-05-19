@@ -8,18 +8,14 @@ use fuels_abigen_macro::abigen;
 use fuels_core::constants::NATIVE_ASSET_ID;
 use fuels_core::Token;
 use sha2::{Digest, Sha256};
-use std::env;
 
 /// Note: all the tests and examples below require pre-compiled Sway projects.
 /// To compile these projects, run `cargo run --bin build-test-projects`.
 /// It will build all test projects, creating their respective binaries,
 /// ABI files, and lock files. These are not to be committed to the repository.
 
-fn setup_logger() {
-    let _ = env_logger::builder()
-        .parse_env(&env::var("RUST_LOG").unwrap_or_default())
-        .is_test(true)
-        .try_init();
+fn init_logger() {
+    let _ = tracing_subscriber::fmt::try_init();
 }
 
 fn null_contract_id() -> String {
@@ -1229,7 +1225,7 @@ async fn test_multiple_args() {
 
 #[tokio::test]
 async fn test_tuples() {
-    setup_logger();
+    init_logger();
 
     abigen!(
         MyContract,

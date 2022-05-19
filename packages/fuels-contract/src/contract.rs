@@ -22,8 +22,9 @@ use fuels_core::{
 use fuels_core::{constants::NATIVE_ASSET_ID, ParamType};
 use fuels_signers::provider::Provider;
 use fuels_signers::{LocalWallet, Signer};
-use log::debug;
 use std::marker::PhantomData;
+
+use tracing::{event, Level};
 
 #[derive(Debug, Clone, Default)]
 pub struct CompiledContract {
@@ -308,7 +309,7 @@ impl Contract {
             return script.simulate(fuel_client).await;
         }
         let receipts = script.call(fuel_client).await;
-        debug!("RECEIPTS : {:?}", receipts);
+        event!(Level::DEBUG, "{:?}", receipts);
         receipts
     }
 

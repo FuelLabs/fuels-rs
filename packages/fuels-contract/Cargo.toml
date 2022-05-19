@@ -19,7 +19,6 @@ fuel-vm = "0.8"
 fuels-core = { version = "0.13.0", path = "../fuels-core" }
 fuels-signers = { version = "0.13.0", path = "../fuels-signers" }
 hex = { version = "0.4.3", default-features = false, features = ["std"] }
-log = "0.4"
 proc-macro2 = "1.0"
 quote = "1.0"
 rand = "0.8"
@@ -31,6 +30,4 @@ strum = "0.21"
 strum_macros = "0.21"
 thiserror = { version = "1.0.26", default-features = false }
 tokio = "1.12"
-
-[dev-dependencies]
-env_logger = "0.9"
+tracing = "0.1"
