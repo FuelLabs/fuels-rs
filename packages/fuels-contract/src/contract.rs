@@ -13,12 +13,13 @@ use fuel_vm::prelude::Contract as FuelContract;
 use fuel_vm::script_with_data_offset;
 use fuels_core::errors::Error;
 use fuels_core::ReturnLocation;
-use fuels_core::{constants::NATIVE_ASSET_ID, ParamType};
 use fuels_core::{
+    constants::DEFAULT_SPENDABLE_COIN_AMOUNT,
     constants::WORD_SIZE,
     parameters::{CallParameters, TxParameters},
     Detokenize, Selector, Token,
 };
+use fuels_core::{constants::NATIVE_ASSET_ID, ParamType};
 use fuels_signers::provider::Provider;
 use fuels_signers::{LocalWallet, Signer};
 use std::marker::PhantomData;
@@ -28,10 +29,6 @@ pub struct CompiledContract {
     pub raw: Vec<u8>,
     pub salt: Salt,
 }
-
-// This constant is used to determine the amount in the 1 UTXO
-// when initializing wallets for now.
-pub const DEFAULT_COIN_AMOUNT: u64 = 1_000_000;
 
 /// Contract is a struct to interface with a contract. That includes things such as
 /// compiling, deploying, and running transactions against a contract.
@@ -217,7 +214,7 @@ impl Contract {
         inputs.push(self_contract_input);
 
         let mut spendables = wallet
-            .get_spendable_coins(&AssetId::default(), DEFAULT_COIN_AMOUNT as u64)
+            .get_spendable_coins(&AssetId::default(), DEFAULT_SPENDABLE_COIN_AMOUNT as u64)
             .await
             .unwrap();
 
@@ -445,7 +442,7 @@ impl Contract {
         let inputs = wallet
             .get_asset_inputs_for_amount(
                 AssetId::default(),
-                DEFAULT_COIN_AMOUNT,
+                DEFAULT_SPENDABLE_COIN_AMOUNT,
                 coin_witness_index,
             )
             .await?;

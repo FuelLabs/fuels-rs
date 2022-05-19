@@ -1,6 +1,8 @@
-pub const DEFAULT_COIN_AMOUNT: u64 = 1_000_000_000;
-pub const DEFAULT_NUM_COINS: u64 = 1;
+// These constants define the default number of wallets to be setup,
+// the number of coins per wallet and the amount per coin
 pub const DEFAULT_NUM_WALLETS: u64 = 10;
+pub const DEFAULT_NUM_COINS: u64 = 1;
+pub const DEFAULT_COIN_AMOUNT: u64 = 1_000_000_000;
 
 #[derive(Debug)]
 pub struct WalletsConfig {
@@ -19,6 +21,14 @@ impl WalletsConfig {
             num_wallets: num_wallets.unwrap_or(DEFAULT_NUM_WALLETS),
             coins_per_wallet: coins_per_wallet.unwrap_or(DEFAULT_NUM_COINS),
             coin_amount: coin_amount.unwrap_or(DEFAULT_COIN_AMOUNT),
+        }
+    }
+
+    pub fn new_single(coins: Option<u64>, amount: Option<u64>) -> Self {
+        Self {
+            num_wallets: 1,
+            coins_per_wallet: coins.unwrap_or(DEFAULT_NUM_COINS),
+            coin_amount: amount.unwrap_or(DEFAULT_COIN_AMOUNT),
         }
     }
 }

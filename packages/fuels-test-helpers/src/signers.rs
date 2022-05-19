@@ -6,9 +6,16 @@ use fuels_signers::{LocalWallet, Signer};
 use std::net::SocketAddr;
 
 #[cfg(feature = "fuels-signers")]
+pub async fn launch_provider_and_get_single_wallet() -> LocalWallet {
+    let mut wallets = launch_provider_and_get_wallets(WalletsConfig::new_single(None, None)).await;
+
+    wallets.pop().unwrap()
+}
+
+#[cfg(feature = "fuels-signers")]
 pub async fn launch_provider_and_get_wallets(config: WalletsConfig) -> Vec<LocalWallet> {
     let mut wallets: Vec<LocalWallet> = (1..=config.num_wallets)
-        .map(|_i| LocalWallet::new(None))
+        .map(|_i| LocalWallet::new_random(None))
         .collect();
 
     let mut all_coins: Vec<(UtxoId, Coin)> = Vec::with_capacity(config.num_wallets as usize);
@@ -45,7 +52,7 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn config() {
+    async fn test_wallet_config() {
         let num_wallets = 2;
         let num_coins = 3;
         let amount = 100;

@@ -37,7 +37,7 @@ type W = English;
 ///   let (provider, _) = setup_test_provider(vec![]).await;
 ///
 ///   // Create a new local wallet with the newly generated key
-///   let wallet = LocalWallet::new(Some(provider));
+///   let wallet = LocalWallet::new_random(Some(provider));
 ///
 ///   let message = "my message";
 ///   let signature = wallet.sign_message(message.as_bytes()).await?;
@@ -100,14 +100,14 @@ impl From<WalletError> for Error {
 }
 
 impl Wallet {
-    pub fn new(provider: Option<Provider>) -> Self {
+    pub fn new_random(provider: Option<Provider>) -> Self {
         let mut rng = rand::thread_rng();
         let private_key = SecretKey::random(&mut rng);
 
         Self::new_from_private_key(private_key, provider)
     }
 
-    pub(crate) fn new_from_private_key(private_key: SecretKey, provider: Option<Provider>) -> Self {
+    pub fn new_from_private_key(private_key: SecretKey, provider: Option<Provider>) -> Self {
         let public = PublicKey::from(&private_key);
         let hashed = public.hash();
 
@@ -228,8 +228,8 @@ impl Wallet {
     ///
     /// async fn foo() -> Result<(), Box<dyn std::error::Error>> {
     ///  // Create the actual wallets/signers
-    ///  let mut wallet_1 = LocalWallet::new(None);
-    ///  let mut wallet_2 = LocalWallet::new(None);
+    ///  let mut wallet_1 = LocalWallet::new_random(None);
+    ///  let mut wallet_2 = LocalWallet::new_random(None);
     ///
     ///   // Setup a coin for each wallet
     ///   let mut coins_1 = setup_coins(wallet_1.address(), 1, 1);

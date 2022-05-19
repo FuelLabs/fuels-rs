@@ -34,7 +34,7 @@ pub trait Signer: std::fmt::Debug + Send + Sync {
 
 #[cfg(test)]
 mod tests {
-    use fuel_crypto::{Message, PublicKey, SecretKey};
+    use fuel_crypto::{Message, SecretKey};
     use fuel_tx::{AssetId, Bytes32, Input, Output, UtxoId};
     use fuels_core::parameters::TxParameters;
     use fuels_test_helpers::{setup_coins, setup_test_client};
@@ -53,14 +53,7 @@ mod tests {
         rng.fill_bytes(&mut secret_seed);
 
         let secret = unsafe { SecretKey::from_bytes_unchecked(secret_seed) };
-        let public = PublicKey::from(&secret);
-        let hashed = public.hash();
-
-        let wallet = Wallet {
-            private_key: secret,
-            address: Address::new(*hashed),
-            provider: None,
-        };
+        let wallet = Wallet::new_from_private_key(secret, None);
 
         let message = "my message";
 
@@ -84,14 +77,7 @@ mod tests {
         let secret =
             SecretKey::from_str("5f70feeff1f229e4a95e1056e8b4d80d0b24b565674860cc213bdb07127ce1b1")
                 .unwrap();
-        let public = PublicKey::from(&secret);
-        let hashed = public.hash();
-
-        let wallet = Wallet {
-            private_key: secret,
-            address: Address::new(*hashed),
-            provider: None,
-        };
+        let wallet = Wallet::new_from_private_key(secret, None);
 
         let input_coin = Input::coin(
             UtxoId::new(Bytes32::zeroed(), 0),
@@ -142,8 +128,8 @@ mod tests {
     #[tokio::test]
     async fn send_transaction() {
         // Setup two sets of coins, one for each wallet, each containing 1 coin with 1 amount.
-        let mut wallet_1 = LocalWallet::new(None);
-        let mut wallet_2 = LocalWallet::new(None);
+        let mut wallet_1 = LocalWallet::new_random(None);
+        let mut wallet_2 = LocalWallet::new_random(None);
 
         let mut coins_1 = setup_coins(wallet_1.address, 1, 1000000);
         let coins_2 = setup_coins(wallet_2.address, 1, 1000000);
@@ -221,8 +207,8 @@ mod tests {
     #[tokio::test]
     async fn transfer_coins_with_change() {
         // Setup two sets of coins, one for each wallet, each containing 1 coin with 5 amounts each.
-        let mut wallet_1 = LocalWallet::new(None);
-        let mut wallet_2 = LocalWallet::new(None);
+        let mut wallet_1 = LocalWallet::new_random(None);
+        let mut wallet_2 = LocalWallet::new_random(None);
 
         let mut coins_1 = setup_coins(wallet_1.address, 1, 5);
         let coins_2 = setup_coins(wallet_2.address, 1, 5);
