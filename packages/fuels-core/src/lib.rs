@@ -14,6 +14,11 @@ pub mod source;
 pub mod types;
 pub mod utils;
 
+pub mod tx {
+    #[doc(no_inline)]
+    pub use fuel_tx::*;
+}
+
 pub type ByteArray = [u8; 8];
 pub type Selector = ByteArray;
 pub type Bits256 = [u8; 32];

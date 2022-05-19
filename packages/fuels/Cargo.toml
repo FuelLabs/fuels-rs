@@ -15,4 +15,3 @@ fuels-contract = { version = "0.13.0", path = "../fuels-contract" }
 fuels-core = { version = "0.13.0", path = "../fuels-core" }
 fuels-signers = { version = "0.13.0", path = "../fuels-signers" }
 fuels-test-helpers = { version = "0.13.0", path = "../fuels-test-helpers" }
-fuel-tx = "0.9"
