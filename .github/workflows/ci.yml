@@ -29,7 +29,7 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: 1.58.0
+          toolchain: 1.61.0
           override: true
 
       # Ensure CI is using the same minimum toolchain specified in fuels Cargo.toml
