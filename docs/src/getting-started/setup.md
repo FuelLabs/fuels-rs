@@ -25,7 +25,7 @@ Now you're up and ready to develop with the Fuel Rust SDK!
 all you need is to declare these three dependencies on your `Cargo.toml`:
 
 ```toml
-fuel-tx = "0.9"
+fuel-tx = "0.10"
 fuels-abigen-macro = "0.12"
 fuels = "0.12"
 ```

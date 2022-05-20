@@ -12,10 +12,10 @@ description = "Fuel Rust SDK contracts."
 anyhow = "1"
 bytes = { version = "1.0.1", features = ["serde"] }
 fuel-asm = { version = "0.4", features = ["serde-types"] }
-fuel-gql-client = { version = "0.6", default-features = false }
-fuel-tx = "0.9"
-fuel-types = "0.3"
-fuel-vm = "0.8"
+fuel-gql-client = { version = "0.7", default-features = false }
+fuel-tx = "0.10"
+fuel-types = "0.5"
+fuel-vm = "0.9"
 fuels-core = { version = "0.13.0", path = "../fuels-core" }
 fuels-signers = { version = "0.13.0", path = "../fuels-signers" }
 hex = { version = "0.4.3", default-features = false, features = ["std"] }
