@@ -2,7 +2,7 @@ use anyhow::Result;
 use fuel_gql_client::client::{types::TransactionStatus, FuelClient};
 use fuel_tx::{Receipt, Transaction};
 use fuels_core::errors::Error;
-use tracing::{event, Level};
+use tracing::debug;
 
 /// Script is a very thin layer on top of fuel-client with some
 /// extra functionalities needed and provided by the SDK.
@@ -36,7 +36,7 @@ impl Script {
     // modified, it is only simulated using a "dry-run".
     pub async fn simulate(self, fuel_client: &FuelClient) -> Result<Vec<Receipt>, Error> {
         let receipts = fuel_client.dry_run(&self.tx).await?;
-        event!(Level::DEBUG, "{:?}", receipts);
+        debug!(target: "receipts", "{:?}", receipts);
         Ok(receipts)
     }
 }
