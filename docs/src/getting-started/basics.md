@@ -254,7 +254,7 @@ contract_instance
 
 `append_variable_outputs` effectively appends a given amount of `Output::Variable`s to the transaction's list of outputs. This output type indicates that the output's amount and owner may vary based on transaction execution.
 
-Note that the Sway `lib-std` function `mint_to_address` calls `transfer_to_output` under the hood, and so, you need to call `append_variable_outputs` in the Rust SDK tests just like you would for transfer_to_output.
+Note that the Sway `lib-std` function `mint_to_address` calls `transfer_to_output` under the hood, and so you need to call `append_variable_outputs` in the Rust SDK tests just like you would for `transfer_to_output`.
 
 ### Contract calls calling other contracts
 
