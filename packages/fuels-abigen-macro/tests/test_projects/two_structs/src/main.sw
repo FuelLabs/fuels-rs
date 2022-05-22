@@ -9,8 +9,8 @@ pub struct StructTwo {
 }
 
 abi MyTest {
-    fn something(input: StructTwo) -> u64;
-    fn something_else(input: StructOne) -> u64;
+    fn something(input: StructOne) -> u64;
+    fn something_else(input: StructTwo) -> u64;
 }
 
 impl MyTest for Contract {

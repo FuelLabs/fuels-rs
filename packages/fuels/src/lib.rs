@@ -32,6 +32,8 @@ pub mod test_helpers {
     pub use fuels_test_helpers::*;
 }
 
+pub use fuels_core::tx;
+
 /// Easy imports of frequently used
 #[doc(hidden)]
 pub mod prelude {
