@@ -406,9 +406,10 @@ impl Contract {
         binary_filepath: &str,
         wallet: &LocalWallet,
         params: TxParameters,
-        salt: Salt
+        salt: Salt,
     ) -> Result<ContractId, Error> {
-        let compiled_contract = Contract::load_sway_contract_with_salt(binary_filepath, salt).unwrap();
+        let compiled_contract =
+            Contract::load_sway_contract_with_salt(binary_filepath, salt).unwrap();
 
         let (mut tx, contract_id) =
             Self::contract_deployment_transaction(&compiled_contract, wallet, params).await?;
