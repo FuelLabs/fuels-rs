@@ -43,7 +43,7 @@ abigen!(
     "your_project/out/debug/contract_test-abi.json",
 );
 
-// This helper will will launch a local node and provide a test wallet linked to it
+// This helper will launch a local node and provide a test wallet linked to it
 let wallets = launch_provider_and_get_single_wallet().await;
 
 // Load the compiled Sway contract (this is the output from `forc build`)
@@ -68,7 +68,7 @@ If you need multiple test wallets, they can be setup as follows:
 
 ```Rust
 
-// This helper will will launch a local node and provide 10 test wallets linked to it.
+// This helper will launch a local node and provide 10 test wallets linked to it.
 // The initial balance defaults to 1 coin per wallet with an amount of 1_000_000_000
 let wallets = launch_provider_and_get_wallets(WalletsConfig::default()).await;
 
@@ -82,8 +82,8 @@ let coins_per_wallet = 3;
 let amount_per_coin = 100;
 
 let config = WalletsConfig::new(
-    Some(num_wallets), 
-    Some(coins_per_wallet), 
+    Some(num_wallets),
+    Some(coins_per_wallet),
     Some(amount_per_coin)
 );
 
