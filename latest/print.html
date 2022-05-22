@@ -465,6 +465,7 @@ contract_instance
     .unwrap();
 </code></pre>
 <p><code>append_variable_outputs</code> effectively appends a given amount of <code>Output::Variable</code>s to the transaction's list of outputs. This output type indicates that the output's amount and owner may vary based on transaction execution.</p>
+<p>Note that the Sway <code>lib-std</code> function <code>mint_to_address</code> calls <code>transfer_to_output</code> under the hood, and so you need to call <code>append_variable_outputs</code> in the Rust SDK tests just like you would for <code>transfer_to_output</code>.</p>
 <h3 id="contract-calls-calling-other-contracts"><a class="header" href="#contract-calls-calling-other-contracts">Contract calls calling other contracts</a></h3>
 <p>Sometimes, you might need to call your contract, which calls other contracts. To do so, you must feed the external contract IDs that your contract depends on to the method you're calling. You do it by chaining <code>.set_contracts(&amp;[external_contract_id, ...])</code> to the method you want to call. For instance:</p>
 <pre><code class="language-Rust">let response = contract_instance
