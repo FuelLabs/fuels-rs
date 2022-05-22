@@ -399,6 +399,28 @@ impl Contract {
         }
     }
 
+    /// Deploys a compiled contract to a running node
+    /// To deploy a contract, you need a wallet with enough assets to pay for deployment. This
+    /// wallet will also receive the change.
+    pub async fn deploy_with_salt(
+        binary_filepath: &str,
+        wallet: &LocalWallet,
+        params: TxParameters,
+        salt: Salt,
+    ) -> Result<ContractId, Error> {
+        let compiled_contract =
+            Contract::load_sway_contract_with_salt(binary_filepath, salt).unwrap();
+
+        let (mut tx, contract_id) =
+            Self::contract_deployment_transaction(&compiled_contract, wallet, params).await?;
+        wallet.sign_transaction(&mut tx).await?;
+
+        match wallet.get_provider().unwrap().client.submit(&tx).await {
+            Ok(_) => Ok(contract_id),
+            Err(e) => Err(Error::TransactionError(e.to_string())),
+        }
+    }
+
     pub fn load_sway_contract(binary_filepath: &str) -> Result<CompiledContract> {
         Self::load_sway_contract_with_salt(binary_filepath, Salt::from([0u8; 32]))
     }
