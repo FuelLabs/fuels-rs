@@ -1,4 +1,4 @@
-use fuel_tx::{AssetId, ContractId, Receipt};
+use fuel_tx::{AssetId, ContractId, Receipt, Salt};
 use fuels::prelude::{
     launch_provider_and_get_single_wallet, launch_provider_and_get_wallets, setup_coins,
     setup_test_provider, CallParameters, Contract, Error, LocalWallet, Provider, Signer,
@@ -8,6 +8,8 @@ use fuels::test_helpers::WalletsConfig;
 use fuels_abigen_macro::abigen;
 use fuels_core::constants::NATIVE_ASSET_ID;
 use fuels_core::Token;
+use rand::prelude::StdRng;
+use rand::{Rng, SeedableRng};
 use sha2::{Digest, Sha256};
 
 /// Note: all the tests and examples below require pre-compiled Sway projects.
@@ -663,6 +665,42 @@ async fn example_workflow() {
         .unwrap();
 
     assert_eq!(52, result.value);
+}
+
+#[tokio::test]
+async fn same_contract_different_ids() {
+    abigen!(
+        MyContract,
+        "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+    );
+
+    let wallet = launch_provider_and_get_single_wallet().await;
+
+    let contract_id_1 = Contract::deploy(
+        "tests/test_projects/contract_test/out/debug/contract_test.bin",
+        &wallet,
+        TxParameters::default(),
+    )
+    .await
+    .unwrap();
+
+    println!("Contract deployed @ {:x}", contract_id_1);
+
+    let rng = &mut StdRng::seed_from_u64(2322u64);
+    let salt: [u8; 32] = rng.gen();
+
+    let contract_id_2 = Contract::deploy_with_salt(
+        "tests/test_projects/contract_test/out/debug/contract_test.bin",
+        &wallet,
+        TxParameters::default(),
+        Salt::from(salt),
+    )
+    .await
+    .unwrap();
+
+    println!("Contract deployed @ {:x}", contract_id_2);
+
+    assert_ne!(contract_id_1, contract_id_2);
 }
 
 #[tokio::test]
