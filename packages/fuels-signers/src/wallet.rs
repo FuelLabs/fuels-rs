@@ -8,7 +8,7 @@ use eth_keystore::KeystoreError;
 use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
 use fuel_gql_client::client::schema::coin::Coin;
 use fuel_gql_client::client::types::TransactionResponse;
-use fuel_gql_client::client::PaginationRequest;
+use fuel_gql_client::client::{PaginatedResult, PaginationRequest};
 use fuel_tx::{Address, AssetId, Input, Output, Receipt, Transaction, UtxoId, Witness};
 use fuels_core::errors::Error;
 use fuels_core::parameters::TxParameters;
@@ -127,12 +127,11 @@ impl Wallet {
     pub async fn get_transactions(
         &self,
         request: PaginationRequest<String>,
-    ) -> Vec<TransactionResponse> {
+    ) -> std::io::Result<PaginatedResult<TransactionResponse, String>> {
         self.get_provider()
             .unwrap()
             .get_transactions_by_owner(self.address.to_string().as_str(), request)
             .await
-            .results
     }
 
     /// Creates a new wallet from a mnemonic phrase.
