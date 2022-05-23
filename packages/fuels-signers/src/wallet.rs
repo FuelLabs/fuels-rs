@@ -127,14 +127,12 @@ impl Wallet {
     pub async fn get_transactions(
         &self,
         request: PaginationRequest<String>,
-    ) -> Result<Vec<TransactionResponse>, WalletError> {
-        Ok(self
-            .get_provider()
+    ) -> Vec<TransactionResponse> {
+        self.get_provider()
             .unwrap()
             .get_transactions_by_owner(self.address.to_string().as_str(), request)
             .await
-            .unwrap()
-            .results)
+            .results
     }
 
     /// Creates a new wallet from a mnemonic phrase.

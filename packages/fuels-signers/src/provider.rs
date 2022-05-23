@@ -141,8 +141,8 @@ impl Provider {
     pub async fn get_transactions(
         &self,
         request: PaginationRequest<String>,
-    ) -> io::Result<PaginatedResult<TransactionResponse, String>> {
-        Ok(self.client.transactions(request).await.unwrap())
+    ) -> PaginatedResult<TransactionResponse, String> {
+        self.client.transactions(request).await.unwrap()
     }
 
     // - Get transaction(s) by owner
@@ -150,12 +150,11 @@ impl Provider {
         &self,
         owner: &str,
         request: PaginationRequest<String>,
-    ) -> io::Result<PaginatedResult<TransactionResponse, String>> {
-        Ok(self
-            .client
+    ) -> PaginatedResult<TransactionResponse, String> {
+        self.client
             .transactions_by_owner(owner, request)
             .await
-            .unwrap())
+            .unwrap()
     }
 
     // @todo
