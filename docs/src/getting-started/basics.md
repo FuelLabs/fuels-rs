@@ -171,17 +171,9 @@ Where `value` will hold the value returned by its respective contract method, re
 
 And lastly, `logs` will hold all logs that happened within that specific contract call.
 
-In order to log out `receipts` values during testing we need to do the following:
+In order to log out `receipts` values during testing you have to run `test` as follows:
 
-1. You have to initialize `tracing_subscriber` in `harness.rs`
-```Rust
-#[cfg(test)]
-#[ctor::ctor]
-fn init_tracing() {
-let _ = tracing_subscriber::fmt::try_init();
-}
-```
-2. You have to run `test` as follows: RUST_LOG=receipts cargo test --test harness `name of the test`
+```RUST_LOG=receipts cargo test --test harness `name of the test```
 
 
 ### Read-only contract calls

@@ -307,7 +307,9 @@ impl Contract {
         let script = Script::new(tx);
 
         if simulate {
-            return script.simulate(fuel_client).await;
+            let receipts = script.simulate(fuel_client).await;
+            debug!(target: "receipts", "{:?}", receipts);
+            return receipts;
         }
         let receipts = script.call(fuel_client).await;
         debug!(target: "receipts", "{:?}", receipts);
