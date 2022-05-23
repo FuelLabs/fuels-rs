@@ -26,11 +26,11 @@ all you need is to declare these three dependencies on your `Cargo.toml`:
 
 ```toml
 fuel-tx = "0.10"
-fuels-abigen-macro = "0.12"
-fuels = "0.12"
+fuels-abigen-macro = "0.13"
+fuels = "0.13"
 ```
 
-_Note that we're using `0.12`, which is the latest version at the time of this writing._
+_Note that we're using `0.13`, which is the latest version at the time of this writing._
 
 And then, in your Rust file that's going to make use of the SDK:
 
