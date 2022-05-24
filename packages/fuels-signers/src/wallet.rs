@@ -356,11 +356,17 @@ impl Wallet {
 
     /// Shallow wrapper around the provider method
     pub async fn get_asset_balance(&self, asset_id: &AssetId) -> io::Result<u64> {
-        self.provider.get_asset_balance(&self.address, *asset_id)
+        self.get_provider()
+            .unwrap()
+            .get_asset_balance(&self.address, *asset_id)
+            .await
     }
     /// Shallow wrapper around the provider method
     pub async fn get_balances(&self) -> HashMap<String, u64> {
-        self.provider.get_balances(&self.address)
+        self.get_provider()
+            .unwrap()
+            .get_balances(&self.address)
+            .await
     }
 }
 
