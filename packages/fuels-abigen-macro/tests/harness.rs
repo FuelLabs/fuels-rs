@@ -1,3 +1,4 @@
+use fuel_core::service::Config;
 use fuel_tx::{AssetId, ContractId, Receipt, Salt};
 use fuels::prelude::{
     launch_provider_and_get_single_wallet, launch_provider_and_get_wallets, setup_coins,
@@ -1069,7 +1070,7 @@ async fn test_provider_launch_and_connect() {
     let mut wallet = LocalWallet::new_random(None);
 
     let coins = setup_coins(wallet.address(), DEFAULT_NUM_COINS, DEFAULT_COIN_AMOUNT);
-    let (launched_provider, address) = setup_test_provider(coins).await;
+    let (launched_provider, address) = setup_test_provider(coins, Config::local_node()).await;
     let connected_provider = Provider::connect(address).await.unwrap();
 
     wallet.set_provider(connected_provider);

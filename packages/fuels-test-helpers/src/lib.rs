@@ -44,7 +44,10 @@ pub fn setup_coins(owner: Address, num_coins: u64, amount: u64) -> Vec<(UtxoId, 
 
 // Setup a test client with the given coins. We return the SocketAddr so the launched node
 // client can be connected to more easily (even though it is often ignored).
-pub async fn setup_test_client(coins: Vec<(UtxoId, Coin)>) -> (FuelClient, SocketAddr) {
+pub async fn setup_test_client(
+    coins: Vec<(UtxoId, Coin)>,
+    node_config: Config,
+) -> (FuelClient, SocketAddr) {
     let coin_configs = coins
         .into_iter()
         .map(|(utxo_id, coin)| CoinConfig {
@@ -69,7 +72,7 @@ pub async fn setup_test_client(coins: Vec<(UtxoId, Coin)>) -> (FuelClient, Socke
         },
         database_type: DbType::InMemory,
         utxo_validation: true,
-        ..Config::local_node()
+        ..node_config
     };
 
     let srv = FuelService::new_node(config).await.unwrap();

@@ -31,12 +31,13 @@ type W = English;
 /// then verified.
 ///
 /// ```
+/// use fuel_core::service::Config;
 /// use fuel_crypto::Message;
 /// use fuels::prelude::*;
 ///
 /// async fn foo() -> Result<(), Box<dyn std::error::Error>> {
 ///   // Setup local test node
-///   let (provider, _) = setup_test_provider(vec![]).await;
+///   let (provider, _) = setup_test_provider(vec![],Config::local_node()).await;
 ///
 ///   // Create a new local wallet with the newly generated key
 ///   let wallet = LocalWallet::new_random(Some(provider));
@@ -237,6 +238,7 @@ impl Wallet {
     /// use fuels::prelude::*;
     /// use fuel_tx::{Bytes32, AssetId, Input, Output, UtxoId};
     /// use std::str::FromStr;
+    /// use fuel_core::service::Config;
     ///
     /// async fn foo() -> Result<(), Box<dyn std::error::Error>> {
     ///  // Create the actual wallets/signers
@@ -249,7 +251,7 @@ impl Wallet {
     ///   coins_1.extend(coins_2);
     ///
     ///   // Setup a provider and node with both set of coins
-    ///   let (provider, _) = setup_test_provider(coins_1).await;
+    ///   let (provider, _) = setup_test_provider(coins_1, Config::local_node()).await;
     ///
     ///   // Set provider for wallets
     ///   wallet_1.set_provider(provider.clone());
