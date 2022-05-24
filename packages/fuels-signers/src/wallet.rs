@@ -13,6 +13,7 @@ use fuel_tx::{Address, AssetId, Input, Output, Receipt, Transaction, UtxoId, Wit
 use fuels_core::errors::Error;
 use fuels_core::parameters::TxParameters;
 use rand::{CryptoRng, Rng};
+use std::collections::HashMap;
 use std::path::Path;
 use std::str::FromStr;
 use std::{fmt, io};
@@ -351,6 +352,15 @@ impl Wallet {
             .unwrap()
             .get_spendable_coins(&self.address(), *asset_id, amount)
             .await
+    }
+
+    /// Shallow wrapper around the provider method
+    pub async fn get_asset_balance(&self, asset_id: &AssetId) -> io::Result<u64> {
+        self.provider.get_asset_balance(&self.address, *asset_id)
+    }
+    /// Shallow wrapper around the provider method
+    pub async fn get_balances(&self) -> HashMap<String, u64> {
+        self.provider.get_balances(&self.address)
     }
 }
 
