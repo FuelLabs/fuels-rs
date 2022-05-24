@@ -1,4 +1,4 @@
-use crate::{setup_coins, setup_test_client, wallets_config::WalletsConfig};
+use crate::{setup_coins, setup_test_client, wallets_config::WalletsConfig, DEFAULT_NUM_COINS};
 use fuel_core::model::Coin;
 use fuel_core::service::Config;
 use fuel_tx::UtxoId;
@@ -17,13 +17,8 @@ pub async fn launch_provider_and_get_single_wallet() -> LocalWallet {
 pub async fn launch_custom_provider_and_get_single_wallet(node_config: Config) -> LocalWallet {
     let mut wallet = LocalWallet::new_random(None);
 
-    let wallet_config = WalletsConfig::new_single(None, None);
-
-    let coins: Vec<(UtxoId, Coin)> = setup_coins(
-        wallet.address(),
-        wallet_config.coins_per_wallet,
-        wallet_config.coin_amount,
-    );
+    let coins: Vec<(UtxoId, Coin)> =
+        setup_coins(wallet.address(), DEFAULT_NUM_COINS, DEFAULT_NUM_COINS);
 
     let (provider, _) = setup_test_provider(coins, node_config).await;
 
