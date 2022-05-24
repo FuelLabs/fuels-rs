@@ -1549,15 +1549,17 @@ async fn unit_type_enums() {
 #[tokio::test]
 // TODO(vnepveu): test for multiple assets
 async fn test_provider_balance_api() {
-    let wallet = launch_provider_and_get_single_wallet().await;
-    let coins = setup_coins(wallet.address(), DEFAULT_NUM_COINS, DEFAULT_COIN_AMOUNT);
+    let mut wallet = LocalWallet::new_random(None);
+    let coins = setup_coins(wallet.address(), 21, 11);
+    let (provider, _) = setup_test_provider(coins.clone(), Config::local_node()).await;
+    wallet.set_provider(provider);
     for (_utxo_id, coin) in coins {
         let balance = wallet
             .get_provider()
             .unwrap()
             .get_asset_balance(&wallet.address(), coin.asset_id)
             .await;
-        assert_eq!(balance.unwrap(), 110);
+        assert_eq!(balance.unwrap(), 231);
     }
     let balances = wallet
         .get_provider()
@@ -1568,5 +1570,5 @@ async fn test_provider_balance_api() {
     let expected_key = expected_key.as_str();
     assert_eq!(balances.len(), 1);
     assert!(balances.contains_key(expected_key));
-    assert_eq!(*balances.get(expected_key).unwrap(), 110)
+    assert_eq!(*balances.get(expected_key).unwrap(), 231)
 }
