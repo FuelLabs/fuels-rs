@@ -26,3 +26,6 @@ fuels = { path = "../fuels" }
 hex = { version = "0.4.3", default-features = false, features = ["std"] }
 sha2 = "0.9.5"
 tokio = "1.15.0"
+tracing = {version = "0.1", default-features = false}
+tracing-subscriber = {version = "0.3", default-features = false, features = ["env-filter", "fmt"]}
+ctor = " 0.1"

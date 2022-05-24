@@ -24,6 +24,8 @@ use fuels_signers::provider::Provider;
 use fuels_signers::{LocalWallet, Signer};
 use std::marker::PhantomData;
 
+use tracing::debug;
+
 #[derive(Debug, Clone, Default)]
 pub struct CompiledContract {
     pub raw: Vec<u8>,
@@ -180,6 +182,7 @@ impl Contract {
 
     /// Calls a contract method with the given ABI function.
     /// The wallet is here to pay for the transaction fees (even though they are 0 right now)
+    #[tracing::instrument]
     #[allow(clippy::too_many_arguments)] // We need that many arguments for now
     async fn call(
         contract_id: ContractId,
@@ -304,9 +307,13 @@ impl Contract {
         let script = Script::new(tx);
 
         if simulate {
-            return script.simulate(fuel_client).await;
+            let receipts = script.simulate(fuel_client).await;
+            debug!(target: "receipts", "{:?}", receipts);
+            return receipts;
         }
-        script.call(fuel_client).await
+        let receipts = script.call(fuel_client).await;
+        debug!(target: "receipts", "{:?}", receipts);
+        receipts
     }
 
     /// Creates an ABI call based on a function selector and

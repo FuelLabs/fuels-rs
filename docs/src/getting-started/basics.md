@@ -263,6 +263,11 @@ Where `value` will hold the value returned by its respective contract method, re
 
 And lastly, `logs` will hold all logs that happened within that specific contract call.
 
+In order to log out `receipts` values during testing you have to run `test` as follows:
+
+```RUST_LOG=receipts cargo test --test harness `name of the test```
+
+
 ### Read-only contract calls
 
 Sometimes you want to call a contract method that doesn't change the state of the blockchain. For instance, a method that only reads a value from storage and returns it.

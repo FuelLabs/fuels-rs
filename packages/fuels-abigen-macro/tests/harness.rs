@@ -17,6 +17,14 @@ use sha2::{Digest, Sha256};
 /// It will build all test projects, creating their respective binaries,
 /// ABI files, and lock files. These are not to be committed to the repository.
 
+/// #[ctor::ctor] Marks a function or static variable as a library/executable constructor.
+/// This uses OS-specific linker sections to call a specific function at load time.
+#[cfg(test)]
+#[ctor::ctor]
+fn init_tracing() {
+    let _ = tracing_subscriber::fmt::try_init();
+}
+
 fn null_contract_id() -> String {
     // a null contract address ~[0u8;32]
     String::from("0000000000000000000000000000000000000000000000000000000000000000")
@@ -1343,6 +1351,7 @@ async fn test_tuples() {
     let instance = MyContract::new(id.to_string(), wallet.clone());
 
     let response = instance.returns_tuple((1, 2)).call().await.unwrap();
+
     assert_eq!(response.value, (1, 2));
 }
 
