@@ -1,18 +1,19 @@
+use std::io;
+use std::net::SocketAddr;
+
 #[cfg(feature = "fuel-core")]
 use fuel_core::service::{Config, FuelService};
 use fuel_gql_client::client::schema::coin::Coin;
 use fuel_gql_client::client::types::TransactionResponse;
-use fuel_gql_client::client::{FuelClient, PageDirection, PaginationRequest};
+use fuel_gql_client::client::{FuelClient, PageDirection, PaginatedResult, PaginationRequest};
 use fuel_tx::Receipt;
 use fuel_tx::{Address, AssetId, Input, Output, Transaction};
 use fuel_vm::consts::REG_ONE;
-use std::io;
-use std::net::SocketAddr;
-
 use fuel_vm::prelude::Opcode;
+use thiserror::Error;
+
 use fuels_core::errors::Error;
 use fuels_core::parameters::TxParameters;
-use thiserror::Error;
 
 /// An error involving a signature.
 #[derive(Debug, Error)]
@@ -136,7 +137,23 @@ impl Provider {
         Ok(self.client.transaction(tx_id).await.unwrap().unwrap())
     }
 
-    // @todo
     // - Get transaction(s)
+    pub async fn get_transactions(
+        &self,
+        request: PaginationRequest<String>,
+    ) -> std::io::Result<PaginatedResult<TransactionResponse, String>> {
+        self.client.transactions(request).await
+    }
+
+    // - Get transaction(s) by owner
+    pub async fn get_transactions_by_owner(
+        &self,
+        owner: &str,
+        request: PaginationRequest<String>,
+    ) -> std::io::Result<PaginatedResult<TransactionResponse, String>> {
+        self.client.transactions_by_owner(owner, request).await
+    }
+
+    // @todo
     // - Get block(s)
 }

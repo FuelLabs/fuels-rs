@@ -7,6 +7,8 @@ use elliptic_curve::rand_core;
 use eth_keystore::KeystoreError;
 use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
 use fuel_gql_client::client::schema::coin::Coin;
+use fuel_gql_client::client::types::TransactionResponse;
+use fuel_gql_client::client::{PaginatedResult, PaginationRequest};
 use fuel_tx::{Address, AssetId, Input, Output, Receipt, Transaction, UtxoId, Witness};
 use fuels_core::errors::Error;
 use fuels_core::parameters::TxParameters;
@@ -120,6 +122,16 @@ impl Wallet {
 
     pub fn get_provider(&self) -> Result<&Provider, WalletError> {
         self.provider.as_ref().ok_or(WalletError::NoProvider)
+    }
+
+    pub async fn get_transactions(
+        &self,
+        request: PaginationRequest<String>,
+    ) -> std::io::Result<PaginatedResult<TransactionResponse, String>> {
+        self.get_provider()
+            .unwrap()
+            .get_transactions_by_owner(self.address.to_string().as_str(), request)
+            .await
     }
 
     /// Creates a new wallet from a mnemonic phrase.
