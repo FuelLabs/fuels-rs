@@ -1,5 +1,5 @@
-use fuel_tx::{AssetId, ContractId, Receipt, Salt};
 use fuel_core::service::Config;
+use fuel_tx::{AssetId, ContractId, Receipt, Salt};
 use fuels::prelude::{
     launch_provider_and_get_single_wallet, launch_provider_and_get_wallets, setup_coins,
     setup_test_provider, CallParameters, Contract, Error, LocalWallet, Provider, Signer,
