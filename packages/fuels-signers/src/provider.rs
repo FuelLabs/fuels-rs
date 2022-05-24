@@ -10,6 +10,7 @@ use fuel_tx::Receipt;
 use fuel_tx::{Address, AssetId, Input, Output, Transaction};
 use fuel_vm::consts::REG_ONE;
 use fuel_vm::prelude::Opcode;
+use std::collections::HashMap;
 use thiserror::Error;
 
 use fuels_core::errors::Error;
@@ -130,6 +131,45 @@ impl Provider {
             witnesses: vec![],
             metadata: None,
         }
+    }
+
+    /// Get the balance of all spendable coins `asset_id` for address `address`. This is different
+    /// from getting coins because we are just returning a number (the sum of UTXOs) instead of the
+    /// UTXOs.
+    pub async fn get_asset_balance(
+        &self,
+        address: &Address,
+        asset_id: AssetId,
+    ) -> std::io::Result<u64> {
+        self.client
+            .balance(&*address.to_string(), Some(&*asset_id.to_string()))
+            .await
+    }
+
+    /// Get all the spendable balances of all assets for address `address`. This is different from
+    /// getting
+    /// the coins because we are only returning the sum of UTXOs and not the UTXOs themselves
+    pub async fn get_balances(&self, address: &Address) -> HashMap<String, u64> {
+        // We don't paginate results because there are likely at most ~100 different assets in one
+        // wallet
+        let pagination = PaginationRequest {
+            cursor: None,
+            results: 9999,
+            direction: PageDirection::Forward,
+        };
+        let balances_vec = self
+            .client
+            .balances(&*address.to_string(), pagination)
+            .await
+            .unwrap()
+            .results;
+        let balances = balances_vec
+            .iter()
+            .map(|b| (b.asset_id.to_string(), b.amount.clone().try_into().unwrap()))
+            .collect::<Vec<(String, u64)>>()
+            .into_iter()
+            .collect();
+        balances
     }
 
     /// Get transaction by id.
