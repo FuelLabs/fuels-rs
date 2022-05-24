@@ -3,7 +3,6 @@ use fuel_core::model::Coin;
 use fuel_core::service::Config;
 use fuel_tx::UtxoId;
 use fuels_signers::provider::Provider;
-use fuels_signers::wallet::Wallet;
 use fuels_signers::{LocalWallet, Signer};
 use std::net::SocketAddr;
 
