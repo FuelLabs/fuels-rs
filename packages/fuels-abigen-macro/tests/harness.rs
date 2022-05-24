@@ -14,6 +14,8 @@ use sha2::{Digest, Sha256};
 /// It will build all test projects, creating their respective binaries,
 /// ABI files, and lock files. These are not to be committed to the repository.
 
+/// #[ctor::ctor] Marks a function or static variable as a library/executable constructor.
+/// This uses OS-specific linker sections to call a specific function at load time.
 #[cfg(test)]
 #[ctor::ctor]
 fn init_tracing() {
