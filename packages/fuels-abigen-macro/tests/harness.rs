@@ -1565,7 +1565,8 @@ async fn test_provider_balance_api() {
         .get_provider()
         .unwrap()
         .get_balances(&wallet.address())
-        .await;
+        .await
+        .unwrap();
     let expected_key = "0x".to_owned() + NATIVE_ASSET_ID.to_string().as_str();
     let expected_key = expected_key.as_str();
     assert_eq!(balances.len(), 1);

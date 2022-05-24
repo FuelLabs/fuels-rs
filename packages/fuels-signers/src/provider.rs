@@ -13,6 +13,7 @@ use fuel_vm::prelude::Opcode;
 use std::collections::HashMap;
 use thiserror::Error;
 
+use crate::wallet::WalletError;
 use fuels_core::errors::Error;
 use fuels_core::parameters::TxParameters;
 
@@ -23,8 +24,15 @@ pub enum ProviderError {
     TransactionRequestError(String),
     #[error(transparent)]
     ClientRequestError(#[from] io::Error),
+    #[error("Wallet error: {0}")]
+    WalletError(String),
 }
 
+impl From<WalletError> for ProviderError {
+    fn from(e: WalletError) -> Self {
+        ProviderError::WalletError(e.to_string())
+    }
+}
 /// Encapsulates common client operations in the SDK.
 /// Note that you may also use `client`, which is an instance
 /// of `FuelClient`, directly, which providers a broader API.
@@ -140,16 +148,20 @@ impl Provider {
         &self,
         address: &Address,
         asset_id: AssetId,
-    ) -> std::io::Result<u64> {
-        self.client
+    ) -> Result<u64, ProviderError> {
+        Ok(self
+            .client
             .balance(&*address.to_string(), Some(&*asset_id.to_string()))
-            .await
+            .await?)
     }
 
     /// Get all the spendable balances of all assets for address `address`. This is different from
     /// getting
     /// the coins because we are only returning the sum of UTXOs and not the UTXOs themselves
-    pub async fn get_balances(&self, address: &Address) -> HashMap<String, u64> {
+    pub async fn get_balances(
+        &self,
+        address: &Address,
+    ) -> Result<HashMap<String, u64>, ProviderError> {
         // We don't paginate results because there are likely at most ~100 different assets in one
         // wallet
         let pagination = PaginationRequest {
@@ -160,8 +172,7 @@ impl Provider {
         let balances_vec = self
             .client
             .balances(&*address.to_string(), pagination)
-            .await
-            .unwrap()
+            .await?
             .results;
         let balances = balances_vec
             .iter()
@@ -169,7 +180,7 @@ impl Provider {
             .collect::<Vec<(String, u64)>>()
             .into_iter()
             .collect();
-        balances
+        Ok(balances)
     }
 
     /// Get transaction by id.
