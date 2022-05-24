@@ -36,7 +36,6 @@ impl Script {
     // modified, it is only simulated using a "dry-run".
     pub async fn simulate(self, fuel_client: &FuelClient) -> Result<Vec<Receipt>, Error> {
         let receipts = fuel_client.dry_run(&self.tx).await?;
-        debug!(target: "receipts", "{:?}", receipts);
         Ok(receipts)
     }
 }
