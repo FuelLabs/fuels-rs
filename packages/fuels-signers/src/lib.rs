@@ -33,6 +33,7 @@ pub trait Signer: std::fmt::Debug + Send + Sync {
 }
 
 #[cfg(test)]
+#[cfg(feature = "test-helpers")]
 mod tests {
     use fuel_core::service::Config;
     use fuel_crypto::{Message, SecretKey};

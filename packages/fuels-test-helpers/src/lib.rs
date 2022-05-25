@@ -1,9 +1,10 @@
 //! Testing helpers/utilities for Fuel SDK.
 
+pub use fuel_core::service::Config;
 use fuel_core::{
     chain_config::{ChainConfig, CoinConfig, StateConfig},
     model::{Coin, CoinStatus},
-    service::{Config, DbType, FuelService},
+    service::{DbType, FuelService},
 };
 use fuel_gql_client::client::FuelClient;
 use fuel_tx::{Address, Bytes32, UtxoId};
