@@ -140,6 +140,7 @@ impl Provider {
             metadata: None,
         }
     }
+    // TODO: add unit tests for the balance API. This is tracked in #321.
 
     /// Get the balance of all spendable coins `asset_id` for address `address`. This is different
     /// from getting coins because we are just returning a number (the sum of UTXOs) instead of the
