@@ -149,10 +149,10 @@ impl Provider {
         address: &Address,
         asset_id: AssetId,
     ) -> Result<u64, ProviderError> {
-        Ok(self
-            .client
+       self.client
             .balance(&*address.to_string(), Some(&*asset_id.to_string()))
-            .await?)
+            .await
+            .map_err(Into::into)
     }
 
     /// Get all the spendable balances of all assets for address `address`. This is different from
