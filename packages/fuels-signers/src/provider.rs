@@ -156,8 +156,8 @@ impl Provider {
     }
 
     /// Get all the spendable balances of all assets for address `address`. This is different from
-    /// getting
-    /// the coins because we are only returning the sum of UTXOs and not the UTXOs themselves
+    /// getting the coins because we are only returning the sum of UTXOs and not the UTXOs
+    /// themselves
     pub async fn get_balances(
         &self,
         address: &Address,
