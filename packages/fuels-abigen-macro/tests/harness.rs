@@ -1568,8 +1568,7 @@ async fn test_provider_balance_api() {
         .await
         .unwrap();
     let expected_key = "0x".to_owned() + NATIVE_ASSET_ID.to_string().as_str();
-    let expected_key = expected_key.as_str();
     assert_eq!(balances.len(), 1);
-    assert!(balances.contains_key(expected_key));
-    assert_eq!(*balances.get(expected_key).unwrap(), 231)
+    assert!(balances.contains_key(&expected_key));
+    assert_eq!(*balances.get(&expected_key).unwrap(), 231)
 }
