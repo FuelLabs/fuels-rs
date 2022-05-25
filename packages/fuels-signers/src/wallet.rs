@@ -31,7 +31,7 @@ type W = English;
 /// then verified.
 ///
 /// ```
-/// use fuel_core::service::Config;
+///
 /// use fuel_crypto::Message;
 /// use fuels::prelude::*;
 ///
@@ -238,7 +238,7 @@ impl Wallet {
     /// use fuels::prelude::*;
     /// use fuel_tx::{Bytes32, AssetId, Input, Output, UtxoId};
     /// use std::str::FromStr;
-    /// use fuel_core::service::Config;
+    /// use fuels_test_helpers::Config;
     ///
     /// async fn foo() -> Result<(), Box<dyn std::error::Error>> {
     ///  // Create the actual wallets/signers
