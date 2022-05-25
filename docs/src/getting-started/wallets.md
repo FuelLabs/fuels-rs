@@ -120,7 +120,7 @@ let uuid = wallet.encrypt(&dir, password).unwrap();
 
 ## Checking balances and coins
 
-First, one should keep in mind that, with UTXOs, each _coin_ is unique, and corresponds to a unique UTXO. So, when you want to query the balance for a given asset ID, you want to query the sum of the amount in each unspent coin. This is done very easily with a wallet:
+First, one should keep in mind that, with UTXOs, each _coin_ is unique. Each UTXO corresponds to a unique _coin_, and said _coin_ has a corresponding _amount_ (the same way a dollar bill has either 10$ or 5$ face value). So, when you want to query the balance for a given asset ID, you want to query the sum of the amount in each unspent coin. This is done very easily with a wallet:
 
 ```Rust
 let asset_id : AssetId = NATIVE_ASSET_ID

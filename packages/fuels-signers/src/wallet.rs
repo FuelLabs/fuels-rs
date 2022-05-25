@@ -354,12 +354,18 @@ impl Wallet {
             .await
     }
 
+    /// Get the balance of all spendable coins `asset_id` for address `address`. This is different
+    /// from getting coins because we are just returning a number (the sum of UTXOs) instead of the
+    /// UTXOs.
     pub async fn get_asset_balance(&self, asset_id: &AssetId) -> Result<u64, ProviderError> {
         self.get_provider()?
             .get_asset_balance(&self.address, *asset_id)
             .await
     }
 
+    /// Get all the spendable balances of all assets for the wallet. This is different from getting
+    /// the coins because we are only returning the sum of UTXOs coins amount and not the UTXOs
+    /// coins themselves
     pub async fn get_balances(&self) -> Result<HashMap<String, u64>, ProviderError> {
         self.get_provider()?.get_balances(&self.address).await
     }

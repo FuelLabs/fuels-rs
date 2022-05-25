@@ -143,8 +143,8 @@ impl Provider {
     // TODO: add unit tests for the balance API. This is tracked in #321.
 
     /// Get the balance of all spendable coins `asset_id` for address `address`. This is different
-    /// from getting coins because we are just returning a number (the sum of UTXOs) instead of the
-    /// UTXOs.
+    /// from getting coins because we are just returning a number (the sum of UTXOs amount) instead
+    /// of the UTXOs.
     pub async fn get_asset_balance(
         &self,
         address: &Address,
@@ -157,8 +157,8 @@ impl Provider {
     }
 
     /// Get all the spendable balances of all assets for address `address`. This is different from
-    /// getting the coins because we are only returning the sum of UTXOs and not the UTXOs
-    /// themselves
+    /// getting the coins because we are only returning the numbers (the sum of UTXOs coins amount
+    /// for each asset id) and not the UTXOs coins themselves
     pub async fn get_balances(
         &self,
         address: &Address,
