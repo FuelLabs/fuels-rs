@@ -149,7 +149,7 @@ impl Provider {
         address: &Address,
         asset_id: AssetId,
     ) -> Result<u64, ProviderError> {
-       self.client
+        self.client
             .balance(&*address.to_string(), Some(&*asset_id.to_string()))
             .await
             .map_err(Into::into)
@@ -174,7 +174,7 @@ impl Provider {
             .balances(&*address.to_string(), pagination)
             .await?
             .results;
-       let balances = balances_vec
+        let balances = balances_vec
             .iter()
             .map(|b| (b.asset_id.to_string(), b.amount.clone().try_into().unwrap()))
             .collect();
