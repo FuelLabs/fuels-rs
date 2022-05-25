@@ -127,7 +127,7 @@ let asset_id : AssetId = NATIVE_ASSET_ID
 let balance : u64 = wallet.get_asset_balance(&asset_id).await;
 ```
 
-If you want to query all the balances (ie get the balance for each asset IDs in that wallet), then it is as simple as:
+If you want to query all the balances (i.e. get the balance for each asset IDs in that wallet), then it is as simple as:
 
 ```Rust
 let balances = wallet.get_balances().await.unwrap();
