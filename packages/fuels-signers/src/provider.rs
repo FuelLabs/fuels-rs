@@ -174,11 +174,9 @@ impl Provider {
             .balances(&*address.to_string(), pagination)
             .await?
             .results;
-        let balances = balances_vec
+       let balances = balances_vec
             .iter()
             .map(|b| (b.asset_id.to_string(), b.amount.clone().try_into().unwrap()))
-            .collect::<Vec<(String, u64)>>()
-            .into_iter()
             .collect();
         Ok(balances)
     }
