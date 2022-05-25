@@ -4,28 +4,24 @@ mod tests {
 
     #[tokio::test]
     async fn wallet_transfer() -> Result<(), Box<dyn std::error::Error>> {
-        // Setup test wallets with 1 coin each
-        let (pk_1, mut coins_1) = setup_address_and_coins(1, 1);
-        let (pk_2, coins_2) = setup_address_and_coins(1, 1);
-        coins_1.extend(coins_2);
-
-        // Setup a provider and node with both set of coins
-        let (provider, _) = setup_test_provider(coins_1).await;
-
-        // Create the actual wallets/signers
-        let wallet_1 = LocalWallet::new_from_private_key(pk_1, provider.clone());
-        let wallet_2 = LocalWallet::new_from_private_key(pk_2, provider);
+        // Setup 2 test wallets with 1 coin each
+        let wallets = launch_provider_and_get_wallets(WalletsConfig {
+            num_wallets: 2,
+            coins_per_wallet: 1,
+            coin_amount: 1,
+        })
+        .await;
 
         // Transfer 1 from wallet 1 to wallet 2
         let asset_id = Default::default();
-        let _receipts = wallet_1
-            .transfer(&wallet_2.address(), 1, asset_id, TxParameters::default())
+        let _receipts = wallets[0]
+            .transfer(&wallets[1].address(), 1, asset_id, TxParameters::default())
             .await
             .unwrap();
 
-        let wallet_2_final_coins = wallet_2.get_coins().await.unwrap();
+        let wallet_2_final_coins = wallets[1].get_coins().await.unwrap();
 
-        // Check that wallet two now has two coins
+        // Check that wallet 2 now has 2 coins
         assert_eq!(wallet_2_final_coins.len(), 2);
         Ok(())
     }
