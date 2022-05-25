@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use fuels_rs::prelude::*;
+    use fuels::prelude::*;
 
     #[tokio::test]
     async fn wallet_transfer() -> Result<(), Box<dyn std::error::Error>> {
@@ -13,13 +13,13 @@ mod tests {
         let (provider, _) = setup_test_provider(coins_1).await;
 
         // Create the actual wallets/signers
-        let wallet_1 = LocalWallet::new_from_private_key(pk_1, provider.clone()).unwrap();
-        let wallet_2 = LocalWallet::new_from_private_key(pk_2, provider).unwrap();
+        let wallet_1 = LocalWallet::new_from_private_key(pk_1, provider.clone());
+        let wallet_2 = LocalWallet::new_from_private_key(pk_2, provider);
 
         // Transfer 1 from wallet 1 to wallet 2
         let asset_id = Default::default();
         let _receipts = wallet_1
-            .transfer(&wallet_2.address(), 1, asset_id)
+            .transfer(&wallet_2.address(), 1, asset_id, TxParameters::default())
             .await
             .unwrap();
 
