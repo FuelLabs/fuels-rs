@@ -10,8 +10,10 @@ use fuel_tx::Receipt;
 use fuel_tx::{Address, AssetId, Input, Output, Transaction};
 use fuel_vm::consts::REG_ONE;
 use fuel_vm::prelude::Opcode;
+use std::collections::HashMap;
 use thiserror::Error;
 
+use crate::wallet::WalletError;
 use fuels_core::errors::Error;
 use fuels_core::parameters::TxParameters;
 
@@ -22,8 +24,15 @@ pub enum ProviderError {
     TransactionRequestError(String),
     #[error(transparent)]
     ClientRequestError(#[from] io::Error),
+    #[error("Wallet error: {0}")]
+    WalletError(String),
 }
 
+impl From<WalletError> for ProviderError {
+    fn from(e: WalletError) -> Self {
+        ProviderError::WalletError(e.to_string())
+    }
+}
 /// Encapsulates common client operations in the SDK.
 /// Note that you may also use `client`, which is an instance
 /// of `FuelClient`, directly, which providers a broader API.
@@ -130,6 +139,47 @@ impl Provider {
             witnesses: vec![],
             metadata: None,
         }
+    }
+    // TODO: add unit tests for the balance API. This is tracked in #321.
+
+    /// Get the balance of all spendable coins `asset_id` for address `address`. This is different
+    /// from getting coins because we are just returning a number (the sum of UTXOs amount) instead
+    /// of the UTXOs.
+    pub async fn get_asset_balance(
+        &self,
+        address: &Address,
+        asset_id: AssetId,
+    ) -> Result<u64, ProviderError> {
+        self.client
+            .balance(&*address.to_string(), Some(&*asset_id.to_string()))
+            .await
+            .map_err(Into::into)
+    }
+
+    /// Get all the spendable balances of all assets for address `address`. This is different from
+    /// getting the coins because we are only returning the numbers (the sum of UTXOs coins amount
+    /// for each asset id) and not the UTXOs coins themselves
+    pub async fn get_balances(
+        &self,
+        address: &Address,
+    ) -> Result<HashMap<String, u64>, ProviderError> {
+        // We don't paginate results because there are likely at most ~100 different assets in one
+        // wallet
+        let pagination = PaginationRequest {
+            cursor: None,
+            results: 9999,
+            direction: PageDirection::Forward,
+        };
+        let balances_vec = self
+            .client
+            .balances(&*address.to_string(), pagination)
+            .await?
+            .results;
+        let balances = balances_vec
+            .iter()
+            .map(|b| (b.asset_id.to_string(), b.amount.clone().try_into().unwrap()))
+            .collect();
+        Ok(balances)
     }
 
     /// Get transaction by id.

@@ -1545,3 +1545,21 @@ async fn unit_type_enums() {
         .unwrap();
     assert_eq!(result.value, BimBamBoum::Boum());
 }
+
+#[tokio::test]
+// This does not currently test for multiple assets, this is tracked in #321.
+async fn test_wallet_balance_api() {
+    let mut wallet = LocalWallet::new_random(None);
+    let coins = setup_coins(wallet.address(), 21, 11);
+    let (provider, _) = setup_test_provider(coins.clone(), Config::local_node()).await;
+    wallet.set_provider(provider);
+    for (_utxo_id, coin) in coins {
+        let balance = wallet.get_asset_balance(&coin.asset_id).await;
+        assert_eq!(balance.unwrap(), 231);
+    }
+    let balances = wallet.get_balances().await.unwrap();
+    let expected_key = "0x".to_owned() + NATIVE_ASSET_ID.to_string().as_str();
+    assert_eq!(balances.len(), 1);
+    assert!(balances.contains_key(&expected_key));
+    assert_eq!(*balances.get(&expected_key).unwrap(), 231)
+}

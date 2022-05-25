@@ -118,6 +118,23 @@ let password = "my_master_password";
 let uuid = wallet.encrypt(&dir, password).unwrap();
 ```
 
+## Checking balances and coins
+
+First, one should keep in mind that, with UTXOs, each _coin_ is unique. Each UTXO corresponds to a unique _coin_, and said _coin_ has a corresponding _amount_ (the same way a dollar bill has either 10$ or 5$ face value). So, when you want to query the balance for a given asset ID, you want to query the sum of the amount in each unspent coin. This is done very easily with a wallet:
+
+```Rust
+let asset_id : AssetId = NATIVE_ASSET_ID
+let balance : u64 = wallet.get_asset_balance(&asset_id).await;
+```
+
+If you want to query all the balances (i.e. get the balance for each asset IDs in that wallet), then it is as simple as:
+
+```Rust
+let balances = wallet.get_balances().await.unwrap();
+```
+
+The return type is a `HashMap`, where the key is the _asset ID_ and the value is the corresponding balance.
+
 ## Security
 
 Keep in mind that you should never share your private/secret key. And in the case of wallets that were derived from a mnemonic phrase, never share your mnemonic phrase.
