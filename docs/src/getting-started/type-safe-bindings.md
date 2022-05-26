@@ -1,4 +1,4 @@
-### Generating type-safe Rust bindings
+# Generating Type-safe Rust Bindings
 
 The SDK lets you transform ABI methods of a contract call, specified as JSON objects (which you can get from [Forc](https://github.com/FuelLabs/sway/tree/master/forc)) into Rust structs and methods that are type-checked at compile time.
 
@@ -43,7 +43,7 @@ For instance, a contract with two methods: `initialize_counter(arg: u64) -> u64`
 
 Can become this (shortened for brevity's sake):
 
-```Rust
+```rust
 // Note that is all GENERATED code. No need to write any of that. Ever.
 pub struct MyContract {
     contract_id: FuelContractId,
@@ -89,7 +89,7 @@ impl MyContract {
 
 And, then, you're able to use to call the actual methods on the deployed contract:
 
-```Rust
+```rust
 //...
 let contract_instance = MyContract::new(contract_id.to_string(), provider, wallet);
 
@@ -116,7 +116,7 @@ assert_eq!(52, result.unwrap());
 
 To generate these bindings, all you have to do is:
 
-```Rust
+```rust
 use fuels_abigen_macro::abigen;
 
 abigen!(
@@ -132,7 +132,7 @@ And this `abigen!` macro will _expand_ the code with the type-safe Rust bindings
 
 The same as the example above but passing the ABI definition directly:
 
-```Rust
+```rust
 use fuels_abigen_macro::abigen;
 
 abigen!(
@@ -175,4 +175,3 @@ abigen!(
     "#
 );
 ```
-
