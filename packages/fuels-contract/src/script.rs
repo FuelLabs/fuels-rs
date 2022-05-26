@@ -1,6 +1,8 @@
 use anyhow::Result;
-use fuel_gql_client::client::{types::TransactionStatus, FuelClient};
-use fuel_tx::{Receipt, Transaction};
+use fuel_gql_client::{
+    client::{types::TransactionStatus, FuelClient},
+    fuel_tx::{Receipt, Transaction},
+};
 use fuels_core::errors::Error;
 
 /// Script is a very thin layer on top of fuel-client with some
