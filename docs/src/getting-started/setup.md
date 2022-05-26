@@ -33,7 +33,7 @@ _Note that we're using `0.13`, which is the latest version at the time of this w
 
 And then, in your Rust file that's going to make use of the SDK:
 
-```Rust
+```rust
 use fuels::prelude::*;
 use fuels_abigen_macro::abigen;
 ```
