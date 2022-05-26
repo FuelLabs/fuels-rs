@@ -85,6 +85,51 @@ jobs:
           command: test
           args: --workspace --all-features --verbose
 
+  cargo-unused-deps-check:
+    needs: cancel-previous-runs
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          # `cargo-udeps` requires nightly to run
+          toolchain: nightly
+          default: true
+
+      - uses: Swatinem/rust-cache@v1
+
+      - name: Install Forc
+        uses: actions-rs/cargo@v1
+        with:
+          command: install
+          args: --debug --path ./forc
+
+      - name: Install Forc fmt
+        uses: actions-rs/cargo@v1
+        with:
+          command: install
+          args: --debug --path ./forc-plugins/forc-fmt
+
+      - name: Build Sway examples
+        uses: actions-rs/cargo@v1
+        with:
+          command: run
+          args: --locked --bin examples-checker build --all-examples
+
+      - name: Install cargo-udeps
+        uses: actions-rs/cargo@v1
+        with:
+          command: install
+          args: --locked cargo-udeps
+
+      - name: Check Unused Deps
+        uses: actions-rs/cargo@v1
+        with:
+          command: udeps
+          args: --locked --all-targets
+
   publish:
     # Only do this job if publishing a release
     needs: build
