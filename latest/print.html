@@ -207,8 +207,7 @@ development.</p>
 <p>Now you're up and ready to develop with the Fuel Rust SDK!</p>
 <h2 id="importing-the-fuel-rust-sdk"><a class="header" href="#importing-the-fuel-rust-sdk">Importing the Fuel Rust SDK</a></h2>
 <p>all you need is to declare these three dependencies on your <code>Cargo.toml</code>:</p>
-<pre><code class="language-toml">fuel-tx = &quot;0.10&quot;
-fuels-abigen-macro = &quot;0.13&quot;
+<pre><code class="language-toml">fuels-abigen-macro = &quot;0.13&quot;
 fuels = &quot;0.13&quot;
 </code></pre>
 <p><em>Note that we're using <code>0.13</code>, which is the latest version at the time of this writing.</em></p>
@@ -277,7 +276,7 @@ let contract_id = Contract::deploy(
 let contract = MyContract::new(contract_id.to_string(), wallet.clone());
 </code></pre>
 <p>Alternatively, if you want multiple instances of the same contract then use <code>deploy_with_salt</code></p>
-<pre><code class="language-Rust">use fuel_tx::Salt;
+<pre><code class="language-Rust">use fuels::tx::Salt;
 use fuels::prelude::*;
 use fuels_abigen_macro::abigen;
 
