@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Fuel Abi CLI - The Fuel Rust SDK</title>
+        <title>fuels-abi-cli - The Fuel Rust SDK</title>
         
         
 
@@ -95,7 +95,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded affix "><a href="../index.html">The Fuel Rust SDK</a></li><li class="chapter-item expanded "><a href="../getting-started/index.html"><strong aria-hidden="true">1.</strong> Getting Started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../getting-started/setup.html"><strong aria-hidden="true">1.1.</strong> Setting up</a></li><li class="chapter-item expanded "><a href="../getting-started/basics.html"><strong aria-hidden="true">1.2.</strong> Basic usage</a></li><li class="chapter-item expanded "><a href="../getting-started/wallets.html"><strong aria-hidden="true">1.3.</strong> Wallets</a></li><li class="chapter-item expanded "><a href="../getting-started/type-safe-bindings.html"><strong aria-hidden="true">1.4.</strong> Generating type-safe Rust bindings</a></li></ol></li><li class="chapter-item expanded "><a href="../workspaces/index.html"><strong aria-hidden="true">2.</strong> Rust workspaces</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../workspaces/fuels-abigen-macro.html"><strong aria-hidden="true">2.1.</strong> Fuel Abigen macro</a></li><li class="chapter-item expanded "><a href="../workspaces/fuels-abi-cli.html" class="active"><strong aria-hidden="true">2.2.</strong> Fuel Abi CLI</a></li></ol></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="../index.html">The Fuel Rust SDK</a></li><li class="chapter-item expanded "><a href="../getting-started/index.html"><strong aria-hidden="true">1.</strong> Getting Started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../getting-started/setup.html"><strong aria-hidden="true">1.1.</strong> Setting up</a></li><li class="chapter-item expanded "><a href="../getting-started/basics.html"><strong aria-hidden="true">1.2.</strong> Basic usage</a></li><li class="chapter-item expanded "><a href="../getting-started/wallets.html"><strong aria-hidden="true">1.3.</strong> Wallets</a></li><li class="chapter-item expanded "><a href="../getting-started/type-safe-bindings.html"><strong aria-hidden="true">1.4.</strong> Generating type-safe Rust bindings</a></li></ol></li><li class="chapter-item expanded "><a href="../workspaces/index.html"><strong aria-hidden="true">2.</strong> fuels-rs Rust Workspaces</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../workspaces/fuels-abigen-macro.html"><strong aria-hidden="true">2.1.</strong> fuels-abigen-macro</a></li><li class="chapter-item expanded "><a href="../workspaces/fuels-abi-cli.html" class="active"><strong aria-hidden="true">2.2.</strong> fuels-abi-cli</a></li></ol></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -167,7 +167,7 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="sway-abi-cli"><a class="header" href="#sway-abi-cli">Sway ABI CLI</a></h1>
+                        <h1 id="fuels-abi-cli"><a class="header" href="#fuels-abi-cli"><code>fuels-abi-cli</code></a></h1>
 <p>Simple CLI program to encode Sway function calls and decode their output. The ABI being encoded and decoded is specified <a href="https://github.com/FuelLabs/fuel-specs/blob/master/specs/protocol/abi.md">here</a>.</p>
 <h2 id="usage"><a class="header" href="#usage">Usage</a></h2>
 <pre><code class="language-plaintext">sway-abi-cli 0.1.0
@@ -189,13 +189,11 @@ SUBCOMMANDS:
 <h2 id="examples"><a class="header" href="#examples">Examples</a></h2>
 <p>You can choose to encode only the given params or you can go a step further and have a full JSON ABI file and encode the whole input to a certain function call defined in the JSON file.</p>
 <h3 id="encoding-params-only"><a class="header" href="#encoding-params-only">Encoding params only</a></h3>
-<pre><code class="language-plaintext">cargo run -- encode params -v bool true
+<pre><code class="language-console">$ cargo run -- encode params -v bool true
+0000000000000001
 </code></pre>
-<pre><code class="language-plaintext">0000000000000001
-</code></pre>
-<pre><code class="language-plaintext">cargo run -- encode params -v bool true -v u32 42 -v u32 100
-</code></pre>
-<pre><code class="language-plaintext">0000000000000001000000000000002a0000000000000064
+<pre><code class="language-console">$ cargo run -- encode params -v bool true -v u32 42 -v u32 100
+0000000000000001000000000000002a0000000000000064
 </code></pre>
 <p>Note that for every param you want to encode, you must pass a <code>-v</code> flag followed by the type, and then the value: <code>-v &lt;type_1&gt; &lt;value_1&gt; -v &lt;type_2&gt; &lt;value_2&gt; -v &lt;type_n&gt; &lt;value_n&gt;</code></p>
 <h3 id="encoding-function-call"><a class="header" href="#encoding-function-call">Encoding function call</a></h3>
@@ -219,9 +217,8 @@ SUBCOMMANDS:
   }
 ]
 </code></pre>
-<pre><code class="language-plaintext">cargo run -- encode function examples/simple.json takes_u32_returns_bool -p 4
-</code></pre>
-<pre><code class="language-plaintext">000000006355e6ee0000000000000004
+<pre><code class="language-console">$ cargo run -- encode function examples/simple.json takes_u32_returns_bool -p 4
+000000006355e6ee0000000000000004
 </code></pre>
 <p><code>example/array.json</code></p>
 <pre><code class="language-json">[
@@ -243,9 +240,8 @@ SUBCOMMANDS:
   }
 ]
 </code></pre>
-<pre><code class="language-plaintext">cargo run -- encode function examples/array.json takes_array -p '[1,2]'
-</code></pre>
-<pre><code class="language-plaintext">00000000f0b8786400000000000000010000000000000002
+<pre><code class="language-console">$ cargo run -- encode function examples/array.json takes_array -p '[1,2]'
+00000000f0b8786400000000000000010000000000000002
 </code></pre>
 <p>Note that the first word (8 bytes) of the output is reserved for the function selector, which is captured in the last 4 bytes, which is simply the 256hash of the function signature.</p>
 <p>Example with nested struct:</p>
@@ -285,22 +281,19 @@ SUBCOMMANDS:
   }
 ]
 </code></pre>
-<pre><code class="language-plaintext">cargo run -- encode function examples/nested_struct.json takes_nested_struct -p '(10, (true, [1,2]))'
-</code></pre>
-<pre><code>00000000e8a04d9c000000000000000a000000000000000100000000000000010000000000000002
+<pre><code class="language-console">$ cargo run -- encode function examples/nested_struct.json takes_nested_struct -p '(10, (true, [1,2]))'
+00000000e8a04d9c000000000000000a000000000000000100000000000000010000000000000002
 </code></pre>
 <h3 id="decoding-params-only"><a class="header" href="#decoding-params-only">Decoding params only</a></h3>
 <p>Similar to encoding parameters only:</p>
-<pre><code class="language-plaintext">cargo run -- decode params -t bool -t u32 -t u32 0000000000000001000000000000002a0000000000000064
-</code></pre>
-<pre><code class="language-plaintext">Bool(true)
+<pre><code class="language-console">$ cargo run -- decode params -t bool -t u32 -t u32 0000000000000001000000000000002a0000000000000064
+Bool(true)
 U32(42)
 U32(100)
 </code></pre>
 <h3 id="decoding-function-output"><a class="header" href="#decoding-function-output">Decoding function output</a></h3>
-<pre><code class="language-plaintext">cargo run -- decode function examples/simple.json takes_u32_returns_bool 0000000000000001
-</code></pre>
-<pre><code class="language-plaintext">Bool(true)
+<pre><code class="language-console">$ cargo run -- decode function examples/simple.json takes_u32_returns_bool 0000000000000001
+Bool(true)
 </code></pre>
 
                     </main>
