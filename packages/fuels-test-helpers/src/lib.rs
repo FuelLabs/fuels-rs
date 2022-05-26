@@ -11,10 +11,12 @@ use fuel_tx::{Address, Bytes32, UtxoId};
 use rand::Fill;
 use std::net::SocketAddr;
 
+mod script;
 #[cfg(feature = "fuels-signers")]
 mod signers;
 mod wallets_config;
 
+pub use script::*;
 #[cfg(feature = "fuels-signers")]
 pub use signers::*;
 pub use wallets_config::*;
