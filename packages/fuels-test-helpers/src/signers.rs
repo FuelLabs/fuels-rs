@@ -2,11 +2,9 @@ use crate::{
     setup_coins, setup_test_client, wallets_config::WalletsConfig, DEFAULT_COIN_AMOUNT,
     DEFAULT_NUM_COINS,
 };
-use fuel_core::model::Coin;
-use fuel_core::service::Config;
-use fuel_tx::UtxoId;
-use fuels_signers::provider::Provider;
-use fuels_signers::{LocalWallet, Signer};
+use fuel_core::{model::Coin, service::Config};
+use fuel_gql_client::fuel_tx::UtxoId;
+use fuels_signers::{provider::Provider, LocalWallet, Signer};
 use std::net::SocketAddr;
 
 #[cfg(feature = "fuels-signers")]

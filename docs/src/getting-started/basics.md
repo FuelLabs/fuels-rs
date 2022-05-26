@@ -73,7 +73,7 @@ let contract = MyContract::new(contract_id.to_string(), wallet.clone());
 Alternatively, if you want multiple instances of the same contract then use `deploy_with_salt`
 
 ```Rust
-use fuel_tx::Salt;
+use fuels::tx::Salt;
 use fuels::prelude::*;
 use fuels_abigen_macro::abigen;
 
