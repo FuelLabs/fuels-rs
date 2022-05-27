@@ -6,17 +6,13 @@ use coins_bip39::{English, Mnemonic, MnemonicError};
 use elliptic_curve::rand_core;
 use eth_keystore::KeystoreError;
 use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
-use fuel_gql_client::client::schema::coin::Coin;
-use fuel_gql_client::client::types::TransactionResponse;
-use fuel_gql_client::client::{PaginatedResult, PaginationRequest};
-use fuel_tx::{Address, AssetId, Input, Output, Receipt, Transaction, UtxoId, Witness};
-use fuels_core::errors::Error;
-use fuels_core::parameters::TxParameters;
+use fuel_gql_client::{
+    client::{schema::coin::Coin, types::TransactionResponse, PaginatedResult, PaginationRequest},
+    fuel_tx::{Address, AssetId, Input, Output, Receipt, Transaction, UtxoId, Witness},
+};
+use fuels_core::{errors::Error, parameters::TxParameters};
 use rand::{CryptoRng, Rng};
-use std::collections::HashMap;
-use std::path::Path;
-use std::str::FromStr;
-use std::{fmt, io};
+use std::{collections::HashMap, fmt, io, path::Path, str::FromStr};
 use thiserror::Error;
 
 const DEFAULT_DERIVATION_PATH_PREFIX: &str = "m/44'/60'/0'/0/";
@@ -237,7 +233,7 @@ impl Wallet {
     /// # Examples
     /// ```
     /// use fuels::prelude::*;
-    /// use fuel_tx::{Bytes32, AssetId, Input, Output, UtxoId};
+    /// use fuels::tx::{Bytes32, AssetId, Input, Output, UtxoId};
     /// use std::str::FromStr;
     /// use fuels_test_helpers::Config;
     ///
@@ -315,15 +311,13 @@ impl Wallet {
         let spendable = self.get_spendable_coins(&asset_id, amount).await?;
         let mut inputs = vec![];
         for coin in spendable {
-            let input_coin = Input::coin(
+            let input_coin = Input::coin_signed(
                 UtxoId::from(coin.utxo_id),
                 coin.owner.into(),
                 coin.amount.0,
                 asset_id,
                 witness_index,
                 0,
-                vec![],
-                vec![],
             );
             inputs.push(input_coin);
         }

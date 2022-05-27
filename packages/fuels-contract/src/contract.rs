@@ -1,27 +1,22 @@
-use crate::abi_decoder::ABIDecoder;
-use crate::abi_encoder::ABIEncoder;
-use crate::script::Script;
+use crate::{abi_decoder::ABIDecoder, abi_encoder::ABIEncoder, script::Script};
 use anyhow::Result;
-use fuel_asm::Opcode;
-use fuel_gql_client::client::FuelClient;
-use fuel_tx::{
-    Address, AssetId, ContractId, Input, Output, Receipt, StorageSlot, Transaction, UtxoId,
+use fuel_gql_client::{
+    client::FuelClient,
+    fuel_tx::{Contract as FuelContract, Input, Output, Receipt, StorageSlot, Transaction, UtxoId},
+    fuel_types::{Address, AssetId, Bytes32, ContractId, Salt, Word},
+    fuel_vm::{
+        consts::{REG_CGAS, REG_ONE},
+        prelude::Opcode,
+        script_with_data_offset,
+    },
 };
-use fuel_types::{Bytes32, Salt, Word};
-use fuel_vm::consts::{REG_CGAS, REG_ONE};
-use fuel_vm::prelude::Contract as FuelContract;
-use fuel_vm::script_with_data_offset;
-use fuels_core::errors::Error;
-use fuels_core::ReturnLocation;
 use fuels_core::{
-    constants::DEFAULT_SPENDABLE_COIN_AMOUNT,
-    constants::WORD_SIZE,
+    constants::{DEFAULT_SPENDABLE_COIN_AMOUNT, NATIVE_ASSET_ID, WORD_SIZE},
+    errors::Error,
     parameters::{CallParameters, TxParameters},
-    Detokenize, Selector, Token,
+    Detokenize, ParamType, ReturnLocation, Selector, Token,
 };
-use fuels_core::{constants::NATIVE_ASSET_ID, ParamType};
-use fuels_signers::provider::Provider;
-use fuels_signers::{LocalWallet, Signer};
+use fuels_signers::{provider::Provider, LocalWallet, Signer};
 use std::marker::PhantomData;
 
 use tracing::debug;
@@ -50,6 +45,7 @@ pub struct CallResponse<D> {
     pub receipts: Vec<Receipt>,
     pub logs: Option<Vec<String>>,
 }
+
 impl<D> CallResponse<D> {
     pub fn new(value: D, receipts: Vec<Receipt>) -> Self {
         // Get all the logs from LogData receipts and put them in the `logs` property
@@ -98,6 +94,7 @@ impl Contract {
         call_parameters: &CallParameters,
         compute_calldata_offset: bool,
     ) -> Result<(Vec<u8>, Vec<u8>), Error> {
+        use fuel_gql_client::fuel_types;
         // Script to call the contract.
         // We use the Opcode to call a contract: `CALL` pointing at the
         // following registers;
@@ -244,15 +241,13 @@ impl Contract {
         }
 
         for coin in spendables {
-            let input_coin = Input::coin(
+            let input_coin = Input::coin_signed(
                 UtxoId::from(coin.utxo_id),
                 coin.owner.into(),
                 coin.amount.0,
                 coin.asset_id.into(),
                 0,
                 0,
-                vec![],
-                vec![],
             );
 
             inputs.push(input_coin);

@@ -3,13 +3,15 @@ use std::net::SocketAddr;
 
 #[cfg(feature = "fuel-core")]
 use fuel_core::service::{Config, FuelService};
-use fuel_gql_client::client::schema::coin::Coin;
-use fuel_gql_client::client::types::TransactionResponse;
-use fuel_gql_client::client::{FuelClient, PageDirection, PaginatedResult, PaginationRequest};
-use fuel_tx::Receipt;
-use fuel_tx::{Address, AssetId, Input, Output, Transaction};
-use fuel_vm::consts::REG_ONE;
-use fuel_vm::prelude::Opcode;
+use fuel_gql_client::{
+    client::{
+        schema::coin::Coin, types::TransactionResponse, FuelClient, PageDirection, PaginatedResult,
+        PaginationRequest,
+    },
+    fuel_tx::{Input, Output, Receipt, Transaction},
+    fuel_types::{Address, AssetId},
+    fuel_vm::{consts::REG_ONE, prelude::Opcode},
+};
 use std::collections::HashMap;
 use thiserror::Error;
 

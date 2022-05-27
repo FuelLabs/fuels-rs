@@ -1,4 +1,4 @@
-# Sway ABI CLI
+# `fuels-abi-cli`
 
 Simple CLI program to encode Sway function calls and decode their output. The ABI being encoded and decoded is specified [here](https://github.com/FuelLabs/fuel-specs/blob/master/specs/protocol/abi.md).
 
@@ -28,19 +28,13 @@ You can choose to encode only the given params or you can go a step further and 
 
 ### Encoding params only
 
-```plaintext
-cargo run -- encode params -v bool true
-```
-
-```plaintext
+```console
+$ cargo run -- encode params -v bool true
 0000000000000001
 ```
 
-```plaintext
-cargo run -- encode params -v bool true -v u32 42 -v u32 100
-```
-
-```plaintext
+```console
+$ cargo run -- encode params -v bool true -v u32 42 -v u32 100
 0000000000000001000000000000002a0000000000000064
 ```
 
@@ -71,11 +65,8 @@ Note that for every param you want to encode, you must pass a `-v` flag followed
 ]
 ```
 
-```plaintext
-cargo run -- encode function examples/simple.json takes_u32_returns_bool -p 4
-```
-
-```plaintext
+```console
+$ cargo run -- encode function examples/simple.json takes_u32_returns_bool -p 4
 000000006355e6ee0000000000000004
 ```
 
@@ -102,11 +93,8 @@ cargo run -- encode function examples/simple.json takes_u32_returns_bool -p 4
 ]
 ```
 
-```plaintext
-cargo run -- encode function examples/array.json takes_array -p '[1,2]'
-```
-
-```plaintext
+```console
+$ cargo run -- encode function examples/array.json takes_array -p '[1,2]'
 00000000f0b8786400000000000000010000000000000002
 ```
 
@@ -152,11 +140,8 @@ Example with nested struct:
 ]
 ```
 
-```plaintext
-cargo run -- encode function examples/nested_struct.json takes_nested_struct -p '(10, (true, [1,2]))'
-```
-
-```
+```console
+$ cargo run -- encode function examples/nested_struct.json takes_nested_struct -p '(10, (true, [1,2]))'
 00000000e8a04d9c000000000000000a000000000000000100000000000000010000000000000002
 ```
 
@@ -164,22 +149,16 @@ cargo run -- encode function examples/nested_struct.json takes_nested_struct -p 
 
 Similar to encoding parameters only:
 
-```plaintext
-cargo run -- decode params -t bool -t u32 -t u32 0000000000000001000000000000002a0000000000000064
-```
-
-```plaintext
+```console
+$ cargo run -- decode params -t bool -t u32 -t u32 0000000000000001000000000000002a0000000000000064
 Bool(true)
 U32(42)
 U32(100)
 ```
 
-### Decoding function output 
+### Decoding function output
 
-```plaintext
-cargo run -- decode function examples/simple.json takes_u32_returns_bool 0000000000000001
-```
-
-```plaintext
+```console
+$ cargo run -- decode function examples/simple.json takes_u32_returns_bool 0000000000000001
 Bool(true)
 ```

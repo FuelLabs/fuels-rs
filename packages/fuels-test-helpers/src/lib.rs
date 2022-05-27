@@ -6,8 +6,10 @@ use fuel_core::{
     model::{Coin, CoinStatus},
     service::{DbType, FuelService},
 };
-use fuel_gql_client::client::FuelClient;
-use fuel_tx::{Address, Bytes32, UtxoId};
+use fuel_gql_client::{
+    client::FuelClient,
+    fuel_tx::{Address, Bytes32, UtxoId},
+};
 use rand::Fill;
 use std::net::SocketAddr;
 
