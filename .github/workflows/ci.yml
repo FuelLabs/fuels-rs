@@ -13,7 +13,7 @@ env:
   DASEL_VERSION: https://github.com/TomWright/dasel/releases/download/v1.24.3/dasel_linux_amd64
 
 jobs:
-  build:
+  cancel-previous-runs:
     runs-on: ubuntu-latest
 
     steps:
@@ -22,6 +22,11 @@ jobs:
         with:
           access_token: ${{ github.token }}
 
+  build:
+    needs: cancel-previous-runs
+    runs-on: ubuntu-latest
+
+    steps:
       - name: Checkout repository
         uses: actions/checkout@v2
 
@@ -114,7 +119,7 @@ jobs:
 
   publish:
     # Only do this job if publishing a release
-    needs: build
+    needs: [cancel-previous-runs, build]
     if: github.event_name == 'release' && github.event.action == 'published'
     runs-on: ubuntu-latest
 
