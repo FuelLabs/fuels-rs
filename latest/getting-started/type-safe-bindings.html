@@ -206,10 +206,7 @@
 ]
 </code></pre>
 <p>Can become this (shortened for brevity's sake):</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>// Note that is all GENERATED code. No need to write any of that. Ever.
+<pre><code class="language-rust ignore">// Note that is all GENERATED code. No need to write any of that. Ever.
 pub struct MyContract {
     contract_id: FuelContractId,
     provider: Provider,
@@ -250,13 +247,9 @@ impl MyContract {
             .expect(&quot;method not found (this should never happen)&quot;)
     }
 }
-<span class="boring">}
-</span></code></pre></pre>
+</code></pre>
 <p>And, then, you're able to use to call the actual methods on the deployed contract:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>//...
+<pre><code class="language-rust ignore">//...
 let contract_instance = MyContract::new(contract_id.to_string(), provider, wallet);
 
 let result = contract_instance
@@ -278,30 +271,22 @@ let result = contract_instance
 .unwrap();
 
 assert_eq!(52, result.unwrap());
-<span class="boring">}
-</span></code></pre></pre>
+</code></pre>
 <p>To generate these bindings, all you have to do is:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use fuels_abigen_macro::abigen;
+<pre><code class="language-rust ignore">use fuels_abigen_macro::abigen;
 
 abigen!(
     MyContractName,
     &quot;path/to/json/abi.json&quot;
 );
-<span class="boring">}
-</span></code></pre></pre>
+</code></pre>
 <p>And this <code>abigen!</code> macro will <em>expand</em> the code with the type-safe Rust bindings. It takes 2 arguments:</p>
 <ol>
 <li>The name of the struct that will be generated (<code>MyContractName</code>);</li>
 <li>Either a path as string to the JSON ABI file or the JSON ABI as a multiline string directly.</li>
 </ol>
 <p>The same as the example above but passing the ABI definition directly:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use fuels_abigen_macro::abigen;
+<pre><code class="language-rust ignore">use fuels_abigen_macro::abigen;
 
 abigen!(
     MyContractName,
@@ -342,8 +327,7 @@ abigen!(
     ]
     &quot;#
 );
-<span class="boring">}
-</span></code></pre></pre>
+</code></pre>
 
                     </main>
 

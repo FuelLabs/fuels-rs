@@ -179,17 +179,13 @@
 <h2 id="instantiating-a-fuel-client"><a class="header" href="#instantiating-a-fuel-client">Instantiating a Fuel client</a></h2>
 <p>You can instantiate a Fuel client, pointing to a local Fuel node by
 using <a href="https://github.com/FuelLabs/fuel-core">Fuel Core</a>:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use fuel_core::service::{Config, FuelService};
+<pre><code class="language-rust ignore">use fuel_core::service::{Config, FuelService};
 use fuel_gql_client::client::FuelClient;
 
 let server = FuelService::new_node(Config::local_node()).await.unwrap();
 
 let client = FuelClient::from(srv.bound_address);
-<span class="boring">}
-</span></code></pre></pre>
+</code></pre>
 <p>Alternatively, if you have a Fuel node running separately, you can pass in the <code>SocketAddr</code> to <code>FuelClient::from()</code>.</p>
 <h2 id="deploying-a-sway-contract"><a class="header" href="#deploying-a-sway-contract">Deploying a Sway contract</a></h2>
 <p>There are two intended ways to deploy a contract</p>
@@ -198,10 +194,7 @@ let client = FuelClient::from(srv.bound_address);
 <li><code>deploy_with_salt</code></li>
 </ul>
 <p>If you are only interested in a single instance of your contract then use <code>deploy</code></p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use fuels::prelude::*;
+<pre><code class="language-rust ignore">use fuels::prelude::*;
 use fuels_abigen_macro::abigen;
 
 // This will generate your contract's methods onto `MyContract`.
@@ -233,13 +226,9 @@ let contract_id = Contract::deploy(
 // Here is an instance of your contract which you can use to make calls to
 // your functions
 let contract = MyContract::new(contract_id.to_string(), wallet.clone());
-<span class="boring">}
-</span></code></pre></pre>
+</code></pre>
 <p>Alternatively, if you want multiple instances of the same contract then use <code>deploy_with_salt</code></p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use fuels::tx::Salt;
+<pre><code class="language-rust ignore">use fuels::tx::Salt;
 use fuels::prelude::*;
 use fuels_abigen_macro::abigen;
 
@@ -286,23 +275,15 @@ let contract_one = MyContract::new(contract_id_one.to_string(), wallet.clone());
 
 // Here is the second instance
 let contract_two = MyContract::new(contract_id_two.to_string(), wallet.clone());
-<span class="boring">}
-</span></code></pre></pre>
+</code></pre>
 <h2 id="setting-up-multiple-test-wallets"><a class="header" href="#setting-up-multiple-test-wallets">Setting up multiple test wallets</a></h2>
 <p>If you need multiple test wallets, they can be setup as follows:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>// This helper will launch a local node and provide 10 test wallets linked to it.
+<pre><code class="language-rust ignore">// This helper will launch a local node and provide 10 test wallets linked to it.
 // The initial balance defaults to 1 coin per wallet with an amount of 1_000_000_000
 let wallets = launch_provider_and_get_wallets(WalletsConfig::default()).await;
-<span class="boring">}
-</span></code></pre></pre>
+</code></pre>
 <p>The returned test wallets can be customized via <code>WalletsConfig</code></p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>let num_wallets = 5;
+<pre><code class="language-rust ignore">let num_wallets = 5;
 let coins_per_wallet = 3;
 let amount_per_coin = 100;
 
@@ -314,17 +295,12 @@ let config = WalletsConfig::new(
 
 // Launches a local node and provides test wallets as specified by the config
 let wallets = launch_provider_and_get_wallets(WalletsConfig::default()).await;
-<span class="boring">}
-</span></code></pre></pre>
+</code></pre>
 <h2 id="calling-and-configuring-contract-calls"><a class="header" href="#calling-and-configuring-contract-calls">Calling and configuring contract calls</a></h2>
 <p>Once you've deployed your contract, as seen in the previous section, you'll likely want to call contract methods and configure some parameters such as gas price, byte price, gas limit, and forward coins in your contract call.</p>
 <p>Start by creating an instance of your contract once you have a wallet set up:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>let contract_instance = MyContract::new(contract_id.to_string(), wallet);
-<span class="boring">}
-</span></code></pre></pre>
+<pre><code class="language-rust ignore">let contract_instance = MyContract::new(contract_id.to_string(), wallet);
+</code></pre>
 <p>Then we move to configuring contract calls.</p>
 <h3 id="txparameters"><a class="header" href="#txparameters"><code>TxParameters</code></a></h3>
 <p>Transaction parameters are:</p>
@@ -335,10 +311,7 @@ let wallets = launch_provider_and_get_wallets(WalletsConfig::default()).await;
 <li>Maturity.</li>
 </ol>
 <p>These parameters can be configured by creating an instance of <a href="https://github.com/FuelLabs/fuels-rs/blob/adf81bd451d7637ce0976363bd7784408430031a/packages/fuels-contract/src/parameters.rs#L7"><code>TxParameters</code></a> and passing it to a chain method called <code>tx_params</code>:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>// In order: gas_price, gas_limit, byte_price, and maturity
+<pre><code class="language-rust ignore">// In order: gas_price, gas_limit, byte_price, and maturity
 let my_tx_params = TxParameters::new(None, Some(1_000_000), None, None);
 
 let result = contract_instance
@@ -348,8 +321,7 @@ let result = contract_instance
         .await                   // This is an async call, `.await` for it.
         .unwrap();               // It returns a `Result&lt;CallResponse&lt;D&gt;, Error&gt;,
                                  // unwrap or handle it in any other preferable way.
-<span class="boring">}
-</span></code></pre></pre>
+</code></pre>
 <p>You can also use <code>TxParameters::default()</code> to use the <a href="https://github.com/FuelLabs/fuels-rs/blob/adf81bd451d7637ce0976363bd7784408430031a/packages/fuels-core/src/constants.rs#L4-L7">default values</a>.</p>
 <h3 id="callparameters"><a class="header" href="#callparameters"><code>CallParameters</code></a></h3>
 <p>Call parameters are:</p>
@@ -359,10 +331,7 @@ let result = contract_instance
 </ol>
 <p>This is commonly used to forward coins to a contract. These parameters can be configured by creating an instance of <a href="https://github.com/FuelLabs/fuels-rs/blob/adf81bd451d7637ce0976363bd7784408430031a/packages/fuels-contract/src/parameters.rs#L15"><code>CallParameters</code></a> and passing it to a chain method called <code>call_params</code>.</p>
 <p>For instance, suppose the following contract that makes use of Sway's <code>msg_amount()</code> to return the amount sent in that message to the contract:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>abi FuelTest {
+<pre><code class="language-rust ignore">abi FuelTest {
     fn get_msg_amount() -&gt; u64;
 }
 
@@ -371,13 +340,9 @@ impl FuelTest for Contract {
         msg_amount()
     }
 }
-<span class="boring">}
-</span></code></pre></pre>
+</code></pre>
 <p>Then, in Rust, after setting up and deploying the above contract, you can configure the amount being sent to the <code>get_msg_amount()</code> method like this:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>let tx_params = TxParameters::new(None, Some(1_000_000), None, None);
+<pre><code class="language-rust ignore">let tx_params = TxParameters::new(None, Some(1_000_000), None, None);
 
 // Forward 1_000_000 coin amount of native asset_id
 // this is a big number for checking that amount can be a u64
@@ -390,16 +355,11 @@ let response = contract_instance
     .call()                    // Perform the contract call.
     .await
     .unwrap();
-<span class="boring">}
-</span></code></pre></pre>
+</code></pre>
 <p>You can also use <code>CallParameters::default()</code> to use the default values:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>pub const DEFAULT_COIN_AMOUNT: u64 = 1_000_000;
+<pre><code class="language-rust ignore">pub const DEFAULT_COIN_AMOUNT: u64 = 1_000_000;
 pub const NATIVE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
-<span class="boring">}
-</span></code></pre></pre>
+</code></pre>
 <h3 id="callresponse-reading-returned-values"><a class="header" href="#callresponse-reading-returned-values"><code>CallResponse</code>: Reading returned values</a></h3>
 <p>You've probably noticed that you're often chaining `.call().await.unwrap(). That's because:</p>
 <ol>
@@ -408,39 +368,29 @@ pub const NATIVE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
 <li><code>.unwrap()</code> the <code>Result&lt;CallResponse, Error&gt;</code> returned by the contract call.</li>
 </ol>
 <p>Once you unwrap the <code>CallResponse</code>, you have access to this struct:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>pub struct CallResponse&lt;D&gt; {
+<pre><code class="language-rust ignore">pub struct CallResponse&lt;D&gt; {
     pub value: D,
     pub receipts: Vec&lt;Receipt&gt;,
     pub logs: Option&lt;Vec&lt;String&gt;&gt;,
 }
-<span class="boring">}
-</span></code></pre></pre>
+</code></pre>
 <p>Where <code>value</code> will hold the value returned by its respective contract method, represented by the exact type returned by the FuelVM. E.g., if your contract returns a FuelVM's <code>u64</code>, <code>value</code>'s <code>D</code> will be a <code>u64</code>. If it's a FuelVM's tuple <code>(u8,bool)</code>, then <code>D</code> will be a <code>(u8,bool)</code>. If it's a custom type, for instance, a Sway struct <code>MyStruct</code> containing 2 components, a <code>u64</code> and a <code>b256</code>, <code>D</code> will be a struct generated at compile-time, called <code>MyStruct</code> with <code>u64</code> and a <code>[u8; 32]</code> (the equivalent of <code>b256</code> in Rust-land).</p>
 <p><code>receipts</code> will hold all <a href="https://github.com/FuelLabs/fuel-specs/blob/master/specs/protocol/abi.md#receipt">receipts</a> generated by that specific contract call.</p>
 <p>And lastly, <code>logs</code> will hold all logs that happened within that specific contract call.</p>
 <p>In order to log out <code>receipts</code> values during testing you have to run <code>test</code> as follows:</p>
-<p><code>RUST_LOG=receipts cargo test --test harness `name of the test</code></p>
+<pre><code class="language-sh">RUST_LOG=receipts cargo test --test harness $NAME_OF_TEST
+</code></pre>
 <h3 id="read-only-contract-calls"><a class="header" href="#read-only-contract-calls">Read-only contract calls</a></h3>
 <p>Sometimes you want to call a contract method that doesn't change the state of the blockchain. For instance, a method that only reads a value from storage and returns it.</p>
 <p>In this case, there's no need to generate an actual blockchain transaction; you only want to quickly read a value.</p>
 <p>You can do this with the SDK by, instead of <code>.call()</code>ing the method, using <code>.simulate()</code> instead:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>let my_balance = contract_instance.return_my_balance().simulate().await.unwrap();
-<span class="boring">}
-</span></code></pre></pre>
+<pre><code class="language-rust ignore">let my_balance = contract_instance.return_my_balance().simulate().await.unwrap();
+</code></pre>
 <p>Note that if you use <code>.simulate()</code> on a method that <em>does</em> change the state of the blockchain, it won't work properly; it will just <code>dry-run</code> it.</p>
 <p>At the moment, it's up to you to know whether a contract method changes state or not, and use <code>.call()</code> or <code>.simulate()</code> accordingly.</p>
 <h3 id="variable-outputs"><a class="header" href="#variable-outputs">Variable outputs</a></h3>
 <p>In some cases, you might want to send funds to the output of a transaction. Sway has a specific method for that: <code>transfer_to_output(coins, asset_id, recipient)</code>. So, if you have a contract that does something like this:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>contract;
+<pre><code class="language-rust ignore">contract;
 
 use std::{address::Address, context::balance_of, context::msg_amount, contract_id::ContractId, token::*};
 
@@ -453,13 +403,9 @@ impl FuelTest for Contract {
         transfer_to_output(coins, asset_id, recipient);
     }
 }
-<span class="boring">}
-</span></code></pre></pre>
+</code></pre>
 <p>With the SDK, you can call <code>transfer_coins_to_output</code>, by chaining <code>append_variable_outputs(amount)</code> to your contract call. Like this:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>let address = wallet.address();
+<pre><code class="language-rust ignore">let address = wallet.address();
 
 // withdraw some tokens to wallet
 contract_instance
@@ -468,31 +414,23 @@ contract_instance
     .call()
     .await
     .unwrap();
-<span class="boring">}
-</span></code></pre></pre>
+</code></pre>
 <p><code>append_variable_outputs</code> effectively appends a given amount of <code>Output::Variable</code>s to the transaction's list of outputs. This output type indicates that the output's amount and owner may vary based on transaction execution.</p>
 <p>Note that the Sway <code>lib-std</code> function <code>mint_to_address</code> calls <code>transfer_to_output</code> under the hood, and so you need to call <code>append_variable_outputs</code> in the Rust SDK tests just like you would for <code>transfer_to_output</code>.</p>
 <h3 id="contract-calls-calling-other-contracts"><a class="header" href="#contract-calls-calling-other-contracts">Contract calls calling other contracts</a></h3>
 <p>Sometimes, you might need to call your contract, which calls other contracts. To do so, you must feed the external contract IDs that your contract depends on to the method you're calling. You do it by chaining <code>.set_contracts(&amp;[external_contract_id, ...])</code> to the method you want to call. For instance:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>let response = contract_instance
+<pre><code class="language-rust ignore">let response = contract_instance
 .my_method(...)
 .set_contracts( &amp; [another_contract_id]) // Add this to set the external contract
 .call()
 .await
 .unwrap();
-<span class="boring">}
-</span></code></pre></pre>
+</code></pre>
 <p>For a more concrete example, see the <code>test_contract_calling_contract</code> function in
 <code>fuels-abigen-macro/tests/harness.rs</code></p>
 <h2 id="connecting-to-existing-contracts"><a class="header" href="#connecting-to-existing-contracts">Connecting to existing contracts</a></h2>
 <p>If you already have a deployed contract and want to call its methods using the SDK,  but without deploying it again, all you need is the contract ID of your deployed contract. You can skip the whole deployment setup and call <code>::new(contract_id, wallet)</code> directly. For example:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>abigen!(
+<pre><code class="language-rust ignore">abigen!(
     MyContract,
     &quot;path/to/abi.json&quot;
 );
@@ -502,8 +440,7 @@ let wallet = launch_provider_and_get_single_wallet().await;
 let contract_id = &quot;0x0123...&quot; // Your contract ID as a string.
 
 let connected_contract_instance = MyContract::new(contract_id, wallet);
-<span class="boring">}
-</span></code></pre></pre>
+</code></pre>
 <h2 id="more-examples"><a class="header" href="#more-examples">More examples</a></h2>
 <p>You can find runnable examples under <code>fuels-abigen-macro/tests/harness.rs</code>.</p>
 

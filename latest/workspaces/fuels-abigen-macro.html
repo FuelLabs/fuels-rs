@@ -172,10 +172,7 @@
 <p>The specifications for the JSON ABI format and its encoding/decoding can be found <a href="https://github.com/FuelLabs/fuel-specs/blob/master/specs/protocol/abi.md#json-abi-format">here</a>.</p>
 <h2 id="usage"><a class="header" href="#usage">Usage</a></h2>
 <p>A simple example of generating type-safe bindings from a JSON ABI specified in-line:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>fn compile_bindings_from_inline_contract() {
+<pre><code class="language-rust ignore">fn compile_bindings_from_inline_contract() {
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `SimpleContract`.
     abigen!(
@@ -218,8 +215,7 @@
 
     assert_eq!(&quot;0000000003b568d4000000000000002a000000000000000a&quot;, encoded);
 }
-<span class="boring">}
-</span></code></pre></pre>
+</code></pre>
 <p>This example and many more can be found under <code>tests/harness.rs</code>. To run the whole test suite run <code>cargo test</code> inside <code>fuels-abi-gen-macro/</code>.</p>
 
                     </main>

@@ -178,27 +178,19 @@
 <p>The SDK gives you many different ways to create wallets. Let's explore these different ways.</p>
 <h2 id="creating-a-wallet"><a class="header" href="#creating-a-wallet">Creating a wallet</a></h2>
 <p>A new wallet with a randomly generated private key can be created by supplying <code>Option&lt;Provider&gt;</code>.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>// Use the test helper to setup a test provider.
+<pre><code class="language-rust ignore">// Use the test helper to setup a test provider.
 let (provider, _address) = setup_test_provider(vec![]).await;
 
 // Create the wallet.
 let wallet = LocalWallet::new_random(Some(provider));
-<span class="boring">}
-</span></code></pre></pre>
+</code></pre>
 <p>Alternatively, you can create a wallet from a predefined <code>SecretKey</code>.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>// Setup the private key
+<pre><code class="language-rust ignore">// Setup the private key
 let secret = SecretKey::from_str(&quot;your_key_string&quot;).unwrap();
 
 // Create the wallet.
 let wallet = LocalWallet::new_from_private_key(secret, Some(provider));
-<span class="boring">}
-</span></code></pre></pre>
+</code></pre>
 <blockquote>
 <p>Note: if <code>None</code> is supplied instead of a provider, any transaction related to the wallet will result
 in an error until a provider is linked with <code>set_provider()</code>. The optional parameter
@@ -209,10 +201,7 @@ enables defining owners (wallet addresses) of genesis coins before a provider is
 <p>In addition to that, we also support <a href="https://www.ledger.com/academy/crypto/what-are-hierarchical-deterministic-hd-wallets">Hierarchical Deterministic Wallets</a> and <a href="https://learnmeabitcoin.com/technical/derivation-paths">derivation paths</a>. You may recognize the string <code>&quot;m/44'/60'/0'/0/0&quot;</code> from somewhere; that's a derivation path. In simple terms, it's a way to derive many wallets from a single root wallet.</p>
 <p>The SDK gives you two wallet from mnemonic instantiation methods: one that takes a derivation path (<code>Wallet::new_from_mnemonic_phrase_with_path</code>) and one that uses the default derivation path, in case you don't want or don't need to configure that (<code>Wallet::new_from_mnemonic_phrase</code>).</p>
 <p>Here's how you can create wallets with both mnemonic phrases and derivation paths:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>let phrase = &quot;oblige salon price punch saddle immune slogan rare snap desert retire surprise&quot;;
+<pre><code class="language-rust ignore">let phrase = &quot;oblige salon price punch saddle immune slogan rare snap desert retire surprise&quot;;
 
 // Use the test helper to setup a test provider.
 let (provider, _address) = setup_test_provider(vec![]).await;
@@ -228,15 +217,11 @@ let wallet = Wallet::new_from_mnemonic_phrase(phrase, Some(provider)).unwrap();
 let expected_address = &quot;df9d0e6c6c5f5da6e82e5e1a77974af6642bdb450a10c43f0c6910a212600185&quot;;
 
 assert_eq!(wallet.address().to_string(), expected_address);
-<span class="boring">}
-</span></code></pre></pre>
+</code></pre>
 <h2 id="creating-a-wallet-and-storing-an-encrypted-json-wallet-to-disk"><a class="header" href="#creating-a-wallet-and-storing-an-encrypted-json-wallet-to-disk">Creating a wallet and storing an encrypted JSON wallet to disk</a></h2>
 <p>You can also manage a wallet using <a href="https://cryptobook.nakov.com/symmetric-key-ciphers/ethereum-wallet-encryption">JSON wallets</a> -- wallets that are securely encrypted and stored on disk. This makes it easier to manage multiple wallets, especially for testing purposes.</p>
 <p>You can create a random wallet and, at the same time, encrypto and store it:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>let dir = tempdir().unwrap();
+<pre><code class="language-rust ignore">let dir = tempdir().unwrap();
 let mut rng = rand::thread_rng();
 
 // Use the test helper to setup a test provider.
@@ -247,27 +232,19 @@ let password = &quot;my_master_password&quot;;
 // Create a wallet to be stored in the keystore.
 let (wallet, uuid) =
     Wallet::new_from_keystore(&amp;dir, &amp;mut rng, password, Some(provider.clone())).unwrap();
-<span class="boring">}
-</span></code></pre></pre>
+</code></pre>
 <p>Then, later, you can recover the wallet if you know the master password:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>// Use the test helper to setup a test provider.
+<pre><code class="language-rust ignore">// Use the test helper to setup a test provider.
 let (provider, _address) = setup_test_provider(vec![]).await;
 
 let path = Path::new(dir.path()).join(uuid);
 let password = &quot;my_master_password&quot;;
 
 let recovered_wallet = Wallet::load_keystore(&amp;path, password, Some(provider)).unwrap();
-<span class="boring">}
-</span></code></pre></pre>
+</code></pre>
 <h2 id="encrypting-and-storing-a-wallet-created-from-mnemonic-or-private-key"><a class="header" href="#encrypting-and-storing-a-wallet-created-from-mnemonic-or-private-key">Encrypting and storing a wallet created from mnemonic or private key</a></h2>
 <p>If you had already created a wallet using a mnemonic phrase or a private key, you can also encrypt it and save it to disk:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>let dir = tempdir().unwrap();
+<pre><code class="language-rust ignore">let dir = tempdir().unwrap();
 
 let phrase =
     &quot;oblige salon price punch saddle immune slogan rare snap desert retire surprise&quot;;
@@ -282,24 +259,15 @@ let password = &quot;my_master_password&quot;;
 
 // Encrypts and stores it on disk. Can be recovered using `Wallet::load_keystore`.
 let uuid = wallet.encrypt(&amp;dir, password).unwrap();
-<span class="boring">}
-</span></code></pre></pre>
+</code></pre>
 <h2 id="checking-balances-and-coins"><a class="header" href="#checking-balances-and-coins">Checking balances and coins</a></h2>
 <p>First, one should keep in mind that, with UTXOs, each <em>coin</em> is unique. Each UTXO corresponds to a unique <em>coin</em>, and said <em>coin</em> has a corresponding <em>amount</em> (the same way a dollar bill has either 10$ or 5$ face value). So, when you want to query the balance for a given asset ID, you want to query the sum of the amount in each unspent coin. This is done very easily with a wallet:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>let asset_id : AssetId = NATIVE_ASSET_ID
+<pre><code class="language-rust ignore">let asset_id : AssetId = NATIVE_ASSET_ID
 let balance : u64 = wallet.get_asset_balance(&amp;asset_id).await;
-<span class="boring">}
-</span></code></pre></pre>
+</code></pre>
 <p>If you want to query all the balances (i.e. get the balance for each asset IDs in that wallet), then it is as simple as:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>let balances = wallet.get_balances().await.unwrap();
-<span class="boring">}
-</span></code></pre></pre>
+<pre><code class="language-rust ignore">let balances = wallet.get_balances().await.unwrap();
+</code></pre>
 <p>The return type is a <code>HashMap</code>, where the key is the <em>asset ID</em> and the value is the corresponding balance.</p>
 <h2 id="security"><a class="header" href="#security">Security</a></h2>
 <p>Keep in mind that you should never share your private/secret key. And in the case of wallets that were derived from a mnemonic phrase, never share your mnemonic phrase.</p>
