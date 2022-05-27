@@ -139,20 +139,20 @@ jobs:
         run: rustup component add clippy
 
       - name: Download sway example artifacts
-        if: ${{ matrix.command == 'test' }}
+        if: ${{ matrix.command == 'test' || matrix.command == 'clippy' }}
         uses: actions/download-artifact@v3
         with:
           name: sway-examples
           path: packages/fuels-abigen-macro/tests/test_projects/
 
-      - name: Cargo (workspace) ${{ matrix.command }} ${{ matrix.args }}
+      - name: Cargo (workspace-level)
         if: ${{ !matrix.package }}
         uses: actions-rs/cargo@v1
         with:
           command: ${{ matrix.command }}
           args: ${{ matrix.args }}
 
-      - name: Cargo (package) ${{ matrix.command }} ${{ matrix.args }} -p ${{ matrix.package }}
+      - name: Cargo (package-level)
         if: ${{ matrix.package }}
         uses: actions-rs/cargo@v1
         with:
