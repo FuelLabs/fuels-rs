@@ -129,6 +129,20 @@ jobs:
         with:
           key: "${{ matrix.command }} ${{ matrix.args }} ${{ matrix.package }}"
 
+      - name: Install rustfmt
+        if: ${{ matrix.command == 'fmt' }}
+        run: rustup component add rustfmt
+
+      - name: Install clippy
+        if: ${{ matrix.command == 'clippy' }}
+        run: rustup component add clippy
+
+      - name: Download sway example artifacts
+        if: ${{ matrix.command == 'test' }}
+        uses: actions/download-artifact@v3
+        with:
+          name: sway-examples
+
       - name: Cargo (workspace) ${{ matrix.command }} ${{ matrix.args }}
         if: ${{ !matrix.package }}
         uses: actions-rs/cargo@v1
