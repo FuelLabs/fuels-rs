@@ -16,7 +16,7 @@ coins-bip39 = "0.6.0"
 elliptic-curve = { version = "0.11.6", default-features = false }
 eth-keystore = { version = "0.3.0" }
 fuel-core = { version = "0.8", default-features = false, optional = true }
-fuel-crypto = "0.5"
+fuel-crypto = { version = "0.5", features = ["random"] }
 fuel-gql-client = { version = "0.8", default-features = false }
 fuels-core = { version = "0.14.0", path = "../fuels-core" }
 hex = { version = "0.4.3", default-features = false, features = ["std"] }
