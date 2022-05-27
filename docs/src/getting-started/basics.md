@@ -355,4 +355,4 @@ let connected_contract_instance = MyContract::new(contract_id, wallet);
 
 ## More examples
 
-You can find runnable examples under `fuels-abigen-macro/tests/harness.rs`.
+You can find runnable examples under [`fuels-abigen-macro/tests/harness.rs`](https://github.com/FuelLabs/fuels-rs/blob/master/packages/fuels-abigen-macro/tests/harness.rs).
