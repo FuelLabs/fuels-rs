@@ -1,5 +1,5 @@
 use fuel_core::service::Config;
-use fuel_gql_client::fuel_tx::{AssetId, ContractId, Receipt, Salt};
+use fuel_gql_client::fuel_tx::{AssetId, ContractId, Receipt};
 use fuels::prelude::{
     launch_provider_and_get_single_wallet, setup_coins, setup_test_provider, CallParameters,
     Contract, Error, LocalWallet, Provider, Signer, TxParameters, DEFAULT_COIN_AMOUNT,
@@ -7,8 +7,6 @@ use fuels::prelude::{
 };
 use fuels_abigen_macro::abigen;
 use fuels_core::{constants::NATIVE_ASSET_ID, Token};
-use rand::prelude::StdRng;
-use rand::{Rng, SeedableRng};
 use sha2::{Digest, Sha256};
 
 /// Note: all the tests and examples below require pre-compiled Sway projects.
