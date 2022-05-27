@@ -126,6 +126,7 @@ jobs:
         # selecting a toolchain either by action or manual `rustup` calls should happen
         # before the cache plugin, as it uses the current rustc version as its cache key
       - uses: Swatinem/rust-cache@v1
+        continue-on-error: true
         with:
           key: "${{ matrix.command }} ${{ matrix.args }} ${{ matrix.package }}"
 
@@ -142,6 +143,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: sway-examples
+          path: packages/fuels-abigen-macro/tests/test_projects/
 
       - name: Cargo (workspace) ${{ matrix.command }} ${{ matrix.args }}
         if: ${{ !matrix.package }}
