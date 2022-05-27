@@ -170,27 +170,19 @@
                         <h1 id="setup-instructions-for-the-fuel-sdk"><a class="header" href="#setup-instructions-for-the-fuel-sdk">Setup instructions for the Fuel SDK</a></h1>
 <h2 id="what-you-will-need-on-your-machine"><a class="header" href="#what-you-will-need-on-your-machine">What you will need on your machine</a></h2>
 <ul>
-<li>Rust 2021 (<a href="https://doc.rust-lang.org/cargo/getting-started/installation.html">see here</a>)</li>
-<li>A clone of the <code>fuels-rs</code> repository:</li>
+<li>The latest <code>stable</code> Rust toolchain: <a href="https://fuellabs.github.io/sway/latest/introduction/installation.html#dependencies">https://fuellabs.github.io/sway/latest/introduction/installation.html#dependencies</a></li>
+<li><code>forc</code> and <code>fuel-core</code> binaries: <a href="https://fuellabs.github.io/sway/latest/introduction/installation.html">https://fuellabs.github.io/sway/latest/introduction/installation.html</a></li>
 </ul>
-<pre><code class="language-sh">git clone https://github.com/FuelLabs/fuels-rs
-</code></pre>
-<ul>
-<li>Install the following <code>cargo</code> crates:</li>
-</ul>
-<pre><code class="language-sh">cargo install forc fuel-core
-</code></pre>
-<ul>
-<li><code>forc</code> is the crate that holds the Sway language and Fuel's equivalent of <code>cargo</code></li>
-<li><code>fuel-core</code> is the crate that contains the Fuel node software and execution</li>
-</ul>
+<p><code>forc</code> is Sway equivalent of Rust's <code>cargo</code>. <code>fuel-core</code> is a Fuel full node implementation.</p>
 <p>Now you're up and ready to develop with the Fuel Rust SDK!</p>
 <h2 id="importing-the-fuel-rust-sdk"><a class="header" href="#importing-the-fuel-rust-sdk">Importing the Fuel Rust SDK</a></h2>
-<p>all you need is to declare these three dependencies on your <code>Cargo.toml</code>:</p>
+<p>Add these dependencies on your <code>Cargo.toml</code>:</p>
 <pre><code class="language-toml">fuels-abigen-macro = &quot;0.14&quot;
 fuels = &quot;0.14&quot;
 </code></pre>
-<p><em>Note that we're using <code>0.14</code>, which is the latest version at the time of this writing.</em></p>
+<blockquote>
+<p><strong>Note</strong> We're using version <code>0.14</code> of the SDK, which is the latest version at the time of this writing.</p>
+</blockquote>
 <p>And then, in your Rust file that's going to make use of the SDK:</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
