@@ -100,24 +100,6 @@ jobs:
 
       - uses: Swatinem/rust-cache@v1
 
-      - name: Install Forc
-        uses: actions-rs/cargo@v1
-        with:
-          command: install
-          args: --debug --path ./forc
-
-      - name: Install Forc fmt
-        uses: actions-rs/cargo@v1
-        with:
-          command: install
-          args: --debug --path ./forc-plugins/forc-fmt
-
-      - name: Build Sway examples
-        uses: actions-rs/cargo@v1
-        with:
-          command: run
-          args: --locked --bin examples-checker build --all-examples
-
       - name: Install cargo-udeps
         uses: actions-rs/cargo@v1
         with:
