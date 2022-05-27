@@ -22,7 +22,7 @@ fuels = "0.14"
 
 And then, in your Rust file that's going to make use of the SDK:
 
-```rust
+```rust,ignore
 use fuels::prelude::*;
 use fuels_abigen_macro::abigen;
 ```

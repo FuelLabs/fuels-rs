@@ -8,7 +8,7 @@ The specifications for the JSON ABI format and its encoding/decoding can be foun
 
 A simple example of generating type-safe bindings from a JSON ABI specified in-line:
 
-```rust
+```rust,ignore
 fn compile_bindings_from_inline_contract() {
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `SimpleContract`.
