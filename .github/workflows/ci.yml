@@ -49,9 +49,6 @@ jobs:
           tar -xvf forc.tar.gz
           chmod +x forc-binaries/forc
           mv forc-binaries/forc /usr/local/bin/forc
-        with:
-          command: install
-          args: forc --version ${{ env.FORC_VERSION }}
 
       - name: Build Sway Examples
         uses: actions-rs/cargo@v1
