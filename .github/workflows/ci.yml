@@ -68,7 +68,7 @@ jobs:
             !packages/fuels-abigen-macro/tests/test_projects/**/Forc.lock
             !packages/fuels-abigen-macro/tests/test_projects/**/.gitignore
 
-  get_workspace_members:
+  get-workspace-members:
     needs: cancel-previous-runs
     runs-on: ubuntu-latest
     outputs:
@@ -102,7 +102,7 @@ jobs:
     needs:
       - setup-test-projects
       - verify-rust-version
-      - get_workspace_members
+      - get-workspace-members
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -113,7 +113,7 @@ jobs:
             args: --all-targets --all-features
           - command: check
             args: --all-features
-            package: ${{fromJSON(needs.set_workspace_members.outputs.members)}}
+            package: ${{fromJSON(needs.get-workspace-members.outputs.members)}}
           - command: test
     steps:
       - name: Checkout repository
