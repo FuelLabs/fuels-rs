@@ -635,42 +635,6 @@ async fn create_nested_struct_from_decoded_tokens() {
 }
 
 #[tokio::test]
-async fn same_contract_different_ids() {
-    abigen!(
-        MyContract,
-        "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
-    );
-
-    let wallet = launch_provider_and_get_single_wallet().await;
-
-    let contract_id_1 = Contract::deploy(
-        "tests/test_projects/contract_test/out/debug/contract_test.bin",
-        &wallet,
-        TxParameters::default(),
-    )
-    .await
-    .unwrap();
-
-    println!("Contract deployed @ {:x}", contract_id_1);
-
-    let rng = &mut StdRng::seed_from_u64(2322u64);
-    let salt: [u8; 32] = rng.gen();
-
-    let contract_id_2 = Contract::deploy_with_salt(
-        "tests/test_projects/contract_test/out/debug/contract_test.bin",
-        &wallet,
-        TxParameters::default(),
-        Salt::from(salt),
-    )
-    .await
-    .unwrap();
-
-    println!("Contract deployed @ {:x}", contract_id_2);
-
-    assert_ne!(contract_id_1, contract_id_2);
-}
-
-#[tokio::test]
 async fn type_safe_output_values() {
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `SimpleContract`.
