@@ -16,5 +16,5 @@ members = [
     "tools/fuels-abi-cli",
     "scripts/build-test-projects",
     "examples/contracts",
-    "examples/wallet-transfer",
+    "examples/wallets",
 ]

@@ -1,5 +1,5 @@
 [package]
-name = "fuels-example-wallet-transfer"
+name = "fuels-example-wallets"
 publish = false
 version = "0.1.0"
 authors = ["Fuel Labs <contact@fuel.sh>"]
@@ -10,4 +10,5 @@ repository = "https://github.com/FuelLabs/fuels-rs"
 
 [dependencies]
 fuels = { version = "0.14.1", path = "../../packages/fuels" }
+rand = "0.8.5"
 tokio = { version = "1.10", features = ["full"] }
