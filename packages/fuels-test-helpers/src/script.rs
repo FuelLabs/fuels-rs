@@ -1,7 +1,6 @@
 use fuel_core::service::{Config, FuelService};
 use fuel_gql_client::client::FuelClient;
 use fuel_gql_client::fuel_tx::{Receipt, Transaction};
-use fuel_tx::consts::MAX_GAS_PER_TX;
 use fuels_contract::script::Script;
 use std::fs::read;
 
@@ -12,7 +11,7 @@ pub async fn script_runner(bin_path: &str) -> Vec<Receipt> {
 
     let tx = Transaction::Script {
         gas_price: 0,
-        gas_limit: MAX_GAS_PER_TX,
+        gas_limit: 1000000,
         maturity: 0,
         byte_price: 0,
         receipts_root: Default::default(),
