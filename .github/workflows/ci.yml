@@ -106,14 +106,14 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
+        command: [check]
+        args: [--all-features]
+        package: ${{fromJSON(needs.get-workspace-members.outputs.members)}}
         include:
           - command: fmt
             args: --all --verbose -- --check
           - command: clippy
             args: --all-targets --all-features
-          - command: check
-            args: --all-features
-            package: ${{fromJSON(needs.get-workspace-members.outputs.members)}}
           - command: test
     steps:
       - name: Checkout repository
