@@ -1,0 +1,11 @@
+[package]
+name = "fuels-example-contracts"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+fuels = { version = "0.13.0", path = "../../packages/fuels" }
+fuels-abigen-macro = { version = "0.13.0", path = "../../packages/fuels-abigen-macro" }
+tokio = { version = "1.10", features = ["full"] }
