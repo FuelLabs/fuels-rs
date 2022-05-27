@@ -1,11 +1,11 @@
 use fuel_core::service::{Config, FuelService};
 use fuel_gql_client::client::FuelClient;
-use fuel_tx::{consts::MAX_GAS_PER_TX, Transaction};
+use fuel_gql_client::fuel_tx::{Receipt, Transaction};
+use fuel_tx::consts::MAX_GAS_PER_TX;
 use fuels_contract::script::Script;
 use std::fs::read;
 
-#[cfg(feature = "fuels-signers")]
-pub async fn script_runner(bin_path: &str) -> u64 {
+pub async fn script_runner(bin_path: &str) -> Vec<Receipt> {
     let bin = read(bin_path);
     let server = FuelService::new_node(Config::local_node()).await.unwrap();
     let client = FuelClient::from(server.bound_address);
@@ -27,5 +27,5 @@ pub async fn script_runner(bin_path: &str) -> u64 {
     let script = Script::new(tx);
     let receipts = script.call(&client).await.unwrap();
 
-    receipts[0].val().unwrap()
+    receipts
 }

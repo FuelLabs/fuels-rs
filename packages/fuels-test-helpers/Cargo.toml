@@ -12,12 +12,9 @@ description = "Fuel Rust SDK test helpers."
 fuel-core = { version = "0.8", default-features = false }
 fuel-gql-client = { version = "0.8", default-features = false }
 fuels-signers = { version = "0.14.1", path = "../fuels-signers", optional = true }
-fuel-core = { version = "0.7", default-features = false }
 fuel-crypto = "0.5"
-fuel-gql-client = { version = "0.7", default-features = false }
 fuel-types = { version = "0.5", default-features = false }
-fuels-signers = { version = "0.13.0", path = "../fuels-signers", optional = true }
-fuels-contract = { version = "0.13.0", path = "../fuels-contract" }
+fuels-contract = { version = "0.14.1", path = "../fuels-contract" }
 fuel-tx = "0.10"
 rand = { version = "0.8.4", default-features = false }
 tokio = "1.15"
