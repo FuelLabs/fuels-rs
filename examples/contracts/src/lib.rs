@@ -2,7 +2,7 @@
 mod tests {
     use fuels::prelude::*;
     use fuels_abigen_macro::abigen;
-    use rand::prelude::{StdRng, Rng, SeedableRng};
+    use rand::prelude::{Rng, SeedableRng, StdRng};
 
     #[tokio::test]
     // ANCHOR: deploy_contract
@@ -31,7 +31,7 @@ mod tests {
             // This path is relative to the current crate (examples/contracts)
             "../../packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test.bin",
             &wallet,
-            TxParameters::new( 
+            TxParameters::new(
                 Some(gas_price),
                 Some(gas_limit),
                 Some(byte_price),
