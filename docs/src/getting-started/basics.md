@@ -37,13 +37,13 @@ There are two intended ways to deploy a contract
 If you are only interested in a single instance of your contract then use `deploy`
 
 ```rust,ignore
-{{#rustdoc_include ../../../examples/contracts/src/lib.rs:deploy_contract}}
+{{#include ../../../examples/contracts/src/lib.rs:deploy_contract}}
 ```
 
 Alternatively, if you want multiple instances of the same contract then use `deploy_with_salt`
 
-```rust
-{{#rustdoc_include ../../../examples/contracts/src/lib.rs:deploy_with_salt}}
+```rust,ignore
+{{#include ../../../examples/contracts/src/lib.rs:deploy_with_salt}}
 ```
 
 ## Setting up multiple test wallets
