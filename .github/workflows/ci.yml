@@ -115,7 +115,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: udeps
-          args: --locked --all-targets
+          args: --all-targets
 
   publish:
     # Only do this job if publishing a release
