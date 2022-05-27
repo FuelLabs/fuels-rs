@@ -16,7 +16,7 @@ For application building, you probably want to go with the second option.
 You can instantiate a Fuel client, pointing to a local Fuel node by
 using [Fuel Core](https://github.com/FuelLabs/fuel-core):
 
-```rust
+```rust,ignore
 use fuel_core::service::{Config, FuelService};
 use fuel_gql_client::client::FuelClient;
 
@@ -36,7 +36,7 @@ There are two intended ways to deploy a contract
 
 If you are only interested in a single instance of your contract then use `deploy`
 
-```rust,no_run
+```rust,ignore
 {{#rustdoc_include ../../../examples/contracts/src/lib.rs:deploy_contract}}
 ```
 
@@ -50,7 +50,7 @@ Alternatively, if you want multiple instances of the same contract then use `dep
 
 If you need multiple test wallets, they can be setup as follows:
 
-```rust
+```rust,ignore
 // This helper will launch a local node and provide 10 test wallets linked to it.
 // The initial balance defaults to 1 coin per wallet with an amount of 1_000_000_000
 let wallets = launch_provider_and_get_wallets(WalletsConfig::default()).await;
@@ -58,7 +58,7 @@ let wallets = launch_provider_and_get_wallets(WalletsConfig::default()).await;
 
 The returned test wallets can be customized via `WalletsConfig`
 
-```rust
+```rust,ignore
 let num_wallets = 5;
 let coins_per_wallet = 3;
 let amount_per_coin = 100;
@@ -79,7 +79,7 @@ Once you've deployed your contract, as seen in the previous section, you'll like
 
 Start by creating an instance of your contract once you have a wallet set up:
 
-```rust
+```rust,ignore
 let contract_instance = MyContract::new(contract_id.to_string(), wallet);
 ```
 
@@ -96,7 +96,7 @@ Transaction parameters are:
 
 These parameters can be configured by creating an instance of [`TxParameters`](https://github.com/FuelLabs/fuels-rs/blob/adf81bd451d7637ce0976363bd7784408430031a/packages/fuels-contract/src/parameters.rs#L7) and passing it to a chain method called `tx_params`:
 
-```rust
+```rust,ignore
 // In order: gas_price, gas_limit, byte_price, and maturity
 let my_tx_params = TxParameters::new(None, Some(1_000_000), None, None);
 
@@ -122,7 +122,7 @@ This is commonly used to forward coins to a contract. These parameters can be co
 
 For instance, suppose the following contract that makes use of Sway's `msg_amount()` to return the amount sent in that message to the contract:
 
-```rust
+```rust,ignore
 abi FuelTest {
     fn get_msg_amount() -> u64;
 }
@@ -136,7 +136,7 @@ impl FuelTest for Contract {
 
 Then, in Rust, after setting up and deploying the above contract, you can configure the amount being sent to the `get_msg_amount()` method like this:
 
-```rust
+```rust,ignore
 let tx_params = TxParameters::new(None, Some(1_000_000), None, None);
 
 // Forward 1_000_000 coin amount of native asset_id
@@ -154,7 +154,7 @@ let response = contract_instance
 
 You can also use `CallParameters::default()` to use the default values:
 
-```rust
+```rust,ignore
 pub const DEFAULT_COIN_AMOUNT: u64 = 1_000_000;
 pub const NATIVE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
 ```
@@ -169,7 +169,7 @@ You've probably noticed that you're often chaining `.call().await.unwrap(). That
 
 Once you unwrap the `CallResponse`, you have access to this struct:
 
-```rust
+```rust,ignore
 pub struct CallResponse<D> {
     pub value: D,
     pub receipts: Vec<Receipt>,
@@ -185,7 +185,9 @@ And lastly, `logs` will hold all logs that happened within that specific contrac
 
 In order to log out `receipts` values during testing you have to run `test` as follows:
 
-```RUST_LOG=receipts cargo test --test harness `name of the test```
+```sh
+RUST_LOG=receipts cargo test --test harness $NAME_OF_TEST
+```
 
 ### Read-only contract calls
 
@@ -195,7 +197,7 @@ In this case, there's no need to generate an actual blockchain transaction; you 
 
 You can do this with the SDK by, instead of `.call()`ing the method, using `.simulate()` instead:
 
-```rust
+```rust,ignore
 let my_balance = contract_instance.return_my_balance().simulate().await.unwrap();
 ```
 
@@ -207,7 +209,7 @@ At the moment, it's up to you to know whether a contract method changes state or
 
 In some cases, you might want to send funds to the output of a transaction. Sway has a specific method for that: `transfer_to_output(coins, asset_id, recipient)`. So, if you have a contract that does something like this:
 
-```rust
+```rust,ignore
 contract;
 
 use std::{address::Address, context::balance_of, context::msg_amount, contract_id::ContractId, token::*};
@@ -225,7 +227,7 @@ impl FuelTest for Contract {
 
 With the SDK, you can call `transfer_coins_to_output`, by chaining `append_variable_outputs(amount)` to your contract call. Like this:
 
-```rust
+```rust,ignore
 let address = wallet.address();
 
 // withdraw some tokens to wallet
@@ -245,7 +247,7 @@ Note that the Sway `lib-std` function `mint_to_address` calls `transfer_to_outpu
 
 Sometimes, you might need to call your contract, which calls other contracts. To do so, you must feed the external contract IDs that your contract depends on to the method you're calling. You do it by chaining `.set_contracts(&[external_contract_id, ...])` to the method you want to call. For instance:
 
-```rust
+```rust,ignore
 let response = contract_instance
 .my_method(...)
 .set_contracts( & [another_contract_id]) // Add this to set the external contract
@@ -261,7 +263,7 @@ For a more concrete example, see the `test_contract_calling_contract` function i
 
 If you already have a deployed contract and want to call its methods using the SDK,  but without deploying it again, all you need is the contract ID of your deployed contract. You can skip the whole deployment setup and call `::new(contract_id, wallet)` directly. For example:
 
-```rust
+```rust,ignore
 abigen!(
     MyContract,
     "path/to/abi.json"
@@ -276,4 +278,4 @@ let connected_contract_instance = MyContract::new(contract_id, wallet);
 
 ## More examples
 
-You can find runnable examples under `fuels-abigen-macro/tests/harness.rs`.
+You can find runnable examples under [`fuels-abigen-macro/tests/harness.rs`](https://github.com/FuelLabs/fuels-rs/blob/master/packages/fuels-abigen-macro/tests/harness.rs).
