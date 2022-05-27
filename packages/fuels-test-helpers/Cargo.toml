@@ -1,6 +1,6 @@
 [package]
 name = "fuels-test-helpers"
-version = "0.14.0"
+version = "0.14.1"
 authors = ["Fuel Labs <contact@fuel.sh>"]
 edition = "2021"
 homepage = "https://fuel.network/"
@@ -11,7 +11,7 @@ description = "Fuel Rust SDK test helpers."
 [dependencies]
 fuel-core = { version = "0.8", default-features = false }
 fuel-gql-client = { version = "0.8", default-features = false }
-fuels-signers = { version = "0.14.0", path = "../fuels-signers", optional = true }
+fuels-signers = { version = "0.14.1", path = "../fuels-signers", optional = true }
 rand = { version = "0.8.4", default-features = false }
 tokio = "1.15"
 
