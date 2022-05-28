@@ -1,9 +1,9 @@
 use fuel_core::service::Config;
 use fuel_gql_client::fuel_tx::{AssetId, ContractId, Receipt};
 use fuels::prelude::{
-    launch_provider_and_get_single_wallet, setup_coins, setup_test_provider, CallParameters,
-    Contract, Error, LocalWallet, Provider, Signer, TxParameters, DEFAULT_COIN_AMOUNT,
-    DEFAULT_NUM_COINS,
+    launch_provider_and_get_single_wallet, setup_single_asset_coins, setup_test_provider,
+    CallParameters, Contract, Error, LocalWallet, Provider, Signer, TxParameters,
+    DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
 };
 use fuels_abigen_macro::abigen;
 use fuels_core::{constants::NATIVE_ASSET_ID, Token};
@@ -937,7 +937,12 @@ async fn test_provider_launch_and_connect() {
 
     let mut wallet = LocalWallet::new_random(None);
 
-    let coins = setup_coins(wallet.address(), DEFAULT_NUM_COINS, DEFAULT_COIN_AMOUNT);
+    let coins = setup_single_asset_coins(
+        wallet.address(),
+        NATIVE_ASSET_ID,
+        DEFAULT_NUM_COINS,
+        DEFAULT_COIN_AMOUNT,
+    );
     let (launched_provider, address) = setup_test_provider(coins, Config::local_node()).await;
     let connected_provider = Provider::connect(address).await.unwrap();
 
@@ -1421,7 +1426,7 @@ async fn unit_type_enums() {
 // This does not currently test for multiple assets, this is tracked in #321.
 async fn test_wallet_balance_api() {
     let mut wallet = LocalWallet::new_random(None);
-    let coins = setup_coins(wallet.address(), 21, 11);
+    let coins = setup_single_asset_coins(wallet.address(), NATIVE_ASSET_ID, 21, 11);
     let (provider, _) = setup_test_provider(coins.clone(), Config::local_node()).await;
     wallet.set_provider(provider);
     for (_utxo_id, coin) in coins {

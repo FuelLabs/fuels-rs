@@ -10,6 +10,7 @@ use fuel_gql_client::{
     client::FuelClient,
     fuel_tx::{Address, Bytes32, UtxoId},
 };
+use fuels_signers::fuel_crypto::fuel_types::AssetId;
 use rand::Fill;
 use std::net::SocketAddr;
 
@@ -21,15 +22,23 @@ mod wallets_config;
 pub use signers::*;
 pub use wallets_config::*;
 
-pub fn setup_coins(owner: Address, num_coins: u64, amount: u64) -> Vec<(UtxoId, Coin)> {
+/// Create a vector of `num_coins` UTXOs containing `amount_per_coin` amount of asset `asset_id`.
+/// The output of this function can be used with `setup_test_client` to get a client with some
+/// pre-existing coins, but with only one asset ID.
+pub fn setup_single_asset_coins(
+    owner: Address,
+    asset_id: AssetId,
+    num_coins: u64,
+    amount_per_coin: u64,
+) -> Vec<(UtxoId, Coin)> {
     let mut rng = rand::thread_rng();
 
     let coins: Vec<(UtxoId, Coin)> = (1..=num_coins)
         .map(|_i| {
             let coin = Coin {
                 owner,
-                amount,
-                asset_id: Default::default(),
+                amount: amount_per_coin,
+                asset_id,
                 maturity: Default::default(),
                 status: CoinStatus::Unspent,
                 block_created: Default::default(),
@@ -82,4 +91,24 @@ pub async fn setup_test_client(
     let client = FuelClient::from(srv.bound_address);
 
     (client, srv.bound_address)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[tokio::test]
+    async fn test_setup_single_asset_coins() {
+        let mut rng = rand::thread_rng();
+        let mut address = Address::zeroed();
+        address.try_fill(&mut rng).unwrap();
+        let mut asset_id = AssetId::zeroed();
+        asset_id.try_fill(&mut rng).unwrap();
+        let coins = setup_single_asset_coins(address, asset_id, 11, 10);
+        assert_eq!(coins.len(), 11);
+        for (_utxo_id, coin) in coins {
+            assert_eq!(coin.asset_id, asset_id);
+            assert_eq!(coin.amount, 10);
+            assert_eq!(coin.owner, address);
+        }
+    }
 }
