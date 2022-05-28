@@ -178,18 +178,33 @@
 <p>The SDK gives you many different ways to create wallets. Let's explore these different ways.</p>
 <h2 id="creating-a-wallet"><a class="header" href="#creating-a-wallet">Creating a wallet</a></h2>
 <p>A new wallet with a randomly generated private key can be created by supplying <code>Option&lt;Provider&gt;</code>.</p>
-<pre><code class="language-rust ignore">// Use the test helper to setup a test provider.
-let (provider, _address) = setup_test_provider(vec![]).await;
+<pre><code class="language-rust ignore">async fn create_random_wallet() {
+    use fuels::prelude::*;
 
-// Create the wallet.
-let wallet = LocalWallet::new_random(Some(provider));
+    // Use the test helper to setup a test provider.
+    let (provider, _address) = setup_test_provider(vec![], Config::local_node()).await;
+
+    // Create the wallet.
+    let _wallet = LocalWallet::new_random(Some(provider));
+}
 </code></pre>
 <p>Alternatively, you can create a wallet from a predefined <code>SecretKey</code>.</p>
-<pre><code class="language-rust ignore">// Setup the private key
-let secret = SecretKey::from_str(&quot;your_key_string&quot;).unwrap();
+<pre><code class="language-rust ignore">async fn create_wallet_from_secret_key() {
+    use fuels::prelude::*;
+    use fuels::signers::fuel_crypto::SecretKey;
+    use std::str::FromStr;
 
-// Create the wallet.
-let wallet = LocalWallet::new_from_private_key(secret, Some(provider));
+    // Use the test helper to setup a test provider.
+    let (provider, _address) = setup_test_provider(vec![], Config::local_node()).await;
+
+    // Setup the private key.
+    let secret =
+        SecretKey::from_str(&quot;5f70feeff1f229e4a95e1056e8b4d80d0b24b565674860cc213bdb07127ce1b1&quot;)
+            .unwrap();
+
+    // Create the wallet.
+    let _wallet = LocalWallet::new_from_private_key(secret, Some(provider));
+}
 </code></pre>
 <blockquote>
 <p>Note: if <code>None</code> is supplied instead of a provider, any transaction related to the wallet will result
@@ -201,64 +216,73 @@ enables defining owners (wallet addresses) of genesis coins before a provider is
 <p>In addition to that, we also support <a href="https://www.ledger.com/academy/crypto/what-are-hierarchical-deterministic-hd-wallets">Hierarchical Deterministic Wallets</a> and <a href="https://learnmeabitcoin.com/technical/derivation-paths">derivation paths</a>. You may recognize the string <code>&quot;m/44'/60'/0'/0/0&quot;</code> from somewhere; that's a derivation path. In simple terms, it's a way to derive many wallets from a single root wallet.</p>
 <p>The SDK gives you two wallet from mnemonic instantiation methods: one that takes a derivation path (<code>Wallet::new_from_mnemonic_phrase_with_path</code>) and one that uses the default derivation path, in case you don't want or don't need to configure that (<code>Wallet::new_from_mnemonic_phrase</code>).</p>
 <p>Here's how you can create wallets with both mnemonic phrases and derivation paths:</p>
-<pre><code class="language-rust ignore">let phrase = &quot;oblige salon price punch saddle immune slogan rare snap desert retire surprise&quot;;
+<pre><code class="language-rust ignore">async fn create_wallet_from_mnemonic() {
+    use fuels::prelude::*;
 
-// Use the test helper to setup a test provider.
-let (provider, _address) = setup_test_provider(vec![]).await;
+    let phrase = &quot;oblige salon price punch saddle immune slogan rare snap desert retire surprise&quot;;
 
-// Create first account from mnemonic phrase.
-let wallet =
-    Wallet::new_from_mnemonic_phrase_with_path(phrase, Some(provider), &quot;m/44'/60'/0'/0/0&quot;)
-        .unwrap();
+    // Use the test helper to setup a test provider.
+    let (provider, _address) = setup_test_provider(vec![], Config::local_node()).await;
 
-// Or with the default derivation path
-let wallet = Wallet::new_from_mnemonic_phrase(phrase, Some(provider)).unwrap();
+    // Create first account from mnemonic phrase.
+    let _wallet = LocalWallet::new_from_mnemonic_phrase_with_path(
+        phrase,
+        Some(provider.clone()),
+        &quot;m/44'/60'/0'/0/0&quot;,
+    )
+    .unwrap();
 
-let expected_address = &quot;df9d0e6c6c5f5da6e82e5e1a77974af6642bdb450a10c43f0c6910a212600185&quot;;
+    // Or with the default derivation path
+    let wallet = LocalWallet::new_from_mnemonic_phrase(phrase, Some(provider)).unwrap();
 
-assert_eq!(wallet.address().to_string(), expected_address);
+    let expected_address = &quot;df9d0e6c6c5f5da6e82e5e1a77974af6642bdb450a10c43f0c6910a212600185&quot;;
+
+    assert_eq!(wallet.address().to_string(), expected_address);
+}
 </code></pre>
 <h2 id="creating-a-wallet-and-storing-an-encrypted-json-wallet-to-disk"><a class="header" href="#creating-a-wallet-and-storing-an-encrypted-json-wallet-to-disk">Creating a wallet and storing an encrypted JSON wallet to disk</a></h2>
 <p>You can also manage a wallet using <a href="https://cryptobook.nakov.com/symmetric-key-ciphers/ethereum-wallet-encryption">JSON wallets</a> -- wallets that are securely encrypted and stored on disk. This makes it easier to manage multiple wallets, especially for testing purposes.</p>
-<p>You can create a random wallet and, at the same time, encrypto and store it:</p>
-<pre><code class="language-rust ignore">let dir = tempdir().unwrap();
-let mut rng = rand::thread_rng();
+<p>You can create a random wallet and, at the same time, encrypt and store it. Then, later, you can recover the wallet if you know the master password:</p>
+<pre><code class="language-rust ignore">async fn create_and_restore_json_wallet() {
+    use fuels::prelude::*;
 
-// Use the test helper to setup a test provider.
-let (provider, _address) = setup_test_provider(vec![]).await;
+    let dir = std::env::temp_dir();
+    let mut rng = rand::thread_rng();
 
-let password = &quot;my_master_password&quot;;
+    // Use the test helper to setup a test provider.
+    let (provider, _address) = setup_test_provider(vec![], Config::local_node()).await;
 
-// Create a wallet to be stored in the keystore.
-let (wallet, uuid) =
-    Wallet::new_from_keystore(&amp;dir, &amp;mut rng, password, Some(provider.clone())).unwrap();
-</code></pre>
-<p>Then, later, you can recover the wallet if you know the master password:</p>
-<pre><code class="language-rust ignore">// Use the test helper to setup a test provider.
-let (provider, _address) = setup_test_provider(vec![]).await;
+    let password = &quot;my_master_password&quot;;
 
-let path = Path::new(dir.path()).join(uuid);
-let password = &quot;my_master_password&quot;;
+    // Create a wallet to be stored in the keystore.
+    let (_wallet, uuid) =
+        LocalWallet::new_from_keystore(&amp;dir, &amp;mut rng, password, Some(provider.clone())).unwrap();
 
-let recovered_wallet = Wallet::load_keystore(&amp;path, password, Some(provider)).unwrap();
+    let path = dir.join(uuid);
+
+    let _recovered_wallet = LocalWallet::load_keystore(&amp;path, password, Some(provider)).unwrap();
+}
 </code></pre>
 <h2 id="encrypting-and-storing-a-wallet-created-from-mnemonic-or-private-key"><a class="header" href="#encrypting-and-storing-a-wallet-created-from-mnemonic-or-private-key">Encrypting and storing a wallet created from mnemonic or private key</a></h2>
 <p>If you had already created a wallet using a mnemonic phrase or a private key, you can also encrypt it and save it to disk:</p>
-<pre><code class="language-rust ignore">let dir = tempdir().unwrap();
+<pre><code class="language-rust ignore">async fn create_and_store_mnemonic_wallet() {
+    use fuels::prelude::*;
 
-let phrase =
-    &quot;oblige salon price punch saddle immune slogan rare snap desert retire surprise&quot;;
+    let dir = std::env::temp_dir();
 
-// Use the test helper to setup a test provider.
-let (provider, _address) = setup_test_provider(vec![]).await;
+    let phrase = &quot;oblige salon price punch saddle immune slogan rare snap desert retire surprise&quot;;
 
-// Create first account from mnemonic phrase.
-let wallet = Wallet::new_from_mnemonic_phrase(phrase, Some(provider)).unwrap();
+    // Use the test helper to setup a test provider.
+    let (provider, _address) = setup_test_provider(vec![], Config::local_node()).await;
 
-let password = &quot;my_master_password&quot;;
+    // Create first account from mnemonic phrase.
+    let wallet = LocalWallet::new_from_mnemonic_phrase(phrase, Some(provider)).unwrap();
 
-// Encrypts and stores it on disk. Can be recovered using `Wallet::load_keystore`.
-let uuid = wallet.encrypt(&amp;dir, password).unwrap();
+    let password = &quot;my_master_password&quot;;
+
+    // Encrypts and stores it on disk. Can be recovered using `Wallet::load_keystore`.
+    let _uuid = wallet.encrypt(&amp;dir, password).unwrap();
+}
 </code></pre>
 <h2 id="checking-balances-and-coins"><a class="header" href="#checking-balances-and-coins">Checking balances and coins</a></h2>
 <p>First, one should keep in mind that, with UTXOs, each <em>coin</em> is unique. Each UTXO corresponds to a unique <em>coin</em>, and said <em>coin</em> has a corresponding <em>amount</em> (the same way a dollar bill has either 10$ or 5$ face value). So, when you want to query the balance for a given asset ID, you want to query the sum of the amount in each unspent coin. This is done very easily with a wallet:</p>
