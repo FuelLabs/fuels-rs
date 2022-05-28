@@ -31,18 +31,20 @@ pub use wallets_config::*;
 /// native asset to pay for gas.
 pub fn setup_multiple_assets_coins(
     owner: Address,
-    num_asset: usize,
+    num_asset: u64,
     coins_per_asset: u64,
     amount_per_coin: u64,
 ) -> (Vec<(UtxoId, Coin)>, Vec<AssetId>) {
     let mut rng = rand::thread_rng();
-    let mut coins = (1..num_asset)
+    // Create `num_asset-1` asset ids so there is `num_asset` in total with the native asset
+    let mut coins = (0..(num_asset - 1))
         .flat_map(|_| {
             let mut random_asset_id = AssetId::zeroed();
             random_asset_id.try_fill(&mut rng).unwrap();
             setup_single_asset_coins(owner, random_asset_id, coins_per_asset, amount_per_coin)
         })
         .collect::<Vec<(UtxoId, Coin)>>();
+    // Add the native asset
     coins.extend(setup_single_asset_coins(
         owner,
         NATIVE_ASSET_ID,
@@ -141,11 +143,13 @@ mod tests {
         address.try_fill(&mut rng).unwrap();
         let mut asset_id = AssetId::zeroed();
         asset_id.try_fill(&mut rng).unwrap();
-        let coins = setup_single_asset_coins(address, asset_id, 11, 10);
-        assert_eq!(coins.len(), 11);
+        let number_of_coins = 11;
+        let amount_per_coin = 10;
+        let coins = setup_single_asset_coins(address, asset_id, number_of_coins, amount_per_coin);
+        assert_eq!(coins.len() as u64, number_of_coins);
         for (_utxo_id, coin) in coins {
             assert_eq!(coin.asset_id, asset_id);
-            assert_eq!(coin.amount, 10);
+            assert_eq!(coin.amount, amount_per_coin);
             assert_eq!(coin.owner, address);
         }
     }
@@ -155,9 +159,17 @@ mod tests {
         let mut rng = rand::thread_rng();
         let mut address = Address::zeroed();
         address.try_fill(&mut rng).unwrap();
-        let (coins, unique_asset_ids) = setup_multiple_assets_coins(address, 7, 10, 13);
-        assert_eq!(coins.len(), 70);
-        assert_eq!(unique_asset_ids.len(), 7);
+        let number_of_assets = 7;
+        let coins_per_asset = 10;
+        let amount_per_coin = 13;
+        let (coins, unique_asset_ids) = setup_multiple_assets_coins(
+            address,
+            number_of_assets,
+            coins_per_asset,
+            amount_per_coin,
+        );
+        assert_eq!(coins.len() as u64, number_of_assets * coins_per_asset);
+        assert_eq!(unique_asset_ids.len() as u64, number_of_assets);
         // Check that the wallet has native assets to pay for gas
         assert!(unique_asset_ids
             .iter()
@@ -168,10 +180,10 @@ mod tests {
                 .into_iter()
                 .filter(|(_, c)| c.asset_id == asset_id)
                 .collect();
-            assert_eq!(coins_asset_id.len(), 10);
+            assert_eq!(coins_asset_id.len() as u64, coins_per_asset);
             for (_utxo_id, coin) in coins_asset_id {
                 assert_eq!(coin.owner, address);
-                assert_eq!(coin.amount, 13);
+                assert_eq!(coin.amount, amount_per_coin);
             }
         }
     }
