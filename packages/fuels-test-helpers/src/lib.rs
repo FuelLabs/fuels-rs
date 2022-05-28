@@ -133,6 +133,7 @@ pub async fn setup_test_client(
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[tokio::test]
     async fn test_setup_single_asset_coins() {
         let mut rng = rand::thread_rng();
@@ -146,6 +147,32 @@ mod tests {
             assert_eq!(coin.asset_id, asset_id);
             assert_eq!(coin.amount, 10);
             assert_eq!(coin.owner, address);
+        }
+    }
+
+    #[tokio::test]
+    async fn test_setup_multiple_assets_coins() {
+        let mut rng = rand::thread_rng();
+        let mut address = Address::zeroed();
+        address.try_fill(&mut rng).unwrap();
+        let (coins, unique_asset_ids) = setup_multiple_assets_coins(address, 7, 10, 13);
+        assert_eq!(coins.len(), 70);
+        assert_eq!(unique_asset_ids.len(), 7);
+        // Check that the wallet has native assets to pay for gas
+        assert!(unique_asset_ids
+            .iter()
+            .any(|&asset_id| asset_id == NATIVE_ASSET_ID));
+        for asset_id in unique_asset_ids {
+            let coins_asset_id: Vec<(UtxoId, Coin)> = coins
+                .clone()
+                .into_iter()
+                .filter(|(_, c)| c.asset_id == asset_id)
+                .collect();
+            assert_eq!(coins_asset_id.len(), 10);
+            for (_utxo_id, coin) in coins_asset_id {
+                assert_eq!(coin.owner, address);
+                assert_eq!(coin.amount, 13);
+            }
         }
     }
 }
