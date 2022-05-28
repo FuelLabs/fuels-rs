@@ -284,8 +284,8 @@ If the contract call succeeded, getting the receipts and logs is done this way:
 
 ```rust,ignore
 let response = contract_instance.my_method(args).call().await?;
-logs : Vec<String> = response.logs // This gives out the decoded hex LOGD logs
-receipts : Vec<Receipt> =  response.receipts // This gives out all the receipts of the transaction
+let logs: Vec<String> = response.logs // This gives out the decoded hex LOGD logs
+let receipts: Vec<Receipt> =  response.receipts // This gives out all the receipts of the transaction
 ```
 
 > Note that for this to work, because of the `?`, it means the call has to have succeded.
