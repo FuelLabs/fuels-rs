@@ -299,7 +299,7 @@ match response {
 }
 ```
 
-> **Note** Is is generally considered good practice, when you expect the call to succeed, to unwrap the response with `?`, this way:
+> **Note:** It is generally considered good practice when you expect the call to succeed, to unwrap the response with `?`, this way:
 > ```rust, ignore
 > let response = contract_instance.my_method(args).call().await?;
 > ```
