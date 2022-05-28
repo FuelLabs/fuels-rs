@@ -303,7 +303,7 @@ if let ContractCallError(reason, receipts) = contract_call_error {
     // Do things with `reason` and `receipts`
 }
 ```
-> It is generally not considered good practice to use `unwrap_err`.
+> **Note**: It is generally not considered good practice to use `unwrap_err`.
 
 ## More examples
 
