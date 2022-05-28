@@ -1,9 +1,9 @@
 use fuel_core::service::Config;
 use fuel_gql_client::fuel_tx::{AssetId, ContractId, Receipt};
 use fuels::prelude::{
-    launch_provider_and_get_single_wallet, setup_single_asset_coins, setup_test_provider,
-    CallParameters, Contract, Error, LocalWallet, Provider, Signer, TxParameters,
-    DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
+    launch_provider_and_get_single_wallet, setup_multiple_assets_coins, setup_single_asset_coins,
+    setup_test_provider, CallParameters, Contract, Error, LocalWallet, Provider, Signer,
+    TxParameters, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
 };
 use fuels_abigen_macro::abigen;
 use fuels_core::{constants::NATIVE_ASSET_ID, Token};
@@ -1423,8 +1423,8 @@ async fn unit_type_enums() {
 }
 
 #[tokio::test]
-// This does not currently test for multiple assets, this is tracked in #321.
 async fn test_wallet_balance_api() {
+    // Single asset
     let mut wallet = LocalWallet::new_random(None);
     let coins = setup_single_asset_coins(wallet.address(), NATIVE_ASSET_ID, 21, 11);
     let (provider, _) = setup_test_provider(coins.clone(), Config::local_node()).await;
@@ -1437,5 +1437,21 @@ async fn test_wallet_balance_api() {
     let expected_key = "0x".to_owned() + NATIVE_ASSET_ID.to_string().as_str();
     assert_eq!(balances.len(), 1);
     assert!(balances.contains_key(&expected_key));
-    assert_eq!(*balances.get(&expected_key).unwrap(), 231)
+    assert_eq!(*balances.get(&expected_key).unwrap(), 231);
+
+    // Multiple assets
+    let (coins, asset_ids) = setup_multiple_assets_coins(wallet.address(), 7, 21, 11);
+    assert_eq!(coins.len(), 147);
+    assert_eq!(asset_ids.len(), 7);
+    let (provider, _) = setup_test_provider(coins.clone(), Config::local_node()).await;
+    wallet.set_provider(provider);
+    let balances = wallet.get_balances().await.unwrap();
+    assert_eq!(balances.len(), 7);
+    for asset_id in asset_ids {
+        let balance = wallet.get_asset_balance(&asset_id).await;
+        assert_eq!(balance.unwrap(), 231);
+        let expected_key = "0x".to_owned() + asset_id.to_string().as_str();
+        assert!(balances.contains_key(&expected_key));
+        assert_eq!(*balances.get(&expected_key).unwrap(), 231);
+    }
 }
