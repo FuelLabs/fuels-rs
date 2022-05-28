@@ -288,7 +288,7 @@ let logs: Vec<String> = response.logs // This gives out the decoded hex LOGD log
 let receipts: Vec<Receipt> =  response.receipts // This gives out all the receipts of the transaction
 ```
 
-> Note that for this to work, because of the `?`, it means the call has to have succeded.
+> **Note**: For this to work, because of the `?`, it means the call has to have succeded.
 
 ### `ContractCallError`
 
