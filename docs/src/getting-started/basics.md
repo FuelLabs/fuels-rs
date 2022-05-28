@@ -294,17 +294,6 @@ let receipts: Vec<Receipt> =  response.receipts // This gives out all the receip
 
 - If the contract call creates an error, the reason and the receipts of the transaction will be displayed in the Rust `panic`.
 
-- If you want to use the receipts in the case of a `ContractCallError`, you can do:
-
-```rust,ignore
-let contract_call_error = contract_instance.my_error_method(args).call().unwrap_err();
-
-if let ContractCallError(reason, receipts) = contract_call_error {
-    // Do things with `reason` and `receipts`
-}
-```
-> **Note**: It is generally not considered good practice to use `unwrap_err`.
-
 ## More examples
 
 You can find runnable examples under [`fuels-abigen-macro/tests/harness.rs`](https://github.com/FuelLabs/fuels-rs/blob/master/packages/fuels-abigen-macro/tests/harness.rs).
