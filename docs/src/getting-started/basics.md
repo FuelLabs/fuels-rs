@@ -37,90 +37,13 @@ There are two intended ways to deploy a contract
 If you are only interested in a single instance of your contract then use `deploy`
 
 ```rust,ignore
-use fuels::prelude::*;
-use fuels_abigen_macro::abigen;
-
-// This will generate your contract's methods onto `MyContract`.
-// This means an instance of `MyContract` will have access to all
-// your contract's methods that are running on-chain!
-abigen!(
-    MyContract,
-    "your_project/out/debug/contract_test-abi.json",
-);
-
-// This helper will launch a local node and provide a test wallet linked to it
-let wallet = launch_provider_and_get_single_wallet().await;
-
-// Optional: Configure deployment parameters or use `TxParameters::default()`
-let gas_price = 0;
-let gas_limit = 1_000_000;
-let byte_price = 0;
-
-// This will deploy your contract binary onto the chain so that its ID can
-// be used to initialize the instance
-let contract_id = Contract::deploy(
-    "your_project/out/debug/contract_test.bin",
-    &wallet,
-    TxParameters::default(gas_price, gas_limit, byte_price),
-)
-.await
-.unwrap();
-
-// Here is an instance of your contract which you can use to make calls to
-// your functions
-let contract = MyContract::new(contract_id.to_string(), wallet.clone());
+{{#include ../../../examples/contracts/src/lib.rs:deploy_contract}}
 ```
 
 Alternatively, if you want multiple instances of the same contract then use `deploy_with_salt`
 
 ```rust,ignore
-use fuels::tx::Salt;
-use fuels::prelude::*;
-use fuels_abigen_macro::abigen;
-
-// This will generate your contract's methods onto `MyContract`.
-// This means an instance of `MyContract` will have access to all
-// your contract's methods that are running on-chain!
-abigen!(
-    MyContract,
-    "your_project/out/debug/contract_test-abi.json",
-);
-
-// This helper will launch a local node and provide a test wallet linked to it
-let wallet = launch_provider_and_get_single_wallet().await;
-
-// Optional: Configure deployment parameters or use `TxParameters::default()`
-let gas_price = 0;
-let gas_limit = 1_000_000;
-let byte_price = 0;
-
-// This will deploy your contract binary onto the chain so that its ID can
-// be used to initialize the instance
-let contract_id_one = Contract::deploy_with_salt(
-    "your_project/out/debug/contract_test.bin",
-    &wallet,
-    TxParameters::default(gas_price, gas_limit, byte_price),
-    Salt::from([1u8; 32]),
-)
-.await
-.unwrap();
-
-// Here is the same contract deployment but under a new ID
-let contract_id_two = Contract::deploy_with_salt(
-    "your_project/out/debug/contract_test.bin",
-    &wallet,
-    TxParameters::default(gas_price, gas_limit, byte_price),
-    Salt::from([2u8; 32]),
-)
-.await
-.unwrap();
-
-// Here is an instance of your contract which you can use to make calls to
-// your functions
-let contract_one = MyContract::new(contract_id_one.to_string(), wallet.clone());
-
-// Here is the second instance
-let contract_two = MyContract::new(contract_id_two.to_string(), wallet.clone());
+{{#include ../../../examples/contracts/src/lib.rs:deploy_with_salt}}
 ```
 
 ## Setting up multiple test wallets
