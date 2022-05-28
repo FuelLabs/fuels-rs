@@ -10,8 +10,10 @@ use fuel_gql_client::{
     client::FuelClient,
     fuel_tx::{Address, Bytes32, UtxoId},
 };
+use fuels_core::constants::NATIVE_ASSET_ID;
 use fuels_signers::fuel_crypto::fuel_types::AssetId;
 use rand::Fill;
+use std::collections::HashSet;
 use std::net::SocketAddr;
 
 #[cfg(feature = "fuels-signers")]
@@ -21,6 +23,41 @@ mod wallets_config;
 #[cfg(feature = "fuels-signers")]
 pub use signers::*;
 pub use wallets_config::*;
+
+/// Create a vector of `num_asset`*`coins_per_asset` UTXOs and a vector of the unique corresponding
+/// asset IDs. `AssetId`. Each UTXO (=coin) contains `amount_per_coin` amount of a random asset. The
+/// output of this function can be used with `setup_test_client` to get a client with some
+/// pre-existing coins, with `num_asset` different asset ids. Note that one of the assets is the
+/// native asset to pay for gas.
+pub fn setup_multiple_assets_coins(
+    owner: Address,
+    num_asset: usize,
+    coins_per_asset: u64,
+    amount_per_coin: u64,
+) -> (Vec<(UtxoId, Coin)>, Vec<AssetId>) {
+    let mut rng = rand::thread_rng();
+    let mut coins = (1..num_asset)
+        .flat_map(|_| {
+            let mut random_asset_id = AssetId::zeroed();
+            random_asset_id.try_fill(&mut rng).unwrap();
+            setup_single_asset_coins(owner, random_asset_id, coins_per_asset, amount_per_coin)
+        })
+        .collect::<Vec<(UtxoId, Coin)>>();
+    coins.extend(setup_single_asset_coins(
+        owner,
+        NATIVE_ASSET_ID,
+        coins_per_asset,
+        amount_per_coin,
+    ));
+    let asset_ids = coins
+        .clone()
+        .into_iter()
+        .map(|(_utxo_id, coin)| coin.asset_id)
+        .collect::<HashSet<_>>()
+        .into_iter()
+        .collect::<Vec<AssetId>>();
+    (coins, asset_ids)
+}
 
 /// Create a vector of `num_coins` UTXOs containing `amount_per_coin` amount of asset `asset_id`.
 /// The output of this function can be used with `setup_test_client` to get a client with some
