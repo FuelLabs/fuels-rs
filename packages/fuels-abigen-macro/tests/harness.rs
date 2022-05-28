@@ -802,7 +802,7 @@ async fn test_reverting_transaction() {
     let contract_instance = RevertingContract::new(contract_id.to_string(), wallet);
     println!("Contract deployed @ {:x}", contract_id);
     let result = contract_instance.make_transaction_fail(0).call().await;
-    assert!(matches!(result, Err(Error::ContractCallError(_))));
+    assert!(matches!(result, Err(Error::ContractCallError(..))));
 }
 
 #[tokio::test]
@@ -1065,7 +1065,9 @@ async fn test_gas_errors() {
         .await
         .expect_err("should error");
 
-    assert_eq!("Contract call error: Response errors; unexpected block execution error InsufficientFeeAmount { provided: 1000000000, required: 100000000000 }", result.to_string());
+    let expected = "Contract call error: Response errors; unexpected block execution error \
+    InsufficientFeeAmount { provided: 1000000000, required: 100000000000 }, receipts:";
+    assert!(result.to_string().starts_with(expected));
 
     // Test for running out of gas. Gas price as `None` will be 0.
     // Gas limit will be 100, this call will use more than 100 gas.
@@ -1076,7 +1078,8 @@ async fn test_gas_errors() {
         .await
         .expect_err("should error");
 
-    assert_eq!("Contract call error: OutOfGas", result.to_string());
+    let expected = "Contract call error: OutOfGas, receipts:";
+    assert!(result.to_string().starts_with(expected));
 }
 
 #[tokio::test]
@@ -1371,21 +1374,21 @@ async fn test_logd_receipts() {
         .call()
         .await
         .unwrap();
-    assert_eq!(result.logs.unwrap(), vec!["ffeedd", "ffeedd000000"]);
+    assert_eq!(result.logs, vec!["ffeedd", "ffeedd000000"]);
     let result = contract_instance
         .use_logd_opcode(value, 14, 15)
         .call()
         .await
         .unwrap();
     assert_eq!(
-        result.logs.unwrap(),
+        result.logs,
         vec![
             "ffeedd000000000000000000aabb",
             "ffeedd000000000000000000aabbcc"
         ]
     );
     let result = contract_instance.dont_use_logd().call().await.unwrap();
-    assert_eq!(result.logs, None);
+    assert!(result.logs.is_empty());
 }
 
 #[tokio::test]

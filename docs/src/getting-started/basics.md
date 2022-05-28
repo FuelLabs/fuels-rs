@@ -276,6 +276,34 @@ let contract_id = "0x0123..." // Your contract ID as a string.
 let connected_contract_instance = MyContract::new(contract_id, wallet);
 ```
 
+## Getting the contract call outputs
+
+- Getting the contract call outputs is done this way:
+
+```rust,ignore
+let response = contract_instance.my_method(args).call().await;
+match response {
+   // The transaction is valid and executes to completion
+    Ok(call_response) => {
+        let logs: Vec<String> = call_response.logs;
+        let receipts: Vec<Receipt> = call_response.receipts;
+        // Do things with logs and receipts
+    }
+    
+    // - The transaction is invalid or node is offline
+    // - The transaction is valid but reverts
+    ContractCallError(reason, receipts) => {
+        println!("ContractCall failed with reason: {}", reason);
+        println!("Transaction receipts are: {:?}", receipts);
+    }
+}
+```
+
+> **Note:** It is generally considered good practice when you expect the call to succeed, to unwrap the response with `?`, this way:
+> ```rust, ignore
+> let response = contract_instance.my_method(args).call().await?;
+> ```
+
 ## More examples
 
 You can find runnable examples under [`fuels-abigen-macro/tests/harness.rs`](https://github.com/FuelLabs/fuels-rs/blob/master/packages/fuels-abigen-macro/tests/harness.rs).

@@ -1,6 +1,7 @@
 use core::fmt;
 use core::str::Utf8Error;
 pub type Result<T> = core::result::Result<T, Error>;
+use fuel_tx::Receipt;
 use std::net;
 use strum::ParseError;
 use thiserror::Error;
@@ -53,8 +54,8 @@ pub enum Error {
     TransactionError(String),
     #[error("Infrastructure error: {0}")]
     InfrastructureError(String),
-    #[error("Contract call error: {0}")]
-    ContractCallError(String),
+    #[error("Contract call error: {}, receipts: {:?}", .0, .1)]
+    ContractCallError(String, Vec<Receipt>),
     #[error("Wallet error: {0}")]
     WalletError(String),
 }
@@ -76,11 +77,11 @@ impl From<ParseError> for Error {
 
 impl From<InvalidOutputType> for Error {
     fn from(err: InvalidOutputType) -> Error {
-        Error::ContractCallError(err.0)
+        Error::ContractCallError(err.0, vec![])
     }
 }
 impl From<std::io::Error> for Error {
     fn from(err: std::io::Error) -> Error {
-        Error::ContractCallError(err.to_string())
+        Error::ContractCallError(err.to_string(), vec![])
     }
 }
