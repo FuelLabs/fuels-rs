@@ -460,6 +460,32 @@ let contract_id = &quot;0x0123...&quot; // Your contract ID as a string.
 
 let connected_contract_instance = MyContract::new(contract_id, wallet);
 </code></pre>
+<h2 id="getting-the-contract-call-outputs"><a class="header" href="#getting-the-contract-call-outputs">Getting the contract call outputs</a></h2>
+<ul>
+<li>Getting the contract call outputs is done this way:</li>
+</ul>
+<pre><code class="language-rust ignore">let response = contract_instance.my_method(args).call().await;
+match response {
+   // The transaction is valid and executes to completion
+    Ok(call_response) =&gt; {
+        let logs: Vec&lt;String&gt; = call_response.logs;
+        let receipts: Vec&lt;Receipt&gt; = call_response.receipts;
+        // Do things with logs and receipts
+    }
+    
+    // - The transaction is invalid or node is offline
+    // - The transaction is valid but reverts
+    ContractCallError(reason, receipts) =&gt; {
+        println!(&quot;ContractCall failed with reason: {}&quot;, reason);
+        println!(&quot;Transaction receipts are: {:?}&quot;, receipts);
+    }
+}
+</code></pre>
+<blockquote>
+<p><strong>Note:</strong> It is generally considered good practice when you expect the call to succeed, to unwrap the response with <code>?</code>, this way:</p>
+<pre><code class="language-rust ignore">let response = contract_instance.my_method(args).call().await?;
+</code></pre>
+</blockquote>
 <h2 id="more-examples"><a class="header" href="#more-examples">More examples</a></h2>
 <p>You can find runnable examples under <a href="https://github.com/FuelLabs/fuels-rs/blob/master/packages/fuels-abigen-macro/tests/harness.rs"><code>fuels-abigen-macro/tests/harness.rs</code></a>.</p>
 
