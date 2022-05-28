@@ -1374,21 +1374,21 @@ async fn test_logd_receipts() {
         .call()
         .await
         .unwrap();
-    assert_eq!(result.logs.unwrap(), vec!["ffeedd", "ffeedd000000"]);
+    assert_eq!(result.logs, vec!["ffeedd", "ffeedd000000"]);
     let result = contract_instance
         .use_logd_opcode(value, 14, 15)
         .call()
         .await
         .unwrap();
     assert_eq!(
-        result.logs.unwrap(),
+        result.logs,
         vec![
             "ffeedd000000000000000000aabb",
             "ffeedd000000000000000000aabbcc"
         ]
     );
     let result = contract_instance.dont_use_logd().call().await.unwrap();
-    assert_eq!(result.logs, None);
+    assert!(result.logs.is_empty());
 }
 
 #[tokio::test]

@@ -43,7 +43,7 @@ pub struct Contract {
 pub struct CallResponse<D> {
     pub value: D,
     pub receipts: Vec<Receipt>,
-    pub logs: Option<Vec<String>>,
+    pub logs: Vec<String>,
 }
 
 impl<D> CallResponse<D> {
@@ -57,10 +57,7 @@ impl<D> CallResponse<D> {
         Self {
             value,
             receipts,
-            logs: match logs_vec.is_empty() {
-                true => None,
-                false => Some(logs_vec),
-            },
+            logs: logs_vec,
         }
     }
 }
