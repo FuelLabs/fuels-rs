@@ -278,21 +278,27 @@ let connected_contract_instance = MyContract::new(contract_id, wallet);
 
 ## Getting the contract call outputs
 
-### Contract call success
-
-If the contract call succeeded, getting the receipts and logs is done this way:
+- Getting the contract call outputs is done this way:
 
 ```rust,ignore
-let response = contract_instance.my_method(args).call().await?;
-let logs: Vec<String> = response.logs // This gives out the decoded hex LOGD logs
-let receipts: Vec<Receipt> =  response.receipts // This gives out all the receipts of the transaction
+let response = contract_instance.my_method(args).call().await;
+match response {
+    Ok(call_response) => {
+        let logs: Vec<String> = call_response.logs;
+        let receipts: Vec<Receipt> = call_response.receipts;
+        // Do things with logs and receipts
+    }
+    ContractCallError(reason, receipts) => {
+        println!("ContractCall failed with reason: {}", reason);
+        println!("Transaction receipts are: {:?}", receipts);
+    }
+}
 ```
 
-> **Note**: For this to work, because of the `?`, it means the call has to have succeded.
-
-### `ContractCallError`
-
-- If the contract call creates an error, the reason and the receipts of the transaction will be displayed in the Rust `panic`.
+> **Note** Is is generally considered good practice, when you expect the call to succeed, to unwrap the response with `?`, this way:
+> ```rust, ignore
+> let response = contract_instance.my_method(args).call().await?;
+> ```
 
 ## More examples
 
