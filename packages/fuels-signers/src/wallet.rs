@@ -436,7 +436,7 @@ mod tests {
         let (wallet, uuid) = Wallet::new_from_keystore(
             &dir,
             &mut rng,
-            "password".to_string(),
+            "password",
             Some(provider.clone()),
         )
         .unwrap();
