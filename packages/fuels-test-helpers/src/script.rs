@@ -5,7 +5,6 @@ use fuels_contract::script::Script;
 use std::fs::read;
 
 /// Helper function to reduce boilerplate code in tests.
-/// Used to run a script which returns a boolean value.0
 pub async fn run_script(bin_path: &str) -> Vec<Receipt> {
     let bin = read(bin_path);
     let server = FuelService::new_node(Config::local_node()).await.unwrap();

@@ -10,3 +10,5 @@
 - [`fuels-rs` Rust Workspaces](./workspaces/index.md)
   - [`fuels-abigen-macro`](./workspaces/fuels-abigen-macro.md)
   - [`fuels-abi-cli`](./workspaces/fuels-abi-cli.md)
+- [Testing](./testing/index.md)
+
