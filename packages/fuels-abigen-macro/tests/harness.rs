@@ -1,14 +1,10 @@
 use fuel_core::service::Config;
-use fuel_gql_client::fuel_tx::{AssetId, ContractId, Receipt, Salt};
+use fuel_gql_client::fuel_tx::{AssetId, ContractId, Receipt};
 use fuels::prelude::run_script;
-use fuels::{
-    prelude::{
-        launch_provider_and_get_single_wallet, setup_test_provider,
-        launch_provider_and_get_single_wallet, launch_provider_and_get_wallets, setup_coins,
-        setup_test_provider, CallParameters, Contract, Error, LocalWallet, Provider, Signer,
-        TxParameters, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
-    },
-    test_helpers::WalletsConfig,
+use fuels::prelude::{
+    launch_provider_and_get_single_wallet, setup_coins, setup_test_provider, CallParameters,
+    Contract, Error, LocalWallet, Provider, Signer, TxParameters, DEFAULT_COIN_AMOUNT,
+    DEFAULT_NUM_COINS,
 };
 use fuels_abigen_macro::abigen;
 use fuels_core::{constants::NATIVE_ASSET_ID, Token};
