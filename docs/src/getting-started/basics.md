@@ -94,7 +94,7 @@ You can create a test wallet which contains multiple different assets (including
 ```
 
 - `coins: Vec<(UtxoId, Coin)>` has `num_assets * coins_per_assets` coins (UTXOs)
-- `asset_ids: Vec<AssetId>` contains the `num_assets` randomly generated`AssetId` (including the native asset id)
+- `asset_ids: Vec<AssetId>` contains the `num_assets` randomly generated `AssetId`s (always includes the base asset)
 
 
 ## Calling and configuring contract calls
