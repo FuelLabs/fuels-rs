@@ -75,7 +75,7 @@ let wallets = launch_provider_and_get_wallets(WalletsConfig::default()).await;
 
 ## Setting up a test wallet with multiple assets
 
-You can create a test wallet which contains multiple different assets (including the native asset to pay for gas!)
+You can create a test wallet which contains multiple different assets (including the base asset to pay for gas).
 
 ```rust,ignore
 let mut wallet = LocalWallet::new_random(None);
