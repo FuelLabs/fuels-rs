@@ -226,7 +226,7 @@ async fn compile_bindings_byte_input() {
     // `SimpleContract` is the name of the contract
     let contract_instance = SimpleContract::new(null_contract_id(), wallet);
 
-    let contract_call = contract_instance.takes_byte(10 as u8);
+    let contract_call = contract_instance.takes_byte(10u8);
 
     let encoded = format!(
         "{}{}",
@@ -501,6 +501,7 @@ async fn compile_bindings_enum_input() {
     assert_eq!(encoded, expected);
 }
 
+#[allow(clippy::blacklisted_name)]
 #[tokio::test]
 async fn create_struct_from_decoded_tokens() {
     // Generates the bindings from the an ABI definition inline.

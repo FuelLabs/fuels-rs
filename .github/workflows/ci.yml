@@ -11,53 +11,44 @@ on:
 env:
   CARGO_TERM_COLOR: always
   DASEL_VERSION: https://github.com/TomWright/dasel/releases/download/v1.24.3/dasel_linux_amd64
+  RUSTFLAGS: "-D warnings"
+  RUST_VERSION: 1.61.0
+  FORC_VERSION: 0.13.0
 
 jobs:
-  build:
+  cancel-previous-runs:
     runs-on: ubuntu-latest
-
     steps:
       - name: Cancel Previous Runs
         uses: styfle/cancel-workflow-action@0.9.1
         with:
           access_token: ${{ github.token }}
 
-      - name: Checkout repository
-        uses: actions/checkout@v2
-
+  setup-test-projects:
+    needs: cancel-previous-runs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
       - name: Install toolchain
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: 1.61.0
+          toolchain: ${{ env.RUST_VERSION }}
           override: true
-
-      # Ensure CI is using the same minimum toolchain specified in fuels Cargo.toml
-      - name: Verify Rust Version
-        run: |
-          curl -sSLf "$DASEL_VERSION" -L -o dasel && chmod +x dasel
-          mv ./dasel /usr/local/bin/dasel
-          MIN_VERSION=$(cat packages/fuels/Cargo.toml | dasel -r toml 'package.rust-version')
-          RUSTC_VERSION=$(rustc --version -v | grep "release" | cut -d " " -f 2)
-          echo "Comparing minimum supported toolchain ($MIN_VERSION) with ci toolchain ($RUSTC_VERSION)"
-          test "$MIN_VERSION" == "$RUSTC_VERSION"
-
         # selecting a toolchain either by action or manual `rustup` calls should happen
         # before the cache plugin, as it uses the current rustc version as its cache key
       - uses: Swatinem/rust-cache@v1
-
-      - name: Install rustfmt
-        run: rustup component add rustfmt
 
       - name: Set git config
         run: |
           git config --global core.bigfilethreshold 100m
 
       - name: Install Forc
-        uses: actions-rs/cargo@v1
-        with:
-          command: install
-          args: forc --version 0.13.0
+        run: |
+          curl -sSLf https://github.com/FuelLabs/sway/releases/download/v${{ env.FORC_VERSION }}/forc-binaries-linux_amd64.tar.gz -L -o forc.tar.gz
+          tar -xvf forc.tar.gz
+          chmod +x forc-binaries/forc
+          mv forc-binaries/forc /usr/local/bin/forc
 
       - name: Build Sway Examples
         uses: actions-rs/cargo@v1
@@ -65,29 +56,113 @@ jobs:
           command: run
           args: --bin build-test-projects
 
-      - name: Check formatting
-        uses: actions-rs/cargo@v1
+      - uses: actions/upload-artifact@v2
         with:
-          command: fmt
-          args: --all --verbose -- --check
+          retention-days: 2
+          name: sway-examples
+          # cache only the sway build artifacts, skip all test_project src files
+          path: |
+            packages/fuels-abigen-macro/tests/test_projects
+            !packages/fuels-abigen-macro/tests/test_projects/**/*.sw
+            !packages/fuels-abigen-macro/tests/test_projects/**/Forc.toml
+            !packages/fuels-abigen-macro/tests/test_projects/**/Forc.lock
+            !packages/fuels-abigen-macro/tests/test_projects/**/.gitignore
 
-      - name: Build
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --verbose --workspace --all-targets --all-features
-        env:
-          RUSTFLAGS: "-D warnings"
+  get-workspace-members:
+    needs: cancel-previous-runs
+    runs-on: ubuntu-latest
+    outputs:
+      members: ${{ steps.set-members.outputs.members }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - id: set-members
+        run: |
+          # install dasel
+          curl -sSLf "$DASEL_VERSION" -L -o dasel && chmod +x dasel
+          mv ./dasel /usr/local/bin/dasel
+          members=$(cat Cargo.toml | dasel -r toml -w json 'workspace.members' | jq -r ".[]" | xargs -L 1 basename | jq -R '[.]' | jq -s -c 'add')
+          echo "::set-output name=members::$members"
 
-      - name: Run tests
+  verify-rust-version:
+    needs: cancel-previous-runs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      # Ensure CI is using the same minimum toolchain specified in fuels Cargo.toml
+      - run: |
+          curl -sSLf "$DASEL_VERSION" -L -o dasel && chmod +x dasel
+          mv ./dasel /usr/local/bin/dasel
+          MIN_VERSION=$(cat packages/fuels/Cargo.toml | dasel -r toml 'package.rust-version')
+          RUST_VERSION="${{ env.RUST_VERSION }}"
+          echo "Comparing minimum supported toolchain ($MIN_VERSION) with ci toolchain (RUST_VERSION)"
+          test "$MIN_VERSION" == "$RUST_VERSION"
+
+  cargo-verifications:
+    needs:
+      - setup-test-projects
+      - verify-rust-version
+      - get-workspace-members
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        command: [check]
+        args: [--all-features]
+        package: ${{fromJSON(needs.get-workspace-members.outputs.members)}}
+        include:
+          - command: fmt
+            args: --all --verbose -- --check
+          - command: clippy
+            args: --all-targets --all-features
+          - command: test
+            args: --all-targets --all-features
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+          override: true
+        # selecting a toolchain either by action or manual `rustup` calls should happen
+        # before the cache plugin, as it uses the current rustc version as its cache key
+      - uses: Swatinem/rust-cache@v1
+        continue-on-error: true
+        with:
+          key: "${{ matrix.command }} ${{ matrix.args }} ${{ matrix.package }}"
+
+      - name: Install rustfmt
+        if: ${{ matrix.command == 'fmt' }}
+        run: rustup component add rustfmt
+
+      - name: Install clippy
+        if: ${{ matrix.command == 'clippy' }}
+        run: rustup component add clippy
+
+      - name: Download sway example artifacts
+        if: ${{ matrix.command == 'test' || matrix.command == 'clippy' }}
+        uses: actions/download-artifact@v3
+        with:
+          name: sway-examples
+          path: packages/fuels-abigen-macro/tests/test_projects/
+
+      - name: Cargo (workspace-level)
+        if: ${{ !matrix.package }}
         uses: actions-rs/cargo@v1
         with:
-          command: test
-          args: --workspace --all-features --verbose
+          command: ${{ matrix.command }}
+          args: ${{ matrix.args }}
+
+      - name: Cargo (package-level)
+        if: ${{ matrix.package }}
+        uses: actions-rs/cargo@v1
+        with:
+          command: ${{ matrix.command }}
+          args: ${{ matrix.args }}
 
   publish:
+    needs: cargo-verifications
     # Only do this job if publishing a release
-    needs: build
     if: github.event_name == 'release' && github.event.action == 'published'
     runs-on: ubuntu-latest
 
@@ -103,7 +178,8 @@ jobs:
 
       - name: Verify tag version
         run: |
-          cargo install toml-cli
+          curl -sSLf "$DASEL_VERSION" -L -o dasel && chmod +x dasel
+          mv ./dasel /usr/local/bin/dasel
           ./.github/workflows/scripts/verify_tag.sh ${{ github.ref_name }} packages/fuels-contract/Cargo.toml
           ./.github/workflows/scripts/verify_tag.sh ${{ github.ref_name }} packages/fuels-core/Cargo.toml
           ./.github/workflows/scripts/verify_tag.sh ${{ github.ref_name }} packages/fuels-abigen-macro/Cargo.toml
