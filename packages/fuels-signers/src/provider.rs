@@ -69,7 +69,8 @@ impl Provider {
         })
     }
 
-    /// Shallow wrapper on client's coins API.
+    /// Gets all coins owned by address `from`, *even spent ones*. This returns actual coins
+    /// (UTXOs).
     pub async fn get_coins(&self, from: &Address) -> Result<Vec<Coin>, ProviderError> {
         let mut coins: Vec<Coin> = vec![];
 

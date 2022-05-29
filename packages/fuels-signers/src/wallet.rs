@@ -324,8 +324,7 @@ impl Wallet {
         Ok(inputs)
     }
 
-    /// Gets coins from this wallet
-    /// Note that this is a simple wrapper on provider's `get_coins`.
+    /// Gets all coins owned by the wallet, *even spent ones*. This returns actual coins (UTXOs).
     pub async fn get_coins(&self) -> Result<Vec<Coin>, WalletError> {
         Ok(self
             .get_provider()
