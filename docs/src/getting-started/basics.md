@@ -93,7 +93,7 @@ You can create a test wallet which contains multiple different assets (including
     wallet.set_provider(provider);
 ```
 
-- `coins: Vec<(UtxoId,Coin)>` has `num_assets`*`coins_per_assets` coins (UTXOs)
+- `coins: Vec<(UtxoId, Coin)>` has `num_assets * coins_per_assets` coins (UTXOs)
 - `asset_ids: Vec<AssetId>` contains the `num_assets` randomly generated`AssetId` (including the native asset id)
 
 
