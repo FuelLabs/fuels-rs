@@ -99,6 +99,9 @@ impl Provider {
         Ok(coins)
     }
 
+    /// Get some spendable coins of asset `asset_id` for address `from` that add up at least to
+    /// amount `amount`. The returned coins (UTXOs) are actual coins that can be spent. The number
+    /// of coins (UXTOs) is minimized via an approximate solution.
     pub async fn get_spendable_coins(
         &self,
         from: &Address,
@@ -114,7 +117,6 @@ impl Provider {
                 None,
             )
             .await?;
-
         Ok(res)
     }
 
