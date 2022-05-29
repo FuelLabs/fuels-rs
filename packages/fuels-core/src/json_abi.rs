@@ -1476,7 +1476,7 @@ mod tests {
             components: Some(vec![inner_foo.clone(), inner_custom.clone()]),
         };
 
-        let params = vec![p.clone()];
+        let params = vec![p];
         let selector = abi.build_fn_selector("my_func", &params).unwrap();
 
         assert_eq!(selector, "my_func(s(bool,e(u64,u32)))");

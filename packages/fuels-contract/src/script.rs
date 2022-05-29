@@ -28,7 +28,9 @@ impl Script {
         let receipts = fuel_client.receipts(&tx_id).await?;
         let status = fuel_client.transaction_status(&tx_id).await?;
         match status {
-            TransactionStatus::Failure { reason, .. } => Err(Error::ContractCallError(reason)),
+            TransactionStatus::Failure { reason, .. } => {
+                Err(Error::ContractCallError(reason, receipts))
+            }
             _ => Ok(receipts),
         }
     }

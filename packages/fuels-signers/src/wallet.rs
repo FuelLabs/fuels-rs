@@ -433,13 +433,8 @@ mod tests {
         let provider = setup().await;
 
         // Create a wallet to be stored in the keystore.
-        let (wallet, uuid) = Wallet::new_from_keystore(
-            &dir,
-            &mut rng,
-            "password".to_string(),
-            Some(provider.clone()),
-        )
-        .unwrap();
+        let (wallet, uuid) =
+            Wallet::new_from_keystore(&dir, &mut rng, "password", Some(provider.clone())).unwrap();
 
         // sign a message using the above key.
         let message = "Hello there!";

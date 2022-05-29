@@ -55,4 +55,5 @@ pub mod prelude {
     pub use super::signers::provider::*;
     pub use super::signers::{LocalWallet, Signer};
     pub use super::test_helpers::*;
+    pub use super::tx::Salt;
 }
