@@ -73,6 +73,29 @@ let config = WalletsConfig::new(
 let wallets = launch_provider_and_get_wallets(WalletsConfig::default()).await;
 ```
 
+## Setting up a test wallet with multiple assets
+
+You can create a test wallet which contains multiple different assets (including the base asset to pay for gas).
+
+```rust,ignore
+let mut wallet = LocalWallet::new_random(None);
+let num_assets = 5; // 5 different assets
+let coins_per_asset = 10; // Per asset id, 10 coins in the wallet
+let amount_per_coin = 15; // For each coin (UTXO) of the asset, amount of 15
+
+let (coins, asset_ids) = setup_multiple_assets_coins(
+    wallet.address(),
+    num_assets,
+    coins_per_asset,
+    amount_per_coin,
+);
+let (provider, _socket_addr) = setup_test_provider(coins.clone(), Config::local_node()).await;
+wallet.set_provider(provider);
+```
+
+- `coins: Vec<(UtxoId, Coin)>` has `num_assets * coins_per_assets` coins (UTXOs)
+- `asset_ids: Vec<AssetId>` contains the `num_assets` randomly generated `AssetId`s (always includes the base asset)
+
 ## Calling and configuring contract calls
 
 Once you've deployed your contract, as seen in the previous section, you'll likely want to call contract methods and configure some parameters such as gas price, byte price, gas limit, and forward coins in your contract call.

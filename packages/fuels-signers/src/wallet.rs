@@ -243,8 +243,8 @@ impl Wallet {
     ///  let mut wallet_2 = LocalWallet::new_random(None);
     ///
     ///   // Setup a coin for each wallet
-    ///   let mut coins_1 = setup_coins(wallet_1.address(), 1, 1);
-    ///   let coins_2 = setup_coins(wallet_2.address(), 1, 1);
+    ///   let mut coins_1 = setup_single_asset_coins(wallet_1.address(),NATIVE_ASSET_ID, 1, 1);
+    ///   let coins_2 = setup_single_asset_coins(wallet_2.address(),NATIVE_ASSET_ID, 1, 1);
     ///   coins_1.extend(coins_2);
     ///
     ///   // Setup a provider and node with both set of coins

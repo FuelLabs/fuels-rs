@@ -1,6 +1,6 @@
 use crate::{
-    setup_coins, setup_test_client, wallets_config::WalletsConfig, DEFAULT_COIN_AMOUNT,
-    DEFAULT_NUM_COINS,
+    setup_single_asset_coins, setup_test_client, wallets_config::WalletsConfig,
+    DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
 };
 use fuel_core::{model::Coin, service::Config};
 use fuel_gql_client::fuel_tx::UtxoId;
@@ -18,8 +18,12 @@ pub async fn launch_provider_and_get_single_wallet() -> LocalWallet {
 pub async fn launch_custom_provider_and_get_single_wallet(node_config: Config) -> LocalWallet {
     let mut wallet = LocalWallet::new_random(None);
 
-    let coins: Vec<(UtxoId, Coin)> =
-        setup_coins(wallet.address(), DEFAULT_NUM_COINS, DEFAULT_COIN_AMOUNT);
+    let coins: Vec<(UtxoId, Coin)> = setup_single_asset_coins(
+        wallet.address(),
+        Default::default(),
+        DEFAULT_NUM_COINS,
+        DEFAULT_COIN_AMOUNT,
+    );
 
     let (provider, _) = setup_test_provider(coins, node_config).await;
 
@@ -35,8 +39,9 @@ pub async fn launch_provider_and_get_wallets(config: WalletsConfig) -> Vec<Local
 
     let mut all_coins: Vec<(UtxoId, Coin)> = Vec::with_capacity(config.num_wallets as usize);
     for wallet in &wallets {
-        let coins: Vec<(UtxoId, Coin)> = setup_coins(
+        let coins: Vec<(UtxoId, Coin)> = setup_single_asset_coins(
             wallet.address(),
+            Default::default(),
             config.coins_per_wallet,
             config.coin_amount,
         );
