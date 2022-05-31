@@ -1,0 +1,12 @@
+[package]
+name = "wasm-tests"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+crate-type = ['cdylib']
+
+[dependencies]
+fuels-abigen-macro = { path = "../fuels-abigen-macro" }
+fuels-core = { path = "../fuels-core" }

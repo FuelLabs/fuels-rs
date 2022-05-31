@@ -116,7 +116,6 @@ impl Abigen {
             (
                 quote! {
                     use fuels::contract::contract::{Contract, ContractCall};
-                    use fuels::prelude::InvalidOutputType;
                     use fuels::signers::LocalWallet;
                     use fuels::tx::{ContractId, Address};
                     use std::str::FromStr;
