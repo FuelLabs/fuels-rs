@@ -47,7 +47,7 @@ async fn compile_bindings_from_contract_file() {
     // Currently this prints `0000000003b568d4000000000000002a000000000000000a`
     // The encoded contract call. Soon it'll be able to perform the
     // actual call.
-    let contract_call = contract_instance.takes_ints_returns_bool(42);
+    let call_handler = contract_instance.takes_ints_returns_bool(42);
 
     // Then you'll be able to use `.call()` to actually call the contract with the
     // specified function:
@@ -56,8 +56,8 @@ async fn compile_bindings_from_contract_file() {
 
     let encoded = format!(
         "{}{}",
-        hex::encode(contract_call.encoded_selector),
-        hex::encode(contract_call.encoded_args)
+        hex::encode(call_handler.contract_call.encoded_selector),
+        hex::encode(call_handler.contract_call.encoded_args)
     );
 
     assert_eq!("000000009593586c000000000000002a", encoded);
@@ -95,12 +95,12 @@ async fn compile_bindings_from_inline_contract() {
     //`SimpleContract` is the name of the contract
     let contract_instance = SimpleContract::new(null_contract_id(), wallet);
 
-    let contract_call = contract_instance.takes_ints_returns_bool(42_u32);
+    let call_handler = contract_instance.takes_ints_returns_bool(42_u32);
 
     let encoded = format!(
         "{}{}",
-        hex::encode(contract_call.encoded_selector),
-        hex::encode(contract_call.encoded_args)
+        hex::encode(call_handler.contract_call.encoded_selector),
+        hex::encode(call_handler.contract_call.encoded_args)
     );
 
     assert_eq!("000000009593586c000000000000002a", encoded);
@@ -137,12 +137,12 @@ async fn compile_bindings_array_input() {
     let contract_instance = SimpleContract::new(null_contract_id(), wallet);
 
     let input: Vec<u16> = vec![1, 2, 3, 4];
-    let contract_call = contract_instance.takes_array(input);
+    let call_handler = contract_instance.takes_array(input);
 
     let encoded = format!(
         "{}{}",
-        hex::encode(contract_call.encoded_selector),
-        hex::encode(contract_call.encoded_args)
+        hex::encode(call_handler.contract_call.encoded_selector),
+        hex::encode(call_handler.contract_call.encoded_args)
     );
 
     assert_eq!(
@@ -182,12 +182,12 @@ async fn compile_bindings_bool_array_input() {
     let contract_instance = SimpleContract::new(null_contract_id(), wallet);
 
     let input: Vec<bool> = vec![true, false, true];
-    let contract_call = contract_instance.takes_array(input);
+    let call_handler = contract_instance.takes_array(input);
 
     let encoded = format!(
         "{}{}",
-        hex::encode(contract_call.encoded_selector),
-        hex::encode(contract_call.encoded_args)
+        hex::encode(call_handler.contract_call.encoded_selector),
+        hex::encode(call_handler.contract_call.encoded_args)
     );
 
     assert_eq!(
@@ -226,12 +226,12 @@ async fn compile_bindings_byte_input() {
     // `SimpleContract` is the name of the contract
     let contract_instance = SimpleContract::new(null_contract_id(), wallet);
 
-    let contract_call = contract_instance.takes_byte(10u8);
+    let call_handler = contract_instance.takes_byte(10u8);
 
     let encoded = format!(
         "{}{}",
-        hex::encode(contract_call.encoded_selector),
-        hex::encode(contract_call.encoded_args)
+        hex::encode(call_handler.contract_call.encoded_selector),
+        hex::encode(call_handler.contract_call.encoded_args)
     );
 
     assert_eq!("00000000a4bd3861000000000000000a", encoded);
@@ -267,12 +267,12 @@ async fn compile_bindings_string_input() {
     // `SimpleContract` is the name of the contract
     let contract_instance = SimpleContract::new(null_contract_id(), wallet);
 
-    let contract_call = contract_instance.takes_string("This is a full sentence".into());
+    let call_handler = contract_instance.takes_string("This is a full sentence".into());
 
     let encoded = format!(
         "{}{}",
-        hex::encode(contract_call.encoded_selector),
-        hex::encode(contract_call.encoded_args)
+        hex::encode(call_handler.contract_call.encoded_selector),
+        hex::encode(call_handler.contract_call.encoded_args)
     );
 
     assert_eq!(
@@ -316,12 +316,12 @@ async fn compile_bindings_b256_input() {
 
     let arg = hasher.finalize();
 
-    let contract_call = contract_instance.takes_b256(arg.into());
+    let call_handler = contract_instance.takes_b256(arg.into());
 
     let encoded = format!(
         "{}{}",
-        hex::encode(contract_call.encoded_selector),
-        hex::encode(contract_call.encoded_args)
+        hex::encode(call_handler.contract_call.encoded_selector),
+        hex::encode(call_handler.contract_call.encoded_args)
     );
 
     assert_eq!(
@@ -374,12 +374,12 @@ async fn compile_bindings_struct_input() {
     // `SimpleContract` is the name of the contract
     let contract_instance = SimpleContract::new(null_contract_id(), wallet);
 
-    let contract_call = contract_instance.takes_struct(input);
+    let call_handler = contract_instance.takes_struct(input);
 
     let encoded = format!(
         "{}{}",
-        hex::encode(contract_call.encoded_selector),
-        hex::encode(contract_call.encoded_args)
+        hex::encode(call_handler.contract_call.encoded_selector),
+        hex::encode(call_handler.contract_call.encoded_args)
     );
 
     assert_eq!(
@@ -439,12 +439,12 @@ async fn compile_bindings_nested_struct_input() {
     // `SimpleContract` is the name of the contract
     let contract_instance = SimpleContract::new(null_contract_id(), wallet);
 
-    let contract_call = contract_instance.takes_nested_struct(input);
+    let call_handler = contract_instance.takes_nested_struct(input);
 
     let encoded = format!(
         "{}{}",
-        hex::encode(contract_call.encoded_selector),
-        hex::encode(contract_call.encoded_args)
+        hex::encode(call_handler.contract_call.encoded_selector),
+        hex::encode(call_handler.contract_call.encoded_args)
     );
 
     assert_eq!("0000000088bf8a1b000000000000000a0000000000000001", encoded);
@@ -490,12 +490,12 @@ async fn compile_bindings_enum_input() {
     // `SimpleContract` is the name of the contract
     let contract_instance = SimpleContract::new(null_contract_id(), wallet);
 
-    let contract_call = contract_instance.takes_enum(variant);
+    let call_handler = contract_instance.takes_enum(variant);
 
     let encoded = format!(
         "{}{}",
-        hex::encode(contract_call.encoded_selector),
-        hex::encode(contract_call.encoded_args)
+        hex::encode(call_handler.contract_call.encoded_selector),
+        hex::encode(call_handler.contract_call.encoded_args)
     );
     let expected = "0000000021b2784f0000000000000000000000000000002a";
     assert_eq!(encoded, expected);
@@ -551,12 +551,12 @@ async fn create_struct_from_decoded_tokens() {
     // `SimpleContract` is the name of the contract
     let contract_instance = SimpleContract::new(null_contract_id(), wallet);
 
-    let contract_call = contract_instance.takes_struct(struct_from_tokens);
+    let call_handler = contract_instance.takes_struct(struct_from_tokens);
 
     let encoded = format!(
         "{}{}",
-        hex::encode(contract_call.encoded_selector),
-        hex::encode(contract_call.encoded_args)
+        hex::encode(call_handler.contract_call.encoded_selector),
+        hex::encode(call_handler.contract_call.encoded_args)
     );
 
     assert_eq!("00000000cb0b2f05000000000000000a0000000000000001", encoded);
@@ -622,12 +622,12 @@ async fn create_nested_struct_from_decoded_tokens() {
     // `SimpleContract` is the name of the contract
     let contract_instance = SimpleContract::new(null_contract_id(), wallet);
 
-    let contract_call = contract_instance.takes_nested_struct(nested_struct_from_tokens);
+    let call_handler = contract_instance.takes_nested_struct(nested_struct_from_tokens);
 
     let encoded = format!(
         "{}{}",
-        hex::encode(contract_call.encoded_selector),
-        hex::encode(contract_call.encoded_args)
+        hex::encode(call_handler.contract_call.encoded_selector),
+        hex::encode(call_handler.contract_call.encoded_args)
     );
 
     assert_eq!("0000000088bf8a1b000000000000000a0000000000000001", encoded);
@@ -979,7 +979,7 @@ async fn test_provider_launch_and_connect() {
 }
 
 #[tokio::test]
-async fn test_contract_calling_contract() {
+async fn test_call_handlering_contract() {
     // Tests a contract call that calls another contract (FooCaller calls FooContract underneath)
     abigen!(
         FooContract,

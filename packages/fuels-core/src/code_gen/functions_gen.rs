@@ -35,7 +35,7 @@ pub fn expand_function(
 
     let tokenized_signature = expand_selector(encoded);
     let tokenized_output = expand_fn_outputs(&function.outputs)?;
-    let result = quote! { ContractCall<#tokenized_output> };
+    let result = quote! { ContractCallHandler<#tokenized_output> };
 
     let (input, arg) = expand_function_arguments(function, custom_enums, custom_structs)?;
 
@@ -250,7 +250,7 @@ mod tests {
         let expected = TokenStream::from_str(
             r#"
 #[doc = "Calls the contract's `HelloWorld` (0x0000000097d4de45) function"]
-pub fn HelloWorld(&self, bimbam: bool) -> ContractCall<()> {
+pub fn HelloWorld(&self, bimbam: bool) -> ContractCallHandler<()> {
     Contract::method_hash(
         &self.wallet.get_provider().unwrap(),
         self.contract_id,
@@ -358,7 +358,7 @@ pub fn HelloWorld(&self, bimbam: bool) -> ContractCall<()> {
 pub fn hello_world(
     &self,
     the_only_allowed_input: SomeWeirdFrenchCuisine
-) -> ContractCall<(CoolIndieGame , EntropyCirclesEnum)> {
+) -> ContractCallHandler<(CoolIndieGame , EntropyCirclesEnum)> {
     Contract::method_hash(
         &self.wallet.get_provider().unwrap(),
         self.contract_id,
