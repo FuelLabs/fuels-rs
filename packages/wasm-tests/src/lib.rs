@@ -48,7 +48,7 @@ wasm_abigen!(
 );
 
 
-fn main() {
+pub fn the_fn() {
     let a_struct = SomeEvent {
         id: 20,
         account: Default::default(),
