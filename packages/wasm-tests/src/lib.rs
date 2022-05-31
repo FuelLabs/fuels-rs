@@ -47,7 +47,6 @@ wasm_abigen!(
     "#
 );
 
-
 pub fn the_fn() {
     let a_struct = SomeEvent {
         id: 20,
