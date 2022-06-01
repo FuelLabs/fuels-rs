@@ -4,7 +4,7 @@ use fuel_gql_client::fuel_tx::{Receipt, Transaction};
 use fuels_contract::script::Script;
 use std::fs::read;
 
-/// Helper function to reduce boilerplate code in tests.
+//`run_script` is helper function for testing simple Sway scripts and reducing boilerplate code related to setting up contracts and deployment.
 pub async fn run_script(bin_path: &str) -> Vec<Receipt> {
     let bin = read(bin_path);
     let server = FuelService::new_node(Config::local_node()).await.unwrap();
@@ -28,4 +28,21 @@ pub async fn run_script(bin_path: &str) -> Vec<Receipt> {
     let receipts = script.call(&client).await.unwrap();
 
     receipts
+}
+
+#[cfg(test)]
+mod tests {
+
+    use crate::run_script;
+
+    #[tokio::test]
+    async fn test_logging_sway() {
+        let path_to_bin = "../fuels-abigen-macro/tests/test_projects/logging/out/debug/logging.bin";
+        let return_val = run_script(path_to_bin).await;
+
+        let correct_hex =
+            hex::decode("ef86afa9696cf0dc6385e2c407a6e159a1103cefb7e2ae0636fb33d3cb2a9e4a");
+
+        assert_eq!(correct_hex.unwrap(), return_val[0].data().unwrap());
+    }
 }
