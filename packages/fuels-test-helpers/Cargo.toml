@@ -11,6 +11,7 @@ description = "Fuel Rust SDK test helpers."
 [dependencies]
 fuel-core = { version = "0.8", default-features = false }
 fuel-gql-client = { version = "0.8", default-features = false }
+fuels-core = { version = "0.14.1", path = "../fuels-core" }
 fuels-signers = { version = "0.14.1", path = "../fuels-signers", optional = true }
 rand = { version = "0.8.4", default-features = false }
 tokio = "1.15"
