@@ -227,7 +227,8 @@ pub async fn setup_test_client_bin(
     let _ = get_node_config_json(config_with_coins);
 
     let fuel_core_bin = env::var("FUEL_CORE_BIN").unwrap_or_else(|_| "FUEL_CORE_BIN".to_string());
-    let fuel_core_config = env::var("FUEL_CORE_CONFIG").unwrap_or_else(|_| "FUEL_CORE_CONFIG".to_string());
+    let fuel_core_config =
+        env::var("FUEL_CORE_CONFIG").unwrap_or_else(|_| "FUEL_CORE_CONFIG".to_string());
 
     let running_node = Command::new(fuel_core_bin)
         .arg("--ip")

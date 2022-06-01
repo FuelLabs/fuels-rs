@@ -1,12 +1,9 @@
 use crate::{
-    setup_coins, setup_test_client, setup_test_client_bin, wallets_config::WalletsConfig,
-    DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
+    setup_single_asset_coins, setup_test_client, setup_test_client_bin,
+    wallets_config::WalletsConfig, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
 }; // Todo Emir make this optional
+
 use fuel_core::service::Config;
-    setup_single_asset_coins, setup_test_client, wallets_config::WalletsConfig,
-    DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
-};
-use fuel_core::{model::Coin, service::Config};
 use fuel_gql_client::fuel_tx::UtxoId;
 use fuels_signers::{provider::Provider, LocalWallet, Signer};
 use std::net::SocketAddr;
@@ -82,8 +79,9 @@ pub async fn launch_provider_and_get_wallets_bin(
 
     let mut all_coins: Vec<(UtxoId, Coin)> = Vec::with_capacity(config.num_wallets as usize);
     for wallet in &wallets {
-        let coins: Vec<(UtxoId, Coin)> = setup_coins(
+        let coins: Vec<(UtxoId, Coin)> = setup_single_asset_coins(
             wallet.address(),
+            Default::default(),
             config.coins_per_wallet,
             config.coin_amount,
         );
