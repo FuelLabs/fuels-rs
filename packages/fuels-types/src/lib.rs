@@ -35,8 +35,8 @@ pub struct Property {
 
 // Both those constants are used to determine if a type field represents an `Enum` or a `Struct`.
 // Since it would have the format `struct foo` or `enum bar`, there is a whitespace.
-const STRUCT_KEYWORD: &str = "struct ";
-const ENUM_KEYWORD: &str = "enum ";
+pub const STRUCT_KEYWORD: &str = "struct ";
+pub const ENUM_KEYWORD: &str = "enum ";
 
 impl Property {
     pub fn is_enum_type(&self) -> bool {
@@ -46,13 +46,45 @@ impl Property {
         self.type_field.starts_with(STRUCT_KEYWORD)
     }
     pub fn is_custom_type(&self) -> bool {
-        self.is_enum_type() || self.is_struct_type()
+        self.is_enum_type()
+            || self.is_struct_type()
+            || self.has_custom_type_in_array().0
+            || self.has_custom_type_in_tuple().0
+    }
+
+    pub fn has_custom_type_in_array(&self) -> (bool, CustomType) {
+        if self.type_field.starts_with('[') && self.type_field.ends_with(']') {
+            if self.type_field.contains(STRUCT_KEYWORD) {
+                (true, CustomType::Struct)
+            } else if self.type_field.contains(ENUM_KEYWORD) {
+                (true, CustomType::Enum)
+            } else {
+                (false, CustomType::None)
+            }
+        } else {
+            (false, CustomType::None)
+        }
+    }
+
+    pub fn has_custom_type_in_tuple(&self) -> (bool, CustomType) {
+        if self.type_field.starts_with('(') && self.type_field.ends_with(')') {
+            if self.type_field.contains(STRUCT_KEYWORD) {
+                (true, CustomType::Struct)
+            } else if self.type_field.contains(ENUM_KEYWORD) {
+                (true, CustomType::Enum)
+            } else {
+                (false, CustomType::None)
+            }
+        } else {
+            (false, CustomType::None)
+        }
     }
 }
 
 #[derive(Debug, Clone, ToString, PartialEq, Eq)]
 #[strum(serialize_all = "lowercase")]
 pub enum CustomType {
+    None,
     Struct,
     Enum,
 }
