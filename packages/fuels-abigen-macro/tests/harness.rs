@@ -1,16 +1,12 @@
 use fuel_core::service::Config;
-use fuel_tx::{AssetId, ContractId, Receipt, Salt};
+use fuel_gql_client::fuel_tx::{AssetId, ContractId, Receipt};
 use fuels::prelude::{
-    launch_provider_and_get_single_wallet, launch_provider_and_get_wallets, setup_coins,
+    launch_provider_and_get_single_wallet, setup_multiple_assets_coins, setup_single_asset_coins,
     setup_test_provider, CallParameters, Contract, Error, LocalWallet, Provider, Signer,
     TxParameters, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
 };
-use fuels::test_helpers::WalletsConfig;
 use fuels_abigen_macro::abigen;
-use fuels_core::constants::NATIVE_ASSET_ID;
-use fuels_core::Token;
-use rand::prelude::StdRng;
-use rand::{Rng, SeedableRng};
+use fuels_core::{constants::NATIVE_ASSET_ID, Token};
 use sha2::{Digest, Sha256};
 
 /// Note: all the tests and examples below require pre-compiled Sway projects.
@@ -230,7 +226,7 @@ async fn compile_bindings_byte_input() {
     // `SimpleContract` is the name of the contract
     let contract_instance = SimpleContract::new(null_contract_id(), wallet);
 
-    let contract_call = contract_instance.takes_byte(10 as u8);
+    let contract_call = contract_instance.takes_byte(10u8);
 
     let encoded = format!(
         "{}{}",
@@ -505,6 +501,7 @@ async fn compile_bindings_enum_input() {
     assert_eq!(encoded, expected);
 }
 
+#[allow(clippy::blacklisted_name)]
 #[tokio::test]
 async fn create_struct_from_decoded_tokens() {
     // Generates the bindings from the an ABI definition inline.
@@ -634,134 +631,6 @@ async fn create_nested_struct_from_decoded_tokens() {
     );
 
     assert_eq!("0000000088bf8a1b000000000000000a0000000000000001", encoded);
-}
-
-#[tokio::test]
-async fn example_workflow() {
-    // Generates the bindings from the an ABI definition inline.
-    // The generated bindings can be accessed through `MyContract`.
-    abigen!(
-        MyContract,
-        "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
-    );
-
-    let wallet = launch_provider_and_get_single_wallet().await;
-
-    let contract_id = Contract::deploy(
-        "tests/test_projects/contract_test/out/debug/contract_test.bin",
-        &wallet,
-        TxParameters::default(),
-    )
-    .await
-    .unwrap();
-
-    println!("Contract deployed @ {:x}", contract_id);
-    let contract_instance = MyContract::new(contract_id.to_string(), wallet);
-
-    let result = contract_instance
-        .initialize_counter(42) // Build the ABI call
-        .tx_params(TxParameters::new(None, Some(1_000_000), None, None))
-        .call() // Perform the network call
-        .await
-        .unwrap();
-
-    assert_eq!(42, result.value);
-
-    let result = contract_instance
-        .increment_counter(10)
-        .call()
-        .await
-        .unwrap();
-
-    assert_eq!(52, result.value);
-}
-
-#[tokio::test]
-async fn same_contract_different_ids() {
-    abigen!(
-        MyContract,
-        "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
-    );
-
-    let wallet = launch_provider_and_get_single_wallet().await;
-
-    let contract_id_1 = Contract::deploy(
-        "tests/test_projects/contract_test/out/debug/contract_test.bin",
-        &wallet,
-        TxParameters::default(),
-    )
-    .await
-    .unwrap();
-
-    println!("Contract deployed @ {:x}", contract_id_1);
-
-    let rng = &mut StdRng::seed_from_u64(2322u64);
-    let salt: [u8; 32] = rng.gen();
-
-    let contract_id_2 = Contract::deploy_with_salt(
-        "tests/test_projects/contract_test/out/debug/contract_test.bin",
-        &wallet,
-        TxParameters::default(),
-        Salt::from(salt),
-    )
-    .await
-    .unwrap();
-
-    println!("Contract deployed @ {:x}", contract_id_2);
-
-    assert_ne!(contract_id_1, contract_id_2);
-}
-
-#[tokio::test]
-async fn example_workflow_multiple_wallets() {
-    // Generates the bindings from the an ABI definition inline.
-    // The generated bindings can be accessed through `MyContract`.
-    abigen!(
-        MyContract,
-        "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
-    );
-
-    let wallets = launch_provider_and_get_wallets(WalletsConfig::default()).await;
-
-    let contract_id_1 = Contract::deploy(
-        "tests/test_projects/contract_test/out/debug/contract_test.bin",
-        &wallets[0],
-        TxParameters::default(),
-    )
-    .await
-    .unwrap();
-
-    println!("Contract deployed @ {:x}", contract_id_1);
-    let contract_instance_1 = MyContract::new(contract_id_1.to_string(), wallets[0].clone());
-
-    let result = contract_instance_1
-        .initialize_counter(42) // Build the ABI call
-        .tx_params(TxParameters::new(None, Some(1_000_000), None, None))
-        .call() // Perform the network call
-        .await
-        .unwrap();
-
-    assert_eq!(42, result.value);
-
-    let contract_id_2 = Contract::deploy(
-        "tests/test_projects/contract_test/out/debug/contract_test.bin",
-        &wallets[1],
-        TxParameters::default(),
-    )
-    .await
-    .unwrap();
-
-    println!("Contract deployed @ {:x}", contract_id_2);
-    let contract_instance_2 = MyContract::new(contract_id_2.to_string(), wallets[1].clone());
-
-    let result = contract_instance_2
-        .initialize_counter(42) // Build the ABI call
-        .tx_params(TxParameters::new(None, Some(1_000_000), None, None))
-        .call() // Perform the network call
-        .await
-        .unwrap();
-
-    assert_eq!(42, result.value);
 }
 
 #[tokio::test]
@@ -934,7 +803,7 @@ async fn test_reverting_transaction() {
     let contract_instance = RevertingContract::new(contract_id.to_string(), wallet);
     println!("Contract deployed @ {:x}", contract_id);
     let result = contract_instance.make_transaction_fail(0).call().await;
-    assert!(matches!(result, Err(Error::ContractCallError(_))));
+    assert!(matches!(result, Err(Error::ContractCallError(..))));
 }
 
 #[tokio::test]
@@ -1069,7 +938,12 @@ async fn test_provider_launch_and_connect() {
 
     let mut wallet = LocalWallet::new_random(None);
 
-    let coins = setup_coins(wallet.address(), DEFAULT_NUM_COINS, DEFAULT_COIN_AMOUNT);
+    let coins = setup_single_asset_coins(
+        wallet.address(),
+        NATIVE_ASSET_ID,
+        DEFAULT_NUM_COINS,
+        DEFAULT_COIN_AMOUNT,
+    );
     let (launched_provider, address) = setup_test_provider(coins, Config::local_node()).await;
     let connected_provider = Provider::connect(address).await.unwrap();
 
@@ -1197,7 +1071,9 @@ async fn test_gas_errors() {
         .await
         .expect_err("should error");
 
-    assert_eq!("Contract call error: Response errors; unexpected block execution error InsufficientFeeAmount { provided: 1000000000, required: 100000000000 }", result.to_string());
+    let expected = "Contract call error: Response errors; unexpected block execution error \
+    InsufficientFeeAmount { provided: 1000000000, required: 100000000000 }, receipts:";
+    assert!(result.to_string().starts_with(expected));
 
     // Test for running out of gas. Gas price as `None` will be 0.
     // Gas limit will be 100, this call will use more than 100 gas.
@@ -1208,7 +1084,8 @@ async fn test_gas_errors() {
         .await
         .expect_err("should error");
 
-    assert_eq!("Contract call error: OutOfGas", result.to_string());
+    let expected = "Contract call error: OutOfGas, receipts:";
+    assert!(result.to_string().starts_with(expected));
 }
 
 #[tokio::test]
@@ -1581,21 +1458,21 @@ async fn test_logd_receipts() {
         .call()
         .await
         .unwrap();
-    assert_eq!(result.logs.unwrap(), vec!["ffeedd", "ffeedd000000"]);
+    assert_eq!(result.logs, vec!["ffeedd", "ffeedd000000"]);
     let result = contract_instance
         .use_logd_opcode(value, 14, 15)
         .call()
         .await
         .unwrap();
     assert_eq!(
-        result.logs.unwrap(),
+        result.logs,
         vec![
             "ffeedd000000000000000000aabb",
             "ffeedd000000000000000000aabbcc"
         ]
     );
     let result = contract_instance.dont_use_logd().call().await.unwrap();
-    assert_eq!(result.logs, None);
+    assert!(result.logs.is_empty());
 }
 
 #[tokio::test]
@@ -1625,19 +1502,56 @@ async fn unit_type_enums() {
 }
 
 #[tokio::test]
-// This does not currently test for multiple assets, this is tracked in #321.
 async fn test_wallet_balance_api() {
+    // Single asset
     let mut wallet = LocalWallet::new_random(None);
-    let coins = setup_coins(wallet.address(), 21, 11);
+    let number_of_coins = 21;
+    let amount_per_coin = 11;
+    let coins = setup_single_asset_coins(
+        wallet.address(),
+        NATIVE_ASSET_ID,
+        number_of_coins,
+        amount_per_coin,
+    );
     let (provider, _) = setup_test_provider(coins.clone(), Config::local_node()).await;
     wallet.set_provider(provider);
     for (_utxo_id, coin) in coins {
         let balance = wallet.get_asset_balance(&coin.asset_id).await;
-        assert_eq!(balance.unwrap(), 231);
+        assert_eq!(balance.unwrap(), number_of_coins * amount_per_coin);
     }
     let balances = wallet.get_balances().await.unwrap();
     let expected_key = "0x".to_owned() + NATIVE_ASSET_ID.to_string().as_str();
-    assert_eq!(balances.len(), 1);
+    assert_eq!(balances.len(), 1); // only the native asset
     assert!(balances.contains_key(&expected_key));
-    assert_eq!(*balances.get(&expected_key).unwrap(), 231)
+    assert_eq!(
+        *balances.get(&expected_key).unwrap(),
+        number_of_coins * amount_per_coin
+    );
+
+    // Multiple assets
+    let number_of_assets = 7;
+    let coins_per_asset = 21;
+    let amount_per_coin = 11;
+    let (coins, asset_ids) = setup_multiple_assets_coins(
+        wallet.address(),
+        number_of_assets,
+        coins_per_asset,
+        amount_per_coin,
+    );
+    assert_eq!(coins.len() as u64, number_of_assets * coins_per_asset);
+    assert_eq!(asset_ids.len() as u64, number_of_assets);
+    let (provider, _) = setup_test_provider(coins.clone(), Config::local_node()).await;
+    wallet.set_provider(provider);
+    let balances = wallet.get_balances().await.unwrap();
+    assert_eq!(balances.len() as u64, number_of_assets);
+    for asset_id in asset_ids {
+        let balance = wallet.get_asset_balance(&asset_id).await;
+        assert_eq!(balance.unwrap(), coins_per_asset * amount_per_coin);
+        let expected_key = "0x".to_owned() + asset_id.to_string().as_str();
+        assert!(balances.contains_key(&expected_key));
+        assert_eq!(
+            *balances.get(&expected_key).unwrap(),
+            coins_per_asset * amount_per_coin
+        );
+    }
 }

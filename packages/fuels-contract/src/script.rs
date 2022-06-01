@@ -1,6 +1,8 @@
 use anyhow::Result;
-use fuel_gql_client::client::{types::TransactionStatus, FuelClient};
-use fuel_tx::{Receipt, Transaction};
+use fuel_gql_client::{
+    client::{types::TransactionStatus, FuelClient},
+    fuel_tx::{Receipt, Transaction},
+};
 use fuels_core::errors::Error;
 
 /// Script is a very thin layer on top of fuel-client with some
@@ -26,7 +28,9 @@ impl Script {
         let receipts = fuel_client.receipts(&tx_id).await?;
         let status = fuel_client.transaction_status(&tx_id).await?;
         match status {
-            TransactionStatus::Failure { reason, .. } => Err(Error::ContractCallError(reason)),
+            TransactionStatus::Failure { reason, .. } => {
+                Err(Error::ContractCallError(reason, receipts))
+            }
             _ => Ok(receipts),
         }
     }

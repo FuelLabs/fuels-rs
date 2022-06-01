@@ -1,6 +1,6 @@
-# Fuels-rs Abigen macro
+# `fuels-abigen-macro`
 
-Fuels-rs' Abigen is a procedural macro used to transform a contract's ABI defined as a JSON object into type-safe Rust bindings, i.e. Rust structs and types that represent that contract's ABI. These bindings are then expanded and brought into scope.
+`fuels-rs`'s abigen is a procedural macro used to transform a contract's ABI defined as a JSON object into type-safe Rust bindings, i.e. Rust structs and types that represent that contract's ABI. These bindings are then expanded and brought into scope.
 
 The specifications for the JSON ABI format and its encoding/decoding can be found [here](https://github.com/FuelLabs/fuel-specs/blob/master/specs/protocol/abi.md#json-abi-format).
 
@@ -8,7 +8,7 @@ The specifications for the JSON ABI format and its encoding/decoding can be foun
 
 A simple example of generating type-safe bindings from a JSON ABI specified in-line:
 
-```rust
+```rust,ignore
 fn compile_bindings_from_inline_contract() {
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `SimpleContract`.

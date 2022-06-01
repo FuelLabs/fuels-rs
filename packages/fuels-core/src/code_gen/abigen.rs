@@ -115,11 +115,11 @@ impl Abigen {
         } else {
             (
                 quote! {
-                    use fuel_tx::{ContractId, Address};
                     use fuels::contract::contract::{Contract, ContractCall};
-                    use fuels::signers::LocalWallet;
-                    use std::str::FromStr;
                     use fuels::prelude::InvalidOutputType;
+                    use fuels::signers::LocalWallet;
+                    use fuels::tx::{ContractId, Address};
+                    use std::str::FromStr;
                 },
                 quote! {
                     pub struct #name {

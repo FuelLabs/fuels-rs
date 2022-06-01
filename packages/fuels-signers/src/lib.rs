@@ -6,7 +6,7 @@ pub use fuel_crypto;
 
 use async_trait::async_trait;
 use fuel_crypto::Signature;
-use fuel_tx::{Address, Transaction};
+use fuel_gql_client::{fuel_tx::Transaction, fuel_types::Address};
 use std::error::Error;
 
 /// A wallet instantiated with a locally stored private key
@@ -37,9 +37,12 @@ pub trait Signer: std::fmt::Debug + Send + Sync {
 mod tests {
     use fuel_core::service::Config;
     use fuel_crypto::{Message, SecretKey};
-    use fuel_tx::{AssetId, Bytes32, Input, Output, UtxoId};
-    use fuels_core::parameters::TxParameters;
-    use fuels_test_helpers::{setup_coins, setup_test_client};
+    use fuels_core::constants::NATIVE_ASSET_ID;
+    use fuels_core::{
+        parameters::TxParameters,
+        tx::{AssetId, Bytes32, Input, Output, UtxoId},
+    };
+    use fuels_test_helpers::{setup_single_asset_coins, setup_test_client};
     use rand::{rngs::StdRng, RngCore, SeedableRng};
     use std::str::FromStr;
 
@@ -81,7 +84,7 @@ mod tests {
                 .unwrap();
         let wallet = Wallet::new_from_private_key(secret, None);
 
-        let input_coin = Input::coin(
+        let input_coin = Input::coin_signed(
             UtxoId::new(Bytes32::zeroed(), 0),
             Address::from_str("0xf1e92c42b90934aa6372e30bc568a326f6e66a1a0288595e6e3fbd392a4f3e6e")
                 .unwrap(),
@@ -89,8 +92,6 @@ mod tests {
             AssetId::from([0u8; 32]),
             0,
             0,
-            vec![],
-            vec![],
         );
 
         let output_coin = Output::coin(
@@ -133,8 +134,8 @@ mod tests {
         let mut wallet_1 = LocalWallet::new_random(None);
         let mut wallet_2 = LocalWallet::new_random(None);
 
-        let mut coins_1 = setup_coins(wallet_1.address, 1, 1000000);
-        let coins_2 = setup_coins(wallet_2.address, 1, 1000000);
+        let mut coins_1 = setup_single_asset_coins(wallet_1.address, NATIVE_ASSET_ID, 1, 1000000);
+        let coins_2 = setup_single_asset_coins(wallet_2.address, NATIVE_ASSET_ID, 1, 1000000);
 
         coins_1.extend(coins_2);
 
@@ -212,8 +213,8 @@ mod tests {
         let mut wallet_1 = LocalWallet::new_random(None);
         let mut wallet_2 = LocalWallet::new_random(None);
 
-        let mut coins_1 = setup_coins(wallet_1.address, 1, 5);
-        let coins_2 = setup_coins(wallet_2.address, 1, 5);
+        let mut coins_1 = setup_single_asset_coins(wallet_1.address, NATIVE_ASSET_ID, 1, 5);
+        let coins_2 = setup_single_asset_coins(wallet_2.address, NATIVE_ASSET_ID, 1, 5);
 
         coins_1.extend(coins_2);
 

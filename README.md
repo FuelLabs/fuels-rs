@@ -1,8 +1,8 @@
 # fuels-rs
 
 [![build](https://github.com/FuelLabs/fuels-rs/actions/workflows/ci.yml/badge.svg)](https://github.com/FuelLabs/fuels-rs/actions/workflows/ci.yml)
-[![crates.io](https://img.shields.io/crates/v/fuels-contract?label=latest)](https://crates.io/crates/fuels-contract)
-[![docs](https://docs.rs/fuels-contract/badge.svg)](https://docs.rs/fuels-contract)
+[![crates.io](https://img.shields.io/crates/v/fuels?label=latest)](https://crates.io/crates/fuels)
+[![docs](https://docs.rs/fuels/badge.svg)](https://docs.rs/fuels)
 [![discord](https://img.shields.io/badge/chat%20on-discord-orange?&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2)](https://discord.gg/xfpK4Pe)
 
 Rust SDK for Fuel. It can be used for a variety of things, including but not limited to:

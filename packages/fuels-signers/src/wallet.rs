@@ -6,17 +6,13 @@ use coins_bip39::{English, Mnemonic, MnemonicError};
 use elliptic_curve::rand_core;
 use eth_keystore::KeystoreError;
 use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
-use fuel_gql_client::client::schema::coin::Coin;
-use fuel_gql_client::client::types::TransactionResponse;
-use fuel_gql_client::client::{PaginatedResult, PaginationRequest};
-use fuel_tx::{Address, AssetId, Input, Output, Receipt, Transaction, UtxoId, Witness};
-use fuels_core::errors::Error;
-use fuels_core::parameters::TxParameters;
+use fuel_gql_client::{
+    client::{schema::coin::Coin, types::TransactionResponse, PaginatedResult, PaginationRequest},
+    fuel_tx::{Address, AssetId, Input, Output, Receipt, Transaction, UtxoId, Witness},
+};
+use fuels_core::{errors::Error, parameters::TxParameters};
 use rand::{CryptoRng, Rng};
-use std::collections::HashMap;
-use std::path::Path;
-use std::str::FromStr;
-use std::{fmt, io};
+use std::{collections::HashMap, fmt, io, path::Path, str::FromStr};
 use thiserror::Error;
 
 const DEFAULT_DERIVATION_PATH_PREFIX: &str = "m/44'/60'/0'/0/";
@@ -237,7 +233,7 @@ impl Wallet {
     /// # Examples
     /// ```
     /// use fuels::prelude::*;
-    /// use fuel_tx::{Bytes32, AssetId, Input, Output, UtxoId};
+    /// use fuels::tx::{Bytes32, AssetId, Input, Output, UtxoId};
     /// use std::str::FromStr;
     /// use fuels_test_helpers::Config;
     ///
@@ -247,8 +243,8 @@ impl Wallet {
     ///  let mut wallet_2 = LocalWallet::new_random(None);
     ///
     ///   // Setup a coin for each wallet
-    ///   let mut coins_1 = setup_coins(wallet_1.address(), 1, 1);
-    ///   let coins_2 = setup_coins(wallet_2.address(), 1, 1);
+    ///   let mut coins_1 = setup_single_asset_coins(wallet_1.address(),NATIVE_ASSET_ID, 1, 1);
+    ///   let coins_2 = setup_single_asset_coins(wallet_2.address(),NATIVE_ASSET_ID, 1, 1);
     ///   coins_1.extend(coins_2);
     ///
     ///   // Setup a provider and node with both set of coins
@@ -315,23 +311,20 @@ impl Wallet {
         let spendable = self.get_spendable_coins(&asset_id, amount).await?;
         let mut inputs = vec![];
         for coin in spendable {
-            let input_coin = Input::coin(
+            let input_coin = Input::coin_signed(
                 UtxoId::from(coin.utxo_id),
                 coin.owner.into(),
                 coin.amount.0,
                 asset_id,
                 witness_index,
                 0,
-                vec![],
-                vec![],
             );
             inputs.push(input_coin);
         }
         Ok(inputs)
     }
 
-    /// Gets coins from this wallet
-    /// Note that this is a simple wrapper on provider's `get_coins`.
+    /// Gets all coins owned by the wallet, *even spent ones*. This returns actual coins (UTXOs).
     pub async fn get_coins(&self) -> Result<Vec<Coin>, WalletError> {
         Ok(self
             .get_provider()
@@ -340,9 +333,9 @@ impl Wallet {
             .await?)
     }
 
-    /// Gets spendable coins from this wallet.
-    /// Note that this is a simple wrapper on provider's
-    /// `get_spendable_coins`.
+    /// Get some spendable coins of asset `asset_id` owned by the wallet that add up at least to
+    /// amount `amount`. The returned coins (UTXOs) are actual coins that can be spent. The number
+    /// of coins (UXTOs) is minimized via an approximate solution.
     pub async fn get_spendable_coins(
         &self,
         asset_id: &AssetId,
@@ -355,8 +348,8 @@ impl Wallet {
     }
 
     /// Get the balance of all spendable coins `asset_id` for address `address`. This is different
-    /// from getting coins because we are just returning a number (the sum of UTXOs) instead of the
-    /// UTXOs.
+    /// from getting coins because we are just returning a number (the sum of UTXOs amount) instead
+    /// of the UTXOs.
     pub async fn get_asset_balance(&self, asset_id: &AssetId) -> Result<u64, ProviderError> {
         self.get_provider()?
             .get_asset_balance(&self.address, *asset_id)
@@ -365,7 +358,7 @@ impl Wallet {
 
     /// Get all the spendable balances of all assets for the wallet. This is different from getting
     /// the coins because we are only returning the sum of UTXOs coins amount and not the UTXOs
-    /// coins themselves
+    /// coins themselves.
     pub async fn get_balances(&self) -> Result<HashMap<String, u64>, ProviderError> {
         self.get_provider()?.get_balances(&self.address).await
     }
@@ -439,13 +432,8 @@ mod tests {
         let provider = setup().await;
 
         // Create a wallet to be stored in the keystore.
-        let (wallet, uuid) = Wallet::new_from_keystore(
-            &dir,
-            &mut rng,
-            "password".to_string(),
-            Some(provider.clone()),
-        )
-        .unwrap();
+        let (wallet, uuid) =
+            Wallet::new_from_keystore(&dir, &mut rng, "password", Some(provider.clone())).unwrap();
 
         // sign a message using the above key.
         let message = "Hello there!";
