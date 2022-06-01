@@ -1,9 +1,9 @@
 use fuel_core::service::Config;
 use fuel_gql_client::fuel_tx::{AssetId, ContractId, Receipt};
 use fuels::prelude::{
-    launch_provider_and_get_single_wallet, setup_coins, setup_test_provider, CallParameters,
-    Contract, Error, LocalWallet, Provider, Signer, TxParameters, DEFAULT_COIN_AMOUNT,
-    DEFAULT_NUM_COINS,
+    launch_provider_and_get_single_wallet, launch_provider_and_get_single_wallet_bin, setup_coins,
+    setup_test_provider, CallParameters, Contract, Error, LocalWallet, Provider, Signer,
+    TxParameters, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
 };
 use fuels_abigen_macro::abigen;
 use fuels_core::{constants::NATIVE_ASSET_ID, Token};
@@ -1431,7 +1431,67 @@ async fn test_wallet_balance_api() {
     }
     let balances = wallet.get_balances().await.unwrap();
     let expected_key = "0x".to_owned() + NATIVE_ASSET_ID.to_string().as_str();
+
+    println!("{}", wallet.address());
+
     assert_eq!(balances.len(), 1);
     assert!(balances.contains_key(&expected_key));
     assert_eq!(*balances.get(&expected_key).unwrap(), 231)
+}
+
+#[tokio::test]
+#[ignore]
+async fn test_tuples_using_fuel_core_bin() {
+    abigen!(
+        MyContract,
+        "packages/fuels-abigen-macro/tests/test_projects/tuples/out/debug/tuples-abi.json"
+    );
+
+    let (mut running_node, wallet) = launch_provider_and_get_single_wallet_bin().await;
+
+    let id = Contract::deploy(
+        "tests/test_projects/tuples/out/debug/tuples.bin",
+        &wallet,
+        TxParameters::default(),
+    )
+    .await
+    .unwrap();
+
+    let instance = MyContract::new(id.to_string(), wallet.clone());
+
+    let response = instance.returns_tuple((1, 2)).call().await.unwrap();
+
+    let _ = running_node.kill().await;
+    assert_eq!(response.value, (1, 2));
+}
+
+#[tokio::test]
+#[ignore]
+async fn unit_type_enums_using_fuel_core_bin() {
+    abigen!(
+        MyContract,
+        "packages/fuels-abigen-macro/tests/test_projects/use_enum_input/out/debug/use_enum_input-abi.json"
+    );
+
+    let (mut running_node, wallet) = launch_provider_and_get_single_wallet_bin().await;
+
+    let id = Contract::deploy(
+        "tests/test_projects/use_enum_input/out/debug/use_enum_input.bin",
+        &wallet,
+        TxParameters::default(),
+    )
+    .await
+    .unwrap();
+
+    let instance = MyContract::new(id.to_string(), wallet.clone());
+    let unit_type_enum = BimBamBoum::Bim();
+    let result = instance
+        .use_unit_type_enum(unit_type_enum)
+        .call()
+        .await
+        .unwrap();
+
+    let _ = running_node.kill().await;
+
+    assert_eq!(result.value, BimBamBoum::Boum());
 }

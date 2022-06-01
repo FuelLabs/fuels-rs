@@ -17,6 +17,8 @@ proc-macro2 = "1.0"
 quote = "1.0"
 rand = "0.8"
 syn = "1.0.12"
+fuel-core-interfaces = { version = "0.8", default-features = false } # TODO Emir make optional
+
 
 [dev-dependencies]
 fuel-core = { version = "0.8", default-features = false }
