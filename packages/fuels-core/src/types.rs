@@ -23,7 +23,7 @@ pub fn expand_type(kind: &ParamType) -> Result<TokenStream, Error> {
         }
         ParamType::Struct(members) => {
             if members.is_empty() {
-                return Err(Error::InvalidData);
+                return Err(Error::InvalidData("struct members can not be empty".into()));
             }
             let members = members
                 .iter()
@@ -33,7 +33,7 @@ pub fn expand_type(kind: &ParamType) -> Result<TokenStream, Error> {
         }
         ParamType::Enum(members) => {
             if members.is_empty() {
-                return Err(Error::InvalidData);
+                return Err(Error::InvalidData("enum members can not be empty".into()));
             }
             let members = members
                 .iter()
@@ -43,7 +43,7 @@ pub fn expand_type(kind: &ParamType) -> Result<TokenStream, Error> {
         }
         ParamType::Tuple(members) => {
             if members.is_empty() {
-                return Err(Error::InvalidData);
+                return Err(Error::InvalidData("tuple members can not be empty".into()));
             }
 
             let members = members
