@@ -108,23 +108,22 @@ impl Contract {
         let maturity = 0;
 
         let contract_call = ContractCall {
+            tx_parameters,
+            contract_id,
+            wallet: wallet.clone(),
             encoded_selector,
             encoded_args,
             call_parameters,
             maturity,
             compute_calldata_offset,
             variable_outputs: None,
-            output_params: output_params.to_vec(),
-            external_contracts: None
+            external_contracts: None,
         };
 
         Ok(ContractCallHandler {
-            output_params: output_params.to_vec(),
             contract_call,
-            tx_parameters,
-            contract_id,
+            output_params: output_params.to_vec(),
             fuel_client: provider.client.clone(),
-            wallet: wallet.clone(),
             datatype: PhantomData,
         })
     }
@@ -259,13 +258,15 @@ impl Contract {
 
 #[derive(Debug)]
 pub struct ContractCall {
+    pub tx_parameters: TxParameters,
+    pub wallet: LocalWallet,
+    pub contract_id: ContractId,
     pub encoded_args: Vec<u8>,
     pub encoded_selector: Selector,
     pub call_parameters: CallParameters,
     pub maturity: u64,
     pub compute_calldata_offset: bool,
     pub variable_outputs: Option<Vec<Output>>,
-    pub output_params: Vec<ParamType>,
     pub external_contracts: Option<Vec<ContractId>>,
 }
 
@@ -275,10 +276,7 @@ pub struct ContractCall {
 pub struct ContractCallHandler<D> {
     pub contract_call: ContractCall,
     pub fuel_client: FuelClient,
-    pub contract_id: ContractId,
-    pub tx_parameters: TxParameters,
     pub datatype: PhantomData<D>,
-    pub wallet: LocalWallet,
     pub output_params: Vec<ParamType>,
 }
 
@@ -301,7 +299,7 @@ where
     /// let params = TxParameters { gas_price: 100, gas_limit: 1000000, byte_price: 100 };
     /// `my_contract_instance.my_method(...).tx_params(params).call()`.
     pub fn tx_params(mut self, params: TxParameters) -> Self {
-        self.tx_parameters = params;
+        self.contract_call.tx_parameters = params;
         self
     }
 
@@ -342,13 +340,7 @@ where
     /// transaction.
     #[tracing::instrument]
     async fn call_or_simulate(self, simulate: bool) -> Result<CallResponse<D>, Error> {
-        let script = Script::from_call(
-            self.contract_call,
-            self.contract_id,
-            self.tx_parameters,
-            self.wallet,
-        )
-        .await;
+        let script = Script::from_call(&self.contract_call).await;
 
         let receipts = if simulate {
             script.simulate(&self.fuel_client).await?
@@ -357,13 +349,16 @@ where
         };
         tracing::debug!(target: "receipts", "{:?}", receipts);
 
+        self.build_response(receipts)
+    }
+
+    pub fn build_response(self, receipts: Vec<Receipt>) -> Result<CallResponse<D>, Error> {
         // If it's an ABI method without a return value, exit early.
         if self.output_params.is_empty() {
             return Ok(CallResponse::new(D::from_tokens(vec![])?, receipts));
         }
 
-        let (decoded_value, receipts) =
-            Self::get_decoded_output(receipts, &self.output_params)?;
+        let (decoded_value, receipts) = Self::get_decoded_output(receipts, &self.output_params)?;
         Ok(CallResponse::new(D::from_tokens(decoded_value)?, receipts))
     }
 

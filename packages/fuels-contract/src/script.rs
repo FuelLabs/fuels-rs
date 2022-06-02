@@ -12,14 +12,14 @@ use fuel_gql_client::{
 };
 use fuels_core::constants::{DEFAULT_SPENDABLE_COIN_AMOUNT, WORD_SIZE};
 use fuels_core::errors::Error;
-use fuels_core::parameters::{CallParameters, TxParameters};
+use fuels_core::parameters::CallParameters;
 use fuels_core::Selector;
 
-use fuels_signers::{LocalWallet, Signer};
 use crate::contract::ContractCall;
+use fuels_signers::Signer;
 
-/// Script is a very thin layer on top of fuel-client with some
-/// extra functionalities needed and provided by the SDK.
+/// Script provides methods to create and a call/simulate a
+/// script transaction that carries out contract method calls
 pub struct Script {
     pub tx: Transaction,
 }
@@ -35,19 +35,14 @@ impl Script {
         Self { tx }
     }
 
-    pub async fn from_call(
-        call: ContractCall,
-        contract_id: ContractId,
-        tx_parameters: TxParameters,
-        wallet: LocalWallet,
-    ) -> Self {
+    pub async fn from_call(call: &ContractCall) -> Self {
         let (script, script_data) = Self::build_script_contents(
-            &contract_id,
-            &Some(call.encoded_selector),
-            &Some(call.encoded_args),
+            &call.contract_id,
+            &Some(call.encoded_selector.clone()),
+            &Some(call.encoded_args.clone()),
             &call.call_parameters,
             call.compute_calldata_offset,
-            tx_parameters.gas_limit
+            call.tx_parameters.gas_limit,
         )
         .unwrap();
 
@@ -58,30 +53,33 @@ impl Script {
             UtxoId::new(Bytes32::zeroed(), 0),
             Bytes32::zeroed(),
             Bytes32::zeroed(),
-            contract_id,
+            call.contract_id,
         );
         inputs.push(self_contract_input);
 
-        let mut spendables = wallet
+        let mut spendables = call
+            .wallet
             .get_spendable_coins(&AssetId::default(), DEFAULT_SPENDABLE_COIN_AMOUNT as u64)
             .await
             .unwrap();
 
         // add default asset change if any inputs are being spent
         if !spendables.is_empty() {
-            let change_output = Output::change(wallet.address(), 0, AssetId::default());
+            let change_output = Output::change(call.wallet.address(), 0, AssetId::default());
             outputs.push(change_output);
         }
 
         if call.call_parameters.asset_id != AssetId::default() {
-            let alt_spendables = wallet
+            let alt_spendables = call
+                .wallet
                 .get_spendable_coins(&call.call_parameters.asset_id, call.call_parameters.amount)
                 .await
                 .unwrap();
 
             // add alt change if inputs are being spent
             if !alt_spendables.is_empty() {
-                let change_output = Output::change(wallet.address(), 0, call.call_parameters.asset_id);
+                let change_output =
+                    Output::change(call.wallet.address(), 0, call.call_parameters.asset_id);
                 outputs.push(change_output);
             }
 
@@ -108,7 +106,7 @@ impl Script {
         outputs.push(self_contract_output);
 
         // Add external contract IDs to Input/Output pair, if applicable.
-        if let Some(external_contract_ids) = call.external_contracts {
+        if let Some(external_contract_ids) = call.external_contracts.clone() {
             for (idx, external_contract_id) in external_contract_ids.iter().enumerate() {
                 // We must associate the right external contract input to the corresponding external
                 // output index (TXO). We add the `n_inputs` offset because we added some inputs
@@ -131,14 +129,14 @@ impl Script {
         }
 
         // Add outputs to the transaction.
-        if let Some(v) = call.variable_outputs {
+        if let Some(v) = call.variable_outputs.clone() {
             outputs.extend(v);
         };
 
         let mut tx = Transaction::script(
-            tx_parameters.gas_price,
-            tx_parameters.gas_limit,
-            tx_parameters.byte_price,
+            call.tx_parameters.gas_price,
+            call.tx_parameters.gas_limit,
+            call.tx_parameters.byte_price,
             call.maturity,
             script,
             script_data,
@@ -146,7 +144,7 @@ impl Script {
             outputs,
             vec![],
         );
-        wallet.sign_transaction(&mut tx).await.unwrap();
+        call.wallet.sign_transaction(&mut tx).await.unwrap();
 
         Script::new(tx)
     }
@@ -161,7 +159,7 @@ impl Script {
         encoded_args: &Option<Vec<u8>>,
         call_parameters: &CallParameters,
         compute_calldata_offset: bool,
-        gas_limit: u64
+        gas_limit: u64,
     ) -> Result<(Vec<u8>, Vec<u8>), Error> {
         use fuel_gql_client::fuel_types;
         // Script to call the contract.
@@ -184,10 +182,7 @@ impl Script {
                 // Load gas forward to 0x11.
                 Opcode::MOVI(0x11, gas_limit as Immediate18),
                 // Load word into 0x12
-                Opcode::MOVI(
-                    0x12,
-                    ((data_offset as usize) + AssetId::LEN) as Immediate18
-                ),
+                Opcode::MOVI(0x12, ((data_offset as usize) + AssetId::LEN) as Immediate18),
                 // Load the amount into 0x12
                 Opcode::LW(0x12, 0x12, 0),
                 // Load the asset id to use to 0x13.
