@@ -1,7 +1,7 @@
-# `run_script` 
+# run_script 
 
 `run_script` is helper function for testing simple Sway scripts and reducing boilerplate code related to setting up contracts and deployment.
-As a parameter the function receives a `&str`, that is, the path that leads to the generated `.bin` file.
+It takes the path to the generated `.bin` file as argument.
 
 You can use it this way:
 
