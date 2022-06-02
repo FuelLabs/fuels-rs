@@ -219,7 +219,9 @@ impl Default for ABIDecoder {
 
 fn peek(data: &[u8], offset: usize, len: usize) -> Result<&[u8], CodecError> {
     if offset + len > data.len() {
-        Err(CodecError::InvalidData)
+        Err(CodecError::InvalidData(
+            "requested data out of bounds".into(),
+        ))
     } else {
         Ok(&data[offset..(offset + len)])
     }

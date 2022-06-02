@@ -249,7 +249,9 @@ impl ABIParser {
     /// It works for nested/recursive structs.
     pub fn tokenize_struct(&self, value: &str, params: &[ParamType]) -> Result<Token, Error> {
         if !value.starts_with('(') || !value.ends_with(')') {
-            return Err(Error::InvalidData);
+            return Err(Error::InvalidData(
+                "struct value string must start and end with round brackets".into(),
+            ));
         }
 
         if value.chars().count() == 2 {
@@ -272,13 +274,17 @@ impl ABIParser {
 
                     match nested.cmp(&0) {
                         std::cmp::Ordering::Less => {
-                            return Err(Error::InvalidData);
+                            return Err(Error::InvalidData(
+                                "struct value string has excess closing brackets".into(),
+                            ));
                         }
                         std::cmp::Ordering::Equal => {
                             let sub = &value[last_item..pos];
 
                             let token = self.tokenize(
-                                params_iter.next().ok_or(Error::InvalidData)?,
+                                params_iter.next().ok_or_else(|| {
+                                    Error::InvalidData("struct value missing matching param".into())
+                                })?,
                                 sub.to_string(),
                             )?;
                             result.push(token);
@@ -299,7 +305,9 @@ impl ABIParser {
                     }
 
                     let token = self.tokenize(
-                        params_iter.next().ok_or(Error::InvalidData)?,
+                        params_iter.next().ok_or_else(|| {
+                            Error::InvalidData("sturct array value missing matching param".into())
+                        })?,
                         sub.to_string(),
                     )?;
                     result.push(token);
@@ -310,7 +318,15 @@ impl ABIParser {
         }
 
         if ignore {
-            return Err(Error::InvalidData);
+            return Err(Error::InvalidData(
+                "struct value string has excess quotes".into(),
+            ));
+        }
+
+        if nested > 0 {
+            return Err(Error::InvalidData(
+                "struct value string has excess opening brackets".into(),
+            ));
         }
 
         Ok(Token::Struct(result))
@@ -324,7 +340,9 @@ impl ABIParser {
     /// It works for nested/recursive enums.
     pub fn tokenize_array<'a>(&self, value: &'a str, param: &ParamType) -> Result<Token, Error> {
         if !value.starts_with('[') || !value.ends_with(']') {
-            return Err(Error::InvalidData);
+            return Err(Error::InvalidData(
+                "array value string must start and end with square brackets".into(),
+            ));
         }
 
         if value.chars().count() == 2 {
@@ -345,7 +363,9 @@ impl ABIParser {
 
                     match nested.cmp(&0) {
                         std::cmp::Ordering::Less => {
-                            return Err(Error::InvalidData);
+                            return Err(Error::InvalidData(
+                                "array value string has excess closing brackets".into(),
+                            ));
                         }
                         std::cmp::Ordering::Equal => {
                             // Last element of this nest level; proceed to tokenize.
@@ -394,7 +414,15 @@ impl ABIParser {
         }
 
         if ignore {
-            return Err(Error::InvalidData);
+            return Err(Error::InvalidData(
+                "array value string has excess quotes".into(),
+            ));
+        }
+
+        if nested > 0 {
+            return Err(Error::InvalidData(
+                "array value string has excess opening brackets".into(),
+            ));
         }
 
         Ok(Token::Array(result))
