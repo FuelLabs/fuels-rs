@@ -68,13 +68,6 @@ impl ABIParser {
 
         let entry = parsed_abi.iter().find(|e| e.name == fn_name);
 
-        if entry.is_none() {
-            return Err(Error::InvalidName(format!(
-                "couldn't find function name: {}",
-                fn_name
-            )));
-        }
-
         let entry = entry.expect("No functions found");
 
         let mut encoder = ABIEncoder::new_with_fn_selector(
@@ -500,9 +493,9 @@ impl ABIParser {
                 result.push_str("s(");
             } else if param.is_enum_type() {
                 result.push_str("e(");
-            } else if param.has_custom_type_in_array().0 {
+            } else if param.has_custom_type_in_array() {
                 result.push_str("a[");
-            } else if param.has_custom_type_in_tuple().0 {
+            } else if param.has_custom_type_in_tuple() {
                 result.push('(');
             } else {
                 panic!("unexpected custom type");
@@ -528,14 +521,18 @@ impl ABIParser {
                 // Type field, in this case, looks like
                 // "[struct Person; 2]" and we want to extract the
                 // length, which in this example is 2.
-                let array_length: String = array_type_field.split(';').collect::<Vec<&str>>()[1]
+                // First, get the last part after `;`: `"<length>]"`.
+                let mut array_length = array_type_field.split(';').collect::<Vec<&str>>()[1]
                     .trim()
-                    .chars()
-                    .filter(|c| c.is_digit(10))
-                    .collect();
+                    .to_string();
+
+                array_length.pop(); // Remove the trailing "]"
+
+                // Make sure the length is a valid number.
+                let array_length = array_length.parse::<usize>().expect("Invalid array length");
 
                 result.push(';');
-                result.push(array_length.chars().next().unwrap());
+                result.push_str(array_length.to_string().as_str());
                 result.push(']');
             } else {
                 result.push(')');

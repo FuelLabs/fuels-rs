@@ -231,9 +231,9 @@ impl Abigen {
         let array_custom_type = prop
             .components
             .as_ref()
-            .expect("Custom array should have at least one component")
-            .first() // Only one component
-            .unwrap();
+            .expect("array should have components")
+            .first()
+            .expect("components in array should have at least one component");
 
         let custom_type_name = extract_custom_type_name_from_abi_property(array_custom_type, None)
             .expect("failed to extract custom type name");
@@ -274,10 +274,10 @@ impl Abigen {
 
         // Extract the top level custom types.
         for prop in all_custom_properties {
-            let custom_type = match prop.has_custom_type_in_array().0 {
+            let custom_type = match prop.has_custom_type_in_array() {
                 // Custom type lives inside array.
                 true => Abigen::get_custom_type_in_array(prop),
-                false => match prop.has_custom_type_in_tuple().0 {
+                false => match prop.has_custom_type_in_tuple() {
                     // Custom type lives inside tuple.
                     true => Abigen::get_custom_types_in_tuple(prop),
                     // Free form custom type.

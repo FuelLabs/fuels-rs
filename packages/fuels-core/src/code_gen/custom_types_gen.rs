@@ -328,9 +328,8 @@ pub fn expand_custom_enum(name: &str, prop: &Property) -> Result<TokenStream, Er
     })
 }
 
-// A custom type name is coming in as `{struct,enum} $name`,
-// inside an array, like `[{struct,enum} $name; $length]`,
-// or inside a tuple, like `({struct,enum} $name, ...)`.
+// A custom type name should be passed to this function as `{struct,enum} $name`,
+// or inside an array, like `[{struct,enum} $name; $length]`.
 // This function extracts the `$name`.
 pub fn extract_custom_type_name_from_abi_property(
     prop: &Property,

@@ -48,43 +48,38 @@ impl Property {
     pub fn is_custom_type(&self) -> bool {
         self.is_enum_type()
             || self.is_struct_type()
-            || self.has_custom_type_in_array().0
-            || self.has_custom_type_in_tuple().0
+            || self.has_custom_type_in_array()
+            || self.has_custom_type_in_tuple()
     }
 
-    pub fn has_custom_type_in_array(&self) -> (bool, CustomType) {
+    pub fn has_custom_type_in_array(&self) -> bool {
         if self.type_field.starts_with('[') && self.type_field.ends_with(']') {
-            if self.type_field.contains(STRUCT_KEYWORD) {
-                (true, CustomType::Struct)
-            } else if self.type_field.contains(ENUM_KEYWORD) {
-                (true, CustomType::Enum)
-            } else {
-                (false, CustomType::None)
-            }
-        } else {
-            (false, CustomType::None)
+            return self.get_custom_type().is_some();
         }
+        false
     }
 
-    pub fn has_custom_type_in_tuple(&self) -> (bool, CustomType) {
+    pub fn has_custom_type_in_tuple(&self) -> bool {
         if self.type_field.starts_with('(') && self.type_field.ends_with(')') {
-            if self.type_field.contains(STRUCT_KEYWORD) {
-                (true, CustomType::Struct)
-            } else if self.type_field.contains(ENUM_KEYWORD) {
-                (true, CustomType::Enum)
-            } else {
-                (false, CustomType::None)
-            }
+            return self.get_custom_type().is_some();
+        }
+        false
+    }
+
+    pub fn get_custom_type(&self) -> Option<CustomType> {
+        if self.type_field.contains(STRUCT_KEYWORD) {
+            Some(CustomType::Struct)
+        } else if self.type_field.contains(ENUM_KEYWORD) {
+            Some(CustomType::Enum)
         } else {
-            (false, CustomType::None)
+            None
         }
     }
 }
 
-#[derive(Debug, Clone, ToString, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, ToString, PartialEq, Eq)]
 #[strum(serialize_all = "lowercase")]
 pub enum CustomType {
-    None,
     Struct,
     Enum,
 }

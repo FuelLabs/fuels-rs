@@ -111,22 +111,26 @@ fn expand_fn_outputs(outputs: &[Property]) -> Result<TokenStream, Error> {
                         Ok(parsed_custom_type_name)
                     }
                     false => match output.has_custom_type_in_array() {
-                        (true, custom_type) => {
+                        true => {
                             let parsed_custom_type_name: TokenStream =
                                 extract_custom_type_name_from_abi_property(
                                     output,
-                                    Some(custom_type),
+                                    Some(
+                                        output
+                                            .get_custom_type()
+                                            .expect("Custom type in array should be set"),
+                                    ),
                                 )?
                                 .parse()
                                 .unwrap();
 
                             Ok(quote! { ::std::vec::Vec<#parsed_custom_type_name> })
                         }
-                        (false, _custom_type) => match output.has_custom_type_in_tuple() {
+                        false => match output.has_custom_type_in_tuple() {
                             // If custom type is inside a tuple `(struct | enum <name>, ...)`,
                             // the type signature should be only `(<name>, ...)`.
                             // To do that, we remove the `STRUCT_KEYWORD` and `ENUM_KEYWORD` from it.
-                            (true, _custom_type) => {
+                            true => {
                                 let tuple_type_signature: TokenStream = output
                                     .type_field
                                     .replace(STRUCT_KEYWORD, "")
@@ -136,7 +140,7 @@ fn expand_fn_outputs(outputs: &[Property]) -> Result<TokenStream, Error> {
 
                                 Ok(tuple_type_signature)
                             }
-                            (false, _custom_type) => {
+                            false => {
                                 panic!("{}", format!("Output is of custom type, but not an enum, struct or enum/struct inside an array/tuple. This shouldn't never happen. Output received: {:?}", output));
                             }
                         },
@@ -191,31 +195,27 @@ fn expand_function_arguments(
                     custom_structs.get(&name)
                 } else {
                     match param.has_custom_type_in_array() {
-                        (true, custom_type) => match custom_type {
-                            CustomType::Struct => {
+                        true => match param.get_custom_type() {
+                            Some(custom_type) => {
                                 let name = extract_custom_type_name_from_abi_property(
                                     param,
-                                    Some(CustomType::Struct),
+                                    Some(custom_type),
                                 )
-                                .expect("couldn't extract struct name from ABI property");
-                                custom_structs.get(&name)
+                                .expect("couldn't extract custom type name from ABI property");
+
+                                match custom_type {
+                                    CustomType::Enum => custom_enums.get(&name),
+                                    CustomType::Struct => custom_structs.get(&name),
+                                }
                             }
-                            CustomType::Enum => {
-                                let name = extract_custom_type_name_from_abi_property(
-                                    param,
-                                    Some(CustomType::Enum),
-                                )
-                                .expect("couldn't extract enum name from ABI property");
-                                custom_enums.get(&name)
-                            }
-                            _ => {
+                            None => {
                                 return Err(Error::InvalidType(format!(
                                     "Custom type in array is not a struct or enum. Type: {:?}",
-                                    custom_type
+                                    param
                                 )))
                             }
                         },
-                        (false, _custom_type) => None,
+                        false => None,
                     }
                 }
             }
