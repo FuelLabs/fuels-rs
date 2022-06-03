@@ -11,3 +11,6 @@ crate-type = ['cdylib']
 fuels-abigen-macro = { path = "../fuels-abigen-macro" }
 fuels-core = { path = "../fuels-core" }
 getrandom = { version = "0.2", features = ["js"] }
+
+[dev-dependencies]
+webassembly-test = "0.1"

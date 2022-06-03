@@ -47,11 +47,34 @@ wasm_abigen!(
     "#
 );
 
-pub fn the_fn() {
-    let a_struct = SomeEvent {
-        id: 20,
-        account: Default::default(),
-    };
 
-    println!("It works! {}", a_struct.id);
+pub fn the_fn() {
+    use fuels_core::{abi_decoder::ABIDecoder, ParamType};
+    let data = vec![
+        0, 0, 0, 0, 0, 0, 3, 252, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175,
+        175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175,
+        175,
+    ];
+
+    let mut decoder = ABIDecoder::new();
+
+    let obj = decoder
+        .decode(&[ParamType::U64, ParamType::B256], &data)
+        .expect("Failed to decode");
+
+    let a_struct = SomeEvent::new_from_tokens(&obj);
+
+    assert_eq!(1020, a_struct.id);
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use webassembly_test::webassembly_test;
+
+    #[webassembly_test]
+    fn test() {
+        the_fn();
+    }
 }

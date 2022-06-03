@@ -50,6 +50,12 @@ jobs:
           chmod +x forc-binaries/forc
           mv forc-binaries/forc /usr/local/bin/forc
 
+      - name: Install WebAssembly Test harness
+        uses: actions-rs/cargo@v1
+        with:
+          command: install
+          args: webassembly-test-runner
+
       - name: Build Sway Examples
         uses: actions-rs/cargo@v1
         with:
