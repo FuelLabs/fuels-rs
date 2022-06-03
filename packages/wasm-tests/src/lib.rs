@@ -47,7 +47,6 @@ wasm_abigen!(
     "#
 );
 
-
 pub fn the_fn() {
     use fuels_core::{abi_decoder::ABIDecoder, ParamType};
     let data = vec![
@@ -66,7 +65,6 @@ pub fn the_fn() {
 
     assert_eq!(1020, a_struct.id);
 }
-
 
 #[cfg(test)]
 mod tests {
