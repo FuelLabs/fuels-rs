@@ -14,4 +14,7 @@ fuels-abigen-macro = { version = "0.14.1", path = "../fuels-abigen-macro" }
 fuels-contract = { version = "0.14.1", path = "../fuels-contract" }
 fuels-core = { version = "0.14.1", path = "../fuels-core" }
 fuels-signers = { version = "0.14.1", path = "../fuels-signers" }
-fuels-test-helpers = { version = "0.14.1", path = "../fuels-test-helpers" }
+fuels-test-helpers = { version = "0.14.1", path = "../fuels-test-helpers", features = ["fuel-core", "fuel-core-bin"]}
+
+[features]
+fuel-core-bin = ["fuels-test-helpers/fuel-core-bin"]

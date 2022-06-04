@@ -1,17 +1,32 @@
-use crate::{
-    setup_single_asset_coins, setup_test_client, setup_test_client_bin,
-    wallets_config::WalletsConfig, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
-}; // Todo Emir make this optional
-
-use fuel_core::service::Config;
-use fuel_gql_client::fuel_tx::UtxoId;
-use fuels_signers::{provider::Provider, LocalWallet, Signer};
 use std::net::SocketAddr;
-use tokio::process::Child; // Todo Emir make this optional
 
-use fuel_core_interfaces::model::Coin; // Todo Emir make this optional
+use fuel_gql_client::fuel_tx::UtxoId;
 
-// #[cfg(feature = "fuels-signers")]
+use fuels_signers::{provider::Provider, LocalWallet, Signer};
+
+use crate::{
+    setup_single_asset_coins, wallets_config::WalletsConfig, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
+};
+
+#[cfg(feature = "fuel-core-bin")]
+use crate::setup_test_client_bin;
+
+#[cfg(feature = "fuel-core")]
+use crate::setup_test_client;
+
+#[cfg(feature = "fuel-core")]
+use fuel_core::service::Config;
+
+#[cfg(not(feature = "fuel-core-bin"))]
+use fuel_core::model::{Coin, CoinStatus};
+
+#[cfg(feature = "fuel-core-bin")]
+use fuel_core_interfaces::model::Coin;
+
+#[cfg(feature = "fuel-core-bin")]
+use tokio::process::Child;
+
+#[cfg(feature = "fuel-core")]
 pub async fn launch_provider_and_get_single_wallet() -> LocalWallet {
     let mut wallets = launch_provider_and_get_wallets(WalletsConfig::new_single(None, None)).await;
 
@@ -19,6 +34,7 @@ pub async fn launch_provider_and_get_single_wallet() -> LocalWallet {
 }
 
 // TODO make it simple and optional
+#[cfg(feature = "fuel-core-bin")]
 pub async fn launch_provider_and_get_single_wallet_bin() -> (Child, LocalWallet) {
     let (running_node, mut wallets) =
         launch_provider_and_get_wallets_bin(WalletsConfig::new_single(None, None)).await;
@@ -26,7 +42,7 @@ pub async fn launch_provider_and_get_single_wallet_bin() -> (Child, LocalWallet)
     (running_node, wallets.pop().unwrap())
 }
 
-// #[cfg(feature = "fuels-signers")]
+#[cfg(feature = "fuel-core")]
 pub async fn launch_custom_provider_and_get_single_wallet(node_config: Config) -> LocalWallet {
     let mut wallet = LocalWallet::new_random(None);
 
@@ -43,7 +59,7 @@ pub async fn launch_custom_provider_and_get_single_wallet(node_config: Config) -
     wallet
 }
 
-#[cfg(feature = "fuels-signers")]
+#[cfg(feature = "fuel-core")]
 pub async fn launch_provider_and_get_wallets(config: WalletsConfig) -> Vec<LocalWallet> {
     let mut wallets: Vec<LocalWallet> = (1..=config.num_wallets)
         .map(|_i| LocalWallet::new_random(None))
@@ -70,6 +86,7 @@ pub async fn launch_provider_and_get_wallets(config: WalletsConfig) -> Vec<Local
 }
 
 // TODO make it simple add optional
+#[cfg(feature = "fuel-core-bin")]
 pub async fn launch_provider_and_get_wallets_bin(
     config: WalletsConfig,
 ) -> (Child, Vec<LocalWallet>) {
@@ -99,7 +116,7 @@ pub async fn launch_provider_and_get_wallets_bin(
 
 // Setup a test provider with the given coins. We return the SocketAddr so the launched node
 // client can be connected to more easily (even though it is often ignored).
-#[cfg(feature = "fuels-signers")]
+#[cfg(feature = "fuel-core")]
 pub async fn setup_test_provider(
     coins: Vec<(UtxoId, Coin)>,
     node_config: Config,
@@ -109,6 +126,7 @@ pub async fn setup_test_provider(
 }
 
 // TODO Emir make it simple add optional
+#[cfg(feature = "fuel-core-bin")]
 pub async fn setup_test_provider_bin(coins: Vec<(UtxoId, Coin)>) -> (Child, Provider, SocketAddr) {
     let (running_node, client, addr) = setup_test_client_bin(coins).await;
     (running_node, Provider::new(client), addr)

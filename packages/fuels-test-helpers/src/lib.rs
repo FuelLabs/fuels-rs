@@ -1,36 +1,51 @@
 //! Testing helpers/utilities for Fuel SDK.
 
-pub use fuel_core::service::Config;
+#[cfg(feature = "fuel-core")]
+extern crate fuel_core;
+
+#[cfg(feature = "fuel-core")]
 use fuel_core::{
     chain_config::{ChainConfig, CoinConfig, StateConfig},
-    model::CoinStatus,
-    service::{DbType, FuelService},
+    service::{Config, DbType, FuelService},
 };
-use std::env;
 
-use fuel_core_interfaces::model::Coin; // TODO Emir make this optional
+#[cfg(not(feature = "fuel-core-bin"))]
+use fuel_core::model::{Coin, CoinStatus};
+
+#[cfg(feature = "fuel-core-bin")]
+use fuel_core_interfaces::model::{Coin, CoinStatus};
+#[cfg(feature = "fuel-core-bin")]
+use serde_json::Value;
+#[cfg(feature = "fuel-core-bin")]
+use std::env;
+#[cfg(feature = "fuel-core-bin")]
+use std::thread::sleep;
+#[cfg(feature = "fuel-core-bin")]
+use std::time::Duration;
+#[cfg(feature = "fuel-core-bin")]
+use tokio::process::{Child, Command};
 
 use fuel_gql_client::{
     client::FuelClient,
     fuel_tx::{Address, Bytes32, UtxoId},
 };
+
 use fuels_core::constants::NATIVE_ASSET_ID;
+
 use fuels_signers::fuel_crypto::fuel_types::AssetId;
 use rand::Fill;
-use serde_json::Value;
 use std::collections::HashSet;
 use std::net::SocketAddr;
-use std::thread::sleep;
-use std::time::Duration;
-use tokio::process::{Child, Command};
 
 #[cfg(feature = "fuels-signers")]
 mod signers;
 mod wallets_config;
 
+#[cfg(feature = "fuel-core-bin")]
 mod node_config_json; // Todo Emir make this optional
-
+#[cfg(feature = "fuel-core-bin")]
 use crate::node_config_json::{get_node_config_json, DummyConfig}; // Todo make optional
+
 #[cfg(feature = "fuels-signers")]
 pub use signers::*;
 pub use wallets_config::*;
@@ -106,6 +121,7 @@ pub fn setup_single_asset_coins(
 
 // Setup a test client with the given coins. We return the SocketAddr so the launched node
 // client can be connected to more easily (even though it is often ignored).
+#[cfg(feature = "fuel-core")]
 pub async fn setup_test_client(
     coins: Vec<(UtxoId, Coin)>,
     node_config: Config,
@@ -201,7 +217,7 @@ mod tests {
 }
 
 // TODO Emir make this optional
-// #[cfg(feature="Emily")]
+#[cfg(feature = "fuel-core-bin")]
 pub async fn setup_test_client_bin(
     coins: Vec<(UtxoId, Coin)>,
     // node_config: Config
@@ -239,6 +255,7 @@ pub async fn setup_test_client_bin(
         .arg(fuel_core_config)
         .arg("--db-type")
         .arg("in-memory")
+        .kill_on_drop(true)
         .spawn()
         .expect("FUEL_CORE_BIN is unable to find. Please set FUEL_CORE_BIN");
 
