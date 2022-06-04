@@ -36,6 +36,7 @@ mod tests {
     use crate::run_script;
 
     #[tokio::test]
+    // ANCHOR: test_logging_sway
     async fn test_logging_sway() {
         let path_to_bin = "../fuels-abigen-macro/tests/test_projects/logging/out/debug/logging.bin";
         let return_val = run_script(path_to_bin).await;
@@ -45,4 +46,5 @@ mod tests {
 
         assert_eq!(correct_hex.unwrap(), return_val[0].data().unwrap());
     }
+    // ANCHOR_END: test_logging_sway
 }
