@@ -10,8 +10,8 @@ use std::net;
 pub enum Error {
     #[error("Invalid name: {0}")]
     InvalidName(String),
-    #[error("Invalid data")]
-    InvalidData,
+    #[error("Invalid data: {0}")]
+    InvalidData(String),
     #[error("Missing data: {0}")]
     MissingData(String),
     #[error("Serialization error: {0}")]
@@ -43,7 +43,7 @@ pub enum Error {
 impl From<CodecError> for Error {
     fn from(err: CodecError) -> Error {
         match err {
-            CodecError::InvalidData => Error::InvalidData,
+            CodecError::InvalidData(s) => Error::InvalidData(s),
             CodecError::Utf8Error(e) => Error::Utf8Error(e),
         }
     }
