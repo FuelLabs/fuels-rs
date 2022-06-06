@@ -1,5 +1,6 @@
 use fuel_core::service::Config;
 use fuel_gql_client::fuel_tx::{AssetId, ContractId, Receipt};
+use fuels::contract::script::Script;
 use fuels::prelude::{
     launch_provider_and_get_single_wallet, setup_multiple_assets_coins, setup_single_asset_coins,
     setup_test_provider, CallParameters, Contract, Error, LocalWallet, Provider, Signer,
@@ -1435,6 +1436,7 @@ async fn test_wallet_balance_api() {
         number_of_coins,
         amount_per_coin,
     );
+
     let (provider, _) = setup_test_provider(coins.clone(), Config::local_node()).await;
     wallet.set_provider(provider);
     for (_utxo_id, coin) in coins {
@@ -1476,4 +1478,35 @@ async fn test_wallet_balance_api() {
             coins_per_asset * amount_per_coin
         );
     }
+}
+
+#[tokio::test]
+async fn test_transaction_script_workflow() {
+    abigen!(
+        MyContract,
+        "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+    );
+
+    let wallet = launch_provider_and_get_single_wallet().await;
+    let client = &wallet.get_provider().unwrap().client;
+
+    let contract_id = Contract::deploy(
+        "tests/test_projects/contract_test/out/debug/contract_test.bin",
+        &wallet,
+        TxParameters::default(),
+    )
+    .await
+    .unwrap();
+
+    let contract_instance = MyContract::new(contract_id.to_string(), wallet.clone());
+
+    let call_handler = contract_instance.initialize_counter(42);
+
+    let script = Script::from_call(&call_handler.contract_call).await;
+    assert!(script.tx.is_script());
+
+    let receipts = script.call(client).await.unwrap();
+
+    let response = call_handler.build_response(receipts).unwrap();
+    assert_eq!(response.value, 42);
 }

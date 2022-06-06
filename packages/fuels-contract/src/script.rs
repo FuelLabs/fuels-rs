@@ -1,10 +1,12 @@
 use anyhow::Result;
 use fuel_gql_client::fuel_tx::{Input, Output, UtxoId};
-use fuel_gql_client::fuel_types::{AssetId, Bytes32, ContractId, Word};
+use fuel_gql_client::fuel_types::{
+    bytes::padded_len_usize, AssetId, Bytes32, ContractId, Immediate18, Word,
+};
+use fuel_gql_client::fuel_vm::consts::VM_TX_MEMORY;
 use fuel_gql_client::fuel_vm::{
     consts::{REG_CGAS, REG_ONE},
     prelude::Opcode,
-    script_with_data_offset,
 };
 use fuel_gql_client::{
     client::{types::TransactionStatus, FuelClient},
@@ -12,8 +14,6 @@ use fuel_gql_client::{
 };
 use fuels_core::constants::{DEFAULT_SPENDABLE_COIN_AMOUNT, WORD_SIZE};
 use fuels_core::errors::Error;
-use fuels_core::parameters::CallParameters;
-use fuels_core::Selector;
 
 use crate::contract::ContractCall;
 use fuels_signers::Signer;
@@ -36,15 +36,9 @@ impl Script {
     }
 
     pub async fn from_call(call: &ContractCall) -> Self {
-        let (script, script_data) = Self::build_script_contents(
-            &call.contract_id,
-            &Some(call.encoded_selector.clone()),
-            &Some(call.encoded_args.clone()),
-            &call.call_parameters,
-            call.compute_calldata_offset,
-            call.tx_parameters.gas_limit,
-        )
-        .unwrap();
+        let (script, offset) = Self::get_instructions(vec![call]);
+
+        let script_data = Self::get_script_data(vec![call], offset);
 
         let mut inputs: Vec<Input> = vec![];
         let mut outputs: Vec<Output> = vec![];
@@ -153,92 +147,101 @@ impl Script {
     /// the contract. The script is the actual opcodes used to call the contract, and the script
     /// data is for instance the function selector. (script, script_data) is returned as a tuple
     /// of hex-encoded value vectors
-    fn build_script_contents(
-        contract_id: &ContractId,
-        encoded_selector: &Option<Selector>,
-        encoded_args: &Option<Vec<u8>>,
-        call_parameters: &CallParameters,
-        compute_calldata_offset: bool,
-        gas_limit: u64,
-    ) -> Result<(Vec<u8>, Vec<u8>), Error> {
-        use fuel_gql_client::fuel_types;
-        // Script to call the contract.
-        // We use the Opcode to call a contract: `CALL` pointing at the
-        // following registers;
-        //
-        // 0x10 Script data offset
-        // 0x11 Gas price  TODO: https://github.com/FuelLabs/fuels-rs/issues/184
-        // 0x12 Coin amount
-        // 0x13 Asset ID
-        //
-        // Note that these are soft rules as we're picking this addresses simply because they
-        // non-reserved register.
-        let forward_data_offset = AssetId::LEN + WORD_SIZE;
-        let (script, offset) = script_with_data_offset!(
-            data_offset,
-            vec![
-                // Load call data to 0x10.
-                Opcode::MOVI(0x10, data_offset + forward_data_offset as Immediate18),
-                // Load gas forward to 0x11.
-                Opcode::MOVI(0x11, gas_limit as Immediate18),
-                // Load word into 0x12
-                Opcode::MOVI(0x12, ((data_offset as usize) + AssetId::LEN) as Immediate18),
-                // Load the amount into 0x12
-                Opcode::LW(0x12, 0x12, 0),
-                // Load the asset id to use to 0x13.
-                Opcode::MOVI(0x13, data_offset),
-                // Call the transfer contract.
-                Opcode::CALL(0x10, 0x12, 0x13, REG_CGAS),
-                Opcode::RET(REG_ONE),
-            ]
-        );
+    fn get_instructions(calls: Vec<&ContractCall>) -> (Vec<u8>, usize) {
+        let num_calls = calls.len();
+        let offset = Self::get_data_offset(num_calls);
 
-        #[allow(clippy::iter_cloned_collect)]
-        let script = script.iter().copied().collect::<Vec<u8>>();
-
-        // `script_data` consists of:
-        // 1. Asset ID to be forwarded
-        // 2. Amount to be forwarded
-        // 3. Contract ID (ContractID::LEN);
-        // 4. Function selector (1 * WORD_SIZE);
-        // 5. Calldata offset, if it has structs as input,
-        // computed as `script_data_offset` + ContractId::LEN
-        //                                  + 2 * WORD_SIZE;
-        // 6. Encoded arguments.
-        let mut script_data: Vec<u8> = vec![];
-
-        script_data.extend(call_parameters.asset_id.to_vec());
-
-        let amount = call_parameters.amount as Word;
-        script_data.extend(amount.to_be_bytes());
-
-        script_data.extend(contract_id.as_ref());
-
-        if let Some(e) = encoded_selector {
-            script_data.extend(e)
+        let mut instructions = vec![];
+        for _ in 0..num_calls {
+            instructions.extend(Self::single_call_instructions(offset, 0));
         }
 
-        // If the method call takes custom inputs or has more than
-        // one argument, we need to calculate the `call_data_offset`,
-        // which points to where the data for the custom types start in the
-        // transaction. If it doesn't take any custom inputs, this isn't necessary.
-        if compute_calldata_offset {
-            // Offset of the script data relative to the call data
-            let call_data_offset =
-                ((offset as usize) + forward_data_offset) + ContractId::LEN + 2 * WORD_SIZE;
-            let call_data_offset = call_data_offset as Word;
+        instructions.extend(Opcode::RET(REG_ONE).to_bytes());
 
-            script_data.extend(&call_data_offset.to_be_bytes());
-        }
-
-        // Insert encoded arguments, if any
-        if let Some(e) = encoded_args {
-            script_data.extend(e)
-        }
-        Ok((script, script_data))
+        (instructions, offset)
     }
 
-    // Calling the contract executes the transaction, and is thus state-modifying
+    /// The script data consists of the following items in the given order:
+    /// 1. Asset ID to be forwarded (AmountId::LEN)
+    /// 2. Amount to be forwarded (1 * WORD_SIZE)
+    /// 3. Contract ID (ContractID::LEN);
+    /// 4. Function selector (1 * WORD_SIZE);
+    /// 5. Calldata offset (optional) (1 * WORD_SIZE)
+    /// 6. Encoded arguments (optional) (variable length)
+    fn get_script_data(calls: Vec<&ContractCall>, offset: usize) -> Vec<u8> {
+        let mut script_data: Vec<u8> = vec![];
+
+        for call in calls {
+            script_data.extend(call.call_parameters.asset_id.to_vec());
+
+            let amount = call.call_parameters.amount as Word;
+            script_data.extend(amount.to_be_bytes());
+
+            script_data.extend(call.contract_id.as_ref());
+
+            script_data.extend(call.encoded_selector);
+
+            // If the method call takes custom inputs or has more than
+            // one argument, we need to calculate the `call_data_offset`,
+            // which points to where the data for the custom types start in the
+            // transaction. If it doesn't take any custom inputs, this isn't necessary.
+            if call.compute_calldata_offset {
+                // Offset of the script data relative to the call data
+                let call_data_offset =
+                    offset + AssetId::LEN + WORD_SIZE + ContractId::LEN + 2 * WORD_SIZE;
+                let call_data_offset = call_data_offset as Word;
+
+                script_data.extend(&call_data_offset.to_be_bytes());
+            }
+            script_data.extend(call.encoded_args.clone());
+        }
+
+        script_data
+    }
+
+    /// Returns the VM instructions for calling a contract method
+    /// We use the Opcode to call a contract: `CALL` pointing at the
+    /// following registers;
+    ///
+    /// 0x10 Script data offset
+    /// 0x11 Gas price
+    /// 0x12 Coin amount
+    /// 0x13 Asset ID
+    ///
+    /// Note that these are soft rules as we're picking this addresses simply because they
+    /// non-reserved register.
+    fn single_call_instructions(data_offset: usize, segment_offset: usize) -> Vec<u8> {
+        let instructions = vec![
+            Opcode::MOVI(
+                0x10,
+                (data_offset + segment_offset + AssetId::LEN + WORD_SIZE) as Immediate18,
+            ),
+            // TODO load gas price
+            Opcode::MOVI(
+                0x12,
+                (data_offset + segment_offset + AssetId::LEN) as Immediate18,
+            ),
+            Opcode::LW(0x12, 0x12, 0),
+            Opcode::MOVI(0x13, (data_offset + segment_offset) as Immediate18),
+            Opcode::CALL(0x10, 0x12, 0x13, REG_CGAS),
+        ];
+
+        #[allow(clippy::iter_cloned_collect)]
+        instructions.iter().copied().collect::<Vec<u8>>()
+    }
+
+    /// Returns the offset between the script instructions and the script data in memory
+    /// based on the amount of contract calls the script has to make
+    fn get_data_offset(num_calls: usize) -> usize {
+        let mut len_script = Script::single_call_instructions(0, 0).len() * num_calls;
+
+        // to account for RET instruction which is added later
+        len_script += Opcode::LEN;
+
+        VM_TX_MEMORY + Transaction::script_offset() + padded_len_usize(len_script)
+    }
+
+    /// Execute the transaction in a state-modifying manner.
     pub async fn call(self, fuel_client: &FuelClient) -> Result<Vec<Receipt>, Error> {
         let tx_id = fuel_client.submit(&self.tx).await?.0.to_string();
         let receipts = fuel_client.receipts(&tx_id).await?;
@@ -251,8 +254,7 @@ impl Script {
         }
     }
 
-    // Simulating a call to the contract means that the actual state of the blockchain is not
-    // modified, it is only simulated using a "dry-run".
+    /// Execute the transaction in a simulated manner, not modifying blockchain state
     pub async fn simulate(self, fuel_client: &FuelClient) -> Result<Vec<Receipt>, Error> {
         let receipts = fuel_client.dry_run(&self.tx).await?;
         Ok(receipts)
