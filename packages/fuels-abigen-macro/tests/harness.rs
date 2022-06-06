@@ -1574,6 +1574,7 @@ mod tests_bin {
     use fuels_core::parameters::TxParameters;
 
     #[tokio::test]
+    #[ignore]
     async fn test_tuples_using_fuel_core_bin() {
         abigen!(
             MyContract,
@@ -1598,6 +1599,7 @@ mod tests_bin {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn unit_type_enums_using_fuel_core_bin() {
         abigen!(
         MyContract,
@@ -1624,4 +1626,5 @@ mod tests_bin {
 
         assert_eq!(result.value, BimBamBoum::Boum());
     }
+
 }
