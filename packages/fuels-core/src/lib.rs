@@ -423,6 +423,80 @@ impl Detokenize for fuel_tx::Address {
     }
 }
 
+/// This trait is similar to `Detokenize`, but it is used inside the abigen
+/// generated code in order to get the parameter types (`ParamType`) and
+/// instantiate a new struct/enum from tokens. This is used in the generated
+/// code in `custom_types_gen.rs`, with the exception of the Sway-native types
+/// `Address`, `ContractId`, and `AssetId`, that are implemented right here,
+/// without code generation.
+pub trait Parameterize {
+    fn param_types() -> Vec<ParamType>;
+    fn new_from_tokens(tokens: &[Token]) -> Self;
+}
+
+impl Parameterize for fuel_tx::Address {
+    fn param_types() -> Vec<ParamType> {
+        vec![ParamType::B256]
+    }
+
+    fn new_from_tokens(tokens: &[Token]) -> Self {
+        if let Token::Struct(inner_tokens) = &tokens[0] {
+            if let Token::B256(id) = &inner_tokens[0] {
+                Self::from(*id)
+            } else {
+                panic!(
+                    "Expected a `b256` inside the Address struct, got {:?}",
+                    inner_tokens[0]
+                )
+            }
+        } else {
+            panic!("Expected a struct containing `b256`, got {:?}", tokens[0])
+        }
+    }
+}
+
+impl Parameterize for fuel_tx::ContractId {
+    fn param_types() -> Vec<ParamType> {
+        vec![ParamType::B256]
+    }
+
+    fn new_from_tokens(tokens: &[Token]) -> Self {
+        if let Token::Struct(inner_tokens) = &tokens[0] {
+            if let Token::B256(id) = &inner_tokens[0] {
+                Self::from(*id)
+            } else {
+                panic!(
+                    "Expected a `b256` inside the ContractId struct, got {:?}",
+                    inner_tokens[0]
+                )
+            }
+        } else {
+            panic!("Expected a struct containing `b256`, got {:?}", tokens[0])
+        }
+    }
+}
+
+impl Parameterize for fuel_tx::AssetId {
+    fn param_types() -> Vec<ParamType> {
+        vec![ParamType::B256]
+    }
+
+    fn new_from_tokens(tokens: &[Token]) -> Self {
+        if let Token::Struct(inner_tokens) = &tokens[0] {
+            if let Token::B256(id) = &inner_tokens[0] {
+                Self::from(*id)
+            } else {
+                panic!(
+                    "Expected a `b256` inside the AssetId struct, got {:?}",
+                    inner_tokens[0]
+                )
+            }
+        } else {
+            panic!("Expected a struct containing `b256`, got {:?}", tokens[0])
+        }
+    }
+}
+
 /// Converts a u8 to a right aligned array of 8 bytes.
 pub fn pad_u8(value: &u8) -> ByteArray {
     let mut padded = ByteArray::default();

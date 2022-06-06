@@ -1,0 +1,7 @@
+[project]
+name = "sway_native_types"
+authors = ["Rodrigo Araujo"]
+entry = "main.sw"
+license = "Apache-2.0"
+
+[dependencies]
