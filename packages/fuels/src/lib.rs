@@ -16,6 +16,8 @@
 //! Examples on how you can use the types imported by the prelude can be found in
 //! the [main test suite](https://github.com/FuelLabs/fuels-rs/blob/master/fuels-abigen-macro/tests/harness.rs)
 
+pub use fuels_core::tx;
+
 pub mod client {
     pub use fuel_gql_client::client::*;
 }
@@ -28,6 +30,7 @@ pub mod core {
     pub use fuels_core::*;
 }
 
+#[cfg(feature = "fuel-core")]
 pub mod node {
     #[doc(no_inline)]
     pub use fuel_core::*;
@@ -37,11 +40,15 @@ pub mod signers {
     pub use fuels_signers::*;
 }
 
+#[cfg(feature = "fuel-core")]
 pub mod test_helpers {
     pub use fuels_test_helpers::*;
 }
 
-pub use fuels_core::tx;
+#[cfg(feature = "fuel-core-bin")]
+pub mod test_helpers_bin {
+    pub use fuels_test_helpers_bin::*;
+}
 
 /// Easy imports of frequently used
 #[doc(hidden)]
@@ -63,6 +70,9 @@ pub mod prelude {
     pub use super::core::{Token, Tokenizable};
     pub use super::signers::provider::*;
     pub use super::signers::{LocalWallet, Signer};
+    #[cfg(feature = "fuel-core")]
     pub use super::test_helpers::*;
+    #[cfg(feature = "fuel-core-bin")]
+    pub use super::test_helpers_bin::*;
     pub use super::tx::Salt;
 }

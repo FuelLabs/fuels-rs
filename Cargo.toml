@@ -12,6 +12,7 @@ members = [
     "packages/fuels-core",
     "packages/fuels-signers",
     "packages/fuels-test-helpers",
+    "packages/fuels-test-helpers-bin",
     "packages/fuels-types",
     "tools/fuels-abi-cli",
     "scripts/build-test-projects",

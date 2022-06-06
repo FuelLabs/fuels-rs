@@ -9,25 +9,12 @@ repository = "https://github.com/FuelLabs/fuels-rs"
 description = "Fuel Rust SDK test helpers."
 
 [dependencies]
-fuel-core = { version = "0.8", default-features = false, optional = true }
+fuel-core = { version = "0.8", default-features = false }
 fuel-gql-client = { version = "0.8", default-features = false }
 fuels-core = { version = "0.14.1", path = "../fuels-core" }
 fuels-signers = { version = "0.14.1", path = "../fuels-signers", optional = true }
 rand = { version = "0.8.4", default-features = false }
-
-cfg-if = "0.1"
-
-tokio = {version = "1.15", optional = true}
-
-fuel-core-interfaces = { version = "0.8", default-features = false, optional = true } # TODO Emir make optional
-fuel-types = { version = "0.5", default-features = false, features = ["random"], optional = true } # TODO Emir make optional
-hex = { version = "0.4", features = ["serde"], optional = true} # TODO Emir make optional
-
-serde = { version = "1.0", features = ["derive"], optional = true } # TODO Emir make optional
-serde_json = { version = "1.0", features = ["raw_value"], optional = true } # TODO Emir make optional
-serde_with = {version = "1.11", optional = true } # TODO Emir make optional
-
+tokio = "1.15"
 
 [features]
-default = ["fuels-signers", "fuel-core"]
-fuel-core-bin = ["fuel-core-interfaces", "fuel-types", "hex", "serde", "serde_json", "serde_with", "tokio"]
+default = ["fuels-signers"]

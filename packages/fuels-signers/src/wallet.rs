@@ -34,7 +34,7 @@ type W = English;
 ///
 /// async fn foo() -> Result<(), Box<dyn std::error::Error>> {
 ///   // Setup local test node
-///   let (provider, _) = setup_test_provider(vec![],Config::local_node()).await;
+///   let (provider, _) = setup_test_provider(vec![], Config::local_node()).await;
 ///
 ///   // Create a new local wallet with the newly generated key
 ///   let wallet = LocalWallet::new_random(Some(provider));
@@ -233,6 +233,7 @@ impl Wallet {
     /// # Examples
     /// ```
     /// use fuels::prelude::*;
+    /// use fuels::test_helpers::setup_single_asset_coins;
     /// use fuels::tx::{Bytes32, AssetId, Input, Output, UtxoId};
     /// use std::str::FromStr;
     /// use fuels_test_helpers::Config;

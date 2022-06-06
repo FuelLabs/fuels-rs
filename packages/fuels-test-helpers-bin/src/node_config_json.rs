@@ -1,3 +1,6 @@
+use std::fmt;
+use std::io::Write;
+
 use fuel_core_interfaces::model::BlockHeight;
 use fuel_gql_client::fuel_vm::consts::WORD_SIZE;
 use fuel_types::{Address, AssetId, Bytes32, Word};
@@ -7,8 +10,13 @@ use serde::{Deserializer, Serializer};
 use serde_json::{json, Value};
 use serde_with::{serde_as, skip_serializing_none};
 use serde_with::{DeserializeAs, SerializeAs};
-use std::fmt;
-use std::path::PathBuf; // TODO Emir make this optional
+use tempfile::NamedTempFile;
+use tokio::process::Child;
+
+pub struct FuelCoreServer {
+    pub process_handle: Child,
+    pub config_file: NamedTempFile,
+}
 
 #[skip_serializing_none]
 #[serde_as]
@@ -60,10 +68,11 @@ where
 
 pub mod serde_hex {
     use core::fmt;
+    use std::convert::TryFrom;
+
     use hex::{FromHex, ToHex};
     use serde::de::Error;
     use serde::{Deserializer, Serializer};
-    use std::convert::TryFrom;
 
     pub fn serialize<T, S>(target: T, ser: S) -> Result<S::Ok, S::Error>
     where
@@ -149,7 +158,7 @@ impl<'de> DeserializeAs<'de, BlockHeight> for HexNumber {
     }
 }
 
-pub fn get_node_config_json(coins: Value) -> std::io::Result<()> {
+pub fn get_node_config_json(coins: Value) -> NamedTempFile {
     let config = json!({
       "chain_name": "local_testnet",
       "block_production": "Instant",
@@ -174,7 +183,13 @@ pub fn get_node_config_json(coins: Value) -> std::io::Result<()> {
       }
     });
 
-    let file_path =
-        PathBuf::from("/home/salka1988/Documents/Git/fuel-labs/fuel-core-bin").join("config.json");
-    std::fs::write(file_path, &config.to_string())
+    let config_file = NamedTempFile::new();
+
+    let _ = writeln!(
+        config_file.as_ref().unwrap().as_file(),
+        "{}",
+        &config.to_string()
+    );
+
+    config_file.unwrap()
 }

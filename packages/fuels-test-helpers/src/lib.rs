@@ -1,54 +1,29 @@
 //! Testing helpers/utilities for Fuel SDK.
 
-#[cfg(feature = "fuel-core")]
-extern crate fuel_core;
+use std::collections::HashSet;
+use std::net::SocketAddr;
 
-#[cfg(feature = "fuel-core")]
+pub use fuel_core::service::Config;
 use fuel_core::{
     chain_config::{ChainConfig, CoinConfig, StateConfig},
-    service::{Config, DbType, FuelService},
+    model::{Coin, CoinStatus},
+    service::{DbType, FuelService},
 };
-
-#[cfg(not(feature = "fuel-core-bin"))]
-use fuel_core::model::{Coin, CoinStatus};
-
-#[cfg(feature = "fuel-core-bin")]
-use fuel_core_interfaces::model::{Coin, CoinStatus};
-#[cfg(feature = "fuel-core-bin")]
-use serde_json::Value;
-#[cfg(feature = "fuel-core-bin")]
-use std::env;
-#[cfg(feature = "fuel-core-bin")]
-use std::thread::sleep;
-#[cfg(feature = "fuel-core-bin")]
-use std::time::Duration;
-#[cfg(feature = "fuel-core-bin")]
-use tokio::process::{Child, Command};
-
 use fuel_gql_client::{
     client::FuelClient,
     fuel_tx::{Address, Bytes32, UtxoId},
 };
+use rand::Fill;
 
 use fuels_core::constants::NATIVE_ASSET_ID;
-
 use fuels_signers::fuel_crypto::fuel_types::AssetId;
-use rand::Fill;
-use std::collections::HashSet;
-use std::net::SocketAddr;
+#[cfg(feature = "fuels-signers")]
+pub use signers::*;
+pub use wallets_config::*;
 
 #[cfg(feature = "fuels-signers")]
 mod signers;
 mod wallets_config;
-
-#[cfg(feature = "fuel-core-bin")]
-mod node_config_json; // Todo Emir make this optional
-#[cfg(feature = "fuel-core-bin")]
-use crate::node_config_json::{get_node_config_json, DummyConfig}; // Todo make optional
-
-#[cfg(feature = "fuels-signers")]
-pub use signers::*;
-pub use wallets_config::*;
 
 /// Create a vector of `num_asset`*`coins_per_asset` UTXOs and a vector of the unique corresponding
 /// asset IDs. `AssetId`. Each UTXO (=coin) contains `amount_per_coin` amount of a random asset. The
@@ -121,7 +96,6 @@ pub fn setup_single_asset_coins(
 
 // Setup a test client with the given coins. We return the SocketAddr so the launched node
 // client can be connected to more easily (even though it is often ignored).
-#[cfg(feature = "fuel-core")]
 pub async fn setup_test_client(
     coins: Vec<(UtxoId, Coin)>,
     node_config: Config,
@@ -214,55 +188,4 @@ mod tests {
             }
         }
     }
-}
-
-// TODO Emir make this optional
-#[cfg(feature = "fuel-core-bin")]
-pub async fn setup_test_client_bin(
-    coins: Vec<(UtxoId, Coin)>,
-    // node_config: Config
-) -> (Child, FuelClient, SocketAddr) {
-    let coin_configs: Vec<String> = coins
-        .into_iter()
-        .map(|(utxo_id, coin)| {
-            serde_json::to_string(&DummyConfig {
-                tx_id: Some(*utxo_id.tx_id()),
-                output_index: Some(utxo_id.output_index() as u64),
-                block_created: Some(coin.block_created),
-                maturity: Some(coin.maturity),
-                owner: coin.owner,
-                amount: coin.amount,
-                asset_id: coin.asset_id,
-            })
-            .unwrap()
-        })
-        .collect();
-
-    let config_with_coins: Value = serde_json::from_str(coin_configs.concat().as_str()).unwrap();
-
-    let _ = get_node_config_json(config_with_coins);
-
-    let fuel_core_bin = env::var("FUEL_CORE_BIN").unwrap_or_else(|_| "FUEL_CORE_BIN".to_string());
-    let fuel_core_config =
-        env::var("FUEL_CORE_CONFIG").unwrap_or_else(|_| "FUEL_CORE_CONFIG".to_string());
-
-    let running_node = Command::new(fuel_core_bin)
-        .arg("--ip")
-        .arg("127.0.0.1")
-        .arg("--port")
-        .arg("4000")
-        .arg("--chain")
-        .arg(fuel_core_config)
-        .arg("--db-type")
-        .arg("in-memory")
-        .kill_on_drop(true)
-        .spawn()
-        .expect("FUEL_CORE_BIN is unable to find. Please set FUEL_CORE_BIN");
-
-    sleep(Duration::from_secs(2));
-
-    let srv_address = SocketAddr::new("127.0.0.1".parse().unwrap(), 4000);
-    let client = FuelClient::from(srv_address);
-
-    (running_node, client, srv_address)
 }

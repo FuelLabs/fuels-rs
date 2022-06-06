@@ -1580,7 +1580,7 @@ mod tests_bin {
             "packages/fuels-abigen-macro/tests/test_projects/tuples/out/debug/tuples-abi.json"
         );
 
-        let (running_node, wallet) = launch_provider_and_get_single_wallet_bin().await;
+        let (_running_node, wallet) = launch_provider_and_get_single_wallet_bin().await;
 
         let id = Contract::deploy(
             "tests/test_projects/tuples/out/debug/tuples.bin",
@@ -1604,7 +1604,7 @@ mod tests_bin {
         "packages/fuels-abigen-macro/tests/test_projects/use_enum_input/out/debug/use_enum_input-abi.json"
     );
 
-        let (mut running_node, wallet) = launch_provider_and_get_single_wallet_bin().await;
+        let (_running_node, wallet) = launch_provider_and_get_single_wallet_bin().await;
 
         let id = Contract::deploy(
             "tests/test_projects/use_enum_input/out/debug/use_enum_input.bin",
