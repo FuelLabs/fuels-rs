@@ -1626,5 +1626,4 @@ mod tests_bin {
 
         assert_eq!(result.value, BimBamBoum::Boum());
     }
-
 }
