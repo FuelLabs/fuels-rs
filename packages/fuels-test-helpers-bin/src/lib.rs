@@ -11,7 +11,8 @@ use fuel_gql_client::{
     client::FuelClient,
     fuel_tx::{Address, Bytes32, UtxoId},
 };
-use rand::{Fill, Rng};
+use portpicker::pick_unused_port;
+use rand::Fill;
 use serde_json::Value;
 use tokio::process::Command;
 
@@ -119,14 +120,15 @@ pub async fn setup_test_client_bin(
 
     let config_with_coins: Value = serde_json::from_str(coin_configs.concat().as_str()).unwrap();
     let temp_config_file = get_node_config_json(config_with_coins);
-    // ports should be checked
-    let free_port = rand::thread_rng().gen_range(4000..9000);
+
+    let free_port = pick_unused_port().expect("No ports free");
+    let srv_address = SocketAddr::new("127.0.0.1".parse().unwrap(), free_port);
 
     let running_node = Command::new("fuel-core")
         .arg("--ip")
         .arg("127.0.0.1")
         .arg("--port")
-        .arg(&free_port.to_string())
+        .arg(free_port.to_string())
         .arg("--chain")
         .arg(temp_config_file.borrow().path())
         .arg("--db-type")
@@ -142,7 +144,6 @@ pub async fn setup_test_client_bin(
 
     sleep(Duration::from_secs(2));
 
-    let srv_address = SocketAddr::new("127.0.0.1".parse().unwrap(), free_port);
     let client = FuelClient::from(srv_address);
 
     (fuel_core_server, client, srv_address)
