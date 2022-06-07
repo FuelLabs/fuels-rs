@@ -249,6 +249,15 @@ impl ABIParser {
             return Ok(Token::Struct(vec![]));
         }
 
+        //To parse the value string we use a two pointer/index approach.
+        //The items are comma separated and if an item is tokenized the last_item
+        //index is moved to the current position.
+        //The variable nested is incremented and decremented if a bracket is encountered,
+        //and appropriate errors are returned if the nested count is not 0.
+        //If the struct has an array inside its values the current position will be incremented
+        //until both the opening and closing bracket are inside the new item.
+        //Characters inside quotes are ignored and they are tokenized as one item.
+        //An error is return if there is an odd number of quotes.
         let mut result = vec![];
         let mut nested = 0isize;
         let mut ignore = false;
@@ -274,7 +283,9 @@ impl ABIParser {
 
                             let token = self.tokenize(
                                 params_iter.next().ok_or_else(|| {
-                                    Error::InvalidData("struct value missing matching param".into())
+                                    Error::InvalidData(
+                                        "last struct value is missing a matching param".into(),
+                                    )
                                 })?,
                                 sub.to_string(),
                             )?;
@@ -297,7 +308,7 @@ impl ABIParser {
 
                     let token = self.tokenize(
                         params_iter.next().ok_or_else(|| {
-                            Error::InvalidData("sturct array value missing matching param".into())
+                            Error::InvalidData("struct value is missing a matching param".into())
                         })?,
                         sub.to_string(),
                     )?;
@@ -340,6 +351,13 @@ impl ABIParser {
             return Ok(Token::Array(vec![]));
         }
 
+        //To parse the value string we use a two pointer/index approach.
+        //The items are comma separated and if an item is tokenized the last_item
+        //index is moved to the current position.
+        //The variable nested is incremented and decremented if a bracket is encountered,
+        //and appropraite errors are thrown if the nested count is not 0
+        //Characters inside quotes are ignored and they are tokenized as one item.
+        //An error is return if there is an odd number of quotes.
         let mut result = vec![];
         let mut nested = 0isize;
         let mut ignore = false;
@@ -436,6 +454,15 @@ impl ABIParser {
             return Ok(Token::Tuple(vec![]));
         }
 
+        //To parse the value string we use a two pointer/index approach.
+        //The items are comma separated and if an item is tokenized the last_item
+        //index is moved to the current position.
+        //The variable nested is incremented and decremented if a bracket is encountered,
+        //and appropriate errors are returned if the nested count is not 0.
+        //If the tuple has an array inside its values the current position will be incremented
+        //until both the opening and closing bracket are inside the new item.
+        //Characters inside quotes are ignored and they are tokenized as one item.
+        //An error is return if there is an odd number of quotes.
         let mut result = vec![];
         let mut nested = 0isize;
         let mut ignore = false;
@@ -461,7 +488,9 @@ impl ABIParser {
 
                             let token = self.tokenize(
                                 params_iter.next().ok_or_else(|| {
-                                    Error::InvalidData("tuple value missing matching param".into())
+                                    Error::InvalidData(
+                                        "last tuple value is missing a matching param".into(),
+                                    )
                                 })?,
                                 sub.to_string(),
                             )?;
@@ -484,7 +513,7 @@ impl ABIParser {
 
                     let token = self.tokenize(
                         params_iter.next().ok_or_else(|| {
-                            Error::InvalidData("tuple array value missing matching param".into())
+                            Error::InvalidData("tuple value is missing a matching param".into())
                         })?,
                         sub.to_string(),
                     )?;
@@ -1394,7 +1423,7 @@ mod tests {
                 "inputs": [
                   {
                     "name": "input",
-                    "type": "(u64, u64)",
+                    "type": "(u64, bool)",
                     "components": [
                       {
                         "name": "__tuple_element",
@@ -1403,7 +1432,7 @@ mod tests {
                       },
                       {
                         "name": "__tuple_element",
-                        "type": "u64",
+                        "type": "bool",
                         "components": null
                       }
                     ]
@@ -1415,7 +1444,7 @@ mod tests {
         ]
         "#;
 
-        let values: Vec<String> = vec!["(42, 42)".to_string()];
+        let values: Vec<String> = vec!["(42, true)".to_string()];
 
         let mut abi = ABIParser::new();
 
@@ -1425,7 +1454,7 @@ mod tests {
             .encode_with_function_selector(json_abi, function_name, &values)
             .unwrap();
 
-        let expected_encode = "000000000e8ece68000000000000002a000000000000002a";
+        let expected_encode = "000000001cc7bb2c000000000000002a0000000000000001";
         assert_eq!(encoded, expected_encode);
     }
 
@@ -1438,11 +1467,11 @@ mod tests {
             "inputs": [
               {
                 "name": "input",
-                "type": "((u64, u64), struct Person, enum State)",
+                "type": "((u64, bool), struct Person, enum State)",
                 "components": [
                   {
                     "name": "__tuple_element",
-                    "type": "(u64, u64)",
+                    "type": "(u64, bool)",
                     "components": [
                       {
                         "name": "__tuple_element",
@@ -1451,7 +1480,7 @@ mod tests {
                       },
                       {
                         "name": "__tuple_element",
-                        "type": "u64",
+                        "type": "bool",
                         "components": null
                       }
                     ]
@@ -1497,7 +1526,7 @@ mod tests {
         ]
         "#;
 
-        let values: Vec<String> = vec!["((42, 42), (John), (1, 0))".to_string()];
+        let values: Vec<String> = vec!["((42, true), (John), (1, 0))".to_string()];
 
         let mut abi = ABIParser::new();
 
@@ -1508,7 +1537,7 @@ mod tests {
             .unwrap();
 
         let expected_encode =
-            "0000000077993e79000000000000002a000000000000002a4a6f686e000000000000000000000001";
+            "00000000ebb8d011000000000000002a00000000000000014a6f686e000000000000000000000001";
         assert_eq!(encoded, expected_encode);
     }
 
