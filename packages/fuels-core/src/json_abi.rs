@@ -232,7 +232,7 @@ impl ABIParser {
         }
     }
 
-    /// Creates a struct `Token` from an array of parameter types and a string of values.
+    /// Creates a `Token::Struct` from an array of parameter types and a string of values.
     /// I.e. it takes a string containing values "value_1, value_2, value_3" and an array
     /// of `ParamType` containing the type of each value, in order:
     /// [ParamType::<Type of value_1>, ParamType::<Type of value_2>, ParamType::<Type of value_3>]
@@ -334,12 +334,10 @@ impl ABIParser {
         Ok(Token::Struct(result))
     }
 
-    /// Creates an enum `Token` from an array of parameter types and a string of values.
-    /// I.e. it takes a string containing values "value_1, value_2, value_3" and an array
-    /// of `ParamType` containing the type of each value, in order:
-    /// [ParamType::<Type of value_1>, ParamType::<Type of value_2>, ParamType::<Type of value_3>]
-    /// And attempts to return a `Token::Enum()` containing the inner types.
-    /// It works for nested/recursive enums.
+    /// Creates a `Token::Array` from one parameter type and a string of values.
+    /// I.e. it takes a string containing values "value_1, value_2, value_3" and a
+    /// `ParamType` sepecifying the type.
+    /// It works for nested/recursive arrays.
     pub fn tokenize_array<'a>(&self, value: &'a str, param: &ParamType) -> Result<Token, Error> {
         if !value.starts_with('[') || !value.ends_with(']') {
             return Err(Error::InvalidData(
@@ -437,7 +435,7 @@ impl ABIParser {
         Ok(Token::Array(result))
     }
 
-    /// Creates a tuple `Token` from an array of parameter types and a string of values.
+    /// Creates `Token::Tuple` from an array of parameter types and a string of values.
     /// I.e. it takes a string containing values "value_1, value_2, value_3" and an array
     /// of `ParamType` containing the type of each value, in order:
     /// [ParamType::<Type of value_1>, ParamType::<Type of value_2>, ParamType::<Type of value_3>]
