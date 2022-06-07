@@ -1,7 +1,13 @@
 [package]
 name = "fuels-example-contracts"
-version = "0.1.0"
+version = "0.0.0"
 edition = "2021"
+publish = false
+authors = ["Fuel Labs <contact@fuel.sh>"]
+homepage = "https://fuel.network/"
+license = "Apache-2.0"
+repository = "https://github.com/FuelLabs/fuels-rs"
+description = "Fuel Rust SDK contract examples."
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
