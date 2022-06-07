@@ -211,6 +211,11 @@ impl ABIParser {
             ParamType::Bool => Ok(Token::Bool(trimmed_value.parse::<bool>()?)),
             ParamType::Byte => Ok(Token::Byte(trimmed_value.parse::<u8>()?)),
             ParamType::B256 => {
+                if trimmed_value.len() != 64 {
+                    return Err(Error::InvalidData(
+                        "the hex encoding of the b256 must have 64 characters".into(),
+                    ));
+                }
                 let v = Vec::from_hex(trimmed_value)?;
                 let s: [u8; 32] = v.as_slice().try_into().unwrap();
                 Ok(Token::B256(s))
@@ -1831,7 +1836,7 @@ mod tests {
                 "type": "function"
             }
         ]
-                "#;
+        "#;
 
         let s = "(true, 42)".to_string();
 
@@ -1847,5 +1852,265 @@ mod tests {
 
         let expected_encode = "00000000e33a11ce0000000000000001000000000000002a";
         assert_eq!(encoded, expected_encode);
+    }
+
+    #[test]
+    fn tokenize_errors_built_in_types() {
+        let abi = ABIParser::new();
+
+        // We test only on U8 as it is the same error on all other unsigned int types
+        let error_message = abi
+            .tokenize(&ParamType::U8, "2,".to_string())
+            .unwrap_err()
+            .to_string();
+
+        assert_eq!(
+            "Parse integer error: invalid digit found in string",
+            error_message
+        );
+
+        let error_message = abi
+            .tokenize(&ParamType::Bool, "True".to_string())
+            .unwrap_err()
+            .to_string();
+
+        assert_eq!(
+            "Parse boolean error: provided string was not `true` or `false`",
+            error_message
+        );
+
+        let value = "d57a9c46dfcc7f18207013e65b44e4cb4e2c2298f4ac457ba8f82743f31e90b".to_string();
+        let error_message = abi
+            .tokenize(&ParamType::B256, value)
+            .unwrap_err()
+            .to_string();
+
+        assert_eq!(
+            "Invalid data: the hex encoding of the b256 must have 64 characters",
+            error_message
+        );
+
+        let value = "Hd57a9c46dfcc7f18207013e65b44e4cb4e2c2298f4ac457ba8f82743f31e90b".to_string();
+        let error_message = abi
+            .tokenize(&ParamType::B256, value)
+            .unwrap_err()
+            .to_string();
+
+        assert!(error_message.contains("Parse hex error: Invalid character"));
+    }
+
+    #[test]
+    fn tokenize_errors_tuple() {
+        let params = Property {
+            name: "input".to_string(),
+            type_field: "(u64, [u64; 3])".to_string(),
+            components: Some(vec![
+                Property {
+                    name: "__tuple_element".to_string(),
+                    type_field: "u64".to_string(),
+                    components: None,
+                },
+                Property {
+                    name: "__tuple_element".to_string(),
+                    type_field: "[u64; 3]".to_string(),
+                    components: None,
+                },
+            ]),
+        };
+
+        let abi = ABIParser::new();
+
+        if let ParamType::Tuple(tuple_params) = parse_tuple_param(&params).unwrap() {
+            let error_message = abi
+                .tokenize_tuple("0, [0,0,0])", &tuple_params)
+                .unwrap_err()
+                .to_string();
+
+            assert_eq!(
+                "Invalid data: tuple value string must start and end with round brackets",
+                error_message
+            );
+
+            let error_message = abi
+                .tokenize_tuple("((0, [0,0,0])", &tuple_params)
+                .unwrap_err()
+                .to_string();
+
+            assert_eq!(
+                "Invalid data: tuple value string has excess opening brackets",
+                error_message
+            );
+
+            let error_message = abi
+                .tokenize_tuple("(0, [0,0,0]))", &tuple_params)
+                .unwrap_err()
+                .to_string();
+
+            assert_eq!(
+                "Invalid data: tuple value string has excess closing brackets",
+                error_message
+            );
+
+            let error_message = abi
+                .tokenize_tuple("(0, \"[0,0,0])", &tuple_params)
+                .unwrap_err()
+                .to_string();
+
+            assert_eq!(
+                "Invalid data: tuple value string has excess quotes",
+                error_message
+            );
+
+            let error_message = abi
+                .tokenize_tuple("(0, [0,0,0], 0, 0)", &tuple_params)
+                .unwrap_err()
+                .to_string();
+
+            assert_eq!(
+                "Invalid data: tuple value is missing a matching param",
+                error_message
+            );
+
+            let error_message = abi
+                .tokenize_tuple("(0, [0,0,0], 0)", &tuple_params)
+                .unwrap_err()
+                .to_string();
+
+            assert_eq!(
+                "Invalid data: last tuple value is missing a matching param",
+                error_message
+            );
+        }
+    }
+
+    #[test]
+    fn tokenize_errors_array() {
+        let param = ParamType::U16;
+
+        let abi = ABIParser::new();
+
+        let error_message = abi
+            .tokenize_array("1,2],[3],4]", &param)
+            .unwrap_err()
+            .to_string();
+
+        assert_eq!(
+            "Invalid data: array value string must start and end with square brackets",
+            error_message
+        );
+
+        let error_message = abi
+            .tokenize_array("[[[1,2],[3],4]", &param)
+            .unwrap_err()
+            .to_string();
+
+        assert_eq!(
+            "Invalid data: array value string has excess opening brackets",
+            error_message
+        );
+
+        let error_message = abi
+            .tokenize_array("[[1,\"2],[3],4]]", &param)
+            .unwrap_err()
+            .to_string();
+
+        assert_eq!(
+            "Invalid data: array value string has excess quotes",
+            error_message
+        );
+
+        let error_message = abi
+            .tokenize_array("[[1,2],[3],4]]", &param)
+            .unwrap_err()
+            .to_string();
+
+        assert_eq!(
+            "Invalid data: array value string has excess closing brackets",
+            error_message
+        );
+    }
+
+    #[test]
+    fn tokenize_errors_struct() {
+        let params = Property {
+            name: "input".to_string(),
+            type_field: "struct MyStruct".to_string(),
+            components: Some(vec![
+                Property {
+                    name: "num".to_string(),
+                    type_field: "u64".to_string(),
+                    components: None,
+                },
+                Property {
+                    name: "arr".to_string(),
+                    type_field: "[u64; 3]".to_string(),
+                    components: None,
+                },
+            ]),
+        };
+
+        let abi = ABIParser::new();
+
+        if let ParamType::Struct(struct_params) = parse_custom_type_param(&params).unwrap() {
+            let error_message = abi
+                .tokenize_struct("0, [0,0,0])", &struct_params)
+                .unwrap_err()
+                .to_string();
+
+            assert_eq!(
+                "Invalid data: struct value string must start and end with round brackets",
+                error_message
+            );
+
+            let error_message = abi
+                .tokenize_struct("((0, [0,0,0])", &struct_params)
+                .unwrap_err()
+                .to_string();
+
+            assert_eq!(
+                "Invalid data: struct value string has excess opening brackets",
+                error_message
+            );
+
+            let error_message = abi
+                .tokenize_struct("(0, [0,0,0]))", &struct_params)
+                .unwrap_err()
+                .to_string();
+
+            assert_eq!(
+                "Invalid data: struct value string has excess closing brackets",
+                error_message
+            );
+
+            let error_message = abi
+                .tokenize_struct("(0, \"[0,0,0])", &struct_params)
+                .unwrap_err()
+                .to_string();
+
+            assert_eq!(
+                "Invalid data: struct value string has excess quotes",
+                error_message
+            );
+
+            let error_message = abi
+                .tokenize_struct("(0, [0,0,0], 0, 0)", &struct_params)
+                .unwrap_err()
+                .to_string();
+
+            assert_eq!(
+                "Invalid data: struct value is missing a matching param",
+                error_message
+            );
+
+            let error_message = abi
+                .tokenize_struct("(0, [0,0,0], 0)", &struct_params)
+                .unwrap_err()
+                .to_string();
+
+            assert_eq!(
+                "Invalid data: last struct value is missing a matching param",
+                error_message
+            );
+        }
     }
 }
