@@ -14,15 +14,10 @@ For application building, you probably want to go with the second option.
 ## Instantiating a Fuel client
 
 You can instantiate a Fuel client, pointing to a local Fuel node by
-using [Fuel Core](https://github.com/FuelLabs/fuel-core):
+using [`FuelClient`](https://docs.rs/fuels/*/fuels/client/struct.FuelClient.html):
 
 ```rust,ignore
-use fuel_core::service::{Config, FuelService};
-use fuel_gql_client::client::FuelClient;
-
-let server = FuelService::new_node(Config::local_node()).await.unwrap();
-
-let client = FuelClient::from(srv.bound_address);
+{{#include ../../../examples/contracts/src/lib.rs:instantiate_client}}
 ```
 
 Alternatively, if you have a Fuel node running separately, you can pass in the `SocketAddr` to `FuelClient::from()`.

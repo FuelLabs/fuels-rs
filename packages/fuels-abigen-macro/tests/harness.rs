@@ -1202,8 +1202,8 @@ async fn test_multiple_args() {
     assert_eq!(response.value, 5);
 
     let t = MyType { x: 5, y: 6 };
-    let response = instance.get_alt(t).call().await.unwrap();
-    assert_eq!(response.value, 5);
+    let response = instance.get_alt(t.clone()).call().await.unwrap();
+    assert_eq!(response.value, t);
 
     let response = instance.get_single(5).call().await.unwrap();
     assert_eq!(response.value, 5);
@@ -1231,6 +1231,84 @@ async fn test_tuples() {
     let response = instance.returns_tuple((1, 2)).call().await.unwrap();
 
     assert_eq!(response.value, (1, 2));
+
+    // Tuple with struct.
+    let my_struct_tuple = (
+        42,
+        Person {
+            name: "Jane".to_string(),
+        },
+    );
+    let response = instance
+        .returns_struct_in_tuple(my_struct_tuple.clone())
+        .call()
+        .await
+        .unwrap();
+
+    assert_eq!(response.value, my_struct_tuple);
+
+    // Tuple with enum.
+    let my_enum_tuple: (u64, State) = (42, State::A());
+
+    let response = instance
+        .returns_enum_in_tuple(my_enum_tuple.clone())
+        .call()
+        .await
+        .unwrap();
+
+    assert_eq!(response.value, my_enum_tuple);
+}
+
+#[tokio::test]
+async fn test_arrays_with_custom_types() {
+    // Generates the bindings from the an ABI definition inline.
+    // The generated bindings can be accessed through `MyContract`.
+    abigen!(
+        MyContract,
+        "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+    );
+
+    let wallet = launch_provider_and_get_single_wallet().await;
+
+    let contract_id = Contract::deploy(
+        "tests/test_projects/contract_test/out/debug/contract_test.bin",
+        &wallet,
+        TxParameters::default(),
+    )
+    .await
+    .unwrap();
+
+    println!("Contract deployed @ {:x}", contract_id);
+    let contract_instance = MyContract::new(contract_id.to_string(), wallet);
+
+    let persons = vec![
+        Person {
+            name: "John".to_string(),
+        },
+        Person {
+            name: "Jane".to_string(),
+        },
+    ];
+
+    let result = contract_instance
+        .array_of_structs(persons)
+        .call()
+        .await
+        .unwrap();
+
+    assert_eq!("John", result.value[0].name);
+    assert_eq!("Jane", result.value[1].name);
+
+    let states = vec![State::A(), State::B()];
+
+    let result = contract_instance
+        .array_of_enums(states.clone())
+        .call()
+        .await
+        .unwrap();
+
+    assert_eq!(states[0], result.value[0]);
+    assert_eq!(states[1], result.value[1]);
 }
 
 #[tokio::test]

@@ -1,4 +1,16 @@
 #[tokio::test]
+// ANCHOR: instantiate_client
+async fn instantiate_client() {
+    use fuels::client::FuelClient;
+    use fuels::node::service::{Config, FuelService};
+
+    let server = FuelService::new_node(Config::local_node()).await.unwrap();
+    let client = FuelClient::from(server.bound_address);
+    assert!(client.health().await.unwrap());
+}
+// ANCHOR_END: instantiate_client
+
+#[tokio::test]
 // ANCHOR: deploy_contract
 async fn deploy_contract() {
     use fuels::prelude::*;

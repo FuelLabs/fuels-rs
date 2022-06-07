@@ -6,7 +6,7 @@ use crate::json_abi::{parse_param, ABIParser};
 use crate::types::expand_type;
 use crate::utils::{ident, safe_ident};
 use crate::{ParamType, Selector};
-use fuels_types::{CustomType, Function, Property};
+use fuels_types::{CustomType, Function, Property, ENUM_KEYWORD, STRUCT_KEYWORD};
 use inflector::Inflector;
 use proc_macro2::{Literal, TokenStream};
 use quote::quote;
@@ -64,7 +64,7 @@ pub fn expand_function(
     Ok(quote! {
         #doc
         pub fn #name(&self #input) -> #result {
-            Contract::method_hash(&self.wallet.get_provider().unwrap(), self.contract_id, &self.wallet,
+            Contract::method_hash(&self.wallet.get_provider().expect("Provider not set up"), self.contract_id, &self.wallet,
                 #tokenized_signature, #output_params_token, #arg).expect("method not found (this should never happen)")
         }
     })
@@ -80,22 +80,73 @@ fn expand_fn_outputs(outputs: &[Property]) -> Result<TokenStream, Error> {
     match outputs.len() {
         0 => Ok(quote! { () }),
         1 => {
-            // If it's a {struct, enum} as the type of a function's output, use its tokenized name
-            // only. Otherwise, parse and expand.
-            if outputs[0].is_custom_type() {
-                let custom_type_name = match outputs[0].is_struct_type() {
-                    true => extract_custom_type_name_from_abi_property(
-                        &outputs[0],
-                        Some(CustomType::Struct),
-                    ),
-                    false => extract_custom_type_name_from_abi_property(
-                        &outputs[0],
-                        Some(CustomType::Enum),
-                    ),
-                }?;
-                return Ok(custom_type_name.parse().unwrap());
+            let output = outputs.first().expect("Outputs shouldn't not be empty");
+
+            // If it's a primitive type, simply parse and expand.
+            if !output.is_custom_type() {
+                return expand_type(&parse_param(output)?);
             }
-            expand_type(&parse_param(&outputs[0])?)
+
+            // If it's a {struct, enum} as the type of a function's output, use its tokenized name only.
+            match output.is_struct_type() {
+                true => {
+                    let parsed_custom_type_name = extract_custom_type_name_from_abi_property(
+                        output,
+                        Some(CustomType::Struct),
+                    )?
+                    .parse()
+                    .expect("Custom type name should be a valid Rust identifier");
+
+                    Ok(parsed_custom_type_name)
+                }
+                false => match output.is_enum_type() {
+                    true => {
+                        let parsed_custom_type_name = extract_custom_type_name_from_abi_property(
+                            output,
+                            Some(CustomType::Enum),
+                        )?
+                        .parse()
+                        .expect("Custom type name should be a valid Rust identifier");
+
+                        Ok(parsed_custom_type_name)
+                    }
+                    false => match output.has_custom_type_in_array() {
+                        true => {
+                            let parsed_custom_type_name: TokenStream =
+                                extract_custom_type_name_from_abi_property(
+                                    output,
+                                    Some(
+                                        output
+                                            .get_custom_type()
+                                            .expect("Custom type in array should be set"),
+                                    ),
+                                )?
+                                .parse()
+                                .unwrap();
+
+                            Ok(quote! { ::std::vec::Vec<#parsed_custom_type_name> })
+                        }
+                        false => match output.has_custom_type_in_tuple() {
+                            // If custom type is inside a tuple `(struct | enum <name>, ...)`,
+                            // the type signature should be only `(<name>, ...)`.
+                            // To do that, we remove the `STRUCT_KEYWORD` and `ENUM_KEYWORD` from it.
+                            true => {
+                                let tuple_type_signature: TokenStream = output
+                                    .type_field
+                                    .replace(STRUCT_KEYWORD, "")
+                                    .replace(ENUM_KEYWORD, "")
+                                    .parse()
+                                    .expect("could not parse tuple type signature");
+
+                                Ok(tuple_type_signature)
+                            }
+                            false => {
+                                panic!("{}", format!("Output is of custom type, but not an enum, struct or enum/struct inside an array/tuple. This shouldn't never happen. Output received: {:?}", output));
+                            }
+                        },
+                    },
+                },
+            }
         }
         // Recursively expand the outputs
         _ => {
@@ -135,22 +186,61 @@ fn expand_function_arguments(
                 if param.is_enum_type() {
                     let name =
                         extract_custom_type_name_from_abi_property(param, Some(CustomType::Enum))
-                            .unwrap();
+                            .expect("couldn't extract enum name from ABI property");
                     custom_enums.get(&name)
-                } else {
+                } else if param.is_struct_type() {
                     let name =
                         extract_custom_type_name_from_abi_property(param, Some(CustomType::Struct))
-                            .unwrap();
+                            .expect("couldn't extract struct name from ABI property");
                     custom_structs.get(&name)
+                } else {
+                    match param.has_custom_type_in_array() {
+                        true => match param.get_custom_type() {
+                            Some(custom_type) => {
+                                let name = extract_custom_type_name_from_abi_property(
+                                    param,
+                                    Some(custom_type),
+                                )
+                                .expect("couldn't extract custom type name from ABI property");
+
+                                match custom_type {
+                                    CustomType::Enum => custom_enums.get(&name),
+                                    CustomType::Struct => custom_structs.get(&name),
+                                }
+                            }
+                            None => {
+                                return Err(Error::InvalidType(format!(
+                                    "Custom type in array is not a struct or enum. Type: {:?}",
+                                    param
+                                )))
+                            }
+                        },
+                        false => None,
+                    }
                 }
             }
         };
 
         // TokenStream representing the type of the argument
-        let ty = expand_input_param(fun, &param.name, &parse_param(param)?, &custom_property)?;
+        let kind = parse_param(param)?;
+
+        // If it's a tuple, don't expand it, just use the type signature as it is (minus the string "struct " | "enum ").
+        let tok = if let ParamType::Tuple(_tuple) = kind {
+            // If custom type is inside a tuple `(struct | enum <name>, ...)`,
+            // the type signature should be only `(<name>, ...)`.
+            // To do that, we remove the `STRUCT_KEYWORD` and `ENUM_KEYWORD` from it.
+            param
+                .type_field
+                .replace(STRUCT_KEYWORD, "")
+                .replace(ENUM_KEYWORD, "")
+                .parse::<TokenStream>()
+                .expect("couldn't parse tuple type signature")
+        } else {
+            expand_input_param(fun, &param.name, &parse_param(param)?, &custom_property)?
+        };
 
         // Add the TokenStream to argument declarations
-        args.push(quote! { #name: #ty });
+        args.push(quote! { #name: #tok });
 
         // This `name` TokenStream is also added to the call arguments
         call_args.push(name);
@@ -201,7 +291,7 @@ fn expand_input_param(
         ParamType::Enum(_) => {
             let ident = ident(
                 &extract_custom_type_name_from_abi_property(
-                    custom_type_property.unwrap(),
+                    custom_type_property.expect("Custom type property not found for enum"),
                     Some(CustomType::Enum),
                 )?
                 .to_class_case(),
@@ -211,7 +301,7 @@ fn expand_input_param(
         ParamType::Struct(_) => {
             let ident = ident(
                 &extract_custom_type_name_from_abi_property(
-                    custom_type_property.unwrap(),
+                    custom_type_property.expect("Custom type property not found for struct"),
                     Some(CustomType::Struct),
                 )?
                 .to_class_case(),
@@ -252,7 +342,7 @@ mod tests {
 #[doc = "Calls the contract's `HelloWorld` (0x0000000097d4de45) function"]
 pub fn HelloWorld(&self, bimbam: bool) -> ContractCall<()> {
     Contract::method_hash(
-        &self.wallet.get_provider().unwrap(),
+        &self.wallet.get_provider().expect("Provider not set up"),
         self.contract_id,
         &self.wallet,
         [0, 0, 0, 0, 151, 212, 222, 69],
@@ -360,7 +450,7 @@ pub fn hello_world(
     the_only_allowed_input: SomeWeirdFrenchCuisine
 ) -> ContractCall<(CoolIndieGame , EntropyCirclesEnum)> {
     Contract::method_hash(
-        &self.wallet.get_provider().unwrap(),
+        &self.wallet.get_provider().expect("Provider not set up"),
         self.contract_id,
         &self.wallet,
         [0, 0, 0, 0, 118, 178, 90, 36],

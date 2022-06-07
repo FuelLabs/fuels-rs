@@ -16,7 +16,10 @@ pub fn expand_custom_struct(prop: &Property) -> Result<TokenStream, Error> {
     let struct_name = &extract_custom_type_name_from_abi_property(prop, Some(CustomType::Struct))?
         .to_class_case();
     let struct_ident = ident(struct_name);
-    let components = prop.components.as_ref().unwrap();
+    let components = prop
+        .components
+        .as_ref()
+        .expect("Fail to extract components from custom type");
     let mut fields = Vec::with_capacity(components.len());
 
     // Holds a TokenStream representing the process of
@@ -134,33 +137,28 @@ pub fn expand_custom_struct(prop: &Property) -> Result<TokenStream, Error> {
                 types
             }
 
-            pub fn into_token(self) -> Token {
-                let mut tokens = Vec::new();
-                #( #struct_fields_tokens; )*
-
-                Token::Struct(tokens)
-            }
 
             pub fn new_from_tokens(tokens: &[Token]) -> Self {
                 Self {
                     #( #args ),*
                 }
             }
-
         }
 
-        impl Detokenize for #struct_ident {
-            fn from_tokens(mut tokens: Vec<Token>) -> Result<Self, InvalidOutputType> {
-                let token = match tokens.len() {
-                    0 => Token::Struct(vec![]),
-                    1 => tokens.remove(0),
-                    _ => Token::Struct(tokens),
-                };
+        impl Tokenizable for #struct_ident {
+            fn into_token(self) -> Token {
+                let mut tokens = Vec::new();
+                #( #struct_fields_tokens; )*
 
-                if let Token::Struct(tokens) = token.clone() {
-                    Ok(#struct_ident::new_from_tokens(&tokens))
-                } else {
-                    Err(InvalidOutputType("Struct token doesn't contain inner tokens. This shouldn't happen.".to_string()))
+                Token::Struct(tokens)
+            }
+
+            fn from_token(token: Token)  -> Result<Self, InvalidOutputType> {
+                match token {
+                    Token::Struct(data) => {
+                        Ok(#struct_ident::new_from_tokens(&data))
+                    }
+                    other => Err(InvalidOutputType(format!("Expected `T`, got {:?}", other))),
                 }
             }
         }
@@ -170,7 +168,10 @@ pub fn expand_custom_struct(prop: &Property) -> Result<TokenStream, Error> {
 /// Transforms a custom enum defined in [`Property`] into a [`TokenStream`]
 /// that represents that same type as a Rust-native enum.
 pub fn expand_custom_enum(name: &str, prop: &Property) -> Result<TokenStream, Error> {
-    let components = prop.components.as_ref().unwrap();
+    let components = prop
+        .components
+        .as_ref()
+        .expect("Fail to extract components from custom type");
     let mut enum_variants = Vec::with_capacity(components.len());
 
     // Holds a TokenStream representing the process of creating an enum [`Token`].
@@ -279,16 +280,6 @@ pub fn expand_custom_enum(name: &str, prop: &Property) -> Result<TokenStream, Er
                 types
             }
 
-            pub fn into_token(self) -> Token {
-
-                let (dis, tok) = match self {
-                    #( #enum_selector_builder, )*
-                };
-
-                let selector = (dis, tok);
-                Token::Enum(Box::new(selector))
-            }
-
             pub fn new_from_tokens(tokens: &[Token]) -> Self {
                 if tokens.is_empty() {
                     panic!("Empty tokens array received in `{}::new_from_tokens`",
@@ -315,12 +306,17 @@ pub fn expand_custom_enum(name: &str, prop: &Property) -> Result<TokenStream, Er
 
         }
 
-        impl Detokenize for #enum_ident {
-            fn from_tokens(mut tokens: Vec<Token>) -> Result<Self, InvalidOutputType> {
-                let token = match tokens.len() {
-                    1 => tokens.remove(0),
-                    _ => panic!("Received invalid number of tokens for creating {} enum (got {} expected 1)", #enum_name, tokens.len()),
+        impl Tokenizable for #enum_ident {
+            fn into_token(self) -> Token {
+                let (dis, tok) = match self {
+                    #( #enum_selector_builder, )*
                 };
+
+                let selector = (dis, tok);
+                Token::Enum(Box::new(selector))
+            }
+
+            fn from_token(token: Token)  -> Result<Self, InvalidOutputType> {
                 if let Token::Enum(_) = token {
                     Ok(#enum_ident::new_from_tokens(&[token]))
                 } else {
@@ -329,35 +325,54 @@ pub fn expand_custom_enum(name: &str, prop: &Property) -> Result<TokenStream, Er
                 }
             }
         }
-
     })
 }
 
-// A custom type name is coming in as `struct $name` or `enum $name`.
-// We want to grab its `$name`.
+// A custom type name should be passed to this function as `{struct,enum} $name`,
+// or inside an array, like `[{struct,enum} $name; $length]`.
+// This function extracts the `$name`.
 pub fn extract_custom_type_name_from_abi_property(
     prop: &Property,
     expected: Option<CustomType>,
 ) -> Result<String, Error> {
-    let type_field: Vec<&str> = prop.type_field.split_whitespace().collect();
+    let type_field = match prop.type_field.starts_with('[') && prop.type_field.ends_with(']') {
+        // Check for custom type inside array.
+        true => {
+            // Split `[struct | enum $name; $length]` into `[struct | enum $name` and ` $length]`
+            let type_field = prop.type_field.split(';').collect::<Vec<&str>>()[0]
+                .chars()
+                .skip(1) // Remove `[` from `[struct | enum $name`.
+                .collect::<String>(); // Return `struct | enum $name`.
+
+            type_field
+        }
+        // If it's not inside an array, return the `{struct,enum} $name`.
+        false => prop.type_field.clone(),
+    };
+
+    // Split `{struct,enum} $name` into `{struct,enum}` and `$name`.
+    let type_field: Vec<&str> = type_field.split_whitespace().collect();
+
     if type_field.len() != 2 {
         return Err(Error::MissingData(
             r#"The declared type was not in the format `{enum,struct} name`"#
                 .parse()
                 .unwrap(),
         ));
-    }
-    let (declared_type, type_name) = (type_field[0], type_field[1]);
+    };
+
     if let Some(expected_type) = expected {
-        if expected_type.to_string() != declared_type {
+        if expected_type.to_string() != type_field[0] {
             return Err(Error::InvalidType(format!(
                 "Expected {} but {} was declared",
                 expected_type.to_string(),
-                declared_type
+                type_field[0]
             )));
         }
     }
-    Ok(String::from(type_name))
+
+    // Return the `$name`.
+    Ok(type_field[1].to_string())
 }
 
 // Doing string -> TokenStream -> string isn't pretty but gives us the opportunity to
@@ -443,76 +458,8 @@ mod tests {
         let result = expand_custom_enum("matcha_tea", &p);
         let expected = TokenStream::from_str(
             r#"
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub enum MatchaTea {
-    LongIsland(u64),
-    MoscowMule(bool)
-}
-impl MatchaTea {
-    pub fn param_types() -> Vec<ParamType> {
-        let mut types = Vec::new();
-        types.push(ParamType::U64);
-        types.push(ParamType::Bool);
-        types
-    }
-    pub fn into_token(self) -> Token {
-        let (dis, tok) = match self {
-            MatchaTea::LongIsland(value) => (0u8, Token::U64(value)),
-            MatchaTea::MoscowMule(value) => (1u8, Token::Bool(value)),
-        };
-        let selector = (dis, tok);
-        Token::Enum(Box::new(selector))
-    }
-    pub fn new_from_tokens(tokens: &[Token]) -> Self {
-        if tokens.is_empty() {
-            panic!("Empty tokens array received in `{}::new_from_tokens`", "MatchaTea");
-        }
-        match tokens[0].clone() {
-            Token::Enum(content) => {
-                if let enum_selector = *content {
-                    return match enum_selector {
-                        (0u8, token) => MatchaTea::LongIsland(
-                            <u64> ::from_tokens(vec![token])
-                                .expect(
-                                &format!("Failed to run `new_from_tokens` for custom {} enum type",
-                                "MatchaTea")
-                                )
-                        ),
-                        (1u8, token) => MatchaTea::MoscowMule(
-                            <bool> ::from_tokens(vec![token])
-                                .expect(
-                                &format!("Failed to run `new_from_tokens` for custom {} enum type",
-                                "MatchaTea")
-                                )
-                        ),
-                        (_, _) => panic!(
-                            "Failed to match with discriminant selector {:?}",
-                            enum_selector
-                        )
-                    };
-                } else {
-                    panic!("The EnumSelector `{:?}` didn't have a match", content);
-                }
-            },
-            _ => panic!("This should contain an `Enum` token, found `{:?}`", tokens),
-        }
-    }
-}
-impl Detokenize for MatchaTea{
-    fn from_tokens(mut tokens: Vec<Token>) -> Result<Self, InvalidOutputType> {
-        let token = match tokens.len() {
-            1 => tokens.remove(0),
-            _ => panic!("Received invalid number of tokens for creating {} enum (got {} expected 1)", "MatchaTea", tokens.len()),
-        };
-        if let Token::Enum(_) = token {
-            Ok(MatchaTea::new_from_tokens(&[token]))
-        } else {
-            Err(InvalidOutputType("Enum token doesn't contain inner tokens."
-                .to_string()))
-        }
-    }
-}
-"#,
+            # [derive (Clone , Debug , Eq , PartialEq)] pub enum MatchaTea { LongIsland (u64) , MoscowMule (bool) } impl MatchaTea { pub fn param_types () -> Vec < ParamType > { let mut types = Vec :: new () ; types . push (ParamType :: U64) ; types . push (ParamType :: Bool) ; types } pub fn new_from_tokens (tokens : & [Token]) -> Self { if tokens . is_empty () { panic ! ("Empty tokens array received in `{}::new_from_tokens`" , "MatchaTea") ; } match tokens [0] . clone () { Token :: Enum (content) => { if let enum_selector = * content { return match enum_selector { (0u8 , token) => MatchaTea :: LongIsland (< u64 > :: from_tokens (vec ! [token]) . expect (& format ! ("Failed to run `new_from_tokens` for custom {} enum type" , "MatchaTea"))) , (1u8 , token) => MatchaTea :: MoscowMule (< bool > :: from_tokens (vec ! [token]) . expect (& format ! ("Failed to run `new_from_tokens` for custom {} enum type" , "MatchaTea"))) , (_ , _) => panic ! ("Failed to match with discriminant selector {:?}" , enum_selector) } ; } else { panic ! ("The EnumSelector `{:?}` didn't have a match" , content) ; } } , _ => panic ! ("This should contain an `Enum` token, found `{:?}`" , tokens) , } } } impl Tokenizable for MatchaTea { fn into_token (self) -> Token { let (dis , tok) = match self { MatchaTea :: LongIsland (value) => (0u8 , Token :: U64 (value)) , MatchaTea :: MoscowMule (value) => (1u8 , Token :: Bool (value)) , } ; let selector = (dis , tok) ; Token :: Enum (Box :: new (selector)) } fn from_token (token : Token) -> Result < Self , InvalidOutputType > { if let Token :: Enum (_) = token { Ok (MatchaTea :: new_from_tokens (& [token])) } else { Err (InvalidOutputType ("Enum token doesn't contain inner tokens." . to_string ())) } } }
+            "#,
         );
         let expected = expected.unwrap().to_string();
         assert_eq!(result.unwrap().to_string(), expected);
@@ -553,72 +500,7 @@ impl Detokenize for MatchaTea{
 
         let expected = TokenStream::from_str(
             r#"
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub enum Amsterdam {
-    Infrastructure(Building),
-    Service(u32)
-}
-impl Amsterdam {
-    pub fn param_types() -> Vec<ParamType> {
-        let mut types = Vec::new();
-        types.push(ParamType::Struct(Building::param_types()));
-        types.push(ParamType::U32);
-        types
-    }
-    pub fn into_token(self) -> Token {
-        let (dis, tok) = match self {
-            Amsterdam::Infrastructure(inner_struct) => (0u8, inner_struct.into_token()),
-            Amsterdam::Service(value) => (1u8, Token::U32(value)),
-        };
-        let selector = (dis, tok);
-        Token::Enum(Box::new(selector))
-    }
-    pub fn new_from_tokens(tokens: &[Token]) -> Self {
-        if tokens.is_empty() {
-            panic!("Empty tokens array received in `{}::new_from_tokens`", "Amsterdam");
-        }
-        match tokens[0].clone() {
-            Token::Enum(content) => {
-                if let enum_selector = *content {
-                    return match enum_selector {
-                        (0u8, token) => {
-                            let variant_content = <Building> ::from_tokens(vec![token]).expect(
-                                "Failed to run `new_from_tokens` for custom Amsterdam enum type"
-                            );
-                            Amsterdam::Infrastructure(variant_content)
-                        }
-                        (1u8, token) => 
-                            Amsterdam::Service(<u32> ::from_tokens(vec![token]).expect(&format!(
-                                "Failed to run `new_from_tokens` for custom {} enum type",
-                                "Amsterdam"
-                            ))),
-                        (_, _) => panic!(
-                            "Failed to match with discriminant selector {:?}",
-                            enum_selector
-                        )
-                    };
-                } else {
-                    panic!("The EnumSelector `{:?}` didn't have a match", content);
-                }
-            },
-            _ => panic!("This should contain an `Enum` token, found `{:?}`", tokens),
-        }
-    }
-}
-impl Detokenize for Amsterdam{
-    fn from_tokens(mut tokens: Vec<Token>) -> Result<Self, InvalidOutputType> {
-        let token = match tokens.len() {
-            1 => tokens.remove(0),
-            _ => panic!("Received invalid number of tokens for creating {} enum (got {} expected 1)", "Amsterdam", tokens.len()),
-        };
-        if let Token::Enum(_) = token {
-            Ok(Amsterdam::new_from_tokens(&[token]))
-        } else {
-            Err(InvalidOutputType("Enum token doesn't contain inner tokens."
-                .to_string()))
-        }
-    }
-}
+            # [derive (Clone , Debug , Eq , PartialEq)] pub enum Amsterdam { Infrastructure (Building) , Service (u32) } impl Amsterdam { pub fn param_types () -> Vec < ParamType > { let mut types = Vec :: new () ; types . push (ParamType :: Struct (Building :: param_types ())) ; types . push (ParamType :: U32) ; types } pub fn new_from_tokens (tokens : & [Token]) -> Self { if tokens . is_empty () { panic ! ("Empty tokens array received in `{}::new_from_tokens`" , "Amsterdam") ; } match tokens [0] . clone () { Token :: Enum (content) => { if let enum_selector = * content { return match enum_selector { (0u8 , token) => { let variant_content = < Building > :: from_tokens (vec ! [token]) . expect ("Failed to run `new_from_tokens` for custom Amsterdam enum type") ; Amsterdam :: Infrastructure (variant_content) } (1u8 , token) => Amsterdam :: Service (< u32 > :: from_tokens (vec ! [token]) . expect (& format ! ("Failed to run `new_from_tokens` for custom {} enum type" , "Amsterdam"))) , (_ , _) => panic ! ("Failed to match with discriminant selector {:?}" , enum_selector) } ; } else { panic ! ("The EnumSelector `{:?}` didn't have a match" , content) ; } } , _ => panic ! ("This should contain an `Enum` token, found `{:?}`" , tokens) , } } } impl Tokenizable for Amsterdam { fn into_token (self) -> Token { let (dis , tok) = match self { Amsterdam :: Infrastructure (inner_struct) => (0u8 , inner_struct . into_token ()) , Amsterdam :: Service (value) => (1u8 , Token :: U32 (value)) , } ; let selector = (dis , tok) ; Token :: Enum (Box :: new (selector)) } fn from_token (token : Token) -> Result < Self , InvalidOutputType > { if let Token :: Enum (_) = token { Ok (Amsterdam :: new_from_tokens (& [token])) } else { Err (InvalidOutputType ("Enum token doesn't contain inner tokens." . to_string ())) } } }
             "#,
         )
         .unwrap();
@@ -670,47 +552,8 @@ impl Detokenize for Amsterdam{
         };
         let expected = TokenStream::from_str(
             r#"
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct Cocktail {
-    pub long_island: bool,
-    pub cosmopolitan: u64,
-    pub mojito: u32
-}
-impl Cocktail {
-    pub fn param_types() -> Vec<ParamType> {
-        let mut types = Vec::new();
-        types.push(ParamType::Bool);
-        types.push(ParamType::U64);
-        types.push(ParamType::U32);
-        types
-    }
-    pub fn into_token(self) -> Token {
-        let mut tokens = Vec::new();
-        tokens.push(Token::Bool(self.long_island));
-        tokens.push(Token::U64(self.cosmopolitan));
-        tokens.push(Token::U32(self.mojito));
-        Token::Struct(tokens)
-    }
-    pub fn new_from_tokens(tokens: &[Token]) -> Self {
-        Self { 
-        long_island : < bool > :: from_token (tokens [0usize] . clone ()) . expect ("Failed to run `new_from_tokens()` for custom Cocktail struct (tokens have wrong order and/or wrong types)") , cosmopolitan : < u64 > :: from_token (tokens [1usize] . clone ()) . expect ("Failed to run `new_from_tokens()` for custom Cocktail struct (tokens have wrong order and/or wrong types)") , mojito : < u32 > :: from_token (tokens [2usize] . clone ()) . expect ("Failed to run `new_from_tokens()` for custom Cocktail struct (tokens have wrong order and/or wrong types)") }
-    }
-}
-impl Detokenize for Cocktail {
-    fn from_tokens(mut tokens: Vec<Token>) -> Result<Self, InvalidOutputType> {
-        let token = match tokens.len() {
-            0 => Token::Struct(vec![]),
-            1 => tokens.remove(0),
-            _ => Token::Struct(tokens),
-        };
-        if let Token::Struct(tokens) = token.clone() {
-            Ok(Cocktail::new_from_tokens(&tokens))
-        } else {
-            Err(InvalidOutputType("Struct token doesn't contain inner tokens. This shouldn't happen.".to_string()))
-        }
-    }
-}
-        "#,
+            # [derive (Clone , Debug , Eq , PartialEq)] pub struct Cocktail { pub long_island : bool , pub cosmopolitan : u64 , pub mojito : u32 } impl Cocktail { pub fn param_types () -> Vec < ParamType > { let mut types = Vec :: new () ; types . push (ParamType :: Bool) ; types . push (ParamType :: U64) ; types . push (ParamType :: U32) ; types } pub fn new_from_tokens (tokens : & [Token]) -> Self { Self { long_island : < bool > :: from_token (tokens [0usize] . clone ()) . expect ("Failed to run `new_from_tokens()` for custom Cocktail struct (tokens have wrong order and/or wrong types)") , cosmopolitan : < u64 > :: from_token (tokens [1usize] . clone ()) . expect ("Failed to run `new_from_tokens()` for custom Cocktail struct (tokens have wrong order and/or wrong types)") , mojito : < u32 > :: from_token (tokens [2usize] . clone ()) . expect ("Failed to run `new_from_tokens()` for custom Cocktail struct (tokens have wrong order and/or wrong types)") } } } impl Tokenizable for Cocktail { fn into_token (self) -> Token { let mut tokens = Vec :: new () ; tokens . push (Token :: Bool (self . long_island)) ; tokens . push (Token :: U64 (self . cosmopolitan)) ; tokens . push (Token :: U32 (self . mojito)) ; Token :: Struct (tokens) } fn from_token (token : Token) -> Result < Self , InvalidOutputType > { match token { Token :: Struct (data) => { Ok (Cocktail :: new_from_tokens (& data)) } other => Err (InvalidOutputType (format ! ("Expected `T`, got {:?}" , other))) , } } }
+            "#,
         );
         let expected = expected.unwrap().to_string();
         let result = expand_custom_struct(&p);
@@ -748,44 +591,8 @@ impl Detokenize for Cocktail {
         };
         let expected = TokenStream::from_str(
             r#"
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct Cocktail {
-    pub long_island: Shaker,
-    pub mojito: u32
-}
-impl Cocktail {
-    pub fn param_types() -> Vec<ParamType> {
-        let mut types = Vec::new();
-        types.push(ParamType::Struct(Shaker::param_types()));
-        types.push(ParamType::U32);
-        types
-    }
-    pub fn into_token(self) -> Token {
-        let mut tokens = Vec::new();
-        tokens.push(self.long_island.into_token());
-        tokens.push(Token::U32(self.mojito));
-        Token::Struct(tokens)
-    }
-    pub fn new_from_tokens(tokens: &[Token]) -> Self {
-        Self { 
-        long_island : Shaker :: new_from_tokens (& tokens [0usize ..]) , mojito : < u32 > :: from_token (tokens [1usize] . clone ()) . expect ("Failed to run `new_from_tokens()` for custom Cocktail struct (tokens have wrong order and/or wrong types)") }
-    }
-}
-impl Detokenize for Cocktail {
-    fn from_tokens(mut tokens: Vec<Token>) -> Result<Self, InvalidOutputType> {
-        let token = match tokens.len() {
-            0 => Token::Struct(vec![]),
-            1 => tokens.remove(0),
-            _ => Token::Struct(tokens),
-        };
-        if let Token::Struct(tokens) = token.clone() {
-            Ok(Cocktail::new_from_tokens(&tokens))
-        } else {
-            Err(InvalidOutputType("Struct token doesn't contain inner tokens. This shouldn't happen.".to_string()))
-        }
-    }
-}
-        "#,
+            # [derive (Clone , Debug , Eq , PartialEq)] pub struct Cocktail { pub long_island : Shaker , pub mojito : u32 } impl Cocktail { pub fn param_types () -> Vec < ParamType > { let mut types = Vec :: new () ; types . push (ParamType :: Struct (Shaker :: param_types ())) ; types . push (ParamType :: U32) ; types } pub fn new_from_tokens (tokens : & [Token]) -> Self { Self { long_island : Shaker :: new_from_tokens (& tokens [0usize ..]) , mojito : < u32 > :: from_token (tokens [1usize] . clone ()) . expect ("Failed to run `new_from_tokens()` for custom Cocktail struct (tokens have wrong order and/or wrong types)") } } } impl Tokenizable for Cocktail { fn into_token (self) -> Token { let mut tokens = Vec :: new () ; tokens . push (self . long_island . into_token ()) ; tokens . push (Token :: U32 (self . mojito)) ; Token :: Struct (tokens) } fn from_token (token : Token) -> Result < Self , InvalidOutputType > { match token { Token :: Struct (data) => { Ok (Cocktail :: new_from_tokens (& data)) } other => Err (InvalidOutputType (format ! ("Expected `T`, got {:?}" , other))) , } } }
+            "#,
         );
         let expected = expected.unwrap().to_string();
         let result = expand_custom_struct(&p);

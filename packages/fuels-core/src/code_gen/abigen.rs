@@ -130,7 +130,7 @@ impl Abigen {
                     impl #name {
                         pub fn new(contract_id: String, wallet: LocalWallet)
                         -> Self {
-                            let contract_id = ContractId::from_str(&contract_id).unwrap();
+                            let contract_id = ContractId::from_str(&contract_id).expect("Invalid contract id");
                             Self{ contract_id, wallet }
                         }
                         #contract_functions
@@ -221,24 +221,92 @@ impl Abigen {
         all_properties
     }
 
+    // Extracts the custom type from a `Property`. This custom type lives
+    // inside an array, in the form of `[struct | enum; length]`.
+    fn get_custom_type_in_array(prop: &Property) -> HashMap<String, &Property> {
+        let mut custom_types = HashMap::new();
+
+        // Custom type in an array looks like `[struct Person; 2]`.
+        // The `components` will hold only one element, which is the custom type.
+        let array_custom_type = prop
+            .components
+            .as_ref()
+            .expect("array should have components")
+            .first()
+            .expect("components in array should have at least one component");
+
+        let custom_type_name = extract_custom_type_name_from_abi_property(array_custom_type, None)
+            .expect("failed to extract custom type name");
+
+        custom_types.insert(custom_type_name, array_custom_type);
+
+        custom_types
+    }
+
+    // Extracts the custom type from a `Property`. These custom types live
+    // inside a tuple, in the form of `((struct | enum) <custom_type_name>, *)`.
+    fn get_custom_types_in_tuple(prop: &Property) -> HashMap<String, &Property> {
+        let mut custom_types = HashMap::new();
+
+        // Tuples can have `n` custom types within them.
+        for tuple_type in prop.components.as_ref().unwrap().iter() {
+            if tuple_type.is_struct_type() || tuple_type.is_enum_type() {
+                let custom_type_name = extract_custom_type_name_from_abi_property(tuple_type, None)
+                    .expect("failed to extract custom type name");
+                custom_types.insert(custom_type_name, tuple_type);
+            }
+        }
+
+        custom_types
+    }
+
     /// Reads the parsed ABI and returns the custom types (either `struct` or `enum`) found in it.
+    /// Custom types can be in the free form (`Struct Person`, `Enum State`), inside arrays (`[struct Person; 2]`, `[enum State; 2]`)), or
+    /// inside tuples (`(struct Person, struct Address)`, `(enum State, enum Country)`).
     fn get_custom_types(abi: &JsonABI) -> HashMap<String, Property> {
         let mut custom_types = HashMap::new();
         let mut nested_custom_types: Vec<Property> = Vec::new();
 
-        let all_properties = Abigen::get_all_properties(abi);
+        let all_custom_properties: Vec<&Property> = Abigen::get_all_properties(abi)
+            .into_iter()
+            .filter(|p| p.is_custom_type())
+            .collect();
 
-        for prop in all_properties {
-            if prop.is_custom_type() {
-                // Top level custom type
-                let custom_type_name = extract_custom_type_name_from_abi_property(prop, None)
-                    .expect("failed to extract custom type name");
+        // Extract the top level custom types.
+        for prop in all_custom_properties {
+            let custom_type = match prop.has_custom_type_in_array() {
+                // Custom type lives inside array.
+                true => Abigen::get_custom_type_in_array(prop),
+                false => match prop.has_custom_type_in_tuple() {
+                    // Custom type lives inside tuple.
+                    true => Abigen::get_custom_types_in_tuple(prop),
+                    // Free form custom type.
+                    false => {
+                        let mut custom_types = HashMap::new();
+
+                        let custom_type_name =
+                            extract_custom_type_name_from_abi_property(prop, None)
+                                .expect("failed to extract custom type name");
+
+                        custom_types.insert(custom_type_name, prop);
+
+                        custom_types
+                    }
+                },
+            };
+
+            for (custom_type_name, custom_type) in custom_type {
+                // Store the custom name and the custom type itself in the map.
                 custom_types
                     .entry(custom_type_name)
-                    .or_insert_with(|| prop.clone());
+                    .or_insert_with(|| custom_type.clone());
 
                 // Find inner {structs, enums} in case of nested custom types
-                for inner_component in prop.components.as_ref().unwrap() {
+                for inner_component in custom_type
+                    .components
+                    .as_ref()
+                    .expect("Custom type should have components")
+                {
                     nested_custom_types
                         .extend(Abigen::get_nested_custom_properties(inner_component));
                 }
@@ -265,7 +333,11 @@ impl Abigen {
         if prop.is_custom_type() {
             props.push(prop.clone());
 
-            for inner_prop in prop.components.as_ref().unwrap() {
+            for inner_prop in prop
+                .components
+                .as_ref()
+                .expect("(inner) custom type should have components")
+            {
                 let inner = Abigen::get_nested_custom_properties(inner_prop);
                 props.extend(inner);
             }
@@ -709,5 +781,207 @@ mod tests {
         assert!(contract.custom_enums.contains_key("Shaker"));
         assert!(contract.custom_enums.contains_key("PolishAlcohol"));
         assert_eq!(contract.custom_enums.len(), 2);
+    }
+
+    #[test]
+    fn struct_in_array() {
+        let contract = r#"
+        [
+            {
+                "type": "function",
+                "inputs": [
+                {
+                    "name": "p",
+                    "type": "[struct Person; 2]",
+                    "components": [
+                    {
+                        "name": "__array_element",
+                        "type": "struct Person",
+                        "components": [
+                        {
+                            "name": "name",
+                            "type": "str[4]",
+                            "components": null
+                        }
+                        ]
+                    }
+                    ]
+                }
+                ],
+                "name": "array_of_structs",
+                "outputs": []
+            }
+        ]
+        "#;
+
+        let contract = Abigen::new("custom", contract).unwrap();
+
+        assert_eq!(1, contract.custom_structs.len());
+
+        assert!(contract.custom_structs.contains_key("Person"));
+
+        let _bindings = contract.generate().unwrap();
+    }
+
+    #[test]
+    fn enum_in_array() {
+        let contract = r#"
+        [
+                {
+                "type":"function",
+                "inputs":[
+                    {
+                        "name":"p",
+                        "type":"[enum State; 2]",
+                        "components":[
+                            {
+                                "name":"__array_element",
+                                "type":"enum State",
+                                "components":[
+                                    {
+                                        "name":"A",
+                                        "type":"()",
+                                        "components":[
+                                            
+                                        ]
+                                    },
+                                    {
+                                        "name":"B",
+                                        "type":"()",
+                                        "components":[
+                                            
+                                        ]
+                                    },
+                                    {
+                                        "name":"C",
+                                        "type":"()",
+                                        "components":[
+                                            
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                "name":"array_of_enums",
+                "outputs":[]
+            }
+        ]
+        "#;
+
+        let contract = Abigen::new("custom", contract).unwrap();
+
+        assert_eq!(1, contract.custom_enums.len());
+
+        assert!(contract.custom_enums.contains_key("State"));
+
+        let _bindings = contract.generate().unwrap();
+    }
+
+    #[test]
+    fn struct_in_tuple() {
+        let contract = r#"
+        [
+            {
+                "type": "function",
+                "inputs": [
+                {
+                    "name": "input",
+                    "type": "(u64, struct Person)",
+                    "components": [
+                    {
+                        "name": "__tuple_element",
+                        "type": "u64",
+                        "components": null
+                    },
+                    {
+                        "name": "__tuple_element",
+                        "type": "struct Person",
+                        "components": [
+                        {
+                            "name": "name",
+                            "type": "str[4]",
+                            "components": null
+                        }
+                        ]
+                    }
+                    ]
+                }
+                ],
+                "name": "returns_struct_in_tuple",
+                "outputs": []
+            }
+        ]
+        "#;
+
+        let contract = Abigen::new("custom", contract).unwrap();
+
+        assert_eq!(1, contract.custom_structs.len());
+
+        assert!(contract.custom_structs.contains_key("Person"));
+
+        let _bindings = contract.generate().unwrap();
+    }
+
+    #[test]
+    fn enum_in_tuple() {
+        let contract = r#"
+        [
+            {
+              "type":"function",
+              "inputs":[
+                {
+                  "name":"input",
+                  "type":"(u64, enum State)",
+                  "components":[
+                    {
+                      "name":"__tuple_element",
+                      "type":"u64",
+                      "components":null
+                    },
+                    {
+                      "name":"__tuple_element",
+                      "type":"enum State",
+                      "components":[
+                        {
+                          "name":"A",
+                          "type":"()",
+                          "components":[
+                            
+                          ]
+                        },
+                        {
+                          "name":"B",
+                          "type":"()",
+                          "components":[
+                            
+                          ]
+                        },
+                        {
+                          "name":"C",
+                          "type":"()",
+                          "components":[
+                            
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "name":"returns_enum_in_tuple",
+              "outputs":[]
+            }
+        ]
+        "#;
+
+        let contract = Abigen::new("custom", contract).unwrap();
+
+        assert_eq!(1, contract.custom_enums.len());
+
+        assert!(contract.custom_enums.contains_key("State"));
+
+        let _bindings = contract.generate().unwrap();
     }
 }
