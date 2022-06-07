@@ -6,9 +6,11 @@ use fuels::prelude::{
     TxParameters, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
 };
 use fuels_abigen_macro::abigen;
+use fuels_core::tx::Address;
+use fuels_core::Parameterize;
 use fuels_core::{constants::NATIVE_ASSET_ID, Token};
 use sha2::{Digest, Sha256};
-
+use std::str::FromStr;
 /// Note: all the tests and examples below require pre-compiled Sway projects.
 /// To compile these projects, run `cargo run --bin build-test-projects`.
 /// It will build all test projects, creating their respective binaries,
@@ -1554,4 +1556,44 @@ async fn test_wallet_balance_api() {
             coins_per_asset * amount_per_coin
         );
     }
+}
+
+#[tokio::test]
+async fn sway_native_types_support() {
+    abigen!(
+        MyContract,
+        "packages/fuels-abigen-macro/tests/test_projects/sway_native_types/out/debug/sway_native_types-abi.json"
+    );
+
+    let wallet = launch_provider_and_get_single_wallet().await;
+
+    let id = Contract::deploy(
+        "tests/test_projects/sway_native_types/out/debug/sway_native_types.bin",
+        &wallet,
+        TxParameters::default(),
+    )
+    .await
+    .unwrap();
+
+    let instance = MyContract::new(id.to_string(), wallet.clone());
+
+    let user = User {
+        weight: 10,
+        address: Address::zeroed(),
+    };
+    let result = instance.wrapped_address(user).call().await.unwrap();
+
+    assert_eq!(result.value.address, Address::zeroed());
+
+    let result = instance
+        .unwrapped_address(Address::zeroed())
+        .call()
+        .await
+        .unwrap();
+
+    assert_eq!(
+        result.value,
+        Address::from_str("0x0000000000000000000000000000000000000000000000000000000000000000")
+            .unwrap()
+    );
 }

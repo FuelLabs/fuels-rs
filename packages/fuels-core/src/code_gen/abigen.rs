@@ -120,6 +120,7 @@ impl Abigen {
                     use fuels::signers::LocalWallet;
                     use fuels::tx::{ContractId, Address};
                     use std::str::FromStr;
+                    use fuels::core::{Detokenize, EnumSelector, ParamType, Tokenizable, Token, Parameterize};
                 },
                 quote! {
                     pub struct #name {
@@ -149,7 +150,6 @@ impl Abigen {
                 #![allow(unused_imports)]
 
                 #includes
-                use fuels::core::{Detokenize, EnumSelector, ParamType, Tokenizable, Token};
 
                 #code
 
