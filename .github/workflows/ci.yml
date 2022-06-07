@@ -144,7 +144,7 @@ jobs:
       - name: Test WASM package
         if: ${{ matrix.command == 'test' }}
         run: |
-          cd packages/wasm-test
+          cd packages/wasm-tests
           cargo test --target wasm32-unknown-unknown --all-targets --all-features
           cargo test --target wasm32-unknown-unknown --all-targets --no-default-features
 
