@@ -160,7 +160,8 @@ impl fmt::Display for ParamType {
 }
 
 // Sway types
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, EnumString)]
+#[strum(ascii_case_insensitive)]
 pub enum Token {
     // Used for unit type variants in Enum. An "empty" enum is not represented as Enum<empty box>,
     // because this way we can have both unit and non-unit type variants.
@@ -175,6 +176,7 @@ pub enum Token {
     Array(Vec<Token>),
     String(String),
     Struct(Vec<Token>),
+    #[strum(disabled)]
     Enum(Box<EnumSelector>),
     Tuple(Vec<Token>),
 }
