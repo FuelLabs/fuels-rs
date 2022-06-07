@@ -109,7 +109,7 @@ impl Abigen {
             (
                 quote! {
                     use alloc::{vec, vec::Vec};
-                    use fuels_core::{Detokenize, EnumSelector, InvalidOutputType, ParamType, Tokenizable, Token};
+                    use fuels_core::{Detokenize, EnumSelector, InvalidOutputType, Parameterize, ParamType, Tokenizable, Token};
                 },
                 quote! {},
             )
