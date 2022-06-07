@@ -1555,3 +1555,43 @@ async fn test_wallet_balance_api() {
         );
     }
 }
+
+#[tokio::test]
+async fn proper_enum_encoding() {
+    abigen!(
+        MyContract,
+        "packages/fuels-abigen-macro/tests/test_projects/proper_enum_encoding/out/debug\
+        /proper_enum_encoding-abi.json"
+    );
+
+    let wallet = launch_provider_and_get_single_wallet().await;
+
+    let id = Contract::deploy(
+        "tests/test_projects/proper_enum_encoding/out/debug/proper_enum_encoding.bin",
+        &wallet,
+        TxParameters::default(),
+    )
+    .await
+    .unwrap();
+
+    let instance = MyContract::new(id.to_string(), wallet);
+
+    let arg_1 = EnumThatHasABigAndSmallVariant::Small(12345);
+    let arg_2 = 6666;
+    let arg_3 = 7777;
+    let arg_4 = 8888;
+
+    let result = instance
+        .test_function(arg_1.clone(), arg_2, arg_3, arg_4)
+        .call()
+        .await
+        .unwrap();
+
+    let expected = AllArgsTogether {
+        arg_1,
+        arg_2,
+        arg_3,
+        arg_4,
+    };
+    assert_eq!(result.value, expected);
+}

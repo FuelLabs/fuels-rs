@@ -1,3 +1,4 @@
+use crate::constants::WORD_SIZE;
 use core::fmt;
 use fuel_types::bytes::padded_len;
 use strum_macros::EnumString;
@@ -6,6 +7,7 @@ pub mod abi_decoder;
 pub mod abi_encoder;
 pub mod code_gen;
 pub mod constants;
+mod encoding_utils;
 pub mod errors;
 pub mod json_abi;
 pub mod parameters;
@@ -22,7 +24,7 @@ pub mod tx {
 pub type ByteArray = [u8; 8];
 pub type Selector = ByteArray;
 pub type Bits256 = [u8; 32];
-pub type EnumSelector = (u8, Token);
+pub type EnumSelector = (u8, Token, Vec<ParamType>);
 
 #[derive(Debug, Clone, EnumString, PartialEq, Eq)]
 #[strum(ascii_case_insensitive)]
@@ -92,9 +94,11 @@ impl fmt::Display for ParamType {
                 let s = format!("Struct(vec![{}])", inner_strings.join(","));
                 write!(f, "{}", s)
             }
-            ParamType::Enum(inner) => {
-                let inner_strings: Vec<String> =
-                    inner.iter().map(|p| format!("ParamType::{}", p)).collect();
+            ParamType::Enum(variants) => {
+                let inner_strings: Vec<String> = variants
+                    .iter()
+                    .map(|p| format!("ParamType::{}", p))
+                    .collect();
 
                 let s = format!("Enum(vec![{}])", inner_strings.join(","));
                 write!(f, "{}", s)

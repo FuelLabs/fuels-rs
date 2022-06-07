@@ -220,13 +220,17 @@ impl ABIParser {
             ParamType::Struct(struct_params) => {
                 Ok(self.tokenize_struct(trimmed_value, struct_params)?)
             }
-            ParamType::Enum(s) => {
+            ParamType::Enum(variants) => {
                 let discriminant = self.get_enum_discriminant_from_string(&value);
                 let value = self.get_enum_value_from_string(&value);
 
-                let token = self.tokenize(&s[discriminant], value)?;
+                let token = self.tokenize(&variants[discriminant], value)?;
 
-                Ok(Token::Enum(Box::new((discriminant as u8, token))))
+                Ok(Token::Enum(Box::new((
+                    discriminant as u8,
+                    token,
+                    variants.clone(),
+                ))))
             }
             ParamType::Tuple(_tuple_params) => {
                 todo!("Tuple tokenization for the ABI CLI tool not implemented yet")
