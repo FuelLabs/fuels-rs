@@ -131,6 +131,24 @@ jobs:
         with:
           key: "${{ matrix.command }} ${{ matrix.args }} ${{ matrix.package }}"
 
+      - name: Add WASM target
+        if: ${{ matrix.command == 'test' }}
+        run: rustup target add wasm32-unknown-unknown
+
+      - name: Install WebAssembly Test harness
+        if: ${{ matrix.command == 'test' }}
+        uses: actions-rs/cargo@v1
+        with:
+          command: install
+          args: webassembly-test-runner
+
+      - name: Test WASM package
+        if: ${{ matrix.command == 'test' }}
+        run: |
+          cd packages/wasm-tests
+          cargo test --target wasm32-unknown-unknown --all-targets --all-features
+          cargo test --target wasm32-unknown-unknown --all-targets --no-default-features
+
       - name: Install rustfmt
         if: ${{ matrix.command == 'fmt' }}
         run: rustup component add rustfmt
