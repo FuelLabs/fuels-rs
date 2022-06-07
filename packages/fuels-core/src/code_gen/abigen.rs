@@ -149,7 +149,7 @@ impl Abigen {
                 #![allow(unused_imports)]
 
                 #includes
-                use fuels::core::{Detokenize, EnumSelector, ParamType, Tokenizable, Token};
+                use fuels::core::{Detokenize, EnumSelector, EnumVariants, ParamType, Tokenizable, Token};
 
                 #code
 

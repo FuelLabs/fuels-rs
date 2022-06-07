@@ -1,6 +1,7 @@
 use crate::constants::WORD_SIZE;
 use core::fmt;
 use fuel_types::bytes::padded_len;
+use std::error::Error;
 use strum_macros::EnumString;
 
 pub mod abi_decoder;
@@ -24,7 +25,43 @@ pub mod tx {
 pub type ByteArray = [u8; 8];
 pub type Selector = ByteArray;
 pub type Bits256 = [u8; 32];
-pub type EnumSelector = (u8, Token, Vec<ParamType>);
+pub type EnumSelector = (u8, Token, EnumVariants);
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct EnumVariants {
+    variants: Vec<ParamType>,
+}
+
+#[derive(Debug)]
+pub struct NoVariants;
+
+impl Error for NoVariants {}
+
+impl fmt::Display for NoVariants {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "An Enum must have variants!")
+    }
+}
+
+impl From<NoVariants> for errors::Error {
+    fn from(err: NoVariants) -> Self {
+        errors::Error::InvalidType(format!("{}", err))
+    }
+}
+
+impl EnumVariants {
+    pub fn new(variants: Vec<ParamType>) -> Result<EnumVariants, NoVariants> {
+        if !variants.is_empty() {
+            Ok(EnumVariants { variants })
+        } else {
+            Err(NoVariants)
+        }
+    }
+
+    pub fn param_types(&self) -> &Vec<ParamType> {
+        &self.variants
+    }
+}
 
 #[derive(Debug, Clone, EnumString, PartialEq, Eq)]
 #[strum(ascii_case_insensitive)]
@@ -45,7 +82,7 @@ pub enum ParamType {
     #[strum(disabled)]
     Struct(Vec<ParamType>),
     #[strum(disabled)]
-    Enum(Vec<ParamType>),
+    Enum(EnumVariants),
     Tuple(Vec<ParamType>),
 }
 
@@ -96,11 +133,15 @@ impl fmt::Display for ParamType {
             }
             ParamType::Enum(variants) => {
                 let inner_strings: Vec<String> = variants
+                    .param_types()
                     .iter()
                     .map(|p| format!("ParamType::{}", p))
                     .collect();
 
-                let s = format!("Enum(vec![{}])", inner_strings.join(","));
+                let s = format!(
+                    "Enum(EnumVariants::new(vec![{}]).unwrap())",
+                    inner_strings.join(",")
+                );
                 write!(f, "{}", s)
             }
             ParamType::Tuple(inner) => {
@@ -119,8 +160,7 @@ impl fmt::Display for ParamType {
 }
 
 // Sway types
-#[derive(Debug, Clone, PartialEq, EnumString)]
-#[strum(ascii_case_insensitive)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Token {
     // Used for unit type variants in Enum. An "empty" enum is not represented as Enum<empty box>,
     // because this way we can have both unit and non-unit type variants.

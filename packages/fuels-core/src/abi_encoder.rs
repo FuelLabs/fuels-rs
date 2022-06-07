@@ -53,7 +53,7 @@ impl ABIEncoder {
                     }
                 }
                 Token::Enum(arg_enum) => {
-                    let (discriminant, token, variants) = arg_enum.as_ref();
+                    let (discriminant, token, enum_variants) = arg_enum.as_ref();
 
                     let pre_encode_size = self.encoded_args.len();
 
@@ -62,8 +62,11 @@ impl ABIEncoder {
                     // Encode the Token within the enum
                     self.encode(slice::from_ref(token))?;
 
-                    let size_of_encoded_enum =
-                        (max_by_encoding_width(variants).unwrap() + 1) * WORD_SIZE;
+                    let biggest_variant_width = max_by_encoding_width(enum_variants.param_types())
+                        .expect(
+                            "Should never happen because EnumVariants must hold at least 1 variant",
+                        );
+                    let size_of_encoded_enum = (biggest_variant_width + 1) * WORD_SIZE;
 
                     self.zeropad_until_size(pre_encode_size + size_of_encoded_enum);
                 }
@@ -102,7 +105,7 @@ impl Default for ABIEncoder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ParamType;
+    use crate::{EnumVariants, ParamType};
 
     #[test]
     fn encode_function_signature() {
@@ -512,7 +515,7 @@ mod tests {
         //     x: u32,
         //     y: bool,
         // }
-        let params = vec![ParamType::U32, ParamType::Bool];
+        let params = EnumVariants::new(vec![ParamType::U32, ParamType::Bool]).unwrap();
 
         // Create a tuple with the Enum discriminant (`0` in this case)
         // And the value matching the discriminant type.
@@ -541,7 +544,7 @@ mod tests {
 
     #[test]
     fn enums_are_sized_to_fit_the_biggest_variant() {
-        let enum_variants = vec![ParamType::B256, ParamType::U64];
+        let enum_variants = EnumVariants::new(vec![ParamType::B256, ParamType::U64]).unwrap();
         let discriminant = Box::new((1, Token::U64(42), enum_variants));
 
         let fun = "takes_my_enum(MyEnum)".as_bytes();
@@ -568,7 +571,8 @@ mod tests {
             v2: str[10]
         }
          */
-        let deeper_enum_variants = vec![ParamType::Bool, ParamType::String(10)];
+        let deeper_enum_variants =
+            EnumVariants::new(vec![ParamType::Bool, ParamType::String(10)]).unwrap();
         let deeper_enum_token = Token::String("0123456789".to_owned());
 
         /*
@@ -596,7 +600,8 @@ mod tests {
         }
         */
 
-        let top_level_enum_variants = vec![struct_a_type, ParamType::Bool, ParamType::U64];
+        let top_level_enum_variants =
+            EnumVariants::new(vec![struct_a_type, ParamType::Bool, ParamType::U64]).unwrap();
         let top_level_enum_token =
             Token::Enum(Box::new((0, struct_a_token, top_level_enum_variants)));
 

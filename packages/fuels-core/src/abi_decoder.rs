@@ -180,7 +180,7 @@ impl ABIDecoder {
                 const DISCRIMINANT_SIZE: usize = WORD_SIZE;
 
                 let res = self.decode_param(
-                    variations.get(discriminant as usize).unwrap(),
+                    variations.param_types().get(discriminant as usize).unwrap(),
                     data,
                     offset + DISCRIMINANT_SIZE,
                 )?;
@@ -244,6 +244,7 @@ fn peek_word(data: &[u8], offset: usize) -> Result<ByteArray, CodecError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::EnumVariants;
 
     #[test]
     fn decode_int() {
@@ -411,7 +412,7 @@ mod tests {
         //     y: bool,
         // }
 
-        let inner_enum_types = vec![ParamType::U32, ParamType::Bool];
+        let inner_enum_types = EnumVariants::new(vec![ParamType::U32, ParamType::Bool]).unwrap();
         let types = vec![ParamType::Enum(inner_enum_types.clone())];
 
         // "0" discriminant and 42 enum value
@@ -443,7 +444,7 @@ mod tests {
         //     y: u32,
         // }
 
-        let inner_enum_types = vec![ParamType::B256, ParamType::U32];
+        let inner_enum_types = EnumVariants::new(vec![ParamType::B256, ParamType::U32]).unwrap();
 
         let types = vec![ParamType::Struct(vec![
             ParamType::Enum(inner_enum_types.clone()),

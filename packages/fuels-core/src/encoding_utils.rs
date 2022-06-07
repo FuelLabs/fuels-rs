@@ -10,13 +10,6 @@ pub fn max_by_encoding_width(params: &[ParamType]) -> Option<usize> {
 }
 
 /// Calculates the number of `WORD`s the VM expects this parameter to be encoded in.
-///
-/// # Arguments
-///
-/// * `param`: the parameter that you plan on encoding
-///
-/// returns: usize
-///
 /// # Panics
 /// Calculating will panic if you pass an ParamType::Enum without any variants since that is an invalid type.
 pub fn encoding_width(param: &ParamType) -> usize {
@@ -43,7 +36,7 @@ pub fn encoding_width(param: &ParamType) -> usize {
         ParamType::Struct(params) => params.iter().map(encoding_width).sum(),
         ParamType::Enum(variants) => {
             const DISCRIMINANT_WORD_SIZE: usize = 1;
-            max_by_encoding_width(variants).unwrap() + DISCRIMINANT_WORD_SIZE
+            max_by_encoding_width(variants.param_types()).unwrap() + DISCRIMINANT_WORD_SIZE
         }
         ParamType::Tuple(params) => params.iter().map(encoding_width).sum(),
     }
@@ -52,7 +45,7 @@ pub fn encoding_width(param: &ParamType) -> usize {
 #[cfg(test)]
 mod tests {
     use crate::encoding_utils::encoding_width;
-    use crate::ParamType;
+    use crate::{EnumVariants, ParamType};
 
     #[test]
     fn array_size_dependent_on_num_of_elements() {
@@ -85,7 +78,7 @@ mod tests {
     #[test]
     fn enums_are_as_big_as_their_biggest_variant_plus_a_word() {
         let inner_struct = ParamType::Struct(vec![ParamType::B256]);
-        let param = ParamType::Enum(vec![ParamType::U32, inner_struct]);
+        let param = ParamType::Enum(EnumVariants::new(vec![ParamType::U32, inner_struct]).unwrap());
 
         let width = encoding_width(&param);
 
