@@ -119,9 +119,8 @@ impl Abigen {
                     use fuels::contract::contract::{Contract, ContractCall};
                     use fuels::signers::LocalWallet;
                     use fuels::tx::{ContractId, Address};
-                    use fuels::core::{Detokenize, EnumSelector, InvalidOutputType, ParamType, Tokenizable, Token};
+                    use fuels::core::{Detokenize, EnumSelector, InvalidOutputType, Parameterize, ParamType, Tokenizable, Token};
                     use std::str::FromStr;
-                    use fuels::core::{Detokenize, EnumSelector, ParamType, Tokenizable, Token, Parameterize};
                 },
                 quote! {
                     pub struct #name {
