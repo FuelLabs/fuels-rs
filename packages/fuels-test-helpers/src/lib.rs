@@ -16,10 +16,12 @@ use rand::Fill;
 use std::collections::HashSet;
 use std::net::SocketAddr;
 
+mod script;
 #[cfg(feature = "fuels-signers")]
 mod signers;
 mod wallets_config;
 
+pub use script::*;
 #[cfg(feature = "fuels-signers")]
 pub use signers::*;
 pub use wallets_config::*;
