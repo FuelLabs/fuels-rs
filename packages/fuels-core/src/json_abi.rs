@@ -454,15 +454,7 @@ impl ABIParser {
             return Ok(Token::Tuple(vec![]));
         }
 
-        //To parse the value string we use a two pointer/index approach.
-        //The items are comma separated and if an item is tokenized the last_item
-        //index is moved to the current position.
-        //The variable nested is incremented and decremented if a bracket is encountered,
-        //and appropriate errors are returned if the nested count is not 0.
-        //If the tuple has an array inside its values the current position will be incremented
-        //until both the opening and closing bracket are inside the new item.
-        //Characters inside quotes are ignored and they are tokenized as one item.
-        //An error is return if there is an odd number of quotes.
+        //for more details about this algorithm, refer to the tokenize_struct method
         let mut result = vec![];
         let mut nested = 0isize;
         let mut ignore = false;
