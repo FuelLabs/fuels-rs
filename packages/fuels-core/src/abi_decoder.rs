@@ -453,10 +453,10 @@ mod tests {
     }
 
     #[test]
-    fn enum_padding_is_skipped() {
-        // struct  MyStruct {
-        // par1: MyEnum,
-        // par2: u32
+    fn decoder_will_skip_enum_padding_and_decode_next_arg() {
+        // struct MyStruct {
+        //    par1: MyEnum,
+        //    par2: u32
         // }
 
         // enum MyEnum {
@@ -473,6 +473,7 @@ mod tests {
 
         let enum_discriminant_enc = vec![0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1];
         let enum_data_enc = vec![0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x30, 0x39];
+        // this padding is due to the biggest variant of MyEnum being 3 WORDs bigger than the chosen variant
         let enum_padding_enc = vec![0x0; 24];
         let struct_par2_enc = vec![0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xD4, 0x31];
         let data: Vec<u8> = vec![
