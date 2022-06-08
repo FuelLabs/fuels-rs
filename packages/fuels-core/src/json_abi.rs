@@ -552,11 +552,7 @@ impl ABIParser {
             entry.unwrap().outputs.iter().map(parse_param).collect();
 
         match params_result {
-            Ok(params) => {
-                let mut decoder = ABIDecoder::new();
-
-                Ok(decoder.decode(&params, value)?)
-            }
+            Ok(params) => Ok(ABIDecoder::decode(&params, value)?),
             Err(e) => Err(e),
         }
     }
@@ -564,8 +560,7 @@ impl ABIParser {
     /// Similar to decode, but it decodes only an array types and the encoded data
     /// without having to reference to a JSON specification of the ABI.
     pub fn decode_params(&self, params: &[ParamType], data: &[u8]) -> Result<Vec<Token>, Error> {
-        let mut decoder = ABIDecoder::new();
-        Ok(decoder.decode(params, data)?)
+        Ok(ABIDecoder::decode(params, data)?)
     }
 
     fn is_array(&self, ele: &str) -> bool {

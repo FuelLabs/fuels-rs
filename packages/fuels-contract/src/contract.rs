@@ -640,8 +640,7 @@ where
         if let Some(i) = index {
             receipts.remove(i);
         }
-        let mut decoder = ABIDecoder::new();
-        let decoded_value = decoder.decode(output_params, &encoded_value)?;
+        let decoded_value = ABIDecoder::decode(output_params, &encoded_value)?;
         Ok((decoded_value, receipts))
     }
 }

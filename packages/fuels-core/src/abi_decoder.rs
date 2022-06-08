@@ -1,4 +1,4 @@
-use crate::encoding_utils::encoding_width;
+use crate::encoding_utils::expected_encoding_width;
 use crate::errors::CodecError;
 use crate::{constants::WORD_SIZE, Bits256, ByteArray, ParamType, Token};
 use core::convert::TryInto;
@@ -15,24 +15,16 @@ struct DecodeResult {
 pub struct ABIDecoder {}
 
 impl ABIDecoder {
-    pub fn new() -> Self {
-        ABIDecoder {}
-    }
-
     /// Decode takes an array of `ParamType` and the encoded data as raw bytes
     /// and returns a vector of `Token`s containing the decoded values.
     /// Note that the order of the types in the `types` array needs to match the order
     /// of the expected values/types in `data`.
     /// You can find comprehensive examples in the tests for this module.
-    pub fn decode<'a>(
-        &mut self,
-        types: &[ParamType],
-        data: &'a [u8],
-    ) -> Result<Vec<Token>, CodecError> {
+    pub fn decode(types: &[ParamType], data: &[u8]) -> Result<Vec<Token>, CodecError> {
         let mut tokens: Vec<Token> = Vec::new();
         let mut offset = 0;
         for param in types {
-            let res = self.decode_param(param, data, offset)?;
+            let res = Self::decode_param(param, data, offset)?;
             offset = res.new_offset;
             tokens.push(res.token);
         }
@@ -41,7 +33,6 @@ impl ABIDecoder {
     }
 
     fn decode_param(
-        self,
         param: &ParamType,
         data: &[u8],
         offset: usize,
@@ -143,7 +134,7 @@ impl ABIDecoder {
                 let mut new_offset = offset;
 
                 for _ in 0..*length {
-                    let res = self.decode_param(t, data, new_offset)?;
+                    let res = Self::decode_param(t, data, new_offset)?;
                     new_offset = res.new_offset;
                     tokens.push(res.token);
                 }
@@ -160,7 +151,7 @@ impl ABIDecoder {
 
                 let mut new_offset = offset;
                 for prop in props {
-                    let res = self.decode_param(prop, data, new_offset)?;
+                    let res = Self::decode_param(prop, data, new_offset)?;
                     new_offset = res.new_offset;
                     tokens.push(res.token);
                 }
@@ -179,7 +170,7 @@ impl ABIDecoder {
 
                 const DISCRIMINANT_SIZE: usize = WORD_SIZE;
 
-                let res = self.decode_param(
+                let res = Self::decode_param(
                     variations.param_types().get(discriminant as usize).unwrap(),
                     data,
                     offset + DISCRIMINANT_SIZE,
@@ -193,7 +184,7 @@ impl ABIDecoder {
 
                 Ok(DecodeResult {
                     token,
-                    new_offset: offset + encoding_width(param) * WORD_SIZE,
+                    new_offset: offset + expected_encoding_width(param) * WORD_SIZE,
                 })
             }
             ParamType::Tuple(types) => {
@@ -201,7 +192,7 @@ impl ABIDecoder {
                 let mut new_offset = offset;
 
                 for t in types {
-                    let res = self.decode_param(t, data, new_offset)?;
+                    let res = Self::decode_param(t, data, new_offset)?;
                     new_offset = res.new_offset;
                     tokens.push(res.token);
                 }
@@ -214,12 +205,6 @@ impl ABIDecoder {
                 Ok(result)
             }
         }
-    }
-}
-
-impl Default for ABIDecoder {
-    fn default() -> Self {
-        Self::new()
     }
 }
 
@@ -251,9 +236,7 @@ mod tests {
         let types = vec![ParamType::U32];
         let data = [0x0, 0x0, 0x0, 0x0, 0xff, 0xff, 0xff, 0xff];
 
-        let mut decoder = ABIDecoder::new();
-
-        let decoded = decoder.decode(&types, &data).unwrap();
+        let decoded = ABIDecoder::decode(&types, &data).unwrap();
 
         let expected = vec![Token::U32(u32::MAX)];
         assert_eq!(decoded, expected);
@@ -278,9 +261,7 @@ mod tests {
             0xff,
         ];
 
-        let mut decoder = ABIDecoder::new();
-
-        let decoded = decoder.decode(&types, &data).unwrap();
+        let decoded = ABIDecoder::decode(&types, &data).unwrap();
 
         let expected = vec![
             Token::U32(u32::MAX),
@@ -302,9 +283,8 @@ mod tests {
         let data = [
             0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x01, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x00,
         ];
-        let mut decoder = ABIDecoder::new();
 
-        let decoded = decoder.decode(&types, &data).unwrap();
+        let decoded = ABIDecoder::decode(&types, &data).unwrap();
 
         let expected = vec![Token::Bool(true), Token::Bool(false)];
         assert_eq!(decoded, expected);
@@ -323,9 +303,8 @@ mod tests {
             0xe4, 0xcb, 0x4e, 0x2c, 0x22, 0x98, 0xf4, 0xac, 0x45, 0x7b, 0xa8, 0xf8, 0x27, 0x43,
             0xf3, 0x1e, 0x93, 0xb,
         ];
-        let mut decoder = ABIDecoder::new();
 
-        let decoded = decoder.decode(&types, &data).unwrap();
+        let decoded = ABIDecoder::decode(&types, &data).unwrap();
 
         let expected = vec![Token::B256(data)];
         assert_eq!(decoded, expected);
@@ -344,9 +323,8 @@ mod tests {
             0x20, 0x73, 0x65, 0x6e, 0x74, 0x65, 0x6e, 0x63, 0x65, 0x00, 0x48, 0x65, 0x6c, 0x6c,
             0x6f, 0x0, 0x0, 0x0,
         ];
-        let mut decoder = ABIDecoder::new();
 
-        let decoded = decoder.decode(&types, &data).unwrap();
+        let decoded = ABIDecoder::decode(&types, &data).unwrap();
 
         let expected = vec![
             Token::String("This is a full sentence".into()),
@@ -366,9 +344,8 @@ mod tests {
         let data = [
             0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xff, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2a,
         ];
-        let mut decoder = ABIDecoder::new();
 
-        let decoded = decoder.decode(&types, &data).unwrap();
+        let decoded = ABIDecoder::decode(&types, &data).unwrap();
 
         let expected = vec![Token::Array(vec![Token::U8(255), Token::U8(42)])];
         assert_eq!(decoded, expected);
@@ -391,9 +368,8 @@ mod tests {
         let data = [
             0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
         ];
-        let mut decoder = ABIDecoder::new();
 
-        let decoded = decoder.decode(&types, &data).unwrap();
+        let decoded = ABIDecoder::decode(&types, &data).unwrap();
 
         let expected = vec![Token::Struct(vec![Token::U8(1), Token::Bool(true)])];
         assert_eq!(decoded, expected);
@@ -419,9 +395,8 @@ mod tests {
         let data = [
             0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2a,
         ];
-        let mut decoder = ABIDecoder::new();
 
-        let decoded = decoder.decode(&types, &data).unwrap();
+        let decoded = ABIDecoder::decode(&types, &data).unwrap();
 
         let expected = vec![Token::Enum(Box::new((0, Token::U32(42), inner_enum_types)))];
         assert_eq!(decoded, expected);
@@ -465,7 +440,7 @@ mod tests {
         .flatten()
         .collect();
 
-        let decoded = ABIDecoder::new().decode(&types, &data).unwrap();
+        let decoded = ABIDecoder::decode(&types, &data).unwrap();
 
         let expected = vec![Token::Struct(vec![
             Token::Enum(Box::new((1, Token::U32(12345), inner_enum_types))),
@@ -500,9 +475,8 @@ mod tests {
             0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xa, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1, 0x0,
             0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2,
         ];
-        let mut decoder = ABIDecoder::new();
 
-        let decoded = decoder.decode(&types, &data).unwrap();
+        let decoded = ABIDecoder::decode(&types, &data).unwrap();
 
         let my_nested_struct = vec![
             Token::U16(10),
@@ -567,9 +541,8 @@ mod tests {
             0x61, 0x20, 0x66, 0x75, 0x6c, 0x6c, 0x20, 0x73, // str[23]
             0x65, 0x6e, 0x74, 0x65, 0x6e, 0x63, 0x65, 0x0, // str[23]
         ];
-        let mut decoder = ABIDecoder::new();
 
-        let decoded = decoder.decode(&types, &data).unwrap();
+        let decoded = ABIDecoder::decode(&types, &data).unwrap();
 
         // Expected tokens
         let foo = Token::Struct(vec![
