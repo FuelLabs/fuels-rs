@@ -970,7 +970,7 @@ async fn test_provider_launch_and_connect() {
 }
 
 #[tokio::test]
-async fn test_contract_calling_contract() {
+async fn test_contract_calling_contract() -> Result<(), Error> {
     // Tests a contract call that calls another contract (FooCaller calls FooContract underneath)
     abigen!(
         FooContract,
@@ -1018,14 +1018,16 @@ async fn test_contract_calling_contract() {
 
     // Calls the contract that calls the `FooContract` contract, also just
     // flips the bool value passed to it.
+    // ANCHOR: external_contract
     let res = foo_caller_contract_instance
         .call_foo_contract(*foo_contract_id, true)
         .set_contracts(&[foo_contract_id]) // Sets the external contract
         .call()
-        .await
-        .unwrap();
+        .await?;
+    // ANCHOR_END: external_contract
 
     assert!(!res.value);
+    Ok(())
 }
 
 #[tokio::test]
