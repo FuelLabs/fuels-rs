@@ -69,7 +69,24 @@ pub fn expand_custom_struct(prop: &Property) -> Result<TokenStream, Error> {
                 fields.push(quote! {pub #field_name: #enum_name});
                 args.push(quote! {#field_name: #enum_name::new_from_tokens(&tokens[#idx..])});
                 struct_fields_tokens.push(quote! { tokens.push(self.#field_name.into_token()) });
-                param_types.push(quote! { types.push(ParamType::Enum(EnumVariants::new(#enum_name::param_types()).unwrap())) });
+
+                //  Calling unwrap here is ok because of the following:
+                // -----------------------------------------------------
+                // 1. EnumVariants::new() will result in an error only if you
+                //    pass an empty slice to it.
+                // 2. The variants of the current enum are held in its
+                //    `EnumVariants`
+                // 3. This means the enum we're currently looking at surely has
+                //    variants.
+                // 4. This means that when we generate the actual rust Enum for
+                //    it, the `param_types()` method will not return an empty
+                //    Vec.
+                // 5. This means that in the param_types() of this struct we'll
+                //    be creating an `EnumVariants` with at least one variant
+                //    and thus can safely unwrap()
+                let variants = quote! {EnumVariants::new(#enum_name::param_types()).unwrap()};
+
+                param_types.push(quote! { types.push(ParamType::Enum(#variants)) });
             }
             _ => {
                 let ty = expand_type(&param_type)?;
