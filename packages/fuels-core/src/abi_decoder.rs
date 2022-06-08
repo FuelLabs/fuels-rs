@@ -455,8 +455,8 @@ mod tests {
     #[test]
     fn decoder_will_skip_enum_padding_and_decode_next_arg() {
         // struct MyStruct {
-        //    par1: MyEnum,
-        //    par2: u32
+        //     par1: MyEnum,
+        //     par2: u32
         // }
 
         // enum MyEnum {
