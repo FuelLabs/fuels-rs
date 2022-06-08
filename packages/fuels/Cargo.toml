@@ -1,6 +1,6 @@
 [package]
 name = "fuels"
-version = "0.14.1"
+version = "0.15.1"
 authors = ["Fuel Labs <contact@fuel.sh>"]
 edition = "2021"
 homepage = "https://fuel.network/"
@@ -10,8 +10,10 @@ rust-version = "1.61.0"
 description = "Fuel Rust SDK."
 
 [dependencies]
-fuels-abigen-macro = { version = "0.14.1", path = "../fuels-abigen-macro" }
-fuels-contract = { version = "0.14.1", path = "../fuels-contract" }
-fuels-core = { version = "0.14.1", path = "../fuels-core" }
-fuels-signers = { version = "0.14.1", path = "../fuels-signers" }
-fuels-test-helpers = { version = "0.14.1", path = "../fuels-test-helpers" }
+fuel-core = { version = "0.8", default-features = false }
+fuel-gql-client = { version = "0.8", default-features = false }
+fuels-abigen-macro = { version = "0.15.1", path = "../fuels-abigen-macro" }
+fuels-contract = { version = "0.15.1", path = "../fuels-contract" }
+fuels-core = { version = "0.15.1", path = "../fuels-core" }
+fuels-signers = { version = "0.15.1", path = "../fuels-signers" }
+fuels-test-helpers = { version = "0.15.1", path = "../fuels-test-helpers" }

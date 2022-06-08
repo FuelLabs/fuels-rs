@@ -13,6 +13,7 @@ members = [
     "packages/fuels-signers",
     "packages/fuels-test-helpers",
     "packages/fuels-types",
+    "packages/wasm-tests",
     "tools/fuels-abi-cli",
     "scripts/build-test-projects",
     "examples/contracts",

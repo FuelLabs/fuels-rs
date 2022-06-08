@@ -13,7 +13,7 @@ env:
   DASEL_VERSION: https://github.com/TomWright/dasel/releases/download/v1.24.3/dasel_linux_amd64
   RUSTFLAGS: "-D warnings"
   RUST_VERSION: 1.61.0
-  FORC_VERSION: 0.13.0
+  FORC_VERSION: 0.14.4
 
 jobs:
   cancel-previous-runs:
@@ -130,6 +130,24 @@ jobs:
         continue-on-error: true
         with:
           key: "${{ matrix.command }} ${{ matrix.args }} ${{ matrix.package }}"
+
+      - name: Add WASM target
+        if: ${{ matrix.command == 'test' }}
+        run: rustup target add wasm32-unknown-unknown
+
+      - name: Install WebAssembly Test harness
+        if: ${{ matrix.command == 'test' }}
+        uses: actions-rs/cargo@v1
+        with:
+          command: install
+          args: webassembly-test-runner
+
+      - name: Test WASM package
+        if: ${{ matrix.command == 'test' }}
+        run: |
+          cd packages/wasm-tests
+          cargo test --target wasm32-unknown-unknown --all-targets --all-features
+          cargo test --target wasm32-unknown-unknown --all-targets --no-default-features
 
       - name: Install rustfmt
         if: ${{ matrix.command == 'fmt' }}

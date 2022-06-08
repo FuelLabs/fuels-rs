@@ -68,14 +68,7 @@ impl ABIParser {
 
         let entry = parsed_abi.iter().find(|e| e.name == fn_name);
 
-        if entry.is_none() {
-            return Err(Error::InvalidName(format!(
-                "couldn't find function name: {}",
-                fn_name
-            )));
-        }
-
-        let entry = entry.unwrap();
+        let entry = entry.expect("No functions found");
 
         let mut encoder = ABIEncoder::new_with_fn_selector(
             self.build_fn_selector(fn_name, &entry.inputs)?.as_bytes(),
@@ -228,20 +221,18 @@ impl ABIParser {
                 Ok(self.tokenize_struct(trimmed_value, struct_params)?)
             }
             ParamType::Enum(s) => {
-                let discriminant = self.get_enum_discriminant_from_string(&value);
-                let value = self.get_enum_value_from_string(&value);
+                let discriminant = self.get_enum_discriminant_from_string(trimmed_value);
+                let value = self.get_enum_value_from_string(trimmed_value);
 
                 let token = self.tokenize(&s[discriminant], value)?;
 
                 Ok(Token::Enum(Box::new((discriminant as u8, token))))
             }
-            ParamType::Tuple(_tuple_params) => {
-                todo!("Tuple tokenization for the ABI CLI tool not implemented yet")
-            }
+            ParamType::Tuple(tuple_params) => Ok(self.tokenize_tuple(trimmed_value, tuple_params)?),
         }
     }
 
-    /// Creates a struct `Token` from an array of parameter types and a string of values.
+    /// Creates a `Token::Struct` from an array of parameter types and a string of values.
     /// I.e. it takes a string containing values "value_1, value_2, value_3" and an array
     /// of `ParamType` containing the type of each value, in order:
     /// [ParamType::<Type of value_1>, ParamType::<Type of value_2>, ParamType::<Type of value_3>]
@@ -249,13 +240,24 @@ impl ABIParser {
     /// It works for nested/recursive structs.
     pub fn tokenize_struct(&self, value: &str, params: &[ParamType]) -> Result<Token, Error> {
         if !value.starts_with('(') || !value.ends_with(')') {
-            return Err(Error::InvalidData);
+            return Err(Error::InvalidData(
+                "struct value string must start and end with round brackets".into(),
+            ));
         }
 
         if value.chars().count() == 2 {
             return Ok(Token::Struct(vec![]));
         }
 
+        //To parse the value string we use a two pointer/index approach.
+        //The items are comma separated and if an item is tokenized the last_item
+        //index is moved to the current position.
+        //The variable nested is incremented and decremented if a bracket is encountered,
+        //and appropriate errors are returned if the nested count is not 0.
+        //If the struct has an array inside its values the current position will be incremented
+        //until both the opening and closing bracket are inside the new item.
+        //Characters inside quotes are ignored and they are tokenized as one item.
+        //An error is return if there is an odd number of quotes.
         let mut result = vec![];
         let mut nested = 0isize;
         let mut ignore = false;
@@ -272,13 +274,19 @@ impl ABIParser {
 
                     match nested.cmp(&0) {
                         std::cmp::Ordering::Less => {
-                            return Err(Error::InvalidData);
+                            return Err(Error::InvalidData(
+                                "struct value string has excess closing brackets".into(),
+                            ));
                         }
                         std::cmp::Ordering::Equal => {
                             let sub = &value[last_item..pos];
 
                             let token = self.tokenize(
-                                params_iter.next().ok_or(Error::InvalidData)?,
+                                params_iter.next().ok_or_else(|| {
+                                    Error::InvalidData(
+                                        "last struct value is missing a matching param".into(),
+                                    )
+                                })?,
                                 sub.to_string(),
                             )?;
                             result.push(token);
@@ -299,7 +307,9 @@ impl ABIParser {
                     }
 
                     let token = self.tokenize(
-                        params_iter.next().ok_or(Error::InvalidData)?,
+                        params_iter.next().ok_or_else(|| {
+                            Error::InvalidData("struct value is missing a matching param".into())
+                        })?,
                         sub.to_string(),
                     )?;
                     result.push(token);
@@ -310,27 +320,36 @@ impl ABIParser {
         }
 
         if ignore {
-            return Err(Error::InvalidData);
+            return Err(Error::InvalidData(
+                "struct value string has excess quotes".into(),
+            ));
+        }
+
+        if nested > 0 {
+            return Err(Error::InvalidData(
+                "struct value string has excess opening brackets".into(),
+            ));
         }
 
         Ok(Token::Struct(result))
     }
 
-    /// Creates an enum `Token` from an array of parameter types and a string of values.
-    /// I.e. it takes a string containing values "value_1, value_2, value_3" and an array
-    /// of `ParamType` containing the type of each value, in order:
-    /// [ParamType::<Type of value_1>, ParamType::<Type of value_2>, ParamType::<Type of value_3>]
-    /// And attempts to return a `Token::Enum()` containing the inner types.
-    /// It works for nested/recursive enums.
+    /// Creates a `Token::Array` from one parameter type and a string of values.
+    /// I.e. it takes a string containing values "value_1, value_2, value_3" and a
+    /// `ParamType` sepecifying the type.
+    /// It works for nested/recursive arrays.
     pub fn tokenize_array<'a>(&self, value: &'a str, param: &ParamType) -> Result<Token, Error> {
         if !value.starts_with('[') || !value.ends_with(']') {
-            return Err(Error::InvalidData);
+            return Err(Error::InvalidData(
+                "array value string must start and end with square brackets".into(),
+            ));
         }
 
         if value.chars().count() == 2 {
             return Ok(Token::Array(vec![]));
         }
 
+        //for more details about this algorithm, refer to the tokenize_struct method
         let mut result = vec![];
         let mut nested = 0isize;
         let mut ignore = false;
@@ -345,7 +364,9 @@ impl ABIParser {
 
                     match nested.cmp(&0) {
                         std::cmp::Ordering::Less => {
-                            return Err(Error::InvalidData);
+                            return Err(Error::InvalidData(
+                                "array value string has excess closing brackets".into(),
+                            ));
                         }
                         std::cmp::Ordering::Equal => {
                             // Last element of this nest level; proceed to tokenize.
@@ -394,10 +415,112 @@ impl ABIParser {
         }
 
         if ignore {
-            return Err(Error::InvalidData);
+            return Err(Error::InvalidData(
+                "array value string has excess quotes".into(),
+            ));
+        }
+
+        if nested > 0 {
+            return Err(Error::InvalidData(
+                "array value string has excess opening brackets".into(),
+            ));
         }
 
         Ok(Token::Array(result))
+    }
+
+    /// Creates `Token::Tuple` from an array of parameter types and a string of values.
+    /// I.e. it takes a string containing values "value_1, value_2, value_3" and an array
+    /// of `ParamType` containing the type of each value, in order:
+    /// [ParamType::<Type of value_1>, ParamType::<Type of value_2>, ParamType::<Type of value_3>]
+    /// And attempts to return a `Token::Tuple()` containing the inner types.
+    /// It works for nested/recursive tuples.
+    pub fn tokenize_tuple(&self, value: &str, params: &[ParamType]) -> Result<Token, Error> {
+        if !value.starts_with('(') || !value.ends_with(')') {
+            return Err(Error::InvalidData(
+                "tuple value string must start and end with round brackets".into(),
+            ));
+        }
+
+        if value.chars().count() == 2 {
+            return Ok(Token::Tuple(vec![]));
+        }
+
+        //for more details about this algorithm, refer to the tokenize_struct method
+        let mut result = vec![];
+        let mut nested = 0isize;
+        let mut ignore = false;
+        let mut last_item = 1;
+        let mut params_iter = params.iter();
+
+        for (pos, ch) in value.chars().enumerate() {
+            match ch {
+                '(' if !ignore => {
+                    nested += 1;
+                }
+                ')' if !ignore => {
+                    nested -= 1;
+
+                    match nested.cmp(&0) {
+                        std::cmp::Ordering::Less => {
+                            return Err(Error::InvalidData(
+                                "tuple value string has excess closing brackets".into(),
+                            ));
+                        }
+                        std::cmp::Ordering::Equal => {
+                            let sub = &value[last_item..pos];
+
+                            let token = self.tokenize(
+                                params_iter.next().ok_or_else(|| {
+                                    Error::InvalidData(
+                                        "last tuple value is missing a matching param".into(),
+                                    )
+                                })?,
+                                sub.to_string(),
+                            )?;
+                            result.push(token);
+                            last_item = pos + 1;
+                        }
+                        _ => {}
+                    }
+                }
+                '"' => {
+                    ignore = !ignore;
+                }
+                ',' if nested == 1 && !ignore => {
+                    let sub = &value[last_item..pos];
+                    // If we've encountered an array within a tuple property
+                    // keep iterating until we see the end of it "]".
+                    if sub.contains('[') && !sub.contains(']') {
+                        continue;
+                    }
+
+                    let token = self.tokenize(
+                        params_iter.next().ok_or_else(|| {
+                            Error::InvalidData("tuple value is missing a matching param".into())
+                        })?,
+                        sub.to_string(),
+                    )?;
+                    result.push(token);
+                    last_item = pos + 1;
+                }
+                _ => (),
+            }
+        }
+
+        if ignore {
+            return Err(Error::InvalidData(
+                "tuple value string has excess quotes".into(),
+            ));
+        }
+
+        if nested > 0 {
+            return Err(Error::InvalidData(
+                "tuple value string has excess opening brackets".into(),
+            ));
+        }
+
+        Ok(Token::Tuple(result))
     }
 
     /// Higher-level layer of the ABI decoding module.
@@ -491,25 +614,61 @@ impl ABIParser {
         let mut result: String = String::new();
 
         if param.is_custom_type() {
-            // Custom type, need to break down inner fields
-            // Will return `"e(field_1,field_2,...,field_n)"` if the type is an `Enum`
-            // and return `"s(field_1,field_2,...,field_n)"` if the type is a `Struct`
+            // Custom type, need to break down inner fields.
+            // Will return `"e(field_1,field_2,...,field_n)"` if the type is an `Enum`,
+            // `"s(field_1,field_2,...,field_n)"` if the type is a `Struct`,
+            // `"a[type;length]"` if the type is an `Array`,
+            // `(type_1,type_2,...,type_n)` if the type is a `Tuple`.
             if param.is_struct_type() {
                 result.push_str("s(");
-            } else {
+            } else if param.is_enum_type() {
                 result.push_str("e(");
+            } else if param.has_custom_type_in_array() {
+                result.push_str("a[");
+            } else if param.has_custom_type_in_tuple() {
+                result.push('(');
+            } else {
+                panic!("unexpected custom type");
             }
 
-            for (idx, component) in param.components.as_ref().unwrap().iter().enumerate() {
-                let res = self.build_fn_selector_params(component);
-                result.push_str(&res);
+            for (idx, component) in param
+                .components
+                .as_ref()
+                .expect("No components found")
+                .iter()
+                .enumerate()
+            {
+                result.push_str(&self.build_fn_selector_params(component));
 
                 if idx + 1 < param.components.as_ref().unwrap().len() {
                     result.push(',');
                 }
             }
-            result.push(')');
+
+            if result.starts_with("a[") {
+                let array_type_field = param.type_field.clone();
+
+                // Type field, in this case, looks like
+                // "[struct Person; 2]" and we want to extract the
+                // length, which in this example is 2.
+                // First, get the last part after `;`: `"<length>]"`.
+                let mut array_length = array_type_field.split(';').collect::<Vec<&str>>()[1]
+                    .trim()
+                    .to_string();
+
+                array_length.pop(); // Remove the trailing "]"
+
+                // Make sure the length is a valid number.
+                let array_length = array_length.parse::<usize>().expect("Invalid array length");
+
+                result.push(';');
+                result.push_str(array_length.to_string().as_str());
+                result.push(']');
+            } else {
+                result.push(')');
+            }
         } else {
+            // Not a custom type.
             let param_str_no_whitespace: String = param
                 .type_field
                 .chars()
@@ -530,9 +689,6 @@ pub fn parse_param(param: &Property) -> Result<ParamType, Error> {
             if param.type_field == "()" {
                 return Ok(ParamType::Unit);
             }
-            if param.is_custom_type() {
-                return parse_custom_type_param(param);
-            }
             if param.type_field.contains('[') && param.type_field.contains(']') {
                 // Try to parse array ([T; M]) or string (str[M])
                 if param.type_field.contains("str[") {
@@ -544,7 +700,7 @@ pub fn parse_param(param: &Property) -> Result<ParamType, Error> {
                 // Try to parse tuple (T, T, ..., T)
                 return parse_tuple_param(param);
             }
-            // Try to parse enum or struct
+            // Try to parse a free form enum or struct (e.g. `struct MySTruct`, `enum MyEnum`).
             parse_custom_type_param(param)
         }
     }
@@ -553,17 +709,12 @@ pub fn parse_param(param: &Property) -> Result<ParamType, Error> {
 pub fn parse_tuple_param(param: &Property) -> Result<ParamType, Error> {
     let mut params: Vec<ParamType> = Vec::new();
 
-    let mut chars = param.type_field.chars();
-    chars.next(); // Remove "("
-    chars.next_back(); // Remove ")"
-
-    for ele in chars.as_str().split(',') {
-        let tuple_type = Property {
-            name: "".to_owned(),
-            type_field: ele.trim().to_owned(),
-            components: None,
-        };
-        params.push(parse_param(&tuple_type)?);
+    for tuple_component in param
+        .components
+        .as_ref()
+        .expect("tuples should have components")
+    {
+        params.push(parse_param(tuple_component)?);
     }
 
     Ok(ParamType::Tuple(params))
@@ -594,7 +745,18 @@ pub fn parse_array_param(param: &Property) -> Result<ParamType, Error> {
     }
     let (type_field, size) = (split[0], split[1]);
     let type_field = type_field[1..].to_string();
-    let param_type = ParamType::from_str(&type_field)?;
+
+    let param_type = match ParamType::from_str(&type_field) {
+        Ok(param_type) => param_type,
+        Err(_) => parse_custom_type_param(
+            param
+                .components
+                .as_ref()
+                .expect("array should have components")
+                .first()
+                .expect("components in array should have at least one component"),
+        )?,
+    };
 
     // Grab size the `n` in "[T; n]"
     let size: usize = size[..size.len() - 1].parse()?;
@@ -730,7 +892,6 @@ mod tests {
         let function_name = "takes_u32_returns_bool";
 
         let encoded = abi.encode(json_abi, function_name, &values).unwrap();
-        println!("encoded: {:?}\n", encoded);
 
         let expected_encode = "000000000000000a";
         assert_eq!(encoded, expected_encode);
@@ -778,7 +939,6 @@ mod tests {
         let encoded = abi
             .encode_with_function_selector(json_abi, function_name, &values)
             .unwrap();
-        println!("encoded: {:?}\n", encoded);
 
         let expected_encode = "000000006355e6ee000000000000000a";
         assert_eq!(encoded, expected_encode);
@@ -833,7 +993,6 @@ mod tests {
         let encoded = abi
             .encode_with_function_selector(json_abi, function_name, &values)
             .unwrap();
-        println!("encoded: {:?}\n", encoded);
 
         let expected_encode = "00000000e64019abd5579c46dfcc7f18207013e65b44e4cb4e2c2298f4ac457ba8f82743f31e930b0000000000000001";
         assert_eq!(encoded, expected_encode);
@@ -883,7 +1042,6 @@ mod tests {
         let encoded = abi
             .encode_with_function_selector(json_abi, function_name, &values)
             .unwrap();
-        println!("encoded: {:?}\n", encoded);
 
         let expected_encode = "000000005898d3a4000000000000000100000000000000020000000000000003";
         assert_eq!(encoded, expected_encode);
@@ -989,7 +1147,6 @@ mod tests {
         let encoded = abi
             .encode_with_function_selector(json_abi, function_name, &values)
             .unwrap();
-        println!("encoded: {:?}\n", encoded);
 
         let expected_encode =
             "000000007456abeb0000000000000001000000000000000200000000000000030000000000000004";
@@ -1039,7 +1196,6 @@ mod tests {
         let encoded = abi
             .encode_with_function_selector(json_abi, function_name, &values)
             .unwrap();
-        println!("encoded: {:?}\n", encoded);
 
         let expected_encode = "00000000d56e76515468697320697320612066756c6c2073656e74656e636500";
         assert_eq!(encoded, expected_encode);
@@ -1092,7 +1248,6 @@ mod tests {
         let encoded = abi
             .encode_with_function_selector(json_abi, function_name, &values)
             .unwrap();
-        println!("encoded: {:?}\n", encoded);
 
         let expected_encode = "00000000cb0b2f05000000000000002a0000000000000001";
         assert_eq!(encoded, expected_encode);
@@ -1139,7 +1294,6 @@ mod tests {
         let encoded = abi
             .encode_with_function_selector(json_abi, function_name, &values)
             .unwrap();
-        println!("encoded: {:?}\n", encoded);
 
         let expected_encode = "000000005c445838000000000000002a0000000000000001000000000000000a";
         assert_eq!(encoded, expected_encode);
@@ -1192,7 +1346,6 @@ mod tests {
         let encoded = abi
             .encode_with_function_selector(json_abi, function_name, &values)
             .unwrap();
-        println!("encoded: {:?}\n", encoded);
 
         let expected_encode =
             "000000001c6b7bb9000000000000000a000000000000000100000000000000010000000000000002";
@@ -1239,10 +1392,136 @@ mod tests {
         let encoded = abi
             .encode_with_function_selector(json_abi, function_name, &values)
             .unwrap();
-        println!("encoded: {:?}\n", encoded);
 
         let expected_encode =
             "00000000f40ff3b5000000000000000100000000000000010000000000000002000000000000000a";
+        assert_eq!(encoded, expected_encode);
+    }
+
+    #[test]
+    fn tuple_encode_and_decode() {
+        let json_abi = r#"
+        [
+            {
+                "type":"contract",
+                "inputs": [
+                  {
+                    "name": "input",
+                    "type": "(u64, bool)",
+                    "components": [
+                      {
+                        "name": "__tuple_element",
+                        "type": "u64",
+                        "components": null
+                      },
+                      {
+                        "name": "__tuple_element",
+                        "type": "bool",
+                        "components": null
+                      }
+                    ]
+                  }
+                ],
+                "name":"takes_tuple",
+                "outputs":[]
+            }
+        ]
+        "#;
+
+        let values: Vec<String> = vec!["(42, true)".to_string()];
+
+        let mut abi = ABIParser::new();
+
+        let function_name = "takes_tuple";
+
+        let encoded = abi
+            .encode_with_function_selector(json_abi, function_name, &values)
+            .unwrap();
+
+        let expected_encode = "000000001cc7bb2c000000000000002a0000000000000001";
+        assert_eq!(encoded, expected_encode);
+    }
+
+    #[test]
+    fn nested_tuple_encode_and_decode() {
+        let json_abi = r#"
+        [
+          {
+            "type": "function",
+            "inputs": [
+              {
+                "name": "input",
+                "type": "((u64, bool), struct Person, enum State)",
+                "components": [
+                  {
+                    "name": "__tuple_element",
+                    "type": "(u64, bool)",
+                    "components": [
+                      {
+                        "name": "__tuple_element",
+                        "type": "u64",
+                        "components": null
+                      },
+                      {
+                        "name": "__tuple_element",
+                        "type": "bool",
+                        "components": null
+                      }
+                    ]
+                  },
+                  {
+                    "name": "__tuple_element",
+                    "type": "struct Person",
+                    "components": [
+                      {
+                        "name": "name",
+                        "type": "str[4]",
+                        "components": null
+                      }
+                    ]
+                  },
+                  {
+                    "name": "__tuple_element",
+                    "type": "enum State",
+                    "components": [
+                      {
+                        "name": "A",
+                        "type": "()",
+                        "components": []
+                      },
+                      {
+                        "name": "B",
+                        "type": "()",
+                        "components": []
+                      },
+                      {
+                        "name": "C",
+                        "type": "()",
+                        "components": []
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "name": "takes_nested_tuple",
+            "outputs":[]
+          }
+        ]
+        "#;
+
+        let values: Vec<String> = vec!["((42, true), (John), (1, 0))".to_string()];
+
+        let mut abi = ABIParser::new();
+
+        let function_name = "takes_nested_tuple";
+
+        let encoded = abi
+            .encode_with_function_selector(json_abi, function_name, &values)
+            .unwrap();
+
+        let expected_encode =
+            "00000000ebb8d011000000000000002a00000000000000014a6f686e000000000000000000000001";
         assert_eq!(encoded, expected_encode);
     }
 
@@ -1283,7 +1562,6 @@ mod tests {
         let encoded = abi
             .encode_with_function_selector(json_abi, function_name, &values)
             .unwrap();
-        println!("encoded: {:?}\n", encoded);
 
         let expected_encode = "0000000021b2784f0000000000000000000000000000002a";
         assert_eq!(encoded, expected_encode);
@@ -1395,7 +1673,6 @@ mod tests {
         };
 
         let params = vec![p];
-        println!("params: {:?}\n", params);
         let selector = abi.build_fn_selector("my_func", &params).unwrap();
 
         assert_eq!(selector, "my_func(s(bool,s(u64,u32)))");
@@ -1436,7 +1713,6 @@ mod tests {
         };
 
         let params = vec![p];
-        println!("params: {:?}\n", params);
         let selector = abi.build_fn_selector("my_func", &params).unwrap();
 
         assert_eq!(selector, "my_func(e(bool,e(u64,u32)))");
@@ -1568,7 +1844,6 @@ mod tests {
         let encoded = abi
             .encode_with_function_selector(json_abi, function_name, &values)
             .unwrap();
-        println!("encoded: {:?}\n", encoded);
 
         let expected_encode = "00000000e33a11ce0000000000000001000000000000002a";
         assert_eq!(encoded, expected_encode);
