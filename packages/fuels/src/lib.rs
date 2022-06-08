@@ -63,7 +63,9 @@ pub mod prelude {
     pub use super::core::tx::{Address, AssetId, ContractId};
     pub use super::core::{Detokenize, InvalidOutputType};
     pub use super::core::{Token, Tokenizable};
+    #[cfg(feature = "fuel-core-lib")]
     pub use super::node::service::Config;
+
     pub use super::signers::provider::*;
     pub use super::signers::{LocalWallet, Signer};
     pub use super::test_helpers::*;

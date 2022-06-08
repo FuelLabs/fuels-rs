@@ -76,20 +76,15 @@ pub async fn setup_test_provider(
     (Provider::new(client), addr)
 }
 
-/// Default ----------------------------------------------------------------------------------------
-
 #[cfg(not(feature = "fuel-core-lib"))]
 pub async fn launch_provider_and_get_single_wallet() -> LocalWallet {
-    let mut wallets =
-        launch_provider_and_get_wallets(WalletsConfig::new_single(None, None)).await;
+    let mut wallets = launch_provider_and_get_wallets(WalletsConfig::new_single(None, None)).await;
 
     wallets.pop().unwrap()
 }
 
 #[cfg(not(feature = "fuel-core-lib"))]
-pub async fn launch_provider_and_get_wallets(
-    config: WalletsConfig,
-) -> Vec<LocalWallet> {
+pub async fn launch_provider_and_get_wallets(config: WalletsConfig) -> Vec<LocalWallet> {
     let mut wallets: Vec<LocalWallet> = (1..=config.num_wallets)
         .map(|_i| LocalWallet::new_random(None))
         .collect();
@@ -115,18 +110,16 @@ pub async fn launch_provider_and_get_wallets(
 }
 
 #[cfg(not(feature = "fuel-core-lib"))]
-pub async fn setup_test_provider(
-    coins: Vec<(UtxoId, Coin)>,
-) -> (Provider, SocketAddr) {
+pub async fn setup_test_provider(coins: Vec<(UtxoId, Coin)>) -> (Provider, SocketAddr) {
     let (client, addr) = setup_test_client(coins).await;
     (Provider::new(client), addr)
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::WalletsConfig;
+    use crate::{launch_provider_and_get_wallets, WalletsConfig};
 
-    use super::*;
+    // use super::*;
 
     #[tokio::test]
     async fn test_wallet_config() {

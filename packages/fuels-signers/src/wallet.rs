@@ -236,6 +236,7 @@ impl Wallet {
     /// use fuels::test_helpers::setup_single_asset_coins;
     /// use fuels::tx::{Bytes32, AssetId, Input, Output, UtxoId};
     /// use std::str::FromStr;
+    /// #[cfg(feature = "fuel-core-lib")]
     /// use fuels_test_helpers::Config;
     ///
     /// async fn foo() -> Result<(), Box<dyn std::error::Error>> {

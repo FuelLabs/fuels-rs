@@ -1,6 +1,7 @@
 //! Testing helpers/utilities for Fuel SDK.
 
-use std::borrow::Borrow;
+extern crate core;
+
 use std::collections::HashSet;
 use std::net::SocketAddr;
 use std::time::Duration;
@@ -22,18 +23,15 @@ use fuel_gql_client::{
     fuel_tx::{Address, Bytes32, UtxoId},
 };
 
-
-
-
-use portpicker::{pick_unused_port, Port};
+use portpicker::pick_unused_port;
 use serde_json::Value;
 use tempfile::NamedTempFile;
 use tokio::process::Command;
 
 use fuels_core::constants::NATIVE_ASSET_ID;
 use fuels_signers::fuel_crypto::fuel_types::AssetId;
-use rand::Fill;
 use fuels_signers::fuel_crypto::rand;
+use rand::Fill;
 
 // #[cfg(feature = "fuels-signers")]
 mod signers;
@@ -43,9 +41,11 @@ mod wallets_config;
 pub use signers::*;
 pub use wallets_config::*;
 
-use crate::node_config_json::{DummyConfig, get_node_config_json, spawn_fuel_service};
+use crate::node_config_json::{get_node_config_json, spawn_fuel_service, DummyConfig};
 
 mod node_config_json;
+mod script;
+
 pub use node_config_json::*;
 
 /// Create a vector of `num_asset`*`coins_per_asset` UTXOs and a vector of the unique corresponding
@@ -162,10 +162,10 @@ pub async fn setup_test_client(
     coins: Vec<(UtxoId, Coin)>,
     // node_config: Config
 ) -> (FuelClient, SocketAddr) {
-    let coin_configs: Vec<String> = coins
+    let coin_configs: Vec<Value> = coins
         .into_iter()
         .map(|(utxo_id, coin)| {
-            serde_json::to_string(&DummyConfig {
+            serde_json::to_value(&DummyConfig {
                 tx_id: Some(*utxo_id.tx_id()),
                 output_index: Some(utxo_id.output_index() as u64),
                 block_created: Some(coin.block_created),
@@ -174,11 +174,13 @@ pub async fn setup_test_client(
                 amount: coin.amount,
                 asset_id: coin.asset_id,
             })
-                .unwrap()
+            .unwrap()
         })
         .collect();
 
-    let config_with_coins: Value = serde_json::from_str(coin_configs.concat().as_str()).unwrap();
+    let result = serde_json::to_string(&coin_configs).unwrap();
+
+    let config_with_coins: Value = serde_json::from_str(result.as_str()).unwrap();
 
     let free_port = pick_unused_port().expect("No ports free");
     let srv_address = SocketAddr::new("127.0.0.1".parse().unwrap(), free_port);
@@ -190,8 +192,6 @@ pub async fn setup_test_client(
 
     (client, srv_address)
 }
-
-
 
 #[cfg(test)]
 mod tests {
