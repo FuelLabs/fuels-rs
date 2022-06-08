@@ -1,6 +1,5 @@
 use fuel_core::service::Config;
 use fuel_gql_client::fuel_tx::{AssetId, ContractId, Receipt};
-use fuels::contract::script::Script;
 use fuels::prelude::{
     launch_provider_and_get_single_wallet, setup_multiple_assets_coins, setup_single_asset_coins,
     setup_test_provider, CallParameters, Contract, Error, LocalWallet, Provider, Signer,
@@ -1502,11 +1501,11 @@ async fn test_transaction_script_workflow() {
 
     let call_handler = contract_instance.initialize_counter(42);
 
-    let script = Script::from_call(&call_handler.contract_call).await;
+    let script = call_handler.get_script().await;
     assert!(script.tx.is_script());
 
     let receipts = script.call(client).await.unwrap();
 
-    let response = call_handler.build_response(receipts).unwrap();
+    let response = call_handler.get_response(receipts).unwrap();
     assert_eq!(response.value, 42);
 }

@@ -115,7 +115,7 @@ impl Abigen {
         } else {
             (
                 quote! {
-                    use fuels::contract::contract::{Contract, ContractCall, ContractCallHandler};
+                    use fuels::contract::contract::{Contract, ContractCallHandler};
                     use fuels::prelude::InvalidOutputType;
                     use fuels::signers::LocalWallet;
                     use fuels::tx::{ContractId, Address};

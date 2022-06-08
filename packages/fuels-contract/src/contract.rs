@@ -12,6 +12,7 @@ use fuels_core::{
     Detokenize, ParamType, ReturnLocation, Selector, Token,
 };
 use fuels_signers::{provider::Provider, LocalWallet, Signer};
+use std::fmt::Debug;
 use std::marker::PhantomData;
 
 #[derive(Debug, Clone, Default)]
@@ -87,7 +88,7 @@ impl Contract {
     /// }
     /// For more details see `code_gen/functions_gen.rs`.
     /// Note that this needs a wallet because the contract instance needs a wallet for the calls
-    pub fn method_hash<D: Detokenize + std::fmt::Debug>(
+    pub fn method_hash<D: Detokenize + Debug>(
         provider: &Provider,
         contract_id: ContractId,
         wallet: &LocalWallet,
@@ -108,9 +109,7 @@ impl Contract {
         let maturity = 0;
 
         let contract_call = ContractCall {
-            tx_parameters,
             contract_id,
-            wallet: wallet.clone(),
             encoded_selector,
             encoded_args,
             call_parameters,
@@ -123,6 +122,8 @@ impl Contract {
 
         Ok(ContractCallHandler {
             contract_call,
+            tx_parameters,
+            wallet: wallet.clone(),
             fuel_client: provider.client.clone(),
             datatype: PhantomData,
         })
@@ -257,9 +258,8 @@ impl Contract {
 }
 
 #[derive(Debug)]
+/// Contains all data relevant to a single contract call
 pub struct ContractCall {
-    pub tx_parameters: TxParameters,
-    pub wallet: LocalWallet,
     pub contract_id: ContractId,
     pub encoded_args: Vec<u8>,
     pub encoded_selector: Selector,
@@ -272,7 +272,7 @@ pub struct ContractCall {
 }
 
 impl ContractCall {
-    /// Based on the returned Contract's output_params and the receipts returned from the call,
+    /// Based on the returned Contract's output_params and the receipts returned from a call,
     /// decode the values and return them.
     pub fn get_decoded_output(
         &self,
@@ -319,16 +319,18 @@ impl ContractCall {
 
 #[derive(Debug)]
 #[must_use = "contract calls do nothing unless you `call` them"]
-/// Helper for managing a transaction before submitting it to a node
+/// Helper that handles submitting a call to a client and formatting the formatting the response
 pub struct ContractCallHandler<D> {
     pub contract_call: ContractCall,
+    pub tx_parameters: TxParameters,
+    pub wallet: LocalWallet,
     pub fuel_client: FuelClient,
     pub datatype: PhantomData<D>,
 }
 
 impl<D> ContractCallHandler<D>
 where
-    D: Detokenize + std::fmt::Debug,
+    D: Detokenize + Debug,
 {
     /// Sets external contracts as dependencies to this contract's call.
     /// Effectively, this will be used to create Input::Contract/Output::Contract
@@ -345,7 +347,7 @@ where
     /// let params = TxParameters { gas_price: 100, gas_limit: 1000000, byte_price: 100 };
     /// `my_contract_instance.my_method(...).tx_params(params).call()`.
     pub fn tx_params(mut self, params: TxParameters) -> Self {
-        self.contract_call.tx_parameters = params;
+        self.tx_parameters = params;
         self
     }
 
@@ -386,7 +388,7 @@ where
     /// transaction.
     #[tracing::instrument]
     async fn call_or_simulate(self, simulate: bool) -> Result<CallResponse<D>, Error> {
-        let script = self.build_script().await;
+        let script = self.get_script().await;
 
         let receipts = if simulate {
             script.simulate(&self.fuel_client).await?
@@ -395,11 +397,11 @@ where
         };
         tracing::debug!(target: "receipts", "{:?}", receipts);
 
-        self.build_response(receipts)
+        self.get_response(receipts)
     }
 
-    pub async fn build_script(&self) -> Script {
-        Script::from_call(&self.contract_call).await
+    pub async fn get_script(&self) -> Script {
+        Script::from_contract_call(&self.contract_call, &self.tx_parameters, &self.wallet).await
     }
 
     /// Call a contract's method on the node, in a state-modifying manner.
@@ -415,7 +417,7 @@ where
     }
 
     /// Create a CallResponse from call receipts
-    pub fn build_response(&self, receipts: Vec<Receipt>) -> Result<CallResponse<D>, Error> {
+    pub fn get_response(&self, receipts: Vec<Receipt>) -> Result<CallResponse<D>, Error> {
         // If it's an ABI method without a return value, exit early.
         if self.contract_call.output_params.is_empty() {
             return Ok(CallResponse::new(D::from_tokens(vec![])?, receipts));

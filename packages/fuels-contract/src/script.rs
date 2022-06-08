@@ -14,9 +14,10 @@ use fuel_gql_client::{
 };
 use fuels_core::constants::{DEFAULT_SPENDABLE_COIN_AMOUNT, WORD_SIZE};
 use fuels_core::errors::Error;
+use fuels_core::parameters::TxParameters;
 
 use crate::contract::ContractCall;
-use fuels_signers::Signer;
+use fuels_signers::{LocalWallet, Signer};
 
 /// Script provides methods to create and a call/simulate a
 /// script transaction that carries out contract method calls
@@ -35,10 +36,17 @@ impl Script {
         Self { tx }
     }
 
-    pub async fn from_call(call: &ContractCall) -> Self {
+    /// Creates a Script from a contract call. The internal Transaction field is initialized
+    /// with the actual script instructions and script data needed to perform the call,
+    /// and transaction inputs/outputs consisting of assets, external contract ids etc.
+    pub async fn from_contract_call(
+        call: &ContractCall,
+        tx_parameters: &TxParameters,
+        wallet: &LocalWallet,
+    ) -> Self {
         let (script, offset) = Self::get_instructions(vec![call]);
 
-        let script_data = Self::get_script_data(vec![call], offset);
+        let script_data = Self::get_script_data_from_calls(vec![call], offset);
 
         let mut inputs: Vec<Input> = vec![];
         let mut outputs: Vec<Output> = vec![];
@@ -51,21 +59,19 @@ impl Script {
         );
         inputs.push(self_contract_input);
 
-        let mut spendables = call
-            .wallet
+        let mut spendables = wallet
             .get_spendable_coins(&AssetId::default(), DEFAULT_SPENDABLE_COIN_AMOUNT as u64)
             .await
             .unwrap();
 
         // add default asset change if any inputs are being spent
         if !spendables.is_empty() {
-            let change_output = Output::change(call.wallet.address(), 0, AssetId::default());
+            let change_output = Output::change(wallet.address(), 0, AssetId::default());
             outputs.push(change_output);
         }
 
         if call.call_parameters.asset_id != AssetId::default() {
-            let alt_spendables = call
-                .wallet
+            let alt_spendables = wallet
                 .get_spendable_coins(&call.call_parameters.asset_id, call.call_parameters.amount)
                 .await
                 .unwrap();
@@ -73,7 +79,7 @@ impl Script {
             // add alt change if inputs are being spent
             if !alt_spendables.is_empty() {
                 let change_output =
-                    Output::change(call.wallet.address(), 0, call.call_parameters.asset_id);
+                    Output::change(wallet.address(), 0, call.call_parameters.asset_id);
                 outputs.push(change_output);
             }
 
@@ -128,9 +134,9 @@ impl Script {
         };
 
         let mut tx = Transaction::script(
-            call.tx_parameters.gas_price,
-            call.tx_parameters.gas_limit,
-            call.tx_parameters.byte_price,
+            tx_parameters.gas_price,
+            tx_parameters.gas_limit,
+            tx_parameters.byte_price,
             call.maturity,
             script,
             script_data,
@@ -138,15 +144,12 @@ impl Script {
             outputs,
             vec![],
         );
-        call.wallet.sign_transaction(&mut tx).await.unwrap();
+        wallet.sign_transaction(&mut tx).await.unwrap();
 
         Script::new(tx)
     }
 
-    /// Given the necessary arguments, create a script that will be submitted to the node to call
-    /// the contract. The script is the actual opcodes used to call the contract, and the script
-    /// data is for instance the function selector. (script, script_data) is returned as a tuple
-    /// of hex-encoded value vectors
+    /// Given a list of contract calls, create the actual opcodes used to call the contract
     fn get_instructions(calls: Vec<&ContractCall>) -> (Vec<u8>, usize) {
         let num_calls = calls.len();
         let offset = Self::get_data_offset(num_calls);
@@ -161,14 +164,14 @@ impl Script {
         (instructions, offset)
     }
 
-    /// The script data consists of the following items in the given order:
+    /// Returns script data, consisting of the following items in the given order:
     /// 1. Asset ID to be forwarded (AmountId::LEN)
     /// 2. Amount to be forwarded (1 * WORD_SIZE)
     /// 3. Contract ID (ContractID::LEN);
     /// 4. Function selector (1 * WORD_SIZE);
     /// 5. Calldata offset (optional) (1 * WORD_SIZE)
     /// 6. Encoded arguments (optional) (variable length)
-    fn get_script_data(calls: Vec<&ContractCall>, offset: usize) -> Vec<u8> {
+    fn get_script_data_from_calls(calls: Vec<&ContractCall>, offset: usize) -> Vec<u8> {
         let mut script_data: Vec<u8> = vec![];
 
         for call in calls {
@@ -204,7 +207,7 @@ impl Script {
     /// following registers;
     ///
     /// 0x10 Script data offset
-    /// 0x11 Gas price
+    /// 0x11 Gas price TODO: #184
     /// 0x12 Coin amount
     /// 0x13 Asset ID
     ///
@@ -216,7 +219,6 @@ impl Script {
                 0x10,
                 (data_offset + segment_offset + AssetId::LEN + WORD_SIZE) as Immediate18,
             ),
-            // TODO load gas price
             Opcode::MOVI(
                 0x12,
                 (data_offset + segment_offset + AssetId::LEN) as Immediate18,
