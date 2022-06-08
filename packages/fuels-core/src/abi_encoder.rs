@@ -65,8 +65,8 @@ impl ABIEncoder {
     }
 
     /// Will encode an Enum according to TODO: PUT_FUEL_SPECS_ENUM_ENCODING_LINK_HERE
-    fn encode_enum(&mut self, selector: &Box<EnumSelector>) -> Result<(), CodecError> {
-        let (discriminant, token_within_enum, variants) = selector.as_ref();
+    fn encode_enum(&mut self, selector: &EnumSelector) -> Result<(), CodecError> {
+        let (discriminant, token_within_enum, variants) = selector;
 
         let pre_encode_size = self.encoded_args.len();
 
