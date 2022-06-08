@@ -30,7 +30,7 @@ pub mod core {
     pub use fuels_core::*;
 }
 
-#[cfg(feature = "fuel-core")]
+#[cfg(feature = "fuel-core-lib")]
 pub mod node {
     #[doc(no_inline)]
     pub use fuel_core::*;
@@ -40,14 +40,8 @@ pub mod signers {
     pub use fuels_signers::*;
 }
 
-#[cfg(feature = "fuel-core")]
 pub mod test_helpers {
     pub use fuels_test_helpers::*;
-}
-
-#[cfg(feature = "fuel-core-bin")]
-pub mod test_helpers_bin {
-    pub use fuels_test_helpers_bin::*;
 }
 
 /// Easy imports of frequently used
@@ -70,9 +64,6 @@ pub mod prelude {
     pub use super::core::{Token, Tokenizable};
     pub use super::signers::provider::*;
     pub use super::signers::{LocalWallet, Signer};
-    #[cfg(feature = "fuel-core")]
     pub use super::test_helpers::*;
-    #[cfg(feature = "fuel-core-bin")]
-    pub use super::test_helpers_bin::*;
     pub use super::tx::Salt;
 }

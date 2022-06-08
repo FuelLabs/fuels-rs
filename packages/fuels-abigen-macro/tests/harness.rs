@@ -11,30 +11,36 @@ fn init_tracing() {
     let _ = tracing_subscriber::fmt::try_init();
 }
 
-#[cfg(not(feature = "fuel-core-bin"))]
 fn null_contract_id() -> String {
     // a null contract address ~[0u8;32]
     String::from("0000000000000000000000000000000000000000000000000000000000000000")
 }
 
+// /*
 #[cfg(test)]
-#[cfg(not(feature = "fuel-core-bin"))]
 mod tests {
-    use fuel_core::service::Config;
+
+    // #[cfg(feature = "fuel-core-lib")]
+    // use fuel_core::service::Config;
+
     use fuel_gql_client::fuel_tx::{AssetId, ContractId, Receipt};
     use sha2::{Digest, Sha256};
 
     use fuels::prelude::{
         launch_provider_and_get_single_wallet, setup_multiple_assets_coins, setup_test_provider,
     };
+
     use fuels::prelude::{
         setup_single_asset_coins, CallParameters, Contract, Error, LocalWallet, Provider, Signer,
         TxParameters, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
     };
+
     use fuels_abigen_macro::abigen;
     use fuels_core::{constants::NATIVE_ASSET_ID, Token};
 
     use crate::null_contract_id;
+
+    // /*
 
     #[tokio::test]
     async fn compile_bindings_from_contract_file() {
@@ -938,54 +944,54 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn test_provider_launch_and_connect() {
-        abigen!(
-        MyContract,
-        "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
-    );
-
-        let mut wallet = LocalWallet::new_random(None);
-
-        let coins = setup_single_asset_coins(
-            wallet.address(),
-            NATIVE_ASSET_ID,
-            DEFAULT_NUM_COINS,
-            DEFAULT_COIN_AMOUNT,
-        );
-        let (launched_provider, address) = setup_test_provider(coins, Config::local_node()).await;
-        let connected_provider = Provider::connect(address).await.unwrap();
-
-        wallet.set_provider(connected_provider);
-
-        let contract_id = Contract::deploy(
-            "tests/test_projects/contract_test/out/debug/contract_test.bin",
-            &wallet,
-            TxParameters::default(),
-        )
-        .await
-        .unwrap();
-        println!("Contract deployed @ {:x}", contract_id);
-
-        let contract_instance_connected = MyContract::new(contract_id.to_string(), wallet.clone());
-
-        let result = contract_instance_connected
-            .initialize_counter(42) // Build the ABI call
-            .call() // Perform the network call
-            .await
-            .unwrap();
-        assert_eq!(42, result.value);
-
-        wallet.set_provider(launched_provider);
-        let contract_instance_launched = MyContract::new(contract_id.to_string(), wallet);
-
-        let result = contract_instance_launched
-            .increment_counter(10)
-            .call()
-            .await
-            .unwrap();
-        assert_eq!(52, result.value);
-    }
+    // #[tokio::test]
+    // async fn test_provider_launch_and_connect() {
+    //     abigen!(
+    //     MyContract,
+    //     "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+    // );
+    //
+    //     let mut wallet = LocalWallet::new_random(None);
+    //
+    //     let coins = setup_single_asset_coins(
+    //         wallet.address(),
+    //         NATIVE_ASSET_ID,
+    //         DEFAULT_NUM_COINS,
+    //         DEFAULT_COIN_AMOUNT,
+    //     );
+    //     let (launched_provider, address) = setup_test_provider(coins, Config::local_node()).await;
+    //     let connected_provider = Provider::connect(address).await.unwrap();
+    //
+    //     wallet.set_provider(connected_provider);
+    //
+    //     let contract_id = Contract::deploy(
+    //         "tests/test_projects/contract_test/out/debug/contract_test.bin",
+    //         &wallet,
+    //         TxParameters::default(),
+    //     )
+    //         .await
+    //         .unwrap();
+    //     println!("Contract deployed @ {:x}", contract_id);
+    //
+    //     let contract_instance_connected = MyContract::new(contract_id.to_string(), wallet.clone());
+    //
+    //     let result = contract_instance_connected
+    //         .initialize_counter(42) // Build the ABI call
+    //         .call() // Perform the network call
+    //         .await
+    //         .unwrap();
+    //     assert_eq!(42, result.value);
+    //
+    //     wallet.set_provider(launched_provider);
+    //     let contract_instance_launched = MyContract::new(contract_id.to_string(), wallet);
+    //
+    //     let result = contract_instance_launched
+    //         .increment_counter(10)
+    //         .call()
+    //         .await
+    //         .unwrap();
+    //     assert_eq!(52, result.value);
+    // }
 
     #[tokio::test]
     async fn test_contract_calling_contract() {
@@ -1510,78 +1516,77 @@ mod tests {
         assert_eq!(result.value, BimBamBoum::Boum());
     }
 
-    #[tokio::test]
-    async fn test_wallet_balance_api() {
-        // Single asset
-        let mut wallet = LocalWallet::new_random(None);
-        let number_of_coins = 21;
-        let amount_per_coin = 11;
-        let coins = setup_single_asset_coins(
-            wallet.address(),
-            NATIVE_ASSET_ID,
-            number_of_coins,
-            amount_per_coin,
-        );
-        let (provider, _) = setup_test_provider(coins.clone(), Config::local_node()).await;
-        wallet.set_provider(provider);
-        for (_utxo_id, coin) in coins {
-            let balance = wallet.get_asset_balance(&coin.asset_id).await;
-            assert_eq!(balance.unwrap(), number_of_coins * amount_per_coin);
-        }
-        let balances = wallet.get_balances().await.unwrap();
-        let expected_key = "0x".to_owned() + NATIVE_ASSET_ID.to_string().as_str();
-        assert_eq!(balances.len(), 1); // only the native asset
-        assert!(balances.contains_key(&expected_key));
-        assert_eq!(
-            *balances.get(&expected_key).unwrap(),
-            number_of_coins * amount_per_coin
-        );
-
-        // Multiple assets
-        let number_of_assets = 7;
-        let coins_per_asset = 21;
-        let amount_per_coin = 11;
-        let (coins, asset_ids) = setup_multiple_assets_coins(
-            wallet.address(),
-            number_of_assets,
-            coins_per_asset,
-            amount_per_coin,
-        );
-        assert_eq!(coins.len() as u64, number_of_assets * coins_per_asset);
-        assert_eq!(asset_ids.len() as u64, number_of_assets);
-        let (provider, _) = setup_test_provider(coins.clone(), Config::local_node()).await;
-        wallet.set_provider(provider);
-        let balances = wallet.get_balances().await.unwrap();
-        assert_eq!(balances.len() as u64, number_of_assets);
-        for asset_id in asset_ids {
-            let balance = wallet.get_asset_balance(&asset_id).await;
-            assert_eq!(balance.unwrap(), coins_per_asset * amount_per_coin);
-            let expected_key = "0x".to_owned() + asset_id.to_string().as_str();
-            assert!(balances.contains_key(&expected_key));
-            assert_eq!(
-                *balances.get(&expected_key).unwrap(),
-                coins_per_asset * amount_per_coin
-            );
-        }
-    }
+    // #[tokio::test]
+    // async fn test_wallet_balance_api() {
+    //     // Single asset
+    //     let mut wallet = LocalWallet::new_random(None);
+    //     let number_of_coins = 21;
+    //     let amount_per_coin = 11;
+    //     let coins = setup_single_asset_coins(
+    //         wallet.address(),
+    //         NATIVE_ASSET_ID,
+    //         number_of_coins,
+    //         amount_per_coin,
+    //     );
+    //     let (provider, _) = setup_test_provider(coins.clone(), Config::local_node()).await;
+    //     wallet.set_provider(provider);
+    //     for (_utxo_id, coin) in coins {
+    //         let balance = wallet.get_asset_balance(&coin.asset_id).await;
+    //         assert_eq!(balance.unwrap(), number_of_coins * amount_per_coin);
+    //     }
+    //     let balances = wallet.get_balances().await.unwrap();
+    //     let expected_key = "0x".to_owned() + NATIVE_ASSET_ID.to_string().as_str();
+    //     assert_eq!(balances.len(), 1); // only the native asset
+    //     assert!(balances.contains_key(&expected_key));
+    //     assert_eq!(
+    //         *balances.get(&expected_key).unwrap(),
+    //         number_of_coins * amount_per_coin
+    //     );
+    //
+    //     // Multiple assets
+    //     let number_of_assets = 7;
+    //     let coins_per_asset = 21;
+    //     let amount_per_coin = 11;
+    //     let (coins, asset_ids) = setup_multiple_assets_coins(
+    //         wallet.address(),
+    //         number_of_assets,
+    //         coins_per_asset,
+    //         amount_per_coin,
+    //     );
+    //     assert_eq!(coins.len() as u64, number_of_assets * coins_per_asset);
+    //     assert_eq!(asset_ids.len() as u64, number_of_assets);
+    //     let (provider, _) = setup_test_provider(coins.clone(), Config::local_node()).await;
+    //     wallet.set_provider(provider);
+    //     let balances = wallet.get_balances().await.unwrap();
+    //     assert_eq!(balances.len() as u64, number_of_assets);
+    //     for asset_id in asset_ids {
+    //         let balance = wallet.get_asset_balance(&asset_id).await;
+    //         assert_eq!(balance.unwrap(), coins_per_asset * amount_per_coin);
+    //         let expected_key = "0x".to_owned() + asset_id.to_string().as_str();
+    //         assert!(balances.contains_key(&expected_key));
+    //         assert_eq!(
+    //             *balances.get(&expected_key).unwrap(),
+    //             coins_per_asset * amount_per_coin
+    //         );
+    //     }
+    // }
 }
 
 #[cfg(test)]
-#[cfg(feature = "fuel-core-bin")]
 mod tests_bin {
-    use fuels::prelude::{launch_provider_and_get_single_wallet_bin, Contract};
+
+    use fuels::prelude::{launch_provider_and_get_single_wallet, Contract};
     use fuels_abigen_macro::abigen;
     use fuels_core::parameters::TxParameters;
 
     #[tokio::test]
-    #[ignore]
     async fn test_tuples_using_fuel_core_bin() {
         abigen!(
             MyContract,
             "packages/fuels-abigen-macro/tests/test_projects/tuples/out/debug/tuples-abi.json"
         );
 
-        let (_running_node, wallet) = launch_provider_and_get_single_wallet_bin().await;
+        let wallet = launch_provider_and_get_single_wallet().await;
 
         let id = Contract::deploy(
             "tests/test_projects/tuples/out/debug/tuples.bin",
@@ -1599,14 +1604,13 @@ mod tests_bin {
     }
 
     #[tokio::test]
-    #[ignore]
     async fn unit_type_enums_using_fuel_core_bin() {
         abigen!(
         MyContract,
         "packages/fuels-abigen-macro/tests/test_projects/use_enum_input/out/debug/use_enum_input-abi.json"
     );
 
-        let (_running_node, wallet) = launch_provider_and_get_single_wallet_bin().await;
+        let wallet = launch_provider_and_get_single_wallet().await;
 
         let id = Contract::deploy(
             "tests/test_projects/use_enum_input/out/debug/use_enum_input.bin",

@@ -3,25 +3,44 @@
 use std::collections::HashSet;
 use std::net::SocketAddr;
 
+#[cfg(feature = "fuel-core-lib")]
 pub use fuel_core::service::Config;
+
+#[cfg(feature = "fuel-core-lib")]
 use fuel_core::{
     chain_config::{ChainConfig, CoinConfig, StateConfig},
     model::{Coin, CoinStatus},
     service::{DbType, FuelService},
 };
+
+#[cfg(not(feature = "fuel-core-lib"))]
+use fuel_core_interfaces::model::{Coin, CoinStatus};
+
 use fuel_gql_client::{
     client::FuelClient,
     fuel_tx::{Address, Bytes32, UtxoId},
 };
+
+use std::borrow::Borrow;
+use std::time::Duration;
+
+use portpicker::pick_unused_port;
 use rand::Fill;
+use serde_json::Value;
+use tokio::process::Command;
+
+use fuels_signers::fuel_crypto::rand;
+
+use crate::node_config_json::{get_node_config_json, DummyConfig};
+
+mod node_config_json;
 
 use fuels_core::constants::NATIVE_ASSET_ID;
 use fuels_signers::fuel_crypto::fuel_types::AssetId;
-#[cfg(feature = "fuels-signers")]
+
 pub use signers::*;
 pub use wallets_config::*;
 
-#[cfg(feature = "fuels-signers")]
 mod signers;
 mod wallets_config;
 
@@ -96,6 +115,7 @@ pub fn setup_single_asset_coins(
 
 // Setup a test client with the given coins. We return the SocketAddr so the launched node
 // client can be connected to more easily (even though it is often ignored).
+#[cfg(feature = "fuel-core-lib")]
 pub async fn setup_test_client(
     coins: Vec<(UtxoId, Coin)>,
     node_config: Config,
@@ -131,6 +151,56 @@ pub async fn setup_test_client(
     let client = FuelClient::from(srv.bound_address);
 
     (client, srv.bound_address)
+}
+
+#[cfg(not(feature = "fuel-core-lib"))]
+pub async fn setup_test_client(
+    coins: Vec<(UtxoId, Coin)>,
+    // node_config: Config
+) -> (FuelClient, SocketAddr) {
+    let coin_configs: Vec<String> = coins
+        .into_iter()
+        .map(|(utxo_id, coin)| {
+            serde_json::to_string(&DummyConfig {
+                tx_id: Some(*utxo_id.tx_id()),
+                output_index: Some(utxo_id.output_index() as u64),
+                block_created: Some(coin.block_created),
+                maturity: Some(coin.maturity),
+                owner: coin.owner,
+                amount: coin.amount,
+                asset_id: coin.asset_id,
+            })
+            .unwrap()
+        })
+        .collect();
+
+    let config_with_coins: Value = serde_json::from_str(coin_configs.concat().as_str()).unwrap();
+    let temp_config_file = get_node_config_json(config_with_coins);
+
+    let free_port = pick_unused_port().expect("No ports free");
+    let srv_address = SocketAddr::new("127.0.0.1".parse().unwrap(), free_port);
+
+    tokio::spawn(async move {
+        let mut running_node = Command::new("fuel-core")
+            .arg("--ip")
+            .arg("127.0.0.1")
+            .arg("--port")
+            .arg(free_port.to_string())
+            .arg("--chain")
+            .arg(temp_config_file.borrow().path())
+            .arg("--db-type")
+            .arg("in-memory")
+            .kill_on_drop(true)
+            .spawn()
+            .expect("Could not find 'fuel-core' in PATH. Please check if it's installed");
+
+        running_node.wait().await
+    });
+
+    tokio::time::sleep(Duration::from_secs(2)).await;
+    let client = FuelClient::from(srv_address);
+
+    (client, srv_address)
 }
 
 #[cfg(test)]

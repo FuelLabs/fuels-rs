@@ -17,8 +17,7 @@ fuels-contract = { version = "0.14.1", path = "../fuels-contract" }
 fuels-core = { version = "0.14.1", path = "../fuels-core" }
 fuels-signers = { version = "0.14.1", path = "../fuels-signers" }
 fuels-test-helpers = { version = "0.14.1", path = "../fuels-test-helpers", optional = true}
-fuels-test-helpers-bin = { version = "0.0.0", path = "../fuels-test-helpers-bin", optional = true}
 
 [features]
-default = ["fuel-core", "fuels-test-helpers"]
-fuel-core-bin = ["fuels-test-helpers-bin"]
+default = ["fuels-test-helpers/fuel-core-bin"]
+fuel-core-lib = ["fuel-core", 'fuels-test-helpers/fuel-core-lib']
