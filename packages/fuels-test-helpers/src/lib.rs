@@ -11,32 +11,42 @@ use fuel_core::{
     model::{Coin, CoinStatus},
     service::{DbType, FuelService},
 };
+
 #[cfg(feature = "fuel-core-lib")]
 pub use fuel_core::service::Config;
+
 #[cfg(not(feature = "fuel-core-lib"))]
 use fuel_core_interfaces::model::{Coin, CoinStatus};
 use fuel_gql_client::{
     client::FuelClient,
     fuel_tx::{Address, Bytes32, UtxoId},
 };
+
+
+
+
 use portpicker::{pick_unused_port, Port};
-use rand::Fill;
 use serde_json::Value;
 use tempfile::NamedTempFile;
 use tokio::process::Command;
 
 use fuels_core::constants::NATIVE_ASSET_ID;
 use fuels_signers::fuel_crypto::fuel_types::AssetId;
+use rand::Fill;
 use fuels_signers::fuel_crypto::rand;
+
+// #[cfg(feature = "fuels-signers")]
+mod signers;
+mod wallets_config;
+
+// #[cfg(feature = "fuels-signers")]
 pub use signers::*;
 pub use wallets_config::*;
 
 use crate::node_config_json::{DummyConfig, get_node_config_json, spawn_fuel_service};
 
 mod node_config_json;
-
-mod signers;
-mod wallets_config;
+pub use node_config_json::*;
 
 /// Create a vector of `num_asset`*`coins_per_asset` UTXOs and a vector of the unique corresponding
 /// asset IDs. `AssetId`. Each UTXO (=coin) contains `amount_per_coin` amount of a random asset. The
