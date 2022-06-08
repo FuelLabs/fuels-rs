@@ -1,16 +1,19 @@
+use std::borrow::Borrow;
 use std::fmt;
 use std::io::Write;
 
 use fuel_core_interfaces::model::BlockHeight;
 use fuel_gql_client::fuel_vm::consts::WORD_SIZE;
 use fuel_types::{Address, AssetId, Bytes32, Word};
-use serde::de::Error;
+use portpicker::Port;
 use serde::{Deserialize, Serialize};
 use serde::{Deserializer, Serializer};
+use serde::de::Error;
 use serde_json::{json, Value};
 use serde_with::{serde_as, skip_serializing_none};
 use serde_with::{DeserializeAs, SerializeAs};
 use tempfile::NamedTempFile;
+use tokio::process::Command;
 
 #[skip_serializing_none]
 #[serde_as]
@@ -65,8 +68,8 @@ pub mod serde_hex {
     use std::convert::TryFrom;
 
     use hex::{FromHex, ToHex};
-    use serde::de::Error;
     use serde::{Deserializer, Serializer};
+    use serde::de::Error;
 
     pub fn serialize<T, S>(target: T, ser: S) -> Result<S::Ok, S::Error>
     where
@@ -186,4 +189,25 @@ pub fn get_node_config_json(coins: Value) -> NamedTempFile {
     );
 
     config_file.unwrap()
+}
+
+pub fn spawn_fuel_service(config_with_coins: Value, free_port: Port) {
+
+    tokio::spawn(async move {
+        let temp_config_file = get_node_config_json(config_with_coins);
+        let mut running_node = Command::new("fuel-core")
+            .arg("--ip")
+            .arg("127.0.0.1")
+            .arg("--port")
+            .arg(free_port.to_string())
+            .arg("--chain")
+            .arg(temp_config_file.borrow().path())
+            .arg("--db-type")
+            .arg("in-memory")
+            .kill_on_drop(true)
+            .spawn()
+            .expect("Could not find 'fuel-core' in PATH. Please check if it's installed");
+
+        running_node.wait().await
+    });
 }

@@ -27,12 +27,13 @@ mod tests {
     use sha2::{Digest, Sha256};
 
     use fuels::prelude::{
-        launch_provider_and_get_single_wallet, setup_multiple_assets_coins, setup_test_provider,
+        launch_provider_and_get_single_wallet,
+         setup_multiple_assets_coins, setup_test_provider,
     };
 
     use fuels::prelude::{
-        setup_single_asset_coins, CallParameters, Contract, Error, LocalWallet, Provider, Signer,
-        TxParameters, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
+        CallParameters, Contract, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS, Error, LocalWallet, Provider,
+        setup_single_asset_coins, Signer, TxParameters,
     };
 
     use fuels_abigen_macro::abigen;
@@ -664,8 +665,8 @@ mod tests {
             &wallet,
             TxParameters::default(),
         )
-        .await
-        .unwrap();
+            .await
+            .unwrap();
         println!("Contract deployed @ {:x}", contract_id);
 
         let contract_instance = MyContract::new(contract_id.to_string(), wallet);
@@ -711,8 +712,8 @@ mod tests {
             &wallet,
             TxParameters::default(),
         )
-        .await
-        .unwrap();
+            .await
+            .unwrap();
         println!("Contract deployed @ {:x}", contract_id);
 
         let contract_instance = MyContract::new(contract_id.to_string(), wallet);
@@ -754,8 +755,8 @@ mod tests {
             &wallet,
             TxParameters::default(),
         )
-        .await
-        .unwrap();
+            .await
+            .unwrap();
         println!("Contract deployed @ {:x}", contract_id);
 
         let contract_instance = MyContract::new(contract_id.to_string(), wallet);
@@ -781,8 +782,8 @@ mod tests {
             &wallet,
             TxParameters::default(),
         )
-        .await
-        .unwrap();
+            .await
+            .unwrap();
         println!("Contract deployed @ {:x}", contract_id);
 
         let contract_instance = MyContract::new(contract_id.to_string(), wallet);
@@ -835,8 +836,8 @@ mod tests {
             &wallet,
             TxParameters::default(),
         )
-        .await
-        .unwrap();
+            .await
+            .unwrap();
         println!("Contract deployed @ {:x}", contract_id);
         let contract_instance = MyContract::new(contract_id.to_string(), wallet);
 
@@ -870,8 +871,8 @@ mod tests {
             &wallet,
             TxParameters::default(),
         )
-        .await
-        .unwrap();
+            .await
+            .unwrap();
         println!("Contract deployed @ {:x}", contract_id);
 
         let contract_instance = MyContract::new(contract_id.to_string(), wallet);
@@ -898,8 +899,8 @@ mod tests {
             &wallet,
             TxParameters::default(),
         )
-        .await
-        .unwrap();
+            .await
+            .unwrap();
         println!("Contract deployed @ {:x}", contract_id);
 
         let contract_instance = MyContract::new(contract_id.to_string(), wallet);
@@ -1014,8 +1015,8 @@ mod tests {
             &wallet,
             TxParameters::default(),
         )
-        .await
-        .unwrap();
+            .await
+            .unwrap();
         println!("Foo contract deployed @ {:x}", foo_contract_id);
 
         let foo_contract_instance = FooContract::new(foo_contract_id.to_string(), wallet.clone());
@@ -1030,8 +1031,8 @@ mod tests {
             &wallet,
             TxParameters::default(),
         )
-        .await
-        .unwrap();
+            .await
+            .unwrap();
         println!(
             "Foo caller contract deployed @ {:x}",
             foo_caller_contract_id
@@ -1068,8 +1069,8 @@ mod tests {
             &wallet,
             TxParameters::default(),
         )
-        .await
-        .unwrap();
+            .await
+            .unwrap();
 
         let contract_instance = MyContract::new(contract_id.to_string(), wallet);
 
@@ -1117,8 +1118,8 @@ mod tests {
             &wallet,
             TxParameters::default(),
         )
-        .await
-        .unwrap();
+            .await
+            .unwrap();
 
         let instance = TestFuelCoinContract::new(id.to_string(), wallet.clone());
 
@@ -1206,8 +1207,8 @@ mod tests {
             &wallet,
             TxParameters::default(),
         )
-        .await
-        .unwrap();
+            .await
+            .unwrap();
 
         let instance = MyContract::new(id.to_string(), wallet.clone());
 
@@ -1238,8 +1239,8 @@ mod tests {
             &wallet,
             TxParameters::default(),
         )
-        .await
-        .unwrap();
+            .await
+            .unwrap();
 
         let instance = MyContract::new(id.to_string(), wallet.clone());
 
@@ -1290,8 +1291,8 @@ mod tests {
             &wallet,
             TxParameters::default(),
         )
-        .await
-        .unwrap();
+            .await
+            .unwrap();
 
         println!("Contract deployed @ {:x}", contract_id);
         let contract_instance = MyContract::new(contract_id.to_string(), wallet);
@@ -1340,8 +1341,8 @@ mod tests {
             &wallet,
             TxParameters::default(),
         )
-        .await
-        .unwrap();
+            .await
+            .unwrap();
 
         let auth_instance = AuthContract::new(id.to_string(), wallet.clone());
 
@@ -1370,8 +1371,8 @@ mod tests {
             &wallet,
             TxParameters::default(),
         )
-        .await
-        .unwrap();
+            .await
+            .unwrap();
         let instance = MyContract::new(id.to_string(), wallet.clone());
         let result = instance.return_enum_inside_struct(11).call().await.unwrap();
         let expected = Cocktail {
@@ -1405,8 +1406,8 @@ mod tests {
             &wallet,
             TxParameters::default(),
         )
-        .await
-        .unwrap();
+            .await
+            .unwrap();
 
         let instance = MyContract::new(id.to_string(), wallet.clone());
         let result = instance.return_struct_inside_enum(11).call().await.unwrap();
@@ -1435,8 +1436,8 @@ mod tests {
             &wallet,
             TxParameters::default(),
         )
-        .await
-        .unwrap();
+            .await
+            .unwrap();
 
         let instance = MyContract::new(id.to_string(), wallet.clone());
         let enum_input = Shaker::Cosmopolitan(255);
@@ -1458,8 +1459,8 @@ mod tests {
             &wallet,
             TxParameters::default(),
         )
-        .await
-        .unwrap();
+            .await
+            .unwrap();
         let contract_instance = LoggingContract::new(id.to_string(), wallet.clone());
         let mut value = [0u8; 32];
         value[0] = 0xFF;
@@ -1503,8 +1504,8 @@ mod tests {
             &wallet,
             TxParameters::default(),
         )
-        .await
-        .unwrap();
+            .await
+            .unwrap();
 
         let instance = MyContract::new(id.to_string(), wallet.clone());
         let unit_type_enum = BimBamBoum::Bim();
@@ -1570,12 +1571,14 @@ mod tests {
     //         );
     //     }
     // }
+
 }
+
 
 #[cfg(test)]
 mod tests_bin {
 
-    use fuels::prelude::{launch_provider_and_get_single_wallet, Contract};
+    use fuels::prelude::{Contract, launch_provider_and_get_single_wallet};
     use fuels_abigen_macro::abigen;
     use fuels_core::parameters::TxParameters;
 
@@ -1593,8 +1596,8 @@ mod tests_bin {
             &wallet,
             TxParameters::default(),
         )
-        .await
-        .unwrap();
+            .await
+            .unwrap();
 
         let instance = MyContract::new(id.to_string(), wallet.clone());
 
@@ -1610,15 +1613,15 @@ mod tests_bin {
         "packages/fuels-abigen-macro/tests/test_projects/use_enum_input/out/debug/use_enum_input-abi.json"
     );
 
-        let wallet = launch_provider_and_get_single_wallet().await;
+        let wallet= launch_provider_and_get_single_wallet().await;
 
         let id = Contract::deploy(
             "tests/test_projects/use_enum_input/out/debug/use_enum_input.bin",
             &wallet,
             TxParameters::default(),
         )
-        .await
-        .unwrap();
+            .await
+            .unwrap();
 
         let instance = MyContract::new(id.to_string(), wallet.clone());
         let unit_type_enum = BimBamBoum::Bim();
@@ -1630,4 +1633,5 @@ mod tests_bin {
 
         assert_eq!(result.value, BimBamBoum::Boum());
     }
+
 }

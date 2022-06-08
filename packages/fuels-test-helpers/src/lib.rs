@@ -1,10 +1,9 @@
 //! Testing helpers/utilities for Fuel SDK.
 
+use std::borrow::Borrow;
 use std::collections::HashSet;
 use std::net::SocketAddr;
-
-#[cfg(feature = "fuel-core-lib")]
-pub use fuel_core::service::Config;
+use std::time::Duration;
 
 #[cfg(feature = "fuel-core-lib")]
 use fuel_core::{
@@ -12,34 +11,29 @@ use fuel_core::{
     model::{Coin, CoinStatus},
     service::{DbType, FuelService},
 };
-
+#[cfg(feature = "fuel-core-lib")]
+pub use fuel_core::service::Config;
 #[cfg(not(feature = "fuel-core-lib"))]
 use fuel_core_interfaces::model::{Coin, CoinStatus};
-
 use fuel_gql_client::{
     client::FuelClient,
     fuel_tx::{Address, Bytes32, UtxoId},
 };
-
-use std::borrow::Borrow;
-use std::time::Duration;
-
-use portpicker::pick_unused_port;
+use portpicker::{pick_unused_port, Port};
 use rand::Fill;
 use serde_json::Value;
+use tempfile::NamedTempFile;
 use tokio::process::Command;
-
-use fuels_signers::fuel_crypto::rand;
-
-use crate::node_config_json::{get_node_config_json, DummyConfig};
-
-mod node_config_json;
 
 use fuels_core::constants::NATIVE_ASSET_ID;
 use fuels_signers::fuel_crypto::fuel_types::AssetId;
-
+use fuels_signers::fuel_crypto::rand;
 pub use signers::*;
 pub use wallets_config::*;
+
+use crate::node_config_json::{DummyConfig, get_node_config_json, spawn_fuel_service};
+
+mod node_config_json;
 
 mod signers;
 mod wallets_config;
@@ -170,38 +164,24 @@ pub async fn setup_test_client(
                 amount: coin.amount,
                 asset_id: coin.asset_id,
             })
-            .unwrap()
+                .unwrap()
         })
         .collect();
 
     let config_with_coins: Value = serde_json::from_str(coin_configs.concat().as_str()).unwrap();
-    let temp_config_file = get_node_config_json(config_with_coins);
 
     let free_port = pick_unused_port().expect("No ports free");
     let srv_address = SocketAddr::new("127.0.0.1".parse().unwrap(), free_port);
 
-    tokio::spawn(async move {
-        let mut running_node = Command::new("fuel-core")
-            .arg("--ip")
-            .arg("127.0.0.1")
-            .arg("--port")
-            .arg(free_port.to_string())
-            .arg("--chain")
-            .arg(temp_config_file.borrow().path())
-            .arg("--db-type")
-            .arg("in-memory")
-            .kill_on_drop(true)
-            .spawn()
-            .expect("Could not find 'fuel-core' in PATH. Please check if it's installed");
-
-        running_node.wait().await
-    });
+    spawn_fuel_service(config_with_coins, free_port);
 
     tokio::time::sleep(Duration::from_secs(2)).await;
     let client = FuelClient::from(srv_address);
 
     (client, srv_address)
 }
+
+
 
 #[cfg(test)]
 mod tests {
