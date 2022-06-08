@@ -1,0 +1,16 @@
+[package]
+name = "wasm-tests"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[lib]
+crate-type = ['cdylib']
+
+[dependencies]
+fuels-abigen-macro = { path = "../fuels-abigen-macro" }
+fuels-core = { path = "../fuels-core" }
+getrandom = { version = "0.2", features = ["js"] }
+
+[dev-dependencies]
+webassembly-test = "0.1"

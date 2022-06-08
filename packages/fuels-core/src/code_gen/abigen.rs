@@ -109,6 +109,7 @@ impl Abigen {
             (
                 quote! {
                     use alloc::{vec, vec::Vec};
+                    use fuels_core::{Detokenize, EnumSelector, InvalidOutputType, Parameterize, ParamType, Tokenizable, Token};
                 },
                 quote! {},
             )
@@ -116,11 +117,10 @@ impl Abigen {
             (
                 quote! {
                     use fuels::contract::contract::{Contract, ContractCall};
-                    use fuels::prelude::InvalidOutputType;
                     use fuels::signers::LocalWallet;
                     use fuels::tx::{ContractId, Address};
+                    use fuels::core::{Detokenize, EnumSelector, InvalidOutputType, Parameterize, ParamType, Tokenizable, Token};
                     use std::str::FromStr;
-                    use fuels::core::{Detokenize, EnumSelector, ParamType, Tokenizable, Token, Parameterize};
                 },
                 quote! {
                     pub struct #name {
