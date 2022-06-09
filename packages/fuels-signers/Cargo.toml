@@ -27,10 +27,10 @@ thiserror = { version = "1.0.30", default-features = false }
 tokio = { version = "1.10.1", features = ["full"] }
 
 [dev-dependencies]
-hex = { version = "0.4.3", default-features = false, features = ["std"] }
 fuel-types = { version = "0.5", default-features = false, features = ["random"] }
 fuels = { path = "../fuels" }
 fuels-test-helpers = { path = "../fuels-test-helpers", default-features = false }
+hex = { version = "0.4.3", default-features = false, features = ["std"] }
 tempfile = "3.3.0"
 
 [features]
