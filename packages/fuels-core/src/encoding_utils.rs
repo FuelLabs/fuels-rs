@@ -22,8 +22,8 @@ pub fn expected_encoding_width(param: &ParamType) -> usize {
     }
 
     match param {
-        ParamType::Unit => 0,
-        ParamType::U8
+        ParamType::Unit
+        | ParamType::U8
         | ParamType::U16
         | ParamType::U32
         | ParamType::U64

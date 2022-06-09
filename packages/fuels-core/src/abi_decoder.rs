@@ -53,7 +53,6 @@ impl ABIDecoder {
     fn decode_tuple(data: &[u8], types: &Vec<ParamType>) -> Result<DecodeResult, CodecError> {
         let mut tokens = vec![];
         let mut bytes_read = 0;
-
         for t in types {
             let res = Self::decode_param(t, &data[bytes_read..])?;
             bytes_read += res.bytes_read;
@@ -201,12 +200,13 @@ impl ABIDecoder {
     fn decode_unit() -> Result<DecodeResult, CodecError> {
         let result = DecodeResult {
             token: Token::Unit,
-            bytes_read: 0,
+            bytes_read: 8,
         };
         Ok(result)
     }
 
-    /// Will decode an Enum according to TODO: PUT_FUEL_SPECS_ENUM_ENCODING_LINK_HERE
+    /// The encoding follows the ABI specs defined
+    /// [here](https://github.com/FuelLabs/fuel-specs/blob/master/specs/protocol/abi.md)
     ///
     /// # Arguments
     ///

@@ -58,13 +58,17 @@ impl ABIEncoder {
                 Token::Tuple(arg_tuple) => {
                     self.encode(arg_tuple)?;
                 }
-                Token::Unit => {}
+                Token::Unit => {
+                    let previous_size = self.encoded_args.len();
+                    self.rightpad_with_zeroes_until_size(previous_size + WORD_SIZE);
+                }
             };
         }
         Ok(self.encoded_args.clone())
     }
 
-    /// Will encode an Enum according to TODO: PUT_FUEL_SPECS_ENUM_ENCODING_LINK_HERE
+    /// The encoding follows the ABI specs defined
+    /// [here](https://github.com/FuelLabs/fuel-specs/blob/master/specs/protocol/abi.md)
     fn encode_enum(&mut self, selector: &EnumSelector) -> Result<(), CodecError> {
         let (discriminant, token_within_enum, variants) = selector;
 
