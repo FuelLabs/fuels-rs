@@ -1,5 +1,4 @@
-use crate::constants::ENUM_DISCRIMINANT_WORD_WIDTH;
-use crate::encoding_utils::encoding_width_to_fit_any;
+use crate::encoding_utils::{encoding_width_of_enum, expected_encoding_width};
 use crate::errors::CodecError;
 use crate::{constants::WORD_SIZE, Bits256, ByteArray, EnumVariants, ParamType, Token};
 use core::convert::TryInto;
@@ -214,15 +213,17 @@ impl ABIDecoder {
     /// * `variants`: all types that this particular enum type could hold
     fn decode_enum(data: &[u8], variants: &EnumVariants) -> Result<DecodeResult, CodecError> {
         let discriminant = Self::decode_discriminant(data)?;
-        let bytes_read = ENUM_DISCRIMINANT_WORD_WIDTH * WORD_SIZE;
 
-        let variant = Self::select_variant(variants, discriminant as usize)?;
-        let res = Self::decode_param(variant, &data[bytes_read..])?;
+        let enum_width = encoding_width_of_enum(variants);
+
+        let variant = Self::type_of_selected_variant(variants, discriminant as usize)?;
+        let words_to_skip = enum_width - expected_encoding_width(variant);
+
+        let res = Self::decode_param(variant, &data[words_to_skip * WORD_SIZE..])?;
 
         let selector = Box::new((discriminant as u8, res.token, variants.clone()));
         let token = Token::Enum(selector);
 
-        let enum_width = encoding_width_to_fit_any(variants) + ENUM_DISCRIMINANT_WORD_WIDTH;
         Ok(DecodeResult {
             token,
             bytes_read: enum_width * WORD_SIZE,
@@ -236,7 +237,7 @@ impl ABIDecoder {
 
     /// Returns a variant from `variants` pointed to by `discriminant`.
     /// Will fail if `discriminant` is out of bounds.
-    fn select_variant(
+    fn type_of_selected_variant(
         variants: &EnumVariants,
         discriminant: usize,
     ) -> Result<&ParamType, CodecError> {
@@ -478,8 +479,8 @@ mod tests {
         let struct_par2_enc = vec![0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xD4, 0x31];
         let data: Vec<u8> = vec![
             enum_discriminant_enc,
-            enum_data_enc,
             enum_padding_enc,
+            enum_data_enc,
             struct_par2_enc,
         ]
         .into_iter()

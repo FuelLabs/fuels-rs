@@ -333,7 +333,6 @@ impl Contract {
         let mut encoder = ABIEncoder::new();
 
         let encoded_args = encoder.encode(args).unwrap();
-        println!("encoded: {}", hex::encode(encoded_args.clone()));
         let encoded_selector = signature;
 
         let tx_parameters = TxParameters::default();

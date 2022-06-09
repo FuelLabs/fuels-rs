@@ -1,7 +1,9 @@
 use crate::constants::{ENUM_DISCRIMINANT_WORD_WIDTH, WORD_SIZE};
-use crate::encoding_utils::encoding_width_to_fit_any;
+use crate::encoding_utils::{encoding_width_of_enum, expected_encoding_width};
 use crate::errors::CodecError;
-use crate::{pad_string, pad_u16, pad_u32, pad_u8, ByteArray, EnumSelector, Token};
+use crate::{
+    pad_string, pad_u16, pad_u32, pad_u8, ByteArray, EnumSelector, EnumVariants, ParamType, Token,
+};
 use sha2::{Digest, Sha256};
 use std::slice;
 
@@ -59,8 +61,7 @@ impl ABIEncoder {
                     self.encode(arg_tuple)?;
                 }
                 Token::Unit => {
-                    let previous_size = self.encoded_args.len();
-                    self.rightpad_with_zeroes_until_size(previous_size + WORD_SIZE);
+                    self.rightpad_with_zeroes(WORD_SIZE);
                 }
             };
         }
@@ -72,26 +73,53 @@ impl ABIEncoder {
     fn encode_enum(&mut self, selector: &EnumSelector) -> Result<(), CodecError> {
         let (discriminant, token_within_enum, variants) = selector;
 
-        let pre_encode_size = self.encoded_args.len();
-
         self.encode_discriminant(discriminant);
+
+        let param_type = Self::type_of_chosen_variant(discriminant, variants)?;
+
+        self.add_enum_padding(variants, param_type);
 
         self.encode(slice::from_ref(token_within_enum))?;
 
-        let size_of_encoded_enum =
-            (encoding_width_to_fit_any(variants) + ENUM_DISCRIMINANT_WORD_WIDTH) * WORD_SIZE;
-
-        self.rightpad_with_zeroes_until_size(pre_encode_size + size_of_encoded_enum);
         Ok(())
+    }
+
+    fn add_enum_padding(&mut self, variants: &EnumVariants, param_type: &ParamType) {
+        let biggest_variant_width = encoding_width_of_enum(variants) - ENUM_DISCRIMINANT_WORD_WIDTH;
+        let variant_width = expected_encoding_width(&param_type);
+
+        let padding_amount = (biggest_variant_width - variant_width) * WORD_SIZE;
+
+        self.rightpad_with_zeroes(padding_amount);
+    }
+
+    fn type_of_chosen_variant<'a>(
+        discriminant: &u8,
+        variants: &'a EnumVariants,
+    ) -> Result<&'a ParamType, CodecError> {
+        variants
+            .param_types()
+            .get(*discriminant as usize)
+            .ok_or_else(|| {
+                let msg = format!(
+                    concat!(
+                        "Error while encoding an enum. The discriminant '{}' doesn't ",
+                        "point to any of the following variants: {:?}"
+                    ),
+                    discriminant, variants
+                );
+                CodecError::InvalidData(msg)
+            })
     }
 
     fn encode_discriminant(&mut self, discriminant: &u8) {
         self.encoded_args.extend(pad_u8(discriminant));
     }
 
-    /// Will append zeroes to the internal buffer, right-padding it, until it reaches the given size.
-    fn rightpad_with_zeroes_until_size(&mut self, final_size: usize) {
-        self.encoded_args.resize(final_size, 0);
+    /// Will append `amount` number of zeroes to the internal buffer, right-padding it
+    fn rightpad_with_zeroes(&mut self, amount: usize) {
+        self.encoded_args
+            .resize(self.encoded_args.len() + amount, 0);
     }
 
     pub fn encode_function_selector(signature: &[u8]) -> ByteArray {
@@ -565,7 +593,7 @@ mod tests {
         let enum_discriminant_enc = vec![0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1];
         let u64_enc = vec![0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2a];
         let enum_padding = vec![0x0; 24];
-        let expected: Vec<u8> = [enum_discriminant_enc, u64_enc, enum_padding]
+        let expected: Vec<u8> = [enum_discriminant_enc, enum_padding, u64_enc]
             .into_iter()
             .flatten()
             .collect();

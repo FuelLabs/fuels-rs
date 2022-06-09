@@ -1598,17 +1598,8 @@ async fn sway_native_types_support() {
     );
 }
 
-// If we hadn't padded our enum correctly when sending it over to the
-// contract we would have seen mangling in arg_2 and onwards due to the VM
-// filling the expected padding with our encoded arguments.
-
-// On the other hand, if forc didn't encode enums properly then we would
-// have done the same thing and the arguments would still be mangled.
-
-// If this test passes then we're synced with the encoding/decoding specs of
-// sway. If it fails then it could be due to either side.
 #[tokio::test]
-async fn enums_are_correctly_coded_and_decoded() {
+async fn enums_are_correctly_encoded_and_decoded() {
     abigen!(
         MyContract,
         "packages/fuels-abigen-macro/tests/test_projects/proper_enum_encoding/out/debug\
@@ -1627,24 +1618,31 @@ async fn enums_are_correctly_coded_and_decoded() {
 
     let instance = MyContract::new(id.to_string(), wallet);
 
-    let arg_1 = EnumThatHasABigAndSmallVariant::Small(12345);
-    let arg_2 = 6666;
-    let arg_3 = 7777;
-    let arg_4 = 8888;
-
     let result = instance
-        .test_function(arg_1.clone(), arg_2, arg_3, arg_4)
+        .get_bundle_as_constructed_by_sway()
         .call()
         .await
         .unwrap();
 
-    let expected = AllArgsTogether {
-        arg_1,
-        arg_2,
-        arg_3,
-        arg_4,
+    let expected = Bundle {
+        arg_1: EnumThatHasABigAndSmallVariant::Small(123456),
+        arg_2: 6666,
+        arg_3: 7777,
+        arg_4: 8888,
     };
     assert_eq!(result.value, expected);
+
+    let result = instance
+        .is_bundle_correct(expected)
+        .call()
+        .await
+        .unwrap()
+        .value;
+
+    assert!(
+        result,
+        "Sway deems that we've not encoded the bundle correctly. Investigate!"
+    );
 }
 
 #[tokio::test]

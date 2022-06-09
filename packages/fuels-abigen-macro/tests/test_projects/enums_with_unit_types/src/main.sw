@@ -17,7 +17,8 @@ abi MyContract {
 impl MyContract for Contract {
     fn test_function(arg: b256) -> JointRet {
         JointRet {
-            arg1: OnlyUnitsInEnum::b(), arg2: arg
+            arg1: OnlyUnitsInEnum::b(),
+            arg2: arg,
         }
     }
 }

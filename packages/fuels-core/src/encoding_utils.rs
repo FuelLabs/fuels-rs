@@ -1,12 +1,14 @@
+use crate::constants::ENUM_DISCRIMINANT_WORD_WIDTH;
 use crate::{EnumVariants, ParamType, WORD_SIZE};
 
-// Calculates how many WORDs are needed to encode any given variant in `variants`
-pub fn encoding_width_to_fit_any(variants: &EnumVariants) -> usize {
+// Calculates how many WORDs are needed to encode an enum
+pub fn encoding_width_of_enum(variants: &EnumVariants) -> usize {
     variants
         .param_types()
         .iter()
         .map(expected_encoding_width)
         .max()
+        .map(|width| width + ENUM_DISCRIMINANT_WORD_WIDTH)
         .expect("Will never panic because EnumVariants must have at least variant inside it!")
 }
 
@@ -33,10 +35,7 @@ pub fn expected_encoding_width(param: &ParamType) -> usize {
         ParamType::Array(param, count) => expected_encoding_width(param) * count,
         ParamType::String(len) => count_words(*len),
         ParamType::Struct(params) => params.iter().map(expected_encoding_width).sum(),
-        ParamType::Enum(variants) => {
-            const DISCRIMINANT_WORD_SIZE: usize = 1;
-            encoding_width_to_fit_any(variants) + DISCRIMINANT_WORD_SIZE
-        }
+        ParamType::Enum(variants) => encoding_width_of_enum(variants),
         ParamType::Tuple(params) => params.iter().map(expected_encoding_width).sum(),
     }
 }
