@@ -19,6 +19,15 @@ use fuels_core::parameters::TxParameters;
 use crate::contract::ContractCall;
 use fuels_signers::{LocalWallet, Signer};
 
+#[derive(Default)]
+/// Specifies offsets of Opcode::CALL parameters stored in the script
+/// data from which they can be loaded into registers
+struct CallParamOffsets {
+    pub asset_id_offset: usize,
+    pub amount_offset: usize,
+    pub call_data_offset: usize,
+}
+
 /// Script provides methods to create and a call/simulate a
 /// script transaction that carries out contract method calls
 pub struct Script {
@@ -36,17 +45,18 @@ impl Script {
         Self { tx }
     }
 
-    /// Creates a Script from a contract call. The internal Transaction field is initialized
-    /// with the actual script instructions and script data needed to perform the call,
+    /// Creates a Script from a contract call. The internal Transaction is initialized
+    /// with the actual script instructions, script data needed to perform the call
     /// and transaction inputs/outputs consisting of assets, external contract ids etc.
     pub async fn from_contract_call(
         call: &ContractCall,
         tx_parameters: &TxParameters,
         wallet: &LocalWallet,
     ) -> Self {
-        let (script, offset) = Self::get_instructions(vec![call]);
-
-        let script_data = Self::get_script_data_from_calls(vec![call], offset);
+        let data_offset = Self::get_data_offset(1);
+        let (script_data, call_param_offsets) =
+            Self::get_script_data_from_calls(vec![call], data_offset);
+        let script = Self::get_instructions(vec![call], call_param_offsets);
 
         let mut inputs: Vec<Input> = vec![];
         let mut outputs: Vec<Output> = vec![];
@@ -150,18 +160,17 @@ impl Script {
     }
 
     /// Given a list of contract calls, create the actual opcodes used to call the contract
-    fn get_instructions(calls: Vec<&ContractCall>) -> (Vec<u8>, usize) {
+    fn get_instructions(calls: Vec<&ContractCall>, offsets: Vec<CallParamOffsets>) -> Vec<u8> {
         let num_calls = calls.len();
-        let offset = Self::get_data_offset(num_calls);
 
         let mut instructions = vec![];
-        for _ in 0..num_calls {
-            instructions.extend(Self::single_call_instructions(offset, 0));
+        for (_, call_offsets) in (0..num_calls).zip(offsets.iter()) {
+            instructions.extend(Self::get_single_call_instructions(call_offsets));
         }
 
         instructions.extend(Opcode::RET(REG_ONE).to_bytes());
 
-        (instructions, offset)
+        instructions
     }
 
     /// Returns script data, consisting of the following items in the given order:
@@ -171,10 +180,20 @@ impl Script {
     /// 4. Function selector (1 * WORD_SIZE);
     /// 5. Calldata offset (optional) (1 * WORD_SIZE)
     /// 6. Encoded arguments (optional) (variable length)
-    fn get_script_data_from_calls(calls: Vec<&ContractCall>, offset: usize) -> Vec<u8> {
-        let mut script_data: Vec<u8> = vec![];
+    fn get_script_data_from_calls(
+        calls: Vec<&ContractCall>,
+        mut data_offset: usize,
+    ) -> (Vec<u8>, Vec<CallParamOffsets>) {
+        let mut script_data = vec![];
+        let mut param_offsets = vec![];
 
         for call in calls {
+            param_offsets.push(CallParamOffsets {
+                asset_id_offset: data_offset,
+                amount_offset: data_offset + AssetId::LEN,
+                call_data_offset: data_offset + AssetId::LEN + WORD_SIZE,
+            });
+
             script_data.extend(call.call_parameters.asset_id.to_vec());
 
             let amount = call.call_parameters.amount as Word;
@@ -191,15 +210,20 @@ impl Script {
             if call.compute_calldata_offset {
                 // Offset of the script data relative to the call data
                 let call_data_offset =
-                    offset + AssetId::LEN + WORD_SIZE + ContractId::LEN + 2 * WORD_SIZE;
+                    data_offset + AssetId::LEN + WORD_SIZE + ContractId::LEN + 2 * WORD_SIZE;
                 let call_data_offset = call_data_offset as Word;
 
                 script_data.extend(&call_data_offset.to_be_bytes());
             }
+
             script_data.extend(call.encoded_args.clone());
+
+            // the offset for the next call parameters is increased
+            // by the length of the data we just added
+            data_offset += script_data.len();
         }
 
-        script_data
+        (script_data, param_offsets)
     }
 
     /// Returns the VM instructions for calling a contract method
@@ -213,18 +237,12 @@ impl Script {
     ///
     /// Note that these are soft rules as we're picking this addresses simply because they
     /// non-reserved register.
-    fn single_call_instructions(data_offset: usize, segment_offset: usize) -> Vec<u8> {
+    fn get_single_call_instructions(offsets: &CallParamOffsets) -> Vec<u8> {
         let instructions = vec![
-            Opcode::MOVI(
-                0x10,
-                (data_offset + segment_offset + AssetId::LEN + WORD_SIZE) as Immediate18,
-            ),
-            Opcode::MOVI(
-                0x12,
-                (data_offset + segment_offset + AssetId::LEN) as Immediate18,
-            ),
+            Opcode::MOVI(0x10, offsets.call_data_offset as Immediate18),
+            Opcode::MOVI(0x12, offsets.amount_offset as Immediate18),
             Opcode::LW(0x12, 0x12, 0),
-            Opcode::MOVI(0x13, (data_offset + segment_offset) as Immediate18),
+            Opcode::MOVI(0x13, offsets.asset_id_offset as Immediate18),
             Opcode::CALL(0x10, 0x12, 0x13, REG_CGAS),
         ];
 
@@ -232,10 +250,12 @@ impl Script {
         instructions.iter().copied().collect::<Vec<u8>>()
     }
 
-    /// Returns the offset between the script instructions and the script data in memory
-    /// based on the amount of contract calls the script has to make
+    /// Calculates the length of the script based on the number of contract calls it
+    /// has to make and returns the offset at which the script data begins
     fn get_data_offset(num_calls: usize) -> usize {
-        let mut len_script = Script::single_call_instructions(0, 0).len() * num_calls;
+        // use placeholder for call param offsets, we only care about the length
+        let mut len_script =
+            Script::get_single_call_instructions(&CallParamOffsets::default()).len() * num_calls;
 
         // to account for RET instruction which is added later
         len_script += Opcode::LEN;
