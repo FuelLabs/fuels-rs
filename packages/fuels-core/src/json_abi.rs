@@ -1973,7 +1973,7 @@ mod tests {
                 .to_string();
 
             assert_eq!(
-                "Invalid data: tuple value is missing a matching param",
+                "Invalid data: tuple value is missing a matching parameter type",
                 error_message
             );
 
@@ -1983,7 +1983,7 @@ mod tests {
                 .to_string();
 
             assert_eq!(
-                "Invalid data: last tuple value is missing a matching param",
+                "Invalid data: tuple value is missing a matching parameter type",
                 error_message
             );
         }
@@ -2104,7 +2104,7 @@ mod tests {
                 .to_string();
 
             assert_eq!(
-                "Invalid data: struct value is missing a matching param",
+                "Invalid data: struct value is missing a matching parameter type",
                 error_message
             );
 
@@ -2114,7 +2114,7 @@ mod tests {
                 .to_string();
 
             assert_eq!(
-                "Invalid data: last struct value is missing a matching param",
+                "Invalid data: struct value is missing a matching parameter type",
                 error_message
             );
         }
