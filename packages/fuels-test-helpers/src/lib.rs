@@ -17,7 +17,11 @@ use fuel_core::{
 pub use fuel_core::service::Config;
 
 #[cfg(not(feature = "fuel-core-lib"))]
+pub use node_config_json::{Config, CoinConfig};
+
+#[cfg(not(feature = "fuel-core-lib"))]
 use fuel_core_interfaces::model::{Coin, CoinStatus};
+
 use fuel_gql_client::{
     client::FuelClient,
     fuel_tx::{Address, Bytes32, UtxoId},
@@ -36,17 +40,17 @@ use rand::Fill;
 // #[cfg(feature = "fuels-signers")]
 mod signers;
 mod wallets_config;
+mod node_config_json;
+mod script;
 
 // #[cfg(feature = "fuels-signers")]
 pub use signers::*;
 pub use wallets_config::*;
-
-use crate::node_config_json::{get_node_config_json, spawn_fuel_service, DummyConfig};
-
-mod node_config_json;
-mod script;
-
 pub use node_config_json::*;
+
+use crate::node_config_json::{get_node_config_json, spawn_fuel_service};
+
+// pub use node_config_json;
 
 /// Create a vector of `num_asset`*`coins_per_asset` UTXOs and a vector of the unique corresponding
 /// asset IDs. `AssetId`. Each UTXO (=coin) contains `amount_per_coin` amount of a random asset. The
@@ -160,12 +164,12 @@ pub async fn setup_test_client(
 #[cfg(not(feature = "fuel-core-lib"))]
 pub async fn setup_test_client(
     coins: Vec<(UtxoId, Coin)>,
-    // node_config: Config
+    node_config: Config
 ) -> (FuelClient, SocketAddr) {
     let coin_configs: Vec<Value> = coins
         .into_iter()
         .map(|(utxo_id, coin)| {
-            serde_json::to_value(&DummyConfig {
+            serde_json::to_value(&CoinConfig {
                 tx_id: Some(*utxo_id.tx_id()),
                 output_index: Some(utxo_id.output_index() as u64),
                 block_created: Some(coin.block_created),

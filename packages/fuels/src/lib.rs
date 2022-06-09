@@ -66,6 +66,9 @@ pub mod prelude {
     #[cfg(feature = "fuel-core-lib")]
     pub use super::node::service::Config;
 
+    #[cfg(not(feature = "fuel-core-lib"))]
+    pub use super::test_helpers::Config;
+
     pub use super::signers::provider::*;
     pub use super::signers::{LocalWallet, Signer};
     pub use super::test_helpers::*;

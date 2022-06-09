@@ -1,8 +1,11 @@
 use std::borrow::Borrow;
 use std::fmt;
 use std::io::Write;
+use std::net::{Ipv4Addr, SocketAddr};
+use std::path::PathBuf;
 
 use fuel_core_interfaces::model::BlockHeight;
+use fuel_gql_client::client::schema::Salt;
 use fuel_gql_client::fuel_vm::consts::WORD_SIZE;
 use fuel_types::{Address, AssetId, Bytes32, Word};
 use portpicker::Port;
@@ -14,11 +17,24 @@ use serde_with::{serde_as, skip_serializing_none};
 use serde_with::{DeserializeAs, SerializeAs};
 use tempfile::NamedTempFile;
 use tokio::process::Command;
+use fuels_core::tx::ConsensusParameters;
+
+#[derive(Clone, Debug)]
+pub struct Config {
+}
+
+impl Config {
+    pub fn local_node() -> Self {
+        Self {
+            //Todo Implement for fuel-core-bin
+        }
+    }
+}
 
 #[skip_serializing_none]
 #[serde_as]
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-pub struct DummyConfig {
+pub struct CoinConfig {
     #[serde_as(as = "Option<HexType>")]
     #[serde(default)]
     pub tx_id: Option<Bytes32>,
@@ -43,21 +59,21 @@ pub(crate) struct HexType;
 
 impl<T: AsRef<[u8]>> SerializeAs<T> for HexType {
     fn serialize_as<S>(value: &T, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
+        where
+            S: Serializer,
     {
         serde_hex::serialize(value, serializer)
     }
 }
 
 impl<'de, T, E> DeserializeAs<'de, T> for HexType
-where
-    for<'a> T: TryFrom<&'a [u8], Error = E>,
-    E: fmt::Display,
+    where
+            for<'a> T: TryFrom<&'a [u8], Error = E>,
+            E: fmt::Display,
 {
     fn deserialize_as<D>(deserializer: D) -> Result<T, D::Error>
-    where
-        D: Deserializer<'de>,
+        where
+            D: Deserializer<'de>,
     {
         serde_hex::deserialize(deserializer)
     }
@@ -72,19 +88,19 @@ pub mod serde_hex {
     use serde::{Deserializer, Serializer};
 
     pub fn serialize<T, S>(target: T, ser: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-        T: ToHex,
+        where
+            S: Serializer,
+            T: ToHex,
     {
         let s = format!("0x{}", target.encode_hex::<String>());
         ser.serialize_str(&s)
     }
 
     pub fn deserialize<'de, T, E, D>(des: D) -> Result<T, D::Error>
-    where
-        D: Deserializer<'de>,
-        for<'a> T: TryFrom<&'a [u8], Error = E>,
-        E: fmt::Display,
+        where
+            D: Deserializer<'de>,
+            for<'a> T: TryFrom<&'a [u8], Error = E>,
+            E: fmt::Display,
     {
         let raw_string: String = serde::Deserialize::deserialize(des)?;
         let stripped_prefix = raw_string.trim_start_matches("0x");
@@ -98,8 +114,8 @@ pub(crate) struct HexNumber;
 
 impl SerializeAs<u64> for HexNumber {
     fn serialize_as<S>(value: &u64, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
+        where
+            S: Serializer,
     {
         let bytes = value.to_be_bytes();
         serde_hex::serialize(bytes, serializer)
@@ -108,8 +124,8 @@ impl SerializeAs<u64> for HexNumber {
 
 impl<'de> DeserializeAs<'de, Word> for HexNumber {
     fn deserialize_as<D>(deserializer: D) -> Result<Word, D::Error>
-    where
-        D: Deserializer<'de>,
+        where
+            D: Deserializer<'de>,
     {
         let mut bytes: Vec<u8> = serde_hex::deserialize(deserializer)?;
         match bytes.len() {
@@ -137,8 +153,8 @@ impl<'de> DeserializeAs<'de, Word> for HexNumber {
 
 impl SerializeAs<BlockHeight> for HexNumber {
     fn serialize_as<S>(value: &BlockHeight, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
+        where
+            S: Serializer,
     {
         let number: u64 = (*value).into();
         HexNumber::serialize_as(&number, serializer)
@@ -147,8 +163,8 @@ impl SerializeAs<BlockHeight> for HexNumber {
 
 impl<'de> DeserializeAs<'de, BlockHeight> for HexNumber {
     fn deserialize_as<D>(deserializer: D) -> Result<BlockHeight, D::Error>
-    where
-        D: Deserializer<'de>,
+        where
+            D: Deserializer<'de>,
     {
         let number: u64 = HexNumber::deserialize_as(deserializer)?;
         Ok(number.into())
