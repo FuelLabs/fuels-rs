@@ -226,15 +226,10 @@ fn expand_function_arguments(
 
         // If it's a tuple, don't expand it, just use the type signature as it is (minus the string "struct " | "enum ").
         let tok = if let ParamType::Tuple(_tuple) = kind {
-            // If custom type is inside a tuple `(struct | enum <name>, ...)`,
-            // the type signature should be only `(<name>, ...)`.
-            // To do that, we remove the `STRUCT_KEYWORD` and `ENUM_KEYWORD` from it.
-            param
-                .type_field
-                .replace(STRUCT_KEYWORD, "")
-                .replace(ENUM_KEYWORD, "")
-                .parse::<TokenStream>()
-                .expect("couldn't parse tuple type signature")
+            let toks = build_expanded_tuple_params(param)
+                .expect("failed to build expanded tuple parameters");
+
+            toks.parse::<TokenStream>().unwrap()
         } else {
             expand_input_param(fun, &param.name, &parse_param(param)?, &custom_property)?
         };
@@ -256,6 +251,35 @@ fn expand_function_arguments(
     let call_args = quote! { &[ #(#call_args.into_token(), )* ] };
 
     Ok((args, call_args))
+}
+
+// Builds a string "(type_1,type_2,type_3,...,type_n,)"
+// Where each type has been expanded through `expand_type()`
+// Except if it's a custom type, when just its name suffices.
+// For example, a tuple coming as "(b256, struct Person)"
+// Should be expanded as "([u8; 32], Person,)".
+fn build_expanded_tuple_params(tuple_param: &Property) -> Result<String, Error> {
+    let mut toks: String = "(".to_string();
+    for component in tuple_param
+        .components
+        .as_ref()
+        .expect("tuple parameter should have components")
+    {
+        if !component.is_custom_type() {
+            let p = parse_param(component)?;
+            let tok = expand_type(&p)?;
+            toks.push_str(&tok.to_string());
+        } else {
+            let tok = component
+                .type_field
+                .replace(STRUCT_KEYWORD, "")
+                .replace(ENUM_KEYWORD, "");
+            toks.push_str(&tok.to_string());
+        }
+        toks.push(',');
+    }
+    toks.push(')');
+    Ok(toks)
 }
 
 /// Expands a positional identifier string that may be empty.
