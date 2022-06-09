@@ -182,16 +182,18 @@ impl Script {
     /// 6. Encoded arguments (optional) (variable length)
     fn get_script_data_from_calls(
         calls: Vec<&ContractCall>,
-        mut data_offset: usize,
+        data_offset: usize,
     ) -> (Vec<u8>, Vec<CallParamOffsets>) {
         let mut script_data = vec![];
         let mut param_offsets = vec![];
 
+        let mut segment_offset = data_offset;
+
         for call in calls {
             param_offsets.push(CallParamOffsets {
-                asset_id_offset: data_offset,
-                amount_offset: data_offset + AssetId::LEN,
-                call_data_offset: data_offset + AssetId::LEN + WORD_SIZE,
+                asset_id_offset: segment_offset,
+                amount_offset: segment_offset + AssetId::LEN,
+                call_data_offset: segment_offset + AssetId::LEN + WORD_SIZE,
             });
 
             script_data.extend(call.call_parameters.asset_id.to_vec());
@@ -210,7 +212,7 @@ impl Script {
             if call.compute_calldata_offset {
                 // Offset of the script data relative to the call data
                 let call_data_offset =
-                    data_offset + AssetId::LEN + WORD_SIZE + ContractId::LEN + 2 * WORD_SIZE;
+                    segment_offset + AssetId::LEN + WORD_SIZE + ContractId::LEN + 2 * WORD_SIZE;
                 let call_data_offset = call_data_offset as Word;
 
                 script_data.extend(&call_data_offset.to_be_bytes());
@@ -218,9 +220,9 @@ impl Script {
 
             script_data.extend(call.encoded_args.clone());
 
-            // the offset for the next call parameters is increased
-            // by the length of the data we just added
-            data_offset += script_data.len();
+            // the data segment that holds the parameters for the next call
+            // begins at the original offset + the data we added so far
+            segment_offset = data_offset + script_data.len();
         }
 
         (script_data, param_offsets)
