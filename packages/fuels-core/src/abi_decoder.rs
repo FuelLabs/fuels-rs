@@ -475,7 +475,7 @@ mod tests {
         let enum_discriminant_enc = vec![0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1];
         let enum_data_enc = vec![0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x30, 0x39];
         // this padding is due to the biggest variant of MyEnum being 3 WORDs bigger than the chosen variant
-        let enum_padding_enc = vec![0x0; 24];
+        let enum_padding_enc = vec![0x0; 3 * WORD_SIZE];
         let struct_par2_enc = vec![0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xD4, 0x31];
         let data: Vec<u8> = vec![
             enum_discriminant_enc,
