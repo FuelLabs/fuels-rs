@@ -1625,7 +1625,7 @@ async fn enums_are_correctly_encoded_and_decoded() {
         .unwrap();
 
     let expected = Bundle {
-        arg_1: EnumThatHasABigAndSmallVariant::Small(123456),
+        arg_1: EnumThatHasABigAndSmallVariant::Small(12345),
         arg_2: 6666,
         arg_3: 7777,
         arg_4: 8888,

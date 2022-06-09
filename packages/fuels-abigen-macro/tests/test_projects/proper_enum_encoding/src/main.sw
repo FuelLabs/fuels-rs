@@ -1,8 +1,8 @@
 contract;
 
 enum EnumThatHasABigAndSmallVariant {
-    Small: u32,
     Big: b256,
+    Small: u32,
 }
 
 struct Bundle {
