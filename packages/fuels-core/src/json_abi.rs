@@ -211,10 +211,12 @@ impl ABIParser {
             ParamType::Bool => Ok(Token::Bool(trimmed_value.parse::<bool>()?)),
             ParamType::Byte => Ok(Token::Byte(trimmed_value.parse::<u8>()?)),
             ParamType::B256 => {
-                if trimmed_value.len() != 64 {
-                    return Err(Error::InvalidData(
-                        "the hex encoding of the b256 must have 64 characters".into(),
-                    ));
+                const B256_HEX_ENC_LENGHT: usize = 64;
+                if trimmed_value.len() != B256_HEX_ENC_LENGHT {
+                    return Err(Error::InvalidData(format!(
+                        "the hex encoding of the b256 must have {} characters",
+                        B256_HEX_ENC_LENGHT
+                    )));
                 }
                 let v = Vec::from_hex(trimmed_value)?;
                 let s: [u8; 32] = v.as_slice().try_into().unwrap();
