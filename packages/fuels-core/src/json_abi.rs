@@ -291,7 +291,7 @@ impl ABIParser {
                             let token = self.tokenize(
                                 params_iter.next().ok_or_else(|| {
                                     Error::InvalidData(
-                                        "last struct value is missing a matching param".into(),
+                                        "struct value is missing a matching parameter type".into(),
                                     )
                                 })?,
                                 sub.to_string(),
@@ -315,7 +315,9 @@ impl ABIParser {
 
                     let token = self.tokenize(
                         params_iter.next().ok_or_else(|| {
-                            Error::InvalidData("struct value is missing a matching param".into())
+                            Error::InvalidData(
+                                "struct value is missing a matching parameter type".into(),
+                            )
                         })?,
                         sub.to_string(),
                     )?;
@@ -480,7 +482,7 @@ impl ABIParser {
                             let token = self.tokenize(
                                 params_iter.next().ok_or_else(|| {
                                     Error::InvalidData(
-                                        "last tuple value is missing a matching param".into(),
+                                        "tuple value is missing a matching parameter type".into(),
                                     )
                                 })?,
                                 sub.to_string(),
@@ -504,7 +506,9 @@ impl ABIParser {
 
                     let token = self.tokenize(
                         params_iter.next().ok_or_else(|| {
-                            Error::InvalidData("tuple value is missing a matching param".into())
+                            Error::InvalidData(
+                                "tuple value is missing a matching parameter type".into(),
+                            )
                         })?,
                         sub.to_string(),
                     )?;
