@@ -19,5 +19,5 @@ fuels-signers = { version = "0.15.1", path = "../fuels-signers" }
 fuels-test-helpers = { version = "0.15.1", path = "../fuels-test-helpers", optional = true }
 
 [features]
-default = ["fuels-test-helpers/fuel-core-bin", "fuels-test-helpers/default", ]
+default = ["fuels-test-helpers/default"]
 fuel-core-lib = ["fuel-core", 'fuels-test-helpers/fuel-core-lib']

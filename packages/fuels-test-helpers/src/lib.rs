@@ -3,7 +3,7 @@
 extern crate core;
 
 use std::collections::HashSet;
-use std::net::SocketAddr;
+use std::net::{SocketAddr};
 
 #[cfg(feature = "fuel-core-lib")]
 use fuel_core::{
@@ -20,9 +20,6 @@ pub use node_config_json::{CoinConfig, Config};
 
 #[cfg(not(feature = "fuel-core-lib"))]
 use fuel_core_interfaces::model::{Coin, CoinStatus};
-
-#[cfg(not(feature = "fuel-core-lib"))]
-use std::time::Duration;
 
 #[cfg(not(feature = "fuel-core-lib"))]
 use portpicker::pick_unused_port;
@@ -165,7 +162,6 @@ pub async fn setup_test_client(
     (client, srv.bound_address)
 }
 
-#[cfg(not(feature = "fuel-core-lib"))]
 pub async fn setup_test_client(
     coins: Vec<(UtxoId, Coin)>,
     _node_config: Config,
@@ -182,7 +178,7 @@ pub async fn setup_test_client(
                 amount: coin.amount,
                 asset_id: coin.asset_id,
             })
-            .unwrap()
+                .unwrap()
         })
         .collect();
 
@@ -195,8 +191,9 @@ pub async fn setup_test_client(
 
     spawn_fuel_service(config_with_coins, free_port);
 
-    tokio::time::sleep(Duration::from_secs(2)).await;
     let client = FuelClient::from(srv_address);
+
+    server_health_check(&client).await;
 
     (client, srv_address)
 }

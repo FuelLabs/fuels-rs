@@ -1,8 +1,10 @@
 use std::borrow::Borrow;
 use std::fmt;
 use std::io::Write;
+use std::time::Duration;
 
 use fuel_core_interfaces::model::BlockHeight;
+use fuel_gql_client::client::FuelClient;
 use fuel_gql_client::fuel_vm::consts::WORD_SIZE;
 use fuel_types::{Address, AssetId, Bytes32, Word};
 use portpicker::Port;
@@ -221,4 +223,20 @@ pub fn spawn_fuel_service(config_with_coins: Value, free_port: Port) {
 
         running_node.wait().await
     });
+}
+
+
+pub async fn server_health_check(client: &FuelClient) {
+    let mut attempts = 5;
+    let mut healthy = client.health().await.unwrap_or(false);
+
+    while attempts > 0 && !healthy {
+        healthy = client.health().await.unwrap_or(false);
+        tokio::time::sleep(Duration::from_millis(100)).await;
+        attempts -= 1;
+    }
+
+    if !healthy {
+        panic!("Could not connect to fuel core server")
+    }
 }
