@@ -1521,8 +1521,9 @@ mod tests {
             .encode_with_function_selector(json_abi, function_name, &values)
             .unwrap();
 
+        println!("Function: {}", hex::encode(abi.fn_selector.unwrap()));
         let expected_encode =
-            "00000000ebb8d011000000000000002a00000000000000014a6f686e000000000000000000000001";
+            "00000000ebb8d011000000000000002a00000000000000014a6f686e0000000000000000000000010000000000000000";
         assert_eq!(encoded, expected_encode);
     }
 

@@ -45,14 +45,14 @@ async fn create_wallet_from_mnemonic() {
     let _wallet = LocalWallet::new_from_mnemonic_phrase_with_path(
         phrase,
         Some(provider.clone()),
-        "m/44'/60'/0'/0/0",
+        "m/44'/1179993420'/0'/0/0",
     )
     .unwrap();
 
     // Or with the default derivation path
     let wallet = LocalWallet::new_from_mnemonic_phrase(phrase, Some(provider)).unwrap();
 
-    let expected_address = "df9d0e6c6c5f5da6e82e5e1a77974af6642bdb450a10c43f0c6910a212600185";
+    let expected_address = "f18b6446deb8135544ba60333e5b7522685cd2cf64aa4e4c75df725149850b65";
 
     assert_eq!(wallet.address().to_string(), expected_address);
 }
