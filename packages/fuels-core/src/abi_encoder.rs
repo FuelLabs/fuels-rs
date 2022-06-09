@@ -1,5 +1,5 @@
 use crate::constants::{ENUM_DISCRIMINANT_WORD_WIDTH, WORD_SIZE};
-use crate::encoding_utils::{encoding_width_of_enum, expected_encoding_width};
+use crate::encoding_utils::{compute_encoding_width, compute_encoding_width_of_enum};
 use crate::errors::CodecError;
 use crate::{
     pad_string, pad_u16, pad_u32, pad_u8, ByteArray, EnumSelector, EnumVariants, ParamType, Token,
@@ -85,8 +85,9 @@ impl ABIEncoder {
     }
 
     fn add_enum_padding(&mut self, variants: &EnumVariants, param_type: &ParamType) {
-        let biggest_variant_width = encoding_width_of_enum(variants) - ENUM_DISCRIMINANT_WORD_WIDTH;
-        let variant_width = expected_encoding_width(&param_type);
+        let biggest_variant_width =
+            compute_encoding_width_of_enum(variants) - ENUM_DISCRIMINANT_WORD_WIDTH;
+        let variant_width = compute_encoding_width(param_type);
 
         let padding_amount = (biggest_variant_width - variant_width) * WORD_SIZE;
 
@@ -580,8 +581,16 @@ mod tests {
         assert_eq!(abi_encoder.function_selector, expected_function_selector);
     }
 
+    // The encoding follows the ABI specs defined  [here](https://github.com/FuelLabs/fuel-specs/blob/master/specs/protocol/abi.md)
+    // An enum doesn't change its encoding width according to which variant it
+    // is currently holding. It is always as wide as its biggest variant. If we
+    // store a smaller variant in it, it will be left padded until it reaches
+    // the allotted enum size. Besides the value itself, an enum also stores a
+    // discriminant to indicate which variant it is currently holding.
     #[test]
     fn enums_are_sized_to_fit_the_biggest_variant() {
+        // Our enum has two variants: B256, and U64. So the enum will set aside
+        // 256b of space or 4 WORDS.
         let enum_variants = EnumVariants::new(vec![ParamType::B256, ParamType::U64]).unwrap();
         let enum_selector = Box::new((1, Token::U64(42), enum_variants));
 
@@ -593,6 +602,9 @@ mod tests {
         let enum_discriminant_enc = vec![0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1];
         let u64_enc = vec![0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2a];
         let enum_padding = vec![0x0; 24];
+
+        // notice the ordering, first the discriminant, then the necessary
+        // padding and then the value itself.
         let expected: Vec<u8> = [enum_discriminant_enc, enum_padding, u64_enc]
             .into_iter()
             .flatten()
@@ -612,6 +624,11 @@ mod tests {
         let deeper_enum_variants =
             EnumVariants::new(vec![ParamType::Bool, ParamType::String(10)]).unwrap();
         let deeper_enum_token = Token::String("0123456789".to_owned());
+        let str_enc = vec![
+            b'0', b'1', b'2', b'3', b'4', b'5', b'6', b'7', b'8', b'9', 0x0, 0x0, 0x0, 0x0, 0x0,
+            0x0,
+        ];
+        let deeper_enum_discriminant_enc = vec![0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1];
 
         /*
         struct StructA {
@@ -629,6 +646,7 @@ mod tests {
             Token::Enum(Box::new((1, deeper_enum_token, deeper_enum_variants))),
             Token::U32(11332),
         ]);
+        let some_number_enc = vec![0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2c, 0x44];
 
         /*
          enum TopLevelEnum {
@@ -642,19 +660,12 @@ mod tests {
             EnumVariants::new(vec![struct_a_type, ParamType::Bool, ParamType::U64]).unwrap();
         let top_level_enum_token =
             Token::Enum(Box::new((0, struct_a_token, top_level_enum_variants)));
+        let top_lvl_discriminant_enc = vec![0x0; 8];
 
         let encoded =
             ABIEncoder::new_with_fn_selector("takes_top_level_enum(TopLevelEnum)".as_bytes())
                 .encode(slice::from_ref(&top_level_enum_token))
                 .unwrap();
-
-        let top_lvl_discriminant_enc = vec![0x0; 8];
-        let deeper_enum_discriminant_enc = vec![0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1];
-        let str_enc = vec![
-            b'0', b'1', b'2', b'3', b'4', b'5', b'6', b'7', b'8', b'9', 0x0, 0x0, 0x0, 0x0, 0x0,
-            0x0,
-        ];
-        let some_number_enc = vec![0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2c, 0x44];
 
         let correct_encoding: Vec<u8> = [
             top_lvl_discriminant_enc,

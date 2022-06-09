@@ -1,4 +1,4 @@
-use crate::encoding_utils::{encoding_width_of_enum, expected_encoding_width};
+use crate::encoding_utils::{compute_encoding_width, compute_encoding_width_of_enum};
 use crate::errors::CodecError;
 use crate::{constants::WORD_SIZE, Bits256, ByteArray, EnumVariants, ParamType, Token};
 use core::convert::TryInto;
@@ -214,10 +214,10 @@ impl ABIDecoder {
     fn decode_enum(data: &[u8], variants: &EnumVariants) -> Result<DecodeResult, CodecError> {
         let discriminant = Self::decode_discriminant(data)?;
 
-        let enum_width = encoding_width_of_enum(variants);
+        let enum_width = compute_encoding_width_of_enum(variants);
 
         let variant = Self::type_of_selected_variant(variants, discriminant as usize)?;
-        let words_to_skip = enum_width - expected_encoding_width(variant);
+        let words_to_skip = enum_width - compute_encoding_width(variant);
 
         let res = Self::decode_param(variant, &data[words_to_skip * WORD_SIZE..])?;
 

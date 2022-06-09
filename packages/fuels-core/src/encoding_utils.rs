@@ -2,18 +2,18 @@ use crate::constants::ENUM_DISCRIMINANT_WORD_WIDTH;
 use crate::{EnumVariants, ParamType, WORD_SIZE};
 
 // Calculates how many WORDs are needed to encode an enum
-pub fn encoding_width_of_enum(variants: &EnumVariants) -> usize {
+pub fn compute_encoding_width_of_enum(variants: &EnumVariants) -> usize {
     variants
         .param_types()
         .iter()
-        .map(expected_encoding_width)
+        .map(compute_encoding_width)
         .max()
         .map(|width| width + ENUM_DISCRIMINANT_WORD_WIDTH)
-        .expect("Will never panic because EnumVariants must have at least variant inside it!")
+        .expect("Will never panic because EnumVariants must have at least one variant inside it!")
 }
 
 /// Calculates the number of `WORD`s the VM expects this parameter to be encoded in.
-pub fn expected_encoding_width(param: &ParamType) -> usize {
+pub fn compute_encoding_width(param: &ParamType) -> usize {
     const fn count_words(bytes: usize) -> usize {
         let q = bytes / WORD_SIZE;
         let r = bytes % WORD_SIZE;
@@ -32,11 +32,11 @@ pub fn expected_encoding_width(param: &ParamType) -> usize {
         | ParamType::Bool
         | ParamType::Byte => 1,
         ParamType::B256 => 4,
-        ParamType::Array(param, count) => expected_encoding_width(param) * count,
+        ParamType::Array(param, count) => compute_encoding_width(param) * count,
         ParamType::String(len) => count_words(*len),
-        ParamType::Struct(params) => params.iter().map(expected_encoding_width).sum(),
-        ParamType::Enum(variants) => encoding_width_of_enum(variants),
-        ParamType::Tuple(params) => params.iter().map(expected_encoding_width).sum(),
+        ParamType::Struct(params) => params.iter().map(compute_encoding_width).sum(),
+        ParamType::Enum(variants) => compute_encoding_width_of_enum(variants),
+        ParamType::Tuple(params) => params.iter().map(compute_encoding_width).sum(),
     }
 }
 
@@ -45,7 +45,7 @@ mod tests {
     const WIDTH_OF_B256: usize = 4;
     const WIDTH_OF_U32: usize = 1;
     const WIDTH_OF_BOOL: usize = 1;
-    use crate::encoding_utils::expected_encoding_width;
+    use crate::encoding_utils::compute_encoding_width;
     use crate::{EnumVariants, ParamType};
 
     #[test]
@@ -53,7 +53,7 @@ mod tests {
         const NUM_ELEMENTS: usize = 11;
         let param = ParamType::Array(Box::new(ParamType::B256), NUM_ELEMENTS);
 
-        let width = expected_encoding_width(&param);
+        let width = compute_encoding_width(&param);
 
         let expected = NUM_ELEMENTS * WIDTH_OF_B256;
         assert_eq!(expected, width);
@@ -64,7 +64,7 @@ mod tests {
         const NUM_ASCII_CHARS: usize = 9;
         let param = ParamType::String(NUM_ASCII_CHARS);
 
-        let width = expected_encoding_width(&param);
+        let width = compute_encoding_width(&param);
 
         // 2 WORDS or 16 B are enough to fit 9 ascii chars
         assert_eq!(2, width);
@@ -76,7 +76,7 @@ mod tests {
 
         let a_struct = ParamType::Struct(vec![ParamType::B256, ParamType::Bool, inner_struct]);
 
-        let width = expected_encoding_width(&a_struct);
+        let width = compute_encoding_width(&a_struct);
 
         const INNER_STRUCT_WIDTH: usize = WIDTH_OF_U32 * 2;
         const EXPECTED_WIDTH: usize = WIDTH_OF_B256 + WIDTH_OF_BOOL + INNER_STRUCT_WIDTH;
@@ -88,7 +88,7 @@ mod tests {
         let inner_struct = ParamType::Struct(vec![ParamType::B256]);
         let param = ParamType::Enum(EnumVariants::new(vec![ParamType::U32, inner_struct]).unwrap());
 
-        let width = expected_encoding_width(&param);
+        let width = compute_encoding_width(&param);
 
         const INNER_STRUCT_SIZE: usize = WIDTH_OF_B256;
         const EXPECTED_WIDTH: usize = INNER_STRUCT_SIZE + 1;
@@ -100,7 +100,7 @@ mod tests {
         let inner_tuple = ParamType::Tuple(vec![ParamType::B256]);
         let param = ParamType::Tuple(vec![ParamType::U32, inner_tuple]);
 
-        let width = expected_encoding_width(&param);
+        let width = compute_encoding_width(&param);
 
         const INNER_TUPLE_WIDTH: usize = WIDTH_OF_B256;
         const EXPECTED_WIDTH: usize = WIDTH_OF_U32 + INNER_TUPLE_WIDTH;
