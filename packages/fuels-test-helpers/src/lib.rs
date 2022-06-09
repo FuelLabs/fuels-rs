@@ -4,7 +4,6 @@ extern crate core;
 
 use std::collections::HashSet;
 use std::net::SocketAddr;
-use std::time::Duration;
 
 #[cfg(feature = "fuel-core-lib")]
 use fuel_core::{
@@ -17,20 +16,27 @@ use fuel_core::{
 pub use fuel_core::service::Config;
 
 #[cfg(not(feature = "fuel-core-lib"))]
-pub use node_config_json::{Config, CoinConfig};
+pub use node_config_json::{CoinConfig, Config};
 
 #[cfg(not(feature = "fuel-core-lib"))]
 use fuel_core_interfaces::model::{Coin, CoinStatus};
+
+#[cfg(not(feature = "fuel-core-lib"))]
+use std::time::Duration;
+
+#[cfg(not(feature = "fuel-core-lib"))]
+use portpicker::pick_unused_port;
+
+#[cfg(not(feature = "fuel-core-lib"))]
+use serde_json::Value;
+
+#[cfg(not(feature = "fuel-core-lib"))]
+use crate::node_config_json::spawn_fuel_service;
 
 use fuel_gql_client::{
     client::FuelClient,
     fuel_tx::{Address, Bytes32, UtxoId},
 };
-
-use portpicker::pick_unused_port;
-use serde_json::Value;
-use tempfile::NamedTempFile;
-use tokio::process::Command;
 
 use fuels_core::constants::NATIVE_ASSET_ID;
 use fuels_signers::fuel_crypto::fuel_types::AssetId;
@@ -38,17 +44,15 @@ use fuels_signers::fuel_crypto::rand;
 use rand::Fill;
 
 // #[cfg(feature = "fuels-signers")]
-mod signers;
-mod wallets_config;
 mod node_config_json;
 mod script;
+mod signers;
+mod wallets_config;
 
 // #[cfg(feature = "fuels-signers")]
+pub use node_config_json::*;
 pub use signers::*;
 pub use wallets_config::*;
-pub use node_config_json::*;
-
-use crate::node_config_json::{get_node_config_json, spawn_fuel_service};
 
 // pub use node_config_json;
 
@@ -164,7 +168,7 @@ pub async fn setup_test_client(
 #[cfg(not(feature = "fuel-core-lib"))]
 pub async fn setup_test_client(
     coins: Vec<(UtxoId, Coin)>,
-    node_config: Config
+    _node_config: Config,
 ) -> (FuelClient, SocketAddr) {
     let coin_configs: Vec<Value> = coins
         .into_iter()

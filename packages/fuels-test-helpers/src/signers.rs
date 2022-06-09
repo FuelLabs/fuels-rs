@@ -3,6 +3,9 @@ use std::net::SocketAddr;
 #[cfg(feature = "fuel-core-lib")]
 use fuel_core::{model::Coin, service::Config};
 
+#[cfg(feature = "fuel-core-lib")]
+use crate::{DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS};
+
 use fuel_gql_client::fuel_tx::UtxoId;
 
 #[cfg(not(feature = "fuel-core-lib"))]
@@ -13,10 +16,7 @@ use crate::node_config_json::Config;
 
 use fuels_signers::{provider::Provider, LocalWallet, Signer};
 
-use crate::{
-    setup_single_asset_coins, setup_test_client, wallets_config::WalletsConfig,
-    DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS
-};
+use crate::{setup_single_asset_coins, setup_test_client, wallets_config::WalletsConfig};
 
 #[cfg(feature = "fuel-core-lib")]
 pub async fn launch_provider_and_get_single_wallet() -> LocalWallet {
@@ -115,7 +115,7 @@ pub async fn launch_provider_and_get_wallets(config: WalletsConfig) -> Vec<Local
 #[cfg(not(feature = "fuel-core-lib"))]
 pub async fn setup_test_provider(
     coins: Vec<(UtxoId, Coin)>,
-    node_config: Config
+    node_config: Config,
 ) -> (Provider, SocketAddr) {
     let (client, addr) = setup_test_client(coins, node_config).await;
     (Provider::new(client), addr)

@@ -1,26 +1,19 @@
-use std::borrow::Borrow;
-use std::net::{SocketAddr, ToSocketAddrs};
-use std::time::Duration;
-
 #[cfg(feature = "fuel-core-lib")]
 use fuel_core::service::{Config, FuelService};
 
-use fuel_core_interfaces::model::Coin;
-
-use crate::{
-    launch_provider_and_get_single_wallet, setup_single_asset_coins, setup_test_client,
-    spawn_fuel_service, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
-};
-use fuel_gql_client::client::schema::UtxoId;
+#[cfg(feature = "fuel-core-lib")]
 use fuel_gql_client::client::FuelClient;
+
+#[cfg(not(feature = "fuel-core-lib"))]
+use crate::launch_provider_and_get_single_wallet;
+
 use fuel_gql_client::fuel_tx::{Receipt, Transaction};
 use fuels_contract::script::Script;
 use fuels_core::errors::Error;
-use fuels_signers::Signer;
-use portpicker::pick_unused_port;
 
 /// Run the Sway script binary located at `binary_filepath` and return its resulting receipts,
 /// without having to setup a node or contract bindings.
+#[allow(dead_code)]
 #[cfg(feature = "fuel-core-lib")]
 pub async fn run_compiled_script(binary_filepath: &str) -> Result<Vec<Receipt>, Error> {
     let script_binary = std::fs::read(binary_filepath)?;
@@ -45,6 +38,7 @@ pub async fn run_compiled_script(binary_filepath: &str) -> Result<Vec<Receipt>, 
     script.call(&client).await
 }
 
+#[allow(dead_code)]
 #[cfg(not(feature = "fuel-core-lib"))]
 pub async fn run_compiled_script(binary_filepath: &str) -> Result<Vec<Receipt>, Error> {
     let script_binary = std::fs::read(binary_filepath)?;
