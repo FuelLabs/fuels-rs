@@ -15,7 +15,7 @@ use rand::{CryptoRng, Rng};
 use std::{collections::HashMap, fmt, io, path::Path, str::FromStr};
 use thiserror::Error;
 
-const DEFAULT_DERIVATION_PATH_PREFIX: &str = "m/44'/60'/0'/0/";
+const DEFAULT_DERIVATION_PATH_PREFIX: &str = "m/44'/1179993420'/0'/0/";
 type W = English;
 
 /// A FuelVM-compatible wallet which can be used for signing, sending transactions, and more.
@@ -243,8 +243,8 @@ impl Wallet {
     ///  let mut wallet_2 = LocalWallet::new_random(None);
     ///
     ///   // Setup a coin for each wallet
-    ///   let mut coins_1 = setup_single_asset_coins(wallet_1.address(),NATIVE_ASSET_ID, 1, 1);
-    ///   let coins_2 = setup_single_asset_coins(wallet_2.address(),NATIVE_ASSET_ID, 1, 1);
+    ///   let mut coins_1 = setup_single_asset_coins(wallet_1.address(),BASE_ASSET_ID, 1, 1);
+    ///   let coins_2 = setup_single_asset_coins(wallet_2.address(),BASE_ASSET_ID, 1, 1);
     ///   coins_1.extend(coins_2);
     ///
     ///   // Setup a provider and node with both set of coins

@@ -10,7 +10,7 @@ use fuel_gql_client::{
     client::FuelClient,
     fuel_tx::{Address, Bytes32, UtxoId},
 };
-use fuels_core::constants::NATIVE_ASSET_ID;
+use fuels_core::constants::BASE_ASSET_ID;
 use fuels_signers::fuel_crypto::fuel_types::AssetId;
 use rand::Fill;
 use std::collections::HashSet;
@@ -30,7 +30,7 @@ pub use wallets_config::*;
 /// asset IDs. `AssetId`. Each UTXO (=coin) contains `amount_per_coin` amount of a random asset. The
 /// output of this function can be used with `setup_test_client` to get a client with some
 /// pre-existing coins, with `num_asset` different asset ids. Note that one of the assets is the
-/// native asset to pay for gas.
+/// base asset to pay for gas.
 pub fn setup_multiple_assets_coins(
     owner: Address,
     num_asset: u64,
@@ -38,7 +38,7 @@ pub fn setup_multiple_assets_coins(
     amount_per_coin: u64,
 ) -> (Vec<(UtxoId, Coin)>, Vec<AssetId>) {
     let mut rng = rand::thread_rng();
-    // Create `num_asset-1` asset ids so there is `num_asset` in total with the native asset
+    // Create `num_asset-1` asset ids so there is `num_asset` in total with the base asset
     let mut coins = (0..(num_asset - 1))
         .flat_map(|_| {
             let mut random_asset_id = AssetId::zeroed();
@@ -46,10 +46,10 @@ pub fn setup_multiple_assets_coins(
             setup_single_asset_coins(owner, random_asset_id, coins_per_asset, amount_per_coin)
         })
         .collect::<Vec<(UtxoId, Coin)>>();
-    // Add the native asset
+    // Add the base asset
     coins.extend(setup_single_asset_coins(
         owner,
-        NATIVE_ASSET_ID,
+        BASE_ASSET_ID,
         coins_per_asset,
         amount_per_coin,
     ));
@@ -172,10 +172,10 @@ mod tests {
         );
         assert_eq!(coins.len() as u64, number_of_assets * coins_per_asset);
         assert_eq!(unique_asset_ids.len() as u64, number_of_assets);
-        // Check that the wallet has native assets to pay for gas
+        // Check that the wallet has base assets to pay for gas
         assert!(unique_asset_ids
             .iter()
-            .any(|&asset_id| asset_id == NATIVE_ASSET_ID));
+            .any(|&asset_id| asset_id == BASE_ASSET_ID));
         for asset_id in unique_asset_ids {
             let coins_asset_id: Vec<(UtxoId, Coin)> = coins
                 .clone()

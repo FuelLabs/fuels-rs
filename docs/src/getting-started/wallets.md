@@ -64,7 +64,7 @@ If you had already created a wallet using a mnemonic phrase or a private key, yo
 First, one should keep in mind that, with UTXOs, each _coin_ is unique. Each UTXO corresponds to a unique _coin_, and said _coin_ has a corresponding _amount_ (the same way a dollar bill has either 10$ or 5$ face value). So, when you want to query the balance for a given asset ID, you want to query the sum of the amount in each unspent coin. This is done very easily with a wallet:
 
 ```rust,ignore
-let asset_id : AssetId = NATIVE_ASSET_ID
+let asset_id : AssetId = BASE_ASSET_ID
 let balance : u64 = wallet.get_asset_balance(&asset_id).await;
 ```
 
