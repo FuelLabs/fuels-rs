@@ -709,7 +709,7 @@ async fn panics_on_non_binary_file() {
         "tests/test_projects/contract_output_test/out/debug/contract_output_test-abi.json",
         &wallet,
         TxParameters::default(),
-        Salt::from([1u8; 32])
+        Salt::from([1u8; 32]),
     )
     .await;
     assert!(deploy_result.is_err());
