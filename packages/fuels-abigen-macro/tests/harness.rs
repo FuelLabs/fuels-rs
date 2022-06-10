@@ -3,8 +3,8 @@
 use fuel_gql_client::fuel_tx::{AssetId, ContractId, Receipt};
 use fuels::prelude::{
     launch_provider_and_get_single_wallet, setup_multiple_assets_coins, setup_single_asset_coins,
-    setup_test_provider, CallParameters, Contract, Error, LocalWallet, Signer, TxParameters,
-    DEFAULT_COIN_AMOUNT,
+    setup_test_provider, CallParameters, Contract, Error, LocalWallet, Provider, Signer,
+    TxParameters, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
 };
 
 use fuels_abigen_macro::abigen;
@@ -934,54 +934,54 @@ async fn test_large_return_data() {
     );
 }
 
-// #[tokio::test]
-// async fn test_provider_launch_and_connect() {
-//     abigen!(
-//         MyContract,
-//         "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
-//     );
-//
-//     let mut wallet = LocalWallet::new_random(None);
-//
-//     let coins = setup_single_asset_coins(
-//         wallet.address(),
-//         NATIVE_ASSET_ID,
-//         DEFAULT_NUM_COINS,
-//         DEFAULT_COIN_AMOUNT,
-//     );
-//     let (launched_provider, address) = setup_test_provider(coins, Config::local_node()).await;
-//     let connected_provider = Provider::connect(address).await.unwrap();
-//
-//     wallet.set_provider(connected_provider);
-//
-//     let contract_id = Contract::deploy(
-//         "tests/test_projects/contract_test/out/debug/contract_test.bin",
-//         &wallet,
-//         TxParameters::default(),
-//     )
-//     .await
-//     .unwrap();
-//     println!("Contract deployed @ {:x}", contract_id);
-//
-//     let contract_instance_connected = MyContract::new(contract_id.to_string(), wallet.clone());
-//
-//     let result = contract_instance_connected
-//         .initialize_counter(42) // Build the ABI call
-//         .call() // Perform the network call
-//         .await
-//         .unwrap();
-//     assert_eq!(42, result.value);
-//
-//     wallet.set_provider(launched_provider);
-//     let contract_instance_launched = MyContract::new(contract_id.to_string(), wallet);
-//
-//     let result = contract_instance_launched
-//         .increment_counter(10)
-//         .call()
-//         .await
-//         .unwrap();
-//     assert_eq!(52, result.value);
-// }
+#[tokio::test]
+async fn test_provider_launch_and_connect() {
+    abigen!(
+        MyContract,
+        "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+    );
+
+    let mut wallet = LocalWallet::new_random(None);
+
+    let coins = setup_single_asset_coins(
+        wallet.address(),
+        NATIVE_ASSET_ID,
+        DEFAULT_NUM_COINS,
+        DEFAULT_COIN_AMOUNT,
+    );
+    let (launched_provider, address) = setup_test_provider(coins, None).await;
+    let connected_provider = Provider::connect(address).await.unwrap();
+
+    wallet.set_provider(connected_provider);
+
+    let contract_id = Contract::deploy(
+        "tests/test_projects/contract_test/out/debug/contract_test.bin",
+        &wallet,
+        TxParameters::default(),
+    )
+    .await
+    .unwrap();
+    println!("Contract deployed @ {:x}", contract_id);
+
+    let contract_instance_connected = MyContract::new(contract_id.to_string(), wallet.clone());
+
+    let result = contract_instance_connected
+        .initialize_counter(42) // Build the ABI call
+        .call() // Perform the network call
+        .await
+        .unwrap();
+    assert_eq!(42, result.value);
+
+    wallet.set_provider(launched_provider);
+    let contract_instance_launched = MyContract::new(contract_id.to_string(), wallet);
+
+    let result = contract_instance_launched
+        .increment_counter(10)
+        .call()
+        .await
+        .unwrap();
+    assert_eq!(52, result.value);
+}
 
 #[tokio::test]
 async fn test_contract_calling_contract() {

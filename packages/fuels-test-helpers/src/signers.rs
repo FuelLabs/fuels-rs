@@ -145,8 +145,6 @@ pub async fn setup_test_provider(
 mod tests {
     use crate::{launch_provider_and_get_wallets, WalletsConfig};
 
-    // use super::*;
-
     #[tokio::test]
     async fn test_wallet_config() {
         let num_wallets = 2;

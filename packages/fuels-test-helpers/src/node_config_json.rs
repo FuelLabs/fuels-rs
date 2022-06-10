@@ -1,7 +1,7 @@
 use std::borrow::Borrow;
 use std::fmt;
 use std::io::Write;
-use std::net::SocketAddr;
+use std::net::{Ipv4Addr, SocketAddr};
 use std::time::Duration;
 
 use fuel_core_interfaces::model::BlockHeight;
@@ -23,14 +23,13 @@ pub struct Config {
     pub addr: SocketAddr,
 }
 
-// #[cfg(not(feature = "fuel-core-lib"))]
-// impl Config {
-//     pub fn local_node() -> Self {
-//         Self {
-//
-//         }
-//     }
-// }
+impl Config {
+    pub fn local_node() -> Self {
+        Self {
+            addr: SocketAddr::new(Ipv4Addr::new(127, 0, 0, 1).into(), 0),
+        }
+    }
+}
 
 #[skip_serializing_none]
 #[serde_as]
@@ -222,7 +221,8 @@ pub fn spawn_fuel_service(config_with_coins: Value, free_port: Port) {
             .arg("in-memory")
             .kill_on_drop(true)
             .spawn()
-            .expect("Could not find 'fuel-core' in PATH. Please check if it's installed");
+            .expect("error: couldn't read fuel-core: No such file or directory. Please check if fuel-core library is installed. \
+        Try this https://fuellabs.github.io/sway/latest/introduction/installation.html");
 
         running_node.wait().await
     });

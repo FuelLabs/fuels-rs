@@ -24,9 +24,9 @@ serde_json = { version = "1.0", features = ["raw_value"], optional = true }
 serde_with = { version = "1.11", features = ["serde_json"], optional = true }
 tempfile = { version = "3.0.1", default-features = false, optional = true }
 tokio = { version = "1.15", default-features = false, optional = true }
-
+portpicker = { version = "0.1.1", optional = true}
 
 [features]
 default = ["fuels-signers", "fuel-core-bin"]
-fuel-core-bin = ["fuel-core-interfaces", "tempfile", "tokio", "hex", "serde_json", "serde_with", "serde"]
+fuel-core-bin = ["fuel-core-interfaces", "tempfile", "tokio", "hex", "serde_json", "serde_with", "serde", "portpicker"]
 fuel-core-lib = ["fuel-core"]

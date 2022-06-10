@@ -144,6 +144,7 @@ pub async fn setup_test_client(
         })
         .collect();
 
+    let default_config = Config::local_node();
     // Setup node config with genesis coins and utxo_validation enabled
     let config = Config {
         chain_conf: ChainConfig {
@@ -155,10 +156,8 @@ pub async fn setup_test_client(
         },
         database_type: DbType::InMemory,
         utxo_validation: true,
-        ..node_config.unwrap_or_else(|| Config::local_node())
+        ..node_config.unwrap_or(default_config)
     };
-
-    println!("{:?}", config);
 
     let srv = FuelService::new_node(config).await.unwrap();
     let client = FuelClient::from(srv.bound_address);
@@ -210,6 +209,8 @@ pub async fn setup_test_client(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fuels_signers::{LocalWallet, Signer};
+    use std::net::Ipv4Addr;
 
     #[tokio::test]
     async fn test_setup_single_asset_coins() {
@@ -261,5 +262,28 @@ mod tests {
                 assert_eq!(coin.amount, amount_per_coin);
             }
         }
+    }
+
+    #[tokio::test]
+    async fn test_setup_test_client_custom_config() {
+        let socket = SocketAddr::new(Ipv4Addr::new(127, 0, 0, 1).into(), 5000);
+
+        let wallet = LocalWallet::new_random(None);
+
+        let coins: Vec<(UtxoId, Coin)> = setup_single_asset_coins(
+            wallet.address(),
+            Default::default(),
+            DEFAULT_NUM_COINS,
+            DEFAULT_COIN_AMOUNT,
+        );
+
+        let config = Config {
+            addr: socket,
+            ..Config::local_node()
+        };
+
+        let wallets = setup_test_client(coins, Some(config)).await;
+
+        assert_eq!(wallets.1, socket);
     }
 }
