@@ -3,7 +3,7 @@
 extern crate core;
 
 use std::collections::HashSet;
-use std::net::{SocketAddr};
+use std::net::SocketAddr;
 
 #[cfg(feature = "fuel-core-lib")]
 use fuel_core::{
@@ -40,18 +40,20 @@ use fuels_signers::fuel_crypto::fuel_types::AssetId;
 use fuels_signers::fuel_crypto::rand;
 use rand::Fill;
 
-// #[cfg(feature = "fuels-signers")]
+#[cfg(not(feature = "fuel-core-lib"))]
 mod node_config_json;
+
 mod script;
+#[cfg(feature = "fuels-signers")]
 mod signers;
 mod wallets_config;
 
-// #[cfg(feature = "fuels-signers")]
+#[cfg(not(feature = "fuel-core-lib"))]
 pub use node_config_json::*;
+
+#[cfg(feature = "fuels-signers")]
 pub use signers::*;
 pub use wallets_config::*;
-
-// pub use node_config_json;
 
 /// Create a vector of `num_asset`*`coins_per_asset` UTXOs and a vector of the unique corresponding
 /// asset IDs. `AssetId`. Each UTXO (=coin) contains `amount_per_coin` amount of a random asset. The
@@ -127,7 +129,7 @@ pub fn setup_single_asset_coins(
 #[cfg(feature = "fuel-core-lib")]
 pub async fn setup_test_client(
     coins: Vec<(UtxoId, Coin)>,
-    node_config: Config,
+    node_config: Option<Config>,
 ) -> (FuelClient, SocketAddr) {
     let coin_configs = coins
         .into_iter()
@@ -153,8 +155,10 @@ pub async fn setup_test_client(
         },
         database_type: DbType::InMemory,
         utxo_validation: true,
-        ..node_config
+        ..node_config.unwrap_or_else(|| Config::local_node())
     };
+
+    println!("{:?}", config);
 
     let srv = FuelService::new_node(config).await.unwrap();
     let client = FuelClient::from(srv.bound_address);
@@ -162,9 +166,10 @@ pub async fn setup_test_client(
     (client, srv.bound_address)
 }
 
+#[cfg(not(feature = "fuel-core-lib"))]
 pub async fn setup_test_client(
     coins: Vec<(UtxoId, Coin)>,
-    _node_config: Config,
+    node_config: Option<Config>,
 ) -> (FuelClient, SocketAddr) {
     let coin_configs: Vec<Value> = coins
         .into_iter()
@@ -178,7 +183,7 @@ pub async fn setup_test_client(
                 amount: coin.amount,
                 asset_id: coin.asset_id,
             })
-                .unwrap()
+            .unwrap()
         })
         .collect();
 
@@ -186,10 +191,14 @@ pub async fn setup_test_client(
 
     let config_with_coins: Value = serde_json::from_str(result.as_str()).unwrap();
 
-    let free_port = pick_unused_port().expect("No ports free");
-    let srv_address = SocketAddr::new("127.0.0.1".parse().unwrap(), free_port);
+    let srv_address = if node_config.is_some() {
+        node_config.unwrap().addr
+    } else {
+        let free_port = pick_unused_port().expect("No ports free");
+        SocketAddr::new("127.0.0.1".parse().unwrap(), free_port)
+    };
 
-    spawn_fuel_service(config_with_coins, free_port);
+    spawn_fuel_service(config_with_coins, srv_address.port());
 
     let client = FuelClient::from(srv_address);
 

@@ -7,8 +7,6 @@ use fuels::prelude::{
     DEFAULT_COIN_AMOUNT,
 };
 
-use fuels::prelude::Config;
-
 use fuels_abigen_macro::abigen;
 use fuels_core::tx::Address;
 use fuels_core::Parameterize;
@@ -1520,7 +1518,7 @@ async fn test_wallet_balance_api() {
         number_of_coins,
         amount_per_coin,
     );
-    let (provider, _) = setup_test_provider(coins.clone(), Config::local_node()).await;
+    let (provider, _) = setup_test_provider(coins.clone(), None).await;
     wallet.set_provider(provider);
     for (_utxo_id, coin) in coins {
         let balance = wallet.get_asset_balance(&coin.asset_id).await;
@@ -1547,7 +1545,7 @@ async fn test_wallet_balance_api() {
     );
     assert_eq!(coins.len() as u64, number_of_assets * coins_per_asset);
     assert_eq!(asset_ids.len() as u64, number_of_assets);
-    let (provider, _) = setup_test_provider(coins.clone(), Config::local_node()).await;
+    let (provider, _) = setup_test_provider(coins.clone(), None).await;
     wallet.set_provider(provider);
     let balances = wallet.get_balances().await.unwrap();
     assert_eq!(balances.len() as u64, number_of_assets);

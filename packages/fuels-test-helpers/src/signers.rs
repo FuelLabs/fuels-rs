@@ -3,7 +3,6 @@ use std::net::SocketAddr;
 #[cfg(feature = "fuel-core-lib")]
 use fuel_core::{model::Coin, service::Config};
 
-#[cfg(feature = "fuel-core-lib")]
 use crate::{DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS};
 
 use fuel_gql_client::fuel_tx::UtxoId;
@@ -26,7 +25,9 @@ pub async fn launch_provider_and_get_single_wallet() -> LocalWallet {
 }
 
 #[cfg(feature = "fuel-core-lib")]
-pub async fn launch_custom_provider_and_get_single_wallet(node_config: Config) -> LocalWallet {
+pub async fn launch_custom_provider_and_get_single_wallet(
+    node_config: Option<Config>,
+) -> LocalWallet {
     let mut wallet = LocalWallet::new_random(None);
 
     let coins: Vec<(UtxoId, Coin)> = setup_single_asset_coins(
@@ -59,7 +60,7 @@ pub async fn launch_provider_and_get_wallets(config: WalletsConfig) -> Vec<Local
         all_coins.extend(coins);
     }
 
-    let (provider, _) = setup_test_provider(all_coins, Config::local_node()).await;
+    let (provider, _) = setup_test_provider(all_coins, None).await;
 
     wallets
         .iter_mut()
@@ -73,7 +74,7 @@ pub async fn launch_provider_and_get_wallets(config: WalletsConfig) -> Vec<Local
 #[cfg(feature = "fuel-core-lib")]
 pub async fn setup_test_provider(
     coins: Vec<(UtxoId, Coin)>,
-    node_config: Config,
+    node_config: Option<Config>,
 ) -> (Provider, SocketAddr) {
     let (client, addr) = setup_test_client(coins, node_config).await;
     (Provider::new(client), addr)
@@ -84,6 +85,25 @@ pub async fn launch_provider_and_get_single_wallet() -> LocalWallet {
     let mut wallets = launch_provider_and_get_wallets(WalletsConfig::new_single(None, None)).await;
 
     wallets.pop().unwrap()
+}
+
+#[cfg(not(feature = "fuel-core-lib"))]
+pub async fn launch_custom_provider_and_get_single_wallet(
+    node_config: Option<Config>,
+) -> LocalWallet {
+    let mut wallet = LocalWallet::new_random(None);
+
+    let coins: Vec<(UtxoId, Coin)> = setup_single_asset_coins(
+        wallet.address(),
+        Default::default(),
+        DEFAULT_NUM_COINS,
+        DEFAULT_COIN_AMOUNT,
+    );
+
+    let (provider, _) = setup_test_provider(coins, node_config).await;
+
+    wallet.set_provider(provider);
+    wallet
 }
 
 #[cfg(not(feature = "fuel-core-lib"))]
@@ -103,7 +123,7 @@ pub async fn launch_provider_and_get_wallets(config: WalletsConfig) -> Vec<Local
         all_coins.extend(coins);
     }
 
-    let (provider, _) = setup_test_provider(all_coins, Config::local_node()).await;
+    let (provider, _) = setup_test_provider(all_coins, None).await;
 
     wallets
         .iter_mut()
@@ -115,7 +135,7 @@ pub async fn launch_provider_and_get_wallets(config: WalletsConfig) -> Vec<Local
 #[cfg(not(feature = "fuel-core-lib"))]
 pub async fn setup_test_provider(
     coins: Vec<(UtxoId, Coin)>,
-    node_config: Config,
+    node_config: Option<Config>,
 ) -> (Provider, SocketAddr) {
     let (client, addr) = setup_test_client(coins, node_config).await;
     (Provider::new(client), addr)

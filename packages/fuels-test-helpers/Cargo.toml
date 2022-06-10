@@ -22,11 +22,12 @@ portpicker = "0.1.1"
 rand = { version = "0.8.4", default-features = false }
 serde = { version = "1.0.137", features = ["derive"], optional = true }
 serde_json = { version = "1.0", features = ["raw_value"], optional = true }
-serde_with = { version = "1.11", default-features = false, optional = true }
+serde_with = { version = "1.11", features = ["serde_json"], optional = true }
 tempfile = { version = "3.0.1", default-features = false, optional = true }
 tokio = { version = "1.15", default-features = false, optional = true }
 
+
 [features]
 default = ["fuels-signers", "fuel-core-bin"]
-fuel-core-bin = ["fuel-core-interfaces", "tempfile", "tokio", "serde_with", "serde_json", "serde", "hex"]
+fuel-core-bin = ["fuel-core-interfaces", "tempfile", "tokio", "hex", "serde_json", "serde_with", "serde"]
 fuel-core-lib = ["fuel-core"]

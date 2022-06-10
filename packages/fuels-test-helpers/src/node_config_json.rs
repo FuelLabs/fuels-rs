@@ -1,6 +1,7 @@
 use std::borrow::Borrow;
 use std::fmt;
 use std::io::Write;
+use std::net::SocketAddr;
 use std::time::Duration;
 
 use fuel_core_interfaces::model::BlockHeight;
@@ -18,16 +19,18 @@ use tempfile::NamedTempFile;
 use tokio::process::Command;
 
 #[derive(Clone, Debug)]
-pub struct Config {}
-
-#[cfg(not(feature = "fuel-core-lib"))]
-impl Config {
-    pub fn local_node() -> Self {
-        Self {
-            //Todo Implement for fuel-core-bin
-        }
-    }
+pub struct Config {
+    pub addr: SocketAddr,
 }
+
+// #[cfg(not(feature = "fuel-core-lib"))]
+// impl Config {
+//     pub fn local_node() -> Self {
+//         Self {
+//
+//         }
+//     }
+// }
 
 #[skip_serializing_none]
 #[serde_as]
@@ -225,7 +228,6 @@ pub fn spawn_fuel_service(config_with_coins: Value, free_port: Port) {
     });
 }
 
-
 pub async fn server_health_check(client: &FuelClient) {
     let mut attempts = 5;
     let mut healthy = client.health().await.unwrap_or(false);
@@ -237,6 +239,6 @@ pub async fn server_health_check(client: &FuelClient) {
     }
 
     if !healthy {
-        panic!("Could not connect to fuel core server")
+        panic!("Could not connect to fuel core server.")
     }
 }
