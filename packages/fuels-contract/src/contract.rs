@@ -420,14 +420,19 @@ impl Contract {
         }
     }
 
-    pub fn load_sway_contract(binary_filepath: &str) -> Result<CompiledContract> {
+    pub fn load_sway_contract(binary_filepath: &str) -> Result<CompiledContract, Error> {
         Self::load_sway_contract_with_salt(binary_filepath, Salt::from([0u8; 32]))
     }
 
     pub fn load_sway_contract_with_salt(
         binary_filepath: &str,
         salt: Salt,
-    ) -> Result<CompiledContract> {
+    ) -> Result<CompiledContract, Error> {
+        let len = binary_filepath.len();
+        let extension = &binary_filepath[len - 4..];
+        if extension != ".bin" {
+            return Err(Error::InvalidData(extension.to_string()));
+        }
         let bin = std::fs::read(binary_filepath)?;
         Ok(CompiledContract { raw: bin, salt })
     }
