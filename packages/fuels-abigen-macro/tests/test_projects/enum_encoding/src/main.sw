@@ -12,13 +12,13 @@ struct Bundle {
     arg_4: u64,
 }
 
-abi MyContract {
-    fn get_bundle_as_constructed_by_sway() -> Bundle;
-    fn is_bundle_correct(arg: Bundle) -> bool;
+abi EnumTesting {
+    fn get_bundle() -> Bundle;
+    fn check_bundle_integrity(arg: Bundle) -> bool;
 }
 
-impl MyContract for Contract {
-    fn get_bundle_as_constructed_by_sway() -> Bundle {
+impl EnumTesting for Contract {
+    fn get_bundle() -> Bundle {
         let arg_1 = EnumThatHasABigAndSmallVariant::Small(12345);
         let arg_2 = 6666;
         let arg_3 = 7777;
@@ -27,12 +27,14 @@ impl MyContract for Contract {
             arg_1, arg_2, arg_3, arg_4
         }
     }
-    fn is_bundle_correct(arg: Bundle) -> bool {
-        match arg.arg_1 {
+    fn check_bundle_integrity(arg: Bundle) -> bool {
+        let arg_1_is_correct = match arg.arg_1 {
             EnumThatHasABigAndSmallVariant::Small(value) => {
-                value == 12345u32 && arg.arg_2 == 6666 && arg.arg_3 == 7777 && arg.arg_4 == 8888
+                value == 12345u32
             },
             _ => false, 
-        }
+        };
+
+        arg_1_is_correct && arg.arg_2 == 6666 && arg.arg_3 == 7777 && arg.arg_4 == 8888
     }
 }
