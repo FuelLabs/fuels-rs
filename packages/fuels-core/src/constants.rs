@@ -12,5 +12,5 @@ pub const WORD_SIZE: usize = core::mem::size_of::<Word>();
 pub const DEFAULT_SPENDABLE_COIN_AMOUNT: u64 = 1_000_000;
 
 // This constant is the bytes representation of the asset ID of
-// Ethereum right now, the "native" token used for gas fees.
-pub const NATIVE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
+// the "base" asset used for gas fees.
+pub const BASE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);

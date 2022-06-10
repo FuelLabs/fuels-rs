@@ -11,7 +11,7 @@ use fuel_gql_client::{
     },
 };
 use fuels_core::{
-    constants::{DEFAULT_SPENDABLE_COIN_AMOUNT, NATIVE_ASSET_ID, WORD_SIZE},
+    constants::{BASE_ASSET_ID, DEFAULT_SPENDABLE_COIN_AMOUNT, WORD_SIZE},
     errors::Error,
     parameters::{CallParameters, TxParameters},
     Detokenize, ParamType, ReturnLocation, Selector, Token,
@@ -451,8 +451,8 @@ impl Contract {
             Output::contract_created(contract_id, FuelContract::default_state_root()),
             // Note that the change will be computed by the node.
             // Here we only have to tell the node who will own the change and its asset ID.
-            // For now we use the NATIVE_ASSET_ID constant
-            Output::change(wallet.address(), 0, NATIVE_ASSET_ID),
+            // For now we use the BASE_ASSET_ID constant
+            Output::change(wallet.address(), 0, BASE_ASSET_ID),
         ];
 
         // The first witness is the bytecode we're deploying.
@@ -530,7 +530,7 @@ where
 
     /// Sets the call parameters for a given contract call.
     /// Note that this is a builder method, i.e. use it as a chain:
-    /// let params = CallParameters { amount: 1, asset_id: NATIVE_ASSET_ID };
+    /// let params = CallParameters { amount: 1, asset_id: BASE_ASSET_ID };
     /// `my_contract_instance.my_method(...).call_params(params).call()`.
     pub fn call_params(mut self, params: CallParameters) -> Self {
         self.call_parameters = params;

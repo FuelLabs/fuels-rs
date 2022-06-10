@@ -157,7 +157,7 @@ Then, in Rust, after setting up and deploying the above contract, you can config
 ```rust,ignore
 let tx_params = TxParameters::new(None, Some(1_000_000), None, None);
 
-// Forward 1_000_000 coin amount of native asset_id
+// Forward 1_000_000 coin amount of base asset_id
 // this is a big number for checking that amount can be a u64
 let call_params = CallParameters::new(Some(1_000_000), None);
 
@@ -318,6 +318,7 @@ match response {
 ```
 
 > **Note:** It is generally considered good practice when you expect the call to succeed, to unwrap the response with `?`, this way:
+>
 > ```rust, ignore
 > let response = contract_instance.my_method(args).call().await?;
 > ```
