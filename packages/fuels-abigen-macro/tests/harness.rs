@@ -43,18 +43,7 @@ async fn compile_bindings_from_contract_file() {
     // `SimpleContract` is the name of the contract
     let contract_instance = SimpleContract::new(null_contract_id(), wallet);
 
-    // Calls the function defined in the JSON ABI.
-    // Note that this is type-safe, if the function does exist
-    // in the JSON ABI, this won't compile!
-    // Currently this prints `0000000003b568d4000000000000002a000000000000000a`
-    // The encoded contract call. Soon it'll be able to perform the
-    // actual call.
     let call_handler = contract_instance.takes_ints_returns_bool(42);
-
-    // Then you'll be able to use `.call()` to actually call the contract with the
-    // specified function:
-    // function.call().unwrap();
-    // Or you might want to just `contract_instance.takes_u32_returns_bool(42 as u32).call()?`
 
     let encoded = format!(
         "{}{}",
@@ -981,7 +970,7 @@ async fn test_provider_launch_and_connect() {
 }
 
 #[tokio::test]
-async fn test_call_handlering_contract() {
+async fn test_contract_calling_contract() {
     // Tests a contract call that calls another contract (FooCaller calls FooContract underneath)
     abigen!(
         FooContract,

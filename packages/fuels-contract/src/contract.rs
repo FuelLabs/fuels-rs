@@ -319,7 +319,7 @@ impl ContractCall {
 
 #[derive(Debug)]
 #[must_use = "contract calls do nothing unless you `call` them"]
-/// Helper that handles submitting a call to a client and formatting the formatting the response
+/// Helper that handles submitting a call to a client and formatting the response
 pub struct ContractCallHandler<D> {
     pub contract_call: ContractCall,
     pub tx_parameters: TxParameters,
