@@ -11,7 +11,7 @@ use fuel_gql_client::{
     },
 };
 use fuels_core::{
-    constants::{DEFAULT_SPENDABLE_COIN_AMOUNT, NATIVE_ASSET_ID, WORD_SIZE},
+    constants::{BASE_ASSET_ID, DEFAULT_SPENDABLE_COIN_AMOUNT, WORD_SIZE},
     errors::Error,
     parameters::{CallParameters, TxParameters},
     Detokenize, ParamType, ReturnLocation, Selector, Token,
@@ -452,7 +452,7 @@ impl Contract {
             // Note that the change will be computed by the node.
             // Here we only have to tell the node who will own the change and its asset ID.
             // For now we use the NATIVE_ASSET_ID constant
-            Output::change(wallet.address(), 0, NATIVE_ASSET_ID),
+            Output::change(wallet.address(), 0, BASE_ASSET_ID),
         ];
 
         // The first witness is the bytecode we're deploying.

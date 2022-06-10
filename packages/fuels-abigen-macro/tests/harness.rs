@@ -8,7 +8,7 @@ use fuels::prelude::{
 use fuels_abigen_macro::abigen;
 use fuels_core::tx::Address;
 use fuels_core::Parameterize;
-use fuels_core::{constants::NATIVE_ASSET_ID, Token};
+use fuels_core::{constants::BASE_ASSET_ID, Token};
 use sha2::{Digest, Sha256};
 use std::str::FromStr;
 /// Note: all the tests and examples below require pre-compiled Sway projects.
@@ -942,7 +942,7 @@ async fn test_provider_launch_and_connect() {
 
     let coins = setup_single_asset_coins(
         wallet.address(),
-        NATIVE_ASSET_ID,
+        BASE_ASSET_ID,
         DEFAULT_NUM_COINS,
         DEFAULT_COIN_AMOUNT,
     );
@@ -1140,7 +1140,7 @@ async fn test_amount_and_asset_forwarding() {
     assert!(call_response.is_some());
 
     assert_eq!(call_response.unwrap().amount().unwrap(), 1_000_000);
-    assert_eq!(call_response.unwrap().asset_id().unwrap(), &NATIVE_ASSET_ID);
+    assert_eq!(call_response.unwrap().asset_id().unwrap(), &BASE_ASSET_ID);
 
     let address = wallet.address();
 
@@ -1522,7 +1522,7 @@ async fn test_wallet_balance_api() {
     let amount_per_coin = 11;
     let coins = setup_single_asset_coins(
         wallet.address(),
-        NATIVE_ASSET_ID,
+        BASE_ASSET_ID,
         number_of_coins,
         amount_per_coin,
     );
@@ -1533,7 +1533,7 @@ async fn test_wallet_balance_api() {
         assert_eq!(balance.unwrap(), number_of_coins * amount_per_coin);
     }
     let balances = wallet.get_balances().await.unwrap();
-    let expected_key = "0x".to_owned() + NATIVE_ASSET_ID.to_string().as_str();
+    let expected_key = "0x".to_owned() + BASE_ASSET_ID.to_string().as_str();
     assert_eq!(balances.len(), 1); // only the native asset
     assert!(balances.contains_key(&expected_key));
     assert_eq!(

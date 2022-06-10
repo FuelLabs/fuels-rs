@@ -10,7 +10,7 @@ use fuel_gql_client::{
     client::FuelClient,
     fuel_tx::{Address, Bytes32, UtxoId},
 };
-use fuels_core::constants::NATIVE_ASSET_ID;
+use fuels_core::constants::BASE_ASSET_ID;
 use fuels_signers::fuel_crypto::fuel_types::AssetId;
 use rand::Fill;
 use std::collections::HashSet;
@@ -49,7 +49,7 @@ pub fn setup_multiple_assets_coins(
     // Add the native asset
     coins.extend(setup_single_asset_coins(
         owner,
-        NATIVE_ASSET_ID,
+        BASE_ASSET_ID,
         coins_per_asset,
         amount_per_coin,
     ));
@@ -175,7 +175,7 @@ mod tests {
         // Check that the wallet has native assets to pay for gas
         assert!(unique_asset_ids
             .iter()
-            .any(|&asset_id| asset_id == NATIVE_ASSET_ID));
+            .any(|&asset_id| asset_id == BASE_ASSET_ID));
         for asset_id in unique_asset_ids {
             let coins_asset_id: Vec<(UtxoId, Coin)> = coins
                 .clone()

@@ -37,7 +37,7 @@ pub trait Signer: std::fmt::Debug + Send + Sync {
 mod tests {
     use fuel_core::service::Config;
     use fuel_crypto::{Message, SecretKey};
-    use fuels_core::constants::NATIVE_ASSET_ID;
+    use fuels_core::constants::BASE_ASSET_ID;
     use fuels_core::{
         parameters::TxParameters,
         tx::{AssetId, Bytes32, Input, Output, UtxoId},
