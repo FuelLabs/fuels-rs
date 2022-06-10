@@ -7,6 +7,7 @@ use fuels::prelude::{
 };
 use fuels_abigen_macro::abigen;
 use fuels_core::tx::Address;
+use fuels_core::tx::Salt;
 use fuels_core::Parameterize;
 use fuels_core::{constants::BASE_ASSET_ID, Token};
 use sha2::{Digest, Sha256};
@@ -683,7 +684,6 @@ async fn type_safe_output_values() {
 }
 
 #[tokio::test]
-#[should_panic]
 async fn panics_on_non_binary_file() {
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `SimpleContract`.
@@ -694,14 +694,25 @@ async fn panics_on_non_binary_file() {
 
     let wallet = launch_provider_and_get_single_wallet().await;
 
+    println!("here");
     // Should panic as we are passing in a JSON instead of BIN
-    Contract::deploy(
+    let deploy_result = Contract::deploy(
         "tests/test_projects/contract_output_test/out/debug/contract_output_test-abi.json",
         &wallet,
         TxParameters::default(),
     )
-    .await
-    .unwrap();
+    .await;
+    assert!(deploy_result.is_err());
+
+    // Should panic as we are passing in a JSON instead of BIN
+    let deploy_result = Contract::deploy_with_salt(
+        "tests/test_projects/contract_output_test/out/debug/contract_output_test-abi.json",
+        &wallet,
+        TxParameters::default(),
+        Salt::from([1u8; 32])
+    )
+    .await;
+    assert!(deploy_result.is_err());
 }
 
 #[tokio::test]
