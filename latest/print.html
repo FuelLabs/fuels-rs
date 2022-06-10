@@ -426,7 +426,7 @@ impl FuelTest for Contract {
 <p>Then, in Rust, after setting up and deploying the above contract, you can configure the amount being sent to the <code>get_msg_amount()</code> method like this:</p>
 <pre><code class="language-rust ignore">let tx_params = TxParameters::new(None, Some(1_000_000), None, None);
 
-// Forward 1_000_000 coin amount of native asset_id
+// Forward 1_000_000 coin amount of base asset_id
 // this is a big number for checking that amount can be a u64
 let call_params = CallParameters::new(Some(1_000_000), None);
 
@@ -670,7 +670,7 @@ enables defining owners (wallet addresses) of genesis coins before a provider is
 </code></pre>
 <h2 id="checking-balances-and-coins"><a class="header" href="#checking-balances-and-coins">Checking balances and coins</a></h2>
 <p>First, one should keep in mind that, with UTXOs, each <em>coin</em> is unique. Each UTXO corresponds to a unique <em>coin</em>, and said <em>coin</em> has a corresponding <em>amount</em> (the same way a dollar bill has either 10$ or 5$ face value). So, when you want to query the balance for a given asset ID, you want to query the sum of the amount in each unspent coin. This is done very easily with a wallet:</p>
-<pre><code class="language-rust ignore">let asset_id : AssetId = NATIVE_ASSET_ID
+<pre><code class="language-rust ignore">let asset_id : AssetId = BASE_ASSET_ID
 let balance : u64 = wallet.get_asset_balance(&amp;asset_id).await;
 </code></pre>
 <p>If you want to query all the balances (i.e. get the balance for each asset IDs in that wallet), then it is as simple as:</p>

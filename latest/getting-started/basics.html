@@ -385,7 +385,7 @@ impl FuelTest for Contract {
 <p>Then, in Rust, after setting up and deploying the above contract, you can configure the amount being sent to the <code>get_msg_amount()</code> method like this:</p>
 <pre><code class="language-rust ignore">let tx_params = TxParameters::new(None, Some(1_000_000), None, None);
 
-// Forward 1_000_000 coin amount of native asset_id
+// Forward 1_000_000 coin amount of base asset_id
 // this is a big number for checking that amount can be a u64
 let call_params = CallParameters::new(Some(1_000_000), None);
 
