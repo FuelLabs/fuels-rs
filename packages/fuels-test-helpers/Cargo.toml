@@ -1,6 +1,6 @@
 [package]
 name = "fuels-test-helpers"
-version = "0.15.1"
+version = "0.15.2"
 authors = ["Fuel Labs <contact@fuel.sh>"]
 edition = "2021"
 homepage = "https://fuel.network/"
@@ -12,13 +12,12 @@ description = "Fuel Rust SDK test helpers."
 fuel-core = { version = "0.8", default-features = false, optional = true }
 fuel-core-interfaces = { version = "0.8", default-features = false, optional = true }
 fuel-gql-client = { version = "0.8", default-features = false }
+fuels-core = { version = "0.15.2", path = "../fuels-core" }
 fuel-types = { version = "0.5", default-features = false, features = ["random"] }
-fuels-contract = { version = "0.15.1", path = "../fuels-contract" }
-fuels-core = { version = "0.15.1", path = "../fuels-core" }
-fuels-signers = { version = "0.15.1", path = "../fuels-signers", optional = true }
-hex = { version = "0.4.3", default-features = false, features = ["std", "serde"], optional = true }
 
-portpicker = "0.1.1"
+hex = { version = "0.4.3", default-features = false, features = ["std", "serde"], optional = true }
+fuels-contract = { version = "0.15.2", path = "../fuels-contract" }
+fuels-signers = { version = "0.15.2", path = "../fuels-signers", optional = true }
 rand = { version = "0.8.4", default-features = false }
 serde = { version = "1.0.137", features = ["derive"], optional = true }
 serde_json = { version = "1.0", features = ["raw_value"], optional = true }
