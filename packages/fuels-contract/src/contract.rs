@@ -6,7 +6,7 @@ use fuel_gql_client::{
     fuel_types::{Address, AssetId, ContractId, Salt},
 };
 use fuels_core::{
-    constants::{BASE_ASSET_ID, DEFAULT_SPENDABLE_COIN_AMOUNT, WORD_SIZE},
+    constants::{BASE_ASSET_ID, DEFAULT_SPENDABLE_COIN_AMOUNT},
     errors::Error,
     parameters::{CallParameters, TxParameters},
     Detokenize, ParamType, ReturnLocation, Selector, Token,
