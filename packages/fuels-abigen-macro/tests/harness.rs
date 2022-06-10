@@ -1118,7 +1118,7 @@ async fn test_amount_and_asset_forwarding() {
     assert_eq!(balance_result.value, 5_000_000);
 
     let tx_params = TxParameters::new(None, Some(1_000_000), None, None);
-    // Forward 1_000_000 coin amount of native asset_id
+    // Forward 1_000_000 coin amount of base asset_id
     // this is a big number for checking that amount can be a u64
     let call_params = CallParameters::new(Some(1_000_000), None);
 
@@ -1534,7 +1534,7 @@ async fn test_wallet_balance_api() {
     }
     let balances = wallet.get_balances().await.unwrap();
     let expected_key = "0x".to_owned() + BASE_ASSET_ID.to_string().as_str();
-    assert_eq!(balances.len(), 1); // only the native asset
+    assert_eq!(balances.len(), 1); // only the base asset
     assert!(balances.contains_key(&expected_key));
     assert_eq!(
         *balances.get(&expected_key).unwrap(),
