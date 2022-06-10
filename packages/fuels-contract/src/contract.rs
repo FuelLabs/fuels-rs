@@ -18,6 +18,7 @@ use fuels_core::{
 };
 use fuels_signers::{provider::Provider, LocalWallet, Signer};
 use std::marker::PhantomData;
+use std::path::Path;
 
 use tracing::debug;
 
@@ -428,10 +429,9 @@ impl Contract {
         binary_filepath: &str,
         salt: Salt,
     ) -> Result<CompiledContract, Error> {
-        let len = binary_filepath.len();
-        let extension = &binary_filepath[len - 4..];
-        if extension != ".bin" {
-            return Err(Error::InvalidData(extension.to_string()));
+        let extension = Path::new(binary_filepath).extension().unwrap();
+        if extension != "bin" {
+            return Err(Error::InvalidData(extension.to_str().unwrap().to_owned()));
         }
         let bin = std::fs::read(binary_filepath)?;
         Ok(CompiledContract { raw: bin, salt })
