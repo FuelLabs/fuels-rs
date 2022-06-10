@@ -1259,6 +1259,17 @@ async fn test_tuples() {
         .unwrap();
 
     assert_eq!(response.value, my_enum_tuple);
+
+    let id = *ContractId::zeroed();
+    let my_b256_u8_tuple: ([u8; 32], u8) = (id, 10);
+
+    let response = instance
+        .tuple_with_b256(my_b256_u8_tuple)
+        .call()
+        .await
+        .unwrap();
+
+    assert_eq!(response.value, my_b256_u8_tuple);
 }
 
 #[tokio::test]
