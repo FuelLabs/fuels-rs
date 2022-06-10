@@ -37,7 +37,7 @@ pub trait Signer: std::fmt::Debug + Send + Sync {
 mod tests {
     use fuel_core::service::Config;
     use fuel_crypto::{Message, SecretKey};
-    use fuels_core::constants::NATIVE_ASSET_ID;
+    use fuels_core::constants::BASE_ASSET_ID;
     use fuels_core::{
         parameters::TxParameters,
         tx::{AssetId, Bytes32, Input, Output, UtxoId},
@@ -134,8 +134,8 @@ mod tests {
         let mut wallet_1 = LocalWallet::new_random(None);
         let mut wallet_2 = LocalWallet::new_random(None);
 
-        let mut coins_1 = setup_single_asset_coins(wallet_1.address, NATIVE_ASSET_ID, 1, 1000000);
-        let coins_2 = setup_single_asset_coins(wallet_2.address, NATIVE_ASSET_ID, 1, 1000000);
+        let mut coins_1 = setup_single_asset_coins(wallet_1.address, BASE_ASSET_ID, 1, 1000000);
+        let coins_2 = setup_single_asset_coins(wallet_2.address, BASE_ASSET_ID, 1, 1000000);
 
         coins_1.extend(coins_2);
 
@@ -213,8 +213,8 @@ mod tests {
         let mut wallet_1 = LocalWallet::new_random(None);
         let mut wallet_2 = LocalWallet::new_random(None);
 
-        let mut coins_1 = setup_single_asset_coins(wallet_1.address, NATIVE_ASSET_ID, 1, 5);
-        let coins_2 = setup_single_asset_coins(wallet_2.address, NATIVE_ASSET_ID, 1, 5);
+        let mut coins_1 = setup_single_asset_coins(wallet_1.address, BASE_ASSET_ID, 1, 5);
+        let coins_2 = setup_single_asset_coins(wallet_2.address, BASE_ASSET_ID, 1, 5);
 
         coins_1.extend(coins_2);
 
