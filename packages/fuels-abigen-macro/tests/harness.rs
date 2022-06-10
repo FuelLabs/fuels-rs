@@ -1601,8 +1601,6 @@ async fn enums_are_correctly_encoded_and_decoded() {
 
     let instance = EnumTesting::new(id.to_string(), wallet);
 
-    let result = instance.get_bundle().call().await.unwrap();
-
     // If we had a regression on the issue of enum encoding width, then we'll
     // probably end up mangling arg_2 and onward which will fail this test.
     let expected = Bundle {
@@ -1611,9 +1609,10 @@ async fn enums_are_correctly_encoded_and_decoded() {
         arg_3: 7777,
         arg_4: 8888,
     };
-    assert_eq!(result.value, expected);
+    let actual = instance.get_bundle().call().await.unwrap().value;
+    assert_eq!(actual, expected);
 
-    let result = instance
+    let sways_judgement = instance
         .check_bundle_integrity(expected)
         .call()
         .await
@@ -1621,7 +1620,7 @@ async fn enums_are_correctly_encoded_and_decoded() {
         .value;
 
     assert!(
-        result,
+        sways_judgement,
         "Sway deems that we've not encoded the bundle correctly. Investigate!"
     );
 }
@@ -1661,7 +1660,7 @@ async fn enum_as_input() {
         "Sway deems that we've not encoded the standard enum correctly. Investigate!"
     );
 
-    let expected = UnitEnum::Second();
+    let expected = UnitEnum::Two();
     let actual = instance.get_unit_enum().call().await.unwrap().value;
     assert_eq!(actual, expected);
 
