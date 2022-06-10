@@ -220,16 +220,16 @@ impl ABIParser {
             ParamType::Struct(struct_params) => {
                 Ok(self.tokenize_struct(trimmed_value, struct_params)?)
             }
-            ParamType::Enum(enum_variants) => {
+            ParamType::Enum(variants) => {
                 let discriminant = self.get_enum_discriminant_from_string(trimmed_value);
                 let value = self.get_enum_value_from_string(trimmed_value);
 
-                let token = self.tokenize(&enum_variants.param_types()[discriminant], value)?;
+                let token = self.tokenize(&variants.param_types()[discriminant], value)?;
 
                 Ok(Token::Enum(Box::new((
                     discriminant as u8,
                     token,
-                    enum_variants.clone(),
+                    variants.clone(),
                 ))))
             }
             ParamType::Tuple(tuple_params) => Ok(self.tokenize_tuple(trimmed_value, tuple_params)?),
