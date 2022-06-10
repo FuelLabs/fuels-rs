@@ -582,11 +582,6 @@ mod tests {
     }
 
     // The encoding follows the ABI specs defined  [here](https://github.com/FuelLabs/fuel-specs/blob/master/specs/protocol/abi.md)
-    // An enum doesn't change its encoding width according to which variant it
-    // is currently holding. It is always as wide as its biggest variant. If we
-    // store a smaller variant in it, it will be left padded until it reaches
-    // the allotted enum size. Besides the value itself, an enum also stores a
-    // discriminant to indicate which variant it is currently holding.
     #[test]
     fn enums_are_sized_to_fit_the_biggest_variant() {
         // Our enum has two variants: B256, and U64. So the enum will set aside
