@@ -683,6 +683,28 @@ async fn type_safe_output_values() {
 }
 
 #[tokio::test]
+#[should_panic]
+async fn panics_on_non_binary_file() {
+    // Generates the bindings from the an ABI definition inline.
+    // The generated bindings can be accessed through `SimpleContract`.
+    abigen!(
+        MyContract,
+        "packages/fuels-abigen-macro/tests/test_projects/contract_output_test/out/debug/contract_output_test-abi.json"
+    );
+
+    let wallet = launch_provider_and_get_single_wallet().await;
+
+    // Should panic as we are passing in a JSON instead of BIN
+    Contract::deploy(
+        "tests/test_projects/contract_output_test/out/debug/contract_output_test-abi.json",
+        &wallet,
+        TxParameters::default(),
+    )
+    .await
+    .unwrap();
+}
+
+#[tokio::test]
 async fn call_with_structs() {
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `MyContract`.
