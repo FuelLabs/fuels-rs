@@ -291,7 +291,7 @@ impl ABIParser {
                             let token = self.tokenize(
                                 params_iter.next().ok_or_else(|| {
                                     Error::InvalidData(
-                                        "struct value is missing a matching parameter type".into(),
+                                        "struct value contains more elements than the parameter types provided".into(),
                                     )
                                 })?,
                                 sub.to_string(),
@@ -316,7 +316,7 @@ impl ABIParser {
                     let token = self.tokenize(
                         params_iter.next().ok_or_else(|| {
                             Error::InvalidData(
-                                "struct value is missing a matching parameter type".into(),
+                                "struct value contains more elements than the parameter types provided".into(),
                             )
                         })?,
                         sub.to_string(),
@@ -482,7 +482,7 @@ impl ABIParser {
                             let token = self.tokenize(
                                 params_iter.next().ok_or_else(|| {
                                     Error::InvalidData(
-                                        "tuple value is missing a matching parameter type".into(),
+                                        "tuple value contains more elements than the parameter types provided".into(),
                                     )
                                 })?,
                                 sub.to_string(),
@@ -507,7 +507,7 @@ impl ABIParser {
                     let token = self.tokenize(
                         params_iter.next().ok_or_else(|| {
                             Error::InvalidData(
-                                "tuple value is missing a matching parameter type".into(),
+                                "tuple value contains more elements than the parameter types provided".into(),
                             )
                         })?,
                         sub.to_string(),
@@ -1973,7 +1973,7 @@ mod tests {
                 .to_string();
 
             assert_eq!(
-                "Invalid data: tuple value is missing a matching parameter type",
+                "Invalid data: tuple value contains more elements than the parameter types provided",
                 error_message
             );
 
@@ -1983,7 +1983,7 @@ mod tests {
                 .to_string();
 
             assert_eq!(
-                "Invalid data: tuple value is missing a matching parameter type",
+                "Invalid data: tuple value contains more elements than the parameter types provided",
                 error_message
             );
         }
@@ -2104,7 +2104,7 @@ mod tests {
                 .to_string();
 
             assert_eq!(
-                "Invalid data: struct value is missing a matching parameter type",
+                "Invalid data: struct value contains more elements than the parameter types provided",
                 error_message
             );
 
@@ -2114,7 +2114,7 @@ mod tests {
                 .to_string();
 
             assert_eq!(
-                "Invalid data: struct value is missing a matching parameter type",
+                "Invalid data: struct value contains more elements than the parameter types provided",
                 error_message
             );
         }
