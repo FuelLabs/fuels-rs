@@ -34,7 +34,6 @@ use fuel_gql_client::{
     fuel_tx::{Address, Bytes32, UtxoId},
 };
 
-use fuels_core::constants::NATIVE_ASSET_ID;
 use fuels_core::constants::BASE_ASSET_ID;
 use fuels_signers::fuel_crypto::fuel_types::AssetId;
 use fuels_signers::fuel_crypto::rand;
