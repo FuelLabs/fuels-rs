@@ -590,7 +590,8 @@ mod tests {
     #[test]
     fn enums_are_sized_to_fit_the_biggest_variant() {
         // Our enum has two variants: B256, and U64. So the enum will set aside
-        // 256b of space or 4 WORDS.
+        // 256b of space or 4 WORDS because that is the space needed to fit the
+        // largest variant(B256).
         let enum_variants = EnumVariants::new(vec![ParamType::B256, ParamType::U64]).unwrap();
         let enum_selector = Box::new((1, Token::U64(42), enum_variants));
 
