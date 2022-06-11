@@ -1,4 +1,3 @@
-use fuel_core::service::Config;
 use fuel_gql_client::fuel_tx::{AssetId, ContractId, Receipt};
 use fuels::prelude::{
     launch_provider_and_get_single_wallet, setup_multiple_assets_coins, setup_single_asset_coins,
