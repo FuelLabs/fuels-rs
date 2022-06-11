@@ -55,7 +55,6 @@ fn get_script(script_binary: Vec<u8>) -> Script {
     Script::new(tx)
 }
 
-
 #[cfg(test)]
 mod tests {
     use crate::script::run_compiled_script;
