@@ -16,8 +16,7 @@ fuels-abigen-macro = { version = "0.15.2", path = "../fuels-abigen-macro" }
 fuels-contract = { version = "0.15.2", path = "../fuels-contract" }
 fuels-core = { version = "0.15.2", path = "../fuels-core" }
 fuels-signers = { version = "0.15.2", path = "../fuels-signers" }
-fuels-test-helpers = { version = "0.15.2", path = "../fuels-test-helpers", optional = true }
+fuels-test-helpers = { version = "0.15.2", path = "../fuels-test-helpers" }
 
 [features]
-default = ["fuels-test-helpers/default"]
-fuel-core-lib = ["fuel-core", 'fuels-test-helpers/fuel-core-lib']
+fuel-core-lib = ["fuels-test-helpers/fuel-core-lib", "fuel-core"]

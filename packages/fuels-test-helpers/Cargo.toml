@@ -10,23 +10,24 @@ description = "Fuel Rust SDK test helpers."
 
 [dependencies]
 fuel-core = { version = "0.8", default-features = false, optional = true }
-fuel-core-interfaces = { version = "0.8", default-features = false, optional = true }
+fuel-core-interfaces = { version = "0.8", default-features = false }
 fuel-gql-client = { version = "0.8", default-features = false }
 fuels-core = { version = "0.15.2", path = "../fuels-core" }
 fuel-types = { version = "0.5", default-features = false, features = ["random"] }
 
-hex = { version = "0.4.3", default-features = false, features = ["std", "serde"], optional = true }
+hex = { version = "0.4.3", default-features = false, features = ["std", "serde"] }
 fuels-contract = { version = "0.15.2", path = "../fuels-contract" }
 fuels-signers = { version = "0.15.2", path = "../fuels-signers", optional = true }
 rand = { version = "0.8.4", default-features = false }
-serde = { version = "1.0.137", features = ["derive"], optional = true }
-serde_json = { version = "1.0", features = ["raw_value"], optional = true }
-serde_with = { version = "1.11", features = ["serde_json"], optional = true }
-tempfile = { version = "3.0.1", default-features = false, optional = true }
-tokio = { version = "1.15", default-features = false, optional = true }
-portpicker = { version = "0.1.1", optional = true}
+serde = { version = "1.0.137", features = ["derive"] }
+serde_json = { version = "1.0", features = ["raw_value"] }
+serde_with = { version = "1.11", features = ["serde_json"] }
+tempfile = { version = "3.0.1", default-features = false }
+tokio = { version = "1.15", default-features = false }
+portpicker = { version = "0.1.1"}
+
+
 
 [features]
-default = ["fuels-signers", "fuel-core-bin"]
-fuel-core-bin = ["fuel-core-interfaces", "tempfile", "tokio", "hex", "serde_json", "serde_with", "serde", "portpicker"]
+default = ["fuels-signers"]
 fuel-core-lib = ["fuel-core"]

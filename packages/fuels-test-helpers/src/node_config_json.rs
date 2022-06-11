@@ -221,7 +221,7 @@ pub fn spawn_fuel_service(config_with_coins: Value, free_port: Port) {
             .arg("in-memory")
             .kill_on_drop(true)
             .spawn()
-            .expect("error: couldn't read fuel-core: No such file or directory. Please check if fuel-core library is installed. \
+            .expect("error: Couldn't read fuel-core: No such file or directory. Please check if fuel-core library is installed. \
         Try this https://fuellabs.github.io/sway/latest/introduction/installation.html");
 
         running_node.wait().await
@@ -239,6 +239,6 @@ pub async fn server_health_check(client: &FuelClient) {
     }
 
     if !healthy {
-        panic!("Could not connect to fuel core server.")
+        panic!("error: Could not connect to fuel core server.")
     }
 }

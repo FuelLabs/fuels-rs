@@ -30,12 +30,6 @@ pub mod core {
     pub use fuels_core::*;
 }
 
-#[cfg(feature = "fuel-core-lib")]
-pub mod node {
-    #[doc(no_inline)]
-    pub use fuel_core::*;
-}
-
 pub mod signers {
     pub use fuels_signers::*;
 }
@@ -63,11 +57,8 @@ pub mod prelude {
     pub use super::core::tx::{Address, AssetId, ContractId};
     pub use super::core::{Detokenize, InvalidOutputType};
     pub use super::core::{Token, Tokenizable};
-    #[cfg(feature = "fuel-core-lib")]
-    pub use super::node::service::Config;
     pub use super::signers::provider::*;
     pub use super::signers::{LocalWallet, Signer};
-    #[cfg(not(feature = "fuel-core-lib"))]
     pub use super::test_helpers::Config;
     pub use super::test_helpers::*;
     pub use super::tx::Salt;

@@ -1,5 +1,4 @@
 //! Testing helpers/utilities for Fuel SDK.
-extern crate core;
 
 use std::collections::HashSet;
 use std::net::SocketAddr;

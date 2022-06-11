@@ -20,21 +20,7 @@ pub async fn run_compiled_script(binary_filepath: &str) -> Result<Vec<Receipt>, 
     let server = FuelService::new_node(Config::local_node()).await.unwrap();
     let client = FuelClient::from(server.bound_address);
 
-    let tx = Transaction::Script {
-        gas_price: 0,
-        gas_limit: 1000000,
-        maturity: 0,
-        byte_price: 0,
-        receipts_root: Default::default(),
-        script: script_binary, // Pass the compiled script into the tx
-        script_data: vec![],
-        inputs: vec![],
-        outputs: vec![],
-        witnesses: vec![vec![].into()],
-        metadata: None,
-    };
-
-    let script = Script::new(tx);
+    let script = get_script(script_binary);
     script.call(&client).await
 }
 
@@ -46,6 +32,12 @@ pub async fn run_compiled_script(binary_filepath: &str) -> Result<Vec<Receipt>, 
     let wallet = launch_provider_and_get_single_wallet().await;
     let client = wallet.get_provider().unwrap().clone().client;
 
+    let script = get_script(script_binary);
+
+    script.call(&client).await
+}
+
+fn get_script(script_binary: Vec<u8>) -> Script {
     let tx = Transaction::Script {
         gas_price: 0,
         gas_limit: 1000000,
@@ -60,9 +52,9 @@ pub async fn run_compiled_script(binary_filepath: &str) -> Result<Vec<Receipt>, 
         metadata: None,
     };
 
-    let script = Script::new(tx);
-    script.call(&client).await
+    Script::new(tx)
 }
+
 
 #[cfg(test)]
 mod tests {
