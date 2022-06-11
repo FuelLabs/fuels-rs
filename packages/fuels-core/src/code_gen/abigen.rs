@@ -116,7 +116,7 @@ impl Abigen {
         } else {
             (
                 quote! {
-                    use fuels::contract::contract::{Contract, ContractCall};
+                    use fuels::contract::contract::{Contract, ContractCallHandler};
                     use fuels::signers::LocalWallet;
                     use fuels::tx::{ContractId, Address};
                     use fuels::core::{Detokenize, EnumSelector, InvalidOutputType, Parameterize, ParamType, Tokenizable, Token};
