@@ -15,13 +15,15 @@ pub struct TxParameters {
 pub struct CallParameters {
     pub amount: u64,
     pub asset_id: AssetId,
+    pub gas_limit: u64,
 }
 
 impl CallParameters {
-    pub fn new(amount: Option<u64>, asset_id: Option<AssetId>) -> Self {
+    pub fn new(amount: Option<u64>, asset_id: Option<AssetId>, gas_limit: Option<u64>) -> Self {
         Self {
             amount: amount.unwrap_or(0),
             asset_id: asset_id.unwrap_or(BASE_ASSET_ID),
+            gas_limit: gas_limit.unwrap_or(DEFAULT_GAS_LIMIT),
         }
     }
 }
@@ -31,6 +33,7 @@ impl Default for CallParameters {
         Self {
             amount: 0,
             asset_id: BASE_ASSET_ID,
+            gas_limit: DEFAULT_GAS_LIMIT,
         }
     }
 }
