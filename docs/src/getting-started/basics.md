@@ -135,6 +135,7 @@ Call parameters are:
 
 1. Amount;
 2. Asset ID;
+3. Gas limit
 
 This is commonly used to forward coins to a contract. These parameters can be configured by creating an instance of [`CallParameters`](https://github.com/FuelLabs/fuels-rs/blob/adf81bd451d7637ce0976363bd7784408430031a/packages/fuels-contract/src/parameters.rs#L15) and passing it to a chain method called `call_params`.
 
@@ -159,7 +160,7 @@ let tx_params = TxParameters::new(None, Some(1_000_000), None, None);
 
 // Forward 1_000_000 coin amount of base asset_id
 // this is a big number for checking that amount can be a u64
-let call_params = CallParameters::new(Some(1_000_000), None);
+let call_params = CallParameters::new(Some(1_000_000), None, None);
 
 let response = contract_instance
     .get_msg_amount()          // Our contract method.
@@ -175,6 +176,26 @@ You can also use `CallParameters::default()` to use the default values:
 ```rust,ignore
 pub const DEFAULT_COIN_AMOUNT: u64 = 1_000_000;
 pub const NATIVE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
+```
+
+The `gas_limit` parameter differs from the one in `TxParameters` in that it defines the limit for the actual contract call
+as opposed to the gas limit for the whole transaction. This means that it is constrained by the transaction limit. If it is set to an amount grater than the available gas, all 
+available gas will be forwarded.
+
+Here we use both the transaction and call `gas_limit` to specify that the contract call transaction may consume up to 1000 gas
+while the actual call may only consume up to 200 gas:
+
+```rust,ignore
+let my_tx_params = TxParameters::new(None, Some(1000), None, None);
+let my_tx_params = CallParameters::new(None, None, Some(200));
+
+let result = contract_instance
+        .initialize_counter(42)  // Our contract method.
+        .tx_params(my_tx_params) // Chain the tx params setting method.
+        .tx_params(my_tx_params) // Chain the call params setting method.
+        .call()                  // Perform the contract call.
+        .await
+        .unwrap();
 ```
 
 ### `CallResponse`: Reading returned values
