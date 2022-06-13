@@ -1,6 +1,6 @@
 use crate::encoding_utils::{compute_encoding_width, compute_encoding_width_of_enum};
 use crate::errors::CodecError;
-use crate::{constants::WORD_SIZE, Bits256, EnumVariants, ParamType, Token};
+use crate::{constants::WORD_SIZE, EnumVariants, ParamType, Token};
 use core::convert::TryInto;
 use core::str;
 use fuel_types::bytes::padded_len;
