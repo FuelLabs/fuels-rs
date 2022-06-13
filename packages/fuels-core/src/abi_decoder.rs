@@ -1,6 +1,6 @@
 use crate::encoding_utils::{compute_encoding_width, compute_encoding_width_of_enum};
 use crate::errors::CodecError;
-use crate::{constants::WORD_SIZE, Bits256, ByteArray, EnumVariants, ParamType, Token};
+use crate::{constants::WORD_SIZE, Bits256, EnumVariants, ParamType, Token};
 use core::convert::TryInto;
 use core::str;
 use fuel_types::bytes::padded_len;
@@ -120,7 +120,7 @@ impl ABIDecoder {
     }
 
     fn decode_b256(data: &[u8]) -> Result<DecodeResult, CodecError> {
-        let b256: Bits256 = peek(data, 32)?.try_into().unwrap();
+        let b256: Bits256 = *peek_fixed::<32>(data)?;
 
         let result = DecodeResult {
             token: Token::B256(b256),
@@ -131,8 +131,7 @@ impl ABIDecoder {
     }
 
     fn decode_byte(data: &[u8]) -> Result<DecodeResult, CodecError> {
-        // Grab last byte of the word and compare it to 0x00
-        let byte = *peek_word(data)?.last().unwrap();
+        let byte = peek_u8(data)?;
 
         let result = DecodeResult {
             token: Token::Byte(byte),
@@ -144,7 +143,7 @@ impl ABIDecoder {
 
     fn decode_bool(data: &[u8]) -> Result<DecodeResult, CodecError> {
         // Grab last byte of the word and compare it to 0x00
-        let b = peek_word(data)?.last().unwrap() != &0u8;
+        let b = peek_u8(data)? != 0u8;
 
         let result = DecodeResult {
             token: Token::Bool(b),
@@ -155,10 +154,8 @@ impl ABIDecoder {
     }
 
     fn decode_u64(data: &[u8]) -> Result<DecodeResult, CodecError> {
-        let slice = peek_word(data)?;
-
         let result = DecodeResult {
-            token: Token::U64(u64::from_be_bytes(slice)),
+            token: Token::U64(peek_u64(data)?),
             bytes_read: 8,
         };
 
@@ -166,34 +163,24 @@ impl ABIDecoder {
     }
 
     fn decode_u32(data: &[u8]) -> Result<DecodeResult, CodecError> {
-        let slice = peek_word(data)?;
-
         Ok(DecodeResult {
-            token: Token::U32(u32::from_be_bytes(slice[4..8].try_into().unwrap())),
+            token: Token::U32(peek_u32(data)?),
             bytes_read: 8,
         })
     }
 
     fn decode_u16(data: &[u8]) -> Result<DecodeResult, CodecError> {
-        let slice = peek_word(data)?;
-
-        let result = DecodeResult {
-            token: Token::U16(u16::from_be_bytes(slice[6..8].try_into().unwrap())),
+        Ok(DecodeResult {
+            token: Token::U16(peek_u16(data)?),
             bytes_read: 8,
-        };
-
-        Ok(result)
+        })
     }
 
     fn decode_u8(data: &[u8]) -> Result<DecodeResult, CodecError> {
-        let slice = peek_word(data)?;
-
-        let result = DecodeResult {
-            token: Token::U8(u8::from_be_bytes(slice[7..8].try_into().unwrap())),
+        Ok(DecodeResult {
+            token: Token::U8(peek_u8(data)?),
             bytes_read: 8,
-        };
-
-        Ok(result)
+        })
     }
 
     fn decode_unit() -> Result<DecodeResult, CodecError> {
@@ -212,7 +199,7 @@ impl ABIDecoder {
     /// * `data`: slice of encoded data on whose beginning we're expecting an encoded enum
     /// * `variants`: all types that this particular enum type could hold
     fn decode_enum(data: &[u8], variants: &EnumVariants) -> Result<DecodeResult, CodecError> {
-        let discriminant = Self::decode_discriminant(data)?;
+        let discriminant = peek_u32(data)?;
 
         let enum_width = compute_encoding_width_of_enum(variants);
 
@@ -228,11 +215,6 @@ impl ABIDecoder {
             token,
             bytes_read: enum_width * WORD_SIZE,
         })
-    }
-
-    fn decode_discriminant(data: &[u8]) -> Result<u32, CodecError> {
-        let discriminant = peek_word(data)?;
-        Ok(u32::from_be_bytes(discriminant[4..8].try_into().unwrap()))
     }
 
     /// Returns a variant from `variants` pointed to by `discriminant`.
@@ -254,6 +236,47 @@ impl ABIDecoder {
     }
 }
 
+fn peek_u64(data: &[u8]) -> Result<u64, CodecError> {
+    let slice = peek_fixed::<WORD_SIZE>(data)?;
+    Ok(u64::from_be_bytes(*slice))
+}
+
+fn peek_u32(data: &[u8]) -> Result<u32, CodecError> {
+    const BYTES: usize = std::mem::size_of::<u32>();
+
+    let slice = peek_fixed::<WORD_SIZE>(data)?;
+    let bytes = slice[WORD_SIZE - BYTES..]
+        .try_into()
+        .expect("peek_u32: You must use a slice containing exactly 4B.");
+    Ok(u32::from_be_bytes(bytes))
+}
+
+fn peek_u16(data: &[u8]) -> Result<u16, CodecError> {
+    const BYTES: usize = std::mem::size_of::<u16>();
+
+    let slice = peek_fixed::<WORD_SIZE>(data)?;
+    let bytes = slice[WORD_SIZE - BYTES..]
+        .try_into()
+        .expect("peek_u16: You must use a slice containing exactly 2B.");
+    Ok(u16::from_be_bytes(bytes))
+}
+
+fn peek_u8(data: &[u8]) -> Result<u8, CodecError> {
+    const BYTES: usize = std::mem::size_of::<u8>();
+
+    let slice = peek_fixed::<WORD_SIZE>(data)?;
+    let bytes = slice[WORD_SIZE - BYTES..]
+        .try_into()
+        .expect("peek_u8: You must use a slice containing exactly 1B.");
+    Ok(u8::from_be_bytes(bytes))
+}
+
+fn peek_fixed<const LEN: usize>(data: &[u8]) -> Result<&[u8; LEN], CodecError> {
+    let slice_w_correct_length = peek(data, LEN)?;
+    Ok(<&[u8; LEN]>::try_from(slice_w_correct_length)
+        .expect("peek(data,len) must return a slice of length `len` or error out"))
+}
+
 fn peek(data: &[u8], len: usize) -> Result<&[u8], CodecError> {
     if len > data.len() {
         Err(CodecError::InvalidData(
@@ -262,14 +285,6 @@ fn peek(data: &[u8], len: usize) -> Result<&[u8], CodecError> {
     } else {
         Ok(&data[..len])
     }
-}
-
-fn peek_word(data: &[u8]) -> Result<ByteArray, CodecError> {
-    peek(data, WORD_SIZE as usize).map(|x| {
-        let mut out: ByteArray = [0u8; 8];
-        out.copy_from_slice(&x[..8]);
-        out
-    })
 }
 
 #[cfg(test)]
