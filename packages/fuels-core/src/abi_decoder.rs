@@ -120,25 +120,17 @@ impl ABIDecoder {
     }
 
     fn decode_b256(data: &[u8]) -> Result<DecodeResult, CodecError> {
-        let b256: Bits256 = *peek_fixed::<32>(data)?;
-
-        let result = DecodeResult {
-            token: Token::B256(b256),
+        Ok(DecodeResult {
+            token: Token::B256(*peek_fixed::<32>(data)?),
             bytes_read: 32,
-        };
-
-        Ok(result)
+        })
     }
 
     fn decode_byte(data: &[u8]) -> Result<DecodeResult, CodecError> {
-        let byte = peek_u8(data)?;
-
-        let result = DecodeResult {
-            token: Token::Byte(byte),
+        Ok(DecodeResult {
+            token: Token::Byte(peek_u8(data)?),
             bytes_read: 8,
-        };
-
-        Ok(result)
+        })
     }
 
     fn decode_bool(data: &[u8]) -> Result<DecodeResult, CodecError> {
@@ -154,12 +146,10 @@ impl ABIDecoder {
     }
 
     fn decode_u64(data: &[u8]) -> Result<DecodeResult, CodecError> {
-        let result = DecodeResult {
+        Ok(DecodeResult {
             token: Token::U64(peek_u64(data)?),
             bytes_read: 8,
-        };
-
-        Ok(result)
+        })
     }
 
     fn decode_u32(data: &[u8]) -> Result<DecodeResult, CodecError> {
@@ -184,11 +174,10 @@ impl ABIDecoder {
     }
 
     fn decode_unit() -> Result<DecodeResult, CodecError> {
-        let result = DecodeResult {
+        Ok(DecodeResult {
             token: Token::Unit,
             bytes_read: 8,
-        };
-        Ok(result)
+        })
     }
 
     /// The encoding follows the ABI specs defined
@@ -257,7 +246,7 @@ fn peek_u16(data: &[u8]) -> Result<u16, CodecError> {
     let slice = peek_fixed::<WORD_SIZE>(data)?;
     let bytes = slice[WORD_SIZE - BYTES..]
         .try_into()
-        .expect("peek_u16: You must use a slice containing exactly 2B.");
+        .expect("peek_u16: You must a slice containing exactly 2B.");
     Ok(u16::from_be_bytes(bytes))
 }
 
