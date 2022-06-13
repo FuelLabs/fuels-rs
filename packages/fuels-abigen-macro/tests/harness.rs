@@ -1629,3 +1629,32 @@ async fn test_transaction_script_workflow() {
     let response = call_handler.get_response(receipts).unwrap();
     assert_eq!(response.value, 42);
 }
+
+#[tokio::test]
+async fn nested_enums() {
+    abigen!(
+        MyContract,
+        "packages/fuels-abigen-macro/tests/test_projects/nested_enums/out/debug/nested_enums-abi.json"
+    );
+
+    let wallet = launch_provider_and_get_single_wallet().await;
+
+    let id = Contract::deploy(
+        "tests/test_projects/nested_enums/out/debug/nested_enums.bin",
+        &wallet,
+        TxParameters::default(),
+    )
+    .await
+    .unwrap();
+
+    let instance = MyContract::new(id.to_string(), wallet.clone());
+    let expected = Option::Some(Identity::Address(Address::zeroed()));
+
+    let result = instance.some_address().call().await.unwrap();
+
+    assert_eq!(result.value, expected);
+
+    let result = instance.none().call().await.unwrap();
+
+    assert_eq!(result.value, Option::None());
+}

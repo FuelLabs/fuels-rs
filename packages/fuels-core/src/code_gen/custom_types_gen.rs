@@ -192,8 +192,34 @@ pub fn expand_custom_enum(name: &str, prop: &Property) -> Result<TokenStream, Er
         match param_type {
             // Case where an enum takes another enum
             ParamType::Enum(_params) => {
-                // TODO: Support nested enums
-                unimplemented!()
+                let inner_enum_name =
+                    &extract_custom_type_name_from_abi_property(component, Some(CustomType::Enum))?
+                        .to_class_case();
+                let inner_enum_ident = ident(inner_enum_name);
+                // Enum variant declaration
+                enum_variants.push(quote! { #variant_name(#inner_enum_ident)});
+
+                // Token creation
+                enum_selector_builder.push(quote! {
+                    #enum_ident::#variant_name(inner_enum) =>
+                    (#dis, inner_enum.into_token())
+                });
+
+                // This is used for creating a new instance with `inner_struct::new_from_tokens()`
+                // based on tokens received
+                let expected_str = format!(
+                    "Failed to run `new_from_tokens` for custom {} enum type",
+                    enum_name
+                );
+                args.push(quote! {
+                    (#dis, token) => {
+                        let variant_content = <#inner_enum_ident>::from_tokens(vec![token]).expect(#expected_str);
+                    #enum_ident::#variant_name(variant_content)
+                        }
+                });
+
+                param_types
+                    .push(quote! { types.push(ParamType::Enum(#inner_enum_ident::param_types())) });
             }
             ParamType::Struct(_params) => {
                 let inner_struct_name = &extract_custom_type_name_from_abi_property(
@@ -507,8 +533,6 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "not implemented")]
-    // Enum cannot contain enum at the moment
     fn test_expand_custom_enum_with_enum() {
         let p = Property {
             name: String::from("unused"),
@@ -523,7 +547,15 @@ mod tests {
                 }]),
             }]),
         };
-        let _ = expand_custom_enum("dragon", &p);
+        let result = expand_custom_enum("dragon", &p).unwrap();
+
+        let expected = TokenStream::from_str(
+            r#"
+            # [derive (Clone , Debug , Eq , PartialEq)] pub enum Dragon { LongIsland (Cocktail) } impl Parameterize for Dragon { fn param_types () -> Vec < ParamType > { let mut types = Vec :: new () ; types . push (ParamType :: Enum (Cocktail :: param_types ())) ; types } fn new_from_tokens (tokens : & [Token]) -> Self { if tokens . is_empty () { panic ! ("Empty tokens array received in `{}::new_from_tokens`" , "Dragon") ; } match tokens [0] . clone () { Token :: Enum (content) => { if let enum_selector = * content { return match enum_selector { (0u8 , token) => { let variant_content = < Cocktail > :: from_tokens (vec ! [token]) . expect ("Failed to run `new_from_tokens` for custom Dragon enum type") ; Dragon :: LongIsland (variant_content) } (_ , _) => panic ! ("Failed to match with discriminant selector {:?}" , enum_selector) } ; } else { panic ! ("The EnumSelector `{:?}` didn't have a match" , content) ; } } , _ => panic ! ("This should contain an `Enum` token, found `{:?}`" , tokens) , } } } impl Tokenizable for Dragon { fn into_token (self) -> Token { let (dis , tok) = match self { Dragon :: LongIsland (inner_enum) => (0u8 , inner_enum . into_token ()) , } ; let selector = (dis , tok) ; Token :: Enum (Box :: new (selector)) } fn from_token (token : Token) -> Result < Self , InvalidOutputType > { if let Token :: Enum (_) = token { Ok (Dragon :: new_from_tokens (& [token])) } else { Err (InvalidOutputType ("Enum token doesn't contain inner tokens." . to_string ())) } } }
+            "#,
+        )
+        .unwrap();
+        assert_eq!(result.to_string(), expected.to_string())
     }
 
     #[test]
