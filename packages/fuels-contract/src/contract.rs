@@ -311,8 +311,7 @@ impl ContractCall {
         if let Some(i) = index {
             receipts.remove(i);
         }
-        let mut decoder = ABIDecoder::new();
-        let decoded_value = decoder.decode(&self.output_params, &encoded_value)?;
+        let decoded_value = ABIDecoder::decode(&self.output_params, &encoded_value)?;
         Ok((decoded_value, receipts))
     }
 }
