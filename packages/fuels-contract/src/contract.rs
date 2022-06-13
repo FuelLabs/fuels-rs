@@ -437,3 +437,40 @@ where
         Ok(CallResponse::new(D::from_tokens(decoded_value)?, receipts))
     }
 }
+
+#[cfg(test)]
+mod test {
+    use fuels_test_helpers::launch_provider_and_get_single_wallet;
+    use super::*;
+
+    #[tokio::test]
+    #[should_panic(expected = "called `Result::unwrap()` on an `Err` value: InvalidData(\"json\")")]
+    async fn deploy_panics_on_non_binary_file() {
+        let wallet = launch_provider_and_get_single_wallet().await;
+
+        // Should panic as we are passing in a JSON instead of BIN
+        Contract::deploy(
+            "tests/test_projects/contract_output_test/out/debug/contract_output_test-abi.json",
+            &wallet,
+            TxParameters::default(),
+        )
+        .await
+        .unwrap();
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "called `Result::unwrap()` on an `Err` value: InvalidData(\"json\")")]
+    async fn deploy_with_salt_panics_on_non_binary_file() {
+        let wallet = launch_provider_and_get_single_wallet().await;
+
+        // Should panic as we are passing in a JSON instead of BIN
+        Contract::deploy_with_salt(
+            "tests/test_projects/contract_output_test/out/debug/contract_output_test-abi.json",
+            &wallet,
+            TxParameters::default(),
+            Salt::default(),
+        )
+        .await
+        .unwrap();
+    }
+}

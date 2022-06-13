@@ -29,5 +29,4 @@ tokio = "1.12"
 tracing = "0.1"
 
 [dev-dependencies]
-fuels = { path = "../fuels" }
-fuels-abigen-macro = { version = "0.15.2", path = "../fuels-abigen-macro" }
+fuels-test-helpers = { path = "../fuels-test-helpers" }
