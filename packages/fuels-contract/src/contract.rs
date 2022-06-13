@@ -432,8 +432,8 @@ where
 
 #[cfg(test)]
 mod test {
-    use fuels_test_helpers::launch_provider_and_get_single_wallet;
     use super::*;
+    use fuels_test_helpers::launch_provider_and_get_single_wallet;
 
     #[tokio::test]
     #[should_panic(expected = "called `Result::unwrap()` on an `Err` value: InvalidData(\"json\")")]
