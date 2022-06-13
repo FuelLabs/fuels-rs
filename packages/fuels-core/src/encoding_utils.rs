@@ -1,7 +1,7 @@
 use crate::constants::ENUM_DISCRIMINANT_WORD_WIDTH;
 use crate::{EnumVariants, ParamType, WORD_SIZE};
 
-// Calculates how many WORDs are needed to encode an enum
+// Calculates how many WORDs are needed to encode an enum.
 pub fn compute_encoding_width_of_enum(variants: &EnumVariants) -> usize {
     variants
         .param_types()
