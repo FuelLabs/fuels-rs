@@ -1621,7 +1621,7 @@ async fn enums_are_correctly_encoded_and_decoded() {
 
     assert!(
         sways_judgement,
-        "Sway deems that we've not encoded the bundle correctly. Investigate!"
+        "The FuelVM deems that we've not encoded the bundle correctly. Investigate!"
     );
 }
 
