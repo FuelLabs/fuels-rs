@@ -246,7 +246,7 @@ fn peek_u16(data: &[u8]) -> Result<u16, CodecError> {
     let slice = peek_fixed::<WORD_SIZE>(data)?;
     let bytes = slice[WORD_SIZE - BYTES..]
         .try_into()
-        .expect("peek_u16: You must a slice containing exactly 2B.");
+        .expect("peek_u16: You must use a slice containing exactly 2B.");
     Ok(u16::from_be_bytes(bytes))
 }
 
