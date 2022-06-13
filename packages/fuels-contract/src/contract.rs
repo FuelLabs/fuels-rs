@@ -106,14 +106,11 @@ impl Contract {
 
         let compute_calldata_offset = Contract::should_compute_call_data_offset(args);
 
-        let maturity = 0;
-
         let contract_call = ContractCall {
             contract_id,
             encoded_selector,
             encoded_args,
             call_parameters,
-            maturity,
             compute_calldata_offset,
             variable_outputs: None,
             external_contracts: None,
@@ -264,7 +261,6 @@ pub struct ContractCall {
     pub encoded_args: Vec<u8>,
     pub encoded_selector: Selector,
     pub call_parameters: CallParameters,
-    pub maturity: u64,
     pub compute_calldata_offset: bool,
     pub variable_outputs: Option<Vec<Output>>,
     pub external_contracts: Option<Vec<ContractId>>,
@@ -400,8 +396,10 @@ where
         self.get_response(receipts)
     }
 
+    /// Returns the script that executes the contract call
     pub async fn get_script(&self) -> Script {
-        Script::from_contract_call(&self.contract_call, &self.tx_parameters, &self.wallet).await
+        Script::from_contract_calls(vec![&self.contract_call], &self.tx_parameters, &self.wallet)
+            .await
     }
 
     /// Call a contract's method on the node, in a state-modifying manner.
@@ -424,6 +422,100 @@ where
         }
 
         let (decoded_value, receipts) = self.contract_call.get_decoded_output(receipts)?;
+        Ok(CallResponse::new(D::from_tokens(decoded_value)?, receipts))
+    }
+}
+
+#[derive(Debug)]
+#[must_use = "contract calls do nothing unless you `call` them"]
+/// Helper that handles bundling multiple calls into a single transaction
+pub struct MultiContractCallHandler<D> {
+    pub contract_calls: Vec<ContractCall>,
+    pub tx_parameters: TxParameters,
+    pub wallet: LocalWallet,
+    pub fuel_client: FuelClient,
+    pub datatype: PhantomData<D>,
+}
+
+impl<D> MultiContractCallHandler<D>
+where
+    D: Detokenize + Debug,
+{
+    pub fn new(call_handlers: Vec<ContractCallHandler<D>>, wallet: LocalWallet) -> Self {
+        let contract_calls = call_handlers
+            .into_iter()
+            .map(|handler| handler.contract_call)
+            .collect();
+
+        Self {
+            contract_calls,
+            tx_parameters: TxParameters::default(),
+            fuel_client: wallet.get_provider().unwrap().client.clone(),
+            wallet,
+            datatype: PhantomData,
+        }
+    }
+
+    /// Adds a contract call to be bundled in the transaction
+    /// Note that this is a builder method
+    pub fn add_call(mut self, call_handler: ContractCallHandler<D>) -> Self {
+        self.contract_calls.push(call_handler.contract_call);
+
+        self
+    }
+
+    /// Sets the transaction parameters for a given transaction.
+    /// Note that this is a builder method
+    pub fn tx_params(mut self, params: TxParameters) -> Self {
+        self.tx_parameters = params;
+        self
+    }
+
+    /// Returns the script that executes the contract calls
+    pub async fn get_script(&self) -> Script {
+        Script::from_contract_calls(
+            self.contract_calls.iter().collect(),
+            &self.tx_parameters,
+            &self.wallet,
+        )
+        .await
+    }
+
+    /// Call contract methods on the node, in a state-modifying manner.
+    pub async fn call(self) -> Result<CallResponse<D>, Error> {
+        Self::call_or_simulate(self, false).await
+    }
+
+    /// Call contract methods on the node, in a simulated manner, meaning the state of the
+    /// blockchain is *not* modified but simulated.
+    /// It is the same as the `call` method because the API is more user-friendly this way.
+    pub async fn simulate(self) -> Result<CallResponse<D>, Error> {
+        Self::call_or_simulate(self, true).await
+    }
+
+    #[tracing::instrument]
+    async fn call_or_simulate(self, simulate: bool) -> Result<CallResponse<D>, Error> {
+        let script = self.get_script().await;
+
+        let receipts = if simulate {
+            script.simulate(&self.fuel_client).await.unwrap()
+        } else {
+            script.call(&self.fuel_client).await.unwrap()
+        };
+        tracing::debug!(target: "receipts", "{:?}", receipts);
+
+        self.get_response(receipts)
+    }
+
+    /// Create a CallResponse from call receipts
+    pub fn get_response(&self, receipts: Vec<Receipt>) -> Result<CallResponse<D>, Error> {
+        let call = &self.contract_calls[0];
+        // If it's an ABI method without a return value, exit early.
+        if call.output_params.is_empty() {
+            return Ok(CallResponse::new(D::from_tokens(vec![])?, receipts));
+        }
+
+        let (decoded_value, receipts) = call.get_decoded_output(receipts)?;
         Ok(CallResponse::new(D::from_tokens(decoded_value)?, receipts))
     }
 }

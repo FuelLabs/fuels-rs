@@ -1,5 +1,6 @@
 use fuel_core::service::Config;
 use fuel_gql_client::fuel_tx::{AssetId, ContractId, Receipt};
+use fuels::contract::contract::MultiContractCallHandler;
 use fuels::prelude::{
     launch_provider_and_get_single_wallet, setup_multiple_assets_coins, setup_single_asset_coins,
     setup_test_provider, CallParameters, Contract, Error, LocalWallet, Provider, Signer,
@@ -11,6 +12,7 @@ use fuels_core::Parameterize;
 use fuels_core::{constants::BASE_ASSET_ID, Token};
 use sha2::{Digest, Sha256};
 use std::str::FromStr;
+
 /// Note: all the tests and examples below require pre-compiled Sway projects.
 /// To compile these projects, run `cargo run --bin build-test-projects`.
 /// It will build all test projects, creating their respective binaries,
@@ -712,6 +714,37 @@ async fn call_with_structs() {
         .unwrap();
 
     assert_eq!(52, result.value);
+}
+
+#[tokio::test]
+async fn multi_call() {
+    // Generates the bindings from the an ABI definition inline.
+    // The generated bindings can be accessed through `MyContract`.
+    abigen!(
+        MyContract,
+        "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+    );
+
+    let wallet = launch_provider_and_get_single_wallet().await;
+
+    let contract_id = Contract::deploy(
+        "tests/test_projects/contract_test/out/debug/contract_test.bin",
+        &wallet,
+        TxParameters::default(),
+    )
+    .await
+    .unwrap();
+    println!("Contract deployed @ {:x}", contract_id);
+
+    let contract_instance = MyContract::new(contract_id.to_string(), wallet.clone());
+
+    let call_1 = contract_instance.initialize_counter(42);
+
+    let call_2 = contract_instance.increment_counter(10);
+
+    let multi = MultiContractCallHandler::new(vec![call_1, call_2], wallet);
+
+    multi.call().await;
 }
 
 #[tokio::test]
