@@ -156,12 +156,8 @@ impl Contract {
         wallet: &LocalWallet,
         params: TxParameters,
     ) -> Result<ContractId, Error> {
-        let compiled_contract = Contract::load_sway_contract(binary_filepath);
-
-        match compiled_contract {
-            Ok(_) => Self::deploy_loaded(&(compiled_contract.unwrap()), wallet, params).await,
-            Err(e) => Err(e),
-        }
+        let compiled_contract = Contract::load_sway_contract(binary_filepath)?;
+        Self::deploy_loaded(&(compiled_contract), wallet, params).await
     }
 
     /// Loads a compiled contract with salt and deploys it to a running node
@@ -171,12 +167,8 @@ impl Contract {
         params: TxParameters,
         salt: Salt,
     ) -> Result<ContractId, Error> {
-        let compiled_contract = Contract::load_sway_contract_with_salt(binary_filepath, salt);
-
-        match compiled_contract {
-            Ok(_) => Self::deploy_loaded(&(compiled_contract.unwrap()), wallet, params).await,
-            Err(e) => Err(e),
-        }
+        let compiled_contract = Contract::load_sway_contract_with_salt(binary_filepath, salt)?;
+        Self::deploy_loaded(&(compiled_contract), wallet, params).await
     }
 
     /// Deploys a compiled contract to a running node
