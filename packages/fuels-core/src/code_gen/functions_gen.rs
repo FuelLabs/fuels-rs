@@ -335,7 +335,6 @@ fn expand_input_param(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::EnumVariants;
     use std::str::FromStr;
 
     #[test]
