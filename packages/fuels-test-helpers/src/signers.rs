@@ -11,7 +11,7 @@ use fuel_gql_client::fuel_tx::UtxoId;
 use fuel_core_interfaces::model::Coin;
 
 #[cfg(not(feature = "fuel-core-lib"))]
-use crate::node_config_json::Config;
+use crate::node::Config;
 
 use fuels_signers::{provider::Provider, LocalWallet, Signer};
 

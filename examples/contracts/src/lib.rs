@@ -9,6 +9,8 @@ async fn instantiate_client() {
     let client = FuelClient::from(server.bound_address);
     assert!(client.health().await.unwrap());
 }
+// ANCHOR_END: instantiate_client
+
 
 #[tokio::test]
 // ANCHOR: deploy_contract

@@ -14,7 +14,7 @@ use fuel_core::{
 pub use fuel_core::service::Config;
 
 #[cfg(not(feature = "fuel-core-lib"))]
-pub use node_config_json::{CoinConfig, Config};
+pub use node::{CoinConfig, Config};
 
 #[cfg(not(feature = "fuel-core-lib"))]
 use fuel_core_interfaces::model::{Coin, CoinStatus};
@@ -26,7 +26,7 @@ use portpicker::pick_unused_port;
 use serde_json::Value;
 
 #[cfg(not(feature = "fuel-core-lib"))]
-use crate::node_config_json::spawn_fuel_service;
+use crate::node::spawn_fuel_service;
 
 use fuel_gql_client::{
     client::FuelClient,
@@ -39,7 +39,7 @@ use fuels_signers::fuel_crypto::rand;
 use rand::Fill;
 
 #[cfg(not(feature = "fuel-core-lib"))]
-mod node_config_json;
+mod node;
 
 mod script;
 #[cfg(feature = "fuels-signers")]
@@ -47,7 +47,7 @@ mod signers;
 mod wallets_config;
 
 #[cfg(not(feature = "fuel-core-lib"))]
-pub use node_config_json::*;
+pub use node::*;
 
 #[cfg(feature = "fuels-signers")]
 pub use signers::*;
@@ -142,7 +142,6 @@ pub async fn setup_test_client(
         })
         .collect();
 
-    let default_config = Config::local_node();
     // Setup node config with genesis coins and utxo_validation enabled
     let config = Config {
         chain_conf: ChainConfig {
@@ -154,7 +153,7 @@ pub async fn setup_test_client(
         },
         database_type: DbType::InMemory,
         utxo_validation: true,
-        ..node_config.unwrap_or(default_config)
+        ..node_config.unwrap_or_else(Config::local_node)
     };
 
     let srv = FuelService::new_node(config).await.unwrap();
