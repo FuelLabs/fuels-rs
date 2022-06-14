@@ -14,6 +14,7 @@ use fuels_core::{
 use fuels_signers::{provider::Provider, LocalWallet, Signer};
 use std::fmt::Debug;
 use std::marker::PhantomData;
+use std::path::Path;
 
 #[derive(Debug, Clone, Default)]
 pub struct CompiledContract {
@@ -155,9 +156,8 @@ impl Contract {
         wallet: &LocalWallet,
         params: TxParameters,
     ) -> Result<ContractId, Error> {
-        let compiled_contract = Contract::load_sway_contract(binary_filepath).unwrap();
-
-        Self::deploy_loaded(&compiled_contract, wallet, params).await
+        let compiled_contract = Contract::load_sway_contract(binary_filepath)?;
+        Self::deploy_loaded(&(compiled_contract), wallet, params).await
     }
 
     /// Loads a compiled contract with salt and deploys it to a running node
@@ -167,10 +167,8 @@ impl Contract {
         params: TxParameters,
         salt: Salt,
     ) -> Result<ContractId, Error> {
-        let compiled_contract =
-            Contract::load_sway_contract_with_salt(binary_filepath, salt).unwrap();
-
-        Self::deploy_loaded(&compiled_contract, wallet, params).await
+        let compiled_contract = Contract::load_sway_contract_with_salt(binary_filepath, salt)?;
+        Self::deploy_loaded(&(compiled_contract), wallet, params).await
     }
 
     /// Deploys a compiled contract to a running node
@@ -191,14 +189,18 @@ impl Contract {
         }
     }
 
-    pub fn load_sway_contract(binary_filepath: &str) -> Result<CompiledContract> {
+    pub fn load_sway_contract(binary_filepath: &str) -> Result<CompiledContract, Error> {
         Self::load_sway_contract_with_salt(binary_filepath, Salt::from([0u8; 32]))
     }
 
     pub fn load_sway_contract_with_salt(
         binary_filepath: &str,
         salt: Salt,
-    ) -> Result<CompiledContract> {
+    ) -> Result<CompiledContract, Error> {
+        let extension = Path::new(binary_filepath).extension().unwrap();
+        if extension != "bin" {
+            return Err(Error::InvalidData(extension.to_str().unwrap().to_owned()));
+        }
         let bin = std::fs::read(binary_filepath)?;
         Ok(CompiledContract { raw: bin, salt })
     }
@@ -424,5 +426,42 @@ where
 
         let (decoded_value, receipts) = self.contract_call.get_decoded_output(receipts)?;
         Ok(CallResponse::new(D::from_tokens(decoded_value)?, receipts))
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use fuels_test_helpers::launch_provider_and_get_single_wallet;
+
+    #[tokio::test]
+    #[should_panic(expected = "called `Result::unwrap()` on an `Err` value: InvalidData(\"json\")")]
+    async fn deploy_panics_on_non_binary_file() {
+        let wallet = launch_provider_and_get_single_wallet().await;
+
+        // Should panic as we are passing in a JSON instead of BIN
+        Contract::deploy(
+            "tests/test_projects/contract_output_test/out/debug/contract_output_test-abi.json",
+            &wallet,
+            TxParameters::default(),
+        )
+        .await
+        .unwrap();
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "called `Result::unwrap()` on an `Err` value: InvalidData(\"json\")")]
+    async fn deploy_with_salt_panics_on_non_binary_file() {
+        let wallet = launch_provider_and_get_single_wallet().await;
+
+        // Should panic as we are passing in a JSON instead of BIN
+        Contract::deploy_with_salt(
+            "tests/test_projects/contract_output_test/out/debug/contract_output_test-abi.json",
+            &wallet,
+            TxParameters::default(),
+            Salt::default(),
+        )
+        .await
+        .unwrap();
     }
 }
