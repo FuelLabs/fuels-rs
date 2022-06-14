@@ -214,21 +214,24 @@ pub fn expand_custom_enum(name: &str, prop: &Property) -> Result<TokenStream, Er
                     (#dis, inner_enum.into_token())
                 });
 
-                // This is used for creating a new instance with `inner_struct::new_from_tokens()`
+                // This is used for creating a new instance with `inner_enum::new_from_tokens()`
                 // based on tokens received
                 let expected_str = format!(
                     "Failed to run `new_from_tokens` for custom {} enum type",
                     enum_name
                 );
                 args.push(quote! {
-                    (#dis, token) => {
+                    (#dis, token, _) => {
                         let variant_content = <#inner_enum_ident>::from_tokens(vec![token]).expect(#expected_str);
                     #enum_ident::#variant_name(variant_content)
                         }
                 });
 
-                param_types
-                    .push(quote! { types.push(ParamType::Enum(#inner_enum_ident::param_types())) });
+                // For more info about this line check the enum inside struct
+                let variants =
+                    quote! {EnumVariants::new(#inner_enum_ident::param_types()).unwrap()};
+
+                param_types.push(quote! { types.push(ParamType::Enum(#variants)) });
             }
             ParamType::Struct(_params) => {
                 let inner_struct_name = &extract_custom_type_name_from_abi_property(
@@ -562,7 +565,7 @@ mod tests {
 
         let expected = TokenStream::from_str(
             r#"
-            # [derive (Clone , Debug , Eq , PartialEq)] pub enum Dragon { LongIsland (Cocktail) } impl Parameterize for Dragon { fn param_types () -> Vec < ParamType > { let mut types = Vec :: new () ; types . push (ParamType :: Enum (Cocktail :: param_types ())) ; types } fn new_from_tokens (tokens : & [Token]) -> Self { if tokens . is_empty () { panic ! ("Empty tokens array received in `{}::new_from_tokens`" , "Dragon") ; } match tokens [0] . clone () { Token :: Enum (content) => { if let enum_selector = * content { return match enum_selector { (0u8 , token) => { let variant_content = < Cocktail > :: from_tokens (vec ! [token]) . expect ("Failed to run `new_from_tokens` for custom Dragon enum type") ; Dragon :: LongIsland (variant_content) } (_ , _) => panic ! ("Failed to match with discriminant selector {:?}" , enum_selector) } ; } else { panic ! ("The EnumSelector `{:?}` didn't have a match" , content) ; } } , _ => panic ! ("This should contain an `Enum` token, found `{:?}`" , tokens) , } } } impl Tokenizable for Dragon { fn into_token (self) -> Token { let (dis , tok) = match self { Dragon :: LongIsland (inner_enum) => (0u8 , inner_enum . into_token ()) , } ; let selector = (dis , tok) ; Token :: Enum (Box :: new (selector)) } fn from_token (token : Token) -> Result < Self , InvalidOutputType > { if let Token :: Enum (_) = token { Ok (Dragon :: new_from_tokens (& [token])) } else { Err (InvalidOutputType ("Enum token doesn't contain inner tokens." . to_string ())) } } }
+            # [derive (Clone , Debug , Eq , PartialEq)] pub enum Dragon { LongIsland (Cocktail) } impl Parameterize for Dragon { fn param_types () -> Vec < ParamType > { let mut types = Vec :: new () ; types . push (ParamType :: Enum (EnumVariants :: new (Cocktail :: param_types ()) . unwrap ())) ; types } fn new_from_tokens (tokens : & [Token]) -> Self { if tokens . is_empty () { panic ! ("Empty tokens array received in `{}::new_from_tokens`" , "Dragon") ; } match tokens [0] . clone () { Token :: Enum (content) => { if let enum_selector = * content { return match enum_selector { (0u8 , token , _) => { let variant_content = < Cocktail > :: from_tokens (vec ! [token]) . expect ("Failed to run `new_from_tokens` for custom Dragon enum type") ; Dragon :: LongIsland (variant_content) } (_ , _ , _) => panic ! ("Failed to match with discriminant selector {:?}" , enum_selector) } ; } else { panic ! ("The EnumSelector `{:?}` didn't have a match" , content) ; } } , _ => panic ! ("This should contain an `Enum` token, found `{:?}`" , tokens) , } } } impl Tokenizable for Dragon { fn into_token (self) -> Token { let (dis , tok) = match self { Dragon :: LongIsland (inner_enum) => (0u8 , inner_enum . into_token ()) , } ; let variants = EnumVariants :: new (Self :: param_types ()) . unwrap () ; let selector = (dis , tok , variants) ; Token :: Enum (Box :: new (selector)) } fn from_token (token : Token) -> Result < Self , InvalidOutputType > { if let Token :: Enum (_) = token { Ok (Dragon :: new_from_tokens (& [token])) } else { Err (InvalidOutputType ("Enum token doesn't contain inner tokens." . to_string ())) } } }
             "#,
         )
         .unwrap();
