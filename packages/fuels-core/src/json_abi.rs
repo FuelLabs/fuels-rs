@@ -685,7 +685,11 @@ impl ABIParser {
                 .filter(|c| !c.is_whitespace())
                 .collect();
 
+            // Check if the parameter is an array.
             if param_str_no_whitespace.starts_with('[') && param_str_no_whitespace.ends_with(']') {
+                // The representation of an array in a function selector should be `a[<type>;<length>]`.
+                // Because this is coming in as `[<type>;<length>]` (not prefixed with an 'a'), here
+                // we must prefix it with an 'a' so the function selector will be properly encoded.
                 let array = format!("{}{}", "a", param_str_no_whitespace);
                 result.push_str(array.as_str());
             } else {
