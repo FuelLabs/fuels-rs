@@ -1061,7 +1061,7 @@ mod tests {
             .encode_with_function_selector(json_abi, function_name, &values)
             .unwrap();
 
-        let expected_encode = "000000005898d3a4000000000000000100000000000000020000000000000003";
+        let expected_encode = "00000000101cbeb5000000000000000100000000000000020000000000000003";
         assert_eq!(encoded, expected_encode);
 
         let return_value = [
@@ -1167,7 +1167,7 @@ mod tests {
             .unwrap();
 
         let expected_encode =
-            "000000007456abeb0000000000000001000000000000000200000000000000030000000000000004";
+            "00000000e6a030f00000000000000001000000000000000200000000000000030000000000000004";
         assert_eq!(encoded, expected_encode);
 
         let return_value = [
@@ -1366,7 +1366,7 @@ mod tests {
             .unwrap();
 
         let expected_encode =
-            "000000001c6b7bb9000000000000000a000000000000000100000000000000010000000000000002";
+            "00000000b1fbe7e3000000000000000a000000000000000100000000000000010000000000000002";
         assert_eq!(encoded, expected_encode);
 
         let json_abi = r#"
@@ -1412,7 +1412,7 @@ mod tests {
             .unwrap();
 
         let expected_encode =
-            "00000000f40ff3b5000000000000000100000000000000010000000000000002000000000000000a";
+            "00000000e748f310000000000000000100000000000000010000000000000002000000000000000a";
         assert_eq!(encoded, expected_encode);
     }
 
