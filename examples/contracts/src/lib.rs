@@ -11,7 +11,6 @@ async fn instantiate_client() {
 }
 // ANCHOR_END: instantiate_client
 
-
 #[tokio::test]
 // ANCHOR: deploy_contract
 async fn deploy_contract() {
