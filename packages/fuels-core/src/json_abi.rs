@@ -1,5 +1,5 @@
-use crate::Token;
 use crate::{abi_decoder::ABIDecoder, abi_encoder::ABIEncoder, errors::Error, ParamType};
+use crate::{EnumVariants, Token};
 use fuels_types::{JsonABI, Property};
 use hex::FromHex;
 use itertools::Itertools;
@@ -211,6 +211,13 @@ impl ABIParser {
             ParamType::Bool => Ok(Token::Bool(trimmed_value.parse::<bool>()?)),
             ParamType::Byte => Ok(Token::Byte(trimmed_value.parse::<u8>()?)),
             ParamType::B256 => {
+                const B256_HEX_ENC_LENGTH: usize = 64;
+                if trimmed_value.len() != B256_HEX_ENC_LENGTH {
+                    return Err(Error::InvalidData(format!(
+                        "the hex encoding of the b256 must have {} characters",
+                        B256_HEX_ENC_LENGTH
+                    )));
+                }
                 let v = Vec::from_hex(trimmed_value)?;
                 let s: [u8; 32] = v.as_slice().try_into().unwrap();
                 Ok(Token::B256(s))
@@ -220,13 +227,17 @@ impl ABIParser {
             ParamType::Struct(struct_params) => {
                 Ok(self.tokenize_struct(trimmed_value, struct_params)?)
             }
-            ParamType::Enum(s) => {
+            ParamType::Enum(variants) => {
                 let discriminant = self.get_enum_discriminant_from_string(trimmed_value);
                 let value = self.get_enum_value_from_string(trimmed_value);
 
-                let token = self.tokenize(&s[discriminant], value)?;
+                let token = self.tokenize(&variants.param_types()[discriminant], value)?;
 
-                Ok(Token::Enum(Box::new((discriminant as u8, token))))
+                Ok(Token::Enum(Box::new((
+                    discriminant as u8,
+                    token,
+                    variants.clone(),
+                ))))
             }
             ParamType::Tuple(tuple_params) => Ok(self.tokenize_tuple(trimmed_value, tuple_params)?),
         }
@@ -284,7 +295,7 @@ impl ABIParser {
                             let token = self.tokenize(
                                 params_iter.next().ok_or_else(|| {
                                     Error::InvalidData(
-                                        "last struct value is missing a matching param".into(),
+                                        "struct value contains more elements than the parameter types provided".into(),
                                     )
                                 })?,
                                 sub.to_string(),
@@ -308,7 +319,9 @@ impl ABIParser {
 
                     let token = self.tokenize(
                         params_iter.next().ok_or_else(|| {
-                            Error::InvalidData("struct value is missing a matching param".into())
+                            Error::InvalidData(
+                                "struct value contains more elements than the parameter types provided".into(),
+                            )
                         })?,
                         sub.to_string(),
                     )?;
@@ -473,7 +486,7 @@ impl ABIParser {
                             let token = self.tokenize(
                                 params_iter.next().ok_or_else(|| {
                                     Error::InvalidData(
-                                        "last tuple value is missing a matching param".into(),
+                                        "tuple value contains more elements than the parameter types provided".into(),
                                     )
                                 })?,
                                 sub.to_string(),
@@ -497,7 +510,9 @@ impl ABIParser {
 
                     let token = self.tokenize(
                         params_iter.next().ok_or_else(|| {
-                            Error::InvalidData("tuple value is missing a matching param".into())
+                            Error::InvalidData(
+                                "tuple value contains more elements than the parameter types provided".into(),
+                            )
                         })?,
                         sub.to_string(),
                     )?;
@@ -548,11 +563,7 @@ impl ABIParser {
             entry.unwrap().outputs.iter().map(parse_param).collect();
 
         match params_result {
-            Ok(params) => {
-                let mut decoder = ABIDecoder::new();
-
-                Ok(decoder.decode(&params, value)?)
-            }
+            Ok(params) => Ok(ABIDecoder::decode(&params, value)?),
             Err(e) => Err(e),
         }
     }
@@ -560,8 +571,7 @@ impl ABIParser {
     /// Similar to decode, but it decodes only an array types and the encoded data
     /// without having to reference to a JSON specification of the ABI.
     pub fn decode_params(&self, params: &[ParamType], data: &[u8]) -> Result<Vec<Token>, Error> {
-        let mut decoder = ABIDecoder::new();
-        Ok(decoder.decode(params, data)?)
+        Ok(ABIDecoder::decode(params, data)?)
     }
 
     fn is_array(&self, ele: &str) -> bool {
@@ -774,7 +784,7 @@ pub fn parse_custom_type_param(param: &Property) -> Result<ParamType, Error> {
                 return Ok(ParamType::Struct(params));
             }
             if param.is_enum_type() {
-                return Ok(ParamType::Enum(params));
+                return Ok(ParamType::Enum(EnumVariants::new(params)?));
             }
             Err(Error::InvalidType(param.type_field.clone()))
         }
@@ -855,9 +865,11 @@ mod tests {
         };
         let enum_result = parse_custom_type_param(&some_enum).unwrap();
         // Underlying value comparison
-        let expected = ParamType::Enum(vec![ParamType::U64, ParamType::Bool]);
+        let expected =
+            ParamType::Enum(EnumVariants::new(vec![ParamType::U64, ParamType::Bool]).unwrap());
         assert_eq!(enum_result, expected);
-        let expected_string = "Enum(vec![ParamType::U64,ParamType::Bool])";
+        let expected_string =
+            "Enum(EnumVariants::new(vec![ParamType::U64,ParamType::Bool]).unwrap())";
         // String format comparison
         assert_eq!(enum_result.to_string(), expected_string);
     }
@@ -1520,8 +1532,9 @@ mod tests {
             .encode_with_function_selector(json_abi, function_name, &values)
             .unwrap();
 
+        println!("Function: {}", hex::encode(abi.fn_selector.unwrap()));
         let expected_encode =
-            "00000000ebb8d011000000000000002a00000000000000014a6f686e000000000000000000000001";
+            "00000000ebb8d011000000000000002a00000000000000014a6f686e0000000000000000000000010000000000000000";
         assert_eq!(encoded, expected_encode);
     }
 
@@ -1831,7 +1844,7 @@ mod tests {
                 "type": "function"
             }
         ]
-                "#;
+        "#;
 
         let s = "(true, 42)".to_string();
 
@@ -1847,5 +1860,479 @@ mod tests {
 
         let expected_encode = "00000000e33a11ce0000000000000001000000000000002a";
         assert_eq!(encoded, expected_encode);
+    }
+
+    #[test]
+    fn tokenize_uint_types_expected_error() {
+        let abi = ABIParser::new();
+
+        // We test only on U8 as it is the same error on all other unsigned int types
+        let error_message = abi
+            .tokenize(&ParamType::U8, "2,".to_string())
+            .unwrap_err()
+            .to_string();
+
+        assert_eq!(
+            "Parse integer error: invalid digit found in string",
+            error_message
+        );
+    }
+
+    #[test]
+    fn tokenize_bool_expected_error() {
+        let abi = ABIParser::new();
+
+        let error_message = abi
+            .tokenize(&ParamType::Bool, "True".to_string())
+            .unwrap_err()
+            .to_string();
+
+        assert_eq!(
+            "Parse boolean error: provided string was not `true` or `false`",
+            error_message
+        );
+    }
+
+    #[test]
+    fn tokenize_b256_invalid_length_expected_error() {
+        let abi = ABIParser::new();
+
+        let value = "d57a9c46dfcc7f18207013e65b44e4cb4e2c2298f4ac457ba8f82743f31e90b".to_string();
+        let error_message = abi
+            .tokenize(&ParamType::B256, value)
+            .unwrap_err()
+            .to_string();
+
+        assert_eq!(
+            "Invalid data: the hex encoding of the b256 must have 64 characters",
+            error_message
+        );
+    }
+
+    #[test]
+    fn tokenize_b256_invalid_character_expected_error() {
+        let abi = ABIParser::new();
+
+        let value = "Hd57a9c46dfcc7f18207013e65b44e4cb4e2c2298f4ac457ba8f82743f31e90b".to_string();
+        let error_message = abi
+            .tokenize(&ParamType::B256, value)
+            .unwrap_err()
+            .to_string();
+
+        assert!(error_message.contains("Parse hex error: Invalid character"));
+    }
+
+    #[test]
+    fn tokenize_tuple_invalid_start_end_bracket_expected_error() {
+        let abi = ABIParser::new();
+        let params = Property {
+            name: "input".to_string(),
+            type_field: "(u64, [u64; 3])".to_string(),
+            components: Some(vec![
+                Property {
+                    name: "__tuple_element".to_string(),
+                    type_field: "u64".to_string(),
+                    components: None,
+                },
+                Property {
+                    name: "__tuple_element".to_string(),
+                    type_field: "[u64; 3]".to_string(),
+                    components: None,
+                },
+            ]),
+        };
+
+        if let ParamType::Tuple(tuple_params) = parse_tuple_param(&params).unwrap() {
+            let error_message = abi
+                .tokenize_tuple("0, [0,0,0])", &tuple_params)
+                .unwrap_err()
+                .to_string();
+
+            assert_eq!(
+                "Invalid data: tuple value string must start and end with round brackets",
+                error_message
+            );
+        }
+    }
+
+    #[test]
+    fn tokenize_tuple_excess_opening_bracket_expected_error() {
+        let abi = ABIParser::new();
+        let params = Property {
+            name: "input".to_string(),
+            type_field: "(u64, [u64; 3])".to_string(),
+            components: Some(vec![
+                Property {
+                    name: "__tuple_element".to_string(),
+                    type_field: "u64".to_string(),
+                    components: None,
+                },
+                Property {
+                    name: "__tuple_element".to_string(),
+                    type_field: "[u64; 3]".to_string(),
+                    components: None,
+                },
+            ]),
+        };
+
+        if let ParamType::Tuple(tuple_params) = parse_tuple_param(&params).unwrap() {
+            let error_message = abi
+                .tokenize_tuple("((0, [0,0,0])", &tuple_params)
+                .unwrap_err()
+                .to_string();
+
+            assert_eq!(
+                "Invalid data: tuple value string has excess opening brackets",
+                error_message
+            );
+        }
+    }
+
+    #[test]
+    fn tokenize_tuple_excess_closing_bracket_expected_error() {
+        let abi = ABIParser::new();
+        let params = Property {
+            name: "input".to_string(),
+            type_field: "(u64, [u64; 3])".to_string(),
+            components: Some(vec![
+                Property {
+                    name: "__tuple_element".to_string(),
+                    type_field: "u64".to_string(),
+                    components: None,
+                },
+                Property {
+                    name: "__tuple_element".to_string(),
+                    type_field: "[u64; 3]".to_string(),
+                    components: None,
+                },
+            ]),
+        };
+
+        if let ParamType::Tuple(tuple_params) = parse_tuple_param(&params).unwrap() {
+            let error_message = abi
+                .tokenize_tuple("(0, [0,0,0]))", &tuple_params)
+                .unwrap_err()
+                .to_string();
+
+            assert_eq!(
+                "Invalid data: tuple value string has excess closing brackets",
+                error_message
+            );
+        }
+    }
+
+    #[test]
+    fn tokenize_tuple_excess_quotes_expected_error() {
+        let abi = ABIParser::new();
+        let params = Property {
+            name: "input".to_string(),
+            type_field: "(u64, [u64; 3])".to_string(),
+            components: Some(vec![
+                Property {
+                    name: "__tuple_element".to_string(),
+                    type_field: "u64".to_string(),
+                    components: None,
+                },
+                Property {
+                    name: "__tuple_element".to_string(),
+                    type_field: "[u64; 3]".to_string(),
+                    components: None,
+                },
+            ]),
+        };
+
+        if let ParamType::Tuple(tuple_params) = parse_tuple_param(&params).unwrap() {
+            let error_message = abi
+                .tokenize_tuple("(0, \"[0,0,0])", &tuple_params)
+                .unwrap_err()
+                .to_string();
+
+            assert_eq!(
+                "Invalid data: tuple value string has excess quotes",
+                error_message
+            );
+        }
+    }
+
+    #[test]
+    fn tokenize_tuple_excess_value_elements_expected_error() {
+        let abi = ABIParser::new();
+        let params = Property {
+            name: "input".to_string(),
+            type_field: "(u64, [u64; 3])".to_string(),
+            components: Some(vec![
+                Property {
+                    name: "__tuple_element".to_string(),
+                    type_field: "u64".to_string(),
+                    components: None,
+                },
+                Property {
+                    name: "__tuple_element".to_string(),
+                    type_field: "[u64; 3]".to_string(),
+                    components: None,
+                },
+            ]),
+        };
+
+        if let ParamType::Tuple(tuple_params) = parse_tuple_param(&params).unwrap() {
+            let error_message = abi
+                .tokenize_tuple("(0, [0,0,0], 0, 0)", &tuple_params)
+                .unwrap_err()
+                .to_string();
+
+            assert_eq!(
+                "Invalid data: tuple value contains more elements than the parameter types provided",
+                error_message
+            );
+
+            let error_message = abi
+                .tokenize_tuple("(0, [0,0,0], 0)", &tuple_params)
+                .unwrap_err()
+                .to_string();
+
+            assert_eq!(
+                "Invalid data: tuple value contains more elements than the parameter types provided",
+                error_message
+            );
+        }
+    }
+
+    #[test]
+    fn tokenize_array_invalid_start_end_bracket_expected_error() {
+        let param = ParamType::U16;
+        let abi = ABIParser::new();
+
+        let error_message = abi
+            .tokenize_array("1,2],[3],4]", &param)
+            .unwrap_err()
+            .to_string();
+
+        assert_eq!(
+            "Invalid data: array value string must start and end with square brackets",
+            error_message
+        );
+    }
+
+    #[test]
+    fn tokenize_array_excess_opening_bracket_expected_error() {
+        let param = ParamType::U16;
+        let abi = ABIParser::new();
+
+        let error_message = abi
+            .tokenize_array("[[[1,2],[3],4]", &param)
+            .unwrap_err()
+            .to_string();
+
+        assert_eq!(
+            "Invalid data: array value string has excess opening brackets",
+            error_message
+        );
+    }
+
+    #[test]
+    fn tokenize_array_excess_closing_bracket_expected_error() {
+        let param = ParamType::U16;
+        let abi = ABIParser::new();
+
+        let error_message = abi
+            .tokenize_array("[[1,2],[3],4]]", &param)
+            .unwrap_err()
+            .to_string();
+
+        assert_eq!(
+            "Invalid data: array value string has excess closing brackets",
+            error_message
+        );
+    }
+
+    #[test]
+    fn tokenize_array_excess_quotes_expected_error() {
+        let param = ParamType::U16;
+        let abi = ABIParser::new();
+
+        let error_message = abi
+            .tokenize_array("[[1,\"2],[3],4]]", &param)
+            .unwrap_err()
+            .to_string();
+
+        assert_eq!(
+            "Invalid data: array value string has excess quotes",
+            error_message
+        );
+    }
+
+    #[test]
+    fn tokenize_struct_invalid_start_end_bracket_expected_error() {
+        let abi = ABIParser::new();
+        let params = Property {
+            name: "input".to_string(),
+            type_field: "struct MyStruct".to_string(),
+            components: Some(vec![
+                Property {
+                    name: "num".to_string(),
+                    type_field: "u64".to_string(),
+                    components: None,
+                },
+                Property {
+                    name: "arr".to_string(),
+                    type_field: "[u64; 3]".to_string(),
+                    components: None,
+                },
+            ]),
+        };
+
+        if let ParamType::Struct(struct_params) = parse_custom_type_param(&params).unwrap() {
+            let error_message = abi
+                .tokenize_struct("0, [0,0,0])", &struct_params)
+                .unwrap_err()
+                .to_string();
+
+            assert_eq!(
+                "Invalid data: struct value string must start and end with round brackets",
+                error_message
+            );
+        }
+    }
+
+    #[test]
+    fn tokenize_struct_excess_opening_bracket_expected_error() {
+        let abi = ABIParser::new();
+        let params = Property {
+            name: "input".to_string(),
+            type_field: "struct MyStruct".to_string(),
+            components: Some(vec![
+                Property {
+                    name: "num".to_string(),
+                    type_field: "u64".to_string(),
+                    components: None,
+                },
+                Property {
+                    name: "arr".to_string(),
+                    type_field: "[u64; 3]".to_string(),
+                    components: None,
+                },
+            ]),
+        };
+
+        if let ParamType::Struct(struct_params) = parse_custom_type_param(&params).unwrap() {
+            let error_message = abi
+                .tokenize_struct("((0, [0,0,0])", &struct_params)
+                .unwrap_err()
+                .to_string();
+
+            assert_eq!(
+                "Invalid data: struct value string has excess opening brackets",
+                error_message
+            );
+        }
+    }
+
+    #[test]
+    fn tokenize_struct_excess_closing_bracket_expected_error() {
+        let abi = ABIParser::new();
+        let params = Property {
+            name: "input".to_string(),
+            type_field: "struct MyStruct".to_string(),
+            components: Some(vec![
+                Property {
+                    name: "num".to_string(),
+                    type_field: "u64".to_string(),
+                    components: None,
+                },
+                Property {
+                    name: "arr".to_string(),
+                    type_field: "[u64; 3]".to_string(),
+                    components: None,
+                },
+            ]),
+        };
+
+        if let ParamType::Struct(struct_params) = parse_custom_type_param(&params).unwrap() {
+            let error_message = abi
+                .tokenize_struct("(0, [0,0,0]))", &struct_params)
+                .unwrap_err()
+                .to_string();
+
+            assert_eq!(
+                "Invalid data: struct value string has excess closing brackets",
+                error_message
+            );
+        }
+    }
+
+    #[test]
+    fn tokenize_struct_excess_quotes_expected_error() {
+        let abi = ABIParser::new();
+        let params = Property {
+            name: "input".to_string(),
+            type_field: "struct MyStruct".to_string(),
+            components: Some(vec![
+                Property {
+                    name: "num".to_string(),
+                    type_field: "u64".to_string(),
+                    components: None,
+                },
+                Property {
+                    name: "arr".to_string(),
+                    type_field: "[u64; 3]".to_string(),
+                    components: None,
+                },
+            ]),
+        };
+
+        if let ParamType::Struct(struct_params) = parse_custom_type_param(&params).unwrap() {
+            let error_message = abi
+                .tokenize_struct("(0, \"[0,0,0])", &struct_params)
+                .unwrap_err()
+                .to_string();
+
+            assert_eq!(
+                "Invalid data: struct value string has excess quotes",
+                error_message
+            );
+        }
+    }
+
+    #[test]
+    fn tokenize_struct_excess_value_elements_expected_error() {
+        let abi = ABIParser::new();
+        let params = Property {
+            name: "input".to_string(),
+            type_field: "struct MyStruct".to_string(),
+            components: Some(vec![
+                Property {
+                    name: "num".to_string(),
+                    type_field: "u64".to_string(),
+                    components: None,
+                },
+                Property {
+                    name: "arr".to_string(),
+                    type_field: "[u64; 3]".to_string(),
+                    components: None,
+                },
+            ]),
+        };
+
+        if let ParamType::Struct(struct_params) = parse_custom_type_param(&params).unwrap() {
+            let error_message = abi
+                .tokenize_struct("(0, [0,0,0], 0, 0)", &struct_params)
+                .unwrap_err()
+                .to_string();
+
+            assert_eq!(
+                "Invalid data: struct value contains more elements than the parameter types provided",
+                error_message
+            );
+
+            let error_message = abi
+                .tokenize_struct("(0, [0,0,0], 0)", &struct_params)
+                .unwrap_err()
+                .to_string();
+
+            assert_eq!(
+                "Invalid data: struct value contains more elements than the parameter types provided",
+                error_message
+            );
+        }
     }
 }
