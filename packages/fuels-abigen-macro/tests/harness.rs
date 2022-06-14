@@ -137,7 +137,7 @@ async fn compile_bindings_array_input() {
     );
 
     assert_eq!(
-        "000000005898d3a40000000000000001000000000000000200000000000000030000000000000004",
+        "00000000101cbeb50000000000000001000000000000000200000000000000030000000000000004",
         encoded
     );
 }
@@ -182,7 +182,7 @@ async fn compile_bindings_bool_array_input() {
     );
 
     assert_eq!(
-        "000000006fc82450000000000000000100000000000000000000000000000001",
+        "000000000c228226000000000000000100000000000000000000000000000001",
         encoded
     );
 }
@@ -374,7 +374,7 @@ async fn compile_bindings_struct_input() {
     );
 
     assert_eq!(
-        "00000000ef5aac44000000000000000a00000000000000026675656c00000000",
+        "000000008d4ab9b0000000000000000a00000000000000026675656c00000000",
         encoded
     );
 }
@@ -1259,6 +1259,37 @@ async fn test_tuples() {
         .unwrap();
 
     assert_eq!(response.value, my_b256_u8_tuple);
+}
+
+#[tokio::test]
+async fn test_array() {
+    abigen!(
+        MyContract,
+        "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+    );
+
+    let wallet = launch_provider_and_get_single_wallet().await;
+
+    let contract_id = Contract::deploy(
+        "tests/test_projects/contract_test/out/debug/contract_test.bin",
+        &wallet,
+        TxParameters::default(),
+    )
+    .await
+    .unwrap();
+
+    println!("Contract deployed @ {:x}", contract_id);
+    let contract_instance = MyContract::new(contract_id.to_string(), wallet);
+
+    assert_eq!(
+        contract_instance
+            .get_array([42; 2].to_vec())
+            .call()
+            .await
+            .unwrap()
+            .value,
+        [42; 2]
+    );
 }
 
 #[tokio::test]
