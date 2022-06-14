@@ -12,6 +12,7 @@ use fuels_core::{
     Detokenize, ParamType, ReturnLocation, Selector, Token,
 };
 use fuels_signers::{provider::Provider, LocalWallet, Signer};
+use std::collections::HashSet;
 use std::fmt::Debug;
 use std::marker::PhantomData;
 
@@ -263,7 +264,7 @@ pub struct ContractCall {
     pub call_parameters: CallParameters,
     pub compute_calldata_offset: bool,
     pub variable_outputs: Option<Vec<Output>>,
-    pub external_contracts: Option<Vec<ContractId>>,
+    pub external_contracts: Option<HashSet<ContractId>>,
     pub output_params: Vec<ParamType>,
 }
 
@@ -334,7 +335,7 @@ where
     /// Note that this is a builder method, i.e. use it as a chain:
     /// `my_contract_instance.my_method(...).set_contracts(&[another_contract_id]).call()`.
     pub fn set_contracts(mut self, contract_ids: &[ContractId]) -> Self {
-        self.contract_call.external_contracts = Some(contract_ids.to_vec());
+        self.contract_call.external_contracts = Some(HashSet::from_iter(contract_ids.to_owned()));
         self
     }
 

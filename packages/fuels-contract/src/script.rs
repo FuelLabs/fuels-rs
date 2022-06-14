@@ -15,6 +15,7 @@ use fuel_gql_client::{
 use fuels_core::constants::{DEFAULT_SPENDABLE_COIN_AMOUNT, WORD_SIZE};
 use fuels_core::errors::Error;
 use fuels_core::parameters::TxParameters;
+use std::collections::HashSet;
 
 use crate::contract::ContractCall;
 use fuels_signers::{LocalWallet, Signer};
@@ -179,94 +180,71 @@ impl Script {
         let mut inputs: Vec<Input> = vec![];
         let mut outputs: Vec<Output> = vec![];
 
-        for call in calls {
+        // Get all unique contract ids
+        let mut contract_ids = HashSet::new();
+        calls.iter().for_each(|call| {
+            contract_ids.insert(call.contract_id);
+
+            if let Some(external_contracts) = call.external_contracts.clone() {
+                contract_ids.extend(external_contracts);
+            }
+        });
+
+        // We must associate the right external contract input to the corresponding external
+        // output index (TXO)
+        for (idx, contract_id) in contract_ids.into_iter().enumerate() {
+            let zeroes = Bytes32::zeroed();
             let self_contract_input = Input::contract(
-                UtxoId::new(Bytes32::zeroed(), 0),
-                Bytes32::zeroed(),
-                Bytes32::zeroed(),
-                call.contract_id,
+                UtxoId::new(Bytes32::zeroed(), idx as u8),
+                zeroes,
+                zeroes,
+                contract_id,
             );
             inputs.push(self_contract_input);
 
-            let mut spendables = wallet
-                .get_spendable_coins(&AssetId::default(), DEFAULT_SPENDABLE_COIN_AMOUNT as u64)
-                .await
-                .unwrap();
+            let external_contract_output = Output::contract(idx as u8, zeroes, zeroes);
+            outputs.push(external_contract_output);
+        }
 
-            // add default asset change if any inputs are being spent
-            if !spendables.is_empty() {
-                let change_output = Output::change(wallet.address(), 0, AssetId::default());
-                outputs.push(change_output);
-            }
+        // Get all unique asset ids
+        let mut asset_ids = HashSet::new();
+        asset_ids.insert(AssetId::default());
+        calls.iter().for_each(|call| {
+            asset_ids.insert(call.call_parameters.asset_id);
+        });
 
-            if call.call_parameters.asset_id != AssetId::default() {
-                let alt_spendables = wallet
-                    .get_spendable_coins(
-                        &call.call_parameters.asset_id,
-                        call.call_parameters.amount,
-                    )
+        let mut spendables = vec![];
+        for asset_id in asset_ids.iter() {
+            spendables.extend(
+                wallet
+                    .get_spendable_coins(asset_id, DEFAULT_SPENDABLE_COIN_AMOUNT as u64)
                     .await
-                    .unwrap();
+                    .unwrap(),
+            );
 
-                // add alt change if inputs are being spent
-                if !alt_spendables.is_empty() {
-                    let change_output =
-                        Output::change(wallet.address(), 0, call.call_parameters.asset_id);
-                    outputs.push(change_output);
-                }
+            // add asset change if any inputs are being spent
+            let change_output = Output::change(wallet.address(), 0, asset_id.to_owned());
+            outputs.push(change_output);
+        }
 
-                // add alt coins to inputs
-                spendables.extend(alt_spendables.into_iter());
-            }
+        for coin in spendables {
+            let input_coin = Input::coin_signed(
+                UtxoId::from(coin.utxo_id),
+                coin.owner.into(),
+                coin.amount.0,
+                coin.asset_id.into(),
+                0,
+                0,
+            );
 
-            for coin in spendables {
-                let input_coin = Input::coin_signed(
-                    UtxoId::from(coin.utxo_id),
-                    coin.owner.into(),
-                    coin.amount.0,
-                    coin.asset_id.into(),
-                    0,
-                    0,
-                );
+            inputs.push(input_coin);
+        }
 
-                inputs.push(input_coin);
-            }
-
-            let n_inputs = inputs.len();
-
-            let self_contract_output = Output::contract(0, Bytes32::zeroed(), Bytes32::zeroed());
-            outputs.push(self_contract_output);
-
-            // Add external contract IDs to Input/Output pair, if applicable.
-            if let Some(external_contract_ids) = call.external_contracts.clone() {
-                for (idx, external_contract_id) in external_contract_ids.iter().enumerate() {
-                    // We must associate the right external contract input to the corresponding external
-                    // output index (TXO). We add the `n_inputs` offset because we added some inputs
-                    // above.
-                    let output_index: u8 = (idx + n_inputs) as u8;
-                    let zeroes = Bytes32::zeroed();
-                    let external_contract_input = Input::contract(
-                        UtxoId::new(Bytes32::zeroed(), output_index),
-                        zeroes,
-                        zeroes,
-                        *external_contract_id,
-                    );
-
-                    inputs.push(external_contract_input);
-
-                    let external_contract_output = Output::contract(output_index, zeroes, zeroes);
-
-                    outputs.push(external_contract_output);
-                }
-            }
-
-            // Add outputs to the transaction.
+        calls.iter().for_each(|call| {
             if let Some(v) = call.variable_outputs.clone() {
                 outputs.extend(v);
             };
-
-            break;
-        }
+        });
 
         (inputs, outputs)
     }
