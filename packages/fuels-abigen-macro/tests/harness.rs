@@ -1263,8 +1263,6 @@ async fn test_tuples() {
 
 #[tokio::test]
 async fn test_array() {
-    // Generates the bindings from the an ABI definition inline.
-    // The generated bindings can be accessed through `MyContract`.
     abigen!(
         MyContract,
         "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
