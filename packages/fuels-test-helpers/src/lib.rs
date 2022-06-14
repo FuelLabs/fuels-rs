@@ -187,8 +187,8 @@ pub async fn setup_test_client(
 
     let config_with_coins: Value = serde_json::from_str(result.as_str()).unwrap();
 
-    let srv_address = if node_config.is_some() {
-        node_config.unwrap().addr
+    let srv_address = if let Some(node_config) = node_config {
+        node_config.addr
     } else {
         let free_port = pick_unused_port().expect("No ports free");
         SocketAddr::new("127.0.0.1".parse().unwrap(), free_port)
