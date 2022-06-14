@@ -185,7 +185,8 @@ pub async fn setup_test_client(
 
     let result = serde_json::to_string(&coin_configs).expect("Failed to stringify coins vector");
 
-    let config_with_coins: Value = serde_json::from_str(result.as_str()).expect("Failed to build config_with_coins JSON");
+    let config_with_coins: Value =
+        serde_json::from_str(result.as_str()).expect("Failed to build config_with_coins JSON");
 
     let srv_address = if let Some(node_config) = node_config {
         node_config.addr
