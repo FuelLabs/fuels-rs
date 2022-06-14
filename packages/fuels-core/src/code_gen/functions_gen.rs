@@ -313,23 +313,17 @@ fn expand_input_param(
             })
         }
         ParamType::Enum(_) => {
-            let ident = ident(
-                &extract_custom_type_name_from_abi_property(
-                    custom_type_property.expect("Custom type property not found for enum"),
-                    Some(CustomType::Enum),
-                )?
-                .to_class_case(),
-            );
+            let ident = ident(&extract_custom_type_name_from_abi_property(
+                custom_type_property.expect("Custom type property not found for enum"),
+                Some(CustomType::Enum),
+            )?);
             Ok(quote! { #ident })
         }
         ParamType::Struct(_) => {
-            let ident = ident(
-                &extract_custom_type_name_from_abi_property(
-                    custom_type_property.expect("Custom type property not found for struct"),
-                    Some(CustomType::Struct),
-                )?
-                .to_class_case(),
-            );
+            let ident = ident(&extract_custom_type_name_from_abi_property(
+                custom_type_property.expect("Custom type property not found for struct"),
+                Some(CustomType::Struct),
+            )?);
             Ok(quote! { #ident })
         }
         // Primitive type
@@ -741,32 +735,6 @@ pub fn hello_world(
         assert_eq!(result.unwrap().to_string(), ":: std :: vec :: Vec < u64 >");
     }
     #[test]
-    fn test_expand_input_param_custom_type() {
-        let def = Function::default();
-        let struct_type = ParamType::Struct(vec![ParamType::Bool, ParamType::U64]);
-        let struct_prop = Property {
-            name: String::from("unused"),
-            type_field: String::from("struct babies"),
-            components: None,
-        };
-        let struct_name = Some(&struct_prop);
-        let result = expand_input_param(&def, "unused", &struct_type, &struct_name);
-        // Notice the removed plural!
-        assert_eq!(result.unwrap().to_string(), "Baby");
-
-        let enum_type =
-            ParamType::Enum(EnumVariants::new(vec![ParamType::U8, ParamType::U32]).unwrap());
-        let enum_prop = Property {
-            name: String::from("unused"),
-            type_field: String::from("enum babies"),
-            components: None,
-        };
-        let enum_name = Some(&enum_prop);
-        let result = expand_input_param(&def, "unused", &enum_type, &enum_name);
-        // Notice the removed plural!
-        assert_eq!(result.unwrap().to_string(), "Baby");
-    }
-    #[test]
     fn test_expand_input_param_struct_wrong_name() {
         let def = Function::default();
         let struct_type = ParamType::Struct(vec![ParamType::Bool, ParamType::U64]);
@@ -785,7 +753,7 @@ pub fn hello_world(
         let struct_type = ParamType::Struct(vec![ParamType::Bool, ParamType::U64]);
         let struct_prop = Property {
             name: String::from("unused"),
-            type_field: String::from("enum butitsastruct"),
+            type_field: String::from("enum Butitsastruct"),
             components: None,
         };
         let struct_name = Some(&struct_prop);

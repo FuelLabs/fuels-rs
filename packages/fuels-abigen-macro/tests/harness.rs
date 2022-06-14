@@ -457,11 +457,11 @@ async fn compile_bindings_enum_input() {
                         "type":"enum MyEnum",
                         "components": [
                             {
-                                "name": "x",
+                                "name": "X",
                                 "type": "u32"
                             },
                             {
-                                "name": "y",
+                                "name": "Y",
                                 "type": "bool"
                             }
                         ]
