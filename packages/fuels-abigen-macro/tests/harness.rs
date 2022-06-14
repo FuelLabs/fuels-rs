@@ -1409,29 +1409,6 @@ async fn workflow_struct_inside_enum() {
 }
 
 #[tokio::test]
-async fn workflow_use_enum_input() {
-    abigen!(
-        MyContract,
-        "packages/fuels-abigen-macro/tests/test_projects/use_enum_input/out/debug/use_enum_input-abi.json"
-    );
-
-    let wallet = launch_provider_and_get_single_wallet().await;
-
-    let id = Contract::deploy(
-        "tests/test_projects/use_enum_input/out/debug/use_enum_input.bin",
-        &wallet,
-        TxParameters::default(),
-    )
-    .await
-    .unwrap();
-
-    let instance = MyContract::new(id.to_string(), wallet.clone());
-    let enum_input = Shaker::Cosmopolitan(255);
-    let result = instance.use_enum_as_input(enum_input).call().await.unwrap();
-    assert_eq!(result.value, 9876);
-}
-
-#[tokio::test]
 async fn test_logd_receipts() {
     abigen!(
         LoggingContract,
@@ -1475,32 +1452,6 @@ async fn test_logd_receipts() {
     );
     let result = contract_instance.dont_use_logd().call().await.unwrap();
     assert!(result.logs.is_empty());
-}
-
-#[tokio::test]
-async fn unit_type_enums() {
-    abigen!(
-        MyContract,
-        "packages/fuels-abigen-macro/tests/test_projects/use_enum_input/out/debug/use_enum_input-abi.json"
-    );
-
-    let wallet = launch_provider_and_get_single_wallet().await;
-    let id = Contract::deploy(
-        "tests/test_projects/use_enum_input/out/debug/use_enum_input.bin",
-        &wallet,
-        TxParameters::default(),
-    )
-    .await
-    .unwrap();
-
-    let instance = MyContract::new(id.to_string(), wallet.clone());
-    let unit_type_enum = BimBamBoum::Bim();
-    let result = instance
-        .use_unit_type_enum(unit_type_enum)
-        .call()
-        .await
-        .unwrap();
-    assert_eq!(result.value, BimBamBoum::Boum());
 }
 
 #[tokio::test]
@@ -1628,4 +1579,99 @@ async fn test_transaction_script_workflow() {
 
     let response = call_handler.get_response(receipts).unwrap();
     assert_eq!(response.value, 42);
+}
+
+#[tokio::test]
+async fn enums_are_correctly_encoded_and_decoded() {
+    abigen!(
+        EnumTesting,
+        "packages/fuels-abigen-macro/tests/test_projects/enum_encoding/out/debug\
+        /enum_encoding-abi.json"
+    );
+
+    let wallet = launch_provider_and_get_single_wallet().await;
+
+    let id = Contract::deploy(
+        "tests/test_projects/enum_encoding/out/debug/enum_encoding.bin",
+        &wallet,
+        TxParameters::default(),
+    )
+    .await
+    .unwrap();
+
+    let instance = EnumTesting::new(id.to_string(), wallet);
+
+    // If we had a regression on the issue of enum encoding width, then we'll
+    // probably end up mangling arg_2 and onward which will fail this test.
+    let expected = Bundle {
+        arg_1: EnumThatHasABigAndSmallVariant::Small(12345),
+        arg_2: 6666,
+        arg_3: 7777,
+        arg_4: 8888,
+    };
+    let actual = instance.get_bundle().call().await.unwrap().value;
+    assert_eq!(actual, expected);
+
+    let sways_judgement = instance
+        .check_bundle_integrity(expected)
+        .call()
+        .await
+        .unwrap()
+        .value;
+
+    assert!(
+        sways_judgement,
+        "The FuelVM deems that we've not encoded the bundle correctly. Investigate!"
+    );
+}
+
+#[tokio::test]
+async fn enum_as_input() {
+    abigen!(
+        EnumTesting,
+        "packages/fuels-abigen-macro/tests/test_projects/enum_as_input/out/debug\
+        /enum_as_input-abi.json"
+    );
+
+    let wallet = launch_provider_and_get_single_wallet().await;
+
+    let id = Contract::deploy(
+        "tests/test_projects/enum_as_input/out/debug/enum_as_input.bin",
+        &wallet,
+        TxParameters::default(),
+    )
+    .await
+    .unwrap();
+
+    let instance = EnumTesting::new(id.to_string(), wallet);
+
+    let expected = StandardEnum::Two(12345);
+    let actual = instance.get_standard_enum().call().await.unwrap().value;
+    assert_eq!(expected, actual);
+
+    let sways_judgement = instance
+        .check_standard_enum_integrity(expected)
+        .call()
+        .await
+        .unwrap()
+        .value;
+    assert!(
+        sways_judgement,
+        "Sway deems that we've not encoded the standard enum correctly. Investigate!"
+    );
+
+    let expected = UnitEnum::Two();
+    let actual = instance.get_unit_enum().call().await.unwrap().value;
+    assert_eq!(actual, expected);
+
+    let sways_judgement = instance
+        .check_unit_enum_integrity(expected)
+        .call()
+        .await
+        .unwrap()
+        .value;
+    assert!(
+        sways_judgement,
+        "Sway deems that we've not encoded the unit enum correctly. Investigate!"
+    );
 }

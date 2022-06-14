@@ -1,5 +1,5 @@
-use crate::Token;
 use crate::{abi_decoder::ABIDecoder, abi_encoder::ABIEncoder, errors::Error, ParamType};
+use crate::{EnumVariants, Token};
 use fuels_types::{JsonABI, Property};
 use hex::FromHex;
 use itertools::Itertools;
@@ -227,13 +227,17 @@ impl ABIParser {
             ParamType::Struct(struct_params) => {
                 Ok(self.tokenize_struct(trimmed_value, struct_params)?)
             }
-            ParamType::Enum(s) => {
+            ParamType::Enum(variants) => {
                 let discriminant = self.get_enum_discriminant_from_string(trimmed_value);
                 let value = self.get_enum_value_from_string(trimmed_value);
 
-                let token = self.tokenize(&s[discriminant], value)?;
+                let token = self.tokenize(&variants.param_types()[discriminant], value)?;
 
-                Ok(Token::Enum(Box::new((discriminant as u8, token))))
+                Ok(Token::Enum(Box::new((
+                    discriminant as u8,
+                    token,
+                    variants.clone(),
+                ))))
             }
             ParamType::Tuple(tuple_params) => Ok(self.tokenize_tuple(trimmed_value, tuple_params)?),
         }
@@ -559,11 +563,7 @@ impl ABIParser {
             entry.unwrap().outputs.iter().map(parse_param).collect();
 
         match params_result {
-            Ok(params) => {
-                let mut decoder = ABIDecoder::new();
-
-                Ok(decoder.decode(&params, value)?)
-            }
+            Ok(params) => Ok(ABIDecoder::decode(&params, value)?),
             Err(e) => Err(e),
         }
     }
@@ -571,8 +571,7 @@ impl ABIParser {
     /// Similar to decode, but it decodes only an array types and the encoded data
     /// without having to reference to a JSON specification of the ABI.
     pub fn decode_params(&self, params: &[ParamType], data: &[u8]) -> Result<Vec<Token>, Error> {
-        let mut decoder = ABIDecoder::new();
-        Ok(decoder.decode(params, data)?)
+        Ok(ABIDecoder::decode(params, data)?)
     }
 
     fn is_array(&self, ele: &str) -> bool {
@@ -785,7 +784,7 @@ pub fn parse_custom_type_param(param: &Property) -> Result<ParamType, Error> {
                 return Ok(ParamType::Struct(params));
             }
             if param.is_enum_type() {
-                return Ok(ParamType::Enum(params));
+                return Ok(ParamType::Enum(EnumVariants::new(params)?));
             }
             Err(Error::InvalidType(param.type_field.clone()))
         }
@@ -866,9 +865,11 @@ mod tests {
         };
         let enum_result = parse_custom_type_param(&some_enum).unwrap();
         // Underlying value comparison
-        let expected = ParamType::Enum(vec![ParamType::U64, ParamType::Bool]);
+        let expected =
+            ParamType::Enum(EnumVariants::new(vec![ParamType::U64, ParamType::Bool]).unwrap());
         assert_eq!(enum_result, expected);
-        let expected_string = "Enum(vec![ParamType::U64,ParamType::Bool])";
+        let expected_string =
+            "Enum(EnumVariants::new(vec![ParamType::U64,ParamType::Bool]).unwrap())";
         // String format comparison
         assert_eq!(enum_result.to_string(), expected_string);
     }
@@ -1531,8 +1532,9 @@ mod tests {
             .encode_with_function_selector(json_abi, function_name, &values)
             .unwrap();
 
+        println!("Function: {}", hex::encode(abi.fn_selector.unwrap()));
         let expected_encode =
-            "00000000ebb8d011000000000000002a00000000000000014a6f686e000000000000000000000001";
+            "00000000ebb8d011000000000000002a00000000000000014a6f686e0000000000000000000000010000000000000000";
         assert_eq!(encoded, expected_encode);
     }
 
