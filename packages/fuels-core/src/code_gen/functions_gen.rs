@@ -334,6 +334,8 @@ fn expand_input_param(
 // Regarding string->TokenStream->string, refer to `custom_types_gen` tests for more details.
 #[cfg(test)]
 mod tests {
+    use crate::EnumVariants;
+
     use super::*;
     use std::str::FromStr;
 
@@ -732,6 +734,30 @@ pub fn hello_world(
         let array_type = ParamType::Array(Box::new(ParamType::U64), 10);
         let result = expand_input_param(&Function::default(), "unused", &array_type, &None);
         assert_eq!(result.unwrap().to_string(), ":: std :: vec :: Vec < u64 >");
+    }
+    #[test]
+    fn test_expand_input_param_custom_type() {
+        let def = Function::default();
+        let struct_type = ParamType::Struct(vec![ParamType::Bool, ParamType::U64]);
+        let struct_prop = Property {
+            name: String::from("unused"),
+            type_field: String::from("struct Babies"),
+            components: None,
+        };
+        let struct_name = Some(&struct_prop);
+        let result = expand_input_param(&def, "unused", &struct_type, &struct_name);
+        assert_eq!(result.unwrap().to_string(), "Babies");
+
+        let enum_type =
+            ParamType::Enum(EnumVariants::new(vec![ParamType::U8, ParamType::U32]).unwrap());
+        let enum_prop = Property {
+            name: String::from("unused"),
+            type_field: String::from("enum Babies"),
+            components: None,
+        };
+        let enum_name = Some(&enum_prop);
+        let result = expand_input_param(&def, "unused", &enum_type, &enum_name);
+        assert_eq!(result.unwrap().to_string(), "Babies");
     }
     #[test]
     fn test_expand_input_param_struct_wrong_name() {
