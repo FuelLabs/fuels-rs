@@ -684,7 +684,13 @@ impl ABIParser {
                 .chars()
                 .filter(|c| !c.is_whitespace())
                 .collect();
-            result.push_str(&param_str_no_whitespace);
+
+            if param_str_no_whitespace.starts_with('[') && param_str_no_whitespace.ends_with(']') {
+                let array = format!("{}{}", "a", param_str_no_whitespace);
+                result.push_str(array.as_str());
+            } else {
+                result.push_str(&param_str_no_whitespace);
+            }
         }
         result
     }

@@ -1262,6 +1262,39 @@ async fn test_tuples() {
 }
 
 #[tokio::test]
+async fn test_array() {
+    // Generates the bindings from the an ABI definition inline.
+    // The generated bindings can be accessed through `MyContract`.
+    abigen!(
+        MyContract,
+        "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+    );
+
+    let wallet = launch_provider_and_get_single_wallet().await;
+
+    let contract_id = Contract::deploy(
+        "tests/test_projects/contract_test/out/debug/contract_test.bin",
+        &wallet,
+        TxParameters::default(),
+    )
+    .await
+    .unwrap();
+
+    println!("Contract deployed @ {:x}", contract_id);
+    let contract_instance = MyContract::new(contract_id.to_string(), wallet);
+
+    assert_eq!(
+        contract_instance
+            .get_array([42; 2].to_vec())
+            .call()
+            .await
+            .unwrap()
+            .value,
+        [42; 2]
+    );
+}
+
+#[tokio::test]
 async fn test_arrays_with_custom_types() {
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `MyContract`.
