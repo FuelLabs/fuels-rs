@@ -186,6 +186,7 @@ impl Script {
         let mut script_data = vec![];
         let mut param_offsets = vec![];
 
+        // The data for each call is ordered into segments
         let mut segment_offset = data_offset;
 
         for call in calls {
@@ -213,6 +214,8 @@ impl Script {
             // which points to where the data for the custom types start in the
             // transaction. If it doesn't take any custom inputs, this isn't necessary.
             if call.compute_custom_input_offset {
+                // Custom inputs are stored after the previously added parameters,
+                // including custom_input_offset
                 let custom_input_offset =
                     segment_offset + AssetId::LEN + 2 * WORD_SIZE + ContractId::LEN + 2 * WORD_SIZE;
                 let custom_input_offset = custom_input_offset as Word;

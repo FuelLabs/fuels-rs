@@ -175,7 +175,7 @@ You can also use `CallParameters::default()` to use the default values:
 
 ```rust,ignore
 pub const DEFAULT_COIN_AMOUNT: u64 = 1_000_000;
-pub const NATIVE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
+pub const BASE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
 ```
 
 The `gas_limit` parameter differs from the one in `TxParameters` in that it defines the limit for the actual contract call
@@ -187,15 +187,14 @@ while the actual call may only consume up to 200 gas:
 
 ```rust,ignore
 let my_tx_params = TxParameters::new(None, Some(1000), None, None);
-let my_tx_params = CallParameters::new(None, None, Some(200));
+let my_call_params = CallParameters::new(None, None, Some(200));
 
 let result = contract_instance
-        .initialize_counter(42)  // Our contract method.
-        .tx_params(my_tx_params) // Chain the tx params setting method.
-        .tx_params(my_tx_params) // Chain the call params setting method.
-        .call()                  // Perform the contract call.
-        .await
-        .unwrap();
+        .initialize_counter(42)      // Our contract method.
+        .tx_params(my_tx_params)     // Chain the tx params setting method.
+        .call_params(my_call_params) // Chain the call params setting method.
+        .call()                      // Perform the contract call.
+        .await?;
 ```
 
 ### `CallResponse`: Reading returned values
