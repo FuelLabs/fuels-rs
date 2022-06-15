@@ -32,6 +32,10 @@ impl ABIDecoder {
         Ok(tokens)
     }
 
+    pub fn decode_single(param: &ParamType, data: &[u8]) -> Result<Token, CodecError> {
+        Ok(Self::decode_param(param, data)?.token)
+    }
+
     fn decode_param(param: &ParamType, data: &[u8]) -> Result<DecodeResult, CodecError> {
         match &*param {
             ParamType::Unit => Self::decode_unit(),
@@ -522,14 +526,13 @@ mod tests {
                 ParamType::Array(Box::new(ParamType::U8), 2),
             ]),
         ]);
-        let types = vec![nested_struct];
 
         let data = [
             0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xa, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1, 0x0,
             0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2,
         ];
 
-        let decoded = ABIDecoder::decode(&types, &data).unwrap();
+        let decoded = ABIDecoder::decode_single(&nested_struct, &data).unwrap();
 
         let my_nested_struct = vec![
             Token::U16(10),
@@ -539,13 +542,13 @@ mod tests {
             ]),
         ];
 
-        let expected = vec![Token::Struct(my_nested_struct)];
-
-        assert_eq!(decoded, expected);
+        assert_eq!(decoded, Token::Struct(my_nested_struct));
 
         println!(
             "Decoded ABI for ({:#0x?}) with types ({:?}): {:?}",
-            data, types, decoded
+            data,
+            vec![nested_struct],
+            decoded
         );
     }
 
@@ -577,7 +580,7 @@ mod tests {
         let b256 = ParamType::B256;
         let s = ParamType::String(23);
 
-        let types = vec![nested_struct, u8_arr, b256, s];
+        let types = [nested_struct, u8_arr, b256, s];
 
         let data = [
             0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xa, // foo.x == 10u16

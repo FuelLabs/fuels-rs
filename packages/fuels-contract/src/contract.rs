@@ -118,7 +118,7 @@ impl Contract {
             compute_calldata_offset,
             variable_outputs: None,
             external_contracts: None,
-            output_params: output_param.map_or(vec![], |param| vec![param]),
+            output_param,
         };
 
         Ok(ContractCallHandler {
@@ -270,7 +270,7 @@ pub struct ContractCall {
     pub compute_calldata_offset: bool,
     pub variable_outputs: Option<Vec<Output>>,
     pub external_contracts: Option<Vec<ContractId>>,
-    pub output_params: Vec<ParamType>,
+    pub output_param: Option<ParamType>,
 }
 
 impl ContractCall {
@@ -279,16 +279,12 @@ impl ContractCall {
     pub fn get_decoded_output(
         &self,
         mut receipts: Vec<Receipt>,
-    ) -> Result<(Vec<Token>, Vec<Receipt>), Error> {
-        // Multiple returns are handled as one `Tuple` (which has its own `ParamType`), so getting
-        // more than one output param is an error.
-        if self.output_params.len() != 1 {
-            return Err(Error::InvalidType(format!(
-                "Received too many output params (expected 1 got {})",
-                self.output_params.len()
-            )));
-        }
-        let output_param = self.output_params[0].clone();
+    ) -> Result<(Token, Vec<Receipt>), Error> {
+        // Multiple returns are handled as one `Tuple` (which has its own `ParamType`)
+
+        let output_param = self.output_param.as_ref().unwrap_or_else(|| {
+            panic!("get_decoded_output mustn't be called if the function doesn't have an output!");
+        });
 
         let (encoded_value, index) = match output_param.get_return_location() {
             ReturnLocation::ReturnData => {
@@ -313,7 +309,7 @@ impl ContractCall {
         if let Some(i) = index {
             receipts.remove(i);
         }
-        let decoded_value = ABIDecoder::decode(&self.output_params, &encoded_value)?;
+        let decoded_value = ABIDecoder::decode_single(&output_param, &encoded_value)?;
         Ok((decoded_value, receipts))
     }
 }
@@ -420,13 +416,16 @@ where
     /// Create a CallResponse from call receipts
     pub fn get_response(&self, receipts: Vec<Receipt>) -> Result<CallResponse<D>, Error> {
         // If it's an ABI method without a return value, exit early.
-        if self.contract_call.output_params.is_empty() {
+        if self.contract_call.output_param.is_none() {
             return Ok(CallResponse::new(D::from_tokens(vec![])?, receipts));
         }
 
         let (decoded_value, receipts) = self.contract_call.get_decoded_output(receipts)?;
         println!("decoded tokens: {:?}", decoded_value);
-        Ok(CallResponse::new(D::from_tokens(decoded_value)?, receipts))
+        Ok(CallResponse::new(
+            D::from_tokens(vec![decoded_value])?,
+            receipts,
+        ))
     }
 }
 

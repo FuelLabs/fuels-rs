@@ -79,11 +79,9 @@ fn expand_selector(selector: Selector) -> TokenStream {
 
 /// Expands the output of a function, i.e. what comes after `->` in a function signature.
 fn expand_fn_outputs(outputs: &[Property]) -> Result<TokenStream, Error> {
-    match outputs.len() {
-        0 => Ok(quote! { () }),
-        1 => {
-            let output = outputs.first().expect("Outputs shouldn't not be empty");
-
+    match outputs {
+        [] => Ok(quote! { () }),
+        [output] => {
             // If it's a primitive type, simply parse and expand.
             if !output.is_custom_type() {
                 return expand_type(&parse_param(output)?);
@@ -151,13 +149,9 @@ fn expand_fn_outputs(outputs: &[Property]) -> Result<TokenStream, Error> {
             }
         }
         // Recursively expand the outputs
-        _ => {
-            let types = outputs
-                .iter()
-                .map(|param| expand_fn_outputs(&[param.clone()]))
-                .collect::<Result<Vec<_>, Error>>()?;
-            Ok(quote! { (#( #types ),*) })
-        }
+        _ => Err(Error::CompilationError(
+            "A function cannot have multiple outputs.".to_string(),
+        )),
     }
 }
 
@@ -536,57 +530,6 @@ pub fn hello_world(
         }]);
         assert_eq!(result.unwrap().to_string(), "StreamingServices");
     }
-    #[test]
-    fn test_expand_fn_outputs_two_more_arguments() {
-        let result = expand_fn_outputs(&[
-            Property {
-                name: "unused".to_string(),
-                type_field: String::from("bool"),
-                components: None,
-            },
-            Property {
-                name: "unused".to_string(),
-                type_field: String::from("u64"),
-                components: None,
-            },
-            Property {
-                name: "unused".to_string(),
-                type_field: String::from("u32"),
-                components: None,
-            },
-        ]);
-        assert_eq!(result.unwrap().to_string(), "(bool , u64 , u32)");
-
-        let two_empty_components = vec![
-            Property {
-                name: String::from("unused"),
-                type_field: String::from("nonexistingtype"),
-                components: None,
-            },
-            Property {
-                name: String::from("unused"),
-                type_field: String::from("anotherunexistingtype"),
-                components: None,
-            },
-        ];
-
-        let some_enum = Property {
-            name: "unused".to_string(),
-            type_field: String::from("enum Carmaker"),
-            components: Some(two_empty_components.clone()),
-        };
-        let result = expand_fn_outputs(&[some_enum.clone(), some_enum]);
-        assert_eq!(result.unwrap().to_string(), "(Carmaker , Carmaker)");
-
-        let some_struct = Property {
-            name: "unused".to_string(),
-            type_field: String::from("struct Carmaker"),
-            components: Some(two_empty_components),
-        };
-        let result = expand_fn_outputs(&[some_struct.clone(), some_struct]);
-        assert_eq!(result.unwrap().to_string(), "(Carmaker , Carmaker)")
-    }
-
     // --- expand_function_argument ---
     #[test]
     fn test_expand_function_arguments() {
