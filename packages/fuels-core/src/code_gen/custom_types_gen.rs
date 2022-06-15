@@ -13,8 +13,7 @@ use quote::quote;
 /// Transforms a custom type defined in [`Property`] into a [`TokenStream`]
 /// that represents that same type as a Rust-native struct.
 pub fn expand_custom_struct(prop: &Property) -> Result<TokenStream, Error> {
-    let struct_name = &extract_custom_type_name_from_abi_property(prop, Some(CustomType::Struct))?
-        .to_class_case();
+    let struct_name = &extract_custom_type_name_from_abi_property(prop, Some(CustomType::Struct))?;
     let struct_ident = ident(struct_name);
     let components = prop
         .components
@@ -43,13 +42,10 @@ pub fn expand_custom_struct(prop: &Property) -> Result<TokenStream, Error> {
         match param_type {
             // Case where a struct takes another struct
             ParamType::Struct(_params) => {
-                let inner_struct_ident = ident(
-                    &extract_custom_type_name_from_abi_property(
-                        component,
-                        Some(CustomType::Struct),
-                    )?
-                    .to_class_case(),
-                );
+                let inner_struct_ident = ident(&extract_custom_type_name_from_abi_property(
+                    component,
+                    Some(CustomType::Struct),
+                )?);
 
                 fields.push(quote! {pub #field_name: #inner_struct_ident});
                 args.push(
@@ -62,10 +58,10 @@ pub fn expand_custom_struct(prop: &Property) -> Result<TokenStream, Error> {
             }
             // The struct contains a nested enum
             ParamType::Enum(_params) => {
-                let enum_name = ident(
-                    &extract_custom_type_name_from_abi_property(component, Some(CustomType::Enum))?
-                        .to_class_case(),
-                );
+                let enum_name = ident(&extract_custom_type_name_from_abi_property(
+                    component,
+                    Some(CustomType::Enum),
+                )?);
                 fields.push(quote! {pub #field_name: #enum_name});
                 args.push(quote! {#field_name: #enum_name::new_from_tokens(&tokens[#idx..])});
                 struct_fields_tokens.push(quote! { tokens.push(self.#field_name.into_token()) });
@@ -175,7 +171,7 @@ pub fn expand_custom_struct(prop: &Property) -> Result<TokenStream, Error> {
 
 /// Transforms a custom enum defined in [`Property`] into a [`TokenStream`]
 /// that represents that same type as a Rust-native enum.
-pub fn expand_custom_enum(name: &str, prop: &Property) -> Result<TokenStream, Error> {
+pub fn expand_custom_enum(enum_name: &str, prop: &Property) -> Result<TokenStream, Error> {
     let components = prop
         .components
         .as_ref()
@@ -189,12 +185,11 @@ pub fn expand_custom_enum(name: &str, prop: &Property) -> Result<TokenStream, Er
     // Used when creating a struct from tokens with `MyEnum::new_from_tokens()`.
     let mut args = Vec::new();
 
-    let enum_name = name.to_class_case();
-    let enum_ident = ident(&enum_name);
+    let enum_ident = ident(enum_name);
     let mut param_types = Vec::new();
 
     for (discriminant, component) in components.iter().enumerate() {
-        let variant_name = ident(&component.name.to_class_case());
+        let variant_name = ident(&component.name);
         let dis = discriminant as u8;
 
         let param_type = parse_param(component)?;
@@ -237,8 +232,7 @@ pub fn expand_custom_enum(name: &str, prop: &Property) -> Result<TokenStream, Er
                 let inner_struct_name = &extract_custom_type_name_from_abi_property(
                     component,
                     Some(CustomType::Struct),
-                )?
-                .to_class_case();
+                )?;
                 let inner_struct_ident = ident(inner_struct_name);
                 // Enum variant declaration
                 enum_variants.push(quote! { #variant_name(#inner_struct_ident)});
@@ -482,18 +476,18 @@ mod tests {
             type_field: String::from("unused"),
             components: Some(vec![
                 Property {
-                    name: String::from("long_island"),
+                    name: String::from("LongIsland"),
                     type_field: String::from("u64"),
                     components: None,
                 },
                 Property {
-                    name: String::from("moscow_mule"),
+                    name: String::from("MoscowMule"),
                     type_field: String::from("bool"),
                     components: None,
                 },
             ]),
         };
-        let result = expand_custom_enum("matcha_tea", &p);
+        let result = expand_custom_enum("MatchaTea", &p);
         let expected = TokenStream::from_str(
             r#"
             # [derive (Clone , Debug , Eq , PartialEq)] pub enum MatchaTea { LongIsland (u64) , MoscowMule (bool) } impl Parameterize for MatchaTea { fn param_types () -> Vec < ParamType > { let mut types = Vec :: new () ; types . push (ParamType :: U64) ; types . push (ParamType :: Bool) ; types } fn new_from_tokens (tokens : & [Token]) -> Self { if tokens . is_empty () { panic ! ("Empty tokens array received in `{}::new_from_tokens`" , "MatchaTea") ; } match tokens [0] . clone () { Token :: Enum (content) => { if let enum_selector = * content { return match enum_selector { (0u8 , token , _) => MatchaTea :: LongIsland (< u64 > :: from_tokens (vec ! [token]) . expect (& format ! ("Failed to run `new_from_tokens` for custom {} enum type" , "MatchaTea"))) , (1u8 , token , _) => MatchaTea :: MoscowMule (< bool > :: from_tokens (vec ! [token]) . expect (& format ! ("Failed to run `new_from_tokens` for custom {} enum type" , "MatchaTea"))) , (_ , _ , _) => panic ! ("Failed to match with discriminant selector {:?}" , enum_selector) } ; } else { panic ! ("The EnumSelector `{:?}` didn't have a match" , content) ; } } , _ => panic ! ("This should contain an `Enum` token, found `{:?}`" , tokens) , } } } impl Tokenizable for MatchaTea { fn into_token (self) -> Token { let (dis , tok) = match self { MatchaTea :: LongIsland (value) => (0u8 , Token :: U64 (value)) , MatchaTea :: MoscowMule (value) => (1u8 , Token :: Bool (value)) , } ; let variants = EnumVariants :: new (Self :: param_types ()) . unwrap () ; let selector = (dis , tok , variants) ; Token :: Enum (Box :: new (selector)) } fn from_token (token : Token) -> Result < Self , InvalidOutputType > { if let Token :: Enum (_) = token { Ok (MatchaTea :: new_from_tokens (& [token])) } else { Err (InvalidOutputType ("Enum token doesn't contain inner tokens." . to_string ())) } } }
@@ -507,16 +501,16 @@ mod tests {
     #[test]
     fn test_expand_struct_inside_enum() {
         let inner_struct = Property {
-            name: String::from("infrastructure"),
+            name: String::from("Infrastructure"),
             type_field: String::from("struct Building"),
             components: Some(vec![
                 Property {
-                    name: String::from("rooms"),
+                    name: String::from("Rooms"),
                     type_field: String::from("u8"),
                     components: None,
                 },
                 Property {
-                    name: String::from("floors"),
+                    name: String::from("Floors"),
                     type_field: String::from("u16"),
                     components: None,
                 },
@@ -525,7 +519,7 @@ mod tests {
         let enum_components = vec![
             inner_struct,
             Property {
-                name: "service".to_string(),
+                name: "Service".to_string(),
                 type_field: "u32".to_string(),
                 components: None,
             },
@@ -580,7 +574,7 @@ mod tests {
     fn test_expand_custom_struct() {
         let p = Property {
             name: String::from("unused"),
-            type_field: String::from("struct cocktail"),
+            type_field: String::from("struct Cocktail"),
             components: Some(vec![
                 Property {
                     name: String::from("long_island"),
@@ -613,11 +607,11 @@ mod tests {
     fn test_expand_custom_struct_with_struct() {
         let p = Property {
             name: String::from("unused"),
-            type_field: String::from("struct cocktail"),
+            type_field: String::from("struct Cocktail"),
             components: Some(vec![
                 Property {
                     name: String::from("long_island"),
-                    type_field: String::from("struct shaker"),
+                    type_field: String::from("struct Shaker"),
                     components: Some(vec![
                         Property {
                             name: String::from("cosmopolitan"),
