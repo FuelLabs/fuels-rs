@@ -378,8 +378,6 @@ pub fn extract_custom_type_name_from_abi_property(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs;
-    use std::process::Command;
     use std::str::FromStr;
 
     #[test]
