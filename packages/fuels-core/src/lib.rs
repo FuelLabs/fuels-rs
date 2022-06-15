@@ -437,7 +437,7 @@ impl Tokenizable for fuel_tx::ContractId {
 
     fn into_token(self) -> Token {
         let underlying_data: &Bits256 = &self;
-        underlying_data.into_token()
+        Token::Struct(vec![underlying_data.into_token()])
     }
 }
 
@@ -465,7 +465,8 @@ impl Tokenizable for fuel_tx::Address {
 
     fn into_token(self) -> Token {
         let underlying_data: &Bits256 = &self;
-        underlying_data.into_token()
+
+        Token::Struct(vec![underlying_data.into_token()])
     }
 }
 
