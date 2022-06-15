@@ -1,5 +1,7 @@
+#[allow(unused_imports)]
+use fuels::core::errors::Error;
+
 #[tokio::test]
-// ANCHOR: instantiate_client
 async fn instantiate_client() {
     use fuels::client::FuelClient;
     use fuels::node::service::{Config, FuelService};
@@ -245,8 +247,7 @@ async fn call_params_gas() -> Result<(), Error> {
         .tx_params(my_tx_params) // Chain the tx params setting method.
         .call_params(my_call_params) // Chain the call params setting method.
         .call() // Perform the contract call.
-        .await
-        .unwrap();
+        .await?;
     // ANCHOR_END: call_params_gas
 
     print!("{:?}", response);
