@@ -7,8 +7,8 @@ use fuels::prelude::{
 };
 use fuels_abigen_macro::abigen;
 use fuels_core::tx::Address;
+use fuels_core::Tokenizable;
 use fuels_core::{constants::BASE_ASSET_ID, Token};
-use fuels_core::{ParamType, Parameterize, Tokenizable};
 use sha2::{Digest, Sha256};
 use std::str::FromStr;
 /// Note: all the tests and examples below require pre-compiled Sway projects.
@@ -1645,7 +1645,7 @@ async fn enums_are_correctly_encoded_and_decoded() {
     let actual = instance.get_bundle().call().await.unwrap().value;
     assert_eq!(actual, expected);
 
-    let sways_judgement = instance
+    let fuelvm_judgement = instance
         .check_bundle_integrity(expected)
         .call()
         .await
@@ -1653,7 +1653,7 @@ async fn enums_are_correctly_encoded_and_decoded() {
         .value;
 
     assert!(
-        sways_judgement,
+        fuelvm_judgement,
         "The FuelVM deems that we've not encoded the bundle correctly. Investigate!"
     );
 }
@@ -1682,14 +1682,14 @@ async fn enum_as_input() {
     let actual = instance.get_standard_enum().call().await.unwrap().value;
     assert_eq!(expected, actual);
 
-    let sways_judgement = instance
+    let fuelvm_judgement = instance
         .check_standard_enum_integrity(expected)
         .call()
         .await
         .unwrap()
         .value;
     assert!(
-        sways_judgement,
+        fuelvm_judgement,
         "The FuelVM deems that we've not encoded the standard enum correctly. Investigate!"
     );
 
@@ -1697,65 +1697,56 @@ async fn enum_as_input() {
     let actual = instance.get_unit_enum().call().await.unwrap().value;
     assert_eq!(actual, expected);
 
-    let sways_judgement = instance
+    let fuelvm_judgement = instance
         .check_unit_enum_integrity(expected)
         .call()
         .await
         .unwrap()
         .value;
     assert!(
-        sways_judgement,
+        fuelvm_judgement,
         "The FuelVM deems that we've not encoded the unit enum correctly. Investigate!"
     );
 }
 
 #[tokio::test]
-async fn complicated_example() {
+async fn nested_structs() {
     abigen!(
-        ComplicatedTest,
-        "packages/fuels-abigen-macro/tests/test_projects/complicated_example/out/debug\
-        /complicated_example-abi.json"
+        NestedStructs,
+        "packages/fuels-abigen-macro/tests/test_projects/nested_structs/out/debug\
+        /nested_structs-abi.json"
     );
 
     let wallet = launch_provider_and_get_single_wallet().await;
 
     let id = Contract::deploy(
-        "tests/test_projects/complicated_example/out/debug/complicated_example.bin",
+        "tests/test_projects/nested_structs/out/debug/nested_structs.bin",
         &wallet,
         TxParameters::default(),
     )
     .await
     .unwrap();
 
-    let instance = ComplicatedTest::new(id.to_string(), wallet);
-    let arg1 = AnotherEnum::en1(SomeStruct {
-        par_1: SomeEnum::V1(1),
-        par_2: 2,
-    });
-    let arg2 = SomeStruct {
-        par_1: SomeEnum::V1(3),
-        par_2: 4,
-    };
-    let arg3 = SomeEnum::V1(5);
-    // let result = instance
-    //     .test_function(arg1, arg2, arg3)
-    //     .call()
-    //     .await
-    //     .unwrap();
+    let instance = NestedStructs::new(id.to_string(), wallet);
 
-    use fuels_core::Tokenizable;
-    let str = AllStruct {
-        par_1: arg1,
-        par_2: arg2,
-        par_3: arg3,
+    let expected = AllStruct {
+        some_struct: SomeStruct { par_1: 12345 },
     };
 
-    let token = str.into_token();
-    let param_type = ParamType::Struct(AllStruct::param_types());
+    let actual = instance.get_struct().call().await.unwrap().value;
+    assert_eq!(actual, expected);
 
-    println!("{:?}", token);
+    let fuelvm_judgement = instance
+        .check_struct_integrity(expected)
+        .call()
+        .await
+        .unwrap()
+        .value;
 
-    let value = instance.def_ok().call().await.unwrap().value;
+    assert!(
+        fuelvm_judgement,
+        "The FuelVM deems that we've not encoded the argument correctly. Investigate!"
+    );
 }
 
 #[tokio::test]
