@@ -305,7 +305,7 @@ impl ContractCall {
         if let Some(i) = index {
             receipts.remove(i);
         }
-        let decoded_value = ABIDecoder::decode_single(&param_type, &encoded_value)?;
+        let decoded_value = ABIDecoder::decode_single(param_type, &encoded_value)?;
         Ok((decoded_value, receipts))
     }
 }

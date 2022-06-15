@@ -187,7 +187,7 @@ impl fmt::Display for Token {
     }
 }
 
-impl<'a> Default for Token {
+impl Default for Token {
     fn default() -> Self {
         Token::U8(0)
     }
@@ -436,7 +436,8 @@ impl Tokenizable for fuel_tx::ContractId {
     }
 
     fn into_token(self) -> Token {
-        todo!()
+        let underlying_data: &Bits256 = &self;
+        underlying_data.into_token()
     }
 }
 
@@ -463,7 +464,8 @@ impl Tokenizable for fuel_tx::Address {
     }
 
     fn into_token(self) -> Token {
-        todo!()
+        let underlying_data: &Bits256 = &self;
+        underlying_data.into_token()
     }
 }
 
