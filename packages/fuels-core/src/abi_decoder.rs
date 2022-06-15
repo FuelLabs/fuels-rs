@@ -20,6 +20,7 @@ impl ABIDecoder {
     /// of the expected values/types in `data`.
     /// You can find comprehensive examples in the tests for this module.
     pub fn decode(types: &[ParamType], data: &[u8]) -> Result<Vec<Token>, CodecError> {
+        println!("decode: {:?}, {:?}", types, data);
         let mut tokens: Vec<Token> = Vec::new();
         let mut offset = 0;
         for param in types {
@@ -280,6 +281,7 @@ fn peek(data: &[u8], len: usize) -> Result<&[u8], CodecError> {
 mod tests {
     use super::*;
     use crate::EnumVariants;
+    use std::slice;
 
     #[test]
     fn decode_int() {
@@ -622,5 +624,114 @@ mod tests {
             "Decoded ABI for ({:#0x?}) with types ({:?}): {:?}",
             data, types, decoded
         );
+    }
+
+    #[test]
+    fn reproducing_the_issue() {
+        // decode: [Struct([Enum(EnumVariants { variants: [Struct([Enum(EnumVariants { variants: [U32, B256] }), U32]), U32] }), Struct([Enum(EnumVariants { variants: [U32, B256] }), U32]), Enum(EnumVariants { variants: [U32, B256] })])], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5]
+
+        let some_enum_variants = vec![ParamType::U32, ParamType::B256];
+        let some_enum_param_type = ParamType::Enum(EnumVariants {
+            variants: some_enum_variants.clone(),
+        });
+
+        let some_struct_param_type =
+            ParamType::Struct(vec![some_enum_param_type.clone(), ParamType::U32]);
+
+        let another_enum_param_type = ParamType::Enum(EnumVariants {
+            variants: vec![some_struct_param_type.clone(), ParamType::U32],
+        });
+
+        let param_type = ParamType::Struct(vec![
+            another_enum_param_type,
+            some_struct_param_type,
+            some_enum_param_type.clone(),
+        ]);
+
+        let data: Vec<u8> = flatten([get_par1(), get_par2(), get_par3()]);
+
+        let expected_token = Token::Struct(vec![
+            Token::Enum(Box::new((
+                0,
+                Token::Struct(vec![
+                    Token::Enum(Box::new((
+                        0,
+                        Token::U32(1),
+                        EnumVariants {
+                            variants: some_enum_variants.clone(),
+                        },
+                    ))),
+                    Token::U32(2),
+                ]),
+                EnumVariants {
+                    variants: vec![
+                        ParamType::Struct(vec![some_enum_param_type, ParamType::U32]),
+                        ParamType::U32,
+                    ],
+                },
+            ))),
+            Token::Struct(vec![
+                Token::Enum(Box::new((
+                    0,
+                    Token::U32(3),
+                    EnumVariants {
+                        variants: some_enum_variants.clone(),
+                    },
+                ))),
+                Token::U32(4),
+            ]),
+            Token::Enum(Box::new((
+                0,
+                Token::U32(5),
+                EnumVariants {
+                    variants: some_enum_variants,
+                },
+            ))),
+        ]);
+
+        let decoded = ABIDecoder::decode(slice::from_ref(&param_type), &data).unwrap();
+
+        assert_eq!(expected_token, decoded[0]);
+
+        println!("Decoded: {:?}", decoded);
+    }
+
+    fn get_par2() -> Vec<u8> {
+        let some_enum_padding = vec![0; 24];
+        let some_enum_u32 = vec![0, 0, 0, 0, 0, 0, 0, 3];
+        let some_enum_value = flatten([some_enum_padding, some_enum_u32]);
+        let some_enum_disc = vec![0, 0, 0, 0, 0, 0, 0, 0];
+
+        let some_struct_par2 = vec![0, 0, 0, 0, 0, 0, 0, 4];
+
+        flatten([some_enum_disc, some_enum_value, some_struct_par2])
+    }
+
+    fn get_par3() -> Vec<u8> {
+        let some_enum_padding = vec![0; 24];
+        let some_enum_u32 = vec![0, 0, 0, 0, 0, 0, 0, 5];
+        let some_enum_value = flatten([some_enum_padding, some_enum_u32]);
+
+        let some_enum_disc = vec![0, 0, 0, 0, 0, 0, 0, 0];
+        flatten([some_enum_disc, some_enum_value])
+    }
+
+    fn get_par1() -> Vec<u8> {
+        let some_enum_u32 = vec![0, 0, 0, 0, 0, 0, 0, 1];
+        let some_enum_padding = vec![0x0; 24];
+        let some_enum_value = flatten([some_enum_padding, some_enum_u32]);
+
+        let some_enum_disc = vec![0, 0, 0, 0, 0, 0, 0, 0];
+        let some_struct_par2 = vec![0, 0, 0, 0, 0, 0, 0, 2];
+
+        let another_enum_disc: Vec<u8> = vec![0, 0, 0, 0, 0, 0, 0, 0];
+        let another_enum_value: Vec<u8> =
+            flatten([some_enum_disc, some_enum_value, some_struct_par2]);
+
+        flatten([another_enum_disc, another_enum_value])
+    }
+
+    fn flatten<const SIZE: usize>(groups_of_bytes: [Vec<u8>; SIZE]) -> Vec<u8> {
+        groups_of_bytes.into_iter().flatten().collect::<Vec<_>>()
     }
 }

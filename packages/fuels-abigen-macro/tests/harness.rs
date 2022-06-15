@@ -7,8 +7,8 @@ use fuels::prelude::{
 };
 use fuels_abigen_macro::abigen;
 use fuels_core::tx::Address;
-use fuels_core::Parameterize;
 use fuels_core::{constants::BASE_ASSET_ID, Token};
+use fuels_core::{ParamType, Parameterize};
 use sha2::{Digest, Sha256};
 use std::str::FromStr;
 /// Note: all the tests and examples below require pre-compiled Sway projects.
@@ -1657,7 +1657,7 @@ async fn enum_as_input() {
         .value;
     assert!(
         sways_judgement,
-        "Sway deems that we've not encoded the standard enum correctly. Investigate!"
+        "The FuelVM deems that we've not encoded the standard enum correctly. Investigate!"
     );
 
     let expected = UnitEnum::Two();
@@ -1672,6 +1672,55 @@ async fn enum_as_input() {
         .value;
     assert!(
         sways_judgement,
-        "Sway deems that we've not encoded the unit enum correctly. Investigate!"
+        "The FuelVM deems that we've not encoded the unit enum correctly. Investigate!"
     );
+}
+
+#[tokio::test]
+async fn complicated_example() {
+    abigen!(
+        ComplicatedTest,
+        "packages/fuels-abigen-macro/tests/test_projects/complicated_example/out/debug\
+        /complicated_example-abi.json"
+    );
+
+    let wallet = launch_provider_and_get_single_wallet().await;
+
+    let id = Contract::deploy(
+        "tests/test_projects/complicated_example/out/debug/complicated_example.bin",
+        &wallet,
+        TxParameters::default(),
+    )
+    .await
+    .unwrap();
+
+    let instance = ComplicatedTest::new(id.to_string(), wallet);
+    let arg1 = AnotherEnum::En1(SomeStruct {
+        par_1: SomeEnum::V1(1),
+        par_2: 2,
+    });
+    let arg2 = SomeStruct {
+        par_1: SomeEnum::V1(3),
+        par_2: 4,
+    };
+    let arg3 = SomeEnum::V1(5);
+    // let result = instance
+    //     .test_function(arg1, arg2, arg3)
+    //     .call()
+    //     .await
+    //     .unwrap();
+
+    use fuels_core::Tokenizable;
+    let str = AllStruct {
+        par_1: arg1,
+        par_2: arg2,
+        par_3: arg3,
+    };
+
+    let token = str.into_token();
+    let param_type = ParamType::Struct(AllStruct::param_types());
+
+    println!("{:?}", token);
+
+    let value = instance.def_ok().call().await.unwrap().value;
 }
