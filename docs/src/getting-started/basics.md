@@ -142,33 +142,13 @@ This is commonly used to forward coins to a contract. These parameters can be co
 For instance, suppose the following contract that makes use of Sway's `msg_amount()` to return the amount sent in that message to the contract:
 
 ```rust,ignore
-abi FuelTest {
-    fn get_msg_amount() -> u64;
-}
-
-impl FuelTest for Contract {
-    fn get_msg_amount() -> u64 {
-        msg_amount()
-    }
-}
+{{#include ../../../packages/fuels-abigen-macro/tests/test-projects/msg_amount/src/main.sw:contract_msg_amount}}
 ```
 
 Then, in Rust, after setting up and deploying the above contract, you can configure the amount being sent to the `get_msg_amount()` method like this:
 
 ```rust,ignore
-let tx_params = TxParameters::new(None, Some(1_000_000), None, None);
-
-// Forward 1_000_000 coin amount of base asset_id
-// this is a big number for checking that amount can be a u64
-let call_params = CallParameters::new(Some(1_000_000), None, None);
-
-let response = contract_instance
-    .get_msg_amount()          // Our contract method.
-    .tx_params(tx_params)      // Chain the tx params setting method.
-    .call_params(call_params)  // Chain the call params setting method.
-    .call()                    // Perform the contract call.
-    .await
-    .unwrap();
+{{#include ../../../examples/contracts/src/lib.rs:call_params}}
 ```
 
 You can also use `CallParameters::default()` to use the default values:
@@ -186,15 +166,7 @@ Here we use both the transaction and call `gas_limit` to specify that the contra
 while the actual call may only consume up to 200 gas:
 
 ```rust,ignore
-let my_tx_params = TxParameters::new(None, Some(1000), None, None);
-let my_call_params = CallParameters::new(None, None, Some(200));
-
-let result = contract_instance
-        .initialize_counter(42)      // Our contract method.
-        .tx_params(my_tx_params)     // Chain the tx params setting method.
-        .call_params(my_call_params) // Chain the call params setting method.
-        .call()                      // Perform the contract call.
-        .await?;
+{{#include ../../../examples/contracts/src/lib.rs:call_params_gas}}
 ```
 
 ### `CallResponse`: Reading returned values
