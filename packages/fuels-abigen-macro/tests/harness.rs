@@ -8,7 +8,7 @@ use fuels::prelude::{
 use fuels_abigen_macro::abigen;
 use fuels_core::tx::Address;
 use fuels_core::{constants::BASE_ASSET_ID, Token};
-use fuels_core::{ParamType, Parameterize};
+use fuels_core::{ParamType, Parameterize, Tokenizable};
 use sha2::{Digest, Sha256};
 use std::str::FromStr;
 /// Note: all the tests and examples below require pre-compiled Sway projects.
@@ -532,7 +532,7 @@ async fn create_struct_from_decoded_tokens() {
 
     // Create the struct using the decoded tokens.
     // `struct_from_tokens` is of type `MyStruct`.
-    let struct_from_tokens = MyStruct::new_from_tokens(&Token::Struct(vec![foo, bar]));
+    let struct_from_tokens = MyStruct::from_token(Token::Struct(vec![foo, bar])).unwrap();
 
     assert_eq!(10, struct_from_tokens.foo);
     assert!(struct_from_tokens.bar);
@@ -595,7 +595,7 @@ async fn create_nested_struct_from_decoded_tokens() {
     // Creating just the InnerStruct is possible
     let a = Token::Bool(true);
     let inner_struct_token = Token::Struct(vec![a.clone()]);
-    let inner_struct_from_tokens = InnerStruct::new_from_tokens(&inner_struct_token);
+    let inner_struct_from_tokens = InnerStruct::from_token(inner_struct_token.clone()).unwrap();
     assert!(inner_struct_from_tokens.a);
 
     // Creating the whole nested struct `MyNestedStruct`
@@ -605,7 +605,7 @@ async fn create_nested_struct_from_decoded_tokens() {
     let x = Token::U16(10);
 
     let nested_struct_from_tokens =
-        MyNestedStruct::new_from_tokens(&Token::Struct(vec![x, inner_struct_token.clone()]));
+        MyNestedStruct::from_token(Token::Struct(vec![x, inner_struct_token.clone()])).unwrap();
 
     assert_eq!(10, nested_struct_from_tokens.x);
     assert!(nested_struct_from_tokens.y.a);
