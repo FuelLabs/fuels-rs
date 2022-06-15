@@ -1,3 +1,6 @@
+#[allow(unused_imports)]
+use fuels::prelude::ProviderError;
+
 #[tokio::test]
 // ANCHOR: create_random_wallet
 async fn create_random_wallet() {
@@ -172,4 +175,22 @@ async fn setup_wallet_multiple_assets() {
     let (provider, _socket_addr) = setup_test_provider(coins.clone(), Config::local_node()).await;
     wallet.set_provider(provider);
     // ANCHOR_END: multiple_assets_wallet
+}
+
+#[tokio::test]
+#[allow(unused_variables)]
+async fn get_balances() -> Result<(), ProviderError> {
+    use fuels::prelude::{launch_provider_and_get_single_wallet, BASE_ASSET_ID};
+    use fuels::tx::AssetId;
+    use std::collections::HashMap;
+
+    let wallet = launch_provider_and_get_single_wallet().await;
+    // ANCHOR: get_asset_balance
+    let asset_id: AssetId = BASE_ASSET_ID;
+    let balance: u64 = wallet.get_asset_balance(&asset_id).await?;
+    // ANCHOR_END: get_asset_balance
+    // ANCHOR: get_balances
+    let balances: HashMap<String, u64> = wallet.get_balances().await?;
+    // ANCHOR_END: get_balances
+    Ok(())
 }
