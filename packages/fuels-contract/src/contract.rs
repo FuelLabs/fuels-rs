@@ -57,6 +57,29 @@ impl<D> CallResponse<D> {
     }
 }
 
+#[derive(Debug)]
+pub struct MultiCallResponse<D> {
+    pub values: Vec<Option<D>>,
+    pub receipts: Vec<Receipt>,
+    pub logs: Vec<String>,
+}
+
+impl<D> MultiCallResponse<D> {
+    pub fn new(values: Vec<Option<D>>, receipts: Vec<Receipt>) -> Self {
+        // Get all the logs from LogData receipts and put them in the `logs` property
+        let logs_vec = receipts
+            .iter()
+            .filter(|r| matches!(r, Receipt::LogData { .. }))
+            .map(|r| hex::encode(r.data().unwrap()))
+            .collect::<Vec<String>>();
+        Self {
+            values,
+            receipts,
+            logs: logs_vec,
+        }
+    }
+}
+
 impl Contract {
     pub fn new(compiled_contract: CompiledContract, wallet: LocalWallet) -> Self {
         Self {
@@ -273,8 +296,8 @@ impl ContractCall {
     /// decode the values and return them.
     pub fn get_decoded_output(
         &self,
-        mut receipts: Vec<Receipt>,
-    ) -> Result<(Vec<Token>, Vec<Receipt>), Error> {
+        receipts: &mut Vec<Receipt>,
+    ) -> Result<Vec<Token>, Error> {
         // Multiple returns are handled as one `Tuple` (which has its own `ParamType`), so getting
         // more than one output param is an error.
         if self.output_params.len() != 1 {
@@ -310,7 +333,7 @@ impl ContractCall {
         }
         let mut decoder = ABIDecoder::new();
         let decoded_value = decoder.decode(&self.output_params, &encoded_value)?;
-        Ok((decoded_value, receipts))
+        Ok(decoded_value)
     }
 }
 
@@ -416,13 +439,13 @@ where
     }
 
     /// Create a CallResponse from call receipts
-    pub fn get_response(&self, receipts: Vec<Receipt>) -> Result<CallResponse<D>, Error> {
+    pub fn get_response(&self, mut receipts: Vec<Receipt>) -> Result<CallResponse<D>, Error> {
         // If it's an ABI method without a return value, exit early.
         if self.contract_call.output_params.is_empty() {
             return Ok(CallResponse::new(D::from_tokens(vec![])?, receipts));
         }
 
-        let (decoded_value, receipts) = self.contract_call.get_decoded_output(receipts)?;
+        let decoded_value = self.contract_call.get_decoded_output(&mut receipts)?;
         Ok(CallResponse::new(D::from_tokens(decoded_value)?, receipts))
     }
 }
@@ -483,19 +506,19 @@ where
     }
 
     /// Call contract methods on the node, in a state-modifying manner.
-    pub async fn call(self) -> Result<CallResponse<D>, Error> {
+    pub async fn call(self) -> Result<MultiCallResponse<D>, Error> {
         Self::call_or_simulate(self, false).await
     }
 
     /// Call contract methods on the node, in a simulated manner, meaning the state of the
     /// blockchain is *not* modified but simulated.
     /// It is the same as the `call` method because the API is more user-friendly this way.
-    pub async fn simulate(self) -> Result<CallResponse<D>, Error> {
+    pub async fn simulate(self) -> Result<MultiCallResponse<D>, Error> {
         Self::call_or_simulate(self, true).await
     }
 
     #[tracing::instrument]
-    async fn call_or_simulate(self, simulate: bool) -> Result<CallResponse<D>, Error> {
+    async fn call_or_simulate(self, simulate: bool) -> Result<MultiCallResponse<D>, Error> {
         let script = self.get_script().await;
 
         let receipts = if simulate {
@@ -506,17 +529,24 @@ where
         tracing::debug!(target: "receipts", "{:?}", receipts);
 
         self.get_response(receipts)
+        //receipts
     }
 
-    /// Create a CallResponse from call receipts
-    pub fn get_response(&self, receipts: Vec<Receipt>) -> Result<CallResponse<D>, Error> {
-        let call = &self.contract_calls[0];
-        // If it's an ABI method without a return value, exit early.
-        if call.output_params.is_empty() {
-            return Ok(CallResponse::new(D::from_tokens(vec![])?, receipts));
+    /// Create a MultiCallResponse from call receipts
+    pub fn get_response(&self, mut receipts: Vec<Receipt>) -> Result<MultiCallResponse<D>, Error> {
+        let mut values = vec![];
+
+        for call in self.contract_calls.iter() {
+            let decoded_value = if call.output_params.is_empty() {
+                None
+            } else {
+                let decoded = call.get_decoded_output(&mut receipts)?;
+                Some(D::from_tokens(decoded)?)
+            };
+
+            values.push(decoded_value);
         }
 
-        let (decoded_value, receipts) = call.get_decoded_output(receipts)?;
-        Ok(CallResponse::new(D::from_tokens(decoded_value)?, receipts))
+        Ok(MultiCallResponse::new(values, receipts))
     }
 }

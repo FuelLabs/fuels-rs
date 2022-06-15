@@ -744,7 +744,9 @@ async fn multi_call() {
 
     let multi = MultiContractCallHandler::new(vec![call_1, call_2], wallet);
 
-    multi.call().await;
+    let rec = multi.call().await;
+
+    print!("{:?}", rec);
 }
 
 #[tokio::test]
