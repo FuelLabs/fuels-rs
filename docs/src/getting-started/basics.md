@@ -35,6 +35,13 @@ If you are only interested in a single instance of your contract then use `deplo
 {{#include ../../../examples/contracts/src/lib.rs:deploy_contract}}
 ```
 
+You can then use the contract methods very simply:
+
+
+```rust,ignore
+{{#include ../../../examples/contracts/src/lib.rs:use_deployed_contract}}
+```
+
 Alternatively, if you want multiple instances of the same contract then use `deploy_with_salt`
 
 ```rust,ignore

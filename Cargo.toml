@@ -18,4 +18,5 @@ members = [
     "scripts/build-test-projects",
     "examples/contracts",
     "examples/wallets",
+    "examples/rust_bindings",
 ]

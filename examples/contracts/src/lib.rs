@@ -14,11 +14,11 @@ async fn instantiate_client() {
 // ANCHOR_END: instantiate_client
 
 #[tokio::test]
-// ANCHOR: deploy_contract
 async fn deploy_contract() {
     use fuels::prelude::*;
     use fuels_abigen_macro::abigen;
 
+    // ANCHOR: deploy_contract
     // This will generate your contract's methods onto `MyContract`.
     // This means an instance of `MyContract` will have access to all
     // your contract's methods that are running on-chain!
@@ -53,14 +53,14 @@ async fn deploy_contract() {
         .await
         .unwrap();
     println!("Contract deployed @ {:x}", contract_id);
+    // ANCHOR_END: deploy_contract
 
-    // Here is an instance of your contract which you can use to make calls to
-    // your functions
+    // ANCHOR: use_deployed_contract
+    // This is an instance of your contract which you can use to make calls to your functions
     let contract_instance = MyContract::new(contract_id.to_string(), wallet);
 
     let result = contract_instance
         .initialize_counter(42) // Build the ABI call
-        .tx_params(TxParameters::new(None, Some(1_000_000), None, None))
         .call() // Perform the network call
         .await
         .unwrap();
@@ -74,8 +74,8 @@ async fn deploy_contract() {
         .unwrap();
 
     assert_eq!(52, result.value);
+    // ANCHOR_END: use_deployed_contract
 }
-// ANCHOR_END: deploy_contract
 
 #[tokio::test]
 // ANCHOR: deploy_with_salt
