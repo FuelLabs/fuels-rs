@@ -1,6 +1,6 @@
 [package]
 name = "fuels-contract"
-version = "0.15.2"
+version = "0.15.3"
 authors = ["Fuel Labs <contact@fuel.sh>"]
 edition = "2021"
 homepage = "https://fuel.network/"
@@ -12,8 +12,8 @@ description = "Fuel Rust SDK contracts."
 anyhow = "1"
 bytes = { version = "1.0.1", features = ["serde"] }
 fuel-gql-client = { version = "0.8", default-features = false }
-fuels-core = { version = "0.15.2", path = "../fuels-core" }
-fuels-signers = { version = "0.15.2", path = "../fuels-signers" }
+fuels-core = { version = "0.15.3", path = "../fuels-core" }
+fuels-signers = { version = "0.15.3", path = "../fuels-signers" }
 hex = { version = "0.4.3", default-features = false, features = ["std"] }
 proc-macro2 = "1.0"
 quote = "1.0"
