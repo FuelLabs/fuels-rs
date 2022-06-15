@@ -477,7 +477,7 @@ impl Tokenizable for fuel_tx::Address {
 /// without code generation.
 pub trait Parameterize {
     fn param_types() -> Vec<ParamType>;
-    fn new_from_tokens(tokens: &[Token]) -> Self;
+    fn new_from_tokens(token: &Token) -> Self;
 }
 
 impl Parameterize for fuel_tx::Address {
@@ -485,8 +485,8 @@ impl Parameterize for fuel_tx::Address {
         vec![ParamType::B256]
     }
 
-    fn new_from_tokens(tokens: &[Token]) -> Self {
-        if let Token::Struct(inner_tokens) = &tokens[0] {
+    fn new_from_tokens(token: &Token) -> Self {
+        if let Token::Struct(inner_tokens) = &token {
             if let Token::B256(id) = &inner_tokens[0] {
                 Self::from(*id)
             } else {
@@ -496,7 +496,7 @@ impl Parameterize for fuel_tx::Address {
                 )
             }
         } else {
-            panic!("Expected a struct containing `b256`, got {:?}", tokens[0])
+            panic!("Expected a struct containing `b256`, got {:?}", token)
         }
     }
 }
@@ -506,8 +506,8 @@ impl Parameterize for fuel_tx::ContractId {
         vec![ParamType::B256]
     }
 
-    fn new_from_tokens(tokens: &[Token]) -> Self {
-        if let Token::Struct(inner_tokens) = &tokens[0] {
+    fn new_from_tokens(token: &Token) -> Self {
+        if let Token::Struct(inner_tokens) = &token {
             if let Token::B256(id) = &inner_tokens[0] {
                 Self::from(*id)
             } else {
@@ -517,7 +517,7 @@ impl Parameterize for fuel_tx::ContractId {
                 )
             }
         } else {
-            panic!("Expected a struct containing `b256`, got {:?}", tokens[0])
+            panic!("Expected a struct containing `b256`, got {:?}", token)
         }
     }
 }
@@ -527,8 +527,8 @@ impl Parameterize for fuel_tx::AssetId {
         vec![ParamType::B256]
     }
 
-    fn new_from_tokens(tokens: &[Token]) -> Self {
-        if let Token::Struct(inner_tokens) = &tokens[0] {
+    fn new_from_tokens(token: &Token) -> Self {
+        if let Token::Struct(inner_tokens) = &token {
             if let Token::B256(id) = &inner_tokens[0] {
                 Self::from(*id)
             } else {
@@ -538,7 +538,7 @@ impl Parameterize for fuel_tx::AssetId {
                 )
             }
         } else {
-            panic!("Expected a struct containing `b256`, got {:?}", tokens[0])
+            panic!("Expected a struct containing `b256`, got {:?}", token)
         }
     }
 }

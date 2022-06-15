@@ -532,7 +532,7 @@ async fn create_struct_from_decoded_tokens() {
 
     // Create the struct using the decoded tokens.
     // `struct_from_tokens` is of type `MyStruct`.
-    let struct_from_tokens = MyStruct::new_from_tokens(&[foo, bar]);
+    let struct_from_tokens = MyStruct::new_from_tokens(&Token::Struct(vec![foo, bar]));
 
     assert_eq!(10, struct_from_tokens.foo);
     assert!(struct_from_tokens.bar);
@@ -594,7 +594,8 @@ async fn create_nested_struct_from_decoded_tokens() {
 
     // Creating just the InnerStruct is possible
     let a = Token::Bool(true);
-    let inner_struct_from_tokens = InnerStruct::new_from_tokens(&[a.clone()]);
+    let inner_struct_token = Token::Struct(vec![a.clone()]);
+    let inner_struct_from_tokens = InnerStruct::new_from_tokens(&inner_struct_token);
     assert!(inner_struct_from_tokens.a);
 
     // Creating the whole nested struct `MyNestedStruct`
@@ -603,7 +604,8 @@ async fn create_nested_struct_from_decoded_tokens() {
     // `a` is the token for the field `a` in `InnerStruct`
     let x = Token::U16(10);
 
-    let nested_struct_from_tokens = MyNestedStruct::new_from_tokens(&[x, a]);
+    let nested_struct_from_tokens =
+        MyNestedStruct::new_from_tokens(&Token::Struct(vec![x, inner_struct_token.clone()]));
 
     assert_eq!(10, nested_struct_from_tokens.x);
     assert!(nested_struct_from_tokens.y.a);

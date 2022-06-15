@@ -55,8 +55,11 @@ pub fn the_fn() {
         175,
     ];
 
-    let obj =
-        ABIDecoder::decode(&[ParamType::U64, ParamType::B256], &data).expect("Failed to decode");
+    let obj = ABIDecoder::decode_single(
+        &ParamType::Struct(vec![ParamType::U64, ParamType::B256]),
+        &data,
+    )
+    .expect("Failed to decode");
 
     let a_struct = SomeEvent::new_from_tokens(&obj);
 
