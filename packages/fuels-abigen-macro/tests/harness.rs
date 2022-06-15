@@ -1706,3 +1706,52 @@ async fn enum_as_input() {
         "Sway deems that we've not encoded the unit enum correctly. Investigate!"
     );
 }
+
+#[tokio::test]
+async fn nested_enums_are_correctly_encoded_decoded() {
+    abigen!(
+        MyContract,
+        "packages/fuels-abigen-macro/tests/test_projects/nested_enums/out/debug/nested_enums-abi.json"
+    );
+
+    let wallet = launch_provider_and_get_single_wallet().await;
+
+    let id = Contract::deploy(
+        "tests/test_projects/nested_enums/out/debug/nested_enums.bin",
+        &wallet,
+        TxParameters::default(),
+    )
+    .await
+    .unwrap();
+
+    let instance = MyContract::new(id.to_string(), wallet.clone());
+
+    let expected_enum = EnumLevel3::El2(EnumLevel2::El1(EnumLevel1::Num(42)));
+
+    let result = instance.get_nested_enum().call().await.unwrap();
+
+    assert_eq!(result.value, expected_enum);
+
+    let result = instance
+        .check_nested_enum_integrity(expected_enum)
+        .call()
+        .await
+        .unwrap();
+
+    assert!(
+        result.value,
+        "The FuelVM deems that we've not encoded the nested enum correctly. Investigate!"
+    );
+
+    let expected_some_address = Option::Some(Identity::Address(Address::zeroed()));
+
+    let result = instance.get_some_address().call().await.unwrap();
+
+    assert_eq!(result.value, expected_some_address);
+
+    let expected_none = Option::None();
+
+    let result = instance.get_none().call().await.unwrap();
+
+    assert_eq!(result.value, expected_none);
+}
