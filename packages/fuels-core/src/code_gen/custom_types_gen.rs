@@ -201,8 +201,37 @@ pub fn expand_custom_enum(name: &str, prop: &Property) -> Result<TokenStream, Er
         match param_type {
             // Case where an enum takes another enum
             ParamType::Enum(_params) => {
-                // TODO: Support nested enums
-                unimplemented!()
+                let inner_enum_name =
+                    &extract_custom_type_name_from_abi_property(component, Some(CustomType::Enum))?
+                        .to_class_case();
+                let inner_enum_ident = ident(inner_enum_name);
+                // Enum variant declaration
+                enum_variants.push(quote! { #variant_name(#inner_enum_ident)});
+
+                // Token creation
+                enum_selector_builder.push(quote! {
+                    #enum_ident::#variant_name(inner_enum) =>
+                    (#dis, inner_enum.into_token())
+                });
+
+                // This is used for creating a new instance with `inner_enum::new_from_tokens()`
+                // based on tokens received
+                let expected_str = format!(
+                    "Failed to run `new_from_tokens` for custom {} enum type",
+                    enum_name
+                );
+                args.push(quote! {
+                    (#dis, token, _) => {
+                        let variant_content = <#inner_enum_ident>::from_tokens(vec![token]).expect(#expected_str);
+                    #enum_ident::#variant_name(variant_content)
+                        }
+                });
+
+                // For more info about this line check the enum inside struct
+                let variants =
+                    quote! {EnumVariants::new(#inner_enum_ident::param_types()).unwrap()};
+
+                param_types.push(quote! { types.push(ParamType::Enum(#variants)) });
             }
             ParamType::Struct(_params) => {
                 let inner_struct_name = &extract_custom_type_name_from_abi_property(
@@ -518,23 +547,33 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "not implemented")]
-    // Enum cannot contain enum at the moment
     fn test_expand_custom_enum_with_enum() {
         let p = Property {
             name: String::from("unused"),
             type_field: String::from("unused"),
             components: Some(vec![Property {
-                name: String::from("long_island"),
-                type_field: String::from("enum cocktail"),
+                name: String::from("El2"),
+                type_field: String::from("enum EnumLevel2"),
                 components: Some(vec![Property {
-                    name: String::from("cosmopolitan"),
-                    type_field: String::from("bool"),
-                    components: None,
+                    name: String::from("El1"),
+                    type_field: String::from("enum EnumLevel1"),
+                    components: Some(vec![Property {
+                        name: String::from("Num"),
+                        type_field: String::from("u32"),
+                        components: None,
+                    }]),
                 }]),
             }]),
         };
-        let _ = expand_custom_enum("dragon", &p);
+        let result = expand_custom_enum("EnumLevel3", &p).unwrap();
+
+        let expected = TokenStream::from_str(
+            r#"
+            # [derive (Clone , Debug , Eq , PartialEq)] pub enum EnumLevel3 { El2 (EnumLevel2) } impl Parameterize for EnumLevel3 { fn param_types () -> Vec < ParamType > { let mut types = Vec :: new () ; types . push (ParamType :: Enum (EnumVariants :: new (EnumLevel2 :: param_types ()) . unwrap ())) ; types } fn new_from_tokens (tokens : & [Token]) -> Self { if tokens . is_empty () { panic ! ("Empty tokens array received in `{}::new_from_tokens`" , "EnumLevel3") ; } match tokens [0] . clone () { Token :: Enum (content) => { if let enum_selector = * content { return match enum_selector { (0u8 , token , _) => { let variant_content = < EnumLevel2 > :: from_tokens (vec ! [token]) . expect ("Failed to run `new_from_tokens` for custom EnumLevel3 enum type") ; EnumLevel3 :: El2 (variant_content) } (_ , _ , _) => panic ! ("Failed to match with discriminant selector {:?}" , enum_selector) } ; } else { panic ! ("The EnumSelector `{:?}` didn't have a match" , content) ; } } , _ => panic ! ("This should contain an `Enum` token, found `{:?}`" , tokens) , } } } impl Tokenizable for EnumLevel3 { fn into_token (self) -> Token { let (dis , tok) = match self { EnumLevel3 :: El2 (inner_enum) => (0u8 , inner_enum . into_token ()) , } ; let variants = EnumVariants :: new (Self :: param_types ()) . unwrap () ; let selector = (dis , tok , variants) ; Token :: Enum (Box :: new (selector)) } fn from_token (token : Token) -> Result < Self , InvalidOutputType > { if let Token :: Enum (_) = token { Ok (EnumLevel3 :: new_from_tokens (& [token])) } else { Err (InvalidOutputType ("Enum token doesn't contain inner tokens." . to_string ())) } } }
+            "#,
+        )
+        .unwrap();
+        assert_eq!(result.to_string(), expected.to_string())
     }
 
     #[test]
