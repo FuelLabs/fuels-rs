@@ -60,11 +60,10 @@ pub mod prelude {
     pub use super::core::errors::Error;
     pub use super::core::parameters::*;
     pub use super::core::tx::{Address, AssetId, ContractId};
-    pub use super::core::{Token, Tokenizable};
+    pub use super::core::{InstantiationError, Token, Tokenizable};
     pub use super::node::service::Config;
     pub use super::signers::provider::*;
     pub use super::signers::{LocalWallet, Signer};
     pub use super::test_helpers::*;
     pub use super::tx::Salt;
-    pub use fuels_core::errors::InstantiationError;
 }

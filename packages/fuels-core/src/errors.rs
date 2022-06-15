@@ -85,12 +85,7 @@ pub struct InstantiationError(pub String);
 
 impl Display for InstantiationError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        // TODO add more info
-        write!(
-            f,
-            "Something happened during instantiation! Reason: {}",
-            self.0
-        )
+        write!(f, "{}", self.0)
     }
 }
 

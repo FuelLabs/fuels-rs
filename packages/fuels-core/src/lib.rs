@@ -419,23 +419,24 @@ impl_tuples!(15, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M
 impl_tuples!(16, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13, O:14, P:15, );
 
 impl Tokenizable for fuel_tx::ContractId {
-    fn from_token(t: Token) -> std::result::Result<Self, InstantiationError>
+    fn from_token(token: Token) -> std::result::Result<Self, InstantiationError>
     where
         Self: Sized,
     {
-        if let Token::Struct(tokens) = &t {
-            if let Token::B256(id) = &tokens[0] {
-                Ok(fuel_tx::ContractId::from(*id))
+        if let Token::Struct(tokens) = token {
+            let first_token = tokens.into_iter().next();
+            if let Some(Token::B256(id)) = first_token {
+                Ok(fuel_tx::ContractId::from(id))
             } else {
                 Err(InstantiationError(format!(
                     "Expected `b256`, got {:?}",
-                    tokens[0]
+                    first_token
                 )))
             }
         } else {
             Err(InstantiationError(format!(
                 "Expected `ContractId`, got {:?}",
-                t
+                token
             )))
         }
     }
@@ -451,13 +452,14 @@ impl Tokenizable for fuel_tx::Address {
     where
         Self: Sized,
     {
-        if let Token::Struct(tokens) = &t {
-            if let Token::B256(id) = &tokens[0] {
-                Ok(fuel_tx::Address::from(*id))
+        if let Token::Struct(tokens) = t {
+            let first_token = tokens.into_iter().next();
+            if let Some(Token::B256(id)) = first_token {
+                Ok(fuel_tx::Address::from(id))
             } else {
                 Err(InstantiationError(format!(
                     "Expected `b256`, got {:?}",
-                    tokens[0]
+                    first_token
                 )))
             }
         } else {
@@ -475,10 +477,32 @@ impl Tokenizable for fuel_tx::Address {
     }
 }
 
-/// This trait is similar to `Tokenizable`, but it is used inside the abigen
-/// generated code in order to get the parameter types (`ParamType`) and
-/// instantiate a new struct/enum from tokens. This is used in the generated
-/// code in `custom_types_gen.rs`, with the exception of the Sway-native types
+impl Tokenizable for fuel_tx::AssetId {
+    fn from_token(token: Token) -> Result<Self, InstantiationError>
+    where
+        Self: Sized,
+    {
+        if let Token::Struct(inner_tokens) = token {
+            let first_token = inner_tokens.into_iter().next();
+            if let Some(Token::B256(id)) = first_token {
+                Ok(Self::from(id))
+            } else {
+                Err(InstantiationError(format!("Could not construct 'AssetId' from token. Wrong token inside of Struct '{:?} instead of B256'", first_token)))
+            }
+        } else {
+            Err(InstantiationError(format!("Could not construct 'AssetId' from token. Instead of a Struct with a B256 inside, received: {:?}", token)))
+        }
+    }
+
+    fn into_token(self) -> Token {
+        let underlying_data: &Bits256 = &self;
+        Token::Struct(vec![underlying_data.into_token()])
+    }
+}
+
+/// This trait is used inside the abigen generated code in order to get the
+/// parameter types (`ParamType`).  This is used in the generated code in
+/// `custom_types_gen.rs`, with the exception of the Sway-native types
 /// `Address`, `ContractId`, and `AssetId`, that are implemented right here,
 /// without code generation.
 pub trait Parameterize {
@@ -500,30 +524,6 @@ impl Parameterize for fuel_tx::ContractId {
 impl Parameterize for fuel_tx::AssetId {
     fn param_types() -> Vec<ParamType> {
         vec![ParamType::B256]
-    }
-}
-
-impl Tokenizable for fuel_tx::AssetId {
-    fn from_token(token: Token) -> Result<Self, InstantiationError>
-    where
-        Self: Sized,
-    {
-        if let Token::Struct(inner_tokens) = &token {
-            if let Token::B256(id) = &inner_tokens[0] {
-                Ok(Self::from(*id))
-            } else {
-                panic!(
-                    "Expected a `b256` inside the AssetId struct, got {:?}",
-                    inner_tokens[0]
-                )
-            }
-        } else {
-            panic!("Expected a struct containing `b256`, got {:?}", token)
-        }
-    }
-
-    fn into_token(self) -> Token {
-        todo!()
     }
 }
 

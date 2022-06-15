@@ -605,7 +605,7 @@ async fn create_nested_struct_from_decoded_tokens() {
     let x = Token::U16(10);
 
     let nested_struct_from_tokens =
-        MyNestedStruct::from_token(Token::Struct(vec![x, inner_struct_token.clone()])).unwrap();
+        MyNestedStruct::from_token(Token::Struct(vec![x, inner_struct_token])).unwrap();
 
     assert_eq!(10, nested_struct_from_tokens.x);
     assert!(nested_struct_from_tokens.y.a);
