@@ -4,10 +4,10 @@
 //!
 //! A prelude is provided which imports all the important data types and traits for you. Use this when you want to quickly bootstrap a new project.
 //!
+//!
 //! ```no_run
 //! # #[allow(unused)]
 //! use fuels::prelude::*;
-//! use fuels_abigen_macro::abigen;
 //! ```
 //!
 //! Note that `fuels_abigen_macro` isn't included in the `fuels` crate because
@@ -18,6 +18,10 @@
 
 pub mod client {
     pub use fuel_gql_client::client::*;
+}
+
+pub mod fuels_abigen {
+   pub use fuels_abigen_macro::*;
 }
 
 pub mod contract {
@@ -67,4 +71,6 @@ pub mod prelude {
     pub use super::signers::{LocalWallet, Signer};
     pub use super::test_helpers::*;
     pub use super::tx::Salt;
+    pub use super::fuels_abigen::abigen;
+
 }
