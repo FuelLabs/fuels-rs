@@ -45,6 +45,6 @@ mod tests {
 
         assert_eq!(correct_hex.unwrap(), return_val[0].data().unwrap());
         // ANCHOR_END: run_compiled_script
-        return Ok(());
+        Ok(())
     }
 }
