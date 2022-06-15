@@ -277,16 +277,12 @@ impl ContractCall {
     /// Based on the returned Contract's output_params and the receipts returned from a call,
     /// decode the values and return them.
     pub fn get_decoded_output(
-        &self,
+        param_type: &ParamType,
         mut receipts: Vec<Receipt>,
     ) -> Result<(Token, Vec<Receipt>), Error> {
         // Multiple returns are handled as one `Tuple` (which has its own `ParamType`)
 
-        let output_param = self.output_param.as_ref().unwrap_or_else(|| {
-            panic!("get_decoded_output mustn't be called if the function doesn't have an output!");
-        });
-
-        let (encoded_value, index) = match output_param.get_return_location() {
+        let (encoded_value, index) = match param_type.get_return_location() {
             ReturnLocation::ReturnData => {
                 match receipts.iter().find(|&receipt| receipt.data().is_some()) {
                     Some(r) => {
@@ -309,7 +305,7 @@ impl ContractCall {
         if let Some(i) = index {
             receipts.remove(i);
         }
-        let decoded_value = ABIDecoder::decode_single(&output_param, &encoded_value)?;
+        let decoded_value = ABIDecoder::decode_single(&param_type, &encoded_value)?;
         Ok((decoded_value, receipts))
     }
 }
@@ -415,17 +411,20 @@ where
 
     /// Create a CallResponse from call receipts
     pub fn get_response(&self, receipts: Vec<Receipt>) -> Result<CallResponse<D>, Error> {
-        // If it's an ABI method without a return value, exit early.
-        if self.contract_call.output_param.is_none() {
-            return Ok(CallResponse::new(D::from_tokens(vec![])?, receipts));
-        }
+        match self.contract_call.output_param.as_ref() {
+            None => Ok(CallResponse::new(D::from_tokens(vec![])?, receipts)),
+            Some(param_type) => {
+                let (decoded_value, receipts) =
+                    ContractCall::get_decoded_output(param_type, receipts)?;
 
-        let (decoded_value, receipts) = self.contract_call.get_decoded_output(receipts)?;
-        println!("decoded tokens: {:?}", decoded_value);
-        Ok(CallResponse::new(
-            D::from_tokens(vec![decoded_value])?,
-            receipts,
-        ))
+                println!("decoded tokens: {:?}", decoded_value);
+
+                Ok(CallResponse::new(
+                    D::from_tokens(vec![decoded_value])?,
+                    receipts,
+                ))
+            }
+        }
     }
 }
 
