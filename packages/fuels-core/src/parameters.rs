@@ -1,6 +1,6 @@
 use crate::constants::{
-    BASE_ASSET_ID, DEFAULT_BYTE_PRICE, DEFAULT_FORWARDED_GAS, DEFAULT_GAS_LIMIT,
-    DEFAULT_GAS_PRICE, DEFAULT_MATURITY,
+    BASE_ASSET_ID, DEFAULT_BYTE_PRICE, DEFAULT_FORWARDED_GAS, DEFAULT_GAS_LIMIT, DEFAULT_GAS_PRICE,
+    DEFAULT_MATURITY,
 };
 use fuel_tx::AssetId;
 
@@ -24,7 +24,7 @@ impl CallParameters {
         Self {
             amount: amount.unwrap_or(0),
             asset_id: asset_id.unwrap_or(BASE_ASSET_ID),
-            gas_forwarded: gas_limit.unwrap_or(DEFAULT_FORWARDED_GAS),
+            gas_forwarded: gas_forwarded.unwrap_or(DEFAULT_FORWARDED_GAS),
         }
     }
 }
