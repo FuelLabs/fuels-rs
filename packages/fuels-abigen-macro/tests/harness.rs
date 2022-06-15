@@ -1728,7 +1728,7 @@ async fn complicated_example() {
     .unwrap();
 
     let instance = ComplicatedTest::new(id.to_string(), wallet);
-    let arg1 = AnotherEnum::En1(SomeStruct {
+    let arg1 = AnotherEnum::en1(SomeStruct {
         par_1: SomeEnum::V1(1),
         par_2: 2,
     });
