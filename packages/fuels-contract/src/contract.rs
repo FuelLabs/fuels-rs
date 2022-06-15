@@ -9,7 +9,7 @@ use fuels_core::{
     constants::{BASE_ASSET_ID, DEFAULT_SPENDABLE_COIN_AMOUNT},
     errors::Error,
     parameters::{CallParameters, TxParameters},
-    Detokenize, ParamType, ReturnLocation, Selector, Token,
+    ParamType, ReturnLocation, Selector, Token, Tokenizable,
 };
 use fuels_signers::{provider::Provider, LocalWallet, Signer};
 use std::fmt::Debug;
@@ -89,7 +89,7 @@ impl Contract {
     /// }
     /// For more details see `code_gen/functions_gen.rs`.
     /// Note that this needs a wallet because the contract instance needs a wallet for the calls
-    pub fn method_hash<D: Detokenize + Debug>(
+    pub fn method_hash<D: Tokenizable + Debug>(
         provider: &Provider,
         contract_id: ContractId,
         wallet: &LocalWallet,
@@ -323,7 +323,7 @@ pub struct ContractCallHandler<D> {
 
 impl<D> ContractCallHandler<D>
 where
-    D: Detokenize + Debug,
+    D: Tokenizable + Debug,
 {
     /// Sets external contracts as dependencies to this contract's call.
     /// Effectively, this will be used to create Input::Contract/Output::Contract
@@ -412,17 +412,10 @@ where
     /// Create a CallResponse from call receipts
     pub fn get_response(&self, receipts: Vec<Receipt>) -> Result<CallResponse<D>, Error> {
         match self.contract_call.output_param.as_ref() {
-            None => Ok(CallResponse::new(D::from_tokens(vec![])?, receipts)),
+            None => Ok(CallResponse::new(D::from_token(Token::Unit)?, receipts)),
             Some(param_type) => {
-                let (decoded_value, receipts) =
-                    ContractCall::get_decoded_output(param_type, receipts)?;
-
-                println!("decoded tokens: {:?}", decoded_value);
-
-                Ok(CallResponse::new(
-                    D::from_tokens(vec![decoded_value])?,
-                    receipts,
-                ))
+                let (token, receipts) = ContractCall::get_decoded_output(param_type, receipts)?;
+                Ok(CallResponse::new(D::from_token(token)?, receipts))
             }
         }
     }

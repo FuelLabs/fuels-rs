@@ -222,7 +222,7 @@ pub fn expand_custom_enum(name: &str, prop: &Property) -> Result<TokenStream, Er
                 );
                 args.push(quote! {
                     (#dis, token, _) => {
-                        let variant_content = <#inner_enum_ident>::from_tokens(vec![token]).expect(#expected_str);
+                        let variant_content = <#inner_enum_ident>::from_token(token).expect(#expected_str);
                     #enum_ident::#variant_name(variant_content)
                         }
                 });
@@ -257,7 +257,7 @@ pub fn expand_custom_enum(name: &str, prop: &Property) -> Result<TokenStream, Er
                 );
                 args.push(quote! {
                     (#dis, token, _) => {
-                        let variant_content = <#inner_struct_ident>::from_tokens(vec![token]).expect(#expected_str);
+                        let variant_content = <#inner_struct_ident>::from_token(token).expect(#expected_str);
                     #enum_ident::#variant_name(variant_content)
                         }
                 });
@@ -293,7 +293,7 @@ pub fn expand_custom_enum(name: &str, prop: &Property) -> Result<TokenStream, Er
                 });
                 param_types.push(quote! { types.push(ParamType::#param_type_string) });
                 args.push(
-                    quote! {(#dis, token, _) => #enum_ident::#variant_name(<#ty>::from_tokens(vec![token])
+                    quote! {(#dis, token, _) => #enum_ident::#variant_name(<#ty>::from_token(token)
                     .expect(&format!("Failed to run `new_from_tokens` for custom {} enum type",
                             #enum_name))),},
                 );

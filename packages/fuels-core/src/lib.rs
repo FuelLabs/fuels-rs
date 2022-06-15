@@ -283,6 +283,25 @@ impl<T: Tokenizable> Tokenizable for Vec<T> {
     }
 }
 
+impl Tokenizable for () {
+    fn from_token(token: Token) -> Result<Self, InvalidOutputType>
+    where
+        Self: Sized,
+    {
+        match token {
+            Token::Unit => Ok(()),
+            other => Err(InvalidOutputType(format!(
+                "Expected `Unit`, got {:?}",
+                other
+            ))),
+        }
+    }
+
+    fn into_token(self) -> Token {
+        Token::Unit
+    }
+}
+
 impl Tokenizable for u8 {
     fn from_token(token: Token) -> Result<Self, InvalidOutputType> {
         match token {
@@ -394,42 +413,12 @@ impl_tuples!(14, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M
 impl_tuples!(15, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13, O:14, );
 impl_tuples!(16, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13, O:14, P:15, );
 
-/// Output type possible to deserialize from Contract ABI
-pub trait Detokenize {
-    /// Creates a new instance from parsed ABI tokens.
-    fn from_tokens(tokens: Vec<Token>) -> Result<Self, InvalidOutputType>
-    where
-        Self: Sized;
-}
-
-impl Detokenize for () {
-    fn from_tokens(_: Vec<Token>) -> std::result::Result<Self, InvalidOutputType>
+impl Tokenizable for fuel_tx::ContractId {
+    fn from_token(t: Token) -> std::result::Result<Self, InvalidOutputType>
     where
         Self: Sized,
     {
-        Ok(())
-    }
-}
-
-impl<T: Tokenizable> Detokenize for T {
-    fn from_tokens(tokens: Vec<Token>) -> Result<Self, InvalidOutputType> {
-        println!("T::from_tokens({:?})", tokens);
-
-        match &tokens[..] {
-            [token] => Self::from_token(token.clone()),
-            _ => Err(InvalidOutputType(
-                "A type must be encoded in only one token.".to_string(),
-            )),
-        }
-    }
-}
-
-impl Detokenize for fuel_tx::ContractId {
-    fn from_tokens(t: Vec<Token>) -> std::result::Result<Self, InvalidOutputType>
-    where
-        Self: Sized,
-    {
-        if let Token::Struct(tokens) = &t[0] {
+        if let Token::Struct(tokens) = &t {
             if let Token::B256(id) = &tokens[0] {
                 Ok(fuel_tx::ContractId::from(*id))
             } else {
@@ -445,14 +434,18 @@ impl Detokenize for fuel_tx::ContractId {
             )))
         }
     }
+
+    fn into_token(self) -> Token {
+        todo!()
+    }
 }
 
-impl Detokenize for fuel_tx::Address {
-    fn from_tokens(t: Vec<Token>) -> std::result::Result<Self, InvalidOutputType>
+impl Tokenizable for fuel_tx::Address {
+    fn from_token(t: Token) -> std::result::Result<Self, InvalidOutputType>
     where
         Self: Sized,
     {
-        if let Token::Struct(tokens) = &t[0] {
+        if let Token::Struct(tokens) = &t {
             if let Token::B256(id) = &tokens[0] {
                 Ok(fuel_tx::Address::from(*id))
             } else {
@@ -468,9 +461,13 @@ impl Detokenize for fuel_tx::Address {
             )))
         }
     }
+
+    fn into_token(self) -> Token {
+        todo!()
+    }
 }
 
-/// This trait is similar to `Detokenize`, but it is used inside the abigen
+/// This trait is similar to `Tokenizable`, but it is used inside the abigen
 /// generated code in order to get the parameter types (`ParamType`) and
 /// instantiate a new struct/enum from tokens. This is used in the generated
 /// code in `custom_types_gen.rs`, with the exception of the Sway-native types
