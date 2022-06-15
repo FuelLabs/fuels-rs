@@ -158,12 +158,9 @@ pub const DEFAULT_COIN_AMOUNT: u64 = 1_000_000;
 pub const BASE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
 ```
 
-The `gas_limit` parameter differs from the one in `TxParameters` in that it defines the limit for the actual contract call
-as opposed to the gas limit for the whole transaction. This means that it is constrained by the transaction limit. If it is set to an amount grater than the available gas, all 
-available gas will be forwarded.
+The `gas_limit` parameter differs from the one in `TxParameters` in that it defines the limit for the actual contract call as opposed to the gas limit for the whole transaction. This means that it is constrained by the transaction limit. If it is set to an amount grater than the available gas, all available gas will be forwarded.
 
-Here we use both the transaction and call `gas_limit` to specify that the contract call transaction may consume up to 1000 gas
-while the actual call may only consume up to 200 gas:
+Here we use both the transaction and call `gas_limit` to specify that the contract call transaction may consume up to 1000 gas while the actual call may only consume up to 200 gas:
 
 ```rust,ignore
 {{#include ../../../examples/contracts/src/lib.rs:call_params_gas}}

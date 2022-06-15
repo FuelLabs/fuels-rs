@@ -238,7 +238,7 @@ impl Script {
     /// following registers;
     ///
     /// 0x10 Script data offset
-    /// 0x11 Gas price
+    /// 0x11 Gas limit
     /// 0x12 Coin amount
     /// 0x13 Asset ID
     ///
