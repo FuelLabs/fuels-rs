@@ -1,5 +1,3 @@
-use fuels::contract::contract::CallResponse;
-
 #[tokio::test]
 // ANCHOR: instantiate_client
 async fn instantiate_client() {
@@ -179,9 +177,9 @@ async fn call_params() {
     use fuels_abigen_macro::abigen;
 
     abigen!(
-            MyContract,
-            "packages/fuels-abigen-macro/tests/test_projects/msg_amount/out/debug/msg_amount-abi.json"
-        );
+        MyContract,
+        "packages/fuels-abigen-macro/tests/test_projects/msg_amount/out/debug/msg_amount-abi.json"
+    );
 
     let wallet = launch_provider_and_get_single_wallet().await;
 
@@ -190,8 +188,8 @@ async fn call_params() {
         &wallet,
         TxParameters::default(),
     )
-        .await
-        .unwrap();
+    .await
+    .unwrap();
 
     println!("Contract deployed @ {:x}", contract_id);
     let contract_instance = MyContract::new(contract_id.to_string(), wallet.clone());
@@ -204,10 +202,10 @@ async fn call_params() {
     let call_params = CallParameters::new(Some(1_000_000), None, None);
 
     let response = contract_instance
-        .get_msg_amount()          // Our contract method.
-        .tx_params(tx_params)      // Chain the tx params setting method.
-        .call_params(call_params)  // Chain the call params setting method.
-        .call()                    // Perform the contract call.
+        .get_msg_amount() // Our contract method.
+        .tx_params(tx_params) // Chain the tx params setting method.
+        .call_params(call_params) // Chain the call params setting method.
+        .call() // Perform the contract call.
         .await
         .unwrap();
     // ANCHOR_END: call_params
@@ -221,9 +219,9 @@ async fn call_params_gas() {
     use fuels_abigen_macro::abigen;
 
     abigen!(
-            MyContract,
-            "packages/fuels-abigen-macro/tests/test_projects/msg_amount/out/debug/msg_amount-abi.json"
-        );
+        MyContract,
+        "packages/fuels-abigen-macro/tests/test_projects/msg_amount/out/debug/msg_amount-abi.json"
+    );
 
     let wallet = launch_provider_and_get_single_wallet().await;
 
@@ -232,8 +230,8 @@ async fn call_params_gas() {
         &wallet,
         TxParameters::default(),
     )
-        .await
-        .unwrap();
+    .await
+    .unwrap();
 
     println!("Contract deployed @ {:x}", contract_id);
     let contract_instance = MyContract::new(contract_id.to_string(), wallet.clone());
@@ -243,10 +241,10 @@ async fn call_params_gas() {
     let my_call_params = CallParameters::new(None, None, Some(200));
 
     let response = contract_instance
-        .get_msg_amount()            // Our contract method.
-        .tx_params(my_tx_params)     // Chain the tx params setting method.
+        .get_msg_amount() // Our contract method.
+        .tx_params(my_tx_params) // Chain the tx params setting method.
         .call_params(my_call_params) // Chain the call params setting method.
-        .call()                      // Perform the contract call.
+        .call() // Perform the contract call.
         .await
         .unwrap();
     // ANCHOR_END: call_params_gas
