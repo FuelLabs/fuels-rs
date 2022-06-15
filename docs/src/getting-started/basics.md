@@ -135,7 +135,7 @@ Call parameters are:
 
 1. Amount;
 2. Asset ID;
-3. Gas limit
+3. Gas forwarded.
 
 This is commonly used to forward coins to a contract. These parameters can be configured by creating an instance of [`CallParameters`](https://github.com/FuelLabs/fuels-rs/blob/adf81bd451d7637ce0976363bd7784408430031a/packages/fuels-contract/src/parameters.rs#L15) and passing it to a chain method called `call_params`.
 
@@ -158,9 +158,9 @@ pub const DEFAULT_COIN_AMOUNT: u64 = 1_000_000;
 pub const BASE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
 ```
 
-The `gas_limit` parameter differs from the one in `TxParameters` in that it defines the limit for the actual contract call as opposed to the gas limit for the whole transaction. This means that it is constrained by the transaction limit. If it is set to an amount greater than the available gas, all available gas will be forwarded.
+The `gas_forwarded` parameter defines the limit for the actual contract call as opposed to the gas limit for the whole transaction. This means that it is constrained by the transaction limit. If it is set to an amount greater than the available gas, all available gas will be forwarded.
 
-Here we use both the transaction and call `gas_limit` to specify that the contract call transaction may consume up to 1000 gas while the actual call may only consume up to 200 gas:
+Here we set the transaction `gas_limit` and call `gas_forwarded` to specify that the contract call transaction may consume up to 1000 gas, while we only forward 200 gas for the actual call:
 
 ```rust,ignore
 {{#include ../../../examples/contracts/src/lib.rs:call_params_gas}}

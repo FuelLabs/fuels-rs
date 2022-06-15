@@ -1,5 +1,5 @@
 use crate::constants::{
-    BASE_ASSET_ID, DEFAULT_BYTE_PRICE, DEFAULT_CALL_GAS_LIMIT, DEFAULT_GAS_LIMIT,
+    BASE_ASSET_ID, DEFAULT_BYTE_PRICE, DEFAULT_FORWARDED_GAS, DEFAULT_GAS_LIMIT,
     DEFAULT_GAS_PRICE, DEFAULT_MATURITY,
 };
 use fuel_tx::AssetId;
@@ -16,15 +16,15 @@ pub struct TxParameters {
 pub struct CallParameters {
     pub amount: u64,
     pub asset_id: AssetId,
-    pub gas_limit: u64,
+    pub gas_forwarded: u64,
 }
 
 impl CallParameters {
-    pub fn new(amount: Option<u64>, asset_id: Option<AssetId>, gas_limit: Option<u64>) -> Self {
+    pub fn new(amount: Option<u64>, asset_id: Option<AssetId>, gas_forwarded: Option<u64>) -> Self {
         Self {
             amount: amount.unwrap_or(0),
             asset_id: asset_id.unwrap_or(BASE_ASSET_ID),
-            gas_limit: gas_limit.unwrap_or(DEFAULT_CALL_GAS_LIMIT),
+            gas_forwarded: gas_limit.unwrap_or(DEFAULT_FORWARDED_GAS),
         }
     }
 }
@@ -34,7 +34,7 @@ impl Default for CallParameters {
         Self {
             amount: 0,
             asset_id: BASE_ASSET_ID,
-            gas_limit: DEFAULT_GAS_LIMIT,
+            gas_forwarded: DEFAULT_FORWARDED_GAS,
         }
     }
 }
