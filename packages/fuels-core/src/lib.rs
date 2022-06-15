@@ -412,14 +412,15 @@ impl Detokenize for () {
 }
 
 impl<T: Tokenizable> Detokenize for T {
-    fn from_tokens(mut tokens: Vec<Token>) -> Result<Self, InvalidOutputType> {
-        let token = match tokens.len() {
-            0 => Token::Struct(vec![]),
-            1 => tokens.remove(0),
-            _ => Token::Struct(tokens),
-        };
+    fn from_tokens(tokens: Vec<Token>) -> Result<Self, InvalidOutputType> {
+        println!("T::from_tokens({:?})", tokens);
 
-        Self::from_token(token)
+        match &tokens[..] {
+            [token] => Self::from_token(token.clone()),
+            _ => Err(InvalidOutputType(
+                "A type must be encoded in only one token.".to_string(),
+            )),
+        }
     }
 }
 

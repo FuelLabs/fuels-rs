@@ -94,7 +94,7 @@ impl Contract {
         contract_id: ContractId,
         wallet: &LocalWallet,
         signature: Selector,
-        output_params: &[ParamType],
+        output_param: Option<ParamType>,
         args: &[Token],
     ) -> Result<ContractCallHandler<D>, Error> {
         let mut encoder = ABIEncoder::new();
@@ -118,7 +118,7 @@ impl Contract {
             compute_calldata_offset,
             variable_outputs: None,
             external_contracts: None,
-            output_params: output_params.to_vec(),
+            output_params: output_param.map_or(vec![], |param| vec![param]),
         };
 
         Ok(ContractCallHandler {
@@ -425,6 +425,7 @@ where
         }
 
         let (decoded_value, receipts) = self.contract_call.get_decoded_output(receipts)?;
+        println!("decoded tokens: {:?}", decoded_value);
         Ok(CallResponse::new(D::from_tokens(decoded_value)?, receipts))
     }
 }
