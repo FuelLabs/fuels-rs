@@ -20,7 +20,6 @@ impl ABIDecoder {
     /// of the expected values/types in `data`.
     /// You can find comprehensive examples in the tests for this module.
     pub fn decode(types: &[ParamType], data: &[u8]) -> Result<Vec<Token>, CodecError> {
-        println!("decode: {:?}, {:?}", types, data);
         let mut tokens: Vec<Token> = Vec::new();
         let mut offset = 0;
         for param in types {
@@ -289,18 +288,11 @@ mod tests {
 
     #[test]
     fn decode_int() {
-        let types = vec![ParamType::U32];
         let data = [0x0, 0x0, 0x0, 0x0, 0xff, 0xff, 0xff, 0xff];
 
-        let decoded = ABIDecoder::decode(&types, &data).unwrap();
+        let decoded = ABIDecoder::decode_single(&ParamType::U32, &data).unwrap();
 
-        let expected = vec![Token::U32(u32::MAX)];
-        assert_eq!(decoded, expected);
-
-        println!(
-            "Decoded ABI for ({:#0x?}) with types ({:?}): {:?}",
-            data, types, decoded
-        );
+        assert_eq!(decoded, Token::U32(u32::MAX));
     }
 
     #[test]
@@ -326,11 +318,6 @@ mod tests {
             Token::U64(u64::MAX),
         ];
         assert_eq!(decoded, expected);
-
-        println!(
-            "Decoded ABI for ({:#0x?}) with types ({:?}): {:?}",
-            data, types, decoded
-        );
     }
 
     #[test]
@@ -343,32 +330,21 @@ mod tests {
         let decoded = ABIDecoder::decode(&types, &data).unwrap();
 
         let expected = vec![Token::Bool(true), Token::Bool(false)];
-        assert_eq!(decoded, expected);
 
-        println!(
-            "Decoded ABI for ({:#0x?}) with types ({:?}): {:?}",
-            data, types, decoded
-        );
+        assert_eq!(decoded, expected);
     }
 
     #[test]
     fn decode_b256() {
-        let types = vec![ParamType::B256];
         let data = [
             0xd5, 0x57, 0x9c, 0x46, 0xdf, 0xcc, 0x7f, 0x18, 0x20, 0x70, 0x13, 0xe6, 0x5b, 0x44,
             0xe4, 0xcb, 0x4e, 0x2c, 0x22, 0x98, 0xf4, 0xac, 0x45, 0x7b, 0xa8, 0xf8, 0x27, 0x43,
             0xf3, 0x1e, 0x93, 0xb,
         ];
 
-        let decoded = ABIDecoder::decode(&types, &data).unwrap();
+        let decoded = ABIDecoder::decode_single(&ParamType::B256, &data).unwrap();
 
-        let expected = vec![Token::B256(data)];
-        assert_eq!(decoded, expected);
-
-        println!(
-            "Decoded ABI for ({:#0x?}) with types ({:?}): {:?}",
-            data, types, decoded
-        );
+        assert_eq!(decoded, Token::B256(data));
     }
 
     #[test]
@@ -386,12 +362,8 @@ mod tests {
             Token::String("This is a full sentence".into()),
             Token::String("Hello".into()),
         ];
-        assert_eq!(decoded, expected);
 
-        println!(
-            "Decoded ABI for ({:#0x?}) with types ({:?}): {:?}",
-            data, types, decoded
-        );
+        assert_eq!(decoded, expected);
     }
     #[test]
     fn decode_array() {
@@ -405,11 +377,6 @@ mod tests {
 
         let expected = vec![Token::Array(vec![Token::U8(255), Token::U8(42)])];
         assert_eq!(decoded, expected);
-
-        println!(
-            "Decoded ABI for ({:#0x?}) with types ({:?}): {:?}",
-            data, types, decoded
-        );
     }
 
     #[test]
@@ -419,21 +386,17 @@ mod tests {
         //     foo: u8,
         //     bar: bool,
         // }
-        let types = vec![ParamType::Struct(vec![ParamType::U8, ParamType::Bool])];
 
         let data = [
             0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
         ];
+        let param_type = ParamType::Struct(vec![ParamType::U8, ParamType::Bool]);
 
-        let decoded = ABIDecoder::decode(&types, &data).unwrap();
+        let decoded = ABIDecoder::decode_single(&param_type, &data).unwrap();
 
-        let expected = vec![Token::Struct(vec![Token::U8(1), Token::Bool(true)])];
+        let expected = Token::Struct(vec![Token::U8(1), Token::Bool(true)]);
+
         assert_eq!(decoded, expected);
-
-        println!(
-            "Decoded ABI for ({:#0x?}) with types ({:?}): {:?}",
-            data, types, decoded
-        );
     }
 
     #[test]
@@ -456,11 +419,6 @@ mod tests {
 
         let expected = vec![Token::Enum(Box::new((0, Token::U32(42), inner_enum_types)))];
         assert_eq!(decoded, expected);
-
-        println!(
-            "Decoded ABI for ({:#0x?}) with types ({:?}): {:?}",
-            data, types, decoded
-        );
     }
 
     #[test]
@@ -543,13 +501,6 @@ mod tests {
         ];
 
         assert_eq!(decoded, Token::Struct(my_nested_struct));
-
-        println!(
-            "Decoded ABI for ({:#0x?}) with types ({:?}): {:?}",
-            data,
-            vec![nested_struct],
-            decoded
-        );
     }
 
     #[test]
@@ -622,11 +573,6 @@ mod tests {
         let expected: Vec<Token> = vec![foo, u8_arr, b256, s];
 
         assert_eq!(decoded, expected);
-
-        println!(
-            "Decoded ABI for ({:#0x?}) with types ({:?}): {:?}",
-            data, types, decoded
-        );
     }
 
     #[test]
@@ -695,8 +641,6 @@ mod tests {
         let decoded = ABIDecoder::decode(slice::from_ref(&param_type), &data).unwrap();
 
         assert_eq!(expected_token, decoded[0]);
-
-        println!("Decoded: {:?}", decoded);
     }
 
     fn get_par2() -> Vec<u8> {
