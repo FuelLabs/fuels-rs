@@ -172,7 +172,7 @@ async fn deploy_with_multiple_wallets() {
 // ANCHOR_END: deploy_with_multiple_wallets
 
 #[tokio::test]
-async fn call_params() {
+async fn call_params() -> Result<(), Error> {
     use fuels::prelude::*;
     use fuels_abigen_macro::abigen;
 
@@ -206,15 +206,15 @@ async fn call_params() {
         .tx_params(tx_params) // Chain the tx params setting method.
         .call_params(call_params) // Chain the call params setting method.
         .call() // Perform the contract call.
-        .await
-        .unwrap();
+        .await?;
     // ANCHOR_END: call_params
 
     print!("{:?}", response);
+    Ok(())
 }
 
 #[tokio::test]
-async fn call_params_gas() {
+async fn call_params_gas() -> Result<(), Error> {
     use fuels::prelude::*;
     use fuels_abigen_macro::abigen;
 
@@ -250,4 +250,5 @@ async fn call_params_gas() {
     // ANCHOR_END: call_params_gas
 
     print!("{:?}", response);
+    Ok(())
 }
