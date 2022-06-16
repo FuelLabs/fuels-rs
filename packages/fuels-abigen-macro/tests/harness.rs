@@ -1,4 +1,3 @@
-use fuel_core::service::Config;
 use fuel_gql_client::fuel_tx::{AssetId, ContractId, Receipt};
 use fuels::prelude::{
     launch_provider_and_get_single_wallet, setup_multiple_assets_coins, setup_single_asset_coins,
@@ -935,7 +934,7 @@ async fn test_provider_launch_and_connect() {
         DEFAULT_NUM_COINS,
         DEFAULT_COIN_AMOUNT,
     );
-    let (launched_provider, address) = setup_test_provider(coins, Config::local_node()).await;
+    let (launched_provider, address) = setup_test_provider(coins, None).await;
     let connected_provider = Provider::connect(address).await.unwrap();
 
     wallet.set_provider(connected_provider);
@@ -1542,7 +1541,7 @@ async fn test_wallet_balance_api() {
         amount_per_coin,
     );
 
-    let (provider, _) = setup_test_provider(coins.clone(), Config::local_node()).await;
+    let (provider, _) = setup_test_provider(coins.clone(), None).await;
     wallet.set_provider(provider);
     for (_utxo_id, coin) in coins {
         let balance = wallet.get_asset_balance(&coin.asset_id).await;
@@ -1569,7 +1568,7 @@ async fn test_wallet_balance_api() {
     );
     assert_eq!(coins.len() as u64, number_of_assets * coins_per_asset);
     assert_eq!(asset_ids.len() as u64, number_of_assets);
-    let (provider, _) = setup_test_provider(coins.clone(), Config::local_node()).await;
+    let (provider, _) = setup_test_provider(coins.clone(), None).await;
     wallet.set_provider(provider);
     let balances = wallet.get_balances().await.unwrap();
     assert_eq!(balances.len() as u64, number_of_assets);
