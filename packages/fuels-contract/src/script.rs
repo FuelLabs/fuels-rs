@@ -288,3 +288,105 @@ impl Script {
         Ok(receipts)
     }
 }
+
+#[cfg(test)]
+mod test {
+    use fuels_core::parameters::CallParameters;
+
+    use super::*;
+
+    #[tokio::test]
+    async fn test_script_data() {
+        // Arrange
+        const SELECTOR_LEN: usize = WORD_SIZE;
+        const NUM_CALLS: usize = 3;
+
+        let contract_ids = vec![
+            ContractId::from([1u8; 32]),
+            ContractId::from([2u8; 32]),
+            ContractId::from([3u8; 32]),
+        ];
+
+        let asset_ids = vec![
+            AssetId::from([4u8; 32]),
+            AssetId::from([5u8; 32]),
+            AssetId::from([6u8; 32]),
+        ];
+
+        let selectors = vec![[7u8; 8], [8u8; 8], [9u8; 8]];
+
+        // Call 2 has a multiple inputs, compute_custom_input_offset will be true
+        let args = vec![[10u8; 8].to_vec(), [11u8; 16].to_vec(), [12u8; 8].to_vec()];
+
+        let calls: Vec<ContractCall> = (0..NUM_CALLS)
+            .map(|i| ContractCall {
+                contract_id: contract_ids[i],
+                encoded_selector: selectors[i],
+                encoded_args: args[i].clone(),
+                call_parameters: CallParameters::new(
+                    Some(i as u64),
+                    Some(asset_ids[i]),
+                    Some(i as u64),
+                ),
+                compute_custom_input_offset: i == 1,
+                variable_outputs: None,
+                external_contracts: None,
+                output_params: vec![],
+            })
+            .collect();
+
+        // Act
+        let (script_data, param_offsets) = Script::get_script_data(calls.iter().collect(), 0);
+
+        // Assert
+        assert_eq!(param_offsets.len(), NUM_CALLS);
+        for (idx, offsets) in param_offsets.iter().enumerate() {
+            let asset_id = script_data
+                [offsets.asset_id_offset..offsets.asset_id_offset + AssetId::LEN]
+                .to_vec();
+            assert_eq!(asset_id, asset_ids[idx].to_vec());
+
+            let amount =
+                script_data[offsets.amount_offset..offsets.amount_offset + WORD_SIZE].to_vec();
+            assert_eq!(amount, idx.to_be_bytes());
+
+            let gas = script_data
+                [offsets.gas_forwarded_offset..offsets.gas_forwarded_offset + WORD_SIZE]
+                .to_vec();
+            assert_eq!(gas, idx.to_be_bytes().to_vec());
+
+            let contract_id = script_data
+                [offsets.call_data_offset..offsets.call_data_offset + ContractId::LEN]
+                .to_vec();
+            assert_eq!(contract_id, contract_ids[idx].to_vec());
+
+            let selector_offset = offsets.call_data_offset + ContractId::LEN;
+            let selector = script_data[selector_offset..selector_offset + SELECTOR_LEN].to_vec();
+            assert_eq!(selector, selectors[idx].to_vec());
+        }
+
+        // Calls 1 and 3 have their input arguments after the selector
+        let call_1_arg_offset = param_offsets[0].call_data_offset + ContractId::LEN + SELECTOR_LEN;
+        let call_1_arg = script_data[call_1_arg_offset..call_1_arg_offset + WORD_SIZE].to_vec();
+        assert_eq!(call_1_arg, args[0].to_vec());
+
+        let call_3_arg_offset = param_offsets[2].call_data_offset + ContractId::LEN + SELECTOR_LEN;
+        let call_3_arg = script_data[call_3_arg_offset..call_3_arg_offset + WORD_SIZE].to_vec();
+        assert_eq!(call_3_arg, args[2]);
+
+        // Call 2 has custom inputs and custom_input_offset
+        let call_2_arg_offset = param_offsets[1].call_data_offset + ContractId::LEN + SELECTOR_LEN;
+        let custom_input_offset =
+            script_data[call_2_arg_offset..call_2_arg_offset + WORD_SIZE].to_vec();
+        assert_eq!(
+            custom_input_offset,
+            (call_2_arg_offset + WORD_SIZE).to_be_bytes()
+        );
+
+        let custom_input_offset =
+            param_offsets[1].call_data_offset + ContractId::LEN + SELECTOR_LEN + WORD_SIZE;
+        let custom_input =
+            script_data[custom_input_offset..custom_input_offset + 2 * WORD_SIZE].to_vec();
+        assert_eq!(custom_input, args[1]);
+    }
+}

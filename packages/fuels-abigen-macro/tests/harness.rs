@@ -717,36 +717,6 @@ async fn call_with_structs() {
 }
 
 #[tokio::test]
-async fn multi_call() {
-    abigen!(
-        MyContract,
-        "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
-    );
-
-    let wallet = launch_provider_and_get_single_wallet().await;
-
-    let contract_id = Contract::deploy(
-        "tests/test_projects/contract_test/out/debug/contract_test.bin",
-        &wallet,
-        TxParameters::default(),
-    )
-    .await
-    .unwrap();
-    println!("Contract deployed @ {:x}", contract_id);
-
-    let contract_instance = MyContract::new(contract_id.to_string(), wallet.clone());
-
-    let call_1 = contract_instance.initialize_counter(42);
-    let call_2 = contract_instance.increment_counter(10);
-    let multi_call = MultiContractCallHandler::new(vec![call_1, call_2], wallet);
-
-    let response = multi_call.call().await.unwrap();
-
-    assert_eq!(response.values[0].unwrap(), 42);
-    assert_eq!(response.values[1].unwrap(), 52);
-}
-
-#[tokio::test]
 async fn call_with_empty_return() {
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `MyContract`.
@@ -1830,4 +1800,76 @@ async fn nested_enums_are_correctly_encoded_decoded() {
     let result = instance.get_none().call().await.unwrap();
 
     assert_eq!(result.value, expected_none);
+}
+
+#[tokio::test]
+async fn test_multi_call() {
+    abigen!(
+        MyContract,
+        "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+    );
+
+    let wallet = launch_provider_and_get_single_wallet().await;
+
+    let contract_id = Contract::deploy(
+        "tests/test_projects/contract_test/out/debug/contract_test.bin",
+        &wallet,
+        TxParameters::default(),
+    )
+    .await
+    .unwrap();
+    println!("Contract deployed @ {:x}", contract_id);
+
+    let contract_instance = MyContract::new(contract_id.to_string(), wallet.clone());
+
+    let call_handler_1 = contract_instance.initialize_counter(42);
+    let call_handler_2 = contract_instance.increment_counter(10);
+
+    let tx_params = TxParameters::new(None, Some(1000), None, None);
+    let multi_call_handler =
+        MultiContractCallHandler::new(vec![call_handler_1, call_handler_2], wallet);
+
+    let response = multi_call_handler
+        .tx_params(tx_params)
+        .call()
+        .await
+        .unwrap();
+
+    assert_eq!(response.values[0].unwrap(), 42);
+    assert_eq!(response.values[1].unwrap(), 52);
+}
+
+#[tokio::test]
+async fn test_multi_call_script_workflow() {
+    abigen!(
+        MyContract,
+        "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+    );
+
+    let wallet = launch_provider_and_get_single_wallet().await;
+    let client = &wallet.get_provider().unwrap().client;
+
+    let contract_id = Contract::deploy(
+        "tests/test_projects/contract_test/out/debug/contract_test.bin",
+        &wallet,
+        TxParameters::default(),
+    )
+    .await
+    .unwrap();
+
+    let contract_instance = MyContract::new(contract_id.to_string(), wallet.clone());
+
+    let call_handler_1 = contract_instance.initialize_counter(42);
+    let call_handler_2 = contract_instance.increment_counter(10);
+    let multi_call_handler =
+        MultiContractCallHandler::new(vec![call_handler_1, call_handler_2], wallet.clone());
+
+    let script = multi_call_handler.get_script().await;
+    assert!(script.tx.is_script());
+
+    let receipts = script.call(client).await.unwrap();
+
+    let response = multi_call_handler.get_response(receipts).unwrap();
+    assert_eq!(response.values[0].unwrap(), 42);
+    assert_eq!(response.values[1].unwrap(), 52);
 }
