@@ -570,7 +570,7 @@ match response {
     use fuels::prelude::*;
 
     // Use the test helper to setup a test provider.
-    let (provider, _address) = setup_test_provider(vec![], Config::local_node()).await;
+    let (provider, _address) = setup_test_provider(vec![], None).await;
 
     // Create the wallet.
     let _wallet = LocalWallet::new_random(Some(provider));
@@ -583,7 +583,7 @@ match response {
     use std::str::FromStr;
 
     // Use the test helper to setup a test provider.
-    let (provider, _address) = setup_test_provider(vec![], Config::local_node()).await;
+    let (provider, _address) = setup_test_provider(vec![], None).await;
 
     // Setup the private key.
     let secret =
@@ -610,7 +610,7 @@ enables defining owners (wallet addresses) of genesis coins before a provider is
     let phrase = &quot;oblige salon price punch saddle immune slogan rare snap desert retire surprise&quot;;
 
     // Use the test helper to setup a test provider.
-    let (provider, _address) = setup_test_provider(vec![], Config::local_node()).await;
+    let (provider, _address) = setup_test_provider(vec![], None).await;
 
     // Create first account from mnemonic phrase.
     let _wallet = LocalWallet::new_from_mnemonic_phrase_with_path(
@@ -638,7 +638,7 @@ enables defining owners (wallet addresses) of genesis coins before a provider is
     let mut rng = rand::thread_rng();
 
     // Use the test helper to setup a test provider.
-    let (provider, _address) = setup_test_provider(vec![], Config::local_node()).await;
+    let (provider, _address) = setup_test_provider(vec![], None).await;
 
     let password = &quot;my_master_password&quot;;
 
@@ -661,7 +661,7 @@ enables defining owners (wallet addresses) of genesis coins before a provider is
     let phrase = &quot;oblige salon price punch saddle immune slogan rare snap desert retire surprise&quot;;
 
     // Use the test helper to setup a test provider.
-    let (provider, _address) = setup_test_provider(vec![], Config::local_node()).await;
+    let (provider, _address) = setup_test_provider(vec![], None).await;
 
     // Create first account from mnemonic phrase.
     let wallet = LocalWallet::new_from_mnemonic_phrase(phrase, Some(provider)).unwrap();
