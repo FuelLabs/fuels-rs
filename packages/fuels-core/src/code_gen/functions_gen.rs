@@ -148,7 +148,6 @@ fn expand_fn_outputs(outputs: &[Property]) -> Result<TokenStream, Error> {
                 },
             }
         }
-        // Recursively expand the outputs
         _ => Err(Error::CompilationError(
             "A function cannot have multiple outputs.".to_string(),
         )),
