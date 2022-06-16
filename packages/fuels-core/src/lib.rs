@@ -61,6 +61,12 @@ impl EnumVariants {
     pub fn param_types(&self) -> &Vec<ParamType> {
         &self.variants
     }
+
+    pub fn only_units_inside(&self) -> bool {
+        self.variants
+            .iter()
+            .all(|variant| *variant == ParamType::Unit)
+    }
 }
 
 #[derive(Debug, Clone, EnumString, PartialEq, Eq)]

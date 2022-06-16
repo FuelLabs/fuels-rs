@@ -75,11 +75,14 @@ impl ABIEncoder {
 
         self.encode_discriminant(discriminant);
 
-        let param_type = Self::type_of_chosen_variant(discriminant, variants)?;
-
-        self.add_enum_padding(variants, param_type);
-
-        self.encode(slice::from_ref(token_within_enum))?;
+        // The sway compiler has an optimization for enums which have only Units
+        // as variants -- such an enum is encoded only by encoding its
+        // discriminant.
+        if !variants.only_units_inside() {
+            let param_type = Self::type_of_chosen_variant(discriminant, variants)?;
+            self.add_enum_padding(variants, param_type);
+            self.encode(slice::from_ref(token_within_enum))?;
+        }
 
         Ok(())
     }
@@ -822,5 +825,53 @@ mod tests {
 
         assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
         assert_eq!(abi_encoder.function_selector, expected_function_selector);
+    }
+
+    #[test]
+    fn enums_with_only_unit_variants_are_encoded_in_one_word() {
+        let expected = [0, 0, 0, 0, 0, 0, 0, 1];
+
+        let mut encoder = ABIEncoder::new();
+
+        let enum_selector = Box::new((
+            1,
+            Token::Unit,
+            EnumVariants::new(vec![ParamType::Unit, ParamType::Unit]).unwrap(),
+        ));
+
+        let actual = encoder.encode(&[Token::Enum(enum_selector)]).unwrap();
+
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn units_in_composite_types_are_encoded_in_one_word() {
+        let expected = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5];
+
+        let mut encoder = ABIEncoder::new();
+
+        let actual = encoder
+            .encode(&[Token::Struct(vec![Token::Unit, Token::U32(5)])])
+            .unwrap();
+
+        assert_eq!(actual, expected);
+    }
+    #[test]
+    fn enums_with_units_are_correctly_padded() {
+        let discriminant = vec![0, 0, 0, 0, 0, 0, 0, 1];
+        let padding = vec![0; 32];
+        let expected: Vec<u8> = [discriminant, padding].into_iter().flatten().collect();
+
+        let mut encoder = ABIEncoder::new();
+
+        let enum_selector = Box::new((
+            1,
+            Token::Unit,
+            EnumVariants::new(vec![ParamType::B256, ParamType::Unit]).unwrap(),
+        ));
+
+        let actual = encoder.encode(&[Token::Enum(enum_selector)]).unwrap();
+
+        assert_eq!(actual, expected);
     }
 }

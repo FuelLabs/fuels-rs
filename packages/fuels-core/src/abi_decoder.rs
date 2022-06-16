@@ -33,7 +33,7 @@ impl ABIDecoder {
 
     fn decode_param(param: &ParamType, data: &[u8]) -> Result<DecodeResult, CodecError> {
         match &*param {
-            ParamType::Unit => Self::decode_unit(),
+            ParamType::Unit => Self::decode_unit(data),
             ParamType::U8 => Self::decode_u8(data),
             ParamType::U16 => Self::decode_u16(data),
             ParamType::U32 => Self::decode_u32(data),
@@ -173,10 +173,13 @@ impl ABIDecoder {
         })
     }
 
-    fn decode_unit() -> Result<DecodeResult, CodecError> {
+    fn decode_unit(data: &[u8]) -> Result<DecodeResult, CodecError> {
+        // We don't need the data, we're doing this purely as a bounds
+        // check.
+        peek_fixed::<WORD_SIZE>(data)?;
         Ok(DecodeResult {
             token: Token::Unit,
-            bytes_read: 8,
+            bytes_read: WORD_SIZE,
         })
     }
 
@@ -189,21 +192,36 @@ impl ABIDecoder {
     /// * `variants`: all types that this particular enum type could hold
     fn decode_enum(data: &[u8], variants: &EnumVariants) -> Result<DecodeResult, CodecError> {
         let discriminant = peek_u32(data)?;
+        let selected_variant = Self::type_of_selected_variant(variants, discriminant as usize)?;
 
         let enum_width = compute_encoding_width_of_enum(variants);
+        let token = Self::decode_token_in_enum(data, variants, selected_variant, enum_width)?;
 
-        let variant = Self::type_of_selected_variant(variants, discriminant as usize)?;
-        let words_to_skip = enum_width - compute_encoding_width(variant);
-
-        let res = Self::decode_param(variant, &data[words_to_skip * WORD_SIZE..])?;
-
-        let selector = Box::new((discriminant as u8, res.token, variants.clone()));
-        let token = Token::Enum(selector);
-
+        let selector = Box::new((discriminant as u8, token, variants.clone()));
         Ok(DecodeResult {
-            token,
+            token: Token::Enum(selector),
             bytes_read: enum_width * WORD_SIZE,
         })
+    }
+
+    fn decode_token_in_enum(
+        data: &[u8],
+        variants: &EnumVariants,
+        selected_variant: &ParamType,
+        enum_width: usize,
+    ) -> Result<Token, CodecError> {
+        // The sway compiler has an optimization where enums that only contain
+        // units for variants have only their discriminant encoded. Because of
+        // this we construct the Token::Unit rather than calling `decode_param`
+        // since that will consume a WORD from `data`.
+        if variants.only_units_inside() {
+            Ok(Token::Unit)
+        } else {
+            let words_to_skip = enum_width - compute_encoding_width(selected_variant);
+
+            let res = Self::decode_param(selected_variant, &data[words_to_skip * WORD_SIZE..])?;
+            Ok(res.token)
+        }
     }
 
     /// Returns a variant from `variants` pointed to by `discriminant`.
@@ -280,6 +298,7 @@ fn peek(data: &[u8], len: usize) -> Result<&[u8], CodecError> {
 mod tests {
     use super::*;
     use crate::EnumVariants;
+    use std::slice;
 
     #[test]
     fn decode_int() {
@@ -622,5 +641,30 @@ mod tests {
             "Decoded ABI for ({:#0x?}) with types ({:?}): {:?}",
             data, types, decoded
         );
+    }
+    #[test]
+    fn enums_with_all_unit_variants_are_decoded_from_one_word() {
+        let data = [0, 0, 0, 0, 0, 0, 0, 1];
+        let variants = EnumVariants::new(vec![ParamType::Unit, ParamType::Unit]).unwrap();
+        let enum_w_only_units = ParamType::Enum(variants.clone());
+
+        let result = ABIDecoder::decode(slice::from_ref(&enum_w_only_units), &data).unwrap();
+
+        let expected_enum = Token::Enum(Box::new((1, Token::Unit, variants)));
+        assert_eq!(result, vec![expected_enum]);
+    }
+
+    #[test]
+    fn out_of_bounds_discriminant_is_detected() {
+        let data = [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 2];
+        let variants = EnumVariants::new(vec![ParamType::U32]).unwrap();
+        let enum_type = ParamType::Enum(variants.clone());
+
+        let result = ABIDecoder::decode(slice::from_ref(&enum_type), &data);
+
+        let error = result.err().expect("Should have resulted in an error");
+
+        let expected_msg = "Error while decoding an enum. The discriminant '1' doesn't point to any of the following variants: ";
+        assert!(matches!(error, CodecError::InvalidData(str) if str.starts_with(expected_msg)));
     }
 }
