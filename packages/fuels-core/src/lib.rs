@@ -1,5 +1,6 @@
 use crate::constants::WORD_SIZE;
 use core::fmt;
+pub use errors::InstantiationError;
 use fuel_types::bytes::padded_len;
 use std::error::Error;
 use strum_macros::EnumString;
@@ -187,19 +188,15 @@ impl fmt::Display for Token {
     }
 }
 
-impl<'a> Default for Token {
+impl Default for Token {
     fn default() -> Self {
         Token::U8(0)
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct InvalidOutputType(pub String);
-
-/// Simplified output type for single value.
 pub trait Tokenizable {
     /// Converts a `Token` into expected type.
-    fn from_token(token: Token) -> Result<Self, InvalidOutputType>
+    fn from_token(token: Token) -> Result<Self, InstantiationError>
     where
         Self: Sized;
     /// Converts a specified type back into token.
@@ -207,7 +204,7 @@ pub trait Tokenizable {
 }
 
 impl Tokenizable for Token {
-    fn from_token(token: Token) -> Result<Self, InvalidOutputType> {
+    fn from_token(token: Token) -> Result<Self, InstantiationError> {
         Ok(token)
     }
     fn into_token(self) -> Token {
@@ -216,10 +213,10 @@ impl Tokenizable for Token {
 }
 
 impl Tokenizable for bool {
-    fn from_token(token: Token) -> Result<Self, InvalidOutputType> {
+    fn from_token(token: Token) -> Result<Self, InstantiationError> {
         match token {
             Token::Bool(data) => Ok(data),
-            other => Err(InvalidOutputType(format!(
+            other => Err(InstantiationError(format!(
                 "Expected `bool`, got {:?}",
                 other
             ))),
@@ -231,10 +228,10 @@ impl Tokenizable for bool {
 }
 
 impl Tokenizable for String {
-    fn from_token(token: Token) -> Result<Self, InvalidOutputType> {
+    fn from_token(token: Token) -> Result<Self, InstantiationError> {
         match token {
             Token::String(data) => Ok(data),
-            other => Err(InvalidOutputType(format!(
+            other => Err(InstantiationError(format!(
                 "Expected `String`, got {:?}",
                 other
             ))),
@@ -246,10 +243,10 @@ impl Tokenizable for String {
 }
 
 impl Tokenizable for Bits256 {
-    fn from_token(token: Token) -> Result<Self, InvalidOutputType> {
+    fn from_token(token: Token) -> Result<Self, InstantiationError> {
         match token {
             Token::B256(data) => Ok(data),
-            other => Err(InvalidOutputType(format!(
+            other => Err(InstantiationError(format!(
                 "Expected `String`, got {:?}",
                 other
             ))),
@@ -261,7 +258,7 @@ impl Tokenizable for Bits256 {
 }
 
 impl<T: Tokenizable> Tokenizable for Vec<T> {
-    fn from_token(token: Token) -> Result<Self, InvalidOutputType> {
+    fn from_token(token: Token) -> Result<Self, InstantiationError> {
         match token {
             Token::Array(data) => {
                 let mut v: Vec<T> = Vec::new();
@@ -270,7 +267,7 @@ impl<T: Tokenizable> Tokenizable for Vec<T> {
                 }
                 Ok(v)
             }
-            other => Err(InvalidOutputType(format!("Expected `T`, got {:?}", other))),
+            other => Err(InstantiationError(format!("Expected `T`, got {:?}", other))),
         }
     }
     fn into_token(self) -> Token {
@@ -283,11 +280,33 @@ impl<T: Tokenizable> Tokenizable for Vec<T> {
     }
 }
 
+impl Tokenizable for () {
+    fn from_token(token: Token) -> Result<Self, InstantiationError>
+    where
+        Self: Sized,
+    {
+        match token {
+            Token::Unit => Ok(()),
+            other => Err(InstantiationError(format!(
+                "Expected `Unit`, got {:?}",
+                other
+            ))),
+        }
+    }
+
+    fn into_token(self) -> Token {
+        Token::Unit
+    }
+}
+
 impl Tokenizable for u8 {
-    fn from_token(token: Token) -> Result<Self, InvalidOutputType> {
+    fn from_token(token: Token) -> Result<Self, InstantiationError> {
         match token {
             Token::U8(data) => Ok(data),
-            other => Err(InvalidOutputType(format!("Expected `u8`, got {:?}", other))),
+            other => Err(InstantiationError(format!(
+                "Expected `u8`, got {:?}",
+                other
+            ))),
         }
     }
     fn into_token(self) -> Token {
@@ -296,10 +315,10 @@ impl Tokenizable for u8 {
 }
 
 impl Tokenizable for u16 {
-    fn from_token(token: Token) -> Result<Self, InvalidOutputType> {
+    fn from_token(token: Token) -> Result<Self, InstantiationError> {
         match token {
             Token::U16(data) => Ok(data),
-            other => Err(InvalidOutputType(format!(
+            other => Err(InstantiationError(format!(
                 "Expected `u16`, got {:?}",
                 other
             ))),
@@ -311,10 +330,10 @@ impl Tokenizable for u16 {
 }
 
 impl Tokenizable for u32 {
-    fn from_token(token: Token) -> Result<Self, InvalidOutputType> {
+    fn from_token(token: Token) -> Result<Self, InstantiationError> {
         match token {
             Token::U32(data) => Ok(data),
-            other => Err(InvalidOutputType(format!(
+            other => Err(InstantiationError(format!(
                 "Expected `u32`, got {:?}",
                 other
             ))),
@@ -326,10 +345,10 @@ impl Tokenizable for u32 {
 }
 
 impl Tokenizable for u64 {
-    fn from_token(token: Token) -> Result<Self, InvalidOutputType> {
+    fn from_token(token: Token) -> Result<Self, InstantiationError> {
         match token {
             Token::U64(data) => Ok(data),
-            other => Err(InvalidOutputType(format!(
+            other => Err(InstantiationError(format!(
                 "Expected `u64`, got {:?}",
                 other
             ))),
@@ -351,15 +370,20 @@ macro_rules! impl_tuples {
                 $ty: Tokenizable,
             )+
         {
-            fn from_token(token: Token) -> Result<Self, InvalidOutputType> {
+            fn from_token(token: Token) -> Result<Self, InstantiationError> {
                 match token {
-                    Token::Tuple(mut tokens) => {
-                        let mut it = tokens.drain(..);
+                    Token::Tuple(tokens) => {
+                        let mut it = tokens.into_iter();
+                        let mut next_token = move || {
+                            it.next().ok_or_else(|| {
+                                InstantiationError("Ran out of tokens before tuple could be constructed".to_string())
+                            })
+                        };
                         Ok(($(
-                          $ty::from_token(it.next().expect("All elements are in vector."))?,
+                          $ty::from_token(next_token()?)?,
                         )+))
                     },
-                    other => Err(InvalidOutputType(format!(
+                    other => Err(InstantiationError(format!(
                         "Expected `Tuple`, got {:?}",
                         other,
                     ))),
@@ -394,110 +418,100 @@ impl_tuples!(14, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M
 impl_tuples!(15, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13, O:14, );
 impl_tuples!(16, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13, O:14, P:15, );
 
-/// Output type possible to deserialize from Contract ABI
-pub trait Detokenize {
-    /// Creates a new instance from parsed ABI tokens.
-    fn from_tokens(tokens: Vec<Token>) -> Result<Self, InvalidOutputType>
-    where
-        Self: Sized;
-}
-
-impl Detokenize for () {
-    fn from_tokens(_: Vec<Token>) -> std::result::Result<Self, InvalidOutputType>
+impl Tokenizable for fuel_tx::ContractId {
+    fn from_token(token: Token) -> std::result::Result<Self, InstantiationError>
     where
         Self: Sized,
     {
-        Ok(())
-    }
-}
-
-impl<T: Tokenizable> Detokenize for T {
-    fn from_tokens(mut tokens: Vec<Token>) -> Result<Self, InvalidOutputType> {
-        let token = match tokens.len() {
-            0 => Token::Struct(vec![]),
-            1 => tokens.remove(0),
-            _ => Token::Struct(tokens),
-        };
-
-        Self::from_token(token)
-    }
-}
-
-impl Detokenize for fuel_tx::ContractId {
-    fn from_tokens(t: Vec<Token>) -> std::result::Result<Self, InvalidOutputType>
-    where
-        Self: Sized,
-    {
-        if let Token::Struct(tokens) = &t[0] {
-            if let Token::B256(id) = &tokens[0] {
-                Ok(fuel_tx::ContractId::from(*id))
+        if let Token::Struct(tokens) = token {
+            let first_token = tokens.into_iter().next();
+            if let Some(Token::B256(id)) = first_token {
+                Ok(fuel_tx::ContractId::from(id))
             } else {
-                Err(InvalidOutputType(format!(
+                Err(InstantiationError(format!(
                     "Expected `b256`, got {:?}",
-                    tokens[0]
+                    first_token
                 )))
             }
         } else {
-            Err(InvalidOutputType(format!(
+            Err(InstantiationError(format!(
                 "Expected `ContractId`, got {:?}",
-                t
+                token
             )))
         }
     }
+
+    fn into_token(self) -> Token {
+        let underlying_data: &Bits256 = &self;
+        Token::Struct(vec![underlying_data.into_token()])
+    }
 }
 
-impl Detokenize for fuel_tx::Address {
-    fn from_tokens(t: Vec<Token>) -> std::result::Result<Self, InvalidOutputType>
+impl Tokenizable for fuel_tx::Address {
+    fn from_token(t: Token) -> std::result::Result<Self, InstantiationError>
     where
         Self: Sized,
     {
-        if let Token::Struct(tokens) = &t[0] {
-            if let Token::B256(id) = &tokens[0] {
-                Ok(fuel_tx::Address::from(*id))
+        if let Token::Struct(tokens) = t {
+            let first_token = tokens.into_iter().next();
+            if let Some(Token::B256(id)) = first_token {
+                Ok(fuel_tx::Address::from(id))
             } else {
-                Err(InvalidOutputType(format!(
+                Err(InstantiationError(format!(
                     "Expected `b256`, got {:?}",
-                    tokens[0]
+                    first_token
                 )))
             }
         } else {
-            Err(InvalidOutputType(format!(
+            Err(InstantiationError(format!(
                 "Expected `Address`, got {:?}",
                 t
             )))
         }
     }
+
+    fn into_token(self) -> Token {
+        let underlying_data: &Bits256 = &self;
+
+        Token::Struct(vec![underlying_data.into_token()])
+    }
 }
 
-/// This trait is similar to `Detokenize`, but it is used inside the abigen
-/// generated code in order to get the parameter types (`ParamType`) and
-/// instantiate a new struct/enum from tokens. This is used in the generated
-/// code in `custom_types_gen.rs`, with the exception of the Sway-native types
+impl Tokenizable for fuel_tx::AssetId {
+    fn from_token(token: Token) -> Result<Self, InstantiationError>
+    where
+        Self: Sized,
+    {
+        if let Token::Struct(inner_tokens) = token {
+            let first_token = inner_tokens.into_iter().next();
+            if let Some(Token::B256(id)) = first_token {
+                Ok(Self::from(id))
+            } else {
+                Err(InstantiationError(format!("Could not construct 'AssetId' from token. Wrong token inside of Struct '{:?} instead of B256'", first_token)))
+            }
+        } else {
+            Err(InstantiationError(format!("Could not construct 'AssetId' from token. Instead of a Struct with a B256 inside, received: {:?}", token)))
+        }
+    }
+
+    fn into_token(self) -> Token {
+        let underlying_data: &Bits256 = &self;
+        Token::Struct(vec![underlying_data.into_token()])
+    }
+}
+
+/// This trait is used inside the abigen generated code in order to get the
+/// parameter types (`ParamType`).  This is used in the generated code in
+/// `custom_types_gen.rs`, with the exception of the Sway-native types
 /// `Address`, `ContractId`, and `AssetId`, that are implemented right here,
 /// without code generation.
 pub trait Parameterize {
     fn param_types() -> Vec<ParamType>;
-    fn new_from_tokens(tokens: &[Token]) -> Self;
 }
 
 impl Parameterize for fuel_tx::Address {
     fn param_types() -> Vec<ParamType> {
         vec![ParamType::B256]
-    }
-
-    fn new_from_tokens(tokens: &[Token]) -> Self {
-        if let Token::Struct(inner_tokens) = &tokens[0] {
-            if let Token::B256(id) = &inner_tokens[0] {
-                Self::from(*id)
-            } else {
-                panic!(
-                    "Expected a `b256` inside the Address struct, got {:?}",
-                    inner_tokens[0]
-                )
-            }
-        } else {
-            panic!("Expected a struct containing `b256`, got {:?}", tokens[0])
-        }
     }
 }
 
@@ -505,41 +519,11 @@ impl Parameterize for fuel_tx::ContractId {
     fn param_types() -> Vec<ParamType> {
         vec![ParamType::B256]
     }
-
-    fn new_from_tokens(tokens: &[Token]) -> Self {
-        if let Token::Struct(inner_tokens) = &tokens[0] {
-            if let Token::B256(id) = &inner_tokens[0] {
-                Self::from(*id)
-            } else {
-                panic!(
-                    "Expected a `b256` inside the ContractId struct, got {:?}",
-                    inner_tokens[0]
-                )
-            }
-        } else {
-            panic!("Expected a struct containing `b256`, got {:?}", tokens[0])
-        }
-    }
 }
 
 impl Parameterize for fuel_tx::AssetId {
     fn param_types() -> Vec<ParamType> {
         vec![ParamType::B256]
-    }
-
-    fn new_from_tokens(tokens: &[Token]) -> Self {
-        if let Token::Struct(inner_tokens) = &tokens[0] {
-            if let Token::B256(id) = &inner_tokens[0] {
-                Self::from(*id)
-            } else {
-                panic!(
-                    "Expected a `b256` inside the AssetId struct, got {:?}",
-                    inner_tokens[0]
-                )
-            }
-        } else {
-            panic!("Expected a struct containing `b256`, got {:?}", tokens[0])
-        }
     }
 }
 

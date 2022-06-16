@@ -2,11 +2,10 @@ use core::fmt;
 use core::str::Utf8Error;
 pub type Result<T> = core::result::Result<T, Error>;
 use fuel_tx::Receipt;
-use std::net;
+use std::fmt::{Display, Formatter};
+use std::{error, net};
 use strum::ParseError;
 use thiserror::Error;
-
-use crate::InvalidOutputType;
 
 #[derive(Debug)]
 pub enum CodecError {
@@ -75,13 +74,25 @@ impl From<ParseError> for Error {
     }
 }
 
-impl From<InvalidOutputType> for Error {
-    fn from(err: InvalidOutputType) -> Error {
-        Error::ContractCallError(err.0, vec![])
-    }
-}
 impl From<std::io::Error> for Error {
     fn from(err: std::io::Error) -> Error {
         Error::ContractCallError(err.to_string(), vec![])
+    }
+}
+
+#[derive(Debug)]
+pub struct InstantiationError(pub String);
+
+impl Display for InstantiationError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl error::Error for InstantiationError {}
+
+impl From<InstantiationError> for Error {
+    fn from(err: InstantiationError) -> Self {
+        Error::InvalidData(err.0)
     }
 }
