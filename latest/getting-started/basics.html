@@ -369,37 +369,41 @@ let result = contract_instance
 <ol>
 <li>Amount;</li>
 <li>Asset ID;</li>
+<li>Gas forwarded.</li>
 </ol>
 <p>This is commonly used to forward coins to a contract. These parameters can be configured by creating an instance of <a href="https://github.com/FuelLabs/fuels-rs/blob/adf81bd451d7637ce0976363bd7784408430031a/packages/fuels-contract/src/parameters.rs#L15"><code>CallParameters</code></a> and passing it to a chain method called <code>call_params</code>.</p>
 <p>For instance, suppose the following contract that makes use of Sway's <code>msg_amount()</code> to return the amount sent in that message to the contract:</p>
-<pre><code class="language-rust ignore">abi FuelTest {
-    fn get_msg_amount() -&gt; u64;
-}
-
-impl FuelTest for Contract {
-    fn get_msg_amount() -&gt; u64 {
-        msg_amount()
-    }
-}
+<pre><code class="language-rust ignore">{{#include ../../../packages/fuels-abigen-macro/tests/test-projects/msg_amount/src/main.sw:contract_msg_amount}}
 </code></pre>
 <p>Then, in Rust, after setting up and deploying the above contract, you can configure the amount being sent to the <code>get_msg_amount()</code> method like this:</p>
-<pre><code class="language-rust ignore">let tx_params = TxParameters::new(None, Some(1_000_000), None, None);
+<pre><code class="language-rust ignore">    let tx_params = TxParameters::new(None, Some(1_000_000), None, None);
 
-// Forward 1_000_000 coin amount of base asset_id
-// this is a big number for checking that amount can be a u64
-let call_params = CallParameters::new(Some(1_000_000), None);
+    // Forward 1_000_000 coin amount of base asset_id
+    // this is a big number for checking that amount can be a u64
+    let call_params = CallParameters::new(Some(1_000_000), None, None);
 
-let response = contract_instance
-    .get_msg_amount()          // Our contract method.
-    .tx_params(tx_params)      // Chain the tx params setting method.
-    .call_params(call_params)  // Chain the call params setting method.
-    .call()                    // Perform the contract call.
-    .await
-    .unwrap();
+    let response = contract_instance
+        .get_msg_amount() // Our contract method.
+        .tx_params(tx_params) // Chain the tx params setting method.
+        .call_params(call_params) // Chain the call params setting method.
+        .call() // Perform the contract call.
+        .await?;
 </code></pre>
 <p>You can also use <code>CallParameters::default()</code> to use the default values:</p>
 <pre><code class="language-rust ignore">pub const DEFAULT_COIN_AMOUNT: u64 = 1_000_000;
-pub const NATIVE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
+pub const BASE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
+</code></pre>
+<p>The <code>gas_forwarded</code> parameter defines the limit for the actual contract call as opposed to the gas limit for the whole transaction. This means that it is constrained by the transaction limit. If it is set to an amount greater than the available gas, all available gas will be forwarded.</p>
+<p>Here we set the transaction <code>gas_limit</code> and call <code>gas_forwarded</code> to specify that the contract call transaction may consume up to 1000 gas, while we only forward 200 gas for the actual call:</p>
+<pre><code class="language-rust ignore">    let my_tx_params = TxParameters::new(None, Some(1000), None, None);
+    let my_call_params = CallParameters::new(None, None, Some(200));
+
+    let response = contract_instance
+        .get_msg_amount() // Our contract method.
+        .tx_params(my_tx_params) // Chain the tx params setting method.
+        .call_params(my_call_params) // Chain the call params setting method.
+        .call() // Perform the contract call.
+        .await?;
 </code></pre>
 <h3 id="callresponse-reading-returned-values"><a class="header" href="#callresponse-reading-returned-values"><code>CallResponse</code>: Reading returned values</a></h3>
 <p>You've probably noticed that you're often chaining `.call().await.unwrap(). That's because:</p>
