@@ -174,7 +174,6 @@ async fn deploy_with_multiple_wallets() {
 #[tokio::test]
 async fn call_params() -> Result<(), Error> {
     use fuels::prelude::*;
-    use fuels_abigen_macro::abigen;
 
     abigen!(
         MyContract,
@@ -216,7 +215,6 @@ async fn call_params() -> Result<(), Error> {
 #[tokio::test]
 async fn call_params_gas() -> Result<(), Error> {
     use fuels::prelude::*;
-    use fuels_abigen_macro::abigen;
 
     abigen!(
         MyContract,
