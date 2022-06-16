@@ -232,7 +232,7 @@ async fn contract_tx_and_call_params() -> Result<(), Error> {
 
     // Forward 1_000_000 coin amount of base asset_id
     // this is a big number for checking that amount can be a u64
-    let call_params = CallParameters::new(Some(1_000_000), None);
+    let call_params = CallParameters::new(Some(1_000_000), None, None);
 
     let response = contract_instance
         .get_msg_amount() // Our contract method.
@@ -349,5 +349,44 @@ async fn get_contract_outputs() -> Result<(), Error> {
     let connected_contract_instance = MyContract::new(contract_id, wallet);
     // You can now use the `connected_contract_instance` just as you did above!
     // ANCHOR_END: deployed_contracts
+    Ok(())
+}
+
+#[tokio::test]
+#[allow(unused_variables)]
+async fn call_params_gas() -> Result<(), Error> {
+    use fuels::prelude::*;
+    use fuels_abigen_macro::abigen;
+    abigen!(
+        MyContract,
+        "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+    );
+
+    let wallet = launch_provider_and_get_single_wallet().await;
+
+    let contract_id = Contract::deploy(
+        "../../packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test.bin",
+        &wallet,
+        TxParameters::default(),
+    )
+    .await
+    .unwrap();
+
+    let contract_instance = MyContract::new(contract_id.to_string(), wallet.clone());
+
+    // ANCHOR: call_params_gas
+    // Set the transaction `gas_limit` to 1000 and `gas_forwarded` to 200 to specify that the
+    // contract call transaction may consume up to 1000 gas, while the actual call may only use 200
+    // gas
+    let tx_params = TxParameters::new(None, Some(1000), None, None);
+    let call_params = CallParameters::new(None, None, Some(200));
+
+    let response = contract_instance
+        .get_msg_amount() // Our contract method.
+        .tx_params(tx_params) // Chain the tx params setting method.
+        .call_params(call_params) // Chain the call params setting method.
+        .call() // Perform the contract call.
+        .await?;
+    // ANCHOR_END: call_params_gas
     Ok(())
 }

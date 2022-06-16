@@ -4,10 +4,7 @@ use fuel_gql_client::fuel_types::{
     bytes::padded_len_usize, AssetId, Bytes32, ContractId, Immediate18, Word,
 };
 use fuel_gql_client::fuel_vm::consts::VM_TX_MEMORY;
-use fuel_gql_client::fuel_vm::{
-    consts::{REG_CGAS, REG_ONE},
-    prelude::Opcode,
-};
+use fuel_gql_client::fuel_vm::{consts::REG_ONE, prelude::Opcode};
 use fuel_gql_client::{
     client::{types::TransactionStatus, FuelClient},
     fuel_tx::{Receipt, Transaction},
@@ -25,6 +22,7 @@ use fuels_signers::{LocalWallet, Signer};
 struct CallParamOffsets {
     pub asset_id_offset: usize,
     pub amount_offset: usize,
+    pub gas_forwarded_offset: usize,
     pub call_data_offset: usize,
 }
 
@@ -176,10 +174,11 @@ impl Script {
     /// Returns script data, consisting of the following items in the given order:
     /// 1. Asset ID to be forwarded (AmountId::LEN)
     /// 2. Amount to be forwarded (1 * WORD_SIZE)
-    /// 3. Contract ID (ContractID::LEN);
-    /// 4. Function selector (1 * WORD_SIZE);
-    /// 5. Calldata offset (optional) (1 * WORD_SIZE)
-    /// 6. Encoded arguments (optional) (variable length)
+    /// 3. Gas to be forwarded (1 * WORD_SIZE)
+    /// 4. Contract ID (ContractID::LEN);
+    /// 5. Function selector (1 * WORD_SIZE);
+    /// 6. Calldata offset (optional) (1 * WORD_SIZE)
+    /// 7. Encoded arguments (optional) (variable length)
     fn get_script_data_from_calls(
         calls: Vec<&ContractCall>,
         data_offset: usize,
@@ -187,19 +186,24 @@ impl Script {
         let mut script_data = vec![];
         let mut param_offsets = vec![];
 
+        // The data for each call is ordered into segments
         let mut segment_offset = data_offset;
 
         for call in calls {
-            param_offsets.push(CallParamOffsets {
+            let call_param_offsets = CallParamOffsets {
                 asset_id_offset: segment_offset,
                 amount_offset: segment_offset + AssetId::LEN,
-                call_data_offset: segment_offset + AssetId::LEN + WORD_SIZE,
-            });
+                gas_forwarded_offset: segment_offset + AssetId::LEN + WORD_SIZE,
+                call_data_offset: segment_offset + AssetId::LEN + 2 * WORD_SIZE,
+            };
+            param_offsets.push(call_param_offsets);
 
             script_data.extend(call.call_parameters.asset_id.to_vec());
 
             let amount = call.call_parameters.amount as Word;
             script_data.extend(amount.to_be_bytes());
+
+            script_data.extend(call.call_parameters.gas_forwarded.to_be_bytes());
 
             script_data.extend(call.contract_id.as_ref());
 
@@ -209,13 +213,14 @@ impl Script {
             // one argument, we need to calculate the `call_data_offset`,
             // which points to where the data for the custom types start in the
             // transaction. If it doesn't take any custom inputs, this isn't necessary.
-            if call.compute_calldata_offset {
-                // Offset of the script data relative to the call data
-                let call_data_offset =
-                    segment_offset + AssetId::LEN + WORD_SIZE + ContractId::LEN + 2 * WORD_SIZE;
-                let call_data_offset = call_data_offset as Word;
+            if call.compute_custom_input_offset {
+                // Custom inputs are stored after the previously added parameters,
+                // including custom_input_offset
+                let custom_input_offset =
+                    segment_offset + AssetId::LEN + 2 * WORD_SIZE + ContractId::LEN + 2 * WORD_SIZE;
+                let custom_input_offset = custom_input_offset as Word;
 
-                script_data.extend(&call_data_offset.to_be_bytes());
+                script_data.extend(&custom_input_offset.to_be_bytes());
             }
 
             script_data.extend(call.encoded_args.clone());
@@ -233,7 +238,7 @@ impl Script {
     /// following registers;
     ///
     /// 0x10 Script data offset
-    /// 0x11 Gas price TODO: #184
+    /// 0x11 Gas forwarded
     /// 0x12 Coin amount
     /// 0x13 Asset ID
     ///
@@ -242,10 +247,12 @@ impl Script {
     fn get_single_call_instructions(offsets: &CallParamOffsets) -> Vec<u8> {
         let instructions = vec![
             Opcode::MOVI(0x10, offsets.call_data_offset as Immediate18),
+            Opcode::MOVI(0x11, offsets.gas_forwarded_offset as Immediate18),
+            Opcode::LW(0x11, 0x11, 0),
             Opcode::MOVI(0x12, offsets.amount_offset as Immediate18),
             Opcode::LW(0x12, 0x12, 0),
             Opcode::MOVI(0x13, offsets.asset_id_offset as Immediate18),
-            Opcode::CALL(0x10, 0x12, 0x13, REG_CGAS),
+            Opcode::CALL(0x10, 0x12, 0x13, 0x11),
         ];
 
         #[allow(clippy::iter_cloned_collect)]
