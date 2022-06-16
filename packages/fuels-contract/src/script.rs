@@ -22,7 +22,7 @@ use fuels_signers::{LocalWallet, Signer};
 struct CallParamOffsets {
     pub asset_id_offset: usize,
     pub amount_offset: usize,
-    pub gas_limit_offset: usize,
+    pub gas_forwarded_offset: usize,
     pub call_data_offset: usize,
 }
 
@@ -174,7 +174,7 @@ impl Script {
     /// Returns script data, consisting of the following items in the given order:
     /// 1. Asset ID to be forwarded (AmountId::LEN)
     /// 2. Amount to be forwarded (1 * WORD_SIZE)
-    /// 3. Gas limit to be forwarded (1 * WORD_SIZE)
+    /// 3. Gas to be forwarded (1 * WORD_SIZE)
     /// 4. Contract ID (ContractID::LEN);
     /// 5. Function selector (1 * WORD_SIZE);
     /// 6. Calldata offset (optional) (1 * WORD_SIZE)
@@ -193,7 +193,7 @@ impl Script {
             let call_param_offsets = CallParamOffsets {
                 asset_id_offset: segment_offset,
                 amount_offset: segment_offset + AssetId::LEN,
-                gas_limit_offset: segment_offset + AssetId::LEN + WORD_SIZE,
+                gas_forwarded_offset: segment_offset + AssetId::LEN + WORD_SIZE,
                 call_data_offset: segment_offset + AssetId::LEN + 2 * WORD_SIZE,
             };
             param_offsets.push(call_param_offsets);
@@ -238,7 +238,7 @@ impl Script {
     /// following registers;
     ///
     /// 0x10 Script data offset
-    /// 0x11 Gas limit
+    /// 0x11 Gas forwarded
     /// 0x12 Coin amount
     /// 0x13 Asset ID
     ///
@@ -247,7 +247,7 @@ impl Script {
     fn get_single_call_instructions(offsets: &CallParamOffsets) -> Vec<u8> {
         let instructions = vec![
             Opcode::MOVI(0x10, offsets.call_data_offset as Immediate18),
-            Opcode::MOVI(0x11, offsets.gas_limit_offset as Immediate18),
+            Opcode::MOVI(0x11, offsets.gas_forwarded_offset as Immediate18),
             Opcode::LW(0x11, 0x11, 0),
             Opcode::MOVI(0x12, offsets.amount_offset as Immediate18),
             Opcode::LW(0x12, 0x12, 0),

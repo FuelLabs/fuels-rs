@@ -1098,7 +1098,7 @@ async fn test_call_param_gas_errors() {
 
     let contract_instance = MyContract::new(contract_id.to_string(), wallet);
 
-    // Transaction gas limit is sufficient, call params limit is too small
+    // Transaction gas_limit is sufficient, call gas_forwarded is too small
     let result = contract_instance
         .initialize_counter(42)
         .tx_params(TxParameters::new(None, Some(1000), None, None))
@@ -1110,7 +1110,7 @@ async fn test_call_param_gas_errors() {
     let expected = "Contract call error: OutOfGas, receipts:";
     assert!(result.to_string().starts_with(expected));
 
-    // Call params gas limit exceeds transaction limit
+    // Call params gas_forwarded exceeds transaction limit
     let result = contract_instance
         .initialize_counter(42)
         .tx_params(TxParameters::new(None, Some(1), None, None))

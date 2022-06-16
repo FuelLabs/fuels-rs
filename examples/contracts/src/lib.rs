@@ -2,6 +2,7 @@
 use fuels::core::errors::Error;
 
 #[tokio::test]
+// ANCHOR: instantiate_client
 async fn instantiate_client() {
     use fuels::client::FuelClient;
     use fuels::node::service::{Config, FuelService};
