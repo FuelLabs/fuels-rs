@@ -296,10 +296,7 @@ pub struct ContractCall {
 impl ContractCall {
     /// Based on the returned Contract's output_params and the receipts returned from a call,
     /// decode the values and return them.
-    pub fn get_decoded_output(
-        &self,
-        receipts: &mut Vec<Receipt>,
-    ) -> Result<Vec<Token>, Error> {
+    pub fn get_decoded_output(&self, receipts: &mut Vec<Receipt>) -> Result<Vec<Token>, Error> {
         // Multiple returns are handled as one `Tuple` (which has its own `ParamType`), so getting
         // more than one output param is an error.
         if self.output_params.len() != 1 {
@@ -333,7 +330,7 @@ impl ContractCall {
         if let Some(i) = index {
             receipts.remove(i);
         }
-      
+
         let decoded_value = ABIDecoder::decode(&self.output_params, &encoded_value)?;
         Ok(decoded_value)
     }

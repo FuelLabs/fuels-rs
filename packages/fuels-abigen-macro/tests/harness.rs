@@ -718,8 +718,6 @@ async fn call_with_structs() {
 
 #[tokio::test]
 async fn multi_call() {
-    // Generates the bindings from the an ABI definition inline.
-    // The generated bindings can be accessed through `MyContract`.
     abigen!(
         MyContract,
         "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
@@ -739,14 +737,13 @@ async fn multi_call() {
     let contract_instance = MyContract::new(contract_id.to_string(), wallet.clone());
 
     let call_1 = contract_instance.initialize_counter(42);
-
     let call_2 = contract_instance.increment_counter(10);
+    let multi_call = MultiContractCallHandler::new(vec![call_1, call_2], wallet);
 
-    let multi = MultiContractCallHandler::new(vec![call_1, call_2], wallet);
+    let response = multi_call.call().await.unwrap();
 
-    let rec = multi.call().await;
-
-    print!("{:?}", rec);
+    assert_eq!(response.values[0].unwrap(), 42);
+    assert_eq!(response.values[1].unwrap(), 52);
 }
 
 #[tokio::test]
