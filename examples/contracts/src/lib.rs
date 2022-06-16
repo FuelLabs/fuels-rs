@@ -2,6 +2,7 @@
 use fuels::core::errors::Error;
 
 #[tokio::test]
+#[cfg(feature = "fuel-core-lib")]
 // ANCHOR: instantiate_client
 async fn instantiate_client() {
     use fuels::client::FuelClient;

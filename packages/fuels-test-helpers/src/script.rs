@@ -1,16 +1,43 @@
+#[cfg(feature = "fuel-core-lib")]
 use fuel_core::service::{Config, FuelService};
+
+#[cfg(feature = "fuel-core-lib")]
 use fuel_gql_client::client::FuelClient;
+
+#[cfg(not(feature = "fuel-core-lib"))]
+use crate::launch_provider_and_get_single_wallet;
+
 use fuel_gql_client::fuel_tx::{Receipt, Transaction};
 use fuels_contract::script::Script;
 use fuels_core::errors::Error;
 
 /// Run the Sway script binary located at `binary_filepath` and return its resulting receipts,
 /// without having to setup a node or contract bindings.
+#[allow(dead_code)]
+#[cfg(feature = "fuel-core-lib")]
 pub async fn run_compiled_script(binary_filepath: &str) -> Result<Vec<Receipt>, Error> {
     let script_binary = std::fs::read(binary_filepath)?;
     let server = FuelService::new_node(Config::local_node()).await.unwrap();
     let client = FuelClient::from(server.bound_address);
 
+    let script = get_script(script_binary);
+    script.call(&client).await
+}
+
+#[allow(dead_code)]
+#[cfg(not(feature = "fuel-core-lib"))]
+pub async fn run_compiled_script(binary_filepath: &str) -> Result<Vec<Receipt>, Error> {
+    let script_binary = std::fs::read(binary_filepath)?;
+
+    let wallet = launch_provider_and_get_single_wallet().await;
+    let client = wallet.get_provider().unwrap().clone().client;
+
+    let script = get_script(script_binary);
+
+    script.call(&client).await
+}
+
+fn get_script(script_binary: Vec<u8>) -> Script {
     let tx = Transaction::Script {
         gas_price: 0,
         gas_limit: 1000000,
@@ -25,13 +52,12 @@ pub async fn run_compiled_script(binary_filepath: &str) -> Result<Vec<Receipt>, 
         metadata: None,
     };
 
-    let script = Script::new(tx);
-    script.call(&client).await
+    Script::new(tx)
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::run_compiled_script;
+    use crate::script::run_compiled_script;
 
     #[tokio::test]
     // ANCHOR: run_compiled_script
