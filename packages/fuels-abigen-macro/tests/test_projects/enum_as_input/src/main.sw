@@ -1,15 +1,15 @@
 contract;
 
 enum StandardEnum {
-    one: b256,
-    two: u32,
-    three: bool,
+    One: b256,
+    Two: u32,
+    Three: bool,
 }
 
 enum UnitEnum {
-    one: (),
-    two: (),
-    three: (),
+    One: (),
+    Two: (),
+    Three: (),
 }
 
 abi EnumTesting {
@@ -22,11 +22,11 @@ abi EnumTesting {
 
 impl EnumTesting for Contract {
     fn get_standard_enum() -> StandardEnum {
-        StandardEnum::two(12345)
+        StandardEnum::Two(12345)
     }
     fn check_standard_enum_integrity(arg: StandardEnum) -> bool {
         match arg {
-            StandardEnum::two(value) => {
+            StandardEnum::Two(value) => {
                 value == 12345u32
             },
             _ => {
@@ -36,11 +36,11 @@ impl EnumTesting for Contract {
     }
 
     fn get_unit_enum() -> UnitEnum {
-        UnitEnum::two()
+        UnitEnum::Two()
     }
     fn check_unit_enum_integrity(arg: UnitEnum) -> bool {
         match arg {
-            UnitEnum::two(_) => {
+            UnitEnum::Two(_) => {
                 true
             },
             _ => {
