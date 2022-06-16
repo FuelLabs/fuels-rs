@@ -197,8 +197,8 @@ pub fn expand_custom_enum(enum_name: &str, prop: &Property) -> Result<TokenStrea
             // Case where an enum takes another enum
             ParamType::Enum(_params) => {
                 let inner_enum_name =
-                    &extract_custom_type_name_from_abi_property(component, Some(CustomType::Enum))?
-                        .to_class_case();
+                    &extract_custom_type_name_from_abi_property(component, Some(CustomType::Enum))?;
+
                 let inner_enum_ident = ident(inner_enum_name);
                 // Enum variant declaration
                 enum_variants.push(quote! { #variant_name(#inner_enum_ident)});

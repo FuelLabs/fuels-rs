@@ -105,7 +105,7 @@ impl Contract {
         let tx_parameters = TxParameters::default();
         let call_parameters = CallParameters::default();
 
-        let compute_calldata_offset = Contract::should_compute_call_data_offset(args);
+        let compute_custom_input_offset = Contract::should_compute_custom_input_offset(args);
 
         let maturity = 0;
 
@@ -115,7 +115,7 @@ impl Contract {
             encoded_args,
             call_parameters,
             maturity,
-            compute_calldata_offset,
+            compute_custom_input_offset,
             variable_outputs: None,
             external_contracts: None,
             output_params: output_params.to_vec(),
@@ -134,7 +134,7 @@ impl Contract {
     // boolean, then the data itself should be passed. Otherwise, it
     // should simply pass a pointer to the data in memory. For more
     // information, see https://github.com/FuelLabs/sway/issues/1368.
-    fn should_compute_call_data_offset(args: &[Token]) -> bool {
+    fn should_compute_custom_input_offset(args: &[Token]) -> bool {
         args.len() > 1
             || args.iter().any(|t| {
                 matches!(
@@ -267,7 +267,7 @@ pub struct ContractCall {
     pub encoded_selector: Selector,
     pub call_parameters: CallParameters,
     pub maturity: u64,
-    pub compute_calldata_offset: bool,
+    pub compute_custom_input_offset: bool,
     pub variable_outputs: Option<Vec<Output>>,
     pub external_contracts: Option<Vec<ContractId>>,
     pub output_params: Vec<ParamType>,

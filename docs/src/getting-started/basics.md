@@ -135,46 +135,35 @@ Call parameters are:
 
 1. Amount;
 2. Asset ID;
+3. Gas forwarded.
 
 This is commonly used to forward coins to a contract. These parameters can be configured by creating an instance of [`CallParameters`](https://github.com/FuelLabs/fuels-rs/blob/adf81bd451d7637ce0976363bd7784408430031a/packages/fuels-contract/src/parameters.rs#L15) and passing it to a chain method called `call_params`.
 
 For instance, suppose the following contract that makes use of Sway's `msg_amount()` to return the amount sent in that message to the contract:
 
 ```rust,ignore
-abi FuelTest {
-    fn get_msg_amount() -> u64;
-}
-
-impl FuelTest for Contract {
-    fn get_msg_amount() -> u64 {
-        msg_amount()
-    }
-}
+{{#include ../../../packages/fuels-abigen-macro/tests/test-projects/msg_amount/src/main.sw:contract_msg_amount}}
 ```
 
 Then, in Rust, after setting up and deploying the above contract, you can configure the amount being sent to the `get_msg_amount()` method like this:
 
 ```rust,ignore
-let tx_params = TxParameters::new(None, Some(1_000_000), None, None);
-
-// Forward 1_000_000 coin amount of base asset_id
-// this is a big number for checking that amount can be a u64
-let call_params = CallParameters::new(Some(1_000_000), None);
-
-let response = contract_instance
-    .get_msg_amount()          // Our contract method.
-    .tx_params(tx_params)      // Chain the tx params setting method.
-    .call_params(call_params)  // Chain the call params setting method.
-    .call()                    // Perform the contract call.
-    .await
-    .unwrap();
+{{#include ../../../examples/contracts/src/lib.rs:call_params}}
 ```
 
 You can also use `CallParameters::default()` to use the default values:
 
 ```rust,ignore
 pub const DEFAULT_COIN_AMOUNT: u64 = 1_000_000;
-pub const NATIVE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
+pub const BASE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
+```
+
+The `gas_forwarded` parameter defines the limit for the actual contract call as opposed to the gas limit for the whole transaction. This means that it is constrained by the transaction limit. If it is set to an amount greater than the available gas, all available gas will be forwarded.
+
+Here we set the transaction `gas_limit` and call `gas_forwarded` to specify that the contract call transaction may consume up to 1000 gas, while we only forward 200 gas for the actual call:
+
+```rust,ignore
+{{#include ../../../examples/contracts/src/lib.rs:call_params_gas}}
 ```
 
 ### `CallResponse`: Reading returned values
