@@ -16,7 +16,6 @@
 //! Examples on how you can use the types imported by the prelude can be found in
 //! the [main test suite](https://github.com/FuelLabs/fuels-rs/blob/master/fuels-abigen-macro/tests/harness.rs)
 
-
 pub mod client {
     pub use fuel_gql_client::client::*;
 }
