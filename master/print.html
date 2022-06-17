@@ -243,21 +243,21 @@ using <a href="https://docs.rs/fuels/*/fuels/client/struct.FuelClient.html"><cod
 <pre><code class="language-rust ignore">    // This is an instance of your contract which you can use to make calls to your functions
     let contract_instance = MyContract::new(contract_id.to_string(), wallet);
 
-    let result = contract_instance
+    let response = contract_instance
         .initialize_counter(42) // Build the ABI call
         .call() // Perform the network call
         .await
         .unwrap();
 
-    assert_eq!(42, result.value);
+    assert_eq!(42, response.value);
 
-    let result = contract_instance
+    let response = contract_instance
         .increment_counter(10)
         .call()
         .await
         .unwrap();
 
-    assert_eq!(52, result.value);
+    assert_eq!(52, response.value);
 </code></pre>
 <p>Alternatively, if you want multiple instances of the same contract then use <code>deploy_with_salt</code></p>
 <pre><code class="language-rust ignore">async fn deploy_with_salt() {
@@ -754,21 +754,21 @@ impl MyContract {
 <pre><code class="language-rust ignore">    // This is an instance of your contract which you can use to make calls to your functions
     let contract_instance = MyContract::new(contract_id.to_string(), wallet);
 
-    let result = contract_instance
+    let response = contract_instance
         .initialize_counter(42) // Build the ABI call
         .call() // Perform the network call
         .await
         .unwrap();
 
-    assert_eq!(42, result.value);
+    assert_eq!(42, response.value);
 
-    let result = contract_instance
+    let response = contract_instance
         .increment_counter(10)
         .call()
         .await
         .unwrap();
 
-    assert_eq!(52, result.value);
+    assert_eq!(52, response.value);
 </code></pre>
 <p>To generate these bindings, all you have to do is:</p>
 <pre><code class="language-rust ignore">    use fuels::prelude::*;
