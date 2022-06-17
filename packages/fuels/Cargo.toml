@@ -10,10 +10,13 @@ rust-version = "1.61.0"
 description = "Fuel Rust SDK."
 
 [dependencies]
-fuel-core = { version = "0.8", default-features = false }
+fuel-core = { version = "0.8", default-features = false, optional = true }
 fuel-gql-client = { version = "0.8", default-features = false }
 fuels-abigen-macro = { version = "0.15.3", path = "../fuels-abigen-macro" }
 fuels-contract = { version = "0.15.3", path = "../fuels-contract" }
 fuels-core = { version = "0.15.3", path = "../fuels-core" }
 fuels-signers = { version = "0.15.3", path = "../fuels-signers" }
 fuels-test-helpers = { version = "0.15.3", path = "../fuels-test-helpers" }
+
+[features]
+fuel-core-lib = ["fuels-test-helpers/fuel-core-lib", "fuel-core"]

@@ -48,17 +48,20 @@ wasm_abigen!(
 );
 
 pub fn the_fn() {
-    use fuels_core::{abi_decoder::ABIDecoder, ParamType, Parameterize};
+    use fuels_core::{abi_decoder::ABIDecoder, ParamType, Tokenizable};
     let data = vec![
         0, 0, 0, 0, 0, 0, 3, 252, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175,
         175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175,
         175,
     ];
 
-    let obj =
-        ABIDecoder::decode(&[ParamType::U64, ParamType::B256], &data).expect("Failed to decode");
+    let obj = ABIDecoder::decode_single(
+        &ParamType::Struct(vec![ParamType::U64, ParamType::B256]),
+        &data,
+    )
+    .expect("Failed to decode");
 
-    let a_struct = SomeEvent::new_from_tokens(&obj);
+    let a_struct = SomeEvent::from_token(obj).unwrap();
 
     assert_eq!(1020, a_struct.id);
 }

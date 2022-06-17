@@ -35,7 +35,6 @@ pub trait Signer: std::fmt::Debug + Send + Sync {
 #[cfg(test)]
 #[cfg(feature = "test-helpers")]
 mod tests {
-    use fuel_core::service::Config;
     use fuel_crypto::{Message, SecretKey};
     use fuels_core::constants::BASE_ASSET_ID;
     use fuels_core::{
@@ -140,7 +139,7 @@ mod tests {
         coins_1.extend(coins_2);
 
         // Setup a provider and node with both set of coins.
-        let (client, _) = setup_test_client(coins_1, Config::local_node()).await;
+        let (client, _) = setup_test_client(coins_1, None).await;
         let provider = Provider::new(client);
 
         wallet_1.set_provider(provider.clone());
@@ -218,7 +217,7 @@ mod tests {
 
         coins_1.extend(coins_2);
 
-        let (client, _) = setup_test_client(coins_1, Config::local_node()).await;
+        let (client, _) = setup_test_client(coins_1, None).await;
         let provider = Provider::new(client);
 
         wallet_1.set_provider(provider.clone());
