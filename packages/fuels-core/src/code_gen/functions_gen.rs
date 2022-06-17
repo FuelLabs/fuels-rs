@@ -28,6 +28,10 @@ pub fn expand_function(
     custom_enums: &HashMap<String, Property>,
     custom_structs: &HashMap<String, Property>,
 ) -> Result<TokenStream, Error> {
+    if function.name.is_empty() {
+        return Err(Error::InvalidData("Function name can not be empty".into()));
+    }
+
     let name = safe_ident(&function.name);
     let fn_signature = abi_parser.build_fn_selector(&function.name, &function.inputs);
 
