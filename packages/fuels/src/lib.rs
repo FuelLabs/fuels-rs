@@ -59,8 +59,8 @@ pub mod prelude {
     pub use super::core::parameters::*;
     pub use super::core::tx::{Address, AssetId, ContractId};
     pub use super::core::{InstantiationError, Token, Tokenizable};
-    pub use super::signers::provider::*;
     pub use super::fuels_abigen::abigen;
+    pub use super::signers::provider::*;
     pub use super::signers::{LocalWallet, Signer};
     pub use super::test_helpers::Config;
     pub use super::test_helpers::*;
