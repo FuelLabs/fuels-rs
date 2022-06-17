@@ -172,7 +172,7 @@ async fn setup_wallet_multiple_assets() {
         coins_per_asset,
         amount_per_coin,
     );
-    let (provider, _socket_addr) = setup_test_provider(coins.clone(), Config::local_node()).await;
+    let (provider, _socket_addr) = setup_test_provider(coins.clone(), None).await;
     wallet.set_provider(provider);
     // ANCHOR_END: multiple_assets_wallet
 }

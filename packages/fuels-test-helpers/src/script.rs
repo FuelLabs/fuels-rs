@@ -57,7 +57,7 @@ fn get_script(script_binary: Vec<u8>) -> Script {
 
 #[cfg(test)]
 mod tests {
-    use crate::run_compiled_script;
+    use crate::script::run_compiled_script;
     use fuels_core::errors::Error;
 
     #[tokio::test]
