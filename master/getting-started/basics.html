@@ -168,7 +168,6 @@ using <a href="https://docs.rs/fuels/*/fuels/client/struct.FuelClient.html"><cod
 <p>If you are only interested in a single instance of your contract then use <code>deploy</code></p>
 <pre><code class="language-rust ignore">async fn deploy_contract() {
     use fuels::prelude::*;
-    use fuels_abigen_macro::abigen;
 
     // This will generate your contract's methods onto `MyContract`.
     // This means an instance of `MyContract` will have access to all
@@ -230,7 +229,6 @@ using <a href="https://docs.rs/fuels/*/fuels/client/struct.FuelClient.html"><cod
 <p>Alternatively, if you want multiple instances of the same contract then use <code>deploy_with_salt</code></p>
 <pre><code class="language-rust ignore">async fn deploy_with_salt() {
     use fuels::prelude::*;
-    use fuels_abigen_macro::abigen;
     use rand::prelude::{Rng, SeedableRng, StdRng};
 
     abigen!(

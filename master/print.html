@@ -167,15 +167,13 @@ development.</p>
 <p>Now you're up and ready to develop with the Fuel Rust SDK!</p>
 <h2 id="importing-the-fuel-rust-sdk"><a class="header" href="#importing-the-fuel-rust-sdk">Importing the Fuel Rust SDK</a></h2>
 <p>Add these dependencies on your <code>Cargo.toml</code>:</p>
-<pre><code class="language-toml">fuels-abigen-macro = &quot;0.15&quot;
-fuels = &quot;0.15&quot;
+<pre><code class="language-toml">fuels = &quot;0.15&quot;
 </code></pre>
 <blockquote>
 <p><strong>Note</strong> We're using version <code>0.15</code> of the SDK, which is the latest version at the time of this writing.</p>
 </blockquote>
 <p>And then, in your Rust file that's going to make use of the SDK:</p>
 <pre><code class="language-rust ignore">use fuels::prelude::*;
-use fuels_abigen_macro::abigen;
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="basic-usage-of-the-sdk"><a class="header" href="#basic-usage-of-the-sdk">Basic Usage of the SDK</a></h1>
 <p>At a high level, the Fuel Rust SDK can be used to build Rust-based applications that can run computations on the Fuel Virtual Machine through interactions with contracts written in Sway.</p>
@@ -208,7 +206,6 @@ using <a href="https://docs.rs/fuels/*/fuels/client/struct.FuelClient.html"><cod
 <p>If you are only interested in a single instance of your contract then use <code>deploy</code></p>
 <pre><code class="language-rust ignore">async fn deploy_contract() {
     use fuels::prelude::*;
-    use fuels_abigen_macro::abigen;
 
     // This will generate your contract's methods onto `MyContract`.
     // This means an instance of `MyContract` will have access to all
@@ -270,7 +267,6 @@ using <a href="https://docs.rs/fuels/*/fuels/client/struct.FuelClient.html"><cod
 <p>Alternatively, if you want multiple instances of the same contract then use <code>deploy_with_salt</code></p>
 <pre><code class="language-rust ignore">async fn deploy_with_salt() {
     use fuels::prelude::*;
-    use fuels_abigen_macro::abigen;
     use rand::prelude::{Rng, SeedableRng, StdRng};
 
     abigen!(
@@ -759,7 +755,7 @@ let result = contract_instance
 assert_eq!(52, result.unwrap());
 </code></pre>
 <p>To generate these bindings, all you have to do is:</p>
-<pre><code class="language-rust ignore">use fuels_abigen_macro::abigen;
+<pre><code class="language-rust ignore">use fuels::prelude::*;
 
 abigen!(
     MyContractName,
@@ -772,7 +768,7 @@ abigen!(
 <li>Either a path as string to the JSON ABI file or the JSON ABI as a multiline string directly.</li>
 </ol>
 <p>The same as the example above but passing the ABI definition directly:</p>
-<pre><code class="language-rust ignore">use fuels_abigen_macro::abigen;
+<pre><code class="language-rust ignore">use fuels::prelude::*;
 
 abigen!(
     MyContractName,

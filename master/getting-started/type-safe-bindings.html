@@ -243,7 +243,7 @@ let result = contract_instance
 assert_eq!(52, result.unwrap());
 </code></pre>
 <p>To generate these bindings, all you have to do is:</p>
-<pre><code class="language-rust ignore">use fuels_abigen_macro::abigen;
+<pre><code class="language-rust ignore">use fuels::prelude::*;
 
 abigen!(
     MyContractName,
@@ -256,7 +256,7 @@ abigen!(
 <li>Either a path as string to the JSON ABI file or the JSON ABI as a multiline string directly.</li>
 </ol>
 <p>The same as the example above but passing the ABI definition directly:</p>
-<pre><code class="language-rust ignore">use fuels_abigen_macro::abigen;
+<pre><code class="language-rust ignore">use fuels::prelude::*;
 
 abigen!(
     MyContractName,
