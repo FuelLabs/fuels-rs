@@ -7,7 +7,7 @@ async fn transform_json_to_bindings() -> Result<(), Error> {
     use fuels::test_helpers::launch_provider_and_get_single_wallet;
     let wallet = launch_provider_and_get_single_wallet().await;
     // ANCHOR: use_abigen
-    use fuels_abigen_macro::abigen;
+    use fuels::prelude::*;
     // Replace with your own JSON abi path (relative to the root of your crate)
     abigen!(MyContractName, "examples/rust_bindings/src/abi.json");
     // ANCHOR_END: use_abigen

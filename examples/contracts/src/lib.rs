@@ -17,7 +17,6 @@ async fn instantiate_client() {
 #[tokio::test]
 async fn deploy_contract() {
     use fuels::prelude::*;
-    use fuels_abigen_macro::abigen;
 
     // ANCHOR: deploy_contract
     // This will generate your contract's methods onto `MyContract`.
@@ -82,7 +81,6 @@ async fn deploy_contract() {
 // ANCHOR: deploy_with_salt
 async fn deploy_with_salt() {
     use fuels::prelude::*;
-    use fuels_abigen_macro::abigen;
     use rand::prelude::{Rng, SeedableRng, StdRng};
 
     abigen!(
@@ -124,7 +122,6 @@ async fn deploy_with_salt() {
 // ANCHOR: deploy_with_multiple_wallets
 async fn deploy_with_multiple_wallets() {
     use fuels::prelude::*;
-    use fuels_abigen_macro::abigen;
 
     abigen!(
             MyContract,
@@ -179,7 +176,6 @@ async fn deploy_with_multiple_wallets() {
 #[allow(unused_variables)]
 async fn contract_tx_and_call_params() -> Result<(), Error> {
     use fuels::prelude::*;
-    use fuels_abigen_macro::abigen;
     abigen!(
             MyContract,
             "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
@@ -257,7 +253,6 @@ async fn contract_tx_and_call_params() -> Result<(), Error> {
 #[allow(unused_variables)]
 async fn token_ops_tests() -> Result<(), Error> {
     use fuels::prelude::*;
-    use fuels_abigen_macro::abigen;
     abigen!(
         MyContract,
         "packages/fuels-abigen-macro/tests/test_projects/token_ops/out/debug/token_ops-abi\
@@ -298,7 +293,6 @@ async fn get_contract_outputs() -> Result<(), Error> {
     use fuels::prelude::Error::ContractCallError;
     use fuels::prelude::*;
     use fuels::tx::Receipt;
-    use fuels_abigen_macro::abigen;
     abigen!(
         TestContract,
         "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
@@ -357,7 +351,6 @@ async fn get_contract_outputs() -> Result<(), Error> {
 #[allow(unused_variables)]
 async fn call_params_gas() -> Result<(), Error> {
     use fuels::prelude::*;
-    use fuels_abigen_macro::abigen;
     abigen!(
         MyContract,
         "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
