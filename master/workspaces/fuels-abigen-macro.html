@@ -142,23 +142,18 @@
 <p>The specifications for the JSON ABI format and its encoding/decoding can be found <a href="https://github.com/FuelLabs/fuel-specs/blob/master/specs/protocol/abi.md#json-abi-format">here</a>.</p>
 <h2 id="usage"><a class="header" href="#usage">Usage</a></h2>
 <p>A simple example of generating type-safe bindings from a JSON ABI specified in-line:</p>
-<pre><code class="language-rust ignore">fn compile_bindings_from_inline_contract() {
-    // Generates the bindings from the an ABI definition inline.
+<pre><code class="language-rust ignore">    // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `SimpleContract`.
     abigen!(
         SimpleContract,
         r#&quot;
         [
             {
-                &quot;type&quot;: &quot;contract&quot;,
+                &quot;type&quot;: &quot;function&quot;,
                 &quot;inputs&quot;: [
                     {
-                        &quot;name&quot;: &quot;arg&quot;,
+                        &quot;name&quot;: &quot;only_argument&quot;,
                         &quot;type&quot;: &quot;u32&quot;
-                    },
-                    {
-                        &quot;name&quot;: &quot;second_arg&quot;,
-                        &quot;type&quot;: &quot;u16&quot;
                     }
                 ],
                 &quot;name&quot;: &quot;takes_ints_returns_bool&quot;,
@@ -170,21 +165,22 @@
                 ]
             }
         ]
-        &quot;#
+        &quot;#,
     );
 
-    let dummy_client = FuelClient::new(&quot;&quot;).unwrap();
-    let contract_instance = SimpleContract::new(contract_id.to_string(),dummy_client);
+    let wallet = launch_provider_and_get_single_wallet().await;
+    //`SimpleContract` is the name of the contract
+    let contract_instance = SimpleContract::new(null_contract_id(), wallet);
 
-    let contract_call = contract_instance.takes_ints_returns_bool(42 as u32, 10 as u16);
+    let call_handler = contract_instance.takes_ints_returns_bool(42_u32);
 
     let encoded = format!(
         &quot;{}{}&quot;,
-        contract_call.encoded_selector, contract_call.encoded_params
+        hex::encode(call_handler.contract_call.encoded_selector),
+        hex::encode(call_handler.contract_call.encoded_args)
     );
 
-    assert_eq!(&quot;0000000003b568d4000000000000002a000000000000000a&quot;, encoded);
-}
+    assert_eq!(&quot;000000009593586c000000000000002a&quot;, encoded);
 </code></pre>
 <p>This example and many more can be found under <code>tests/harness.rs</code>. To run the whole test suite run <code>cargo test</code> inside <code>fuels-abi-gen-macro/</code>.</p>
 
