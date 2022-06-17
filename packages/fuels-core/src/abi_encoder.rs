@@ -75,20 +75,16 @@ impl ABIEncoder {
         self.encode_tokens(arg_tuple)
     }
 
-    fn encode_struct(&mut self, subcomponents: &Vec<Token>) -> Result<(), CodecError> {
-        for component in subcomponents {
-            self.encode_tokens(slice::from_ref(component))?;
-        }
-        Ok(())
+    fn encode_struct(&mut self, subcomponents: &[Token]) -> Result<(), CodecError> {
+        self.encode_tokens(subcomponents)
+    }
+
+    fn encode_array(&mut self, arg_array: &[Token]) -> Result<(), CodecError> {
+        self.encode_tokens(arg_array)
     }
 
     fn encode_string(&mut self, arg_string: &str) {
         self.buffer.extend(pad_string(arg_string));
-    }
-
-    fn encode_array(&mut self, arg_array: &[Token]) -> Result<(), CodecError> {
-        // Recursively encode the array of Tokens
-        self.encode_tokens(arg_array)
     }
 
     fn encode_b256(&mut self, arg_bits256: &Bits256) {
