@@ -118,7 +118,7 @@ These parameters can be configured by creating an instance of [`TxParameters`](h
 // In order: gas_price, gas_limit, byte_price, and maturity
 let my_tx_params = TxParameters::new(None, Some(1_000_000), None, None);
 
-let result = contract_instance
+let response = contract_instance
         .initialize_counter(42)  // Our contract method.
         .tx_params(my_tx_params) // Chain the tx params setting method.
         .call()                  // Perform the contract call.

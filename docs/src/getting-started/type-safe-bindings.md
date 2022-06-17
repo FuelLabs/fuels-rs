@@ -93,7 +93,7 @@ And, then, you're able to use to call the actual methods on the deployed contrac
 //...
 let contract_instance = MyContract::new(contract_id.to_string(), provider, wallet);
 
-let result = contract_instance
+let response = contract_instance
 .initialize_counter(42) // Build the ABI call
 // Perform the network call, this will use the default values for
 // gas price (0), gas limit (1_000_000), and byte price (0).
@@ -101,9 +101,9 @@ let result = contract_instance
 .await
 .unwrap();
 
-assert_eq!(42, result.unwrap());
+assert_eq!(42, response.unwrap());
 
-let result = contract_instance
+let response = contract_instance
 .increment_counter(10)
 .call()
 // You can configure the parameters for a specific contract call:
@@ -111,7 +111,7 @@ let result = contract_instance
 .await
 .unwrap();
 
-assert_eq!(52, result.unwrap());
+assert_eq!(52, response.unwrap());
 ```
 
 To generate these bindings, all you have to do is:

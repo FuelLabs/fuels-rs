@@ -58,22 +58,22 @@ async fn deploy_contract() {
     // your functions
     let contract_instance = MyContract::new(contract_id.to_string(), wallet);
 
-    let result = contract_instance
+    let response = contract_instance
         .initialize_counter(42) // Build the ABI call
         .tx_params(TxParameters::new(None, Some(1_000_000), None, None))
         .call() // Perform the network call
         .await
         .unwrap();
 
-    assert_eq!(42, result.value);
+    assert_eq!(42, response.value);
 
-    let result = contract_instance
+    let response = contract_instance
         .increment_counter(10)
         .call()
         .await
         .unwrap();
 
-    assert_eq!(52, result.value);
+    assert_eq!(52, response.value);
 }
 // ANCHOR_END: deploy_contract
 
@@ -143,14 +143,14 @@ async fn deploy_with_multiple_wallets() {
     println!("Contract deployed @ {:x}", contract_id_1);
     let contract_instance_1 = MyContract::new(contract_id_1.to_string(), wallets[0].clone());
 
-    let result = contract_instance_1
+    let response = contract_instance_1
         .initialize_counter(42) // Build the ABI call
         .tx_params(TxParameters::new(None, Some(1_000_000), None, None))
         .call() // Perform the network call
         .await
         .unwrap();
 
-    assert_eq!(42, result.value);
+    assert_eq!(42, response.value);
 
     let contract_id_2 = Contract::deploy(
             "../../packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test.bin",
@@ -163,14 +163,14 @@ async fn deploy_with_multiple_wallets() {
     println!("Contract deployed @ {:x}", contract_id_2);
     let contract_instance_2 = MyContract::new(contract_id_2.to_string(), wallets[1].clone());
 
-    let result = contract_instance_2
+    let response = contract_instance_2
         .initialize_counter(42) // Build the ABI call
         .tx_params(TxParameters::new(None, Some(1_000_000), None, None))
         .call() // Perform the network call
         .await
         .unwrap();
 
-    assert_eq!(42, result.value);
+    assert_eq!(42, response.value);
 }
 // ANCHOR_END: deploy_with_multiple_wallets
 
