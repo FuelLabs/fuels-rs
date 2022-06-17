@@ -3,6 +3,7 @@ contract;
 use std::*;
 use core::*;
 use std::storage::*;
+use std::context::msg_amount;
 
 struct MyType {
     x: u64,
@@ -29,11 +30,18 @@ abi TestContract {
     fn array_of_structs(p: [Person; 2]) -> [Person; 2];
     fn array_of_enums(p: [State; 2]) -> [State; 2];
     fn get_array(p: [u64; 2]) -> [u64; 2];
+    fn get_msg_amount() -> u64;
 }
 
 const COUNTER_KEY = 0x0000000000000000000000000000000000000000000000000000000000000000;
 
 impl TestContract for Contract {
+    // ANCHOR: msg_amount
+    fn get_msg_amount() -> u64 {
+        msg_amount()
+    }
+    // ANCHOR_END: msg_amount
+
     fn initialize_counter(value: u64) -> u64 {
         store(COUNTER_KEY, value);
         value

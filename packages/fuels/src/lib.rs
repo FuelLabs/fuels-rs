@@ -7,7 +7,6 @@
 //! ```no_run
 //! # #[allow(unused)]
 //! use fuels::prelude::*;
-//! use fuels_abigen_macro::abigen;
 //! ```
 //!
 //! Note that `fuels_abigen_macro` isn't included in the `fuels` crate because
@@ -20,6 +19,10 @@ pub use fuels_core::tx;
 
 pub mod client {
     pub use fuel_gql_client::client::*;
+}
+
+pub mod fuels_abigen {
+    pub use fuels_abigen_macro::*;
 }
 
 pub mod contract {
@@ -56,6 +59,7 @@ pub mod prelude {
     pub use super::core::parameters::*;
     pub use super::core::tx::{Address, AssetId, ContractId};
     pub use super::core::{InstantiationError, Token, Tokenizable};
+    pub use super::fuels_abigen::abigen;
     pub use super::signers::provider::*;
     pub use super::signers::{LocalWallet, Signer};
     pub use super::test_helpers::Config;

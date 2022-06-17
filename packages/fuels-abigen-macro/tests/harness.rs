@@ -1,10 +1,9 @@
 use fuel_gql_client::fuel_tx::{AssetId, ContractId, Receipt};
 use fuels::prelude::{
-    launch_provider_and_get_single_wallet, setup_multiple_assets_coins, setup_single_asset_coins,
-    setup_test_provider, CallParameters, Contract, Error, LocalWallet, Provider, Signer,
-    TxParameters, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
+    abigen, launch_provider_and_get_single_wallet, setup_multiple_assets_coins,
+    setup_single_asset_coins, setup_test_provider, CallParameters, Contract, Error, LocalWallet,
+    Provider, Signer, TxParameters, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
 };
-use fuels_abigen_macro::abigen;
 use fuels_core::tx::Address;
 use fuels_core::Tokenizable;
 use fuels_core::{constants::BASE_ASSET_ID, Token};
@@ -54,7 +53,8 @@ async fn compile_bindings_from_contract_file() {
 }
 
 #[tokio::test]
-async fn compile_bindings_from_inline_contract() {
+async fn compile_bindings_from_inline_contract() -> Result<(), Error> {
+    // ANCHOR: bindings_from_inline_contracts
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `SimpleContract`.
     abigen!(
@@ -94,6 +94,8 @@ async fn compile_bindings_from_inline_contract() {
     );
 
     assert_eq!("000000009593586c000000000000002a", encoded);
+    // ANCHOR_END: bindings_from_inline_contracts
+    Ok(())
 }
 
 #[tokio::test]
@@ -971,7 +973,7 @@ async fn test_provider_launch_and_connect() {
 }
 
 #[tokio::test]
-async fn test_contract_calling_contract() {
+async fn test_contract_calling_contract() -> Result<(), Error> {
     // Tests a contract call that calls another contract (FooCaller calls FooContract underneath)
     abigen!(
         FooContract,
@@ -1019,14 +1021,16 @@ async fn test_contract_calling_contract() {
 
     // Calls the contract that calls the `FooContract` contract, also just
     // flips the bool value passed to it.
+    // ANCHOR: external_contract
     let res = foo_caller_contract_instance
         .call_foo_contract(*foo_contract_id, true)
         .set_contracts(&[foo_contract_id]) // Sets the external contract
         .call()
-        .await
-        .unwrap();
+        .await?;
+    // ANCHOR_END: external_contract
 
     assert!(!res.value);
+    Ok(())
 }
 
 #[tokio::test]
