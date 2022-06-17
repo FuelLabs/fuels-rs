@@ -302,7 +302,6 @@ fn peek(data: &[u8], len: usize) -> Result<&[u8], CodecError> {
 mod tests {
     use super::*;
     use crate::EnumVariants;
-    use std::slice;
 
     #[test]
     fn decode_int() {
@@ -453,10 +452,10 @@ mod tests {
 
         let inner_enum_types = EnumVariants::new(vec![ParamType::B256, ParamType::U32]).unwrap();
 
-        let types = vec![ParamType::Struct(vec![
+        let struct_type = ParamType::Struct(vec![
             ParamType::Enum(inner_enum_types.clone()),
             ParamType::U32,
-        ])];
+        ]);
 
         let enum_discriminant_enc = vec![0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1];
         let enum_data_enc = vec![0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x30, 0x39];
@@ -473,12 +472,12 @@ mod tests {
         .flatten()
         .collect();
 
-        let decoded = ABIDecoder::decode(&types, &data).unwrap();
+        let decoded = ABIDecoder::decode_single(&struct_type, &data).unwrap();
 
-        let expected = vec![Token::Struct(vec![
+        let expected = Token::Struct(vec![
             Token::Enum(Box::new((1, Token::U32(12345), inner_enum_types))),
             Token::U32(54321),
-        ])];
+        ]);
         assert_eq!(decoded, expected);
     }
 
@@ -593,15 +592,27 @@ mod tests {
         assert_eq!(decoded, expected);
     }
     #[test]
+    fn units_in_structs_are_decoded_as_one_word() {
+        let data = [
+            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+        ];
+        let struct_type = ParamType::Struct(vec![ParamType::Unit, ParamType::U64]);
+
+        let actual = ABIDecoder::decode_single(&struct_type, &data).unwrap();
+
+        let expected = Token::Struct(vec![Token::Unit, Token::U64(u64::MAX)]);
+        assert_eq!(actual, expected);
+    }
+    #[test]
     fn enums_with_all_unit_variants_are_decoded_from_one_word() {
         let data = [0, 0, 0, 0, 0, 0, 0, 1];
         let variants = EnumVariants::new(vec![ParamType::Unit, ParamType::Unit]).unwrap();
         let enum_w_only_units = ParamType::Enum(variants.clone());
 
-        let result = ABIDecoder::decode(slice::from_ref(&enum_w_only_units), &data).unwrap();
+        let result = ABIDecoder::decode_single(&enum_w_only_units, &data).unwrap();
 
         let expected_enum = Token::Enum(Box::new((1, Token::Unit, variants)));
-        assert_eq!(result, vec![expected_enum]);
+        assert_eq!(result, expected_enum);
     }
 
     #[test]
@@ -610,7 +621,7 @@ mod tests {
         let variants = EnumVariants::new(vec![ParamType::U32]).unwrap();
         let enum_type = ParamType::Enum(variants.clone());
 
-        let result = ABIDecoder::decode(slice::from_ref(&enum_type), &data);
+        let result = ABIDecoder::decode_single(&enum_type, &data);
 
         let error = result.err().expect("Should have resulted in an error");
 
