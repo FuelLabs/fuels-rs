@@ -9,7 +9,7 @@ use fuels_core::{
     constants::{BASE_ASSET_ID, DEFAULT_SPENDABLE_COIN_AMOUNT},
     errors::Error,
     parameters::{CallParameters, TxParameters},
-    Detokenize, ParamType, ReturnLocation, Selector, Token,
+    ParamType, ReturnLocation, Selector, Token, Tokenizable,
 };
 use fuels_signers::{provider::Provider, LocalWallet, Signer};
 use std::fmt::Debug;
@@ -89,12 +89,12 @@ impl Contract {
     /// }
     /// For more details see `code_gen/functions_gen.rs`.
     /// Note that this needs a wallet because the contract instance needs a wallet for the calls
-    pub fn method_hash<D: Detokenize + Debug>(
+    pub fn method_hash<D: Tokenizable + Debug>(
         provider: &Provider,
         contract_id: ContractId,
         wallet: &LocalWallet,
         signature: Selector,
-        output_params: &[ParamType],
+        output_param: Option<ParamType>,
         args: &[Token],
     ) -> Result<ContractCallHandler<D>, Error> {
         let mut encoder = ABIEncoder::new();
@@ -118,7 +118,7 @@ impl Contract {
             compute_custom_input_offset,
             variable_outputs: None,
             external_contracts: None,
-            output_params: output_params.to_vec(),
+            output_param,
         };
 
         Ok(ContractCallHandler {
@@ -270,27 +270,19 @@ pub struct ContractCall {
     pub compute_custom_input_offset: bool,
     pub variable_outputs: Option<Vec<Output>>,
     pub external_contracts: Option<Vec<ContractId>>,
-    pub output_params: Vec<ParamType>,
+    pub output_param: Option<ParamType>,
 }
 
 impl ContractCall {
     /// Based on the returned Contract's output_params and the receipts returned from a call,
     /// decode the values and return them.
     pub fn get_decoded_output(
-        &self,
+        param_type: &ParamType,
         mut receipts: Vec<Receipt>,
-    ) -> Result<(Vec<Token>, Vec<Receipt>), Error> {
-        // Multiple returns are handled as one `Tuple` (which has its own `ParamType`), so getting
-        // more than one output param is an error.
-        if self.output_params.len() != 1 {
-            return Err(Error::InvalidType(format!(
-                "Received too many output params (expected 1 got {})",
-                self.output_params.len()
-            )));
-        }
-        let output_param = self.output_params[0].clone();
+    ) -> Result<(Token, Vec<Receipt>), Error> {
+        // Multiple returns are handled as one `Tuple` (which has its own `ParamType`)
 
-        let (encoded_value, index) = match output_param.get_return_location() {
+        let (encoded_value, index) = match param_type.get_return_location() {
             ReturnLocation::ReturnData => {
                 match receipts.iter().find(|&receipt| receipt.data().is_some()) {
                     Some(r) => {
@@ -313,7 +305,7 @@ impl ContractCall {
         if let Some(i) = index {
             receipts.remove(i);
         }
-        let decoded_value = ABIDecoder::decode(&self.output_params, &encoded_value)?;
+        let decoded_value = ABIDecoder::decode_single(param_type, &encoded_value)?;
         Ok((decoded_value, receipts))
     }
 }
@@ -331,7 +323,7 @@ pub struct ContractCallHandler<D> {
 
 impl<D> ContractCallHandler<D>
 where
-    D: Detokenize + Debug,
+    D: Tokenizable + Debug,
 {
     /// Sets external contracts as dependencies to this contract's call.
     /// Effectively, this will be used to create Input::Contract/Output::Contract
@@ -419,13 +411,13 @@ where
 
     /// Create a CallResponse from call receipts
     pub fn get_response(&self, receipts: Vec<Receipt>) -> Result<CallResponse<D>, Error> {
-        // If it's an ABI method without a return value, exit early.
-        if self.contract_call.output_params.is_empty() {
-            return Ok(CallResponse::new(D::from_tokens(vec![])?, receipts));
+        match self.contract_call.output_param.as_ref() {
+            None => Ok(CallResponse::new(D::from_token(Token::Unit)?, receipts)),
+            Some(param_type) => {
+                let (token, receipts) = ContractCall::get_decoded_output(param_type, receipts)?;
+                Ok(CallResponse::new(D::from_token(token)?, receipts))
+            }
         }
-
-        let (decoded_value, receipts) = self.contract_call.get_decoded_output(receipts)?;
-        Ok(CallResponse::new(D::from_tokens(decoded_value)?, receipts))
     }
 }
 

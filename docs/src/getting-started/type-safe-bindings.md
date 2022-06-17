@@ -117,7 +117,7 @@ assert_eq!(52, result.unwrap());
 To generate these bindings, all you have to do is:
 
 ```rust,ignore
-use fuels_abigen_macro::abigen;
+use fuels::prelude::*;
 
 abigen!(
     MyContractName,
@@ -133,7 +133,7 @@ And this `abigen!` macro will _expand_ the code with the type-safe Rust bindings
 The same as the example above but passing the ABI definition directly:
 
 ```rust,ignore
-use fuels_abigen_macro::abigen;
+use fuels::prelude::*;
 
 abigen!(
     MyContractName,
