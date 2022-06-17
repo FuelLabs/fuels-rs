@@ -18,7 +18,6 @@ async fn instantiate_client() {
 // ANCHOR: deploy_contract
 async fn deploy_contract() {
     use fuels::prelude::*;
-    use fuels_abigen_macro::abigen;
 
     // This will generate your contract's methods onto `MyContract`.
     // This means an instance of `MyContract` will have access to all
@@ -82,7 +81,6 @@ async fn deploy_contract() {
 // ANCHOR: deploy_with_salt
 async fn deploy_with_salt() {
     use fuels::prelude::*;
-    use fuels_abigen_macro::abigen;
     use rand::prelude::{Rng, SeedableRng, StdRng};
 
     abigen!(
@@ -124,7 +122,6 @@ async fn deploy_with_salt() {
 // ANCHOR: deploy_with_multiple_wallets
 async fn deploy_with_multiple_wallets() {
     use fuels::prelude::*;
-    use fuels_abigen_macro::abigen;
 
     abigen!(
             MyContract,
@@ -178,7 +175,6 @@ async fn deploy_with_multiple_wallets() {
 #[tokio::test]
 async fn call_params() -> Result<(), Error> {
     use fuels::prelude::*;
-    use fuels_abigen_macro::abigen;
 
     abigen!(
         MyContract,
@@ -220,7 +216,6 @@ async fn call_params() -> Result<(), Error> {
 #[tokio::test]
 async fn call_params_gas() -> Result<(), Error> {
     use fuels::prelude::*;
-    use fuels_abigen_macro::abigen;
 
     abigen!(
         MyContract,
