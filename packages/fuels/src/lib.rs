@@ -4,7 +4,6 @@
 //!
 //! A prelude is provided which imports all the important data types and traits for you. Use this when you want to quickly bootstrap a new project.
 //!
-//!
 //! ```no_run
 //! # #[allow(unused)]
 //! use fuels::prelude::*;
@@ -15,6 +14,8 @@
 //!
 //! Examples on how you can use the types imported by the prelude can be found in
 //! the [main test suite](https://github.com/FuelLabs/fuels-rs/blob/master/fuels-abigen-macro/tests/harness.rs)
+
+pub use fuels_core::tx;
 
 pub mod client {
     pub use fuel_gql_client::client::*;
@@ -40,8 +41,6 @@ pub mod test_helpers {
     pub use fuels_test_helpers::*;
 }
 
-pub use fuels_core::tx;
-
 /// Easy imports of frequently used
 #[doc(hidden)]
 pub mod prelude {
@@ -59,10 +58,9 @@ pub mod prelude {
     pub use super::core::errors::Error;
     pub use super::core::parameters::*;
     pub use super::core::tx::{Address, AssetId, ContractId};
-    pub use super::core::{Detokenize, InvalidOutputType};
-    pub use super::core::{Token, Tokenizable};
-    pub use super::fuels_abigen::abigen;
+    pub use super::core::{InstantiationError, Token, Tokenizable};
     pub use super::signers::provider::*;
+    pub use super::fuels_abigen::abigen;
     pub use super::signers::{LocalWallet, Signer};
     pub use super::test_helpers::Config;
     pub use super::test_helpers::*;
