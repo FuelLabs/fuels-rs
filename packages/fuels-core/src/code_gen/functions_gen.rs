@@ -170,7 +170,7 @@ fn expand_function_arguments(
     let mut args = vec![];
     let mut call_args = vec![];
 
-    for param in fun.inputs.iter() {
+    for param in &fun.inputs {
         // For each [`Property`] in a function input we expand:
         // 1. The name of the argument;
         // 2. The type of the argument;
@@ -287,16 +287,12 @@ fn build_expanded_tuple_params(tuple_param: &Property) -> Result<String, Error> 
 /// Note that this expands the parameter name with `safe_ident`, meaning that
 /// identifiers that are reserved keywords get `_` appended to them.
 pub fn expand_input_name(name: &str) -> Result<TokenStream, Error> {
-    let name_str = match name {
-        "" => {
-            return Err(Error::InvalidData(
-                "Function arguments can not have empty names".into(),
-            ))
-        }
-        n => n.to_snake_case(),
-    };
-    let name = safe_ident(&name_str);
-
+    if name.is_empty() {
+        return Err(Error::InvalidData(
+            "Function arguments can not have empty names".into(),
+        ));
+    }
+    let name = safe_ident(&name.to_snake_case());
     Ok(quote! { #name })
 }
 
@@ -647,12 +643,15 @@ mod tests {
         Ok(())
     }
 
-    // --- expand_input_name ---
     #[test]
-    fn test_expand_input_name() -> Result<(), Error> {
+    fn transform_name_to_snake_case() -> Result<(), Error> {
         let result = expand_input_name("CamelCaseHello");
         assert_eq!(result?.to_string(), "camel_case_hello");
+        Ok(())
+    }
 
+    #[test]
+    fn avoids_collisions_with_keywords() -> Result<(), Error> {
         let result = expand_input_name("if");
         assert_eq!(result?.to_string(), "if_");
 

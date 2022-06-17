@@ -1017,13 +1017,16 @@ mod tests {
             }
         ]
         "#;
+        let maybe_error = Abigen::new("test", contract)?.generate().err();
+        assert!(
+            maybe_error.is_some(),
+            "Expected an error because the function name is empty"
+        );
 
-        if let Some(result_error) = Abigen::new("test", contract)?.generate().err() {
-            assert_eq!(
-                result_error.to_string(),
-                "Invalid data: Function name can not be empty"
-            );
-        }
+        assert_eq!(
+            maybe_error.unwrap().to_string(),
+            "Invalid data: Function name can not be empty"
+        );
         Ok(())
     }
 
@@ -1044,13 +1047,16 @@ mod tests {
             }
         ]
         "#;
+        let maybe_error = Abigen::new("test", contract)?.generate().err();
+        assert!(
+            maybe_error.is_some(),
+            "Expected an error because the argument name is empty"
+        );
 
-        if let Some(result_error) = Abigen::new("test", contract)?.generate().err() {
-            assert_eq!(
-                result_error.to_string(),
-                "Invalid data: Function arguments can not have empty names"
-            );
-        }
+        assert_eq!(
+            maybe_error.unwrap().to_string(),
+            "Invalid data: Function arguments can not have empty names"
+        );
         Ok(())
     }
 }
