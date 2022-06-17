@@ -344,7 +344,7 @@ mod tests {
     use std::str::FromStr;
 
     #[test]
-    fn test_expand_function_simple() {
+    fn test_expand_function_simple() -> Result<(), Error> {
         let mut the_function = Function {
             type_field: "unused".to_string(),
             inputs: vec![],
@@ -378,11 +378,14 @@ mod tests {
             }
             "#,
         );
-        let expected = expected.unwrap().to_string();
-        assert_eq!(result.unwrap().to_string(), expected);
+        let expected = expected?.to_string();
+
+        assert_eq!(result?.to_string(), expected);
+        Ok(())
     }
+
     #[test]
-    fn test_expand_function_complex() {
+    fn test_expand_function_complex() -> Result<(), Error> {
         let mut the_function = Function {
             type_field: "function".to_string(),
             name: "hello_world".to_string(),
@@ -468,8 +471,10 @@ mod tests {
             }
             "#,
         );
-        let expected = expected.unwrap().to_string();
-        assert_eq!(result.unwrap().to_string(), expected);
+        let expected = expected?.to_string();
+
+        assert_eq!(result?.to_string(), expected);
+        Ok(())
     }
 
     // --- expand_selector ---
@@ -477,15 +482,16 @@ mod tests {
     fn test_expand_selector() {
         let result = expand_selector(Selector::default());
         assert_eq!(result.to_string(), "[0 , 0 , 0 , 0 , 0 , 0 , 0 , 0]");
+
         let result = expand_selector([1, 2, 3, 4, 5, 6, 7, 8]);
         assert_eq!(result.to_string(), "[1 , 2 , 3 , 4 , 5 , 6 , 7 , 8]");
     }
 
     // --- expand_fn_outputs ---
     #[test]
-    fn test_expand_fn_outputs() {
+    fn test_expand_fn_outputs() -> Result<(), Error> {
         let result = expand_fn_outputs(&[]);
-        assert_eq!(result.unwrap().to_string(), "()");
+        assert_eq!(result?.to_string(), "()");
 
         // Primitive type
         let result = expand_fn_outputs(&[Property {
@@ -493,7 +499,7 @@ mod tests {
             type_field: "bool".to_string(),
             components: None,
         }]);
-        assert_eq!(result.unwrap().to_string(), "bool");
+        assert_eq!(result?.to_string(), "bool");
 
         // Struct type
         let result = expand_fn_outputs(&[Property {
@@ -512,7 +518,7 @@ mod tests {
                 },
             ]),
         }]);
-        assert_eq!(result.unwrap().to_string(), "streaming_services");
+        assert_eq!(result?.to_string(), "streaming_services");
 
         // Enum type
         let result = expand_fn_outputs(&[Property {
@@ -531,11 +537,13 @@ mod tests {
                 },
             ]),
         }]);
-        assert_eq!(result.unwrap().to_string(), "StreamingServices");
+        assert_eq!(result?.to_string(), "StreamingServices");
+        Ok(())
     }
+
     // --- expand_function_argument ---
     #[test]
-    fn test_expand_function_arguments() {
+    fn test_expand_function_arguments() -> Result<(), Error> {
         let hm: HashMap<String, Property> = HashMap::new();
         let the_argument = Property {
             name: "some_argument".to_string(),
@@ -553,13 +561,16 @@ mod tests {
         the_function.inputs.push(the_argument);
 
         let result = expand_function_arguments(&the_function, &hm, &hm);
-        let (args, call_args) = result.unwrap();
+        let (args, call_args) = result?;
         let result = format!("({},{})", args, call_args);
         let expected = "(, some_argument : u32,& [some_argument . into_token () ,])";
+
         assert_eq!(result, expected);
+        Ok(())
     }
+
     #[test]
-    fn test_expand_function_arguments_primitive() {
+    fn test_expand_function_arguments_primitive() -> Result<(), Error> {
         let hm: HashMap<String, Property> = HashMap::new();
         let mut the_function = Function {
             type_field: "function".to_string(),
@@ -574,12 +585,15 @@ mod tests {
             components: None,
         });
         let result = expand_function_arguments(&the_function, &hm, &hm);
-        let (args, call_args) = result.unwrap();
+        let (args, call_args) = result?;
         let result = format!("({},{})", args, call_args);
+
         assert_eq!(result, "(, bim_bam : u64,& [bim_bam . into_token () ,])");
+        Ok(())
     }
+
     #[test]
-    fn test_expand_function_arguments_composite() {
+    fn test_expand_function_arguments_composite() -> Result<(), Error> {
         let mut function = Function {
             type_field: "zig_zag".to_string(),
             inputs: vec![],
@@ -619,51 +633,59 @@ mod tests {
         );
 
         let result = expand_function_arguments(&function, &custom_enums, &custom_structs);
-        let (args, call_args) = result.unwrap();
+        let (args, call_args) = result?;
         let result = format!("({},{})", args, call_args);
         let expected = r#"(, bim_bam : CarMaker,& [bim_bam . into_token () ,])"#;
         assert_eq!(result, expected);
 
         function.inputs[0].type_field = "enum Cocktail".to_string();
         let result = expand_function_arguments(&function, &custom_enums, &custom_structs);
-        let (args, call_args) = result.unwrap();
+        let (args, call_args) = result?;
         let result = format!("({},{})", args, call_args);
         let expected = r#"(, bim_bam : Cocktail,& [bim_bam . into_token () ,])"#;
         assert_eq!(result, expected);
+        Ok(())
     }
 
     // --- expand_input_name ---
     #[test]
-    fn test_expand_input_name() {
+    fn test_expand_input_name() -> Result<(), Error> {
         let result = expand_input_name("CamelCaseHello");
-        assert_eq!(result.unwrap().to_string(), "camel_case_hello");
+        assert_eq!(result?.to_string(), "camel_case_hello");
+
         let result = expand_input_name("if");
-        assert_eq!(result.unwrap().to_string(), "if_");
+        assert_eq!(result?.to_string(), "if_");
+
         let result = expand_input_name("let");
-        assert_eq!(result.unwrap().to_string(), "let_");
+        assert_eq!(result?.to_string(), "let_");
+        Ok(())
     }
 
     // --- expand_input_param ---
     #[test]
-    fn test_expand_input_param_primitive() {
+    fn test_expand_input_param_primitive() -> Result<(), Error> {
         let def = Function::default();
         let result = expand_input_param(&def, "unused", &ParamType::Bool, &None);
-        assert_eq!(result.unwrap().to_string(), "bool");
+        assert_eq!(result?.to_string(), "bool");
+
         let result = expand_input_param(&def, "unused", &ParamType::U64, &None);
-        assert_eq!(result.unwrap().to_string(), "u64");
+        assert_eq!(result?.to_string(), "u64");
+
         let result = expand_input_param(&def, "unused", &ParamType::String(10), &None);
-        assert_eq!(result.unwrap().to_string(), "String");
+        assert_eq!(result?.to_string(), "String");
+        Ok(())
     }
 
     #[test]
-    fn test_expand_input_param_array() {
+    fn test_expand_input_param_array() -> Result<(), Error> {
         let array_type = ParamType::Array(Box::new(ParamType::U64), 10);
         let result = expand_input_param(&Function::default(), "unused", &array_type, &None);
-        assert_eq!(result.unwrap().to_string(), ":: std :: vec :: Vec < u64 >");
+        assert_eq!(result?.to_string(), ":: std :: vec :: Vec < u64 >");
+        Ok(())
     }
 
     #[test]
-    fn test_expand_input_param_custom_type() {
+    fn test_expand_input_param_custom_type() -> Result<(), Error> {
         let def = Function::default();
         let struct_type = ParamType::Struct(vec![ParamType::Bool, ParamType::U64]);
         let struct_prop = Property {
@@ -673,10 +695,9 @@ mod tests {
         };
         let struct_name = Some(&struct_prop);
         let result = expand_input_param(&def, "unused", &struct_type, &struct_name);
-        assert_eq!(result.unwrap().to_string(), "Babies");
+        assert_eq!(result?.to_string(), "Babies");
 
-        let enum_type =
-            ParamType::Enum(EnumVariants::new(vec![ParamType::U8, ParamType::U32]).unwrap());
+        let enum_type = ParamType::Enum(EnumVariants::new(vec![ParamType::U8, ParamType::U32])?);
         let enum_prop = Property {
             name: String::from("unused"),
             type_field: String::from("enum Babies"),
@@ -684,7 +705,8 @@ mod tests {
         };
         let enum_name = Some(&enum_prop);
         let result = expand_input_param(&def, "unused", &enum_type, &enum_name);
-        assert_eq!(result.unwrap().to_string(), "Babies");
+        assert_eq!(result?.to_string(), "Babies");
+        Ok(())
     }
 
     #[test]
