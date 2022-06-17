@@ -166,14 +166,15 @@ fn expand_function_arguments(
     let mut args = vec![];
     let mut call_args = vec![];
 
-    for (i, param) in fun.inputs.iter().enumerate() {
+    for param in fun.inputs.iter() {
         // For each [`Property`] in a function input we expand:
         // 1. The name of the argument;
         // 2. The type of the argument;
         // Note that _any_ significant change in the way the JSON ABI is generated
         // could affect this function expansion.
         // TokenStream representing the name of the argument
-        let name = expand_input_name(i, &param.name);
+
+        let name = expand_input_name(&param.name)?;
 
         let custom_property = match param.is_custom_type() {
             false => None,
@@ -281,14 +282,18 @@ fn build_expanded_tuple_params(tuple_param: &Property) -> Result<String, Error> 
 ///
 /// Note that this expands the parameter name with `safe_ident`, meaning that
 /// identifiers that are reserved keywords get `_` appended to them.
-pub fn expand_input_name(index: usize, name: &str) -> TokenStream {
+pub fn expand_input_name(name: &str) -> Result<TokenStream, Error> {
     let name_str = match name {
-        "" => format!("p{}", index),
+        "" => {
+            return Err(Error::InvalidData(
+                "Function arguments can not have empty names".into(),
+            ))
+        }
         n => n.to_snake_case(),
     };
     let name = safe_ident(&name_str);
 
-    quote! { #name }
+    Ok(quote! { #name })
 }
 
 // Expands the type of an argument being passed in a function declaration.
@@ -355,19 +360,19 @@ mod tests {
         );
         let expected = TokenStream::from_str(
             r#"
-#[doc = "Calls the contract's `HelloWorld` (0x0000000097d4de45) function"]
-pub fn HelloWorld(&self, bimbam: bool) -> ContractCallHandler<()> {
-    Contract::method_hash(
-        &self.wallet.get_provider().expect("Provider not set up"),
-        self.contract_id,
-        &self.wallet,
-        [0, 0, 0, 0, 151, 212, 222, 69],
-        None,
-        &[bimbam.into_token() ,]
-    )
-    .expect("method not found (this should never happen)")
-}
-        "#,
+            #[doc = "Calls the contract's `HelloWorld` (0x0000000097d4de45) function"]
+            pub fn HelloWorld(&self, bimbam: bool) -> ContractCallHandler<()> {
+                Contract::method_hash(
+                    &self.wallet.get_provider().expect("Provider not set up"),
+                    self.contract_id,
+                    &self.wallet,
+                    [0, 0, 0, 0, 151, 212, 222, 69],
+                    None,
+                    &[bimbam.into_token() ,]
+                )
+                .expect("method not found (this should never happen)")
+            }
+            "#,
         );
         let expected = expected.unwrap().to_string();
         assert_eq!(result.unwrap().to_string(), expected);
@@ -442,22 +447,22 @@ pub fn HelloWorld(&self, bimbam: bool) -> ContractCallHandler<()> {
         // Some more editing was required because it is not rustfmt-compatible (adding/removing parentheses or commas)
         let expected = TokenStream::from_str(
             r#"
-#[doc = "Calls the contract's `hello_world` (0x0000000076b25a24) function"]
-pub fn hello_world(
-    &self,
-    the_only_allowed_input: SomeWeirdFrenchCuisine
-) -> ContractCallHandler<EntropyCirclesEnum> {
-    Contract::method_hash(
-        &self.wallet.get_provider().expect("Provider not set up"),
-        self.contract_id,
-        &self.wallet,
-        [0, 0, 0, 0, 118, 178, 90, 36],
-        Some(ParamType::Enum(EnumVariants::new(vec![ParamType::Bool, ParamType::U64]).unwrap())),
-        &[the_only_allowed_input.into_token() ,]
-    )
-    .expect("method not found (this should never happen)")
-}
-        "#,
+            #[doc = "Calls the contract's `hello_world` (0x0000000076b25a24) function"]
+            pub fn hello_world(
+                &self,
+                the_only_allowed_input: SomeWeirdFrenchCuisine
+            ) -> ContractCallHandler<EntropyCirclesEnum> {
+                Contract::method_hash(
+                    &self.wallet.get_provider().expect("Provider not set up"),
+                    self.contract_id,
+                    &self.wallet,
+                    [0, 0, 0, 0, 118, 178, 90, 36],
+                    Some(ParamType::Enum(EnumVariants::new(vec![ParamType::Bool, ParamType::U64]).unwrap())),
+                    &[the_only_allowed_input.into_token() ,]
+                )
+                .expect("method not found (this should never happen)")
+            }
+            "#,
         );
         let expected = expected.unwrap().to_string();
         assert_eq!(result.unwrap().to_string(), expected);
@@ -568,12 +573,6 @@ pub fn hello_world(
         let (args, call_args) = result.unwrap();
         let result = format!("({},{})", args, call_args);
         assert_eq!(result, "(, bim_bam : u64,& [bim_bam . into_token () ,])");
-
-        the_function.inputs[0].name = String::from("");
-        let result = expand_function_arguments(&the_function, &hm, &hm);
-        let (args, call_args) = result.unwrap();
-        let result = format!("({},{})", args, call_args);
-        assert_eq!(result, "(, p0 : u64,& [p0 . into_token () ,])");
     }
     #[test]
     fn test_expand_function_arguments_composite() {
@@ -632,14 +631,12 @@ pub fn hello_world(
     // --- expand_input_name ---
     #[test]
     fn test_expand_input_name() {
-        let result = expand_input_name(0, "CamelCaseHello");
-        assert_eq!(result.to_string(), "camel_case_hello");
-        let result = expand_input_name(1080, "");
-        assert_eq!(result.to_string(), "p1080");
-        let result = expand_input_name(0, "if");
-        assert_eq!(result.to_string(), "if_");
-        let result = expand_input_name(0, "let");
-        assert_eq!(result.to_string(), "let_");
+        let result = expand_input_name("CamelCaseHello");
+        assert_eq!(result.unwrap().to_string(), "camel_case_hello");
+        let result = expand_input_name("if");
+        assert_eq!(result.unwrap().to_string(), "if_");
+        let result = expand_input_name("let");
+        assert_eq!(result.unwrap().to_string(), "let_");
     }
 
     // --- expand_input_param ---
@@ -653,12 +650,14 @@ pub fn hello_world(
         let result = expand_input_param(&def, "unused", &ParamType::String(10), &None);
         assert_eq!(result.unwrap().to_string(), "String");
     }
+
     #[test]
     fn test_expand_input_param_array() {
         let array_type = ParamType::Array(Box::new(ParamType::U64), 10);
         let result = expand_input_param(&Function::default(), "unused", &array_type, &None);
         assert_eq!(result.unwrap().to_string(), ":: std :: vec :: Vec < u64 >");
     }
+
     #[test]
     fn test_expand_input_param_custom_type() {
         let def = Function::default();
@@ -683,6 +682,7 @@ pub fn hello_world(
         let result = expand_input_param(&def, "unused", &enum_type, &enum_name);
         assert_eq!(result.unwrap().to_string(), "Babies");
     }
+
     #[test]
     fn test_expand_input_param_struct_wrong_name() {
         let def = Function::default();
@@ -696,6 +696,7 @@ pub fn hello_world(
         let result = expand_input_param(&def, "unused", &struct_type, &struct_name);
         assert!(matches!(result, Err(Error::MissingData(_))));
     }
+
     #[test]
     fn test_expand_input_param_struct_with_enum_name() {
         let def = Function::default();
