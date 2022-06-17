@@ -6,7 +6,6 @@ use crate::{
     ParamType, Token,
 };
 use sha2::{Digest, Sha256};
-use std::slice;
 
 pub struct ABIEncoder {
     buffer: Vec<u8>,
@@ -126,7 +125,7 @@ impl ABIEncoder {
         if !variants.only_units_inside() {
             let param_type = Self::type_of_chosen_variant(discriminant, variants)?;
             self.encode_enum_padding(variants, param_type);
-            self.encode_tokens(slice::from_ref(token_within_enum))?;
+            self.encode_token(token_within_enum)?;
         }
 
         Ok(())
@@ -173,6 +172,7 @@ impl ABIEncoder {
 mod tests {
     use super::*;
     use crate::{EnumVariants, ParamType};
+    use std::slice;
 
     #[test]
     fn encode_function_signature() {
