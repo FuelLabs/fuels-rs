@@ -8,9 +8,13 @@ use crate::{
 use sha2::{Digest, Sha256};
 use std::slice;
 
-pub struct ABIEncoder;
+pub struct ABIEncoder {
+    buffer: Vec<u8>,
+}
 
 impl ABIEncoder {
+    /// Encodes the function selector followin the ABI specs defined  ///
+    /// [here](https://github.com/FuelLabs/fuel-specs/blob/master/specs/protocol/abi.md)
     pub fn encode_function_selector(fn_selector: &str) -> ByteArray {
         let signature = fn_selector.as_bytes();
         let mut hasher = Sha256::new();
@@ -21,117 +25,132 @@ impl ABIEncoder {
         output
     }
 
-    /// Encode takes an array of `Token`s, encodes these tokens, and returns the
-    /// raw bytes (as a Vec<u8>) that represent the encoded tokens.
-    /// The encoding follows the ABI specs defined
+    /// Encodes `Token`s in `args` following the ABI specs defined
     /// [here](https://github.com/FuelLabs/fuel-specs/blob/master/specs/protocol/abi.md)
     pub fn encode(args: &[Token]) -> Result<Vec<u8>, CodecError> {
-        let mut encoded = vec![];
+        let mut encoder = ABIEncoder::new();
+
+        encoder.encode_tokens(args)?;
+
+        Ok(encoder.buffer)
+    }
+
+    fn new() -> Self {
+        ABIEncoder {
+            buffer: Default::default(),
+        }
+    }
+
+    fn encode_tokens(&mut self, args: &[Token]) -> Result<(), CodecError> {
         for arg in args {
-            encoded.extend(Self::encode_token(arg)?);
+            self.encode_token(arg)?;
         }
-        Ok(encoded)
+        Ok(())
     }
 
-    fn encode_token(arg: &Token) -> Result<Vec<u8>, CodecError> {
-        Ok(match arg {
-            Token::U8(arg_u8) => Self::encode_u8(arg_u8),
-            Token::U16(arg_u16) => Self::encode_u16(arg_u16),
-            Token::U32(arg_u32) => Self::encode_u32(arg_u32),
-            Token::U64(arg_u64) => Self::encode_u64(arg_u64),
-            Token::Byte(arg_byte) => Self::encode_byte(arg_byte),
-            Token::Bool(arg_bool) => Self::encode_bool(arg_bool),
-            Token::B256(arg_bits256) => Self::encode_b256(arg_bits256),
-            Token::Array(arg_array) => Self::encode_array(arg_array)?,
-            Token::String(arg_string) => Self::encode_string(arg_string),
-            Token::Struct(arg_struct) => Self::encode_struct(arg_struct)?,
-            Token::Enum(arg_enum) => Self::encode_enum(arg_enum)?,
-            Token::Tuple(arg_tuple) => Self::encode_tuple(arg_tuple)?,
-            Token::Unit => Self::encode_unit(),
-        })
+    fn encode_token(&mut self, arg: &Token) -> Result<(), CodecError> {
+        match arg {
+            Token::U8(arg_u8) => self.encode_u8(*arg_u8),
+            Token::U16(arg_u16) => self.encode_u16(*arg_u16),
+            Token::U32(arg_u32) => self.encode_u32(*arg_u32),
+            Token::U64(arg_u64) => self.encode_u64(*arg_u64),
+            Token::Byte(arg_byte) => self.encode_byte(*arg_byte),
+            Token::Bool(arg_bool) => self.encode_bool(*arg_bool),
+            Token::B256(arg_bits256) => self.encode_b256(arg_bits256),
+            Token::Array(arg_array) => self.encode_array(arg_array)?,
+            Token::String(arg_string) => self.encode_string(arg_string),
+            Token::Struct(arg_struct) => self.encode_struct(arg_struct)?,
+            Token::Enum(arg_enum) => self.encode_enum(arg_enum)?,
+            Token::Tuple(arg_tuple) => self.encode_tuple(arg_tuple)?,
+            Token::Unit => self.encode_unit(),
+        };
+        Ok(())
     }
 
-    fn encode_unit() -> Vec<u8> {
-        vec![0; WORD_SIZE]
+    fn encode_unit(&mut self) {
+        self.rightpad_with_zeroes(WORD_SIZE);
     }
 
-    fn encode_tuple(arg_tuple: &[Token]) -> Result<Vec<u8>, CodecError> {
-        Self::encode(arg_tuple)
+    fn encode_tuple(&mut self, arg_tuple: &[Token]) -> Result<(), CodecError> {
+        self.encode_tokens(arg_tuple)
     }
 
-    fn encode_struct(arg_struct: &[Token]) -> Result<Vec<u8>, CodecError> {
-        let mut data = vec![];
-        for property in arg_struct.iter() {
-            data.extend(Self::encode(slice::from_ref(property))?);
+    fn encode_struct(&mut self, subcomponents: &Vec<Token>) -> Result<(), CodecError> {
+        for component in subcomponents {
+            self.encode_tokens(slice::from_ref(component))?;
         }
-        Ok(data)
+        Ok(())
     }
 
-    fn encode_string(arg_string: &str) -> Vec<u8> {
-        pad_string(arg_string)
+    fn encode_string(&mut self, arg_string: &str) {
+        self.buffer.extend(pad_string(arg_string));
     }
 
-    fn encode_array(arg_array: &[Token]) -> Result<Vec<u8>, CodecError> {
+    fn encode_array(&mut self, arg_array: &[Token]) -> Result<(), CodecError> {
         // Recursively encode the array of Tokens
-        Self::encode(arg_array)
+        self.encode_tokens(arg_array)
     }
 
-    fn encode_b256(arg_bits256: &Bits256) -> Vec<u8> {
-        arg_bits256.to_vec()
+    fn encode_b256(&mut self, arg_bits256: &Bits256) {
+        self.buffer.extend(arg_bits256);
     }
 
-    fn encode_bool(arg_bool: &bool) -> Vec<u8> {
-        pad_u8(if *arg_bool { &1 } else { &0 }).to_vec()
+    fn encode_bool(&mut self, arg_bool: bool) {
+        self.buffer.extend(pad_u8(if arg_bool { 1 } else { 0 }));
     }
 
-    fn encode_byte(arg_byte: &u8) -> Vec<u8> {
-        pad_u8(arg_byte).to_vec()
+    fn encode_byte(&mut self, arg_byte: u8) {
+        self.buffer.extend(pad_u8(arg_byte));
     }
 
-    fn encode_u64(arg_u64: &u64) -> Vec<u8> {
-        arg_u64.to_be_bytes().to_vec()
+    fn encode_u64(&mut self, arg_u64: u64) {
+        self.buffer.extend(arg_u64.to_be_bytes());
     }
 
-    fn encode_u32(arg_u32: &u32) -> Vec<u8> {
-        pad_u32(arg_u32).to_vec()
+    fn encode_u32(&mut self, arg_u32: u32) {
+        self.buffer.extend(pad_u32(arg_u32));
     }
 
-    fn encode_u16(arg_u16: &u16) -> Vec<u8> {
-        pad_u16(arg_u16).to_vec()
+    fn encode_u16(&mut self, arg_u16: u16) {
+        self.buffer.extend(pad_u16(arg_u16));
     }
 
-    fn encode_u8(arg_u8: &u8) -> Vec<u8> {
-        pad_u8(arg_u8).to_vec()
+    fn encode_u8(&mut self, arg_u8: u8) {
+        self.buffer.extend(pad_u8(arg_u8));
     }
 
-    /// The encoding follows the ABI specs defined
-    /// [here](https://github.com/FuelLabs/fuel-specs/blob/master/specs/protocol/abi.md)
-    fn encode_enum(selector: &EnumSelector) -> Result<Vec<u8>, CodecError> {
+    fn encode_enum(&mut self, selector: &EnumSelector) -> Result<(), CodecError> {
         let (discriminant, token_within_enum, variants) = selector;
 
-        let mut data = vec![];
-        data.extend(Self::encode_discriminant(discriminant));
+        self.encode_discriminant(*discriminant);
 
         // The sway compiler has an optimization for enums which have only Units
         // as variants -- such an enum is encoded only by encoding its
         // discriminant.
         if !variants.only_units_inside() {
             let param_type = Self::type_of_chosen_variant(discriminant, variants)?;
-            data.extend(Self::add_enum_padding(variants, param_type));
-            data.extend(Self::encode(slice::from_ref(token_within_enum))?);
+            self.encode_enum_padding(variants, param_type);
+            self.encode_tokens(slice::from_ref(token_within_enum))?;
         }
 
-        Ok(data)
+        Ok(())
     }
 
-    fn add_enum_padding(variants: &EnumVariants, param_type: &ParamType) -> Vec<u8> {
+    fn encode_discriminant(&mut self, discriminant: u8) {
+        self.encode_u8(discriminant);
+    }
+
+    fn encode_enum_padding(&mut self, variants: &EnumVariants, param_type: &ParamType) {
         let biggest_variant_width =
             compute_encoding_width_of_enum(variants) - ENUM_DISCRIMINANT_WORD_WIDTH;
         let variant_width = compute_encoding_width(param_type);
-
         let padding_amount = (biggest_variant_width - variant_width) * WORD_SIZE;
 
-        Self::rightpad_with_zeroes(padding_amount)
+        self.rightpad_with_zeroes(padding_amount);
+    }
+
+    fn rightpad_with_zeroes(&mut self, amount: usize) {
+        self.buffer.resize(self.buffer.len() + amount, 0);
     }
 
     fn type_of_chosen_variant<'a>(
@@ -151,15 +170,6 @@ impl ABIEncoder {
                 );
                 CodecError::InvalidData(msg)
             })
-    }
-
-    fn encode_discriminant(discriminant: &u8) -> Vec<u8> {
-        pad_u8(discriminant).to_vec()
-    }
-
-    /// Will append `amount` number of zeroes to the internal buffer, right-padding it
-    fn rightpad_with_zeroes(amount: usize) -> Vec<u8> {
-        vec![0; amount]
     }
 }
 
