@@ -35,6 +35,13 @@ If you are only interested in a single instance of your contract then use `deplo
 {{#include ../../../examples/contracts/src/lib.rs:deploy_contract}}
 ```
 
+You can then use the contract methods very simply:
+
+
+```rust,ignore
+{{#include ../../../examples/contracts/src/lib.rs:use_deployed_contract}}
+```
+
 Alternatively, if you want multiple instances of the same contract then use `deploy_with_salt`
 
 ```rust,ignore
@@ -46,26 +53,13 @@ Alternatively, if you want multiple instances of the same contract then use `dep
 If you need multiple test wallets, they can be setup as follows:
 
 ```rust,ignore
-// This helper will launch a local node and provide 10 test wallets linked to it.
-// The initial balance defaults to 1 coin per wallet with an amount of 1_000_000_000
-let wallets = launch_provider_and_get_wallets(WalletsConfig::default()).await;
+{{#include ../../../examples/wallets/src/lib.rs:multiple_wallets_helper}}
 ```
 
 The returned test wallets can be customized via `WalletsConfig`
 
 ```rust,ignore
-let num_wallets = 5;
-let coins_per_wallet = 3;
-let amount_per_coin = 100;
-
-let config = WalletsConfig::new(
-    Some(num_wallets),
-    Some(coins_per_wallet),
-    Some(amount_per_coin)
-);
-
-// Launches a local node and provides test wallets as specified by the config
-let wallets = launch_provider_and_get_wallets(WalletsConfig::default()).await;
+{{#include ../../../examples/wallets/src/lib.rs:setup_5_wallets}}
 ```
 
 ## Setting up a test wallet with multiple assets
@@ -73,19 +67,7 @@ let wallets = launch_provider_and_get_wallets(WalletsConfig::default()).await;
 You can create a test wallet which contains multiple different assets (including the base asset to pay for gas).
 
 ```rust,ignore
-let mut wallet = LocalWallet::new_random(None);
-let num_assets = 5; // 5 different assets
-let coins_per_asset = 10; // Per asset id, 10 coins in the wallet
-let amount_per_coin = 15; // For each coin (UTXO) of the asset, amount of 15
-
-let (coins, asset_ids) = setup_multiple_assets_coins(
-    wallet.address(),
-    num_assets,
-    coins_per_asset,
-    amount_per_coin,
-);
-let (provider, _socket_addr) = setup_test_provider(coins.clone(), Config::local_node()).await;
-wallet.set_provider(provider);
+{{#include ../../../examples/wallets/src/lib.rs:multiple_assets_wallet}}
 ```
 
 - `coins: Vec<(UtxoId, Coin)>` has `num_assets * coins_per_assets` coins (UTXOs)
@@ -98,7 +80,7 @@ Once you've deployed your contract, as seen in the previous section, you'll like
 Start by creating an instance of your contract once you have a wallet set up:
 
 ```rust,ignore
-let contract_instance = MyContract::new(contract_id.to_string(), wallet);
+{{#include ../../../examples/contracts/src/lib.rs:instantiate_contract}}
 ```
 
 Then we move to configuring contract calls.
@@ -115,19 +97,20 @@ Transaction parameters are:
 These parameters can be configured by creating an instance of [`TxParameters`](https://github.com/FuelLabs/fuels-rs/blob/adf81bd451d7637ce0976363bd7784408430031a/packages/fuels-contract/src/parameters.rs#L7) and passing it to a chain method called `tx_params`:
 
 ```rust,ignore
-// In order: gas_price, gas_limit, byte_price, and maturity
-let my_tx_params = TxParameters::new(None, Some(1_000_000), None, None);
+{{#include ../../../examples/contracts/src/lib.rs:tx_parameters}}
+```
+You can also use `TxParameters::default()` to use the default values:
 
-let result = contract_instance
-        .initialize_counter(42)  // Our contract method.
-        .tx_params(my_tx_params) // Chain the tx params setting method.
-        .call()                  // Perform the contract call.
-        .await                   // This is an async call, `.await` for it.
-        .unwrap();               // It returns a `Result<CallResponse<D>, Error>,
-                                 // unwrap or handle it in any other preferable way.
+```rust,ignore
+{{#include ../../../packages/fuels-core/src/constants.rs:default_tx_parameters}}
 ```
 
-You can also use `TxParameters::default()` to use the [default values](https://github.com/FuelLabs/fuels-rs/blob/adf81bd451d7637ce0976363bd7784408430031a/packages/fuels-core/src/constants.rs#L4-L7).
+this way:
+
+```rust,ignore
+{{#include ../../../examples/contracts/src/lib.rs:tx_parameters_default}}
+```
+
 
 ### `CallParameters`
 
@@ -139,28 +122,33 @@ Call parameters are:
 
 This is commonly used to forward coins to a contract. These parameters can be configured by creating an instance of [`CallParameters`](https://github.com/FuelLabs/fuels-rs/blob/adf81bd451d7637ce0976363bd7784408430031a/packages/fuels-contract/src/parameters.rs#L15) and passing it to a chain method called `call_params`.
 
-For instance, suppose the following contract that makes use of Sway's `msg_amount()` to return the amount sent in that message to the contract:
+For instance, suppose the following contract that makes use of Sway's `msg_amount()` to return the amount sent in that transaction.
 
 ```rust,ignore
-{{#include ../../../packages/fuels-abigen-macro/tests/test-projects/msg_amount/src/main.sw:contract_msg_amount}}
+{{#include ../../../packages/fuels-abigen-macro/tests/test_projects/contract_test/src/main.sw:msg_amount}}
 ```
 
-Then, in Rust, after setting up and deploying the above contract, you can configure the amount being sent to the `get_msg_amount()` method like this:
+Then, in Rust, after setting up and deploying the above contract, you can configure the amount being sent in the transaction like this:
 
 ```rust,ignore
-{{#include ../../../examples/contracts/src/lib.rs:call_params}}
+{{#include ../../../examples/contracts/src/lib.rs:call_parameters}}
 ```
 
 You can also use `CallParameters::default()` to use the default values:
 
 ```rust,ignore
-pub const DEFAULT_COIN_AMOUNT: u64 = 1_000_000;
-pub const BASE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
+{{#include ../../../packages/fuels-core/src/constants.rs:default_call_parameters}}
+```
+
+this way:
+
+
+```rust,ignore
+{{#include ../../../examples/contracts/src/lib.rs:call_parameters_default}}
 ```
 
 The `gas_forwarded` parameter defines the limit for the actual contract call as opposed to the gas limit for the whole transaction. This means that it is constrained by the transaction limit. If it is set to an amount greater than the available gas, all available gas will be forwarded.
 
-Here we set the transaction `gas_limit` and call `gas_forwarded` to specify that the contract call transaction may consume up to 1000 gas, while we only forward 200 gas for the actual call:
 
 ```rust,ignore
 {{#include ../../../examples/contracts/src/lib.rs:call_params_gas}}
@@ -177,11 +165,7 @@ You've probably noticed that you're often chaining `.call().await.unwrap(). That
 Once you unwrap the `CallResponse`, you have access to this struct:
 
 ```rust,ignore
-pub struct CallResponse<D> {
-    pub value: D,
-    pub receipts: Vec<Receipt>,
-    pub logs: Option<Vec<String>>,
-}
+{{#include ../../../packages/fuels-contract/src/contract.rs:call_response}}
 ```
 
 Where `value` will hold the value returned by its respective contract method, represented by the exact type returned by the FuelVM. E.g., if your contract returns a FuelVM's `u64`, `value`'s `D` will be a `u64`. If it's a FuelVM's tuple `(u8,bool)`, then `D` will be a `(u8,bool)`. If it's a custom type, for instance, a Sway struct `MyStruct` containing 2 components, a `u64` and a `b256`, `D` will be a struct generated at compile-time, called `MyStruct` with `u64` and a `[u8; 32]` (the equivalent of `b256` in Rust-land).
@@ -205,7 +189,7 @@ In this case, there's no need to generate an actual blockchain transaction; you 
 You can do this with the SDK by, instead of `.call()`ing the method, using `.simulate()` instead:
 
 ```rust,ignore
-let my_balance = contract_instance.return_my_balance().simulate().await.unwrap();
+{{#include ../../../examples/contracts/src/lib.rs:simulate}}
 ```
 
 Note that if you use `.simulate()` on a method that _does_ change the state of the blockchain, it won't work properly; it will just `dry-run` it.
@@ -217,33 +201,13 @@ At the moment, it's up to you to know whether a contract method changes state or
 In some cases, you might want to send funds to the output of a transaction. Sway has a specific method for that: `transfer_to_output(coins, asset_id, recipient)`. So, if you have a contract that does something like this:
 
 ```rust,ignore
-contract;
-
-use std::{address::Address, context::balance_of, context::msg_amount, contract_id::ContractId, token::*};
-
-abi FuelTest {
-    fn transfer_coins_to_output(coins: u64, asset_id: ContractId, recipient: Address);
-}
-
-impl FuelTest for Contract {
-    fn transfer_coins_to_output(coins: u64, asset_id: ContractId, recipient: Address) {
-        transfer_to_output(coins, asset_id, recipient);
-    }
-}
+{{#include ../../../packages/fuels-abigen-macro/tests/test_projects/token_ops/src/main.sw:variable_outputs}}
 ```
 
 With the SDK, you can call `transfer_coins_to_output`, by chaining `append_variable_outputs(amount)` to your contract call. Like this:
 
 ```rust,ignore
-let address = wallet.address();
-
-// withdraw some tokens to wallet
-contract_instance
-    .transfer_coins_to_output(1_000_000, id, address)
-    .append_variable_outputs(1)
-    .call()
-    .await
-    .unwrap();
+{{#include ../../../examples/contracts/src/lib.rs:variable_outputs}}
 ```
 
 `append_variable_outputs` effectively appends a given amount of `Output::Variable`s to the transaction's list of outputs. This output type indicates that the output's amount and owner may vary based on transaction execution.
@@ -255,12 +219,7 @@ Note that the Sway `lib-std` function `mint_to_address` calls `transfer_to_outpu
 Sometimes, you might need to call your contract, which calls other contracts. To do so, you must feed the external contract IDs that your contract depends on to the method you're calling. You do it by chaining `.set_contracts(&[external_contract_id, ...])` to the method you want to call. For instance:
 
 ```rust,ignore
-let response = contract_instance
-.my_method(...)
-.set_contracts( & [another_contract_id]) // Add this to set the external contract
-.call()
-.await
-.unwrap();
+{{#include ../../../packages/fuels-abigen-macro/tests/harness.rs:external_contract}}
 ```
 
 For a more concrete example, see the `test_contract_calling_contract` function in
@@ -271,16 +230,7 @@ For a more concrete example, see the `test_contract_calling_contract` function i
 If you already have a deployed contract and want to call its methods using the SDK,  but without deploying it again, all you need is the contract ID of your deployed contract. You can skip the whole deployment setup and call `::new(contract_id, wallet)` directly. For example:
 
 ```rust,ignore
-abigen!(
-    MyContract,
-    "path/to/abi.json"
-);
-
-let wallet = launch_provider_and_get_single_wallet().await;
-
-let contract_id = "0x0123..." // Your contract ID as a string.
-
-let connected_contract_instance = MyContract::new(contract_id, wallet);
+{{#include ../../../examples/contracts/src/lib.rs:deployed_contracts}}
 ```
 
 ## Getting the contract call outputs
@@ -288,28 +238,13 @@ let connected_contract_instance = MyContract::new(contract_id, wallet);
 - Getting the contract call outputs is done this way:
 
 ```rust,ignore
-let response = contract_instance.my_method(args).call().await;
-match response {
-   // The transaction is valid and executes to completion
-    Ok(call_response) => {
-        let logs: Vec<String> = call_response.logs;
-        let receipts: Vec<Receipt> = call_response.receipts;
-        // Do things with logs and receipts
-    }
-    
-    // - The transaction is invalid or node is offline
-    // - The transaction is valid but reverts
-    ContractCallError(reason, receipts) => {
-        println!("ContractCall failed with reason: {}", reason);
-        println!("Transaction receipts are: {:?}", receipts);
-    }
-}
+{{#include ../../../examples/contracts/src/lib.rs:contract_receipts}}
 ```
 
 > **Note:** It is generally considered good practice when you expect the call to succeed, to unwrap the response with `?`, this way:
 >
 > ```rust, ignore
-> let response = contract_instance.my_method(args).call().await?;
+> {{#include ../../../examples/contracts/src/lib.rs:good_practice}}
 > ```
 
 ## More examples
