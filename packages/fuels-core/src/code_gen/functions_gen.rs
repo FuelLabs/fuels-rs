@@ -48,24 +48,26 @@ pub fn expand_function(
     // Here we turn `ParamType`s into a custom stringified version that's identical
     // to how we would declare a `ParamType` in Rust code. Which will then
     // be used to be tokenized and passed onto `method_hash()`.
-    let mut output_params = vec![];
-    for output in &function.outputs {
-        let mut param_type_str: String = "ParamType::".to_owned();
-        let p = parse_param(output).unwrap();
-        param_type_str.push_str(&p.to_string());
+    let output_param = match &function.outputs[..] {
+        [output] => {
+            let param_type = parse_param(output).unwrap();
 
-        let tok: proc_macro2::TokenStream = param_type_str.parse().unwrap();
+            let tok: proc_macro2::TokenStream =
+                format!("Some(ParamType::{})", param_type).parse().unwrap();
 
-        output_params.push(tok);
-    }
-
-    let output_params_token = quote! { &[#( #output_params ),*] };
+            Ok(tok)
+        }
+        [] => Ok("None".parse().unwrap()),
+        &_ => Err(Error::CompilationError(
+            "A function cannot have multiple outputs!".to_string(),
+        )),
+    }?;
 
     Ok(quote! {
         #doc
         pub fn #name(&self #input) -> #result {
             Contract::method_hash(&self.wallet.get_provider().expect("Provider not set up"), self.contract_id, &self.wallet,
-                #tokenized_signature, #output_params_token, #arg).expect("method not found (this should never happen)")
+                #tokenized_signature, #output_param, #arg).expect("method not found (this should never happen)")
         }
     })
 }
@@ -77,11 +79,9 @@ fn expand_selector(selector: Selector) -> TokenStream {
 
 /// Expands the output of a function, i.e. what comes after `->` in a function signature.
 fn expand_fn_outputs(outputs: &[Property]) -> Result<TokenStream, Error> {
-    match outputs.len() {
-        0 => Ok(quote! { () }),
-        1 => {
-            let output = outputs.first().expect("Outputs shouldn't not be empty");
-
+    match outputs {
+        [] => Ok(quote! { () }),
+        [output] => {
             // If it's a primitive type, simply parse and expand.
             if !output.is_custom_type() {
                 return expand_type(&parse_param(output)?);
@@ -148,14 +148,9 @@ fn expand_fn_outputs(outputs: &[Property]) -> Result<TokenStream, Error> {
                 },
             }
         }
-        // Recursively expand the outputs
-        _ => {
-            let types = outputs
-                .iter()
-                .map(|param| expand_fn_outputs(&[param.clone()]))
-                .collect::<Result<Vec<_>, Error>>()?;
-            Ok(quote! { (#( #types ),*) })
-        }
+        _ => Err(Error::CompilationError(
+            "A function cannot have multiple outputs.".to_string(),
+        )),
     }
 }
 
@@ -367,7 +362,7 @@ pub fn HelloWorld(&self, bimbam: bool) -> ContractCallHandler<()> {
         self.contract_id,
         &self.wallet,
         [0, 0, 0, 0, 151, 212, 222, 69],
-        &[],
+        None,
         &[bimbam.into_token() ,]
     )
     .expect("method not found (this should never happen)")
@@ -383,40 +378,22 @@ pub fn HelloWorld(&self, bimbam: bool) -> ContractCallHandler<()> {
             type_field: "function".to_string(),
             name: "hello_world".to_string(),
             inputs: vec![],
-            outputs: vec![
-                Property {
-                    name: String::from("notused"),
-                    type_field: String::from("struct CoolIndieGame"),
-                    components: Some(vec![
-                        Property {
-                            name: String::from("SuperMeat"),
-                            type_field: String::from("bool"),
-                            components: None,
-                        },
-                        Property {
-                            name: String::from("BoyOrGirl"),
-                            type_field: String::from("u64"),
-                            components: None,
-                        },
-                    ]),
-                },
-                Property {
-                    name: String::from("stillnotused"),
-                    type_field: String::from("enum EntropyCirclesEnum"),
-                    components: Some(vec![
-                        Property {
-                            name: String::from("Postcard"),
-                            type_field: String::from("bool"),
-                            components: None,
-                        },
-                        Property {
-                            name: String::from("Teacup"),
-                            type_field: String::from("u64"),
-                            components: None,
-                        },
-                    ]),
-                },
-            ],
+            outputs: vec![Property {
+                name: String::from("stillnotused"),
+                type_field: String::from("enum EntropyCirclesEnum"),
+                components: Some(vec![
+                    Property {
+                        name: String::from("Postcard"),
+                        type_field: String::from("bool"),
+                        components: None,
+                    },
+                    Property {
+                        name: String::from("Teacup"),
+                        type_field: String::from("u64"),
+                        components: None,
+                    },
+                ]),
+            }],
         };
         the_function.inputs.push(Property {
             name: String::from("the_only_allowed_input"),
@@ -469,15 +446,13 @@ pub fn HelloWorld(&self, bimbam: bool) -> ContractCallHandler<()> {
 pub fn hello_world(
     &self,
     the_only_allowed_input: SomeWeirdFrenchCuisine
-) -> ContractCallHandler<(CoolIndieGame , EntropyCirclesEnum)> {
+) -> ContractCallHandler<EntropyCirclesEnum> {
     Contract::method_hash(
         &self.wallet.get_provider().expect("Provider not set up"),
         self.contract_id,
         &self.wallet,
         [0, 0, 0, 0, 118, 178, 90, 36],
-        &[
-            ParamType::Struct(vec![ParamType::Bool, ParamType::U64]),
-            ParamType::Enum(EnumVariants::new(vec![ParamType::Bool, ParamType::U64]).unwrap())],
+        Some(ParamType::Enum(EnumVariants::new(vec![ParamType::Bool, ParamType::U64]).unwrap())),
         &[the_only_allowed_input.into_token() ,]
     )
     .expect("method not found (this should never happen)")
@@ -549,57 +524,6 @@ pub fn hello_world(
         }]);
         assert_eq!(result.unwrap().to_string(), "StreamingServices");
     }
-    #[test]
-    fn test_expand_fn_outputs_two_more_arguments() {
-        let result = expand_fn_outputs(&[
-            Property {
-                name: "unused".to_string(),
-                type_field: String::from("bool"),
-                components: None,
-            },
-            Property {
-                name: "unused".to_string(),
-                type_field: String::from("u64"),
-                components: None,
-            },
-            Property {
-                name: "unused".to_string(),
-                type_field: String::from("u32"),
-                components: None,
-            },
-        ]);
-        assert_eq!(result.unwrap().to_string(), "(bool , u64 , u32)");
-
-        let two_empty_components = vec![
-            Property {
-                name: String::from("unused"),
-                type_field: String::from("nonexistingtype"),
-                components: None,
-            },
-            Property {
-                name: String::from("unused"),
-                type_field: String::from("anotherunexistingtype"),
-                components: None,
-            },
-        ];
-
-        let some_enum = Property {
-            name: "unused".to_string(),
-            type_field: String::from("enum Carmaker"),
-            components: Some(two_empty_components.clone()),
-        };
-        let result = expand_fn_outputs(&[some_enum.clone(), some_enum]);
-        assert_eq!(result.unwrap().to_string(), "(Carmaker , Carmaker)");
-
-        let some_struct = Property {
-            name: "unused".to_string(),
-            type_field: String::from("struct Carmaker"),
-            components: Some(two_empty_components),
-        };
-        let result = expand_fn_outputs(&[some_struct.clone(), some_struct]);
-        assert_eq!(result.unwrap().to_string(), "(Carmaker , Carmaker)")
-    }
-
     // --- expand_function_argument ---
     #[test]
     fn test_expand_function_arguments() {

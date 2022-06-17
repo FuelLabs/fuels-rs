@@ -1,4 +1,3 @@
-use fuel_core::service::Config;
 use fuel_gql_client::fuel_tx::{AssetId, ContractId, Receipt};
 use fuels::prelude::{
     launch_provider_and_get_single_wallet, setup_multiple_assets_coins, setup_single_asset_coins,
@@ -7,7 +6,7 @@ use fuels::prelude::{
 };
 use fuels_abigen_macro::abigen;
 use fuels_core::tx::Address;
-use fuels_core::Parameterize;
+use fuels_core::Tokenizable;
 use fuels_core::{constants::BASE_ASSET_ID, Token};
 use sha2::{Digest, Sha256};
 use std::str::FromStr;
@@ -535,7 +534,7 @@ async fn create_struct_from_decoded_tokens() {
 
     // Create the struct using the decoded tokens.
     // `struct_from_tokens` is of type `MyStruct`.
-    let struct_from_tokens = MyStruct::new_from_tokens(&[foo, bar]);
+    let struct_from_tokens = MyStruct::from_token(Token::Struct(vec![foo, bar])).unwrap();
 
     assert_eq!(10, struct_from_tokens.foo);
     assert!(struct_from_tokens.bar);
@@ -597,7 +596,8 @@ async fn create_nested_struct_from_decoded_tokens() {
 
     // Creating just the InnerStruct is possible
     let a = Token::Bool(true);
-    let inner_struct_from_tokens = InnerStruct::new_from_tokens(&[a.clone()]);
+    let inner_struct_token = Token::Struct(vec![a.clone()]);
+    let inner_struct_from_tokens = InnerStruct::from_token(inner_struct_token.clone()).unwrap();
     assert!(inner_struct_from_tokens.a);
 
     // Creating the whole nested struct `MyNestedStruct`
@@ -606,7 +606,8 @@ async fn create_nested_struct_from_decoded_tokens() {
     // `a` is the token for the field `a` in `InnerStruct`
     let x = Token::U16(10);
 
-    let nested_struct_from_tokens = MyNestedStruct::new_from_tokens(&[x, a]);
+    let nested_struct_from_tokens =
+        MyNestedStruct::from_token(Token::Struct(vec![x, inner_struct_token])).unwrap();
 
     assert_eq!(10, nested_struct_from_tokens.x);
     assert!(nested_struct_from_tokens.y.a);
@@ -938,7 +939,7 @@ async fn test_provider_launch_and_connect() {
         DEFAULT_NUM_COINS,
         DEFAULT_COIN_AMOUNT,
     );
-    let (launched_provider, address) = setup_test_provider(coins, Config::local_node()).await;
+    let (launched_provider, address) = setup_test_provider(coins, None).await;
     let connected_provider = Provider::connect(address).await.unwrap();
 
     wallet.set_provider(connected_provider);
@@ -1547,7 +1548,7 @@ async fn test_wallet_balance_api() {
         amount_per_coin,
     );
 
-    let (provider, _) = setup_test_provider(coins.clone(), Config::local_node()).await;
+    let (provider, _) = setup_test_provider(coins.clone(), None).await;
     wallet.set_provider(provider);
     for (_utxo_id, coin) in coins {
         let balance = wallet.get_asset_balance(&coin.asset_id).await;
@@ -1574,7 +1575,7 @@ async fn test_wallet_balance_api() {
     );
     assert_eq!(coins.len() as u64, number_of_assets * coins_per_asset);
     assert_eq!(asset_ids.len() as u64, number_of_assets);
-    let (provider, _) = setup_test_provider(coins.clone(), Config::local_node()).await;
+    let (provider, _) = setup_test_provider(coins.clone(), None).await;
     wallet.set_provider(provider);
     let balances = wallet.get_balances().await.unwrap();
     assert_eq!(balances.len() as u64, number_of_assets);
@@ -1692,7 +1693,7 @@ async fn enums_are_correctly_encoded_and_decoded() {
     let actual = instance.get_bundle().call().await.unwrap().value;
     assert_eq!(actual, expected);
 
-    let sways_judgement = instance
+    let fuelvm_judgement = instance
         .check_bundle_integrity(expected)
         .call()
         .await
@@ -1700,7 +1701,7 @@ async fn enums_are_correctly_encoded_and_decoded() {
         .value;
 
     assert!(
-        sways_judgement,
+        fuelvm_judgement,
         "The FuelVM deems that we've not encoded the bundle correctly. Investigate!"
     );
 }
@@ -1729,30 +1730,70 @@ async fn enum_as_input() {
     let actual = instance.get_standard_enum().call().await.unwrap().value;
     assert_eq!(expected, actual);
 
-    let sways_judgement = instance
+    let fuelvm_judgement = instance
         .check_standard_enum_integrity(expected)
         .call()
         .await
         .unwrap()
         .value;
     assert!(
-        sways_judgement,
-        "Sway deems that we've not encoded the standard enum correctly. Investigate!"
+        fuelvm_judgement,
+        "The FuelVM deems that we've not encoded the standard enum correctly. Investigate!"
     );
 
     let expected = UnitEnum::Two();
     let actual = instance.get_unit_enum().call().await.unwrap().value;
     assert_eq!(actual, expected);
 
-    let sways_judgement = instance
+    let fuelvm_judgement = instance
         .check_unit_enum_integrity(expected)
         .call()
         .await
         .unwrap()
         .value;
     assert!(
-        sways_judgement,
-        "Sway deems that we've not encoded the unit enum correctly. Investigate!"
+        fuelvm_judgement,
+        "The FuelVM deems that we've not encoded the unit enum correctly. Investigate!"
+    );
+}
+
+#[tokio::test]
+async fn nested_structs() {
+    abigen!(
+        NestedStructs,
+        "packages/fuels-abigen-macro/tests/test_projects/nested_structs/out/debug\
+        /nested_structs-abi.json"
+    );
+
+    let wallet = launch_provider_and_get_single_wallet().await;
+
+    let id = Contract::deploy(
+        "tests/test_projects/nested_structs/out/debug/nested_structs.bin",
+        &wallet,
+        TxParameters::default(),
+    )
+    .await
+    .unwrap();
+
+    let instance = NestedStructs::new(id.to_string(), wallet);
+
+    let expected = AllStruct {
+        some_struct: SomeStruct { par_1: 12345 },
+    };
+
+    let actual = instance.get_struct().call().await.unwrap().value;
+    assert_eq!(actual, expected);
+
+    let fuelvm_judgement = instance
+        .check_struct_integrity(expected)
+        .call()
+        .await
+        .unwrap()
+        .value;
+
+    assert!(
+        fuelvm_judgement,
+        "The FuelVM deems that we've not encoded the argument correctly. Investigate!"
     );
 }
 
