@@ -619,7 +619,7 @@ mod tests {
     fn out_of_bounds_discriminant_is_detected() {
         let data = [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 2];
         let variants = EnumVariants::new(vec![ParamType::U32]).unwrap();
-        let enum_type = ParamType::Enum(variants.clone());
+        let enum_type = ParamType::Enum(variants);
 
         let result = ABIDecoder::decode_single(&enum_type, &data);
 
