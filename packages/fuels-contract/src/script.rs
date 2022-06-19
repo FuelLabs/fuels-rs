@@ -3,18 +3,18 @@ use fuel_gql_client::fuel_tx::{Input, Output, UtxoId};
 use fuel_gql_client::fuel_types::{
     bytes::padded_len_usize, AssetId, Bytes32, ContractId, Immediate18, Word,
 };
-use fuel_gql_client::fuel_vm::consts::VM_TX_MEMORY;
 use fuel_gql_client::fuel_vm::{consts::REG_ONE, prelude::Opcode};
 use fuel_gql_client::{
     client::{types::TransactionStatus, FuelClient},
-    fuel_tx::{Receipt, Transaction},
+    fuel_tx::{ConsensusParameters, Receipt, Transaction},
 };
+
 use fuels_core::constants::{DEFAULT_SPENDABLE_COIN_AMOUNT, WORD_SIZE};
 use fuels_core::errors::Error;
 use fuels_core::parameters::TxParameters;
+use fuels_signers::{LocalWallet, Signer};
 
 use crate::contract::ContractCall;
-use fuels_signers::{LocalWallet, Signer};
 
 #[derive(Default)]
 /// Specifies offsets of Opcode::CALL parameters stored in the script
@@ -269,7 +269,9 @@ impl Script {
         // to account for RET instruction which is added later
         len_script += Opcode::LEN;
 
-        VM_TX_MEMORY + Transaction::script_offset() + padded_len_usize(len_script)
+        ConsensusParameters::DEFAULT.tx_offset()
+            + Transaction::script_offset()
+            + padded_len_usize(len_script)
     }
 
     /// Execute the transaction in a state-modifying manner.

@@ -1,4 +1,8 @@
+use std::str::FromStr;
+
 use fuel_gql_client::fuel_tx::{AssetId, ContractId, Receipt};
+use sha2::{Digest, Sha256};
+
 use fuels::prelude::{
     launch_provider_and_get_single_wallet, setup_multiple_assets_coins, setup_single_asset_coins,
     setup_test_provider, CallParameters, Contract, Error, LocalWallet, Provider, Signer,
@@ -8,8 +12,7 @@ use fuels_abigen_macro::abigen;
 use fuels_core::tx::Address;
 use fuels_core::Tokenizable;
 use fuels_core::{constants::BASE_ASSET_ID, Token};
-use sha2::{Digest, Sha256};
-use std::str::FromStr;
+
 /// Note: all the tests and examples below require pre-compiled Sway projects.
 /// To compile these projects, run `cargo run --bin build-test-projects`.
 /// It will build all test projects, creating their respective binaries,
@@ -1030,6 +1033,7 @@ async fn test_contract_calling_contract() {
 }
 
 #[tokio::test]
+#[cfg(feature = "fuel-core-lib")]
 async fn test_gas_errors() {
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `MyContract`.
@@ -1065,6 +1069,7 @@ async fn test_gas_errors() {
 
     let expected = "Contract call error: Response errors; unexpected block execution error \
     InsufficientFeeAmount { provided: 1000000000, required: 100000000000 }, receipts:";
+
     assert!(result.to_string().starts_with(expected));
 
     // Test for running out of gas. Gas price as `None` will be 0.
@@ -1076,7 +1081,57 @@ async fn test_gas_errors() {
         .await
         .expect_err("should error");
 
+    assert!(result.to_string().starts_with(expected));
+}
+
+#[tokio::test]
+#[cfg(not(feature = "fuel-core-lib"))]
+async fn test_gas_errors_bin() {
+    // Generates the bindings from the an ABI definition inline.
+    // The generated bindings can be accessed through `MyContract`.
+    abigen!(
+        MyContract,
+        "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+    );
+
+    let wallet = launch_provider_and_get_single_wallet().await;
+
+    let contract_id = Contract::deploy(
+        "tests/test_projects/contract_test/out/debug/contract_test.bin",
+        &wallet,
+        TxParameters::default(),
+    )
+    .await
+    .unwrap();
+
+    let contract_instance = MyContract::new(contract_id.to_string(), wallet);
+
+    // Test for insufficient gas.
+    let result = contract_instance
+        .initialize_counter(42) // Build the ABI call
+        .tx_params(TxParameters::new(
+            Some(DEFAULT_COIN_AMOUNT),
+            Some(100),
+            None,
+            None,
+        ))
+        .call() // Perform the network call
+        .await
+        .expect_err("should error");
+
     let expected = "Contract call error: OutOfGas, receipts:";
+
+    assert!(result.to_string().starts_with(expected));
+
+    // Test for running out of gas. Gas price as `None` will be 0.
+    // Gas limit will be 100, this call will use more than 100 gas.
+    let result = contract_instance
+        .initialize_counter(42) // Build the ABI call
+        .tx_params(TxParameters::new(None, Some(100), None, None))
+        .call() // Perform the network call
+        .await
+        .expect_err("should error");
+
     assert!(result.to_string().starts_with(expected));
 }
 
