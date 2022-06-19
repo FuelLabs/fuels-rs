@@ -1,12 +1,6 @@
 contract;
 
-use std::{
-    address::Address,
-    constants::NATIVE_ASSET_ID,
-    identity::Identity,
-    option::Option,
-};
-
+use std::{address::Address, constants::BASE_ASSET_ID, identity::Identity, option::Option};
 
 enum EnumLevel1 {
     Num: u32,
@@ -22,7 +16,6 @@ enum EnumLevel3 {
     El2: EnumLevel2,
     Num: u8,
 }
-
 
 abi MyContract {
     fn get_nested_enum() -> EnumLevel3;
@@ -48,7 +41,7 @@ impl MyContract for Contract {
     }
 
     fn get_some_address() -> Option<Identity> {
-        Option::Some(Identity::Address(~Address::from(NATIVE_ASSET_ID)))
+        Option::Some(Identity::Address(~Address::from(BASE_ASSET_ID)))
     }
 
     fn get_none() -> Option<Identity> {
