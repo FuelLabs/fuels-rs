@@ -58,17 +58,19 @@ fn get_script(script_binary: Vec<u8>) -> Script {
 #[cfg(test)]
 mod tests {
     use crate::script::run_compiled_script;
+    use fuels_core::errors::Error;
 
     #[tokio::test]
-    // ANCHOR: run_compiled_script
-    async fn test_run_compiled_script() {
+    async fn test_run_compiled_script() -> Result<(), Error> {
+        // ANCHOR: run_compiled_script
         let path_to_bin = "../fuels-abigen-macro/tests/test_projects/logging/out/debug/logging.bin";
-        let return_val = run_compiled_script(path_to_bin).await;
+        let return_val = run_compiled_script(path_to_bin).await?;
 
         let correct_hex =
             hex::decode("ef86afa9696cf0dc6385e2c407a6e159a1103cefb7e2ae0636fb33d3cb2a9e4a");
 
-        assert_eq!(correct_hex.unwrap(), return_val.unwrap()[0].data().unwrap());
+        assert_eq!(correct_hex.unwrap(), return_val[0].data().unwrap());
+        // ANCHOR_END: run_compiled_script
+        Ok(())
     }
-    // ANCHOR_END: run_compiled_script
 }

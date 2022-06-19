@@ -24,9 +24,11 @@ impl TestFuelCoin for Contract {
         force_transfer_to_contract(coins, asset_id, target);
     }
 
+    // ANCHOR: variable_outputs
     fn transfer_coins_to_output(coins: u64, asset_id: ContractId, recipient: Address) {
         transfer_to_output(coins, asset_id, recipient);
     }
+    // ANCHOR_END: variable_outputs
 
     fn get_balance(target: ContractId, asset_id: ContractId) -> u64 {
         balance_of(target, asset_id)

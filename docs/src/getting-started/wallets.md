@@ -64,14 +64,13 @@ If you had already created a wallet using a mnemonic phrase or a private key, yo
 First, one should keep in mind that, with UTXOs, each _coin_ is unique. Each UTXO corresponds to a unique _coin_, and said _coin_ has a corresponding _amount_ (the same way a dollar bill has either 10$ or 5$ face value). So, when you want to query the balance for a given asset ID, you want to query the sum of the amount in each unspent coin. This is done very easily with a wallet:
 
 ```rust,ignore
-let asset_id : AssetId = BASE_ASSET_ID
-let balance : u64 = wallet.get_asset_balance(&asset_id).await;
+{{#include ../../../examples/wallets/src/lib.rs:get_asset_balance}}
 ```
 
 If you want to query all the balances (i.e. get the balance for each asset IDs in that wallet), then it is as simple as:
 
 ```rust,ignore
-let balances = wallet.get_balances().await.unwrap();
+{{#include ../../../examples/wallets/src/lib.rs:get_balances}}
 ```
 
 The return type is a `HashMap`, where the key is the _asset ID_ and the value is the corresponding balance.

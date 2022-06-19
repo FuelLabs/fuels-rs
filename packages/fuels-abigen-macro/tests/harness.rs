@@ -1,14 +1,11 @@
-use std::str::FromStr;
-
 use fuel_gql_client::fuel_tx::{AssetId, ContractId, Receipt};
 use sha2::{Digest, Sha256};
 
 use fuels::prelude::{
-    launch_provider_and_get_single_wallet, setup_multiple_assets_coins, setup_single_asset_coins,
-    setup_test_provider, CallParameters, Contract, Error, LocalWallet, Provider, Signer,
-    TxParameters, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
+    abigen, launch_provider_and_get_single_wallet, setup_multiple_assets_coins,
+    setup_single_asset_coins, setup_test_provider, CallParameters, Contract, Error, LocalWallet,
+    Provider, Signer, TxParameters, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
 };
-use fuels_abigen_macro::abigen;
 use fuels_core::tx::Address;
 use fuels_core::Tokenizable;
 use fuels_core::{constants::BASE_ASSET_ID, Token};
@@ -57,7 +54,8 @@ async fn compile_bindings_from_contract_file() {
 }
 
 #[tokio::test]
-async fn compile_bindings_from_inline_contract() {
+async fn compile_bindings_from_inline_contract() -> Result<(), Error> {
+    // ANCHOR: bindings_from_inline_contracts
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `SimpleContract`.
     abigen!(
@@ -97,6 +95,8 @@ async fn compile_bindings_from_inline_contract() {
     );
 
     assert_eq!("000000009593586c000000000000002a", encoded);
+    // ANCHOR_END: bindings_from_inline_contracts
+    Ok(())
 }
 
 #[tokio::test]
@@ -701,21 +701,21 @@ async fn call_with_structs() {
         initial_value: 42,
     };
 
-    let result = contract_instance
+    let response = contract_instance
         .initialize_counter(counter_config) // Build the ABI call
         .call() // Perform the network call
         .await
         .unwrap();
 
-    assert_eq!(42, result.value);
+    assert_eq!(42, response.value);
 
-    let result = contract_instance
+    let response = contract_instance
         .increment_counter(10)
         .call()
         .await
         .unwrap();
 
-    assert_eq!(52, result.value);
+    assert_eq!(52, response.value);
 }
 
 #[tokio::test]
@@ -740,7 +740,7 @@ async fn call_with_empty_return() {
 
     let contract_instance = MyContract::new(contract_id.to_string(), wallet);
 
-    let _result = contract_instance
+    let _response = contract_instance
         .store_value(42) // Build the ABI call
         .call() // Perform the network call
         .await
@@ -797,8 +797,8 @@ async fn test_reverting_transaction() {
         .unwrap();
     let contract_instance = RevertingContract::new(contract_id.to_string(), wallet);
     println!("Contract deployed @ {:x}", contract_id);
-    let result = contract_instance.make_transaction_fail(0).call().await;
-    assert!(matches!(result, Err(Error::ContractCallError(..))));
+    let response = contract_instance.make_transaction_fail(0).call().await;
+    assert!(matches!(response, Err(Error::ContractCallError(..))));
 }
 
 #[tokio::test]
@@ -856,12 +856,12 @@ async fn test_methods_typeless_argument() {
 
     let contract_instance = MyContract::new(contract_id.to_string(), wallet);
 
-    let result = contract_instance
+    let response = contract_instance
         .method_with_empty_argument()
         .call()
         .await
         .unwrap();
-    assert_eq!(result.value, 63);
+    assert_eq!(response.value, 63);
 }
 
 #[tokio::test]
@@ -955,26 +955,26 @@ async fn test_provider_launch_and_connect() {
 
     let contract_instance_connected = MyContract::new(contract_id.to_string(), wallet.clone());
 
-    let result = contract_instance_connected
+    let response = contract_instance_connected
         .initialize_counter(42) // Build the ABI call
         .call() // Perform the network call
         .await
         .unwrap();
-    assert_eq!(42, result.value);
+    assert_eq!(42, response.value);
 
     wallet.set_provider(launched_provider);
     let contract_instance_launched = MyContract::new(contract_id.to_string(), wallet);
 
-    let result = contract_instance_launched
+    let response = contract_instance_launched
         .increment_counter(10)
         .call()
         .await
         .unwrap();
-    assert_eq!(52, result.value);
+    assert_eq!(52, response.value);
 }
 
 #[tokio::test]
-async fn test_contract_calling_contract() {
+async fn test_contract_calling_contract() -> Result<(), Error> {
     // Tests a contract call that calls another contract (FooCaller calls FooContract underneath)
     abigen!(
         FooContract,
@@ -1022,14 +1022,16 @@ async fn test_contract_calling_contract() {
 
     // Calls the contract that calls the `FooContract` contract, also just
     // flips the bool value passed to it.
+    // ANCHOR: external_contract
     let res = foo_caller_contract_instance
         .call_foo_contract(*foo_contract_id, true)
         .set_contracts(&[foo_contract_id]) // Sets the external contract
         .call()
-        .await
-        .unwrap();
+        .await?;
+    // ANCHOR_END: external_contract
 
     assert!(!res.value);
+    Ok(())
 }
 
 #[tokio::test]
@@ -1055,7 +1057,7 @@ async fn test_gas_errors() {
     let contract_instance = MyContract::new(contract_id.to_string(), wallet);
 
     // Test for insufficient gas.
-    let result = contract_instance
+    let response = contract_instance
         .initialize_counter(42) // Build the ABI call
         .tx_params(TxParameters::new(
             Some(DEFAULT_COIN_AMOUNT),
@@ -1069,19 +1071,18 @@ async fn test_gas_errors() {
 
     let expected = "Contract call error: Response errors; unexpected block execution error \
     InsufficientFeeAmount { provided: 1000000000, required: 100000000000 }, receipts:";
-
-    assert!(result.to_string().starts_with(expected));
+    assert!(response.to_string().starts_with(expected));
 
     // Test for running out of gas. Gas price as `None` will be 0.
     // Gas limit will be 100, this call will use more than 100 gas.
-    let result = contract_instance
+    let response = contract_instance
         .initialize_counter(42) // Build the ABI call
         .tx_params(TxParameters::new(None, Some(100), None, None))
         .call() // Perform the network call
         .await
         .expect_err("should error");
 
-    assert!(result.to_string().starts_with(expected));
+    assert!(response.to_string().starts_with(expected));
 }
 
 #[tokio::test]
@@ -1120,19 +1121,7 @@ async fn test_gas_errors_bin() {
         .expect_err("should error");
 
     let expected = "Contract call error: OutOfGas, receipts:";
-
-    assert!(result.to_string().starts_with(expected));
-
-    // Test for running out of gas. Gas price as `None` will be 0.
-    // Gas limit will be 100, this call will use more than 100 gas.
-    let result = contract_instance
-        .initialize_counter(42) // Build the ABI call
-        .tx_params(TxParameters::new(None, Some(100), None, None))
-        .call() // Perform the network call
-        .await
-        .expect_err("should error");
-
-    assert!(result.to_string().starts_with(expected));
+    assert!(response.to_string().starts_with(expected));
 }
 
 #[tokio::test]
@@ -1155,7 +1144,7 @@ async fn test_call_param_gas_errors() {
     let contract_instance = MyContract::new(contract_id.to_string(), wallet);
 
     // Transaction gas_limit is sufficient, call gas_forwarded is too small
-    let result = contract_instance
+    let response = contract_instance
         .initialize_counter(42)
         .tx_params(TxParameters::new(None, Some(1000), None, None))
         .call_params(CallParameters::new(None, None, Some(1)))
@@ -1164,10 +1153,10 @@ async fn test_call_param_gas_errors() {
         .expect_err("should error");
 
     let expected = "Contract call error: OutOfGas, receipts:";
-    assert!(result.to_string().starts_with(expected));
+    assert!(response.to_string().starts_with(expected));
 
     // Call params gas_forwarded exceeds transaction limit
-    let result = contract_instance
+    let response = contract_instance
         .initialize_counter(42)
         .tx_params(TxParameters::new(None, Some(1), None, None))
         .call_params(CallParameters::new(None, None, Some(1000)))
@@ -1176,7 +1165,7 @@ async fn test_call_param_gas_errors() {
         .expect_err("should error");
 
     let expected = "Contract call error: OutOfGas, receipts:";
-    assert!(result.to_string().starts_with(expected));
+    assert!(response.to_string().starts_with(expected));
 }
 
 #[tokio::test]
@@ -1198,13 +1187,13 @@ async fn test_amount_and_asset_forwarding() {
 
     let instance = TestFuelCoinContract::new(id.to_string(), wallet.clone());
 
-    let mut balance_result = instance.get_balance(id, id).call().await.unwrap();
-    assert_eq!(balance_result.value, 0);
+    let mut balance_response = instance.get_balance(id, id).call().await.unwrap();
+    assert_eq!(balance_response.value, 0);
 
     instance.mint_coins(5_000_000).call().await.unwrap();
 
-    balance_result = instance.get_balance(id, id).call().await.unwrap();
-    assert_eq!(balance_result.value, 5_000_000);
+    balance_response = instance.get_balance(id, id).call().await.unwrap();
+    assert_eq!(balance_response.value, 5_000_000);
 
     let tx_params = TxParameters::new(None, Some(1_000_000), None, None);
     // Forward 1_000_000 coin amount of base asset_id
@@ -1423,25 +1412,25 @@ async fn test_arrays_with_custom_types() {
         },
     ];
 
-    let result = contract_instance
+    let response = contract_instance
         .array_of_structs(persons)
         .call()
         .await
         .unwrap();
 
-    assert_eq!("John", result.value[0].name);
-    assert_eq!("Jane", result.value[1].name);
+    assert_eq!("John", response.value[0].name);
+    assert_eq!("Jane", response.value[1].name);
 
     let states = vec![State::A(), State::B()];
 
-    let result = contract_instance
+    let response = contract_instance
         .array_of_enums(states.clone())
         .call()
         .await
         .unwrap();
 
-    assert_eq!(states[0], result.value[0]);
-    assert_eq!(states[1], result.value[1]);
+    assert_eq!(states[0], response.value[0]);
+    assert_eq!(states[1], response.value[1]);
 }
 
 #[tokio::test]
@@ -1464,13 +1453,13 @@ async fn test_auth_msg_sender_from_sdk() {
     let auth_instance = AuthContract::new(id.to_string(), wallet.clone());
 
     // Contract returns true if `msg_sender()` matches `wallet.address()`.
-    let result = auth_instance
+    let response = auth_instance
         .check_msg_sender(wallet.address())
         .call()
         .await
         .unwrap();
 
-    assert!(result.value);
+    assert!(response.value);
 }
 
 #[tokio::test]
@@ -1491,22 +1480,22 @@ async fn workflow_enum_inside_struct() {
     .await
     .unwrap();
     let instance = MyContract::new(id.to_string(), wallet.clone());
-    let result = instance.return_enum_inside_struct(11).call().await.unwrap();
+    let response = instance.return_enum_inside_struct(11).call().await.unwrap();
     let expected = Cocktail {
         the_thing_you_mix_in: Shaker::Mojito(222),
         glass: 333,
     };
-    assert_eq!(result.value, expected);
+    assert_eq!(response.value, expected);
     let enum_inside_struct = Cocktail {
         the_thing_you_mix_in: Shaker::Cosmopolitan(444),
         glass: 555,
     };
-    let result = instance
+    let response = instance
         .take_enum_inside_struct(enum_inside_struct)
         .call()
         .await
         .unwrap();
-    assert_eq!(result.value, 6666)
+    assert_eq!(response.value, 6666)
 }
 
 #[tokio::test]
@@ -1527,16 +1516,16 @@ async fn workflow_struct_inside_enum() {
     .unwrap();
 
     let instance = MyContract::new(id.to_string(), wallet.clone());
-    let result = instance.return_struct_inside_enum(11).call().await.unwrap();
+    let response = instance.return_struct_inside_enum(11).call().await.unwrap();
     let expected = Shaker::Cosmopolitan(Recipe { ice: 22, sugar: 99 });
-    assert_eq!(result.value, expected);
+    assert_eq!(response.value, expected);
     let struct_inside_enum = Shaker::Cosmopolitan(Recipe { ice: 22, sugar: 66 });
-    let result = instance
+    let response = instance
         .take_struct_inside_enum(struct_inside_enum)
         .call()
         .await
         .unwrap();
-    assert_eq!(result.value, 8888);
+    assert_eq!(response.value, 8888);
 }
 
 #[tokio::test]
@@ -1563,26 +1552,26 @@ async fn test_logd_receipts() {
     value[12] = 0xAA;
     value[13] = 0xBB;
     value[14] = 0xCC;
-    let result = contract_instance
+    let response = contract_instance
         .use_logd_opcode(value, 3, 6)
         .call()
         .await
         .unwrap();
-    assert_eq!(result.logs, vec!["ffeedd", "ffeedd000000"]);
-    let result = contract_instance
+    assert_eq!(response.logs, vec!["ffeedd", "ffeedd000000"]);
+    let response = contract_instance
         .use_logd_opcode(value, 14, 15)
         .call()
         .await
         .unwrap();
     assert_eq!(
-        result.logs,
+        response.logs,
         vec![
             "ffeedd000000000000000000aabb",
             "ffeedd000000000000000000aabbcc"
         ]
     );
-    let result = contract_instance.dont_use_logd().call().await.unwrap();
-    assert!(result.logs.is_empty());
+    let response = contract_instance.dont_use_logd().call().await.unwrap();
+    assert!(response.logs.is_empty());
 }
 
 #[tokio::test]
@@ -1664,18 +1653,18 @@ async fn sway_native_types_support() {
         weight: 10,
         address: Address::zeroed(),
     };
-    let result = instance.wrapped_address(user).call().await.unwrap();
+    let response = instance.wrapped_address(user).call().await.unwrap();
 
-    assert_eq!(result.value.address, Address::zeroed());
+    assert_eq!(response.value.address, Address::zeroed());
 
-    let result = instance
+    let response = instance
         .unwrapped_address(Address::zeroed())
         .call()
         .await
         .unwrap();
 
     assert_eq!(
-        result.value,
+        response.value,
         Address::from_str("0x0000000000000000000000000000000000000000000000000000000000000000")
             .unwrap()
     );
@@ -1868,30 +1857,30 @@ async fn nested_enums_are_correctly_encoded_decoded() {
 
     let expected_enum = EnumLevel3::El2(EnumLevel2::El1(EnumLevel1::Num(42)));
 
-    let result = instance.get_nested_enum().call().await.unwrap();
+    let response = instance.get_nested_enum().call().await.unwrap();
 
-    assert_eq!(result.value, expected_enum);
+    assert_eq!(response.value, expected_enum);
 
-    let result = instance
+    let response = instance
         .check_nested_enum_integrity(expected_enum)
         .call()
         .await
         .unwrap();
 
     assert!(
-        result.value,
+        response.value,
         "The FuelVM deems that we've not encoded the nested enum correctly. Investigate!"
     );
 
     let expected_some_address = Option::Some(Identity::Address(Address::zeroed()));
 
-    let result = instance.get_some_address().call().await.unwrap();
+    let response = instance.get_some_address().call().await.unwrap();
 
-    assert_eq!(result.value, expected_some_address);
+    assert_eq!(response.value, expected_some_address);
 
     let expected_none = Option::None();
 
-    let result = instance.get_none().call().await.unwrap();
+    let response = instance.get_none().call().await.unwrap();
 
-    assert_eq!(result.value, expected_none);
+    assert_eq!(response.value, expected_none);
 }
