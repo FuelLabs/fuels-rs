@@ -352,7 +352,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn generates_bindings() {
+    fn generates_bindings() -> Result<(), Error> {
         let contract = r#"
         [
             {
@@ -374,11 +374,12 @@ mod tests {
         ]
         "#;
 
-        let _bindings = Abigen::new("test", contract).unwrap().generate().unwrap();
+        let _bindings = Abigen::new("test", contract)?.generate()?;
+        Ok(())
     }
 
     #[test]
-    fn generates_bindings_two_args() {
+    fn generates_bindings_two_args() -> Result<(), Error> {
         let contract = r#"
         [
             {
@@ -407,11 +408,12 @@ mod tests {
         // We are expecting a MissingData error because at the moment, the
         // ABIgen expects exactly 4 arguments (see `expand_function_arguments`), here
         // there are 5
-        let _bindings = Abigen::new("test", contract).unwrap().generate().unwrap();
+        let _bindings = Abigen::new("test", contract)?.generate()?;
+        Ok(())
     }
 
     #[test]
-    fn custom_struct() {
+    fn custom_struct() -> Result<(), Error> {
         let contract = r#"
         [
             {
@@ -438,17 +440,18 @@ mod tests {
         ]
         "#;
 
-        let contract = Abigen::new("custom", contract).unwrap();
+        let contract = Abigen::new("custom", contract)?;
 
         assert_eq!(1, contract.custom_structs.len());
 
         assert!(contract.custom_structs.contains_key("MyStruct"));
 
-        let _bindings = contract.generate().unwrap();
+        let _bindings = contract.generate()?;
+        Ok(())
     }
 
     #[test]
-    fn multiple_custom_types() {
+    fn multiple_custom_types() -> Result<(), Error> {
         let contract = r#"
         [
             {
@@ -513,7 +516,7 @@ mod tests {
         ]
         "#;
 
-        let contract = Abigen::new("custom", contract).unwrap();
+        let contract = Abigen::new("custom", contract)?;
 
         assert_eq!(5, contract.custom_structs.len());
 
@@ -528,10 +531,11 @@ mod tests {
         for name in expected_custom_struct_names {
             assert!(contract.custom_structs.contains_key(name));
         }
+        Ok(())
     }
 
     #[test]
-    fn single_nested_struct() {
+    fn single_nested_struct() -> Result<(), Error> {
         let contract = r#"
         [
             {
@@ -564,18 +568,19 @@ mod tests {
         ]
         "#;
 
-        let contract = Abigen::new("custom", contract).unwrap();
+        let contract = Abigen::new("custom", contract)?;
 
         assert_eq!(2, contract.custom_structs.len());
 
         assert!(contract.custom_structs.contains_key("MyNestedStruct"));
         assert!(contract.custom_structs.contains_key("InnerStruct"));
 
-        let _bindings = contract.generate().unwrap();
+        let _bindings = contract.generate()?;
+        Ok(())
     }
 
     #[test]
-    fn custom_enum() {
+    fn custom_enum() -> Result<(), Error> {
         let contract = r#"
         [
             {
@@ -602,17 +607,19 @@ mod tests {
         ]
         "#;
 
-        let contract = Abigen::new("custom", contract).unwrap();
+        let contract = Abigen::new("custom", contract)?;
 
         assert_eq!(1, contract.custom_enums.len());
         assert_eq!(0, contract.custom_structs.len());
 
         assert!(contract.custom_enums.contains_key("MyEnum"));
 
-        let _bindings = contract.generate().unwrap();
+        let _bindings = contract.generate()?;
+        Ok(())
     }
+
     #[test]
-    fn output_types() {
+    fn output_types() -> Result<(), Error> {
         let contract = r#"
         [
             {
@@ -662,129 +669,133 @@ mod tests {
         ]
         "#;
 
-        let contract = Abigen::new("custom", contract).unwrap();
-        let _bindings = contract.generate().unwrap();
+        let contract = Abigen::new("custom", contract)?;
+        let _bindings = contract.generate()?;
+        Ok(())
     }
+
     #[test]
-    fn test_abigen_struct_inside_enum() {
+    fn test_abigen_struct_inside_enum() -> Result<(), Error> {
         let contract = r#"
-[
-  {
-    "type": "function",
-    "inputs": [
-      {
-        "name": "b",
-        "type": "enum Bar",
-        "components": [
+        [
           {
-            "name": "waiter",
-            "type": "struct Waiter",
-            "components": [
+            "type": "function",
+            "inputs": [
               {
-                "name": "name",
-                "type": "u8",
-                "components": null
-              },
-              {
-                "name": "male",
-                "type": "bool",
-                "components": null
+                "name": "b",
+                "type": "enum Bar",
+                "components": [
+                  {
+                    "name": "waiter",
+                    "type": "struct Waiter",
+                    "components": [
+                      {
+                        "name": "name",
+                        "type": "u8",
+                        "components": null
+                      },
+                      {
+                        "name": "male",
+                        "type": "bool",
+                        "components": null
+                      }
+                    ]
+                  },
+                  {
+                    "name": "table",
+                    "type": "u32",
+                    "components": null
+                  }
+                ]
               }
-            ]
-          },
-          {
-            "name": "table",
-            "type": "u32",
-            "components": null
+            ],
+            "name": "struct_inside_enum",
+            "outputs": []
           }
         ]
-      }
-    ],
-    "name": "struct_inside_enum",
-    "outputs": []
-  }
-]
         "#;
 
-        let contract = Abigen::new("custom", contract).unwrap();
+        let contract = Abigen::new("custom", contract)?;
         assert_eq!(contract.custom_structs.len(), 1);
         assert_eq!(contract.custom_enums.len(), 1);
+        Ok(())
     }
 
     #[test]
-    fn test_get_custom_types_nested_structs_and_enums() {
+    fn test_get_custom_types_nested_structs_and_enums() -> Result<(), Error> {
         let contract = r#"
-[
-  {
-    "type": "function",
-    "inputs": [
-      {
-        "name": "c",
-        "type": "struct Cocktail",
-        "components": [
+        [
           {
-            "name": "shaker",
-            "type": "enum Shaker",
-            "components": [
+            "type": "function",
+            "inputs": [
               {
-                "name": "Cosmopolitan",
-                "type": "struct Recipe",
+                "name": "c",
+                "type": "struct Cocktail",
                 "components": [
+                  {
+                    "name": "shaker",
+                    "type": "enum Shaker",
+                    "components": [
                       {
-                        "name": "vodka",
-                        "type": "enum PolishAlcohol",
+                        "name": "Cosmopolitan",
+                        "type": "struct Recipe",
                         "components": [
                               {
-                                "name": "potatoes",
-                                "type": "u64",
-                                "components": null
+                                "name": "vodka",
+                                "type": "enum PolishAlcohol",
+                                "components": [
+                                      {
+                                        "name": "potatoes",
+                                        "type": "u64",
+                                        "components": null
+                                      },
+                                      {
+                                        "name": "alcohol",
+                                        "type": "u64",
+                                        "components": null
+                                      }
+                                ]
                               },
                               {
-                                "name": "alcohol",
+                                "name": "cramberry",
                                 "type": "u64",
                                 "components": null
                               }
                         ]
                       },
                       {
-                        "name": "cramberry",
-                        "type": "u64",
+                        "name": "Mojito",
+                        "type": "u32",
                         "components": null
                       }
+                    ]
+                  },
+                  {
+                    "name": "glass",
+                    "type": "u64",
+                    "components": null
+                  }
                 ]
-              },
-              {
-                "name": "Mojito",
-                "type": "u32",
-                "components": null
               }
-            ]
-          },
-          {
-            "name": "glass",
-            "type": "u64",
-            "components": null
+            ],
+            "name": "give_and_return_enum_inside_struct",
+            "outputs": []
           }
         ]
-      }
-    ],
-    "name": "give_and_return_enum_inside_struct",
-    "outputs": []
-  }
-]
         "#;
 
-        let contract = Abigen::new("custom", contract).unwrap();
+        let contract = Abigen::new("custom", contract)?;
         assert!(contract.custom_structs.contains_key("Cocktail"));
         assert!(contract.custom_structs.contains_key("Recipe"));
         assert_eq!(contract.custom_structs.len(), 2);
         assert!(contract.custom_enums.contains_key("Shaker"));
         assert!(contract.custom_enums.contains_key("PolishAlcohol"));
         assert_eq!(contract.custom_enums.len(), 2);
+        Ok(())
     }
 
     #[test]
-    fn struct_in_array() {
+    fn struct_in_array() -> Result<(), Error> {
         let contract = r#"
         [
             {
@@ -814,17 +825,18 @@ mod tests {
         ]
         "#;
 
-        let contract = Abigen::new("custom", contract).unwrap();
+        let contract = Abigen::new("custom", contract)?;
 
         assert_eq!(1, contract.custom_structs.len());
 
         assert!(contract.custom_structs.contains_key("Person"));
 
-        let _bindings = contract.generate().unwrap();
+        let _bindings = contract.generate()?;
+        Ok(())
     }
 
     #[test]
-    fn enum_in_array() {
+    fn enum_in_array() -> Result<(), Error> {
         let contract = r#"
         [
                 {
@@ -842,21 +854,21 @@ mod tests {
                                         "name":"A",
                                         "type":"()",
                                         "components":[
-                                            
+
                                         ]
                                     },
                                     {
                                         "name":"B",
                                         "type":"()",
                                         "components":[
-                                            
+
                                         ]
                                     },
                                     {
                                         "name":"C",
                                         "type":"()",
                                         "components":[
-                                            
+
                                         ]
                                     }
                                 ]
@@ -870,17 +882,18 @@ mod tests {
         ]
         "#;
 
-        let contract = Abigen::new("custom", contract).unwrap();
+        let contract = Abigen::new("custom", contract)?;
 
         assert_eq!(1, contract.custom_enums.len());
 
         assert!(contract.custom_enums.contains_key("State"));
 
-        let _bindings = contract.generate().unwrap();
+        let _bindings = contract.generate()?;
+        Ok(())
     }
 
     #[test]
-    fn struct_in_tuple() {
+    fn struct_in_tuple() -> Result<(), Error> {
         let contract = r#"
         [
             {
@@ -915,17 +928,18 @@ mod tests {
         ]
         "#;
 
-        let contract = Abigen::new("custom", contract).unwrap();
+        let contract = Abigen::new("custom", contract)?;
 
         assert_eq!(1, contract.custom_structs.len());
 
         assert!(contract.custom_structs.contains_key("Person"));
 
-        let _bindings = contract.generate().unwrap();
+        let _bindings = contract.generate()?;
+        Ok(())
     }
 
     #[test]
-    fn enum_in_tuple() {
+    fn enum_in_tuple() -> Result<(), Error> {
         let contract = r#"
         [
             {
@@ -948,21 +962,21 @@ mod tests {
                           "name":"A",
                           "type":"()",
                           "components":[
-                            
+
                           ]
                         },
                         {
                           "name":"B",
                           "type":"()",
                           "components":[
-                            
+
                           ]
                         },
                         {
                           "name":"C",
                           "type":"()",
                           "components":[
-                            
+
                           ]
                         }
                       ]
@@ -976,12 +990,71 @@ mod tests {
         ]
         "#;
 
-        let contract = Abigen::new("custom", contract).unwrap();
+        let contract = Abigen::new("custom", contract)?;
 
         assert_eq!(1, contract.custom_enums.len());
 
         assert!(contract.custom_enums.contains_key("State"));
 
-        let _bindings = contract.generate().unwrap();
+        let _bindings = contract.generate()?;
+        Ok(())
+    }
+
+    #[test]
+    fn error_on_empty_function_name() -> Result<(), Error> {
+        let contract = r#"
+        [
+            {
+                "type":"contract",
+                "inputs":[
+                    {
+                        "name":"arg1",
+                        "type":"u32"
+                    }
+                ],
+                "name":"",
+                "outputs":[]
+            }
+        ]
+        "#;
+        let result_error = Abigen::new("test", contract)?
+            .generate()
+            .err()
+            .expect("Expected an error because the function name is empty");
+
+        assert_eq!(
+            result_error.to_string(),
+            "Invalid data: Function name can not be empty"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn error_on_empty_argument_names() -> Result<(), Error> {
+        let contract = r#"
+        [
+            {
+                "type":"contract",
+                "inputs":[
+                    {
+                        "name":"",
+                        "type":"u32"
+                    }
+                ],
+                "name":"unused",
+                "outputs":[]
+            }
+        ]
+        "#;
+        let result_error = Abigen::new("test", contract)?
+            .generate()
+            .err()
+            .expect("Expected an error because the argument name is empty");
+
+        assert_eq!(
+            result_error.to_string(),
+            "Invalid data: Function arguments can not have empty names"
+        );
+        Ok(())
     }
 }
