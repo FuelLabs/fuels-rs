@@ -188,7 +188,7 @@ impl ABIDecoder {
     }
 
     /// The encoding follows the ABI specs defined
-    /// [here](https://github.com/FuelLabs/fuel-specs/blob/master/specs/protocol/abi.md)
+    /// [here](https://github.com/FuelLabs/fuel-specs/blob/1be31f70c757d8390f74b9e1b3beb096620553eb/specs/protocol/abi.md)
     ///
     /// # Arguments
     ///
