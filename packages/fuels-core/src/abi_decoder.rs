@@ -37,7 +37,7 @@ impl ABIDecoder {
 
     fn decode_param(param: &ParamType, data: &[u8]) -> Result<DecodeResult, CodecError> {
         match &*param {
-            ParamType::Unit => Self::decode_unit(),
+            ParamType::Unit => Self::decode_unit(data),
             ParamType::U8 => Self::decode_u8(data),
             ParamType::U16 => Self::decode_u16(data),
             ParamType::U32 => Self::decode_u32(data),
@@ -177,15 +177,18 @@ impl ABIDecoder {
         })
     }
 
-    fn decode_unit() -> Result<DecodeResult, CodecError> {
+    fn decode_unit(data: &[u8]) -> Result<DecodeResult, CodecError> {
+        // We don't need the data, we're doing this purely as a bounds
+        // check.
+        peek_fixed::<WORD_SIZE>(data)?;
         Ok(DecodeResult {
             token: Token::Unit,
-            bytes_read: 8,
+            bytes_read: WORD_SIZE,
         })
     }
 
     /// The encoding follows the ABI specs defined
-    /// [here](https://github.com/FuelLabs/fuel-specs/blob/master/specs/protocol/abi.md)
+    /// [here](https://github.com/FuelLabs/fuel-specs/blob/1be31f70c757d8390f74b9e1b3beb096620553eb/specs/protocol/abi.md)
     ///
     /// # Arguments
     ///
@@ -193,21 +196,36 @@ impl ABIDecoder {
     /// * `variants`: all types that this particular enum type could hold
     fn decode_enum(data: &[u8], variants: &EnumVariants) -> Result<DecodeResult, CodecError> {
         let discriminant = peek_u32(data)?;
+        let selected_variant = Self::type_of_selected_variant(variants, discriminant as usize)?;
 
         let enum_width = compute_encoding_width_of_enum(variants);
+        let token = Self::decode_token_in_enum(data, variants, selected_variant, enum_width)?;
 
-        let variant = Self::type_of_selected_variant(variants, discriminant as usize)?;
-        let words_to_skip = enum_width - compute_encoding_width(variant);
-
-        let res = Self::decode_param(variant, &data[words_to_skip * WORD_SIZE..])?;
-
-        let selector = Box::new((discriminant as u8, res.token, variants.clone()));
-        let token = Token::Enum(selector);
-
+        let selector = Box::new((discriminant as u8, token, variants.clone()));
         Ok(DecodeResult {
-            token,
+            token: Token::Enum(selector),
             bytes_read: enum_width * WORD_SIZE,
         })
+    }
+
+    fn decode_token_in_enum(
+        data: &[u8],
+        variants: &EnumVariants,
+        selected_variant: &ParamType,
+        enum_width: usize,
+    ) -> Result<Token, CodecError> {
+        // The sway compiler has an optimization where enums that only contain
+        // units for variants have only their discriminant encoded. Because of
+        // this we construct the Token::Unit rather than calling `decode_param`
+        // since that will consume a WORD from `data`.
+        if variants.only_units_inside() {
+            Ok(Token::Unit)
+        } else {
+            let words_to_skip = enum_width - compute_encoding_width(selected_variant);
+
+            let res = Self::decode_param(selected_variant, &data[words_to_skip * WORD_SIZE..])?;
+            Ok(res.token)
+        }
     }
 
     /// Returns a variant from `variants` pointed to by `discriminant`.
@@ -434,10 +452,10 @@ mod tests {
 
         let inner_enum_types = EnumVariants::new(vec![ParamType::B256, ParamType::U32]).unwrap();
 
-        let types = vec![ParamType::Struct(vec![
+        let struct_type = ParamType::Struct(vec![
             ParamType::Enum(inner_enum_types.clone()),
             ParamType::U32,
-        ])];
+        ]);
 
         let enum_discriminant_enc = vec![0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1];
         let enum_data_enc = vec![0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x30, 0x39];
@@ -454,12 +472,12 @@ mod tests {
         .flatten()
         .collect();
 
-        let decoded = ABIDecoder::decode(&types, &data).unwrap();
+        let decoded = ABIDecoder::decode_single(&struct_type, &data).unwrap();
 
-        let expected = vec![Token::Struct(vec![
+        let expected = Token::Struct(vec![
             Token::Enum(Box::new((1, Token::U32(12345), inner_enum_types))),
             Token::U32(54321),
-        ])];
+        ]);
         assert_eq!(decoded, expected);
     }
 
@@ -572,5 +590,42 @@ mod tests {
         let expected: Vec<Token> = vec![foo, u8_arr, b256, s];
 
         assert_eq!(decoded, expected);
+    }
+    #[test]
+    fn units_in_structs_are_decoded_as_one_word() {
+        let data = [
+            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+        ];
+        let struct_type = ParamType::Struct(vec![ParamType::Unit, ParamType::U64]);
+
+        let actual = ABIDecoder::decode_single(&struct_type, &data).unwrap();
+
+        let expected = Token::Struct(vec![Token::Unit, Token::U64(u64::MAX)]);
+        assert_eq!(actual, expected);
+    }
+    #[test]
+    fn enums_with_all_unit_variants_are_decoded_from_one_word() {
+        let data = [0, 0, 0, 0, 0, 0, 0, 1];
+        let variants = EnumVariants::new(vec![ParamType::Unit, ParamType::Unit]).unwrap();
+        let enum_w_only_units = ParamType::Enum(variants.clone());
+
+        let result = ABIDecoder::decode_single(&enum_w_only_units, &data).unwrap();
+
+        let expected_enum = Token::Enum(Box::new((1, Token::Unit, variants)));
+        assert_eq!(result, expected_enum);
+    }
+
+    #[test]
+    fn out_of_bounds_discriminant_is_detected() {
+        let data = [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 2];
+        let variants = EnumVariants::new(vec![ParamType::U32]).unwrap();
+        let enum_type = ParamType::Enum(variants);
+
+        let result = ABIDecoder::decode_single(&enum_type, &data);
+
+        let error = result.err().expect("Should have resulted in an error");
+
+        let expected_msg = "Error while decoding an enum. The discriminant '1' doesn't point to any of the following variants: ";
+        assert!(matches!(error, CodecError::InvalidData(str) if str.starts_with(expected_msg)));
     }
 }

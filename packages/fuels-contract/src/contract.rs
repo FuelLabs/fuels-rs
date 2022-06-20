@@ -35,11 +35,13 @@ pub struct Contract {
 /// holds the decoded typed value returned by the contract's method. The other field
 /// holds all the receipts returned by the call.
 #[derive(Debug)]
+// ANCHOR: call_response
 pub struct CallResponse<D> {
     pub value: D,
     pub receipts: Vec<Receipt>,
     pub logs: Vec<String>,
 }
+// ANCHOR_END: call_response
 
 impl<D> CallResponse<D> {
     pub fn new(value: D, receipts: Vec<Receipt>) -> Self {
@@ -97,9 +99,7 @@ impl Contract {
         output_param: Option<ParamType>,
         args: &[Token],
     ) -> Result<ContractCallHandler<D>, Error> {
-        let mut encoder = ABIEncoder::new();
-
-        let encoded_args = encoder.encode(args).unwrap();
+        let encoded_args = ABIEncoder::encode(args).unwrap();
         let encoded_selector = signature;
 
         let tx_parameters = TxParameters::default();

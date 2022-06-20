@@ -14,7 +14,6 @@ Now you're up and ready to develop with the Fuel Rust SDK!
 Add these dependencies on your `Cargo.toml`:
 
 ```toml
-fuels-abigen-macro = "0.15"
 fuels = "0.15"
 ```
 
@@ -24,5 +23,4 @@ And then, in your Rust file that's going to make use of the SDK:
 
 ```rust,ignore
 use fuels::prelude::*;
-use fuels_abigen_macro::abigen;
 ```

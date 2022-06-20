@@ -7,7 +7,6 @@ use syn::parse::{Parse, ParseStream, Result as ParseResult};
 use syn::{parse_macro_input, Ident, LitStr, Token};
 
 /// Abigen proc macro definition and helper functions/types.
-
 #[proc_macro]
 pub fn abigen(input: TokenStream) -> TokenStream {
     let args = parse_macro_input!(input as Spanned<ContractArgs>);

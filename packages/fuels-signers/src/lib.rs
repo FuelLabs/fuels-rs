@@ -192,7 +192,7 @@ mod tests {
         assert_eq!(wallet_2_final_coins.len(), 2);
 
         // Transferring more than balance should fail.
-        let result = wallet_1
+        let response = wallet_1
             .transfer(
                 &wallet_2.address(),
                 2000000,
@@ -201,7 +201,7 @@ mod tests {
             )
             .await;
 
-        assert!(result.is_err());
+        assert!(response.is_err());
         let wallet_2_coins = wallet_2.get_coins().await.unwrap();
         assert_eq!(wallet_2_coins.len(), 2); // Not changed
     }
