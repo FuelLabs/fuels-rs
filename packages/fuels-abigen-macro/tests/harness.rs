@@ -1344,7 +1344,6 @@ async fn test_array() {
 }
 
 #[tokio::test]
-#[ignore]
 async fn test_arrays_with_custom_types() {
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `MyContract`.
