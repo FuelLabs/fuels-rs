@@ -193,7 +193,7 @@ pub fn get_node_config_json(coins: Value) -> NamedTempFile {
         "max_storage_slots": 255,
         "max_predicate_length": 1048576,
         "max_predicate_data_length": 1048576,
-        "gas_price_factor": 1000000000
+        "gas_price_factor": 1000000000,
       }
     });
 
