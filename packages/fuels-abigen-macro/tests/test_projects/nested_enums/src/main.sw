@@ -26,7 +26,7 @@ abi MyContract {
 
 impl MyContract for Contract {
     fn get_nested_enum() -> EnumLevel3 {
-       EnumLevel3::El2(EnumLevel2::El1(EnumLevel1::Num(42)))
+        EnumLevel3::El2(EnumLevel2::El1(EnumLevel1::Num(42)))
     }
 
     fn check_nested_enum_integrity(e: EnumLevel3) -> bool {
@@ -34,7 +34,7 @@ impl MyContract for Contract {
             EnumLevel3::El2(EnumLevel2::El1(EnumLevel1::Num(value))) => {
                 value == 42u32
             },
-            _ => false,
+            _ => false, 
         };
 
         arg_is_correct

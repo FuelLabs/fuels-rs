@@ -2,96 +2,150 @@ use crate::constants::{ENUM_DISCRIMINANT_WORD_WIDTH, WORD_SIZE};
 use crate::encoding_utils::{compute_encoding_width, compute_encoding_width_of_enum};
 use crate::errors::CodecError;
 use crate::{
-    pad_string, pad_u16, pad_u32, pad_u8, ByteArray, EnumSelector, EnumVariants, ParamType, Token,
+    pad_string, pad_u16, pad_u32, pad_u8, Bits256, ByteArray, EnumSelector, EnumVariants,
+    ParamType, Token,
 };
 use sha2::{Digest, Sha256};
-use std::slice;
 
 pub struct ABIEncoder {
-    pub function_selector: ByteArray,
-    pub encoded_args: Vec<u8>,
+    buffer: Vec<u8>,
 }
 
 impl ABIEncoder {
-    pub fn new() -> Self {
-        Self {
-            function_selector: [0; 8],
-            encoded_args: Vec::new(),
+    /// Encodes the function selector following the ABI specs defined  ///
+    /// [here](https://github.com/FuelLabs/fuel-specs/blob/1be31f70c757d8390f74b9e1b3beb096620553eb/specs/protocol/abi.md)
+    pub fn encode_function_selector(fn_selector: &str) -> ByteArray {
+        let signature = fn_selector.as_bytes();
+        let mut hasher = Sha256::new();
+        hasher.update(signature);
+        let result = hasher.finalize();
+        let mut output = ByteArray::default();
+        (&mut output[4..]).copy_from_slice(&result[..4]);
+        output
+    }
+
+    /// Encodes `Token`s in `args` following the ABI specs defined
+    /// [here](https://github.com/FuelLabs/fuel-specs/blob/1be31f70c757d8390f74b9e1b3beb096620553eb/specs/protocol/abi.md)
+    pub fn encode(args: &[Token]) -> Result<Vec<u8>, CodecError> {
+        let mut encoder = ABIEncoder::new();
+
+        encoder.encode_tokens(args)?;
+
+        Ok(encoder.buffer)
+    }
+
+    fn new() -> Self {
+        ABIEncoder {
+            buffer: Default::default(),
         }
     }
 
-    pub fn new_with_fn_selector(signature: &[u8]) -> Self {
-        Self {
-            function_selector: Self::encode_function_selector(signature),
-            encoded_args: Vec::new(),
-        }
-    }
-
-    /// Encode takes an array of `Token`s, encodes these tokens, and returns the
-    /// raw bytes (as a Vec<u8>) that represent the encoded tokens.
-    /// The encoding follows the ABI specs defined
-    /// [here](https://github.com/FuelLabs/fuel-specs/blob/master/specs/protocol/abi.md)
-    pub fn encode(&mut self, args: &[Token]) -> Result<Vec<u8>, CodecError> {
+    fn encode_tokens(&mut self, args: &[Token]) -> Result<(), CodecError> {
         for arg in args {
-            match arg {
-                Token::U8(arg_u8) => self.encoded_args.extend(pad_u8(arg_u8)),
-                Token::U16(arg_u16) => self.encoded_args.extend(pad_u16(arg_u16)),
-                Token::U32(arg_u32) => self.encoded_args.extend(pad_u32(arg_u32)),
-                Token::U64(arg_u64) => self.encoded_args.extend(arg_u64.to_be_bytes()),
-                Token::Byte(arg_byte) => self.encoded_args.extend(pad_u8(arg_byte)),
-                Token::Bool(arg_bool) => {
-                    self.encoded_args
-                        .extend(pad_u8(if *arg_bool { &1 } else { &0 }))
-                }
-                Token::B256(arg_bits256) => self.encoded_args.extend(arg_bits256),
-                Token::Array(arg_array) => {
-                    // Recursively encode the array of Tokens
-                    self.encode(arg_array)?;
-                }
-                Token::String(arg_string) => self.encoded_args.extend(pad_string(arg_string)),
-                Token::Struct(arg_struct) => {
-                    for property in arg_struct.iter() {
-                        self.encode(slice::from_ref(property))?;
-                    }
-                }
-                Token::Enum(arg_enum) => {
-                    self.encode_enum(arg_enum)?;
-                }
-                Token::Tuple(arg_tuple) => {
-                    self.encode(arg_tuple)?;
-                }
-                Token::Unit => {
-                    self.rightpad_with_zeroes(WORD_SIZE);
-                }
-            };
+            self.encode_token(arg)?;
         }
-        Ok(self.encoded_args.clone())
+        Ok(())
     }
 
-    /// The encoding follows the ABI specs defined
-    /// [here](https://github.com/FuelLabs/fuel-specs/blob/master/specs/protocol/abi.md)
+    fn encode_token(&mut self, arg: &Token) -> Result<(), CodecError> {
+        match arg {
+            Token::U8(arg_u8) => self.encode_u8(*arg_u8),
+            Token::U16(arg_u16) => self.encode_u16(*arg_u16),
+            Token::U32(arg_u32) => self.encode_u32(*arg_u32),
+            Token::U64(arg_u64) => self.encode_u64(*arg_u64),
+            Token::Byte(arg_byte) => self.encode_byte(*arg_byte),
+            Token::Bool(arg_bool) => self.encode_bool(*arg_bool),
+            Token::B256(arg_bits256) => self.encode_b256(arg_bits256),
+            Token::Array(arg_array) => self.encode_array(arg_array)?,
+            Token::String(arg_string) => self.encode_string(arg_string),
+            Token::Struct(arg_struct) => self.encode_struct(arg_struct)?,
+            Token::Enum(arg_enum) => self.encode_enum(arg_enum)?,
+            Token::Tuple(arg_tuple) => self.encode_tuple(arg_tuple)?,
+            Token::Unit => self.encode_unit(),
+        };
+        Ok(())
+    }
+
+    fn encode_unit(&mut self) {
+        self.rightpad_with_zeroes(WORD_SIZE);
+    }
+
+    fn encode_tuple(&mut self, arg_tuple: &[Token]) -> Result<(), CodecError> {
+        self.encode_tokens(arg_tuple)
+    }
+
+    fn encode_struct(&mut self, subcomponents: &[Token]) -> Result<(), CodecError> {
+        self.encode_tokens(subcomponents)
+    }
+
+    fn encode_array(&mut self, arg_array: &[Token]) -> Result<(), CodecError> {
+        self.encode_tokens(arg_array)
+    }
+
+    fn encode_string(&mut self, arg_string: &str) {
+        self.buffer.extend(pad_string(arg_string));
+    }
+
+    fn encode_b256(&mut self, arg_bits256: &Bits256) {
+        self.buffer.extend(arg_bits256);
+    }
+
+    fn encode_bool(&mut self, arg_bool: bool) {
+        self.buffer.extend(pad_u8(if arg_bool { 1 } else { 0 }));
+    }
+
+    fn encode_byte(&mut self, arg_byte: u8) {
+        self.buffer.extend(pad_u8(arg_byte));
+    }
+
+    fn encode_u64(&mut self, arg_u64: u64) {
+        self.buffer.extend(arg_u64.to_be_bytes());
+    }
+
+    fn encode_u32(&mut self, arg_u32: u32) {
+        self.buffer.extend(pad_u32(arg_u32));
+    }
+
+    fn encode_u16(&mut self, arg_u16: u16) {
+        self.buffer.extend(pad_u16(arg_u16));
+    }
+
+    fn encode_u8(&mut self, arg_u8: u8) {
+        self.buffer.extend(pad_u8(arg_u8));
+    }
+
     fn encode_enum(&mut self, selector: &EnumSelector) -> Result<(), CodecError> {
         let (discriminant, token_within_enum, variants) = selector;
 
-        self.encode_discriminant(discriminant);
+        self.encode_discriminant(*discriminant);
 
-        let param_type = Self::type_of_chosen_variant(discriminant, variants)?;
-
-        self.add_enum_padding(variants, param_type);
-
-        self.encode(slice::from_ref(token_within_enum))?;
+        // The sway compiler has an optimization for enums which have only Units
+        // as variants -- such an enum is encoded only by encoding its
+        // discriminant.
+        if !variants.only_units_inside() {
+            let param_type = Self::type_of_chosen_variant(discriminant, variants)?;
+            self.encode_enum_padding(variants, param_type);
+            self.encode_token(token_within_enum)?;
+        }
 
         Ok(())
     }
 
-    fn add_enum_padding(&mut self, variants: &EnumVariants, param_type: &ParamType) {
+    fn encode_discriminant(&mut self, discriminant: u8) {
+        self.encode_u8(discriminant);
+    }
+
+    fn encode_enum_padding(&mut self, variants: &EnumVariants, param_type: &ParamType) {
         let biggest_variant_width =
             compute_encoding_width_of_enum(variants) - ENUM_DISCRIMINANT_WORD_WIDTH;
         let variant_width = compute_encoding_width(param_type);
-
         let padding_amount = (biggest_variant_width - variant_width) * WORD_SIZE;
 
         self.rightpad_with_zeroes(padding_amount);
+    }
+
+    fn rightpad_with_zeroes(&mut self, amount: usize) {
+        self.buffer.resize(self.buffer.len() + amount, 0);
     }
 
     fn type_of_chosen_variant<'a>(
@@ -112,46 +166,19 @@ impl ABIEncoder {
                 CodecError::InvalidData(msg)
             })
     }
-
-    fn encode_discriminant(&mut self, discriminant: &u8) {
-        self.encoded_args.extend(pad_u8(discriminant));
-    }
-
-    /// Will append `amount` number of zeroes to the internal buffer, right-padding it
-    fn rightpad_with_zeroes(&mut self, amount: usize) {
-        self.encoded_args
-            .resize(self.encoded_args.len() + amount, 0);
-    }
-
-    pub fn encode_function_selector(signature: &[u8]) -> ByteArray {
-        let mut hasher = Sha256::new();
-        hasher.update(signature);
-        let result = hasher.finalize();
-
-        let mut output = ByteArray::default();
-
-        (&mut output[4..]).copy_from_slice(&result[..4]);
-
-        output
-    }
-}
-
-impl Default for ABIEncoder {
-    fn default() -> Self {
-        Self::new()
-    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::{EnumVariants, ParamType};
+    use std::slice;
 
     #[test]
     fn encode_function_signature() {
         let sway_fn = "entry_one(u64)";
 
-        let result = ABIEncoder::encode_function_selector(sway_fn.as_bytes());
+        let result = ABIEncoder::encode_function_selector(sway_fn);
 
         println!(
             "Encoded function selector for ({}): {:#0x?}",
@@ -184,14 +211,14 @@ mod tests {
 
         let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0xb7, 0x9e, 0xf7, 0x43];
 
-        let mut abi_encoder = ABIEncoder::new_with_fn_selector(sway_fn.as_bytes());
+        let encoded_function_selector = ABIEncoder::encode_function_selector(sway_fn);
 
-        let encoded = abi_encoder.encode(&args).unwrap();
+        let encoded = ABIEncoder::encode(&args).unwrap();
 
         println!("Encoded ABI for ({}): {:#0x?}", sway_fn, encoded);
 
         assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
-        assert_eq!(abi_encoder.function_selector, expected_function_selector);
+        assert_eq!(encoded_function_selector, expected_function_selector);
     }
 
     #[test]
@@ -218,16 +245,15 @@ mod tests {
             0x0, 0x0, 0x0, 0x0, 0xff, 0xff, 0xff, 0xff, 0x0, 0x0, 0x0, 0x0, 0xff, 0xff, 0xff, 0xff,
         ];
 
-        let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0xa7, 0x07, 0xb0, 0x8e];
+        let expected_fn_selector = [0x0, 0x0, 0x0, 0x0, 0xa7, 0x07, 0xb0, 0x8e];
 
-        let mut abi_encoder = ABIEncoder::new_with_fn_selector(sway_fn.as_bytes());
-
-        let encoded = abi_encoder.encode(&args).unwrap();
+        let encoded_function_selector = ABIEncoder::encode_function_selector(sway_fn);
+        let encoded = ABIEncoder::encode(&args).unwrap();
 
         println!("Encoded ABI for ({}): {:#0x?}", sway_fn, encoded);
 
         assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
-        assert_eq!(abi_encoder.function_selector, expected_function_selector);
+        assert_eq!(encoded_function_selector, expected_fn_selector);
     }
 
     #[test]
@@ -253,14 +279,14 @@ mod tests {
 
         let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0x0c, 0x36, 0xcb, 0x9c];
 
-        let mut abi_encoder = ABIEncoder::new_with_fn_selector(sway_fn.as_bytes());
+        let encoded_function_selector = ABIEncoder::encode_function_selector(sway_fn);
 
-        let encoded = abi_encoder.encode(&args).unwrap();
+        let encoded = ABIEncoder::encode(&args).unwrap();
 
         println!("Encoded ABI for ({}): {:#0x?}", sway_fn, encoded);
 
         assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
-        assert_eq!(abi_encoder.function_selector, expected_function_selector);
+        assert_eq!(encoded_function_selector, expected_function_selector);
     }
 
     #[test]
@@ -286,14 +312,14 @@ mod tests {
 
         let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0x66, 0x8f, 0xff, 0x58];
 
-        let mut abi_encoder = ABIEncoder::new_with_fn_selector(sway_fn.as_bytes());
+        let encoded_function_selector = ABIEncoder::encode_function_selector(sway_fn);
 
-        let encoded = abi_encoder.encode(&args).unwrap();
+        let encoded = ABIEncoder::encode(&args).unwrap();
 
         println!("Encoded ABI for ({}): {:#0x?}", sway_fn, encoded);
 
         assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
-        assert_eq!(abi_encoder.function_selector, expected_function_selector);
+        assert_eq!(encoded_function_selector, expected_function_selector);
     }
 
     #[test]
@@ -322,14 +348,14 @@ mod tests {
 
         let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0xf5, 0x40, 0x73, 0x2b];
 
-        let mut abi_encoder = ABIEncoder::new_with_fn_selector(sway_fn.as_bytes());
+        let encoded_function_selector = ABIEncoder::encode_function_selector(sway_fn);
 
-        let encoded = abi_encoder.encode(&args).unwrap();
+        let encoded = ABIEncoder::encode(&args).unwrap();
 
         println!("Encoded ABI for ({}) {:#0x?}", sway_fn, encoded);
 
         assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
-        assert_eq!(abi_encoder.function_selector, expected_function_selector);
+        assert_eq!(encoded_function_selector, expected_function_selector);
     }
 
     #[test]
@@ -355,14 +381,14 @@ mod tests {
 
         let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0x2e, 0xe3, 0xce, 0x1f];
 
-        let mut abi_encoder = ABIEncoder::new_with_fn_selector(sway_fn.as_bytes());
+        let encoded_function_selector = ABIEncoder::encode_function_selector(sway_fn);
 
-        let encoded = abi_encoder.encode(&args).unwrap();
+        let encoded = ABIEncoder::encode(&args).unwrap();
 
         println!("Encoded ABI for ({}): {:#0x?}", sway_fn, encoded);
 
         assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
-        assert_eq!(abi_encoder.function_selector, expected_function_selector);
+        assert_eq!(encoded_function_selector, expected_function_selector);
     }
 
     #[test]
@@ -398,14 +424,14 @@ mod tests {
 
         let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0x01, 0x49, 0x42, 0x96];
 
-        let mut abi_encoder = ABIEncoder::new_with_fn_selector(sway_fn.as_bytes());
+        let encoded_function_selector = ABIEncoder::encode_function_selector(sway_fn);
 
-        let encoded = abi_encoder.encode(&args).unwrap();
+        let encoded = ABIEncoder::encode(&args).unwrap();
 
         println!("Encoded ABI for ({}): {:#0x?}", sway_fn, encoded);
 
         assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
-        assert_eq!(abi_encoder.function_selector, expected_function_selector);
+        assert_eq!(encoded_function_selector, expected_function_selector);
     }
 
     #[test]
@@ -441,14 +467,14 @@ mod tests {
 
         let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0x2c, 0x5a, 0x10, 0x2e];
 
-        let mut abi_encoder = ABIEncoder::new_with_fn_selector(sway_fn.as_bytes());
+        let encoded_function_selector = ABIEncoder::encode_function_selector(sway_fn);
 
-        let encoded = abi_encoder.encode(&args).unwrap();
+        let encoded = ABIEncoder::encode(&args).unwrap();
 
         println!("Encoded ABI for ({}): {:#0x?}", sway_fn, encoded);
 
         assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
-        assert_eq!(abi_encoder.function_selector, expected_function_selector);
+        assert_eq!(encoded_function_selector, expected_function_selector);
     }
 
     #[test]
@@ -476,14 +502,14 @@ mod tests {
 
         let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0xd5, 0x6e, 0x76, 0x51];
 
-        let mut abi_encoder = ABIEncoder::new_with_fn_selector(sway_fn.as_bytes());
+        let encoded_function_selector = ABIEncoder::encode_function_selector(sway_fn);
 
-        let encoded = abi_encoder.encode(&args).unwrap();
+        let encoded = ABIEncoder::encode(&args).unwrap();
 
         println!("Encoded ABI for ({}): {:#0x?}", sway_fn, encoded);
 
         assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
-        assert_eq!(abi_encoder.function_selector, expected_function_selector);
+        assert_eq!(encoded_function_selector, expected_function_selector);
     }
 
     #[test]
@@ -522,16 +548,16 @@ mod tests {
 
         let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0xa8, 0x1e, 0x8d, 0xd7];
 
-        let mut abi_encoder = ABIEncoder::new_with_fn_selector(sway_fn.as_bytes());
+        let encoded_function_selector = ABIEncoder::encode_function_selector(sway_fn);
 
-        let encoded = abi_encoder.encode(&args).unwrap();
+        let encoded = ABIEncoder::encode(&args).unwrap();
 
         println!("Encoded ABI for ({}): {:#0x?}", sway_fn, encoded);
 
         println!("Encoded ABI for ({}): {:#0x?}", sway_fn, encoded);
 
         assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
-        assert_eq!(abi_encoder.function_selector, expected_function_selector);
+        assert_eq!(encoded_function_selector, expected_function_selector);
     }
 
     #[test]
@@ -573,12 +599,12 @@ mod tests {
 
         let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0x35, 0x5c, 0xa6, 0xfa];
 
-        let mut abi_encoder = ABIEncoder::new_with_fn_selector(sway_fn.as_bytes());
+        let encoded_function_selector = ABIEncoder::encode_function_selector(sway_fn);
 
-        let encoded = abi_encoder.encode(&args).unwrap();
+        let encoded = ABIEncoder::encode(&args).unwrap();
 
         assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
-        assert_eq!(abi_encoder.function_selector, expected_function_selector);
+        assert_eq!(encoded_function_selector, expected_function_selector);
     }
 
     // The encoding follows the ABI specs defined  [here](https://github.com/FuelLabs/fuel-specs/blob/master/specs/protocol/abi.md)
@@ -590,10 +616,7 @@ mod tests {
         let enum_variants = EnumVariants::new(vec![ParamType::B256, ParamType::U64]).unwrap();
         let enum_selector = Box::new((1, Token::U64(42), enum_variants));
 
-        let fun = "takes_my_enum(MyEnum)".as_bytes();
-        let encoded = ABIEncoder::new_with_fn_selector(fun)
-            .encode(slice::from_ref(&Token::Enum(enum_selector)))
-            .unwrap();
+        let encoded = ABIEncoder::encode(slice::from_ref(&Token::Enum(enum_selector))).unwrap();
 
         let enum_discriminant_enc = vec![0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1];
         let u64_enc = vec![0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2a];
@@ -658,10 +681,7 @@ mod tests {
             Token::Enum(Box::new((0, struct_a_token, top_level_enum_variants)));
         let top_lvl_discriminant_enc = vec![0x0; 8];
 
-        let encoded =
-            ABIEncoder::new_with_fn_selector("takes_top_level_enum(TopLevelEnum)".as_bytes())
-                .encode(slice::from_ref(&top_level_enum_token))
-                .unwrap();
+        let encoded = ABIEncoder::encode(slice::from_ref(&top_level_enum_token)).unwrap();
 
         let correct_encoding: Vec<u8> = [
             top_lvl_discriminant_enc,
@@ -718,14 +738,14 @@ mod tests {
 
         let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0xea, 0x0a, 0xfd, 0x23];
 
-        let mut abi_encoder = ABIEncoder::new_with_fn_selector(sway_fn.as_bytes());
+        let encoded_function_selector = ABIEncoder::encode_function_selector(sway_fn);
 
-        let encoded = abi_encoder.encode(&args).unwrap();
+        let encoded = ABIEncoder::encode(&args).unwrap();
 
         println!("Encoded ABI for ({}): {:#0x?}", sway_fn, encoded);
 
         assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
-        assert_eq!(abi_encoder.function_selector, expected_function_selector);
+        assert_eq!(encoded_function_selector, expected_function_selector);
     }
 
     #[test]
@@ -809,18 +829,52 @@ mod tests {
 
         let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0x10, 0x93, 0xb2, 0x12];
 
-        let mut abi_encoder = ABIEncoder::new_with_fn_selector(sway_fn.as_bytes());
+        let encoded_function_selector = ABIEncoder::encode_function_selector(sway_fn);
 
-        let encoded = abi_encoder.encode(&args).unwrap();
-
-        println!("Encoded ABI for ({}): {:#0x?}", sway_fn, encoded);
-
-        println!(
-            "abi_encoder.function_selector: {:#0x?}\n",
-            abi_encoder.function_selector
-        );
+        let encoded = ABIEncoder::encode(&args).unwrap();
 
         assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
-        assert_eq!(abi_encoder.function_selector, expected_function_selector);
+        assert_eq!(encoded_function_selector, expected_function_selector);
+    }
+
+    #[test]
+    fn enums_with_only_unit_variants_are_encoded_in_one_word() {
+        let expected = [0, 0, 0, 0, 0, 0, 0, 1];
+
+        let enum_selector = Box::new((
+            1,
+            Token::Unit,
+            EnumVariants::new(vec![ParamType::Unit, ParamType::Unit]).unwrap(),
+        ));
+
+        let actual = ABIEncoder::encode(&[Token::Enum(enum_selector)]).unwrap();
+
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn units_in_composite_types_are_encoded_in_one_word() {
+        let expected = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5];
+
+        let actual =
+            ABIEncoder::encode(&[Token::Struct(vec![Token::Unit, Token::U32(5)])]).unwrap();
+
+        assert_eq!(actual, expected);
+    }
+    #[test]
+    fn enums_with_units_are_correctly_padded() {
+        let discriminant = vec![0, 0, 0, 0, 0, 0, 0, 1];
+        let padding = vec![0; 32];
+        let expected: Vec<u8> = [discriminant, padding].into_iter().flatten().collect();
+
+        let enum_selector = Box::new((
+            1,
+            Token::Unit,
+            EnumVariants::new(vec![ParamType::B256, ParamType::Unit]).unwrap(),
+        ));
+
+        let actual = ABIEncoder::encode(&[Token::Enum(enum_selector)]).unwrap();
+
+        assert_eq!(actual, expected);
     }
 }
