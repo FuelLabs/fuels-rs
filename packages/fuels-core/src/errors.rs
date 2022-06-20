@@ -43,6 +43,8 @@ pub enum Error {
     ParseBoolError(#[from] std::str::ParseBoolError),
     #[error("Parse hex error: {0}")]
     ParseHexError(#[from] hex::FromHexError),
+    #[error("Parse token stream error: {0}")]
+    ParseTokenStreamError(String),
     #[error("Utf8 error: {0}")]
     Utf8Error(#[from] Utf8Error),
     #[error("Compilation error: {0}")]
@@ -77,6 +79,12 @@ impl From<ParseError> for Error {
 impl From<std::io::Error> for Error {
     fn from(err: std::io::Error) -> Error {
         Error::ContractCallError(err.to_string(), vec![])
+    }
+}
+
+impl From<proc_macro2::LexError> for Error {
+    fn from(err: proc_macro2::LexError) -> Error {
+        Error::ParseTokenStreamError(err.to_string())
     }
 }
 
