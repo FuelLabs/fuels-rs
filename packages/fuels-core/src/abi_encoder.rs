@@ -12,7 +12,7 @@ pub struct ABIEncoder {
 }
 
 impl ABIEncoder {
-    /// Encodes the function selector followin the ABI specs defined  ///
+    /// Encodes the function selector following the ABI specs defined  ///
     /// [here](https://github.com/FuelLabs/fuel-specs/blob/master/specs/protocol/abi.md)
     pub fn encode_function_selector(fn_selector: &str) -> ByteArray {
         let signature = fn_selector.as_bytes();
