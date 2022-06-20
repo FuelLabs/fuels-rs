@@ -99,9 +99,7 @@ impl Contract {
         output_param: Option<ParamType>,
         args: &[Token],
     ) -> Result<ContractCallHandler<D>, Error> {
-        let mut encoder = ABIEncoder::new();
-
-        let encoded_args = encoder.encode(args).unwrap();
+        let encoded_args = ABIEncoder::encode(args).unwrap();
         let encoded_selector = signature;
 
         let tx_parameters = TxParameters::default();

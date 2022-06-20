@@ -62,6 +62,12 @@ impl EnumVariants {
     pub fn param_types(&self) -> &Vec<ParamType> {
         &self.variants
     }
+
+    pub fn only_units_inside(&self) -> bool {
+        self.variants
+            .iter()
+            .all(|variant| *variant == ParamType::Unit)
+    }
 }
 
 #[derive(Debug, Clone, EnumString, PartialEq, Eq)]
@@ -528,21 +534,21 @@ impl Parameterize for fuel_tx::AssetId {
 }
 
 /// Converts a u8 to a right aligned array of 8 bytes.
-pub fn pad_u8(value: &u8) -> ByteArray {
+pub fn pad_u8(value: u8) -> ByteArray {
     let mut padded = ByteArray::default();
-    padded[7] = *value;
+    padded[7] = value;
     padded
 }
 
 /// Converts a u16 to a right aligned array of 8 bytes.
-pub fn pad_u16(value: &u16) -> ByteArray {
+pub fn pad_u16(value: u16) -> ByteArray {
     let mut padded = ByteArray::default();
     padded[6..].copy_from_slice(&value.to_be_bytes());
     padded
 }
 
 /// Converts a u32 to a right aligned array of 8 bytes.
-pub fn pad_u32(value: &u32) -> ByteArray {
+pub fn pad_u32(value: u32) -> ByteArray {
     let mut padded = [0u8; 8];
     padded[4..].copy_from_slice(&value.to_be_bytes());
     padded

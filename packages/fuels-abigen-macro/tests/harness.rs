@@ -1662,7 +1662,7 @@ async fn test_transaction_script_workflow() {
 }
 
 #[tokio::test]
-async fn enums_are_correctly_encoded_and_decoded() {
+async fn enum_coding_w_variable_width_variants() {
     abigen!(
         EnumTesting,
         "packages/fuels-abigen-macro/tests/test_projects/enum_encoding/out/debug\
@@ -1683,17 +1683,59 @@ async fn enums_are_correctly_encoded_and_decoded() {
 
     // If we had a regression on the issue of enum encoding width, then we'll
     // probably end up mangling arg_2 and onward which will fail this test.
-    let expected = Bundle {
+    let expected = BigBundle {
         arg_1: EnumThatHasABigAndSmallVariant::Small(12345),
         arg_2: 6666,
         arg_3: 7777,
         arg_4: 8888,
     };
-    let actual = instance.get_bundle().call().await.unwrap().value;
+    let actual = instance.get_big_bundle().call().await.unwrap().value;
     assert_eq!(actual, expected);
 
     let fuelvm_judgement = instance
-        .check_bundle_integrity(expected)
+        .check_big_bundle_integrity(expected)
+        .call()
+        .await
+        .unwrap()
+        .value;
+
+    assert!(
+        fuelvm_judgement,
+        "The FuelVM deems that we've not encoded the bundle correctly. Investigate!"
+    );
+}
+
+#[tokio::test]
+async fn enum_coding_w_unit_enums() {
+    abigen!(
+        EnumTesting,
+        "packages/fuels-abigen-macro/tests/test_projects/enum_encoding/out/debug\
+        /enum_encoding-abi.json"
+    );
+
+    let wallet = launch_provider_and_get_single_wallet().await;
+
+    let id = Contract::deploy(
+        "tests/test_projects/enum_encoding/out/debug/enum_encoding.bin",
+        &wallet,
+        TxParameters::default(),
+    )
+    .await
+    .unwrap();
+
+    let instance = EnumTesting::new(id.to_string(), wallet);
+
+    // If we had a regression on the issue of unit enum encoding width, then
+    // we'll end up mangling arg_2
+    let expected = UnitBundle {
+        arg_1: UnitEnum::var2(),
+        arg_2: u64::MAX,
+    };
+    let actual = instance.get_unit_bundle().call().await.unwrap().value;
+    assert_eq!(actual, expected);
+
+    let fuelvm_judgement = instance
+        .check_unit_bundle_integrity(expected)
         .call()
         .await
         .unwrap()

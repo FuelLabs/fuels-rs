@@ -70,12 +70,10 @@ impl ABIParser {
 
         let entry = entry.expect("No functions found");
 
-        let mut encoder = ABIEncoder::new_with_fn_selector(
-            self.build_fn_selector(fn_name, &entry.inputs)?.as_bytes(),
-        );
+        let fn_selector = self.build_fn_selector(fn_name, &entry.inputs)?;
 
         // Update the fn_selector field with the encoded selector.
-        self.fn_selector = Some(encoder.function_selector.to_vec());
+        self.fn_selector = Some(ABIEncoder::encode_function_selector(&fn_selector).to_vec());
 
         let params: Vec<_> = entry
             .inputs
@@ -86,7 +84,7 @@ impl ABIParser {
 
         let tokens = self.parse_tokens(&params)?;
 
-        Ok(hex::encode(encoder.encode(&tokens)?))
+        Ok(hex::encode(ABIEncoder::encode(&tokens)?))
     }
 
     /// Similar to `encode`, but includes the function selector in the
@@ -141,9 +139,9 @@ impl ABIParser {
             .to_owned()
             .expect("Function selector not encoded");
 
-        let encoded_fn_selector = hex::encode(fn_selector);
+        let encoded_function_selector = hex::encode(fn_selector);
 
-        Ok(format!("{}{}", encoded_fn_selector, encoded_params))
+        Ok(format!("{}{}", encoded_function_selector, encoded_params))
     }
 
     /// Helper function to return the encoded function selector.
@@ -165,8 +163,6 @@ impl ABIParser {
 
         let mut param_type_pairs: Vec<(ParamType, &str)> = vec![];
 
-        let mut encoder = ABIEncoder::new();
-
         for pair in pairs {
             let prop = Property {
                 name: "".to_string(),
@@ -181,7 +177,7 @@ impl ABIParser {
 
         let tokens = self.parse_tokens(&param_type_pairs)?;
 
-        let encoded = encoder.encode(&tokens)?;
+        let encoded = ABIEncoder::encode(&tokens)?;
 
         Ok(hex::encode(encoded))
     }
@@ -1544,7 +1540,7 @@ mod tests {
 
         println!("Function: {}", hex::encode(abi.fn_selector.unwrap()));
         let expected_encode =
-            "00000000ebb8d011000000000000002a00000000000000014a6f686e0000000000000000000000010000000000000000";
+            "00000000ebb8d011000000000000002a00000000000000014a6f686e000000000000000000000001";
         assert_eq!(encoded, expected_encode);
     }
 

@@ -21,8 +21,11 @@ enum State {
 }
 
 abi TestContract {
+    #[storage(write)]
     fn initialize_counter(value: u64) -> u64;
+    #[storage(read, write)]
     fn increment_counter(value: u64) -> u64;
+    #[storage(read)]
     fn get_counter() -> u64;
     fn get(x: u64, y: u64) -> u64;
     fn get_alt(x: MyType) -> MyType;
@@ -42,17 +45,20 @@ impl TestContract for Contract {
     }
     // ANCHOR_END: msg_amount
 
+    #[storage(write)]
     fn initialize_counter(value: u64) -> u64 {
         store(COUNTER_KEY, value);
         value
     }
 
+    #[storage(read, write)]
     fn increment_counter(value: u64) -> u64 {
         let new_value = get::<u64>(COUNTER_KEY) + value;
         store(COUNTER_KEY, new_value);
         new_value
     }
 
+    #[storage(read)]
     fn get_counter() -> u64 {
         get::<u64>(COUNTER_KEY)
     }
