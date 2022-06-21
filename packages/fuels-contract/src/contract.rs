@@ -107,14 +107,11 @@ impl Contract {
 
         let compute_custom_input_offset = Contract::should_compute_custom_input_offset(args);
 
-        let maturity = 0;
-
         let contract_call = ContractCall {
             contract_id,
             encoded_selector,
             encoded_args,
             call_parameters,
-            maturity,
             compute_custom_input_offset,
             variable_outputs: None,
             external_contracts: None,
@@ -211,7 +208,6 @@ impl Contract {
         wallet: &LocalWallet,
         params: TxParameters,
     ) -> Result<(Transaction, ContractId), Error> {
-        let maturity = 0;
         let bytecode_witness_index = 0;
         let storage_slots: Vec<StorageSlot> = vec![];
         let witnesses = vec![compiled_contract.raw.clone().into()];
@@ -245,7 +241,7 @@ impl Contract {
             params.gas_price,
             params.gas_limit,
             params.byte_price,
-            maturity,
+            params.maturity,
             bytecode_witness_index,
             compiled_contract.salt,
             static_contracts,
@@ -266,7 +262,6 @@ pub struct ContractCall {
     pub encoded_args: Vec<u8>,
     pub encoded_selector: Selector,
     pub call_parameters: CallParameters,
-    pub maturity: u64,
     pub compute_custom_input_offset: bool,
     pub variable_outputs: Option<Vec<Output>>,
     pub external_contracts: Option<Vec<ContractId>>,

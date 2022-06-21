@@ -145,7 +145,7 @@ impl Script {
             tx_parameters.gas_price,
             tx_parameters.gas_limit,
             tx_parameters.byte_price,
-            call.maturity,
+            tx_parameters.maturity,
             script,
             script_data,
             inputs,

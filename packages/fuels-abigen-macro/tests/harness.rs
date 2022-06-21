@@ -1,7 +1,11 @@
+use fuel_core::schema;
+use fuel_gql_client::client::schema::chain::ChainInfo;
 use fuel_gql_client::fuel_tx::{AssetId, ContractId, Receipt};
 use fuels::contract::contract::ContractCallHandler;
 use sha2::{Digest, Sha256};
 use std::str::FromStr;
+use std::thread::current;
+use tracing_subscriber::layer::Identity;
 
 use fuels::prelude::{
     abigen, launch_provider_and_get_single_wallet, setup_multiple_assets_coins,
@@ -1921,15 +1925,36 @@ async fn can_set_transaction_height() {
 
     let wallet = launch_provider_and_get_single_wallet().await;
 
+    let client = &wallet.get_provider().unwrap().client;
+    let current_height = client.chain_info().await.unwrap().latest_block.height;
+    println!("height before deployment: {:?}", current_height);
+    let mut parameters = TxParameters::default();
+    parameters.maturity = 0;
     let id = Contract::deploy(
         "tests/test_projects/transaction_block_height/out/debug/transaction_block_height.bin",
         &wallet,
-        TxParameters::default(),
+        parameters,
     )
     .await
     .unwrap();
+    let current_height = client.chain_info().await.unwrap().latest_block.height;
+    println!("height after deployment: {:?}", current_height);
 
     let instance = MyContract::new(id.to_string(), wallet.clone());
 
-    let something: ContractCallHandler<bool> = instance.test_function();
+    let mut something: ContractCallHandler<u64> = instance.test_function();
+    something.tx_parameters.maturity = 0;
+
+    let result = something.call().await;
+    let current_height = client.chain_info().await.unwrap().latest_block.height;
+    println!("height after call: {:?}", current_height);
+
+    let mut something: ContractCallHandler<u64> = instance.test_function();
+    something.tx_parameters.maturity = 1;
+    let result = something.call().await;
+    let current_height = client.chain_info().await.unwrap().latest_block.height;
+
+    let val = result.unwrap().value;
+
+    assert_eq!(val, 12345);
 }
