@@ -1,4 +1,5 @@
 use fuel_gql_client::fuel_tx::{AssetId, ContractId, Receipt};
+use fuels::contract::contract::ContractCallHandler;
 use sha2::{Digest, Sha256};
 use std::str::FromStr;
 
@@ -1887,4 +1888,26 @@ async fn nested_enums_are_correctly_encoded_decoded() {
     let response = instance.get_none().call().await.unwrap();
 
     assert_eq!(response.value, expected_none);
+}
+
+#[tokio::test]
+async fn can_set_transaction_height() {
+    abigen!(
+        MyContract,
+        "packages/fuels-abigen-macro/tests/test_projects/transaction_block_height/out/debug/transaction_block_height-abi.json"
+    );
+
+    let wallet = launch_provider_and_get_single_wallet().await;
+
+    let id = Contract::deploy(
+        "tests/test_projects/transaction_block_height/out/debug/transaction_block_height.bin",
+        &wallet,
+        TxParameters::default(),
+    )
+    .await
+    .unwrap();
+
+    let instance = MyContract::new(id.to_string(), wallet.clone());
+
+    let something: ContractCallHandler<bool> = instance.test_function();
 }
