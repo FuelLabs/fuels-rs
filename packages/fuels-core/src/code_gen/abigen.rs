@@ -5,6 +5,7 @@ use crate::code_gen::custom_types_gen::{
     expand_custom_enum, expand_custom_struct, extract_custom_type_name_from_abi_property,
 };
 use crate::code_gen::functions_gen::expand_function;
+use crate::constants::{ADDRESS_SWAY_NATIVE_TYPE, CONTRACT_ID_SWAY_NATIVE_TYPE};
 use crate::errors::Error;
 use crate::json_abi::ABIParser;
 use crate::source::Source;
@@ -185,7 +186,7 @@ impl Abigen {
             // Skip custom type generation if the custom type is a Sway-native type.
             // This means ABI methods receiving or returning a Sway-native type
             // can receive or return that native type directly.
-            if prop.type_field.contains("ContractId") || prop.type_field.contains("Address") {
+            if Abigen::is_sway_native_type(&prop.type_field) {
                 continue;
             }
 
@@ -196,6 +197,23 @@ impl Abigen {
         }
 
         Ok(structs)
+    }
+
+    // Checks whether the given type field is a Sway-native type.
+    // It's expected to come in as `"struct T"` or `"enum T"`.
+    // `T` is a Sway-native type if it matches exactly one of
+    // the reserved strings, such as "Address" or "ContractId".
+    fn is_sway_native_type(type_field: &str) -> bool {
+        let split: Vec<&str> = type_field.split_whitespace().collect();
+
+        if split.len() > 2 {
+            return false;
+        }
+
+        if split[1] == CONTRACT_ID_SWAY_NATIVE_TYPE || split[1] == ADDRESS_SWAY_NATIVE_TYPE {
+            return true;
+        }
+        false
     }
 
     fn abi_enums(&self) -> Result<TokenStream, Error> {
