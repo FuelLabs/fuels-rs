@@ -19,3 +19,6 @@ pub const DEFAULT_SPENDABLE_COIN_AMOUNT: u64 = 1_000_000;
 // Bytes representation of the asset ID of the "base" asset used for gas fees.
 pub const BASE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
 // ANCHOR_END: default_call_parameters
+
+pub const CONTRACT_ID_SWAY_NATIVE_TYPE: &str = "ContractId";
+pub const ADDRESS_SWAY_NATIVE_TYPE: &str = "Address";
