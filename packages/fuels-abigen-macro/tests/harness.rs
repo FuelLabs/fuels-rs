@@ -1557,6 +1557,7 @@ async fn test_wallet_balance_api() {
     }
     let balances = wallet.get_balances().await.unwrap();
     let expected_key = "0x".to_owned() + BASE_ASSET_ID.to_string().as_str();
+    // assert_eq!(balances.len(), 1); // only the base asset
     assert_eq!(balances.len(), 1); // only the base asset
     assert!(balances.contains_key(&expected_key));
     assert_eq!(

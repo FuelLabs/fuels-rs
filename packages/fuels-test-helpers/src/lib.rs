@@ -32,6 +32,7 @@ use fuel_gql_client::{
     client::FuelClient,
     fuel_tx::{Address, Bytes32, UtxoId},
 };
+use fuel_gql_client::fuel_tx::ConsensusParameters;
 
 use fuels_core::constants::BASE_ASSET_ID;
 use fuels_signers::fuel_crypto::fuel_types::AssetId;
@@ -159,6 +160,7 @@ pub async fn setup_test_client(
     let srv = FuelService::new_node(config).await.unwrap();
     let client = FuelClient::from(srv.bound_address);
 
+
     (client, srv.bound_address)
 }
 
@@ -188,6 +190,8 @@ pub async fn setup_test_client(
     let config_with_coins: Value =
         serde_json::from_str(result.as_str()).expect("Failed to build config_with_coins JSON");
 
+    let transaction_parameters = serde_json::to_value(ConsensusParameters::DEFAULT).expect("Failed to build transaction_parameters JSON");
+
     let srv_address = if let Some(node_config) = node_config {
         node_config.addr
     } else {
@@ -195,11 +199,16 @@ pub async fn setup_test_client(
         SocketAddr::new("127.0.0.1".parse().unwrap(), free_port)
     };
 
-    spawn_fuel_service(config_with_coins, srv_address.port());
+    spawn_fuel_service(config_with_coins, transaction_parameters, srv_address.port());
 
     let client = FuelClient::from(srv_address);
 
     server_health_check(&client).await;
+
+    let chain_info = client.chain_info().await;
+
+    println!("Emerson {:?}", chain_info);
+
 
     (client, srv_address)
 }

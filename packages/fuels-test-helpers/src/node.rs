@@ -171,7 +171,8 @@ impl<'de> DeserializeAs<'de, BlockHeight> for HexNumber {
     }
 }
 
-pub fn get_node_config_json(coins: Value) -> NamedTempFile {
+pub fn get_node_config_json(coins: Value, transaction_parameters: Value) -> NamedTempFile {
+
     let config = json!({
       "chain_name": "local_testnet",
       "block_production": "Instant",
@@ -181,20 +182,7 @@ pub fn get_node_config_json(coins: Value) -> NamedTempFile {
       "initial_state": {
         "coins": coins
       },
-      "transaction_parameters": {
-        "contract_max_size": 16777216,
-        "max_inputs": 255,
-        "max_outputs": 255,
-        "max_witnesses": 255,
-        "max_gas_per_tx": 100000000,
-        "max_script_length": 1048576,
-        "max_script_data_length": 1048576,
-        "max_static_contracts": 255,
-        "max_storage_slots": 255,
-        "max_predicate_length": 1048576,
-        "max_predicate_data_length": 1048576,
-        "gas_price_factor": 1000000000,
-      }
+      "transaction_parameters": transaction_parameters
     });
 
     let config_file = NamedTempFile::new();
@@ -208,9 +196,9 @@ pub fn get_node_config_json(coins: Value) -> NamedTempFile {
     config_file.unwrap()
 }
 
-pub fn spawn_fuel_service(config_with_coins: Value, free_port: Port) {
+pub fn spawn_fuel_service(config_with_coins: Value, transaction_parameters: Value, free_port: Port) {
     tokio::spawn(async move {
-        let temp_config_file = get_node_config_json(config_with_coins);
+        let temp_config_file = get_node_config_json(config_with_coins, transaction_parameters);
         let mut running_node = Command::new("fuel-core")
             .arg("--ip")
             .arg("127.0.0.1")
