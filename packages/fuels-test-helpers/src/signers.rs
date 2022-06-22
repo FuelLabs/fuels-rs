@@ -5,7 +5,7 @@ use fuel_core::{model::Coin, service::Config};
 
 use crate::{DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS};
 
-use fuel_gql_client::fuel_tx::UtxoId;
+use fuel_gql_client::fuel_tx::{ConsensusParameters, UtxoId};
 
 #[cfg(not(feature = "fuel-core-lib"))]
 use fuel_core_interfaces::model::Coin;
@@ -27,6 +27,7 @@ pub async fn launch_provider_and_get_single_wallet() -> LocalWallet {
 #[cfg(feature = "fuel-core-lib")]
 pub async fn launch_custom_provider_and_get_single_wallet(
     node_config: Option<Config>,
+    consensus_parameters_config: Option<ConsensusParameters>,
 ) -> LocalWallet {
     let mut wallet = LocalWallet::new_random(None);
 
@@ -37,7 +38,7 @@ pub async fn launch_custom_provider_and_get_single_wallet(
         DEFAULT_COIN_AMOUNT,
     );
 
-    let (provider, _) = setup_test_provider(coins, node_config).await;
+    let (provider, _) = setup_test_provider(coins, node_config, consensus_parameters_config).await;
 
     wallet.set_provider(provider);
     wallet
@@ -60,7 +61,7 @@ pub async fn launch_provider_and_get_wallets(config: WalletsConfig) -> Vec<Local
         all_coins.extend(coins);
     }
 
-    let (provider, _) = setup_test_provider(all_coins, None).await;
+    let (provider, _) = setup_test_provider(all_coins, None, None).await;
 
     wallets
         .iter_mut()
@@ -75,8 +76,9 @@ pub async fn launch_provider_and_get_wallets(config: WalletsConfig) -> Vec<Local
 pub async fn setup_test_provider(
     coins: Vec<(UtxoId, Coin)>,
     node_config: Option<Config>,
+    consensus_parameters_config: Option<ConsensusParameters>,
 ) -> (Provider, SocketAddr) {
-    let (client, addr) = setup_test_client(coins, node_config).await;
+    let (client, addr) = setup_test_client(coins, node_config, consensus_parameters_config).await;
     (Provider::new(client), addr)
 }
 
@@ -90,6 +92,7 @@ pub async fn launch_provider_and_get_single_wallet() -> LocalWallet {
 #[cfg(not(feature = "fuel-core-lib"))]
 pub async fn launch_custom_provider_and_get_single_wallet(
     node_config: Option<Config>,
+    consensus_parameters_config: Option<ConsensusParameters>,
 ) -> LocalWallet {
     let mut wallet = LocalWallet::new_random(None);
 
@@ -100,7 +103,7 @@ pub async fn launch_custom_provider_and_get_single_wallet(
         DEFAULT_COIN_AMOUNT,
     );
 
-    let (provider, _) = setup_test_provider(coins, node_config).await;
+    let (provider, _) = setup_test_provider(coins, node_config, consensus_parameters_config).await;
 
     wallet.set_provider(provider);
     wallet
@@ -123,7 +126,7 @@ pub async fn launch_provider_and_get_wallets(config: WalletsConfig) -> Vec<Local
         all_coins.extend(coins);
     }
 
-    let (provider, _) = setup_test_provider(all_coins, None).await;
+    let (provider, _) = setup_test_provider(all_coins, None, None).await;
 
     wallets
         .iter_mut()
@@ -136,8 +139,9 @@ pub async fn launch_provider_and_get_wallets(config: WalletsConfig) -> Vec<Local
 pub async fn setup_test_provider(
     coins: Vec<(UtxoId, Coin)>,
     node_config: Option<Config>,
+    consensus_parameters_config: Option<ConsensusParameters>,
 ) -> (Provider, SocketAddr) {
-    let (client, addr) = setup_test_client(coins, node_config).await;
+    let (client, addr) = setup_test_client(coins, node_config, consensus_parameters_config).await;
     (Provider::new(client), addr)
 }
 

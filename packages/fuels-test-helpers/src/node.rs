@@ -172,7 +172,6 @@ impl<'de> DeserializeAs<'de, BlockHeight> for HexNumber {
 }
 
 pub fn get_node_config_json(coins: Value, transaction_parameters: Value) -> NamedTempFile {
-
     let config = json!({
       "chain_name": "local_testnet",
       "block_production": "Instant",
@@ -196,9 +195,9 @@ pub fn get_node_config_json(coins: Value, transaction_parameters: Value) -> Name
     config_file.unwrap()
 }
 
-pub fn spawn_fuel_service(config_with_coins: Value, transaction_parameters: Value, free_port: Port) {
+pub fn spawn_fuel_service(config_with_coins: Value, consensus_parameters: Value, free_port: Port) {
     tokio::spawn(async move {
-        let temp_config_file = get_node_config_json(config_with_coins, transaction_parameters);
+        let temp_config_file = get_node_config_json(config_with_coins, consensus_parameters);
         let mut running_node = Command::new("fuel-core")
             .arg("--ip")
             .arg("127.0.0.1")

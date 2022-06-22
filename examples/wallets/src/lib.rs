@@ -7,7 +7,7 @@ async fn create_random_wallet() {
     use fuels::prelude::*;
 
     // Use the test helper to setup a test provider.
-    let (provider, _address) = setup_test_provider(vec![], None).await;
+    let (provider, _address) = setup_test_provider(vec![], None, None).await;
 
     // Create the wallet.
     let _wallet = LocalWallet::new_random(Some(provider));
@@ -22,7 +22,7 @@ async fn create_wallet_from_secret_key() {
     use std::str::FromStr;
 
     // Use the test helper to setup a test provider.
-    let (provider, _address) = setup_test_provider(vec![], None).await;
+    let (provider, _address) = setup_test_provider(vec![], None, None).await;
 
     // Setup the private key.
     let secret =
@@ -42,7 +42,7 @@ async fn create_wallet_from_mnemonic() {
     let phrase = "oblige salon price punch saddle immune slogan rare snap desert retire surprise";
 
     // Use the test helper to setup a test provider.
-    let (provider, _address) = setup_test_provider(vec![], None).await;
+    let (provider, _address) = setup_test_provider(vec![], None, None).await;
 
     // Create first account from mnemonic phrase.
     let _wallet = LocalWallet::new_from_mnemonic_phrase_with_path(
@@ -70,7 +70,7 @@ async fn create_and_restore_json_wallet() {
     let mut rng = rand::thread_rng();
 
     // Use the test helper to setup a test provider.
-    let (provider, _address) = setup_test_provider(vec![], None).await;
+    let (provider, _address) = setup_test_provider(vec![], None, None).await;
 
     let password = "my_master_password";
 
@@ -94,7 +94,7 @@ async fn create_and_store_mnemonic_wallet() {
     let phrase = "oblige salon price punch saddle immune slogan rare snap desert retire surprise";
 
     // Use the test helper to setup a test provider.
-    let (provider, _address) = setup_test_provider(vec![], None).await;
+    let (provider, _address) = setup_test_provider(vec![], None, None).await;
 
     // Create first account from mnemonic phrase.
     let wallet = LocalWallet::new_from_mnemonic_phrase(phrase, Some(provider)).unwrap();
@@ -172,7 +172,7 @@ async fn setup_wallet_multiple_assets() {
         coins_per_asset,
         amount_per_coin,
     );
-    let (provider, _socket_addr) = setup_test_provider(coins.clone(), None).await;
+    let (provider, _socket_addr) = setup_test_provider(coins.clone(), None, None).await;
     wallet.set_provider(provider);
     // ANCHOR_END: multiple_assets_wallet
 }

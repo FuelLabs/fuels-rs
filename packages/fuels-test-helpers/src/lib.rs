@@ -28,11 +28,11 @@ use serde_json::Value;
 #[cfg(not(feature = "fuel-core-lib"))]
 use crate::node::spawn_fuel_service;
 
+use fuel_gql_client::fuel_tx::ConsensusParameters;
 use fuel_gql_client::{
     client::FuelClient,
     fuel_tx::{Address, Bytes32, UtxoId},
 };
-use fuel_gql_client::fuel_tx::ConsensusParameters;
 
 use fuels_core::constants::BASE_ASSET_ID;
 use fuels_signers::fuel_crypto::fuel_types::AssetId;
@@ -129,6 +129,7 @@ pub fn setup_single_asset_coins(
 pub async fn setup_test_client(
     coins: Vec<(UtxoId, Coin)>,
     node_config: Option<Config>,
+    consensus_parameters_config: Option<ConsensusParameters>,
 ) -> (FuelClient, SocketAddr) {
     let coin_configs = coins
         .into_iter()
@@ -144,12 +145,14 @@ pub async fn setup_test_client(
         .collect();
 
     // Setup node config with genesis coins and utxo_validation enabled
+
     let config = Config {
         chain_conf: ChainConfig {
             initial_state: Some(StateConfig {
                 coins: Some(coin_configs),
                 ..StateConfig::default()
             }),
+            transaction_parameters: consensus_parameters_config.unwrap_or_default(),
             ..ChainConfig::local_testnet()
         },
         database_type: DbType::InMemory,
@@ -160,7 +163,6 @@ pub async fn setup_test_client(
     let srv = FuelService::new_node(config).await.unwrap();
     let client = FuelClient::from(srv.bound_address);
 
-
     (client, srv.bound_address)
 }
 
@@ -168,6 +170,7 @@ pub async fn setup_test_client(
 pub async fn setup_test_client(
     coins: Vec<(UtxoId, Coin)>,
     node_config: Option<Config>,
+    consensus_parameters_config: Option<ConsensusParameters>,
 ) -> (FuelClient, SocketAddr) {
     let coin_configs: Vec<Value> = coins
         .into_iter()
@@ -190,7 +193,9 @@ pub async fn setup_test_client(
     let config_with_coins: Value =
         serde_json::from_str(result.as_str()).expect("Failed to build config_with_coins JSON");
 
-    let transaction_parameters = serde_json::to_value(ConsensusParameters::DEFAULT).expect("Failed to build transaction_parameters JSON");
+    let consensus_parameters =
+        serde_json::to_value(consensus_parameters_config.unwrap_or_default())
+            .expect("Failed to build transaction_parameters JSON");
 
     let srv_address = if let Some(node_config) = node_config {
         node_config.addr
@@ -199,16 +204,11 @@ pub async fn setup_test_client(
         SocketAddr::new("127.0.0.1".parse().unwrap(), free_port)
     };
 
-    spawn_fuel_service(config_with_coins, transaction_parameters, srv_address.port());
+    spawn_fuel_service(config_with_coins, consensus_parameters, srv_address.port());
 
     let client = FuelClient::from(srv_address);
 
     server_health_check(&client).await;
-
-    let chain_info = client.chain_info().await;
-
-    println!("Emerson {:?}", chain_info);
-
 
     (client, srv_address)
 }
@@ -289,7 +289,7 @@ mod tests {
             ..Config::local_node()
         };
 
-        let wallets = setup_test_client(coins, Some(config)).await;
+        let wallets = setup_test_client(coins, Some(config), None).await;
 
         assert_eq!(wallets.1, socket);
     }
