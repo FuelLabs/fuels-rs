@@ -23,9 +23,6 @@ use fuel_core_interfaces::model::{Coin, CoinStatus};
 use portpicker::pick_unused_port;
 
 #[cfg(not(feature = "fuel-core-lib"))]
-use serde_json::Value;
-
-#[cfg(not(feature = "fuel-core-lib"))]
 use crate::node::spawn_fuel_service;
 
 use fuel_gql_client::fuel_tx::ConsensusParameters;
@@ -172,31 +169,6 @@ pub async fn setup_test_client(
     node_config: Option<Config>,
     consensus_parameters_config: Option<ConsensusParameters>,
 ) -> (FuelClient, SocketAddr) {
-    let coin_configs: Vec<Value> = coins
-        .into_iter()
-        .map(|(utxo_id, coin)| {
-            serde_json::to_value(&CoinConfig {
-                tx_id: Some(*utxo_id.tx_id()),
-                output_index: Some(utxo_id.output_index() as u64),
-                block_created: Some(coin.block_created),
-                maturity: Some(coin.maturity),
-                owner: coin.owner,
-                amount: coin.amount,
-                asset_id: coin.asset_id,
-            })
-            .unwrap()
-        })
-        .collect();
-
-    let result = serde_json::to_string(&coin_configs).expect("Failed to stringify coins vector");
-
-    let config_with_coins: Value =
-        serde_json::from_str(result.as_str()).expect("Failed to build config_with_coins JSON");
-
-    let consensus_parameters =
-        serde_json::to_value(consensus_parameters_config.unwrap_or_default())
-            .expect("Failed to build transaction_parameters JSON");
-
     let srv_address = if let Some(node_config) = node_config {
         node_config.addr
     } else {
@@ -204,7 +176,7 @@ pub async fn setup_test_client(
         SocketAddr::new("127.0.0.1".parse().unwrap(), free_port)
     };
 
-    spawn_fuel_service(config_with_coins, consensus_parameters, srv_address.port());
+    spawn_fuel_service(coins, consensus_parameters_config, srv_address.port());
 
     let client = FuelClient::from(srv_address);
 
