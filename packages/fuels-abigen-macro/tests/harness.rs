@@ -1,10 +1,9 @@
-use fuel_core::schema;
-use fuel_gql_client::client::schema::chain::ChainInfo;
+use fuel_gql_client::client::schema::U64;
+use fuel_gql_client::client::FuelClient;
 use fuel_gql_client::fuel_tx::{AssetId, ContractId, Receipt};
 use fuels::contract::contract::ContractCallHandler;
 use sha2::{Digest, Sha256};
 use std::str::FromStr;
-use std::thread::current;
 use tracing_subscriber::layer::Identity;
 
 use fuels::prelude::{
@@ -1924,37 +1923,37 @@ async fn can_set_transaction_height() {
     );
 
     let wallet = launch_provider_and_get_single_wallet().await;
-
     let client = &wallet.get_provider().unwrap().client;
-    let current_height = client.chain_info().await.unwrap().latest_block.height;
-    println!("height before deployment: {:?}", current_height);
-    let mut parameters = TxParameters::default();
-    parameters.maturity = 0;
+
+    // println!(
+    //     "height before deployment: {:?}",
+    //     current_height(client).await
+    // );
     let id = Contract::deploy(
         "tests/test_projects/transaction_block_height/out/debug/transaction_block_height.bin",
         &wallet,
-        parameters,
+        TxParameters::default(),
     )
     .await
     .unwrap();
-    let current_height = client.chain_info().await.unwrap().latest_block.height;
-    println!("height after deployment: {:?}", current_height);
+
+    // println!(
+    //     "height after deployment: {:?}",
+    //     current_height(client).await
+    // );
 
     let instance = MyContract::new(id.to_string(), wallet.clone());
 
-    let mut something: ContractCallHandler<u64> = instance.test_function();
-    something.tx_parameters.maturity = 0;
-
-    let result = something.call().await;
-    let current_height = client.chain_info().await.unwrap().latest_block.height;
-    println!("height after call: {:?}", current_height);
+    instance.test_function().call().await.unwrap();
+    // println!("height after call: {:?}", current_height(client).await);
 
     let mut something: ContractCallHandler<u64> = instance.test_function();
     something.tx_parameters.maturity = 1;
-    let result = something.call().await;
-    let current_height = client.chain_info().await.unwrap().latest_block.height;
 
-    let val = result.unwrap().value;
+    let expected = something.call().await.unwrap().value;
+    assert_eq!(expected, 12345);
+}
 
-    assert_eq!(val, 12345);
+async fn current_height(client: &FuelClient) -> U64 {
+    client.chain_info().await.unwrap().latest_block.height
 }
