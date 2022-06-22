@@ -3,9 +3,9 @@ use sha2::{Digest, Sha256};
 use std::str::FromStr;
 
 use fuels::prelude::{
-    abigen, launch_provider_and_get_single_wallet, setup_multiple_assets_coins,
-    setup_single_asset_coins, setup_test_provider, CallParameters, Contract, Error, LocalWallet,
-    Provider, Signer, TxParameters, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
+    abigen, launch_provider_and_get_wallet, setup_multiple_assets_coins, setup_single_asset_coins,
+    setup_test_provider, CallParameters, Contract, Error, LocalWallet, Provider, Signer,
+    TxParameters, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
 };
 use fuels_core::tx::Address;
 use fuels_core::Tokenizable;
@@ -38,7 +38,7 @@ async fn compile_bindings_from_contract_file() {
         "packages/fuels-abigen-macro/tests/takes_ints_returns_bool.json",
     );
 
-    let wallet = launch_provider_and_get_single_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await;
 
     // `SimpleContract` is the name of the contract
     let contract_instance = SimpleContract::new(null_contract_id(), wallet);
@@ -83,7 +83,7 @@ async fn compile_bindings_from_inline_contract() -> Result<(), Error> {
         "#,
     );
 
-    let wallet = launch_provider_and_get_single_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await;
     //`SimpleContract` is the name of the contract
     let contract_instance = SimpleContract::new(null_contract_id(), wallet);
 
@@ -125,7 +125,7 @@ async fn compile_bindings_array_input() {
         "#,
     );
 
-    let wallet = launch_provider_and_get_single_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await;
 
     // `SimpleContract` is the name of the contract
     let contract_instance = SimpleContract::new(null_contract_id(), wallet);
@@ -170,7 +170,7 @@ async fn compile_bindings_bool_array_input() {
         "#,
     );
 
-    let wallet = launch_provider_and_get_single_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await;
 
     // `SimpleContract` is the name of the contract
     let contract_instance = SimpleContract::new(null_contract_id(), wallet);
@@ -215,7 +215,7 @@ async fn compile_bindings_byte_input() {
         "#,
     );
 
-    let wallet = launch_provider_and_get_single_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await;
 
     // `SimpleContract` is the name of the contract
     let contract_instance = SimpleContract::new(null_contract_id(), wallet);
@@ -256,7 +256,7 @@ async fn compile_bindings_string_input() {
         "#,
     );
 
-    let wallet = launch_provider_and_get_single_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await;
 
     // `SimpleContract` is the name of the contract
     let contract_instance = SimpleContract::new(null_contract_id(), wallet);
@@ -300,7 +300,7 @@ async fn compile_bindings_b256_input() {
         "#,
     );
 
-    let wallet = launch_provider_and_get_single_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await;
 
     // `SimpleContract` is the name of the contract
     let contract_instance = SimpleContract::new(null_contract_id(), wallet);
@@ -363,7 +363,7 @@ async fn compile_bindings_struct_input() {
         bar: "fuel".to_string(),
     };
 
-    let wallet = launch_provider_and_get_single_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await;
 
     // `SimpleContract` is the name of the contract
     let contract_instance = SimpleContract::new(null_contract_id(), wallet);
@@ -428,7 +428,7 @@ async fn compile_bindings_nested_struct_input() {
         foo: inner_struct,
     };
 
-    let wallet = launch_provider_and_get_single_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await;
 
     // `SimpleContract` is the name of the contract
     let contract_instance = SimpleContract::new(null_contract_id(), wallet);
@@ -479,7 +479,7 @@ async fn compile_bindings_enum_input() {
 
     let variant = MyEnum::X(42);
 
-    let wallet = launch_provider_and_get_single_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await;
 
     // `SimpleContract` is the name of the contract
     let contract_instance = SimpleContract::new(null_contract_id(), wallet);
@@ -540,7 +540,7 @@ async fn create_struct_from_decoded_tokens() {
     assert_eq!(10, struct_from_tokens.foo);
     assert!(struct_from_tokens.bar);
 
-    let wallet = launch_provider_and_get_single_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await;
 
     // `SimpleContract` is the name of the contract
     let contract_instance = SimpleContract::new(null_contract_id(), wallet);
@@ -613,7 +613,7 @@ async fn create_nested_struct_from_decoded_tokens() {
     assert_eq!(10, nested_struct_from_tokens.x);
     assert!(nested_struct_from_tokens.y.a);
 
-    let wallet = launch_provider_and_get_single_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await;
 
     // `SimpleContract` is the name of the contract
     let contract_instance = SimpleContract::new(null_contract_id(), wallet);
@@ -638,7 +638,7 @@ async fn type_safe_output_values() {
         "packages/fuels-abigen-macro/tests/test_projects/contract_output_test/out/debug/contract_output_test-abi.json"
     );
 
-    let wallet = launch_provider_and_get_single_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await;
 
     let contract_id = Contract::deploy(
         "tests/test_projects/contract_output_test/out/debug/contract_output_test.bin",
@@ -685,7 +685,7 @@ async fn call_with_structs() {
         "packages/fuels-abigen-macro/tests/test_projects/complex_types_contract/out/debug/contract_test-abi.json"
     );
 
-    let wallet = launch_provider_and_get_single_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await;
 
     let contract_id = Contract::deploy(
         "tests/test_projects/complex_types_contract/out/debug/contract_test.bin",
@@ -728,7 +728,7 @@ async fn call_with_empty_return() {
         "packages/fuels-abigen-macro/tests/test_projects/call_empty_return/out/debug/contract_test-abi.json"
     );
 
-    let wallet = launch_provider_and_get_single_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await;
 
     let contract_id = Contract::deploy(
         "tests/test_projects/call_empty_return/out/debug/contract_test.bin",
@@ -755,7 +755,7 @@ async fn abigen_different_structs_same_arg_name() {
         "packages/fuels-abigen-macro/tests/test_projects/two_structs/out/debug/two_structs-abi.json",
     );
 
-    let wallet = launch_provider_and_get_single_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await;
 
     let contract_id = Contract::deploy(
         "tests/test_projects/two_structs/out/debug/two_structs.bin",
@@ -791,7 +791,7 @@ async fn test_reverting_transaction() {
         "packages/fuels-abigen-macro/tests/test_projects/revert_transaction_error/out/debug/capture_revert_transaction_error-abi.json"
     );
 
-    let wallet = launch_provider_and_get_single_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await;
 
     let contract_id = Contract::deploy("tests/test_projects/revert_transaction_error/out/debug/capture_revert_transaction_error.bin", &wallet, TxParameters::default())
         .await
@@ -809,7 +809,7 @@ async fn multiple_read_calls() {
         "packages/fuels-abigen-macro/tests/test_projects/multiple_read_calls/out/debug/demo-abi.json"
     );
 
-    let wallet = launch_provider_and_get_single_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await;
 
     let contract_id = Contract::deploy(
         "tests/test_projects/multiple_read_calls/out/debug/demo.bin",
@@ -844,7 +844,7 @@ async fn test_methods_typeless_argument() {
         "packages/fuels-abigen-macro/tests/test_projects/empty_arguments/out/debug/method_four_arguments-abi.json"
     );
 
-    let wallet = launch_provider_and_get_single_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await;
 
     let contract_id = Contract::deploy(
         "tests/test_projects/empty_arguments/out/debug/method_four_arguments.bin",
@@ -872,7 +872,7 @@ async fn test_large_return_data() {
         "packages/fuels-abigen-macro/tests/test_projects/large_return_data/out/debug/contract_test-abi.json"
     );
 
-    let wallet = launch_provider_and_get_single_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await;
 
     let contract_id = Contract::deploy(
         "tests/test_projects/large_return_data/out/debug/contract_test.bin",
@@ -987,7 +987,7 @@ async fn test_contract_calling_contract() -> Result<(), Error> {
         "packages/fuels-abigen-macro/tests/test_projects/foo_caller_contract/out/debug/foo_caller_contract-abi.json"
     );
 
-    let wallet = launch_provider_and_get_single_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await;
 
     // Load and deploy the first compiled contract
     let foo_contract_id = Contract::deploy(
@@ -1044,7 +1044,7 @@ async fn test_gas_errors() {
         "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
 
-    let wallet = launch_provider_and_get_single_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await;
 
     let contract_id = Contract::deploy(
         "tests/test_projects/contract_test/out/debug/contract_test.bin",
@@ -1093,7 +1093,7 @@ async fn test_call_param_gas_errors() {
         "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
 
-    let wallet = launch_provider_and_get_single_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await;
 
     let contract_id = Contract::deploy(
         "tests/test_projects/contract_test/out/debug/contract_test.bin",
@@ -1137,7 +1137,7 @@ async fn test_amount_and_asset_forwarding() {
         "packages/fuels-abigen-macro/tests/test_projects/token_ops/out/debug/token_ops-abi.json"
     );
 
-    let wallet = launch_provider_and_get_single_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await;
 
     let id = Contract::deploy(
         "tests/test_projects/token_ops/out/debug/token_ops.bin",
@@ -1226,7 +1226,7 @@ async fn test_multiple_args() {
         "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
 
-    let wallet = launch_provider_and_get_single_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await;
 
     let id = Contract::deploy(
         "tests/test_projects/contract_test/out/debug/contract_test.bin",
@@ -1258,7 +1258,7 @@ async fn test_tuples() {
         "packages/fuels-abigen-macro/tests/test_projects/tuples/out/debug/tuples-abi.json"
     );
 
-    let wallet = launch_provider_and_get_single_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await;
 
     let id = Contract::deploy(
         "tests/test_projects/tuples/out/debug/tuples.bin",
@@ -1319,7 +1319,7 @@ async fn test_array() {
         "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
 
-    let wallet = launch_provider_and_get_single_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await;
 
     let contract_id = Contract::deploy(
         "tests/test_projects/contract_test/out/debug/contract_test.bin",
@@ -1352,7 +1352,7 @@ async fn test_arrays_with_custom_types() {
         "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
 
-    let wallet = launch_provider_and_get_single_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await;
 
     let contract_id = Contract::deploy(
         "tests/test_projects/contract_test/out/debug/contract_test.bin",
@@ -1402,7 +1402,7 @@ async fn test_auth_msg_sender_from_sdk() {
         "packages/fuels-abigen-macro/tests/test_projects/auth_testing_contract/out/debug/auth_testing_contract-abi.json"
     );
 
-    let wallet = launch_provider_and_get_single_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await;
 
     let id = Contract::deploy(
         "tests/test_projects/auth_testing_contract/out/debug/auth_testing_contract.bin",
@@ -1432,7 +1432,7 @@ async fn workflow_enum_inside_struct() {
         /enum_inside_struct-abi.json"
     );
 
-    let wallet = launch_provider_and_get_single_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await;
 
     let id = Contract::deploy(
         "tests/test_projects/enum_inside_struct/out/debug/enum_inside_struct.bin",
@@ -1467,7 +1467,7 @@ async fn workflow_struct_inside_enum() {
         "packages/fuels-abigen-macro/tests/test_projects/struct_inside_enum/out/debug/struct_inside_enum-abi.json"
     );
 
-    let wallet = launch_provider_and_get_single_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await;
 
     let id = Contract::deploy(
         "tests/test_projects/struct_inside_enum/out/debug/struct_inside_enum.bin",
@@ -1497,7 +1497,7 @@ async fn test_logd_receipts() {
         "packages/fuels-abigen-macro/tests/test_projects/contract_logdata/out/debug/contract_logdata-abi.json"
     );
 
-    let wallet = launch_provider_and_get_single_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await;
 
     let id = Contract::deploy(
         "tests/test_projects/contract_logdata/out/debug/contract_logdata.bin",
@@ -1599,7 +1599,7 @@ async fn sway_native_types_support() {
         "packages/fuels-abigen-macro/tests/test_projects/sway_native_types/out/debug/sway_native_types-abi.json"
     );
 
-    let wallet = launch_provider_and_get_single_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await;
 
     let id = Contract::deploy(
         "tests/test_projects/sway_native_types/out/debug/sway_native_types.bin",
@@ -1639,7 +1639,7 @@ async fn test_transaction_script_workflow() {
         "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
 
-    let wallet = launch_provider_and_get_single_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await;
     let client = &wallet.get_provider().unwrap().client;
 
     let contract_id = Contract::deploy(
@@ -1671,7 +1671,7 @@ async fn enum_coding_w_variable_width_variants() {
         /enum_encoding-abi.json"
     );
 
-    let wallet = launch_provider_and_get_single_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await;
 
     let id = Contract::deploy(
         "tests/test_projects/enum_encoding/out/debug/enum_encoding.bin",
@@ -1715,7 +1715,7 @@ async fn enum_coding_w_unit_enums() {
         /enum_encoding-abi.json"
     );
 
-    let wallet = launch_provider_and_get_single_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await;
 
     let id = Contract::deploy(
         "tests/test_projects/enum_encoding/out/debug/enum_encoding.bin",
@@ -1757,7 +1757,7 @@ async fn enum_as_input() {
         /enum_as_input-abi.json"
     );
 
-    let wallet = launch_provider_and_get_single_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await;
 
     let id = Contract::deploy(
         "tests/test_projects/enum_as_input/out/debug/enum_as_input.bin",
@@ -1808,7 +1808,7 @@ async fn nested_structs() {
         /nested_structs-abi.json"
     );
 
-    let wallet = launch_provider_and_get_single_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await;
 
     let id = Contract::deploy(
         "tests/test_projects/nested_structs/out/debug/nested_structs.bin",
@@ -1869,7 +1869,7 @@ async fn nested_enums_are_correctly_encoded_decoded() {
         "packages/fuels-abigen-macro/tests/test_projects/nested_enums/out/debug/nested_enums-abi.json"
     );
 
-    let wallet = launch_provider_and_get_single_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await;
 
     let id = Contract::deploy(
         "tests/test_projects/nested_enums/out/debug/nested_enums.bin",

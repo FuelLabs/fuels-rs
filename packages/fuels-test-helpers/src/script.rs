@@ -5,7 +5,7 @@ use fuel_core::service::{Config, FuelService};
 use fuel_gql_client::client::FuelClient;
 
 #[cfg(not(feature = "fuel-core-lib"))]
-use crate::launch_provider_and_get_single_wallet;
+use crate::launch_provider_and_get_wallet;
 
 use fuel_gql_client::fuel_tx::{Receipt, Transaction};
 use fuels_contract::script::Script;
@@ -29,7 +29,7 @@ pub async fn run_compiled_script(binary_filepath: &str) -> Result<Vec<Receipt>, 
 pub async fn run_compiled_script(binary_filepath: &str) -> Result<Vec<Receipt>, Error> {
     let script_binary = std::fs::read(binary_filepath)?;
 
-    let wallet = launch_provider_and_get_single_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await;
     let client = wallet.get_provider().unwrap().clone().client;
 
     let script = get_script(script_binary);

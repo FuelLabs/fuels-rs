@@ -4,8 +4,8 @@ use fuels::prelude::Error;
 #[tokio::test]
 #[allow(unused_variables)]
 async fn transform_json_to_bindings() -> Result<(), Error> {
-    use fuels::test_helpers::launch_provider_and_get_single_wallet;
-    let wallet = launch_provider_and_get_single_wallet().await;
+    use fuels::test_helpers::launch_provider_and_get_wallet;
+    let wallet = launch_provider_and_get_wallet().await;
     // ANCHOR: use_abigen
     use fuels::prelude::*;
     // Replace with your own JSON abi path (relative to the root of your crate)
