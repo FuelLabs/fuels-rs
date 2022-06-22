@@ -285,3 +285,5 @@ mod tests {
         assert_eq!(wallets.1, socket);
     }
 }
+
+pub fn add_blocks(amount: usize) {}

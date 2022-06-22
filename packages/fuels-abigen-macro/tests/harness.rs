@@ -11,6 +11,7 @@ use fuels::prelude::{
     setup_single_asset_coins, setup_test_provider, CallParameters, Contract, Error, LocalWallet,
     Provider, Signer, TxParameters, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
 };
+use fuels::test_helpers::add_blocks;
 use fuels_core::tx::Address;
 use fuels_core::Tokenizable;
 use fuels_core::{constants::BASE_ASSET_ID, Token};
@@ -1923,12 +1924,10 @@ async fn can_set_transaction_height() {
     );
 
     let wallet = launch_provider_and_get_single_wallet().await;
-    let client = &wallet.get_provider().unwrap().client;
+    let client = &wallet.get_provider().unwrap().client.clone();
 
-    // println!(
-    //     "height before deployment: {:?}",
-    //     current_height(client).await
-    // );
+    assert_eq!(lastest_block_height(client).await, 0);
+
     let id = Contract::deploy(
         "tests/test_projects/transaction_block_height/out/debug/transaction_block_height.bin",
         &wallet,
@@ -1936,24 +1935,33 @@ async fn can_set_transaction_height() {
     )
     .await
     .unwrap();
+    assert_eq!(lastest_block_height(client).await, 1);
 
-    // println!(
-    //     "height after deployment: {:?}",
-    //     current_height(client).await
-    // );
-
-    let instance = MyContract::new(id.to_string(), wallet.clone());
-
+    let instance = MyContract::new(id.to_string(), wallet);
     instance.test_function().call().await.unwrap();
-    // println!("height after call: {:?}", current_height(client).await);
+    assert_eq!(lastest_block_height(client).await, 2);
 
     let mut something: ContractCallHandler<u64> = instance.test_function();
     something.tx_parameters.maturity = 1;
+    let result = something.call().await;
+    assert_eq!(lastest_block_height(client).await, 2);
 
-    let expected = something.call().await.unwrap().value;
+    let expected = result.unwrap().value;
     assert_eq!(expected, 12345);
 }
 
-async fn current_height(client: &FuelClient) -> U64 {
-    client.chain_info().await.unwrap().latest_block.height
+#[tokio::test]
+async fn can_increase_block_height() {
+    let wallet = launch_provider_and_get_single_wallet().await;
+    let client = &wallet.get_provider().unwrap().client.clone();
+
+    assert_eq!(lastest_block_height(client).await, 0);
+
+    add_blocks(10);
+
+    assert_eq!(lastest_block_height(client).await, 10);
+}
+
+async fn lastest_block_height(client: &FuelClient) -> u64 {
+    client.chain_info().await.unwrap().latest_block.height.0
 }
