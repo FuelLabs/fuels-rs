@@ -1,8 +1,12 @@
 use fuel_gql_client::client::schema::U64;
 use fuel_gql_client::client::FuelClient;
 use fuel_gql_client::fuel_tx::{AssetId, ContractId, Receipt};
+use fuel_gql_client::fuel_vm::consts::REG_ONE;
+use fuel_gql_client::fuel_vm::fuel_asm::Opcode;
 use fuels::contract::contract::ContractCallHandler;
+use rand::{Rng, RngCore};
 use sha2::{Digest, Sha256};
+use std::iter;
 use std::str::FromStr;
 use tracing_subscriber::layer::Identity;
 
@@ -12,7 +16,10 @@ use fuels::prelude::{
     Provider, Signer, TxParameters, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
 };
 use fuels::test_helpers::add_blocks;
-use fuels_core::tx::Address;
+use fuels_core::constants::{
+    DEFAULT_BYTE_PRICE, DEFAULT_GAS_LIMIT, DEFAULT_GAS_PRICE, DEFAULT_MATURITY,
+};
+use fuels_core::tx::{Address, Transaction};
 use fuels_core::Tokenizable;
 use fuels_core::{constants::BASE_ASSET_ID, Token};
 
@@ -1953,13 +1960,14 @@ async fn can_set_transaction_height() {
 #[tokio::test]
 async fn can_increase_block_height() {
     let wallet = launch_provider_and_get_single_wallet().await;
-    let client = &wallet.get_provider().unwrap().client.clone();
+    let provider = wallet.get_provider().unwrap();
+    let client = &provider.client.clone();
 
     assert_eq!(lastest_block_height(client).await, 0);
 
-    add_blocks(10);
+    add_blocks(&provider, 20).await;
 
-    assert_eq!(lastest_block_height(client).await, 10);
+    assert_eq!(lastest_block_height(client).await, 20);
 }
 
 async fn lastest_block_height(client: &FuelClient) -> u64 {

@@ -1,7 +1,10 @@
 //! Testing helpers/utilities for Fuel SDK.
 
 use std::collections::HashSet;
+use std::iter;
+use std::marker::PhantomData;
 use std::net::SocketAddr;
+use std::sync::Arc;
 
 #[cfg(feature = "fuel-core-lib")]
 use fuel_core::{
@@ -12,6 +15,8 @@ use fuel_core::{
 
 #[cfg(feature = "fuel-core-lib")]
 pub use fuel_core::service::Config;
+use fuel_core_interfaces::common::fuel_asm::Opcode;
+use fuel_core_interfaces::common::fuel_vm::consts::REG_ONE;
 
 #[cfg(not(feature = "fuel-core-lib"))]
 pub use node::{CoinConfig, Config};
@@ -33,10 +38,17 @@ use fuel_gql_client::{
     fuel_tx::{Address, Bytes32, UtxoId},
 };
 
-use fuels_core::constants::BASE_ASSET_ID;
+use fuels_contract::contract::ContractCallHandler;
+use fuels_core::constants::{
+    BASE_ASSET_ID, DEFAULT_BYTE_PRICE, DEFAULT_GAS_LIMIT, DEFAULT_GAS_PRICE, DEFAULT_MATURITY,
+};
+use fuels_core::tx::Transaction;
 use fuels_signers::fuel_crypto::fuel_types::AssetId;
 use fuels_signers::fuel_crypto::rand;
-use rand::Fill;
+use fuels_signers::provider::Provider;
+use rand::{Fill, Rng};
+use tokio::join;
+use tokio::task::{futures, JoinHandle};
 
 #[cfg(not(feature = "fuel-core-lib"))]
 mod node;
@@ -286,4 +298,34 @@ mod tests {
     }
 }
 
-pub fn add_blocks(amount: usize) {}
+pub async fn add_blocks(provider: &Provider, amount: usize) {
+    let shared_provider = Arc::new(provider.clone());
+
+    let handles = iter::repeat(())
+        .take(amount)
+        .map(|_| {
+            let provider = Arc::clone(&shared_provider);
+            tokio::spawn(async move {
+                let random_data = rand::thread_rng().gen::<[u8; 32]>();
+                let transaction = Transaction::Script {
+                    gas_price: DEFAULT_GAS_PRICE,
+                    gas_limit: DEFAULT_GAS_LIMIT,
+                    byte_price: DEFAULT_BYTE_PRICE,
+                    maturity: DEFAULT_MATURITY,
+                    receipts_root: Default::default(),
+                    script: Opcode::RET(REG_ONE).to_bytes().to_vec(),
+                    script_data: random_data.to_vec(),
+                    inputs: vec![],
+                    outputs: vec![],
+                    witnesses: vec![],
+                    metadata: None,
+                };
+                provider.send_transaction(&transaction).await
+            })
+        })
+        .collect::<Vec<_>>();
+
+    for handle in handles {
+        handle.await.unwrap();
+    }
+}
