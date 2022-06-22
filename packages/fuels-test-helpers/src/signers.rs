@@ -14,7 +14,6 @@ use fuels_signers::{provider::Provider, LocalWallet, Signer};
 
 use crate::{setup_single_asset_coins, setup_test_client, wallets_config::WalletsConfig};
 
-#[cfg(feature = "fuel-core-lib")]
 pub async fn launch_provider_and_get_wallet() -> LocalWallet {
     let mut wallets =
         launch_custom_provider_and_get_wallets(WalletsConfig::new_single(None, None), None).await;
@@ -60,14 +59,6 @@ pub async fn setup_test_provider(
 ) -> (Provider, SocketAddr) {
     let (client, addr) = setup_test_client(coins, node_config).await;
     (Provider::new(client), addr)
-}
-
-#[cfg(not(feature = "fuel-core-lib"))]
-pub async fn launch_provider_and_get_wallet() -> LocalWallet {
-    let mut wallets =
-        launch_custom_provider_and_get_wallets(WalletsConfig::new_single(None, None), None).await;
-
-    wallets.pop().unwrap()
 }
 
 #[cfg(not(feature = "fuel-core-lib"))]

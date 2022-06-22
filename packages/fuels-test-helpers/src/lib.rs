@@ -125,7 +125,7 @@ pub fn setup_single_asset_coins(
 // Setup a test client with the given coins. We return the SocketAddr so the launched node
 // client can be connected to more easily (even though it is often ignored).
 #[cfg(feature = "fuel-core-lib")]
-async fn setup_test_client(
+pub async fn setup_test_client(
     coins: Vec<(UtxoId, Coin)>,
     node_config: Option<Config>,
 ) -> (FuelClient, SocketAddr) {
