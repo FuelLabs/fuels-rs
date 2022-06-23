@@ -1,0 +1,126 @@
+[
+  {
+    "type": "function",
+    "inputs": [],
+    "name": "get_standard_enum",
+    "outputs": [
+      {
+        "name": "",
+        "type": "enum StandardEnum",
+        "components": [
+          {
+            "name": "One",
+            "type": "b256",
+            "components": null
+          },
+          {
+            "name": "Two",
+            "type": "u32",
+            "components": null
+          },
+          {
+            "name": "Three",
+            "type": "bool",
+            "components": null
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "inputs": [
+      {
+        "name": "arg",
+        "type": "enum StandardEnum",
+        "components": [
+          {
+            "name": "One",
+            "type": "b256",
+            "components": null
+          },
+          {
+            "name": "Two",
+            "type": "u32",
+            "components": null
+          },
+          {
+            "name": "Three",
+            "type": "bool",
+            "components": null
+          }
+        ]
+      }
+    ],
+    "name": "check_standard_enum_integrity",
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "components": null
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "inputs": [],
+    "name": "get_unit_enum",
+    "outputs": [
+      {
+        "name": "",
+        "type": "enum UnitEnum",
+        "components": [
+          {
+            "name": "One",
+            "type": "()",
+            "components": []
+          },
+          {
+            "name": "Two",
+            "type": "()",
+            "components": []
+          },
+          {
+            "name": "Three",
+            "type": "()",
+            "components": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "inputs": [
+      {
+        "name": "arg",
+        "type": "enum UnitEnum",
+        "components": [
+          {
+            "name": "One",
+            "type": "()",
+            "components": []
+          },
+          {
+            "name": "Two",
+            "type": "()",
+            "components": []
+          },
+          {
+            "name": "Three",
+            "type": "()",
+            "components": []
+          }
+        ]
+      }
+    ],
+    "name": "check_unit_enum_integrity",
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "components": null
+      }
+    ]
+  }
+]
