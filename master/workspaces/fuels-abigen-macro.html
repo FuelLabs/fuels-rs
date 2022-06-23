@@ -168,7 +168,7 @@
         &quot;#,
     );
 
-    let wallet = launch_provider_and_get_single_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await;
     //`SimpleContract` is the name of the contract
     let contract_instance = SimpleContract::new(null_contract_id(), wallet);
 

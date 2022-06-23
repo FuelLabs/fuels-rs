@@ -176,7 +176,7 @@ using <a href="https://docs.rs/fuels/*/fuels/client/struct.FuelClient.html"><cod
         );
 
     // This helper will launch a local node and provide a test wallet linked to it
-    let wallet = launch_provider_and_get_single_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await;
 
     // Optional: Configure deployment parameters or use `TxParameters::default()`
     let gas_price = 0;
@@ -231,7 +231,7 @@ using <a href="https://docs.rs/fuels/*/fuels/client/struct.FuelClient.html"><cod
             &quot;packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json&quot;
         );
 
-    let wallet = launch_provider_and_get_single_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await;
 
     let contract_id_1 = Contract::deploy(
             &quot;../../packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test.bin&quot;,
@@ -265,7 +265,7 @@ using <a href="https://docs.rs/fuels/*/fuels/client/struct.FuelClient.html"><cod
 <pre><code class="language-rust ignore">    use fuels::prelude::*;
     // This helper will launch a local node and provide 10 test wallets linked to it.
     // The initial balance defaults to 1 coin per wallet with an amount of 1_000_000_000
-    let wallets = launch_provider_and_get_wallets(WalletsConfig::default()).await;
+    let wallets = launch_custom_provider_and_get_wallets(WalletsConfig::default(), None).await;
 </code></pre>
 <p>The returned test wallets can be customized via <code>WalletsConfig</code></p>
 <pre><code class="language-rust ignore">    let num_wallets = 5;
@@ -278,7 +278,7 @@ using <a href="https://docs.rs/fuels/*/fuels/client/struct.FuelClient.html"><cod
         Some(amount_per_coin),
     );
     // Launches a local node and provides test wallets as specified by the config
-    let wallets = launch_provider_and_get_wallets(config).await;
+    let wallets = launch_custom_provider_and_get_wallets(config, None).await;
 </code></pre>
 <h2 id="setting-up-a-test-wallet-with-multiple-assets"><a class="header" href="#setting-up-a-test-wallet-with-multiple-assets">Setting up a test wallet with multiple assets</a></h2>
 <p>You can create a test wallet which contains multiple different assets (including the base asset to pay for gas).</p>
@@ -462,7 +462,7 @@ pub const BASE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
         MyContract,
         &quot;packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json&quot;
     );
-    let wallet = launch_provider_and_get_single_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await;
     // Your contract ID as a String.
     let contract_id =
         &quot;0x068fe90ddc43b18a8f76756ecad8bf30eb0ceea33d2e6990c0185d01b0dbb675&quot;.to_string();
