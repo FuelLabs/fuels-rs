@@ -119,7 +119,7 @@ mod tests {
         let amount = 100;
         let config = WalletsConfig::new(Some(num_wallets), Some(num_coins), Some(amount));
 
-        let wallets = launch_custom_provider_and_get_wallets(config, None).await;
+        let wallets = launch_custom_provider_and_get_wallets(config, None, None).await;
 
         assert_eq!(wallets.len(), num_wallets as usize);
 

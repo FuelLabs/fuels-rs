@@ -118,6 +118,7 @@ async fn wallet_transfer() -> Result<(), Box<dyn std::error::Error>> {
             coin_amount: 1,
         },
         None,
+        None,
     )
     .await;
 
@@ -142,7 +143,8 @@ async fn setup_multiple_wallets() {
     use fuels::prelude::*;
     // This helper will launch a local node and provide 10 test wallets linked to it.
     // The initial balance defaults to 1 coin per wallet with an amount of 1_000_000_000
-    let wallets = launch_custom_provider_and_get_wallets(WalletsConfig::default(), None).await;
+    let wallets =
+        launch_custom_provider_and_get_wallets(WalletsConfig::default(), None, None).await;
     // ANCHOR_END: multiple_wallets_helper
     // ANCHOR: setup_5_wallets
     let num_wallets = 5;
@@ -155,7 +157,7 @@ async fn setup_multiple_wallets() {
         Some(amount_per_coin),
     );
     // Launches a local node and provides test wallets as specified by the config
-    let wallets = launch_custom_provider_and_get_wallets(config, None).await;
+    let wallets = launch_custom_provider_and_get_wallets(config, None, None).await;
     // ANCHOR_END: setup_5_wallets
 }
 

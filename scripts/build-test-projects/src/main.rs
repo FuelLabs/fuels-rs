@@ -19,7 +19,7 @@ fn main() {
 
     println!("Building projects with: {:?}", version.trim());
 
-    let path = Path::new("packages/fuels-abigen-macro/tests/test_projects");
+    let path = Path::new("packages/fuels/tests/test_projects");
     let cwd = env::current_dir().unwrap();
     let final_path = cwd.join(path);
 
