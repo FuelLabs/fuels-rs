@@ -62,11 +62,11 @@ jobs:
           name: sway-examples
           # cache only the sway build artifacts, skip all test_project src files
           path: |
-            packages/fuels-abigen-macro/tests/test_projects
-            !packages/fuels-abigen-macro/tests/test_projects/**/*.sw
-            !packages/fuels-abigen-macro/tests/test_projects/**/Forc.toml
-            !packages/fuels-abigen-macro/tests/test_projects/**/Forc.lock
-            !packages/fuels-abigen-macro/tests/test_projects/**/.gitignore
+            packages/fuels/tests/test_projects
+            !packages/fuels/tests/test_projects/**/*.sw
+            !packages/fuels/tests/test_projects/**/Forc.toml
+            !packages/fuels/tests/test_projects/**/Forc.lock
+            !packages/fuels/tests/test_projects/**/.gitignore
 
   get-workspace-members:
     needs: cancel-previous-runs
@@ -162,7 +162,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: sway-examples
-          path: packages/fuels-abigen-macro/tests/test_projects/
+          path: packages/fuels/tests/test_projects/
 
       - name: Cargo (workspace-level)
         if: ${{ !matrix.package }}
