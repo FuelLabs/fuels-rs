@@ -424,12 +424,12 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use fuels_test_helpers::launch_provider_and_get_single_wallet;
+    use fuels_test_helpers::launch_provider_and_get_wallet;
 
     #[tokio::test]
     #[should_panic(expected = "called `Result::unwrap()` on an `Err` value: InvalidData(\"json\")")]
     async fn deploy_panics_on_non_binary_file() {
-        let wallet = launch_provider_and_get_single_wallet().await;
+        let wallet = launch_provider_and_get_wallet().await;
 
         // Should panic as we are passing in a JSON instead of BIN
         Contract::deploy(
@@ -444,7 +444,7 @@ mod test {
     #[tokio::test]
     #[should_panic(expected = "called `Result::unwrap()` on an `Err` value: InvalidData(\"json\")")]
     async fn deploy_with_salt_panics_on_non_binary_file() {
-        let wallet = launch_provider_and_get_single_wallet().await;
+        let wallet = launch_provider_and_get_wallet().await;
 
         // Should panic as we are passing in a JSON instead of BIN
         Contract::deploy_with_salt(
