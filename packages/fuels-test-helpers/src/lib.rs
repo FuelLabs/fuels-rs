@@ -1,10 +1,12 @@
 //! Testing helpers/utilities for Fuel SDK.
 
+use anyhow::bail;
 use std::collections::HashSet;
-use std::iter;
-use std::marker::PhantomData;
+use std::future::Future;
+use std::io;
 use std::net::SocketAddr;
 use std::sync::Arc;
+use std::time::Duration;
 
 #[cfg(feature = "fuel-core-lib")]
 use fuel_core::{
@@ -38,7 +40,6 @@ use fuel_gql_client::{
     fuel_tx::{Address, Bytes32, UtxoId},
 };
 
-use fuels_contract::contract::ContractCallHandler;
 use fuels_core::constants::{
     BASE_ASSET_ID, DEFAULT_BYTE_PRICE, DEFAULT_GAS_LIMIT, DEFAULT_GAS_PRICE, DEFAULT_MATURITY,
 };
@@ -47,8 +48,6 @@ use fuels_signers::fuel_crypto::fuel_types::AssetId;
 use fuels_signers::fuel_crypto::rand;
 use fuels_signers::provider::Provider;
 use rand::{Fill, Rng};
-use tokio::join;
-use tokio::task::{futures, JoinHandle};
 
 #[cfg(not(feature = "fuel-core-lib"))]
 mod node;
@@ -298,34 +297,74 @@ mod tests {
     }
 }
 
-pub async fn add_blocks(provider: &Provider, amount: usize) {
-    let shared_provider = Arc::new(provider.clone());
+pub async fn add_blocks(provider: &Provider, amount: usize) -> anyhow::Result<()> {
+    for _ in 0..amount {
+        let height_before_transaction = current_block_height(&provider.client).await?;
 
-    let handles = iter::repeat(())
-        .take(amount)
-        .map(|_| {
-            let provider = Arc::clone(&shared_provider);
-            tokio::spawn(async move {
-                let random_data = rand::thread_rng().gen::<[u8; 32]>();
-                let transaction = Transaction::Script {
-                    gas_price: DEFAULT_GAS_PRICE,
-                    gas_limit: DEFAULT_GAS_LIMIT,
-                    byte_price: DEFAULT_BYTE_PRICE,
-                    maturity: DEFAULT_MATURITY,
-                    receipts_root: Default::default(),
-                    script: Opcode::RET(REG_ONE).to_bytes().to_vec(),
-                    script_data: random_data.to_vec(),
-                    inputs: vec![],
-                    outputs: vec![],
-                    witnesses: vec![],
-                    metadata: None,
-                };
-                provider.send_transaction(&transaction).await
-            })
-        })
-        .collect::<Vec<_>>();
+        let transaction = generate_no_op_script();
+        provider.send_transaction(&transaction).await.unwrap();
 
-    for handle in handles {
-        handle.await.unwrap();
+        if !check_if_block_height_increased(&provider.client, height_before_transaction).await? {
+            bail!("Couldn't confirm a block generation via no-op script");
+        }
+    }
+    Ok(())
+}
+
+async fn check_if_block_height_increased(
+    client: &FuelClient,
+    height_before_transaction: u64,
+) -> anyhow::Result<bool> {
+    let shared_client = Arc::new(client.clone());
+
+    let has_block_height_increased = || {
+        let client = Arc::clone(&shared_client);
+        async move {
+            let current_block_height = current_block_height(&client).await?;
+            Ok(current_block_height > height_before_transaction)
+        }
+    };
+
+    let height_increased =
+        retry_until(has_block_height_increased, 5, Duration::from_millis(100)).await?;
+
+    Ok(height_increased)
+}
+
+async fn retry_until<Fut>(
+    condition: impl Fn() -> Fut,
+    max_attempts: usize,
+    between_attempts: Duration,
+) -> anyhow::Result<bool>
+where
+    Fut: Future<Output = anyhow::Result<bool>>,
+{
+    for _ in 0..max_attempts {
+        if condition().await? {
+            return Ok(true);
+        }
+        tokio::time::sleep(between_attempts).await;
+    }
+    Ok(false)
+}
+
+pub async fn current_block_height(client: &FuelClient) -> io::Result<u64> {
+    Ok(client.chain_info().await?.latest_block.height.0)
+}
+
+fn generate_no_op_script() -> Transaction {
+    let random_data = rand::thread_rng().gen::<[u8; 32]>();
+    Transaction::Script {
+        gas_price: DEFAULT_GAS_PRICE,
+        gas_limit: DEFAULT_GAS_LIMIT,
+        byte_price: DEFAULT_BYTE_PRICE,
+        maturity: DEFAULT_MATURITY,
+        receipts_root: Default::default(),
+        script: Opcode::RET(REG_ONE).to_bytes().to_vec(),
+        script_data: random_data.to_vec(),
+        inputs: vec![],
+        outputs: vec![],
+        witnesses: vec![],
+        metadata: None,
     }
 }
