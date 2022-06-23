@@ -181,9 +181,19 @@ impl Contract {
     ) -> Result<ContractId, Error> {
         let (mut tx, contract_id) =
             Self::contract_deployment_transaction(compiled_contract, wallet, params).await?;
+
+        let client = &wallet
+            .get_provider()
+            .expect("Can't get wallet provider?")
+            .client;
+
+        let chan_info = client.chain_info().await?;
+
         wallet.sign_transaction(&mut tx).await?;
 
-        match wallet.get_provider().unwrap().client.submit(&tx).await {
+        let _ = tx.validate_without_signature(0, &chan_info.consensus_parameters.into());
+
+        match client.submit(&tx).await {
             Ok(_) => Ok(contract_id),
             Err(e) => Err(Error::TransactionError(e.to_string())),
         }
