@@ -111,11 +111,14 @@ async fn wallet_transfer() -> Result<(), Box<dyn std::error::Error>> {
     use fuels::prelude::*;
 
     // Setup 2 test wallets with 1 coin each
-    let wallets = launch_provider_and_get_wallets(WalletsConfig {
-        num_wallets: 2,
-        coins_per_wallet: 1,
-        coin_amount: 1,
-    })
+    let wallets = launch_custom_provider_and_get_wallets(
+        WalletsConfig {
+            num_wallets: 2,
+            coins_per_wallet: 1,
+            coin_amount: 1,
+        },
+        None,
+    )
     .await;
 
     // Transfer 1 from wallet 1 to wallet 2
@@ -139,7 +142,7 @@ async fn setup_multiple_wallets() {
     use fuels::prelude::*;
     // This helper will launch a local node and provide 10 test wallets linked to it.
     // The initial balance defaults to 1 coin per wallet with an amount of 1_000_000_000
-    let wallets = launch_provider_and_get_wallets(WalletsConfig::default()).await;
+    let wallets = launch_custom_provider_and_get_wallets(WalletsConfig::default(), None).await;
     // ANCHOR_END: multiple_wallets_helper
     // ANCHOR: setup_5_wallets
     let num_wallets = 5;
@@ -152,7 +155,7 @@ async fn setup_multiple_wallets() {
         Some(amount_per_coin),
     );
     // Launches a local node and provides test wallets as specified by the config
-    let wallets = launch_provider_and_get_wallets(config).await;
+    let wallets = launch_custom_provider_and_get_wallets(config, None).await;
     // ANCHOR_END: setup_5_wallets
 }
 
@@ -180,11 +183,11 @@ async fn setup_wallet_multiple_assets() {
 #[tokio::test]
 #[allow(unused_variables)]
 async fn get_balances() -> Result<(), ProviderError> {
-    use fuels::prelude::{launch_provider_and_get_single_wallet, BASE_ASSET_ID};
+    use fuels::prelude::{launch_provider_and_get_wallet, BASE_ASSET_ID};
     use fuels::tx::AssetId;
     use std::collections::HashMap;
 
-    let wallet = launch_provider_and_get_single_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await;
     // ANCHOR: get_asset_balance
     let asset_id: AssetId = BASE_ASSET_ID;
     let balance: u64 = wallet.get_asset_balance(&asset_id).await?;

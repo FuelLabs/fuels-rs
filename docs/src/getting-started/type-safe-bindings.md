@@ -16,7 +16,7 @@ Can become this (shortened for brevity's sake):
 
 > **Note:** that is all **generated** code. No need to write any of that. Ever.
 
-> **Note:** the generated code might look different from one version to another, this is just an example to give an idea of what it looks like.
+> **Note:** the generated code might look different from one version to another, this is just an example to give you an idea of what it looks like.
 
 And, then, you're able to use it to call the actual methods on the deployed contract:
 
