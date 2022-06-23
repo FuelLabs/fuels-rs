@@ -1951,12 +1951,11 @@ async fn can_set_transaction_height() -> io::Result<()> {
 #[tokio::test]
 async fn can_increase_block_height() -> anyhow::Result<()> {
     let wallet = launch_provider_and_get_single_wallet().await;
-    let provider = wallet.get_provider().unwrap();
-    let client = &provider.client.clone();
+    let client = &wallet.get_provider().unwrap().client;
 
     assert_eq!(current_block_height(client).await?, 0);
 
-    add_blocks(provider, 20).await?;
+    add_blocks(client, 20).await?;
 
     assert_eq!(current_block_height(client).await?, 20);
     Ok(())
