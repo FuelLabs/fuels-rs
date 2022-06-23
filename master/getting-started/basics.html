@@ -399,7 +399,7 @@ pub const BASE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
         .await?;
 </code></pre>
 <h3 id="callresponse-reading-returned-values"><a class="header" href="#callresponse-reading-returned-values"><code>CallResponse</code>: Reading returned values</a></h3>
-<p>You've probably noticed that you're often chaining `.call().await.unwrap(). That's because:</p>
+<p>You've probably noticed that you're often chaining <code>.call().await.unwrap()</code>. That's because:</p>
 <ol>
 <li>You have to choose between <code>.call()</code> and <code>.simulate()</code> (more on this in the next section);</li>
 <li>Contract calls are asynchronous, so you can choose to either <code>.await</code> it or perform concurrent tasks, making full use of Rust's async;</li>
@@ -421,7 +421,7 @@ pub const BASE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
 <h3 id="read-only-contract-calls"><a class="header" href="#read-only-contract-calls">Read-only contract calls</a></h3>
 <p>Sometimes you want to call a contract method that doesn't change the state of the blockchain. For instance, a method that only reads a value from storage and returns it.</p>
 <p>In this case, there's no need to generate an actual blockchain transaction; you only want to quickly read a value.</p>
-<p>You can do this with the SDK by, instead of <code>.call()</code>ing the method, using <code>.simulate()</code> instead:</p>
+<p>You can do this with the SDK. Instead of <code>.call()</code>ing the method, use <code>.simulate()</code>:</p>
 <pre><code class="language-rust ignore">    // you would mint 100 coins if the transaction wasn't simulated
     let counter = contract_instance.mint_coins(100).simulate().await?;
 </code></pre>

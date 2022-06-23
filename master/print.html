@@ -437,7 +437,7 @@ pub const BASE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
         .await?;
 </code></pre>
 <h3 id="callresponse-reading-returned-values"><a class="header" href="#callresponse-reading-returned-values"><code>CallResponse</code>: Reading returned values</a></h3>
-<p>You've probably noticed that you're often chaining `.call().await.unwrap(). That's because:</p>
+<p>You've probably noticed that you're often chaining <code>.call().await.unwrap()</code>. That's because:</p>
 <ol>
 <li>You have to choose between <code>.call()</code> and <code>.simulate()</code> (more on this in the next section);</li>
 <li>Contract calls are asynchronous, so you can choose to either <code>.await</code> it or perform concurrent tasks, making full use of Rust's async;</li>
@@ -459,7 +459,7 @@ pub const BASE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
 <h3 id="read-only-contract-calls"><a class="header" href="#read-only-contract-calls">Read-only contract calls</a></h3>
 <p>Sometimes you want to call a contract method that doesn't change the state of the blockchain. For instance, a method that only reads a value from storage and returns it.</p>
 <p>In this case, there's no need to generate an actual blockchain transaction; you only want to quickly read a value.</p>
-<p>You can do this with the SDK by, instead of <code>.call()</code>ing the method, using <code>.simulate()</code> instead:</p>
+<p>You can do this with the SDK. Instead of <code>.call()</code>ing the method, use <code>.simulate()</code>:</p>
 <pre><code class="language-rust ignore">    // you would mint 100 coins if the transaction wasn't simulated
     let counter = contract_instance.mint_coins(100).simulate().await?;
 </code></pre>
@@ -585,7 +585,7 @@ enables defining owners (wallet addresses) of genesis coins before a provider is
 <h2 id="creating-a-wallet-from-a-mnemonic-phrase"><a class="header" href="#creating-a-wallet-from-a-mnemonic-phrase">Creating a wallet from a mnemonic phrase</a></h2>
 <p>A mnemonic phrase is a cryptographically-generated sequence of words that's used to derive a private key. For instance: <code>&quot;oblige salon price punch saddle immune slogan rare snap desert retire surprise&quot;;</code> would generate the address <code>0xdf9d0e6c6c5f5da6e82e5e1a77974af6642bdb450a10c43f0c6910a212600185</code>.</p>
 <p>In addition to that, we also support <a href="https://www.ledger.com/academy/crypto/what-are-hierarchical-deterministic-hd-wallets">Hierarchical Deterministic Wallets</a> and <a href="https://learnmeabitcoin.com/technical/derivation-paths">derivation paths</a>. You may recognize the string <code>&quot;m/44'/60'/0'/0/0&quot;</code> from somewhere; that's a derivation path. In simple terms, it's a way to derive many wallets from a single root wallet.</p>
-<p>The SDK gives you two wallet from mnemonic instantiation methods: one that takes a derivation path (<code>Wallet::new_from_mnemonic_phrase_with_path</code>) and one that uses the default derivation path, in case you don't want or don't need to configure that (<code>Wallet::new_from_mnemonic_phrase</code>).</p>
+<p>The SDK gives you two wallets from mnemonic instantiation methods: one that takes a derivation path (<code>Wallet::new_from_mnemonic_phrase_with_path</code>) and one that uses the default derivation path, in case you don't want or don't need to configure that (<code>Wallet::new_from_mnemonic_phrase</code>).</p>
 <p>Here's how you can create wallets with both mnemonic phrases and derivation paths:</p>
 <pre><code class="language-rust ignore">async fn create_wallet_from_mnemonic() {
     use fuels::prelude::*;
@@ -748,7 +748,7 @@ impl MyContract {
 <p><strong>Note:</strong> that is all <strong>generated</strong> code. No need to write any of that. Ever.</p>
 </blockquote>
 <blockquote>
-<p><strong>Note:</strong> the generated code might look different from one version to another, this is just an example to give an idea of what it looks like.</p>
+<p><strong>Note:</strong> the generated code might look different from one version to another, this is just an example to give you an idea of what it looks like.</p>
 </blockquote>
 <p>And, then, you're able to use it to call the actual methods on the deployed contract:</p>
 <pre><code class="language-rust ignore">    // This is an instance of your contract which you can use to make calls to your functions
