@@ -17,7 +17,8 @@ use crate::{setup_single_asset_coins, setup_test_client, wallets_config::Wallets
 
 pub async fn launch_provider_and_get_wallet() -> LocalWallet {
     let mut wallets =
-        launch_custom_provider_and_get_wallets(WalletsConfig::new_single(None, None), None, None).await;
+        launch_custom_provider_and_get_wallets(WalletsConfig::new_single(None, None), None, None)
+            .await;
 
     wallets.pop().unwrap()
 }
@@ -43,7 +44,8 @@ pub async fn launch_custom_provider_and_get_wallets(
         all_coins.extend(coins);
     }
 
-    let (provider, _) = setup_test_provider(all_coins, provider_config, consensus_parameters_config).await;
+    let (provider, _) =
+        setup_test_provider(all_coins, provider_config, consensus_parameters_config).await;
 
     wallets
         .iter_mut()
@@ -85,7 +87,8 @@ pub async fn launch_custom_provider_and_get_wallets(
         all_coins.extend(coins);
     }
 
-    let (provider, _) = setup_test_provider(all_coins, provider_config, consensus_parameters_config).await;
+    let (provider, _) =
+        setup_test_provider(all_coins, provider_config, consensus_parameters_config).await;
 
     wallets
         .iter_mut()
