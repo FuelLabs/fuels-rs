@@ -9,7 +9,7 @@ use fuels_core::{
     constants::{BASE_ASSET_ID, DEFAULT_SPENDABLE_COIN_AMOUNT},
     errors::Error,
     parameters::{CallParameters, TxParameters},
-    Detokenize, ParamType, ReturnLocation, Selector, Token,
+    ParamType, ReturnLocation, Selector, Token, Tokenizable,
 };
 use fuels_signers::{provider::Provider, LocalWallet, Signer};
 use std::collections::HashSet;
@@ -36,11 +36,13 @@ pub struct Contract {
 /// holds the decoded typed value returned by the contract's method. The other field
 /// holds all the receipts returned by the call.
 #[derive(Debug)]
+// ANCHOR: call_response
 pub struct CallResponse<D> {
     pub value: D,
     pub receipts: Vec<Receipt>,
     pub logs: Vec<String>,
 }
+// ANCHOR_END: call_response
 
 impl<D> CallResponse<D> {
     /// Get all the logs from LogData receipts
@@ -110,17 +112,15 @@ impl Contract {
     /// }
     /// For more details see `code_gen/functions_gen.rs`.
     /// Note that this needs a wallet because the contract instance needs a wallet for the calls
-    pub fn method_hash<D: Detokenize + Debug>(
+    pub fn method_hash<D: Tokenizable + Debug>(
         provider: &Provider,
         contract_id: ContractId,
         wallet: &LocalWallet,
         signature: Selector,
-        output_params: &[ParamType],
+        output_param: Option<ParamType>,
         args: &[Token],
     ) -> Result<ContractCallHandler<D>, Error> {
-        let mut encoder = ABIEncoder::new();
-
-        let encoded_args = encoder.encode(args).unwrap();
+        let encoded_args = ABIEncoder::encode(args).unwrap();
         let encoded_selector = signature;
 
         let tx_parameters = TxParameters::default();
@@ -136,7 +136,7 @@ impl Contract {
             compute_custom_input_offset,
             variable_outputs: None,
             external_contracts: None,
-            output_params: output_params.to_vec(),
+            output_param,
         };
 
         Ok(ContractCallHandler {
@@ -287,24 +287,19 @@ pub struct ContractCall {
     pub compute_custom_input_offset: bool,
     pub variable_outputs: Option<Vec<Output>>,
     pub external_contracts: Option<HashSet<ContractId>>,
-    pub output_params: Vec<ParamType>,
+    pub output_param: Option<ParamType>,
 }
 
 impl ContractCall {
     /// Based on the returned Contract's output_params and the receipts returned from a call,
     /// decode the values and return them.
-    pub fn get_decoded_output(&self, receipts: &mut Vec<Receipt>) -> Result<Vec<Token>, Error> {
-        // Multiple returns are handled as one `Tuple` (which has its own `ParamType`), so getting
-        // more than one output param is an error.
-        if self.output_params.len() != 1 {
-            return Err(Error::InvalidType(format!(
-                "Received too many output params (expected 1 got {})",
-                self.output_params.len()
-            )));
-        }
-        let output_param = self.output_params[0].clone();
+    pub fn get_decoded_output(
+        param_type: &ParamType,
+        receipts: &mut Vec<Receipt>,
+    ) -> Result<Token, Error> {
+        // Multiple returns are handled as one `Tuple` (which has its own `ParamType`)
 
-        let (encoded_value, index) = match output_param.get_return_location() {
+        let (encoded_value, index) = match param_type.get_return_location() {
             ReturnLocation::ReturnData => {
                 match receipts.iter().find(|&receipt| receipt.data().is_some()) {
                     Some(r) => {
@@ -328,7 +323,7 @@ impl ContractCall {
             receipts.remove(i);
         }
 
-        let decoded_value = ABIDecoder::decode(&self.output_params, &encoded_value)?;
+        let decoded_value = ABIDecoder::decode_single(param_type, &encoded_value)?;
         Ok(decoded_value)
     }
 }
@@ -346,7 +341,7 @@ pub struct ContractCallHandler<D> {
 
 impl<D> ContractCallHandler<D>
 where
-    D: Detokenize + Debug,
+    D: Tokenizable + Debug,
 {
     /// Sets external contracts as dependencies to this contract's call.
     /// Effectively, this will be used to create Input::Contract/Output::Contract
@@ -435,14 +430,14 @@ where
     }
 
     /// Create a CallResponse from call receipts
-    pub fn get_response(&self, mut receipts: Vec<Receipt>) -> Result<CallResponse<D>, Error> {
-        // If it's an ABI method without a return value, exit early.
-        if self.contract_call.output_params.is_empty() {
-            return Ok(CallResponse::new(D::from_tokens(vec![])?, receipts));
+    pub fn get_response(&self, receipts: Vec<Receipt>) -> Result<CallResponse<D>, Error> {
+        match self.contract_call.output_param.as_ref() {
+            None => Ok(CallResponse::new(D::from_token(Token::Unit)?, receipts)),
+            Some(param_type) => {
+                let (token, receipts) = ContractCall::get_decoded_output(param_type, receipts)?;
+                Ok(CallResponse::new(D::from_token(token)?, receipts))
+            }
         }
-
-        let decoded_value = self.contract_call.get_decoded_output(&mut receipts)?;
-        Ok(CallResponse::new(D::from_tokens(decoded_value)?, receipts))
     }
 }
 
@@ -555,12 +550,12 @@ impl MultiContractCallHandler {
 #[cfg(test)]
 mod test {
     use super::*;
-    use fuels_test_helpers::launch_provider_and_get_single_wallet;
+    use fuels_test_helpers::launch_provider_and_get_wallet;
 
     #[tokio::test]
     #[should_panic(expected = "called `Result::unwrap()` on an `Err` value: InvalidData(\"json\")")]
     async fn deploy_panics_on_non_binary_file() {
-        let wallet = launch_provider_and_get_single_wallet().await;
+        let wallet = launch_provider_and_get_wallet().await;
 
         // Should panic as we are passing in a JSON instead of BIN
         Contract::deploy(
@@ -575,7 +570,7 @@ mod test {
     #[tokio::test]
     #[should_panic(expected = "called `Result::unwrap()` on an `Err` value: InvalidData(\"json\")")]
     async fn deploy_with_salt_panics_on_non_binary_file() {
-        let wallet = launch_provider_and_get_single_wallet().await;
+        let wallet = launch_provider_and_get_wallet().await;
 
         // Should panic as we are passing in a JSON instead of BIN
         Contract::deploy_with_salt(

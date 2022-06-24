@@ -2,11 +2,10 @@ use core::fmt;
 use core::str::Utf8Error;
 pub type Result<T> = core::result::Result<T, Error>;
 use fuel_tx::Receipt;
-use std::net;
+use std::fmt::{Display, Formatter};
+use std::{error, net};
 use strum::ParseError;
 use thiserror::Error;
-
-use crate::InvalidOutputType;
 
 #[derive(Debug)]
 pub enum CodecError {
@@ -44,6 +43,8 @@ pub enum Error {
     ParseBoolError(#[from] std::str::ParseBoolError),
     #[error("Parse hex error: {0}")]
     ParseHexError(#[from] hex::FromHexError),
+    #[error("Parse token stream error: {0}")]
+    ParseTokenStreamError(String),
     #[error("Utf8 error: {0}")]
     Utf8Error(#[from] Utf8Error),
     #[error("Compilation error: {0}")]
@@ -75,13 +76,31 @@ impl From<ParseError> for Error {
     }
 }
 
-impl From<InvalidOutputType> for Error {
-    fn from(err: InvalidOutputType) -> Error {
-        Error::ContractCallError(err.0, vec![])
-    }
-}
 impl From<std::io::Error> for Error {
     fn from(err: std::io::Error) -> Error {
         Error::ContractCallError(err.to_string(), vec![])
+    }
+}
+
+impl From<proc_macro2::LexError> for Error {
+    fn from(err: proc_macro2::LexError) -> Error {
+        Error::ParseTokenStreamError(err.to_string())
+    }
+}
+
+#[derive(Debug)]
+pub struct InstantiationError(pub String);
+
+impl Display for InstantiationError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl error::Error for InstantiationError {}
+
+impl From<InstantiationError> for Error {
+    fn from(err: InstantiationError) -> Self {
+        Error::InvalidData(err.0)
     }
 }

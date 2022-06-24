@@ -1,27 +1,54 @@
 //! Testing helpers/utilities for Fuel SDK.
 
-pub use fuel_core::service::Config;
+use std::collections::HashSet;
+use std::net::SocketAddr;
+
+#[cfg(feature = "fuel-core-lib")]
 use fuel_core::{
     chain_config::{ChainConfig, CoinConfig, StateConfig},
     model::{Coin, CoinStatus},
     service::{DbType, FuelService},
 };
+
+#[cfg(feature = "fuel-core-lib")]
+pub use fuel_core::service::Config;
+
+#[cfg(not(feature = "fuel-core-lib"))]
+pub use node::{CoinConfig, Config};
+
+#[cfg(not(feature = "fuel-core-lib"))]
+use fuel_core_interfaces::model::{Coin, CoinStatus};
+
+#[cfg(not(feature = "fuel-core-lib"))]
+use portpicker::pick_unused_port;
+
+#[cfg(not(feature = "fuel-core-lib"))]
+use serde_json::Value;
+
+#[cfg(not(feature = "fuel-core-lib"))]
+use crate::node::spawn_fuel_service;
+
 use fuel_gql_client::{
     client::FuelClient,
     fuel_tx::{Address, Bytes32, UtxoId},
 };
+
 use fuels_core::constants::BASE_ASSET_ID;
 use fuels_signers::fuel_crypto::fuel_types::AssetId;
+use fuels_signers::fuel_crypto::rand;
 use rand::Fill;
-use std::collections::HashSet;
-use std::net::SocketAddr;
+
+#[cfg(not(feature = "fuel-core-lib"))]
+mod node;
 
 mod script;
 #[cfg(feature = "fuels-signers")]
 mod signers;
 mod wallets_config;
 
-pub use script::*;
+#[cfg(not(feature = "fuel-core-lib"))]
+pub use node::*;
+
 #[cfg(feature = "fuels-signers")]
 pub use signers::*;
 pub use wallets_config::*;
@@ -97,9 +124,10 @@ pub fn setup_single_asset_coins(
 
 // Setup a test client with the given coins. We return the SocketAddr so the launched node
 // client can be connected to more easily (even though it is often ignored).
+#[cfg(feature = "fuel-core-lib")]
 pub async fn setup_test_client(
     coins: Vec<(UtxoId, Coin)>,
-    node_config: Config,
+    node_config: Option<Config>,
 ) -> (FuelClient, SocketAddr) {
     let coin_configs = coins
         .into_iter()
@@ -125,7 +153,7 @@ pub async fn setup_test_client(
         },
         database_type: DbType::InMemory,
         utxo_validation: true,
-        ..node_config
+        ..node_config.unwrap_or_else(Config::local_node)
     };
 
     let srv = FuelService::new_node(config).await.unwrap();
@@ -134,9 +162,53 @@ pub async fn setup_test_client(
     (client, srv.bound_address)
 }
 
+#[cfg(not(feature = "fuel-core-lib"))]
+pub async fn setup_test_client(
+    coins: Vec<(UtxoId, Coin)>,
+    node_config: Option<Config>,
+) -> (FuelClient, SocketAddr) {
+    let coin_configs: Vec<Value> = coins
+        .into_iter()
+        .map(|(utxo_id, coin)| {
+            serde_json::to_value(&CoinConfig {
+                tx_id: Some(*utxo_id.tx_id()),
+                output_index: Some(utxo_id.output_index() as u64),
+                block_created: Some(coin.block_created),
+                maturity: Some(coin.maturity),
+                owner: coin.owner,
+                amount: coin.amount,
+                asset_id: coin.asset_id,
+            })
+            .unwrap()
+        })
+        .collect();
+
+    let result = serde_json::to_string(&coin_configs).expect("Failed to stringify coins vector");
+
+    let config_with_coins: Value =
+        serde_json::from_str(result.as_str()).expect("Failed to build config_with_coins JSON");
+
+    let srv_address = if let Some(node_config) = node_config {
+        node_config.addr
+    } else {
+        let free_port = pick_unused_port().expect("No ports free");
+        SocketAddr::new("127.0.0.1".parse().unwrap(), free_port)
+    };
+
+    spawn_fuel_service(config_with_coins, srv_address.port());
+
+    let client = FuelClient::from(srv_address);
+
+    server_health_check(&client).await;
+
+    (client, srv_address)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fuels_signers::{LocalWallet, Signer};
+    use std::net::Ipv4Addr;
 
     #[tokio::test]
     async fn test_setup_single_asset_coins() {
@@ -188,5 +260,28 @@ mod tests {
                 assert_eq!(coin.amount, amount_per_coin);
             }
         }
+    }
+
+    #[tokio::test]
+    async fn test_setup_test_client_custom_config() {
+        let socket = SocketAddr::new(Ipv4Addr::new(127, 0, 0, 1).into(), 5000);
+
+        let wallet = LocalWallet::new_random(None);
+
+        let coins: Vec<(UtxoId, Coin)> = setup_single_asset_coins(
+            wallet.address(),
+            Default::default(),
+            DEFAULT_NUM_COINS,
+            DEFAULT_COIN_AMOUNT,
+        );
+
+        let config = Config {
+            addr: socket,
+            ..Config::local_node()
+        };
+
+        let wallets = setup_test_client(coins, Some(config)).await;
+
+        assert_eq!(wallets.1, socket);
     }
 }

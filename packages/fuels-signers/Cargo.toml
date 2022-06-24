@@ -1,6 +1,6 @@
 [package]
 name = "fuels-signers"
-version = "0.15.3"
+version = "0.16.1"
 authors = ["Fuel Labs <contact@fuel.sh>"]
 edition = "2021"
 homepage = "https://fuel.network/"
@@ -15,10 +15,10 @@ coins-bip32 = "0.6.0"
 coins-bip39 = "0.6.0"
 elliptic-curve = { version = "0.11.6", default-features = false }
 eth-keystore = { version = "0.3.0" }
-fuel-core = { version = "0.8", default-features = false, optional = true }
+fuel-core = { version = "0.9", default-features = false, optional = true }
 fuel-crypto = { version = "0.5", features = ["random"] }
-fuel-gql-client = { version = "0.8", default-features = false }
-fuels-core = { version = "0.15.3", path = "../fuels-core" }
+fuel-gql-client = { version = "0.9", default-features = false }
+fuels-core = { version = "0.16.1", path = "../fuels-core" }
 hex = { version = "0.4.3", default-features = false, features = ["std"] }
 rand = { version = "0.8.4", default-features = false }
 serde = { version = "1.0.124", default-features = true, features = ["derive"] }
@@ -27,10 +27,10 @@ thiserror = { version = "1.0.30", default-features = false }
 tokio = { version = "1.10.1", features = ["full"] }
 
 [dev-dependencies]
-hex = { version = "0.4.3", default-features = false, features = ["std"] }
 fuel-types = { version = "0.5", default-features = false, features = ["random"] }
 fuels = { path = "../fuels" }
 fuels-test-helpers = { path = "../fuels-test-helpers", default-features = false }
+hex = { version = "0.4.3", default-features = false, features = ["std"] }
 tempfile = "3.3.0"
 
 [features]
