@@ -4,7 +4,7 @@ At a high level, the Fuel Rust SDK can be used to build Rust-based applications 
 
 For this interaction to work, the SDK must be able to communicate to a `fuel-core` node; you have two options at your disposal:
 
-1. Use the SDK's native `launch_provider_and_get_single_wallet()` that runs a short-lived test Fuel node;
+1. Use the SDK's native `launch_provider_and_get_wallet()` that runs a short-lived test Fuel node;
 2. Run a Fuel node outside your SDK code (using `fuel-core`) and point your SDK to that node's IP and port.
 
 The first option is ideal for contract testing, as you can quickly spin up and tear down nodes between specific test cases.
@@ -156,7 +156,7 @@ The `gas_forwarded` parameter defines the limit for the actual contract call as 
 
 ### `CallResponse`: Reading returned values
 
-You've probably noticed that you're often chaining `.call().await.unwrap(). That's because:
+You've probably noticed that you're often chaining `.call().await.unwrap()`. That's because:
 
 1. You have to choose between `.call()` and `.simulate()` (more on this in the next section);
 2. Contract calls are asynchronous, so you can choose to either `.await` it or perform concurrent tasks, making full use of Rust's async;
@@ -186,7 +186,7 @@ Sometimes you want to call a contract method that doesn't change the state of th
 
 In this case, there's no need to generate an actual blockchain transaction; you only want to quickly read a value.
 
-You can do this with the SDK by, instead of `.call()`ing the method, using `.simulate()` instead:
+You can do this with the SDK. Instead of `.call()`ing the method, use `.simulate()`:
 
 ```rust,ignore
 {{#include ../../../examples/contracts/src/lib.rs:simulate}}
