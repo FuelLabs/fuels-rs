@@ -12,8 +12,8 @@ use fuel_gql_client::{
 use fuels_core::constants::{DEFAULT_SPENDABLE_COIN_AMOUNT, WORD_SIZE};
 use fuels_core::errors::Error;
 use fuels_core::parameters::TxParameters;
-use std::collections::HashSet;
 use fuels_signers::{LocalWallet, Signer};
+use std::collections::HashSet;
 
 use crate::contract::ContractCall;
 
@@ -333,7 +333,7 @@ mod test {
                 compute_custom_input_offset: i == 1,
                 variable_outputs: None,
                 external_contracts: None,
-                output_params: vec![],
+                output_param: None,
             })
             .collect();
 

@@ -430,11 +430,11 @@ where
     }
 
     /// Create a CallResponse from call receipts
-    pub fn get_response(&self, receipts: Vec<Receipt>) -> Result<CallResponse<D>, Error> {
+    pub fn get_response(&self, mut receipts: Vec<Receipt>) -> Result<CallResponse<D>, Error> {
         match self.contract_call.output_param.as_ref() {
             None => Ok(CallResponse::new(D::from_token(Token::Unit)?, receipts)),
             Some(param_type) => {
-                let (token, receipts) = ContractCall::get_decoded_output(param_type, receipts)?;
+                let token = ContractCall::get_decoded_output(param_type, &mut receipts)?;
                 Ok(CallResponse::new(D::from_token(token)?, receipts))
             }
         }
@@ -463,7 +463,7 @@ impl MultiContractCallHandler {
 
     /// Adds a contract call to be bundled in the transaction
     /// Note that this is a builder method
-    pub fn add_call<D: Detokenize>(&mut self, call_handler: ContractCallHandler<D>) -> &mut Self {
+    pub fn add_call<D: Tokenizable>(&mut self, call_handler: ContractCallHandler<D>) -> &mut Self {
         match self.contract_calls.as_mut() {
             Some(c) => c.push(call_handler.contract_call),
             None => self.contract_calls = Some(vec![call_handler.contract_call]),
@@ -473,7 +473,7 @@ impl MultiContractCallHandler {
 
     /// Clears all added contract calls
     /// Note that this is a builder method
-    pub fn clear_calls<D: Detokenize>(&mut self) -> &mut Self {
+    pub fn clear_calls<D: Tokenizable>(&mut self) -> &mut Self {
         if let Some(calls) = self.contract_calls.as_mut() {
             calls.clear()
         }
@@ -498,19 +498,19 @@ impl MultiContractCallHandler {
     }
 
     /// Call contract methods on the node, in a state-modifying manner.
-    pub async fn call<D: Detokenize + Debug>(&self) -> Result<MultiCallResponse<D>, Error> {
+    pub async fn call<D: Tokenizable + Debug>(&self) -> Result<MultiCallResponse<D>, Error> {
         Self::call_or_simulate(self, false).await
     }
 
     /// Call contract methods on the node, in a simulated manner, meaning the state of the
     /// blockchain is *not* modified but simulated.
     /// It is the same as the `call` method because the API is more user-friendly this way.
-    pub async fn simulate<D: Detokenize + Debug>(&self) -> Result<MultiCallResponse<D>, Error> {
+    pub async fn simulate<D: Tokenizable + Debug>(&self) -> Result<MultiCallResponse<D>, Error> {
         Self::call_or_simulate(self, true).await
     }
 
     #[tracing::instrument]
-    async fn call_or_simulate<D: Detokenize + Debug>(
+    async fn call_or_simulate<D: Tokenizable + Debug>(
         &self,
         simulate: bool,
     ) -> Result<MultiCallResponse<D>, Error> {
@@ -527,21 +527,23 @@ impl MultiContractCallHandler {
     }
 
     /// Create a MultiCallResponse from call receipts
-    pub fn get_response<D: Detokenize + Debug>(
+    pub fn get_response<D: Tokenizable + Debug>(
         &self,
         mut receipts: Vec<Receipt>,
     ) -> Result<MultiCallResponse<D>, Error> {
         let mut final_tokens = vec![];
 
         for call in self.contract_calls.as_ref().unwrap().iter() {
-            let decoded = call.get_decoded_output(&mut receipts)?;
+            // We only aggregate the tokens if the contract call has an output parameter
+            if let Some(param_type) = call.output_param.as_ref() {
+                let decoded = ContractCall::get_decoded_output(param_type, &mut receipts)?;
 
-            final_tokens.extend(decoded.clone());
+                final_tokens.push(decoded.clone());
+            }
         }
 
-        let tokens_as_tuple = vec![Token::Tuple(final_tokens)];
-
-        let response = MultiCallResponse::<D>::new(D::from_tokens(tokens_as_tuple)?, receipts);
+        let tokens_as_tuple = Token::Tuple(final_tokens);
+        let response = MultiCallResponse::<D>::new(D::from_token(tokens_as_tuple)?, receipts);
 
         Ok(response)
     }
