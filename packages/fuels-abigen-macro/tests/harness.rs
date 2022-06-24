@@ -1818,25 +1818,22 @@ async fn test_multi_call() {
     )
     .await
     .unwrap();
-    println!("Contract deployed @ {:x}", contract_id);
 
     let contract_instance = MyContract::new(contract_id.to_string(), wallet.clone());
 
     let call_handler_1 = contract_instance.initialize_counter(42);
-    let call_handler_2 = contract_instance.increment_counter(10);
+    let call_handler_2 = contract_instance.get_array([42; 2].to_vec());
 
-    let tx_params = TxParameters::new(None, Some(1000), None, None);
-    let multi_call_handler =
-        MultiContractCallHandler::new(vec![call_handler_1, call_handler_2], wallet);
+    let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
 
-    let response = multi_call_handler
-        .tx_params(tx_params)
-        .call()
-        .await
-        .unwrap();
+    multi_call_handler
+        .add_call(call_handler_1)
+        .add_call(call_handler_2);
 
-    assert_eq!(response.values[0].unwrap(), 42);
-    assert_eq!(response.values[1].unwrap(), 52);
+    let (counter, array): (u64, Vec<u64>) = multi_call_handler.call().await.unwrap().values;
+
+    assert_eq!(counter, 42);
+    assert_eq!(array, [42; 2]);
 }
 
 #[tokio::test]
@@ -1860,16 +1857,19 @@ async fn test_multi_call_script_workflow() {
     let contract_instance = MyContract::new(contract_id.to_string(), wallet.clone());
 
     let call_handler_1 = contract_instance.initialize_counter(42);
-    let call_handler_2 = contract_instance.increment_counter(10);
-    let multi_call_handler =
-        MultiContractCallHandler::new(vec![call_handler_1, call_handler_2], wallet.clone());
+    let call_handler_2 = contract_instance.get_array([42; 2].to_vec());
+
+    let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
+
+    multi_call_handler
+        .add_call(call_handler_1)
+        .add_call(call_handler_2);
 
     let script = multi_call_handler.get_script().await;
-    assert!(script.tx.is_script());
-
     let receipts = script.call(client).await.unwrap();
+    let (counter, array): (u64, Vec<u64>) =
+        multi_call_handler.get_response(receipts).unwrap().values;
 
-    let response = multi_call_handler.get_response(receipts).unwrap();
-    assert_eq!(response.values[0].unwrap(), 42);
-    assert_eq!(response.values[1].unwrap(), 52);
+    assert_eq!(counter, 42);
+    assert_eq!(array, [42; 2]);
 }

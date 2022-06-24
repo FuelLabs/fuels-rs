@@ -43,40 +43,37 @@ pub struct CallResponse<D> {
 }
 
 impl<D> CallResponse<D> {
-    pub fn new(value: D, receipts: Vec<Receipt>) -> Self {
-        // Get all the logs from LogData receipts and put them in the `logs` property
-        let logs_vec = receipts
+    /// Get all the logs from LogData receipts
+    pub fn get_logs(receipts: &[Receipt]) -> Vec<String> {
+        receipts
             .iter()
             .filter(|r| matches!(r, Receipt::LogData { .. }))
             .map(|r| hex::encode(r.data().unwrap()))
-            .collect::<Vec<String>>();
+            .collect::<Vec<String>>()
+    }
+
+    pub fn new(value: D, receipts: Vec<Receipt>) -> Self {
         Self {
             value,
+            logs: Self::get_logs(&receipts),
             receipts,
-            logs: logs_vec,
         }
     }
 }
 
 #[derive(Debug)]
 pub struct MultiCallResponse<D> {
-    pub values: Vec<Option<D>>,
+    pub values: D,
     pub receipts: Vec<Receipt>,
     pub logs: Vec<String>,
 }
 
 impl<D> MultiCallResponse<D> {
-    pub fn new(values: Vec<Option<D>>, receipts: Vec<Receipt>) -> Self {
-        // Get all the logs from LogData receipts and put them in the `logs` property
-        let logs_vec = receipts
-            .iter()
-            .filter(|r| matches!(r, Receipt::LogData { .. }))
-            .map(|r| hex::encode(r.data().unwrap()))
-            .collect::<Vec<String>>();
+    pub fn new(values: D, receipts: Vec<Receipt>) -> Self {
         Self {
             values,
+            logs: CallResponse::<D>::get_logs(&receipts),
             receipts,
-            logs: logs_vec,
         }
     }
 }
@@ -452,44 +449,45 @@ where
 #[derive(Debug)]
 #[must_use = "contract calls do nothing unless you `call` them"]
 /// Helper that handles bundling multiple calls into a single transaction
-pub struct MultiContractCallHandler<D> {
-    pub contract_calls: Vec<ContractCall>,
+pub struct MultiContractCallHandler {
+    pub contract_calls: Option<Vec<ContractCall>>,
     pub tx_parameters: TxParameters,
     pub wallet: LocalWallet,
     pub fuel_client: FuelClient,
-    pub datatype: PhantomData<D>,
 }
 
-impl<D> MultiContractCallHandler<D>
-where
-    D: Detokenize + Debug,
-{
-    pub fn new(call_handlers: Vec<ContractCallHandler<D>>, wallet: LocalWallet) -> Self {
-        let contract_calls = call_handlers
-            .into_iter()
-            .map(|handler| handler.contract_call)
-            .collect();
-
+impl MultiContractCallHandler {
+    pub fn new(wallet: LocalWallet) -> Self {
         Self {
-            contract_calls,
+            contract_calls: None,
             tx_parameters: TxParameters::default(),
             fuel_client: wallet.get_provider().unwrap().client.clone(),
             wallet,
-            datatype: PhantomData,
         }
     }
 
     /// Adds a contract call to be bundled in the transaction
     /// Note that this is a builder method
-    pub fn add_call(mut self, call_handler: ContractCallHandler<D>) -> Self {
-        self.contract_calls.push(call_handler.contract_call);
+    pub fn add_call<D: Detokenize>(&mut self, call_handler: ContractCallHandler<D>) -> &mut Self {
+        match self.contract_calls.as_mut() {
+            Some(c) => c.push(call_handler.contract_call),
+            None => self.contract_calls = Some(vec![call_handler.contract_call]),
+        }
+        self
+    }
 
+    /// Clears all added contract calls
+    /// Note that this is a builder method
+    pub fn clear_calls<D: Detokenize>(&mut self) -> &mut Self {
+        if let Some(calls) = self.contract_calls.as_mut() {
+            calls.clear()
+        }
         self
     }
 
     /// Sets the transaction parameters for a given transaction.
     /// Note that this is a builder method
-    pub fn tx_params(mut self, params: TxParameters) -> Self {
+    pub fn tx_params(&mut self, params: TxParameters) -> &mut Self {
         self.tx_parameters = params;
         self
     }
@@ -497,7 +495,7 @@ where
     /// Returns the script that executes the contract calls
     pub async fn get_script(&self) -> Script {
         Script::from_contract_calls(
-            self.contract_calls.iter().collect(),
+            self.contract_calls.as_ref().unwrap().iter().collect(),
             &self.tx_parameters,
             &self.wallet,
         )
@@ -505,19 +503,22 @@ where
     }
 
     /// Call contract methods on the node, in a state-modifying manner.
-    pub async fn call(self) -> Result<MultiCallResponse<D>, Error> {
+    pub async fn call<D: Detokenize + Debug>(&self) -> Result<MultiCallResponse<D>, Error> {
         Self::call_or_simulate(self, false).await
     }
 
     /// Call contract methods on the node, in a simulated manner, meaning the state of the
     /// blockchain is *not* modified but simulated.
     /// It is the same as the `call` method because the API is more user-friendly this way.
-    pub async fn simulate(self) -> Result<MultiCallResponse<D>, Error> {
+    pub async fn simulate<D: Detokenize + Debug>(&self) -> Result<MultiCallResponse<D>, Error> {
         Self::call_or_simulate(self, true).await
     }
 
     #[tracing::instrument]
-    async fn call_or_simulate(self, simulate: bool) -> Result<MultiCallResponse<D>, Error> {
+    async fn call_or_simulate<D: Detokenize + Debug>(
+        &self,
+        simulate: bool,
+    ) -> Result<MultiCallResponse<D>, Error> {
         let script = self.get_script().await;
 
         let receipts = if simulate {
@@ -528,25 +529,26 @@ where
         tracing::debug!(target: "receipts", "{:?}", receipts);
 
         self.get_response(receipts)
-        //receipts
     }
 
     /// Create a MultiCallResponse from call receipts
-    pub fn get_response(&self, mut receipts: Vec<Receipt>) -> Result<MultiCallResponse<D>, Error> {
-        let mut values = vec![];
+    pub fn get_response<D: Detokenize + Debug>(
+        &self,
+        mut receipts: Vec<Receipt>,
+    ) -> Result<MultiCallResponse<D>, Error> {
+        let mut final_tokens = vec![];
 
-        for call in self.contract_calls.iter() {
-            let decoded_value = if call.output_params.is_empty() {
-                None
-            } else {
-                let decoded = call.get_decoded_output(&mut receipts)?;
-                Some(D::from_tokens(decoded)?)
-            };
+        for call in self.contract_calls.as_ref().unwrap().iter() {
+            let decoded = call.get_decoded_output(&mut receipts)?;
 
-            values.push(decoded_value);
+            final_tokens.extend(decoded.clone());
         }
 
-        Ok(MultiCallResponse::new(values, receipts))
+        let tokens_as_tuple = vec![Token::Tuple(final_tokens)];
+
+        let response = MultiCallResponse::<D>::new(D::from_tokens(tokens_as_tuple)?, receipts);
+
+        Ok(response)
     }
 }
 
