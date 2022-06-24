@@ -1976,8 +1976,10 @@ async fn test_multi_call_script_workflow() {
 
     let script = multi_call_handler.get_script().await;
     let receipts = script.call(client).await.unwrap();
-    let (counter, array) =
-        multi_call_handler.get_response::<(u64, Vec<u64>)>(receipts).unwrap().value;
+    let (counter, array) = multi_call_handler
+        .get_response::<(u64, Vec<u64>)>(receipts)
+        .unwrap()
+        .value;
 
     assert_eq!(counter, 42);
     assert_eq!(array, [42; 2]);

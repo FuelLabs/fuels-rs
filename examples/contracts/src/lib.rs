@@ -402,8 +402,8 @@ async fn multi_call_example() {
         &wallet,
         TxParameters::default(),
     )
-        .await
-        .unwrap();
+    .await
+    .unwrap();
 
     // ANCHOR: multi_call_prepare
     let contract_instance = MyContract::new(contract_id.to_string(), wallet.clone());
