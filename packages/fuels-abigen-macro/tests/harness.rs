@@ -1939,7 +1939,7 @@ async fn test_multi_call() {
         .add_call(call_handler_1)
         .add_call(call_handler_2);
 
-    let (counter, array): (u64, Vec<u64>) = multi_call_handler.call().await.unwrap().values;
+    let (counter, array): (u64, Vec<u64>) = multi_call_handler.call().await.unwrap().value;
 
     assert_eq!(counter, 42);
     assert_eq!(array, [42; 2]);
@@ -1976,8 +1976,8 @@ async fn test_multi_call_script_workflow() {
 
     let script = multi_call_handler.get_script().await;
     let receipts = script.call(client).await.unwrap();
-    let (counter, array): (u64, Vec<u64>) =
-        multi_call_handler.get_response(receipts).unwrap().values;
+    let (counter, array) =
+        multi_call_handler.get_response::<(u64, Vec<u64>)>(receipts).unwrap().value;
 
     assert_eq!(counter, 42);
     assert_eq!(array, [42; 2]);
