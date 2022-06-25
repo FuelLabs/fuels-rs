@@ -1976,7 +1976,8 @@ async fn contract_method_call_respects_maturity() -> anyhow::Result<()> {
     assert_eq!(provider.latest_block_height().await?, 1);
     call_w_maturity(1).await.expect("Should have passed since we're calling with a maturity that is less or equal to the current block height");
 
-    call_w_maturity(2).await.err().expect("Should have failed since we're calling with a maturity that is greater than the current block height");
+    assert_eq!(provider.latest_block_height().await?, 2);
+    call_w_maturity(3).await.err().expect("Should have failed since we're calling with a maturity that is greater than the current block height");
 
     Ok(())
 }
@@ -1989,9 +1990,9 @@ async fn can_increase_block_height() -> anyhow::Result<()> {
 
     assert_eq!(provider.latest_block_height().await?, 0);
 
-    add_blocks(&wallet, 20).await?;
+    add_blocks(&wallet, 3).await?;
 
-    assert_eq!(provider.latest_block_height().await?, 20);
+    assert_eq!(provider.latest_block_height().await?, 3);
     // ANCHOR_END: uses_add_blocks_to_increase_block_height
     Ok(())
 }

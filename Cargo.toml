@@ -22,4 +22,4 @@ members = [
 ]
 
 [patch.crates-io]
-fuel-core = { path = '/home/segfault_magnet/fuel/github/fuel-core/fuel-core' }
+fuel-vm = { git = 'https://github.com/FuelLabs/fuel-vm', branch = 'Voxelot/maturity-validation'}
