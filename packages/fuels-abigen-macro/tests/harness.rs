@@ -1921,8 +1921,10 @@ async fn contract_deployment_respects_maturity() -> anyhow::Result<()> {
 
     let wallet = launch_provider_and_get_wallet().await;
 
-    let mut parameters = TxParameters::default();
-    parameters.maturity = 1;
+    let parameters = TxParameters {
+        maturity: 1,
+        ..Default::default()
+    };
 
     let deploy_the_contract = || {
         Contract::deploy(
