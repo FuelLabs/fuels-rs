@@ -20,3 +20,6 @@ members = [
     "scripts/build-test-projects",
     "tools/fuels-abi-cli",
 ]
+
+[patch.crates-io]
+fuel-core = { path = '/home/segfault_magnet/fuel/github/fuel-core/fuel-core' }

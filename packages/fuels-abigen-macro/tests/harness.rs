@@ -1,6 +1,5 @@
 use fuel_gql_client::fuel_tx::{AssetId, ContractId, Receipt};
 use sha2::{Digest, Sha256};
-use std::io;
 use std::str::FromStr;
 
 use fuels::prelude::{
@@ -8,7 +7,7 @@ use fuels::prelude::{
     setup_test_provider, CallParameters, Contract, Error, LocalWallet, Provider, Signer,
     TxParameters, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
 };
-use fuels::test_helpers::{add_blocks, current_block_height};
+use fuels::test_helpers::add_blocks;
 use fuels_core::tx::Address;
 use fuels_core::Tokenizable;
 use fuels_core::{constants::BASE_ASSET_ID, Token};
@@ -1914,49 +1913,85 @@ async fn nested_enums_are_correctly_encoded_decoded() {
 }
 
 #[tokio::test]
-async fn can_set_transaction_height() -> io::Result<()> {
+async fn contract_deployment_respects_maturity() -> anyhow::Result<()> {
     abigen!(
         MyContract,
         "packages/fuels-abigen-macro/tests/test_projects/transaction_block_height/out/debug/transaction_block_height-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
-    let client = &wallet.get_provider().unwrap().client.clone();
 
-    assert_eq!(current_block_height(client).await?, 0);
+    let mut parameters = TxParameters::default();
+    parameters.maturity = 1;
+
+    let deploy_the_contract = |params| {
+        Contract::deploy(
+            "tests/test_projects/transaction_block_height/out/debug/transaction_block_height.bin",
+            &wallet,
+            params,
+        )
+    };
+
+    deploy_the_contract(parameters)
+        .await
+        .err()
+        .expect("Should have failed because the block height was less than the requested maturity");
+
+    add_blocks(&wallet, 1).await?;
+
+    deploy_the_contract(parameters).await.expect(
+        "Should have passed because the block height was greater or equal than the requested maturity",
+    );
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn contract_method_call_respects_maturity() -> anyhow::Result<()> {
+    abigen!(
+        MyContract,
+        "packages/fuels-abigen-macro/tests/test_projects/transaction_block_height/out/debug/transaction_block_height-abi.json"
+    );
+
+    let wallet = launch_provider_and_get_wallet().await;
+    let provider = &wallet.get_provider().unwrap().clone();
+
+    let parameters = TxParameters::default();
 
     let id = Contract::deploy(
         "tests/test_projects/transaction_block_height/out/debug/transaction_block_height.bin",
         &wallet,
-        TxParameters::default(),
+        parameters,
     )
-    .await
-    .unwrap();
-    assert_eq!(current_block_height(client).await?, 1);
+    .await?;
 
-    let instance = MyContract::new(id.to_string(), wallet);
-    instance.test_function().call().await.unwrap();
-    assert_eq!(current_block_height(client).await?, 2);
+    let instance = MyContract::new(id.to_string(), wallet.clone());
 
-    let mut something = instance.test_function();
-    something.tx_parameters.maturity = 1;
-    let result = something.call().await;
-    assert_eq!(current_block_height(client).await?, 2);
+    let call_w_maturity = |call_maturity| {
+        let mut prepared_call = instance.test_function();
+        prepared_call.tx_parameters.maturity = call_maturity;
+        prepared_call.call()
+    };
 
-    let expected = result.unwrap().value;
-    assert_eq!(expected, 12345);
+    assert_eq!(provider.latest_block_height().await?, 1);
+    call_w_maturity(1).await.expect("Should have passed since we're calling with a maturity that is less or equal to the current block height");
+
+    call_w_maturity(2).await.err().expect("Should have failed since we're calling with a maturity that is greater than the current block height");
+
     Ok(())
 }
 
 #[tokio::test]
 async fn can_increase_block_height() -> anyhow::Result<()> {
+    // ANCHOR: uses_add_blocks_to_increase_block_height
     let wallet = launch_provider_and_get_wallet().await;
-    let client = &wallet.get_provider().unwrap().client;
+    let provider = &wallet.get_provider().unwrap();
 
-    assert_eq!(current_block_height(client).await?, 0);
+    assert_eq!(provider.latest_block_height().await?, 0);
 
     add_blocks(&wallet, 20).await?;
 
-    assert_eq!(current_block_height(client).await?, 20);
+    assert_eq!(provider.latest_block_height().await?, 20);
+    // ANCHOR_END: uses_add_blocks_to_increase_block_height
     Ok(())
 }
