@@ -1924,22 +1924,22 @@ async fn contract_deployment_respects_maturity() -> anyhow::Result<()> {
     let mut parameters = TxParameters::default();
     parameters.maturity = 1;
 
-    let deploy_the_contract = |params| {
+    let deploy_the_contract = || {
         Contract::deploy(
             "tests/test_projects/transaction_block_height/out/debug/transaction_block_height.bin",
             &wallet,
-            params,
+            parameters,
         )
     };
 
-    deploy_the_contract(parameters)
+    deploy_the_contract()
         .await
         .err()
         .expect("Should have failed because the block height was less than the requested maturity");
 
     add_blocks(&wallet, 1).await?;
 
-    deploy_the_contract(parameters).await.expect(
+    deploy_the_contract().await.expect(
         "Should have passed because the block height was greater or equal than the requested maturity",
     );
 
