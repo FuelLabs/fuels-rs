@@ -188,10 +188,9 @@ pub async fn setup_test_client(
     let config_with_coins: Value =
         serde_json::from_str(result.as_str()).expect("Failed to build config_with_coins JSON");
 
-    let srv_address = if node_config.is_some() && node_config.as_ref().unwrap().addr.port() != 0 {
-        node_config.unwrap().addr
-    } else {
-        get_socket_address()
+    let srv_address = match node_config {
+        Some(config) if config.addr.port() != 0 => config.addr,
+        _ => get_socket_address(),
     };
 
     spawn_fuel_service(config_with_coins, srv_address.port());
