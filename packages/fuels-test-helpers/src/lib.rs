@@ -188,11 +188,10 @@ pub async fn setup_test_client(
     let config_with_coins: Value =
         serde_json::from_str(result.as_str()).expect("Failed to build config_with_coins JSON");
 
-    let srv_address = if let Some(node_config) = node_config {
-        node_config.addr
+    let srv_address = if node_config.is_some() && node_config.as_ref().unwrap().addr.port() != 0 {
+        node_config.unwrap().addr
     } else {
-        let free_port = pick_unused_port().expect("No ports free");
-        SocketAddr::new("127.0.0.1".parse().unwrap(), free_port)
+        get_socket_address()
     };
 
     spawn_fuel_service(config_with_coins, srv_address.port());
@@ -202,6 +201,12 @@ pub async fn setup_test_client(
     server_health_check(&client).await;
 
     (client, srv_address)
+}
+
+#[cfg(not(feature = "fuel-core-lib"))]
+fn get_socket_address() -> SocketAddr {
+    let free_port = pick_unused_port().expect("No ports free");
+    SocketAddr::new("127.0.0.1".parse().unwrap(), free_port)
 }
 
 #[cfg(test)]
