@@ -1,11 +1,10 @@
 contract;
 
 abi MyContract {
-    fn test_function() -> u64;
+    fn test_function();
 }
 
 impl MyContract for Contract {
-    fn test_function() -> u64 {
-        12345u64
+    fn test_function() {
     }
 }
