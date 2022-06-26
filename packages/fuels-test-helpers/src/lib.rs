@@ -189,7 +189,8 @@ pub async fn setup_test_client(
         serde_json::from_str(result.as_str()).expect("Failed to build config_with_coins JSON");
 
     let srv_address = match node_config {
-        Some(config) if config.addr.port() != 0 => config.addr,
+        Some(config) if config.addr.port() != 0  && is_free(config.addr.port()) => config.addr,
+        Some(config) if !is_free(config.addr.port()) => panic!("Error: Address already in use"),
         _ => get_socket_address(),
     };
 
