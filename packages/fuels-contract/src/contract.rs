@@ -464,7 +464,11 @@ impl MultiContractCallHandler {
     /// Returns the script that executes the contract calls
     pub async fn get_script(&self) -> Script {
         Script::from_contract_calls(
-            self.contract_calls.as_ref().unwrap().iter().collect(),
+            self.contract_calls
+                .as_ref()
+                .expect("No calls added. Have you used '.add_calls()'?")
+                .iter()
+                .collect(),
             &self.tx_parameters,
             &self.wallet,
         )

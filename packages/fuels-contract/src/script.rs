@@ -14,6 +14,7 @@ use fuels_core::errors::Error;
 use fuels_core::parameters::TxParameters;
 use fuels_signers::{LocalWallet, Signer};
 use std::collections::HashSet;
+use std::iter;
 
 use crate::contract::ContractCall;
 
@@ -188,14 +189,18 @@ impl Script {
         let mut outputs: Vec<Output> = vec![];
 
         // Get all unique contract ids
-        let mut contract_ids = HashSet::new();
-        calls.iter().for_each(|call| {
-            contract_ids.insert(call.contract_id);
-
-            if let Some(external_contracts) = call.external_contracts.clone() {
-                contract_ids.extend(external_contracts);
-            }
-        });
+        let contract_ids: HashSet<ContractId> = calls
+            .iter()
+            .flat_map(|call| {
+                let mut ids = call
+                    .external_contracts
+                    .as_ref()
+                    .cloned()
+                    .unwrap_or_default();
+                ids.insert(call.contract_id);
+                ids
+            })
+            .collect();
 
         // We must associate the right external contract input to the corresponding external
         // output index (TXO)
@@ -214,11 +219,11 @@ impl Script {
         }
 
         // Get all unique asset ids
-        let mut asset_ids = HashSet::new();
-        asset_ids.insert(AssetId::default());
-        calls.iter().for_each(|call| {
-            asset_ids.insert(call.call_parameters.asset_id);
-        });
+        let asset_ids: HashSet<AssetId> = calls
+            .iter()
+            .map(|call| call.call_parameters.asset_id)
+            .chain(iter::once(AssetId::default()))
+            .collect();
 
         let mut spendables = vec![];
         for asset_id in asset_ids.iter() {
@@ -228,7 +233,9 @@ impl Script {
                     .await
                     .unwrap(),
             );
+        }
 
+        for asset_id in asset_ids.iter() {
             // add asset change if any inputs are being spent
             let change_output = Output::change(wallet.address(), 0, asset_id.to_owned());
             outputs.push(change_output);
