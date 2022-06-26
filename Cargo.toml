@@ -20,6 +20,3 @@ members = [
     "scripts/build-test-projects",
     "tools/fuels-abi-cli",
 ]
-
-[patch.crates-io]
-fuel-vm = { git = 'https://github.com/FuelLabs/fuel-vm', branch = 'Voxelot/maturity-validation'}
