@@ -48,6 +48,7 @@ mod chains;
 mod script;
 #[cfg(feature = "fuels-signers")]
 mod signers;
+mod utility;
 mod wallets_config;
 
 #[cfg(not(feature = "fuel-core-lib"))]
