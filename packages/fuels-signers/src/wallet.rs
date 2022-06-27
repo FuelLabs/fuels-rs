@@ -4,8 +4,8 @@ use async_trait::async_trait;
 use coins_bip32::{path::DerivationPath, Bip32Error};
 use coins_bip39::{English, Mnemonic, MnemonicError};
 use elliptic_curve::rand_core;
-use fuel_eth_keystore::KeystoreError;
 use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
+use fuel_eth_keystore::KeystoreError;
 use fuel_gql_client::{
     client::{schema::coin::Coin, types::TransactionResponse, PaginatedResult, PaginationRequest},
     fuel_tx::{Address, AssetId, Input, Output, Receipt, Transaction, UtxoId, Witness},
