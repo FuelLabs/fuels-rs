@@ -14,7 +14,8 @@ bytes = { version = "1.1.0", features = ["serde"] }
 coins-bip32 = "0.6.0"
 coins-bip39 = "0.6.0"
 elliptic-curve = { version = "0.11.6", default-features = false }
-eth-keystore = { version = "0.3.0" }
+# TODO(oleksii): either properly release this or bring changes upstream to eth-keystore-rs
+fuel-eth-keystore = { version = "0.5.0", git = "https://github.com/FuelLabs/fuel-eth-keystore", tag = "v0.5.0" }
 fuel-core = { version = "0.9", default-features = false, optional = true }
 fuel-crypto = { version = "0.5", features = ["random"] }
 # TODO(oleksii): bump fuel-gql-client for WASM support
