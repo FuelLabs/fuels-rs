@@ -110,7 +110,10 @@ pub async fn setup_test_provider(
 #[cfg(test)]
 mod tests {
     use crate::{launch_custom_provider_and_get_wallets, WalletsConfig};
+    use fuel_gql_client::fuel_tx::ConsensusParameters;
+    use fuels_contract::contract::Contract;
     use fuels_core::errors::Error;
+    use fuels_core::parameters::TxParameters;
 
     #[tokio::test]
     async fn test_wallet_config() -> Result<(), Error> {
@@ -133,5 +136,29 @@ mod tests {
             }
         }
         Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_setup_test_client_consensus_parameters_config() {
+        let config = WalletsConfig::default();
+
+        let consensus_parameters_config = ConsensusParameters::DEFAULT.with_max_gas_per_tx(1);
+
+        let wallet =
+            launch_custom_provider_and_get_wallets(config, None, Some(consensus_parameters_config))
+                .await;
+
+        let result = Contract::deploy(
+            "../fuels/tests/test_projects/contract_output_test/out/debug/contract_output_test.bin",
+            &wallet[0],
+            TxParameters::default(),
+        )
+        .await;
+
+        let expected = result.expect_err("should fail");
+
+        let error_string = "error: ValidationError(TransactionGasLimit)";
+
+        assert!(expected.to_string().contains(error_string));
     }
 }
