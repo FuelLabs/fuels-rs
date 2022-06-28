@@ -1,3 +1,4 @@
+use crate::abi_decoder::ABIDecoder;
 use crate::constants::WORD_SIZE;
 use core::fmt;
 pub use errors::InstantiationError;
@@ -207,6 +208,18 @@ pub trait Tokenizable {
         Self: Sized;
     /// Converts a specified type back into token.
     fn into_token(self) -> Token;
+}
+
+pub fn try_from_bytes<T>(bytes: &[u8]) -> Result<T, crate::errors::Error>
+where
+    T: Parameterize + Tokenizable,
+{
+    let token = ABIDecoder::decode_single(&T::param_type(), bytes)?;
+
+    // Not inlined so that the error conversion InstantiationError -> Error
+    // might happen
+    let constructed = T::from_token(token)?;
+    Ok(constructed)
 }
 
 impl Tokenizable for Token {
@@ -507,29 +520,29 @@ impl Tokenizable for fuel_tx::AssetId {
 }
 
 /// This trait is used inside the abigen generated code in order to get the
-/// parameter types (`ParamType`).  This is used in the generated code in
+/// parameter type (`ParamType`).  This is used in the generated code in
 /// `custom_types_gen.rs`, with the exception of the Sway-native types
 /// `Address`, `ContractId`, and `AssetId`, that are implemented right here,
 /// without code generation.
 pub trait Parameterize {
-    fn param_types() -> Vec<ParamType>;
+    fn param_type() -> ParamType;
 }
 
 impl Parameterize for fuel_tx::Address {
-    fn param_types() -> Vec<ParamType> {
-        vec![ParamType::B256]
+    fn param_type() -> ParamType {
+        ParamType::B256
     }
 }
 
 impl Parameterize for fuel_tx::ContractId {
-    fn param_types() -> Vec<ParamType> {
-        vec![ParamType::B256]
+    fn param_type() -> ParamType {
+        ParamType::B256
     }
 }
 
 impl Parameterize for fuel_tx::AssetId {
-    fn param_types() -> Vec<ParamType> {
-        vec![ParamType::B256]
+    fn param_type() -> ParamType {
+        ParamType::B256
     }
 }
 

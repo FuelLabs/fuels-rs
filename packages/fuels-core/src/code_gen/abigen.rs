@@ -110,7 +110,8 @@ impl Abigen {
             (
                 quote! {
                     use alloc::{vec, vec::Vec};
-                    use fuels_core::{EnumSelector, EnumVariants, InstantiationError, Parameterize, ParamType, Tokenizable, Token};
+                    use fuels_core::{EnumSelector, EnumVariants, InstantiationError, Parameterize, ParamType, Tokenizable, Token, try_from_bytes};
+                    use fuels_core::errors::Error as SDKError;
                 },
                 quote! {},
             )
@@ -120,7 +121,8 @@ impl Abigen {
                     use fuels::contract::contract::{Contract, ContractCallHandler};
                     use fuels::signers::LocalWallet;
                     use fuels::tx::{ContractId, Address};
-                    use fuels::core::{EnumSelector, EnumVariants, InstantiationError, Parameterize, ParamType, Tokenizable, Token};
+                    use fuels::core::{EnumSelector, EnumVariants, InstantiationError, Parameterize, ParamType, Tokenizable, Token, try_from_bytes};
+                    use fuels::core::errors::Error as SDKError;
                     use std::str::FromStr;
                 },
                 quote! {
