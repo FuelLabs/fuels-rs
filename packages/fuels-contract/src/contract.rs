@@ -12,6 +12,7 @@ use fuels_core::{
     ParamType, ReturnLocation, Selector, Token, Tokenizable,
 };
 use fuels_signers::{provider::Provider, LocalWallet, Signer};
+use std::collections::HashSet;
 use std::fmt::Debug;
 use std::marker::PhantomData;
 use std::path::Path;
@@ -44,17 +45,20 @@ pub struct CallResponse<D> {
 // ANCHOR_END: call_response
 
 impl<D> CallResponse<D> {
-    pub fn new(value: D, receipts: Vec<Receipt>) -> Self {
-        // Get all the logs from LogData receipts and put them in the `logs` property
-        let logs_vec = receipts
+    /// Get all the logs from LogData receipts
+    pub fn get_logs(receipts: &[Receipt]) -> Vec<String> {
+        receipts
             .iter()
             .filter(|r| matches!(r, Receipt::LogData { .. }))
             .map(|r| hex::encode(r.data().unwrap()))
-            .collect::<Vec<String>>();
+            .collect::<Vec<String>>()
+    }
+
+    pub fn new(value: D, receipts: Vec<Receipt>) -> Self {
         Self {
             value,
+            logs: Self::get_logs(&receipts),
             receipts,
-            logs: logs_vec,
         }
     }
 }
@@ -107,14 +111,11 @@ impl Contract {
 
         let compute_custom_input_offset = Contract::should_compute_custom_input_offset(args);
 
-        let maturity = 0;
-
         let contract_call = ContractCall {
             contract_id,
             encoded_selector,
             encoded_args,
             call_parameters,
-            maturity,
             compute_custom_input_offset,
             variable_outputs: None,
             external_contracts: None,
@@ -266,10 +267,9 @@ pub struct ContractCall {
     pub encoded_args: Vec<u8>,
     pub encoded_selector: Selector,
     pub call_parameters: CallParameters,
-    pub maturity: u64,
     pub compute_custom_input_offset: bool,
     pub variable_outputs: Option<Vec<Output>>,
-    pub external_contracts: Option<Vec<ContractId>>,
+    pub external_contracts: Option<HashSet<ContractId>>,
     pub output_param: Option<ParamType>,
 }
 
@@ -278,8 +278,8 @@ impl ContractCall {
     /// decode the values and return them.
     pub fn get_decoded_output(
         param_type: &ParamType,
-        mut receipts: Vec<Receipt>,
-    ) -> Result<(Token, Vec<Receipt>), Error> {
+        receipts: &mut Vec<Receipt>,
+    ) -> Result<Token, Error> {
         // Multiple returns are handled as one `Tuple` (which has its own `ParamType`)
 
         let (encoded_value, index) = match param_type.get_return_location() {
@@ -305,8 +305,9 @@ impl ContractCall {
         if let Some(i) = index {
             receipts.remove(i);
         }
+
         let decoded_value = ABIDecoder::decode_single(param_type, &encoded_value)?;
-        Ok((decoded_value, receipts))
+        Ok(decoded_value)
     }
 }
 
@@ -331,7 +332,7 @@ where
     /// Note that this is a builder method, i.e. use it as a chain:
     /// `my_contract_instance.my_method(...).set_contracts(&[another_contract_id]).call()`.
     pub fn set_contracts(mut self, contract_ids: &[ContractId]) -> Self {
-        self.contract_call.external_contracts = Some(contract_ids.to_vec());
+        self.contract_call.external_contracts = Some(HashSet::from_iter(contract_ids.to_owned()));
         self
     }
 
@@ -393,8 +394,10 @@ where
         self.get_response(receipts)
     }
 
+    /// Returns the script that executes the contract call
     pub async fn get_script(&self) -> Script {
-        Script::from_contract_call(&self.contract_call, &self.tx_parameters, &self.wallet).await
+        Script::from_contract_calls(vec![&self.contract_call], &self.tx_parameters, &self.wallet)
+            .await
     }
 
     /// Call a contract's method on the node, in a state-modifying manner.
@@ -410,14 +413,117 @@ where
     }
 
     /// Create a CallResponse from call receipts
-    pub fn get_response(&self, receipts: Vec<Receipt>) -> Result<CallResponse<D>, Error> {
+    pub fn get_response(&self, mut receipts: Vec<Receipt>) -> Result<CallResponse<D>, Error> {
         match self.contract_call.output_param.as_ref() {
             None => Ok(CallResponse::new(D::from_token(Token::Unit)?, receipts)),
             Some(param_type) => {
-                let (token, receipts) = ContractCall::get_decoded_output(param_type, receipts)?;
+                let token = ContractCall::get_decoded_output(param_type, &mut receipts)?;
                 Ok(CallResponse::new(D::from_token(token)?, receipts))
             }
         }
+    }
+}
+
+#[derive(Debug)]
+#[must_use = "contract calls do nothing unless you `call` them"]
+/// Helper that handles bundling multiple calls into a single transaction
+pub struct MultiContractCallHandler {
+    pub contract_calls: Option<Vec<ContractCall>>,
+    pub tx_parameters: TxParameters,
+    pub wallet: LocalWallet,
+    pub fuel_client: FuelClient,
+}
+
+impl MultiContractCallHandler {
+    pub fn new(wallet: LocalWallet) -> Self {
+        Self {
+            contract_calls: None,
+            tx_parameters: TxParameters::default(),
+            fuel_client: wallet.get_provider().unwrap().client.clone(),
+            wallet,
+        }
+    }
+
+    /// Adds a contract call to be bundled in the transaction
+    /// Note that this is a builder method
+    pub fn add_call<D: Tokenizable>(&mut self, call_handler: ContractCallHandler<D>) -> &mut Self {
+        match self.contract_calls.as_mut() {
+            Some(c) => c.push(call_handler.contract_call),
+            None => self.contract_calls = Some(vec![call_handler.contract_call]),
+        }
+        self
+    }
+
+    /// Sets the transaction parameters for a given transaction.
+    /// Note that this is a builder method
+    pub fn tx_params(&mut self, params: TxParameters) -> &mut Self {
+        self.tx_parameters = params;
+        self
+    }
+
+    /// Returns the script that executes the contract calls
+    pub async fn get_script(&self) -> Script {
+        Script::from_contract_calls(
+            self.contract_calls
+                .as_ref()
+                .expect("No calls added. Have you used '.add_calls()'?")
+                .iter()
+                .collect(),
+            &self.tx_parameters,
+            &self.wallet,
+        )
+        .await
+    }
+
+    /// Call contract methods on the node, in a state-modifying manner.
+    pub async fn call<D: Tokenizable + Debug>(&self) -> Result<CallResponse<D>, Error> {
+        Self::call_or_simulate(self, false).await
+    }
+
+    /// Call contract methods on the node, in a simulated manner, meaning the state of the
+    /// blockchain is *not* modified but simulated.
+    /// It is the same as the `call` method because the API is more user-friendly this way.
+    pub async fn simulate<D: Tokenizable + Debug>(&self) -> Result<CallResponse<D>, Error> {
+        Self::call_or_simulate(self, true).await
+    }
+
+    #[tracing::instrument]
+    async fn call_or_simulate<D: Tokenizable + Debug>(
+        &self,
+        simulate: bool,
+    ) -> Result<CallResponse<D>, Error> {
+        let script = self.get_script().await;
+
+        let receipts = if simulate {
+            script.simulate(&self.fuel_client).await.unwrap()
+        } else {
+            script.call(&self.fuel_client).await.unwrap()
+        };
+        tracing::debug!(target: "receipts", "{:?}", receipts);
+
+        self.get_response(receipts)
+    }
+
+    /// Create a MultiCallResponse from call receipts
+    pub fn get_response<D: Tokenizable + Debug>(
+        &self,
+        mut receipts: Vec<Receipt>,
+    ) -> Result<CallResponse<D>, Error> {
+        let mut final_tokens = vec![];
+
+        for call in self.contract_calls.as_ref().unwrap().iter() {
+            // We only aggregate the tokens if the contract call has an output parameter
+            if let Some(param_type) = call.output_param.as_ref() {
+                let decoded = ContractCall::get_decoded_output(param_type, &mut receipts)?;
+
+                final_tokens.push(decoded.clone());
+            }
+        }
+
+        let tokens_as_tuple = Token::Tuple(final_tokens);
+        let response = CallResponse::<D>::new(D::from_token(tokens_as_tuple)?, receipts);
+
+        Ok(response)
     }
 }
 
