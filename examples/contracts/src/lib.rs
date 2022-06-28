@@ -4,18 +4,19 @@ use fuels::prelude::Error;
 #[tokio::test]
 #[cfg(feature = "fuel-core-lib")]
 // ANCHOR: instantiate_client
-async fn instantiate_client() {
+async fn instantiate_client() -> Result<(), Error> {
     use fuels::client::FuelClient;
     use fuels::node::service::{Config, FuelService};
 
-    let server = FuelService::new_node(Config::local_node()).await.unwrap();
+    let server = FuelService::new_node(Config::local_node()).await?;
     let client = FuelClient::from(server.bound_address);
-    assert!(client.health().await.unwrap());
+    assert!(client.health().await?);
+    Ok(())
 }
 // ANCHOR_END: instantiate_client
 
 #[tokio::test]
-async fn deploy_contract() {
+async fn deploy_contract() -> Result<(), Error> {
     use fuels::prelude::*;
 
     // ANCHOR: deploy_contract
@@ -50,8 +51,8 @@ async fn deploy_contract() {
                 Some(maturity)
             )
         )
-        .await
-        .unwrap();
+        .await?;
+
     println!("Contract deployed @ {:x}", contract_id);
     // ANCHOR_END: deploy_contract
 
@@ -62,24 +63,20 @@ async fn deploy_contract() {
     let response = contract_instance
         .initialize_counter(42) // Build the ABI call
         .call() // Perform the network call
-        .await
-        .unwrap();
+        .await?;
 
     assert_eq!(42, response.value);
 
-    let response = contract_instance
-        .increment_counter(10)
-        .call()
-        .await
-        .unwrap();
+    let response = contract_instance.increment_counter(10).call().await?;
 
     assert_eq!(52, response.value);
     // ANCHOR_END: use_deployed_contract
+    Ok(())
 }
 
 #[tokio::test]
 // ANCHOR: deploy_with_salt
-async fn deploy_with_salt() {
+async fn deploy_with_salt() -> Result<(), Error> {
     use fuels::prelude::*;
     use rand::prelude::{Rng, SeedableRng, StdRng};
 
@@ -95,8 +92,7 @@ async fn deploy_with_salt() {
             &wallet,
             TxParameters::default(),
         )
-        .await
-        .unwrap();
+        .await?;
 
     println!("Contract deployed @ {:x}", contract_id_1);
 
@@ -109,18 +105,18 @@ async fn deploy_with_salt() {
             TxParameters::default(),
             Salt::from(salt),
         )
-        .await
-        .unwrap();
+        .await?;
 
     println!("Contract deployed @ {:x}", contract_id_2);
 
     assert_ne!(contract_id_1, contract_id_2);
+    Ok(())
 }
 // ANCHOR_END: deploy_with_salt
 
 #[tokio::test]
 // ANCHOR: deploy_with_multiple_wallets
-async fn deploy_with_multiple_wallets() {
+async fn deploy_with_multiple_wallets() -> Result<(), Error> {
     use fuels::prelude::*;
 
     abigen!(
@@ -135,8 +131,7 @@ async fn deploy_with_multiple_wallets() {
             &wallets[0],
             TxParameters::default(),
         )
-        .await
-        .unwrap();
+        .await?;
 
     println!("Contract deployed @ {:x}", contract_id_1);
     let contract_instance_1 = MyContract::new(contract_id_1.to_string(), wallets[0].clone());
@@ -145,8 +140,7 @@ async fn deploy_with_multiple_wallets() {
         .initialize_counter(42) // Build the ABI call
         .tx_params(TxParameters::new(None, Some(1_000_000), None, None))
         .call() // Perform the network call
-        .await
-        .unwrap();
+        .await?;
 
     assert_eq!(42, response.value);
 
@@ -155,8 +149,7 @@ async fn deploy_with_multiple_wallets() {
             &wallets[1],
             TxParameters::default(),
         )
-        .await
-        .unwrap();
+        .await?;
 
     println!("Contract deployed @ {:x}", contract_id_2);
     let contract_instance_2 = MyContract::new(contract_id_2.to_string(), wallets[1].clone());
@@ -165,10 +158,10 @@ async fn deploy_with_multiple_wallets() {
         .initialize_counter(42) // Build the ABI call
         .tx_params(TxParameters::new(None, Some(1_000_000), None, None))
         .call() // Perform the network call
-        .await
-        .unwrap();
+        .await?;
 
     assert_eq!(42, response.value);
+    Ok(())
 }
 // ANCHOR_END: deploy_with_multiple_wallets
 
@@ -363,8 +356,7 @@ async fn call_params_gas() -> Result<(), Error> {
         &wallet,
         TxParameters::default(),
     )
-    .await
-    .unwrap();
+    .await?;
 
     let contract_instance = MyContract::new(contract_id.to_string(), wallet.clone());
 

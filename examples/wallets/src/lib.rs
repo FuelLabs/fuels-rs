@@ -1,5 +1,5 @@
 #[allow(unused_imports)]
-use fuels::prelude::ProviderError;
+use fuels::prelude::{Error, ProviderError};
 
 #[tokio::test]
 // ANCHOR: create_random_wallet
@@ -16,7 +16,7 @@ async fn create_random_wallet() {
 
 #[tokio::test]
 // ANCHOR: create_wallet_from_secret_key
-async fn create_wallet_from_secret_key() {
+async fn create_wallet_from_secret_key() -> Result<(), Box<dyn std::error::Error>> {
     use fuels::prelude::*;
     use fuels::signers::fuel_crypto::SecretKey;
     use std::str::FromStr;
@@ -26,17 +26,17 @@ async fn create_wallet_from_secret_key() {
 
     // Setup the private key.
     let secret =
-        SecretKey::from_str("5f70feeff1f229e4a95e1056e8b4d80d0b24b565674860cc213bdb07127ce1b1")
-            .unwrap();
+        SecretKey::from_str("5f70feeff1f229e4a95e1056e8b4d80d0b24b565674860cc213bdb07127ce1b1")?;
 
     // Create the wallet.
     let _wallet = LocalWallet::new_from_private_key(secret, Some(provider));
+    Ok(())
 }
 // ANCHOR_END: create_wallet_from_secret_key
 
 #[tokio::test]
 // ANCHOR: create_wallet_from_mnemonic
-async fn create_wallet_from_mnemonic() {
+async fn create_wallet_from_mnemonic() -> Result<(), Error> {
     use fuels::prelude::*;
 
     let phrase = "oblige salon price punch saddle immune slogan rare snap desert retire surprise";
@@ -49,21 +49,21 @@ async fn create_wallet_from_mnemonic() {
         phrase,
         Some(provider.clone()),
         "m/44'/1179993420'/0'/0/0",
-    )
-    .unwrap();
+    )?;
 
     // Or with the default derivation path
-    let wallet = LocalWallet::new_from_mnemonic_phrase(phrase, Some(provider)).unwrap();
+    let wallet = LocalWallet::new_from_mnemonic_phrase(phrase, Some(provider))?;
 
     let expected_address = "f18b6446deb8135544ba60333e5b7522685cd2cf64aa4e4c75df725149850b65";
 
     assert_eq!(wallet.address().to_string(), expected_address);
+    Ok(())
 }
 // ANCHOR_END: create_wallet_from_mnemonic
 
 #[tokio::test]
 // ANCHOR: create_and_restore_json_wallet
-async fn create_and_restore_json_wallet() {
+async fn create_and_restore_json_wallet() -> Result<(), Error> {
     use fuels::prelude::*;
 
     let dir = std::env::temp_dir();
@@ -76,17 +76,18 @@ async fn create_and_restore_json_wallet() {
 
     // Create a wallet to be stored in the keystore.
     let (_wallet, uuid) =
-        LocalWallet::new_from_keystore(&dir, &mut rng, password, Some(provider.clone())).unwrap();
+        LocalWallet::new_from_keystore(&dir, &mut rng, password, Some(provider.clone()))?;
 
     let path = dir.join(uuid);
 
-    let _recovered_wallet = LocalWallet::load_keystore(&path, password, Some(provider)).unwrap();
+    let _recovered_wallet = LocalWallet::load_keystore(&path, password, Some(provider))?;
+    Ok(())
 }
 // ANCHOR_END: create_and_restore_json_wallet
 
 #[tokio::test]
 // ANCHOR: create_and_store_mnemonic_wallet
-async fn create_and_store_mnemonic_wallet() {
+async fn create_and_store_mnemonic_wallet() -> Result<(), Error> {
     use fuels::prelude::*;
 
     let dir = std::env::temp_dir();
@@ -97,17 +98,18 @@ async fn create_and_store_mnemonic_wallet() {
     let (provider, _address) = setup_test_provider(vec![], None).await;
 
     // Create first account from mnemonic phrase.
-    let wallet = LocalWallet::new_from_mnemonic_phrase(phrase, Some(provider)).unwrap();
+    let wallet = LocalWallet::new_from_mnemonic_phrase(phrase, Some(provider))?;
 
     let password = "my_master_password";
 
     // Encrypts and stores it on disk. Can be recovered using `Wallet::load_keystore`.
-    let _uuid = wallet.encrypt(&dir, password).unwrap();
+    let _uuid = wallet.encrypt(&dir, password)?;
+    Ok(())
 }
 // ANCHOR_END: create_and_store_mnemonic_wallet
 
 #[tokio::test]
-async fn wallet_transfer() -> Result<(), Box<dyn std::error::Error>> {
+async fn wallet_transfer() -> Result<(), Error> {
     use fuels::prelude::*;
 
     // Setup 2 test wallets with 1 coin each
@@ -125,10 +127,9 @@ async fn wallet_transfer() -> Result<(), Box<dyn std::error::Error>> {
     let asset_id = Default::default();
     let _receipts = wallets[0]
         .transfer(&wallets[1].address(), 1, asset_id, TxParameters::default())
-        .await
-        .unwrap();
+        .await?;
 
-    let wallet_2_final_coins = wallets[1].get_coins().await.unwrap();
+    let wallet_2_final_coins = wallets[1].get_coins().await?;
 
     // Check that wallet 2 now has 2 coins
     assert_eq!(wallet_2_final_coins.len(), 2);
@@ -137,7 +138,7 @@ async fn wallet_transfer() -> Result<(), Box<dyn std::error::Error>> {
 
 #[tokio::test]
 #[allow(unused_variables)]
-async fn setup_multiple_wallets() {
+async fn setup_multiple_wallets() -> Result<(), Error> {
     // ANCHOR: multiple_wallets_helper
     use fuels::prelude::*;
     // This helper will launch a local node and provide 10 test wallets linked to it.
@@ -157,11 +158,12 @@ async fn setup_multiple_wallets() {
     // Launches a local node and provides test wallets as specified by the config
     let wallets = launch_custom_provider_and_get_wallets(config, None).await;
     // ANCHOR_END: setup_5_wallets
+    Ok(())
 }
 
 #[tokio::test]
 #[allow(unused_variables)]
-async fn setup_wallet_multiple_assets() {
+async fn setup_wallet_multiple_assets() -> Result<(), Error> {
     // ANCHOR: multiple_assets_wallet
     use fuels::prelude::*;
     let mut wallet = LocalWallet::new_random(None);
@@ -178,6 +180,7 @@ async fn setup_wallet_multiple_assets() {
     let (provider, _socket_addr) = setup_test_provider(coins.clone(), None).await;
     wallet.set_provider(provider);
     // ANCHOR_END: multiple_assets_wallet
+    Ok(())
 }
 
 #[tokio::test]

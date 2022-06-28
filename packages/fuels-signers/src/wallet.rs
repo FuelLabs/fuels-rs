@@ -424,47 +424,50 @@ mod tests {
     use super::*;
     use fuel_core::service::{Config, FuelService};
     use fuel_gql_client::client::FuelClient;
+    use fuels_core::errors::Error;
     use tempfile::tempdir;
 
     #[tokio::test]
-    async fn encrypted_json_keystore() {
-        let dir = tempdir().unwrap();
+    async fn encrypted_json_keystore() -> Result<(), Error> {
+        let dir = tempdir()?;
         let mut rng = rand::thread_rng();
 
         let provider = setup().await;
 
         // Create a wallet to be stored in the keystore.
         let (wallet, uuid) =
-            Wallet::new_from_keystore(&dir, &mut rng, "password", Some(provider.clone())).unwrap();
+            Wallet::new_from_keystore(&dir, &mut rng, "password", Some(provider.clone()))?;
 
         // sign a message using the above key.
         let message = "Hello there!";
-        let signature = wallet.sign_message(message).await.unwrap();
+        let signature = wallet.sign_message(message).await?;
 
         // Read from the encrypted JSON keystore and decrypt it.
         let path = Path::new(dir.path()).join(uuid);
         let recovered_wallet =
-            Wallet::load_keystore(&path.clone(), "password", Some(provider.clone())).unwrap();
+            Wallet::load_keystore(&path.clone(), "password", Some(provider.clone()))?;
 
         // Sign the same message as before and assert that the signature is the same.
-        let signature2 = recovered_wallet.sign_message(message).await.unwrap();
+        let signature2 = recovered_wallet.sign_message(message).await?;
         assert_eq!(signature, signature2);
 
         // Remove tempdir.
         assert!(std::fs::remove_file(&path).is_ok());
+        Ok(())
     }
 
     #[tokio::test]
-    async fn mnemonic_generation() {
+    async fn mnemonic_generation() -> Result<(), Error> {
         let provider = setup().await;
 
-        let mnemonic = Wallet::generate_mnemonic_phrase(&mut rand::thread_rng(), 12).unwrap();
+        let mnemonic = Wallet::generate_mnemonic_phrase(&mut rand::thread_rng(), 12)?;
 
-        let _wallet = Wallet::new_from_mnemonic_phrase(&mnemonic, Some(provider)).unwrap();
+        let _wallet = Wallet::new_from_mnemonic_phrase(&mnemonic, Some(provider))?;
+        Ok(())
     }
 
     #[tokio::test]
-    async fn wallet_from_mnemonic_phrase() {
+    async fn wallet_from_mnemonic_phrase() -> Result<(), Error> {
         let phrase =
             "oblige salon price punch saddle immune slogan rare snap desert retire surprise";
 
@@ -475,8 +478,7 @@ mod tests {
             phrase,
             Some(provider.clone()),
             "m/44'/60'/0'/0/0",
-        )
-        .unwrap();
+        )?;
 
         let expected_address = "df9d0e6c6c5f5da6e82e5e1a77974af6642bdb450a10c43f0c6910a212600185";
 
@@ -484,18 +486,18 @@ mod tests {
 
         // Create a second account from the same phrase.
         let wallet2 =
-            Wallet::new_from_mnemonic_phrase_with_path(phrase, Some(provider), "m/44'/60'/1'/0/0")
-                .unwrap();
+            Wallet::new_from_mnemonic_phrase_with_path(phrase, Some(provider), "m/44'/60'/1'/0/0")?;
 
         let expected_second_address =
             "261191b0164a24fd0fd51566ec5e5b0b9ba8fb2d42dc9cf7dbbd6f23d2742759";
 
         assert_eq!(wallet2.address().to_string(), expected_second_address);
+        Ok(())
     }
 
     #[tokio::test]
-    async fn encrypt_and_store_wallet_from_mnemonic() {
-        let dir = tempdir().unwrap();
+    async fn encrypt_and_store_wallet_from_mnemonic() -> Result<(), Error> {
+        let dir = tempdir()?;
 
         let phrase =
             "oblige salon price punch saddle immune slogan rare snap desert retire surprise";
@@ -507,19 +509,19 @@ mod tests {
             phrase,
             Some(provider.clone()),
             "m/44'/60'/0'/0/0",
-        )
-        .unwrap();
+        )?;
 
-        let uuid = wallet.encrypt(&dir, "password").unwrap();
+        let uuid = wallet.encrypt(&dir, "password")?;
 
         let path = Path::new(dir.path()).join(uuid);
 
-        let recovered_wallet = Wallet::load_keystore(&path, "password", Some(provider)).unwrap();
+        let recovered_wallet = Wallet::load_keystore(&path, "password", Some(provider))?;
 
         assert_eq!(wallet.address(), recovered_wallet.address());
 
         // Remove tempdir.
         assert!(std::fs::remove_file(&path).is_ok());
+        Ok(())
     }
 
     async fn setup() -> Provider {
