@@ -187,13 +187,14 @@ development.</p>
 <h2 id="instantiating-a-fuel-client"><a class="header" href="#instantiating-a-fuel-client">Instantiating a Fuel client</a></h2>
 <p>You can instantiate a Fuel client, pointing to a local Fuel node by
 using <a href="https://docs.rs/fuels/*/fuels/client/struct.FuelClient.html"><code>FuelClient</code></a>:</p>
-<pre><code class="language-rust ignore">async fn instantiate_client() {
+<pre><code class="language-rust ignore">async fn instantiate_client() -&gt; Result&lt;(), Error&gt; {
     use fuels::client::FuelClient;
     use fuels::node::service::{Config, FuelService};
 
-    let server = FuelService::new_node(Config::local_node()).await.unwrap();
+    let server = FuelService::new_node(Config::local_node()).await?;
     let client = FuelClient::from(server.bound_address);
-    assert!(client.health().await.unwrap());
+    assert!(client.health().await?);
+    Ok(())
 }
 </code></pre>
 <p>Alternatively, if you have a Fuel node running separately, you can pass in the <code>SocketAddr</code> to <code>FuelClient::from()</code>.</p>
@@ -235,8 +236,8 @@ using <a href="https://docs.rs/fuels/*/fuels/client/struct.FuelClient.html"><cod
                 Some(maturity)
             )
         )
-        .await
-        .unwrap();
+        .await?;
+
     println!(&quot;Contract deployed @ {:x}&quot;, contract_id);
 </code></pre>
 <p>You can then use the contract methods very simply:</p>
@@ -246,21 +247,16 @@ using <a href="https://docs.rs/fuels/*/fuels/client/struct.FuelClient.html"><cod
     let response = contract_instance
         .initialize_counter(42) // Build the ABI call
         .call() // Perform the network call
-        .await
-        .unwrap();
+        .await?;
 
     assert_eq!(42, response.value);
 
-    let response = contract_instance
-        .increment_counter(10)
-        .call()
-        .await
-        .unwrap();
+    let response = contract_instance.increment_counter(10).call().await?;
 
     assert_eq!(52, response.value);
 </code></pre>
 <p>Alternatively, if you want multiple instances of the same contract then use <code>deploy_with_salt</code></p>
-<pre><code class="language-rust ignore">async fn deploy_with_salt() {
+<pre><code class="language-rust ignore">async fn deploy_with_salt() -&gt; Result&lt;(), Error&gt; {
     use fuels::prelude::*;
     use rand::prelude::{Rng, SeedableRng, StdRng};
 
@@ -276,8 +272,7 @@ using <a href="https://docs.rs/fuels/*/fuels/client/struct.FuelClient.html"><cod
             &amp;wallet,
             TxParameters::default(),
         )
-        .await
-        .unwrap();
+        .await?;
 
     println!(&quot;Contract deployed @ {:x}&quot;, contract_id_1);
 
@@ -290,12 +285,12 @@ using <a href="https://docs.rs/fuels/*/fuels/client/struct.FuelClient.html"><cod
             TxParameters::default(),
             Salt::from(salt),
         )
-        .await
-        .unwrap();
+        .await?;
 
     println!(&quot;Contract deployed @ {:x}&quot;, contract_id_2);
 
     assert_ne!(contract_id_1, contract_id_2);
+    Ok(())
 }
 </code></pre>
 <h2 id="setting-up-multiple-test-wallets"><a class="header" href="#setting-up-multiple-test-wallets">Setting up multiple test wallets</a></h2>
@@ -560,7 +555,7 @@ pub const BASE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
 }
 </code></pre>
 <p>Alternatively, you can create a wallet from a predefined <code>SecretKey</code>.</p>
-<pre><code class="language-rust ignore">async fn create_wallet_from_secret_key() {
+<pre><code class="language-rust ignore">async fn create_wallet_from_secret_key() -&gt; Result&lt;(), Box&lt;dyn std::error::Error&gt;&gt; {
     use fuels::prelude::*;
     use fuels::signers::fuel_crypto::SecretKey;
     use std::str::FromStr;
@@ -570,11 +565,11 @@ pub const BASE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
 
     // Setup the private key.
     let secret =
-        SecretKey::from_str(&quot;5f70feeff1f229e4a95e1056e8b4d80d0b24b565674860cc213bdb07127ce1b1&quot;)
-            .unwrap();
+        SecretKey::from_str(&quot;5f70feeff1f229e4a95e1056e8b4d80d0b24b565674860cc213bdb07127ce1b1&quot;)?;
 
     // Create the wallet.
     let _wallet = LocalWallet::new_from_private_key(secret, Some(provider));
+    Ok(())
 }
 </code></pre>
 <blockquote>
@@ -587,7 +582,7 @@ enables defining owners (wallet addresses) of genesis coins before a provider is
 <p>In addition to that, we also support <a href="https://www.ledger.com/academy/crypto/what-are-hierarchical-deterministic-hd-wallets">Hierarchical Deterministic Wallets</a> and <a href="https://learnmeabitcoin.com/technical/derivation-paths">derivation paths</a>. You may recognize the string <code>&quot;m/44'/60'/0'/0/0&quot;</code> from somewhere; that's a derivation path. In simple terms, it's a way to derive many wallets from a single root wallet.</p>
 <p>The SDK gives you two wallets from mnemonic instantiation methods: one that takes a derivation path (<code>Wallet::new_from_mnemonic_phrase_with_path</code>) and one that uses the default derivation path, in case you don't want or don't need to configure that (<code>Wallet::new_from_mnemonic_phrase</code>).</p>
 <p>Here's how you can create wallets with both mnemonic phrases and derivation paths:</p>
-<pre><code class="language-rust ignore">async fn create_wallet_from_mnemonic() {
+<pre><code class="language-rust ignore">async fn create_wallet_from_mnemonic() -&gt; Result&lt;(), Error&gt; {
     use fuels::prelude::*;
 
     let phrase = &quot;oblige salon price punch saddle immune slogan rare snap desert retire surprise&quot;;
@@ -600,21 +595,21 @@ enables defining owners (wallet addresses) of genesis coins before a provider is
         phrase,
         Some(provider.clone()),
         &quot;m/44'/1179993420'/0'/0/0&quot;,
-    )
-    .unwrap();
+    )?;
 
     // Or with the default derivation path
-    let wallet = LocalWallet::new_from_mnemonic_phrase(phrase, Some(provider)).unwrap();
+    let wallet = LocalWallet::new_from_mnemonic_phrase(phrase, Some(provider))?;
 
     let expected_address = &quot;f18b6446deb8135544ba60333e5b7522685cd2cf64aa4e4c75df725149850b65&quot;;
 
     assert_eq!(wallet.address().to_string(), expected_address);
+    Ok(())
 }
 </code></pre>
 <h2 id="creating-a-wallet-and-storing-an-encrypted-json-wallet-to-disk"><a class="header" href="#creating-a-wallet-and-storing-an-encrypted-json-wallet-to-disk">Creating a wallet and storing an encrypted JSON wallet to disk</a></h2>
 <p>You can also manage a wallet using <a href="https://cryptobook.nakov.com/symmetric-key-ciphers/ethereum-wallet-encryption">JSON wallets</a> -- wallets that are securely encrypted and stored on disk. This makes it easier to manage multiple wallets, especially for testing purposes.</p>
 <p>You can create a random wallet and, at the same time, encrypt and store it. Then, later, you can recover the wallet if you know the master password:</p>
-<pre><code class="language-rust ignore">async fn create_and_restore_json_wallet() {
+<pre><code class="language-rust ignore">async fn create_and_restore_json_wallet() -&gt; Result&lt;(), Error&gt; {
     use fuels::prelude::*;
 
     let dir = std::env::temp_dir();
@@ -627,16 +622,17 @@ enables defining owners (wallet addresses) of genesis coins before a provider is
 
     // Create a wallet to be stored in the keystore.
     let (_wallet, uuid) =
-        LocalWallet::new_from_keystore(&amp;dir, &amp;mut rng, password, Some(provider.clone())).unwrap();
+        LocalWallet::new_from_keystore(&amp;dir, &amp;mut rng, password, Some(provider.clone()))?;
 
     let path = dir.join(uuid);
 
-    let _recovered_wallet = LocalWallet::load_keystore(&amp;path, password, Some(provider)).unwrap();
+    let _recovered_wallet = LocalWallet::load_keystore(&amp;path, password, Some(provider))?;
+    Ok(())
 }
 </code></pre>
 <h2 id="encrypting-and-storing-a-wallet-created-from-mnemonic-or-private-key"><a class="header" href="#encrypting-and-storing-a-wallet-created-from-mnemonic-or-private-key">Encrypting and storing a wallet created from mnemonic or private key</a></h2>
 <p>If you had already created a wallet using a mnemonic phrase or a private key, you can also encrypt it and save it to disk:</p>
-<pre><code class="language-rust ignore">async fn create_and_store_mnemonic_wallet() {
+<pre><code class="language-rust ignore">async fn create_and_store_mnemonic_wallet() -&gt; Result&lt;(), Error&gt; {
     use fuels::prelude::*;
 
     let dir = std::env::temp_dir();
@@ -647,12 +643,13 @@ enables defining owners (wallet addresses) of genesis coins before a provider is
     let (provider, _address) = setup_test_provider(vec![], None).await;
 
     // Create first account from mnemonic phrase.
-    let wallet = LocalWallet::new_from_mnemonic_phrase(phrase, Some(provider)).unwrap();
+    let wallet = LocalWallet::new_from_mnemonic_phrase(phrase, Some(provider))?;
 
     let password = &quot;my_master_password&quot;;
 
     // Encrypts and stores it on disk. Can be recovered using `Wallet::load_keystore`.
-    let _uuid = wallet.encrypt(&amp;dir, password).unwrap();
+    let _uuid = wallet.encrypt(&amp;dir, password)?;
+    Ok(())
 }
 </code></pre>
 <h2 id="checking-balances-and-coins"><a class="header" href="#checking-balances-and-coins">Checking balances and coins</a></h2>
@@ -757,16 +754,11 @@ impl MyContract {
     let response = contract_instance
         .initialize_counter(42) // Build the ABI call
         .call() // Perform the network call
-        .await
-        .unwrap();
+        .await?;
 
     assert_eq!(42, response.value);
 
-    let response = contract_instance
-        .increment_counter(10)
-        .call()
-        .await
-        .unwrap();
+    let response = contract_instance.increment_counter(10).call().await?;
 
     assert_eq!(52, response.value);
 </code></pre>
@@ -834,7 +826,7 @@ impl MyContract {
         let correct_hex =
             hex::decode(&quot;ef86afa9696cf0dc6385e2c407a6e159a1103cefb7e2ae0636fb33d3cb2a9e4a&quot;);
 
-        assert_eq!(correct_hex.unwrap(), return_val[0].data().unwrap());
+        assert_eq!(correct_hex?, return_val[0].data().unwrap());
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="fuels-rs-rust-workspaces"><a class="header" href="#fuels-rs-rust-workspaces"><code>fuels-rs</code> Rust Workspaces</a></h1>
 <p>This section gives you a little overview of the role and function of every workspace in the <code>fuels-rs</code> repository.</p>

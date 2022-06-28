@@ -227,16 +227,11 @@ impl MyContract {
     let response = contract_instance
         .initialize_counter(42) // Build the ABI call
         .call() // Perform the network call
-        .await
-        .unwrap();
+        .await?;
 
     assert_eq!(42, response.value);
 
-    let response = contract_instance
-        .increment_counter(10)
-        .call()
-        .await
-        .unwrap();
+    let response = contract_instance.increment_counter(10).call().await?;
 
     assert_eq!(52, response.value);
 </code></pre>

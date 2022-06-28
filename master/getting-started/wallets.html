@@ -159,7 +159,7 @@
 }
 </code></pre>
 <p>Alternatively, you can create a wallet from a predefined <code>SecretKey</code>.</p>
-<pre><code class="language-rust ignore">async fn create_wallet_from_secret_key() {
+<pre><code class="language-rust ignore">async fn create_wallet_from_secret_key() -&gt; Result&lt;(), Box&lt;dyn std::error::Error&gt;&gt; {
     use fuels::prelude::*;
     use fuels::signers::fuel_crypto::SecretKey;
     use std::str::FromStr;
@@ -169,11 +169,11 @@
 
     // Setup the private key.
     let secret =
-        SecretKey::from_str(&quot;5f70feeff1f229e4a95e1056e8b4d80d0b24b565674860cc213bdb07127ce1b1&quot;)
-            .unwrap();
+        SecretKey::from_str(&quot;5f70feeff1f229e4a95e1056e8b4d80d0b24b565674860cc213bdb07127ce1b1&quot;)?;
 
     // Create the wallet.
     let _wallet = LocalWallet::new_from_private_key(secret, Some(provider));
+    Ok(())
 }
 </code></pre>
 <blockquote>
@@ -186,7 +186,7 @@ enables defining owners (wallet addresses) of genesis coins before a provider is
 <p>In addition to that, we also support <a href="https://www.ledger.com/academy/crypto/what-are-hierarchical-deterministic-hd-wallets">Hierarchical Deterministic Wallets</a> and <a href="https://learnmeabitcoin.com/technical/derivation-paths">derivation paths</a>. You may recognize the string <code>&quot;m/44'/60'/0'/0/0&quot;</code> from somewhere; that's a derivation path. In simple terms, it's a way to derive many wallets from a single root wallet.</p>
 <p>The SDK gives you two wallets from mnemonic instantiation methods: one that takes a derivation path (<code>Wallet::new_from_mnemonic_phrase_with_path</code>) and one that uses the default derivation path, in case you don't want or don't need to configure that (<code>Wallet::new_from_mnemonic_phrase</code>).</p>
 <p>Here's how you can create wallets with both mnemonic phrases and derivation paths:</p>
-<pre><code class="language-rust ignore">async fn create_wallet_from_mnemonic() {
+<pre><code class="language-rust ignore">async fn create_wallet_from_mnemonic() -&gt; Result&lt;(), Error&gt; {
     use fuels::prelude::*;
 
     let phrase = &quot;oblige salon price punch saddle immune slogan rare snap desert retire surprise&quot;;
@@ -199,21 +199,21 @@ enables defining owners (wallet addresses) of genesis coins before a provider is
         phrase,
         Some(provider.clone()),
         &quot;m/44'/1179993420'/0'/0/0&quot;,
-    )
-    .unwrap();
+    )?;
 
     // Or with the default derivation path
-    let wallet = LocalWallet::new_from_mnemonic_phrase(phrase, Some(provider)).unwrap();
+    let wallet = LocalWallet::new_from_mnemonic_phrase(phrase, Some(provider))?;
 
     let expected_address = &quot;f18b6446deb8135544ba60333e5b7522685cd2cf64aa4e4c75df725149850b65&quot;;
 
     assert_eq!(wallet.address().to_string(), expected_address);
+    Ok(())
 }
 </code></pre>
 <h2 id="creating-a-wallet-and-storing-an-encrypted-json-wallet-to-disk"><a class="header" href="#creating-a-wallet-and-storing-an-encrypted-json-wallet-to-disk">Creating a wallet and storing an encrypted JSON wallet to disk</a></h2>
 <p>You can also manage a wallet using <a href="https://cryptobook.nakov.com/symmetric-key-ciphers/ethereum-wallet-encryption">JSON wallets</a> -- wallets that are securely encrypted and stored on disk. This makes it easier to manage multiple wallets, especially for testing purposes.</p>
 <p>You can create a random wallet and, at the same time, encrypt and store it. Then, later, you can recover the wallet if you know the master password:</p>
-<pre><code class="language-rust ignore">async fn create_and_restore_json_wallet() {
+<pre><code class="language-rust ignore">async fn create_and_restore_json_wallet() -&gt; Result&lt;(), Error&gt; {
     use fuels::prelude::*;
 
     let dir = std::env::temp_dir();
@@ -226,16 +226,17 @@ enables defining owners (wallet addresses) of genesis coins before a provider is
 
     // Create a wallet to be stored in the keystore.
     let (_wallet, uuid) =
-        LocalWallet::new_from_keystore(&amp;dir, &amp;mut rng, password, Some(provider.clone())).unwrap();
+        LocalWallet::new_from_keystore(&amp;dir, &amp;mut rng, password, Some(provider.clone()))?;
 
     let path = dir.join(uuid);
 
-    let _recovered_wallet = LocalWallet::load_keystore(&amp;path, password, Some(provider)).unwrap();
+    let _recovered_wallet = LocalWallet::load_keystore(&amp;path, password, Some(provider))?;
+    Ok(())
 }
 </code></pre>
 <h2 id="encrypting-and-storing-a-wallet-created-from-mnemonic-or-private-key"><a class="header" href="#encrypting-and-storing-a-wallet-created-from-mnemonic-or-private-key">Encrypting and storing a wallet created from mnemonic or private key</a></h2>
 <p>If you had already created a wallet using a mnemonic phrase or a private key, you can also encrypt it and save it to disk:</p>
-<pre><code class="language-rust ignore">async fn create_and_store_mnemonic_wallet() {
+<pre><code class="language-rust ignore">async fn create_and_store_mnemonic_wallet() -&gt; Result&lt;(), Error&gt; {
     use fuels::prelude::*;
 
     let dir = std::env::temp_dir();
@@ -246,12 +247,13 @@ enables defining owners (wallet addresses) of genesis coins before a provider is
     let (provider, _address) = setup_test_provider(vec![], None).await;
 
     // Create first account from mnemonic phrase.
-    let wallet = LocalWallet::new_from_mnemonic_phrase(phrase, Some(provider)).unwrap();
+    let wallet = LocalWallet::new_from_mnemonic_phrase(phrase, Some(provider))?;
 
     let password = &quot;my_master_password&quot;;
 
     // Encrypts and stores it on disk. Can be recovered using `Wallet::load_keystore`.
-    let _uuid = wallet.encrypt(&amp;dir, password).unwrap();
+    let _uuid = wallet.encrypt(&amp;dir, password)?;
+    Ok(())
 }
 </code></pre>
 <h2 id="checking-balances-and-coins"><a class="header" href="#checking-balances-and-coins">Checking balances and coins</a></h2>
