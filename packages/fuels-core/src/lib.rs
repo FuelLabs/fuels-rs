@@ -579,7 +579,7 @@ impl Parameterize for u8 {
 
 impl Parameterize for u16 {
     fn param_type() -> ParamType {
-        ParamType::U8
+        ParamType::U16
     }
 }
 
