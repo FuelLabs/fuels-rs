@@ -188,11 +188,10 @@ pub async fn setup_test_client(
     let config_with_coins: Value =
         serde_json::from_str(result.as_str()).expect("Failed to build config_with_coins JSON");
 
-    let srv_address = if let Some(node_config) = node_config {
-        node_config.addr
-    } else {
-        let free_port = pick_unused_port().expect("No ports free");
-        SocketAddr::new("127.0.0.1".parse().unwrap(), free_port)
+    let srv_address = match node_config {
+        Some(config) if config.addr.port() != 0 && is_free(config.addr.port()) => config.addr,
+        Some(config) if !is_free(config.addr.port()) => panic!("Error: Address already in use"),
+        _ => get_socket_address(),
     };
 
     spawn_fuel_service(config_with_coins, srv_address.port());
@@ -202,6 +201,12 @@ pub async fn setup_test_client(
     server_health_check(&client).await;
 
     (client, srv_address)
+}
+
+#[cfg(not(feature = "fuel-core-lib"))]
+fn get_socket_address() -> SocketAddr {
+    let free_port = pick_unused_port().expect("No ports free");
+    SocketAddr::new("127.0.0.1".parse().unwrap(), free_port)
 }
 
 #[cfg(test)]
