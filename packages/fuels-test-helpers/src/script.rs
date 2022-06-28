@@ -22,8 +22,6 @@ pub async fn run_compiled_script(binary_filepath: &str) -> Result<Vec<Receipt>, 
 
     let script = get_script(script_binary);
 
-    let chan_info = client.chain_info().await?;
-
     script.call(&client).await
 }
 
@@ -36,8 +34,6 @@ pub async fn run_compiled_script(binary_filepath: &str) -> Result<Vec<Receipt>, 
     let client = wallet.get_provider().unwrap().clone().client;
 
     let script = get_script(script_binary);
-
-    let chan_info = client.chain_info().await?;
 
     script.call(&client).await
 }
