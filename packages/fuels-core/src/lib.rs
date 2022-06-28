@@ -415,6 +415,19 @@ macro_rules! impl_tuples {
                 ])
             }
         }
+
+        impl<$($ty, )+> Parameterize for ($($ty,)+) where
+            $(
+                $ty: Parameterize,
+            )+
+        {
+            fn param_type() -> ParamType {
+                ParamType::Tuple(vec![
+                    $( $ty::param_type(), )+
+                ])
+            }
+
+        }
     }
 }
 
@@ -546,6 +559,48 @@ impl Parameterize for fuel_tx::AssetId {
     }
 }
 
+impl Parameterize for () {
+    fn param_type() -> ParamType {
+        ParamType::Unit
+    }
+}
+
+impl Parameterize for bool {
+    fn param_type() -> ParamType {
+        ParamType::Bool
+    }
+}
+
+impl Parameterize for u8 {
+    fn param_type() -> ParamType {
+        ParamType::U8
+    }
+}
+
+impl Parameterize for u16 {
+    fn param_type() -> ParamType {
+        ParamType::U8
+    }
+}
+
+impl Parameterize for u32 {
+    fn param_type() -> ParamType {
+        ParamType::U32
+    }
+}
+
+impl Parameterize for u64 {
+    fn param_type() -> ParamType {
+        ParamType::U64
+    }
+}
+
+impl Parameterize for Bits256 {
+    fn param_type() -> ParamType {
+        ParamType::B256
+    }
+}
+
 /// Converts a u8 to a right aligned array of 8 bytes.
 pub fn pad_u8(value: u8) -> ByteArray {
     let mut padded = ByteArray::default();
@@ -575,4 +630,21 @@ pub fn pad_string(s: &str) -> Vec<u8> {
     padded.extend_from_slice(&vec![0; pad]);
 
     padded
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::errors::Error;
+    use crate::try_from_bytes;
+
+    #[test]
+    fn can_convert_bytes_into_tuple() -> Result<(), Error> {
+        let tuple_in_bytes: Vec<u8> = vec![0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 2];
+
+        let the_tuple: (u64, u32) = try_from_bytes(&tuple_in_bytes)?;
+
+        assert_eq!(the_tuple, (1, 2));
+
+        Ok(())
+    }
 }
