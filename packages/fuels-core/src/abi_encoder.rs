@@ -171,6 +171,7 @@ impl ABIEncoder {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::errors::Error;
     use crate::{EnumVariants, ParamType};
     use std::slice;
 
@@ -189,7 +190,7 @@ mod tests {
     }
 
     #[test]
-    fn encode_function_with_u32_type() {
+    fn encode_function_with_u32_type() -> Result<(), Error> {
         // let json_abi =
         // r#"
         // [
@@ -213,16 +214,17 @@ mod tests {
 
         let encoded_function_selector = ABIEncoder::encode_function_selector(sway_fn);
 
-        let encoded = ABIEncoder::encode(&args).unwrap();
+        let encoded = ABIEncoder::encode(&args)?;
 
         println!("Encoded ABI for ({}): {:#0x?}", sway_fn, encoded);
 
         assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
         assert_eq!(encoded_function_selector, expected_function_selector);
+        Ok(())
     }
 
     #[test]
-    fn encode_function_with_u32_type_multiple_args() {
+    fn encode_function_with_u32_type_multiple_args() -> Result<(), Error> {
         // let json_abi =
         // r#"
         // [
@@ -248,16 +250,17 @@ mod tests {
         let expected_fn_selector = [0x0, 0x0, 0x0, 0x0, 0xa7, 0x07, 0xb0, 0x8e];
 
         let encoded_function_selector = ABIEncoder::encode_function_selector(sway_fn);
-        let encoded = ABIEncoder::encode(&args).unwrap();
+        let encoded = ABIEncoder::encode(&args)?;
 
         println!("Encoded ABI for ({}): {:#0x?}", sway_fn, encoded);
 
         assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
         assert_eq!(encoded_function_selector, expected_fn_selector);
+        Ok(())
     }
 
     #[test]
-    fn encode_function_with_u64_type() {
+    fn encode_function_with_u64_type() -> Result<(), Error> {
         // let json_abi =
         // r#"
         // [
@@ -281,16 +284,17 @@ mod tests {
 
         let encoded_function_selector = ABIEncoder::encode_function_selector(sway_fn);
 
-        let encoded = ABIEncoder::encode(&args).unwrap();
+        let encoded = ABIEncoder::encode(&args)?;
 
         println!("Encoded ABI for ({}): {:#0x?}", sway_fn, encoded);
 
         assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
         assert_eq!(encoded_function_selector, expected_function_selector);
+        Ok(())
     }
 
     #[test]
-    fn encode_function_with_bool_type() {
+    fn encode_function_with_bool_type() -> Result<(), Error> {
         // let json_abi =
         // r#"
         // [
@@ -314,16 +318,17 @@ mod tests {
 
         let encoded_function_selector = ABIEncoder::encode_function_selector(sway_fn);
 
-        let encoded = ABIEncoder::encode(&args).unwrap();
+        let encoded = ABIEncoder::encode(&args)?;
 
         println!("Encoded ABI for ({}): {:#0x?}", sway_fn, encoded);
 
         assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
         assert_eq!(encoded_function_selector, expected_function_selector);
+        Ok(())
     }
 
     #[test]
-    fn encode_function_with_two_different_type() {
+    fn encode_function_with_two_different_type() -> Result<(), Error> {
         // let json_abi =
         // r#"
         // [
@@ -350,16 +355,17 @@ mod tests {
 
         let encoded_function_selector = ABIEncoder::encode_function_selector(sway_fn);
 
-        let encoded = ABIEncoder::encode(&args).unwrap();
+        let encoded = ABIEncoder::encode(&args)?;
 
         println!("Encoded ABI for ({}) {:#0x?}", sway_fn, encoded);
 
         assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
         assert_eq!(encoded_function_selector, expected_function_selector);
+        Ok(())
     }
 
     #[test]
-    fn encode_function_with_byte_type() {
+    fn encode_function_with_byte_type() -> Result<(), Error> {
         // let json_abi =
         // r#"
         // [
@@ -383,16 +389,17 @@ mod tests {
 
         let encoded_function_selector = ABIEncoder::encode_function_selector(sway_fn);
 
-        let encoded = ABIEncoder::encode(&args).unwrap();
+        let encoded = ABIEncoder::encode(&args)?;
 
         println!("Encoded ABI for ({}): {:#0x?}", sway_fn, encoded);
 
         assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
         assert_eq!(encoded_function_selector, expected_function_selector);
+        Ok(())
     }
 
     #[test]
-    fn encode_function_with_bits256_type() {
+    fn encode_function_with_bits256_type() -> Result<(), Error> {
         // let json_abi =
         // r#"
         // [
@@ -426,16 +433,17 @@ mod tests {
 
         let encoded_function_selector = ABIEncoder::encode_function_selector(sway_fn);
 
-        let encoded = ABIEncoder::encode(&args).unwrap();
+        let encoded = ABIEncoder::encode(&args)?;
 
         println!("Encoded ABI for ({}): {:#0x?}", sway_fn, encoded);
 
         assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
         assert_eq!(encoded_function_selector, expected_function_selector);
+        Ok(())
     }
 
     #[test]
-    fn encode_function_with_array_type() {
+    fn encode_function_with_array_type() -> Result<(), Error> {
         // let json_abi =
         // r#"
         // [
@@ -469,16 +477,17 @@ mod tests {
 
         let encoded_function_selector = ABIEncoder::encode_function_selector(sway_fn);
 
-        let encoded = ABIEncoder::encode(&args).unwrap();
+        let encoded = ABIEncoder::encode(&args)?;
 
         println!("Encoded ABI for ({}): {:#0x?}", sway_fn, encoded);
 
         assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
         assert_eq!(encoded_function_selector, expected_function_selector);
+        Ok(())
     }
 
     #[test]
-    fn encode_function_with_string_type() {
+    fn encode_function_with_string_type() -> Result<(), Error> {
         // let json_abi =
         // r#"
         // [
@@ -504,16 +513,17 @@ mod tests {
 
         let encoded_function_selector = ABIEncoder::encode_function_selector(sway_fn);
 
-        let encoded = ABIEncoder::encode(&args).unwrap();
+        let encoded = ABIEncoder::encode(&args)?;
 
         println!("Encoded ABI for ({}): {:#0x?}", sway_fn, encoded);
 
         assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
         assert_eq!(encoded_function_selector, expected_function_selector);
+        Ok(())
     }
 
     #[test]
-    fn encode_function_with_struct() {
+    fn encode_function_with_struct() -> Result<(), Error> {
         // let json_abi =
         // r#"
         // [
@@ -550,7 +560,7 @@ mod tests {
 
         let encoded_function_selector = ABIEncoder::encode_function_selector(sway_fn);
 
-        let encoded = ABIEncoder::encode(&args).unwrap();
+        let encoded = ABIEncoder::encode(&args)?;
 
         println!("Encoded ABI for ({}): {:#0x?}", sway_fn, encoded);
 
@@ -558,10 +568,11 @@ mod tests {
 
         assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
         assert_eq!(encoded_function_selector, expected_function_selector);
+        Ok(())
     }
 
     #[test]
-    fn encode_function_with_enum() {
+    fn encode_function_with_enum() -> Result<(), Error> {
         // let json_abi =
         // r#"
         // [
@@ -581,7 +592,7 @@ mod tests {
         //     x: u32,
         //     y: bool,
         // }
-        let params = EnumVariants::new(vec![ParamType::U32, ParamType::Bool]).unwrap();
+        let params = EnumVariants::new(vec![ParamType::U32, ParamType::Bool])?;
 
         // An `EnumSelector` indicating that we've chosen the first Enum variant,
         // whose value is 42 of the type ParamType::U32 and that the Enum could
@@ -601,22 +612,23 @@ mod tests {
 
         let encoded_function_selector = ABIEncoder::encode_function_selector(sway_fn);
 
-        let encoded = ABIEncoder::encode(&args).unwrap();
+        let encoded = ABIEncoder::encode(&args)?;
 
         assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
         assert_eq!(encoded_function_selector, expected_function_selector);
+        Ok(())
     }
 
     // The encoding follows the ABI specs defined  [here](https://github.com/FuelLabs/fuel-specs/blob/master/specs/protocol/abi.md)
     #[test]
-    fn enums_are_sized_to_fit_the_biggest_variant() {
+    fn enums_are_sized_to_fit_the_biggest_variant() -> Result<(), Error> {
         // Our enum has two variants: B256, and U64. So the enum will set aside
         // 256b of space or 4 WORDS because that is the space needed to fit the
         // largest variant(B256).
-        let enum_variants = EnumVariants::new(vec![ParamType::B256, ParamType::U64]).unwrap();
+        let enum_variants = EnumVariants::new(vec![ParamType::B256, ParamType::U64])?;
         let enum_selector = Box::new((1, Token::U64(42), enum_variants));
 
-        let encoded = ABIEncoder::encode(slice::from_ref(&Token::Enum(enum_selector))).unwrap();
+        let encoded = ABIEncoder::encode(slice::from_ref(&Token::Enum(enum_selector)))?;
 
         let enum_discriminant_enc = vec![0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1];
         let u64_enc = vec![0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2a];
@@ -630,18 +642,18 @@ mod tests {
             .collect();
 
         assert_eq!(hex::encode(expected), hex::encode(encoded));
+        Ok(())
     }
 
     #[test]
-    fn encoding_enums_with_deeply_nested_types() {
+    fn encoding_enums_with_deeply_nested_types() -> Result<(), Error> {
         /*
         enum DeeperEnum {
             v1: bool,
             v2: str[10]
         }
          */
-        let deeper_enum_variants =
-            EnumVariants::new(vec![ParamType::Bool, ParamType::String(10)]).unwrap();
+        let deeper_enum_variants = EnumVariants::new(vec![ParamType::Bool, ParamType::String(10)])?;
         let deeper_enum_token = Token::String("0123456789".to_owned());
         let str_enc = vec![
             b'0', b'1', b'2', b'3', b'4', b'5', b'6', b'7', b'8', b'9', 0x0, 0x0, 0x0, 0x0, 0x0,
@@ -676,12 +688,12 @@ mod tests {
         */
 
         let top_level_enum_variants =
-            EnumVariants::new(vec![struct_a_type, ParamType::Bool, ParamType::U64]).unwrap();
+            EnumVariants::new(vec![struct_a_type, ParamType::Bool, ParamType::U64])?;
         let top_level_enum_token =
             Token::Enum(Box::new((0, struct_a_token, top_level_enum_variants)));
         let top_lvl_discriminant_enc = vec![0x0; 8];
 
-        let encoded = ABIEncoder::encode(slice::from_ref(&top_level_enum_token)).unwrap();
+        let encoded = ABIEncoder::encode(slice::from_ref(&top_level_enum_token))?;
 
         let correct_encoding: Vec<u8> = [
             top_lvl_discriminant_enc,
@@ -694,10 +706,11 @@ mod tests {
         .collect();
 
         assert_eq!(hex::encode(correct_encoding), hex::encode(encoded));
+        Ok(())
     }
 
     #[test]
-    fn encode_function_with_nested_structs() {
+    fn encode_function_with_nested_structs() -> Result<(), Error> {
         // let json_abi =
         // r#"
         // [
@@ -740,16 +753,17 @@ mod tests {
 
         let encoded_function_selector = ABIEncoder::encode_function_selector(sway_fn);
 
-        let encoded = ABIEncoder::encode(&args).unwrap();
+        let encoded = ABIEncoder::encode(&args)?;
 
         println!("Encoded ABI for ({}): {:#0x?}", sway_fn, encoded);
 
         assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
         assert_eq!(encoded_function_selector, expected_function_selector);
+        Ok(())
     }
 
     #[test]
-    fn encode_comprehensive_function() {
+    fn encode_comprehensive_function() -> Result<(), Error> {
         // let json_abi =
         // r#"
         // [
@@ -831,38 +845,41 @@ mod tests {
 
         let encoded_function_selector = ABIEncoder::encode_function_selector(sway_fn);
 
-        let encoded = ABIEncoder::encode(&args).unwrap();
+        let encoded = ABIEncoder::encode(&args)?;
 
         assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
         assert_eq!(encoded_function_selector, expected_function_selector);
+        Ok(())
     }
 
     #[test]
-    fn enums_with_only_unit_variants_are_encoded_in_one_word() {
+    fn enums_with_only_unit_variants_are_encoded_in_one_word() -> Result<(), Error> {
         let expected = [0, 0, 0, 0, 0, 0, 0, 1];
 
         let enum_selector = Box::new((
             1,
             Token::Unit,
-            EnumVariants::new(vec![ParamType::Unit, ParamType::Unit]).unwrap(),
+            EnumVariants::new(vec![ParamType::Unit, ParamType::Unit])?,
         ));
 
-        let actual = ABIEncoder::encode(&[Token::Enum(enum_selector)]).unwrap();
+        let actual = ABIEncoder::encode(&[Token::Enum(enum_selector)])?;
 
         assert_eq!(actual, expected);
+        Ok(())
     }
 
     #[test]
-    fn units_in_composite_types_are_encoded_in_one_word() {
+    fn units_in_composite_types_are_encoded_in_one_word() -> Result<(), Error> {
         let expected = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5];
 
-        let actual =
-            ABIEncoder::encode(&[Token::Struct(vec![Token::Unit, Token::U32(5)])]).unwrap();
+        let actual = ABIEncoder::encode(&[Token::Struct(vec![Token::Unit, Token::U32(5)])])?;
 
         assert_eq!(actual, expected);
+        Ok(())
     }
+
     #[test]
-    fn enums_with_units_are_correctly_padded() {
+    fn enums_with_units_are_correctly_padded() -> Result<(), Error> {
         let discriminant = vec![0, 0, 0, 0, 0, 0, 0, 1];
         let padding = vec![0; 32];
         let expected: Vec<u8> = [discriminant, padding].into_iter().flatten().collect();
@@ -870,11 +887,12 @@ mod tests {
         let enum_selector = Box::new((
             1,
             Token::Unit,
-            EnumVariants::new(vec![ParamType::B256, ParamType::Unit]).unwrap(),
+            EnumVariants::new(vec![ParamType::B256, ParamType::Unit])?,
         ));
 
-        let actual = ABIEncoder::encode(&[Token::Enum(enum_selector)]).unwrap();
+        let actual = ABIEncoder::encode(&[Token::Enum(enum_selector)])?;
 
         assert_eq!(actual, expected);
+        Ok(())
     }
 }

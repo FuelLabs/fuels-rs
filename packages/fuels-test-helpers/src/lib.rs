@@ -216,12 +216,12 @@ mod tests {
     use std::net::Ipv4Addr;
 
     #[tokio::test]
-    async fn test_setup_single_asset_coins() {
+    async fn test_setup_single_asset_coins() -> Result<(), rand::Error> {
         let mut rng = rand::thread_rng();
         let mut address = Address::zeroed();
-        address.try_fill(&mut rng).unwrap();
+        address.try_fill(&mut rng)?;
         let mut asset_id = AssetId::zeroed();
-        asset_id.try_fill(&mut rng).unwrap();
+        asset_id.try_fill(&mut rng)?;
         let number_of_coins = 11;
         let amount_per_coin = 10;
         let coins = setup_single_asset_coins(address, asset_id, number_of_coins, amount_per_coin);
@@ -231,13 +231,14 @@ mod tests {
             assert_eq!(coin.amount, amount_per_coin);
             assert_eq!(coin.owner, address);
         }
+        Ok(())
     }
 
     #[tokio::test]
-    async fn test_setup_multiple_assets_coins() {
+    async fn test_setup_multiple_assets_coins() -> Result<(), rand::Error> {
         let mut rng = rand::thread_rng();
         let mut address = Address::zeroed();
-        address.try_fill(&mut rng).unwrap();
+        address.try_fill(&mut rng)?;
         let number_of_assets = 7;
         let coins_per_asset = 10;
         let amount_per_coin = 13;
@@ -265,10 +266,11 @@ mod tests {
                 assert_eq!(coin.amount, amount_per_coin);
             }
         }
+        Ok(())
     }
 
     #[tokio::test]
-    async fn test_setup_test_client_custom_config() {
+    async fn test_setup_test_client_custom_config() -> Result<(), rand::Error> {
         let socket = SocketAddr::new(Ipv4Addr::new(127, 0, 0, 1).into(), 5000);
 
         let wallet = LocalWallet::new_random(None);
@@ -288,5 +290,6 @@ mod tests {
         let wallets = setup_test_client(coins, Some(config)).await;
 
         assert_eq!(wallets.1, socket);
+        Ok(())
     }
 }

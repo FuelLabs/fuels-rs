@@ -51,7 +51,7 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn sign_and_verify() {
+    async fn sign_and_verify() -> Result<(), Box<dyn Error>> {
         let mut rng = StdRng::seed_from_u64(2322u64);
         let mut secret_seed = [0u8; 32];
         rng.fill_bytes(&mut secret_seed);
@@ -61,32 +61,34 @@ mod tests {
 
         let message = "my message";
 
-        let signature = wallet.sign_message(message).await.unwrap();
+        let signature = wallet.sign_message(message).await?;
 
         // Check if signature is what we expect it to be
-        assert_eq!(signature, Signature::from_str("0x8eeb238db1adea4152644f1cd827b552dfa9ab3f4939718bb45ca476d167c6512a656f4d4c7356bfb9561b14448c230c6e7e4bd781df5ee9e5999faa6495163d").unwrap());
+        assert_eq!(signature, Signature::from_str("0x8eeb238db1adea4152644f1cd827b552dfa9ab3f4939718bb45ca476d167c6512a656f4d4c7356bfb9561b14448c230c6e7e4bd781df5ee9e5999faa6495163d")?);
 
         // Recover address that signed the message
         let message = Message::new(message);
-        let recovered_address = signature.recover(&message).unwrap();
+        let recovered_address = signature.recover(&message)?;
 
         assert_eq!(wallet.address.as_ref(), recovered_address.hash().as_ref());
 
         // Verify signature
-        signature.verify(&recovered_address, &message).unwrap();
+        signature.verify(&recovered_address, &message)?;
+        Ok(())
     }
 
     #[tokio::test]
-    async fn sign_tx_and_verify() {
-        let secret =
-            SecretKey::from_str("5f70feeff1f229e4a95e1056e8b4d80d0b24b565674860cc213bdb07127ce1b1")
-                .unwrap();
+    async fn sign_tx_and_verify() -> Result<(), Box<dyn Error>> {
+        let secret = SecretKey::from_str(
+            "5f70feeff1f229e4a95e1056e8b4d80d0b24b565674860cc213bdb07127ce1b1",
+        )?;
         let wallet = Wallet::new_from_private_key(secret, None);
 
         let input_coin = Input::coin_signed(
             UtxoId::new(Bytes32::zeroed(), 0),
-            Address::from_str("0xf1e92c42b90934aa6372e30bc568a326f6e66a1a0288595e6e3fbd392a4f3e6e")
-                .unwrap(),
+            Address::from_str(
+                "0xf1e92c42b90934aa6372e30bc568a326f6e66a1a0288595e6e3fbd392a4f3e6e",
+            )?,
             10000000,
             AssetId::from([0u8; 32]),
             0,
@@ -94,8 +96,9 @@ mod tests {
         );
 
         let output_coin = Output::coin(
-            Address::from_str("0xc7862855b418ba8f58878db434b21053a61a2025209889cc115989e8040ff077")
-                .unwrap(),
+            Address::from_str(
+                "0xc7862855b418ba8f58878db434b21053a61a2025209889cc115989e8040ff077",
+            )?,
             1,
             AssetId::from([0u8; 32]),
         );
@@ -105,30 +108,31 @@ mod tests {
             1000000,
             0,
             0,
-            hex::decode("24400000").unwrap(),
+            hex::decode("24400000")?,
             vec![],
             vec![input_coin],
             vec![output_coin],
             vec![],
         );
 
-        let signature = wallet.sign_transaction(&mut tx).await.unwrap();
+        let signature = wallet.sign_transaction(&mut tx).await?;
         let message = unsafe { Message::from_bytes_unchecked(*tx.id()) };
 
         // Check if signature is what we expect it to be
-        assert_eq!(signature, Signature::from_str("a1287a24af13fc102cb9e60988b558d5575d7870032f64bafcc2deda2c99125fb25eca55a29a169de156cb30700965e2b26278fcc7ad375bc720440ea50ba3cb").unwrap());
+        assert_eq!(signature, Signature::from_str("a1287a24af13fc102cb9e60988b558d5575d7870032f64bafcc2deda2c99125fb25eca55a29a169de156cb30700965e2b26278fcc7ad375bc720440ea50ba3cb")?);
 
         // Recover address that signed the transaction
-        let recovered_address = signature.recover(&message).unwrap();
+        let recovered_address = signature.recover(&message)?;
 
         assert_eq!(wallet.address.as_ref(), recovered_address.hash().as_ref());
 
         // Verify signature
-        signature.verify(&recovered_address, &message).unwrap();
+        signature.verify(&recovered_address, &message)?;
+        Ok(())
     }
 
     #[tokio::test]
-    async fn send_transaction() {
+    async fn send_transaction() -> Result<(), fuels_core::errors::Error> {
         // Setup two sets of coins, one for each wallet, each containing 1 coin with 1 amount.
         let mut wallet_1 = LocalWallet::new_random(None);
         let mut wallet_2 = LocalWallet::new_random(None);
@@ -145,8 +149,8 @@ mod tests {
         wallet_1.set_provider(provider.clone());
         wallet_2.set_provider(provider);
 
-        let wallet_1_initial_coins = wallet_1.get_coins().await.unwrap();
-        let wallet_2_initial_coins = wallet_2.get_coins().await.unwrap();
+        let wallet_1_initial_coins = wallet_1.get_coins().await?;
+        let wallet_2_initial_coins = wallet_2.get_coins().await?;
 
         // Check initial wallet state.
         assert_eq!(wallet_1_initial_coins.len(), 1);
@@ -168,16 +172,13 @@ mod tests {
         // Transfer 1 from wallet 1 to wallet 2.
         let (tx_id, _receipts) = wallet_1
             .transfer(&wallet_2.address(), 1, Default::default(), tx_params)
-            .await
-            .unwrap();
+            .await?;
 
         // Assert that the transaction was properly configured.
         let res = wallet_1
-            .get_provider()
-            .unwrap()
+            .get_provider()?
             .get_transaction_by_id(&tx_id)
-            .await
-            .unwrap();
+            .await?;
 
         assert_eq!(res.transaction.byte_price(), byte_price);
         assert_eq!(res.transaction.gas_limit(), gas_limit);
@@ -185,8 +186,8 @@ mod tests {
         assert_eq!(res.transaction.maturity(), maturity);
 
         // Currently ignoring the effect on wallet 1, as coins aren't being marked as spent for now.
-        let _wallet_1_final_coins = wallet_1.get_coins().await.unwrap();
-        let wallet_2_final_coins = wallet_2.get_coins().await.unwrap();
+        let _wallet_1_final_coins = wallet_1.get_coins().await?;
+        let wallet_2_final_coins = wallet_2.get_coins().await?;
 
         // Check that wallet two now has two coins.
         assert_eq!(wallet_2_final_coins.len(), 2);
@@ -202,12 +203,13 @@ mod tests {
             .await;
 
         assert!(response.is_err());
-        let wallet_2_coins = wallet_2.get_coins().await.unwrap();
+        let wallet_2_coins = wallet_2.get_coins().await?;
         assert_eq!(wallet_2_coins.len(), 2); // Not changed
+        Ok(())
     }
 
     #[tokio::test]
-    async fn transfer_coins_with_change() {
+    async fn transfer_coins_with_change() -> Result<(), fuels_core::errors::Error> {
         // Setup two sets of coins, one for each wallet, each containing 1 coin with 5 amounts each.
         let mut wallet_1 = LocalWallet::new_random(None);
         let mut wallet_2 = LocalWallet::new_random(None);
@@ -223,8 +225,8 @@ mod tests {
         wallet_1.set_provider(provider.clone());
         wallet_2.set_provider(provider);
 
-        let wallet_1_initial_coins = wallet_1.get_coins().await.unwrap();
-        let wallet_2_initial_coins = wallet_2.get_coins().await.unwrap();
+        let wallet_1_initial_coins = wallet_1.get_coins().await?;
+        let wallet_2_initial_coins = wallet_2.get_coins().await?;
 
         assert_eq!(wallet_1_initial_coins.len(), 1);
         assert_eq!(wallet_2_initial_coins.len(), 1);
@@ -237,21 +239,21 @@ mod tests {
                 Default::default(),
                 TxParameters::default(),
             )
-            .await
-            .unwrap();
+            .await?;
 
-        let wallet_1_final_coins = wallet_1.get_coins().await.unwrap();
+        let wallet_1_final_coins = wallet_1.get_coins().await?;
 
         // Assert that we've sent 2 from wallet 1, resulting in an amount of 3 in wallet 1.
         let resulting_amount = wallet_1_final_coins.first().unwrap();
         assert_eq!(resulting_amount.amount.0, 3);
 
-        let wallet_2_final_coins = wallet_2.get_coins().await.unwrap();
+        let wallet_2_final_coins = wallet_2.get_coins().await?;
         assert_eq!(wallet_2_final_coins.len(), 2);
 
         // Check that wallet 2's amount is 7:
         // 5 initial + 2 that was sent to it.
         let total_amount: u64 = wallet_2_final_coins.iter().map(|c| c.amount.0).sum();
         assert_eq!(total_amount, 7);
+        Ok(())
     }
 }
