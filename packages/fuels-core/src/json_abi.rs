@@ -803,17 +803,18 @@ pub fn parse_custom_type_param(param: &Property) -> Result<ParamType, Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::errors::Error;
     use crate::ParamType;
 
     #[test]
-    fn parse_string_and_array_param() {
+    fn parse_string_and_array_param() -> Result<(), Error> {
         let array_prop = Property {
             name: "some_array".to_string(),
             type_field: "[bool; 4]".to_string(),
             components: None,
         };
         let expected = "Array(Box::new(ParamType::Bool),4)";
-        let result = parse_array_param(&array_prop).unwrap().to_string();
+        let result = parse_array_param(&array_prop)?.to_string();
         assert_eq!(result, expected);
 
         let string_prop = Property {
@@ -822,7 +823,7 @@ mod tests {
             components: None,
         };
         let expected = "String(5)";
-        let result = parse_string_param(&string_prop).unwrap().to_string();
+        let result = parse_string_param(&string_prop)?.to_string();
         assert_eq!(result, expected);
 
         let expected = "Invalid type: Expected parameter type `str[n]`, found `[bool; 4]`";
@@ -832,10 +833,11 @@ mod tests {
         let expected = "Invalid type: Expected parameter type `[T; n]`, found `str[5]`";
         let result = parse_array_param(&string_prop).unwrap_err().to_string();
         assert_eq!(result, expected);
+        Ok(())
     }
 
     #[test]
-    fn test_parse_custom_type_params() {
+    fn test_parse_custom_type_params() -> Result<(), Error> {
         let components = vec![
             Property {
                 name: "vodka".to_string(),
@@ -855,7 +857,7 @@ mod tests {
             type_field: String::from("struct Cocktail"),
             components: Some(components.clone()),
         };
-        let struct_result = parse_custom_type_param(&some_struct).unwrap();
+        let struct_result = parse_custom_type_param(&some_struct)?;
         // Underlying value comparison
         let expected = ParamType::Struct(vec![ParamType::U64, ParamType::Bool]);
         assert_eq!(struct_result, expected);
@@ -869,19 +871,19 @@ mod tests {
             type_field: String::from("enum Cocktail"),
             components: Some(components),
         };
-        let enum_result = parse_custom_type_param(&some_enum).unwrap();
+        let enum_result = parse_custom_type_param(&some_enum)?;
         // Underlying value comparison
-        let expected =
-            ParamType::Enum(EnumVariants::new(vec![ParamType::U64, ParamType::Bool]).unwrap());
+        let expected = ParamType::Enum(EnumVariants::new(vec![ParamType::U64, ParamType::Bool])?);
         assert_eq!(enum_result, expected);
         let expected_string =
             "Enum(EnumVariants::new(vec![ParamType::U64,ParamType::Bool]).unwrap())";
         // String format comparison
         assert_eq!(enum_result.to_string(), expected_string);
+        Ok(())
     }
 
     #[test]
-    fn simple_encode_and_decode_no_selector() {
+    fn simple_encode_and_decode_no_selector() -> Result<(), Error> {
         let json_abi = r#"
         [
             {
@@ -909,7 +911,7 @@ mod tests {
 
         let function_name = "takes_u32_returns_bool";
 
-        let encoded = abi.encode(json_abi, function_name, &values).unwrap();
+        let encoded = abi.encode(json_abi, function_name, &values)?;
 
         let expected_encode = "000000000000000a";
         assert_eq!(encoded, expected_encode);
@@ -918,15 +920,16 @@ mod tests {
             0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, // false
         ];
 
-        let decoded_return = abi.decode(json_abi, function_name, &return_value).unwrap();
+        let decoded_return = abi.decode(json_abi, function_name, &return_value)?;
 
         let expected_return = vec![Token::Bool(false)];
 
         assert_eq!(decoded_return, expected_return);
+        Ok(())
     }
 
     #[test]
-    fn simple_encode_and_decode() {
+    fn simple_encode_and_decode() -> Result<(), Error> {
         let json_abi = r#"
         [
             {
@@ -954,9 +957,7 @@ mod tests {
 
         let function_name = "takes_u32_returns_bool";
 
-        let encoded = abi
-            .encode_with_function_selector(json_abi, function_name, &values)
-            .unwrap();
+        let encoded = abi.encode_with_function_selector(json_abi, function_name, &values)?;
 
         let expected_encode = "000000006355e6ee000000000000000a";
         assert_eq!(encoded, expected_encode);
@@ -965,15 +966,16 @@ mod tests {
             0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, // false
         ];
 
-        let decoded_return = abi.decode(json_abi, function_name, &return_value).unwrap();
+        let decoded_return = abi.decode(json_abi, function_name, &return_value)?;
 
         let expected_return = vec![Token::Bool(false)];
 
         assert_eq!(decoded_return, expected_return);
+        Ok(())
     }
 
     #[test]
-    fn b256_and_single_byte_encode_and_decode() {
+    fn b256_and_single_byte_encode_and_decode() -> Result<(), Box<dyn std::error::Error>> {
         let json_abi = r#"
         [
             {
@@ -1008,28 +1010,26 @@ mod tests {
 
         let function_name = "my_func";
 
-        let encoded = abi
-            .encode_with_function_selector(json_abi, function_name, &values)
-            .unwrap();
+        let encoded = abi.encode_with_function_selector(json_abi, function_name, &values)?;
 
         let expected_encode = "00000000e64019abd5579c46dfcc7f18207013e65b44e4cb4e2c2298f4ac457ba8f82743f31e930b0000000000000001";
         assert_eq!(encoded, expected_encode);
 
         let return_value =
-            hex::decode("a441b15fe9a3cf56661190a0b93b9dec7d04127288cc87250967cf3b52894d11")
-                .unwrap();
+            hex::decode("a441b15fe9a3cf56661190a0b93b9dec7d04127288cc87250967cf3b52894d11")?;
 
-        let decoded_return = abi.decode(json_abi, function_name, &return_value).unwrap();
+        let decoded_return = abi.decode(json_abi, function_name, &return_value)?;
 
-        let s: [u8; 32] = return_value.as_slice().try_into().unwrap();
+        let s: [u8; 32] = return_value.as_slice().try_into()?;
 
         let expected_return = vec![Token::B256(s)];
 
         assert_eq!(decoded_return, expected_return);
+        Ok(())
     }
 
     #[test]
-    fn array_encode_and_decode() {
+    fn array_encode_and_decode() -> Result<(), Error> {
         let json_abi = r#"
         [
             {
@@ -1057,9 +1057,7 @@ mod tests {
 
         let function_name = "takes_array";
 
-        let encoded = abi
-            .encode_with_function_selector(json_abi, function_name, &values)
-            .unwrap();
+        let encoded = abi.encode_with_function_selector(json_abi, function_name, &values)?;
 
         let expected_encode = "00000000101cbeb5000000000000000100000000000000020000000000000003";
         assert_eq!(encoded, expected_encode);
@@ -1069,20 +1067,21 @@ mod tests {
             0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1, // 1
         ];
 
-        let decoded_return = abi.decode(json_abi, function_name, &return_value).unwrap();
+        let decoded_return = abi.decode(json_abi, function_name, &return_value)?;
 
         let expected_return = vec![Token::Array(vec![Token::U16(0), Token::U16(1)])];
 
         assert_eq!(decoded_return, expected_return);
+        Ok(())
     }
 
     #[test]
-    fn tokenize_array() {
+    fn tokenize_array() -> Result<(), Error> {
         let abi = ABIParser::new();
 
         let value = "[[1,2],[3],4]";
         let param = ParamType::U16;
-        let tokens = abi.tokenize_array(value, &param).unwrap();
+        let tokens = abi.tokenize_array(value, &param)?;
 
         let expected_tokens = Token::Array(vec![
             Token::Array(vec![Token::U16(1), Token::U16(2)]), // First element, a sub-array with 2 elements
@@ -1094,7 +1093,7 @@ mod tests {
 
         let value = "[1,[2],[3],[4,5]]";
         let param = ParamType::U16;
-        let tokens = abi.tokenize_array(value, &param).unwrap();
+        let tokens = abi.tokenize_array(value, &param)?;
 
         let expected_tokens = Token::Array(vec![
             Token::U16(1),
@@ -1107,7 +1106,7 @@ mod tests {
 
         let value = "[1,2,3,4,5]";
         let param = ParamType::U16;
-        let tokens = abi.tokenize_array(value, &param).unwrap();
+        let tokens = abi.tokenize_array(value, &param)?;
 
         let expected_tokens = Token::Array(vec![
             Token::U16(1),
@@ -1121,7 +1120,7 @@ mod tests {
 
         let value = "[[1,2,3,[4,5]]]";
         let param = ParamType::U16;
-        let tokens = abi.tokenize_array(value, &param).unwrap();
+        let tokens = abi.tokenize_array(value, &param)?;
 
         let expected_tokens = Token::Array(vec![Token::Array(vec![
             Token::U16(1),
@@ -1131,10 +1130,11 @@ mod tests {
         ])]);
 
         assert_eq!(tokens, expected_tokens);
+        Ok(())
     }
 
     #[test]
-    fn nested_array_encode_and_decode() {
+    fn nested_array_encode_and_decode() -> Result<(), Error> {
         let json_abi = r#"
         [
             {
@@ -1162,9 +1162,7 @@ mod tests {
 
         let function_name = "takes_nested_array";
 
-        let encoded = abi
-            .encode_with_function_selector(json_abi, function_name, &values)
-            .unwrap();
+        let encoded = abi.encode_with_function_selector(json_abi, function_name, &values)?;
 
         let expected_encode =
             "00000000e6a030f00000000000000001000000000000000200000000000000030000000000000004";
@@ -1175,15 +1173,16 @@ mod tests {
             0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1, // 1
         ];
 
-        let decoded_return = abi.decode(json_abi, function_name, &return_value).unwrap();
+        let decoded_return = abi.decode(json_abi, function_name, &return_value)?;
 
         let expected_return = vec![Token::Array(vec![Token::U16(0), Token::U16(1)])];
 
         assert_eq!(decoded_return, expected_return);
+        Ok(())
     }
 
     #[test]
-    fn string_encode_and_decode() {
+    fn string_encode_and_decode() -> Result<(), Error> {
         let json_abi = r#"
         [
             {
@@ -1211,9 +1210,7 @@ mod tests {
 
         let function_name = "takes_string";
 
-        let encoded = abi
-            .encode_with_function_selector(json_abi, function_name, &values)
-            .unwrap();
+        let encoded = abi.encode_with_function_selector(json_abi, function_name, &values)?;
 
         let expected_encode = "00000000d56e76515468697320697320612066756c6c2073656e74656e636500";
         assert_eq!(encoded, expected_encode);
@@ -1222,15 +1219,16 @@ mod tests {
             0x4f, 0x4b, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, // "OK" encoded in utf8
         ];
 
-        let decoded_return = abi.decode(json_abi, function_name, &return_value).unwrap();
+        let decoded_return = abi.decode(json_abi, function_name, &return_value)?;
 
         let expected_return = vec![Token::String("OK".into())];
 
         assert_eq!(decoded_return, expected_return);
+        Ok(())
     }
 
     #[test]
-    fn struct_encode_and_decode() {
+    fn struct_encode_and_decode() -> Result<(), Error> {
         let json_abi = r#"
         [
             {
@@ -1263,16 +1261,15 @@ mod tests {
 
         let function_name = "takes_struct";
 
-        let encoded = abi
-            .encode_with_function_selector(json_abi, function_name, &values)
-            .unwrap();
+        let encoded = abi.encode_with_function_selector(json_abi, function_name, &values)?;
 
         let expected_encode = "00000000cb0b2f05000000000000002a0000000000000001";
         assert_eq!(encoded, expected_encode);
+        Ok(())
     }
 
     #[test]
-    fn struct_and_primitive_encode_and_decode() {
+    fn struct_and_primitive_encode_and_decode() -> Result<(), Error> {
         let json_abi = r#"
         [
             {
@@ -1309,16 +1306,15 @@ mod tests {
 
         let function_name = "takes_struct_and_primitive";
 
-        let encoded = abi
-            .encode_with_function_selector(json_abi, function_name, &values)
-            .unwrap();
+        let encoded = abi.encode_with_function_selector(json_abi, function_name, &values)?;
 
         let expected_encode = "000000005c445838000000000000002a0000000000000001000000000000000a";
         assert_eq!(encoded, expected_encode);
+        Ok(())
     }
 
     #[test]
-    fn nested_struct_encode_and_decode() {
+    fn nested_struct_encode_and_decode() -> Result<(), Error> {
         let json_abi = r#"
         [
             {
@@ -1361,9 +1357,7 @@ mod tests {
 
         let function_name = "takes_nested_struct";
 
-        let encoded = abi
-            .encode_with_function_selector(json_abi, function_name, &values)
-            .unwrap();
+        let encoded = abi.encode_with_function_selector(json_abi, function_name, &values)?;
 
         let expected_encode =
             "00000000b1fbe7e3000000000000000a000000000000000100000000000000010000000000000002";
@@ -1407,17 +1401,16 @@ mod tests {
 
         let values: Vec<String> = vec!["((true, [1,2]), 10)".to_string()];
 
-        let encoded = abi
-            .encode_with_function_selector(json_abi, function_name, &values)
-            .unwrap();
+        let encoded = abi.encode_with_function_selector(json_abi, function_name, &values)?;
 
         let expected_encode =
             "00000000e748f310000000000000000100000000000000010000000000000002000000000000000a";
         assert_eq!(encoded, expected_encode);
+        Ok(())
     }
 
     #[test]
-    fn tuple_encode_and_decode() {
+    fn tuple_encode_and_decode() -> Result<(), Error> {
         let json_abi = r#"
         [
             {
@@ -1452,16 +1445,15 @@ mod tests {
 
         let function_name = "takes_tuple";
 
-        let encoded = abi
-            .encode_with_function_selector(json_abi, function_name, &values)
-            .unwrap();
+        let encoded = abi.encode_with_function_selector(json_abi, function_name, &values)?;
 
         let expected_encode = "000000001cc7bb2c000000000000002a0000000000000001";
         assert_eq!(encoded, expected_encode);
+        Ok(())
     }
 
     #[test]
-    fn nested_tuple_encode_and_decode() {
+    fn nested_tuple_encode_and_decode() -> Result<(), Error> {
         let json_abi = r#"
         [
           {
@@ -1534,18 +1526,17 @@ mod tests {
 
         let function_name = "takes_nested_tuple";
 
-        let encoded = abi
-            .encode_with_function_selector(json_abi, function_name, &values)
-            .unwrap();
+        let encoded = abi.encode_with_function_selector(json_abi, function_name, &values)?;
 
         println!("Function: {}", hex::encode(abi.fn_selector.unwrap()));
         let expected_encode =
             "00000000ebb8d011000000000000002a00000000000000014a6f686e000000000000000000000001";
         assert_eq!(encoded, expected_encode);
+        Ok(())
     }
 
     #[test]
-    fn enum_encode_and_decode() {
+    fn enum_encode_and_decode() -> Result<(), Error> {
         let json_abi = r#"
         [
             {
@@ -1578,16 +1569,15 @@ mod tests {
 
         let function_name = "takes_enum";
 
-        let encoded = abi
-            .encode_with_function_selector(json_abi, function_name, &values)
-            .unwrap();
+        let encoded = abi.encode_with_function_selector(json_abi, function_name, &values)?;
 
         let expected_encode = "0000000021b2784f0000000000000000000000000000002a";
         assert_eq!(encoded, expected_encode);
+        Ok(())
     }
 
     #[test]
-    fn fn_selector_single_primitive() {
+    fn fn_selector_single_primitive() -> Result<(), Error> {
         let abi = ABIParser::new();
         let p = Property {
             name: "foo".into(),
@@ -1595,13 +1585,14 @@ mod tests {
             components: None,
         };
         let params = vec![p];
-        let selector = abi.build_fn_selector("my_func", &params).unwrap();
+        let selector = abi.build_fn_selector("my_func", &params)?;
 
         assert_eq!(selector, "my_func(u64)");
+        Ok(())
     }
 
     #[test]
-    fn fn_selector_multiple_primitives() {
+    fn fn_selector_multiple_primitives() -> Result<(), Error> {
         let abi = ABIParser::new();
         let p1 = Property {
             name: "foo".into(),
@@ -1614,13 +1605,14 @@ mod tests {
             components: None,
         };
         let params = vec![p1, p2];
-        let selector = abi.build_fn_selector("my_func", &params).unwrap();
+        let selector = abi.build_fn_selector("my_func", &params)?;
 
         assert_eq!(selector, "my_func(u64,bool)");
+        Ok(())
     }
 
     #[test]
-    fn fn_selector_custom_type() {
+    fn fn_selector_custom_type() -> Result<(), Error> {
         let abi = ABIParser::new();
 
         let inner_foo = Property {
@@ -1642,7 +1634,7 @@ mod tests {
         };
 
         let params = vec![p_struct];
-        let selector = abi.build_fn_selector("my_func", &params).unwrap();
+        let selector = abi.build_fn_selector("my_func", &params)?;
 
         assert_eq!(selector, "my_func(s(bool,u64))");
 
@@ -1652,13 +1644,14 @@ mod tests {
             components: Some(vec![inner_foo, inner_bar]),
         };
         let params = vec![p_enum];
-        let selector = abi.build_fn_selector("my_func", &params).unwrap();
+        let selector = abi.build_fn_selector("my_func", &params)?;
 
         assert_eq!(selector, "my_func(e(bool,u64))");
+        Ok(())
     }
 
     #[test]
-    fn fn_selector_nested_struct() {
+    fn fn_selector_nested_struct() -> Result<(), Error> {
         let abi = ABIParser::new();
 
         let inner_foo = Property {
@@ -1692,13 +1685,14 @@ mod tests {
         };
 
         let params = vec![p];
-        let selector = abi.build_fn_selector("my_func", &params).unwrap();
+        let selector = abi.build_fn_selector("my_func", &params)?;
 
         assert_eq!(selector, "my_func(s(bool,s(u64,u32)))");
+        Ok(())
     }
 
     #[test]
-    fn fn_selector_nested_enum() {
+    fn fn_selector_nested_enum() -> Result<(), Error> {
         let abi = ABIParser::new();
 
         let inner_foo = Property {
@@ -1732,13 +1726,14 @@ mod tests {
         };
 
         let params = vec![p];
-        let selector = abi.build_fn_selector("my_func", &params).unwrap();
+        let selector = abi.build_fn_selector("my_func", &params)?;
 
         assert_eq!(selector, "my_func(e(bool,e(u64,u32)))");
+        Ok(())
     }
 
     #[test]
-    fn fn_selector_nested_custom_types() {
+    fn fn_selector_nested_custom_types() -> Result<(), Error> {
         let abi = ABIParser::new();
 
         let inner_foo = Property {
@@ -1772,7 +1767,7 @@ mod tests {
         };
 
         let params = vec![p];
-        let selector = abi.build_fn_selector("my_func", &params).unwrap();
+        let selector = abi.build_fn_selector("my_func", &params)?;
 
         assert_eq!(selector, "my_func(s(bool,e(u64,u32)))");
 
@@ -1783,12 +1778,13 @@ mod tests {
             components: Some(vec![inner_foo, inner_custom]),
         };
         let params = vec![p];
-        let selector = abi.build_fn_selector("my_func", &params).unwrap();
+        let selector = abi.build_fn_selector("my_func", &params)?;
         assert_eq!(selector, "my_func(e(bool,s(u64,u32)))");
+        Ok(())
     }
 
     #[test]
-    fn compiler_generated_abi_test() {
+    fn compiler_generated_abi_test() -> Result<(), Error> {
         let json_abi = r#"
         [
             {
@@ -1860,12 +1856,11 @@ mod tests {
 
         let function_name = "boo";
 
-        let encoded = abi
-            .encode_with_function_selector(json_abi, function_name, &values)
-            .unwrap();
+        let encoded = abi.encode_with_function_selector(json_abi, function_name, &values)?;
 
         let expected_encode = "00000000e33a11ce0000000000000001000000000000002a";
         assert_eq!(encoded, expected_encode);
+        Ok(())
     }
 
     #[test]
@@ -1929,7 +1924,7 @@ mod tests {
     }
 
     #[test]
-    fn tokenize_tuple_invalid_start_end_bracket_expected_error() {
+    fn tokenize_tuple_invalid_start_end_bracket_expected_error() -> Result<(), Error> {
         let abi = ABIParser::new();
         let params = Property {
             name: "input".to_string(),
@@ -1948,7 +1943,7 @@ mod tests {
             ]),
         };
 
-        if let ParamType::Tuple(tuple_params) = parse_tuple_param(&params).unwrap() {
+        if let ParamType::Tuple(tuple_params) = parse_tuple_param(&params)? {
             let error_message = abi
                 .tokenize_tuple("0, [0,0,0])", &tuple_params)
                 .unwrap_err()
@@ -1959,10 +1954,11 @@ mod tests {
                 error_message
             );
         }
+        Ok(())
     }
 
     #[test]
-    fn tokenize_tuple_excess_opening_bracket_expected_error() {
+    fn tokenize_tuple_excess_opening_bracket_expected_error() -> Result<(), Error> {
         let abi = ABIParser::new();
         let params = Property {
             name: "input".to_string(),
@@ -1981,7 +1977,7 @@ mod tests {
             ]),
         };
 
-        if let ParamType::Tuple(tuple_params) = parse_tuple_param(&params).unwrap() {
+        if let ParamType::Tuple(tuple_params) = parse_tuple_param(&params)? {
             let error_message = abi
                 .tokenize_tuple("((0, [0,0,0])", &tuple_params)
                 .unwrap_err()
@@ -1992,10 +1988,11 @@ mod tests {
                 error_message
             );
         }
+        Ok(())
     }
 
     #[test]
-    fn tokenize_tuple_excess_closing_bracket_expected_error() {
+    fn tokenize_tuple_excess_closing_bracket_expected_error() -> Result<(), Error> {
         let abi = ABIParser::new();
         let params = Property {
             name: "input".to_string(),
@@ -2014,7 +2011,7 @@ mod tests {
             ]),
         };
 
-        if let ParamType::Tuple(tuple_params) = parse_tuple_param(&params).unwrap() {
+        if let ParamType::Tuple(tuple_params) = parse_tuple_param(&params)? {
             let error_message = abi
                 .tokenize_tuple("(0, [0,0,0]))", &tuple_params)
                 .unwrap_err()
@@ -2025,10 +2022,11 @@ mod tests {
                 error_message
             );
         }
+        Ok(())
     }
 
     #[test]
-    fn tokenize_tuple_excess_quotes_expected_error() {
+    fn tokenize_tuple_excess_quotes_expected_error() -> Result<(), Error> {
         let abi = ABIParser::new();
         let params = Property {
             name: "input".to_string(),
@@ -2047,7 +2045,7 @@ mod tests {
             ]),
         };
 
-        if let ParamType::Tuple(tuple_params) = parse_tuple_param(&params).unwrap() {
+        if let ParamType::Tuple(tuple_params) = parse_tuple_param(&params)? {
             let error_message = abi
                 .tokenize_tuple("(0, \"[0,0,0])", &tuple_params)
                 .unwrap_err()
@@ -2058,10 +2056,11 @@ mod tests {
                 error_message
             );
         }
+        Ok(())
     }
 
     #[test]
-    fn tokenize_tuple_excess_value_elements_expected_error() {
+    fn tokenize_tuple_excess_value_elements_expected_error() -> Result<(), Error> {
         let abi = ABIParser::new();
         let params = Property {
             name: "input".to_string(),
@@ -2080,7 +2079,7 @@ mod tests {
             ]),
         };
 
-        if let ParamType::Tuple(tuple_params) = parse_tuple_param(&params).unwrap() {
+        if let ParamType::Tuple(tuple_params) = parse_tuple_param(&params)? {
             let error_message = abi
                 .tokenize_tuple("(0, [0,0,0], 0, 0)", &tuple_params)
                 .unwrap_err()
@@ -2101,6 +2100,7 @@ mod tests {
                 error_message
             );
         }
+        Ok(())
     }
 
     #[test]
@@ -2168,7 +2168,7 @@ mod tests {
     }
 
     #[test]
-    fn tokenize_struct_invalid_start_end_bracket_expected_error() {
+    fn tokenize_struct_invalid_start_end_bracket_expected_error() -> Result<(), Error> {
         let abi = ABIParser::new();
         let params = Property {
             name: "input".to_string(),
@@ -2187,7 +2187,7 @@ mod tests {
             ]),
         };
 
-        if let ParamType::Struct(struct_params) = parse_custom_type_param(&params).unwrap() {
+        if let ParamType::Struct(struct_params) = parse_custom_type_param(&params)? {
             let error_message = abi
                 .tokenize_struct("0, [0,0,0])", &struct_params)
                 .unwrap_err()
@@ -2198,10 +2198,11 @@ mod tests {
                 error_message
             );
         }
+        Ok(())
     }
 
     #[test]
-    fn tokenize_struct_excess_opening_bracket_expected_error() {
+    fn tokenize_struct_excess_opening_bracket_expected_error() -> Result<(), Error> {
         let abi = ABIParser::new();
         let params = Property {
             name: "input".to_string(),
@@ -2220,7 +2221,7 @@ mod tests {
             ]),
         };
 
-        if let ParamType::Struct(struct_params) = parse_custom_type_param(&params).unwrap() {
+        if let ParamType::Struct(struct_params) = parse_custom_type_param(&params)? {
             let error_message = abi
                 .tokenize_struct("((0, [0,0,0])", &struct_params)
                 .unwrap_err()
@@ -2231,10 +2232,11 @@ mod tests {
                 error_message
             );
         }
+        Ok(())
     }
 
     #[test]
-    fn tokenize_struct_excess_closing_bracket_expected_error() {
+    fn tokenize_struct_excess_closing_bracket_expected_error() -> Result<(), Error> {
         let abi = ABIParser::new();
         let params = Property {
             name: "input".to_string(),
@@ -2253,7 +2255,7 @@ mod tests {
             ]),
         };
 
-        if let ParamType::Struct(struct_params) = parse_custom_type_param(&params).unwrap() {
+        if let ParamType::Struct(struct_params) = parse_custom_type_param(&params)? {
             let error_message = abi
                 .tokenize_struct("(0, [0,0,0]))", &struct_params)
                 .unwrap_err()
@@ -2264,10 +2266,11 @@ mod tests {
                 error_message
             );
         }
+        Ok(())
     }
 
     #[test]
-    fn tokenize_struct_excess_quotes_expected_error() {
+    fn tokenize_struct_excess_quotes_expected_error() -> Result<(), Error> {
         let abi = ABIParser::new();
         let params = Property {
             name: "input".to_string(),
@@ -2286,7 +2289,7 @@ mod tests {
             ]),
         };
 
-        if let ParamType::Struct(struct_params) = parse_custom_type_param(&params).unwrap() {
+        if let ParamType::Struct(struct_params) = parse_custom_type_param(&params)? {
             let error_message = abi
                 .tokenize_struct("(0, \"[0,0,0])", &struct_params)
                 .unwrap_err()
@@ -2297,10 +2300,11 @@ mod tests {
                 error_message
             );
         }
+        Ok(())
     }
 
     #[test]
-    fn tokenize_struct_excess_value_elements_expected_error() {
+    fn tokenize_struct_excess_value_elements_expected_error() -> Result<(), Error> {
         let abi = ABIParser::new();
         let params = Property {
             name: "input".to_string(),
@@ -2319,7 +2323,7 @@ mod tests {
             ]),
         };
 
-        if let ParamType::Struct(struct_params) = parse_custom_type_param(&params).unwrap() {
+        if let ParamType::Struct(struct_params) = parse_custom_type_param(&params)? {
             let error_message = abi
                 .tokenize_struct("(0, [0,0,0], 0, 0)", &struct_params)
                 .unwrap_err()
@@ -2340,5 +2344,6 @@ mod tests {
                 error_message
             );
         }
+        Ok(())
     }
 }
