@@ -379,7 +379,7 @@ async fn call_params_gas() -> Result<(), Error> {
 
 #[tokio::test]
 #[allow(unused_variables)]
-async fn multi_call_example() {
+async fn multi_call_example() -> Result<(), Error> {
     use fuels::prelude::*;
 
     abigen!(
@@ -394,8 +394,7 @@ async fn multi_call_example() {
         &wallet,
         TxParameters::default(),
     )
-    .await
-    .unwrap();
+    .await?;
 
     // ANCHOR: multi_call_prepare
     let contract_instance = MyContract::new(contract_id.to_string(), wallet.clone());
@@ -413,13 +412,15 @@ async fn multi_call_example() {
     // ANCHOR_END: multi_call_build
 
     // ANCHOR: multi_call_values
-    let (counter, array): (u64, Vec<u64>) = multi_call_handler.call().await.unwrap().value;
+    let (counter, array): (u64, Vec<u64>) = multi_call_handler.call().await?.value;
     // ANCHOR_END: multi_call_values
 
     // ANCHOR: multi_call_response
-    let response = multi_call_handler.call::<(u64, Vec<u64>)>().await.unwrap();
+    let response = multi_call_handler.call::<(u64, Vec<u64>)>().await?;
     // ANCHOR_END: multi_call_response
 
     assert_eq!(counter, 42);
     assert_eq!(array, [42; 2]);
+
+    Ok(())
 }

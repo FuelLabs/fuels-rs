@@ -1863,7 +1863,7 @@ async fn nested_enums_are_correctly_encoded_decoded() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_multi_call() {
+async fn test_multi_call() -> Result<(), Error> {
     abigen!(
         MyContract,
         "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
@@ -1876,8 +1876,7 @@ async fn test_multi_call() {
         &wallet,
         TxParameters::default(),
     )
-    .await
-    .unwrap();
+    .await?;
 
     let contract_instance = MyContract::new(contract_id.to_string(), wallet.clone());
 
@@ -1890,29 +1889,30 @@ async fn test_multi_call() {
         .add_call(call_handler_1)
         .add_call(call_handler_2);
 
-    let (counter, array): (u64, Vec<u64>) = multi_call_handler.call().await.unwrap().value;
+    let (counter, array): (u64, Vec<u64>) = multi_call_handler.call().await?.value;
 
     assert_eq!(counter, 42);
     assert_eq!(array, [42; 2]);
+
+    Ok(())
 }
 
 #[tokio::test]
-async fn test_multi_call_script_workflow() {
+async fn test_multi_call_script_workflow() -> Result<(), Error> {
     abigen!(
         MyContract,
         "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
-    let client = &wallet.get_provider().unwrap().client;
+    let client = &wallet.get_provider()?.client;
 
     let contract_id = Contract::deploy(
         "tests/test_projects/contract_test/out/debug/contract_test.bin",
         &wallet,
         TxParameters::default(),
     )
-    .await
-    .unwrap();
+    .await?;
 
     let contract_instance = MyContract::new(contract_id.to_string(), wallet.clone());
 
@@ -1928,10 +1928,11 @@ async fn test_multi_call_script_workflow() {
     let script = multi_call_handler.get_script().await;
     let receipts = script.call(client).await.unwrap();
     let (counter, array) = multi_call_handler
-        .get_response::<(u64, Vec<u64>)>(receipts)
-        .unwrap()
+        .get_response::<(u64, Vec<u64>)>(receipts)?
         .value;
 
     assert_eq!(counter, 42);
     assert_eq!(array, [42; 2]);
+
+    Ok(())
 }
