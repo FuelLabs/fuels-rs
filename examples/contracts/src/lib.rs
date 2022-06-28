@@ -92,8 +92,7 @@ async fn deploy_with_salt() -> Result<(), Error> {
         &wallet,
         TxParameters::default(),
     )
-    .await
-    ?;
+    .await?;
 
     println!("Contract deployed @ {:x}", contract_id_1);
 
@@ -106,8 +105,7 @@ async fn deploy_with_salt() -> Result<(), Error> {
         TxParameters::default(),
         Salt::from(salt),
     )
-    .await
-    ?;
+    .await?;
 
     println!("Contract deployed @ {:x}", contract_id_2);
 
@@ -134,8 +132,7 @@ async fn deploy_with_multiple_wallets() -> Result<(), Error> {
         &wallets[0],
         TxParameters::default(),
     )
-    .await
-    ?;
+    .await?;
 
     println!("Contract deployed @ {:x}", contract_id_1);
     let contract_instance_1 = MyContract::new(contract_id_1.to_string(), wallets[0].clone());
@@ -153,8 +150,7 @@ async fn deploy_with_multiple_wallets() -> Result<(), Error> {
         &wallets[1],
         TxParameters::default(),
     )
-    .await
-    ?;
+    .await?;
 
     println!("Contract deployed @ {:x}", contract_id_2);
     let contract_instance_2 = MyContract::new(contract_id_2.to_string(), wallets[1].clone());
