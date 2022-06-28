@@ -1,7 +1,7 @@
 use core::fmt;
 use core::str::Utf8Error;
 pub type Result<T> = core::result::Result<T, Error>;
-use fuel_tx::Receipt;
+use fuel_tx::{Receipt, ValidationError};
 use std::fmt::{Display, Formatter};
 use std::{error, net};
 use strum::ParseError;
@@ -59,6 +59,8 @@ pub enum Error {
     ContractCallError(String, Vec<Receipt>),
     #[error("Wallet error: {0}")]
     WalletError(String),
+    #[error("Validation error: {0}")]
+    ValidationError(#[from] ValidationError),
 }
 
 impl From<CodecError> for Error {

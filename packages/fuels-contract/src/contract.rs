@@ -191,7 +191,7 @@ impl Contract {
 
         wallet.sign_transaction(&mut tx).await?;
 
-        let _ = tx.validate_without_signature(0, &chan_info.consensus_parameters.into());
+        tx.validate_without_signature(0, &chan_info.consensus_parameters.into())?;
 
         match client.submit(&tx).await {
             Ok(_) => Ok(contract_id),

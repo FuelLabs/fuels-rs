@@ -276,6 +276,10 @@ impl Script {
 
     /// Execute the transaction in a state-modifying manner.
     pub async fn call(self, fuel_client: &FuelClient) -> Result<Vec<Receipt>, Error> {
+        let chan_info = fuel_client.chain_info().await?;
+        self.tx
+            .validate_without_signature(0, &chan_info.consensus_parameters.into())?;
+
         let tx_id = fuel_client.submit(&self.tx).await?.0.to_string();
         let receipts = fuel_client.receipts(&tx_id).await?;
         let status = fuel_client.transaction_status(&tx_id).await?;
@@ -289,6 +293,10 @@ impl Script {
 
     /// Execute the transaction in a simulated manner, not modifying blockchain state
     pub async fn simulate(self, fuel_client: &FuelClient) -> Result<Vec<Receipt>, Error> {
+        let chan_info = fuel_client.chain_info().await?;
+        self.tx
+            .validate_without_signature(0, &chan_info.consensus_parameters.into())?;
+
         let receipts = fuel_client.dry_run(&self.tx).await?;
         Ok(receipts)
     }

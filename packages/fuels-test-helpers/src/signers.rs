@@ -157,7 +157,7 @@ mod tests {
 
         let expected = result.expect_err("should fail");
 
-        let error_string = "error: ValidationError(TransactionGasLimit)";
+        let error_string = "Validation error: TransactionGasLimit";
 
         assert!(expected.to_string().contains(error_string));
     }
