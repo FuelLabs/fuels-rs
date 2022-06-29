@@ -3,7 +3,7 @@ use std::net::SocketAddr;
 #[cfg(feature = "fuel-core-lib")]
 use fuel_core::{model::Coin, service::Config};
 
-use fuel_gql_client::fuel_tx::{ConsensusParameters, UtxoId};
+use fuel_gql_client::fuel_tx::UtxoId;
 
 #[cfg(not(feature = "fuel-core-lib"))]
 use fuel_core_interfaces::model::Coin;
@@ -17,8 +17,7 @@ use crate::{setup_single_asset_coins, setup_test_client, wallets_config::Wallets
 
 pub async fn launch_provider_and_get_wallet() -> LocalWallet {
     let mut wallets =
-        launch_custom_provider_and_get_wallets(WalletsConfig::new_single(None, None), None, None)
-            .await;
+        launch_custom_provider_and_get_wallets(WalletsConfig::new_single(None, None), None).await;
 
     wallets.pop().unwrap()
 }
@@ -27,7 +26,6 @@ pub async fn launch_provider_and_get_wallet() -> LocalWallet {
 pub async fn launch_custom_provider_and_get_wallets(
     wallet_config: WalletsConfig,
     provider_config: Option<Config>,
-    consensus_parameters_config: Option<ConsensusParameters>,
 ) -> Vec<LocalWallet> {
     let mut wallets: Vec<LocalWallet> = (1..=wallet_config.num_wallets)
         .map(|_i| LocalWallet::new_random(None))
@@ -44,8 +42,7 @@ pub async fn launch_custom_provider_and_get_wallets(
         all_coins.extend(coins);
     }
 
-    let (provider, _) =
-        setup_test_provider(all_coins, provider_config, consensus_parameters_config).await;
+    let (provider, _) = setup_test_provider(all_coins, provider_config).await;
 
     wallets
         .iter_mut()
@@ -60,9 +57,8 @@ pub async fn launch_custom_provider_and_get_wallets(
 pub async fn setup_test_provider(
     coins: Vec<(UtxoId, Coin)>,
     node_config: Option<Config>,
-    consensus_parameters_config: Option<ConsensusParameters>,
 ) -> (Provider, SocketAddr) {
-    let (client, addr) = setup_test_client(coins, node_config, consensus_parameters_config).await;
+    let (client, addr) = setup_test_client(coins, node_config, None).await;
     (Provider::new(client), addr)
 }
 
@@ -70,7 +66,6 @@ pub async fn setup_test_provider(
 pub async fn launch_custom_provider_and_get_wallets(
     wallet_config: WalletsConfig,
     provider_config: Option<Config>,
-    consensus_parameters_config: Option<ConsensusParameters>,
 ) -> Vec<LocalWallet> {
     let mut wallets: Vec<LocalWallet> = (1..=wallet_config.num_wallets)
         .map(|_i| LocalWallet::new_random(None))
@@ -87,8 +82,7 @@ pub async fn launch_custom_provider_and_get_wallets(
         all_coins.extend(coins);
     }
 
-    let (provider, _) =
-        setup_test_provider(all_coins, provider_config, consensus_parameters_config).await;
+    let (provider, _) = setup_test_provider(all_coins, provider_config).await;
 
     wallets
         .iter_mut()
@@ -101,9 +95,8 @@ pub async fn launch_custom_provider_and_get_wallets(
 pub async fn setup_test_provider(
     coins: Vec<(UtxoId, Coin)>,
     node_config: Option<Config>,
-    consensus_parameters_config: Option<ConsensusParameters>,
 ) -> (Provider, SocketAddr) {
-    let (client, addr) = setup_test_client(coins, node_config, consensus_parameters_config).await;
+    let (client, addr) = setup_test_client(coins, node_config, None).await;
     (Provider::new(client), addr)
 }
 
@@ -122,7 +115,7 @@ mod tests {
         let amount = 100;
         let config = WalletsConfig::new(Some(num_wallets), Some(num_coins), Some(amount));
 
-        let wallets = launch_custom_provider_and_get_wallets(config, None, None).await;
+        let wallets = launch_custom_provider_and_get_wallets(config, None).await;
 
         assert_eq!(wallets.len(), num_wallets as usize);
 
@@ -136,29 +129,5 @@ mod tests {
             }
         }
         Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_setup_test_client_consensus_parameters_config() {
-        let config = WalletsConfig::default();
-
-        let consensus_parameters_config = ConsensusParameters::DEFAULT.with_max_gas_per_tx(1);
-
-        let wallet =
-            launch_custom_provider_and_get_wallets(config, None, Some(consensus_parameters_config))
-                .await;
-
-        let result = Contract::deploy(
-            "../fuels/tests/test_projects/contract_output_test/out/debug/contract_output_test.bin",
-            &wallet[0],
-            TxParameters::default(),
-        )
-        .await;
-
-        let expected = result.expect_err("should fail");
-
-        let error_string = "Validation error: TransactionGasLimit";
-
-        assert!(expected.to_string().contains(error_string));
     }
 }

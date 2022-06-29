@@ -22,7 +22,7 @@ async fn create_wallet_from_secret_key() -> Result<(), Box<dyn std::error::Error
     use std::str::FromStr;
 
     // Use the test helper to setup a test provider.
-    let (provider, _address) = setup_test_provider(vec![], None, None).await;
+    let (provider, _address) = setup_test_provider(vec![], None).await;
 
     // Setup the private key.
     let secret =
@@ -42,7 +42,7 @@ async fn create_wallet_from_mnemonic() -> Result<(), Error> {
     let phrase = "oblige salon price punch saddle immune slogan rare snap desert retire surprise";
 
     // Use the test helper to setup a test provider.
-    let (provider, _address) = setup_test_provider(vec![], None, None).await;
+    let (provider, _address) = setup_test_provider(vec![], None).await;
 
     // Create first account from mnemonic phrase.
     let _wallet = LocalWallet::new_from_mnemonic_phrase_with_path(
@@ -70,7 +70,7 @@ async fn create_and_restore_json_wallet() -> Result<(), Error> {
     let mut rng = rand::thread_rng();
 
     // Use the test helper to setup a test provider.
-    let (provider, _address) = setup_test_provider(vec![], None, None).await;
+    let (provider, _address) = setup_test_provider(vec![], None).await;
 
     let password = "my_master_password";
 
@@ -95,7 +95,7 @@ async fn create_and_store_mnemonic_wallet() -> Result<(), Error> {
     let phrase = "oblige salon price punch saddle immune slogan rare snap desert retire surprise";
 
     // Use the test helper to setup a test provider.
-    let (provider, _address) = setup_test_provider(vec![], None, None).await;
+    let (provider, _address) = setup_test_provider(vec![], None).await;
 
     // Create first account from mnemonic phrase.
     let wallet = LocalWallet::new_from_mnemonic_phrase(phrase, Some(provider))?;
@@ -120,7 +120,6 @@ async fn wallet_transfer() -> Result<(), Error> {
             coin_amount: 1,
         },
         None,
-        None,
     )
     .await;
 
@@ -144,8 +143,7 @@ async fn setup_multiple_wallets() -> Result<(), Error> {
     use fuels::prelude::*;
     // This helper will launch a local node and provide 10 test wallets linked to it.
     // The initial balance defaults to 1 coin per wallet with an amount of 1_000_000_000
-    let wallets =
-        launch_custom_provider_and_get_wallets(WalletsConfig::default(), None, None).await;
+    let wallets = launch_custom_provider_and_get_wallets(WalletsConfig::default(), None).await;
     // ANCHOR_END: multiple_wallets_helper
     // ANCHOR: setup_5_wallets
     let num_wallets = 5;
@@ -158,7 +156,7 @@ async fn setup_multiple_wallets() -> Result<(), Error> {
         Some(amount_per_coin),
     );
     // Launches a local node and provides test wallets as specified by the config
-    let wallets = launch_custom_provider_and_get_wallets(config, None, None).await;
+    let wallets = launch_custom_provider_and_get_wallets(config, None).await;
     // ANCHOR_END: setup_5_wallets
     Ok(())
 }
@@ -179,7 +177,7 @@ async fn setup_wallet_multiple_assets() -> Result<(), Error> {
         coins_per_asset,
         amount_per_coin,
     );
-    let (provider, _socket_addr) = setup_test_provider(coins.clone(), None, None).await;
+    let (provider, _socket_addr) = setup_test_provider(coins.clone(), None).await;
     wallet.set_provider(provider);
     // ANCHOR_END: multiple_assets_wallet
     Ok(())

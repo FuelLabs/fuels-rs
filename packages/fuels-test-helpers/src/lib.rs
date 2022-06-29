@@ -20,7 +20,7 @@ pub use node::{CoinConfig, Config};
 use fuel_core_interfaces::model::{Coin, CoinStatus};
 
 #[cfg(not(feature = "fuel-core-lib"))]
-use portpicker::pick_unused_port;
+use portpicker::{is_free, pick_unused_port};
 
 #[cfg(not(feature = "fuel-core-lib"))]
 use crate::node::spawn_fuel_service;
@@ -193,6 +193,9 @@ fn get_socket_address() -> SocketAddr {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fuels_contract::contract::Contract;
+    use fuels_core::parameters::TxParameters;
+    use fuels_signers::provider::Provider;
     use fuels_signers::{LocalWallet, Signer};
     use std::net::Ipv4Addr;
 
@@ -272,5 +275,39 @@ mod tests {
 
         assert_eq!(wallets.1, socket);
         Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_setup_test_client_consensus_parameters_config() {
+        let config = WalletsConfig::default();
+
+        let consensus_parameters_config = ConsensusParameters::DEFAULT.with_max_gas_per_tx(1);
+
+        let mut wallet = LocalWallet::new_random(None);
+
+        let coins: Vec<(UtxoId, Coin)> = setup_single_asset_coins(
+            wallet.address(),
+            Default::default(),
+            DEFAULT_NUM_COINS,
+            DEFAULT_COIN_AMOUNT,
+        );
+
+        let (fuel_client, _) =
+            setup_test_client(coins, None, Some(consensus_parameters_config)).await;
+        let provider = Provider::new(fuel_client);
+        wallet.set_provider(provider.clone());
+
+        let result = Contract::deploy(
+            "../fuels/tests/test_projects/contract_output_test/out/debug/contract_output_test.bin",
+            &wallet,
+            TxParameters::default(),
+        )
+        .await;
+
+        let expected = result.expect_err("should fail");
+
+        let error_string = "Validation error: TransactionGasLimit";
+
+        assert!(expected.to_string().contains(error_string));
     }
 }

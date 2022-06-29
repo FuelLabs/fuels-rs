@@ -124,8 +124,7 @@ async fn deploy_with_multiple_wallets() -> Result<(), Error> {
         "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
 
-    let wallets =
-        launch_custom_provider_and_get_wallets(WalletsConfig::default(), None, None).await;
+    let wallets = launch_custom_provider_and_get_wallets(WalletsConfig::default(), None).await;
 
     let contract_id_1 = Contract::deploy(
         "../../packages/fuels/tests/test_projects/contract_test/out/debug/contract_test.bin",
