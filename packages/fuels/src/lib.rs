@@ -53,7 +53,7 @@ pub mod prelude {
     //! use fuels::prelude::*;
     //! ```
 
-    pub use super::contract::contract::Contract;
+    pub use super::contract::contract::{Contract, MultiContractCallHandler};
     pub use super::core::constants::*;
     pub use super::core::errors::Error;
     pub use super::core::parameters::*;

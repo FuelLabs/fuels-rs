@@ -1,7 +1,5 @@
 use fuel_gql_client::fuel_tx::{AssetId, ContractId, Receipt};
-use sha2::{Digest, Sha256};
-use std::str::FromStr;
-
+use fuels::contract::contract::MultiContractCallHandler;
 use fuels::prelude::{
     abigen, launch_provider_and_get_wallet, setup_multiple_assets_coins, setup_single_asset_coins,
     setup_test_provider, CallParameters, Contract, Error, LocalWallet, Provider, ProviderError,
@@ -10,6 +8,8 @@ use fuels::prelude::{
 use fuels_core::tx::Address;
 use fuels_core::Tokenizable;
 use fuels_core::{constants::BASE_ASSET_ID, Token};
+use sha2::{Digest, Sha256};
+use std::str::FromStr;
 
 /// Note: all the tests and examples below require pre-compiled Sway projects.
 /// To compile these projects, run `cargo run --bin build-test-projects`.
@@ -1859,5 +1859,80 @@ async fn nested_enums_are_correctly_encoded_decoded() -> Result<(), Error> {
     let response = instance.get_none().call().await?;
 
     assert_eq!(response.value, expected_none);
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_multi_call() -> Result<(), Error> {
+    abigen!(
+        MyContract,
+        "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+    );
+
+    let wallet = launch_provider_and_get_wallet().await;
+
+    let contract_id = Contract::deploy(
+        "tests/test_projects/contract_test/out/debug/contract_test.bin",
+        &wallet,
+        TxParameters::default(),
+    )
+    .await?;
+
+    let contract_instance = MyContract::new(contract_id.to_string(), wallet.clone());
+
+    let call_handler_1 = contract_instance.initialize_counter(42);
+    let call_handler_2 = contract_instance.get_array([42; 2].to_vec());
+
+    let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
+
+    multi_call_handler
+        .add_call(call_handler_1)
+        .add_call(call_handler_2);
+
+    let (counter, array): (u64, Vec<u64>) = multi_call_handler.call().await?.value;
+
+    assert_eq!(counter, 42);
+    assert_eq!(array, [42; 2]);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_multi_call_script_workflow() -> Result<(), Error> {
+    abigen!(
+        MyContract,
+        "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+    );
+
+    let wallet = launch_provider_and_get_wallet().await;
+    let client = &wallet.get_provider()?.client;
+
+    let contract_id = Contract::deploy(
+        "tests/test_projects/contract_test/out/debug/contract_test.bin",
+        &wallet,
+        TxParameters::default(),
+    )
+    .await?;
+
+    let contract_instance = MyContract::new(contract_id.to_string(), wallet.clone());
+
+    let call_handler_1 = contract_instance.initialize_counter(42);
+    let call_handler_2 = contract_instance.get_array([42; 2].to_vec());
+
+    let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
+
+    multi_call_handler
+        .add_call(call_handler_1)
+        .add_call(call_handler_2);
+
+    let script = multi_call_handler.get_script().await;
+    let receipts = script.call(client).await.unwrap();
+    let (counter, array) = multi_call_handler
+        .get_response::<(u64, Vec<u64>)>(receipts)?
+        .value;
+
+    assert_eq!(counter, 42);
+    assert_eq!(array, [42; 2]);
+
     Ok(())
 }
