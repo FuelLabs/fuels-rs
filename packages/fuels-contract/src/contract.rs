@@ -13,13 +13,16 @@ use fuels_core::{
 };
 use fuels_signers::{provider::Provider, LocalWallet, Signer};
 use std::fmt::Debug;
+use std::fs;
 use std::marker::PhantomData;
 use std::path::Path;
+use tracing::level_enabled;
 
 #[derive(Debug, Clone, Default)]
 pub struct CompiledContract {
     pub raw: Vec<u8>,
     pub salt: Salt,
+    // pub storage: Vec<StorageSlot>
 }
 
 /// Contract is a struct to interface with a contract. That includes things such as
@@ -202,6 +205,19 @@ impl Contract {
             return Err(Error::InvalidData(extension.to_str().unwrap().to_owned()));
         }
         let bin = std::fs::read(binary_filepath)?;
+
+        let storage_path = Path::new(binary_filepath).file_stem().unwrap();
+        let ss = Path::new(binary_filepath).parent().unwrap();
+        let st = Path::new(binary_filepath).with_extension("");
+
+        let storage_path = format!("{}{}", Path::new(binary_filepath).with_extension("").to_str().unwrap(), "-storage_slots.json");
+
+        let storage = match Path::new(storage_path.as_str()).exists() {
+            true => Self::get_storage_vec(storage_path.as_str()),
+            false => vec![],
+        };
+
+        println!("{:?}", storage_path);
         Ok(CompiledContract { raw: bin, salt })
     }
 
@@ -257,6 +273,18 @@ impl Contract {
 
         Ok((tx, contract_id))
     }
+
+    fn get_storage_vec(storage_path: &str) -> Vec<StorageSlot>{
+
+        let storage_json_string = fs::read_to_string(storage_path).expect("Unable to read file");
+
+        let storage: serde_json::Value =
+            serde_json::from_str(storage_json_string.as_str()).expect("JSON was not well-formatted");
+
+        // println!("{:?}", storage);
+        vec![]
+    }
+
 }
 
 #[derive(Debug)]

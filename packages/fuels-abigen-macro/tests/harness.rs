@@ -1910,3 +1910,24 @@ async fn nested_enums_are_correctly_encoded_decoded() {
 
     assert_eq!(response.value, expected_none);
 }
+
+#[tokio::test]
+async fn init_storage() {
+    abigen!(
+        MyContract,
+        "packages/fuels-abigen-macro/tests/test_projects/contract_storage_test/out/debug/contract_storage_test-abi.json"
+    );
+
+    let wallet = launch_provider_and_get_wallet().await;
+
+    let id = Contract::deploy(
+        "tests/test_projects/contract_storage_test/out/debug/contract_storage_test.bin",
+        &wallet,
+        TxParameters::default(),
+    )
+        .await
+        .unwrap();
+
+    assert_eq!(true, false)
+
+}
