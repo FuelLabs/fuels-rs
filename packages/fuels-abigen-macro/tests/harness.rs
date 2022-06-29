@@ -1975,6 +1975,7 @@ async fn can_use_try_into_to_construct_enum_from_bytes() -> Result<(), Error> {
         "packages/fuels-abigen-macro/tests/test_projects/enum_inside_struct/out/debug\
         /enum_inside_struct-abi.json"
     );
+    // ANCHOR: manual_decode
     let shaker_in_bytes: Vec<u8> = vec![0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 2];
 
     let expected = Shaker::Mojito(2);
@@ -1990,6 +1991,8 @@ async fn can_use_try_into_to_construct_enum_from_bytes() -> Result<(), Error> {
     // as value
     let actual: Shaker = shaker_in_bytes.try_into()?;
     assert_eq!(actual, expected);
+
+    // ANCHOR_END: manual_decode
 
     Ok(())
 }

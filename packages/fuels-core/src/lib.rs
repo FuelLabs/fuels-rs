@@ -532,30 +532,28 @@ impl Tokenizable for fuel_tx::AssetId {
     }
 }
 
-/// This trait is used inside the abigen generated code in order to get the
-/// parameter type (`ParamType`).  This is used in the generated code in
-/// `custom_types_gen.rs`, with the exception of the Sway-native types
-/// `Address`, `ContractId`, and `AssetId`, that are implemented right here,
-/// without code generation.
+/// `abigen` requires `Parameterized` to construct nested types. It is
+/// also used by `try_from_bytes` to facilitate the instantiation of custom
+/// types from bytes.
 pub trait Parameterize {
     fn param_type() -> ParamType;
 }
 
 impl Parameterize for fuel_tx::Address {
     fn param_type() -> ParamType {
-        ParamType::B256
+        ParamType::Struct(vec![ParamType::B256])
     }
 }
 
 impl Parameterize for fuel_tx::ContractId {
     fn param_type() -> ParamType {
-        ParamType::B256
+        ParamType::Struct(vec![ParamType::B256])
     }
 }
 
 impl Parameterize for fuel_tx::AssetId {
     fn param_type() -> ParamType {
-        ParamType::B256
+        ParamType::Struct(vec![ParamType::B256])
     }
 }
 
@@ -635,7 +633,8 @@ pub fn pad_string(s: &str) -> Vec<u8> {
 #[cfg(test)]
 mod tests {
     use crate::errors::Error;
-    use crate::try_from_bytes;
+    use crate::{try_from_bytes, WORD_SIZE};
+    use fuel_types::{Address, AssetId, ContractId};
 
     #[test]
     fn can_convert_bytes_into_tuple() -> Result<(), Error> {
@@ -645,6 +644,38 @@ mod tests {
 
         assert_eq!(the_tuple, (1, 2));
 
+        Ok(())
+    }
+
+    #[test]
+    fn can_convert_all_from_bool_to_u64() -> Result<(), Error> {
+        let bytes: Vec<u8> = vec![0xFF; WORD_SIZE];
+
+        assert!(try_from_bytes::<bool>(&bytes)?);
+        assert_eq!(try_from_bytes::<u8>(&bytes)?, u8::MAX);
+        assert_eq!(try_from_bytes::<u16>(&bytes)?, u16::MAX);
+        assert_eq!(try_from_bytes::<u32>(&bytes)?, u32::MAX);
+        assert_eq!(try_from_bytes::<u64>(&bytes)?, u64::MAX);
+
+        Ok(())
+    }
+
+    #[test]
+    fn can_convert_native_types() -> anyhow::Result<()> {
+        let bytes = [0xFF; 32];
+
+        assert_eq!(
+            try_from_bytes::<Address>(&bytes)?,
+            Address::new(bytes.as_slice().try_into()?)
+        );
+        assert_eq!(
+            try_from_bytes::<ContractId>(&bytes)?,
+            ContractId::new(bytes.as_slice().try_into()?)
+        );
+        assert_eq!(
+            try_from_bytes::<AssetId>(&bytes)?,
+            AssetId::new(bytes.as_slice().try_into()?)
+        );
         Ok(())
     }
 }
