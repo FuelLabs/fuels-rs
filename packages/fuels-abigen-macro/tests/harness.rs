@@ -1936,3 +1936,63 @@ async fn test_multi_call_script_workflow() -> Result<(), Error> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn can_use_try_into_to_construct_struct_from_bytes() -> Result<(), Error> {
+    abigen!(
+        MyContract,
+        "packages/fuels-abigen-macro/tests/test_projects/enum_inside_struct/out/debug\
+        /enum_inside_struct-abi.json"
+    );
+    let cocktail_in_bytes: Vec<u8> = vec![
+        0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 3,
+    ];
+
+    let expected = Cocktail {
+        the_thing_you_mix_in: Shaker::Mojito(2),
+        glass: 3,
+    };
+
+    // as slice
+    let actual: Cocktail = cocktail_in_bytes[..].try_into()?;
+    assert_eq!(actual, expected);
+
+    // as ref
+    let actual: Cocktail = (&cocktail_in_bytes).try_into()?;
+    assert_eq!(actual, expected);
+
+    // as value
+    let actual: Cocktail = cocktail_in_bytes.try_into()?;
+    assert_eq!(actual, expected);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn can_use_try_into_to_construct_enum_from_bytes() -> Result<(), Error> {
+    abigen!(
+        MyContract,
+        "packages/fuels-abigen-macro/tests/test_projects/enum_inside_struct/out/debug\
+        /enum_inside_struct-abi.json"
+    );
+    // ANCHOR: manual_decode
+    let shaker_in_bytes: Vec<u8> = vec![0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 2];
+
+    let expected = Shaker::Mojito(2);
+
+    // as slice
+    let actual: Shaker = shaker_in_bytes[..].try_into()?;
+    assert_eq!(actual, expected);
+
+    // as ref
+    let actual: Shaker = (&shaker_in_bytes).try_into()?;
+    assert_eq!(actual, expected);
+
+    // as value
+    let actual: Shaker = shaker_in_bytes.try_into()?;
+    assert_eq!(actual, expected);
+
+    // ANCHOR_END: manual_decode
+
+    Ok(())
+}

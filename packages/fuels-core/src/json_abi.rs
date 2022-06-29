@@ -794,7 +794,7 @@ pub fn parse_custom_type_param(param: &Property) -> Result<ParamType, Error> {
             }
             Err(Error::InvalidType(param.type_field.clone()))
         }
-        None => Err(Error::MissingData(
+        None => Err(Error::InvalidType(
             "cannot parse custom type with no components".into(),
         )),
     }
