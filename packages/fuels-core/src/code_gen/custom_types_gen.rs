@@ -171,10 +171,14 @@ pub fn expand_custom_struct(prop: &Property) -> Result<TokenStream, Error> {
 /// Transforms a custom enum defined in [`Property`] into a [`TokenStream`]
 /// that represents that same type as a Rust-native enum.
 pub fn expand_custom_enum(enum_name: &str, prop: &Property) -> Result<TokenStream, Error> {
-    let components = prop
-        .components
-        .as_ref()
-        .expect("Fail to extract components from custom type");
+    let components = match &prop.components {
+        Some(components) if !components.is_empty() => Ok(components),
+        _ => Err(Error::InvalidType(format!(
+            "Enum '{}' must have at least one variant!",
+            enum_name
+        ))),
+    }?;
+
     let mut enum_variants = Vec::with_capacity(components.len());
 
     // Holds a TokenStream representing the process of creating an enum [`Token`].
@@ -397,6 +401,7 @@ pub fn extract_custom_type_name_from_abi_property(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use anyhow::anyhow;
     use std::str::FromStr;
 
     #[test]
@@ -479,6 +484,47 @@ mod tests {
         )?.to_string();
 
         assert_eq!(actual, expected);
+        Ok(())
+    }
+
+    #[test]
+    fn top_lvl_enum_w_no_variants_cannot_be_constructed() -> anyhow::Result<()> {
+        assert_enum_cannot_be_constructed_from(Some(vec![]))?;
+        assert_enum_cannot_be_constructed_from(None)?;
+        Ok(())
+    }
+    #[test]
+    fn nested_enum_w_no_variants_cannot_be_constructed() -> anyhow::Result<()> {
+        let nested_enum_w_components = |components| {
+            Some(vec![Property {
+                name: "SomeEmptyEnum".to_string(),
+                type_field: "enum SomeEmptyEnum".to_string(),
+                components,
+            }])
+        };
+
+        assert_enum_cannot_be_constructed_from(nested_enum_w_components(None))?;
+        assert_enum_cannot_be_constructed_from(nested_enum_w_components(Some(vec![])))?;
+
+        Ok(())
+    }
+
+    fn assert_enum_cannot_be_constructed_from(
+        components: Option<Vec<Property>>,
+    ) -> anyhow::Result<()> {
+        let property = Property {
+            components,
+            ..Property::default()
+        };
+        let err = expand_custom_enum("TheEmptyEnum", &property)
+            .err()
+            .ok_or_else(|| anyhow!("Was able to construct an enum without variants"))?;
+
+        assert!(
+            matches!(err, Error::InvalidType(_)),
+            "Expected the error to be of the type 'InvalidType'"
+        );
+
         Ok(())
     }
 
