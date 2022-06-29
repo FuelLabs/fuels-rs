@@ -279,8 +279,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_setup_test_client_consensus_parameters_config() {
-        let config = WalletsConfig::default();
-
         let consensus_parameters_config = ConsensusParameters::DEFAULT.with_max_gas_per_tx(1);
 
         let mut wallet = LocalWallet::new_random(None);

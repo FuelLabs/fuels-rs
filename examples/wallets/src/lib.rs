@@ -7,7 +7,7 @@ async fn create_random_wallet() {
     use fuels::prelude::*;
 
     // Use the test helper to setup a test provider.
-    let (provider, _address) = setup_test_provider(vec![], None, None).await;
+    let (provider, _address) = setup_test_provider(vec![], None).await;
 
     // Create the wallet.
     let _wallet = LocalWallet::new_random(Some(provider));
