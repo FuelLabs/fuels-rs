@@ -1,0 +1,8 @@
+[project]
+authors = ["salka1988"]
+entry = "main.sw"
+license = "Apache-2.0"
+name = "contract_storage_test"
+
+[dependencies]
+std = { path = "/home/salka1988/Documents/Git/fulstack/sway/sway-lib-std" }
