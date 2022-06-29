@@ -145,7 +145,7 @@ impl Abigen {
             pub use #name_mod::*;
 
             #[allow(clippy::too_many_arguments)]
-            mod #name_mod {
+            pub mod #name_mod {
                 #![allow(clippy::enum_variant_names)]
                 #![allow(dead_code)]
                 #![allow(unused_imports)]
