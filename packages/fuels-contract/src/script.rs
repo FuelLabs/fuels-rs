@@ -13,6 +13,8 @@ use fuels_core::constants::{DEFAULT_SPENDABLE_COIN_AMOUNT, WORD_SIZE};
 use fuels_core::errors::Error;
 use fuels_core::parameters::TxParameters;
 use fuels_signers::{LocalWallet, Signer};
+use std::collections::HashSet;
+use std::iter;
 
 use crate::contract::ContractCall;
 
@@ -45,107 +47,25 @@ impl Script {
 
     /// Creates a Script from a contract call. The internal Transaction is initialized
     /// with the actual script instructions, script data needed to perform the call
-    /// and transaction inputs/outputs consisting of assets, external contract ids etc.
-    pub async fn from_contract_call(
-        call: &ContractCall,
+    /// and transaction inputs/outputs consisting of assets and contracts
+    pub async fn from_contract_calls(
+        calls: Vec<&ContractCall>,
         tx_parameters: &TxParameters,
         wallet: &LocalWallet,
     ) -> Self {
-        let data_offset = Self::get_data_offset(1);
-        let (script_data, call_param_offsets) =
-            Self::get_script_data_from_calls(vec![call], data_offset);
-        let script = Self::get_instructions(vec![call], call_param_offsets);
+        let data_offset = Self::get_data_offset(calls.len());
 
-        let mut inputs: Vec<Input> = vec![];
-        let mut outputs: Vec<Output> = vec![];
+        let (script_data, call_param_offsets) = Self::get_script_data(calls.clone(), data_offset);
 
-        let self_contract_input = Input::contract(
-            UtxoId::new(Bytes32::zeroed(), 0),
-            Bytes32::zeroed(),
-            Bytes32::zeroed(),
-            call.contract_id,
-        );
-        inputs.push(self_contract_input);
+        let script = Self::get_instructions(calls.clone(), call_param_offsets);
 
-        let mut spendables = wallet
-            .get_spendable_coins(&AssetId::default(), DEFAULT_SPENDABLE_COIN_AMOUNT as u64)
-            .await
-            .unwrap();
-
-        // add default asset change if any inputs are being spent
-        if !spendables.is_empty() {
-            let change_output = Output::change(wallet.address(), 0, AssetId::default());
-            outputs.push(change_output);
-        }
-
-        if call.call_parameters.asset_id != AssetId::default() {
-            let alt_spendables = wallet
-                .get_spendable_coins(&call.call_parameters.asset_id, call.call_parameters.amount)
-                .await
-                .unwrap();
-
-            // add alt change if inputs are being spent
-            if !alt_spendables.is_empty() {
-                let change_output =
-                    Output::change(wallet.address(), 0, call.call_parameters.asset_id);
-                outputs.push(change_output);
-            }
-
-            // add alt coins to inputs
-            spendables.extend(alt_spendables.into_iter());
-        }
-
-        for coin in spendables {
-            let input_coin = Input::coin_signed(
-                UtxoId::from(coin.utxo_id),
-                coin.owner.into(),
-                coin.amount.0,
-                coin.asset_id.into(),
-                0,
-                0,
-            );
-
-            inputs.push(input_coin);
-        }
-
-        let n_inputs = inputs.len();
-
-        let self_contract_output = Output::contract(0, Bytes32::zeroed(), Bytes32::zeroed());
-        outputs.push(self_contract_output);
-
-        // Add external contract IDs to Input/Output pair, if applicable.
-        if let Some(external_contract_ids) = call.external_contracts.clone() {
-            for (idx, external_contract_id) in external_contract_ids.iter().enumerate() {
-                // We must associate the right external contract input to the corresponding external
-                // output index (TXO). We add the `n_inputs` offset because we added some inputs
-                // above.
-                let output_index: u8 = (idx + n_inputs) as u8;
-                let zeroes = Bytes32::zeroed();
-                let external_contract_input = Input::contract(
-                    UtxoId::new(Bytes32::zeroed(), output_index),
-                    zeroes,
-                    zeroes,
-                    *external_contract_id,
-                );
-
-                inputs.push(external_contract_input);
-
-                let external_contract_output = Output::contract(output_index, zeroes, zeroes);
-
-                outputs.push(external_contract_output);
-            }
-        }
-
-        // Add outputs to the transaction.
-        if let Some(v) = call.variable_outputs.clone() {
-            outputs.extend(v);
-        };
+        let (inputs, outputs) = Self::get_transaction_inputs_outputs(calls.clone(), wallet).await;
 
         let mut tx = Transaction::script(
             tx_parameters.gas_price,
             tx_parameters.gas_limit,
             tx_parameters.byte_price,
-            call.maturity,
+            tx_parameters.maturity,
             script,
             script_data,
             inputs,
@@ -179,7 +99,7 @@ impl Script {
     /// 5. Function selector (1 * WORD_SIZE);
     /// 6. Calldata offset (optional) (1 * WORD_SIZE)
     /// 7. Encoded arguments (optional) (variable length)
-    fn get_script_data_from_calls(
+    fn get_script_data(
         calls: Vec<&ContractCall>,
         data_offset: usize,
     ) -> (Vec<u8>, Vec<CallParamOffsets>) {
@@ -259,6 +179,90 @@ impl Script {
         instructions.iter().copied().collect::<Vec<u8>>()
     }
 
+    /// Returns the assets and contracts that will be consumed (inputs) and created (outputs)
+    /// by the transaction
+    async fn get_transaction_inputs_outputs(
+        calls: Vec<&ContractCall>,
+        wallet: &LocalWallet,
+    ) -> (Vec<Input>, Vec<Output>) {
+        let mut inputs: Vec<Input> = vec![];
+        let mut outputs: Vec<Output> = vec![];
+
+        // Get all unique contract ids
+        let contract_ids: HashSet<ContractId> = calls
+            .iter()
+            .flat_map(|call| {
+                let mut ids = call
+                    .external_contracts
+                    .as_ref()
+                    .cloned()
+                    .unwrap_or_default();
+                ids.insert(call.contract_id);
+                ids
+            })
+            .collect();
+
+        // We must associate the right external contract input to the corresponding external
+        // output index (TXO)
+        for (idx, contract_id) in contract_ids.into_iter().enumerate() {
+            let zeroes = Bytes32::zeroed();
+            let self_contract_input = Input::contract(
+                UtxoId::new(Bytes32::zeroed(), idx as u8),
+                zeroes,
+                zeroes,
+                contract_id,
+            );
+            inputs.push(self_contract_input);
+
+            let external_contract_output = Output::contract(idx as u8, zeroes, zeroes);
+            outputs.push(external_contract_output);
+        }
+
+        // Get all unique asset ids
+        let asset_ids: HashSet<AssetId> = calls
+            .iter()
+            .map(|call| call.call_parameters.asset_id)
+            .chain(iter::once(AssetId::default()))
+            .collect();
+
+        let mut spendables = vec![];
+        for asset_id in asset_ids.iter() {
+            spendables.extend(
+                wallet
+                    .get_spendable_coins(asset_id, DEFAULT_SPENDABLE_COIN_AMOUNT as u64)
+                    .await
+                    .unwrap(),
+            );
+        }
+
+        for asset_id in asset_ids.iter() {
+            // add asset change if any inputs are being spent
+            let change_output = Output::change(wallet.address(), 0, asset_id.to_owned());
+            outputs.push(change_output);
+        }
+
+        for coin in spendables {
+            let input_coin = Input::coin_signed(
+                UtxoId::from(coin.utxo_id),
+                coin.owner.into(),
+                coin.amount.0,
+                coin.asset_id.into(),
+                0,
+                0,
+            );
+
+            inputs.push(input_coin);
+        }
+
+        calls.iter().for_each(|call| {
+            if let Some(v) = call.variable_outputs.clone() {
+                outputs.extend(v);
+            };
+        });
+
+        (inputs, outputs)
+    }
+
     /// Calculates the length of the script based on the number of contract calls it
     /// has to make and returns the offset at which the script data begins
     fn get_data_offset(num_calls: usize) -> usize {
@@ -291,5 +295,107 @@ impl Script {
     pub async fn simulate(self, fuel_client: &FuelClient) -> Result<Vec<Receipt>, Error> {
         let receipts = fuel_client.dry_run(&self.tx).await?;
         Ok(receipts)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use fuels_core::parameters::CallParameters;
+
+    use super::*;
+
+    #[tokio::test]
+    async fn test_script_data() {
+        // Arrange
+        const SELECTOR_LEN: usize = WORD_SIZE;
+        const NUM_CALLS: usize = 3;
+
+        let contract_ids = vec![
+            ContractId::from([1u8; 32]),
+            ContractId::from([2u8; 32]),
+            ContractId::from([3u8; 32]),
+        ];
+
+        let asset_ids = vec![
+            AssetId::from([4u8; 32]),
+            AssetId::from([5u8; 32]),
+            AssetId::from([6u8; 32]),
+        ];
+
+        let selectors = vec![[7u8; 8], [8u8; 8], [9u8; 8]];
+
+        // Call 2 has a multiple inputs, compute_custom_input_offset will be true
+        let args = vec![[10u8; 8].to_vec(), [11u8; 16].to_vec(), [12u8; 8].to_vec()];
+
+        let calls: Vec<ContractCall> = (0..NUM_CALLS)
+            .map(|i| ContractCall {
+                contract_id: contract_ids[i],
+                encoded_selector: selectors[i],
+                encoded_args: args[i].clone(),
+                call_parameters: CallParameters::new(
+                    Some(i as u64),
+                    Some(asset_ids[i]),
+                    Some(i as u64),
+                ),
+                compute_custom_input_offset: i == 1,
+                variable_outputs: None,
+                external_contracts: None,
+                output_param: None,
+            })
+            .collect();
+
+        // Act
+        let (script_data, param_offsets) = Script::get_script_data(calls.iter().collect(), 0);
+
+        // Assert
+        assert_eq!(param_offsets.len(), NUM_CALLS);
+        for (idx, offsets) in param_offsets.iter().enumerate() {
+            let asset_id = script_data
+                [offsets.asset_id_offset..offsets.asset_id_offset + AssetId::LEN]
+                .to_vec();
+            assert_eq!(asset_id, asset_ids[idx].to_vec());
+
+            let amount =
+                script_data[offsets.amount_offset..offsets.amount_offset + WORD_SIZE].to_vec();
+            assert_eq!(amount, idx.to_be_bytes());
+
+            let gas = script_data
+                [offsets.gas_forwarded_offset..offsets.gas_forwarded_offset + WORD_SIZE]
+                .to_vec();
+            assert_eq!(gas, idx.to_be_bytes().to_vec());
+
+            let contract_id = script_data
+                [offsets.call_data_offset..offsets.call_data_offset + ContractId::LEN]
+                .to_vec();
+            assert_eq!(contract_id, contract_ids[idx].to_vec());
+
+            let selector_offset = offsets.call_data_offset + ContractId::LEN;
+            let selector = script_data[selector_offset..selector_offset + SELECTOR_LEN].to_vec();
+            assert_eq!(selector, selectors[idx].to_vec());
+        }
+
+        // Calls 1 and 3 have their input arguments after the selector
+        let call_1_arg_offset = param_offsets[0].call_data_offset + ContractId::LEN + SELECTOR_LEN;
+        let call_1_arg = script_data[call_1_arg_offset..call_1_arg_offset + WORD_SIZE].to_vec();
+        assert_eq!(call_1_arg, args[0].to_vec());
+
+        let call_3_arg_offset = param_offsets[2].call_data_offset + ContractId::LEN + SELECTOR_LEN;
+        let call_3_arg = script_data[call_3_arg_offset..call_3_arg_offset + WORD_SIZE].to_vec();
+        assert_eq!(call_3_arg, args[2]);
+
+        // Call 2 has custom inputs and custom_input_offset
+        let call_2_arg_offset = param_offsets[1].call_data_offset + ContractId::LEN + SELECTOR_LEN;
+        let custom_input_offset =
+            script_data[call_2_arg_offset..call_2_arg_offset + WORD_SIZE].to_vec();
+        assert_eq!(
+            custom_input_offset,
+            (call_2_arg_offset + WORD_SIZE).to_be_bytes()
+        );
+
+        let custom_input_offset =
+            param_offsets[1].call_data_offset + ContractId::LEN + SELECTOR_LEN + WORD_SIZE;
+        let custom_input =
+            script_data[custom_input_offset..custom_input_offset + 2 * WORD_SIZE].to_vec();
+        assert_eq!(custom_input, args[1]);
     }
 }
