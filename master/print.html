@@ -187,15 +187,15 @@ development.</p>
 <h2 id="instantiating-a-fuel-client"><a class="header" href="#instantiating-a-fuel-client">Instantiating a Fuel client</a></h2>
 <p>You can instantiate a Fuel client, pointing to a local Fuel node by
 using <a href="https://docs.rs/fuels/*/fuels/client/struct.FuelClient.html"><code>FuelClient</code></a>:</p>
-<pre><code class="language-rust ignore">async fn instantiate_client() -&gt; Result&lt;(), Error&gt; {
-    use fuels::client::FuelClient;
-    use fuels::node::service::{Config, FuelService};
+<pre><code class="language-rust ignore">    async fn instantiate_client() -&gt; Result&lt;(), Error&gt; {
+        use fuels::client::FuelClient;
+        use fuels::node::service::{Config, FuelService};
 
-    let server = FuelService::new_node(Config::local_node()).await?;
-    let client = FuelClient::from(server.bound_address);
-    assert!(client.health().await?);
-    Ok(())
-}
+        let server = FuelService::new_node(Config::local_node()).await?;
+        let client = FuelClient::from(server.bound_address);
+        assert!(client.health().await?);
+        Ok(())
+    }
 </code></pre>
 <p>Alternatively, if you have a Fuel node running separately, you can pass in the <code>SocketAddr</code> to <code>FuelClient::from()</code>.</p>
 <h2 id="deploying-a-sway-contract"><a class="header" href="#deploying-a-sway-contract">Deploying a Sway contract</a></h2>
@@ -205,27 +205,27 @@ using <a href="https://docs.rs/fuels/*/fuels/client/struct.FuelClient.html"><cod
 <li><code>deploy_with_salt</code></li>
 </ul>
 <p>If you are only interested in a single instance of your contract then use <code>deploy</code></p>
-<pre><code class="language-rust ignore">    // This will generate your contract's methods onto `MyContract`.
-    // This means an instance of `MyContract` will have access to all
-    // your contract's methods that are running on-chain!
-    abigen!(
+<pre><code class="language-rust ignore">        // This will generate your contract's methods onto `MyContract`.
+        // This means an instance of `MyContract` will have access to all
+        // your contract's methods that are running on-chain!
+        abigen!(
             MyContract,
             // This path is relative to the workspace (repository) root
             &quot;packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json&quot;
         );
 
-    // This helper will launch a local node and provide a test wallet linked to it
-    let wallet = launch_provider_and_get_wallet().await;
+        // This helper will launch a local node and provide a test wallet linked to it
+        let wallet = launch_provider_and_get_wallet().await;
 
-    // Optional: Configure deployment parameters or use `TxParameters::default()`
-    let gas_price = 0;
-    let gas_limit = 1_000_000;
-    let byte_price = 0;
-    let maturity = 0;
+        // Optional: Configure deployment parameters or use `TxParameters::default()`
+        let gas_price = 0;
+        let gas_limit = 1_000_000;
+        let byte_price = 0;
+        let maturity = 0;
 
-    // This will deploy your contract binary onto the chain so that its ID can
-    // be used to initialize the instance
-    let contract_id = Contract::deploy(
+        // This will deploy your contract binary onto the chain so that its ID can
+        // be used to initialize the instance
+        let contract_id = Contract::deploy(
             // This path is relative to the current crate (examples/contracts)
             &quot;../../packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test.bin&quot;,
             &amp;wallet,
@@ -238,48 +238,48 @@ using <a href="https://docs.rs/fuels/*/fuels/client/struct.FuelClient.html"><cod
         )
         .await?;
 
-    println!(&quot;Contract deployed @ {:x}&quot;, contract_id);
+        println!(&quot;Contract deployed @ {:x}&quot;, contract_id);
 </code></pre>
 <p>You can then use the contract methods very simply:</p>
-<pre><code class="language-rust ignore">    // This is an instance of your contract which you can use to make calls to your functions
-    let contract_instance = MyContract::new(contract_id.to_string(), wallet);
+<pre><code class="language-rust ignore">        // This is an instance of your contract which you can use to make calls to your functions
+        let contract_instance = MyContract::new(contract_id.to_string(), wallet);
 
-    let response = contract_instance
-        .initialize_counter(42) // Build the ABI call
-        .call() // Perform the network call
-        .await?;
+        let response = contract_instance
+            .initialize_counter(42) // Build the ABI call
+            .call() // Perform the network call
+            .await?;
 
-    assert_eq!(42, response.value);
+        assert_eq!(42, response.value);
 
-    let response = contract_instance.increment_counter(10).call().await?;
+        let response = contract_instance.increment_counter(10).call().await?;
 
-    assert_eq!(52, response.value);
+        assert_eq!(52, response.value);
 </code></pre>
 <p>Alternatively, if you want multiple instances of the same contract then use <code>deploy_with_salt</code></p>
-<pre><code class="language-rust ignore">async fn deploy_with_salt() -&gt; Result&lt;(), Error&gt; {
-    use fuels::prelude::*;
-    use rand::prelude::{Rng, SeedableRng, StdRng};
+<pre><code class="language-rust ignore">    async fn deploy_with_salt() -&gt; Result&lt;(), Error&gt; {
+        use fuels::prelude::*;
+        use rand::prelude::{Rng, SeedableRng, StdRng};
 
-    abigen!(
+        abigen!(
             MyContract,
             &quot;packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json&quot;
         );
 
-    let wallet = launch_provider_and_get_wallet().await;
+        let wallet = launch_provider_and_get_wallet().await;
 
-    let contract_id_1 = Contract::deploy(
+        let contract_id_1 = Contract::deploy(
             &quot;../../packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test.bin&quot;,
             &amp;wallet,
             TxParameters::default(),
         )
         .await?;
 
-    println!(&quot;Contract deployed @ {:x}&quot;, contract_id_1);
+        println!(&quot;Contract deployed @ {:x}&quot;, contract_id_1);
 
-    let rng = &amp;mut StdRng::seed_from_u64(2322u64);
-    let salt: [u8; 32] = rng.gen();
+        let rng = &amp;mut StdRng::seed_from_u64(2322u64);
+        let salt: [u8; 32] = rng.gen();
 
-    let contract_id_2 = Contract::deploy_with_salt(
+        let contract_id_2 = Contract::deploy_with_salt(
             &quot;../../packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test.bin&quot;,
             &amp;wallet,
             TxParameters::default(),
@@ -287,48 +287,48 @@ using <a href="https://docs.rs/fuels/*/fuels/client/struct.FuelClient.html"><cod
         )
         .await?;
 
-    println!(&quot;Contract deployed @ {:x}&quot;, contract_id_2);
+        println!(&quot;Contract deployed @ {:x}&quot;, contract_id_2);
 
-    assert_ne!(contract_id_1, contract_id_2);
-    Ok(())
-}
+        assert_ne!(contract_id_1, contract_id_2);
+        Ok(())
+    }
 </code></pre>
 <h2 id="setting-up-multiple-test-wallets"><a class="header" href="#setting-up-multiple-test-wallets">Setting up multiple test wallets</a></h2>
 <p>If you need multiple test wallets, they can be setup as follows:</p>
-<pre><code class="language-rust ignore">    use fuels::prelude::*;
-    // This helper will launch a local node and provide 10 test wallets linked to it.
-    // The initial balance defaults to 1 coin per wallet with an amount of 1_000_000_000
-    let wallets = launch_custom_provider_and_get_wallets(WalletsConfig::default(), None).await;
+<pre><code class="language-rust ignore">        use fuels::prelude::*;
+        // This helper will launch a local node and provide 10 test wallets linked to it.
+        // The initial balance defaults to 1 coin per wallet with an amount of 1_000_000_000
+        let wallets = launch_custom_provider_and_get_wallets(WalletsConfig::default(), None).await;
 </code></pre>
 <p>The returned test wallets can be customized via <code>WalletsConfig</code></p>
-<pre><code class="language-rust ignore">    let num_wallets = 5;
-    let coins_per_wallet = 3;
-    let amount_per_coin = 100;
+<pre><code class="language-rust ignore">        let num_wallets = 5;
+        let coins_per_wallet = 3;
+        let amount_per_coin = 100;
 
-    let config = WalletsConfig::new(
-        Some(num_wallets),
-        Some(coins_per_wallet),
-        Some(amount_per_coin),
-    );
-    // Launches a local node and provides test wallets as specified by the config
-    let wallets = launch_custom_provider_and_get_wallets(config, None).await;
+        let config = WalletsConfig::new(
+            Some(num_wallets),
+            Some(coins_per_wallet),
+            Some(amount_per_coin),
+        );
+        // Launches a local node and provides test wallets as specified by the config
+        let wallets = launch_custom_provider_and_get_wallets(config, None).await;
 </code></pre>
 <h2 id="setting-up-a-test-wallet-with-multiple-assets"><a class="header" href="#setting-up-a-test-wallet-with-multiple-assets">Setting up a test wallet with multiple assets</a></h2>
 <p>You can create a test wallet which contains multiple different assets (including the base asset to pay for gas).</p>
-<pre><code class="language-rust ignore">    use fuels::prelude::*;
-    let mut wallet = LocalWallet::new_random(None);
-    let num_assets = 5; // 5 different assets
-    let coins_per_asset = 10; // Per asset id, 10 coins in the wallet
-    let amount_per_coin = 15; // For each coin (UTXO) of the asset, amount of 15
+<pre><code class="language-rust ignore">        use fuels::prelude::*;
+        let mut wallet = LocalWallet::new_random(None);
+        let num_assets = 5; // 5 different assets
+        let coins_per_asset = 10; // Per asset id, 10 coins in the wallet
+        let amount_per_coin = 15; // For each coin (UTXO) of the asset, amount of 15
 
-    let (coins, asset_ids) = setup_multiple_assets_coins(
-        wallet.address(),
-        num_assets,
-        coins_per_asset,
-        amount_per_coin,
-    );
-    let (provider, _socket_addr) = setup_test_provider(coins.clone(), None).await;
-    wallet.set_provider(provider);
+        let (coins, asset_ids) = setup_multiple_assets_coins(
+            wallet.address(),
+            num_assets,
+            coins_per_asset,
+            amount_per_coin,
+        );
+        let (provider, _socket_addr) = setup_test_provider(coins.clone(), None).await;
+        wallet.set_provider(provider);
 </code></pre>
 <ul>
 <li><code>coins: Vec&lt;(UtxoId, Coin)&gt;</code> has <code>num_assets * coins_per_assets</code> coins (UTXOs)</li>
@@ -337,7 +337,7 @@ using <a href="https://docs.rs/fuels/*/fuels/client/struct.FuelClient.html"><cod
 <h2 id="calling-and-configuring-contract-calls"><a class="header" href="#calling-and-configuring-contract-calls">Calling and configuring contract calls</a></h2>
 <p>Once you've deployed your contract, as seen in the previous section, you'll likely want to call contract methods and configure some parameters such as gas price, byte price, gas limit, and forward coins in your contract call.</p>
 <p>Start by creating an instance of your contract once you have a wallet set up:</p>
-<pre><code class="language-rust ignore">    let contract_instance = MyContract::new(contract_id.to_string(), wallet.clone());
+<pre><code class="language-rust ignore">        let contract_instance = MyContract::new(contract_id.to_string(), wallet.clone());
 </code></pre>
 <p>Then we move to configuring contract calls.</p>
 <h3 id="txparameters"><a class="header" href="#txparameters"><code>TxParameters</code></a></h3>
@@ -349,14 +349,14 @@ using <a href="https://docs.rs/fuels/*/fuels/client/struct.FuelClient.html"><cod
 <li>Maturity.</li>
 </ol>
 <p>These parameters can be configured by creating an instance of <a href="https://github.com/FuelLabs/fuels-rs/blob/adf81bd451d7637ce0976363bd7784408430031a/packages/fuels-contract/src/parameters.rs#L7"><code>TxParameters</code></a> and passing it to a chain method called <code>tx_params</code>:</p>
-<pre><code class="language-rust ignore">    // In order: gas_price, gas_limit, byte_price, and maturity
-    let my_tx_params = TxParameters::new(None, Some(1_000_000), None, None);
+<pre><code class="language-rust ignore">        // In order: gas_price, gas_limit, byte_price, and maturity
+        let my_tx_params = TxParameters::new(None, Some(1_000_000), None, None);
 
-    let response = contract_instance
-        .initialize_counter(42) // Our contract method.
-        .tx_params(my_tx_params) // Chain the tx params setting method.
-        .call() // Perform the contract call.
-        .await?; // This is an async call, `.await` for it.
+        let response = contract_instance
+            .initialize_counter(42) // Our contract method.
+            .tx_params(my_tx_params) // Chain the tx params setting method.
+            .call() // Perform the contract call.
+            .await?; // This is an async call, `.await` for it.
 
 </code></pre>
 <p>You can also use <code>TxParameters::default()</code> to use the default values:</p>
@@ -366,11 +366,11 @@ pub const DEFAULT_BYTE_PRICE: u64 = 0;
 pub const DEFAULT_MATURITY: u64 = 0;
 </code></pre>
 <p>this way:</p>
-<pre><code class="language-rust ignore">    let response = contract_instance
-        .initialize_counter(42)
-        .tx_params(TxParameters::default())
-        .call()
-        .await?;
+<pre><code class="language-rust ignore">        let response = contract_instance
+            .initialize_counter(42)
+            .tx_params(TxParameters::default())
+            .call()
+            .await?;
 
 </code></pre>
 <h3 id="callparameters"><a class="header" href="#callparameters"><code>CallParameters</code></a></h3>
@@ -388,18 +388,18 @@ pub const DEFAULT_MATURITY: u64 = 0;
 </code></pre>
 <p>Then, in Rust, after setting up and deploying the above contract, you can configure the amount being sent in the transaction like this:</p>
 <pre><code class="language-rust ignore">
-    let tx_params = TxParameters::default();
+        let tx_params = TxParameters::default();
 
-    // Forward 1_000_000 coin amount of base asset_id
-    // this is a big number for checking that amount can be a u64
-    let call_params = CallParameters::new(Some(1_000_000), None, None);
+        // Forward 1_000_000 coin amount of base asset_id
+        // this is a big number for checking that amount can be a u64
+        let call_params = CallParameters::new(Some(1_000_000), None, None);
 
-    let response = contract_instance
-        .get_msg_amount() // Our contract method.
-        .tx_params(tx_params) // Chain the tx params setting method.
-        .call_params(call_params) // Chain the call params setting method.
-        .call() // Perform the contract call.
-        .await?;
+        let response = contract_instance
+            .get_msg_amount() // Our contract method.
+            .tx_params(tx_params) // Chain the tx params setting method.
+            .call_params(call_params) // Chain the call params setting method.
+            .call() // Perform the contract call.
+            .await?;
 </code></pre>
 <p>You can also use <code>CallParameters::default()</code> to use the default values:</p>
 <pre><code class="language-rust ignore">// Limit for the actual contract call
@@ -410,26 +410,26 @@ pub const DEFAULT_SPENDABLE_COIN_AMOUNT: u64 = 1_000_000;
 pub const BASE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
 </code></pre>
 <p>this way:</p>
-<pre><code class="language-rust ignore">    let response = contract_instance
-        .initialize_counter(42)
-        .call_params(CallParameters::default())
-        .call()
-        .await?;
+<pre><code class="language-rust ignore">        let response = contract_instance
+            .initialize_counter(42)
+            .call_params(CallParameters::default())
+            .call()
+            .await?;
 
 </code></pre>
 <p>The <code>gas_forwarded</code> parameter defines the limit for the actual contract call as opposed to the gas limit for the whole transaction. This means that it is constrained by the transaction limit. If it is set to an amount greater than the available gas, all available gas will be forwarded.</p>
-<pre><code class="language-rust ignore">    // Set the transaction `gas_limit` to 1000 and `gas_forwarded` to 200 to specify that the
-    // contract call transaction may consume up to 1000 gas, while the actual call may only use 200
-    // gas
-    let tx_params = TxParameters::new(None, Some(1000), None, None);
-    let call_params = CallParameters::new(None, None, Some(200));
+<pre><code class="language-rust ignore">        // Set the transaction `gas_limit` to 1000 and `gas_forwarded` to 200 to specify that the
+        // contract call transaction may consume up to 1000 gas, while the actual call may only use 200
+        // gas
+        let tx_params = TxParameters::new(None, Some(1000), None, None);
+        let call_params = CallParameters::new(None, None, Some(200));
 
-    let response = contract_instance
-        .get_msg_amount() // Our contract method.
-        .tx_params(tx_params) // Chain the tx params setting method.
-        .call_params(call_params) // Chain the call params setting method.
-        .call() // Perform the contract call.
-        .await?;
+        let response = contract_instance
+            .get_msg_amount() // Our contract method.
+            .tx_params(tx_params) // Chain the tx params setting method.
+            .call_params(call_params) // Chain the call params setting method.
+            .call() // Perform the contract call.
+            .await?;
 </code></pre>
 <h3 id="callresponse-reading-returned-values"><a class="header" href="#callresponse-reading-returned-values"><code>CallResponse</code>: Reading returned values</a></h3>
 <p>You've probably noticed that you're often chaining <code>.call().await.unwrap()</code>. That's because:</p>
@@ -455,8 +455,8 @@ pub const BASE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
 <p>Sometimes you want to call a contract method that doesn't change the state of the blockchain. For instance, a method that only reads a value from storage and returns it.</p>
 <p>In this case, there's no need to generate an actual blockchain transaction; you only want to quickly read a value.</p>
 <p>You can do this with the SDK. Instead of <code>.call()</code>ing the method, use <code>.simulate()</code>:</p>
-<pre><code class="language-rust ignore">    // you would mint 100 coins if the transaction wasn't simulated
-    let counter = contract_instance.mint_coins(100).simulate().await?;
+<pre><code class="language-rust ignore">        // you would mint 100 coins if the transaction wasn't simulated
+        let counter = contract_instance.mint_coins(100).simulate().await?;
 </code></pre>
 <p>Note that if you use <code>.simulate()</code> on a method that <em>does</em> change the state of the blockchain, it won't work properly; it will just <code>dry-run</code> it.</p>
 <p>At the moment, it's up to you to know whether a contract method changes state or not, and use <code>.call()</code> or <code>.simulate()</code> accordingly.</p>
@@ -467,14 +467,14 @@ pub const BASE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
     }
 </code></pre>
 <p>With the SDK, you can call <code>transfer_coins_to_output</code>, by chaining <code>append_variable_outputs(amount)</code> to your contract call. Like this:</p>
-<pre><code class="language-rust ignore">    let address = wallet.address();
+<pre><code class="language-rust ignore">        let address = wallet.address();
 
-    // withdraw some tokens to wallet
-    let response = contract_instance
-        .transfer_coins_to_output(1_000_000, contract_id, address)
-        .append_variable_outputs(1)
-        .call()
-        .await?;
+        // withdraw some tokens to wallet
+        let response = contract_instance
+            .transfer_coins_to_output(1_000_000, contract_id, address)
+            .append_variable_outputs(1)
+            .call()
+            .await?;
 </code></pre>
 <p><code>append_variable_outputs</code> effectively appends a given amount of <code>Output::Variable</code>s to the transaction's list of outputs. This output type indicates that the output's amount and owner may vary based on transaction execution.</p>
 <p>Note that the Sway <code>lib-std</code> function <code>mint_to_address</code> calls <code>transfer_to_output</code> under the hood, and so you need to call <code>append_variable_outputs</code> in the Rust SDK tests just like you would for <code>transfer_to_output</code>.</p>
@@ -490,69 +490,69 @@ pub const BASE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
 <code>fuels-abigen-macro/tests/harness.rs</code></p>
 <h2 id="connecting-to-existing-contracts"><a class="header" href="#connecting-to-existing-contracts">Connecting to existing contracts</a></h2>
 <p>If you already have a deployed contract and want to call its methods using the SDK,  but without deploying it again, all you need is the contract ID of your deployed contract. You can skip the whole deployment setup and call <code>::new(contract_id, wallet)</code> directly. For example:</p>
-<pre><code class="language-rust ignore">    // Replace with your contract ABI.json path
-    abigen!(
+<pre><code class="language-rust ignore">        // Replace with your contract ABI.json path
+        abigen!(
         MyContract,
         &quot;packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json&quot;
     );
-    let wallet = launch_provider_and_get_wallet().await;
-    // Your contract ID as a String.
-    let contract_id =
-        &quot;0x068fe90ddc43b18a8f76756ecad8bf30eb0ceea33d2e6990c0185d01b0dbb675&quot;.to_string();
+        let wallet = launch_provider_and_get_wallet().await;
+        // Your contract ID as a String.
+        let contract_id =
+            &quot;0x068fe90ddc43b18a8f76756ecad8bf30eb0ceea33d2e6990c0185d01b0dbb675&quot;.to_string();
 
-    let connected_contract_instance = MyContract::new(contract_id, wallet);
-    // You can now use the `connected_contract_instance` just as you did above!
+        let connected_contract_instance = MyContract::new(contract_id, wallet);
+        // You can now use the `connected_contract_instance` just as you did above!
 </code></pre>
 <h2 id="getting-the-contract-call-outputs"><a class="header" href="#getting-the-contract-call-outputs">Getting the contract call outputs</a></h2>
 <ul>
 <li>Getting the contract call outputs is done this way:</li>
 </ul>
-<pre><code class="language-rust ignore">    let response = contract_instance.increment_counter(162).call().await;
-    match response {
-        // The transaction is valid and executes to completion
-        Ok(call_response) =&gt; {
-            let logs: Vec&lt;String&gt; = call_response.logs;
-            let receipts: Vec&lt;Receipt&gt; = call_response.receipts;
-            // Do things with logs and receipts
-        }
+<pre><code class="language-rust ignore">        let response = contract_instance.increment_counter(162).call().await;
+        match response {
+            // The transaction is valid and executes to completion
+            Ok(call_response) =&gt; {
+                let logs: Vec&lt;String&gt; = call_response.logs;
+                let receipts: Vec&lt;Receipt&gt; = call_response.receipts;
+                // Do things with logs and receipts
+            }
 
-        // The transaction is invalid or node is offline
-        // OR
-        // The transaction is valid but reverts
-        Err(ContractCallError(reason, receipts)) =&gt; {
-            println!(&quot;ContractCall failed with reason: {}&quot;, reason);
-            println!(&quot;Transaction receipts are: {:?}&quot;, receipts);
+            // The transaction is invalid or node is offline
+            // OR
+            // The transaction is valid but reverts
+            Err(ContractCallError(reason, receipts)) =&gt; {
+                println!(&quot;ContractCall failed with reason: {}&quot;, reason);
+                println!(&quot;Transaction receipts are: {:?}&quot;, receipts);
+            }
+            Err(_) =&gt; {}
         }
-        Err(_) =&gt; {}
-    }
 </code></pre>
 <blockquote>
 <p><strong>Note:</strong> It is generally considered good practice when you expect the call to succeed, to unwrap the response with <code>?</code>, this way:</p>
-<pre><code class="language-rust  ignore">    let response = contract_instance.increment_counter(162).call().await?;
+<pre><code class="language-rust  ignore">        let response = contract_instance.increment_counter(162).call().await?;
 </code></pre>
 </blockquote>
 <h2 id="multiple-contract-calls-in-a-single-transaction"><a class="header" href="#multiple-contract-calls-in-a-single-transaction">Multiple contract calls in a single transaction</a></h2>
 <p>With <code>ContractMultiCallHandler</code> you can execute multiple contract calls within a single transaction. To achieve this, you first prepare all the contract calls that you want to bundle:</p>
-<pre><code class="language-rust ignore">    let contract_instance = MyContract::new(contract_id.to_string(), wallet.clone());
+<pre><code class="language-rust ignore">        let contract_instance = MyContract::new(contract_id.to_string(), wallet.clone());
 
-    let call_handler_1 = contract_instance.initialize_counter(42);
-    let call_handler_2 = contract_instance.get_array([42; 2].to_vec());
+        let call_handler_1 = contract_instance.initialize_counter(42);
+        let call_handler_2 = contract_instance.get_array([42; 2].to_vec());
 </code></pre>
 <p>At this point you can also choose to set call parameters, variable outputs or external contracts for every contract call, as long as you don't execute it with <code>call()</code> or <code>simulate()</code>.
 Next, you provide the prepared calls to your <code>ContractMultiCallHandler</code> and optionally configure transaction parameters:</p>
-<pre><code class="language-rust ignore">    let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
+<pre><code class="language-rust ignore">        let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
 
-    multi_call_handler
-        .add_call(call_handler_1)
-        .add_call(call_handler_2);
+        multi_call_handler
+            .add_call(call_handler_1)
+            .add_call(call_handler_2);
 </code></pre>
 <p>Note that any transaction parameters configured on separate contract calls are disregarded in favor of the parameters provided to <code>ContractMultiCallHandler</code>.</p>
 <h3 id="output-values"><a class="header" href="#output-values">Output values</a></h3>
 <p>To get the output values of the bundled calls, you need to provide explicit type annotations when saving the result of <code>call()</code> or <code>simulate()</code> to a variable:</p>
-<pre><code class="language-rust ignore">    let (counter, array): (u64, Vec&lt;u64&gt;) = multi_call_handler.call().await?.value;
+<pre><code class="language-rust ignore">        let (counter, array): (u64, Vec&lt;u64&gt;) = multi_call_handler.call().await?.value;
 </code></pre>
 <p>You can also interact with the <code>CallResponse</code> by moving the type annotation to the invoked method:</p>
-<pre><code class="language-rust ignore">    let response = multi_call_handler.call::&lt;(u64, Vec&lt;u64&gt;)&gt;().await?;
+<pre><code class="language-rust ignore">        let response = multi_call_handler.call::&lt;(u64, Vec&lt;u64&gt;)&gt;().await?;
 </code></pre>
 <h2 id="more-examples"><a class="header" href="#more-examples">More examples</a></h2>
 <p>You can find runnable examples under <a href="https://github.com/FuelLabs/fuels-rs/blob/master/packages/fuels-abigen-macro/tests/harness.rs"><code>fuels-abigen-macro/tests/harness.rs</code></a>.</p>
@@ -567,33 +567,34 @@ Next, you provide the prepared calls to your <code>ContractMultiCallHandler</cod
 <p>The SDK gives you many different ways to create wallets. Let's explore these different ways.</p>
 <h2 id="creating-a-wallet"><a class="header" href="#creating-a-wallet">Creating a wallet</a></h2>
 <p>A new wallet with a randomly generated private key can be created by supplying <code>Option&lt;Provider&gt;</code>.</p>
-<pre><code class="language-rust ignore">async fn create_random_wallet() {
-    use fuels::prelude::*;
+<pre><code class="language-rust ignore">    async fn create_random_wallet() {
+        use fuels::prelude::*;
 
-    // Use the test helper to setup a test provider.
-    let (provider, _address) = setup_test_provider(vec![], None).await;
+        // Use the test helper to setup a test provider.
+        let (provider, _address) = setup_test_provider(vec![], None).await;
 
-    // Create the wallet.
-    let _wallet = LocalWallet::new_random(Some(provider));
-}
+        // Create the wallet.
+        let _wallet = LocalWallet::new_random(Some(provider));
+    }
 </code></pre>
 <p>Alternatively, you can create a wallet from a predefined <code>SecretKey</code>.</p>
-<pre><code class="language-rust ignore">async fn create_wallet_from_secret_key() -&gt; Result&lt;(), Box&lt;dyn std::error::Error&gt;&gt; {
-    use fuels::prelude::*;
-    use fuels::signers::fuel_crypto::SecretKey;
-    use std::str::FromStr;
+<pre><code class="language-rust ignore">    async fn create_wallet_from_secret_key() -&gt; Result&lt;(), Box&lt;dyn std::error::Error&gt;&gt; {
+        use fuels::prelude::*;
+        use fuels::signers::fuel_crypto::SecretKey;
+        use std::str::FromStr;
 
-    // Use the test helper to setup a test provider.
-    let (provider, _address) = setup_test_provider(vec![], None).await;
+        // Use the test helper to setup a test provider.
+        let (provider, _address) = setup_test_provider(vec![], None).await;
 
-    // Setup the private key.
-    let secret =
-        SecretKey::from_str(&quot;5f70feeff1f229e4a95e1056e8b4d80d0b24b565674860cc213bdb07127ce1b1&quot;)?;
+        // Setup the private key.
+        let secret = SecretKey::from_str(
+            &quot;5f70feeff1f229e4a95e1056e8b4d80d0b24b565674860cc213bdb07127ce1b1&quot;,
+        )?;
 
-    // Create the wallet.
-    let _wallet = LocalWallet::new_from_private_key(secret, Some(provider));
-    Ok(())
-}
+        // Create the wallet.
+        let _wallet = LocalWallet::new_from_private_key(secret, Some(provider));
+        Ok(())
+    }
 </code></pre>
 <blockquote>
 <p>Note: if <code>None</code> is supplied instead of a provider, any transaction related to the wallet will result
@@ -605,83 +606,85 @@ enables defining owners (wallet addresses) of genesis coins before a provider is
 <p>In addition to that, we also support <a href="https://www.ledger.com/academy/crypto/what-are-hierarchical-deterministic-hd-wallets">Hierarchical Deterministic Wallets</a> and <a href="https://learnmeabitcoin.com/technical/derivation-paths">derivation paths</a>. You may recognize the string <code>&quot;m/44'/60'/0'/0/0&quot;</code> from somewhere; that's a derivation path. In simple terms, it's a way to derive many wallets from a single root wallet.</p>
 <p>The SDK gives you two wallets from mnemonic instantiation methods: one that takes a derivation path (<code>Wallet::new_from_mnemonic_phrase_with_path</code>) and one that uses the default derivation path, in case you don't want or don't need to configure that (<code>Wallet::new_from_mnemonic_phrase</code>).</p>
 <p>Here's how you can create wallets with both mnemonic phrases and derivation paths:</p>
-<pre><code class="language-rust ignore">async fn create_wallet_from_mnemonic() -&gt; Result&lt;(), Error&gt; {
-    use fuels::prelude::*;
+<pre><code class="language-rust ignore">    async fn create_wallet_from_mnemonic() -&gt; Result&lt;(), Error&gt; {
+        use fuels::prelude::*;
 
-    let phrase = &quot;oblige salon price punch saddle immune slogan rare snap desert retire surprise&quot;;
+        let phrase =
+            &quot;oblige salon price punch saddle immune slogan rare snap desert retire surprise&quot;;
 
-    // Use the test helper to setup a test provider.
-    let (provider, _address) = setup_test_provider(vec![], None).await;
+        // Use the test helper to setup a test provider.
+        let (provider, _address) = setup_test_provider(vec![], None).await;
 
-    // Create first account from mnemonic phrase.
-    let _wallet = LocalWallet::new_from_mnemonic_phrase_with_path(
-        phrase,
-        Some(provider.clone()),
-        &quot;m/44'/1179993420'/0'/0/0&quot;,
-    )?;
+        // Create first account from mnemonic phrase.
+        let _wallet = LocalWallet::new_from_mnemonic_phrase_with_path(
+            phrase,
+            Some(provider.clone()),
+            &quot;m/44'/1179993420'/0'/0/0&quot;,
+        )?;
 
-    // Or with the default derivation path
-    let wallet = LocalWallet::new_from_mnemonic_phrase(phrase, Some(provider))?;
+        // Or with the default derivation path
+        let wallet = LocalWallet::new_from_mnemonic_phrase(phrase, Some(provider))?;
 
-    let expected_address = &quot;f18b6446deb8135544ba60333e5b7522685cd2cf64aa4e4c75df725149850b65&quot;;
+        let expected_address = &quot;f18b6446deb8135544ba60333e5b7522685cd2cf64aa4e4c75df725149850b65&quot;;
 
-    assert_eq!(wallet.address().to_string(), expected_address);
-    Ok(())
-}
+        assert_eq!(wallet.address().to_string(), expected_address);
+        Ok(())
+    }
 </code></pre>
 <h2 id="creating-a-wallet-and-storing-an-encrypted-json-wallet-to-disk"><a class="header" href="#creating-a-wallet-and-storing-an-encrypted-json-wallet-to-disk">Creating a wallet and storing an encrypted JSON wallet to disk</a></h2>
 <p>You can also manage a wallet using <a href="https://cryptobook.nakov.com/symmetric-key-ciphers/ethereum-wallet-encryption">JSON wallets</a> -- wallets that are securely encrypted and stored on disk. This makes it easier to manage multiple wallets, especially for testing purposes.</p>
 <p>You can create a random wallet and, at the same time, encrypt and store it. Then, later, you can recover the wallet if you know the master password:</p>
-<pre><code class="language-rust ignore">async fn create_and_restore_json_wallet() -&gt; Result&lt;(), Error&gt; {
-    use fuels::prelude::*;
+<pre><code class="language-rust ignore">    async fn create_and_restore_json_wallet() -&gt; Result&lt;(), Error&gt; {
+        use fuels::prelude::*;
 
-    let dir = std::env::temp_dir();
-    let mut rng = rand::thread_rng();
+        let dir = std::env::temp_dir();
+        let mut rng = rand::thread_rng();
 
-    // Use the test helper to setup a test provider.
-    let (provider, _address) = setup_test_provider(vec![], None).await;
+        // Use the test helper to setup a test provider.
+        let (provider, _address) = setup_test_provider(vec![], None).await;
 
-    let password = &quot;my_master_password&quot;;
+        let password = &quot;my_master_password&quot;;
 
-    // Create a wallet to be stored in the keystore.
-    let (_wallet, uuid) =
-        LocalWallet::new_from_keystore(&amp;dir, &amp;mut rng, password, Some(provider.clone()))?;
+        // Create a wallet to be stored in the keystore.
+        let (_wallet, uuid) =
+            LocalWallet::new_from_keystore(&amp;dir, &amp;mut rng, password, Some(provider.clone()))?;
 
-    let path = dir.join(uuid);
+        let path = dir.join(uuid);
 
-    let _recovered_wallet = LocalWallet::load_keystore(&amp;path, password, Some(provider))?;
-    Ok(())
-}
+        let _recovered_wallet = LocalWallet::load_keystore(&amp;path, password, Some(provider))?;
+        Ok(())
+    }
 </code></pre>
 <h2 id="encrypting-and-storing-a-wallet-created-from-mnemonic-or-private-key"><a class="header" href="#encrypting-and-storing-a-wallet-created-from-mnemonic-or-private-key">Encrypting and storing a wallet created from mnemonic or private key</a></h2>
 <p>If you had already created a wallet using a mnemonic phrase or a private key, you can also encrypt it and save it to disk:</p>
-<pre><code class="language-rust ignore">async fn create_and_store_mnemonic_wallet() -&gt; Result&lt;(), Error&gt; {
-    use fuels::prelude::*;
+<pre><code class="language-rust ignore">    async fn create_and_store_mnemonic_wallet() -&gt; Result&lt;(), Error&gt; {
+        use fuels::prelude::*;
 
-    let dir = std::env::temp_dir();
+        let dir = std::env::temp_dir();
 
-    let phrase = &quot;oblige salon price punch saddle immune slogan rare snap desert retire surprise&quot;;
+        let phrase =
+            &quot;oblige salon price punch saddle immune slogan rare snap desert retire surprise&quot;;
 
-    // Use the test helper to setup a test provider.
-    let (provider, _address) = setup_test_provider(vec![], None).await;
+        // Use the test helper to setup a test provider.
+        let (provider, _address) = setup_test_provider(vec![], None).await;
 
-    // Create first account from mnemonic phrase.
-    let wallet = LocalWallet::new_from_mnemonic_phrase(phrase, Some(provider))?;
+        // Create first account from mnemonic phrase.
+        let wallet = LocalWallet::new_from_mnemonic_phrase(phrase, Some(provider))?;
 
-    let password = &quot;my_master_password&quot;;
+        let password = &quot;my_master_password&quot;;
 
-    // Encrypts and stores it on disk. Can be recovered using `Wallet::load_keystore`.
-    let _uuid = wallet.encrypt(&amp;dir, password)?;
-    Ok(())
-}
+        // Encrypts and stores it on disk. Can be recovered using `Wallet::load_keystore`.
+        let _uuid = wallet.encrypt(&amp;dir, password)?;
+        Ok(())
+    }
 </code></pre>
 <h2 id="checking-balances-and-coins"><a class="header" href="#checking-balances-and-coins">Checking balances and coins</a></h2>
 <p>First, one should keep in mind that, with UTXOs, each <em>coin</em> is unique. Each UTXO corresponds to a unique <em>coin</em>, and said <em>coin</em> has a corresponding <em>amount</em> (the same way a dollar bill has either 10$ or 5$ face value). So, when you want to query the balance for a given asset ID, you want to query the sum of the amount in each unspent coin. This is done very easily with a wallet:</p>
-<pre><code class="language-rust ignore">    let asset_id: AssetId = BASE_ASSET_ID;
-    let balance: u64 = wallet.get_asset_balance(&amp;asset_id).await?;
+<pre><code class="language-rust ignore">        let asset_id: AssetId = BASE_ASSET_ID;
+        let balance: u64 = wallet.get_asset_balance(&amp;asset_id).await?;
 </code></pre>
 <p>If you want to query all the balances (i.e. get the balance for each asset IDs in that wallet), then it is as simple as:</p>
-<pre><code class="language-rust ignore">    let balances: HashMap&lt;String, u64&gt; = wallet.get_balances().await?;
+<pre><code class="language-rust ignore">        let balances: HashMap&lt;String, u64&gt; = wallet.get_balances().await?;
 </code></pre>
 <p>The return type is a <code>HashMap</code>, where the key is the <em>asset ID</em> and the value is the corresponding balance.</p>
 <h2 id="security"><a class="header" href="#security">Security</a></h2>
@@ -771,24 +774,24 @@ impl MyContract {
 <p><strong>Note:</strong> the generated code might look different from one version to another, this is just an example to give you an idea of what it looks like.</p>
 </blockquote>
 <p>And, then, you're able to use it to call the actual methods on the deployed contract:</p>
-<pre><code class="language-rust ignore">    // This is an instance of your contract which you can use to make calls to your functions
-    let contract_instance = MyContract::new(contract_id.to_string(), wallet);
+<pre><code class="language-rust ignore">        // This is an instance of your contract which you can use to make calls to your functions
+        let contract_instance = MyContract::new(contract_id.to_string(), wallet);
 
-    let response = contract_instance
-        .initialize_counter(42) // Build the ABI call
-        .call() // Perform the network call
-        .await?;
+        let response = contract_instance
+            .initialize_counter(42) // Build the ABI call
+            .call() // Perform the network call
+            .await?;
 
-    assert_eq!(42, response.value);
+        assert_eq!(42, response.value);
 
-    let response = contract_instance.increment_counter(10).call().await?;
+        let response = contract_instance.increment_counter(10).call().await?;
 
-    assert_eq!(52, response.value);
+        assert_eq!(52, response.value);
 </code></pre>
 <p>To generate these bindings, all you have to do is:</p>
-<pre><code class="language-rust ignore">    use fuels::prelude::*;
-    // Replace with your own JSON abi path (relative to the root of your crate)
-    abigen!(MyContractName, &quot;examples/rust_bindings/src/abi.json&quot;);
+<pre><code class="language-rust ignore">        use fuels::prelude::*;
+        // Replace with your own JSON abi path (relative to the root of your crate)
+        abigen!(MyContractName, &quot;examples/rust_bindings/src/abi.json&quot;);
 </code></pre>
 <p>And this <code>abigen!</code> macro will <em>expand</em> the code with the type-safe Rust bindings. It takes 2 arguments:</p>
 <ol>
@@ -796,10 +799,10 @@ impl MyContract {
 <li>Either a path as string to the JSON ABI file or the JSON ABI as a multiline string directly.</li>
 </ol>
 <p>The same as the example above but passing the ABI definition directly:</p>
-<pre><code class="language-rust ignore">    // Don't forget to import the `abigen` macro as above
-    abigen!(
-        MyContract,
-        r#&quot;
+<pre><code class="language-rust ignore">        // Don't forget to import the `abigen` macro as above
+        abigen!(
+            MyContract,
+            r#&quot;
     [
         {
             &quot;type&quot;: &quot;function&quot;,
@@ -835,7 +838,40 @@ impl MyContract {
         }
     ]
     &quot;#
-    );
+        );
+</code></pre>
+<h2 id="manual-decoding"><a class="header" href="#manual-decoding">Manual decoding</a></h2>
+<p>If, for whatever reason, you find yourself with bytes you wish to decode into a type used in your contract.</p>
+<p>If it is a type generated by <code>abigen!</code> then you can use <code>try_into</code>:</p>
+<pre><code class="language-rust ignore">    let shaker_in_bytes: Vec&lt;u8&gt; = vec![0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 2];
+
+    let expected = Shaker::Mojito(2);
+
+    // as slice
+    let actual: Shaker = shaker_in_bytes[..].try_into()?;
+    assert_eq!(actual, expected);
+
+    // as ref
+    let actual: Shaker = (&amp;shaker_in_bytes).try_into()?;
+    assert_eq!(actual, expected);
+
+    // as value
+    let actual: Shaker = shaker_in_bytes.try_into()?;
+    assert_eq!(actual, expected);
+
+</code></pre>
+<p>Otherwise, for native types such as <code>u8</code>, <code>u32</code>,...,<code>ContractId</code> and others, you must use
+<code>::fuels::core::try_from_bytes</code>:</p>
+<pre><code class="language-rust ignore">        let contract_id_bytes = [0xFF; 32];
+        let contract_id = ContractId::new(contract_id_bytes);
+
+        let asset_id_bytes = [0xFF; 32];
+        let asset_id = AssetId::new(asset_id_bytes);
+
+        let bytes: Vec&lt;u8&gt; = [contract_id_bytes, asset_id_bytes].concat();
+        let expected: (ContractId, AssetId) = try_from_bytes(&amp;bytes)?;
+
+        assert_eq!(expected, (contract_id, asset_id));
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="fuels-rs-testing"><a class="header" href="#fuels-rs-testing"><code>fuels-rs</code> Testing</a></h1>
 <h2 id="running-a-sway-script"><a class="header" href="#running-a-sway-script">Running a Sway script</a></h2>
