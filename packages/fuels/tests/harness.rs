@@ -1866,7 +1866,7 @@ async fn nested_enums_are_correctly_encoded_decoded() -> Result<(), Error> {
 async fn test_multi_call() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -1901,7 +1901,7 @@ async fn test_multi_call() -> Result<(), Error> {
 async fn test_multi_call_script_workflow() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
