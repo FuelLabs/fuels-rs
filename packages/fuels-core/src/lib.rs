@@ -214,10 +214,7 @@ where
 {
     let token = ABIDecoder::decode_single(&T::param_type(), bytes)?;
 
-    // Not inlined so that the error conversion Error -> Error
-    // might happen
-    let constructed = T::from_token(token)?;
-    Ok(constructed)
+    T::from_token(token)
 }
 
 impl Tokenizable for Token {
@@ -233,7 +230,7 @@ impl Tokenizable for bool {
     fn from_token(token: Token) -> Result<Self, Error> {
         match token {
             Token::Bool(data) => Ok(data),
-            other => Err(Error::InvalidData(format!(
+            other => Err(Error::InstantiationError(format!(
                 "Expected `bool`, got {:?}",
                 other
             ))),
