@@ -788,7 +788,8 @@ async fn test_reverting_transaction() -> Result<(), Error> {
         "tests/test_projects/revert_transaction_error/out/debug/capture_revert_transaction_error.bin",
         &wallet,
         TxParameters::default(),
-        vec![],)
+        vec![],
+    )
         .await?;
     let contract_instance = RevertingContract::new(contract_id.to_string(), wallet);
     println!("Contract deployed @ {:x}", contract_id);

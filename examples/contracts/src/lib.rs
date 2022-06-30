@@ -93,8 +93,8 @@ mod tests {
         let storage_slot = create_storage_slot("slot", 42);
         // ANCHOR_END: storage_slot_create
 
-        let key = *storage_slot.key().clone();
-        let expected_value = storage_slot.value().clone();
+        let key = *(storage_slot.key()).clone();
+        let expected_value = (storage_slot.value()).clone();
 
         // ANCHOR: manual_storage
         let contract_id = Contract::deploy(
@@ -173,7 +173,8 @@ mod tests {
         let contract_id_1 = Contract::deploy(
             "../../packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test.bin",
             &wallets[0],
-            TxParameters::default(),vec![],
+            TxParameters::default(),
+            vec![],
         )
         .await?;
 
@@ -221,10 +222,12 @@ mod tests {
 
         let wallet = launch_provider_and_get_wallet().await;
         let contract_id = Contract::deploy(
-        "../../packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test.bin",
-        &wallet,
-        TxParameters::default(), vec![],
-    ).await?;
+            "../../packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test.bin",
+            &wallet,
+            TxParameters::default(),
+            vec![]
+        )
+            .await?;
         println!("Contract deployed @ {:x}", contract_id);
         // ANCHOR: instantiate_contract
         let contract_instance = MyContract::new(contract_id.to_string(), wallet.clone());
@@ -341,7 +344,8 @@ mod tests {
         "../../packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test\
         .bin",
         &wallet,
-        TxParameters::default(), vec![],
+        TxParameters::default(),
+        vec![],
     )
         .await?;
         let contract_instance = TestContract::new(contract_id.to_string(), wallet);
@@ -400,7 +404,8 @@ mod tests {
         let contract_id = Contract::deploy(
         "../../packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test.bin",
         &wallet,
-        TxParameters::default(), vec![],
+        TxParameters::default(),
+        vec![],
     )
     .await?;
 
@@ -438,7 +443,8 @@ mod tests {
         let contract_id = Contract::deploy(
         "../../packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test.bin",
         &wallet,
-        TxParameters::default(), vec![],
+        TxParameters::default(),
+        vec![],
     )
     .await?;
 
