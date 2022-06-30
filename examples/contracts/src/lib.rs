@@ -1,5 +1,3 @@
-extern crate core;
-
 #[allow(unused_imports)]
 use fuels::prelude::Error;
 
