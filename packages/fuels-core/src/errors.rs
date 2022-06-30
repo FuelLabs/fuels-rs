@@ -2,8 +2,7 @@ use core::fmt;
 use core::str::Utf8Error;
 pub type Result<T> = core::result::Result<T, Error>;
 use fuel_tx::Receipt;
-use std::fmt::{Display, Formatter};
-use std::{error, net};
+use std::net;
 use strum::ParseError;
 use thiserror::Error;
 
@@ -59,6 +58,8 @@ pub enum Error {
     ContractCallError(String, Vec<Receipt>),
     #[error("Wallet error: {0}")]
     WalletError(String),
+    #[error("Instantiation error: {0}")]
+    InstantiationError(String),
 }
 
 impl From<CodecError> for Error {
@@ -85,22 +86,5 @@ impl From<std::io::Error> for Error {
 impl From<proc_macro2::LexError> for Error {
     fn from(err: proc_macro2::LexError) -> Error {
         Error::ParseTokenStreamError(err.to_string())
-    }
-}
-
-#[derive(Debug)]
-pub struct InstantiationError(pub String);
-
-impl Display for InstantiationError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-impl error::Error for InstantiationError {}
-
-impl From<InstantiationError> for Error {
-    fn from(err: InstantiationError) -> Self {
-        Error::InvalidData(err.0)
     }
 }

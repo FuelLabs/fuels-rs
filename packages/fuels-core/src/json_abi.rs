@@ -697,27 +697,27 @@ impl ABIParser {
 }
 
 /// Turns a JSON property into ParamType
-pub fn parse_param(param: &Property) -> Result<ParamType, Error> {
-    match ParamType::from_str(&param.type_field) {
+pub fn parse_param(prop: &Property) -> Result<ParamType, Error> {
+    match ParamType::from_str(&prop.type_field) {
         // Simple case (primitive types, no arrays, including string)
         Ok(param_type) => Ok(param_type),
         Err(_) => {
-            if param.type_field == "()" {
+            if prop.type_field == "()" {
                 return Ok(ParamType::Unit);
             }
-            if param.type_field.contains('[') && param.type_field.contains(']') {
+            if prop.type_field.contains('[') && prop.type_field.contains(']') {
                 // Try to parse array ([T; M]) or string (str[M])
-                if param.type_field.contains("str[") {
-                    return parse_string_param(param);
+                if prop.type_field.contains("str[") {
+                    return parse_string_param(prop);
                 }
-                return parse_array_param(param);
+                return parse_array_param(prop);
             }
-            if param.type_field.starts_with('(') && param.type_field.ends_with(')') {
+            if prop.type_field.starts_with('(') && prop.type_field.ends_with(')') {
                 // Try to parse tuple (T, T, ..., T)
-                return parse_tuple_param(param);
+                return parse_tuple_param(prop);
             }
             // Try to parse a free form enum or struct (e.g. `struct MySTruct`, `enum MyEnum`).
-            parse_custom_type_param(param)
+            parse_custom_type_param(prop)
         }
     }
 }
