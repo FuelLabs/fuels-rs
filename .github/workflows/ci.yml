@@ -116,6 +116,8 @@ jobs:
             args: --all-targets --all-features
           - command: test
             args: --all-targets --all-features
+          - command: test
+            args: --all-targets --no-default-features
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
