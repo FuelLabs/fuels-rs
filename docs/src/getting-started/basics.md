@@ -48,6 +48,22 @@ Alternatively, if you want multiple instances of the same contract then use `dep
 {{#include ../../../examples/contracts/src/lib.rs:deploy_with_salt}}
 ```
 
+### Initializing storage slots
+
+The storage slots of a contract can be initialized manually from `Vec<StorageSlot>` where `StorageSlot` is a struct that holds the key-value pair for a given slot. The helper function `create_storage_slot` makes it easy to create a `StorageSlot` from generic types for the key/value.
+
+```rust,ignore
+{{#include ../../../examples/contracts/src/lib.rs:storage_slot_create}}
+```
+
+Note that `create_storage_slot` will panic if you try to use a key/value with a size greater than 32 bytes.
+
+Once created, the slots can be passed to `deploy` or `deploy_with_salt`: 
+
+```rust,ignore
+{{#include ../../../examples/contracts/src/lib.rs:manual_storage}}
+```
+
 ## Setting up multiple test wallets
 
 If you need multiple test wallets, they can be setup as follows:
@@ -246,6 +262,33 @@ If you already have a deployed contract and want to call its methods using the S
 > ```rust, ignore
 > {{#include ../../../examples/contracts/src/lib.rs:good_practice}}
 > ```
+
+## Multiple contract calls in a single transaction
+
+With `ContractMultiCallHandler` you can execute multiple contract calls within a single transaction. To achieve this, you first prepare all the contract calls that you want to bundle:
+
+```rust,ignore
+{{#include ../../../examples/contracts/src/lib.rs:multi_call_prepare}}
+```
+At this point you can also choose to set call parameters, variable outputs or external contracts for every contract call, as long as you don't execute it with `call()` or `simulate()`.
+Next, you provide the prepared calls to your `ContractMultiCallHandler` and optionally configure transaction parameters:
+
+```rust,ignore
+{{#include ../../../examples/contracts/src/lib.rs:multi_call_build}}
+```
+Note that any transaction parameters configured on separate contract calls are disregarded in favor of the parameters provided to `ContractMultiCallHandler`.
+
+### Output values
+To get the output values of the bundled calls, you need to provide explicit type annotations when saving the result of `call()` or `simulate()` to a variable:
+
+```rust,ignore
+{{#include ../../../examples/contracts/src/lib.rs:multi_call_values}}
+```
+You can also interact with the `CallResponse` by moving the type annotation to the invoked method:
+
+```rust,ignore
+{{#include ../../../examples/contracts/src/lib.rs:multi_call_response}}
+```
 
 ## More examples
 

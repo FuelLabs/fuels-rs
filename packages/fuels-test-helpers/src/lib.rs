@@ -28,6 +28,7 @@ use serde_json::Value;
 #[cfg(not(feature = "fuel-core-lib"))]
 use crate::node::spawn_fuel_service;
 
+use fuel_gql_client::fuel_tx::StorageSlot;
 use fuel_gql_client::{
     client::FuelClient,
     fuel_tx::{Address, Bytes32, UtxoId},
@@ -162,6 +163,24 @@ pub async fn setup_test_client(
     (client, srv.bound_address)
 }
 
+pub fn create_storage_slot<T: Sized, D: Sized>(key: T, value: D) -> StorageSlot {
+    if ::std::mem::size_of::<T>() > Bytes32::LEN || ::std::mem::size_of::<D>() > Bytes32::LEN {
+        panic!("StorageSlot key/value is limited to 32 bytes.");
+    }
+
+    unsafe fn to_bytes32<T: Sized>(p: &T) -> Bytes32 {
+        let bytes =
+            ::std::slice::from_raw_parts((p as *const T) as *const u8, ::std::mem::size_of::<T>());
+
+        Bytes32::from_slice_unchecked(bytes)
+    }
+
+    let key = unsafe { to_bytes32(&key) };
+    let value = unsafe { to_bytes32(&value) };
+
+    StorageSlot::new(key, value)
+}
+
 #[cfg(not(feature = "fuel-core-lib"))]
 pub async fn setup_test_client(
     coins: Vec<(UtxoId, Coin)>,
@@ -216,12 +235,12 @@ mod tests {
     use std::net::Ipv4Addr;
 
     #[tokio::test]
-    async fn test_setup_single_asset_coins() {
+    async fn test_setup_single_asset_coins() -> Result<(), rand::Error> {
         let mut rng = rand::thread_rng();
         let mut address = Address::zeroed();
-        address.try_fill(&mut rng).unwrap();
+        address.try_fill(&mut rng)?;
         let mut asset_id = AssetId::zeroed();
-        asset_id.try_fill(&mut rng).unwrap();
+        asset_id.try_fill(&mut rng)?;
         let number_of_coins = 11;
         let amount_per_coin = 10;
         let coins = setup_single_asset_coins(address, asset_id, number_of_coins, amount_per_coin);
@@ -231,13 +250,14 @@ mod tests {
             assert_eq!(coin.amount, amount_per_coin);
             assert_eq!(coin.owner, address);
         }
+        Ok(())
     }
 
     #[tokio::test]
-    async fn test_setup_multiple_assets_coins() {
+    async fn test_setup_multiple_assets_coins() -> Result<(), rand::Error> {
         let mut rng = rand::thread_rng();
         let mut address = Address::zeroed();
-        address.try_fill(&mut rng).unwrap();
+        address.try_fill(&mut rng)?;
         let number_of_assets = 7;
         let coins_per_asset = 10;
         let amount_per_coin = 13;
@@ -265,10 +285,11 @@ mod tests {
                 assert_eq!(coin.amount, amount_per_coin);
             }
         }
+        Ok(())
     }
 
     #[tokio::test]
-    async fn test_setup_test_client_custom_config() {
+    async fn test_setup_test_client_custom_config() -> Result<(), rand::Error> {
         let socket = SocketAddr::new(Ipv4Addr::new(127, 0, 0, 1).into(), 5000);
 
         let wallet = LocalWallet::new_random(None);
@@ -288,5 +309,6 @@ mod tests {
         let wallets = setup_test_client(coins, Some(config)).await;
 
         assert_eq!(wallets.1, socket);
+        Ok(())
     }
 }
