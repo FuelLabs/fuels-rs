@@ -1,28 +1,32 @@
-use crate::{abi_decoder::ABIDecoder, abi_encoder::ABIEncoder, script::Script};
+use std::fmt::Debug;
+use std::fs;
+use std::marker::PhantomData;
+use std::path::Path;
+use std::str::FromStr;
+
 use anyhow::Result;
 use fuel_gql_client::{
     client::FuelClient,
     fuel_tx::{Contract as FuelContract, Output, Receipt, StorageSlot, Transaction},
     fuel_types::{Address, AssetId, ContractId, Salt},
 };
+
 use fuels_core::{
     constants::{BASE_ASSET_ID, DEFAULT_SPENDABLE_COIN_AMOUNT},
     errors::Error,
     parameters::{CallParameters, TxParameters},
     ParamType, ReturnLocation, Selector, Token, Tokenizable,
 };
-use fuels_signers::{provider::Provider, LocalWallet, Signer};
-use std::fmt::Debug;
-use std::fs;
-use std::marker::PhantomData;
-use std::path::Path;
-use tracing::level_enabled;
+use fuels_core::tx::Bytes32;
+use fuels_signers::{LocalWallet, provider::Provider, Signer};
+
+use crate::{abi_decoder::ABIDecoder, abi_encoder::ABIEncoder, script::Script};
 
 #[derive(Debug, Clone, Default)]
 pub struct CompiledContract {
     pub raw: Vec<u8>,
     pub salt: Salt,
-    // pub storage: Vec<StorageSlot>
+    pub storage: Vec<StorageSlot>
 }
 
 /// Contract is a struct to interface with a contract. That includes things such as
@@ -140,7 +144,7 @@ impl Contract {
     fn should_compute_custom_input_offset(args: &[Token]) -> bool {
         args.len() > 1
             || args.iter().any(|t| {
-                matches!(
+            matches!(
                     t,
                     Token::String(_)
                         | Token::Struct(_)
@@ -150,7 +154,7 @@ impl Contract {
                         | Token::Array(_)
                         | Token::Byte(_)
                 )
-            })
+        })
     }
 
     /// Loads a compiled contract and deploys it to a running node
@@ -206,10 +210,6 @@ impl Contract {
         }
         let bin = std::fs::read(binary_filepath)?;
 
-        let storage_path = Path::new(binary_filepath).file_stem().unwrap();
-        let ss = Path::new(binary_filepath).parent().unwrap();
-        let st = Path::new(binary_filepath).with_extension("");
-
         let storage_path = format!("{}{}", Path::new(binary_filepath).with_extension("").to_str().unwrap(), "-storage_slots.json");
 
         let storage = match Path::new(storage_path.as_str()).exists() {
@@ -217,8 +217,7 @@ impl Contract {
             false => vec![],
         };
 
-        println!("{:?}", storage_path);
-        Ok(CompiledContract { raw: bin, salt })
+        Ok(CompiledContract { raw: bin, salt, storage })
     }
 
     /// Crafts a transaction used to deploy a contract
@@ -229,7 +228,7 @@ impl Contract {
     ) -> Result<(Transaction, ContractId), Error> {
         let maturity = 0;
         let bytecode_witness_index = 0;
-        let storage_slots: Vec<StorageSlot> = vec![];
+        let storage_slots: Vec<StorageSlot> = compiled_contract.storage.clone();
         let witnesses = vec![compiled_contract.raw.clone().into()];
 
         let static_contracts = vec![];
@@ -276,13 +275,21 @@ impl Contract {
 
     fn get_storage_vec(storage_path: &str) -> Vec<StorageSlot>{
 
+        let mut return_storage: Vec<StorageSlot> = vec![];
+
         let storage_json_string = fs::read_to_string(storage_path).expect("Unable to read file");
 
         let storage: serde_json::Value =
             serde_json::from_str(storage_json_string.as_str()).expect("JSON was not well-formatted");
 
-        // println!("{:?}", storage);
-        vec![]
+        for slot in storage.as_array().unwrap() {
+            return_storage.push(StorageSlot::new( Bytes32::from_str(slot["key"].as_str().unwrap()).unwrap(),
+                                                  Bytes32::from_str(slot["value"].as_str().unwrap()).unwrap()
+            ));
+        }
+
+        return_storage
+
     }
 
 }
@@ -350,8 +357,8 @@ pub struct ContractCallHandler<D> {
 }
 
 impl<D> ContractCallHandler<D>
-where
-    D: Tokenizable + Debug,
+    where
+        D: Tokenizable + Debug,
 {
     /// Sets external contracts as dependencies to this contract's call.
     /// Effectively, this will be used to create Input::Contract/Output::Contract
@@ -451,8 +458,9 @@ where
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use fuels_test_helpers::launch_provider_and_get_wallet;
+
+    use super::*;
 
     #[tokio::test]
     #[should_panic(expected = "called `Result::unwrap()` on an `Err` value: InvalidData(\"json\")")]
@@ -465,8 +473,8 @@ mod test {
             &wallet,
             TxParameters::default(),
         )
-        .await
-        .unwrap();
+            .await
+            .unwrap();
     }
 
     #[tokio::test]
@@ -481,7 +489,7 @@ mod test {
             TxParameters::default(),
             Salt::default(),
         )
-        .await
-        .unwrap();
+            .await
+            .unwrap();
     }
 }
