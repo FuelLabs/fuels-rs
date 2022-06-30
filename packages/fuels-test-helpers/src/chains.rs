@@ -1,10 +1,10 @@
 use crate::{utility, Opcode, Transaction, REG_ONE};
-use anyhow::bail;
 use fuel_types::AssetId;
 use fuels_core::constants::{
     BASE_ASSET_ID, DEFAULT_BYTE_PRICE, DEFAULT_GAS_LIMIT, DEFAULT_GAS_PRICE, DEFAULT_MATURITY,
     DEFAULT_SPENDABLE_COIN_AMOUNT,
 };
+use fuels_core::errors::Error;
 use fuels_core::tx::{Input, Output};
 use fuels_signers::provider::Provider;
 use fuels_signers::{LocalWallet, Signer};
@@ -23,7 +23,7 @@ use utility::retry_until;
 /// * `amount`: By how much to increase the block height.
 ///
 /// returns: Result<(), Error>
-pub async fn add_blocks(wallet: &LocalWallet, amount: usize) -> anyhow::Result<()> {
+pub async fn add_blocks(wallet: &LocalWallet, amount: usize) -> Result<(), Error> {
     let provider = wallet.get_provider()?;
     for _ in 0..amount {
         let height_before_transaction = provider.latest_block_height().await?;
@@ -33,13 +33,13 @@ pub async fn add_blocks(wallet: &LocalWallet, amount: usize) -> anyhow::Result<(
         provider.send_transaction(&transaction).await?;
 
         if !check_if_block_height_increased(provider, height_before_transaction).await? {
-            bail!("Couldn't confirm a block generation via no-op script -- the block height ({}) stayed the same!", height_before_transaction);
+            return Err(Error::InfrastructureError(format!("Couldn't confirm a block generation via no-op script -- the block height ({}) stayed the same!", height_before_transaction)));
         }
     }
     Ok(())
 }
 
-async fn no_op_signed_transaction(wallet: &LocalWallet) -> anyhow::Result<Transaction> {
+async fn no_op_signed_transaction(wallet: &LocalWallet) -> Result<Transaction, Error> {
     let inputs = wallet
         .get_asset_inputs_for_amount(BASE_ASSET_ID, DEFAULT_SPENDABLE_COIN_AMOUNT, 0)
         .await?;
@@ -56,14 +56,15 @@ async fn no_op_signed_transaction(wallet: &LocalWallet) -> anyhow::Result<Transa
 async fn check_if_block_height_increased(
     provider: &Provider,
     height_to_compare_with: u64,
-) -> anyhow::Result<bool> {
+) -> Result<bool, Error> {
     let has_block_height_increased = || async {
         let current_block_height = provider.latest_block_height().await?;
         Ok(current_block_height > height_to_compare_with)
     };
 
-    let height_increased =
-        retry_until(has_block_height_increased, 5, Duration::from_millis(100)).await?;
+    let height_increased = retry_until(has_block_height_increased, 5, Duration::from_millis(100))
+        .await
+        .map_err(|err| Error::NetworkError(err.to_string()))?;
 
     Ok(height_increased)
 }
