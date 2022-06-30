@@ -1998,7 +1998,7 @@ async fn test_storage_initialization() -> Result<(), Error> {
 
     let value = contract_instance.get_value(key).call().await?.value;
     assert_eq!(value.as_slice(), storage_slot.value().as_slice());
-  
+
     Ok(())
 }
 

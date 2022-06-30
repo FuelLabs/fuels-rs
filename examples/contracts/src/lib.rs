@@ -78,43 +78,43 @@ mod tests {
         Ok(())
     }
 
-#[tokio::test]
-async fn manual_storage_init() -> Result<(), Error> {
-    use fuels::prelude::*;
+    #[tokio::test]
+    async fn manual_storage_init() -> Result<(), Error> {
+        use fuels::prelude::*;
 
-    abigen!(
-        MyContract,
-        "packages/fuels-abigen-macro/tests/test_projects/storage/out/debug/storage-abi.json"
-    );
+        abigen!(
+            MyContract,
+            "packages/fuels-abigen-macro/tests/test_projects/storage/out/debug/storage-abi.json"
+        );
 
-    let wallet = launch_provider_and_get_wallet().await;
+        let wallet = launch_provider_and_get_wallet().await;
 
-    // ANCHOR: storage_slot_create
-    let storage_slot = create_storage_slot("slot", 42);
-    // ANCHOR_END: storage_slot_create
+        // ANCHOR: storage_slot_create
+        let storage_slot = create_storage_slot("slot", 42);
+        // ANCHOR_END: storage_slot_create
 
-    let key = *storage_slot.key().clone();
-    let expected_value = storage_slot.value().clone();
+        let key = *storage_slot.key().clone();
+        let expected_value = storage_slot.value().clone();
 
-    // ANCHOR: manual_storage
-    let contract_id = Contract::deploy(
-        "tests/test_projects/storage/out/debug/storage.bin",
-        &wallet,
-        TxParameters::default(),
-        vec![storage_slot],
-    )
-    .await?;
-    // ANCHOR_END: manual_storage
+        // ANCHOR: manual_storage
+        let contract_id = Contract::deploy(
+            "tests/test_projects/storage/out/debug/storage.bin",
+            &wallet,
+            TxParameters::default(),
+            vec![storage_slot],
+        )
+        .await?;
+        // ANCHOR_END: manual_storage
 
-    println!("Foo contract deployed @ {:x}", contract_id);
+        println!("Foo contract deployed @ {:x}", contract_id);
 
-    let contract_instance = MyContract::new(contract_id.to_string(), wallet.clone());
+        let contract_instance = MyContract::new(contract_id.to_string(), wallet.clone());
 
-    let value = contract_instance.get_value(key).call().await?.value;
-    assert_eq!(expected_value.as_slice(), value.as_slice());
+        let value = contract_instance.get_value(key).call().await?.value;
+        assert_eq!(expected_value.as_slice(), value.as_slice());
 
-    Ok(())
-}
+        Ok(())
+    }
 
     #[tokio::test]
     // ANCHOR: deploy_with_salt
