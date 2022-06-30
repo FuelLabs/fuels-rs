@@ -28,11 +28,11 @@ use serde_json::Value;
 #[cfg(not(feature = "fuel-core-lib"))]
 use crate::node::spawn_fuel_service;
 
+use fuel_gql_client::fuel_tx::StorageSlot;
 use fuel_gql_client::{
     client::FuelClient,
     fuel_tx::{Address, Bytes32, UtxoId},
 };
-use fuel_gql_client::fuel_tx::StorageSlot;
 
 use fuels_core::constants::BASE_ASSET_ID;
 use fuels_signers::fuel_crypto::fuel_types::AssetId;
@@ -164,10 +164,13 @@ pub async fn setup_test_client(
 }
 
 pub fn create_storage_slot<T: Sized, D: Sized>(key: T, value: D) -> StorageSlot {
+    if ::std::mem::size_of::<T>() > Bytes32::LEN || ::std::mem::size_of::<D>() > Bytes32::LEN {
+        panic!("StorageSlot key/value is limited to 32 bytes.");
+    }
+
     unsafe fn to_bytes32<T: Sized>(p: &T) -> Bytes32 {
-        let bytes = ::std::slice::from_raw_parts(
-        (p as *const T) as *const u8,
-        ::std::mem::size_of::<T>(), );
+        let bytes =
+            ::std::slice::from_raw_parts((p as *const T) as *const u8, ::std::mem::size_of::<T>());
 
         Bytes32::from_slice_unchecked(bytes)
     }

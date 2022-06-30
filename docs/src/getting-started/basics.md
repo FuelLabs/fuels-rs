@@ -50,7 +50,15 @@ Alternatively, if you want multiple instances of the same contract then use `dep
 
 ### Initializing storage slots
 
-The storage slots of a contract can be initialized manually by passing a `Vec<StorageSlot>` to `deploy` or `deploy_with_salt`:
+The storage slots of a contract can be initialized manually from `Vec<StorageSlot>` where `StorageSlot` is a struct that holds the key-value pair for a given slot. The helper function `create_storage_slot` makes it easy to create a `StorageSlot` from generic types for the key/value.
+
+```rust,ignore
+{{#include ../../../examples/contracts/src/lib.rs:storage_slot_create}}
+```
+
+Note that `create_storage_slot` will panic if you try to use a key/value with a size greater than 32 bytes.
+
+Once created, the slots can be passed to `deploy` or `deploy_with_salt`: 
 
 ```rust,ignore
 {{#include ../../../examples/contracts/src/lib.rs:manual_storage}}

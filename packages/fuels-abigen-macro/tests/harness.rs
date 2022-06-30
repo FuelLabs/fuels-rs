@@ -1,12 +1,11 @@
 use fuel_gql_client::fuel_tx::{AssetId, ContractId, Receipt};
 use fuels::contract::contract::MultiContractCallHandler;
 use fuels::prelude::{
-    abigen, launch_provider_and_get_wallet, setup_multiple_assets_coins, setup_single_asset_coins,
-    setup_test_provider, CallParameters, Contract, Error, LocalWallet, Provider, ProviderError,
-    Signer, TxParameters, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
+    abigen, create_storage_slot, launch_provider_and_get_wallet, setup_multiple_assets_coins,
+    setup_single_asset_coins, setup_test_provider, CallParameters, Contract, Error, LocalWallet,
+    Provider, ProviderError, Signer, TxParameters, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
 };
-use fuels::signers::fuel_crypto::fuel_types::Bytes32;
-use fuels_core::tx::{Address, StorageSlot};
+use fuels_core::tx::Address;
 use fuels_core::Tokenizable;
 use fuels_core::{constants::BASE_ASSET_ID, Token};
 use sha2::{Digest, Sha256};
@@ -1981,23 +1980,24 @@ async fn test_storage_initialization() -> Result<(), Error> {
 
     let wallet = launch_provider_and_get_wallet().await;
 
-    let key = Bytes32::new([1u8; 32]);
-    let value = Bytes32::new([2u8; 32]);
-    let storage = vec![StorageSlot::new(key, value)];
+    let storage_slot = create_storage_slot("slot", 42);
 
     let contract_id = Contract::deploy(
         "tests/test_projects/storage/out/debug/storage.bin",
         &wallet,
         TxParameters::default(),
-        storage,
+        vec![storage_slot.clone()],
     )
     .await?;
     println!("Foo contract deployed @ {:x}", contract_id);
 
     let contract_instance = MyContract::new(contract_id.to_string(), wallet.clone());
 
-    let value = contract_instance.get_value([1u8; 32]).call().await?.value;
-    assert_eq!(value, [2u8; 32]);
+    // from Bytes32 to [u8; 32]
+    let key = **storage_slot.key();
+
+    let value = contract_instance.get_value(key).call().await?.value;
+    assert_eq!(value.as_slice(), storage_slot.value().as_slice());
 
     Ok(())
 }
