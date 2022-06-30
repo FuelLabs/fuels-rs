@@ -2003,6 +2003,7 @@ async fn test_storage_initialization() -> Result<(), Error> {
     Ok(())
 }
 
+#[tokio::test]
 async fn can_use_try_into_to_construct_struct_from_bytes() -> Result<(), Error> {
     abigen!(
         MyContract,

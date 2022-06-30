@@ -93,8 +93,8 @@ mod tests {
         let storage_slot = create_storage_slot("slot", 42);
         // ANCHOR_END: storage_slot_create
 
-        let key = *(storage_slot.key()).clone();
-        let expected_value = (storage_slot.value()).clone();
+        let key = **storage_slot.key();
+        let expected_value = storage_slot.value().to_owned();
 
         // ANCHOR: manual_storage
         let contract_id = Contract::deploy(
