@@ -37,6 +37,10 @@ pub mod signers {
     pub use fuels_signers::*;
 }
 
+pub mod types {
+    pub use fuels_types::*;
+}
+
 pub mod test_helpers {
     pub use fuels_test_helpers::*;
 }
@@ -55,7 +59,6 @@ pub mod prelude {
 
     pub use super::contract::contract::{Contract, MultiContractCallHandler};
     pub use super::core::constants::*;
-    pub use super::core::errors::Error;
     pub use super::core::parameters::*;
     pub use super::core::tx::{Address, AssetId, ContractId};
     pub use super::core::{Token, Tokenizable};
@@ -65,4 +68,5 @@ pub mod prelude {
     pub use super::test_helpers::Config;
     pub use super::test_helpers::*;
     pub use super::tx::Salt;
+    pub use super::types::errors::Error;
 }

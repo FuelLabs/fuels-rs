@@ -1,5 +1,5 @@
-use crate::errors::Error;
 use anyhow::Result;
+use fuels_types::errors::Error;
 use proc_macro2::TokenStream;
 use quote::quote;
 

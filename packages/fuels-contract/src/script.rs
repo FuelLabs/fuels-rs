@@ -10,9 +10,9 @@ use fuel_gql_client::{
 };
 
 use fuels_core::constants::{DEFAULT_SPENDABLE_COIN_AMOUNT, WORD_SIZE};
-use fuels_core::errors::Error;
 use fuels_core::parameters::TxParameters;
 use fuels_signers::{LocalWallet, Signer};
+use fuels_types::errors::Error;
 use std::collections::HashSet;
 use std::iter;
 

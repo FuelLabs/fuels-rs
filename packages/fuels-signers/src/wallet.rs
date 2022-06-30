@@ -10,7 +10,8 @@ use fuel_gql_client::{
     client::{schema::coin::Coin, types::TransactionResponse, PaginatedResult, PaginationRequest},
     fuel_tx::{Address, AssetId, Input, Output, Receipt, Transaction, UtxoId, Witness},
 };
-use fuels_core::{errors::Error, parameters::TxParameters};
+use fuels_core::parameters::TxParameters;
+use fuels_types::errors::Error;
 use rand::{CryptoRng, Rng};
 use std::{collections::HashMap, fmt, io, path::Path, str::FromStr};
 use thiserror::Error;
@@ -424,7 +425,7 @@ mod tests {
     use super::*;
     use fuel_core::service::{Config, FuelService};
     use fuel_gql_client::client::FuelClient;
-    use fuels_core::errors::Error;
+    use fuels_types::errors::Error;
     use tempfile::tempdir;
 
     #[tokio::test]

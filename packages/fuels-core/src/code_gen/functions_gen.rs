@@ -1,11 +1,11 @@
 use crate::abi_encoder::ABIEncoder;
 use crate::code_gen::custom_types_gen::extract_custom_type_name_from_abi_property;
 use crate::code_gen::docs_gen::expand_doc;
-use crate::errors::Error;
 use crate::json_abi::{parse_param, ABIParser};
 use crate::types::expand_type;
 use crate::utils::{ident, safe_ident};
 use crate::{ParamType, Selector};
+use fuels_types::errors::Error;
 use fuels_types::{CustomType, Function, Property, ENUM_KEYWORD, STRUCT_KEYWORD};
 use inflector::Inflector;
 use proc_macro2::{Literal, TokenStream};
