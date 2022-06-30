@@ -98,15 +98,13 @@ mod tests {
 
         // ANCHOR: manual_storage
         let contract_id = Contract::deploy(
-            "tests/test_projects/storage/out/debug/storage.bin",
+            "../../packages/fuels-abigen-macro/tests/test_projects/storage/out/debug/storage.bin",
             &wallet,
             TxParameters::default(),
             vec![storage_slot],
         )
         .await?;
         // ANCHOR_END: manual_storage
-
-        println!("Foo contract deployed @ {:x}", contract_id);
 
         let contract_instance = MyContract::new(contract_id.to_string(), wallet.clone());
 

@@ -1990,7 +1990,6 @@ async fn test_storage_initialization() -> Result<(), Error> {
         vec![storage_slot.clone()],
     )
     .await?;
-    println!("Foo contract deployed @ {:x}", contract_id);
 
     let contract_instance = MyContract::new(contract_id.to_string(), wallet.clone());
 
