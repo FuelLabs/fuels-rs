@@ -48,6 +48,14 @@ Alternatively, if you want multiple instances of the same contract then use `dep
 {{#include ../../../examples/contracts/src/lib.rs:deploy_with_salt}}
 ```
 
+### Initializing storage slots
+
+The storage slots of a contract can be initialized manually by passing a `Vec<StorageSlot>` to `deploy` or `deploy_with_salt`:
+
+```rust,ignore
+{{#include ../../../examples/contracts/src/lib.rs:manual_storage}}
+```
+
 ## Setting up multiple test wallets
 
 If you need multiple test wallets, they can be setup as follows:

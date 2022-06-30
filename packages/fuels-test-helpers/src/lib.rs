@@ -32,6 +32,7 @@ use fuel_gql_client::{
     client::FuelClient,
     fuel_tx::{Address, Bytes32, UtxoId},
 };
+use fuel_gql_client::fuel_tx::StorageSlot;
 
 use fuels_core::constants::BASE_ASSET_ID;
 use fuels_signers::fuel_crypto::fuel_types::AssetId;
@@ -160,6 +161,21 @@ pub async fn setup_test_client(
     let client = FuelClient::from(srv.bound_address);
 
     (client, srv.bound_address)
+}
+
+pub fn create_storage_slot<T: Sized, D: Sized>(key: T, value: D) -> StorageSlot {
+    unsafe fn to_bytes32<T: Sized>(p: &T) -> Bytes32 {
+        let bytes = ::std::slice::from_raw_parts(
+        (p as *const T) as *const u8,
+        ::std::mem::size_of::<T>(), );
+
+        Bytes32::from_slice_unchecked(bytes)
+    }
+
+    let key = unsafe { to_bytes32(&key) };
+    let value = unsafe { to_bytes32(&value) };
+
+    StorageSlot::new(key, value)
 }
 
 #[cfg(not(feature = "fuel-core-lib"))]
