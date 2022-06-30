@@ -11,14 +11,14 @@ use fuel_gql_client::{
     fuel_types::{Address, AssetId, ContractId, Salt},
 };
 
+use fuels_core::tx::Bytes32;
 use fuels_core::{
     constants::{BASE_ASSET_ID, DEFAULT_SPENDABLE_COIN_AMOUNT},
     errors::Error,
     parameters::{CallParameters, TxParameters},
     ParamType, ReturnLocation, Selector, Token, Tokenizable,
 };
-use fuels_core::tx::Bytes32;
-use fuels_signers::{LocalWallet, provider::Provider, Signer};
+use fuels_signers::{provider::Provider, LocalWallet, Signer};
 
 use crate::{abi_decoder::ABIDecoder, abi_encoder::ABIEncoder, script::Script};
 
@@ -26,7 +26,7 @@ use crate::{abi_decoder::ABIDecoder, abi_encoder::ABIEncoder, script::Script};
 pub struct CompiledContract {
     pub raw: Vec<u8>,
     pub salt: Salt,
-    pub storage_slots: Vec<StorageSlot>
+    pub storage_slots: Vec<StorageSlot>,
 }
 
 /// Contract is a struct to interface with a contract. That includes things such as
@@ -146,7 +146,7 @@ impl Contract {
     fn should_compute_custom_input_offset(args: &[Token]) -> bool {
         args.len() > 1
             || args.iter().any(|t| {
-            matches!(
+                matches!(
                     t,
                     Token::String(_)
                         | Token::Struct(_)
@@ -156,7 +156,7 @@ impl Contract {
                         | Token::Array(_)
                         | Token::Byte(_)
                 )
-        })
+            })
     }
 
     /// Loads a compiled contract and deploys it to a running node
@@ -212,14 +212,25 @@ impl Contract {
         }
         let bin = std::fs::read(binary_filepath)?;
 
-        let storage_path = format!("{}{}", Path::new(binary_filepath).with_extension("").to_str().unwrap(), "-storage_slots.json");
+        let storage_path = format!(
+            "{}{}",
+            Path::new(binary_filepath)
+                .with_extension("")
+                .to_str()
+                .unwrap(),
+            "-storage_slots.json"
+        );
 
         let storage = match Path::new(storage_path.as_str()).exists() {
             true => Self::get_storage_vec(storage_path.as_str()),
             false => vec![],
         };
 
-        Ok(CompiledContract { raw: bin, salt, storage_slots: storage })
+        Ok(CompiledContract {
+            raw: bin,
+            salt,
+            storage_slots: storage,
+        })
     }
 
     /// Crafts a transaction used to deploy a contract
@@ -275,25 +286,23 @@ impl Contract {
         Ok((tx, contract_id))
     }
 
-    fn get_storage_vec(storage_path: &str) -> Vec<StorageSlot>{
-
+    fn get_storage_vec(storage_path: &str) -> Vec<StorageSlot> {
         let mut return_storage: Vec<StorageSlot> = vec![];
 
         let storage_json_string = fs::read_to_string(storage_path).expect("Unable to read file");
 
-        let storage: serde_json::Value =
-            serde_json::from_str(storage_json_string.as_str()).expect("JSON was not well-formatted");
+        let storage: serde_json::Value = serde_json::from_str(storage_json_string.as_str())
+            .expect("JSON was not well-formatted");
 
         for slot in storage.as_array().unwrap() {
-            return_storage.push(StorageSlot::new( Bytes32::from_str(slot["key"].as_str().unwrap()).unwrap(),
-                                                  Bytes32::from_str(slot["value"].as_str().unwrap()).unwrap()
+            return_storage.push(StorageSlot::new(
+                Bytes32::from_str(slot["key"].as_str().unwrap()).unwrap(),
+                Bytes32::from_str(slot["value"].as_str().unwrap()).unwrap(),
             ));
         }
 
         return_storage
-
     }
-
 }
 
 #[derive(Debug)]
@@ -359,8 +368,8 @@ pub struct ContractCallHandler<D> {
 }
 
 impl<D> ContractCallHandler<D>
-    where
-        D: Tokenizable + Debug,
+where
+    D: Tokenizable + Debug,
 {
     /// Sets external contracts as dependencies to this contract's call.
     /// Effectively, this will be used to create Input::Contract/Output::Contract
@@ -475,8 +484,8 @@ mod test {
             &wallet,
             TxParameters::default(),
         )
-            .await
-            .unwrap();
+        .await
+        .unwrap();
     }
 
     #[tokio::test]
@@ -491,7 +500,7 @@ mod test {
             TxParameters::default(),
             Salt::default(),
         )
-            .await
-            .unwrap();
+        .await
+        .unwrap();
     }
 }

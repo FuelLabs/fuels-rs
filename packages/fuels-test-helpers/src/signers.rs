@@ -6,11 +6,11 @@ use fuel_core::{model::Coin, service::Config};
 use fuel_core_interfaces::model::Coin;
 use fuel_gql_client::fuel_tx::UtxoId;
 
-use fuels_signers::{LocalWallet, provider::Provider, Signer};
+use fuels_signers::{provider::Provider, LocalWallet, Signer};
 
-use crate::{setup_single_asset_coins, setup_test_client, wallets_config::WalletsConfig};
 #[cfg(not(feature = "fuel-core-lib"))]
 use crate::node::Config;
+use crate::{setup_single_asset_coins, setup_test_client, wallets_config::WalletsConfig};
 
 pub async fn launch_provider_and_get_wallet() -> LocalWallet {
     let mut wallets =
