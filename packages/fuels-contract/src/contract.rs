@@ -26,7 +26,7 @@ use crate::{abi_decoder::ABIDecoder, abi_encoder::ABIEncoder, script::Script};
 pub struct CompiledContract {
     pub raw: Vec<u8>,
     pub salt: Salt,
-    pub storage: Vec<StorageSlot>
+    pub storage_slots: Vec<StorageSlot>
 }
 
 /// Contract is a struct to interface with a contract. That includes things such as
@@ -74,14 +74,16 @@ impl Contract {
         }
     }
 
-    pub fn compute_contract_id(compiled_contract: &CompiledContract) -> ContractId {
+    pub fn compute_contract_id_and_state_root(
+        compiled_contract: &CompiledContract,
+    ) -> (ContractId, Bytes32) {
         let fuel_contract = FuelContract::from(compiled_contract.raw.clone());
         let root = fuel_contract.root();
-        fuel_contract.id(
-            &compiled_contract.salt,
-            &root,
-            &FuelContract::default_state_root(),
-        )
+        let state_root = FuelContract::initial_state_root(compiled_contract.storage_slots.iter());
+
+        let contract_id = fuel_contract.id(&compiled_contract.salt, &root, &state_root);
+
+        (contract_id, state_root)
     }
 
     /// Creates an ABI call based on a function selector and
@@ -217,7 +219,7 @@ impl Contract {
             false => vec![],
         };
 
-        Ok(CompiledContract { raw: bin, salt, storage })
+        Ok(CompiledContract { raw: bin, salt, storage_slots: storage })
     }
 
     /// Crafts a transaction used to deploy a contract
@@ -228,15 +230,15 @@ impl Contract {
     ) -> Result<(Transaction, ContractId), Error> {
         let maturity = 0;
         let bytecode_witness_index = 0;
-        let storage_slots: Vec<StorageSlot> = compiled_contract.storage.clone();
+        let storage_slots: Vec<StorageSlot> = compiled_contract.storage_slots.clone();
         let witnesses = vec![compiled_contract.raw.clone().into()];
 
         let static_contracts = vec![];
 
-        let contract_id = Self::compute_contract_id(compiled_contract);
+        let (contract_id, state_root) = Self::compute_contract_id_and_state_root(compiled_contract);
 
         let outputs: Vec<Output> = vec![
-            Output::contract_created(contract_id, FuelContract::default_state_root()),
+            Output::contract_created(contract_id, state_root),
             // Note that the change will be computed by the node.
             // Here we only have to tell the node who will own the change and its asset ID.
             // For now we use the BASE_ASSET_ID constant

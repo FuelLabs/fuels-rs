@@ -7,6 +7,7 @@ use fuels::prelude::{
     setup_test_provider, CallParameters, Contract, Error, LocalWallet, Provider, Signer,
     TxParameters, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
 };
+use fuels::signers::fuel_crypto::fuel_types::Bytes32;
 use fuels_core::tx::Address;
 use fuels_core::Tokenizable;
 use fuels_core::{constants::BASE_ASSET_ID, Token};
@@ -1912,7 +1913,7 @@ async fn nested_enums_are_correctly_encoded_decoded() {
 }
 
 #[tokio::test]
-async fn init_storage() {
+async fn test_init_storage_automatically() -> Result<(), Error> {
     abigen!(
         MyContract,
         "packages/fuels-abigen-macro/tests/test_projects/contract_storage_test/out/debug/contract_storage_test-abi.json"
@@ -1920,16 +1921,25 @@ async fn init_storage() {
 
     let wallet = launch_provider_and_get_wallet().await;
 
-    let id = Contract::deploy(
+    let contract_id = Contract::deploy(
         "tests/test_projects/contract_storage_test/out/debug/contract_storage_test.bin",
         &wallet,
         TxParameters::default(),
     )
-        .await
-        .unwrap();
+        .await?;
 
+    println!("Foo contract deployed @ {:x}", contract_id);
 
+    let key1 = Bytes32::from_str("de9090cb50e71c2588c773487d1da7066d0c719849a7e58dc8b6397a25c567c0").unwrap();
+    let key2 = Bytes32::from_str("f383b0ce51358be57daa3b725fe44acdb2d880604e367199080b4379c41bb6ed").unwrap();
 
-    assert_eq!(true, false)
+    let contract_instance = MyContract::new(contract_id.to_string(), wallet.clone());
 
+    let value = contract_instance.get_value_b256(*key1).call().await?.value;
+    assert_eq!(value, [1u8;32]);
+
+    let value = contract_instance.get_value_u64(*key2).call().await?.value;
+    assert_eq!(value, 64);
+
+    Ok(())
 }
