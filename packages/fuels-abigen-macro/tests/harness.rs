@@ -2076,6 +2076,7 @@ async fn test_init_storage_automatically() -> Result<(), Error> {
         "tests/test_projects/contract_storage_test/out/debug/contract_storage_test.bin",
         &wallet,
         TxParameters::default(),
+        vec![],
     )
     .await?;
 
@@ -2094,6 +2095,50 @@ async fn test_init_storage_automatically() -> Result<(), Error> {
     assert_eq!(value, [1u8; 32]);
 
     let value = contract_instance.get_value_u64(*key2).call().await?.value;
+    assert_eq!(value, 64);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_init_storage_overlap() -> Result<(), Error> {
+    abigen!(
+        MyContract,
+        "packages/fuels-abigen-macro/tests/test_projects/contract_storage_test/out/debug/contract_storage_test-abi.json"
+    );
+
+    let wallet = launch_provider_and_get_wallet().await;
+
+    let storage_slot = create_storage_slot("slot", 42);
+
+    let contract_id = Contract::deploy(
+        "tests/test_projects/contract_storage_test/out/debug/contract_storage_test.bin",
+        &wallet,
+        TxParameters::default(),
+        vec![storage_slot.clone()],
+    )
+    .await?;
+
+    println!("Foo contract deployed @ {:x}", contract_id);
+
+    let key = **storage_slot.key();
+
+    let key2 =
+        Bytes32::from_str("de9090cb50e71c2588c773487d1da7066d0c719849a7e58dc8b6397a25c567c0")
+            .unwrap();
+    let key3 =
+        Bytes32::from_str("f383b0ce51358be57daa3b725fe44acdb2d880604e367199080b4379c41bb6ed")
+            .unwrap();
+
+    let contract_instance = MyContract::new(contract_id.to_string(), wallet.clone());
+
+    let value = contract_instance.get_value_b256(key).call().await?.value;
+    assert_eq!(value.as_slice(), storage_slot.value().as_slice());
+
+    let value = contract_instance.get_value_b256(*key2).call().await?.value;
+    assert_eq!(value, [1u8; 32]);
+
+    let value = contract_instance.get_value_u64(*key3).call().await?.value;
     assert_eq!(value, 64);
 
     Ok(())

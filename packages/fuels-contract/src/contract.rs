@@ -1,12 +1,15 @@
 use std::fs;
 use std::str::FromStr;
 
+use crate::script::Script;
 use anyhow::Result;
 use fuel_gql_client::{
     client::FuelClient,
     fuel_tx::{Contract as FuelContract, Output, Receipt, StorageSlot, Transaction},
     fuel_types::{Address, AssetId, ContractId, Salt},
 };
+use fuels_core::abi_decoder::ABIDecoder;
+use fuels_core::abi_encoder::ABIEncoder;
 use fuels_core::tx::Bytes32;
 use fuels_core::{
     constants::{BASE_ASSET_ID, DEFAULT_SPENDABLE_COIN_AMOUNT},
@@ -19,9 +22,6 @@ use std::collections::HashSet;
 use std::fmt::Debug;
 use std::marker::PhantomData;
 use std::path::Path;
-use fuels_core::abi_decoder::ABIDecoder;
-use fuels_core::abi_encoder::ABIEncoder;
-use crate::script::Script;
 
 #[derive(Debug, Clone, Default)]
 pub struct CompiledContract {
@@ -168,7 +168,14 @@ impl Contract {
         storage_slots: Vec<StorageSlot>,
     ) -> Result<ContractId, Error> {
         let mut compiled_contract = Contract::load_sway_contract(binary_filepath)?;
-        compiled_contract.storage_slots = storage_slots;
+
+        if !storage_slots.is_empty() {
+            compiled_contract.storage_slots =
+                Self::merge_storage_slots(storage_slots, &compiled_contract.storage_slots);
+        }
+
+        // println!("{:?}", compiled_contract.storage_slots);
+
         Self::deploy_loaded(&(compiled_contract), wallet, params).await
     }
 
@@ -217,6 +224,14 @@ impl Contract {
         }
         let bin = std::fs::read(binary_filepath)?;
 
+        Ok(CompiledContract {
+            raw: bin,
+            salt,
+            storage_slots: Self::auto_init_storage(binary_filepath),
+        })
+    }
+
+    fn auto_init_storage(binary_filepath: &str) -> Vec<StorageSlot> {
         let storage_path = format!(
             "{}{}",
             Path::new(binary_filepath)
@@ -230,12 +245,23 @@ impl Contract {
             true => Self::get_storage_vec(storage_path.as_str()),
             false => vec![],
         };
+        storage
+    }
 
-        Ok(CompiledContract {
-            raw: bin,
-            salt,
-            storage_slots: storage,
-        })
+    fn merge_storage_slots(
+        manual_storage: Vec<StorageSlot>,
+        contract_storage: &[StorageSlot],
+    ) -> Vec<StorageSlot> {
+        let mut return_storage: Vec<StorageSlot> = manual_storage.clone();
+        let keys: HashSet<Bytes32> = manual_storage.iter().map(|slot| *slot.key()).collect();
+
+        contract_storage.iter().for_each(|slot| {
+            if !keys.contains(slot.key()) {
+                return_storage.push(slot.clone())
+            }
+        });
+
+        return_storage
     }
 
     /// Crafts a transaction used to deploy a contract
