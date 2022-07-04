@@ -19,6 +19,7 @@ fuel-core = { version = "0.9", default-features = false, optional = true }
 fuel-crypto = { version = "0.5", features = ["random"] }
 fuel-gql-client = { version = "0.9", default-features = false }
 fuels-core = { version = "0.16.1", path = "../fuels-core" }
+fuels-types = { version = "0.16.1", path = "../fuels-types" }
 hex = { version = "0.4.3", default-features = false, features = ["std"] }
 rand = { version = "0.8.4", default-features = false }
 serde = { version = "1.0.124", default-features = true, features = ["derive"] }

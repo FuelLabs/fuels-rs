@@ -17,6 +17,7 @@ fuels-contract = { version = "0.16.1", path = "../fuels-contract" }
 fuels-core = { version = "0.16.1", path = "../fuels-core" }
 fuels-signers = { version = "0.16.1", path = "../fuels-signers" }
 fuels-test-helpers = { version = "0.16.1", path = "../fuels-test-helpers" }
+fuels-types = { version = "0.16.1", path = "../fuels-types" }
 
 [features]
 fuel-core-lib = ["fuels-test-helpers/fuel-core-lib", "fuel-core"]
