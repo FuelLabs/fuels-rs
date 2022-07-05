@@ -1996,3 +1996,40 @@ async fn can_use_try_into_to_construct_enum_from_bytes() -> Result<(), Error> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn string_and_array_inside_enum() -> Result<(), Error> {
+    abigen!(
+        MyContract,
+        "packages/fuels-abigen-macro/tests/test_projects/string_and_array_inside_enum/out/debug\
+        /string_and_array_inside_enum-abi.json"
+    );
+
+    let wallet = launch_provider_and_get_wallet().await;
+
+    let id = Contract::deploy(
+        "tests/test_projects/string_and_array_inside_enum/out/debug/string_and_array_inside_enum.bin",
+        &wallet,
+        TxParameters::default(),
+    )
+        .await?;
+
+    let instance = MyContract::new(id.to_string(), wallet.clone());
+
+    let enum_string = SomeEnum::SomeStr("asdf".to_owned());
+    let enum_array = SomeEnum::SomeArr(vec![1,2,3,4]);
+
+    let response = instance
+        .get_enum_str(enum_string.clone())
+        .call()
+        .await?;
+    assert_eq!(response.value, enum_string);
+
+    let response = instance
+        .get_enum_arr(enum_array.clone())
+        .call()
+        .await?;
+    assert_eq!(response.value, enum_array);
+
+    Ok(())
+}

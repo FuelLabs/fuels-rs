@@ -261,19 +261,44 @@ pub fn expand_custom_enum(enum_name: &str, prop: &Property) -> Result<TokenStrea
             // Elementary type
             _ => {
                 let ty = expand_type(&param_type)?;
-                let param_type_string = ident(&param_type.to_string());
+
+                let mut param_type_string = param_type.to_string();
+
+                let param_type_string_ident_tok: proc_macro2::TokenStream =
+                    param_type_string.parse().unwrap();
+
+                param_types.push(quote! { types.push(ParamType::#param_type_string_ident_tok) });
+
+                if let ParamType::Array(..) = param_type {
+                    param_type_string = "Array".to_string();
+                }
+                if let ParamType::String(..) = param_type {
+                    param_type_string = "String".to_string();
+                }
+
+                let param_type_string_ident = ident(&param_type_string);
 
                 // Enum variant declaration
                 enum_variants.push(quote! { #variant_name(#ty)});
 
-                // Token creation
-                enum_selector_builder.push(quote! {
-                    #enum_ident::#variant_name(value) => (#dis, Token::#param_type_string(value))
-                });
-                param_types.push(quote! { types.push(ParamType::#param_type_string) });
                 args.push(
                     quote! {(#dis, token, _) => Ok(#enum_ident::#variant_name(<#ty>::from_token(token)?)),},
                 );
+
+                // Token creation
+                match param_type {
+                    ParamType::Array(_t, _s) => {
+                        enum_selector_builder.push(quote! {
+                            #enum_ident::#variant_name(value) => (#dis, Token::#param_type_string_ident(vec![value.into_token()]))
+                        });
+                    }
+                    // Primitive type
+                    _ => {
+                        enum_selector_builder.push(quote! {
+                            #enum_ident::#variant_name(value) => (#dis, Token::#param_type_string_ident(value))
+                        });
+                    }
+                }
             }
         }
     }
