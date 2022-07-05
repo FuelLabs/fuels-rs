@@ -1,5 +1,6 @@
 use fuel_gql_client::fuel_tx::{AssetId, ContractId, Receipt};
 use fuels::contract::contract::MultiContractCallHandler;
+use fuels::prelude::Error::TransactionError;
 use fuels::prelude::{
     abigen, launch_provider_and_get_wallet, setup_multiple_assets_coins, setup_single_asset_coins,
     setup_test_provider, CallParameters, Contract, Error, LocalWallet, Provider, ProviderError,
@@ -2006,30 +2007,57 @@ async fn contract_method_call_respects_maturity() -> anyhow::Result<()> {
     );
 
     let wallet = launch_provider_and_get_wallet().await;
-    let provider = &wallet.get_provider().unwrap().clone();
-
-    let parameters = TxParameters::default();
 
     let id = Contract::deploy(
         "tests/test_projects/transaction_block_height/out/debug/transaction_block_height.bin",
         &wallet,
-        parameters,
+        TxParameters::default(),
     )
     .await?;
 
     let instance = MyContract::new(id.to_string(), wallet.clone());
 
     let call_w_maturity = |call_maturity| {
-        let mut prepared_call = instance.test_function();
+        let mut prepared_call = instance.calling_this_will_produce_a_block();
         prepared_call.tx_parameters.maturity = call_maturity;
         prepared_call.call()
     };
 
-    assert_eq!(provider.latest_block_height().await?, 1);
     call_w_maturity(1).await.expect("Should have passed since we're calling with a maturity that is less or equal to the current block height");
 
-    assert_eq!(provider.latest_block_height().await?, 2);
     call_w_maturity(3).await.expect_err("Should have failed since we're calling with a maturity that is greater than the current block height");
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn contract_deployment_respects_maturity() -> anyhow::Result<()> {
+    abigen!(
+        MyContract,
+        "packages/fuels-abigen-macro/tests/test_projects/transaction_block_height/out/debug/transaction_block_height-abi.json"
+    );
+
+    let wallet = launch_provider_and_get_wallet().await;
+
+    let deploy_w_maturity = |maturity| {
+        let parameters = TxParameters {
+            maturity,
+            ..TxParameters::default()
+        };
+        Contract::deploy(
+            "tests/test_projects/transaction_block_height/out/debug/transaction_block_height.bin",
+            &wallet,
+            parameters,
+        )
+    };
+
+    let err = deploy_w_maturity(1).await.expect_err("Should not have been able to deploy the contract since the block height (0) is less than the requested maturity (1)");
+    assert!(matches!(err, TransactionError(msg) if msg.contains("TransactionMaturity")));
+
+    produce_blocks(&wallet, 1).await?;
+    deploy_w_maturity(1)
+        .await
+        .expect("Should be able to deploy now since maturity (1) is <= than the block height (1)");
 
     Ok(())
 }
@@ -2046,5 +2074,37 @@ async fn can_increase_block_height() -> anyhow::Result<()> {
 
     assert_eq!(provider.latest_block_height().await?, 3);
     // ANCHOR_END: uses_produce_blocks_to_increase_block_height
+    Ok(())
+}
+
+#[tokio::test]
+async fn gql_height_info_is_correct() -> anyhow::Result<()> {
+    abigen!(
+        MyContract,
+        "packages/fuels-abigen-macro/tests/test_projects/transaction_block_height/out/debug/transaction_block_height-abi.json"
+    );
+
+    let wallet = launch_provider_and_get_wallet().await;
+    let provider = &wallet.get_provider().unwrap();
+
+    let id = Contract::deploy(
+        "tests/test_projects/transaction_block_height/out/debug/transaction_block_height.bin",
+        &wallet,
+        TxParameters::default(),
+    )
+    .await?;
+    let instance = MyContract::new(id.to_string(), wallet.clone());
+
+    let block_height_from_contract = || async {
+        Ok(instance.get_current_height().simulate().await?.value) as Result<u64, Error>
+    };
+
+    assert_eq!(provider.latest_block_height().await?, 1);
+    assert_eq!(block_height_from_contract().await?, 1);
+
+    produce_blocks(&wallet, 3).await?;
+
+    assert_eq!(provider.latest_block_height().await?, 4);
+    assert_eq!(block_height_from_contract().await?, 4);
     Ok(())
 }
