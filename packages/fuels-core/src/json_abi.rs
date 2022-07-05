@@ -1,6 +1,6 @@
-use crate::{abi_decoder::ABIDecoder, abi_encoder::ABIEncoder, errors::Error, ParamType};
+use crate::{abi_decoder::ABIDecoder, abi_encoder::ABIEncoder, ParamType};
 use crate::{EnumVariants, Token};
-use fuels_types::{JsonABI, Property};
+use fuels_types::{errors::Error, JsonABI, Property};
 use hex::FromHex;
 use itertools::Itertools;
 use serde_json;
@@ -803,8 +803,8 @@ pub fn parse_custom_type_param(param: &Property) -> Result<ParamType, Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::errors::Error;
     use crate::ParamType;
+    use fuels_types::errors::Error;
 
     #[test]
     fn parse_string_and_array_param() -> Result<(), Error> {

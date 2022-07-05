@@ -20,7 +20,7 @@ pub use node::{CoinConfig, Config};
 use fuel_core_interfaces::model::{Coin, CoinStatus};
 
 #[cfg(not(feature = "fuel-core-lib"))]
-use portpicker::pick_unused_port;
+use portpicker::{is_free, pick_unused_port};
 
 #[cfg(not(feature = "fuel-core-lib"))]
 use serde_json::Value;
