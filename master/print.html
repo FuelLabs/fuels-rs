@@ -202,7 +202,7 @@ using <a href="https://docs.rs/fuels/*/fuels/client/struct.FuelClient.html"><cod
 <p>There are two intended ways to deploy a contract</p>
 <ul>
 <li><code>deploy</code></li>
-<li><code>deploy_with_salt</code></li>
+<li><code>deploy_with_parameters</code></li>
 </ul>
 <p>If you are only interested in a single instance of your contract then use <code>deploy</code></p>
 <pre><code class="language-rust ignore">        // This will generate your contract's methods onto `MyContract`.
@@ -234,7 +234,7 @@ using <a href="https://docs.rs/fuels/*/fuels/client/struct.FuelClient.html"><cod
                 Some(gas_limit),
                 Some(byte_price),
                 Some(maturity)
-            )
+            ),
         )
         .await?;
 
@@ -255,8 +255,8 @@ using <a href="https://docs.rs/fuels/*/fuels/client/struct.FuelClient.html"><cod
 
         assert_eq!(52, response.value);
 </code></pre>
-<p>Alternatively, if you want multiple instances of the same contract then use <code>deploy_with_salt</code></p>
-<pre><code class="language-rust ignore">    async fn deploy_with_salt() -&gt; Result&lt;(), Error&gt; {
+<p>Alternatively, if you want multiple instances of the same contract then use <code>deploy_with_parameters</code> and set the salt parameter.</p>
+<pre><code class="language-rust ignore">    async fn deploy_with_parameters() -&gt; Result&lt;(), Error&gt; {
         use fuels::prelude::*;
         use rand::prelude::{Rng, SeedableRng, StdRng};
 
@@ -279,10 +279,11 @@ using <a href="https://docs.rs/fuels/*/fuels/client/struct.FuelClient.html"><cod
         let rng = &amp;mut StdRng::seed_from_u64(2322u64);
         let salt: [u8; 32] = rng.gen();
 
-        let contract_id_2 = Contract::deploy_with_salt(
+        let contract_id_2 = Contract::deploy_with_parameters(
             &quot;../../packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test.bin&quot;,
             &amp;wallet,
             TxParameters::default(),
+            vec![],
             Salt::from(salt),
         )
         .await?;
@@ -292,6 +293,22 @@ using <a href="https://docs.rs/fuels/*/fuels/client/struct.FuelClient.html"><cod
         assert_ne!(contract_id_1, contract_id_2);
         Ok(())
     }
+</code></pre>
+<h3 id="initializing-storage-slots"><a class="header" href="#initializing-storage-slots">Initializing storage slots</a></h3>
+<p>The storage slots of a contract can be initialized manually from <code>Vec&lt;StorageSlot&gt;</code> where <code>StorageSlot</code> is a struct that holds the key-value pair for a given slot.</p>
+<pre><code class="language-rust ignore">    let key = Bytes32::from([1u8; 32]);
+    let value = Bytes32::from([2u8; 32]);
+    let storage_slot = StorageSlot::new(key, value);
+</code></pre>
+<p>Once created, the slots can be passed to <code>deploy_with_parameters</code>: </p>
+<pre><code class="language-rust ignore">    let contract_id = Contract::deploy_with_parameters(
+        &quot;tests/test_projects/storage/out/debug/storage.bin&quot;,
+        &amp;wallet,
+        TxParameters::default(),
+        vec![storage_slot.clone()],
+        Salt::from([0; 32]),
+    )
+    .await?;
 </code></pre>
 <h2 id="setting-up-multiple-test-wallets"><a class="header" href="#setting-up-multiple-test-wallets">Setting up multiple test wallets</a></h2>
 <p>If you need multiple test wallets, they can be setup as follows:</p>
