@@ -2,7 +2,7 @@ contract;
 
 enum SomeEnum {
 	SomeStr: str[4],
-	SomeArr: [u64; 4]
+	SomeArr: [u64; 7]
 }
 
 abi MyContract {
