@@ -9,7 +9,7 @@ use crate::launch_provider_and_get_wallet;
 
 use fuel_gql_client::fuel_tx::{Receipt, Transaction};
 use fuels_contract::script::Script;
-use fuels_core::errors::Error;
+use fuels_types::errors::Error;
 
 /// Run the Sway script binary located at `binary_filepath` and return its resulting receipts,
 /// without having to setup a node or contract bindings.
@@ -58,7 +58,7 @@ fn get_script(script_binary: Vec<u8>) -> Script {
 #[cfg(test)]
 mod tests {
     use crate::script::run_compiled_script;
-    use fuels_core::errors::Error;
+    use fuels_types::errors::Error;
 
     #[tokio::test]
     async fn test_run_compiled_script() -> Result<(), Error> {
