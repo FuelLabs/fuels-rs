@@ -7,6 +7,7 @@ use fuels_types::{CustomType, Property};
 use inflector::Inflector;
 use proc_macro2::TokenStream;
 use quote::quote;
+use std::str::FromStr;
 
 /// Functions used by the Abigen to expand custom types defined in an ABI spec.
 
@@ -258,24 +259,18 @@ pub fn expand_custom_enum(enum_name: &str, prop: &Property) -> Result<TokenStrea
                 param_types.push(quote! { types.push(ParamType::Unit) });
                 args.push(quote! {(#dis, token, _) => Ok(#enum_ident::#variant_name()),});
             }
-            // Elementary type
+            // Elementary types, String, Array
             _ => {
                 let ty = expand_type(&param_type)?;
 
-                let mut param_type_string = param_type.to_string();
-
-                let param_type_string_ident_tok: proc_macro2::TokenStream =
-                    param_type_string.parse().unwrap();
-
+                let param_type_string_ident_tok = TokenStream::from_str(&param_type.to_string())?;
                 param_types.push(quote! { types.push(ParamType::#param_type_string_ident_tok) });
 
-                if let ParamType::Array(..) = param_type {
-                    param_type_string = "Array".to_string();
-                }
-                if let ParamType::String(..) = param_type {
-                    param_type_string = "String".to_string();
-                }
-
+                let param_type_string = match param_type {
+                    ParamType::Array(..) => "Array".to_string(),
+                    ParamType::String(..) => "String".to_string(),
+                    _ => param_type.to_string(),
+                };
                 let param_type_string_ident = ident(&param_type_string);
 
                 // Enum variant declaration
