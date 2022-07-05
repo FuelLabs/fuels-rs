@@ -1,8 +1,8 @@
 use crate::abi_decoder::ABIDecoder;
 use crate::constants::WORD_SIZE;
-use crate::errors::Error;
 use core::fmt;
 use fuel_types::bytes::padded_len;
+use fuels_types::errors::Error;
 use strum_macros::EnumString;
 use thiserror::Error as ThisError;
 
@@ -11,7 +11,6 @@ pub mod abi_encoder;
 pub mod code_gen;
 pub mod constants;
 mod encoding_utils;
-pub mod errors;
 pub mod json_abi;
 pub mod parameters;
 pub mod rustfmt;
@@ -630,9 +629,9 @@ pub fn pad_string(s: &str) -> Vec<u8> {
 
 #[cfg(test)]
 mod tests {
-    use crate::errors::Error;
     use crate::{try_from_bytes, WORD_SIZE};
     use fuel_types::{Address, AssetId, ContractId};
+    use fuels_types::errors::Error;
 
     #[test]
     fn can_convert_bytes_into_tuple() -> Result<(), Error> {

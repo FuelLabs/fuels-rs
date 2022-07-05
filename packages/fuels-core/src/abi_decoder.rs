@@ -1,9 +1,9 @@
 use crate::encoding_utils::{compute_encoding_width, compute_encoding_width_of_enum};
-use crate::errors::CodecError;
 use crate::{constants::WORD_SIZE, EnumVariants, ParamType, Token};
 use core::convert::TryInto;
 use core::str;
 use fuel_types::bytes::padded_len;
+use fuels_types::errors::CodecError;
 
 #[derive(Debug, Clone)]
 struct DecodeResult {
@@ -301,8 +301,8 @@ fn peek(data: &[u8], len: usize) -> Result<&[u8], CodecError> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::errors::Error;
     use crate::EnumVariants;
+    use fuels_types::errors::Error;
 
     #[test]
     fn decode_int() -> Result<(), Error> {

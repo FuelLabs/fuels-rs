@@ -49,8 +49,8 @@ mod tests {
     const WIDTH_OF_U32: usize = 1;
     const WIDTH_OF_BOOL: usize = 1;
     use crate::encoding_utils::compute_encoding_width;
-    use crate::errors::Error;
     use crate::{EnumVariants, ParamType};
+    use fuels_types::errors::Error;
 
     #[test]
     fn array_size_dependent_on_num_of_elements() {

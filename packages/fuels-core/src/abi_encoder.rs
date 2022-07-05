@@ -1,10 +1,10 @@
 use crate::constants::{ENUM_DISCRIMINANT_WORD_WIDTH, WORD_SIZE};
 use crate::encoding_utils::{compute_encoding_width, compute_encoding_width_of_enum};
-use crate::errors::CodecError;
 use crate::{
     pad_string, pad_u16, pad_u32, pad_u8, Bits256, ByteArray, EnumSelector, EnumVariants,
     ParamType, Token,
 };
+use fuels_types::errors::CodecError;
 use sha2::{Digest, Sha256};
 
 pub struct ABIEncoder {
@@ -171,8 +171,8 @@ impl ABIEncoder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::errors::Error;
     use crate::{EnumVariants, ParamType};
+    use fuels_types::errors::Error;
     use std::slice;
 
     #[test]
