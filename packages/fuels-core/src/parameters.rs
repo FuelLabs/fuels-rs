@@ -70,7 +70,7 @@ impl TxParameters {
 #[derive(Debug, Default)]
 pub struct StorageConfiguration {
     pub storage_path: Option<String>,
-    pub manuel_storage_vec: Option<Vec<StorageSlot>>,
+    pub manual_storage_vec: Option<Vec<StorageSlot>>,
 }
 
 impl StorageConfiguration {
