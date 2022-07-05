@@ -53,7 +53,7 @@ mod tests {
                 Some(byte_price),
                 Some(maturity)
             ),
-            vec![],
+            StorageConfiguration::default(),
         )
         .await?;
 
@@ -101,7 +101,7 @@ mod tests {
             "../../packages/fuels-abigen-macro/tests/test_projects/storage/out/debug/storage.bin",
             &wallet,
             TxParameters::default(),
-            vec![storage_slot],
+            StorageConfiguration::with_manuel_storage(Some(vec![storage_slot])),
         )
         .await?;
         // ANCHOR_END: manual_storage
@@ -131,7 +131,7 @@ mod tests {
             "../../packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test.bin",
             &wallet,
             TxParameters::default(),
-            vec![],
+            StorageConfiguration::default(),
         )
         .await?;
 
@@ -172,7 +172,7 @@ mod tests {
             "../../packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test.bin",
             &wallets[0],
             TxParameters::default(),
-            vec![],
+            StorageConfiguration::default(),
         )
         .await?;
 
@@ -191,7 +191,7 @@ mod tests {
             "../../packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test.bin",
             &wallets[1],
             TxParameters::default(),
-            vec![],
+            StorageConfiguration::default(),
         )
         .await?;
 
@@ -223,7 +223,7 @@ mod tests {
             "../../packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test.bin",
             &wallet,
             TxParameters::default(),
-            vec![]
+            StorageConfiguration::default(),
         )
             .await?;
         println!("Contract deployed @ {:x}", contract_id);
@@ -304,7 +304,7 @@ mod tests {
         .bin",
             &wallet,
             TxParameters::default(),
-            vec![],
+            StorageConfiguration::default(),
         )
         .await?;
         println!("Contract deployed @ {:x}", contract_id);
@@ -343,7 +343,7 @@ mod tests {
         .bin",
         &wallet,
         TxParameters::default(),
-        vec![],
+        StorageConfiguration::default(),
     )
         .await?;
         let contract_instance = TestContract::new(contract_id.to_string(), wallet);
@@ -403,7 +403,7 @@ mod tests {
         "../../packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test.bin",
         &wallet,
         TxParameters::default(),
-        vec![],
+        StorageConfiguration::default(),
     )
     .await?;
 
@@ -442,7 +442,7 @@ mod tests {
         "../../packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test.bin",
         &wallet,
         TxParameters::default(),
-        vec![],
+        StorageConfiguration::default(),
     )
     .await?;
 

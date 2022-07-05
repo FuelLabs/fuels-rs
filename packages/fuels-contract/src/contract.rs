@@ -10,6 +10,7 @@ use fuel_gql_client::{
 };
 use fuels_core::abi_decoder::ABIDecoder;
 use fuels_core::abi_encoder::ABIEncoder;
+use fuels_core::parameters::StorageConfiguration;
 use fuels_core::tx::Bytes32;
 use fuels_core::{
     constants::{BASE_ASSET_ID, DEFAULT_SPENDABLE_COIN_AMOUNT},
@@ -165,16 +166,24 @@ impl Contract {
         binary_filepath: &str,
         wallet: &LocalWallet,
         params: TxParameters,
-        storage_slots: Vec<StorageSlot>,
+        storage_configuration: StorageConfiguration,
     ) -> Result<ContractId, Error> {
-        let mut compiled_contract = Contract::load_sway_contract(binary_filepath)?;
+        let mut compiled_contract =
+            Contract::load_sway_contract(binary_filepath, storage_configuration.storage_path)?;
 
-        if !storage_slots.is_empty() {
-            compiled_contract.storage_slots =
-                Self::merge_storage_slots(storage_slots, &compiled_contract.storage_slots);
+        match storage_configuration.manuel_storage_vec {
+            Some(storage)
+                if !storage_configuration
+                    .manuel_storage_vec
+                    .as_ref()
+                    .unwrap()
+                    .is_empty() =>
+            {
+                compiled_contract.storage_slots =
+                    Self::merge_storage_slots(&storage, &compiled_contract.storage_slots);
+            }
+            _ => {}
         }
-
-        // println!("{:?}", compiled_contract.storage_slots);
 
         Self::deploy_loaded(&(compiled_contract), wallet, params).await
     }
@@ -187,7 +196,8 @@ impl Contract {
         storage_slots: Vec<StorageSlot>,
         salt: Salt,
     ) -> Result<ContractId, Error> {
-        let mut compiled_contract = Contract::load_sway_contract_with_salt(binary_filepath, salt)?;
+        let mut compiled_contract =
+            Contract::load_sway_contract_with_salt(binary_filepath, None, salt)?;
         compiled_contract.storage_slots = storage_slots;
         Self::deploy_loaded(&(compiled_contract), wallet, params).await
     }
@@ -210,12 +220,16 @@ impl Contract {
         }
     }
 
-    pub fn load_sway_contract(binary_filepath: &str) -> Result<CompiledContract, Error> {
-        Self::load_sway_contract_with_salt(binary_filepath, Salt::from([0u8; 32]))
+    pub fn load_sway_contract(
+        binary_filepath: &str,
+        storage_path: Option<String>,
+    ) -> Result<CompiledContract, Error> {
+        Self::load_sway_contract_with_salt(binary_filepath, storage_path, Salt::from([0u8; 32]))
     }
 
     pub fn load_sway_contract_with_salt(
         binary_filepath: &str,
+        storage_path: Option<String>,
         salt: Salt,
     ) -> Result<CompiledContract, Error> {
         let extension = Path::new(binary_filepath).extension().unwrap();
@@ -224,35 +238,25 @@ impl Contract {
         }
         let bin = std::fs::read(binary_filepath)?;
 
+        let storage = match storage_path {
+            Some(path) if Path::new(&path).exists() => Self::get_storage_vec(&path),
+            _ => {
+                vec![]
+            }
+        };
+
         Ok(CompiledContract {
             raw: bin,
             salt,
-            storage_slots: Self::auto_init_storage(binary_filepath),
+            storage_slots: storage,
         })
     }
 
-    fn auto_init_storage(binary_filepath: &str) -> Vec<StorageSlot> {
-        let storage_path = format!(
-            "{}{}",
-            Path::new(binary_filepath)
-                .with_extension("")
-                .to_str()
-                .unwrap(),
-            "-storage_slots.json"
-        );
-
-        let storage = match Path::new(storage_path.as_str()).exists() {
-            true => Self::get_storage_vec(storage_path.as_str()),
-            false => vec![],
-        };
-        storage
-    }
-
     fn merge_storage_slots(
-        manual_storage: Vec<StorageSlot>,
+        manual_storage: &[StorageSlot],
         contract_storage: &[StorageSlot],
     ) -> Vec<StorageSlot> {
-        let mut return_storage: Vec<StorageSlot> = manual_storage.clone();
+        let mut return_storage: Vec<StorageSlot> = manual_storage.to_owned();
         let keys: HashSet<Bytes32> = manual_storage.iter().map(|slot| *slot.key()).collect();
 
         contract_storage.iter().for_each(|slot| {
@@ -619,7 +623,7 @@ mod test {
             "tests/test_projects/contract_output_test/out/debug/contract_output_test-abi.json",
             &wallet,
             TxParameters::default(),
-            vec![],
+            StorageConfiguration::default(),
         )
         .await
         .unwrap();
