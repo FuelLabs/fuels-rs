@@ -552,7 +552,6 @@ mod test {
             "tests/test_projects/contract_output_test/out/debug/contract_output_test-abi.json",
             &wallet,
             TxParameters::default(),
-            vec![],
         )
         .await
         .unwrap();
