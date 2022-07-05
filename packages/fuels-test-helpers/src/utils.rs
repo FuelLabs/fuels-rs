@@ -1,101 +1,157 @@
+use std::error::Error;
+use std::fmt::{Debug, Display, Formatter};
 use std::future::Future;
 use std::time::Duration;
 
-pub async fn retry_until<Fut>(
-    predicate: impl Fn() -> Fut,
-    max_attempts: usize,
+#[derive(Debug)]
+pub struct RetryExhausted {
     interval: Duration,
-) -> anyhow::Result<bool>
-where
-    Fut: Future<Output = anyhow::Result<bool>>,
-{
-    for _ in 0..max_attempts {
-        if predicate().await? {
-            return Ok(true);
-        }
-        tokio::time::sleep(interval).await;
+    abort_after: Duration,
+    error_from_last_attempt: Option<anyhow::Error>,
+}
+
+impl Display for RetryExhausted {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Attempted to retry action every {:?} for {:?}. The last attempt resulted in: {:?}",
+            self.interval, self.abort_after, self.error_from_last_attempt
+        )
     }
-    Ok(false)
+}
+
+impl Error for RetryExhausted {}
+
+pub async fn retry<Fut, T>(
+    action: impl Fn() -> Fut,
+    interval: Duration,
+    abort_after: Duration,
+) -> Result<T, RetryExhausted>
+where
+    Fut: Future<Output = anyhow::Result<T>>,
+{
+    let mut last_err = None;
+
+    tokio::time::timeout(abort_after, async {
+        loop {
+            match action().await {
+                Ok(value) => break value,
+                Err(error) => last_err = Some(error),
+            }
+
+            tokio::time::sleep(interval).await;
+        }
+    })
+    .await
+    .map_err(|_| RetryExhausted {
+        interval,
+        abort_after,
+        error_from_last_attempt: last_err,
+    })
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::utils::retry_until;
-    use anyhow::bail;
-    use std::time::{Duration, Instant};
-    use tokio::sync::Mutex;
+    mod retry_until {
+        use crate::utils::retry;
+        use anyhow::anyhow;
+        use std::time::{Duration, Instant};
+        use tokio::sync::Mutex;
+        #[tokio::test]
+        async fn gives_up_after_timeout() -> anyhow::Result<()> {
+            let timestamp_of_last_attempt = Mutex::new(Instant::now());
 
-    #[tokio::test]
-    async fn retry_until_will_try_the_requested_amount_of_times() -> anyhow::Result<()> {
-        let counter = Mutex::new(0);
+            let will_always_fail = || async {
+                *timestamp_of_last_attempt.lock().await = Instant::now();
 
-        let will_always_fail = || async {
-            *counter.lock().await += 1;
+                Ok(false)
+            };
 
-            Ok(false)
-        };
+            let retry_start = Instant::now();
+            retry(
+                will_always_fail,
+                Duration::from_millis(10),
+                Duration::from_millis(250),
+            )
+            .await?;
 
-        retry_until(will_always_fail, 5, Duration::from_secs(0)).await?;
+            assert!(
+                *timestamp_of_last_attempt.lock().await - retry_start < Duration::from_millis(250)
+            );
 
-        assert_eq!(*counter.lock().await, 5);
+            Ok(())
+        }
 
-        Ok(())
-    }
+        #[tokio::test]
+        async fn returns_error_if_timeout_happened() -> anyhow::Result<()> {
+            let will_always_fail =
+                || async { Err(anyhow!("I fail because I must.")) as anyhow::Result<()> };
 
-    #[tokio::test]
-    async fn retry_until_will_return_false_if_attempts_exhausted() -> anyhow::Result<()> {
-        let will_always_fail = || async { Ok(false) };
+            let interval = Duration::from_millis(100);
+            let abort_after = Duration::from_millis(250);
 
-        let response = retry_until(will_always_fail, 2, Duration::from_secs(0)).await?;
-
-        assert!(!response);
-
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn retry_until_will_respect_delay_between_attempts() -> anyhow::Result<()> {
-        let timestamps_predicate_was_called_at: Mutex<Vec<Instant>> = Mutex::new(vec![]);
-
-        let will_fail = || async {
-            timestamps_predicate_was_called_at
-                .lock()
+            let err = retry(will_always_fail, interval, abort_after)
                 .await
-                .push(Instant::now());
-            Ok(false)
-        };
+                .expect_err("retry_until should have returned an error due to attempts exhaustion");
 
-        retry_until(will_fail, 2, Duration::from_millis(250)).await?;
+            assert_eq!(err.interval, interval);
+            assert_eq!(err.abort_after, abort_after);
+            assert!(err
+                .error_from_last_attempt
+                .expect("Must have the error since it ran at least once")
+                .to_string()
+                .contains("I fail because I must."));
 
-        let timestamps = timestamps_predicate_was_called_at.lock().await.clone();
+            Ok(())
+        }
 
-        let timestamps_spaced_out_at_least_250_mills = timestamps
-            .iter()
-            .zip(timestamps.iter().skip(1))
-            .all(|(current_timestamp, the_next_timestamp)| {
-                *the_next_timestamp - *current_timestamp >= Duration::from_millis(250)
-            });
+        #[tokio::test]
+        async fn returns_value_on_success() -> anyhow::Result<()> {
+            let successfully_generates_value = || async { Ok(12345u64) as anyhow::Result<u64> };
 
-        assert!(timestamps_spaced_out_at_least_250_mills, "It seems that retry_until didn't allow for the allotted time to pass between two attempts");
+            let value = retry(
+                successfully_generates_value,
+                Duration::from_millis(100),
+                Duration::from_millis(250),
+            )
+            .await?;
 
-        Ok(())
-    }
+            assert_eq!(value, 12345);
 
-    #[tokio::test]
-    async fn retry_until_will_fail_fast_in_case_of_error_in_predicate() -> anyhow::Result<()> {
-        let times_called = Mutex::new(0);
-        let will_fail_w_error = || async {
-            *times_called.lock().await += 1;
-            bail!("Some error")
-        };
+            Ok(())
+        }
 
-        let response = retry_until(will_fail_w_error, 5, Duration::from_secs(0)).await;
+        #[tokio::test]
+        async fn respects_delay_between_attempts() -> anyhow::Result<()> {
+            let timestamps_predicate_was_called_at: Mutex<Vec<Instant>> = Mutex::new(vec![]);
 
-        let err = response.expect_err("Should have propagated the failure of the predicate");
+            let will_fail = || async {
+                timestamps_predicate_was_called_at
+                    .lock()
+                    .await
+                    .push(Instant::now());
+                Ok(false)
+            };
 
-        assert_eq!(err.to_string(), "Some error");
-        assert_eq!(*times_called.lock().await, 1);
+            retry(
+                will_fail,
+                Duration::from_millis(100),
+                Duration::from_millis(250),
+            )
+            .await?;
 
-        Ok(())
+            let timestamps = timestamps_predicate_was_called_at.lock().await.clone();
+
+            let timestamps_spaced_out_at_least_100_mills = timestamps
+                .iter()
+                .zip(timestamps.iter().skip(1))
+                .all(|(current_timestamp, the_next_timestamp)| {
+                    *the_next_timestamp - *current_timestamp >= Duration::from_millis(100)
+                });
+
+            assert!(timestamps_spaced_out_at_least_100_mills, "It seems that retry didn't allow for the allotted time to pass between two attempts");
+
+            Ok(())
+        }
     }
 }

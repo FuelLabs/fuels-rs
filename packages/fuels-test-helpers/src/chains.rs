@@ -1,4 +1,5 @@
-use crate::utils::retry_until;
+use crate::utils::retry;
+use anyhow::bail;
 use fuel_types::AssetId;
 use fuels_core::constants::{BASE_ASSET_ID, DEFAULT_SPENDABLE_COIN_AMOUNT};
 use fuels_core::tx::{Input, Output, Transaction};
@@ -28,11 +29,33 @@ pub async fn produce_blocks(wallet: &LocalWallet, amount: usize) -> Result<(), E
 
         provider.send_transaction(&transaction).await?;
 
-        if !has_block_height_increased(provider, height_before_transaction).await? {
-            return Err(Error::InfrastructureError(format!("Couldn't confirm a block generation via no-op script -- the block height ({}) stayed the same!", height_before_transaction)));
-        }
+        confirm_block_created(provider, height_before_transaction).await?;
     }
     Ok(())
+}
+
+async fn confirm_block_created(provider: &Provider, previous_height: u64) -> Result<(), Error> {
+    let block_height_increased = || async {
+        let current_block_height = provider.latest_block_height().await?;
+        if current_block_height > previous_height {
+            Ok(())
+        } else {
+            bail!("There was no increase in block height")
+        }
+    };
+
+    retry(
+        block_height_increased,
+        Duration::from_millis(100),
+        Duration::from_millis(500),
+    )
+    .await
+    .map_err(|err| {
+        Error::InfrastructureError(format!(
+            "Couldn't confirm a block generation via no-op script -- {}",
+            err
+        ))
+    })
 }
 
 async fn no_op_signed_transaction(wallet: &LocalWallet) -> Result<Transaction, Error> {
@@ -47,22 +70,6 @@ async fn no_op_signed_transaction(wallet: &LocalWallet) -> Result<Transaction, E
     wallet.sign_transaction(&mut transaction).await?;
 
     Ok(transaction)
-}
-
-async fn has_block_height_increased(
-    provider: &Provider,
-    previous_height: u64,
-) -> Result<bool, Error> {
-    let block_height_increased = || async {
-        let current_block_height = provider.latest_block_height().await?;
-        Ok(current_block_height > previous_height)
-    };
-
-    let height_increased = retry_until(block_height_increased, 5, Duration::from_millis(100))
-        .await
-        .map_err(|err| Error::NetworkError(err.to_string()))?;
-
-    Ok(height_increased)
 }
 
 fn generate_no_op_script(inputs: Vec<Input>, outputs: Vec<Output>) -> Transaction {
