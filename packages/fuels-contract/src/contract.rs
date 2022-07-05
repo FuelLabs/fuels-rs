@@ -564,7 +564,7 @@ mod test {
         let wallet = launch_provider_and_get_wallet().await;
 
         // Should panic as we are passing in a JSON instead of BIN
-        Contract::deploy_with_salt(
+        Contract::deploy_with_parameters(
             "tests/test_projects/contract_output_test/out/debug/contract_output_test-abi.json",
             &wallet,
             TxParameters::default(),
