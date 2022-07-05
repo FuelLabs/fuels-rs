@@ -121,7 +121,6 @@ impl ABIParser {
     ///     let values: Vec<String> = vec!["10".to_string()];
     ///
     ///     let mut abi = ABIParser::new();
-
     ///     let function_name = "takes_u32_returns_bool";
     ///
     ///     let encoded = abi
@@ -347,9 +346,8 @@ impl ABIParser {
         Ok(Token::Struct(result))
     }
 
-    /// Creates a `Token::Array` from one parameter type and a string of values.
-    /// I.e. it takes a string containing values "value_1, value_2, value_3" and a
-    /// `ParamType` sepecifying the type.
+    /// Creates a `Token::Array` from one parameter type and a string of values. I.e. it takes a
+    /// string containing values "value_1, value_2, value_3" and a `ParamType` sepecifying the type.
     /// It works for nested/recursive arrays.
     pub fn tokenize_array<'a>(&self, value: &'a str, param: &ParamType) -> Result<Token, Error> {
         if !value.starts_with('[') || !value.ends_with(']') {
@@ -807,8 +805,7 @@ pub fn parse_custom_type_param(param: &Property) -> Result<ParamType, Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ParamType;
-    use fuels_types::errors::Error;
+    use fuels_types::{errors::Error, param_types::ParamType};
 
     #[test]
     fn parse_string_and_array_param() -> Result<(), Error> {

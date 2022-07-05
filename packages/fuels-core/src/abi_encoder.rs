@@ -119,12 +119,11 @@ impl ABIEncoder {
 
         self.encode_discriminant(*discriminant);
 
-        // The sway compiler has an optimization for enums which have only Units
-        // as variants -- such an enum is encoded only by encoding its
-        // discriminant.
+        // The sway compiler has an optimization for enums which have only Units as variants -- such
+        // an enum is encoded only by encoding its discriminant.
         if !variants.only_units_inside() {
             let param_type = Self::type_of_chosen_variant(discriminant, variants)?;
-            self.encode_enum_padding(variants, param_type);
+            self.encode_enum_with_padding(variants, param_type);
             self.encode_token(token_within_enum)?;
         }
 
@@ -135,7 +134,7 @@ impl ABIEncoder {
         self.encode_u8(discriminant);
     }
 
-    fn encode_enum_padding(&mut self, variants: &EnumVariants, param_type: &ParamType) {
+    fn encode_enum_with_padding(&mut self, variants: &EnumVariants, param_type: &ParamType) {
         let biggest_variant_width =
             compute_encoding_width_of_enum(variants) - ENUM_DISCRIMINANT_WORD_WIDTH;
         let variant_width = compute_encoding_width(param_type);
