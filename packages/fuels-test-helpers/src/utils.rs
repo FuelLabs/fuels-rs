@@ -2,18 +2,18 @@ use std::future::Future;
 use std::time::Duration;
 
 pub async fn retry_until<Fut>(
-    condition: impl Fn() -> Fut,
+    predicate: impl Fn() -> Fut,
     max_attempts: usize,
-    between_attempts: Duration,
+    interval: Duration,
 ) -> anyhow::Result<bool>
 where
     Fut: Future<Output = anyhow::Result<bool>>,
 {
     for _ in 0..max_attempts {
-        if condition().await? {
+        if predicate().await? {
             return Ok(true);
         }
-        tokio::time::sleep(between_attempts).await;
+        tokio::time::sleep(interval).await;
     }
     Ok(false)
 }
@@ -82,7 +82,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn retry_until_will_fail_fast_in_case_of_error_in_condition() -> anyhow::Result<()> {
+    async fn retry_until_will_fail_fast_in_case_of_error_in_predicate() -> anyhow::Result<()> {
         let times_called = Mutex::new(0);
         let will_fail_w_error = || async {
             *times_called.lock().await += 1;
@@ -91,7 +91,7 @@ mod tests {
 
         let response = retry_until(will_fail_w_error, 5, Duration::from_secs(0)).await;
 
-        let err = response.expect_err("Should have propagated the failure of the condition");
+        let err = response.expect_err("Should have propagated the failure of the predicate");
 
         assert_eq!(err.to_string(), "Some error");
         assert_eq!(*times_called.lock().await, 1);
