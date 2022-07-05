@@ -27,7 +27,7 @@ Alternatively, if you have a Fuel node running separately, you can pass in the `
 There are two intended ways to deploy a contract
 
 - `deploy`
-- `deploy_with_salt`
+- `deploy_with_parameters`
 
 If you are only interested in a single instance of your contract then use `deploy`
 
@@ -42,10 +42,24 @@ You can then use the contract methods very simply:
 {{#include ../../../examples/contracts/src/lib.rs:use_deployed_contract}}
 ```
 
-Alternatively, if you want multiple instances of the same contract then use `deploy_with_salt`
+Alternatively, if you want multiple instances of the same contract then use `deploy_with_parameters` and set the salt parameter.
 
 ```rust,ignore
-{{#include ../../../examples/contracts/src/lib.rs:deploy_with_salt}}
+{{#include ../../../examples/contracts/src/lib.rs:deploy_with_parameters}}
+```
+
+### Initializing storage slots
+
+The storage slots of a contract can be initialized manually from `Vec<StorageSlot>` where `StorageSlot` is a struct that holds the key-value pair for a given slot.
+
+```rust,ignore
+{{#include ../../../packages/fuels-abigen-macro/tests/harness.rs:storage_slot_create}}
+```
+
+Once created, the slots can be passed to `deploy_with_parameters`: 
+
+```rust,ignore
+{{#include ../../../packages/fuels-abigen-macro/tests/harness.rs:manual_storage}}
 ```
 
 ## Setting up multiple test wallets

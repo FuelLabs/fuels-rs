@@ -5,6 +5,7 @@ use fuel_gql_client::{
     fuel_tx::{Contract as FuelContract, Output, Receipt, StorageSlot, Transaction},
     fuel_types::{Address, AssetId, ContractId, Salt},
 };
+use fuels_core::tx::Bytes32;
 use fuels_core::{
     constants::{BASE_ASSET_ID, DEFAULT_SPENDABLE_COIN_AMOUNT},
     parameters::{CallParameters, TxParameters},
@@ -21,6 +22,7 @@ use std::path::Path;
 pub struct CompiledContract {
     pub raw: Vec<u8>,
     pub salt: Salt,
+    pub storage_slots: Vec<StorageSlot>,
 }
 
 /// Contract is a struct to interface with a contract. That includes things such as
@@ -71,14 +73,16 @@ impl Contract {
         }
     }
 
-    pub fn compute_contract_id(compiled_contract: &CompiledContract) -> ContractId {
+    pub fn compute_contract_id_and_state_root(
+        compiled_contract: &CompiledContract,
+    ) -> (ContractId, Bytes32) {
         let fuel_contract = FuelContract::from(compiled_contract.raw.clone());
         let root = fuel_contract.root();
-        fuel_contract.id(
-            &compiled_contract.salt,
-            &root,
-            &FuelContract::default_state_root(),
-        )
+        let state_root = FuelContract::initial_state_root(compiled_contract.storage_slots.iter());
+
+        let contract_id = fuel_contract.id(&compiled_contract.salt, &root, &state_root);
+
+        (contract_id, state_root)
     }
 
     /// Creates an ABI call based on a function selector and
@@ -162,13 +166,15 @@ impl Contract {
     }
 
     /// Loads a compiled contract with salt and deploys it to a running node
-    pub async fn deploy_with_salt(
+    pub async fn deploy_with_parameters(
         binary_filepath: &str,
         wallet: &LocalWallet,
         params: TxParameters,
+        storage_slots: Vec<StorageSlot>,
         salt: Salt,
     ) -> Result<ContractId, Error> {
-        let compiled_contract = Contract::load_sway_contract_with_salt(binary_filepath, salt)?;
+        let mut compiled_contract = Contract::load_sway_contract_with_salt(binary_filepath, salt)?;
+        compiled_contract.storage_slots = storage_slots;
         Self::deploy_loaded(&(compiled_contract), wallet, params).await
     }
 
@@ -203,7 +209,11 @@ impl Contract {
             return Err(Error::InvalidData(extension.to_str().unwrap().to_owned()));
         }
         let bin = std::fs::read(binary_filepath)?;
-        Ok(CompiledContract { raw: bin, salt })
+        Ok(CompiledContract {
+            raw: bin,
+            salt,
+            storage_slots: vec![],
+        })
     }
 
     /// Crafts a transaction used to deploy a contract
@@ -214,15 +224,15 @@ impl Contract {
     ) -> Result<(Transaction, ContractId), Error> {
         let maturity = 0;
         let bytecode_witness_index = 0;
-        let storage_slots: Vec<StorageSlot> = vec![];
+        let storage_slots: Vec<StorageSlot> = compiled_contract.storage_slots.clone();
         let witnesses = vec![compiled_contract.raw.clone().into()];
 
         let static_contracts = vec![];
 
-        let contract_id = Self::compute_contract_id(compiled_contract);
+        let (contract_id, state_root) = Self::compute_contract_id_and_state_root(compiled_contract);
 
         let outputs: Vec<Output> = vec![
-            Output::contract_created(contract_id, FuelContract::default_state_root()),
+            Output::contract_created(contract_id, state_root),
             // Note that the change will be computed by the node.
             // Here we only have to tell the node who will own the change and its asset ID.
             // For now we use the BASE_ASSET_ID constant
@@ -553,10 +563,11 @@ mod test {
         let wallet = launch_provider_and_get_wallet().await;
 
         // Should panic as we are passing in a JSON instead of BIN
-        Contract::deploy_with_salt(
+        Contract::deploy_with_parameters(
             "tests/test_projects/contract_output_test/out/debug/contract_output_test-abi.json",
             &wallet,
             TxParameters::default(),
+            vec![],
             Salt::default(),
         )
         .await

@@ -3,9 +3,9 @@ use fuels::contract::contract::MultiContractCallHandler;
 use fuels::prelude::{
     abigen, launch_provider_and_get_wallet, setup_multiple_assets_coins, setup_single_asset_coins,
     setup_test_provider, CallParameters, Contract, Error, LocalWallet, Provider, ProviderError,
-    Signer, TxParameters, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
+    Salt, Signer, TxParameters, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
 };
-use fuels_core::tx::Address;
+use fuels_core::tx::{Address, Bytes32, StorageSlot};
 use fuels_core::Tokenizable;
 use fuels_core::{constants::BASE_ASSET_ID, Token};
 use sha2::{Digest, Sha256};
@@ -780,7 +780,11 @@ async fn test_reverting_transaction() -> Result<(), Error> {
 
     let wallet = launch_provider_and_get_wallet().await;
 
-    let contract_id = Contract::deploy("tests/test_projects/revert_transaction_error/out/debug/capture_revert_transaction_error.bin", &wallet, TxParameters::default())
+    let contract_id = Contract::deploy(
+        "tests/test_projects/revert_transaction_error/out/debug/capture_revert_transaction_error.bin",
+        &wallet,
+        TxParameters::default(),
+    )
         .await?;
     let contract_instance = RevertingContract::new(contract_id.to_string(), wallet);
     println!("Contract deployed @ {:x}", contract_id);
@@ -1933,6 +1937,40 @@ async fn test_multi_call_script_workflow() -> Result<(), Error> {
 
     assert_eq!(counter, 42);
     assert_eq!(array, [42; 2]);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_storage_initialization() -> Result<(), Error> {
+    abigen!(
+        MyContract,
+        "packages/fuels-abigen-macro/tests/test_projects/storage/out/debug/storage-abi.json"
+    );
+
+    let wallet = launch_provider_and_get_wallet().await;
+
+    // ANCHOR: storage_slot_create
+    let key = Bytes32::from([1u8; 32]);
+    let value = Bytes32::from([2u8; 32]);
+    let storage_slot = StorageSlot::new(key, value);
+    // ANCHOR_END: storage_slot_create
+
+    // ANCHOR: manual_storage
+    let contract_id = Contract::deploy_with_parameters(
+        "tests/test_projects/storage/out/debug/storage.bin",
+        &wallet,
+        TxParameters::default(),
+        vec![storage_slot.clone()],
+        Salt::from([0; 32]),
+    )
+    .await?;
+    // ANCHOR_END: manual_storage
+
+    let contract_instance = MyContract::new(contract_id.to_string(), wallet.clone());
+
+    let result = contract_instance.get_value(key.into()).call().await?.value;
+    assert_eq!(result.as_slice(), value.as_slice());
 
     Ok(())
 }
