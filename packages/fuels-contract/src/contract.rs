@@ -173,10 +173,10 @@ impl Contract {
         let mut compiled_contract =
             Contract::load_sway_contract(binary_filepath, storage_configuration.storage_path)?;
 
-        match storage_configuration.manuel_storage_vec {
+        match storage_configuration.manual_storage_vec {
             Some(storage)
                 if !storage_configuration
-                    .manuel_storage_vec
+                    .manual_storage_vec
                     .as_ref()
                     .unwrap()
                     .is_empty() =>
