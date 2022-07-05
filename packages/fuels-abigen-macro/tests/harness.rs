@@ -5,7 +5,7 @@ use fuels::prelude::{
     setup_test_provider, CallParameters, Contract, Error, LocalWallet, Provider, ProviderError,
     Signer, TxParameters, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
 };
-use fuels::test_helpers::add_blocks;
+use fuels::test_helpers::produce_blocks;
 use fuels_core::tx::Address;
 use fuels_core::Tokenizable;
 use fuels_core::{constants::BASE_ASSET_ID, Token};
@@ -2029,22 +2029,22 @@ async fn contract_method_call_respects_maturity() -> anyhow::Result<()> {
     call_w_maturity(1).await.expect("Should have passed since we're calling with a maturity that is less or equal to the current block height");
 
     assert_eq!(provider.latest_block_height().await?, 2);
-    call_w_maturity(3).await.err().expect("Should have failed since we're calling with a maturity that is greater than the current block height");
+    call_w_maturity(3).await.expect_err("Should have failed since we're calling with a maturity that is greater than the current block height");
 
     Ok(())
 }
 
 #[tokio::test]
 async fn can_increase_block_height() -> anyhow::Result<()> {
-    // ANCHOR: uses_add_blocks_to_increase_block_height
+    // ANCHOR: uses_produce_blocks_to_increase_block_height
     let wallet = launch_provider_and_get_wallet().await;
     let provider = &wallet.get_provider().unwrap();
 
     assert_eq!(provider.latest_block_height().await?, 0);
 
-    add_blocks(&wallet, 3).await?;
+    produce_blocks(&wallet, 3).await?;
 
     assert_eq!(provider.latest_block_height().await?, 3);
-    // ANCHOR_END: uses_add_blocks_to_increase_block_height
+    // ANCHOR_END: uses_produce_blocks_to_increase_block_height
     Ok(())
 }

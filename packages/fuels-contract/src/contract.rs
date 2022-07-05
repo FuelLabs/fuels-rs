@@ -7,11 +7,11 @@ use fuel_gql_client::{
 };
 use fuels_core::{
     constants::{BASE_ASSET_ID, DEFAULT_SPENDABLE_COIN_AMOUNT},
-    errors::Error,
     parameters::{CallParameters, TxParameters},
     ParamType, ReturnLocation, Selector, Token, Tokenizable,
 };
 use fuels_signers::{provider::Provider, LocalWallet, Signer};
+use fuels_types::errors::Error;
 use std::collections::HashSet;
 use std::fmt::Debug;
 use std::marker::PhantomData;

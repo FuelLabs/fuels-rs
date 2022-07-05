@@ -16,8 +16,8 @@ use std::collections::HashMap;
 use thiserror::Error;
 
 use crate::wallet::WalletError;
-use fuels_core::errors::Error;
 use fuels_core::parameters::TxParameters;
+use fuels_types::errors::Error;
 
 /// An error involving a signature.
 #[derive(Debug, Error)]

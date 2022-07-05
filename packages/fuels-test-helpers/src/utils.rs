@@ -20,7 +20,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::utility::retry_until;
+    use crate::utils::retry_until;
     use anyhow::bail;
     use std::time::{Duration, Instant};
     use tokio::sync::Mutex;
@@ -91,9 +91,7 @@ mod tests {
 
         let response = retry_until(will_fail_w_error, 5, Duration::from_secs(0)).await;
 
-        let err = response
-            .err()
-            .expect("Should have propagated the failure of the condition");
+        let err = response.expect_err("Should have propagated the failure of the condition");
 
         assert_eq!(err.to_string(), "Some error");
         assert_eq!(*times_called.lock().await, 1);

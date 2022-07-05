@@ -12,8 +12,6 @@ use fuel_core::{
 
 #[cfg(feature = "fuel-core-lib")]
 pub use fuel_core::service::Config;
-use fuel_core_interfaces::common::fuel_asm::Opcode;
-use fuel_core_interfaces::common::fuel_vm::consts::REG_ONE;
 
 #[cfg(not(feature = "fuel-core-lib"))]
 pub use node::{CoinConfig, Config};
@@ -36,7 +34,6 @@ use fuel_gql_client::{
 };
 
 use fuels_core::constants::BASE_ASSET_ID;
-use fuels_core::tx::Transaction;
 use fuels_signers::fuel_crypto::fuel_types::AssetId;
 use fuels_signers::fuel_crypto::rand;
 use rand::Fill;
@@ -48,7 +45,7 @@ mod chains;
 mod script;
 #[cfg(feature = "fuels-signers")]
 mod signers;
-mod utility;
+mod utils;
 mod wallets_config;
 
 #[cfg(not(feature = "fuel-core-lib"))]

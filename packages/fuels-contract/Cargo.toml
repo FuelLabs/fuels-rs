@@ -14,6 +14,7 @@ bytes = { version = "1.0.1", features = ["serde"] }
 fuel-gql-client = { version = "0.9", default-features = false }
 fuels-core = { version = "0.16.1", path = "../fuels-core" }
 fuels-signers = { version = "0.16.1", path = "../fuels-signers" }
+fuels-types = { version = "0.16.1", path = "../fuels-types" }
 hex = { version = "0.4.3", default-features = false, features = ["std"] }
 proc-macro2 = "1.0"
 quote = "1.0"

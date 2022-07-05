@@ -1,9 +1,9 @@
 use crate::encoding_utils::{compute_encoding_width, compute_encoding_width_of_enum};
-use crate::errors::CodecError;
 use crate::{constants::WORD_SIZE, EnumVariants, ParamType, Token};
 use core::convert::TryInto;
 use core::str;
 use fuel_types::bytes::padded_len;
+use fuels_types::errors::CodecError;
 
 #[derive(Debug, Clone)]
 struct DecodeResult {
@@ -301,8 +301,8 @@ fn peek(data: &[u8], len: usize) -> Result<&[u8], CodecError> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::errors::Error;
     use crate::EnumVariants;
+    use fuels_types::errors::Error;
 
     #[test]
     fn decode_int() -> Result<(), Error> {
@@ -639,7 +639,7 @@ mod tests {
 
         let result = ABIDecoder::decode_single(&enum_type, &data);
 
-        let error = result.err().expect("Should have resulted in an error");
+        let error = result.expect_err("Should have resulted in an error");
 
         let expected_msg = "Error while decoding an enum. The discriminant '1' doesn't point to any of the following variants: ";
         assert!(matches!(error, CodecError::InvalidData(str) if str.starts_with(expected_msg)));
