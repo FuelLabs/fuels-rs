@@ -77,21 +77,21 @@ impl StorageConfiguration {
     pub fn new(storage_path: Option<String>, manuel_storage_vec: Option<Vec<StorageSlot>>) -> Self {
         Self {
             storage_path,
-            manuel_storage_vec,
+            manual_storage_vec,
         }
     }
 
     pub fn with_storage_path(storage_path: Option<String>) -> Self {
         Self {
             storage_path,
-            manuel_storage_vec: None,
+            manual_storage_vec: None,
         }
     }
 
     pub fn with_manuel_storage(manuel_storage_vec: Option<Vec<StorageSlot>>) -> Self {
         Self {
             storage_path: None,
-            manuel_storage_vec,
+            manual_storage_vec,
         }
     }
 }
