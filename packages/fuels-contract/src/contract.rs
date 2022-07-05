@@ -12,16 +12,16 @@ use fuel_gql_client::{
     fuel_types::{Address, AssetId, ContractId, Salt},
 };
 
+use fuels_core::abi_decoder::ABIDecoder;
+use fuels_core::abi_encoder::ABIEncoder;
+use fuels_core::parameters::StorageConfiguration;
+use fuels_core::tx::Bytes32;
 use fuels_core::{
     constants::{BASE_ASSET_ID, DEFAULT_SPENDABLE_COIN_AMOUNT},
     parameters::{CallParameters, TxParameters},
     ParamType, ReturnLocation, Selector, Token, Tokenizable,
 };
-use fuels_core::abi_decoder::ABIDecoder;
-use fuels_core::abi_encoder::ABIEncoder;
-use fuels_core::parameters::StorageConfiguration;
-use fuels_core::tx::Bytes32;
-use fuels_signers::{LocalWallet, provider::Provider, Signer};
+use fuels_signers::{provider::Provider, LocalWallet, Signer};
 use fuels_types::errors::Error;
 
 use crate::script::Script;

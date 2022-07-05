@@ -1,9 +1,9 @@
 use fuel_gql_client::fuel_tx::{AssetId, ContractId, Receipt};
 use fuels::contract::contract::MultiContractCallHandler;
 use fuels::prelude::{
-    abigen, launch_provider_and_get_wallet, setup_multiple_assets_coins,
-    setup_single_asset_coins, setup_test_provider, CallParameters, Contract, Error, LocalWallet,
-    Provider, ProviderError,Salt, Signer, TxParameters, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
+    abigen, launch_provider_and_get_wallet, setup_multiple_assets_coins, setup_single_asset_coins,
+    setup_test_provider, CallParameters, Contract, Error, LocalWallet, Provider, ProviderError,
+    Salt, Signer, TxParameters, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
 };
 use fuels_core::parameters::StorageConfiguration;
 use fuels_core::tx::{Address, Bytes32, StorageSlot};
