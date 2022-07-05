@@ -160,15 +160,13 @@ impl Contract {
         binary_filepath: &str,
         wallet: &LocalWallet,
         params: TxParameters,
-        storage_slots: Vec<StorageSlot>,
     ) -> Result<ContractId, Error> {
-        let mut compiled_contract = Contract::load_sway_contract(binary_filepath)?;
-        compiled_contract.storage_slots = storage_slots;
+        let compiled_contract = Contract::load_sway_contract(binary_filepath)?;
         Self::deploy_loaded(&(compiled_contract), wallet, params).await
     }
 
     /// Loads a compiled contract with salt and deploys it to a running node
-    pub async fn deploy_with_salt(
+    pub async fn deploy_with_parameters(
         binary_filepath: &str,
         wallet: &LocalWallet,
         params: TxParameters,

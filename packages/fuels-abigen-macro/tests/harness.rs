@@ -3,9 +3,9 @@ use fuels::contract::contract::MultiContractCallHandler;
 use fuels::prelude::{
     abigen, create_storage_slot, launch_provider_and_get_wallet, setup_multiple_assets_coins,
     setup_single_asset_coins, setup_test_provider, CallParameters, Contract, Error, LocalWallet,
-    Provider, ProviderError, Signer, TxParameters, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
+    Provider, ProviderError, Salt, Signer, TxParameters, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
 };
-use fuels_core::tx::Address;
+use fuels_core::tx::{Address, Bytes32, StorageSlot};
 use fuels_core::Tokenizable;
 use fuels_core::{constants::BASE_ASSET_ID, Token};
 use sha2::{Digest, Sha256};
@@ -646,7 +646,6 @@ async fn type_safe_output_values() -> Result<(), Error> {
         "tests/test_projects/contract_output_test/out/debug/contract_output_test.bin",
         &wallet,
         TxParameters::default(),
-        vec![],
     )
     .await?;
     println!("Contract deployed @ {:x}", contract_id);
@@ -689,7 +688,6 @@ async fn call_with_structs() -> Result<(), Error> {
         "tests/test_projects/complex_types_contract/out/debug/contract_test.bin",
         &wallet,
         TxParameters::default(),
-        vec![],
     )
     .await?;
     println!("Contract deployed @ {:x}", contract_id);
@@ -728,7 +726,6 @@ async fn call_with_empty_return() -> Result<(), Error> {
         "tests/test_projects/call_empty_return/out/debug/contract_test.bin",
         &wallet,
         TxParameters::default(),
-        vec![],
     )
     .await?;
     println!("Contract deployed @ {:x}", contract_id);
@@ -755,7 +752,6 @@ async fn abigen_different_structs_same_arg_name() -> Result<(), Error> {
         "tests/test_projects/two_structs/out/debug/two_structs.bin",
         &wallet,
         TxParameters::default(),
-        vec![],
     )
     .await?;
     println!("Contract deployed @ {:x}", contract_id);
@@ -788,7 +784,6 @@ async fn test_reverting_transaction() -> Result<(), Error> {
         "tests/test_projects/revert_transaction_error/out/debug/capture_revert_transaction_error.bin",
         &wallet,
         TxParameters::default(),
-        vec![],
     )
         .await?;
     let contract_instance = RevertingContract::new(contract_id.to_string(), wallet);
@@ -811,7 +806,6 @@ async fn multiple_read_calls() -> Result<(), Error> {
         "tests/test_projects/multiple_read_calls/out/debug/demo.bin",
         &wallet,
         TxParameters::default(),
-        vec![],
     )
     .await?;
     println!("Contract deployed @ {:x}", contract_id);
@@ -847,7 +841,6 @@ async fn test_methods_typeless_argument() -> Result<(), Error> {
         "tests/test_projects/empty_arguments/out/debug/method_four_arguments.bin",
         &wallet,
         TxParameters::default(),
-        vec![],
     )
     .await?;
     println!("Contract deployed @ {:x}", contract_id);
@@ -875,7 +868,6 @@ async fn test_large_return_data() -> Result<(), Error> {
         "tests/test_projects/large_return_data/out/debug/contract_test.bin",
         &wallet,
         TxParameters::default(),
-        vec![],
     )
     .await?;
     println!("Contract deployed @ {:x}", contract_id);
@@ -947,7 +939,6 @@ async fn test_provider_launch_and_connect() -> Result<(), Error> {
         "tests/test_projects/contract_test/out/debug/contract_test.bin",
         &wallet,
         TxParameters::default(),
-        vec![],
     )
     .await?;
     println!("Contract deployed @ {:x}", contract_id);
@@ -991,7 +982,6 @@ async fn test_contract_calling_contract() -> Result<(), Error> {
         "tests/test_projects/foo_contract/out/debug/foo_contract.bin",
         &wallet,
         TxParameters::default(),
-        vec![],
     )
     .await?;
     println!("Foo contract deployed @ {:x}", foo_contract_id);
@@ -1007,7 +997,6 @@ async fn test_contract_calling_contract() -> Result<(), Error> {
         "tests/test_projects/foo_caller_contract/out/debug/foo_caller_contract.bin",
         &wallet,
         TxParameters::default(),
-        vec![],
     )
     .await?;
     println!(
@@ -1047,7 +1036,6 @@ async fn test_gas_errors() -> Result<(), Error> {
         "tests/test_projects/contract_test/out/debug/contract_test.bin",
         &wallet,
         TxParameters::default(),
-        vec![],
     )
     .await?;
 
@@ -1097,7 +1085,6 @@ async fn test_call_param_gas_errors() -> Result<(), Error> {
         "tests/test_projects/contract_test/out/debug/contract_test.bin",
         &wallet,
         TxParameters::default(),
-        vec![],
     )
     .await?;
 
@@ -1142,7 +1129,6 @@ async fn test_amount_and_asset_forwarding() -> Result<(), Error> {
         "tests/test_projects/token_ops/out/debug/token_ops.bin",
         &wallet,
         TxParameters::default(),
-        vec![],
     )
     .await?;
 
@@ -1229,7 +1215,6 @@ async fn test_multiple_args() -> Result<(), Error> {
         "tests/test_projects/contract_test/out/debug/contract_test.bin",
         &wallet,
         TxParameters::default(),
-        vec![],
     )
     .await?;
 
@@ -1262,7 +1247,6 @@ async fn test_tuples() -> Result<(), Error> {
         "tests/test_projects/tuples/out/debug/tuples.bin",
         &wallet,
         TxParameters::default(),
-        vec![],
     )
     .await?;
 
@@ -1318,7 +1302,6 @@ async fn test_array() -> Result<(), Error> {
         "tests/test_projects/contract_test/out/debug/contract_test.bin",
         &wallet,
         TxParameters::default(),
-        vec![],
     )
     .await?;
 
@@ -1351,7 +1334,6 @@ async fn test_arrays_with_custom_types() -> Result<(), Error> {
         "tests/test_projects/contract_test/out/debug/contract_test.bin",
         &wallet,
         TxParameters::default(),
-        vec![],
     )
     .await?;
 
@@ -1397,7 +1379,6 @@ async fn test_auth_msg_sender_from_sdk() -> Result<(), Error> {
         "tests/test_projects/auth_testing_contract/out/debug/auth_testing_contract.bin",
         &wallet,
         TxParameters::default(),
-        vec![],
     )
     .await?;
 
@@ -1427,7 +1408,6 @@ async fn workflow_enum_inside_struct() -> Result<(), Error> {
         "tests/test_projects/enum_inside_struct/out/debug/enum_inside_struct.bin",
         &wallet,
         TxParameters::default(),
-        vec![],
     )
     .await?;
     let instance = MyContract::new(id.to_string(), wallet.clone());
@@ -1462,7 +1442,6 @@ async fn workflow_struct_inside_enum() -> Result<(), Error> {
         "tests/test_projects/struct_inside_enum/out/debug/struct_inside_enum.bin",
         &wallet,
         TxParameters::default(),
-        vec![],
     )
     .await?;
 
@@ -1492,7 +1471,6 @@ async fn test_logd_receipts() -> Result<(), Error> {
         "tests/test_projects/contract_logdata/out/debug/contract_logdata.bin",
         &wallet,
         TxParameters::default(),
-        vec![],
     )
     .await?;
     let contract_instance = LoggingContract::new(id.to_string(), wallet.clone());
@@ -1594,7 +1572,6 @@ async fn sway_native_types_support() -> Result<(), Box<dyn std::error::Error>> {
         "tests/test_projects/sway_native_types/out/debug/sway_native_types.bin",
         &wallet,
         TxParameters::default(),
-        vec![],
     )
     .await?;
 
@@ -1631,7 +1608,6 @@ async fn test_transaction_script_workflow() -> Result<(), Error> {
         "tests/test_projects/contract_test/out/debug/contract_test.bin",
         &wallet,
         TxParameters::default(),
-        vec![],
     )
     .await?;
 
@@ -1663,7 +1639,6 @@ async fn enum_coding_w_variable_width_variants() -> Result<(), Error> {
         "tests/test_projects/enum_encoding/out/debug/enum_encoding.bin",
         &wallet,
         TxParameters::default(),
-        vec![],
     )
     .await?;
 
@@ -1707,7 +1682,6 @@ async fn enum_coding_w_unit_enums() -> Result<(), Error> {
         "tests/test_projects/enum_encoding/out/debug/enum_encoding.bin",
         &wallet,
         TxParameters::default(),
-        vec![],
     )
     .await?;
 
@@ -1749,7 +1723,6 @@ async fn enum_as_input() -> Result<(), Error> {
         "tests/test_projects/enum_as_input/out/debug/enum_as_input.bin",
         &wallet,
         TxParameters::default(),
-        vec![],
     )
     .await?;
 
@@ -1799,7 +1772,6 @@ async fn nested_structs() -> Result<(), Error> {
         "tests/test_projects/nested_structs/out/debug/nested_structs.bin",
         &wallet,
         TxParameters::default(),
-        vec![],
     )
     .await?;
 
@@ -1859,7 +1831,6 @@ async fn nested_enums_are_correctly_encoded_decoded() -> Result<(), Error> {
         "tests/test_projects/nested_enums/out/debug/nested_enums.bin",
         &wallet,
         TxParameters::default(),
-        vec![],
     )
     .await?;
 
@@ -1908,7 +1879,6 @@ async fn test_multi_call() -> Result<(), Error> {
         "tests/test_projects/contract_test/out/debug/contract_test.bin",
         &wallet,
         TxParameters::default(),
-        vec![],
     )
     .await?;
 
@@ -1945,7 +1915,6 @@ async fn test_multi_call_script_workflow() -> Result<(), Error> {
         "tests/test_projects/contract_test/out/debug/contract_test.bin",
         &wallet,
         TxParameters::default(),
-        vec![],
     )
     .await?;
 
@@ -1981,23 +1950,27 @@ async fn test_storage_initialization() -> Result<(), Error> {
 
     let wallet = launch_provider_and_get_wallet().await;
 
-    let storage_slot = create_storage_slot("slot", 42);
+    // ANCHOR: storage_slot_create
+    let key = Bytes32::from([1u8; 32]);
+    let value = Bytes32::from([2u8; 32]);
+    let storage_slot = StorageSlot::new(key, value);
+    // ANCHOR_END: storage_slot_create
 
-    let contract_id = Contract::deploy(
+    // ANCHOR: manual_storage
+    let contract_id = Contract::deploy_with_parameters(
         "tests/test_projects/storage/out/debug/storage.bin",
         &wallet,
         TxParameters::default(),
         vec![storage_slot.clone()],
+        Salt::from(vec![]),
     )
     .await?;
+    // ANCHOR_END: manual_storage
 
     let contract_instance = MyContract::new(contract_id.to_string(), wallet.clone());
 
-    // from Bytes32 to [u8; 32]
-    let key = **storage_slot.key();
-
-    let value = contract_instance.get_value(key).call().await?.value;
-    assert_eq!(value.as_slice(), storage_slot.value().as_slice());
+    let result = contract_instance.get_value(key.into()).call().await?.value;
+    assert_eq!(result.as_slice(), value.as_slice());
 
     Ok(())
 }
