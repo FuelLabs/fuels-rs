@@ -52,7 +52,7 @@ mod tests {
                 Some(gas_limit),
                 Some(byte_price),
                 Some(maturity)
-            )
+            ),
         )
         .await?;
 
@@ -78,8 +78,8 @@ mod tests {
     }
 
     #[tokio::test]
-    // ANCHOR: deploy_with_salt
-    async fn deploy_with_salt() -> Result<(), Error> {
+    // ANCHOR: deploy_with_parameters
+    async fn deploy_with_parameters() -> Result<(), Error> {
         use fuels::prelude::*;
         use rand::prelude::{Rng, SeedableRng, StdRng};
 
@@ -102,10 +102,11 @@ mod tests {
         let rng = &mut StdRng::seed_from_u64(2322u64);
         let salt: [u8; 32] = rng.gen();
 
-        let contract_id_2 = Contract::deploy_with_salt(
+        let contract_id_2 = Contract::deploy_with_parameters(
             "../../packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test.bin",
             &wallet,
             TxParameters::default(),
+            vec![],
             Salt::from(salt),
         )
         .await?;
@@ -115,7 +116,7 @@ mod tests {
         assert_ne!(contract_id_1, contract_id_2);
         Ok(())
     }
-    // ANCHOR_END: deploy_with_salt
+    // ANCHOR_END: deploy_with_parameters
 
     #[tokio::test]
     // ANCHOR: deploy_with_multiple_wallets
@@ -179,10 +180,11 @@ mod tests {
 
         let wallet = launch_provider_and_get_wallet().await;
         let contract_id = Contract::deploy(
-        "../../packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test.bin",
-        &wallet,
-        TxParameters::default()
-    ).await?;
+            "../../packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test.bin",
+            &wallet,
+            TxParameters::default(),
+        )
+            .await?;
         println!("Contract deployed @ {:x}", contract_id);
         // ANCHOR: instantiate_contract
         let contract_instance = MyContract::new(contract_id.to_string(), wallet.clone());
