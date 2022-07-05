@@ -3,7 +3,6 @@ mod tests {
     #[cfg(feature = "fuel-core-lib")]
     use fuels::prelude::Config;
     use fuels::prelude::Error;
-    use fuels::tx::{Bytes32, StorageSlot};
 
     #[tokio::test]
     #[cfg(feature = "fuel-core-lib")]
@@ -54,7 +53,6 @@ mod tests {
                 Some(byte_price),
                 Some(maturity)
             ),
-            vec![],
         )
         .await?;
 
@@ -136,7 +134,6 @@ mod tests {
             "../../packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test.bin",
             &wallets[0],
             TxParameters::default(),
-            vec![],
         )
         .await?;
 
@@ -155,7 +152,6 @@ mod tests {
             "../../packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test.bin",
             &wallets[1],
             TxParameters::default(),
-            vec![],
         )
         .await?;
 
@@ -187,7 +183,6 @@ mod tests {
             "../../packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test.bin",
             &wallet,
             TxParameters::default(),
-            vec![]
         )
             .await?;
         println!("Contract deployed @ {:x}", contract_id);
@@ -268,7 +263,6 @@ mod tests {
         .bin",
             &wallet,
             TxParameters::default(),
-            vec![],
         )
         .await?;
         println!("Contract deployed @ {:x}", contract_id);
@@ -307,7 +301,6 @@ mod tests {
         .bin",
         &wallet,
         TxParameters::default(),
-        vec![],
     )
         .await?;
         let contract_instance = TestContract::new(contract_id.to_string(), wallet);
@@ -367,7 +360,6 @@ mod tests {
         "../../packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test.bin",
         &wallet,
         TxParameters::default(),
-        vec![],
     )
     .await?;
 
@@ -406,7 +398,6 @@ mod tests {
         "../../packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test.bin",
         &wallet,
         TxParameters::default(),
-        vec![],
     )
     .await?;
 
