@@ -88,7 +88,7 @@ impl StorageConfiguration {
         }
     }
 
-    pub fn with_manuel_storage(manual_storage_vec: Option<Vec<StorageSlot>>) -> Self {
+    pub fn with_manual_storage(manual_storage_vec: Option<Vec<StorageSlot>>) -> Self {
         Self {
             storage_path: None,
             manual_storage_vec,

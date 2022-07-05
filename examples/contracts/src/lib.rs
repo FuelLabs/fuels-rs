@@ -101,7 +101,7 @@ mod tests {
             "../../packages/fuels-abigen-macro/tests/test_projects/storage/out/debug/storage.bin",
             &wallet,
             TxParameters::default(),
-            StorageConfiguration::with_manuel_storage(Some(vec![storage_slot])),
+            StorageConfiguration::with_manual_storage(Some(vec![storage_slot])),
         )
         .await?;
         // ANCHOR_END: manual_storage
