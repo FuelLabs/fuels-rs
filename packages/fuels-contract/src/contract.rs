@@ -1,28 +1,30 @@
+use std::collections::HashSet;
+use std::fmt::Debug;
 use std::fs;
+use std::marker::PhantomData;
+use std::path::Path;
 use std::str::FromStr;
 
-use crate::script::Script;
 use anyhow::Result;
 use fuel_gql_client::{
     client::FuelClient,
     fuel_tx::{Contract as FuelContract, Output, Receipt, StorageSlot, Transaction},
     fuel_types::{Address, AssetId, ContractId, Salt},
 };
-use fuels_core::abi_decoder::ABIDecoder;
-use fuels_core::abi_encoder::ABIEncoder;
-use fuels_core::parameters::StorageConfiguration;
-use fuels_core::tx::Bytes32;
+
 use fuels_core::{
     constants::{BASE_ASSET_ID, DEFAULT_SPENDABLE_COIN_AMOUNT},
     parameters::{CallParameters, TxParameters},
     ParamType, ReturnLocation, Selector, Token, Tokenizable,
 };
-use fuels_signers::{provider::Provider, LocalWallet, Signer};
+use fuels_core::abi_decoder::ABIDecoder;
+use fuels_core::abi_encoder::ABIEncoder;
+use fuels_core::parameters::StorageConfiguration;
+use fuels_core::tx::Bytes32;
+use fuels_signers::{LocalWallet, provider::Provider, Signer};
 use fuels_types::errors::Error;
-use std::collections::HashSet;
-use std::fmt::Debug;
-use std::marker::PhantomData;
-use std::path::Path;
+
+use crate::script::Script;
 
 #[derive(Debug, Clone, Default)]
 pub struct CompiledContract {
@@ -189,7 +191,7 @@ impl Contract {
     }
 
     /// Loads a compiled contract with salt and deploys it to a running node
-    pub async fn deploy_with_salt(
+    pub async fn deploy_with_parameters(
         binary_filepath: &str,
         wallet: &LocalWallet,
         params: TxParameters,
@@ -635,7 +637,7 @@ mod test {
         let wallet = launch_provider_and_get_wallet().await;
 
         // Should panic as we are passing in a JSON instead of BIN
-        Contract::deploy_with_salt(
+        Contract::deploy_with_parameters(
             "tests/test_projects/contract_output_test/out/debug/contract_output_test-abi.json",
             &wallet,
             TxParameters::default(),

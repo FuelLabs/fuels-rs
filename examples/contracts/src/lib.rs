@@ -115,8 +115,8 @@ mod tests {
     }
 
     #[tokio::test]
-    // ANCHOR: deploy_with_salt
-    async fn deploy_with_salt() -> Result<(), Error> {
+    // ANCHOR: deploy_with_parameters
+    async fn deploy_with_parameters() -> Result<(), Error> {
         use fuels::prelude::*;
         use rand::prelude::{Rng, SeedableRng, StdRng};
 
@@ -140,7 +140,7 @@ mod tests {
         let rng = &mut StdRng::seed_from_u64(2322u64);
         let salt: [u8; 32] = rng.gen();
 
-        let contract_id_2 = Contract::deploy_with_salt(
+        let contract_id_2 = Contract::deploy_with_parameters(
             "../../packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test.bin",
             &wallet,
             TxParameters::default(),
@@ -154,7 +154,7 @@ mod tests {
         assert_ne!(contract_id_1, contract_id_2);
         Ok(())
     }
-    // ANCHOR_END: deploy_with_salt
+    // ANCHOR_END: deploy_with_parameters
 
     #[tokio::test]
     // ANCHOR: deploy_with_multiple_wallets
