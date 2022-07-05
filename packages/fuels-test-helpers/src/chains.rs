@@ -1,4 +1,4 @@
-use crate::utils;
+use crate::utils::retry_until;
 use fuel_types::AssetId;
 use fuels_core::constants::{BASE_ASSET_ID, DEFAULT_SPENDABLE_COIN_AMOUNT};
 use fuels_core::tx::{Input, Output, Transaction};
@@ -7,7 +7,6 @@ use fuels_signers::{LocalWallet, Signer};
 use fuels_types::errors::Error;
 use rand::Rng;
 use std::time::Duration;
-use utils::retry_until;
 
 /// Can be used to produce `amount` number of blocks. A block is produced by
 /// submitting a no-op script for execution. Transactions are submitted one
