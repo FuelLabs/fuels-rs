@@ -2017,18 +2017,12 @@ async fn string_and_array_inside_enum() -> Result<(), Error> {
     let instance = MyContract::new(id.to_string(), wallet.clone());
 
     let enum_string = SomeEnum::SomeStr("asdf".to_owned());
-    let enum_array = SomeEnum::SomeArr(vec![1,2,3,4]);
+    let enum_array = SomeEnum::SomeArr(vec![1, 2, 3, 4]);
 
-    let response = instance
-        .get_enum_str(enum_string.clone())
-        .call()
-        .await?;
+    let response = instance.get_enum_str(enum_string.clone()).call().await?;
     assert_eq!(response.value, enum_string);
 
-    let response = instance
-        .get_enum_arr(enum_array.clone())
-        .call()
-        .await?;
+    let response = instance.get_enum_arr(enum_array.clone()).call().await?;
     assert_eq!(response.value, enum_array);
 
     Ok(())
