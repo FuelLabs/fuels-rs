@@ -55,10 +55,10 @@ mod tests {
 
     #[tokio::test]
     async fn retry_until_will_respect_delay_between_attempts() -> anyhow::Result<()> {
-        let timestamps_condition_was_called_at: Mutex<Vec<Instant>> = Mutex::new(vec![]);
+        let timestamps_predicate_was_called_at: Mutex<Vec<Instant>> = Mutex::new(vec![]);
 
         let will_fail = || async {
-            timestamps_condition_was_called_at
+            timestamps_predicate_was_called_at
                 .lock()
                 .await
                 .push(Instant::now());
@@ -67,7 +67,7 @@ mod tests {
 
         retry_until(will_fail, 2, Duration::from_millis(250)).await?;
 
-        let timestamps = timestamps_condition_was_called_at.lock().await.clone();
+        let timestamps = timestamps_predicate_was_called_at.lock().await.clone();
 
         let timestamps_spaced_out_at_least_250_mills = timestamps
             .iter()
