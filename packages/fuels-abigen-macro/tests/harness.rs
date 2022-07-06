@@ -1792,35 +1792,6 @@ async fn nested_structs() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_option() -> Result<(), Error> {
-    abigen!(
-        MyContract,
-        "packages/fuels-abigen-macro/tests/test_projects/option_type/out/debug/option_type-abi.json"
-    );
-
-    let wallet = launch_provider_and_get_wallet().await;
-
-    let id = Contract::deploy(
-        "tests/test_projects/option_type/out/debug/option_type.bin",
-        &wallet,
-        TxParameters::default(),
-    )
-    .await?;
-
-    let instance = MyContract::new(id.to_string(), wallet.clone());
-
-    let expected_some_address = Option::Some(Identity::Address(Address::zeroed()));
-    let response = instance.get_some_address().call().await?;
-    assert_eq!(response.value, expected_some_address);
-
-    let expected_none = Option::None();
-    let response = instance.get_none().call().await?;
-    assert_eq!(response.value, expected_none);
-
-    Ok(())
-}
-
-#[tokio::test]
 async fn test_multi_call() -> Result<(), Error> {
     abigen!(
         MyContract,
