@@ -6,8 +6,8 @@ use fuels::prelude::{
     setup_test_provider, CallParameters, Contract, Error, LocalWallet, Provider, ProviderError,
     Salt, Signer, TxParameters, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
 };
-use fuels_core::parameters::StorageConfiguration;
 use fuels::test_helpers::produce_blocks;
+use fuels_core::parameters::StorageConfiguration;
 use fuels_core::tx::{Address, Bytes32, StorageSlot};
 use fuels_core::Tokenizable;
 use fuels_core::{constants::BASE_ASSET_ID, Token};
@@ -2129,6 +2129,7 @@ async fn contract_method_call_respects_maturity() -> anyhow::Result<()> {
         "tests/test_projects/transaction_block_height/out/debug/transaction_block_height.bin",
         &wallet,
         TxParameters::default(),
+        StorageConfiguration::default(),
     )
     .await?;
 
@@ -2165,7 +2166,7 @@ async fn contract_deployment_respects_maturity() -> anyhow::Result<()> {
             "tests/test_projects/transaction_block_height/out/debug/transaction_block_height.bin",
             &wallet,
             parameters,
-            StorageConfiguration::default()
+            StorageConfiguration::default(),
         )
     };
 
@@ -2209,7 +2210,7 @@ async fn gql_height_info_is_correct() -> anyhow::Result<()> {
         "tests/test_projects/transaction_block_height/out/debug/transaction_block_height.bin",
         &wallet,
         TxParameters::default(),
-        StorageConfiguration::default()
+        StorageConfiguration::default(),
     )
     .await?;
     let instance = MyContract::new(id.to_string(), wallet.clone());
