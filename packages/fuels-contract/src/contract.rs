@@ -286,7 +286,6 @@ impl Contract {
         wallet: &LocalWallet,
         params: TxParameters,
     ) -> Result<(Transaction, ContractId), Error> {
-        let maturity = 0;
         let bytecode_witness_index = 0;
         let storage_slots: Vec<StorageSlot> = compiled_contract.storage_slots.clone();
         let witnesses = vec![compiled_contract.raw.clone().into()];
@@ -320,7 +319,7 @@ impl Contract {
             params.gas_price,
             params.gas_limit,
             params.byte_price,
-            maturity,
+            params.maturity,
             bytecode_witness_index,
             compiled_contract.salt,
             static_contracts,

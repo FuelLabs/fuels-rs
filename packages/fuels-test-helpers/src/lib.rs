@@ -41,14 +41,17 @@ use rand::Fill;
 #[cfg(not(feature = "fuel-core-lib"))]
 mod node;
 
+mod chains;
 mod script;
 #[cfg(feature = "fuels-signers")]
 mod signers;
+mod utils;
 mod wallets_config;
 
 #[cfg(not(feature = "fuel-core-lib"))]
 pub use node::*;
 
+pub use chains::*;
 #[cfg(feature = "fuels-signers")]
 pub use signers::*;
 pub use wallets_config::*;
