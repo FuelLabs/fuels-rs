@@ -48,26 +48,32 @@ Alternatively, if you want multiple instances of the same contract then use `dep
 {{#include ../../../examples/contracts/src/lib.rs:deploy_with_parameters}}
 ```
 
-### Initializing storage slots
+### Initializing storage slots manually
 
 The storage slots of a contract can be initialized manually from `Vec<StorageSlot>` where `StorageSlot` is a struct that holds the key-value pair for a given slot.
 
 ```rust,ignore
 {{#include ../../../packages/fuels-abigen-macro/tests/harness.rs:storage_slot_create}}
 ```
-
-Once created, the slots can be passed to `deploy_with_parameters`: 
+Once created, the slots can be used to initialize `StorageConfiguration::with_manual_storage` which was then passed to `deploy_with_parameters`: 
 
 ```rust,ignore
 {{#include ../../../packages/fuels-abigen-macro/tests/harness.rs:manual_storage}}
 ```
-Note that `create_storage_slot` will panic if you try to use a key/value with a size greater than 32 bytes.
 
-Once created, the slots can be passed to `deploy` or `deploy_with_salt`: 
+### Initializing storage slots automatically
+
+The storage slots of a contract can be initialized automatically from auto-generated JSON file where literals containing key-value pair are transformed into `Vec<StorageSlot>`.
+
+Path to JSON file is used to initialize `StorageConfiguration::with_storage_path` which was then passed to `deploy_with_parameters`:
 
 ```rust,ignore
-{{#include ../../../examples/contracts/src/lib.rs:manual_storage}}
+{{#include ../../../packages/fuels-abigen-macro/tests/harness.rs:automatic_storage}}
 ```
+
+### Initializing storage slots both automatically and manually
+
+If we initialize the slots both automatically and manually, then the generated `Vec<StorageSlot>` will be merged and the `manually` generated `Vec<StorageSlot>` takes precedence.
 
 ## Setting up multiple test wallets
 

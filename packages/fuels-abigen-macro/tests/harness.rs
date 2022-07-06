@@ -1944,11 +1944,6 @@ async fn test_multi_call_script_workflow() -> Result<(), Error> {
 
 #[tokio::test]
 async fn test_storage_initialization() -> Result<(), Error> {
-    // abigen!(
-    //     MyContract,
-    //     "packages/fuels-abigen-macro/tests/test_projects/storage/out/debug/storage-abi.json"
-    // );
-
     abigen!(
         MyContract,
         "packages/fuels-abigen-macro/tests/test_projects/contract_storage_test/out/debug/contract_storage_test-abi.json"
@@ -2054,16 +2049,17 @@ async fn test_init_storage_automatically() -> Result<(), Error> {
 
     let wallet = launch_provider_and_get_wallet().await;
 
+    // ANCHOR: automatic_storage
     let contract_id = Contract::deploy_with_parameters(
         "tests/test_projects/contract_storage_test/out/debug/contract_storage_test.bin",
         &wallet,
         TxParameters::default(),
-
         StorageConfiguration::with_storage_path(
             Some("tests/test_projects/contract_storage_test/out/debug/contract_storage_test-storage_slots.json".to_string())),
         Salt::default(),
     )
         .await?;
+    // ANCHOR_END: automatic_storage
 
     println!("Foo contract deployed @ {:x}", contract_id);
 
