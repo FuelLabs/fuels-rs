@@ -1614,7 +1614,7 @@ async fn test_transaction_script_workflow() -> Result<(), Error> {
     let script = call_handler.get_script().await;
     assert!(script.tx.is_script());
 
-    let receipts = script.call(client).await?;
+    let receipts = script.call(client, &client.chain_info().await?.consensus_parameters.into()).await?;
 
     let response = call_handler.get_response(receipts)?;
     assert_eq!(response.value, 42);
@@ -1926,7 +1926,7 @@ async fn test_multi_call_script_workflow() -> Result<(), Error> {
         .add_call(call_handler_2);
 
     let script = multi_call_handler.get_script().await;
-    let receipts = script.call(client).await.unwrap();
+    let receipts = script.call(client, &client.chain_info().await?.consensus_parameters.into()).await.unwrap();
     let (counter, array) = multi_call_handler
         .get_response::<(u64, Vec<u64>)>(receipts)?
         .value;

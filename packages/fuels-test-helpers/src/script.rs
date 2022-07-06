@@ -22,7 +22,7 @@ pub async fn run_compiled_script(binary_filepath: &str) -> Result<Vec<Receipt>, 
 
     let script = get_script(script_binary);
 
-    script.call(&client).await
+    script.call(&client, &client.chain_info().await?.consensus_parameters.into()).await
 }
 
 #[allow(dead_code)]
@@ -35,7 +35,12 @@ pub async fn run_compiled_script(binary_filepath: &str) -> Result<Vec<Receipt>, 
 
     let script = get_script(script_binary);
 
-    script.call(&client).await
+    script
+        .call(
+            &client,
+            &client.chain_info().await?.consensus_parameters.into(),
+        )
+        .await
 }
 
 fn get_script(script_binary: Vec<u8>) -> Script {
