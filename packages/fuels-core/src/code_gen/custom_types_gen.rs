@@ -596,13 +596,11 @@ mod tests {
 
     #[test]
     fn test_expand_array_inside_enum() -> Result<(), Error> {
-        let enum_components = vec![
-            Property {
-                name: "SomeArr".to_string(),
-                type_field: "[u64; 7]".to_string(),
-                components: None,
-            },
-        ];
+        let enum_components = vec![Property {
+            name: "SomeArr".to_string(),
+            type_field: "[u64; 7]".to_string(),
+            components: None,
+        }];
         let p = Property {
             name: String::from("unused"),
             type_field: String::from("unused"),
