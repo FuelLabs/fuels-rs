@@ -19,6 +19,7 @@ rand = "0.8"
 syn = "1.0.12"
 
 [dev-dependencies]
+anyhow = { version = "1.0.58" }
 ctor = " 0.1"
 fuel-core = { version = "0.9", default-features = false }
 fuel-gql-client = { version = "0.9", default-features = false }

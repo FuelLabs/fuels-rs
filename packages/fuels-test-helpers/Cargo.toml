@@ -17,6 +17,7 @@ fuels-contract = { version = "0.16.1", path = "../fuels-contract" }
 fuels-core = { version = "0.16.1", path = "../fuels-core" }
 fuels-signers = { version = "0.16.1", path = "../fuels-signers", optional = true }
 fuels-types = { version = "0.16.1", path = "../fuels-types" }
+anyhow = { version = "1.0.58" }
 
 hex = { version = "0.4.3", default-features = false, features = ["std", "serde"] }
 portpicker = { version = "0.1.1" }
