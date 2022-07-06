@@ -1,0 +1,38 @@
+[
+  {
+    "type": "function",
+    "inputs": [],
+    "name": "is_caller_external",
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "components": null
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "inputs": [
+      {
+        "name": "expected_id",
+        "type": "struct Address",
+        "components": [
+          {
+            "name": "value",
+            "type": "b256",
+            "components": null
+          }
+        ]
+      }
+    ],
+    "name": "check_msg_sender",
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "components": null
+      }
+    ]
+  }
+]

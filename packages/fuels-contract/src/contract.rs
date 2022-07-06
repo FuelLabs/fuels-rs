@@ -175,10 +175,7 @@ impl Contract {
 
         match storage_configuration.manual_storage_vec {
             Some(storage)
-                if !storage_configuration
-                    .manual_storage_vec
-                    .as_ref()
-                    .unwrap()
+                if !storage
                     .is_empty() =>
             {
                 compiled_contract.storage_slots =

@@ -1,0 +1,172 @@
+[
+  {
+    "type": "function",
+    "inputs": [],
+    "name": "get_struct",
+    "outputs": [
+      {
+        "name": "",
+        "type": "struct AllStruct",
+        "components": [
+          {
+            "name": "some_struct",
+            "type": "struct SomeStruct",
+            "components": [
+              {
+                "name": "par1",
+                "type": "u32",
+                "components": null
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "inputs": [
+      {
+        "name": "arg",
+        "type": "struct AllStruct",
+        "components": [
+          {
+            "name": "some_struct",
+            "type": "struct SomeStruct",
+            "components": [
+              {
+                "name": "par1",
+                "type": "u32",
+                "components": null
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "name": "check_struct_integrity",
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "components": null
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "inputs": [
+      {
+        "name": "call_data",
+        "type": "struct CallData",
+        "components": [
+          {
+            "name": "memory_address",
+            "type": "struct MemoryAddress",
+            "components": [
+              {
+                "name": "contract_id",
+                "type": "struct ContractId",
+                "components": [
+                  {
+                    "name": "value",
+                    "type": "b256",
+                    "components": null
+                  }
+                ]
+              },
+              {
+                "name": "function_selector",
+                "type": "u64",
+                "components": null
+              },
+              {
+                "name": "function_data",
+                "type": "u64",
+                "components": null
+              }
+            ]
+          },
+          {
+            "name": "num_coins_to_forward",
+            "type": "u64",
+            "components": null
+          },
+          {
+            "name": "asset_id_of_coins_to_forward",
+            "type": "struct ContractId",
+            "components": [
+              {
+                "name": "value",
+                "type": "b256",
+                "components": null
+              }
+            ]
+          },
+          {
+            "name": "amount_of_gas_to_forward",
+            "type": "u64",
+            "components": null
+          }
+        ]
+      }
+    ],
+    "name": "nested_struct_with_reserved_keyword_substring",
+    "outputs": [
+      {
+        "name": "",
+        "type": "struct CallData",
+        "components": [
+          {
+            "name": "memory_address",
+            "type": "struct MemoryAddress",
+            "components": [
+              {
+                "name": "contract_id",
+                "type": "struct ContractId",
+                "components": [
+                  {
+                    "name": "value",
+                    "type": "b256",
+                    "components": null
+                  }
+                ]
+              },
+              {
+                "name": "function_selector",
+                "type": "u64",
+                "components": null
+              },
+              {
+                "name": "function_data",
+                "type": "u64",
+                "components": null
+              }
+            ]
+          },
+          {
+            "name": "num_coins_to_forward",
+            "type": "u64",
+            "components": null
+          },
+          {
+            "name": "asset_id_of_coins_to_forward",
+            "type": "struct ContractId",
+            "components": [
+              {
+                "name": "value",
+                "type": "b256",
+                "components": null
+              }
+            ]
+          },
+          {
+            "name": "amount_of_gas_to_forward",
+            "type": "u64",
+            "components": null
+          }
+        ]
+      }
+    ]
+  }
+]

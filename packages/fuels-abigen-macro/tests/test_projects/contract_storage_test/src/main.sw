@@ -24,5 +24,4 @@ impl MyContract for Contract {
   fn get_value_u64(key: b256) -> u64 {
     get::<u64>(key)
   }
-
 }

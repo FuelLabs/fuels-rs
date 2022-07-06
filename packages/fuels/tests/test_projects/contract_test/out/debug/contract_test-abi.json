@@ -1,0 +1,277 @@
+[
+  {
+    "type": "function",
+    "inputs": [],
+    "name": "get_msg_amount",
+    "outputs": [
+      {
+        "name": "",
+        "type": "u64",
+        "components": null
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "inputs": [
+      {
+        "name": "value",
+        "type": "u64",
+        "components": null
+      }
+    ],
+    "name": "initialize_counter",
+    "outputs": [
+      {
+        "name": "",
+        "type": "u64",
+        "components": null
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "inputs": [
+      {
+        "name": "value",
+        "type": "u64",
+        "components": null
+      }
+    ],
+    "name": "increment_counter",
+    "outputs": [
+      {
+        "name": "",
+        "type": "u64",
+        "components": null
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "inputs": [],
+    "name": "get_counter",
+    "outputs": [
+      {
+        "name": "",
+        "type": "u64",
+        "components": null
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "inputs": [
+      {
+        "name": "x",
+        "type": "u64",
+        "components": null
+      },
+      {
+        "name": "y",
+        "type": "u64",
+        "components": null
+      }
+    ],
+    "name": "get",
+    "outputs": [
+      {
+        "name": "",
+        "type": "u64",
+        "components": null
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "inputs": [
+      {
+        "name": "t",
+        "type": "struct MyType",
+        "components": [
+          {
+            "name": "x",
+            "type": "u64",
+            "components": null
+          },
+          {
+            "name": "y",
+            "type": "u64",
+            "components": null
+          }
+        ]
+      }
+    ],
+    "name": "get_alt",
+    "outputs": [
+      {
+        "name": "",
+        "type": "struct MyType",
+        "components": [
+          {
+            "name": "x",
+            "type": "u64",
+            "components": null
+          },
+          {
+            "name": "y",
+            "type": "u64",
+            "components": null
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "inputs": [
+      {
+        "name": "x",
+        "type": "u64",
+        "components": null
+      }
+    ],
+    "name": "get_single",
+    "outputs": [
+      {
+        "name": "",
+        "type": "u64",
+        "components": null
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "inputs": [
+      {
+        "name": "p",
+        "type": "[struct Person; 2]",
+        "components": [
+          {
+            "name": "__array_element",
+            "type": "struct Person",
+            "components": [
+              {
+                "name": "name",
+                "type": "str[4]",
+                "components": null
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "name": "array_of_structs",
+    "outputs": [
+      {
+        "name": "",
+        "type": "[struct Person; 2]",
+        "components": [
+          {
+            "name": "__array_element",
+            "type": "struct Person",
+            "components": [
+              {
+                "name": "name",
+                "type": "str[4]",
+                "components": null
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "inputs": [
+      {
+        "name": "p",
+        "type": "[enum State; 2]",
+        "components": [
+          {
+            "name": "__array_element",
+            "type": "enum State",
+            "components": [
+              {
+                "name": "A",
+                "type": "()",
+                "components": []
+              },
+              {
+                "name": "B",
+                "type": "()",
+                "components": []
+              },
+              {
+                "name": "C",
+                "type": "()",
+                "components": []
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "name": "array_of_enums",
+    "outputs": [
+      {
+        "name": "",
+        "type": "[enum State; 2]",
+        "components": [
+          {
+            "name": "__array_element",
+            "type": "enum State",
+            "components": [
+              {
+                "name": "A",
+                "type": "()",
+                "components": []
+              },
+              {
+                "name": "B",
+                "type": "()",
+                "components": []
+              },
+              {
+                "name": "C",
+                "type": "()",
+                "components": []
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "inputs": [
+      {
+        "name": "p",
+        "type": "[u64; 2]",
+        "components": [
+          {
+            "name": "__array_element",
+            "type": "u64",
+            "components": null
+          }
+        ]
+      }
+    ],
+    "name": "get_array",
+    "outputs": [
+      {
+        "name": "",
+        "type": "[u64; 2]",
+        "components": [
+          {
+            "name": "__array_element",
+            "type": "u64",
+            "components": null
+          }
+        ]
+      }
+    ]
+  }
+]
