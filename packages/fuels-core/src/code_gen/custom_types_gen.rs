@@ -595,6 +595,31 @@ mod tests {
     }
 
     #[test]
+    fn test_expand_array_inside_enum() -> Result<(), Error> {
+        let enum_components = vec![
+            Property {
+                name: "SomeArr".to_string(),
+                type_field: "[u64; 7]".to_string(),
+                components: None,
+            },
+        ];
+        let p = Property {
+            name: String::from("unused"),
+            type_field: String::from("unused"),
+            components: Some(enum_components),
+        };
+        let actual = expand_custom_enum("SomeEnum", &p)?.to_string();
+        let expected = TokenStream::from_str(
+            r#"
+            # [derive (Clone , Debug , Eq , PartialEq)] pub enum SomeEnum { SomeArr (:: std :: vec :: Vec < u64 >) } impl Parameterize for SomeEnum { fn param_type () -> ParamType { let mut types = Vec :: new () ; types . push (ParamType :: Array (Box :: new (ParamType :: U64) , 7)) ; let variants = EnumVariants :: new (types) . expect (concat ! ("Enum " , "SomeEnum" , " has no variants! 'abigen!' should not have succeeded!")) ; ParamType :: Enum (variants) } } impl Tokenizable for SomeEnum { fn into_token (self) -> Token { let (dis , tok) = match self { SomeEnum :: SomeArr (value) => (0u8 , Token :: Array (vec ! [value . into_token ()])) , } ; let variants = match Self :: param_type () { ParamType :: Enum (variants) => variants , other => panic ! ("Calling ::param_type() on a custom enum must return a ParamType::Enum but instead it returned: {}" , other) } ; let selector = (dis , tok , variants) ; Token :: Enum (Box :: new (selector)) } fn from_token (token : Token) -> Result < Self , SDKError > { if let Token :: Enum (enum_selector) = token { match * enum_selector { (0u8 , token , _) => Ok (SomeEnum :: SomeArr (< :: std :: vec :: Vec < u64 > > :: from_token (token) ?)) , (_ , _ , _) => Err (SDKError :: InstantiationError (format ! ("Could not construct '{}'. Failed to match with discriminant selector {:?}" , "SomeEnum" , enum_selector))) } } else { Err (SDKError :: InstantiationError (format ! ("Could not construct '{}'. Expected a token of type Token::Enum, got {:?}" , "SomeEnum" , token))) } } } impl TryFrom < & [u8] > for SomeEnum { type Error = SDKError ; fn try_from (bytes : & [u8]) -> Result < Self , Self :: Error > { try_from_bytes (bytes) } } impl TryFrom < & Vec < u8 >> for SomeEnum { type Error = SDKError ; fn try_from (bytes : & Vec < u8 >) -> Result < Self , Self :: Error > { try_from_bytes (bytes) } } impl TryFrom < Vec < u8 >> for SomeEnum { type Error = SDKError ; fn try_from (bytes : Vec < u8 >) -> Result < Self , Self :: Error > { try_from_bytes (& bytes) } }
+            "#,
+        )?.to_string();
+
+        assert_eq!(actual, expected);
+        Ok(())
+    }
+
+    #[test]
     fn test_expand_custom_enum_with_enum() -> Result<(), Error> {
         let p = Property {
             name: String::from("unused"),
