@@ -2068,6 +2068,7 @@ async fn string_and_array_inside_enum() -> Result<(), Error> {
     Ok(())
 }
 
+#[tokio::test]
 async fn contract_method_call_respects_maturity() -> anyhow::Result<()> {
     abigen!(
         MyContract,
