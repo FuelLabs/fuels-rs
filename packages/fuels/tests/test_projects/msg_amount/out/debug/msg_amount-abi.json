@@ -1,0 +1,14 @@
+[
+  {
+    "type": "function",
+    "inputs": [],
+    "name": "get_msg_amount",
+    "outputs": [
+      {
+        "name": "",
+        "type": "u64",
+        "components": null
+      }
+    ]
+  }
+]

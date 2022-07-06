@@ -1,0 +1,206 @@
+[
+  {
+    "type": "function",
+    "inputs": [
+      {
+        "name": "input",
+        "type": "(u64, u64)",
+        "components": [
+          {
+            "name": "__tuple_element",
+            "type": "u64",
+            "components": null
+          },
+          {
+            "name": "__tuple_element",
+            "type": "u64",
+            "components": null
+          }
+        ]
+      }
+    ],
+    "name": "returns_tuple",
+    "outputs": [
+      {
+        "name": "",
+        "type": "(u64, u64)",
+        "components": [
+          {
+            "name": "__tuple_element",
+            "type": "u64",
+            "components": null
+          },
+          {
+            "name": "__tuple_element",
+            "type": "u64",
+            "components": null
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "inputs": [
+      {
+        "name": "input",
+        "type": "(u64, struct Person)",
+        "components": [
+          {
+            "name": "__tuple_element",
+            "type": "u64",
+            "components": null
+          },
+          {
+            "name": "__tuple_element",
+            "type": "struct Person",
+            "components": [
+              {
+                "name": "name",
+                "type": "str[4]",
+                "components": null
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "name": "returns_struct_in_tuple",
+    "outputs": [
+      {
+        "name": "",
+        "type": "(u64, struct Person)",
+        "components": [
+          {
+            "name": "__tuple_element",
+            "type": "u64",
+            "components": null
+          },
+          {
+            "name": "__tuple_element",
+            "type": "struct Person",
+            "components": [
+              {
+                "name": "name",
+                "type": "str[4]",
+                "components": null
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "inputs": [
+      {
+        "name": "input",
+        "type": "(u64, enum State)",
+        "components": [
+          {
+            "name": "__tuple_element",
+            "type": "u64",
+            "components": null
+          },
+          {
+            "name": "__tuple_element",
+            "type": "enum State",
+            "components": [
+              {
+                "name": "A",
+                "type": "()",
+                "components": []
+              },
+              {
+                "name": "B",
+                "type": "()",
+                "components": []
+              },
+              {
+                "name": "C",
+                "type": "()",
+                "components": []
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "name": "returns_enum_in_tuple",
+    "outputs": [
+      {
+        "name": "",
+        "type": "(u64, enum State)",
+        "components": [
+          {
+            "name": "__tuple_element",
+            "type": "u64",
+            "components": null
+          },
+          {
+            "name": "__tuple_element",
+            "type": "enum State",
+            "components": [
+              {
+                "name": "A",
+                "type": "()",
+                "components": []
+              },
+              {
+                "name": "B",
+                "type": "()",
+                "components": []
+              },
+              {
+                "name": "C",
+                "type": "()",
+                "components": []
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "inputs": [
+      {
+        "name": "p",
+        "type": "(b256, u8)",
+        "components": [
+          {
+            "name": "__tuple_element",
+            "type": "b256",
+            "components": null
+          },
+          {
+            "name": "__tuple_element",
+            "type": "u8",
+            "components": null
+          }
+        ]
+      }
+    ],
+    "name": "tuple_with_b256",
+    "outputs": [
+      {
+        "name": "",
+        "type": "(b256, u8)",
+        "components": [
+          {
+            "name": "__tuple_element",
+            "type": "b256",
+            "components": null
+          },
+          {
+            "name": "__tuple_element",
+            "type": "u8",
+            "components": null
+          }
+        ]
+      }
+    ]
+  }
+]

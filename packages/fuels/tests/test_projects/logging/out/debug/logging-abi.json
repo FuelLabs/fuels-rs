@@ -1,0 +1,14 @@
+[
+  {
+    "type": "function",
+    "inputs": [],
+    "name": "main",
+    "outputs": [
+      {
+        "name": "",
+        "type": "()",
+        "components": []
+      }
+    ]
+  }
+]

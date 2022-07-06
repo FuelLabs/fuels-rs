@@ -1,0 +1,84 @@
+[
+  {
+    "type": "function",
+    "inputs": [
+      {
+        "name": "user",
+        "type": "struct User",
+        "components": [
+          {
+            "name": "address",
+            "type": "struct Address",
+            "components": [
+              {
+                "name": "value",
+                "type": "b256",
+                "components": null
+              }
+            ]
+          },
+          {
+            "name": "weight",
+            "type": "u64",
+            "components": null
+          }
+        ]
+      }
+    ],
+    "name": "wrapped_address",
+    "outputs": [
+      {
+        "name": "",
+        "type": "struct User",
+        "components": [
+          {
+            "name": "address",
+            "type": "struct Address",
+            "components": [
+              {
+                "name": "value",
+                "type": "b256",
+                "components": null
+              }
+            ]
+          },
+          {
+            "name": "weight",
+            "type": "u64",
+            "components": null
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "inputs": [
+      {
+        "name": "addr",
+        "type": "struct Address",
+        "components": [
+          {
+            "name": "value",
+            "type": "b256",
+            "components": null
+          }
+        ]
+      }
+    ],
+    "name": "unwrapped_address",
+    "outputs": [
+      {
+        "name": "",
+        "type": "struct Address",
+        "components": [
+          {
+            "name": "value",
+            "type": "b256",
+            "components": null
+          }
+        ]
+      }
+    ]
+  }
+]

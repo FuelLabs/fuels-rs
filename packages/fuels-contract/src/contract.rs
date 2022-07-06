@@ -168,8 +168,13 @@ impl Contract {
         binary_filepath: &str,
         wallet: &LocalWallet,
         params: TxParameters,
+        storage_configuration: StorageConfiguration,
     ) -> Result<ContractId, Error> {
-        let compiled_contract = Contract::load_sway_contract(binary_filepath)?;
+        let mut compiled_contract =
+            Contract::load_sway_contract(binary_filepath, &storage_configuration.storage_path)?;
+
+        Self::merge_storage_vectors(&storage_configuration, &mut compiled_contract);
+
         Self::deploy_loaded(&(compiled_contract), wallet, params).await
     }
 
@@ -181,21 +186,28 @@ impl Contract {
         storage_configuration: StorageConfiguration,
         salt: Salt,
     ) -> Result<ContractId, Error> {
-        let mut compiled_contract = Contract::load_sway_contract_with_salt(
+        let mut compiled_contract = Contract::load_sway_contract_with_parameters(
             binary_filepath,
-            storage_configuration.storage_path,
+            &storage_configuration.storage_path,
             salt,
         )?;
 
-        match storage_configuration.manual_storage_vec {
+        Self::merge_storage_vectors(&storage_configuration, &mut compiled_contract);
+
+        Self::deploy_loaded(&(compiled_contract), wallet, params).await
+    }
+
+    fn merge_storage_vectors(
+        storage_configuration: &StorageConfiguration,
+        compiled_contract: &mut CompiledContract,
+    ) {
+        match &storage_configuration.manual_storage_vec {
             Some(storage) if !storage.is_empty() => {
                 compiled_contract.storage_slots =
-                    Self::merge_storage_slots(&storage, &compiled_contract.storage_slots);
+                    Self::merge_storage_slots(storage, &compiled_contract.storage_slots);
             }
             _ => {}
         }
-
-        Self::deploy_loaded(&(compiled_contract), wallet, params).await
     }
 
     /// Deploys a compiled contract to a running node
@@ -216,13 +228,20 @@ impl Contract {
         }
     }
 
-    pub fn load_sway_contract(binary_filepath: &str) -> Result<CompiledContract, Error> {
-        Self::load_sway_contract_with_salt(binary_filepath, None, Salt::from([0u8; 32]))
+    pub fn load_sway_contract(
+        binary_filepath: &str,
+        storage_path: &Option<String>,
+    ) -> Result<CompiledContract, Error> {
+        Self::load_sway_contract_with_parameters(
+            binary_filepath,
+            storage_path,
+            Salt::from([0u8; 32]),
+        )
     }
 
-    pub fn load_sway_contract_with_salt(
+    pub fn load_sway_contract_with_parameters(
         binary_filepath: &str,
-        storage_path: Option<String>,
+        storage_path: &Option<String>,
         salt: Salt,
     ) -> Result<CompiledContract, Error> {
         let extension = Path::new(binary_filepath).extension().unwrap();
@@ -232,7 +251,7 @@ impl Contract {
         let bin = std::fs::read(binary_filepath)?;
 
         let storage = match storage_path {
-            Some(path) if Path::new(&path).exists() => Self::get_storage_vec(&path),
+            Some(path) if Path::new(&path).exists() => Self::get_storage_vec(path),
             _ => {
                 vec![]
             }
@@ -616,6 +635,7 @@ mod test {
             "tests/test_projects/contract_output_test/out/debug/contract_output_test-abi.json",
             &wallet,
             TxParameters::default(),
+            StorageConfiguration::default(),
         )
         .await
         .unwrap();
