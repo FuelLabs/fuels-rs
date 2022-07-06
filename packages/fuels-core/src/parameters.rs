@@ -4,7 +4,7 @@ use crate::constants::{
 };
 use fuel_tx::AssetId;
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub struct TxParameters {
     pub gas_price: u64,
     pub gas_limit: u64,

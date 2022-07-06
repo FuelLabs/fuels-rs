@@ -1,11 +1,13 @@
 use fuel_gql_client::fuel_tx::{AssetId, ContractId, Receipt};
 use fuels::contract::contract::MultiContractCallHandler;
+use fuels::prelude::Error::TransactionError;
 use fuels::prelude::{
     abigen, launch_provider_and_get_wallet, setup_multiple_assets_coins, setup_single_asset_coins,
     setup_test_provider, CallParameters, Contract, Error, LocalWallet, Provider, ProviderError,
-    Signer, TxParameters, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
+    Salt, Signer, TxParameters, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
 };
-use fuels_core::tx::Address;
+use fuels::test_helpers::produce_blocks;
+use fuels_core::tx::{Address, Bytes32, StorageSlot};
 use fuels_core::Tokenizable;
 use fuels_core::{constants::BASE_ASSET_ID, Token};
 use sha2::{Digest, Sha256};
@@ -780,7 +782,11 @@ async fn test_reverting_transaction() -> Result<(), Error> {
 
     let wallet = launch_provider_and_get_wallet().await;
 
-    let contract_id = Contract::deploy("tests/test_projects/revert_transaction_error/out/debug/capture_revert_transaction_error.bin", &wallet, TxParameters::default())
+    let contract_id = Contract::deploy(
+        "tests/test_projects/revert_transaction_error/out/debug/capture_revert_transaction_error.bin",
+        &wallet,
+        TxParameters::default(),
+    )
         .await?;
     let contract_instance = RevertingContract::new(contract_id.to_string(), wallet);
     println!("Contract deployed @ {:x}", contract_id);
@@ -1938,6 +1944,40 @@ async fn test_multi_call_script_workflow() -> Result<(), Error> {
 }
 
 #[tokio::test]
+async fn test_storage_initialization() -> Result<(), Error> {
+    abigen!(
+        MyContract,
+        "packages/fuels-abigen-macro/tests/test_projects/storage/out/debug/storage-abi.json"
+    );
+
+    let wallet = launch_provider_and_get_wallet().await;
+
+    // ANCHOR: storage_slot_create
+    let key = Bytes32::from([1u8; 32]);
+    let value = Bytes32::from([2u8; 32]);
+    let storage_slot = StorageSlot::new(key, value);
+    // ANCHOR_END: storage_slot_create
+
+    // ANCHOR: manual_storage
+    let contract_id = Contract::deploy_with_parameters(
+        "tests/test_projects/storage/out/debug/storage.bin",
+        &wallet,
+        TxParameters::default(),
+        vec![storage_slot.clone()],
+        Salt::from([0; 32]),
+    )
+    .await?;
+    // ANCHOR_END: manual_storage
+
+    let contract_instance = MyContract::new(contract_id.to_string(), wallet.clone());
+
+    let result = contract_instance.get_value(key.into()).call().await?.value;
+    assert_eq!(result.as_slice(), value.as_slice());
+
+    Ok(())
+}
+
+#[tokio::test]
 async fn can_use_try_into_to_construct_struct_from_bytes() -> Result<(), Error> {
     abigen!(
         MyContract,
@@ -2025,5 +2065,114 @@ async fn string_and_array_inside_enum() -> Result<(), Error> {
     let response = instance.arr_inside_enum(enum_array.clone()).call().await?;
     assert_eq!(response.value, enum_array);
 
+    Ok(())
+}
+
+async fn contract_method_call_respects_maturity() -> anyhow::Result<()> {
+    abigen!(
+        MyContract,
+        "packages/fuels-abigen-macro/tests/test_projects/transaction_block_height/out/debug/transaction_block_height-abi.json"
+    );
+
+    let wallet = launch_provider_and_get_wallet().await;
+
+    let id = Contract::deploy(
+        "tests/test_projects/transaction_block_height/out/debug/transaction_block_height.bin",
+        &wallet,
+        TxParameters::default(),
+    )
+    .await?;
+
+    let instance = MyContract::new(id.to_string(), wallet.clone());
+
+    let call_w_maturity = |call_maturity| {
+        let mut prepared_call = instance.calling_this_will_produce_a_block();
+        prepared_call.tx_parameters.maturity = call_maturity;
+        prepared_call.call()
+    };
+
+    call_w_maturity(1).await.expect("Should have passed since we're calling with a maturity that is less or equal to the current block height");
+
+    call_w_maturity(3).await.expect_err("Should have failed since we're calling with a maturity that is greater than the current block height");
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn contract_deployment_respects_maturity() -> anyhow::Result<()> {
+    abigen!(
+        MyContract,
+        "packages/fuels-abigen-macro/tests/test_projects/transaction_block_height/out/debug/transaction_block_height-abi.json"
+    );
+
+    let wallet = launch_provider_and_get_wallet().await;
+
+    let deploy_w_maturity = |maturity| {
+        let parameters = TxParameters {
+            maturity,
+            ..TxParameters::default()
+        };
+        Contract::deploy(
+            "tests/test_projects/transaction_block_height/out/debug/transaction_block_height.bin",
+            &wallet,
+            parameters,
+        )
+    };
+
+    let err = deploy_w_maturity(1).await.expect_err("Should not have been able to deploy the contract since the block height (0) is less than the requested maturity (1)");
+    assert!(matches!(err, TransactionError(msg) if msg.contains("TransactionMaturity")));
+
+    produce_blocks(&wallet, 1).await?;
+    deploy_w_maturity(1)
+        .await
+        .expect("Should be able to deploy now since maturity (1) is <= than the block height (1)");
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn can_increase_block_height() -> anyhow::Result<()> {
+    // ANCHOR: uses_produce_blocks_to_increase_block_height
+    let wallet = launch_provider_and_get_wallet().await;
+    let provider = &wallet.get_provider().unwrap();
+
+    assert_eq!(provider.latest_block_height().await?, 0);
+
+    produce_blocks(&wallet, 3).await?;
+
+    assert_eq!(provider.latest_block_height().await?, 3);
+    // ANCHOR_END: uses_produce_blocks_to_increase_block_height
+    Ok(())
+}
+
+#[tokio::test]
+async fn gql_height_info_is_correct() -> anyhow::Result<()> {
+    abigen!(
+        MyContract,
+        "packages/fuels-abigen-macro/tests/test_projects/transaction_block_height/out/debug/transaction_block_height-abi.json"
+    );
+
+    let wallet = launch_provider_and_get_wallet().await;
+    let provider = &wallet.get_provider().unwrap();
+
+    let id = Contract::deploy(
+        "tests/test_projects/transaction_block_height/out/debug/transaction_block_height.bin",
+        &wallet,
+        TxParameters::default(),
+    )
+    .await?;
+    let instance = MyContract::new(id.to_string(), wallet.clone());
+
+    let block_height_from_contract = || async {
+        Ok(instance.get_current_height().simulate().await?.value) as Result<u64, Error>
+    };
+
+    assert_eq!(provider.latest_block_height().await?, 1);
+    assert_eq!(block_height_from_contract().await?, 1);
+
+    produce_blocks(&wallet, 3).await?;
+
+    assert_eq!(provider.latest_block_height().await?, 4);
+    assert_eq!(block_height_from_contract().await?, 4);
     Ok(())
 }

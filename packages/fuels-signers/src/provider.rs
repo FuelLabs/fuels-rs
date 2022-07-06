@@ -209,6 +209,10 @@ impl Provider {
         self.client.transactions_by_owner(owner, request).await
     }
 
+    pub async fn latest_block_height(&self) -> io::Result<u64> {
+        Ok(self.client.chain_info().await?.latest_block.height.0)
+    }
+
     // @todo
     // - Get block(s)
 }

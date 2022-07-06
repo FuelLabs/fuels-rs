@@ -2,7 +2,6 @@ use core::fmt;
 use core::str::Utf8Error;
 pub type Result<T> = core::result::Result<T, Error>;
 use fuel_tx::Receipt;
-use std::net;
 use strum::ParseError;
 use thiserror::Error;
 
@@ -49,7 +48,7 @@ pub enum Error {
     #[error("Compilation error: {0}")]
     CompilationError(String),
     #[error("Network error: {0}")]
-    NetworkError(#[from] net::AddrParseError),
+    NetworkError(String),
     #[error("Transaction error: {0}")]
     TransactionError(String),
     #[error("Infrastructure error: {0}")]

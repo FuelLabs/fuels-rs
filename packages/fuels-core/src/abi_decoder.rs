@@ -639,7 +639,7 @@ mod tests {
 
         let result = ABIDecoder::decode_single(&enum_type, &data);
 
-        let error = result.err().expect("Should have resulted in an error");
+        let error = result.expect_err("Should have resulted in an error");
 
         let expected_msg = "Error while decoding an enum. The discriminant '1' doesn't point to any of the following variants: ";
         assert!(matches!(error, CodecError::InvalidData(str) if str.starts_with(expected_msg)));
