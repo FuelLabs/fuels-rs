@@ -76,7 +76,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded affix "><a href="index.html">The Fuel Rust SDK</a></li><li class="chapter-item expanded "><a href="getting-started/index.html"><strong aria-hidden="true">1.</strong> Getting Started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="getting-started/setup.html"><strong aria-hidden="true">1.1.</strong> Setting up</a></li><li class="chapter-item expanded "><a href="getting-started/basics.html"><strong aria-hidden="true">1.2.</strong> Basic usage</a></li><li class="chapter-item expanded "><a href="getting-started/wallets.html"><strong aria-hidden="true">1.3.</strong> Wallets</a></li><li class="chapter-item expanded "><a href="getting-started/type-safe-bindings.html"><strong aria-hidden="true">1.4.</strong> Generating type-safe Rust bindings</a></li></ol></li><li class="chapter-item expanded "><a href="testing/index.html"><strong aria-hidden="true">2.</strong> Testing</a></li><li class="chapter-item expanded "><a href="workspaces/index.html"><strong aria-hidden="true">3.</strong> fuels-rs Rust Workspaces</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="workspaces/fuels-abigen-macro.html"><strong aria-hidden="true">3.1.</strong> fuels-abigen-macro</a></li><li class="chapter-item expanded "><a href="workspaces/fuels-abi-cli.html"><strong aria-hidden="true">3.2.</strong> fuels-abi-cli</a></li></ol></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="index.html">The Fuel Rust SDK</a></li><li class="chapter-item expanded "><a href="getting-started/index.html"><strong aria-hidden="true">1.</strong> Getting Started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="getting-started/setup.html"><strong aria-hidden="true">1.1.</strong> Setting up</a></li><li class="chapter-item expanded "><a href="getting-started/basics.html"><strong aria-hidden="true">1.2.</strong> Basic usage</a></li><li class="chapter-item expanded "><a href="getting-started/wallets.html"><strong aria-hidden="true">1.3.</strong> Wallets</a></li><li class="chapter-item expanded "><a href="getting-started/type-safe-bindings.html"><strong aria-hidden="true">1.4.</strong> Generating type-safe Rust bindings</a></li></ol></li><li class="chapter-item expanded "><a href="testing/index.html"><strong aria-hidden="true">2.</strong> Testing</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="testing/scripts.html"><strong aria-hidden="true">2.1.</strong> Running scripts</a></li><li class="chapter-item expanded "><a href="testing/chains.html"><strong aria-hidden="true">2.2.</strong> Tweaking the blockchain</a></li></ol></li><li class="chapter-item expanded "><a href="workspaces/index.html"><strong aria-hidden="true">3.</strong> fuels-rs Rust Workspaces</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="workspaces/fuels-abigen-macro.html"><strong aria-hidden="true">3.1.</strong> fuels-abigen-macro</a></li><li class="chapter-item expanded "><a href="workspaces/fuels-abi-cli.html"><strong aria-hidden="true">3.2.</strong> fuels-abi-cli</a></li></ol></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -891,8 +891,13 @@ impl MyContract {
         assert_eq!(expected, (contract_id, asset_id));
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="fuels-rs-testing"><a class="header" href="#fuels-rs-testing"><code>fuels-rs</code> Testing</a></h1>
-<h2 id="running-a-sway-script"><a class="header" href="#running-a-sway-script">Running a Sway script</a></h2>
-<p><code>run_compiled_script</code> is a helper function for testing simple Sway scripts and reducing  boilerplate  code  related to setting up contracts and deployment. It takes the path to the generated <code>.bin</code> file as argument. </p>
+<p>Here you'll find an overview of the various test helpers located in <code>fuels-test-helpers</code>:</p>
+<ul>
+<li><a href="testing/./scripts.html">Running scripts</a></li>
+<li><a href="testing/./chains.html">Tweaking the blockchain</a></li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h2 id="running-a-sway-script"><a class="header" href="#running-a-sway-script">Running a Sway script</a></h2>
+<p><code>run_compiled_script</code> is a helper function for testing simple Sway scripts and reducing  boilerplate  code  related to setting up contracts and deployment. It takes the path to the generated <code>.bin</code> file as argument.</p>
 <ul>
 <li>You can use it this way:</li>
 </ul>
@@ -903,6 +908,18 @@ impl MyContract {
             hex::decode(&quot;ef86afa9696cf0dc6385e2c407a6e159a1103cefb7e2ae0636fb33d3cb2a9e4a&quot;);
 
         assert_eq!(correct_hex?, return_val[0].data().unwrap());
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h2 id="increase-the-block-height"><a class="header" href="#increase-the-block-height">Increase the block height</a></h2>
+<p><code>produce_blocks</code> can be used to help achieve a desired block height. Useful for when you want to do any testing regarding transaction maturity.</p>
+<p>Example of usage:</p>
+<pre><code class="language-rust ignore">    let wallet = launch_provider_and_get_wallet().await;
+    let provider = &amp;wallet.get_provider().unwrap();
+
+    assert_eq!(provider.latest_block_height().await?, 0);
+
+    produce_blocks(&amp;wallet, 3).await?;
+
+    assert_eq!(provider.latest_block_height().await?, 3);
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="fuels-rs-rust-workspaces"><a class="header" href="#fuels-rs-rust-workspaces"><code>fuels-rs</code> Rust Workspaces</a></h1>
 <p>This section gives you a little overview of the role and function of every workspace in the <code>fuels-rs</code> repository.</p>
