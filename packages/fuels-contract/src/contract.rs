@@ -17,8 +17,6 @@ use std::collections::HashSet;
 use std::fmt::Debug;
 use std::marker::PhantomData;
 use std::path::Path;
-use std::thread;
-use tokio::runtime::Runtime;
 
 #[derive(Debug, Clone, Default)]
 pub struct CompiledContract {
@@ -108,17 +106,9 @@ impl Contract {
     ) -> Result<ContractCallHandler<D>, Error> {
         let encoded_args = ABIEncoder::encode(args).unwrap();
         let encoded_selector = signature;
-
-        let consensus_parameters =
-            Runtime::new().unwrap().block_on(async {
-                provider
-                .client.clone()
-                .chain_info().
-                await.expect("Failed to fetch")
-                .consensus_parameters
-                .into()
-            });
-
+        let consensus_parameters = futures::executor::block_on(provider.client.chain_info())?
+            .consensus_parameters
+            .into();
         let tx_parameters = TxParameters::default();
         let call_parameters = CallParameters::default();
         let compute_custom_input_offset = Contract::should_compute_custom_input_offset(args);
@@ -151,7 +141,7 @@ impl Contract {
     fn should_compute_custom_input_offset(args: &[Token]) -> bool {
         args.len() > 1
             || args.iter().any(|t| {
-            matches!(
+                matches!(
                     t,
                     Token::String(_)
                         | Token::Struct(_)
@@ -161,7 +151,7 @@ impl Contract {
                         | Token::Array(_)
                         | Token::Byte(_)
                 )
-        })
+            })
     }
 
     /// Loads a compiled contract and deploys it to a running node
@@ -347,8 +337,8 @@ pub struct ContractCallHandler<D> {
 }
 
 impl<D> ContractCallHandler<D>
-    where
-        D: Tokenizable + Debug,
+where
+    D: Tokenizable + Debug,
 {
     /// Sets external contracts as dependencies to this contract's call.
     /// Effectively, this will be used to create Input::Contract/Output::Contract
@@ -464,16 +454,9 @@ pub struct MultiContractCallHandler {
 }
 
 impl MultiContractCallHandler {
-    pub fn new(wallet: LocalWallet) -> Self {
+    pub fn new(wallet: LocalWallet, consensus_parameters: ConsensusParameters) -> Self {
         Self {
-            consensus_parameters:
-            Runtime::new().unwrap().block_on(async {
-                wallet.get_provider().unwrap()
-                .client.clone()
-                .chain_info()
-                .await.expect("Failed to fetch")
-                .consensus_parameters
-                .into()}),
+            consensus_parameters,
             contract_calls: None,
             tx_parameters: TxParameters::default(),
             fuel_client: wallet.get_provider().unwrap().client.clone(),
@@ -509,7 +492,7 @@ impl MultiContractCallHandler {
             &self.tx_parameters,
             &self.wallet,
         )
-            .await
+        .await
     }
 
     /// Call contract methods on the node, in a state-modifying manner.
@@ -532,9 +515,15 @@ impl MultiContractCallHandler {
         let script = self.get_script().await;
 
         let receipts = if simulate {
-            script.simulate(&self.fuel_client, &self.consensus_parameters).await.unwrap()
+            script
+                .simulate(&self.fuel_client, &self.consensus_parameters)
+                .await
+                .unwrap()
         } else {
-            script.call(&self.fuel_client, &self.consensus_parameters).await.unwrap()
+            script
+                .call(&self.fuel_client, &self.consensus_parameters)
+                .await
+                .unwrap()
         };
         tracing::debug!(target: "receipts", "{:?}", receipts);
 
@@ -580,8 +569,8 @@ mod test {
             &wallet,
             TxParameters::default(),
         )
-            .await
-            .unwrap();
+        .await
+        .unwrap();
     }
 
     #[tokio::test]
@@ -596,7 +585,7 @@ mod test {
             TxParameters::default(),
             Salt::default(),
         )
-            .await
-            .unwrap();
+        .await
+        .unwrap();
     }
 }

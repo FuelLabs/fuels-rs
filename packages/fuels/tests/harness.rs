@@ -1614,7 +1614,12 @@ async fn test_transaction_script_workflow() -> Result<(), Error> {
     let script = call_handler.get_script().await;
     assert!(script.tx.is_script());
 
-    let receipts = script.call(client, &client.chain_info().await?.consensus_parameters.into()).await?;
+    let receipts = script
+        .call(
+            client,
+            &client.chain_info().await?.consensus_parameters.into(),
+        )
+        .await?;
 
     let response = call_handler.get_response(receipts)?;
     assert_eq!(response.value, 42);
@@ -1883,7 +1888,16 @@ async fn test_multi_call() -> Result<(), Error> {
     let call_handler_1 = contract_instance.initialize_counter(42);
     let call_handler_2 = contract_instance.get_array([42; 2].to_vec());
 
-    let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
+    let mut multi_call_handler = MultiContractCallHandler::new(
+        wallet.clone(),
+        wallet
+            .get_provider()?
+            .client
+            .chain_info()
+            .await?
+            .consensus_parameters
+            .into(),
+    );
 
     multi_call_handler
         .add_call(call_handler_1)
@@ -1919,14 +1933,29 @@ async fn test_multi_call_script_workflow() -> Result<(), Error> {
     let call_handler_1 = contract_instance.initialize_counter(42);
     let call_handler_2 = contract_instance.get_array([42; 2].to_vec());
 
-    let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
+    let mut multi_call_handler = MultiContractCallHandler::new(
+        wallet.clone(),
+        wallet
+            .get_provider()?
+            .client
+            .chain_info()
+            .await?
+            .consensus_parameters
+            .into(),
+    );
 
     multi_call_handler
         .add_call(call_handler_1)
         .add_call(call_handler_2);
 
     let script = multi_call_handler.get_script().await;
-    let receipts = script.call(client, &client.chain_info().await?.consensus_parameters.into()).await.unwrap();
+    let receipts = script
+        .call(
+            client,
+            &client.chain_info().await?.consensus_parameters.into(),
+        )
+        .await
+        .unwrap();
     let (counter, array) = multi_call_handler
         .get_response::<(u64, Vec<u64>)>(receipts)?
         .value;

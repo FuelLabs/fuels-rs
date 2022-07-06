@@ -405,7 +405,16 @@ async fn multi_call_example() -> Result<(), Error> {
     // ANCHOR_END: multi_call_prepare
 
     // ANCHOR: multi_call_build
-    let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
+    let mut multi_call_handler = MultiContractCallHandler::new(
+        wallet.clone(),
+        wallet
+            .get_provider()?
+            .client
+            .chain_info()
+            .await?
+            .consensus_parameters
+            .into(),
+    );
 
     multi_call_handler
         .add_call(call_handler_1)
