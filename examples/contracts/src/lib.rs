@@ -11,7 +11,10 @@ mod tests {
         use fuels::client::FuelClient;
         use fuels::node::service::{Config, FuelService};
 
+        // Run the fuel node.
         let server = FuelService::new_node(Config::local_node()).await?;
+
+        // Create a client that will talk to the node created above.
         let client = FuelClient::from(server.bound_address);
         assert!(client.health().await?);
         Ok(())
@@ -83,10 +86,12 @@ mod tests {
         use fuels::prelude::*;
         use rand::prelude::{Rng, SeedableRng, StdRng};
 
+        // ANCHOR: abigen_example
         abigen!(
             MyContract,
             "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
         );
+        // ANCHOR_END: abigen_example
 
         let wallet = launch_provider_and_get_wallet().await;
 

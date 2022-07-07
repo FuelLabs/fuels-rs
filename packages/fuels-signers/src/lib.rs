@@ -50,6 +50,7 @@ mod tests {
 
     use super::*;
 
+    // ANCHOR: sign_message
     #[tokio::test]
     async fn sign_and_verify() -> Result<(), Box<dyn Error>> {
         let mut rng = StdRng::seed_from_u64(2322u64);
@@ -57,6 +58,8 @@ mod tests {
         rng.fill_bytes(&mut secret_seed);
 
         let secret = unsafe { SecretKey::from_bytes_unchecked(secret_seed) };
+
+        // Create a wallet using the private key created above.
         let wallet = Wallet::new_from_private_key(secret, None);
 
         let message = "my message";
@@ -76,7 +79,9 @@ mod tests {
         signature.verify(&recovered_address, &message)?;
         Ok(())
     }
+    // ANCHOR_END: sign_message
 
+    // ANCHOR: sign_tx
     #[tokio::test]
     async fn sign_tx_and_verify() -> Result<(), Box<dyn Error>> {
         let secret = SecretKey::from_str(
@@ -84,6 +89,7 @@ mod tests {
         )?;
         let wallet = Wallet::new_from_private_key(secret, None);
 
+        // Set up a dummy transaction.
         let input_coin = Input::coin_signed(
             UtxoId::new(Bytes32::zeroed(), 0),
             Address::from_str(
@@ -115,6 +121,7 @@ mod tests {
             vec![],
         );
 
+        // Sign the transaction.
         let signature = wallet.sign_transaction(&mut tx).await?;
         let message = unsafe { Message::from_bytes_unchecked(*tx.id()) };
 
@@ -130,6 +137,7 @@ mod tests {
         signature.verify(&recovered_address, &message)?;
         Ok(())
     }
+    // ANCHOR_END: sign_tx
 
     #[tokio::test]
     async fn send_transaction() -> Result<(), fuels_types::errors::Error> {

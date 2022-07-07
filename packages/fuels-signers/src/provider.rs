@@ -48,7 +48,25 @@ impl Provider {
         Self { client }
     }
 
-    /// Shallow wrapper on client's submit.
+    /// Sends a transaction to the underlying Provider's client.
+    /// # Examples
+    ///
+    /// ## Sending a transaction
+    ///
+    /// ```
+    /// use fuels::tx::Transaction;
+    /// use fuels::prelude::*;
+    /// async fn foo() -> Result<(), Box<dyn std::error::Error>> {
+    ///   // Setup local test node
+    ///   let (provider, _) = setup_test_provider(vec![], None).await;  
+    ///   let tx = Transaction::default();
+    ///   
+    ///   let receipts = provider.send_transaction(&tx).await?;
+    ///   dbg!(receipts);
+    ///
+    ///   Ok(())
+    /// }
+    /// ```
     pub async fn send_transaction(&self, tx: &Transaction) -> io::Result<Vec<Receipt>> {
         let tx_id = self.client.submit(tx).await?;
 
@@ -62,7 +80,27 @@ impl Provider {
         Ok(FuelClient::from(srv.bound_address))
     }
 
-    /// Connects to an existing node at the given address
+    /// Connects to an existing node at the given address.
+    /// # Examples
+    ///
+    /// ## Connect to a node
+    /// ```
+    /// async fn connect_to_fuel_node() {
+    ///     use fuels::prelude::*;
+    ///     use std::net::SocketAddr;
+    ///
+    ///     // This is the address of a running node.
+    ///     let server_address: SocketAddr = "127.0.0.1:4000"
+    ///         .parse()
+    ///         .expect("Unable to parse socket address");
+    ///
+    ///     // Create the provider using the client.
+    ///     let provider = Provider::connect(server_address).await.unwrap();
+    ///
+    ///     // Create the wallet.
+    ///     let _wallet = LocalWallet::new_random(Some(provider));
+    /// }
+    /// ```
     pub async fn connect(socket: SocketAddr) -> Result<Provider, Error> {
         Ok(Self {
             client: FuelClient::from(socket),
