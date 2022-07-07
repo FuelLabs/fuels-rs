@@ -1454,36 +1454,6 @@ async fn workflow_enum_inside_struct() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn workflow_struct_inside_enum() -> Result<(), Error> {
-    abigen!(
-        MyContract,
-        "packages/fuels-abigen-macro/tests/test_projects/struct_inside_enum/out/debug/struct_inside_enum-abi.json"
-    );
-
-    let wallet = launch_provider_and_get_wallet().await;
-
-    let id = Contract::deploy(
-        "tests/test_projects/struct_inside_enum/out/debug/struct_inside_enum.bin",
-        &wallet,
-        TxParameters::default(),
-        StorageConfiguration::default(),
-    )
-    .await?;
-
-    let instance = MyContract::new(id.to_string(), wallet.clone());
-    let response = instance.return_struct_inside_enum(11).call().await?;
-    let expected = Shaker::Cosmopolitan(Recipe { ice: 22, sugar: 99 });
-    assert_eq!(response.value, expected);
-    let struct_inside_enum = Shaker::Cosmopolitan(Recipe { ice: 22, sugar: 66 });
-    let response = instance
-        .take_struct_inside_enum(struct_inside_enum)
-        .call()
-        .await?;
-    assert_eq!(response.value, 8888);
-    Ok(())
-}
-
-#[tokio::test]
 async fn test_logd_receipts() -> Result<(), Error> {
     abigen!(
         LoggingContract,
@@ -1851,55 +1821,6 @@ async fn nested_structs() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn nested_enums_are_correctly_encoded_decoded() -> Result<(), Error> {
-    abigen!(
-        MyContract,
-        "packages/fuels-abigen-macro/tests/test_projects/nested_enums/out/debug/nested_enums-abi.json"
-    );
-
-    let wallet = launch_provider_and_get_wallet().await;
-
-    let id = Contract::deploy(
-        "tests/test_projects/nested_enums/out/debug/nested_enums.bin",
-        &wallet,
-        TxParameters::default(),
-        StorageConfiguration::default(),
-    )
-    .await?;
-
-    let instance = MyContract::new(id.to_string(), wallet.clone());
-
-    let expected_enum = EnumLevel3::El2(EnumLevel2::El1(EnumLevel1::Num(42)));
-
-    let response = instance.get_nested_enum().call().await?;
-
-    assert_eq!(response.value, expected_enum);
-
-    let response = instance
-        .check_nested_enum_integrity(expected_enum)
-        .call()
-        .await?;
-
-    assert!(
-        response.value,
-        "The FuelVM deems that we've not encoded the nested enum correctly. Investigate!"
-    );
-
-    let expected_some_address = Option::Some(Identity::Address(Address::zeroed()));
-
-    let response = instance.get_some_address().call().await?;
-
-    assert_eq!(response.value, expected_some_address);
-
-    let expected_none = Option::None();
-
-    let response = instance.get_none().call().await?;
-
-    assert_eq!(response.value, expected_none);
-    Ok(())
-}
-
-#[tokio::test]
 async fn test_multi_call() -> Result<(), Error> {
     abigen!(
         MyContract,
@@ -2071,6 +1992,64 @@ async fn can_use_try_into_to_construct_enum_from_bytes() -> Result<(), Error> {
     assert_eq!(actual, expected);
 
     // ANCHOR_END: manual_decode
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn type_inside_enum() -> Result<(), Error> {
+    abigen!(
+        MyContract,
+        "packages/fuels-abigen-macro/tests/test_projects/type_inside_enum/out/debug\
+        /type_inside_enum-abi.json"
+    );
+
+    let wallet = launch_provider_and_get_wallet().await;
+
+    let id = Contract::deploy(
+        "tests/test_projects/type_inside_enum/out/debug/type_inside_enum.bin",
+        &wallet,
+        TxParameters::default(),
+        StorageConfiguration::default(),
+    )
+    .await?;
+
+    let instance = MyContract::new(id.to_string(), wallet.clone());
+
+    // String inside enum
+    let enum_string = SomeEnum::SomeStr("asdf".to_owned());
+    let response = instance.str_inside_enum(enum_string.clone()).call().await?;
+    assert_eq!(response.value, enum_string);
+
+    // Array inside enum
+    let enum_array = SomeEnum::SomeArr(vec![1, 2, 3, 4, 5, 6, 7]);
+    let response = instance.arr_inside_enum(enum_array.clone()).call().await?;
+    assert_eq!(response.value, enum_array);
+
+    // Struct inside enum
+    let response = instance.return_struct_inside_enum(11).call().await?;
+    let expected = Shaker::Cosmopolitan(Recipe { ice: 22, sugar: 99 });
+    assert_eq!(response.value, expected);
+    let struct_inside_enum = Shaker::Cosmopolitan(Recipe { ice: 22, sugar: 66 });
+    let response = instance
+        .take_struct_inside_enum(struct_inside_enum)
+        .call()
+        .await?;
+    assert_eq!(response.value, 8888);
+
+    // Enum inside enum
+    let expected_enum = EnumLevel3::El2(EnumLevel2::El1(EnumLevel1::Num(42)));
+    let response = instance.get_nested_enum().call().await?;
+    assert_eq!(response.value, expected_enum);
+
+    let response = instance
+        .check_nested_enum_integrity(expected_enum)
+        .call()
+        .await?;
+    assert!(
+        response.value,
+        "The FuelVM deems that we've not encoded the nested enum correctly. Investigate!"
+    );
 
     Ok(())
 }
