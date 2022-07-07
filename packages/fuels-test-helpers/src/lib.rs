@@ -23,9 +23,6 @@ use fuel_core_interfaces::model::{Coin, CoinStatus};
 use portpicker::{is_free, pick_unused_port};
 
 #[cfg(not(feature = "fuel-core-lib"))]
-use serde_json::Value;
-
-#[cfg(not(feature = "fuel-core-lib"))]
 use crate::node::spawn_fuel_service;
 
 use fuel_gql_client::fuel_tx::ConsensusParameters;
@@ -305,7 +302,7 @@ mod tests {
             "../fuels/tests/test_projects/contract_output_test/out/debug/contract_output_test.bin",
             &wallet,
             TxParameters::default(),
-            StorageConfiguration::default()
+            StorageConfiguration::default(),
         )
         .await;
 
