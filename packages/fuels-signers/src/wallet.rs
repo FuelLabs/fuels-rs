@@ -395,6 +395,7 @@ impl Signer for Wallet {
         let witness = vec![Witness::from(sig.as_ref())];
 
         let mut witnesses: Vec<Witness> = tx.witnesses().to_vec();
+
         match witnesses.len() {
             0 => tx.set_witnesses(witness),
             _ => {

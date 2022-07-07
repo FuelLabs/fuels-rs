@@ -41,6 +41,8 @@
   - [Debugging contract call errors](./debugging/contract-calls.md)
   - [Debugging network errors](./debugging/network.md)
 - [Testing](./testing/index.md)
+  - [Running scripts](./testing/scripts.md)
+  - [Tweaking the blockchain](./testing/chains.md)
 - [Cookbook](./cookbook/cookbook.md)
 - [Command Line Interfaces](./cli/index.md)
   - [`fuels-abi-cli`](./cli/fuels-abi-cli.md)

@@ -1,10 +1,21 @@
-use crate::{abi_decoder::ABIDecoder, abi_encoder::ABIEncoder, script::Script};
+use std::collections::HashSet;
+use std::fmt::Debug;
+use std::fs;
+use std::marker::PhantomData;
+use std::path::Path;
+use std::str::FromStr;
+
 use anyhow::Result;
 use fuel_gql_client::{
     client::FuelClient,
     fuel_tx::{Contract as FuelContract, Output, Receipt, StorageSlot, Transaction},
     fuel_types::{Address, AssetId, ContractId, Salt},
 };
+
+use fuels_core::abi_decoder::ABIDecoder;
+use fuels_core::abi_encoder::ABIEncoder;
+use fuels_core::parameters::StorageConfiguration;
+use fuels_core::tx::Bytes32;
 use fuels_core::{
     constants::{BASE_ASSET_ID, DEFAULT_SPENDABLE_COIN_AMOUNT},
     parameters::{CallParameters, TxParameters},
@@ -12,15 +23,14 @@ use fuels_core::{
 };
 use fuels_signers::{provider::Provider, LocalWallet, Signer};
 use fuels_types::errors::Error;
-use std::collections::HashSet;
-use std::fmt::Debug;
-use std::marker::PhantomData;
-use std::path::Path;
+
+use crate::script::Script;
 
 #[derive(Debug, Clone, Default)]
 pub struct CompiledContract {
     pub raw: Vec<u8>,
     pub salt: Salt,
+    pub storage_slots: Vec<StorageSlot>,
 }
 
 /// Contract is a struct to interface with a contract. That includes things such as
@@ -71,14 +81,16 @@ impl Contract {
         }
     }
 
-    pub fn compute_contract_id(compiled_contract: &CompiledContract) -> ContractId {
+    pub fn compute_contract_id_and_state_root(
+        compiled_contract: &CompiledContract,
+    ) -> (ContractId, Bytes32) {
         let fuel_contract = FuelContract::from(compiled_contract.raw.clone());
         let root = fuel_contract.root();
-        fuel_contract.id(
-            &compiled_contract.salt,
-            &root,
-            &FuelContract::default_state_root(),
-        )
+        let state_root = FuelContract::initial_state_root(compiled_contract.storage_slots.iter());
+
+        let contract_id = fuel_contract.id(&compiled_contract.salt, &root, &state_root);
+
+        (contract_id, state_root)
     }
 
     /// Creates an ABI call based on a function selector and
@@ -156,20 +168,46 @@ impl Contract {
         binary_filepath: &str,
         wallet: &LocalWallet,
         params: TxParameters,
+        storage_configuration: StorageConfiguration,
     ) -> Result<ContractId, Error> {
-        let compiled_contract = Contract::load_sway_contract(binary_filepath)?;
+        let mut compiled_contract =
+            Contract::load_sway_contract(binary_filepath, &storage_configuration.storage_path)?;
+
+        Self::merge_storage_vectors(&storage_configuration, &mut compiled_contract);
+
         Self::deploy_loaded(&(compiled_contract), wallet, params).await
     }
 
     /// Loads a compiled contract with salt and deploys it to a running node
-    pub async fn deploy_with_salt(
+    pub async fn deploy_with_parameters(
         binary_filepath: &str,
         wallet: &LocalWallet,
         params: TxParameters,
+        storage_configuration: StorageConfiguration,
         salt: Salt,
     ) -> Result<ContractId, Error> {
-        let compiled_contract = Contract::load_sway_contract_with_salt(binary_filepath, salt)?;
+        let mut compiled_contract = Contract::load_sway_contract_with_parameters(
+            binary_filepath,
+            &storage_configuration.storage_path,
+            salt,
+        )?;
+
+        Self::merge_storage_vectors(&storage_configuration, &mut compiled_contract);
+
         Self::deploy_loaded(&(compiled_contract), wallet, params).await
+    }
+
+    fn merge_storage_vectors(
+        storage_configuration: &StorageConfiguration,
+        compiled_contract: &mut CompiledContract,
+    ) {
+        match &storage_configuration.manual_storage_vec {
+            Some(storage) if !storage.is_empty() => {
+                compiled_contract.storage_slots =
+                    Self::merge_storage_slots(storage, &compiled_contract.storage_slots);
+            }
+            _ => {}
+        }
     }
 
     /// Deploys a compiled contract to a running node
@@ -190,12 +228,20 @@ impl Contract {
         }
     }
 
-    pub fn load_sway_contract(binary_filepath: &str) -> Result<CompiledContract, Error> {
-        Self::load_sway_contract_with_salt(binary_filepath, Salt::from([0u8; 32]))
+    pub fn load_sway_contract(
+        binary_filepath: &str,
+        storage_path: &Option<String>,
+    ) -> Result<CompiledContract, Error> {
+        Self::load_sway_contract_with_parameters(
+            binary_filepath,
+            storage_path,
+            Salt::from([0u8; 32]),
+        )
     }
 
-    pub fn load_sway_contract_with_salt(
+    pub fn load_sway_contract_with_parameters(
         binary_filepath: &str,
+        storage_path: &Option<String>,
         salt: Salt,
     ) -> Result<CompiledContract, Error> {
         let extension = Path::new(binary_filepath).extension().unwrap();
@@ -203,7 +249,35 @@ impl Contract {
             return Err(Error::InvalidData(extension.to_str().unwrap().to_owned()));
         }
         let bin = std::fs::read(binary_filepath)?;
-        Ok(CompiledContract { raw: bin, salt })
+
+        let storage = match storage_path {
+            Some(path) if Path::new(&path).exists() => Self::get_storage_vec(path),
+            _ => {
+                vec![]
+            }
+        };
+
+        Ok(CompiledContract {
+            raw: bin,
+            salt,
+            storage_slots: storage,
+        })
+    }
+
+    fn merge_storage_slots(
+        manual_storage: &[StorageSlot],
+        contract_storage: &[StorageSlot],
+    ) -> Vec<StorageSlot> {
+        let mut return_storage: Vec<StorageSlot> = manual_storage.to_owned();
+        let keys: HashSet<Bytes32> = manual_storage.iter().map(|slot| *slot.key()).collect();
+
+        contract_storage.iter().for_each(|slot| {
+            if !keys.contains(slot.key()) {
+                return_storage.push(slot.clone())
+            }
+        });
+
+        return_storage
     }
 
     /// Crafts a transaction used to deploy a contract
@@ -212,17 +286,16 @@ impl Contract {
         wallet: &LocalWallet,
         params: TxParameters,
     ) -> Result<(Transaction, ContractId), Error> {
-        let maturity = 0;
         let bytecode_witness_index = 0;
-        let storage_slots: Vec<StorageSlot> = vec![];
+        let storage_slots: Vec<StorageSlot> = compiled_contract.storage_slots.clone();
         let witnesses = vec![compiled_contract.raw.clone().into()];
 
         let static_contracts = vec![];
 
-        let contract_id = Self::compute_contract_id(compiled_contract);
+        let (contract_id, state_root) = Self::compute_contract_id_and_state_root(compiled_contract);
 
         let outputs: Vec<Output> = vec![
-            Output::contract_created(contract_id, FuelContract::default_state_root()),
+            Output::contract_created(contract_id, state_root),
             // Note that the change will be computed by the node.
             // Here we only have to tell the node who will own the change and its asset ID.
             // For now we use the BASE_ASSET_ID constant
@@ -246,7 +319,7 @@ impl Contract {
             params.gas_price,
             params.gas_limit,
             params.byte_price,
-            maturity,
+            params.maturity,
             bytecode_witness_index,
             compiled_contract.salt,
             static_contracts,
@@ -257,6 +330,24 @@ impl Contract {
         );
 
         Ok((tx, contract_id))
+    }
+
+    fn get_storage_vec(storage_path: &str) -> Vec<StorageSlot> {
+        let mut return_storage: Vec<StorageSlot> = vec![];
+
+        let storage_json_string = fs::read_to_string(storage_path).expect("Unable to read file");
+
+        let storage: serde_json::Value = serde_json::from_str(storage_json_string.as_str())
+            .expect("JSON was not well-formatted");
+
+        for slot in storage.as_array().unwrap() {
+            return_storage.push(StorageSlot::new(
+                Bytes32::from_str(slot["key"].as_str().unwrap()).unwrap(),
+                Bytes32::from_str(slot["value"].as_str().unwrap()).unwrap(),
+            ));
+        }
+
+        return_storage
     }
 }
 
@@ -529,8 +620,9 @@ impl MultiContractCallHandler {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use fuels_test_helpers::launch_provider_and_get_wallet;
+
+    use super::*;
 
     #[tokio::test]
     #[should_panic(expected = "called `Result::unwrap()` on an `Err` value: InvalidData(\"json\")")]
@@ -542,6 +634,7 @@ mod test {
             "tests/test_projects/contract_output_test/out/debug/contract_output_test-abi.json",
             &wallet,
             TxParameters::default(),
+            StorageConfiguration::default(),
         )
         .await
         .unwrap();
@@ -553,10 +646,11 @@ mod test {
         let wallet = launch_provider_and_get_wallet().await;
 
         // Should panic as we are passing in a JSON instead of BIN
-        Contract::deploy_with_salt(
+        Contract::deploy_with_parameters(
             "tests/test_projects/contract_output_test/out/debug/contract_output_test-abi.json",
             &wallet,
             TxParameters::default(),
+            StorageConfiguration::default(),
             Salt::default(),
         )
         .await

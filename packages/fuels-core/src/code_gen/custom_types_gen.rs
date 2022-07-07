@@ -7,6 +7,7 @@ use fuels_types::{CustomType, Property};
 use inflector::Inflector;
 use proc_macro2::TokenStream;
 use quote::quote;
+use std::str::FromStr;
 
 /// Functions used by the Abigen to expand custom types defined in an ABI spec.
 
@@ -258,22 +259,41 @@ pub fn expand_custom_enum(enum_name: &str, prop: &Property) -> Result<TokenStrea
                 param_types.push(quote! { types.push(ParamType::Unit) });
                 args.push(quote! {(#dis, token, _) => Ok(#enum_ident::#variant_name()),});
             }
-            // Elementary type
+            // Elementary types, String, Array
             _ => {
                 let ty = expand_type(&param_type)?;
-                let param_type_string = ident(&param_type.to_string());
+
+                let param_type_string_ident_tok = TokenStream::from_str(&param_type.to_string())?;
+                param_types.push(quote! { types.push(ParamType::#param_type_string_ident_tok) });
+
+                let param_type_string = match param_type {
+                    ParamType::Array(..) => "Array".to_string(),
+                    ParamType::String(..) => "String".to_string(),
+                    _ => param_type.to_string(),
+                };
+                let param_type_string_ident = ident(&param_type_string);
 
                 // Enum variant declaration
                 enum_variants.push(quote! { #variant_name(#ty)});
 
-                // Token creation
-                enum_selector_builder.push(quote! {
-                    #enum_ident::#variant_name(value) => (#dis, Token::#param_type_string(value))
-                });
-                param_types.push(quote! { types.push(ParamType::#param_type_string) });
                 args.push(
                     quote! {(#dis, token, _) => Ok(#enum_ident::#variant_name(<#ty>::from_token(token)?)),},
                 );
+
+                // Token creation
+                match param_type {
+                    ParamType::Array(_t, _s) => {
+                        enum_selector_builder.push(quote! {
+                            #enum_ident::#variant_name(value) => (#dis, Token::#param_type_string_ident(vec![value.into_token()]))
+                        });
+                    }
+                    // Primitive type
+                    _ => {
+                        enum_selector_builder.push(quote! {
+                            #enum_ident::#variant_name(value) => (#dis, Token::#param_type_string_ident(value))
+                        });
+                    }
+                }
             }
         }
     }
@@ -567,6 +587,29 @@ mod tests {
         let expected = TokenStream::from_str(
             r#"
             # [derive (Clone , Debug , Eq , PartialEq)] pub enum Amsterdam { Infrastructure (Building) , Service (u32) } impl Parameterize for Amsterdam { fn param_type () -> ParamType { let mut types = Vec :: new () ; types . push (Building :: param_type ()) ; types . push (ParamType :: U32) ; let variants = EnumVariants :: new (types) . expect (concat ! ("Enum " , "Amsterdam" , " has no variants! 'abigen!' should not have succeeded!")) ; ParamType :: Enum (variants) } } impl Tokenizable for Amsterdam { fn into_token (self) -> Token { let (dis , tok) = match self { Amsterdam :: Infrastructure (inner_struct) => (0u8 , inner_struct . into_token ()) , Amsterdam :: Service (value) => (1u8 , Token :: U32 (value)) , } ; let variants = match Self :: param_type () { ParamType :: Enum (variants) => variants , other => panic ! ("Calling ::param_type() on a custom enum must return a ParamType::Enum but instead it returned: {}" , other) } ; let selector = (dis , tok , variants) ; Token :: Enum (Box :: new (selector)) } fn from_token (token : Token) -> Result < Self , SDKError > { if let Token :: Enum (enum_selector) = token { match * enum_selector { (0u8 , token , _) => { let variant_content = < Building > :: from_token (token) ? ; Ok (Amsterdam :: Infrastructure (variant_content)) } (1u8 , token , _) => Ok (Amsterdam :: Service (< u32 > :: from_token (token) ?)) , (_ , _ , _) => Err (SDKError :: InstantiationError (format ! ("Could not construct '{}'. Failed to match with discriminant selector {:?}" , "Amsterdam" , enum_selector))) } } else { Err (SDKError :: InstantiationError (format ! ("Could not construct '{}'. Expected a token of type Token::Enum, got {:?}" , "Amsterdam" , token))) } } } impl TryFrom < & [u8] > for Amsterdam { type Error = SDKError ; fn try_from (bytes : & [u8]) -> Result < Self , Self :: Error > { try_from_bytes (bytes) } } impl TryFrom < & Vec < u8 >> for Amsterdam { type Error = SDKError ; fn try_from (bytes : & Vec < u8 >) -> Result < Self , Self :: Error > { try_from_bytes (bytes) } } impl TryFrom < Vec < u8 >> for Amsterdam { type Error = SDKError ; fn try_from (bytes : Vec < u8 >) -> Result < Self , Self :: Error > { try_from_bytes (& bytes) } }
+            "#,
+        )?.to_string();
+
+        assert_eq!(actual, expected);
+        Ok(())
+    }
+
+    #[test]
+    fn test_expand_array_inside_enum() -> Result<(), Error> {
+        let enum_components = vec![Property {
+            name: "SomeArr".to_string(),
+            type_field: "[u64; 7]".to_string(),
+            components: None,
+        }];
+        let p = Property {
+            name: String::from("unused"),
+            type_field: String::from("unused"),
+            components: Some(enum_components),
+        };
+        let actual = expand_custom_enum("SomeEnum", &p)?.to_string();
+        let expected = TokenStream::from_str(
+            r#"
+            # [derive (Clone , Debug , Eq , PartialEq)] pub enum SomeEnum { SomeArr (:: std :: vec :: Vec < u64 >) } impl Parameterize for SomeEnum { fn param_type () -> ParamType { let mut types = Vec :: new () ; types . push (ParamType :: Array (Box :: new (ParamType :: U64) , 7)) ; let variants = EnumVariants :: new (types) . expect (concat ! ("Enum " , "SomeEnum" , " has no variants! 'abigen!' should not have succeeded!")) ; ParamType :: Enum (variants) } } impl Tokenizable for SomeEnum { fn into_token (self) -> Token { let (dis , tok) = match self { SomeEnum :: SomeArr (value) => (0u8 , Token :: Array (vec ! [value . into_token ()])) , } ; let variants = match Self :: param_type () { ParamType :: Enum (variants) => variants , other => panic ! ("Calling ::param_type() on a custom enum must return a ParamType::Enum but instead it returned: {}" , other) } ; let selector = (dis , tok , variants) ; Token :: Enum (Box :: new (selector)) } fn from_token (token : Token) -> Result < Self , SDKError > { if let Token :: Enum (enum_selector) = token { match * enum_selector { (0u8 , token , _) => Ok (SomeEnum :: SomeArr (< :: std :: vec :: Vec < u64 > > :: from_token (token) ?)) , (_ , _ , _) => Err (SDKError :: InstantiationError (format ! ("Could not construct '{}'. Failed to match with discriminant selector {:?}" , "SomeEnum" , enum_selector))) } } else { Err (SDKError :: InstantiationError (format ! ("Could not construct '{}'. Expected a token of type Token::Enum, got {:?}" , "SomeEnum" , token))) } } } impl TryFrom < & [u8] > for SomeEnum { type Error = SDKError ; fn try_from (bytes : & [u8]) -> Result < Self , Self :: Error > { try_from_bytes (bytes) } } impl TryFrom < & Vec < u8 >> for SomeEnum { type Error = SDKError ; fn try_from (bytes : & Vec < u8 >) -> Result < Self , Self :: Error > { try_from_bytes (bytes) } } impl TryFrom < Vec < u8 >> for SomeEnum { type Error = SDKError ; fn try_from (bytes : Vec < u8 >) -> Result < Self , Self :: Error > { try_from_bytes (& bytes) } }
             "#,
         )?.to_string();
 
