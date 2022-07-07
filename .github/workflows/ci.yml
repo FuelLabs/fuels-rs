@@ -20,7 +20,16 @@ env:
   FORC_VERSION: 0.17.0
 
 jobs:
+  cancel-previous-runs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.9.1
+        with:
+          access_token: ${{ github.token }}
+
   setup-test-projects:
+    needs: cancel-previous-runs
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -64,6 +73,7 @@ jobs:
             !packages/fuels/tests/test_projects/**/.gitignore
 
   get-workspace-members:
+    needs: cancel-previous-runs
     runs-on: ubuntu-latest
     outputs:
       members: ${{ steps.set-members.outputs.members }}
@@ -79,6 +89,7 @@ jobs:
           echo "::set-output name=members::$members"
 
   verify-rust-version:
+    needs: cancel-previous-runs
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
