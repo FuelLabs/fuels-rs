@@ -23,6 +23,9 @@ use fuel_core_interfaces::model::{Coin, CoinStatus};
 use portpicker::{is_free, pick_unused_port};
 
 #[cfg(not(feature = "fuel-core-lib"))]
+use serde_json::Value;
+
+#[cfg(not(feature = "fuel-core-lib"))]
 use crate::node::spawn_fuel_service;
 
 use fuel_gql_client::fuel_tx::ConsensusParameters;
@@ -39,14 +42,17 @@ use rand::Fill;
 #[cfg(not(feature = "fuel-core-lib"))]
 mod node;
 
+mod chains;
 mod script;
 #[cfg(feature = "fuels-signers")]
 mod signers;
+mod utils;
 mod wallets_config;
 
 #[cfg(not(feature = "fuel-core-lib"))]
 pub use node::*;
 
+pub use chains::*;
 #[cfg(feature = "fuels-signers")]
 pub use signers::*;
 pub use wallets_config::*;
@@ -194,7 +200,7 @@ fn get_socket_address() -> SocketAddr {
 mod tests {
     use super::*;
     use fuels_contract::contract::Contract;
-    use fuels_core::parameters::TxParameters;
+    use fuels_core::parameters::{StorageConfiguration, TxParameters};
     use fuels_signers::provider::Provider;
     use fuels_signers::{LocalWallet, Signer};
     use std::net::Ipv4Addr;
@@ -299,6 +305,7 @@ mod tests {
             "../fuels/tests/test_projects/contract_output_test/out/debug/contract_output_test.bin",
             &wallet,
             TxParameters::default(),
+            StorageConfiguration::default()
         )
         .await;
 

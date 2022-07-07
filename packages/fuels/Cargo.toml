@@ -17,8 +17,10 @@ fuels-contract = { version = "0.16.1", path = "../fuels-contract" }
 fuels-core = { version = "0.16.1", path = "../fuels-core" }
 fuels-signers = { version = "0.16.1", path = "../fuels-signers" }
 fuels-test-helpers = { version = "0.16.1", path = "../fuels-test-helpers" }
+fuels-types = { version = "0.16.1", path = "../fuels-types" }
 
 [dev-dependencies]
+anyhow = "1.0.58"
 ctor = " 0.1"
 fuel-core = { version = "0.9", default-features = false }
 fuel-gql-client = { version = "0.9", default-features = false }

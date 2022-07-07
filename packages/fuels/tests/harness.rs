@@ -1,11 +1,14 @@
 use fuel_gql_client::fuel_tx::{AssetId, ContractId, Receipt};
 use fuels::contract::contract::MultiContractCallHandler;
+use fuels::prelude::Error::TransactionError;
 use fuels::prelude::{
     abigen, launch_provider_and_get_wallet, setup_multiple_assets_coins, setup_single_asset_coins,
     setup_test_provider, CallParameters, Contract, Error, LocalWallet, Provider, ProviderError,
-    Signer, TxParameters, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
+    Salt, Signer, TxParameters, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
 };
-use fuels_core::tx::Address;
+use fuels::test_helpers::produce_blocks;
+use fuels_core::parameters::StorageConfiguration;
+use fuels_core::tx::{Address, Bytes32, StorageSlot};
 use fuels_core::Tokenizable;
 use fuels_core::{constants::BASE_ASSET_ID, Token};
 use sha2::{Digest, Sha256};
@@ -646,6 +649,7 @@ async fn type_safe_output_values() -> Result<(), Error> {
         "tests/test_projects/contract_output_test/out/debug/contract_output_test.bin",
         &wallet,
         TxParameters::default(),
+        StorageConfiguration::default(),
     )
     .await?;
     println!("Contract deployed @ {:x}", contract_id);
@@ -688,6 +692,7 @@ async fn call_with_structs() -> Result<(), Error> {
         "tests/test_projects/complex_types_contract/out/debug/contract_test.bin",
         &wallet,
         TxParameters::default(),
+        StorageConfiguration::default(),
     )
     .await?;
     println!("Contract deployed @ {:x}", contract_id);
@@ -726,6 +731,7 @@ async fn call_with_empty_return() -> Result<(), Error> {
         "tests/test_projects/call_empty_return/out/debug/contract_test.bin",
         &wallet,
         TxParameters::default(),
+        StorageConfiguration::default(),
     )
     .await?;
     println!("Contract deployed @ {:x}", contract_id);
@@ -752,6 +758,7 @@ async fn abigen_different_structs_same_arg_name() -> Result<(), Error> {
         "tests/test_projects/two_structs/out/debug/two_structs.bin",
         &wallet,
         TxParameters::default(),
+        StorageConfiguration::default(),
     )
     .await?;
     println!("Contract deployed @ {:x}", contract_id);
@@ -780,7 +787,13 @@ async fn test_reverting_transaction() -> Result<(), Error> {
 
     let wallet = launch_provider_and_get_wallet().await;
 
-    let contract_id = Contract::deploy("tests/test_projects/revert_transaction_error/out/debug/capture_revert_transaction_error.bin", &wallet, TxParameters::default())
+    let contract_id = Contract::deploy(
+        "tests/test_projects/revert_transaction_error/out/debug/capture_revert_transaction_error.bin",
+        &wallet,
+        TxParameters::default(),
+        StorageConfiguration::default()
+
+    )
         .await?;
     let contract_instance = RevertingContract::new(contract_id.to_string(), wallet);
     println!("Contract deployed @ {:x}", contract_id);
@@ -802,6 +815,7 @@ async fn multiple_read_calls() -> Result<(), Error> {
         "tests/test_projects/multiple_read_calls/out/debug/demo.bin",
         &wallet,
         TxParameters::default(),
+        StorageConfiguration::default(),
     )
     .await?;
     println!("Contract deployed @ {:x}", contract_id);
@@ -837,6 +851,7 @@ async fn test_methods_typeless_argument() -> Result<(), Error> {
         "tests/test_projects/empty_arguments/out/debug/method_four_arguments.bin",
         &wallet,
         TxParameters::default(),
+        StorageConfiguration::default(),
     )
     .await?;
     println!("Contract deployed @ {:x}", contract_id);
@@ -864,6 +879,7 @@ async fn test_large_return_data() -> Result<(), Error> {
         "tests/test_projects/large_return_data/out/debug/contract_test.bin",
         &wallet,
         TxParameters::default(),
+        StorageConfiguration::default(),
     )
     .await?;
     println!("Contract deployed @ {:x}", contract_id);
@@ -935,6 +951,7 @@ async fn test_provider_launch_and_connect() -> Result<(), Error> {
         "tests/test_projects/contract_test/out/debug/contract_test.bin",
         &wallet,
         TxParameters::default(),
+        StorageConfiguration::default(),
     )
     .await?;
     println!("Contract deployed @ {:x}", contract_id);
@@ -978,6 +995,7 @@ async fn test_contract_calling_contract() -> Result<(), Error> {
         "tests/test_projects/foo_contract/out/debug/foo_contract.bin",
         &wallet,
         TxParameters::default(),
+        StorageConfiguration::default(),
     )
     .await?;
     println!("Foo contract deployed @ {:x}", foo_contract_id);
@@ -993,6 +1011,7 @@ async fn test_contract_calling_contract() -> Result<(), Error> {
         "tests/test_projects/foo_caller_contract/out/debug/foo_caller_contract.bin",
         &wallet,
         TxParameters::default(),
+        StorageConfiguration::default(),
     )
     .await?;
     println!(
@@ -1032,6 +1051,7 @@ async fn test_gas_errors() -> Result<(), Error> {
         "tests/test_projects/contract_test/out/debug/contract_test.bin",
         &wallet,
         TxParameters::default(),
+        StorageConfiguration::default(),
     )
     .await?;
 
@@ -1081,6 +1101,7 @@ async fn test_call_param_gas_errors() -> Result<(), Error> {
         "tests/test_projects/contract_test/out/debug/contract_test.bin",
         &wallet,
         TxParameters::default(),
+        StorageConfiguration::default(),
     )
     .await?;
 
@@ -1125,6 +1146,7 @@ async fn test_amount_and_asset_forwarding() -> Result<(), Error> {
         "tests/test_projects/token_ops/out/debug/token_ops.bin",
         &wallet,
         TxParameters::default(),
+        StorageConfiguration::default(),
     )
     .await?;
 
@@ -1211,6 +1233,7 @@ async fn test_multiple_args() -> Result<(), Error> {
         "tests/test_projects/contract_test/out/debug/contract_test.bin",
         &wallet,
         TxParameters::default(),
+        StorageConfiguration::default(),
     )
     .await?;
 
@@ -1243,6 +1266,7 @@ async fn test_tuples() -> Result<(), Error> {
         "tests/test_projects/tuples/out/debug/tuples.bin",
         &wallet,
         TxParameters::default(),
+        StorageConfiguration::default(),
     )
     .await?;
 
@@ -1298,6 +1322,7 @@ async fn test_array() -> Result<(), Error> {
         "tests/test_projects/contract_test/out/debug/contract_test.bin",
         &wallet,
         TxParameters::default(),
+        StorageConfiguration::default(),
     )
     .await?;
 
@@ -1330,6 +1355,7 @@ async fn test_arrays_with_custom_types() -> Result<(), Error> {
         "tests/test_projects/contract_test/out/debug/contract_test.bin",
         &wallet,
         TxParameters::default(),
+        StorageConfiguration::default(),
     )
     .await?;
 
@@ -1375,6 +1401,7 @@ async fn test_auth_msg_sender_from_sdk() -> Result<(), Error> {
         "tests/test_projects/auth_testing_contract/out/debug/auth_testing_contract.bin",
         &wallet,
         TxParameters::default(),
+        StorageConfiguration::default(),
     )
     .await?;
 
@@ -1404,6 +1431,7 @@ async fn workflow_enum_inside_struct() -> Result<(), Error> {
         "tests/test_projects/enum_inside_struct/out/debug/enum_inside_struct.bin",
         &wallet,
         TxParameters::default(),
+        StorageConfiguration::default(),
     )
     .await?;
     let instance = MyContract::new(id.to_string(), wallet.clone());
@@ -1426,35 +1454,6 @@ async fn workflow_enum_inside_struct() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn workflow_struct_inside_enum() -> Result<(), Error> {
-    abigen!(
-        MyContract,
-        "packages/fuels/tests/test_projects/struct_inside_enum/out/debug/struct_inside_enum-abi.json"
-    );
-
-    let wallet = launch_provider_and_get_wallet().await;
-
-    let id = Contract::deploy(
-        "tests/test_projects/struct_inside_enum/out/debug/struct_inside_enum.bin",
-        &wallet,
-        TxParameters::default(),
-    )
-    .await?;
-
-    let instance = MyContract::new(id.to_string(), wallet.clone());
-    let response = instance.return_struct_inside_enum(11).call().await?;
-    let expected = Shaker::Cosmopolitan(Recipe { ice: 22, sugar: 99 });
-    assert_eq!(response.value, expected);
-    let struct_inside_enum = Shaker::Cosmopolitan(Recipe { ice: 22, sugar: 66 });
-    let response = instance
-        .take_struct_inside_enum(struct_inside_enum)
-        .call()
-        .await?;
-    assert_eq!(response.value, 8888);
-    Ok(())
-}
-
-#[tokio::test]
 async fn test_logd_receipts() -> Result<(), Error> {
     abigen!(
         LoggingContract,
@@ -1467,6 +1466,7 @@ async fn test_logd_receipts() -> Result<(), Error> {
         "tests/test_projects/contract_logdata/out/debug/contract_logdata.bin",
         &wallet,
         TxParameters::default(),
+        StorageConfiguration::default(),
     )
     .await?;
     let contract_instance = LoggingContract::new(id.to_string(), wallet.clone());
@@ -1568,6 +1568,7 @@ async fn sway_native_types_support() -> Result<(), Box<dyn std::error::Error>> {
         "tests/test_projects/sway_native_types/out/debug/sway_native_types.bin",
         &wallet,
         TxParameters::default(),
+        StorageConfiguration::default(),
     )
     .await?;
 
@@ -1604,6 +1605,7 @@ async fn test_transaction_script_workflow() -> Result<(), Error> {
         "tests/test_projects/contract_test/out/debug/contract_test.bin",
         &wallet,
         TxParameters::default(),
+        StorageConfiguration::default(),
     )
     .await?;
 
@@ -1635,6 +1637,7 @@ async fn enum_coding_w_variable_width_variants() -> Result<(), Error> {
         "tests/test_projects/enum_encoding/out/debug/enum_encoding.bin",
         &wallet,
         TxParameters::default(),
+        StorageConfiguration::default(),
     )
     .await?;
 
@@ -1678,6 +1681,7 @@ async fn enum_coding_w_unit_enums() -> Result<(), Error> {
         "tests/test_projects/enum_encoding/out/debug/enum_encoding.bin",
         &wallet,
         TxParameters::default(),
+        StorageConfiguration::default(),
     )
     .await?;
 
@@ -1719,6 +1723,7 @@ async fn enum_as_input() -> Result<(), Error> {
         "tests/test_projects/enum_as_input/out/debug/enum_as_input.bin",
         &wallet,
         TxParameters::default(),
+        StorageConfiguration::default(),
     )
     .await?;
 
@@ -1768,6 +1773,7 @@ async fn nested_structs() -> Result<(), Error> {
         "tests/test_projects/nested_structs/out/debug/nested_structs.bin",
         &wallet,
         TxParameters::default(),
+        StorageConfiguration::default(),
     )
     .await?;
 
@@ -1815,54 +1821,6 @@ async fn nested_structs() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn nested_enums_are_correctly_encoded_decoded() -> Result<(), Error> {
-    abigen!(
-        MyContract,
-        "packages/fuels/tests/test_projects/nested_enums/out/debug/nested_enums-abi.json"
-    );
-
-    let wallet = launch_provider_and_get_wallet().await;
-
-    let id = Contract::deploy(
-        "tests/test_projects/nested_enums/out/debug/nested_enums.bin",
-        &wallet,
-        TxParameters::default(),
-    )
-    .await?;
-
-    let instance = MyContract::new(id.to_string(), wallet.clone());
-
-    let expected_enum = EnumLevel3::El2(EnumLevel2::El1(EnumLevel1::Num(42)));
-
-    let response = instance.get_nested_enum().call().await?;
-
-    assert_eq!(response.value, expected_enum);
-
-    let response = instance
-        .check_nested_enum_integrity(expected_enum)
-        .call()
-        .await?;
-
-    assert!(
-        response.value,
-        "The FuelVM deems that we've not encoded the nested enum correctly. Investigate!"
-    );
-
-    let expected_some_address = Option::Some(Identity::Address(Address::zeroed()));
-
-    let response = instance.get_some_address().call().await?;
-
-    assert_eq!(response.value, expected_some_address);
-
-    let expected_none = Option::None();
-
-    let response = instance.get_none().call().await?;
-
-    assert_eq!(response.value, expected_none);
-    Ok(())
-}
-
-#[tokio::test]
 async fn test_multi_call() -> Result<(), Error> {
     abigen!(
         MyContract,
@@ -1875,6 +1833,7 @@ async fn test_multi_call() -> Result<(), Error> {
         "tests/test_projects/contract_test/out/debug/contract_test.bin",
         &wallet,
         TxParameters::default(),
+        StorageConfiguration::default(),
     )
     .await?;
 
@@ -1911,6 +1870,7 @@ async fn test_multi_call_script_workflow() -> Result<(), Error> {
         "tests/test_projects/contract_test/out/debug/contract_test.bin",
         &wallet,
         TxParameters::default(),
+        StorageConfiguration::default(),
     )
     .await?;
 
@@ -1934,5 +1894,316 @@ async fn test_multi_call_script_workflow() -> Result<(), Error> {
     assert_eq!(counter, 42);
     assert_eq!(array, [42; 2]);
 
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_storage_initialization() -> Result<(), Error> {
+    abigen!(
+        MyContract,
+        "packages/fuels/tests/test_projects/contract_storage_test/out/debug/contract_storage_test-abi.json"
+    );
+
+    let wallet = launch_provider_and_get_wallet().await;
+
+    // ANCHOR: storage_slot_create
+    let key = Bytes32::from([1u8; 32]);
+    let value = Bytes32::from([2u8; 32]);
+    let storage_slot = StorageSlot::new(key, value);
+    let storage_vec = vec![storage_slot.clone()];
+    // ANCHOR_END: storage_slot_create
+
+    // ANCHOR: manual_storage
+    let contract_id = Contract::deploy_with_parameters(
+        "tests/test_projects/contract_storage_test/out/debug/contract_storage_test.bin",
+        &wallet,
+        TxParameters::default(),
+        StorageConfiguration::with_manual_storage(Some(storage_vec)),
+        Salt::from([0; 32]),
+    )
+    .await?;
+    // ANCHOR_END: manual_storage
+
+    let contract_instance = MyContract::new(contract_id.to_string(), wallet.clone());
+
+    let result = contract_instance
+        .get_value_b256(key.into())
+        .call()
+        .await?
+        .value;
+    assert_eq!(result.as_slice(), value.as_slice());
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn can_use_try_into_to_construct_struct_from_bytes() -> Result<(), Error> {
+    abigen!(
+        MyContract,
+        "packages/fuels/tests/test_projects/enum_inside_struct/out/debug\
+        /enum_inside_struct-abi.json"
+    );
+    let cocktail_in_bytes: Vec<u8> = vec![
+        0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 3,
+    ];
+
+    let expected = Cocktail {
+        the_thing_you_mix_in: Shaker::Mojito(2),
+        glass: 3,
+    };
+
+    // as slice
+    let actual: Cocktail = cocktail_in_bytes[..].try_into()?;
+    assert_eq!(actual, expected);
+
+    // as ref
+    let actual: Cocktail = (&cocktail_in_bytes).try_into()?;
+    assert_eq!(actual, expected);
+
+    // as value
+    let actual: Cocktail = cocktail_in_bytes.try_into()?;
+    assert_eq!(actual, expected);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn can_use_try_into_to_construct_enum_from_bytes() -> Result<(), Error> {
+    abigen!(
+        MyContract,
+        "packages/fuels/tests/test_projects/enum_inside_struct/out/debug\
+        /enum_inside_struct-abi.json"
+    );
+    // ANCHOR: manual_decode
+    let shaker_in_bytes: Vec<u8> = vec![0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 2];
+
+    let expected = Shaker::Mojito(2);
+
+    // as slice
+    let actual: Shaker = shaker_in_bytes[..].try_into()?;
+    assert_eq!(actual, expected);
+
+    // as ref
+    let actual: Shaker = (&shaker_in_bytes).try_into()?;
+    assert_eq!(actual, expected);
+
+    // as value
+    let actual: Shaker = shaker_in_bytes.try_into()?;
+    assert_eq!(actual, expected);
+
+    // ANCHOR_END: manual_decode
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn type_inside_enum() -> Result<(), Error> {
+    abigen!(
+        MyContract,
+        "packages/fuels/tests/test_projects/type_inside_enum/out/debug\
+        /type_inside_enum-abi.json"
+    );
+
+    let wallet = launch_provider_and_get_wallet().await;
+
+    let id = Contract::deploy(
+        "tests/test_projects/type_inside_enum/out/debug/type_inside_enum.bin",
+        &wallet,
+        TxParameters::default(),
+        StorageConfiguration::default(),
+    )
+    .await?;
+
+    let instance = MyContract::new(id.to_string(), wallet.clone());
+
+    // String inside enum
+    let enum_string = SomeEnum::SomeStr("asdf".to_owned());
+    let response = instance.str_inside_enum(enum_string.clone()).call().await?;
+    assert_eq!(response.value, enum_string);
+
+    // Array inside enum
+    let enum_array = SomeEnum::SomeArr(vec![1, 2, 3, 4, 5, 6, 7]);
+    let response = instance.arr_inside_enum(enum_array.clone()).call().await?;
+    assert_eq!(response.value, enum_array);
+
+    // Struct inside enum
+    let response = instance.return_struct_inside_enum(11).call().await?;
+    let expected = Shaker::Cosmopolitan(Recipe { ice: 22, sugar: 99 });
+    assert_eq!(response.value, expected);
+    let struct_inside_enum = Shaker::Cosmopolitan(Recipe { ice: 22, sugar: 66 });
+    let response = instance
+        .take_struct_inside_enum(struct_inside_enum)
+        .call()
+        .await?;
+    assert_eq!(response.value, 8888);
+
+    // Enum inside enum
+    let expected_enum = EnumLevel3::El2(EnumLevel2::El1(EnumLevel1::Num(42)));
+    let response = instance.get_nested_enum().call().await?;
+    assert_eq!(response.value, expected_enum);
+
+    let response = instance
+        .check_nested_enum_integrity(expected_enum)
+        .call()
+        .await?;
+    assert!(
+        response.value,
+        "The FuelVM deems that we've not encoded the nested enum correctly. Investigate!"
+    );
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_init_storage_automatically() -> Result<(), Error> {
+    abigen!(
+        MyContract,
+        "packages/fuels/tests/test_projects/contract_storage_test/out/debug/contract_storage_test-abi.json"
+    );
+
+    let wallet = launch_provider_and_get_wallet().await;
+
+    // ANCHOR: automatic_storage
+    let contract_id = Contract::deploy_with_parameters(
+        "tests/test_projects/contract_storage_test/out/debug/contract_storage_test.bin",
+        &wallet,
+        TxParameters::default(),
+        StorageConfiguration::with_storage_path(
+            Some("tests/test_projects/contract_storage_test/out/debug/contract_storage_test-storage_slots.json".to_string())),
+        Salt::default(),
+    )
+        .await?;
+    // ANCHOR_END: automatic_storage
+
+    println!("Foo contract deployed @ {:x}", contract_id);
+
+    let key1 =
+        Bytes32::from_str("de9090cb50e71c2588c773487d1da7066d0c719849a7e58dc8b6397a25c567c0")
+            .unwrap();
+    let key2 =
+        Bytes32::from_str("f383b0ce51358be57daa3b725fe44acdb2d880604e367199080b4379c41bb6ed")
+            .unwrap();
+
+    let contract_instance = MyContract::new(contract_id.to_string(), wallet.clone());
+
+    let value = contract_instance.get_value_b256(*key1).call().await?.value;
+    assert_eq!(value, [1u8; 32]);
+
+    let value = contract_instance.get_value_u64(*key2).call().await?.value;
+    assert_eq!(value, 64);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn contract_method_call_respects_maturity() -> anyhow::Result<()> {
+    abigen!(
+        MyContract,
+        "packages/fuels/tests/test_projects/transaction_block_height/out/debug/transaction_block_height-abi.json"
+    );
+
+    let wallet = launch_provider_and_get_wallet().await;
+
+    let id = Contract::deploy(
+        "tests/test_projects/transaction_block_height/out/debug/transaction_block_height.bin",
+        &wallet,
+        TxParameters::default(),
+        StorageConfiguration::default(),
+    )
+    .await?;
+
+    let instance = MyContract::new(id.to_string(), wallet.clone());
+
+    let call_w_maturity = |call_maturity| {
+        let mut prepared_call = instance.calling_this_will_produce_a_block();
+        prepared_call.tx_parameters.maturity = call_maturity;
+        prepared_call.call()
+    };
+
+    call_w_maturity(1).await.expect("Should have passed since we're calling with a maturity that is less or equal to the current block height");
+
+    call_w_maturity(3).await.expect_err("Should have failed since we're calling with a maturity that is greater than the current block height");
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn contract_deployment_respects_maturity() -> anyhow::Result<()> {
+    abigen!(
+        MyContract,
+        "packages/fuels/tests/test_projects/transaction_block_height/out/debug/transaction_block_height-abi.json"
+    );
+
+    let wallet = launch_provider_and_get_wallet().await;
+
+    let deploy_w_maturity = |maturity| {
+        let parameters = TxParameters {
+            maturity,
+            ..TxParameters::default()
+        };
+        Contract::deploy(
+            "tests/test_projects/transaction_block_height/out/debug/transaction_block_height.bin",
+            &wallet,
+            parameters,
+            StorageConfiguration::default(),
+        )
+    };
+
+    let err = deploy_w_maturity(1).await.expect_err("Should not have been able to deploy the contract since the block height (0) is less than the requested maturity (1)");
+    assert!(matches!(err, TransactionError(msg) if msg.contains("TransactionMaturity")));
+
+    produce_blocks(&wallet, 1).await?;
+    deploy_w_maturity(1)
+        .await
+        .expect("Should be able to deploy now since maturity (1) is <= than the block height (1)");
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn can_increase_block_height() -> anyhow::Result<()> {
+    // ANCHOR: uses_produce_blocks_to_increase_block_height
+    let wallet = launch_provider_and_get_wallet().await;
+    let provider = &wallet.get_provider().unwrap();
+
+    assert_eq!(provider.latest_block_height().await?, 0);
+
+    produce_blocks(&wallet, 3).await?;
+
+    assert_eq!(provider.latest_block_height().await?, 3);
+    // ANCHOR_END: uses_produce_blocks_to_increase_block_height
+    Ok(())
+}
+
+#[tokio::test]
+async fn gql_height_info_is_correct() -> anyhow::Result<()> {
+    abigen!(
+        MyContract,
+        "packages/fuels/tests/test_projects/transaction_block_height/out/debug/transaction_block_height-abi.json"
+    );
+
+    let wallet = launch_provider_and_get_wallet().await;
+    let provider = &wallet.get_provider().unwrap();
+
+    let id = Contract::deploy(
+        "tests/test_projects/transaction_block_height/out/debug/transaction_block_height.bin",
+        &wallet,
+        TxParameters::default(),
+        StorageConfiguration::default(),
+    )
+    .await?;
+    let instance = MyContract::new(id.to_string(), wallet.clone());
+
+    let block_height_from_contract = || async {
+        Ok(instance.get_current_height().simulate().await?.value) as Result<u64, Error>
+    };
+
+    assert_eq!(provider.latest_block_height().await?, 1);
+    assert_eq!(block_height_from_contract().await?, 1);
+
+    produce_blocks(&wallet, 3).await?;
+
+    assert_eq!(provider.latest_block_height().await?, 4);
+    assert_eq!(block_height_from_contract().await?, 4);
     Ok(())
 }
