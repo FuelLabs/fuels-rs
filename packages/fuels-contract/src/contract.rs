@@ -5,7 +5,6 @@ use fuel_gql_client::{
     fuel_tx::{Contract as FuelContract, Output, Receipt, StorageSlot, Transaction},
     fuel_types::{Address, AssetId, ContractId, Salt},
 };
-use fuel_tx::ConsensusParameters;
 use fuels_core::{
     constants::{BASE_ASSET_ID, DEFAULT_SPENDABLE_COIN_AMOUNT},
     errors::Error,
@@ -106,11 +105,10 @@ impl Contract {
     ) -> Result<ContractCallHandler<D>, Error> {
         let encoded_args = ABIEncoder::encode(args).unwrap();
         let encoded_selector = signature;
-        let consensus_parameters = futures::executor::block_on(provider.client.chain_info())?
-            .consensus_parameters
-            .into();
+
         let tx_parameters = TxParameters::default();
         let call_parameters = CallParameters::default();
+
         let compute_custom_input_offset = Contract::should_compute_custom_input_offset(args);
 
         let contract_call = ContractCall {
@@ -125,7 +123,6 @@ impl Contract {
         };
 
         Ok(ContractCallHandler {
-            consensus_parameters,
             contract_call,
             tx_parameters,
             wallet: wallet.clone(),
@@ -188,14 +185,14 @@ impl Contract {
 
         let client = &wallet
             .get_provider()
-            .expect("Can't get wallet provider?")
+            .expect("Can't get wallet provider")
             .client;
 
-        let chan_info = client.chain_info().await?;
+        let chain_info = client.chain_info().await?;
 
         wallet.sign_transaction(&mut tx).await?;
 
-        tx.validate_without_signature(0, &chan_info.consensus_parameters.into())?;
+        tx.validate_without_signature(0, &chain_info.consensus_parameters.into())?;
 
         match client.submit(&tx).await {
             Ok(_) => Ok(contract_id),
@@ -328,7 +325,6 @@ impl ContractCall {
 #[must_use = "contract calls do nothing unless you `call` them"]
 /// Helper that handles submitting a call to a client and formatting the response
 pub struct ContractCallHandler<D> {
-    pub consensus_parameters: ConsensusParameters,
     pub contract_call: ContractCall,
     pub tx_parameters: TxParameters,
     pub wallet: LocalWallet,
@@ -399,13 +395,9 @@ where
         let script = self.get_script().await;
 
         let receipts = if simulate {
-            script
-                .simulate(&self.fuel_client, &self.consensus_parameters)
-                .await?
+            script.simulate(&self.fuel_client).await?
         } else {
-            script
-                .call(&self.fuel_client, &self.consensus_parameters)
-                .await?
+            script.call(&self.fuel_client).await?
         };
         tracing::debug!(target: "receipts", "{:?}", receipts);
 
@@ -446,7 +438,6 @@ where
 #[must_use = "contract calls do nothing unless you `call` them"]
 /// Helper that handles bundling multiple calls into a single transaction
 pub struct MultiContractCallHandler {
-    pub consensus_parameters: ConsensusParameters,
     pub contract_calls: Option<Vec<ContractCall>>,
     pub tx_parameters: TxParameters,
     pub wallet: LocalWallet,
@@ -454,9 +445,8 @@ pub struct MultiContractCallHandler {
 }
 
 impl MultiContractCallHandler {
-    pub fn new(wallet: LocalWallet, consensus_parameters: ConsensusParameters) -> Self {
+    pub fn new(wallet: LocalWallet) -> Self {
         Self {
-            consensus_parameters,
             contract_calls: None,
             tx_parameters: TxParameters::default(),
             fuel_client: wallet.get_provider().unwrap().client.clone(),
@@ -515,15 +505,9 @@ impl MultiContractCallHandler {
         let script = self.get_script().await;
 
         let receipts = if simulate {
-            script
-                .simulate(&self.fuel_client, &self.consensus_parameters)
-                .await
-                .unwrap()
+            script.simulate(&self.fuel_client).await.unwrap()
         } else {
-            script
-                .call(&self.fuel_client, &self.consensus_parameters)
-                .await
-                .unwrap()
+            script.call(&self.fuel_client).await.unwrap()
         };
         tracing::debug!(target: "receipts", "{:?}", receipts);
 
