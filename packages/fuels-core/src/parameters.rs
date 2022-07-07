@@ -2,7 +2,7 @@ use crate::constants::{
     BASE_ASSET_ID, DEFAULT_BYTE_PRICE, DEFAULT_FORWARDED_GAS, DEFAULT_GAS_LIMIT, DEFAULT_GAS_PRICE,
     DEFAULT_MATURITY,
 };
-use fuel_tx::AssetId;
+use fuel_tx::{AssetId, StorageSlot};
 
 #[derive(Debug, Copy, Clone)]
 pub struct TxParameters {
@@ -63,6 +63,35 @@ impl TxParameters {
             gas_limit: gas_limit.unwrap_or(DEFAULT_GAS_LIMIT),
             byte_price: byte_price.unwrap_or(DEFAULT_BYTE_PRICE),
             maturity: maturity.unwrap_or(DEFAULT_MATURITY),
+        }
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct StorageConfiguration {
+    pub storage_path: Option<String>,
+    pub manual_storage_vec: Option<Vec<StorageSlot>>,
+}
+
+impl StorageConfiguration {
+    pub fn new(storage_path: Option<String>, manual_storage_vec: Option<Vec<StorageSlot>>) -> Self {
+        Self {
+            storage_path,
+            manual_storage_vec,
+        }
+    }
+
+    pub fn with_storage_path(storage_path: Option<String>) -> Self {
+        Self {
+            storage_path,
+            manual_storage_vec: None,
+        }
+    }
+
+    pub fn with_manual_storage(manual_storage_vec: Option<Vec<StorageSlot>>) -> Self {
+        Self {
+            storage_path: None,
+            manual_storage_vec,
         }
     }
 }
