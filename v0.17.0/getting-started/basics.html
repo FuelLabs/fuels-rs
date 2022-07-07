@@ -1,0 +1,596 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js light">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Basic usage - The Fuel Rust SDK</title>
+        <!-- Custom HTML head -->
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script type="text/javascript">
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script type="text/javascript">
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="../index.html">The Fuel Rust SDK</a></li><li class="chapter-item expanded "><a href="../getting-started/index.html"><strong aria-hidden="true">1.</strong> Getting Started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../getting-started/setup.html"><strong aria-hidden="true">1.1.</strong> Setting up</a></li><li class="chapter-item expanded "><a href="../getting-started/basics.html" class="active"><strong aria-hidden="true">1.2.</strong> Basic usage</a></li><li class="chapter-item expanded "><a href="../getting-started/wallets.html"><strong aria-hidden="true">1.3.</strong> Wallets</a></li><li class="chapter-item expanded "><a href="../getting-started/type-safe-bindings.html"><strong aria-hidden="true">1.4.</strong> Generating type-safe Rust bindings</a></li></ol></li><li class="chapter-item expanded "><a href="../testing/index.html"><strong aria-hidden="true">2.</strong> Testing</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../testing/scripts.html"><strong aria-hidden="true">2.1.</strong> Running scripts</a></li><li class="chapter-item expanded "><a href="../testing/chains.html"><strong aria-hidden="true">2.2.</strong> Tweaking the blockchain</a></li></ol></li><li class="chapter-item expanded "><a href="../workspaces/index.html"><strong aria-hidden="true">3.</strong> fuels-rs Rust Workspaces</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../workspaces/fuels-abigen-macro.html"><strong aria-hidden="true">3.1.</strong> fuels-abigen-macro</a></li><li class="chapter-item expanded "><a href="../workspaces/fuels-abi-cli.html"><strong aria-hidden="true">3.2.</strong> fuels-abi-cli</a></li></ol></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The Fuel Rust SDK</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/FuelLabs/fuels-rs" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script type="text/javascript">
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="basic-usage-of-the-sdk"><a class="header" href="#basic-usage-of-the-sdk">Basic Usage of the SDK</a></h1>
+<p>At a high level, the Fuel Rust SDK can be used to build Rust-based applications that can run computations on the Fuel Virtual Machine through interactions with contracts written in Sway.</p>
+<p>For this interaction to work, the SDK must be able to communicate to a <code>fuel-core</code> node; you have two options at your disposal:</p>
+<ol>
+<li>Use the SDK's native <code>launch_provider_and_get_wallet()</code> that runs a short-lived test Fuel node;</li>
+<li>Run a Fuel node outside your SDK code (using <code>fuel-core</code>) and point your SDK to that node's IP and port.</li>
+</ol>
+<p>The first option is ideal for contract testing, as you can quickly spin up and tear down nodes between specific test cases.</p>
+<p>For application building, you probably want to go with the second option.</p>
+<h2 id="instantiating-a-fuel-client"><a class="header" href="#instantiating-a-fuel-client">Instantiating a Fuel client</a></h2>
+<p>You can instantiate a Fuel client, pointing to a local Fuel node by
+using <a href="https://docs.rs/fuels/*/fuels/client/struct.FuelClient.html"><code>FuelClient</code></a>:</p>
+<pre><code class="language-rust ignore">    async fn instantiate_client() -&gt; Result&lt;(), Error&gt; {
+        use fuels::client::FuelClient;
+        use fuels::node::service::{Config, FuelService};
+
+        let server = FuelService::new_node(Config::local_node()).await?;
+        let client = FuelClient::from(server.bound_address);
+        assert!(client.health().await?);
+        Ok(())
+    }
+</code></pre>
+<p>Alternatively, if you have a Fuel node running separately, you can pass in the <code>SocketAddr</code> to <code>FuelClient::from()</code>.</p>
+<h2 id="deploying-a-sway-contract"><a class="header" href="#deploying-a-sway-contract">Deploying a Sway contract</a></h2>
+<p>There are two intended ways to deploy a contract</p>
+<ul>
+<li><code>deploy</code></li>
+<li><code>deploy_with_parameters</code></li>
+</ul>
+<p>If you are only interested in a single instance of your contract then use <code>deploy</code></p>
+<pre><code class="language-rust ignore">        // This will generate your contract's methods onto `MyContract`.
+        // This means an instance of `MyContract` will have access to all
+        // your contract's methods that are running on-chain!
+        abigen!(
+            MyContract,
+            // This path is relative to the workspace (repository) root
+            &quot;packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json&quot;
+        );
+
+        // This helper will launch a local node and provide a test wallet linked to it
+        let wallet = launch_provider_and_get_wallet().await;
+
+        // Optional: Configure deployment parameters or use `TxParameters::default()`
+        let gas_price = 0;
+        let gas_limit = 1_000_000;
+        let byte_price = 0;
+        let maturity = 0;
+
+        // This will deploy your contract binary onto the chain so that its ID can
+        // be used to initialize the instance
+        let contract_id = Contract::deploy(
+            // This path is relative to the current crate (examples/contracts)
+            &quot;../../packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test.bin&quot;,
+            &amp;wallet,
+            TxParameters::new(
+                Some(gas_price),
+                Some(gas_limit),
+                Some(byte_price),
+                Some(maturity)
+            ),
+            StorageConfiguration::default()
+        )
+        .await?;
+
+        println!(&quot;Contract deployed @ {:x}&quot;, contract_id);
+</code></pre>
+<p>You can then use the contract methods very simply:</p>
+<pre><code class="language-rust ignore">        // This is an instance of your contract which you can use to make calls to your functions
+        let contract_instance = MyContract::new(contract_id.to_string(), wallet);
+
+        let response = contract_instance
+            .initialize_counter(42) // Build the ABI call
+            .call() // Perform the network call
+            .await?;
+
+        assert_eq!(42, response.value);
+
+        let response = contract_instance.increment_counter(10).call().await?;
+
+        assert_eq!(52, response.value);
+</code></pre>
+<p>Alternatively, if you want multiple instances of the same contract then use <code>deploy_with_parameters</code> and set the salt parameter.</p>
+<pre><code class="language-rust ignore">    async fn deploy_with_parameters() -&gt; Result&lt;(), Error&gt; {
+        use fuels::prelude::*;
+        use rand::prelude::{Rng, SeedableRng, StdRng};
+
+        abigen!(
+            MyContract,
+            &quot;packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json&quot;
+        );
+
+        let wallet = launch_provider_and_get_wallet().await;
+
+        let contract_id_1 = Contract::deploy(
+            &quot;../../packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test.bin&quot;,
+            &amp;wallet,
+            TxParameters::default(),        StorageConfiguration::default()
+
+        )
+        .await?;
+
+        println!(&quot;Contract deployed @ {:x}&quot;, contract_id_1);
+
+        let rng = &amp;mut StdRng::seed_from_u64(2322u64);
+        let salt: [u8; 32] = rng.gen();
+
+        let contract_id_2 = Contract::deploy_with_parameters(
+            &quot;../../packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test.bin&quot;,
+            &amp;wallet,
+            TxParameters::default(),
+            StorageConfiguration::default(),
+            Salt::from(salt),
+        )
+        .await?;
+
+        println!(&quot;Contract deployed @ {:x}&quot;, contract_id_2);
+
+        assert_ne!(contract_id_1, contract_id_2);
+        Ok(())
+    }
+</code></pre>
+<h3 id="initializing-storage-slots-manually"><a class="header" href="#initializing-storage-slots-manually">Initializing storage slots manually</a></h3>
+<p>The storage slots of a contract can be initialized manually from <code>Vec&lt;StorageSlot&gt;</code> where <code>StorageSlot</code> is a struct that holds the key-value pair for a given slot.</p>
+<pre><code class="language-rust ignore">    let key = Bytes32::from([1u8; 32]);
+    let value = Bytes32::from([2u8; 32]);
+    let storage_slot = StorageSlot::new(key, value);
+    let storage_vec = vec![storage_slot.clone()];
+</code></pre>
+<p>Once created, the slots can be used to initialize <code>StorageConfiguration::with_manual_storage</code> which can finally be passed to <code>deploy_with_parameters</code>:</p>
+<pre><code class="language-rust ignore">    let contract_id = Contract::deploy_with_parameters(
+        &quot;tests/test_projects/contract_storage_test/out/debug/contract_storage_test.bin&quot;,
+        &amp;wallet,
+        TxParameters::default(),
+        StorageConfiguration::with_manual_storage(Some(storage_vec)),
+        Salt::from([0; 32]),
+    )
+    .await?;
+</code></pre>
+<h3 id="initializing-storage-slots-automatically"><a class="header" href="#initializing-storage-slots-automatically">Initializing storage slots automatically</a></h3>
+<p>The storage slots of a contract can be initialized automatically from the JSON file generated by the sway compiler.</p>
+<p>Path to JSON file is used to initialize <code>StorageConfiguration::with_storage_path</code> which was then passed to <code>deploy_with_parameters</code>:</p>
+<pre><code class="language-rust ignore">    let contract_id = Contract::deploy_with_parameters(
+        &quot;tests/test_projects/contract_storage_test/out/debug/contract_storage_test.bin&quot;,
+        &amp;wallet,
+        TxParameters::default(),
+        StorageConfiguration::with_storage_path(
+            Some(&quot;tests/test_projects/contract_storage_test/out/debug/contract_storage_test-storage_slots.json&quot;.to_string())),
+        Salt::default(),
+    )
+        .await?;
+</code></pre>
+<h3 id="initializing-storage-slots-both-automatically-and-manually"><a class="header" href="#initializing-storage-slots-both-automatically-and-manually">Initializing storage slots both automatically and manually</a></h3>
+<p>We can initialize the slots both automatically and manually by using <code>StorageConfiguration::new()</code>.
+If we this, then the generated <code>Vec&lt;StorageSlot&gt;</code> will be merged and the <code>manually</code> generated <code>Vec&lt;StorageSlot&gt;</code> takes precedence.</p>
+<h2 id="setting-up-multiple-test-wallets"><a class="header" href="#setting-up-multiple-test-wallets">Setting up multiple test wallets</a></h2>
+<p>If you need multiple test wallets, they can be setup as follows:</p>
+<pre><code class="language-rust ignore">        use fuels::prelude::*;
+        // This helper will launch a local node and provide 10 test wallets linked to it.
+        // The initial balance defaults to 1 coin per wallet with an amount of 1_000_000_000
+        let wallets = launch_custom_provider_and_get_wallets(WalletsConfig::default(), None).await;
+</code></pre>
+<p>The returned test wallets can be customized via <code>WalletsConfig</code></p>
+<pre><code class="language-rust ignore">        let num_wallets = 5;
+        let coins_per_wallet = 3;
+        let amount_per_coin = 100;
+
+        let config = WalletsConfig::new(
+            Some(num_wallets),
+            Some(coins_per_wallet),
+            Some(amount_per_coin),
+        );
+        // Launches a local node and provides test wallets as specified by the config
+        let wallets = launch_custom_provider_and_get_wallets(config, None).await;
+</code></pre>
+<h2 id="setting-up-a-test-wallet-with-multiple-assets"><a class="header" href="#setting-up-a-test-wallet-with-multiple-assets">Setting up a test wallet with multiple assets</a></h2>
+<p>You can create a test wallet which contains multiple different assets (including the base asset to pay for gas).</p>
+<pre><code class="language-rust ignore">        use fuels::prelude::*;
+        let mut wallet = LocalWallet::new_random(None);
+        let num_assets = 5; // 5 different assets
+        let coins_per_asset = 10; // Per asset id, 10 coins in the wallet
+        let amount_per_coin = 15; // For each coin (UTXO) of the asset, amount of 15
+
+        let (coins, asset_ids) = setup_multiple_assets_coins(
+            wallet.address(),
+            num_assets,
+            coins_per_asset,
+            amount_per_coin,
+        );
+        let (provider, _socket_addr) = setup_test_provider(coins.clone(), None).await;
+        wallet.set_provider(provider);
+</code></pre>
+<ul>
+<li><code>coins: Vec&lt;(UtxoId, Coin)&gt;</code> has <code>num_assets * coins_per_assets</code> coins (UTXOs)</li>
+<li><code>asset_ids: Vec&lt;AssetId&gt;</code> contains the <code>num_assets</code> randomly generated <code>AssetId</code>s (always includes the base asset)</li>
+</ul>
+<h2 id="calling-and-configuring-contract-calls"><a class="header" href="#calling-and-configuring-contract-calls">Calling and configuring contract calls</a></h2>
+<p>Once you've deployed your contract, as seen in the previous section, you'll likely want to call contract methods and configure some parameters such as gas price, byte price, gas limit, and forward coins in your contract call.</p>
+<p>Start by creating an instance of your contract once you have a wallet set up:</p>
+<pre><code class="language-rust ignore">        let contract_instance = MyContract::new(contract_id.to_string(), wallet.clone());
+</code></pre>
+<p>Then we move to configuring contract calls.</p>
+<h3 id="txparameters"><a class="header" href="#txparameters"><code>TxParameters</code></a></h3>
+<p>Transaction parameters are:</p>
+<ol>
+<li>Gas price;</li>
+<li>Gas limit;</li>
+<li>Byte price;</li>
+<li>Maturity.</li>
+</ol>
+<p>These parameters can be configured by creating an instance of <a href="https://github.com/FuelLabs/fuels-rs/blob/adf81bd451d7637ce0976363bd7784408430031a/packages/fuels-contract/src/parameters.rs#L7"><code>TxParameters</code></a> and passing it to a chain method called <code>tx_params</code>:</p>
+<pre><code class="language-rust ignore">        // In order: gas_price, gas_limit, byte_price, and maturity
+        let my_tx_params = TxParameters::new(None, Some(1_000_000), None, None);
+
+        let response = contract_instance
+            .initialize_counter(42) // Our contract method.
+            .tx_params(my_tx_params) // Chain the tx params setting method.
+            .call() // Perform the contract call.
+            .await?; // This is an async call, `.await` for it.
+
+</code></pre>
+<p>You can also use <code>TxParameters::default()</code> to use the default values:</p>
+<pre><code class="language-rust ignore">pub const DEFAULT_GAS_LIMIT: u64 = 1_000_000;
+pub const DEFAULT_GAS_PRICE: u64 = 0;
+pub const DEFAULT_BYTE_PRICE: u64 = 0;
+pub const DEFAULT_MATURITY: u64 = 0;
+</code></pre>
+<p>this way:</p>
+<pre><code class="language-rust ignore">        let response = contract_instance
+            .initialize_counter(42)
+            .tx_params(TxParameters::default())
+            .call()
+            .await?;
+
+</code></pre>
+<h3 id="callparameters"><a class="header" href="#callparameters"><code>CallParameters</code></a></h3>
+<p>Call parameters are:</p>
+<ol>
+<li>Amount;</li>
+<li>Asset ID;</li>
+<li>Gas forwarded.</li>
+</ol>
+<p>This is commonly used to forward coins to a contract. These parameters can be configured by creating an instance of <a href="https://github.com/FuelLabs/fuels-rs/blob/adf81bd451d7637ce0976363bd7784408430031a/packages/fuels-contract/src/parameters.rs#L15"><code>CallParameters</code></a> and passing it to a chain method called <code>call_params</code>.</p>
+<p>For instance, suppose the following contract that makes use of Sway's <code>msg_amount()</code> to return the amount sent in that transaction.</p>
+<pre><code class="language-rust ignore">    fn get_msg_amount() -&gt; u64 {
+        msg_amount()
+    }
+</code></pre>
+<p>Then, in Rust, after setting up and deploying the above contract, you can configure the amount being sent in the transaction like this:</p>
+<pre><code class="language-rust ignore">
+        let tx_params = TxParameters::default();
+
+        // Forward 1_000_000 coin amount of base asset_id
+        // this is a big number for checking that amount can be a u64
+        let call_params = CallParameters::new(Some(1_000_000), None, None);
+
+        let response = contract_instance
+            .get_msg_amount() // Our contract method.
+            .tx_params(tx_params) // Chain the tx params setting method.
+            .call_params(call_params) // Chain the call params setting method.
+            .call() // Perform the contract call.
+            .await?;
+</code></pre>
+<p>You can also use <code>CallParameters::default()</code> to use the default values:</p>
+<pre><code class="language-rust ignore">// Limit for the actual contract call
+pub const DEFAULT_FORWARDED_GAS: u64 = 1_000_000;
+// Lower limit when querying spendable UTXOs
+pub const DEFAULT_SPENDABLE_COIN_AMOUNT: u64 = 1_000_000;
+// Bytes representation of the asset ID of the &quot;base&quot; asset used for gas fees.
+pub const BASE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
+</code></pre>
+<p>this way:</p>
+<pre><code class="language-rust ignore">        let response = contract_instance
+            .initialize_counter(42)
+            .call_params(CallParameters::default())
+            .call()
+            .await?;
+
+</code></pre>
+<p>The <code>gas_forwarded</code> parameter defines the limit for the actual contract call as opposed to the gas limit for the whole transaction. This means that it is constrained by the transaction limit. If it is set to an amount greater than the available gas, all available gas will be forwarded.</p>
+<pre><code class="language-rust ignore">        // Set the transaction `gas_limit` to 1000 and `gas_forwarded` to 200 to specify that the
+        // contract call transaction may consume up to 1000 gas, while the actual call may only use 200
+        // gas
+        let tx_params = TxParameters::new(None, Some(1000), None, None);
+        let call_params = CallParameters::new(None, None, Some(200));
+
+        let response = contract_instance
+            .get_msg_amount() // Our contract method.
+            .tx_params(tx_params) // Chain the tx params setting method.
+            .call_params(call_params) // Chain the call params setting method.
+            .call() // Perform the contract call.
+            .await?;
+</code></pre>
+<h3 id="callresponse-reading-returned-values"><a class="header" href="#callresponse-reading-returned-values"><code>CallResponse</code>: Reading returned values</a></h3>
+<p>You've probably noticed that you're often chaining <code>.call().await.unwrap()</code>. That's because:</p>
+<ol>
+<li>You have to choose between <code>.call()</code> and <code>.simulate()</code> (more on this in the next section);</li>
+<li>Contract calls are asynchronous, so you can choose to either <code>.await</code> it or perform concurrent tasks, making full use of Rust's async;</li>
+<li><code>.unwrap()</code> the <code>Result&lt;CallResponse, Error&gt;</code> returned by the contract call.</li>
+</ol>
+<p>Once you unwrap the <code>CallResponse</code>, you have access to this struct:</p>
+<pre><code class="language-rust ignore">pub struct CallResponse&lt;D&gt; {
+    pub value: D,
+    pub receipts: Vec&lt;Receipt&gt;,
+    pub logs: Vec&lt;String&gt;,
+}
+</code></pre>
+<p>Where <code>value</code> will hold the value returned by its respective contract method, represented by the exact type returned by the FuelVM. E.g., if your contract returns a FuelVM's <code>u64</code>, <code>value</code>'s <code>D</code> will be a <code>u64</code>. If it's a FuelVM's tuple <code>(u8,bool)</code>, then <code>D</code> will be a <code>(u8,bool)</code>. If it's a custom type, for instance, a Sway struct <code>MyStruct</code> containing 2 components, a <code>u64</code> and a <code>b256</code>, <code>D</code> will be a struct generated at compile-time, called <code>MyStruct</code> with <code>u64</code> and a <code>[u8; 32]</code> (the equivalent of <code>b256</code> in Rust-land).</p>
+<p><code>receipts</code> will hold all <a href="https://github.com/FuelLabs/fuel-specs/blob/master/specs/protocol/abi.md#receipt">receipts</a> generated by that specific contract call.</p>
+<p>And lastly, <code>logs</code> will hold all logs that happened within that specific contract call.</p>
+<p>In order to log out <code>receipts</code> values during testing you have to run <code>test</code> as follows:</p>
+<pre><code class="language-sh">RUST_LOG=receipts cargo test --test harness $NAME_OF_TEST
+</code></pre>
+<h3 id="read-only-contract-calls"><a class="header" href="#read-only-contract-calls">Read-only contract calls</a></h3>
+<p>Sometimes you want to call a contract method that doesn't change the state of the blockchain. For instance, a method that only reads a value from storage and returns it.</p>
+<p>In this case, there's no need to generate an actual blockchain transaction; you only want to quickly read a value.</p>
+<p>You can do this with the SDK. Instead of <code>.call()</code>ing the method, use <code>.simulate()</code>:</p>
+<pre><code class="language-rust ignore">        // you would mint 100 coins if the transaction wasn't simulated
+        let counter = contract_instance.mint_coins(100).simulate().await?;
+</code></pre>
+<p>Note that if you use <code>.simulate()</code> on a method that <em>does</em> change the state of the blockchain, it won't work properly; it will just <code>dry-run</code> it.</p>
+<p>At the moment, it's up to you to know whether a contract method changes state or not, and use <code>.call()</code> or <code>.simulate()</code> accordingly.</p>
+<h3 id="variable-outputs"><a class="header" href="#variable-outputs">Variable outputs</a></h3>
+<p>In some cases, you might want to send funds to the output of a transaction. Sway has a specific method for that: <code>transfer_to_output(coins, asset_id, recipient)</code>. So, if you have a contract that does something like this:</p>
+<pre><code class="language-rust ignore">    fn transfer_coins_to_output(coins: u64, asset_id: ContractId, recipient: Address) {
+        transfer_to_output(coins, asset_id, recipient);
+    }
+</code></pre>
+<p>With the SDK, you can call <code>transfer_coins_to_output</code>, by chaining <code>append_variable_outputs(amount)</code> to your contract call. Like this:</p>
+<pre><code class="language-rust ignore">        let address = wallet.address();
+
+        // withdraw some tokens to wallet
+        let response = contract_instance
+            .transfer_coins_to_output(1_000_000, contract_id, address)
+            .append_variable_outputs(1)
+            .call()
+            .await?;
+</code></pre>
+<p><code>append_variable_outputs</code> effectively appends a given amount of <code>Output::Variable</code>s to the transaction's list of outputs. This output type indicates that the output's amount and owner may vary based on transaction execution.</p>
+<p>Note that the Sway <code>lib-std</code> function <code>mint_to_address</code> calls <code>transfer_to_output</code> under the hood, and so you need to call <code>append_variable_outputs</code> in the Rust SDK tests just like you would for <code>transfer_to_output</code>.</p>
+<h3 id="contract-calls-calling-other-contracts"><a class="header" href="#contract-calls-calling-other-contracts">Contract calls calling other contracts</a></h3>
+<p>Sometimes, you might need to call your contract, which calls other contracts. To do so, you must feed the external contract IDs that your contract depends on to the method you're calling. You do it by chaining <code>.set_contracts(&amp;[external_contract_id, ...])</code> to the method you want to call. For instance:</p>
+<pre><code class="language-rust ignore">    let res = foo_caller_contract_instance
+        .call_foo_contract(*foo_contract_id, true)
+        .set_contracts(&amp;[foo_contract_id]) // Sets the external contract
+        .call()
+        .await?;
+</code></pre>
+<p>For a more concrete example, see the <code>test_contract_calling_contract</code> function in
+<code>fuels-abigen-macro/tests/harness.rs</code></p>
+<h2 id="connecting-to-existing-contracts"><a class="header" href="#connecting-to-existing-contracts">Connecting to existing contracts</a></h2>
+<p>If you already have a deployed contract and want to call its methods using the SDK,  but without deploying it again, all you need is the contract ID of your deployed contract. You can skip the whole deployment setup and call <code>::new(contract_id, wallet)</code> directly. For example:</p>
+<pre><code class="language-rust ignore">        // Replace with your contract ABI.json path
+        abigen!(
+        MyContract,
+        &quot;packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json&quot;
+    );
+        let wallet = launch_provider_and_get_wallet().await;
+        // Your contract ID as a String.
+        let contract_id =
+            &quot;0x068fe90ddc43b18a8f76756ecad8bf30eb0ceea33d2e6990c0185d01b0dbb675&quot;.to_string();
+
+        let connected_contract_instance = MyContract::new(contract_id, wallet);
+        // You can now use the `connected_contract_instance` just as you did above!
+</code></pre>
+<h2 id="getting-the-contract-call-outputs"><a class="header" href="#getting-the-contract-call-outputs">Getting the contract call outputs</a></h2>
+<ul>
+<li>Getting the contract call outputs is done this way:</li>
+</ul>
+<pre><code class="language-rust ignore">        let response = contract_instance.increment_counter(162).call().await;
+        match response {
+            // The transaction is valid and executes to completion
+            Ok(call_response) =&gt; {
+                let logs: Vec&lt;String&gt; = call_response.logs;
+                let receipts: Vec&lt;Receipt&gt; = call_response.receipts;
+                // Do things with logs and receipts
+            }
+
+            // The transaction is invalid or node is offline
+            // OR
+            // The transaction is valid but reverts
+            Err(ContractCallError(reason, receipts)) =&gt; {
+                println!(&quot;ContractCall failed with reason: {}&quot;, reason);
+                println!(&quot;Transaction receipts are: {:?}&quot;, receipts);
+            }
+            Err(_) =&gt; {}
+        }
+</code></pre>
+<blockquote>
+<p><strong>Note:</strong> It is generally considered good practice when you expect the call to succeed, to unwrap the response with <code>?</code>, this way:</p>
+<pre><code class="language-rust  ignore">        let response = contract_instance.increment_counter(162).call().await?;
+</code></pre>
+</blockquote>
+<h2 id="multiple-contract-calls-in-a-single-transaction"><a class="header" href="#multiple-contract-calls-in-a-single-transaction">Multiple contract calls in a single transaction</a></h2>
+<p>With <code>ContractMultiCallHandler</code> you can execute multiple contract calls within a single transaction. To achieve this, you first prepare all the contract calls that you want to bundle:</p>
+<pre><code class="language-rust ignore">        let contract_instance = MyContract::new(contract_id.to_string(), wallet.clone());
+
+        let call_handler_1 = contract_instance.initialize_counter(42);
+        let call_handler_2 = contract_instance.get_array([42; 2].to_vec());
+</code></pre>
+<p>At this point you can also choose to set call parameters, variable outputs or external contracts for every contract call, as long as you don't execute it with <code>call()</code> or <code>simulate()</code>.
+Next, you provide the prepared calls to your <code>ContractMultiCallHandler</code> and optionally configure transaction parameters:</p>
+<pre><code class="language-rust ignore">        let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
+
+        multi_call_handler
+            .add_call(call_handler_1)
+            .add_call(call_handler_2);
+</code></pre>
+<p>Note that any transaction parameters configured on separate contract calls are disregarded in favor of the parameters provided to <code>ContractMultiCallHandler</code>.</p>
+<h3 id="output-values"><a class="header" href="#output-values">Output values</a></h3>
+<p>To get the output values of the bundled calls, you need to provide explicit type annotations when saving the result of <code>call()</code> or <code>simulate()</code> to a variable:</p>
+<pre><code class="language-rust ignore">        let (counter, array): (u64, Vec&lt;u64&gt;) = multi_call_handler.call().await?.value;
+</code></pre>
+<p>You can also interact with the <code>CallResponse</code> by moving the type annotation to the invoked method:</p>
+<pre><code class="language-rust ignore">        let response = multi_call_handler.call::&lt;(u64, Vec&lt;u64&gt;)&gt;().await?;
+</code></pre>
+<h2 id="more-examples"><a class="header" href="#more-examples">More examples</a></h2>
+<p>You can find runnable examples under <a href="https://github.com/FuelLabs/fuels-rs/blob/master/packages/fuels-abigen-macro/tests/harness.rs"><code>fuels-abigen-macro/tests/harness.rs</code></a>.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../getting-started/setup.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+                            <a rel="next" href="../getting-started/wallets.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../getting-started/setup.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+                    <a rel="next" href="../getting-started/wallets.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+        <script type="text/javascript">
+            window.playground_copyable = true;
+        </script>
+        <script src="../elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../mark.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../searcher.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../book.js" type="text/javascript" charset="utf-8"></script>
+
+        <!-- Custom JS scripts -->
+    </body>
+</html>
