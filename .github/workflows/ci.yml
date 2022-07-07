@@ -91,11 +91,20 @@ jobs:
           echo "Comparing minimum supported toolchain ($MIN_VERSION) with ci toolchain (RUST_VERSION)"
           test "$MIN_VERSION" == "$RUST_VERSION"
 
+  install-fuel-core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      # Ensure CI is using the same minimum toolchain specified in fuels Cargo.toml
+      - run: | 
+             cargo install fuel-core
+
   cargo-verifications:
     needs:
       - setup-test-projects
       - verify-rust-version
       - get-workspace-members
+      - install-fuel-core
     runs-on: ubuntu-latest
     strategy:
       matrix:
