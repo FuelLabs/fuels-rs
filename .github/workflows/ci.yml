@@ -20,16 +20,7 @@ env:
   FORC_VERSION: 0.17.0
 
 jobs:
-  cancel-previous-runs:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.9.1
-        with:
-          access_token: ${{ github.token }}
-
   setup-test-projects:
-    needs: cancel-previous-runs
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -66,14 +57,13 @@ jobs:
           name: sway-examples
           # cache only the sway build artifacts, skip all test_project src files
           path: |
-            packages/fuels/tests/test_projects
-            !packages/fuels/tests/test_projects/**/*.sw
-            !packages/fuels/tests/test_projects/**/Forc.toml
-            !packages/fuels/tests/test_projects/**/Forc.lock
-            !packages/fuels/tests/test_projects/**/.gitignore
+            packages/fuels-abigen-macro/tests/test_projects
+            !packages/fuels-abigen-macro/tests/test_projects/**/*.sw
+            !packages/fuels-abigen-macro/tests/test_projects/**/Forc.toml
+            !packages/fuels-abigen-macro/tests/test_projects/**/Forc.lock
+            !packages/fuels-abigen-macro/tests/test_projects/**/.gitignore
 
   get-workspace-members:
-    needs: cancel-previous-runs
     runs-on: ubuntu-latest
     outputs:
       members: ${{ steps.set-members.outputs.members }}
@@ -89,7 +79,6 @@ jobs:
           echo "::set-output name=members::$members"
 
   verify-rust-version:
-    needs: cancel-previous-runs
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -168,7 +157,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: sway-examples
-          path: packages/fuels/tests/test_projects/
+          path: packages/fuels-abigen-macro/tests/test_projects/
 
       - name: Cargo (workspace-level)
         if: ${{ !matrix.package }}
