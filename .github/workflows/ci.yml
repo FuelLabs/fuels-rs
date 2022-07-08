@@ -41,16 +41,16 @@ jobs:
 
       - name: Install Forc
         run: |
-          curl -sSLf https://github.com/FuelLabs/fuel-core/releases/download/v${{ env.FUEL_CORE_VERSION }}/fuel-core-${{ env.FUEL_CORE_VERSION }}-x86_64-unknown-linux-gnu.tar.gz |  tar -xz
-          chmod +x */fuel-core
-          mv */fuel-core /usr/local/bin/fuel-core
-
-      - name: Install Fuel Core
-        run: |
-          curl -sSLf https://github.com/FuelLabs/fuel-core/releases/download/v${{ env.FORC_VERSION }}/forc-binaries-linux_amd64.tar.gz -L -o forc.tar.gz
+          curl -sSLf https://github.com/FuelLabs/sway/releases/download/v${{ env.FORC_VERSION }}/forc-binaries-linux_amd64.tar.gz -L -o forc.tar.gz
           tar -xvf forc.tar.gz
           chmod +x forc-binaries/forc
           mv forc-binaries/forc /usr/local/bin/forc
+
+      - name: Install Fuel Core
+        run: |
+          curl -sSLf https://github.com/FuelLabs/fuel-core/releases/download/v${{ env.FUEL_CORE_VERSION }}/fuel-core-${{ env.FUEL_CORE_VERSION }}-x86_64-unknown-linux-gnu.tar.gz | tar -xz
+          chmod +x */fuel-core
+          mv */fuel-core /usr/local/bin/fuel-core
 
       - name: Build Sway Examples
         uses: actions-rs/cargo@v1
