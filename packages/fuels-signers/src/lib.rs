@@ -136,8 +136,8 @@ mod tests {
         // Verify signature
         signature.verify(&recovered_address, &message)?;
         Ok(())
-    }
     // ANCHOR_END: sign_tx
+    }
 
     #[tokio::test]
     async fn send_transaction() -> Result<(), fuels_types::errors::Error> {
