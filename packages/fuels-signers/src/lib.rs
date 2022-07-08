@@ -81,9 +81,9 @@ mod tests {
     // ANCHOR_END: sign_message
     }
 
-    // ANCHOR: sign_tx
     #[tokio::test]
     async fn sign_tx_and_verify() -> Result<(), Box<dyn Error>> {
+    // ANCHOR: sign_tx
         let secret = SecretKey::from_str(
             "5f70feeff1f229e4a95e1056e8b4d80d0b24b565674860cc213bdb07127ce1b1",
         )?;
