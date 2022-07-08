@@ -19,8 +19,8 @@ impl MyContract for Contract {
 After `forc build`, will have a binary file that contains:
 
 ```terminal
-cat out/debug/my-test.bin
-G4]�]D`I]C�As@
+~$ cat out/debug/my-test.bin
+~$ G4]�]D`I]C�As@
               6]C�$@!QK% 
 ```
 
