@@ -51,9 +51,9 @@ mod tests {
                 Some(gas_price),
                 Some(gas_limit),
                 Some(byte_price),
-                Some(maturity)
+                Some(maturity),
             ),
-            StorageConfiguration::default()
+            StorageConfiguration::default(),
         )
         .await?;
 
@@ -94,8 +94,8 @@ mod tests {
         let contract_id_1 = Contract::deploy(
             "../../packages/fuels/tests/test_projects/contract_test/out/debug/contract_test.bin",
             &wallet,
-            TxParameters::default(),        StorageConfiguration::default()
-
+            TxParameters::default(),
+            StorageConfiguration::default(),
         )
         .await?;
 
@@ -135,8 +135,8 @@ mod tests {
         let contract_id_1 = Contract::deploy(
             "../../packages/fuels/tests/test_projects/contract_test/out/debug/contract_test.bin",
             &wallets[0],
-            TxParameters::default(),        StorageConfiguration::default()
-
+            TxParameters::default(),
+            StorageConfiguration::default(),
         )
         .await?;
 
@@ -155,8 +155,7 @@ mod tests {
             "../../packages/fuels/tests/test_projects/contract_test/out/debug/contract_test.bin",
             &wallets[1],
             TxParameters::default(),
-            StorageConfiguration::default()
-
+            StorageConfiguration::default(),
         )
         .await?;
 
@@ -187,10 +186,10 @@ mod tests {
         let contract_id = Contract::deploy(
             "../../packages/fuels/tests/test_projects/contract_test/out/debug/contract_test.bin",
             &wallet,
-            TxParameters::default(),        StorageConfiguration::default()
-
+            TxParameters::default(),
+            StorageConfiguration::default(),
         )
-            .await?;
+        .await?;
         println!("Contract deployed @ {:x}", contract_id);
         // ANCHOR: instantiate_contract
         let contract_instance = MyContract::new(contract_id.to_string(), wallet.clone());
@@ -299,16 +298,16 @@ mod tests {
         use fuels::prelude::*;
         use fuels::tx::Receipt;
         abigen!(
-        TestContract,
-        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
-    );
+            TestContract,
+            "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+        );
         let wallet = launch_provider_and_get_wallet().await;
         let contract_id = Contract::deploy(
-        "../../packages/fuels/tests/test_projects/contract_test/out/debug/contract_test\
+            "../../packages/fuels/tests/test_projects/contract_test/out/debug/contract_test\
         .bin",
-        &wallet,
-        TxParameters::default(),        StorageConfiguration::default()
-
+            &wallet,
+            TxParameters::default(),
+            StorageConfiguration::default(),
         )
         .await?;
         let contract_instance = TestContract::new(contract_id.to_string(), wallet);
@@ -339,9 +338,9 @@ mod tests {
         // ANCHOR: deployed_contracts
         // Replace with your contract ABI.json path
         abigen!(
-        MyContract,
-        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
-    );
+            MyContract,
+            "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+        );
         let wallet = launch_provider_and_get_wallet().await;
         // Your contract ID as a String.
         let contract_id =
@@ -358,19 +357,19 @@ mod tests {
     async fn call_params_gas() -> Result<(), Error> {
         use fuels::prelude::*;
         abigen!(
-        MyContract,
-        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
-    );
+            MyContract,
+            "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+        );
 
         let wallet = launch_provider_and_get_wallet().await;
 
         let contract_id = Contract::deploy(
-        "../../packages/fuels/tests/test_projects/contract_test/out/debug/contract_test.bin",
-        &wallet,
-        TxParameters::default(),        StorageConfiguration::default()
-
+            "../../packages/fuels/tests/test_projects/contract_test/out/debug/contract_test.bin",
+            &wallet,
+            TxParameters::default(),
+            StorageConfiguration::default(),
         )
-    .await?;
+        .await?;
 
         let contract_instance = MyContract::new(contract_id.to_string(), wallet.clone());
 
@@ -397,19 +396,19 @@ mod tests {
         use fuels::prelude::*;
 
         abigen!(
-        MyContract,
-        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
-    );
+            MyContract,
+            "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+        );
 
         let wallet = launch_provider_and_get_wallet().await;
 
         let contract_id = Contract::deploy(
-        "../../packages/fuels/tests/test_projects/contract_test/out/debug/contract_test.bin",
-        &wallet,
-        TxParameters::default(),        StorageConfiguration::default()
-
+            "../../packages/fuels/tests/test_projects/contract_test/out/debug/contract_test.bin",
+            &wallet,
+            TxParameters::default(),
+            StorageConfiguration::default(),
         )
-    .await?;
+        .await?;
 
         // ANCHOR: multi_call_prepare
         let contract_instance = MyContract::new(contract_id.to_string(), wallet.clone());
