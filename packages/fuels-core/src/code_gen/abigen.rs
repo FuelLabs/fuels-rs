@@ -111,7 +111,8 @@ impl Abigen {
                 quote! {
                     use alloc::{vec, vec::Vec};
                     use fuels_types::errors::Error as SDKError;
-                    use fuels_core::{EnumSelector, EnumVariants, Parameterize, ParamType, Tokenizable, Token, try_from_bytes};
+                    use fuels_types::param_types::{ParamType, EnumVariants};
+                    use fuels_core::{EnumSelector, Parameterize, Tokenizable, Token, try_from_bytes};
                 },
                 quote! {},
             )
