@@ -21,21 +21,21 @@ impl MyContract for Contract {
 The JSON ABI file looks like this:
 
 ```json
-cat out/debug/my-test-abi.json
-[
-  {
-    "type": "function",
-    "inputs": [],
-    "name": "test_function",
-    "outputs": [
-      {
-        "name": "",
-        "type": "bool",
-        "components": null
-      }
-    ]
-  }
-]
+$ cat out/debug/my-test-abi.json
+$ [
+    {
+      "type": "function",
+      "inputs": [],
+      "name": "test_function",
+      "outputs": [
+        {
+          "name": "",
+          "type": "bool",
+          "components": null
+        }
+      ]
+    }
+  ]
 ```
 
 The Fuel Rust SDK will take this file as input and generate equivalent methods (and custom types if applicable) that you can call from your Rust code.
