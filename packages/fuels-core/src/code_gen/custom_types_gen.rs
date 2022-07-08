@@ -1,4 +1,4 @@
-use crate::json_abi::parse_param;
+use crate::json_abi::parse_param_type_from_property;
 use crate::types::expand_type;
 use crate::utils::ident;
 use crate::ParamType;
@@ -38,7 +38,7 @@ pub fn expand_custom_struct(prop: &Property) -> Result<TokenStream, Error> {
     // 2. The creation of a token and its insertion into a vector of Tokens.
     for component in components {
         let field_name = ident(&component.name.to_snake_case());
-        let param_type = parse_param(component)?;
+        let param_type = parse_param_type_from_property(component)?;
 
         match param_type {
             // Case where a struct takes another struct
@@ -196,7 +196,7 @@ pub fn expand_custom_enum(enum_name: &str, prop: &Property) -> Result<TokenStrea
         let variant_name = ident(&component.name);
         let dis = discriminant as u8;
 
-        let param_type = parse_param(component)?;
+        let param_type = parse_param_type_from_property(component)?;
         match param_type {
             // Case where an enum takes another enum
             ParamType::Enum(_params) => {

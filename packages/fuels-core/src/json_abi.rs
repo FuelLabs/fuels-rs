@@ -82,7 +82,7 @@ impl ABIParser {
         let params: Vec<_> = entry
             .inputs
             .iter()
-            .map(|param| parse_param(param).unwrap())
+            .map(|param| parse_param_type_from_property(param).unwrap())
             .zip(values.iter().map(|v| v as &str))
             .collect();
 
@@ -172,7 +172,7 @@ impl ABIParser {
                 type_field: pair[0].clone(),
                 components: None,
             };
-            let p = parse_param(&prop)?;
+            let p = parse_param_type_from_property(&prop)?;
 
             let t: (ParamType, &str) = (p, &pair[1]);
             param_type_pairs.push(t);
@@ -557,8 +557,12 @@ impl ABIParser {
             )));
         }
 
-        let params_result: Result<Vec<_>, _> =
-            entry.unwrap().outputs.iter().map(parse_param).collect();
+        let params_result: Result<Vec<_>, _> = entry
+            .unwrap()
+            .outputs
+            .iter()
+            .map(parse_param_type_from_property)
+            .collect();
 
         match params_result {
             Ok(params) => Ok(ABIDecoder::decode(&params, value)?),
@@ -699,7 +703,7 @@ impl ABIParser {
 }
 
 /// Turns a JSON property into ParamType
-pub fn parse_param(prop: &Property) -> Result<ParamType, Error> {
+pub fn parse_param_type_from_property(prop: &Property) -> Result<ParamType, Error> {
     match ParamType::from_str(&prop.type_field) {
         // Simple case (primitive types, no arrays, including string)
         Ok(param_type) => Ok(param_type),
@@ -732,7 +736,7 @@ pub fn parse_tuple_param(param: &Property) -> Result<ParamType, Error> {
         .as_ref()
         .expect("tuples should have components")
     {
-        params.push(parse_param(tuple_component)?);
+        params.push(parse_param_type_from_property(tuple_component)?);
     }
 
     Ok(ParamType::Tuple(params))
@@ -786,7 +790,7 @@ pub fn parse_custom_type_param(param: &Property) -> Result<ParamType, Error> {
     match &param.components {
         Some(c) => {
             for component in c {
-                params.push(parse_param(component)?)
+                params.push(parse_param_type_from_property(component)?)
             }
             if param.is_struct_type() {
                 return Ok(ParamType::Struct(params));
