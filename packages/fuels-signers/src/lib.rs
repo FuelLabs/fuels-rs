@@ -78,8 +78,8 @@ mod tests {
         // Verify signature
         signature.verify(&recovered_address, &message)?;
         Ok(())
-    }
     // ANCHOR_END: sign_message
+    }
 
     // ANCHOR: sign_tx
     #[tokio::test]
