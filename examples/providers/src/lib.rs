@@ -2,9 +2,9 @@
 mod tests {
     use std::net::SocketAddr;
 
-    // ANCHOR: connect_to_node
     #[tokio::test]
     async fn connect_to_fuel_node() {
+        // ANCHOR: connect_to_node
         use fuels::prelude::*;
 
         // This is the address of a running node.
@@ -17,8 +17,8 @@ mod tests {
 
         // Create the wallet.
         let _wallet = LocalWallet::new_random(Some(provider));
+        // ANCHOR_END: connect_to_node
     }
-    // ANCHOR_END: connect_to_node
 
     #[tokio::test]
     async fn query_the_blockchain() {

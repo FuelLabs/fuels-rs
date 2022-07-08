@@ -4,9 +4,9 @@ mod tests {
     use fuels::prelude::Config;
     use fuels::prelude::Error;
 
-    // ANCHOR: bytes32
     #[tokio::test]
     async fn bytes32() -> Result<(), Error> {
+        // ANCHOR: bytes32
         use fuels::tx::Bytes32;
         use std::str::FromStr;
 
@@ -26,13 +26,12 @@ mod tests {
         let hex_string = "0x0000000000000000000000000000000000000000000000000000000000000000";
         let b256 = Bytes32::from_str(hex_string).expect("failed to create Bytes32 from string");
         assert_eq!([0u8; 32], *b256);
-
+        // ANCHOR_END: bytes32
         Ok(())
     }
-    // ANCHOR_END: bytes32
-    // ANCHOR: address
     #[tokio::test]
     async fn address() -> Result<(), Error> {
+        // ANCHOR: address
         use fuels::tx::Address;
         use std::str::FromStr;
 
@@ -52,13 +51,12 @@ mod tests {
         let hex_string = "0x0000000000000000000000000000000000000000000000000000000000000000";
         let address = Address::from_str(hex_string).expect("failed to create Address from string");
         assert_eq!([0u8; 32], *address);
-
+        // ANCHOR_END: address
         Ok(())
     }
-    // ANCHOR_END: address
-    // ANCHOR: asset_id
     #[tokio::test]
     async fn asset_id() -> Result<(), Error> {
+        // ANCHOR: asset_id
         use fuels::tx::AssetId;
         use std::str::FromStr;
 
@@ -78,13 +76,12 @@ mod tests {
         let hex_string = "0x0000000000000000000000000000000000000000000000000000000000000000";
         let asset_id = AssetId::from_str(hex_string).expect("failed to create AssetId from string");
         assert_eq!([0u8; 32], *asset_id);
-
+        // ANCHOR_END: asset_id
         Ok(())
     }
-    // ANCHOR_END: asset_id
-    // ANCHOR: contract_id
     #[tokio::test]
     async fn contract_id() -> Result<(), Error> {
+        // ANCHOR: contract_id
         use fuels::tx::ContractId;
         use std::str::FromStr;
 
@@ -105,14 +102,13 @@ mod tests {
         let contract_id =
             ContractId::from_str(hex_string).expect("failed to create ContractId from string");
         assert_eq!([0u8; 32], *contract_id);
-
+        // ANCHOR_END: contract_id
         Ok(())
     }
-    // ANCHOR_END: contract_id
 
-    // ANCHOR: type_conversion
     #[tokio::test]
     async fn type_conversion() -> Result<(), Error> {
+        // ANCHOR: type_conversion
         use fuels::tx::{AssetId, ContractId};
 
         let contract_id = ContractId::new([1u8; 32]);
@@ -120,8 +116,7 @@ mod tests {
         let asset_id: AssetId = AssetId::new(*contract_id);
 
         assert_eq!([1u8; 32], *asset_id);
-
+        // ANCHOR_END: type_conversion
         Ok(())
     }
-    // ANCHOR_END: type_conversion
 }
