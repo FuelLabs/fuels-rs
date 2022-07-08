@@ -1,6 +1,6 @@
 # Deploying contracts
 
-There are two main ways of working with contracts in the SDK: deploying a contract with SDK or using the SDK to connect to existing contracts.
+There are two main ways of working with contracts in the SDK: deploying a contract with SDK or using the SDK to interact with existing contracts.
 
 ## Deploying a contract binary
 
@@ -30,5 +30,5 @@ You can then use the contract methods very simply:
 Alternatively, if you want multiple instances of the same contract then use `deploy_with_salt`
 
 ```rust,ignore
-{{#include ../../../examples/contracts/src/lib.rs:deploy_with_salt}}
+{{#include ../../../examples/contracts/src/lib.rs:deploy_with_parameters}}
 ```

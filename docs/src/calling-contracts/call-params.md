@@ -6,7 +6,7 @@ Call parameters are:
 2. Asset ID;
 3. Gas forwarded.
 
-You can use these to forward coins to a contract. You can configure these parameters by creating an instance of [`CallParameters`](https://github.com/FuelLabs/fuels-rs/blob/adf81bd451d7637ce0976363bd7784408430031a/packages/fuels-contract/src/parameters.rs#L15) and passing it to a chain method called `call_params`.
+You can use these to forward coins to a contract. You can configure these parameters by creating an instance of [`CallParameters`](https://docs.rs/fuels/latest/fuels/core/parameters/struct.CallParameters.html#) and passing it to a chain method called `call_params`.
 
 For instance, suppose the following contract that uses Sway's `msg_amount()` to return the amount sent in that transaction.
 

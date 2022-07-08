@@ -17,7 +17,7 @@
     - [Setting up test wallets](./wallets/test-wallets.md)
     - [Signing](./wallets/signing.md)
   - [Deploying contracts](./getting-started/contracts.md)
-    - [Connecting to contracts](./contracts/connecting-to-contracts.md)
+    - [Interacting with contracts](./contracts/interacting-with-contracts.md)
     - [The FuelVM Binary file](./contracts/the-fuelvm-binary-file.md)
     - [The JSON ABI file](./contracts/the-json-abi-file.md)
     - [The `abigen!` macro](./contracts/the-abigen-macro.md)
