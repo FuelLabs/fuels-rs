@@ -6,10 +6,10 @@ use crate::code_gen::custom_types_gen::{
 };
 use crate::code_gen::functions_gen::expand_function;
 use crate::constants::{ADDRESS_SWAY_NATIVE_TYPE, CONTRACT_ID_SWAY_NATIVE_TYPE};
-use crate::errors::Error;
 use crate::json_abi::ABIParser;
 use crate::source::Source;
 use crate::utils::ident;
+use fuels_types::errors::Error;
 use fuels_types::{JsonABI, Property};
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
@@ -110,7 +110,8 @@ impl Abigen {
             (
                 quote! {
                     use alloc::{vec, vec::Vec};
-                    use fuels_core::{EnumSelector, EnumVariants, InstantiationError, Parameterize, ParamType, Tokenizable, Token};
+                    use fuels_types::errors::Error as SDKError;
+                    use fuels_core::{EnumSelector, EnumVariants, Parameterize, ParamType, Tokenizable, Token, try_from_bytes};
                 },
                 quote! {},
             )
@@ -118,9 +119,10 @@ impl Abigen {
             (
                 quote! {
                     use fuels::contract::contract::{Contract, ContractCallHandler};
+                    use fuels::core::{EnumSelector, EnumVariants, Parameterize, ParamType, Tokenizable, Token, try_from_bytes};
                     use fuels::signers::LocalWallet;
                     use fuels::tx::{ContractId, Address};
-                    use fuels::core::{EnumSelector, EnumVariants, InstantiationError, Parameterize, ParamType, Tokenizable, Token};
+                    use fuels::types::errors::Error as SDKError;
                     use std::str::FromStr;
                 },
                 quote! {
@@ -145,7 +147,7 @@ impl Abigen {
             pub use #name_mod::*;
 
             #[allow(clippy::too_many_arguments)]
-            mod #name_mod {
+            pub mod #name_mod {
                 #![allow(clippy::enum_variant_names)]
                 #![allow(dead_code)]
                 #![allow(unused_imports)]

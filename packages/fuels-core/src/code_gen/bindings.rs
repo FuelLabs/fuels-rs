@@ -1,5 +1,5 @@
-use crate::errors::Error;
 use crate::rustfmt;
+use fuels_types::errors::Error;
 use proc_macro2::TokenStream;
 use std::{fs::File, io::Write, path::Path};
 

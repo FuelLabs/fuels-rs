@@ -102,7 +102,7 @@ pub async fn setup_test_provider(
 #[cfg(test)]
 mod tests {
     use crate::{launch_custom_provider_and_get_wallets, WalletsConfig};
-    use fuels_core::errors::Error;
+    use fuels_types::errors::Error;
 
     #[tokio::test]
     async fn test_wallet_config() -> Result<(), Error> {

@@ -50,6 +50,7 @@ mod tests {
     const WIDTH_OF_BOOL: usize = 1;
     use crate::encoding_utils::compute_encoding_width;
     use crate::{EnumVariants, ParamType};
+    use fuels_types::errors::Error;
 
     #[test]
     fn array_size_dependent_on_num_of_elements() {
@@ -87,15 +88,16 @@ mod tests {
     }
 
     #[test]
-    fn enums_are_as_big_as_their_biggest_variant_plus_a_word() {
+    fn enums_are_as_big_as_their_biggest_variant_plus_a_word() -> Result<(), Error> {
         let inner_struct = ParamType::Struct(vec![ParamType::B256]);
-        let param = ParamType::Enum(EnumVariants::new(vec![ParamType::U32, inner_struct]).unwrap());
+        let param = ParamType::Enum(EnumVariants::new(vec![ParamType::U32, inner_struct])?);
 
         let width = compute_encoding_width(&param);
 
         const INNER_STRUCT_SIZE: usize = WIDTH_OF_B256;
         const EXPECTED_WIDTH: usize = INNER_STRUCT_SIZE + 1;
         assert_eq!(EXPECTED_WIDTH, width);
+        Ok(())
     }
 
     #[test]
