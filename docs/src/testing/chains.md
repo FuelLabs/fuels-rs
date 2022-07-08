@@ -5,5 +5,5 @@
 Example of usage:
 
 ````rust,ignore
-{{#include ../../../packages/fuels-abigen-macro/tests/harness.rs:uses_produce_blocks_to_increase_block_height}}
+{{#include ../../../packages/fuels/tests/harness.rs:uses_produce_blocks_to_increase_block_height}}
 ````

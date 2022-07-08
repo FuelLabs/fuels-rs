@@ -29,7 +29,7 @@ mod tests {
         abigen!(
             MyContract,
             // This path is relative to the workspace (repository) root
-            "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+            "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
         );
 
         // This helper will launch a local node and provide a test wallet linked to it
@@ -45,7 +45,7 @@ mod tests {
         // be used to initialize the instance
         let contract_id = Contract::deploy(
             // This path is relative to the current crate (examples/contracts)
-            "../../packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test.bin",
+            "../../packages/fuels/tests/test_projects/contract_test/out/debug/contract_test.bin",
             &wallet,
             TxParameters::new(
                 Some(gas_price),
@@ -86,13 +86,13 @@ mod tests {
 
         abigen!(
             MyContract,
-            "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+            "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
         );
 
         let wallet = launch_provider_and_get_wallet().await;
 
         let contract_id_1 = Contract::deploy(
-            "../../packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test.bin",
+            "../../packages/fuels/tests/test_projects/contract_test/out/debug/contract_test.bin",
             &wallet,
             TxParameters::default(),        StorageConfiguration::default()
 
@@ -105,7 +105,7 @@ mod tests {
         let salt: [u8; 32] = rng.gen();
 
         let contract_id_2 = Contract::deploy_with_parameters(
-            "../../packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test.bin",
+            "../../packages/fuels/tests/test_projects/contract_test/out/debug/contract_test.bin",
             &wallet,
             TxParameters::default(),
             StorageConfiguration::default(),
@@ -127,13 +127,13 @@ mod tests {
 
         abigen!(
             MyContract,
-            "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+            "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
         );
 
         let wallets = launch_custom_provider_and_get_wallets(WalletsConfig::default(), None).await;
 
         let contract_id_1 = Contract::deploy(
-            "../../packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test.bin",
+            "../../packages/fuels/tests/test_projects/contract_test/out/debug/contract_test.bin",
             &wallets[0],
             TxParameters::default(),        StorageConfiguration::default()
 
@@ -152,7 +152,7 @@ mod tests {
         assert_eq!(42, response.value);
 
         let contract_id_2 = Contract::deploy(
-            "../../packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test.bin",
+            "../../packages/fuels/tests/test_projects/contract_test/out/debug/contract_test.bin",
             &wallets[1],
             TxParameters::default(),
             StorageConfiguration::default()
@@ -180,12 +180,12 @@ mod tests {
         use fuels::prelude::*;
         abigen!(
             MyContract,
-            "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+            "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
         );
 
         let wallet = launch_provider_and_get_wallet().await;
         let contract_id = Contract::deploy(
-            "../../packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test.bin",
+            "../../packages/fuels/tests/test_projects/contract_test/out/debug/contract_test.bin",
             &wallet,
             TxParameters::default(),        StorageConfiguration::default()
 
@@ -259,13 +259,13 @@ mod tests {
         use fuels::prelude::*;
         abigen!(
             MyContract,
-            "packages/fuels-abigen-macro/tests/test_projects/token_ops/out/debug/token_ops-abi\
+            "packages/fuels/tests/test_projects/token_ops/out/debug/token_ops-abi\
             .json"
         );
 
         let wallet = launch_provider_and_get_wallet().await;
         let contract_id = Contract::deploy(
-            "../../packages/fuels-abigen-macro/tests/test_projects/token_ops/out/debug/token_ops\
+            "../../packages/fuels/tests/test_projects/token_ops/out/debug/token_ops\
         .bin",
             &wallet,
             TxParameters::default(),
@@ -300,11 +300,11 @@ mod tests {
         use fuels::tx::Receipt;
         abigen!(
         TestContract,
-        "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
         let wallet = launch_provider_and_get_wallet().await;
         let contract_id = Contract::deploy(
-        "../../packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test\
+        "../../packages/fuels/tests/test_projects/contract_test/out/debug/contract_test\
         .bin",
         &wallet,
         TxParameters::default(),        StorageConfiguration::default()
@@ -340,7 +340,7 @@ mod tests {
         // Replace with your contract ABI.json path
         abigen!(
         MyContract,
-        "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
         let wallet = launch_provider_and_get_wallet().await;
         // Your contract ID as a String.
@@ -359,13 +359,13 @@ mod tests {
         use fuels::prelude::*;
         abigen!(
         MyContract,
-        "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
 
         let wallet = launch_provider_and_get_wallet().await;
 
         let contract_id = Contract::deploy(
-        "../../packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test.bin",
+        "../../packages/fuels/tests/test_projects/contract_test/out/debug/contract_test.bin",
         &wallet,
         TxParameters::default(),        StorageConfiguration::default()
 
@@ -398,13 +398,13 @@ mod tests {
 
         abigen!(
         MyContract,
-        "packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
 
         let wallet = launch_provider_and_get_wallet().await;
 
         let contract_id = Contract::deploy(
-        "../../packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test.bin",
+        "../../packages/fuels/tests/test_projects/contract_test/out/debug/contract_test.bin",
         &wallet,
         TxParameters::default(),        StorageConfiguration::default()
 

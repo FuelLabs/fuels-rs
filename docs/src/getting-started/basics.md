@@ -53,11 +53,11 @@ Alternatively, if you want multiple instances of the same contract then use `dep
 The storage slots of a contract can be initialized manually from `Vec<StorageSlot>` where `StorageSlot` is a struct that holds the key-value pair for a given slot.
 
 ```rust,ignore
-{{#include ../../../packages/fuels-abigen-macro/tests/harness.rs:storage_slot_create}}
+{{#include ../../../packages/fuels/tests/harness.rs:storage_slot_create}}
 ```
 Once created, the slots can be used to initialize `StorageConfiguration::with_manual_storage` which can finally be passed to `deploy_with_parameters`:
 ```rust,ignore
-{{#include ../../../packages/fuels-abigen-macro/tests/harness.rs:manual_storage}}
+{{#include ../../../packages/fuels/tests/harness.rs:manual_storage}}
 ```
 
 ### Initializing storage slots automatically
@@ -67,7 +67,7 @@ The storage slots of a contract can be initialized automatically from the JSON f
 Path to JSON file is used to initialize `StorageConfiguration::with_storage_path` which was then passed to `deploy_with_parameters`:
 
 ```rust,ignore
-{{#include ../../../packages/fuels-abigen-macro/tests/harness.rs:automatic_storage}}
+{{#include ../../../packages/fuels/tests/harness.rs:automatic_storage}}
 ```
 
 ### Initializing storage slots both automatically and manually
@@ -152,7 +152,7 @@ This is commonly used to forward coins to a contract. These parameters can be co
 For instance, suppose the following contract that makes use of Sway's `msg_amount()` to return the amount sent in that transaction.
 
 ```rust,ignore
-{{#include ../../../packages/fuels-abigen-macro/tests/test_projects/contract_test/src/main.sw:msg_amount}}
+{{#include ../../../packages/fuels/tests/test_projects/contract_test/src/main.sw:msg_amount}}
 ```
 
 Then, in Rust, after setting up and deploying the above contract, you can configure the amount being sent in the transaction like this:
@@ -228,7 +228,7 @@ At the moment, it's up to you to know whether a contract method changes state or
 In some cases, you might want to send funds to the output of a transaction. Sway has a specific method for that: `transfer_to_output(coins, asset_id, recipient)`. So, if you have a contract that does something like this:
 
 ```rust,ignore
-{{#include ../../../packages/fuels-abigen-macro/tests/test_projects/token_ops/src/main.sw:variable_outputs}}
+{{#include ../../../packages/fuels/tests/test_projects/token_ops/src/main.sw:variable_outputs}}
 ```
 
 With the SDK, you can call `transfer_coins_to_output`, by chaining `append_variable_outputs(amount)` to your contract call. Like this:
@@ -246,11 +246,11 @@ Note that the Sway `lib-std` function `mint_to_address` calls `transfer_to_outpu
 Sometimes, you might need to call your contract, which calls other contracts. To do so, you must feed the external contract IDs that your contract depends on to the method you're calling. You do it by chaining `.set_contracts(&[external_contract_id, ...])` to the method you want to call. For instance:
 
 ```rust,ignore
-{{#include ../../../packages/fuels-abigen-macro/tests/harness.rs:external_contract}}
+{{#include ../../../packages/fuels/tests/harness.rs:external_contract}}
 ```
 
 For a more concrete example, see the `test_contract_calling_contract` function in
-`fuels-abigen-macro/tests/harness.rs`
+`fuels/tests/harness.rs`
 
 ## Connecting to existing contracts
 
@@ -303,4 +303,4 @@ You can also interact with the `CallResponse` by moving the type annotation to t
 
 ## More examples
 
-You can find runnable examples under [`fuels-abigen-macro/tests/harness.rs`](https://github.com/FuelLabs/fuels-rs/blob/master/packages/fuels-abigen-macro/tests/harness.rs).
+You can find runnable examples under [`fuels/tests/harness.rs`](https://github.com/FuelLabs/fuels-rs/blob/master/packages/fuels/tests/harness.rs).

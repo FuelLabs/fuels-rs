@@ -9,7 +9,7 @@ The specifications for the JSON ABI format and its encoding/decoding can be foun
 A simple example of generating type-safe bindings from a JSON ABI specified in-line:
 
 ```rust,ignore
-{{#include ../../../packages/fuels-abigen-macro/tests/harness.rs:bindings_from_inline_contracts}}
+{{#include ../../../packages/fuels/tests/harness.rs:bindings_from_inline_contracts}}
 ```
 
 This example and many more can be found under `tests/harness.rs`. To run the whole test suite run `cargo test` inside `fuels-abi-gen-macro/`.
