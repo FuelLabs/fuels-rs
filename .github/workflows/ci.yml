@@ -48,9 +48,10 @@ jobs:
 
       - name: Install Fuel Core
         run: |
-          curl -sSLf https://github.com/FuelLabs/fuel-core/releases/download/v0.9.4/fuel-core-0.9.4-x86_64-unknown-linux-gnu.tar.gz | tar -xz
-          chmod +x */fuel-core
-          mv */fuel-core /usr/local/bin/fuel-core
+          curl -sSLf https://github.com/FuelLabs/fuel-core/releases/download/v0.9.4/fuel-core-0.9.4-x86_64-unknown-linux-gnu.tar.gz -L -o fuel-core.tar.gz
+          tar -xvf fuel-core.tar.gz          
+          chmod +x fuel-core-0.9.4-x86_64-unknown-linux-gnu/fuel-core
+          mv fuel-core-0.9.4-x86_64-unknown-linux-gnu/fuel-core /usr/local/bin/fuel-core
 
       - name: Build Sway Examples
         uses: actions-rs/cargo@v1
