@@ -6,7 +6,6 @@ use fuels::prelude::{
     setup_test_provider, CallParameters, Contract, Error, LocalWallet, Provider, ProviderError,
     Salt, Signer, TxParameters, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
 };
-use fuels::signers::wallet::Wallet;
 use fuels::test_helpers::produce_blocks;
 use fuels_core::parameters::StorageConfiguration;
 use fuels_core::tx::{Address, Bytes32, StorageSlot};
