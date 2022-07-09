@@ -2221,7 +2221,7 @@ async fn can_handle_sway_function_called_new() -> anyhow::Result<()> {
     let wallet = launch_provider_and_get_wallet().await;
 
     let id = Contract::deploy(
-        "tests/test_projects/transaction_block_height/out/debug/transaction_block_height.bin",
+        "tests/test_projects/collision_in_fn_names/out/debug/collision_in_fn_names.bin",
         &wallet,
         TxParameters::default(),
         StorageConfiguration::default(),
