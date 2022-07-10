@@ -3,8 +3,8 @@ mod tests {
     use fuels::prelude::{Error, ProviderError};
 
     #[tokio::test]
-    // ANCHOR: create_random_wallet
     async fn create_random_wallet() {
+        // ANCHOR: create_random_wallet
         use fuels::prelude::*;
 
         // Use the test helper to setup a test provider.
@@ -12,12 +12,12 @@ mod tests {
 
         // Create the wallet.
         let _wallet = LocalWallet::new_random(Some(provider));
+        // ANCHOR_END: create_random_wallet
     }
-    // ANCHOR_END: create_random_wallet
 
     #[tokio::test]
-    // ANCHOR: create_wallet_from_secret_key
     async fn create_wallet_from_secret_key() -> Result<(), Box<dyn std::error::Error>> {
+        // ANCHOR: create_wallet_from_secret_key
         use fuels::prelude::*;
         use fuels::signers::fuel_crypto::SecretKey;
         use std::str::FromStr;
@@ -32,13 +32,13 @@ mod tests {
 
         // Create the wallet.
         let _wallet = LocalWallet::new_from_private_key(secret, Some(provider));
+        // ANCHOR_END: create_wallet_from_secret_key
         Ok(())
     }
-    // ANCHOR_END: create_wallet_from_secret_key
 
     #[tokio::test]
-    // ANCHOR: create_wallet_from_mnemonic
     async fn create_wallet_from_mnemonic() -> Result<(), Error> {
+        // ANCHOR: create_wallet_from_mnemonic
         use fuels::prelude::*;
 
         let phrase =
@@ -60,13 +60,13 @@ mod tests {
         let expected_address = "f18b6446deb8135544ba60333e5b7522685cd2cf64aa4e4c75df725149850b65";
 
         assert_eq!(wallet.address().to_string(), expected_address);
+        // ANCHOR_END: create_wallet_from_mnemonic
         Ok(())
     }
-    // ANCHOR_END: create_wallet_from_mnemonic
 
     #[tokio::test]
-    // ANCHOR: create_and_restore_json_wallet
     async fn create_and_restore_json_wallet() -> Result<(), Error> {
+        // ANCHOR: create_and_restore_json_wallet
         use fuels::prelude::*;
 
         let dir = std::env::temp_dir();
@@ -84,13 +84,13 @@ mod tests {
         let path = dir.join(uuid);
 
         let _recovered_wallet = LocalWallet::load_keystore(&path, password, Some(provider))?;
+        // ANCHOR_END: create_and_restore_json_wallet
         Ok(())
     }
-    // ANCHOR_END: create_and_restore_json_wallet
 
     #[tokio::test]
-    // ANCHOR: create_and_store_mnemonic_wallet
     async fn create_and_store_mnemonic_wallet() -> Result<(), Error> {
+        // ANCHOR: create_and_store_mnemonic_wallet
         use fuels::prelude::*;
 
         let dir = std::env::temp_dir();
@@ -108,9 +108,9 @@ mod tests {
 
         // Encrypts and stores it on disk. Can be recovered using `Wallet::load_keystore`.
         let _uuid = wallet.encrypt(&dir, password)?;
+        // ANCHOR_END: create_and_store_mnemonic_wallet
         Ok(())
     }
-    // ANCHOR_END: create_and_store_mnemonic_wallet
 
     #[tokio::test]
     async fn wallet_transfer() -> Result<(), Error> {

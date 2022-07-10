@@ -1,9 +1,11 @@
 # Setup instructions for the Fuel SDK
 
-## What you will need on your machine
+These are the steps you need to use the Fuel Rust SDK.
 
-- The latest `stable` Rust toolchain: <https://fuellabs.github.io/sway/latest/introduction/installation.html#dependencies>
-- `forc` and `fuel-core` binaries: <https://fuellabs.github.io/sway/latest/introduction/installation.html>
+## Dependencies
+
+- [The latest `stable` Rust toolchain](https://fuellabs.github.io/sway/master/introduction/installation.html);
+- [`forc` and `fuel-core` binaries](https://fuellabs.github.io/sway/master/introduction/installation.html#installing-from-cargo).
 
 `forc` is Sway equivalent of Rust's `cargo`. `fuel-core` is a Fuel full node implementation.
 
@@ -24,3 +26,7 @@ And then, in your Rust file that's going to make use of the SDK:
 ```rust,ignore
 use fuels::prelude::*;
 ```
+
+## More in-depth Fuel and Sway knowledge
+
+Read [The Sway Book](https://fuellabs.github.io/sway/master/introduction/overview.html) for more in-depth knowledge about Sway, the official smart contract language for the Fuel Virtual Machine.
