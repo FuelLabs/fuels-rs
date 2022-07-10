@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Generating type-safe Rust bindings - The Fuel Rust SDK</title>
+        <title>The abigen! macro - The Fuel Rust SDK</title>
         <!-- Custom HTML head -->
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
         <meta name="description" content="">
@@ -75,7 +75,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded affix "><a href="../index.html">The Fuel Rust SDK</a></li><li class="chapter-item expanded "><a href="../getting-started/index.html"><strong aria-hidden="true">1.</strong> Getting Started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../getting-started/setup.html"><strong aria-hidden="true">1.1.</strong> Setting up</a></li><li class="chapter-item expanded "><a href="../getting-started/basics.html"><strong aria-hidden="true">1.2.</strong> Basic usage</a></li><li class="chapter-item expanded "><a href="../getting-started/wallets.html"><strong aria-hidden="true">1.3.</strong> Wallets</a></li><li class="chapter-item expanded "><a href="../getting-started/type-safe-bindings.html" class="active"><strong aria-hidden="true">1.4.</strong> Generating type-safe Rust bindings</a></li></ol></li><li class="chapter-item expanded "><a href="../testing/index.html"><strong aria-hidden="true">2.</strong> Testing</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../testing/scripts.html"><strong aria-hidden="true">2.1.</strong> Running scripts</a></li><li class="chapter-item expanded "><a href="../testing/chains.html"><strong aria-hidden="true">2.2.</strong> Tweaking the blockchain</a></li></ol></li><li class="chapter-item expanded "><a href="../workspaces/index.html"><strong aria-hidden="true">3.</strong> fuels-rs Rust Workspaces</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../workspaces/fuels-abigen-macro.html"><strong aria-hidden="true">3.1.</strong> fuels-abigen-macro</a></li><li class="chapter-item expanded "><a href="../workspaces/fuels-abi-cli.html"><strong aria-hidden="true">3.2.</strong> fuels-abi-cli</a></li></ol></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="../index.html">The Fuel Rust SDK</a></li><li class="chapter-item expanded "><a href="../getting-started/index.html"><strong aria-hidden="true">1.</strong> Getting Started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../getting-started/setup.html"><strong aria-hidden="true">1.1.</strong> Setup</a></li><li class="chapter-item expanded "><a href="../getting-started/terminology.html"><strong aria-hidden="true">1.2.</strong> Terminology</a></li><li class="chapter-item expanded "><a href="../getting-started/connecting.html"><strong aria-hidden="true">1.3.</strong> Connecting to a Fuel node</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../providers/external-node.html"><strong aria-hidden="true">1.3.1.</strong> Connecting to an external Fuel node</a></li><li class="chapter-item expanded "><a href="../providers/short-lived.html"><strong aria-hidden="true">1.3.2.</strong> Running a short-lived Fuel node with the SDK</a></li><li class="chapter-item expanded "><a href="../providers/querying.html"><strong aria-hidden="true">1.3.3.</strong> Querying the blockchain</a></li></ol></li><li class="chapter-item expanded "><a href="../getting-started/managing-wallets.html"><strong aria-hidden="true">1.4.</strong> Managing wallets</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../wallets/private-keys.html"><strong aria-hidden="true">1.4.1.</strong> Creating a wallet from a private key</a></li><li class="chapter-item expanded "><a href="../wallets/mnemonic-wallet.html"><strong aria-hidden="true">1.4.2.</strong> Creating a wallet from mnemonic phrases</a></li><li class="chapter-item expanded "><a href="../wallets/encrypting-and-storing.html"><strong aria-hidden="true">1.4.3.</strong> Encrypting and storing wallets</a></li><li class="chapter-item expanded "><a href="../wallets/checking-balances-and-coins.html"><strong aria-hidden="true">1.4.4.</strong> Checking balances and coins</a></li><li class="chapter-item expanded "><a href="../wallets/test-wallets.html"><strong aria-hidden="true">1.4.5.</strong> Setting up test wallets</a></li><li class="chapter-item expanded "><a href="../wallets/signing.html"><strong aria-hidden="true">1.4.6.</strong> Signing</a></li></ol></li><li class="chapter-item expanded "><a href="../getting-started/contracts.html"><strong aria-hidden="true">1.5.</strong> Deploying contracts</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../contracts/interacting-with-contracts.html"><strong aria-hidden="true">1.5.1.</strong> Interacting with contracts</a></li><li class="chapter-item expanded "><a href="../contracts/the-fuelvm-binary-file.html"><strong aria-hidden="true">1.5.2.</strong> The FuelVM Binary file</a></li><li class="chapter-item expanded "><a href="../contracts/the-json-abi-file.html"><strong aria-hidden="true">1.5.3.</strong> The JSON ABI file</a></li><li class="chapter-item expanded "><a href="../contracts/the-abigen-macro.html" class="active"><strong aria-hidden="true">1.5.4.</strong> The abigen! macro</a></li></ol></li><li class="chapter-item expanded "><a href="../getting-started/calling-contracts.html"><strong aria-hidden="true">1.6.</strong> Calling contracts</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../calling-contracts/tx-params.html"><strong aria-hidden="true">1.6.1.</strong> Transaction parameters</a></li><li class="chapter-item expanded "><a href="../calling-contracts/call-params.html"><strong aria-hidden="true">1.6.2.</strong> Call parameters</a></li><li class="chapter-item expanded "><a href="../calling-contracts/call-response.html"><strong aria-hidden="true">1.6.3.</strong> Call response</a></li><li class="chapter-item expanded "><a href="../calling-contracts/variable-outputs.html"><strong aria-hidden="true">1.6.4.</strong> Variable outputs</a></li><li class="chapter-item expanded "><a href="../calling-contracts/read-only.html"><strong aria-hidden="true">1.6.5.</strong> Read-only calls</a></li><li class="chapter-item expanded "><a href="../calling-contracts/other-contracts.html"><strong aria-hidden="true">1.6.6.</strong> Calling other contracts</a></li><li class="chapter-item expanded "><a href="../calling-contracts/multicalls.html"><strong aria-hidden="true">1.6.7.</strong> Multiple contract calls</a></li></ol></li><li class="chapter-item expanded "><a href="../getting-started/types.html"><strong aria-hidden="true">1.7.</strong> Types</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../types/bytes32.html"><strong aria-hidden="true">1.7.1.</strong> Bytes32</a></li><li class="chapter-item expanded "><a href="../types/address.html"><strong aria-hidden="true">1.7.2.</strong> Address</a></li><li class="chapter-item expanded "><a href="../types/contract-id.html"><strong aria-hidden="true">1.7.3.</strong> ContractId</a></li><li class="chapter-item expanded "><a href="../types/asset-id.html"><strong aria-hidden="true">1.7.4.</strong> AssetId</a></li><li class="chapter-item expanded "><a href="../types/conversion.html"><strong aria-hidden="true">1.7.5.</strong> Converting native types</a></li></ol></li></ol></li><li class="chapter-item expanded "><a href="../getting-started/api.html"><strong aria-hidden="true">2.</strong> API</a></li><li class="chapter-item expanded "><a href="../debugging/debugging.html"><strong aria-hidden="true">3.</strong> Debugging</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../debugging/abigen.html"><strong aria-hidden="true">3.1.</strong> Debugging abigen errors</a></li><li class="chapter-item expanded "><a href="../debugging/contract-calls.html"><strong aria-hidden="true">3.2.</strong> Debugging contract call errors</a></li><li class="chapter-item expanded "><a href="../debugging/network.html"><strong aria-hidden="true">3.3.</strong> Debugging network errors</a></li></ol></li><li class="chapter-item expanded "><a href="../testing/index.html"><strong aria-hidden="true">4.</strong> Testing</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../testing/scripts.html"><strong aria-hidden="true">4.1.</strong> Running scripts</a></li><li class="chapter-item expanded "><a href="../testing/chains.html"><strong aria-hidden="true">4.2.</strong> Tweaking the blockchain</a></li></ol></li><li class="chapter-item expanded "><a href="../cookbook/cookbook.html"><strong aria-hidden="true">5.</strong> Cookbook</a></li><li class="chapter-item expanded "><a href="../cli/index.html"><strong aria-hidden="true">6.</strong> Command Line Interfaces</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../cli/fuels-abi-cli.html"><strong aria-hidden="true">6.1.</strong> fuels-abi-cli</a></li></ol></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -137,8 +137,14 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="generating-type-safe-rust-bindings"><a class="header" href="#generating-type-safe-rust-bindings">Generating Type-safe Rust Bindings</a></h1>
-<p>The SDK lets you transform ABI methods of a contract call, specified as JSON objects (which you can get from <a href="https://github.com/FuelLabs/sway/tree/master/forc">Forc</a>) into Rust structs and methods that are type-checked at compile time.</p>
+                        <h1 id="the-abigen-macro"><a class="header" href="#the-abigen-macro">The abigen! macro</a></h1>
+<p>You might have noticed this section in the previous example:</p>
+<pre><code class="language-rust ignore">        abigen!(
+            MyContract,
+            &quot;packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json&quot;
+        );
+</code></pre>
+<p>The SDK lets you transform ABI methods of a smart contract, specified as JSON objects (which you can get from <a href="https://github.com/FuelLabs/sway/tree/master/forc">Forc</a>), into Rust structs and methods that are type-checked at compile time.</p>
 <p>For instance, a contract with two methods: <code>initialize_counter(arg: u64) -&gt; u64</code> and <code>increment_counter(arg: u64) -&gt; u64</code>, with the following JSON ABI:</p>
 <pre><code class="language-json ignore">[
   {
@@ -215,12 +221,9 @@ impl MyContract {
 }
 </code></pre>
 <blockquote>
-<p><strong>Note:</strong> that is all <strong>generated</strong> code. No need to write any of that. Ever.</p>
+<p><strong>Note:</strong> that is all <strong>generated</strong> code. No need to write any of that. Ever. The generated code might look different from one version to another, this is just an example to give you an idea of what it looks like.</p>
 </blockquote>
-<blockquote>
-<p><strong>Note:</strong> the generated code might look different from one version to another, this is just an example to give you an idea of what it looks like.</p>
-</blockquote>
-<p>And, then, you're able to use it to call the actual methods on the deployed contract:</p>
+<p>Then, you're able to use it to call the actual methods on the deployed contract:</p>
 <pre><code class="language-rust ignore">        // This is an instance of your contract which you can use to make calls to your functions
         let contract_instance = MyContract::new(contract_id.to_string(), wallet);
 
@@ -240,10 +243,10 @@ impl MyContract {
         // Replace with your own JSON abi path (relative to the root of your crate)
         abigen!(MyContractName, &quot;examples/rust_bindings/src/abi.json&quot;);
 </code></pre>
-<p>And this <code>abigen!</code> macro will <em>expand</em> the code with the type-safe Rust bindings. It takes 2 arguments:</p>
+<p>And this <code>abigen!</code> macro will <em>expand</em> the code with the type-safe Rust bindings. It takes two arguments:</p>
 <ol>
 <li>The name of the struct that will be generated (<code>MyContractName</code>);</li>
-<li>Either a path as string to the JSON ABI file or the JSON ABI as a multiline string directly.</li>
+<li>Either a path as a string to the JSON ABI file or the JSON ABI as a multiline string directly.</li>
 </ol>
 <p>The same as the example above but passing the ABI definition directly:</p>
 <pre><code class="language-rust ignore">        // Don't forget to import the `abigen` macro as above
@@ -288,8 +291,8 @@ impl MyContract {
         );
 </code></pre>
 <h2 id="manual-decoding"><a class="header" href="#manual-decoding">Manual decoding</a></h2>
-<p>If, for whatever reason, you find yourself with bytes you wish to decode into a type used in your contract.</p>
-<p>If it is a type generated by <code>abigen!</code> then you can use <code>try_into</code>:</p>
+<p>@todo this must be moved to types section.</p>
+<p>Suppose you wish to decode raw bytes into a type used in your contract and the <code>abigen!</code> generated this type, then you can use <code>try_into</code>:</p>
 <pre><code class="language-rust ignore">    let shaker_in_bytes: Vec&lt;u8&gt; = vec![0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 2];
 
     let expected = Shaker::Mojito(2);
@@ -307,8 +310,7 @@ impl MyContract {
     assert_eq!(actual, expected);
 
 </code></pre>
-<p>Otherwise, for native types such as <code>u8</code>, <code>u32</code>,...,<code>ContractId</code> and others, you must use
-<code>::fuels::core::try_from_bytes</code>:</p>
+<p>Otherwise, for native types such as <code>u8</code>, <code>u32</code>,...,<code>ContractId</code> and others, you must use <code>::fuels::core::try_from_bytes</code>:</p>
 <pre><code class="language-rust ignore">        let contract_id_bytes = [0xFF; 32];
         let contract_id = ContractId::new(contract_id_bytes);
 
@@ -325,10 +327,10 @@ impl MyContract {
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../getting-started/wallets.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../contracts/the-json-abi-file.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
-                            <a rel="next" href="../testing/index.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next" href="../getting-started/calling-contracts.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
                         <div style="clear: both"></div>
@@ -337,10 +339,10 @@ impl MyContract {
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../getting-started/wallets.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../contracts/the-json-abi-file.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
-                    <a rel="next" href="../testing/index.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next" href="../getting-started/calling-contracts.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
