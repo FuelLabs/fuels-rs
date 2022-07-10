@@ -2096,6 +2096,30 @@ async fn test_init_storage_automatically() -> Result<(), Error> {
 }
 
 #[tokio::test]
+async fn test_init_storage_automatically_bad_json_path() -> Result<(), Error> {
+    abigen!(
+        MyContract,
+        "packages/fuels-abigen-macro/tests/test_projects/contract_storage_test/out/debug/contract_storage_test-abi.json"
+    );
+
+    let wallet = launch_provider_and_get_wallet().await;
+
+    let response = Contract::deploy_with_parameters(
+        "tests/test_projects/contract_storage_test/out/debug/contract_storage_test.bin",
+        &wallet,
+        TxParameters::default(),
+        StorageConfiguration::with_storage_path(
+            Some("tests/test_projects/contract_storage_test/out/debug/contract_storage_test-storage_slts.json".to_string())),
+        Salt::default(),
+    ).await.expect_err("Should fail");
+
+    let expected = "Invalid data:";
+    assert!(response.to_string().starts_with(expected));
+
+    Ok(())
+}
+
+#[tokio::test]
 async fn contract_method_call_respects_maturity() -> anyhow::Result<()> {
     abigen!(
         MyContract,
