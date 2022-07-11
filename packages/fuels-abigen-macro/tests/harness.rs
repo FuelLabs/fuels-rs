@@ -8,7 +8,6 @@ use fuels::prelude::{
     setup_test_provider, CallParameters, Contract, Error, LocalWallet, Provider, ProviderError,
     Salt, Signer, TxParameters, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
 };
-use fuels::signers::wallet::Wallet;
 use fuels::test_helpers::produce_blocks;
 use fuels_core::abi_encoder::ABIEncoder;
 use fuels_core::parameters::StorageConfiguration;
@@ -34,15 +33,6 @@ fn init_tracing() {
 fn null_contract_id() -> String {
     // a null contract address ~[0u8;32]
     String::from("0000000000000000000000000000000000000000000000000000000000000000")
-}
-
-async fn get_balance(wallet: &Wallet, address: Address, asset_id: AssetId) -> u64 {
-    wallet
-        .get_provider()
-        .unwrap()
-        .get_asset_balance(&address, asset_id)
-        .await
-        .unwrap()
 }
 
 #[tokio::test]
@@ -2246,11 +2236,11 @@ async fn gql_height_info_is_correct() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-async fn can_call_no_arg_predicate_returns_true() {
+async fn can_call_no_arg_predicate_returns_true() -> anyhow::Result<(), anyhow::Error> {
     let amount_to_predicate: u64 = 16;
     let asset_id = AssetId::default();
     let predicate_code =
-        std::fs::read("tests/test_projects/predicate_true/out/debug/predicate_true.bin").unwrap();
+        std::fs::read("tests/test_projects/predicate_true/out/debug/predicate_true.bin")?;
     let receiver_address: Address = LocalWallet::new_random(None).address();
     let mut wallet = LocalWallet::new_random(None);
     let coins = setup_single_asset_coins(
@@ -2268,41 +2258,49 @@ async fn can_call_no_arg_predicate_returns_true() {
         }),
     )
     .await;
-    let connected_provider = Provider::connect(address).await.unwrap();
+    let connected_provider = Provider::connect(address).await?;
     wallet.set_provider(connected_provider);
 
     let instance = Predicate::new(predicate_code);
     instance
         .deploy_predicate(&wallet, amount_to_predicate, asset_id)
-        .await
-        .unwrap();
-    let receiver_balance_before = get_balance(&wallet, receiver_address, asset_id).await;
+        .await?;
+    let receiver_balance_before = wallet
+        .get_provider()?
+        .get_asset_balance(&receiver_address, asset_id)
+        .await?;
     assert_eq!(receiver_balance_before, 0);
     instance
         .spend_predicate(
-            &wallet.get_provider().unwrap(),
+            wallet.get_provider()?,
             amount_to_predicate,
             asset_id,
             receiver_address,
             None,
         )
-        .await
-        .unwrap();
-    let receiver_balance_after = get_balance(&wallet, receiver_address, asset_id).await;
+        .await?;
+    let receiver_balance_after = wallet
+        .get_provider()?
+        .get_asset_balance(&receiver_address, asset_id)
+        .await?;
     assert_eq!(
         receiver_balance_before + amount_to_predicate,
         receiver_balance_after
     );
-    let predicate_balance = get_balance(&wallet, instance.address, asset_id).await;
+    let predicate_balance = wallet
+        .get_provider()?
+        .get_asset_balance(&instance.address, asset_id)
+        .await?;
     assert_eq!(predicate_balance, 0);
+    Ok(())
 }
 
 #[tokio::test]
-async fn can_call_no_arg_predicate_returns_false() {
+async fn can_call_no_arg_predicate_returns_false() -> anyhow::Result<(), anyhow::Error> {
     let amount_to_predicate: u64 = 12;
     let asset_id = AssetId::default();
     let predicate_code =
-        std::fs::read("tests/test_projects/predicate_false/out/debug/predicate_false.bin").unwrap();
+        std::fs::read("tests/test_projects/predicate_false/out/debug/predicate_false.bin")?;
     let receiver_address: Address = LocalWallet::new_random(None).address();
     let mut wallet = LocalWallet::new_random(None);
     let coins = setup_single_asset_coins(
@@ -2320,21 +2318,23 @@ async fn can_call_no_arg_predicate_returns_false() {
         }),
     )
     .await;
-    let connected_provider = Provider::connect(address).await.unwrap();
+    let connected_provider = Provider::connect(address).await?;
     wallet.set_provider(connected_provider);
 
     let instance = Predicate::new(predicate_code);
     instance
         .deploy_predicate(&wallet, amount_to_predicate, asset_id)
-        .await
-        .unwrap();
+        .await?;
 
-    let receiver_balance_before = get_balance(&wallet, receiver_address, asset_id).await;
+    let receiver_balance_before = wallet
+        .get_provider()?
+        .get_asset_balance(&receiver_address, asset_id)
+        .await?;
     assert_eq!(receiver_balance_before, 0);
 
     instance
         .spend_predicate(
-            &wallet.get_provider().unwrap(),
+            wallet.get_provider()?,
             amount_to_predicate,
             asset_id,
             receiver_address,
@@ -2342,21 +2342,29 @@ async fn can_call_no_arg_predicate_returns_false() {
         )
         .await
         .expect_err("should error");
-    let receiver_balance_after = get_balance(&wallet, receiver_address, asset_id).await;
+    let receiver_balance_after = wallet
+        .get_provider()?
+        .get_asset_balance(&receiver_address, asset_id)
+        .await?;
     assert_eq!(receiver_balance_before, receiver_balance_after);
-    let predicate_balance = get_balance(&wallet, instance.address, asset_id).await;
+    let predicate_balance = wallet
+        .get_provider()?
+        .get_asset_balance(&instance.address, asset_id)
+        .await?;
     assert_eq!(predicate_balance, amount_to_predicate);
+
+    Ok(())
 }
 
 #[tokio::test]
-async fn can_call_predicate_with_valid_u32_data() {
+async fn can_call_predicate_with_valid_u32_data() -> anyhow::Result<(), anyhow::Error> {
     let arg = Token::U32(1078_u32);
     let args: Vec<Token> = vec![arg];
     let predicate_data = ABIEncoder::encode(&args).unwrap();
     let amount_to_predicate: u64 = 23;
     let asset_id = AssetId::default();
     let predicate_code =
-        std::fs::read("tests/test_projects/predicate_u32/out/debug/predicate_u32.bin").unwrap();
+        std::fs::read("tests/test_projects/predicate_u32/out/debug/predicate_u32.bin")?;
     let receiver_address: Address = LocalWallet::new_random(None).address();
     let mut wallet = LocalWallet::new_random(None);
     let coins = setup_single_asset_coins(
@@ -2374,44 +2382,52 @@ async fn can_call_predicate_with_valid_u32_data() {
         }),
     )
     .await;
-    let connected_provider = Provider::connect(address).await.unwrap();
+    let connected_provider = Provider::connect(address).await?;
     wallet.set_provider(connected_provider);
 
     let instance = Predicate::new(predicate_code);
     instance
         .deploy_predicate(&wallet, amount_to_predicate, asset_id)
-        .await
-        .unwrap();
-    let receiver_balance_before = get_balance(&wallet, receiver_address, asset_id).await;
+        .await?;
+    let receiver_balance_before = wallet
+        .get_provider()?
+        .get_asset_balance(&receiver_address, asset_id)
+        .await?;
     assert_eq!(receiver_balance_before, 0);
     instance
         .spend_predicate(
-            &wallet.get_provider().unwrap(),
+            wallet.get_provider()?,
             amount_to_predicate,
             asset_id,
             receiver_address,
             Some(predicate_data),
         )
-        .await
-        .unwrap();
-    let receiver_balance_after = get_balance(&wallet, receiver_address, asset_id).await;
+        .await?;
+    let receiver_balance_after = wallet
+        .get_provider()?
+        .get_asset_balance(&receiver_address, asset_id)
+        .await?;
     assert_eq!(
         receiver_balance_before + amount_to_predicate,
         receiver_balance_after
     );
-    let predicate_balance = get_balance(&wallet, instance.address, asset_id).await;
+    let predicate_balance = wallet
+        .get_provider()?
+        .get_asset_balance(&instance.address, asset_id)
+        .await?;
     assert_eq!(predicate_balance, 0);
+    Ok(())
 }
 
 #[tokio::test]
-async fn can_call_predicate_with_invalid_u32_data() {
+async fn can_call_predicate_with_invalid_u32_data() -> anyhow::Result<(), anyhow::Error> {
     let arg = Token::U32(101_u32);
     let args: Vec<Token> = vec![arg];
     let predicate_data = ABIEncoder::encode(&args).unwrap();
     let amount_to_predicate: u64 = 23;
     let asset_id = AssetId::default();
     let predicate_code =
-        std::fs::read("tests/test_projects/predicate_u32/out/debug/predicate_u32.bin").unwrap();
+        std::fs::read("tests/test_projects/predicate_u32/out/debug/predicate_u32.bin")?;
     let receiver_address: Address = LocalWallet::new_random(None).address();
     let mut wallet = LocalWallet::new_random(None);
     let coins = setup_single_asset_coins(
@@ -2429,19 +2445,21 @@ async fn can_call_predicate_with_invalid_u32_data() {
         }),
     )
     .await;
-    let connected_provider = Provider::connect(address).await.unwrap();
+    let connected_provider = Provider::connect(address).await?;
     wallet.set_provider(connected_provider);
 
     let instance = Predicate::new(predicate_code);
     instance
         .deploy_predicate(&wallet, amount_to_predicate, asset_id)
-        .await
-        .unwrap();
-    let receiver_balance_before = get_balance(&wallet, receiver_address, asset_id).await;
+        .await?;
+    let receiver_balance_before = wallet
+        .get_provider()?
+        .get_asset_balance(&receiver_address, asset_id)
+        .await?;
     assert_eq!(receiver_balance_before, 0);
     instance
         .spend_predicate(
-            &wallet.get_provider().unwrap(),
+            wallet.get_provider()?,
             amount_to_predicate,
             asset_id,
             receiver_address,
@@ -2449,14 +2467,21 @@ async fn can_call_predicate_with_invalid_u32_data() {
         )
         .await
         .expect_err("should error");
-    let receiver_balance_after = get_balance(&wallet, receiver_address, asset_id).await;
+    let receiver_balance_after = wallet
+        .get_provider()?
+        .get_asset_balance(&receiver_address, asset_id)
+        .await?;
     assert_eq!(receiver_balance_before, receiver_balance_after);
-    let predicate_balance = get_balance(&wallet, instance.address, asset_id).await;
+    let predicate_balance = wallet
+        .get_provider()?
+        .get_asset_balance(&instance.address, asset_id)
+        .await?;
     assert_eq!(predicate_balance, amount_to_predicate);
+    Ok(())
 }
 
 #[tokio::test]
-async fn can_call_predicate_with_address_data() {
+async fn can_call_predicate_with_address_data() -> anyhow::Result<(), anyhow::Error> {
     let arg = Token::B256(
         *Address::from_str("0xef86afa9696cf0dc6385e2c407a6e159a1103cefb7e2ae0636fb33d3cb2a9e4a")
             .unwrap(),
@@ -2466,8 +2491,7 @@ async fn can_call_predicate_with_address_data() {
     let amount_to_predicate: u64 = 44;
     let asset_id = AssetId::default();
     let predicate_code =
-        std::fs::read("tests/test_projects/predicate_address/out/debug/predicate_address.bin")
-            .unwrap();
+        std::fs::read("tests/test_projects/predicate_address/out/debug/predicate_address.bin")?;
     let receiver_address: Address = LocalWallet::new_random(None).address();
     let mut wallet = LocalWallet::new_random(None);
     let coins = setup_single_asset_coins(
@@ -2485,37 +2509,45 @@ async fn can_call_predicate_with_address_data() {
         }),
     )
     .await;
-    let connected_provider = Provider::connect(address).await.unwrap();
+    let connected_provider = Provider::connect(address).await?;
     wallet.set_provider(connected_provider);
 
     let instance = Predicate::new(predicate_code);
     instance
         .deploy_predicate(&wallet, amount_to_predicate, asset_id)
-        .await
-        .unwrap();
-    let receiver_balance_before = get_balance(&wallet, receiver_address, asset_id).await;
+        .await?;
+    let receiver_balance_before = wallet
+        .get_provider()?
+        .get_asset_balance(&receiver_address, asset_id)
+        .await?;
     assert_eq!(receiver_balance_before, 0);
     instance
         .spend_predicate(
-            &wallet.get_provider().unwrap(),
+            wallet.get_provider()?,
             amount_to_predicate,
             asset_id,
             receiver_address,
             Some(predicate_data),
         )
-        .await
-        .unwrap();
-    let receiver_balance_after = get_balance(&wallet, receiver_address, asset_id).await;
+        .await?;
+    let receiver_balance_after = wallet
+        .get_provider()?
+        .get_asset_balance(&receiver_address, asset_id)
+        .await?;
     assert_eq!(
         receiver_balance_before + amount_to_predicate,
         receiver_balance_after
     );
-    let predicate_balance = get_balance(&wallet, instance.address, asset_id).await;
+    let predicate_balance = wallet
+        .get_provider()?
+        .get_asset_balance(&instance.address, asset_id)
+        .await?;
     assert_eq!(predicate_balance, 0);
+    Ok(())
 }
 
 #[tokio::test]
-async fn can_call_predicate_with_valid_struct_data() {
+async fn can_call_predicate_with_valid_struct_data() -> anyhow::Result<(), anyhow::Error> {
     let has_account = Token::Bool(true);
     let total_complete = Token::U64(100);
     let args: Vec<Token> = vec![has_account, total_complete];
@@ -2542,37 +2574,45 @@ async fn can_call_predicate_with_valid_struct_data() {
         }),
     )
     .await;
-    let connected_provider = Provider::connect(address).await.unwrap();
+    let connected_provider = Provider::connect(address).await?;
     wallet.set_provider(connected_provider);
 
     let instance = Predicate::new(predicate_code);
     instance
         .deploy_predicate(&wallet, amount_to_predicate, asset_id)
-        .await
-        .unwrap();
-    let receiver_balance_before = get_balance(&wallet, receiver_address, asset_id).await;
+        .await?;
+    let receiver_balance_before = wallet
+        .get_provider()?
+        .get_asset_balance(&receiver_address, asset_id)
+        .await?;
     assert_eq!(receiver_balance_before, 0);
     instance
         .spend_predicate(
-            &wallet.get_provider().unwrap(),
+            wallet.get_provider()?,
             amount_to_predicate,
             asset_id,
             receiver_address,
             Some(predicate_data),
         )
-        .await
-        .unwrap();
-    let receiver_balance_after = get_balance(&wallet, receiver_address, asset_id).await;
+        .await?;
+    let receiver_balance_after = wallet
+        .get_provider()?
+        .get_asset_balance(&receiver_address, asset_id)
+        .await?;
     assert_eq!(
         receiver_balance_before + amount_to_predicate,
         receiver_balance_after
     );
-    let predicate_balance = get_balance(&wallet, instance.address, asset_id).await;
+    let predicate_balance = wallet
+        .get_provider()?
+        .get_asset_balance(&instance.address, asset_id)
+        .await?;
     assert_eq!(predicate_balance, 0);
+    Ok(())
 }
 
 #[tokio::test]
-async fn can_call_predicate_with_invalid_struct_u64() {
+async fn can_call_predicate_with_invalid_struct_u64() -> anyhow::Result<(), anyhow::Error> {
     let has_account = Token::Bool(true);
     let total_complete = Token::U64(55);
     let args: Vec<Token> = vec![has_account, total_complete];
@@ -2599,19 +2639,21 @@ async fn can_call_predicate_with_invalid_struct_u64() {
         }),
     )
     .await;
-    let connected_provider = Provider::connect(address).await.unwrap();
+    let connected_provider = Provider::connect(address).await?;
     wallet.set_provider(connected_provider);
 
     let instance = Predicate::new(predicate_code);
     instance
         .deploy_predicate(&wallet, amount_to_predicate, asset_id)
-        .await
-        .unwrap();
-    let receiver_balance_before = get_balance(&wallet, receiver_address, asset_id).await;
+        .await?;
+    let receiver_balance_before = wallet
+        .get_provider()?
+        .get_asset_balance(&receiver_address, asset_id)
+        .await?;
     assert_eq!(receiver_balance_before, 0);
     instance
         .spend_predicate(
-            &wallet.get_provider().unwrap(),
+            wallet.get_provider()?,
             amount_to_predicate,
             asset_id,
             receiver_address,
@@ -2619,14 +2661,21 @@ async fn can_call_predicate_with_invalid_struct_u64() {
         )
         .await
         .expect_err("should error");
-    let receiver_balance_after = get_balance(&wallet, receiver_address, asset_id).await;
+    let receiver_balance_after = wallet
+        .get_provider()?
+        .get_asset_balance(&receiver_address, asset_id)
+        .await?;
     assert_eq!(receiver_balance_before, receiver_balance_after);
-    let predicate_balance = get_balance(&wallet, instance.address, asset_id).await;
+    let predicate_balance = wallet
+        .get_provider()?
+        .get_asset_balance(&instance.address, asset_id)
+        .await?;
     assert_eq!(predicate_balance, amount_to_predicate);
+    Ok(())
 }
 
 #[tokio::test]
-async fn can_call_predicate_with_invalid_struct_bool() {
+async fn can_call_predicate_with_invalid_struct_bool() -> anyhow::Result<(), anyhow::Error> {
     let has_account = Token::Bool(false);
     let total_complete = Token::U64(100);
     let args: Vec<Token> = vec![has_account, total_complete];
@@ -2653,19 +2702,21 @@ async fn can_call_predicate_with_invalid_struct_bool() {
         }),
     )
     .await;
-    let connected_provider = Provider::connect(address).await.unwrap();
+    let connected_provider = Provider::connect(address).await?;
     wallet.set_provider(connected_provider);
 
     let instance = Predicate::new(predicate_code);
     instance
         .deploy_predicate(&wallet, amount_to_predicate, asset_id)
-        .await
-        .unwrap();
-    let receiver_balance_before = get_balance(&wallet, receiver_address, asset_id).await;
+        .await?;
+    let receiver_balance_before = wallet
+        .get_provider()?
+        .get_asset_balance(&receiver_address, asset_id)
+        .await?;
     assert_eq!(receiver_balance_before, 0);
     instance
         .spend_predicate(
-            &wallet.get_provider().unwrap(),
+            wallet.get_provider()?,
             amount_to_predicate,
             asset_id,
             receiver_address,
@@ -2673,8 +2724,15 @@ async fn can_call_predicate_with_invalid_struct_bool() {
         )
         .await
         .expect_err("should error");
-    let receiver_balance_after = get_balance(&wallet, receiver_address, asset_id).await;
+    let receiver_balance_after = wallet
+        .get_provider()?
+        .get_asset_balance(&receiver_address, asset_id)
+        .await?;
     assert_eq!(receiver_balance_before, receiver_balance_after);
-    let predicate_balance = get_balance(&wallet, instance.address, asset_id).await;
+    let predicate_balance = wallet
+        .get_provider()?
+        .get_asset_balance(&instance.address, asset_id)
+        .await?;
     assert_eq!(predicate_balance, amount_to_predicate);
+    Ok(())
 }
