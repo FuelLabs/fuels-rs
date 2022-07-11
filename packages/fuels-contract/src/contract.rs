@@ -252,6 +252,9 @@ impl Contract {
 
         let storage = match storage_path {
             Some(path) if Path::new(&path).exists() => Self::get_storage_vec(path),
+            Some(path) if !Path::new(&path).exists() => {
+                return Err(Error::InvalidData(path.to_owned()));
+            }
             _ => {
                 vec![]
             }
