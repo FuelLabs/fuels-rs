@@ -2280,7 +2280,7 @@ async fn can_call_no_arg_predicate_returns_true() {
     assert_eq!(receiver_balance_before, 0);
     instance
         .spend_predicate(
-            &wallet,
+            &wallet.get_provider().unwrap(),
             amount_to_predicate,
             asset_id,
             receiver_address,
@@ -2334,7 +2334,7 @@ async fn can_call_no_arg_predicate_returns_false() {
 
     instance
         .spend_predicate(
-            &wallet,
+            &wallet.get_provider().unwrap(),
             amount_to_predicate,
             asset_id,
             receiver_address,
@@ -2386,7 +2386,7 @@ async fn can_call_predicate_with_valid_u32_data() {
     assert_eq!(receiver_balance_before, 0);
     instance
         .spend_predicate(
-            &wallet,
+            &wallet.get_provider().unwrap(),
             amount_to_predicate,
             asset_id,
             receiver_address,
@@ -2441,7 +2441,7 @@ async fn can_call_predicate_with_invalid_u32_data() {
     assert_eq!(receiver_balance_before, 0);
     instance
         .spend_predicate(
-            &wallet,
+            &wallet.get_provider().unwrap(),
             amount_to_predicate,
             asset_id,
             receiver_address,
@@ -2497,7 +2497,7 @@ async fn can_call_predicate_with_address_data() {
     assert_eq!(receiver_balance_before, 0);
     instance
         .spend_predicate(
-            &wallet,
+            &wallet.get_provider().unwrap(),
             amount_to_predicate,
             asset_id,
             receiver_address,
@@ -2554,7 +2554,7 @@ async fn can_call_predicate_with_valid_struct_data() {
     assert_eq!(receiver_balance_before, 0);
     instance
         .spend_predicate(
-            &wallet,
+            &wallet.get_provider().unwrap(),
             amount_to_predicate,
             asset_id,
             receiver_address,
@@ -2611,7 +2611,7 @@ async fn can_call_predicate_with_invalid_struct_u64() {
     assert_eq!(receiver_balance_before, 0);
     instance
         .spend_predicate(
-            &wallet,
+            &wallet.get_provider().unwrap(),
             amount_to_predicate,
             asset_id,
             receiver_address,
@@ -2665,7 +2665,7 @@ async fn can_call_predicate_with_invalid_struct_bool() {
     assert_eq!(receiver_balance_before, 0);
     instance
         .spend_predicate(
-            &wallet,
+            &wallet.get_provider().unwrap(),
             amount_to_predicate,
             asset_id,
             receiver_address,

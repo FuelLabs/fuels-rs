@@ -4,7 +4,7 @@ use fuel_gql_client::{
     fuel_tx::{Contract, Input, Output, Receipt, Transaction, UtxoId},
     fuel_types::{Address, AssetId},
 };
-use fuels_signers::{wallet::Wallet, Signer};
+use fuels_signers::{provider::Provider, wallet::Wallet, Signer};
 use fuels_types::errors::Error;
 
 /// Predicate provides methods to create new predicates and call them
@@ -19,10 +19,17 @@ impl Predicate {
         Self { code, address }
     }
 
+    /// Deploys locked coins in a Predicate to the given wallet's provider.
+    ///
+    /// # Arguments
+    ///
+    /// * `wallet` - A wallet that funds this transaction
+    /// * `coin_amount_to_predicate` - The amount of locked coins as given asset id to store within Predicate
+    /// * `asset_id` - The asset id of the locked coins stored within Predicate
     pub async fn deploy_predicate(
         &self,
         wallet: &Wallet,
-        amount_to_predicate: u64,
+        coin_amount_to_predicate: u64,
         asset_id: AssetId,
     ) -> Result<Vec<Receipt>, Error> {
         let wallet_coins = wallet
@@ -33,7 +40,7 @@ impl Predicate {
             )
             .await?;
 
-        let output_coin = Output::coin(self.address, amount_to_predicate, asset_id);
+        let output_coin = Output::coin(self.address, coin_amount_to_predicate, asset_id);
         let output_change = Output::change(wallet.address(), 0, asset_id);
         if let Transaction::Script {
             gas_price,
@@ -68,18 +75,25 @@ impl Predicate {
         }
     }
 
+    /// Attempts to spend coins from referenced Predicate and add to the given wallet's coins
+    ///
+    /// # Arguments
+    ///
+    /// * `provider` - A provider to handle the transaction
+    /// * `coin_amount_to_predicate` - The amount of locked coins as given asset id to store within Predicate
+    /// * `asset_id` - The asset id of the locked coins stored within Predicate
+    /// * `receiver_address` - The address that may receive the locked coins if Predicate returns true
+    /// * `predicate_data` - Optional parameter data to be sent to Predicate function as part of processing
     pub async fn spend_predicate(
         &self,
-        wallet: &Wallet,
-        amount_to_predicate: u64,
+        provider: &Provider,
+        coin_amount_to_predicate: u64,
         asset_id: AssetId,
         receiver_address: Address,
         predicate_data: Option<Vec<u8>>,
     ) -> Result<(), Error> {
-        let utxo_predicate_hash = wallet
-            .get_provider()
-            .unwrap()
-            .get_spendable_coins(&self.address, asset_id, amount_to_predicate)
+        let utxo_predicate_hash = provider
+            .get_spendable_coins(&self.address, asset_id, coin_amount_to_predicate)
             .await?;
 
         let mut inputs = vec![];
@@ -131,7 +145,6 @@ impl Predicate {
             );
 
             let script = Script::new(tx);
-            let provider = wallet.get_provider()?;
             let _call_result = script.call(&provider.client).await;
             Ok(())
         } else {
