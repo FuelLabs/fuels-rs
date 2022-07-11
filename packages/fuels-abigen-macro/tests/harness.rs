@@ -1,22 +1,22 @@
+use fuel_core::service::Config;
 use fuel_gql_client::fuel_tx::{AssetId, ContractId, Receipt};
 use fuels::contract::contract::MultiContractCallHandler;
+use fuels::contract::predicate::Predicate;
 use fuels::prelude::Error::TransactionError;
 use fuels::prelude::{
     abigen, launch_provider_and_get_wallet, setup_multiple_assets_coins, setup_single_asset_coins,
     setup_test_provider, CallParameters, Contract, Error, LocalWallet, Provider, ProviderError,
     Salt, Signer, TxParameters, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
 };
+use fuels::signers::wallet::Wallet;
 use fuels::test_helpers::produce_blocks;
+use fuels_core::abi_encoder::ABIEncoder;
 use fuels_core::parameters::StorageConfiguration;
 use fuels_core::tx::{Address, Bytes32, StorageSlot};
 use fuels_core::Tokenizable;
 use fuels_core::{constants::BASE_ASSET_ID, Token};
 use sha2::{Digest, Sha256};
 use std::str::FromStr;
-use fuel_core::service::Config;
-use fuels::contract::predicate::Predicate;
-use fuels::signers::wallet::Wallet;
-use fuels_core::abi_encoder::ABIEncoder;
 
 /// Note: all the tests and examples below require pre-compiled Sway projects.
 /// To compile these projects, run `cargo run --bin build-test-projects`.
@@ -2249,7 +2249,7 @@ async fn can_call_no_arg_predicate_returns_true() {
 
     let instance = Predicate::new(predicate_code);
     instance
-        .create_predicate(&wallet, amount_to_predicate, asset_id)
+        .deploy_predicate(&wallet, amount_to_predicate, asset_id)
         .await
         .unwrap();
     let receiver_balance_before = get_balance(&wallet, receiver_address, asset_id).await;
@@ -2301,7 +2301,7 @@ async fn can_call_no_arg_predicate_returns_false() {
 
     let instance = Predicate::new(predicate_code);
     instance
-        .create_predicate(&wallet, amount_to_predicate, asset_id)
+        .deploy_predicate(&wallet, amount_to_predicate, asset_id)
         .await
         .unwrap();
 
@@ -2355,7 +2355,7 @@ async fn can_call_predicate_with_valid_u32_data() {
 
     let instance = Predicate::new(predicate_code);
     instance
-        .create_predicate(&wallet, amount_to_predicate, asset_id)
+        .deploy_predicate(&wallet, amount_to_predicate, asset_id)
         .await
         .unwrap();
     let receiver_balance_before = get_balance(&wallet, receiver_address, asset_id).await;
@@ -2410,7 +2410,7 @@ async fn can_call_predicate_with_invalid_u32_data() {
 
     let instance = Predicate::new(predicate_code);
     instance
-        .create_predicate(&wallet, amount_to_predicate, asset_id)
+        .deploy_predicate(&wallet, amount_to_predicate, asset_id)
         .await
         .unwrap();
     let receiver_balance_before = get_balance(&wallet, receiver_address, asset_id).await;
@@ -2466,7 +2466,7 @@ async fn can_call_predicate_with_address_data() {
 
     let instance = Predicate::new(predicate_code);
     instance
-        .create_predicate(&wallet, amount_to_predicate, asset_id)
+        .deploy_predicate(&wallet, amount_to_predicate, asset_id)
         .await
         .unwrap();
     let receiver_balance_before = get_balance(&wallet, receiver_address, asset_id).await;
@@ -2523,7 +2523,7 @@ async fn can_call_predicate_with_valid_struct_data() {
 
     let instance = Predicate::new(predicate_code);
     instance
-        .create_predicate(&wallet, amount_to_predicate, asset_id)
+        .deploy_predicate(&wallet, amount_to_predicate, asset_id)
         .await
         .unwrap();
     let receiver_balance_before = get_balance(&wallet, receiver_address, asset_id).await;
@@ -2580,7 +2580,7 @@ async fn can_call_predicate_with_invalid_struct_u64() {
 
     let instance = Predicate::new(predicate_code);
     instance
-        .create_predicate(&wallet, amount_to_predicate, asset_id)
+        .deploy_predicate(&wallet, amount_to_predicate, asset_id)
         .await
         .unwrap();
     let receiver_balance_before = get_balance(&wallet, receiver_address, asset_id).await;
@@ -2634,7 +2634,7 @@ async fn can_call_predicate_with_invalid_struct_bool() {
 
     let instance = Predicate::new(predicate_code);
     instance
-        .create_predicate(&wallet, amount_to_predicate, asset_id)
+        .deploy_predicate(&wallet, amount_to_predicate, asset_id)
         .await
         .unwrap();
     let receiver_balance_before = get_balance(&wallet, receiver_address, asset_id).await;

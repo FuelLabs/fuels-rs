@@ -3,10 +3,9 @@ use anyhow::Result;
 use fuel_gql_client::{
     fuel_tx::{Contract, Input, Output, Receipt, Transaction, UtxoId},
     fuel_types::{Address, AssetId},
-    fuel_vm::{consts::REG_ONE, prelude::Opcode},
 };
-use fuels_core::errors::Error;
 use fuels_signers::{wallet::Wallet, Signer};
+use fuels_types::errors::Error;
 
 /// Predicate provides methods to create new predicates and call them
 pub struct Predicate {
@@ -20,7 +19,7 @@ impl Predicate {
         Self { code, address }
     }
 
-    pub async fn create_predicate(
+    pub async fn deploy_predicate(
         &self,
         wallet: &Wallet,
         amount_to_predicate: u64,
@@ -36,20 +35,37 @@ impl Predicate {
 
         let output_coin = Output::coin(self.address, amount_to_predicate, asset_id);
         let output_change = Output::change(wallet.address(), 0, asset_id);
-        let mut tx = Transaction::script(
-            1,
-            1000000,
-            1,
-            0,
-            Opcode::RET(REG_ONE).to_bytes().to_vec(),
-            vec![],
-            wallet_coins,
-            vec![output_coin, output_change],
-            vec![],
-        );
-        wallet.sign_transaction(&mut tx).await?;
-        let provider = wallet.get_provider()?;
-        Ok(provider.send_transaction(&tx).await?)
+        if let Transaction::Script {
+            gas_price,
+            gas_limit,
+            byte_price,
+            maturity,
+            receipts_root: _,
+            script,
+            script_data,
+            inputs: _,
+            outputs: _,
+            witnesses,
+            metadata: _,
+        } = Transaction::default()
+        {
+            let mut tx = Transaction::script(
+                gas_price,
+                gas_limit,
+                byte_price,
+                maturity,
+                script,
+                script_data,
+                wallet_coins,
+                vec![output_coin, output_change],
+                witnesses,
+            );
+            wallet.sign_transaction(&mut tx).await?;
+            let provider = wallet.get_provider()?;
+            Ok(provider.send_transaction(&tx).await?)
+        } else {
+            panic!("Expected Transaction::default() to return a Transaction::Script");
+        }
     }
 
     pub async fn spend_predicate(
@@ -88,21 +104,38 @@ impl Predicate {
 
         let output_coin = Output::coin(receiver_address, total_amount_in_predicate, asset_id);
         let output_change = Output::change(self.address, 0, asset_id);
-        let new_tx = Transaction::script(
-            0,
-            1000000,
-            0,
-            0,
-            vec![],
-            vec![],
-            inputs,
-            vec![output_coin, output_change],
-            vec![],
-        );
+        if let Transaction::Script {
+            gas_price,
+            gas_limit,
+            byte_price,
+            maturity,
+            receipts_root: _,
+            script,
+            script_data,
+            inputs: _,
+            outputs: _,
+            witnesses,
+            metadata: _,
+        } = Transaction::default()
+        {
+            let tx = Transaction::script(
+                gas_price,
+                gas_limit,
+                byte_price,
+                maturity,
+                script,
+                script_data,
+                inputs,
+                vec![output_coin, output_change],
+                witnesses,
+            );
 
-        let script = Script::new(new_tx);
-        let provider = wallet.get_provider()?;
-        let _call_result = script.call(&provider.client).await;
-        Ok(())
+            let script = Script::new(tx);
+            let provider = wallet.get_provider()?;
+            let _call_result = script.call(&provider.client).await;
+            Ok(())
+        } else {
+            panic!("Expected Transaction::default() to return a Transaction::Script");
+        }
     }
 }
