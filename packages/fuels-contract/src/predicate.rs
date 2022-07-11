@@ -91,7 +91,7 @@ impl Predicate {
         asset_id: AssetId,
         receiver_address: Address,
         predicate_data: Option<Vec<u8>>,
-    ) -> Result<(), Error> {
+    ) -> Result<Vec<Receipt>, Error> {
         let spendable_predicate_coins = provider
             .get_spendable_coins(&self.address, asset_id, coin_amount_to_predicate)
             .await?;
@@ -99,6 +99,7 @@ impl Predicate {
         let mut inputs = vec![];
         let mut total_amount_in_predicate = 0;
 
+        let predicate_data = predicate_data.unwrap_or_default();
         for coin in spendable_predicate_coins {
             let input_coin = Input::coin_predicate(
                 UtxoId::from(coin.utxo_id),
@@ -107,10 +108,7 @@ impl Predicate {
                 asset_id,
                 0,
                 self.code.clone(),
-                match &predicate_data {
-                    Some(data) => data.clone(),
-                    None => vec![],
-                },
+                predicate_data.clone(),
             );
             inputs.push(input_coin);
             total_amount_in_predicate += coin.amount.0;
@@ -145,8 +143,7 @@ impl Predicate {
             );
 
             let script = Script::new(tx);
-            let _call_result = script.call(&provider.client).await;
-            Ok(())
+            script.call(&provider.client).await
         } else {
             panic!("Expected Transaction::default() to return a Transaction::Script");
         }

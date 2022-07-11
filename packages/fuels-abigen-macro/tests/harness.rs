@@ -2341,7 +2341,7 @@ async fn can_call_no_arg_predicate_returns_false() {
             None,
         )
         .await
-        .unwrap();
+        .expect_err("should error");
     let receiver_balance_after = get_balance(&wallet, receiver_address, asset_id).await;
     assert_eq!(receiver_balance_before, receiver_balance_after);
     let predicate_balance = get_balance(&wallet, instance.address, asset_id).await;
@@ -2448,7 +2448,7 @@ async fn can_call_predicate_with_invalid_u32_data() {
             Some(predicate_data),
         )
         .await
-        .unwrap();
+        .expect_err("should error");
     let receiver_balance_after = get_balance(&wallet, receiver_address, asset_id).await;
     assert_eq!(receiver_balance_before, receiver_balance_after);
     let predicate_balance = get_balance(&wallet, instance.address, asset_id).await;
@@ -2618,7 +2618,7 @@ async fn can_call_predicate_with_invalid_struct_u64() {
             Some(predicate_data),
         )
         .await
-        .unwrap();
+        .expect_err("should error");
     let receiver_balance_after = get_balance(&wallet, receiver_address, asset_id).await;
     assert_eq!(receiver_balance_before, receiver_balance_after);
     let predicate_balance = get_balance(&wallet, instance.address, asset_id).await;
@@ -2672,7 +2672,7 @@ async fn can_call_predicate_with_invalid_struct_bool() {
             Some(predicate_data),
         )
         .await
-        .unwrap();
+        .expect_err("should error");
     let receiver_balance_after = get_balance(&wallet, receiver_address, asset_id).await;
     assert_eq!(receiver_balance_before, receiver_balance_after);
     let predicate_balance = get_balance(&wallet, instance.address, asset_id).await;
