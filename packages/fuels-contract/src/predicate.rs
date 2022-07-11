@@ -92,14 +92,14 @@ impl Predicate {
         receiver_address: Address,
         predicate_data: Option<Vec<u8>>,
     ) -> Result<(), Error> {
-        let utxo_predicate_hash = provider
+        let spendable_predicate_coins = provider
             .get_spendable_coins(&self.address, asset_id, coin_amount_to_predicate)
             .await?;
 
         let mut inputs = vec![];
         let mut total_amount_in_predicate = 0;
 
-        for coin in utxo_predicate_hash {
+        for coin in spendable_predicate_coins {
             let input_coin = Input::coin_predicate(
                 UtxoId::from(coin.utxo_id),
                 coin.owner.into(),
