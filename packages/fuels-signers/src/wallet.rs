@@ -14,7 +14,10 @@ use fuels_core::parameters::TxParameters;
 use fuels_types::errors::Error;
 use rand::{CryptoRng, Rng};
 use std::{collections::HashMap, fmt, io, path::Path, str::FromStr};
+use bech32::Variant::{Bech32, Bech32m};
 use thiserror::Error;
+use fuels_core::constants::FUEL_BECH32_HRP;
+use fuels_types::bech32::Bech32Address;
 
 const DEFAULT_DERIVATION_PATH_PREFIX: &str = "m/44'/1179993420'/0'/0/";
 type W = English;
@@ -62,7 +65,7 @@ pub struct Wallet {
     pub(crate) private_key: SecretKey,
     /// The wallet's address. The wallet's address is derived
     /// from the first 32 bytes of SHA-256 hash of the wallet's public key.
-    pub(crate) address: Address,
+    pub(crate) address: Bech32Address,
 
     pub(crate) provider: Option<Provider>,
 }
@@ -114,7 +117,7 @@ impl Wallet {
 
         Self {
             private_key,
-            address: Address::new(*hashed),
+            address: Bech32Address::new(FUEL_BECH32_HRP, *hashed, Bech32m),
             provider,
         }
     }
@@ -129,7 +132,7 @@ impl Wallet {
     ) -> std::io::Result<PaginatedResult<TransactionResponse, String>> {
         self.get_provider()
             .unwrap()
-            .get_transactions_by_owner(self.address.to_string().as_str(), request)
+            .get_transactions_by_owner(&self.address, request)
             .await
     }
 
@@ -272,7 +275,7 @@ impl Wallet {
     /// ```
     pub async fn transfer(
         &self,
-        to: &Address,
+        to: &Bech32Address,
         amount: u64,
         asset_id: AssetId,
         tx_parameters: TxParameters,
@@ -281,10 +284,10 @@ impl Wallet {
             .get_asset_inputs_for_amount(asset_id, amount, 0)
             .await?;
         let outputs: Vec<Output> = vec![
-            Output::coin(*to, amount, asset_id),
+            Output::coin(to.into(), amount, asset_id),
             // Note that the change will be computed by the node.
             // Here we only have to tell the node who will own the change and its asset ID.
-            Output::change(self.address(), 0, asset_id),
+            Output::change(self.address().into(), 0, asset_id),
         ];
 
         // Build transaction and sign it
@@ -407,7 +410,7 @@ impl Signer for Wallet {
         Ok(sig)
     }
 
-    fn address(&self) -> Address {
+    fn address(&self) -> Bech32Address {
         self.address
     }
 }

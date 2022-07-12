@@ -52,6 +52,7 @@ mod wallets_config;
 pub use node::*;
 
 pub use chains::*;
+use fuels_types::bech32::Bech32Address;
 #[cfg(feature = "fuels-signers")]
 pub use signers::*;
 pub use wallets_config::*;
@@ -62,7 +63,7 @@ pub use wallets_config::*;
 /// pre-existing coins, with `num_asset` different asset ids. Note that one of the assets is the
 /// base asset to pay for gas.
 pub fn setup_multiple_assets_coins(
-    owner: Address,
+    owner: Bech32Address,
     num_asset: u64,
     coins_per_asset: u64,
     amount_per_coin: u64,
@@ -73,12 +74,12 @@ pub fn setup_multiple_assets_coins(
         .flat_map(|_| {
             let mut random_asset_id = AssetId::zeroed();
             random_asset_id.try_fill(&mut rng).unwrap();
-            setup_single_asset_coins(owner, random_asset_id, coins_per_asset, amount_per_coin)
+            setup_single_asset_coins(&owner, random_asset_id, coins_per_asset, amount_per_coin)
         })
         .collect::<Vec<(UtxoId, Coin)>>();
     // Add the base asset
     coins.extend(setup_single_asset_coins(
-        owner,
+        &owner,
         BASE_ASSET_ID,
         coins_per_asset,
         amount_per_coin,
@@ -97,7 +98,7 @@ pub fn setup_multiple_assets_coins(
 /// The output of this function can be used with `setup_test_client` to get a client with some
 /// pre-existing coins, but with only one asset ID.
 pub fn setup_single_asset_coins(
-    owner: Address,
+    owner: &Bech32Address,
     asset_id: AssetId,
     num_coins: u64,
     amount_per_coin: u64,
@@ -107,7 +108,7 @@ pub fn setup_single_asset_coins(
     let coins: Vec<(UtxoId, Coin)> = (1..=num_coins)
         .map(|_i| {
             let coin = Coin {
-                owner,
+                owner: owner.into(),
                 amount: amount_per_coin,
                 asset_id,
                 maturity: Default::default(),
