@@ -3,10 +3,14 @@
 //! We declare these in a dedicated, minimal crate in order to allow for downstream projects to
 //! consume or generate these ABI-compatible types without needing to pull in the rest of the SDK.
 
+extern crate core;
+
 use serde::{Deserialize, Serialize};
 use strum_macros::ToString;
 
+pub mod bech32;
 pub mod errors;
+
 /// Fuel ABI representation in JSON, originally specified here:
 ///
 /// https://github.com/FuelLabs/fuel-specs/blob/master/specs/protocol/abi.md
