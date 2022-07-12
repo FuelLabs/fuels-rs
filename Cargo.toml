@@ -9,6 +9,8 @@ members = [
     "examples/contracts",
     "examples/rust_bindings",
     "examples/wallets",
+    "examples/types",
+    "examples/providers",
     "packages/fuels",
     "packages/fuels-abigen-macro",
     "packages/fuels-contract",
