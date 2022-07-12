@@ -4,8 +4,8 @@ use async_trait::async_trait;
 use coins_bip32::{path::DerivationPath, Bip32Error};
 use coins_bip39::{English, Mnemonic, MnemonicError};
 use elliptic_curve::rand_core;
-use eth_keystore::KeystoreError;
 use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
+use fuel_eth_keystore::KeystoreError;
 use fuel_gql_client::{
     client::{schema::coin::Coin, types::TransactionResponse, PaginatedResult, PaginationRequest},
     fuel_tx::{Address, AssetId, Input, Output, Receipt, Transaction, UtxoId, Witness},
@@ -173,7 +173,7 @@ impl Wallet {
         R: Rng + CryptoRng + rand_core::CryptoRng,
         S: AsRef<[u8]>,
     {
-        let (secret, uuid) = eth_keystore::new(dir, rng, password)?;
+        let (secret, uuid) = fuel_eth_keystore::new(dir, rng, password, None)?;
 
         let secret_key = unsafe { SecretKey::from_slice_unchecked(&secret) };
 
@@ -200,11 +200,12 @@ impl Wallet {
     {
         let mut rng = rand::thread_rng();
 
-        Ok(eth_keystore::encrypt_key(
+        Ok(fuel_eth_keystore::encrypt_key(
             dir,
             &mut rng,
             *self.private_key,
             password,
+            None,
         )?)
     }
 
@@ -218,7 +219,7 @@ impl Wallet {
         P: AsRef<Path>,
         S: AsRef<[u8]>,
     {
-        let secret = eth_keystore::decrypt_key(keypath, password)?;
+        let secret = fuel_eth_keystore::decrypt_key(keypath, password)?;
         let secret_key = unsafe { SecretKey::from_slice_unchecked(&secret) };
         Ok(Self::new_from_private_key(secret_key, provider))
     }

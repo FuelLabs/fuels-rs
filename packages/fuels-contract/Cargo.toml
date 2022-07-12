@@ -11,6 +11,7 @@ description = "Fuel Rust SDK contracts."
 [dependencies]
 anyhow = "1"
 bytes = { version = "1.0.1", features = ["serde"] }
+# TODO(oleksii): bump fuel-gql-client for WASM support
 fuel-gql-client = { version = "0.9", default-features = false }
 fuels-core = { version = "0.17.0", path = "../fuels-core" }
 fuels-signers = { version = "0.17.0", path = "../fuels-signers" }
@@ -26,7 +27,7 @@ sha2 = "0.9.5"
 strum = "0.21"
 strum_macros = "0.21"
 thiserror = { version = "1.0.26", default-features = false }
-tokio = "1.12"
+tokio = { version = "1.12", default-features = false, features = ["rt", "macros"] }
 tracing = "0.1"
 
 [dev-dependencies]
