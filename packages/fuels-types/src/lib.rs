@@ -10,8 +10,6 @@ pub mod bech32;
 pub mod errors;
 pub mod param_types;
 
-pub mod param_types;
-
 /// Fuel ABI representation in JSON, originally specified here:
 ///
 /// https://github.com/FuelLabs/fuel-specs/blob/master/specs/protocol/abi.md
