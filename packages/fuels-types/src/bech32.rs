@@ -1,53 +1,67 @@
-use bech32::{u5, Variant, FromBase32, ToBase32};
+use crate::errors::Error;
+use bech32::Variant::Bech32m;
+use bech32::{FromBase32, ToBase32};
 use core::str;
 use fuel_tx::Address;
+use std::fmt::{Display, Formatter};
 
+pub const FUEL_BECH32_HRP: &str = "fuel";
+
+#[derive(Debug, Clone)]
 pub struct Bech32Address {
-    hrp: String,
-    data: [u8; 32],
-    variant: Variant,
+    plain_addr: Address,
     encoding: String,
 }
 
 impl Bech32Address {
-    pub fn new(hrp: &str, data: [u8; 32], variant: Variant) -> Self {
+    pub fn new(hrp: &str, data: [u8; 32]) -> Self {
         let data_base32 = data.to_base32();
-        let encoding = bech32::encode(hrp, &data_base32, variant).unwrap();
+        let encoding = bech32::encode(hrp, &data_base32, Bech32m).unwrap();
 
         Self {
-            hrp: hrp.to_string(),
-            data,
-            variant,
+            plain_addr: Address::from(data),
             encoding,
         }
     }
 
-    pub fn len(&self) -> usize {
-        self.encoding.len()
+    /// Returns the plain address string
+    pub fn plain_address(&self) -> Address {
+        self.plain_addr
     }
 
-    pub fn variant(&self) -> Variant {
-        self.variant
+    /// Returns the plain address string
+    pub fn to_plain_addr_str(&self) -> String {
+        self.plain_addr.to_string()
     }
 }
 
-impl Into<Address> for Bech32Address {
+#[allow(clippy::from_over_into)]
+impl Into<Address> for &Bech32Address {
     fn into(self) -> Address {
-        Address::new(self.data)
+        self.plain_addr
     }
 }
 
 impl str::FromStr for Bech32Address {
-    type Err = bech32::Error;
+    type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let (hrp, data, variant) = bech32::decode(s)?;
+        let (_, data_base32, _) = bech32::decode(s)?;
+
+        let data: [u8; Address::LEN] = Vec::<u8>::from_base32(&data_base32)
+            .unwrap()
+            .as_slice()
+            .try_into()?;
 
         Ok(Self {
-            hrp,
-            data,
-            variant,
+            plain_addr: Address::from(data),
             encoding: s.to_string(),
         })
+    }
+}
+
+impl Display for Bech32Address {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.encoding)
     }
 }
