@@ -1,3 +1,4 @@
+use crate::utils::has_array_format;
 use crate::Token;
 use crate::{abi_decoder::ABIDecoder, abi_encoder::ABIEncoder};
 use fuels_types::{
@@ -382,7 +383,7 @@ impl ABIParser {
                         std::cmp::Ordering::Equal => {
                             // Last element of this nest level; proceed to tokenize.
                             let sub = &value[last_item..i];
-                            match self.is_array(sub) {
+                            match has_array_format(sub) {
                                 true => {
                                     let arr_param = ParamType::Array(
                                         Box::new(param.to_owned()),
@@ -406,7 +407,7 @@ impl ABIParser {
                 }
                 ',' if nested == 1 && !ignore => {
                     let sub = &value[last_item..i];
-                    match self.is_array(sub) {
+                    match has_array_format(sub) {
                         true => {
                             let arr_param = ParamType::Array(
                                 Box::new(param.to_owned()),
@@ -576,10 +577,6 @@ impl ABIParser {
         Ok(ABIDecoder::decode(params, data)?)
     }
 
-    fn is_array(&self, ele: &str) -> bool {
-        ele.starts_with('[') && ele.ends_with(']')
-    }
-
     fn get_enum_discriminant_from_string(&self, ele: &str) -> usize {
         let mut chars = ele.chars();
         chars.next(); // Remove "("
@@ -688,7 +685,7 @@ impl ABIParser {
                 .collect();
 
             // Check if the parameter is an array.
-            if param_str_no_whitespace.starts_with('[') && param_str_no_whitespace.ends_with(']') {
+            if has_array_format(&param_str_no_whitespace) {
                 // The representation of an array in a function selector should be `a[<type>;<length>]`.
                 // Because this is coming in as `[<type>;<length>]` (not prefixed with an 'a'), here
                 // we must prefix it with an 'a' so the function selector will be properly encoded.
