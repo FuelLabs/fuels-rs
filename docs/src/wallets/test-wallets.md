@@ -31,7 +31,7 @@ You can create a test wallet containing multiple assets (including the base asse
 
 The Fuel blockchain holds many different assets; you can create your asset with its unique `AssetId` or create random assets for testing purposes.
 
-You can use only one asset to pay for transaction fees and gas: the base asset, whose AssetId is `0x000...`, a 32-byte zeroed value.
+You can use only one asset to pay for transaction fees and gas: the base asset, whose AssetId is `0x000...0`, a 32-byte zeroed value.
 
 For testing purposes, you can configure coins and amounts for assets. You can use `setup_multiple_assets_coins`:
 
