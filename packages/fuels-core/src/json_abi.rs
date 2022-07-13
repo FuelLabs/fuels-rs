@@ -73,8 +73,8 @@ impl ABIParser {
 
         let fn_selector = self.build_fn_selector(fn_name, &entry.inputs)?;
 
-        // Update the fn_selector field with the hashed selector.
-        self.fn_selector = Some(ABIEncoder::hash_function_selector(&fn_selector).to_vec());
+        // Update the fn_selector field with the hash of the previously encoded function selector
+        self.fn_selector = Some(ABIEncoder::hash_encoded_function_selector(&fn_selector).to_vec());
 
         let params: Vec<_> = entry
             .inputs
