@@ -1,6 +1,10 @@
-use crate::{abi_decoder::ABIDecoder, abi_encoder::ABIEncoder, ParamType};
-use crate::{EnumVariants, Token};
-use fuels_types::{errors::Error, JsonABI, Property};
+use crate::Token;
+use crate::{abi_decoder::ABIDecoder, abi_encoder::ABIEncoder};
+use fuels_types::{
+    errors::Error,
+    param_types::{EnumVariants, ParamType},
+    JsonABI, Property,
+};
 use hex::FromHex;
 use itertools::Itertools;
 use serde_json;
