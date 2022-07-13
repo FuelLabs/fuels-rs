@@ -2,10 +2,7 @@ use crate::{
     pad_string, pad_u16, pad_u32, pad_u8, Bits256, ByteArray, EnumSelector, EnumVariants,
     ParamType, Token,
 };
-use fuels_types::{
-    constants::{ENUM_DISCRIMINANT_WORD_WIDTH, WORD_SIZE},
-    errors::CodecError,
-};
+use fuels_types::{constants::WORD_SIZE, errors::CodecError};
 use sha2::{Digest, Sha256};
 
 pub struct ABIEncoder {
@@ -125,7 +122,8 @@ impl ABIEncoder {
         // an enum is encoded only by encoding its discriminant.
         if !variants.only_units_inside() {
             let variant_param_type = Self::type_of_chosen_variant(discriminant, variants)?;
-            self.encode_enum_padding(variants, variant_param_type);
+            let padding_amount = variants.compute_padding_amount(variant_param_type);
+            self.rightpad_with_zeroes(padding_amount);
             self.encode_token(token_within_enum)?;
         }
 
@@ -134,16 +132,6 @@ impl ABIEncoder {
 
     fn encode_discriminant(&mut self, discriminant: u8) {
         self.encode_u8(discriminant);
-    }
-
-    /// Determines the padding needed for the provided enum variant (param_type) (based on the width
-    /// of the biggest variant), encodes the padding and returns it:
-    fn encode_enum_padding(&mut self, variants: &EnumVariants, variant_param_type: &ParamType) {
-        let biggest_variant_width =
-            variants.compute_encoding_width_of_enum() - ENUM_DISCRIMINANT_WORD_WIDTH;
-        let variant_width = variant_param_type.compute_encoding_width();
-        let padding_amount = (biggest_variant_width - variant_width) * WORD_SIZE;
-        self.rightpad_with_zeroes(padding_amount);
     }
 
     fn rightpad_with_zeroes(&mut self, amount: usize) {
