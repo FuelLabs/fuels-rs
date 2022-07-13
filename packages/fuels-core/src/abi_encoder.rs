@@ -12,9 +12,10 @@ pub struct ABIEncoder {
 }
 
 impl ABIEncoder {
-    /// Encodes the function selector following the ABI specs defined  ///
+    /// Hex-encodes the function selector.
+    /// The function selector has to have been already encoded following the ABI specs defined
     /// [here](https://github.com/FuelLabs/fuel-specs/blob/1be31f70c757d8390f74b9e1b3beb096620553eb/specs/protocol/abi.md)
-    pub fn encode_function_selector(fn_selector: &str) -> ByteArray {
+    pub fn hex_encode_function_selector(fn_selector: &str) -> ByteArray {
         let signature = fn_selector.as_bytes();
         let mut hasher = Sha256::new();
         hasher.update(signature);
@@ -180,7 +181,7 @@ mod tests {
     fn encode_function_signature() {
         let sway_fn = "entry_one(u64)";
 
-        let result = ABIEncoder::encode_function_selector(sway_fn);
+        let result = ABIEncoder::hex_encode_function_selector(sway_fn);
 
         println!(
             "Encoded function selector for ({}): {:#0x?}",
@@ -213,7 +214,7 @@ mod tests {
 
         let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0xb7, 0x9e, 0xf7, 0x43];
 
-        let encoded_function_selector = ABIEncoder::encode_function_selector(sway_fn);
+        let encoded_function_selector = ABIEncoder::hex_encode_function_selector(sway_fn);
 
         let encoded = ABIEncoder::encode(&args)?;
 
@@ -250,7 +251,7 @@ mod tests {
 
         let expected_fn_selector = [0x0, 0x0, 0x0, 0x0, 0xa7, 0x07, 0xb0, 0x8e];
 
-        let encoded_function_selector = ABIEncoder::encode_function_selector(sway_fn);
+        let encoded_function_selector = ABIEncoder::hex_encode_function_selector(sway_fn);
         let encoded = ABIEncoder::encode(&args)?;
 
         println!("Encoded ABI for ({}): {:#0x?}", sway_fn, encoded);
@@ -283,7 +284,7 @@ mod tests {
 
         let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0x0c, 0x36, 0xcb, 0x9c];
 
-        let encoded_function_selector = ABIEncoder::encode_function_selector(sway_fn);
+        let encoded_function_selector = ABIEncoder::hex_encode_function_selector(sway_fn);
 
         let encoded = ABIEncoder::encode(&args)?;
 
@@ -317,7 +318,7 @@ mod tests {
 
         let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0x66, 0x8f, 0xff, 0x58];
 
-        let encoded_function_selector = ABIEncoder::encode_function_selector(sway_fn);
+        let encoded_function_selector = ABIEncoder::hex_encode_function_selector(sway_fn);
 
         let encoded = ABIEncoder::encode(&args)?;
 
@@ -354,7 +355,7 @@ mod tests {
 
         let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0xf5, 0x40, 0x73, 0x2b];
 
-        let encoded_function_selector = ABIEncoder::encode_function_selector(sway_fn);
+        let encoded_function_selector = ABIEncoder::hex_encode_function_selector(sway_fn);
 
         let encoded = ABIEncoder::encode(&args)?;
 
@@ -388,7 +389,7 @@ mod tests {
 
         let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0x2e, 0xe3, 0xce, 0x1f];
 
-        let encoded_function_selector = ABIEncoder::encode_function_selector(sway_fn);
+        let encoded_function_selector = ABIEncoder::hex_encode_function_selector(sway_fn);
 
         let encoded = ABIEncoder::encode(&args)?;
 
@@ -432,7 +433,7 @@ mod tests {
 
         let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0x01, 0x49, 0x42, 0x96];
 
-        let encoded_function_selector = ABIEncoder::encode_function_selector(sway_fn);
+        let encoded_function_selector = ABIEncoder::hex_encode_function_selector(sway_fn);
 
         let encoded = ABIEncoder::encode(&args)?;
 
@@ -476,7 +477,7 @@ mod tests {
 
         let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0x2c, 0x5a, 0x10, 0x2e];
 
-        let encoded_function_selector = ABIEncoder::encode_function_selector(sway_fn);
+        let encoded_function_selector = ABIEncoder::hex_encode_function_selector(sway_fn);
 
         let encoded = ABIEncoder::encode(&args)?;
 
@@ -512,7 +513,7 @@ mod tests {
 
         let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0xd5, 0x6e, 0x76, 0x51];
 
-        let encoded_function_selector = ABIEncoder::encode_function_selector(sway_fn);
+        let encoded_function_selector = ABIEncoder::hex_encode_function_selector(sway_fn);
 
         let encoded = ABIEncoder::encode(&args)?;
 
@@ -559,7 +560,7 @@ mod tests {
 
         let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0xa8, 0x1e, 0x8d, 0xd7];
 
-        let encoded_function_selector = ABIEncoder::encode_function_selector(sway_fn);
+        let encoded_function_selector = ABIEncoder::hex_encode_function_selector(sway_fn);
 
         let encoded = ABIEncoder::encode(&args)?;
 
@@ -611,7 +612,7 @@ mod tests {
 
         let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0x35, 0x5c, 0xa6, 0xfa];
 
-        let encoded_function_selector = ABIEncoder::encode_function_selector(sway_fn);
+        let encoded_function_selector = ABIEncoder::hex_encode_function_selector(sway_fn);
 
         let encoded = ABIEncoder::encode(&args)?;
 
@@ -752,7 +753,7 @@ mod tests {
 
         let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0xea, 0x0a, 0xfd, 0x23];
 
-        let encoded_function_selector = ABIEncoder::encode_function_selector(sway_fn);
+        let encoded_function_selector = ABIEncoder::hex_encode_function_selector(sway_fn);
 
         let encoded = ABIEncoder::encode(&args)?;
 
@@ -844,7 +845,7 @@ mod tests {
 
         let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0x10, 0x93, 0xb2, 0x12];
 
-        let encoded_function_selector = ABIEncoder::encode_function_selector(sway_fn);
+        let encoded_function_selector = ABIEncoder::hex_encode_function_selector(sway_fn);
 
         let encoded = ABIEncoder::encode(&args)?;
 
