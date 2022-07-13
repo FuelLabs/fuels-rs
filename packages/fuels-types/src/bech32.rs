@@ -79,7 +79,7 @@ mod test {
         ];
         let expected_bech32 = "fuel1xpjnzdpsvccrwvryx9skvafn8ycnyvpkxp3rqeps8qcn2vp5xy6qu7yyz7";
 
-        let bech32_addr = Bech32Address::new(FUEL_BECH32_HRP, hash.clone());
+        let bech32_addr = Bech32Address::new(FUEL_BECH32_HRP, hash);
 
         assert_eq!(bech32_addr.plain_address(), Address::new(hash));
         assert_eq!(bech32_addr.to_string(), expected_bech32)
