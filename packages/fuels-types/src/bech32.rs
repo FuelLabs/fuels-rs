@@ -65,3 +65,38 @@ impl Display for Bech32Address {
         write!(f, "{}", self.encoding)
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use std::str::FromStr;
+
+    #[tokio::test]
+    async fn test_new() {
+        let addr_data = [
+            48, 101, 49, 52, 48, 102, 48, 55, 48, 100, 49, 97, 102, 117, 51, 57, 49, 50, 48, 54,
+            48, 98, 48, 100, 48, 56, 49, 53, 48, 52, 49, 52,
+        ];
+        let expected_encoding = "fuel1xpjnzdpsvccrwvryx9skvafn8ycnyvpkxp3rqeps8qcn2vp5xy6qu7yyz7";
+
+        let bech32_addr = Bech32Address::new(FUEL_BECH32_HRP, addr_data.clone());
+
+        assert_eq!(bech32_addr.plain_address(), Address::new(addr_data));
+        assert_eq!(bech32_addr.encoding, expected_encoding)
+    }
+
+    #[tokio::test]
+    async fn test_from_str() {
+        let addr_data = [
+            48, 101, 49, 52, 48, 102, 48, 55, 48, 100, 49, 97, 102, 117, 51, 57, 49, 50, 48, 54,
+            48, 98, 48, 100, 48, 56, 49, 53, 48, 52, 49, 52,
+        ];
+
+        let bech32_addr = Bech32Address::from_str(
+            "fuel1xpjnzdpsvccrwvryx9skvafn8ycnyvpkxp3rqeps8qcn2vp5xy6qu7yyz7",
+        )
+        .unwrap();
+
+        assert_eq!(bech32_addr.plain_address(), Address::new(addr_data));
+    }
+}
