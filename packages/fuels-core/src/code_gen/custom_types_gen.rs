@@ -1,4 +1,4 @@
-use crate::json_abi::parse_param_type_from_property;
+use crate::parse::parse_param_type_from_property;
 use crate::types::expand_type;
 use crate::utils::{has_array_format, ident};
 use crate::ParamType;

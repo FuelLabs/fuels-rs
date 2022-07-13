@@ -1,7 +1,8 @@
 use crate::abi_encoder::ABIEncoder;
 use crate::code_gen::custom_types_gen::extract_custom_type_name_from_abi_property;
 use crate::code_gen::docs_gen::expand_doc;
-use crate::json_abi::{parse_param_type_from_property, ABIParser};
+use crate::json_abi::ABIParser;
+use crate::parse::parse_param_type_from_property;
 use crate::types::expand_type;
 use crate::utils::{ident, safe_ident};
 use crate::{ParamType, Selector};

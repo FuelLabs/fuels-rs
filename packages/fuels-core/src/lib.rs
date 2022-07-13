@@ -15,6 +15,7 @@ pub mod constants;
 mod encoding_utils;
 pub mod json_abi;
 pub mod parameters;
+pub mod parse;
 pub mod rustfmt;
 pub mod source;
 pub mod types;

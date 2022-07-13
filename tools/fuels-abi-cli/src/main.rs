@@ -1,6 +1,6 @@
 use fuels_core::code_gen::abigen::Abigen;
-use fuels_core::json_abi::parse_param_type_from_property;
 use fuels_core::json_abi::ABIParser;
+use fuels_core::parse::parse_param_type_from_property;
 use fuels_types::{param_types::ParamType, Property};
 
 use std::fs;
