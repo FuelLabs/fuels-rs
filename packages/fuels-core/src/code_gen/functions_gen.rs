@@ -36,7 +36,7 @@ pub fn expand_function(
     let name = safe_ident(&function.name);
     let fn_signature = abi_parser.build_fn_selector(&function.name, &function.inputs)?;
 
-    let encoded = ABIEncoder::hex_encode_function_selector(&fn_signature);
+    let encoded = ABIEncoder::hash_function_selector(&fn_signature);
 
     let tokenized_signature = expand_selector(encoded);
     let tokenized_output = expand_fn_outputs(&function.outputs)?;
