@@ -1,9 +1,9 @@
-use crate::encoding_utils::{compute_encoding_width, compute_encoding_width_of_enum};
-use crate::{constants::WORD_SIZE, Token};
+use crate::Token;
 use core::convert::TryInto;
 use core::str;
 use fuel_types::bytes::padded_len;
 use fuels_types::{
+    constants::WORD_SIZE,
     errors::CodecError,
     param_types::{EnumVariants, ParamType},
 };
@@ -201,7 +201,7 @@ impl ABIDecoder {
         let discriminant = peek_u32(data)?;
         let selected_variant = Self::type_of_selected_variant(variants, discriminant as usize)?;
 
-        let enum_width = compute_encoding_width_of_enum(variants);
+        let enum_width = variants.compute_encoding_width_of_enum();
         let token = Self::decode_token_in_enum(data, variants, selected_variant, enum_width)?;
 
         let selector = Box::new((discriminant as u8, token, variants.clone()));
@@ -224,7 +224,7 @@ impl ABIDecoder {
         if variants.only_units_inside() {
             Ok(Token::Unit)
         } else {
-            let words_to_skip = enum_width - compute_encoding_width(selected_variant);
+            let words_to_skip = enum_width - selected_variant.compute_encoding_width();
 
             let res = Self::decode_param(selected_variant, &data[words_to_skip * WORD_SIZE..])?;
             Ok(res.token)

@@ -1,10 +1,11 @@
-use crate::constants::{ENUM_DISCRIMINANT_WORD_WIDTH, WORD_SIZE};
-use crate::encoding_utils::{compute_encoding_width, compute_encoding_width_of_enum};
 use crate::{
     pad_string, pad_u16, pad_u32, pad_u8, Bits256, ByteArray, EnumSelector, EnumVariants,
     ParamType, Token,
 };
-use fuels_types::errors::CodecError;
+use fuels_types::{
+    constants::{ENUM_DISCRIMINANT_WORD_WIDTH, WORD_SIZE},
+    errors::CodecError,
+};
 use sha2::{Digest, Sha256};
 
 pub struct ABIEncoder {
@@ -123,8 +124,8 @@ impl ABIEncoder {
         // The sway compiler has an optimization for enums which have only Units as variants -- such
         // an enum is encoded only by encoding its discriminant.
         if !variants.only_units_inside() {
-            let param_type = Self::type_of_chosen_variant(discriminant, variants)?;
-            self.encode_enum_with_padding(variants, param_type);
+            let variant_param_type = Self::type_of_chosen_variant(discriminant, variants)?;
+            self.encode_enum_padding(variants, variant_param_type);
             self.encode_token(token_within_enum)?;
         }
 
@@ -135,12 +136,13 @@ impl ABIEncoder {
         self.encode_u8(discriminant);
     }
 
-    fn encode_enum_with_padding(&mut self, variants: &EnumVariants, param_type: &ParamType) {
+    /// Determines the padding needed for the provided enum variant (param_type) (based on the width
+    /// of the biggest variant), encodes the padding and returns it:
+    fn encode_enum_padding(&mut self, variants: &EnumVariants, variant_param_type: &ParamType) {
         let biggest_variant_width =
-            compute_encoding_width_of_enum(variants) - ENUM_DISCRIMINANT_WORD_WIDTH;
-        let variant_width = compute_encoding_width(param_type);
+            variants.compute_encoding_width_of_enum() - ENUM_DISCRIMINANT_WORD_WIDTH;
+        let variant_width = variant_param_type.compute_encoding_width();
         let padding_amount = (biggest_variant_width - variant_width) * WORD_SIZE;
-
         self.rightpad_with_zeroes(padding_amount);
     }
 
