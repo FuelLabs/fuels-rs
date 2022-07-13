@@ -22,5 +22,3 @@ pub const BASE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
 
 pub const CONTRACT_ID_SWAY_NATIVE_TYPE: &str = "ContractId";
 pub const ADDRESS_SWAY_NATIVE_TYPE: &str = "Address";
-
-pub const FUEL_BECH32_HRP: &str = "fuel" ;

@@ -8,16 +8,14 @@ use eth_keystore::KeystoreError;
 use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
 use fuel_gql_client::{
     client::{schema::coin::Coin, types::TransactionResponse, PaginatedResult, PaginationRequest},
-    fuel_tx::{Address, AssetId, Input, Output, Receipt, Transaction, UtxoId, Witness},
+    fuel_tx::{AssetId, Input, Output, Receipt, Transaction, UtxoId, Witness},
 };
 use fuels_core::parameters::TxParameters;
+use fuels_types::bech32::{Bech32Address, FUEL_BECH32_HRP};
 use fuels_types::errors::Error;
 use rand::{CryptoRng, Rng};
 use std::{collections::HashMap, fmt, io, path::Path, str::FromStr};
-use bech32::Variant::{Bech32, Bech32m};
 use thiserror::Error;
-use fuels_core::constants::FUEL_BECH32_HRP;
-use fuels_types::bech32::Bech32Address;
 
 const DEFAULT_DERIVATION_PATH_PREFIX: &str = "m/44'/1179993420'/0'/0/";
 type W = English;
@@ -117,7 +115,7 @@ impl Wallet {
 
         Self {
             private_key,
-            address: Bech32Address::new(FUEL_BECH32_HRP, *hashed, Bech32m),
+            address: Bech32Address::new(FUEL_BECH32_HRP, *hashed),
             provider,
         }
     }
@@ -335,7 +333,7 @@ impl Wallet {
         Ok(self
             .get_provider()
             .unwrap()
-            .get_coins(&self.address())
+            .get_coins(self.address())
             .await?)
     }
 
@@ -349,7 +347,7 @@ impl Wallet {
     ) -> io::Result<Vec<Coin>> {
         self.get_provider()
             .unwrap()
-            .get_spendable_coins(&self.address(), *asset_id, amount)
+            .get_spendable_coins(self.address(), *asset_id, amount)
             .await
     }
 
@@ -358,7 +356,7 @@ impl Wallet {
     /// of the UTXOs.
     pub async fn get_asset_balance(&self, asset_id: &AssetId) -> Result<u64, ProviderError> {
         self.get_provider()?
-            .get_asset_balance(&self.address, *asset_id)
+            .get_asset_balance(self.address(), *asset_id)
             .await
     }
 
@@ -366,7 +364,7 @@ impl Wallet {
     /// the coins because we are only returning the sum of UTXOs coins amount and not the UTXOs
     /// coins themselves.
     pub async fn get_balances(&self) -> Result<HashMap<String, u64>, ProviderError> {
-        self.get_provider()?.get_balances(&self.address).await
+        self.get_provider()?.get_balances(self.address()).await
     }
 }
 
@@ -410,8 +408,8 @@ impl Signer for Wallet {
         Ok(sig)
     }
 
-    fn address(&self) -> Bech32Address {
-        self.address
+    fn address(&self) -> &Bech32Address {
+        &self.address
     }
 }
 

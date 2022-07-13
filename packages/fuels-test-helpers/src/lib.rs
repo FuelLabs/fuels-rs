@@ -30,7 +30,7 @@ use crate::node::spawn_fuel_service;
 
 use fuel_gql_client::{
     client::FuelClient,
-    fuel_tx::{Address, Bytes32, UtxoId},
+    fuel_tx::{Bytes32, UtxoId},
 };
 
 use fuels_core::constants::BASE_ASSET_ID;
@@ -63,7 +63,7 @@ pub use wallets_config::*;
 /// pre-existing coins, with `num_asset` different asset ids. Note that one of the assets is the
 /// base asset to pay for gas.
 pub fn setup_multiple_assets_coins(
-    owner: Bech32Address,
+    owner: &Bech32Address,
     num_asset: u64,
     coins_per_asset: u64,
     amount_per_coin: u64,
@@ -74,12 +74,12 @@ pub fn setup_multiple_assets_coins(
         .flat_map(|_| {
             let mut random_asset_id = AssetId::zeroed();
             random_asset_id.try_fill(&mut rng).unwrap();
-            setup_single_asset_coins(&owner, random_asset_id, coins_per_asset, amount_per_coin)
+            setup_single_asset_coins(owner, random_asset_id, coins_per_asset, amount_per_coin)
         })
         .collect::<Vec<(UtxoId, Coin)>>();
     // Add the base asset
     coins.extend(setup_single_asset_coins(
-        &owner,
+        owner,
         BASE_ASSET_ID,
         coins_per_asset,
         amount_per_coin,
@@ -222,36 +222,44 @@ mod tests {
     #[tokio::test]
     async fn test_setup_single_asset_coins() -> Result<(), rand::Error> {
         let mut rng = rand::thread_rng();
-        let mut address = Address::zeroed();
-        address.try_fill(&mut rng)?;
+        let mut addr_data = [0u8; 32];
+        addr_data.try_fill(&mut rng)?;
+        let address = Bech32Address::new("test", addr_data);
+
         let mut asset_id = AssetId::zeroed();
         asset_id.try_fill(&mut rng)?;
+
         let number_of_coins = 11;
         let amount_per_coin = 10;
-        let coins = setup_single_asset_coins(address, asset_id, number_of_coins, amount_per_coin);
+        let coins = setup_single_asset_coins(&address, asset_id, number_of_coins, amount_per_coin);
+
         assert_eq!(coins.len() as u64, number_of_coins);
         for (_utxo_id, coin) in coins {
             assert_eq!(coin.asset_id, asset_id);
             assert_eq!(coin.amount, amount_per_coin);
-            assert_eq!(coin.owner, address);
+            assert_eq!(coin.owner, address.plain_address());
         }
+
         Ok(())
     }
 
     #[tokio::test]
     async fn test_setup_multiple_assets_coins() -> Result<(), rand::Error> {
         let mut rng = rand::thread_rng();
-        let mut address = Address::zeroed();
-        address.try_fill(&mut rng)?;
+        let mut addr_data = [0u8; 32];
+        addr_data.try_fill(&mut rng)?;
+        let address = Bech32Address::new("test", addr_data);
+
         let number_of_assets = 7;
         let coins_per_asset = 10;
         let amount_per_coin = 13;
         let (coins, unique_asset_ids) = setup_multiple_assets_coins(
-            address,
+            &address,
             number_of_assets,
             coins_per_asset,
             amount_per_coin,
         );
+
         assert_eq!(coins.len() as u64, number_of_assets * coins_per_asset);
         assert_eq!(unique_asset_ids.len() as u64, number_of_assets);
         // Check that the wallet has base assets to pay for gas
@@ -266,10 +274,11 @@ mod tests {
                 .collect();
             assert_eq!(coins_asset_id.len() as u64, coins_per_asset);
             for (_utxo_id, coin) in coins_asset_id {
-                assert_eq!(coin.owner, address);
+                assert_eq!(coin.owner, address.plain_address());
                 assert_eq!(coin.amount, amount_per_coin);
             }
         }
+
         Ok(())
     }
 

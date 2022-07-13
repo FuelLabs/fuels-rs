@@ -237,7 +237,7 @@ impl Script {
 
         for asset_id in asset_ids.iter() {
             // add asset change if any inputs are being spent
-            let change_output = Output::change(wallet.address(), 0, asset_id.to_owned());
+            let change_output = Output::change(wallet.address().into(), 0, asset_id.to_owned());
             outputs.push(change_output);
         }
 

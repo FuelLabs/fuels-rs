@@ -1188,7 +1188,7 @@ async fn test_amount_and_asset_forwarding() -> Result<(), Error> {
 
     // withdraw some tokens to wallet
     instance
-        .transfer_coins_to_output(1_000_000, id, address)
+        .transfer_coins_to_output(1_000_000, id, address.into())
         .append_variable_outputs(1)
         .call()
         .await?;
@@ -1409,7 +1409,7 @@ async fn test_auth_msg_sender_from_sdk() -> Result<(), Error> {
 
     // Contract returns true if `msg_sender()` matches `wallet.address()`.
     let response = auth_instance
-        .check_msg_sender(wallet.address())
+        .check_msg_sender(wallet.address().into())
         .call()
         .await?;
 

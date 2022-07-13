@@ -302,7 +302,7 @@ impl Contract {
             // Note that the change will be computed by the node.
             // Here we only have to tell the node who will own the change and its asset ID.
             // For now we use the BASE_ASSET_ID constant
-            Output::change(wallet.address(), 0, BASE_ASSET_ID),
+            Output::change(wallet.address().into(), 0, BASE_ASSET_ID),
         ];
 
         // The first witness is the bytecode we're deploying.

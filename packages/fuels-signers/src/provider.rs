@@ -119,7 +119,7 @@ impl Provider {
             let res = self
                 .client
                 .coins(
-                    &(from.into()).to_string(),
+                    &from.to_plain_addr_str(),
                     None,
                     PaginationRequest {
                         cursor: cursor.clone(),
@@ -151,7 +151,7 @@ impl Provider {
         let res = self
             .client
             .coins_to_spend(
-                &from.into().to_string(),
+                &from.to_plain_addr_str(),
                 vec![(format!("{:#x}", asset_id).as_str(), amount)],
                 None,
                 None,
@@ -195,7 +195,7 @@ impl Provider {
         asset_id: AssetId,
     ) -> Result<u64, ProviderError> {
         self.client
-            .balance(&*address.into().to_string(), Some(&*asset_id.to_string()))
+            .balance(&address.to_plain_addr_str(), Some(&*asset_id.to_string()))
             .await
             .map_err(Into::into)
     }
@@ -216,7 +216,7 @@ impl Provider {
         };
         let balances_vec = self
             .client
-            .balances(&*address.into().to_string(), pagination)
+            .balances(&address.to_plain_addr_str(), pagination)
             .await?
             .results;
         let balances = balances_vec
@@ -245,7 +245,9 @@ impl Provider {
         owner: &Bech32Address,
         request: PaginationRequest<String>,
     ) -> std::io::Result<PaginatedResult<TransactionResponse, String>> {
-        self.client.transactions_by_owner(owner., request).await
+        self.client
+            .transactions_by_owner(&owner.to_plain_addr_str(), request)
+            .await
     }
 
     pub async fn latest_block_height(&self) -> io::Result<u64> {
