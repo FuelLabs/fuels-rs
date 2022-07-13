@@ -622,28 +622,28 @@ impl ABIParser {
         Ok(result)
     }
 
-    fn build_fn_selector_params(&self, param: &Property) -> String {
+    fn build_fn_selector_params(&self, prop: &Property) -> String {
         let mut result: String = String::new();
 
-        if param.is_custom_type() {
+        if prop.is_custom_type() {
             // Custom type, need to break down inner fields.
             // Will return `"e(field_1,field_2,...,field_n)"` if the type is an `Enum`,
             // `"s(field_1,field_2,...,field_n)"` if the type is a `Struct`,
             // `"a[type;length]"` if the type is an `Array`,
             // `(type_1,type_2,...,type_n)` if the type is a `Tuple`.
-            if param.is_struct_type() {
+            if prop.is_struct_type() {
                 result.push_str("s(");
-            } else if param.is_enum_type() {
+            } else if prop.is_enum_type() {
                 result.push_str("e(");
-            } else if param.has_custom_type_in_array() {
+            } else if prop.has_custom_type_in_array() {
                 result.push_str("a[");
-            } else if param.has_custom_type_in_tuple() {
+            } else if prop.has_custom_type_in_tuple() {
                 result.push('(');
             } else {
                 panic!("unexpected custom type");
             }
 
-            for (idx, component) in param
+            for (idx, component) in prop
                 .components
                 .as_ref()
                 .expect("No components found")
@@ -652,13 +652,13 @@ impl ABIParser {
             {
                 result.push_str(&self.build_fn_selector_params(component));
 
-                if idx + 1 < param.components.as_ref().unwrap().len() {
+                if idx + 1 < prop.components.as_ref().unwrap().len() {
                     result.push(',');
                 }
             }
 
             if result.starts_with("a[") {
-                let array_type_field = param.type_field.clone();
+                let array_type_field = prop.type_field.clone();
 
                 // Type field, in this case, looks like
                 // "[struct Person; 2]" and we want to extract the
@@ -681,7 +681,7 @@ impl ABIParser {
             }
         } else {
             // Not a custom type.
-            let param_str_no_whitespace: String = param
+            let param_str_no_whitespace: String = prop
                 .type_field
                 .chars()
                 .filter(|c| !c.is_whitespace())
@@ -728,10 +728,10 @@ pub fn parse_param_type_from_property(prop: &Property) -> Result<ParamType, Erro
     }
 }
 
-pub fn parse_tuple_param(param: &Property) -> Result<ParamType, Error> {
+pub fn parse_tuple_param(prop: &Property) -> Result<ParamType, Error> {
     let mut params: Vec<ParamType> = Vec::new();
 
-    for tuple_component in param
+    for tuple_component in prop
         .components
         .as_ref()
         .expect("tuples should have components")
@@ -742,13 +742,13 @@ pub fn parse_tuple_param(param: &Property) -> Result<ParamType, Error> {
     Ok(ParamType::Tuple(params))
 }
 
-pub fn parse_string_param(param: &Property) -> Result<ParamType, Error> {
+pub fn parse_string_param(prop: &Property) -> Result<ParamType, Error> {
     // Split "str[n]" string into "str" and "[n]"
-    let split: Vec<&str> = param.type_field.split('[').collect();
+    let split: Vec<&str> = prop.type_field.split('[').collect();
     if split.len() != 2 || !split[0].eq("str") {
         return Err(Error::InvalidType(format!(
             "Expected parameter type `str[n]`, found `{}`",
-            param.type_field
+            prop.type_field
         )));
     }
     // Grab size in between brackets, i.e the `n` in "[n]"
@@ -756,13 +756,13 @@ pub fn parse_string_param(param: &Property) -> Result<ParamType, Error> {
     Ok(ParamType::String(size))
 }
 
-pub fn parse_array_param(param: &Property) -> Result<ParamType, Error> {
+pub fn parse_array_param(prop: &Property) -> Result<ParamType, Error> {
     // Split "[T; n]" string into "T" and "n"
-    let split: Vec<&str> = param.type_field.split("; ").collect();
+    let split: Vec<&str> = prop.type_field.split("; ").collect();
     if split.len() != 2 {
         return Err(Error::InvalidType(format!(
             "Expected parameter type `[T; n]`, found `{}`",
-            param.type_field
+            prop.type_field
         )));
     }
     let (type_field, size) = (split[0], split[1]);
@@ -771,8 +771,7 @@ pub fn parse_array_param(param: &Property) -> Result<ParamType, Error> {
     let param_type = match ParamType::from_str(&type_field) {
         Ok(param_type) => param_type,
         Err(_) => parse_custom_type_param(
-            param
-                .components
+            prop.components
                 .as_ref()
                 .expect("array should have components")
                 .first()
@@ -785,20 +784,20 @@ pub fn parse_array_param(param: &Property) -> Result<ParamType, Error> {
     Ok(ParamType::Array(Box::new(param_type), size))
 }
 
-pub fn parse_custom_type_param(param: &Property) -> Result<ParamType, Error> {
+pub fn parse_custom_type_param(prop: &Property) -> Result<ParamType, Error> {
     let mut params: Vec<ParamType> = vec![];
-    match &param.components {
+    match &prop.components {
         Some(c) => {
             for component in c {
                 params.push(parse_param_type_from_property(component)?)
             }
-            if param.is_struct_type() {
+            if prop.is_struct_type() {
                 return Ok(ParamType::Struct(params));
             }
-            if param.is_enum_type() {
+            if prop.is_enum_type() {
                 return Ok(ParamType::Enum(EnumVariants::new(params)?));
             }
-            Err(Error::InvalidType(param.type_field.clone()))
+            Err(Error::InvalidType(prop.type_field.clone()))
         }
         None => Err(Error::InvalidType(
             "cannot parse custom type with no components".into(),
