@@ -1,5 +1,6 @@
 use crate::constants::ENUM_DISCRIMINANT_WORD_WIDTH;
-use crate::{EnumVariants, ParamType, WORD_SIZE};
+use crate::WORD_SIZE;
+use fuels_types::param_types::{EnumVariants, ParamType};
 
 // Calculates how many WORDs are needed to encode an enum.
 pub fn compute_encoding_width_of_enum(variants: &EnumVariants) -> usize {
@@ -49,8 +50,10 @@ mod tests {
     const WIDTH_OF_U32: usize = 1;
     const WIDTH_OF_BOOL: usize = 1;
     use crate::encoding_utils::compute_encoding_width;
-    use crate::{EnumVariants, ParamType};
-    use fuels_types::errors::Error;
+    use fuels_types::{
+        errors::Error,
+        param_types::{EnumVariants, ParamType},
+    };
 
     #[test]
     fn array_size_dependent_on_num_of_elements() {
