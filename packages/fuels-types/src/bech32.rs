@@ -14,23 +14,23 @@ pub struct Bech32Address {
 }
 
 impl Bech32Address {
-    pub fn new(hrp: &str, data: [u8; 32]) -> Self {
-        let data_base32 = data.to_base32();
+    pub fn new(hrp: &str, hash: [u8; 32]) -> Self {
+        let data_base32 = hash.to_base32();
         let encoding = bech32::encode(hrp, &data_base32, Bech32m).unwrap();
 
         Self {
-            plain_addr: Address::from(data),
+            plain_addr: Address::from(hash),
             encoding,
         }
     }
 
-    /// Returns the plain address string
+    /// Returns the plain address (public-key hash)
     pub fn plain_address(&self) -> Address {
         self.plain_addr
     }
 
-    /// Returns the plain address string
-    pub fn to_plain_addr_str(&self) -> String {
+    /// Returns the plain address (public-key hash) string representation
+    pub fn to_plain_addr_string(&self) -> String {
         self.plain_addr.to_string()
     }
 }
@@ -46,15 +46,15 @@ impl str::FromStr for Bech32Address {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let (_, data_base32, _) = bech32::decode(s)?;
+        let (_, hash_base32, _) = bech32::decode(s)?;
 
-        let data: [u8; Address::LEN] = Vec::<u8>::from_base32(&data_base32)
+        let hash: [u8; Address::LEN] = Vec::<u8>::from_base32(&hash_base32)
             .unwrap()
             .as_slice()
             .try_into()?;
 
         Ok(Self {
-            plain_addr: Address::from(data),
+            plain_addr: Address::from(hash),
             encoding: s.to_string(),
         })
     }
@@ -73,21 +73,21 @@ mod test {
 
     #[tokio::test]
     async fn test_new() {
-        let addr_data = [
+        let hash = [
             48, 101, 49, 52, 48, 102, 48, 55, 48, 100, 49, 97, 102, 117, 51, 57, 49, 50, 48, 54,
             48, 98, 48, 100, 48, 56, 49, 53, 48, 52, 49, 52,
         ];
-        let expected_encoding = "fuel1xpjnzdpsvccrwvryx9skvafn8ycnyvpkxp3rqeps8qcn2vp5xy6qu7yyz7";
+        let expected_bech32 = "fuel1xpjnzdpsvccrwvryx9skvafn8ycnyvpkxp3rqeps8qcn2vp5xy6qu7yyz7";
 
-        let bech32_addr = Bech32Address::new(FUEL_BECH32_HRP, addr_data.clone());
+        let bech32_addr = Bech32Address::new(FUEL_BECH32_HRP, hash.clone());
 
-        assert_eq!(bech32_addr.plain_address(), Address::new(addr_data));
-        assert_eq!(bech32_addr.encoding, expected_encoding)
+        assert_eq!(bech32_addr.plain_address(), Address::new(hash));
+        assert_eq!(bech32_addr.to_string(), expected_bech32)
     }
 
     #[tokio::test]
     async fn test_from_str() {
-        let addr_data = [
+        let hash = [
             48, 101, 49, 52, 48, 102, 48, 55, 48, 100, 49, 97, 102, 117, 51, 57, 49, 50, 48, 54,
             48, 98, 48, 100, 48, 56, 49, 53, 48, 52, 49, 52,
         ];
@@ -97,6 +97,6 @@ mod test {
         )
         .unwrap();
 
-        assert_eq!(bech32_addr.plain_address(), Address::new(addr_data));
+        assert_eq!(bech32_addr.plain_address(), Address::new(hash));
     }
 }

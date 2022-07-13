@@ -119,7 +119,7 @@ impl Provider {
             let res = self
                 .client
                 .coins(
-                    &from.to_plain_addr_str(),
+                    &from.to_plain_addr_string(),
                     None,
                     PaginationRequest {
                         cursor: cursor.clone(),
@@ -151,7 +151,7 @@ impl Provider {
         let res = self
             .client
             .coins_to_spend(
-                &from.to_plain_addr_str(),
+                &from.to_plain_addr_string(),
                 vec![(format!("{:#x}", asset_id).as_str(), amount)],
                 None,
                 None,
@@ -195,7 +195,10 @@ impl Provider {
         asset_id: AssetId,
     ) -> Result<u64, ProviderError> {
         self.client
-            .balance(&address.to_plain_addr_str(), Some(&*asset_id.to_string()))
+            .balance(
+                &address.to_plain_addr_string(),
+                Some(&*asset_id.to_string()),
+            )
             .await
             .map_err(Into::into)
     }
@@ -216,7 +219,7 @@ impl Provider {
         };
         let balances_vec = self
             .client
-            .balances(&address.to_plain_addr_str(), pagination)
+            .balances(&address.to_plain_addr_string(), pagination)
             .await?
             .results;
         let balances = balances_vec
@@ -246,7 +249,7 @@ impl Provider {
         request: PaginationRequest<String>,
     ) -> std::io::Result<PaginatedResult<TransactionResponse, String>> {
         self.client
-            .transactions_by_owner(&owner.to_plain_addr_str(), request)
+            .transactions_by_owner(&owner.to_plain_addr_string(), request)
             .await
     }
 
