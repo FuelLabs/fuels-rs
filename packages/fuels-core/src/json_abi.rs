@@ -75,12 +75,12 @@ impl ABIParser {
         // Update the fn_selector field with the hash of the previously encoded function selector
         self.fn_selector = Some(ABIEncoder::hash_encoded_function_selector(&fn_selector).to_vec());
 
-        let params_and_values: Vec<(ParamType, &str)> = entry
+        let params_and_values = entry
             .inputs
             .iter()
-            .map(|prop| ParamType::try_from(prop).unwrap())
-            .zip(values.iter().map(|v| v as &str))
-            .collect::<Vec<_>>();
+            .zip(values)
+            .map(|(prop, val)| Ok((ParamType::try_from(prop)?, val.as_str())))
+            .collect::<Result<Vec<_>, Error>>()?;
 
         let tokens = self.parse_tokens(&params_and_values)?;
 
