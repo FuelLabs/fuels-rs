@@ -10,6 +10,7 @@ use fuels_types::{CustomType, Function, Property, ENUM_KEYWORD, STRUCT_KEYWORD};
 use inflector::Inflector;
 use proc_macro2::{Literal, TokenStream};
 use quote::quote;
+use regex::Regex;
 use std::collections::HashMap;
 
 /// Functions used by the Abigen to expand functions defined in an ABI spec.
@@ -130,24 +131,7 @@ fn expand_fn_outputs(outputs: &[Property]) -> Result<TokenStream, Error> {
 
                             Ok(quote! { ::std::vec::Vec<#parsed_custom_type_name> })
                         }
-                        false => match output.has_custom_type_in_tuple() {
-                            // If custom type is inside a tuple `(struct | enum <name>, ...)`,
-                            // the type signature should be only `(<name>, ...)`.
-                            // To do that, we remove the `STRUCT_KEYWORD` and `ENUM_KEYWORD` from it.
-                            true => {
-                                let tuple_type_signature: TokenStream = output
-                                    .type_field
-                                    .replace(STRUCT_KEYWORD, "")
-                                    .replace(ENUM_KEYWORD, "")
-                                    .parse()
-                                    .expect("could not parse tuple type signature");
-
-                                Ok(tuple_type_signature)
-                            }
-                            false => {
-                                panic!("{}", format!("Output is of custom type, but not an enum, struct or enum/struct inside an array/tuple. This shouldn't never happen. Output received: {:?}", output));
-                            }
-                        },
+                        false => expand_tuple_w_custom_types(output),
                     },
                 },
             }
@@ -156,6 +140,37 @@ fn expand_fn_outputs(outputs: &[Property]) -> Result<TokenStream, Error> {
             "A function cannot have multiple outputs.".to_string(),
         )),
     }
+}
+
+fn expand_tuple_w_custom_types(output: &Property) -> Result<TokenStream, Error> {
+    if !output.has_custom_type_in_tuple() {
+        panic!("Output is of custom type, but not an enum, struct or enum/struct inside an array/tuple. This shouldn't never happen. Output received: {:?}", output);
+    }
+
+    // If custom type is inside a tuple `(struct | enum <name>, ...)`,
+    // the type signature should be only `(<name>, ...)`.
+    // To do that, we remove the `STRUCT_KEYWORD` and `ENUM_KEYWORD` from it.
+
+    let keywords_removed = remove_words(&output.type_field, &[STRUCT_KEYWORD, ENUM_KEYWORD]);
+
+    let tuple_type_signature = expand_b256_into_array_form(&keywords_removed)
+        .parse()
+        .expect("could not parse tuple type signature");
+
+    Ok(tuple_type_signature)
+}
+
+fn expand_b256_into_array_form(type_field: &str) -> String {
+    let re = Regex::new(r"\bb256\b").unwrap();
+    re.replace_all(type_field, "[u8; 32]").to_string()
+}
+
+fn remove_words(from: &str, words: &[&str]) -> String {
+    words
+        .iter()
+        .fold(from.to_string(), |str_in_construction, word| {
+            str_in_construction.replace(word, "")
+        })
 }
 
 /// Expands the arguments in a function declaration and the same arguments as input
@@ -335,6 +350,7 @@ fn expand_input_param(
 #[cfg(test)]
 mod tests {
     use crate::EnumVariants;
+    use std::slice;
 
     use super::*;
     use std::str::FromStr;
@@ -734,5 +750,48 @@ mod tests {
         let struct_name = Some(&struct_prop);
         let result = expand_input_param(&def, "unused", &struct_type, &struct_name);
         assert!(matches!(result, Err(Error::InvalidType(_))));
+    }
+
+    #[test]
+    fn can_have_b256_mixed_in_tuple_w_custom_types() -> anyhow::Result<()> {
+        let test_struct_component = Property {
+            name: "__tuple_element".to_string(),
+            type_field: "struct TestStruct".to_string(),
+            components: Some(vec![Property {
+                name: "value".to_string(),
+                type_field: "u64".to_string(),
+                components: None,
+            }]),
+        };
+        let b256_component = Property {
+            name: "__tuple_element".to_string(),
+            type_field: "b256".to_string(),
+            components: None,
+        };
+
+        let property = Property {
+            name: "".to_string(),
+            type_field: "(struct TestStruct, b256)".to_string(),
+            components: Some(vec![test_struct_component, b256_component]),
+        };
+
+        let stream = expand_fn_outputs(slice::from_ref(&property))?;
+
+        let actual = stream.to_string();
+        let expected = "(TestStruct , [u8 ; 32])";
+
+        assert_eq!(actual, expected);
+
+        Ok(())
+    }
+
+    #[test]
+    fn will_not_replace_b256_in_middle_of_word() {
+        let result = expand_b256_into_array_form("(b256, Someb256WeirdStructName, b256, b256)");
+
+        assert_eq!(
+            result,
+            "([u8; 32], Someb256WeirdStructName, [u8; 32], [u8; 32])"
+        );
     }
 }
