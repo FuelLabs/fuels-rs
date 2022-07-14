@@ -180,6 +180,42 @@
 <li>coins: <code>Vec&lt;(UtxoId, Coin)&gt;</code> has num_assets * coins_per_assets coins (UTXOs)</li>
 <li>asset_ids: <code>Vec&lt;AssetId&gt;</code> contains the num_assets randomly generated <code>AssetId</code>s (always includes the base asset)</li>
 </ul>
+<h2 id="setting-up-assets"><a class="header" href="#setting-up-assets">Setting up assets</a></h2>
+<p>The Fuel blockchain holds many different assets; you can create your asset with its unique <code>AssetId</code> or create random assets for testing purposes.</p>
+<p>You can use only one asset to pay for transaction fees and gas: the base asset, whose AssetId is <code>0x000...0</code>, a 32-byte zeroed value.</p>
+<p>For testing purposes, you can configure coins and amounts for assets. You can use <code>setup_multiple_assets_coins</code>:</p>
+<pre><code class="language-rust ignore">        use fuels::prelude::*;
+        let mut wallet = LocalWallet::new_random(None);
+        let num_assets = 5; // 5 different assets
+        let coins_per_asset = 10; // Per asset id, 10 coins in the wallet
+        let amount_per_coin = 15; // For each coin (UTXO) of the asset, amount of 15
+
+        let (coins, asset_ids) = setup_multiple_assets_coins(
+            wallet.address(),
+            num_assets,
+            coins_per_asset,
+            amount_per_coin,
+        );
+</code></pre>
+<blockquote>
+<p><strong>Note</strong> If setting up multiple assets, one of these assets will always be the base asset.</p>
+</blockquote>
+<p>If you want to create coins only with the base asset, then you can use:</p>
+<pre><code class="language-rust ignore">        let wallet = LocalWallet::new_random(None);
+
+        // How many coins in our wallet.
+        let number_of_coins = 1;
+
+        // The amount/value in each coin in our wallet.
+        let amount_per_coin = 3;
+
+        let coins = setup_single_asset_coins(
+            wallet.address(),
+            BASE_ASSET_ID,
+            number_of_coins,
+            amount_per_coin,
+        );
+</code></pre>
 
                     </main>
 

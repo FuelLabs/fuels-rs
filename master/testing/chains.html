@@ -137,9 +137,8 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h2 id="increase-the-block-height"><a class="header" href="#increase-the-block-height">Increase the block height</a></h2>
-<p><code>produce_blocks</code> can be used to help achieve a desired block height. Useful for when you want to do any testing regarding transaction maturity.</p>
-<p>Example of usage:</p>
+                        <h1 id="increasing-the-block-height"><a class="header" href="#increasing-the-block-height">Increasing the block height</a></h1>
+<p>You can use <code>produce_blocks</code> to help achieve an arbitrary block height; this is useful when you want to do any testing regarding transaction maturity.</p>
 <pre><code class="language-rust ignore">    let wallet = launch_provider_and_get_wallet().await;
     let provider = &amp;wallet.get_provider().unwrap();
 

@@ -137,11 +137,8 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h2 id="running-a-sway-script"><a class="header" href="#running-a-sway-script">Running a Sway script</a></h2>
-<p><code>run_compiled_script</code> is a helper function for testing simple Sway scripts and reducing  boilerplate  code  related to setting up contracts and deployment. It takes the path to the generated <code>.bin</code> file as argument.</p>
-<ul>
-<li>You can use it this way:</li>
-</ul>
+                        <h1 id="running-scripts"><a class="header" href="#running-scripts">Running scripts</a></h1>
+<p><code>run_compiled_script</code> is a helper function for testing simple Sway scripts and reducing boilerplate code related to setting up contracts and deployment. As the argument, it takes the path to the generated binary file (<code>.bin</code>).</p>
 <pre><code class="language-rust ignore">        let path_to_bin = &quot;../fuels-abigen-macro/tests/test_projects/logging/out/debug/logging.bin&quot;;
         let return_val = run_compiled_script(path_to_bin).await?;
 
