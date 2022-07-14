@@ -48,7 +48,7 @@ type W = English;
 ///   let message = Message::new(message);
 ///   let recovered_address = signature.recover(&message).unwrap();
 ///
-///   assert_eq!(wallet.address().as_ref(), recovered_address.hash().as_ref());
+///   assert_eq!(wallet.address().plain_address().as_ref(), recovered_address.hash().as_ref());
 ///
 ///   // Verify signature
 ///   signature.verify(&recovered_address, &message).unwrap();
@@ -483,18 +483,31 @@ mod tests {
             "m/44'/60'/0'/0/0",
         )?;
 
-        let expected_address = "df9d0e6c6c5f5da6e82e5e1a77974af6642bdb450a10c43f0c6910a212600185";
+        let expected_plain_address =
+            "df9d0e6c6c5f5da6e82e5e1a77974af6642bdb450a10c43f0c6910a212600185";
+        let expected_address = "fuel1m7wsumrvtaw6d6pwtcd809627ejzhk69pggvg0cvdyg2yynqqxzseuzply";
 
+        assert_eq!(
+            wallet.address().plain_address().to_string(),
+            expected_plain_address
+        );
         assert_eq!(wallet.address().to_string(), expected_address);
 
         // Create a second account from the same phrase.
         let wallet2 =
             Wallet::new_from_mnemonic_phrase_with_path(phrase, Some(provider), "m/44'/60'/1'/0/0")?;
 
-        let expected_second_address =
+        let expected_second_plain_address =
             "261191b0164a24fd0fd51566ec5e5b0b9ba8fb2d42dc9cf7dbbd6f23d2742759";
+        let expected_second_address =
+            "fuel1ycgervqkfgj06r74z4nwchjmpwd637edgtwfea7mh4hj85n5yavszjk4cc";
 
+        assert_eq!(
+            wallet2.address().plain_address().to_string(),
+            expected_second_plain_address
+        );
         assert_eq!(wallet2.address().to_string(), expected_second_address);
+
         Ok(())
     }
 
