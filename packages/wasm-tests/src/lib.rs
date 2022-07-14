@@ -48,7 +48,8 @@ wasm_abigen!(
 );
 
 pub fn the_fn() {
-    use fuels_core::{abi_decoder::ABIDecoder, ParamType, Tokenizable};
+    use fuels_core::{abi_decoder::ABIDecoder, Tokenizable};
+    use fuels_types::param_types::ParamType;
     let data = vec![
         0, 0, 0, 0, 0, 0, 3, 252, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175,
         175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175,

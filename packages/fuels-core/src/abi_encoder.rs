@@ -171,8 +171,10 @@ impl ABIEncoder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{EnumVariants, ParamType};
-    use fuels_types::errors::Error;
+    use fuels_types::{
+        errors::Error,
+        param_types::{EnumVariants, ParamType},
+    };
     use std::slice;
 
     #[test]
