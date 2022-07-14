@@ -26,3 +26,23 @@ You can create a test wallet containing multiple assets (including the base asse
 
 - coins: `Vec<(UtxoId, Coin)>` has num_assets * coins_per_assets coins (UTXOs)
 - asset_ids: `Vec<AssetId>` contains the num_assets randomly generated `AssetId`s (always includes the base asset)
+
+## Setting up assets
+
+The Fuel blockchain holds many different assets; you can create your asset with its unique `AssetId` or create random assets for testing purposes.
+
+You can use only one asset to pay for transaction fees and gas: the base asset, whose AssetId is `0x000...0`, a 32-byte zeroed value.
+
+For testing purposes, you can configure coins and amounts for assets. You can use `setup_multiple_assets_coins`:
+
+```rust,ignore
+{{#include ../../../examples/wallets/src/lib.rs:multiple_assets_coins}}
+```
+
+>**Note** If setting up multiple assets, one of these assets will always be the base asset.
+
+If you want to create coins only with the base asset, then you can use:
+
+```rust,ignore
+{{#include ../../../examples/providers/src/lib.rs:setup_single_asset}}
+```
