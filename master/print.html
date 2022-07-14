@@ -583,7 +583,7 @@ enables defining owners (wallet addresses) of genesis coins before a provider is
         abigen!(
             MyContract,
             // This path is relative to the workspace (repository) root
-            &quot;packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json&quot;
+            &quot;packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json&quot;
         );
 
         // This helper will launch a local node and provide a test wallet linked to it
@@ -599,15 +599,15 @@ enables defining owners (wallet addresses) of genesis coins before a provider is
         // be used to initialize the instance
         let contract_id = Contract::deploy(
             // This path is relative to the current crate (examples/contracts)
-            &quot;../../packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test.bin&quot;,
+            &quot;../../packages/fuels/tests/test_projects/contract_test/out/debug/contract_test.bin&quot;,
             &amp;wallet,
             TxParameters::new(
                 Some(gas_price),
                 Some(gas_limit),
                 Some(byte_price),
-                Some(maturity)
+                Some(maturity),
             ),
-            StorageConfiguration::default()
+            StorageConfiguration::default(),
         )
         .await?;
 
@@ -634,16 +634,16 @@ enables defining owners (wallet addresses) of genesis coins before a provider is
 
         abigen!(
             MyContract,
-            &quot;packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json&quot;
+            &quot;packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json&quot;
         );
 
         let wallet = launch_provider_and_get_wallet().await;
 
         let contract_id_1 = Contract::deploy(
-            &quot;../../packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test.bin&quot;,
+            &quot;../../packages/fuels/tests/test_projects/contract_test/out/debug/contract_test.bin&quot;,
             &amp;wallet,
-            TxParameters::default(),        StorageConfiguration::default()
-
+            TxParameters::default(),
+            StorageConfiguration::default(),
         )
         .await?;
 
@@ -653,7 +653,7 @@ enables defining owners (wallet addresses) of genesis coins before a provider is
         let salt: [u8; 32] = rng.gen();
 
         let contract_id_2 = Contract::deploy_with_parameters(
-            &quot;../../packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test.bin&quot;,
+            &quot;../../packages/fuels/tests/test_projects/contract_test/out/debug/contract_test.bin&quot;,
             &amp;wallet,
             TxParameters::default(),
             StorageConfiguration::default(),
@@ -669,9 +669,9 @@ enables defining owners (wallet addresses) of genesis coins before a provider is
 <p>If you already have a deployed contract and want to call its methods using the SDK,  but without deploying it again, all you need is the contract ID of your deployed contract. You can skip the whole deployment setup and call <code>::new(contract_id, wallet)</code> directly. For example:</p>
 <pre><code class="language-rust ignore">        // Replace with your contract ABI.json path
         abigen!(
-        MyContract,
-        &quot;packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json&quot;
-    );
+            MyContract,
+            &quot;packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json&quot;
+        );
         let wallet = launch_provider_and_get_wallet().await;
         // Your contract ID as a String.
         let contract_id =
@@ -758,7 +758,7 @@ impl MyContract for Contract {
 <p>You might have noticed this section in the previous example:</p>
 <pre><code class="language-rust ignore">        abigen!(
             MyContract,
-            &quot;packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json&quot;
+            &quot;packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json&quot;
         );
 </code></pre>
 <p>The SDK lets you transform ABI methods of a smart contract, specified as JSON objects (which you can get from <a href="https://github.com/FuelLabs/sway/tree/master/forc">Forc</a>), into Rust structs and methods that are type-checked at compile time.</p>
@@ -1223,7 +1223,7 @@ pub const BASE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
 <p>After using the <code>abigen!</code> macro, <code>CounterConfig</code> will be accessible in your Rust file! Here's an example:</p>
 <pre><code class="language-rust ignore">    abigen!(
         MyContract,
-        &quot;packages/fuels-abigen-macro/tests/test_projects/complex_types_contract/out/debug/contract_test-abi.json&quot;
+        &quot;packages/fuels/tests/test_projects/complex_types_contract/out/debug/contract_test-abi.json&quot;
     );
 
     // Here we can use `CounterConfig`, a struct originally
@@ -1283,7 +1283,7 @@ pub const BASE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
 <ul>
 <li>You can use it this way:</li>
 </ul>
-<pre><code class="language-rust ignore">        let path_to_bin = &quot;../fuels-abigen-macro/tests/test_projects/logging/out/debug/logging.bin&quot;;
+<pre><code class="language-rust ignore">        let path_to_bin = &quot;../fuels/tests/test_projects/logging/out/debug/logging.bin&quot;;
         let return_val = run_compiled_script(path_to_bin).await?;
 
         let correct_hex =
@@ -1298,7 +1298,7 @@ pub const BASE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
 </ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="running-scripts"><a class="header" href="#running-scripts">Running scripts</a></h1>
 <p><code>run_compiled_script</code> is a helper function for testing simple Sway scripts and reducing boilerplate code related to setting up contracts and deployment. As the argument, it takes the path to the generated binary file (<code>.bin</code>).</p>
-<pre><code class="language-rust ignore">        let path_to_bin = &quot;../fuels-abigen-macro/tests/test_projects/logging/out/debug/logging.bin&quot;;
+<pre><code class="language-rust ignore">        let path_to_bin = &quot;../fuels/tests/test_projects/logging/out/debug/logging.bin&quot;;
         let return_val = run_compiled_script(path_to_bin).await?;
 
         let correct_hex =

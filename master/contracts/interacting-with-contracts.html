@@ -141,9 +141,9 @@
 <p>If you already have a deployed contract and want to call its methods using the SDK,  but without deploying it again, all you need is the contract ID of your deployed contract. You can skip the whole deployment setup and call <code>::new(contract_id, wallet)</code> directly. For example:</p>
 <pre><code class="language-rust ignore">        // Replace with your contract ABI.json path
         abigen!(
-        MyContract,
-        &quot;packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test-abi.json&quot;
-    );
+            MyContract,
+            &quot;packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json&quot;
+        );
         let wallet = launch_provider_and_get_wallet().await;
         // Your contract ID as a String.
         let contract_id =
