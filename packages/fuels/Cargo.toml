@@ -19,5 +19,16 @@ fuels-signers = { version = "0.17.0", path = "../fuels-signers" }
 fuels-test-helpers = { version = "0.17.0", path = "../fuels-test-helpers" }
 fuels-types = { version = "0.17.0", path = "../fuels-types" }
 
+[dev-dependencies]  
+anyhow = "1.0.58"
+ctor = " 0.1"
+fuel-core = { version = "0.9", default-features = false }
+fuel-gql-client = { version = "0.9", default-features = false }
+hex = { version = "0.4.3", default-features = false }
+sha2 = "0.9.5"
+tokio = "1.15.0"
+tracing = { version = "0.1", default-features = false }
+tracing-subscriber = { version = "0.3", default-features = false, features = ["env-filter", "fmt"] }
+
 [features]
 fuel-core-lib = ["fuels-test-helpers/fuel-core-lib", "fuel-core"]
