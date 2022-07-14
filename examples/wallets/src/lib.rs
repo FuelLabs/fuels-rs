@@ -169,6 +169,7 @@ mod tests {
     #[allow(unused_variables)]
     async fn setup_wallet_multiple_assets() -> Result<(), Error> {
         // ANCHOR: multiple_assets_wallet
+        // ANCHOR: multiple_assets_coins
         use fuels::prelude::*;
         let mut wallet = LocalWallet::new_random(None);
         let num_assets = 5; // 5 different assets
@@ -181,6 +182,7 @@ mod tests {
             coins_per_asset,
             amount_per_coin,
         );
+        // ANCHOR_END: multiple_assets_coins
         let (provider, _socket_addr) = setup_test_provider(coins.clone(), None).await;
         wallet.set_provider(provider);
         // ANCHOR_END: multiple_assets_wallet
