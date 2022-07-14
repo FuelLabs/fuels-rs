@@ -681,10 +681,19 @@ async fn type_safe_output_values() -> Result<(), Error> {
 async fn call_with_structs() -> Result<(), Error> {
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `MyContract`.
+    // ANCHOR: struct_generation
     abigen!(
         MyContract,
         "packages/fuels-abigen-macro/tests/test_projects/complex_types_contract/out/debug/contract_test-abi.json"
     );
+
+    // Here we can use `CounterConfig`, a struct originally
+    // defined in the Sway contract.
+    let counter_config = CounterConfig {
+        dummy: true,
+        initial_value: 42,
+    };
+    // ANCHOR_END: struct_generation
 
     let wallet = launch_provider_and_get_wallet().await;
 
@@ -698,10 +707,6 @@ async fn call_with_structs() -> Result<(), Error> {
     println!("Contract deployed @ {:x}", contract_id);
 
     let contract_instance = MyContract::new(contract_id.to_string(), wallet);
-    let counter_config = CounterConfig {
-        dummy: true,
-        initial_value: 42,
-    };
 
     let response = contract_instance
         .initialize_counter(counter_config) // Build the ABI call
