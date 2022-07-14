@@ -130,7 +130,7 @@ mod tests {
         // Transfer 1 from wallet 1 to wallet 2
         let asset_id = Default::default();
         let _receipts = wallets[0]
-            .transfer(&wallets[1].address(), 1, asset_id, TxParameters::default())
+            .transfer(wallets[1].address(), 1, asset_id, TxParameters::default())
             .await?;
 
         let wallet_2_final_coins = wallets[1].get_coins().await?;

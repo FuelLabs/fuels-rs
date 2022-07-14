@@ -47,20 +47,20 @@ mod tests {
         // ANCHOR_END: setup_test_blockchain
 
         // ANCHOR: get_coins
-        let coins = provider.get_coins(&wallet.address()).await.unwrap();
+        let coins = provider.get_coins(wallet.address()).await.unwrap();
         assert_eq!(coins.len(), 1);
         // ANCHOR_END: get_coins
 
         // ANCHOR: get_spendable_coins
         let spendable_coins = provider
-            .get_spendable_coins(&wallet.address(), BASE_ASSET_ID, 1)
+            .get_spendable_coins(wallet.address(), BASE_ASSET_ID, 1)
             .await
             .unwrap();
         assert_eq!(spendable_coins.len(), 1);
         // ANCHOR_END: get_spendable_coins
 
         // ANCHOR: get_balances
-        let _balances = provider.get_balances(&wallet.address()).await.unwrap();
+        let _balances = provider.get_balances(wallet.address()).await.unwrap();
         // ANCHOR_END: get_balances
     }
 }
