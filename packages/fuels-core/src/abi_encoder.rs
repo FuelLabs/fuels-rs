@@ -12,7 +12,7 @@ pub struct ABIEncoder {
 impl ABIEncoder {
     /// Hashes the function selector using SHA256 and returns the first 4 bytes.
     /// The function selector has to have been already encoded following the ABI specs defined
-    /// [here](https://github.com/FuelLabs/fuel-specs/blob/1be31f70c757d8390f74b9e1b3beb096620553eb/specs/protocol/abi.md)
+    /// https://github.com/FuelLabs/fuel-specs/blob/master/specs/protocol/abi.md
     pub fn hash_encoded_function_selector(fn_selector: &str) -> ByteArray {
         let signature = fn_selector.as_bytes();
         let mut hasher = Sha256::new();
@@ -24,7 +24,7 @@ impl ABIEncoder {
     }
 
     /// Encodes `Token`s in `args` following the ABI specs defined
-    /// [here](https://github.com/FuelLabs/fuel-specs/blob/1be31f70c757d8390f74b9e1b3beb096620553eb/specs/protocol/abi.md)
+    /// https://github.com/FuelLabs/fuel-specs/blob/master/specs/protocol/abi.md
     pub fn encode(args: &[Token]) -> Result<Vec<u8>, CodecError> {
         let mut encoder = ABIEncoder::new();
 
