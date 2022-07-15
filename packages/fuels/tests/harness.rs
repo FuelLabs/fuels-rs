@@ -2182,7 +2182,10 @@ async fn contract_deployment_respects_maturity() -> anyhow::Result<()> {
 
     let err = deploy_w_maturity(1).await.expect_err("Should not have been able to deploy the contract since the block height (0) is less than the requested maturity (1)");
 
-    assert!(matches!(err, Error::ValidationError(fuel_gql_client::fuel_tx::ValidationError::TransactionMaturity)));
+    assert!(matches!(
+        err,
+        Error::ValidationError(fuel_gql_client::fuel_tx::ValidationError::TransactionMaturity)
+    ));
 
     produce_blocks(&wallet, 1).await?;
     deploy_w_maturity(1)
