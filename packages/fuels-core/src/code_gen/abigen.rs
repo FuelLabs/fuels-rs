@@ -97,6 +97,7 @@ impl Abigen {
     /// after it is called through a procedural macro (`abigen!()` in our case).
     pub fn expand(&self) -> Result<TokenStream, Error> {
         let name = &self.contract_name;
+        let builder_name = ident(&format!("{}Builder", name));
         let name_mod = ident(&format!(
             "{}_mod",
             self.contract_name.to_string().to_lowercase()
@@ -134,12 +135,33 @@ impl Abigen {
                     }
 
                     impl #name {
-                        pub fn new(contract_id: String, wallet: LocalWallet)
-                        -> Self {
-                            let contract_id = ContractId::from_str(&contract_id).expect("Invalid contract id");
-                            Self{ contract_id, wallet }
-                        }
                         #contract_functions
+                    }
+
+                    pub struct #builder_name {
+                        contract_id: ContractId,
+                        wallet: LocalWallet
+                    }
+
+                    impl #builder_name {
+                        pub fn new(contract_id: String, wallet: LocalWallet) -> Self {
+                            let contract_id = ContractId::from_str(&contract_id).expect("Invalid contract id");
+                            Self { contract_id, wallet }
+                        }
+
+                        pub fn contract_id(&mut self, contract_id: String) -> &mut Self {
+                            self.contract_id = ContractId::from_str(&contract_id).expect("Invalid contract id");
+                            self
+                        }
+
+                        pub fn wallet(&mut self, wallet: LocalWallet) -> &mut Self {
+                            self.wallet = wallet;
+                            self
+                        }
+
+                        pub fn build(self) -> #name {
+                            #name { contract_id: self.contract_id, wallet: self.wallet }
+                        }
                     }
                 },
             )

@@ -65,7 +65,7 @@ mod tests {
 
         // ANCHOR: use_deployed_contract
         // This is an instance of your contract which you can use to make calls to your functions
-        let contract_instance = MyContract::new(contract_id.to_string(), wallet);
+        let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
 
         let response = contract_instance
             .initialize_counter(42) // Build the ABI call
@@ -146,7 +146,8 @@ mod tests {
         .await?;
 
         println!("Contract deployed @ {:x}", contract_id_1);
-        let contract_instance_1 = MyContract::new(contract_id_1.to_string(), wallets[0].clone());
+        let contract_instance_1 =
+            MyContractBuilder::new(contract_id_1.to_string(), wallets[0].clone()).build();
 
         let response = contract_instance_1
             .initialize_counter(42) // Build the ABI call
@@ -165,7 +166,8 @@ mod tests {
         .await?;
 
         println!("Contract deployed @ {:x}", contract_id_2);
-        let contract_instance_2 = MyContract::new(contract_id_2.to_string(), wallets[1].clone());
+        let contract_instance_2 =
+            MyContractBuilder::new(contract_id_2.to_string(), wallets[1].clone()).build();
 
         let response = contract_instance_2
             .initialize_counter(42) // Build the ABI call
@@ -197,7 +199,8 @@ mod tests {
         .await?;
         println!("Contract deployed @ {:x}", contract_id);
         // ANCHOR: instantiate_contract
-        let contract_instance = MyContract::new(contract_id.to_string(), wallet.clone());
+        let contract_instance =
+            MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
         // ANCHOR_END: instantiate_contract
         // ANCHOR: tx_parameters
         // In order: gas_price, gas_limit, byte_price, and maturity
@@ -277,7 +280,8 @@ mod tests {
         )
         .await?;
         println!("Contract deployed @ {:x}", contract_id);
-        let contract_instance = MyContract::new(contract_id.to_string(), wallet.clone());
+        let contract_instance =
+            MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
         // ANCHOR: simulate
         // you would mint 100 coins if the transaction wasn't simulated
         let counter = contract_instance.mint_coins(100).simulate().await?;
@@ -315,7 +319,7 @@ mod tests {
             StorageConfiguration::default(),
         )
         .await?;
-        let contract_instance = TestContract::new(contract_id.to_string(), wallet);
+        let contract_instance = TestContractBuilder::new(contract_id.to_string(), wallet).build();
 
         // ANCHOR: good_practice
         let response = contract_instance.increment_counter(162).call().await?;
@@ -351,7 +355,7 @@ mod tests {
         let contract_id =
             "0x068fe90ddc43b18a8f76756ecad8bf30eb0ceea33d2e6990c0185d01b0dbb675".to_string();
 
-        let connected_contract_instance = MyContract::new(contract_id, wallet);
+        let connected_contract_instance = MyContractBuilder::new(contract_id, wallet).build();
         // You can now use the `connected_contract_instance` just as you did above!
         // ANCHOR_END: deployed_contracts
         Ok(())
@@ -376,7 +380,8 @@ mod tests {
         )
         .await?;
 
-        let contract_instance = MyContract::new(contract_id.to_string(), wallet.clone());
+        let contract_instance =
+            MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
 
         // ANCHOR: call_params_gas
         // Set the transaction `gas_limit` to 1000 and `gas_forwarded` to 200 to specify that the
@@ -416,7 +421,8 @@ mod tests {
         .await?;
 
         // ANCHOR: multi_call_prepare
-        let contract_instance = MyContract::new(contract_id.to_string(), wallet.clone());
+        let contract_instance =
+            MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
 
         let call_handler_1 = contract_instance.initialize_counter(42);
         let call_handler_2 = contract_instance.get_array([42; 2].to_vec());
