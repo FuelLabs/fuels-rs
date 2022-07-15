@@ -1,4 +1,4 @@
-use crate::utils::has_array_format;
+use crate::utils::{first_four_bytes_of_sha256_hash, has_array_format};
 use crate::Token;
 use crate::{abi_decoder::ABIDecoder, abi_encoder::ABIEncoder};
 use fuels_types::{errors::Error, param_types::ParamType, JsonABI, Property};
@@ -73,7 +73,7 @@ impl ABIParser {
         let fn_selector = self.build_fn_selector(fn_name, &entry.inputs)?;
 
         // Update the fn_selector field with the hash of the previously encoded function selector
-        self.fn_selector = Some(ABIEncoder::hash_encoded_function_selector(&fn_selector).to_vec());
+        self.fn_selector = Some(first_four_bytes_of_sha256_hash(&fn_selector).to_vec());
 
         let params_and_values = entry
             .inputs

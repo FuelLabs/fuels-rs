@@ -1,9 +1,8 @@
-use crate::abi_encoder::ABIEncoder;
 use crate::code_gen::custom_types_gen::extract_custom_type_name_from_abi_property;
 use crate::code_gen::docs_gen::expand_doc;
 use crate::json_abi::ABIParser;
 use crate::types::expand_type;
-use crate::utils::{ident, safe_ident};
+use crate::utils::{first_four_bytes_of_sha256_hash, ident, safe_ident};
 use crate::{ParamType, Selector};
 use fuels_types::errors::Error;
 use fuels_types::{CustomType, Function, Property, ENUM_KEYWORD, STRUCT_KEYWORD};
@@ -35,7 +34,7 @@ pub fn expand_function(
     let name = safe_ident(&function.name);
     let fn_signature = abi_parser.build_fn_selector(&function.name, &function.inputs)?;
 
-    let encoded = ABIEncoder::hash_encoded_function_selector(&fn_signature);
+    let encoded = first_four_bytes_of_sha256_hash(&fn_signature);
 
     let tokenized_signature = expand_selector(encoded);
     let tokenized_output = expand_fn_outputs(&function.outputs)?;
