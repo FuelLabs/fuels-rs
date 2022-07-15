@@ -681,10 +681,19 @@ async fn type_safe_output_values() -> Result<(), Error> {
 async fn call_with_structs() -> Result<(), Error> {
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `MyContract`.
+    // ANCHOR: struct_generation
     abigen!(
         MyContract,
         "packages/fuels/tests/test_projects/complex_types_contract/out/debug/contract_test-abi.json"
     );
+
+    // Here we can use `CounterConfig`, a struct originally
+    // defined in the Sway contract.
+    let counter_config = CounterConfig {
+        dummy: true,
+        initial_value: 42,
+    };
+    // ANCHOR_END: struct_generation
 
     let wallet = launch_provider_and_get_wallet().await;
 
@@ -698,10 +707,6 @@ async fn call_with_structs() -> Result<(), Error> {
     println!("Contract deployed @ {:x}", contract_id);
 
     let contract_instance = MyContract::new(contract_id.to_string(), wallet);
-    let counter_config = CounterConfig {
-        dummy: true,
-        initial_value: 42,
-    };
 
     let response = contract_instance
         .initialize_counter(counter_config) // Build the ABI call
@@ -2091,6 +2096,30 @@ async fn test_init_storage_automatically() -> Result<(), Error> {
 
     let value = contract_instance.get_value_u64(*key2).call().await?.value;
     assert_eq!(value, 64);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_init_storage_automatically_bad_json_path() -> Result<(), Error> {
+    abigen!(
+        MyContract,
+        "packages/fuels/tests/test_projects/contract_storage_test/out/debug/contract_storage_test-abi.json"
+    );
+
+    let wallet = launch_provider_and_get_wallet().await;
+
+    let response = Contract::deploy_with_parameters(
+        "tests/test_projects/contract_storage_test/out/debug/contract_storage_test.bin",
+        &wallet,
+        TxParameters::default(),
+        StorageConfiguration::with_storage_path(
+            Some("tests/test_projects/contract_storage_test/out/debug/contract_storage_test-storage_slts.json".to_string())),
+        Salt::default(),
+    ).await.expect_err("Should fail");
+
+    let expected = "Invalid data:";
+    assert!(response.to_string().starts_with(expected));
 
     Ok(())
 }

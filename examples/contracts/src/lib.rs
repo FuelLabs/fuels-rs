@@ -6,17 +6,20 @@ mod tests {
 
     #[tokio::test]
     #[cfg(feature = "fuel-core-lib")]
-    // ANCHOR: instantiate_client
     async fn instantiate_client() -> Result<(), Error> {
+        // ANCHOR: instantiate_client
         use fuels::client::FuelClient;
         use fuels::node::service::{Config, FuelService};
 
+        // Run the fuel node.
         let server = FuelService::new_node(Config::local_node()).await?;
+
+        // Create a client that will talk to the node created above.
         let client = FuelClient::from(server.bound_address);
         assert!(client.health().await?);
+        // ANCHOR_END: instantiate_client
         Ok(())
     }
-    // ANCHOR_END: instantiate_client
 
     #[tokio::test]
     async fn deploy_contract() -> Result<(), Error> {
@@ -79,15 +82,17 @@ mod tests {
     }
 
     #[tokio::test]
-    // ANCHOR: deploy_with_parameters
     async fn deploy_with_parameters() -> Result<(), Error> {
+        // ANCHOR: deploy_with_parameters
         use fuels::prelude::*;
         use rand::prelude::{Rng, SeedableRng, StdRng};
 
+        // ANCHOR: abigen_example
         abigen!(
             MyContract,
             "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
         );
+        // ANCHOR_END: abigen_example
 
         let wallet = launch_provider_and_get_wallet().await;
 
@@ -116,13 +121,13 @@ mod tests {
         println!("Contract deployed @ {:x}", contract_id_2);
 
         assert_ne!(contract_id_1, contract_id_2);
+        // ANCHOR_END: deploy_with_parameters
         Ok(())
     }
-    // ANCHOR_END: deploy_with_parameters
 
     #[tokio::test]
-    // ANCHOR: deploy_with_multiple_wallets
     async fn deploy_with_multiple_wallets() -> Result<(), Error> {
+        // ANCHOR: deploy_with_multiple_wallets
         use fuels::prelude::*;
 
         abigen!(
@@ -169,9 +174,9 @@ mod tests {
             .await?;
 
         assert_eq!(42, response.value);
+        // ANCHOR_END: deploy_with_multiple_wallets
         Ok(())
     }
-    // ANCHOR_END: deploy_with_multiple_wallets
 
     #[tokio::test]
     #[allow(unused_variables)]
@@ -184,12 +189,12 @@ mod tests {
 
         let wallet = launch_provider_and_get_wallet().await;
         let contract_id = Contract::deploy(
-            "../../packages/fuels-abigen-macro/tests/test_projects/contract_test/out/debug/contract_test.bin",
+            "../../packages/fuels/tests/test_projects/contract_test/out/debug/contract_test.bin",
             &wallet,
-            TxParameters::default(),        StorageConfiguration::default()
-
+            TxParameters::default(),
+            StorageConfiguration::default(),
         )
-            .await?;
+        .await?;
         println!("Contract deployed @ {:x}", contract_id);
         // ANCHOR: instantiate_contract
         let contract_instance = MyContract::new(contract_id.to_string(), wallet.clone());

@@ -19,10 +19,13 @@ use fuels_core::tx::Bytes32;
 use fuels_core::{
     constants::{BASE_ASSET_ID, DEFAULT_SPENDABLE_COIN_AMOUNT},
     parameters::{CallParameters, TxParameters},
-    ParamType, ReturnLocation, Selector, Token, Tokenizable,
+    Selector, Token, Tokenizable,
 };
 use fuels_signers::{provider::Provider, LocalWallet, Signer};
-use fuels_types::errors::Error;
+use fuels_types::{
+    errors::Error,
+    param_types::{ParamType, ReturnLocation},
+};
 
 use crate::script::Script;
 
@@ -262,6 +265,9 @@ impl Contract {
 
         let storage = match storage_path {
             Some(path) if Path::new(&path).exists() => Self::get_storage_vec(path),
+            Some(path) if !Path::new(&path).exists() => {
+                return Err(Error::InvalidData(path.to_owned()));
+            }
             _ => {
                 vec![]
             }
