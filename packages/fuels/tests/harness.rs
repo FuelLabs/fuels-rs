@@ -2265,3 +2265,52 @@ async fn can_handle_sway_function_called_new() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn transfer_to_contract() {
+    abigen!(
+        MyContract,
+        "packages/fuels/tests/test_projects/tst/out/debug/tst-abi.json",
+    );
+
+    let wallet = launch_provider_and_get_wallet().await;
+
+    let id = Contract::deploy(
+        "tests/test_projects/tst/out/debug/tst.bin",
+        &wallet,
+        TxParameters::default(),
+        StorageConfiguration::default(),
+    )
+    .await
+    .unwrap();
+
+    let instance = MyContractBuilder::new(id.to_string(), wallet.clone()).build();
+
+    let spendable = wallet
+        .get_provider()
+        .unwrap()
+        .get_coins(&Address::new(*id))
+        .await
+        .unwrap();
+    println!("spendable {:?}", spendable);
+
+    wallet
+        .transfer(
+            &Address::new(*id),
+            2,
+            Default::default(),
+            TxParameters::default(),
+        )
+        .await
+        .unwrap();
+
+    let spendable = wallet
+        .get_provider()
+        .unwrap()
+        .get_coins(&Address::new(*id))
+        .await
+        .unwrap();
+    println!("spendable {:?}", spendable);
+
+    // Now you have an instance of your contract you can use to test each function
+}
