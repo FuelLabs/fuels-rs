@@ -615,7 +615,7 @@ enables defining owners (wallet addresses) of genesis coins before a provider is
 </code></pre>
 <p>You can then use the contract methods very simply:</p>
 <pre><code class="language-rust ignore">        // This is an instance of your contract which you can use to make calls to your functions
-        let contract_instance = MyContract::new(contract_id.to_string(), wallet);
+        let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
 
         let response = contract_instance
             .initialize_counter(42) // Build the ABI call
@@ -677,7 +677,7 @@ enables defining owners (wallet addresses) of genesis coins before a provider is
         let contract_id =
             &quot;0x068fe90ddc43b18a8f76756ecad8bf30eb0ceea33d2e6990c0185d01b0dbb675&quot;.to_string();
 
-        let connected_contract_instance = MyContract::new(contract_id, wallet);
+        let connected_contract_instance = MyContractBuilder::new(contract_id, wallet).build();
         // You can now use the `connected_contract_instance` just as you did above!
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="the-fuelvm-binary-file"><a class="header" href="#the-fuelvm-binary-file">The FuelVM binary file</a></h1>
@@ -842,7 +842,7 @@ impl MyContract {
 </blockquote>
 <p>Then, you're able to use it to call the actual methods on the deployed contract:</p>
 <pre><code class="language-rust ignore">        // This is an instance of your contract which you can use to make calls to your functions
-        let contract_instance = MyContract::new(contract_id.to_string(), wallet);
+        let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
 
         let response = contract_instance
             .initialize_counter(42) // Build the ABI call
@@ -917,7 +917,7 @@ impl MyContract {
 </ol>
 <p>Here's an example. Suppose your Sway contract has two ABI methods called <code>initialize_counter(u64)</code> and <code>increment_counter(u64)</code>. Once you've deployed it the contract, you can call these methods like this:</p>
 <pre><code class="language-rust ignore">        // This is an instance of your contract which you can use to make calls to your functions
-        let contract_instance = MyContract::new(contract_id.to_string(), wallet);
+        let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
 
         let response = contract_instance
             .initialize_counter(42) // Build the ABI call
@@ -1080,7 +1080,8 @@ pub const BASE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="multiple-contract-calls"><a class="header" href="#multiple-contract-calls">Multiple contract calls</a></h1>
 <p>With <code>ContractMultiCallHandler</code>, you can execute multiple contract calls within a single transaction. To achieve this, you first prepare all the contract calls that you want to bundle:</p>
-<pre><code class="language-rust ignore">        let contract_instance = MyContract::new(contract_id.to_string(), wallet.clone());
+<pre><code class="language-rust ignore">        let contract_instance =
+            MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
 
         let call_handler_1 = contract_instance.initialize_counter(42);
         let call_handler_2 = contract_instance.get_array([42; 2].to_vec());

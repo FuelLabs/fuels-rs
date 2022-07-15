@@ -187,7 +187,7 @@
 </code></pre>
 <p>You can then use the contract methods very simply:</p>
 <pre><code class="language-rust ignore">        // This is an instance of your contract which you can use to make calls to your functions
-        let contract_instance = MyContract::new(contract_id.to_string(), wallet);
+        let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
 
         let response = contract_instance
             .initialize_counter(42) // Build the ABI call
