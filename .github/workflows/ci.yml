@@ -16,6 +16,7 @@ env:
   CARGO_TERM_COLOR: always
   DASEL_VERSION: https://github.com/TomWright/dasel/releases/download/v1.24.3/dasel_linux_amd64
   RUSTFLAGS: "-D warnings"
+  FUEL_CORE_VERSION: 0.9.6
   RUST_VERSION: 1.61.0
   FORC_VERSION: 0.18.0
 
@@ -57,11 +58,11 @@ jobs:
           name: sway-examples
           # cache only the sway build artifacts, skip all test_project src files
           path: |
-            packages/fuels-abigen-macro/tests/test_projects
-            !packages/fuels-abigen-macro/tests/test_projects/**/*.sw
-            !packages/fuels-abigen-macro/tests/test_projects/**/Forc.toml
-            !packages/fuels-abigen-macro/tests/test_projects/**/Forc.lock
-            !packages/fuels-abigen-macro/tests/test_projects/**/.gitignore
+            packages/fuels/tests/test_projects
+            !packages/fuels/tests/test_projects/**/*.sw
+            !packages/fuels/tests/test_projects/**/Forc.toml
+            !packages/fuels/tests/test_projects/**/Forc.lock
+            !packages/fuels/tests/test_projects/**/.gitignore
 
   get-workspace-members:
     runs-on: ubuntu-latest
@@ -144,6 +145,14 @@ jobs:
           cargo test --target wasm32-unknown-unknown --all-targets --all-features
           cargo test --target wasm32-unknown-unknown --all-targets --no-default-features
 
+      - name: Install Fuel Core
+        if: ${{ matrix.command == 'test' }}
+        run: |
+          curl -sSLf https://github.com/FuelLabs/fuel-core/releases/download/v${{ env.FUEL_CORE_VERSION }}/fuel-core-${{ env.FUEL_CORE_VERSION }}-x86_64-unknown-linux-gnu.tar.gz -L -o fuel-core.tar.gz
+          tar -xvf fuel-core.tar.gz          
+          chmod +x fuel-core-${{ env.FUEL_CORE_VERSION }}-x86_64-unknown-linux-gnu/fuel-core
+          mv fuel-core-${{ env.FUEL_CORE_VERSION }}-x86_64-unknown-linux-gnu/fuel-core /usr/local/bin/fuel-core
+
       - name: Install rustfmt
         if: ${{ matrix.command == 'fmt' }}
         run: rustup component add rustfmt
@@ -157,7 +166,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: sway-examples
-          path: packages/fuels-abigen-macro/tests/test_projects/
+          path: packages/fuels/tests/test_projects/
 
       - name: Cargo (workspace-level)
         if: ${{ !matrix.package }}
