@@ -11,7 +11,7 @@ You can use these to forward coins to a contract. You can configure these parame
 For instance, suppose the following contract that uses Sway's `msg_amount()` to return the amount sent in that transaction.
 
 ```rust,ignore
-{{#include ../../../packages/fuels-abigen-macro/tests/test_projects/contract_test/src/main.sw:msg_amount}}
+{{#include ../../../packages/fuels/tests/test_projects/contract_test/src/main.sw:msg_amount}}
 ```
 
 Then, in Rust, after setting up and deploying the above contract, you can configure the amount being sent in the transaction like this:

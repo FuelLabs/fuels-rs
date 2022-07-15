@@ -35,6 +35,7 @@
     - [ContractId](./types/contract-id.md)
     - [AssetId](./types/asset-id.md)
     - [Converting native types](./types/conversion.md)
+    - [Structs and enums](./types/custom_types.md)
 - [API](./getting-started/api.md)
 - [Debugging](./debugging/debugging.md)
   - [Debugging abigen errors](./debugging/abigen.md)

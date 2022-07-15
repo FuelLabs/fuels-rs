@@ -28,9 +28,10 @@ mod tests {
         // Set up our test blockchain.
 
         // Create a random wallet (more on wallets later).
+        // ANCHOR: setup_single_asset
         let wallet = LocalWallet::new_random(None);
 
-        // How many  coins in our wallet.
+        // How many coins in our wallet.
         let number_of_coins = 1;
 
         // The amount/value in each coin in our wallet.
@@ -42,6 +43,7 @@ mod tests {
             number_of_coins,
             amount_per_coin,
         );
+        // ANCHOR_END: setup_single_asset
 
         let (provider, _) = setup_test_provider(coins.clone(), None).await;
         // ANCHOR_END: setup_test_blockchain
