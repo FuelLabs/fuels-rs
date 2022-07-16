@@ -819,7 +819,6 @@ async fn multiple_read_calls() -> Result<(), Error> {
         StorageConfiguration::default(),
     )
     .await?;
-    println!("Contract deployed @ {:x}", contract_id);
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
 
     contract_instance.store(42).call().await?;
@@ -1329,7 +1328,6 @@ async fn test_array() -> Result<(), Error> {
     )
     .await?;
 
-    println!("Contract deployed @ {:x}", contract_id);
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
 
     assert_eq!(
@@ -2076,8 +2074,6 @@ async fn test_init_storage_automatically() -> Result<(), Error> {
     )
         .await?;
     // ANCHOR_END: automatic_storage
-
-    println!("Foo contract deployed @ {:x}", contract_id);
 
     let key1 =
         Bytes32::from_str("de9090cb50e71c2588c773487d1da7066d0c719849a7e58dc8b6397a25c567c0")
