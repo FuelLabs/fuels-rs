@@ -1,9 +1,8 @@
-# Bech32Address
+# Bech32
 
-`Bech32Address` enables the use of addresses in the bech32 format. It can be converted to an `Address` because they both hold the same data (public-key hash), only with different encodings.
+`Bech32` enables the use of addresses and contract ids in the bech32 format. It can easily be converted to, and from `Address` and `ContractId`.
 
-
-These are the main ways of creating a `Bech32Address`: 
+These are the main ways of creating a `Bech32`: 
 
 ```rust,ignore
 {{#include ../../../examples/types/src/lib.rs:bech32}}
