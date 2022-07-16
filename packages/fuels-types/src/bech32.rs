@@ -120,12 +120,12 @@ mod test {
             48, 101, 49, 52, 48, 102, 48, 55, 48, 100, 49, 97, 102, 117, 51, 57, 49, 50, 48, 54,
             48, 98, 48, 100, 48, 56, 49, 53, 48, 52, 49, 52,
         ];
-        let expected_bech32 = "fuel1xpjnzdpsvccrwvryx9skvafn8ycnyvpkxp3rqeps8qcn2vp5xy6qu7yyz7";
+        let expected_address = Address::new(pubkey_hash);
 
         let bech32_addr = Bech32::new(FUEL_BECH32_HRP, pubkey_hash, ContentType::Address);
 
         assert_eq!(bech32_addr.to_address(), Address::new(pubkey_hash));
-        assert_eq!(bech32_addr.to_address().to_string(), expected_bech32)
+        assert_eq!(bech32_addr.to_address().to_string(), expected_address.to_string())
     }
 
     #[tokio::test]
