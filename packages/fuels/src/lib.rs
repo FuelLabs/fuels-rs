@@ -13,7 +13,7 @@
 //! it is a `proc_macro` package.
 //!
 //! Examples on how you can use the types imported by the prelude can be found in
-//! the [main test suite](https://github.com/FuelLabs/fuels-rs/blob/master/fuels-abigen-macro/tests/harness.rs)
+//! the [main test suite](https://github.com/FuelLabs/fuels-rs/blob/master/fuels/tests/harness.rs)
 
 pub use fuels_core::tx;
 

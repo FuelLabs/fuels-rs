@@ -1,5 +1,5 @@
 //! Runs `forc build` for all projects under the
-//! `fuels-abigen-macro/tests/test_projects` directory.
+//! `fuels/tests/test_projects` directory.
 //!
 //! NOTE: This expects both `forc` and `cargo` to be available in `PATH`.
 
@@ -19,7 +19,7 @@ fn main() {
 
     println!("Building projects with: {:?}", version.trim());
 
-    let path = Path::new("packages/fuels-abigen-macro/tests/test_projects");
+    let path = Path::new("packages/fuels/tests/test_projects");
     let cwd = env::current_dir().unwrap();
     let final_path = cwd.join(path);
 
