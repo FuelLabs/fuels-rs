@@ -11,7 +11,7 @@ use fuel_gql_client::{
     fuel_tx::{AssetId, Input, Output, Receipt, Transaction, UtxoId, Witness},
 };
 use fuels_core::parameters::TxParameters;
-use fuels_types::bech32::{Bech32Address, FUEL_BECH32_HRP};
+use fuels_types::bech32::{Bech32, FUEL_BECH32_HRP};
 use fuels_types::errors::Error;
 use rand::{CryptoRng, Rng};
 use std::{collections::HashMap, fmt, io, path::Path, str::FromStr};
@@ -48,7 +48,7 @@ type W = English;
 ///   let message = Message::new(message);
 ///   let recovered_address = signature.recover(&message).unwrap();
 ///
-///   assert_eq!(wallet.address().plain_address().as_ref(), recovered_address.hash().as_ref());
+///   assert_eq!(wallet.address().to_address().as_ref(), recovered_address.hash().as_ref());
 ///
 ///   // Verify signature
 ///   signature.verify(&recovered_address, &message).unwrap();
@@ -63,7 +63,7 @@ pub struct Wallet {
     pub(crate) private_key: SecretKey,
     /// The wallet's address. The wallet's address is derived
     /// from the first 32 bytes of SHA-256 hash of the wallet's public key.
-    pub(crate) address: Bech32Address,
+    pub(crate) address: Bech32,
 
     pub(crate) provider: Option<Provider>,
 }
@@ -115,7 +115,7 @@ impl Wallet {
 
         Self {
             private_key,
-            address: Bech32Address::new(FUEL_BECH32_HRP, *hashed),
+            address: Bech32::new_address(FUEL_BECH32_HRP, *hashed),
             provider,
         }
     }
@@ -273,7 +273,7 @@ impl Wallet {
     /// ```
     pub async fn transfer(
         &self,
-        to: &Bech32Address,
+        to: &Bech32,
         amount: u64,
         asset_id: AssetId,
         tx_parameters: TxParameters,
@@ -408,7 +408,7 @@ impl Signer for Wallet {
         Ok(sig)
     }
 
-    fn address(&self) -> &Bech32Address {
+    fn address(&self) -> &Bech32 {
         &self.address
     }
 }
@@ -488,7 +488,7 @@ mod tests {
         let expected_address = "fuel1m7wsumrvtaw6d6pwtcd809627ejzhk69pggvg0cvdyg2yynqqxzseuzply";
 
         assert_eq!(
-            wallet.address().plain_address().to_string(),
+            wallet.address().to_address().to_string(),
             expected_plain_address
         );
         assert_eq!(wallet.address().to_string(), expected_address);
@@ -503,7 +503,7 @@ mod tests {
             "fuel1ycgervqkfgj06r74z4nwchjmpwd637edgtwfea7mh4hj85n5yavszjk4cc";
 
         assert_eq!(
-            wallet2.address().plain_address().to_string(),
+            wallet2.address().to_address().to_string(),
             expected_second_plain_address
         );
         assert_eq!(wallet2.address().to_string(), expected_second_address);

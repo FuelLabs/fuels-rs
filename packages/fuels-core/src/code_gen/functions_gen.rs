@@ -70,7 +70,7 @@ pub fn expand_function(
     Ok(quote! {
         #doc
         pub fn #name(&self #input) -> #result {
-            Contract::method_hash(&self.wallet.get_provider().expect("Provider not set up"), self.contract_id, &self.wallet,
+            Contract::method_hash(&self.wallet.get_provider().expect("Provider not set up"), self.contract_id.clone(), &self.wallet,
                 #tokenized_signature, #output_param, #arg).expect("method not found (this should never happen)")
         }
     })

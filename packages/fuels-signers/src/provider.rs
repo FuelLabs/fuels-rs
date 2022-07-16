@@ -17,7 +17,7 @@ use thiserror::Error;
 
 use crate::wallet::WalletError;
 use fuels_core::parameters::TxParameters;
-use fuels_types::bech32::Bech32Address;
+use fuels_types::bech32::Bech32;
 use fuels_types::errors::Error;
 
 /// An error involving a signature.
@@ -110,7 +110,7 @@ impl Provider {
 
     /// Gets all coins owned by address `from`, *even spent ones*. This returns actual coins
     /// (UTXOs).
-    pub async fn get_coins(&self, from: &Bech32Address) -> Result<Vec<Coin>, ProviderError> {
+    pub async fn get_coins(&self, from: &Bech32) -> Result<Vec<Coin>, ProviderError> {
         let mut coins: Vec<Coin> = vec![];
 
         let mut cursor = None;
@@ -119,7 +119,7 @@ impl Provider {
             let res = self
                 .client
                 .coins(
-                    &from.to_plain_addr_string(),
+                    &from.to_address().to_string(),
                     None,
                     PaginationRequest {
                         cursor: cursor.clone(),
@@ -144,14 +144,14 @@ impl Provider {
     /// of coins (UXTOs) is optimized to prevent dust accumulation.
     pub async fn get_spendable_coins(
         &self,
-        from: &Bech32Address,
+        from: &Bech32,
         asset_id: AssetId,
         amount: u64,
     ) -> io::Result<Vec<Coin>> {
         let res = self
             .client
             .coins_to_spend(
-                &from.to_plain_addr_string(),
+                &from.to_address().to_string(),
                 vec![(format!("{:#x}", asset_id).as_str(), amount)],
                 None,
                 None,
@@ -191,12 +191,12 @@ impl Provider {
     /// of the UTXOs.
     pub async fn get_asset_balance(
         &self,
-        address: &Bech32Address,
+        address: &Bech32,
         asset_id: AssetId,
     ) -> Result<u64, ProviderError> {
         self.client
             .balance(
-                &address.to_plain_addr_string(),
+                &address.to_address().to_string(),
                 Some(&*asset_id.to_string()),
             )
             .await
@@ -208,7 +208,7 @@ impl Provider {
     /// for each asset id) and not the UTXOs coins themselves
     pub async fn get_balances(
         &self,
-        address: &Bech32Address,
+        address: &Bech32,
     ) -> Result<HashMap<String, u64>, ProviderError> {
         // We don't paginate results because there are likely at most ~100 different assets in one
         // wallet
@@ -219,7 +219,7 @@ impl Provider {
         };
         let balances_vec = self
             .client
-            .balances(&address.to_plain_addr_string(), pagination)
+            .balances(&address.to_address().to_string(), pagination)
             .await?
             .results;
         let balances = balances_vec
@@ -245,11 +245,11 @@ impl Provider {
     // - Get transaction(s) by owner
     pub async fn get_transactions_by_owner(
         &self,
-        owner: &Bech32Address,
+        owner: &Bech32,
         request: PaginationRequest<String>,
     ) -> std::io::Result<PaginatedResult<TransactionResponse, String>> {
         self.client
-            .transactions_by_owner(&owner.to_plain_addr_string(), request)
+            .transactions_by_owner(&owner.to_address().to_string(), request)
             .await
     }
 

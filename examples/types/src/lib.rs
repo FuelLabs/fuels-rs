@@ -55,25 +55,24 @@ mod tests {
         Ok(())
     }
     #[tokio::test]
-    async fn bech32_address() -> Result<(), Error> {
+    async fn bech32() -> Result<(), Error> {
         // ANCHOR: bech32
-        use fuels::types::bech32::Bech32Address;
-        use std::str::FromStr;
+        use fuels::types::bech32::Bech32;
 
         // New from HRP string and a `[u8; 32]`
         let hrp = "fuel";
         let my_slice = [1u8; 32];
-        let bech32_address = Bech32Address::new(hrp, my_slice);
+        let bech32_address = Bech32::new_address(hrp, my_slice);
 
         // Get the corresponding Address.
-        let address = bech32_address.plain_address();
+        let address = bech32_address.to_address();
         assert_eq!([1u8; 32], *address);
 
         // From a string.
         let string = "fuel1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqsx2mt2";
-        let bech32_address =
-            Bech32Address::from_str(string).expect("failed to create Bech32Address from string");
-        assert_eq!([0u8; 32], *bech32_address.plain_address());
+        let bech32_address = Bech32::new_address_from_string(string)
+            .expect("failed to create Bech32Address from string");
+        assert_eq!([0u8; 32], *bech32_address.to_address());
         // ANCHOR_END: bech32
 
         Ok(())

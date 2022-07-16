@@ -52,7 +52,7 @@ mod wallets_config;
 pub use node::*;
 
 pub use chains::*;
-use fuels_types::bech32::Bech32Address;
+use fuels_types::bech32::Bech32;
 #[cfg(feature = "fuels-signers")]
 pub use signers::*;
 pub use wallets_config::*;
@@ -63,7 +63,7 @@ pub use wallets_config::*;
 /// pre-existing coins, with `num_asset` different asset ids. Note that one of the assets is the
 /// base asset to pay for gas.
 pub fn setup_multiple_assets_coins(
-    owner: &Bech32Address,
+    owner: &Bech32,
     num_asset: u64,
     coins_per_asset: u64,
     amount_per_coin: u64,
@@ -98,7 +98,7 @@ pub fn setup_multiple_assets_coins(
 /// The output of this function can be used with `setup_test_client` to get a client with some
 /// pre-existing coins, but with only one asset ID.
 pub fn setup_single_asset_coins(
-    owner: &Bech32Address,
+    owner: &Bech32,
     asset_id: AssetId,
     num_coins: u64,
     amount_per_coin: u64,
@@ -224,7 +224,7 @@ mod tests {
         let mut rng = rand::thread_rng();
         let mut addr_data = [0u8; 32];
         addr_data.try_fill(&mut rng)?;
-        let address = Bech32Address::new("test", addr_data);
+        let address = Bech32::new_address("test", addr_data);
 
         let mut asset_id = AssetId::zeroed();
         asset_id.try_fill(&mut rng)?;
@@ -237,7 +237,7 @@ mod tests {
         for (_utxo_id, coin) in coins {
             assert_eq!(coin.asset_id, asset_id);
             assert_eq!(coin.amount, amount_per_coin);
-            assert_eq!(coin.owner, address.plain_address());
+            assert_eq!(coin.owner, address.to_address());
         }
 
         Ok(())
@@ -248,7 +248,7 @@ mod tests {
         let mut rng = rand::thread_rng();
         let mut addr_data = [0u8; 32];
         addr_data.try_fill(&mut rng)?;
-        let address = Bech32Address::new("test", addr_data);
+        let address = Bech32::new_address("test", addr_data);
 
         let number_of_assets = 7;
         let coins_per_asset = 10;
@@ -274,7 +274,7 @@ mod tests {
                 .collect();
             assert_eq!(coins_asset_id.len() as u64, coins_per_asset);
             for (_utxo_id, coin) in coins_asset_id {
-                assert_eq!(coin.owner, address.plain_address());
+                assert_eq!(coin.owner, address.to_address());
                 assert_eq!(coin.amount, amount_per_coin);
             }
         }

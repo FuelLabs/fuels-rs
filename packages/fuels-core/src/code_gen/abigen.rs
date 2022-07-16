@@ -123,20 +123,21 @@ impl Abigen {
                     use fuels::core::{EnumSelector, Parameterize, Tokenizable, Token, try_from_bytes};
                     use fuels::signers::LocalWallet;
                     use fuels::tx::{ContractId, Address};
+                    use fuels::types::bech32::{Bech32, ContentType};
                     use fuels::types::errors::Error as SDKError;
                     use fuels::types::param_types::{EnumVariants, ParamType};
                     use std::str::FromStr;
                 },
                 quote! {
                     pub struct #name {
-                        contract_id: ContractId,
+                        contract_id: Bech32,
                         wallet: LocalWallet
                     }
 
                     impl #name {
                         pub fn new(contract_id: String, wallet: LocalWallet)
                         -> Self {
-                            let contract_id = ContractId::from_str(&contract_id).expect("Invalid contract id");
+                            let contract_id = Bech32::new_contract_id_from_string(&contract_id).expect("Invalid contract id");
                             Self{ contract_id, wallet }
                         }
                         #contract_functions

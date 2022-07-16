@@ -125,7 +125,7 @@ impl Script {
 
             script_data.extend(call.call_parameters.gas_forwarded.to_be_bytes());
 
-            script_data.extend(call.contract_id.as_ref());
+            script_data.extend(call.contract_id.to_contract_id().as_ref());
 
             script_data.extend(call.encoded_selector);
 
@@ -192,12 +192,12 @@ impl Script {
         let contract_ids: HashSet<ContractId> = calls
             .iter()
             .flat_map(|call| {
-                let mut ids = call
+                let mut ids: HashSet<ContractId> = call
                     .external_contracts
-                    .as_ref()
-                    .cloned()
-                    .unwrap_or_default();
-                ids.insert(call.contract_id);
+                    .iter()
+                    .map(|bech32| bech32.to_contract_id())
+                    .collect();
+                ids.insert(call.contract_id.to_contract_id());
                 ids
             })
             .collect();
@@ -301,6 +301,7 @@ impl Script {
 #[cfg(test)]
 mod test {
     use fuels_core::parameters::CallParameters;
+    use fuels_types::bech32::Bech32;
 
     use super::*;
 
@@ -311,9 +312,9 @@ mod test {
         const NUM_CALLS: usize = 3;
 
         let contract_ids = vec![
-            ContractId::from([1u8; 32]),
-            ContractId::from([2u8; 32]),
-            ContractId::from([3u8; 32]),
+            Bech32::new_contract_id("test", [1u8; 32]),
+            Bech32::new_contract_id("test", [2u8; 32]),
+            Bech32::new_contract_id("test", [3u8; 32]),
         ];
 
         let asset_ids = vec![
@@ -329,7 +330,7 @@ mod test {
 
         let calls: Vec<ContractCall> = (0..NUM_CALLS)
             .map(|i| ContractCall {
-                contract_id: contract_ids[i],
+                contract_id: contract_ids[i].clone(),
                 encoded_selector: selectors[i],
                 encoded_args: args[i].clone(),
                 call_parameters: CallParameters::new(
@@ -339,7 +340,7 @@ mod test {
                 ),
                 compute_custom_input_offset: i == 1,
                 variable_outputs: None,
-                external_contracts: None,
+                external_contracts: vec![],
                 output_param: None,
             })
             .collect();
@@ -367,7 +368,7 @@ mod test {
             let contract_id = script_data
                 [offsets.call_data_offset..offsets.call_data_offset + ContractId::LEN]
                 .to_vec();
-            assert_eq!(contract_id, contract_ids[idx].to_vec());
+            assert_eq!(contract_id, contract_ids[idx].to_contract_id().to_vec());
 
             let selector_offset = offsets.call_data_offset + ContractId::LEN;
             let selector = script_data[selector_offset..selector_offset + SELECTOR_LEN].to_vec();
