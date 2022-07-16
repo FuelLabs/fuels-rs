@@ -280,11 +280,12 @@ impl Script {
 
     /// Execute the transaction in a state-modifying manner.
     pub async fn call(self, fuel_client: &FuelClient) -> Result<Vec<Receipt>, Error> {
-
         let chain_info = fuel_client.chain_info().await?;
 
-        self.tx
-            .validate_without_signature(chain_info.latest_block.height.0, &chain_info.consensus_parameters.into())?;
+        self.tx.validate_without_signature(
+            chain_info.latest_block.height.0,
+            &chain_info.consensus_parameters.into(),
+        )?;
 
         let tx_id = fuel_client.submit(&self.tx).await?.0.to_string();
         let receipts = fuel_client.receipts(&tx_id).await?;
@@ -301,8 +302,10 @@ impl Script {
     pub async fn simulate(self, fuel_client: &FuelClient) -> Result<Vec<Receipt>, Error> {
         let chain_info = fuel_client.chain_info().await?;
 
-        self.tx
-            .validate_without_signature(chain_info.latest_block.height.0, &chain_info.consensus_parameters.into())?;
+        self.tx.validate_without_signature(
+            chain_info.latest_block.height.0,
+            &chain_info.consensus_parameters.into(),
+        )?;
 
         let receipts = fuel_client.dry_run(&self.tx).await?;
         Ok(receipts)
