@@ -231,11 +231,9 @@ impl Contract {
 
         let chain_info = client.chain_info().await?;
 
-        let latest_block_height = wallet.get_provider().unwrap().latest_block_height().await?;
-
         wallet.sign_transaction(&mut tx).await?;
         tx.validate_without_signature(
-            latest_block_height,
+            chain_info.latest_block.height.0,
             &chain_info.consensus_parameters.into(),
         )?;
 
