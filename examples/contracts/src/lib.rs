@@ -196,7 +196,7 @@ mod tests {
             TxParameters::default(),
             StorageConfiguration::default(),
         )
-            .await?;
+        .await?;
         println!("Contract deployed @ {contract_id}");
         // ANCHOR: instantiate_contract
         let contract_instance =
