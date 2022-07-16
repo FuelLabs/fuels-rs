@@ -125,7 +125,10 @@ mod test {
         let bech32_addr = Bech32::new(FUEL_BECH32_HRP, pubkey_hash, ContentType::Address);
 
         assert_eq!(bech32_addr.to_address(), Address::new(pubkey_hash));
-        assert_eq!(bech32_addr.to_address().to_string(), expected_address.to_string())
+        assert_eq!(
+            bech32_addr.to_address().to_string(),
+            expected_address.to_string()
+        )
     }
 
     #[tokio::test]
