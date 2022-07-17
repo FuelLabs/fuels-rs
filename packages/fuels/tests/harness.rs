@@ -2208,39 +2208,6 @@ async fn can_increase_block_height() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-async fn gql_height_info_is_correct() -> anyhow::Result<()> {
-    abigen!(
-        MyContract,
-        "packages/fuels/tests/test_projects/transaction_block_height/out/debug/transaction_block_height-abi.json"
-    );
-
-    let wallet = launch_provider_and_get_wallet().await;
-    let provider = &wallet.get_provider().unwrap();
-
-    let id = Contract::deploy(
-        "tests/test_projects/transaction_block_height/out/debug/transaction_block_height.bin",
-        &wallet,
-        TxParameters::default(),
-        StorageConfiguration::default(),
-    )
-    .await?;
-    let instance = MyContractBuilder::new(id.to_string(), wallet.clone()).build();
-
-    let block_height_from_contract = || async {
-        Ok(instance.get_current_height().simulate().await?.value) as Result<u64, Error>
-    };
-
-    assert_eq!(provider.latest_block_height().await?, 1);
-    assert_eq!(block_height_from_contract().await?, 1);
-
-    produce_blocks(&wallet, 3).await?;
-
-    assert_eq!(provider.latest_block_height().await?, 4);
-    assert_eq!(block_height_from_contract().await?, 4);
-    Ok(())
-}
-
-#[tokio::test]
 async fn can_handle_sway_function_called_new() -> anyhow::Result<()> {
     abigen!(
         MyContract,
