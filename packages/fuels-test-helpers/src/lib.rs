@@ -14,10 +14,10 @@ use fuel_core::{
 pub use fuel_core::service::Config;
 
 #[cfg(not(feature = "fuel-core-lib"))]
-pub use node::{CoinConfig, Config};
+pub use crate::node::{CoinConfig, Config};
 
 #[cfg(not(feature = "fuel-core-lib"))]
-use fuel_core_interfaces::model::{Coin, CoinStatus};
+pub use fuel_core_interfaces::model::{Coin, CoinStatus};
 
 #[cfg(not(feature = "fuel-core-lib"))]
 use portpicker::{is_free, pick_unused_port};
@@ -200,7 +200,6 @@ pub async fn setup_test_client(
     spawn_fuel_service(config_with_coins, srv_address.port());
 
     let client = FuelClient::from(srv_address);
-
     server_health_check(&client).await;
 
     (client, srv_address)

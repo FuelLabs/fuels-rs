@@ -1,12 +1,13 @@
 use fuel_gql_client::fuel_tx::{AssetId, ContractId, Receipt};
 use fuels::contract::contract::MultiContractCallHandler;
-use fuels::prelude::Error::TransactionError;
+#[cfg(feature = "fuel-core-lib")]
+use fuels::prelude::Config;
 use fuels::prelude::{
-    abigen, launch_provider_and_get_wallet, setup_multiple_assets_coins, setup_single_asset_coins,
-    setup_test_provider, CallParameters, Contract, Error, LocalWallet, Provider, ProviderError,
-    Salt, Signer, TxParameters, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
+    abigen, launch_custom_provider_and_get_wallets, launch_provider_and_get_wallet,
+    setup_multiple_assets_coins, setup_single_asset_coins, setup_test_provider, CallParameters,
+    Contract, Error, LocalWallet, Provider, ProviderError, Salt, Signer, TxParameters,
+    WalletsConfig, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
 };
-use fuels::test_helpers::produce_blocks;
 use fuels_core::parameters::StorageConfiguration;
 use fuels_core::tx::{Address, Bytes32, StorageSlot};
 use fuels_core::Tokenizable;
@@ -2128,7 +2129,7 @@ async fn test_init_storage_automatically_bad_json_path() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn contract_method_call_respects_maturity() -> anyhow::Result<()> {
+async fn contract_method_call_respects_maturity() -> Result<(), Error> {
     abigen!(
         MyContract,
         "packages/fuels/tests/test_projects/transaction_block_height/out/debug/transaction_block_height-abi.json"
@@ -2160,13 +2161,21 @@ async fn contract_method_call_respects_maturity() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-async fn contract_deployment_respects_maturity() -> anyhow::Result<()> {
+#[cfg(feature = "fuel-core-lib")]
+async fn contract_deployment_respects_maturity() -> Result<(), Error> {
     abigen!(
         MyContract,
         "packages/fuels/tests/test_projects/transaction_block_height/out/debug/transaction_block_height-abi.json"
     );
 
-    let wallet = launch_provider_and_get_wallet().await;
+    let config = Config {
+        manual_blocks_enabled: true,
+        ..Config::local_node()
+    };
+    let wallets =
+        launch_custom_provider_and_get_wallets(WalletsConfig::default(), Some(config)).await;
+    let wallet = &wallets[0];
+    let provider = wallet.get_provider()?;
 
     let deploy_w_maturity = |maturity| {
         let parameters = TxParameters {
@@ -2175,16 +2184,16 @@ async fn contract_deployment_respects_maturity() -> anyhow::Result<()> {
         };
         Contract::deploy(
             "tests/test_projects/transaction_block_height/out/debug/transaction_block_height.bin",
-            &wallet,
+            wallet,
             parameters,
             StorageConfiguration::default(),
         )
     };
 
     let err = deploy_w_maturity(1).await.expect_err("Should not have been able to deploy the contract since the block height (0) is less than the requested maturity (1)");
-    assert!(matches!(err, TransactionError(msg) if msg.contains("TransactionMaturity")));
+    assert!(matches!(err, Error::TransactionError(msg) if msg.contains("TransactionMaturity")));
 
-    produce_blocks(&wallet, 1).await?;
+    provider.produce_blocks(1).await?;
     deploy_w_maturity(1)
         .await
         .expect("Should be able to deploy now since maturity (1) is <= than the block height (1)");
@@ -2193,14 +2202,21 @@ async fn contract_deployment_respects_maturity() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-async fn can_increase_block_height() -> anyhow::Result<()> {
+#[cfg(feature = "fuel-core-lib")]
+async fn can_increase_block_height() -> Result<(), Error> {
     // ANCHOR: uses_produce_blocks_to_increase_block_height
-    let wallet = launch_provider_and_get_wallet().await;
-    let provider = &wallet.get_provider().unwrap();
+    let config = Config {
+        manual_blocks_enabled: true,
+        ..Config::local_node()
+    };
+    let wallets =
+        launch_custom_provider_and_get_wallets(WalletsConfig::default(), Some(config)).await;
+    let wallet = &wallets[0];
+    let provider = wallet.get_provider()?;
 
     assert_eq!(provider.latest_block_height().await?, 0);
 
-    produce_blocks(&wallet, 3).await?;
+    provider.produce_blocks(3).await?;
 
     assert_eq!(provider.latest_block_height().await?, 3);
     // ANCHOR_END: uses_produce_blocks_to_increase_block_height
