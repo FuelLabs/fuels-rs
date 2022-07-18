@@ -143,17 +143,6 @@ impl ABIParser {
         Ok(format!("{}{}", encoded_function_selector, encoded_params))
     }
 
-    /// Helper function to return the encoded function selector.
-    /// It must already be encoded.
-    pub fn get_encoded_function_selector(&self) -> String {
-        let fn_selector = self
-            .fn_selector
-            .to_owned()
-            .expect("Function selector not encoded");
-
-        hex::encode(fn_selector)
-    }
-
     /// Similar to `encode`, but it encodes only an array of strings containing
     /// [<type_1>, <param_1>, <type_2>, <param_2>, <type_n>, <param_n>]
     /// Without having to reference to a JSON specification of the ABI.

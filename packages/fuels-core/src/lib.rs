@@ -13,6 +13,7 @@ pub mod code_gen;
 pub mod constants;
 pub mod json_abi;
 pub mod parameters;
+pub mod parse;
 pub mod rustfmt;
 pub mod source;
 pub mod types;
