@@ -1,15 +1,12 @@
+use crate::parse::*;
+use crate::utils::has_array_format;
 use crate::Token;
 use crate::{abi_decoder::ABIDecoder, abi_encoder::ABIEncoder};
-use fuels_types::{
-    errors::Error,
-    param_types::{EnumVariants, ParamType},
-    JsonABI, Property,
-};
+use fuels_types::{errors::Error, param_types::ParamType, JsonABI, Property};
 use hex::FromHex;
 use itertools::Itertools;
 use serde_json;
 use std::str;
-use std::str::FromStr;
 
 pub struct ABIParser {
     fn_selector: Option<Vec<u8>>,
@@ -76,13 +73,13 @@ impl ABIParser {
 
         let fn_selector = self.build_fn_selector(fn_name, &entry.inputs)?;
 
-        // Update the fn_selector field with the encoded selector.
-        self.fn_selector = Some(ABIEncoder::encode_function_selector(&fn_selector).to_vec());
+        // Update the fn_selector field with the hash of the previously encoded function selector
+        self.fn_selector = Some(ABIEncoder::hash_encoded_function_selector(&fn_selector).to_vec());
 
         let params: Vec<_> = entry
             .inputs
             .iter()
-            .map(|param| parse_param(param).unwrap())
+            .map(|param| parse_param_type_from_property(param).unwrap())
             .zip(values.iter().map(|v| v as &str))
             .collect();
 
@@ -121,7 +118,6 @@ impl ABIParser {
     ///     let values: Vec<String> = vec!["10".to_string()];
     ///
     ///     let mut abi = ABIParser::new();
-
     ///     let function_name = "takes_u32_returns_bool";
     ///
     ///     let encoded = abi
@@ -148,17 +144,6 @@ impl ABIParser {
         Ok(format!("{}{}", encoded_function_selector, encoded_params))
     }
 
-    /// Helper function to return the encoded function selector.
-    /// It must already be encoded.
-    pub fn get_encoded_function_selector(&self) -> String {
-        let fn_selector = self
-            .fn_selector
-            .to_owned()
-            .expect("Function selector not encoded");
-
-        hex::encode(fn_selector)
-    }
-
     /// Similar to `encode`, but it encodes only an array of strings containing
     /// [<type_1>, <param_1>, <type_2>, <param_2>, <type_n>, <param_n>]
     /// Without having to reference to a JSON specification of the ABI.
@@ -173,7 +158,7 @@ impl ABIParser {
                 type_field: pair[0].clone(),
                 components: None,
             };
-            let p = parse_param(&prop)?;
+            let p = parse_param_type_from_property(&prop)?;
 
             let t: (ParamType, &str) = (p, &pair[1]);
             param_type_pairs.push(t);
@@ -347,9 +332,8 @@ impl ABIParser {
         Ok(Token::Struct(result))
     }
 
-    /// Creates a `Token::Array` from one parameter type and a string of values.
-    /// I.e. it takes a string containing values "value_1, value_2, value_3" and a
-    /// `ParamType` sepecifying the type.
+    /// Creates a `Token::Array` from one parameter type and a string of values. I.e. it takes a
+    /// string containing values "value_1, value_2, value_3" and a `ParamType` sepecifying the type.
     /// It works for nested/recursive arrays.
     pub fn tokenize_array<'a>(&self, value: &'a str, param: &ParamType) -> Result<Token, Error> {
         if !value.starts_with('[') || !value.ends_with(']') {
@@ -384,7 +368,7 @@ impl ABIParser {
                         std::cmp::Ordering::Equal => {
                             // Last element of this nest level; proceed to tokenize.
                             let sub = &value[last_item..i];
-                            match self.is_array(sub) {
+                            match has_array_format(sub) {
                                 true => {
                                     let arr_param = ParamType::Array(
                                         Box::new(param.to_owned()),
@@ -408,7 +392,7 @@ impl ABIParser {
                 }
                 ',' if nested == 1 && !ignore => {
                     let sub = &value[last_item..i];
-                    match self.is_array(sub) {
+                    match has_array_format(sub) {
                         true => {
                             let arr_param = ParamType::Array(
                                 Box::new(param.to_owned()),
@@ -559,8 +543,12 @@ impl ABIParser {
             )));
         }
 
-        let params_result: Result<Vec<_>, _> =
-            entry.unwrap().outputs.iter().map(parse_param).collect();
+        let params_result: Result<Vec<_>, _> = entry
+            .unwrap()
+            .outputs
+            .iter()
+            .map(parse_param_type_from_property)
+            .collect();
 
         match params_result {
             Ok(params) => Ok(ABIDecoder::decode(&params, value)?),
@@ -572,10 +560,6 @@ impl ABIParser {
     /// without having to reference to a JSON specification of the ABI.
     pub fn decode_params(&self, params: &[ParamType], data: &[u8]) -> Result<Vec<Token>, Error> {
         Ok(ABIDecoder::decode(params, data)?)
-    }
-
-    fn is_array(&self, ele: &str) -> bool {
-        ele.starts_with('[') && ele.ends_with(']')
     }
 
     fn get_enum_discriminant_from_string(&self, ele: &str) -> usize {
@@ -620,28 +604,28 @@ impl ABIParser {
         Ok(result)
     }
 
-    fn build_fn_selector_params(&self, param: &Property) -> String {
+    fn build_fn_selector_params(&self, prop: &Property) -> String {
         let mut result: String = String::new();
 
-        if param.is_custom_type() {
+        if prop.is_custom_type() {
             // Custom type, need to break down inner fields.
             // Will return `"e(field_1,field_2,...,field_n)"` if the type is an `Enum`,
             // `"s(field_1,field_2,...,field_n)"` if the type is a `Struct`,
             // `"a[type;length]"` if the type is an `Array`,
             // `(type_1,type_2,...,type_n)` if the type is a `Tuple`.
-            if param.is_struct_type() {
+            if prop.is_struct_type() {
                 result.push_str("s(");
-            } else if param.is_enum_type() {
+            } else if prop.is_enum_type() {
                 result.push_str("e(");
-            } else if param.has_custom_type_in_array() {
+            } else if prop.has_custom_type_in_array() {
                 result.push_str("a[");
-            } else if param.has_custom_type_in_tuple() {
+            } else if prop.has_custom_type_in_tuple() {
                 result.push('(');
             } else {
                 panic!("unexpected custom type");
             }
 
-            for (idx, component) in param
+            for (idx, component) in prop
                 .components
                 .as_ref()
                 .expect("No components found")
@@ -650,13 +634,13 @@ impl ABIParser {
             {
                 result.push_str(&self.build_fn_selector_params(component));
 
-                if idx + 1 < param.components.as_ref().unwrap().len() {
+                if idx + 1 < prop.components.as_ref().unwrap().len() {
                     result.push(',');
                 }
             }
 
             if result.starts_with("a[") {
-                let array_type_field = param.type_field.clone();
+                let array_type_field = prop.type_field.clone();
 
                 // Type field, in this case, looks like
                 // "[struct Person; 2]" and we want to extract the
@@ -679,14 +663,14 @@ impl ABIParser {
             }
         } else {
             // Not a custom type.
-            let param_str_no_whitespace: String = param
+            let param_str_no_whitespace: String = prop
                 .type_field
                 .chars()
                 .filter(|c| !c.is_whitespace())
                 .collect();
 
             // Check if the parameter is an array.
-            if param_str_no_whitespace.starts_with('[') && param_str_no_whitespace.ends_with(']') {
+            if has_array_format(&param_str_no_whitespace) {
                 // The representation of an array in a function selector should be `a[<type>;<length>]`.
                 // Because this is coming in as `[<type>;<length>]` (not prefixed with an 'a'), here
                 // we must prefix it with an 'a' so the function selector will be properly encoded.
@@ -700,191 +684,10 @@ impl ABIParser {
     }
 }
 
-/// Turns a JSON property into ParamType
-pub fn parse_param(prop: &Property) -> Result<ParamType, Error> {
-    match ParamType::from_str(&prop.type_field) {
-        // Simple case (primitive types, no arrays, including string)
-        Ok(param_type) => Ok(param_type),
-        Err(_) => {
-            if prop.type_field == "()" {
-                return Ok(ParamType::Unit);
-            }
-            if prop.type_field.contains('[') && prop.type_field.contains(']') {
-                // Try to parse array ([T; M]) or string (str[M])
-                if prop.type_field.contains("str[") {
-                    return parse_string_param(prop);
-                }
-                return parse_array_param(prop);
-            }
-            if prop.type_field.starts_with('(') && prop.type_field.ends_with(')') {
-                // Try to parse tuple (T, T, ..., T)
-                return parse_tuple_param(prop);
-            }
-            // Try to parse a free form enum or struct (e.g. `struct MySTruct`, `enum MyEnum`).
-            parse_custom_type_param(prop)
-        }
-    }
-}
-
-pub fn parse_tuple_param(param: &Property) -> Result<ParamType, Error> {
-    let mut params: Vec<ParamType> = Vec::new();
-
-    for tuple_component in param
-        .components
-        .as_ref()
-        .expect("tuples should have components")
-    {
-        params.push(parse_param(tuple_component)?);
-    }
-
-    Ok(ParamType::Tuple(params))
-}
-
-pub fn parse_string_param(param: &Property) -> Result<ParamType, Error> {
-    // Split "str[n]" string into "str" and "[n]"
-    let split: Vec<&str> = param.type_field.split('[').collect();
-    if split.len() != 2 || !split[0].eq("str") {
-        return Err(Error::InvalidType(format!(
-            "Expected parameter type `str[n]`, found `{}`",
-            param.type_field
-        )));
-    }
-    // Grab size in between brackets, i.e the `n` in "[n]"
-    let size: usize = split[1][..split[1].len() - 1].parse()?;
-    Ok(ParamType::String(size))
-}
-
-pub fn parse_array_param(param: &Property) -> Result<ParamType, Error> {
-    // Split "[T; n]" string into "T" and "n"
-    let split: Vec<&str> = param.type_field.split("; ").collect();
-    if split.len() != 2 {
-        return Err(Error::InvalidType(format!(
-            "Expected parameter type `[T; n]`, found `{}`",
-            param.type_field
-        )));
-    }
-    let (type_field, size) = (split[0], split[1]);
-    let type_field = type_field[1..].to_string();
-
-    let param_type = match ParamType::from_str(&type_field) {
-        Ok(param_type) => param_type,
-        Err(_) => parse_custom_type_param(
-            param
-                .components
-                .as_ref()
-                .expect("array should have components")
-                .first()
-                .expect("components in array should have at least one component"),
-        )?,
-    };
-
-    // Grab size the `n` in "[T; n]"
-    let size: usize = size[..size.len() - 1].parse()?;
-    Ok(ParamType::Array(Box::new(param_type), size))
-}
-
-pub fn parse_custom_type_param(param: &Property) -> Result<ParamType, Error> {
-    let mut params: Vec<ParamType> = vec![];
-    match &param.components {
-        Some(c) => {
-            for component in c {
-                params.push(parse_param(component)?)
-            }
-            if param.is_struct_type() {
-                return Ok(ParamType::Struct(params));
-            }
-            if param.is_enum_type() {
-                return Ok(ParamType::Enum(EnumVariants::new(params)?));
-            }
-            Err(Error::InvalidType(param.type_field.clone()))
-        }
-        None => Err(Error::InvalidType(
-            "cannot parse custom type with no components".into(),
-        )),
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ParamType;
-    use fuels_types::errors::Error;
-
-    #[test]
-    fn parse_string_and_array_param() -> Result<(), Error> {
-        let array_prop = Property {
-            name: "some_array".to_string(),
-            type_field: "[bool; 4]".to_string(),
-            components: None,
-        };
-        let expected = "Array(Box::new(ParamType::Bool),4)";
-        let result = parse_array_param(&array_prop)?.to_string();
-        assert_eq!(result, expected);
-
-        let string_prop = Property {
-            name: "some_array".to_string(),
-            type_field: "str[5]".to_string(),
-            components: None,
-        };
-        let expected = "String(5)";
-        let result = parse_string_param(&string_prop)?.to_string();
-        assert_eq!(result, expected);
-
-        let expected = "Invalid type: Expected parameter type `str[n]`, found `[bool; 4]`";
-        let result = parse_string_param(&array_prop).unwrap_err().to_string();
-        assert_eq!(result, expected);
-
-        let expected = "Invalid type: Expected parameter type `[T; n]`, found `str[5]`";
-        let result = parse_array_param(&string_prop).unwrap_err().to_string();
-        assert_eq!(result, expected);
-        Ok(())
-    }
-
-    #[test]
-    fn test_parse_custom_type_params() -> Result<(), Error> {
-        let components = vec![
-            Property {
-                name: "vodka".to_string(),
-                type_field: "u64".to_string(),
-                components: None,
-            },
-            Property {
-                name: "redbull".to_string(),
-                type_field: "bool".to_string(),
-                components: None,
-            },
-        ];
-
-        // STRUCT
-        let some_struct = Property {
-            name: String::from("something_you_drink"),
-            type_field: String::from("struct Cocktail"),
-            components: Some(components.clone()),
-        };
-        let struct_result = parse_custom_type_param(&some_struct)?;
-        // Underlying value comparison
-        let expected = ParamType::Struct(vec![ParamType::U64, ParamType::Bool]);
-        assert_eq!(struct_result, expected);
-        let expected_string = "Struct(vec![ParamType::U64,ParamType::Bool])";
-        // String format comparison
-        assert_eq!(struct_result.to_string(), expected_string);
-
-        // ENUM
-        let some_enum = Property {
-            name: String::from("something_you_drink"),
-            type_field: String::from("enum Cocktail"),
-            components: Some(components),
-        };
-        let enum_result = parse_custom_type_param(&some_enum)?;
-        // Underlying value comparison
-        let expected = ParamType::Enum(EnumVariants::new(vec![ParamType::U64, ParamType::Bool])?);
-        assert_eq!(enum_result, expected);
-        let expected_string =
-            "Enum(EnumVariants::new(vec![ParamType::U64,ParamType::Bool]).unwrap())";
-        // String format comparison
-        assert_eq!(enum_result.to_string(), expected_string);
-        Ok(())
-    }
+    use fuels_types::{errors::Error, param_types::ParamType};
 
     #[test]
     fn simple_encode_and_decode_no_selector() -> Result<(), Error> {
