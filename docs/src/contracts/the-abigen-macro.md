@@ -44,19 +44,3 @@ The same as the example above but passing the ABI definition directly:
 ```rust,ignore
 {{#include ../../../examples/rust_bindings/src/lib.rs:abigen_with_string}}
 ```
-
-## Manual decoding
-
-@todo this must be moved to types section.
-
-Suppose you wish to decode raw bytes into a type used in your contract and the `abigen!` generated this type, then you can use `try_into`:
-
-```rust,ignore
-{{#include ../../../packages/fuels-abigen-macro/tests/harness.rs:manual_decode}}
-```
-
-Otherwise, for native types such as `u8`, `u32`,...,`ContractId` and others, you must use `::fuels::core::try_from_bytes`:
-
-```rust,ignore
-{{#include ../../../examples/rust_bindings/src/lib.rs:manual_decode_native}}
-```
