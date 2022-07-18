@@ -28,8 +28,8 @@ fn init_tracing() {
 }
 
 fn null_contract_id() -> String {
-    // a bech32 contract address that decodes to ~[0u8;32]
-    String::from("fuel1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqsx2mt2")
+    // a null contract address ~[0u8;32]
+    String::from("0000000000000000000000000000000000000000000000000000000000000000")
 }
 
 #[tokio::test]
@@ -652,6 +652,7 @@ async fn type_safe_output_values() -> Result<(), Error> {
         StorageConfiguration::default(),
     )
     .await?;
+    println!("Contract deployed @ {:x}", contract_id);
 
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
 
@@ -703,6 +704,7 @@ async fn call_with_structs() -> Result<(), Error> {
         StorageConfiguration::default(),
     )
     .await?;
+    println!("Contract deployed @ {:x}", contract_id);
 
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
 
@@ -737,6 +739,7 @@ async fn call_with_empty_return() -> Result<(), Error> {
         StorageConfiguration::default(),
     )
     .await?;
+    println!("Contract deployed @ {:x}", contract_id);
 
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
 
@@ -763,6 +766,7 @@ async fn abigen_different_structs_same_arg_name() -> Result<(), Error> {
         StorageConfiguration::default(),
     )
     .await?;
+    println!("Contract deployed @ {:x}", contract_id);
 
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
 
@@ -797,9 +801,9 @@ async fn test_reverting_transaction() -> Result<(), Error> {
     )
         .await?;
     let contract_instance = RevertingContractBuilder::new(contract_id.to_string(), wallet).build();
+    println!("Contract deployed @ {:x}", contract_id);
     let response = contract_instance.make_transaction_fail(0).call().await;
     assert!(matches!(response, Err(Error::ContractCallError(..))));
-
     Ok(())
 }
 
@@ -819,6 +823,7 @@ async fn multiple_read_calls() -> Result<(), Error> {
         StorageConfiguration::default(),
     )
     .await?;
+    println!("Contract deployed @ {:x}", contract_id);
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
 
     contract_instance.store(42).call().await?;
@@ -854,6 +859,7 @@ async fn test_methods_typeless_argument() -> Result<(), Error> {
         StorageConfiguration::default(),
     )
     .await?;
+    println!("Contract deployed @ {:x}", contract_id);
 
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
 
@@ -881,6 +887,7 @@ async fn test_large_return_data() -> Result<(), Error> {
         StorageConfiguration::default(),
     )
     .await?;
+    println!("Contract deployed @ {:x}", contract_id);
 
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
 
@@ -952,6 +959,7 @@ async fn test_provider_launch_and_connect() -> Result<(), Error> {
         StorageConfiguration::default(),
     )
     .await?;
+    println!("Contract deployed @ {:x}", contract_id);
 
     let contract_instance_connected =
         MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
@@ -997,6 +1005,7 @@ async fn test_contract_calling_contract() -> Result<(), Error> {
         StorageConfiguration::default(),
     )
     .await?;
+    println!("Foo contract deployed @ {:x}", foo_contract_id);
 
     let foo_contract_instance =
         FooContractBuilder::new(foo_contract_id.to_string(), wallet.clone()).build();
@@ -1013,6 +1022,10 @@ async fn test_contract_calling_contract() -> Result<(), Error> {
         StorageConfiguration::default(),
     )
     .await?;
+    println!(
+        "Foo caller contract deployed @ {:x}",
+        foo_caller_contract_id
+    );
 
     let foo_caller_contract_instance =
         FooCallerBuilder::new(foo_caller_contract_id.to_string(), wallet.clone()).build();
@@ -1021,7 +1034,7 @@ async fn test_contract_calling_contract() -> Result<(), Error> {
     // flips the bool value passed to it.
     // ANCHOR: external_contract
     let res = foo_caller_contract_instance
-        .call_foo_contract(*foo_contract_id.to_contract_id(), true)
+        .call_foo_contract(*foo_contract_id, true)
         .set_contracts(&[foo_contract_id]) // Sets the external contract
         .call()
         .await?;
@@ -1147,18 +1160,12 @@ async fn test_amount_and_asset_forwarding() -> Result<(), Error> {
 
     let instance = TestFuelCoinContractBuilder::new(id.to_string(), wallet.clone()).build();
 
-    let mut balance_response = instance
-        .get_balance(id.to_contract_id(), id.to_contract_id())
-        .call()
-        .await?;
+    let mut balance_response = instance.get_balance(id, id).call().await?;
     assert_eq!(balance_response.value, 0);
 
     instance.mint_coins(5_000_000).call().await?;
 
-    balance_response = instance
-        .get_balance(id.to_contract_id(), id.to_contract_id())
-        .call()
-        .await?;
+    balance_response = instance.get_balance(id, id).call().await?;
     assert_eq!(balance_response.value, 5_000_000);
 
     let tx_params = TxParameters::new(None, Some(1_000_000), None, None);
@@ -1189,13 +1196,12 @@ async fn test_amount_and_asset_forwarding() -> Result<(), Error> {
 
     // withdraw some tokens to wallet
     instance
-        .transfer_coins_to_output(1_000_000, id.to_contract_id(), address.into())
+        .transfer_coins_to_output(1_000_000, id, address)
         .append_variable_outputs(1)
         .call()
         .await?;
 
-    let asset_id = AssetId::from(*id.to_contract_id());
-    let call_params = CallParameters::new(Some(0), Some(asset_id), None);
+    let call_params = CallParameters::new(Some(0), Some(AssetId::from(*id)), None);
     let tx_params = TxParameters::new(None, Some(1_000_000), None, None);
 
     let response = instance
@@ -1217,7 +1223,7 @@ async fn test_amount_and_asset_forwarding() -> Result<(), Error> {
     assert_eq!(call_response.unwrap().amount().unwrap(), 0);
     assert_eq!(
         call_response.unwrap().asset_id().unwrap(),
-        &AssetId::from(*id.to_contract_id())
+        &AssetId::from(*id)
     );
     Ok(())
 }
@@ -1328,6 +1334,7 @@ async fn test_array() -> Result<(), Error> {
     )
     .await?;
 
+    println!("Contract deployed @ {:x}", contract_id);
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
 
     assert_eq!(
@@ -1360,6 +1367,7 @@ async fn test_arrays_with_custom_types() -> Result<(), Error> {
     )
     .await?;
 
+    println!("Contract deployed @ {:x}", contract_id);
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
 
     let persons = vec![
@@ -1409,7 +1417,7 @@ async fn test_auth_msg_sender_from_sdk() -> Result<(), Error> {
 
     // Contract returns true if `msg_sender()` matches `wallet.address()`.
     let response = auth_instance
-        .check_msg_sender(wallet.address().into())
+        .check_msg_sender(wallet.address())
         .call()
         .await?;
 
@@ -2074,6 +2082,8 @@ async fn test_init_storage_automatically() -> Result<(), Error> {
     )
         .await?;
     // ANCHOR_END: automatic_storage
+
+    println!("Foo contract deployed @ {:x}", contract_id);
 
     let key1 =
         Bytes32::from_str("de9090cb50e71c2588c773487d1da7066d0c719849a7e58dc8b6397a25c567c0")

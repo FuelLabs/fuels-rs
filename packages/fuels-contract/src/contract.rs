@@ -10,7 +10,6 @@ use fuel_gql_client::{
     client::FuelClient,
     fuel_tx::{Contract as FuelContract, Output, Receipt, StorageSlot, Transaction},
     fuel_types::{Address, AssetId, ContractId, Salt},
-    fuel_vm::gas,
 };
 
 use fuels_core::abi_decoder::ABIDecoder;
