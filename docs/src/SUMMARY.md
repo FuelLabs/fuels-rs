@@ -9,6 +9,7 @@
     - [Connecting to an external Fuel node](./providers/external-node.md)
     - [Running a short-lived Fuel node with the SDK](./providers/short-lived.md)
     - [Querying the blockchain](./providers/querying.md)
+    - [Features](./providers/features.md)
   - [Managing wallets](./getting-started/managing-wallets.md)
     - [Creating a wallet from a private key](./wallets/private-keys.md)
     - [Creating a wallet from mnemonic phrases](./wallets/mnemonic-wallet.md)
