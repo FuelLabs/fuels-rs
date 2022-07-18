@@ -2275,7 +2275,11 @@ async fn test_get_gas_used() -> anyhow::Result<()> {
 
     let instance = MyContractBuilder::new(id.to_string(), wallet.clone()).build();
 
-    let gas_used = instance.new().call().await?.get_gas_used();
+    let gas_used = contract_instance
+        .initialize_counter(42)
+        .call()
+        .await?
+        .get_gas_used();
 
     assert!(gas_used > 0);
 
