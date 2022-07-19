@@ -2289,7 +2289,7 @@ async fn can_call_no_arg_predicate_returns_true() -> anyhow::Result<(), anyhow::
 
     let instance = Predicate::new(predicate_code);
     instance
-        .deploy_predicate(&wallet, amount_to_predicate, asset_id)
+        .deploy_predicate(wallet, amount_to_predicate, asset_id)
         .await?;
     let receiver_balance_before = wallet
         .get_provider()?
@@ -2341,7 +2341,7 @@ async fn can_call_no_arg_predicate_returns_false() -> anyhow::Result<(), anyhow:
 
     let instance = Predicate::new(predicate_code);
     instance
-        .deploy_predicate(&wallet, amount_to_predicate, asset_id)
+        .deploy_predicate(wallet, amount_to_predicate, asset_id)
         .await?;
 
     let receiver_balance_before = wallet
@@ -2394,7 +2394,7 @@ async fn can_call_predicate_with_u32_data() -> anyhow::Result<(), anyhow::Error>
 
     let instance = Predicate::new(predicate_code);
     instance
-        .deploy_predicate(&wallet, amount_to_predicate, asset_id)
+        .deploy_predicate(wallet, amount_to_predicate, asset_id)
         .await?;
     let receiver_balance_before = wallet
         .get_provider()?
@@ -2403,7 +2403,7 @@ async fn can_call_predicate_with_u32_data() -> anyhow::Result<(), anyhow::Error>
     assert_eq!(receiver_balance_before, 0);
 
     // invalid predicate data
-    let predicate_data = ABIEncoder::encode(&vec![Token::U32(101_u32)]).unwrap();
+    let predicate_data = ABIEncoder::encode(&[Token::U32(101_u32)]).unwrap();
     instance
         .spend_predicate(
             wallet.get_provider()?,
@@ -2426,7 +2426,7 @@ async fn can_call_predicate_with_u32_data() -> anyhow::Result<(), anyhow::Error>
     assert_eq!(predicate_balance, amount_to_predicate);
 
     // valid predicate data
-    let predicate_data = ABIEncoder::encode(&vec![Token::U32(1078_u32)]).unwrap();
+    let predicate_data = ABIEncoder::encode(&[Token::U32(1078_u32)]).unwrap();
     instance
         .spend_predicate(
             wallet.get_provider()?,
@@ -2478,7 +2478,7 @@ async fn can_call_predicate_with_address_data() -> anyhow::Result<(), anyhow::Er
 
     let instance = Predicate::new(predicate_code);
     instance
-        .deploy_predicate(&wallet, amount_to_predicate, asset_id)
+        .deploy_predicate(wallet, amount_to_predicate, asset_id)
         .await?;
     let receiver_balance_before = wallet
         .get_provider()?
@@ -2531,7 +2531,7 @@ async fn can_call_predicate_with_struct_data() -> anyhow::Result<(), anyhow::Err
 
     let instance = Predicate::new(predicate_code);
     instance
-        .deploy_predicate(&wallet, amount_to_predicate, asset_id)
+        .deploy_predicate(wallet, amount_to_predicate, asset_id)
         .await?;
     let receiver_balance_before = wallet
         .get_provider()?
