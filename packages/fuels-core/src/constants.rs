@@ -1,4 +1,3 @@
-use fuel_tx::Word;
 use fuel_types::AssetId;
 
 // ANCHOR: default_tx_parameters
@@ -7,9 +6,6 @@ pub const DEFAULT_GAS_PRICE: u64 = 0;
 pub const DEFAULT_BYTE_PRICE: u64 = 0;
 pub const DEFAULT_MATURITY: u64 = 0;
 // ANCHOR_END: default_tx_parameters
-
-pub const WORD_SIZE: usize = core::mem::size_of::<Word>();
-pub const ENUM_DISCRIMINANT_WORD_WIDTH: usize = 1;
 
 // ANCHOR: default_call_parameters
 // Limit for the actual contract call

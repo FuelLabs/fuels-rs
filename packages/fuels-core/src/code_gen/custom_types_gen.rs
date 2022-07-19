@@ -1,6 +1,6 @@
-use crate::json_abi::parse_param;
+use crate::parse::parse_param_type_from_property;
 use crate::types::expand_type;
-use crate::utils::ident;
+use crate::utils::{has_array_format, ident};
 use crate::ParamType;
 use fuels_types::errors::Error;
 use fuels_types::{CustomType, Property};
@@ -38,7 +38,7 @@ pub fn expand_custom_struct(prop: &Property) -> Result<TokenStream, Error> {
     // 2. The creation of a token and its insertion into a vector of Tokens.
     for component in components {
         let field_name = ident(&component.name.to_snake_case());
-        let param_type = parse_param(component)?;
+        let param_type = parse_param_type_from_property(component)?;
 
         match param_type {
             // Case where a struct takes another struct
@@ -196,7 +196,7 @@ pub fn expand_custom_enum(enum_name: &str, prop: &Property) -> Result<TokenStrea
         let variant_name = ident(&component.name);
         let dis = discriminant as u8;
 
-        let param_type = parse_param(component)?;
+        let param_type = parse_param_type_from_property(component)?;
         match param_type {
             // Case where an enum takes another enum
             ParamType::Enum(_params) => {
@@ -374,7 +374,7 @@ pub fn extract_custom_type_name_from_abi_property(
     prop: &Property,
     expected: Option<CustomType>,
 ) -> Result<String, Error> {
-    let type_field = match prop.type_field.starts_with('[') && prop.type_field.ends_with(']') {
+    let type_field = match has_array_format(&prop.type_field) {
         // Check for custom type inside array.
         true => {
             // Split `[struct | enum $name; $length]` into `[struct | enum $name` and ` $length]`
