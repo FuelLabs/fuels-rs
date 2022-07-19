@@ -1,4 +1,3 @@
-use fuel_core::service::Config;
 use fuel_gql_client::fuel_tx::{AssetId, ContractId, Receipt};
 use fuels::contract::contract::MultiContractCallHandler;
 use fuels::contract::predicate::Predicate;
@@ -6,7 +5,7 @@ use fuels::prelude::Error::TransactionError;
 use fuels::prelude::{
     abigen, launch_custom_provider_and_get_wallets, launch_provider_and_get_wallet,
     setup_multiple_assets_coins, setup_single_asset_coins, setup_test_provider, CallParameters,
-    Contract, Error, LocalWallet, Provider, ProviderError, Salt, Signer, TxParameters,
+    Config, Contract, Error, LocalWallet, Provider, ProviderError, Salt, Signer, TxParameters,
     DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
 };
 use fuels::test_helpers::{produce_blocks, WalletsConfig};
