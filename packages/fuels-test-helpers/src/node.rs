@@ -22,12 +22,16 @@ use tokio::process::Command;
 #[derive(Clone, Debug)]
 pub struct Config {
     pub addr: SocketAddr,
+    pub utxo_validation: bool,
+    pub predicates: bool,
 }
 
 impl Config {
     pub fn local_node() -> Self {
         Self {
             addr: SocketAddr::new(Ipv4Addr::new(127, 0, 0, 1).into(), 0),
+            utxo_validation: false,
+            predicates: false,
         }
     }
 }
