@@ -53,13 +53,14 @@ pub struct Contract {
 pub struct CallResponse<D> {
     pub value: D,
     pub receipts: Vec<Receipt>,
+    pub gas_used: u64,
     pub logs: Vec<String>,
 }
 // ANCHOR_END: call_response
 
 impl<D> CallResponse<D> {
     /// Get all the logs from LogData receipts
-    pub fn get_logs(receipts: &[Receipt]) -> Vec<String> {
+    fn get_logs(receipts: &[Receipt]) -> Vec<String> {
         receipts
             .iter()
             .filter(|r| matches!(r, Receipt::LogData { .. }))
@@ -67,10 +68,21 @@ impl<D> CallResponse<D> {
             .collect::<Vec<String>>()
     }
 
+    /// Get the gas used from ScriptResult receipt
+    fn get_gas_used(receipts: &[Receipt]) -> u64 {
+        receipts
+            .iter()
+            .rfind(|r| matches!(r, Receipt::ScriptResult { .. }))
+            .expect("could not retrieve ScriptResult")
+            .gas_used()
+            .expect("could not retrieve gas used")
+    }
+
     pub fn new(value: D, receipts: Vec<Receipt>) -> Self {
         Self {
             value,
             logs: Self::get_logs(&receipts),
+            gas_used: Self::get_gas_used(&receipts),
             receipts,
         }
     }
