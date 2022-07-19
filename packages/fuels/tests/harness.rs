@@ -2265,3 +2265,29 @@ async fn can_handle_sway_function_called_new() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn test_get_gas_used() -> anyhow::Result<()> {
+    abigen!(
+        MyContract,
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+    );
+
+    let wallet = launch_provider_and_get_wallet().await;
+
+    let id = Contract::deploy(
+        "tests/test_projects/contract_test/out/debug/contract_test.bin",
+        &wallet,
+        TxParameters::default(),
+        StorageConfiguration::default(),
+    )
+    .await?;
+
+    let instance = MyContractBuilder::new(id.to_string(), wallet.clone()).build();
+
+    let gas_used = instance.initialize_counter(42).call().await?.gas_used;
+
+    assert!(gas_used > 0);
+
+    Ok(())
+}
