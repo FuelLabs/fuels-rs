@@ -151,7 +151,7 @@ mod tests {
         coins_1.extend(coins_2);
 
         // Setup a provider and node with both set of coins.
-        let (client, _) = setup_test_client(coins_1, None).await;
+        let (client, _) = setup_test_client(coins_1, None, None).await;
         let provider = Provider::new(client);
 
         wallet_1.set_provider(provider.clone());
@@ -227,7 +227,7 @@ mod tests {
 
         coins_1.extend(coins_2);
 
-        let (client, _) = setup_test_client(coins_1, None).await;
+        let (client, _) = setup_test_client(coins_1, None, None).await;
         let provider = Provider::new(client);
 
         wallet_1.set_provider(provider.clone());

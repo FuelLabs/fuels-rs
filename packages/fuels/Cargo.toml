@@ -19,7 +19,7 @@ fuels-signers = { version = "0.18.0", path = "../fuels-signers" }
 fuels-test-helpers = { version = "0.18.0", path = "../fuels-test-helpers" }
 fuels-types = { version = "0.18.0", path = "../fuels-types" }
 
-[dev-dependencies]  
+[dev-dependencies]
 anyhow = "1.0.58"
 ctor = " 0.1"
 fuel-core = { version = "0.9", default-features = false }

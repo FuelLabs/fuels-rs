@@ -7,10 +7,10 @@
 resolver = "2"
 members = [
     "examples/contracts",
-    "examples/rust_bindings",
-    "examples/wallets",
-    "examples/types",
     "examples/providers",
+    "examples/rust_bindings",
+    "examples/types",
+    "examples/wallets",
     "packages/fuels",
     "packages/fuels-abigen-macro",
     "packages/fuels-contract",
