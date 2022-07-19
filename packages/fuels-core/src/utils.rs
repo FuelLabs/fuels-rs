@@ -13,3 +13,7 @@ pub fn ident(name: &str) -> Ident {
 pub fn safe_ident(name: &str) -> Ident {
     syn::parse_str::<SynIdent>(name).unwrap_or_else(|_| ident(&format!("{}_", name)))
 }
+
+pub fn has_array_format(element: &str) -> bool {
+    element.starts_with('[') && element.ends_with(']')
+}

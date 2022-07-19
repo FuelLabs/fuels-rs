@@ -97,6 +97,7 @@ impl Abigen {
     /// after it is called through a procedural macro (`abigen!()` in our case).
     pub fn expand(&self) -> Result<TokenStream, Error> {
         let name = &self.contract_name;
+        let builder_name = ident(&format!("{}Builder", name));
         let name_mod = ident(&format!(
             "{}_mod",
             self.contract_name.to_string().to_lowercase()
@@ -110,8 +111,9 @@ impl Abigen {
             (
                 quote! {
                     use alloc::{vec, vec::Vec};
+                    use fuels_core::{EnumSelector, Parameterize, Tokenizable, Token, try_from_bytes};
                     use fuels_types::errors::Error as SDKError;
-                    use fuels_core::{EnumSelector, EnumVariants, Parameterize, ParamType, Tokenizable, Token, try_from_bytes};
+                    use fuels_types::param_types::{ParamType, EnumVariants};
                 },
                 quote! {},
             )
@@ -119,10 +121,11 @@ impl Abigen {
             (
                 quote! {
                     use fuels::contract::contract::{Contract, ContractCallHandler};
-                    use fuels::core::{EnumSelector, EnumVariants, Parameterize, ParamType, Tokenizable, Token, try_from_bytes};
+                    use fuels::core::{EnumSelector, Parameterize, Tokenizable, Token, try_from_bytes};
                     use fuels::signers::LocalWallet;
                     use fuels::tx::{ContractId, Address};
                     use fuels::types::errors::Error as SDKError;
+                    use fuels::types::param_types::{EnumVariants, ParamType};
                     use std::str::FromStr;
                 },
                 quote! {
@@ -132,12 +135,33 @@ impl Abigen {
                     }
 
                     impl #name {
-                        pub fn new(contract_id: String, wallet: LocalWallet)
-                        -> Self {
-                            let contract_id = ContractId::from_str(&contract_id).expect("Invalid contract id");
-                            Self{ contract_id, wallet }
-                        }
                         #contract_functions
+                    }
+
+                    pub struct #builder_name {
+                        contract_id: ContractId,
+                        wallet: LocalWallet
+                    }
+
+                    impl #builder_name {
+                        pub fn new(contract_id: String, wallet: LocalWallet) -> Self {
+                            let contract_id = ContractId::from_str(&contract_id).expect("Invalid contract id");
+                            Self { contract_id, wallet }
+                        }
+
+                        pub fn contract_id(&mut self, contract_id: String) -> &mut Self {
+                            self.contract_id = ContractId::from_str(&contract_id).expect("Invalid contract id");
+                            self
+                        }
+
+                        pub fn wallet(&mut self, wallet: LocalWallet) -> &mut Self {
+                            self.wallet = wallet;
+                            self
+                        }
+
+                        pub fn build(self) -> #name {
+                            #name { contract_id: self.contract_id, wallet: self.wallet }
+                        }
                     }
                 },
             )
@@ -211,11 +235,7 @@ impl Abigen {
         if split.len() > 2 {
             return false;
         }
-
-        if split[1] == CONTRACT_ID_SWAY_NATIVE_TYPE || split[1] == ADDRESS_SWAY_NATIVE_TYPE {
-            return true;
-        }
-        false
+        split[1] == CONTRACT_ID_SWAY_NATIVE_TYPE || split[1] == ADDRESS_SWAY_NATIVE_TYPE
     }
 
     fn abi_enums(&self) -> Result<TokenStream, Error> {

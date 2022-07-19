@@ -15,6 +15,7 @@ use serde::{Deserializer, Serializer};
 use serde_json::{json, Value};
 use serde_with::{serde_as, skip_serializing_none};
 use serde_with::{DeserializeAs, SerializeAs};
+use std::process::Stdio;
 use tempfile::NamedTempFile;
 use tokio::process::Command;
 
@@ -221,6 +222,8 @@ pub fn spawn_fuel_service(config_with_coins: Value, free_port: Port) {
             .arg("--db-type")
             .arg("in-memory")
             .kill_on_drop(true)
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
             .spawn()
             .expect("error: Couldn't read fuel-core: No such file or directory. Please check if fuel-core library is installed. \
         Try this https://fuellabs.github.io/sway/latest/introduction/installation.html");

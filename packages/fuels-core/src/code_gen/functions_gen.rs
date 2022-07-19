@@ -1,7 +1,8 @@
 use crate::abi_encoder::ABIEncoder;
 use crate::code_gen::custom_types_gen::extract_custom_type_name_from_abi_property;
 use crate::code_gen::docs_gen::expand_doc;
-use crate::json_abi::{parse_param, ABIParser};
+use crate::json_abi::ABIParser;
+use crate::parse::parse_param_type_from_property;
 use crate::types::expand_type;
 use crate::utils::{ident, safe_ident};
 use crate::{ParamType, Selector};
@@ -10,6 +11,7 @@ use fuels_types::{CustomType, Function, Property, ENUM_KEYWORD, STRUCT_KEYWORD};
 use inflector::Inflector;
 use proc_macro2::{Literal, TokenStream};
 use quote::quote;
+use regex::Regex;
 use std::collections::HashMap;
 
 /// Functions used by the Abigen to expand functions defined in an ABI spec.
@@ -35,7 +37,7 @@ pub fn expand_function(
     let name = safe_ident(&function.name);
     let fn_signature = abi_parser.build_fn_selector(&function.name, &function.inputs)?;
 
-    let encoded = ABIEncoder::encode_function_selector(&fn_signature);
+    let encoded = ABIEncoder::hash_encoded_function_selector(&fn_signature);
 
     let tokenized_signature = expand_selector(encoded);
     let tokenized_output = expand_fn_outputs(&function.outputs)?;
@@ -54,7 +56,7 @@ pub fn expand_function(
     // be used to be tokenized and passed onto `method_hash()`.
     let output_param = match &function.outputs[..] {
         [output] => {
-            let param_type = parse_param(output).unwrap();
+            let param_type = parse_param_type_from_property(output).unwrap();
 
             let tok: proc_macro2::TokenStream =
                 format!("Some(ParamType::{})", param_type).parse().unwrap();
@@ -88,7 +90,7 @@ fn expand_fn_outputs(outputs: &[Property]) -> Result<TokenStream, Error> {
         [output] => {
             // If it's a primitive type, simply parse and expand.
             if !output.is_custom_type() {
-                return expand_type(&parse_param(output)?);
+                return expand_type(&parse_param_type_from_property(output)?);
             }
 
             // If it's a {struct, enum} as the type of a function's output, use its tokenized name only.
@@ -130,24 +132,7 @@ fn expand_fn_outputs(outputs: &[Property]) -> Result<TokenStream, Error> {
 
                             Ok(quote! { ::std::vec::Vec<#parsed_custom_type_name> })
                         }
-                        false => match output.has_custom_type_in_tuple() {
-                            // If custom type is inside a tuple `(struct | enum <name>, ...)`,
-                            // the type signature should be only `(<name>, ...)`.
-                            // To do that, we remove the `STRUCT_KEYWORD` and `ENUM_KEYWORD` from it.
-                            true => {
-                                let tuple_type_signature: TokenStream = output
-                                    .type_field
-                                    .replace(STRUCT_KEYWORD, "")
-                                    .replace(ENUM_KEYWORD, "")
-                                    .parse()
-                                    .expect("could not parse tuple type signature");
-
-                                Ok(tuple_type_signature)
-                            }
-                            false => {
-                                panic!("{}", format!("Output is of custom type, but not an enum, struct or enum/struct inside an array/tuple. This shouldn't never happen. Output received: {:?}", output));
-                            }
-                        },
+                        false => expand_tuple_w_custom_types(output),
                     },
                 },
             }
@@ -156,6 +141,37 @@ fn expand_fn_outputs(outputs: &[Property]) -> Result<TokenStream, Error> {
             "A function cannot have multiple outputs.".to_string(),
         )),
     }
+}
+
+fn expand_tuple_w_custom_types(output: &Property) -> Result<TokenStream, Error> {
+    if !output.has_custom_type_in_tuple() {
+        panic!("Output is of custom type, but not an enum, struct or enum/struct inside an array/tuple. This shouldn't never happen. Output received: {:?}", output);
+    }
+
+    // If custom type is inside a tuple `(struct | enum <name>, ...)`,
+    // the type signature should be only `(<name>, ...)`.
+    // To do that, we remove the `STRUCT_KEYWORD` and `ENUM_KEYWORD` from it.
+
+    let keywords_removed = remove_words(&output.type_field, &[STRUCT_KEYWORD, ENUM_KEYWORD]);
+
+    let tuple_type_signature = expand_b256_into_array_form(&keywords_removed)
+        .parse()
+        .expect("could not parse tuple type signature");
+
+    Ok(tuple_type_signature)
+}
+
+fn expand_b256_into_array_form(type_field: &str) -> String {
+    let re = Regex::new(r"\bb256\b").unwrap();
+    re.replace_all(type_field, "[u8; 32]").to_string()
+}
+
+fn remove_words(from: &str, words: &[&str]) -> String {
+    words
+        .iter()
+        .fold(from.to_string(), |str_in_construction, word| {
+            str_in_construction.replace(word, "")
+        })
 }
 
 /// Expands the arguments in a function declaration and the same arguments as input
@@ -222,7 +238,7 @@ fn expand_function_arguments(
         };
 
         // TokenStream representing the type of the argument
-        let kind = parse_param(param)?;
+        let kind = parse_param_type_from_property(param)?;
 
         // If it's a tuple, don't expand it, just use the type signature as it is (minus the string "struct " | "enum ").
         let tok = if let ParamType::Tuple(_tuple) = kind {
@@ -231,7 +247,12 @@ fn expand_function_arguments(
 
             toks.parse::<TokenStream>().unwrap()
         } else {
-            expand_input_param(fun, &param.name, &parse_param(param)?, &custom_property)?
+            expand_input_param(
+                fun,
+                &param.name,
+                &parse_param_type_from_property(param)?,
+                &custom_property,
+            )?
         };
 
         // Add the TokenStream to argument declarations
@@ -266,7 +287,7 @@ fn build_expanded_tuple_params(tuple_param: &Property) -> Result<String, Error> 
         .expect("tuple parameter should have components")
     {
         if !component.is_custom_type() {
-            let p = parse_param(component)?;
+            let p = parse_param_type_from_property(component)?;
             let tok = expand_type(&p)?;
             toks.push_str(&tok.to_string());
         } else {
@@ -335,6 +356,7 @@ fn expand_input_param(
 #[cfg(test)]
 mod tests {
     use crate::EnumVariants;
+    use std::slice;
 
     use super::*;
     use std::str::FromStr;
@@ -734,5 +756,48 @@ mod tests {
         let struct_name = Some(&struct_prop);
         let result = expand_input_param(&def, "unused", &struct_type, &struct_name);
         assert!(matches!(result, Err(Error::InvalidType(_))));
+    }
+
+    #[test]
+    fn can_have_b256_mixed_in_tuple_w_custom_types() -> anyhow::Result<()> {
+        let test_struct_component = Property {
+            name: "__tuple_element".to_string(),
+            type_field: "struct TestStruct".to_string(),
+            components: Some(vec![Property {
+                name: "value".to_string(),
+                type_field: "u64".to_string(),
+                components: None,
+            }]),
+        };
+        let b256_component = Property {
+            name: "__tuple_element".to_string(),
+            type_field: "b256".to_string(),
+            components: None,
+        };
+
+        let property = Property {
+            name: "".to_string(),
+            type_field: "(struct TestStruct, b256)".to_string(),
+            components: Some(vec![test_struct_component, b256_component]),
+        };
+
+        let stream = expand_fn_outputs(slice::from_ref(&property))?;
+
+        let actual = stream.to_string();
+        let expected = "(TestStruct , [u8 ; 32])";
+
+        assert_eq!(actual, expected);
+
+        Ok(())
+    }
+
+    #[test]
+    fn will_not_replace_b256_in_middle_of_word() {
+        let result = expand_b256_into_array_form("(b256, Someb256WeirdStructName, b256, b256)");
+
+        assert_eq!(
+            result,
+            "([u8; 32], Someb256WeirdStructName, [u8; 32], [u8; 32])"
+        );
     }
 }
