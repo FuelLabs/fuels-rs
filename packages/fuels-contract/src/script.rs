@@ -9,10 +9,10 @@ use fuel_gql_client::{
     fuel_tx::{ConsensusParameters, Receipt, Transaction},
 };
 
-use fuels_core::constants::{DEFAULT_SPENDABLE_COIN_AMOUNT, WORD_SIZE};
+use fuels_core::constants::DEFAULT_SPENDABLE_COIN_AMOUNT;
 use fuels_core::parameters::TxParameters;
 use fuels_signers::{LocalWallet, Signer};
-use fuels_types::errors::Error;
+use fuels_types::{constants::WORD_SIZE, errors::Error};
 use std::collections::HashSet;
 use std::iter;
 
