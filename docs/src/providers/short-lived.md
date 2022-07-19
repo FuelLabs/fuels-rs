@@ -19,3 +19,13 @@ You can also use `launch_provider_and_get_wallet()`, which abstracts away the `s
 ```rust,ignore
 let wallet = launch_provider_and_get_wallet().await;
 ```
+
+# Features
+
+## Fuel-core lib
+
+The `fuel-core-lib` is a feature defined in the `fuels` library, allowing us to run a `fuel-core` node without installing the `fuel-core` binary on the local machine. Using the `fuel-core-lib` feature flag entails downloading all the dependencies needed to run the fuel-core node.
+
+```rust,ignore
+fuels = { version = "0.18.0", features = ["fuel-core-lib"] }
+```
