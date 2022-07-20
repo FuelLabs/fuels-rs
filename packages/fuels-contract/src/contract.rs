@@ -54,13 +54,14 @@ pub struct Contract {
 pub struct CallResponse<D> {
     pub value: D,
     pub receipts: Vec<Receipt>,
+    pub gas_used: u64,
     pub logs: Vec<String>,
 }
 // ANCHOR_END: call_response
 
 impl<D> CallResponse<D> {
     /// Get all the logs from LogData receipts
-    pub fn get_logs(receipts: &[Receipt]) -> Vec<String> {
+    fn get_logs(receipts: &[Receipt]) -> Vec<String> {
         receipts
             .iter()
             .filter(|r| matches!(r, Receipt::LogData { .. }))
@@ -68,10 +69,21 @@ impl<D> CallResponse<D> {
             .collect::<Vec<String>>()
     }
 
+    /// Get the gas used from ScriptResult receipt
+    fn get_gas_used(receipts: &[Receipt]) -> u64 {
+        receipts
+            .iter()
+            .rfind(|r| matches!(r, Receipt::ScriptResult { .. }))
+            .expect("could not retrieve ScriptResult")
+            .gas_used()
+            .expect("could not retrieve gas used")
+    }
+
     pub fn new(value: D, receipts: Vec<Receipt>) -> Self {
         Self {
             value,
             logs: Self::get_logs(&receipts),
+            gas_used: Self::get_gas_used(&receipts),
             receipts,
         }
     }
@@ -224,10 +236,22 @@ impl Contract {
     ) -> Result<Bech32, Error> {
         let (mut tx, contract_id) =
             Self::contract_deployment_transaction(compiled_contract, wallet, params).await?;
-        wallet.sign_transaction(&mut tx).await?;
 
-        match wallet.get_provider().unwrap().client.submit(&tx).await {
-            Ok(_) => Ok(Bech32::from(contract_id)),
+        let client = &wallet
+            .get_provider()
+            .expect("Can't get wallet provider")
+            .client;
+
+        let chain_info = client.chain_info().await?;
+
+        wallet.sign_transaction(&mut tx).await?;
+        tx.validate_without_signature(
+            chain_info.latest_block.height.0,
+            &chain_info.consensus_parameters.into(),
+        )?;
+      
+        match client.submit(&tx).await {
+            k(_) => Ok(Bech32::from(contract_id)),
             Err(e) => Err(Error::TransactionError(e.to_string())),
         }
     }

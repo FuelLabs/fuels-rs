@@ -5,7 +5,9 @@ use std::net::{Ipv4Addr, SocketAddr};
 use std::time::Duration;
 
 use fuel_core_interfaces::model::BlockHeight;
+use fuel_core_interfaces::model::Coin;
 use fuel_gql_client::client::FuelClient;
+use fuel_gql_client::fuel_tx::{ConsensusParameters, UtxoId};
 use fuel_gql_client::fuel_vm::consts::WORD_SIZE;
 use fuel_types::{Address, AssetId, Bytes32, Word};
 use portpicker::Port;
@@ -172,7 +174,35 @@ impl<'de> DeserializeAs<'de, BlockHeight> for HexNumber {
     }
 }
 
-pub fn get_node_config_json(coins: Value) -> NamedTempFile {
+pub fn get_node_config_json(
+    coins: Vec<(UtxoId, Coin)>,
+    consensus_parameters_config: Option<ConsensusParameters>,
+) -> Value {
+    let coin_configs: Vec<Value> = coins
+        .into_iter()
+        .map(|(utxo_id, coin)| {
+            serde_json::to_value(&CoinConfig {
+                tx_id: Some(*utxo_id.tx_id()),
+                output_index: Some(utxo_id.output_index() as u64),
+                block_created: Some(coin.block_created),
+                maturity: Some(coin.maturity),
+                owner: coin.owner,
+                amount: coin.amount,
+                asset_id: coin.asset_id,
+            })
+            .unwrap()
+        })
+        .collect();
+
+    let result = serde_json::to_string(&coin_configs).expect("Failed to stringify coins vector");
+
+    let coins: Value =
+        serde_json::from_str(result.as_str()).expect("Failed to build config_with_coins JSON");
+
+    let consensus_parameters =
+        serde_json::to_value(consensus_parameters_config.unwrap_or_default())
+            .expect("Failed to build transaction_parameters JSON");
+
     let config = json!({
       "chain_name": "local_testnet",
       "block_production": "Instant",
@@ -182,22 +212,13 @@ pub fn get_node_config_json(coins: Value) -> NamedTempFile {
       "initial_state": {
         "coins": coins
       },
-      "transaction_parameters": {
-        "contract_max_size": 16777216,
-        "max_inputs": 255,
-        "max_outputs": 255,
-        "max_witnesses": 255,
-        "max_gas_per_tx": 100000000,
-        "max_script_length": 1048576,
-        "max_script_data_length": 1048576,
-        "max_static_contracts": 255,
-        "max_storage_slots": 255,
-        "max_predicate_length": 1048576,
-        "max_predicate_data_length": 1048576,
-        "gas_price_factor": 1000000000,
-      }
+      "transaction_parameters": consensus_parameters
     });
 
+    config
+}
+
+fn write_temp_config_file(config: Value) -> NamedTempFile {
     let config_file = NamedTempFile::new();
 
     let _ = writeln!(
@@ -209,9 +230,14 @@ pub fn get_node_config_json(coins: Value) -> NamedTempFile {
     config_file.unwrap()
 }
 
-pub fn spawn_fuel_service(config_with_coins: Value, free_port: Port) {
+pub fn spawn_fuel_service(
+    coins: Vec<(UtxoId, Coin)>,
+    consensus_parameters_config: Option<ConsensusParameters>,
+    free_port: Port,
+) {
     tokio::spawn(async move {
-        let temp_config_file = get_node_config_json(config_with_coins);
+        let config = get_node_config_json(coins, consensus_parameters_config);
+        let temp_config_file = write_temp_config_file(config);
         let mut running_node = Command::new("fuel-core")
             .arg("--ip")
             .arg("127.0.0.1")

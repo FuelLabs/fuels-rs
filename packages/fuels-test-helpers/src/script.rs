@@ -21,6 +21,7 @@ pub async fn run_compiled_script(binary_filepath: &str) -> Result<Vec<Receipt>, 
     let client = FuelClient::from(server.bound_address);
 
     let script = get_script(script_binary);
+
     script.call(&client).await
 }
 
