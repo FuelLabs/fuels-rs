@@ -1,6 +1,5 @@
 use fuel_gql_client::fuel_tx::{AssetId, ContractId, Receipt};
 use fuels::contract::contract::MultiContractCallHandler;
-use fuels::prelude::Error::TransactionError;
 use fuels::prelude::{
     abigen, launch_provider_and_get_wallet, setup_multiple_assets_coins, setup_single_asset_coins,
     setup_test_provider, CallParameters, Contract, Error, LocalWallet, Provider, ProviderError,
@@ -2182,7 +2181,11 @@ async fn contract_deployment_respects_maturity() -> anyhow::Result<()> {
     };
 
     let err = deploy_w_maturity(1).await.expect_err("Should not have been able to deploy the contract since the block height (0) is less than the requested maturity (1)");
-    assert!(matches!(err, TransactionError(msg) if msg.contains("TransactionMaturity")));
+
+    assert!(matches!(
+        err,
+        Error::ValidationError(fuel_gql_client::fuel_tx::ValidationError::TransactionMaturity)
+    ));
 
     produce_blocks(&wallet, 1).await?;
     deploy_w_maturity(1)
@@ -2262,6 +2265,32 @@ async fn can_handle_sway_function_called_new() -> anyhow::Result<()> {
     let response = instance.new().call().await?.value;
 
     assert_eq!(response, 12345);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_get_gas_used() -> anyhow::Result<()> {
+    abigen!(
+        MyContract,
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+    );
+
+    let wallet = launch_provider_and_get_wallet().await;
+
+    let id = Contract::deploy(
+        "tests/test_projects/contract_test/out/debug/contract_test.bin",
+        &wallet,
+        TxParameters::default(),
+        StorageConfiguration::default(),
+    )
+    .await?;
+
+    let instance = MyContractBuilder::new(id.to_string(), wallet.clone()).build();
+
+    let gas_used = instance.initialize_counter(42).call().await?.gas_used;
+
+    assert!(gas_used > 0);
 
     Ok(())
 }
