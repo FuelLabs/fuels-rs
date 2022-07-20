@@ -487,10 +487,7 @@ mod tests {
             "df9d0e6c6c5f5da6e82e5e1a77974af6642bdb450a10c43f0c6910a212600185";
         let expected_address = "fuel1m7wsumrvtaw6d6pwtcd809627ejzhk69pggvg0cvdyg2yynqqxzseuzply";
 
-        assert_eq!(
-            wallet.address().hash().to_string(),
-            expected_plain_address
-        );
+        assert_eq!(wallet.address().hash().to_string(), expected_plain_address);
         assert_eq!(wallet.address().to_string(), expected_address);
 
         // Create a second account from the same phrase.

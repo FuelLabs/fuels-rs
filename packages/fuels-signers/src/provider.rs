@@ -36,6 +36,12 @@ impl From<WalletError> for ProviderError {
         ProviderError::WalletError(e.to_string())
     }
 }
+
+impl From<ProviderError> for Error {
+    fn from(e: ProviderError) -> Self {
+        Error::ProviderError(e.to_string())
+    }
+}
 /// Encapsulates common client operations in the SDK.
 /// Note that you may also use `client`, which is an instance
 /// of `FuelClient`, directly, which providers a broader API.
@@ -195,10 +201,7 @@ impl Provider {
         asset_id: AssetId,
     ) -> Result<u64, ProviderError> {
         self.client
-            .balance(
-                &address.hash().to_string(),
-                Some(&*asset_id.to_string()),
-            )
+            .balance(&address.hash().to_string(), Some(&*asset_id.to_string()))
             .await
             .map_err(Into::into)
     }

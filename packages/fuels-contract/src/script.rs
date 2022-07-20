@@ -365,8 +365,8 @@ mod test {
                 .to_vec();
             assert_eq!(gas, idx.to_be_bytes().to_vec());
 
-            let contract_id = &script_data
-                [offsets.call_data_offset..offsets.call_data_offset + ContractId::LEN];
+            let contract_id =
+                &script_data[offsets.call_data_offset..offsets.call_data_offset + ContractId::LEN];
             let expected_contract_id = contract_ids[idx].hash();
             assert_eq!(contract_id, expected_contract_id.as_slice());
 

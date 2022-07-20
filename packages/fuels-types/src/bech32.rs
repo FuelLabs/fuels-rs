@@ -2,9 +2,9 @@ use crate::errors::Error;
 use bech32::Variant::Bech32m;
 use bech32::{FromBase32, ToBase32};
 use core::str;
-use std::str::FromStr;
 use fuel_tx::{Address, Bytes32, ContractId};
 use std::fmt::{Display, Formatter};
+use std::str::FromStr;
 
 pub const FUEL_BECH32_HRP: &str = "fuel";
 
@@ -20,20 +20,26 @@ impl Bech32Data {
     pub fn new(hrp: &str, hash: Bytes32) -> Bech32Data {
         Self {
             hrp: hrp.to_string(),
-            hash
+            hash,
         }
     }
 }
 
 impl From<Address> for Bech32Data {
     fn from(address: Address) -> Bech32Data {
-        Bech32Data { hrp: FUEL_BECH32_HRP.to_string(), hash: Bytes32::new(*address) }
+        Bech32Data {
+            hrp: FUEL_BECH32_HRP.to_string(),
+            hash: Bytes32::new(*address),
+        }
     }
 }
 
 impl From<ContractId> for Bech32Data {
     fn from(contract_id: ContractId) -> Bech32Data {
-        Bech32Data { hrp: FUEL_BECH32_HRP.to_string(), hash: Bytes32::new(*contract_id) }
+        Bech32Data {
+            hrp: FUEL_BECH32_HRP.to_string(),
+            hash: Bytes32::new(*contract_id),
+        }
     }
 }
 
@@ -132,7 +138,6 @@ impl Bech32 {
             Self::ContractId(data) => &data.hrp,
         }
     }
-
 }
 
 impl Display for Bech32 {

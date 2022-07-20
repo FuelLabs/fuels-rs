@@ -74,10 +74,7 @@ mod tests {
         let message = Message::new(message);
         let recovered_address = signature.recover(&message)?;
 
-        assert_eq!(
-            wallet.address().hash(),
-            recovered_address.hash()
-        );
+        assert_eq!(wallet.address().hash(), recovered_address.hash());
 
         // Verify signature
         signature.verify(&recovered_address, &message)?;
@@ -135,10 +132,7 @@ mod tests {
         // Recover address that signed the transaction
         let recovered_address = signature.recover(&message)?;
 
-        assert_eq!(
-            wallet.address().hash(),
-            recovered_address.hash()
-        );
+        assert_eq!(wallet.address().hash(), recovered_address.hash());
 
         // Verify signature
         signature.verify(&recovered_address, &message)?;

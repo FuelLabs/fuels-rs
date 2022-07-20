@@ -62,13 +62,13 @@ mod tests {
         // New from HRP string and a `[u8; 32]`
         let hrp = "fuel";
         let my_slice = [1u8; 32];
-        let bech32_address = Bech32::address(hrp, my_slice);
-        let bech32_contract = Bech32::contract_id(hrp, my_slice);
+        let _bech32_address = Bech32::address(hrp, my_slice);
+        let _bech32_contract = Bech32::contract_id(hrp, my_slice);
 
         // From a string.
         let string = "fuel1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqsx2mt2";
-        let bech32_address = Bech32::address_from_str(string)
-            .expect("failed to create Bech32 address from string");
+        let bech32_address =
+            Bech32::address_from_str(string).expect("failed to create Bech32 address from string");
         assert_eq!([0u8; 32], *bech32_address.hash());
         // ANCHOR_END: bech32
 
