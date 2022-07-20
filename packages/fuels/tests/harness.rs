@@ -2294,3 +2294,17 @@ async fn test_get_gas_used() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn instantiate_client() -> Result<(), Error> {
+    use fuels::client::FuelClient;
+    use fuels::fuel_node::{Config, FuelService};
+
+    // Run the fuel node.
+    let server = FuelService::new_node(Config::local_node()).await.unwrap();
+
+    // Create a client that will talk to the node created above.
+    let client = FuelClient::from(server.bound_address);
+    assert!(client.health().await?);
+    Ok(())
+}

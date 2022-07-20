@@ -14,16 +14,13 @@ use fuel_core::{
 pub use fuel_core::service::Config;
 
 #[cfg(not(feature = "fuel-core-lib"))]
-pub use node::{CoinConfig, Config};
+pub use node::{CoinConfig, Config, get_socket_address, spawn_fuel_service};
 
 #[cfg(not(feature = "fuel-core-lib"))]
 use fuel_core_interfaces::model::{Coin, CoinStatus};
 
 #[cfg(not(feature = "fuel-core-lib"))]
 use portpicker::{is_free, pick_unused_port};
-
-#[cfg(not(feature = "fuel-core-lib"))]
-use crate::node::spawn_fuel_service;
 
 use fuel_gql_client::fuel_tx::ConsensusParameters;
 use fuel_gql_client::{
@@ -37,7 +34,7 @@ use fuels_signers::fuel_crypto::rand;
 use rand::Fill;
 
 #[cfg(not(feature = "fuel-core-lib"))]
-mod node;
+pub mod node;
 
 mod chains;
 mod script;
@@ -187,11 +184,6 @@ pub async fn setup_test_client(
     (client, srv_address)
 }
 
-#[cfg(not(feature = "fuel-core-lib"))]
-fn get_socket_address() -> SocketAddr {
-    let free_port = pick_unused_port().expect("No ports free");
-    SocketAddr::new("127.0.0.1".parse().unwrap(), free_port)
-}
 
 #[cfg(test)]
 mod tests {

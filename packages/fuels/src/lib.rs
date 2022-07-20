@@ -45,6 +45,15 @@ pub mod test_helpers {
     pub use fuels_test_helpers::*;
 }
 
+pub mod fuel_node {
+    #[cfg(feature = "fuel-core-lib")]
+   pub use fuel_core::service::{Config, FuelService};
+
+   #[cfg(not(feature = "fuel-core-lib"))]
+    pub use fuels_test_helpers::node::{Config, FuelService};
+
+}
+
 /// Easy imports of frequently used
 #[doc(hidden)]
 pub mod prelude {
@@ -69,4 +78,5 @@ pub mod prelude {
     pub use super::test_helpers::*;
     pub use super::tx::Salt;
     pub use super::types::errors::Error;
+    pub use super::fuel_node::*;
 }
