@@ -14,7 +14,7 @@ use fuel_core::{
 pub use fuel_core::service::Config;
 
 #[cfg(not(feature = "fuel-core-lib"))]
-pub use node::{CoinConfig, Config, get_socket_address, spawn_fuel_service};
+pub use node::{get_socket_address, spawn_fuel_service, CoinConfig, Config};
 
 #[cfg(not(feature = "fuel-core-lib"))]
 use fuel_core_interfaces::model::{Coin, CoinStatus};
@@ -183,7 +183,6 @@ pub async fn setup_test_client(
 
     (client, srv_address)
 }
-
 
 #[cfg(test)]
 mod tests {

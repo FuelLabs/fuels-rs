@@ -47,11 +47,10 @@ pub mod test_helpers {
 
 pub mod fuel_node {
     #[cfg(feature = "fuel-core-lib")]
-   pub use fuel_core::service::{Config, FuelService};
+    pub use fuel_core::service::{Config, FuelService};
 
-   #[cfg(not(feature = "fuel-core-lib"))]
+    #[cfg(not(feature = "fuel-core-lib"))]
     pub use fuels_test_helpers::node::{Config, FuelService};
-
 }
 
 /// Easy imports of frequently used
@@ -71,6 +70,7 @@ pub mod prelude {
     pub use super::core::parameters::*;
     pub use super::core::tx::{Address, AssetId, ContractId};
     pub use super::core::{Token, Tokenizable};
+    pub use super::fuel_node::*;
     pub use super::fuels_abigen::abigen;
     pub use super::signers::provider::*;
     pub use super::signers::{LocalWallet, Signer};
@@ -78,5 +78,4 @@ pub mod prelude {
     pub use super::test_helpers::*;
     pub use super::tx::Salt;
     pub use super::types::errors::Error;
-    pub use super::fuel_node::*;
 }

@@ -1,20 +1,20 @@
+use anyhow::Error as AnyError;
 use std::borrow::Borrow;
 use std::fmt;
-use std::path::PathBuf;
 use std::io::Write;
 use std::net::{Ipv4Addr, SocketAddr};
+use std::path::PathBuf;
 use std::time::Duration;
-use anyhow::Error as AnyError;
 
 use portpicker::is_free;
 use portpicker::pick_unused_port;
-
 
 use fuel_core_interfaces::model::BlockHeight;
 use fuel_core_interfaces::model::Coin;
 use fuel_gql_client::client::FuelClient;
 use fuel_gql_client::fuel_tx::{ConsensusParameters, UtxoId};
 use fuel_gql_client::fuel_vm::consts::WORD_SIZE;
+use fuel_gql_client::fuel_vm::fuel_merkle::common::NODE;
 use fuel_types::{Address, AssetId, Bytes32, Word};
 use portpicker::Port;
 use serde::de::Error;
@@ -24,7 +24,6 @@ use serde_json::{json, Value};
 use serde_with::{serde_as, skip_serializing_none};
 use serde_with::{DeserializeAs, SerializeAs};
 use std::process::Stdio;
-use fuel_gql_client::fuel_vm::fuel_merkle::common::NODE;
 use tempfile::NamedTempFile;
 use tokio::process::Command;
 
@@ -69,21 +68,21 @@ pub(crate) struct HexType;
 
 impl<T: AsRef<[u8]>> SerializeAs<T> for HexType {
     fn serialize_as<S>(value: &T, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: Serializer,
+    where
+        S: Serializer,
     {
         serde_hex::serialize(value, serializer)
     }
 }
 
 impl<'de, T, E> DeserializeAs<'de, T> for HexType
-    where
-            for<'a> T: TryFrom<&'a [u8], Error = E>,
-            E: fmt::Display,
+where
+    for<'a> T: TryFrom<&'a [u8], Error = E>,
+    E: fmt::Display,
 {
     fn deserialize_as<D>(deserializer: D) -> Result<T, D::Error>
-        where
-            D: Deserializer<'de>,
+    where
+        D: Deserializer<'de>,
     {
         serde_hex::deserialize(deserializer)
     }
@@ -98,19 +97,19 @@ pub mod serde_hex {
     use serde::{Deserializer, Serializer};
 
     pub fn serialize<T, S>(target: T, ser: S) -> Result<S::Ok, S::Error>
-        where
-            S: Serializer,
-            T: ToHex,
+    where
+        S: Serializer,
+        T: ToHex,
     {
         let s = format!("0x{}", target.encode_hex::<String>());
         ser.serialize_str(&s)
     }
 
     pub fn deserialize<'de, T, E, D>(des: D) -> Result<T, D::Error>
-        where
-            D: Deserializer<'de>,
-            for<'a> T: TryFrom<&'a [u8], Error = E>,
-            E: fmt::Display,
+    where
+        D: Deserializer<'de>,
+        for<'a> T: TryFrom<&'a [u8], Error = E>,
+        E: fmt::Display,
     {
         let raw_string: String = serde::Deserialize::deserialize(des)?;
         let stripped_prefix = raw_string.trim_start_matches("0x");
@@ -124,8 +123,8 @@ pub(crate) struct HexNumber;
 
 impl SerializeAs<u64> for HexNumber {
     fn serialize_as<S>(value: &u64, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: Serializer,
+    where
+        S: Serializer,
     {
         let bytes = value.to_be_bytes();
         serde_hex::serialize(bytes, serializer)
@@ -134,8 +133,8 @@ impl SerializeAs<u64> for HexNumber {
 
 impl<'de> DeserializeAs<'de, Word> for HexNumber {
     fn deserialize_as<D>(deserializer: D) -> Result<Word, D::Error>
-        where
-            D: Deserializer<'de>,
+    where
+        D: Deserializer<'de>,
     {
         let mut bytes: Vec<u8> = serde_hex::deserialize(deserializer)?;
         match bytes.len() {
@@ -163,8 +162,8 @@ impl<'de> DeserializeAs<'de, Word> for HexNumber {
 
 impl SerializeAs<BlockHeight> for HexNumber {
     fn serialize_as<S>(value: &BlockHeight, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: Serializer,
+    where
+        S: Serializer,
     {
         let number: u64 = (*value).into();
         HexNumber::serialize_as(&number, serializer)
@@ -173,8 +172,8 @@ impl SerializeAs<BlockHeight> for HexNumber {
 
 impl<'de> DeserializeAs<'de, BlockHeight> for HexNumber {
     fn deserialize_as<D>(deserializer: D) -> Result<BlockHeight, D::Error>
-        where
-            D: Deserializer<'de>,
+    where
+        D: Deserializer<'de>,
     {
         let number: u64 = HexNumber::deserialize_as(deserializer)?;
         Ok(number.into())
@@ -197,7 +196,7 @@ pub fn get_node_config_json(
                 amount: coin.amount,
                 asset_id: coin.asset_id,
             })
-                .unwrap()
+            .unwrap()
         })
         .collect();
 
@@ -245,9 +244,12 @@ pub fn spawn_fuel_service(
     new_fuel_node(Some(coins), consensus_parameters_config, free_port);
 }
 
-fn new_fuel_node(coins: Option<Vec<(UtxoId, Coin)>>, consensus_parameters_config: Option<ConsensusParameters>, free_port: Port) {
+fn new_fuel_node(
+    coins: Option<Vec<(UtxoId, Coin)>>,
+    consensus_parameters_config: Option<ConsensusParameters>,
+    free_port: Port,
+) {
     tokio::spawn(async move {
-
         let config = get_node_config_json(coins.unwrap_or(vec![]), consensus_parameters_config);
         let temp_config_file = write_temp_config_file(config);
 
@@ -297,7 +299,6 @@ pub struct FuelService {
 
 impl FuelService {
     pub async fn new_node(config: Config) -> Result<Self, AnyError> {
-
         let bound_address = match config {
             node_config if config.addr.port() != 0 && is_free(config.addr.port()) => config.addr,
             node_config if !is_free(config.addr.port()) => panic!("Error: Address already in use"),
@@ -305,9 +306,6 @@ impl FuelService {
         };
         new_fuel_node(None, None, bound_address.port());
 
-        Ok(FuelService {
-            bound_address,
-        })
+        Ok(FuelService { bound_address })
     }
 }
-
