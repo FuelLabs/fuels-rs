@@ -1,6 +1,6 @@
 use fuels_core::code_gen::abigen::Abigen;
-use fuels_core::json_abi::parse_param;
 use fuels_core::json_abi::ABIParser;
+use fuels_core::parse::parse_param_type_from_property;
 use fuels_types::{param_types::ParamType, Property};
 
 use std::fs;
@@ -144,7 +144,7 @@ fn decode_params(types: &[String], data: &str) -> anyhow::Result<String> {
     let types: Result<Vec<ParamType>, _> = types
         .iter()
         .map(|s| {
-            parse_param(&Property {
+            parse_param_type_from_property(&Property {
                 name: "".into(),
                 type_field: s.to_owned(),
                 components: None,

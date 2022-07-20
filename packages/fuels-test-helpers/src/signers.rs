@@ -2,6 +2,7 @@ use std::net::SocketAddr;
 
 #[cfg(feature = "fuel-core-lib")]
 use fuel_core::{model::Coin, service::Config};
+
 use fuel_gql_client::fuel_tx::UtxoId;
 
 #[cfg(not(feature = "fuel-core-lib"))]
@@ -99,7 +100,7 @@ pub async fn setup_test_provider(
     coins: Vec<(UtxoId, Coin)>,
     node_config: Option<Config>,
 ) -> (Provider, SocketAddr) {
-    let (client, addr) = setup_test_client(coins, node_config).await;
+    let (client, addr) = setup_test_client(coins, node_config, None).await;
     (Provider::new(client), addr)
 }
 
