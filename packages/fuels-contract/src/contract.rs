@@ -249,9 +249,9 @@ impl Contract {
             chain_info.latest_block.height.0,
             &chain_info.consensus_parameters.into(),
         )?;
-      
+
         match client.submit(&tx).await {
-            k(_) => Ok(Bech32::from(contract_id)),
+            Ok(_) => Ok(Bech32::from(contract_id)),
             Err(e) => Err(Error::TransactionError(e.to_string())),
         }
     }
