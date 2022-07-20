@@ -68,6 +68,6 @@ pub mod prelude {
     pub use super::test_helpers::Config;
     pub use super::test_helpers::*;
     pub use super::tx::Salt;
-    pub use super::types::bech32::{Bech32, ContentType};
+    pub use super::types::bech32::Bech32;
     pub use super::types::errors::Error;
 }

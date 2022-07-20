@@ -58,27 +58,18 @@ mod tests {
     async fn bech32() -> Result<(), Error> {
         // ANCHOR: bech32
         use fuels::prelude::Bech32;
-        use fuels::prelude::ContentType;
 
         // New from HRP string and a `[u8; 32]`
         let hrp = "fuel";
         let my_slice = [1u8; 32];
-        let bech32_address = Bech32::new_address(hrp, my_slice);
-        let bech32_contract = Bech32::new_contract_id(hrp, my_slice);
-
-        // Get the corresponding Address or ContractId.
-        let _address = bech32_address.to_address();
-        let _contract_id = bech32_contract.to_contract_id();
+        let bech32_address = Bech32::address(hrp, my_slice);
+        let bech32_contract = Bech32::contract_id(hrp, my_slice);
 
         // From a string.
         let string = "fuel1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqsx2mt2";
-        let bech32_address = Bech32::new_address_from_string(string)
+        let bech32_address = Bech32::address_from_str(string)
             .expect("failed to create Bech32 address from string");
-        assert_eq!([0u8; 32], *bech32_address.to_address());
-
-        // Check if Bech32 is storing a string or a ContractId
-        let content_type = bech32_address.content_type;
-        assert_eq!(ContentType::Address, content_type);
+        assert_eq!([0u8; 32], *bech32_address.hash());
         // ANCHOR_END: bech32
 
         Ok(())

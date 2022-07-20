@@ -224,7 +224,7 @@ mod tests {
         let mut rng = rand::thread_rng();
         let mut addr_data = [0u8; 32];
         addr_data.try_fill(&mut rng)?;
-        let address = Bech32::new_address("test", addr_data);
+        let address = Bech32::address("test", addr_data);
 
         let mut asset_id = AssetId::zeroed();
         asset_id.try_fill(&mut rng)?;
@@ -237,7 +237,7 @@ mod tests {
         for (_utxo_id, coin) in coins {
             assert_eq!(coin.asset_id, asset_id);
             assert_eq!(coin.amount, amount_per_coin);
-            assert_eq!(coin.owner, address.to_address());
+            assert_eq!(*coin.owner, *address.hash());
         }
 
         Ok(())
@@ -248,7 +248,7 @@ mod tests {
         let mut rng = rand::thread_rng();
         let mut addr_data = [0u8; 32];
         addr_data.try_fill(&mut rng)?;
-        let address = Bech32::new_address("test", addr_data);
+        let address = Bech32::address("test", addr_data);
 
         let number_of_assets = 7;
         let coins_per_asset = 10;
@@ -274,7 +274,7 @@ mod tests {
                 .collect();
             assert_eq!(coins_asset_id.len() as u64, coins_per_asset);
             for (_utxo_id, coin) in coins_asset_id {
-                assert_eq!(coin.owner, address.to_address());
+                assert_eq!(*coin.owner, *address.hash());
                 assert_eq!(coin.amount, amount_per_coin);
             }
         }

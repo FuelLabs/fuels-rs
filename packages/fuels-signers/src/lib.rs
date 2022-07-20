@@ -75,8 +75,8 @@ mod tests {
         let recovered_address = signature.recover(&message)?;
 
         assert_eq!(
-            wallet.address.to_address().as_ref(),
-            recovered_address.hash().as_ref()
+            wallet.address().hash(),
+            recovered_address.hash()
         );
 
         // Verify signature
@@ -136,8 +136,8 @@ mod tests {
         let recovered_address = signature.recover(&message)?;
 
         assert_eq!(
-            wallet.address.to_address().as_ref(),
-            recovered_address.hash().as_ref()
+            wallet.address().hash(),
+            recovered_address.hash()
         );
 
         // Verify signature

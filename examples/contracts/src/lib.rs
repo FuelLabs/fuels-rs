@@ -292,7 +292,7 @@ mod tests {
 
         // withdraw some tokens to wallet
         let response = contract_instance
-            .transfer_coins_to_output(1_000_000, contract_id.to_contract_id(), address.into())
+            .transfer_coins_to_output(1_000_000, contract_id.into(), address.into())
             .append_variable_outputs(1)
             .call()
             .await?;

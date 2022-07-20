@@ -119,7 +119,7 @@ impl Provider {
             let res = self
                 .client
                 .coins(
-                    &from.to_address().to_string(),
+                    &from.hash().to_string(),
                     None,
                     PaginationRequest {
                         cursor: cursor.clone(),
@@ -151,7 +151,7 @@ impl Provider {
         let res = self
             .client
             .coins_to_spend(
-                &from.to_address().to_string(),
+                &from.hash().to_string(),
                 vec![(format!("{:#x}", asset_id).as_str(), amount)],
                 None,
                 None,
@@ -196,7 +196,7 @@ impl Provider {
     ) -> Result<u64, ProviderError> {
         self.client
             .balance(
-                &address.to_address().to_string(),
+                &address.hash().to_string(),
                 Some(&*asset_id.to_string()),
             )
             .await
@@ -219,7 +219,7 @@ impl Provider {
         };
         let balances_vec = self
             .client
-            .balances(&address.to_address().to_string(), pagination)
+            .balances(&address.hash().to_string(), pagination)
             .await?
             .results;
         let balances = balances_vec
@@ -249,7 +249,7 @@ impl Provider {
         request: PaginationRequest<String>,
     ) -> std::io::Result<PaginatedResult<TransactionResponse, String>> {
         self.client
-            .transactions_by_owner(&owner.to_address().to_string(), request)
+            .transactions_by_owner(&owner.hash().to_string(), request)
             .await
     }
 

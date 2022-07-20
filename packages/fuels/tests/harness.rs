@@ -1021,7 +1021,7 @@ async fn test_contract_calling_contract() -> Result<(), Error> {
     // flips the bool value passed to it.
     // ANCHOR: external_contract
     let res = foo_caller_contract_instance
-        .call_foo_contract(*foo_contract_id.to_contract_id(), true)
+        .call_foo_contract(*foo_contract_id.hash(), true)
         .set_contracts(&[foo_contract_id]) // Sets the external contract
         .call()
         .await?;
@@ -1148,7 +1148,7 @@ async fn test_amount_and_asset_forwarding() -> Result<(), Error> {
     let instance = TestFuelCoinContractBuilder::new(id.to_string(), wallet.clone()).build();
 
     let mut balance_response = instance
-        .get_balance(id.to_contract_id(), id.to_contract_id())
+        .get_balance((&id).into(), (&id).into())
         .call()
         .await?;
     assert_eq!(balance_response.value, 0);
@@ -1156,7 +1156,7 @@ async fn test_amount_and_asset_forwarding() -> Result<(), Error> {
     instance.mint_coins(5_000_000).call().await?;
 
     balance_response = instance
-        .get_balance(id.to_contract_id(), id.to_contract_id())
+        .get_balance(id.clone().into(), (&id).into())
         .call()
         .await?;
     assert_eq!(balance_response.value, 5_000_000);
@@ -1189,12 +1189,12 @@ async fn test_amount_and_asset_forwarding() -> Result<(), Error> {
 
     // withdraw some tokens to wallet
     instance
-        .transfer_coins_to_output(1_000_000, id.to_contract_id(), address.into())
+        .transfer_coins_to_output(1_000_000, (&id).into(), address.into())
         .append_variable_outputs(1)
         .call()
         .await?;
 
-    let asset_id = AssetId::from(*id.to_contract_id());
+    let asset_id = AssetId::from(*id.hash());
     let call_params = CallParameters::new(Some(0), Some(asset_id), None);
     let tx_params = TxParameters::new(None, Some(1_000_000), None, None);
 
@@ -1217,7 +1217,7 @@ async fn test_amount_and_asset_forwarding() -> Result<(), Error> {
     assert_eq!(call_response.unwrap().amount().unwrap(), 0);
     assert_eq!(
         call_response.unwrap().asset_id().unwrap(),
-        &AssetId::from(*id.to_contract_id())
+        &AssetId::from(*id.hash())
     );
     Ok(())
 }

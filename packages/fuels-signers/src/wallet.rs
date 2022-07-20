@@ -48,7 +48,7 @@ type W = English;
 ///   let message = Message::new(message);
 ///   let recovered_address = signature.recover(&message).unwrap();
 ///
-///   assert_eq!(wallet.address().to_address().as_ref(), recovered_address.hash().as_ref());
+///   assert_eq!(wallet.address(), recovered_address);
 ///
 ///   // Verify signature
 ///   signature.verify(&recovered_address, &message).unwrap();
@@ -115,7 +115,7 @@ impl Wallet {
 
         Self {
             private_key,
-            address: Bech32::new_address(FUEL_BECH32_HRP, *hashed),
+            address: Bech32::address(FUEL_BECH32_HRP, *hashed),
             provider,
         }
     }
@@ -488,7 +488,7 @@ mod tests {
         let expected_address = "fuel1m7wsumrvtaw6d6pwtcd809627ejzhk69pggvg0cvdyg2yynqqxzseuzply";
 
         assert_eq!(
-            wallet.address().to_address().to_string(),
+            wallet.address().hash().to_string(),
             expected_plain_address
         );
         assert_eq!(wallet.address().to_string(), expected_address);
@@ -503,7 +503,7 @@ mod tests {
             "fuel1ycgervqkfgj06r74z4nwchjmpwd637edgtwfea7mh4hj85n5yavszjk4cc";
 
         assert_eq!(
-            wallet2.address().to_address().to_string(),
+            wallet2.address().hash().to_string(),
             expected_second_plain_address
         );
         assert_eq!(wallet2.address().to_string(), expected_second_address);

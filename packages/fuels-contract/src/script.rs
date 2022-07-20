@@ -125,7 +125,7 @@ impl Script {
 
             script_data.extend(call.call_parameters.gas_forwarded.to_be_bytes());
 
-            script_data.extend(call.contract_id.to_contract_id().as_ref());
+            script_data.extend(call.contract_id.hash().as_ref());
 
             script_data.extend(call.encoded_selector);
 
@@ -195,9 +195,9 @@ impl Script {
                 let mut ids: HashSet<ContractId> = call
                     .external_contracts
                     .iter()
-                    .map(|bech32| bech32.to_contract_id())
+                    .map(|bech32| ContractId::new(*bech32.hash()))
                     .collect();
-                ids.insert(call.contract_id.to_contract_id());
+                ids.insert((&call.contract_id).into());
                 ids
             })
             .collect();
@@ -312,9 +312,9 @@ mod test {
         const NUM_CALLS: usize = 3;
 
         let contract_ids = vec![
-            Bech32::new_contract_id("test", [1u8; 32]),
-            Bech32::new_contract_id("test", [2u8; 32]),
-            Bech32::new_contract_id("test", [3u8; 32]),
+            Bech32::contract_id("test", [1u8; 32]),
+            Bech32::contract_id("test", [2u8; 32]),
+            Bech32::contract_id("test", [3u8; 32]),
         ];
 
         let asset_ids = vec![
@@ -365,10 +365,10 @@ mod test {
                 .to_vec();
             assert_eq!(gas, idx.to_be_bytes().to_vec());
 
-            let contract_id = script_data
-                [offsets.call_data_offset..offsets.call_data_offset + ContractId::LEN]
-                .to_vec();
-            assert_eq!(contract_id, contract_ids[idx].to_contract_id().to_vec());
+            let contract_id = &script_data
+                [offsets.call_data_offset..offsets.call_data_offset + ContractId::LEN];
+            let expected_contract_id = contract_ids[idx].hash();
+            assert_eq!(contract_id, expected_contract_id.as_slice());
 
             let selector_offset = offsets.call_data_offset + ContractId::LEN;
             let selector = script_data[selector_offset..selector_offset + SELECTOR_LEN].to_vec();
