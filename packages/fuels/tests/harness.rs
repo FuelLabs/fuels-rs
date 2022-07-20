@@ -1,3 +1,4 @@
+use fuel_core::service::Config;
 use fuel_gql_client::fuel_tx::{AssetId, ContractId, Receipt};
 use fuels::contract::contract::MultiContractCallHandler;
 use fuels::prelude::{
@@ -2203,7 +2204,6 @@ async fn contract_deployment_respects_maturity() -> Result<(), Error> {
 }
 
 #[tokio::test]
-#[cfg(feature = "fuel-core-lib")]
 async fn can_increase_block_height() -> Result<(), Error> {
     // ANCHOR: uses_produce_blocks_to_increase_block_height
     let config = Config {
