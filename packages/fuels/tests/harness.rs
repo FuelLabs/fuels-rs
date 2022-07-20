@@ -1,10 +1,9 @@
-use fuel_core::service::Config;
 use fuel_gql_client::fuel_tx::{AssetId, ContractId, Receipt};
 use fuels::contract::contract::MultiContractCallHandler;
 use fuels::prelude::{
     abigen, launch_custom_provider_and_get_wallets, launch_provider_and_get_wallet,
     setup_multiple_assets_coins, setup_single_asset_coins, setup_test_provider, CallParameters,
-    Contract, Error, LocalWallet, Provider, ProviderError, Salt, Signer, TxParameters,
+    Config, Contract, Error, LocalWallet, Provider, ProviderError, Salt, Signer, TxParameters,
     WalletsConfig, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
 };
 use fuels_core::parameters::StorageConfiguration;
@@ -2160,7 +2159,6 @@ async fn contract_method_call_respects_maturity() -> Result<(), Error> {
 }
 
 #[tokio::test]
-#[cfg(feature = "fuel-core-lib")]
 async fn contract_deployment_respects_maturity() -> Result<(), Error> {
     abigen!(
         MyContract,
