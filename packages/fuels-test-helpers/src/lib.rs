@@ -91,6 +91,18 @@ pub fn setup_multiple_assets_coins(
     (coins, asset_ids)
 }
 
+/// Create a vector of of UTXOs with the provided AssetIds, num_coins and amount_per_coin
+pub fn setup_custom_assets_coins(
+    owner: Address,
+    assets: &[(AssetId, u64, u64)],
+) -> Vec<(UtxoId, Coin)> {
+    let coins = assets
+        .iter()
+        .flat_map(|asset| setup_single_asset_coins(owner, asset.0, asset.1, asset.2))
+        .collect::<Vec<(UtxoId, Coin)>>();
+    coins
+}
+
 /// Create a vector of `num_coins` UTXOs containing `amount_per_coin` amount of asset `asset_id`.
 /// The output of this function can be used with `setup_test_client` to get a client with some
 /// pre-existing coins, but with only one asset ID.
@@ -251,6 +263,53 @@ mod tests {
             for (_utxo_id, coin) in coins_asset_id {
                 assert_eq!(coin.owner, address);
                 assert_eq!(coin.amount, amount_per_coin);
+            }
+        }
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_setup_custom_assets_coins() -> Result<(), rand::Error> {
+        let mut rng = rand::thread_rng();
+        let mut address = Address::zeroed();
+        address.try_fill(&mut rng)?;
+
+        let asset_id_base = BASE_ASSET_ID;
+        let coins_per_asset_base = 10;
+        let amount_per_coin_base = 13;
+
+        let mut asset_id_1 = AssetId::zeroed();
+        asset_id_1.try_fill(&mut rng)?;
+        let coins_per_asset_1 = 20;
+        let amount_per_coin_1 = 23;
+
+        let mut asset_id_2 = AssetId::zeroed();
+        asset_id_2.try_fill(&mut rng)?;
+        let coins_per_asset_2 = 30;
+        let amount_per_coin_2 = 33;
+
+        let assets = &[
+            (asset_id_base, coins_per_asset_base, amount_per_coin_base),
+            (asset_id_1, coins_per_asset_1, amount_per_coin_1),
+            (asset_id_2, coins_per_asset_2, amount_per_coin_2),
+        ];
+
+        let coins = setup_custom_assets_coins(address, assets);
+        assert_eq!(
+            coins.len() as u64,
+            coins_per_asset_base + coins_per_asset_1 + coins_per_asset_2
+        );
+
+        for asset in assets {
+            let coins_asset_id: Vec<(UtxoId, Coin)> = coins
+                .clone()
+                .into_iter()
+                .filter(|(_, c)| c.asset_id == asset.0)
+                .collect();
+            assert_eq!(coins_asset_id.len() as u64, asset.1);
+            for (_utxo_id, coin) in coins_asset_id {
+                assert_eq!(coin.owner, address);
+                assert_eq!(coin.amount, asset.2);
             }
         }
         Ok(())

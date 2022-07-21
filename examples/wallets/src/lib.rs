@@ -117,12 +117,12 @@ mod tests {
         use fuels::prelude::*;
 
         // Setup 2 test wallets with 1 coin each
+        let num_wallets = Some(2);
+        let coins_per_wallet = Some(1);
+        let coin_amount = Some(1);
+
         let wallets = launch_custom_provider_and_get_wallets(
-            WalletsConfig {
-                num_wallets: 2,
-                coins_per_wallet: 1,
-                coin_amount: 1,
-            },
+            WalletsConfig::new(num_wallets, coins_per_wallet, coin_amount),
             None,
         )
         .await;
@@ -186,6 +186,43 @@ mod tests {
         let (provider, _socket_addr) = setup_test_provider(coins.clone(), None).await;
         wallet.set_provider(provider);
         // ANCHOR_END: multiple_assets_wallet
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[allow(unused_variables)]
+    async fn setup_wallet_custom_assets() -> Result<(), Box<dyn std::error::Error>> {
+        // ANCHOR: custom_assets_wallet
+        use fuels::prelude::*;
+        use rand::Fill;
+
+        let mut wallet = LocalWallet::new_random(None);
+        let mut rng = rand::thread_rng();
+
+        let asset_id_base = BASE_ASSET_ID;
+        let coins_per_asset_base = 10;
+        let amount_per_coin_base = 13;
+
+        let mut asset_id_1 = AssetId::zeroed();
+        asset_id_1.try_fill(&mut rng)?;
+        let coins_per_asset_1 = 20;
+        let amount_per_coin_1 = 23;
+
+        let mut asset_id_2 = AssetId::zeroed();
+        asset_id_2.try_fill(&mut rng)?;
+        let coins_per_asset_2 = 30;
+        let amount_per_coin_2 = 33;
+
+        let assets = &[
+            (asset_id_base, coins_per_asset_base, amount_per_coin_base),
+            (asset_id_1, coins_per_asset_1, amount_per_coin_1),
+            (asset_id_2, coins_per_asset_2, amount_per_coin_2),
+        ];
+
+        let coins = setup_custom_assets_coins(wallet.address(), assets);
+        let (provider, _socket_addr) = setup_test_provider(coins.clone(), None).await;
+        wallet.set_provider(provider);
+        // ANCHOR_END: custom_assets_wallet
         Ok(())
     }
 
