@@ -12,6 +12,8 @@ use fuels_core::Tokenizable;
 use fuels_core::{constants::BASE_ASSET_ID, Token};
 use sha2::{Digest, Sha256};
 use std::str::FromStr;
+use std::thread::sleep;
+use std::time::Duration;
 
 /// Note: all the tests and examples below require pre-compiled Sway projects.
 /// To compile these projects, run `cargo run --bin build-test-projects`.
@@ -2302,6 +2304,7 @@ async fn instantiate_client() -> Result<(), Error> {
 
     // Run the fuel node.
     let server = FuelService::new_node(Config::local_node()).await.unwrap();
+
 
     // Create a client that will talk to the node created above.
     let client = FuelClient::from(server.bound_address);

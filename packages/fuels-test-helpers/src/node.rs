@@ -253,8 +253,6 @@ fn new_fuel_node(
             None => false,
         };
 
-        println!("chain {:?}", chain);
-
         let config = get_node_config_json(coins.unwrap_or(vec![]), consensus_parameters_config);
         let temp_config_file = write_temp_config_file(config);
 
@@ -269,7 +267,6 @@ fn new_fuel_node(
         ];
 
         if chain {
-            println!("moderni idiotizam");
             args.push("--chain");
             args.push(temp_config_file.borrow().path().to_str().unwrap());
         };
