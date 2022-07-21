@@ -158,13 +158,9 @@ mod tests {
         ];
 
         let assets_to_verify = vec![
-            (
-                asset_id_base.clone(),
-                coins_per_asset_base,
-                amount_per_coin_base,
-            ),
-            (asset_id_1.clone(), coins_per_asset_1, amount_per_coin_1),
-            (asset_id_2.clone(), coins_per_asset_2, amount_per_coin_2),
+            (asset_id_base, coins_per_asset_base, amount_per_coin_base),
+            (asset_id_1, coins_per_asset_1, amount_per_coin_1),
+            (asset_id_2, coins_per_asset_2, amount_per_coin_2),
         ];
 
         let config = WalletsConfig::new_multiple_assets(num_wallets, assets);
@@ -182,10 +178,7 @@ mod tests {
                 assert_eq!(coins.len() as u64, asset.1);
 
                 for coin in coins {
-                    assert_eq!(
-                        coin.owner.to_string(),
-                        format!("0x{}", wallet.address().to_string())
-                    );
+                    assert_eq!(coin.owner.to_string(), format!("0x{}", wallet.address()));
                     assert_eq!(coin.amount.0, asset.2);
                 }
             }
