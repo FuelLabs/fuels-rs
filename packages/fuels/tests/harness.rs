@@ -2297,8 +2297,6 @@ async fn test_get_gas_used() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn test_contract_id_and_wallet_getters() {
-    // Generates the bindings from an ABI definition in a JSON file
-    // The generated bindings can be accessed through `SimpleContract`.
     abigen!(
         SimpleContract,
         "packages/fuels/tests/takes_ints_returns_bool.json",
