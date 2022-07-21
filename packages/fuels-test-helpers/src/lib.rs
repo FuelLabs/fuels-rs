@@ -20,7 +20,7 @@ pub use node::{get_socket_address, spawn_fuel_service, CoinConfig, Config};
 use fuel_core_interfaces::model::{Coin, CoinStatus};
 
 #[cfg(not(feature = "fuel-core-lib"))]
-use portpicker::{is_free, pick_unused_port};
+use portpicker::is_free;
 
 use fuel_gql_client::fuel_tx::ConsensusParameters;
 use fuel_gql_client::{

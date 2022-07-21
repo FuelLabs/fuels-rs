@@ -3,7 +3,6 @@ use std::borrow::Borrow;
 use std::fmt;
 use std::io::Write;
 use std::net::{Ipv4Addr, SocketAddr};
-use std::path::PathBuf;
 use std::time::Duration;
 
 use portpicker::is_free;
@@ -14,7 +13,6 @@ use fuel_core_interfaces::model::Coin;
 use fuel_gql_client::client::FuelClient;
 use fuel_gql_client::fuel_tx::{ConsensusParameters, UtxoId};
 use fuel_gql_client::fuel_vm::consts::WORD_SIZE;
-use fuel_gql_client::fuel_vm::fuel_merkle::common::NODE;
 use fuel_types::{Address, AssetId, Bytes32, Word};
 use portpicker::Port;
 use serde::de::Error;
@@ -250,18 +248,33 @@ fn new_fuel_node(
     free_port: Port,
 ) {
     tokio::spawn(async move {
+        let chain = match coins {
+            Some(_) => true,
+            None => false,
+        };
+
+        println!("chain {:?}", chain);
+
         let config = get_node_config_json(coins.unwrap_or(vec![]), consensus_parameters_config);
         let temp_config_file = write_temp_config_file(config);
 
-        let mut running_node = Command::new("fuel-core")
-            .arg("--ip")
-            .arg("127.0.0.1")
-            .arg("--port")
-            .arg(free_port.to_string())
-            .arg("--chain")
-            .arg(temp_config_file.borrow().path())
-            .arg("--db-type")
-            .arg("in-memory")
+        let port = &free_port.to_string();
+        let mut args = vec![
+            "--ip",
+            "127.0.0.1",
+            "--port",
+            port,
+            "--db-type",
+            "in-memory",
+        ];
+
+        if chain {
+            println!("moderni idiotizam");
+            args.push("--chain");
+            args.push(temp_config_file.borrow().path().to_str().unwrap());
+        };
+
+        let mut running_node = Command::new("fuel-core").args(args)
             .kill_on_drop(true)
             .stdin(Stdio::null())
             .stdout(Stdio::null())
@@ -300,10 +313,15 @@ pub struct FuelService {
 impl FuelService {
     pub async fn new_node(config: Config) -> Result<Self, AnyError> {
         let bound_address = match config {
-            node_config if config.addr.port() != 0 && is_free(config.addr.port()) => config.addr,
-            node_config if !is_free(config.addr.port()) => panic!("Error: Address already in use"),
+            node_config if node_config.addr.port() != 0 && is_free(node_config.addr.port()) => {
+                node_config.addr
+            }
+            node_config if !is_free(node_config.addr.port()) => {
+                panic!("Error: Address already in use")
+            }
             _ => get_socket_address(),
         };
+
         new_fuel_node(None, None, bound_address.port());
 
         Ok(FuelService { bound_address })

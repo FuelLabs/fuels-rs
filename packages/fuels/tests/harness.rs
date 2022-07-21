@@ -2305,6 +2305,7 @@ async fn instantiate_client() -> Result<(), Error> {
 
     // Create a client that will talk to the node created above.
     let client = FuelClient::from(server.bound_address);
+
     assert!(client.health().await?);
     Ok(())
 }
