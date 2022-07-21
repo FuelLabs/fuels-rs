@@ -134,22 +134,21 @@ mod tests {
     #[tokio::test]
     async fn test_wallet_config_multiple_assets() -> Result<(), Box<dyn std::error::Error>> {
         let mut rng = rand::thread_rng();
-
-        let num_wallets = 1;
+        let num_wallets = 3;
 
         let asset_id_base = BASE_ASSET_ID;
-        let coins_per_asset_base = 10;
-        let amount_per_coin_base = 13;
+        let coins_per_asset_base = 2;
+        let amount_per_coin_base = 4;
 
         let mut asset_id_1 = AssetId::zeroed();
         asset_id_1.try_fill(&mut rng)?;
-        let coins_per_asset_1 = 20;
-        let amount_per_coin_1 = 23;
+        let coins_per_asset_1 = 6;
+        let amount_per_coin_1 = 8;
 
         let mut asset_id_2 = AssetId::zeroed();
         asset_id_2.try_fill(&mut rng)?;
-        let coins_per_asset_2 = 30;
-        let amount_per_coin_2 = 33;
+        let coins_per_asset_2 = 10;
+        let amount_per_coin_2 = 12;
 
         let assets = vec![
             (asset_id_base, coins_per_asset_base, amount_per_coin_base),
@@ -157,24 +156,15 @@ mod tests {
             (asset_id_2, coins_per_asset_2, amount_per_coin_2),
         ];
 
-        let assets_to_verify = vec![
-            (asset_id_base, coins_per_asset_base, amount_per_coin_base),
-            (asset_id_1, coins_per_asset_1, amount_per_coin_1),
-            (asset_id_2, coins_per_asset_2, amount_per_coin_2),
-        ];
-
-        let config = WalletsConfig::new_multiple_assets(num_wallets, assets);
-
+        let config = WalletsConfig::new_multiple_assets(num_wallets, assets.clone());
         let wallets = launch_custom_provider_and_get_wallets(config, None).await;
-
         assert_eq!(wallets.len(), num_wallets as usize);
 
-        for asset in assets_to_verify {
+        for asset in assets {
             for wallet in &wallets {
                 let coins = wallet
                     .get_spendable_coins(&asset.0, asset.1 * asset.2)
                     .await?;
-
                 assert_eq!(coins.len() as u64, asset.1);
 
                 for coin in coins {
@@ -183,7 +173,6 @@ mod tests {
                 }
             }
         }
-
         Ok(())
     }
 }

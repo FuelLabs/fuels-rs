@@ -200,18 +200,18 @@ mod tests {
         let mut rng = rand::thread_rng();
 
         let asset_id_base = BASE_ASSET_ID;
-        let coins_per_asset_base = 10;
-        let amount_per_coin_base = 13;
+        let coins_per_asset_base = 2;
+        let amount_per_coin_base = 4;
 
         let mut asset_id_1 = AssetId::zeroed();
         asset_id_1.try_fill(&mut rng)?;
-        let coins_per_asset_1 = 20;
-        let amount_per_coin_1 = 23;
+        let coins_per_asset_1 = 6;
+        let amount_per_coin_1 = 8;
 
         let mut asset_id_2 = AssetId::zeroed();
         asset_id_2.try_fill(&mut rng)?;
-        let coins_per_asset_2 = 30;
-        let amount_per_coin_2 = 33;
+        let coins_per_asset_2 = 10;
+        let amount_per_coin_2 = 12;
 
         let assets = &[
             (asset_id_base, coins_per_asset_base, amount_per_coin_base),
