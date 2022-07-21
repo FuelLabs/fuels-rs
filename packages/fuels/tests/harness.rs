@@ -1,3 +1,4 @@
+use fuel_core::config::Config;
 use fuel_gql_client::fuel_tx::{AssetId, ContractId, Receipt};
 use fuels::contract::contract::MultiContractCallHandler;
 use fuels::prelude::Error::TransactionError;
@@ -11,6 +12,7 @@ use fuels_core::parameters::StorageConfiguration;
 use fuels_core::tx::{Address, Bytes32, StorageSlot};
 use fuels_core::Tokenizable;
 use fuels_core::{constants::BASE_ASSET_ID, Token};
+use fuels_test_helpers::{launch_custom_provider_and_get_wallets, WalletsConfig};
 use sha2::{Digest, Sha256};
 use std::str::FromStr;
 
@@ -2267,50 +2269,44 @@ async fn can_handle_sway_function_called_new() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-async fn transfer_to_contract() {
+async fn transfer_to_contract() -> anyhow::Result<()> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/tst/out/debug/tst-abi.json",
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json",
     );
 
-    let wallet = launch_provider_and_get_wallet().await;
+    let wallets =
+        launch_custom_provider_and_get_wallets(WalletsConfig::new(Some(2), Some(100), None), None)
+            .await;
+    launch_provider_and_get_wallet().await;
 
     let id = Contract::deploy(
-        "tests/test_projects/tst/out/debug/tst.bin",
-        &wallet,
+        "tests/test_projects/contract_test/out/debug/contract_test.bin",
+        &wallets[0],
         TxParameters::default(),
         StorageConfiguration::default(),
     )
-    .await
-    .unwrap();
+    .await?;
 
-    let instance = MyContractBuilder::new(id.to_string(), wallet.clone()).build();
+    let _instance = MyContractBuilder::new(id.to_string(), wallets[0].clone()).build();
 
-    let spendable = wallet
-        .get_provider()
-        .unwrap()
-        .get_coins(&Address::new(*id))
-        .await
-        .unwrap();
+    let spendable = wallets[0]
+        .get_provider()?
+        .get_contract_balances(&id)
+        .await?;
     println!("spendable {:?}", spendable);
 
-    wallet
-        .transfer(
-            &Address::new(*id),
-            2,
-            Default::default(),
-            TxParameters::default(),
-        )
-        .await
-        .unwrap();
+    let (_, receipts) = wallets[0]
+        .force_transfer_to_contract(id, 1, AssetId::default(), TxParameters::default())
+        .await?;
 
-    let spendable = wallet
-        .get_provider()
-        .unwrap()
-        .get_coins(&Address::new(*id))
-        .await
-        .unwrap();
+    println!("spendable {:?}", receipts);
+
+    let spendable = wallets[0]
+        .get_provider()?
+        .get_contract_balances(&id)
+        .await?;
     println!("spendable {:?}", spendable);
 
-    // Now you have an instance of your contract you can use to test each function
+    Ok(())
 }

@@ -6,9 +6,16 @@ use coins_bip39::{English, Mnemonic, MnemonicError};
 use elliptic_curve::rand_core;
 use eth_keystore::KeystoreError;
 use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
+use fuel_gql_client::fuel_tx::ConsensusParameters;
+use fuel_gql_client::fuel_types::{Immediate12, Immediate18, Word};
+use fuel_gql_client::fuel_vm::consts::{REG_ONE, WORD_SIZE};
+use fuel_gql_client::fuel_vm::fuel_asm::Opcode;
+use fuel_gql_client::fuel_vm::script_with_data_offset;
 use fuel_gql_client::{
     client::{schema::coin::Coin, types::TransactionResponse, PaginatedResult, PaginationRequest},
-    fuel_tx::{Address, AssetId, Input, Output, Receipt, Transaction, UtxoId, Witness},
+    fuel_tx::{
+        Address, AssetId, Bytes32, ContractId, Input, Output, Receipt, Transaction, UtxoId, Witness,
+    },
 };
 use fuels_core::parameters::TxParameters;
 use fuels_types::errors::Error;
@@ -295,6 +302,86 @@ impl Wallet {
         let _sig = self.sign_transaction(&mut tx).await.unwrap();
 
         let receipts = self.get_provider().unwrap().send_transaction(&tx).await?;
+
+        Ok((tx.id().to_string(), receipts))
+    }
+
+    /// UNCONDITIONAL transfer of `amount` coins of type `asset_id` to
+    /// the contract at `to`.
+    ///
+    /// CAUTION !!!
+    ///
+    /// This will transfer coins to a contract even with no way to retrieve them
+    /// (i.e. no withdrawal functionality on receiving contract), possibly leading
+    /// to the PERMANENT LOSS OF COINS if not used with care.
+    pub async fn force_transfer_to_contract(
+        &self,
+        to: ContractId,
+        amount: u64,
+        asset_id: AssetId,
+        tx_parameters: TxParameters,
+    ) -> Result<(String, Vec<Receipt>), WalletError> {
+        let zeroes = Bytes32::zeroed();
+
+        let mut inputs = vec![Input::contract(UtxoId::new(zeroes, 0), zeroes, zeroes, to)];
+        inputs.extend(
+            self.get_asset_inputs_for_amount(asset_id, amount, 0)
+                .await?,
+        );
+
+        let outputs = vec![
+            Output::contract(0, zeroes, zeroes),
+            //Output::change(self.address(), 0, asset_id),
+        ]
+        .to_vec();
+
+        let (script, _) = script_with_data_offset!(
+            data_offset,
+            vec![
+                Opcode::MOVI(0x10, data_offset as Immediate18),
+                Opcode::MOVI(
+                    0x11,
+                    (data_offset as usize + ContractId::LEN) as Immediate18
+                ),
+                Opcode::MOVI(
+                    0x12,
+                    (data_offset as usize + ContractId::LEN + WORD_SIZE) as Immediate18
+                ),
+                Opcode::LW(0x12, 0x12, 0),
+                Opcode::TR(0x10, 0x12, 0x11),
+                Opcode::RET(REG_ONE)
+            ],
+            ConsensusParameters::DEFAULT.tx_offset()
+        );
+
+        #[allow(clippy::iter_cloned_collect)]
+        let script = script.iter().copied().collect();
+
+        let script_data: Vec<u8> = [
+            to.to_vec(),
+            amount.to_be_bytes().to_vec(),
+            asset_id.to_vec(),
+        ]
+        .into_iter()
+        .flatten()
+        .collect();
+
+        let mut tx = Transaction::script (
+            tx_parameters.gas_price,
+            tx_parameters.gas_limit,
+            tx_parameters.byte_price,
+            tx_parameters.maturity,
+            script,
+            script_data,
+            inputs.to_vec(),
+            outputs,
+            vec![],
+        );
+        self.sign_transaction(&mut tx).await?;
+
+        println!("{:?}", tx);
+
+        let receipts = self.get_provider()?.send_transaction(&tx).await?;
 
         Ok((tx.id().to_string(), receipts))
     }

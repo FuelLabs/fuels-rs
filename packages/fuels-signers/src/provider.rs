@@ -9,7 +9,7 @@ use fuel_gql_client::{
         PaginationRequest,
     },
     fuel_tx::{Input, Output, Receipt, Transaction},
-    fuel_types::{Address, AssetId},
+    fuel_types::{Address, AssetId, ContractId},
     fuel_vm::{consts::REG_ONE, prelude::Opcode},
 };
 use std::collections::HashMap;
@@ -183,7 +183,6 @@ impl Provider {
             metadata: None,
         }
     }
-    // TODO: add unit tests for the balance API. This is tracked in #321.
 
     /// Get the balance of all spendable coins `asset_id` for address `address`. This is different
     /// from getting coins because we are just returning a number (the sum of UTXOs amount) instead
@@ -216,6 +215,30 @@ impl Provider {
         let balances_vec = self
             .client
             .balances(&*address.to_string(), pagination)
+            .await?
+            .results;
+        let balances = balances_vec
+            .iter()
+            .map(|b| (b.asset_id.to_string(), b.amount.clone().try_into().unwrap()))
+            .collect();
+        Ok(balances)
+    }
+
+    /// Get all balances of all assets for the contract with id `contract_id`.
+    pub async fn get_contract_balances(
+        &self,
+        contract_id: &ContractId,
+    ) -> Result<HashMap<String, u64>, ProviderError> {
+        // We don't paginate results because there are likely at most ~100 different assets in one
+        // wallet
+        let pagination = PaginationRequest {
+            cursor: None,
+            results: 9999,
+            direction: PageDirection::Forward,
+        };
+        let balances_vec = self
+            .client
+            .contract_balances(&*contract_id.to_string(), pagination)
             .await?
             .results;
         let balances = balances_vec

@@ -120,8 +120,7 @@ impl Script {
 
             script_data.extend(call.call_parameters.asset_id.to_vec());
 
-            let amount = call.call_parameters.amount as Word;
-            script_data.extend(amount.to_be_bytes());
+            script_data.extend(call.call_parameters.amount.to_be_bytes());
 
             script_data.extend(call.call_parameters.gas_forwarded.to_be_bytes());
 
