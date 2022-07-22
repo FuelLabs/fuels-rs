@@ -8,9 +8,13 @@ use fuel_gql_client::{
         schema::coin::Coin, types::TransactionResponse, FuelClient, PageDirection, PaginatedResult,
         PaginationRequest,
     },
-    fuel_tx::{Input, Output, Receipt, Transaction},
-    fuel_types::{Address, AssetId, ContractId},
-    fuel_vm::{consts::REG_ONE, prelude::Opcode},
+    fuel_tx::{ConsensusParameters, Input, Output, Receipt, Transaction},
+    fuel_types::{Address, AssetId, ContractId, Immediate18},
+    fuel_vm::{
+        consts::{REG_ONE, WORD_SIZE},
+        prelude::Opcode,
+        script_with_data_offset,
+    },
 };
 use std::collections::HashMap;
 use thiserror::Error;
@@ -28,6 +32,12 @@ pub enum ProviderError {
     ClientRequestError(#[from] io::Error),
     #[error("Wallet error: {0}")]
     WalletError(String),
+}
+
+impl From<ProviderError> for Error {
+    fn from(e: ProviderError) -> Self {
+        Error::ProviderError(e.to_string())
+    }
 }
 
 impl From<WalletError> for ProviderError {
@@ -184,6 +194,67 @@ impl Provider {
         }
     }
 
+    /// Craft a transaction used to transfer funds to a contract.
+    pub fn build_contract_transfer_tx(
+        &self,
+        to: ContractId,
+        amount: u64,
+        asset_id: AssetId,
+        inputs: &[Input],
+        outputs: &[Output],
+        params: TxParameters,
+    ) -> Transaction {
+        let script_data: Vec<u8> = [
+            to.to_vec(),
+            amount.to_be_bytes().to_vec(),
+            asset_id.to_vec(),
+        ]
+        .into_iter()
+        .flatten()
+        .collect();
+
+        // This script loads:
+        //  - a pointer to the contract id,
+        //  - the actual amount
+        //  - a pointer to the asset id
+        // into the registers 0X10, 0x11, 0x12
+        // and calls the TR instruction
+        let (script, _) = script_with_data_offset!(
+            data_offset,
+            vec![
+                Opcode::MOVI(0x10, data_offset as Immediate18),
+                Opcode::MOVI(
+                    0x11,
+                    (data_offset as usize + ContractId::LEN) as Immediate18
+                ),
+                Opcode::LW(0x11, 0x11, 0),
+                Opcode::MOVI(
+                    0x12,
+                    (data_offset as usize + ContractId::LEN + WORD_SIZE) as Immediate18
+                ),
+                Opcode::TR(0x10, 0x11, 0x12),
+                Opcode::RET(REG_ONE)
+            ],
+            ConsensusParameters::DEFAULT.tx_offset()
+        );
+        #[allow(clippy::iter_cloned_collect)]
+        let script = script.iter().copied().collect();
+
+        Transaction::Script {
+            gas_price: params.gas_price,
+            gas_limit: params.gas_limit,
+            byte_price: params.byte_price,
+            maturity: params.maturity,
+            receipts_root: Default::default(),
+            script,
+            script_data,
+            inputs: inputs.to_vec(),
+            outputs: outputs.to_vec(),
+            witnesses: vec![],
+            metadata: None,
+        }
+    }
+
     /// Get the balance of all spendable coins `asset_id` for address `address`. This is different
     /// from getting coins because we are just returning a number (the sum of UTXOs amount) instead
     /// of the UTXOs.
@@ -194,6 +265,18 @@ impl Provider {
     ) -> Result<u64, ProviderError> {
         self.client
             .balance(&*address.to_string(), Some(&*asset_id.to_string()))
+            .await
+            .map_err(Into::into)
+    }
+
+    /// Get the balance of all spendable coins `asset_id` for contract with id `contract_id`.
+    pub async fn get_contract_asset_balance(
+        &self,
+        contract_id: &ContractId,
+        asset_id: AssetId,
+    ) -> Result<u64, ProviderError> {
+        self.client
+            .contract_balance(&*contract_id.to_string(), Some(&*asset_id.to_string()))
             .await
             .map_err(Into::into)
     }

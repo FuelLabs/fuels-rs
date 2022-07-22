@@ -114,6 +114,7 @@ mod tests {
 
     #[tokio::test]
     async fn wallet_transfer() -> Result<(), Error> {
+        // ANCHOR: wallet_transfer
         use fuels::prelude::*;
 
         // Setup 2 test wallets with 1 coin each
@@ -137,6 +138,48 @@ mod tests {
 
         // Check that wallet 2 now has 2 coins
         assert_eq!(wallet_2_final_coins.len(), 2);
+
+        // ANCHOR_END: wallet_transfer
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn wallet_contract_transfer() -> Result<(), Error> {
+        use fuels::prelude::*;
+
+        let wallet = launch_provider_and_get_wallet().await;
+
+        let contract_id = Contract::deploy(
+            "../../packages/fuels/tests/test_projects/contract_test/out/debug/contract_test.bin",
+            &wallet,
+            TxParameters::default(),
+            StorageConfiguration::default(),
+        )
+        .await?;
+
+        // ANCHOR: wallet_contract_transfer
+        // Check that the contract with id 'contract_id' has no balance prior to the transfer
+        let contract_coins = wallet
+            .get_provider()?
+            .get_contract_balances(&contract_id)
+            .await?;
+        assert_eq!(contract_coins.len(), 0);
+
+        // Transfer an amount of 100 of the default asset to the contract
+        let amount = 100;
+        let asset_id = Default::default();
+        let _receipts = wallet
+            .force_transfer_to_contract(&contract_id, amount, asset_id, TxParameters::default())
+            .await?;
+
+        // Check that the contract now has 1 coin
+        let contract_coins = wallet
+            .get_provider()?
+            .get_contract_balances(&contract_id)
+            .await?;
+        assert_eq!(contract_coins.len(), 1);
+        // ANCHOR_END: wallet_contract_transfer
+
         Ok(())
     }
 

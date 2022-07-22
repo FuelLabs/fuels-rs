@@ -1,4 +1,3 @@
-use fuel_core::config::Config;
 use fuel_gql_client::fuel_tx::{AssetId, ContractId, Receipt};
 use fuels::contract::contract::MultiContractCallHandler;
 use fuels::prelude::Error::TransactionError;
@@ -12,7 +11,6 @@ use fuels_core::parameters::StorageConfiguration;
 use fuels_core::tx::{Address, Bytes32, StorageSlot};
 use fuels_core::Tokenizable;
 use fuels_core::{constants::BASE_ASSET_ID, Token};
-use fuels_test_helpers::{launch_custom_provider_and_get_wallets, WalletsConfig};
 use sha2::{Digest, Sha256};
 use std::str::FromStr;
 
@@ -2264,49 +2262,6 @@ async fn can_handle_sway_function_called_new() -> anyhow::Result<()> {
     let response = instance.new().call().await?.value;
 
     assert_eq!(response, 12345);
-
-    Ok(())
-}
-
-#[tokio::test]
-async fn transfer_to_contract() -> anyhow::Result<()> {
-    abigen!(
-        MyContract,
-        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json",
-    );
-
-    let wallets =
-        launch_custom_provider_and_get_wallets(WalletsConfig::new(Some(2), Some(100), None), None)
-            .await;
-    launch_provider_and_get_wallet().await;
-
-    let id = Contract::deploy(
-        "tests/test_projects/contract_test/out/debug/contract_test.bin",
-        &wallets[0],
-        TxParameters::default(),
-        StorageConfiguration::default(),
-    )
-    .await?;
-
-    let _instance = MyContractBuilder::new(id.to_string(), wallets[0].clone()).build();
-
-    let spendable = wallets[0]
-        .get_provider()?
-        .get_contract_balances(&id)
-        .await?;
-    println!("spendable {:?}", spendable);
-
-    let (_, receipts) = wallets[0]
-        .force_transfer_to_contract(id, 1, AssetId::default(), TxParameters::default())
-        .await?;
-
-    println!("spendable {:?}", receipts);
-
-    let spendable = wallets[0]
-        .get_provider()?
-        .get_contract_balances(&id)
-        .await?;
-    println!("spendable {:?}", spendable);
 
     Ok(())
 }

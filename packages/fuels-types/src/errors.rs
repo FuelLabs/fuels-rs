@@ -57,6 +57,8 @@ pub enum Error {
     ContractCallError(String, Vec<Receipt>),
     #[error("Wallet error: {0}")]
     WalletError(String),
+    #[error("Provider error: {0}")]
+    ProviderError(String),
     #[error("Instantiation error: {0}")]
     InstantiationError(String),
 }
