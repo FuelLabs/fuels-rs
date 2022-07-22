@@ -14,7 +14,7 @@ use fuel_core::{
 pub use fuel_core::service::Config;
 
 #[cfg(not(feature = "fuel-core-lib"))]
-pub use node::{get_socket_address, spawn_fuel_service, CoinConfig, Config};
+pub use node::{get_socket_address, new_fuel_node, server_health_check, CoinConfig, Config};
 
 #[cfg(not(feature = "fuel-core-lib"))]
 use fuel_core_interfaces::model::{Coin, CoinStatus};
@@ -175,11 +175,9 @@ pub async fn setup_test_client(
         _ => get_socket_address(),
     };
 
-    spawn_fuel_service(coins, consensus_parameters_config, srv_address.port());
+    new_fuel_node(Some(coins), consensus_parameters_config, srv_address).await;
 
     let client = FuelClient::from(srv_address);
-
-    server_health_check(&client).await;
 
     (client, srv_address)
 }
