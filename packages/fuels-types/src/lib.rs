@@ -6,8 +6,10 @@
 use serde::{Deserialize, Serialize};
 use strum_macros::ToString;
 
+pub mod constants;
 pub mod errors;
 pub mod param_types;
+pub mod parse_param;
 /// Fuel ABI representation in JSON, originally specified here:
 ///
 /// https://github.com/FuelLabs/fuel-specs/blob/master/specs/protocol/abi.md

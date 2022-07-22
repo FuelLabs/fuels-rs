@@ -23,11 +23,9 @@ use fuel_core_interfaces::model::{Coin, CoinStatus};
 use portpicker::{is_free, pick_unused_port};
 
 #[cfg(not(feature = "fuel-core-lib"))]
-use serde_json::Value;
-
-#[cfg(not(feature = "fuel-core-lib"))]
 use crate::node::spawn_fuel_service;
 
+use fuel_gql_client::fuel_tx::ConsensusParameters;
 use fuel_gql_client::{
     client::FuelClient,
     fuel_tx::{Address, Bytes32, UtxoId},
@@ -131,6 +129,7 @@ pub fn setup_single_asset_coins(
 pub async fn setup_test_client(
     coins: Vec<(UtxoId, Coin)>,
     node_config: Option<Config>,
+    consensus_parameters_config: Option<ConsensusParameters>,
 ) -> (FuelClient, SocketAddr) {
     let coin_configs = coins
         .into_iter()
@@ -146,12 +145,14 @@ pub async fn setup_test_client(
         .collect();
 
     // Setup node config with genesis coins and utxo_validation enabled
+
     let config = Config {
         chain_conf: ChainConfig {
             initial_state: Some(StateConfig {
                 coins: Some(coin_configs),
                 ..StateConfig::default()
             }),
+            transaction_parameters: consensus_parameters_config.unwrap_or_default(),
             ..ChainConfig::local_testnet()
         },
         database_type: DbType::InMemory,
@@ -169,35 +170,15 @@ pub async fn setup_test_client(
 pub async fn setup_test_client(
     coins: Vec<(UtxoId, Coin)>,
     node_config: Option<Config>,
+    consensus_parameters_config: Option<ConsensusParameters>,
 ) -> (FuelClient, SocketAddr) {
-    let coin_configs: Vec<Value> = coins
-        .into_iter()
-        .map(|(utxo_id, coin)| {
-            serde_json::to_value(&CoinConfig {
-                tx_id: Some(*utxo_id.tx_id()),
-                output_index: Some(utxo_id.output_index() as u64),
-                block_created: Some(coin.block_created),
-                maturity: Some(coin.maturity),
-                owner: coin.owner,
-                amount: coin.amount,
-                asset_id: coin.asset_id,
-            })
-            .unwrap()
-        })
-        .collect();
-
-    let result = serde_json::to_string(&coin_configs).expect("Failed to stringify coins vector");
-
-    let config_with_coins: Value =
-        serde_json::from_str(result.as_str()).expect("Failed to build config_with_coins JSON");
-
     let srv_address = match node_config {
         Some(config) if config.addr.port() != 0 && is_free(config.addr.port()) => config.addr,
         Some(config) if !is_free(config.addr.port()) => panic!("Error: Address already in use"),
         _ => get_socket_address(),
     };
 
-    spawn_fuel_service(config_with_coins, srv_address.port());
+    spawn_fuel_service(coins, consensus_parameters_config, srv_address.port());
 
     let client = FuelClient::from(srv_address);
 
@@ -215,6 +196,9 @@ fn get_socket_address() -> SocketAddr {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fuels_contract::contract::Contract;
+    use fuels_core::parameters::{StorageConfiguration, TxParameters};
+    use fuels_signers::provider::Provider;
     use fuels_signers::{LocalWallet, Signer};
     use std::net::Ipv4Addr;
 
@@ -290,9 +274,42 @@ mod tests {
             ..Config::local_node()
         };
 
-        let wallets = setup_test_client(coins, Some(config)).await;
+        let wallets = setup_test_client(coins, Some(config), None).await;
 
         assert_eq!(wallets.1, socket);
         Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_setup_test_client_consensus_parameters_config() {
+        let consensus_parameters_config = ConsensusParameters::DEFAULT.with_max_gas_per_tx(1);
+
+        let mut wallet = LocalWallet::new_random(None);
+
+        let coins: Vec<(UtxoId, Coin)> = setup_single_asset_coins(
+            wallet.address(),
+            Default::default(),
+            DEFAULT_NUM_COINS,
+            DEFAULT_COIN_AMOUNT,
+        );
+
+        let (fuel_client, _) =
+            setup_test_client(coins, None, Some(consensus_parameters_config)).await;
+        let provider = Provider::new(fuel_client);
+        wallet.set_provider(provider.clone());
+
+        let result = Contract::deploy(
+            "../fuels/tests/test_projects/contract_output_test/out/debug/contract_output_test.bin",
+            &wallet,
+            TxParameters::default(),
+            StorageConfiguration::default(),
+        )
+        .await;
+
+        let expected = result.expect_err("should fail");
+
+        let error_string = "Validation error: TransactionGasLimit";
+
+        assert!(expected.to_string().contains(error_string));
     }
 }

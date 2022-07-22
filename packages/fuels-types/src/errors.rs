@@ -1,7 +1,7 @@
 use core::fmt;
 use core::str::Utf8Error;
 pub type Result<T> = core::result::Result<T, Error>;
-use fuel_tx::Receipt;
+use fuel_tx::{Receipt, ValidationError};
 use strum::ParseError;
 use thiserror::Error;
 
@@ -61,6 +61,8 @@ pub enum Error {
     ProviderError(String),
     #[error("Instantiation error: {0}")]
     InstantiationError(String),
+    #[error("Validation error: {0}")]
+    ValidationError(#[from] ValidationError),
 }
 
 impl From<CodecError> for Error {

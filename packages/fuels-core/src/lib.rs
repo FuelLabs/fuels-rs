@@ -1,5 +1,4 @@
 use crate::abi_decoder::ABIDecoder;
-use crate::constants::WORD_SIZE;
 use core::fmt;
 use fuel_types::bytes::padded_len;
 use fuels_types::{
@@ -12,7 +11,6 @@ pub mod abi_decoder;
 pub mod abi_encoder;
 pub mod code_gen;
 pub mod constants;
-mod encoding_utils;
 pub mod json_abi;
 pub mod parameters;
 pub mod rustfmt;
@@ -395,9 +393,8 @@ impl Tokenizable for fuel_tx::AssetId {
     }
 }
 
-/// `abigen` requires `Parameterized` to construct nested types. It is
-/// also used by `try_from_bytes` to facilitate the instantiation of custom
-/// types from bytes.
+/// `abigen` requires `Parameterized` to construct nested types. It is also used by `try_from_bytes`
+/// to facilitate the instantiation of custom types from bytes.
 pub trait Parameterize {
     fn param_type() -> ParamType;
 }
@@ -495,9 +492,9 @@ pub fn pad_string(s: &str) -> Vec<u8> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{try_from_bytes, WORD_SIZE};
+    use crate::try_from_bytes;
     use fuel_types::{Address, AssetId, ContractId};
-    use fuels_types::errors::Error;
+    use fuels_types::{constants::WORD_SIZE, errors::Error};
 
     #[test]
     fn can_convert_bytes_into_tuple() -> Result<(), Error> {

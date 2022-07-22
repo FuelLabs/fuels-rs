@@ -136,6 +136,14 @@ impl Abigen {
 
                     impl #name {
                         #contract_functions
+
+                        pub fn _get_contract_id(&self) -> ContractId {
+                            self.contract_id
+                        }
+
+                        pub fn _get_wallet(&self) -> LocalWallet {
+                            self.wallet.clone()
+                        }
                     }
 
                     pub struct #builder_name {
@@ -235,11 +243,7 @@ impl Abigen {
         if split.len() > 2 {
             return false;
         }
-
-        if split[1] == CONTRACT_ID_SWAY_NATIVE_TYPE || split[1] == ADDRESS_SWAY_NATIVE_TYPE {
-            return true;
-        }
-        false
+        split[1] == CONTRACT_ID_SWAY_NATIVE_TYPE || split[1] == ADDRESS_SWAY_NATIVE_TYPE
     }
 
     fn abi_enums(&self) -> Result<TokenStream, Error> {
