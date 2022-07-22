@@ -191,7 +191,7 @@ mod tests {
 
     #[tokio::test]
     #[allow(unused_variables)]
-    async fn setup_wallet_custom_assets() -> Result<(), Box<dyn std::error::Error>> {
+    async fn setup_wallet_custom_assets() -> Result<(), rand::Error> {
         // ANCHOR: custom_assets_wallet
         use fuels::prelude::*;
         use rand::Fill;
@@ -199,25 +199,29 @@ mod tests {
         let mut wallet = LocalWallet::new_random(None);
         let mut rng = rand::thread_rng();
 
-        let asset_id_base = BASE_ASSET_ID;
-        let coins_per_asset_base = 2;
-        let amount_per_coin_base = 4;
+        let asset_base = AssetsConfig {
+            id: BASE_ASSET_ID,
+            num_coins: 2,
+            coin_amount: 4,
+        };
 
         let mut asset_id_1 = AssetId::zeroed();
         asset_id_1.try_fill(&mut rng)?;
-        let coins_per_asset_1 = 6;
-        let amount_per_coin_1 = 8;
+        let asset_1 = AssetsConfig {
+            id: asset_id_1,
+            num_coins: 6,
+            coin_amount: 8,
+        };
 
         let mut asset_id_2 = AssetId::zeroed();
         asset_id_2.try_fill(&mut rng)?;
-        let coins_per_asset_2 = 10;
-        let amount_per_coin_2 = 12;
+        let asset_2 = AssetsConfig {
+            id: asset_id_2,
+            num_coins: 10,
+            coin_amount: 12,
+        };
 
-        let assets = &[
-            (asset_id_base, coins_per_asset_base, amount_per_coin_base),
-            (asset_id_1, coins_per_asset_1, amount_per_coin_1),
-            (asset_id_2, coins_per_asset_2, amount_per_coin_2),
-        ];
+        let assets = vec![asset_base, asset_1, asset_2];
 
         let coins = setup_custom_assets_coins(wallet.address(), assets);
         let (provider, _socket_addr) = setup_test_provider(coins.clone(), None).await;
