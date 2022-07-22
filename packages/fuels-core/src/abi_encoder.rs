@@ -1,28 +1,12 @@
 use crate::{
-    pad_string, pad_u16, pad_u32, pad_u8, Bits256, ByteArray, EnumSelector, EnumVariants,
-    ParamType, Token,
+    pad_string, pad_u16, pad_u32, pad_u8, Bits256, EnumSelector, EnumVariants, ParamType, Token,
 };
 use fuels_types::{constants::WORD_SIZE, errors::CodecError};
-use sha2::{Digest, Sha256};
-
 pub struct ABIEncoder {
     buffer: Vec<u8>,
 }
 
 impl ABIEncoder {
-    /// Hashes the function selector using SHA256 and returns the first 4 bytes.
-    /// The function selector has to have been already encoded following the ABI specs defined
-    /// https://github.com/FuelLabs/fuel-specs/blob/master/specs/protocol/abi.md
-    pub fn hash_encoded_function_selector(fn_selector: &str) -> ByteArray {
-        let signature = fn_selector.as_bytes();
-        let mut hasher = Sha256::new();
-        hasher.update(signature);
-        let result = hasher.finalize();
-        let mut output = ByteArray::default();
-        (&mut output[4..]).copy_from_slice(&result[..4]);
-        output
-    }
-
     /// Encodes `Token`s in `args` following the ABI specs defined
     /// https://github.com/FuelLabs/fuel-specs/blob/master/specs/protocol/abi.md
     pub fn encode(args: &[Token]) -> Result<Vec<u8>, CodecError> {
@@ -161,17 +145,19 @@ impl ABIEncoder {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::utils::first_four_bytes_of_sha256_hash;
     use fuels_types::{
         errors::Error,
         param_types::{EnumVariants, ParamType},
     };
+    use sha2::{Digest, Sha256};
     use std::slice;
 
     #[test]
     fn encode_function_signature() {
         let sway_fn = "entry_one(u64)";
 
-        let result = ABIEncoder::hash_encoded_function_selector(sway_fn);
+        let result = first_four_bytes_of_sha256_hash(sway_fn);
 
         println!(
             "Encoded function selector for ({}): {:#0x?}",
@@ -204,7 +190,7 @@ mod tests {
 
         let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0xb7, 0x9e, 0xf7, 0x43];
 
-        let encoded_function_selector = ABIEncoder::hash_encoded_function_selector(sway_fn);
+        let encoded_function_selector = first_four_bytes_of_sha256_hash(sway_fn);
 
         let encoded = ABIEncoder::encode(&args)?;
 
@@ -241,7 +227,7 @@ mod tests {
 
         let expected_fn_selector = [0x0, 0x0, 0x0, 0x0, 0xa7, 0x07, 0xb0, 0x8e];
 
-        let encoded_function_selector = ABIEncoder::hash_encoded_function_selector(sway_fn);
+        let encoded_function_selector = first_four_bytes_of_sha256_hash(sway_fn);
         let encoded = ABIEncoder::encode(&args)?;
 
         println!("Encoded ABI for ({}): {:#0x?}", sway_fn, encoded);
@@ -274,7 +260,7 @@ mod tests {
 
         let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0x0c, 0x36, 0xcb, 0x9c];
 
-        let encoded_function_selector = ABIEncoder::hash_encoded_function_selector(sway_fn);
+        let encoded_function_selector = first_four_bytes_of_sha256_hash(sway_fn);
 
         let encoded = ABIEncoder::encode(&args)?;
 
@@ -308,7 +294,7 @@ mod tests {
 
         let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0x66, 0x8f, 0xff, 0x58];
 
-        let encoded_function_selector = ABIEncoder::hash_encoded_function_selector(sway_fn);
+        let encoded_function_selector = first_four_bytes_of_sha256_hash(sway_fn);
 
         let encoded = ABIEncoder::encode(&args)?;
 
@@ -345,7 +331,7 @@ mod tests {
 
         let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0xf5, 0x40, 0x73, 0x2b];
 
-        let encoded_function_selector = ABIEncoder::hash_encoded_function_selector(sway_fn);
+        let encoded_function_selector = first_four_bytes_of_sha256_hash(sway_fn);
 
         let encoded = ABIEncoder::encode(&args)?;
 
@@ -379,7 +365,7 @@ mod tests {
 
         let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0x2e, 0xe3, 0xce, 0x1f];
 
-        let encoded_function_selector = ABIEncoder::hash_encoded_function_selector(sway_fn);
+        let encoded_function_selector = first_four_bytes_of_sha256_hash(sway_fn);
 
         let encoded = ABIEncoder::encode(&args)?;
 
@@ -423,7 +409,7 @@ mod tests {
 
         let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0x01, 0x49, 0x42, 0x96];
 
-        let encoded_function_selector = ABIEncoder::hash_encoded_function_selector(sway_fn);
+        let encoded_function_selector = first_four_bytes_of_sha256_hash(sway_fn);
 
         let encoded = ABIEncoder::encode(&args)?;
 
@@ -467,7 +453,7 @@ mod tests {
 
         let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0x2c, 0x5a, 0x10, 0x2e];
 
-        let encoded_function_selector = ABIEncoder::hash_encoded_function_selector(sway_fn);
+        let encoded_function_selector = first_four_bytes_of_sha256_hash(sway_fn);
 
         let encoded = ABIEncoder::encode(&args)?;
 
@@ -503,7 +489,7 @@ mod tests {
 
         let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0xd5, 0x6e, 0x76, 0x51];
 
-        let encoded_function_selector = ABIEncoder::hash_encoded_function_selector(sway_fn);
+        let encoded_function_selector = first_four_bytes_of_sha256_hash(sway_fn);
 
         let encoded = ABIEncoder::encode(&args)?;
 
@@ -550,7 +536,7 @@ mod tests {
 
         let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0xa8, 0x1e, 0x8d, 0xd7];
 
-        let encoded_function_selector = ABIEncoder::hash_encoded_function_selector(sway_fn);
+        let encoded_function_selector = first_four_bytes_of_sha256_hash(sway_fn);
 
         let encoded = ABIEncoder::encode(&args)?;
 
@@ -602,7 +588,7 @@ mod tests {
 
         let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0x35, 0x5c, 0xa6, 0xfa];
 
-        let encoded_function_selector = ABIEncoder::hash_encoded_function_selector(sway_fn);
+        let encoded_function_selector = first_four_bytes_of_sha256_hash(sway_fn);
 
         let encoded = ABIEncoder::encode(&args)?;
 
@@ -743,7 +729,7 @@ mod tests {
 
         let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0xea, 0x0a, 0xfd, 0x23];
 
-        let encoded_function_selector = ABIEncoder::hash_encoded_function_selector(sway_fn);
+        let encoded_function_selector = first_four_bytes_of_sha256_hash(sway_fn);
 
         let encoded = ABIEncoder::encode(&args)?;
 
@@ -835,7 +821,7 @@ mod tests {
 
         let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0x10, 0x93, 0xb2, 0x12];
 
-        let encoded_function_selector = ABIEncoder::hash_encoded_function_selector(sway_fn);
+        let encoded_function_selector = first_four_bytes_of_sha256_hash(sway_fn);
 
         let encoded = ABIEncoder::encode(&args)?;
 

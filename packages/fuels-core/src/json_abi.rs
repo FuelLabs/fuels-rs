@@ -1,5 +1,4 @@
-use crate::parse::*;
-use crate::utils::has_array_format;
+use crate::utils::{first_four_bytes_of_sha256_hash, has_array_format};
 use crate::Token;
 use crate::{abi_decoder::ABIDecoder, abi_encoder::ABIEncoder};
 use fuels_types::{errors::Error, param_types::ParamType, JsonABI, Property};
@@ -74,16 +73,16 @@ impl ABIParser {
         let fn_selector = self.build_fn_selector(fn_name, &entry.inputs)?;
 
         // Update the fn_selector field with the hash of the previously encoded function selector
-        self.fn_selector = Some(ABIEncoder::hash_encoded_function_selector(&fn_selector).to_vec());
+        self.fn_selector = Some(first_four_bytes_of_sha256_hash(&fn_selector).to_vec());
 
-        let params: Vec<_> = entry
+        let params_and_values = entry
             .inputs
             .iter()
-            .map(|param| parse_param_type_from_property(param).unwrap())
-            .zip(values.iter().map(|v| v as &str))
-            .collect();
+            .zip(values)
+            .map(|(prop, val)| Ok((ParamType::try_from(prop)?, val.as_str())))
+            .collect::<Result<Vec<_>, Error>>()?;
 
-        let tokens = self.parse_tokens(&params)?;
+        let tokens = self.parse_tokens(&params_and_values)?;
 
         Ok(hex::encode(ABIEncoder::encode(&tokens)?))
     }
@@ -158,7 +157,7 @@ impl ABIParser {
                 type_field: pair[0].clone(),
                 components: None,
             };
-            let p = parse_param_type_from_property(&prop)?;
+            let p = ParamType::try_from(&prop)?;
 
             let t: (ParamType, &str) = (p, &pair[1]);
             param_type_pairs.push(t);
@@ -547,7 +546,7 @@ impl ABIParser {
             .unwrap()
             .outputs
             .iter()
-            .map(parse_param_type_from_property)
+            .map(ParamType::try_from)
             .collect();
 
         match params_result {
@@ -1750,7 +1749,7 @@ mod tests {
             ]),
         };
 
-        if let ParamType::Tuple(tuple_params) = parse_tuple_param(&params)? {
+        if let ParamType::Tuple(tuple_params) = ParamType::parse_tuple_param(&params)? {
             let error_message = abi
                 .tokenize_tuple("0, [0,0,0])", &tuple_params)
                 .unwrap_err()
@@ -1784,7 +1783,7 @@ mod tests {
             ]),
         };
 
-        if let ParamType::Tuple(tuple_params) = parse_tuple_param(&params)? {
+        if let ParamType::Tuple(tuple_params) = ParamType::parse_tuple_param(&params)? {
             let error_message = abi
                 .tokenize_tuple("((0, [0,0,0])", &tuple_params)
                 .unwrap_err()
@@ -1818,7 +1817,7 @@ mod tests {
             ]),
         };
 
-        if let ParamType::Tuple(tuple_params) = parse_tuple_param(&params)? {
+        if let ParamType::Tuple(tuple_params) = ParamType::parse_tuple_param(&params)? {
             let error_message = abi
                 .tokenize_tuple("(0, [0,0,0]))", &tuple_params)
                 .unwrap_err()
@@ -1852,7 +1851,7 @@ mod tests {
             ]),
         };
 
-        if let ParamType::Tuple(tuple_params) = parse_tuple_param(&params)? {
+        if let ParamType::Tuple(tuple_params) = ParamType::parse_tuple_param(&params)? {
             let error_message = abi
                 .tokenize_tuple("(0, \"[0,0,0])", &tuple_params)
                 .unwrap_err()
@@ -1886,7 +1885,7 @@ mod tests {
             ]),
         };
 
-        if let ParamType::Tuple(tuple_params) = parse_tuple_param(&params)? {
+        if let ParamType::Tuple(tuple_params) = ParamType::parse_tuple_param(&params)? {
             let error_message = abi
                 .tokenize_tuple("(0, [0,0,0], 0, 0)", &tuple_params)
                 .unwrap_err()
@@ -1994,7 +1993,7 @@ mod tests {
             ]),
         };
 
-        if let ParamType::Struct(struct_params) = parse_custom_type_param(&params)? {
+        if let ParamType::Struct(struct_params) = ParamType::parse_custom_type_param(&params)? {
             let error_message = abi
                 .tokenize_struct("0, [0,0,0])", &struct_params)
                 .unwrap_err()
@@ -2028,7 +2027,7 @@ mod tests {
             ]),
         };
 
-        if let ParamType::Struct(struct_params) = parse_custom_type_param(&params)? {
+        if let ParamType::Struct(struct_params) = ParamType::parse_custom_type_param(&params)? {
             let error_message = abi
                 .tokenize_struct("((0, [0,0,0])", &struct_params)
                 .unwrap_err()
@@ -2062,7 +2061,7 @@ mod tests {
             ]),
         };
 
-        if let ParamType::Struct(struct_params) = parse_custom_type_param(&params)? {
+        if let ParamType::Struct(struct_params) = ParamType::parse_custom_type_param(&params)? {
             let error_message = abi
                 .tokenize_struct("(0, [0,0,0]))", &struct_params)
                 .unwrap_err()
@@ -2096,7 +2095,7 @@ mod tests {
             ]),
         };
 
-        if let ParamType::Struct(struct_params) = parse_custom_type_param(&params)? {
+        if let ParamType::Struct(struct_params) = ParamType::parse_custom_type_param(&params)? {
             let error_message = abi
                 .tokenize_struct("(0, \"[0,0,0])", &struct_params)
                 .unwrap_err()
@@ -2130,7 +2129,7 @@ mod tests {
             ]),
         };
 
-        if let ParamType::Struct(struct_params) = parse_custom_type_param(&params)? {
+        if let ParamType::Struct(struct_params) = ParamType::parse_custom_type_param(&params)? {
             let error_message = abi
                 .tokenize_struct("(0, [0,0,0], 0, 0)", &struct_params)
                 .unwrap_err()
