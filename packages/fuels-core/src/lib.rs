@@ -13,7 +13,6 @@ pub mod code_gen;
 pub mod constants;
 pub mod json_abi;
 pub mod parameters;
-pub mod parse;
 pub mod rustfmt;
 pub mod source;
 pub mod types;
@@ -394,9 +393,8 @@ impl Tokenizable for fuel_tx::AssetId {
     }
 }
 
-/// `abigen` requires `Parameterized` to construct nested types. It is
-/// also used by `try_from_bytes` to facilitate the instantiation of custom
-/// types from bytes.
+/// `abigen` requires `Parameterized` to construct nested types. It is also used by `try_from_bytes`
+/// to facilitate the instantiation of custom types from bytes.
 pub trait Parameterize {
     fn param_type() -> ParamType;
 }
