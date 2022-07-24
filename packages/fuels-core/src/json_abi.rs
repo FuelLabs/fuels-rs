@@ -23,7 +23,7 @@ impl ABIParser {
     pub fn new() -> Self {
         ABIParser {
             fn_selector: None,
-            tokenizer: Tokenizer {},
+            tokenizer: Tokenizer::new(),
         }
     }
 

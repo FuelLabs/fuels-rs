@@ -4,13 +4,8 @@ use fuels_types::param_types::ParamType;
 use fuels_types::utils::has_array_format;
 use hex::FromHex;
 
+#[derive(Default)]
 pub struct Tokenizer {}
-
-impl Default for Tokenizer {
-    fn default() -> Self {
-        Self {}
-    }
-}
 
 impl Tokenizer {
     pub fn new() -> Self {
