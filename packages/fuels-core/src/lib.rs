@@ -15,6 +15,7 @@ pub mod json_abi;
 pub mod parameters;
 pub mod rustfmt;
 pub mod source;
+pub mod tokenizer;
 pub mod types;
 pub mod utils;
 
