@@ -7,3 +7,5 @@ Here are the main ways of creating a `Bech32Address`, but note that the same app
 ```rust,ignore
 {{#include ../../../examples/types/src/lib.rs:bech32}}
 ```
+
+> **Note:** when creating a `Bech32Address` from `Address` or `Bech32ContractId` from `ContractId` the HRP (Human-Readable Part) is set to **"fuel"** per default.
