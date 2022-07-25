@@ -1,8 +1,7 @@
 use fuels_core::code_gen::abigen::Abigen;
 use fuels_core::json_abi::ABIParser;
-use fuels_core::parse::parse_param_type_from_property;
+use fuels_types::errors::Error;
 use fuels_types::{param_types::ParamType, Property};
-
 use std::fs;
 use std::path::PathBuf;
 use structopt::StructOpt;
@@ -141,10 +140,10 @@ fn encode_input(path: &str, function_name: &str, values: &[String]) -> anyhow::R
 fn decode_params(types: &[String], data: &str) -> anyhow::Result<String> {
     let abi_coder = ABIParser::new();
 
-    let types: Result<Vec<ParamType>, _> = types
+    let types: Result<Vec<ParamType>, Error> = types
         .iter()
         .map(|s| {
-            parse_param_type_from_property(&Property {
+            ParamType::try_from(&Property {
                 name: "".into(),
                 type_field: s.to_owned(),
                 components: None,

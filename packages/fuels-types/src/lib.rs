@@ -11,6 +11,7 @@ pub mod constants;
 pub mod errors;
 
 pub mod param_types;
+pub mod parse_param;
 
 /// Fuel ABI representation in JSON, originally specified here:
 ///
