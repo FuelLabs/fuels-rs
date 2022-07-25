@@ -27,6 +27,7 @@ pub type ByteArray = [u8; 8];
 pub type Selector = ByteArray;
 pub type Bits256 = [u8; 32];
 pub type EnumSelector = (u8, Token, EnumVariants);
+pub type StringToken = (String, usize);
 
 // Sway types
 #[derive(Debug, Clone, PartialEq, EnumString)]
@@ -43,7 +44,7 @@ pub enum Token {
     Byte(u8),
     B256(Bits256),
     Array(Vec<Token>),
-    String(String),
+    String(StringToken),
     Struct(Vec<Token>),
     #[strum(disabled)]
     Enum(Box<EnumSelector>),
@@ -104,10 +105,25 @@ impl Tokenizable for bool {
     }
 }
 
-impl Tokenizable for String {
+impl Tokenizable for StringToken {
     fn from_token(token: Token) -> Result<Self, Error> {
         match token {
             Token::String(data) => Ok(data),
+            other => Err(Error::InstantiationError(format!(
+                "Expected `StringToken`, got {:?}",
+                other
+            ))),
+        }
+    }
+    fn into_token(self) -> Token {
+        Token::String(self)
+    }
+}
+
+impl Tokenizable for String {
+    fn from_token(token: Token) -> Result<Self, Error> {
+        match token {
+            Token::String(data) => Ok(data.0),
             other => Err(Error::InstantiationError(format!(
                 "Expected `String`, got {:?}",
                 other
@@ -115,7 +131,8 @@ impl Tokenizable for String {
         }
     }
     fn into_token(self) -> Token {
-        Token::String(self)
+        let len = self.len();
+        Token::String((self, len))
     }
 }
 

@@ -119,7 +119,7 @@ impl ABIDecoder {
         let decoded = str::from_utf8(encoded_str)?;
 
         let result = DecodeResult {
-            token: Token::String(decoded.to_string()),
+            token: Token::String((decoded.to_string(), *length)),
             bytes_read: padded_len(encoded_str),
         };
 
@@ -383,13 +383,14 @@ mod tests {
         let decoded = ABIDecoder::decode(&types, &data)?;
 
         let expected = vec![
-            Token::String("This is a full sentence".into()),
-            Token::String("Hello".into()),
+            Token::String(("This is a full sentence".into(), 23)),
+            Token::String(("Hello".into(), 5)),
         ];
 
         assert_eq!(decoded, expected);
         Ok(())
     }
+
     #[test]
     fn decode_array() -> Result<(), Error> {
         // Create a parameter type for u8[2].
@@ -598,7 +599,7 @@ mod tests {
             0xf3, 0x1e, 0x93, 0xb,
         ]);
 
-        let s = Token::String("This is a full sentence".into());
+        let s = Token::String(("This is a full sentence".into(), 23));
 
         let expected: Vec<Token> = vec![foo, u8_arr, b256, s];
 

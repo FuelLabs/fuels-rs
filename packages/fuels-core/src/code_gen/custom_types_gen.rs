@@ -92,6 +92,11 @@ pub fn expand_custom_struct(prop: &Property) -> Result<TokenStream, Error> {
 
                 // Token creation and insertion
                 match param_type {
+                    ParamType::String(len) => {
+                        struct_fields_tokens.push(
+                            quote! {tokens.push(Token::#param_type_string_ident((self.#field_name, #len)))},
+                        );
+                    }
                     ParamType::Array(_t, _s) => {
                         struct_fields_tokens.push(
                             quote! {tokens.push(Token::#param_type_string_ident(vec![self.#field_name.into_token()]))},
@@ -281,6 +286,11 @@ pub fn expand_custom_enum(enum_name: &str, prop: &Property) -> Result<TokenStrea
 
                 // Token creation
                 match param_type {
+                    ParamType::String(len) => {
+                        enum_selector_builder.push(quote! {
+                            #enum_ident::#variant_name(value) => (#dis, Token::#param_type_string_ident((value, #len)))
+                        });
+                    }
                     ParamType::Array(_t, _s) => {
                         enum_selector_builder.push(quote! {
                             #enum_ident::#variant_name(value) => (#dis, Token::#param_type_string_ident(vec![value.into_token()]))

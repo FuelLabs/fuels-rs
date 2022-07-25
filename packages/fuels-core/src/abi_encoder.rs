@@ -1,5 +1,6 @@
 use crate::{
-    pad_string, pad_u16, pad_u32, pad_u8, Bits256, EnumSelector, EnumVariants, ParamType, Token,
+    pad_string, pad_u16, pad_u32, pad_u8, Bits256, EnumSelector, EnumVariants, ParamType,
+    StringToken, Token,
 };
 use fuels_types::{constants::WORD_SIZE, errors::CodecError};
 pub struct ABIEncoder {
@@ -65,8 +66,19 @@ impl ABIEncoder {
         self.encode_tokens(arg_array)
     }
 
-    fn encode_string(&mut self, arg_string: &str) {
-        self.buffer.extend(pad_string(arg_string));
+    fn encode_string(&mut self, arg_string: &StringToken) {
+        if !arg_string.0.is_ascii() {
+            panic!("String parameters can only have ascii values");
+        }
+
+        if arg_string.0.len() != arg_string.1 {
+            panic!(
+                "String parameter has len {}, but should have {}",
+                arg_string.0.len(),
+                arg_string.1
+            );
+        }
+        self.buffer.extend(pad_string(&arg_string.0));
     }
 
     fn encode_b256(&mut self, arg_bits256: &Bits256) {
@@ -480,7 +492,7 @@ mod tests {
 
         let sway_fn = "takes_string(str[23])";
 
-        let args: Vec<Token> = vec![Token::String("This is a full sentence".into())];
+        let args: Vec<Token> = vec![Token::String(("This is a full sentence".into(), 23))];
 
         let expected_encoded_abi = [
             0x54, 0x68, 0x69, 0x73, 0x20, 0x69, 0x73, 0x20, 0x61, 0x20, 0x66, 0x75, 0x6c, 0x6c,
@@ -632,7 +644,7 @@ mod tests {
         }
          */
         let deeper_enum_variants = EnumVariants::new(vec![ParamType::Bool, ParamType::String(10)])?;
-        let deeper_enum_token = Token::String("0123456789".to_owned());
+        let deeper_enum_token = Token::String(("0123456789".to_owned(), 10));
         let str_enc = vec![
             b'0', b'1', b'2', b'3', b'4', b'5', b'6', b'7', b'8', b'9', 0x0, 0x0, 0x0, 0x0, 0x0,
             0x0,
@@ -799,7 +811,7 @@ mod tests {
 
         let b256 = Token::B256(hasher.finalize().into());
 
-        let s = Token::String("This is a full sentence".into());
+        let s = Token::String(("This is a full sentence".into(), 23));
 
         let args: Vec<Token> = vec![foo, u8_arr, b256, s];
 
