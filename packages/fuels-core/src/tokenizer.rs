@@ -178,7 +178,7 @@ impl Tokenizer {
             return Ok(Token::Array(vec![]));
         }
 
-        //for more details about this algorithm, refer to the tokenize_struct method
+        // For more details about this algorithm, refer to the tokenize_struct method.
         let mut result = vec![];
         let mut nested = 0isize;
         let mut ignore = false;
