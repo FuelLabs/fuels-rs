@@ -50,7 +50,7 @@ mod wallets_config;
 pub use node::*;
 
 pub use chains::*;
-use fuels_types::bech32::Bech32;
+use fuels_types::bech32::Bech32Address;
 #[cfg(feature = "fuels-signers")]
 pub use signers::*;
 pub use wallets_config::*;
@@ -61,7 +61,7 @@ pub use wallets_config::*;
 /// pre-existing coins, with `num_asset` different asset ids. Note that one of the assets is the
 /// base asset to pay for gas.
 pub fn setup_multiple_assets_coins(
-    owner: &Bech32,
+    owner: &Bech32Address,
     num_asset: u64,
     coins_per_asset: u64,
     amount_per_coin: u64,
@@ -96,7 +96,7 @@ pub fn setup_multiple_assets_coins(
 /// The output of this function can be used with `setup_test_client` to get a client with some
 /// pre-existing coins, but with only one asset ID.
 pub fn setup_single_asset_coins(
-    owner: &Bech32,
+    owner: &Bech32Address,
     asset_id: AssetId,
     num_coins: u64,
     amount_per_coin: u64,
@@ -206,9 +206,9 @@ mod tests {
     #[tokio::test]
     async fn test_setup_single_asset_coins() -> Result<(), rand::Error> {
         let mut rng = rand::thread_rng();
-        let mut addr_data = [0u8; 32];
+        let mut addr_data = Bytes32::new([0u8; 32]);
         addr_data.try_fill(&mut rng)?;
-        let address = Bech32::address("test", addr_data);
+        let address = Bech32Address::new("test", addr_data);
 
         let mut asset_id = AssetId::zeroed();
         asset_id.try_fill(&mut rng)?;
@@ -230,9 +230,9 @@ mod tests {
     #[tokio::test]
     async fn test_setup_multiple_assets_coins() -> Result<(), rand::Error> {
         let mut rng = rand::thread_rng();
-        let mut addr_data = [0u8; 32];
+        let mut addr_data = Bytes32::new([0u8; 32]);
         addr_data.try_fill(&mut rng)?;
-        let address = Bech32::address("test", addr_data);
+        let address = Bech32Address::new("test", addr_data);
 
         let number_of_assets = 7;
         let coins_per_asset = 10;

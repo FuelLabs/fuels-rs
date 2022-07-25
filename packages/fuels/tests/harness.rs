@@ -2294,7 +2294,7 @@ async fn test_contract_id_and_wallet_getters() {
 
     let wallet = launch_provider_and_get_wallet().await;
     let contract_id =
-        String::from("0000000000000000000000000000000000000000000000000000000000000042");
+        String::from("fuel1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqsx2mt2");
 
     let contract_instance = SimpleContractBuilder::new(contract_id.clone(), wallet.clone()).build();
 

@@ -315,7 +315,7 @@ impl Script {
 #[cfg(test)]
 mod test {
     use fuels_core::parameters::CallParameters;
-    use fuels_types::bech32::Bech32;
+    use fuels_types::bech32::Bech32ContractId;
 
     use super::*;
 
@@ -326,9 +326,9 @@ mod test {
         const NUM_CALLS: usize = 3;
 
         let contract_ids = vec![
-            Bech32::contract_id("test", [1u8; 32]),
-            Bech32::contract_id("test", [2u8; 32]),
-            Bech32::contract_id("test", [3u8; 32]),
+            Bech32ContractId::new("test", Bytes32::new([1u8; 32])),
+            Bech32ContractId::new("test", Bytes32::new([1u8; 32])),
+            Bech32ContractId::new("test", Bytes32::new([1u8; 32])),
         ];
 
         let asset_ids = vec![

@@ -22,7 +22,7 @@ use fuels_core::{
     Selector, Token, Tokenizable,
 };
 use fuels_signers::{provider::Provider, LocalWallet, Signer};
-use fuels_types::bech32::Bech32;
+use fuels_types::bech32::Bech32ContractId;
 use fuels_types::{
     errors::Error,
     param_types::{ParamType, ReturnLocation},
@@ -125,7 +125,7 @@ impl Contract {
     /// Note that this needs a wallet because the contract instance needs a wallet for the calls
     pub fn method_hash<D: Tokenizable + Debug>(
         provider: &Provider,
-        contract_id: Bech32,
+        contract_id: Bech32ContractId,
         wallet: &LocalWallet,
         signature: Selector,
         output_param: Option<ParamType>,
@@ -185,7 +185,7 @@ impl Contract {
         wallet: &LocalWallet,
         params: TxParameters,
         storage_configuration: StorageConfiguration,
-    ) -> Result<Bech32, Error> {
+    ) -> Result<Bech32ContractId, Error> {
         let mut compiled_contract =
             Contract::load_sway_contract(binary_filepath, &storage_configuration.storage_path)?;
 
@@ -201,7 +201,7 @@ impl Contract {
         params: TxParameters,
         storage_configuration: StorageConfiguration,
         salt: Salt,
-    ) -> Result<Bech32, Error> {
+    ) -> Result<Bech32ContractId, Error> {
         let mut compiled_contract = Contract::load_sway_contract_with_parameters(
             binary_filepath,
             &storage_configuration.storage_path,
@@ -233,7 +233,7 @@ impl Contract {
         compiled_contract: &CompiledContract,
         wallet: &LocalWallet,
         params: TxParameters,
-    ) -> Result<Bech32, Error> {
+    ) -> Result<Bech32ContractId, Error> {
         let (mut tx, contract_id) =
             Self::contract_deployment_transaction(compiled_contract, wallet, params).await?;
 
@@ -251,7 +251,7 @@ impl Contract {
         )?;
 
         match client.submit(&tx).await {
-            Ok(_) => Ok(Bech32::from(contract_id)),
+            Ok(_) => Ok(Bech32ContractId::from(contract_id)),
             Err(e) => Err(Error::TransactionError(e.to_string())),
         }
     }
@@ -385,13 +385,13 @@ impl Contract {
 #[derive(Debug)]
 /// Contains all data relevant to a single contract call
 pub struct ContractCall {
-    pub contract_id: Bech32,
+    pub contract_id: Bech32ContractId,
     pub encoded_args: Vec<u8>,
     pub encoded_selector: Selector,
     pub call_parameters: CallParameters,
     pub compute_custom_input_offset: bool,
     pub variable_outputs: Option<Vec<Output>>,
-    pub external_contracts: Vec<Bech32>,
+    pub external_contracts: Vec<Bech32ContractId>,
     pub output_param: Option<ParamType>,
 }
 
@@ -453,7 +453,7 @@ where
     /// pairs and set them into the transaction.
     /// Note that this is a builder method, i.e. use it as a chain:
     /// `my_contract_instance.my_method(...).set_contracts(&[another_contract_id]).call()`.
-    pub fn set_contracts(mut self, contract_ids: &[Bech32]) -> Self {
+    pub fn set_contracts(mut self, contract_ids: &[Bech32ContractId]) -> Self {
         self.contract_call.external_contracts = contract_ids.to_vec();
         self
     }

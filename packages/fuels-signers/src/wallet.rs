@@ -11,7 +11,7 @@ use fuel_gql_client::{
     fuel_tx::{AssetId, Input, Output, Receipt, Transaction, UtxoId, Witness},
 };
 use fuels_core::parameters::TxParameters;
-use fuels_types::bech32::{Bech32, FUEL_BECH32_HRP};
+use fuels_types::bech32::{Bech32Address, FUEL_BECH32_HRP};
 use fuels_types::errors::Error;
 use rand::{CryptoRng, Rng};
 use std::{collections::HashMap, fmt, io, path::Path, str::FromStr};
@@ -63,7 +63,7 @@ pub struct Wallet {
     pub(crate) private_key: SecretKey,
     /// The wallet's address. The wallet's address is derived
     /// from the first 32 bytes of SHA-256 hash of the wallet's public key.
-    pub(crate) address: Bech32,
+    pub(crate) address: Bech32Address,
 
     pub(crate) provider: Option<Provider>,
 }
@@ -115,7 +115,7 @@ impl Wallet {
 
         Self {
             private_key,
-            address: Bech32::address(FUEL_BECH32_HRP, *hashed),
+            address: Bech32Address::new(FUEL_BECH32_HRP, hashed),
             provider,
         }
     }
@@ -273,7 +273,7 @@ impl Wallet {
     /// ```
     pub async fn transfer(
         &self,
-        to: &Bech32,
+        to: &Bech32Address,
         amount: u64,
         asset_id: AssetId,
         tx_parameters: TxParameters,
@@ -408,7 +408,7 @@ impl Signer for Wallet {
         Ok(sig)
     }
 
-    fn address(&self) -> &Bech32 {
+    fn address(&self) -> &Bech32Address {
         &self.address
     }
 }

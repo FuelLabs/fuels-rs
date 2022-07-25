@@ -17,7 +17,7 @@ use thiserror::Error;
 
 use crate::wallet::WalletError;
 use fuels_core::parameters::TxParameters;
-use fuels_types::bech32::Bech32;
+use fuels_types::bech32::Bech32Address;
 use fuels_types::errors::Error;
 
 /// An error involving a signature.
@@ -116,7 +116,7 @@ impl Provider {
 
     /// Gets all coins owned by address `from`, *even spent ones*. This returns actual coins
     /// (UTXOs).
-    pub async fn get_coins(&self, from: &Bech32) -> Result<Vec<Coin>, ProviderError> {
+    pub async fn get_coins(&self, from: &Bech32Address) -> Result<Vec<Coin>, ProviderError> {
         let mut coins: Vec<Coin> = vec![];
 
         let mut cursor = None;
@@ -150,7 +150,7 @@ impl Provider {
     /// of coins (UXTOs) is optimized to prevent dust accumulation.
     pub async fn get_spendable_coins(
         &self,
-        from: &Bech32,
+        from: &Bech32Address,
         asset_id: AssetId,
         amount: u64,
     ) -> io::Result<Vec<Coin>> {
@@ -197,7 +197,7 @@ impl Provider {
     /// of the UTXOs.
     pub async fn get_asset_balance(
         &self,
-        address: &Bech32,
+        address: &Bech32Address,
         asset_id: AssetId,
     ) -> Result<u64, ProviderError> {
         self.client
@@ -211,7 +211,7 @@ impl Provider {
     /// for each asset id) and not the UTXOs coins themselves
     pub async fn get_balances(
         &self,
-        address: &Bech32,
+        address: &Bech32Address,
     ) -> Result<HashMap<String, u64>, ProviderError> {
         // We don't paginate results because there are likely at most ~100 different assets in one
         // wallet
@@ -248,7 +248,7 @@ impl Provider {
     // - Get transaction(s) by owner
     pub async fn get_transactions_by_owner(
         &self,
-        owner: &Bech32,
+        owner: &Bech32Address,
         request: PaginationRequest<String>,
     ) -> std::io::Result<PaginatedResult<TransactionResponse, String>> {
         self.client

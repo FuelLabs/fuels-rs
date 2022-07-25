@@ -7,7 +7,7 @@ pub use fuel_crypto;
 use async_trait::async_trait;
 use fuel_crypto::Signature;
 use fuel_gql_client::fuel_tx::Transaction;
-use fuels_types::bech32::Bech32;
+use fuels_types::bech32::Bech32Address;
 use std::error::Error;
 
 /// A wallet instantiated with a locally stored private key
@@ -30,7 +30,7 @@ pub trait Signer: std::fmt::Debug + Send + Sync {
     async fn sign_transaction(&self, message: &mut Transaction) -> Result<Signature, Self::Error>;
 
     /// Returns the signer's Fuel Address
-    fn address(&self) -> &Bech32;
+    fn address(&self) -> &Bech32Address;
 }
 
 #[cfg(test)]

@@ -1,5 +1,7 @@
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
+
     #[cfg(feature = "fuel-core-lib")]
     use fuels::prelude::Config;
     use fuels::prelude::Error;
@@ -57,18 +59,19 @@ mod tests {
     #[tokio::test]
     async fn bech32() -> Result<(), Error> {
         // ANCHOR: bech32
-        use fuels::prelude::Bech32;
+        use fuels::prelude::{Bech32Address, Bech32ContractId};
+        use fuels::tx::Bytes32;
 
-        // New from HRP string and a `[u8; 32]`
+        // New from HRP string and a hash
         let hrp = "fuel";
-        let my_slice = [1u8; 32];
-        let _bech32_address = Bech32::address(hrp, my_slice);
-        let _bech32_contract = Bech32::contract_id(hrp, my_slice);
+        let my_hash = Bytes32::new([1u8; 32]);
+        let _bech32_address = Bech32Address::new(hrp, my_hash);
+        let _bech32_contract = Bech32ContractId::new(hrp, my_hash);
 
         // From a string.
         let string = "fuel1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqsx2mt2";
         let bech32_address =
-            Bech32::address_from_str(string).expect("failed to create Bech32 address from string");
+            Bech32Address::from_str(string).expect("failed to create Bech32 address from string");
         assert_eq!([0u8; 32], *bech32_address.hash());
         // ANCHOR_END: bech32
 
