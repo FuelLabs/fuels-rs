@@ -20,10 +20,10 @@ macro_rules! bech32type {
         }
 
         impl $i {
-            pub fn new(hrp: &str, hash: Bytes32) -> Self {
+            pub fn new<T: Into<Bytes32>>(hrp: &str, hash: T) -> Self {
                 Self {
                     hrp: hrp.to_string(),
-                    hash,
+                    hash: hash.into(),
                 }
             }
 

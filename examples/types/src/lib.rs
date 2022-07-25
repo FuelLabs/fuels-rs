@@ -59,20 +59,27 @@ mod tests {
     #[tokio::test]
     async fn bech32() -> Result<(), Error> {
         // ANCHOR: bech32
-        use fuels::prelude::{Bech32Address, Bech32ContractId};
-        use fuels::tx::Bytes32;
+        use fuels::prelude::Bech32Address;
+        use fuels::tx::{Address, Bytes32};
 
         // New from HRP string and a hash
         let hrp = "fuel";
+        let my_slice = [1u8; 32];
+        let _bech32_address = Bech32Address::new(hrp, my_slice);
+
+        // Note that you can also pass a hash stored as Bytes32 to new:
         let my_hash = Bytes32::new([1u8; 32]);
         let _bech32_address = Bech32Address::new(hrp, my_hash);
-        let _bech32_contract = Bech32ContractId::new(hrp, my_hash);
 
         // From a string.
         let string = "fuel1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqsx2mt2";
         let bech32_address =
             Bech32Address::from_str(string).expect("failed to create Bech32 address from string");
         assert_eq!([0u8; 32], *bech32_address.hash());
+
+        // Convert to Address
+        let _plain_address: Address = bech32_address.into();
+
         // ANCHOR_END: bech32
 
         Ok(())
