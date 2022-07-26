@@ -7,7 +7,6 @@ use std::str::FromStr;
 
 use anyhow::Result;
 use fuel_gql_client::{
-    client::FuelClient,
     fuel_tx::{Contract as FuelContract, Output, Receipt, StorageSlot, Transaction},
     fuel_types::{Address, AssetId, ContractId, Salt},
 };
@@ -153,7 +152,7 @@ impl Contract {
             contract_call,
             tx_parameters,
             wallet: wallet.clone(),
-            fuel_client: provider.client.clone(),
+            provider: provider.clone(),
             datatype: PhantomData,
         })
     }
@@ -236,12 +235,9 @@ impl Contract {
         let (mut tx, contract_id) =
             Self::contract_deployment_transaction(compiled_contract, wallet, params).await?;
 
-        let client = &wallet
-            .get_provider()
-            .expect("Can't get wallet provider")
-            .client;
+        let provider = wallet.get_provider()?;
 
-        let chain_info = client.chain_info().await?;
+        let chain_info = provider.chain_info().await?;
 
         wallet.sign_transaction(&mut tx).await?;
         tx.validate_without_signature(
@@ -249,10 +245,10 @@ impl Contract {
             &chain_info.consensus_parameters.into(),
         )?;
 
-        match client.submit(&tx).await {
-            Ok(_) => Ok(contract_id),
-            Err(e) => Err(Error::TransactionError(e.to_string())),
-        }
+        // TODO: do we want to return receipts?
+        let _receipts = provider.send_transaction(&tx).await?;
+
+        Ok(contract_id)
     }
 
     pub fn load_sway_contract(
@@ -439,7 +435,7 @@ pub struct ContractCallHandler<D> {
     pub contract_call: ContractCall,
     pub tx_parameters: TxParameters,
     pub wallet: LocalWallet,
-    pub fuel_client: FuelClient,
+    pub provider: Provider,
     pub datatype: PhantomData<D>,
 }
 
@@ -506,9 +502,9 @@ where
         let script = self.get_script().await;
 
         let receipts = if simulate {
-            script.simulate(&self.fuel_client).await?
+            script.simulate(&self.provider).await?
         } else {
-            script.call(&self.fuel_client).await?
+            script.call(&self.provider).await?
         };
         tracing::debug!(target: "receipts", "{:?}", receipts);
 
@@ -552,7 +548,7 @@ pub struct MultiContractCallHandler {
     pub contract_calls: Option<Vec<ContractCall>>,
     pub tx_parameters: TxParameters,
     pub wallet: LocalWallet,
-    pub fuel_client: FuelClient,
+    pub provider: Provider,
 }
 
 impl MultiContractCallHandler {
@@ -560,7 +556,7 @@ impl MultiContractCallHandler {
         Self {
             contract_calls: None,
             tx_parameters: TxParameters::default(),
-            fuel_client: wallet.get_provider().unwrap().client.clone(),
+            provider: wallet.get_provider().unwrap().clone(),
             wallet,
         }
     }
@@ -616,9 +612,9 @@ impl MultiContractCallHandler {
         let script = self.get_script().await;
 
         let receipts = if simulate {
-            script.simulate(&self.fuel_client).await.unwrap()
+            script.simulate(&self.provider).await.unwrap()
         } else {
-            script.call(&self.fuel_client).await.unwrap()
+            script.call(&self.provider).await.unwrap()
         };
         tracing::debug!(target: "receipts", "{:?}", receipts);
 

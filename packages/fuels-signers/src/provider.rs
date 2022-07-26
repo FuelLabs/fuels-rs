@@ -5,7 +5,7 @@ use std::net::SocketAddr;
 use fuel_core::service::{Config, FuelService};
 use fuel_gql_client::{
     client::{
-        schema::coin::Coin, types::TransactionResponse, FuelClient, PageDirection, PaginatedResult,
+        schema::{coin::Coin, chain::ChainInfo}, types::{TransactionResponse, TransactionStatus}, FuelClient, PageDirection, PaginatedResult,
         PaginationRequest,
     },
     fuel_tx::{Input, Output, Receipt, Transaction},
@@ -23,6 +23,8 @@ use fuels_types::errors::Error;
 pub enum ProviderError {
     #[error(transparent)]
     ClientRequestError(#[from] io::Error),
+    #[error("Transaction error: {}, receipts: {:?}", .0, .1)]
+    TransactionError(String, Vec<Receipt>),
 }
 
 impl From<ProviderError> for Error {
@@ -64,9 +66,16 @@ impl Provider {
     /// }
     /// ```
     pub async fn send_transaction(&self, tx: &Transaction) -> Result<Vec<Receipt>, ProviderError> {
-        let tx_id = self.client.submit(tx).await?;
+        let tx_id = self.client.submit(tx).await?.0.to_string();
+        let receipts = self.client.receipts(&tx_id).await?;
+        let status = self.client.transaction_status(&tx_id).await?;
 
-        Ok(self.client.receipts(&tx_id.0.to_string()).await?)
+        match status {
+            TransactionStatus::Failure { reason, .. } => {
+                Err(ProviderError::TransactionError(reason, receipts))
+            }
+            _ => Ok(receipts),
+        }
     }
 
     #[cfg(feature = "fuel-core")]
@@ -101,6 +110,16 @@ impl Provider {
         Ok(Self {
             client: FuelClient::from(socket),
         })
+    }
+
+
+    pub async fn chain_info(&self) -> Result<ChainInfo, ProviderError> {
+        Ok(self.client.chain_info().await?)
+    }
+
+    // TODO should we check for revert
+    pub async fn dry_run(&self, tx: &Transaction) -> Result<Vec<Receipt>, ProviderError> {
+        Ok(self.client.dry_run(tx).await?)
     }
 
     /// Gets all coins owned by address `from`, *even spent ones*. This returns actual coins
@@ -234,7 +253,7 @@ impl Provider {
         Ok(self.client.transactions(request).await?)
     }
 
-    // - Get transaction(s) by owner
+    /// Get transaction(s) by owner
     pub async fn get_transactions_by_owner(
         &self,
         owner: &str,

@@ -1,4 +1,4 @@
-use crate::provider::{Provider, ProviderError};
+use crate::provider::Provider;
 use crate::Signer;
 use async_trait::async_trait;
 use coins_bip32::{path::DerivationPath, Bip32Error};
@@ -78,8 +78,6 @@ pub enum WalletError {
     Parsing(#[from] std::array::TryFromSliceError),
     #[error("No provider was setup: make sure to set_provider in your wallet!")]
     NoProvider,
-    #[error(transparent)]
-    ProviderError(#[from] ProviderError),
     /// Keystore error
     #[error(transparent)]
     KeystoreError(#[from] KeystoreError),
@@ -121,7 +119,7 @@ impl Wallet {
     pub async fn get_transactions(
         &self,
         request: PaginationRequest<String>,
-    ) -> Result<PaginatedResult<TransactionResponse, String>, WalletError> {
+    ) -> Result<PaginatedResult<TransactionResponse, String>, Error> {
         Ok(self.get_provider()?
             .get_transactions_by_owner(self.address.to_string().as_str(), request)
             .await?)
@@ -270,7 +268,7 @@ impl Wallet {
         amount: u64,
         asset_id: AssetId,
         tx_parameters: TxParameters,
-    ) -> Result<(String, Vec<Receipt>), WalletError> {
+    ) -> Result<(String, Vec<Receipt>), Error> {
         let inputs = self
             .get_asset_inputs_for_amount(asset_id, amount, 0)
             .await?;
@@ -303,7 +301,7 @@ impl Wallet {
         asset_id: AssetId,
         amount: u64,
         witness_index: u8,
-    ) -> Result<Vec<Input>, WalletError> {
+    ) -> Result<Vec<Input>, Error> {
         let spendable = self.get_spendable_coins(&asset_id, amount).await?;
         let mut inputs = vec![];
         for coin in spendable {
@@ -321,7 +319,7 @@ impl Wallet {
     }
 
     /// Gets all coins owned by the wallet, *even spent ones*. This returns actual coins (UTXOs).
-    pub async fn get_coins(&self) -> Result<Vec<Coin>, WalletError> {
+    pub async fn get_coins(&self) -> Result<Vec<Coin>, Error> {
         Ok(self
             .get_provider()?
             .get_coins(&self.address())
@@ -335,7 +333,7 @@ impl Wallet {
         &self,
         asset_id: &AssetId,
         amount: u64,
-    ) -> Result<Vec<Coin>, WalletError> {
+    ) -> Result<Vec<Coin>, Error> {
         Ok(self.get_provider()?
             .get_spendable_coins(&self.address(), *asset_id, amount)
             .await?)
@@ -344,7 +342,7 @@ impl Wallet {
     /// Get the balance of all spendable coins `asset_id` for address `address`. This is different
     /// from getting coins because we are just returning a number (the sum of UTXOs amount) instead
     /// of the UTXOs.
-    pub async fn get_asset_balance(&self, asset_id: &AssetId) -> Result<u64, WalletError> {
+    pub async fn get_asset_balance(&self, asset_id: &AssetId) -> Result<u64, Error> {
         Ok(self.get_provider()?
             .get_asset_balance(&self.address, *asset_id)
             .await?)
@@ -353,7 +351,7 @@ impl Wallet {
     /// Get all the spendable balances of all assets for the wallet. This is different from getting
     /// the coins because we are only returning the sum of UTXOs coins amount and not the UTXOs
     /// coins themselves.
-    pub async fn get_balances(&self) -> Result<HashMap<String, u64>, WalletError> {
+    pub async fn get_balances(&self) -> Result<HashMap<String, u64>, Error> {
         Ok(self.get_provider()?.get_balances(&self.address).await?)
     }
 }

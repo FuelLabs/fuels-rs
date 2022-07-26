@@ -303,7 +303,7 @@ mod tests {
     #[tokio::test]
     #[allow(unused_variables)]
     async fn get_contract_outputs() -> Result<(), Error> {
-        use fuels::prelude::Error::ContractCallError;
+        use fuels::prelude::Error::TransactionError;
         use fuels::prelude::*;
         use fuels::tx::Receipt;
         abigen!(
@@ -337,7 +337,7 @@ mod tests {
             // The transaction is invalid or node is offline
             // OR
             // The transaction is valid but reverts
-            Err(ContractCallError(reason, receipts)) => {
+            Err(TransactionError(reason, receipts)) => {
                 println!("ContractCall failed with reason: {}", reason);
                 println!("Transaction receipts are: {:?}", receipts);
             }

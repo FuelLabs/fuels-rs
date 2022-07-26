@@ -2,7 +2,7 @@ use fuel_gql_client::fuel_tx::{AssetId, ContractId, Receipt};
 use fuels::contract::contract::MultiContractCallHandler;
 use fuels::prelude::{
     abigen, launch_provider_and_get_wallet, setup_multiple_assets_coins, setup_single_asset_coins,
-    setup_test_provider, CallParameters, Contract, Error, LocalWallet, Provider, ProviderError,
+    setup_test_provider, CallParameters, Contract, Error, LocalWallet, Provider,
     Salt, Signer, TxParameters, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
 };
 use fuels::test_helpers::produce_blocks;
@@ -14,7 +14,6 @@ use sha2::{Digest, Sha256};
 use std::str::FromStr;
 use fuel_core::service::{Config, FuelService};
 use fuel_gql_client::client::FuelClient;
-use fuels_types::errors::Error::WalletError;
 
 /// Note: all the tests and examples below require pre-compiled Sway projects.
 /// To compile these projects, run `cargo run --bin build-test-projects`.
@@ -1510,7 +1509,7 @@ async fn test_logd_receipts() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_wallet_balance_api() -> Result<(), ProviderError> {
+async fn test_wallet_balance_api() -> Result<(), Error> {
     // Single asset
     let mut wallet = LocalWallet::new_random(None);
     let number_of_coins = 21;

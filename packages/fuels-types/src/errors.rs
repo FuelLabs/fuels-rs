@@ -1,7 +1,7 @@
 use core::fmt;
 use core::str::Utf8Error;
 pub type Result<T> = core::result::Result<T, Error>;
-use fuel_tx::{Receipt, ValidationError};
+use fuel_tx::ValidationError;
 use strum::ParseError;
 use thiserror::Error;
 
@@ -33,6 +33,8 @@ pub enum Error {
     MissingData(String),
     #[error("Serialization error: {0}")]
     SerdeJson(#[from] serde_json::Error),
+    #[error("IO error: {0}")]
+    IOError(#[from] std::io::Error),
     #[error("Invalid type: {0}")]
     InvalidType(String),
     #[error("Parse integer error: {0}")]
@@ -47,14 +49,8 @@ pub enum Error {
     Utf8Error(#[from] Utf8Error),
     #[error("Compilation error: {0}")]
     CompilationError(String),
-    #[error("Network error: {0}")]
-    NetworkError(String),
-    #[error("Transaction error: {0}")]
-    TransactionError(String),
     #[error("Infrastructure error: {0}")]
     InfrastructureError(String),
-    #[error("Contract call error: {}, receipts: {:?}", .0, .1)]
-    ContractCallError(String, Vec<Receipt>),
     #[error("Wallet error: {0}")]
     WalletError(String),
     #[error("Provider error: {0}")]
@@ -77,12 +73,6 @@ impl From<CodecError> for Error {
 impl From<ParseError> for Error {
     fn from(err: ParseError) -> Error {
         Error::InvalidType(err.to_string())
-    }
-}
-
-impl From<std::io::Error> for Error {
-    fn from(err: std::io::Error) -> Error {
-        Error::ContractCallError(err.to_string(), vec![])
     }
 }
 
