@@ -2294,3 +2294,23 @@ async fn test_get_gas_used() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn test_contract_id_and_wallet_getters() {
+    abigen!(
+        SimpleContract,
+        "packages/fuels/tests/takes_ints_returns_bool.json",
+    );
+
+    let wallet = launch_provider_and_get_wallet().await;
+    let contract_id =
+        String::from("0000000000000000000000000000000000000000000000000000000000000042");
+
+    let contract_instance = SimpleContractBuilder::new(contract_id.clone(), wallet.clone()).build();
+
+    assert_eq!(contract_instance._get_wallet().address(), wallet.address());
+    assert_eq!(
+        contract_instance._get_contract_id().to_string(),
+        contract_id
+    );
+}
