@@ -35,8 +35,8 @@ You can also create assets with specific `AssetId`s, coin amounts and number of 
 {{#include ../../../examples/wallets/src/lib.rs:custom_assets_wallet}}
 ```
 
->**Note** In this case you need to specify also the base asset and the corresponding number of
->coins and coint amount
+>**Note** In this case, you need to specify also the base asset and the corresponding number of
+>coins and coin amount
 
 ## Setting up assets
 
