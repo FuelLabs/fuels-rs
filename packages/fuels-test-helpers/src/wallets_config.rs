@@ -7,7 +7,7 @@ pub const DEFAULT_NUM_COINS: u64 = 1;
 pub const DEFAULT_COIN_AMOUNT: u64 = 1_000_000_000;
 
 #[derive(Debug, Clone)]
-pub struct AssetsConfig {
+pub struct AssetConfig {
     pub id: AssetId,
     pub num_coins: u64,
     pub coin_amount: u64,
@@ -16,14 +16,14 @@ pub struct AssetsConfig {
 #[derive(Debug)]
 pub struct WalletsConfig {
     pub num_wallets: u64,
-    pub assets: Vec<AssetsConfig>,
+    pub assets: Vec<AssetConfig>,
 }
 
 impl WalletsConfig {
     pub fn new(num_wallets: Option<u64>, num_coins: Option<u64>, coin_amount: Option<u64>) -> Self {
         Self {
             num_wallets: num_wallets.unwrap_or(DEFAULT_NUM_WALLETS),
-            assets: vec![AssetsConfig {
+            assets: vec![AssetConfig {
                 id: AssetId::default(),
                 num_coins: num_coins.unwrap_or(DEFAULT_NUM_COINS),
                 coin_amount: coin_amount.unwrap_or(DEFAULT_COIN_AMOUNT),
@@ -31,7 +31,7 @@ impl WalletsConfig {
         }
     }
 
-    pub fn new_multiple_assets(num_wallets: u64, assets: Vec<AssetsConfig>) -> Self {
+    pub fn new_multiple_assets(num_wallets: u64, assets: Vec<AssetConfig>) -> Self {
         Self {
             num_wallets,
             assets,
@@ -43,7 +43,7 @@ impl Default for WalletsConfig {
     fn default() -> Self {
         Self {
             num_wallets: DEFAULT_NUM_WALLETS,
-            assets: vec![AssetsConfig {
+            assets: vec![AssetConfig {
                 id: AssetId::default(),
                 num_coins: DEFAULT_NUM_COINS,
                 coin_amount: DEFAULT_COIN_AMOUNT,

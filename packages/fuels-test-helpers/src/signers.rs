@@ -136,7 +136,7 @@ mod tests {
         let mut rng = rand::thread_rng();
         let num_wallets = 3;
 
-        let asset_base = AssetsConfig {
+        let asset_base = AssetConfig {
             id: BASE_ASSET_ID,
             num_coins: 2,
             coin_amount: 4,
@@ -144,7 +144,7 @@ mod tests {
 
         let mut asset_id_1 = AssetId::zeroed();
         asset_id_1.try_fill(&mut rng)?;
-        let asset_1 = AssetsConfig {
+        let asset_1 = AssetConfig {
             id: asset_id_1,
             num_coins: 6,
             coin_amount: 8,
@@ -152,7 +152,7 @@ mod tests {
 
         let mut asset_id_2 = AssetId::zeroed();
         asset_id_2.try_fill(&mut rng)?;
-        let asset_2 = AssetsConfig {
+        let asset_2 = AssetConfig {
             id: asset_id_2,
             num_coins: 10,
             coin_amount: 12,
