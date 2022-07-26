@@ -27,8 +27,8 @@ pub async fn confirm_blocks_created(
     .await
     .map_err(|err| {
         Error::InfrastructureError(format!(
-            "Couldn't confirm a block generation via no-op script -- {}",
-            err
+            "Couldn't confirm a {} blocks increase with the `produce_blocks` API -- {}",
+            n_blocks, err
         ))
     })
 }
