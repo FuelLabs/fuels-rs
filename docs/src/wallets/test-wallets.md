@@ -29,7 +29,7 @@ You can create a test wallet containing multiple assets (including the base asse
 
 ## Setting up a test wallet with multiple custom assets
 
-You can also create assets with specific `AssetId`s, coin amounts and number of coins.
+You can also create assets with specific `AssetId`s, coin amounts, and number of coins.
 
 ```rust,ignore
 {{#include ../../../examples/wallets/src/lib.rs:custom_assets_wallet}}
