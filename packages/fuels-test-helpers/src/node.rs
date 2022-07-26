@@ -242,10 +242,8 @@ pub async fn new_fuel_node(
     let (tx, rx) = oneshot::channel();
 
     tokio::spawn(async move {
-        let chain = match coins {
-            Some(_) => true,
-            None => false,
-        };
+
+        let chain = coins.is_some();
 
         let config = get_node_config_json(coins.unwrap_or(vec![]), consensus_parameters_config);
         let temp_config_file = write_temp_config_file(config);
