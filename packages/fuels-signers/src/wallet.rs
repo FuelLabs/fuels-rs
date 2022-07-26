@@ -13,7 +13,7 @@ use fuel_gql_client::{
 use fuels_core::parameters::TxParameters;
 use fuels_types::errors::Error;
 use rand::{CryptoRng, Rng};
-use std::{collections::HashMap, fmt, io, path::Path, str::FromStr};
+use std::{collections::HashMap, fmt, path::Path, str::FromStr};
 use thiserror::Error;
 
 const DEFAULT_DERIVATION_PATH_PREFIX: &str = "m/44'/1179993420'/0'/0/";
@@ -73,21 +73,16 @@ pub enum WalletError {
     /// Error propagated from the hex crate.
     #[error(transparent)]
     Hex(#[from] hex::FromHexError),
-    /// Error propagated by IO operations
-    #[error(transparent)]
-    Io(#[from] std::io::Error),
     /// Error propagated by parsing of a slice
     #[error("Failed to parse slice")]
     Parsing(#[from] std::array::TryFromSliceError),
     #[error("No provider was setup: make sure to set_provider in your wallet!")]
     NoProvider,
-    #[error("Provider error: {0}")]
+    #[error(transparent)]
     ProviderError(#[from] ProviderError),
     /// Keystore error
     #[error(transparent)]
     KeystoreError(#[from] KeystoreError),
-    #[error("invalid mnemonic word count (expected 12, 15, 18, 21, 24, found `{0}`")]
-    InvalidMnemonicWordCount(usize),
     #[error(transparent)]
     MnemonicError(#[from] MnemonicError),
     #[error(transparent)]
@@ -126,11 +121,10 @@ impl Wallet {
     pub async fn get_transactions(
         &self,
         request: PaginationRequest<String>,
-    ) -> std::io::Result<PaginatedResult<TransactionResponse, String>> {
-        self.get_provider()
-            .unwrap()
+    ) -> Result<PaginatedResult<TransactionResponse, String>, WalletError> {
+        Ok(self.get_provider()?
             .get_transactions_by_owner(self.address.to_string().as_str(), request)
-            .await
+            .await?)
     }
 
     /// Creates a new wallet from a mnemonic phrase.
@@ -289,12 +283,11 @@ impl Wallet {
 
         // Build transaction and sign it
         let mut tx =
-            self.get_provider()
-                .unwrap()
+            self.get_provider()?
                 .build_transfer_tx(&inputs, &outputs, tx_parameters);
         let _sig = self.sign_transaction(&mut tx).await.unwrap();
 
-        let receipts = self.get_provider().unwrap().send_transaction(&tx).await?;
+        let receipts = self.get_provider()?.send_transaction(&tx).await?;
 
         Ok((tx.id().to_string(), receipts))
     }
@@ -330,8 +323,7 @@ impl Wallet {
     /// Gets all coins owned by the wallet, *even spent ones*. This returns actual coins (UTXOs).
     pub async fn get_coins(&self) -> Result<Vec<Coin>, WalletError> {
         Ok(self
-            .get_provider()
-            .unwrap()
+            .get_provider()?
             .get_coins(&self.address())
             .await?)
     }
@@ -343,27 +335,26 @@ impl Wallet {
         &self,
         asset_id: &AssetId,
         amount: u64,
-    ) -> io::Result<Vec<Coin>> {
-        self.get_provider()
-            .unwrap()
+    ) -> Result<Vec<Coin>, WalletError> {
+        Ok(self.get_provider()?
             .get_spendable_coins(&self.address(), *asset_id, amount)
-            .await
+            .await?)
     }
 
     /// Get the balance of all spendable coins `asset_id` for address `address`. This is different
     /// from getting coins because we are just returning a number (the sum of UTXOs amount) instead
     /// of the UTXOs.
-    pub async fn get_asset_balance(&self, asset_id: &AssetId) -> Result<u64, ProviderError> {
-        self.get_provider()?
+    pub async fn get_asset_balance(&self, asset_id: &AssetId) -> Result<u64, WalletError> {
+        Ok(self.get_provider()?
             .get_asset_balance(&self.address, *asset_id)
-            .await
+            .await?)
     }
 
     /// Get all the spendable balances of all assets for the wallet. This is different from getting
     /// the coins because we are only returning the sum of UTXOs coins amount and not the UTXOs
     /// coins themselves.
-    pub async fn get_balances(&self) -> Result<HashMap<String, u64>, ProviderError> {
-        self.get_provider()?.get_balances(&self.address).await
+    pub async fn get_balances(&self) -> Result<HashMap<String, u64>, WalletError> {
+        Ok(self.get_provider()?.get_balances(&self.address).await?)
     }
 }
 

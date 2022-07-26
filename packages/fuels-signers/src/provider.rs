@@ -15,29 +15,25 @@ use fuel_gql_client::{
 use std::collections::HashMap;
 use thiserror::Error;
 
-use crate::wallet::WalletError;
 use fuels_core::parameters::TxParameters;
 use fuels_types::errors::Error;
 
 /// An error involving a signature.
 #[derive(Debug, Error)]
 pub enum ProviderError {
-    #[error("Request failed: {0}")]
-    TransactionRequestError(String),
     #[error(transparent)]
     ClientRequestError(#[from] io::Error),
-    #[error("Wallet error: {0}")]
-    WalletError(String),
 }
 
-impl From<WalletError> for ProviderError {
-    fn from(e: WalletError) -> Self {
-        ProviderError::WalletError(e.to_string())
+impl From<ProviderError> for Error {
+    fn from(e: ProviderError) -> Self {
+        Error::ProviderError(e.to_string())
     }
 }
+
 /// Encapsulates common client operations in the SDK.
 /// Note that you may also use `client`, which is an instance
-/// of `FuelClient`, directly, which providers a broader API.
+/// of `FuelClient`, directly, which provides a broader API.
 #[derive(Debug, Clone)]
 pub struct Provider {
     pub client: FuelClient,
@@ -67,10 +63,10 @@ impl Provider {
     ///   Ok(())
     /// }
     /// ```
-    pub async fn send_transaction(&self, tx: &Transaction) -> io::Result<Vec<Receipt>> {
+    pub async fn send_transaction(&self, tx: &Transaction) -> Result<Vec<Receipt>, ProviderError> {
         let tx_id = self.client.submit(tx).await?;
 
-        self.client.receipts(&tx_id.0.to_string()).await
+        Ok(self.client.receipts(&tx_id.0.to_string()).await?)
     }
 
     #[cfg(feature = "fuel-core")]
@@ -146,7 +142,7 @@ impl Provider {
         from: &Address,
         asset_id: AssetId,
         amount: u64,
-    ) -> io::Result<Vec<Coin>> {
+    ) -> Result<Vec<Coin>, ProviderError> {
         let res = self
             .client
             .coins_to_spend(
@@ -226,7 +222,7 @@ impl Provider {
     }
 
     /// Get transaction by id.
-    pub async fn get_transaction_by_id(&self, tx_id: &str) -> io::Result<TransactionResponse> {
+    pub async fn get_transaction_by_id(&self, tx_id: &str) -> Result<TransactionResponse, ProviderError> {
         Ok(self.client.transaction(tx_id).await.unwrap().unwrap())
     }
 
@@ -234,8 +230,8 @@ impl Provider {
     pub async fn get_transactions(
         &self,
         request: PaginationRequest<String>,
-    ) -> std::io::Result<PaginatedResult<TransactionResponse, String>> {
-        self.client.transactions(request).await
+    ) -> Result<PaginatedResult<TransactionResponse, String>, ProviderError> {
+        Ok(self.client.transactions(request).await?)
     }
 
     // - Get transaction(s) by owner
@@ -243,11 +239,11 @@ impl Provider {
         &self,
         owner: &str,
         request: PaginationRequest<String>,
-    ) -> std::io::Result<PaginatedResult<TransactionResponse, String>> {
-        self.client.transactions_by_owner(owner, request).await
+    ) -> Result<PaginatedResult<TransactionResponse, String>, ProviderError> {
+        Ok(self.client.transactions_by_owner(owner, request).await?)
     }
 
-    pub async fn latest_block_height(&self) -> io::Result<u64> {
+    pub async fn latest_block_height(&self) -> Result<u64, ProviderError> {
         Ok(self.client.chain_info().await?.latest_block.height.0)
     }
 

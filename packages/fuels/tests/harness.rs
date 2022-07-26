@@ -12,6 +12,9 @@ use fuels_core::Tokenizable;
 use fuels_core::{constants::BASE_ASSET_ID, Token};
 use sha2::{Digest, Sha256};
 use std::str::FromStr;
+use fuel_core::service::{Config, FuelService};
+use fuel_gql_client::client::FuelClient;
+use fuels_types::errors::Error::WalletError;
 
 /// Note: all the tests and examples below require pre-compiled Sway projects.
 /// To compile these projects, run `cargo run --bin build-test-projects`.
@@ -802,6 +805,7 @@ async fn test_reverting_transaction() -> Result<(), Error> {
     let contract_instance = RevertingContractBuilder::new(contract_id.to_string(), wallet).build();
     println!("Contract deployed @ {:x}", contract_id);
     let response = contract_instance.make_transaction_fail(0).call().await;
+    println!("{:?}", response);
     assert!(matches!(response, Err(Error::ContractCallError(..))));
     Ok(())
 }
@@ -2313,4 +2317,54 @@ async fn test_contract_id_and_wallet_getters() {
         contract_instance._get_contract_id().to_string(),
         contract_id
     );
+}
+
+#[tokio::test]
+async fn test_network_error() -> Result<(), anyhow::Error> {
+    abigen!(
+        MyContract,
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+    );
+
+    let mut wallet = LocalWallet::new_random(None);
+
+    let config = Config::local_node();
+    let service = FuelService::new_node(config).await?;
+    let client = FuelClient::from(service.bound_address);
+    let provider = Provider::new(client);
+
+    wallet.set_provider(provider);
+
+    // Simulate unreachable node
+    service.stop().await;
+/*
+    let contract_id = Contract::deploy(
+        "tests/test_projects/contract_test/out/debug/contract_test.bin",
+        &wallet,
+        TxParameters::default(),
+        StorageConfiguration::default()
+    )
+        .await;
+    match contract_id {
+        // The transaction is valid and executes to completion
+        Ok(call_response) => {
+        }
+
+        Err(e) => {println!("HEHE {:?}", e)}
+    }*/
+
+    /*let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
+
+    //service.stop().await;
+
+    let response = contract_instance.initialize_counter(42).call().await;
+    match response {
+        // The transaction is valid and executes to completion
+        Ok(call_response) => {
+        }
+
+        Err(e) => {println!("{:?}", e)}
+    }*/
+
+    Ok(())
 }
