@@ -2208,7 +2208,7 @@ async fn contract_deployment_respects_maturity() -> Result<(), Error> {
 async fn can_increase_block_height() -> Result<(), Error> {
     // ANCHOR: uses_produce_blocks_to_increase_block_height
     let config = Config {
-        manual_blocks_enabled: true,
+        manual_blocks_enabled: true, // Necessary so the `produce_blocks` API can be used locally
         ..Config::local_node()
     };
     let wallets =
