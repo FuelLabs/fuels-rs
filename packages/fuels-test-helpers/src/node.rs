@@ -1,5 +1,4 @@
-use anyhow::Error as AnyError;
-use std::borrow::Borrow;
+use anyhow::{bail, Error as AnyError};
 use std::fmt;
 use std::io::Write;
 use std::net::{Ipv4Addr, SocketAddr};
@@ -235,33 +234,27 @@ fn write_temp_config_file(config: Value) -> NamedTempFile {
 }
 
 pub async fn new_fuel_node(
-    coins: Option<Vec<(UtxoId, Coin)>>,
+    coins: Vec<(UtxoId, Coin)>,
     consensus_parameters_config: Option<ConsensusParameters>,
     socket_addr: SocketAddr,
 ) {
     let (tx, rx) = oneshot::channel();
 
     tokio::spawn(async move {
-
-        let chain = coins.is_some();
-
-        let config = get_node_config_json(coins.unwrap_or(vec![]), consensus_parameters_config);
+        let config = get_node_config_json(coins, consensus_parameters_config);
         let temp_config_file = write_temp_config_file(config);
 
         let port = &socket_addr.port().to_string();
-        let mut args = vec![
+        let args = vec![
             "--ip",
             "127.0.0.1",
             "--port",
             port,
             "--db-type",
             "in-memory",
+            "--chain",
+            temp_config_file.path().to_str().unwrap(),
         ];
-
-        if chain {
-            args.push("--chain");
-            args.push(temp_config_file.borrow().path().to_str().unwrap());
-        };
 
         let mut running_node = Command::new("fuel-core").args(args)
             .kill_on_drop(true)
@@ -271,11 +264,9 @@ pub async fn new_fuel_node(
             .expect("error: Couldn't read fuel-core: No such file or directory. Please check if fuel-core library is installed. \
         Try this https://fuellabs.github.io/sway/latest/introduction/installation.html");
 
-        {
-            let client = FuelClient::from(socket_addr);
-            server_health_check(&client).await;
-            tx.send(()).unwrap();
-        }
+        let client = FuelClient::from(socket_addr);
+        server_health_check(&client).await;
+        tx.send(()).unwrap();
 
         running_node.wait().await
     });
@@ -283,7 +274,7 @@ pub async fn new_fuel_node(
     rx.await.unwrap();
 }
 
-pub async fn server_health_check(client: &FuelClient) -> bool {
+pub async fn server_health_check(client: &FuelClient) {
     let mut attempts = 5;
     let mut healthy = client.health().await.unwrap_or(false);
 
@@ -296,7 +287,6 @@ pub async fn server_health_check(client: &FuelClient) -> bool {
     if !healthy {
         panic!("error: Could not connect to fuel core server.")
     }
-    true
 }
 
 pub fn get_socket_address() -> SocketAddr {
@@ -310,17 +300,17 @@ pub struct FuelService {
 
 impl FuelService {
     pub async fn new_node(config: Config) -> Result<Self, AnyError> {
-        let bound_address = match config {
-            node_config if node_config.addr.port() != 0 && is_free(node_config.addr.port()) => {
-                node_config.addr
-            }
-            node_config if !is_free(node_config.addr.port()) => {
-                panic!("Error: Address already in use")
-            }
-            _ => get_socket_address(),
+        let requested_port = config.addr.port();
+
+        let bound_address = if requested_port == 0 {
+            get_socket_address()
+        } else if is_free(requested_port) {
+            config.addr
+        } else {
+            bail!("Error: Address already in use");
         };
 
-        new_fuel_node(None, None, bound_address).await;
+        new_fuel_node(vec![], None, bound_address).await;
 
         Ok(FuelService { bound_address })
     }
