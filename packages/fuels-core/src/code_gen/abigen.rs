@@ -6,7 +6,6 @@ use crate::code_gen::custom_types_gen::{
 };
 use crate::code_gen::functions_gen::expand_function;
 use crate::constants::{ADDRESS_SWAY_NATIVE_TYPE, CONTRACT_ID_SWAY_NATIVE_TYPE};
-use crate::json_abi::ABIParser;
 use crate::source::Source;
 use crate::utils::ident;
 use fuels_types::errors::Error;
@@ -17,9 +16,6 @@ use quote::quote;
 pub struct Abigen {
     /// The parsed ABI.
     abi: JsonABI,
-
-    /// The parser used to transform the JSON format into `JsonABI`
-    abi_parser: ABIParser,
 
     /// The contract name as an identifier.
     contract_name: Ident,
@@ -67,7 +63,6 @@ impl Abigen {
                 .collect(),
             abi: parsed_abi,
             contract_name: ident(contract_name),
-            abi_parser: ABIParser::new(),
             rustfmt: true,
             no_std: false,
         })
@@ -198,12 +193,7 @@ impl Abigen {
         let mut tokenized_functions = Vec::new();
 
         for function in &self.abi {
-            let tokenized_fn = expand_function(
-                function,
-                &self.abi_parser,
-                &self.custom_enums,
-                &self.custom_structs,
-            )?;
+            let tokenized_fn = expand_function(function, &self.custom_enums, &self.custom_structs)?;
             tokenized_functions.push(tokenized_fn);
         }
 
