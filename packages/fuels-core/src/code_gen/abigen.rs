@@ -144,6 +144,11 @@ impl Abigen {
                         pub fn _get_wallet(&self) -> LocalWallet {
                             self.wallet.clone()
                         }
+
+                        pub fn _connect(&mut self, new_wallet: LocalWallet) -> &mut Self {
+                            self.wallet = new_wallet;
+                            self
+                        }
                     }
 
                     pub struct #builder_name {
