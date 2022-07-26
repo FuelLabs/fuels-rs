@@ -238,6 +238,7 @@ pub async fn new_fuel_node(
     consensus_parameters_config: Option<ConsensusParameters>,
     socket_addr: SocketAddr,
 ) {
+    // Create a new one-shot channel for sending single values across asynchronous tasks.
     let (tx, rx) = oneshot::channel();
 
     tokio::spawn(async move {
@@ -266,11 +267,12 @@ pub async fn new_fuel_node(
 
         let client = FuelClient::from(socket_addr);
         server_health_check(&client).await;
+        // Sending single to RX to inform that the fuel core node is ready.
         tx.send(()).unwrap();
 
         running_node.wait().await
     });
-
+    // Awaiting a signal from Tx that informs us if the fuel-core node is ready.
     rx.await.unwrap();
 }
 
