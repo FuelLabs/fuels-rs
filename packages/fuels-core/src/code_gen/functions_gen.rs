@@ -1,12 +1,10 @@
-use crate::abi_encoder::ABIEncoder;
 use crate::code_gen::custom_types_gen::extract_custom_type_name_from_abi_property;
 use crate::code_gen::docs_gen::expand_doc;
-use crate::json_abi::ABIParser;
-use crate::parse::parse_param_type_from_property;
 use crate::types::expand_type;
-use crate::utils::{ident, safe_ident};
+use crate::utils::{first_four_bytes_of_sha256_hash, ident, safe_ident};
 use crate::{ParamType, Selector};
 use fuels_types::errors::Error;
+use fuels_types::function_selector::build_fn_selector;
 use fuels_types::{CustomType, Function, Property, ENUM_KEYWORD, STRUCT_KEYWORD};
 use inflector::Inflector;
 use proc_macro2::{Literal, TokenStream};
@@ -26,7 +24,6 @@ use std::collections::HashMap;
 /// [`Contract`]: crate::contract::Contract
 pub fn expand_function(
     function: &Function,
-    abi_parser: &ABIParser,
     custom_enums: &HashMap<String, Property>,
     custom_structs: &HashMap<String, Property>,
 ) -> Result<TokenStream, Error> {
@@ -35,9 +32,9 @@ pub fn expand_function(
     }
 
     let name = safe_ident(&function.name);
-    let fn_signature = abi_parser.build_fn_selector(&function.name, &function.inputs)?;
+    let fn_signature = build_fn_selector(&function.name, &function.inputs)?;
 
-    let encoded = ABIEncoder::hash_encoded_function_selector(&fn_signature);
+    let encoded = first_four_bytes_of_sha256_hash(&fn_signature);
 
     let tokenized_signature = expand_selector(encoded);
     let tokenized_output = expand_fn_outputs(&function.outputs)?;
@@ -56,7 +53,7 @@ pub fn expand_function(
     // be used to be tokenized and passed onto `method_hash()`.
     let output_param = match &function.outputs[..] {
         [output] => {
-            let param_type = parse_param_type_from_property(output).unwrap();
+            let param_type = ParamType::try_from(output).unwrap();
 
             let tok: proc_macro2::TokenStream =
                 format!("Some(ParamType::{})", param_type).parse().unwrap();
@@ -90,7 +87,7 @@ fn expand_fn_outputs(outputs: &[Property]) -> Result<TokenStream, Error> {
         [output] => {
             // If it's a primitive type, simply parse and expand.
             if !output.is_custom_type() {
-                return expand_type(&parse_param_type_from_property(output)?);
+                return expand_type(&ParamType::try_from(output)?);
             }
 
             // If it's a {struct, enum} as the type of a function's output, use its tokenized name only.
@@ -238,7 +235,7 @@ fn expand_function_arguments(
         };
 
         // TokenStream representing the type of the argument
-        let kind = parse_param_type_from_property(param)?;
+        let kind = ParamType::try_from(param)?;
 
         // If it's a tuple, don't expand it, just use the type signature as it is (minus the string "struct " | "enum ").
         let tok = if let ParamType::Tuple(_tuple) = kind {
@@ -250,7 +247,7 @@ fn expand_function_arguments(
             expand_input_param(
                 fun,
                 &param.name,
-                &parse_param_type_from_property(param)?,
+                &ParamType::try_from(param)?,
                 &custom_property,
             )?
         };
@@ -287,7 +284,7 @@ fn build_expanded_tuple_params(tuple_param: &Property) -> Result<String, Error> 
         .expect("tuple parameter should have components")
     {
         if !component.is_custom_type() {
-            let p = parse_param_type_from_property(component)?;
+            let p = ParamType::try_from(component)?;
             let tok = expand_type(&p)?;
             toks.push_str(&tok.to_string());
         } else {
@@ -374,12 +371,7 @@ mod tests {
             type_field: String::from("bool"),
             components: None,
         });
-        let result = expand_function(
-            &the_function,
-            &ABIParser::new(),
-            &Default::default(),
-            &Default::default(),
-        );
+        let result = expand_function(&the_function, &Default::default(), &Default::default());
         let expected = TokenStream::from_str(
             r#"
             #[doc = "Calls the contract's `HelloWorld` (0x0000000097d4de45) function"]
@@ -467,8 +459,7 @@ mod tests {
                 components: None,
             },
         );
-        let abi_parser = ABIParser::new();
-        let result = expand_function(&the_function, &abi_parser, &custom_enums, &custom_structs);
+        let result = expand_function(&the_function, &custom_enums, &custom_structs);
         // Some more editing was required because it is not rustfmt-compatible (adding/removing parentheses or commas)
         let expected = TokenStream::from_str(
             r#"
