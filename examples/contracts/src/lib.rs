@@ -1,15 +1,12 @@
 #[cfg(test)]
 mod tests {
-    #[cfg(feature = "fuel-core-lib")]
-    use fuels::prelude::Config;
     use fuels::prelude::Error;
 
     #[tokio::test]
-    #[cfg(feature = "fuel-core-lib")]
     async fn instantiate_client() -> Result<(), Error> {
         // ANCHOR: instantiate_client
         use fuels::client::FuelClient;
-        use fuels::node::service::{Config, FuelService};
+        use fuels::fuel_node::{Config, FuelService};
 
         // Run the fuel node.
         let server = FuelService::new_node(Config::local_node()).await?;
