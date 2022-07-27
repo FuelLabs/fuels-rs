@@ -128,7 +128,7 @@ mod tests {
         )
         .await;
 
-        // Transfer 1 from wallet 1 to wallet 2
+        // Transfer the base asset with amount 1 from wallet 1 to wallet 2
         let asset_id = Default::default();
         let _receipts = wallets[0]
             .transfer(&wallets[1].address(), 1, asset_id, TxParameters::default())
@@ -158,12 +158,12 @@ mod tests {
         .await?;
 
         // ANCHOR: wallet_contract_transfer
-        // Check that the contract with id 'contract_id' has no balance prior to the transfer
+        // Check the current balance of the contract with id 'contract_id'
         let contract_coins = wallet
             .get_provider()?
             .get_contract_balances(&contract_id)
             .await?;
-        assert_eq!(contract_coins.len(), 0);
+        assert!(contract_coins.is_empty());
 
         // Transfer an amount of 100 of the default asset to the contract
         let amount = 100;

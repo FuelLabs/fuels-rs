@@ -293,7 +293,7 @@ impl Wallet {
         let mut tx = self
             .get_provider()?
             .build_transfer_tx(&inputs, &outputs, tx_parameters);
-        let _sig = self.sign_transaction(&mut tx).await?;
+        self.sign_transaction(&mut tx).await?;
 
         let receipts = self.get_provider()?.send_transaction(&tx).await?;
 
@@ -307,7 +307,7 @@ impl Wallet {
     ///
     /// CAUTION !!!
     ///
-    /// This will transfer coins to a contract even with no way to retrieve them
+    /// This will transfer coins to a contract with no way to retrieve them
     /// (i.e. no withdrawal functionality on receiving contract), possibly leading
     /// to the PERMANENT LOSS OF COINS if not used with care.
     pub async fn force_transfer_to_contract(
@@ -339,7 +339,7 @@ impl Wallet {
             &outputs,
             tx_parameters,
         );
-        let _sig = self.sign_transaction(&mut tx).await?;
+        self.sign_transaction(&mut tx).await?;
 
         let receipts = self.get_provider()?.send_transaction(&tx).await?;
 

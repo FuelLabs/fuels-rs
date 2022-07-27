@@ -5,8 +5,9 @@ use std::net::SocketAddr;
 use fuel_core::service::{Config, FuelService};
 use fuel_gql_client::{
     client::{
-        schema::coin::Coin, types::TransactionResponse, FuelClient, PageDirection, PaginatedResult,
-        PaginationRequest,
+        schema::{balance::Balance, coin::Coin, contract::ContractBalance},
+        types::TransactionResponse,
+        FuelClient, PageDirection, PaginatedResult, PaginationRequest,
     },
     fuel_tx::{ConsensusParameters, Input, Output, Receipt, Transaction},
     fuel_types::{Address, AssetId, ContractId, Immediate18},
@@ -264,7 +265,7 @@ impl Provider {
         asset_id: AssetId,
     ) -> Result<u64, ProviderError> {
         self.client
-            .balance(&*address.to_string(), Some(&*asset_id.to_string()))
+            .balance(&address.to_string(), Some(&asset_id.to_string()))
             .await
             .map_err(Into::into)
     }
@@ -276,9 +277,9 @@ impl Provider {
         asset_id: AssetId,
     ) -> Result<u64, ProviderError> {
         self.client
-            .contract_balance(&*contract_id.to_string(), Some(&*asset_id.to_string()))
+            .contract_balance(&contract_id.to_string(), Some(&asset_id.to_string()))
             .await
-            .map_err(Into::into)
+            .map_err(ProviderError::ClientRequestError)
     }
 
     /// Get all the spendable balances of all assets for address `address`. This is different from
@@ -297,12 +298,18 @@ impl Provider {
         };
         let balances_vec = self
             .client
-            .balances(&*address.to_string(), pagination)
+            .balances(&address.to_string(), pagination)
             .await?
             .results;
         let balances = balances_vec
-            .iter()
-            .map(|b| (b.asset_id.to_string(), b.amount.clone().try_into().unwrap()))
+            .into_iter()
+            .map(
+                |Balance {
+                     owner: _,
+                     amount,
+                     asset_id,
+                 }| (asset_id.to_string(), amount.try_into().unwrap()),
+            )
             .collect();
         Ok(balances)
     }
@@ -319,14 +326,21 @@ impl Provider {
             results: 9999,
             direction: PageDirection::Forward,
         };
+
         let balances_vec = self
             .client
-            .contract_balances(&*contract_id.to_string(), pagination)
+            .contract_balances(&contract_id.to_string(), pagination)
             .await?
             .results;
         let balances = balances_vec
-            .iter()
-            .map(|b| (b.asset_id.to_string(), b.amount.clone().try_into().unwrap()))
+            .into_iter()
+            .map(
+                |ContractBalance {
+                     contract: _,
+                     amount,
+                     asset_id,
+                 }| (asset_id.to_string(), amount.try_into().unwrap()),
+            )
             .collect();
         Ok(balances)
     }
