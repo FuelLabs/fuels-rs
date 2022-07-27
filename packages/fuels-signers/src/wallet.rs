@@ -120,7 +120,8 @@ impl Wallet {
         &self,
         request: PaginationRequest<String>,
     ) -> Result<PaginatedResult<TransactionResponse, String>, Error> {
-        Ok(self.get_provider()?
+        Ok(self
+            .get_provider()?
             .get_transactions_by_owner(self.address.to_string().as_str(), request)
             .await?)
     }
@@ -280,9 +281,9 @@ impl Wallet {
         ];
 
         // Build transaction and sign it
-        let mut tx =
-            self.get_provider()?
-                .build_transfer_tx(&inputs, &outputs, tx_parameters);
+        let mut tx = self
+            .get_provider()?
+            .build_transfer_tx(&inputs, &outputs, tx_parameters);
         let _sig = self.sign_transaction(&mut tx).await.unwrap();
 
         let receipts = self.get_provider()?.send_transaction(&tx).await?;
@@ -320,10 +321,7 @@ impl Wallet {
 
     /// Gets all coins owned by the wallet, *even spent ones*. This returns actual coins (UTXOs).
     pub async fn get_coins(&self) -> Result<Vec<Coin>, Error> {
-        Ok(self
-            .get_provider()?
-            .get_coins(&self.address())
-            .await?)
+        Ok(self.get_provider()?.get_coins(&self.address()).await?)
     }
 
     /// Get some spendable coins of asset `asset_id` owned by the wallet that add up at least to
@@ -334,7 +332,8 @@ impl Wallet {
         asset_id: &AssetId,
         amount: u64,
     ) -> Result<Vec<Coin>, Error> {
-        Ok(self.get_provider()?
+        Ok(self
+            .get_provider()?
             .get_spendable_coins(&self.address(), *asset_id, amount)
             .await?)
     }
@@ -343,7 +342,8 @@ impl Wallet {
     /// from getting coins because we are just returning a number (the sum of UTXOs amount) instead
     /// of the UTXOs.
     pub async fn get_asset_balance(&self, asset_id: &AssetId) -> Result<u64, Error> {
-        Ok(self.get_provider()?
+        Ok(self
+            .get_provider()?
             .get_asset_balance(&self.address, *asset_id)
             .await?)
     }

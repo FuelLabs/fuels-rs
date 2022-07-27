@@ -5,8 +5,9 @@ use std::net::SocketAddr;
 use fuel_core::service::{Config, FuelService};
 use fuel_gql_client::{
     client::{
-        schema::{coin::Coin, chain::ChainInfo}, types::{TransactionResponse, TransactionStatus}, FuelClient, PageDirection, PaginatedResult,
-        PaginationRequest,
+        schema::{chain::ChainInfo, coin::Coin},
+        types::{TransactionResponse, TransactionStatus},
+        FuelClient, PageDirection, PaginatedResult, PaginationRequest,
     },
     fuel_tx::{Input, Output, Receipt, Transaction},
     fuel_types::{Address, AssetId},
@@ -74,7 +75,10 @@ impl Provider {
         }
     }
 
-    async fn submit_with_feedback(&self, tx: &Transaction) -> Result<(TransactionStatus, Vec<Receipt>), ProviderError> {
+    async fn submit_with_feedback(
+        &self,
+        tx: &Transaction,
+    ) -> Result<(TransactionStatus, Vec<Receipt>), ProviderError> {
         let tx_id = self.client.submit(tx).await?.0.to_string();
         let receipts = self.client.receipts(&tx_id).await?;
         let status = self.client.transaction_status(&tx_id).await?;
@@ -116,12 +120,10 @@ impl Provider {
         })
     }
 
-
     pub async fn chain_info(&self) -> Result<ChainInfo, ProviderError> {
         Ok(self.client.chain_info().await?)
     }
 
-    // TODO should we check for revert
     pub async fn dry_run(&self, tx: &Transaction) -> Result<Vec<Receipt>, ProviderError> {
         Ok(self.client.dry_run(tx).await?)
     }
@@ -245,7 +247,10 @@ impl Provider {
     }
 
     /// Get transaction by id.
-    pub async fn get_transaction_by_id(&self, tx_id: &str) -> Result<TransactionResponse, ProviderError> {
+    pub async fn get_transaction_by_id(
+        &self,
+        tx_id: &str,
+    ) -> Result<TransactionResponse, ProviderError> {
         Ok(self.client.transaction(tx_id).await.unwrap().unwrap())
     }
 

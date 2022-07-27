@@ -732,7 +732,7 @@ mod tests {
         };
         let struct_name = Some(&struct_prop);
         let result = expand_input_param(&def, "unused", &struct_type, &struct_name);
-        assert!(matches!(result, Err(Error::MissingData(_))));
+        assert!(matches!(result, Err(Error::InvalidData(_))));
     }
 
     #[test]

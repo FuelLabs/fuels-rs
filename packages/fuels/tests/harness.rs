@@ -1,9 +1,11 @@
+use fuel_core::service::{Config, FuelService};
+use fuel_gql_client::client::FuelClient;
 use fuel_gql_client::fuel_tx::{AssetId, ContractId, Receipt};
 use fuels::contract::contract::MultiContractCallHandler;
 use fuels::prelude::{
     abigen, launch_provider_and_get_wallet, setup_multiple_assets_coins, setup_single_asset_coins,
-    setup_test_provider, CallParameters, Contract, Error, LocalWallet, Provider,
-    Salt, Signer, TxParameters, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
+    setup_test_provider, CallParameters, Contract, Error, LocalWallet, Provider, Salt, Signer,
+    TxParameters, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
 };
 use fuels::test_helpers::produce_blocks;
 use fuels_core::parameters::StorageConfiguration;
@@ -12,8 +14,6 @@ use fuels_core::Tokenizable;
 use fuels_core::{constants::BASE_ASSET_ID, Token};
 use sha2::{Digest, Sha256};
 use std::str::FromStr;
-use fuel_core::service::{Config, FuelService};
-use fuel_gql_client::client::FuelClient;
 
 /// Note: all the tests and examples below require pre-compiled Sway projects.
 /// To compile these projects, run `cargo run --bin build-test-projects`.
@@ -2336,7 +2336,7 @@ async fn test_network_error() -> Result<(), anyhow::Error> {
 
     // Simulate unreachable node
     service.stop().await;
-/*
+    /*
     let contract_id = Contract::deploy(
         "tests/test_projects/contract_test/out/debug/contract_test.bin",
         &wallet,

@@ -245,8 +245,7 @@ impl Contract {
             &chain_info.consensus_parameters.into(),
         )?;
 
-        // TODO: do we want to return receipts?
-        let _receipts = provider.send_transaction(&tx).await?;
+        provider.send_transaction(&tx).await?;
 
         Ok(contract_id)
     }

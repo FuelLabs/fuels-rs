@@ -393,7 +393,7 @@ pub fn extract_custom_type_name_from_abi_property(
     let type_field: Vec<&str> = type_field.split_whitespace().collect();
 
     if type_field.len() != 2 {
-        return Err(Error::MissingData(
+        return Err(Error::InvalidData(
             r#"The declared type was not in the format `{enum,struct} name`"#
                 .parse()
                 .unwrap(),
@@ -431,7 +431,7 @@ mod tests {
     fn test_extract_custom_type_name_from_abi_property_bad_data() {
         let p: Property = Default::default();
         let result = extract_custom_type_name_from_abi_property(&p, Some(CustomType::Enum));
-        assert!(matches!(result, Err(Error::MissingData(_))));
+        assert!(matches!(result, Err(Error::InvalidData(_))));
 
         let p = Property {
             name: String::from("foo"),
@@ -439,7 +439,7 @@ mod tests {
             components: None,
         };
         let result = extract_custom_type_name_from_abi_property(&p, Some(CustomType::Enum));
-        assert!(matches!(result, Err(Error::MissingData(_))));
+        assert!(matches!(result, Err(Error::InvalidData(_))));
     }
 
     #[test]

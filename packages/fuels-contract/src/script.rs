@@ -1,10 +1,10 @@
 use anyhow::Result;
+use fuel_gql_client::fuel_tx::{ConsensusParameters, Receipt, Transaction};
 use fuel_gql_client::fuel_tx::{Input, Output, UtxoId};
 use fuel_gql_client::fuel_types::{
     bytes::padded_len_usize, AssetId, Bytes32, ContractId, Immediate18, Word,
 };
 use fuel_gql_client::fuel_vm::{consts::REG_ONE, prelude::Opcode};
-use fuel_gql_client::fuel_tx::{ConsensusParameters, Receipt, Transaction};
 
 use fuels_core::constants::DEFAULT_SPENDABLE_COIN_AMOUNT;
 use fuels_core::parameters::TxParameters;
