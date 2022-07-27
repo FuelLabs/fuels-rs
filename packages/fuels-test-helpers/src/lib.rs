@@ -93,7 +93,10 @@ pub fn setup_multiple_assets_coins(
 }
 
 /// Create a vector of UTXOs with the provided AssetIds, num_coins, and amount_per_coin
-pub fn setup_custom_assets_coins(owner: Address, assets: Vec<AssetConfig>) -> Vec<(UtxoId, Coin)> {
+pub fn setup_custom_assets_coins(
+    owner: &Bech32Address,
+    assets: Vec<AssetConfig>,
+) -> Vec<(UtxoId, Coin)> {
     let coins = assets
         .iter()
         .flat_map(|asset| {
@@ -212,6 +215,7 @@ mod tests {
     use fuels_core::parameters::{StorageConfiguration, TxParameters};
     use fuels_signers::provider::Provider;
     use fuels_signers::{LocalWallet, Signer};
+    use fuels_types::bech32::FUEL_BECH32_HRP;
     use std::net::Ipv4Addr;
 
     #[tokio::test]
@@ -280,8 +284,9 @@ mod tests {
     #[tokio::test]
     async fn test_setup_custom_assets_coins() -> Result<(), rand::Error> {
         let mut rng = rand::thread_rng();
-        let mut address = Address::zeroed();
-        address.try_fill(&mut rng)?;
+        let mut hash = [0u8; 32];
+        hash.try_fill(&mut rng)?;
+        let address = Bech32Address::new(FUEL_BECH32_HRP, hash);
 
         let asset_base = AssetConfig {
             id: BASE_ASSET_ID,
@@ -306,7 +311,7 @@ mod tests {
         };
 
         let assets = vec![asset_base, asset_1, asset_2];
-        let coins = setup_custom_assets_coins(address, assets.clone());
+        let coins = setup_custom_assets_coins(&address, assets.clone());
 
         for asset in assets {
             let coins_asset_id: Vec<(UtxoId, Coin)> = coins
@@ -316,7 +321,7 @@ mod tests {
                 .collect();
             assert_eq!(coins_asset_id.len() as u64, asset.num_coins);
             for (_utxo_id, coin) in coins_asset_id {
-                assert_eq!(coin.owner, address);
+                assert_eq!(*coin.owner, *address.hash());
                 assert_eq!(coin.amount, asset.coin_amount);
             }
         }

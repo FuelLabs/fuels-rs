@@ -126,8 +126,8 @@ impl Abigen {
                 },
                 quote! {
                     pub struct #name {
-                        pub contract_id: Bech32ContractId,
-                        pub wallet: LocalWallet
+                        contract_id: Bech32ContractId,
+                        wallet: LocalWallet
                     }
 
                     impl #name {
