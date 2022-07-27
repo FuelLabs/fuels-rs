@@ -180,7 +180,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: ${{ matrix.command }}
-          args: ${{ matrix.args }}
+          args: "-p ${{ matrix.package }} ${{ matrix.args }}"
 
   publish:
     needs: cargo-verifications
