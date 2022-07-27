@@ -103,7 +103,9 @@ impl From<bech32::Error> for Error {
 impl From<TryFromSliceError> for Error {
     fn from(err: TryFromSliceError) -> Error {
         Error::InvalidData(err.to_string())
-        
+    }
+}
+
 impl From<anyhow::Error> for Error {
     fn from(err: anyhow::Error) -> Error {
         Error::ParseTokenStreamError(err.to_string())
