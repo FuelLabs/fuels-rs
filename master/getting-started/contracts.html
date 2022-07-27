@@ -183,7 +183,7 @@
         )
         .await?;
 
-        println!(&quot;Contract deployed @ {:x}&quot;, contract_id);
+        println!(&quot;Contract deployed @ {contract_id}&quot;);
 </code></pre>
 <p>You can then use the contract methods very simply:</p>
 <pre><code class="language-rust ignore">        // This is an instance of your contract which you can use to make calls to your functions
@@ -219,7 +219,7 @@
         )
         .await?;
 
-        println!(&quot;Contract deployed @ {:x}&quot;, contract_id_1);
+        println!(&quot;Contract deployed @ {contract_id_1}&quot;);
 
         let rng = &amp;mut StdRng::seed_from_u64(2322u64);
         let salt: [u8; 32] = rng.gen();
@@ -233,7 +233,7 @@
         )
         .await?;
 
-        println!(&quot;Contract deployed @ {:x}&quot;, contract_id_2);
+        println!(&quot;Contract deployed @ {contract_id_2}&quot;);
 
         assert_ne!(contract_id_1, contract_id_2);
 </code></pre>

@@ -272,20 +272,19 @@ development.</p>
 </code></pre>
 <h2 id="get-all-coins-from-an-address"><a class="header" href="#get-all-coins-from-an-address">Get all coins from an address</a></h2>
 <p>This method returns all coins from a wallet, including spent ones.</p>
-<pre><code class="language-rust ignore">        let coins = provider.get_coins(&amp;wallet.address()).await.unwrap();
+<pre><code class="language-rust ignore">        let coins = provider.get_coins(wallet.address()).await?;
         assert_eq!(coins.len(), 1);
 </code></pre>
 <h2 id="get-spendable-coins-from-an-address"><a class="header" href="#get-spendable-coins-from-an-address">Get spendable coins from an address</a></h2>
 <p>The last argument says how much you want to spend. This method returns only spendable, i.e., unspent coins. If you ask for more spendable than the amount of unspent coins you have, it returns an error.</p>
 <pre><code class="language-rust ignore">        let spendable_coins = provider
-            .get_spendable_coins(&amp;wallet.address(), BASE_ASSET_ID, 1)
-            .await
-            .unwrap();
+            .get_spendable_coins(wallet.address(), BASE_ASSET_ID, 1)
+            .await?;
         assert_eq!(spendable_coins.len(), 1);
 </code></pre>
 <h2 id="get-balances-from-an-address"><a class="header" href="#get-balances-from-an-address">Get balances from an address</a></h2>
 <p>Get all the spendable balances of all assets for an address. This is different from getting the coins because we only return the numbers (the sum of UTXOs coins amount for each asset id) and not the UTXOs coins themselves.</p>
-<pre><code class="language-rust ignore">        let _balances = provider.get_balances(&amp;wallet.address()).await.unwrap();
+<pre><code class="language-rust ignore">        let _balances = provider.get_balances(wallet.address()).await?;
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="managing-wallets"><a class="header" href="#managing-wallets">Managing wallets</a></h1>
 <p>You can use wallets for many important things, for instance:</p>
@@ -354,7 +353,7 @@ enables defining owners (wallet addresses) of genesis coins before a provider is
         // Or with the default derivation path
         let wallet = LocalWallet::new_from_mnemonic_phrase(phrase, Some(provider))?;
 
-        let expected_address = &quot;f18b6446deb8135544ba60333e5b7522685cd2cf64aa4e4c75df725149850b65&quot;;
+        let expected_address = &quot;fuel17x9kg3k7hqf42396vqenukm4yf59e5k0vj4yunr4mae9zjv9pdjszy098t&quot;;
 
         assert_eq!(wallet.address().to_string(), expected_address);
 </code></pre>
@@ -550,7 +549,7 @@ coins and coin amount</p>
         let message = Message::new(message);
         let recovered_address = signature.recover(&amp;message)?;
 
-        assert_eq!(wallet.address.as_ref(), recovered_address.hash().as_ref());
+        assert_eq!(wallet.address().hash(), recovered_address.hash());
 
         // Verify signature
         signature.verify(&amp;recovered_address, &amp;message)?;
@@ -604,7 +603,7 @@ coins and coin amount</p>
         // Recover address that signed the transaction
         let recovered_address = signature.recover(&amp;message)?;
 
-        assert_eq!(wallet.address.as_ref(), recovered_address.hash().as_ref());
+        assert_eq!(wallet.address().hash(), recovered_address.hash());
 
         // Verify signature
         signature.verify(&amp;recovered_address, &amp;message)?;
@@ -656,7 +655,7 @@ coins and coin amount</p>
         )
         .await?;
 
-        println!(&quot;Contract deployed @ {:x}&quot;, contract_id);
+        println!(&quot;Contract deployed @ {contract_id}&quot;);
 </code></pre>
 <p>You can then use the contract methods very simply:</p>
 <pre><code class="language-rust ignore">        // This is an instance of your contract which you can use to make calls to your functions
@@ -692,7 +691,7 @@ coins and coin amount</p>
         )
         .await?;
 
-        println!(&quot;Contract deployed @ {:x}&quot;, contract_id_1);
+        println!(&quot;Contract deployed @ {contract_id_1}&quot;);
 
         let rng = &amp;mut StdRng::seed_from_u64(2322u64);
         let salt: [u8; 32] = rng.gen();
@@ -706,7 +705,7 @@ coins and coin amount</p>
         )
         .await?;
 
-        println!(&quot;Contract deployed @ {:x}&quot;, contract_id_2);
+        println!(&quot;Contract deployed @ {contract_id_2}&quot;);
 
         assert_ne!(contract_id_1, contract_id_2);
 </code></pre>
@@ -720,7 +719,7 @@ coins and coin amount</p>
         let wallet = launch_provider_and_get_wallet().await;
         // Your contract ID as a String.
         let contract_id =
-            &quot;0x068fe90ddc43b18a8f76756ecad8bf30eb0ceea33d2e6990c0185d01b0dbb675&quot;.to_string();
+            &quot;fuel1vkm285ypjesypw7vhdlhnty3kjxxx4efckdycqh3ttna4xvmxtfs6murwy&quot;.to_string();
 
         let connected_contract_instance = MyContractBuilder::new(contract_id, wallet).build();
         // You can now use the `connected_contract_instance` just as you did above!
@@ -1103,7 +1102,7 @@ pub const BASE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
 
         // withdraw some tokens to wallet
         let response = contract_instance
-            .transfer_coins_to_output(1_000_000, contract_id, address)
+            .transfer_coins_to_output(1_000_000, contract_id.into(), address.into())
             .append_variable_outputs(1)
             .call()
             .await?;
@@ -1122,7 +1121,7 @@ pub const BASE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
 <div style="break-before: page; page-break-before: always;"></div><h1 id="calling-other-contracts"><a class="header" href="#calling-other-contracts">Calling other contracts</a></h1>
 <p>Your contract method might be calling other contracts. To do so, you must feed the external contract IDs that your contract depends on to the method you're calling. You do it by chaining <code>.set_contracts(&amp;[external_contract_id, ...])</code> to the method you want to call. For instance:</p>
 <pre><code class="language-rust ignore">    let res = foo_caller_contract_instance
-        .call_foo_contract(*foo_contract_id, true)
+        .call_foo_contract(*foo_contract_id.hash(), true)
         .set_contracts(&amp;[foo_contract_id]) // Sets the external contract
         .call()
         .await?;
@@ -1173,7 +1172,7 @@ pub const BASE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
         let b256 = Bytes32::new(my_slice);
         assert_eq!([1u8; 32], *b256);
 
-        // From a string.
+        // From a hex string.
         let hex_string = &quot;0x0000000000000000000000000000000000000000000000000000000000000000&quot;;
         let b256 = Bytes32::from_str(hex_string).expect(&quot;failed to create Bytes32 from string&quot;);
         assert_eq!([0u8; 32], *b256);
