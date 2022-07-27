@@ -2343,12 +2343,7 @@ async fn test_network_error() -> Result<(), anyhow::Error> {
     )
     .await;
 
-    match response {
-        Err(ProviderError(_)) => {}
-        _ => {
-            panic!("This should be impossible");
-        }
-    };
+    assert!(matches!(response, Err(ProviderError(_))));
 
     Ok(())
 }
