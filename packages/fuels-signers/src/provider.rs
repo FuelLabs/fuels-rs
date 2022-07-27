@@ -267,7 +267,10 @@ impl Provider {
         owner: &str,
         request: PaginationRequest<String>,
     ) -> Result<PaginatedResult<TransactionResponse, String>, ProviderError> {
-        Ok(self.client.transactions_by_owner(owner, request).await?)
+        self.client
+            .transactions_by_owner(owner, request)
+            .await
+            .map_err(Into::into)
     }
 
     pub async fn latest_block_height(&self) -> Result<u64, ProviderError> {
