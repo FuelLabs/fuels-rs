@@ -89,3 +89,9 @@ impl From<proc_macro2::LexError> for Error {
         Error::ParseTokenStreamError(err.to_string())
     }
 }
+
+impl From<anyhow::Error> for Error {
+    fn from(err: anyhow::Error) -> Error {
+        Error::ParseTokenStreamError(err.to_string())
+    }
+}
