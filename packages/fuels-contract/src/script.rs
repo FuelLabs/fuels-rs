@@ -285,7 +285,7 @@ impl Script {
             &chain_info.consensus_parameters.into(),
         )?;
 
-        Ok(provider.send_transaction(&self.tx).await?)
+        provider.send_transaction(&self.tx).await
     }
 
     /// Execute the transaction in a simulated manner, not modifying blockchain state

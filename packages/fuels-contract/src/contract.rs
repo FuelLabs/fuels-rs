@@ -548,7 +548,6 @@ pub struct MultiContractCallHandler {
     pub contract_calls: Option<Vec<ContractCall>>,
     pub tx_parameters: TxParameters,
     pub wallet: LocalWallet,
-    pub provider: Provider,
 }
 
 impl MultiContractCallHandler {
@@ -556,7 +555,6 @@ impl MultiContractCallHandler {
         Self {
             contract_calls: None,
             tx_parameters: TxParameters::default(),
-            provider: wallet.get_provider().unwrap().clone(),
             wallet,
         }
     }
@@ -611,10 +609,12 @@ impl MultiContractCallHandler {
     ) -> Result<CallResponse<D>, Error> {
         let script = self.get_script().await;
 
+        let provider = self.wallet.get_provider()?;
+
         let receipts = if simulate {
-            script.simulate(&self.provider).await.unwrap()
+            script.simulate(provider).await.unwrap()
         } else {
-            script.call(&self.provider).await.unwrap()
+            script.call(provider).await.unwrap()
         };
         tracing::debug!(target: "receipts", "{:?}", receipts);
 

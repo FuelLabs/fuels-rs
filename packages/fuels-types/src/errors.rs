@@ -1,7 +1,7 @@
 use core::fmt;
 use core::str::Utf8Error;
 pub type Result<T> = core::result::Result<T, Error>;
-use fuel_tx::ValidationError;
+use fuel_tx::{ValidationError, Receipt};
 use strum::ParseError;
 use thiserror::Error;
 
@@ -49,16 +49,18 @@ pub enum Error {
     Utf8Error(#[from] Utf8Error),
     #[error("Compilation error: {0}")]
     CompilationError(String),
+    #[error("Instantiation error: {0}")]
+    InstantiationError(String),
     #[error("Infrastructure error: {0}")]
     InfrastructureError(String),
     #[error("Wallet error: {0}")]
     WalletError(String),
     #[error("Provider error: {0}")]
     ProviderError(String),
-    #[error("Instantiation error: {0}")]
-    InstantiationError(String),
     #[error("Validation error: {0}")]
     ValidationError(#[from] ValidationError),
+    #[error("Revert transaction error: {}, receipts: {:?}", .0, .1)]
+    RevertTransactionError(String, Vec<Receipt>),
 }
 
 impl From<CodecError> for Error {

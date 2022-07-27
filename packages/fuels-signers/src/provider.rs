@@ -18,13 +18,11 @@ use thiserror::Error;
 use fuels_core::parameters::TxParameters;
 use fuels_types::errors::Error;
 
-/// An error involving a signature.
 #[derive(Debug, Error)]
 pub enum ProviderError {
+    // Every IO error in the context of Provider comes from the gql client
     #[error(transparent)]
     ClientRequestError(#[from] io::Error),
-    #[error("Transaction error: {}, receipts: {:?}", .0, .1)]
-    TransactionError(String, Vec<Receipt>),
 }
 
 impl From<ProviderError> for Error {
@@ -65,17 +63,23 @@ impl Provider {
     ///   Ok(())
     /// }
     /// ```
-    pub async fn send_transaction(&self, tx: &Transaction) -> Result<Vec<Receipt>, ProviderError> {
+    pub async fn send_transaction(&self, tx: &Transaction) -> Result<Vec<Receipt>, Error> {
+        let (status, receipts) = self.submit_with_feedback(tx).await?;
+
+        match status {
+            TransactionStatus::Failure { reason, .. } => {
+                Err(Error::RevertTransactionError(reason, receipts))
+            }
+            _ => Ok(receipts),
+        }
+    }
+
+    async fn submit_with_feedback(&self, tx: &Transaction) -> Result<(TransactionStatus, Vec<Receipt>), ProviderError> {
         let tx_id = self.client.submit(tx).await?.0.to_string();
         let receipts = self.client.receipts(&tx_id).await?;
         let status = self.client.transaction_status(&tx_id).await?;
 
-        match status {
-            TransactionStatus::Failure { reason, .. } => {
-                Err(ProviderError::TransactionError(reason, receipts))
-            }
-            _ => Ok(receipts),
-        }
+        Ok((status, receipts))
     }
 
     #[cfg(feature = "fuel-core")]

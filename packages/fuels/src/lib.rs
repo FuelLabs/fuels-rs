@@ -69,4 +69,5 @@ pub mod prelude {
     pub use super::test_helpers::*;
     pub use super::tx::Salt;
     pub use super::types::errors::Error;
+    pub use super::types::errors::Error::*;
 }

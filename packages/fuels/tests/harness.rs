@@ -805,7 +805,7 @@ async fn test_reverting_transaction() -> Result<(), Error> {
     println!("Contract deployed @ {:x}", contract_id);
     let response = contract_instance.make_transaction_fail(0).call().await;
     println!("{:?}", response);
-    assert!(matches!(response, Err(Error::ContractCallError(..))));
+    assert!(matches!(response, Err(Error::RevertTransactionError(..))));
     Ok(())
 }
 
@@ -1080,7 +1080,7 @@ async fn test_gas_errors() -> Result<(), Error> {
         .await
         .expect_err("should error");
 
-    let expected = "Contract call error: OutOfGas, receipts:";
+    let expected = "Revert transaction error: OutOfGas, receipts:";
     assert!(response.to_string().starts_with(expected));
 
     // Test for running out of gas. Gas price as `None` will be 0.
@@ -1092,7 +1092,7 @@ async fn test_gas_errors() -> Result<(), Error> {
         .await
         .expect_err("should error");
 
-    let expected = "Contract call error: OutOfGas, receipts:";
+    let expected = "Revert transaction error: OutOfGas, receipts:";
 
     assert!(response.to_string().starts_with(expected));
     Ok(())
@@ -1126,7 +1126,7 @@ async fn test_call_param_gas_errors() -> Result<(), Error> {
         .await
         .expect_err("should error");
 
-    let expected = "Contract call error: OutOfGas, receipts:";
+    let expected = "Revert transaction error: OutOfGas, receipts:";
     assert!(response.to_string().starts_with(expected));
 
     // Call params gas_forwarded exceeds transaction limit
@@ -1138,7 +1138,7 @@ async fn test_call_param_gas_errors() -> Result<(), Error> {
         .await
         .expect_err("should error");
 
-    let expected = "Contract call error: OutOfGas, receipts:";
+    let expected = "Revert transaction error: OutOfGas, receipts:";
     assert!(response.to_string().starts_with(expected));
     Ok(())
 }
@@ -1609,7 +1609,7 @@ async fn test_transaction_script_workflow() -> Result<(), Error> {
     );
 
     let wallet = launch_provider_and_get_wallet().await;
-    let client = &wallet.get_provider()?.client;
+    let provider = &wallet.get_provider()?;
 
     let contract_id = Contract::deploy(
         "tests/test_projects/contract_test/out/debug/contract_test.bin",
@@ -1626,7 +1626,7 @@ async fn test_transaction_script_workflow() -> Result<(), Error> {
     let script = call_handler.get_script().await;
     assert!(script.tx.is_script());
 
-    let receipts = script.call(client).await?;
+    let receipts = script.call(provider).await?;
 
     let response = call_handler.get_response(receipts)?;
     assert_eq!(response.value, 42);
@@ -1874,7 +1874,7 @@ async fn test_multi_call_script_workflow() -> Result<(), Error> {
     );
 
     let wallet = launch_provider_and_get_wallet().await;
-    let client = &wallet.get_provider()?.client;
+    let provider = &wallet.get_provider()?;
 
     let contract_id = Contract::deploy(
         "tests/test_projects/contract_test/out/debug/contract_test.bin",
@@ -1896,7 +1896,7 @@ async fn test_multi_call_script_workflow() -> Result<(), Error> {
         .add_call(call_handler_2);
 
     let script = multi_call_handler.get_script().await;
-    let receipts = script.call(client).await.unwrap();
+    let receipts = script.call(provider).await.unwrap();
     let (counter, array) = multi_call_handler
         .get_response::<(u64, Vec<u64>)>(receipts)?
         .value;
