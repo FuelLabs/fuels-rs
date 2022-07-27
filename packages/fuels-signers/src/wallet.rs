@@ -300,15 +300,14 @@ impl Wallet {
         Ok((tx.id().to_string(), receipts))
     }
 
-    /// UNCONDITIONAL transfer of `amount` coins of type `asset_id` to
+    /// Unconditionally transfers `amount` coins of type `asset_id` to
     /// the contract at `to`.
-    /// Fails if amount for asset ID is larger than this wallets spendable coins.
-    /// Returns the transaction ID that was sent and the list of receipts.
+    /// Fails if amount for `asset_id` is larger than this wallet's spendable coins.
+    /// Returns the corresponding transaction ID and the list of receipts.
     ///
     /// CAUTION !!!
     ///
-    /// This will transfer coins to a contract with no way to retrieve them
-    /// (i.e. no withdrawal functionality on receiving contract), possibly leading
+    /// This will transfer coins to a contract, possibly leading
     /// to the PERMANENT LOSS OF COINS if not used with care.
     pub async fn force_transfer_to_contract(
         &self,
