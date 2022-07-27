@@ -3,8 +3,8 @@ use fuel_gql_client::fuel_tx::{AssetId, ContractId, Receipt};
 use fuels::contract::contract::MultiContractCallHandler;
 use fuels::prelude::{
     abigen, launch_provider_and_get_wallet, setup_multiple_assets_coins, setup_single_asset_coins,
-    setup_test_provider, CallParameters, Contract, Error, LocalWallet, Provider, Salt, Signer,
-    TxParameters, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS, ProviderError,
+    setup_test_provider, CallParameters, Contract, Error, LocalWallet, Provider, ProviderError,
+    Salt, Signer, TxParameters, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
 };
 use fuels::test_helpers::produce_blocks;
 use fuels_core::parameters::StorageConfiguration;
@@ -2334,18 +2334,20 @@ async fn test_network_error() -> Result<(), anyhow::Error> {
 
     // Simulate an unreachable node
     service.stop().await;
-    
+
     let response = Contract::deploy(
         "tests/test_projects/contract_test/out/debug/contract_test.bin",
         &wallet,
         TxParameters::default(),
-        StorageConfiguration::default()
+        StorageConfiguration::default(),
     )
-        .await;
+    .await;
 
     match response {
-            Err(ProviderError(_)) => {}
-            _ => { panic!("This should be impossible"); }
+        Err(ProviderError(_)) => {}
+        _ => {
+            panic!("This should be impossible");
+        }
     };
 
     Ok(())
