@@ -67,11 +67,10 @@ impl Provider {
     pub async fn send_transaction(&self, tx: &Transaction) -> Result<Vec<Receipt>, Error> {
         let (status, receipts) = self.submit_with_feedback(tx).await?;
 
-        match status {
-            TransactionStatus::Failure { reason, .. } => {
-                Err(Error::RevertTransactionError(reason, receipts))
-            }
-            _ => Ok(receipts),
+        if let TransactionStatus::Failure { reason, .. } = status {
+            Err(Error::RevertTransactionError(reason, receipts))
+        } else {
+            Ok(receipts)
         }
     }
 
