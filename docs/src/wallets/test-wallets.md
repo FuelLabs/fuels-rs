@@ -16,7 +16,7 @@ You can customize your test wallets via `WalletsConfig`.
 {{#include ../../../examples/wallets/src/lib.rs:setup_5_wallets}}
 ```
 
-## Setting up a test wallet with multiple assets
+## Setting up a test wallet with multiple random assets
 
 You can create a test wallet containing multiple assets (including the base asset to pay for gas).
 
@@ -26,6 +26,17 @@ You can create a test wallet containing multiple assets (including the base asse
 
 - coins: `Vec<(UtxoId, Coin)>` has num_assets * coins_per_assets coins (UTXOs)
 - asset_ids: `Vec<AssetId>` contains the num_assets randomly generated `AssetId`s (always includes the base asset)
+
+## Setting up a test wallet with multiple custom assets
+
+You can also create assets with specific `AssetId`s, coin amounts, and number of coins.
+
+```rust,ignore
+{{#include ../../../examples/wallets/src/lib.rs:custom_assets_wallet}}
+```
+
+>**Note** In this case, you need to specify also the base asset and the corresponding number of
+>coins and coin amount
 
 ## Setting up assets
 
