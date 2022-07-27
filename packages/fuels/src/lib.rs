@@ -9,9 +9,6 @@
 //! use fuels::prelude::*;
 //! ```
 //!
-//! Note that `fuels_abigen_macro` isn't included in the `fuels` crate because
-//! it is a `proc_macro` package.
-//!
 //! Examples on how you can use the types imported by the prelude can be found in
 //! the [main test suite](https://github.com/FuelLabs/fuels-rs/blob/master/fuels/tests/harness.rs)
 
@@ -45,6 +42,14 @@ pub mod test_helpers {
     pub use fuels_test_helpers::*;
 }
 
+pub mod fuel_node {
+    #[cfg(feature = "fuel-core-lib")]
+    pub use fuel_core::service::{Config, FuelService};
+
+    #[cfg(not(feature = "fuel-core-lib"))]
+    pub use fuels_test_helpers::node::{Config, FuelService};
+}
+
 /// Easy imports of frequently used
 #[doc(hidden)]
 pub mod prelude {
@@ -62,6 +67,7 @@ pub mod prelude {
     pub use super::core::parameters::*;
     pub use super::core::tx::{Address, AssetId, ContractId};
     pub use super::core::{Token, Tokenizable};
+    pub use super::fuel_node::*;
     pub use super::fuels_abigen::abigen;
     pub use super::signers::provider::*;
     pub use super::signers::{LocalWallet, Signer};

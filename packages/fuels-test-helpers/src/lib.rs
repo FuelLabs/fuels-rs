@@ -14,16 +14,13 @@ use fuel_core::{
 pub use fuel_core::service::Config;
 
 #[cfg(not(feature = "fuel-core-lib"))]
-pub use node::{CoinConfig, Config};
+pub use node::{get_socket_address, new_fuel_node, CoinConfig, Config};
 
 #[cfg(not(feature = "fuel-core-lib"))]
 use fuel_core_interfaces::model::{Coin, CoinStatus};
 
 #[cfg(not(feature = "fuel-core-lib"))]
-use portpicker::{is_free, pick_unused_port};
-
-#[cfg(not(feature = "fuel-core-lib"))]
-use crate::node::spawn_fuel_service;
+use portpicker::is_free;
 
 use fuel_gql_client::fuel_tx::ConsensusParameters;
 use fuel_gql_client::{
@@ -37,7 +34,7 @@ use fuels_signers::fuel_crypto::rand;
 use rand::Fill;
 
 #[cfg(not(feature = "fuel-core-lib"))]
-mod node;
+pub mod node;
 
 mod chains;
 mod script;
@@ -89,6 +86,17 @@ pub fn setup_multiple_assets_coins(
         .into_iter()
         .collect::<Vec<AssetId>>();
     (coins, asset_ids)
+}
+
+/// Create a vector of UTXOs with the provided AssetIds, num_coins, and amount_per_coin
+pub fn setup_custom_assets_coins(owner: Address, assets: Vec<AssetConfig>) -> Vec<(UtxoId, Coin)> {
+    let coins = assets
+        .iter()
+        .flat_map(|asset| {
+            setup_single_asset_coins(owner, asset.id, asset.num_coins, asset.coin_amount)
+        })
+        .collect::<Vec<(UtxoId, Coin)>>();
+    coins
 }
 
 /// Create a vector of `num_coins` UTXOs containing `amount_per_coin` amount of asset `asset_id`.
@@ -178,19 +186,11 @@ pub async fn setup_test_client(
         _ => get_socket_address(),
     };
 
-    spawn_fuel_service(coins, consensus_parameters_config, srv_address.port());
+    new_fuel_node(coins, consensus_parameters_config, srv_address).await;
 
     let client = FuelClient::from(srv_address);
 
-    server_health_check(&client).await;
-
     (client, srv_address)
-}
-
-#[cfg(not(feature = "fuel-core-lib"))]
-fn get_socket_address() -> SocketAddr {
-    let free_port = pick_unused_port().expect("No ports free");
-    SocketAddr::new("127.0.0.1".parse().unwrap(), free_port)
 }
 
 #[cfg(test)]
@@ -251,6 +251,52 @@ mod tests {
             for (_utxo_id, coin) in coins_asset_id {
                 assert_eq!(coin.owner, address);
                 assert_eq!(coin.amount, amount_per_coin);
+            }
+        }
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_setup_custom_assets_coins() -> Result<(), rand::Error> {
+        let mut rng = rand::thread_rng();
+        let mut address = Address::zeroed();
+        address.try_fill(&mut rng)?;
+
+        let asset_base = AssetConfig {
+            id: BASE_ASSET_ID,
+            num_coins: 2,
+            coin_amount: 4,
+        };
+
+        let mut asset_id_1 = AssetId::zeroed();
+        asset_id_1.try_fill(&mut rng)?;
+        let asset_1 = AssetConfig {
+            id: asset_id_1,
+            num_coins: 6,
+            coin_amount: 8,
+        };
+
+        let mut asset_id_2 = AssetId::zeroed();
+        asset_id_2.try_fill(&mut rng)?;
+        let asset_2 = AssetConfig {
+            id: asset_id_2,
+            num_coins: 10,
+            coin_amount: 12,
+        };
+
+        let assets = vec![asset_base, asset_1, asset_2];
+        let coins = setup_custom_assets_coins(address, assets.clone());
+
+        for asset in assets {
+            let coins_asset_id: Vec<(UtxoId, Coin)> = coins
+                .clone()
+                .into_iter()
+                .filter(|(_, c)| c.asset_id == asset.id)
+                .collect();
+            assert_eq!(coins_asset_id.len() as u64, asset.num_coins);
+            for (_utxo_id, coin) in coins_asset_id {
+                assert_eq!(coin.owner, address);
+                assert_eq!(coin.amount, asset.coin_amount);
             }
         }
         Ok(())

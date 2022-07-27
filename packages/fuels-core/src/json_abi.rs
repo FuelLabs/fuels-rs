@@ -1,6 +1,8 @@
-use crate::utils::{first_four_bytes_of_sha256_hash, has_array_format};
+use crate::utils::first_four_bytes_of_sha256_hash;
 use crate::Token;
 use crate::{abi_decoder::ABIDecoder, abi_encoder::ABIEncoder};
+use fuels_types::function_selector::build_fn_selector;
+use fuels_types::utils::has_array_format;
 use fuels_types::{errors::Error, param_types::ParamType, JsonABI, Property};
 use hex::FromHex;
 use itertools::Itertools;
@@ -70,7 +72,7 @@ impl ABIParser {
 
         let entry = entry.expect("No functions found");
 
-        let fn_selector = self.build_fn_selector(fn_name, &entry.inputs)?;
+        let fn_selector = build_fn_selector(fn_name, &entry.inputs)?;
 
         // Update the fn_selector field with the hash of the previously encoded function selector
         self.fn_selector = Some(first_four_bytes_of_sha256_hash(&fn_selector).to_vec());
@@ -582,104 +584,6 @@ impl ABIParser {
         chars.next();
         chars.next_back();
         chars.as_str().split(',').count()
-    }
-
-    /// Builds a string representation of a function selector,
-    /// i.e: <fn_name>(<type_1>, <type_2>, ..., <type_n>)
-    pub fn build_fn_selector(&self, fn_name: &str, params: &[Property]) -> Result<String, Error> {
-        let fn_selector = fn_name.to_owned();
-
-        let mut result: String = format!("{}(", fn_selector);
-
-        for (idx, param) in params.iter().enumerate() {
-            result.push_str(&self.build_fn_selector_params(param));
-            if idx + 1 < params.len() {
-                result.push(',');
-            }
-        }
-
-        result.push(')');
-
-        Ok(result)
-    }
-
-    fn build_fn_selector_params(&self, prop: &Property) -> String {
-        let mut result: String = String::new();
-
-        if prop.is_custom_type() {
-            // Custom type, need to break down inner fields.
-            // Will return `"e(field_1,field_2,...,field_n)"` if the type is an `Enum`,
-            // `"s(field_1,field_2,...,field_n)"` if the type is a `Struct`,
-            // `"a[type;length]"` if the type is an `Array`,
-            // `(type_1,type_2,...,type_n)` if the type is a `Tuple`.
-            if prop.is_struct_type() {
-                result.push_str("s(");
-            } else if prop.is_enum_type() {
-                result.push_str("e(");
-            } else if prop.has_custom_type_in_array() {
-                result.push_str("a[");
-            } else if prop.has_custom_type_in_tuple() {
-                result.push('(');
-            } else {
-                panic!("unexpected custom type");
-            }
-
-            for (idx, component) in prop
-                .components
-                .as_ref()
-                .expect("No components found")
-                .iter()
-                .enumerate()
-            {
-                result.push_str(&self.build_fn_selector_params(component));
-
-                if idx + 1 < prop.components.as_ref().unwrap().len() {
-                    result.push(',');
-                }
-            }
-
-            if result.starts_with("a[") {
-                let array_type_field = prop.type_field.clone();
-
-                // Type field, in this case, looks like
-                // "[struct Person; 2]" and we want to extract the
-                // length, which in this example is 2.
-                // First, get the last part after `;`: `"<length>]"`.
-                let mut array_length = array_type_field.split(';').collect::<Vec<&str>>()[1]
-                    .trim()
-                    .to_string();
-
-                array_length.pop(); // Remove the trailing "]"
-
-                // Make sure the length is a valid number.
-                let array_length = array_length.parse::<usize>().expect("Invalid array length");
-
-                result.push(';');
-                result.push_str(array_length.to_string().as_str());
-                result.push(']');
-            } else {
-                result.push(')');
-            }
-        } else {
-            // Not a custom type.
-            let param_str_no_whitespace: String = prop
-                .type_field
-                .chars()
-                .filter(|c| !c.is_whitespace())
-                .collect();
-
-            // Check if the parameter is an array.
-            if has_array_format(&param_str_no_whitespace) {
-                // The representation of an array in a function selector should be `a[<type>;<length>]`.
-                // Because this is coming in as `[<type>;<length>]` (not prefixed with an 'a'), here
-                // we must prefix it with an 'a' so the function selector will be properly encoded.
-                let array = format!("{}{}", "a", param_str_no_whitespace);
-                result.push_str(array.as_str());
-            } else {
-                result.push_str(&param_str_no_whitespace);
-            }
-        }
-        result
     }
 }
 
@@ -1384,14 +1288,13 @@ mod tests {
 
     #[test]
     fn fn_selector_single_primitive() -> Result<(), Error> {
-        let abi = ABIParser::new();
         let p = Property {
             name: "foo".into(),
             type_field: "u64".into(),
             components: None,
         };
         let params = vec![p];
-        let selector = abi.build_fn_selector("my_func", &params)?;
+        let selector = build_fn_selector("my_func", &params)?;
 
         assert_eq!(selector, "my_func(u64)");
         Ok(())
@@ -1399,7 +1302,6 @@ mod tests {
 
     #[test]
     fn fn_selector_multiple_primitives() -> Result<(), Error> {
-        let abi = ABIParser::new();
         let p1 = Property {
             name: "foo".into(),
             type_field: "u64".into(),
@@ -1411,7 +1313,7 @@ mod tests {
             components: None,
         };
         let params = vec![p1, p2];
-        let selector = abi.build_fn_selector("my_func", &params)?;
+        let selector = build_fn_selector("my_func", &params)?;
 
         assert_eq!(selector, "my_func(u64,bool)");
         Ok(())
@@ -1419,8 +1321,6 @@ mod tests {
 
     #[test]
     fn fn_selector_custom_type() -> Result<(), Error> {
-        let abi = ABIParser::new();
-
         let inner_foo = Property {
             name: "foo".into(),
             type_field: "bool".into(),
@@ -1440,7 +1340,7 @@ mod tests {
         };
 
         let params = vec![p_struct];
-        let selector = abi.build_fn_selector("my_func", &params)?;
+        let selector = build_fn_selector("my_func", &params)?;
 
         assert_eq!(selector, "my_func(s(bool,u64))");
 
@@ -1450,7 +1350,7 @@ mod tests {
             components: Some(vec![inner_foo, inner_bar]),
         };
         let params = vec![p_enum];
-        let selector = abi.build_fn_selector("my_func", &params)?;
+        let selector = build_fn_selector("my_func", &params)?;
 
         assert_eq!(selector, "my_func(e(bool,u64))");
         Ok(())
@@ -1458,8 +1358,6 @@ mod tests {
 
     #[test]
     fn fn_selector_nested_struct() -> Result<(), Error> {
-        let abi = ABIParser::new();
-
         let inner_foo = Property {
             name: "foo".into(),
             type_field: "bool".into(),
@@ -1491,7 +1389,7 @@ mod tests {
         };
 
         let params = vec![p];
-        let selector = abi.build_fn_selector("my_func", &params)?;
+        let selector = build_fn_selector("my_func", &params)?;
 
         assert_eq!(selector, "my_func(s(bool,s(u64,u32)))");
         Ok(())
@@ -1499,8 +1397,6 @@ mod tests {
 
     #[test]
     fn fn_selector_nested_enum() -> Result<(), Error> {
-        let abi = ABIParser::new();
-
         let inner_foo = Property {
             name: "foo".into(),
             type_field: "bool".into(),
@@ -1532,7 +1428,7 @@ mod tests {
         };
 
         let params = vec![p];
-        let selector = abi.build_fn_selector("my_func", &params)?;
+        let selector = build_fn_selector("my_func", &params)?;
 
         assert_eq!(selector, "my_func(e(bool,e(u64,u32)))");
         Ok(())
@@ -1540,8 +1436,6 @@ mod tests {
 
     #[test]
     fn fn_selector_nested_custom_types() -> Result<(), Error> {
-        let abi = ABIParser::new();
-
         let inner_foo = Property {
             name: "foo".into(),
             type_field: "bool".into(),
@@ -1573,7 +1467,7 @@ mod tests {
         };
 
         let params = vec![p];
-        let selector = abi.build_fn_selector("my_func", &params)?;
+        let selector = build_fn_selector("my_func", &params)?;
 
         assert_eq!(selector, "my_func(s(bool,e(u64,u32)))");
 
@@ -1584,7 +1478,7 @@ mod tests {
             components: Some(vec![inner_foo, inner_custom]),
         };
         let params = vec![p];
-        let selector = abi.build_fn_selector("my_func", &params)?;
+        let selector = build_fn_selector("my_func", &params)?;
         assert_eq!(selector, "my_func(e(bool,s(u64,u32)))");
         Ok(())
     }
