@@ -189,6 +189,8 @@ mod tests {
         Ok(())
     }
 
+    #[tokio::test]
+    #[allow(unused_variables)]
     async fn setup_wallet_custom_assets() -> Result<(), rand::Error> {
         // ANCHOR: custom_assets_wallet
         use fuels::prelude::*;
