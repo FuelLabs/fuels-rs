@@ -9,9 +9,10 @@ use strum_macros::ToString;
 pub mod bech32;
 pub mod constants;
 pub mod errors;
-
+pub mod function_selector;
 pub mod param_types;
 pub mod parse_param;
+pub mod utils;
 
 /// Fuel ABI representation in JSON, originally specified here:
 ///
