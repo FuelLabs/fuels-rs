@@ -1,5 +1,7 @@
 use core::fmt;
 use core::str::Utf8Error;
+use std::array::TryFromSliceError;
+
 pub type Result<T> = core::result::Result<T, Error>;
 use fuel_tx::{Receipt, ValidationError};
 use strum::ParseError;
@@ -57,6 +59,8 @@ pub enum Error {
     ContractCallError(String, Vec<Receipt>),
     #[error("Wallet error: {0}")]
     WalletError(String),
+    #[error("Provider error: {0}")]
+    ProviderError(String),
     #[error("Instantiation error: {0}")]
     InstantiationError(String),
     #[error("Validation error: {0}")]
@@ -87,6 +91,18 @@ impl From<std::io::Error> for Error {
 impl From<proc_macro2::LexError> for Error {
     fn from(err: proc_macro2::LexError) -> Error {
         Error::ParseTokenStreamError(err.to_string())
+    }
+}
+
+impl From<bech32::Error> for Error {
+    fn from(err: bech32::Error) -> Error {
+        Error::InvalidData(err.to_string())
+    }
+}
+
+impl From<TryFromSliceError> for Error {
+    fn from(err: TryFromSliceError) -> Error {
+        Error::InvalidData(err.to_string())
     }
 }
 
