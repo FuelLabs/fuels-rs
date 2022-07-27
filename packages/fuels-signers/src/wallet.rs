@@ -8,10 +8,10 @@ use eth_keystore::KeystoreError;
 use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
 use fuel_gql_client::{
     client::{schema::coin::Coin, types::TransactionResponse, PaginatedResult, PaginationRequest},
-    fuel_tx::{AssetId, Input, Output, Receipt, Transaction, UtxoId, Witness},
+    fuel_tx::{AssetId, Bytes32, ContractId, Input, Output, Receipt, Transaction, UtxoId, Witness},
 };
 use fuels_core::parameters::TxParameters;
-use fuels_types::bech32::{Bech32Address, FUEL_BECH32_HRP};
+use fuels_types::bech32::{Bech32Address, Bech32ContractId, FUEL_BECH32_HRP};
 use fuels_types::errors::Error;
 use rand::{CryptoRng, Rng};
 use std::{collections::HashMap, fmt, io, path::Path, str::FromStr};
@@ -310,14 +310,20 @@ impl Wallet {
     /// to the PERMANENT LOSS OF COINS if not used with care.
     pub async fn force_transfer_to_contract(
         &self,
-        to: &ContractId,
+        to: &Bech32ContractId,
         amount: u64,
         asset_id: AssetId,
         tx_parameters: TxParameters,
     ) -> Result<(String, Vec<Receipt>), WalletError> {
         let zeroes = Bytes32::zeroed();
+        let plain_contract_id: ContractId = to.into();
 
-        let mut inputs = vec![Input::contract(UtxoId::new(zeroes, 0), zeroes, zeroes, *to)];
+        let mut inputs = vec![Input::contract(
+            UtxoId::new(zeroes, 0),
+            zeroes,
+            zeroes,
+            plain_contract_id,
+        )];
         inputs.extend(
             self.get_asset_inputs_for_amount(asset_id, amount, 0)
                 .await?,
@@ -325,12 +331,12 @@ impl Wallet {
 
         let outputs = vec![
             Output::contract(0, zeroes, zeroes),
-            Output::change(self.address(), 0, asset_id),
+            Output::change(self.address().into(), 0, asset_id),
         ];
 
         // Build transaction and sign it
         let mut tx = self.get_provider()?.build_contract_transfer_tx(
-            *to,
+            plain_contract_id,
             amount,
             asset_id,
             &inputs,

@@ -10,22 +10,19 @@ use fuel_gql_client::{
         FuelClient, PageDirection, PaginatedResult, PaginationRequest,
     },
     fuel_tx::{ConsensusParameters, Input, Output, Receipt, Transaction},
-    fuel_types::{Address, AssetId, ContractId, Immediate18},
+    fuel_types::{AssetId, ContractId, Immediate18},
     fuel_vm::{
         consts::{REG_ONE, WORD_SIZE},
         prelude::Opcode,
         script_with_data_offset,
     },
-    fuel_tx::{Input, Output, Receipt, Transaction},
-    fuel_types::AssetId,
-    fuel_vm::{consts::REG_ONE, prelude::Opcode},
 };
 use std::collections::HashMap;
 use thiserror::Error;
 
 use crate::wallet::WalletError;
 use fuels_core::parameters::TxParameters;
-use fuels_types::bech32::Bech32Address;
+use fuels_types::bech32::{Bech32Address, Bech32ContractId};
 use fuels_types::errors::Error;
 
 /// An error involving a signature.
@@ -51,11 +48,6 @@ impl From<WalletError> for ProviderError {
     }
 }
 
-impl From<ProviderError> for Error {
-    fn from(e: ProviderError) -> Self {
-        Error::ProviderError(e.to_string())
-    }
-}
 /// Encapsulates common client operations in the SDK.
 /// Note that you may also use `client`, which is an instance
 /// of `FuelClient`, directly, which providers a broader API.
@@ -283,11 +275,11 @@ impl Provider {
     /// Get the balance of all spendable coins `asset_id` for contract with id `contract_id`.
     pub async fn get_contract_asset_balance(
         &self,
-        contract_id: &ContractId,
+        contract_id: &Bech32ContractId,
         asset_id: AssetId,
     ) -> Result<u64, ProviderError> {
         self.client
-            .contract_balance(&contract_id.to_string(), Some(&asset_id.to_string()))
+            .contract_balance(&contract_id.hash().to_string(), Some(&asset_id.to_string()))
             .await
             .map_err(ProviderError::ClientRequestError)
     }
@@ -327,7 +319,7 @@ impl Provider {
     /// Get all balances of all assets for the contract with id `contract_id`.
     pub async fn get_contract_balances(
         &self,
-        contract_id: &ContractId,
+        contract_id: &Bech32ContractId,
     ) -> Result<HashMap<String, u64>, ProviderError> {
         // We don't paginate results because there are likely at most ~100 different assets in one
         // wallet
@@ -339,7 +331,7 @@ impl Provider {
 
         let balances_vec = self
             .client
-            .contract_balances(&contract_id.to_string(), pagination)
+            .contract_balances(&contract_id.hash().to_string(), pagination)
             .await?
             .results;
         let balances = balances_vec
