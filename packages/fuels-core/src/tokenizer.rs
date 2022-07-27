@@ -5,7 +5,7 @@ use fuels_types::utils::has_array_format;
 use hex::FromHex;
 
 #[derive(Default)]
-pub struct Tokenizer {}
+pub struct Tokenizer;
 
 impl Tokenizer {
     pub fn new() -> Self {
@@ -17,7 +17,7 @@ impl Tokenizer {
     /// Takes a ParamType and a value string and joins them as a single
     /// Token that holds the value within it. This Token is used
     /// in the encoding process.
-    pub fn tokenize(&self, param: &ParamType, value: String) -> Result<Token, Error> {
+    pub fn tokenize(param: &ParamType, value: String) -> Result<Token, Error> {
         let trimmed_value = value.trim();
         match &*param {
             ParamType::Unit => Ok(Token::Unit),
@@ -39,16 +39,16 @@ impl Tokenizer {
                 let s: [u8; 32] = v.as_slice().try_into().unwrap();
                 Ok(Token::B256(s))
             }
-            ParamType::Array(t, _) => Ok(self.tokenize_array(trimmed_value, &*t)?),
+            ParamType::Array(t, _) => Ok(Self::tokenize_array(trimmed_value, &*t)?),
             ParamType::String(_) => Ok(Token::String(trimmed_value.to_string())),
             ParamType::Struct(struct_params) => {
-                Ok(self.tokenize_struct(trimmed_value, struct_params)?)
+                Ok(Self::tokenize_struct(trimmed_value, struct_params)?)
             }
             ParamType::Enum(variants) => {
                 let discriminant = get_enum_discriminant_from_string(trimmed_value);
                 let value = get_enum_value_from_string(trimmed_value);
 
-                let token = self.tokenize(&variants.param_types()[discriminant], value)?;
+                let token = Self::tokenize(&variants.param_types()[discriminant], value)?;
 
                 Ok(Token::Enum(Box::new((
                     discriminant as u8,
@@ -56,7 +56,9 @@ impl Tokenizer {
                     variants.clone(),
                 ))))
             }
-            ParamType::Tuple(tuple_params) => Ok(self.tokenize_tuple(trimmed_value, tuple_params)?),
+            ParamType::Tuple(tuple_params) => {
+                Ok(Self::tokenize_tuple(trimmed_value, tuple_params)?)
+            }
         }
     }
 
@@ -66,7 +68,7 @@ impl Tokenizer {
     /// [ParamType::<Type of value_1>, ParamType::<Type of value_2>, ParamType::<Type of value_3>]
     /// And attempts to return a `Token::Struct()` containing the inner types.
     /// It works for nested/recursive structs.
-    pub fn tokenize_struct(&self, value: &str, params: &[ParamType]) -> Result<Token, Error> {
+    pub fn tokenize_struct(value: &str, params: &[ParamType]) -> Result<Token, Error> {
         if !value.starts_with('(') || !value.ends_with(')') {
             return Err(Error::InvalidData(
                 "struct value string must start and end with round brackets".into(),
@@ -109,7 +111,7 @@ impl Tokenizer {
                         std::cmp::Ordering::Equal => {
                             let sub = &value[last_item..pos];
 
-                            let token = self.tokenize(
+                            let token = Self::tokenize(
                                 params_iter.next().ok_or_else(|| {
                                     Error::InvalidData(
                                         "struct value contains more elements than the parameter types provided".into(),
@@ -134,7 +136,7 @@ impl Tokenizer {
                         continue;
                     }
 
-                    let token = self.tokenize(
+                    let token = Self::tokenize(
                         params_iter.next().ok_or_else(|| {
                             Error::InvalidData(
                                 "struct value contains more elements than the parameter types provided".into(),
@@ -167,7 +169,7 @@ impl Tokenizer {
     /// Creates a `Token::Array` from one parameter type and a string of values. I.e. it takes a
     /// string containing values "value_1, value_2, value_3" and a `ParamType` sepecifying the type.
     /// It works for nested/recursive arrays.
-    pub fn tokenize_array<'a>(&self, value: &'a str, param: &ParamType) -> Result<Token, Error> {
+    pub fn tokenize_array(value: &str, param: &ParamType) -> Result<Token, Error> {
         if !value.starts_with('[') || !value.ends_with(']') {
             return Err(Error::InvalidData(
                 "array value string must start and end with square brackets".into(),
@@ -207,10 +209,10 @@ impl Tokenizer {
                                         get_array_length_from_string(sub),
                                     );
 
-                                    result.push(self.tokenize(&arr_param, sub.to_string())?);
+                                    result.push(Self::tokenize(&arr_param, sub.to_string())?);
                                 }
                                 false => {
-                                    result.push(self.tokenize(param, sub.to_string())?);
+                                    result.push(Self::tokenize(param, sub.to_string())?);
                                 }
                             }
 
@@ -231,10 +233,10 @@ impl Tokenizer {
                                 get_array_length_from_string(sub),
                             );
 
-                            result.push(self.tokenize(&arr_param, sub.to_string())?);
+                            result.push(Self::tokenize(&arr_param, sub.to_string())?);
                         }
                         false => {
-                            result.push(self.tokenize(param, sub.to_string())?);
+                            result.push(Self::tokenize(param, sub.to_string())?);
                         }
                     }
                     last_item = i + 1;
@@ -264,7 +266,7 @@ impl Tokenizer {
     /// [ParamType::<Type of value_1>, ParamType::<Type of value_2>, ParamType::<Type of value_3>]
     /// And attempts to return a `Token::Tuple()` containing the inner types.
     /// It works for nested/recursive tuples.
-    pub fn tokenize_tuple(&self, value: &str, params: &[ParamType]) -> Result<Token, Error> {
+    pub fn tokenize_tuple(value: &str, params: &[ParamType]) -> Result<Token, Error> {
         if !value.starts_with('(') || !value.ends_with(')') {
             return Err(Error::InvalidData(
                 "tuple value string must start and end with round brackets".into(),
@@ -299,7 +301,7 @@ impl Tokenizer {
                         std::cmp::Ordering::Equal => {
                             let sub = &value[last_item..pos];
 
-                            let token = self.tokenize(
+                            let token = Self::tokenize(
                                 params_iter.next().ok_or_else(|| {
                                     Error::InvalidData(
                                         "tuple value contains more elements than the parameter types provided".into(),
@@ -324,7 +326,7 @@ impl Tokenizer {
                         continue;
                     }
 
-                    let token = self.tokenize(
+                    let token = Self::tokenize(
                         params_iter.next().ok_or_else(|| {
                             Error::InvalidData(
                                 "tuple value contains more elements than the parameter types provided".into(),
@@ -383,7 +385,6 @@ mod tests {
 
     #[test]
     fn tokenize_struct_excess_value_elements_expected_error() -> Result<(), Error> {
-        let abi = Tokenizer {};
         let params = Property {
             name: "input".to_string(),
             type_field: "struct MyStruct".to_string(),
@@ -402,8 +403,7 @@ mod tests {
         };
 
         if let ParamType::Struct(struct_params) = ParamType::parse_custom_type_param(&params)? {
-            let error_message = abi
-                .tokenize_struct("(0, [0,0,0], 0, 0)", &struct_params)
+            let error_message = Tokenizer::tokenize_struct("(0, [0,0,0], 0, 0)", &struct_params)
                 .unwrap_err()
                 .to_string();
 
@@ -412,8 +412,7 @@ mod tests {
                 error_message
             );
 
-            let error_message = abi
-                .tokenize_struct("(0, [0,0,0], 0)", &struct_params)
+            let error_message = Tokenizer::tokenize_struct("(0, [0,0,0], 0)", &struct_params)
                 .unwrap_err()
                 .to_string();
 
@@ -426,7 +425,6 @@ mod tests {
     }
     #[test]
     fn tokenize_struct_excess_quotes_expected_error() -> Result<(), Error> {
-        let tokenizer = Tokenizer::new();
         let params = Property {
             name: "input".to_string(),
             type_field: "struct MyStruct".to_string(),
@@ -445,8 +443,7 @@ mod tests {
         };
 
         if let ParamType::Struct(struct_params) = ParamType::parse_custom_type_param(&params)? {
-            let error_message = tokenizer
-                .tokenize_struct("(0, \"[0,0,0])", &struct_params)
+            let error_message = Tokenizer::tokenize_struct("(0, \"[0,0,0])", &struct_params)
                 .unwrap_err()
                 .to_string();
 
@@ -460,11 +457,8 @@ mod tests {
 
     #[test]
     fn tokenize_uint_types_expected_error() {
-        let tokenizer = Tokenizer::new();
-
         // We test only on U8 as it is the same error on all other unsigned int types
-        let error_message = tokenizer
-            .tokenize(&ParamType::U8, "2,".to_string())
+        let error_message = Tokenizer::tokenize(&ParamType::U8, "2,".to_string())
             .unwrap_err()
             .to_string();
 
@@ -476,10 +470,7 @@ mod tests {
 
     #[test]
     fn tokenize_bool_expected_error() {
-        let tokenizer = Tokenizer::new();
-
-        let error_message = tokenizer
-            .tokenize(&ParamType::Bool, "True".to_string())
+        let error_message = Tokenizer::tokenize(&ParamType::Bool, "True".to_string())
             .unwrap_err()
             .to_string();
 
@@ -491,11 +482,8 @@ mod tests {
 
     #[test]
     fn tokenize_b256_invalid_length_expected_error() {
-        let tokenizer = Tokenizer::new();
-
         let value = "d57a9c46dfcc7f18207013e65b44e4cb4e2c2298f4ac457ba8f82743f31e90b".to_string();
-        let error_message = tokenizer
-            .tokenize(&ParamType::B256, value)
+        let error_message = Tokenizer::tokenize(&ParamType::B256, value)
             .unwrap_err()
             .to_string();
 
@@ -507,11 +495,8 @@ mod tests {
 
     #[test]
     fn tokenize_b256_invalid_character_expected_error() {
-        let tokenizer = Tokenizer::new();
-
         let value = "Hd57a9c46dfcc7f18207013e65b44e4cb4e2c2298f4ac457ba8f82743f31e90b".to_string();
-        let error_message = tokenizer
-            .tokenize(&ParamType::B256, value)
+        let error_message = Tokenizer::tokenize(&ParamType::B256, value)
             .unwrap_err()
             .to_string();
 
@@ -520,7 +505,6 @@ mod tests {
 
     #[test]
     fn tokenize_tuple_invalid_start_end_bracket_expected_error() -> Result<(), Error> {
-        let tokenizer = Tokenizer::new();
         let params = Property {
             name: "input".to_string(),
             type_field: "(u64, [u64; 3])".to_string(),
@@ -539,8 +523,7 @@ mod tests {
         };
 
         if let ParamType::Tuple(tuple_params) = ParamType::parse_tuple_param(&params)? {
-            let error_message = tokenizer
-                .tokenize_tuple("0, [0,0,0])", &tuple_params)
+            let error_message = Tokenizer::tokenize_tuple("0, [0,0,0])", &tuple_params)
                 .unwrap_err()
                 .to_string();
 
@@ -554,7 +537,6 @@ mod tests {
 
     #[test]
     fn tokenize_tuple_excess_opening_bracket_expected_error() -> Result<(), Error> {
-        let tokenizer = Tokenizer::new();
         let params = Property {
             name: "input".to_string(),
             type_field: "(u64, [u64; 3])".to_string(),
@@ -573,8 +555,7 @@ mod tests {
         };
 
         if let ParamType::Tuple(tuple_params) = ParamType::parse_tuple_param(&params)? {
-            let error_message = tokenizer
-                .tokenize_tuple("((0, [0,0,0])", &tuple_params)
+            let error_message = Tokenizer::tokenize_tuple("((0, [0,0,0])", &tuple_params)
                 .unwrap_err()
                 .to_string();
 
@@ -588,7 +569,6 @@ mod tests {
 
     #[test]
     fn tokenize_tuple_excess_closing_bracket_expected_error() -> Result<(), Error> {
-        let tokenizer = Tokenizer::new();
         let params = Property {
             name: "input".to_string(),
             type_field: "(u64, [u64; 3])".to_string(),
@@ -607,8 +587,7 @@ mod tests {
         };
 
         if let ParamType::Tuple(tuple_params) = ParamType::parse_tuple_param(&params)? {
-            let error_message = tokenizer
-                .tokenize_tuple("(0, [0,0,0]))", &tuple_params)
+            let error_message = Tokenizer::tokenize_tuple("(0, [0,0,0]))", &tuple_params)
                 .unwrap_err()
                 .to_string();
 
@@ -622,7 +601,6 @@ mod tests {
 
     #[test]
     fn tokenize_tuple_excess_quotes_expected_error() -> Result<(), Error> {
-        let tokenizer = Tokenizer::new();
         let params = Property {
             name: "input".to_string(),
             type_field: "(u64, [u64; 3])".to_string(),
@@ -641,8 +619,7 @@ mod tests {
         };
 
         if let ParamType::Tuple(tuple_params) = ParamType::parse_tuple_param(&params)? {
-            let error_message = tokenizer
-                .tokenize_tuple("(0, \"[0,0,0])", &tuple_params)
+            let error_message = Tokenizer::tokenize_tuple("(0, \"[0,0,0])", &tuple_params)
                 .unwrap_err()
                 .to_string();
 
@@ -656,7 +633,6 @@ mod tests {
 
     #[test]
     fn tokenize_tuple_excess_value_elements_expected_error() -> Result<(), Error> {
-        let tokenizer = Tokenizer::new();
         let params = Property {
             name: "input".to_string(),
             type_field: "(u64, [u64; 3])".to_string(),
@@ -675,8 +651,7 @@ mod tests {
         };
 
         if let ParamType::Tuple(tuple_params) = ParamType::parse_tuple_param(&params)? {
-            let error_message = tokenizer
-                .tokenize_tuple("(0, [0,0,0], 0, 0)", &tuple_params)
+            let error_message = Tokenizer::tokenize_tuple("(0, [0,0,0], 0, 0)", &tuple_params)
                 .unwrap_err()
                 .to_string();
 
@@ -685,8 +660,7 @@ mod tests {
                 error_message
             );
 
-            let error_message = tokenizer
-                .tokenize_tuple("(0, [0,0,0], 0)", &tuple_params)
+            let error_message = Tokenizer::tokenize_tuple("(0, [0,0,0], 0)", &tuple_params)
                 .unwrap_err()
                 .to_string();
 
@@ -701,10 +675,8 @@ mod tests {
     #[test]
     fn tokenize_array_invalid_start_end_bracket_expected_error() {
         let param = ParamType::U16;
-        let tokenizer = Tokenizer::new();
 
-        let error_message = tokenizer
-            .tokenize_array("1,2],[3],4]", &param)
+        let error_message = Tokenizer::tokenize_array("1,2],[3],4]", &param)
             .unwrap_err()
             .to_string();
 
@@ -717,10 +689,8 @@ mod tests {
     #[test]
     fn tokenize_array_excess_opening_bracket_expected_error() {
         let param = ParamType::U16;
-        let tokenizer = Tokenizer::new();
 
-        let error_message = tokenizer
-            .tokenize_array("[[[1,2],[3],4]", &param)
+        let error_message = Tokenizer::tokenize_array("[[[1,2],[3],4]", &param)
             .unwrap_err()
             .to_string();
 
@@ -733,10 +703,8 @@ mod tests {
     #[test]
     fn tokenize_array_excess_closing_bracket_expected_error() {
         let param = ParamType::U16;
-        let tokenizer = Tokenizer::new();
 
-        let error_message = tokenizer
-            .tokenize_array("[[1,2],[3],4]]", &param)
+        let error_message = Tokenizer::tokenize_array("[[1,2],[3],4]]", &param)
             .unwrap_err()
             .to_string();
 
@@ -749,10 +717,7 @@ mod tests {
     #[test]
     fn tokenize_array_excess_quotes_expected_error() {
         let param = ParamType::U16;
-        let abi = Tokenizer::new();
-
-        let error_message = abi
-            .tokenize_array("[[1,\"2],[3],4]]", &param)
+        let error_message = Tokenizer::tokenize_array("[[1,\"2],[3],4]]", &param)
             .unwrap_err()
             .to_string();
 
@@ -764,7 +729,6 @@ mod tests {
 
     #[test]
     fn tokenize_struct_invalid_start_end_bracket_expected_error() -> Result<(), Error> {
-        let abi = Tokenizer::new();
         let params = Property {
             name: "input".to_string(),
             type_field: "struct MyStruct".to_string(),
@@ -783,8 +747,7 @@ mod tests {
         };
 
         if let ParamType::Struct(struct_params) = ParamType::parse_custom_type_param(&params)? {
-            let error_message = abi
-                .tokenize_struct("0, [0,0,0])", &struct_params)
+            let error_message = Tokenizer::tokenize_struct("0, [0,0,0])", &struct_params)
                 .unwrap_err()
                 .to_string();
 
@@ -798,7 +761,6 @@ mod tests {
 
     #[test]
     fn tokenize_struct_excess_opening_bracket_expected_error() -> Result<(), Error> {
-        let abi = Tokenizer::new();
         let params = Property {
             name: "input".to_string(),
             type_field: "struct MyStruct".to_string(),
@@ -817,8 +779,7 @@ mod tests {
         };
 
         if let ParamType::Struct(struct_params) = ParamType::parse_custom_type_param(&params)? {
-            let error_message = abi
-                .tokenize_struct("((0, [0,0,0])", &struct_params)
+            let error_message = Tokenizer::tokenize_struct("((0, [0,0,0])", &struct_params)
                 .unwrap_err()
                 .to_string();
 
@@ -832,7 +793,6 @@ mod tests {
 
     #[test]
     fn tokenize_struct_excess_closing_bracket_expected_error() -> Result<(), Error> {
-        let tokenizer = Tokenizer::new();
         let params = Property {
             name: "input".to_string(),
             type_field: "struct MyStruct".to_string(),
@@ -851,8 +811,7 @@ mod tests {
         };
 
         if let ParamType::Struct(struct_params) = ParamType::parse_custom_type_param(&params)? {
-            let error_message = tokenizer
-                .tokenize_struct("(0, [0,0,0]))", &struct_params)
+            let error_message = Tokenizer::tokenize_struct("(0, [0,0,0]))", &struct_params)
                 .unwrap_err()
                 .to_string();
 
@@ -861,6 +820,62 @@ mod tests {
                 error_message
             );
         }
+        Ok(())
+    }
+
+    #[test]
+    fn tokenize_array() -> Result<(), Error> {
+        let value = "[[1,2],[3],4]";
+        let param = ParamType::U16;
+        let tokens = Tokenizer::tokenize_array(value, &param)?;
+
+        let expected_tokens = Token::Array(vec![
+            Token::Array(vec![Token::U16(1), Token::U16(2)]), // First element, a sub-array with 2 elements
+            Token::Array(vec![Token::U16(3)]), // Second element, a sub-array with 1 element
+            Token::U16(4),                     // Third element
+        ]);
+
+        assert_eq!(tokens, expected_tokens);
+
+        let value = "[1,[2],[3],[4,5]]";
+        let param = ParamType::U16;
+        let tokens = Tokenizer::tokenize_array(value, &param)?;
+
+        let expected_tokens = Token::Array(vec![
+            Token::U16(1),
+            Token::Array(vec![Token::U16(2)]),
+            Token::Array(vec![Token::U16(3)]),
+            Token::Array(vec![Token::U16(4), Token::U16(5)]),
+        ]);
+
+        assert_eq!(tokens, expected_tokens);
+
+        let value = "[1,2,3,4,5]";
+        let param = ParamType::U16;
+        let tokens = Tokenizer::tokenize_array(value, &param)?;
+
+        let expected_tokens = Token::Array(vec![
+            Token::U16(1),
+            Token::U16(2),
+            Token::U16(3),
+            Token::U16(4),
+            Token::U16(5),
+        ]);
+
+        assert_eq!(tokens, expected_tokens);
+
+        let value = "[[1,2,3,[4,5]]]";
+        let param = ParamType::U16;
+        let tokens = Tokenizer::tokenize_array(value, &param)?;
+
+        let expected_tokens = Token::Array(vec![Token::Array(vec![
+            Token::U16(1),
+            Token::U16(2),
+            Token::U16(3),
+            Token::Array(vec![Token::U16(4), Token::U16(5)]),
+        ])]);
+
+        assert_eq!(tokens, expected_tokens);
         Ok(())
     }
 }

@@ -10,7 +10,6 @@ use std::str;
 
 pub struct ABIParser {
     fn_selector: Option<Vec<u8>>,
-    tokenizer: Tokenizer,
 }
 
 impl Default for ABIParser {
@@ -21,10 +20,7 @@ impl Default for ABIParser {
 
 impl ABIParser {
     pub fn new() -> Self {
-        ABIParser {
-            fn_selector: None,
-            tokenizer: Tokenizer::new(),
-        }
+        ABIParser { fn_selector: None }
     }
 
     /// Higher-level layer of the ABI encoding module.
@@ -181,7 +177,7 @@ impl ABIParser {
     pub fn parse_tokens<'a>(&self, params: &'a [(ParamType, &str)]) -> Result<Vec<Token>, Error> {
         params
             .iter()
-            .map(|&(ref param, value)| self.tokenizer.tokenize(param, value.to_string()))
+            .map(|&(ref param, value)| Tokenizer::tokenize(param, value.to_string()))
             .collect::<Result<_, _>>()
             .map_err(From::from)
     }
@@ -230,7 +226,7 @@ impl ABIParser {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fuels_types::{errors::Error, param_types::ParamType};
+    use fuels_types::errors::Error;
 
     #[test]
     fn simple_encode_and_decode_no_selector() -> Result<(), Error> {
@@ -422,64 +418,6 @@ mod tests {
         let expected_return = vec![Token::Array(vec![Token::U16(0), Token::U16(1)])];
 
         assert_eq!(decoded_return, expected_return);
-        Ok(())
-    }
-
-    #[test]
-    fn tokenize_array() -> Result<(), Error> {
-        let tokenizer = Tokenizer::new();
-
-        let value = "[[1,2],[3],4]";
-        let param = ParamType::U16;
-        let tokens = tokenizer.tokenize_array(value, &param)?;
-
-        let expected_tokens = Token::Array(vec![
-            Token::Array(vec![Token::U16(1), Token::U16(2)]), // First element, a sub-array with 2 elements
-            Token::Array(vec![Token::U16(3)]), // Second element, a sub-array with 1 element
-            Token::U16(4),                     // Third element
-        ]);
-
-        assert_eq!(tokens, expected_tokens);
-
-        let value = "[1,[2],[3],[4,5]]";
-        let param = ParamType::U16;
-        let tokens = tokenizer.tokenize_array(value, &param)?;
-
-        let expected_tokens = Token::Array(vec![
-            Token::U16(1),
-            Token::Array(vec![Token::U16(2)]),
-            Token::Array(vec![Token::U16(3)]),
-            Token::Array(vec![Token::U16(4), Token::U16(5)]),
-        ]);
-
-        assert_eq!(tokens, expected_tokens);
-
-        let value = "[1,2,3,4,5]";
-        let param = ParamType::U16;
-        let tokens = tokenizer.tokenize_array(value, &param)?;
-
-        let expected_tokens = Token::Array(vec![
-            Token::U16(1),
-            Token::U16(2),
-            Token::U16(3),
-            Token::U16(4),
-            Token::U16(5),
-        ]);
-
-        assert_eq!(tokens, expected_tokens);
-
-        let value = "[[1,2,3,[4,5]]]";
-        let param = ParamType::U16;
-        let tokens = tokenizer.tokenize_array(value, &param)?;
-
-        let expected_tokens = Token::Array(vec![Token::Array(vec![
-            Token::U16(1),
-            Token::U16(2),
-            Token::U16(3),
-            Token::Array(vec![Token::U16(4), Token::U16(5)]),
-        ])]);
-
-        assert_eq!(tokens, expected_tokens);
         Ok(())
     }
 
