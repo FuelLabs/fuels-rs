@@ -9,9 +9,6 @@
 //! use fuels::prelude::*;
 //! ```
 //!
-//! Note that `fuels_abigen_macro` isn't included in the `fuels` crate because
-//! it is a `proc_macro` package.
-//!
 //! Examples on how you can use the types imported by the prelude can be found in
 //! the [main test suite](https://github.com/FuelLabs/fuels-rs/blob/master/fuels/tests/harness.rs)
 
