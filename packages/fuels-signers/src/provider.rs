@@ -261,7 +261,7 @@ impl Provider {
         Ok(self.client.transactions(request).await?)
     }
 
-    /// Get transaction(s) by owner
+    // Get transaction(s) by owner
     pub async fn get_transactions_by_owner(
         &self,
         owner: &str,
