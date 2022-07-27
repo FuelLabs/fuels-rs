@@ -57,7 +57,7 @@ mod tests {
         // Or with the default derivation path
         let wallet = LocalWallet::new_from_mnemonic_phrase(phrase, Some(provider))?;
 
-        let expected_address = "f18b6446deb8135544ba60333e5b7522685cd2cf64aa4e4c75df725149850b65";
+        let expected_address = "fuel17x9kg3k7hqf42396vqenukm4yf59e5k0vj4yunr4mae9zjv9pdjszy098t";
 
         assert_eq!(wallet.address().to_string(), expected_address);
         // ANCHOR_END: create_wallet_from_mnemonic
@@ -117,12 +117,12 @@ mod tests {
         use fuels::prelude::*;
 
         // Setup 2 test wallets with 1 coin each
+        let num_wallets = Some(2);
+        let coins_per_wallet = Some(1);
+        let coin_amount = Some(1);
+
         let wallets = launch_custom_provider_and_get_wallets(
-            WalletsConfig {
-                num_wallets: 2,
-                coins_per_wallet: 1,
-                coin_amount: 1,
-            },
+            WalletsConfig::new(num_wallets, coins_per_wallet, coin_amount),
             None,
         )
         .await;
@@ -130,7 +130,7 @@ mod tests {
         // Transfer 1 from wallet 1 to wallet 2
         let asset_id = Default::default();
         let _receipts = wallets[0]
-            .transfer(&wallets[1].address(), 1, asset_id, TxParameters::default())
+            .transfer(wallets[1].address(), 1, asset_id, TxParameters::default())
             .await?;
 
         let wallet_2_final_coins = wallets[1].get_coins().await?;
@@ -186,6 +186,47 @@ mod tests {
         let (provider, _socket_addr) = setup_test_provider(coins.clone(), None).await;
         wallet.set_provider(provider);
         // ANCHOR_END: multiple_assets_wallet
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[allow(unused_variables)]
+    async fn setup_wallet_custom_assets() -> Result<(), rand::Error> {
+        // ANCHOR: custom_assets_wallet
+        use fuels::prelude::*;
+        use rand::Fill;
+
+        let mut wallet = LocalWallet::new_random(None);
+        let mut rng = rand::thread_rng();
+
+        let asset_base = AssetConfig {
+            id: BASE_ASSET_ID,
+            num_coins: 2,
+            coin_amount: 4,
+        };
+
+        let mut asset_id_1 = AssetId::zeroed();
+        asset_id_1.try_fill(&mut rng)?;
+        let asset_1 = AssetConfig {
+            id: asset_id_1,
+            num_coins: 6,
+            coin_amount: 8,
+        };
+
+        let mut asset_id_2 = AssetId::zeroed();
+        asset_id_2.try_fill(&mut rng)?;
+        let asset_2 = AssetConfig {
+            id: asset_id_2,
+            num_coins: 10,
+            coin_amount: 12,
+        };
+
+        let assets = vec![asset_base, asset_1, asset_2];
+
+        let coins = setup_custom_assets_coins(wallet.address(), assets);
+        let (provider, _socket_addr) = setup_test_provider(coins.clone(), None).await;
+        wallet.set_provider(provider);
+        // ANCHOR_END: custom_assets_wallet
         Ok(())
     }
 

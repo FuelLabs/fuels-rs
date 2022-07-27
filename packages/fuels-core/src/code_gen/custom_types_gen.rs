@@ -1,7 +1,8 @@
 use crate::types::expand_type;
-use crate::utils::{has_array_format, ident};
+use crate::utils::ident;
 use crate::ParamType;
 use fuels_types::errors::Error;
+use fuels_types::utils::has_array_format;
 use fuels_types::{CustomType, Property};
 use inflector::Inflector;
 use proc_macro2::TokenStream;

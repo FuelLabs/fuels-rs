@@ -63,7 +63,11 @@ async fn no_op_signed_transaction(wallet: &LocalWallet) -> Result<Transaction, E
         .get_asset_inputs_for_amount(BASE_ASSET_ID, DEFAULT_SPENDABLE_COIN_AMOUNT, 0)
         .await?;
 
-    let outputs = vec![Output::change(wallet.address(), 0, AssetId::default())];
+    let outputs = vec![Output::change(
+        wallet.address().into(),
+        0,
+        AssetId::default(),
+    )];
 
     let mut transaction = generate_no_op_script(inputs, outputs);
 
