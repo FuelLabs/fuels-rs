@@ -1,11 +1,10 @@
 use fuel_core::service::{Config, FuelService};
-use fuel_gql_client::client::FuelClient;
 use fuel_gql_client::fuel_tx::{AssetId, ContractId, Receipt};
 use fuels::contract::contract::MultiContractCallHandler;
 use fuels::prelude::{
     abigen, launch_provider_and_get_wallet, setup_multiple_assets_coins, setup_single_asset_coins,
     setup_test_provider, CallParameters, Contract, Error, LocalWallet, Provider, Salt, Signer,
-    TxParameters, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
+    TxParameters, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS, ProviderError,
 };
 use fuels::test_helpers::produce_blocks;
 use fuels_core::parameters::StorageConfiguration;
@@ -2329,41 +2328,25 @@ async fn test_network_error() -> Result<(), anyhow::Error> {
 
     let config = Config::local_node();
     let service = FuelService::new_node(config).await?;
-    let client = FuelClient::from(service.bound_address);
-    let provider = Provider::new(client);
+    let provider = Provider::connect(service.bound_address).await?;
 
     wallet.set_provider(provider);
 
-    // Simulate unreachable node
+    // Simulate an unreachable node
     service.stop().await;
-    /*
-    let contract_id = Contract::deploy(
+    
+    let response = Contract::deploy(
         "tests/test_projects/contract_test/out/debug/contract_test.bin",
         &wallet,
         TxParameters::default(),
         StorageConfiguration::default()
     )
         .await;
-    match contract_id {
-        // The transaction is valid and executes to completion
-        Ok(call_response) => {
-        }
 
-        Err(e) => {println!("HEHE {:?}", e)}
-    }*/
-
-    /*let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
-
-    //service.stop().await;
-
-    let response = contract_instance.initialize_counter(42).call().await;
     match response {
-        // The transaction is valid and executes to completion
-        Ok(call_response) => {
-        }
-
-        Err(e) => {println!("{:?}", e)}
-    }*/
+            Err(ProviderError(_)) => {}
+            _ => { panic!("This should be impossible"); }
+    };
 
     Ok(())
 }
