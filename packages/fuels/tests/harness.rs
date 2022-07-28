@@ -2304,3 +2304,11 @@ async fn test_contract_id_and_wallet_getters() {
         contract_id
     );
 }
+
+#[tokio::test]
+async fn test_array_contract_inputs() {
+    abigen!(
+        TestContract,
+        "packages/fuels/tests/test_projects/array_contract_inputs/out/debug/array_contract_inputs-abi.json"
+    );
+}
