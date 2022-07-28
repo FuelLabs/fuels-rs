@@ -1,4 +1,4 @@
-use crate::Token;
+use crate::{StringToken, Token};
 use core::convert::TryInto;
 use core::str;
 use fuel_types::bytes::padded_len;
@@ -119,7 +119,10 @@ impl ABIDecoder {
         let decoded = str::from_utf8(encoded_str)?;
 
         let result = DecodeResult {
-            token: Token::String((decoded.to_string(), *length)),
+            token: Token::String(StringToken {
+                data: decoded.into(),
+                expected_len: *length,
+            }),
             bytes_read: padded_len(encoded_str),
         };
 
@@ -383,8 +386,14 @@ mod tests {
         let decoded = ABIDecoder::decode(&types, &data)?;
 
         let expected = vec![
-            Token::String(("This is a full sentence".into(), 23)),
-            Token::String(("Hello".into(), 5)),
+            Token::String(StringToken {
+                data: "This is a full sentence".into(),
+                expected_len: 23,
+            }),
+            Token::String(StringToken {
+                data: "Hello".into(),
+                expected_len: 5,
+            }),
         ];
 
         assert_eq!(decoded, expected);
@@ -599,7 +608,10 @@ mod tests {
             0xf3, 0x1e, 0x93, 0xb,
         ]);
 
-        let s = Token::String(("This is a full sentence".into(), 23));
+        let s = Token::String(StringToken {
+            data: "This is a full sentence".into(),
+            expected_len: 23,
+        });
 
         let expected: Vec<Token> = vec![foo, u8_arr, b256, s];
 

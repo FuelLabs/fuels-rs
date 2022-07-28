@@ -238,7 +238,7 @@ fn expand_function_arguments(
         let kind = ParamType::try_from(param)?;
 
         // If it's a tuple, don't expand it, just use the type signature as it is (minus the string "struct " | "enum ").
-        let tok = if let ParamType::Tuple(_tuple) = kind.clone() {
+        let tok = if let ParamType::Tuple(_tuple) = &kind {
             let toks = build_expanded_tuple_params(param)
                 .expect("failed to build expanded tuple parameters");
 
@@ -256,8 +256,8 @@ fn expand_function_arguments(
         args.push(quote! { #name: #tok });
 
         // This `name` TokenStream is also added to the call arguments
-        if let ParamType::String(len) = kind {
-            call_args.push(quote! {Token::String((#name, #len))});
+        if let ParamType::String(len) = &kind {
+            call_args.push(quote! {Token::String(StringToken{data: #name, expected_len: #len})});
         } else {
             call_args.push(name);
         }

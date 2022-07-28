@@ -27,7 +27,18 @@ pub type ByteArray = [u8; 8];
 pub type Selector = ByteArray;
 pub type Bits256 = [u8; 32];
 pub type EnumSelector = (u8, Token, EnumVariants);
-pub type StringToken = (String, usize);
+
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct StringToken {
+    pub data: String,
+    pub expected_len: usize,
+}
+
+impl StringToken {
+    pub fn correct_len(&self) -> bool {
+        self.data.len() == self.expected_len
+    }
+}
 
 // Sway types
 #[derive(Debug, Clone, PartialEq, EnumString)]
@@ -110,7 +121,7 @@ impl Tokenizable for StringToken {
         match token {
             Token::String(data) => Ok(data),
             other => Err(Error::InstantiationError(format!(
-                "Expected `StringToken`, got {:?}",
+                "Expected `String`, got {:?}",
                 other
             ))),
         }
@@ -123,7 +134,7 @@ impl Tokenizable for StringToken {
 impl Tokenizable for String {
     fn from_token(token: Token) -> Result<Self, Error> {
         match token {
-            Token::String(data) => Ok(data.0),
+            Token::String(data) => Ok(data.data),
             other => Err(Error::InstantiationError(format!(
                 "Expected `String`, got {:?}",
                 other
@@ -132,7 +143,10 @@ impl Tokenizable for String {
     }
     fn into_token(self) -> Token {
         let len = self.len();
-        Token::String((self, len))
+        Token::String(StringToken {
+            data: self,
+            expected_len: len,
+        })
     }
 }
 

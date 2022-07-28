@@ -1,6 +1,6 @@
 use crate::utils::first_four_bytes_of_sha256_hash;
-use crate::Token;
 use crate::{abi_decoder::ABIDecoder, abi_encoder::ABIEncoder};
+use crate::{StringToken, Token};
 use fuels_types::function_selector::build_fn_selector;
 use fuels_types::utils::has_array_format;
 use fuels_types::{errors::Error, param_types::ParamType, JsonABI, Property};
@@ -216,7 +216,10 @@ impl ABIParser {
                 Ok(Token::B256(s))
             }
             ParamType::Array(t, _) => Ok(self.tokenize_array(trimmed_value, &*t)?),
-            ParamType::String(len) => Ok(Token::String((trimmed_value.to_string(), *len))),
+            ParamType::String(len) => Ok(Token::String(StringToken {
+                data: trimmed_value.into(),
+                expected_len: *len,
+            })),
             ParamType::Struct(struct_params) => {
                 Ok(self.tokenize_struct(trimmed_value, struct_params)?)
             }
@@ -938,7 +941,10 @@ mod tests {
 
         let decoded_return = abi.decode(json_abi, function_name, &return_value)?;
 
-        let expected_return = vec![Token::String(("OK".into(), 2))];
+        let expected_return = vec![Token::String(StringToken {
+            data: "OK".into(),
+            expected_len: 2,
+        })];
 
         assert_eq!(decoded_return, expected_return);
         Ok(())
@@ -2055,7 +2061,6 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "String parameter has len ")]
     fn strings_must_have_correct_length() {
         let json_abi = r#"
         [
@@ -2076,11 +2081,15 @@ mod tests {
         let values: Vec<String> = vec!["fue".to_string()];
         let mut abi = ABIParser::new();
         let function_name = "takes_string";
-        let _ = abi.encode(json_abi, function_name, &values);
+        let error_message = abi
+            .encode(json_abi, function_name, &values)
+            .unwrap_err()
+            .to_string();
+
+        assert!(error_message.contains("String parameter has len "))
     }
 
     #[test]
-    #[should_panic(expected = "String parameter has len ")]
     fn strings_must_have_correct_length_custom_types() {
         let json_abi = r#"
         [
@@ -2111,7 +2120,12 @@ mod tests {
         let values: Vec<String> = vec!["([0, 0], fuell)".to_string()];
         let mut abi = ABIParser::new();
         let function_name = "takes_struct";
-        let _ = abi.encode(json_abi, function_name, &values);
+        let error_message = abi
+            .encode(json_abi, function_name, &values)
+            .unwrap_err()
+            .to_string();
+
+        assert!(error_message.contains("String parameter has len "))
     }
 
     #[test]
