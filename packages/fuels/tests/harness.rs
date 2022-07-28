@@ -2196,7 +2196,7 @@ async fn contract_deployment_respects_maturity() -> Result<(), Error> {
 #[tokio::test]
 #[cfg(feature = "fuel-core-lib")]
 async fn can_increase_block_height() -> Result<(), Error> {
-    // ANCHOR: uses_produce_blocks_to_increase_block_height
+    // ANCHOR: use_produce_blocks_to_increase_block_height
     let config = Config {
         manual_blocks_enabled: true, // Necessary so the `produce_blocks` API can be used locally
         ..Config::local_node()
@@ -2211,7 +2211,7 @@ async fn can_increase_block_height() -> Result<(), Error> {
     provider.produce_blocks(3).await?;
 
     assert_eq!(provider.latest_block_height().await?, 3);
-    // ANCHOR_END: uses_produce_blocks_to_increase_block_height
+    // ANCHOR_END: use_produce_blocks_to_increase_block_height
     Ok(())
 }
 
