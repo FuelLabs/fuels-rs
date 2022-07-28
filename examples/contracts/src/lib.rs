@@ -331,7 +331,7 @@ mod tests {
             }
             // The transaction is malformed
             Err(Error::ValidationError(e)) => {
-                println!(": {}", e);
+                println!("Transaction is malformed (ValidationError): {}", e);
             }
             // Failed request to provider
             Err(Error::ProviderError(reason)) => {
