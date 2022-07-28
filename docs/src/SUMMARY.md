@@ -16,6 +16,7 @@
     - [Checking balances and coins](./wallets/checking-balances-and-coins.md)
     - [Setting up test wallets](./wallets/test-wallets.md)
     - [Signing](./wallets/signing.md)
+    - [Transfering assets](./wallets/transferring-assets.md)
   - [Deploying contracts](./getting-started/contracts.md)
     - [Interacting with contracts](./contracts/interacting-with-contracts.md)
     - [The FuelVM Binary file](./contracts/the-fuelvm-binary-file.md)
