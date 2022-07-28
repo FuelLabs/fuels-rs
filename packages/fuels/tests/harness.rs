@@ -1,12 +1,11 @@
 use fuel_gql_client::fuel_tx::{AssetId, ContractId, Receipt};
 use fuels::contract::contract::MultiContractCallHandler;
 use fuels::prelude::{
-    abigen, launch_provider_and_get_wallet, setup_multiple_assets_coins, setup_single_asset_coins,
-    setup_test_provider, CallParameters, Contract, Error, LocalWallet, Provider, ProviderError,
-    Salt, Signer, TxParameters, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
+    abigen, launch_custom_provider_and_get_wallets, launch_provider_and_get_wallet,
+    setup_multiple_assets_coins, setup_single_asset_coins, setup_test_provider, CallParameters,
+    Config, Contract, Error, LocalWallet, Provider, ProviderError, Salt, Signer, TxParameters,
+    WalletsConfig, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
 };
-#[cfg(feature = "fuel-core-lib")]
-use fuels::prelude::{launch_custom_provider_and_get_wallets, Config, WalletsConfig};
 use fuels_core::parameters::StorageConfiguration;
 use fuels_core::tx::{Address, Bytes32, StorageSlot};
 use fuels_core::Tokenizable;
@@ -2150,7 +2149,6 @@ async fn contract_method_call_respects_maturity() -> Result<(), Error> {
 }
 
 #[tokio::test]
-#[cfg(feature = "fuel-core-lib")]
 async fn contract_deployment_respects_maturity() -> Result<(), Error> {
     abigen!(
         MyContract,
@@ -2194,7 +2192,6 @@ async fn contract_deployment_respects_maturity() -> Result<(), Error> {
 }
 
 #[tokio::test]
-#[cfg(feature = "fuel-core-lib")]
 async fn can_increase_block_height() -> Result<(), Error> {
     // ANCHOR: use_produce_blocks_to_increase_block_height
     let config = Config {
