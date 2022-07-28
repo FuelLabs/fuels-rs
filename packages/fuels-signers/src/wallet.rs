@@ -8,9 +8,10 @@ use eth_keystore::KeystoreError;
 use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
 use fuel_gql_client::{
     client::{schema::coin::Coin, types::TransactionResponse, PaginatedResult, PaginationRequest},
-    fuel_tx::{Address, AssetId, Input, Output, Receipt, Transaction, UtxoId, Witness},
+    fuel_tx::{AssetId, Bytes32, ContractId, Input, Output, Receipt, Transaction, UtxoId, Witness},
 };
 use fuels_core::parameters::TxParameters;
+use fuels_types::bech32::{Bech32Address, Bech32ContractId, FUEL_BECH32_HRP};
 use fuels_types::errors::Error;
 use rand::{CryptoRng, Rng};
 use std::{collections::HashMap, fmt, path::Path, str::FromStr};
@@ -47,7 +48,7 @@ type W = English;
 ///   let message = Message::new(message);
 ///   let recovered_address = signature.recover(&message).unwrap();
 ///
-///   assert_eq!(wallet.address().as_ref(), recovered_address.hash().as_ref());
+///   assert_eq!(wallet.address(), recovered_address);
 ///
 ///   // Verify signature
 ///   signature.verify(&recovered_address, &message).unwrap();
@@ -62,7 +63,7 @@ pub struct Wallet {
     pub(crate) private_key: SecretKey,
     /// The wallet's address. The wallet's address is derived
     /// from the first 32 bytes of SHA-256 hash of the wallet's public key.
-    pub(crate) address: Address,
+    pub(crate) address: Bech32Address,
 
     pub(crate) provider: Option<Provider>,
 }
@@ -107,7 +108,7 @@ impl Wallet {
 
         Self {
             private_key,
-            address: Address::new(*hashed),
+            address: Bech32Address::new(FUEL_BECH32_HRP, hashed),
             provider,
         }
     }
@@ -120,10 +121,10 @@ impl Wallet {
         &self,
         request: PaginationRequest<String>,
     ) -> Result<PaginatedResult<TransactionResponse, String>, Error> {
-        Ok(self
+        self
             .get_provider()?
             .get_transactions_by_owner(self.address.to_string().as_str(), request)
-            .await?)
+            .await.map_err(Into::into)
     }
 
     /// Creates a new wallet from a mnemonic phrase.
@@ -265,7 +266,7 @@ impl Wallet {
     /// ```
     pub async fn transfer(
         &self,
-        to: &Address,
+        to: &Bech32Address,
         amount: u64,
         asset_id: AssetId,
         tx_parameters: TxParameters,
@@ -274,17 +275,68 @@ impl Wallet {
             .get_asset_inputs_for_amount(asset_id, amount, 0)
             .await?;
         let outputs: Vec<Output> = vec![
-            Output::coin(*to, amount, asset_id),
+            Output::coin(to.into(), amount, asset_id),
             // Note that the change will be computed by the node.
             // Here we only have to tell the node who will own the change and its asset ID.
-            Output::change(self.address(), 0, asset_id),
+            Output::change(self.address().into(), 0, asset_id),
         ];
 
         // Build transaction and sign it
         let mut tx = self
             .get_provider()?
             .build_transfer_tx(&inputs, &outputs, tx_parameters);
-        let _sig = self.sign_transaction(&mut tx).await.unwrap();
+        self.sign_transaction(&mut tx).await?;
+
+        let receipts = self.get_provider()?.send_transaction(&tx).await?;
+
+        Ok((tx.id().to_string(), receipts))
+    }
+
+    /// Unconditionally transfers `balance` of type `asset_id` to
+    /// the contract at `to`.
+    /// Fails if balance for `asset_id` is larger than this wallet's spendable coins.
+    /// Returns the corresponding transaction ID and the list of receipts.
+    ///
+    /// CAUTION !!!
+    ///
+    /// This will transfer coins to a contract, possibly leading
+    /// to the PERMANENT LOSS OF COINS if not used with care.
+    pub async fn force_transfer_to_contract(
+        &self,
+        to: &Bech32ContractId,
+        balance: u64,
+        asset_id: AssetId,
+        tx_parameters: TxParameters,
+    ) -> Result<(String, Vec<Receipt>), Error> {
+        let zeroes = Bytes32::zeroed();
+        let plain_contract_id: ContractId = to.into();
+
+        let mut inputs = vec![Input::contract(
+            UtxoId::new(zeroes, 0),
+            zeroes,
+            zeroes,
+            plain_contract_id,
+        )];
+        inputs.extend(
+            self.get_asset_inputs_for_amount(asset_id, balance, 0)
+                .await?,
+        );
+
+        let outputs = vec![
+            Output::contract(0, zeroes, zeroes),
+            Output::change(self.address().into(), 0, asset_id),
+        ];
+
+        // Build transaction and sign it
+        let mut tx = self.get_provider()?.build_contract_transfer_tx(
+            plain_contract_id,
+            balance,
+            asset_id,
+            &inputs,
+            &outputs,
+            tx_parameters,
+        );
+        self.sign_transaction(&mut tx).await?;
 
         let receipts = self.get_provider()?.send_transaction(&tx).await?;
 
@@ -332,27 +384,30 @@ impl Wallet {
         asset_id: &AssetId,
         amount: u64,
     ) -> Result<Vec<Coin>, Error> {
-        Ok(self
-            .get_provider()?
-            .get_spendable_coins(&self.address(), *asset_id, amount)
-            .await?)
+        self
+           .get_provider()?
+           .get_spendable_coins(&self.address(), *asset_id, amount)
+           .await.map_err(Into::into)
     }
 
     /// Get the balance of all spendable coins `asset_id` for address `address`. This is different
     /// from getting coins because we are just returning a number (the sum of UTXOs amount) instead
     /// of the UTXOs.
     pub async fn get_asset_balance(&self, asset_id: &AssetId) -> Result<u64, Error> {
-        Ok(self
-            .get_provider()?
-            .get_asset_balance(&self.address, *asset_id)
-            .await?)
+        self
+           .get_provider()?
+           .get_asset_balance(&self.address, *asset_id)
+           .await.map_err(Into::into)
     }
 
     /// Get all the spendable balances of all assets for the wallet. This is different from getting
     /// the coins because we are only returning the sum of UTXOs coins amount and not the UTXOs
     /// coins themselves.
     pub async fn get_balances(&self) -> Result<HashMap<String, u64>, Error> {
-        Ok(self.get_provider()?.get_balances(&self.address).await?)
+        self.get_provider()?.get_balances(&self.address).await.map_err(Into::into)
+
+    pub async fn get_balances(&self) -> Result<HashMap<String, u64>, ProviderError> {
+        self.get_provider()?.get_balances(self.address()).await
     }
 }
 
@@ -396,8 +451,8 @@ impl Signer for Wallet {
         Ok(sig)
     }
 
-    fn address(&self) -> Address {
-        self.address
+    fn address(&self) -> &Bech32Address {
+        &self.address
     }
 }
 
@@ -471,18 +526,28 @@ mod tests {
             "m/44'/60'/0'/0/0",
         )?;
 
-        let expected_address = "df9d0e6c6c5f5da6e82e5e1a77974af6642bdb450a10c43f0c6910a212600185";
+        let expected_plain_address =
+            "df9d0e6c6c5f5da6e82e5e1a77974af6642bdb450a10c43f0c6910a212600185";
+        let expected_address = "fuel1m7wsumrvtaw6d6pwtcd809627ejzhk69pggvg0cvdyg2yynqqxzseuzply";
 
+        assert_eq!(wallet.address().hash().to_string(), expected_plain_address);
         assert_eq!(wallet.address().to_string(), expected_address);
 
         // Create a second account from the same phrase.
         let wallet2 =
             Wallet::new_from_mnemonic_phrase_with_path(phrase, Some(provider), "m/44'/60'/1'/0/0")?;
 
-        let expected_second_address =
+        let expected_second_plain_address =
             "261191b0164a24fd0fd51566ec5e5b0b9ba8fb2d42dc9cf7dbbd6f23d2742759";
+        let expected_second_address =
+            "fuel1ycgervqkfgj06r74z4nwchjmpwd637edgtwfea7mh4hj85n5yavszjk4cc";
 
+        assert_eq!(
+            wallet2.address().hash().to_string(),
+            expected_second_plain_address
+        );
         assert_eq!(wallet2.address().to_string(), expected_second_address);
+
         Ok(())
     }
 

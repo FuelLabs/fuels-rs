@@ -5,18 +5,23 @@ use std::net::SocketAddr;
 use fuel_core::service::{Config, FuelService};
 use fuel_gql_client::{
     client::{
-        schema::{chain::ChainInfo, coin::Coin},
+        schema::{chain::ChainInfo, balance::Balance, coin::Coin, contract::ContractBalance},
         types::{TransactionResponse, TransactionStatus},
         FuelClient, PageDirection, PaginatedResult, PaginationRequest,
     },
-    fuel_tx::{Input, Output, Receipt, Transaction},
-    fuel_types::{Address, AssetId},
-    fuel_vm::{consts::REG_ONE, prelude::Opcode},
+    fuel_tx::{ConsensusParameters, Input, Output, Receipt, Transaction},
+    fuel_types::{AssetId, ContractId, Immediate18},
+    fuel_vm::{
+        consts::{REG_ONE, WORD_SIZE},
+        prelude::Opcode,
+        script_with_data_offset,
+    },
 };
 use std::collections::HashMap;
 use thiserror::Error;
 
 use fuels_core::parameters::TxParameters;
+use fuels_types::bech32::{Bech32Address, Bech32ContractId};
 use fuels_types::errors::Error;
 
 #[derive(Debug, Error)]
@@ -129,7 +134,7 @@ impl Provider {
 
     /// Gets all coins owned by address `from`, *even spent ones*. This returns actual coins
     /// (UTXOs).
-    pub async fn get_coins(&self, from: &Address) -> Result<Vec<Coin>, ProviderError> {
+    pub async fn get_coins(&self, from: &Bech32Address) -> Result<Vec<Coin>, ProviderError> {
         let mut coins: Vec<Coin> = vec![];
 
         let mut cursor = None;
@@ -138,7 +143,7 @@ impl Provider {
             let res = self
                 .client
                 .coins(
-                    &from.to_string(),
+                    &from.hash().to_string(),
                     None,
                     PaginationRequest {
                         cursor: cursor.clone(),
@@ -163,14 +168,14 @@ impl Provider {
     /// of coins (UXTOs) is optimized to prevent dust accumulation.
     pub async fn get_spendable_coins(
         &self,
-        from: &Address,
+        from: &Bech32Address,
         asset_id: AssetId,
         amount: u64,
     ) -> Result<Vec<Coin>, ProviderError> {
         let res = self
             .client
             .coins_to_spend(
-                &from.to_string(),
+                &from.hash().to_string(),
                 vec![(format!("{:#x}", asset_id).as_str(), amount)],
                 None,
                 None,
@@ -203,20 +208,92 @@ impl Provider {
             metadata: None,
         }
     }
-    // TODO: add unit tests for the balance API. This is tracked in #321.
+
+    /// Craft a transaction used to transfer funds to a contract.
+    pub fn build_contract_transfer_tx(
+        &self,
+        to: ContractId,
+        amount: u64,
+        asset_id: AssetId,
+        inputs: &[Input],
+        outputs: &[Output],
+        params: TxParameters,
+    ) -> Transaction {
+        let script_data: Vec<u8> = [
+            to.to_vec(),
+            amount.to_be_bytes().to_vec(),
+            asset_id.to_vec(),
+        ]
+        .into_iter()
+        .flatten()
+        .collect();
+
+        // This script loads:
+        //  - a pointer to the contract id,
+        //  - the actual amount
+        //  - a pointer to the asset id
+        // into the registers 0X10, 0x11, 0x12
+        // and calls the TR instruction
+        let (script, _) = script_with_data_offset!(
+            data_offset,
+            vec![
+                Opcode::MOVI(0x10, data_offset as Immediate18),
+                Opcode::MOVI(
+                    0x11,
+                    (data_offset as usize + ContractId::LEN) as Immediate18
+                ),
+                Opcode::LW(0x11, 0x11, 0),
+                Opcode::MOVI(
+                    0x12,
+                    (data_offset as usize + ContractId::LEN + WORD_SIZE) as Immediate18
+                ),
+                Opcode::TR(0x10, 0x11, 0x12),
+                Opcode::RET(REG_ONE)
+            ],
+            ConsensusParameters::DEFAULT.tx_offset()
+        );
+        #[allow(clippy::iter_cloned_collect)]
+        let script = script.iter().copied().collect();
+
+        Transaction::Script {
+            gas_price: params.gas_price,
+            gas_limit: params.gas_limit,
+            byte_price: params.byte_price,
+            maturity: params.maturity,
+            receipts_root: Default::default(),
+            script,
+            script_data,
+            inputs: inputs.to_vec(),
+            outputs: outputs.to_vec(),
+            witnesses: vec![],
+            metadata: None,
+        }
+    }
 
     /// Get the balance of all spendable coins `asset_id` for address `address`. This is different
     /// from getting coins because we are just returning a number (the sum of UTXOs amount) instead
     /// of the UTXOs.
     pub async fn get_asset_balance(
         &self,
-        address: &Address,
+        address: &Bech32Address,
         asset_id: AssetId,
     ) -> Result<u64, ProviderError> {
         self.client
-            .balance(&*address.to_string(), Some(&*asset_id.to_string()))
+            .balance(&address.hash().to_string(), Some(&*asset_id.to_string()))
             .await
             .map_err(Into::into)
+    }
+
+    /// Get the balance of all spendable coins `asset_id` for contract with id `contract_id`.
+    pub async fn get_contract_asset_balance(
+        &self,
+        contract_id: &Bech32ContractId,
+        asset_id: AssetId,
+    ) -> Result<u64, ProviderError> {
+        self.client
+            .contract_balance(&contract_id.hash().to_string(), Some(&asset_id.to_string()))
+            .await
+            .map_err(ProviderError::ClientRequestError)
     }
 
     /// Get all the spendable balances of all assets for address `address`. This is different from
@@ -224,7 +301,7 @@ impl Provider {
     /// for each asset id) and not the UTXOs coins themselves
     pub async fn get_balances(
         &self,
-        address: &Address,
+        address: &Bech32Address,
     ) -> Result<HashMap<String, u64>, ProviderError> {
         // We don't paginate results because there are likely at most ~100 different assets in one
         // wallet
@@ -235,12 +312,49 @@ impl Provider {
         };
         let balances_vec = self
             .client
-            .balances(&*address.to_string(), pagination)
+            .balances(&address.hash().to_string(), pagination)
             .await?
             .results;
         let balances = balances_vec
-            .iter()
-            .map(|b| (b.asset_id.to_string(), b.amount.clone().try_into().unwrap()))
+            .into_iter()
+            .map(
+                |Balance {
+                     owner: _,
+                     amount,
+                     asset_id,
+                 }| (asset_id.to_string(), amount.try_into().unwrap()),
+            )
+            .collect();
+        Ok(balances)
+    }
+
+    /// Get all balances of all assets for the contract with id `contract_id`.
+    pub async fn get_contract_balances(
+        &self,
+        contract_id: &Bech32ContractId,
+    ) -> Result<HashMap<String, u64>, ProviderError> {
+        // We don't paginate results because there are likely at most ~100 different assets in one
+        // wallet
+        let pagination = PaginationRequest {
+            cursor: None,
+            results: 9999,
+            direction: PageDirection::Forward,
+        };
+
+        let balances_vec = self
+            .client
+            .contract_balances(&contract_id.hash().to_string(), pagination)
+            .await?
+            .results;
+        let balances = balances_vec
+            .into_iter()
+            .map(
+                |ContractBalance {
+                     contract: _,
+                     amount,
+                     asset_id,
+                 }| (asset_id.to_string(), amount.try_into().unwrap()),
+            )
             .collect();
         Ok(balances)
     }
@@ -264,11 +378,11 @@ impl Provider {
     // Get transaction(s) by owner
     pub async fn get_transactions_by_owner(
         &self,
-        owner: &str,
+        owner: &Bech32Address,
         request: PaginationRequest<String>,
     ) -> Result<PaginatedResult<TransactionResponse, String>, ProviderError> {
         self.client
-            .transactions_by_owner(owner, request)
+            .transactions_by_owner(owner.hash().to_string(), request)
             .await
             .map_err(Into::into)
     }

@@ -1,5 +1,7 @@
 use core::fmt;
 use core::str::Utf8Error;
+use std::array::TryFromSliceError;
+
 pub type Result<T> = core::result::Result<T, Error>;
 use fuel_tx::{Receipt, ValidationError};
 use strum::ParseError;
@@ -76,6 +78,24 @@ impl From<ParseError> for Error {
 
 impl From<proc_macro2::LexError> for Error {
     fn from(err: proc_macro2::LexError) -> Error {
+        Error::ParseTokenStreamError(err.to_string())
+    }
+}
+
+impl From<bech32::Error> for Error {
+    fn from(err: bech32::Error) -> Error {
+        Error::InvalidData(err.to_string())
+    }
+}
+
+impl From<TryFromSliceError> for Error {
+    fn from(err: TryFromSliceError) -> Error {
+        Error::InvalidData(err.to_string())
+    }
+}
+
+impl From<anyhow::Error> for Error {
+    fn from(err: anyhow::Error) -> Error {
         Error::ParseTokenStreamError(err.to_string())
     }
 }
