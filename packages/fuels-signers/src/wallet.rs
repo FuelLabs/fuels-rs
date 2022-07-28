@@ -294,7 +294,7 @@ impl Wallet {
 
     /// Unconditionally transfers `balance` of type `asset_id` to
     /// the contract at `to`.
-    /// Fails if balance for `asset_id` is larger than this wallet's spendable coins.
+    /// Fails if balance for `asset_id` is larger than this wallet's spendable balance.
     /// Returns the corresponding transaction ID and the list of receipts.
     ///
     /// CAUTION !!!

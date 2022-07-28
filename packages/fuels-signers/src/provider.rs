@@ -281,7 +281,7 @@ impl Provider {
         self.client
             .balance(&address.hash().to_string(), Some(&*asset_id.to_string()))
             .await
-            .map_err(ProviderError::ClientRequestError)
+            .map_err(Into::into)
     }
 
     /// Get the balance of all spendable coins `asset_id` for contract with id `contract_id`.
@@ -293,7 +293,7 @@ impl Provider {
         self.client
             .contract_balance(&contract_id.hash().to_string(), Some(&asset_id.to_string()))
             .await
-            .map_err(ProviderError::ClientRequestError)
+            .map_err(Into::into)
     }
 
     /// Get all the spendable balances of all assets for address `address`. This is different from
@@ -372,7 +372,7 @@ impl Provider {
         &self,
         request: PaginationRequest<String>,
     ) -> Result<PaginatedResult<TransactionResponse, String>, ProviderError> {
-        Ok(self.client.transactions(request).await?)
+        self.client.transactions(request).await.map_err(Into::into)
     }
 
     // Get transaction(s) by owner
