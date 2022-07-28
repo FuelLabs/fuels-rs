@@ -67,21 +67,8 @@ impl ABIEncoder {
     }
 
     fn encode_string(&mut self, arg_string: &StringToken) -> Result<(), CodecError> {
-        if !arg_string.data.is_ascii() {
-            return Err(CodecError::InvalidData(
-                "String parameters can only have ascii values".into(),
-            ));
-        }
-
-        if !arg_string.correct_len() {
-            return Err(CodecError::InvalidData(format!(
-                "String parameter has len {}, but should have {}",
-                arg_string.data.len(),
-                arg_string.expected_len
-            )));
-        }
-
-        self.buffer.extend(pad_string(&arg_string.data));
+        self.buffer
+            .extend(pad_string(arg_string.get_encodable_str()?));
         Ok(())
     }
 

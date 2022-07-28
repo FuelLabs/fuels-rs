@@ -2,7 +2,7 @@ use crate::abi_decoder::ABIDecoder;
 use core::fmt;
 use fuel_types::bytes::padded_len;
 use fuels_types::{
-    errors::Error,
+    errors::{CodecError, Error},
     param_types::{EnumVariants, ParamType},
 };
 use strum_macros::EnumString;
@@ -35,8 +35,21 @@ pub struct StringToken {
 }
 
 impl StringToken {
-    pub fn correct_len(&self) -> bool {
-        self.data.len() == self.expected_len
+    pub fn get_encodable_str(&self) -> Result<&str, CodecError> {
+        if !self.data.is_ascii() {
+            return Err(CodecError::InvalidData(
+                "String parameters can only have ascii values".into(),
+            ));
+        }
+
+        if self.data.len() != self.expected_len {
+            return Err(CodecError::InvalidData(format!(
+                "String parameter has len {}, but should have {}",
+                self.data.len(),
+                self.expected_len
+            )));
+        }
+        Ok(self.data.as_str())
     }
 }
 
