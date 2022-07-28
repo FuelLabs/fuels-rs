@@ -5,7 +5,7 @@ use std::net::SocketAddr;
 use fuel_core::service::{Config, FuelService};
 use fuel_gql_client::{
     client::{
-        schema::{chain::ChainInfo, balance::Balance, coin::Coin, contract::ContractBalance},
+        schema::{balance::Balance, chain::ChainInfo, coin::Coin, contract::ContractBalance},
         types::{TransactionResponse, TransactionStatus},
         FuelClient, PageDirection, PaginatedResult, PaginationRequest,
     },
@@ -281,7 +281,7 @@ impl Provider {
         self.client
             .balance(&address.hash().to_string(), Some(&*asset_id.to_string()))
             .await
-            .map_err(Into::into)
+            .map_err(ProviderError::ClientRequestError)
     }
 
     /// Get the balance of all spendable coins `asset_id` for contract with id `contract_id`.
@@ -382,7 +382,7 @@ impl Provider {
         request: PaginationRequest<String>,
     ) -> Result<PaginatedResult<TransactionResponse, String>, ProviderError> {
         self.client
-            .transactions_by_owner(owner.hash().to_string(), request)
+            .transactions_by_owner(&owner.hash().to_string(), request)
             .await
             .map_err(Into::into)
     }

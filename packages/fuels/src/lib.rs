@@ -77,5 +77,4 @@ pub mod prelude {
     pub use super::types::bech32::Bech32Address;
     pub use super::types::bech32::Bech32ContractId;
     pub use super::types::errors::Error;
-    pub use super::types::errors::Error::*;
 }

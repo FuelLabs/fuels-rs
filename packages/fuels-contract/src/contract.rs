@@ -311,7 +311,7 @@ impl Contract {
         compiled_contract: &CompiledContract,
         wallet: &LocalWallet,
         params: TxParameters,
-    ) -> Result<(Transaction, ContractId), Error> {
+    ) -> Result<(Transaction, Bech32ContractId), Error> {
         let bytecode_witness_index = 0;
         let storage_slots: Vec<StorageSlot> = compiled_contract.storage_slots.clone();
         let witnesses = vec![compiled_contract.raw.clone().into()];
@@ -355,7 +355,7 @@ impl Contract {
             witnesses,
         );
 
-        Ok((tx, contract_id))
+        Ok((tx, contract_id.into()))
     }
 
     fn get_storage_vec(storage_path: &str) -> Vec<StorageSlot> {
