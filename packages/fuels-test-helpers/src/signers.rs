@@ -172,7 +172,10 @@ mod tests {
                 assert_eq!(coins.len() as u64, asset.num_coins);
 
                 for coin in coins {
-                    assert_eq!(coin.owner.to_string(), format!("0x{}", wallet.address()));
+                    assert_eq!(
+                        coin.owner.to_string(),
+                        format!("0x{}", wallet.address().hash())
+                    );
                     assert_eq!(coin.amount.0, asset.coin_amount);
                 }
             }
