@@ -184,9 +184,6 @@ pub async fn setup_test_client(
     node_config: Option<Config>,
     consensus_parameters_config: Option<ConsensusParameters>,
 ) -> (FuelClient, SocketAddr) {
-    if node_config.is_some() {
-        println!("DAMN BRO {}", node_config.unwrap().manual_blocks_enabled);
-    }
     let (srv_address, manual_blocks_enabled) = match node_config {
         Some(config) if config.addr.port() != 0 && is_free(config.addr.port()) => {
             (config.addr, config.manual_blocks_enabled)
