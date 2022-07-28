@@ -8,10 +8,10 @@ use eth_keystore::KeystoreError;
 use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
 use fuel_gql_client::{
     client::{schema::coin::Coin, types::TransactionResponse, PaginatedResult, PaginationRequest},
-    fuel_tx::{AssetId, Input, Output, Receipt, Transaction, UtxoId, Witness},
+    fuel_tx::{AssetId, Bytes32, ContractId, Input, Output, Receipt, Transaction, UtxoId, Witness},
 };
 use fuels_core::parameters::TxParameters;
-use fuels_types::bech32::{Bech32Address, FUEL_BECH32_HRP};
+use fuels_types::bech32::{Bech32Address, Bech32ContractId, FUEL_BECH32_HRP};
 use fuels_types::errors::Error;
 use rand::{CryptoRng, Rng};
 use std::{collections::HashMap, fmt, io, path::Path, str::FromStr};
@@ -289,13 +289,63 @@ impl Wallet {
         ];
 
         // Build transaction and sign it
-        let mut tx =
-            self.get_provider()
-                .unwrap()
-                .build_transfer_tx(&inputs, &outputs, tx_parameters);
-        let _sig = self.sign_transaction(&mut tx).await.unwrap();
+        let mut tx = self
+            .get_provider()?
+            .build_transfer_tx(&inputs, &outputs, tx_parameters);
+        self.sign_transaction(&mut tx).await?;
 
-        let receipts = self.get_provider().unwrap().send_transaction(&tx).await?;
+        let receipts = self.get_provider()?.send_transaction(&tx).await?;
+
+        Ok((tx.id().to_string(), receipts))
+    }
+
+    /// Unconditionally transfers `balance` of type `asset_id` to
+    /// the contract at `to`.
+    /// Fails if balance for `asset_id` is larger than this wallet's spendable coins.
+    /// Returns the corresponding transaction ID and the list of receipts.
+    ///
+    /// CAUTION !!!
+    ///
+    /// This will transfer coins to a contract, possibly leading
+    /// to the PERMANENT LOSS OF COINS if not used with care.
+    pub async fn force_transfer_to_contract(
+        &self,
+        to: &Bech32ContractId,
+        balance: u64,
+        asset_id: AssetId,
+        tx_parameters: TxParameters,
+    ) -> Result<(String, Vec<Receipt>), WalletError> {
+        let zeroes = Bytes32::zeroed();
+        let plain_contract_id: ContractId = to.into();
+
+        let mut inputs = vec![Input::contract(
+            UtxoId::new(zeroes, 0),
+            zeroes,
+            zeroes,
+            plain_contract_id,
+        )];
+        inputs.extend(
+            self.get_asset_inputs_for_amount(asset_id, balance, 0)
+                .await?,
+        );
+
+        let outputs = vec![
+            Output::contract(0, zeroes, zeroes),
+            Output::change(self.address().into(), 0, asset_id),
+        ];
+
+        // Build transaction and sign it
+        let mut tx = self.get_provider()?.build_contract_transfer_tx(
+            plain_contract_id,
+            balance,
+            asset_id,
+            &inputs,
+            &outputs,
+            tx_parameters,
+        );
+        self.sign_transaction(&mut tx).await?;
+
+        let receipts = self.get_provider()?.send_transaction(&tx).await?;
 
         Ok((tx.id().to_string(), receipts))
     }
