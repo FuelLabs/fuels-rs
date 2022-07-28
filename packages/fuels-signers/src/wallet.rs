@@ -299,9 +299,9 @@ impl Wallet {
         Ok((tx.id().to_string(), receipts))
     }
 
-    /// Unconditionally transfers `amount` coins of type `asset_id` to
+    /// Unconditionally transfers `balance` of type `asset_id` to
     /// the contract at `to`.
-    /// Fails if amount for `asset_id` is larger than this wallet's spendable coins.
+    /// Fails if balance for `asset_id` is larger than this wallet's spendable coins.
     /// Returns the corresponding transaction ID and the list of receipts.
     ///
     /// CAUTION !!!
@@ -311,7 +311,7 @@ impl Wallet {
     pub async fn force_transfer_to_contract(
         &self,
         to: &Bech32ContractId,
-        amount: u64,
+        balance: u64,
         asset_id: AssetId,
         tx_parameters: TxParameters,
     ) -> Result<(String, Vec<Receipt>), WalletError> {
@@ -325,7 +325,7 @@ impl Wallet {
             plain_contract_id,
         )];
         inputs.extend(
-            self.get_asset_inputs_for_amount(asset_id, amount, 0)
+            self.get_asset_inputs_for_amount(asset_id, balance, 0)
                 .await?,
         );
 
@@ -337,7 +337,7 @@ impl Wallet {
         // Build transaction and sign it
         let mut tx = self.get_provider()?.build_contract_transfer_tx(
             plain_contract_id,
-            amount,
+            balance,
             asset_id,
             &inputs,
             &outputs,
