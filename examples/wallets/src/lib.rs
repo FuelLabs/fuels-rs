@@ -57,7 +57,7 @@ mod tests {
         // Or with the default derivation path
         let wallet = LocalWallet::new_from_mnemonic_phrase(phrase, Some(provider))?;
 
-        let expected_address = "f18b6446deb8135544ba60333e5b7522685cd2cf64aa4e4c75df725149850b65";
+        let expected_address = "fuel17x9kg3k7hqf42396vqenukm4yf59e5k0vj4yunr4mae9zjv9pdjszy098t";
 
         assert_eq!(wallet.address().to_string(), expected_address);
         // ANCHOR_END: create_wallet_from_mnemonic
@@ -130,7 +130,7 @@ mod tests {
         // Transfer 1 from wallet 1 to wallet 2
         let asset_id = Default::default();
         let _receipts = wallets[0]
-            .transfer(&wallets[1].address(), 1, asset_id, TxParameters::default())
+            .transfer(wallets[1].address(), 1, asset_id, TxParameters::default())
             .await?;
 
         let wallet_2_final_coins = wallets[1].get_coins().await?;

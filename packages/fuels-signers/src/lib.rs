@@ -6,7 +6,8 @@ pub use fuel_crypto;
 
 use async_trait::async_trait;
 use fuel_crypto::Signature;
-use fuel_gql_client::{fuel_tx::Transaction, fuel_types::Address};
+use fuel_gql_client::fuel_tx::Transaction;
+use fuels_types::bech32::Bech32Address;
 use std::error::Error;
 
 /// A wallet instantiated with a locally stored private key
@@ -29,7 +30,7 @@ pub trait Signer: std::fmt::Debug + Send + Sync {
     async fn sign_transaction(&self, message: &mut Transaction) -> Result<Signature, Self::Error>;
 
     /// Returns the signer's Fuel Address
-    fn address(&self) -> Address;
+    fn address(&self) -> &Bech32Address;
 }
 
 #[cfg(test)]
@@ -39,7 +40,7 @@ mod tests {
     use fuels_core::constants::BASE_ASSET_ID;
     use fuels_core::{
         parameters::TxParameters,
-        tx::{AssetId, Bytes32, Input, Output, UtxoId},
+        tx::{Address, AssetId, Bytes32, Input, Output, UtxoId},
     };
     use fuels_test_helpers::{setup_single_asset_coins, setup_test_client};
     use rand::{rngs::StdRng, RngCore, SeedableRng};
@@ -73,7 +74,7 @@ mod tests {
         let message = Message::new(message);
         let recovered_address = signature.recover(&message)?;
 
-        assert_eq!(wallet.address.as_ref(), recovered_address.hash().as_ref());
+        assert_eq!(wallet.address().hash(), recovered_address.hash());
 
         // Verify signature
         signature.verify(&recovered_address, &message)?;
@@ -131,7 +132,7 @@ mod tests {
         // Recover address that signed the transaction
         let recovered_address = signature.recover(&message)?;
 
-        assert_eq!(wallet.address.as_ref(), recovered_address.hash().as_ref());
+        assert_eq!(wallet.address().hash(), recovered_address.hash());
 
         // Verify signature
         signature.verify(&recovered_address, &message)?;
@@ -145,8 +146,8 @@ mod tests {
         let mut wallet_1 = LocalWallet::new_random(None);
         let mut wallet_2 = LocalWallet::new_random(None);
 
-        let mut coins_1 = setup_single_asset_coins(wallet_1.address, BASE_ASSET_ID, 1, 1000000);
-        let coins_2 = setup_single_asset_coins(wallet_2.address, BASE_ASSET_ID, 1, 1000000);
+        let mut coins_1 = setup_single_asset_coins(wallet_1.address(), BASE_ASSET_ID, 1, 1000000);
+        let coins_2 = setup_single_asset_coins(wallet_2.address(), BASE_ASSET_ID, 1, 1000000);
 
         coins_1.extend(coins_2);
 
@@ -179,7 +180,7 @@ mod tests {
 
         // Transfer 1 from wallet 1 to wallet 2.
         let (tx_id, _receipts) = wallet_1
-            .transfer(&wallet_2.address(), 1, Default::default(), tx_params)
+            .transfer(wallet_2.address(), 1, Default::default(), tx_params)
             .await?;
 
         // Assert that the transaction was properly configured.
@@ -203,7 +204,7 @@ mod tests {
         // Transferring more than balance should fail.
         let response = wallet_1
             .transfer(
-                &wallet_2.address(),
+                wallet_2.address(),
                 2000000,
                 Default::default(),
                 TxParameters::default(),
@@ -222,8 +223,8 @@ mod tests {
         let mut wallet_1 = LocalWallet::new_random(None);
         let mut wallet_2 = LocalWallet::new_random(None);
 
-        let mut coins_1 = setup_single_asset_coins(wallet_1.address, BASE_ASSET_ID, 1, 5);
-        let coins_2 = setup_single_asset_coins(wallet_2.address, BASE_ASSET_ID, 1, 5);
+        let mut coins_1 = setup_single_asset_coins(wallet_1.address(), BASE_ASSET_ID, 1, 5);
+        let coins_2 = setup_single_asset_coins(wallet_2.address(), BASE_ASSET_ID, 1, 5);
 
         coins_1.extend(coins_2);
 
@@ -242,7 +243,7 @@ mod tests {
         // Transfer 2 from wallet 1 to wallet 2.
         let _receipts = wallet_1
             .transfer(
-                &wallet_2.address(),
+                wallet_2.address(),
                 2,
                 Default::default(),
                 TxParameters::default(),
