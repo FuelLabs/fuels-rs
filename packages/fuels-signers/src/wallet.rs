@@ -46,9 +46,9 @@ type W = English;
 ///
 ///   // Recover address that signed the message
 ///   let message = Message::new(message);
-///   let recovered_address = signature.recover(&message).unwrap();
+///   let recovered_address = signature.recover(&message)?;
 ///
-///   assert_eq!(wallet.address(), recovered_address);
+///   assert_eq!(wallet.address().to_string(), recovered_address.to_string());
 ///
 ///   // Verify signature
 ///   signature.verify(&recovered_address, &message).unwrap();
