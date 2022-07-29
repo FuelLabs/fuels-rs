@@ -161,10 +161,7 @@ impl Tokenizable for String {
     }
     fn into_token(self) -> Token {
         let len = self.len();
-        Token::String(StringToken {
-            data: self,
-            expected_len: len,
-        })
+        Token::String(StringToken::new(self, len))
     }
 }
 
