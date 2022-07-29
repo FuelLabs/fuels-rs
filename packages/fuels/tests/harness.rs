@@ -2316,31 +2316,53 @@ async fn test_contract_id_and_wallet_getters() {
 }
 
 #[tokio::test]
-async fn test_contract_connect() {
+async fn test_connect_get_gas_used() -> anyhow::Result<()> {
     abigen!(
-        SimpleContract,
-        "packages/fuels/tests/takes_ints_returns_bool.json",
+        MyContract,
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
 
-    let wallet = launch_provider_and_get_wallet().await;
-    let wallet2 = launch_provider_and_get_wallet().await;
+    let wallet_one = launch_provider_and_get_wallet().await;
+    let wallet_two = launch_provider_and_get_wallet().await;
 
-    let contract_id =
-        String::from("0000000000000000000000000000000000000000000000000000000000000042");
+    let id = Contract::deploy(
+        "tests/test_projects/contract_test/out/debug/contract_test.bin",
+        &wallet_one,
+        TxParameters::default(),
+        StorageConfiguration::default(),
+    )
+    .await?;
 
-    let mut contract_instance = SimpleContractBuilder::new(contract_id.clone(), wallet.clone()).build();
-    assert_eq!(contract_instance._get_wallet().address(), wallet.address());
+    let mut contract_instance = MyContractBuilder::new(id.to_string(), wallet_one.clone()).build();
 
     assert_eq!(
-        contract_instance._get_contract_id().to_string(),
-        contract_id
+        contract_instance._get_wallet().address(),
+        wallet_one.address()
     );
 
-    contract_instance._connect(wallet2.clone())._get_wallet().address();
+    let gas_used = contract_instance
+        .initialize_counter(42)
+        .call()
+        .await?
+        .gas_used;
 
-    assert_eq!(contract_instance._get_wallet().address(), wallet2.address());
+    assert!(gas_used > 0);
+
     assert_eq!(
-        contract_instance._get_contract_id().to_string(),
-        contract_id
+        contract_instance
+            ._connect(wallet_two.clone())
+            ._get_wallet()
+            .address(),
+        wallet_two.address()
     );
+
+    let gas_used_two = contract_instance
+        ._connect(wallet_two.clone())
+        .initialize_counter(42)
+        .call()
+        .await?
+        .gas_used;
+    assert!(gas_used_two > 0);
+
+    Ok(())
 }

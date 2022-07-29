@@ -145,9 +145,8 @@ impl Abigen {
                             self.wallet.clone()
                         }
 
-                        pub fn _connect(&mut self, new_wallet: LocalWallet) -> &mut Self {
-                            self.wallet = new_wallet;
-                            self
+                        pub fn _connect(&mut self, new_wallet: LocalWallet) -> Self {
+                           Self { contract_id: self.contract_id, wallet: new_wallet }
                         }
                     }
 
