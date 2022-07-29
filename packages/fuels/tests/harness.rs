@@ -2286,3 +2286,55 @@ async fn test_contract_id_and_wallet_getters() {
         contract_id
     );
 }
+
+#[tokio::test]
+async fn test_connect_get_gas_used() -> anyhow::Result<()> {
+    abigen!(
+        MyContract,
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+    );
+
+    let wallet_one = launch_provider_and_get_wallet().await;
+    let wallet_two = launch_provider_and_get_wallet().await;
+
+    let id = Contract::deploy(
+        "tests/test_projects/contract_test/out/debug/contract_test.bin",
+        &wallet_one,
+        TxParameters::default(),
+        StorageConfiguration::default(),
+    )
+    .await?;
+
+    let mut contract_instance = MyContractBuilder::new(id.to_string(), wallet_one.clone()).build();
+
+    assert_eq!(
+        contract_instance._get_wallet().address(),
+        wallet_one.address()
+    );
+
+    let gas_used = contract_instance
+        .initialize_counter(42)
+        .call()
+        .await?
+        .gas_used;
+
+    assert!(gas_used > 0);
+
+    assert_eq!(
+        contract_instance
+            ._connect(wallet_two.clone())
+            ._get_wallet()
+            .address(),
+        wallet_two.address()
+    );
+
+    let gas_used_two = contract_instance
+        ._connect(wallet_two.clone())
+        .initialize_counter(42)
+        .call()
+        .await?
+        .gas_used;
+    assert!(gas_used_two > 0);
+
+    Ok(())
+}
