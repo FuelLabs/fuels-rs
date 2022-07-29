@@ -300,7 +300,6 @@ mod tests {
     #[tokio::test]
     #[allow(unused_variables)]
     async fn get_contract_outputs() -> Result<(), Error> {
-        use fuels::prelude::Error::ContractCallError;
         use fuels::prelude::*;
         use fuels::tx::Receipt;
         abigen!(
@@ -330,11 +329,16 @@ mod tests {
                 let receipts: Vec<Receipt> = call_response.receipts;
                 // Do things with logs and receipts
             }
-
-            // The transaction is invalid or node is offline
-            // OR
+            // The transaction is malformed
+            Err(Error::ValidationError(e)) => {
+                println!("Transaction is malformed (ValidationError): {}", e);
+            }
+            // Failed request to provider
+            Err(Error::ProviderError(reason)) => {
+                println!("Provider request failed with reason: {}", reason);
+            }
             // The transaction is valid but reverts
-            Err(ContractCallError(reason, receipts)) => {
+            Err(Error::RevertTransactionError(reason, receipts)) => {
                 println!("ContractCall failed with reason: {}", reason);
                 println!("Transaction receipts are: {:?}", receipts);
             }
