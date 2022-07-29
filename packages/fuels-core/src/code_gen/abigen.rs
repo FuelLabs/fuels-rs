@@ -116,7 +116,7 @@ impl Abigen {
             (
                 quote! {
                     use fuels::contract::contract::{Contract, ContractCallHandler};
-                    use fuels::core::{EnumSelector, Parameterize, Tokenizable, Token, try_from_bytes};
+                    use fuels::core::{EnumSelector, StringToken, Parameterize, Tokenizable, Token, try_from_bytes};
                     use fuels::signers::LocalWallet;
                     use fuels::tx::{ContractId, Address};
                     use fuels::types::bech32::Bech32ContractId;

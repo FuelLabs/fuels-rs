@@ -1,4 +1,4 @@
-use crate::Token;
+use crate::{StringToken, Token};
 use fuels_types::errors::Error;
 use fuels_types::param_types::ParamType;
 use fuels_types::utils::has_array_format;
@@ -18,7 +18,14 @@ impl Tokenizer {
     /// Token that holds the value within it. This Token is used
     /// in the encoding process.
     pub fn tokenize(param: &ParamType, value: String) -> Result<Token, Error> {
+        if !value.is_ascii() {
+            return Err(Error::InvalidData(
+                "value string can only contain ascii characters".into(),
+            ));
+        }
+
         let trimmed_value = value.trim();
+
         match &*param {
             ParamType::Unit => Ok(Token::Unit),
             ParamType::U8 => Ok(Token::U8(trimmed_value.parse::<u8>()?)),
@@ -40,7 +47,10 @@ impl Tokenizer {
                 Ok(Token::B256(s))
             }
             ParamType::Array(t, _) => Ok(Self::tokenize_array(trimmed_value, &*t)?),
-            ParamType::String(_) => Ok(Token::String(trimmed_value.to_string())),
+            ParamType::String(length) => Ok(Token::String(StringToken::new(
+                trimmed_value.into(),
+                *length,
+            ))),
             ParamType::Struct(struct_params) => {
                 Ok(Self::tokenize_struct(trimmed_value, struct_params)?)
             }
