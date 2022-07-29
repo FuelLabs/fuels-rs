@@ -391,6 +391,10 @@ impl Provider {
         Ok(self.client.chain_info().await?.latest_block.height.0)
     }
 
+    pub async fn produce_blocks(&self, amount: u64) -> io::Result<u64> {
+        self.client.produce_block(amount).await
+    }
+
     // @todo
     // - Get block(s)
 }
