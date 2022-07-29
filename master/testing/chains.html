@@ -139,12 +139,21 @@
                     <main>
                         <h1 id="increasing-the-block-height"><a class="header" href="#increasing-the-block-height">Increasing the block height</a></h1>
 <p>You can use <code>produce_blocks</code> to help achieve an arbitrary block height; this is useful when you want to do any testing regarding transaction maturity.</p>
-<pre><code class="language-rust ignore">    let wallet = launch_provider_and_get_wallet().await;
-    let provider = &amp;wallet.get_provider().unwrap();
+<blockquote>
+<p><strong>Note</strong>: For the <code>produce_blocks</code> API to work, it is imperative to have the <code>fuel-core-lib</code> feature enabled, and have <code>manual_blocks_enabled = true</code> in the config for the running node. See example below.</p>
+</blockquote>
+<pre><code class="language-rust ignore">    let config = Config {
+        manual_blocks_enabled: true, // Necessary so the `produce_blocks` API can be used locally
+        ..Config::local_node()
+    };
+    let wallets =
+        launch_custom_provider_and_get_wallets(WalletsConfig::default(), Some(config)).await;
+    let wallet = &amp;wallets[0];
+    let provider = wallet.get_provider()?;
 
     assert_eq!(provider.latest_block_height().await?, 0);
 
-    produce_blocks(&amp;wallet, 3).await?;
+    provider.produce_blocks(3).await?;
 
     assert_eq!(provider.latest_block_height().await?, 3);
 </code></pre>
