@@ -145,8 +145,17 @@ impl Abigen {
                             self.wallet.clone()
                         }
 
-                        pub fn _connect(&mut self, new_wallet: LocalWallet) -> Self {
-                           Self { contract_id: self.contract_id, wallet: new_wallet }
+                        pub fn connect(&mut self, new_wallet: LocalWallet) -> Self {
+                           // self.get_provider().unwrap();
+                           // let provider = _get_wallet.get_provider().unwrap().clone();
+                           //  println!("Krkan {:?}", new_wallet);
+                           //  println!("Rubin {:?}", &self.wallet.get_provider().unwrap());
+                           //  println!("emir {:?}", self._get_wallet());
+                           let mut nw = new_wallet.clone();
+                           let provider = self.wallet.get_provider();
+                           nw.set_provider(provider.unwrap().clone());
+                           // new_wallet.set_provider(provider);
+                           Self { contract_id: self.contract_id, wallet: nw }
                         }
                     }
 

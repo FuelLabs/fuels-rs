@@ -10,6 +10,7 @@ use fuels_core::parameters::StorageConfiguration;
 use fuels_core::tx::{Address, Bytes32, StorageSlot};
 use fuels_core::Tokenizable;
 use fuels_core::{constants::BASE_ASSET_ID, Token};
+use fuels_test_helpers::{launch_custom_provider_and_get_wallets, WalletsConfig};
 use sha2::{Digest, Sha256};
 use std::str::FromStr;
 
@@ -2322,22 +2323,27 @@ async fn test_connect_get_gas_used() -> anyhow::Result<()> {
         "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
 
-    let wallet_one = launch_provider_and_get_wallet().await;
-    let wallet_two = launch_provider_and_get_wallet().await;
+    let num_wallets = 2;
+    let num_coins = 3;
+    let amount = 1000000000000;
+    let config = WalletsConfig::new(Some(num_wallets), Some(num_coins), Some(amount));
+
+    let wallets = launch_custom_provider_and_get_wallets(config, None).await;
 
     let id = Contract::deploy(
         "tests/test_projects/contract_test/out/debug/contract_test.bin",
-        &wallet_one,
+        wallets.get(0).unwrap(),
         TxParameters::default(),
         StorageConfiguration::default(),
     )
     .await?;
 
-    let mut contract_instance = MyContractBuilder::new(id.to_string(), wallet_one.clone()).build();
+    let mut contract_instance =
+        MyContractBuilder::new(id.to_string(), wallets.get(0).unwrap().clone()).build();
 
     assert_eq!(
         contract_instance._get_wallet().address(),
-        wallet_one.address()
+        wallets.get(0).unwrap().address()
     );
 
     let gas_used = contract_instance
@@ -2348,20 +2354,13 @@ async fn test_connect_get_gas_used() -> anyhow::Result<()> {
 
     assert!(gas_used > 0);
 
-    assert_eq!(
-        contract_instance
-            ._connect(wallet_two.clone())
-            ._get_wallet()
-            .address(),
-        wallet_two.address()
-    );
-
     let gas_used_two = contract_instance
-        ._connect(wallet_two.clone())
+        .connect(wallets.get(1).unwrap().clone())
         .initialize_counter(42)
         .call()
         .await?
         .gas_used;
+
     assert!(gas_used_two > 0);
 
     Ok(())
