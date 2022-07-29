@@ -356,7 +356,7 @@ impl Provider {
     pub async fn get_transactions(
         &self,
         request: PaginationRequest<String>,
-    ) -> std::io::Result<PaginatedResult<TransactionResponse, String>> {
+    ) -> io::Result<PaginatedResult<TransactionResponse, String>> {
         self.client.transactions(request).await
     }
 
@@ -373,6 +373,10 @@ impl Provider {
 
     pub async fn latest_block_height(&self) -> io::Result<u64> {
         Ok(self.client.chain_info().await?.latest_block.height.0)
+    }
+
+    pub async fn produce_blocks(&self, amount: u64) -> io::Result<u64> {
+        self.client.produce_block(amount).await
     }
 
     // @todo
