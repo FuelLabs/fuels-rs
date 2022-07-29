@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use fuels::prelude::{Error, ProviderError};
+    use fuels::prelude::Error;
 
     #[tokio::test]
     async fn create_random_wallet() {
@@ -275,7 +275,7 @@ mod tests {
 
     #[tokio::test]
     #[allow(unused_variables)]
-    async fn get_balances() -> Result<(), ProviderError> {
+    async fn get_balances() -> Result<(), Error> {
         use fuels::prelude::{launch_provider_and_get_wallet, BASE_ASSET_ID};
         use fuels::tx::AssetId;
         use std::collections::HashMap;

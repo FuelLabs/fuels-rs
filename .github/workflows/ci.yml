@@ -6,7 +6,7 @@ on:
       - master
   pull_request:
   release:
-    types: [published]
+    types: [ published ]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -18,7 +18,7 @@ env:
   RUSTFLAGS: "-D warnings"
   FUEL_CORE_VERSION: 0.9.6
   RUST_VERSION: 1.61.0
-  FORC_VERSION: 0.18.0
+  FORC_VERSION: 0.19.0
 
 jobs:
   setup-test-projects:
@@ -100,8 +100,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        command: [check]
-        args: [--all-features]
+        command: [ check ]
+        args: [ --all-features ]
         package: ${{fromJSON(needs.get-workspace-members.outputs.members)}}
         include:
           - command: fmt

@@ -1,16 +1,14 @@
 use anyhow::Result;
+use fuel_gql_client::fuel_tx::{ConsensusParameters, Receipt, Transaction};
 use fuel_gql_client::fuel_tx::{Input, Output, UtxoId};
 use fuel_gql_client::fuel_types::{
     bytes::padded_len_usize, AssetId, Bytes32, ContractId, Immediate18, Word,
 };
 use fuel_gql_client::fuel_vm::{consts::REG_ONE, prelude::Opcode};
-use fuel_gql_client::{
-    client::{types::TransactionStatus, FuelClient},
-    fuel_tx::{ConsensusParameters, Receipt, Transaction},
-};
 
 use fuels_core::constants::DEFAULT_SPENDABLE_COIN_AMOUNT;
 use fuels_core::parameters::TxParameters;
+use fuels_signers::provider::Provider;
 use fuels_signers::{LocalWallet, Signer};
 use fuels_types::{constants::WORD_SIZE, errors::Error};
 use std::collections::HashSet;
@@ -278,35 +276,27 @@ impl Script {
     }
 
     /// Execute the transaction in a state-modifying manner.
-    pub async fn call(self, fuel_client: &FuelClient) -> Result<Vec<Receipt>, Error> {
-        let chain_info = fuel_client.chain_info().await?;
+    pub async fn call(self, provider: &Provider) -> Result<Vec<Receipt>, Error> {
+        let chain_info = provider.chain_info().await?;
 
         self.tx.validate_without_signature(
             chain_info.latest_block.height.0,
             &chain_info.consensus_parameters.into(),
         )?;
 
-        let tx_id = fuel_client.submit(&self.tx).await?.0.to_string();
-        let receipts = fuel_client.receipts(&tx_id).await?;
-        let status = fuel_client.transaction_status(&tx_id).await?;
-        match status {
-            TransactionStatus::Failure { reason, .. } => {
-                Err(Error::ContractCallError(reason, receipts))
-            }
-            _ => Ok(receipts),
-        }
+        provider.send_transaction(&self.tx).await
     }
 
     /// Execute the transaction in a simulated manner, not modifying blockchain state
-    pub async fn simulate(self, fuel_client: &FuelClient) -> Result<Vec<Receipt>, Error> {
-        let chain_info = fuel_client.chain_info().await?;
+    pub async fn simulate(self, provider: &Provider) -> Result<Vec<Receipt>, Error> {
+        let chain_info = provider.chain_info().await?;
 
         self.tx.validate_without_signature(
             chain_info.latest_block.height.0,
             &chain_info.consensus_parameters.into(),
         )?;
 
-        let receipts = fuel_client.dry_run(&self.tx).await?;
+        let receipts = provider.dry_run(&self.tx).await?;
         Ok(receipts)
     }
 }

@@ -7,7 +7,6 @@ use std::str::FromStr;
 
 use anyhow::Result;
 use fuel_gql_client::{
-    client::FuelClient,
     fuel_tx::{Contract as FuelContract, Output, Receipt, StorageSlot, Transaction},
     fuel_types::{Address, AssetId, Salt},
 };
@@ -154,7 +153,7 @@ impl Contract {
             contract_call,
             tx_parameters,
             wallet: wallet.clone(),
-            fuel_client: provider.client.clone(),
+            provider: provider.clone(),
             datatype: PhantomData,
         })
     }
@@ -237,12 +236,9 @@ impl Contract {
         let (mut tx, contract_id) =
             Self::contract_deployment_transaction(compiled_contract, wallet, params).await?;
 
-        let client = &wallet
-            .get_provider()
-            .expect("Can't get wallet provider")
-            .client;
+        let provider = wallet.get_provider()?;
 
-        let chain_info = client.chain_info().await?;
+        let chain_info = provider.chain_info().await?;
 
         wallet.sign_transaction(&mut tx).await?;
         tx.validate_without_signature(
@@ -250,10 +246,9 @@ impl Contract {
             &chain_info.consensus_parameters.into(),
         )?;
 
-        match client.submit(&tx).await {
-            Ok(_) => Ok(Bech32ContractId::from(contract_id)),
-            Err(e) => Err(Error::TransactionError(e.to_string())),
-        }
+        provider.send_transaction(&tx).await?;
+
+        Ok(contract_id)
     }
 
     pub fn load_sway_contract(
@@ -316,7 +311,7 @@ impl Contract {
         compiled_contract: &CompiledContract,
         wallet: &LocalWallet,
         params: TxParameters,
-    ) -> Result<(Transaction, ContractId), Error> {
+    ) -> Result<(Transaction, Bech32ContractId), Error> {
         let bytecode_witness_index = 0;
         let storage_slots: Vec<StorageSlot> = compiled_contract.storage_slots.clone();
         let witnesses = vec![compiled_contract.raw.clone().into()];
@@ -360,7 +355,7 @@ impl Contract {
             witnesses,
         );
 
-        Ok((tx, contract_id))
+        Ok((tx, contract_id.into()))
     }
 
     fn get_storage_vec(storage_path: &str) -> Vec<StorageSlot> {
@@ -440,7 +435,7 @@ pub struct ContractCallHandler<D> {
     pub contract_call: ContractCall,
     pub tx_parameters: TxParameters,
     pub wallet: LocalWallet,
-    pub fuel_client: FuelClient,
+    pub provider: Provider,
     pub datatype: PhantomData<D>,
 }
 
@@ -507,9 +502,9 @@ where
         let script = self.get_script().await;
 
         let receipts = if simulate {
-            script.simulate(&self.fuel_client).await?
+            script.simulate(&self.provider).await?
         } else {
-            script.call(&self.fuel_client).await?
+            script.call(&self.provider).await?
         };
         tracing::debug!(target: "receipts", "{:?}", receipts);
 
@@ -553,7 +548,6 @@ pub struct MultiContractCallHandler {
     pub contract_calls: Option<Vec<ContractCall>>,
     pub tx_parameters: TxParameters,
     pub wallet: LocalWallet,
-    pub fuel_client: FuelClient,
 }
 
 impl MultiContractCallHandler {
@@ -561,7 +555,6 @@ impl MultiContractCallHandler {
         Self {
             contract_calls: None,
             tx_parameters: TxParameters::default(),
-            fuel_client: wallet.get_provider().unwrap().client.clone(),
             wallet,
         }
     }
@@ -616,10 +609,12 @@ impl MultiContractCallHandler {
     ) -> Result<CallResponse<D>, Error> {
         let script = self.get_script().await;
 
+        let provider = self.wallet.get_provider()?;
+
         let receipts = if simulate {
-            script.simulate(&self.fuel_client).await.unwrap()
+            script.simulate(provider).await.unwrap()
         } else {
-            script.call(&self.fuel_client).await.unwrap()
+            script.call(provider).await.unwrap()
         };
         tracing::debug!(target: "receipts", "{:?}", receipts);
 
