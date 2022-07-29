@@ -2337,7 +2337,6 @@ async fn str_in_array() -> Result<(), Error> {
     )
     .await?;
 
-    // `SimpleContract` is the name of the contract
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
 
     let input = vec!["foo".to_string(), "bar".to_string(), "baz".to_string()];
