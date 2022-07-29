@@ -47,10 +47,10 @@ impl Tokenizer {
                 Ok(Token::B256(s))
             }
             ParamType::Array(t, _) => Ok(Self::tokenize_array(trimmed_value, &*t)?),
-            ParamType::String(length) => Ok(Token::String(StringToken {
-                data: trimmed_value.into(),
-                expected_len: *length,
-            })),
+            ParamType::String(length) => Ok(Token::String(StringToken::new(
+                trimmed_value.into(),
+                *length,
+            ))),
             ParamType::Struct(struct_params) => {
                 Ok(Self::tokenize_struct(trimmed_value, struct_params)?)
             }

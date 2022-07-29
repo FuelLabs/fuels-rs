@@ -483,10 +483,10 @@ mod tests {
 
         let sway_fn = "takes_string(str[23])";
 
-        let args: Vec<Token> = vec![Token::String(StringToken {
-            data: "This is a full sentence".into(),
-            expected_len: 23,
-        })];
+        let args: Vec<Token> = vec![Token::String(StringToken::new(
+            "This is a full sentence".into(),
+            23,
+        ))];
 
         let expected_encoded_abi = [
             0x54, 0x68, 0x69, 0x73, 0x20, 0x69, 0x73, 0x20, 0x61, 0x20, 0x66, 0x75, 0x6c, 0x6c,
@@ -638,10 +638,7 @@ mod tests {
         }
          */
         let deeper_enum_variants = EnumVariants::new(vec![ParamType::Bool, ParamType::String(10)])?;
-        let deeper_enum_token = Token::String(StringToken {
-            data: "0123456789".into(),
-            expected_len: 10,
-        });
+        let deeper_enum_token = Token::String(StringToken::new("0123456789".into(), 10));
 
         let str_enc = vec![
             b'0', b'1', b'2', b'3', b'4', b'5', b'6', b'7', b'8', b'9', 0x0, 0x0, 0x0, 0x0, 0x0,
@@ -809,10 +806,7 @@ mod tests {
 
         let b256 = Token::B256(hasher.finalize().into());
 
-        let s = Token::String(StringToken {
-            data: "This is a full sentence".into(),
-            expected_len: 23,
-        });
+        let s = Token::String(StringToken::new("This is a full sentence".into(), 23));
 
         let args: Vec<Token> = vec![foo, u8_arr, b256, s];
 

@@ -31,11 +31,15 @@ pub type EnumSelector = (u8, Token, EnumVariants);
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct StringToken {
-    pub data: String,
-    pub expected_len: usize,
+    data: String,
+    expected_len: usize,
 }
 
 impl StringToken {
+    pub fn new(data: String, expected_len: usize) -> Self {
+        StringToken { data, expected_len }
+    }
+
     pub fn get_encodable_str(&self) -> Result<&str, CodecError> {
         if !self.data.is_ascii() {
             return Err(CodecError::InvalidData(

@@ -257,7 +257,7 @@ fn expand_function_arguments(
 
         // This `name` TokenStream is also added to the call arguments
         if let ParamType::String(len) = &kind {
-            call_args.push(quote! {Token::String(StringToken{data: #name, expected_len: #len})});
+            call_args.push(quote! {Token::String(StringToken::new(#name, #len))});
         } else {
             call_args.push(name);
         }

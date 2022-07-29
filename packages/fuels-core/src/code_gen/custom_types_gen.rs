@@ -96,7 +96,7 @@ pub fn expand_custom_struct(prop: &Property) -> Result<TokenStream, Error> {
                     ParamType::String(len) => {
                         struct_fields_tokens
                             .push(quote! {tokens.push(Token::#param_type_string_ident(
-                            StringToken{data: self.#field_name,  expected_len: #len}))});
+                            StringToken::new(self.#field_name,  #len)))});
                     }
                     ParamType::Array(_t, _s) => {
                         struct_fields_tokens.push(
@@ -290,7 +290,7 @@ pub fn expand_custom_enum(enum_name: &str, prop: &Property) -> Result<TokenStrea
                     ParamType::String(len) => {
                         enum_selector_builder.push(quote! {
                             #enum_ident::#variant_name(value) => (#dis, Token::#param_type_string_ident(
-                                    StringToken{data: value,  expected_len: #len}))
+                                    StringToken::new(value,  #len)))
                         });
                     }
                     ParamType::Array(_t, _s) => {

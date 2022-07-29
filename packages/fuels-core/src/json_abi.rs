@@ -510,10 +510,7 @@ mod tests {
 
         let decoded_return = abi.decode(json_abi, function_name, &return_value)?;
 
-        let expected_return = vec![Token::String(StringToken {
-            data: "OK".into(),
-            expected_len: 2,
-        })];
+        let expected_return = vec![Token::String(StringToken::new("OK".into(), 2))];
 
         assert_eq!(decoded_return, expected_return);
         Ok(())
