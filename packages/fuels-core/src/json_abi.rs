@@ -197,7 +197,7 @@ impl ABIParser {
         let entry = parsed_abi.iter().find(|e| e.name == fn_name);
 
         if entry.is_none() {
-            return Err(Error::InvalidName(format!(
+            return Err(Error::InvalidData(format!(
                 "couldn't find function name: {}",
                 fn_name
             )));

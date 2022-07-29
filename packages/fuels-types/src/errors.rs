@@ -27,14 +27,12 @@ impl From<Utf8Error> for CodecError {
 
 #[derive(Error, Debug)]
 pub enum Error {
-    #[error("Invalid name: {0}")]
-    InvalidName(String),
     #[error("Invalid data: {0}")]
     InvalidData(String),
-    #[error("Missing data: {0}")]
-    MissingData(String),
     #[error("Serialization error: {0}")]
     SerdeJson(#[from] serde_json::Error),
+    #[error("IO error: {0}")]
+    IOError(#[from] std::io::Error),
     #[error("Invalid type: {0}")]
     InvalidType(String),
     #[error("Parse integer error: {0}")]
@@ -49,22 +47,18 @@ pub enum Error {
     Utf8Error(#[from] Utf8Error),
     #[error("Compilation error: {0}")]
     CompilationError(String),
-    #[error("Network error: {0}")]
-    NetworkError(String),
-    #[error("Transaction error: {0}")]
-    TransactionError(String),
+    #[error("Instantiation error: {0}")]
+    InstantiationError(String),
     #[error("Infrastructure error: {0}")]
     InfrastructureError(String),
-    #[error("Contract call error: {}, receipts: {:?}", .0, .1)]
-    ContractCallError(String, Vec<Receipt>),
     #[error("Wallet error: {0}")]
     WalletError(String),
     #[error("Provider error: {0}")]
     ProviderError(String),
-    #[error("Instantiation error: {0}")]
-    InstantiationError(String),
     #[error("Validation error: {0}")]
     ValidationError(#[from] ValidationError),
+    #[error("Revert transaction error: {}, receipts: {:?}", .0, .1)]
+    RevertTransactionError(String, Vec<Receipt>),
 }
 
 impl From<CodecError> for Error {
@@ -79,12 +73,6 @@ impl From<CodecError> for Error {
 impl From<ParseError> for Error {
     fn from(err: ParseError) -> Error {
         Error::InvalidType(err.to_string())
-    }
-}
-
-impl From<std::io::Error> for Error {
-    fn from(err: std::io::Error) -> Error {
-        Error::ContractCallError(err.to_string(), vec![])
     }
 }
 

@@ -2,7 +2,7 @@
 use fuel_core::service::{Config, FuelService};
 
 #[cfg(feature = "fuel-core-lib")]
-use fuel_gql_client::client::FuelClient;
+use fuels_signers::provider::Provider;
 
 #[cfg(not(feature = "fuel-core-lib"))]
 use crate::launch_provider_and_get_wallet;
@@ -18,11 +18,11 @@ use fuels_types::errors::Error;
 pub async fn run_compiled_script(binary_filepath: &str) -> Result<Vec<Receipt>, Error> {
     let script_binary = std::fs::read(binary_filepath)?;
     let server = FuelService::new_node(Config::local_node()).await.unwrap();
-    let client = FuelClient::from(server.bound_address);
+    let provider = Provider::connect(server.bound_address).await?;
 
     let script = get_script(script_binary);
 
-    script.call(&client).await
+    script.call(&provider).await
 }
 
 #[allow(dead_code)]
@@ -31,11 +31,11 @@ pub async fn run_compiled_script(binary_filepath: &str) -> Result<Vec<Receipt>, 
     let script_binary = std::fs::read(binary_filepath)?;
 
     let wallet = launch_provider_and_get_wallet().await;
-    let client = wallet.get_provider().unwrap().clone().client;
+    let provider = wallet.get_provider()?;
 
     let script = get_script(script_binary);
 
-    script.call(&client).await
+    script.call(provider).await
 }
 
 fn get_script(script_binary: Vec<u8>) -> Script {
