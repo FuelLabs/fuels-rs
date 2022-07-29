@@ -2304,3 +2304,48 @@ async fn test_contract_id_and_wallet_getters() {
         contract_id
     );
 }
+
+#[tokio::test]
+async fn str_in_array() -> Result<(), Error> {
+    abigen!(
+        MyContract,
+        "packages/fuels/tests/test_projects/str_in_array/out/debug/str_in_array-abi.json"
+    );
+
+    let wallet = launch_provider_and_get_wallet().await;
+
+    let contract_id = Contract::deploy(
+        "tests/test_projects/str_in_array/out/debug/str_in_array.bin",
+        &wallet,
+        TxParameters::default(),
+        StorageConfiguration::default(),
+    )
+    .await?;
+
+    // `SimpleContract` is the name of the contract
+    let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
+
+    let input = vec!["foo".to_string(), "bar".to_string(), "baz".to_string()];
+    let response = contract_instance
+        .take_array_string_shuffle(input.clone())
+        .call()
+        .await?;
+
+    assert_eq!(response.value, ["baz", "foo", "bar"]);
+
+    let response = contract_instance
+        .take_array_string_return_single(input.clone())
+        .call()
+        .await?;
+
+    assert_eq!(response.value, ["foo"]);
+
+    // let response = contract_instance
+    //     .take_array_string_return_single_element(input)
+    //     .call()
+    //     .await?;
+
+    // assert_eq!(response.value, "baz");
+
+    Ok(())
+}
