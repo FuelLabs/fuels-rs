@@ -2355,6 +2355,8 @@ async fn str_in_array() -> Result<(), Error> {
 
     assert_eq!(response.value, ["foo"]);
 
+    // This test is skipped because of a compiler error.
+    // See: https://github.com/FuelLabs/sway/issues/2410
     // let response = contract_instance
     //     .take_array_string_return_single_element(input)
     //     .call()
