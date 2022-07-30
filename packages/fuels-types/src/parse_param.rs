@@ -17,12 +17,11 @@ impl TryFrom<&Property> for ParamType {
                 if prop.type_field == "()" {
                     return Ok(ParamType::Unit);
                 }
-                if prop.type_field.contains('[') && prop.type_field.contains(']') {
-                    // Try to parse array ([T; M]) or string (str[M])
-                    if prop.type_field.contains("str[") {
-                        return ParamType::parse_string_param(prop);
-                    }
+                if prop.type_field.starts_with('[') && prop.type_field.ends_with(']') {
                     return ParamType::parse_array_param(prop);
+                }
+                if prop.type_field.contains("str[") {
+                    return ParamType::parse_string_param(prop);
                 }
                 if prop.type_field.starts_with('(') && prop.type_field.ends_with(')') {
                     // Try to parse tuple (T, T, ..., T)
@@ -78,13 +77,20 @@ impl ParamType {
 
         let param_type = match Self::from_str(&type_field) {
             Ok(param_type) => param_type,
-            Err(_) => ParamType::parse_custom_type_param(
-                prop.components
+            Err(_) => {
+                let component = prop
+                    .components
                     .as_ref()
                     .expect("array should have components")
                     .first()
-                    .expect("components in array should have at least one component"),
-            )?,
+                    .expect("components in array should have at least one component");
+
+                if type_field.contains("str[") {
+                    ParamType::parse_string_param(component)?
+                } else {
+                    ParamType::parse_custom_type_param(component)?
+                }
+            }
         };
 
         // Grab size the `n` in "[T; n]"
