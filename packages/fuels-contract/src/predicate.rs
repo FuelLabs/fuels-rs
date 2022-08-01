@@ -144,7 +144,7 @@ impl Predicate {
             );
 
             let script = Script::new(tx);
-            script.call(&provider).await
+            script.call(provider).await
         } else {
             panic!("Expected Transaction::default() to return a Transaction::Script");
         }
