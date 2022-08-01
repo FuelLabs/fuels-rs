@@ -1,10 +1,10 @@
 use crate::code_gen::custom_types_gen::extract_custom_type_name_from_abi_property;
 use crate::code_gen::docs_gen::expand_doc;
-use crate::json_abi::ABIParser;
 use crate::types::expand_type;
 use crate::utils::{first_four_bytes_of_sha256_hash, ident, safe_ident};
 use crate::{ParamType, Selector};
 use fuels_types::errors::Error;
+use fuels_types::function_selector::build_fn_selector;
 use fuels_types::{CustomType, Function, Property, ENUM_KEYWORD, STRUCT_KEYWORD};
 use inflector::Inflector;
 use proc_macro2::{Literal, TokenStream};
@@ -24,7 +24,6 @@ use std::collections::HashMap;
 /// [`Contract`]: crate::contract::Contract
 pub fn expand_function(
     function: &Function,
-    abi_parser: &ABIParser,
     custom_enums: &HashMap<String, Property>,
     custom_structs: &HashMap<String, Property>,
 ) -> Result<TokenStream, Error> {
@@ -33,7 +32,7 @@ pub fn expand_function(
     }
 
     let name = safe_ident(&function.name);
-    let fn_signature = abi_parser.build_fn_selector(&function.name, &function.inputs)?;
+    let fn_signature = build_fn_selector(&function.name, &function.inputs)?;
 
     let encoded = first_four_bytes_of_sha256_hash(&fn_signature);
 
@@ -70,7 +69,7 @@ pub fn expand_function(
     Ok(quote! {
         #doc
         pub fn #name(&self #input) -> #result {
-            Contract::method_hash(&self.wallet.get_provider().expect("Provider not set up"), self.contract_id, &self.wallet,
+            Contract::method_hash(&self.wallet.get_provider().expect("Provider not set up"), self.contract_id.clone(), &self.wallet,
                 #tokenized_signature, #output_param, #arg).expect("method not found (this should never happen)")
         }
     })
@@ -239,7 +238,7 @@ fn expand_function_arguments(
         let kind = ParamType::try_from(param)?;
 
         // If it's a tuple, don't expand it, just use the type signature as it is (minus the string "struct " | "enum ").
-        let tok = if let ParamType::Tuple(_tuple) = kind {
+        let tok = if let ParamType::Tuple(_tuple) = &kind {
             let toks = build_expanded_tuple_params(param)
                 .expect("failed to build expanded tuple parameters");
 
@@ -257,7 +256,11 @@ fn expand_function_arguments(
         args.push(quote! { #name: #tok });
 
         // This `name` TokenStream is also added to the call arguments
-        call_args.push(name);
+        if let ParamType::String(len) = &kind {
+            call_args.push(quote! {Token::String(StringToken::new(#name, #len))});
+        } else {
+            call_args.push(name);
+        }
     }
 
     // The final TokenStream of the argument declaration in a function declaration
@@ -372,19 +375,14 @@ mod tests {
             type_field: String::from("bool"),
             components: None,
         });
-        let result = expand_function(
-            &the_function,
-            &ABIParser::new(),
-            &Default::default(),
-            &Default::default(),
-        );
+        let result = expand_function(&the_function, &Default::default(), &Default::default());
         let expected = TokenStream::from_str(
             r#"
             #[doc = "Calls the contract's `HelloWorld` (0x0000000097d4de45) function"]
             pub fn HelloWorld(&self, bimbam: bool) -> ContractCallHandler<()> {
                 Contract::method_hash(
                     &self.wallet.get_provider().expect("Provider not set up"),
-                    self.contract_id,
+                    self.contract_id.clone(),
                     &self.wallet,
                     [0, 0, 0, 0, 151, 212, 222, 69],
                     None,
@@ -465,8 +463,7 @@ mod tests {
                 components: None,
             },
         );
-        let abi_parser = ABIParser::new();
-        let result = expand_function(&the_function, &abi_parser, &custom_enums, &custom_structs);
+        let result = expand_function(&the_function, &custom_enums, &custom_structs);
         // Some more editing was required because it is not rustfmt-compatible (adding/removing parentheses or commas)
         let expected = TokenStream::from_str(
             r#"
@@ -477,7 +474,7 @@ mod tests {
             ) -> ContractCallHandler<EntropyCirclesEnum> {
                 Contract::method_hash(
                     &self.wallet.get_provider().expect("Provider not set up"),
-                    self.contract_id,
+                    self.contract_id.clone(),
                     &self.wallet,
                     [0, 0, 0, 0, 118, 178, 90, 36],
                     Some(ParamType::Enum(EnumVariants::new(vec![ParamType::Bool, ParamType::U64]).unwrap())),
@@ -739,7 +736,7 @@ mod tests {
         };
         let struct_name = Some(&struct_prop);
         let result = expand_input_param(&def, "unused", &struct_type, &struct_name);
-        assert!(matches!(result, Err(Error::MissingData(_))));
+        assert!(matches!(result, Err(Error::InvalidData(_))));
     }
 
     #[test]

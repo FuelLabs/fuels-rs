@@ -1,15 +1,12 @@
 #[cfg(test)]
 mod tests {
-    #[cfg(feature = "fuel-core-lib")]
-    use fuels::prelude::Config;
     use fuels::prelude::Error;
 
     #[tokio::test]
-    #[cfg(feature = "fuel-core-lib")]
     async fn instantiate_client() -> Result<(), Error> {
         // ANCHOR: instantiate_client
         use fuels::client::FuelClient;
-        use fuels::node::service::{Config, FuelService};
+        use fuels::fuel_node::{Config, FuelService};
 
         // Run the fuel node.
         let server = FuelService::new_node(Config::local_node()).await?;
@@ -60,7 +57,7 @@ mod tests {
         )
         .await?;
 
-        println!("Contract deployed @ {:x}", contract_id);
+        println!("Contract deployed @ {contract_id}");
         // ANCHOR_END: deploy_contract
 
         // ANCHOR: use_deployed_contract
@@ -104,7 +101,7 @@ mod tests {
         )
         .await?;
 
-        println!("Contract deployed @ {:x}", contract_id_1);
+        println!("Contract deployed @ {contract_id_1}");
 
         let rng = &mut StdRng::seed_from_u64(2322u64);
         let salt: [u8; 32] = rng.gen();
@@ -118,7 +115,7 @@ mod tests {
         )
         .await?;
 
-        println!("Contract deployed @ {:x}", contract_id_2);
+        println!("Contract deployed @ {contract_id_2}");
 
         assert_ne!(contract_id_1, contract_id_2);
         // ANCHOR_END: deploy_with_parameters
@@ -145,7 +142,7 @@ mod tests {
         )
         .await?;
 
-        println!("Contract deployed @ {:x}", contract_id_1);
+        println!("Contract deployed @ {contract_id_1}");
         let contract_instance_1 =
             MyContractBuilder::new(contract_id_1.to_string(), wallets[0].clone()).build();
 
@@ -165,7 +162,7 @@ mod tests {
         )
         .await?;
 
-        println!("Contract deployed @ {:x}", contract_id_2);
+        println!("Contract deployed @ {contract_id_2}");
         let contract_instance_2 =
             MyContractBuilder::new(contract_id_2.to_string(), wallets[1].clone()).build();
 
@@ -197,7 +194,7 @@ mod tests {
             StorageConfiguration::default(),
         )
         .await?;
-        println!("Contract deployed @ {:x}", contract_id);
+        println!("Contract deployed @ {contract_id}");
         // ANCHOR: instantiate_contract
         let contract_instance =
             MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
@@ -279,7 +276,7 @@ mod tests {
             StorageConfiguration::default(),
         )
         .await?;
-        println!("Contract deployed @ {:x}", contract_id);
+        println!("Contract deployed @ {contract_id}");
         let contract_instance =
             MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
         // ANCHOR: simulate
@@ -292,7 +289,7 @@ mod tests {
 
         // withdraw some tokens to wallet
         let response = contract_instance
-            .transfer_coins_to_output(1_000_000, contract_id, address)
+            .transfer_coins_to_output(1_000_000, contract_id.into(), address.into())
             .append_variable_outputs(1)
             .call()
             .await?;
@@ -303,7 +300,6 @@ mod tests {
     #[tokio::test]
     #[allow(unused_variables)]
     async fn get_contract_outputs() -> Result<(), Error> {
-        use fuels::prelude::Error::ContractCallError;
         use fuels::prelude::*;
         use fuels::tx::Receipt;
         abigen!(
@@ -333,11 +329,16 @@ mod tests {
                 let receipts: Vec<Receipt> = call_response.receipts;
                 // Do things with logs and receipts
             }
-
-            // The transaction is invalid or node is offline
-            // OR
+            // The transaction is malformed
+            Err(Error::ValidationError(e)) => {
+                println!("Transaction is malformed (ValidationError): {}", e);
+            }
+            // Failed request to provider
+            Err(Error::ProviderError(reason)) => {
+                println!("Provider request failed with reason: {}", reason);
+            }
             // The transaction is valid but reverts
-            Err(ContractCallError(reason, receipts)) => {
+            Err(Error::RevertTransactionError(reason, receipts)) => {
                 println!("ContractCall failed with reason: {}", reason);
                 println!("Transaction receipts are: {:?}", receipts);
             }
@@ -353,7 +354,7 @@ mod tests {
         let wallet = launch_provider_and_get_wallet().await;
         // Your contract ID as a String.
         let contract_id =
-            "0x068fe90ddc43b18a8f76756ecad8bf30eb0ceea33d2e6990c0185d01b0dbb675".to_string();
+            "fuel1vkm285ypjesypw7vhdlhnty3kjxxx4efckdycqh3ttna4xvmxtfs6murwy".to_string();
 
         let connected_contract_instance = MyContractBuilder::new(contract_id, wallet).build();
         // You can now use the `connected_contract_instance` just as you did above!

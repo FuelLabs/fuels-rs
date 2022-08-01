@@ -3,7 +3,7 @@
 You can use wallets for many important things, for instance:
 
 1. Checking your balance;
-2. Transferring coins to a destination address;
+2. Transferring coins to a destination address or contract;
 3. Signing messages and transactions;
 4. Paying for network fees when sending transactions or deploying smart contracts.
 

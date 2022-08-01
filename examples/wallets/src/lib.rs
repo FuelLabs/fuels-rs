@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use fuels::prelude::{Error, ProviderError};
+    use fuels::prelude::Error;
 
     #[tokio::test]
     async fn create_random_wallet() {
@@ -57,7 +57,7 @@ mod tests {
         // Or with the default derivation path
         let wallet = LocalWallet::new_from_mnemonic_phrase(phrase, Some(provider))?;
 
-        let expected_address = "f18b6446deb8135544ba60333e5b7522685cd2cf64aa4e4c75df725149850b65";
+        let expected_address = "fuel17x9kg3k7hqf42396vqenukm4yf59e5k0vj4yunr4mae9zjv9pdjszy098t";
 
         assert_eq!(wallet.address().to_string(), expected_address);
         // ANCHOR_END: create_wallet_from_mnemonic
@@ -114,29 +114,72 @@ mod tests {
 
     #[tokio::test]
     async fn wallet_transfer() -> Result<(), Error> {
+        // ANCHOR: wallet_transfer
         use fuels::prelude::*;
 
         // Setup 2 test wallets with 1 coin each
+        let num_wallets = Some(2);
+        let coins_per_wallet = Some(1);
+        let coin_amount = Some(1);
+
         let wallets = launch_custom_provider_and_get_wallets(
-            WalletsConfig {
-                num_wallets: 2,
-                coins_per_wallet: 1,
-                coin_amount: 1,
-            },
+            WalletsConfig::new(num_wallets, coins_per_wallet, coin_amount),
             None,
         )
         .await;
 
-        // Transfer 1 from wallet 1 to wallet 2
+        // Transfer the base asset with amount 1 from wallet 1 to wallet 2
         let asset_id = Default::default();
         let _receipts = wallets[0]
-            .transfer(&wallets[1].address(), 1, asset_id, TxParameters::default())
+            .transfer(wallets[1].address(), 1, asset_id, TxParameters::default())
             .await?;
 
         let wallet_2_final_coins = wallets[1].get_coins().await?;
 
         // Check that wallet 2 now has 2 coins
         assert_eq!(wallet_2_final_coins.len(), 2);
+
+        // ANCHOR_END: wallet_transfer
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn wallet_contract_transfer() -> Result<(), Error> {
+        use fuels::prelude::*;
+
+        let wallet = launch_provider_and_get_wallet().await;
+
+        let contract_id = Contract::deploy(
+            "../../packages/fuels/tests/test_projects/contract_test/out/debug/contract_test.bin",
+            &wallet,
+            TxParameters::default(),
+            StorageConfiguration::default(),
+        )
+        .await?;
+
+        // ANCHOR: wallet_contract_transfer
+        // Check the current balance of the contract with id 'contract_id'
+        let contract_coins = wallet
+            .get_provider()?
+            .get_contract_balances(&contract_id)
+            .await?;
+        assert!(contract_coins.is_empty());
+
+        // Transfer an amount of 100 of the default asset to the contract
+        let amount = 100;
+        let asset_id = Default::default();
+        let _receipts = wallet
+            .force_transfer_to_contract(&contract_id, amount, asset_id, TxParameters::default())
+            .await?;
+
+        // Check that the contract now has 1 coin
+        let contract_coins = wallet
+            .get_provider()?
+            .get_contract_balances(&contract_id)
+            .await?;
+        assert_eq!(contract_coins.len(), 1);
+        // ANCHOR_END: wallet_contract_transfer
+
         Ok(())
     }
 
@@ -191,7 +234,48 @@ mod tests {
 
     #[tokio::test]
     #[allow(unused_variables)]
-    async fn get_balances() -> Result<(), ProviderError> {
+    async fn setup_wallet_custom_assets() -> Result<(), rand::Error> {
+        // ANCHOR: custom_assets_wallet
+        use fuels::prelude::*;
+        use rand::Fill;
+
+        let mut wallet = LocalWallet::new_random(None);
+        let mut rng = rand::thread_rng();
+
+        let asset_base = AssetConfig {
+            id: BASE_ASSET_ID,
+            num_coins: 2,
+            coin_amount: 4,
+        };
+
+        let mut asset_id_1 = AssetId::zeroed();
+        asset_id_1.try_fill(&mut rng)?;
+        let asset_1 = AssetConfig {
+            id: asset_id_1,
+            num_coins: 6,
+            coin_amount: 8,
+        };
+
+        let mut asset_id_2 = AssetId::zeroed();
+        asset_id_2.try_fill(&mut rng)?;
+        let asset_2 = AssetConfig {
+            id: asset_id_2,
+            num_coins: 10,
+            coin_amount: 12,
+        };
+
+        let assets = vec![asset_base, asset_1, asset_2];
+
+        let coins = setup_custom_assets_coins(wallet.address(), assets);
+        let (provider, _socket_addr) = setup_test_provider(coins.clone(), None).await;
+        wallet.set_provider(provider);
+        // ANCHOR_END: custom_assets_wallet
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[allow(unused_variables)]
+    async fn get_balances() -> Result<(), Error> {
         use fuels::prelude::{launch_provider_and_get_wallet, BASE_ASSET_ID};
         use fuels::tx::AssetId;
         use std::collections::HashMap;

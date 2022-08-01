@@ -7,21 +7,21 @@ use std::str::FromStr;
 
 use anyhow::Result;
 use fuel_gql_client::{
-    client::FuelClient,
     fuel_tx::{Contract as FuelContract, Output, Receipt, StorageSlot, Transaction},
-    fuel_types::{Address, AssetId, ContractId, Salt},
+    fuel_types::{Address, AssetId, Salt},
 };
 
 use fuels_core::abi_decoder::ABIDecoder;
 use fuels_core::abi_encoder::ABIEncoder;
 use fuels_core::parameters::StorageConfiguration;
-use fuels_core::tx::Bytes32;
+use fuels_core::tx::{Bytes32, ContractId};
 use fuels_core::{
     constants::{BASE_ASSET_ID, DEFAULT_SPENDABLE_COIN_AMOUNT},
     parameters::{CallParameters, TxParameters},
     Selector, Token, Tokenizable,
 };
 use fuels_signers::{provider::Provider, LocalWallet, Signer};
+use fuels_types::bech32::Bech32ContractId;
 use fuels_types::{
     errors::Error,
     param_types::{ParamType, ReturnLocation},
@@ -124,7 +124,7 @@ impl Contract {
     /// Note that this needs a wallet because the contract instance needs a wallet for the calls
     pub fn method_hash<D: Tokenizable + Debug>(
         provider: &Provider,
-        contract_id: ContractId,
+        contract_id: Bech32ContractId,
         wallet: &LocalWallet,
         signature: Selector,
         output_param: Option<ParamType>,
@@ -145,7 +145,7 @@ impl Contract {
             call_parameters,
             compute_custom_input_offset,
             variable_outputs: None,
-            external_contracts: None,
+            external_contracts: vec![],
             output_param,
         };
 
@@ -153,7 +153,7 @@ impl Contract {
             contract_call,
             tx_parameters,
             wallet: wallet.clone(),
-            fuel_client: provider.client.clone(),
+            provider: provider.clone(),
             datatype: PhantomData,
         })
     }
@@ -184,7 +184,7 @@ impl Contract {
         wallet: &LocalWallet,
         params: TxParameters,
         storage_configuration: StorageConfiguration,
-    ) -> Result<ContractId, Error> {
+    ) -> Result<Bech32ContractId, Error> {
         let mut compiled_contract =
             Contract::load_sway_contract(binary_filepath, &storage_configuration.storage_path)?;
 
@@ -200,7 +200,7 @@ impl Contract {
         params: TxParameters,
         storage_configuration: StorageConfiguration,
         salt: Salt,
-    ) -> Result<ContractId, Error> {
+    ) -> Result<Bech32ContractId, Error> {
         let mut compiled_contract = Contract::load_sway_contract_with_parameters(
             binary_filepath,
             &storage_configuration.storage_path,
@@ -232,16 +232,13 @@ impl Contract {
         compiled_contract: &CompiledContract,
         wallet: &LocalWallet,
         params: TxParameters,
-    ) -> Result<ContractId, Error> {
+    ) -> Result<Bech32ContractId, Error> {
         let (mut tx, contract_id) =
             Self::contract_deployment_transaction(compiled_contract, wallet, params).await?;
 
-        let client = &wallet
-            .get_provider()
-            .expect("Can't get wallet provider")
-            .client;
+        let provider = wallet.get_provider()?;
 
-        let chain_info = client.chain_info().await?;
+        let chain_info = provider.chain_info().await?;
 
         wallet.sign_transaction(&mut tx).await?;
         tx.validate_without_signature(
@@ -249,10 +246,9 @@ impl Contract {
             &chain_info.consensus_parameters.into(),
         )?;
 
-        match client.submit(&tx).await {
-            Ok(_) => Ok(contract_id),
-            Err(e) => Err(Error::TransactionError(e.to_string())),
-        }
+        provider.send_transaction(&tx).await?;
+
+        Ok(contract_id)
     }
 
     pub fn load_sway_contract(
@@ -315,7 +311,7 @@ impl Contract {
         compiled_contract: &CompiledContract,
         wallet: &LocalWallet,
         params: TxParameters,
-    ) -> Result<(Transaction, ContractId), Error> {
+    ) -> Result<(Transaction, Bech32ContractId), Error> {
         let bytecode_witness_index = 0;
         let storage_slots: Vec<StorageSlot> = compiled_contract.storage_slots.clone();
         let witnesses = vec![compiled_contract.raw.clone().into()];
@@ -329,7 +325,7 @@ impl Contract {
             // Note that the change will be computed by the node.
             // Here we only have to tell the node who will own the change and its asset ID.
             // For now we use the BASE_ASSET_ID constant
-            Output::change(wallet.address(), 0, BASE_ASSET_ID),
+            Output::change(wallet.address().into(), 0, BASE_ASSET_ID),
         ];
 
         // The first witness is the bytecode we're deploying.
@@ -359,7 +355,7 @@ impl Contract {
             witnesses,
         );
 
-        Ok((tx, contract_id))
+        Ok((tx, contract_id.into()))
     }
 
     fn get_storage_vec(storage_path: &str) -> Vec<StorageSlot> {
@@ -384,13 +380,13 @@ impl Contract {
 #[derive(Debug)]
 /// Contains all data relevant to a single contract call
 pub struct ContractCall {
-    pub contract_id: ContractId,
+    pub contract_id: Bech32ContractId,
     pub encoded_args: Vec<u8>,
     pub encoded_selector: Selector,
     pub call_parameters: CallParameters,
     pub compute_custom_input_offset: bool,
     pub variable_outputs: Option<Vec<Output>>,
-    pub external_contracts: Option<HashSet<ContractId>>,
+    pub external_contracts: Vec<Bech32ContractId>,
     pub output_param: Option<ParamType>,
 }
 
@@ -439,7 +435,7 @@ pub struct ContractCallHandler<D> {
     pub contract_call: ContractCall,
     pub tx_parameters: TxParameters,
     pub wallet: LocalWallet,
-    pub fuel_client: FuelClient,
+    pub provider: Provider,
     pub datatype: PhantomData<D>,
 }
 
@@ -452,8 +448,8 @@ where
     /// pairs and set them into the transaction.
     /// Note that this is a builder method, i.e. use it as a chain:
     /// `my_contract_instance.my_method(...).set_contracts(&[another_contract_id]).call()`.
-    pub fn set_contracts(mut self, contract_ids: &[ContractId]) -> Self {
-        self.contract_call.external_contracts = Some(HashSet::from_iter(contract_ids.to_owned()));
+    pub fn set_contracts(mut self, contract_ids: &[Bech32ContractId]) -> Self {
+        self.contract_call.external_contracts = contract_ids.to_vec();
         self
     }
 
@@ -506,9 +502,9 @@ where
         let script = self.get_script().await;
 
         let receipts = if simulate {
-            script.simulate(&self.fuel_client).await?
+            script.simulate(&self.provider).await?
         } else {
-            script.call(&self.fuel_client).await?
+            script.call(&self.provider).await?
         };
         tracing::debug!(target: "receipts", "{:?}", receipts);
 
@@ -552,7 +548,6 @@ pub struct MultiContractCallHandler {
     pub contract_calls: Option<Vec<ContractCall>>,
     pub tx_parameters: TxParameters,
     pub wallet: LocalWallet,
-    pub fuel_client: FuelClient,
 }
 
 impl MultiContractCallHandler {
@@ -560,7 +555,6 @@ impl MultiContractCallHandler {
         Self {
             contract_calls: None,
             tx_parameters: TxParameters::default(),
-            fuel_client: wallet.get_provider().unwrap().client.clone(),
             wallet,
         }
     }
@@ -615,10 +609,12 @@ impl MultiContractCallHandler {
     ) -> Result<CallResponse<D>, Error> {
         let script = self.get_script().await;
 
+        let provider = self.wallet.get_provider()?;
+
         let receipts = if simulate {
-            script.simulate(&self.fuel_client).await.unwrap()
+            script.simulate(provider).await.unwrap()
         } else {
-            script.call(&self.fuel_client).await.unwrap()
+            script.call(provider).await.unwrap()
         };
         tracing::debug!(target: "receipts", "{:?}", receipts);
 
