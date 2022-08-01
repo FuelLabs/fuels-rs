@@ -43,13 +43,13 @@ impl StringToken {
     pub fn get_encodable_str(&self) -> Result<&str, CodecError> {
         if !self.data.is_ascii() {
             return Err(CodecError::InvalidData(
-                "String parameters can only have ascii values".into(),
+                "String data can only have ascii values".into(),
             ));
         }
 
         if self.data.len() != self.expected_len {
             return Err(CodecError::InvalidData(format!(
-                "String parameter has len {}, but should have {}",
+                "String data has len {}, but the expected len is {}",
                 self.data.len(),
                 self.expected_len
             )));
@@ -137,7 +137,7 @@ impl Tokenizable for bool {
 impl Tokenizable for StringToken {
     fn from_token(token: Token) -> Result<Self, Error> {
         match token {
-            Token::String(data) => Ok(data),
+            Token::String(string_token @ StringToken { .. }) => Ok(string_token),
             other => Err(Error::InstantiationError(format!(
                 "Expected `String`, got {:?}",
                 other
@@ -152,7 +152,7 @@ impl Tokenizable for StringToken {
 impl Tokenizable for String {
     fn from_token(token: Token) -> Result<Self, Error> {
         match token {
-            Token::String(data) => Ok(data.data),
+            Token::String(string_token) => Ok(string_token.data),
             other => Err(Error::InstantiationError(format!(
                 "Expected `String`, got {:?}",
                 other

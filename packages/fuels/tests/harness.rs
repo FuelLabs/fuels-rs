@@ -2321,7 +2321,7 @@ async fn test_network_error() -> Result<(), anyhow::Error> {
 }
 
 #[tokio::test]
-#[should_panic(expected = "String parameter has len ")]
+#[should_panic(expected = "String data has len ")]
 async fn strings_must_have_correct_length() {
     abigen!(
         SimpleContract,
@@ -2350,7 +2350,7 @@ async fn strings_must_have_correct_length() {
 }
 
 #[tokio::test]
-#[should_panic(expected = "String parameters can only have ascii values")]
+#[should_panic(expected = "String data can only have ascii values")]
 async fn strings_must_have_all_ascii_chars() {
     abigen!(
         SimpleContract,
@@ -2379,7 +2379,7 @@ async fn strings_must_have_all_ascii_chars() {
 }
 
 #[tokio::test]
-#[should_panic(expected = "String parameter has len ")]
+#[should_panic(expected = "String data has len ")]
 async fn strings_must_have_correct_length_custom_types() {
     abigen!(
         SimpleContract,
@@ -2416,7 +2416,7 @@ async fn strings_must_have_correct_length_custom_types() {
 }
 
 #[tokio::test]
-#[should_panic(expected = "String parameters can only have ascii values")]
+#[should_panic(expected = "String data can only have ascii values")]
 async fn strings_must_have_all_ascii_chars_custom_types() {
     abigen!(
         SimpleContract,

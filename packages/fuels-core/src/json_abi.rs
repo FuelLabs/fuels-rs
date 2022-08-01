@@ -1168,7 +1168,7 @@ mod tests {
             .unwrap_err()
             .to_string();
 
-        assert!(error_message.contains("String parameter has len "))
+        assert!(error_message.contains("String data has len "));
     }
 
     #[test]
@@ -1207,7 +1207,7 @@ mod tests {
             .unwrap_err()
             .to_string();
 
-        assert!(error_message.contains("String parameter has len "))
+        assert!(error_message.contains("String data has len "));
     }
 
     #[test]
