@@ -2,7 +2,7 @@ use crate::abi_decoder::ABIDecoder;
 use core::fmt;
 use fuel_types::bytes::padded_len;
 use fuels_types::{
-    errors::Error,
+    errors::{CodecError, Error},
     param_types::{EnumVariants, ParamType},
 };
 use strum_macros::EnumString;
@@ -29,6 +29,35 @@ pub type Selector = ByteArray;
 pub type Bits256 = [u8; 32];
 pub type EnumSelector = (u8, Token, EnumVariants);
 
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct StringToken {
+    data: String,
+    expected_len: usize,
+}
+
+impl StringToken {
+    pub fn new(data: String, expected_len: usize) -> Self {
+        StringToken { data, expected_len }
+    }
+
+    pub fn get_encodable_str(&self) -> Result<&str, CodecError> {
+        if !self.data.is_ascii() {
+            return Err(CodecError::InvalidData(
+                "String data can only have ascii values".into(),
+            ));
+        }
+
+        if self.data.len() != self.expected_len {
+            return Err(CodecError::InvalidData(format!(
+                "String data has len {}, but the expected len is {}",
+                self.data.len(),
+                self.expected_len
+            )));
+        }
+        Ok(self.data.as_str())
+    }
+}
+
 // Sway types
 #[derive(Debug, Clone, PartialEq, EnumString)]
 #[strum(ascii_case_insensitive)]
@@ -44,7 +73,7 @@ pub enum Token {
     Byte(u8),
     B256(Bits256),
     Array(Vec<Token>),
-    String(String),
+    String(StringToken),
     Struct(Vec<Token>),
     #[strum(disabled)]
     Enum(Box<EnumSelector>),
@@ -105,10 +134,10 @@ impl Tokenizable for bool {
     }
 }
 
-impl Tokenizable for String {
+impl Tokenizable for StringToken {
     fn from_token(token: Token) -> Result<Self, Error> {
         match token {
-            Token::String(data) => Ok(data),
+            Token::String(string_token @ StringToken { .. }) => Ok(string_token),
             other => Err(Error::InstantiationError(format!(
                 "Expected `String`, got {:?}",
                 other
@@ -117,6 +146,22 @@ impl Tokenizable for String {
     }
     fn into_token(self) -> Token {
         Token::String(self)
+    }
+}
+
+impl Tokenizable for String {
+    fn from_token(token: Token) -> Result<Self, Error> {
+        match token {
+            Token::String(string_token) => Ok(string_token.data),
+            other => Err(Error::InstantiationError(format!(
+                "Expected `String`, got {:?}",
+                other
+            ))),
+        }
+    }
+    fn into_token(self) -> Token {
+        let len = self.len();
+        Token::String(StringToken::new(self, len))
     }
 }
 
