@@ -145,7 +145,7 @@ impl Abigen {
                            let provider = self.wallet.get_provider()?;
                            wallet.set_provider(provider.clone());
 
-                           Ok(Self { contract_id: self.contract_id, wallet: wallet })
+                           Ok(Self { contract_id: self.contract_id.clone(), wallet: wallet })
                         }
                     }
 

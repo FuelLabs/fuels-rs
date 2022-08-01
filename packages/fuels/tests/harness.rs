@@ -6,8 +6,6 @@ use fuels::prelude::{
     setup_test_provider, CallParameters, Contract, Error, LocalWallet, Provider, Salt, Signer,
     TxParameters, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
 };
-#[cfg(feature = "fuel-core-lib")]
-use fuels::prelude::{launch_custom_provider_and_get_wallets, WalletsConfig};
 use fuels_core::parameters::StorageConfiguration;
 use fuels_core::tx::{Address, Bytes32, StorageSlot};
 use fuels_core::Tokenizable;
