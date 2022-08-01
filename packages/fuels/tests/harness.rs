@@ -18,8 +18,6 @@ use fuels_core::parameters::StorageConfiguration;
 use fuels_core::tx::{Address, Bytes32, StorageSlot};
 use fuels_core::Tokenizable;
 use fuels_core::{constants::BASE_ASSET_ID, Token};
-#[cfg(feature = "fuel-core-lib")]
-use fuels_test_helpers::WalletsConfig;
 
 use sha2::{Digest, Sha256};
 use std::str::FromStr;
@@ -2278,7 +2276,7 @@ async fn can_call_no_arg_predicate_returns_true() -> Result<(), anyhow::Error> {
         .deploy_predicate(wallet, amount_to_predicate, asset_id)
         .await?;
     let receiver_balance_before = provider
-        .get_asset_balance(&receiver_address, asset_id)
+        .get_asset_balance(receiver_address, asset_id)
         .await?;
     assert_eq!(receiver_balance_before, 0);
     instance
@@ -2291,7 +2289,7 @@ async fn can_call_no_arg_predicate_returns_true() -> Result<(), anyhow::Error> {
         )
         .await?;
     let receiver_balance_after = provider
-        .get_asset_balance(&receiver_address, asset_id)
+        .get_asset_balance(receiver_address, asset_id)
         .await?;
     assert_eq!(
         receiver_balance_before + amount_to_predicate,
@@ -2331,7 +2329,7 @@ async fn can_call_no_arg_predicate_returns_false() -> Result<(), anyhow::Error> 
         .await?;
 
     let receiver_balance_before = provider
-        .get_asset_balance(&receiver_address, asset_id)
+        .get_asset_balance(receiver_address, asset_id)
         .await?;
     assert_eq!(receiver_balance_before, 0);
 
@@ -2346,7 +2344,7 @@ async fn can_call_no_arg_predicate_returns_false() -> Result<(), anyhow::Error> 
         .await
         .expect_err("should error");
     let receiver_balance_after = provider
-        .get_asset_balance(&receiver_address, asset_id)
+        .get_asset_balance(receiver_address, asset_id)
         .await?;
     assert_eq!(receiver_balance_before, receiver_balance_after);
     let predicate_balance = provider
@@ -2383,7 +2381,7 @@ async fn can_call_predicate_with_u32_data() -> Result<(), anyhow::Error> {
         .deploy_predicate(wallet, amount_to_predicate, asset_id)
         .await?;
     let receiver_balance_before = provider
-        .get_asset_balance(&receiver_address, asset_id)
+        .get_asset_balance(receiver_address, asset_id)
         .await?;
     assert_eq!(receiver_balance_before, 0);
 
@@ -2400,7 +2398,7 @@ async fn can_call_predicate_with_u32_data() -> Result<(), anyhow::Error> {
         .await
         .expect_err("should error");
     let receiver_balance_after = provider
-        .get_asset_balance(&receiver_address, asset_id)
+        .get_asset_balance(receiver_address, asset_id)
         .await?;
     assert_eq!(receiver_balance_before, receiver_balance_after);
     let predicate_balance = provider
@@ -2420,7 +2418,7 @@ async fn can_call_predicate_with_u32_data() -> Result<(), anyhow::Error> {
         )
         .await?;
     let receiver_balance_after = provider
-        .get_asset_balance(&receiver_address, asset_id)
+        .get_asset_balance(receiver_address, asset_id)
         .await?;
     assert_eq!(
         receiver_balance_before + amount_to_predicate,
@@ -2465,7 +2463,7 @@ async fn can_call_predicate_with_address_data() -> Result<(), anyhow::Error> {
         .deploy_predicate(wallet, amount_to_predicate, asset_id)
         .await?;
     let receiver_balance_before = provider
-        .get_asset_balance(&receiver_address, asset_id)
+        .get_asset_balance(receiver_address, asset_id)
         .await?;
     assert_eq!(receiver_balance_before, 0);
     instance
@@ -2478,7 +2476,7 @@ async fn can_call_predicate_with_address_data() -> Result<(), anyhow::Error> {
         )
         .await?;
     let receiver_balance_after = provider
-        .get_asset_balance(&receiver_address, asset_id)
+        .get_asset_balance(receiver_address, asset_id)
         .await?;
     assert_eq!(
         receiver_balance_before + amount_to_predicate,
@@ -2518,7 +2516,7 @@ async fn can_call_predicate_with_struct_data() -> Result<(), anyhow::Error> {
         .deploy_predicate(wallet, amount_to_predicate, asset_id)
         .await?;
     let receiver_balance_before = provider
-        .get_asset_balance(&receiver_address, asset_id)
+        .get_asset_balance(receiver_address, asset_id)
         .await?;
     assert_eq!(receiver_balance_before, 0);
 
@@ -2538,7 +2536,7 @@ async fn can_call_predicate_with_struct_data() -> Result<(), anyhow::Error> {
         .await
         .expect_err("should error");
     let receiver_balance_after = provider
-        .get_asset_balance(&receiver_address, asset_id)
+        .get_asset_balance(receiver_address, asset_id)
         .await?;
     assert_eq!(receiver_balance_before, receiver_balance_after);
     let predicate_balance = provider
@@ -2562,7 +2560,7 @@ async fn can_call_predicate_with_struct_data() -> Result<(), anyhow::Error> {
         .await
         .expect_err("should error");
     let receiver_balance_after = provider
-        .get_asset_balance(&receiver_address, asset_id)
+        .get_asset_balance(receiver_address, asset_id)
         .await?;
     assert_eq!(receiver_balance_before, receiver_balance_after);
     let predicate_balance = provider
@@ -2585,7 +2583,7 @@ async fn can_call_predicate_with_struct_data() -> Result<(), anyhow::Error> {
         )
         .await?;
     let receiver_balance_after = provider
-        .get_asset_balance(&receiver_address, asset_id)
+        .get_asset_balance(receiver_address, asset_id)
         .await?;
     assert_eq!(
         receiver_balance_before + amount_to_predicate,
