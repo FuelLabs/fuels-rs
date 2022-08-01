@@ -41,7 +41,7 @@ impl Predicate {
             .await?;
 
         let output_coin = Output::coin(self.address, coin_amount_to_predicate, asset_id);
-        let output_change = Output::change(wallet.address(), 0, asset_id);
+        let output_change = Output::change(wallet.address().into(), 0, asset_id);
         if let Transaction::Script {
             gas_price,
             gas_limit,
@@ -93,7 +93,7 @@ impl Predicate {
         predicate_data: Option<Vec<u8>>,
     ) -> Result<Vec<Receipt>, Error> {
         let spendable_predicate_coins = provider
-            .get_spendable_coins(&self.address, asset_id, coin_amount_to_predicate)
+            .get_spendable_coins(&self.address.into(), asset_id, coin_amount_to_predicate)
             .await?;
 
         let mut inputs = vec![];
@@ -143,7 +143,7 @@ impl Predicate {
             );
 
             let script = Script::new(tx);
-            script.call(&provider.client).await
+            script.call(&provider).await
         } else {
             panic!("Expected Transaction::default() to return a Transaction::Script");
         }
