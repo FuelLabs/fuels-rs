@@ -2,11 +2,11 @@ use fuel_core::service::{Config, FuelService};
 use fuel_gql_client::fuel_tx::{AssetId, ContractId, Receipt};
 use fuels::contract::contract::MultiContractCallHandler;
 use fuels::contract::predicate::Predicate;
-use fuels::prelude::Error::TransactionError;
 use fuels::prelude::{
-    abigen, launch_provider_and_get_wallet, setup_multiple_assets_coins, setup_single_asset_coins,
-    setup_test_provider, CallParameters, Config, Contract, Error, LocalWallet, Provider,
-    ProviderError, Salt, Signer, TxParameters, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
+    abigen, launch_custom_provider_and_get_wallets, launch_provider_and_get_wallet,
+    setup_multiple_assets_coins, setup_single_asset_coins, setup_test_provider, Bech32Address,
+    CallParameters, Config as TestConfig, Contract, Error, LocalWallet, Provider, Salt, Signer,
+    TxParameters, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
 };
 #[cfg(feature = "fuel-core-lib")]
 use fuels::prelude::{launch_custom_provider_and_get_wallets, WalletsConfig};
@@ -15,6 +15,7 @@ use fuels_core::parameters::StorageConfiguration;
 use fuels_core::tx::{Address, Bytes32, StorageSlot};
 use fuels_core::Tokenizable;
 use fuels_core::{constants::BASE_ASSET_ID, Token};
+use fuels_test_helpers::WalletsConfig;
 use sha2::{Digest, Sha256};
 use std::str::FromStr;
 
@@ -2247,19 +2248,19 @@ async fn can_handle_sway_function_called_new() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-#[cfg(feature = "fuel-core-lib")]
 async fn can_call_no_arg_predicate_returns_true() -> Result<(), anyhow::Error> {
     let amount_to_predicate: u64 = 16;
     let asset_id = AssetId::default();
     let predicate_code =
         std::fs::read("tests/test_projects/predicate_true/out/debug/predicate_true.bin")?;
-    let receiver_address: Address = LocalWallet::new_random(None).address();
+    let receiver = LocalWallet::new_random(None);
+    let receiver_address: &Bech32Address = receiver.address();
     let wallets = launch_custom_provider_and_get_wallets(
         WalletsConfig::default(),
-        Some(Config {
+        Some(TestConfig {
             predicates: true,
             utxo_validation: true,
-            ..Config::local_node()
+            ..TestConfig::local_node()
         }),
     )
     .await;
@@ -2291,26 +2292,26 @@ async fn can_call_no_arg_predicate_returns_true() -> Result<(), anyhow::Error> {
         receiver_balance_after
     );
     let predicate_balance = provider
-        .get_asset_balance(&instance.address, asset_id)
+        .get_asset_balance(&instance.address.into(), asset_id)
         .await?;
     assert_eq!(predicate_balance, 0);
     Ok(())
 }
 
 #[tokio::test]
-#[cfg(feature = "fuel-core-lib")]
 async fn can_call_no_arg_predicate_returns_false() -> Result<(), anyhow::Error> {
     let amount_to_predicate: u64 = 12;
     let asset_id = AssetId::default();
     let predicate_code =
         std::fs::read("tests/test_projects/predicate_false/out/debug/predicate_false.bin")?;
-    let receiver_address: Address = LocalWallet::new_random(None).address();
+    let receiver = LocalWallet::new_random(None);
+    let receiver_address: &Bech32Address = receiver.address();
     let wallets = launch_custom_provider_and_get_wallets(
         WalletsConfig::default(),
-        Some(Config {
+        Some(TestConfig {
             predicates: true,
             utxo_validation: true,
-            ..Config::local_node()
+            ..TestConfig::local_node()
         }),
     )
     .await;
@@ -2342,7 +2343,7 @@ async fn can_call_no_arg_predicate_returns_false() -> Result<(), anyhow::Error> 
         .await?;
     assert_eq!(receiver_balance_before, receiver_balance_after);
     let predicate_balance = provider
-        .get_asset_balance(&instance.address, asset_id)
+        .get_asset_balance(&instance.address.into(), asset_id)
         .await?;
     assert_eq!(predicate_balance, amount_to_predicate);
     assert_eq!(predicate_balance, 0);
@@ -2350,19 +2351,19 @@ async fn can_call_no_arg_predicate_returns_false() -> Result<(), anyhow::Error> 
 }
 
 #[tokio::test]
-#[cfg(feature = "fuel-core-lib")]
 async fn can_call_predicate_with_u32_data() -> Result<(), anyhow::Error> {
     let amount_to_predicate: u64 = 23;
     let asset_id = AssetId::default();
     let predicate_code =
         std::fs::read("tests/test_projects/predicate_u32/out/debug/predicate_u32.bin")?;
-    let receiver_address: Address = LocalWallet::new_random(None).address();
+    let receiver = LocalWallet::new_random(None);
+    let receiver_address: &Bech32Address = receiver.address();
     let wallets = launch_custom_provider_and_get_wallets(
         WalletsConfig::default(),
-        Some(Config {
+        Some(TestConfig {
             predicates: true,
             utxo_validation: true,
-            ..Config::local_node()
+            ..TestConfig::local_node()
         }),
     )
     .await;
@@ -2395,7 +2396,7 @@ async fn can_call_predicate_with_u32_data() -> Result<(), anyhow::Error> {
         .await?;
     assert_eq!(receiver_balance_before, receiver_balance_after);
     let predicate_balance = provider
-        .get_asset_balance(&instance.address, asset_id)
+        .get_asset_balance(&instance.address.into(), asset_id)
         .await?;
     assert_eq!(predicate_balance, amount_to_predicate);
 
@@ -2418,14 +2419,13 @@ async fn can_call_predicate_with_u32_data() -> Result<(), anyhow::Error> {
         receiver_balance_after
     );
     let predicate_balance = provider
-        .get_asset_balance(&instance.address, asset_id)
+        .get_asset_balance(&instance.address.into(), asset_id)
         .await?;
     assert_eq!(predicate_balance, 0);
     Ok(())
 }
 
 #[tokio::test]
-#[cfg(feature = "fuel-core-lib")]
 async fn can_call_predicate_with_address_data() -> Result<(), anyhow::Error> {
     let arg = Token::B256(
         *Address::from_str("0xef86afa9696cf0dc6385e2c407a6e159a1103cefb7e2ae0636fb33d3cb2a9e4a")
@@ -2437,13 +2437,14 @@ async fn can_call_predicate_with_address_data() -> Result<(), anyhow::Error> {
     let asset_id = AssetId::default();
     let predicate_code =
         std::fs::read("tests/test_projects/predicate_address/out/debug/predicate_address.bin")?;
-    let receiver_address: Address = LocalWallet::new_random(None).address();
+    let receiver = LocalWallet::new_random(None);
+    let receiver_address: &Bech32Address = receiver.address();
     let wallets = launch_custom_provider_and_get_wallets(
         WalletsConfig::default(),
-        Some(Config {
+        Some(TestConfig {
             predicates: true,
             utxo_validation: true,
-            ..Config::local_node()
+            ..TestConfig::local_node()
         }),
     )
     .await;
@@ -2475,27 +2476,27 @@ async fn can_call_predicate_with_address_data() -> Result<(), anyhow::Error> {
         receiver_balance_after
     );
     let predicate_balance = provider
-        .get_asset_balance(&instance.address, asset_id)
+        .get_asset_balance(&instance.address.into(), asset_id)
         .await?;
     assert_eq!(predicate_balance, 0);
     Ok(())
 }
 
 #[tokio::test]
-#[cfg(feature = "fuel-core-lib")]
 async fn can_call_predicate_with_struct_data() -> Result<(), anyhow::Error> {
     let amount_to_predicate: u64 = 1886;
     let asset_id = AssetId::default();
     let predicate_code =
         std::fs::read("tests/test_projects/predicate_struct/out/debug/predicate_struct.bin")
             .unwrap();
-    let receiver_address: Address = LocalWallet::new_random(None).address();
+    let receiver = LocalWallet::new_random(None);
+    let receiver_address: &Bech32Address = receiver.address();
     let wallets = launch_custom_provider_and_get_wallets(
         WalletsConfig::default(),
-        Some(Config {
+        Some(TestConfig {
             predicates: true,
             utxo_validation: true,
-            ..Config::local_node()
+            ..TestConfig::local_node()
         }),
     )
     .await;
@@ -2531,7 +2532,7 @@ async fn can_call_predicate_with_struct_data() -> Result<(), anyhow::Error> {
         .await?;
     assert_eq!(receiver_balance_before, receiver_balance_after);
     let predicate_balance = provider
-        .get_asset_balance(&instance.address, asset_id)
+        .get_asset_balance(&instance.address.into(), asset_id)
         .await?;
     assert_eq!(predicate_balance, amount_to_predicate);
 
@@ -2555,7 +2556,7 @@ async fn can_call_predicate_with_struct_data() -> Result<(), anyhow::Error> {
         .await?;
     assert_eq!(receiver_balance_before, receiver_balance_after);
     let predicate_balance = provider
-        .get_asset_balance(&instance.address, asset_id)
+        .get_asset_balance(&instance.address.into(), asset_id)
         .await?;
     assert_eq!(predicate_balance, amount_to_predicate);
 
@@ -2581,7 +2582,7 @@ async fn can_call_predicate_with_struct_data() -> Result<(), anyhow::Error> {
         receiver_balance_after
     );
     let predicate_balance = provider
-        .get_asset_balance(&instance.address, asset_id)
+        .get_asset_balance(&instance.address.into(), asset_id)
         .await?;
     assert_eq!(predicate_balance, 0);
     Ok(())

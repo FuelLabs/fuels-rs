@@ -5,7 +5,7 @@ use fuel_gql_client::{
     fuel_types::{Address, AssetId},
 };
 use fuels_signers::{provider::Provider, wallet::Wallet, Signer};
-use fuels_types::errors::Error;
+use fuels_types::{bech32::Bech32Address, errors::Error};
 
 /// Predicate provides methods to create new predicates and call them
 pub struct Predicate {
@@ -89,7 +89,7 @@ impl Predicate {
         provider: &Provider,
         coin_amount_to_predicate: u64,
         asset_id: AssetId,
-        receiver_address: Address,
+        receiver_address: &Bech32Address,
         predicate_data: Option<Vec<u8>>,
     ) -> Result<Vec<Receipt>, Error> {
         let spendable_predicate_coins = provider
@@ -114,7 +114,8 @@ impl Predicate {
             total_amount_in_predicate += coin.amount.0;
         }
 
-        let output_coin = Output::coin(receiver_address, total_amount_in_predicate, asset_id);
+        let output_coin =
+            Output::coin(receiver_address.into(), total_amount_in_predicate, asset_id);
         let output_change = Output::change(self.address, 0, asset_id);
         if let Transaction::Script {
             gas_price,
