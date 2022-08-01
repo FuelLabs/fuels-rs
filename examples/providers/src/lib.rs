@@ -2,6 +2,8 @@
 mod tests {
     use std::net::SocketAddr;
 
+    use fuels::prelude::Error;
+
     #[tokio::test]
     async fn connect_to_fuel_node() {
         // ANCHOR: connect_to_node
@@ -21,7 +23,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn query_the_blockchain() {
+    async fn query_the_blockchain() -> Result<(), Error> {
         // ANCHOR: setup_test_blockchain
         use fuels::prelude::*;
 
@@ -49,20 +51,21 @@ mod tests {
         // ANCHOR_END: setup_test_blockchain
 
         // ANCHOR: get_coins
-        let coins = provider.get_coins(&wallet.address()).await.unwrap();
+        let coins = provider.get_coins(wallet.address()).await?;
         assert_eq!(coins.len(), 1);
         // ANCHOR_END: get_coins
 
         // ANCHOR: get_spendable_coins
         let spendable_coins = provider
-            .get_spendable_coins(&wallet.address(), BASE_ASSET_ID, 1)
-            .await
-            .unwrap();
+            .get_spendable_coins(wallet.address(), BASE_ASSET_ID, 1)
+            .await?;
         assert_eq!(spendable_coins.len(), 1);
         // ANCHOR_END: get_spendable_coins
 
         // ANCHOR: get_balances
-        let _balances = provider.get_balances(&wallet.address()).await.unwrap();
+        let _balances = provider.get_balances(wallet.address()).await?;
         // ANCHOR_END: get_balances
+
+        Ok(())
     }
 }

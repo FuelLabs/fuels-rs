@@ -1,8 +1,9 @@
-use crate::utils::{first_four_bytes_of_sha256_hash, has_array_format};
+use crate::tokenizer::Tokenizer;
+use crate::utils::first_four_bytes_of_sha256_hash;
 use crate::Token;
 use crate::{abi_decoder::ABIDecoder, abi_encoder::ABIEncoder};
+use fuels_types::function_selector::build_fn_selector;
 use fuels_types::{errors::Error, param_types::ParamType, JsonABI, Property};
-use hex::FromHex;
 use itertools::Itertools;
 use serde_json;
 use std::str;
@@ -70,7 +71,7 @@ impl ABIParser {
 
         let entry = entry.expect("No functions found");
 
-        let fn_selector = self.build_fn_selector(fn_name, &entry.inputs)?;
+        let fn_selector = build_fn_selector(fn_name, &entry.inputs)?;
 
         // Update the fn_selector field with the hash of the previously encoded function selector
         self.fn_selector = Some(first_four_bytes_of_sha256_hash(&fn_selector).to_vec());
@@ -176,349 +177,9 @@ impl ABIParser {
     pub fn parse_tokens<'a>(&self, params: &'a [(ParamType, &str)]) -> Result<Vec<Token>, Error> {
         params
             .iter()
-            .map(|&(ref param, value)| self.tokenize(param, value.to_string()))
+            .map(|&(ref param, value)| Tokenizer::tokenize(param, value.to_string()))
             .collect::<Result<_, _>>()
             .map_err(From::from)
-    }
-
-    /// Takes a ParamType and a value string and joins them as a single
-    /// Token that holds the value within it. This Token is used
-    /// in the encoding process.
-    pub fn tokenize(&self, param: &ParamType, value: String) -> Result<Token, Error> {
-        let trimmed_value = value.trim();
-        match &*param {
-            ParamType::Unit => Ok(Token::Unit),
-            ParamType::U8 => Ok(Token::U8(trimmed_value.parse::<u8>()?)),
-            ParamType::U16 => Ok(Token::U16(trimmed_value.parse::<u16>()?)),
-            ParamType::U32 => Ok(Token::U32(trimmed_value.parse::<u32>()?)),
-            ParamType::U64 => Ok(Token::U64(trimmed_value.parse::<u64>()?)),
-            ParamType::Bool => Ok(Token::Bool(trimmed_value.parse::<bool>()?)),
-            ParamType::Byte => Ok(Token::Byte(trimmed_value.parse::<u8>()?)),
-            ParamType::B256 => {
-                const B256_HEX_ENC_LENGTH: usize = 64;
-                if trimmed_value.len() != B256_HEX_ENC_LENGTH {
-                    return Err(Error::InvalidData(format!(
-                        "the hex encoding of the b256 must have {} characters",
-                        B256_HEX_ENC_LENGTH
-                    )));
-                }
-                let v = Vec::from_hex(trimmed_value)?;
-                let s: [u8; 32] = v.as_slice().try_into().unwrap();
-                Ok(Token::B256(s))
-            }
-            ParamType::Array(t, _) => Ok(self.tokenize_array(trimmed_value, &*t)?),
-            ParamType::String(_) => Ok(Token::String(trimmed_value.to_string())),
-            ParamType::Struct(struct_params) => {
-                Ok(self.tokenize_struct(trimmed_value, struct_params)?)
-            }
-            ParamType::Enum(variants) => {
-                let discriminant = self.get_enum_discriminant_from_string(trimmed_value);
-                let value = self.get_enum_value_from_string(trimmed_value);
-
-                let token = self.tokenize(&variants.param_types()[discriminant], value)?;
-
-                Ok(Token::Enum(Box::new((
-                    discriminant as u8,
-                    token,
-                    variants.clone(),
-                ))))
-            }
-            ParamType::Tuple(tuple_params) => Ok(self.tokenize_tuple(trimmed_value, tuple_params)?),
-        }
-    }
-
-    /// Creates a `Token::Struct` from an array of parameter types and a string of values.
-    /// I.e. it takes a string containing values "value_1, value_2, value_3" and an array
-    /// of `ParamType` containing the type of each value, in order:
-    /// [ParamType::<Type of value_1>, ParamType::<Type of value_2>, ParamType::<Type of value_3>]
-    /// And attempts to return a `Token::Struct()` containing the inner types.
-    /// It works for nested/recursive structs.
-    pub fn tokenize_struct(&self, value: &str, params: &[ParamType]) -> Result<Token, Error> {
-        if !value.starts_with('(') || !value.ends_with(')') {
-            return Err(Error::InvalidData(
-                "struct value string must start and end with round brackets".into(),
-            ));
-        }
-
-        if value.chars().count() == 2 {
-            return Ok(Token::Struct(vec![]));
-        }
-
-        //To parse the value string we use a two pointer/index approach.
-        //The items are comma separated and if an item is tokenized the last_item
-        //index is moved to the current position.
-        //The variable nested is incremented and decremented if a bracket is encountered,
-        //and appropriate errors are returned if the nested count is not 0.
-        //If the struct has an array inside its values the current position will be incremented
-        //until both the opening and closing bracket are inside the new item.
-        //Characters inside quotes are ignored and they are tokenized as one item.
-        //An error is return if there is an odd number of quotes.
-        let mut result = vec![];
-        let mut nested = 0isize;
-        let mut ignore = false;
-        let mut last_item = 1;
-        let mut params_iter = params.iter();
-
-        for (pos, ch) in value.chars().enumerate() {
-            match ch {
-                '(' if !ignore => {
-                    nested += 1;
-                }
-                ')' if !ignore => {
-                    nested -= 1;
-
-                    match nested.cmp(&0) {
-                        std::cmp::Ordering::Less => {
-                            return Err(Error::InvalidData(
-                                "struct value string has excess closing brackets".into(),
-                            ));
-                        }
-                        std::cmp::Ordering::Equal => {
-                            let sub = &value[last_item..pos];
-
-                            let token = self.tokenize(
-                                params_iter.next().ok_or_else(|| {
-                                    Error::InvalidData(
-                                        "struct value contains more elements than the parameter types provided".into(),
-                                    )
-                                })?,
-                                sub.to_string(),
-                            )?;
-                            result.push(token);
-                            last_item = pos + 1;
-                        }
-                        _ => {}
-                    }
-                }
-                '"' => {
-                    ignore = !ignore;
-                }
-                ',' if nested == 1 && !ignore => {
-                    let sub = &value[last_item..pos];
-                    // If we've encountered an array within a struct property
-                    // keep iterating until we see the end of it "]".
-                    if sub.contains('[') && !sub.contains(']') {
-                        continue;
-                    }
-
-                    let token = self.tokenize(
-                        params_iter.next().ok_or_else(|| {
-                            Error::InvalidData(
-                                "struct value contains more elements than the parameter types provided".into(),
-                            )
-                        })?,
-                        sub.to_string(),
-                    )?;
-                    result.push(token);
-                    last_item = pos + 1;
-                }
-                _ => (),
-            }
-        }
-
-        if ignore {
-            return Err(Error::InvalidData(
-                "struct value string has excess quotes".into(),
-            ));
-        }
-
-        if nested > 0 {
-            return Err(Error::InvalidData(
-                "struct value string has excess opening brackets".into(),
-            ));
-        }
-
-        Ok(Token::Struct(result))
-    }
-
-    /// Creates a `Token::Array` from one parameter type and a string of values. I.e. it takes a
-    /// string containing values "value_1, value_2, value_3" and a `ParamType` sepecifying the type.
-    /// It works for nested/recursive arrays.
-    pub fn tokenize_array<'a>(&self, value: &'a str, param: &ParamType) -> Result<Token, Error> {
-        if !value.starts_with('[') || !value.ends_with(']') {
-            return Err(Error::InvalidData(
-                "array value string must start and end with square brackets".into(),
-            ));
-        }
-
-        if value.chars().count() == 2 {
-            return Ok(Token::Array(vec![]));
-        }
-
-        //for more details about this algorithm, refer to the tokenize_struct method
-        let mut result = vec![];
-        let mut nested = 0isize;
-        let mut ignore = false;
-        let mut last_item = 1;
-        for (i, ch) in value.chars().enumerate() {
-            match ch {
-                '[' if !ignore => {
-                    nested += 1;
-                }
-                ']' if !ignore => {
-                    nested -= 1;
-
-                    match nested.cmp(&0) {
-                        std::cmp::Ordering::Less => {
-                            return Err(Error::InvalidData(
-                                "array value string has excess closing brackets".into(),
-                            ));
-                        }
-                        std::cmp::Ordering::Equal => {
-                            // Last element of this nest level; proceed to tokenize.
-                            let sub = &value[last_item..i];
-                            match has_array_format(sub) {
-                                true => {
-                                    let arr_param = ParamType::Array(
-                                        Box::new(param.to_owned()),
-                                        self.get_array_length_from_string(sub),
-                                    );
-
-                                    result.push(self.tokenize(&arr_param, sub.to_string())?);
-                                }
-                                false => {
-                                    result.push(self.tokenize(param, sub.to_string())?);
-                                }
-                            }
-
-                            last_item = i + 1;
-                        }
-                        _ => {}
-                    }
-                }
-                '"' => {
-                    ignore = !ignore;
-                }
-                ',' if nested == 1 && !ignore => {
-                    let sub = &value[last_item..i];
-                    match has_array_format(sub) {
-                        true => {
-                            let arr_param = ParamType::Array(
-                                Box::new(param.to_owned()),
-                                self.get_array_length_from_string(sub),
-                            );
-
-                            result.push(self.tokenize(&arr_param, sub.to_string())?);
-                        }
-                        false => {
-                            result.push(self.tokenize(param, sub.to_string())?);
-                        }
-                    }
-                    last_item = i + 1;
-                }
-                _ => (),
-            }
-        }
-
-        if ignore {
-            return Err(Error::InvalidData(
-                "array value string has excess quotes".into(),
-            ));
-        }
-
-        if nested > 0 {
-            return Err(Error::InvalidData(
-                "array value string has excess opening brackets".into(),
-            ));
-        }
-
-        Ok(Token::Array(result))
-    }
-
-    /// Creates `Token::Tuple` from an array of parameter types and a string of values.
-    /// I.e. it takes a string containing values "value_1, value_2, value_3" and an array
-    /// of `ParamType` containing the type of each value, in order:
-    /// [ParamType::<Type of value_1>, ParamType::<Type of value_2>, ParamType::<Type of value_3>]
-    /// And attempts to return a `Token::Tuple()` containing the inner types.
-    /// It works for nested/recursive tuples.
-    pub fn tokenize_tuple(&self, value: &str, params: &[ParamType]) -> Result<Token, Error> {
-        if !value.starts_with('(') || !value.ends_with(')') {
-            return Err(Error::InvalidData(
-                "tuple value string must start and end with round brackets".into(),
-            ));
-        }
-
-        if value.chars().count() == 2 {
-            return Ok(Token::Tuple(vec![]));
-        }
-
-        //for more details about this algorithm, refer to the tokenize_struct method
-        let mut result = vec![];
-        let mut nested = 0isize;
-        let mut ignore = false;
-        let mut last_item = 1;
-        let mut params_iter = params.iter();
-
-        for (pos, ch) in value.chars().enumerate() {
-            match ch {
-                '(' if !ignore => {
-                    nested += 1;
-                }
-                ')' if !ignore => {
-                    nested -= 1;
-
-                    match nested.cmp(&0) {
-                        std::cmp::Ordering::Less => {
-                            return Err(Error::InvalidData(
-                                "tuple value string has excess closing brackets".into(),
-                            ));
-                        }
-                        std::cmp::Ordering::Equal => {
-                            let sub = &value[last_item..pos];
-
-                            let token = self.tokenize(
-                                params_iter.next().ok_or_else(|| {
-                                    Error::InvalidData(
-                                        "tuple value contains more elements than the parameter types provided".into(),
-                                    )
-                                })?,
-                                sub.to_string(),
-                            )?;
-                            result.push(token);
-                            last_item = pos + 1;
-                        }
-                        _ => {}
-                    }
-                }
-                '"' => {
-                    ignore = !ignore;
-                }
-                ',' if nested == 1 && !ignore => {
-                    let sub = &value[last_item..pos];
-                    // If we've encountered an array within a tuple property
-                    // keep iterating until we see the end of it "]".
-                    if sub.contains('[') && !sub.contains(']') {
-                        continue;
-                    }
-
-                    let token = self.tokenize(
-                        params_iter.next().ok_or_else(|| {
-                            Error::InvalidData(
-                                "tuple value contains more elements than the parameter types provided".into(),
-                            )
-                        })?,
-                        sub.to_string(),
-                    )?;
-                    result.push(token);
-                    last_item = pos + 1;
-                }
-                _ => (),
-            }
-        }
-
-        if ignore {
-            return Err(Error::InvalidData(
-                "tuple value string has excess quotes".into(),
-            ));
-        }
-
-        if nested > 0 {
-            return Err(Error::InvalidData(
-                "tuple value string has excess opening brackets".into(),
-            ));
-        }
-
-        Ok(Token::Tuple(result))
     }
 
     /// Higher-level layer of the ABI decoding module.
@@ -536,7 +197,7 @@ impl ABIParser {
         let entry = parsed_abi.iter().find(|e| e.name == fn_name);
 
         if entry.is_none() {
-            return Err(Error::InvalidName(format!(
+            return Err(Error::InvalidData(format!(
                 "couldn't find function name: {}",
                 fn_name
             )));
@@ -560,133 +221,13 @@ impl ABIParser {
     pub fn decode_params(&self, params: &[ParamType], data: &[u8]) -> Result<Vec<Token>, Error> {
         Ok(ABIDecoder::decode(params, data)?)
     }
-
-    fn get_enum_discriminant_from_string(&self, ele: &str) -> usize {
-        let mut chars = ele.chars();
-        chars.next(); // Remove "("
-        chars.next_back(); // Remove ")"
-        let v: Vec<_> = chars.as_str().split(',').collect();
-        v[0].parse().unwrap()
-    }
-
-    fn get_enum_value_from_string(&self, ele: &str) -> String {
-        let mut chars = ele.chars();
-        chars.next(); // Remove "("
-        chars.next_back(); // Remove ")"
-        let v: Vec<_> = chars.as_str().split(',').collect();
-        v[1].to_string()
-    }
-
-    fn get_array_length_from_string(&self, ele: &str) -> usize {
-        let mut chars = ele.chars();
-        chars.next();
-        chars.next_back();
-        chars.as_str().split(',').count()
-    }
-
-    /// Builds a string representation of a function selector,
-    /// i.e: <fn_name>(<type_1>, <type_2>, ..., <type_n>)
-    pub fn build_fn_selector(&self, fn_name: &str, params: &[Property]) -> Result<String, Error> {
-        let fn_selector = fn_name.to_owned();
-
-        let mut result: String = format!("{}(", fn_selector);
-
-        for (idx, param) in params.iter().enumerate() {
-            result.push_str(&self.build_fn_selector_params(param));
-            if idx + 1 < params.len() {
-                result.push(',');
-            }
-        }
-
-        result.push(')');
-
-        Ok(result)
-    }
-
-    fn build_fn_selector_params(&self, prop: &Property) -> String {
-        let mut result: String = String::new();
-
-        if prop.is_custom_type() {
-            // Custom type, need to break down inner fields.
-            // Will return `"e(field_1,field_2,...,field_n)"` if the type is an `Enum`,
-            // `"s(field_1,field_2,...,field_n)"` if the type is a `Struct`,
-            // `"a[type;length]"` if the type is an `Array`,
-            // `(type_1,type_2,...,type_n)` if the type is a `Tuple`.
-            if prop.is_struct_type() {
-                result.push_str("s(");
-            } else if prop.is_enum_type() {
-                result.push_str("e(");
-            } else if prop.has_custom_type_in_array() {
-                result.push_str("a[");
-            } else if prop.has_custom_type_in_tuple() {
-                result.push('(');
-            } else {
-                panic!("unexpected custom type");
-            }
-
-            for (idx, component) in prop
-                .components
-                .as_ref()
-                .expect("No components found")
-                .iter()
-                .enumerate()
-            {
-                result.push_str(&self.build_fn_selector_params(component));
-
-                if idx + 1 < prop.components.as_ref().unwrap().len() {
-                    result.push(',');
-                }
-            }
-
-            if result.starts_with("a[") {
-                let array_type_field = prop.type_field.clone();
-
-                // Type field, in this case, looks like
-                // "[struct Person; 2]" and we want to extract the
-                // length, which in this example is 2.
-                // First, get the last part after `;`: `"<length>]"`.
-                let mut array_length = array_type_field.split(';').collect::<Vec<&str>>()[1]
-                    .trim()
-                    .to_string();
-
-                array_length.pop(); // Remove the trailing "]"
-
-                // Make sure the length is a valid number.
-                let array_length = array_length.parse::<usize>().expect("Invalid array length");
-
-                result.push(';');
-                result.push_str(array_length.to_string().as_str());
-                result.push(']');
-            } else {
-                result.push(')');
-            }
-        } else {
-            // Not a custom type.
-            let param_str_no_whitespace: String = prop
-                .type_field
-                .chars()
-                .filter(|c| !c.is_whitespace())
-                .collect();
-
-            // Check if the parameter is an array.
-            if has_array_format(&param_str_no_whitespace) {
-                // The representation of an array in a function selector should be `a[<type>;<length>]`.
-                // Because this is coming in as `[<type>;<length>]` (not prefixed with an 'a'), here
-                // we must prefix it with an 'a' so the function selector will be properly encoded.
-                let array = format!("{}{}", "a", param_str_no_whitespace);
-                result.push_str(array.as_str());
-            } else {
-                result.push_str(&param_str_no_whitespace);
-            }
-        }
-        result
-    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fuels_types::{errors::Error, param_types::ParamType};
+    use crate::StringToken;
+    use fuels_types::errors::Error;
 
     #[test]
     fn simple_encode_and_decode_no_selector() -> Result<(), Error> {
@@ -882,64 +423,6 @@ mod tests {
     }
 
     #[test]
-    fn tokenize_array() -> Result<(), Error> {
-        let abi = ABIParser::new();
-
-        let value = "[[1,2],[3],4]";
-        let param = ParamType::U16;
-        let tokens = abi.tokenize_array(value, &param)?;
-
-        let expected_tokens = Token::Array(vec![
-            Token::Array(vec![Token::U16(1), Token::U16(2)]), // First element, a sub-array with 2 elements
-            Token::Array(vec![Token::U16(3)]), // Second element, a sub-array with 1 element
-            Token::U16(4),                     // Third element
-        ]);
-
-        assert_eq!(tokens, expected_tokens);
-
-        let value = "[1,[2],[3],[4,5]]";
-        let param = ParamType::U16;
-        let tokens = abi.tokenize_array(value, &param)?;
-
-        let expected_tokens = Token::Array(vec![
-            Token::U16(1),
-            Token::Array(vec![Token::U16(2)]),
-            Token::Array(vec![Token::U16(3)]),
-            Token::Array(vec![Token::U16(4), Token::U16(5)]),
-        ]);
-
-        assert_eq!(tokens, expected_tokens);
-
-        let value = "[1,2,3,4,5]";
-        let param = ParamType::U16;
-        let tokens = abi.tokenize_array(value, &param)?;
-
-        let expected_tokens = Token::Array(vec![
-            Token::U16(1),
-            Token::U16(2),
-            Token::U16(3),
-            Token::U16(4),
-            Token::U16(5),
-        ]);
-
-        assert_eq!(tokens, expected_tokens);
-
-        let value = "[[1,2,3,[4,5]]]";
-        let param = ParamType::U16;
-        let tokens = abi.tokenize_array(value, &param)?;
-
-        let expected_tokens = Token::Array(vec![Token::Array(vec![
-            Token::U16(1),
-            Token::U16(2),
-            Token::U16(3),
-            Token::Array(vec![Token::U16(4), Token::U16(5)]),
-        ])]);
-
-        assert_eq!(tokens, expected_tokens);
-        Ok(())
-    }
-
-    #[test]
     fn nested_array_encode_and_decode() -> Result<(), Error> {
         let json_abi = r#"
         [
@@ -1027,7 +510,7 @@ mod tests {
 
         let decoded_return = abi.decode(json_abi, function_name, &return_value)?;
 
-        let expected_return = vec![Token::String("OK".into())];
+        let expected_return = vec![Token::String(StringToken::new("OK".into(), 2))];
 
         assert_eq!(decoded_return, expected_return);
         Ok(())
@@ -1384,14 +867,13 @@ mod tests {
 
     #[test]
     fn fn_selector_single_primitive() -> Result<(), Error> {
-        let abi = ABIParser::new();
         let p = Property {
             name: "foo".into(),
             type_field: "u64".into(),
             components: None,
         };
         let params = vec![p];
-        let selector = abi.build_fn_selector("my_func", &params)?;
+        let selector = build_fn_selector("my_func", &params)?;
 
         assert_eq!(selector, "my_func(u64)");
         Ok(())
@@ -1399,7 +881,6 @@ mod tests {
 
     #[test]
     fn fn_selector_multiple_primitives() -> Result<(), Error> {
-        let abi = ABIParser::new();
         let p1 = Property {
             name: "foo".into(),
             type_field: "u64".into(),
@@ -1411,7 +892,7 @@ mod tests {
             components: None,
         };
         let params = vec![p1, p2];
-        let selector = abi.build_fn_selector("my_func", &params)?;
+        let selector = build_fn_selector("my_func", &params)?;
 
         assert_eq!(selector, "my_func(u64,bool)");
         Ok(())
@@ -1419,8 +900,6 @@ mod tests {
 
     #[test]
     fn fn_selector_custom_type() -> Result<(), Error> {
-        let abi = ABIParser::new();
-
         let inner_foo = Property {
             name: "foo".into(),
             type_field: "bool".into(),
@@ -1440,7 +919,7 @@ mod tests {
         };
 
         let params = vec![p_struct];
-        let selector = abi.build_fn_selector("my_func", &params)?;
+        let selector = build_fn_selector("my_func", &params)?;
 
         assert_eq!(selector, "my_func(s(bool,u64))");
 
@@ -1450,7 +929,7 @@ mod tests {
             components: Some(vec![inner_foo, inner_bar]),
         };
         let params = vec![p_enum];
-        let selector = abi.build_fn_selector("my_func", &params)?;
+        let selector = build_fn_selector("my_func", &params)?;
 
         assert_eq!(selector, "my_func(e(bool,u64))");
         Ok(())
@@ -1458,8 +937,6 @@ mod tests {
 
     #[test]
     fn fn_selector_nested_struct() -> Result<(), Error> {
-        let abi = ABIParser::new();
-
         let inner_foo = Property {
             name: "foo".into(),
             type_field: "bool".into(),
@@ -1491,7 +968,7 @@ mod tests {
         };
 
         let params = vec![p];
-        let selector = abi.build_fn_selector("my_func", &params)?;
+        let selector = build_fn_selector("my_func", &params)?;
 
         assert_eq!(selector, "my_func(s(bool,s(u64,u32)))");
         Ok(())
@@ -1499,8 +976,6 @@ mod tests {
 
     #[test]
     fn fn_selector_nested_enum() -> Result<(), Error> {
-        let abi = ABIParser::new();
-
         let inner_foo = Property {
             name: "foo".into(),
             type_field: "bool".into(),
@@ -1532,7 +1007,7 @@ mod tests {
         };
 
         let params = vec![p];
-        let selector = abi.build_fn_selector("my_func", &params)?;
+        let selector = build_fn_selector("my_func", &params)?;
 
         assert_eq!(selector, "my_func(e(bool,e(u64,u32)))");
         Ok(())
@@ -1540,8 +1015,6 @@ mod tests {
 
     #[test]
     fn fn_selector_nested_custom_types() -> Result<(), Error> {
-        let abi = ABIParser::new();
-
         let inner_foo = Property {
             name: "foo".into(),
             type_field: "bool".into(),
@@ -1573,7 +1046,7 @@ mod tests {
         };
 
         let params = vec![p];
-        let selector = abi.build_fn_selector("my_func", &params)?;
+        let selector = build_fn_selector("my_func", &params)?;
 
         assert_eq!(selector, "my_func(s(bool,e(u64,u32)))");
 
@@ -1584,7 +1057,7 @@ mod tests {
             components: Some(vec![inner_foo, inner_custom]),
         };
         let params = vec![p];
-        let selector = abi.build_fn_selector("my_func", &params)?;
+        let selector = build_fn_selector("my_func", &params)?;
         assert_eq!(selector, "my_func(e(bool,s(u64,u32)))");
         Ok(())
     }
@@ -1670,486 +1143,112 @@ mod tests {
     }
 
     #[test]
-    fn tokenize_uint_types_expected_error() {
-        let abi = ABIParser::new();
+    fn strings_must_have_correct_length() {
+        let json_abi = r#"
+        [
+            {
+                "type":"contract",
+                "inputs":[
+                    {
+                        "name":"foo",
+                        "type":"str[4]"
+                    }
+                ],
+                "name":"takes_string",
+                "outputs":[]
+            }
+        ]
+        "#;
 
-        // We test only on U8 as it is the same error on all other unsigned int types
+        let values: Vec<String> = vec!["fue".to_string()];
+        let mut abi = ABIParser::new();
+        let function_name = "takes_string";
         let error_message = abi
-            .tokenize(&ParamType::U8, "2,".to_string())
+            .encode(json_abi, function_name, &values)
+            .unwrap_err()
+            .to_string();
+
+        assert!(error_message.contains("String data has len "));
+    }
+
+    #[test]
+    fn strings_must_have_correct_length_custom_types() {
+        let json_abi = r#"
+        [
+            {
+                "type":"contract",
+                "inputs":[
+                    {
+                        "name":"value",
+                        "type":"struct MyStruct",
+                        "components": [
+                            {
+                                "name": "foo",
+                                "type": "[u8; 2]"
+                            },
+                            {
+                                "name": "bar",
+                                "type": "str[4]"
+                            }
+                        ]
+                    }
+                ],
+                "name":"takes_struct",
+                "outputs":[]
+            }
+        ]
+        "#;
+
+        let values: Vec<String> = vec!["([0, 0], fuell)".to_string()];
+        let mut abi = ABIParser::new();
+        let function_name = "takes_struct";
+        let error_message = abi
+            .encode(json_abi, function_name, &values)
+            .unwrap_err()
+            .to_string();
+
+        assert!(error_message.contains("String data has len "));
+    }
+
+    #[test]
+    fn value_string_must_have_all_ascii_chars() {
+        let json_abi = r#"
+        [
+            {
+                "type":"contract",
+                "inputs":[
+                    {
+                        "name":"my_enum",
+                        "type":"enum MyEnum",
+                        "components": [
+                            {
+                                "name": "foo",
+                                "type": "u32"
+                            },
+                            {
+                                "name": "bar",
+                                "type": "str[4]"
+                            }
+                        ]
+                    }
+                ],
+                "name":"takes_enum",
+                "outputs":[]
+            }
+        ]
+        "#;
+
+        let values: Vec<String> = vec!["(0, fueŁ)".to_string()];
+        let mut abi = ABIParser::new();
+        let function_name = "takes_enum";
+        let error_message = abi
+            .encode(json_abi, function_name, &values)
             .unwrap_err()
             .to_string();
 
         assert_eq!(
-            "Parse integer error: invalid digit found in string",
+            "Invalid data: value string can only contain ascii characters",
             error_message
         );
-    }
-
-    #[test]
-    fn tokenize_bool_expected_error() {
-        let abi = ABIParser::new();
-
-        let error_message = abi
-            .tokenize(&ParamType::Bool, "True".to_string())
-            .unwrap_err()
-            .to_string();
-
-        assert_eq!(
-            "Parse boolean error: provided string was not `true` or `false`",
-            error_message
-        );
-    }
-
-    #[test]
-    fn tokenize_b256_invalid_length_expected_error() {
-        let abi = ABIParser::new();
-
-        let value = "d57a9c46dfcc7f18207013e65b44e4cb4e2c2298f4ac457ba8f82743f31e90b".to_string();
-        let error_message = abi
-            .tokenize(&ParamType::B256, value)
-            .unwrap_err()
-            .to_string();
-
-        assert_eq!(
-            "Invalid data: the hex encoding of the b256 must have 64 characters",
-            error_message
-        );
-    }
-
-    #[test]
-    fn tokenize_b256_invalid_character_expected_error() {
-        let abi = ABIParser::new();
-
-        let value = "Hd57a9c46dfcc7f18207013e65b44e4cb4e2c2298f4ac457ba8f82743f31e90b".to_string();
-        let error_message = abi
-            .tokenize(&ParamType::B256, value)
-            .unwrap_err()
-            .to_string();
-
-        assert!(error_message.contains("Parse hex error: Invalid character"));
-    }
-
-    #[test]
-    fn tokenize_tuple_invalid_start_end_bracket_expected_error() -> Result<(), Error> {
-        let abi = ABIParser::new();
-        let params = Property {
-            name: "input".to_string(),
-            type_field: "(u64, [u64; 3])".to_string(),
-            components: Some(vec![
-                Property {
-                    name: "__tuple_element".to_string(),
-                    type_field: "u64".to_string(),
-                    components: None,
-                },
-                Property {
-                    name: "__tuple_element".to_string(),
-                    type_field: "[u64; 3]".to_string(),
-                    components: None,
-                },
-            ]),
-        };
-
-        if let ParamType::Tuple(tuple_params) = ParamType::parse_tuple_param(&params)? {
-            let error_message = abi
-                .tokenize_tuple("0, [0,0,0])", &tuple_params)
-                .unwrap_err()
-                .to_string();
-
-            assert_eq!(
-                "Invalid data: tuple value string must start and end with round brackets",
-                error_message
-            );
-        }
-        Ok(())
-    }
-
-    #[test]
-    fn tokenize_tuple_excess_opening_bracket_expected_error() -> Result<(), Error> {
-        let abi = ABIParser::new();
-        let params = Property {
-            name: "input".to_string(),
-            type_field: "(u64, [u64; 3])".to_string(),
-            components: Some(vec![
-                Property {
-                    name: "__tuple_element".to_string(),
-                    type_field: "u64".to_string(),
-                    components: None,
-                },
-                Property {
-                    name: "__tuple_element".to_string(),
-                    type_field: "[u64; 3]".to_string(),
-                    components: None,
-                },
-            ]),
-        };
-
-        if let ParamType::Tuple(tuple_params) = ParamType::parse_tuple_param(&params)? {
-            let error_message = abi
-                .tokenize_tuple("((0, [0,0,0])", &tuple_params)
-                .unwrap_err()
-                .to_string();
-
-            assert_eq!(
-                "Invalid data: tuple value string has excess opening brackets",
-                error_message
-            );
-        }
-        Ok(())
-    }
-
-    #[test]
-    fn tokenize_tuple_excess_closing_bracket_expected_error() -> Result<(), Error> {
-        let abi = ABIParser::new();
-        let params = Property {
-            name: "input".to_string(),
-            type_field: "(u64, [u64; 3])".to_string(),
-            components: Some(vec![
-                Property {
-                    name: "__tuple_element".to_string(),
-                    type_field: "u64".to_string(),
-                    components: None,
-                },
-                Property {
-                    name: "__tuple_element".to_string(),
-                    type_field: "[u64; 3]".to_string(),
-                    components: None,
-                },
-            ]),
-        };
-
-        if let ParamType::Tuple(tuple_params) = ParamType::parse_tuple_param(&params)? {
-            let error_message = abi
-                .tokenize_tuple("(0, [0,0,0]))", &tuple_params)
-                .unwrap_err()
-                .to_string();
-
-            assert_eq!(
-                "Invalid data: tuple value string has excess closing brackets",
-                error_message
-            );
-        }
-        Ok(())
-    }
-
-    #[test]
-    fn tokenize_tuple_excess_quotes_expected_error() -> Result<(), Error> {
-        let abi = ABIParser::new();
-        let params = Property {
-            name: "input".to_string(),
-            type_field: "(u64, [u64; 3])".to_string(),
-            components: Some(vec![
-                Property {
-                    name: "__tuple_element".to_string(),
-                    type_field: "u64".to_string(),
-                    components: None,
-                },
-                Property {
-                    name: "__tuple_element".to_string(),
-                    type_field: "[u64; 3]".to_string(),
-                    components: None,
-                },
-            ]),
-        };
-
-        if let ParamType::Tuple(tuple_params) = ParamType::parse_tuple_param(&params)? {
-            let error_message = abi
-                .tokenize_tuple("(0, \"[0,0,0])", &tuple_params)
-                .unwrap_err()
-                .to_string();
-
-            assert_eq!(
-                "Invalid data: tuple value string has excess quotes",
-                error_message
-            );
-        }
-        Ok(())
-    }
-
-    #[test]
-    fn tokenize_tuple_excess_value_elements_expected_error() -> Result<(), Error> {
-        let abi = ABIParser::new();
-        let params = Property {
-            name: "input".to_string(),
-            type_field: "(u64, [u64; 3])".to_string(),
-            components: Some(vec![
-                Property {
-                    name: "__tuple_element".to_string(),
-                    type_field: "u64".to_string(),
-                    components: None,
-                },
-                Property {
-                    name: "__tuple_element".to_string(),
-                    type_field: "[u64; 3]".to_string(),
-                    components: None,
-                },
-            ]),
-        };
-
-        if let ParamType::Tuple(tuple_params) = ParamType::parse_tuple_param(&params)? {
-            let error_message = abi
-                .tokenize_tuple("(0, [0,0,0], 0, 0)", &tuple_params)
-                .unwrap_err()
-                .to_string();
-
-            assert_eq!(
-                "Invalid data: tuple value contains more elements than the parameter types provided",
-                error_message
-            );
-
-            let error_message = abi
-                .tokenize_tuple("(0, [0,0,0], 0)", &tuple_params)
-                .unwrap_err()
-                .to_string();
-
-            assert_eq!(
-                "Invalid data: tuple value contains more elements than the parameter types provided",
-                error_message
-            );
-        }
-        Ok(())
-    }
-
-    #[test]
-    fn tokenize_array_invalid_start_end_bracket_expected_error() {
-        let param = ParamType::U16;
-        let abi = ABIParser::new();
-
-        let error_message = abi
-            .tokenize_array("1,2],[3],4]", &param)
-            .unwrap_err()
-            .to_string();
-
-        assert_eq!(
-            "Invalid data: array value string must start and end with square brackets",
-            error_message
-        );
-    }
-
-    #[test]
-    fn tokenize_array_excess_opening_bracket_expected_error() {
-        let param = ParamType::U16;
-        let abi = ABIParser::new();
-
-        let error_message = abi
-            .tokenize_array("[[[1,2],[3],4]", &param)
-            .unwrap_err()
-            .to_string();
-
-        assert_eq!(
-            "Invalid data: array value string has excess opening brackets",
-            error_message
-        );
-    }
-
-    #[test]
-    fn tokenize_array_excess_closing_bracket_expected_error() {
-        let param = ParamType::U16;
-        let abi = ABIParser::new();
-
-        let error_message = abi
-            .tokenize_array("[[1,2],[3],4]]", &param)
-            .unwrap_err()
-            .to_string();
-
-        assert_eq!(
-            "Invalid data: array value string has excess closing brackets",
-            error_message
-        );
-    }
-
-    #[test]
-    fn tokenize_array_excess_quotes_expected_error() {
-        let param = ParamType::U16;
-        let abi = ABIParser::new();
-
-        let error_message = abi
-            .tokenize_array("[[1,\"2],[3],4]]", &param)
-            .unwrap_err()
-            .to_string();
-
-        assert_eq!(
-            "Invalid data: array value string has excess quotes",
-            error_message
-        );
-    }
-
-    #[test]
-    fn tokenize_struct_invalid_start_end_bracket_expected_error() -> Result<(), Error> {
-        let abi = ABIParser::new();
-        let params = Property {
-            name: "input".to_string(),
-            type_field: "struct MyStruct".to_string(),
-            components: Some(vec![
-                Property {
-                    name: "num".to_string(),
-                    type_field: "u64".to_string(),
-                    components: None,
-                },
-                Property {
-                    name: "arr".to_string(),
-                    type_field: "[u64; 3]".to_string(),
-                    components: None,
-                },
-            ]),
-        };
-
-        if let ParamType::Struct(struct_params) = ParamType::parse_custom_type_param(&params)? {
-            let error_message = abi
-                .tokenize_struct("0, [0,0,0])", &struct_params)
-                .unwrap_err()
-                .to_string();
-
-            assert_eq!(
-                "Invalid data: struct value string must start and end with round brackets",
-                error_message
-            );
-        }
-        Ok(())
-    }
-
-    #[test]
-    fn tokenize_struct_excess_opening_bracket_expected_error() -> Result<(), Error> {
-        let abi = ABIParser::new();
-        let params = Property {
-            name: "input".to_string(),
-            type_field: "struct MyStruct".to_string(),
-            components: Some(vec![
-                Property {
-                    name: "num".to_string(),
-                    type_field: "u64".to_string(),
-                    components: None,
-                },
-                Property {
-                    name: "arr".to_string(),
-                    type_field: "[u64; 3]".to_string(),
-                    components: None,
-                },
-            ]),
-        };
-
-        if let ParamType::Struct(struct_params) = ParamType::parse_custom_type_param(&params)? {
-            let error_message = abi
-                .tokenize_struct("((0, [0,0,0])", &struct_params)
-                .unwrap_err()
-                .to_string();
-
-            assert_eq!(
-                "Invalid data: struct value string has excess opening brackets",
-                error_message
-            );
-        }
-        Ok(())
-    }
-
-    #[test]
-    fn tokenize_struct_excess_closing_bracket_expected_error() -> Result<(), Error> {
-        let abi = ABIParser::new();
-        let params = Property {
-            name: "input".to_string(),
-            type_field: "struct MyStruct".to_string(),
-            components: Some(vec![
-                Property {
-                    name: "num".to_string(),
-                    type_field: "u64".to_string(),
-                    components: None,
-                },
-                Property {
-                    name: "arr".to_string(),
-                    type_field: "[u64; 3]".to_string(),
-                    components: None,
-                },
-            ]),
-        };
-
-        if let ParamType::Struct(struct_params) = ParamType::parse_custom_type_param(&params)? {
-            let error_message = abi
-                .tokenize_struct("(0, [0,0,0]))", &struct_params)
-                .unwrap_err()
-                .to_string();
-
-            assert_eq!(
-                "Invalid data: struct value string has excess closing brackets",
-                error_message
-            );
-        }
-        Ok(())
-    }
-
-    #[test]
-    fn tokenize_struct_excess_quotes_expected_error() -> Result<(), Error> {
-        let abi = ABIParser::new();
-        let params = Property {
-            name: "input".to_string(),
-            type_field: "struct MyStruct".to_string(),
-            components: Some(vec![
-                Property {
-                    name: "num".to_string(),
-                    type_field: "u64".to_string(),
-                    components: None,
-                },
-                Property {
-                    name: "arr".to_string(),
-                    type_field: "[u64; 3]".to_string(),
-                    components: None,
-                },
-            ]),
-        };
-
-        if let ParamType::Struct(struct_params) = ParamType::parse_custom_type_param(&params)? {
-            let error_message = abi
-                .tokenize_struct("(0, \"[0,0,0])", &struct_params)
-                .unwrap_err()
-                .to_string();
-
-            assert_eq!(
-                "Invalid data: struct value string has excess quotes",
-                error_message
-            );
-        }
-        Ok(())
-    }
-
-    #[test]
-    fn tokenize_struct_excess_value_elements_expected_error() -> Result<(), Error> {
-        let abi = ABIParser::new();
-        let params = Property {
-            name: "input".to_string(),
-            type_field: "struct MyStruct".to_string(),
-            components: Some(vec![
-                Property {
-                    name: "num".to_string(),
-                    type_field: "u64".to_string(),
-                    components: None,
-                },
-                Property {
-                    name: "arr".to_string(),
-                    type_field: "[u64; 3]".to_string(),
-                    components: None,
-                },
-            ]),
-        };
-
-        if let ParamType::Struct(struct_params) = ParamType::parse_custom_type_param(&params)? {
-            let error_message = abi
-                .tokenize_struct("(0, [0,0,0], 0, 0)", &struct_params)
-                .unwrap_err()
-                .to_string();
-
-            assert_eq!(
-                "Invalid data: struct value contains more elements than the parameter types provided",
-                error_message
-            );
-
-            let error_message = abi
-                .tokenize_struct("(0, [0,0,0], 0)", &struct_params)
-                .unwrap_err()
-                .to_string();
-
-            assert_eq!(
-                "Invalid data: struct value contains more elements than the parameter types provided",
-                error_message
-            );
-        }
-        Ok(())
     }
 }
