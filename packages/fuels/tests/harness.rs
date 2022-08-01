@@ -2270,7 +2270,7 @@ async fn can_handle_sway_function_called_new() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-async fn can_call_no_arg_predicate_returns_true() -> anyhow::Result<(), anyhow::Error> {
+async fn can_call_no_arg_predicate_returns_true() -> Result<(), anyhow::Error> {
     let amount_to_predicate: u64 = 16;
     let asset_id = AssetId::default();
     let predicate_code =
@@ -2320,7 +2320,7 @@ async fn can_call_no_arg_predicate_returns_true() -> anyhow::Result<(), anyhow::
 }
 
 #[tokio::test]
-async fn can_call_no_arg_predicate_returns_false() -> anyhow::Result<(), anyhow::Error> {
+async fn can_call_no_arg_predicate_returns_false() -> Result<(), anyhow::Error> {
     let amount_to_predicate: u64 = 12;
     let asset_id = AssetId::default();
     let predicate_code =
@@ -2371,7 +2371,7 @@ async fn can_call_no_arg_predicate_returns_false() -> anyhow::Result<(), anyhow:
 }
 
 #[tokio::test]
-async fn can_call_predicate_with_u32_data() -> anyhow::Result<(), anyhow::Error> {
+async fn can_call_predicate_with_u32_data() -> Result<(), anyhow::Error> {
     let amount_to_predicate: u64 = 23;
     let asset_id = AssetId::default();
     let predicate_code =
@@ -2445,7 +2445,7 @@ async fn can_call_predicate_with_u32_data() -> anyhow::Result<(), anyhow::Error>
 }
 
 #[tokio::test]
-async fn can_call_predicate_with_address_data() -> anyhow::Result<(), anyhow::Error> {
+async fn can_call_predicate_with_address_data() -> Result<(), anyhow::Error> {
     let arg = Token::B256(
         *Address::from_str("0xef86afa9696cf0dc6385e2c407a6e159a1103cefb7e2ae0636fb33d3cb2a9e4a")
             .unwrap(),
@@ -2501,7 +2501,7 @@ async fn can_call_predicate_with_address_data() -> anyhow::Result<(), anyhow::Er
 }
 
 #[tokio::test]
-async fn can_call_predicate_with_struct_data() -> anyhow::Result<(), anyhow::Error> {
+async fn can_call_predicate_with_struct_data() -> Result<(), anyhow::Error> {
     let amount_to_predicate: u64 = 1886;
     let asset_id = AssetId::default();
     let predicate_code =
