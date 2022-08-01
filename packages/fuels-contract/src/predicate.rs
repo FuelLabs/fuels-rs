@@ -80,7 +80,7 @@ impl Predicate {
     /// # Arguments
     ///
     /// * `provider` - A provider to handle the transaction
-    /// * `coin_amount_to_predicate` - The amount of locked coins as given asset id to store within Predicate
+    /// * `coin_amount_to_predicate` - The amount of locked coins as given asset id to retrieve within Predicate
     /// * `asset_id` - The asset id of the locked coins stored within Predicate
     /// * `receiver_address` - The address that may receive the locked coins if Predicate returns true
     /// * `predicate_data` - Optional parameter data to be sent to Predicate function as part of processing
