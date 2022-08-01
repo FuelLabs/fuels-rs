@@ -2365,3 +2365,149 @@ async fn str_in_array() -> Result<(), Error> {
 
     Ok(())
 }
+
+#[tokio::test]
+#[should_panic(expected = "String data has len ")]
+async fn strings_must_have_correct_length() {
+    abigen!(
+        SimpleContract,
+        r#"
+        [
+            {
+                "type":"contract",
+                "inputs":[
+                    {
+                        "name":"arg",
+                        "type":"str[4]"
+                    }
+                ],
+                "name":"takes_string",
+                "outputs":[
+
+                ]
+            }
+        ]
+        "#,
+    );
+
+    let wallet = launch_provider_and_get_wallet().await;
+    let contract_instance = SimpleContractBuilder::new(null_contract_id(), wallet).build();
+    let _ = contract_instance.takes_string("fuell".into());
+}
+
+#[tokio::test]
+#[should_panic(expected = "String data can only have ascii values")]
+async fn strings_must_have_all_ascii_chars() {
+    abigen!(
+        SimpleContract,
+        r#"
+        [
+            {
+                "type":"contract",
+                "inputs":[
+                    {
+                        "name":"arg",
+                        "type":"str[4]"
+                    }
+                ],
+                "name":"takes_string",
+                "outputs":[
+
+                ]
+            }
+        ]
+        "#,
+    );
+
+    let wallet = launch_provider_and_get_wallet().await;
+    let contract_instance = SimpleContractBuilder::new(null_contract_id(), wallet).build();
+    let _ = contract_instance.takes_string("fueŁ".into());
+}
+
+#[tokio::test]
+#[should_panic(expected = "String data has len ")]
+async fn strings_must_have_correct_length_custom_types() {
+    abigen!(
+        SimpleContract,
+        r#"
+        [
+            {
+                "type":"contract",
+                "inputs":[
+                    {
+                        "name":"value",
+                        "type":"enum MyEnum",
+                        "components": [
+                            {
+                                "name": "foo",
+                                "type": "[u8; 2]"
+                            },
+                            {
+                                "name": "bar",
+                                "type": "str[4]"
+                            }
+                        ]
+                    }
+                ],
+                "name":"takes_enum",
+                "outputs":[]
+            }
+        ]
+        "#,
+    );
+
+    let wallet = launch_provider_and_get_wallet().await;
+    let contract_instance = SimpleContractBuilder::new(null_contract_id(), wallet).build();
+    let _ = contract_instance.takes_enum(MyEnum::bar("fuell".to_string()));
+}
+
+#[tokio::test]
+#[should_panic(expected = "String data can only have ascii values")]
+async fn strings_must_have_all_ascii_chars_custom_types() {
+    abigen!(
+        SimpleContract,
+        r#"
+        [
+            {
+                "type":"contract",
+                "inputs":[
+                    {
+                        "name":"top_value",
+                        "type":"struct MyNestedStruct",
+                        "components": [
+                            {
+                                "name": "x",
+                                "type": "u16"
+                            },
+                            {
+                                "name": "foo",
+                                "type": "struct InnerStruct",
+                                "components": [
+                                    {
+                                        "name":"bar",
+                                        "type": "str[4]"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                "name":"takes_nested_struct",
+                "outputs":[]
+            }
+        ]
+        "#,
+    );
+
+    let inner_struct = InnerStruct {
+        bar: "fueŁ".to_string(),
+    };
+    let input = MyNestedStruct {
+        x: 10,
+        foo: inner_struct,
+    };
+
+    let wallet = launch_provider_and_get_wallet().await;
+    let contract_instance = SimpleContractBuilder::new(null_contract_id(), wallet).build();
+    let _ = contract_instance.takes_nested_struct(input);
+}

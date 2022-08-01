@@ -226,6 +226,7 @@ impl ABIParser {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::StringToken;
     use fuels_types::errors::Error;
 
     #[test]
@@ -509,7 +510,7 @@ mod tests {
 
         let decoded_return = abi.decode(json_abi, function_name, &return_value)?;
 
-        let expected_return = vec![Token::String("OK".into())];
+        let expected_return = vec![Token::String(StringToken::new("OK".into(), 2))];
 
         assert_eq!(decoded_return, expected_return);
         Ok(())
@@ -1139,5 +1140,115 @@ mod tests {
         let expected_encode = "00000000e33a11ce0000000000000001000000000000002a";
         assert_eq!(encoded, expected_encode);
         Ok(())
+    }
+
+    #[test]
+    fn strings_must_have_correct_length() {
+        let json_abi = r#"
+        [
+            {
+                "type":"contract",
+                "inputs":[
+                    {
+                        "name":"foo",
+                        "type":"str[4]"
+                    }
+                ],
+                "name":"takes_string",
+                "outputs":[]
+            }
+        ]
+        "#;
+
+        let values: Vec<String> = vec!["fue".to_string()];
+        let mut abi = ABIParser::new();
+        let function_name = "takes_string";
+        let error_message = abi
+            .encode(json_abi, function_name, &values)
+            .unwrap_err()
+            .to_string();
+
+        assert!(error_message.contains("String data has len "));
+    }
+
+    #[test]
+    fn strings_must_have_correct_length_custom_types() {
+        let json_abi = r#"
+        [
+            {
+                "type":"contract",
+                "inputs":[
+                    {
+                        "name":"value",
+                        "type":"struct MyStruct",
+                        "components": [
+                            {
+                                "name": "foo",
+                                "type": "[u8; 2]"
+                            },
+                            {
+                                "name": "bar",
+                                "type": "str[4]"
+                            }
+                        ]
+                    }
+                ],
+                "name":"takes_struct",
+                "outputs":[]
+            }
+        ]
+        "#;
+
+        let values: Vec<String> = vec!["([0, 0], fuell)".to_string()];
+        let mut abi = ABIParser::new();
+        let function_name = "takes_struct";
+        let error_message = abi
+            .encode(json_abi, function_name, &values)
+            .unwrap_err()
+            .to_string();
+
+        assert!(error_message.contains("String data has len "));
+    }
+
+    #[test]
+    fn value_string_must_have_all_ascii_chars() {
+        let json_abi = r#"
+        [
+            {
+                "type":"contract",
+                "inputs":[
+                    {
+                        "name":"my_enum",
+                        "type":"enum MyEnum",
+                        "components": [
+                            {
+                                "name": "foo",
+                                "type": "u32"
+                            },
+                            {
+                                "name": "bar",
+                                "type": "str[4]"
+                            }
+                        ]
+                    }
+                ],
+                "name":"takes_enum",
+                "outputs":[]
+            }
+        ]
+        "#;
+
+        let values: Vec<String> = vec!["(0, fueŁ)".to_string()];
+        let mut abi = ABIParser::new();
+        let function_name = "takes_enum";
+        let error_message = abi
+            .encode(json_abi, function_name, &values)
+            .unwrap_err()
+            .to_string();
+
+        assert_eq!(
+            "Invalid data: value string can only contain ascii characters",
+            error_message
+        );
     }
 }
