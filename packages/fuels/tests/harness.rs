@@ -1,10 +1,12 @@
+use fuel_core::service::Config as CoreConfig;
+use fuel_core::service::FuelService;
 use fuel_gql_client::fuel_tx::{AssetId, ContractId, Receipt};
 use fuels::contract::contract::MultiContractCallHandler;
 use fuels::prelude::{
     abigen, launch_custom_provider_and_get_wallets, launch_provider_and_get_wallet,
     setup_multiple_assets_coins, setup_single_asset_coins, setup_test_provider, CallParameters,
-    Config, Contract, Error, LocalWallet, Provider, ProviderError, Salt, Signer, TxParameters,
-    WalletsConfig, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
+    Config, Contract, Error, LocalWallet, Provider, Salt, Signer, TxParameters, WalletsConfig,
+    DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
 };
 use fuels_core::parameters::StorageConfiguration;
 use fuels_core::tx::{Address, Bytes32, StorageSlot};
@@ -797,7 +799,8 @@ async fn test_reverting_transaction() -> Result<(), Error> {
         .await?;
     let contract_instance = RevertingContractBuilder::new(contract_id.to_string(), wallet).build();
     let response = contract_instance.make_transaction_fail(0).call().await;
-    assert!(matches!(response, Err(Error::ContractCallError(..))));
+
+    assert!(matches!(response, Err(Error::RevertTransactionError(..))));
 
     Ok(())
 }
@@ -1064,7 +1067,7 @@ async fn test_gas_errors() -> Result<(), Error> {
         .await
         .expect_err("should error");
 
-    let expected = "Contract call error: OutOfGas, receipts:";
+    let expected = "Revert transaction error: OutOfGas, receipts:";
     assert!(response.to_string().starts_with(expected));
 
     // Test for running out of gas. Gas price as `None` will be 0.
@@ -1076,7 +1079,7 @@ async fn test_gas_errors() -> Result<(), Error> {
         .await
         .expect_err("should error");
 
-    let expected = "Contract call error: OutOfGas, receipts:";
+    let expected = "Revert transaction error: OutOfGas, receipts:";
 
     assert!(response.to_string().starts_with(expected));
     Ok(())
@@ -1110,7 +1113,7 @@ async fn test_call_param_gas_errors() -> Result<(), Error> {
         .await
         .expect_err("should error");
 
-    let expected = "Contract call error: OutOfGas, receipts:";
+    let expected = "Revert transaction error: OutOfGas, receipts:";
     assert!(response.to_string().starts_with(expected));
 
     // Call params gas_forwarded exceeds transaction limit
@@ -1122,7 +1125,7 @@ async fn test_call_param_gas_errors() -> Result<(), Error> {
         .await
         .expect_err("should error");
 
-    let expected = "Contract call error: OutOfGas, receipts:";
+    let expected = "Revert transaction error: OutOfGas, receipts:";
     assert!(response.to_string().starts_with(expected));
     Ok(())
 }
@@ -1498,7 +1501,7 @@ async fn test_logd_receipts() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_wallet_balance_api() -> Result<(), ProviderError> {
+async fn test_wallet_balance_api() -> Result<(), Error> {
     // Single asset
     let mut wallet = LocalWallet::new_random(None);
     let number_of_coins = 21;
@@ -1598,7 +1601,7 @@ async fn test_transaction_script_workflow() -> Result<(), Error> {
     );
 
     let wallet = launch_provider_and_get_wallet().await;
-    let client = &wallet.get_provider()?.client;
+    let provider = &wallet.get_provider()?;
 
     let contract_id = Contract::deploy(
         "tests/test_projects/contract_test/out/debug/contract_test.bin",
@@ -1615,7 +1618,7 @@ async fn test_transaction_script_workflow() -> Result<(), Error> {
     let script = call_handler.get_script().await;
     assert!(script.tx.is_script());
 
-    let receipts = script.call(client).await?;
+    let receipts = script.call(provider).await?;
 
     let response = call_handler.get_response(receipts)?;
     assert_eq!(response.value, 42);
@@ -1863,7 +1866,7 @@ async fn test_multi_call_script_workflow() -> Result<(), Error> {
     );
 
     let wallet = launch_provider_and_get_wallet().await;
-    let client = &wallet.get_provider()?.client;
+    let provider = &wallet.get_provider()?;
 
     let contract_id = Contract::deploy(
         "tests/test_projects/contract_test/out/debug/contract_test.bin",
@@ -1885,7 +1888,7 @@ async fn test_multi_call_script_workflow() -> Result<(), Error> {
         .add_call(call_handler_2);
 
     let script = multi_call_handler.get_script().await;
-    let receipts = script.call(client).await.unwrap();
+    let receipts = script.call(provider).await.unwrap();
     let (counter, array) = multi_call_handler
         .get_response::<(u64, Vec<u64>)>(receipts)?
         .value;
@@ -2282,4 +2285,227 @@ async fn test_contract_id_and_wallet_getters() {
         contract_instance._get_contract_id().to_string(),
         contract_id
     );
+}
+
+#[tokio::test]
+async fn test_network_error() -> Result<(), anyhow::Error> {
+    abigen!(
+        MyContract,
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+    );
+
+    let mut wallet = LocalWallet::new_random(None);
+
+    let config = CoreConfig::local_node();
+    let service = FuelService::new_node(config).await?;
+    let provider = Provider::connect(service.bound_address).await?;
+
+    wallet.set_provider(provider);
+
+    // Simulate an unreachable node
+    service.stop().await;
+
+    let response = Contract::deploy(
+        "tests/test_projects/contract_test/out/debug/contract_test.bin",
+        &wallet,
+        TxParameters::default(),
+        StorageConfiguration::default(),
+    )
+    .await;
+
+    assert!(matches!(response, Err(Error::ProviderError(_))));
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn str_in_array() -> Result<(), Error> {
+    abigen!(
+        MyContract,
+        "packages/fuels/tests/test_projects/str_in_array/out/debug/str_in_array-abi.json"
+    );
+
+    let wallet = launch_provider_and_get_wallet().await;
+
+    let contract_id = Contract::deploy(
+        "tests/test_projects/str_in_array/out/debug/str_in_array.bin",
+        &wallet,
+        TxParameters::default(),
+        StorageConfiguration::default(),
+    )
+    .await?;
+
+    let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
+
+    let input = vec!["foo".to_string(), "bar".to_string(), "baz".to_string()];
+    let response = contract_instance
+        .take_array_string_shuffle(input.clone())
+        .call()
+        .await?;
+
+    assert_eq!(response.value, ["baz", "foo", "bar"]);
+
+    let response = contract_instance
+        .take_array_string_return_single(input.clone())
+        .call()
+        .await?;
+
+    assert_eq!(response.value, ["foo"]);
+
+    // This test is skipped because of a compiler error.
+    // See: https://github.com/FuelLabs/sway/issues/2410
+    // let response = contract_instance
+    //     .take_array_string_return_single_element(input)
+    //     .call()
+    //     .await?;
+
+    // assert_eq!(response.value, "baz");
+
+    Ok(())
+}
+
+#[tokio::test]
+#[should_panic(expected = "String data has len ")]
+async fn strings_must_have_correct_length() {
+    abigen!(
+        SimpleContract,
+        r#"
+        [
+            {
+                "type":"contract",
+                "inputs":[
+                    {
+                        "name":"arg",
+                        "type":"str[4]"
+                    }
+                ],
+                "name":"takes_string",
+                "outputs":[
+
+                ]
+            }
+        ]
+        "#,
+    );
+
+    let wallet = launch_provider_and_get_wallet().await;
+    let contract_instance = SimpleContractBuilder::new(null_contract_id(), wallet).build();
+    let _ = contract_instance.takes_string("fuell".into());
+}
+
+#[tokio::test]
+#[should_panic(expected = "String data can only have ascii values")]
+async fn strings_must_have_all_ascii_chars() {
+    abigen!(
+        SimpleContract,
+        r#"
+        [
+            {
+                "type":"contract",
+                "inputs":[
+                    {
+                        "name":"arg",
+                        "type":"str[4]"
+                    }
+                ],
+                "name":"takes_string",
+                "outputs":[
+
+                ]
+            }
+        ]
+        "#,
+    );
+
+    let wallet = launch_provider_and_get_wallet().await;
+    let contract_instance = SimpleContractBuilder::new(null_contract_id(), wallet).build();
+    let _ = contract_instance.takes_string("fueŁ".into());
+}
+
+#[tokio::test]
+#[should_panic(expected = "String data has len ")]
+async fn strings_must_have_correct_length_custom_types() {
+    abigen!(
+        SimpleContract,
+        r#"
+        [
+            {
+                "type":"contract",
+                "inputs":[
+                    {
+                        "name":"value",
+                        "type":"enum MyEnum",
+                        "components": [
+                            {
+                                "name": "foo",
+                                "type": "[u8; 2]"
+                            },
+                            {
+                                "name": "bar",
+                                "type": "str[4]"
+                            }
+                        ]
+                    }
+                ],
+                "name":"takes_enum",
+                "outputs":[]
+            }
+        ]
+        "#,
+    );
+
+    let wallet = launch_provider_and_get_wallet().await;
+    let contract_instance = SimpleContractBuilder::new(null_contract_id(), wallet).build();
+    let _ = contract_instance.takes_enum(MyEnum::bar("fuell".to_string()));
+}
+
+#[tokio::test]
+#[should_panic(expected = "String data can only have ascii values")]
+async fn strings_must_have_all_ascii_chars_custom_types() {
+    abigen!(
+        SimpleContract,
+        r#"
+        [
+            {
+                "type":"contract",
+                "inputs":[
+                    {
+                        "name":"top_value",
+                        "type":"struct MyNestedStruct",
+                        "components": [
+                            {
+                                "name": "x",
+                                "type": "u16"
+                            },
+                            {
+                                "name": "foo",
+                                "type": "struct InnerStruct",
+                                "components": [
+                                    {
+                                        "name":"bar",
+                                        "type": "str[4]"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                "name":"takes_nested_struct",
+                "outputs":[]
+            }
+        ]
+        "#,
+    );
+
+    let inner_struct = InnerStruct {
+        bar: "fueŁ".to_string(),
+    };
+    let input = MyNestedStruct {
+        x: 10,
+        foo: inner_struct,
+    };
+
+    let wallet = launch_provider_and_get_wallet().await;
+    let contract_instance = SimpleContractBuilder::new(null_contract_id(), wallet).build();
+    let _ = contract_instance.takes_nested_struct(input);
 }

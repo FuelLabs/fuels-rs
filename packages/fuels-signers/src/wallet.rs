@@ -1,4 +1,4 @@
-use crate::provider::{Provider, ProviderError};
+use crate::provider::Provider;
 use crate::Signer;
 use async_trait::async_trait;
 use coins_bip32::{path::DerivationPath, Bip32Error};
@@ -14,7 +14,7 @@ use fuels_core::parameters::TxParameters;
 use fuels_types::bech32::{Bech32Address, Bech32ContractId, FUEL_BECH32_HRP};
 use fuels_types::errors::Error;
 use rand::{CryptoRng, Rng};
-use std::{collections::HashMap, fmt, io, path::Path, str::FromStr};
+use std::{collections::HashMap, fmt, path::Path, str::FromStr};
 use thiserror::Error;
 
 const DEFAULT_DERIVATION_PATH_PREFIX: &str = "m/44'/1179993420'/0'/0/";
@@ -74,21 +74,14 @@ pub enum WalletError {
     /// Error propagated from the hex crate.
     #[error(transparent)]
     Hex(#[from] hex::FromHexError),
-    /// Error propagated by IO operations
-    #[error(transparent)]
-    Io(#[from] std::io::Error),
     /// Error propagated by parsing of a slice
     #[error("Failed to parse slice")]
     Parsing(#[from] std::array::TryFromSliceError),
     #[error("No provider was setup: make sure to set_provider in your wallet!")]
     NoProvider,
-    #[error("Provider error: {0}")]
-    ProviderError(#[from] ProviderError),
     /// Keystore error
     #[error(transparent)]
     KeystoreError(#[from] KeystoreError),
-    #[error("invalid mnemonic word count (expected 12, 15, 18, 21, 24, found `{0}`")]
-    InvalidMnemonicWordCount(usize),
     #[error(transparent)]
     MnemonicError(#[from] MnemonicError),
     #[error(transparent)]
@@ -127,11 +120,11 @@ impl Wallet {
     pub async fn get_transactions(
         &self,
         request: PaginationRequest<String>,
-    ) -> std::io::Result<PaginatedResult<TransactionResponse, String>> {
-        self.get_provider()
-            .unwrap()
-            .get_transactions_by_owner(&self.address, request)
+    ) -> Result<PaginatedResult<TransactionResponse, String>, Error> {
+        self.get_provider()?
+            .get_transactions_by_owner(self.address(), request)
             .await
+            .map_err(Into::into)
     }
 
     /// Creates a new wallet from a mnemonic phrase.
@@ -277,7 +270,7 @@ impl Wallet {
         amount: u64,
         asset_id: AssetId,
         tx_parameters: TxParameters,
-    ) -> Result<(String, Vec<Receipt>), WalletError> {
+    ) -> Result<(String, Vec<Receipt>), Error> {
         let inputs = self
             .get_asset_inputs_for_amount(asset_id, amount, 0)
             .await?;
@@ -301,7 +294,7 @@ impl Wallet {
 
     /// Unconditionally transfers `balance` of type `asset_id` to
     /// the contract at `to`.
-    /// Fails if balance for `asset_id` is larger than this wallet's spendable coins.
+    /// Fails if balance for `asset_id` is larger than this wallet's spendable balance.
     /// Returns the corresponding transaction ID and the list of receipts.
     ///
     /// CAUTION !!!
@@ -314,7 +307,7 @@ impl Wallet {
         balance: u64,
         asset_id: AssetId,
         tx_parameters: TxParameters,
-    ) -> Result<(String, Vec<Receipt>), WalletError> {
+    ) -> Result<(String, Vec<Receipt>), Error> {
         let zeroes = Bytes32::zeroed();
         let plain_contract_id: ContractId = to.into();
 
@@ -361,7 +354,7 @@ impl Wallet {
         asset_id: AssetId,
         amount: u64,
         witness_index: u8,
-    ) -> Result<Vec<Input>, WalletError> {
+    ) -> Result<Vec<Input>, Error> {
         let spendable = self.get_spendable_coins(&asset_id, amount).await?;
         let mut inputs = vec![];
         for coin in spendable {
@@ -379,12 +372,8 @@ impl Wallet {
     }
 
     /// Gets all coins owned by the wallet, *even spent ones*. This returns actual coins (UTXOs).
-    pub async fn get_coins(&self) -> Result<Vec<Coin>, WalletError> {
-        Ok(self
-            .get_provider()
-            .unwrap()
-            .get_coins(self.address())
-            .await?)
+    pub async fn get_coins(&self) -> Result<Vec<Coin>, Error> {
+        Ok(self.get_provider()?.get_coins(self.address()).await?)
     }
 
     /// Get some spendable coins of asset `asset_id` owned by the wallet that add up at least to
@@ -394,27 +383,31 @@ impl Wallet {
         &self,
         asset_id: &AssetId,
         amount: u64,
-    ) -> io::Result<Vec<Coin>> {
-        self.get_provider()
-            .unwrap()
+    ) -> Result<Vec<Coin>, Error> {
+        self.get_provider()?
             .get_spendable_coins(self.address(), *asset_id, amount)
             .await
+            .map_err(Into::into)
     }
 
     /// Get the balance of all spendable coins `asset_id` for address `address`. This is different
     /// from getting coins because we are just returning a number (the sum of UTXOs amount) instead
     /// of the UTXOs.
-    pub async fn get_asset_balance(&self, asset_id: &AssetId) -> Result<u64, ProviderError> {
+    pub async fn get_asset_balance(&self, asset_id: &AssetId) -> Result<u64, Error> {
         self.get_provider()?
-            .get_asset_balance(self.address(), *asset_id)
+            .get_asset_balance(&self.address, *asset_id)
             .await
+            .map_err(Into::into)
     }
 
     /// Get all the spendable balances of all assets for the wallet. This is different from getting
     /// the coins because we are only returning the sum of UTXOs coins amount and not the UTXOs
     /// coins themselves.
-    pub async fn get_balances(&self) -> Result<HashMap<String, u64>, ProviderError> {
-        self.get_provider()?.get_balances(self.address()).await
+    pub async fn get_balances(&self) -> Result<HashMap<String, u64>, Error> {
+        self.get_provider()?
+            .get_balances(&self.address)
+            .await
+            .map_err(Into::into)
     }
 }
 

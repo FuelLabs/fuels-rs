@@ -1,4 +1,4 @@
-use crate::Token;
+use crate::{StringToken, Token};
 use core::convert::TryInto;
 use core::str;
 use fuel_types::bytes::padded_len;
@@ -39,7 +39,7 @@ impl ABIDecoder {
     }
 
     fn decode_param(param: &ParamType, data: &[u8]) -> Result<DecodeResult, CodecError> {
-        match &*param {
+        match param {
             ParamType::Unit => Self::decode_unit(data),
             ParamType::U8 => Self::decode_u8(data),
             ParamType::U16 => Self::decode_u16(data),
@@ -48,8 +48,8 @@ impl ABIDecoder {
             ParamType::Bool => Self::decode_bool(data),
             ParamType::Byte => Self::decode_byte(data),
             ParamType::B256 => Self::decode_b256(data),
-            ParamType::String(length) => Self::decode_string(data, length),
-            ParamType::Array(ref t, length) => Self::decode_array(data, t, length),
+            ParamType::String(length) => Self::decode_string(data, *length),
+            ParamType::Array(ref t, length) => Self::decode_array(data, t, *length),
             ParamType::Struct(props) => Self::decode_struct(data, props),
             ParamType::Enum(variants) => Self::decode_enum(data, variants),
             ParamType::Tuple(types) => Self::decode_tuple(data, types),
@@ -91,15 +91,11 @@ impl ABIDecoder {
         Ok(result)
     }
 
-    fn decode_array(
-        data: &[u8],
-        t: &ParamType,
-        length: &usize,
-    ) -> Result<DecodeResult, CodecError> {
+    fn decode_array(data: &[u8], t: &ParamType, length: usize) -> Result<DecodeResult, CodecError> {
         let mut tokens = vec![];
         let mut bytes_read = 0;
 
-        for _ in 0..*length {
+        for _ in 0..length {
             let res = Self::decode_param(t, &data[bytes_read..])?;
             bytes_read += res.bytes_read;
             tokens.push(res.token);
@@ -113,13 +109,13 @@ impl ABIDecoder {
         Ok(result)
     }
 
-    fn decode_string(data: &[u8], length: &usize) -> Result<DecodeResult, CodecError> {
-        let encoded_str = peek(data, *length)?;
+    fn decode_string(data: &[u8], length: usize) -> Result<DecodeResult, CodecError> {
+        let encoded_str = peek(data, length)?;
 
         let decoded = str::from_utf8(encoded_str)?;
 
         let result = DecodeResult {
-            token: Token::String(decoded.to_string()),
+            token: Token::String(StringToken::new(decoded.into(), length)),
             bytes_read: padded_len(encoded_str),
         };
 
@@ -383,13 +379,14 @@ mod tests {
         let decoded = ABIDecoder::decode(&types, &data)?;
 
         let expected = vec![
-            Token::String("This is a full sentence".into()),
-            Token::String("Hello".into()),
+            Token::String(StringToken::new("This is a full sentence".into(), 23)),
+            Token::String(StringToken::new("Hello".into(), 5)),
         ];
 
         assert_eq!(decoded, expected);
         Ok(())
     }
+
     #[test]
     fn decode_array() -> Result<(), Error> {
         // Create a parameter type for u8[2].
@@ -598,7 +595,7 @@ mod tests {
             0xf3, 0x1e, 0x93, 0xb,
         ]);
 
-        let s = Token::String("This is a full sentence".into());
+        let s = Token::String(StringToken::new("This is a full sentence".into(), 23));
 
         let expected: Vec<Token> = vec![foo, u8_arr, b256, s];
 
