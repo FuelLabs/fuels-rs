@@ -14,4 +14,3 @@ fn main() -> bool {
 
     received.has_account == expected_has_account && received.total_complete == expected_total_complete
 }
-
