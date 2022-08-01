@@ -2286,35 +2286,33 @@ async fn can_call_no_arg_predicate_returns_true() -> anyhow::Result<(), anyhow::
     )
     .await;
     let wallet = &wallets[0];
+    let provider: &Provider = wallet.get_provider()?;
 
     let instance = Predicate::new(predicate_code);
     instance
         .deploy_predicate(wallet, amount_to_predicate, asset_id)
         .await?;
-    let receiver_balance_before = wallet
-        .get_provider()?
+    let receiver_balance_before = provider
         .get_asset_balance(&receiver_address, asset_id)
         .await?;
     assert_eq!(receiver_balance_before, 0);
     instance
         .spend_predicate(
-            wallet.get_provider()?,
+            provider,
             amount_to_predicate,
             asset_id,
             receiver_address,
             None,
         )
         .await?;
-    let receiver_balance_after = wallet
-        .get_provider()?
+    let receiver_balance_after = provider
         .get_asset_balance(&receiver_address, asset_id)
         .await?;
     assert_eq!(
         receiver_balance_before + amount_to_predicate,
         receiver_balance_after
     );
-    let predicate_balance = wallet
-        .get_provider()?
+    let predicate_balance = provider
         .get_asset_balance(&instance.address, asset_id)
         .await?;
     assert_eq!(predicate_balance, 0);
@@ -2338,21 +2336,21 @@ async fn can_call_no_arg_predicate_returns_false() -> anyhow::Result<(), anyhow:
     )
     .await;
     let wallet = &wallets[0];
+    let provider: &Provider = wallet.get_provider()?;
 
     let instance = Predicate::new(predicate_code);
     instance
         .deploy_predicate(wallet, amount_to_predicate, asset_id)
         .await?;
 
-    let receiver_balance_before = wallet
-        .get_provider()?
+    let receiver_balance_before = provider
         .get_asset_balance(&receiver_address, asset_id)
         .await?;
     assert_eq!(receiver_balance_before, 0);
 
     instance
         .spend_predicate(
-            wallet.get_provider()?,
+            provider,
             amount_to_predicate,
             asset_id,
             receiver_address,
@@ -2360,13 +2358,11 @@ async fn can_call_no_arg_predicate_returns_false() -> anyhow::Result<(), anyhow:
         )
         .await
         .expect_err("should error");
-    let receiver_balance_after = wallet
-        .get_provider()?
+    let receiver_balance_after = provider
         .get_asset_balance(&receiver_address, asset_id)
         .await?;
     assert_eq!(receiver_balance_before, receiver_balance_after);
-    let predicate_balance = wallet
-        .get_provider()?
+    let predicate_balance = provider
         .get_asset_balance(&instance.address, asset_id)
         .await?;
     assert_eq!(predicate_balance, amount_to_predicate);
@@ -2391,13 +2387,13 @@ async fn can_call_predicate_with_u32_data() -> anyhow::Result<(), anyhow::Error>
     )
     .await;
     let wallet = &wallets[0];
+    let provider: &Provider = wallet.get_provider()?;
 
     let instance = Predicate::new(predicate_code);
     instance
         .deploy_predicate(wallet, amount_to_predicate, asset_id)
         .await?;
-    let receiver_balance_before = wallet
-        .get_provider()?
+    let receiver_balance_before = provider
         .get_asset_balance(&receiver_address, asset_id)
         .await?;
     assert_eq!(receiver_balance_before, 0);
@@ -2406,7 +2402,7 @@ async fn can_call_predicate_with_u32_data() -> anyhow::Result<(), anyhow::Error>
     let predicate_data = ABIEncoder::encode(&[Token::U32(101_u32)]).unwrap();
     instance
         .spend_predicate(
-            wallet.get_provider()?,
+            provider,
             amount_to_predicate,
             asset_id,
             receiver_address,
@@ -2414,13 +2410,11 @@ async fn can_call_predicate_with_u32_data() -> anyhow::Result<(), anyhow::Error>
         )
         .await
         .expect_err("should error");
-    let receiver_balance_after = wallet
-        .get_provider()?
+    let receiver_balance_after = provider
         .get_asset_balance(&receiver_address, asset_id)
         .await?;
     assert_eq!(receiver_balance_before, receiver_balance_after);
-    let predicate_balance = wallet
-        .get_provider()?
+    let predicate_balance = provider
         .get_asset_balance(&instance.address, asset_id)
         .await?;
     assert_eq!(predicate_balance, amount_to_predicate);
@@ -2429,23 +2423,21 @@ async fn can_call_predicate_with_u32_data() -> anyhow::Result<(), anyhow::Error>
     let predicate_data = ABIEncoder::encode(&[Token::U32(1078_u32)]).unwrap();
     instance
         .spend_predicate(
-            wallet.get_provider()?,
+            provider,
             amount_to_predicate,
             asset_id,
             receiver_address,
             Some(predicate_data),
         )
         .await?;
-    let receiver_balance_after = wallet
-        .get_provider()?
+    let receiver_balance_after = provider
         .get_asset_balance(&receiver_address, asset_id)
         .await?;
     assert_eq!(
         receiver_balance_before + amount_to_predicate,
         receiver_balance_after
     );
-    let predicate_balance = wallet
-        .get_provider()?
+    let predicate_balance = provider
         .get_asset_balance(&instance.address, asset_id)
         .await?;
     assert_eq!(predicate_balance, 0);
@@ -2475,35 +2467,33 @@ async fn can_call_predicate_with_address_data() -> anyhow::Result<(), anyhow::Er
     )
     .await;
     let wallet = &wallets[0];
+    let provider: &Provider = wallet.get_provider()?;
 
     let instance = Predicate::new(predicate_code);
     instance
         .deploy_predicate(wallet, amount_to_predicate, asset_id)
         .await?;
-    let receiver_balance_before = wallet
-        .get_provider()?
+    let receiver_balance_before = provider
         .get_asset_balance(&receiver_address, asset_id)
         .await?;
     assert_eq!(receiver_balance_before, 0);
     instance
         .spend_predicate(
-            wallet.get_provider()?,
+            provider,
             amount_to_predicate,
             asset_id,
             receiver_address,
             Some(predicate_data),
         )
         .await?;
-    let receiver_balance_after = wallet
-        .get_provider()?
+    let receiver_balance_after = provider
         .get_asset_balance(&receiver_address, asset_id)
         .await?;
     assert_eq!(
         receiver_balance_before + amount_to_predicate,
         receiver_balance_after
     );
-    let predicate_balance = wallet
-        .get_provider()?
+    let predicate_balance = provider
         .get_asset_balance(&instance.address, asset_id)
         .await?;
     assert_eq!(predicate_balance, 0);
@@ -2528,13 +2518,13 @@ async fn can_call_predicate_with_struct_data() -> anyhow::Result<(), anyhow::Err
     )
     .await;
     let wallet = &wallets[0];
+    let provider: &Provider = wallet.get_provider()?;
 
     let instance = Predicate::new(predicate_code);
     instance
         .deploy_predicate(wallet, amount_to_predicate, asset_id)
         .await?;
-    let receiver_balance_before = wallet
-        .get_provider()?
+    let receiver_balance_before = provider
         .get_asset_balance(&receiver_address, asset_id)
         .await?;
     assert_eq!(receiver_balance_before, 0);
@@ -2546,7 +2536,7 @@ async fn can_call_predicate_with_struct_data() -> anyhow::Result<(), anyhow::Err
     let predicate_data = ABIEncoder::encode(&args).unwrap();
     instance
         .spend_predicate(
-            wallet.get_provider()?,
+            provider,
             amount_to_predicate,
             asset_id,
             receiver_address,
@@ -2554,13 +2544,11 @@ async fn can_call_predicate_with_struct_data() -> anyhow::Result<(), anyhow::Err
         )
         .await
         .expect_err("should error");
-    let receiver_balance_after = wallet
-        .get_provider()?
+    let receiver_balance_after = provider
         .get_asset_balance(&receiver_address, asset_id)
         .await?;
     assert_eq!(receiver_balance_before, receiver_balance_after);
-    let predicate_balance = wallet
-        .get_provider()?
+    let predicate_balance = provider
         .get_asset_balance(&instance.address, asset_id)
         .await?;
     assert_eq!(predicate_balance, amount_to_predicate);
@@ -2572,7 +2560,7 @@ async fn can_call_predicate_with_struct_data() -> anyhow::Result<(), anyhow::Err
     let predicate_data = ABIEncoder::encode(&args).unwrap();
     instance
         .spend_predicate(
-            wallet.get_provider()?,
+            provider,
             amount_to_predicate,
             asset_id,
             receiver_address,
@@ -2580,13 +2568,11 @@ async fn can_call_predicate_with_struct_data() -> anyhow::Result<(), anyhow::Err
         )
         .await
         .expect_err("should error");
-    let receiver_balance_after = wallet
-        .get_provider()?
+    let receiver_balance_after = provider
         .get_asset_balance(&receiver_address, asset_id)
         .await?;
     assert_eq!(receiver_balance_before, receiver_balance_after);
-    let predicate_balance = wallet
-        .get_provider()?
+    let predicate_balance = provider
         .get_asset_balance(&instance.address, asset_id)
         .await?;
     assert_eq!(predicate_balance, amount_to_predicate);
@@ -2598,23 +2584,21 @@ async fn can_call_predicate_with_struct_data() -> anyhow::Result<(), anyhow::Err
     let predicate_data = ABIEncoder::encode(&args).unwrap();
     instance
         .spend_predicate(
-            wallet.get_provider()?,
+            provider,
             amount_to_predicate,
             asset_id,
             receiver_address,
             Some(predicate_data),
         )
         .await?;
-    let receiver_balance_after = wallet
-        .get_provider()?
+    let receiver_balance_after = provider
         .get_asset_balance(&receiver_address, asset_id)
         .await?;
     assert_eq!(
         receiver_balance_before + amount_to_predicate,
         receiver_balance_after
     );
-    let predicate_balance = wallet
-        .get_provider()?
+    let predicate_balance = provider
         .get_asset_balance(&instance.address, asset_id)
         .await?;
     assert_eq!(predicate_balance, 0);
