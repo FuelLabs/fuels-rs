@@ -2351,7 +2351,6 @@ async fn can_call_no_arg_predicate_returns_false() -> Result<(), anyhow::Error> 
         .get_asset_balance(&instance.address.into(), asset_id)
         .await?;
     assert_eq!(predicate_balance, amount_to_predicate);
-    assert_eq!(predicate_balance, 0);
     Ok(())
 }
 
