@@ -1,3 +1,4 @@
+use fuel_core::service::{Config, FuelService};
 use fuel_gql_client::fuel_tx::{AssetId, ContractId, Receipt};
 use fuels::contract::contract::MultiContractCallHandler;
 use fuels::contract::predicate::Predicate;
@@ -31,8 +32,8 @@ fn init_tracing() {
 }
 
 fn null_contract_id() -> String {
-    // a null contract address ~[0u8;32]
-    String::from("0000000000000000000000000000000000000000000000000000000000000000")
+    // a bech32 contract address that decodes to ~[0u8;32]
+    String::from("fuel1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqsx2mt2")
 }
 
 #[tokio::test]
@@ -655,7 +656,6 @@ async fn type_safe_output_values() -> Result<(), Error> {
         StorageConfiguration::default(),
     )
     .await?;
-    println!("Contract deployed @ {:x}", contract_id);
 
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
 
@@ -707,7 +707,6 @@ async fn call_with_structs() -> Result<(), Error> {
         StorageConfiguration::default(),
     )
     .await?;
-    println!("Contract deployed @ {:x}", contract_id);
 
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
 
@@ -742,7 +741,6 @@ async fn call_with_empty_return() -> Result<(), Error> {
         StorageConfiguration::default(),
     )
     .await?;
-    println!("Contract deployed @ {:x}", contract_id);
 
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
 
@@ -769,7 +767,6 @@ async fn abigen_different_structs_same_arg_name() -> Result<(), Error> {
         StorageConfiguration::default(),
     )
     .await?;
-    println!("Contract deployed @ {:x}", contract_id);
 
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
 
@@ -804,9 +801,10 @@ async fn test_reverting_transaction() -> Result<(), Error> {
     )
         .await?;
     let contract_instance = RevertingContractBuilder::new(contract_id.to_string(), wallet).build();
-    println!("Contract deployed @ {:x}", contract_id);
     let response = contract_instance.make_transaction_fail(0).call().await;
-    assert!(matches!(response, Err(Error::ContractCallError(..))));
+
+    assert!(matches!(response, Err(Error::RevertTransactionError(..))));
+
     Ok(())
 }
 
@@ -826,7 +824,6 @@ async fn multiple_read_calls() -> Result<(), Error> {
         StorageConfiguration::default(),
     )
     .await?;
-    println!("Contract deployed @ {:x}", contract_id);
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
 
     contract_instance.store(42).call().await?;
@@ -862,7 +859,6 @@ async fn test_methods_typeless_argument() -> Result<(), Error> {
         StorageConfiguration::default(),
     )
     .await?;
-    println!("Contract deployed @ {:x}", contract_id);
 
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
 
@@ -890,7 +886,6 @@ async fn test_large_return_data() -> Result<(), Error> {
         StorageConfiguration::default(),
     )
     .await?;
-    println!("Contract deployed @ {:x}", contract_id);
 
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
 
@@ -962,7 +957,6 @@ async fn test_provider_launch_and_connect() -> Result<(), Error> {
         StorageConfiguration::default(),
     )
     .await?;
-    println!("Contract deployed @ {:x}", contract_id);
 
     let contract_instance_connected =
         MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
@@ -1008,7 +1002,6 @@ async fn test_contract_calling_contract() -> Result<(), Error> {
         StorageConfiguration::default(),
     )
     .await?;
-    println!("Foo contract deployed @ {:x}", foo_contract_id);
 
     let foo_contract_instance =
         FooContractBuilder::new(foo_contract_id.to_string(), wallet.clone()).build();
@@ -1025,10 +1018,6 @@ async fn test_contract_calling_contract() -> Result<(), Error> {
         StorageConfiguration::default(),
     )
     .await?;
-    println!(
-        "Foo caller contract deployed @ {:x}",
-        foo_caller_contract_id
-    );
 
     let foo_caller_contract_instance =
         FooCallerBuilder::new(foo_caller_contract_id.to_string(), wallet.clone()).build();
@@ -1037,7 +1026,7 @@ async fn test_contract_calling_contract() -> Result<(), Error> {
     // flips the bool value passed to it.
     // ANCHOR: external_contract
     let res = foo_caller_contract_instance
-        .call_foo_contract(*foo_contract_id, true)
+        .call_foo_contract(*foo_contract_id.hash(), true)
         .set_contracts(&[foo_contract_id]) // Sets the external contract
         .call()
         .await?;
@@ -1081,7 +1070,7 @@ async fn test_gas_errors() -> Result<(), Error> {
         .await
         .expect_err("should error");
 
-    let expected = "Contract call error: OutOfGas, receipts:";
+    let expected = "Revert transaction error: OutOfGas, receipts:";
     assert!(response.to_string().starts_with(expected));
 
     // Test for running out of gas. Gas price as `None` will be 0.
@@ -1093,7 +1082,7 @@ async fn test_gas_errors() -> Result<(), Error> {
         .await
         .expect_err("should error");
 
-    let expected = "Contract call error: OutOfGas, receipts:";
+    let expected = "Revert transaction error: OutOfGas, receipts:";
 
     assert!(response.to_string().starts_with(expected));
     Ok(())
@@ -1127,7 +1116,7 @@ async fn test_call_param_gas_errors() -> Result<(), Error> {
         .await
         .expect_err("should error");
 
-    let expected = "Contract call error: OutOfGas, receipts:";
+    let expected = "Revert transaction error: OutOfGas, receipts:";
     assert!(response.to_string().starts_with(expected));
 
     // Call params gas_forwarded exceeds transaction limit
@@ -1139,7 +1128,7 @@ async fn test_call_param_gas_errors() -> Result<(), Error> {
         .await
         .expect_err("should error");
 
-    let expected = "Contract call error: OutOfGas, receipts:";
+    let expected = "Revert transaction error: OutOfGas, receipts:";
     assert!(response.to_string().starts_with(expected));
     Ok(())
 }
@@ -1163,12 +1152,18 @@ async fn test_amount_and_asset_forwarding() -> Result<(), Error> {
 
     let instance = TestFuelCoinContractBuilder::new(id.to_string(), wallet.clone()).build();
 
-    let mut balance_response = instance.get_balance(id, id).call().await?;
+    let mut balance_response = instance
+        .get_balance((&id).into(), (&id).into())
+        .call()
+        .await?;
     assert_eq!(balance_response.value, 0);
 
     instance.mint_coins(5_000_000).call().await?;
 
-    balance_response = instance.get_balance(id, id).call().await?;
+    balance_response = instance
+        .get_balance(id.clone().into(), (&id).into())
+        .call()
+        .await?;
     assert_eq!(balance_response.value, 5_000_000);
 
     let tx_params = TxParameters::new(None, Some(1_000_000), None, None);
@@ -1199,12 +1194,13 @@ async fn test_amount_and_asset_forwarding() -> Result<(), Error> {
 
     // withdraw some tokens to wallet
     instance
-        .transfer_coins_to_output(1_000_000, id, address)
+        .transfer_coins_to_output(1_000_000, (&id).into(), address.into())
         .append_variable_outputs(1)
         .call()
         .await?;
 
-    let call_params = CallParameters::new(Some(0), Some(AssetId::from(*id)), None);
+    let asset_id = AssetId::from(*id.hash());
+    let call_params = CallParameters::new(Some(0), Some(asset_id), None);
     let tx_params = TxParameters::new(None, Some(1_000_000), None, None);
 
     let response = instance
@@ -1226,7 +1222,7 @@ async fn test_amount_and_asset_forwarding() -> Result<(), Error> {
     assert_eq!(call_response.unwrap().amount().unwrap(), 0);
     assert_eq!(
         call_response.unwrap().asset_id().unwrap(),
-        &AssetId::from(*id)
+        &AssetId::from(*id.hash())
     );
     Ok(())
 }
@@ -1337,7 +1333,6 @@ async fn test_array() -> Result<(), Error> {
     )
     .await?;
 
-    println!("Contract deployed @ {:x}", contract_id);
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
 
     assert_eq!(
@@ -1370,7 +1365,6 @@ async fn test_arrays_with_custom_types() -> Result<(), Error> {
     )
     .await?;
 
-    println!("Contract deployed @ {:x}", contract_id);
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
 
     let persons = vec![
@@ -1420,7 +1414,7 @@ async fn test_auth_msg_sender_from_sdk() -> Result<(), Error> {
 
     // Contract returns true if `msg_sender()` matches `wallet.address()`.
     let response = auth_instance
-        .check_msg_sender(wallet.address())
+        .check_msg_sender(wallet.address().into())
         .call()
         .await?;
 
@@ -1510,7 +1504,7 @@ async fn test_logd_receipts() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_wallet_balance_api() -> Result<(), ProviderError> {
+async fn test_wallet_balance_api() -> Result<(), Error> {
     // Single asset
     let mut wallet = LocalWallet::new_random(None);
     let number_of_coins = 21;
@@ -1610,7 +1604,7 @@ async fn test_transaction_script_workflow() -> Result<(), Error> {
     );
 
     let wallet = launch_provider_and_get_wallet().await;
-    let client = &wallet.get_provider()?.client;
+    let provider = &wallet.get_provider()?;
 
     let contract_id = Contract::deploy(
         "tests/test_projects/contract_test/out/debug/contract_test.bin",
@@ -1627,7 +1621,7 @@ async fn test_transaction_script_workflow() -> Result<(), Error> {
     let script = call_handler.get_script().await;
     assert!(script.tx.is_script());
 
-    let receipts = script.call(client).await?;
+    let receipts = script.call(provider).await?;
 
     let response = call_handler.get_response(receipts)?;
     assert_eq!(response.value, 42);
@@ -1875,7 +1869,7 @@ async fn test_multi_call_script_workflow() -> Result<(), Error> {
     );
 
     let wallet = launch_provider_and_get_wallet().await;
-    let client = &wallet.get_provider()?.client;
+    let provider = &wallet.get_provider()?;
 
     let contract_id = Contract::deploy(
         "tests/test_projects/contract_test/out/debug/contract_test.bin",
@@ -1897,7 +1891,7 @@ async fn test_multi_call_script_workflow() -> Result<(), Error> {
         .add_call(call_handler_2);
 
     let script = multi_call_handler.get_script().await;
-    let receipts = script.call(client).await.unwrap();
+    let receipts = script.call(provider).await.unwrap();
     let (counter, array) = multi_call_handler
         .get_response::<(u64, Vec<u64>)>(receipts)?
         .value;
@@ -2086,8 +2080,6 @@ async fn test_init_storage_automatically() -> Result<(), Error> {
         .await?;
     // ANCHOR_END: automatic_storage
 
-    println!("Foo contract deployed @ {:x}", contract_id);
-
     let key1 =
         Bytes32::from_str("de9090cb50e71c2588c773487d1da7066d0c719849a7e58dc8b6397a25c567c0")
             .unwrap();
@@ -2131,7 +2123,7 @@ async fn test_init_storage_automatically_bad_json_path() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn contract_method_call_respects_maturity() -> anyhow::Result<()> {
+async fn contract_method_call_respects_maturity() -> Result<(), Error> {
     abigen!(
         MyContract,
         "packages/fuels/tests/test_projects/transaction_block_height/out/debug/transaction_block_height-abi.json"
@@ -2163,13 +2155,21 @@ async fn contract_method_call_respects_maturity() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-async fn contract_deployment_respects_maturity() -> anyhow::Result<()> {
+#[cfg(feature = "fuel-core-lib")]
+async fn contract_deployment_respects_maturity() -> Result<(), Error> {
     abigen!(
         MyContract,
         "packages/fuels/tests/test_projects/transaction_block_height/out/debug/transaction_block_height-abi.json"
     );
 
-    let wallet = launch_provider_and_get_wallet().await;
+    let config = Config {
+        manual_blocks_enabled: true,
+        ..Config::local_node()
+    };
+    let wallets =
+        launch_custom_provider_and_get_wallets(WalletsConfig::default(), Some(config)).await;
+    let wallet = &wallets[0];
+    let provider = wallet.get_provider()?;
 
     let deploy_w_maturity = |maturity| {
         let parameters = TxParameters {
@@ -2178,16 +2178,19 @@ async fn contract_deployment_respects_maturity() -> anyhow::Result<()> {
         };
         Contract::deploy(
             "tests/test_projects/transaction_block_height/out/debug/transaction_block_height.bin",
-            &wallet,
+            wallet,
             parameters,
             StorageConfiguration::default(),
         )
     };
 
     let err = deploy_w_maturity(1).await.expect_err("Should not have been able to deploy the contract since the block height (0) is less than the requested maturity (1)");
-    assert!(matches!(err, TransactionError(msg) if msg.contains("TransactionMaturity")));
+    assert!(matches!(
+        err,
+        Error::ValidationError(fuel_gql_client::fuel_tx::ValidationError::TransactionMaturity)
+    ));
 
-    produce_blocks(&wallet, 1).await?;
+    provider.produce_blocks(1).await?;
     deploy_w_maturity(1)
         .await
         .expect("Should be able to deploy now since maturity (1) is <= than the block height (1)");
@@ -2196,50 +2199,24 @@ async fn contract_deployment_respects_maturity() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-async fn can_increase_block_height() -> anyhow::Result<()> {
-    // ANCHOR: uses_produce_blocks_to_increase_block_height
-    let wallet = launch_provider_and_get_wallet().await;
-    let provider = &wallet.get_provider().unwrap();
+#[cfg(feature = "fuel-core-lib")]
+async fn can_increase_block_height() -> Result<(), Error> {
+    // ANCHOR: use_produce_blocks_to_increase_block_height
+    let config = Config {
+        manual_blocks_enabled: true, // Necessary so the `produce_blocks` API can be used locally
+        ..Config::local_node()
+    };
+    let wallets =
+        launch_custom_provider_and_get_wallets(WalletsConfig::default(), Some(config)).await;
+    let wallet = &wallets[0];
+    let provider = wallet.get_provider()?;
 
     assert_eq!(provider.latest_block_height().await?, 0);
 
-    produce_blocks(&wallet, 3).await?;
+    provider.produce_blocks(3).await?;
 
     assert_eq!(provider.latest_block_height().await?, 3);
-    // ANCHOR_END: uses_produce_blocks_to_increase_block_height
-    Ok(())
-}
-
-#[tokio::test]
-async fn gql_height_info_is_correct() -> anyhow::Result<()> {
-    abigen!(
-        MyContract,
-        "packages/fuels/tests/test_projects/transaction_block_height/out/debug/transaction_block_height-abi.json"
-    );
-
-    let wallet = launch_provider_and_get_wallet().await;
-    let provider = &wallet.get_provider().unwrap();
-
-    let id = Contract::deploy(
-        "tests/test_projects/transaction_block_height/out/debug/transaction_block_height.bin",
-        &wallet,
-        TxParameters::default(),
-        StorageConfiguration::default(),
-    )
-    .await?;
-    let instance = MyContractBuilder::new(id.to_string(), wallet.clone()).build();
-
-    let block_height_from_contract = || async {
-        Ok(instance.get_current_height().simulate().await?.value) as Result<u64, Error>
-    };
-
-    assert_eq!(provider.latest_block_height().await?, 1);
-    assert_eq!(block_height_from_contract().await?, 1);
-
-    produce_blocks(&wallet, 3).await?;
-
-    assert_eq!(provider.latest_block_height().await?, 4);
-    assert_eq!(block_height_from_contract().await?, 4);
+    // ANCHOR_END: use_produce_blocks_to_increase_block_height
     Ok(())
 }
 
@@ -2366,7 +2343,7 @@ async fn can_call_no_arg_predicate_returns_false() -> Result<(), anyhow::Error> 
         .get_asset_balance(&instance.address, asset_id)
         .await?;
     assert_eq!(predicate_balance, amount_to_predicate);
-
+    assert_eq!(predicate_balance, 0);
     Ok(())
 }
 
@@ -2602,5 +2579,127 @@ async fn can_call_predicate_with_struct_data() -> Result<(), anyhow::Error> {
         .get_asset_balance(&instance.address, asset_id)
         .await?;
     assert_eq!(predicate_balance, 0);
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_get_gas_used() -> anyhow::Result<()> {
+    abigen!(
+        MyContract,
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+    );
+
+    let wallet = launch_provider_and_get_wallet().await;
+
+    let id = Contract::deploy(
+        "tests/test_projects/contract_test/out/debug/contract_test.bin",
+        &wallet,
+        TxParameters::default(),
+        StorageConfiguration::default(),
+    )
+    .await?;
+
+    let instance = MyContractBuilder::new(id.to_string(), wallet.clone()).build();
+
+    let gas_used = instance.initialize_counter(42).call().await?.gas_used;
+
+    assert!(gas_used > 0);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_contract_id_and_wallet_getters() {
+    abigen!(
+        SimpleContract,
+        "packages/fuels/tests/takes_ints_returns_bool.json",
+    );
+
+    let wallet = launch_provider_and_get_wallet().await;
+    let contract_id =
+        String::from("fuel1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqsx2mt2");
+
+    let contract_instance = SimpleContractBuilder::new(contract_id.clone(), wallet.clone()).build();
+
+    assert_eq!(contract_instance._get_wallet().address(), wallet.address());
+    assert_eq!(
+        contract_instance._get_contract_id().to_string(),
+        contract_id
+    );
+}
+
+#[tokio::test]
+async fn test_network_error() -> Result<(), anyhow::Error> {
+    abigen!(
+        MyContract,
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+    );
+
+    let mut wallet = LocalWallet::new_random(None);
+
+    let config = Config::local_node();
+    let service = FuelService::new_node(config).await?;
+    let provider = Provider::connect(service.bound_address).await?;
+
+    wallet.set_provider(provider);
+
+    // Simulate an unreachable node
+    service.stop().await;
+
+    let response = Contract::deploy(
+        "tests/test_projects/contract_test/out/debug/contract_test.bin",
+        &wallet,
+        TxParameters::default(),
+        StorageConfiguration::default(),
+    )
+    .await;
+
+    assert!(matches!(response, Err(Error::ProviderError(_))));
+    Ok(())
+}
+
+#[tokio::test]
+async fn str_in_array() -> Result<(), Error> {
+    abigen!(
+        MyContract,
+        "packages/fuels/tests/test_projects/str_in_array/out/debug/str_in_array-abi.json"
+    );
+
+    let wallet = launch_provider_and_get_wallet().await;
+
+    let contract_id = Contract::deploy(
+        "tests/test_projects/str_in_array/out/debug/str_in_array.bin",
+        &wallet,
+        TxParameters::default(),
+        StorageConfiguration::default(),
+    )
+    .await?;
+
+    let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
+
+    let input = vec!["foo".to_string(), "bar".to_string(), "baz".to_string()];
+    let response = contract_instance
+        .take_array_string_shuffle(input.clone())
+        .call()
+        .await?;
+
+    assert_eq!(response.value, ["baz", "foo", "bar"]);
+
+    let response = contract_instance
+        .take_array_string_return_single(input.clone())
+        .call()
+        .await?;
+
+    assert_eq!(response.value, ["foo"]);
+
+    // This test is skipped because of a compiler error.
+    // See: https://github.com/FuelLabs/sway/issues/2410
+    // let response = contract_instance
+    //     .take_array_string_return_single_element(input)
+    //     .call()
+    //     .await?;
+
+    // assert_eq!(response.value, "baz");
+
     Ok(())
 }

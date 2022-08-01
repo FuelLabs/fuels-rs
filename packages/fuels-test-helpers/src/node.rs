@@ -1,14 +1,19 @@
-use std::borrow::Borrow;
+use anyhow::{bail, Error as AnyError};
 use std::fmt;
 use std::io::Write;
 use std::net::{Ipv4Addr, SocketAddr};
 use std::time::Duration;
+use tokio::sync::oneshot;
+
+use portpicker::is_free;
+use portpicker::pick_unused_port;
 
 use fuel_core_interfaces::model::BlockHeight;
+use fuel_core_interfaces::model::Coin;
 use fuel_gql_client::client::FuelClient;
+use fuel_gql_client::fuel_tx::{ConsensusParameters, UtxoId};
 use fuel_gql_client::fuel_vm::consts::WORD_SIZE;
 use fuel_types::{Address, AssetId, Bytes32, Word};
-use portpicker::Port;
 use serde::de::Error;
 use serde::{Deserialize, Serialize};
 use serde::{Deserializer, Serializer};
@@ -19,7 +24,7 @@ use std::process::Stdio;
 use tempfile::NamedTempFile;
 use tokio::process::Command;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct Config {
     pub addr: SocketAddr,
     pub utxo_validation: bool,
@@ -176,7 +181,35 @@ impl<'de> DeserializeAs<'de, BlockHeight> for HexNumber {
     }
 }
 
-pub fn get_node_config_json(coins: Value) -> NamedTempFile {
+pub fn get_node_config_json(
+    coins: Vec<(UtxoId, Coin)>,
+    consensus_parameters_config: Option<ConsensusParameters>,
+) -> Value {
+    let coin_configs: Vec<Value> = coins
+        .into_iter()
+        .map(|(utxo_id, coin)| {
+            serde_json::to_value(&CoinConfig {
+                tx_id: Some(*utxo_id.tx_id()),
+                output_index: Some(utxo_id.output_index() as u64),
+                block_created: Some(coin.block_created),
+                maturity: Some(coin.maturity),
+                owner: coin.owner,
+                amount: coin.amount,
+                asset_id: coin.asset_id,
+            })
+            .unwrap()
+        })
+        .collect();
+
+    let result = serde_json::to_string(&coin_configs).expect("Failed to stringify coins vector");
+
+    let coins: Value =
+        serde_json::from_str(result.as_str()).expect("Failed to build config_with_coins JSON");
+
+    let consensus_parameters =
+        serde_json::to_value(consensus_parameters_config.unwrap_or_default())
+            .expect("Failed to build transaction_parameters JSON");
+
     let config = json!({
       "chain_name": "local_testnet",
       "block_production": "Instant",
@@ -186,22 +219,13 @@ pub fn get_node_config_json(coins: Value) -> NamedTempFile {
       "initial_state": {
         "coins": coins
       },
-      "transaction_parameters": {
-        "contract_max_size": 16777216,
-        "max_inputs": 255,
-        "max_outputs": 255,
-        "max_witnesses": 255,
-        "max_gas_per_tx": 100000000,
-        "max_script_length": 1048576,
-        "max_script_data_length": 1048576,
-        "max_static_contracts": 255,
-        "max_storage_slots": 255,
-        "max_predicate_length": 1048576,
-        "max_predicate_data_length": 1048576,
-        "gas_price_factor": 1000000000,
-      }
+      "transaction_parameters": consensus_parameters
     });
 
+    config
+}
+
+fn write_temp_config_file(config: Value) -> NamedTempFile {
     let config_file = NamedTempFile::new();
 
     let _ = writeln!(
@@ -213,18 +237,31 @@ pub fn get_node_config_json(coins: Value) -> NamedTempFile {
     config_file.unwrap()
 }
 
-pub fn spawn_fuel_service(config_with_coins: Value, free_port: Port) {
+pub async fn new_fuel_node(
+    coins: Vec<(UtxoId, Coin)>,
+    consensus_parameters_config: Option<ConsensusParameters>,
+    socket_addr: SocketAddr,
+) {
+    // Create a new one-shot channel for sending single values across asynchronous tasks.
+    let (tx, rx) = oneshot::channel();
+
     tokio::spawn(async move {
-        let temp_config_file = get_node_config_json(config_with_coins);
-        let mut running_node = Command::new("fuel-core")
-            .arg("--ip")
-            .arg("127.0.0.1")
-            .arg("--port")
-            .arg(free_port.to_string())
-            .arg("--chain")
-            .arg(temp_config_file.borrow().path())
-            .arg("--db-type")
-            .arg("in-memory")
+        let config = get_node_config_json(coins, consensus_parameters_config);
+        let temp_config_file = write_temp_config_file(config);
+
+        let port = &socket_addr.port().to_string();
+        let args = vec![
+            "--ip",
+            "127.0.0.1",
+            "--port",
+            port,
+            "--db-type",
+            "in-memory",
+            "--chain",
+            temp_config_file.path().to_str().unwrap(),
+        ];
+
+        let mut running_node = Command::new("fuel-core").args(args)
             .kill_on_drop(true)
             .stdin(Stdio::null())
             .stdout(Stdio::null())
@@ -232,8 +269,15 @@ pub fn spawn_fuel_service(config_with_coins: Value, free_port: Port) {
             .expect("error: Couldn't read fuel-core: No such file or directory. Please check if fuel-core library is installed. \
         Try this https://fuellabs.github.io/sway/latest/introduction/installation.html");
 
+        let client = FuelClient::from(socket_addr);
+        server_health_check(&client).await;
+        // Sending single to RX to inform that the fuel core node is ready.
+        tx.send(()).unwrap();
+
         running_node.wait().await
     });
+    // Awaiting a signal from Tx that informs us if the fuel-core node is ready.
+    rx.await.unwrap();
 }
 
 pub async fn server_health_check(client: &FuelClient) {
@@ -248,5 +292,32 @@ pub async fn server_health_check(client: &FuelClient) {
 
     if !healthy {
         panic!("error: Could not connect to fuel core server.")
+    }
+}
+
+pub fn get_socket_address() -> SocketAddr {
+    let free_port = pick_unused_port().expect("No ports free");
+    SocketAddr::new("127.0.0.1".parse().unwrap(), free_port)
+}
+
+pub struct FuelService {
+    pub bound_address: SocketAddr,
+}
+
+impl FuelService {
+    pub async fn new_node(config: Config) -> Result<Self, AnyError> {
+        let requested_port = config.addr.port();
+
+        let bound_address = if requested_port == 0 {
+            get_socket_address()
+        } else if is_free(requested_port) {
+            config.addr
+        } else {
+            bail!("Error: Address already in use");
+        };
+
+        new_fuel_node(vec![], None, bound_address).await;
+
+        Ok(FuelService { bound_address })
     }
 }

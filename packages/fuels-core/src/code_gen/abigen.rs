@@ -6,7 +6,6 @@ use crate::code_gen::custom_types_gen::{
 };
 use crate::code_gen::functions_gen::expand_function;
 use crate::constants::{ADDRESS_SWAY_NATIVE_TYPE, CONTRACT_ID_SWAY_NATIVE_TYPE};
-use crate::json_abi::ABIParser;
 use crate::source::Source;
 use crate::utils::ident;
 use fuels_types::errors::Error;
@@ -17,9 +16,6 @@ use quote::quote;
 pub struct Abigen {
     /// The parsed ABI.
     abi: JsonABI,
-
-    /// The parser used to transform the JSON format into `JsonABI`
-    abi_parser: ABIParser,
 
     /// The contract name as an identifier.
     contract_name: Ident,
@@ -67,7 +63,6 @@ impl Abigen {
                 .collect(),
             abi: parsed_abi,
             contract_name: ident(contract_name),
-            abi_parser: ABIParser::new(),
             rustfmt: true,
             no_std: false,
         })
@@ -124,33 +119,42 @@ impl Abigen {
                     use fuels::core::{EnumSelector, Parameterize, Tokenizable, Token, try_from_bytes};
                     use fuels::signers::LocalWallet;
                     use fuels::tx::{ContractId, Address};
+                    use fuels::types::bech32::Bech32ContractId;
                     use fuels::types::errors::Error as SDKError;
                     use fuels::types::param_types::{EnumVariants, ParamType};
                     use std::str::FromStr;
                 },
                 quote! {
                     pub struct #name {
-                        contract_id: ContractId,
+                        contract_id: Bech32ContractId,
                         wallet: LocalWallet
                     }
 
                     impl #name {
                         #contract_functions
+
+                        pub fn _get_contract_id(&self) -> &Bech32ContractId {
+                            &self.contract_id
+                        }
+
+                        pub fn _get_wallet(&self) -> LocalWallet {
+                            self.wallet.clone()
+                        }
                     }
 
                     pub struct #builder_name {
-                        contract_id: ContractId,
+                        contract_id: Bech32ContractId,
                         wallet: LocalWallet
                     }
 
                     impl #builder_name {
                         pub fn new(contract_id: String, wallet: LocalWallet) -> Self {
-                            let contract_id = ContractId::from_str(&contract_id).expect("Invalid contract id");
+                            let contract_id = Bech32ContractId::from_str(&contract_id).expect("Invalid contract id");
                             Self { contract_id, wallet }
                         }
 
                         pub fn contract_id(&mut self, contract_id: String) -> &mut Self {
-                            self.contract_id = ContractId::from_str(&contract_id).expect("Invalid contract id");
+                            self.contract_id = Bech32ContractId::from_str(&contract_id).expect("Invalid contract id");
                             self
                         }
 
@@ -190,12 +194,7 @@ impl Abigen {
         let mut tokenized_functions = Vec::new();
 
         for function in &self.abi {
-            let tokenized_fn = expand_function(
-                function,
-                &self.abi_parser,
-                &self.custom_enums,
-                &self.custom_structs,
-            )?;
+            let tokenized_fn = expand_function(function, &self.custom_enums, &self.custom_structs)?;
             tokenized_functions.push(tokenized_fn);
         }
 

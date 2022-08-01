@@ -1,16 +1,14 @@
 use anyhow::Result;
+use fuel_gql_client::fuel_tx::{ConsensusParameters, Receipt, Transaction};
 use fuel_gql_client::fuel_tx::{Input, Output, UtxoId};
 use fuel_gql_client::fuel_types::{
     bytes::padded_len_usize, AssetId, Bytes32, ContractId, Immediate18, Word,
 };
 use fuel_gql_client::fuel_vm::{consts::REG_ONE, prelude::Opcode};
-use fuel_gql_client::{
-    client::{types::TransactionStatus, FuelClient},
-    fuel_tx::{ConsensusParameters, Receipt, Transaction},
-};
 
 use fuels_core::constants::DEFAULT_SPENDABLE_COIN_AMOUNT;
 use fuels_core::parameters::TxParameters;
+use fuels_signers::provider::Provider;
 use fuels_signers::{LocalWallet, Signer};
 use fuels_types::{constants::WORD_SIZE, errors::Error};
 use std::collections::HashSet;
@@ -120,12 +118,11 @@ impl Script {
 
             script_data.extend(call.call_parameters.asset_id.to_vec());
 
-            let amount = call.call_parameters.amount as Word;
-            script_data.extend(amount.to_be_bytes());
+            script_data.extend(call.call_parameters.amount.to_be_bytes());
 
             script_data.extend(call.call_parameters.gas_forwarded.to_be_bytes());
 
-            script_data.extend(call.contract_id.as_ref());
+            script_data.extend(call.contract_id.hash().as_ref());
 
             script_data.extend(call.encoded_selector);
 
@@ -192,12 +189,12 @@ impl Script {
         let contract_ids: HashSet<ContractId> = calls
             .iter()
             .flat_map(|call| {
-                let mut ids = call
+                let mut ids: HashSet<ContractId> = call
                     .external_contracts
-                    .as_ref()
-                    .cloned()
-                    .unwrap_or_default();
-                ids.insert(call.contract_id);
+                    .iter()
+                    .map(|bech32| ContractId::new(*bech32.hash()))
+                    .collect();
+                ids.insert((&call.contract_id).into());
                 ids
             })
             .collect();
@@ -237,7 +234,7 @@ impl Script {
 
         for asset_id in asset_ids.iter() {
             // add asset change if any inputs are being spent
-            let change_output = Output::change(wallet.address(), 0, asset_id.to_owned());
+            let change_output = Output::change(wallet.address().into(), 0, asset_id.to_owned());
             outputs.push(change_output);
         }
 
@@ -279,21 +276,27 @@ impl Script {
     }
 
     /// Execute the transaction in a state-modifying manner.
-    pub async fn call(self, fuel_client: &FuelClient) -> Result<Vec<Receipt>, Error> {
-        let tx_id = fuel_client.submit(&self.tx).await?.0.to_string();
-        let receipts = fuel_client.receipts(&tx_id).await?;
-        let status = fuel_client.transaction_status(&tx_id).await?;
-        match status {
-            TransactionStatus::Failure { reason, .. } => {
-                Err(Error::ContractCallError(reason, receipts))
-            }
-            _ => Ok(receipts),
-        }
+    pub async fn call(self, provider: &Provider) -> Result<Vec<Receipt>, Error> {
+        let chain_info = provider.chain_info().await?;
+
+        self.tx.validate_without_signature(
+            chain_info.latest_block.height.0,
+            &chain_info.consensus_parameters.into(),
+        )?;
+
+        provider.send_transaction(&self.tx).await
     }
 
     /// Execute the transaction in a simulated manner, not modifying blockchain state
-    pub async fn simulate(self, fuel_client: &FuelClient) -> Result<Vec<Receipt>, Error> {
-        let receipts = fuel_client.dry_run(&self.tx).await?;
+    pub async fn simulate(self, provider: &Provider) -> Result<Vec<Receipt>, Error> {
+        let chain_info = provider.chain_info().await?;
+
+        self.tx.validate_without_signature(
+            chain_info.latest_block.height.0,
+            &chain_info.consensus_parameters.into(),
+        )?;
+
+        let receipts = provider.dry_run(&self.tx).await?;
         Ok(receipts)
     }
 }
@@ -301,6 +304,7 @@ impl Script {
 #[cfg(test)]
 mod test {
     use fuels_core::parameters::CallParameters;
+    use fuels_types::bech32::Bech32ContractId;
 
     use super::*;
 
@@ -311,9 +315,9 @@ mod test {
         const NUM_CALLS: usize = 3;
 
         let contract_ids = vec![
-            ContractId::from([1u8; 32]),
-            ContractId::from([2u8; 32]),
-            ContractId::from([3u8; 32]),
+            Bech32ContractId::new("test", Bytes32::new([1u8; 32])),
+            Bech32ContractId::new("test", Bytes32::new([1u8; 32])),
+            Bech32ContractId::new("test", Bytes32::new([1u8; 32])),
         ];
 
         let asset_ids = vec![
@@ -329,7 +333,7 @@ mod test {
 
         let calls: Vec<ContractCall> = (0..NUM_CALLS)
             .map(|i| ContractCall {
-                contract_id: contract_ids[i],
+                contract_id: contract_ids[i].clone(),
                 encoded_selector: selectors[i],
                 encoded_args: args[i].clone(),
                 call_parameters: CallParameters::new(
@@ -339,7 +343,7 @@ mod test {
                 ),
                 compute_custom_input_offset: i == 1,
                 variable_outputs: None,
-                external_contracts: None,
+                external_contracts: vec![],
                 output_param: None,
             })
             .collect();
@@ -364,10 +368,10 @@ mod test {
                 .to_vec();
             assert_eq!(gas, idx.to_be_bytes().to_vec());
 
-            let contract_id = script_data
-                [offsets.call_data_offset..offsets.call_data_offset + ContractId::LEN]
-                .to_vec();
-            assert_eq!(contract_id, contract_ids[idx].to_vec());
+            let contract_id =
+                &script_data[offsets.call_data_offset..offsets.call_data_offset + ContractId::LEN];
+            let expected_contract_id = contract_ids[idx].hash();
+            assert_eq!(contract_id, expected_contract_id.as_slice());
 
             let selector_offset = offsets.call_data_offset + ContractId::LEN;
             let selector = script_data[selector_offset..selector_offset + SELECTOR_LEN].to_vec();
