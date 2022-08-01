@@ -2317,51 +2317,52 @@ async fn test_contract_id_and_wallet_getters() {
 }
 
 #[tokio::test]
-async fn test_connect_get_gas_used() -> anyhow::Result<()> {
+async fn test_connect_wallet() -> anyhow::Result<()> {
     abigen!(
         MyContract,
         "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
 
-    let num_wallets = 2;
-    let num_coins = 3;
-    let amount = 1000000000000;
-    let config = WalletsConfig::new(Some(num_wallets), Some(num_coins), Some(amount));
+    let config = WalletsConfig::new(Some(2), Some(1), Some(DEFAULT_COIN_AMOUNT));
 
-    let wallets = launch_custom_provider_and_get_wallets(config, None).await;
+    let mut wallets = launch_custom_provider_and_get_wallets(config, None).await;
+    let wallet_1 = wallets.pop().unwrap();
+    let wallet_2 = wallets.pop().unwrap();
 
     let id = Contract::deploy(
         "tests/test_projects/contract_test/out/debug/contract_test.bin",
-        wallets.get(0).unwrap(),
+        &wallet_1,
         TxParameters::default(),
         StorageConfiguration::default(),
     )
     .await?;
 
-    let mut contract_instance =
-        MyContractBuilder::new(id.to_string(), wallets.get(0).unwrap().clone()).build();
-
-    assert_eq!(
-        contract_instance._get_wallet().address(),
-        wallets.get(0).unwrap().address()
-    );
-
-    let gas_used = contract_instance
+    // pay for call with wallet_1
+    let contract_instance = MyContractBuilder::new(id.to_string(), wallet_1.clone()).build();
+    let tx_params = TxParameters::new(Some(10), Some(10000), None, None);
+    contract_instance
         .initialize_counter(42)
+        .tx_params(tx_params)
         .call()
-        .await?
-        .gas_used;
+        .await?;
 
-    assert!(gas_used > 0);
+    // confirm that funds have been deducted
+    let wallet_1_balance = wallet_1.get_asset_balance(&Default::default()).await?;
+    assert!(DEFAULT_COIN_AMOUNT > wallet_1_balance);
 
-    let gas_used_two = contract_instance
-        .connect(wallets.get(1).unwrap().clone())
+    // pay for call with wallet_2
+    contract_instance
+        ._connect(wallet_2.clone())?
         .initialize_counter(42)
+        .tx_params(tx_params)
         .call()
-        .await?
-        .gas_used;
+        .await?;
 
-    assert!(gas_used_two > 0);
+    // confirm there are no changes to wallet_1, wallet_2 has been charged
+    let wallet_1_balance_second_call = wallet_1.get_asset_balance(&Default::default()).await?;
+    let wallet_2_balance = wallet_2.get_asset_balance(&Default::default()).await?;
+    assert_eq!(wallet_1_balance_second_call, wallet_1_balance);
+    assert!(DEFAULT_COIN_AMOUNT > wallet_2_balance);
 
     Ok(())
 }
