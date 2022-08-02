@@ -148,7 +148,7 @@ impl Provider {
                 .client
                 .coins(
                     &from.hash().to_string(),
-                    Some(&*asset_id.to_string()),
+                    Some(&asset_id.to_string()),
                     PaginationRequest {
                         cursor: cursor.clone(),
                         results: 100,

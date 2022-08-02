@@ -355,7 +355,7 @@ impl Wallet {
         amount: u64,
         witness_index: u8,
     ) -> Result<Vec<Input>, Error> {
-        let spendable = self.get_spendable_coins(&asset_id, amount).await?;
+        let spendable = self.get_spendable_coins(asset_id, amount).await?;
         let mut inputs = vec![];
         for coin in spendable {
             let input_coin = Input::coin_signed(
@@ -374,10 +374,10 @@ impl Wallet {
     /// Gets all coins of asset `asset_id` owned by the wallet, *even spent ones* (this is useful
     /// for some particular cases, but in general, you should use `get_spendable_coins`). This
     /// returns actual coins (UTXOs).
-    pub async fn get_coins(&self, asset_id: &AssetId) -> Result<Vec<Coin>, Error> {
+    pub async fn get_coins(&self, asset_id: AssetId) -> Result<Vec<Coin>, Error> {
         Ok(self
             .get_provider()?
-            .get_coins(self.address(), *asset_id)
+            .get_coins(self.address(), asset_id)
             .await?)
     }
 
@@ -386,11 +386,11 @@ impl Wallet {
     /// of coins (UXTOs) is optimized to prevent dust accumulation.
     pub async fn get_spendable_coins(
         &self,
-        asset_id: &AssetId,
+        asset_id: AssetId,
         amount: u64,
     ) -> Result<Vec<Coin>, Error> {
         self.get_provider()?
-            .get_spendable_coins(self.address(), *asset_id, amount)
+            .get_spendable_coins(self.address(), asset_id, amount)
             .await
             .map_err(Into::into)
     }
