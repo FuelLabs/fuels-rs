@@ -141,7 +141,7 @@ impl Abigen {
                             self.wallet.clone()
                         }
 
-                        pub fn _connect(&self, mut wallet: LocalWallet) -> Result<Self, SDKError> {
+                        pub fn _with_wallet(&self, mut wallet: LocalWallet) -> Result<Self, SDKError> {
                            let provider = self.wallet.get_provider()?;
                            wallet.set_provider(provider.clone());
 

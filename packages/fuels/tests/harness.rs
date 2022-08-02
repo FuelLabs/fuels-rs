@@ -2546,7 +2546,7 @@ async fn test_connect_wallet() -> anyhow::Result<()> {
 
     // pay for call with wallet_2
     contract_instance
-        ._connect(wallet_2.clone())?
+        ._with_wallet(wallet_2.clone())?
         .initialize_counter(42)
         .tx_params(tx_params)
         .call()
