@@ -4,6 +4,9 @@ use fuel_gql_client::{
     fuel_tx::{Contract, Input, Output, Receipt, Transaction, UtxoId},
     fuel_types::{Address, AssetId},
 };
+
+use fuel_gql_client::fuel_vm::prelude::Opcode;
+use fuels_core::parameters::TxParameters;
 use fuels_signers::{provider::Provider, wallet::Wallet, Signer};
 use fuels_types::{bech32::Bech32Address, errors::Error};
 
@@ -17,6 +20,31 @@ impl Predicate {
     pub fn new(code: Vec<u8>) -> Self {
         let address = (*Contract::root_from_code(&code)).into();
         Self { code, address }
+    }
+
+    /// Craft a transaction used to transfer funds between two addresses.
+    pub fn build_transfer_tx(
+        &self,
+        inputs: &[Input],
+        outputs: &[Output],
+        params: TxParameters,
+    ) -> Transaction {
+        // This script contains a single Opcode that returns immediately (RET)
+        // since all this transaction does is move Inputs and Outputs around.
+        let script = Opcode::RET(0x10).to_bytes().to_vec();
+        Transaction::Script {
+            gas_price: params.gas_price,
+            gas_limit: params.gas_limit,
+            byte_price: params.byte_price,
+            maturity: params.maturity,
+            receipts_root: Default::default(),
+            script,
+            script_data: vec![],
+            inputs: inputs.to_vec(),
+            outputs: outputs.to_vec(),
+            witnesses: vec![],
+            metadata: None,
+        }
     }
 
     /// Deploys locked coins in a Predicate to the given wallet's provider.
@@ -42,37 +70,15 @@ impl Predicate {
 
         let output_coin = Output::coin(self.address, coin_amount_to_predicate, asset_id);
         let output_change = Output::change(wallet.address().into(), 0, asset_id);
-        if let Transaction::Script {
-            gas_price,
-            gas_limit,
-            byte_price,
-            maturity,
-            receipts_root: _,
-            script,
-            script_data,
-            inputs: _,
-            outputs: _,
-            witnesses,
-            metadata: _,
-        } = Transaction::default()
-        {
-            let mut tx = Transaction::script(
-                gas_price,
-                gas_limit,
-                byte_price,
-                maturity,
-                script,
-                script_data,
-                wallet_coins,
-                vec![output_coin, output_change],
-                witnesses,
-            );
-            wallet.sign_transaction(&mut tx).await?;
-            let provider = wallet.get_provider()?;
-            Ok(provider.send_transaction(&tx).await?)
-        } else {
-            panic!("Expected Transaction::default() to return a Transaction::Script");
-        }
+
+        let mut tx = self.build_transfer_tx(
+            &wallet_coins,
+            &[output_coin, output_change],
+            TxParameters::default(),
+        );
+        wallet.sign_transaction(&mut tx).await?;
+        let provider = wallet.get_provider()?;
+        provider.send_transaction(&tx).await
     }
 
     /// Attempts to spend coins from referenced Predicate and add to the given wallet's coins
@@ -117,36 +123,14 @@ impl Predicate {
         let output_coin =
             Output::coin(receiver_address.into(), total_amount_in_predicate, asset_id);
         let output_change = Output::change(self.address, 0, asset_id);
-        if let Transaction::Script {
-            gas_price,
-            gas_limit,
-            byte_price,
-            maturity,
-            receipts_root: _,
-            script,
-            script_data,
-            inputs: _,
-            outputs: _,
-            witnesses,
-            metadata: _,
-        } = Transaction::default()
-        {
-            let tx = Transaction::script(
-                gas_price,
-                gas_limit,
-                byte_price,
-                maturity,
-                script,
-                script_data,
-                inputs,
-                vec![output_coin, output_change],
-                witnesses,
-            );
 
-            let script = Script::new(tx);
-            script.call(provider).await
-        } else {
-            panic!("Expected Transaction::default() to return a Transaction::Script");
-        }
+        let tx = self.build_transfer_tx(
+            &inputs,
+            &[output_coin, output_change],
+            TxParameters::default(),
+        );
+
+        let script = Script::new(tx);
+        script.call(provider).await
     }
 }
