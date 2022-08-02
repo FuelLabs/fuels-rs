@@ -34,7 +34,7 @@ type W = English;
 /// use fuel_crypto::Message;
 /// use fuels::prelude::*;
 ///
-/// async fn foo() -> Result<(), Box<dyn std::error::Error>> {
+/// async fn foo() -> Result<(), Error> {
 ///   // Setup local test node
 ///   let (provider, _) = setup_test_provider(vec![], None).await;
 ///
@@ -46,7 +46,7 @@ type W = English;
 ///
 ///   // Recover address that signed the message
 ///   let message = Message::new(message);
-///   let recovered_address = signature.recover(&message).unwrap();
+///   let recovered_address = signature.recover(&message)?;
 ///
 ///   assert_eq!(wallet.address().hash(), recovered_address.hash());
 ///

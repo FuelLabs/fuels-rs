@@ -184,13 +184,22 @@ pub async fn setup_test_client(
     node_config: Option<Config>,
     consensus_parameters_config: Option<ConsensusParameters>,
 ) -> (FuelClient, SocketAddr) {
-    let srv_address = match node_config {
-        Some(config) if config.addr.port() != 0 && is_free(config.addr.port()) => config.addr,
+    let (srv_address, manual_blocks_enabled) = match node_config {
+        Some(config) if config.addr.port() != 0 && is_free(config.addr.port()) => {
+            (config.addr, config.manual_blocks_enabled)
+        }
         Some(config) if !is_free(config.addr.port()) => panic!("Error: Address already in use"),
-        _ => get_socket_address(),
+        Some(config) => (get_socket_address(), config.manual_blocks_enabled),
+        None => (get_socket_address(), false),
     };
 
-    new_fuel_node(coins, consensus_parameters_config, srv_address).await;
+    new_fuel_node(
+        coins,
+        consensus_parameters_config,
+        srv_address,
+        manual_blocks_enabled,
+    )
+    .await;
 
     let client = FuelClient::from(srv_address);
     server_health_check(&client).await;

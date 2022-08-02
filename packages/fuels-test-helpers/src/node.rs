@@ -27,12 +27,14 @@ use tokio::process::Command;
 #[derive(Clone, Copy, Debug)]
 pub struct Config {
     pub addr: SocketAddr,
+    pub manual_blocks_enabled: bool,
 }
 
 impl Config {
     pub fn local_node() -> Self {
         Self {
             addr: SocketAddr::new(Ipv4Addr::new(127, 0, 0, 1).into(), 0),
+            manual_blocks_enabled: false,
         }
     }
 }
@@ -237,6 +239,7 @@ pub async fn new_fuel_node(
     coins: Vec<(UtxoId, Coin)>,
     consensus_parameters_config: Option<ConsensusParameters>,
     socket_addr: SocketAddr,
+    manual_blocks_enabled: bool,
 ) {
     // Create a new one-shot channel for sending single values across asynchronous tasks.
     let (tx, rx) = oneshot::channel();
@@ -246,7 +249,8 @@ pub async fn new_fuel_node(
         let temp_config_file = write_temp_config_file(config);
 
         let port = &socket_addr.port().to_string();
-        let args = vec![
+        let mut args = vec![
+            "run", // `fuel-core` is now run with `fuel-core run`
             "--ip",
             "127.0.0.1",
             "--port",
@@ -256,6 +260,9 @@ pub async fn new_fuel_node(
             "--chain",
             temp_config_file.path().to_str().unwrap(),
         ];
+        if manual_blocks_enabled {
+            args.push("--manual_blocks_enabled");
+        }
 
         let mut running_node = Command::new("fuel-core").args(args)
             .kill_on_drop(true)
@@ -312,7 +319,7 @@ impl FuelService {
             bail!("Error: Address already in use");
         };
 
-        new_fuel_node(vec![], None, bound_address).await;
+        new_fuel_node(vec![], None, bound_address, config.manual_blocks_enabled).await;
 
         Ok(FuelService { bound_address })
     }
