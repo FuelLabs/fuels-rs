@@ -140,7 +140,7 @@
                         <h1 id="increasing-the-block-height"><a class="header" href="#increasing-the-block-height">Increasing the block height</a></h1>
 <p>You can use <code>produce_blocks</code> to help achieve an arbitrary block height; this is useful when you want to do any testing regarding transaction maturity.</p>
 <blockquote>
-<p><strong>Note</strong>: For the <code>produce_blocks</code> API to work, it is imperative to have the <code>fuel-core-lib</code> feature enabled, and have <code>manual_blocks_enabled = true</code> in the config for the running node. See example below.</p>
+<p><strong>Note</strong>: For the <code>produce_blocks</code> API to work, it is imperative to have <code>manual_blocks_enabled = true</code> in the config for the running node. See example below.</p>
 </blockquote>
 <pre><code class="language-rust ignore">    let config = Config {
         manual_blocks_enabled: true, // Necessary so the `produce_blocks` API can be used locally
