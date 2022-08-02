@@ -12,7 +12,6 @@ use fuels_core::parameters::StorageConfiguration;
 use fuels_core::tx::{Address, Bytes32, StorageSlot};
 use fuels_core::Tokenizable;
 use fuels_core::{constants::BASE_ASSET_ID, Token};
-use fuels_test_helpers::{launch_custom_provider_and_get_wallets, WalletsConfig};
 use sha2::{Digest, Sha256};
 use std::str::FromStr;
 
