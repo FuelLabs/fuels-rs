@@ -174,12 +174,12 @@
         let (provider, _) = setup_test_provider(coins.clone(), None).await;
 </code></pre>
 <h2 id="get-all-coins-from-an-address"><a class="header" href="#get-all-coins-from-an-address">Get all coins from an address</a></h2>
-<p>This method returns all coins from a wallet, including spent ones.</p>
-<pre><code class="language-rust ignore">        let coins = provider.get_coins(wallet.address()).await?;
+<p>This method returns all coins (of a given asset ID) from a wallet, including spent ones.</p>
+<pre><code class="language-rust ignore">        let coins = provider.get_coins(wallet.address(), BASE_ASSET_ID).await?;
         assert_eq!(coins.len(), 1);
 </code></pre>
 <h2 id="get-spendable-coins-from-an-address"><a class="header" href="#get-spendable-coins-from-an-address">Get spendable coins from an address</a></h2>
-<p>The last argument says how much you want to spend. This method returns only spendable, i.e., unspent coins. If you ask for more spendable than the amount of unspent coins you have, it returns an error.</p>
+<p>The last argument says how much you want to spend. This method returns only spendable, i.e., unspent coins (of a given asset ID). If you ask for more spendable than the amount of unspent coins you have, it returns an error.</p>
 <pre><code class="language-rust ignore">        let spendable_coins = provider
             .get_spendable_coins(wallet.address(), BASE_ASSET_ID, 1)
             .await?;
