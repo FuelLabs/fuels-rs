@@ -226,7 +226,7 @@ impl Script {
         for asset_id in asset_ids.iter() {
             spendables.extend(
                 wallet
-                    .get_spendable_coins(asset_id, DEFAULT_SPENDABLE_COIN_AMOUNT as u64)
+                    .get_spendable_coins(*asset_id, DEFAULT_SPENDABLE_COIN_AMOUNT as u64)
                     .await
                     .unwrap(),
             );
