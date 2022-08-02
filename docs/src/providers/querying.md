@@ -18,7 +18,7 @@ You might need to set up a test blockchain first. You can skip this step if you'
 
 ## Get all coins from an address
 
-This method returns all coins from a wallet, including spent ones.
+This method returns all coins (of a given asset ID) from a wallet, including spent ones.
 
 ```rust,ignore
 {{#include ../../../examples/providers/src/lib.rs:get_coins}}
@@ -26,7 +26,7 @@ This method returns all coins from a wallet, including spent ones.
 
 ## Get spendable coins from an address
 
-The last argument says how much you want to spend. This method returns only spendable, i.e., unspent coins. If you ask for more spendable than the amount of unspent coins you have, it returns an error.
+The last argument says how much you want to spend. This method returns only spendable, i.e., unspent coins (of a given asset ID). If you ask for more spendable than the amount of unspent coins you have, it returns an error.
 
 ```rust,ignore
 {{#include ../../../examples/providers/src/lib.rs:get_spendable_coins}}

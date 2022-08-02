@@ -132,9 +132,13 @@ impl Provider {
         Ok(self.client.dry_run(tx).await?)
     }
 
-    /// Gets all coins owned by address `from`, *even spent ones*. This returns actual coins
-    /// (UTXOs).
-    pub async fn get_coins(&self, from: &Bech32Address) -> Result<Vec<Coin>, ProviderError> {
+    /// Gets all coins owned by address `from`, with asset ID `asset_id`, *even spent ones*. This
+    /// returns actual coins (UTXOs).
+    pub async fn get_coins(
+        &self,
+        from: &Bech32Address,
+        asset_id: AssetId,
+    ) -> Result<Vec<Coin>, ProviderError> {
         let mut coins: Vec<Coin> = vec![];
 
         let mut cursor = None;
@@ -144,7 +148,7 @@ impl Provider {
                 .client
                 .coins(
                     &from.hash().to_string(),
-                    None,
+                    Some(&asset_id.to_string()),
                     PaginationRequest {
                         cursor: cursor.clone(),
                         results: 100,

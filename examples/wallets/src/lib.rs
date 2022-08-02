@@ -134,7 +134,7 @@ mod tests {
             .transfer(wallets[1].address(), 1, asset_id, TxParameters::default())
             .await?;
 
-        let wallet_2_final_coins = wallets[1].get_coins().await?;
+        let wallet_2_final_coins = wallets[1].get_coins(BASE_ASSET_ID).await?;
 
         // Check that wallet 2 now has 2 coins
         assert_eq!(wallet_2_final_coins.len(), 2);
