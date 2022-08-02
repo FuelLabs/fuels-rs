@@ -257,7 +257,7 @@ impl Wallet {
     ///        .await
     ///        .unwrap();
     ///
-    ///   let wallet_2_final_coins = wallet_2.get_coins().await.unwrap();
+    ///   let wallet_2_final_coins = wallet_2.get_coins(BASE_ASSET_ID).await.unwrap();
     ///
     ///   // Check that wallet two now has two coins
     ///   assert_eq!(wallet_2_final_coins.len(), 2);
@@ -355,7 +355,7 @@ impl Wallet {
         amount: u64,
         witness_index: u8,
     ) -> Result<Vec<Input>, Error> {
-        let spendable = self.get_spendable_coins(&asset_id, amount).await?;
+        let spendable = self.get_spendable_coins(asset_id, amount).await?;
         let mut inputs = vec![];
         for coin in spendable {
             let input_coin = Input::coin_signed(
@@ -371,9 +371,14 @@ impl Wallet {
         Ok(inputs)
     }
 
-    /// Gets all coins owned by the wallet, *even spent ones*. This returns actual coins (UTXOs).
-    pub async fn get_coins(&self) -> Result<Vec<Coin>, Error> {
-        Ok(self.get_provider()?.get_coins(self.address()).await?)
+    /// Gets all coins of asset `asset_id` owned by the wallet, *even spent ones* (this is useful
+    /// for some particular cases, but in general, you should use `get_spendable_coins`). This
+    /// returns actual coins (UTXOs).
+    pub async fn get_coins(&self, asset_id: AssetId) -> Result<Vec<Coin>, Error> {
+        Ok(self
+            .get_provider()?
+            .get_coins(self.address(), asset_id)
+            .await?)
     }
 
     /// Get some spendable coins of asset `asset_id` owned by the wallet that add up at least to
@@ -381,11 +386,11 @@ impl Wallet {
     /// of coins (UXTOs) is optimized to prevent dust accumulation.
     pub async fn get_spendable_coins(
         &self,
-        asset_id: &AssetId,
+        asset_id: AssetId,
         amount: u64,
     ) -> Result<Vec<Coin>, Error> {
         self.get_provider()?
-            .get_spendable_coins(self.address(), *asset_id, amount)
+            .get_spendable_coins(self.address(), asset_id, amount)
             .await
             .map_err(Into::into)
     }

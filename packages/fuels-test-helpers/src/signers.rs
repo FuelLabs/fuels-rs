@@ -120,7 +120,7 @@ mod tests {
         assert_eq!(wallets.len(), num_wallets as usize);
 
         for wallet in &wallets {
-            let coins = wallet.get_coins().await?;
+            let coins = wallet.get_coins(BASE_ASSET_ID).await?;
 
             assert_eq!(coins.len(), num_coins as usize);
 
@@ -167,7 +167,7 @@ mod tests {
         for asset in assets {
             for wallet in &wallets {
                 let coins = wallet
-                    .get_spendable_coins(&asset.id, asset.num_coins * asset.coin_amount)
+                    .get_spendable_coins(asset.id, asset.num_coins * asset.coin_amount)
                     .await?;
                 assert_eq!(coins.len() as u64, asset.num_coins);
 
