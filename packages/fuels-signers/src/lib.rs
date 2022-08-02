@@ -194,7 +194,7 @@ mod tests {
         assert_eq!(res.transaction.gas_price(), gas_price);
         assert_eq!(res.transaction.maturity(), maturity);
 
-        let wallet_1_spendable_coins = wallet_1.get_spendable_coins(&BASE_ASSET_ID, 0).await?;
+        let wallet_1_spendable_coins = wallet_1.get_spendable_coins(BASE_ASSET_ID, 0).await?;
         let wallet_1_all_coins = wallet_1.get_coins(BASE_ASSET_ID).await?;
         let wallet_2_all_coins = wallet_2.get_coins(BASE_ASSET_ID).await?;
 
