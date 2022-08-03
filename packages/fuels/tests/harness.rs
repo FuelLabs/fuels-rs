@@ -2507,3 +2507,54 @@ async fn strings_must_have_all_ascii_chars_custom_types() {
     let contract_instance = SimpleContractBuilder::new(null_contract_id(), wallet).build();
     let _ = contract_instance.takes_nested_struct(input);
 }
+
+#[tokio::test]
+async fn test_connect_wallet() -> anyhow::Result<()> {
+    abigen!(
+        MyContract,
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+    );
+
+    let config = WalletsConfig::new(Some(2), Some(1), Some(DEFAULT_COIN_AMOUNT));
+
+    let mut wallets = launch_custom_provider_and_get_wallets(config, None).await;
+    let wallet_1 = wallets.pop().unwrap();
+    let wallet_2 = wallets.pop().unwrap();
+
+    let id = Contract::deploy(
+        "tests/test_projects/contract_test/out/debug/contract_test.bin",
+        &wallet_1,
+        TxParameters::default(),
+        StorageConfiguration::default(),
+    )
+    .await?;
+
+    // pay for call with wallet_1
+    let contract_instance = MyContractBuilder::new(id.to_string(), wallet_1.clone()).build();
+    let tx_params = TxParameters::new(Some(10), Some(10000), None, None);
+    contract_instance
+        .initialize_counter(42)
+        .tx_params(tx_params)
+        .call()
+        .await?;
+
+    // confirm that funds have been deducted
+    let wallet_1_balance = wallet_1.get_asset_balance(&Default::default()).await?;
+    assert!(DEFAULT_COIN_AMOUNT > wallet_1_balance);
+
+    // pay for call with wallet_2
+    contract_instance
+        ._with_wallet(wallet_2.clone())?
+        .initialize_counter(42)
+        .tx_params(tx_params)
+        .call()
+        .await?;
+
+    // confirm there are no changes to wallet_1, wallet_2 has been charged
+    let wallet_1_balance_second_call = wallet_1.get_asset_balance(&Default::default()).await?;
+    let wallet_2_balance = wallet_2.get_asset_balance(&Default::default()).await?;
+    assert_eq!(wallet_1_balance_second_call, wallet_1_balance);
+    assert!(DEFAULT_COIN_AMOUNT > wallet_2_balance);
+
+    Ok(())
+}
