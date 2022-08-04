@@ -1,6 +1,6 @@
 // These constants define the default number of wallets to be setup,
 // the number of coins per wallet and the amount per coin
-use fuels_signers::fuel_crypto::fuel_types::AssetId;
+use fuels_signers::fuel_crypto::{fuel_types::AssetId, SecretKey};
 
 pub const DEFAULT_NUM_WALLETS: u64 = 10;
 pub const DEFAULT_NUM_COINS: u64 = 1;
@@ -17,6 +17,7 @@ pub struct AssetConfig {
 pub struct WalletsConfig {
     pub num_wallets: u64,
     pub assets: Vec<AssetConfig>,
+    pub private_keys: Vec<SecretKey>,
 }
 
 impl WalletsConfig {
@@ -28,6 +29,7 @@ impl WalletsConfig {
                 num_coins: num_coins.unwrap_or(DEFAULT_NUM_COINS),
                 coin_amount: coin_amount.unwrap_or(DEFAULT_COIN_AMOUNT),
             }],
+            private_keys: vec![],
         }
     }
 
@@ -35,6 +37,15 @@ impl WalletsConfig {
         Self {
             num_wallets,
             assets,
+            private_keys: vec![],
+        }
+    }
+
+    pub fn with_private_keys(self, private_keys: Vec<SecretKey>) -> Self {
+        Self {
+            num_wallets: self.num_wallets,
+            assets: self.assets,
+            private_keys,
         }
     }
 }
@@ -48,6 +59,7 @@ impl Default for WalletsConfig {
                 num_coins: DEFAULT_NUM_COINS,
                 coin_amount: DEFAULT_COIN_AMOUNT,
             }],
+            private_keys: vec![],
         }
     }
 }

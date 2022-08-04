@@ -60,9 +60,23 @@ pub async fn launch_custom_provider_and_get_wallets(
     wallet_config: WalletsConfig,
     provider_config: Option<Config>,
 ) -> Vec<LocalWallet> {
-    let mut wallets: Vec<LocalWallet> = (1..=wallet_config.num_wallets)
-        .map(|_i| LocalWallet::new_random(None))
-        .collect();
+    let mut wallets: Vec<LocalWallet> = vec![];
+
+    if !wallet_config.private_keys.is_empty() {
+        wallets.extend(
+            wallet_config
+                .private_keys
+                .iter()
+                .map(|pk| LocalWallet::new_from_private_key(*pk, None)),
+        );
+    }
+
+    // If the requested `num_wallets` is graeter then the number of the provided `private_keys`,
+    // generate the remaining wallets with random keys.
+    wallets.extend(
+        (wallet_config.private_keys.len()..wallet_config.num_wallets as usize)
+            .map(|_i| LocalWallet::new_random(None)),
+    );
 
     let mut all_coins: Vec<(UtxoId, Coin)> = Vec::with_capacity(wallet_config.num_wallets as usize);
     for wallet in &wallets {
@@ -101,12 +115,13 @@ pub async fn setup_test_provider(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::{launch_custom_provider_and_get_wallets, WalletsConfig};
+    use crate::{launch_custom_provider_and_get_wallets, AssetConfig, WalletsConfig};
     use fuels_core::constants::BASE_ASSET_ID;
-    use fuels_signers::fuel_crypto::fuel_types::AssetId;
+    use fuels_signers::fuel_crypto::{fuel_types::AssetId, SecretKey};
+    use fuels_signers::Signer;
     use fuels_types::errors::Error;
     use rand::Fill;
+    use std::str::FromStr;
 
     #[tokio::test]
     async fn test_wallet_config() -> Result<(), Error> {
@@ -180,6 +195,90 @@ mod tests {
                 }
             }
         }
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn wallets_with_private_keys() -> Result<(), Box<dyn std::error::Error>> {
+        let num_wallets = 3;
+
+        let private_keys = vec![
+            SecretKey::from_str(
+                "5f70feeff1f229e4a95a7056e8b4d80d0b24b565674860cc213bdb07127ce1b1",
+            )?,
+            SecretKey::from_str(
+                "705ffeeff1f229e4a95e1056e8b4d80d0b24b565674860cc213bdb07127ce1b1",
+            )?,
+        ];
+
+        let config =
+            WalletsConfig::new(Some(num_wallets), None, None).with_private_keys(private_keys);
+        let wallets = launch_custom_provider_and_get_wallets(config, None).await;
+        let wallet1 = wallets.get(0).unwrap();
+        let wallet2 = wallets.get(1).unwrap();
+
+        assert_eq!(wallets.len(), num_wallets as usize);
+        assert_eq!(
+            wallet1.address().to_string(),
+            "fuel1wg5674np2frjd3jwlfvjalyg5c79hakt4wqmfpgqm8zgvr5sugmsjsc3pv"
+        );
+        assert_eq!(
+            wallet2.address().to_string(),
+            "fuel1a6f6zf5le4acmj6ay4uw06ec99nrv75f8ggfhu55cqqgcqxzhfjq65vvuc"
+        );
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn wallets_custom_assets_with_private_keys() -> Result<(), Box<dyn std::error::Error>> {
+        let mut rng = rand::thread_rng();
+        let num_wallets = 1;
+
+        let asset_base = AssetConfig {
+            id: BASE_ASSET_ID,
+            num_coins: 2,
+            coin_amount: 4,
+        };
+
+        let mut asset_id_1 = AssetId::zeroed();
+        asset_id_1.try_fill(&mut rng)?;
+        let asset_1 = AssetConfig {
+            id: asset_id_1,
+            num_coins: 6,
+            coin_amount: 8,
+        };
+
+        let assets = vec![asset_base, asset_1];
+
+        let private_keys = vec![
+            SecretKey::from_str(
+                "5f70feeff1f229e4a95a7056e8b4d80d0b24b565674860cc213bdb07127ce1b1",
+            )?,
+            SecretKey::from_str(
+                "705ffeeff1f229e4a95e1056e8b4d80d0b24b565674860cc213bdb07127ce1b1",
+            )?,
+        ];
+
+        let config =
+            WalletsConfig::new_multiple_assets(num_wallets, assets).with_private_keys(private_keys);
+        let wallets = launch_custom_provider_and_get_wallets(config, None).await;
+        let wallet1 = wallets.get(0).unwrap();
+        let wallet2 = wallets.get(1).unwrap();
+
+        // num_wallets was set to 1 but we provided 2 private_keys so 2 wallets were created
+        let acctual_num_wallets = 2;
+
+        assert_eq!(wallets.len(), acctual_num_wallets);
+        assert_eq!(
+            wallet1.address().to_string(),
+            "fuel1wg5674np2frjd3jwlfvjalyg5c79hakt4wqmfpgqm8zgvr5sugmsjsc3pv"
+        );
+        assert_eq!(
+            wallet2.address().to_string(),
+            "fuel1a6f6zf5le4acmj6ay4uw06ec99nrv75f8ggfhu55cqqgcqxzhfjq65vvuc"
+        );
+
         Ok(())
     }
 }

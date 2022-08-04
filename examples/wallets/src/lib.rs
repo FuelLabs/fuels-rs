@@ -266,10 +266,50 @@ mod tests {
 
         let assets = vec![asset_base, asset_1, asset_2];
 
-        let coins = setup_custom_assets_coins(wallet.address(), assets);
-        let (provider, _socket_addr) = setup_test_provider(coins.clone(), None).await;
+        let coins = setup_custom_assets_coins(wallet.address(), assets.clone());
+        let (provider, _socket_addr) = setup_test_provider(coins, None).await;
         wallet.set_provider(provider);
         // ANCHOR_END: custom_assets_wallet
+        // ANCHOR: custom_assets_wallet_short
+        let num_wallets = 1;
+        let wallet_config = WalletsConfig::new_multiple_assets(num_wallets, assets);
+        let wallets = launch_custom_provider_and_get_wallets(wallet_config, None).await;
+        // ANCHOR_END: custom_assets_wallet_short
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[allow(unused_variables)]
+    async fn setup_wallet_private_keys() -> Result<(), Box<dyn std::error::Error>> {
+        use fuels::prelude::*;
+        use fuels::signers::fuel_crypto::SecretKey;
+        use std::str::FromStr;
+
+        let asset_base = AssetConfig {
+            id: BASE_ASSET_ID,
+            num_coins: 2,
+            coin_amount: 4,
+        };
+
+        let assets = vec![asset_base];
+
+        // ANCHOR: private_keys_wallet
+        let num_wallets = 1;
+        let private_keys = vec![
+            SecretKey::from_str(
+                "5f70feeff1f229e4a95a7056e8b4d80d0b24b565674860cc213bdb07127ce1b1",
+            )?,
+            SecretKey::from_str(
+                "705ffeeff1f229e4a95e1056e8b4d80d0b24b565674860cc213bdb07127ce1b1",
+            )?,
+        ];
+
+        let wallet_config = WalletsConfig::new(Some(num_wallets), None, None)
+            .with_private_keys(private_keys.clone());
+
+        let wallet_config =
+            WalletsConfig::new_multiple_assets(num_wallets, assets).with_private_keys(private_keys);
+        // ANCHOR_END: private_keys_wallet
         Ok(())
     }
 

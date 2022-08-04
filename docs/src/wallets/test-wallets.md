@@ -35,8 +35,19 @@ You can also create assets with specific `AssetId`s, coin amounts, and number of
 {{#include ../../../examples/wallets/src/lib.rs:custom_assets_wallet}}
 ```
 
->**Note** In this case, you need to specify also the base asset and the corresponding number of
->coins and coin amount
+This can also be achieved directly with the `WalletsConfig`.
+
+```rust,ignore
+{{#include ../../../examples/wallets/src/lib.rs:custom_assets_wallet_short}}
+```
+
+## Setting up test wallets with deterministic addresses
+
+You can specify the private keys for the test wallets using the `WalletsConfig`.
+
+```rust,ignore
+{{#include ../../../examples/wallets/src/lib.rs:private_keys_wallet}}
+```
 
 ## Setting up assets
 
