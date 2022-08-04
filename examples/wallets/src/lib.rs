@@ -266,7 +266,7 @@ mod tests {
 
         let assets = vec![asset_base, asset_1, asset_2];
 
-        let coins = setup_custom_assets_coins(wallet.address(), assets.clone());
+        let coins = setup_custom_assets_coins(wallet.address(), &assets);
         let (provider, _socket_addr) = setup_test_provider(coins, None).await;
         wallet.set_provider(provider);
         // ANCHOR_END: custom_assets_wallet

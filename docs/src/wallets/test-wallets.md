@@ -49,8 +49,8 @@ You can specify the private keys for the test wallets using the `WalletsConfig`.
 {{#include ../../../examples/wallets/src/lib.rs:private_keys_wallet}}
 ```
 
-If the number of private keys is less than the requested `num_wallets` then the rest of the wallets will be
-generated using random keys. If, however, the number of private keys is higher than the requested `num_wallets`, the `num_wallets` will be ignored and the number of wallets will match the number of provided private keys.
+Wallets are first generated using the private keys. If the number of private keys is less than
+the requested `num_wallets` then the rest of the wallets will be generated using random keys.
 
 ## Setting up assets
 

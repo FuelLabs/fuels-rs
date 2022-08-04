@@ -15,9 +15,9 @@ pub struct AssetConfig {
 
 #[derive(Debug)]
 pub struct WalletsConfig {
-    pub num_wallets: u64,
-    pub assets: Vec<AssetConfig>,
-    pub private_keys: Vec<SecretKey>,
+    num_wallets: u64,
+    assets: Vec<AssetConfig>,
+    private_keys: Vec<SecretKey>,
 }
 
 impl WalletsConfig {
@@ -47,6 +47,18 @@ impl WalletsConfig {
             assets: self.assets,
             private_keys,
         }
+    }
+
+    pub fn num_wallets(&self) -> u64 {
+        self.num_wallets
+    }
+
+    pub fn assets(&self) -> &Vec<AssetConfig> {
+        &self.assets
+    }
+
+    pub fn private_keys(&self) -> &Vec<SecretKey> {
+        &self.private_keys
     }
 }
 
