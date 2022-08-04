@@ -1,8 +1,6 @@
 use crate::provider::Provider;
 use crate::Signer;
 use async_trait::async_trait;
-use coins_bip32::{path::DerivationPath, Bip32Error};
-use coins_bip39::{English, Mnemonic, MnemonicError};
 use elliptic_curve::rand_core;
 use eth_keystore::KeystoreError;
 use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
@@ -14,11 +12,10 @@ use fuels_core::parameters::TxParameters;
 use fuels_types::bech32::{Bech32Address, Bech32ContractId, FUEL_BECH32_HRP};
 use fuels_types::errors::Error;
 use rand::{CryptoRng, Rng};
-use std::{collections::HashMap, fmt, path::Path, str::FromStr};
+use std::{collections::HashMap, fmt, path::Path};
 use thiserror::Error;
 
 const DEFAULT_DERIVATION_PATH_PREFIX: &str = "m/44'/1179993420'/0'/0/";
-type W = English;
 
 /// A FuelVM-compatible wallet which can be used for signing, sending transactions, and more.
 ///
@@ -83,9 +80,7 @@ pub enum WalletError {
     #[error(transparent)]
     KeystoreError(#[from] KeystoreError),
     #[error(transparent)]
-    MnemonicError(#[from] MnemonicError),
-    #[error(transparent)]
-    Bip32Error(#[from] Bip32Error),
+    FuelCrypto(#[from] fuel_crypto::Error),
 }
 
 impl From<WalletError> for Error {
@@ -144,13 +139,7 @@ impl Wallet {
         provider: Option<Provider>,
         path: &str,
     ) -> Result<Self, WalletError> {
-        let mnemonic = Mnemonic::<W>::new_from_phrase(phrase)?;
-
-        let path = DerivationPath::from_str(path)?;
-
-        let derived_priv_key = mnemonic.derive_key(path, None)?;
-        let key: &coins_bip32::prelude::SigningKey = derived_priv_key.as_ref();
-        let secret_key = unsafe { SecretKey::from_slice_unchecked(key.to_bytes().as_ref()) };
+        let secret_key = SecretKey::new_from_mnemonic_phrase_with_path(phrase, path)?;
 
         Ok(Self::new_from_private_key(secret_key, provider))
     }
@@ -182,7 +171,9 @@ impl Wallet {
         rng: &mut R,
         count: usize,
     ) -> Result<String, WalletError> {
-        Ok(Mnemonic::<W>::new_with_count(rng, count)?.to_phrase()?)
+        Ok(fuel_crypto::FuelMnemonic::generate_mnemonic_phrase(
+            rng, count,
+        )?)
     }
 
     /// Encrypts the wallet's private key with the given password and saves it

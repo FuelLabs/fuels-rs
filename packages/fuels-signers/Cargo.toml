@@ -11,12 +11,10 @@ description = "Fuel Rust SDK signers."
 [dependencies]
 async-trait = { version = "0.1.50", default-features = false }
 bytes = { version = "1.1.0", features = ["serde"] }
-coins-bip32 = "0.6.0"
-coins-bip39 = "0.6.0"
 elliptic-curve = { version = "0.11.6", default-features = false }
 eth-keystore = { version = "0.3.0" }
 fuel-core = { version = "0.9", default-features = false, optional = true }
-fuel-crypto = { version = "0.5", features = ["random"] }
+fuel-crypto = { version = "0.6", features = ["random"] }
 fuel-gql-client = { version = "0.9", default-features = false }
 fuels-core = { version = "0.19.0", path = "../fuels-core" }
 fuels-types = { version = "0.19.0", path = "../fuels-types" }
