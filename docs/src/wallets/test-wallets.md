@@ -41,6 +41,9 @@ This can also be achieved directly with the `WalletsConfig`.
 {{#include ../../../examples/wallets/src/lib.rs:custom_assets_wallet_short}}
 ```
 
+>**Note** In this case, you need to manually add the base asset and the corresponding number of
+>coins and coin amount
+
 ## Setting up test wallets with deterministic addresses
 
 You can specify the private keys for the test wallets using the `WalletsConfig`.
