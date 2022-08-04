@@ -280,41 +280,6 @@ mod tests {
 
     #[tokio::test]
     #[allow(unused_variables)]
-    async fn setup_wallet_private_keys() -> Result<(), Box<dyn std::error::Error>> {
-        use fuels::prelude::*;
-        use fuels::signers::fuel_crypto::SecretKey;
-        use std::str::FromStr;
-
-        let asset_base = AssetConfig {
-            id: BASE_ASSET_ID,
-            num_coins: 2,
-            coin_amount: 4,
-        };
-
-        let assets = vec![asset_base];
-
-        // ANCHOR: private_keys_wallet
-        let num_wallets = 1;
-        let private_keys = vec![
-            SecretKey::from_str(
-                "5f70feeff1f229e4a95a7056e8b4d80d0b24b565674860cc213bdb07127ce1b1",
-            )?,
-            SecretKey::from_str(
-                "705ffeeff1f229e4a95e1056e8b4d80d0b24b565674860cc213bdb07127ce1b1",
-            )?,
-        ];
-
-        let wallet_config = WalletsConfig::new(Some(num_wallets), None, None)
-            .with_private_keys(private_keys.clone());
-
-        let wallet_config =
-            WalletsConfig::new_multiple_assets(num_wallets, assets).with_private_keys(private_keys);
-        // ANCHOR_END: private_keys_wallet
-        Ok(())
-    }
-
-    #[tokio::test]
-    #[allow(unused_variables)]
     async fn get_balances() -> Result<(), Error> {
         use fuels::prelude::{launch_provider_and_get_wallet, BASE_ASSET_ID};
         use fuels::tx::AssetId;

@@ -44,17 +44,6 @@ This can also be achieved directly with the `WalletsConfig`.
 >**Note** In this case, you need to manually add the base asset and the corresponding number of
 >coins and coin amount
 
-## Setting up test wallets with deterministic addresses
-
-You can specify the private keys for the test wallets using the `WalletsConfig`.
-
-```rust,ignore
-{{#include ../../../examples/wallets/src/lib.rs:private_keys_wallet}}
-```
-
-Wallets are first generated using the private keys. If the number of private keys is less than
-the requested `num_wallets` then the rest of the wallets will be generated using random keys.
-
 ## Setting up assets
 
 The Fuel blockchain holds many different assets; you can create your asset with its unique `AssetId` or create random assets for testing purposes.

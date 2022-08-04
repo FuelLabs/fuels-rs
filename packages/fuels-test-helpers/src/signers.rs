@@ -1,4 +1,5 @@
-use std::{iter, net::SocketAddr};
+use fuels_signers::fuel_crypto::SecretKey;
+use std::net::SocketAddr;
 
 #[cfg(feature = "fuel-core-lib")]
 use fuel_core::{model::Coin, service::Config};
@@ -60,14 +61,19 @@ pub async fn launch_custom_provider_and_get_wallets(
     wallet_config: WalletsConfig,
     provider_config: Option<Config>,
 ) -> Vec<LocalWallet> {
-    // If the requested `num_wallets` is greater than the number of the provided `private_keys`,
-    // generate the remaining wallets with random keys.
-    let mut wallets: Vec<_> = wallet_config
-        .private_keys()
-        .iter()
-        .map(|pk| LocalWallet::new_from_private_key(*pk, None))
-        .chain(iter::repeat_with(|| LocalWallet::new_random(None)))
-        .take(wallet_config.num_wallets() as usize)
+    let mut wallets: Vec<_> = (1..=wallet_config.num_wallets())
+        .map(|wallet_counter| {
+            let bytes32: Vec<u8> = [0; 24] // [u8; 24] is padding as u64.to_be_bytes() is [u8,8]
+                .into_iter()
+                .chain(wallet_counter.to_be_bytes().into_iter())
+                .collect();
+
+            return LocalWallet::new_from_private_key(
+                SecretKey::try_from(bytes32.as_slice())
+                    .expect("This should never happen as we provide a [u8,32] array"),
+                None,
+            );
+        })
         .collect();
 
     let all_coins = wallets
@@ -107,11 +113,10 @@ pub async fn setup_test_provider(
 mod tests {
     use crate::{launch_custom_provider_and_get_wallets, AssetConfig, WalletsConfig};
     use fuels_core::constants::BASE_ASSET_ID;
-    use fuels_signers::fuel_crypto::{fuel_types::AssetId, SecretKey};
+    use fuels_signers::fuel_crypto::fuel_types::AssetId;
     use fuels_signers::Signer;
     use fuels_types::errors::Error;
     use rand::Fill;
-    use std::str::FromStr;
 
     #[tokio::test]
     async fn test_wallet_config() -> Result<(), Error> {
@@ -189,73 +194,17 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn wallets_with_private_keys() -> Result<(), Box<dyn std::error::Error>> {
-        let num_wallets = 3;
-        let private_keys = vec![
-            SecretKey::from_str(
-                "5f70feeff1f229e4a95a7056e8b4d80d0b24b565674860cc213bdb07127ce1b1",
-            )?,
-            SecretKey::from_str(
-                "705ffeeff1f229e4a95e1056e8b4d80d0b24b565674860cc213bdb07127ce1b1",
-            )?,
-        ];
-        let config =
-            WalletsConfig::new(Some(num_wallets), None, None).with_private_keys(private_keys);
+    async fn generated_wallets_are_deterministic() -> Result<(), Error> {
+        let num_wallets = 32;
+        let num_coins = 1;
+        let amount = 100;
+        let config = WalletsConfig::new(Some(num_wallets), Some(num_coins), Some(amount));
 
         let wallets = launch_custom_provider_and_get_wallets(config, None).await;
 
-        assert_eq!(wallets.len() as u64, num_wallets);
         assert_eq!(
-            wallets.get(0).unwrap().address().to_string(),
-            "fuel1wg5674np2frjd3jwlfvjalyg5c79hakt4wqmfpgqm8zgvr5sugmsjsc3pv"
-        );
-        assert_eq!(
-            wallets.get(1).unwrap().address().to_string(),
-            "fuel1a6f6zf5le4acmj6ay4uw06ec99nrv75f8ggfhu55cqqgcqxzhfjq65vvuc"
-        );
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn wallets_custom_assets_with_private_keys() -> Result<(), Box<dyn std::error::Error>> {
-        let mut rng = rand::thread_rng();
-        let num_wallets = 3;
-
-        let asset_base = AssetConfig {
-            id: BASE_ASSET_ID,
-            num_coins: 2,
-            coin_amount: 4,
-        };
-        let mut asset_id_1 = AssetId::zeroed();
-        asset_id_1.try_fill(&mut rng)?;
-        let asset_1 = AssetConfig {
-            id: asset_id_1,
-            num_coins: 6,
-            coin_amount: 8,
-        };
-        let assets = vec![asset_base, asset_1];
-
-        let private_keys = vec![
-            SecretKey::from_str(
-                "5f70feeff1f229e4a95a7056e8b4d80d0b24b565674860cc213bdb07127ce1b1",
-            )?,
-            SecretKey::from_str(
-                "705ffeeff1f229e4a95e1056e8b4d80d0b24b565674860cc213bdb07127ce1b1",
-            )?,
-        ];
-        let config =
-            WalletsConfig::new_multiple_assets(num_wallets, assets).with_private_keys(private_keys);
-
-        let wallets = launch_custom_provider_and_get_wallets(config, None).await;
-
-        assert_eq!(wallets.len() as u64, num_wallets);
-        assert_eq!(
-            wallets.get(0).unwrap().address().to_string(),
-            "fuel1wg5674np2frjd3jwlfvjalyg5c79hakt4wqmfpgqm8zgvr5sugmsjsc3pv"
-        );
-        assert_eq!(
-            wallets.get(1).unwrap().address().to_string(),
-            "fuel1a6f6zf5le4acmj6ay4uw06ec99nrv75f8ggfhu55cqqgcqxzhfjq65vvuc"
+            wallets.get(31).unwrap().address().to_string(),
+            "fuel1rsjlwjzx0px3zu2al05jdlzp4j5quqzlk7pzyk4g45x6m7r3elzsz9dwh4".to_string()
         );
         Ok(())
     }
