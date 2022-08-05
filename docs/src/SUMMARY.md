@@ -23,6 +23,7 @@
     - [The JSON ABI file](./contracts/the-json-abi-file.md)
     - [The `abigen!` macro](./contracts/the-abigen-macro.md)
   - [Calling contracts](./getting-started/calling-contracts.md)
+    - [Connecting wallets](./calling-contracts/calls-with-different-wallets.md)
     - [Transaction parameters](./calling-contracts/tx-params.md)
     - [Call parameters](./calling-contracts/call-params.md)
     - [Call response](./calling-contracts/call-response.md)
