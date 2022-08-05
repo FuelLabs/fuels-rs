@@ -1,6 +1,6 @@
 [package]
 name = "fuels-signers"
-version = "0.19.0"
+version = "0.20.0"
 authors = ["Fuel Labs <contact@fuel.sh>"]
 edition = "2021"
 homepage = "https://fuel.network/"
@@ -16,8 +16,8 @@ eth-keystore = { version = "0.3.0" }
 fuel-core = { version = "0.9", default-features = false, optional = true }
 fuel-crypto = { version = "0.6", features = ["random"] }
 fuel-gql-client = { version = "0.9", default-features = false }
-fuels-core = { version = "0.19.0", path = "../fuels-core" }
-fuels-types = { version = "0.19.0", path = "../fuels-types" }
+fuels-core = { version = "0.20.0", path = "../fuels-core" }
+fuels-types = { version = "0.20.0", path = "../fuels-types" }
 hex = { version = "0.4.3", default-features = false, features = ["std"] }
 rand = { version = "0.8.4", default-features = false }
 serde = { version = "1.0.124", default-features = true, features = ["derive"] }

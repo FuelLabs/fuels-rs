@@ -1,6 +1,6 @@
 [package]
 name = "fuels-contract"
-version = "0.19.0"
+version = "0.20.0"
 authors = ["Fuel Labs <contact@fuel.sh>"]
 edition = "2021"
 homepage = "https://fuel.network/"
@@ -13,9 +13,9 @@ anyhow = "1"
 bytes = { version = "1.0.1", features = ["serde"] }
 fuel-gql-client = { version = "0.9", default-features = false }
 fuel-tx = "0.13"
-fuels-core = { version = "0.19.0", path = "../fuels-core" }
-fuels-signers = { version = "0.19.0", path = "../fuels-signers" }
-fuels-types = { version = "0.19.0", path = "../fuels-types" }
+fuels-core = { version = "0.20.0", path = "../fuels-core" }
+fuels-signers = { version = "0.20.0", path = "../fuels-signers" }
+fuels-types = { version = "0.20.0", path = "../fuels-types" }
 hex = { version = "0.4.3", default-features = false, features = ["std"] }
 proc-macro2 = "1.0"
 quote = "1.0"
