@@ -43,7 +43,7 @@ const DEFAULT_DERIVATION_PATH_PREFIX: &str = "m/44'/1179993420'/0'/0/";
 ///
 ///   // Recover address that signed the message
 ///   let message = Message::new(message);
-///   let recovered_address = signature.recover(&message)?;
+///   let recovered_address = signature.recover(&message).expect("Failed to recover address");
 ///
 ///   assert_eq!(wallet.address().hash(), recovered_address.hash());
 ///
