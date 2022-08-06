@@ -120,32 +120,22 @@ mod tests {
     async fn transfer_multiple() -> Result<(), Error> {
         // ANCHOR: transfer_multiple
         use fuels::prelude::*;
-        use rand::Fill;
         use std::str::FromStr;
 
         // ANCHOR: transfer_multiple_setup
-        let mut rng = rand::thread_rng();
+        let mut wallet_1 = LocalWallet::new_random(None);
+        let mut wallet_2 = LocalWallet::new_random(None);
 
-        const NUM_ASSETS: usize = 5;
-        let mut asset_ids = [AssetId::zeroed(); NUM_ASSETS];
-        asset_ids
-            .iter_mut()
-            .for_each(|id| id.try_fill(&mut rng).unwrap());
+        const NUM_ASSETS: u64 = 5;
+        const AMOUNT: u64 = 100_000;
+        const NUM_COINS: u64 = 10;
+        let (coins, _) =
+            setup_multiple_assets_coins(wallet_1.address(), NUM_ASSETS, NUM_COINS, AMOUNT);
 
-        let asset_configs = asset_ids
-            .map(|id| AssetConfig {
-                id,
-                num_coins: 1,
-                coin_amount: 1_000_000,
-            })
-            .into_iter()
-            .collect();
-        let wallet_config = WalletsConfig::new_multiple_assets(2, asset_configs);
+        let (provider, _) = setup_test_provider(coins, None).await;
 
-        let wallets = launch_custom_provider_and_get_wallets(wallet_config, None).await;
-        let wallet_1 = &wallets[0];
-        let wallet_2 = &wallets[1];
-        let provider = wallet_1.get_provider()?;
+        wallet_1.set_provider(provider.clone());
+        wallet_2.set_provider(provider.clone());
         // ANCHOR_END: transfer_multiple_setup
 
         // ANCHOR: transfer_multiple_inout
