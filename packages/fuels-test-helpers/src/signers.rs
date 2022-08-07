@@ -1,5 +1,5 @@
 use fuels_signers::fuel_crypto::SecretKey;
-use std::net::SocketAddr;
+use std::{mem::size_of, net::SocketAddr};
 
 #[cfg(feature = "fuel-core-lib")]
 use fuel_core::{model::Coin, service::Config};
@@ -63,7 +63,8 @@ pub async fn launch_custom_provider_and_get_wallets(
 ) -> Vec<LocalWallet> {
     let mut wallets: Vec<_> = (1..=wallet_config.num_wallets())
         .map(|wallet_counter| {
-            let bytes32: Vec<u8> = [0; 24] // [u8; 24] is padding as u64.to_be_bytes() is [u8,8]
+            const PADDING_BYTES: usize = size_of::<SecretKey>() - size_of::<u64>();
+            let bytes32: Vec<u8> = [0; PADDING_BYTES]
                 .into_iter()
                 .chain(wallet_counter.to_be_bytes().into_iter())
                 .collect();

@@ -42,8 +42,8 @@ impl WalletsConfig {
         self.num_wallets
     }
 
-    pub fn assets(&self) -> &Vec<AssetConfig> {
-        &self.assets
+    pub fn assets(&self) -> &[AssetConfig] {
+        &self.assets[..]
     }
 }
 
