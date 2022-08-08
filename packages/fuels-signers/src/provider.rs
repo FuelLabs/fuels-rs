@@ -3,9 +3,13 @@ use std::net::SocketAddr;
 
 #[cfg(feature = "fuel-core")]
 use fuel_core::service::{Config, FuelService};
+
 use fuel_gql_client::{
     client::{
-        schema::{balance::Balance, chain::ChainInfo, coin::Coin, contract::ContractBalance},
+        schema::{
+            balance::Balance, chain::ChainInfo, coin::Coin, contract::ContractBalance,
+            node_info::NodeInfo,
+        },
         types::{TransactionResponse, TransactionStatus},
         FuelClient, PageDirection, PaginatedResult, PaginationRequest,
     },
@@ -17,12 +21,25 @@ use fuel_gql_client::{
         script_with_data_offset,
     },
 };
+use fuel_types::bytes::SerializableVec;
+use fuels_core::constants::{DEFAULT_GAS_ESTIMATION_TOLERANCE, GAS_PRICE_FACTOR, MAX_GAS_PER_TX};
 use std::collections::HashMap;
 use thiserror::Error;
 
 use fuels_core::parameters::TxParameters;
 use fuels_types::bech32::{Bech32Address, Bech32ContractId};
 use fuels_types::errors::Error;
+
+#[derive(Debug)]
+pub struct TransactionCost {
+    pub min_gas_price: u64,
+    pub min_byte_price: u64,
+    pub byte_price: u64,
+    pub gas_price: u64,
+    pub gas_used: u64,
+    pub byte_size: u64,
+    pub fee: u64,
+}
 
 #[derive(Debug, Error)]
 pub enum ProviderError {
@@ -60,9 +77,9 @@ impl Provider {
     /// use fuels::prelude::*;
     /// async fn foo() -> Result<(), Box<dyn std::error::Error>> {
     ///   // Setup local test node
-    ///   let (provider, _) = setup_test_provider(vec![], None).await;  
+    ///   let (provider, _) = setup_test_provider(vec![], None).await;
     ///   let tx = Transaction::default();
-    ///   
+    ///
     ///   let receipts = provider.send_transaction(&tx).await?;
     ///   dbg!(receipts);
     ///
@@ -70,6 +87,34 @@ impl Provider {
     /// }
     /// ```
     pub async fn send_transaction(&self, tx: &Transaction) -> Result<Vec<Receipt>, Error> {
+        let tolerance = 0.0;
+        let TransactionCost {
+            gas_used,
+            min_gas_price,
+            min_byte_price,
+            ..
+        } = self.get_transaction_cost(tx, Some(tolerance)).await?;
+
+        if gas_used > tx.gas_limit() {
+            return Err(Error::ProviderError(format!(
+                "gas_limit({}) is lower than the estimated gas_used({})",
+                tx.gas_limit(),
+                gas_used
+            )));
+        } else if min_gas_price > tx.gas_price() {
+            return Err(Error::ProviderError(format!(
+                "gas_price({}) is lower than the required min_gas_price({})",
+                tx.gas_price(),
+                min_gas_price
+            )));
+        } else if min_byte_price > tx.byte_price() {
+            return Err(Error::ProviderError(format!(
+                "byte_price({}) is lower than the required min_byte_price({})",
+                tx.byte_price(),
+                min_byte_price
+            )));
+        }
+
         let (status, receipts) = self.submit_with_feedback(tx).await?;
 
         if let TransactionStatus::Failure { reason, .. } = status {
@@ -126,6 +171,10 @@ impl Provider {
 
     pub async fn chain_info(&self) -> Result<ChainInfo, ProviderError> {
         Ok(self.client.chain_info().await?)
+    }
+
+    pub async fn node_info(&self) -> Result<NodeInfo, ProviderError> {
+        Ok(self.client.node_info().await?)
     }
 
     pub async fn dry_run(&self, tx: &Transaction) -> Result<Vec<Receipt>, ProviderError> {
@@ -397,6 +446,74 @@ impl Provider {
 
     pub async fn produce_blocks(&self, amount: u64) -> io::Result<u64> {
         self.client.produce_block(amount).await
+    }
+
+    /// Get estimated cost of a transaction
+    pub async fn get_transaction_cost(
+        &self,
+        tx: &Transaction,
+        tolerance: Option<f64>,
+    ) -> Result<TransactionCost, Error> {
+        let tolerance = tolerance.unwrap_or(DEFAULT_GAS_ESTIMATION_TOLERANCE);
+
+        let NodeInfo {
+            min_gas_price,
+            min_byte_price,
+            ..
+        } = &self.node_info().await?;
+
+        let gas_price = std::cmp::max(tx.gas_price(), min_gas_price.0);
+        let byte_price = std::cmp::max(tx.byte_price(), min_byte_price.0);
+
+        // Simulate the contract call with  the default TxParameters
+        let mut tmp_tx = tx.clone();
+        tmp_tx.set_gas_limit(MAX_GAS_PER_TX);
+        tmp_tx.set_gas_price(0);
+        tmp_tx.set_byte_price(0);
+
+        let gas_used = self.get_gas_used_with_tolerance(&tmp_tx, tolerance).await?;
+        let byte_size = self.get_chargable_byte_size(tmp_tx);
+        // GAS_PRICE_FACTOR is a chaing_config of the  node. Because of the different decimal precision in
+        // FuelVM and EVM we need to scale the price down_
+        let gas_fee = ((gas_used as f64 / GAS_PRICE_FACTOR as f64) * gas_price as f64) as u64;
+        let byte_fee = ((byte_size as f64 / GAS_PRICE_FACTOR as f64) * byte_price as f64) as u64;
+
+        Ok(TransactionCost {
+            min_gas_price: min_gas_price.0,
+            min_byte_price: min_byte_price.0,
+            byte_price,
+            gas_price,
+            gas_used,
+            byte_size,
+            fee: gas_fee + byte_fee,
+        })
+    }
+
+    async fn get_gas_used_with_tolerance(
+        &self,
+        tx: &Transaction,
+        tolerance: f64,
+    ) -> Result<u64, ProviderError> {
+        let gas_used = self.get_gas_used(&self.dry_run(tx).await?);
+        Ok((gas_used as f64 * (1.0 + tolerance)) as u64)
+    }
+
+    fn get_gas_used(&self, receipts: &[Receipt]) -> u64 {
+        let script_receipt = receipts
+            .iter()
+            .rfind(|r| matches!(r, Receipt::ScriptResult { .. }));
+
+        if let Some(script_result) = script_receipt {
+            return script_result
+                .gas_used()
+                .expect("could not retrieve gas used from ScriptResult");
+        }
+        0
+    }
+
+    fn get_chargable_byte_size(&self, mut tx: Transaction) -> u64 {
+        let witness_size: usize = tx.witnesses().iter().map(|w| w.as_vec().len()).sum();
+        tx.to_bytes().len() as u64 - witness_size as u64
     }
 
     // @todo

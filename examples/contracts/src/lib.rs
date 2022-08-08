@@ -75,6 +75,41 @@ mod tests {
 
         assert_eq!(52, response.value);
         // ANCHOR_END: use_deployed_contract
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn contract_call_cost_estimation() -> Result<(), Error> {
+        use fuels::prelude::*;
+
+        abigen!(
+            MyContract,
+            "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+        );
+
+        let wallet = launch_provider_and_get_wallet().await;
+
+        let contract_id = Contract::deploy(
+            "../../packages/fuels/tests/test_projects/contract_test/out/debug/contract_test.bin",
+            &wallet,
+            TxParameters::default(),
+            StorageConfiguration::default(),
+        )
+        .await?;
+
+        // ANCHOR: contract_call_cost_estimation
+        let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
+
+        let tolerance = 0.0;
+        let transaction_cost = contract_instance
+            .initialize_counter(42) // Build the ABI call
+            .get_transaction_cost(Some(tolerance)) // Get estimated transaction cost
+            .await?;
+        // ANCHOR_END: contract_call_cost_estimation
+
+        assert_eq!(transaction_cost.gas_used, 290);
+
         Ok(())
     }
 
@@ -445,8 +480,16 @@ mod tests {
         let response = multi_call_handler.call::<(u64, Vec<u64>)>().await?;
         // ANCHOR_END: multi_call_response
 
+        // ANCHOR: multi_call_cost_estimation
+        let tolerance = 0.0;
+        let transaction_cost = multi_call_handler
+            .get_transaction_cost(Some(tolerance)) // Perform the network call
+            .await?;
+        // ANCHOR_END: multi_call_cost_estimation
+
         assert_eq!(counter, 42);
         assert_eq!(array, [42; 2]);
+        assert_eq!(transaction_cost.gas_used, 710);
 
         Ok(())
     }
