@@ -61,17 +61,17 @@ pub async fn launch_custom_provider_and_get_wallets(
     wallet_config: WalletsConfig,
     provider_config: Option<Config>,
 ) -> Vec<LocalWallet> {
+    const SIZE_SECRET_KEY: usize = size_of::<SecretKey>();
+    const PADDING_BYTES: usize = SIZE_SECRET_KEY - size_of::<u64>();
+    let mut secret_key: [u8; SIZE_SECRET_KEY] = [0; SIZE_SECRET_KEY];
+
     let mut wallets: Vec<_> = (1..=wallet_config.num_wallets())
         .map(|wallet_counter| {
-            const PADDING_BYTES: usize = size_of::<SecretKey>() - size_of::<u64>();
-            let bytes32: Vec<u8> = [0; PADDING_BYTES]
-                .into_iter()
-                .chain(wallet_counter.to_be_bytes().into_iter())
-                .collect();
+            secret_key[PADDING_BYTES..].copy_from_slice(&wallet_counter.to_be_bytes());
 
             return LocalWallet::new_from_private_key(
-                SecretKey::try_from(bytes32.as_slice())
-                    .expect("This should never happen as we provide a [u8,32] array"),
+                SecretKey::try_from(secret_key.as_slice())
+                    .expect("This should never happen as we provide a [u8; SIZE_SECRET_KEY] array"),
                 None,
             );
         })
