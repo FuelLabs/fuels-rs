@@ -69,11 +69,11 @@ pub async fn launch_custom_provider_and_get_wallets(
         .map(|wallet_counter| {
             secret_key[PADDING_BYTES..].copy_from_slice(&wallet_counter.to_be_bytes());
 
-            return LocalWallet::new_from_private_key(
+            LocalWallet::new_from_private_key(
                 SecretKey::try_from(secret_key.as_slice())
                     .expect("This should never happen as we provide a [u8; SIZE_SECRET_KEY] array"),
                 None,
-            );
+            )
         })
         .collect();
 
