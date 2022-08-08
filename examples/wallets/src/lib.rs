@@ -266,10 +266,15 @@ mod tests {
 
         let assets = vec![asset_base, asset_1, asset_2];
 
-        let coins = setup_custom_assets_coins(wallet.address(), assets);
-        let (provider, _socket_addr) = setup_test_provider(coins.clone(), None).await;
+        let coins = setup_custom_assets_coins(wallet.address(), &assets);
+        let (provider, _socket_addr) = setup_test_provider(coins, None).await;
         wallet.set_provider(provider);
         // ANCHOR_END: custom_assets_wallet
+        // ANCHOR: custom_assets_wallet_short
+        let num_wallets = 1;
+        let wallet_config = WalletsConfig::new_multiple_assets(num_wallets, assets);
+        let wallets = launch_custom_provider_and_get_wallets(wallet_config, None).await;
+        // ANCHOR_END: custom_assets_wallet_short
         Ok(())
     }
 
