@@ -1042,7 +1042,7 @@ async fn test_gas_errors() -> Result<(), Error> {
 
     let mut wallet = LocalWallet::new_random(None);
     let number_of_coins = 1;
-    let amount_per_coin = 1000_000;
+    let amount_per_coin = 1_000_000;
     let coins = setup_single_asset_coins(
         wallet.address(),
         BASE_ASSET_ID,
