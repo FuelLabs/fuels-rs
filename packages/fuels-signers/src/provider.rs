@@ -181,6 +181,13 @@ impl Provider {
         Ok(self.client.dry_run(tx).await?)
     }
 
+    pub async fn dry_run_no_validation(
+        &self,
+        tx: &Transaction,
+    ) -> Result<Vec<Receipt>, ProviderError> {
+        Ok(self.client.dry_run_opt(tx, Some(false)).await?)
+    }
+
     /// Gets all coins owned by address `from`, with asset ID `asset_id`, *even spent ones*. This
     /// returns actual coins (UTXOs).
     pub async fn get_coins(
@@ -465,7 +472,7 @@ impl Provider {
         let gas_price = std::cmp::max(tx.gas_price(), min_gas_price.0);
         let byte_price = std::cmp::max(tx.byte_price(), min_byte_price.0);
 
-        // Simulate the contract call with  the default TxParameters
+        // Simulate the contract call with MAX_GAS_PER_TX to get the complete gase_used
         let mut tmp_tx = tx.clone();
         tmp_tx.set_gas_limit(MAX_GAS_PER_TX);
         tmp_tx.set_gas_price(0);
@@ -474,7 +481,7 @@ impl Provider {
         let gas_used = self.get_gas_used_with_tolerance(&tmp_tx, tolerance).await?;
         let byte_size = self.get_chargable_byte_size(tmp_tx);
         // GAS_PRICE_FACTOR is a chaing_config of the  node. Because of the different decimal precision in
-        // FuelVM and EVM we need to scale the price down_
+        // FuelVM and EVM we need to scale the price down
         let gas_fee = ((gas_used as f64 / GAS_PRICE_FACTOR as f64) * gas_price as f64) as u64;
         let byte_fee = ((byte_size as f64 / GAS_PRICE_FACTOR as f64) * byte_price as f64) as u64;
 
@@ -494,7 +501,7 @@ impl Provider {
         tx: &Transaction,
         tolerance: f64,
     ) -> Result<u64, ProviderError> {
-        let gas_used = self.get_gas_used(&self.dry_run(tx).await?);
+        let gas_used = self.get_gas_used(&self.dry_run_no_validation(tx).await?);
         Ok((gas_used as f64 * (1.0 + tolerance)) as u64)
     }
 

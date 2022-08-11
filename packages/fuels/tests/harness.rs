@@ -1040,7 +1040,18 @@ async fn test_gas_errors() -> Result<(), Error> {
         "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
 
-    let wallet = launch_provider_and_get_wallet().await;
+    let mut wallet = LocalWallet::new_random(None);
+    let number_of_coins = 1;
+    let amount_per_coin = 1000_000;
+    let coins = setup_single_asset_coins(
+        wallet.address(),
+        BASE_ASSET_ID,
+        number_of_coins,
+        amount_per_coin,
+    );
+
+    let (provider, _) = setup_test_provider(coins.clone(), None).await;
+    wallet.set_provider(provider);
 
     let contract_id = Contract::deploy(
         "tests/test_projects/contract_test/out/debug/contract_test.bin",
@@ -1068,9 +1079,9 @@ async fn test_gas_errors() -> Result<(), Error> {
     let response = contract_instance
         .initialize_counter(42) // Build the ABI call
         .tx_params(TxParameters::new(
-            Some(10_000_000_000_000_000),
+            Some(100_000_000_000),
             None,
-            None,
+            Some(100_000_000_000),
             None,
         ))
         .call()
