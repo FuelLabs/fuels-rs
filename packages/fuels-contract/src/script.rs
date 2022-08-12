@@ -416,8 +416,8 @@ mod test {
     }
 
     #[test]
-    fn contract_input_present() -> Result<()> {
-        let call = given_a_contract_call(Default::default(), Default::default());
+    fn contract_input_present() {
+        let call = given_a_contract_call();
 
         let (inputs, _) = Script::get_transaction_inputs_outputs(
             vec![&call],
@@ -435,35 +435,17 @@ mod test {
                 call.contract_id.into(),
             )]
         );
-
-        Ok(())
-    }
-
-    fn given_a_contract_call(
-        external_contracts: Vec<Bech32ContractId>,
-        variable_outputs: Vec<Output>,
-    ) -> ContractCall {
-        ContractCall {
-            contract_id: random_bech32_contract_id(),
-            encoded_args: vec![],
-            encoded_selector: [0; 8],
-            call_parameters: Default::default(),
-            compute_custom_input_offset: false,
-            variable_outputs: Some(variable_outputs),
-            external_contracts,
-            output_param: None,
-        }
     }
 
     #[test]
-    fn contract_input_is_not_duplicated() -> Result<()> {
-        let call = given_a_contract_call(Default::default(), Default::default());
+    fn contract_input_is_not_duplicated() {
+        let call = given_a_contract_call();
 
         let (inputs, _) = Script::get_transaction_inputs_outputs(
             vec![&call, &call],
             &random_bech32_addr(),
-            vec![],
-            [].into(),
+            Default::default(),
+            Default::default(),
         );
 
         assert_eq!(
@@ -475,49 +457,41 @@ mod test {
                 call.contract_id.into(),
             )]
         );
-
-        Ok(())
     }
 
     #[test]
-    fn contract_output_present() -> Result<()> {
-        let call = given_a_contract_call(Default::default(), Default::default());
+    fn contract_output_present() {
+        let call = given_a_contract_call();
 
         let (_, outputs) = Script::get_transaction_inputs_outputs(
             vec![&call],
             &random_bech32_addr(),
-            vec![],
-            [].into(),
+            Default::default(),
+            Default::default(),
         );
 
         assert_eq!(
             outputs,
             vec![Output::contract(0, Bytes32::zeroed(), Bytes32::zeroed())]
         );
-
-        Ok(())
-    }
-
-    fn random_bech32_addr() -> Bech32Address {
-        Bech32Address::new("fuel", rand::thread_rng().gen::<[u8; 32]>())
-    }
-
-    fn random_bech32_contract_id() -> Bech32ContractId {
-        Bech32ContractId::new("fuel", rand::thread_rng().gen::<[u8; 32]>())
     }
 
     #[test]
-    fn external_contract_input_present() -> Result<()> {
+    fn external_contract_input_present() {
+        // given
         let external_contract_id = random_bech32_contract_id();
-        let call = given_a_contract_call(vec![external_contract_id.clone()], Default::default());
+        let call =
+            given_a_contract_call().with_external_contracts(vec![external_contract_id.clone()]);
 
+        // when
         let (inputs, _) = Script::get_transaction_inputs_outputs(
             vec![&call],
             &random_bech32_addr(),
-            vec![],
-            [].into(),
+            Default::default(),
+            Default::default(),
         );
 
+        // then
         let mut expected_contract_ids: HashSet<ContractId> =
             [call.contract_id.into(), external_contract_id.into()].into();
 
@@ -540,46 +514,46 @@ mod test {
                 }
             }
         }
-
-        Ok(())
     }
 
     #[test]
-    fn external_contract_output_present() -> Result<()> {
+    fn external_contract_output_present() {
+        // given
         let external_contract_id = random_bech32_contract_id();
-        let call = given_a_contract_call(vec![external_contract_id], Default::default());
+        let call = given_a_contract_call().with_external_contracts(vec![external_contract_id]);
 
+        // when
         let (_, outputs) = Script::get_transaction_inputs_outputs(
             vec![&call],
             &random_bech32_addr(),
-            vec![],
-            [].into(),
+            Default::default(),
+            Default::default(),
         );
 
+        // then
         let expected_outputs = (0..=1)
             .map(|i| Output::contract(i, Bytes32::zeroed(), Bytes32::zeroed()))
             .collect::<Vec<_>>();
 
         assert_eq!(outputs, expected_outputs);
-
-        Ok(())
     }
 
     #[test]
-    fn change_per_asset_id_added() -> Result<()> {
+    fn change_per_asset_id_added() {
+        // given
         let wallet_addr = random_bech32_addr();
-
         let asset_ids = [AssetId::default(), AssetId::from([1; 32])];
+        let call = given_a_contract_call();
 
-        let call = given_a_contract_call(Default::default(), Default::default());
-
+        // when
         let (_, outputs) = Script::get_transaction_inputs_outputs(
             vec![&call],
             &wallet_addr,
-            vec![],
+            Default::default(),
             asset_ids.into(),
         );
 
+        // then
         let change_outputs: HashSet<Output> = outputs[1..].iter().cloned().collect();
 
         let expected_change_outputs = asset_ids
@@ -592,12 +566,11 @@ mod test {
             .collect();
 
         assert_eq!(change_outputs, expected_change_outputs);
-
-        Ok(())
     }
 
     #[test]
-    fn spendable_coins_added_to_input() -> Result<()> {
+    fn spendable_coins_added_to_input() {
+        // given
         let asset_ids = [AssetId::default(), AssetId::from([1; 32])];
 
         let generate_spendable_coins = || {
@@ -616,8 +589,9 @@ mod test {
                 .collect::<Vec<_>>()
         };
 
-        let call = given_a_contract_call(Default::default(), Default::default());
+        let call = given_a_contract_call();
 
+        // when
         let (inputs, _) = Script::get_transaction_inputs_outputs(
             vec![&call],
             &random_bech32_addr(),
@@ -625,6 +599,7 @@ mod test {
             asset_ids.into(),
         );
 
+        // then
         let inputs_as_signed_coins: HashSet<Input> = inputs[1..].iter().cloned().collect();
 
         let expected_inputs = generate_spendable_coins()
@@ -642,12 +617,11 @@ mod test {
             .collect::<HashSet<_>>();
 
         assert_eq!(expected_inputs, inputs_as_signed_coins);
-
-        Ok(())
     }
 
     #[test]
-    fn variable_outputs_appended_to_outputs() -> Result<()> {
+    fn variable_outputs_appended_to_outputs() {
+        // given
         let variable_outputs = [100, 200].map(|amount| {
             Output::variable(random_bech32_addr().into(), amount, Default::default())
         });
@@ -655,21 +629,63 @@ mod test {
         let calls = variable_outputs
             .iter()
             .cloned()
-            .map(|variable_output| given_a_contract_call(vec![], vec![variable_output]))
+            .map(|variable_output| {
+                given_a_contract_call().with_variable_outputs(vec![variable_output])
+            })
             .collect::<Vec<_>>();
 
+        // when
         let (_, outputs) = Script::get_transaction_inputs_outputs(
             calls.iter().collect(),
             &random_bech32_addr(),
-            vec![],
-            [].into(),
+            Default::default(),
+            Default::default(),
         );
 
+        // then
         let actual_variable_outputs: HashSet<Output> = outputs[2..].iter().cloned().collect();
         let expected_outputs: HashSet<Output> = variable_outputs.into();
 
         assert_eq!(expected_outputs, actual_variable_outputs);
+    }
 
-        Ok(())
+    fn random_bech32_addr() -> Bech32Address {
+        Bech32Address::new("fuel", rand::thread_rng().gen::<[u8; 32]>())
+    }
+
+    fn random_bech32_contract_id() -> Bech32ContractId {
+        Bech32ContractId::new("fuel", rand::thread_rng().gen::<[u8; 32]>())
+    }
+
+    fn given_a_contract_call() -> ContractCall {
+        ContractCall {
+            contract_id: random_bech32_contract_id(),
+            encoded_args: Default::default(),
+            encoded_selector: [0; 8],
+            call_parameters: Default::default(),
+            compute_custom_input_offset: false,
+            variable_outputs: None,
+            external_contracts: Default::default(),
+            output_param: None,
+        }
+    }
+
+    impl ContractCall {
+        pub fn with_external_contracts(
+            self,
+            external_contracts: Vec<Bech32ContractId>,
+        ) -> ContractCall {
+            ContractCall {
+                external_contracts,
+                ..self
+            }
+        }
+
+        pub fn with_variable_outputs(self, variable_outputs: Vec<Output>) -> ContractCall {
+            ContractCall {
+                variable_outputs: Some(variable_outputs),
+                ..self
+            }
+        }
     }
 }
