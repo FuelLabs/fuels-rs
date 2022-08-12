@@ -141,7 +141,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn send_transaction() -> Result<(), fuels_types::errors::Error> {
+    async fn send_transfer_transactions() -> Result<(), fuels_types::errors::Error> {
         // Setup two sets of coins, one for each wallet, each containing 1 coin with 1 amount.
         let mut wallet_1 = LocalWallet::new_random(None);
         let mut wallet_2 = LocalWallet::new_random(None);
@@ -158,8 +158,8 @@ mod tests {
         wallet_1.set_provider(provider.clone());
         wallet_2.set_provider(provider);
 
-        let wallet_1_initial_coins = wallet_1.get_coins().await?;
-        let wallet_2_initial_coins = wallet_2.get_coins().await?;
+        let wallet_1_initial_coins = wallet_1.get_coins(BASE_ASSET_ID).await?;
+        let wallet_2_initial_coins = wallet_2.get_coins(BASE_ASSET_ID).await?;
 
         // Check initial wallet state.
         assert_eq!(wallet_1_initial_coins.len(), 1);
@@ -194,12 +194,15 @@ mod tests {
         assert_eq!(res.transaction.gas_price(), gas_price);
         assert_eq!(res.transaction.maturity(), maturity);
 
-        // Currently ignoring the effect on wallet 1, as coins aren't being marked as spent for now.
-        let _wallet_1_final_coins = wallet_1.get_coins().await?;
-        let wallet_2_final_coins = wallet_2.get_coins().await?;
+        let wallet_1_spendable_coins = wallet_1.get_spendable_coins(BASE_ASSET_ID, 0).await?;
+        let wallet_1_all_coins = wallet_1.get_coins(BASE_ASSET_ID).await?;
+        let wallet_2_all_coins = wallet_2.get_coins(BASE_ASSET_ID).await?;
 
+        // wallet_1 has now only 1 spent coin (so 0 spendable)
+        assert_eq!(wallet_1_spendable_coins.len(), 0);
+        assert_eq!(wallet_1_all_coins.len(), 1);
         // Check that wallet two now has two coins.
-        assert_eq!(wallet_2_final_coins.len(), 2);
+        assert_eq!(wallet_2_all_coins.len(), 2);
 
         // Transferring more than balance should fail.
         let response = wallet_1
@@ -212,7 +215,7 @@ mod tests {
             .await;
 
         assert!(response.is_err());
-        let wallet_2_coins = wallet_2.get_coins().await?;
+        let wallet_2_coins = wallet_2.get_coins(BASE_ASSET_ID).await?;
         assert_eq!(wallet_2_coins.len(), 2); // Not changed
         Ok(())
     }
@@ -234,8 +237,8 @@ mod tests {
         wallet_1.set_provider(provider.clone());
         wallet_2.set_provider(provider);
 
-        let wallet_1_initial_coins = wallet_1.get_coins().await?;
-        let wallet_2_initial_coins = wallet_2.get_coins().await?;
+        let wallet_1_initial_coins = wallet_1.get_coins(BASE_ASSET_ID).await?;
+        let wallet_2_initial_coins = wallet_2.get_coins(BASE_ASSET_ID).await?;
 
         assert_eq!(wallet_1_initial_coins.len(), 1);
         assert_eq!(wallet_2_initial_coins.len(), 1);
@@ -250,13 +253,13 @@ mod tests {
             )
             .await?;
 
-        let wallet_1_final_coins = wallet_1.get_coins().await?;
+        let wallet_1_final_coins = wallet_1.get_coins(BASE_ASSET_ID).await?;
 
         // Assert that we've sent 2 from wallet 1, resulting in an amount of 3 in wallet 1.
         let resulting_amount = wallet_1_final_coins.first().unwrap();
         assert_eq!(resulting_amount.amount.0, 3);
 
-        let wallet_2_final_coins = wallet_2.get_coins().await?;
+        let wallet_2_final_coins = wallet_2.get_coins(BASE_ASSET_ID).await?;
         assert_eq!(wallet_2_final_coins.len(), 2);
 
         // Check that wallet 2's amount is 7:

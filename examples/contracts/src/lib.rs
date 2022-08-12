@@ -450,4 +450,42 @@ mod tests {
 
         Ok(())
     }
+
+    #[tokio::test]
+    #[allow(unused_variables)]
+    async fn connect_wallet() -> Result<(), Error> {
+        use fuels::prelude::*;
+        abigen!(
+            MyContract,
+            "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+        );
+
+        let config = WalletsConfig::new(Some(2), Some(1), Some(DEFAULT_COIN_AMOUNT));
+        let mut wallets = launch_custom_provider_and_get_wallets(config, None).await;
+        let wallet_1 = wallets.pop().unwrap();
+        let wallet_2 = wallets.pop().unwrap();
+
+        let contract_id = Contract::deploy(
+            "../../packages/fuels/tests/test_projects/contract_test/out/debug/contract_test.bin",
+            &wallet_1,
+            TxParameters::default(),
+            StorageConfiguration::default(),
+        )
+        .await?;
+
+        // ANCHOR: connect_wallet
+        // Create contract instance with wallet_1
+        let contract_instance =
+            MyContractBuilder::new(contract_id.to_string(), wallet_1.clone()).build();
+
+        // Perform contract call with wallet_2
+        let response = contract_instance
+            ._with_wallet(wallet_2)? // Connect wallet_2
+            .get_msg_amount() // Our contract method.
+            .call() // Perform the contract call.
+            .await?; // This is an async call, `.await` for it.
+                     // ANCHOR_END: connect_wallet
+
+        Ok(())
+    }
 }

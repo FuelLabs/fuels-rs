@@ -1,19 +1,17 @@
-use fuel_core::service::{Config, FuelService};
+use fuel_core::service::Config as CoreConfig;
+use fuel_core::service::FuelService;
 use fuel_gql_client::fuel_tx::{AssetId, ContractId, Receipt};
 use fuels::contract::contract::MultiContractCallHandler;
 #[cfg(feature = "fuel-core-lib")]
 use fuels::contract::predicate::Predicate;
 use fuels::prelude::{
-    abigen, launch_provider_and_get_wallet, setup_multiple_assets_coins, setup_single_asset_coins,
-    setup_test_provider, CallParameters, Contract, Error, LocalWallet, Provider, Salt, Signer,
-    TxParameters, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
+    abigen, launch_custom_provider_and_get_wallets, launch_provider_and_get_wallet,
+    setup_multiple_assets_coins, setup_single_asset_coins, setup_test_provider, Bech32Address,
+    CallParameters, Config, Contract, Error, LocalWallet, Provider, Salt, Signer, TxParameters,
+    WalletsConfig, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
 };
-#[cfg(feature = "fuel-core-lib")]
-use fuels::prelude::{
-    launch_custom_provider_and_get_wallets, Bech32Address, Config as TestConfig, WalletsConfig,
-};
-#[cfg(feature = "fuel-core-lib")]
 use fuels_core::abi_encoder::ABIEncoder;
+
 use fuels_core::parameters::StorageConfiguration;
 use fuels_core::tx::{Address, Bytes32, StorageSlot};
 use fuels_core::Tokenizable;
@@ -2159,7 +2157,6 @@ async fn contract_method_call_respects_maturity() -> Result<(), Error> {
 }
 
 #[tokio::test]
-#[cfg(feature = "fuel-core-lib")]
 async fn contract_deployment_respects_maturity() -> Result<(), Error> {
     abigen!(
         MyContract,
@@ -2203,7 +2200,6 @@ async fn contract_deployment_respects_maturity() -> Result<(), Error> {
 }
 
 #[tokio::test]
-#[cfg(feature = "fuel-core-lib")]
 async fn can_increase_block_height() -> Result<(), Error> {
     // ANCHOR: use_produce_blocks_to_increase_block_height
     let config = Config {
@@ -2251,7 +2247,6 @@ async fn can_handle_sway_function_called_new() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-#[cfg(feature = "fuel-core-lib")]
 async fn can_call_no_arg_predicate_returns_true() -> Result<(), anyhow::Error> {
     let amount_to_predicate: u64 = 16;
     let asset_id = AssetId::default();
@@ -2261,10 +2256,10 @@ async fn can_call_no_arg_predicate_returns_true() -> Result<(), anyhow::Error> {
     let receiver_address: &Bech32Address = receiver.address();
     let wallets = launch_custom_provider_and_get_wallets(
         WalletsConfig::default(),
-        Some(TestConfig {
+        Some(Config {
             predicates: true,
             utxo_validation: true,
-            ..TestConfig::local_node()
+            ..Config::local_node()
         }),
     )
     .await;
@@ -2303,7 +2298,6 @@ async fn can_call_no_arg_predicate_returns_true() -> Result<(), anyhow::Error> {
 }
 
 #[tokio::test]
-#[cfg(feature = "fuel-core-lib")]
 async fn can_call_no_arg_predicate_returns_false() -> Result<(), anyhow::Error> {
     let amount_to_predicate: u64 = 12;
     let asset_id = AssetId::default();
@@ -2313,10 +2307,10 @@ async fn can_call_no_arg_predicate_returns_false() -> Result<(), anyhow::Error> 
     let receiver_address: &Bech32Address = receiver.address();
     let wallets = launch_custom_provider_and_get_wallets(
         WalletsConfig::default(),
-        Some(TestConfig {
+        Some(Config {
             predicates: true,
             utxo_validation: true,
-            ..TestConfig::local_node()
+            ..Config::local_node()
         }),
     )
     .await;
@@ -2355,7 +2349,6 @@ async fn can_call_no_arg_predicate_returns_false() -> Result<(), anyhow::Error> 
 }
 
 #[tokio::test]
-#[cfg(feature = "fuel-core-lib")]
 async fn can_call_predicate_with_u32_data() -> Result<(), anyhow::Error> {
     let amount_to_predicate: u64 = 23;
     let asset_id = AssetId::default();
@@ -2365,10 +2358,10 @@ async fn can_call_predicate_with_u32_data() -> Result<(), anyhow::Error> {
     let receiver_address: &Bech32Address = receiver.address();
     let wallets = launch_custom_provider_and_get_wallets(
         WalletsConfig::default(),
-        Some(TestConfig {
+        Some(Config {
             predicates: true,
             utxo_validation: true,
-            ..TestConfig::local_node()
+            ..Config::local_node()
         }),
     )
     .await;
@@ -2431,7 +2424,6 @@ async fn can_call_predicate_with_u32_data() -> Result<(), anyhow::Error> {
 }
 
 #[tokio::test]
-#[cfg(feature = "fuel-core-lib")]
 async fn can_call_predicate_with_address_data() -> Result<(), anyhow::Error> {
     let arg = Token::B256(
         *Address::from_str("0xef86afa9696cf0dc6385e2c407a6e159a1103cefb7e2ae0636fb33d3cb2a9e4a")
@@ -2447,10 +2439,10 @@ async fn can_call_predicate_with_address_data() -> Result<(), anyhow::Error> {
     let receiver_address: &Bech32Address = receiver.address();
     let wallets = launch_custom_provider_and_get_wallets(
         WalletsConfig::default(),
-        Some(TestConfig {
+        Some(Config {
             predicates: true,
             utxo_validation: true,
-            ..TestConfig::local_node()
+            ..Config::local_node()
         }),
     )
     .await;
@@ -2489,7 +2481,6 @@ async fn can_call_predicate_with_address_data() -> Result<(), anyhow::Error> {
 }
 
 #[tokio::test]
-#[cfg(feature = "fuel-core-lib")]
 async fn can_call_predicate_with_struct_data() -> Result<(), anyhow::Error> {
     let amount_to_predicate: u64 = 1886;
     let asset_id = AssetId::default();
@@ -2500,10 +2491,10 @@ async fn can_call_predicate_with_struct_data() -> Result<(), anyhow::Error> {
     let receiver_address: &Bech32Address = receiver.address();
     let wallets = launch_custom_provider_and_get_wallets(
         WalletsConfig::default(),
-        Some(TestConfig {
+        Some(Config {
             predicates: true,
             utxo_validation: true,
-            ..TestConfig::local_node()
+            ..Config::local_node()
         }),
     )
     .await;
@@ -2650,7 +2641,7 @@ async fn test_network_error() -> Result<(), anyhow::Error> {
 
     let mut wallet = LocalWallet::new_random(None);
 
-    let config = Config::local_node();
+    let config = CoreConfig::local_node();
     let service = FuelService::new_node(config).await?;
     let provider = Provider::connect(service.bound_address).await?;
 
@@ -2706,14 +2697,12 @@ async fn str_in_array() -> Result<(), Error> {
 
     assert_eq!(response.value, ["foo"]);
 
-    // This test is skipped because of a compiler error.
-    // See: https://github.com/FuelLabs/sway/issues/2410
-    // let response = contract_instance
-    //     .take_array_string_return_single_element(input)
-    //     .call()
-    //     .await?;
+    let response = contract_instance
+        .take_array_string_return_single_element(input)
+        .call()
+        .await?;
 
-    // assert_eq!(response.value, "baz");
+    assert_eq!(response.value, "bar");
 
     Ok(())
 }
@@ -2862,4 +2851,55 @@ async fn strings_must_have_all_ascii_chars_custom_types() {
     let wallet = launch_provider_and_get_wallet().await;
     let contract_instance = SimpleContractBuilder::new(null_contract_id(), wallet).build();
     let _ = contract_instance.takes_nested_struct(input);
+}
+
+#[tokio::test]
+async fn test_connect_wallet() -> anyhow::Result<()> {
+    abigen!(
+        MyContract,
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+    );
+
+    let config = WalletsConfig::new(Some(2), Some(1), Some(DEFAULT_COIN_AMOUNT));
+
+    let mut wallets = launch_custom_provider_and_get_wallets(config, None).await;
+    let wallet_1 = wallets.pop().unwrap();
+    let wallet_2 = wallets.pop().unwrap();
+
+    let id = Contract::deploy(
+        "tests/test_projects/contract_test/out/debug/contract_test.bin",
+        &wallet_1,
+        TxParameters::default(),
+        StorageConfiguration::default(),
+    )
+    .await?;
+
+    // pay for call with wallet_1
+    let contract_instance = MyContractBuilder::new(id.to_string(), wallet_1.clone()).build();
+    let tx_params = TxParameters::new(Some(10), Some(10000), None, None);
+    contract_instance
+        .initialize_counter(42)
+        .tx_params(tx_params)
+        .call()
+        .await?;
+
+    // confirm that funds have been deducted
+    let wallet_1_balance = wallet_1.get_asset_balance(&Default::default()).await?;
+    assert!(DEFAULT_COIN_AMOUNT > wallet_1_balance);
+
+    // pay for call with wallet_2
+    contract_instance
+        ._with_wallet(wallet_2.clone())?
+        .initialize_counter(42)
+        .tx_params(tx_params)
+        .call()
+        .await?;
+
+    // confirm there are no changes to wallet_1, wallet_2 has been charged
+    let wallet_1_balance_second_call = wallet_1.get_asset_balance(&Default::default()).await?;
+    let wallet_2_balance = wallet_2.get_asset_balance(&Default::default()).await?;
+    assert_eq!(wallet_1_balance_second_call, wallet_1_balance);
+    assert!(DEFAULT_COIN_AMOUNT > wallet_2_balance);
+
+    Ok(())
 }

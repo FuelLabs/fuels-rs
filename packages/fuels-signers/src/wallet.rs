@@ -1,8 +1,6 @@
 use crate::provider::Provider;
 use crate::Signer;
 use async_trait::async_trait;
-use coins_bip32::{path::DerivationPath, Bip32Error};
-use coins_bip39::{English, Mnemonic, MnemonicError};
 use elliptic_curve::rand_core;
 use eth_keystore::KeystoreError;
 use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
@@ -14,11 +12,10 @@ use fuels_core::parameters::TxParameters;
 use fuels_types::bech32::{Bech32Address, Bech32ContractId, FUEL_BECH32_HRP};
 use fuels_types::errors::Error;
 use rand::{CryptoRng, Rng};
-use std::{collections::HashMap, fmt, path::Path, str::FromStr};
+use std::{collections::HashMap, fmt, path::Path};
 use thiserror::Error;
 
 const DEFAULT_DERIVATION_PATH_PREFIX: &str = "m/44'/1179993420'/0'/0/";
-type W = English;
 
 /// A FuelVM-compatible wallet which can be used for signing, sending transactions, and more.
 ///
@@ -34,7 +31,7 @@ type W = English;
 /// use fuel_crypto::Message;
 /// use fuels::prelude::*;
 ///
-/// async fn foo() -> Result<(), Box<dyn std::error::Error>> {
+/// async fn foo() -> Result<(), Error> {
 ///   // Setup local test node
 ///   let (provider, _) = setup_test_provider(vec![], None).await;
 ///
@@ -46,7 +43,7 @@ type W = English;
 ///
 ///   // Recover address that signed the message
 ///   let message = Message::new(message);
-///   let recovered_address = signature.recover(&message).unwrap();
+///   let recovered_address = signature.recover(&message).expect("Failed to recover address");
 ///
 ///   assert_eq!(wallet.address().hash(), recovered_address.hash());
 ///
@@ -83,9 +80,7 @@ pub enum WalletError {
     #[error(transparent)]
     KeystoreError(#[from] KeystoreError),
     #[error(transparent)]
-    MnemonicError(#[from] MnemonicError),
-    #[error(transparent)]
-    Bip32Error(#[from] Bip32Error),
+    FuelCrypto(#[from] fuel_crypto::Error),
 }
 
 impl From<WalletError> for Error {
@@ -144,13 +139,7 @@ impl Wallet {
         provider: Option<Provider>,
         path: &str,
     ) -> Result<Self, WalletError> {
-        let mnemonic = Mnemonic::<W>::new_from_phrase(phrase)?;
-
-        let path = DerivationPath::from_str(path)?;
-
-        let derived_priv_key = mnemonic.derive_key(path, None)?;
-        let key: &coins_bip32::prelude::SigningKey = derived_priv_key.as_ref();
-        let secret_key = unsafe { SecretKey::from_slice_unchecked(key.to_bytes().as_ref()) };
+        let secret_key = SecretKey::new_from_mnemonic_phrase_with_path(phrase, path)?;
 
         Ok(Self::new_from_private_key(secret_key, provider))
     }
@@ -182,7 +171,9 @@ impl Wallet {
         rng: &mut R,
         count: usize,
     ) -> Result<String, WalletError> {
-        Ok(Mnemonic::<W>::new_with_count(rng, count)?.to_phrase()?)
+        Ok(fuel_crypto::FuelMnemonic::generate_mnemonic_phrase(
+            rng, count,
+        )?)
     }
 
     /// Encrypts the wallet's private key with the given password and saves it
@@ -257,7 +248,7 @@ impl Wallet {
     ///        .await
     ///        .unwrap();
     ///
-    ///   let wallet_2_final_coins = wallet_2.get_coins().await.unwrap();
+    ///   let wallet_2_final_coins = wallet_2.get_coins(BASE_ASSET_ID).await.unwrap();
     ///
     ///   // Check that wallet two now has two coins
     ///   assert_eq!(wallet_2_final_coins.len(), 2);
@@ -355,7 +346,7 @@ impl Wallet {
         amount: u64,
         witness_index: u8,
     ) -> Result<Vec<Input>, Error> {
-        let spendable = self.get_spendable_coins(&asset_id, amount).await?;
+        let spendable = self.get_spendable_coins(asset_id, amount).await?;
         let mut inputs = vec![];
         for coin in spendable {
             let input_coin = Input::coin_signed(
@@ -371,9 +362,14 @@ impl Wallet {
         Ok(inputs)
     }
 
-    /// Gets all coins owned by the wallet, *even spent ones*. This returns actual coins (UTXOs).
-    pub async fn get_coins(&self) -> Result<Vec<Coin>, Error> {
-        Ok(self.get_provider()?.get_coins(self.address()).await?)
+    /// Gets all coins of asset `asset_id` owned by the wallet, *even spent ones* (this is useful
+    /// for some particular cases, but in general, you should use `get_spendable_coins`). This
+    /// returns actual coins (UTXOs).
+    pub async fn get_coins(&self, asset_id: AssetId) -> Result<Vec<Coin>, Error> {
+        Ok(self
+            .get_provider()?
+            .get_coins(self.address(), asset_id)
+            .await?)
     }
 
     /// Get some spendable coins of asset `asset_id` owned by the wallet that add up at least to
@@ -381,11 +377,11 @@ impl Wallet {
     /// of coins (UXTOs) is optimized to prevent dust accumulation.
     pub async fn get_spendable_coins(
         &self,
-        asset_id: &AssetId,
+        asset_id: AssetId,
         amount: u64,
     ) -> Result<Vec<Coin>, Error> {
         self.get_provider()?
-            .get_spendable_coins(self.address(), *asset_id, amount)
+            .get_spendable_coins(self.address(), asset_id, amount)
             .await
             .map_err(Into::into)
     }

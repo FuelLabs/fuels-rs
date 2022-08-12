@@ -140,6 +140,13 @@ impl Abigen {
                         pub fn _get_wallet(&self) -> LocalWallet {
                             self.wallet.clone()
                         }
+
+                        pub fn _with_wallet(&self, mut wallet: LocalWallet) -> Result<Self, SDKError> {
+                           let provider = self.wallet.get_provider()?;
+                           wallet.set_provider(provider.clone());
+
+                           Ok(Self { contract_id: self.contract_id.clone(), wallet: wallet })
+                        }
                     }
 
                     pub struct #builder_name {

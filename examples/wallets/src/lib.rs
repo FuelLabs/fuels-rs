@@ -134,7 +134,7 @@ mod tests {
             .transfer(wallets[1].address(), 1, asset_id, TxParameters::default())
             .await?;
 
-        let wallet_2_final_coins = wallets[1].get_coins().await?;
+        let wallet_2_final_coins = wallets[1].get_coins(BASE_ASSET_ID).await?;
 
         // Check that wallet 2 now has 2 coins
         assert_eq!(wallet_2_final_coins.len(), 2);
@@ -266,10 +266,15 @@ mod tests {
 
         let assets = vec![asset_base, asset_1, asset_2];
 
-        let coins = setup_custom_assets_coins(wallet.address(), assets);
-        let (provider, _socket_addr) = setup_test_provider(coins.clone(), None).await;
+        let coins = setup_custom_assets_coins(wallet.address(), &assets);
+        let (provider, _socket_addr) = setup_test_provider(coins, None).await;
         wallet.set_provider(provider);
         // ANCHOR_END: custom_assets_wallet
+        // ANCHOR: custom_assets_wallet_short
+        let num_wallets = 1;
+        let wallet_config = WalletsConfig::new_multiple_assets(num_wallets, assets);
+        let wallets = launch_custom_provider_and_get_wallets(wallet_config, None).await;
+        // ANCHOR_END: custom_assets_wallet_short
         Ok(())
     }
 

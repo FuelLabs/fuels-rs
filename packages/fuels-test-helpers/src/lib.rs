@@ -65,20 +65,21 @@ pub fn setup_multiple_assets_coins(
 ) -> (Vec<(UtxoId, Coin)>, Vec<AssetId>) {
     let mut rng = rand::thread_rng();
     // Create `num_asset-1` asset ids so there is `num_asset` in total with the base asset
-    let mut coins = (0..(num_asset - 1))
+    let coins = (0..(num_asset - 1))
         .flat_map(|_| {
             let mut random_asset_id = AssetId::zeroed();
             random_asset_id.try_fill(&mut rng).unwrap();
             setup_single_asset_coins(owner, random_asset_id, coins_per_asset, amount_per_coin)
         })
+        // Add the base asset
+        .chain(setup_single_asset_coins(
+            owner,
+            BASE_ASSET_ID,
+            coins_per_asset,
+            amount_per_coin,
+        ))
         .collect::<Vec<(UtxoId, Coin)>>();
-    // Add the base asset
-    coins.extend(setup_single_asset_coins(
-        owner,
-        BASE_ASSET_ID,
-        coins_per_asset,
-        amount_per_coin,
-    ));
+
     let asset_ids = coins
         .clone()
         .into_iter()
@@ -92,7 +93,7 @@ pub fn setup_multiple_assets_coins(
 /// Create a vector of UTXOs with the provided AssetIds, num_coins, and amount_per_coin
 pub fn setup_custom_assets_coins(
     owner: &Bech32Address,
-    assets: Vec<AssetConfig>,
+    assets: &[AssetConfig],
 ) -> Vec<(UtxoId, Coin)> {
     let coins = assets
         .iter()
@@ -184,13 +185,22 @@ pub async fn setup_test_client(
     node_config: Option<Config>,
     consensus_parameters_config: Option<ConsensusParameters>,
 ) -> (FuelClient, SocketAddr) {
-    let srv_address = match node_config {
-        Some(config) if config.addr.port() != 0 && is_free(config.addr.port()) => config.addr,
+    let (srv_address, manual_blocks_enabled) = match node_config {
+        Some(config) if config.addr.port() != 0 && is_free(config.addr.port()) => {
+            (config.addr, config.manual_blocks_enabled)
+        }
         Some(config) if !is_free(config.addr.port()) => panic!("Error: Address already in use"),
-        _ => get_socket_address(),
+        Some(config) => (get_socket_address(), config.manual_blocks_enabled),
+        None => (get_socket_address(), false),
     };
 
-    new_fuel_node(coins, consensus_parameters_config, srv_address).await;
+    new_fuel_node(
+        coins,
+        consensus_parameters_config,
+        srv_address,
+        manual_blocks_enabled,
+    )
+    .await;
 
     let client = FuelClient::from(srv_address);
     server_health_check(&client).await;
@@ -301,7 +311,7 @@ mod tests {
         };
 
         let assets = vec![asset_base, asset_1, asset_2];
-        let coins = setup_custom_assets_coins(&address, assets.clone());
+        let coins = setup_custom_assets_coins(&address, &assets);
 
         for asset in assets {
             let coins_asset_id: Vec<(UtxoId, Coin)> = coins
