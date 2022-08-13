@@ -58,4 +58,4 @@ If you want to create coins only with the base asset, then you can use:
 {{#include ../../../examples/providers/src/lib.rs:setup_single_asset}}
 ```
 
->**Note** Choosing a large number of coins and assets for `setup_multiple_assets_coins`, or number of coins for `setup_single_asset_coins`, can lead to considerable runtime for these methods. This will be improved in the future but for now we recommend using upto **1_000_000** coins, or **1000** coins and assets simultaneously.
+>**Note** Choosing a large number of coins and assets for `setup_multiple_assets_coins` or `setup_single_asset_coins` can lead to considerable runtime for these methods. This will be improved in the future but for now, we recommend using up to **1_000_000** coins, or **1000** coins and assets simultaneously.
