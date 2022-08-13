@@ -9,7 +9,7 @@ use fuel_gql_client::{
         types::{TransactionResponse, TransactionStatus},
         FuelClient, PageDirection, PaginatedResult, PaginationRequest,
     },
-    fuel_tx::{ConsensusParameters, Input, Output, Receipt, Transaction},
+    fuel_tx::{ConsensusParameters, Input, Output, Receipt, Transaction, UtxoId},
     fuel_types::{AssetId, ContractId, Immediate18},
     fuel_vm::{
         consts::{REG_ONE, WORD_SIZE},
@@ -60,9 +60,9 @@ impl Provider {
     /// use fuels::prelude::*;
     /// async fn foo() -> Result<(), Box<dyn std::error::Error>> {
     ///   // Setup local test node
-    ///   let (provider, _) = setup_test_provider(vec![], None).await;  
+    ///   let (provider, _) = setup_test_provider(vec![], None).await;
     ///   let tx = Transaction::default();
-    ///   
+    ///
     ///   let receipts = provider.send_transaction(&tx).await?;
     ///   dbg!(receipts);
     ///
@@ -397,6 +397,48 @@ impl Provider {
 
     pub async fn produce_blocks(&self, amount: u64) -> io::Result<u64> {
         self.client.produce_block(amount).await
+    }
+
+    pub async fn spend_predicate(
+        &self,
+        from: &Bech32Address,
+        code: Vec<u8>,
+        amount: u64,
+        asset_id: AssetId,
+        to: &Bech32Address,
+        data: Option<Vec<u8>>,
+    ) -> Result<Vec<Receipt>, Error> {
+        let spendable_predicate_coins = self.get_spendable_coins(from, asset_id, amount).await?;
+
+        let total_amount_in_predicate: u64 = spendable_predicate_coins
+            .iter()
+            .map(|coin| coin.amount.0)
+            .sum();
+
+        let predicate_data = data.unwrap_or_default();
+        let inputs = spendable_predicate_coins
+            .into_iter()
+            .map(|coin| {
+                Input::coin_predicate(
+                    UtxoId::from(coin.utxo_id),
+                    coin.owner.into(),
+                    coin.amount.0,
+                    asset_id,
+                    0,
+                    code.clone(),
+                    predicate_data.clone(),
+                )
+            })
+            .collect::<Vec<_>>();
+
+        let outputs = [
+            Output::coin(to.into(), total_amount_in_predicate, asset_id),
+            Output::change(from.into(), 0, asset_id),
+        ];
+
+        let tx = self.build_transfer_tx(&inputs, &outputs, TxParameters::default());
+
+        Ok(self.send_transaction(&tx).await?)
     }
 
     // @todo
