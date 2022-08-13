@@ -65,20 +65,21 @@ pub fn setup_multiple_assets_coins(
 ) -> (Vec<(UtxoId, Coin)>, Vec<AssetId>) {
     let mut rng = rand::thread_rng();
     // Create `num_asset-1` asset ids so there is `num_asset` in total with the base asset
-    let mut coins = (0..(num_asset - 1))
+    let coins = (0..(num_asset - 1))
         .flat_map(|_| {
             let mut random_asset_id = AssetId::zeroed();
             random_asset_id.try_fill(&mut rng).unwrap();
             setup_single_asset_coins(owner, random_asset_id, coins_per_asset, amount_per_coin)
         })
+        // Add the base asset
+        .chain(setup_single_asset_coins(
+            owner,
+            BASE_ASSET_ID,
+            coins_per_asset,
+            amount_per_coin,
+        ))
         .collect::<Vec<(UtxoId, Coin)>>();
-    // Add the base asset
-    coins.extend(setup_single_asset_coins(
-        owner,
-        BASE_ASSET_ID,
-        coins_per_asset,
-        amount_per_coin,
-    ));
+
     let asset_ids = coins
         .clone()
         .into_iter()
@@ -92,7 +93,7 @@ pub fn setup_multiple_assets_coins(
 /// Create a vector of UTXOs with the provided AssetIds, num_coins, and amount_per_coin
 pub fn setup_custom_assets_coins(
     owner: &Bech32Address,
-    assets: Vec<AssetConfig>,
+    assets: &[AssetConfig],
 ) -> Vec<(UtxoId, Coin)> {
     let coins = assets
         .iter()
@@ -310,7 +311,7 @@ mod tests {
         };
 
         let assets = vec![asset_base, asset_1, asset_2];
-        let coins = setup_custom_assets_coins(&address, assets.clone());
+        let coins = setup_custom_assets_coins(&address, &assets);
 
         for asset in assets {
             let coins_asset_id: Vec<(UtxoId, Coin)> = coins
