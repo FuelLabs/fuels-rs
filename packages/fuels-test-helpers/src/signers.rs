@@ -1,4 +1,5 @@
-use std::net::SocketAddr;
+use fuels_signers::fuel_crypto::SecretKey;
+use std::{mem::size_of, net::SocketAddr};
 
 #[cfg(feature = "fuel-core-lib")]
 use fuel_core::{model::Coin, service::Config};
@@ -60,16 +61,26 @@ pub async fn launch_custom_provider_and_get_wallets(
     wallet_config: WalletsConfig,
     provider_config: Option<Config>,
 ) -> Vec<LocalWallet> {
-    let mut wallets: Vec<LocalWallet> = (1..=wallet_config.num_wallets)
-        .map(|_i| LocalWallet::new_random(None))
+    const SIZE_SECRET_KEY: usize = size_of::<SecretKey>();
+    const PADDING_BYTES: usize = SIZE_SECRET_KEY - size_of::<u64>();
+    let mut secret_key: [u8; SIZE_SECRET_KEY] = [0; SIZE_SECRET_KEY];
+
+    let mut wallets: Vec<_> = (1..=wallet_config.num_wallets())
+        .map(|wallet_counter| {
+            secret_key[PADDING_BYTES..].copy_from_slice(&wallet_counter.to_be_bytes());
+
+            LocalWallet::new_from_private_key(
+                SecretKey::try_from(secret_key.as_slice())
+                    .expect("This should never happen as we provide a [u8; SIZE_SECRET_KEY] array"),
+                None,
+            )
+        })
         .collect();
 
-    let mut all_coins: Vec<(UtxoId, Coin)> = Vec::with_capacity(wallet_config.num_wallets as usize);
-    for wallet in &wallets {
-        let coins: Vec<(UtxoId, Coin)> =
-            setup_custom_assets_coins(wallet.address(), wallet_config.assets.clone());
-        all_coins.extend(coins);
-    }
+    let all_coins = wallets
+        .iter()
+        .flat_map(|wallet| setup_custom_assets_coins(wallet.address(), wallet_config.assets()))
+        .collect::<Vec<_>>();
 
     let (provider, _) = setup_test_provider(all_coins, provider_config).await;
 
@@ -101,10 +112,10 @@ pub async fn setup_test_provider(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::{launch_custom_provider_and_get_wallets, WalletsConfig};
+    use crate::{launch_custom_provider_and_get_wallets, AssetConfig, WalletsConfig};
     use fuels_core::constants::BASE_ASSET_ID;
     use fuels_signers::fuel_crypto::fuel_types::AssetId;
+    use fuels_signers::Signer;
     use fuels_types::errors::Error;
     use rand::Fill;
 
@@ -180,6 +191,22 @@ mod tests {
                 }
             }
         }
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn generated_wallets_are_deterministic() -> Result<(), Error> {
+        let num_wallets = 32;
+        let num_coins = 1;
+        let amount = 100;
+        let config = WalletsConfig::new(Some(num_wallets), Some(num_coins), Some(amount));
+
+        let wallets = launch_custom_provider_and_get_wallets(config, None).await;
+
+        assert_eq!(
+            wallets.get(31).unwrap().address().to_string(),
+            "fuel1rsjlwjzx0px3zu2al05jdlzp4j5quqzlk7pzyk4g45x6m7r3elzsz9dwh4".to_string()
+        );
         Ok(())
     }
 }

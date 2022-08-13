@@ -84,7 +84,7 @@ pub fn setup_multiple_assets_coins(
 /// Create a vector of UTXOs with the provided AssetIds, num_coins, and amount_per_coin
 pub fn setup_custom_assets_coins(
     owner: &Bech32Address,
-    assets: Vec<AssetConfig>,
+    assets: &[AssetConfig],
 ) -> Vec<(UtxoId, Coin)> {
     let coins = assets
         .iter()
@@ -302,7 +302,7 @@ mod tests {
         };
 
         let assets = vec![asset_base, asset_1, asset_2];
-        let coins = setup_custom_assets_coins(&address, assets.clone());
+        let coins = setup_custom_assets_coins(&address, &assets);
 
         for asset in assets {
             let coins_asset_id: Vec<(UtxoId, Coin)> = coins

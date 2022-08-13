@@ -16,6 +16,9 @@ You can customize your test wallets via `WalletsConfig`.
 {{#include ../../../examples/wallets/src/lib.rs:setup_5_wallets}}
 ```
 
+>**Note** Wallets generated with `launch_provider_and_get_wallet` or `launch_custom_provider_and_get_wallets`
+will have deterministic addresses.
+
 ## Setting up a test wallet with multiple random assets
 
 You can create a test wallet containing multiple assets (including the base asset to pay for gas).
@@ -35,7 +38,13 @@ You can also create assets with specific `AssetId`s, coin amounts, and number of
 {{#include ../../../examples/wallets/src/lib.rs:custom_assets_wallet}}
 ```
 
->**Note** In this case, you need to specify also the base asset and the corresponding number of
+This can also be achieved directly with the `WalletsConfig`.
+
+```rust,ignore
+{{#include ../../../examples/wallets/src/lib.rs:custom_assets_wallet_short}}
+```
+
+>**Note** In this case, you need to manually add the base asset and the corresponding number of
 >coins and coin amount
 
 ## Setting up assets
