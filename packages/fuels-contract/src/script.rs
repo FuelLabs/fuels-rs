@@ -51,20 +51,20 @@ impl Script {
     /// with the actual script instructions, script data needed to perform the call
     /// and transaction inputs/outputs consisting of assets and contracts
     pub async fn from_contract_calls(
-        calls: Vec<&ContractCall>,
+        calls: &[ContractCall],
         tx_parameters: &TxParameters,
         wallet: &LocalWallet,
     ) -> Self {
         let data_offset = Self::get_data_offset(calls.len());
 
-        let (script_data, call_param_offsets) = Self::get_script_data(&calls, data_offset);
+        let (script_data, call_param_offsets) = Self::get_script_data(calls, data_offset);
 
-        let script = Self::get_instructions(&calls, call_param_offsets);
+        let script = Self::get_instructions(calls, call_param_offsets);
 
-        let spendable_coins = Self::get_spendable_coins(wallet, &calls).await.unwrap();
+        let spendable_coins = Self::get_spendable_coins(wallet, calls).await.unwrap();
 
         let (inputs, outputs) =
-            Self::get_transaction_inputs_outputs(&calls, wallet.address(), spendable_coins);
+            Self::get_transaction_inputs_outputs(calls, wallet.address(), spendable_coins);
 
         let mut tx = Transaction::script(
             tx_parameters.gas_price,
@@ -84,7 +84,7 @@ impl Script {
 
     async fn get_spendable_coins(
         wallet: &LocalWallet,
-        calls: &[&ContractCall],
+        calls: &[ContractCall],
     ) -> Result<Vec<Coin>, fuels_types::errors::Error> {
         stream::iter(Self::calculate_required_asset_amounts(calls))
             .map(|(asset_id, amount)| wallet.get_spendable_coins(asset_id, amount))
@@ -96,7 +96,7 @@ impl Script {
             .collect()
     }
 
-    fn calculate_required_asset_amounts(calls: &[&ContractCall]) -> Vec<(AssetId, u64)> {
+    fn calculate_required_asset_amounts(calls: &[ContractCall]) -> Vec<(AssetId, u64)> {
         // TODO what to do about the default asset?
         calls
             .iter()
@@ -112,7 +112,7 @@ impl Script {
     }
 
     /// Given a list of contract calls, create the actual opcodes used to call the contract
-    fn get_instructions(calls: &[&ContractCall], offsets: Vec<CallParamOffsets>) -> Vec<u8> {
+    fn get_instructions(calls: &[ContractCall], offsets: Vec<CallParamOffsets>) -> Vec<u8> {
         let num_calls = calls.len();
 
         let mut instructions = vec![];
@@ -134,7 +134,7 @@ impl Script {
     /// 6. Calldata offset (optional) (1 * WORD_SIZE)
     /// 7. Encoded arguments (optional) (variable length)
     fn get_script_data(
-        calls: &[&ContractCall],
+        calls: &[ContractCall],
         data_offset: usize,
     ) -> (Vec<u8>, Vec<CallParamOffsets>) {
         let mut script_data = vec![];
@@ -215,7 +215,7 @@ impl Script {
     /// Returns the assets and contracts that will be consumed (inputs) and created (outputs)
     /// by the transaction
     fn get_transaction_inputs_outputs(
-        calls: &[&ContractCall],
+        calls: &[ContractCall],
         wallet_address: &Bech32Address,
         spendable_coins: Vec<Coin>,
     ) -> (Vec<Input>, Vec<Output>) {
@@ -250,7 +250,7 @@ impl Script {
             .collect()
     }
 
-    fn extract_variable_outputs(calls: &[&ContractCall]) -> Vec<Output> {
+    fn extract_variable_outputs(calls: &[ContractCall]) -> Vec<Output> {
         calls
             .iter()
             .filter_map(|call| call.variable_outputs.clone())
@@ -305,7 +305,7 @@ impl Script {
             .collect()
     }
 
-    fn extract_unique_contract_ids(calls: &[&ContractCall]) -> HashSet<ContractId> {
+    fn extract_unique_contract_ids(calls: &[ContractCall]) -> HashSet<ContractId> {
         calls
             .iter()
             .flat_map(|call| {
@@ -410,8 +410,7 @@ mod test {
             .collect();
 
         // Act
-        let (script_data, param_offsets) =
-            Script::get_script_data(&calls.iter().collect::<Vec<_>>(), 0);
+        let (script_data, param_offsets) = Script::get_script_data(&calls, 0);
 
         // Assert
         assert_eq!(param_offsets.len(), NUM_CALLS);
@@ -468,13 +467,14 @@ mod test {
     #[cfg(test)]
     mod creating_inputs_and_outputs {
         use super::*;
+        use std::slice;
 
         #[test]
         fn contract_input_present() {
             let call = given_a_contract_call();
 
             let (inputs, _) = Script::get_transaction_inputs_outputs(
-                &[&call],
+                slice::from_ref(&call),
                 &random_bech32_addr(),
                 Default::default(),
             );
@@ -493,9 +493,13 @@ mod test {
         #[test]
         fn contract_input_is_not_duplicated() {
             let call = given_a_contract_call();
+            let call_w_same_contract =
+                given_a_contract_call().with_contract_id(call.contract_id.clone());
+
+            let calls = [call, call_w_same_contract];
 
             let (inputs, _) = Script::get_transaction_inputs_outputs(
-                &[&call, &call],
+                &calls,
                 &random_bech32_addr(),
                 Default::default(),
             );
@@ -506,7 +510,7 @@ mod test {
                     UtxoId::new(Bytes32::zeroed(), 0),
                     Bytes32::zeroed(),
                     Bytes32::zeroed(),
-                    call.contract_id.into(),
+                    calls[0].contract_id.clone().into(),
                 )]
             );
         }
@@ -516,7 +520,7 @@ mod test {
             let call = given_a_contract_call();
 
             let (_, outputs) = Script::get_transaction_inputs_outputs(
-                &[&call],
+                &[call],
                 &random_bech32_addr(),
                 Default::default(),
             );
@@ -536,7 +540,7 @@ mod test {
 
             // when
             let (inputs, _) = Script::get_transaction_inputs_outputs(
-                &[&call],
+                slice::from_ref(&call),
                 &random_bech32_addr(),
                 Default::default(),
             );
@@ -574,7 +578,7 @@ mod test {
 
             // when
             let (_, outputs) = Script::get_transaction_inputs_outputs(
-                &[&call],
+                &[call],
                 &random_bech32_addr(),
                 Default::default(),
             );
@@ -608,8 +612,7 @@ mod test {
             let call = given_a_contract_call();
 
             // when
-            let (_, outputs) =
-                Script::get_transaction_inputs_outputs(&[&call], &wallet_addr, coins);
+            let (_, outputs) = Script::get_transaction_inputs_outputs(&[call], &wallet_addr, coins);
 
             // then
             let change_outputs: HashSet<Output> = outputs[1..].iter().cloned().collect();
@@ -651,7 +654,7 @@ mod test {
 
             // when
             let (inputs, _) = Script::get_transaction_inputs_outputs(
-                &[&call],
+                &[call],
                 &random_bech32_addr(),
                 generate_spendable_coins(),
             );
@@ -693,7 +696,7 @@ mod test {
 
             // when
             let (_, outputs) = Script::get_transaction_inputs_outputs(
-                &calls.iter().collect::<Vec<_>>(),
+                &calls,
                 &random_bech32_addr(),
                 Default::default(),
             );
@@ -720,6 +723,12 @@ mod test {
     }
 
     impl ContractCall {
+        pub fn with_contract_id(self, contract_id: Bech32ContractId) -> Self {
+            ContractCall {
+                contract_id,
+                ..self
+            }
+        }
         pub fn with_external_contracts(
             self,
             external_contracts: Vec<Bech32ContractId>,
@@ -780,8 +789,7 @@ mod test {
                 })
             });
 
-            let asset_id_amounts =
-                Script::calculate_required_asset_amounts(&calls.iter().collect::<Vec<_>>());
+            let asset_id_amounts = Script::calculate_required_asset_amounts(&calls);
 
             let expected_asset_id_amounts = [
                 (BASE_ASSET_ID, DEFAULT_SPENDABLE_COIN_AMOUNT),

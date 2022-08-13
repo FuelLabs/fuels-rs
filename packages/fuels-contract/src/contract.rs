@@ -513,8 +513,12 @@ where
 
     /// Returns the script that executes the contract call
     pub async fn get_script(&self) -> Script {
-        Script::from_contract_calls(vec![&self.contract_call], &self.tx_parameters, &self.wallet)
-            .await
+        Script::from_contract_calls(
+            std::slice::from_ref(&self.contract_call),
+            &self.tx_parameters,
+            &self.wallet,
+        )
+        .await
     }
 
     /// Call a contract's method on the node, in a state-modifying manner.
@@ -581,9 +585,7 @@ impl MultiContractCallHandler {
         Script::from_contract_calls(
             self.contract_calls
                 .as_ref()
-                .expect("No calls added. Have you used '.add_calls()'?")
-                .iter()
-                .collect(),
+                .expect("No calls added. Have you used '.add_calls()'?"),
             &self.tx_parameters,
             &self.wallet,
         )
