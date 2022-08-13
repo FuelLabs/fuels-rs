@@ -438,7 +438,7 @@ impl Provider {
 
         let tx = self.build_transfer_tx(&inputs, &outputs, TxParameters::default());
 
-        Ok(self.send_transaction(&tx).await?)
+        self.send_transaction(&tx).await
     }
 
     // @todo
