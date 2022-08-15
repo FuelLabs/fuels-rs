@@ -54,14 +54,14 @@ impl Script {
         calls: &[ContractCall],
         tx_parameters: &TxParameters,
         wallet: &LocalWallet,
-    ) -> Self {
+    ) -> std::result::Result<Self, fuels_types::errors::Error> {
         let data_offset = Self::get_data_offset(calls.len());
 
         let (script_data, call_param_offsets) = Self::get_script_data(calls, data_offset);
 
         let script = Self::get_instructions(calls, call_param_offsets);
 
-        let spendable_coins = Self::get_spendable_coins(wallet, calls).await.unwrap();
+        let spendable_coins = Self::get_spendable_coins(wallet, calls).await?;
 
         let (inputs, outputs) =
             Self::get_transaction_inputs_outputs(calls, wallet.address(), spendable_coins);
@@ -79,13 +79,13 @@ impl Script {
         );
         wallet.sign_transaction(&mut tx).await.unwrap();
 
-        Script::new(tx)
+        Ok(Script::new(tx))
     }
 
     async fn get_spendable_coins(
         wallet: &LocalWallet,
         calls: &[ContractCall],
-    ) -> Result<Vec<Coin>, fuels_types::errors::Error> {
+    ) -> std::result::Result<Vec<Coin>, fuels_types::errors::Error> {
         stream::iter(Self::calculate_required_asset_amounts(calls))
             .map(|(asset_id, amount)| wallet.get_spendable_coins(asset_id, amount))
             .buffer_unordered(10)
