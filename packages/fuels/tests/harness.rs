@@ -2591,9 +2591,9 @@ async fn contract_call_fee_estimation() -> Result<(), Error> {
     let transaction_cost = contract_instance
         .initialize_counter(42) // Build the ABI call
         .tx_params(TxParameters::new(
-            Some(1_000_000_000),
+            Some(10_000),
             Some(500),
-            Some(1_000_000_000),
+            Some(10_000),
             None,
         ))
         .get_transaction_cost(Some(tolerance)) // Perform the network call
@@ -2601,11 +2601,11 @@ async fn contract_call_fee_estimation() -> Result<(), Error> {
 
     assert_eq!(transaction_cost.min_gas_price, 0);
     assert_eq!(transaction_cost.min_byte_price, 0);
-    assert_eq!(transaction_cost.gas_price, 1_000_000_000);
-    assert_eq!(transaction_cost.byte_price, 1_000_000_000);
+    assert_eq!(transaction_cost.gas_price, 10_000);
+    assert_eq!(transaction_cost.byte_price, 10_000);
     assert_eq!(transaction_cost.gas_used, 348);
     assert_eq!(transaction_cost.byte_size, 704);
-    assert_eq!(transaction_cost.fee, 1052);
+    assert_eq!(transaction_cost.fee, 0.01052);
 
     Ok(())
 }

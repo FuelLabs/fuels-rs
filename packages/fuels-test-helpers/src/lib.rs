@@ -184,25 +184,31 @@ pub async fn setup_test_client(
     node_config: Option<Config>,
     consensus_parameters_config: Option<ConsensusParameters>,
 ) -> (FuelClient, SocketAddr) {
-    let config = match node_config {
-        Some(config) if config.addr.port() != 0 && is_free(config.addr.port()) => config,
-        Some(config) if !is_free(config.addr.port()) => panic!("Error: Address already in use"),
-        Some(config) => Config {
-            addr: get_socket_address(),
-            ..config
-        },
-        None => Config {
-            addr: get_socket_address(),
-            ..Config::local_node()
-        },
+    let config = node_config.unwrap_or_else(Config::local_node);
+    let requested_port = config.addr.port();
+
+    let bound_address = if requested_port == 0 {
+        get_socket_address()
+    } else if is_free(requested_port) {
+        config.addr
+    } else {
+        panic!("Error: Address already in use");
     };
 
-    new_fuel_node(coins, consensus_parameters_config, config).await;
+    new_fuel_node(
+        coins,
+        consensus_parameters_config,
+        Config {
+            addr: bound_address,
+            ..config
+        },
+    )
+    .await;
 
-    let client = FuelClient::from(config.addr);
+    let client = FuelClient::from(bound_address);
     server_health_check(&client).await;
 
-    (client, config.addr)
+    (client, bound_address)
 }
 
 #[cfg(test)]

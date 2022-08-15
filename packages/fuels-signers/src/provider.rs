@@ -38,7 +38,7 @@ pub struct TransactionCost {
     pub gas_price: u64,
     pub gas_used: u64,
     pub byte_size: u64,
-    pub fee: u64,
+    pub fee: f64,
 }
 
 #[derive(Debug, Error)]
@@ -461,33 +461,57 @@ impl Provider {
         tx: &Transaction,
         tolerance: Option<f64>,
     ) -> Result<TransactionCost, Error> {
-        let tolerance = tolerance.unwrap_or(DEFAULT_GAS_ESTIMATION_TOLERANCE);
-
         let NodeInfo {
             min_gas_price,
             min_byte_price,
             ..
-        } = &self.node_info().await?;
+        } = self.node_info().await?;
 
-        let gas_price = std::cmp::max(tx.gas_price(), min_gas_price.0);
-        let byte_price = std::cmp::max(tx.byte_price(), min_byte_price.0);
+        let tolerance = tolerance.unwrap_or(DEFAULT_GAS_ESTIMATION_TOLERANCE);
+        let dry_run_tx = Self::generate_dry_run_tx(tx);
+        let gas_used = self
+            .get_gas_used_with_tolerance(&dry_run_tx, tolerance)
+            .await?;
 
-        // Simulate the contract call with MAX_GAS_PER_TX to get the complete gase_used
-        let mut tmp_tx = tx.clone();
-        tmp_tx.set_gas_limit(MAX_GAS_PER_TX);
-        tmp_tx.set_gas_price(0);
-        tmp_tx.set_byte_price(0);
+        Self::calculate_tx_cost(
+            dry_run_tx,
+            tx.gas_price(),
+            tx.byte_price(),
+            min_gas_price.0,
+            min_byte_price.0,
+            gas_used,
+        )
+    }
 
-        let gas_used = self.get_gas_used_with_tolerance(&tmp_tx, tolerance).await?;
-        let byte_size = self.get_chargable_byte_size(tmp_tx);
-        // GAS_PRICE_FACTOR is a chaing_config of the  node. Because of the different decimal precision in
+    fn generate_dry_run_tx(tx: &Transaction) -> Transaction {
+        let mut dry_run_tx = tx.clone();
+        // Simulate the contract call with MAX_GAS_PER_TX to get the complete gas_used
+        dry_run_tx.set_gas_limit(MAX_GAS_PER_TX);
+        dry_run_tx.set_gas_price(0);
+        dry_run_tx.set_byte_price(0);
+        dry_run_tx
+    }
+
+    fn calculate_tx_cost(
+        dry_run_tx: Transaction,
+        gas_price: u64,
+        byte_price: u64,
+        min_gas_price: u64,
+        min_byte_price: u64,
+        gas_used: u64,
+    ) -> Result<TransactionCost, Error> {
+        let gas_price = std::cmp::max(gas_price, min_gas_price);
+        let byte_price = std::cmp::max(byte_price, min_byte_price);
+        let byte_size = Self::get_chargable_byte_size(dry_run_tx);
+
+        // GAS_PRICE_FACTOR is a chain_config of the  node. Because of the different decimal precision in
         // FuelVM and EVM we need to scale the price down
-        let gas_fee = ((gas_used as f64 / GAS_PRICE_FACTOR as f64) * gas_price as f64) as u64;
-        let byte_fee = ((byte_size as f64 / GAS_PRICE_FACTOR as f64) * byte_price as f64) as u64;
+        let gas_fee = (gas_used as f64 / GAS_PRICE_FACTOR as f64) * gas_price as f64;
+        let byte_fee = (byte_size as f64 / GAS_PRICE_FACTOR as f64) * byte_price as f64;
 
         Ok(TransactionCost {
-            min_gas_price: min_gas_price.0,
-            min_byte_price: min_byte_price.0,
+            min_gas_price,
+            min_byte_price,
             byte_price,
             gas_price,
             gas_used,
@@ -506,23 +530,42 @@ impl Provider {
     }
 
     fn get_gas_used(&self, receipts: &[Receipt]) -> u64 {
-        let script_receipt = receipts
+        receipts
             .iter()
-            .rfind(|r| matches!(r, Receipt::ScriptResult { .. }));
-
-        if let Some(script_result) = script_receipt {
-            return script_result
-                .gas_used()
-                .expect("could not retrieve gas used from ScriptResult");
-        }
-        0
+            .rfind(|r| matches!(r, Receipt::ScriptResult { .. }))
+            .map(|script_result| {
+                script_result
+                    .gas_used()
+                    .expect("could not retrieve gas used from ScriptResult")
+            })
+            .unwrap_or(0)
     }
 
-    fn get_chargable_byte_size(&self, mut tx: Transaction) -> u64 {
+    fn get_chargable_byte_size(mut tx: Transaction) -> u64 {
         let witness_size: usize = tx.witnesses().iter().map(|w| w.as_vec().len()).sum();
         tx.to_bytes().len() as u64 - witness_size as u64
     }
 
     // @todo
     // - Get block(s)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_calculate_tx_cost() -> Result<(), Error> {
+        let transaction_cost =
+            Provider::calculate_tx_cost(Transaction::default(), 10_000, 10_000, 0, 0, 270)?;
+
+        assert_eq!(transaction_cost.min_gas_price, 0);
+        assert_eq!(transaction_cost.min_byte_price, 0);
+        assert_eq!(transaction_cost.gas_price, 10_000);
+        assert_eq!(transaction_cost.byte_price, 10_000);
+        assert_eq!(transaction_cost.gas_used, 270);
+        assert_eq!(transaction_cost.byte_size, 120);
+        assert_eq!(transaction_cost.fee, 0.0039);
+        Ok(())
+    }
 }
