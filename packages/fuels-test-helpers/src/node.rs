@@ -266,13 +266,12 @@ pub async fn new_fuel_node(
         }
 
         let mut command = Command::new("fuel-core");
+        command.stdin(Stdio::null());
         if silent {
-            command
-                .stdin(Stdio::null())
-                .stdout(Stdio::null())
-                .stderr(Stdio::null());
+            command.stdout(Stdio::null()).stderr(Stdio::null());
         }
-        let mut running_node =command.args(args)
+        let mut running_node = command
+            .args(args)
             .kill_on_drop(true)
             .spawn()
             .expect("error: Couldn't read fuel-core: No such file or directory. Please check if fuel-core library is installed. \
