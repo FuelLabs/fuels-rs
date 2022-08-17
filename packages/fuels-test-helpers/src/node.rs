@@ -30,7 +30,7 @@ pub struct Config {
     pub utxo_validation: bool,
     pub predicates: bool,
     pub manual_blocks_enabled: bool,
-    pub silent: bool
+    pub silent: bool,
 }
 
 impl Config {
@@ -40,7 +40,7 @@ impl Config {
             utxo_validation: false,
             predicates: false,
             manual_blocks_enabled: false,
-            silent: true
+            silent: true,
         }
     }
 }
