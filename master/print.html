@@ -536,6 +536,9 @@ coins and coin amount</p>
             amount_per_coin,
         );
 </code></pre>
+<blockquote>
+<p><strong>Note</strong> Choosing a large number of coins and assets for <code>setup_multiple_assets_coins</code> or <code>setup_single_asset_coins</code> can lead to considerable runtime for these methods. This will be improved in the future but for now, we recommend using up to <strong>1_000_000</strong> coins, or <strong>1000</strong> coins and assets simultaneously.</p>
+</blockquote>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="signing"><a class="header" href="#signing">Signing</a></h1>
 <p>Once you've instantiated your wallet using one of the previously discussed methods, you can sign a message with <code>wallet.sign_message</code>. Below is a full example of how to sign and recover a message.</p>
 <pre><code class="language-rust ignore">        let mut rng = StdRng::seed_from_u64(2322u64);
