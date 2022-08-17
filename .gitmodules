@@ -1,0 +1,3 @@
+[submodule "fuel-e2e-tests"]
+	path = fuel-e2e-tests
+	url = git@github.com:FuelLabs/fuel-e2e-tests.git
