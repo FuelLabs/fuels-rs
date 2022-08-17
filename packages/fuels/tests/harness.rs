@@ -2245,13 +2245,12 @@ async fn can_handle_sway_function_called_new() -> anyhow::Result<()> {
     Ok(())
 }
 
-#[tokio::test]
-async fn can_call_no_arg_predicate_returns_true() -> Result<(), Error> {
-    let predicate_code =
-        std::fs::read("tests/test_projects/predicate_true/out/debug/predicate_true.bin")?;
-    let predicate = Predicate::new(predicate_code);
+async fn setup_predicate_test(
+    file_path: &str,
+) -> Result<(Predicate, LocalWallet, LocalWallet, AssetId), Error> {
+    let predicate = Predicate::load_from(file_path)?;
 
-    let wallets = launch_custom_provider_and_get_wallets(
+    let mut wallets = launch_custom_provider_and_get_wallets(
         WalletsConfig::new(Some(2), Some(1), Some(16)),
         Some(Config {
             predicates: true,
@@ -2261,10 +2260,19 @@ async fn can_call_no_arg_predicate_returns_true() -> Result<(), Error> {
     )
     .await;
 
-    let sender = &wallets[0];
-    let receiver = &wallets[1];
-    let provider = sender.get_provider()?;
+    let sender = wallets.pop().unwrap();
+    let receiver = wallets.pop().unwrap();
     let asset_id = AssetId::default();
+
+    Ok((predicate, sender, receiver, asset_id))
+}
+
+#[tokio::test]
+async fn can_call_no_arg_predicate_returns_true() -> Result<(), Error> {
+    let (predicate, sender, receiver, asset_id) =
+        setup_predicate_test("tests/test_projects/predicate_true/out/debug/predicate_true.bin")
+            .await?;
+    let provider = receiver.get_provider()?;
     let amount_to_predicate = 2;
 
     sender
@@ -2304,24 +2312,10 @@ async fn can_call_no_arg_predicate_returns_true() -> Result<(), Error> {
 
 #[tokio::test]
 async fn can_call_no_arg_predicate_returns_false() -> Result<(), Error> {
-    let predicate_code =
-        std::fs::read("tests/test_projects/predicate_false/out/debug/predicate_false.bin")?;
-    let predicate = Predicate::new(predicate_code);
-
-    let wallets = launch_custom_provider_and_get_wallets(
-        WalletsConfig::new(Some(2), Some(1), Some(16)),
-        Some(Config {
-            predicates: true,
-            utxo_validation: true,
-            ..Config::local_node()
-        }),
-    )
-    .await;
-
-    let sender = &wallets[0];
-    let receiver = &wallets[1];
-    let provider = sender.get_provider()?;
-    let asset_id = AssetId::default();
+    let (predicate, sender, receiver, asset_id) =
+        setup_predicate_test("tests/test_projects/predicate_false/out/debug/predicate_false.bin")
+            .await?;
+    let provider = receiver.get_provider()?;
     let amount_to_predicate = 4;
 
     sender
@@ -2359,24 +2353,10 @@ async fn can_call_no_arg_predicate_returns_false() -> Result<(), Error> {
 
 #[tokio::test]
 async fn can_call_predicate_with_u32_data() -> Result<(), Error> {
-    let predicate_code =
-        std::fs::read("tests/test_projects/predicate_u32/out/debug/predicate_u32.bin")?;
-    let predicate = Predicate::new(predicate_code);
-
-    let wallets = launch_custom_provider_and_get_wallets(
-        WalletsConfig::new(Some(2), Some(1), Some(16)),
-        Some(Config {
-            predicates: true,
-            utxo_validation: true,
-            ..Config::local_node()
-        }),
-    )
-    .await;
-
-    let sender = &wallets[0];
-    let receiver = &wallets[1];
-    let provider = sender.get_provider()?;
-    let asset_id = AssetId::default();
+    let (predicate, sender, receiver, asset_id) =
+        setup_predicate_test("tests/test_projects/predicate_u32/out/debug/predicate_u32.bin")
+            .await?;
+    let provider = receiver.get_provider()?;
     let amount_to_predicate = 8;
 
     sender
@@ -2441,24 +2421,11 @@ async fn can_call_predicate_with_u32_data() -> Result<(), Error> {
 
 #[tokio::test]
 async fn can_call_predicate_with_address_data() -> Result<(), Error> {
-    let predicate_code =
-        std::fs::read("tests/test_projects/predicate_address/out/debug/predicate_address.bin")?;
-    let predicate = Predicate::new(predicate_code);
-
-    let wallets = launch_custom_provider_and_get_wallets(
-        WalletsConfig::new(Some(2), Some(1), Some(16)),
-        Some(Config {
-            predicates: true,
-            utxo_validation: true,
-            ..Config::local_node()
-        }),
+    let (predicate, sender, receiver, asset_id) = setup_predicate_test(
+        "tests/test_projects/predicate_address/out/debug/predicate_address.bin",
     )
-    .await;
-
-    let sender = &wallets[0];
-    let receiver = &wallets[1];
-    let provider = sender.get_provider()?;
-    let asset_id = AssetId::default();
+    .await?;
+    let provider = receiver.get_provider()?;
     let amount_to_predicate = 16;
 
     sender
@@ -2502,24 +2469,10 @@ async fn can_call_predicate_with_address_data() -> Result<(), Error> {
 
 #[tokio::test]
 async fn can_call_predicate_with_struct_data() -> Result<(), Error> {
-    let predicate_code =
-        std::fs::read("tests/test_projects/predicate_struct/out/debug/predicate_struct.bin")?;
-    let predicate = Predicate::new(predicate_code);
-
-    let wallets = launch_custom_provider_and_get_wallets(
-        WalletsConfig::new(Some(2), Some(1), Some(16)),
-        Some(Config {
-            predicates: true,
-            utxo_validation: true,
-            ..Config::local_node()
-        }),
-    )
-    .await;
-
-    let sender = &wallets[0];
-    let receiver = &wallets[1];
-    let provider = sender.get_provider()?;
-    let asset_id = AssetId::default();
+    let (predicate, sender, receiver, asset_id) =
+        setup_predicate_test("tests/test_projects/predicate_struct/out/debug/predicate_struct.bin")
+            .await?;
+    let provider = receiver.get_provider()?;
     let amount_to_predicate = 8;
 
     sender

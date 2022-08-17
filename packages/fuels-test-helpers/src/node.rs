@@ -45,7 +45,7 @@ impl Config {
 
 #[skip_serializing_none]
 #[serde_as]
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 pub struct CoinConfig {
     #[serde_as(as = "Option<HexType>")]
     #[serde(default)]

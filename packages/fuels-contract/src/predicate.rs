@@ -1,4 +1,6 @@
 use fuel_gql_client::fuel_tx::{Address, Contract};
+use fuels_types::errors::Error;
+
 use fuels_types::bech32::Bech32Address;
 
 pub struct Predicate {
@@ -13,6 +15,10 @@ impl Predicate {
             address: address.into(),
             code,
         }
+    }
+
+    pub fn load_from(file_path: &str) -> Result<Self, Error> {
+        Ok(Predicate::new(std::fs::read(file_path)?))
     }
 
     pub fn address(&self) -> &Bech32Address {
