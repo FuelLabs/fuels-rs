@@ -240,6 +240,7 @@ pub async fn new_fuel_node(
     consensus_parameters_config: Option<ConsensusParameters>,
     socket_addr: SocketAddr,
     manual_blocks_enabled: bool,
+    silent: bool,
 ) {
     // Create a new one-shot channel for sending single values across asynchronous tasks.
     let (tx, rx) = oneshot::channel();
@@ -264,10 +265,14 @@ pub async fn new_fuel_node(
             args.push("--manual_blocks_enabled");
         }
 
-        let mut running_node = Command::new("fuel-core").args(args)
+        let mut command = Command::new("fuel-core");
+        command.stdin(Stdio::null());
+        if silent {
+            command.stdout(Stdio::null()).stderr(Stdio::null());
+        }
+        let mut running_node = command
+            .args(args)
             .kill_on_drop(true)
-            .stdin(Stdio::null())
-            .stdout(Stdio::null())
             .spawn()
             .expect("error: Couldn't read fuel-core: No such file or directory. Please check if fuel-core library is installed. \
         Try this https://fuellabs.github.io/sway/latest/introduction/installation.html");
@@ -319,7 +324,14 @@ impl FuelService {
             bail!("Error: Address already in use");
         };
 
-        new_fuel_node(vec![], None, bound_address, config.manual_blocks_enabled).await;
+        new_fuel_node(
+            vec![],
+            None,
+            bound_address,
+            config.manual_blocks_enabled,
+            true,
+        )
+        .await;
 
         Ok(FuelService { bound_address })
     }

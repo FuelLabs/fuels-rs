@@ -190,6 +190,7 @@ pub async fn setup_test_client(
         consensus_parameters_config,
         srv_address,
         manual_blocks_enabled,
+        true,
     )
     .await;
 
