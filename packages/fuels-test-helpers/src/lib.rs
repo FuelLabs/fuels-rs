@@ -1,6 +1,5 @@
 //! Testing helpers/utilities for Fuel SDK.
 
-use std::collections::HashSet;
 use std::net::SocketAddr;
 
 #[cfg(feature = "fuel-core-lib")]
@@ -65,28 +64,20 @@ pub fn setup_multiple_assets_coins(
 ) -> (Vec<(UtxoId, Coin)>, Vec<AssetId>) {
     let mut rng = rand::thread_rng();
     // Create `num_asset-1` asset ids so there is `num_asset` in total with the base asset
-    let coins = (0..(num_asset - 1))
-        .flat_map(|_| {
+    let asset_ids = (0..(num_asset - 1))
+        .map(|_| {
             let mut random_asset_id = AssetId::zeroed();
             random_asset_id.try_fill(&mut rng).unwrap();
-            setup_single_asset_coins(owner, random_asset_id, coins_per_asset, amount_per_coin)
+            random_asset_id
         })
-        // Add the base asset
-        .chain(setup_single_asset_coins(
-            owner,
-            BASE_ASSET_ID,
-            coins_per_asset,
-            amount_per_coin,
-        ))
+        .chain([BASE_ASSET_ID].into_iter())
+        .collect::<Vec<AssetId>>();
+
+    let coins = asset_ids
+        .iter()
+        .flat_map(|id| setup_single_asset_coins(owner, *id, coins_per_asset, amount_per_coin))
         .collect::<Vec<(UtxoId, Coin)>>();
 
-    let asset_ids = coins
-        .clone()
-        .into_iter()
-        .map(|(_utxo_id, coin)| coin.asset_id)
-        .collect::<HashSet<_>>()
-        .into_iter()
-        .collect::<Vec<AssetId>>();
     (coins, asset_ids)
 }
 
