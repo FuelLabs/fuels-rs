@@ -43,7 +43,7 @@ impl ParamType {
     // either in `Return` or `ReturnData`. For more information,
     // see https://github.com/FuelLabs/sway/issues/1368.
     pub fn get_return_location(&self) -> ReturnLocation {
-        match &*self {
+        match self {
             Self::Unit | Self::U8 | Self::U16 | Self::U32 | Self::U64 | Self::Bool => {
                 ReturnLocation::Return
             }
