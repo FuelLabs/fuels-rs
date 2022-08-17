@@ -533,7 +533,7 @@ where
     }
 
     /// Get a contract's estimated cost
-    pub async fn get_transaction_cost(
+    pub async fn estimate_transaction_cost(
         &self,
         tolerance: Option<f64>,
     ) -> Result<TransactionCost, Error> {
@@ -541,7 +541,7 @@ where
 
         let transaction_cost = self
             .provider
-            .get_transaction_cost(&script.tx, tolerance)
+            .estimate_transaction_cost(&script.tx, tolerance)
             .await?;
 
         Ok(transaction_cost)
@@ -640,7 +640,7 @@ impl MultiContractCallHandler {
     }
 
     /// Get a contract's estimated cost
-    pub async fn get_transaction_cost(
+    pub async fn estimate_transaction_cost(
         &self,
         tolerance: Option<f64>,
     ) -> Result<TransactionCost, Error> {
@@ -649,7 +649,7 @@ impl MultiContractCallHandler {
         let transaction_cost = self
             .wallet
             .get_provider()?
-            .get_transaction_cost(&script.tx, tolerance)
+            .estimate_transaction_cost(&script.tx, tolerance)
             .await?;
 
         Ok(transaction_cost)

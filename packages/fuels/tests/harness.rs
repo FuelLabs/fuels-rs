@@ -1063,11 +1063,20 @@ async fn test_gas_errors() -> Result<(), Error> {
 
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
 
-    // Test for running out of gas. Gas price as `None` will be 0.
-    // Gas limit will be 100, this call will use more than 100 gas.
-    let response = contract_instance
+    // Test running out of gas. Gas price as `None` will be 0.
+    let gas_limit = 100;
+    let contract_instace_call = contract_instance
         .initialize_counter(42) // Build the ABI call
-        .tx_params(TxParameters::new(None, Some(100), None, None))
+        .tx_params(TxParameters::new(None, Some(gas_limit), None, None));
+
+    //  Test that the call will use more gas than the gas limit
+    let gas_used = contract_instace_call
+        .estimate_transaction_cost(None)
+        .await?
+        .gas_used;
+    assert!(gas_used > gas_limit);
+
+    let response = contract_instace_call
         .call() // Perform the network call
         .await
         .expect_err("should error");
@@ -1075,7 +1084,7 @@ async fn test_gas_errors() -> Result<(), Error> {
     let expected = "Provider error: gas_limit(";
     assert!(response.to_string().starts_with(expected));
 
-    // Test for insufficient amount to pay for transaction
+    // Test for insufficient base asset amount to pay for the transaction fee
     let response = contract_instance
         .initialize_counter(42) // Build the ABI call
         .tx_params(TxParameters::new(
@@ -2588,7 +2597,7 @@ async fn contract_call_fee_estimation() -> Result<(), Error> {
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
 
     let tolerance = 0.2;
-    let transaction_cost = contract_instance
+    let estimated_transaction_cost = contract_instance
         .initialize_counter(42) // Build the ABI call
         .tx_params(TxParameters::new(
             Some(10_000),
@@ -2596,16 +2605,16 @@ async fn contract_call_fee_estimation() -> Result<(), Error> {
             Some(10_000),
             None,
         ))
-        .get_transaction_cost(Some(tolerance)) // Perform the network call
+        .estimate_transaction_cost(Some(tolerance)) // Perform the network call
         .await?;
 
-    assert_eq!(transaction_cost.min_gas_price, 0);
-    assert_eq!(transaction_cost.min_byte_price, 0);
-    assert_eq!(transaction_cost.gas_price, 10_000);
-    assert_eq!(transaction_cost.byte_price, 10_000);
-    assert_eq!(transaction_cost.gas_used, 348);
-    assert_eq!(transaction_cost.byte_size, 704);
-    assert_eq!(transaction_cost.fee, 0.01052);
+    assert_eq!(estimated_transaction_cost.min_gas_price, 0);
+    assert_eq!(estimated_transaction_cost.min_byte_price, 0);
+    assert_eq!(estimated_transaction_cost.gas_price, 10_000);
+    assert_eq!(estimated_transaction_cost.byte_price, 10_000);
+    assert_eq!(estimated_transaction_cost.gas_used, 348);
+    assert_eq!(estimated_transaction_cost.byte_size, 704);
+    assert_eq!(estimated_transaction_cost.total_fee, 0.01052);
 
     Ok(())
 }
@@ -2632,7 +2641,7 @@ async fn contract_call_has_same_estimated_and_used_gas() -> Result<(), Error> {
     let tolerance = 0.0;
     let estimated_gas_used = contract_instance
         .initialize_counter(42) // Build the ABI call
-        .get_transaction_cost(Some(tolerance)) // Perform the network call
+        .estimate_transaction_cost(Some(tolerance)) // Perform the network call
         .await?
         .gas_used;
 
@@ -2677,7 +2686,7 @@ async fn mutl_call_has_same_estimated_and_used_gas() -> Result<(), Error> {
 
     let tolerance = 0.0;
     let estimated_gas_used = multi_call_handler
-        .get_transaction_cost(Some(tolerance)) // Perform the network call
+        .estimate_transaction_cost(Some(tolerance)) // Perform the network call
         .await?
         .gas_used;
 

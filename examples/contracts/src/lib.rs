@@ -104,7 +104,7 @@ mod tests {
         let tolerance = 0.0;
         let transaction_cost = contract_instance
             .initialize_counter(42) // Build the ABI call
-            .get_transaction_cost(Some(tolerance)) // Get estimated transaction cost
+            .estimate_transaction_cost(Some(tolerance)) // Get estimated transaction cost
             .await?;
         // ANCHOR_END: contract_call_cost_estimation
 
@@ -480,15 +480,51 @@ mod tests {
         let response = multi_call_handler.call::<(u64, Vec<u64>)>().await?;
         // ANCHOR_END: multi_call_response
 
+        assert_eq!(counter, 42);
+        assert_eq!(array, [42; 2]);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[allow(unused_variables)]
+    async fn multi_call_cost_estimation() -> Result<(), Error> {
+        use fuels::prelude::*;
+
+        abigen!(
+            MyContract,
+            "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+        );
+
+        let wallet = launch_provider_and_get_wallet().await;
+
+        let contract_id = Contract::deploy(
+            "../../packages/fuels/tests/test_projects/contract_test/out/debug/contract_test.bin",
+            &wallet,
+            TxParameters::default(),
+            StorageConfiguration::default(),
+        )
+        .await?;
+
+        let contract_instance =
+            MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
+
         // ANCHOR: multi_call_cost_estimation
+        let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
+
+        let call_handler_1 = contract_instance.initialize_counter(42);
+        let call_handler_2 = contract_instance.get_array([42; 2].to_vec());
+
+        multi_call_handler
+            .add_call(call_handler_1)
+            .add_call(call_handler_2);
+
         let tolerance = 0.0;
         let transaction_cost = multi_call_handler
-            .get_transaction_cost(Some(tolerance)) // Perform the network call
+            .estimate_transaction_cost(Some(tolerance)) // Get estimated transaction cost
             .await?;
         // ANCHOR_END: multi_call_cost_estimation
 
-        assert_eq!(counter, 42);
-        assert_eq!(array, [42; 2]);
         assert_eq!(transaction_cost.gas_used, 710);
 
         Ok(())
