@@ -1,0 +1,10 @@
+[package]
+name = "check-docs"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+ripgrep = "13.0.0"
+sed = "0.1.0"
+project-root = "0.2.2"
