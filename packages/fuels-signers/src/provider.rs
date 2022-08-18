@@ -527,6 +527,7 @@ impl Provider {
         tolerance: f64,
     ) -> Result<u64, ProviderError> {
         let gas_used = self.get_gas_used(&self.dry_run_no_validation(tx).await?);
+        dbg!(gas_used);
         Ok((gas_used as f64 * (1.0 + tolerance)) as u64)
     }
 
@@ -559,16 +560,31 @@ mod tests {
 
     #[test]
     fn test_calculate_tx_cost() -> Result<(), Error> {
-        let transaction_cost =
-            Provider::calculate_tx_cost(Transaction::default(), 10_000, 10_000, 42, 42, 270)?;
+        let gas_used = 270;
+        let gas_price = 10_000;
+        let byte_price = 10_000;
+        let min_gas_price = 42;
+        let min_byte_price = 32;
 
-        assert_eq!(transaction_cost.min_gas_price, 42);
-        assert_eq!(transaction_cost.min_byte_price, 42);
-        assert_eq!(transaction_cost.gas_price, 10_000);
-        assert_eq!(transaction_cost.byte_price, 10_000);
-        assert_eq!(transaction_cost.gas_used, 270);
-        assert_eq!(transaction_cost.byte_size, 120);
-        assert_eq!(transaction_cost.total_fee, 0.0039);
+        let transaction_cost = Provider::calculate_tx_cost(
+            Transaction::default(),
+            gas_price,
+            byte_price,
+            min_gas_price,
+            min_byte_price,
+            gas_used,
+        )?;
+
+        let expected_byte_size = 120;
+        let expected_total_fee = 0.0039;
+
+        assert_eq!(transaction_cost.min_gas_price, min_gas_price);
+        assert_eq!(transaction_cost.min_byte_price, min_byte_price);
+        assert_eq!(transaction_cost.gas_price, gas_price);
+        assert_eq!(transaction_cost.byte_price, byte_price);
+        assert_eq!(transaction_cost.gas_used, gas_used);
+        assert_eq!(transaction_cost.byte_size, expected_byte_size);
+        assert_eq!(transaction_cost.total_fee, expected_total_fee);
         Ok(())
     }
 }
