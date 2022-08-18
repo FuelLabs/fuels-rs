@@ -26,7 +26,7 @@ impl Tokenizer {
 
         let trimmed_value = value.trim();
 
-        match &*param {
+        match param {
             ParamType::Unit => Ok(Token::Unit),
             ParamType::U8 => Ok(Token::U8(trimmed_value.parse::<u8>()?)),
             ParamType::U16 => Ok(Token::U16(trimmed_value.parse::<u16>()?)),
@@ -46,7 +46,7 @@ impl Tokenizer {
                 let s: [u8; 32] = v.as_slice().try_into().unwrap();
                 Ok(Token::B256(s))
             }
-            ParamType::Array(t, _) => Ok(Self::tokenize_array(trimmed_value, &*t)?),
+            ParamType::Array(t, _) => Ok(Self::tokenize_array(trimmed_value, t)?),
             ParamType::String(length) => Ok(Token::String(StringToken::new(
                 trimmed_value.into(),
                 *length,
