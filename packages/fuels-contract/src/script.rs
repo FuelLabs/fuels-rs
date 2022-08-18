@@ -100,7 +100,6 @@ impl Script {
 
     fn calculate_required_asset_amounts(calls: &[ContractCall]) -> Vec<(AssetId, u64)> {
         let amounts_per_asset_id = Self::extract_required_amounts_per_asset_id(calls);
-
         Self::sum_up_amounts_for_each_asset_id(amounts_per_asset_id)
     }
 
