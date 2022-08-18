@@ -51,22 +51,32 @@ fn main() {
 
     // println!("vani : {:?}", stack);
 
-    let _rg_docs = std::process::Command::new("rg")
+    let rg_docs = std::process::Command::new("rg")
         .arg("--case-sensitive")
+        .arg("-g")
+        .arg("!/scripts/check-docs/src/main.rs")
         .arg("--no-filename")
         .arg("\\{\\{#include")
-        .arg("fuels-rs/docs")
         .stdout(Stdio::piped())
         .spawn()
         .expect("failed rg command");
-    //
-    // let output_docs = std::process::Command::new("sed")
-    //     .arg("s={{#include==g; s=}}==g")
-    //     .stdin(rg_project.stdout.unwrap())
-    //     .output()
-    //     .expect("failed sed command");
 
-    // let output_docs_to_string = String::from_utf8(output_docs.stdout).expect("failed to parse command output");
-    //
-    // println!("{:?}", output_docs)
+    let output_docs = std::process::Command::new("sed")
+        .arg("s/ //g; s={{#include==g; s=}}==g")
+        .stdin(rg_docs.stdout.unwrap())
+        .output()
+        .expect("failed sed command");
+
+    let output_docs_to_string = String::from_utf8(output_docs.stdout).expect("failed to parse command output");
+
+    let split = output_docs_to_string.split('\n');
+    let vec_of_doc_anchors = split
+        .into_iter()
+        .filter(|s| !s.is_empty())
+        .collect::<Vec<&str>>();
+
+    for i in vec_of_doc_anchors {
+        println!("{:?}", i);
+    }
+
 }
