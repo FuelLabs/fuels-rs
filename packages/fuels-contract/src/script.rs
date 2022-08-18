@@ -54,7 +54,7 @@ impl Script {
         calls: &[ContractCall],
         tx_parameters: &TxParameters,
         wallet: &LocalWallet,
-    ) -> std::result::Result<Self, fuels_types::errors::Error> {
+    ) -> Result<Self, Error> {
         let data_offset = Self::get_data_offset(calls.len());
 
         let (script_data, call_param_offsets) = Self::get_script_data(calls, data_offset);
