@@ -28,14 +28,10 @@ fn main() {
 
     for i in vec_of_anchors {
         let parts = i.split(':').collect::<Vec<&str>>();
-        if *parts
-            .get(1)
-            .expect("error in parsing vec_of_anchors") == "ANCHOR"
-        {
+        if *parts.get(1).expect("error in parsing vec_of_anchors") == "ANCHOR" {
             stack.push(*parts.get(2).expect("error"));
             // println!("{:?}", stack);
         } else {
-
             if stack.is_empty() {
                 panic!(
                     "ANCHOR of \"{}\" cannot be found",
@@ -54,7 +50,6 @@ fn main() {
     }
 
     // println!("vani : {:?}", stack);
-
 
     let _rg_docs = std::process::Command::new("rg")
         .arg("--case-sensitive")
