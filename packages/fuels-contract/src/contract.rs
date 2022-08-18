@@ -512,7 +512,7 @@ where
     }
 
     /// Returns the script that executes the contract call
-    pub async fn get_script(&self) -> std::result::Result<Script, Error> {
+    pub async fn get_script(&self) -> Result<Script, Error> {
         Script::from_contract_calls(
             std::slice::from_ref(&self.contract_call),
             &self.tx_parameters,
