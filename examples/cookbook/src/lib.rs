@@ -7,7 +7,6 @@ mod tests {
         // ANCHOR: liquidity
         use fuels::prelude::*;
         use fuels::test_helpers::{AssetConfig, WalletsConfig};
-        use std::str::FromStr;
 
         // ANCHOR: liquidity_abigen
         abigen!(
@@ -18,7 +17,8 @@ mod tests {
 
         // ANCHOR: liquidity_wallet
         let base_asset_id: AssetId =
-            AssetId::from_str("0x9ae5b658754e096e4d681c548daf46354495a437cc61492599e33fc64dcdc30c")
+            "0x9ae5b658754e096e4d681c548daf46354495a437cc61492599e33fc64dcdc30c"
+                .parse()
                 .unwrap();
 
         let asset_ids = [AssetId::default(), base_asset_id];
@@ -28,8 +28,7 @@ mod tests {
                 num_coins: 1,
                 coin_amount: 1_000_000,
             })
-            .into_iter()
-            .collect();
+            .into();
 
         let wallet_config = WalletsConfig::new_multiple_assets(1, asset_configs);
         let wallets = launch_custom_provider_and_get_wallets(wallet_config, None).await;
