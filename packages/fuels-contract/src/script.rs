@@ -85,7 +85,7 @@ impl Script {
     async fn get_spendable_coins(
         wallet: &LocalWallet,
         calls: &[ContractCall],
-    ) -> std::result::Result<Vec<Coin>, fuels_types::errors::Error> {
+    ) -> Result<Vec<Coin>, Error> {
         stream::iter(Self::calculate_required_asset_amounts(calls))
             .map(|(asset_id, amount)| wallet.get_spendable_coins(asset_id, amount))
             .buffer_unordered(10)
