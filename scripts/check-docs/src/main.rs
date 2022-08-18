@@ -1,7 +1,6 @@
 use std::process::Stdio;
 
 fn main() {
-
     let rg_project = std::process::Command::new("rg")
         .arg("--case-sensitive")
         .arg("-g")
@@ -19,22 +18,45 @@ fn main() {
 
     let mut stack = vec![];
 
-    let output_to_string = String::from_utf8(output_files.stdout).expect("failed to parse command output");
-    let split = output_to_string.split("\n");
-    let vec_of_anchors = split.into_iter().filter(|s| !s.is_empty()).collect::<Vec<&str>>();
+    let output_to_string =
+        String::from_utf8(output_files.stdout).expect("failed to parse command output");
+    let split = output_to_string.split('\n');
+    let vec_of_anchors = split
+        .into_iter()
+        .filter(|s| !s.is_empty())
+        .collect::<Vec<&str>>();
 
     for i in vec_of_anchors {
-        let mut parts = i.split(':').collect::<Vec<&str>>();
-        if parts.get(1).expect("error in parsing vec_of_anchors").to_string() == "ANCHOR" {
-            stack.push(parts.get(2).unwrap().clone());
+        let parts = i.split(':').collect::<Vec<&str>>();
+        if *parts
+            .get(1)
+            .expect("error in parsing vec_of_anchors") == "ANCHOR"
+        {
+            stack.push(*parts.get(2).expect("error"));
+            // println!("{:?}", stack);
         } else {
-            if stack.pop().unwrap() != parts.get(2).unwrap().clone() {
-                panic!("ANCHOR_END of \"{}\" cannot be found", parts.get(2).unwrap().clone());
+
+            if stack.is_empty() {
+                panic!(
+                    "ANCHOR of \"{}\" cannot be found",
+                    *parts.get(2).expect("error")
+                );
             }
+
+            if stack.pop().unwrap() != *parts.get(2).expect("error") {
+                panic!(
+                    "ANCHOR_END of \"{}\" cannot be found",
+                    *parts.get(2).expect("error")
+                );
+            }
+            // println!("{:?}", stack);
         }
     }
 
-    let rg_docs = std::process::Command::new("rg")
+    // println!("vani : {:?}", stack);
+
+
+    let _rg_docs = std::process::Command::new("rg")
         .arg("--case-sensitive")
         .arg("--no-filename")
         .arg("\\{\\{#include")
@@ -52,5 +74,4 @@ fn main() {
     // let output_docs_to_string = String::from_utf8(output_docs.stdout).expect("failed to parse command output");
     //
     // println!("{:?}", output_docs)
-
 }
