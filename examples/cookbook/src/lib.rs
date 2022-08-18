@@ -82,18 +82,17 @@ mod tests {
 
     #[tokio::test]
     async fn custom_chain() -> Result<(), Error> {
-        // ANCHOR: custom_chain
         use fuels::prelude::*;
         // ANCHOR: custom_chain_import
         use fuels::tx::ConsensusParameters;
-        // ANCHOR: custom_chain_import
+        // ANCHOR_END: custom_chain_import
 
         // ANCHOR: custom_chain_consensus
         let consensus_parameters_config = ConsensusParameters::DEFAULT
             .with_max_gas_per_tx(1000)
             .with_gas_price_factor(10)
             .with_max_inputs(2);
-        // ANCHOR: custom_chain_consensus
+        // ANCHOR_END: custom_chain_consensus
 
         // ANCHOR: custom_chain_coins
         let wallet = LocalWallet::new_random(None);
@@ -111,8 +110,6 @@ mod tests {
             setup_test_client(coins, Some(node_config), Some(consensus_parameters_config)).await;
         let _provider = Provider::new(client);
         // ANCHOR_END: custom_chain_client
-
-        // ANCHOR_END: custom_chain
         Ok(())
     }
 

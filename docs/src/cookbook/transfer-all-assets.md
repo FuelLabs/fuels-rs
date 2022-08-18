@@ -16,7 +16,7 @@ Transactions require us to define input and output coins. Let's assume we do not
 {{#include ../../../examples/cookbook/src/lib.rs:transfer_multiple_inout}}
 ```
 
-All that is left is to build the transaction with the provider helper `build_transfer_transaction()`, have `wallet_1` sign over it, and we can send it. Checking that the wallets balances are empty lets us confirm that we have indeed transferred all assets:
+All that is left is to build the transaction with the provider's helper `build_transfer_transaction()`, have `wallet_1` sign it, and we can send it. Checking that the wallets balances are empty lets us confirm that we have indeed transferred all assets:
 
 ```rust,ignore
 {{#include ../../../examples/cookbook/src/lib.rs:transfer_multiple_transaction}}

@@ -3,7 +3,7 @@
 Consider the following contract:
 
 ```rust,ignore
-{{#include ../../../fuels/tests/test_projects/liquidity/src/main.sw}}
+{{#include ../../../packages/fuels/tests/test_projects/liquidity_pool/src/main.sw}}
 ```
 
 As its name suggests, it represents a simplified example of a liquidity pool contract. The method `deposit()` expects you to supply an arbitrary amount of the `BASE_TOKEN`. As a result, it mints double the amount of the liquidity asset to the calling address. Analogously, if you call `withdraw()` supplying it with the liquidity asset, it will transfer half that amount of the `BASE_TOKEN` back to the calling address except for deducting it from the contract balance instead of minting it.
@@ -32,7 +32,7 @@ With the preparations out of the way, we can finally deposit to the liquidity po
 {{#include ../../../examples/cookbook/src/lib.rs:liquidity_deposit}}
 ```
 
-As a final demonstration, let's use all our liquidity asset balance to withdraw from the pool and confirm we retrieved the initial amount. For this, we get our liquidity asset balance and supply it to the `withdraw()` call via `CallParameters`.  
+As a final demonstration, let's use all our liquidity asset balance to withdraw from the pool and confirm we retrieved the initial amount. For this, we get our liquidity asset balance and supply it to the `withdraw()` call via `CallParameters`.
 
 ```rust,ignore
 {{#include ../../../examples/cookbook/src/lib.rs:liquidity_withdraw}}
