@@ -82,6 +82,8 @@ impl Script {
         Ok(Script::new(tx))
     }
 
+    /// Calculates how much of each asset id the given calls require and
+    /// proceeds to request spendable coins from `wallet` to cover that cost.
     async fn get_spendable_coins(
         wallet: &LocalWallet,
         calls: &[ContractCall],
@@ -97,6 +99,14 @@ impl Script {
     }
 
     fn calculate_required_asset_amounts(calls: &[ContractCall]) -> Vec<(AssetId, u64)> {
+        let amounts_per_asset_id = Self::extract_required_amounts_per_asset_id(calls);
+
+        Self::sum_up_amounts_for_each_asset_id(amounts_per_asset_id)
+    }
+
+    fn extract_required_amounts_per_asset_id(
+        calls: &[ContractCall],
+    ) -> impl Iterator<Item = (AssetId, u64)> + '_ {
         // TODO what to do about the default asset?
         calls
             .iter()
@@ -105,9 +115,17 @@ impl Script {
                 AssetId::default(),
                 DEFAULT_SPENDABLE_COIN_AMOUNT,
             )))
-            .group_by(|(asset_id, _)| *asset_id)
+    }
+
+    fn sum_up_amounts_for_each_asset_id(
+        smt: impl Iterator<Item = (AssetId, u64)>,
+    ) -> Vec<(AssetId, u64)> {
+        smt.group_by(|(asset_id, _)| *asset_id)
             .into_iter()
-            .map(|(asset_id, amounts)| (asset_id, amounts.map(|(_, amount)| amount).sum()))
+            .map(|(asset_id, groups_w_same_asset_id)| {
+                let total_amount_in_group = groups_w_same_asset_id.map(|(_, amount)| amount).sum();
+                (asset_id, total_amount_in_group)
+            })
             .collect()
     }
 

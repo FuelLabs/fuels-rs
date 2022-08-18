@@ -499,7 +499,7 @@ where
     /// transaction.
     #[tracing::instrument]
     async fn call_or_simulate(self, simulate: bool) -> Result<CallResponse<D>, Error> {
-        let script = self.get_script().await?;
+        let script = self.get_call_execution_script().await?;
 
         let receipts = if simulate {
             script.simulate(&self.provider).await?
@@ -512,7 +512,7 @@ where
     }
 
     /// Returns the script that executes the contract call
-    pub async fn get_script(&self) -> std::result::Result<Script, Error> {
+    pub async fn get_call_execution_script(&self) -> Result<Script, Error> {
         Script::from_contract_calls(
             std::slice::from_ref(&self.contract_call),
             &self.tx_parameters,
@@ -581,7 +581,7 @@ impl MultiContractCallHandler {
     }
 
     /// Returns the script that executes the contract calls
-    pub async fn get_script(&self) -> std::result::Result<Script, Error> {
+    pub async fn get_call_execution_script(&self) -> std::result::Result<Script, Error> {
         Script::from_contract_calls(
             self.contract_calls
                 .as_ref()
@@ -609,7 +609,7 @@ impl MultiContractCallHandler {
         &self,
         simulate: bool,
     ) -> Result<CallResponse<D>, Error> {
-        let script = self.get_script().await?;
+        let script = self.get_call_execution_script().await?;
 
         let provider = self.wallet.get_provider()?;
 
