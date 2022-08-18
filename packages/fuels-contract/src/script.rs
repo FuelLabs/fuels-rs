@@ -54,7 +54,7 @@ impl Script {
         calls: &[ContractCall],
         tx_parameters: &TxParameters,
         wallet: &LocalWallet,
-    ) -> std::result::Result<Self, fuels_types::errors::Error> {
+    ) -> Result<Self, Error> {
         let data_offset = Self::get_data_offset(calls.len());
 
         let (script_data, call_param_offsets) = Self::get_script_data(calls, data_offset);
@@ -87,7 +87,7 @@ impl Script {
     async fn get_spendable_coins(
         wallet: &LocalWallet,
         calls: &[ContractCall],
-    ) -> std::result::Result<Vec<Coin>, fuels_types::errors::Error> {
+    ) -> Result<Vec<Coin>, Error> {
         stream::iter(Self::calculate_required_asset_amounts(calls))
             .map(|(asset_id, amount)| wallet.get_spendable_coins(asset_id, amount))
             .buffer_unordered(10)
