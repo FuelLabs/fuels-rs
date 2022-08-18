@@ -160,7 +160,6 @@ pub async fn setup_test_client(
             ..ChainConfig::local_testnet()
         },
         database_type: DbType::InMemory,
-        utxo_validation: true,
         ..node_config.unwrap_or_else(Config::local_node)
     };
 
@@ -176,28 +175,31 @@ pub async fn setup_test_client(
     node_config: Option<Config>,
     consensus_parameters_config: Option<ConsensusParameters>,
 ) -> (FuelClient, SocketAddr) {
-    let (srv_address, manual_blocks_enabled) = match node_config {
-        Some(config) if config.addr.port() != 0 && is_free(config.addr.port()) => {
-            (config.addr, config.manual_blocks_enabled)
-        }
-        Some(config) if !is_free(config.addr.port()) => panic!("Error: Address already in use"),
-        Some(config) => (get_socket_address(), config.manual_blocks_enabled),
-        None => (get_socket_address(), false),
+    let config = node_config.unwrap_or_else(Config::local_node);
+    let requested_port = config.addr.port();
+
+    let bound_address = if requested_port == 0 {
+        get_socket_address()
+    } else if is_free(requested_port) {
+        config.addr
+    } else {
+        panic!("Error: Address already in use");
     };
 
     new_fuel_node(
         coins,
         consensus_parameters_config,
-        srv_address,
-        manual_blocks_enabled,
-        true,
+        Config {
+            addr: bound_address,
+            ..config
+        },
     )
     .await;
 
-    let client = FuelClient::from(srv_address);
+    let client = FuelClient::from(bound_address);
     server_health_check(&client).await;
 
-    (client, srv_address)
+    (client, bound_address)
 }
 
 #[cfg(test)]
