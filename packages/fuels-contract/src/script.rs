@@ -489,7 +489,7 @@ mod test {
 
         #[test]
         fn contract_input_present() {
-            let call = given_a_contract_call();
+            let call = ContractCall::new_with_random_id();
 
             let (inputs, _) = Script::get_transaction_inputs_outputs(
                 slice::from_ref(&call),
@@ -510,9 +510,9 @@ mod test {
 
         #[test]
         fn contract_input_is_not_duplicated() {
-            let call = given_a_contract_call();
+            let call = ContractCall::new_with_random_id();
             let call_w_same_contract =
-                given_a_contract_call().with_contract_id(call.contract_id.clone());
+                ContractCall::new_with_random_id().with_contract_id(call.contract_id.clone());
 
             let calls = [call, call_w_same_contract];
 
@@ -535,7 +535,7 @@ mod test {
 
         #[test]
         fn contract_output_present() {
-            let call = given_a_contract_call();
+            let call = ContractCall::new_with_random_id();
 
             let (_, outputs) = Script::get_transaction_inputs_outputs(
                 &[call],
@@ -553,8 +553,8 @@ mod test {
         fn external_contract_input_present() {
             // given
             let external_contract_id = random_bech32_contract_id();
-            let call =
-                given_a_contract_call().with_external_contracts(vec![external_contract_id.clone()]);
+            let call = ContractCall::new_with_random_id()
+                .with_external_contracts(vec![external_contract_id.clone()]);
 
             // when
             let (inputs, _) = Script::get_transaction_inputs_outputs(
@@ -592,7 +592,8 @@ mod test {
         fn external_contract_output_present() {
             // given
             let external_contract_id = random_bech32_contract_id();
-            let call = given_a_contract_call().with_external_contracts(vec![external_contract_id]);
+            let call = ContractCall::new_with_random_id()
+                .with_external_contracts(vec![external_contract_id]);
 
             // when
             let (_, outputs) = Script::get_transaction_inputs_outputs(
@@ -627,7 +628,7 @@ mod test {
                     status: CoinStatus::Unspent,
                 })
                 .collect();
-            let call = given_a_contract_call();
+            let call = ContractCall::new_with_random_id();
 
             // when
             let (_, outputs) = Script::get_transaction_inputs_outputs(&[call], &wallet_addr, coins);
@@ -668,7 +669,7 @@ mod test {
                     .collect::<Vec<_>>()
             };
 
-            let call = given_a_contract_call();
+            let call = ContractCall::new_with_random_id();
 
             // when
             let (inputs, _) = Script::get_transaction_inputs_outputs(
@@ -708,7 +709,7 @@ mod test {
                 .iter()
                 .cloned()
                 .map(|variable_output| {
-                    given_a_contract_call().with_variable_outputs(vec![variable_output])
+                    ContractCall::new_with_random_id().with_variable_outputs(vec![variable_output])
                 })
                 .collect::<Vec<_>>();
 
@@ -727,16 +728,18 @@ mod test {
         }
     }
 
-    fn given_a_contract_call() -> ContractCall {
-        ContractCall {
-            contract_id: random_bech32_contract_id(),
-            encoded_args: Default::default(),
-            encoded_selector: [0; 8],
-            call_parameters: Default::default(),
-            compute_custom_input_offset: false,
-            variable_outputs: None,
-            external_contracts: Default::default(),
-            output_param: None,
+    impl ContractCall {
+        pub fn new_with_random_id() -> Self {
+            ContractCall {
+                contract_id: random_bech32_contract_id(),
+                encoded_args: Default::default(),
+                encoded_selector: [0; 8],
+                call_parameters: Default::default(),
+                compute_custom_input_offset: false,
+                variable_outputs: None,
+                external_contracts: Default::default(),
+                output_param: None,
+            }
         }
     }
 
@@ -800,7 +803,7 @@ mod test {
 
             let asset_id = [1; 32].into();
             let calls = amounts.map(|amount| {
-                given_a_contract_call().with_call_parameters(CallParameters {
+                ContractCall::new_with_random_id().with_call_parameters(CallParameters {
                     amount,
                     asset_id,
                     gas_forwarded: 0,
