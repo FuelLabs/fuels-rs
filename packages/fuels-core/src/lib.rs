@@ -29,7 +29,7 @@ pub type Selector = ByteArray;
 pub type Bits256 = [u8; 32];
 pub type EnumSelector = (u8, Token, EnumVariants);
 
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct StringToken {
     data: String,
     expected_len: usize,
