@@ -283,19 +283,7 @@ impl Wallet {
         Ok((tx.id().to_string(), receipts))
     }
 
-    pub async fn transfer_to_predicate(
-        &self,
-        to: &Bech32Address,
-        amount: u64,
-        asset_id: AssetId,
-    ) -> Result<Vec<Receipt>, Error> {
-        let (_, receipts) = self
-            .transfer(to, amount, asset_id, TxParameters::default())
-            .await?;
-        Ok(receipts)
-    }
-
-    pub async fn recieve_from_predicate(
+    pub async fn receive_from_predicate(
         &self,
         predicate_address: &Bech32Address,
         predicate_code: Vec<u8>,

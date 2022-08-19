@@ -2294,7 +2294,12 @@ async fn can_call_no_arg_predicate_returns_true() -> Result<(), Error> {
     let amount_to_predicate = 2;
 
     sender
-        .transfer_to_predicate(predicate.address(), amount_to_predicate, asset_id)
+        .transfer(
+            predicate.address(),
+            amount_to_predicate,
+            asset_id,
+            TxParameters::default(),
+        )
         .await?;
 
     let receiver_balance_before = provider
@@ -2303,7 +2308,7 @@ async fn can_call_no_arg_predicate_returns_true() -> Result<(), Error> {
     assert_eq!(receiver_balance_before, 16);
 
     receiver
-        .recieve_from_predicate(
+        .receive_from_predicate(
             predicate.address(),
             predicate.code(),
             amount_to_predicate,
@@ -2337,7 +2342,12 @@ async fn can_call_no_arg_predicate_returns_false() -> Result<(), Error> {
     let amount_to_predicate = 4;
 
     sender
-        .transfer_to_predicate(predicate.address(), amount_to_predicate, asset_id)
+        .transfer(
+            predicate.address(),
+            amount_to_predicate,
+            asset_id,
+            TxParameters::default(),
+        )
         .await?;
 
     let receiver_balance_before = provider
@@ -2346,7 +2356,7 @@ async fn can_call_no_arg_predicate_returns_false() -> Result<(), Error> {
     assert_eq!(receiver_balance_before, 16);
 
     receiver
-        .recieve_from_predicate(
+        .receive_from_predicate(
             predicate.address(),
             predicate.code(),
             amount_to_predicate,
@@ -2378,7 +2388,12 @@ async fn can_call_predicate_with_u32_data() -> Result<(), Error> {
     let amount_to_predicate = 8;
 
     sender
-        .transfer_to_predicate(predicate.address(), amount_to_predicate, asset_id)
+        .transfer(
+            predicate.address(),
+            amount_to_predicate,
+            asset_id,
+            TxParameters::default(),
+        )
         .await?;
 
     let receiver_balance_before = provider
@@ -2389,7 +2404,7 @@ async fn can_call_predicate_with_u32_data() -> Result<(), Error> {
     // invalid predicate data
     let predicate_data = ABIEncoder::encode(&[101_u32.into_token()]).unwrap();
     receiver
-        .recieve_from_predicate(
+        .receive_from_predicate(
             predicate.address(),
             predicate.code(),
             amount_to_predicate,
@@ -2412,7 +2427,7 @@ async fn can_call_predicate_with_u32_data() -> Result<(), Error> {
     // valid predicate data
     let predicate_data = ABIEncoder::encode(&[1078_u32.into_token()]).unwrap();
     receiver
-        .recieve_from_predicate(
+        .receive_from_predicate(
             predicate.address(),
             predicate.code(),
             amount_to_predicate,
@@ -2447,7 +2462,12 @@ async fn can_call_predicate_with_address_data() -> Result<(), Error> {
     let amount_to_predicate = 16;
 
     sender
-        .transfer_to_predicate(predicate.address(), amount_to_predicate, asset_id)
+        .transfer(
+            predicate.address(),
+            amount_to_predicate,
+            asset_id,
+            TxParameters::default(),
+        )
         .await?;
 
     let receiver_balance_before = provider
@@ -2460,7 +2480,7 @@ async fn can_call_predicate_with_address_data() -> Result<(), Error> {
             .unwrap();
     let predicate_data = ABIEncoder::encode(&[addr.into_token()]).unwrap();
     receiver
-        .recieve_from_predicate(
+        .receive_from_predicate(
             predicate.address(),
             predicate.code(),
             amount_to_predicate,
@@ -2494,7 +2514,12 @@ async fn can_call_predicate_with_struct_data() -> Result<(), Error> {
     let amount_to_predicate = 8;
 
     sender
-        .transfer_to_predicate(predicate.address(), amount_to_predicate, asset_id)
+        .transfer(
+            predicate.address(),
+            amount_to_predicate,
+            asset_id,
+            TxParameters::default(),
+        )
         .await?;
 
     let receiver_balance_before = provider
@@ -2505,7 +2530,7 @@ async fn can_call_predicate_with_struct_data() -> Result<(), Error> {
     // invalid predicate data
     let predicate_data = ABIEncoder::encode(&[true.into_token(), 55_u32.into_token()]).unwrap();
     receiver
-        .recieve_from_predicate(
+        .receive_from_predicate(
             predicate.address(),
             predicate.code(),
             amount_to_predicate,
@@ -2528,7 +2553,7 @@ async fn can_call_predicate_with_struct_data() -> Result<(), Error> {
     // valid predicate data
     let predicate_data = ABIEncoder::encode(&[true.into_token(), 100_u32.into_token()]).unwrap();
     receiver
-        .recieve_from_predicate(
+        .receive_from_predicate(
             predicate.address(),
             predicate.code(),
             amount_to_predicate,

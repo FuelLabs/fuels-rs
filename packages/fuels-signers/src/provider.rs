@@ -457,14 +457,16 @@ impl Provider {
 
     pub async fn spend_predicate(
         &self,
-        from: &Bech32Address,
+        predicate_address: &Bech32Address,
         code: Vec<u8>,
         amount: u64,
         asset_id: AssetId,
         to: &Bech32Address,
         data: Option<Vec<u8>>,
     ) -> Result<Vec<Receipt>, Error> {
-        let spendable_predicate_coins = self.get_spendable_coins(from, asset_id, amount).await?;
+        let spendable_predicate_coins = self
+            .get_spendable_coins(predicate_address, asset_id, amount)
+            .await?;
 
         let total_amount_in_predicate: u64 = spendable_predicate_coins
             .iter()
@@ -489,11 +491,10 @@ impl Provider {
 
         let outputs = [
             Output::coin(to.into(), total_amount_in_predicate, asset_id),
-            Output::change(from.into(), 0, asset_id),
+            Output::change(predicate_address.into(), 0, asset_id),
         ];
 
         let tx = self.build_transfer_tx(&inputs, &outputs, TxParameters::default());
-
         self.send_transaction(&tx).await
     }
 
