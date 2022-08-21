@@ -182,6 +182,32 @@ jobs:
           command: ${{ matrix.command }}
           args: ${{ matrix.args }}
 
+  e2e-tests:
+    needs:
+      - verify-rust-version
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          submodules: true
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+          override: true
+        # selecting a toolchain either by action or manual `rustup` calls should happen
+        # before the cache plugin, as it uses the current rustc version as its cache key
+      - uses: Swatinem/rust-cache@v1
+      - name: Install Forc
+        run: |
+          curl -sSLf https://github.com/FuelLabs/sway/releases/download/v${{ env.FORC_VERSION }}/forc-binaries-linux_amd64.tar.gz -L -o forc.tar.gz
+          tar -xvf forc.tar.gz
+          chmod +x forc-binaries/forc
+          mv forc-binaries/forc /usr/local/bin/forc
+      - name: Run e2e tests
+        run: |
+          ./test_e2e.sh
+
   publish:
     needs: cargo-verifications
     # Only do this job if publishing a release
