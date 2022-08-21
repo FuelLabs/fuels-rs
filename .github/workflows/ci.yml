@@ -185,6 +185,7 @@ jobs:
   e2e-tests:
     needs:
       - verify-rust-version
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
