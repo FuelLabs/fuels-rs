@@ -7,3 +7,6 @@ These are the main ways of creating an `AssetId`:
 ```rust,ignore
 {{#include ../../../examples/types/src/lib.rs:asset_id}}
 ```
+```rust,ignore
+{{#include ../../../examples/types/src/lib.rs:asset_id}}
+```

@@ -1,29 +1,28 @@
 extern crate core;
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::env;
 use std::path::Path;
 use std::process::Stdio;
 
 fn main() {
     let mut stack = vec![];
-    let mut valid_anchors = HashSet::new();
+    let mut valid_anchors: HashMap<&str, HashSet<&str>> = HashMap::new();
 
     let rg_project = std::process::Command::new("rg")
-    .arg("--case-sensitive")
-    .arg("-g")
-    .arg("!/scripts/check-docs/src/main.rs")
-    .arg("ANCHOR")
-    .stdout(Stdio::piped())
-    .spawn()
-    .expect("failed rg command");
+        .arg("--case-sensitive")
+        .arg("-g")
+        .arg("!/scripts/check-docs/src/main.rs")
+        .arg("ANCHOR")
+        .stdout(Stdio::piped())
+        .spawn()
+        .expect("failed rg command");
 
     let output_files = std::process::Command::new("sed")
-    .arg("s/ //g; s=//==g")
-    .stdin(rg_project.stdout.unwrap())
-    .output()
-    .expect("failed sed command");
-
+        .arg("s/ //g; s=//==g")
+        .stdin(rg_project.stdout.unwrap())
+        .output()
+        .expect("failed sed command");
 
     let output_to_string =
         String::from_utf8(output_files.stdout).expect("failed to parse command output");
@@ -37,9 +36,7 @@ fn main() {
         let parts = i.split(':').collect::<Vec<&str>>();
         if *parts.get(1).expect("error in parsing vec_of_anchors") == "ANCHOR" {
             stack.push(*parts.get(2).expect("error"));
-            // println!("{:?}", stack);
-        }
-        else if *parts.get(1).expect("error in parsing vec_of_anchors") == "ANCHOR_END" {
+        } else if *parts.get(1).expect("error in parsing vec_of_anchors") == "ANCHOR_END" {
             // TODO test this
             if stack.is_empty() {
                 panic!(
@@ -54,7 +51,6 @@ fn main() {
                     *parts.get(2).expect("error")
                 );
             }
-            // println!("{:?}", stack);
         } else {
             panic!(
                 "Invalid syntax for ANCHOR or ANCHOR_END\"{}\"",
@@ -62,8 +58,17 @@ fn main() {
             );
         }
 
-        valid_anchors.insert(*parts.get(2).expect("error in parsing vec_of_anchors"));
-
+        match valid_anchors.contains_key(*parts.get(0).unwrap()) {
+            true => {
+                let update_hash_set = valid_anchors.get_mut(*parts.get(0).unwrap()).unwrap();
+                update_hash_set.insert(*parts.get(2).unwrap());
+            }
+            false => {
+                let mut new_hash_set = HashSet::new();
+                new_hash_set.insert(*parts.get(2).unwrap());
+                valid_anchors.insert(*parts.get(0).unwrap(), new_hash_set);
+            }
+        }
     }
 
     let rg_docs = std::process::Command::new("rg")
@@ -81,7 +86,8 @@ fn main() {
         .output()
         .expect("failed sed command");
 
-    let output_docs_to_string = String::from_utf8(output_docs.stdout).expect("failed to parse command output");
+    let output_docs_to_string =
+        String::from_utf8(output_docs.stdout).expect("failed to parse command output");
 
     let split = output_docs_to_string.split('\n');
     let vec_of_doc_anchors = split
@@ -92,21 +98,27 @@ fn main() {
     for i in vec_of_doc_anchors {
         let parts = i.split(':').collect::<Vec<&str>>();
 
-        let mut root = (*parts.get(0).unwrap()).rsplitn(2,"/");
-        let _file_name = root.next().unwrap();
-        let _folder_path = root.next().unwrap();
+        let (_folder_path, _file_name) = (*parts.get(0).unwrap()).rsplit_once('/').unwrap();
 
         let _ = env::set_current_dir(&_folder_path).is_ok();
 
         if !Path::new(*parts.get(1).unwrap()).exists() {
-           panic!("Cannot find path to \"{}\"", *parts.get(1).expect("error"));
+            panic!("Cannot find path to \"{}\"", *parts.get(1).expect("error"));
         }
 
-        if parts.get(2).is_some() && !valid_anchors.contains(*parts.get(2).unwrap()){
-            panic!("Cannot find anchor \"{}\" on path \"{}\"", *parts.get(2).unwrap(), *parts.get(1).unwrap());
+        let doc_file_with_anchors = parts.get(1).unwrap().replace("../", "");
+
+        if parts.get(2).is_some()
+            && !valid_anchors
+                .get(doc_file_with_anchors.as_str())
+                .unwrap()
+                .contains(parts.get(2).unwrap())
+        {
+            panic!(
+                "Cannot find anchor \"{}\" on path \"{}\"",
+                *parts.get(2).unwrap(),
+                *parts.get(1).unwrap()
+            );
         }
-
-
     }
-
 }
