@@ -20,7 +20,10 @@ use fuels_core::{
     parameters::{CallParameters, TxParameters},
     Selector, Token, Tokenizable,
 };
-use fuels_signers::{provider::Provider, LocalWallet, Signer};
+use fuels_signers::{
+    provider::{Provider, TransactionCost},
+    LocalWallet, Signer,
+};
 use fuels_types::bech32::Bech32ContractId;
 use fuels_types::{
     errors::Error,
@@ -75,7 +78,7 @@ impl<D> CallResponse<D> {
             .rfind(|r| matches!(r, Receipt::ScriptResult { .. }))
             .expect("could not retrieve ScriptResult")
             .gas_used()
-            .expect("could not retrieve gas used")
+            .expect("could not retrieve gas used from ScriptResult")
     }
 
     pub fn new(value: D, receipts: Vec<Receipt>) -> Self {
@@ -529,6 +532,21 @@ where
         Self::call_or_simulate(self, true).await
     }
 
+    /// Get a contract's estimated cost
+    pub async fn estimate_transaction_cost(
+        &self,
+        tolerance: Option<f64>,
+    ) -> Result<TransactionCost, Error> {
+        let script = self.get_script().await;
+
+        let transaction_cost = self
+            .provider
+            .estimate_transaction_cost(&script.tx, tolerance)
+            .await?;
+
+        Ok(transaction_cost)
+    }
+
     /// Create a CallResponse from call receipts
     pub fn get_response(&self, mut receipts: Vec<Receipt>) -> Result<CallResponse<D>, Error> {
         match self.contract_call.output_param.as_ref() {
@@ -621,6 +639,22 @@ impl MultiContractCallHandler {
         self.get_response(receipts)
     }
 
+    /// Get a contract's estimated cost
+    pub async fn estimate_transaction_cost(
+        &self,
+        tolerance: Option<f64>,
+    ) -> Result<TransactionCost, Error> {
+        let script = self.get_script().await;
+
+        let transaction_cost = self
+            .wallet
+            .get_provider()?
+            .estimate_transaction_cost(&script.tx, tolerance)
+            .await?;
+
+        Ok(transaction_cost)
+    }
+
     /// Create a MultiCallResponse from call receipts
     pub fn get_response<D: Tokenizable + Debug>(
         &self,
@@ -646,9 +680,8 @@ impl MultiContractCallHandler {
 
 #[cfg(test)]
 mod test {
-    use fuels_test_helpers::launch_provider_and_get_wallet;
-
     use super::*;
+    use fuels_test_helpers::launch_provider_and_get_wallet;
 
     #[tokio::test]
     #[should_panic(expected = "called `Result::unwrap()` on an `Err` value: InvalidData(\"json\")")]
