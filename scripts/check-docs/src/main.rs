@@ -71,7 +71,7 @@ fn main() {
         );
     }
 
-    let rg_docs = std::process::Command::new("grep")
+    let grep_docs = std::process::Command::new("grep")
         .args(["-I", "-H", "-R", "--exclude-dir=scripts", "{{#include", "."])
         .output()
         .expect("failed rg command");
