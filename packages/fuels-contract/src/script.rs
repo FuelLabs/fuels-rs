@@ -117,9 +117,10 @@ impl Script {
     }
 
     fn sum_up_amounts_for_each_asset_id(
-        smt: impl Iterator<Item = (AssetId, u64)>,
+        amounts_per_asset_id: impl Iterator<Item = (AssetId, u64)>,
     ) -> Vec<(AssetId, u64)> {
-        smt.group_by(|(asset_id, _)| *asset_id)
+        amounts_per_asset_id
+            .group_by(|(asset_id, _)| *asset_id)
             .into_iter()
             .map(|(asset_id, groups_w_same_asset_id)| {
                 let total_amount_in_group = groups_w_same_asset_id.map(|(_, amount)| amount).sum();
