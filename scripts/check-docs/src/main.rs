@@ -8,7 +8,7 @@ fn main() {
     let mut stack: Vec<&str> = vec![];
     let mut valid_anchors: HashMap<&str, HashSet<&str>> = HashMap::new();
 
-    let rg_project = std::process::Command::new("grep")
+    let grep_project = std::process::Command::new("grep")
         .args(["-I", "-H", "-R", "--exclude-dir=scripts", "ANCHOR", "."])
         .output()
         .expect("failed rg command");
