@@ -9,12 +9,7 @@ fn main() {
     let mut valid_anchors: HashMap<&str, HashSet<&str>> = HashMap::new();
 
     let rg_project = std::process::Command::new("grep")
-        .arg("-I")
-        .arg("-H")
-        .arg("-R")
-        .arg("--exclude-dir=scripts")
-        .arg("ANCHOR")
-        .arg(".")
+        .args(["-I", "-H", "-R", "--exclude-dir=scripts", "ANCHOR", "."])
         .output()
         .expect("failed rg command");
 
@@ -39,13 +34,16 @@ fn main() {
             "ANCHOR_END" => {
                 if stack.is_empty() {
                     panic!(
-                        "ANCHOR of \"{}\" cannot be found",
+                        "ANCHOR of \"{}\" is missing or is wrong",
                         *parts.get(2).expect("error")
                     );
                 }
                 let first_from_stack = stack.pop().unwrap();
                 if first_from_stack != *parts.get(2).expect("error") {
-                    panic!("ANCHOR_END of \"{}\" is wrong", first_from_stack);
+                    panic!(
+                        "ANCHOR_END of \"{}\" is missing or is wrong",
+                        first_from_stack
+                    );
                 }
             }
             &_ => {
@@ -69,12 +67,15 @@ fn main() {
         }
     }
 
+    if !stack.is_empty() {
+        panic!(
+            "ANCHOR_END of \"{}\" is missing or is wrong",
+            stack.pop().unwrap()
+        );
+    }
+
     let rg_docs = std::process::Command::new("grep")
-        .arg("-I")
-        .arg("-H")
-        .arg("-R")
-        .arg("--exclude-dir=scripts")
-        .arg("{{#include")
+        .args(["-I", "-H", "-R", "--exclude-dir=scripts", "{{#include", "."])
         .output()
         .expect("failed rg command");
 
