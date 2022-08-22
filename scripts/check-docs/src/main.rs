@@ -41,7 +41,7 @@ fn main() {
                 let first_from_stack = stack.pop().unwrap();
                 if first_from_stack != *parts.get(2).expect("error") {
                     panic!(
-                        "ANCHOR_END of \"{}\" is missing or is wrong",
+                        "ANCHOR_END of \"{}\" is missing corresponding ANCHOR or name/tag is wrong",
                         first_from_stack
                     );
                 }
