@@ -74,7 +74,7 @@ fn main() {
     let grep_docs = std::process::Command::new("grep")
         .args(["-I", "-H", "-R", "--exclude-dir=scripts", "{{#include", "."])
         .output()
-        .expect("failed rg command");
+        .expect("failed grep command");
 
     let output_docs_to_string =
         String::from_utf8(grep_docs.stdout).expect("failed to parse command output");
