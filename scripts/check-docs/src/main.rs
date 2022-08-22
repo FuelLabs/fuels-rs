@@ -11,7 +11,7 @@ fn main() {
     let grep_project = std::process::Command::new("grep")
         .args(["-I", "-H", "-R", "--exclude-dir=scripts", "ANCHOR", "."])
         .output()
-        .expect("failed rg command");
+        .expect("failed grep command");
 
     let output_to_string =
         String::from_utf8(grep_project.stdout).expect("failed to parse command output");
