@@ -27,21 +27,27 @@ use tokio::process::Command;
 #[derive(Clone, Copy, Debug)]
 pub struct Config {
     pub addr: SocketAddr,
+    pub utxo_validation: bool,
+    pub predicates: bool,
     pub manual_blocks_enabled: bool,
+    pub silent: bool,
 }
 
 impl Config {
     pub fn local_node() -> Self {
         Self {
             addr: SocketAddr::new(Ipv4Addr::new(127, 0, 0, 1).into(), 0),
+            utxo_validation: false,
+            predicates: false,
             manual_blocks_enabled: false,
+            silent: true,
         }
     }
 }
 
 #[skip_serializing_none]
 #[serde_as]
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 pub struct CoinConfig {
     #[serde_as(as = "Option<HexType>")]
     #[serde(default)]
@@ -238,18 +244,16 @@ fn write_temp_config_file(config: Value) -> NamedTempFile {
 pub async fn new_fuel_node(
     coins: Vec<(UtxoId, Coin)>,
     consensus_parameters_config: Option<ConsensusParameters>,
-    socket_addr: SocketAddr,
-    manual_blocks_enabled: bool,
-    silent: bool,
+    config: Config,
 ) {
     // Create a new one-shot channel for sending single values across asynchronous tasks.
     let (tx, rx) = oneshot::channel();
 
     tokio::spawn(async move {
-        let config = get_node_config_json(coins, consensus_parameters_config);
-        let temp_config_file = write_temp_config_file(config);
+        let config_json = get_node_config_json(coins, consensus_parameters_config);
+        let temp_config_file = write_temp_config_file(config_json);
 
-        let port = &socket_addr.port().to_string();
+        let port = &config.addr.port().to_string();
         let mut args = vec![
             "run", // `fuel-core` is now run with `fuel-core run`
             "--ip",
@@ -261,13 +265,22 @@ pub async fn new_fuel_node(
             "--chain",
             temp_config_file.path().to_str().unwrap(),
         ];
-        if manual_blocks_enabled {
+
+        if config.utxo_validation {
+            args.push("--utxo-validation");
+        }
+
+        if config.predicates {
+            args.push("--predicates");
+        }
+
+        if config.manual_blocks_enabled {
             args.push("--manual_blocks_enabled");
         }
 
         let mut command = Command::new("fuel-core");
         command.stdin(Stdio::null());
-        if silent {
+        if config.silent {
             command.stdout(Stdio::null()).stderr(Stdio::null());
         }
         let mut running_node = command
@@ -277,7 +290,7 @@ pub async fn new_fuel_node(
             .expect("error: Couldn't read fuel-core: No such file or directory. Please check if fuel-core library is installed. \
         Try this https://fuellabs.github.io/sway/latest/introduction/installation.html");
 
-        let client = FuelClient::from(socket_addr);
+        let client = FuelClient::from(config.addr);
         server_health_check(&client).await;
         // Sending single to RX to inform that the fuel core node is ready.
         tx.send(()).unwrap();
@@ -327,9 +340,10 @@ impl FuelService {
         new_fuel_node(
             vec![],
             None,
-            bound_address,
-            config.manual_blocks_enabled,
-            true,
+            Config {
+                addr: bound_address,
+                ..config
+            },
         )
         .await;
 
