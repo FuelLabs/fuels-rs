@@ -265,12 +265,7 @@ impl Wallet {
         let inputs = self
             .get_asset_inputs_for_amount(asset_id, amount, 0)
             .await?;
-        let outputs = [
-            Output::coin(to.into(), amount, asset_id),
-            // Note that the change will be computed by the node.
-            // Here we only have to tell the node who will own the change and its asset ID.
-            Output::change(self.address().into(), 0, asset_id),
-        ];
+        let outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
 
         // Build transaction and sign it
         let mut tx = self
@@ -380,6 +375,21 @@ impl Wallet {
             inputs.push(input_coin);
         }
         Ok(inputs)
+    }
+
+    /// Returns a vector containing the output coin and change output given an asset and amount
+    pub fn get_asset_outputs_for_amount(
+        &self,
+        to: &Bech32Address,
+        asset_id: AssetId,
+        amount: u64,
+    ) -> Vec<Output> {
+        vec![
+            Output::coin(to.into(), amount, asset_id),
+            // Note that the change will be computed by the node.
+            // Here we only have to tell the node who will own the change and its asset ID.
+            Output::change(self.address().into(), 0, asset_id),
+        ]
     }
 
     /// Gets all coins of asset `asset_id` owned by the wallet, *even spent ones* (this is useful
