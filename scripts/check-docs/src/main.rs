@@ -35,7 +35,7 @@ fn main() {
                 if stack.is_empty() {
                     panic!(
                         "ANCHOR of \"{}\" is missing or is wrong",
-                        *parts.get(2).expect("error")
+                        *parts.get(2).expect("anchor name/tag is missing")
                     );
                 }
                 let first_from_stack = stack.pop().unwrap();
