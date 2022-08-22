@@ -32,27 +32,28 @@ fn main() {
     for i in &vec_of_anchors {
         let parts = i.split(':').collect::<Vec<_>>();
 
-        if *parts.get(1).expect("error in parsing vec_of_anchors") == "ANCHOR" {
-            stack.push(*parts.get(2).expect("error"));
-        } else if *parts.get(1).expect("error in parsing vec_of_anchors") == "ANCHOR_END" {
-            if stack.is_empty() {
+        match *parts.get(1).expect("error in parsing vec_of_anchors") {
+            "ANCHOR" => {
+                stack.push(*parts.get(2).expect("error"));
+            }
+            "ANCHOR_END" => {
+                if stack.is_empty() {
+                    panic!(
+                        "ANCHOR of \"{}\" cannot be found",
+                        *parts.get(2).expect("error")
+                    );
+                }
+                let first_from_stack = stack.pop().unwrap();
+                if first_from_stack != *parts.get(2).expect("error") {
+                    panic!("ANCHOR_END of \"{}\" is wrong", first_from_stack);
+                }
+            }
+            &_ => {
                 panic!(
-                    "ANCHOR of \"{}\" cannot be found",
-                    *parts.get(2).expect("error")
+                    "Invalid syntax for ANCHOR or ANCHOR_END:  \"{}\"",
+                    *parts.get(1).expect("error")
                 );
             }
-
-            if stack.pop().unwrap() != *parts.get(2).expect("error") {
-                panic!(
-                    "ANCHOR or ANCHOR_END of \"{}\" is wrong",
-                    *parts.get(2).expect("error")
-                );
-            }
-        } else {
-            panic!(
-                "Invalid syntax for ANCHOR or ANCHOR_END\"{}\"",
-                *parts.get(1).expect("error")
-            );
         }
 
         match valid_anchors.contains_key(*parts.get(0).unwrap()) {
