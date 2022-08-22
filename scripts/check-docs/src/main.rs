@@ -14,7 +14,7 @@ fn main() {
         .expect("failed rg command");
 
     let output_to_string =
-        String::from_utf8(rg_project.stdout).expect("failed to parse command output");
+        String::from_utf8(grep_project.stdout).expect("failed to parse command output");
 
     let split = output_to_string.split('\n');
 
