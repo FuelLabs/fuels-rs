@@ -278,6 +278,26 @@ impl Wallet {
         Ok((tx.id().to_string(), receipts))
     }
 
+    pub async fn receive_from_predicate(
+        &self,
+        predicate_address: &Bech32Address,
+        predicate_code: Vec<u8>,
+        amount: u64,
+        asset_id: AssetId,
+        predicate_data: Option<Vec<u8>>,
+    ) -> Result<Vec<Receipt>, Error> {
+        self.get_provider()?
+            .spend_predicate(
+                predicate_address,
+                predicate_code,
+                amount,
+                asset_id,
+                self.address(),
+                predicate_data,
+            )
+            .await
+    }
+
     /// Unconditionally transfers `balance` of type `asset_id` to
     /// the contract at `to`.
     /// Fails if balance for `asset_id` is larger than this wallet's spendable balance.
