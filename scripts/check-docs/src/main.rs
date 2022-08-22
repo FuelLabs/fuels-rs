@@ -29,7 +29,7 @@ fn main() {
 
         match *parts.get(1).expect("error in parsing vec_of_anchors") {
             "ANCHOR" => {
-                stack.push(*parts.get(2).expect("error"));
+                stack.push(*parts.get(2).expect("anchor name/tag is missing"));
             }
             "ANCHOR_END" => {
                 if stack.is_empty() {
