@@ -1,4 +1,5 @@
 pub mod contract;
+pub mod predicate;
 pub mod script;
 
 pub mod abi_encoder {

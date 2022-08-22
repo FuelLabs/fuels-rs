@@ -502,7 +502,7 @@ where
     /// transaction.
     #[tracing::instrument]
     async fn call_or_simulate(self, simulate: bool) -> Result<CallResponse<D>, Error> {
-        let script = self.get_script().await;
+        let script = self.get_call_execution_script().await?;
 
         let receipts = if simulate {
             script.simulate(&self.provider).await?
@@ -515,9 +515,13 @@ where
     }
 
     /// Returns the script that executes the contract call
-    pub async fn get_script(&self) -> Script {
-        Script::from_contract_calls(vec![&self.contract_call], &self.tx_parameters, &self.wallet)
-            .await
+    pub async fn get_call_execution_script(&self) -> Result<Script, Error> {
+        Script::from_contract_calls(
+            std::slice::from_ref(&self.contract_call),
+            &self.tx_parameters,
+            &self.wallet,
+        )
+        .await
     }
 
     /// Call a contract's method on the node, in a state-modifying manner.
@@ -537,7 +541,7 @@ where
         &self,
         tolerance: Option<f64>,
     ) -> Result<TransactionCost, Error> {
-        let script = self.get_script().await;
+        let script = self.get_call_execution_script().await?;
 
         let transaction_cost = self
             .provider
@@ -595,13 +599,11 @@ impl MultiContractCallHandler {
     }
 
     /// Returns the script that executes the contract calls
-    pub async fn get_script(&self) -> Script {
+    pub async fn get_call_execution_script(&self) -> Result<Script, Error> {
         Script::from_contract_calls(
             self.contract_calls
                 .as_ref()
-                .expect("No calls added. Have you used '.add_calls()'?")
-                .iter()
-                .collect(),
+                .expect("No calls added. Have you used '.add_calls()'?"),
             &self.tx_parameters,
             &self.wallet,
         )
@@ -625,14 +627,14 @@ impl MultiContractCallHandler {
         &self,
         simulate: bool,
     ) -> Result<CallResponse<D>, Error> {
-        let script = self.get_script().await;
+        let script = self.get_call_execution_script().await?;
 
         let provider = self.wallet.get_provider()?;
 
         let receipts = if simulate {
-            script.simulate(provider).await.unwrap()
+            script.simulate(provider).await?
         } else {
-            script.call(provider).await.unwrap()
+            script.call(provider).await?
         };
         tracing::debug!(target: "receipts", "{:?}", receipts);
 
@@ -644,7 +646,7 @@ impl MultiContractCallHandler {
         &self,
         tolerance: Option<f64>,
     ) -> Result<TransactionCost, Error> {
-        let script = self.get_script().await;
+        let script = self.get_call_execution_script().await?;
 
         let transaction_cost = self
             .wallet
