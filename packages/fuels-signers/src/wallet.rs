@@ -265,7 +265,7 @@ impl Wallet {
         let inputs = self
             .get_asset_inputs_for_amount(asset_id, amount, 0)
             .await?;
-        let outputs: Vec<Output> = vec![
+        let outputs = [
             Output::coin(to.into(), amount, asset_id),
             // Note that the change will be computed by the node.
             // Here we only have to tell the node who will own the change and its asset ID.
@@ -281,6 +281,26 @@ impl Wallet {
         let receipts = self.get_provider()?.send_transaction(&tx).await?;
 
         Ok((tx.id().to_string(), receipts))
+    }
+
+    pub async fn receive_from_predicate(
+        &self,
+        predicate_address: &Bech32Address,
+        predicate_code: Vec<u8>,
+        amount: u64,
+        asset_id: AssetId,
+        predicate_data: Option<Vec<u8>>,
+    ) -> Result<Vec<Receipt>, Error> {
+        self.get_provider()?
+            .spend_predicate(
+                predicate_address,
+                predicate_code,
+                amount,
+                asset_id,
+                self.address(),
+                predicate_data,
+            )
+            .await
     }
 
     /// Unconditionally transfers `balance` of type `asset_id` to
