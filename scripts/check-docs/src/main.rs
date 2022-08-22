@@ -77,7 +77,7 @@ fn main() {
         .expect("failed rg command");
 
     let output_docs_to_string =
-        String::from_utf8(rg_docs.stdout).expect("failed to parse command output");
+        String::from_utf8(grep_docs.stdout).expect("failed to parse command output");
 
     let split = output_docs_to_string.split('\n');
     let vec_of_doc_anchors = split
