@@ -54,16 +54,13 @@ fn main() {
             }
         }
 
-        match valid_anchors.contains_key(*parts.get(0).unwrap()) {
-            true => {
-                let update_hash_set = valid_anchors.get_mut(*parts.get(0).unwrap()).unwrap();
-                update_hash_set.insert(*parts.get(2).unwrap());
-            }
-            false => {
-                let mut new_hash_set = HashSet::new();
-                new_hash_set.insert(*parts.get(2).unwrap());
-                valid_anchors.insert(*parts.get(0).unwrap(), new_hash_set);
-            }
+        if valid_anchors.contains_key(*parts.get(0).unwrap()) {
+            let update_hash_set = valid_anchors.get_mut(*parts.get(0).unwrap()).unwrap();
+            update_hash_set.insert(*parts.get(2).unwrap());
+        } else {
+            let mut new_hash_set = HashSet::new();
+            new_hash_set.insert(*parts.get(2).unwrap());
+            valid_anchors.insert(*parts.get(0).unwrap(), new_hash_set);
         }
     }
 
