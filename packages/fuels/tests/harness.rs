@@ -1637,7 +1637,7 @@ async fn test_transaction_script_workflow() -> Result<(), Error> {
 
     let call_handler = contract_instance.initialize_counter(42);
 
-    let script = call_handler.get_script().await;
+    let script = call_handler.get_call_execution_script().await?;
     assert!(script.tx.is_script());
 
     let receipts = script.call(provider).await?;
@@ -1909,7 +1909,7 @@ async fn test_multi_call_script_workflow() -> Result<(), Error> {
         .add_call(call_handler_1)
         .add_call(call_handler_2);
 
-    let script = multi_call_handler.get_script().await;
+    let script = multi_call_handler.get_call_execution_script().await?;
     let receipts = script.call(provider).await.unwrap();
     let (counter, array) = multi_call_handler
         .get_response::<(u64, Vec<u64>)>(receipts)?
