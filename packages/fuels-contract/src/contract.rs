@@ -599,7 +599,7 @@ impl MultiContractCallHandler {
     }
 
     /// Returns the script that executes the contract calls
-    pub async fn get_call_execution_script(&self) -> std::result::Result<Script, Error> {
+    pub async fn get_call_execution_script(&self) -> Result<Script, Error> {
         Script::from_contract_calls(
             self.contract_calls
                 .as_ref()
