@@ -1171,12 +1171,14 @@ async fn test_amount_and_asset_forwarding() -> Result<(), Error> {
 
     let instance = TestFuelCoinContractBuilder::new(id.to_string(), wallet.clone()).build();
 
+    dbg!("halil");
     let mut balance_response = instance
         .get_balance((&id).into(), (&id).into())
         .call()
         .await?;
     assert_eq!(balance_response.value, 0);
 
+    dbg!("halil");
     instance.mint_coins(5_000_000).call().await?;
 
     balance_response = instance
@@ -1185,6 +1187,7 @@ async fn test_amount_and_asset_forwarding() -> Result<(), Error> {
         .await?;
     assert_eq!(balance_response.value, 5_000_000);
 
+    dbg!("halil");
     let tx_params = TxParameters::new(None, Some(1_000_000), None, None);
     // Forward 1_000_000 coin amount of base asset_id
     // this is a big number for checking that amount can be a u64
@@ -1197,6 +1200,7 @@ async fn test_amount_and_asset_forwarding() -> Result<(), Error> {
         .call()
         .await?;
 
+    dbg!("halil");
     assert_eq!(response.value, 1_000_000);
 
     let call_response = response
@@ -1204,6 +1208,7 @@ async fn test_amount_and_asset_forwarding() -> Result<(), Error> {
         .iter()
         .find(|&r| matches!(r, Receipt::Call { .. }));
 
+    dbg!("halil-last");
     assert!(call_response.is_some());
 
     assert_eq!(call_response.unwrap().amount().unwrap(), 1_000_000);
@@ -1218,6 +1223,7 @@ async fn test_amount_and_asset_forwarding() -> Result<(), Error> {
         .call()
         .await?;
 
+    dbg!("halil-here");
     let asset_id = AssetId::from(*id.hash());
     let call_params = CallParameters::new(Some(0), Some(asset_id), None);
     let tx_params = TxParameters::new(None, Some(1_000_000), None, None);
@@ -1229,6 +1235,7 @@ async fn test_amount_and_asset_forwarding() -> Result<(), Error> {
         .call()
         .await?;
 
+    dbg!("halil");
     assert_eq!(response.value, 0);
 
     let call_response = response
@@ -1236,6 +1243,7 @@ async fn test_amount_and_asset_forwarding() -> Result<(), Error> {
         .iter()
         .find(|&r| matches!(r, Receipt::Call { .. }));
 
+    dbg!("halil");
     assert!(call_response.is_some());
 
     assert_eq!(call_response.unwrap().amount().unwrap(), 0);
