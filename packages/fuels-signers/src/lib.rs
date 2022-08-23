@@ -40,7 +40,7 @@ mod tests {
     use fuels_core::constants::BASE_ASSET_ID;
     use fuels_core::{
         parameters::TxParameters,
-        tx::{Address, AssetId, Bytes32, Input, Output, UtxoId},
+        tx::{Address, AssetId, Bytes32, Input, Output, TxPointer, UtxoId},
     };
     use fuels_test_helpers::{setup_single_asset_coins, setup_test_client};
     use rand::{rngs::StdRng, RngCore, SeedableRng};
@@ -98,6 +98,7 @@ mod tests {
             )?,
             10000000,
             AssetId::from([0u8; 32]),
+            TxPointer::default(),
             0,
             0,
         );
@@ -113,7 +114,6 @@ mod tests {
         let mut tx = Transaction::script(
             0,
             1000000,
-            0,
             0,
             hex::decode("24400000")?,
             vec![],
@@ -189,7 +189,6 @@ mod tests {
             .get_transaction_by_id(&tx_id)
             .await?;
 
-        assert_eq!(res.transaction.byte_price(), byte_price);
         assert_eq!(res.transaction.gas_limit(), gas_limit);
         assert_eq!(res.transaction.gas_price(), gas_price);
         assert_eq!(res.transaction.maturity(), maturity);

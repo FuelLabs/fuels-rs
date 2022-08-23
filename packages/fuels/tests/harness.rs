@@ -2928,9 +2928,7 @@ async fn contract_call_fee_estimation() -> Result<(), Error> {
         .await?;
 
     assert_eq!(estimated_transaction_cost.min_gas_price, 0);
-    assert_eq!(estimated_transaction_cost.min_byte_price, 0);
     assert_eq!(estimated_transaction_cost.gas_price, 10_000);
-    assert_eq!(estimated_transaction_cost.byte_price, 10_000);
     assert_eq!(estimated_transaction_cost.gas_used, 348);
     assert_eq!(estimated_transaction_cost.byte_size, 704);
     assert_eq!(estimated_transaction_cost.total_fee, 0.01052);

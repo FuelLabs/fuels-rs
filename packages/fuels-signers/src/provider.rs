@@ -13,7 +13,7 @@ use fuel_gql_client::{
         types::{TransactionResponse, TransactionStatus},
         FuelClient, PageDirection, PaginatedResult, PaginationRequest,
     },
-    fuel_tx::{ConsensusParameters, Input, Output, Receipt, Transaction, UtxoId},
+    fuel_tx::{ConsensusParameters, Input, Output, Receipt, Transaction, TxPointer, UtxoId},
     fuel_types::{AssetId, ContractId, Immediate18},
     fuel_vm::{
         consts::{REG_ONE, WORD_SIZE},
@@ -33,8 +33,6 @@ use fuels_types::errors::Error;
 #[derive(Debug)]
 pub struct TransactionCost {
     pub min_gas_price: u64,
-    pub min_byte_price: u64,
-    pub byte_price: u64,
     pub gas_price: u64,
     pub gas_used: u64,
     pub byte_size: u64,
@@ -91,7 +89,6 @@ impl Provider {
         let TransactionCost {
             gas_used,
             min_gas_price,
-            min_byte_price,
             ..
         } = self.estimate_transaction_cost(tx, Some(tolerance)).await?;
 
@@ -106,12 +103,6 @@ impl Provider {
                 "gas_price({}) is lower than the required min_gas_price({})",
                 tx.gas_price(),
                 min_gas_price
-            )));
-        } else if min_byte_price > tx.byte_price() {
-            return Err(Error::ProviderError(format!(
-                "byte_price({}) is lower than the required min_byte_price({})",
-                tx.byte_price(),
-                min_byte_price
             )));
         }
 
@@ -257,7 +248,6 @@ impl Provider {
         Transaction::Script {
             gas_price: params.gas_price,
             gas_limit: params.gas_limit,
-            byte_price: params.byte_price,
             maturity: params.maturity,
             receipts_root: Default::default(),
             script,
@@ -318,7 +308,6 @@ impl Provider {
         Transaction::Script {
             gas_price: params.gas_price,
             gas_limit: params.gas_limit,
-            byte_price: params.byte_price,
             maturity: params.maturity,
             receipts_root: Default::default(),
             script,
@@ -452,7 +441,7 @@ impl Provider {
     }
 
     pub async fn produce_blocks(&self, amount: u64) -> io::Result<u64> {
-        self.client.produce_block(amount).await
+        self.client.produce_blocks(amount).await
     }
 
     pub async fn spend_predicate(
@@ -482,6 +471,7 @@ impl Provider {
                     coin.owner.into(),
                     coin.amount.0,
                     asset_id,
+                    TxPointer::default(),
                     0,
                     code.clone(),
                     predicate_data.clone(),
@@ -503,11 +493,7 @@ impl Provider {
         tx: &Transaction,
         tolerance: Option<f64>,
     ) -> Result<TransactionCost, Error> {
-        let NodeInfo {
-            min_gas_price,
-            min_byte_price,
-            ..
-        } = self.node_info().await?;
+        let NodeInfo { min_gas_price, .. } = self.node_info().await?;
 
         let tolerance = tolerance.unwrap_or(DEFAULT_GAS_ESTIMATION_TOLERANCE);
         let dry_run_tx = Self::generate_dry_run_tx(tx);
@@ -515,14 +501,7 @@ impl Provider {
             .get_gas_used_with_tolerance(&dry_run_tx, tolerance)
             .await?;
 
-        Self::calculate_tx_cost(
-            dry_run_tx,
-            tx.gas_price(),
-            tx.byte_price(),
-            min_gas_price.0,
-            min_byte_price.0,
-            gas_used,
-        )
+        Self::calculate_tx_cost(dry_run_tx, tx.gas_price(), min_gas_price.0, gas_used)
     }
 
     // Remove limits from an existing Transaction to get an accurate gas estimation
@@ -531,31 +510,27 @@ impl Provider {
         // Simulate the contract call with MAX_GAS_PER_TX to get the complete gas_used
         dry_run_tx.set_gas_limit(MAX_GAS_PER_TX);
         dry_run_tx.set_gas_price(0);
-        dry_run_tx.set_byte_price(0);
         dry_run_tx
     }
 
     fn calculate_tx_cost(
         tx: Transaction,
         gas_price: u64,
-        byte_price: u64,
         min_gas_price: u64,
-        min_byte_price: u64,
         gas_used: u64,
     ) -> Result<TransactionCost, Error> {
         let gas_price = std::cmp::max(gas_price, min_gas_price);
-        let byte_price = std::cmp::max(byte_price, min_byte_price);
         let byte_size = Self::get_chargeable_byte_size(tx);
 
         // GAS_PRICE_FACTOR is a chain_config of the  node. Because of the different decimal precision in
         // FuelVM and EVM we need to scale the price down
         let gas_fee = (gas_used as f64 / GAS_PRICE_FACTOR as f64) * gas_price as f64;
-        let byte_fee = (byte_size as f64 / GAS_PRICE_FACTOR as f64) * byte_price as f64;
+        // let byte_fee = (byte_size as f64 / GAS_PRICE_FACTOR as f64) * byte_price as f64;
+        // TODO:
+        let byte_fee = 0.0;
 
         Ok(TransactionCost {
             min_gas_price,
-            min_byte_price,
-            byte_price,
             gas_price,
             gas_used,
             byte_size,
@@ -570,7 +545,6 @@ impl Provider {
         tolerance: f64,
     ) -> Result<u64, ProviderError> {
         let gas_used = self.get_gas_used(&self.dry_run_no_validation(tx).await?);
-        dbg!(gas_used);
         Ok((gas_used as f64 * (1.0 + tolerance)) as u64)
     }
 
@@ -605,16 +579,12 @@ mod tests {
     fn test_calculate_tx_cost() -> Result<(), Error> {
         let gas_used = 270;
         let gas_price = 10_000;
-        let byte_price = 10_000;
         let min_gas_price = 42;
-        let min_byte_price = 32;
 
         let transaction_cost = Provider::calculate_tx_cost(
             Transaction::default(),
             gas_price,
-            byte_price,
             min_gas_price,
-            min_byte_price,
             gas_used,
         )?;
 
@@ -626,9 +596,7 @@ mod tests {
         let expected_total_fee = 0.0039;
 
         assert_eq!(transaction_cost.min_gas_price, min_gas_price);
-        assert_eq!(transaction_cost.min_byte_price, min_byte_price);
         assert_eq!(transaction_cost.gas_price, gas_price);
-        assert_eq!(transaction_cost.byte_price, byte_price);
         assert_eq!(transaction_cost.gas_used, gas_used);
         assert_eq!(transaction_cost.byte_size, expected_byte_size);
         assert_eq!(transaction_cost.total_fee, expected_total_fee);
