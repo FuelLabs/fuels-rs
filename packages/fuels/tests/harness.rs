@@ -2911,19 +2911,32 @@ async fn contract_call_fee_estimation() -> Result<(), Error> {
 
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
 
+    let gas_price = 100_000_000;
+    let gas_limit = 800;
     let tolerance = 0.2;
+
+    let expected_min_gas_price = 0; // This is the default min_gas_price from the ConsensusParameters
+    let expected_gas_used = 757;
+    let expected_metered_bytes = 720;
+    let expected_total_fee = 364;
+
     let estimated_transaction_cost = contract_instance
         .initialize_counter(42) // Build the ABI call
-        .tx_params(TxParameters::new(Some(10_000), Some(500), None))
+        .tx_params(TxParameters::new(Some(gas_price), Some(gas_limit), None))
         .estimate_transaction_cost(Some(tolerance)) // Perform the network call
         .await?;
 
-    assert_eq!(estimated_transaction_cost.min_gas_price, 0);
-    assert_eq!(estimated_transaction_cost.gas_price, 10_000);
-    // TODO:: Update cost esimation
-    assert_eq!(estimated_transaction_cost.gas_used, 757);
-    assert_eq!(estimated_transaction_cost.byte_size, 728);
-    assert_eq!(estimated_transaction_cost.total_fee, 0.00757);
+    assert_eq!(
+        estimated_transaction_cost.min_gas_price,
+        expected_min_gas_price
+    );
+    assert_eq!(estimated_transaction_cost.gas_price, gas_price);
+    assert_eq!(estimated_transaction_cost.gas_used, expected_gas_used);
+    assert_eq!(
+        estimated_transaction_cost.metered_bytes,
+        expected_metered_bytes
+    );
+    assert_eq!(estimated_transaction_cost.total_fee, expected_total_fee);
 
     Ok(())
 }
