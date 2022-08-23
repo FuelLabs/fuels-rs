@@ -168,13 +168,11 @@ mod tests {
         // Configure transaction parameters.
         let gas_price = 1;
         let gas_limit = 500_000;
-        let byte_price = 1;
         let maturity = 0;
 
         let tx_params = TxParameters {
             gas_price,
             gas_limit,
-            byte_price,
             maturity,
         };
 
