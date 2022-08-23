@@ -498,12 +498,13 @@ impl Provider {
 
         let tolerance = tolerance.unwrap_or(DEFAULT_GAS_ESTIMATION_TOLERANCE);
         let mut dry_run_tx = Self::generate_dry_run_tx(tx);
+        let consensus_parameters = self.chain_info().await?.consensus_parameters;
         let gas_used = self
             .get_gas_used_with_tolerance(&dry_run_tx, tolerance)
             .await?;
-        let consensus_parameters = self.chain_info().await?.consensus_parameters;
         let gas_price = std::cmp::max(tx.gas_price(), min_gas_price.0);
 
+        // Update the dry_run_tx with estimated gas_used and correct gas price to calculate the total_fee
         dry_run_tx.set_gas_price(gas_price);
         dry_run_tx.set_gas_limit(gas_used);
 
