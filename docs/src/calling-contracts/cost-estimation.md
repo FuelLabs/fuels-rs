@@ -9,7 +9,7 @@ TransactionCost {
     min_byte_price: u64,
     gas_price: u64,
     gas_used: u64,
-    metered_bytes: u64,
+    metered_bytes_size: u64,
     total_fee: f64, // where total_fee is the sum of the gas and byte fees
 }
 ```

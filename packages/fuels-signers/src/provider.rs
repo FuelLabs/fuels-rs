@@ -36,7 +36,7 @@ pub struct TransactionCost {
     pub min_gas_price: u64,
     pub gas_price: u64,
     pub gas_used: u64,
-    pub metered_bytes: u64,
+    pub metered_bytes_size: u64,
     pub total_fee: u64,
 }
 
@@ -516,7 +516,7 @@ impl Provider {
             min_gas_price: min_gas_price.0,
             gas_price,
             gas_used,
-            metered_bytes: tx.metered_bytes_size() as u64,
+            metered_bytes_size: tx.metered_bytes_size() as u64,
             total_fee: transaction_fee.total(),
         })
     }

@@ -2917,7 +2917,7 @@ async fn contract_call_fee_estimation() -> Result<(), Error> {
 
     let expected_min_gas_price = 0; // This is the default min_gas_price from the ConsensusParameters
     let expected_gas_used = 757;
-    let expected_metered_bytes = 720;
+    let expected_metered_bytes_size = 720;
     let expected_total_fee = 364;
 
     let estimated_transaction_cost = contract_instance
@@ -2933,8 +2933,8 @@ async fn contract_call_fee_estimation() -> Result<(), Error> {
     assert_eq!(estimated_transaction_cost.gas_price, gas_price);
     assert_eq!(estimated_transaction_cost.gas_used, expected_gas_used);
     assert_eq!(
-        estimated_transaction_cost.metered_bytes,
-        expected_metered_bytes
+        estimated_transaction_cost.metered_bytes_size,
+        expected_metered_bytes_size
     );
     assert_eq!(estimated_transaction_cost.total_fee, expected_total_fee);
 
