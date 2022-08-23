@@ -127,7 +127,7 @@ mod tests {
         let message = unsafe { Message::from_bytes_unchecked(*tx.id()) };
 
         // Check if signature is what we expect it to be
-        assert_eq!(signature, Signature::from_str("a1287a24af13fc102cb9e60988b558d5575d7870032f64bafcc2deda2c99125fb25eca55a29a169de156cb30700965e2b26278fcc7ad375bc720440ea50ba3cb")?);
+        assert_eq!(signature, Signature::from_str("34482a581d1fe01ba84900581f5321a8b7d4ec65c3e7ca0de318ff8fcf45eb2c793c4b99e96400673e24b81b7aa47f042cad658f05a84e2f96f365eb0ce5a511")?);
 
         // Recover address that signed the transaction
         let recovered_address = signature.recover(&message)?;

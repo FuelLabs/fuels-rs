@@ -589,12 +589,12 @@ mod tests {
         )?;
 
         // The chargeable byte size is calculated as the transaction size minus the witnesses size
-        let expected_byte_size = 120;
+        let expected_byte_size = 112;
         // The total_fee is calculated as the sum of the gas_fee and byte_fee.
         // Both are calculated as the price multiplied by the used gas/bytes divided by the
         // correction factor
-        let expected_total_fee = 0.0039;
-
+        let expected_total_fee = 0.0027;
+        //TODO: Update cost estimation
         assert_eq!(transaction_cost.min_gas_price, min_gas_price);
         assert_eq!(transaction_cost.gas_price, gas_price);
         assert_eq!(transaction_cost.gas_used, gas_used);
