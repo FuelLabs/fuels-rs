@@ -841,18 +841,15 @@ pub fn _new_extract_custom_type_name_from_abi_property(
     let type_field = match has_array_format(&t.type_field) {
         // Check for custom type inside array.
         true => {
-            let custom_type_in_array = prop
-                .components
-                .as_ref()
-                .expect("array should have components")
-                .first()
-                .unwrap();
+            if let Some([custom_type_in_array]) = prop.components.as_deref() {
+                let c = types
+                    .get(&custom_type_in_array.type_field)
+                    .expect("couldn't find type id");
 
-            let c = types
-                .get(&custom_type_in_array.type_field)
-                .expect("couldn't find type id");
-
-            c.type_field.clone()
+                c.type_field.clone()
+            } else {
+                panic!("array should have components");
+            }
         }
         // If it's not inside an array, return the `{struct,enum} $name`.
         false => prop.type_field.clone(),
