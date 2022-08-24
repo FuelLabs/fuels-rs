@@ -6,7 +6,6 @@ use regex::Regex;
 use std::path::{Path, PathBuf};
 
 fn main() {
-    // let text_w_anchors = search_for_anchors_in_docs();
     let text_w_anchors = search_for_patterns_in_project("ANCHOR").unwrap();
 
     let (starts, ends) = extract_starts_and_ends(&text_w_anchors);
