@@ -1,6 +1,7 @@
 use crate::{
     errors::Error,
     param_types::{EnumVariants, ParamType},
+    utils::{has_array_format, has_tuple_format},
     Property, TypeDeclaration,
 };
 use std::str::FromStr;
@@ -46,13 +47,13 @@ impl ParamType {
                 if prop.type_field == "()" {
                     return Ok(ParamType::Unit);
                 }
-                if has_array_format(prop.type_field) {
+                if has_array_format(&prop.type_field) {
                     return ParamType::_new_parse_array_param(prop, types);
                 }
                 if prop.type_field.contains("str[") {
                     return ParamType::_new_parse_string_param(prop);
                 }
-                if has_tuple_format(prop.type_field) {
+                if has_tuple_format(&prop.type_field) {
                     // Try to parse tuple (T, T, ..., T)
                     return ParamType::_new_parse_tuple_param(prop, types);
                 }

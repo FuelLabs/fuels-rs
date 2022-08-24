@@ -7,6 +7,7 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 use strum_macros::ToString;
+use utils::{has_array_format, has_tuple_format};
 
 pub mod bech32;
 pub mod constants;
@@ -147,7 +148,7 @@ impl TypeDeclaration {
     }
 
     pub fn has_custom_type_in_array(&self, types: &HashMap<usize, TypeDeclaration>) -> bool {
-        if has_array_format(self.type_field) {
+        if has_array_format(&self.type_field) {
             // For each component in the tuple, check if it is a custom type
             for component in self.components.as_ref().unwrap() {
                 let component_type = types.get(&component.type_field).unwrap();
@@ -162,7 +163,7 @@ impl TypeDeclaration {
     }
 
     pub fn has_custom_type_in_tuple(&self, types: &HashMap<usize, TypeDeclaration>) -> bool {
-        if has_tuple_format(self.type_field) {
+        if has_tuple_format(&self.type_field) {
             // For each component in the tuple, check if it is a custom type
             for component in self.components.as_ref().unwrap() {
                 let component_type = types.get(&component.type_field).unwrap();
