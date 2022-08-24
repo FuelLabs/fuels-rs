@@ -240,16 +240,16 @@ impl ParamType {
         prop: &TypeDeclaration,
         types: &HashMap<usize, TypeDeclaration>,
     ) -> Result<ParamType, Error> {
-        let mut params: Vec<ParamType> = vec![];
         match &prop.components {
             Some(c) => {
-                for component in c {
-                    let component_type_declaration = types.get(&component.type_field).unwrap();
-                    params.push(Self::from_type_declaration(
-                        component_type_declaration,
-                        types,
-                    )?)
-                }
+                let params = c
+                    .iter()
+                    .map(|component| {
+                        let component_type_declaration = types.get(&component.type_field).unwrap();
+                        Self::from_type_declaration(component_type_declaration, types).unwrap()
+                    })
+                    .collect();
+
                 if prop.is_struct_type() {
                     return Ok(ParamType::Struct(params));
                 }
