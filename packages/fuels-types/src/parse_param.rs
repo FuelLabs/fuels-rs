@@ -40,7 +40,7 @@ impl ParamType {
         types: &HashMap<usize, TypeDeclaration>,
     ) -> Result<Self, Error> {
         match ParamType::from_str(&prop.type_field) {
-            // Simple case (primitive types, no arrays, including string)
+            // Simple case (primitive types, no arrays or strings)
             Ok(param_type) => Ok(param_type),
             Err(_) => {
                 if prop.type_field == "()" {
