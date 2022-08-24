@@ -1,4 +1,6 @@
-use crate::code_gen::custom_types_gen::extract_custom_type_name_from_abi_property;
+use crate::code_gen::custom_types_gen::{
+    _new_extract_custom_type_name_from_abi_property, extract_custom_type_name_from_abi_property,
+};
 use crate::code_gen::docs_gen::expand_doc;
 use crate::types::expand_type;
 use crate::utils::{first_four_bytes_of_sha256_hash, ident, safe_ident};
@@ -14,8 +16,6 @@ use proc_macro2::{Literal, TokenStream};
 use quote::quote;
 use regex::Regex;
 use std::collections::HashMap;
-
-use super::custom_types_gen::_new_extract_custom_type_name_from_abi_property;
 
 /// Functions used by the Abigen to expand functions defined in an ABI spec.
 

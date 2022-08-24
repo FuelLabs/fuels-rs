@@ -73,7 +73,7 @@ impl ABIParser {
 
         let entry = entry.expect("No functions found");
 
-        let types = FlatAbigen::get_custom_types(&parsed_abi);
+        let types = FlatAbigen::get_types(&parsed_abi);
 
         let fn_param_types = entry
             .inputs
@@ -216,7 +216,7 @@ impl ABIParser {
             )));
         }
 
-        let types = FlatAbigen::get_custom_types(&parsed_abi);
+        let types = FlatAbigen::get_types(&parsed_abi);
 
         let param_result = types
             .get(&entry.unwrap().output.type_field)

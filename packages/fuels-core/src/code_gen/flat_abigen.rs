@@ -41,10 +41,8 @@ impl FlatAbigen {
         let parsed_abi: ProgramABI =
             serde_json::from_str(&source.get().expect("failed to parse JSON ABI from string"))?;
 
-        let types = FlatAbigen::get_custom_types(&parsed_abi);
-
         Ok(Self {
-            types,
+            types: FlatAbigen::get_types(&parsed_abi),
             abi: parsed_abi,
             contract_name: ident(contract_name),
             rustfmt: true,
@@ -236,20 +234,25 @@ impl FlatAbigen {
     fn abi_enums(&self) -> Result<TokenStream, Error> {
         let mut enums = TokenStream::new();
 
+        // Prevent expanding the same struct more than once
+        let mut seen_enum: Vec<&str> = vec![];
+
         for prop in &self.abi.types {
             if !prop.is_enum_type() {
                 continue;
             }
-            enums.extend(_new_expand_custom_enum(prop, &self.types)?);
+
+            if !seen_enum.contains(&prop.type_field.as_str()) {
+                enums.extend(_new_expand_custom_enum(prop, &self.types)?);
+                seen_enum.push(&prop.type_field);
+            }
         }
 
         Ok(enums)
     }
 
-    /// Reads the parsed ABI and returns the custom types (either `struct` or `enum`) found in it.
-    /// Custom types can be in the free form (`Struct Person`, `Enum State`), inside arrays (`[struct Person; 2]`, `[enum State; 2]`)), or
-    /// inside tuples (`(struct Person, struct Address)`, `(enum State, enum Country)`).
-    pub fn get_custom_types(abi: &ProgramABI) -> HashMap<usize, TypeDeclaration> {
+    /// Reads the parsed ABI and returns all the types in it.
+    pub fn get_types(abi: &ProgramABI) -> HashMap<usize, TypeDeclaration> {
         abi.types.iter().map(|t| (t.type_id, t.clone())).collect()
     }
 }

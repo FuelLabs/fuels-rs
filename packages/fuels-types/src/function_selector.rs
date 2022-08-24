@@ -202,16 +202,16 @@ fn _new_build_fn_selector_params(
             result.push(';');
             result.push_str(array_length.to_string().as_str());
             result.push(']');
+            result
         } else {
             result.push(')');
+            result
         }
     } else {
         // Not a custom type.
 
         // Tuple.
         if has_tuple_format(&type_declaration.type_field) {
-            let tuple_primitive_types_only_signature = "(".to_string();
-
             let components = type_declaration
                 .components
                 .as_ref()
@@ -231,8 +231,7 @@ fn _new_build_fn_selector_params(
             // join component_types
             let joined = component_types.join(",");
 
-            let tuple_primitive_types_only_signature =
-                format!("{}{}{}", tuple_primitive_types_only_signature, joined, ")");
+            let tuple_primitive_types_only_signature = format!("{}{}{}", "(", joined, ")");
             return tuple_primitive_types_only_signature;
         }
 
@@ -255,6 +254,7 @@ fn _new_build_fn_selector_params(
 
             let array = format!("a[{};{}", array_component_type.type_field, array_length);
             result.push_str(array.as_str());
+            result
         } else {
             let param_str_no_whitespace: String = type_declaration
                 .type_field
@@ -262,10 +262,9 @@ fn _new_build_fn_selector_params(
                 .filter(|c| !c.is_whitespace())
                 .collect();
             result.push_str(&param_str_no_whitespace);
+            result
         }
     }
-
-    result
 }
 
 #[cfg(test)]

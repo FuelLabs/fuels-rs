@@ -27,12 +27,17 @@ pub fn abigen(input: TokenStream) -> TokenStream {
         };
 
     if is_flat {
-        let c = FlatAbigen::new(&args.name, &args.abi).unwrap();
-        c.expand().unwrap().into()
+        FlatAbigen::new(&args.name, &args.abi)
+            .unwrap()
+            .expand()
+            .unwrap()
+            .into()
     } else {
-        // Create the Abigen with `new_format` as false.
-        let c = Abigen::new(&args.name, &args.abi).unwrap();
-        c.expand().unwrap().into()
+        Abigen::new(&args.name, &args.abi)
+            .unwrap()
+            .expand()
+            .unwrap()
+            .into()
     }
 }
 
@@ -55,13 +60,19 @@ pub fn wasm_abigen(input: TokenStream) -> TokenStream {
         };
 
     if is_flat {
-        // Create the Abigen with `new_format` as true.
-        let c = FlatAbigen::new(&args.name, &args.abi).unwrap().no_std();
-        c.expand().unwrap().into()
+        FlatAbigen::new(&args.name, &args.abi)
+            .unwrap()
+            .no_std()
+            .expand()
+            .unwrap()
+            .into()
     } else {
-        // Create the Abigen with `new_format` as false.
-        let c = Abigen::new(&args.name, &args.abi).unwrap().no_std();
-        c.expand().unwrap().into()
+        Abigen::new(&args.name, &args.abi)
+            .unwrap()
+            .no_std()
+            .expand()
+            .unwrap()
+            .into()
     }
 }
 
