@@ -218,13 +218,16 @@ fn _new_build_fn_selector_params(
                 .expect("tuples should have components");
 
             // get types of components
-            let mut component_types = Vec::new();
-            for component in components {
-                let t = types
-                    .get(&component.type_field)
-                    .expect("couldn't find type");
-                component_types.push(t.type_field.clone());
-            }
+            let component_types: Vec<String> = components
+                .iter()
+                .map(|component| {
+                    let t = types
+                        .get(&component.type_field)
+                        .expect("couldn't find type");
+                    t.type_field.clone()
+                })
+                .collect();
+
             // join component_types
             let joined = component_types.join(",");
 
