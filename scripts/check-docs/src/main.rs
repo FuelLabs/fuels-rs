@@ -1,119 +1,224 @@
 extern crate core;
 
-use std::collections::{HashMap, HashSet};
-use std::env;
-use std::path::Path;
+use anyhow::{anyhow, bail, Error};
+use itertools::{chain, Itertools};
+use regex::Regex;
+use std::path::{Path, PathBuf};
 
 fn main() {
-    let mut stack: Vec<&str> = vec![];
-    let mut valid_anchors: HashMap<&str, HashSet<&str>> = HashMap::new();
+    // let text_w_anchors = search_for_anchors_in_docs();
+    let text_w_anchors = search_for_patterns_in_project("ANCHOR").unwrap();
 
-    let grep_project = std::process::Command::new("grep")
-        .args(["-I", "-H", "-R", "--exclude-dir=scripts", "ANCHOR", "."])
-        .output()
-        .expect("failed grep command");
+    let (starts, ends) = extract_starts_and_ends(&text_w_anchors);
 
-    let output_to_string =
-        String::from_utf8(grep_project.stdout).expect("failed to parse command output");
+    let (valid_anchors, anchor_errors) = filter_valid_anchors(starts, ends);
 
-    let split = output_to_string.split('\n');
+    report_invalid_anchors(&anchor_errors);
 
-    let vec_of_anchors = split
-        .into_iter()
-        .filter(|s| !s.is_empty())
-        .map(|g| g.replace("./", "").replace(' ', "").replace("//", ""))
-        .collect::<Vec<_>>();
+    let text_mentioning_include = search_for_patterns_in_project("{{#include").unwrap();
+    let includes = parse_includes(text_mentioning_include);
 
-    for i in &vec_of_anchors {
-        let parts = i.split(':').collect::<Vec<_>>();
+    let include_errors = validate_includes(includes, valid_anchors);
 
-        match *parts.get(1).expect("error in parsing vec_of_anchors") {
-            "ANCHOR" => {
-                stack.push(*parts.get(2).expect("anchor name/tag is missing"));
-            }
-            "ANCHOR_END" => {
-                if stack.is_empty() {
-                    panic!(
-                        "ANCHOR of \"{}\" is missing or is wrong",
-                        *parts.get(2).expect("anchor name/tag is missing")
-                    );
-                }
-                let first_from_stack = stack.pop().unwrap();
-                if first_from_stack != *parts.get(2).expect("error") {
-                    panic!(
-                        "ANCHOR_END of \"{}\" is missing corresponding ANCHOR or name/tag is wrong",
-                        first_from_stack
-                    );
-                }
-            }
-            &_ => {
-                panic!(
-                    "Invalid syntax for ANCHOR or ANCHOR_END:  \"{}\"",
-                    *parts.get(1).expect("error")
-                );
-            }
-        }
+    report_invalid_includes(&include_errors);
 
-        if valid_anchors.contains_key(*parts.get(0).unwrap()) {
-            let update_hash_set = valid_anchors.get_mut(*parts.get(0).unwrap()).unwrap();
-            update_hash_set.insert(*parts.get(2).unwrap());
-        } else {
-            let mut new_hash_set = HashSet::new();
-            new_hash_set.insert(*parts.get(2).unwrap());
-            valid_anchors.insert(*parts.get(0).unwrap(), new_hash_set);
-        }
+    if !anchor_errors.is_empty() || !include_errors.is_empty() {
+        panic!("Finished with errors");
     }
+}
 
-    if !stack.is_empty() {
-        panic!(
-            "ANCHOR_END of \"{}\" is missing or is wrong",
-            stack.pop().unwrap()
-        );
+fn report_invalid_includes(errors: &[Error]) {
+    eprintln!("Invalid includes detected!");
+    for error in errors {
+        eprintln!("{error}")
     }
+}
 
-    let grep_docs = std::process::Command::new("grep")
-        .args(["-I", "-H", "-R", "--exclude-dir=scripts", "{{#include", "."])
-        .output()
-        .expect("failed grep command");
-
-    let output_docs_to_string =
-        String::from_utf8(grep_docs.stdout).expect("failed to parse command output");
-
-    let split = output_docs_to_string.split('\n');
-    let vec_of_doc_anchors = split
+fn validate_includes(includes: Vec<Include>, valid_anchors: Vec<Anchor>) -> Vec<Error> {
+    let (pairs, errors): (Vec<_>, Vec<_>) = includes
         .into_iter()
-        .filter(|s| !s.is_empty())
-        .map(|g| {
-            g.replace(' ', "")
-                .replace("{{#include", "")
-                .replace("}}", "")
+        .map(|include| {
+            let mut maybe_anchor = valid_anchors.iter().find(|anchor| {
+                anchor.file == include.anchor_file && anchor.name == include.anchor_name
+            });
+
+            match maybe_anchor.take() {
+                Some(anchor) => Ok((include, anchor.clone())),
+                None => Err(anyhow!(
+                    "No anchor available to satisfy include {include:?}"
+                )),
+            }
         })
+        .partition_result();
+
+    let additional_errors = valid_anchors
+        .iter()
+        .filter(|valid_anchor| {
+            let anchor_used_in_a_pair = pairs.iter().any(|(_, anchor)| anchor == *valid_anchor);
+            !anchor_used_in_a_pair
+        })
+        .map(|unused_anchor| anyhow!("anchor unused: {unused_anchor:?}!"))
         .collect::<Vec<_>>();
 
-    for i in vec_of_doc_anchors {
-        let parts = i.split(':').collect::<Vec<_>>();
+    chain!(errors, additional_errors).collect()
+}
 
-        let (_folder_path, _file_name) = (*parts.get(0).unwrap()).rsplit_once('/').unwrap();
+#[allow(dead_code)]
+#[derive(Debug)]
+struct Include {
+    anchor_name: String,
+    anchor_file: PathBuf,
+    include_file: PathBuf,
+    line_no: usize,
+}
 
-        let _ = env::set_current_dir(&_folder_path).is_ok();
+fn parse_includes(text_w_includes: String) -> Vec<Include> {
+    let apply_regex = |regex: Regex| {
+        text_w_includes
+            .lines()
+            .filter_map(|line| regex.captures(line))
+            .map(|capture| {
+                let include_file = PathBuf::from(&capture[1]).canonicalize().unwrap();
+                let line_no = capture[2].parse().unwrap();
+                let anchor_file = PathBuf::from(&capture[3]);
+                let anchor_name = capture[4].to_owned();
 
-        if !Path::new(*parts.get(1).unwrap()).exists() {
-            panic!("Cannot find path to \"{}\"", *parts.get(1).expect("error"));
-        }
+                let the_path = include_file.parent().unwrap().join(anchor_file);
 
-        let doc_file_with_anchors = parts.get(1).unwrap().replace("../", "");
+                let anchor_file = the_path.canonicalize();
+                if anchor_file.is_err() {
+                    panic!(
+                        "{the_path:?} when canonicalized gives error {:?}",
+                        anchor_file.err().unwrap()
+                    )
+                }
 
-        if parts.get(2).is_some()
-            && !valid_anchors
-                .get(doc_file_with_anchors.as_str())
-                .unwrap()
-                .contains(parts.get(2).unwrap())
-        {
-            panic!(
-                "Cannot find anchor \"{}\" on path \"{}\"",
-                *parts.get(2).unwrap(),
-                *parts.get(1).unwrap()
-            );
-        }
+                let anchor_file = anchor_file.unwrap();
+
+                Include {
+                    anchor_name,
+                    anchor_file,
+                    include_file,
+                    line_no,
+                }
+            })
+            .collect::<Vec<_>>()
+    };
+
+    apply_regex(Regex::new(r"^(\S+):(\d+):\s*\{\{\s*#include\s*(\S+)\s*:\s*(\S+)\s*\}\}").unwrap())
+}
+
+fn report_invalid_anchors(errors: &[Error]) {
+    eprintln!("Invalid anchors encountered!");
+    for error in errors {
+        eprintln!("{error}");
     }
+}
+
+fn filter_valid_anchors(starts: Vec<Anchor>, ends: Vec<Anchor>) -> (Vec<Anchor>, Vec<Error>) {
+    let find_anchor_end_by_name = |anchor_name: &str, file: &Path| {
+        ends.iter()
+            .filter(|el| el.name == *anchor_name && el.file == file)
+            .collect::<Vec<_>>()
+    };
+
+    let (pairs, errors):(Vec<_>, Vec<_>) = starts.into_iter().map(|start| {
+        let matches_by_name = find_anchor_end_by_name(&start.name, &start.file);
+
+        let (begin, end) = match matches_by_name.as_slice() {
+            [single_match] => Ok((start, (*single_match).clone())),
+            [] => Err(anyhow!("Couldn't find a matching end anchor for {start:?}")),
+            multiple_ends => Err(anyhow!("Found too many matching anchor ends for anchor: {start:?}. The matching ends are: {multiple_ends:?}")),
+        }?;
+
+        match check_validity_of_anchor_pair(&begin, &end) {
+            None => Ok((begin, end)),
+            Some(_) => {
+                let err_msg = check_validity_of_anchor_pair(&begin, &end).iter().map(|e|e.to_string()).collect::<Vec<_>>().join("\n");
+                Err(anyhow!("{err_msg}"))
+            }
+        }
+    }).partition_result();
+
+    let additional_errors = filter_unused_ends(&ends, &pairs)
+        .into_iter()
+        .map(|unused_end| anyhow!("Missing anchor start for {unused_end:?}"))
+        .collect::<Vec<_>>();
+
+    let start_only = pairs.into_iter().map(|(begin, _)| begin).collect();
+
+    (start_only, chain!(errors, additional_errors).collect())
+}
+
+fn filter_unused_ends<'a>(ends: &'a [Anchor], pairs: &[(Anchor, Anchor)]) -> Vec<&'a Anchor> {
+    ends.iter()
+        .filter(|end| {
+            let end_used_in_pairs = pairs.iter().any(|(_, used_end)| *end == used_end);
+            !end_used_in_pairs
+        })
+        .collect()
+}
+
+fn check_validity_of_anchor_pair(begin: &Anchor, end: &Anchor) -> Option<anyhow::Error> {
+    if begin.line_no > end.line_no {
+        Some(anyhow!("The end of the anchor appears before the beginning. End anchor: {end:?}. Begin anchor: {begin:?}"))
+    } else {
+        None
+    }
+}
+
+#[derive(Debug, Clone, Hash, Eq, PartialEq)]
+struct Anchor {
+    line_no: usize,
+    name: String,
+    file: PathBuf,
+}
+
+fn extract_starts_and_ends(text_w_anchors: &str) -> (Vec<Anchor>, Vec<Anchor>) {
+    let apply_regex = |regex: Regex| {
+        text_w_anchors
+            .lines()
+            .filter_map(|line| regex.captures(line))
+            .map(|capture| {
+                let file = PathBuf::from(&capture[1]).canonicalize().unwrap();
+                let line_no = &capture[2];
+                let anchor_name = &capture[3];
+
+                Anchor {
+                    line_no: line_no.parse().unwrap(),
+                    name: anchor_name.to_string(),
+                    file,
+                }
+            })
+            .collect::<Vec<_>>()
+    };
+
+    let begins = apply_regex(Regex::new(r"^(.+):(\d+):\s*//\s*ANCHOR\s*:\s*(\S+)").unwrap());
+    let ends = apply_regex(Regex::new(r"^(.+):(\d+):\s*//\s*ANCHOR_END\s*:\s*(\S+)").unwrap());
+
+    (begins, ends)
+}
+
+fn search_for_patterns_in_project(pattern: &str) -> anyhow::Result<String> {
+    let grep_project = std::process::Command::new("grep")
+        .args([
+            "-I",
+            "-H",
+            "-R",
+            "-n",
+            "--exclude-dir=scripts",
+            pattern,
+            ".",
+        ])
+        .output()
+        .expect("failed grep command");
+
+    if !grep_project.status.success() {
+        bail!(format!(
+            "Failed running grep command for searching {}",
+            pattern
+        ));
+    }
+
+    Ok(String::from_utf8(grep_project.stdout)?)
 }
