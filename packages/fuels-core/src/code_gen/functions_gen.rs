@@ -648,7 +648,9 @@ fn _new_expand_input_param(
             })
         }
         ParamType::Enum(_) => {
-            let t = types.get(&type_application.type_field).unwrap(); // temp unwrap
+            let t = types
+                .get(&type_application.type_field)
+                .expect("type not found");
 
             let ident = ident(&_new_extract_custom_type_name_from_abi_property(
                 t,
@@ -658,7 +660,9 @@ fn _new_expand_input_param(
             Ok(quote! { #ident })
         }
         ParamType::Struct(_) => {
-            let t = types.get(&type_application.type_field).unwrap(); // temp unwrap
+            let t = types
+                .get(&type_application.type_field)
+                .expect("type not found");
 
             let ident = ident(&_new_extract_custom_type_name_from_abi_property(
                 t,
