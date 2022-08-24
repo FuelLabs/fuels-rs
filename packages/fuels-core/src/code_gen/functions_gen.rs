@@ -304,7 +304,7 @@ fn _new_expand_tuple_w_custom_types(
     types: &HashMap<usize, TypeDeclaration>,
 ) -> Result<TokenStream, Error> {
     if !output.has_custom_type_in_tuple(types) {
-        panic!("Output is of custom type, but not an enum, struct or enum/struct inside an array/tuple. This shouldn't never happen. Output received: {:?}", output);
+        panic!("Output is of custom type, but not an enum, struct or enum/struct inside an array/tuple. This should never happen. Output received: {:?}", output);
     }
 
     let mut final_signature: String = "(".into();
