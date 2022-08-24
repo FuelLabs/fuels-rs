@@ -46,7 +46,7 @@ impl ParamType {
                 if prop.type_field == "()" {
                     return Ok(ParamType::Unit);
                 }
-                if prop.type_field.starts_with('[') && prop.type_field.ends_with(']') {
+                if has_array_format(prop.type_field) {
                     return ParamType::_new_parse_array_param(prop, types);
                 }
                 if prop.type_field.contains("str[") {

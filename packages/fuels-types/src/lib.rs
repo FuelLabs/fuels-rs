@@ -147,7 +147,7 @@ impl TypeDeclaration {
     }
 
     pub fn has_custom_type_in_array(&self, types: &HashMap<usize, TypeDeclaration>) -> bool {
-        if self.type_field.starts_with('[') && self.type_field.ends_with(']') {
+        if has_array_format(self.type_field) {
             // For each component in the tuple, check if it is a custom type
             for component in self.components.as_ref().unwrap() {
                 let component_type = types.get(&component.type_field).unwrap();
@@ -162,7 +162,7 @@ impl TypeDeclaration {
     }
 
     pub fn has_custom_type_in_tuple(&self, types: &HashMap<usize, TypeDeclaration>) -> bool {
-        if self.type_field.starts_with('(') && self.type_field.ends_with(')') {
+        if has_tuple_format(self.type_field) {
             // For each component in the tuple, check if it is a custom type
             for component in self.components.as_ref().unwrap() {
                 let component_type = types.get(&component.type_field).unwrap();

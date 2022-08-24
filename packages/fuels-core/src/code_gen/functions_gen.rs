@@ -122,7 +122,7 @@ pub fn _new_expand_function(
         .get(&function.output.type_field)
         .expect("couldn't find type");
 
-    let param_type = ParamType::from_type_declaration(t, types).unwrap();
+    let param_type = ParamType::from_type_declaration(t, types)?;
 
     let tok: proc_macro2::TokenStream = format!("Some(ParamType::{})", param_type).parse().unwrap();
 
@@ -461,7 +461,7 @@ fn _new_expand_function_arguments(
     let mut call_args = vec![];
 
     for fn_type_application in &fun.inputs {
-        // For each [`Property`] in a function input we expand:
+        // For each [`TypeDeclaration`] in a function input we expand:
         // 1. The name of the argument;
         // 2. The type of the argument;
         // Note that _any_ significant change in the way the JSON ABI is generated
