@@ -250,13 +250,7 @@ impl FlatAbigen {
     /// Custom types can be in the free form (`Struct Person`, `Enum State`), inside arrays (`[struct Person; 2]`, `[enum State; 2]`)), or
     /// inside tuples (`(struct Person, struct Address)`, `(enum State, enum Country)`).
     pub fn get_custom_types(abi: &ProgramABI) -> HashMap<usize, TypeDeclaration> {
-        let mut ts = HashMap::new();
-
-        for t in &abi.types {
-            ts.insert(t.type_id, t.clone());
-        }
-
-        ts
+        abi.types.iter().map(|t| (t.type_id, t.clone())).collect()
     }
 }
 
