@@ -52,7 +52,7 @@ impl ParamType {
                 if prop.type_field.contains("str[") {
                     return ParamType::_new_parse_string_param(prop);
                 }
-                if prop.type_field.starts_with('(') && prop.type_field.ends_with(')') {
+                if has_tuple_format(prop.type_field) {
                     // Try to parse tuple (T, T, ..., T)
                     return ParamType::_new_parse_tuple_param(prop, types);
                 }
