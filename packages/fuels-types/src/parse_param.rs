@@ -180,17 +180,13 @@ impl ParamType {
         }
         let (_type_field, size) = (split[0], split[1]);
 
-        let t = types
-            .get(
-                &prop
-                    .components
-                    .as_ref()
-                    .expect("array component shouldn't be empty")
-                    .first()
-                    .unwrap()
-                    .type_field,
-            )
-            .expect("couldn't find type declaration for array component");
+        let t = if let Some([component]) = prop.components.as_deref() {
+            types
+                .get(&component.type_field)
+                .expect("couldn't find type declaration for array component")
+        } else {
+            panic!("array should have components");
+        };
 
         let type_field = t.type_field.clone();
 

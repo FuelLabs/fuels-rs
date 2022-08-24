@@ -310,7 +310,12 @@ fn _new_expand_tuple_w_custom_types(
     let mut final_signature: String = "(".into();
     let mut type_strings: Vec<String> = vec![];
 
-    for c in output.components.as_ref().unwrap().iter() {
+    for c in output
+        .components
+        .as_ref()
+        .expect("tuples should have components")
+        .iter()
+    {
         let type_string = types.get(&c.type_field).unwrap().type_field.clone();
 
         // If custom type is inside a tuple `(struct | enum <name>, ...)`,

@@ -182,12 +182,12 @@ impl FlatAbigen {
     }
 
     pub fn functions(&self) -> Result<TokenStream, Error> {
-        let mut tokenized_functions = Vec::new();
-
-        for function in &self.abi.functions {
-            let tokenized_fn = _new_expand_function(function, &self.types)?;
-            tokenized_functions.push(tokenized_fn);
-        }
+        let tokenized_functions = self
+            .abi
+            .functions
+            .iter()
+            .map(|function| _new_expand_function(function, &self.types))
+            .collect::<Result<Vec<TokenStream>, Error>>()?;
 
         Ok(quote! { #( #tokenized_functions )* })
     }
