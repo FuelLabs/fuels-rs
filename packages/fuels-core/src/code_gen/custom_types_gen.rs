@@ -331,21 +331,21 @@ pub fn _new_expand_custom_struct(
                 }
             }
         }
-    
+
     impl TryFrom<&[u8]> for #struct_ident {
         type Error = SDKError;
         fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
             try_from_bytes(bytes)
         }
     }
-   
-     impl TryFrom<&Vec<u8>> for #struct_ident {
+
+    impl TryFrom<&Vec<u8>> for #struct_ident {
         type Error = SDKError;
         fn try_from(bytes: &Vec<u8>) -> Result<Self, Self::Error> {
             try_from_bytes(bytes)
         }
     }
-   
+
      impl TryFrom<Vec<u8>> for #struct_ident {
         type Error = SDKError;
         fn try_from(bytes: Vec<u8>) -> Result<Self, Self::Error> {
@@ -764,14 +764,14 @@ pub fn _new_expand_custom_enum(
                 try_from_bytes(bytes)
             }
         }
-        
+
         impl TryFrom<&Vec<u8>> for #enum_ident {
             type Error = SDKError;
             fn try_from(bytes: &Vec<u8>) -> Result<Self, Self::Error> {
                 try_from_bytes(bytes)
             }
         }
-        
+
         impl TryFrom<Vec<u8>> for #enum_ident {
             type Error = SDKError;
             fn try_from(bytes: Vec<u8>) -> Result<Self, Self::Error> {
