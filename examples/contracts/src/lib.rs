@@ -234,6 +234,7 @@ mod tests {
         let contract_instance =
             MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
         // ANCHOR_END: instantiate_contract
+
         // ANCHOR: tx_parameters
         // In order: gas_price, gas_limit, byte_price, and maturity
         let my_tx_params = TxParameters::new(None, Some(1_000_000), None, None);
@@ -254,7 +255,8 @@ mod tests {
             .await?;
 
         // ANCHOR_END: tx_parameters_default
-        // ANCHOR: tx_parameters
+
+        //// ANCHOR: tx_parameters
         // In order: gas_price, gas_limit, byte_price, and maturity
         let my_tx_params = TxParameters::new(None, Some(1_000_000), None, None);
 
@@ -264,7 +266,7 @@ mod tests {
             .call() // Perform the contract call.
             .await?; // This is an async call, `.await` for it.
 
-        // ANCHOR_END: tx_parameters
+        //// ANCHOR_END: tx_parameters
 
         // ANCHOR: call_parameters
 

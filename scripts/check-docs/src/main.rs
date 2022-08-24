@@ -13,28 +13,37 @@ fn main() {
 
     let (valid_anchors, anchor_errors) = filter_valid_anchors(starts, ends);
 
-    report_invalid_anchors(&anchor_errors);
-
     let text_mentioning_include = search_for_patterns_in_project("{{#include").unwrap();
     let includes = parse_includes(text_mentioning_include);
 
-    let include_errors = validate_includes(includes, valid_anchors);
+    let (include_errors, additional_warnings) = validate_includes(includes, valid_anchors);
 
-    report_invalid_includes(&include_errors);
+    report_warnings(&additional_warnings);
 
     if !anchor_errors.is_empty() || !include_errors.is_empty() {
+        report_errors("anchors", &anchor_errors);
+        report_errors("includes", &include_errors);
         panic!("Finished with errors");
     }
 }
 
-fn report_invalid_includes(errors: &[Error]) {
-    eprintln!("Invalid includes detected!");
+fn report_errors(error_type: &str, errors: &[Error]) {
+    eprintln!("Invalid {} detected!", error_type);
     for error in errors {
         eprintln!("{error}")
     }
 }
 
-fn validate_includes(includes: Vec<Include>, valid_anchors: Vec<Anchor>) -> Vec<Error> {
+fn report_warnings(warnings: &[Error]) {
+    for warning in warnings {
+        eprintln!("WARNING! {warning}")
+    }
+}
+
+fn validate_includes(
+    includes: Vec<Include>,
+    valid_anchors: Vec<Anchor>,
+) -> (Vec<Error>, Vec<Error>) {
     let (pairs, errors): (Vec<_>, Vec<_>) = includes
         .into_iter()
         .map(|include| {
@@ -51,16 +60,16 @@ fn validate_includes(includes: Vec<Include>, valid_anchors: Vec<Anchor>) -> Vec<
         })
         .partition_result();
 
-    let additional_errors = valid_anchors
+    let additional_warnings = valid_anchors
         .iter()
         .filter(|valid_anchor| {
             let anchor_used_in_a_pair = pairs.iter().any(|(_, anchor)| anchor == *valid_anchor);
             !anchor_used_in_a_pair
         })
-        .map(|unused_anchor| anyhow!("anchor unused: {unused_anchor:?}!"))
+        .map(|unused_anchor| anyhow!("Anchor unused: {unused_anchor:?}!"))
         .collect::<Vec<_>>();
 
-    chain!(errors, additional_errors).collect()
+    (errors, additional_warnings)
 }
 
 #[allow(dead_code)]
@@ -106,13 +115,6 @@ fn parse_includes(text_w_includes: String) -> Vec<Include> {
     };
 
     apply_regex(Regex::new(r"^(\S+):(\d+):\s*\{\{\s*#include\s*(\S+)\s*:\s*(\S+)\s*\}\}").unwrap())
-}
-
-fn report_invalid_anchors(errors: &[Error]) {
-    eprintln!("Invalid anchors encountered!");
-    for error in errors {
-        eprintln!("{error}");
-    }
 }
 
 fn filter_valid_anchors(starts: Vec<Anchor>, ends: Vec<Anchor>) -> (Vec<Anchor>, Vec<Error>) {
@@ -214,10 +216,7 @@ fn search_for_patterns_in_project(pattern: &str) -> anyhow::Result<String> {
         .expect("failed grep command");
 
     if !grep_project.status.success() {
-        bail!(format!(
-            "Failed running grep command for searching {}",
-            pattern
-        ));
+        bail!("Failed running grep command for searching {}", pattern);
     }
 
     Ok(String::from_utf8(grep_project.stdout)?)
