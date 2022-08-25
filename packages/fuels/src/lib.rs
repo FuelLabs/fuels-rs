@@ -70,7 +70,10 @@ pub mod prelude {
     pub use super::fuel_node::*;
     pub use super::fuels_abigen::abigen;
     pub use super::signers::provider::*;
-    pub use super::signers::{LocalWallet, Signer};
+    pub use super::signers::{
+        wallet::{Locked, Unlocked},
+        LocalWallet, Signer,
+    };
     pub use super::test_helpers::Config;
     pub use super::test_helpers::*;
     pub use super::tx::Salt;

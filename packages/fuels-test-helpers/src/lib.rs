@@ -208,7 +208,7 @@ mod tests {
     use fuels_contract::contract::Contract;
     use fuels_core::parameters::{StorageConfiguration, TxParameters};
     use fuels_signers::provider::Provider;
-    use fuels_signers::{LocalWallet, Signer};
+    use fuels_signers::LocalWallet;
     use fuels_types::bech32::FUEL_BECH32_HRP;
     use std::net::Ipv4Addr;
 

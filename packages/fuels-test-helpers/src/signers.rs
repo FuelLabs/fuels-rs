@@ -115,7 +115,6 @@ mod tests {
     use crate::{launch_custom_provider_and_get_wallets, AssetConfig, WalletsConfig};
     use fuels_core::constants::BASE_ASSET_ID;
     use fuels_signers::fuel_crypto::fuel_types::AssetId;
-    use fuels_signers::Signer;
     use fuels_types::errors::Error;
     use rand::Fill;
 

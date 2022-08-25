@@ -6,7 +6,7 @@ use fuels::contract::predicate::Predicate;
 use fuels::prelude::{
     abigen, launch_custom_provider_and_get_wallets, launch_provider_and_get_wallet,
     setup_multiple_assets_coins, setup_single_asset_coins, setup_test_provider, CallParameters,
-    Config, Contract, Error, LocalWallet, Provider, Salt, Signer, TxParameters, WalletsConfig,
+    Config, Contract, Error, LocalWallet, Provider, Salt, TxParameters, Unlocked, WalletsConfig,
     DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
 };
 use fuels_core::abi_encoder::ABIEncoder;
@@ -2583,7 +2583,15 @@ async fn can_handle_sway_function_called_new() -> anyhow::Result<()> {
 
 async fn setup_predicate_test(
     file_path: &str,
-) -> Result<(Predicate, LocalWallet, LocalWallet, AssetId), Error> {
+) -> Result<
+    (
+        Predicate,
+        LocalWallet<Unlocked>,
+        LocalWallet<Unlocked>,
+        AssetId,
+    ),
+    Error,
+> {
     let predicate = Predicate::load_from(file_path)?;
 
     let mut wallets = launch_custom_provider_and_get_wallets(
