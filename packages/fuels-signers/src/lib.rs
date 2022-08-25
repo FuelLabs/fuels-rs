@@ -11,7 +11,7 @@ use fuels_types::bech32::Bech32Address;
 use std::error::Error;
 
 /// A wallet instantiated with a locally stored private key
-pub type LocalWallet = wallet::Wallet;
+pub type LocalWallet<T = wallet::Locked> = wallet::Wallet<T>;
 
 /// Trait for signing transactions and messages
 ///
