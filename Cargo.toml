@@ -8,6 +8,7 @@ resolver = "2"
 members = [
     "examples/contracts",
     "examples/cookbook",
+    "examples/predicates",
     "examples/providers",
     "examples/rust_bindings",
     "examples/types",
