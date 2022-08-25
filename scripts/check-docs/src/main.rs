@@ -5,15 +5,15 @@ use itertools::{chain, Itertools};
 use regex::Regex;
 use std::path::{Path, PathBuf};
 
-fn main() {
-    let text_w_anchors = search_for_patterns_in_project("ANCHOR").unwrap();
+fn main() -> anyhow::Result<(), Error> {
+    let text_w_anchors = search_for_patterns_in_project("ANCHOR")?;
 
-    let (starts, ends) = extract_starts_and_ends(&text_w_anchors);
+    let (starts, ends) = extract_starts_and_ends(&text_w_anchors)?;
 
     let (valid_anchors, anchor_errors) = filter_valid_anchors(starts, ends);
 
-    let text_mentioning_include = search_for_patterns_in_project("{{#include").unwrap();
-    let includes = parse_includes(text_mentioning_include);
+    let text_mentioning_include = search_for_patterns_in_project("{{#include")?;
+    let includes = parse_includes(text_mentioning_include)?;
 
     let (include_errors, additional_warnings) = validate_includes(includes, valid_anchors);
 
@@ -24,6 +24,7 @@ fn main() {
         report_errors("includes", &include_errors);
         panic!("Finished with errors");
     }
+    Ok(())
 }
 
 fn report_errors(error_type: &str, errors: &[Error]) {
@@ -80,14 +81,14 @@ struct Include {
     line_no: usize,
 }
 
-fn parse_includes(text_w_includes: String) -> Vec<Include> {
+fn parse_includes(text_w_includes: String) -> anyhow::Result<Vec<Include>, Error> {
     let apply_regex = |regex: Regex| {
         text_w_includes
             .lines()
             .filter_map(|line| regex.captures(line))
             .map(|capture| {
-                let include_file = PathBuf::from(&capture[1]).canonicalize().unwrap();
-                let line_no = capture[2].parse().unwrap();
+                let include_file = PathBuf::from(&capture[1]).canonicalize()?;
+                let line_no = capture[2].parse()?;
                 let anchor_file = PathBuf::from(&capture[3]);
                 let anchor_name = capture[4].to_owned();
 
@@ -101,19 +102,20 @@ fn parse_includes(text_w_includes: String) -> Vec<Include> {
                     )
                 }
 
-                let anchor_file = anchor_file.unwrap();
+                let anchor_file = anchor_file?;
 
-                Include {
+                Ok(Include {
                     anchor_name,
                     anchor_file,
                     include_file,
                     line_no,
-                }
+                })
             })
-            .collect::<Vec<_>>()
+            .collect::<Result<Vec<_>, Error>>()
     };
 
-    apply_regex(Regex::new(r"^(\S+):(\d+):\s*\{\{\s*#include\s*(\S+)\s*:\s*(\S+)\s*\}\}").unwrap())
+    Ok(apply_regex(Regex::new(r"^(\S+):(\d+):\s*\{\{\s*#include\s*(\S+)\s*:\s*(\S+)\s*\}\}")?)?)
+
 }
 
 fn filter_valid_anchors(starts: Vec<Anchor>, ends: Vec<Anchor>) -> (Vec<Anchor>, Vec<Error>) {
@@ -175,29 +177,29 @@ struct Anchor {
     file: PathBuf,
 }
 
-fn extract_starts_and_ends(text_w_anchors: &str) -> (Vec<Anchor>, Vec<Anchor>) {
+fn extract_starts_and_ends(text_w_anchors: &str) -> anyhow::Result<(Vec<Anchor>, Vec<Anchor>), Error> {
     let apply_regex = |regex: Regex| {
         text_w_anchors
             .lines()
             .filter_map(|line| regex.captures(line))
             .map(|capture| {
-                let file = PathBuf::from(&capture[1]).canonicalize().unwrap();
+                let file = PathBuf::from(&capture[1]).canonicalize()?;
                 let line_no = &capture[2];
                 let anchor_name = &capture[3];
 
-                Anchor {
+                Ok(Anchor {
                     line_no: line_no.parse().unwrap(),
                     name: anchor_name.to_string(),
                     file,
-                }
+                })
             })
-            .collect::<Vec<_>>()
+            .collect::<Result<Vec<_>, Error>>()
     };
 
-    let begins = apply_regex(Regex::new(r"^(.+):(\d+):\s*//\s*ANCHOR\s*:\s*(\S+)").unwrap());
-    let ends = apply_regex(Regex::new(r"^(.+):(\d+):\s*//\s*ANCHOR_END\s*:\s*(\S+)").unwrap());
+    let begins = apply_regex(Regex::new(r"^(.+):(\d+):\s*//\s*ANCHOR\s*:\s*(\S+)")?)?;
+    let ends = apply_regex(Regex::new(r"^(.+):(\d+):\s*//\s*ANCHOR_END\s*:\s*(\S+)")?)?;
 
-    (begins, ends)
+    Ok((begins, ends))
 }
 
 fn search_for_patterns_in_project(pattern: &str) -> anyhow::Result<String> {
