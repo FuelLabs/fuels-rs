@@ -234,7 +234,7 @@ impl FlatAbigen {
     fn abi_enums(&self) -> Result<TokenStream, Error> {
         let mut enums = TokenStream::new();
 
-        // Prevent expanding the same struct more than once
+        // Prevent expanding the same enum more than once
         let mut seen_enum: Vec<&str> = vec![];
 
         for prop in &self.abi.types {
