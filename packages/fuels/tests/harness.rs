@@ -43,7 +43,7 @@ async fn compile_bindings_from_contract_file() {
     // The generated bindings can be accessed through `SimpleContract`.
     abigen!(
         SimpleContract,
-        "packages/fuels/tests/takes_ints_returns_bool.json",
+        "packages/fuels/tests/takes_ints_returns_bool-flat-abi.json",
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -70,24 +70,39 @@ async fn compile_bindings_from_inline_contract() -> Result<(), Error> {
     abigen!(
         SimpleContract,
         r#"
-        [
-            {
-                "type": "function",
-                "inputs": [
-                    {
-                        "name": "only_argument",
-                        "type": "u32"
-                    }
-                ],
-                "name": "takes_ints_returns_bool",
-                "outputs": [
-                    {
+        {
+            "types": [
+                {
+                    "typeId": 0,
+                    "type": "bool",
+                    "components": null,
+                    "typeParameters": null
+                },
+                {
+                    "typeId": 1,
+                    "type": "u32",
+                    "components": null,
+                    "typeParameters": null
+                }
+            ],
+            "functions": [
+                {
+                    "inputs": [
+                        {
+                            "name": "only_argument",
+                            "type": 1,
+                            "typeArguments": null
+                        }
+                    ],
+                    "name": "takes_ints_returns_bool",
+                    "output": {
                         "name": "",
-                        "type": "bool"
+                        "type": 0,
+                        "typeArguments": null
                     }
-                ]
-            }
-        ]
+                }
+            ]
+        }
         "#,
     );
 
@@ -115,21 +130,51 @@ async fn compile_bindings_array_input() {
     abigen!(
         SimpleContract,
         r#"
-        [
-            {
-                "type":"contract",
-                "inputs":[
-                    {
-                        "name":"arg",
-                        "type":"[u16; 3]"
-                    }
+        {
+            "types": [
+              {
+                "typeId": 0,
+                "type": "()",
+                "components": [],
+                "typeParameters": null
+              },
+              {
+                "typeId": 1,
+                "type": "[u16; 3]",
+                "components": [
+                  {
+                    "name": "__array_element",
+                    "type": 2,
+                    "typeArguments": null
+                  }
                 ],
-                "name":"takes_array",
-                "outputs":[
-
-                ]
-            }
-        ]
+                "typeParameters": null
+              },
+              {
+                "typeId": 2,
+                "type": "u16",
+                "components": null,
+                "typeParameters": null
+              }
+            ],
+            "functions": [
+              {
+                "inputs": [
+                  {
+                    "name": "arg",
+                    "type": 1,
+                    "typeArguments": null
+                  }
+                ],
+                "name": "takes_array",
+                "output": {
+                  "name": "",
+                  "type": 0,
+                  "typeArguments": null
+                }
+              }
+            ]
+        }
         "#,
     );
 
@@ -160,21 +205,51 @@ async fn compile_bindings_bool_array_input() {
     abigen!(
         SimpleContract,
         r#"
-        [
-            {
-                "type":"contract",
-                "inputs":[
-                    {
-                        "name":"arg",
-                        "type":"[bool; 3]"
-                    }
+        {
+            "types": [
+              {
+                "typeId": 0,
+                "type": "()",
+                "components": [],
+                "typeParameters": null
+              },
+              {
+                "typeId": 1,
+                "type": "[bool; 3]",
+                "components": [
+                  {
+                    "name": "__array_element",
+                    "type": 2,
+                    "typeArguments": null
+                  }
                 ],
-                "name":"takes_array",
-                "outputs":[
-
-                ]
-            }
-        ]
+                "typeParameters": null
+              },
+              {
+                "typeId": 2,
+                "type": "bool",
+                "components": null,
+                "typeParameters": null
+              }
+            ],
+            "functions": [
+              {
+                "inputs": [
+                  {
+                    "name": "arg",
+                    "type": 1,
+                    "typeArguments": null
+                  }
+                ],
+                "name": "takes_array",
+                "output": {
+                  "name": "",
+                  "type": 0,
+                  "typeArguments": null
+                }
+              }
+            ]
+        }
         "#,
     );
 
@@ -205,21 +280,39 @@ async fn compile_bindings_byte_input() {
     abigen!(
         SimpleContract,
         r#"
-        [
-            {
-                "type":"contract",
-                "inputs":[
-                    {
-                        "name":"arg",
-                        "type":"byte"
-                    }
+        {
+            "types": [
+              {
+                "typeId": 0,
+                "type": "()",
+                "components": [],
+                "typeParameters": null
+              },
+              {
+                "typeId": 1,
+                "type": "byte",
+                "components": null,
+                "typeParameters": null
+              }
+            ],
+            "functions": [
+              {
+                "inputs": [
+                  {
+                    "name": "arg",
+                    "type": 1,
+                    "typeArguments": null
+                  }
                 ],
-                "name":"takes_byte",
-                "outputs":[
-
-                ]
-            }
-        ]
+                "name": "takes_byte",
+                "output": {
+                  "name": "",
+                  "type": 0,
+                  "typeArguments": null
+                }
+              }
+            ]
+          }
         "#,
     );
 
@@ -246,21 +339,39 @@ async fn compile_bindings_string_input() {
     abigen!(
         SimpleContract,
         r#"
-        [
-            {
-                "type":"contract",
-                "inputs":[
-                    {
-                        "name":"arg",
-                        "type":"str[23]"
-                    }
+        {
+            "types": [
+              {
+                "typeId": 0,
+                "type": "()",
+                "components": [],
+                "typeParameters": null
+              },
+              {
+                "typeId": 1,
+                "type": "str[23]",
+                "components": null,
+                "typeParameters": null
+              }
+            ],
+            "functions": [
+              {
+                "inputs": [
+                  {
+                    "name": "arg",
+                    "type": 1,
+                    "typeArguments": null
+                  }
                 ],
-                "name":"takes_string",
-                "outputs":[
-
-                ]
-            }
-        ]
+                "name": "takes_string",
+                "output": {
+                  "name": "",
+                  "type": 0,
+                  "typeArguments": null
+                }
+              }
+            ]
+          }
         "#,
     );
 
@@ -290,21 +401,39 @@ async fn compile_bindings_b256_input() {
     abigen!(
         SimpleContract,
         r#"
-        [
-            {
-                "type":"contract",
-                "inputs":[
-                    {
-                        "name":"arg",
-                        "type":"b256"
-                    }
+        {
+            "types": [
+              {
+                "typeId": 0,
+                "type": "()",
+                "components": [],
+                "typeParameters": null
+              },
+              {
+                "typeId": 1,
+                "type": "b256",
+                "components": null,
+                "typeParameters": null
+              }
+            ],
+            "functions": [
+              {
+                "inputs": [
+                  {
+                    "name": "arg",
+                    "type": 1,
+                    "typeArguments": null
+                  }
                 ],
-                "name":"takes_b256",
-                "outputs":[
-
-                ]
-            }
-        ]
+                "name": "takes_b256",
+                "output": {
+                  "name": "",
+                  "type": 0,
+                  "typeArguments": null
+                }
+              }
+            ]
+          }
         "#,
     );
 
@@ -339,29 +468,74 @@ async fn compile_bindings_struct_input() {
     abigen!(
         SimpleContract,
         r#"
-        [
-            {
-                "type":"contract",
-                "inputs":[
-                    {
-                        "name":"value",
-                        "type":"struct MyStruct",
-                        "components": [
-                            {
-                                "name": "foo",
-                                "type": "[u8; 2]"
-                            },
-                            {
-                                "name": "bar",
-                                "type": "str[4]"
-                            }
-                        ]
-                    }
+        {
+            "types": [
+              {
+                "typeId": 0,
+                "type": "()",
+                "components": [],
+                "typeParameters": null
+              },
+              {
+                "typeId": 1,
+                "type": "[u8; 2]",
+                "components": [
+                  {
+                    "name": "__array_element",
+                    "type": 4,
+                    "typeArguments": null
+                  }
                 ],
-                "name":"takes_struct",
-                "outputs":[]
-            }
-        ]
+                "typeParameters": null
+              },
+              {
+                "typeId": 2,
+                "type": "str[4]",
+                "components": null,
+                "typeParameters": null
+              },
+              {
+                "typeId": 3,
+                "type": "struct MyStruct",
+                "components": [
+                  {
+                    "name": "foo",
+                    "type": 1,
+                    "typeArguments": null
+                  },
+                  {
+                    "name": "bar",
+                    "type": 2,
+                    "typeArguments": null
+                  }
+                ],
+                "typeParameters": null
+              },
+              {
+                "typeId": 4,
+                "type": "u8",
+                "components": null,
+                "typeParameters": null
+              }
+            ],
+            "functions": [
+              {
+                "inputs": [
+                  {
+                    "name": "value",
+                    "type": 3,
+                    "typeArguments": null
+                  }
+                ],
+                "name": "takes_struct",
+                "output": {
+                  "name": "",
+                  "type": 0,
+                  "typeArguments": null
+                }
+              }
+            ]
+          }
         "#,
     );
     // Because of the abigen! macro, `MyStruct` is now in scope
@@ -397,35 +571,74 @@ async fn compile_bindings_nested_struct_input() {
     abigen!(
         SimpleContract,
         r#"
-        [
-            {
-                "type":"contract",
-                "inputs":[
-                    {
-                        "name":"top_value",
-                        "type":"struct MyNestedStruct",
-                        "components": [
-                            {
-                                "name": "x",
-                                "type": "u16"
-                            },
-                            {
-                                "name": "foo",
-                                "type": "struct InnerStruct",
-                                "components": [
-                                    {
-                                        "name":"a",
-                                        "type": "bool"
-                                    }
-                                ]
-                            }
-                        ]
-                    }
+        {
+            "types": [
+              {
+                "typeId": 0,
+                "type": "()",
+                "components": [],
+                "typeParameters": null
+              },
+              {
+                "typeId": 1,
+                "type": "bool",
+                "components": null,
+                "typeParameters": null
+              },
+              {
+                "typeId": 2,
+                "type": "struct InnerStruct",
+                "components": [
+                  {
+                    "name": "a",
+                    "type": 1,
+                    "typeArguments": null
+                  }
                 ],
-                "name":"takes_nested_struct",
-                "outputs":[]
-            }
-        ]
+                "typeParameters": null
+              },
+              {
+                "typeId": 3,
+                "type": "struct MyNestedStruct",
+                "components": [
+                  {
+                    "name": "x",
+                    "type": 4,
+                    "typeArguments": null
+                  },
+                  {
+                    "name": "foo",
+                    "type": 2,
+                    "typeArguments": null
+                  }
+                ],
+                "typeParameters": null
+              },
+              {
+                "typeId": 4,
+                "type": "u16",
+                "components": null,
+                "typeParameters": null
+              }
+            ],
+            "functions": [
+              {
+                "inputs": [
+                  {
+                    "name": "top_value",
+                    "type": 3,
+                    "typeArguments": null
+                  }
+                ],
+                "name": "takes_nested_struct",
+                "output": {
+                  "name": "",
+                  "type": 0,
+                  "typeArguments": null
+                }
+              }
+            ]
+          }
         "#,
     );
 
@@ -459,29 +672,62 @@ async fn compile_bindings_enum_input() {
     abigen!(
         SimpleContract,
         r#"
-        [
-            {
-                "type":"contract",
-                "inputs":[
-                    {
-                        "name":"my_enum",
-                        "type":"enum MyEnum",
-                        "components": [
-                            {
-                                "name": "X",
-                                "type": "u32"
-                            },
-                            {
-                                "name": "Y",
-                                "type": "bool"
-                            }
-                        ]
-                    }
+        {
+            "types": [
+              {
+                "typeId": 0,
+                "type": "()",
+                "components": [],
+                "typeParameters": null
+              },
+              {
+                "typeId": 1,
+                "type": "bool",
+                "components": null,
+                "typeParameters": null
+              },
+              {
+                "typeId": 2,
+                "type": "enum MyEnum",
+                "components": [
+                  {
+                    "name": "X",
+                    "type": 3,
+                    "typeArguments": null
+                  },
+                  {
+                    "name": "Y",
+                    "type": 1,
+                    "typeArguments": null
+                  }
                 ],
-                "name":"takes_enum",
-                "outputs":[]
-            }
-        ]
+                "typeParameters": null
+              },
+              {
+                "typeId": 3,
+                "type": "u32",
+                "components": null,
+                "typeParameters": null
+              }
+            ],
+            "functions": [
+              {
+                "inputs": [
+                  {
+                    "name": "my_enum",
+                    "type": 2,
+                    "typeArguments": null
+                  }
+                ],
+                "name": "takes_enum",
+                "output": {
+                  "name": "",
+                  "type": 0,
+                  "typeArguments": null
+                }
+              }
+            ]
+          }
         "#,
     );
 
@@ -511,29 +757,62 @@ async fn create_struct_from_decoded_tokens() -> Result<(), Error> {
     abigen!(
         SimpleContract,
         r#"
-        [
-            {
-                "type":"contract",
-                "inputs":[
-                    {
-                        "name":"my_val",
-                        "type":"struct MyStruct",
-                        "components": [
-                            {
-                                "name": "foo",
-                                "type": "u8"
-                            },
-                            {
-                                "name": "bar",
-                                "type": "bool"
-                            }
-                        ]
-                    }
+        {
+            "types": [
+              {
+                "typeId": 0,
+                "type": "()",
+                "components": [],
+                "typeParameters": null
+              },
+              {
+                "typeId": 1,
+                "type": "bool",
+                "components": null,
+                "typeParameters": null
+              },
+              {
+                "typeId": 2,
+                "type": "struct MyStruct",
+                "components": [
+                  {
+                    "name": "foo",
+                    "type": 3,
+                    "typeArguments": null
+                  },
+                  {
+                    "name": "bar",
+                    "type": 1,
+                    "typeArguments": null
+                  }
                 ],
-                "name":"takes_struct",
-                "outputs":[]
-            }
-        ]
+                "typeParameters": null
+              },
+              {
+                "typeId": 3,
+                "type": "u8",
+                "components": null,
+                "typeParameters": null
+              }
+            ],
+            "functions": [
+              {
+                "inputs": [
+                  {
+                    "name": "my_val",
+                    "type": 2,
+                    "typeArguments": null
+                  }
+                ],
+                "name": "takes_struct",
+                "output": {
+                  "name": "",
+                  "type": 0,
+                  "typeArguments": null
+                }
+              }
+            ]
+          }
         "#,
     );
 
@@ -572,35 +851,74 @@ async fn create_nested_struct_from_decoded_tokens() -> Result<(), Error> {
     abigen!(
         SimpleContract,
         r#"
-        [
-            {
-                "type":"contract",
-                "inputs":[
-                    {
-                        "name":"input",
-                        "type":"struct MyNestedStruct",
-                        "components": [
-                            {
-                                "name": "x",
-                                "type": "u16"
-                            },
-                            {
-                                "name": "y",
-                                "type": "struct InnerStruct",
-                                "components": [
-                                    {
-                                        "name":"a",
-                                        "type": "bool"
-                                    }
-                                ]
-                            }
-                        ]
-                    }
+        {
+            "types": [
+              {
+                "typeId": 0,
+                "type": "()",
+                "components": [],
+                "typeParameters": null
+              },
+              {
+                "typeId": 1,
+                "type": "bool",
+                "components": null,
+                "typeParameters": null
+              },
+              {
+                "typeId": 2,
+                "type": "struct InnerStruct",
+                "components": [
+                  {
+                    "name": "a",
+                    "type": 1,
+                    "typeArguments": null
+                  }
                 ],
-                "name":"takes_nested_struct",
-                "outputs":[]
-            }
-        ]
+                "typeParameters": null
+              },
+              {
+                "typeId": 3,
+                "type": "struct MyNestedStruct",
+                "components": [
+                  {
+                    "name": "x",
+                    "type": 4,
+                    "typeArguments": null
+                  },
+                  {
+                    "name": "foo",
+                    "type": 2,
+                    "typeArguments": null
+                  }
+                ],
+                "typeParameters": null
+              },
+              {
+                "typeId": 4,
+                "type": "u16",
+                "components": null,
+                "typeParameters": null
+              }
+            ],
+            "functions": [
+              {
+                "inputs": [
+                  {
+                    "name": "top_value",
+                    "type": 3,
+                    "typeArguments": null
+                  }
+                ],
+                "name": "takes_nested_struct",
+                "output": {
+                  "name": "",
+                  "type": 0,
+                  "typeArguments": null
+                }
+              }
+            ]
+          }
         "#,
     );
 
@@ -620,7 +938,7 @@ async fn create_nested_struct_from_decoded_tokens() -> Result<(), Error> {
         MyNestedStruct::from_token(Token::Struct(vec![x, inner_struct_token]))?;
 
     assert_eq!(10, nested_struct_from_tokens.x);
-    assert!(nested_struct_from_tokens.y.a);
+    assert!(nested_struct_from_tokens.foo.a);
 
     let wallet = launch_provider_and_get_wallet().await;
 
@@ -645,7 +963,7 @@ async fn type_safe_output_values() -> Result<(), Error> {
     // The generated bindings can be accessed through `SimpleContract`.
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/contract_output_test/out/debug/contract_output_test-abi.json"
+        "packages/fuels/tests/test_projects/contract_output_test/out/debug/contract_output_test-flat-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -688,7 +1006,7 @@ async fn call_with_structs() -> Result<(), Error> {
     // ANCHOR: struct_generation
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/complex_types_contract/out/debug/contract_test-abi.json"
+        "packages/fuels/tests/test_projects/complex_types_contract/out/debug/contract_test-flat-abi.json"
     );
 
     // Here we can use `CounterConfig`, a struct originally
@@ -730,7 +1048,7 @@ async fn call_with_empty_return() -> Result<(), Error> {
     // The generated bindings can be accessed through `MyContract`.
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/call_empty_return/out/debug/contract_test-abi.json"
+        "packages/fuels/tests/test_projects/call_empty_return/out/debug/contract_test-flat-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -756,7 +1074,7 @@ async fn call_with_empty_return() -> Result<(), Error> {
 async fn abigen_different_structs_same_arg_name() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/two_structs/out/debug/two_structs-abi.json",
+        "packages/fuels/tests/test_projects/two_structs/out/debug/two_structs-flat-abi.json",
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -788,7 +1106,7 @@ async fn abigen_different_structs_same_arg_name() -> Result<(), Error> {
 async fn test_reverting_transaction() -> Result<(), Error> {
     abigen!(
         RevertingContract,
-        "packages/fuels/tests/test_projects/revert_transaction_error/out/debug/capture_revert_transaction_error-abi.json"
+        "packages/fuels/tests/test_projects/revert_transaction_error/out/debug/capture_revert_transaction_error-flat-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -813,7 +1131,7 @@ async fn test_reverting_transaction() -> Result<(), Error> {
 async fn multiple_read_calls() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/multiple_read_calls/out/debug/demo-abi.json"
+        "packages/fuels/tests/test_projects/multiple_read_calls/out/debug/demo-flat-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -848,7 +1166,7 @@ async fn test_methods_typeless_argument() -> Result<(), Error> {
     // The generated bindings can be accessed through `MyContract`.
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/empty_arguments/out/debug/method_four_arguments-abi.json"
+        "packages/fuels/tests/test_projects/empty_arguments/out/debug/method_four_arguments-flat-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -875,7 +1193,7 @@ async fn test_methods_typeless_argument() -> Result<(), Error> {
 async fn test_large_return_data() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/large_return_data/out/debug/contract_test-abi.json"
+        "packages/fuels/tests/test_projects/large_return_data/out/debug/contract_test-flat-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -935,7 +1253,7 @@ async fn test_large_return_data() -> Result<(), Error> {
 async fn test_provider_launch_and_connect() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json"
     );
 
     let mut wallet = LocalWallet::new_random(None);
@@ -985,12 +1303,12 @@ async fn test_contract_calling_contract() -> Result<(), Error> {
     // Tests a contract call that calls another contract (FooCaller calls FooContract underneath)
     abigen!(
         FooContract,
-        "packages/fuels/tests/test_projects/foo_contract/out/debug/foo_contract-abi.json"
+        "packages/fuels/tests/test_projects/foo_contract/out/debug/foo_contract-flat-abi.json"
     );
 
     abigen!(
         FooCaller,
-        "packages/fuels/tests/test_projects/foo_caller_contract/out/debug/foo_caller_contract-abi.json"
+        "packages/fuels/tests/test_projects/foo_caller_contract/out/debug/foo_caller_contract-flat-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -1041,7 +1359,7 @@ async fn test_contract_calling_contract() -> Result<(), Error> {
 async fn test_gas_errors() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json"
     );
 
     let mut wallet = LocalWallet::new_random(None);
@@ -1111,7 +1429,7 @@ async fn test_gas_errors() -> Result<(), Error> {
 async fn test_call_param_gas_errors() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -1156,7 +1474,7 @@ async fn test_call_param_gas_errors() -> Result<(), Error> {
 async fn test_amount_and_asset_forwarding() -> Result<(), Error> {
     abigen!(
         TestFuelCoinContract,
-        "packages/fuels/tests/test_projects/token_ops/out/debug/token_ops-abi.json"
+        "packages/fuels/tests/test_projects/token_ops/out/debug/token_ops-flat-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -1250,7 +1568,7 @@ async fn test_amount_and_asset_forwarding() -> Result<(), Error> {
 async fn test_multiple_args() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -1283,7 +1601,7 @@ async fn test_multiple_args() -> Result<(), Error> {
 async fn test_tuples() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/tuples/out/debug/tuples-abi.json"
+        "packages/fuels/tests/test_projects/tuples/out/debug/tuples-flat-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -1339,7 +1657,7 @@ async fn test_tuples() -> Result<(), Error> {
 async fn test_array() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -1371,7 +1689,7 @@ async fn test_arrays_with_custom_types() -> Result<(), Error> {
     // The generated bindings can be accessed through `MyContract`.
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -1416,7 +1734,7 @@ async fn test_arrays_with_custom_types() -> Result<(), Error> {
 async fn test_auth_msg_sender_from_sdk() -> Result<(), Error> {
     abigen!(
         AuthContract,
-        "packages/fuels/tests/test_projects/auth_testing_contract/out/debug/auth_testing_contract-abi.json"
+        "packages/fuels/tests/test_projects/auth_testing_contract/out/debug/auth_testing_contract-flat-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -1446,7 +1764,7 @@ async fn workflow_enum_inside_struct() -> Result<(), Error> {
     abigen!(
         MyContract,
         "packages/fuels/tests/test_projects/enum_inside_struct/out/debug\
-        /enum_inside_struct-abi.json"
+        /enum_inside_struct-flat-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -1481,7 +1799,7 @@ async fn workflow_enum_inside_struct() -> Result<(), Error> {
 async fn test_logd_receipts() -> Result<(), Error> {
     abigen!(
         LoggingContract,
-        "packages/fuels/tests/test_projects/contract_logdata/out/debug/contract_logdata-abi.json"
+        "packages/fuels/tests/test_projects/contract_logdata/out/debug/contract_logdata-flat-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -1583,7 +1901,7 @@ async fn test_wallet_balance_api() -> Result<(), Error> {
 async fn sway_native_types_support() -> Result<(), Box<dyn std::error::Error>> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/sway_native_types/out/debug/sway_native_types-abi.json"
+        "packages/fuels/tests/test_projects/sway_native_types/out/debug/sway_native_types-flat-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -1619,7 +1937,7 @@ async fn sway_native_types_support() -> Result<(), Box<dyn std::error::Error>> {
 async fn test_transaction_script_workflow() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -1652,7 +1970,7 @@ async fn enum_coding_w_variable_width_variants() -> Result<(), Error> {
     abigen!(
         EnumTesting,
         "packages/fuels/tests/test_projects/enum_encoding/out/debug\
-        /enum_encoding-abi.json"
+        /enum_encoding-flat-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -1696,7 +2014,7 @@ async fn enum_coding_w_unit_enums() -> Result<(), Error> {
     abigen!(
         EnumTesting,
         "packages/fuels/tests/test_projects/enum_encoding/out/debug\
-        /enum_encoding-abi.json"
+        /enum_encoding-flat-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -1738,7 +2056,7 @@ async fn enum_as_input() -> Result<(), Error> {
     abigen!(
         EnumTesting,
         "packages/fuels/tests/test_projects/enum_as_input/out/debug\
-        /enum_as_input-abi.json"
+        /enum_as_input-flat-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -1788,7 +2106,7 @@ async fn nested_structs() -> Result<(), Error> {
     abigen!(
         NestedStructs,
         "packages/fuels/tests/test_projects/nested_structs/out/debug\
-        /nested_structs-abi.json"
+        /nested_structs-flat-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -1848,7 +2166,7 @@ async fn nested_structs() -> Result<(), Error> {
 async fn test_multi_call() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -1884,7 +2202,7 @@ async fn test_multi_call() -> Result<(), Error> {
 async fn test_multi_call_script_workflow() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -1925,7 +2243,7 @@ async fn test_multi_call_script_workflow() -> Result<(), Error> {
 async fn test_storage_initialization() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/contract_storage_test/out/debug/contract_storage_test-abi.json"
+        "packages/fuels/tests/test_projects/contract_storage_test/out/debug/contract_storage_test-flat-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -1965,7 +2283,7 @@ async fn can_use_try_into_to_construct_struct_from_bytes() -> Result<(), Error> 
     abigen!(
         MyContract,
         "packages/fuels/tests/test_projects/enum_inside_struct/out/debug\
-        /enum_inside_struct-abi.json"
+        /enum_inside_struct-flat-abi.json"
     );
     let cocktail_in_bytes: Vec<u8> = vec![
         0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 3,
@@ -1996,7 +2314,7 @@ async fn can_use_try_into_to_construct_enum_from_bytes() -> Result<(), Error> {
     abigen!(
         MyContract,
         "packages/fuels/tests/test_projects/enum_inside_struct/out/debug\
-        /enum_inside_struct-abi.json"
+        /enum_inside_struct-flat-abi.json"
     );
     // ANCHOR: manual_decode
     let shaker_in_bytes: Vec<u8> = vec![0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 2];
@@ -2025,7 +2343,7 @@ async fn type_inside_enum() -> Result<(), Error> {
     abigen!(
         MyContract,
         "packages/fuels/tests/test_projects/type_inside_enum/out/debug\
-        /type_inside_enum-abi.json"
+        /type_inside_enum-flat-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -2082,7 +2400,7 @@ async fn type_inside_enum() -> Result<(), Error> {
 async fn test_init_storage_automatically() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/contract_storage_test/out/debug/contract_storage_test-abi.json"
+        "packages/fuels/tests/test_projects/contract_storage_test/out/debug/contract_storage_test-flat-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -2121,7 +2439,7 @@ async fn test_init_storage_automatically() -> Result<(), Error> {
 async fn test_init_storage_automatically_bad_json_path() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/contract_storage_test/out/debug/contract_storage_test-abi.json"
+        "packages/fuels/tests/test_projects/contract_storage_test/out/debug/contract_storage_test-flat-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -2145,7 +2463,7 @@ async fn test_init_storage_automatically_bad_json_path() -> Result<(), Error> {
 async fn contract_method_call_respects_maturity() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/transaction_block_height/out/debug/transaction_block_height-abi.json"
+        "packages/fuels/tests/test_projects/transaction_block_height/out/debug/transaction_block_height-flat-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -2177,7 +2495,7 @@ async fn contract_method_call_respects_maturity() -> Result<(), Error> {
 async fn contract_deployment_respects_maturity() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/transaction_block_height/out/debug/transaction_block_height-abi.json"
+        "packages/fuels/tests/test_projects/transaction_block_height/out/debug/transaction_block_height-flat-abi.json"
     );
 
     let config = Config {
@@ -2241,7 +2559,7 @@ async fn can_increase_block_height() -> Result<(), Error> {
 async fn can_handle_sway_function_called_new() -> anyhow::Result<()> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/collision_in_fn_names/out/debug/collision_in_fn_names-abi.json"
+        "packages/fuels/tests/test_projects/collision_in_fn_names/out/debug/collision_in_fn_names-flat-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -2582,7 +2900,7 @@ async fn can_call_predicate_with_struct_data() -> Result<(), Error> {
 async fn test_get_gas_used() -> anyhow::Result<()> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -2608,7 +2926,7 @@ async fn test_get_gas_used() -> anyhow::Result<()> {
 async fn test_contract_id_and_wallet_getters() {
     abigen!(
         SimpleContract,
-        "packages/fuels/tests/takes_ints_returns_bool.json",
+        "packages/fuels/tests/takes_ints_returns_bool-flat-abi.json",
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -2628,7 +2946,7 @@ async fn test_contract_id_and_wallet_getters() {
 async fn test_network_error() -> Result<(), anyhow::Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json"
     );
 
     let mut wallet = LocalWallet::new_random(None);
@@ -2659,7 +2977,7 @@ async fn test_network_error() -> Result<(), anyhow::Error> {
 async fn str_in_array() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/str_in_array/out/debug/str_in_array-abi.json"
+        "packages/fuels/tests/test_projects/str_in_array/out/debug/str_in_array-flat-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -2705,21 +3023,39 @@ async fn strings_must_have_correct_length() {
     abigen!(
         SimpleContract,
         r#"
-        [
+        {
+          "types": [
             {
-                "type":"contract",
-                "inputs":[
-                    {
-                        "name":"arg",
-                        "type":"str[4]"
-                    }
-                ],
-                "name":"takes_string",
-                "outputs":[
-
-                ]
+              "typeId": 0,
+              "type": "()",
+              "components": [],
+              "typeParameters": null
+            },
+            {
+              "typeId": 1,
+              "type": "str[4]",
+              "components": null,
+              "typeParameters": null
             }
-        ]
+          ],
+          "functions": [
+            {
+              "inputs": [
+                {
+                  "name": "arg",
+                  "type": 1,
+                  "typeArguments": null
+                }
+              ],
+              "name": "takes_string",
+              "output": {
+                "name": "",
+                "type": 0,
+                "typeArguments": null
+              }
+            }
+          ]
+        }
         "#,
     );
 
@@ -2734,21 +3070,39 @@ async fn strings_must_have_all_ascii_chars() {
     abigen!(
         SimpleContract,
         r#"
-        [
+        {
+          "types": [
             {
-                "type":"contract",
-                "inputs":[
-                    {
-                        "name":"arg",
-                        "type":"str[4]"
-                    }
-                ],
-                "name":"takes_string",
-                "outputs":[
-
-                ]
+              "typeId": 0,
+              "type": "()",
+              "components": [],
+              "typeParameters": null
+            },
+            {
+              "typeId": 1,
+              "type": "str[4]",
+              "components": null,
+              "typeParameters": null
             }
-        ]
+          ],
+          "functions": [
+            {
+              "inputs": [
+                {
+                  "name": "arg",
+                  "type": 1,
+                  "typeArguments": null
+                }
+              ],
+              "name": "takes_string",
+              "output": {
+                "name": "",
+                "type": 0,
+                "typeArguments": null
+              }
+            }
+          ]
+        }
         "#,
     );
 
@@ -2763,29 +3117,74 @@ async fn strings_must_have_correct_length_custom_types() {
     abigen!(
         SimpleContract,
         r#"
-        [
+        {
+          "types": [
             {
-                "type":"contract",
-                "inputs":[
-                    {
-                        "name":"value",
-                        "type":"enum MyEnum",
-                        "components": [
-                            {
-                                "name": "foo",
-                                "type": "[u8; 2]"
-                            },
-                            {
-                                "name": "bar",
-                                "type": "str[4]"
-                            }
-                        ]
-                    }
-                ],
-                "name":"takes_enum",
-                "outputs":[]
+              "typeId": 0,
+              "type": "()",
+              "components": [],
+              "typeParameters": null
+            },
+            {
+              "typeId": 1,
+              "type": "[_; 2]",
+              "components": [
+                {
+                  "name": "__array_element",
+                  "type": 4,
+                  "typeArguments": null
+                }
+              ],
+              "typeParameters": null
+            },
+            {
+              "typeId": 2,
+              "type": "enum MyEnum",
+              "components": [
+                {
+                  "name": "foo",
+                  "type": 1,
+                  "typeArguments": null
+                },
+                {
+                  "name": "bar",
+                  "type": 3,
+                  "typeArguments": null
+                }
+              ],
+              "typeParameters": null
+            },
+            {
+              "typeId": 3,
+              "type": "str[4]",
+              "components": null,
+              "typeParameters": null
+            },
+            {
+              "typeId": 4,
+              "type": "u8",
+              "components": null,
+              "typeParameters": null
             }
-        ]
+          ],
+          "functions": [
+            {
+              "inputs": [
+                {
+                  "name": "value",
+                  "type": 2,
+                  "typeArguments": null
+                }
+              ],
+              "name": "takes_enum",
+              "output": {
+                "name": "",
+                "type": 0,
+                "typeArguments": null
+              }
+            }
+          ]
+        }
         "#,
     );
 
@@ -2800,35 +3199,74 @@ async fn strings_must_have_all_ascii_chars_custom_types() {
     abigen!(
         SimpleContract,
         r#"
-        [
+        {
+          "types": [
             {
-                "type":"contract",
-                "inputs":[
-                    {
-                        "name":"top_value",
-                        "type":"struct MyNestedStruct",
-                        "components": [
-                            {
-                                "name": "x",
-                                "type": "u16"
-                            },
-                            {
-                                "name": "foo",
-                                "type": "struct InnerStruct",
-                                "components": [
-                                    {
-                                        "name":"bar",
-                                        "type": "str[4]"
-                                    }
-                                ]
-                            }
-                        ]
-                    }
-                ],
-                "name":"takes_nested_struct",
-                "outputs":[]
+              "typeId": 0,
+              "type": "()",
+              "components": [],
+              "typeParameters": null
+            },
+            {
+              "typeId": 1,
+              "type": "str[4]",
+              "components": null,
+              "typeParameters": null
+            },
+            {
+              "typeId": 2,
+              "type": "struct InnerStruct",
+              "components": [
+                {
+                  "name": "bar",
+                  "type": 1,
+                  "typeArguments": null
+                }
+              ],
+              "typeParameters": null
+            },
+            {
+              "typeId": 3,
+              "type": "struct MyNestedStruct",
+              "components": [
+                {
+                  "name": "x",
+                  "type": 4,
+                  "typeArguments": null
+                },
+                {
+                  "name": "foo",
+                  "type": 2,
+                  "typeArguments": null
+                }
+              ],
+              "typeParameters": null
+            },
+            {
+              "typeId": 4,
+              "type": "u16",
+              "components": null,
+              "typeParameters": null
             }
-        ]
+          ],
+          "functions": [
+            {
+              "inputs": [
+                {
+                  "name": "top_value",
+                  "type": 3,
+                  "typeArguments": null
+                }
+              ],
+              "name": "takes_nested_struct",
+              "output": {
+                "name": "",
+                "type": 0,
+                "typeArguments": null
+              }
+            }
+          ]
+        }
         "#,
     );
 
@@ -2849,7 +3287,7 @@ async fn strings_must_have_all_ascii_chars_custom_types() {
 async fn test_connect_wallet() -> anyhow::Result<()> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json"
     );
 
     let config = WalletsConfig::new(Some(2), Some(1), Some(DEFAULT_COIN_AMOUNT));
@@ -2931,9 +3369,9 @@ async fn contract_call_fee_estimation() -> Result<(), Error> {
     assert_eq!(estimated_transaction_cost.min_byte_price, 0);
     assert_eq!(estimated_transaction_cost.gas_price, 10_000);
     assert_eq!(estimated_transaction_cost.byte_price, 10_000);
-    assert_eq!(estimated_transaction_cost.gas_used, 348);
+    assert_eq!(estimated_transaction_cost.gas_used, 757);
     assert_eq!(estimated_transaction_cost.byte_size, 704);
-    assert_eq!(estimated_transaction_cost.total_fee, 0.01052);
+    assert_eq!(estimated_transaction_cost.total_fee, 0.01461);
 
     Ok(())
 }
