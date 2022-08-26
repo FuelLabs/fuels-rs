@@ -20,7 +20,7 @@ Next, let's add some coins, start a provider and connect it with the wallets.
 {{#include ../../../examples/predicates/src/lib.rs:predicate_coins}}
 ```
 
-Now we can load the predicate binary, and prepare variables.
+Now we can load the predicate binary, and prepare some transaction variables.
 
 ```rust,ignore
 {{#include ../../../examples/predicates/src/lib.rs:predicate_load}}
@@ -32,7 +32,7 @@ After the predicate address is generated we can send funds to it. Note that we a
 {{#include ../../../examples/predicates/src/lib.rs:predicate_send}}
 ```
 
-To spend the funds that are now locked in the predicate we have to provide two out of three signatures whose public keys match the ones we defined in the predicate. The signatures are generated in the snippet below:
+To spend the funds that are now locked in the predicate we have to provide two out of three signatures whose public keys match the ones we defined in the predicate. In this example, the signatures are generated from an array of zeros.
 
 ```rust,ignore
 {{#include ../../../examples/predicates/src/lib.rs:predicate_signatures}}
