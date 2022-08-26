@@ -114,8 +114,9 @@ fn parse_includes(text_w_includes: String) -> anyhow::Result<Vec<Include>, Error
             .collect::<Result<Vec<_>, Error>>()
     };
 
-    Ok(apply_regex(Regex::new(r"^(\S+):(\d+):\s*\{\{\s*#include\s*(\S+)\s*:\s*(\S+)\s*\}\}")?)?)
-
+    apply_regex(Regex::new(
+        r"^(\S+):(\d+):\s*\{\{\s*#include\s*(\S+)\s*:\s*(\S+)\s*\}\}",
+    )?)
 }
 
 fn filter_valid_anchors(starts: Vec<Anchor>, ends: Vec<Anchor>) -> (Vec<Anchor>, Vec<Error>) {
@@ -177,7 +178,9 @@ struct Anchor {
     file: PathBuf,
 }
 
-fn extract_starts_and_ends(text_w_anchors: &str) -> anyhow::Result<(Vec<Anchor>, Vec<Anchor>), Error> {
+fn extract_starts_and_ends(
+    text_w_anchors: &str,
+) -> anyhow::Result<(Vec<Anchor>, Vec<Anchor>), Error> {
     let apply_regex = |regex: Regex| {
         text_w_anchors
             .lines()
