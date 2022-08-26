@@ -49,5 +49,5 @@ is stored in memory.
 When designing APIs that accept a `Wallet` as an input, we should think
 carefully about the kind of access that we require. API developers should aim to
 minimise their usage of `Unlocked` wallets in order to ensure private keys are
-stored in memory no longer than necessary in order to reduce the surface area
-for attacks and vulnerabilities in downstream libraries and applications.
+stored in memory no longer than necessary to reduce the surface area for attacks
+and vulnerabilities in downstream libraries and applications.
