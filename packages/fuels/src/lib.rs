@@ -71,7 +71,7 @@ pub mod prelude {
     pub use super::fuels_abigen::abigen;
     pub use super::signers::provider::*;
     pub use super::signers::{
-        wallet::{Locked, Unlocked},
+        wallet::{generate_mnemonic_phrase, Locked, Unlocked},
         LocalWallet, Signer,
     };
     pub use super::test_helpers::Config;

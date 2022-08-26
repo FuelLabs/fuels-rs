@@ -110,17 +110,6 @@ impl<T> Wallet<T> {
         &self.address
     }
 
-    /// Generates a random mnemonic phrase given a random number generator and
-    /// the number of words to generate, `count`.
-    pub fn generate_mnemonic_phrase<R: Rng>(
-        rng: &mut R,
-        count: usize,
-    ) -> Result<String, WalletError> {
-        Ok(fuel_crypto::FuelMnemonic::generate_mnemonic_phrase(
-            rng, count,
-        )?)
-    }
-
     pub async fn get_transactions(
         &self,
         request: PaginationRequest<String>,
@@ -553,6 +542,14 @@ impl<T> fmt::Debug for Wallet<T> {
     }
 }
 
+/// Generates a random mnemonic phrase given a random number generator and the number of words to
+/// generate, `count`.
+pub fn generate_mnemonic_phrase<R: Rng>(rng: &mut R, count: usize) -> Result<String, WalletError> {
+    Ok(fuel_crypto::FuelMnemonic::generate_mnemonic_phrase(
+        rng, count,
+    )?)
+}
+
 #[cfg(test)]
 #[cfg(feature = "test-helpers")]
 mod tests {
@@ -595,7 +592,7 @@ mod tests {
     async fn mnemonic_generation() -> Result<(), Error> {
         let provider = setup().await;
 
-        let mnemonic = Wallet::generate_mnemonic_phrase(&mut rand::thread_rng(), 12)?;
+        let mnemonic = generate_mnemonic_phrase(&mut rand::thread_rng(), 12)?;
 
         let _wallet = Wallet::new_from_mnemonic_phrase(&mnemonic, Some(provider))?;
         Ok(())
