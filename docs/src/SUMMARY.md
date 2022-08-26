@@ -12,6 +12,7 @@
   - [Managing wallets](./getting-started/managing-wallets.md)
     - [Creating a wallet from a private key](./wallets/private-keys.md)
     - [Creating a wallet from mnemonic phrases](./wallets/mnemonic-wallet.md)
+    - [Wallet Access](./wallets/access.md)
     - [Encrypting and storing wallets](./wallets/encrypting-and-storing.md)
     - [Checking balances and coins](./wallets/checking-balances-and-coins.md)
     - [Setting up test wallets](./wallets/test-wallets.md)
