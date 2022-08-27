@@ -138,12 +138,12 @@ jobs:
           command: install
           args: webassembly-test-runner
 
-      - name: Test WASM package
-        if: ${{ matrix.command == 'test' }}
-        run: |
-          cd packages/wasm-tests
-          cargo test --target wasm32-unknown-unknown --all-targets --all-features
-          cargo test --target wasm32-unknown-unknown --all-targets --no-default-features
+      # - name: Test WASM package
+      #   if: ${{ matrix.command == 'test' }}
+      #   run: |
+      #     cd packages/wasm-tests
+      #     cargo test --target wasm32-unknown-unknown --all-targets --all-features
+      #     cargo test --target wasm32-unknown-unknown --all-targets --no-default-features
 
       - name: Install Fuel Core
         if: ${{ matrix.command == 'test' }}
