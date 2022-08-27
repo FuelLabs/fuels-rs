@@ -150,7 +150,7 @@ mod tests {
         let wallet = launch_provider_and_get_wallet().await;
 
         let contract_id = Contract::deploy(
-            "../../packages/fuels/tests/test_projects/contract_test/out/debug/contract_test.bin",
+            "../../crates/fuels/tests/test_projects/contract_test/out/debug/contract_test.bin",
             &wallet,
             TxParameters::default(),
             StorageConfiguration::default(),

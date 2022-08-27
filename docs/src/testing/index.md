@@ -9,7 +9,7 @@
 - You can use it this way:
 
 ````rust,ignore
-{{#include ../../../packages/fuels-test-helpers/src/script.rs:run_compiled_script}}
+{{#include ../../../crates/fuels-test-helpers/src/script.rs:run_compiled_script}}
 ````
 
 Here you'll find an overview of the various test helpers located in `fuels-test-helpers`:

@@ -58,11 +58,11 @@ jobs:
           name: sway-examples
           # cache only the sway build artifacts, skip all test_project src files
           path: |
-            packages/fuels/tests/test_projects
-            !packages/fuels/tests/test_projects/**/*.sw
-            !packages/fuels/tests/test_projects/**/Forc.toml
-            !packages/fuels/tests/test_projects/**/Forc.lock
-            !packages/fuels/tests/test_projects/**/.gitignore
+            crates/fuels/tests/test_projects
+            !crates/fuels/tests/test_projects/**/*.sw
+            !crates/fuels/tests/test_projects/**/Forc.toml
+            !crates/fuels/tests/test_projects/**/Forc.lock
+            !crates/fuels/tests/test_projects/**/.gitignore
 
   get-workspace-members:
     runs-on: ubuntu-latest
@@ -87,7 +87,7 @@ jobs:
       - run: |
           curl -sSLf "$DASEL_VERSION" -L -o dasel && chmod +x dasel
           mv ./dasel /usr/local/bin/dasel
-          MIN_VERSION=$(cat packages/fuels/Cargo.toml | dasel -r toml 'package.rust-version')
+          MIN_VERSION=$(cat crates/fuels/Cargo.toml | dasel -r toml 'package.rust-version')
           RUST_VERSION="${{ env.RUST_VERSION }}"
           echo "Comparing minimum supported toolchain ($MIN_VERSION) with ci toolchain (RUST_VERSION)"
           test "$MIN_VERSION" == "$RUST_VERSION"
@@ -141,7 +141,7 @@ jobs:
       - name: Test WASM package
         if: ${{ matrix.command == 'test' }}
         run: |
-          cd packages/wasm-tests
+          cd crates/wasm-tests
           cargo test --target wasm32-unknown-unknown --all-targets --all-features
           cargo test --target wasm32-unknown-unknown --all-targets --no-default-features
 
@@ -166,7 +166,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: sway-examples
-          path: packages/fuels/tests/test_projects/
+          path: crates/fuels/tests/test_projects/
 
       - name: Cargo (workspace-level)
         if: ${{ !matrix.package }}
@@ -202,12 +202,12 @@ jobs:
         run: |
           curl -sSLf "$DASEL_VERSION" -L -o dasel && chmod +x dasel
           mv ./dasel /usr/local/bin/dasel
-          ./.github/workflows/scripts/verify_tag.sh ${{ github.ref_name }} packages/fuels-contract/Cargo.toml
-          ./.github/workflows/scripts/verify_tag.sh ${{ github.ref_name }} packages/fuels-core/Cargo.toml
-          ./.github/workflows/scripts/verify_tag.sh ${{ github.ref_name }} packages/fuels-abigen-macro/Cargo.toml
-          ./.github/workflows/scripts/verify_tag.sh ${{ github.ref_name }} packages/fuels/Cargo.toml
-          ./.github/workflows/scripts/verify_tag.sh ${{ github.ref_name }} packages/fuels-types/Cargo.toml
-          ./.github/workflows/scripts/verify_tag.sh ${{ github.ref_name }} packages/fuels-test-helpers/Cargo.toml
+          ./.github/workflows/scripts/verify_tag.sh ${{ github.ref_name }} crates/fuels-contract/Cargo.toml
+          ./.github/workflows/scripts/verify_tag.sh ${{ github.ref_name }} crates/fuels-core/Cargo.toml
+          ./.github/workflows/scripts/verify_tag.sh ${{ github.ref_name }} crates/fuels-abigen-macro/Cargo.toml
+          ./.github/workflows/scripts/verify_tag.sh ${{ github.ref_name }} crates/fuels/Cargo.toml
+          ./.github/workflows/scripts/verify_tag.sh ${{ github.ref_name }} crates/fuels-types/Cargo.toml
+          ./.github/workflows/scripts/verify_tag.sh ${{ github.ref_name }} crates/fuels-test-helpers/Cargo.toml
           ./.github/workflows/scripts/verify_tag.sh ${{ github.ref_name }} tools/fuels-abi-cli/Cargo.toml
       - name: Publish crate
         uses: katyo/publish-crates@v1
