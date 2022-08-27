@@ -12,22 +12,37 @@ use fuels_core::parameters::TxParameters;
 use fuels_types::bech32::{Bech32Address, Bech32ContractId, FUEL_BECH32_HRP};
 use fuels_types::errors::Error;
 use rand::{CryptoRng, Rng};
-use std::{collections::HashMap, fmt, path::Path};
+use std::{collections::HashMap, fmt, ops, path::Path};
 use thiserror::Error;
 
 const DEFAULT_DERIVATION_PATH_PREFIX: &str = "m/44'/1179993420'/0'/0/";
 
-/// A FuelVM-compatible wallet which can be used for signing, sending transactions, and more.
+/// A FuelVM compatible wallet that can be used to list assets, balances and more.
+///
+/// Note that insances of the `Wallet` type only know their public address, and as a result can
+/// only perform read-only operations.
+///
+/// In order to sign messages or send transactions, a `Wallet` must first call [`Wallet::unlock`]
+/// with a valid private key to produce a [`WalletUnlocked`].
+#[derive(Clone)]
+pub struct Wallet {
+    /// The wallet's address. The wallet's address is derived
+    /// from the first 32 bytes of SHA-256 hash of the wallet's public key.
+    pub(crate) address: Bech32Address,
+    pub(crate) provider: Option<Provider>,
+}
+
+/// A `WalletUnlocked` is equivalent to a [`Wallet`] whose private key is known and stored
+/// alongside in-memory. Knowing the private key allows a `WalletUlocked` to sign operations, send
+/// transactions, and more.
 ///
 /// # Examples
 ///
 /// ## Signing and Verifying a message
 ///
-/// The wallet can be used to produce ECDSA [`Signature`] objects, which can be
-/// then verified.
+/// The wallet can be used to produce ECDSA [`Signature`] objects, which can be then verified.
 ///
 /// ```
-///
 /// use fuel_crypto::Message;
 /// use fuels::prelude::*;
 ///
@@ -36,10 +51,13 @@ const DEFAULT_DERIVATION_PATH_PREFIX: &str = "m/44'/1179993420'/0'/0/";
 ///   let (provider, _) = setup_test_provider(vec![], None).await;
 ///
 ///   // Create a new local wallet with the newly generated key
-///   let wallet = LocalWallet::new_random(Some(provider));
+///   let wallet = WalletUnlocked::new_random(Some(provider));
 ///
 ///   let message = "my message";
 ///   let signature = wallet.sign_message(message.as_bytes()).await?;
+///
+///   // Lock the wallet when we're done, dropping the private key from memory.
+///   let wallet = wallet.lock();
 ///
 ///   // Recover address that signed the message
 ///   let message = Message::new(message);
@@ -52,24 +70,10 @@ const DEFAULT_DERIVATION_PATH_PREFIX: &str = "m/44'/1179993420'/0'/0/";
 ///   Ok(())
 /// }
 /// ```
-///
 /// [`Signature`]: fuels_core::signature::Signature
-#[derive(Clone)]
-pub struct Wallet<T = Locked> {
-    /// The wallet's address. The wallet's address is derived
-    /// from the first 32 bytes of SHA-256 hash of the wallet's public key.
-    pub(crate) address: Bech32Address,
-    pub(crate) provider: Option<Provider>,
-    pub(crate) state: T,
-}
-
-/// The "locked" state of a wallet, only read-only operations can be performed.
-#[derive(Clone)]
-pub struct Locked;
-
-/// The "unlocked" state of a wallet. Transactions can be executed using the in-memory prvate_key.
-#[derive(Clone)]
-pub struct Unlocked {
+#[derive(Clone, Debug)]
+pub struct WalletUnlocked {
+    wallet: Wallet,
     pub(crate) private_key: SecretKey,
 }
 
@@ -97,7 +101,12 @@ impl From<WalletError> for Error {
     }
 }
 
-impl<T> Wallet<T> {
+impl Wallet {
+    /// Construct a Wallet from its given public address.
+    pub fn from_address(address: Bech32Address, provider: Option<Provider>) -> Self {
+        Self { address, provider }
+    }
+
     pub fn get_provider(&self) -> Result<&Provider, WalletError> {
         self.provider.as_ref().ok_or(WalletError::NoProvider)
     }
@@ -206,63 +215,41 @@ impl<T> Wallet<T> {
             .await
             .map_err(Into::into)
     }
-}
-
-impl Wallet<Locked> {
-    /// Construct a wallet in the `Locked` state from its given public address.
-    pub fn from_address(address: Bech32Address, provider: Option<Provider>) -> Self {
-        let state = Locked;
-        Self {
-            address,
-            provider,
-            state,
-        }
-    }
 
     /// Unlock the wallet with the given `private_key`.
     ///
     /// The private key will be stored in memory until `wallet.lock()` is called or until the
     /// wallet is `drop`ped.
-    pub fn unlock(self, private_key: SecretKey) -> Wallet<Unlocked> {
-        let Self {
-            address, provider, ..
-        } = self;
-        let state = Unlocked { private_key };
-        Wallet {
-            address,
-            provider,
-            state,
+    pub fn unlock(self, private_key: SecretKey) -> WalletUnlocked {
+        WalletUnlocked {
+            wallet: self,
+            private_key,
         }
     }
 }
 
-impl Wallet<Unlocked> {
+impl WalletUnlocked {
     /// Lock the wallet by `drop`ping the private key from memory.
-    pub fn lock(self) -> Wallet<Locked> {
-        let Self {
-            address, provider, ..
-        } = self;
-        let state = Locked;
-        Wallet {
-            address,
-            provider,
-            state,
-        }
+    pub fn lock(self) -> Wallet {
+        self.wallet
+    }
+
+    // NOTE: Rather than providing a `DerefMut` implementation, we wrap the `set_provider` method
+    // directly. This is because we should not allow the user a `&mut` handle to the inner `Wallet`
+    // as this could lead to ending up with a `WalletUnlocked` in an inconsistent state (e.g. the
+    // private key doesn't match the inner wallet's public key).
+    pub fn set_provider(&mut self, provider: Provider) {
+        self.wallet.set_provider(provider)
     }
 
     /// Creates a new wallet with a random private key.
-    ///
-    /// The returned wallet is in the `Unlocked` state, i.e. with the private key stored in memory.
     pub fn new_random(provider: Option<Provider>) -> Self {
         let mut rng = rand::thread_rng();
         let private_key = SecretKey::random(&mut rng);
-
         Self::new_from_private_key(private_key, provider)
     }
 
     /// Creates a new wallet from the given private key.
-    ///
-    /// The returned wallet is in the `Unlocked` state, i.e. with the private key stored in memory.
     pub fn new_from_private_key(private_key: SecretKey, provider: Option<Provider>) -> Self {
         let public = PublicKey::from(&private_key);
         let hashed = public.hash();
@@ -272,20 +259,16 @@ impl Wallet<Unlocked> {
 
     /// Creates a new wallet from a mnemonic phrase.
     /// The default derivation path is used.
-    ///
-    /// The returned wallet is in the `Unlocked` state, i.e. with the private key stored in memory.
     pub fn new_from_mnemonic_phrase(
         phrase: &str,
         provider: Option<Provider>,
     ) -> Result<Self, WalletError> {
         let path = format!("{}{}", DEFAULT_DERIVATION_PATH_PREFIX, 0);
-        Wallet::new_from_mnemonic_phrase_with_path(phrase, provider, &path)
+        Self::new_from_mnemonic_phrase_with_path(phrase, provider, &path)
     }
 
     /// Creates a new wallet from a mnemonic phrase.
     /// It takes a path to a BIP32 derivation path.
-    ///
-    /// The returned wallet is in the `Unlocked` state, i.e. with the private key stored in memory.
     pub fn new_from_mnemonic_phrase_with_path(
         phrase: &str,
         provider: Option<Provider>,
@@ -297,8 +280,6 @@ impl Wallet<Unlocked> {
     }
 
     /// Creates a new wallet and stores its encrypted version in the given path.
-    ///
-    /// The returned wallet is in the `Unlocked` state, i.e. with the private key stored in memory.
     pub fn new_from_keystore<P, R, S>(
         dir: P,
         rng: &mut R,
@@ -331,7 +312,7 @@ impl Wallet<Unlocked> {
         Ok(eth_keystore::encrypt_key(
             dir,
             &mut rng,
-            *self.state.private_key,
+            *self.private_key,
             password,
         )?)
     }
@@ -366,8 +347,8 @@ impl Wallet<Unlocked> {
     ///
     /// async fn foo() -> Result<(), Box<dyn std::error::Error>> {
     ///  // Create the actual wallets/signers
-    ///  let mut wallet_1 = LocalWallet::new_random(None);
-    ///  let mut wallet_2 = LocalWallet::new_random(None);
+    ///  let mut wallet_1 = WalletUnlocked::new_random(None);
+    ///  let mut wallet_2 = WalletUnlocked::new_random(None).lock();
     ///
     ///   // Setup a coin for each wallet
     ///   let mut coins_1 = setup_single_asset_coins(wallet_1.address(),BASE_ASSET_ID, 1, 1);
@@ -491,7 +472,7 @@ impl Wallet<Unlocked> {
 
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
-impl Signer for Wallet<Unlocked> {
+impl Signer for WalletUnlocked {
     type Error = WalletError;
 
     async fn sign_message<S: Send + Sync + AsRef<[u8]>>(
@@ -499,7 +480,7 @@ impl Signer for Wallet<Unlocked> {
         message: S,
     ) -> Result<Signature, Self::Error> {
         let message = Message::new(message);
-        let sig = Signature::sign(&self.state.private_key, &message);
+        let sig = Signature::sign(&self.private_key, &message);
         Ok(sig)
     }
 
@@ -512,7 +493,7 @@ impl Signer for Wallet<Unlocked> {
         // coming from `tx.id()`, which already uses `Hasher::hash()`
         // to hash it using a secure hash mechanism.
         let message = unsafe { Message::from_bytes_unchecked(*id) };
-        let sig = Signature::sign(&self.state.private_key, &message);
+        let sig = Signature::sign(&self.private_key, &message);
 
         let witness = vec![Witness::from(sig.as_ref())];
 
@@ -534,11 +515,18 @@ impl Signer for Wallet<Unlocked> {
     }
 }
 
-impl<T> fmt::Debug for Wallet<T> {
+impl fmt::Debug for Wallet {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Wallet")
             .field("address", &self.address)
             .finish()
+    }
+}
+
+impl ops::Deref for WalletUnlocked {
+    type Target = Wallet;
+    fn deref(&self) -> &Self::Target {
+        &self.wallet
     }
 }
 
@@ -568,7 +556,7 @@ mod tests {
 
         // Create a wallet to be stored in the keystore.
         let (wallet, uuid) =
-            Wallet::new_from_keystore(&dir, &mut rng, "password", Some(provider.clone()))?;
+            WalletUnlocked::new_from_keystore(&dir, &mut rng, "password", Some(provider.clone()))?;
 
         // sign a message using the above key.
         let message = "Hello there!";
@@ -577,7 +565,7 @@ mod tests {
         // Read from the encrypted JSON keystore and decrypt it.
         let path = Path::new(dir.path()).join(uuid);
         let recovered_wallet =
-            Wallet::load_keystore(&path.clone(), "password", Some(provider.clone()))?;
+            WalletUnlocked::load_keystore(&path.clone(), "password", Some(provider.clone()))?;
 
         // Sign the same message as before and assert that the signature is the same.
         let signature2 = recovered_wallet.sign_message(message).await?;
@@ -594,7 +582,7 @@ mod tests {
 
         let mnemonic = generate_mnemonic_phrase(&mut rand::thread_rng(), 12)?;
 
-        let _wallet = Wallet::new_from_mnemonic_phrase(&mnemonic, Some(provider))?;
+        let _wallet = WalletUnlocked::new_from_mnemonic_phrase(&mnemonic, Some(provider))?;
         Ok(())
     }
 
@@ -606,7 +594,7 @@ mod tests {
         let provider = setup().await;
 
         // Create first account from mnemonic phrase.
-        let wallet = Wallet::new_from_mnemonic_phrase_with_path(
+        let wallet = WalletUnlocked::new_from_mnemonic_phrase_with_path(
             phrase,
             Some(provider.clone()),
             "m/44'/60'/0'/0/0",
@@ -620,8 +608,11 @@ mod tests {
         assert_eq!(wallet.address().to_string(), expected_address);
 
         // Create a second account from the same phrase.
-        let wallet2 =
-            Wallet::new_from_mnemonic_phrase_with_path(phrase, Some(provider), "m/44'/60'/1'/0/0")?;
+        let wallet2 = WalletUnlocked::new_from_mnemonic_phrase_with_path(
+            phrase,
+            Some(provider),
+            "m/44'/60'/1'/0/0",
+        )?;
 
         let expected_second_plain_address =
             "261191b0164a24fd0fd51566ec5e5b0b9ba8fb2d42dc9cf7dbbd6f23d2742759";
@@ -647,7 +638,7 @@ mod tests {
         let provider = setup().await;
 
         // Create first account from mnemonic phrase.
-        let wallet = Wallet::new_from_mnemonic_phrase_with_path(
+        let wallet = WalletUnlocked::new_from_mnemonic_phrase_with_path(
             phrase,
             Some(provider.clone()),
             "m/44'/60'/0'/0/0",
@@ -657,7 +648,7 @@ mod tests {
 
         let path = Path::new(dir.path()).join(uuid);
 
-        let recovered_wallet = Wallet::load_keystore(&path, "password", Some(provider))?;
+        let recovered_wallet = WalletUnlocked::load_keystore(&path, "password", Some(provider))?;
 
         assert_eq!(wallet.address(), recovered_wallet.address());
 
