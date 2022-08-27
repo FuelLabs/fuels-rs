@@ -111,8 +111,8 @@ impl From<ContractId> for Bech32ContractId {
 mod test {
     use super::*;
 
-    #[tokio::test]
-    async fn test_new() {
+    #[test]
+    fn test_new() {
         let pubkey_hash = [
             48, 101, 49, 52, 48, 102, 48, 55, 48, 100, 49, 97, 102, 117, 51, 57, 49, 50, 48, 54,
             48, 98, 48, 100, 48, 56, 49, 53, 48, 52, 49, 52,
@@ -125,8 +125,8 @@ mod test {
         assert_eq!(plain_addr, expected_address);
     }
 
-    #[tokio::test]
-    async fn test_from_str() {
+    #[test]
+    fn test_from_str() {
         let pubkey_hash = [
             48, 101, 49, 52, 48, 102, 48, 55, 48, 100, 49, 97, 102, 117, 51, 57, 49, 50, 48, 54,
             48, 98, 48, 100, 48, 56, 49, 53, 48, 52, 49, 52,

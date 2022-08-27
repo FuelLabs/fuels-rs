@@ -1,10 +1,11 @@
 use crate::{
     errors::Error,
     param_types::{EnumVariants, ParamType},
-    Property,
+    utils::{has_array_format, has_tuple_format},
+    Property, TypeDeclaration,
 };
-use std::convert::TryFrom;
 use std::str::FromStr;
+use std::{collections::HashMap, convert::TryFrom};
 
 impl TryFrom<&Property> for ParamType {
     type Error = Error;
@@ -35,6 +36,33 @@ impl TryFrom<&Property> for ParamType {
 }
 
 impl ParamType {
+    pub fn from_type_declaration(
+        prop: &TypeDeclaration,
+        types: &HashMap<usize, TypeDeclaration>,
+    ) -> Result<Self, Error> {
+        match ParamType::from_str(&prop.type_field) {
+            // Simple case (primitive types, no arrays or strings)
+            Ok(param_type) => Ok(param_type),
+            Err(_) => {
+                if prop.type_field == "()" {
+                    return Ok(ParamType::Unit);
+                }
+                if has_array_format(&prop.type_field) {
+                    return ParamType::_new_parse_array_param(prop, types);
+                }
+                if prop.type_field.contains("str[") {
+                    return ParamType::_new_parse_string_param(prop);
+                }
+                if has_tuple_format(&prop.type_field) {
+                    // Try to parse tuple (T, T, ..., T)
+                    return ParamType::_new_parse_tuple_param(prop, types);
+                }
+                // Try to parse a free form enum or struct (e.g. `struct MySTruct`, `enum MyEnum`).
+                ParamType::_new_parse_custom_type_param(prop, types)
+            }
+        }
+    }
+
     pub fn parse_tuple_param(prop: &Property) -> Result<Self, Error> {
         let mut params: Vec<Self> = Vec::new();
 
@@ -49,7 +77,42 @@ impl ParamType {
         Ok(ParamType::Tuple(params))
     }
 
+    pub fn _new_parse_tuple_param(
+        prop: &TypeDeclaration,
+        types: &HashMap<usize, TypeDeclaration>,
+    ) -> Result<Self, Error> {
+        let mut params: Vec<Self> = Vec::new();
+
+        for tuple_component in prop
+            .components
+            .as_ref()
+            .expect("tuples should have components")
+        {
+            let tuple_component_type_declaration = types.get(&tuple_component.type_field).unwrap();
+            params.push(Self::from_type_declaration(
+                tuple_component_type_declaration,
+                types,
+            )?);
+        }
+
+        Ok(ParamType::Tuple(params))
+    }
+
     pub fn parse_string_param(prop: &Property) -> Result<Self, Error> {
+        // Split "str[n]" string into "str" and "[n]"
+        let split: Vec<&str> = prop.type_field.split('[').collect();
+        if split.len() != 2 || !split[0].eq("str") {
+            return Err(Error::InvalidType(format!(
+                "Expected parameter type `str[n]`, found `{}`",
+                prop.type_field
+            )));
+        }
+        // Grab size in between brackets, i.e the `n` in "[n]"
+        let size: usize = split[1][..split[1].len() - 1].parse()?;
+        Ok(ParamType::String(size))
+    }
+
+    pub fn _new_parse_string_param(prop: &TypeDeclaration) -> Result<Self, Error> {
         // Split "str[n]" string into "str" and "[n]"
         let split: Vec<&str> = prop.type_field.split('[').collect();
         if split.len() != 2 || !split[0].eq("str") {
@@ -98,6 +161,52 @@ impl ParamType {
         Ok(ParamType::Array(Box::new(param_type), size))
     }
 
+    // @todo This is an experimental support for the new JSON ABI file format.
+    // Once this is stable:
+    // 1. Delete old one;
+    // 2. Rename it to its original name;
+    // 3. Write documentation.
+    pub fn _new_parse_array_param(
+        prop: &TypeDeclaration,
+        types: &HashMap<usize, TypeDeclaration>,
+    ) -> Result<ParamType, Error> {
+        // Split "[T; n]" string into "T" and "n"
+        let split: Vec<&str> = prop.type_field.split("; ").collect();
+        if split.len() != 2 {
+            return Err(Error::InvalidType(format!(
+                "Expected parameter type `[T; n]`, found `{}`",
+                prop.type_field
+            )));
+        }
+        let (_type_field, size) = (split[0], split[1]);
+
+        let t = if let Some([component]) = prop.components.as_deref() {
+            types
+                .get(&component.type_field)
+                .expect("couldn't find type declaration for array component")
+        } else {
+            panic!("array should have components");
+        };
+
+        let type_field = t.type_field.clone();
+
+        let param_type = match Self::from_str(&type_field) {
+            Ok(param_type) => param_type,
+            Err(_) => {
+                if type_field.contains("str[") {
+                    ParamType::_new_parse_string_param(t)?
+                } else {
+                    ParamType::_new_parse_custom_type_param(t, types)?
+                }
+            }
+        };
+
+        // Grab size the `n` in "[T; n]"
+        let size: usize = size[..size.len() - 1].parse()?;
+
+        Ok(ParamType::Array(Box::new(param_type), size))
+    }
+
     pub fn parse_custom_type_param(prop: &Property) -> Result<ParamType, Error> {
         let mut params: Vec<ParamType> = vec![];
         match &prop.components {
@@ -105,6 +214,39 @@ impl ParamType {
                 for component in c {
                     params.push(Self::try_from(component)?)
                 }
+                if prop.is_struct_type() {
+                    return Ok(ParamType::Struct(params));
+                }
+                if prop.is_enum_type() {
+                    return Ok(ParamType::Enum(EnumVariants::new(params)?));
+                }
+                Err(Error::InvalidType(prop.type_field.clone()))
+            }
+            None => Err(Error::InvalidType(
+                "cannot parse custom type with no components".into(),
+            )),
+        }
+    }
+
+    // @todo This is an experimental support for the new JSON ABI file format.
+    // Once this is stable:
+    // 1. Delete old one;
+    // 2. Rename it to its original name;
+    // 3. Write documentation.
+    pub fn _new_parse_custom_type_param(
+        prop: &TypeDeclaration,
+        types: &HashMap<usize, TypeDeclaration>,
+    ) -> Result<ParamType, Error> {
+        match &prop.components {
+            Some(c) => {
+                let params = c
+                    .iter()
+                    .map(|component| {
+                        let component_type_declaration = types.get(&component.type_field).unwrap();
+                        Self::from_type_declaration(component_type_declaration, types).unwrap()
+                    })
+                    .collect();
+
                 if prop.is_struct_type() {
                     return Ok(ParamType::Struct(params));
                 }

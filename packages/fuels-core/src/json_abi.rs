@@ -1,9 +1,11 @@
+use crate::code_gen::flat_abigen::FlatAbigen;
 use crate::tokenizer::Tokenizer;
 use crate::utils::first_four_bytes_of_sha256_hash;
 use crate::Token;
 use crate::{abi_decoder::ABIDecoder, abi_encoder::ABIEncoder};
-use fuels_types::function_selector::build_fn_selector;
-use fuels_types::{errors::Error, param_types::ParamType, JsonABI, Property};
+use fuels_types::function_selector::_new_build_fn_selector;
+use fuels_types::{errors::Error, param_types::ParamType, Property};
+use fuels_types::{ProgramABI, TypeDeclaration};
 use itertools::Itertools;
 use serde_json;
 use std::str;
@@ -31,8 +33,8 @@ impl ABIParser {
     /// It won't include the function selector in it. To get the function
     /// selector, use `encode_with_function_selector`.
     ///
-    /// # Examples
-    /// ```
+    /// # Examples (@todo update doctest)
+    /// ```no_run
     /// use fuels_core::json_abi::ABIParser;
     /// let json_abi = r#"
     ///     [
@@ -65,13 +67,21 @@ impl ABIParser {
     ///     assert_eq!(encoded, expected_encode);
     /// ```
     pub fn encode(&mut self, abi: &str, fn_name: &str, values: &[String]) -> Result<String, Error> {
-        let parsed_abi: JsonABI = serde_json::from_str(abi)?;
+        let parsed_abi: ProgramABI = serde_json::from_str(abi)?;
 
-        let entry = parsed_abi.iter().find(|e| e.name == fn_name);
+        let entry = parsed_abi.functions.iter().find(|e| e.name == fn_name);
 
         let entry = entry.expect("No functions found");
 
-        let fn_selector = build_fn_selector(fn_name, &entry.inputs)?;
+        let types = FlatAbigen::get_types(&parsed_abi);
+
+        let fn_param_types = entry
+            .inputs
+            .iter()
+            .map(|t| types.get(&t.type_field).unwrap().clone())
+            .collect::<Vec<TypeDeclaration>>();
+
+        let fn_selector = _new_build_fn_selector(fn_name, &fn_param_types, &types)?;
 
         // Update the fn_selector field with the hash of the previously encoded function selector
         self.fn_selector = Some(first_four_bytes_of_sha256_hash(&fn_selector).to_vec());
@@ -80,7 +90,10 @@ impl ABIParser {
             .inputs
             .iter()
             .zip(values)
-            .map(|(prop, val)| Ok((ParamType::try_from(prop)?, val.as_str())))
+            .map(|(prop, val)| {
+                let t = types.get(&prop.type_field).unwrap();
+                Ok((ParamType::from_type_declaration(t, &types)?, val.as_str()))
+            })
             .collect::<Result<Vec<_>, Error>>()?;
 
         let tokens = self.parse_tokens(&params_and_values)?;
@@ -91,8 +104,8 @@ impl ABIParser {
     /// Similar to `encode`, but includes the function selector in the
     /// final encoded string.
     ///
-    /// # Examples
-    /// ```
+    /// # Examples (@todo update doctest)
+    /// ```no_run
     /// use fuels_core::json_abi::ABIParser;
     /// let json_abi = r#"
     ///     [
@@ -192,9 +205,9 @@ impl ABIParser {
         fn_name: &str,
         value: &'a [u8],
     ) -> Result<Vec<Token>, Error> {
-        let parsed_abi: JsonABI = serde_json::from_str(abi)?;
+        let parsed_abi: ProgramABI = serde_json::from_str(abi)?;
 
-        let entry = parsed_abi.iter().find(|e| e.name == fn_name);
+        let entry = parsed_abi.functions.iter().find(|e| e.name == fn_name);
 
         if entry.is_none() {
             return Err(Error::InvalidData(format!(
@@ -203,15 +216,16 @@ impl ABIParser {
             )));
         }
 
-        let params_result: Result<Vec<_>, _> = entry
-            .unwrap()
-            .outputs
-            .iter()
-            .map(ParamType::try_from)
-            .collect();
+        let types = FlatAbigen::get_types(&parsed_abi);
 
-        match params_result {
-            Ok(params) => Ok(ABIDecoder::decode(&params, value)?),
+        let param_result = types
+            .get(&entry.unwrap().output.type_field)
+            .expect("No output type");
+
+        let param_result = ParamType::from_type_declaration(param_result, &types);
+
+        match param_result {
+            Ok(params) => Ok(ABIDecoder::decode(&[params], value)?),
             Err(e) => Err(e),
         }
     }
@@ -227,29 +241,44 @@ impl ABIParser {
 mod tests {
     use super::*;
     use crate::StringToken;
-    use fuels_types::errors::Error;
+    use fuels_types::{errors::Error, function_selector::build_fn_selector};
 
     #[test]
     fn simple_encode_and_decode_no_selector() -> Result<(), Error> {
         let json_abi = r#"
-        [
-            {
-                "type":"contract",
-                "inputs":[
-                    {
-                        "name":"arg",
-                        "type":"u32"
+        {
+            "types": [
+                {
+                    "typeId": 0,
+                    "type": "bool",
+                    "components": null,
+                    "typeParameters": null
+                },
+                {
+                    "typeId": 1,
+                    "type": "u32",
+                    "components": null,
+                    "typeParameters": null
+                }
+            ],
+            "functions": [
+                {
+                    "inputs": [
+                        {
+                            "name": "only_argument",
+                            "type": 1,
+                            "typeArguments": null
+                        }
+                    ],
+                    "name": "takes_u32_returns_bool",
+                    "output": {
+                        "name": "",
+                        "type": 0,
+                        "typeArguments": null
                     }
-                ],
-                "name":"takes_u32_returns_bool",
-                "outputs":[
-                    {
-                        "name":"",
-                        "type":"bool"
-                    }
-                ]
-            }
-        ]
+                }
+            ]
+        }
         "#;
 
         let values: Vec<String> = vec!["10".to_string()];
@@ -278,24 +307,39 @@ mod tests {
     #[test]
     fn simple_encode_and_decode() -> Result<(), Error> {
         let json_abi = r#"
-        [
-            {
-                "type":"contract",
-                "inputs":[
-                    {
-                        "name":"arg",
-                        "type":"u32"
+        {
+            "types": [
+                {
+                    "typeId": 0,
+                    "type": "bool",
+                    "components": null,
+                    "typeParameters": null
+                },
+                {
+                    "typeId": 1,
+                    "type": "u32",
+                    "components": null,
+                    "typeParameters": null
+                }
+            ],
+            "functions": [
+                {
+                    "inputs": [
+                        {
+                            "name": "only_argument",
+                            "type": 1,
+                            "typeArguments": null
+                        }
+                    ],
+                    "name": "takes_u32_returns_bool",
+                    "output": {
+                        "name": "",
+                        "type": 0,
+                        "typeArguments": null
                     }
-                ],
-                "name":"takes_u32_returns_bool",
-                "outputs":[
-                    {
-                        "name":"",
-                        "type":"bool"
-                    }
-                ]
-            }
-        ]
+                }
+            ]
+        }
         "#;
 
         let values: Vec<String> = vec!["10".to_string()];
@@ -324,28 +368,44 @@ mod tests {
     #[test]
     fn b256_and_single_byte_encode_and_decode() -> Result<(), Box<dyn std::error::Error>> {
         let json_abi = r#"
-        [
-            {
-                "type":"contract",
-                "inputs":[
-                    {
-                        "name":"foo",
-                        "type":"b256"
-                    },
-                    {
-                        "name":"bar",
-                        "type":"byte"
-                    }
+        {
+            "types": [
+              {
+                "typeId": 0,
+                "type": "b256",
+                "components": null,
+                "typeParameters": null
+              },
+              {
+                "typeId": 1,
+                "type": "byte",
+                "components": null,
+                "typeParameters": null
+              }
+            ],
+            "functions": [
+              {
+                "inputs": [
+                  {
+                    "name": "foo",
+                    "type": 0,
+                    "typeArguments": null
+                  },
+                  {
+                    "name": "bar",
+                    "type": 1,
+                    "typeArguments": null
+                  }
                 ],
-                "name":"my_func",
-                "outputs":[
-                    {
-                        "name":"",
-                        "type":"b256"
-                    }
-                ]
-            }
-        ]
+                "name": "my_func",
+                "output": {
+                  "name": "",
+                  "type": 0,
+                  "typeArguments": null
+                }
+              }
+            ]
+          }
         "#;
 
         let values: Vec<String> = vec![
@@ -378,24 +438,57 @@ mod tests {
     #[test]
     fn array_encode_and_decode() -> Result<(), Error> {
         let json_abi = r#"
-        [
-            {
-                "type":"contract",
-                "inputs":[
-                    {
-                        "name":"arg",
-                        "type":"[u16; 3]"
-                    }
+        {
+            "types": [
+              {
+                "typeId": 0,
+                "type": "[_; 2]",
+                "components": [
+                  {
+                    "name": "__array_element",
+                    "type": 2,
+                    "typeArguments": null
+                  }
                 ],
-                "name":"takes_array",
-                "outputs":[
-                    {
-                        "name":"",
-                        "type":"[u16; 2]"
-                    }
-                ]
-            }
-        ]
+                "typeParameters": null
+              },
+              {
+                "typeId": 1,
+                "type": "[_; 3]",
+                "components": [
+                  {
+                    "name": "__array_element",
+                    "type": 2,
+                    "typeArguments": null
+                  }
+                ],
+                "typeParameters": null
+              },
+              {
+                "typeId": 2,
+                "type": "u16",
+                "components": null,
+                "typeParameters": null
+              }
+            ],
+            "functions": [
+              {
+                "inputs": [
+                  {
+                    "name": "arg",
+                    "type": 1,
+                    "typeArguments": null
+                  }
+                ],
+                "name": "takes_array",
+                "output": {
+                  "name": "",
+                  "type": 0,
+                  "typeArguments": null
+                }
+              }
+            ]
+          }
         "#;
 
         let values: Vec<String> = vec!["[1,2,3]".to_string()];
@@ -425,24 +518,57 @@ mod tests {
     #[test]
     fn nested_array_encode_and_decode() -> Result<(), Error> {
         let json_abi = r#"
-        [
-            {
-                "type":"contract",
-                "inputs":[
-                    {
-                        "name":"arg",
-                        "type":"[u16; 3]"
-                    }
+        {
+            "types": [
+              {
+                "typeId": 0,
+                "type": "[_; 2]",
+                "components": [
+                  {
+                    "name": "__array_element",
+                    "type": 2,
+                    "typeArguments": null
+                  }
                 ],
-                "name":"takes_nested_array",
-                "outputs":[
-                    {
-                        "name":"",
-                        "type":"[u16; 2]"
-                    }
-                ]
-            }
-        ]
+                "typeParameters": null
+              },
+              {
+                "typeId": 1,
+                "type": "[_; 3]",
+                "components": [
+                  {
+                    "name": "__array_element",
+                    "type": 2,
+                    "typeArguments": null
+                  }
+                ],
+                "typeParameters": null
+              },
+              {
+                "typeId": 2,
+                "type": "u16",
+                "components": null,
+                "typeParameters": null
+              }
+            ],
+            "functions": [
+              {
+                "inputs": [
+                  {
+                    "name": "arg",
+                    "type": 1,
+                    "typeArguments": null
+                  }
+                ],
+                "name": "takes_nested_array",
+                "output": {
+                  "name": "",
+                  "type": 0,
+                  "typeArguments": null
+                }
+              }
+            ]
+          }
         "#;
 
         let values: Vec<String> = vec!["[[1,2],[3],[4]]".to_string()];
@@ -473,24 +599,39 @@ mod tests {
     #[test]
     fn string_encode_and_decode() -> Result<(), Error> {
         let json_abi = r#"
-        [
-            {
-                "type":"contract",
-                "inputs":[
-                    {
-                        "name":"foo",
-                        "type":"str[23]"
-                    }
+        {
+            "types": [
+              {
+                "typeId": 0,
+                "type": "str[2]",
+                "components": [],
+                "typeParameters": null
+              },
+              {
+                "typeId": 1,
+                "type": "str[23]",
+                "components": null,
+                "typeParameters": null
+              }
+            ],
+            "functions": [
+              {
+                "inputs": [
+                  {
+                    "name": "arg",
+                    "type": 1,
+                    "typeArguments": null
+                  }
                 ],
-                "name":"takes_string",
-                "outputs":[
-                    {
-                        "name":"",
-                        "type":"str[2]"
-                    }
-                ]
-            }
-        ]
+                "name": "takes_string",
+                "output": {
+                  "name": "",
+                  "type": 0,
+                  "typeArguments": null
+                }
+              }
+            ]
+          }
         "#;
 
         let values: Vec<String> = vec!["This is a full sentence".to_string()];
@@ -519,29 +660,62 @@ mod tests {
     #[test]
     fn struct_encode_and_decode() -> Result<(), Error> {
         let json_abi = r#"
-        [
-            {
-                "type":"contract",
-                "inputs":[
-                    {
-                        "name":"my_struct",
-                        "type":"struct MyStruct",
-                        "components": [
-                            {
-                                "name": "foo",
-                                "type": "u8"
-                            },
-                            {
-                                "name": "bar",
-                                "type": "bool"
-                            }
-                        ]
-                    }
+        {
+            "types": [
+              {
+                "typeId": 0,
+                "type": "()",
+                "components": [],
+                "typeParameters": null
+              },
+              {
+                "typeId": 1,
+                "type": "bool",
+                "components": null,
+                "typeParameters": null
+              },
+              {
+                "typeId": 2,
+                "type": "struct MyStruct",
+                "components": [
+                  {
+                    "name": "foo",
+                    "type": 3,
+                    "typeArguments": null
+                  },
+                  {
+                    "name": "bar",
+                    "type": 1,
+                    "typeArguments": null
+                  }
                 ],
-                "name":"takes_struct",
-                "outputs":[]
-            }
-        ]
+                "typeParameters": null
+              },
+              {
+                "typeId": 3,
+                "type": "u8",
+                "components": null,
+                "typeParameters": null
+              }
+            ],
+            "functions": [
+              {
+                "inputs": [
+                  {
+                    "name": "my_val",
+                    "type": 2,
+                    "typeArguments": null
+                  }
+                ],
+                "name": "takes_struct",
+                "output": {
+                  "name": "",
+                  "type": 0,
+                  "typeArguments": null
+                }
+              }
+            ]
+          }
         "#;
 
         let values: Vec<String> = vec!["(42, true)".to_string()];
@@ -560,33 +734,73 @@ mod tests {
     #[test]
     fn struct_and_primitive_encode_and_decode() -> Result<(), Error> {
         let json_abi = r#"
-        [
-            {
-                "type":"contract",
-                "inputs":[
-                    {
-                        "name":"my_struct",
-                        "type":"struct MyStruct",
-                        "components": [
-                            {
-                                "name": "foo",
-                                "type": "u8"
-                            },
-                            {
-                                "name": "bar",
-                                "type": "bool"
-                            }
-                        ]
-                    },
-                    {
-                        "name":"foo",
-                        "type":"u32"
-                    }
+        {
+            "types": [
+              {
+                "typeId": 0,
+                "type": "()",
+                "components": [],
+                "typeParameters": null
+              },
+              {
+                "typeId": 1,
+                "type": "bool",
+                "components": null,
+                "typeParameters": null
+              },
+              {
+                "typeId": 2,
+                "type": "struct MyStruct",
+                "components": [
+                  {
+                    "name": "foo",
+                    "type": 4,
+                    "typeArguments": null
+                  },
+                  {
+                    "name": "bar",
+                    "type": 1,
+                    "typeArguments": null
+                  }
                 ],
-                "name":"takes_struct_and_primitive",
-                "outputs":[]
-            }
-        ]
+                "typeParameters": null
+              },
+              {
+                "typeId": 3,
+                "type": "u32",
+                "components": null,
+                "typeParameters": null
+              },
+              {
+                "typeId": 4,
+                "type": "u8",
+                "components": null,
+                "typeParameters": null
+              }
+            ],
+            "functions": [
+              {
+                "inputs": [
+                  {
+                    "name": "my_struct",
+                    "type": 2,
+                    "typeArguments": null
+                  },
+                  {
+                    "name": "foo",
+                    "type": 3,
+                    "typeArguments": null
+                  }
+                ],
+                "name": "takes_struct_and_primitive",
+                "output": {
+                  "name": "",
+                  "type": 0,
+                  "typeArguments": null
+                }
+              }
+            ]
+          }
         "#;
 
         let values: Vec<String> = vec!["(42, true)".to_string(), "10".to_string()];
@@ -605,39 +819,97 @@ mod tests {
     #[test]
     fn nested_struct_encode_and_decode() -> Result<(), Error> {
         let json_abi = r#"
-        [
-            {
-                "type":"contract",
-                "inputs":[
-                    {
-                        "name":"top_value",
-                        "type":"struct MyNestedStruct",
-                        "components": [
-                            {
-                                "name": "x",
-                                "type": "u16"
-                            },
-                            {
-                                "name": "inner",
-                                "type": "struct Y",
-                                "components": [
-                                    {
-                                        "name":"a",
-                                        "type": "bool"
-                                    },
-                                    {
-                                        "name":"b",
-                                        "type": "[u8; 2]"
-                                    }
-                                ]
-                            }
-                        ]
-                    }
+        {
+            "types": [
+              {
+                "typeId": 0,
+                "type": "()",
+                "components": [],
+                "typeParameters": null
+              },
+              {
+                "typeId": 1,
+                "type": "[_; 2]",
+                "components": [
+                  {
+                    "name": "__array_element",
+                    "type": 6,
+                    "typeArguments": null
+                  }
                 ],
-                "name":"takes_nested_struct",
-                "outputs":[]
-            }
-        ]
+                "typeParameters": null
+              },
+              {
+                "typeId": 2,
+                "type": "bool",
+                "components": null,
+                "typeParameters": null
+              },
+              {
+                "typeId": 3,
+                "type": "struct MyNestedStruct",
+                "components": [
+                  {
+                    "name": "x",
+                    "type": 5,
+                    "typeArguments": null
+                  },
+                  {
+                    "name": "inner",
+                    "type": 4,
+                    "typeArguments": null
+                  }
+                ],
+                "typeParameters": null
+              },
+              {
+                "typeId": 4,
+                "type": "struct Y",
+                "components": [
+                  {
+                    "name": "a",
+                    "type": 2,
+                    "typeArguments": null
+                  },
+                  {
+                    "name": "b",
+                    "type": 1,
+                    "typeArguments": null
+                  }
+                ],
+                "typeParameters": null
+              },
+              {
+                "typeId": 5,
+                "type": "u16",
+                "components": null,
+                "typeParameters": null
+              },
+              {
+                "typeId": 6,
+                "type": "u8",
+                "components": null,
+                "typeParameters": null
+              }
+            ],
+            "functions": [
+              {
+                "inputs": [
+                  {
+                    "name": "top_value",
+                    "type": 3,
+                    "typeArguments": null
+                  }
+                ],
+                "name": "takes_nested_struct",
+                "output": {
+                  "name": "",
+                  "type": 0,
+                  "typeArguments": null
+                }
+              }
+            ]
+          }
         "#;
 
         let values: Vec<String> = vec!["(10, (true, [1,2]))".to_string()];
@@ -652,80 +924,68 @@ mod tests {
             "00000000b1fbe7e3000000000000000a000000000000000100000000000000010000000000000002";
         assert_eq!(encoded, expected_encode);
 
-        let json_abi = r#"
-        [
-            {
-                "type":"contract",
-                "inputs":[
-                    {
-                        "name":"top_value",
-                        "type":"struct MyNestedStruct",
-                        "components": [
-                            {
-                                "name": "inner",
-                                "type": "struct X",
-                                "components": [
-                                    {
-                                        "name":"a",
-                                        "type": "bool"
-                                    },
-                                    {
-                                        "name":"b",
-                                        "type": "[u8; 2]"
-                                    }
-                                ]
-                            },
-                            {
-                                "name": "y",
-                                "type": "u16"
-                            }
-                        ]
-                    }
-                ],
-                "name":"takes_nested_struct",
-                "outputs":[]
-            }
-        ]
-        "#;
-
-        let values: Vec<String> = vec!["((true, [1,2]), 10)".to_string()];
-
-        let encoded = abi.encode_with_function_selector(json_abi, function_name, &values)?;
-
-        let expected_encode =
-            "00000000e748f310000000000000000100000000000000010000000000000002000000000000000a";
-        assert_eq!(encoded, expected_encode);
         Ok(())
     }
 
     #[test]
     fn tuple_encode_and_decode() -> Result<(), Error> {
         let json_abi = r#"
-        [
-            {
-                "type":"contract",
+        {
+            "types": [
+              {
+                "typeId": 0,
+                "type": "()",
+                "components": [],
+                "typeParameters": null
+              },
+              {
+                "typeId": 1,
+                "type": "(_, _)",
+                "components": [
+                  {
+                    "name": "__tuple_element",
+                    "type": 3,
+                    "typeArguments": null
+                  },
+                  {
+                    "name": "__tuple_element",
+                    "type": 2,
+                    "typeArguments": null
+                  }
+                ],
+                "typeParameters": null
+              },
+              {
+                "typeId": 2,
+                "type": "bool",
+                "components": null,
+                "typeParameters": null
+              },
+              {
+                "typeId": 3,
+                "type": "u64",
+                "components": null,
+                "typeParameters": null
+              }
+            ],
+            "functions": [
+              {
                 "inputs": [
                   {
                     "name": "input",
-                    "type": "(u64, bool)",
-                    "components": [
-                      {
-                        "name": "__tuple_element",
-                        "type": "u64",
-                        "components": null
-                      },
-                      {
-                        "name": "__tuple_element",
-                        "type": "bool",
-                        "components": null
-                      }
-                    ]
+                    "type": 1,
+                    "typeArguments": null
                   }
                 ],
-                "name":"takes_tuple",
-                "outputs":[]
-            }
-        ]
+                "name": "takes_tuple",
+                "output": {
+                  "name": "",
+                  "type": 0,
+                  "typeArguments": null
+                }
+              }
+            ]
+          }
         "#;
 
         let values: Vec<String> = vec!["(42, true)".to_string()];
@@ -744,69 +1004,124 @@ mod tests {
     #[test]
     fn nested_tuple_encode_and_decode() -> Result<(), Error> {
         let json_abi = r#"
-        [
-          {
-            "type": "function",
-            "inputs": [
-              {
-                "name": "input",
-                "type": "((u64, bool), struct Person, enum State)",
-                "components": [
-                  {
-                    "name": "__tuple_element",
-                    "type": "(u64, bool)",
-                    "components": [
-                      {
-                        "name": "__tuple_element",
-                        "type": "u64",
-                        "components": null
-                      },
-                      {
-                        "name": "__tuple_element",
-                        "type": "bool",
-                        "components": null
-                      }
-                    ]
-                  },
-                  {
-                    "name": "__tuple_element",
-                    "type": "struct Person",
-                    "components": [
-                      {
-                        "name": "name",
-                        "type": "str[4]",
-                        "components": null
-                      }
-                    ]
-                  },
-                  {
-                    "name": "__tuple_element",
-                    "type": "enum State",
-                    "components": [
-                      {
-                        "name": "A",
-                        "type": "()",
-                        "components": []
-                      },
-                      {
-                        "name": "B",
-                        "type": "()",
-                        "components": []
-                      },
-                      {
-                        "name": "C",
-                        "type": "()",
-                        "components": []
-                      }
-                    ]
-                  }
-                ]
+        {
+          "types": [
+            {
+              "typeId": 0,
+              "type": "()",
+              "components": [],
+              "typeParameters": null
+            },
+            {
+              "typeId": 1,
+              "type": "(_, _)",
+              "components": [
+                {
+                  "name": "__tuple_element",
+                  "type": 7,
+                  "typeArguments": null
+                },
+                {
+                  "name": "__tuple_element",
+                  "type": 3,
+                  "typeArguments": null
+                }
+              ],
+              "typeParameters": null
+            },
+            {
+              "typeId": 2,
+              "type": "(_, _, _)",
+              "components": [
+                {
+                  "name": "__tuple_element",
+                  "type": 1,
+                  "typeArguments": null
+                },
+                {
+                  "name": "__tuple_element",
+                  "type": 6,
+                  "typeArguments": null
+                },
+                {
+                  "name": "__tuple_element",
+                  "type": 4,
+                  "typeArguments": null
+                }
+              ],
+              "typeParameters": null
+            },
+            {
+              "typeId": 3,
+              "type": "bool",
+              "components": null,
+              "typeParameters": null
+            },
+            {
+              "typeId": 4,
+              "type": "enum State",
+              "components": [
+                {
+                  "name": "A",
+                  "type": 0,
+                  "typeArguments": null
+                },
+                {
+                  "name": "B",
+                  "type": 0,
+                  "typeArguments": null
+                },
+                {
+                  "name": "C",
+                  "type": 0,
+                  "typeArguments": null
+                }
+              ],
+              "typeParameters": null
+            },
+            {
+              "typeId": 5,
+              "type": "str[4]",
+              "components": null,
+              "typeParameters": null
+            },
+            {
+              "typeId": 6,
+              "type": "struct Person",
+              "components": [
+                {
+                  "name": "name",
+                  "type": 5,
+                  "typeArguments": null
+                }
+              ],
+              "typeParameters": null
+            },
+            {
+              "typeId": 7,
+              "type": "u64",
+              "components": null,
+              "typeParameters": null
+            }
+          ],
+          "functions": [
+            {
+              "inputs": [
+                {
+                  "name": "input",
+                  "type": 2,
+                  "typeArguments": null
+                }
+              ],
+              "name": "takes_nested_tuple",
+              "output": {
+                "name": "",
+                "type": 0,
+                "typeArguments": null
               }
-            ],
-            "name": "takes_nested_tuple",
-            "outputs":[]
-          }
-        ]
+            }
+          ]
+        }
         "#;
 
         let values: Vec<String> = vec!["((42, true), (John), (1, 0))".to_string()];
@@ -820,47 +1135,6 @@ mod tests {
         println!("Function: {}", hex::encode(abi.fn_selector.unwrap()));
         let expected_encode =
             "00000000ebb8d011000000000000002a00000000000000014a6f686e000000000000000000000001";
-        assert_eq!(encoded, expected_encode);
-        Ok(())
-    }
-
-    #[test]
-    fn enum_encode_and_decode() -> Result<(), Error> {
-        let json_abi = r#"
-        [
-            {
-                "type":"contract",
-                "inputs":[
-                    {
-                        "name":"my_enum",
-                        "type":"enum MyEnum",
-                        "components": [
-                            {
-                                "name": "x",
-                                "type": "u32"
-                            },
-                            {
-                                "name": "y",
-                                "type": "bool"
-                            }
-                        ]
-                    }
-                ],
-                "name":"takes_enum",
-                "outputs":[]
-            }
-        ]
-        "#;
-
-        let values: Vec<String> = vec!["(0, 42)".to_string()];
-
-        let mut abi = ABIParser::new();
-
-        let function_name = "takes_enum";
-
-        let encoded = abi.encode_with_function_selector(json_abi, function_name, &values)?;
-
-        let expected_encode = "0000000021b2784f0000000000000000000000000000002a";
         assert_eq!(encoded, expected_encode);
         Ok(())
     }
@@ -1063,101 +1337,41 @@ mod tests {
     }
 
     #[test]
-    fn compiler_generated_abi_test() -> Result<(), Error> {
-        let json_abi = r#"
-        [
-            {
-                "inputs": [
-                    {
-                        "components": null,
-                        "name": "value",
-                        "type": "u64"
-                    }
-                ],
-                "name": "foo",
-                "outputs": [
-                    {
-                        "components": null,
-                        "name": "",
-                        "type": "u64"
-                    }
-                ],
-                "type": "function"
-            },
-            {
-                "inputs": [
-                    {
-                        "components": [
-                            {
-                                "components": null,
-                                "name": "a",
-                                "type": "bool"
-                            },
-                            {
-                                "components": null,
-                                "name": "b",
-                                "type": "u64"
-                            }
-                        ],
-                        "name": "value",
-                        "type": "struct TestStruct"
-                    }
-                ],
-                "name": "boo",
-                "outputs": [
-                    {
-                        "components": [
-                            {
-                                "components": null,
-                                "name": "a",
-                                "type": "bool"
-                            },
-                            {
-                                "components": null,
-                                "name": "b",
-                                "type": "u64"
-                            }
-                        ],
-                        "name": "",
-                        "type": "struct TestStruct"
-                    }
-                ],
-                "type": "function"
-            }
-        ]
-        "#;
-
-        let s = "(true, 42)".to_string();
-
-        let values: Vec<String> = vec![s];
-
-        let mut abi = ABIParser::new();
-
-        let function_name = "boo";
-
-        let encoded = abi.encode_with_function_selector(json_abi, function_name, &values)?;
-
-        let expected_encode = "00000000e33a11ce0000000000000001000000000000002a";
-        assert_eq!(encoded, expected_encode);
-        Ok(())
-    }
-
-    #[test]
     fn strings_must_have_correct_length() {
         let json_abi = r#"
-        [
+        {
+          "types": [
             {
-                "type":"contract",
-                "inputs":[
-                    {
-                        "name":"foo",
-                        "type":"str[4]"
-                    }
-                ],
-                "name":"takes_string",
-                "outputs":[]
+              "typeId": 0,
+              "type": "()",
+              "components": [],
+              "typeParameters": null
+            },
+            {
+              "typeId": 1,
+              "type": "str[4]",
+              "components": null,
+              "typeParameters": null
             }
-        ]
+          ],
+          "functions": [
+            {
+              "inputs": [
+                {
+                  "name": "foo",
+                  "type": 1,
+                  "typeArguments": null
+                }
+              ],
+              "name": "takes_string",
+              "output": {
+                "name": "",
+                "type": 0,
+                "typeArguments": null
+              }
+            }
+          ]
+        }
         "#;
 
         let values: Vec<String> = vec!["fue".to_string()];
@@ -1174,29 +1388,74 @@ mod tests {
     #[test]
     fn strings_must_have_correct_length_custom_types() {
         let json_abi = r#"
-        [
+        {
+          "types": [
             {
-                "type":"contract",
-                "inputs":[
-                    {
-                        "name":"value",
-                        "type":"struct MyStruct",
-                        "components": [
-                            {
-                                "name": "foo",
-                                "type": "[u8; 2]"
-                            },
-                            {
-                                "name": "bar",
-                                "type": "str[4]"
-                            }
-                        ]
-                    }
-                ],
-                "name":"takes_struct",
-                "outputs":[]
+              "typeId": 0,
+              "type": "()",
+              "components": [],
+              "typeParameters": null
+            },
+            {
+              "typeId": 1,
+              "type": "[_; 2]",
+              "components": [
+                {
+                  "name": "__array_element",
+                  "type": 4,
+                  "typeArguments": null
+                }
+              ],
+              "typeParameters": null
+            },
+            {
+              "typeId": 2,
+              "type": "str[4]",
+              "components": null,
+              "typeParameters": null
+            },
+            {
+              "typeId": 3,
+              "type": "struct MyStruct",
+              "components": [
+                {
+                  "name": "foo",
+                  "type": 1,
+                  "typeArguments": null
+                },
+                {
+                  "name": "bar",
+                  "type": 2,
+                  "typeArguments": null
+                }
+              ],
+              "typeParameters": null
+            },
+            {
+              "typeId": 4,
+              "type": "u8",
+              "components": null,
+              "typeParameters": null
             }
-        ]
+          ],
+          "functions": [
+            {
+              "inputs": [
+                {
+                  "name": "value",
+                  "type": 3,
+                  "typeArguments": null
+                }
+              ],
+              "name": "takes_struct",
+              "output": {
+                "name": "",
+                "type": 0,
+                "typeArguments": null
+              }
+            }
+          ]
+        }
         "#;
 
         let values: Vec<String> = vec!["([0, 0], fuell)".to_string()];
@@ -1213,29 +1472,62 @@ mod tests {
     #[test]
     fn value_string_must_have_all_ascii_chars() {
         let json_abi = r#"
-        [
+        {
+          "types": [
             {
-                "type":"contract",
-                "inputs":[
-                    {
-                        "name":"my_enum",
-                        "type":"enum MyEnum",
-                        "components": [
-                            {
-                                "name": "foo",
-                                "type": "u32"
-                            },
-                            {
-                                "name": "bar",
-                                "type": "str[4]"
-                            }
-                        ]
-                    }
-                ],
-                "name":"takes_enum",
-                "outputs":[]
+              "typeId": 0,
+              "type": "()",
+              "components": [],
+              "typeParameters": null
+            },
+            {
+              "typeId": 1,
+              "type": "str[4]",
+              "components": null,
+              "typeParameters": null
+            },
+            {
+              "typeId": 2,
+              "type": "struct MyEnum",
+              "components": [
+                {
+                  "name": "foo",
+                  "type": 3,
+                  "typeArguments": null
+                },
+                {
+                  "name": "bar",
+                  "type": 1,
+                  "typeArguments": null
+                }
+              ],
+              "typeParameters": null
+            },
+            {
+              "typeId": 3,
+              "type": "u32",
+              "components": null,
+              "typeParameters": null
             }
-        ]
+          ],
+          "functions": [
+            {
+              "inputs": [
+                {
+                  "name": "my_enum",
+                  "type": 2,
+                  "typeArguments": null
+                }
+              ],
+              "name": "takes_enum",
+              "output": {
+                "name": "",
+                "type": 0,
+                "typeArguments": null
+              }
+            }
+          ]
+        }
         "#;
 
         let values: Vec<String> = vec!["(0, fueŁ)".to_string()];
