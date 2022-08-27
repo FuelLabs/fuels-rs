@@ -17,9 +17,9 @@ use thiserror::Error;
 
 const DEFAULT_DERIVATION_PATH_PREFIX: &str = "m/44'/1179993420'/0'/0/";
 
-/// A FuelVM compatible wallet that can be used to list assets, balances and more.
+/// A FuelVM-compatible wallet that can be used to list assets, balances and more.
 ///
-/// Note that insances of the `Wallet` type only know their public address, and as a result can
+/// Note that instances of the `Wallet` type only know their public address, and as a result can
 /// only perform read-only operations.
 ///
 /// In order to sign messages or send transactions, a `Wallet` must first call [`Wallet::unlock`]
