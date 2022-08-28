@@ -208,7 +208,7 @@ mod tests {
     use fuels_contract::contract::Contract;
     use fuels_core::parameters::{StorageConfiguration, TxParameters};
     use fuels_signers::provider::Provider;
-    use fuels_signers::{LocalWallet, Signer};
+    use fuels_signers::WalletUnlocked;
     use fuels_types::bech32::FUEL_BECH32_HRP;
     use std::net::Ipv4Addr;
 
@@ -326,7 +326,7 @@ mod tests {
     async fn test_setup_test_client_custom_config() -> Result<(), rand::Error> {
         let socket = SocketAddr::new(Ipv4Addr::new(127, 0, 0, 1).into(), 5000);
 
-        let wallet = LocalWallet::new_random(None);
+        let wallet = WalletUnlocked::new_random(None);
 
         let coins: Vec<(UtxoId, Coin)> = setup_single_asset_coins(
             wallet.address(),
@@ -350,7 +350,7 @@ mod tests {
     async fn test_setup_test_client_consensus_parameters_config() {
         let consensus_parameters_config = ConsensusParameters::DEFAULT.with_max_gas_per_tx(1);
 
-        let mut wallet = LocalWallet::new_random(None);
+        let mut wallet = WalletUnlocked::new_random(None);
 
         let coins: Vec<(UtxoId, Coin)> = setup_single_asset_coins(
             wallet.address(),

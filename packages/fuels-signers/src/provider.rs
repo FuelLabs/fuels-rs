@@ -160,7 +160,7 @@ impl Provider {
     ///     let provider = Provider::connect(server_address).await.unwrap();
     ///
     ///     // Create the wallet.
-    ///     let _wallet = LocalWallet::new_random(Some(provider));
+    ///     let _wallet = WalletUnlocked::new_random(Some(provider));
     /// }
     /// ```
     pub async fn connect(socket: SocketAddr) -> Result<Provider, Error> {

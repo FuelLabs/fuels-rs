@@ -6,7 +6,7 @@ use fuels::contract::predicate::Predicate;
 use fuels::prelude::{
     abigen, launch_custom_provider_and_get_wallets, launch_provider_and_get_wallet,
     setup_multiple_assets_coins, setup_single_asset_coins, setup_test_provider, CallParameters,
-    Config, Contract, Error, LocalWallet, Provider, Salt, Signer, TxParameters, WalletsConfig,
+    Config, Contract, Error, Provider, Salt, TxParameters, WalletUnlocked, WalletsConfig,
     DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
 };
 use fuels_core::abi_encoder::ABIEncoder;
@@ -1256,7 +1256,7 @@ async fn test_provider_launch_and_connect() -> Result<(), Error> {
         "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json"
     );
 
-    let mut wallet = LocalWallet::new_random(None);
+    let mut wallet = WalletUnlocked::new_random(None);
 
     let coins = setup_single_asset_coins(
         wallet.address(),
@@ -1362,7 +1362,7 @@ async fn test_gas_errors() -> Result<(), Error> {
         "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json"
     );
 
-    let mut wallet = LocalWallet::new_random(None);
+    let mut wallet = WalletUnlocked::new_random(None);
     let number_of_coins = 1;
     let amount_per_coin = 1_000_000;
     let coins = setup_single_asset_coins(
@@ -1843,7 +1843,7 @@ async fn test_logd_receipts() -> Result<(), Error> {
 #[tokio::test]
 async fn test_wallet_balance_api() -> Result<(), Error> {
     // Single asset
-    let mut wallet = LocalWallet::new_random(None);
+    let mut wallet = WalletUnlocked::new_random(None);
     let number_of_coins = 21;
     let amount_per_coin = 11;
     let coins = setup_single_asset_coins(
@@ -2583,7 +2583,7 @@ async fn can_handle_sway_function_called_new() -> anyhow::Result<()> {
 
 async fn setup_predicate_test(
     file_path: &str,
-) -> Result<(Predicate, LocalWallet, LocalWallet, AssetId), Error> {
+) -> Result<(Predicate, WalletUnlocked, WalletUnlocked, AssetId), Error> {
     let predicate = Predicate::load_from(file_path)?;
 
     let mut wallets = launch_custom_provider_and_get_wallets(
@@ -2949,7 +2949,7 @@ async fn test_network_error() -> Result<(), anyhow::Error> {
         "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json"
     );
 
-    let mut wallet = LocalWallet::new_random(None);
+    let mut wallet = WalletUnlocked::new_random(None);
 
     let config = CoreConfig::local_node();
     let service = FuelService::new_node(config).await?;

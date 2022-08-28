@@ -12,7 +12,7 @@ use fuel_core_interfaces::model::Coin;
 #[cfg(not(feature = "fuel-core-lib"))]
 use crate::node::Config;
 
-use fuels_signers::{provider::Provider, LocalWallet, Signer};
+use fuels_signers::{provider::Provider, WalletUnlocked};
 
 use crate::{setup_custom_assets_coins, setup_test_client, wallets_config::*};
 
@@ -30,7 +30,7 @@ use crate::{setup_custom_assets_coins, setup_test_client, wallets_config::*};
 ///   Ok(())
 /// }
 /// ```
-pub async fn launch_provider_and_get_wallet() -> LocalWallet {
+pub async fn launch_provider_and_get_wallet() -> WalletUnlocked {
     let mut wallets =
         launch_custom_provider_and_get_wallets(WalletsConfig::new(Some(1), None, None), None).await;
 
@@ -60,7 +60,7 @@ pub async fn launch_provider_and_get_wallet() -> LocalWallet {
 pub async fn launch_custom_provider_and_get_wallets(
     wallet_config: WalletsConfig,
     provider_config: Option<Config>,
-) -> Vec<LocalWallet> {
+) -> Vec<WalletUnlocked> {
     const SIZE_SECRET_KEY: usize = size_of::<SecretKey>();
     const PADDING_BYTES: usize = SIZE_SECRET_KEY - size_of::<u64>();
     let mut secret_key: [u8; SIZE_SECRET_KEY] = [0; SIZE_SECRET_KEY];
@@ -69,7 +69,7 @@ pub async fn launch_custom_provider_and_get_wallets(
         .map(|wallet_counter| {
             secret_key[PADDING_BYTES..].copy_from_slice(&wallet_counter.to_be_bytes());
 
-            LocalWallet::new_from_private_key(
+            WalletUnlocked::new_from_private_key(
                 SecretKey::try_from(secret_key.as_slice())
                     .expect("This should never happen as we provide a [u8; SIZE_SECRET_KEY] array"),
                 None,
@@ -115,7 +115,6 @@ mod tests {
     use crate::{launch_custom_provider_and_get_wallets, AssetConfig, WalletsConfig};
     use fuels_core::constants::BASE_ASSET_ID;
     use fuels_signers::fuel_crypto::fuel_types::AssetId;
-    use fuels_signers::Signer;
     use fuels_types::errors::Error;
     use rand::Fill;
 

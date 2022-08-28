@@ -9,9 +9,7 @@ use fuel_crypto::Signature;
 use fuel_gql_client::fuel_tx::Transaction;
 use fuels_types::bech32::Bech32Address;
 use std::error::Error;
-
-/// A wallet instantiated with a locally stored private key
-pub type LocalWallet = wallet::Wallet;
+pub use wallet::{Wallet, WalletUnlocked};
 
 /// Trait for signing transactions and messages
 ///
@@ -47,7 +45,7 @@ mod tests {
     use std::str::FromStr;
 
     use crate::provider::Provider;
-    use crate::wallet::Wallet;
+    use crate::wallet::WalletUnlocked;
 
     use super::*;
 
@@ -61,7 +59,7 @@ mod tests {
         let secret = unsafe { SecretKey::from_bytes_unchecked(secret_seed) };
 
         // Create a wallet using the private key created above.
-        let wallet = Wallet::new_from_private_key(secret, None);
+        let wallet = WalletUnlocked::new_from_private_key(secret, None);
 
         let message = "my message";
 
@@ -88,7 +86,7 @@ mod tests {
         let secret = SecretKey::from_str(
             "5f70feeff1f229e4a95e1056e8b4d80d0b24b565674860cc213bdb07127ce1b1",
         )?;
-        let wallet = Wallet::new_from_private_key(secret, None);
+        let wallet = WalletUnlocked::new_from_private_key(secret, None);
 
         // Set up a dummy transaction.
         let input_coin = Input::coin_signed(
@@ -143,8 +141,8 @@ mod tests {
     #[tokio::test]
     async fn send_transfer_transactions() -> Result<(), fuels_types::errors::Error> {
         // Setup two sets of coins, one for each wallet, each containing 1 coin with 1 amount.
-        let mut wallet_1 = LocalWallet::new_random(None);
-        let mut wallet_2 = LocalWallet::new_random(None);
+        let mut wallet_1 = WalletUnlocked::new_random(None);
+        let mut wallet_2 = WalletUnlocked::new_random(None).lock();
 
         let mut coins_1 = setup_single_asset_coins(wallet_1.address(), BASE_ASSET_ID, 1, 1000000);
         let coins_2 = setup_single_asset_coins(wallet_2.address(), BASE_ASSET_ID, 1, 1000000);
@@ -223,8 +221,8 @@ mod tests {
     #[tokio::test]
     async fn transfer_coins_with_change() -> Result<(), fuels_types::errors::Error> {
         // Setup two sets of coins, one for each wallet, each containing 1 coin with 5 amounts each.
-        let mut wallet_1 = LocalWallet::new_random(None);
-        let mut wallet_2 = LocalWallet::new_random(None);
+        let mut wallet_1 = WalletUnlocked::new_random(None);
+        let mut wallet_2 = WalletUnlocked::new_random(None).lock();
 
         let mut coins_1 = setup_single_asset_coins(wallet_1.address(), BASE_ASSET_ID, 1, 5);
         let coins_2 = setup_single_asset_coins(wallet_2.address(), BASE_ASSET_ID, 1, 5);
