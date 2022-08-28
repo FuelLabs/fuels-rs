@@ -4,7 +4,6 @@ mod tests {
 
     #[tokio::test]
     async fn liquidity() -> Result<(), Error> {
-        //// ANCHOR: liquidity
         use fuels::prelude::*;
         use fuels::test_helpers::{AssetConfig, WalletsConfig};
 
@@ -75,7 +74,6 @@ mod tests {
         assert_eq!(base_balance, deposit_amount);
         // ANCHOR_END: liquidity_withdraw
 
-        //// ANCHOR_END: deposit_and_withdraw
         Ok(())
     }
 

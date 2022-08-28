@@ -22,7 +22,7 @@ fn main() -> anyhow::Result<(), Error> {
     if !anchor_errors.is_empty() || !include_errors.is_empty() {
         report_errors("anchors", &anchor_errors);
         report_errors("includes", &include_errors);
-        panic!("Finished with errors");
+        bail!("Finished with errors");
     }
     Ok(())
 }
@@ -52,7 +52,7 @@ fn validate_includes(
             });
 
             match maybe_anchor.take() {
-                Some(anchor) => Ok((include, anchor.clone())),
+                Some(anchor) => Ok(anchor.clone()),
                 None => Err(anyhow!(
                     "No anchor available to satisfy include {include:?}"
                 )),
@@ -63,7 +63,7 @@ fn validate_includes(
     let additional_warnings = valid_anchors
         .iter()
         .filter(|valid_anchor| {
-            let anchor_used_in_a_pair = pairs.iter().any(|(_, anchor)| anchor == *valid_anchor);
+            let anchor_used_in_a_pair = pairs.iter().any(| anchor| anchor == *valid_anchor);
             !anchor_used_in_a_pair
         })
         .map(|unused_anchor| anyhow!("Anchor unused: {unused_anchor:?}!"))
@@ -199,23 +199,23 @@ fn extract_starts_and_ends(
             .collect::<Result<Vec<_>, Error>>()
     };
 
-    let begins = apply_regex(Regex::new(r"^(.+):(\d+):\s*//\s*ANCHOR\s*:\s*(\S+)")?)?;
-    let ends = apply_regex(Regex::new(r"^(.+):(\d+):\s*//\s*ANCHOR_END\s*:\s*(\S+)")?)?;
+    // \s*([\w_-]+
+
+    let begins = apply_regex(Regex::new(r"^(.+):(\d+):\s*(?:/{2,}|/\*)\s*ANCHOR\s*:\s*([\w_-]+)\s*(?:\*/)?")?)?;
+    let ends = apply_regex(Regex::new(r"^(.+):(\d+):\s*(?:/{2,}|/\*)\s*ANCHOR_END\s*:\s*([\w_-]+)\s*(?:\*/)?")?)?;
 
     Ok((begins, ends))
 }
 
 fn search_for_patterns_in_project(pattern: &str) -> anyhow::Result<String> {
     let grep_project = std::process::Command::new("grep")
-        .args([
-            "-I",
-            "-H",
-            "-R",
-            "-n",
-            "--exclude-dir=scripts",
-            pattern,
-            ".",
-        ])
+        .arg("-I")
+        .arg("-H")
+        .arg("-R")
+        .arg("-n")
+        .arg("--exclude-dir=scripts")
+        .arg(pattern)
+        .arg(".")
         .output()
         .expect("failed grep command");
 

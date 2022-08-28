@@ -256,7 +256,7 @@ mod tests {
 
         // ANCHOR_END: tx_parameters_default
 
-        //// ANCHOR: tx_parameters
+        //// ANCHOR: tx_parameters_check_which_should_be_used
         // In order: gas_price, gas_limit, byte_price, and maturity
         let my_tx_params = TxParameters::new(None, Some(1_000_000), None, None);
 
@@ -266,7 +266,7 @@ mod tests {
             .call() // Perform the contract call.
             .await?; // This is an async call, `.await` for it.
 
-        //// ANCHOR_END: tx_parameters
+        //// ANCHOR_END: tx_parameters_check_which_should_be_used
 
         // ANCHOR: call_parameters
 
