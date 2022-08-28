@@ -63,7 +63,7 @@ fn validate_includes(
     let additional_warnings = valid_anchors
         .iter()
         .filter(|valid_anchor| {
-            let anchor_used_in_a_pair = pairs.iter().any(| anchor| anchor == *valid_anchor);
+            let anchor_used_in_a_pair = pairs.iter().any(|anchor| anchor == *valid_anchor);
             !anchor_used_in_a_pair
         })
         .map(|unused_anchor| anyhow!("Anchor unused: {unused_anchor:?}!"))
@@ -137,8 +137,8 @@ fn filter_valid_anchors(starts: Vec<Anchor>, ends: Vec<Anchor>) -> (Vec<Anchor>,
 
         match check_validity_of_anchor_pair(&begin, &end) {
             None => Ok((begin, end)),
-            Some(_) => {
-                let err_msg = check_validity_of_anchor_pair(&begin, &end).iter().map(|e|e.to_string()).collect::<Vec<_>>().join("\n");
+            Some(err) => {
+                let err_msg = err.to_string();
                 Err(anyhow!("{err_msg}"))
             }
         }
@@ -201,8 +201,12 @@ fn extract_starts_and_ends(
 
     // \s*([\w_-]+
 
-    let begins = apply_regex(Regex::new(r"^(.+):(\d+):\s*(?:/{2,}|/\*)\s*ANCHOR\s*:\s*([\w_-]+)\s*(?:\*/)?")?)?;
-    let ends = apply_regex(Regex::new(r"^(.+):(\d+):\s*(?:/{2,}|/\*)\s*ANCHOR_END\s*:\s*([\w_-]+)\s*(?:\*/)?")?)?;
+    let begins = apply_regex(Regex::new(
+        r"^(.+):(\d+):\s*(?:/{2,}|/\*)\s*ANCHOR\s*:\s*([\w_-]+)\s*(?:\*/)?",
+    )?)?;
+    let ends = apply_regex(Regex::new(
+        r"^(.+):(\d+):\s*(?:/{2,}|/\*)\s*ANCHOR_END\s*:\s*([\w_-]+)\s*(?:\*/)?",
+    )?)?;
 
     Ok((begins, ends))
 }
