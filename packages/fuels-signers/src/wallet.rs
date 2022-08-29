@@ -145,21 +145,19 @@ impl Wallet {
         witness_index: u8,
     ) -> Result<Vec<Input>, Error> {
         let spendable = self.get_spendable_coins(asset_id, amount).await?;
-        let inputs: Vec<Input> = spendable
-            .into_iter()
-            .map(|coin| {
-                Input::coin_signed(
-                    UtxoId::from(coin.utxo_id),
-                    coin.owner.into(),
-                    coin.amount.0,
-                    asset_id,
-                    TxPointer::default(),
-                    witness_index,
-                    0,
-                )
-            })
-            .collect();
-
+        let mut inputs = vec![];
+        for coin in spendable {
+            let input_coin = Input::coin_signed(
+                UtxoId::from(coin.utxo_id),
+                coin.owner.into(),
+                coin.amount.0,
+                asset_id,
+                TxPointer::default(),
+                witness_index,
+                0,
+            );
+            inputs.push(input_coin);
+        }
         Ok(inputs)
     }
 
@@ -474,96 +472,6 @@ impl WalletUnlocked {
         let receipts = self.get_provider()?.send_transaction(&tx).await?;
 
         Ok((tx.id().to_string(), receipts))
-    }
-
-    /// Returns a proper vector of `Input::Coin`s for the given asset ID, amount, and witness index.
-    /// The `witness_index` is the position of the witness
-    /// (signature) in the transaction's list of witnesses.
-    /// Meaning that, in the validation process, the node will
-    /// use the witness at this index to validate the coins returned
-    /// by this method.
-    pub async fn get_asset_inputs_for_amount(
-        &self,
-        asset_id: AssetId,
-        amount: u64,
-        witness_index: u8,
-    ) -> Result<Vec<Input>, Error> {
-        let spendable = self.get_spendable_coins(asset_id, amount).await?;
-        let inputs: Vec<Input> = spendable
-            .into_iter()
-            .map(|coin| {
-                Input::coin_signed(
-                    UtxoId::from(coin.utxo_id),
-                    coin.owner.into(),
-                    coin.amount.0,
-                    asset_id,
-                    TxPointer::default(),
-                    witness_index,
-                    0,
-                )
-            })
-            .collect();
-
-        Ok(inputs)
-    }
-
-    /// Returns a vector containing the output coin and change output given an asset and amount
-    pub fn get_asset_outputs_for_amount(
-        &self,
-        to: &Bech32Address,
-        asset_id: AssetId,
-        amount: u64,
-    ) -> Vec<Output> {
-        vec![
-            Output::coin(to.into(), amount, asset_id),
-            // Note that the change will be computed by the node.
-            // Here we only have to tell the node who will own the change and its asset ID.
-            Output::change(self.address().into(), 0, asset_id),
-        ]
-    }
-
-    /// Gets all coins of asset `asset_id` owned by the wallet, *even spent ones* (this is useful
-    /// for some particular cases, but in general, you should use `get_spendable_coins`). This
-    /// returns actual coins (UTXOs).
-    pub async fn get_coins(&self, asset_id: AssetId) -> Result<Vec<Coin>, Error> {
-        Ok(self
-            .get_provider()?
-            .get_coins(self.address(), asset_id)
-            .await?)
-    }
-
-    /// Get some spendable coins of asset `asset_id` owned by the wallet that add up at least to
-    /// amount `amount`. The returned coins (UTXOs) are actual coins that can be spent. The number
-    /// of coins (UXTOs) is optimized to prevent dust accumulation.
-    pub async fn get_spendable_coins(
-        &self,
-        asset_id: AssetId,
-        amount: u64,
-    ) -> Result<Vec<Coin>, Error> {
-        self.get_provider()?
-            .get_spendable_coins(self.address(), asset_id, amount)
-            .await
-            .map_err(Into::into)
-    }
-
-    /// Get the balance of all spendable coins `asset_id` for address `address`. This is different
-    /// from getting coins because we are just returning a number (the sum of UTXOs amount) instead
-    /// of the UTXOs.
-    pub async fn get_asset_balance(&self, asset_id: &AssetId) -> Result<u64, Error> {
-        self.get_provider()?
-            .get_asset_balance(&self.address, *asset_id)
-            .await
-            .map_err(Into::into)
-    }
-
-    /// Get all the spendable balances of all assets for the wallet. This is different from getting
-    /// the coins because we are only returning the sum of UTXOs coins amount and not the UTXOs
-    /// coins themselves.
-    pub async fn get_balances(&self) -> Result<HashMap<String, u64>, Error> {
-        self.get_provider()?
-            .get_balances(&self.address)
-            .await
-            .map_err(Into::into)
     }
 }
 
