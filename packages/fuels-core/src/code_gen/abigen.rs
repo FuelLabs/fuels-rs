@@ -117,7 +117,7 @@ impl Abigen {
                 quote! {
                     use fuels::contract::contract::{Contract, ContractCallHandler};
                     use fuels::core::{EnumSelector, StringToken, Parameterize, Tokenizable, Token, try_from_bytes};
-                    use fuels::signers::LocalWallet;
+                    use fuels::signers::{Wallet, WalletUnlocked};
                     use fuels::tx::{ContractId, Address};
                     use fuels::types::bech32::Bech32ContractId;
                     use fuels::types::errors::Error as SDKError;
@@ -127,7 +127,7 @@ impl Abigen {
                 quote! {
                     pub struct #name {
                         contract_id: Bech32ContractId,
-                        wallet: LocalWallet
+                        wallet: WalletUnlocked
                     }
 
                     impl #name {
@@ -137,11 +137,11 @@ impl Abigen {
                             &self.contract_id
                         }
 
-                        pub fn _get_wallet(&self) -> LocalWallet {
+                        pub fn _get_wallet(&self) -> WalletUnlocked {
                             self.wallet.clone()
                         }
 
-                        pub fn _with_wallet(&self, mut wallet: LocalWallet) -> Result<Self, SDKError> {
+                        pub fn _with_wallet(&self, mut wallet: WalletUnlocked) -> Result<Self, SDKError> {
                            let provider = self.wallet.get_provider()?;
                            wallet.set_provider(provider.clone());
 
@@ -151,11 +151,11 @@ impl Abigen {
 
                     pub struct #builder_name {
                         contract_id: Bech32ContractId,
-                        wallet: LocalWallet
+                        wallet: WalletUnlocked
                     }
 
                     impl #builder_name {
-                        pub fn new(contract_id: String, wallet: LocalWallet) -> Self {
+                        pub fn new(contract_id: String, wallet: WalletUnlocked) -> Self {
                             let contract_id = Bech32ContractId::from_str(&contract_id).expect("Invalid contract id");
                             Self { contract_id, wallet }
                         }
@@ -165,7 +165,7 @@ impl Abigen {
                             self
                         }
 
-                        pub fn wallet(&mut self, wallet: LocalWallet) -> &mut Self {
+                        pub fn wallet(&mut self, wallet: WalletUnlocked) -> &mut Self {
                             self.wallet = wallet;
                             self
                         }

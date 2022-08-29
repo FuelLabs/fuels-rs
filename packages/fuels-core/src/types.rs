@@ -9,7 +9,7 @@ use crate::ParamType;
 /// Used to expand functions when generating type-safe bindings of a JSON ABI.
 pub fn expand_type(kind: &ParamType) -> Result<TokenStream, Error> {
     match kind {
-        ParamType::Unit => Ok(quote! {}),
+        ParamType::Unit => Ok(quote! {()}),
         ParamType::U8 | ParamType::Byte => Ok(quote! { u8 }),
         ParamType::U16 => Ok(quote! { u16 }),
         ParamType::U32 => Ok(quote! { u32 }),

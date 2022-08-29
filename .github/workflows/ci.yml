@@ -6,7 +6,7 @@ on:
       - master
   pull_request:
   release:
-    types: [ published ]
+    types: [published]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -100,8 +100,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        command: [ check ]
-        args: [ --all-features ]
+        command: [check]
+        args: [--all-features]
         package: ${{fromJSON(needs.get-workspace-members.outputs.members)}}
         include:
           - command: fmt

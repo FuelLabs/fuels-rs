@@ -18,7 +18,7 @@ mod tests {
         let provider = Provider::connect(server_address).await.unwrap();
 
         // Create the wallet.
-        let _wallet = LocalWallet::new_random(Some(provider));
+        let _wallet = WalletUnlocked::new_random(Some(provider));
         // ANCHOR_END: connect_to_node
     }
 
@@ -31,7 +31,7 @@ mod tests {
 
         // Create a random wallet (more on wallets later).
         // ANCHOR: setup_single_asset
-        let wallet = LocalWallet::new_random(None);
+        let wallet = WalletUnlocked::new_random(None);
 
         // How many coins in our wallet.
         let number_of_coins = 1;

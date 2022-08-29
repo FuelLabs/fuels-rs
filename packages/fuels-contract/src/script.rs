@@ -11,7 +11,7 @@ use fuel_gql_client::client::schema::coin::Coin;
 use fuels_core::constants::DEFAULT_SPENDABLE_COIN_AMOUNT;
 use fuels_core::parameters::TxParameters;
 use fuels_signers::provider::Provider;
-use fuels_signers::{LocalWallet, Signer};
+use fuels_signers::{Signer, WalletUnlocked};
 use fuels_types::bech32::Bech32Address;
 use fuels_types::{constants::WORD_SIZE, errors::Error};
 use futures::{stream, StreamExt};
@@ -53,7 +53,7 @@ impl Script {
     pub async fn from_contract_calls(
         calls: &[ContractCall],
         tx_parameters: &TxParameters,
-        wallet: &LocalWallet,
+        wallet: &WalletUnlocked,
     ) -> Result<Self, Error> {
         let data_offset = Self::get_data_offset(calls.len());
 
@@ -85,7 +85,7 @@ impl Script {
     /// Calculates how much of each asset id the given calls require and
     /// proceeds to request spendable coins from `wallet` to cover that cost.
     async fn get_spendable_coins(
-        wallet: &LocalWallet,
+        wallet: &WalletUnlocked,
         calls: &[ContractCall],
     ) -> Result<Vec<Coin>, Error> {
         stream::iter(Self::calculate_required_asset_amounts(calls))

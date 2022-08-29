@@ -172,6 +172,9 @@ mod tests {
 
     #[test]
     fn encode_function_with_u32_type() -> Result<(), Error> {
+        // @todo eventually we must update the json abi examples in here.
+        // They're in the old format.
+        //
         // let json_abi =
         // r#"
         // [

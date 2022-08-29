@@ -1,11 +1,16 @@
-use crate::code_gen::custom_types_gen::extract_custom_type_name_from_abi_property;
+use crate::code_gen::custom_types_gen::{
+    _new_extract_custom_type_name_from_abi_property, extract_custom_type_name_from_abi_property,
+};
 use crate::code_gen::docs_gen::expand_doc;
 use crate::types::expand_type;
 use crate::utils::{first_four_bytes_of_sha256_hash, ident, safe_ident};
 use crate::{ParamType, Selector};
 use fuels_types::errors::Error;
-use fuels_types::function_selector::build_fn_selector;
-use fuels_types::{CustomType, Function, Property, ENUM_KEYWORD, STRUCT_KEYWORD};
+use fuels_types::function_selector::{_new_build_fn_selector, build_fn_selector};
+use fuels_types::{
+    ABIFunction, CustomType, Function, Property, TypeApplication, TypeDeclaration, ENUM_KEYWORD,
+    STRUCT_KEYWORD,
+};
 use inflector::Inflector;
 use proc_macro2::{Literal, TokenStream};
 use quote::quote;
@@ -65,6 +70,63 @@ pub fn expand_function(
             "A function cannot have multiple outputs!".to_string(),
         )),
     }?;
+
+    Ok(quote! {
+        #doc
+        pub fn #name(&self #input) -> #result {
+            Contract::method_hash(&self.wallet.get_provider().expect("Provider not set up"), self.contract_id.clone(), &self.wallet,
+                #tokenized_signature, #output_param, #arg).expect("method not found (this should never happen)")
+        }
+    })
+}
+
+// @todo This is an experimental support for the new JSON ABI file format.
+// Once this is stable:
+// 1. Delete old one;
+// 2. Rename it to its original name;
+// 3. Write documentation.
+pub fn _new_expand_function(
+    function: &ABIFunction,
+    types: &HashMap<usize, TypeDeclaration>,
+) -> Result<TokenStream, Error> {
+    if function.name.is_empty() {
+        return Err(Error::InvalidData("Function name can not be empty".into()));
+    }
+
+    let fn_param_types = function
+        .inputs
+        .iter()
+        .map(|t| types.get(&t.type_field).unwrap().clone())
+        .collect::<Vec<TypeDeclaration>>();
+
+    let name = safe_ident(&function.name);
+    let fn_signature = _new_build_fn_selector(&function.name, &fn_param_types, types)?;
+
+    let encoded = first_four_bytes_of_sha256_hash(&fn_signature);
+
+    let tokenized_signature = expand_selector(encoded);
+
+    let tokenized_output = _new_expand_fn_output(&function.output, types)?;
+
+    let result = quote! { ContractCallHandler<#tokenized_output> };
+
+    let (input, arg) = _new_expand_function_arguments(function, types)?;
+
+    let doc = expand_doc(&format!(
+        "Calls the contract's `{}` (0x{}) function",
+        function.name,
+        hex::encode(encoded)
+    ));
+
+    let t = types
+        .get(&function.output.type_field)
+        .expect("couldn't find type");
+
+    let param_type = ParamType::from_type_declaration(t, types)?;
+
+    let tok: proc_macro2::TokenStream = format!("Some(ParamType::{})", param_type).parse().unwrap();
+
+    let output_param = tok;
 
     Ok(quote! {
         #doc
@@ -140,6 +202,80 @@ fn expand_fn_outputs(outputs: &[Property]) -> Result<TokenStream, Error> {
     }
 }
 
+// @todo This is an experimental support for the new JSON ABI file format.
+// Once this is stable:
+// 1. Delete old one;
+// 2. Rename it to its original name;
+// 3. Write documentation.
+fn _new_expand_fn_output(
+    output: &TypeApplication,
+    types: &HashMap<usize, TypeDeclaration>,
+) -> Result<TokenStream, Error> {
+    let output_type = types.get(&output.type_field).expect("couldn't find type");
+
+    // If it's a primitive type, simply parse and expand.
+    if !output_type.is_custom_type(types) {
+        return expand_type(&ParamType::from_type_declaration(output_type, types)?);
+    }
+
+    // If it's a {struct, enum} as the type of a function's output, use its tokenized name only.
+    match output_type.is_struct_type() {
+        true => {
+            let parsed_custom_type_name = _new_extract_custom_type_name_from_abi_property(
+                output_type,
+                Some(CustomType::Struct),
+                types,
+            )?
+            .parse()
+            .expect("Custom type name should be a valid Rust identifier");
+
+            Ok(parsed_custom_type_name)
+        }
+        false => match output_type.is_enum_type() {
+            true => {
+                let parsed_custom_type_name = _new_extract_custom_type_name_from_abi_property(
+                    output_type,
+                    Some(CustomType::Enum),
+                    types,
+                )?
+                .parse()
+                .expect("Custom type name should be a valid Rust identifier");
+
+                Ok(parsed_custom_type_name)
+            }
+            false => match output_type.has_custom_type_in_array(types) {
+                true => {
+                    let type_inside_array = types
+                        .get(
+                            &output_type
+                                .components
+                                .as_ref()
+                                .expect("array should have components")[0]
+                                .type_field,
+                        )
+                        .expect("couldn't find type");
+
+                    let parsed_custom_type_name: TokenStream =
+                        _new_extract_custom_type_name_from_abi_property(
+                            type_inside_array,
+                            Some(
+                                type_inside_array
+                                    .get_custom_type()
+                                    .expect("Custom type in array should be set"),
+                            ),
+                            types,
+                        )?
+                        .parse()
+                        .expect("couldn't parse custom type name");
+
+                    Ok(quote! { ::std::vec::Vec<#parsed_custom_type_name> })
+                }
+                false => _new_expand_tuple_w_custom_types(output_type, types),
+            },
+        },
+    }
+}
+
 fn expand_tuple_w_custom_types(output: &Property) -> Result<TokenStream, Error> {
     if !output.has_custom_type_in_tuple() {
         panic!("Output is of custom type, but not an enum, struct or enum/struct inside an array/tuple. This shouldn't never happen. Output received: {:?}", output);
@@ -156,6 +292,48 @@ fn expand_tuple_w_custom_types(output: &Property) -> Result<TokenStream, Error> 
         .expect("could not parse tuple type signature");
 
     Ok(tuple_type_signature)
+}
+
+// @todo This is an experimental support for the new JSON ABI file format.
+// Once this is stable:
+// 1. Delete old one;
+// 2. Rename it to its original name;
+// 3. Write documentation.
+fn _new_expand_tuple_w_custom_types(
+    output: &TypeDeclaration,
+    types: &HashMap<usize, TypeDeclaration>,
+) -> Result<TokenStream, Error> {
+    if !output.has_custom_type_in_tuple(types) {
+        panic!("Output is of custom type, but not an enum, struct or enum/struct inside an array/tuple. This should never happen. Output received: {:?}", output);
+    }
+
+    let mut final_signature: String = "(".into();
+    let mut type_strings: Vec<String> = vec![];
+
+    for c in output
+        .components
+        .as_ref()
+        .expect("tuples should have components")
+        .iter()
+    {
+        let type_string = types.get(&c.type_field).unwrap().type_field.clone();
+
+        // If custom type is inside a tuple `(struct | enum <name>, ...)`,
+        // the type signature should be only `(<name>, ...)`.
+        // To do that, we remove the `STRUCT_KEYWORD` and `ENUM_KEYWORD` from it.
+        let keywords_removed = remove_words(&type_string, &[STRUCT_KEYWORD, ENUM_KEYWORD]);
+
+        let tuple_type_signature = expand_b256_into_array_form(&keywords_removed)
+            .parse()
+            .expect("could not parse tuple type signature");
+
+        type_strings.push(tuple_type_signature);
+    }
+
+    final_signature.push_str(&type_strings.join(", "));
+    final_signature.push(')');
+
+    Ok(final_signature.parse().unwrap())
 }
 
 fn expand_b256_into_array_form(type_field: &str) -> String {
@@ -275,6 +453,73 @@ fn expand_function_arguments(
     Ok((args, call_args))
 }
 
+// @todo This is an experimental support for the new JSON ABI file format.
+// Once this is stable:
+// 1. Delete old one;
+// 2. Rename it to its original name;
+// 3. Write documentation.
+fn _new_expand_function_arguments(
+    fun: &ABIFunction,
+    types: &HashMap<usize, TypeDeclaration>,
+) -> Result<(TokenStream, TokenStream), Error> {
+    let mut args = vec![];
+    let mut call_args = vec![];
+
+    for fn_type_application in &fun.inputs {
+        // For each [`TypeDeclaration`] in a function input we expand:
+        // 1. The name of the argument;
+        // 2. The type of the argument;
+        // Note that _any_ significant change in the way the JSON ABI is generated
+        // could affect this function expansion.
+        // TokenStream representing the name of the argument
+
+        let name = expand_input_name(&fn_type_application.name)?;
+
+        let param = types
+            .get(&fn_type_application.type_field)
+            .expect("couldn't find type");
+
+        // TokenStream representing the type of the argument
+        let kind = ParamType::from_type_declaration(param, types)?;
+
+        // If it's a tuple, don't expand it, just use the type signature as it is (minus the string "struct " | "enum ").
+        let tok = if let ParamType::Tuple(_tuple) = &kind {
+            let toks = _new_build_expanded_tuple_params(param, types)
+                .expect("failed to build expanded tuple parameters");
+
+            toks.parse::<TokenStream>().unwrap()
+        } else {
+            _new_expand_input_param(
+                fun,
+                fn_type_application,
+                &ParamType::from_type_declaration(param, types)?,
+                types,
+            )?
+        };
+
+        // Add the TokenStream to argument declarations
+        args.push(quote! { #name: #tok });
+
+        // This `name` TokenStream is also added to the call arguments
+        if let ParamType::String(len) = &kind {
+            call_args.push(quote! {Token::String(StringToken::new(#name, #len))});
+        } else {
+            call_args.push(name);
+        }
+    }
+
+    // The final TokenStream of the argument declaration in a function declaration
+    let args = quote! { #( , #args )* };
+
+    // The final TokenStream of the arguments being passed in a function call
+    // It'll look like `&[my_arg.into_token(), another_arg.into_token()]`
+    // as the [`Contract`] `method_hash` function expects a slice of Tokens
+    // in order to encode the call.
+    let call_args = quote! { &[ #(#call_args.into_token(), )* ] };
+
+    Ok((args, call_args))
+}
+
 // Builds a string "(type_1,type_2,type_3,...,type_n,)"
 // Where each type has been expanded through `expand_type()`
 // Except if it's a custom type, when just its name suffices.
@@ -289,6 +534,42 @@ fn build_expanded_tuple_params(tuple_param: &Property) -> Result<String, Error> 
     {
         if !component.is_custom_type() {
             let p = ParamType::try_from(component)?;
+            let tok = expand_type(&p)?;
+            toks.push_str(&tok.to_string());
+        } else {
+            let tok = component
+                .type_field
+                .replace(STRUCT_KEYWORD, "")
+                .replace(ENUM_KEYWORD, "");
+            toks.push_str(&tok.to_string());
+        }
+        toks.push(',');
+    }
+    toks.push(')');
+    Ok(toks)
+}
+
+// @todo This is an experimental support for the new JSON ABI file format.
+// Once this is stable:
+// 1. Delete old one;
+// 2. Rename it to its original name;
+// 3. Write documentation.
+fn _new_build_expanded_tuple_params(
+    tuple_param: &TypeDeclaration,
+    types: &HashMap<usize, TypeDeclaration>,
+) -> Result<String, Error> {
+    let mut toks: String = "(".to_string();
+    for type_application in tuple_param
+        .components
+        .as_ref()
+        .expect("tuple parameter should have components")
+    {
+        let component = types
+            .get(&type_application.type_field)
+            .expect("couldn't find type");
+
+        if !component.is_custom_type(types) {
+            let p = ParamType::from_type_declaration(component, types)?;
             let tok = expand_type(&p)?;
             toks.push_str(&tok.to_string());
         } else {
@@ -353,14 +634,238 @@ fn expand_input_param(
     }
 }
 
+// @todo This is an experimental support for the new JSON ABI file format.
+// Once this is stable:
+// 1. Delete old one;
+// 2. Rename it to its original name;
+// 3. Write documentation.
+fn _new_expand_input_param(
+    fun: &ABIFunction,
+    type_application: &TypeApplication,
+    kind: &ParamType,
+    types: &HashMap<usize, TypeDeclaration>,
+) -> Result<TokenStream, Error> {
+    match kind {
+        ParamType::Array(ty, _) => {
+            let ty = _new_expand_input_param(fun, type_application, ty, types)?;
+            Ok(quote! {
+                ::std::vec::Vec<#ty>
+            })
+        }
+        ParamType::Enum(_) => {
+            let t = types
+                .get(&type_application.type_field)
+                .expect("type not found");
+
+            let ident = ident(&_new_extract_custom_type_name_from_abi_property(
+                t,
+                Some(CustomType::Enum),
+                types,
+            )?);
+            Ok(quote! { #ident })
+        }
+        ParamType::Struct(_) => {
+            let t = types
+                .get(&type_application.type_field)
+                .expect("type not found");
+
+            let ident = ident(&_new_extract_custom_type_name_from_abi_property(
+                t,
+                Some(CustomType::Struct),
+                types,
+            )?);
+            Ok(quote! { #ident })
+        }
+        // Primitive type
+        _ => expand_type(kind),
+    }
+}
+
 // Regarding string->TokenStream->string, refer to `custom_types_gen` tests for more details.
 #[cfg(test)]
 mod tests {
+    use fuels_types::ProgramABI;
+
     use crate::EnumVariants;
     use std::slice;
 
     use super::*;
     use std::str::FromStr;
+
+    #[test]
+    fn test_expand_function_simple_new_abi() -> Result<(), Error> {
+        let s = r#"
+        {
+            "types": [
+              {
+                "typeId": 6,
+                "type": "u64",
+                "components": null,
+                "typeParameters": null
+              },
+              {
+                "typeId": 8,
+                "type": "b256",
+                "components": null,
+                "typeParameters": null
+              },
+              {
+                "typeId": 6,
+                "type": "u64",
+                "components": null,
+                "typeParameters": null
+              },
+              {
+                "typeId": 8,
+                "type": "b256",
+                "components": null,
+                "typeParameters": null
+              },
+              {
+                "typeId": 10,
+                "type": "bool",
+                "components": null,
+                "typeParameters": null
+              },
+              {
+                "typeId": 12,
+                "type": "struct MyStruct1",
+                "components": [
+                  {
+                    "name": "x",
+                    "type": 6,
+                    "typeArguments": null
+                  },
+                  {
+                    "name": "y",
+                    "type": 8,
+                    "typeArguments": null
+                  }
+                ],
+                "typeParameters": null
+              },
+              {
+                "typeId": 6,
+                "type": "u64",
+                "components": null,
+                "typeParameters": null
+              },
+              {
+                "typeId": 8,
+                "type": "b256",
+                "components": null,
+                "typeParameters": null
+              },
+              {
+                "typeId": 2,
+                "type": "struct MyStruct1",
+                "components": [
+                  {
+                    "name": "x",
+                    "type": 6,
+                    "typeArguments": null
+                  },
+                  {
+                    "name": "y",
+                    "type": 8,
+                    "typeArguments": null
+                  }
+                ],
+                "typeParameters": null
+              },
+              {
+                "typeId": 3,
+                "type": "struct MyStruct2",
+                "components": [
+                  {
+                    "name": "x",
+                    "type": 10,
+                    "typeArguments": null
+                  },
+                  {
+                    "name": "y",
+                    "type": 12,
+                    "typeArguments": []
+                  }
+                ],
+                "typeParameters": null
+              },
+              {
+                "typeId": 26,
+                "type": "struct MyStruct1",
+                "components": [
+                  {
+                    "name": "x",
+                    "type": 6,
+                    "typeArguments": null
+                  },
+                  {
+                    "name": "y",
+                    "type": 8,
+                    "typeArguments": null
+                  }
+                ],
+                "typeParameters": null
+              }
+            ],
+            "functions": [
+              {
+                "type": "function",
+                "inputs": [
+                  {
+                    "name": "s1",
+                    "type": 2,
+                    "typeArguments": []
+                  },
+                  {
+                    "name": "s2",
+                    "type": 3,
+                    "typeArguments": []
+                  }
+                ],
+                "name": "some_abi_funct",
+                "output": {
+                  "name": "",
+                  "type": 26,
+                  "typeArguments": []
+                }
+              }
+            ]
+          }
+"#;
+        let parsed_abi: ProgramABI = serde_json::from_str(s)?;
+        let all_types = parsed_abi
+            .types
+            .into_iter()
+            .map(|t| (t.type_id, t))
+            .collect::<HashMap<usize, TypeDeclaration>>();
+
+        // Grabbing the one and only function in it.
+        let result = _new_expand_function(&parsed_abi.functions[0], &all_types);
+
+        // let result = expand_function(&the_function, &Default::default(), &Default::default());
+        let expected = TokenStream::from_str(
+            r#"
+            #[doc = "Calls the contract's `some_abi_funct` (0x00000000652399f3) function"]
+            pub fn some_abi_funct(&self, s_1: MyStruct1, s_2: MyStruct2) -> ContractCallHandler<MyStruct1> {
+                Contract::method_hash(
+                    &self.wallet.get_provider().expect("Provider not set up"),
+                    self.contract_id.clone(),
+                    &self.wallet,
+                    [0, 0, 0, 0, 101 , 35 , 153 , 243],
+                    Some(ParamType::Struct(vec![ParamType::U64, ParamType::B256])),
+                    &[s_1.into_token(), s_2.into_token(),]
+                )
+                .expect("method not found (this should never happen)")
+            }
+
+            "#,
+        );
+        let expected = expected?.to_string();
+
+        assert_eq!(result?.to_string(), expected);
+        Ok(())
+    }
 
     #[test]
     fn test_expand_function_simple() -> Result<(), Error> {

@@ -22,7 +22,7 @@ use fuels_core::{
 };
 use fuels_signers::{
     provider::{Provider, TransactionCost},
-    LocalWallet, Signer,
+    Signer, WalletUnlocked,
 };
 use fuels_types::bech32::Bech32ContractId;
 use fuels_types::{
@@ -45,7 +45,7 @@ pub struct CompiledContract {
 /// It allows doing calls without passing a wallet/signer each time.
 pub struct Contract {
     pub compiled_contract: CompiledContract,
-    pub wallet: LocalWallet,
+    pub wallet: WalletUnlocked,
 }
 
 /// CallResponse is a struct that is returned by a call to the contract. Its value field
@@ -92,7 +92,7 @@ impl<D> CallResponse<D> {
 }
 
 impl Contract {
-    pub fn new(compiled_contract: CompiledContract, wallet: LocalWallet) -> Self {
+    pub fn new(compiled_contract: CompiledContract, wallet: WalletUnlocked) -> Self {
         Self {
             compiled_contract,
             wallet,
@@ -128,7 +128,7 @@ impl Contract {
     pub fn method_hash<D: Tokenizable + Debug>(
         provider: &Provider,
         contract_id: Bech32ContractId,
-        wallet: &LocalWallet,
+        wallet: &WalletUnlocked,
         signature: Selector,
         output_param: Option<ParamType>,
         args: &[Token],
@@ -184,7 +184,7 @@ impl Contract {
     /// Loads a compiled contract and deploys it to a running node
     pub async fn deploy(
         binary_filepath: &str,
-        wallet: &LocalWallet,
+        wallet: &WalletUnlocked,
         params: TxParameters,
         storage_configuration: StorageConfiguration,
     ) -> Result<Bech32ContractId, Error> {
@@ -199,7 +199,7 @@ impl Contract {
     /// Loads a compiled contract with salt and deploys it to a running node
     pub async fn deploy_with_parameters(
         binary_filepath: &str,
-        wallet: &LocalWallet,
+        wallet: &WalletUnlocked,
         params: TxParameters,
         storage_configuration: StorageConfiguration,
         salt: Salt,
@@ -233,7 +233,7 @@ impl Contract {
     /// wallet will also receive the change.
     pub async fn deploy_loaded(
         compiled_contract: &CompiledContract,
-        wallet: &LocalWallet,
+        wallet: &WalletUnlocked,
         params: TxParameters,
     ) -> Result<Bech32ContractId, Error> {
         let (mut tx, contract_id) =
@@ -312,7 +312,7 @@ impl Contract {
     /// Crafts a transaction used to deploy a contract
     pub async fn contract_deployment_transaction(
         compiled_contract: &CompiledContract,
-        wallet: &LocalWallet,
+        wallet: &WalletUnlocked,
         params: TxParameters,
     ) -> Result<(Transaction, Bech32ContractId), Error> {
         let bytecode_witness_index = 0;
@@ -437,7 +437,7 @@ impl ContractCall {
 pub struct ContractCallHandler<D> {
     pub contract_call: ContractCall,
     pub tx_parameters: TxParameters,
-    pub wallet: LocalWallet,
+    pub wallet: WalletUnlocked,
     pub provider: Provider,
     pub datatype: PhantomData<D>,
 }
@@ -569,11 +569,11 @@ where
 pub struct MultiContractCallHandler {
     pub contract_calls: Option<Vec<ContractCall>>,
     pub tx_parameters: TxParameters,
-    pub wallet: LocalWallet,
+    pub wallet: WalletUnlocked,
 }
 
 impl MultiContractCallHandler {
-    pub fn new(wallet: LocalWallet) -> Self {
+    pub fn new(wallet: WalletUnlocked) -> Self {
         Self {
             contract_calls: None,
             tx_parameters: TxParameters::default(),

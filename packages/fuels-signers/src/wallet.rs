@@ -12,22 +12,37 @@ use fuels_core::parameters::TxParameters;
 use fuels_types::bech32::{Bech32Address, Bech32ContractId, FUEL_BECH32_HRP};
 use fuels_types::errors::Error;
 use rand::{CryptoRng, Rng};
-use std::{collections::HashMap, fmt, path::Path};
+use std::{collections::HashMap, fmt, ops, path::Path};
 use thiserror::Error;
 
 const DEFAULT_DERIVATION_PATH_PREFIX: &str = "m/44'/1179993420'/0'/0/";
 
-/// A FuelVM-compatible wallet which can be used for signing, sending transactions, and more.
+/// A FuelVM-compatible wallet that can be used to list assets, balances and more.
+///
+/// Note that instances of the `Wallet` type only know their public address, and as a result can
+/// only perform read-only operations.
+///
+/// In order to sign messages or send transactions, a `Wallet` must first call [`Wallet::unlock`]
+/// with a valid private key to produce a [`WalletUnlocked`].
+#[derive(Clone)]
+pub struct Wallet {
+    /// The wallet's address. The wallet's address is derived
+    /// from the first 32 bytes of SHA-256 hash of the wallet's public key.
+    pub(crate) address: Bech32Address,
+    pub(crate) provider: Option<Provider>,
+}
+
+/// A `WalletUnlocked` is equivalent to a [`Wallet`] whose private key is known and stored
+/// alongside in-memory. Knowing the private key allows a `WalletUlocked` to sign operations, send
+/// transactions, and more.
 ///
 /// # Examples
 ///
 /// ## Signing and Verifying a message
 ///
-/// The wallet can be used to produce ECDSA [`Signature`] objects, which can be
-/// then verified.
+/// The wallet can be used to produce ECDSA [`Signature`] objects, which can be then verified.
 ///
 /// ```
-///
 /// use fuel_crypto::Message;
 /// use fuels::prelude::*;
 ///
@@ -36,10 +51,13 @@ const DEFAULT_DERIVATION_PATH_PREFIX: &str = "m/44'/1179993420'/0'/0/";
 ///   let (provider, _) = setup_test_provider(vec![], None).await;
 ///
 ///   // Create a new local wallet with the newly generated key
-///   let wallet = LocalWallet::new_random(Some(provider));
+///   let wallet = WalletUnlocked::new_random(Some(provider));
 ///
 ///   let message = "my message";
 ///   let signature = wallet.sign_message(message.as_bytes()).await?;
+///
+///   // Lock the wallet when we're done, dropping the private key from memory.
+///   let wallet = wallet.lock();
 ///
 ///   // Recover address that signed the message
 ///   let message = Message::new(message);
@@ -52,17 +70,11 @@ const DEFAULT_DERIVATION_PATH_PREFIX: &str = "m/44'/1179993420'/0'/0/";
 ///   Ok(())
 /// }
 /// ```
-///
 /// [`Signature`]: fuels_core::signature::Signature
-#[derive(Clone)]
-pub struct Wallet {
-    /// The Wallet's private key
+#[derive(Clone, Debug)]
+pub struct WalletUnlocked {
+    wallet: Wallet,
     pub(crate) private_key: SecretKey,
-    /// The wallet's address. The wallet's address is derived
-    /// from the first 32 bytes of SHA-256 hash of the wallet's public key.
-    pub(crate) address: Bech32Address,
-
-    pub(crate) provider: Option<Provider>,
 }
 
 #[derive(Error, Debug)]
@@ -90,26 +102,21 @@ impl From<WalletError> for Error {
 }
 
 impl Wallet {
-    pub fn new_random(provider: Option<Provider>) -> Self {
-        let mut rng = rand::thread_rng();
-        let private_key = SecretKey::random(&mut rng);
-
-        Self::new_from_private_key(private_key, provider)
-    }
-
-    pub fn new_from_private_key(private_key: SecretKey, provider: Option<Provider>) -> Self {
-        let public = PublicKey::from(&private_key);
-        let hashed = public.hash();
-
-        Self {
-            private_key,
-            address: Bech32Address::new(FUEL_BECH32_HRP, hashed),
-            provider,
-        }
+    /// Construct a Wallet from its given public address.
+    pub fn from_address(address: Bech32Address, provider: Option<Provider>) -> Self {
+        Self { address, provider }
     }
 
     pub fn get_provider(&self) -> Result<&Provider, WalletError> {
         self.provider.as_ref().ok_or(WalletError::NoProvider)
+    }
+
+    pub fn set_provider(&mut self, provider: Provider) {
+        self.provider = Some(provider)
+    }
+
+    pub fn address(&self) -> &Bech32Address {
+        &self.address
     }
 
     pub async fn get_transactions(
@@ -117,9 +124,137 @@ impl Wallet {
         request: PaginationRequest<String>,
     ) -> Result<PaginatedResult<TransactionResponse, String>, Error> {
         self.get_provider()?
-            .get_transactions_by_owner(self.address(), request)
+            .get_transactions_by_owner(&self.address, request)
             .await
             .map_err(Into::into)
+    }
+
+    /// Returns a proper vector of `Input::Coin`s for the given asset ID, amount, and witness index.
+    /// The `witness_index` is the position of the witness
+    /// (signature) in the transaction's list of witnesses.
+    /// Meaning that, in the validation process, the node will
+    /// use the witness at this index to validate the coins returned
+    /// by this method.
+    pub async fn get_asset_inputs_for_amount(
+        &self,
+        asset_id: AssetId,
+        amount: u64,
+        witness_index: u8,
+    ) -> Result<Vec<Input>, Error> {
+        let spendable = self.get_spendable_coins(asset_id, amount).await?;
+        let mut inputs = vec![];
+        for coin in spendable {
+            let input_coin = Input::coin_signed(
+                UtxoId::from(coin.utxo_id),
+                coin.owner.into(),
+                coin.amount.0,
+                asset_id,
+                witness_index,
+                0,
+            );
+            inputs.push(input_coin);
+        }
+        Ok(inputs)
+    }
+
+    /// Returns a vector containing the output coin and change output given an asset and amount
+    pub fn get_asset_outputs_for_amount(
+        &self,
+        to: &Bech32Address,
+        asset_id: AssetId,
+        amount: u64,
+    ) -> Vec<Output> {
+        vec![
+            Output::coin(to.into(), amount, asset_id),
+            // Note that the change will be computed by the node.
+            // Here we only have to tell the node who will own the change and its asset ID.
+            Output::change((&self.address).into(), 0, asset_id),
+        ]
+    }
+
+    /// Gets all coins of asset `asset_id` owned by the wallet, *even spent ones* (this is useful
+    /// for some particular cases, but in general, you should use `get_spendable_coins`). This
+    /// returns actual coins (UTXOs).
+    pub async fn get_coins(&self, asset_id: AssetId) -> Result<Vec<Coin>, Error> {
+        Ok(self
+            .get_provider()?
+            .get_coins(&self.address, asset_id)
+            .await?)
+    }
+
+    /// Get some spendable coins of asset `asset_id` owned by the wallet that add up at least to
+    /// amount `amount`. The returned coins (UTXOs) are actual coins that can be spent. The number
+    /// of coins (UXTOs) is optimized to prevent dust accumulation.
+    pub async fn get_spendable_coins(
+        &self,
+        asset_id: AssetId,
+        amount: u64,
+    ) -> Result<Vec<Coin>, Error> {
+        self.get_provider()?
+            .get_spendable_coins(&self.address, asset_id, amount)
+            .await
+            .map_err(Into::into)
+    }
+
+    /// Get the balance of all spendable coins `asset_id` for address `address`. This is different
+    /// from getting coins because we are just returning a number (the sum of UTXOs amount) instead
+    /// of the UTXOs.
+    pub async fn get_asset_balance(&self, asset_id: &AssetId) -> Result<u64, Error> {
+        self.get_provider()?
+            .get_asset_balance(&self.address, *asset_id)
+            .await
+            .map_err(Into::into)
+    }
+
+    /// Get all the spendable balances of all assets for the wallet. This is different from getting
+    /// the coins because we are only returning the sum of UTXOs coins amount and not the UTXOs
+    /// coins themselves.
+    pub async fn get_balances(&self) -> Result<HashMap<String, u64>, Error> {
+        self.get_provider()?
+            .get_balances(&self.address)
+            .await
+            .map_err(Into::into)
+    }
+
+    /// Unlock the wallet with the given `private_key`.
+    ///
+    /// The private key will be stored in memory until `wallet.lock()` is called or until the
+    /// wallet is `drop`ped.
+    pub fn unlock(self, private_key: SecretKey) -> WalletUnlocked {
+        WalletUnlocked {
+            wallet: self,
+            private_key,
+        }
+    }
+}
+
+impl WalletUnlocked {
+    /// Lock the wallet by `drop`ping the private key from memory.
+    pub fn lock(self) -> Wallet {
+        self.wallet
+    }
+
+    // NOTE: Rather than providing a `DerefMut` implementation, we wrap the `set_provider` method
+    // directly. This is because we should not allow the user a `&mut` handle to the inner `Wallet`
+    // as this could lead to ending up with a `WalletUnlocked` in an inconsistent state (e.g. the
+    // private key doesn't match the inner wallet's public key).
+    pub fn set_provider(&mut self, provider: Provider) {
+        self.wallet.set_provider(provider)
+    }
+
+    /// Creates a new wallet with a random private key.
+    pub fn new_random(provider: Option<Provider>) -> Self {
+        let mut rng = rand::thread_rng();
+        let private_key = SecretKey::random(&mut rng);
+        Self::new_from_private_key(private_key, provider)
+    }
+
+    /// Creates a new wallet from the given private key.
+    pub fn new_from_private_key(private_key: SecretKey, provider: Option<Provider>) -> Self {
+        let public = PublicKey::from(&private_key);
+        let hashed = public.hash();
+        let address = Bech32Address::new(FUEL_BECH32_HRP, hashed);
+        Wallet::from_address(address, provider).unlock(private_key)
     }
 
     /// Creates a new wallet from a mnemonic phrase.
@@ -129,7 +264,7 @@ impl Wallet {
         provider: Option<Provider>,
     ) -> Result<Self, WalletError> {
         let path = format!("{}{}", DEFAULT_DERIVATION_PATH_PREFIX, 0);
-        Wallet::new_from_mnemonic_phrase_with_path(phrase, provider, &path)
+        Self::new_from_mnemonic_phrase_with_path(phrase, provider, &path)
     }
 
     /// Creates a new wallet from a mnemonic phrase.
@@ -165,17 +300,6 @@ impl Wallet {
         Ok((wallet, uuid))
     }
 
-    /// Generates a random mnemonic phrase given a random number generator and
-    /// the number of words to generate, `count`.
-    pub fn generate_mnemonic_phrase<R: Rng>(
-        rng: &mut R,
-        count: usize,
-    ) -> Result<String, WalletError> {
-        Ok(fuel_crypto::FuelMnemonic::generate_mnemonic_phrase(
-            rng, count,
-        )?)
-    }
-
     /// Encrypts the wallet's private key with the given password and saves it
     /// to the given path.
     pub fn encrypt<P, S>(&self, dir: P, password: S) -> Result<String, WalletError>
@@ -208,10 +332,6 @@ impl Wallet {
         Ok(Self::new_from_private_key(secret_key, provider))
     }
 
-    pub fn set_provider(&mut self, provider: Provider) {
-        self.provider = Some(provider)
-    }
-
     /// Transfer funds from this wallet to another `Address`.
     /// Fails if amount for asset ID is larger than address's spendable coins.
     /// Returns the transaction ID that was sent and the list of receipts.
@@ -227,8 +347,8 @@ impl Wallet {
     ///
     /// async fn foo() -> Result<(), Box<dyn std::error::Error>> {
     ///  // Create the actual wallets/signers
-    ///  let mut wallet_1 = LocalWallet::new_random(None);
-    ///  let mut wallet_2 = LocalWallet::new_random(None);
+    ///  let mut wallet_1 = WalletUnlocked::new_random(None);
+    ///  let mut wallet_2 = WalletUnlocked::new_random(None).lock();
     ///
     ///   // Setup a coin for each wallet
     ///   let mut coins_1 = setup_single_asset_coins(wallet_1.address(),BASE_ASSET_ID, 1, 1);
@@ -330,7 +450,7 @@ impl Wallet {
 
         let outputs = vec![
             Output::contract(0, zeroes, zeroes),
-            Output::change(self.address().into(), 0, asset_id),
+            Output::change((&self.address).into(), 0, asset_id),
         ];
 
         // Build transaction and sign it
@@ -348,98 +468,11 @@ impl Wallet {
 
         Ok((tx.id().to_string(), receipts))
     }
-
-    /// Returns a proper vector of `Input::Coin`s for the given asset ID, amount, and witness index.
-    /// The `witness_index` is the position of the witness
-    /// (signature) in the transaction's list of witnesses.
-    /// Meaning that, in the validation process, the node will
-    /// use the witness at this index to validate the coins returned
-    /// by this method.
-    pub async fn get_asset_inputs_for_amount(
-        &self,
-        asset_id: AssetId,
-        amount: u64,
-        witness_index: u8,
-    ) -> Result<Vec<Input>, Error> {
-        let spendable = self.get_spendable_coins(asset_id, amount).await?;
-        let mut inputs = vec![];
-        for coin in spendable {
-            let input_coin = Input::coin_signed(
-                UtxoId::from(coin.utxo_id),
-                coin.owner.into(),
-                coin.amount.0,
-                asset_id,
-                witness_index,
-                0,
-            );
-            inputs.push(input_coin);
-        }
-        Ok(inputs)
-    }
-
-    /// Returns a vector containing the output coin and change output given an asset and amount
-    pub fn get_asset_outputs_for_amount(
-        &self,
-        to: &Bech32Address,
-        asset_id: AssetId,
-        amount: u64,
-    ) -> Vec<Output> {
-        vec![
-            Output::coin(to.into(), amount, asset_id),
-            // Note that the change will be computed by the node.
-            // Here we only have to tell the node who will own the change and its asset ID.
-            Output::change(self.address().into(), 0, asset_id),
-        ]
-    }
-
-    /// Gets all coins of asset `asset_id` owned by the wallet, *even spent ones* (this is useful
-    /// for some particular cases, but in general, you should use `get_spendable_coins`). This
-    /// returns actual coins (UTXOs).
-    pub async fn get_coins(&self, asset_id: AssetId) -> Result<Vec<Coin>, Error> {
-        Ok(self
-            .get_provider()?
-            .get_coins(self.address(), asset_id)
-            .await?)
-    }
-
-    /// Get some spendable coins of asset `asset_id` owned by the wallet that add up at least to
-    /// amount `amount`. The returned coins (UTXOs) are actual coins that can be spent. The number
-    /// of coins (UXTOs) is optimized to prevent dust accumulation.
-    pub async fn get_spendable_coins(
-        &self,
-        asset_id: AssetId,
-        amount: u64,
-    ) -> Result<Vec<Coin>, Error> {
-        self.get_provider()?
-            .get_spendable_coins(self.address(), asset_id, amount)
-            .await
-            .map_err(Into::into)
-    }
-
-    /// Get the balance of all spendable coins `asset_id` for address `address`. This is different
-    /// from getting coins because we are just returning a number (the sum of UTXOs amount) instead
-    /// of the UTXOs.
-    pub async fn get_asset_balance(&self, asset_id: &AssetId) -> Result<u64, Error> {
-        self.get_provider()?
-            .get_asset_balance(&self.address, *asset_id)
-            .await
-            .map_err(Into::into)
-    }
-
-    /// Get all the spendable balances of all assets for the wallet. This is different from getting
-    /// the coins because we are only returning the sum of UTXOs coins amount and not the UTXOs
-    /// coins themselves.
-    pub async fn get_balances(&self) -> Result<HashMap<String, u64>, Error> {
-        self.get_provider()?
-            .get_balances(&self.address)
-            .await
-            .map_err(Into::into)
-    }
 }
 
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
-impl Signer for Wallet {
+impl Signer for WalletUnlocked {
     type Error = WalletError;
 
     async fn sign_message<S: Send + Sync + AsRef<[u8]>>(
@@ -490,6 +523,21 @@ impl fmt::Debug for Wallet {
     }
 }
 
+impl ops::Deref for WalletUnlocked {
+    type Target = Wallet;
+    fn deref(&self) -> &Self::Target {
+        &self.wallet
+    }
+}
+
+/// Generates a random mnemonic phrase given a random number generator and the number of words to
+/// generate, `count`.
+pub fn generate_mnemonic_phrase<R: Rng>(rng: &mut R, count: usize) -> Result<String, WalletError> {
+    Ok(fuel_crypto::FuelMnemonic::generate_mnemonic_phrase(
+        rng, count,
+    )?)
+}
+
 #[cfg(test)]
 #[cfg(feature = "test-helpers")]
 mod tests {
@@ -508,7 +556,7 @@ mod tests {
 
         // Create a wallet to be stored in the keystore.
         let (wallet, uuid) =
-            Wallet::new_from_keystore(&dir, &mut rng, "password", Some(provider.clone()))?;
+            WalletUnlocked::new_from_keystore(&dir, &mut rng, "password", Some(provider.clone()))?;
 
         // sign a message using the above key.
         let message = "Hello there!";
@@ -517,7 +565,7 @@ mod tests {
         // Read from the encrypted JSON keystore and decrypt it.
         let path = Path::new(dir.path()).join(uuid);
         let recovered_wallet =
-            Wallet::load_keystore(&path.clone(), "password", Some(provider.clone()))?;
+            WalletUnlocked::load_keystore(&path.clone(), "password", Some(provider.clone()))?;
 
         // Sign the same message as before and assert that the signature is the same.
         let signature2 = recovered_wallet.sign_message(message).await?;
@@ -532,9 +580,9 @@ mod tests {
     async fn mnemonic_generation() -> Result<(), Error> {
         let provider = setup().await;
 
-        let mnemonic = Wallet::generate_mnemonic_phrase(&mut rand::thread_rng(), 12)?;
+        let mnemonic = generate_mnemonic_phrase(&mut rand::thread_rng(), 12)?;
 
-        let _wallet = Wallet::new_from_mnemonic_phrase(&mnemonic, Some(provider))?;
+        let _wallet = WalletUnlocked::new_from_mnemonic_phrase(&mnemonic, Some(provider))?;
         Ok(())
     }
 
@@ -546,7 +594,7 @@ mod tests {
         let provider = setup().await;
 
         // Create first account from mnemonic phrase.
-        let wallet = Wallet::new_from_mnemonic_phrase_with_path(
+        let wallet = WalletUnlocked::new_from_mnemonic_phrase_with_path(
             phrase,
             Some(provider.clone()),
             "m/44'/60'/0'/0/0",
@@ -560,8 +608,11 @@ mod tests {
         assert_eq!(wallet.address().to_string(), expected_address);
 
         // Create a second account from the same phrase.
-        let wallet2 =
-            Wallet::new_from_mnemonic_phrase_with_path(phrase, Some(provider), "m/44'/60'/1'/0/0")?;
+        let wallet2 = WalletUnlocked::new_from_mnemonic_phrase_with_path(
+            phrase,
+            Some(provider),
+            "m/44'/60'/1'/0/0",
+        )?;
 
         let expected_second_plain_address =
             "261191b0164a24fd0fd51566ec5e5b0b9ba8fb2d42dc9cf7dbbd6f23d2742759";
@@ -587,7 +638,7 @@ mod tests {
         let provider = setup().await;
 
         // Create first account from mnemonic phrase.
-        let wallet = Wallet::new_from_mnemonic_phrase_with_path(
+        let wallet = WalletUnlocked::new_from_mnemonic_phrase_with_path(
             phrase,
             Some(provider.clone()),
             "m/44'/60'/0'/0/0",
@@ -597,7 +648,7 @@ mod tests {
 
         let path = Path::new(dir.path()).join(uuid);
 
-        let recovered_wallet = Wallet::load_keystore(&path, "password", Some(provider))?;
+        let recovered_wallet = WalletUnlocked::load_keystore(&path, "password", Some(provider))?;
 
         assert_eq!(wallet.address(), recovered_wallet.address());
 
