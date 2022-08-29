@@ -36,7 +36,7 @@ impl Source {
     {
         let source = source.as_ref().trim();
 
-        if source.starts_with('[') || source.starts_with('\n') {
+        if source.starts_with('{') || source.starts_with('[') || source.starts_with('\n') {
             return Ok(Source::String(source.to_owned()));
         }
         let root = env::current_dir()?.canonicalize()?;

@@ -3,10 +3,11 @@ use crate::utils::ident;
 use crate::ParamType;
 use fuels_types::errors::Error;
 use fuels_types::utils::has_array_format;
-use fuels_types::{CustomType, Property};
+use fuels_types::{CustomType, Property, TypeDeclaration};
 use inflector::Inflector;
 use proc_macro2::TokenStream;
 use quote::quote;
+use std::collections::HashMap;
 use std::str::FromStr;
 
 /// Functions used by the Abigen to expand custom types defined in an ABI spec.
@@ -166,6 +167,186 @@ pub fn expand_custom_struct(prop: &Property) -> Result<TokenStream, Error> {
         }
     }
     impl TryFrom<Vec<u8>> for #struct_ident {
+        type Error = SDKError;
+        fn try_from(bytes: Vec<u8>) -> Result<Self, Self::Error> {
+            try_from_bytes(&bytes)
+        }
+    }
+    })
+}
+
+// @todo This is an experimental support for the new JSON ABI file format.
+// Once this is stable:
+// 1. Delete old one;
+// 2. Rename it to its original name;
+// 3. Write documentation.
+pub fn _new_expand_custom_struct(
+    prop: &TypeDeclaration,
+    types: &HashMap<usize, TypeDeclaration>,
+) -> Result<TokenStream, Error> {
+    let struct_name =
+        &_new_extract_custom_type_name_from_abi_property(prop, Some(CustomType::Struct), types)?;
+    let struct_ident = ident(struct_name);
+    let components = prop
+        .components
+        .as_ref()
+        .expect("Fail to extract components from custom type");
+    let mut fields = Vec::with_capacity(components.len());
+
+    // Holds a TokenStream representing the process of
+    // creating a [`Token`] and pushing it a vector of Tokens.
+    let mut struct_fields_tokens = Vec::new();
+    let mut param_types = Vec::new();
+
+    // Holds the TokenStream representing the process
+    // of creating a Self struct from each `Token`.
+    // Used when creating a struct from tokens with
+    // `Tokenizable::from_token()`.
+    let mut args = Vec::new();
+
+    // For each component, we create two TokenStreams:
+    // 1. A struct field declaration like `pub #field_name: #component_name`
+    // 2. The creation of a token and its insertion into a vector of Tokens.
+    for component in components {
+        let field_name = ident(&component.name.to_snake_case());
+
+        let t = types
+            .get(&component.type_field)
+            .expect("couldn't find type");
+
+        let param_type = ParamType::from_type_declaration(t, types)?;
+
+        match param_type {
+            // Case where a struct takes another struct
+            ParamType::Struct(_params) => {
+                let inner_struct_ident = ident(&_new_extract_custom_type_name_from_abi_property(
+                    t,
+                    Some(CustomType::Struct),
+                    types,
+                )?);
+
+                fields.push(quote! {pub #field_name: #inner_struct_ident});
+                args.push(quote! {#field_name: #inner_struct_ident::from_token(next_token()?)?});
+                struct_fields_tokens.push(quote! { tokens.push(self.#field_name.into_token()) });
+                param_types.push(quote! { types.push(#inner_struct_ident::param_type()) });
+            }
+            // The struct contains a nested enum
+            ParamType::Enum(_params) => {
+                let enum_name = ident(&_new_extract_custom_type_name_from_abi_property(
+                    t,
+                    Some(CustomType::Enum),
+                    types,
+                )?);
+                fields.push(quote! {pub #field_name: #enum_name});
+                args.push(quote! {#field_name: #enum_name::from_token(next_token()?)?});
+                struct_fields_tokens.push(quote! { tokens.push(self.#field_name.into_token()) });
+
+                param_types.push(quote! { types.push(#enum_name::param_type()) });
+            }
+            _ => {
+                let ty = expand_type(&param_type)?;
+
+                let mut param_type_string = param_type.to_string();
+
+                let param_type_string_ident_tok: proc_macro2::TokenStream =
+                    param_type_string.parse().unwrap();
+
+                param_types.push(quote! { types.push(ParamType::#param_type_string_ident_tok) });
+
+                if let ParamType::Array(..) = param_type {
+                    param_type_string = "Array".to_string();
+                }
+                if let ParamType::String(..) = param_type {
+                    param_type_string = "String".to_string();
+                }
+
+                let param_type_string_ident = ident(&param_type_string);
+
+                // Field declaration
+                fields.push(quote! { pub #field_name: #ty});
+
+                args.push(quote! {
+                    #field_name: <#ty>::from_token(next_token()?)?
+                });
+
+                // Token creation and insertion
+                match param_type {
+                    ParamType::String(len) => {
+                        struct_fields_tokens
+                            .push(quote! {tokens.push(Token::#param_type_string_ident(
+                            StringToken::new(self.#field_name,  #len)))});
+                    }
+                    ParamType::Array(_t, _s) => {
+                        struct_fields_tokens.push(
+                            quote! {tokens.push(Token::#param_type_string_ident(vec![self.#field_name.into_token()]))},
+                        );
+                    }
+                    // Primitive type
+                    _ => {
+                        // Token creation and insertion
+                        struct_fields_tokens.push(
+                            quote! {tokens.push(Token::#param_type_string_ident(self.#field_name))},
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    // Actual creation of the struct, using the inner TokenStreams from above to produce the
+    // TokenStream that represents the whole struct + methods declaration.
+    Ok(quote! {
+        #[derive(Clone, Debug, Eq, PartialEq)]
+        pub struct #struct_ident {
+            #( #fields ),*
+        }
+
+        impl Parameterize for #struct_ident {
+            fn param_type() -> ParamType {
+                let mut types = Vec::new();
+                #( #param_types; )*
+                ParamType::Struct(types)
+            }
+        }
+
+        impl Tokenizable for #struct_ident {
+            fn into_token(self) -> Token {
+                let mut tokens = Vec::new();
+                #( #struct_fields_tokens; )*
+
+                Token::Struct(tokens)
+            }
+
+            fn from_token(token: Token)  -> Result<Self, SDKError> {
+                match token {
+                    Token::Struct(tokens) => {
+                        let mut tokens_iter = tokens.into_iter();
+                        let mut next_token = move || { tokens_iter
+                            .next()
+                            .ok_or_else(|| { SDKError::InstantiationError(format!("Ran out of tokens before '{}' has finished construction!", #struct_name)) })
+                        };
+                        Ok(Self { #( #args ),* })
+                    },
+                    other => Err(SDKError::InstantiationError(format!("Error while constructing '{}'. Expected token of type Token::Struct, got {:?}", #struct_name, other))),
+                }
+            }
+        }
+
+    impl TryFrom<&[u8]> for #struct_ident {
+        type Error = SDKError;
+        fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
+            try_from_bytes(bytes)
+        }
+    }
+
+    impl TryFrom<&Vec<u8>> for #struct_ident {
+        type Error = SDKError;
+        fn try_from(bytes: &Vec<u8>) -> Result<Self, Self::Error> {
+            try_from_bytes(bytes)
+        }
+    }
+
+     impl TryFrom<Vec<u8>> for #struct_ident {
         type Error = SDKError;
         fn try_from(bytes: Vec<u8>) -> Result<Self, Self::Error> {
             try_from_bytes(&bytes)
@@ -378,6 +559,228 @@ pub fn expand_custom_enum(enum_name: &str, prop: &Property) -> Result<TokenStrea
     })
 }
 
+// @todo This is an experimental support for the new JSON ABI file format.
+// Once this is stable:
+// 1. Delete old one;
+// 2. Rename it to its original name;
+// 3. Write documentation.
+pub fn _new_expand_custom_enum(
+    prop: &TypeDeclaration,
+    types: &HashMap<usize, TypeDeclaration>,
+) -> Result<TokenStream, Error> {
+    let enum_name =
+        &_new_extract_custom_type_name_from_abi_property(prop, Some(CustomType::Enum), types)?;
+
+    let components = match &prop.components {
+        Some(components) if !components.is_empty() => Ok(components),
+        _ => Err(Error::InvalidType(format!(
+            "Enum '{}' must have at least one variant!",
+            enum_name
+        ))),
+    }?;
+
+    let mut enum_variants = Vec::with_capacity(components.len());
+
+    // Holds a TokenStream representing the process of creating an enum [`Token`].
+    let mut enum_selector_builder = Vec::new();
+
+    // Holds the TokenStream representing the process of creating a Self enum from each `Token`.
+    // Used when creating a struct from tokens with `Tokenizable::from_token()`.
+    let mut args = Vec::new();
+
+    let enum_ident = ident(enum_name);
+    let mut param_types = Vec::new();
+
+    for (discriminant, component) in components.iter().enumerate() {
+        let variant_name = ident(&component.name);
+        let dis = discriminant as u8;
+        let t = types
+            .get(&component.type_field)
+            .expect("couldn't find type");
+        let param_type = ParamType::from_type_declaration(t, types)?;
+
+        match param_type {
+            // Case where an enum takes another enum
+            ParamType::Enum(_params) => {
+                let inner_enum_name = &_new_extract_custom_type_name_from_abi_property(
+                    t,
+                    Some(CustomType::Enum),
+                    types,
+                )?;
+
+                let inner_enum_ident = ident(inner_enum_name);
+                // Enum variant declaration
+                enum_variants.push(quote! { #variant_name(#inner_enum_ident)});
+
+                // Token creation
+                enum_selector_builder.push(quote! {
+                    #enum_ident::#variant_name(inner_enum) =>
+                    (#dis, inner_enum.into_token())
+                });
+
+                args.push(quote! {
+                    (#dis, token, _) => {
+                        let variant_content = <#inner_enum_ident>::from_token(token)?;
+                        Ok(#enum_ident::#variant_name(variant_content))
+                    }
+                });
+
+                param_types.push(quote! { types.push(#inner_enum_ident::param_type()) });
+            }
+            ParamType::Struct(_params) => {
+                let inner_struct_name = &_new_extract_custom_type_name_from_abi_property(
+                    t,
+                    Some(CustomType::Struct),
+                    types,
+                )?;
+                let inner_struct_ident = ident(inner_struct_name);
+                // Enum variant declaration
+                enum_variants.push(quote! { #variant_name(#inner_struct_ident)});
+
+                // Token creation
+                enum_selector_builder.push(quote! {
+                    #enum_ident::#variant_name(inner_struct) =>
+                    (#dis, inner_struct.into_token())
+                });
+
+                args.push(quote! {
+                    (#dis, token, _) => {
+                        let variant_content = <#inner_struct_ident>::from_token(token)?;
+                        Ok(#enum_ident::#variant_name(variant_content))
+                        }
+                });
+
+                // This is used to get the correct nested types of the enum
+                param_types.push(quote! { types.push(#inner_struct_ident::param_type())
+                });
+            }
+            // Unit type
+            ParamType::Unit => {
+                // Enum variant declaration
+                enum_variants.push(quote! {#variant_name()});
+                // Token creation
+                enum_selector_builder.push(quote! {
+                    #enum_ident::#variant_name() => (#dis, Token::Unit)
+                });
+                param_types.push(quote! { types.push(ParamType::Unit) });
+                args.push(quote! {(#dis, token, _) => Ok(#enum_ident::#variant_name()),});
+            }
+            // Elementary types, String, Array
+            _ => {
+                let ty = expand_type(&param_type)?;
+
+                let param_type_string_ident_tok = TokenStream::from_str(&param_type.to_string())?;
+                param_types.push(quote! { types.push(ParamType::#param_type_string_ident_tok) });
+
+                let param_type_string = match param_type {
+                    ParamType::Array(..) => "Array".to_string(),
+                    ParamType::String(..) => "String".to_string(),
+                    _ => param_type.to_string(),
+                };
+                let param_type_string_ident = ident(&param_type_string);
+
+                // Enum variant declaration
+                enum_variants.push(quote! { #variant_name(#ty)});
+
+                args.push(
+                    quote! {(#dis, token, _) => Ok(#enum_ident::#variant_name(<#ty>::from_token(token)?)),},
+                );
+
+                // Token creation
+                match param_type {
+                    ParamType::String(len) => {
+                        enum_selector_builder.push(quote! {
+                            #enum_ident::#variant_name(value) => (#dis, Token::#param_type_string_ident(
+                                    StringToken::new(value,  #len)))
+                        });
+                    }
+                    ParamType::Array(_t, _s) => {
+                        enum_selector_builder.push(quote! {
+                            #enum_ident::#variant_name(value) => (#dis, Token::#param_type_string_ident(vec![value.into_token()]))
+                        });
+                    }
+                    // Primitive type
+                    _ => {
+                        enum_selector_builder.push(quote! {
+                            #enum_ident::#variant_name(value) => (#dis, Token::#param_type_string_ident(value))
+                        });
+                    }
+                }
+            }
+        }
+    }
+
+    // Actual creation of the enum, using the inner TokenStreams from above
+    // to produce the TokenStream that represents the whole enum + methods
+    // declaration.
+    Ok(quote! {
+        #[derive(Clone, Debug, Eq, PartialEq)]
+        pub enum #enum_ident {
+            #( #enum_variants ),*
+        }
+
+        impl Parameterize for #enum_ident {
+            fn param_type() -> ParamType {
+                let mut types = Vec::new();
+                #( #param_types; )*
+
+                let variants = EnumVariants::new(types).expect(concat!("Enum ", #enum_name, " has no variants! 'abigen!' should not have succeeded!"));
+
+                ParamType::Enum(variants)
+            }
+        }
+
+        impl Tokenizable for #enum_ident {
+            fn into_token(self) -> Token {
+                let (dis, tok) = match self {
+                    #( #enum_selector_builder, )*
+                };
+
+                let variants = match Self::param_type() {
+                    ParamType::Enum(variants) => variants,
+                    other => panic!("Calling ::param_type() on a custom enum must return a ParamType::Enum but instead it returned: {}", other)
+                };
+
+                let selector = (dis, tok, variants);
+                Token::Enum(Box::new(selector))
+            }
+
+            fn from_token(token: Token)  -> Result<Self, SDKError> {
+                if let Token::Enum(enum_selector) = token {
+                        match *enum_selector {
+                            #( #args )*
+                            (_, _, _) => Err(SDKError::InstantiationError(format!("Could not construct '{}'. Failed to match with discriminant selector {:?}", #enum_name, enum_selector)))
+                        }
+                }
+                else {
+                    Err(SDKError::InstantiationError(format!("Could not construct '{}'. Expected a token of type Token::Enum, got {:?}", #enum_name, token)))
+                }
+            }
+        }
+
+        impl TryFrom<&[u8]> for #enum_ident {
+            type Error = SDKError;
+            fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
+                try_from_bytes(bytes)
+            }
+        }
+
+        impl TryFrom<&Vec<u8>> for #enum_ident {
+            type Error = SDKError;
+            fn try_from(bytes: &Vec<u8>) -> Result<Self, Self::Error> {
+                try_from_bytes(bytes)
+            }
+        }
+
+        impl TryFrom<Vec<u8>> for #enum_ident {
+            type Error = SDKError;
+            fn try_from(bytes: Vec<u8>) -> Result<Self, Self::Error> {
+                try_from_bytes(&bytes)
+            }
+        }
+    })
+}
+
 // A custom type name should be passed to this function as `{struct,enum} $name`,
 // or inside an array, like `[{struct,enum} $name; $length]`.
 // This function extracts the `$name`.
@@ -425,6 +828,58 @@ pub fn extract_custom_type_name_from_abi_property(
     Ok(type_field[1].to_string())
 }
 
+// A custom type name should be passed to this function as `{struct,enum} $name`,
+// or inside an array, like `[{struct,enum} $name; $length]`.
+// This function extracts the `$name`.
+pub fn _new_extract_custom_type_name_from_abi_property(
+    prop: &TypeDeclaration,
+    expected: Option<CustomType>,
+    types: &HashMap<usize, TypeDeclaration>,
+) -> Result<String, Error> {
+    let t = types.get(&prop.type_id).expect("couldn't find type id");
+
+    let type_field = match has_array_format(&t.type_field) {
+        // Check for custom type inside array.
+        true => {
+            if let Some([custom_type_in_array]) = prop.components.as_deref() {
+                let c = types
+                    .get(&custom_type_in_array.type_field)
+                    .expect("couldn't find type id");
+
+                c.type_field.clone()
+            } else {
+                panic!("array should have components");
+            }
+        }
+        // If it's not inside an array, return the `{struct,enum} $name`.
+        false => prop.type_field.clone(),
+    };
+
+    // Split `{struct,enum} $name` into `{struct,enum}` and `$name`.
+    let type_field: Vec<&str> = type_field.split_whitespace().collect();
+
+    if type_field.len() != 2 {
+        return Err(Error::InvalidData(
+            r#"The declared type was not in the format `{enum,struct} name`"#
+                .parse()
+                .unwrap(),
+        ));
+    };
+
+    if let Some(expected_type) = expected {
+        if expected_type.to_string() != type_field[0] {
+            return Err(Error::InvalidType(format!(
+                "Expected {} but {} was declared",
+                expected_type.to_string(),
+                type_field[0]
+            )));
+        }
+    }
+
+    // Return the `$name`.
+    Ok(type_field[1].to_string())
+}
+
 // Doing string -> TokenStream -> string isn't pretty but gives us the opportunity to
 // have a better understanding of the generated code so we consider it ok.
 // To generate the expected examples, output of the functions were taken
@@ -436,6 +891,7 @@ pub fn extract_custom_type_name_from_abi_property(
 mod tests {
     use super::*;
     use anyhow::anyhow;
+    use fuels_types::ProgramABI;
     use std::str::FromStr;
 
     #[test]
@@ -729,6 +1185,181 @@ mod tests {
         )?.to_string();
 
         assert_eq!(actual, expected);
+        Ok(())
+    }
+
+    #[test]
+    fn test_expand_struct_new_abi() -> Result<(), Error> {
+        let s = r#"
+        {
+            "types": [
+              {
+                "typeId": 6,
+                "type": "u64",
+                "components": null,
+                "typeParameters": null
+              },
+              {
+                "typeId": 8,
+                "type": "b256",
+                "components": null,
+                "typeParameters": null
+              },
+              {
+                "typeId": 6,
+                "type": "u64",
+                "components": null,
+                "typeParameters": null
+              },
+              {
+                "typeId": 8,
+                "type": "b256",
+                "components": null,
+                "typeParameters": null
+              },
+              {
+                "typeId": 10,
+                "type": "bool",
+                "components": null,
+                "typeParameters": null
+              },
+              {
+                "typeId": 12,
+                "type": "struct MyStruct1",
+                "components": [
+                  {
+                    "name": "x",
+                    "type": 6,
+                    "typeArguments": null
+                  },
+                  {
+                    "name": "y",
+                    "type": 8,
+                    "typeArguments": null
+                  }
+                ],
+                "typeParameters": null
+              },
+              {
+                "typeId": 6,
+                "type": "u64",
+                "components": null,
+                "typeParameters": null
+              },
+              {
+                "typeId": 8,
+                "type": "b256",
+                "components": null,
+                "typeParameters": null
+              },
+              {
+                "typeId": 2,
+                "type": "struct MyStruct1",
+                "components": [
+                  {
+                    "name": "x",
+                    "type": 6,
+                    "typeArguments": null
+                  },
+                  {
+                    "name": "y",
+                    "type": 8,
+                    "typeArguments": null
+                  }
+                ],
+                "typeParameters": null
+              },
+              {
+                "typeId": 3,
+                "type": "struct MyStruct2",
+                "components": [
+                  {
+                    "name": "x",
+                    "type": 10,
+                    "typeArguments": null
+                  },
+                  {
+                    "name": "y",
+                    "type": 12,
+                    "typeArguments": []
+                  }
+                ],
+                "typeParameters": null
+              },
+              {
+                "typeId": 26,
+                "type": "struct MyStruct1",
+                "components": [
+                  {
+                    "name": "x",
+                    "type": 6,
+                    "typeArguments": null
+                  },
+                  {
+                    "name": "y",
+                    "type": 8,
+                    "typeArguments": null
+                  }
+                ],
+                "typeParameters": null
+              }
+            ],
+            "functions": [
+              {
+                "type": "function",
+                "inputs": [
+                  {
+                    "name": "s1",
+                    "type": 2,
+                    "typeArguments": []
+                  },
+                  {
+                    "name": "s2",
+                    "type": 3,
+                    "typeArguments": []
+                  }
+                ],
+                "name": "some_abi_funct",
+                "output": {
+                  "name": "",
+                  "type": 26,
+                  "typeArguments": []
+                }
+              }
+            ]
+          }
+"#;
+        let parsed_abi: ProgramABI = serde_json::from_str(s)?;
+        let all_types = parsed_abi
+            .types
+            .into_iter()
+            .map(|t| (t.type_id, t))
+            .collect::<HashMap<usize, TypeDeclaration>>();
+
+        let s1 = all_types.get(&2).unwrap();
+
+        let actual = _new_expand_custom_struct(s1, &all_types)?.to_string();
+
+        let expected = TokenStream::from_str(
+            r#"
+            # [derive (Clone , Debug , Eq , PartialEq)] pub struct MyStruct1 { pub x : u64 , pub y : [u8 ; 32] } impl Parameterize for MyStruct1 { fn param_type () -> ParamType { let mut types = Vec :: new () ; types . push (ParamType :: U64) ; types . push (ParamType :: B256) ; ParamType :: Struct (types) } } impl Tokenizable for MyStruct1 { fn into_token (self) -> Token { let mut tokens = Vec :: new () ; tokens . push (Token :: U64 (self . x)) ; tokens . push (Token :: B256 (self . y)) ; Token :: Struct (tokens) } fn from_token (token : Token) -> Result < Self , SDKError > { match token { Token :: Struct (tokens) => { let mut tokens_iter = tokens . into_iter () ; let mut next_token = move || { tokens_iter . next () . ok_or_else (|| { SDKError :: InstantiationError (format ! ("Ran out of tokens before '{}' has finished construction!" , "MyStruct1")) }) } ; Ok (Self { x : < u64 > :: from_token (next_token () ?) ? , y : < [u8 ; 32] > :: from_token (next_token () ?) ? }) } , other => Err (SDKError :: InstantiationError (format ! ("Error while constructing '{}'. Expected token of type Token::Struct, got {:?}" , "MyStruct1" , other))) , } } } impl TryFrom < & [u8] > for MyStruct1 { type Error = SDKError ; fn try_from (bytes : & [u8]) -> Result < Self , Self :: Error > { try_from_bytes (bytes) } } impl TryFrom < & Vec < u8 >> for MyStruct1 { type Error = SDKError ; fn try_from (bytes : & Vec < u8 >) -> Result < Self , Self :: Error > { try_from_bytes (bytes) } } impl TryFrom < Vec < u8 >> for MyStruct1 { type Error = SDKError ; fn try_from (bytes : Vec < u8 >) -> Result < Self , Self :: Error > { try_from_bytes (& bytes) } }    
+            "#,
+        )?.to_string();
+
+        assert_eq!(actual, expected);
+
+        let s2 = all_types.get(&3).unwrap();
+
+        let actual = _new_expand_custom_struct(s2, &all_types)?.to_string();
+
+        let expected = TokenStream::from_str(
+            r#"
+            # [derive (Clone , Debug , Eq , PartialEq)] pub struct MyStruct2 { pub x : bool , pub y : MyStruct1 } impl Parameterize for MyStruct2 { fn param_type () -> ParamType { let mut types = Vec :: new () ; types . push (ParamType :: Bool) ; types . push (MyStruct1 :: param_type ()) ; ParamType :: Struct (types) } } impl Tokenizable for MyStruct2 { fn into_token (self) -> Token { let mut tokens = Vec :: new () ; tokens . push (Token :: Bool (self . x)) ; tokens . push (self . y . into_token ()) ; Token :: Struct (tokens) } fn from_token (token : Token) -> Result < Self , SDKError > { match token { Token :: Struct (tokens) => { let mut tokens_iter = tokens . into_iter () ; let mut next_token = move || { tokens_iter . next () . ok_or_else (|| { SDKError :: InstantiationError (format ! ("Ran out of tokens before '{}' has finished construction!" , "MyStruct2")) }) } ; Ok (Self { x : < bool > :: from_token (next_token () ?) ? , y : MyStruct1 :: from_token (next_token () ?) ? }) } , other => Err (SDKError :: InstantiationError (format ! ("Error while constructing '{}'. Expected token of type Token::Struct, got {:?}" , "MyStruct2" , other))) , } } } impl TryFrom < & [u8] > for MyStruct2 { type Error = SDKError ; fn try_from (bytes : & [u8]) -> Result < Self , Self :: Error > { try_from_bytes (bytes) } } impl TryFrom < & Vec < u8 >> for MyStruct2 { type Error = SDKError ; fn try_from (bytes : & Vec < u8 >) -> Result < Self , Self :: Error > { try_from_bytes (bytes) } } impl TryFrom < Vec < u8 >> for MyStruct2 { type Error = SDKError ; fn try_from (bytes : Vec < u8 >) -> Result < Self , Self :: Error > { try_from_bytes (& bytes) } }
+            "#,
+        )?.to_string();
+
+        assert_eq!(actual, expected);
+
         Ok(())
     }
 }

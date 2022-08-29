@@ -1,9 +1,9 @@
 pub struct MyContract {
     contract_id: ContractId,
-    wallet: LocalWallet,
+    wallet: WalletUnlocked,
 }
 impl MyContract {
-    pub fn new(contract_id: String, wallet: LocalWallet) -> Self {
+    pub fn new(contract_id: String, wallet: WalletUnlocked) -> Self {
         let contract_id = ContractId::from_str(&contract_id).expect("Invalid contract id");
         Self {
             contract_id,

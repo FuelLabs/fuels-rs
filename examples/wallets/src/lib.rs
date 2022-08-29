@@ -11,7 +11,7 @@ mod tests {
         let (provider, _address) = setup_test_provider(vec![], None).await;
 
         // Create the wallet.
-        let _wallet = LocalWallet::new_random(Some(provider));
+        let _wallet = WalletUnlocked::new_random(Some(provider));
         // ANCHOR_END: create_random_wallet
     }
 
@@ -31,7 +31,7 @@ mod tests {
         )?;
 
         // Create the wallet.
-        let _wallet = LocalWallet::new_from_private_key(secret, Some(provider));
+        let _wallet = WalletUnlocked::new_from_private_key(secret, Some(provider));
         // ANCHOR_END: create_wallet_from_secret_key
         Ok(())
     }
@@ -48,14 +48,14 @@ mod tests {
         let (provider, _address) = setup_test_provider(vec![], None).await;
 
         // Create first account from mnemonic phrase.
-        let _wallet = LocalWallet::new_from_mnemonic_phrase_with_path(
+        let _wallet = WalletUnlocked::new_from_mnemonic_phrase_with_path(
             phrase,
             Some(provider.clone()),
             "m/44'/1179993420'/0'/0/0",
         )?;
 
         // Or with the default derivation path
-        let wallet = LocalWallet::new_from_mnemonic_phrase(phrase, Some(provider))?;
+        let wallet = WalletUnlocked::new_from_mnemonic_phrase(phrase, Some(provider))?;
 
         let expected_address = "fuel17x9kg3k7hqf42396vqenukm4yf59e5k0vj4yunr4mae9zjv9pdjszy098t";
 
@@ -79,11 +79,11 @@ mod tests {
 
         // Create a wallet to be stored in the keystore.
         let (_wallet, uuid) =
-            LocalWallet::new_from_keystore(&dir, &mut rng, password, Some(provider.clone()))?;
+            WalletUnlocked::new_from_keystore(&dir, &mut rng, password, Some(provider.clone()))?;
 
         let path = dir.join(uuid);
 
-        let _recovered_wallet = LocalWallet::load_keystore(&path, password, Some(provider))?;
+        let _recovered_wallet = WalletUnlocked::load_keystore(&path, password, Some(provider))?;
         // ANCHOR_END: create_and_restore_json_wallet
         Ok(())
     }
@@ -102,7 +102,7 @@ mod tests {
         let (provider, _address) = setup_test_provider(vec![], None).await;
 
         // Create first account from mnemonic phrase.
-        let wallet = LocalWallet::new_from_mnemonic_phrase(phrase, Some(provider))?;
+        let wallet = WalletUnlocked::new_from_mnemonic_phrase(phrase, Some(provider))?;
 
         let password = "my_master_password";
 
@@ -214,7 +214,7 @@ mod tests {
         // ANCHOR: multiple_assets_wallet
         // ANCHOR: multiple_assets_coins
         use fuels::prelude::*;
-        let mut wallet = LocalWallet::new_random(None);
+        let mut wallet = WalletUnlocked::new_random(None);
         let num_assets = 5; // 5 different assets
         let coins_per_asset = 10; // Per asset id, 10 coins in the wallet
         let amount_per_coin = 15; // For each coin (UTXO) of the asset, amount of 15
@@ -239,7 +239,7 @@ mod tests {
         use fuels::prelude::*;
         use rand::Fill;
 
-        let mut wallet = LocalWallet::new_random(None);
+        let mut wallet = WalletUnlocked::new_random(None);
         let mut rng = rand::thread_rng();
 
         let asset_base = AssetConfig {

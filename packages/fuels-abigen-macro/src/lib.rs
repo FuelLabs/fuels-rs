@@ -1,4 +1,5 @@
 use fuels_core::code_gen::abigen::Abigen;
+use fuels_core::code_gen::flat_abigen::FlatAbigen;
 use proc_macro::TokenStream;
 use proc_macro2::Span;
 
@@ -11,18 +12,68 @@ use syn::{parse_macro_input, Ident, LitStr, Token};
 pub fn abigen(input: TokenStream) -> TokenStream {
     let args = parse_macro_input!(input as Spanned<ContractArgs>);
 
-    let c = Abigen::new(&args.name, &args.abi).unwrap();
+    // Temporary while we support both JSON ABI formats.
+    // First, we check whether it's an inline JSON string. If not, we assume it's a path.
+    // For both cases, we check if it's the new flat JSON ABI format
+    // or the old one.
+    let is_flat =
+        if args.abi.starts_with('\n') || args.abi.starts_with('{') || args.abi.starts_with('[') {
+            // These keys are only found in the new JSON ABI format.
+            args.abi.contains("types") && args.abi.contains("typeArguments")
+        } else {
+            // This is a file, not an inline JSON.
+            // Check if "flat-abi" is in the file name.
+            args.abi.split('/').last().unwrap().contains("flat-abi")
+        };
 
-    c.expand().unwrap().into()
+    if is_flat {
+        FlatAbigen::new(&args.name, &args.abi)
+            .unwrap()
+            .expand()
+            .unwrap()
+            .into()
+    } else {
+        Abigen::new(&args.name, &args.abi)
+            .unwrap()
+            .expand()
+            .unwrap()
+            .into()
+    }
 }
 
 #[proc_macro]
 pub fn wasm_abigen(input: TokenStream) -> TokenStream {
     let args = parse_macro_input!(input as Spanned<ContractArgs>);
 
-    let c = Abigen::new(&args.name, &args.abi).unwrap().no_std();
+    // Temporary while we support both JSON ABI formats.
+    // First, we check whether it's an inline JSON string. If not, we assume it's a path.
+    // For both cases, we check if it's the new flat JSON ABI format
+    // or the old one.
+    let is_flat =
+        if args.abi.starts_with('\n') || args.abi.starts_with('{') || args.abi.starts_with('[') {
+            // These keys are only found in the new JSON ABI format.
+            args.abi.contains("types") && args.abi.contains("typeArguments")
+        } else {
+            // This is a file, not an inline JSON.
+            // Check if "flat-abi" is in the file name.
+            args.abi.split('/').last().unwrap().contains("flat-abi")
+        };
 
-    c.expand().unwrap().into()
+    if is_flat {
+        FlatAbigen::new(&args.name, &args.abi)
+            .unwrap()
+            .no_std()
+            .expand()
+            .unwrap()
+            .into()
+    } else {
+        Abigen::new(&args.name, &args.abi)
+            .unwrap()
+            .no_std()
+            .expand()
+            .unwrap()
+            .into()
+    }
 }
 
 /// Trait that abstracts functionality for inner data that can be parsed and
