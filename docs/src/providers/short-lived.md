@@ -27,5 +27,5 @@ let wallet = launch_provider_and_get_wallet().await;
 The `fuel-core-lib` is a feature defined in the `fuels` library, allowing us to run a `fuel-core` node without installing the `fuel-core` binary on the local machine. Using the `fuel-core-lib` feature flag entails downloading all the dependencies needed to run the fuel-core node.
 
 ```rust,ignore
-fuels = { version = "0.20.0", features = ["fuel-core-lib"] }
+fuels = { version = "0.21.0", features = ["fuel-core-lib"] }
 ```
