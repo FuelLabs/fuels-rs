@@ -290,21 +290,21 @@ mod tests {
 
         assert!(contains_any(
             &anchor_err_vec,
-            "Missing anchor start for Anchor { line_no: 13, name: \"test_no_anchor_beginning\""
+            "Missing anchor start for Anchor { line_no: 10, name: \"test_no_anchor_beginning\""
         ));
-        assert!(contains_any(&anchor_err_vec, "Couldn't find a matching end anchor for Anchor { line_no: 14, name: \"test_no_anchor_end\""));
-        assert!(contains_any(&anchor_err_vec, "The end of the anchor appears before the beginning. End anchor: Anchor { line_no: 16, name: \"test_end_before_beginning\""));
+        assert!(contains_any(&anchor_err_vec, "Couldn't find a matching end anchor for Anchor { line_no: 12, name: \"test_no_anchor_end\""));
+        assert!(contains_any(&anchor_err_vec, "The end of the anchor appears before the beginning. End anchor: Anchor { line_no: 14, name: \"test_end_before_beginning\""));
 
-        assert!(contains_any(&anchor_err_vec, "Found too many matching anchor ends for anchor: Anchor { line_no: 19, name: \"test_same_name_multiple_time\""));
-        assert!(contains_any(&anchor_err_vec, "Found too many matching anchor ends for anchor: Anchor { line_no: 22, name: \"test_same_name_multiple_time\""));
+        assert!(contains_any(&anchor_err_vec, "Found too many matching anchor ends for anchor: Anchor { line_no: 17, name: \"test_same_name_multiple_time\""));
+        assert!(contains_any(&anchor_err_vec, "Found too many matching anchor ends for anchor: Anchor { line_no: 20, name: \"test_same_name_multiple_time\""));
         // Caused by too many matching anchors
         assert!(contains_any(
             &anchor_err_vec,
-            "Missing anchor start for Anchor { line_no: 20, name: \"test_same_name_multiple_time\""
+            "Missing anchor start for Anchor { line_no: 18, name: \"test_same_name_multiple_time\""
         ));
         assert!(contains_any(
             &anchor_err_vec,
-            "Missing anchor start for Anchor { line_no: 23, name: \"test_same_name_multiple_time\""
+            "Missing anchor start for Anchor { line_no: 21, name: \"test_same_name_multiple_time\""
         ));
 
         let text_mentioning_include =

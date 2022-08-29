@@ -8,6 +8,7 @@
 ///// ANCHOR_END: test_with_more_forward_slashes
 
 // ANCHOR_END: test_no_anchor_beginning
+
 // ANCHOR: test_no_anchor_end
 
 // ANCHOR_END: test_end_before_beginning
