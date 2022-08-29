@@ -47,7 +47,7 @@ mod tests {
         let _contract_instance =
             MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
         // ANCHOR_END: liquidity_deploy
-        //TODO: Enhable test
+        //TODO: Enable test
         // // ANCHOR: liquidity_deposit
         // let deposit_amount = 1_000_000;
         // let call_params = CallParameters::new(Some(deposit_amount), Some(base_asset_id), None);

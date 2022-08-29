@@ -33,6 +33,8 @@
     - [Calling other contracts](./calling-contracts/other-contracts.md)
     - [Multiple contract calls](./calling-contracts/multicalls.md)
     - [Estimating cost](./calling-contracts/cost-estimation.md)
+  - [Predicates](./getting-started/predicates.md)
+    - [Send and spend funds](./predicates/send-spend-predicate.md)
   - [Types](./getting-started/types.md)
     - [Bytes32](./types/bytes32.md)
     - [Address](./types/address.md)

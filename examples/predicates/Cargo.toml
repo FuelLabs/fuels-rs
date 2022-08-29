@@ -1,0 +1,15 @@
+[package]
+name = "fuels-example-predicates"
+version = "0.0.0"
+edition = "2021"
+publish = false
+authors = ["Fuel Labs <contact@fuel.sh>"]
+homepage = "https://fuel.network/"
+license = "Apache-2.0"
+repository = "https://github.com/FuelLabs/fuels-rs"
+description = "Fuel Rust SDK cookbook examples."
+
+[dependencies]
+fuels = { version = "0.20.0", path = "../../packages/fuels" }
+rand = "0.8"
+tokio = { version = "1.10", features = ["full"] }

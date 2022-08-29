@@ -138,6 +138,7 @@ jobs:
           command: install
           args: webassembly-test-runner
 
+      # TODO: Enable WASM tests
       # - name: Test WASM package
       #   if: ${{ matrix.command == 'test' }}
       #   run: |
