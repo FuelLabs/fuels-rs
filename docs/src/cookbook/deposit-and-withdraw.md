@@ -28,9 +28,9 @@ Having launched a provider and created the wallet, we can deploy our contract an
 
 With the preparations out of the way, we can finally deposit to the liquidity pool by calling `deposit()` via the contract instance. Since we have to transfer assets to the contract, we create the appropriate `CallParameters` and chain them to the method call. To receive the minted liquidity pool asset, we have to append a variable output to our contract call.
 
-```rust,ignore
-{{#include ../../../examples/cookbook/src/lib.rs:liquidity_deposit}}
-```
+[//]: # (```rust,ignore)
+[//]: # ({{#include ../../../examples/cookbook/src/lib.rs:liquidity_deposit}})
+[//]: # (```)
 
 As a final demonstration, let's use all our liquidity asset balance to withdraw from the pool and confirm we retrieved the initial amount. For this, we get our liquidity asset balance and supply it to the `withdraw()` call via `CallParameters`.
 

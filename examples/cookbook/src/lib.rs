@@ -58,7 +58,7 @@ mod tests {
         //     .await?;
         // // ANCHOR_END: liquidity_deposit
 
-        // // ANCHOR: liquidity_withdraw
+        // ANCHOR: liquidity_withdraw
         // let lp_asset_id = AssetId::from(*contract_id.hash());
         // let lp_token_balance = wallet.get_asset_balance(&lp_asset_id).await?;
 
