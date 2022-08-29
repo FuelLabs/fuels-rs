@@ -1,3 +1,5 @@
+mod test_anchor_data;
+
 extern crate core;
 
 use anyhow::{anyhow, bail, Error};
@@ -73,7 +75,7 @@ fn validate_includes(
 }
 
 #[allow(dead_code)]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Include {
     anchor_name: String,
     anchor_file: PathBuf,
@@ -178,6 +180,13 @@ struct Anchor {
     file: PathBuf,
 }
 
+#[allow(dead_code)]
+enum TestEnum {
+    Anchor(Vec<Anchor>),
+    Include(Vec<Include>),
+    Errors(Vec<Error>),
+}
+
 fn extract_starts_and_ends(
     text_w_anchors: &str,
 ) -> anyhow::Result<(Vec<Anchor>, Vec<Anchor>), Error> {
@@ -198,8 +207,6 @@ fn extract_starts_and_ends(
             })
             .collect::<Result<Vec<_>, Error>>()
     };
-
-    // \s*([\w_-]+
 
     let begins = apply_regex(Regex::new(
         r"^(.+):(\d+):\s*(?:/{2,}|/\*)\s*ANCHOR\s*:\s*([\w_-]+)\s*(?:\*/)?",
@@ -228,4 +235,101 @@ fn search_for_patterns_in_project(pattern: &str) -> anyhow::Result<String> {
     }
 
     Ok(String::from_utf8(grep_project.stdout)?)
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        extract_starts_and_ends, filter_valid_anchors, parse_includes, validate_includes, TestEnum,
+    };
+    use anyhow::bail;
+
+    fn test_search_for_patterns(pattern: &str, test_file: &str) -> anyhow::Result<String> {
+        let grep = std::process::Command::new("grep")
+            .arg("-I")
+            .arg("-H")
+            .arg("-R")
+            .arg("-n")
+            .arg("--exclude-dir=scripts")
+            .arg(pattern)
+            .arg(test_file)
+            .output()
+            .expect("failed grep command");
+
+        if !grep.status.success() {
+            bail!("Failed running grep command for searching {}", pattern);
+        }
+
+        Ok(String::from_utf8(grep.stdout)?)
+    }
+
+    fn contains_any(vec: &TestEnum, str: &str) -> bool {
+        match vec {
+            TestEnum::Anchor(anchor_vec) => anchor_vec.iter().any(|anchor| anchor.name == str),
+            TestEnum::Include(include_vec) => {
+                include_vec.iter().any(|include| include.anchor_name == str)
+            }
+            TestEnum::Errors(err_vec) => err_vec.iter().any(|err| err.to_string().starts_with(str)),
+        }
+    }
+
+    #[test]
+    fn test_anchors() -> anyhow::Result<()> {
+        let test_data = test_search_for_patterns("ANCHOR", "src/test_anchor_data.rs")?;
+
+        let (starts, ends) = extract_starts_and_ends(&test_data)?;
+        let (valid_anchors, anchor_errors) = filter_valid_anchors(starts, ends);
+
+        let valid_vec = TestEnum::Anchor(valid_anchors.clone());
+        let anchor_err_vec = TestEnum::Errors(anchor_errors);
+
+        assert!(contains_any(&valid_vec, "test_anchor_line_comment"));
+        assert!(contains_any(&valid_vec, "test_anchor_block_comment"));
+        assert!(contains_any(&valid_vec, "test_with_more_forward_slashes"));
+        assert!(!contains_any(&valid_vec, "no_anchor_with_this_name"));
+
+        assert!(contains_any(
+            &anchor_err_vec,
+            "Missing anchor start for Anchor { line_no: 13, name: \"test_no_anchor_beginning\""
+        ));
+        assert!(contains_any(&anchor_err_vec, "Couldn't find a matching end anchor for Anchor { line_no: 14, name: \"test_no_anchor_end\""));
+        assert!(contains_any(&anchor_err_vec, "The end of the anchor appears before the beginning. End anchor: Anchor { line_no: 16, name: \"test_end_before_beginning\""));
+
+        assert!(contains_any(&anchor_err_vec, "Found too many matching anchor ends for anchor: Anchor { line_no: 19, name: \"test_same_name_multiple_time\""));
+        assert!(contains_any(&anchor_err_vec, "Found too many matching anchor ends for anchor: Anchor { line_no: 22, name: \"test_same_name_multiple_time\""));
+        // Caused by too many matching anchors
+        assert!(contains_any(
+            &anchor_err_vec,
+            "Missing anchor start for Anchor { line_no: 20, name: \"test_same_name_multiple_time\""
+        ));
+        assert!(contains_any(
+            &anchor_err_vec,
+            "Missing anchor start for Anchor { line_no: 23, name: \"test_same_name_multiple_time\""
+        ));
+
+        let text_mentioning_include =
+            test_search_for_patterns("{{#include", "src/test_include_data.md")?;
+
+        let includes = parse_includes(text_mentioning_include)?;
+
+        let includes_vec = TestEnum::Include(includes.clone());
+
+        assert!(contains_any(&includes_vec, "test_anchor_line_comment"));
+        assert!(contains_any(&includes_vec, "test_anchor_block_comment"));
+        assert!(contains_any(
+            &includes_vec,
+            "test_with_more_forward_slashes"
+        ));
+
+        let (include_errors, _) = validate_includes(includes, valid_anchors);
+
+        let include_err_vec = TestEnum::Errors(include_errors);
+
+        assert!(contains_any(
+            &include_err_vec,
+            "No anchor available to satisfy include Include { anchor_name: \"no_existing_anchor\""
+        ));
+
+        Ok(())
+    }
 }
