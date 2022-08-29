@@ -3358,7 +3358,7 @@ async fn contract_call_fee_estimation() -> Result<(), Error> {
         .initialize_counter(42) // Build the ABI call
         .tx_params(TxParameters::new(
             Some(10_000),
-            Some(500),
+            Some(800),
             Some(10_000),
             None,
         ))
