@@ -94,7 +94,7 @@ mod tests {
         // ANCHOR_END: custom_chain_consensus
 
         // ANCHOR: custom_chain_coins
-        let wallet = LocalWallet::new_random(None);
+        let wallet = WalletUnlocked::new_random(None);
         let coins = setup_single_asset_coins(
             wallet.address(),
             Default::default(),
@@ -119,8 +119,8 @@ mod tests {
         use std::str::FromStr;
 
         // ANCHOR: transfer_multiple_setup
-        let mut wallet_1 = LocalWallet::new_random(None);
-        let mut wallet_2 = LocalWallet::new_random(None);
+        let mut wallet_1 = WalletUnlocked::new_random(None);
+        let mut wallet_2 = WalletUnlocked::new_random(None);
 
         const NUM_ASSETS: u64 = 5;
         const AMOUNT: u64 = 100_000;
