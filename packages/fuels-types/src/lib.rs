@@ -130,7 +130,7 @@ pub struct TypeApplication {
     pub name: String,
     #[serde(rename = "type")]
     pub type_field: usize,
-    pub type_arguments: Option<Vec<usize>>,
+    pub type_arguments: Option<Vec<TypeApplication>>,
 }
 
 impl TypeDeclaration {

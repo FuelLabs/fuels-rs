@@ -165,7 +165,7 @@ impl Contract {
     // boolean, then the data itself should be passed. Otherwise, it
     // should simply pass a pointer to the data in memory. For more
     // information, see https://github.com/FuelLabs/sway/issues/1368.
-    fn should_compute_custom_input_offset(args: &[Token]) -> bool {
+    pub fn should_compute_custom_input_offset(args: &[Token]) -> bool {
         args.len() > 1
             || args.iter().any(|t| {
                 matches!(

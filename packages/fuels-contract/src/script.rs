@@ -20,10 +20,10 @@ use std::iter;
 
 use crate::contract::ContractCall;
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 /// Specifies offsets of Opcode::CALL parameters stored in the script
 /// data from which they can be loaded into registers
-struct CallParamOffsets {
+pub struct CallParamOffsets {
     pub asset_id_offset: usize,
     pub amount_offset: usize,
     pub gas_forwarded_offset: usize,
@@ -84,7 +84,7 @@ impl Script {
 
     /// Calculates how much of each asset id the given calls require and
     /// proceeds to request spendable coins from `wallet` to cover that cost.
-    async fn get_spendable_coins(
+    pub async fn get_spendable_coins(
         wallet: &LocalWallet,
         calls: &[ContractCall],
     ) -> Result<Vec<Coin>, Error> {
@@ -130,7 +130,7 @@ impl Script {
     }
 
     /// Given a list of contract calls, create the actual opcodes used to call the contract
-    fn get_instructions(calls: &[ContractCall], offsets: Vec<CallParamOffsets>) -> Vec<u8> {
+    pub fn get_instructions(calls: &[ContractCall], offsets: Vec<CallParamOffsets>) -> Vec<u8> {
         let num_calls = calls.len();
 
         let mut instructions = vec![];
@@ -151,7 +151,7 @@ impl Script {
     /// 5. Function selector (1 * WORD_SIZE);
     /// 6. Calldata offset (optional) (1 * WORD_SIZE)
     /// 7. Encoded arguments (optional) (variable length)
-    fn get_script_data(
+    pub fn get_script_data(
         calls: &[ContractCall],
         data_offset: usize,
     ) -> (Vec<u8>, Vec<CallParamOffsets>) {
@@ -232,7 +232,7 @@ impl Script {
 
     /// Returns the assets and contracts that will be consumed (inputs) and created (outputs)
     /// by the transaction
-    fn get_transaction_inputs_outputs(
+    pub fn get_transaction_inputs_outputs(
         calls: &[ContractCall],
         wallet_address: &Bech32Address,
         spendable_coins: Vec<Coin>,
@@ -337,7 +337,7 @@ impl Script {
 
     /// Calculates the length of the script based on the number of contract calls it
     /// has to make and returns the offset at which the script data begins
-    fn get_data_offset(num_calls: usize) -> usize {
+    pub fn get_data_offset(num_calls: usize) -> usize {
         // use placeholder for call param offsets, we only care about the length
         let mut len_script =
             Script::get_single_call_instructions(&CallParamOffsets::default()).len() * num_calls;
