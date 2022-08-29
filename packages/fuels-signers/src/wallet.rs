@@ -6,7 +6,10 @@ use eth_keystore::KeystoreError;
 use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
 use fuel_gql_client::{
     client::{schema::coin::Coin, types::TransactionResponse, PaginatedResult, PaginationRequest},
-    fuel_tx::{AssetId, Bytes32, ContractId, Input, Output, Receipt, Transaction, UtxoId, Witness},
+    fuel_tx::{
+        AssetId, Bytes32, ContractId, Input, Output, Receipt, Transaction, TxPointer, UtxoId,
+        Witness,
+    },
 };
 use fuels_core::parameters::TxParameters;
 use fuels_types::bech32::{Bech32Address, Bech32ContractId, FUEL_BECH32_HRP};
@@ -149,6 +152,7 @@ impl Wallet {
                 coin.owner.into(),
                 coin.amount.0,
                 asset_id,
+                TxPointer::default(),
                 witness_index,
                 0,
             );
@@ -441,6 +445,7 @@ impl WalletUnlocked {
             UtxoId::new(zeroes, 0),
             zeroes,
             zeroes,
+            TxPointer::default(),
             plain_contract_id,
         )];
         inputs.extend(

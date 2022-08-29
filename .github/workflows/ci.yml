@@ -16,7 +16,7 @@ env:
   CARGO_TERM_COLOR: always
   DASEL_VERSION: https://github.com/TomWright/dasel/releases/download/v1.24.3/dasel_linux_amd64
   RUSTFLAGS: "-D warnings"
-  FUEL_CORE_VERSION: 0.9.6
+  FUEL_CORE_VERSION: 0.10.1
   RUST_VERSION: 1.61.0
   FORC_VERSION: 0.20.2
 
@@ -138,12 +138,13 @@ jobs:
           command: install
           args: webassembly-test-runner
 
-      - name: Test WASM package
-        if: ${{ matrix.command == 'test' }}
-        run: |
-          cd packages/wasm-tests
-          cargo test --target wasm32-unknown-unknown --all-targets --all-features
-          cargo test --target wasm32-unknown-unknown --all-targets --no-default-features
+      # TODO: Enable WASM tests
+      # - name: Test WASM package
+      #   if: ${{ matrix.command == 'test' }}
+      #   run: |
+      #     cd packages/wasm-tests
+      #     cargo test --target wasm32-unknown-unknown --all-targets --all-features
+      #     cargo test --target wasm32-unknown-unknown --all-targets --no-default-features
 
       - name: Install Fuel Core
         if: ${{ matrix.command == 'test' }}

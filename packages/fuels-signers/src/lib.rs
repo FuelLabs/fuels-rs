@@ -38,7 +38,7 @@ mod tests {
     use fuels_core::constants::BASE_ASSET_ID;
     use fuels_core::{
         parameters::TxParameters,
-        tx::{Address, AssetId, Bytes32, Input, Output, UtxoId},
+        tx::{Address, AssetId, Bytes32, Input, Output, TxPointer, UtxoId},
     };
     use fuels_test_helpers::{setup_single_asset_coins, setup_test_client};
     use rand::{rngs::StdRng, RngCore, SeedableRng};
@@ -96,6 +96,7 @@ mod tests {
             )?,
             10000000,
             AssetId::from([0u8; 32]),
+            TxPointer::default(),
             0,
             0,
         );
@@ -112,7 +113,6 @@ mod tests {
             0,
             1000000,
             0,
-            0,
             hex::decode("24400000")?,
             vec![],
             vec![input_coin],
@@ -125,7 +125,7 @@ mod tests {
         let message = unsafe { Message::from_bytes_unchecked(*tx.id()) };
 
         // Check if signature is what we expect it to be
-        assert_eq!(signature, Signature::from_str("a1287a24af13fc102cb9e60988b558d5575d7870032f64bafcc2deda2c99125fb25eca55a29a169de156cb30700965e2b26278fcc7ad375bc720440ea50ba3cb")?);
+        assert_eq!(signature, Signature::from_str("34482a581d1fe01ba84900581f5321a8b7d4ec65c3e7ca0de318ff8fcf45eb2c793c4b99e96400673e24b81b7aa47f042cad658f05a84e2f96f365eb0ce5a511")?);
 
         // Recover address that signed the transaction
         let recovered_address = signature.recover(&message)?;
@@ -166,13 +166,11 @@ mod tests {
         // Configure transaction parameters.
         let gas_price = 1;
         let gas_limit = 500_000;
-        let byte_price = 1;
         let maturity = 0;
 
         let tx_params = TxParameters {
             gas_price,
             gas_limit,
-            byte_price,
             maturity,
         };
 
@@ -187,7 +185,6 @@ mod tests {
             .get_transaction_by_id(&tx_id)
             .await?;
 
-        assert_eq!(res.transaction.byte_price(), byte_price);
         assert_eq!(res.transaction.gas_limit(), gas_limit);
         assert_eq!(res.transaction.gas_price(), gas_price);
         assert_eq!(res.transaction.maturity(), maturity);

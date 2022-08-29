@@ -1,6 +1,6 @@
 use anyhow::Result;
 use fuel_gql_client::fuel_tx::{ConsensusParameters, Receipt, Transaction};
-use fuel_gql_client::fuel_tx::{Input, Output, UtxoId};
+use fuel_gql_client::fuel_tx::{Input, Output, TxPointer, UtxoId};
 use fuel_gql_client::fuel_types::{
     bytes::padded_len_usize, AssetId, Bytes32, ContractId, Immediate18, Word,
 };
@@ -69,7 +69,6 @@ impl Script {
         let mut tx = Transaction::script(
             tx_parameters.gas_price,
             tx_parameters.gas_limit,
-            tx_parameters.byte_price,
             tx_parameters.maturity,
             script,
             script_data,
@@ -301,6 +300,7 @@ impl Script {
                     coin.owner.into(),
                     coin.amount.0,
                     coin.asset_id.into(),
+                    TxPointer::default(),
                     0,
                     0,
                 )
@@ -317,6 +317,7 @@ impl Script {
                     UtxoId::new(Bytes32::zeroed(), idx as u8),
                     Bytes32::zeroed(),
                     Bytes32::zeroed(),
+                    TxPointer::default(),
                     contract_id,
                 )
             })
@@ -497,6 +498,7 @@ mod test {
                 UtxoId::new(Bytes32::zeroed(), 0),
                 Bytes32::zeroed(),
                 Bytes32::zeroed(),
+                TxPointer::default(),
                 call.contract_id.into(),
             )]
         );
@@ -522,6 +524,7 @@ mod test {
                 UtxoId::new(Bytes32::zeroed(), 0),
                 Bytes32::zeroed(),
                 Bytes32::zeroed(),
+                TxPointer::default(),
                 calls[0].contract_id.clone().into(),
             )]
         );
@@ -567,11 +570,13 @@ mod test {
                     utxo_id,
                     balance_root,
                     state_root,
+                    tx_pointer,
                     contract_id,
                 } => {
                     assert_eq!(utxo_id, UtxoId::new(Bytes32::zeroed(), index as u8));
                     assert_eq!(balance_root, Bytes32::zeroed());
                     assert_eq!(state_root, Bytes32::zeroed());
+                    assert_eq!(tx_pointer, TxPointer::default());
                     assert!(expected_contract_ids.contains(&contract_id));
                     expected_contract_ids.remove(&contract_id);
                 }
@@ -683,6 +688,7 @@ mod test {
                     coin.owner.into(),
                     coin.amount.0,
                     coin.asset_id.into(),
+                    TxPointer::default(),
                     0,
                     0,
                 )

@@ -124,7 +124,7 @@ pub struct TypeDeclaration {
     pub type_parameters: Option<Vec<usize>>,
 }
 
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TypeApplication {
     pub name: String,

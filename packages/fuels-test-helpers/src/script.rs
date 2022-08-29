@@ -43,7 +43,6 @@ fn get_script(script_binary: Vec<u8>) -> Script {
         gas_price: 0,
         gas_limit: 1000000,
         maturity: 0,
-        byte_price: 0,
         receipts_root: Default::default(),
         script: script_binary, // Pass the compiled script into the tx
         script_data: vec![],
