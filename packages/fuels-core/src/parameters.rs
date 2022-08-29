@@ -1,6 +1,5 @@
 use crate::constants::{
-    BASE_ASSET_ID, DEFAULT_BYTE_PRICE, DEFAULT_FORWARDED_GAS, DEFAULT_GAS_LIMIT, DEFAULT_GAS_PRICE,
-    DEFAULT_MATURITY,
+    BASE_ASSET_ID, DEFAULT_FORWARDED_GAS, DEFAULT_GAS_LIMIT, DEFAULT_GAS_PRICE, DEFAULT_MATURITY,
 };
 use fuel_tx::{AssetId, StorageSlot};
 
@@ -8,7 +7,6 @@ use fuel_tx::{AssetId, StorageSlot};
 pub struct TxParameters {
     pub gas_price: u64,
     pub gas_limit: u64,
-    pub byte_price: u64,
     pub maturity: u64,
 }
 
@@ -44,7 +42,6 @@ impl Default for TxParameters {
         Self {
             gas_price: DEFAULT_GAS_PRICE,
             gas_limit: DEFAULT_GAS_LIMIT,
-            byte_price: DEFAULT_BYTE_PRICE,
             // By default, transaction is immediately valid
             maturity: DEFAULT_MATURITY,
         }
@@ -52,16 +49,10 @@ impl Default for TxParameters {
 }
 
 impl TxParameters {
-    pub fn new(
-        gas_price: Option<u64>,
-        gas_limit: Option<u64>,
-        byte_price: Option<u64>,
-        maturity: Option<u64>,
-    ) -> Self {
+    pub fn new(gas_price: Option<u64>, gas_limit: Option<u64>, maturity: Option<u64>) -> Self {
         Self {
             gas_price: gas_price.unwrap_or(DEFAULT_GAS_PRICE),
             gas_limit: gas_limit.unwrap_or(DEFAULT_GAS_LIMIT),
-            byte_price: byte_price.unwrap_or(DEFAULT_BYTE_PRICE),
             maturity: maturity.unwrap_or(DEFAULT_MATURITY),
         }
     }

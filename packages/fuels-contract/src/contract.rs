@@ -319,8 +319,6 @@ impl Contract {
         let storage_slots: Vec<StorageSlot> = compiled_contract.storage_slots.clone();
         let witnesses = vec![compiled_contract.raw.clone().into()];
 
-        let static_contracts = vec![];
-
         let (contract_id, state_root) = Self::compute_contract_id_and_state_root(compiled_contract);
 
         let outputs: Vec<Output> = vec![
@@ -347,11 +345,9 @@ impl Contract {
         let tx = Transaction::create(
             params.gas_price,
             params.gas_limit,
-            params.byte_price,
             params.maturity,
             bytecode_witness_index,
             compiled_contract.salt,
-            static_contracts,
             storage_slots,
             inputs,
             outputs,
@@ -458,7 +454,7 @@ where
 
     /// Sets the transaction parameters for a given transaction.
     /// Note that this is a builder method, i.e. use it as a chain:
-    /// let params = TxParameters { gas_price: 100, gas_limit: 1000000, byte_price: 100 };
+    /// let params = TxParameters { gas_price: 100, gas_limit: 1000000 };
     /// `my_contract_instance.my_method(...).tx_params(params).call()`.
     pub fn tx_params(mut self, params: TxParameters) -> Self {
         self.tx_parameters = params;

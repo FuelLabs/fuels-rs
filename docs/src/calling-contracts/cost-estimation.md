@@ -7,10 +7,9 @@ With with the function `estimate_transaction_cost(tolerance: Option<f64>)` provi
 TransactionCost {
     min_gas_price: u64,
     min_byte_price: u64,
-    byte_price: u64,
     gas_price: u64,
     gas_used: u64,
-    byte_size: u64,
+    metered_bytes_size: u64,
     total_fee: f64, // where total_fee is the sum of the gas and byte fees
 }
 ```
