@@ -570,7 +570,6 @@ impl Provider {
         tolerance: f64,
     ) -> Result<u64, ProviderError> {
         let gas_used = self.get_gas_used(&self.dry_run_no_validation(tx).await?);
-        dbg!(gas_used);
         Ok((gas_used as f64 * (1.0 + tolerance)) as u64)
     }
 
