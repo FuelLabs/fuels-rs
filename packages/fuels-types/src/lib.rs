@@ -99,14 +99,14 @@ pub enum CustomType {
 // `JsonABI` around, but eventually we'll want to remove the old one.
 
 /// Flat JSON ABI
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ProgramABI {
     pub types: Vec<TypeDeclaration>,
     pub functions: Vec<ABIFunction>,
 }
 
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ABIFunction {
     pub inputs: Vec<TypeApplication>,
@@ -114,7 +114,7 @@ pub struct ABIFunction {
     pub output: TypeApplication,
 }
 
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TypeDeclaration {
     pub type_id: usize,
@@ -124,7 +124,7 @@ pub struct TypeDeclaration {
     pub type_parameters: Option<Vec<usize>>,
 }
 
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TypeApplication {
     pub name: String,
