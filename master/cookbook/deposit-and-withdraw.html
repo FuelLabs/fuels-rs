@@ -216,33 +216,33 @@ impl LiquidityPool for Contract {
         )
         .await?;
 
-        let contract_instance =
+        let _contract_instance =
             MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
 </code></pre>
 <p>With the preparations out of the way, we can finally deposit to the liquidity pool by calling <code>deposit()</code> via the contract instance. Since we have to transfer assets to the contract, we create the appropriate <code>CallParameters</code> and chain them to the method call. To receive the minted liquidity pool asset, we have to append a variable output to our contract call.</p>
-<pre><code class="language-rust ignore">        let deposit_amount = 1_000_000;
-        let call_params = CallParameters::new(Some(deposit_amount), Some(base_asset_id), None);
-        contract_instance
-            .deposit(wallet.address().into())
-            .call_params(call_params)
-            .append_variable_outputs(1)
-            .call()
-            .await?;
+<pre><code class="language-rust ignore">        // let deposit_amount = 1_000_000;
+        // let call_params = CallParameters::new(Some(deposit_amount), Some(base_asset_id), None);
+        // contract_instance
+        //     .deposit(wallet.address().into())
+        //     .call_params(call_params)
+        //     .append_variable_outputs(1)
+        //     .call()
+        //     .await?;
 </code></pre>
 <p>As a final demonstration, let's use all our liquidity asset balance to withdraw from the pool and confirm we retrieved the initial amount. For this, we get our liquidity asset balance and supply it to the <code>withdraw()</code> call via <code>CallParameters</code>.</p>
-<pre><code class="language-rust ignore">        let lp_asset_id = AssetId::from(*contract_id.hash());
-        let lp_token_balance = wallet.get_asset_balance(&amp;lp_asset_id).await?;
+<pre><code class="language-rust ignore">        // let lp_asset_id = AssetId::from(*contract_id.hash());
+        // let lp_token_balance = wallet.get_asset_balance(&amp;lp_asset_id).await?;
 
-        let call_params = CallParameters::new(Some(lp_token_balance), Some(lp_asset_id), None);
-        contract_instance
-            .withdraw(wallet.address().into())
-            .call_params(call_params)
-            .append_variable_outputs(1)
-            .call()
-            .await?;
+        // let call_params = CallParameters::new(Some(lp_token_balance), Some(lp_asset_id), None);
+        // contract_instance
+        //     .withdraw(wallet.address().into())
+        //     .call_params(call_params)
+        //     .append_variable_outputs(1)
+        //     .call()
+        //     .await?;
 
-        let base_balance = wallet.get_asset_balance(&amp;base_asset_id).await?;
-        assert_eq!(base_balance, deposit_amount);
+        // let base_balance = wallet.get_asset_balance(&amp;base_asset_id).await?;
+        // assert_eq!(base_balance, deposit_amount);
 </code></pre>
 
                     </main>

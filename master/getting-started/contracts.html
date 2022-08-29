@@ -164,7 +164,6 @@
         // Optional: Configure deployment parameters or use `TxParameters::default()`
         let gas_price = 0;
         let gas_limit = 1_000_000;
-        let byte_price = 0;
         let maturity = 0;
 
         // This will deploy your contract binary onto the chain so that its ID can
@@ -173,12 +172,7 @@
             // This path is relative to the current crate (examples/contracts)
             &quot;../../packages/fuels/tests/test_projects/contract_test/out/debug/contract_test.bin&quot;,
             &amp;wallet,
-            TxParameters::new(
-                Some(gas_price),
-                Some(gas_limit),
-                Some(byte_price),
-                Some(maturity),
-            ),
+            TxParameters::new(Some(gas_price), Some(gas_limit), Some(maturity)),
             StorageConfiguration::default(),
         )
         .await?;

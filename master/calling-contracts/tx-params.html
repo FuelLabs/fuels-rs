@@ -146,8 +146,8 @@
 <li>Maturity.</li>
 </ol>
 <p>You can configure these parameters by creating an instance of <a href="https://github.com/FuelLabs/fuels-rs/blob/adf81bd451d7637ce0976363bd7784408430031a/packages/fuels-contract/src/parameters.rs#L7"><code>TxParameters</code></a> and passing it to a chain method called <code>tx_params</code>:</p>
-<pre><code class="language-rust ignore">        // In order: gas_price, gas_limit, byte_price, and maturity
-        let my_tx_params = TxParameters::new(None, Some(1_000_000), None, None);
+<pre><code class="language-rust ignore">        // In order: gas_price, gas_limit, and maturity
+        let my_tx_params = TxParameters::new(None, Some(1_000_000), None);
 
         let response = contract_instance
             .initialize_counter(42) // Our contract method.
@@ -159,7 +159,6 @@
 <p>You can also use <code>TxParameters::default()</code> to use the default values:</p>
 <pre><code class="language-rust ignore">pub const DEFAULT_GAS_LIMIT: u64 = 1_000_000;
 pub const DEFAULT_GAS_PRICE: u64 = 0;
-pub const DEFAULT_BYTE_PRICE: u64 = 0;
 pub const DEFAULT_MATURITY: u64 = 0;
 </code></pre>
 <p>This way:</p>

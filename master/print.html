@@ -617,6 +617,7 @@ coins and coin amount</p>
             )?,
             10000000,
             AssetId::from([0u8; 32]),
+            TxPointer::default(),
             0,
             0,
         );
@@ -633,7 +634,6 @@ coins and coin amount</p>
             0,
             1000000,
             0,
-            0,
             hex::decode(&quot;24400000&quot;)?,
             vec![],
             vec![input_coin],
@@ -646,7 +646,7 @@ coins and coin amount</p>
         let message = unsafe { Message::from_bytes_unchecked(*tx.id()) };
 
         // Check if signature is what we expect it to be
-        assert_eq!(signature, Signature::from_str(&quot;a1287a24af13fc102cb9e60988b558d5575d7870032f64bafcc2deda2c99125fb25eca55a29a169de156cb30700965e2b26278fcc7ad375bc720440ea50ba3cb&quot;)?);
+        assert_eq!(signature, Signature::from_str(&quot;34482a581d1fe01ba84900581f5321a8b7d4ec65c3e7ca0de318ff8fcf45eb2c793c4b99e96400673e24b81b7aa47f042cad658f05a84e2f96f365eb0ce5a511&quot;)?);
 
         // Recover address that signed the transaction
         let recovered_address = signature.recover(&amp;message)?;
@@ -733,7 +733,6 @@ coins and coin amount</p>
         // Optional: Configure deployment parameters or use `TxParameters::default()`
         let gas_price = 0;
         let gas_limit = 1_000_000;
-        let byte_price = 0;
         let maturity = 0;
 
         // This will deploy your contract binary onto the chain so that its ID can
@@ -742,12 +741,7 @@ coins and coin amount</p>
             // This path is relative to the current crate (examples/contracts)
             &quot;../../packages/fuels/tests/test_projects/contract_test/out/debug/contract_test.bin&quot;,
             &amp;wallet,
-            TxParameters::new(
-                Some(gas_price),
-                Some(gas_limit),
-                Some(byte_price),
-                Some(maturity),
-            ),
+            TxParameters::new(Some(gas_price), Some(gas_limit), Some(maturity)),
             StorageConfiguration::default(),
         )
         .await?;
@@ -1098,8 +1092,8 @@ impl MyContract {
 <li>Maturity.</li>
 </ol>
 <p>You can configure these parameters by creating an instance of <a href="https://github.com/FuelLabs/fuels-rs/blob/adf81bd451d7637ce0976363bd7784408430031a/packages/fuels-contract/src/parameters.rs#L7"><code>TxParameters</code></a> and passing it to a chain method called <code>tx_params</code>:</p>
-<pre><code class="language-rust ignore">        // In order: gas_price, gas_limit, byte_price, and maturity
-        let my_tx_params = TxParameters::new(None, Some(1_000_000), None, None);
+<pre><code class="language-rust ignore">        // In order: gas_price, gas_limit, and maturity
+        let my_tx_params = TxParameters::new(None, Some(1_000_000), None);
 
         let response = contract_instance
             .initialize_counter(42) // Our contract method.
@@ -1111,7 +1105,6 @@ impl MyContract {
 <p>You can also use <code>TxParameters::default()</code> to use the default values:</p>
 <pre><code class="language-rust ignore">pub const DEFAULT_GAS_LIMIT: u64 = 1_000_000;
 pub const DEFAULT_GAS_PRICE: u64 = 0;
-pub const DEFAULT_BYTE_PRICE: u64 = 0;
 pub const DEFAULT_MATURITY: u64 = 0;
 </code></pre>
 <p>This way:</p>
@@ -1170,7 +1163,7 @@ pub const BASE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
 <pre><code class="language-rust ignore">        // Set the transaction `gas_limit` to 1000 and `gas_forwarded` to 200 to specify that the
         // contract call transaction may consume up to 1000 gas, while the actual call may only use 200
         // gas
-        let tx_params = TxParameters::new(None, Some(1000), None, None);
+        let tx_params = TxParameters::new(None, Some(1000), None);
         let call_params = CallParameters::new(None, None, Some(200));
 
         let response = contract_instance
@@ -1211,14 +1204,15 @@ pub const BASE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
     }
 </code></pre>
 <p>With the SDK, you can call <code>transfer_coins_to_output</code> by chaining <code>append_variable_outputs(amount)</code> to your contract call. Like this:</p>
-<pre><code class="language-rust ignore">        let address = wallet.address();
+<pre><code class="language-rust ignore">        // TODO: Enable test
+        // let address = wallet.address();
 
         // withdraw some tokens to wallet
-        let response = contract_instance
-            .transfer_coins_to_output(1_000_000, contract_id.into(), address.into())
-            .append_variable_outputs(1)
-            .call()
-            .await?;
+        // let response = contract_instance
+        //     .transfer_coins_to_output(1_000_000, contract_id.into(), address.into())
+        //     .append_variable_outputs(1)
+        //     .call()
+        //     .await?;
 </code></pre>
 <p><code>append_variable_outputs</code> effectively appends a given amount of <code>Output::Variable</code>s to the transaction's list of outputs. This output type indicates that the output's amount and the owner may vary based on transaction execution.</p>
 <p>Note that the Sway <code>lib-std</code> function <code>mint_to_address</code> calls <code>transfer_to_output</code> under the hood, so you need to call <code>append_variable_outputs</code> in the Rust SDK tests like you would for <code>transfer_to_output</code>.</p>
@@ -1270,10 +1264,9 @@ pub const BASE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
 <pre><code class="language-rust ignore">TransactionCost {
     min_gas_price: u64,
     min_byte_price: u64,
-    byte_price: u64,
     gas_price: u64,
     gas_used: u64,
-    byte_size: u64,
+    metered_bytes_size: u64,
     total_fee: f64, // where total_fee is the sum of the gas and byte fees
 }
 </code></pre>
@@ -1817,33 +1810,33 @@ impl LiquidityPool for Contract {
         )
         .await?;
 
-        let contract_instance =
+        let _contract_instance =
             MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
 </code></pre>
 <p>With the preparations out of the way, we can finally deposit to the liquidity pool by calling <code>deposit()</code> via the contract instance. Since we have to transfer assets to the contract, we create the appropriate <code>CallParameters</code> and chain them to the method call. To receive the minted liquidity pool asset, we have to append a variable output to our contract call.</p>
-<pre><code class="language-rust ignore">        let deposit_amount = 1_000_000;
-        let call_params = CallParameters::new(Some(deposit_amount), Some(base_asset_id), None);
-        contract_instance
-            .deposit(wallet.address().into())
-            .call_params(call_params)
-            .append_variable_outputs(1)
-            .call()
-            .await?;
+<pre><code class="language-rust ignore">        // let deposit_amount = 1_000_000;
+        // let call_params = CallParameters::new(Some(deposit_amount), Some(base_asset_id), None);
+        // contract_instance
+        //     .deposit(wallet.address().into())
+        //     .call_params(call_params)
+        //     .append_variable_outputs(1)
+        //     .call()
+        //     .await?;
 </code></pre>
 <p>As a final demonstration, let's use all our liquidity asset balance to withdraw from the pool and confirm we retrieved the initial amount. For this, we get our liquidity asset balance and supply it to the <code>withdraw()</code> call via <code>CallParameters</code>.</p>
-<pre><code class="language-rust ignore">        let lp_asset_id = AssetId::from(*contract_id.hash());
-        let lp_token_balance = wallet.get_asset_balance(&amp;lp_asset_id).await?;
+<pre><code class="language-rust ignore">        // let lp_asset_id = AssetId::from(*contract_id.hash());
+        // let lp_token_balance = wallet.get_asset_balance(&amp;lp_asset_id).await?;
 
-        let call_params = CallParameters::new(Some(lp_token_balance), Some(lp_asset_id), None);
-        contract_instance
-            .withdraw(wallet.address().into())
-            .call_params(call_params)
-            .append_variable_outputs(1)
-            .call()
-            .await?;
+        // let call_params = CallParameters::new(Some(lp_token_balance), Some(lp_asset_id), None);
+        // contract_instance
+        //     .withdraw(wallet.address().into())
+        //     .call_params(call_params)
+        //     .append_variable_outputs(1)
+        //     .call()
+        //     .await?;
 
-        let base_balance = wallet.get_asset_balance(&amp;base_asset_id).await?;
-        assert_eq!(base_balance, deposit_amount);
+        // let base_balance = wallet.get_asset_balance(&amp;base_asset_id).await?;
+        // assert_eq!(base_balance, deposit_amount);
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="transfer-all-assets"><a class="header" href="#transfer-all-assets">Transfer all assets</a></h1>
 <p>The <code>transfer()</code> method lets you transfer a single asset, but what if you needed to move all of your assets to a different wallet? You could repeatably call <code>transfer()</code>, initiating a transaction each time, or you bundle all the transfers into a single transaction. This chapter guides you through crafting your custom transaction for transferring all assets owned by a wallet.</p>
