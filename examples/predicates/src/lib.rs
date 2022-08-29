@@ -24,10 +24,10 @@ mod tests {
                 .parse()
                 .unwrap();
 
-        let mut wallet = LocalWallet::new_from_private_key(secret_key1, None);
-        let mut wallet2 = LocalWallet::new_from_private_key(secret_key2, None);
-        let mut wallet3 = LocalWallet::new_from_private_key(secret_key3, None);
-        let mut receiver = LocalWallet::new_random(None);
+        let mut wallet = WalletUnlocked::new_from_private_key(secret_key1, None);
+        let mut wallet2 = WalletUnlocked::new_from_private_key(secret_key2, None);
+        let mut wallet3 = WalletUnlocked::new_from_private_key(secret_key3, None);
+        let mut receiver = WalletUnlocked::new_random(None);
         // ANCHOR_END: predicate_wallets
 
         // ANCHOR: predicate_coins
