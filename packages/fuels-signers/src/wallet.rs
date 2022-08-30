@@ -7,15 +7,15 @@ use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
 use fuel_gql_client::{
     client::{schema::coin::Coin, types::TransactionResponse, PaginatedResult, PaginationRequest},
     fuel_tx::{
-        AssetId, Bytes32, ContractId, Input, Output, Receipt, Transaction, TxPointer, UtxoId,
-        Witness,
+        AssetId, Bytes32, ContractId, Input, Output, Receipt, Transaction, TransactionFee,
+        TxPointer, UtxoId, Witness,
     },
 };
-use fuels_core::parameters::TxParameters;
+use fuels_core::{constants::BASE_ASSET_ID, parameters::TxParameters};
 use fuels_types::bech32::{Bech32Address, Bech32ContractId, FUEL_BECH32_HRP};
 use fuels_types::errors::Error;
 use rand::{CryptoRng, Rng};
-use std::{collections::HashMap, fmt, ops, path::Path};
+use std::{collections::HashMap, fmt, ops, path::Path, vec};
 use thiserror::Error;
 
 const DEFAULT_DERIVATION_PATH_PREFIX: &str = "m/44'/1179993420'/0'/0/";
@@ -336,6 +336,89 @@ impl WalletUnlocked {
         Ok(Self::new_from_private_key(secret_key, provider))
     }
 
+    // Add base asset inputs to the transaction to cover the estimated fee.
+    // The original base asset amount cannot be calculated reliably from
+    // the existing transaction inputs because the selected coins may exceed
+    // the required amount to avoid dust. Therefore we need it as an argument.
+    // Note: this method may fail to setup enough coins to cover the fee
+    // in extreme cases where the wallet owns coins with amounts inssufficient
+    // to cover the cost of adding them to a transaction
+    pub async fn cover_fee(
+        &self,
+        tx: &mut Transaction,
+        previous_base_amount: u64,
+        witness_index: u8,
+    ) -> Result<(), Error> {
+        let consensus_parameters = self
+            .get_provider()?
+            .chain_info()
+            .await?
+            .consensus_parameters;
+        let estimated_fee = TransactionFee::checked_from_tx(&consensus_parameters.into(), &*tx)
+            .expect("Error calculating TransactionFee")
+            .total();
+
+        if estimated_fee == 0 {
+            return Ok(());
+        }
+
+        let new_base_amount = estimated_fee + previous_base_amount;
+
+        let (base_inputs, non_base_inputs): (Vec<Input>, Vec<Input>) =
+            tx.inputs().iter().cloned().partition(|input| {
+                matches!(input, Input::CoinSigned { .. })
+                    && *input.asset_id().unwrap() == BASE_ASSET_ID
+            });
+
+        let new_base_inputs = self
+            .get_asset_inputs_for_amount(BASE_ASSET_ID, new_base_amount, witness_index)
+            .await?;
+        let adjusted_inputs: Vec<Input> = non_base_inputs
+            .into_iter()
+            .chain(new_base_inputs.into_iter())
+            .collect();
+
+        let is_base_change_present = tx.outputs().iter().cloned().any(|output| {
+            matches!(output, Output::Change { .. }) && *output.asset_id().unwrap() == BASE_ASSET_ID
+        });
+
+        // if an input for the base asset exists, the change output should also exist
+        if !base_inputs.is_empty() != is_base_change_present {
+            return Err(Error::WalletError(
+                "Tried to cover fee for malformed transaction".to_string(),
+            ));
+        }
+
+        let change_output = if is_base_change_present && !adjusted_inputs.is_empty() {
+            vec![Output::change(self.address().into(), 0, AssetId::default())]
+        } else {
+            vec![]
+        };
+
+        match tx {
+            Transaction::Script {
+                ref mut inputs,
+                ref mut outputs,
+                ..
+            } => {
+                *inputs = adjusted_inputs;
+                outputs.extend(change_output);
+            }
+            Transaction::Create {
+                ref mut inputs,
+                ref mut outputs,
+                ..
+            } => {
+                *inputs = adjusted_inputs;
+                outputs.extend(change_output);
+            }
+        };
+
+        dbg!(tx);
+
+        Ok(())
+    }
+
     /// Transfer funds from this wallet to another `Address`.
     /// Fails if amount for asset ID is larger than address's spendable coins.
     /// Returns the transaction ID that was sent and the list of receipts.
@@ -391,10 +474,15 @@ impl WalletUnlocked {
             .await?;
         let outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
 
-        // Build transaction and sign it
         let mut tx = self
             .get_provider()?
             .build_transfer_tx(&inputs, &outputs, tx_parameters);
+
+        if asset_id == AssetId::default() {
+            self.cover_fee(&mut tx, amount, 0).await?;
+        } else {
+            self.cover_fee(&mut tx, 0, 0).await?;
+        };
         self.sign_transaction(&mut tx).await?;
 
         let receipts = self.get_provider()?.send_transaction(&tx).await?;
@@ -467,6 +555,12 @@ impl WalletUnlocked {
             &outputs,
             tx_parameters,
         );
+        let base_amount = if asset_id == AssetId::default() {
+            balance
+        } else {
+            0
+        };
+        self.cover_fee(&mut tx, base_amount, 0).await?;
         self.sign_transaction(&mut tx).await?;
 
         let receipts = self.get_provider()?.send_transaction(&tx).await?;

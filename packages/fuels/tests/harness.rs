@@ -1414,7 +1414,7 @@ async fn test_gas_errors() -> Result<(), Error> {
         .await
         .expect_err("should error");
 
-    let expected = "Provider error: Response errors; InsufficientFeeAmount {";
+    let expected = "Provider error: Response errors; enough coins could not be found";
     assert!(response.to_string().starts_with(expected));
 
     Ok(())
@@ -1492,11 +1492,15 @@ async fn test_amount_and_asset_forwarding() -> Result<(), Error> {
 
     instance.mint_coins(5_000_000).call().await?;
 
+    dbg!("pls");
+
     balance_response = instance
-        .get_balance(id.clone().into(), (&id).into())
+        .get_balance((&id).into(), (&id).into())
         .call()
         .await?;
     assert_eq!(balance_response.value, 5_000_000);
+
+    dbg!("wtf");
 
     let tx_params = TxParameters::new(None, Some(1_000_000), None);
     // Forward 1_000_000 coin amount of base asset_id
@@ -3353,8 +3357,8 @@ async fn contract_call_fee_estimation() -> Result<(), Error> {
 
     let expected_min_gas_price = 0; // This is the default min_gas_price from the ConsensusParameters
     let expected_gas_used = 757;
-    let expected_metered_bytes_size = 720;
-    let expected_total_fee = 364;
+    let expected_metered_bytes_size = 640;
+    let expected_total_fee = 332;
 
     let estimated_transaction_cost = contract_instance
         .initialize_counter(42) // Build the ABI call
