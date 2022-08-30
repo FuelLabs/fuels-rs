@@ -20,7 +20,6 @@ use fuels_core::{constants::BASE_ASSET_ID, Token};
 use fuels_contract::contract::ContractCall;
 use fuels_contract::script::Script;
 use fuels_core::utils::first_four_bytes_of_sha256_hash;
-use fuels_types::constants::WORD_SIZE;
 use sha2::{Digest, Sha256};
 use std::str::FromStr;
 
@@ -58,7 +57,7 @@ async fn compile_bindings_from_contract_file() {
 
     let call_handler = contract_instance.takes_ints_returns_bool(42);
 
-    let encoded_args = ABIEncoder::encode(&call_handler.contract_call.encoded_args, 0).unwrap();
+    let encoded_args = call_handler.contract_call.encoded_args.resolve(0);
     let encoded = format!(
         "{}{}",
         hex::encode(call_handler.contract_call.encoded_selector),
@@ -118,7 +117,7 @@ async fn compile_bindings_from_inline_contract() -> Result<(), Error> {
 
     let call_handler = contract_instance.takes_ints_returns_bool(42_u32);
 
-    let encoded_args = ABIEncoder::encode(&call_handler.contract_call.encoded_args, 0).unwrap();
+    let encoded_args = call_handler.contract_call.encoded_args.resolve(0);
     let encoded = format!(
         "{}{}",
         hex::encode(call_handler.contract_call.encoded_selector),
@@ -193,7 +192,7 @@ async fn compile_bindings_array_input() {
     let input: Vec<u16> = vec![1, 2, 3, 4];
     let call_handler = contract_instance.takes_array(input);
 
-    let encoded_args = ABIEncoder::encode(&call_handler.contract_call.encoded_args, 0).unwrap();
+    let encoded_args = call_handler.contract_call.encoded_args.resolve(0);
     let encoded = format!(
         "{}{}",
         hex::encode(call_handler.contract_call.encoded_selector),
@@ -269,7 +268,7 @@ async fn compile_bindings_bool_array_input() {
     let input: Vec<bool> = vec![true, false, true];
     let call_handler = contract_instance.takes_array(input);
 
-    let encoded_args = ABIEncoder::encode(&call_handler.contract_call.encoded_args, 0).unwrap();
+    let encoded_args = call_handler.contract_call.encoded_args.resolve(0);
     let encoded = format!(
         "{}{}",
         hex::encode(call_handler.contract_call.encoded_selector),
@@ -332,7 +331,7 @@ async fn compile_bindings_byte_input() {
 
     let call_handler = contract_instance.takes_byte(10u8);
 
-    let encoded_args = ABIEncoder::encode(&call_handler.contract_call.encoded_args, 0).unwrap();
+    let encoded_args = call_handler.contract_call.encoded_args.resolve(0);
     let encoded = format!(
         "{}{}",
         hex::encode(call_handler.contract_call.encoded_selector),
@@ -392,7 +391,7 @@ async fn compile_bindings_string_input() {
 
     let call_handler = contract_instance.takes_string("This is a full sentence".into());
 
-    let encoded_args = ABIEncoder::encode(&call_handler.contract_call.encoded_args, 0).unwrap();
+    let encoded_args = call_handler.contract_call.encoded_args.resolve(0);
     let encoded = format!(
         "{}{}",
         hex::encode(call_handler.contract_call.encoded_selector),
@@ -460,7 +459,7 @@ async fn compile_bindings_b256_input() {
 
     let call_handler = contract_instance.takes_b256(arg.into());
 
-    let encoded_args = ABIEncoder::encode(&call_handler.contract_call.encoded_args, 0).unwrap();
+    let encoded_args = call_handler.contract_call.encoded_args.resolve(0);
     let encoded = format!(
         "{}{}",
         hex::encode(call_handler.contract_call.encoded_selector),
@@ -564,7 +563,7 @@ async fn compile_bindings_struct_input() {
 
     let call_handler = contract_instance.takes_struct(input);
 
-    let encoded_args = ABIEncoder::encode(&call_handler.contract_call.encoded_args, 0).unwrap();
+    let encoded_args = call_handler.contract_call.encoded_args.resolve(0);
     let encoded = format!(
         "{}{}",
         hex::encode(call_handler.contract_call.encoded_selector),
@@ -668,7 +667,9 @@ async fn compile_bindings_nested_struct_input() {
     let contract_instance = SimpleContractBuilder::new(null_contract_id(), wallet).build();
 
     let call_handler = contract_instance.takes_nested_struct(input.clone());
-    let encoded_arg = ABIEncoder::encode(slice::from_ref(&input.into_token()), 0).unwrap();
+    let encoded_arg = ABIEncoder::encode(slice::from_ref(&input.into_token()))
+        .unwrap()
+        .resolve(0);
 
     let encoded = format!(
         "{}{}",
@@ -754,7 +755,7 @@ async fn compile_bindings_enum_input() {
 
     let call_handler = contract_instance.takes_enum(variant);
 
-    let encoded_args = ABIEncoder::encode(&call_handler.contract_call.encoded_args, 0).unwrap();
+    let encoded_args = call_handler.contract_call.encoded_args.resolve(0);
     let encoded = format!(
         "{}{}",
         hex::encode(call_handler.contract_call.encoded_selector),
@@ -849,7 +850,7 @@ async fn create_struct_from_decoded_tokens() -> Result<(), Error> {
 
     let call_handler = contract_instance.takes_struct(struct_from_tokens);
 
-    let encoded_args = ABIEncoder::encode(&call_handler.contract_call.encoded_args, 0).unwrap();
+    let encoded_args = call_handler.contract_call.encoded_args.resolve(0);
     let encoded = format!(
         "{}{}",
         hex::encode(call_handler.contract_call.encoded_selector),
@@ -963,7 +964,7 @@ async fn create_nested_struct_from_decoded_tokens() -> Result<(), Error> {
 
     let call_handler = contract_instance.takes_nested_struct(nested_struct_from_tokens);
 
-    let encoded_args = ABIEncoder::encode(&call_handler.contract_call.encoded_args, 0).unwrap();
+    let encoded_args = call_handler.contract_call.encoded_args.resolve(0);
     let encoded = format!(
         "{}{}",
         hex::encode(call_handler.contract_call.encoded_selector),
@@ -2737,7 +2738,9 @@ async fn can_call_predicate_with_u32_data() -> Result<(), Error> {
     assert_eq!(receiver_balance_before, 16);
 
     // invalid predicate data
-    let predicate_data = ABIEncoder::encode(&[101_u32.into_token()], 0).unwrap();
+    let predicate_data = ABIEncoder::encode(&[101_u32.into_token()])
+        .unwrap()
+        .resolve(0);
     receiver
         .receive_from_predicate(
             predicate.address(),
@@ -2760,7 +2763,9 @@ async fn can_call_predicate_with_u32_data() -> Result<(), Error> {
     assert_eq!(predicate_balance, amount_to_predicate);
 
     // valid predicate data
-    let predicate_data = ABIEncoder::encode(&[1078_u32.into_token()], 0).unwrap();
+    let predicate_data = ABIEncoder::encode(&[1078_u32.into_token()])
+        .unwrap()
+        .resolve(0);
     receiver
         .receive_from_predicate(
             predicate.address(),
@@ -2813,7 +2818,7 @@ async fn can_call_predicate_with_address_data() -> Result<(), Error> {
     let addr =
         Address::from_str("0xef86afa9696cf0dc6385e2c407a6e159a1103cefb7e2ae0636fb33d3cb2a9e4a")
             .unwrap();
-    let predicate_data = ABIEncoder::encode(&[addr.into_token()], 0).unwrap();
+    let predicate_data = ABIEncoder::encode(&[addr.into_token()]).unwrap().resolve(0);
     receiver
         .receive_from_predicate(
             predicate.address(),
@@ -2863,7 +2868,9 @@ async fn can_call_predicate_with_struct_data() -> Result<(), Error> {
     assert_eq!(receiver_balance_before, 16);
 
     // invalid predicate data
-    let predicate_data = ABIEncoder::encode(&[true.into_token(), 55_u32.into_token()], 0).unwrap();
+    let predicate_data = ABIEncoder::encode(&[true.into_token(), 55_u32.into_token()])
+        .unwrap()
+        .resolve(0);
     receiver
         .receive_from_predicate(
             predicate.address(),
@@ -2886,7 +2893,9 @@ async fn can_call_predicate_with_struct_data() -> Result<(), Error> {
     assert_eq!(predicate_balance, amount_to_predicate);
 
     // valid predicate data
-    let predicate_data = ABIEncoder::encode(&[true.into_token(), 100_u32.into_token()], 0).unwrap();
+    let predicate_data = ABIEncoder::encode(&[true.into_token(), 100_u32.into_token()])
+        .unwrap()
+        .resolve(0);
     receiver
         .receive_from_predicate(
             predicate.address(),
@@ -3503,20 +3512,11 @@ async fn test_vector() -> Result<(), Error> {
 
     let encoded_selector = first_four_bytes_of_sha256_hash(fn_signature);
 
-    let encoded_args = vec![
-        Token::U64((10480 + 6 * WORD_SIZE) as u64),
-        Token::U64(4),
-        Token::U64(3),
-        Token::U64((10480 + 9 * WORD_SIZE) as u64),
-        Token::U64(4),
-        Token::U64(3),
-        Token::U64(100),
-        Token::U64(200),
-        Token::U64(300),
-        Token::U64(100),
-        Token::U64(200),
-        Token::U64(300),
-    ];
+    let encoded_args = ABIEncoder::encode(&[
+        Token::Vector(vec![Token::U64(100), Token::U64(200), Token::U64(300)]),
+        Token::Vector(vec![Token::U64(100), Token::U64(200), Token::U64(300)]),
+    ])
+    .unwrap();
 
     let call = ContractCall {
         contract_id: contract_id.clone(),

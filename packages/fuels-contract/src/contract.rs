@@ -12,6 +12,7 @@ use fuel_gql_client::{
 };
 
 use fuels_core::abi_decoder::ABIDecoder;
+use fuels_core::abi_encoder::{ABIEncoder, UnresolvedBytes};
 use fuels_core::parameters::StorageConfiguration;
 use fuels_core::tx::{Bytes32, ContractId};
 use fuels_core::{
@@ -130,19 +131,20 @@ impl Contract {
         wallet: &LocalWallet,
         signature: Selector,
         output_param: Option<ParamType>,
-        args: Vec<Token>,
+        args: &[Token],
     ) -> Result<ContractCallHandler<D>, Error> {
         let encoded_selector = signature;
 
         let tx_parameters = TxParameters::default();
         let call_parameters = CallParameters::default();
 
-        let compute_custom_input_offset = Contract::should_compute_custom_input_offset(&args);
+        let compute_custom_input_offset = Contract::should_compute_custom_input_offset(args);
 
+        let unresolved_bytes = ABIEncoder::encode(args)?;
         let contract_call = ContractCall {
             contract_id,
             encoded_selector,
-            encoded_args: args,
+            encoded_args: unresolved_bytes,
             call_parameters,
             compute_custom_input_offset,
             variable_outputs: None,
@@ -382,7 +384,7 @@ impl Contract {
 /// Contains all data relevant to a single contract call
 pub struct ContractCall {
     pub contract_id: Bech32ContractId,
-    pub encoded_args: Vec<Token>,
+    pub encoded_args: UnresolvedBytes,
     pub encoded_selector: Selector,
     pub call_parameters: CallParameters,
     pub compute_custom_input_offset: bool,

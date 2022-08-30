@@ -98,7 +98,7 @@ impl ABIParser {
 
         let tokens = self.parse_tokens(&params_and_values)?;
 
-        Ok(hex::encode(ABIEncoder::encode(&tokens, 0)?))
+        Ok(hex::encode(ABIEncoder::encode(&tokens)?.resolve(0)))
     }
 
     /// Similar to `encode`, but includes the function selector in the
@@ -179,7 +179,7 @@ impl ABIParser {
 
         let tokens = self.parse_tokens(&param_type_pairs)?;
 
-        let encoded = ABIEncoder::encode(&tokens, 0)?;
+        let encoded = ABIEncoder::encode(&tokens)?.resolve(0);
 
         Ok(hex::encode(encoded))
     }

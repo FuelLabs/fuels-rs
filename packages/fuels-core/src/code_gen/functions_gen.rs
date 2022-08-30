@@ -448,7 +448,7 @@ fn expand_function_arguments(
     // It'll look like `&[my_arg.into_token(), another_arg.into_token()]`
     // as the [`Contract`] `method_hash` function expects a slice of Tokens
     // in order to encode the call.
-    let call_args = quote! { vec![ #(#call_args.into_token(), )* ] };
+    let call_args = quote! { &[ #(#call_args.into_token(), )* ] };
 
     Ok((args, call_args))
 }
@@ -515,7 +515,7 @@ fn _new_expand_function_arguments(
     // It'll look like `&[my_arg.into_token(), another_arg.into_token()]`
     // as the [`Contract`] `method_hash` function expects a slice of Tokens
     // in order to encode the call.
-    let call_args = quote! { vec![ #(#call_args.into_token(), )* ] };
+    let call_args = quote! { &[ #(#call_args.into_token(), )* ] };
 
     Ok((args, call_args))
 }
