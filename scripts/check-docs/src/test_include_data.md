@@ -14,5 +14,3 @@
 ```rust,ignore
 {{#include ./test_anchor_data.rs:no_existing_anchor}}
 ```
-
-
