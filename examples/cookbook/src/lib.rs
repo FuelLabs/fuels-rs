@@ -47,7 +47,7 @@ mod tests {
             MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
         // ANCHOR_END: liquidity_deploy
         //TODO: Enable test
-        // // ANCHOR: liquidity_deposit
+        // ANCHOR: liquidity_deposit
         // let deposit_amount = 1_000_000;
         // let call_params = CallParameters::new(Some(deposit_amount), Some(base_asset_id), None);
         // contract_instance
@@ -56,7 +56,7 @@ mod tests {
         //     .append_variable_outputs(1)
         //     .call()
         //     .await?;
-        // // ANCHOR_END: liquidity_deposit
+        // ANCHOR_END: liquidity_deposit
 
         // ANCHOR: liquidity_withdraw
         // let lp_asset_id = AssetId::from(*contract_id.hash());
