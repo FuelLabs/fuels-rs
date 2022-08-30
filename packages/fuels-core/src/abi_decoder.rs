@@ -27,7 +27,7 @@ impl ABIDecoder {
     pub fn decode(
         param_types: &[ParamType],
         ret_data: &[u8],
-        receipts: Vec<Receipt>,
+        receipts: &[Receipt],
     ) -> Result<Vec<Token>, CodecError> {
         let aux_bytes = Self::extract_bytes_from_receipts(receipts);
 
@@ -36,25 +36,25 @@ impl ABIDecoder {
         Ok(tokens)
     }
 
-    fn extract_bytes_from_receipts(receipts: Vec<Receipt>) -> Vec<u8> {
+    pub fn decode_single(
+        param_type: &ParamType,
+        ret_data: &[u8],
+        receipts: &[Receipt],
+    ) -> Result<Token, CodecError> {
+        let aux_bytes = Self::extract_bytes_from_receipts(receipts);
+        Ok(Self::decode_param(param_type, ret_data, &aux_bytes)?.token)
+    }
+
+    fn extract_bytes_from_receipts(receipts: &[Receipt]) -> Vec<u8> {
         receipts
-            .into_iter()
+            .iter()
             .filter_map(|receipt| match receipt {
                 Receipt::Log { ra, .. } => Some(ra.to_be_bytes().to_vec()),
-                Receipt::LogData { data, .. } => Some(data),
+                Receipt::LogData { data, .. } => Some(data.clone()),
                 _ => None,
             })
             .flatten()
             .collect()
-    }
-
-    pub fn decode_single(
-        param_type: &ParamType,
-        ret_data: &[u8],
-        receipts: Vec<Receipt>,
-    ) -> Result<Token, CodecError> {
-        let aux_bytes = Self::extract_bytes_from_receipts(receipts);
-        Ok(Self::decode_param(param_type, ret_data, &aux_bytes)?.token)
     }
 
     fn decode_param(
@@ -88,6 +88,7 @@ impl ABIDecoder {
         let len = peek_u64(&ret_data[2 * WORD_SIZE..])?;
         let bytes_read: usize = 3 * WORD_SIZE;
 
+        Self::decode_multiple(&vec![param_type.clone(); len as usize], aux_data, &[])?;
         let result = Self::decode_array(param_type, aux_data, aux_data, len as usize)?;
 
         let elements = match result.token {
@@ -144,7 +145,7 @@ impl ABIDecoder {
 
         for param_type in param_types {
             let res = Self::decode_param(
-                &param_type,
+                param_type,
                 &ret_data[ret_bytes_read..],
                 &aux_data[aux_bytes_read..],
             )?;
@@ -367,19 +368,19 @@ fn peek_u8(ret_data: &[u8]) -> Result<u8, CodecError> {
     Ok(u8::from_be_bytes(bytes))
 }
 
-fn peek_fixed<const LEN: usize>(ret_data: &[u8]) -> Result<&[u8; LEN], CodecError> {
-    let slice_w_correct_length = peek(ret_data, LEN)?;
+fn peek_fixed<const LEN: usize>(data: &[u8]) -> Result<&[u8; LEN], CodecError> {
+    let slice_w_correct_length = peek(data, LEN)?;
     Ok(<&[u8; LEN]>::try_from(slice_w_correct_length)
         .expect("peek(data,len) must return a slice of length `len` or error out"))
 }
 
-fn peek(ret_data: &[u8], len: usize) -> Result<&[u8], CodecError> {
-    if len > ret_data.len() {
+fn peek(data: &[u8], len: usize) -> Result<&[u8], CodecError> {
+    if len > data.len() {
         Err(CodecError::InvalidData(
             "requested data out of bounds".into(),
         ))
     } else {
-        Ok(&ret_data[..len])
+        Ok(&data[..len])
     }
 }
 
@@ -393,7 +394,7 @@ mod tests {
     fn decode_int() -> Result<(), Error> {
         let data = [0x0, 0x0, 0x0, 0x0, 0xff, 0xff, 0xff, 0xff];
 
-        let decoded = ABIDecoder::decode_single(&ParamType::U32, &data, vec![])?;
+        let decoded = ABIDecoder::decode_single(&ParamType::U32, &data, &[])?;
 
         assert_eq!(decoded, Token::U32(u32::MAX));
         Ok(())
@@ -413,7 +414,7 @@ mod tests {
             0xff,
         ];
 
-        let decoded = ABIDecoder::decode(&types, &data, vec![])?;
+        let decoded = ABIDecoder::decode(&types, &data, &[])?;
 
         let expected = vec![
             Token::U32(u32::MAX),
@@ -432,7 +433,7 @@ mod tests {
             0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x01, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x00,
         ];
 
-        let decoded = ABIDecoder::decode(&types, &data, vec![])?;
+        let decoded = ABIDecoder::decode(&types, &data, &[])?;
 
         let expected = vec![Token::Bool(true), Token::Bool(false)];
 
@@ -448,7 +449,7 @@ mod tests {
             0xf3, 0x1e, 0x93, 0xb,
         ];
 
-        let decoded = ABIDecoder::decode_single(&ParamType::B256, &data, vec![])?;
+        let decoded = ABIDecoder::decode_single(&ParamType::B256, &data, &[])?;
 
         assert_eq!(decoded, Token::B256(data));
         Ok(())
@@ -463,7 +464,7 @@ mod tests {
             0x6f, 0x0, 0x0, 0x0,
         ];
 
-        let decoded = ABIDecoder::decode(&types, &data, vec![])?;
+        let decoded = ABIDecoder::decode(&types, &data, &[])?;
 
         let expected = vec![
             Token::String(StringToken::new("This is a full sentence".into(), 23)),
@@ -482,7 +483,7 @@ mod tests {
             0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xff, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2a,
         ];
 
-        let decoded = ABIDecoder::decode(&types, &data, vec![])?;
+        let decoded = ABIDecoder::decode(&types, &data, &[])?;
 
         let expected = vec![Token::Array(vec![Token::U8(255), Token::U8(42)])];
         assert_eq!(decoded, expected);
@@ -502,7 +503,7 @@ mod tests {
         ];
         let param_type = ParamType::Struct(vec![ParamType::U8, ParamType::Bool]);
 
-        let decoded = ABIDecoder::decode_single(&param_type, &data, vec![])?;
+        let decoded = ABIDecoder::decode_single(&param_type, &data, &[])?;
 
         let expected = Token::Struct(vec![Token::U8(1), Token::Bool(true)]);
 
@@ -526,7 +527,7 @@ mod tests {
             0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2a,
         ];
 
-        let decoded = ABIDecoder::decode(&types, &data, vec![])?;
+        let decoded = ABIDecoder::decode(&types, &data, &[])?;
 
         let expected = vec![Token::Enum(Box::new((0, Token::U32(42), inner_enum_types)))];
         assert_eq!(decoded, expected);
@@ -567,7 +568,7 @@ mod tests {
         .flatten()
         .collect();
 
-        let decoded = ABIDecoder::decode_single(&struct_type, &ret_data, vec![])?;
+        let decoded = ABIDecoder::decode_single(&struct_type, &ret_data, &[])?;
 
         let expected = Token::Struct(vec![
             Token::Enum(Box::new((1, Token::U32(12345), inner_enum_types))),
@@ -603,7 +604,7 @@ mod tests {
             0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2,
         ];
 
-        let decoded = ABIDecoder::decode_single(&nested_struct, &data, vec![])?;
+        let decoded = ABIDecoder::decode_single(&nested_struct, &data, &[])?;
 
         let my_nested_struct = vec![
             Token::U16(10),
@@ -663,7 +664,7 @@ mod tests {
             0x65, 0x6e, 0x74, 0x65, 0x6e, 0x63, 0x65, 0x0, // str[23]
         ];
 
-        let decoded = ABIDecoder::decode(&types, &data, vec![])?;
+        let decoded = ABIDecoder::decode(&types, &data, &[])?;
 
         // Expected tokens
         let foo = Token::Struct(vec![
@@ -697,7 +698,7 @@ mod tests {
         ];
         let struct_type = ParamType::Struct(vec![ParamType::Unit, ParamType::U64]);
 
-        let actual = ABIDecoder::decode_single(&struct_type, &data, vec![])?;
+        let actual = ABIDecoder::decode_single(&struct_type, &data, &[])?;
 
         let expected = Token::Struct(vec![Token::Unit, Token::U64(u64::MAX)]);
         assert_eq!(actual, expected);
@@ -710,7 +711,7 @@ mod tests {
         let variants = EnumVariants::new(vec![ParamType::Unit, ParamType::Unit])?;
         let enum_w_only_units = ParamType::Enum(variants.clone());
 
-        let result = ABIDecoder::decode_single(&enum_w_only_units, &data, vec![])?;
+        let result = ABIDecoder::decode_single(&enum_w_only_units, &data, &[])?;
 
         let expected_enum = Token::Enum(Box::new((1, Token::Unit, variants)));
         assert_eq!(result, expected_enum);
@@ -723,7 +724,7 @@ mod tests {
         let variants = EnumVariants::new(vec![ParamType::U32])?;
         let enum_type = ParamType::Enum(variants);
 
-        let result = ABIDecoder::decode_single(&enum_type, &data, vec![]);
+        let result = ABIDecoder::decode_single(&enum_type, &data, &[]);
 
         let error = result.expect_err("Should have resulted in an error");
 

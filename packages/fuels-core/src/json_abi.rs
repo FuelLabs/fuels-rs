@@ -225,7 +225,7 @@ impl ABIParser {
         let param_result = ParamType::from_type_declaration(param_result, &types);
 
         match param_result {
-            Ok(params) => Ok(ABIDecoder::decode(&[params], value, vec![])?),
+            Ok(params) => Ok(ABIDecoder::decode(&[params], value, &[])?),
             Err(e) => Err(e),
         }
     }
@@ -233,7 +233,7 @@ impl ABIParser {
     /// Similar to decode, but it decodes only an array types and the encoded data
     /// without having to reference to a JSON specification of the ABI.
     pub fn decode_params(&self, params: &[ParamType], data: &[u8]) -> Result<Vec<Token>, Error> {
-        Ok(ABIDecoder::decode(params, data, vec![])?)
+        Ok(ABIDecoder::decode(params, data, &[])?)
     }
 }
 
