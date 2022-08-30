@@ -73,6 +73,7 @@ pub enum Token {
     Byte(u8),
     B256(Bits256),
     Array(Vec<Token>),
+    Vector(Vec<Token>),
     String(StringToken),
     Struct(Vec<Token>),
     #[strum(disabled)]

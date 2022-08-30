@@ -46,6 +46,9 @@ impl Tokenizer {
                 let s: [u8; 32] = v.as_slice().try_into().unwrap();
                 Ok(Token::B256(s))
             }
+            ParamType::Vector(_) => {
+                todo!("Not implemented")
+            }
             ParamType::Array(t, _) => Ok(Self::tokenize_array(trimmed_value, t)?),
             ParamType::String(length) => Ok(Token::String(StringToken::new(
                 trimmed_value.into(),
