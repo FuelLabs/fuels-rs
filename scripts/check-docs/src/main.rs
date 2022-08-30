@@ -96,15 +96,9 @@ fn parse_includes(text_w_includes: String) -> anyhow::Result<Vec<Include>, Error
 
                 let the_path = include_file.parent().unwrap().join(anchor_file);
 
-                let anchor_file = the_path.canonicalize();
-                if anchor_file.is_err() {
-                    panic!(
-                        "{the_path:?} when canonicalized gives error {:?}",
-                        anchor_file.err().unwrap()
-                    )
-                }
-
-                let anchor_file = anchor_file?;
+                let anchor_file = the_path.canonicalize().unwrap_or_else(|err| {
+                    panic!("{the_path:?} when canonicalized gives error {:?}", err)
+                });
 
                 Ok(Include {
                     anchor_name,
