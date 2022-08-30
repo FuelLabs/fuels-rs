@@ -172,9 +172,7 @@ fn _new_build_fn_selector_params(
             .iter()
             .enumerate()
         {
-            let t = types
-                .get(&component.type_field)
-                .expect("couldn't find type");
+            let t = types.get(&component.type_id).expect("couldn't find type");
 
             result.push_str(&_new_build_fn_selector_params(t, types));
 
@@ -221,9 +219,7 @@ fn _new_build_fn_selector_params(
             let component_types: Vec<String> = components
                 .iter()
                 .map(|component| {
-                    let t = types
-                        .get(&component.type_field)
-                        .expect("couldn't find type");
+                    let t = types.get(&component.type_id).expect("couldn't find type");
                     t.type_field.clone()
                 })
                 .collect();
@@ -242,7 +238,7 @@ fn _new_build_fn_selector_params(
             // we must prefix it with an 'a' so the function selector will be properly encoded.
 
             let array_component_type = types
-                .get(&type_declaration.components.as_ref().unwrap()[0].type_field)
+                .get(&type_declaration.components.as_ref().unwrap()[0].type_id)
                 .expect("couldn't find type");
 
             // Get array size from type field string
@@ -280,12 +276,12 @@ mod tests {
         let fn_params = vec![
             TypeApplication {
                 name: "s1".to_string(),
-                type_field: 3,
+                type_id: 3,
                 type_arguments: None,
             },
             TypeApplication {
                 name: "s2".to_string(),
-                type_field: 4,
+                type_id: 4,
                 type_arguments: None,
             },
         ];
@@ -316,12 +312,12 @@ mod tests {
                 components: Some(vec![
                     TypeApplication {
                         name: "x".to_string(),
-                        type_field: 0,
+                        type_id: 0,
                         type_arguments: None,
                     },
                     TypeApplication {
                         name: "y".to_string(),
-                        type_field: 1,
+                        type_id: 1,
                         type_arguments: None,
                     },
                 ]),
@@ -333,12 +329,12 @@ mod tests {
                 components: Some(vec![
                     TypeApplication {
                         name: "x".to_string(),
-                        type_field: 2,
+                        type_id: 2,
                         type_arguments: None,
                     },
                     TypeApplication {
                         name: "y".to_string(),
-                        type_field: 3,
+                        type_id: 3,
                         type_arguments: None,
                     },
                 ]),
@@ -352,7 +348,7 @@ mod tests {
 
         let fn_param_types = fn_params
             .iter()
-            .map(|t| all_types.get(&t.type_field).unwrap().clone())
+            .map(|t| all_types.get(&t.type_id).unwrap().clone())
             .collect::<Vec<TypeDeclaration>>();
 
         let result = _new_build_fn_selector(fn_name, &fn_param_types, &all_types).unwrap();

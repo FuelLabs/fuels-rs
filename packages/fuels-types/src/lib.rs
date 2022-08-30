@@ -124,13 +124,13 @@ pub struct TypeDeclaration {
     pub type_parameters: Option<Vec<usize>>,
 }
 
-#[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, Eq, PartialEq, Serialize, Hash, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TypeApplication {
     pub name: String,
     #[serde(rename = "type")]
-    pub type_field: usize,
-    pub type_arguments: Option<Vec<usize>>,
+    pub type_id: usize,
+    pub type_arguments: Option<Vec<TypeApplication>>,
 }
 
 impl TypeDeclaration {
@@ -151,7 +151,7 @@ impl TypeDeclaration {
         if has_array_format(&self.type_field) {
             // For each component in the tuple, check if it is a custom type
             for component in self.components.as_ref().unwrap() {
-                let component_type = types.get(&component.type_field).unwrap();
+                let component_type = types.get(&component.type_id).unwrap();
                 if component_type.is_custom_type(types) {
                     return true;
                 }
@@ -166,7 +166,7 @@ impl TypeDeclaration {
         if has_tuple_format(&self.type_field) {
             // For each component in the tuple, check if it is a custom type
             for component in self.components.as_ref().unwrap() {
-                let component_type = types.get(&component.type_field).unwrap();
+                let component_type = types.get(&component.type_id).unwrap();
                 if component_type.is_custom_type(types) {
                     return true;
                 }

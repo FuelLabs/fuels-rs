@@ -197,6 +197,7 @@ pub fn _new_expand_custom_struct(
     // creating a [`Token`] and pushing it a vector of Tokens.
     let mut struct_fields_tokens = Vec::new();
     let mut param_types = Vec::new();
+    let mut generic_args = Vec::new();
 
     // Holds the TokenStream representing the process
     // of creating a Self struct from each `Token`.
@@ -210,9 +211,7 @@ pub fn _new_expand_custom_struct(
     for component in components {
         let field_name = ident(&component.name.to_snake_case());
 
-        let t = types
-            .get(&component.type_field)
-            .expect("couldn't find type");
+        let t = types.get(&component.type_id).expect("couldn't find type");
 
         let param_type = ParamType::from_type_declaration(t, types)?;
 
@@ -248,10 +247,11 @@ pub fn _new_expand_custom_struct(
 
                 let mut param_type_string = param_type.to_string();
 
+                dbg!(&ty);
+                dbg!(&param_type_string);
+
                 let param_type_string_ident_tok: proc_macro2::TokenStream =
                     param_type_string.parse().unwrap();
-
-                param_types.push(quote! { types.push(ParamType::#param_type_string_ident_tok) });
 
                 if let ParamType::Array(..) = param_type {
                     param_type_string = "Array".to_string();
@@ -265,93 +265,216 @@ pub fn _new_expand_custom_struct(
                 // Field declaration
                 fields.push(quote! { pub #field_name: #ty});
 
-                args.push(quote! {
-                    #field_name: <#ty>::from_token(next_token()?)?
-                });
+                dbg!(&fields);
 
-                // Token creation and insertion
-                match param_type {
-                    ParamType::String(len) => {
-                        struct_fields_tokens
-                            .push(quote! {tokens.push(Token::#param_type_string_ident(
-                            StringToken::new(self.#field_name,  #len)))});
-                    }
-                    ParamType::Array(_t, _s) => {
-                        struct_fields_tokens.push(
-                            quote! {tokens.push(Token::#param_type_string_ident(vec![self.#field_name.into_token()]))},
-                        );
-                    }
-                    // Primitive type
-                    _ => {
-                        // Token creation and insertion
-                        struct_fields_tokens.push(
-                            quote! {tokens.push(Token::#param_type_string_ident(self.#field_name))},
-                        );
+                // Check if param type is generic
+                if let ParamType::Generic(name) = param_type {
+                    let generic_arg = ident(&name);
+                    generic_args.push(quote! { #generic_arg });
+                    args.push(quote! {
+                        #field_name: 42
+                    });
+
+                    param_types.push(quote! { types.push(ParamType::Generic(#name.to_string())) });
+
+                    continue; // @todo temp.
+                } else {
+                    param_types
+                        .push(quote! { types.push(ParamType::#param_type_string_ident_tok) });
+
+                    args.push(quote! {
+                        #field_name: <#ty>::from_token(next_token()?)?
+                    });
+
+                    // Token creation and insertion
+                    match param_type {
+                        ParamType::String(len) => {
+                            struct_fields_tokens
+                                .push(quote! {tokens.push(Token::#param_type_string_ident(
+                                StringToken::new(self.#field_name,  #len)))});
+                        }
+                        ParamType::Array(_t, _s) => {
+                            struct_fields_tokens.push(
+                                quote! {tokens.push(Token::#param_type_string_ident(vec![self.#field_name.into_token()]))},
+                            );
+                        }
+                        // Primitive type
+                        _ => {
+                            // Token creation and insertion
+                            struct_fields_tokens.push(
+                                quote! {tokens.push(Token::#param_type_string_ident(self.#field_name))},
+                            );
+                        }
                     }
                 }
             }
         }
     }
 
-    // Actual creation of the struct, using the inner TokenStreams from above to produce the
-    // TokenStream that represents the whole struct + methods declaration.
+    // If struct is generic, we need to add the generic args to the struct
+    // declaration.
+    let struct_decl = if generic_args.is_empty() {
+        quote! { pub struct #struct_ident { #(#fields),* } }
+    } else {
+        quote! { pub struct #struct_ident <#(#generic_args),*> { #(#fields),* } }
+    };
+
+    // If struct is generic, we need to add generic params to impl Parameterize
+    let param_type_impl = if generic_args.is_empty() {
+        quote! {
+            impl Parameterize for #struct_ident {
+                fn param_type() -> ParamType {
+                    let mut types = Vec::new();
+                    #( #param_types; )*
+                    ParamType::Struct(types)
+                }
+            }
+        }
+    } else {
+        quote! {
+            impl <#(#generic_args),*> Parameterize for #struct_ident <#(#generic_args),*> {
+                fn param_type() -> ParamType {
+                    let mut types = Vec::new();
+                    #( #param_types; )*
+                    ParamType::Struct(types)
+                }
+            }
+        }
+    };
+
+    // If struct is generic, we need to add generic params to impl Tokenizable.
+    // @todo they're temporarily (maybe permanently) the same.
+    let tokenizable_impl = if generic_args.is_empty() {
+        quote! {
+            impl Tokenizable for #struct_ident {
+                fn into_token(self) -> Token {
+                    let mut tokens = Vec::new();
+                    #( #struct_fields_tokens; )*
+
+                    Token::Struct(tokens)
+                }
+
+                fn from_token(token: Token)  -> Result<Self, SDKError> {
+                    match token {
+                        Token::Struct(tokens) => {
+                            let mut tokens_iter = tokens.into_iter();
+                            let mut next_token = move || { tokens_iter
+                                .next()
+                                .ok_or_else(|| { SDKError::InstantiationError(format!("Ran out of tokens before '{}' has finished construction!", #struct_name)) })
+                            };
+                            Ok(Self { #( #args ),* })
+                        },
+                        other => Err(SDKError::InstantiationError(format!("Error while constructing '{}'. Expected token of type Token::Struct, got {:?}", #struct_name, other))),
+                    }
+                }
+            }
+        }
+    } else {
+        quote! {
+            impl <#(#generic_args),*> Tokenizable for #struct_ident <#(#generic_args),*> {
+                fn into_token(self) -> Token {
+                    let mut tokens = Vec::new();
+                    #( #struct_fields_tokens; )*
+
+                    Token::Struct(tokens)
+                }
+
+                fn from_token(token: Token)  -> Result<Self, SDKError> {
+                    match token {
+                        Token::Struct(tokens) => {
+                            let mut tokens_iter = tokens.into_iter();
+                            let mut next_token = move || { tokens_iter
+                                .next()
+                                .ok_or_else(|| { SDKError::InstantiationError(format!("Ran out of tokens before '{}' has finished construction!", #struct_name)) })
+                            };
+                            Ok(Self { #( #args ),* })
+                        },
+                        other => Err(SDKError::InstantiationError(format!("Error while constructing '{}'. Expected token of type Token::Struct, got {:?}", #struct_name, other))),
+                    }
+                }
+            }
+        }
+    };
+
+    // If struct is generic, we need to add generic params to impl TryFrom<&[u8]>.
+    let try_from_slice_impl = if generic_args.is_empty() {
+        quote! {
+            impl TryFrom<&[u8]> for #struct_ident {
+                type Error = SDKError;
+
+                fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
+                    try_from_bytes(bytes)
+                }
+            }
+        }
+    } else {
+        quote! {
+            impl <#(#generic_args),*> TryFrom<&[u8]> for #struct_ident <#(#generic_args),*> {
+                type Error = SDKError;
+
+                fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
+                    try_from_bytes(bytes)
+                }
+            }
+        }
+    };
+
+    let try_from_vec_ref_impl = if generic_args.is_empty() {
+        quote! {
+            impl TryFrom<&Vec<u8>> for #struct_ident {
+                type Error = SDKError;
+
+                fn try_from(bytes: &Vec<u8>) -> Result<Self, Self::Error> {
+                    try_from_bytes(bytes)
+                }
+            }
+        }
+    } else {
+        quote! {
+            impl <#(#generic_args),*> TryFrom<&Vec<u8>> for #struct_ident <#(#generic_args),*> {
+                type Error = SDKError;
+
+                fn try_from(bytes: &Vec<u8>) -> Result<Self, Self::Error> {
+                    try_from_bytes(bytes)
+                }
+            }
+        }
+    };
+
+    let try_from_vec_impl = if generic_args.is_empty() {
+        quote! {
+            impl TryFrom<Vec<u8>> for #struct_ident {
+                type Error = SDKError;
+
+                fn try_from(bytes: Vec<u8>) -> Result<Self, Self::Error> {
+                    try_from_bytes(&bytes)
+                }
+            }
+        }
+    } else {
+        quote! {
+            impl <#(#generic_args),*> TryFrom<Vec<u8>> for #struct_ident <#(#generic_args),*> {
+                type Error = SDKError;
+
+                fn try_from(bytes: Vec<u8>) -> Result<Self, Self::Error> {
+                    try_from_bytes(&bytes)
+                }
+            }
+        }
+    };
+
     Ok(quote! {
-        #[derive(Clone, Debug, Eq, PartialEq)]
-        pub struct #struct_ident {
-            #( #fields ),*
-        }
+        #struct_decl
 
-        impl Parameterize for #struct_ident {
-            fn param_type() -> ParamType {
-                let mut types = Vec::new();
-                #( #param_types; )*
-                ParamType::Struct(types)
-            }
-        }
+        #param_type_impl
 
-        impl Tokenizable for #struct_ident {
-            fn into_token(self) -> Token {
-                let mut tokens = Vec::new();
-                #( #struct_fields_tokens; )*
+        #tokenizable_impl
 
-                Token::Struct(tokens)
-            }
+        #try_from_slice_impl
 
-            fn from_token(token: Token)  -> Result<Self, SDKError> {
-                match token {
-                    Token::Struct(tokens) => {
-                        let mut tokens_iter = tokens.into_iter();
-                        let mut next_token = move || { tokens_iter
-                            .next()
-                            .ok_or_else(|| { SDKError::InstantiationError(format!("Ran out of tokens before '{}' has finished construction!", #struct_name)) })
-                        };
-                        Ok(Self { #( #args ),* })
-                    },
-                    other => Err(SDKError::InstantiationError(format!("Error while constructing '{}'. Expected token of type Token::Struct, got {:?}", #struct_name, other))),
-                }
-            }
-        }
+        #try_from_vec_ref_impl
 
-    impl TryFrom<&[u8]> for #struct_ident {
-        type Error = SDKError;
-        fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
-            try_from_bytes(bytes)
-        }
-    }
-
-    impl TryFrom<&Vec<u8>> for #struct_ident {
-        type Error = SDKError;
-        fn try_from(bytes: &Vec<u8>) -> Result<Self, Self::Error> {
-            try_from_bytes(bytes)
-        }
-    }
-
-     impl TryFrom<Vec<u8>> for #struct_ident {
-        type Error = SDKError;
-        fn try_from(bytes: Vec<u8>) -> Result<Self, Self::Error> {
-            try_from_bytes(&bytes)
-        }
-    }
+        #try_from_vec_impl
     })
 }
 
@@ -594,9 +717,7 @@ pub fn _new_expand_custom_enum(
     for (discriminant, component) in components.iter().enumerate() {
         let variant_name = ident(&component.name);
         let dis = discriminant as u8;
-        let t = types
-            .get(&component.type_field)
-            .expect("couldn't find type");
+        let t = types.get(&component.type_id).expect("couldn't find type");
         let param_type = ParamType::from_type_declaration(t, types)?;
 
         match param_type {
@@ -843,7 +964,7 @@ pub fn _new_extract_custom_type_name_from_abi_property(
         true => {
             if let Some([custom_type_in_array]) = prop.components.as_deref() {
                 let c = types
-                    .get(&custom_type_in_array.type_field)
+                    .get(&custom_type_in_array.type_id)
                     .expect("couldn't find type id");
 
                 c.type_field.clone()

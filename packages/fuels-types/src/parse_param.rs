@@ -40,6 +40,7 @@ impl ParamType {
         prop: &TypeDeclaration,
         types: &HashMap<usize, TypeDeclaration>,
     ) -> Result<Self, Error> {
+        dbg!(&prop);
         match ParamType::from_str(&prop.type_field) {
             // Simple case (primitive types, no arrays or strings)
             Ok(param_type) => Ok(param_type),
@@ -56,6 +57,10 @@ impl ParamType {
                 if has_tuple_format(&prop.type_field) {
                     // Try to parse tuple (T, T, ..., T)
                     return ParamType::_new_parse_tuple_param(prop, types);
+                }
+                if prop.type_field.contains("generic") {
+                    let name = prop.type_field.split("generic").collect::<Vec<&str>>()[1].trim();
+                    return Ok(ParamType::Generic(name.into()));
                 }
                 // Try to parse a free form enum or struct (e.g. `struct MySTruct`, `enum MyEnum`).
                 ParamType::_new_parse_custom_type_param(prop, types)
@@ -88,7 +93,7 @@ impl ParamType {
             .as_ref()
             .expect("tuples should have components")
         {
-            let tuple_component_type_declaration = types.get(&tuple_component.type_field).unwrap();
+            let tuple_component_type_declaration = types.get(&tuple_component.type_id).unwrap();
             params.push(Self::from_type_declaration(
                 tuple_component_type_declaration,
                 types,
@@ -182,7 +187,7 @@ impl ParamType {
 
         let t = if let Some([component]) = prop.components.as_deref() {
             types
-                .get(&component.type_field)
+                .get(&component.type_id)
                 .expect("couldn't find type declaration for array component")
         } else {
             panic!("array should have components");
@@ -242,7 +247,7 @@ impl ParamType {
                 let params = c
                     .iter()
                     .map(|component| {
-                        let component_type_declaration = types.get(&component.type_field).unwrap();
+                        let component_type_declaration = types.get(&component.type_id).unwrap();
                         Self::from_type_declaration(component_type_declaration, types).unwrap()
                     })
                     .collect();

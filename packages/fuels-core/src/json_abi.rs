@@ -78,7 +78,7 @@ impl ABIParser {
         let fn_param_types = entry
             .inputs
             .iter()
-            .map(|t| types.get(&t.type_field).unwrap().clone())
+            .map(|t| types.get(&t.type_id).unwrap().clone())
             .collect::<Vec<TypeDeclaration>>();
 
         let fn_selector = _new_build_fn_selector(fn_name, &fn_param_types, &types)?;
@@ -91,7 +91,7 @@ impl ABIParser {
             .iter()
             .zip(values)
             .map(|(prop, val)| {
-                let t = types.get(&prop.type_field).unwrap();
+                let t = types.get(&prop.type_id).unwrap();
                 Ok((ParamType::from_type_declaration(t, &types)?, val.as_str()))
             })
             .collect::<Result<Vec<_>, Error>>()?;
@@ -219,7 +219,7 @@ impl ABIParser {
         let types = FlatAbigen::get_types(&parsed_abi);
 
         let param_result = types
-            .get(&entry.unwrap().output.type_field)
+            .get(&entry.unwrap().output.type_id)
             .expect("No output type");
 
         let param_result = ParamType::from_type_declaration(param_result, &types);

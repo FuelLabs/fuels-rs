@@ -38,8 +38,8 @@ impl FlatAbigen {
         // Support for new JSON ABI file format.
         let source = Source::parse(abi_source).expect("failed to parse JSON ABI");
 
-        let parsed_abi: ProgramABI =
-            serde_json::from_str(&source.get().expect("failed to parse JSON ABI from string"))?;
+        let s = source.get().expect("failed to parse JSON ABI from string");
+        let parsed_abi: ProgramABI = serde_json::from_str(&s)?;
 
         Ok(Self {
             types: FlatAbigen::get_types(&parsed_abi),
@@ -80,9 +80,9 @@ impl FlatAbigen {
             self.contract_name.to_string().to_lowercase()
         ));
 
-        let contract_functions = self.functions()?;
         let abi_structs = self.abi_structs()?;
         let abi_enums = self.abi_enums()?;
+        let contract_functions = self.functions()?;
 
         let (includes, code) = if self.no_std {
             (
@@ -180,6 +180,8 @@ impl FlatAbigen {
     }
 
     pub fn functions(&self) -> Result<TokenStream, Error> {
+        // Return empty TokenStream for now
+        return Ok(quote! {}); // temp
         let tokenized_functions = self
             .abi
             .functions
@@ -210,7 +212,10 @@ impl FlatAbigen {
             }
 
             if !seen_struct.contains(&prop.type_field.as_str()) {
-                structs.extend(_new_expand_custom_struct(prop, &self.types)?);
+                dbg!("trying to expand struct: {}", &prop);
+                let s = _new_expand_custom_struct(prop, &self.types)?;
+                dbg!(&s.to_string());
+                structs.extend(s);
                 seen_struct.push(&prop.type_field);
             }
         }
@@ -233,6 +238,8 @@ impl FlatAbigen {
 
     fn abi_enums(&self) -> Result<TokenStream, Error> {
         let mut enums = TokenStream::new();
+
+        return Ok(enums); // temp
 
         // Prevent expanding the same enum more than once
         let mut seen_enum: Vec<&str> = vec![];

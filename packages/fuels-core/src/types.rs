@@ -1,14 +1,15 @@
 use anyhow::Result;
 use fuels_types::errors::Error;
 use proc_macro2::TokenStream;
-use quote::quote;
+use quote::{quote, ToTokens};
 
-use crate::ParamType;
+use crate::{utils::ident, ParamType};
 
 /// Expands a [`ParamType`] into a TokenStream.
 /// Used to expand functions when generating type-safe bindings of a JSON ABI.
 pub fn expand_type(kind: &ParamType) -> Result<TokenStream, Error> {
     match kind {
+        ParamType::Generic(name) => Ok(ident(name).into_token_stream()),
         ParamType::Unit => Ok(quote! {()}),
         ParamType::U8 | ParamType::Byte => Ok(quote! { u8 }),
         ParamType::U16 => Ok(quote! { u16 }),

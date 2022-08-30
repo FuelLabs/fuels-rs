@@ -96,7 +96,7 @@ pub fn _new_expand_function(
     let fn_param_types = function
         .inputs
         .iter()
-        .map(|t| types.get(&t.type_field).unwrap().clone())
+        .map(|t| types.get(&t.type_id).unwrap().clone())
         .collect::<Vec<TypeDeclaration>>();
 
     let name = safe_ident(&function.name);
@@ -119,7 +119,7 @@ pub fn _new_expand_function(
     ));
 
     let t = types
-        .get(&function.output.type_field)
+        .get(&function.output.type_id)
         .expect("couldn't find type");
 
     let param_type = ParamType::from_type_declaration(t, types)?;
@@ -211,7 +211,7 @@ fn _new_expand_fn_output(
     output: &TypeApplication,
     types: &HashMap<usize, TypeDeclaration>,
 ) -> Result<TokenStream, Error> {
-    let output_type = types.get(&output.type_field).expect("couldn't find type");
+    let output_type = types.get(&output.type_id).expect("couldn't find type");
 
     // If it's a primitive type, simply parse and expand.
     if !output_type.is_custom_type(types) {
@@ -251,7 +251,7 @@ fn _new_expand_fn_output(
                                 .components
                                 .as_ref()
                                 .expect("array should have components")[0]
-                                .type_field,
+                                .type_id,
                         )
                         .expect("couldn't find type");
 
@@ -316,7 +316,7 @@ fn _new_expand_tuple_w_custom_types(
         .expect("tuples should have components")
         .iter()
     {
-        let type_string = types.get(&c.type_field).unwrap().type_field.clone();
+        let type_string = types.get(&c.type_id).unwrap().type_field.clone();
 
         // If custom type is inside a tuple `(struct | enum <name>, ...)`,
         // the type signature should be only `(<name>, ...)`.
@@ -476,7 +476,7 @@ fn _new_expand_function_arguments(
         let name = expand_input_name(&fn_type_application.name)?;
 
         let param = types
-            .get(&fn_type_application.type_field)
+            .get(&fn_type_application.type_id)
             .expect("couldn't find type");
 
         // TokenStream representing the type of the argument
@@ -565,7 +565,7 @@ fn _new_build_expanded_tuple_params(
         .expect("tuple parameter should have components")
     {
         let component = types
-            .get(&type_application.type_field)
+            .get(&type_application.type_id)
             .expect("couldn't find type");
 
         if !component.is_custom_type(types) {
@@ -654,7 +654,7 @@ fn _new_expand_input_param(
         }
         ParamType::Enum(_) => {
             let t = types
-                .get(&type_application.type_field)
+                .get(&type_application.type_id)
                 .expect("type not found");
 
             let ident = ident(&_new_extract_custom_type_name_from_abi_property(
@@ -666,7 +666,7 @@ fn _new_expand_input_param(
         }
         ParamType::Struct(_) => {
             let t = types
-                .get(&type_application.type_field)
+                .get(&type_application.type_id)
                 .expect("type not found");
 
             let ident = ident(&_new_extract_custom_type_name_from_abi_property(
