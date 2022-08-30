@@ -194,8 +194,12 @@ mod tests {
         errors::Error,
         param_types::{EnumVariants, ParamType},
     };
+    use itertools::chain;
     use sha2::{Digest, Sha256};
     use std::slice;
+
+    const VEC_METADATA_SIZE: usize = 3 * WORD_SIZE;
+    const DISCRIMINANT_SIZE: usize = WORD_SIZE;
 
     #[test]
     fn encode_function_signature() {
@@ -922,6 +926,192 @@ mod tests {
         let actual = ABIEncoder::encode(&[Token::Enum(enum_selector)], 0)?;
 
         assert_eq!(actual, expected);
+        Ok(())
+    }
+
+    #[test]
+    fn vector_has_ptr_cap_len_and_then_data() -> Result<(), Error> {
+        // arrange
+        let offset: u8 = 150;
+        let token = Token::Vector(vec![Token::U64(5)]);
+
+        // act
+        let result = ABIEncoder::encode(&[token], offset as u64)?;
+
+        // assert
+        let ptr = [0, 0, 0, 0, 0, 0, 0, 3 * WORD_SIZE as u8 + offset];
+        let cap = [0, 0, 0, 0, 0, 0, 0, 1];
+        let len = [0, 0, 0, 0, 0, 0, 0, 1];
+        let data = [0, 0, 0, 0, 0, 0, 0, 5];
+
+        let expected = chain!(ptr, cap, len, data).collect::<Vec<_>>();
+
+        assert_eq!(result, expected);
+
+        Ok(())
+    }
+
+    #[test]
+    fn data_from_two_vectors_aggregated_at_the_end() -> Result<(), Error> {
+        // arrange
+        let offset: u8 = 40;
+        let vec_1 = Token::Vector(vec![Token::U64(5)]);
+        let vec_2 = Token::Vector(vec![Token::U64(6)]);
+
+        // act
+        let result = ABIEncoder::encode(&[vec_1, vec_2], offset as u64)?;
+
+        // assert
+        let vec1_data_offset = 6 * WORD_SIZE as u8 + offset;
+        let vec1_ptr = [0, 0, 0, 0, 0, 0, 0, vec1_data_offset];
+        let vec1_cap = [0, 0, 0, 0, 0, 0, 0, 1];
+        let vec1_len = [0, 0, 0, 0, 0, 0, 0, 1];
+        let vec1_data = [0, 0, 0, 0, 0, 0, 0, 5];
+
+        let vec2_data_offset = vec1_data_offset + vec1_data.len() as u8;
+        let vec2_ptr = [0, 0, 0, 0, 0, 0, 0, vec2_data_offset];
+        let vec2_cap = [0, 0, 0, 0, 0, 0, 0, 1];
+        let vec2_len = [0, 0, 0, 0, 0, 0, 0, 1];
+        let vec2_data = [0, 0, 0, 0, 0, 0, 0, 6];
+
+        let expected = chain!(
+            vec1_ptr, vec1_cap, vec1_len, vec2_ptr, vec2_cap, vec2_len, vec1_data, vec2_data,
+        )
+        .collect::<Vec<_>>();
+
+        assert_eq!(result, expected);
+
+        Ok(())
+    }
+
+    #[test]
+    fn a_vec_in_an_enum() -> Result<(), Error> {
+        // arrange
+        let offset = 40;
+        let variants = EnumVariants::new(vec![
+            ParamType::B256,
+            ParamType::Vector(Box::new(ParamType::U64)),
+        ])?;
+        let selector = (1, Token::Vector(vec![Token::U64(5)]), variants);
+        let token = Token::Enum(Box::new(selector));
+
+        // act
+        let result = ABIEncoder::encode(&[token], offset as u64)?;
+
+        // assert
+        let discriminant = vec![0, 0, 0, 0, 0, 0, 0, 1];
+
+        const PADDING: usize = std::mem::size_of::<Bits256>() - VEC_METADATA_SIZE;
+
+        let vec1_ptr = ((DISCRIMINANT_SIZE + PADDING + VEC_METADATA_SIZE + offset) as u64)
+            .to_be_bytes()
+            .to_vec();
+        let vec1_cap = [0, 0, 0, 0, 0, 0, 0, 1];
+        let vec1_len = [0, 0, 0, 0, 0, 0, 0, 1];
+        let vec1_data = [0, 0, 0, 0, 0, 0, 0, 5];
+
+        let expected = chain!(
+            discriminant,
+            vec![0; PADDING],
+            vec1_ptr,
+            vec1_cap,
+            vec1_len,
+            vec1_data
+        )
+        .collect::<Vec<u8>>();
+
+        assert_eq!(result, expected);
+
+        Ok(())
+    }
+
+    #[test]
+    fn an_enum_in_a_vec() -> Result<(), Error> {
+        // arrange
+        let offset = 40;
+        let variants = EnumVariants::new(vec![ParamType::B256, ParamType::U8])?;
+        let selector = (1, Token::U8(8), variants);
+        let enum_token = Token::Enum(Box::new(selector));
+
+        let vec_token = Token::Vector(vec![enum_token]);
+
+        // act
+        let result = ABIEncoder::encode(&[vec_token], offset as u64)?;
+
+        // assert
+        const PADDING: usize = std::mem::size_of::<Bits256>() - WORD_SIZE;
+
+        let vec1_ptr = ((VEC_METADATA_SIZE + offset) as u64).to_be_bytes().to_vec();
+        let vec1_cap = [0, 0, 0, 0, 0, 0, 0, 1];
+        let vec1_len = [0, 0, 0, 0, 0, 0, 0, 1];
+        let discriminant = 1u64.to_be_bytes();
+        let vec1_data = chain!(discriminant, [0; PADDING], 8u64.to_be_bytes()).collect::<Vec<_>>();
+
+        let expected = chain!(vec1_ptr, vec1_cap, vec1_len, vec1_data).collect::<Vec<u8>>();
+
+        assert_eq!(result, expected);
+
+        Ok(())
+    }
+
+    #[test]
+    fn a_vec_in_a_struct() -> Result<(), Error> {
+        // arrange
+        let offset = 40;
+        let token = Token::Struct(vec![Token::Vector(vec![Token::U64(5)]), Token::U8(9)]);
+
+        // act
+        let result = ABIEncoder::encode(&[token], offset as u64)?;
+
+        // assert
+        let vec1_ptr = ((VEC_METADATA_SIZE + WORD_SIZE + offset) as u64)
+            .to_be_bytes()
+            .to_vec();
+        let vec1_cap = [0, 0, 0, 0, 0, 0, 0, 1];
+        let vec1_len = [0, 0, 0, 0, 0, 0, 0, 1];
+        let vec1_data = [0, 0, 0, 0, 0, 0, 0, 5];
+
+        let expected = chain!(
+            vec1_ptr,
+            vec1_cap,
+            vec1_len,
+            [0, 0, 0, 0, 0, 0, 0, 9],
+            vec1_data
+        )
+        .collect::<Vec<u8>>();
+
+        assert_eq!(result, expected);
+
+        Ok(())
+    }
+    #[test]
+    fn a_vec_in_a_vec() -> Result<(), Error> {
+        // arrange
+        let offset = 40;
+        let token = Token::Vector(vec![Token::Vector(vec![Token::U8(5), Token::U8(6)])]);
+
+        // act
+        let result = ABIEncoder::encode(&[token], offset as u64)?;
+
+        // assert
+        let vec1_data_offset = (VEC_METADATA_SIZE + offset) as u64;
+        let vec1_ptr = vec1_data_offset.to_be_bytes().to_vec();
+        let vec1_cap = [0, 0, 0, 0, 0, 0, 0, 1];
+        let vec1_len = [0, 0, 0, 0, 0, 0, 0, 1];
+
+        let vec2_ptr = (vec1_data_offset + VEC_METADATA_SIZE as u64)
+            .to_be_bytes()
+            .to_vec();
+        let vec2_cap = [0, 0, 0, 0, 0, 0, 0, 2];
+        let vec2_len = [0, 0, 0, 0, 0, 0, 0, 2];
+        let vec2_data = [0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 6];
+
+        let vec1_data = chain!(vec2_ptr, vec2_cap, vec2_len, vec2_data).collect::<Vec<_>>();
+
+        let expected = chain!(vec1_ptr, vec1_cap, vec1_len, vec1_data).collect::<Vec<u8>>();
+
+        assert_eq!(result, expected);
+
         Ok(())
     }
 }
