@@ -5,6 +5,7 @@ use fuels_types::{
     errors::{CodecError, Error},
     param_types::{EnumVariants, ParamType},
 };
+use std::vec;
 use strum_macros::EnumString;
 
 pub mod abi_decoder;
@@ -106,7 +107,7 @@ pub fn try_from_bytes<T>(bytes: &[u8]) -> Result<T, Error>
 where
     T: Parameterize + Tokenizable,
 {
-    let token = ABIDecoder::decode_single(&T::param_type(), bytes)?;
+    let token = ABIDecoder::decode_single(&T::param_type(), bytes, vec![])?;
 
     T::from_token(token)
 }

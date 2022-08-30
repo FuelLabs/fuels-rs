@@ -1,9 +1,9 @@
 use std::collections::HashSet;
 use std::fmt::Debug;
-use std::fs;
 use std::marker::PhantomData;
 use std::path::Path;
 use std::str::FromStr;
+use std::{fs, vec};
 
 use anyhow::Result;
 use fuel_gql_client::{
@@ -426,7 +426,7 @@ impl ContractCall {
             receipts.remove(i);
         }
 
-        let decoded_value = ABIDecoder::decode_single(param_type, &encoded_value)?;
+        let decoded_value = ABIDecoder::decode_single(param_type, &encoded_value, vec![])?;
         Ok(decoded_value)
     }
 }

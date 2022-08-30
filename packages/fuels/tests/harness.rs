@@ -9,7 +9,8 @@ use fuels::prelude::{
     Config, Contract, Error, LocalWallet, Provider, Salt, Signer, TxParameters, WalletsConfig,
     DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
 };
-use fuels_core::abi_encoder::ABIEncoder;
+use fuels_core::abi_encoder::{ABIEncoder, UnresolvedBytes};
+use itertools::Itertools;
 use std::slice;
 
 use fuels_core::parameters::StorageConfiguration;
@@ -3560,5 +3561,94 @@ async fn test_vector() -> Result<(), Error> {
     let script = Script::new(tx);
     let receipts = script.call(wallet.get_provider().unwrap()).await.unwrap();
     dbg!(receipts);
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_vector_rtn() -> Result<(), Error> {
+    let wallet = launch_provider_and_get_wallet().await;
+
+    let contract_id = Contract::deploy(
+        "tests/test_projects/vectors/out/debug/vectors.bin",
+        &wallet,
+        TxParameters::default(),
+        StorageConfiguration::default(),
+    )
+    .await?;
+
+    let fn_signature = "return_a_vec()";
+
+    let encoded_selector = first_four_bytes_of_sha256_hash(fn_signature);
+
+    let encoded_args = UnresolvedBytes::new(vec![]);
+
+    let call = ContractCall {
+        contract_id: contract_id.clone(),
+        encoded_selector,
+        encoded_args,
+        call_parameters: CallParameters::default(),
+        compute_custom_input_offset: true,
+        variable_outputs: None,
+        external_contracts: vec![],
+        output_param: None,
+    };
+
+    let calls: Vec<ContractCall> = vec![call];
+
+    let data_offset = Script::get_data_offset(calls.len());
+
+    let (script_data, call_param_offsets) = Script::get_script_data(&calls, data_offset);
+
+    let script = Script::get_instructions(&calls, call_param_offsets);
+
+    let spendable_coins = Script::get_spendable_coins(&wallet, &calls).await?;
+
+    let (inputs, outputs) =
+        Script::get_transaction_inputs_outputs(&calls, wallet.address(), spendable_coins);
+
+    let tx_parameters: TxParameters = Default::default();
+    let mut tx = Transaction::script(
+        tx_parameters.gas_price,
+        tx_parameters.gas_limit,
+        tx_parameters.byte_price,
+        tx_parameters.maturity,
+        script,
+        script_data,
+        inputs,
+        outputs,
+        vec![],
+    );
+    wallet.sign_transaction(&mut tx).await.unwrap();
+
+    let script = Script::new(tx);
+    let receipts = script.call(wallet.get_provider().unwrap()).await.unwrap();
+    let rtn = receipts
+        .iter()
+        .filter_map(|receipt| match receipt {
+            Receipt::ReturnData { data, .. } => Some(data.clone()),
+            _ => None,
+        })
+        .exactly_one()
+        .unwrap();
+    dbg!(&receipts);
+    let length = rtn
+        .chunks(8)
+        .map(|bytes| u64::from_be_bytes(bytes.try_into().unwrap()))
+        .last()
+        .unwrap();
+
+    let vec_logs = receipts
+        .iter()
+        .rev()
+        .filter_map(|receipt| match receipt {
+            Receipt::Log { ref ra, .. } => Some(ra),
+            _ => None,
+        })
+        .rev()
+        .take(length as usize)
+        .collect::<Vec<_>>();
+
+    dbg!(vec_logs);
+
     Ok(())
 }

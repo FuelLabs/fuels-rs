@@ -8,7 +8,7 @@ use fuels_types::{errors::Error, param_types::ParamType, Property};
 use fuels_types::{ProgramABI, TypeDeclaration};
 use itertools::Itertools;
 use serde_json;
-use std::str;
+use std::{str, vec};
 
 pub struct ABIParser {
     fn_selector: Option<Vec<u8>>,
@@ -225,7 +225,7 @@ impl ABIParser {
         let param_result = ParamType::from_type_declaration(param_result, &types);
 
         match param_result {
-            Ok(params) => Ok(ABIDecoder::decode(&[params], value)?),
+            Ok(params) => Ok(ABIDecoder::decode(&[params], value, vec![])?),
             Err(e) => Err(e),
         }
     }
@@ -233,7 +233,7 @@ impl ABIParser {
     /// Similar to decode, but it decodes only an array types and the encoded data
     /// without having to reference to a JSON specification of the ABI.
     pub fn decode_params(&self, params: &[ParamType], data: &[u8]) -> Result<Vec<Token>, Error> {
-        Ok(ABIDecoder::decode(params, data)?)
+        Ok(ABIDecoder::decode(params, data, vec![])?)
     }
 }
 

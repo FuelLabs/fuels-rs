@@ -1,5 +1,7 @@
 extern crate alloc;
+
 use fuels_abigen_macro::wasm_abigen;
+use std::vec;
 
 wasm_abigen!(
     no_name,
@@ -59,6 +61,7 @@ pub fn the_fn() {
     let obj = ABIDecoder::decode_single(
         &ParamType::Struct(vec![ParamType::U64, ParamType::B256]),
         &data,
+        vec![],
     )
     .expect("Failed to decode");
 

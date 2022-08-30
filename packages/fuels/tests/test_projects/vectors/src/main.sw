@@ -15,11 +15,32 @@ fn check_vector(a_vec: Vec<u64>) {
         }
 }
 
+fn print_a_vec(a_vec: Vec<u64>) {
+        let mut i = 0;
+        while i < a_vec.len() {
+            log(a_vec.get(i).unwrap());
+            i += 1;
+        }
+}
+
 impl MyContract for Contract {
     fn real_vec(vec_1: Vec<u64>, vec_2: Vec<u64>){
         check_vector(vec_1);
         check_vector(vec_2);
     }
+
+    fn return_a_vec()->Vec<u64>{
+        let mut vec = ~Vec::new();
+
+        vec.push(100);
+        vec.push(200);
+        vec.push(300);
+
+        print_a_vec(vec);
+
+        vec
+    }
+
     fn fake_vec(a_vector: MyVec){
 
         assert(a_vector.raw.ptr == 10480 + 24);
