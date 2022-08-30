@@ -214,10 +214,10 @@ fn extract_starts_and_ends(
 
 fn search_for_patterns_in_project(pattern: &str) -> anyhow::Result<String> {
     let grep_project = std::process::Command::new("grep")
-        .arg("-I")
-        .arg("-H")
-        .arg("-R")
-        .arg("-n")
+        .arg("--binary-files=without-match")
+        .arg("--with-filename")
+        .arg("--dereference-recursive")
+        .arg("--line-number")
         .arg("--exclude-dir=scripts")
         .arg(pattern)
         .arg(".")
@@ -240,10 +240,10 @@ mod tests {
 
     fn test_search_for_patterns(pattern: &str, test_file: &str) -> anyhow::Result<String> {
         let grep = std::process::Command::new("grep")
-            .arg("-I")
-            .arg("-H")
-            .arg("-R")
-            .arg("-n")
+            .arg("--binary-files=without-match")
+            .arg("--with-filename")
+            .arg("--dereference-recursive")
+            .arg("--line-number")
             .arg("--exclude-dir=scripts")
             .arg(pattern)
             .arg(test_file)
