@@ -731,15 +731,6 @@ mod test {
     }
 
     #[test]
-    fn will_require_base_asset_even_if_not_explicitly_asked_for() {
-        let asset_id_amounts = Script::calculate_required_asset_amounts(&[]);
-        assert_eq!(
-            asset_id_amounts,
-            [(BASE_ASSET_ID, DEFAULT_SPENDABLE_COIN_AMOUNT)]
-        )
-    }
-
-    #[test]
     fn will_collate_same_asset_ids() {
         let amounts = [100, 200];
 
@@ -755,7 +746,6 @@ mod test {
         let asset_id_amounts = Script::calculate_required_asset_amounts(&calls);
 
         let expected_asset_id_amounts = [
-            (BASE_ASSET_ID, DEFAULT_SPENDABLE_COIN_AMOUNT),
             (asset_id, amounts.iter().sum()),
         ]
         .into();

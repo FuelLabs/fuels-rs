@@ -340,13 +340,10 @@ impl WalletUnlocked {
     // The original base asset amount cannot be calculated reliably from
     // the existing transaction inputs because the selected coins may exceed
     // the required amount to avoid dust. Therefore we need it as an argument.
-    // Note: this method may fail to setup enough coins to cover the fee
-    // in extreme cases where the wallet owns coins with amounts inssufficient
-    // to cover the cost of adding them to a transaction
     pub async fn cover_fee(
         &self,
         tx: &mut Transaction,
-        previous_base_amount: u64,
+        base_asset_amount: u64,
         witness_index: u8,
     ) -> Result<(), Error> {
         let consensus_parameters = self
@@ -354,21 +351,33 @@ impl WalletUnlocked {
             .chain_info()
             .await?
             .consensus_parameters;
-        let estimated_fee = TransactionFee::checked_from_tx(&consensus_parameters.into(), &*tx)
-            .expect("Error calculating TransactionFee")
-            .total();
-
-        if estimated_fee == 0 {
-            return Ok(());
-        }
-
-        let new_base_amount = estimated_fee + previous_base_amount;
+        let transaction_fee = TransactionFee::checked_from_tx(&consensus_parameters.into(), &*tx)
+            .expect("Error calculating TransactionFee");
 
         let (base_inputs, non_base_inputs): (Vec<Input>, Vec<Input>) =
             tx.inputs().iter().cloned().partition(|input| {
                 matches!(input, Input::CoinSigned { .. })
                     && *input.asset_id().unwrap() == BASE_ASSET_ID
             });
+
+        let base_inputs_sum: u64 = base_inputs.iter().map(|input| { input.amount().unwrap( ) }).sum();
+        if base_inputs_sum < base_asset_amount {
+            return Err(Error::WalletError(
+                "The provided base asset amount is less than the present input coins".to_string(),
+            ));
+        }
+
+        let mut new_base_amount = transaction_fee.total() + base_asset_amount;
+        // If the tx doesn't consume any UTXOs, attempting to repeat it will lead to an
+        // error due to non unique tx ids (e.g. repeated contract call with configured gas fee of 0).
+        // Here we enforce a minimum input amount on the base asset to avoid this
+        const MIN_FEE:u64 = 1;
+        let is_using_coins = tx.inputs().iter().any(|input| {
+            matches!(input, Input::CoinSigned { .. })
+        });
+        if !is_using_coins && new_base_amount == 0 {
+            new_base_amount = MIN_FEE;
+        }
 
         let new_base_inputs = self
             .get_asset_inputs_for_amount(BASE_ASSET_ID, new_base_amount, witness_index)
@@ -389,7 +398,7 @@ impl WalletUnlocked {
             ));
         }
 
-        let change_output = if is_base_change_present && !adjusted_inputs.is_empty() {
+        let change_output = if !is_base_change_present {
             vec![Output::change(self.address().into(), 0, AssetId::default())]
         } else {
             vec![]
@@ -413,8 +422,6 @@ impl WalletUnlocked {
                 outputs.extend(change_output);
             }
         };
-
-        dbg!(tx);
 
         Ok(())
     }
