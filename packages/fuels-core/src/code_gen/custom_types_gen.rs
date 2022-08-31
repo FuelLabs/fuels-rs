@@ -214,7 +214,6 @@ pub fn _new_expand_custom_struct(
         let t = types.get(&component.type_id).expect("couldn't find type");
 
         let param_type = ParamType::from_type_declaration(t, types)?;
-
         match param_type {
             // Case where a struct takes another struct
             ParamType::Struct(_params) => {
@@ -224,7 +223,9 @@ pub fn _new_expand_custom_struct(
                     types,
                 )?);
 
-                fields.push(quote! {pub #field_name: #inner_struct_ident});
+                let stream = quote! {pub #field_name: #inner_struct_ident};
+                eprintln!("Adding a struct field: {stream}");
+                fields.push(stream);
                 args.push(quote! {#field_name: #inner_struct_ident::from_token(next_token()?)?});
                 struct_fields_tokens.push(quote! { tokens.push(self.#field_name.into_token()) });
                 param_types.push(quote! { types.push(#inner_struct_ident::param_type()) });
@@ -236,7 +237,9 @@ pub fn _new_expand_custom_struct(
                     Some(CustomType::Enum),
                     types,
                 )?);
-                fields.push(quote! {pub #field_name: #enum_name});
+                let stream = quote! {pub #field_name: #enum_name};
+                eprintln!("Adding a struct field: {stream}");
+                fields.push(stream);
                 args.push(quote! {#field_name: #enum_name::from_token(next_token()?)?});
                 struct_fields_tokens.push(quote! { tokens.push(self.#field_name.into_token()) });
 
@@ -246,9 +249,6 @@ pub fn _new_expand_custom_struct(
                 let ty = expand_type(&param_type)?;
 
                 let mut param_type_string = param_type.to_string();
-
-                dbg!(&ty);
-                dbg!(&param_type_string);
 
                 let param_type_string_ident_tok: proc_macro2::TokenStream =
                     param_type_string.parse().unwrap();
@@ -263,9 +263,9 @@ pub fn _new_expand_custom_struct(
                 let param_type_string_ident = ident(&param_type_string);
 
                 // Field declaration
-                fields.push(quote! { pub #field_name: #ty});
-
-                dbg!(&fields);
+                let stream = quote! { pub #field_name: #ty};
+                eprintln!("Adding a struct field: {stream}");
+                fields.push(stream);
 
                 // Check if param type is generic
                 if let ParamType::Generic(name) = param_type {

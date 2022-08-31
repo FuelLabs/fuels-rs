@@ -212,9 +212,9 @@ impl FlatAbigen {
             }
 
             if !seen_struct.contains(&prop.type_field.as_str()) {
-                dbg!("trying to expand struct: {}", &prop);
+                eprintln!("trying to expand struct: {prop:?}");
                 let s = _new_expand_custom_struct(prop, &self.types)?;
-                dbg!(&s.to_string());
+                eprintln!("expanded struct into: {s}");
                 structs.extend(s);
                 seen_struct.push(&prop.type_field);
             }

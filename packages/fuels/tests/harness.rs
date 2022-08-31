@@ -1,3 +1,4 @@
+#![allow(warnings)] // temp remove me later
 use fuel_core::service::Config as CoreConfig;
 use fuel_core::service::FuelService;
 use fuel_gql_client::fuel_tx::{AssetId, ContractId, Receipt};
@@ -10,12 +11,16 @@ use fuels::prelude::{
     DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
 };
 use fuels_core::abi_encoder::ABIEncoder;
+use std::fs;
+use std::path::Path;
+use std::process::{Command, ExitStatus};
 
 use fuels_core::parameters::StorageConfiguration;
 use fuels_core::tx::{Address, Bytes32, StorageSlot};
 use fuels_core::Tokenizable;
 use fuels_core::{constants::BASE_ASSET_ID, Token};
 
+use fuels_core::code_gen::flat_abigen::FlatAbigen;
 use sha2::{Digest, Sha256};
 use std::str::FromStr;
 
@@ -3456,21 +3461,92 @@ fn null_contract_id() -> String {
 // }
 
 #[tokio::test]
-async fn basic_generics() -> Result<(), Error> {
-    abigen!(
-        MyContract,
-        "packages/fuels/tests/test_projects/generics/out/debug/generics-flat-abi.json"
-    );
+async fn generics_preview() -> Result<(), Error> {
+    let project_path = Path::new("/tmp/generics_project");
+    abigen_to_project(&project_path, false)?;
 
-    let wallet = launch_provider_and_get_wallet().await;
-
-    let contract_id = Contract::deploy(
-        "tests/test_projects/contract_test/out/debug/generics.bin",
-        &wallet,
-        TxParameters::default(),
-        StorageConfiguration::default(),
-    )
-    .await?;
+    open_in_terminal(&project_path)?;
 
     Ok(())
+}
+
+#[tokio::test]
+async fn generics_compiling() -> Result<(), Error> {
+    let project_path = Path::new("/tmp/generics_project");
+
+    abigen_to_project(&project_path, true)?;
+
+    cargo_check(project_path)?;
+
+    Ok(())
+}
+
+fn cargo_check(project_path: &Path) -> std::io::Result<ExitStatus> {
+    Command::new(env!("CARGO"))
+        .current_dir(project_path)
+        .args(["check"])
+        .spawn()?
+        .wait()
+}
+
+fn abigen_to_project(project_path: &Path, disable_warnings: bool) -> anyhow::Result<()> {
+    let mut code = FlatAbigen::new(
+        "MyContract",
+        "tests/test_projects/generics/out/debug/generics-flat-abi.json",
+    )?
+    .expand()?
+    .to_string();
+
+    if disable_warnings {
+        code = format!("#![allow(warnings)]\n{code}");
+    }
+
+    temp_cargo_project(project_path)?;
+
+    let code_file = project_path.join("./src/lib.rs");
+
+    fs::write(&code_file, code.to_string())?;
+
+    rustfmt(&code_file)?;
+
+    Ok(())
+}
+
+fn temp_cargo_project(project_path: &Path) -> anyhow::Result<()> {
+    fs::create_dir_all(project_path.join("./src"))?;
+
+    let fuels_package_path = "/home/segfault_magnet/fuel/github/fuels-rs/packages/fuels";
+    fs::copy(
+        Path::new(fuels_package_path).join("generics_cargo.toml"),
+        project_path.join("./Cargo.toml"),
+    )?;
+
+    let project_cargo_toml_path = project_path.join("./Cargo.toml");
+    let toml_w_local_fuels_package = fs::read_to_string(&project_cargo_toml_path)?
+        .replace("FUELS_PACKAGE_PATH", &format!("\"{fuels_package_path}\""));
+
+    fs::write(&project_cargo_toml_path, toml_w_local_fuels_package)?;
+
+    Ok(())
+}
+
+fn open_in_terminal(project_path: &Path) -> std::io::Result<ExitStatus> {
+    let code_file = project_path.join("./src/lib.rs");
+    Command::new("alacritty")
+        .args(["-e", "nvim", "--", code_file.to_str().unwrap()])
+        .spawn()?
+        .wait()
+}
+
+fn rustfmt(code_file: &Path) -> std::io::Result<ExitStatus> {
+    Command::new("rustfmt")
+        .args([
+            "--edition",
+            "2021",
+            "--config-path",
+            "/home/segfault_magnet/fuel/github/fuels-rs/rustfmt.toml",
+            code_file.to_str().unwrap(),
+        ])
+        .spawn()?
+        .wait()
 }

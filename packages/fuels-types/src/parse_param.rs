@@ -40,7 +40,6 @@ impl ParamType {
         prop: &TypeDeclaration,
         types: &HashMap<usize, TypeDeclaration>,
     ) -> Result<Self, Error> {
-        dbg!(&prop);
         match ParamType::from_str(&prop.type_field) {
             // Simple case (primitive types, no arrays or strings)
             Ok(param_type) => Ok(param_type),

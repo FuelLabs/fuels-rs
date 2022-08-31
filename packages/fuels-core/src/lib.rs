@@ -1,3 +1,4 @@
+#![allow(warnings)] // temp remove me later
 use crate::abi_decoder::ABIDecoder;
 use core::fmt;
 use fuel_types::bytes::padded_len;
