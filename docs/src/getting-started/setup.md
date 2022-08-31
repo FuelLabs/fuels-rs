@@ -7,25 +7,25 @@
 
 `forc` is Sway equivalent of Rust's `cargo`. `fuel-core` is a Fuel full node implementation.
 
-There are two main ways how you can use the Fuel Rust SDK:
+There are two main ways you can use the Fuel Rust SDK:
 1. Creating a new Sway project with `forc` and running the tests
 2. Creating a standalone project and importing the `fuels-rs` crate
 
 ## Creating a new project with Forc
 
-You can create new Sway project with
+You can create a new Sway project with
 
 ```
 forc new <Project name>
 ```
 
-or you can initialize a project within an existing folder with
+Or you can initialize a project within an existing folder with
 
 ```
 forc init
 ```
 
-`forc` will setup an example project, and we can test it with
+`forc` will setup an example project and we can test it with
 
 ```
 forc test
