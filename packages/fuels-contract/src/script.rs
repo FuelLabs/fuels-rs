@@ -81,8 +81,8 @@ impl Script {
             .iter()
             .find(|(asset_id, _)| *asset_id == AssetId::default());
         match base_asset_amount {
-            Some((_, base_amount)) => wallet.cover_fee(&mut tx, *base_amount, 0).await?,
-            None => wallet.cover_fee(&mut tx, 0, 0).await?,
+            Some((_, base_amount)) => wallet.add_fee_coins(&mut tx, *base_amount, 0).await?,
+            None => wallet.add_fee_coins(&mut tx, 0, 0).await?,
         }
         wallet.sign_transaction(&mut tx).await.unwrap();
 
@@ -384,7 +384,6 @@ impl Script {
 mod test {
     use super::*;
     use fuel_gql_client::client::schema::coin::CoinStatus;
-    use fuels_core::constants::{BASE_ASSET_ID, DEFAULT_SPENDABLE_COIN_AMOUNT};
     use fuels_core::parameters::CallParameters;
     use fuels_types::bech32::Bech32ContractId;
     use rand::Rng;
@@ -745,10 +744,7 @@ mod test {
 
         let asset_id_amounts = Script::calculate_required_asset_amounts(&calls);
 
-        let expected_asset_id_amounts = [
-            (asset_id, amounts.iter().sum()),
-        ]
-        .into();
+        let expected_asset_id_amounts = [(asset_id, amounts.iter().sum())].into();
 
         assert_eq!(
             asset_id_amounts.into_iter().collect::<HashSet<_>>(),

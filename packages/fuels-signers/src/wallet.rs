@@ -339,8 +339,8 @@ impl WalletUnlocked {
     // Add base asset inputs to the transaction to cover the estimated fee.
     // The original base asset amount cannot be calculated reliably from
     // the existing transaction inputs because the selected coins may exceed
-    // the required amount to avoid dust. Therefore we need it as an argument.
-    pub async fn cover_fee(
+    // the required amount to avoid dust. Therefore we require it as an argument.
+    pub async fn add_fee_coins(
         &self,
         tx: &mut Transaction,
         base_asset_amount: u64,
@@ -354,13 +354,17 @@ impl WalletUnlocked {
         let transaction_fee = TransactionFee::checked_from_tx(&consensus_parameters.into(), &*tx)
             .expect("Error calculating TransactionFee");
 
-        let (base_inputs, non_base_inputs): (Vec<Input>, Vec<Input>) =
+        let (base_asset_inputs, remaining_inputs): (Vec<Input>, Vec<Input>) =
             tx.inputs().iter().cloned().partition(|input| {
                 matches!(input, Input::CoinSigned { .. })
                     && *input.asset_id().unwrap() == BASE_ASSET_ID
             });
 
-        let base_inputs_sum: u64 = base_inputs.iter().map(|input| { input.amount().unwrap( ) }).sum();
+        let base_inputs_sum: u64 = base_asset_inputs
+            .iter()
+            .map(|input| input.amount().unwrap())
+            .sum();
+        // either the inputs were setup incorecctly, or the passed base_asset_amount is wrong
         if base_inputs_sum < base_asset_amount {
             return Err(Error::WalletError(
                 "The provided base asset amount is less than the present input coins".to_string(),
@@ -370,19 +374,20 @@ impl WalletUnlocked {
         let mut new_base_amount = transaction_fee.total() + base_asset_amount;
         // If the tx doesn't consume any UTXOs, attempting to repeat it will lead to an
         // error due to non unique tx ids (e.g. repeated contract call with configured gas fee of 0).
-        // Here we enforce a minimum input amount on the base asset to avoid this
-        const MIN_FEE:u64 = 1;
-        let is_using_coins = tx.inputs().iter().any(|input| {
-            matches!(input, Input::CoinSigned { .. })
-        });
+        // Here we enforce a minimum amount on the base asset to avoid this
+        const MIN_AMOUNT: u64 = 1;
+        let is_using_coins = tx
+            .inputs()
+            .iter()
+            .any(|input| matches!(input, Input::CoinSigned { .. }));
         if !is_using_coins && new_base_amount == 0 {
-            new_base_amount = MIN_FEE;
+            new_base_amount = MIN_AMOUNT;
         }
 
         let new_base_inputs = self
             .get_asset_inputs_for_amount(BASE_ASSET_ID, new_base_amount, witness_index)
             .await?;
-        let adjusted_inputs: Vec<Input> = non_base_inputs
+        let adjusted_inputs: Vec<Input> = remaining_inputs
             .into_iter()
             .chain(new_base_inputs.into_iter())
             .collect();
@@ -392,9 +397,9 @@ impl WalletUnlocked {
         });
 
         // if an input for the base asset exists, the change output should also exist
-        if !base_inputs.is_empty() != is_base_change_present {
+        if !base_asset_inputs.is_empty() != is_base_change_present {
             return Err(Error::WalletError(
-                "Tried to cover fee for malformed transaction".to_string(),
+                "Tried to add fee coins for malformed transaction".to_string(),
             ));
         }
 
@@ -486,9 +491,9 @@ impl WalletUnlocked {
             .build_transfer_tx(&inputs, &outputs, tx_parameters);
 
         if asset_id == AssetId::default() {
-            self.cover_fee(&mut tx, amount, 0).await?;
+            self.add_fee_coins(&mut tx, amount, 0).await?;
         } else {
-            self.cover_fee(&mut tx, 0, 0).await?;
+            self.add_fee_coins(&mut tx, 0, 0).await?;
         };
         self.sign_transaction(&mut tx).await?;
 
@@ -567,7 +572,7 @@ impl WalletUnlocked {
         } else {
             0
         };
-        self.cover_fee(&mut tx, base_amount, 0).await?;
+        self.add_fee_coins(&mut tx, base_amount, 0).await?;
         self.sign_transaction(&mut tx).await?;
 
         let receipts = self.get_provider()?.send_transaction(&tx).await?;

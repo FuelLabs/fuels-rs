@@ -9,8 +9,6 @@ pub const DEFAULT_MATURITY: u64 = 0;
 // ANCHOR: default_call_parameters
 // Limit for the actual contract call
 pub const DEFAULT_FORWARDED_GAS: u64 = 1_000_000;
-// Lower limit when querying spendable UTXOs
-pub const DEFAULT_SPENDABLE_COIN_AMOUNT: u64 = 1_000_000;
 // Bytes representation of the asset ID of the "base" asset used for gas fees.
 pub const BASE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
 // ANCHOR_END: default_call_parameters
