@@ -147,6 +147,9 @@ impl TypeDeclaration {
             || self.has_custom_type_in_tuple(types)
     }
 
+    pub fn is_array(&self) -> bool {
+        has_array_format(&self.type_field)
+    }
     pub fn has_custom_type_in_array(&self, types: &HashMap<usize, TypeDeclaration>) -> bool {
         if has_array_format(&self.type_field) {
             // For each component in the tuple, check if it is a custom type

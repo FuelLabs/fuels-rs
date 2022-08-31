@@ -215,35 +215,15 @@ pub fn _new_expand_custom_struct(
 
         let param_type = ParamType::from_type_declaration(t, types)?;
         match param_type {
-            // Case where a struct takes another struct
-            ParamType::Struct(_params) => {
-                let inner_struct_ident = ident(&_new_extract_custom_type_name_from_abi_property(
-                    t,
-                    Some(CustomType::Struct),
-                    types,
+            ParamType::Struct(_) | ParamType::Enum(_) => {
+                let inner_ident = ident(&_new_extract_custom_type_name_from_abi_property(
+                    t, None, types,
                 )?);
 
-                let stream = quote! {pub #field_name: #inner_struct_ident};
-                eprintln!("Adding a struct field: {stream}");
-                fields.push(stream);
-                args.push(quote! {#field_name: #inner_struct_ident::from_token(next_token()?)?});
+                fields.push(quote! {pub #field_name: #inner_ident});
+                args.push(quote! {#field_name: #inner_ident::from_token(next_token()?)?});
                 struct_fields_tokens.push(quote! { tokens.push(self.#field_name.into_token()) });
-                param_types.push(quote! { types.push(#inner_struct_ident::param_type()) });
-            }
-            // The struct contains a nested enum
-            ParamType::Enum(_params) => {
-                let enum_name = ident(&_new_extract_custom_type_name_from_abi_property(
-                    t,
-                    Some(CustomType::Enum),
-                    types,
-                )?);
-                let stream = quote! {pub #field_name: #enum_name};
-                eprintln!("Adding a struct field: {stream}");
-                fields.push(stream);
-                args.push(quote! {#field_name: #enum_name::from_token(next_token()?)?});
-                struct_fields_tokens.push(quote! { tokens.push(self.#field_name.into_token()) });
-
-                param_types.push(quote! { types.push(#enum_name::param_type()) });
+                param_types.push(quote! { types.push(#inner_ident::param_type()) });
             }
             _ => {
                 let ty = expand_type(&param_type)?;
@@ -264,16 +244,12 @@ pub fn _new_expand_custom_struct(
 
                 // Field declaration
                 let stream = quote! { pub #field_name: #ty};
-                eprintln!("Adding a struct field: {stream}");
                 fields.push(stream);
 
                 // Check if param type is generic
                 if let ParamType::Generic(name) = param_type {
                     let generic_arg = ident(&name);
                     generic_args.push(quote! { #generic_arg });
-                    args.push(quote! {
-                        #field_name: 42
-                    });
 
                     param_types.push(quote! { types.push(ParamType::Generic(#name.to_string())) });
 
@@ -314,9 +290,9 @@ pub fn _new_expand_custom_struct(
     // If struct is generic, we need to add the generic args to the struct
     // declaration.
     let struct_decl = if generic_args.is_empty() {
-        quote! { pub struct #struct_ident { #(#fields),* } }
+        quote! { #[derive(Debug)] pub struct #struct_ident { #(#fields),* } }
     } else {
-        quote! { pub struct #struct_ident <#(#generic_args),*> { #(#fields),* } }
+        quote! { #[derive(Debug)] pub struct #struct_ident <#(#generic_args),*> { #(#fields),* } }
     };
 
     // If struct is generic, we need to add generic params to impl Parameterize
@@ -331,15 +307,7 @@ pub fn _new_expand_custom_struct(
             }
         }
     } else {
-        quote! {
-            impl <#(#generic_args),*> Parameterize for #struct_ident <#(#generic_args),*> {
-                fn param_type() -> ParamType {
-                    let mut types = Vec::new();
-                    #( #param_types; )*
-                    ParamType::Struct(types)
-                }
-            }
-        }
+        quote! {}
     };
 
     // If struct is generic, we need to add generic params to impl Tokenizable.
@@ -370,30 +338,7 @@ pub fn _new_expand_custom_struct(
             }
         }
     } else {
-        quote! {
-            impl <#(#generic_args),*> Tokenizable for #struct_ident <#(#generic_args),*> {
-                fn into_token(self) -> Token {
-                    let mut tokens = Vec::new();
-                    #( #struct_fields_tokens; )*
-
-                    Token::Struct(tokens)
-                }
-
-                fn from_token(token: Token)  -> Result<Self, SDKError> {
-                    match token {
-                        Token::Struct(tokens) => {
-                            let mut tokens_iter = tokens.into_iter();
-                            let mut next_token = move || { tokens_iter
-                                .next()
-                                .ok_or_else(|| { SDKError::InstantiationError(format!("Ran out of tokens before '{}' has finished construction!", #struct_name)) })
-                            };
-                            Ok(Self { #( #args ),* })
-                        },
-                        other => Err(SDKError::InstantiationError(format!("Error while constructing '{}'. Expected token of type Token::Struct, got {:?}", #struct_name, other))),
-                    }
-                }
-            }
-        }
+        quote! {}
     };
 
     // If struct is generic, we need to add generic params to impl TryFrom<&[u8]>.
@@ -408,15 +353,16 @@ pub fn _new_expand_custom_struct(
             }
         }
     } else {
-        quote! {
-            impl <#(#generic_args),*> TryFrom<&[u8]> for #struct_ident <#(#generic_args),*> {
-                type Error = SDKError;
-
-                fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
-                    try_from_bytes(bytes)
-                }
-            }
-        }
+        quote! {}
+        // quote! {
+        //     impl <#(#generic_args),*> TryFrom<&[u8]> for #struct_ident <#(#generic_args),*> {
+        //         type Error = SDKError;
+        //
+        //         fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
+        //             try_from_bytes(bytes)
+        //         }
+        //     }
+        // }
     };
 
     let try_from_vec_ref_impl = if generic_args.is_empty() {
@@ -430,15 +376,16 @@ pub fn _new_expand_custom_struct(
             }
         }
     } else {
-        quote! {
-            impl <#(#generic_args),*> TryFrom<&Vec<u8>> for #struct_ident <#(#generic_args),*> {
-                type Error = SDKError;
-
-                fn try_from(bytes: &Vec<u8>) -> Result<Self, Self::Error> {
-                    try_from_bytes(bytes)
-                }
-            }
-        }
+        quote! {}
+        // quote! {
+        //     impl <#(#generic_args),*> TryFrom<&Vec<u8>> for #struct_ident <#(#generic_args),*> {
+        //         type Error = SDKError;
+        //
+        //         fn try_from(bytes: &Vec<u8>) -> Result<Self, Self::Error> {
+        //             try_from_bytes(bytes)
+        //         }
+        //     }
+        // }
     };
 
     let try_from_vec_impl = if generic_args.is_empty() {
@@ -452,15 +399,16 @@ pub fn _new_expand_custom_struct(
             }
         }
     } else {
-        quote! {
-            impl <#(#generic_args),*> TryFrom<Vec<u8>> for #struct_ident <#(#generic_args),*> {
-                type Error = SDKError;
-
-                fn try_from(bytes: Vec<u8>) -> Result<Self, Self::Error> {
-                    try_from_bytes(&bytes)
-                }
-            }
-        }
+        quote! {}
+        // quote! {
+        //     impl <#(#generic_args),*> TryFrom<Vec<u8>> for #struct_ident <#(#generic_args),*> {
+        //         type Error = SDKError;
+        //
+        //         fn try_from(bytes: Vec<u8>) -> Result<Self, Self::Error> {
+        //             try_from_bytes(&bytes)
+        //         }
+        //     }
+        // }
     };
 
     Ok(quote! {

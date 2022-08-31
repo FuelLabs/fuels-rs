@@ -12,6 +12,7 @@ use fuels::prelude::{
 };
 use fuels_core::abi_encoder::ABIEncoder;
 use std::fs;
+use std::marker::PhantomData;
 use std::path::Path;
 use std::process::{Command, ExitStatus};
 
@@ -3459,6 +3460,14 @@ fn null_contract_id() -> String {
 
 //     Ok(())
 // }
+
+struct MyStruct<T> {
+    data: PhantomData<T>,
+}
+
+impl<T> MyStruct<T> {
+    pub fn something() {}
+}
 
 #[tokio::test]
 async fn generics_preview() -> Result<(), Error> {

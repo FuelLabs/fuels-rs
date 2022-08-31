@@ -5,11 +5,11 @@ struct MyStruct<T> {
 }
 
 abi MyContract {
-  fn identity(arg: MyStruct<u64>) -> u64;
+  fn identity(arg: MyStruct<u64>) -> MyStruct<u64>;
 }
 
 impl MyContract for Contract {
-    fn identity(arg: MyStruct<u64>) -> u64 {
-      arg.foo
+    fn identity(arg: MyStruct<u64>) -> MyStruct<u64> {
+      arg
     }
 }

@@ -12,10 +12,13 @@ use fuels_types::{
     STRUCT_KEYWORD,
 };
 use inflector::Inflector;
-use proc_macro2::{Literal, TokenStream};
-use quote::quote;
+use itertools::Itertools;
+use proc_macro2::{Ident, Literal, TokenStream};
+use quote::{quote, ToTokens};
 use regex::Regex;
 use std::collections::HashMap;
+use std::hash::{Hash, Hasher};
+use syn::Expr::Type;
 
 /// Functions used by the Abigen to expand functions defined in an ABI spec.
 
@@ -106,9 +109,7 @@ pub fn _new_expand_function(
 
     let tokenized_signature = expand_selector(encoded);
 
-    let tokenized_output = _new_expand_fn_output(&function.output, types)?;
-
-    let result = quote! { ContractCallHandler<#tokenized_output> };
+    let resolved_output_type = _new_expand_fn_output(&function.output, types)?;
 
     let (input, arg) = _new_expand_function_arguments(function, types)?;
 
@@ -124,9 +125,20 @@ pub fn _new_expand_function(
 
     let param_type = ParamType::from_type_declaration(t, types)?;
 
-    let tok: proc_macro2::TokenStream = format!("Some(ParamType::{})", param_type).parse().unwrap();
+    let generics = resolved_output_type
+        .generic_params
+        .iter()
+        .cloned()
+        .map(|gen| TokenStream::from(gen))
+        .collect::<Vec<_>>();
+    let output_type_name = resolved_output_type.type_name.clone();
+    let tok: proc_macro2::TokenStream =
+        quote! { Some(#output_type_name::<#(#generics)*,>::param_type()) };
 
     let output_param = tok;
+
+    let output_type_tokenized: TokenStream = resolved_output_type.into();
+    let result = quote! { ContractCallHandler<#output_type_tokenized> };
 
     Ok(quote! {
         #doc
@@ -201,6 +213,44 @@ fn expand_fn_outputs(outputs: &[Property]) -> Result<TokenStream, Error> {
         )),
     }
 }
+#[derive(Debug, Clone)]
+struct ResolvedType {
+    pub type_name: TokenStream,
+    pub generic_params: Vec<ResolvedType>,
+}
+
+// impl Eq for ResolvedType {}
+// impl PartialEq for ResolvedType {
+//     fn eq(&self, other: &Self) -> bool {
+//         self.type_name.to_string() == other.type_name.to_string()
+//             && self.generic_params == other.generic_params
+//     }
+// }
+// impl Hash for ResolvedType {
+//     fn hash<H: Hasher>(&self, state: &mut H) {
+//         self.type_name.to_string().hash(state);
+//         for resolved_type in self.generic_params {
+//             resolved_type.hash(state);
+//         }
+//     }
+// }
+
+impl From<ResolvedType> for TokenStream {
+    fn from(resolved_type: ResolvedType) -> Self {
+        let type_name = resolved_type.type_name;
+        if resolved_type.generic_params.is_empty() {
+            return quote! { #type_name };
+        }
+
+        let generic_params = resolved_type
+            .generic_params
+            .into_iter()
+            .map(|generic_type| TokenStream::from(generic_type))
+            .collect::<Vec<_>>();
+
+        quote! { #type_name<#( #generic_params ),*> }
+    }
+}
 
 // @todo This is an experimental support for the new JSON ABI file format.
 // Once this is stable:
@@ -210,69 +260,53 @@ fn expand_fn_outputs(outputs: &[Property]) -> Result<TokenStream, Error> {
 fn _new_expand_fn_output(
     output: &TypeApplication,
     types: &HashMap<usize, TypeDeclaration>,
-) -> Result<TokenStream, Error> {
+) -> Result<ResolvedType, Error> {
     let output_type = types.get(&output.type_id).expect("couldn't find type");
 
     // If it's a primitive type, simply parse and expand.
     if !output_type.is_custom_type(types) {
-        return expand_type(&ParamType::from_type_declaration(output_type, types)?);
+        return resolve_type(&output, &types);
     }
 
     // If it's a {struct, enum} as the type of a function's output, use its tokenized name only.
-    match output_type.is_struct_type() {
-        true => {
-            let parsed_custom_type_name = _new_extract_custom_type_name_from_abi_property(
-                output_type,
-                Some(CustomType::Struct),
-                types,
-            )?
-            .parse()
-            .expect("Custom type name should be a valid Rust identifier");
+    if output_type.is_custom_type(&types) {
+        Ok(resolve_type(&output, &types)?.into())
+    } else if output_type.has_custom_type_in_array(types) {
+        let type_inside_array = types
+            .get(
+                &output_type
+                    .components
+                    .as_ref()
+                    .expect("array should have components")[0]
+                    .type_id,
+            )
+            .expect("couldn't find type");
 
-            Ok(parsed_custom_type_name)
-        }
-        false => match output_type.is_enum_type() {
-            true => {
-                let parsed_custom_type_name = _new_extract_custom_type_name_from_abi_property(
-                    output_type,
-                    Some(CustomType::Enum),
-                    types,
-                )?
-                .parse()
-                .expect("Custom type name should be a valid Rust identifier");
+        let parsed_custom_type_name: TokenStream = _new_extract_custom_type_name_from_abi_property(
+            type_inside_array,
+            Some(
+                type_inside_array
+                    .get_custom_type()
+                    .expect("Custom type in array should be set"),
+            ),
+            types,
+        )?
+        .parse()
+        .expect("couldn't parse custom type name");
 
-                Ok(parsed_custom_type_name)
-            }
-            false => match output_type.has_custom_type_in_array(types) {
-                true => {
-                    let type_inside_array = types
-                        .get(
-                            &output_type
-                                .components
-                                .as_ref()
-                                .expect("array should have components")[0]
-                                .type_id,
-                        )
-                        .expect("couldn't find type");
-
-                    let parsed_custom_type_name: TokenStream =
-                        _new_extract_custom_type_name_from_abi_property(
-                            type_inside_array,
-                            Some(
-                                type_inside_array
-                                    .get_custom_type()
-                                    .expect("Custom type in array should be set"),
-                            ),
-                            types,
-                        )?
-                        .parse()
-                        .expect("couldn't parse custom type name");
-
-                    Ok(quote! { ::std::vec::Vec<#parsed_custom_type_name> })
-                }
-                false => _new_expand_tuple_w_custom_types(output_type, types),
-            },
-        },
+        Ok(ResolvedType {
+            type_name: quote! { ::std::vec::Vec },
+            generic_params: vec![ResolvedType {
+                type_name: parsed_custom_type_name,
+                generic_params: vec![],
+            }],
+        })
+    } else {
+        let type_name = _new_expand_tuple_w_custom_types(output_type, types)?;
+        Ok(ResolvedType {
+            type_name,
+            generic_params: vec![],
+        })
     }
 }
 
@@ -453,6 +487,47 @@ fn expand_function_arguments(
     Ok((args, call_args))
 }
 
+fn resolve_type(
+    type_application: &TypeApplication,
+    types: &HashMap<usize, TypeDeclaration>,
+) -> Result<ResolvedType, Error> {
+    let base_type = types.get(&type_application.type_id).unwrap();
+
+    if !base_type.is_custom_type(&types) {
+        return Ok(ResolvedType {
+            type_name: expand_type(&ParamType::from_type_declaration(base_type, types)?)?,
+            generic_params: vec![],
+        });
+    }
+
+    if base_type.is_array() {
+        let array_type = base_type
+            .components
+            .iter()
+            .flatten()
+            .map(|array_type| resolve_type(&array_type, &types))
+            .next()
+            .expect("An array must have components!")?;
+
+        return Ok(ResolvedType {
+            type_name: quote! { ::std::vec::Vec },
+            generic_params: vec![array_type],
+        });
+    }
+
+    let base_type_name = _new_extract_custom_type_name_from_abi_property(&base_type, None, &types)?;
+    let inner_types = type_application
+        .type_arguments
+        .iter()
+        .flatten()
+        .map(|something| resolve_type(something, types))
+        .collect::<Result<Vec<_>, _>>()?;
+
+    Ok(ResolvedType {
+        type_name: base_type_name.parse().unwrap(),
+        generic_params: inner_types,
+    })
+}
 // @todo This is an experimental support for the new JSON ABI file format.
 // Once this is stable:
 // 1. Delete old one;
@@ -573,10 +648,8 @@ fn _new_build_expanded_tuple_params(
             let tok = expand_type(&p)?;
             toks.push_str(&tok.to_string());
         } else {
-            let tok = component
-                .type_field
-                .replace(STRUCT_KEYWORD, "")
-                .replace(ENUM_KEYWORD, "");
+            let tok: TokenStream = resolve_type(&type_application, &types)?.into();
+
             toks.push_str(&tok.to_string());
         }
         toks.push(',');
@@ -652,33 +725,142 @@ fn _new_expand_input_param(
                 ::std::vec::Vec<#ty>
             })
         }
-        ParamType::Enum(_) => {
-            let t = types
-                .get(&type_application.type_id)
-                .expect("type not found");
-
-            let ident = ident(&_new_extract_custom_type_name_from_abi_property(
-                t,
-                Some(CustomType::Enum),
-                types,
-            )?);
-            Ok(quote! { #ident })
-        }
-        ParamType::Struct(_) => {
-            let t = types
-                .get(&type_application.type_id)
-                .expect("type not found");
-
-            let ident = ident(&_new_extract_custom_type_name_from_abi_property(
-                t,
-                Some(CustomType::Struct),
-                types,
-            )?);
+        ParamType::Enum(_) | ParamType::Struct(_) => {
+            let ident: TokenStream = resolve_type(&type_application, &types)?.into();
             Ok(quote! { #ident })
         }
         // Primitive type
         _ => expand_type(kind),
     }
+}
+
+pub fn gen_trait_impls(
+    functions: &[ABIFunction],
+    types: &HashMap<usize, TypeDeclaration>,
+) -> Result<TokenStream, Error> {
+    functions
+        .iter()
+        .flat_map(|fun| &fun.inputs)
+        .filter(|input| !input.type_arguments.as_ref().unwrap_or(&vec![]).is_empty())
+        .unique()
+        .flat_map(|fun_input| {
+            [
+                gen_parameterize_impl(fun_input, &types),
+                gen_tokenize_impl(fun_input, &types),
+            ]
+        })
+        .collect()
+}
+
+fn gen_parameterize_impl(
+    input_type: &TypeApplication,
+    types: &HashMap<usize, TypeDeclaration>,
+) -> Result<TokenStream, Error> {
+    let base_type = types.get(&input_type.type_id).unwrap();
+    let components = base_type
+        .components
+        .as_ref()
+        .expect("Fail to extract components from custom type");
+
+    let mut param_types = Vec::new();
+    let resolved_type = resolve_type(&input_type, &types)?;
+    let mut use_these_generics = resolved_type.generic_params.clone();
+    use_these_generics.reverse();
+    for component in components {
+        let t = types.get(&component.type_id).expect("couldn't find type");
+
+        let param_type = ParamType::from_type_declaration(t, types)?;
+        match param_type {
+            ParamType::Struct(_) | ParamType::Enum(_) => {
+                let inner_ident = ident(&_new_extract_custom_type_name_from_abi_property(
+                    t, None, types,
+                )?);
+
+                param_types.push(quote! { types.push(#inner_ident::param_type()) });
+            }
+            _ => {
+                let ty = expand_type(&param_type)?;
+
+                let mut param_type_string = param_type.to_string();
+
+                let param_type_string_ident_tok: proc_macro2::TokenStream =
+                    param_type_string.parse().unwrap();
+
+                if let ParamType::Array(..) = param_type {
+                    param_type_string = "Array".to_string();
+                }
+                if let ParamType::String(..) = param_type {
+                    param_type_string = "String".to_string();
+                }
+
+                // Check if param type is generic
+                if let ParamType::Generic(_) = param_type {
+                    let resolved = use_these_generics.pop().unwrap();
+                    let name = resolved.type_name;
+                    let generics = resolved
+                        .generic_params
+                        .into_iter()
+                        .map(|param| TokenStream::from(param))
+                        .collect::<Vec<_>>();
+                    let stream = if generics.is_empty() {
+                        quote! { #name::param_type() }
+                    } else {
+                        quote! { #name::<#(#generics)*,>::param_type() }
+                    };
+                    param_types.push(quote! {types.push(#stream)});
+                } else {
+                    param_types
+                        .push(quote! { types.push(ParamType::#param_type_string_ident_tok) });
+                }
+            }
+        }
+    }
+
+    let tokenized_resolved_type: TokenStream = resolved_type.clone().into();
+    Ok(quote! {
+        impl Parameterize for #tokenized_resolved_type {
+            fn param_type() -> ParamType {
+                let mut types = Vec::new();
+                #( #param_types; )*
+                ParamType::Struct(types)
+            }
+        }
+    })
+}
+
+fn gen_tokenize_impl(
+    input_type: &TypeApplication,
+    types: &HashMap<usize, TypeDeclaration>,
+) -> Result<TokenStream, Error> {
+    // let generic_type = types.get(&input_type.type_id).unwrap();
+    //
+    let resolved_type = resolve_type(&input_type, &types)?;
+
+    let tokenized_resolved_type: TokenStream = resolved_type.clone().into();
+    let stringified_resolved_type: String = tokenized_resolved_type.to_string();
+    Ok(quote! {
+        impl Tokenizable for #tokenized_resolved_type {
+            fn into_token(self) -> Token {
+                let mut tokens = Vec::new();
+
+                Token::Struct(tokens)
+            }
+
+            fn from_token(token: Token)  -> Result<Self, SDKError> {
+                match token {
+                    Token::Struct(tokens) => {
+                        let mut tokens_iter = tokens.into_iter();
+                        let mut next_token = move || { tokens_iter
+                            .next()
+                            .ok_or_else(|| { SDKError::InstantiationError(format!("Ran out of tokens before '{}' has finished construction!", #stringified_resolved_type)) })
+                        };
+                        todo!("to be implemented")
+                    },
+                    other => Err(SDKError::InstantiationError(format!("Error while constructing '{}'. Expected token of type Token::Struct, got {:?}", #stringified_resolved_type, other))),
+                }
+            }
+        }
+    })
 }
 
 // Regarding string->TokenStream->string, refer to `custom_types_gen` tests for more details.

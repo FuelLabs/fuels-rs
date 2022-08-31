@@ -1,11 +1,13 @@
+use itertools::Itertools;
 use std::collections::HashMap;
 
 use crate::code_gen::bindings::ContractBindings;
+use crate::code_gen::functions_gen::gen_trait_impls;
 use crate::constants::{ADDRESS_SWAY_NATIVE_TYPE, CONTRACT_ID_SWAY_NATIVE_TYPE};
 use crate::source::Source;
 use crate::utils::ident;
 use fuels_types::errors::Error;
-use fuels_types::{ProgramABI, TypeDeclaration};
+use fuels_types::{ProgramABI, TypeApplication, TypeDeclaration};
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
@@ -81,6 +83,7 @@ impl FlatAbigen {
         ));
 
         let abi_structs = self.abi_structs()?;
+        let trait_specializations = gen_trait_impls(&self.abi.functions, &self.types)?;
         let abi_enums = self.abi_enums()?;
         let contract_functions = self.functions()?;
 
@@ -174,6 +177,7 @@ impl FlatAbigen {
                 #code
 
                 #abi_structs
+                #trait_specializations
                 #abi_enums
             }
         })
@@ -181,7 +185,7 @@ impl FlatAbigen {
 
     pub fn functions(&self) -> Result<TokenStream, Error> {
         // Return empty TokenStream for now
-        return Ok(quote! {}); // temp
+        // return Ok(quote! {}); // temp
         let tokenized_functions = self
             .abi
             .functions
