@@ -7,7 +7,7 @@ use fuels_types::{CustomType, Property, TypeDeclaration};
 use inflector::Inflector;
 use proc_macro2::TokenStream;
 use quote::quote;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
 
 /// Functions used by the Abigen to expand custom types defined in an ABI spec.
@@ -198,6 +198,7 @@ pub fn _new_expand_custom_struct(
     let mut struct_fields_tokens = Vec::new();
     let mut param_types = Vec::new();
     let mut generic_args = Vec::new();
+    let mut seen_generic_types: HashSet<String> = Default::default();
 
     // Holds the TokenStream representing the process
     // of creating a Self struct from each `Token`.
@@ -248,11 +249,12 @@ pub fn _new_expand_custom_struct(
 
                 // Check if param type is generic
                 if let ParamType::Generic(name) = param_type {
-                    let generic_arg = ident(&name);
-                    generic_args.push(quote! { #generic_arg });
-
-                    param_types.push(quote! { types.push(ParamType::Generic(#name.to_string())) });
-
+                    if !seen_generic_types.contains(&name) {
+                        seen_generic_types.insert(name.clone());
+                        let generic_arg = ident(&name);
+                        generic_args.push(quote! { #generic_arg });
+                        param_types.push(quote! { types.push(ParamType::Generic(#name)) });
+                    }
                     continue; // @todo temp.
                 } else {
                     param_types

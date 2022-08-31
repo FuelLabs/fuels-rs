@@ -16,8 +16,9 @@ use itertools::Itertools;
 use proc_macro2::{Ident, Literal, TokenStream};
 use quote::{quote, ToTokens};
 use regex::Regex;
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::hash::{Hash, Hasher};
+use std::iter;
 use syn::Expr::Type;
 
 /// Functions used by the Abigen to expand functions defined in an ABI spec.
@@ -133,7 +134,7 @@ pub fn _new_expand_function(
         .collect::<Vec<_>>();
     let output_type_name = resolved_output_type.type_name.clone();
     let tok: proc_macro2::TokenStream =
-        quote! { Some(#output_type_name::<#(#generics)*,>::param_type()) };
+        quote! { Some(#output_type_name::<#(#generics,)*>::param_type()) };
 
     let output_param = tok;
 
@@ -734,6 +735,15 @@ fn _new_expand_input_param(
     }
 }
 
+pub fn unravel_type_application(type_application: &TypeApplication) -> Vec<&TypeApplication> {
+    type_application
+        .type_arguments
+        .iter()
+        .flatten()
+        .flat_map(|type_argument| unravel_type_application(type_argument))
+        .chain(iter::once(type_application))
+        .collect()
+}
 pub fn gen_trait_impls(
     functions: &[ABIFunction],
     types: &HashMap<usize, TypeDeclaration>,
@@ -741,6 +751,7 @@ pub fn gen_trait_impls(
     functions
         .iter()
         .flat_map(|fun| &fun.inputs)
+        .flat_map(|type_application| unravel_type_application(type_application))
         .filter(|input| !input.type_arguments.as_ref().unwrap_or(&vec![]).is_empty())
         .unique()
         .flat_map(|fun_input| {
@@ -756,67 +767,55 @@ fn gen_parameterize_impl(
     input_type: &TypeApplication,
     types: &HashMap<usize, TypeDeclaration>,
 ) -> Result<TokenStream, Error> {
-    let base_type = types.get(&input_type.type_id).unwrap();
-    let components = base_type
-        .components
-        .as_ref()
-        .expect("Fail to extract components from custom type");
-
-    let mut param_types = Vec::new();
     let resolved_type = resolve_type(&input_type, &types)?;
-    let mut use_these_generics = resolved_type.generic_params.clone();
-    use_these_generics.reverse();
-    for component in components {
-        let t = types.get(&component.type_id).expect("couldn't find type");
 
-        let param_type = ParamType::from_type_declaration(t, types)?;
-        match param_type {
-            ParamType::Struct(_) | ParamType::Enum(_) => {
-                let inner_ident = ident(&_new_extract_custom_type_name_from_abi_property(
-                    t, None, types,
-                )?);
+    let mut resolved_generics = &resolved_type.generic_params;
+    let mut current_generic_index = 0;
+    let mut prev_generic_name = String::new();
+    let param_types = extract_components(&input_type, types)
+        .into_iter()
+        .map(|type_decl| -> Result<TokenStream, Error> {
+            let param_type = ParamType::from_type_declaration(type_decl, types)?;
+            let token = match param_type {
+                ParamType::Struct(_) | ParamType::Enum(_) => {
+                    let custom_type_ident = ident(
+                        &_new_extract_custom_type_name_from_abi_property(type_decl, None, types)?,
+                    );
 
-                param_types.push(quote! { types.push(#inner_ident::param_type()) });
-            }
-            _ => {
-                let ty = expand_type(&param_type)?;
-
-                let mut param_type_string = param_type.to_string();
-
-                let param_type_string_ident_tok: proc_macro2::TokenStream =
-                    param_type_string.parse().unwrap();
-
-                if let ParamType::Array(..) = param_type {
-                    param_type_string = "Array".to_string();
+                    quote! { types.push(#custom_type_ident::param_type()) }
                 }
-                if let ParamType::String(..) = param_type {
-                    param_type_string = "String".to_string();
-                }
+                ParamType::Generic(name) => {
+                    if prev_generic_name != "" && name != prev_generic_name {
+                        current_generic_index += 1;
+                    }
+                    prev_generic_name = name;
+                    let resolved_generic = resolved_generics[current_generic_index].clone();
 
-                // Check if param type is generic
-                if let ParamType::Generic(_) = param_type {
-                    let resolved = use_these_generics.pop().unwrap();
-                    let name = resolved.type_name;
-                    let generics = resolved
+                    let type_name = resolved_generic.type_name;
+                    let tokenized_generic_parameters = resolved_generic
                         .generic_params
                         .into_iter()
                         .map(|param| TokenStream::from(param))
                         .collect::<Vec<_>>();
-                    let stream = if generics.is_empty() {
-                        quote! { #name::param_type() }
+                    let stream = if tokenized_generic_parameters.is_empty() {
+                        quote! { #type_name::param_type() }
                     } else {
-                        quote! { #name::<#(#generics)*,>::param_type() }
+                        quote! { #type_name::<#(#tokenized_generic_parameters,)*>::param_type() }
                     };
-                    param_types.push(quote! {types.push(#stream)});
-                } else {
-                    param_types
-                        .push(quote! { types.push(ParamType::#param_type_string_ident_tok) });
+                    quote! {types.push(#stream)}
                 }
-            }
-        }
-    }
+                _ => {
+                    let param_type_string_ident_tok: proc_macro2::TokenStream =
+                        param_type.to_string().parse()?;
 
-    let tokenized_resolved_type: TokenStream = resolved_type.clone().into();
+                    quote! { types.push(ParamType::#param_type_string_ident_tok) }
+                }
+            };
+            Ok(token)
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+
+    let tokenized_resolved_type: TokenStream = resolved_type.into();
     Ok(quote! {
         impl Parameterize for #tokenized_resolved_type {
             fn param_type() -> ParamType {
@@ -828,21 +827,119 @@ fn gen_parameterize_impl(
     })
 }
 
+fn extract_components<'a>(
+    input_type: &'a TypeApplication,
+    types: &'a HashMap<usize, TypeDeclaration>,
+) -> Vec<&'a TypeDeclaration> {
+    types
+        .get(&input_type.type_id)
+        .unwrap()
+        .components
+        .as_ref()
+        .expect("Fail to extract components from custom type")
+        .into_iter()
+        .map(|component| types.get(&component.type_id).expect("couldn't find type"))
+        .collect()
+}
+
 fn gen_tokenize_impl(
     input_type: &TypeApplication,
     types: &HashMap<usize, TypeDeclaration>,
 ) -> Result<TokenStream, Error> {
-    // let generic_type = types.get(&input_type.type_id).unwrap();
-    //
     let resolved_type = resolve_type(&input_type, &types)?;
+    let mut resolved_generics = &resolved_type.generic_params;
+    let mut current_generic_index = 0;
+    let mut prev_generic_name = String::new();
 
     let tokenized_resolved_type: TokenStream = resolved_type.clone().into();
     let stringified_resolved_type: String = tokenized_resolved_type.to_string();
+
+    let components = types
+        .get(&input_type.type_id)
+        .unwrap()
+        .components
+        .as_ref()
+        .expect("Fail to extract components from custom type");
+
+    let mut struct_fields_tokens = Vec::new();
+
+    let mut args = Vec::new();
+
+    for component in components {
+        let field_name = ident(&component.name.to_snake_case());
+
+        let t = types.get(&component.type_id).expect("couldn't find type");
+
+        let param_type = ParamType::from_type_declaration(t, types)?;
+        match param_type {
+            ParamType::Struct(_) | ParamType::Enum(_) => {
+                let inner_ident = ident(&_new_extract_custom_type_name_from_abi_property(
+                    t, None, types,
+                )?);
+
+                args.push(quote! {#field_name: #inner_ident::from_token(next_token()?)?});
+                struct_fields_tokens.push(quote! { tokens.push(self.#field_name.into_token()) });
+            }
+            _ => {
+                let ty = expand_type(&param_type)?;
+
+                let param_type_string = match param_type {
+                    ParamType::Array(..) => "Array".to_string(),
+                    ParamType::String(..) => "String".to_string(),
+                    _ => param_type.to_string(),
+                };
+
+                let param_type_string_ident = ident(&param_type_string);
+
+                // Check if param type is generic
+                if let ParamType::Generic(name) = param_type {
+                    if prev_generic_name != "" && name != prev_generic_name {
+                        current_generic_index += 1;
+                    }
+                    prev_generic_name = name;
+                    let resolved_generic = resolved_generics[current_generic_index].clone();
+                    let type_name = resolved_generic.type_name;
+                    let generic_params = resolved_generic
+                        .generic_params
+                        .into_iter()
+                        .map(|param| TokenStream::from(param))
+                        .collect::<Vec<_>>();
+                    let stream = if generic_params.is_empty() {
+                        quote! {#field_name: #type_name::from_token(next_token()?)?}
+                    } else {
+                        quote! {#field_name: #type_name::<#(#generic_params,)*>::from_token(next_token()?)?}
+                    };
+                    args.push(stream);
+                    struct_fields_tokens
+                        .push(quote! { tokens.push(self.#field_name.into_token()) });
+                } else {
+                    args.push(quote! {
+                        #field_name: <#ty>::from_token(next_token()?)?
+                    });
+
+                    let stream = match param_type {
+                        ParamType::String(len) => {
+                            quote! {StringToken::new(self.#field_name,  #len)}
+                        }
+                        ParamType::Array(..) => {
+                            quote! {vec![self.#field_name.into_token()]}
+                        }
+                        _ => {
+                            quote! {self.#field_name}
+                        }
+                    };
+                    let stream = quote! { tokens.push(Token::#param_type_string_ident(#stream))};
+                    struct_fields_tokens.push(stream);
+                }
+            }
+        }
+    }
+
     Ok(quote! {
         impl Tokenizable for #tokenized_resolved_type {
             fn into_token(self) -> Token {
                 let mut tokens = Vec::new();
-
+                #( #struct_fields_tokens; )*
                 Token::Struct(tokens)
             }
 
@@ -854,7 +951,7 @@ fn gen_tokenize_impl(
                             .next()
                             .ok_or_else(|| { SDKError::InstantiationError(format!("Ran out of tokens before '{}' has finished construction!", #stringified_resolved_type)) })
                         };
-                        todo!("to be implemented")
+                        Ok(Self { #( #args ),* })
                     },
                     other => Err(SDKError::InstantiationError(format!("Error while constructing '{}'. Expected token of type Token::Struct, got {:?}", #stringified_resolved_type, other))),
                 }

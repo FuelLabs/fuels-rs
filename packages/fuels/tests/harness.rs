@@ -3461,14 +3461,6 @@ fn null_contract_id() -> String {
 //     Ok(())
 // }
 
-struct MyStruct<T> {
-    data: PhantomData<T>,
-}
-
-impl<T> MyStruct<T> {
-    pub fn something() {}
-}
-
 #[tokio::test]
 async fn generics_preview() -> Result<(), Error> {
     let project_path = Path::new("/tmp/generics_project");
@@ -3486,6 +3478,41 @@ async fn generics_compiling() -> Result<(), Error> {
     abigen_to_project(&project_path, true)?;
 
     cargo_check(project_path)?;
+
+    Ok(())
+}
+#[tokio::test]
+async fn real_test() -> Result<(), Error> {
+    // this still fails ATTOW probably because of the fn selector
+    abigen!(
+        MyContract,
+        "packages/fuels/tests/test_projects/generics/out/debug/generics-flat-abi.json"
+    );
+
+    let wallet = launch_provider_and_get_wallet().await;
+
+    let contract_id = Contract::deploy(
+        "tests/test_projects/generics/out/debug/generics.bin",
+        &wallet,
+        TxParameters::default(),
+        StorageConfiguration::default(),
+    )
+    .await?;
+
+    let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
+
+    let a = BraveOne { one: 10, two: 20 };
+
+    let b = AnotherOne {
+        rodrigo: 30,
+        john: "123456789012345".to_string(),
+        juicy: a,
+    };
+
+    let c = MyStruct { foo: 40, boo: b };
+
+    let result = contract_instance.identity(c).call().await?;
+    dbg!(result);
 
     Ok(())
 }
