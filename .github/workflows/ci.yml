@@ -183,6 +183,12 @@ jobs:
           command: ${{ matrix.command }}
           args: ${{ matrix.args }}
 
+      - name: Check Docs. Validity
+        uses: actions-rs/cargo@v1
+        with:
+          command: run
+          args: --bin check-docs
+
   publish:
     needs: cargo-verifications
     # Only do this job if publishing a release
