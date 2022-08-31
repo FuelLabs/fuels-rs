@@ -8,7 +8,7 @@ use fuel_gql_client::{
     client::{
         schema::{
             balance::Balance, chain::ChainInfo, coin::Coin, contract::ContractBalance,
-            node_info::NodeInfo,
+            node_info::NodeInfo, message::Message
         },
         types::{TransactionResponse, TransactionStatus},
         FuelClient, PageDirection, PaginatedResult, PaginationRequest,
@@ -275,9 +275,9 @@ impl Provider {
             amount.to_be_bytes().to_vec(),
             asset_id.to_vec(),
         ]
-        .into_iter()
-        .flatten()
-        .collect();
+            .into_iter()
+            .flatten()
+            .collect();
 
         // This script loads:
         //  - a pointer to the contract id,
@@ -304,7 +304,7 @@ impl Provider {
             ConsensusParameters::DEFAULT.tx_offset()
         );
         #[allow(clippy::iter_cloned_collect)]
-        let script = script.iter().copied().collect();
+            let script = script.iter().copied().collect();
 
         Transaction::Script {
             gas_price: params.gas_price,
@@ -551,4 +551,17 @@ impl Provider {
             })
             .unwrap_or(0)
     }
+
+    pub async fn get_messages(
+        &self,
+        from: &Bech32Address,
+    ) -> Result<Vec<Message>, ProviderError> {
+        let pagination = PaginationRequest {
+            cursor: None,
+            results: 100,
+            direction: PageDirection::Forward,
+        };
+        Ok(self.client.messages(Some(from.hrp.as_str()), pagination).await?.results)
+    }
+
 }

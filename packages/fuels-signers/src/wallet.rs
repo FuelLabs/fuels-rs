@@ -16,6 +16,7 @@ use fuels_types::bech32::{Bech32Address, Bech32ContractId, FUEL_BECH32_HRP};
 use fuels_types::errors::Error;
 use rand::{CryptoRng, Rng};
 use std::{collections::HashMap, fmt, ops, path::Path};
+use fuel_gql_client::client::schema;
 use thiserror::Error;
 
 const DEFAULT_DERIVATION_PATH_PREFIX: &str = "m/44'/1179993420'/0'/0/";
@@ -220,6 +221,10 @@ impl Wallet {
             .map_err(Into::into)
     }
 
+    pub async fn get_messages(&self) -> Result<Vec<schema::message::Message,>, Error>  {
+            Ok(self
+                .get_provider()?.get_messages(&self.address).await?)
+    }
     /// Unlock the wallet with the given `private_key`.
     ///
     /// The private key will be stored in memory until `wallet.lock()` is called or until the

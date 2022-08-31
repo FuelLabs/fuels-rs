@@ -249,7 +249,7 @@ impl Contract {
             &chain_info.consensus_parameters.into(),
         )?;
 
-        provider.send_transaction(&tx).await?;
+        provider.send_transaction(&tx, ).await?;
 
         Ok(contract_id)
     }
@@ -341,6 +341,9 @@ impl Contract {
                 coin_witness_index,
             )
             .await?;
+
+        let coin_witness_index = 1;
+        let mesages = wallet.get_messages().await?;
 
         let tx = Transaction::create(
             params.gas_price,
@@ -525,6 +528,10 @@ where
         Self::call_or_simulate(self, false).await
     }
 
+    pub async fn call_spend_message(self) -> Result<CallResponse<D>, Error> {
+        Self::call_or_simulate(self, false).await
+    }
+
     /// Call a contract's method on the node, in a simulated manner, meaning the state of the
     /// blockchain is *not* modified but simulated.
     /// It is the same as the `call` method because the API is more user-friendly this way.
@@ -628,9 +635,9 @@ impl MultiContractCallHandler {
         let provider = self.wallet.get_provider()?;
 
         let receipts = if simulate {
-            script.simulate(provider).await?
+            script.simulate(provider, ).await?
         } else {
-            script.call(provider).await?
+            script.call(provider, ).await?
         };
         tracing::debug!(target: "receipts", "{:?}", receipts);
 
