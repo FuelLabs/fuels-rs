@@ -479,7 +479,7 @@ impl WalletUnlocked {
             .chain(new_base_inputs.into_iter())
             .collect();
 
-        let is_base_change_present = tx.outputs().iter().cloned().any(|output| {
+        let is_base_change_present = tx.outputs().iter().any(|output| {
             matches!(output, Output::Change { .. }) && *output.asset_id().unwrap() == BASE_ASSET_ID
         });
 
