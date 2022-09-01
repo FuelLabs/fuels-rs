@@ -312,15 +312,14 @@ mod tests {
         // ANCHOR_END: simulate
         let response = contract_instance.mint_coins(1_000_000).call().await?;
         // ANCHOR: variable_outputs
-        // TODO: Enable test
-        // let address = wallet.address();
+        let address = wallet.address();
 
         // withdraw some tokens to wallet
-        // let response = contract_instance
-        //     .transfer_coins_to_output(1_000_000, contract_id.into(), address.into())
-        //     .append_variable_outputs(1)
-        //     .call()
-        //     .await?;
+        let response = contract_instance
+            .transfer_coins_to_output(1_000_000, contract_id.into(), address.into())
+            .append_variable_outputs(1)
+            .call()
+            .await?;
         // ANCHOR_END: variable_outputs
         Ok(())
     }
