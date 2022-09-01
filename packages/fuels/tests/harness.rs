@@ -3382,7 +3382,7 @@ async fn contract_call_fee_estimation() -> Result<(), Error> {
 async fn contract_call_has_same_estimated_and_used_gas() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -3419,7 +3419,7 @@ async fn contract_call_has_same_estimated_and_used_gas() -> Result<(), Error> {
 async fn mutl_call_has_same_estimated_and_used_gas() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
