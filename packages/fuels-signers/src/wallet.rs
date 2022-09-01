@@ -474,7 +474,7 @@ impl WalletUnlocked {
         let new_base_inputs = self
             .get_asset_inputs_for_amount(BASE_ASSET_ID, new_base_amount, witness_index)
             .await?;
-        let adjusted_inputs: Vec<Input> = remaining_inputs
+        let adjusted_inputs: Vec<_> = remaining_inputs
             .into_iter()
             .chain(new_base_inputs.into_iter())
             .collect();
