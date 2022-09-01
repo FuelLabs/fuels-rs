@@ -2610,7 +2610,7 @@ async fn can_call_no_arg_predicate_returns_true() -> Result<(), Error> {
             predicate.address(),
             amount_to_predicate,
             asset_id,
-            TxParameters::default(),
+            TxParameters::new(Some(0), None, None),
         )
         .await?;
 
@@ -2658,7 +2658,7 @@ async fn can_call_no_arg_predicate_returns_false() -> Result<(), Error> {
             predicate.address(),
             amount_to_predicate,
             asset_id,
-            TxParameters::default(),
+            TxParameters::new(Some(0), None, None),
         )
         .await?;
 
@@ -2704,7 +2704,7 @@ async fn can_call_predicate_with_u32_data() -> Result<(), Error> {
             predicate.address(),
             amount_to_predicate,
             asset_id,
-            TxParameters::default(),
+            TxParameters::new(Some(0), None, None),
         )
         .await?;
 
@@ -2778,7 +2778,7 @@ async fn can_call_predicate_with_address_data() -> Result<(), Error> {
             predicate.address(),
             amount_to_predicate,
             asset_id,
-            TxParameters::default(),
+            TxParameters::new(Some(0), None, None),
         )
         .await?;
 
@@ -2830,7 +2830,7 @@ async fn can_call_predicate_with_struct_data() -> Result<(), Error> {
             predicate.address(),
             amount_to_predicate,
             asset_id,
-            TxParameters::default(),
+            TxParameters::new(Some(0), None, None),
         )
         .await?;
 

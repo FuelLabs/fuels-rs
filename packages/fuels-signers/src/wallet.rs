@@ -7,10 +7,12 @@ use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
 use fuel_gql_client::{
     client::{schema::coin::Coin, types::TransactionResponse, PaginatedResult, PaginationRequest},
     fuel_tx::{
-        AssetId, Bytes32, ContractId, Input, Output, Receipt, Transaction, TransactionFee,
-        TxPointer, UtxoId, Witness,
+        AssetId, Bytes32, ConsensusParameters, ContractId, Input, Output, Receipt, Transaction,
+        TransactionFee, TxPointer, UtxoId, Witness,
     },
+    fuel_vm::{consts::REG_ONE, prelude::Opcode, script_with_data_offset},
 };
+use fuel_types::{bytes::WORD_SIZE, Immediate18};
 use fuels_core::{constants::BASE_ASSET_ID, parameters::TxParameters};
 use fuels_types::bech32::{Bech32Address, Bech32ContractId, FUEL_BECH32_HRP};
 use fuels_types::errors::Error;
@@ -230,6 +232,88 @@ impl Wallet {
             private_key,
         }
     }
+
+    /// Craft a transaction used to transfer funds between two addresses.
+    pub fn build_transfer_tx(
+        inputs: &[Input],
+        outputs: &[Output],
+        params: TxParameters,
+    ) -> Transaction {
+        // This script contains a single Opcode that returns immediately (RET)
+        // since all this transaction does is move Inputs and Outputs around.
+        let script = Opcode::RET(REG_ONE).to_bytes().to_vec();
+        Transaction::Script {
+            gas_price: params.gas_price,
+            gas_limit: params.gas_limit,
+            maturity: params.maturity,
+            receipts_root: Default::default(),
+            script,
+            script_data: vec![],
+            inputs: inputs.to_vec(),
+            outputs: outputs.to_vec(),
+            witnesses: vec![],
+            metadata: None,
+        }
+    }
+
+    /// Craft a transaction used to transfer funds to a contract.
+    pub fn build_contract_transfer_tx(
+        to: ContractId,
+        amount: u64,
+        asset_id: AssetId,
+        inputs: &[Input],
+        outputs: &[Output],
+        params: TxParameters,
+    ) -> Transaction {
+        let script_data: Vec<u8> = [
+            to.to_vec(),
+            amount.to_be_bytes().to_vec(),
+            asset_id.to_vec(),
+        ]
+        .into_iter()
+        .flatten()
+        .collect();
+
+        // This script loads:
+        //  - a pointer to the contract id,
+        //  - the actual amount
+        //  - a pointer to the asset id
+        // into the registers 0X10, 0x11, 0x12
+        // and calls the TR instruction
+        let (script, _) = script_with_data_offset!(
+            data_offset,
+            vec![
+                Opcode::MOVI(0x10, data_offset as Immediate18),
+                Opcode::MOVI(
+                    0x11,
+                    (data_offset as usize + ContractId::LEN) as Immediate18
+                ),
+                Opcode::LW(0x11, 0x11, 0),
+                Opcode::MOVI(
+                    0x12,
+                    (data_offset as usize + ContractId::LEN + WORD_SIZE) as Immediate18
+                ),
+                Opcode::TR(0x10, 0x11, 0x12),
+                Opcode::RET(REG_ONE)
+            ],
+            ConsensusParameters::DEFAULT.tx_offset()
+        );
+        #[allow(clippy::iter_cloned_collect)]
+        let script = script.iter().copied().collect();
+
+        Transaction::Script {
+            gas_price: params.gas_price,
+            gas_limit: params.gas_limit,
+            maturity: params.maturity,
+            receipts_root: Default::default(),
+            script,
+            script_data,
+            inputs: inputs.to_vec(),
+            outputs: outputs.to_vec(),
+            witnesses: vec![],
+            metadata: None,
+        }
+    }
 }
 
 impl WalletUnlocked {
@@ -340,10 +424,13 @@ impl WalletUnlocked {
     // The original base asset amount cannot be calculated reliably from
     // the existing transaction inputs because the selected coins may exceed
     // the required amount to avoid dust. Therefore we require it as an argument.
+    //
+    // Requires contract inputs to be at the start of the transactions inputs vec
+    // so that their indexes are retained
     pub async fn add_fee_coins(
         &self,
         tx: &mut Transaction,
-        base_asset_amount: u64,
+        previous_base_amount: u64,
         witness_index: u8,
     ) -> Result<(), Error> {
         let consensus_parameters = self
@@ -365,13 +452,13 @@ impl WalletUnlocked {
             .map(|input| input.amount().unwrap())
             .sum();
         // either the inputs were setup incorecctly, or the passed base_asset_amount is wrong
-        if base_inputs_sum < base_asset_amount {
+        if base_inputs_sum < previous_base_amount {
             return Err(Error::WalletError(
                 "The provided base asset amount is less than the present input coins".to_string(),
             ));
         }
 
-        let mut new_base_amount = transaction_fee.total() + base_asset_amount;
+        let mut new_base_amount = transaction_fee.total() + previous_base_amount;
         // If the tx doesn't consume any UTXOs, attempting to repeat it will lead to an
         // error due to non unique tx ids (e.g. repeated contract call with configured gas fee of 0).
         // Here we enforce a minimum amount on the base asset to avoid this
@@ -395,13 +482,6 @@ impl WalletUnlocked {
         let is_base_change_present = tx.outputs().iter().cloned().any(|output| {
             matches!(output, Output::Change { .. }) && *output.asset_id().unwrap() == BASE_ASSET_ID
         });
-
-        // if an input for the base asset exists, the change output should also exist
-        if !base_asset_inputs.is_empty() != is_base_change_present {
-            return Err(Error::WalletError(
-                "Tried to add fee coins for malformed transaction".to_string(),
-            ));
-        }
 
         let change_output = if !is_base_change_present {
             vec![Output::change(self.address().into(), 0, AssetId::default())]
@@ -486,9 +566,7 @@ impl WalletUnlocked {
             .await?;
         let outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
 
-        let mut tx = self
-            .get_provider()?
-            .build_transfer_tx(&inputs, &outputs, tx_parameters);
+        let mut tx = Wallet::build_transfer_tx(&inputs, &outputs, tx_parameters);
 
         if asset_id == AssetId::default() {
             self.add_fee_coins(&mut tx, amount, 0).await?;
@@ -502,6 +580,55 @@ impl WalletUnlocked {
         Ok((tx.id().to_string(), receipts))
     }
 
+    pub async fn spend_predicate(
+        &self,
+        predicate_address: &Bech32Address,
+        code: Vec<u8>,
+        amount: u64,
+        asset_id: AssetId,
+        to: &Bech32Address,
+        data: Option<Vec<u8>>,
+    ) -> Result<Vec<Receipt>, Error> {
+        let spendable_predicate_coins = self
+            .get_provider()?
+            .get_spendable_coins(predicate_address, asset_id, amount)
+            .await?;
+
+        let total_amount_in_predicate: u64 = spendable_predicate_coins
+            .iter()
+            .map(|coin| coin.amount.0)
+            .sum();
+
+        let predicate_data = data.unwrap_or_default();
+        let inputs = spendable_predicate_coins
+            .into_iter()
+            .map(|coin| {
+                Input::coin_predicate(
+                    UtxoId::from(coin.utxo_id),
+                    coin.owner.into(),
+                    coin.amount.0,
+                    asset_id,
+                    TxPointer::default(),
+                    0,
+                    code.clone(),
+                    predicate_data.clone(),
+                )
+            })
+            .collect::<Vec<_>>();
+
+        let outputs = [
+            Output::coin(to.into(), total_amount_in_predicate, asset_id),
+            Output::change(self.address().into(), 0, asset_id),
+        ];
+
+        let mut tx = Wallet::build_transfer_tx(&inputs, &outputs, TxParameters::default());
+        // we set previous base amount to 0 because it only applies to signed coins, not predicate coins
+        self.add_fee_coins(&mut tx, 0, 0).await?;
+        self.sign_transaction(&mut tx).await?;
+
+        self.get_provider()?.send_transaction(&tx).await
+    }
+
     pub async fn receive_from_predicate(
         &self,
         predicate_address: &Bech32Address,
@@ -510,16 +637,15 @@ impl WalletUnlocked {
         asset_id: AssetId,
         predicate_data: Option<Vec<u8>>,
     ) -> Result<Vec<Receipt>, Error> {
-        self.get_provider()?
-            .spend_predicate(
-                predicate_address,
-                predicate_code,
-                amount,
-                asset_id,
-                self.address(),
-                predicate_data,
-            )
-            .await
+        self.spend_predicate(
+            predicate_address,
+            predicate_code,
+            amount,
+            asset_id,
+            self.address(),
+            predicate_data,
+        )
+        .await
     }
 
     /// Unconditionally transfers `balance` of type `asset_id` to
@@ -559,7 +685,7 @@ impl WalletUnlocked {
         ];
 
         // Build transaction and sign it
-        let mut tx = self.get_provider()?.build_contract_transfer_tx(
+        let mut tx = Wallet::build_contract_transfer_tx(
             plain_contract_id,
             balance,
             asset_id,
