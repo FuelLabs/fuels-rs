@@ -144,15 +144,14 @@
     }
 </code></pre>
 <p>With the SDK, you can call <code>transfer_coins_to_output</code> by chaining <code>append_variable_outputs(amount)</code> to your contract call. Like this:</p>
-<pre><code class="language-rust ignore">        // TODO: Enable test
-        // let address = wallet.address();
+<pre><code class="language-rust ignore">        let address = wallet.address();
 
         // withdraw some tokens to wallet
-        // let response = contract_instance
-        //     .transfer_coins_to_output(1_000_000, contract_id.into(), address.into())
-        //     .append_variable_outputs(1)
-        //     .call()
-        //     .await?;
+        let response = contract_instance
+            .transfer_coins_to_output(1_000_000, contract_id.into(), address.into())
+            .append_variable_outputs(1)
+            .call()
+            .await?;
 </code></pre>
 <p><code>append_variable_outputs</code> effectively appends a given amount of <code>Output::Variable</code>s to the transaction's list of outputs. This output type indicates that the output's amount and the owner may vary based on transaction execution.</p>
 <p>Note that the Sway <code>lib-std</code> function <code>mint_to_address</code> calls <code>transfer_to_output</code> under the hood, so you need to call <code>append_variable_outputs</code> in the Rust SDK tests like you would for <code>transfer_to_output</code>.</p>

@@ -762,7 +762,7 @@ coins and coin amount</p>
         abigen!(
             MyContract,
             // This path is relative to the workspace (repository) root
-            &quot;packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json&quot;
+            &quot;packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json&quot;
         );
 
         // This helper will launch a local node and provide a test wallet linked to it
@@ -807,7 +807,7 @@ coins and coin amount</p>
 
         abigen!(
             MyContract,
-            &quot;packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json&quot;
+            &quot;packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json&quot;
         );
 
         let wallet = launch_provider_and_get_wallet().await;
@@ -843,7 +843,7 @@ coins and coin amount</p>
 <pre><code class="language-rust ignore">        // Replace with your contract ABI.json path
         abigen!(
             MyContract,
-            &quot;packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json&quot;
+            &quot;packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json&quot;
         );
         let wallet = launch_provider_and_get_wallet().await;
         // Your contract ID as a String.
@@ -931,7 +931,7 @@ impl MyContract for Contract {
 <p>You might have noticed this section in the previous example:</p>
 <pre><code class="language-rust ignore">        abigen!(
             MyContract,
-            &quot;packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json&quot;
+            &quot;packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json&quot;
         );
 </code></pre>
 <p>The SDK lets you transform ABI methods of a smart contract, specified as JSON objects (which you can get from <a href="https://github.com/FuelLabs/sway/tree/master/forc">Forc</a>), into Rust structs and methods that are type-checked at compile time.</p>
@@ -1242,15 +1242,14 @@ pub const BASE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
     }
 </code></pre>
 <p>With the SDK, you can call <code>transfer_coins_to_output</code> by chaining <code>append_variable_outputs(amount)</code> to your contract call. Like this:</p>
-<pre><code class="language-rust ignore">        // TODO: Enable test
-        // let address = wallet.address();
+<pre><code class="language-rust ignore">        let address = wallet.address();
 
         // withdraw some tokens to wallet
-        // let response = contract_instance
-        //     .transfer_coins_to_output(1_000_000, contract_id.into(), address.into())
-        //     .append_variable_outputs(1)
-        //     .call()
-        //     .await?;
+        let response = contract_instance
+            .transfer_coins_to_output(1_000_000, contract_id.into(), address.into())
+            .append_variable_outputs(1)
+            .call()
+            .await?;
 </code></pre>
 <p><code>append_variable_outputs</code> effectively appends a given amount of <code>Output::Variable</code>s to the transaction's list of outputs. This output type indicates that the output's amount and the owner may vary based on transaction execution.</p>
 <p>Note that the Sway <code>lib-std</code> function <code>mint_to_address</code> calls <code>transfer_to_output</code> under the hood, so you need to call <code>append_variable_outputs</code> in the Rust SDK tests like you would for <code>transfer_to_output</code>.</p>
@@ -1350,7 +1349,7 @@ pub const BASE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
 <pre><code class="language-rust ignore">predicate;
 
 use std::{
-    tx::get_predicate_data,
+    inputs::input_predicate_data,
     ecr::ec_recover_address,
     constants::ZERO_B256,
     b512::B512,
@@ -1367,7 +1366,7 @@ fn extract_pulic_key_and_match(signature: B512, expected_public_key: b256) -&gt;
 }
 
 fn main() -&gt; bool {
-    let signatures: [B512;3] = get_predicate_data();
+    let signatures: [B512;3] = input_predicate_data(0);
 
     let public_keys = [
         0xd58573593432a30a800f97ad32f877425c223a9e427ab557aab5d5bb89156db0,
@@ -1817,7 +1816,7 @@ impl LiquidityPool for Contract {
 <p>The first step towards interacting with any contract in the Rust SDK is calling the <code>abigen!</code> macro to generate type-safe Rust bindings for the contract methods:</p>
 <pre><code class="language-rust ignore">        abigen!(
             MyContract,
-            &quot;packages/fuels/tests/test_projects/liquidity_pool/out/debug/liquidity_pool-abi.json&quot;
+            &quot;packages/fuels/tests/test_projects/liquidity_pool/out/debug/liquidity_pool-flat-abi.json&quot;
         );
 </code></pre>
 <p>Next, we set up a wallet with custom-defined assets. We give our wallet some of the contracts <code>BASE_TOKEN</code> and the default asset (required for contract deployment):</p>
@@ -1848,33 +1847,33 @@ impl LiquidityPool for Contract {
         )
         .await?;
 
-        let _contract_instance =
+        let contract_instance =
             MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
 </code></pre>
 <p>With the preparations out of the way, we can finally deposit to the liquidity pool by calling <code>deposit()</code> via the contract instance. Since we have to transfer assets to the contract, we create the appropriate <code>CallParameters</code> and chain them to the method call. To receive the minted liquidity pool asset, we have to append a variable output to our contract call.</p>
-<pre><code class="language-rust ignore">        // let deposit_amount = 1_000_000;
-        // let call_params = CallParameters::new(Some(deposit_amount), Some(base_asset_id), None);
-        // contract_instance
-        //     .deposit(wallet.address().into())
-        //     .call_params(call_params)
-        //     .append_variable_outputs(1)
-        //     .call()
-        //     .await?;
+<pre><code class="language-rust ignore">        let deposit_amount = 1_000_000;
+        let call_params = CallParameters::new(Some(deposit_amount), Some(base_asset_id), None);
+        contract_instance
+            .deposit(wallet.address().into())
+            .call_params(call_params)
+            .append_variable_outputs(1)
+            .call()
+            .await?;
 </code></pre>
 <p>As a final demonstration, let's use all our liquidity asset balance to withdraw from the pool and confirm we retrieved the initial amount. For this, we get our liquidity asset balance and supply it to the <code>withdraw()</code> call via <code>CallParameters</code>.</p>
-<pre><code class="language-rust ignore">        // let lp_asset_id = AssetId::from(*contract_id.hash());
-        // let lp_token_balance = wallet.get_asset_balance(&amp;lp_asset_id).await?;
+<pre><code class="language-rust ignore">        let lp_asset_id = AssetId::from(*contract_id.hash());
+        let lp_token_balance = wallet.get_asset_balance(&amp;lp_asset_id).await?;
 
-        // let call_params = CallParameters::new(Some(lp_token_balance), Some(lp_asset_id), None);
-        // contract_instance
-        //     .withdraw(wallet.address().into())
-        //     .call_params(call_params)
-        //     .append_variable_outputs(1)
-        //     .call()
-        //     .await?;
+        let call_params = CallParameters::new(Some(lp_token_balance), Some(lp_asset_id), None);
+        contract_instance
+            .withdraw(wallet.address().into())
+            .call_params(call_params)
+            .append_variable_outputs(1)
+            .call()
+            .await?;
 
-        // let base_balance = wallet.get_asset_balance(&amp;base_asset_id).await?;
-        // assert_eq!(base_balance, deposit_amount);
+        let base_balance = wallet.get_asset_balance(&amp;base_asset_id).await?;
+        assert_eq!(base_balance, deposit_amount);
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="transfer-all-assets"><a class="header" href="#transfer-all-assets">Transfer all assets</a></h1>
 <p>The <code>transfer()</code> method lets you transfer a single asset, but what if you needed to move all of your assets to a different wallet? You could repeatably call <code>transfer()</code>, initiating a transaction each time, or you bundle all the transfers into a single transaction. This chapter guides you through crafting your custom transaction for transferring all assets owned by a wallet.</p>
