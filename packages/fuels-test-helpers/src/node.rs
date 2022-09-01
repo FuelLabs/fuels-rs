@@ -30,6 +30,7 @@ pub struct Config {
     pub utxo_validation: bool,
     pub predicates: bool,
     pub manual_blocks_enabled: bool,
+    pub vm_backtrace: bool,
     pub silent: bool,
 }
 
@@ -40,6 +41,7 @@ impl Config {
             utxo_validation: false,
             predicates: false,
             manual_blocks_enabled: false,
+            vm_backtrace: false,
             silent: true,
         }
     }
@@ -276,6 +278,10 @@ pub async fn new_fuel_node(
 
         if config.manual_blocks_enabled {
             args.push("--manual_blocks_enabled");
+        }
+
+        if config.vm_backtrace {
+            args.push("--vm-backtrace");
         }
 
         let mut command = Command::new("fuel-core");
