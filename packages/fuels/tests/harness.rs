@@ -2578,7 +2578,7 @@ async fn can_handle_sway_function_called_new() -> anyhow::Result<()> {
 async fn setup_predicate_test(
     file_path: &str,
     num_coins: u64,
-    coin_amount: u64
+    coin_amount: u64,
 ) -> Result<(Predicate, WalletUnlocked, WalletUnlocked, AssetId), Error> {
     let predicate = Predicate::load_from(file_path)?;
 
@@ -2601,9 +2601,12 @@ async fn setup_predicate_test(
 
 #[tokio::test]
 async fn predicate_with_multiple_coins() -> Result<(), Error> {
-    let (predicate, sender, receiver, asset_id) =
-        setup_predicate_test("tests/test_projects/predicate_true/out/debug/predicate_true.bin", 3, 100)
-            .await?;
+    let (predicate, sender, receiver, asset_id) = setup_predicate_test(
+        "tests/test_projects/predicate_true/out/debug/predicate_true.bin",
+        3,
+        100,
+    )
+    .await?;
     let provider = receiver.get_provider()?;
     let amount_to_predicate = 10;
 
@@ -2615,7 +2618,7 @@ async fn predicate_with_multiple_coins() -> Result<(), Error> {
             TxParameters::new(Some(0), None, None),
         )
         .await?;
-    
+
     sender
         .transfer(
             predicate.address(),
@@ -2658,9 +2661,12 @@ async fn predicate_with_multiple_coins() -> Result<(), Error> {
 
 #[tokio::test]
 async fn can_call_no_arg_predicate_returns_true() -> Result<(), Error> {
-    let (predicate, sender, receiver, asset_id) =
-        setup_predicate_test("tests/test_projects/predicate_true/out/debug/predicate_true.bin", 1, 16)
-            .await?;
+    let (predicate, sender, receiver, asset_id) = setup_predicate_test(
+        "tests/test_projects/predicate_true/out/debug/predicate_true.bin",
+        1,
+        16,
+    )
+    .await?;
     let provider = receiver.get_provider()?;
     let amount_to_predicate = 2;
 
@@ -2706,9 +2712,12 @@ async fn can_call_no_arg_predicate_returns_true() -> Result<(), Error> {
 
 #[tokio::test]
 async fn can_call_no_arg_predicate_returns_false() -> Result<(), Error> {
-    let (predicate, sender, receiver, asset_id) =
-        setup_predicate_test("tests/test_projects/predicate_false/out/debug/predicate_false.bin", 1, 16)
-            .await?;
+    let (predicate, sender, receiver, asset_id) = setup_predicate_test(
+        "tests/test_projects/predicate_false/out/debug/predicate_false.bin",
+        1,
+        16,
+    )
+    .await?;
     let provider = receiver.get_provider()?;
     let amount_to_predicate = 4;
 
@@ -2752,9 +2761,12 @@ async fn can_call_no_arg_predicate_returns_false() -> Result<(), Error> {
 
 #[tokio::test]
 async fn can_call_predicate_with_u32_data() -> Result<(), Error> {
-    let (predicate, sender, receiver, asset_id) =
-        setup_predicate_test("tests/test_projects/predicate_u32/out/debug/predicate_u32.bin", 1, 16)
-            .await?;
+    let (predicate, sender, receiver, asset_id) = setup_predicate_test(
+        "tests/test_projects/predicate_u32/out/debug/predicate_u32.bin",
+        1,
+        16,
+    )
+    .await?;
     let provider = receiver.get_provider()?;
     let amount_to_predicate = 8;
 
@@ -2826,7 +2838,9 @@ async fn can_call_predicate_with_u32_data() -> Result<(), Error> {
 #[tokio::test]
 async fn can_call_predicate_with_address_data() -> Result<(), Error> {
     let (predicate, sender, receiver, asset_id) = setup_predicate_test(
-        "tests/test_projects/predicate_address/out/debug/predicate_address.bin", 1, 16
+        "tests/test_projects/predicate_address/out/debug/predicate_address.bin",
+        1,
+        16,
     )
     .await?;
     let provider = receiver.get_provider()?;
@@ -2878,9 +2892,12 @@ async fn can_call_predicate_with_address_data() -> Result<(), Error> {
 
 #[tokio::test]
 async fn can_call_predicate_with_struct_data() -> Result<(), Error> {
-    let (predicate, sender, receiver, asset_id) =
-        setup_predicate_test("tests/test_projects/predicate_struct/out/debug/predicate_struct.bin", 1, 16)
-            .await?;
+    let (predicate, sender, receiver, asset_id) = setup_predicate_test(
+        "tests/test_projects/predicate_struct/out/debug/predicate_struct.bin",
+        1,
+        16,
+    )
+    .await?;
     let provider = receiver.get_provider()?;
     let amount_to_predicate = 8;
 
