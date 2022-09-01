@@ -2,6 +2,7 @@ use crate::code_gen::custom_types_gen::{
     _new_extract_custom_type_name_from_abi_property, extract_custom_type_name_from_abi_property,
 };
 use crate::code_gen::docs_gen::expand_doc;
+use crate::code_gen::flat_abigen::FlatAbigen;
 use crate::types::expand_type;
 use crate::utils::{first_four_bytes_of_sha256_hash, ident, safe_ident};
 use crate::{ParamType, Selector};
@@ -12,7 +13,7 @@ use fuels_types::{
     STRUCT_KEYWORD,
 };
 use inflector::Inflector;
-use itertools::Itertools;
+use itertools::{chain, Itertools};
 use proc_macro2::{Ident, Literal, TokenStream};
 use quote::{quote, ToTokens};
 use regex::Regex;
@@ -133,8 +134,11 @@ pub fn _new_expand_function(
         .map(|gen| TokenStream::from(gen))
         .collect::<Vec<_>>();
     let output_type_name = resolved_output_type.type_name.clone();
-    let tok: proc_macro2::TokenStream =
-        quote! { Some(#output_type_name::<#(#generics,)*>::param_type()) };
+    let tok = if t.is_array() || generics.is_empty() {
+        format!("Some(ParamType::{param_type})").parse()?
+    } else {
+        quote! { Some(#output_type_name::<#(#generics,)*>::param_type()) }
+    };
 
     let output_param = tok;
 
@@ -750,10 +754,15 @@ pub fn gen_trait_impls(
 ) -> Result<TokenStream, Error> {
     functions
         .iter()
-        .flat_map(|fun| &fun.inputs)
+        .flat_map(|fun| chain!(&fun.inputs, iter::once(&fun.output)))
         .flat_map(|type_application| unravel_type_application(type_application))
-        .filter(|input| !input.type_arguments.as_ref().unwrap_or(&vec![]).is_empty())
-        .unique()
+        .unique_by(|el| (el.type_id, &el.type_arguments))
+        .filter(|type_application| {
+            let type_decl = types.get(&type_application.type_id).unwrap();
+            type_decl.is_custom_type(&types)
+                && !type_decl.is_array()
+                && !FlatAbigen::is_sway_native_type(&type_decl.type_field)
+        })
         .flat_map(|fun_input| {
             [
                 gen_parameterize_impl(fun_input, &types),
@@ -768,6 +777,7 @@ fn gen_parameterize_impl(
     types: &HashMap<usize, TypeDeclaration>,
 ) -> Result<TokenStream, Error> {
     let resolved_type = resolve_type(&input_type, &types)?;
+    let type_decl = types.get(&input_type.type_id).unwrap();
 
     let mut resolved_generics = &resolved_type.generic_params;
     let mut current_generic_index = 0;
@@ -816,6 +826,8 @@ fn gen_parameterize_impl(
         .collect::<Result<Vec<_>, _>>()?;
 
     let tokenized_resolved_type: TokenStream = resolved_type.into();
+    let smt = tokenized_resolved_type.to_string();
+
     Ok(quote! {
         impl Parameterize for #tokenized_resolved_type {
             fn param_type() -> ParamType {

@@ -193,22 +193,11 @@ pub fn _new_expand_custom_struct(
         .expect("Fail to extract components from custom type");
     let mut fields = Vec::with_capacity(components.len());
 
-    // Holds a TokenStream representing the process of
-    // creating a [`Token`] and pushing it a vector of Tokens.
-    let mut struct_fields_tokens = Vec::new();
-    let mut param_types = Vec::new();
     let mut generic_args = Vec::new();
     let mut seen_generic_types: HashSet<String> = Default::default();
 
-    // Holds the TokenStream representing the process
-    // of creating a Self struct from each `Token`.
-    // Used when creating a struct from tokens with
-    // `Tokenizable::from_token()`.
-    let mut args = Vec::new();
-
     // For each component, we create two TokenStreams:
     // 1. A struct field declaration like `pub #field_name: #component_name`
-    // 2. The creation of a token and its insertion into a vector of Tokens.
     for component in components {
         let field_name = ident(&component.name.to_snake_case());
 
@@ -222,26 +211,9 @@ pub fn _new_expand_custom_struct(
                 )?);
 
                 fields.push(quote! {pub #field_name: #inner_ident});
-                args.push(quote! {#field_name: #inner_ident::from_token(next_token()?)?});
-                struct_fields_tokens.push(quote! { tokens.push(self.#field_name.into_token()) });
-                param_types.push(quote! { types.push(#inner_ident::param_type()) });
             }
             _ => {
                 let ty = expand_type(&param_type)?;
-
-                let mut param_type_string = param_type.to_string();
-
-                let param_type_string_ident_tok: proc_macro2::TokenStream =
-                    param_type_string.parse().unwrap();
-
-                if let ParamType::Array(..) = param_type {
-                    param_type_string = "Array".to_string();
-                }
-                if let ParamType::String(..) = param_type {
-                    param_type_string = "String".to_string();
-                }
-
-                let param_type_string_ident = ident(&param_type_string);
 
                 // Field declaration
                 let stream = quote! { pub #field_name: #ty};
@@ -253,36 +225,6 @@ pub fn _new_expand_custom_struct(
                         seen_generic_types.insert(name.clone());
                         let generic_arg = ident(&name);
                         generic_args.push(quote! { #generic_arg });
-                        param_types.push(quote! { types.push(ParamType::Generic(#name)) });
-                    }
-                    continue; // @todo temp.
-                } else {
-                    param_types
-                        .push(quote! { types.push(ParamType::#param_type_string_ident_tok) });
-
-                    args.push(quote! {
-                        #field_name: <#ty>::from_token(next_token()?)?
-                    });
-
-                    // Token creation and insertion
-                    match param_type {
-                        ParamType::String(len) => {
-                            struct_fields_tokens
-                                .push(quote! {tokens.push(Token::#param_type_string_ident(
-                                StringToken::new(self.#field_name,  #len)))});
-                        }
-                        ParamType::Array(_t, _s) => {
-                            struct_fields_tokens.push(
-                                quote! {tokens.push(Token::#param_type_string_ident(vec![self.#field_name.into_token()]))},
-                            );
-                        }
-                        // Primitive type
-                        _ => {
-                            // Token creation and insertion
-                            struct_fields_tokens.push(
-                                quote! {tokens.push(Token::#param_type_string_ident(self.#field_name))},
-                            );
-                        }
                     }
                 }
             }
@@ -291,57 +233,13 @@ pub fn _new_expand_custom_struct(
 
     // If struct is generic, we need to add the generic args to the struct
     // declaration.
-    let struct_decl = if generic_args.is_empty() {
-        quote! { #[derive(Debug)] pub struct #struct_ident { #(#fields),* } }
-    } else {
-        quote! { #[derive(Debug)] pub struct #struct_ident <#(#generic_args),*> { #(#fields),* } }
-    };
-
-    // If struct is generic, we need to add generic params to impl Parameterize
-    let param_type_impl = if generic_args.is_empty() {
-        quote! {
-            impl Parameterize for #struct_ident {
-                fn param_type() -> ParamType {
-                    let mut types = Vec::new();
-                    #( #param_types; )*
-                    ParamType::Struct(types)
-                }
-            }
-        }
-    } else {
+    let generic_params = if generic_args.is_empty() {
         quote! {}
-    };
-
-    // If struct is generic, we need to add generic params to impl Tokenizable.
-    // @todo they're temporarily (maybe permanently) the same.
-    let tokenizable_impl = if generic_args.is_empty() {
-        quote! {
-            impl Tokenizable for #struct_ident {
-                fn into_token(self) -> Token {
-                    let mut tokens = Vec::new();
-                    #( #struct_fields_tokens; )*
-
-                    Token::Struct(tokens)
-                }
-
-                fn from_token(token: Token)  -> Result<Self, SDKError> {
-                    match token {
-                        Token::Struct(tokens) => {
-                            let mut tokens_iter = tokens.into_iter();
-                            let mut next_token = move || { tokens_iter
-                                .next()
-                                .ok_or_else(|| { SDKError::InstantiationError(format!("Ran out of tokens before '{}' has finished construction!", #struct_name)) })
-                            };
-                            Ok(Self { #( #args ),* })
-                        },
-                        other => Err(SDKError::InstantiationError(format!("Error while constructing '{}'. Expected token of type Token::Struct, got {:?}", #struct_name, other))),
-                    }
-                }
-            }
-        }
     } else {
-        quote! {}
+        quote! { <#(#generic_args,)*> }
     };
+    let struct_decl =
+        quote! { #[derive(Debug)] pub struct #struct_ident #generic_params { #(#fields),* } };
 
     // If struct is generic, we need to add generic params to impl TryFrom<&[u8]>.
     let try_from_slice_impl = if generic_args.is_empty() {
@@ -415,10 +313,6 @@ pub fn _new_expand_custom_struct(
 
     Ok(quote! {
         #struct_decl
-
-        #param_type_impl
-
-        #tokenizable_impl
 
         #try_from_slice_impl
 

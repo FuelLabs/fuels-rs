@@ -114,7 +114,7 @@ pub struct ABIFunction {
     pub output: TypeApplication,
 }
 
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TypeDeclaration {
     pub type_id: usize,

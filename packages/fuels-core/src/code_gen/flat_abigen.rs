@@ -216,9 +216,7 @@ impl FlatAbigen {
             }
 
             if !seen_struct.contains(&prop.type_field.as_str()) {
-                eprintln!("trying to expand struct: {prop:?}");
                 let s = _new_expand_custom_struct(prop, &self.types)?;
-                eprintln!("expanded struct into: {s}");
                 structs.extend(s);
                 seen_struct.push(&prop.type_field);
             }
@@ -231,7 +229,7 @@ impl FlatAbigen {
     // It's expected to come in as `"struct T"` or `"enum T"`.
     // `T` is a Sway-native type if it matches exactly one of
     // the reserved strings, such as "Address" or "ContractId".
-    fn is_sway_native_type(type_field: &str) -> bool {
+    pub fn is_sway_native_type(type_field: &str) -> bool {
         let split: Vec<&str> = type_field.split_whitespace().collect();
 
         if split.len() > 2 {
@@ -243,7 +241,7 @@ impl FlatAbigen {
     fn abi_enums(&self) -> Result<TokenStream, Error> {
         let mut enums = TokenStream::new();
 
-        return Ok(enums); // temp
+        // return Ok(enums); // temp
 
         // Prevent expanding the same enum more than once
         let mut seen_enum: Vec<&str> = vec![];
