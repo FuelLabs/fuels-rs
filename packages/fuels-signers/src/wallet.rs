@@ -441,7 +441,7 @@ impl WalletUnlocked {
         let transaction_fee = TransactionFee::checked_from_tx(&consensus_parameters.into(), &*tx)
             .expect("Error calculating TransactionFee");
 
-        let (base_asset_inputs, remaining_inputs): (Vec<Input>, Vec<Input>) =
+        let (base_asset_inputs, remaining_inputs): (Vec<_>, Vec<_>) =
             tx.inputs().iter().cloned().partition(|input| {
                 matches!(input, Input::CoinSigned { .. })
                     && *input.asset_id().unwrap() == BASE_ASSET_ID
