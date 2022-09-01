@@ -29,7 +29,7 @@ mod tests {
         abigen!(
             MyContract,
             // This path is relative to the workspace (repository) root
-            "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+            "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json"
         );
 
         // This helper will launch a local node and provide a test wallet linked to it
@@ -79,7 +79,7 @@ mod tests {
 
         abigen!(
             MyContract,
-            "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+            "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json"
         );
 
         let wallet = launch_provider_and_get_wallet().await;
@@ -102,7 +102,7 @@ mod tests {
             .await?;
         // ANCHOR_END: contract_call_cost_estimation
 
-        assert_eq!(transaction_cost.gas_used, 631);
+        assert_eq!(transaction_cost.gas_used, 592);
 
         Ok(())
     }
@@ -116,7 +116,7 @@ mod tests {
         // ANCHOR: abigen_example
         abigen!(
             MyContract,
-            "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+            "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json"
         );
         // ANCHOR_END: abigen_example
 
@@ -158,7 +158,7 @@ mod tests {
 
         abigen!(
             MyContract,
-            "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+            "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json"
         );
 
         let wallets = launch_custom_provider_and_get_wallets(WalletsConfig::default(), None).await;
@@ -212,7 +212,7 @@ mod tests {
         use fuels::prelude::*;
         abigen!(
             MyContract,
-            "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+            "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json"
         );
 
         let wallet = launch_provider_and_get_wallet().await;
@@ -290,8 +290,7 @@ mod tests {
         use fuels::prelude::*;
         abigen!(
             MyContract,
-            "packages/fuels/tests/test_projects/token_ops/out/debug/token_ops-abi\
-            .json"
+            "packages/fuels/tests/test_projects/token_ops/out/debug/token_ops-flat-abi.json"
         );
 
         let wallet = launch_provider_and_get_wallet().await;
@@ -312,15 +311,14 @@ mod tests {
         // ANCHOR_END: simulate
         let response = contract_instance.mint_coins(1_000_000).call().await?;
         // ANCHOR: variable_outputs
-        // TODO: Enable test
-        // let address = wallet.address();
+        let address = wallet.address();
 
         // withdraw some tokens to wallet
-        // let response = contract_instance
-        //     .transfer_coins_to_output(1_000_000, contract_id.into(), address.into())
-        //     .append_variable_outputs(1)
-        //     .call()
-        //     .await?;
+        let response = contract_instance
+            .transfer_coins_to_output(1_000_000, contract_id.into(), address.into())
+            .append_variable_outputs(1)
+            .call()
+            .await?;
         // ANCHOR_END: variable_outputs
         Ok(())
     }
@@ -332,7 +330,7 @@ mod tests {
         use fuels::tx::Receipt;
         abigen!(
             TestContract,
-            "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+            "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json"
         );
         let wallet = launch_provider_and_get_wallet().await;
         let contract_id = Contract::deploy(
@@ -377,7 +375,7 @@ mod tests {
         // Replace with your contract ABI.json path
         abigen!(
             MyContract,
-            "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+            "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json"
         );
         let wallet = launch_provider_and_get_wallet().await;
         // Your contract ID as a String.
@@ -396,7 +394,7 @@ mod tests {
         use fuels::prelude::*;
         abigen!(
             MyContract,
-            "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+            "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json"
         );
 
         let wallet = launch_provider_and_get_wallet().await;
@@ -436,7 +434,7 @@ mod tests {
 
         abigen!(
             MyContract,
-            "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+            "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json"
         );
 
         let wallet = launch_provider_and_get_wallet().await;
@@ -486,7 +484,7 @@ mod tests {
 
         abigen!(
             MyContract,
-            "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+            "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json"
         );
 
         let wallet = launch_provider_and_get_wallet().await;
@@ -518,7 +516,7 @@ mod tests {
             .await?;
         // ANCHOR_END: multi_call_cost_estimation
 
-        assert_eq!(transaction_cost.gas_used, 1051);
+        assert_eq!(transaction_cost.gas_used, 1012);
 
         Ok(())
     }
@@ -529,7 +527,7 @@ mod tests {
         use fuels::prelude::*;
         abigen!(
             MyContract,
-            "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+            "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json"
         );
 
         let config = WalletsConfig::new(Some(2), Some(1), Some(DEFAULT_COIN_AMOUNT));
