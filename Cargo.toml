@@ -22,5 +22,6 @@ members = [
     "packages/fuels-types",
     "packages/wasm-tests",
     "scripts/build-test-projects",
+    "scripts/check-docs",
     "tools/fuels-abi-cli",
 ]
