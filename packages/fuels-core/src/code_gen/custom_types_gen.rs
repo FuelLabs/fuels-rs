@@ -239,8 +239,7 @@ pub fn _new_expand_custom_struct(
         quote! { <#(#generic_args,)*> }
     };
 
-    let struct_decl =
-        quote! { #[derive(Debug)] pub struct #struct_ident #generic_params { #(#fields),* } };
+    let struct_decl = quote! { #[derive(Clone, Debug, Eq, PartialEq)] pub struct #struct_ident #generic_params { #(#fields),* } };
 
     Ok(quote! { #struct_decl })
 }

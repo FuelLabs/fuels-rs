@@ -17,7 +17,7 @@ use itertools::{chain, Itertools};
 use proc_macro2::{Ident, Literal, TokenStream};
 use quote::{quote, ToTokens};
 use regex::Regex;
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::hash::{Hash, Hasher};
 use std::iter;
 use syn::Expr::Type;
@@ -553,12 +553,7 @@ fn _new_expand_function_arguments(
 
             toks.parse::<TokenStream>().unwrap()
         } else {
-            _new_expand_input_param(
-                fun,
-                fn_type_application,
-                &ParamType::from_type_declaration(param, types)?,
-                types,
-            )?
+            resolve_type(&fn_type_application, &types)?.into()
         };
 
         // Add the TokenStream to argument declarations
@@ -696,47 +691,20 @@ fn expand_input_param(
     }
 }
 
-// @todo This is an experimental support for the new JSON ABI file format.
-// Once this is stable:
-// 1. Delete old one;
-// 2. Rename it to its original name;
-// 3. Write documentation.
-fn _new_expand_input_param(
-    fun: &ABIFunction,
-    type_application: &TypeApplication,
-    kind: &ParamType,
-    types: &HashMap<usize, TypeDeclaration>,
-) -> Result<TokenStream, Error> {
-    match kind {
-        ParamType::Array(ty, _) => {
-            let ty = _new_expand_input_param(fun, type_application, ty, types)?;
-            Ok(quote! {
-                ::std::vec::Vec<#ty>
-            })
-        }
-        ParamType::Enum(_) | ParamType::Struct(_) => {
-            let ident: TokenStream = resolve_type(&type_application, &types)?.into();
-            Ok(quote! { #ident })
-        }
-        // Primitive type
-        _ => expand_type(kind),
-    }
-}
-
 pub fn gen_trait_impls(
     functions: &[ABIFunction],
     types: &HashMap<usize, TypeDeclaration>,
 ) -> Result<TokenStream, Error> {
-    filter_all_unique_used_types(functions)
+    filter_all_unique_used_types(functions, types)
         .into_iter()
         .filter(|type_application| only_types_which_should_generate_impls(type_application, types))
         .flat_map(|type_application| {
             [
-                gen_parameterize_impl(type_application, &types),
-                gen_tokenize_impl(type_application, &types),
-                gen_try_from_byte_slice(type_application, &types),
-                gen_try_from_bytevec_ref(type_application, &types),
-                gen_try_from_bytevec(type_application, &types),
+                gen_parameterize_impl(&type_application, &types),
+                gen_tokenize_impl(&type_application, &types),
+                gen_try_from_byte_slice(&type_application, &types),
+                gen_try_from_bytevec_ref(&type_application, &types),
+                gen_try_from_bytevec(&type_application, &types),
             ]
         })
         .collect()
@@ -747,17 +715,43 @@ fn only_types_which_should_generate_impls(
     types: &HashMap<usize, TypeDeclaration>,
 ) -> bool {
     let type_decl = types.get(&type_application.type_id).unwrap();
-    type_decl.is_custom_type(&types)
+    type_decl.is_struct_type() // because tuples are not yet implemented
+        && type_decl.is_custom_type(&types)
         && !type_decl.is_array()
         && !FlatAbigen::is_sway_native_type(&type_decl.type_field)
 }
 
-fn filter_all_unique_used_types(functions: &[ABIFunction]) -> Vec<&TypeApplication> {
+fn filter_all_unique_used_types(
+    functions: &[ABIFunction],
+    types: &HashMap<usize, TypeDeclaration>,
+) -> Vec<TypeApplication> {
     functions
         .iter()
         .flat_map(|fun| chain!(&fun.inputs, iter::once(&fun.output)))
         .flat_map(|type_application| unravel_type_application(type_application))
-        .unique_by(|el| (el.type_id, &el.type_arguments))
+        .cloned()
+        .chain(
+            extract_nongeneric_type_declarations(&types)
+                .into_iter()
+                .map(|type_declaration| TypeApplication {
+                    name: Default::default(),
+                    type_id: type_declaration.type_id,
+                    type_arguments: None,
+                }),
+        )
+        .unique_by(|el| (el.type_id, el.type_arguments.clone()))
+        .collect::<Vec<_>>()
+}
+pub fn extract_nongeneric_type_declarations(
+    types: &HashMap<usize, TypeDeclaration>,
+) -> Vec<TypeDeclaration> {
+    types
+        .values()
+        .filter(|type_declaration| {
+            let is_generic = matches!(&type_declaration.type_parameters, Some(parameters) if !parameters.is_empty() );
+            !is_generic
+        })
+        .cloned()
         .collect()
 }
 
