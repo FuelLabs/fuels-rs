@@ -12,11 +12,6 @@ use quote::quote;
 use super::custom_types_gen::{expand_custom_enum, expand_custom_struct};
 use super::functions_gen::expand_function;
 
-// This is a temporary file that duplicates most of the logic in `abigen.rs`.
-// This is necessary to support both the old and new JSON ABI formats.
-// Once we drop the support for the old one, we can remove this file and rename
-// `flat_abigen.rs` to `abigen.rs`.
-
 pub struct Abigen {
     /// Format the code using a locally installed copy of `rustfmt`.
     rustfmt: bool,
@@ -35,7 +30,6 @@ pub struct Abigen {
 impl Abigen {
     /// Creates a new contract with the given ABI JSON source.
     pub fn new<S: AsRef<str>>(contract_name: &str, abi_source: S) -> Result<Self, Error> {
-        // Support for new JSON ABI file format.
         let source = Source::parse(abi_source).expect("failed to parse JSON ABI");
 
         let parsed_abi: ProgramABI =
