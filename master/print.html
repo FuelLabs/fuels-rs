@@ -936,40 +936,48 @@ impl MyContract for Contract {
 </code></pre>
 <p>The SDK lets you transform ABI methods of a smart contract, specified as JSON objects (which you can get from <a href="https://github.com/FuelLabs/sway/tree/master/forc">Forc</a>), into Rust structs and methods that are type-checked at compile time.</p>
 <p>For instance, a contract with two methods: <code>initialize_counter(arg: u64) -&gt; u64</code> and <code>increment_counter(arg: u64) -&gt; u64</code>, with the following JSON ABI:</p>
-<pre><code class="language-json ignore">[
-  {
-    &quot;type&quot;: &quot;function&quot;,
-    &quot;inputs&quot;: [
-      {
-        &quot;name&quot;: &quot;arg&quot;,
-        &quot;type&quot;: &quot;u64&quot;
+<pre><code class="language-json ignore">{
+  &quot;types&quot;: [
+    {
+      &quot;typeId&quot;: 0,
+      &quot;type&quot;: &quot;u64&quot;,
+      &quot;components&quot;: null,
+      &quot;typeParameters&quot;: null
+    }
+  ],
+  &quot;functions&quot;: [
+    {
+      &quot;inputs&quot;: [
+        {
+          &quot;name&quot;: &quot;value&quot;,
+          &quot;type&quot;: 0,
+          &quot;typeArguments&quot;: null
+        }
+      ],
+      &quot;name&quot;: &quot;initialize_counter&quot;,
+      &quot;output&quot;: {
+        &quot;name&quot;: &quot;&quot;,
+        &quot;type&quot;: 0,
+        &quot;typeArguments&quot;: null
       }
-    ],
-    &quot;name&quot;: &quot;initialize_counter&quot;,
-    &quot;outputs&quot;: [
-      {
-        &quot;name&quot;: &quot;arg&quot;,
-        &quot;type&quot;: &quot;u64&quot;
+    },
+    {
+      &quot;inputs&quot;: [
+        {
+          &quot;name&quot;: &quot;value&quot;,
+          &quot;type&quot;: 0,
+          &quot;typeArguments&quot;: null
+        }
+      ],
+      &quot;name&quot;: &quot;increment_counter&quot;,
+      &quot;output&quot;: {
+        &quot;name&quot;: &quot;&quot;,
+        &quot;type&quot;: 0,
+        &quot;typeArguments&quot;: null
       }
-    ]
-  },
-  {
-    &quot;type&quot;: &quot;function&quot;,
-    &quot;inputs&quot;: [
-      {
-        &quot;name&quot;: &quot;arg&quot;,
-        &quot;type&quot;: &quot;u64&quot;
-      }
-    ],
-    &quot;name&quot;: &quot;increment_counter&quot;,
-    &quot;outputs&quot;: [
-      {
-        &quot;name&quot;: &quot;arg&quot;,
-        &quot;type&quot;: &quot;u64&quot;
-      }
-    ]
-  }
-]
+    }
+  ]
+}
 </code></pre>
 <p>Can become this (shortened for brevity's sake):</p>
 <pre><code class="language-rust ignore">pub struct MyContract {
@@ -1043,41 +1051,49 @@ impl MyContract {
         abigen!(
             MyContract,
             r#&quot;
-    [
-        {
-            &quot;type&quot;: &quot;function&quot;,
-            &quot;inputs&quot;: [
-                {
-                    &quot;name&quot;: &quot;arg&quot;,
-                    &quot;type&quot;: &quot;u64&quot;
-                }
-            ],
-            &quot;name&quot;: &quot;initialize_counter&quot;,
-            &quot;outputs&quot;: [
-                {
-                    &quot;name&quot;: &quot;arg&quot;,
-                    &quot;type&quot;: &quot;u64&quot;
-                }
-            ]
-        },
-        {
-            &quot;type&quot;: &quot;function&quot;,
-            &quot;inputs&quot;: [
-                {
-                    &quot;name&quot;: &quot;arg&quot;,
-                    &quot;type&quot;: &quot;u64&quot;
-                }
-            ],
-            &quot;name&quot;: &quot;increment_counter&quot;,
-            &quot;outputs&quot;: [
-                {
-                    &quot;name&quot;: &quot;arg&quot;,
-                    &quot;type&quot;: &quot;u64&quot;
-                }
-            ]
-        }
-    ]
-    &quot;#
+            {
+                &quot;types&quot;: [
+                  {
+                    &quot;typeId&quot;: 0,
+                    &quot;type&quot;: &quot;u64&quot;,
+                    &quot;components&quot;: null,
+                    &quot;typeParameters&quot;: null
+                  }
+                ],
+                &quot;functions&quot;: [
+                  {
+                    &quot;inputs&quot;: [
+                      {
+                        &quot;name&quot;: &quot;value&quot;,
+                        &quot;type&quot;: 0,
+                        &quot;typeArguments&quot;: null
+                      }
+                    ],
+                    &quot;name&quot;: &quot;initialize_counter&quot;,
+                    &quot;output&quot;: {
+                      &quot;name&quot;: &quot;&quot;,
+                      &quot;type&quot;: 0,
+                      &quot;typeArguments&quot;: null
+                    }
+                  },
+                  {
+                    &quot;inputs&quot;: [
+                      {
+                        &quot;name&quot;: &quot;value&quot;,
+                        &quot;type&quot;: 0,
+                        &quot;typeArguments&quot;: null
+                      }
+                    ],
+                    &quot;name&quot;: &quot;increment_counter&quot;,
+                    &quot;output&quot;: {
+                      &quot;name&quot;: &quot;&quot;,
+                      &quot;type&quot;: 0,
+                      &quot;typeArguments&quot;: null
+                    }
+                  }
+                ]
+              }
+            &quot;#
         );
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="calling-contracts"><a class="header" href="#calling-contracts">Calling contracts</a></h1>
