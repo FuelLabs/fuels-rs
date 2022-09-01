@@ -1,34 +1,42 @@
-[
-  {
-    "type": "function",
-    "inputs": [
-      {
-        "name": "arg",
-        "type": "u64"
+{
+  "types": [
+    {
+      "typeId": 0,
+      "type": "u64",
+      "components": null,
+      "typeParameters": null
+    }
+  ],
+  "functions": [
+    {
+      "inputs": [
+        {
+          "name": "value",
+          "type": 0,
+          "typeArguments": null
+        }
+      ],
+      "name": "initialize_counter",
+      "output": {
+        "name": "",
+        "type": 0,
+        "typeArguments": null
       }
-    ],
-    "name": "initialize_counter",
-    "outputs": [
-      {
-        "name": "arg",
-        "type": "u64"
+    },
+    {
+      "inputs": [
+        {
+          "name": "value",
+          "type": 0,
+          "typeArguments": null
+        }
+      ],
+      "name": "increment_counter",
+      "output": {
+        "name": "",
+        "type": 0,
+        "typeArguments": null
       }
-    ]
-  },
-  {
-    "type": "function",
-    "inputs": [
-      {
-        "name": "arg",
-        "type": "u64"
-      }
-    ],
-    "name": "increment_counter",
-    "outputs": [
-      {
-        "name": "arg",
-        "type": "u64"
-      }
-    ]
-  }
-]
+    }
+  ]
+}
