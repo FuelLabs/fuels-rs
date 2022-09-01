@@ -1522,15 +1522,14 @@ async fn test_amount_and_asset_forwarding() -> Result<(), Error> {
     assert_eq!(call_response.unwrap().amount().unwrap(), 1_000_000);
     assert_eq!(call_response.unwrap().asset_id().unwrap(), &BASE_ASSET_ID);
 
-    // TODO: Enable test
-    //let address = wallet.address();
+    let address = wallet.address();
 
     // withdraw some tokens to wallet
-    // instance
-    //     .transfer_coins_to_output(1_000_000, (&id).into(), address.into())
-    //     .append_variable_outputs(1)
-    //     .call()
-    //     .await?;
+    instance
+        .transfer_coins_to_output(1_000_000, (&id).into(), address.into())
+        .append_variable_outputs(1)
+        .call()
+        .await?;
 
     let asset_id = AssetId::from(*id.hash());
     let call_params = CallParameters::new(Some(0), Some(asset_id), None);
@@ -1725,33 +1724,35 @@ async fn test_arrays_with_custom_types() -> Result<(), Error> {
     assert_eq!(states[1], response.value[1]);
     Ok(())
 }
-// TODO: Enable test
-// #[tokio::test]
-// async fn test_auth_msg_sender_from_sdk() -> Result<(), Error> {
-//     abigen!(
-//         AuthContract,
-//         "packages/fuels/tests/test_projects/auth_testing_contract/out/debug/auth_testing_contract-flat-abi.json"
-//     );
 
-//     let id = Contract::deploy(
-//         "tests/test_projects/auth_testing_contract/out/debug/auth_testing_contract.bin",
-//         &wallet,
-//         TxParameters::default(),
-//         StorageConfiguration::default(),
-//     )
-//     .await?;
+#[tokio::test]
+async fn test_auth_msg_sender_from_sdk() -> Result<(), Error> {
+    abigen!(
+        AuthContract,
+        "packages/fuels/tests/test_projects/auth_testing_contract/out/debug/auth_testing_contract-flat-abi.json"
+    );
 
-//     let auth_instance = AuthContractBuilder::new(id.to_string(), wallet.clone()).build();
+    let wallet = launch_provider_and_get_wallet().await;
 
-//     // Contract returns true if `msg_sender()` matches `wallet.address()`.
-//     let response = auth_instance
-//         .check_msg_sender(wallet.address().into())
-//         .call()
-//         .await?;
+    let id = Contract::deploy(
+        "tests/test_projects/auth_testing_contract/out/debug/auth_testing_contract.bin",
+        &wallet,
+        TxParameters::default(),
+        StorageConfiguration::default(),
+    )
+    .await?;
 
-//     assert!(response.value);
-//     Ok(())
-// }
+    let auth_instance = AuthContractBuilder::new(id.to_string(), wallet.clone()).build();
+
+    // Contract returns true if `msg_sender()` matches `wallet.address()`.
+    let response = auth_instance
+        .check_msg_sender(wallet.address().into())
+        .call()
+        .await?;
+
+    assert!(response.value);
+    Ok(())
+}
 
 #[tokio::test]
 async fn workflow_enum_inside_struct() -> Result<(), Error> {
@@ -3332,7 +3333,7 @@ async fn test_connect_wallet() -> anyhow::Result<()> {
 async fn contract_call_fee_estimation() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -3352,9 +3353,9 @@ async fn contract_call_fee_estimation() -> Result<(), Error> {
     let tolerance = 0.2;
 
     let expected_min_gas_price = 0; // This is the default min_gas_price from the ConsensusParameters
-    let expected_gas_used = 757;
+    let expected_gas_used = 710;
     let expected_metered_bytes_size = 720;
-    let expected_total_fee = 364;
+    let expected_total_fee = 359;
 
     let estimated_transaction_cost = contract_instance
         .initialize_counter(42) // Build the ABI call
@@ -3381,7 +3382,7 @@ async fn contract_call_fee_estimation() -> Result<(), Error> {
 async fn contract_call_has_same_estimated_and_used_gas() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -3418,7 +3419,7 @@ async fn contract_call_has_same_estimated_and_used_gas() -> Result<(), Error> {
 async fn mutl_call_has_same_estimated_and_used_gas() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
