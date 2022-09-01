@@ -451,7 +451,7 @@ impl WalletUnlocked {
             .iter()
             .map(|input| input.amount().unwrap())
             .sum();
-        // either the inputs were setup incorecctly, or the passed base_asset_amount is wrong
+        // either the inputs were setup incorrectly, or the passed base_asset_amount is wrong
         if base_inputs_sum < previous_base_amount {
             return Err(Error::WalletError(
                 "The provided base asset amount is less than the present input coins".to_string(),
