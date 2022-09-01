@@ -2676,7 +2676,7 @@ async fn can_call_no_arg_predicate_returns_true() -> Result<(), Error> {
     let receiver_balance_before = provider
         .get_asset_balance(receiver.address(), asset_id)
         .await?;
-    assert_eq!(receiver_balance_before, 32);
+    assert_eq!(receiver_balance_before, 16);
 
     receiver
         .receive_from_predicate(

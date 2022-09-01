@@ -483,8 +483,9 @@ impl WalletUnlocked {
             matches!(output, Output::Change { .. }) && *output.asset_id().unwrap() == BASE_ASSET_ID
         });
 
-        let change_output = if !is_base_change_present {
-            vec![Output::change(self.address().into(), 0, AssetId::default())]
+        // add a change output for the base asset if it doesn't exist and there are base inputs
+        let change_output = if !is_base_change_present && new_base_amount != 0 {
+            vec![Output::change(self.address().into(), 0, BASE_ASSET_ID)]
         } else {
             vec![]
         };
