@@ -290,8 +290,7 @@ mod tests {
         use fuels::prelude::*;
         abigen!(
             MyContract,
-            "packages/fuels/tests/test_projects/token_ops/out/debug/token_ops-abi\
-            .json"
+            "packages/fuels/tests/test_projects/token_ops/out/debug/token_ops-flat-abi.json"
         );
 
         let wallet = launch_provider_and_get_wallet().await;
