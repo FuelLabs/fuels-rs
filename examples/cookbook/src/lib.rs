@@ -4,7 +4,6 @@ mod tests {
 
     #[tokio::test]
     async fn liquidity() -> Result<(), Error> {
-        // ANCHOR: liquidity
         use fuels::prelude::*;
         use fuels::test_helpers::{AssetConfig, WalletsConfig};
 
@@ -48,7 +47,7 @@ mod tests {
             MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
         // ANCHOR_END: liquidity_deploy
         //TODO: Enable test
-        // // ANCHOR: liquidity_deposit
+        // ANCHOR: liquidity_deposit
         // let deposit_amount = 1_000_000;
         // let call_params = CallParameters::new(Some(deposit_amount), Some(base_asset_id), None);
         // contract_instance
@@ -57,9 +56,9 @@ mod tests {
         //     .append_variable_outputs(1)
         //     .call()
         //     .await?;
-        // // ANCHOR_END: liquidity_deposit
+        // ANCHOR_END: liquidity_deposit
 
-        // // ANCHOR: liquidity_withdraw
+        // ANCHOR: liquidity_withdraw
         // let lp_asset_id = AssetId::from(*contract_id.hash());
         // let lp_token_balance = wallet.get_asset_balance(&lp_asset_id).await?;
 
@@ -75,7 +74,6 @@ mod tests {
         // assert_eq!(base_balance, deposit_amount);
         // ANCHOR_END: liquidity_withdraw
 
-        // ANCHOR_END: deposit_and_withdraw
         Ok(())
     }
 
