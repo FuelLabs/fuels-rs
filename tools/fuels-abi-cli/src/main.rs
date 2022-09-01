@@ -180,6 +180,5 @@
 
 fn main() -> anyhow::Result<()> {
     // println!("{}", execute(std::env::args())?);
-
-    Ok(())
+    unimplemented!("This is currently disabled, we'll be bringing it back very soon!");
 }
