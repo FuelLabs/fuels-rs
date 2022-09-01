@@ -224,22 +224,6 @@ struct ResolvedType {
     pub generic_params: Vec<ResolvedType>,
 }
 
-// impl Eq for ResolvedType {}
-// impl PartialEq for ResolvedType {
-//     fn eq(&self, other: &Self) -> bool {
-//         self.type_name.to_string() == other.type_name.to_string()
-//             && self.generic_params == other.generic_params
-//     }
-// }
-// impl Hash for ResolvedType {
-//     fn hash<H: Hasher>(&self, state: &mut H) {
-//         self.type_name.to_string().hash(state);
-//         for resolved_type in self.generic_params {
-//             resolved_type.hash(state);
-//         }
-//     }
-// }
-
 impl From<ResolvedType> for TokenStream {
     fn from(resolved_type: ResolvedType) -> Self {
         let type_name = resolved_type.type_name;
@@ -739,6 +723,44 @@ fn _new_expand_input_param(
     }
 }
 
+pub fn gen_trait_impls(
+    functions: &[ABIFunction],
+    types: &HashMap<usize, TypeDeclaration>,
+) -> Result<TokenStream, Error> {
+    filter_all_unique_used_types(functions)
+        .into_iter()
+        .filter(|type_application| only_types_which_should_generate_impls(type_application, types))
+        .flat_map(|type_application| {
+            [
+                gen_parameterize_impl(type_application, &types),
+                gen_tokenize_impl(type_application, &types),
+                gen_try_from_byte_slice(type_application, &types),
+                gen_try_from_bytevec_ref(type_application, &types),
+                gen_try_from_bytevec(type_application, &types),
+            ]
+        })
+        .collect()
+}
+
+fn only_types_which_should_generate_impls(
+    type_application: &TypeApplication,
+    types: &HashMap<usize, TypeDeclaration>,
+) -> bool {
+    let type_decl = types.get(&type_application.type_id).unwrap();
+    type_decl.is_custom_type(&types)
+        && !type_decl.is_array()
+        && !FlatAbigen::is_sway_native_type(&type_decl.type_field)
+}
+
+fn filter_all_unique_used_types(functions: &[ABIFunction]) -> Vec<&TypeApplication> {
+    functions
+        .iter()
+        .flat_map(|fun| chain!(&fun.inputs, iter::once(&fun.output)))
+        .flat_map(|type_application| unravel_type_application(type_application))
+        .unique_by(|el| (el.type_id, &el.type_arguments))
+        .collect()
+}
+
 pub fn unravel_type_application(type_application: &TypeApplication) -> Vec<&TypeApplication> {
     type_application
         .type_arguments
@@ -748,36 +770,12 @@ pub fn unravel_type_application(type_application: &TypeApplication) -> Vec<&Type
         .chain(iter::once(type_application))
         .collect()
 }
-pub fn gen_trait_impls(
-    functions: &[ABIFunction],
-    types: &HashMap<usize, TypeDeclaration>,
-) -> Result<TokenStream, Error> {
-    functions
-        .iter()
-        .flat_map(|fun| chain!(&fun.inputs, iter::once(&fun.output)))
-        .flat_map(|type_application| unravel_type_application(type_application))
-        .unique_by(|el| (el.type_id, &el.type_arguments))
-        .filter(|type_application| {
-            let type_decl = types.get(&type_application.type_id).unwrap();
-            type_decl.is_custom_type(&types)
-                && !type_decl.is_array()
-                && !FlatAbigen::is_sway_native_type(&type_decl.type_field)
-        })
-        .flat_map(|fun_input| {
-            [
-                gen_parameterize_impl(fun_input, &types),
-                gen_tokenize_impl(fun_input, &types),
-            ]
-        })
-        .collect()
-}
 
 fn gen_parameterize_impl(
     input_type: &TypeApplication,
     types: &HashMap<usize, TypeDeclaration>,
 ) -> Result<TokenStream, Error> {
     let resolved_type = resolve_type(&input_type, &types)?;
-    let type_decl = types.get(&input_type.type_id).unwrap();
 
     let mut resolved_generics = &resolved_type.generic_params;
     let mut current_generic_index = 0;
@@ -826,7 +824,6 @@ fn gen_parameterize_impl(
         .collect::<Result<Vec<_>, _>>()?;
 
     let tokenized_resolved_type: TokenStream = resolved_type.into();
-    let smt = tokenized_resolved_type.to_string();
 
     Ok(quote! {
         impl Parameterize for #tokenized_resolved_type {
@@ -970,6 +967,57 @@ fn gen_tokenize_impl(
             }
         }
     })
+}
+
+fn gen_try_from_byte_slice(
+    type_application: &TypeApplication,
+    types: &HashMap<usize, TypeDeclaration>,
+) -> Result<TokenStream, Error> {
+    let resolved_type_token_stream: TokenStream = resolve_type(&type_application, &types)?.into();
+    let token_stream = quote! {
+        impl TryFrom<&[u8]> for #resolved_type_token_stream {
+            type Error = SDKError;
+
+            fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
+                try_from_bytes(bytes)
+            }
+        }
+    };
+    Ok(token_stream)
+}
+
+fn gen_try_from_bytevec_ref(
+    type_application: &TypeApplication,
+    types: &HashMap<usize, TypeDeclaration>,
+) -> Result<TokenStream, Error> {
+    let resolved_type_token_stream: TokenStream = resolve_type(&type_application, &types)?.into();
+    let token_stream = quote! {
+        impl TryFrom<&Vec<u8>> for #resolved_type_token_stream {
+            type Error = SDKError;
+
+            fn try_from(bytes: &Vec<u8>) -> Result<Self, Self::Error> {
+                try_from_bytes(bytes)
+            }
+        }
+    };
+    Ok(token_stream)
+}
+
+fn gen_try_from_bytevec(
+    type_application: &TypeApplication,
+    types: &HashMap<usize, TypeDeclaration>,
+) -> Result<TokenStream, Error> {
+    let resolved_type_token_stream: TokenStream = resolve_type(&type_application, &types)?.into();
+    let token_stream = quote! {
+        impl TryFrom<Vec<u8>> for #resolved_type_token_stream {
+            type Error = SDKError;
+
+            fn try_from(bytes: Vec<u8>) -> Result<Self, Self::Error> {
+                try_from_bytes(&bytes)
+            }
+        }
+    };
+    Ok(token_stream)
 }
 
 // Regarding string->TokenStream->string, refer to `custom_types_gen` tests for more details.

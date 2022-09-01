@@ -18,8 +18,8 @@ use std::process::{Command, ExitStatus};
 
 use fuels_core::parameters::StorageConfiguration;
 use fuels_core::tx::{Address, Bytes32, StorageSlot};
-use fuels_core::Tokenizable;
 use fuels_core::{constants::BASE_ASSET_ID, Token};
+use fuels_core::{try_from_bytes, Tokenizable};
 
 use fuels_core::code_gen::flat_abigen::FlatAbigen;
 use sha2::{Digest, Sha256};
@@ -3465,8 +3465,8 @@ async fn test_large_return_data() -> Result<(), Error> {
 async fn generics_preview() -> Result<(), Error> {
     let project_path = Path::new("/tmp/generics_project");
     abigen_to_project(
-        // "tests/test_projects/generics/out/debug/generics-flat-abi.json",
-        "tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json",
+        "tests/test_projects/generics/out/debug/generics-flat-abi.json",
+        // "tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json",
         &project_path,
         false,
     )?;
@@ -3481,8 +3481,8 @@ async fn generics_compiling() -> Result<(), Error> {
     let project_path = Path::new("/tmp/generics_project");
 
     abigen_to_project(
-        // "tests/test_projects/generics/out/debug/generics-flat-abi.json",
-        "tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json",
+        "tests/test_projects/generics/out/debug/generics-flat-abi.json",
+        // "tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json",
         &project_path,
         true,
     )?;
@@ -3491,41 +3491,41 @@ async fn generics_compiling() -> Result<(), Error> {
 
     Ok(())
 }
-// #[tokio::test]
-// async fn real_test() -> Result<(), Error> {
-//     // this still fails ATTOW probably because of the fn selector
-//     abigen!(
-//         MyContract,
-//         "packages/fuels/tests/test_projects/generics/out/debug/generics-flat-abi.json"
-//     );
-//
-//     let wallet = launch_provider_and_get_wallet().await;
-//
-//     let contract_id = Contract::deploy(
-//         "tests/test_projects/generics/out/debug/generics.bin",
-//         &wallet,
-//         TxParameters::default(),
-//         StorageConfiguration::default(),
-//     )
-//     .await?;
-//
-//     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
-//
-//     let a = BraveOne { one: 10, two: 20 };
-//
-//     let b = AnotherOne {
-//         rodrigo: 30,
-//         john: "123456789012345".to_string(),
-//         juicy: a,
-//     };
-//
-//     let c = MyStruct { foo: 40, boo: b };
-//
-//     let result = contract_instance.identity(c).call().await?;
-//     dbg!(result);
-//
-//     Ok(())
-// }
+#[tokio::test]
+async fn real_test() -> Result<(), Error> {
+    // this still fails ATTOW probably because of the fn selector
+    abigen!(
+        MyContract,
+        "packages/fuels/tests/test_projects/generics/out/debug/generics-flat-abi.json"
+    );
+
+    let wallet = launch_provider_and_get_wallet().await;
+
+    let contract_id = Contract::deploy(
+        "tests/test_projects/generics/out/debug/generics.bin",
+        &wallet,
+        TxParameters::default(),
+        StorageConfiguration::default(),
+    )
+    .await?;
+
+    let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
+
+    let a = BraveOne { one: 10, two: 20 };
+
+    let b = AnotherOne {
+        rodrigo: 30,
+        john: "123456789012345".to_string(),
+        juicy: a,
+    };
+
+    let c = MyStruct { foo: 40, boo: b };
+
+    let result = contract_instance.identity(c).call().await?;
+    dbg!(result);
+
+    Ok(())
+}
 
 fn cargo_check(project_path: &Path) -> std::io::Result<ExitStatus> {
     Command::new(env!("CARGO"))

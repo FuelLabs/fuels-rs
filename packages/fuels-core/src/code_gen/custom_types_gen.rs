@@ -238,88 +238,11 @@ pub fn _new_expand_custom_struct(
     } else {
         quote! { <#(#generic_args,)*> }
     };
+
     let struct_decl =
         quote! { #[derive(Debug)] pub struct #struct_ident #generic_params { #(#fields),* } };
 
-    // If struct is generic, we need to add generic params to impl TryFrom<&[u8]>.
-    let try_from_slice_impl = if generic_args.is_empty() {
-        quote! {
-            impl TryFrom<&[u8]> for #struct_ident {
-                type Error = SDKError;
-
-                fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
-                    try_from_bytes(bytes)
-                }
-            }
-        }
-    } else {
-        quote! {}
-        // quote! {
-        //     impl <#(#generic_args),*> TryFrom<&[u8]> for #struct_ident <#(#generic_args),*> {
-        //         type Error = SDKError;
-        //
-        //         fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
-        //             try_from_bytes(bytes)
-        //         }
-        //     }
-        // }
-    };
-
-    let try_from_vec_ref_impl = if generic_args.is_empty() {
-        quote! {
-            impl TryFrom<&Vec<u8>> for #struct_ident {
-                type Error = SDKError;
-
-                fn try_from(bytes: &Vec<u8>) -> Result<Self, Self::Error> {
-                    try_from_bytes(bytes)
-                }
-            }
-        }
-    } else {
-        quote! {}
-        // quote! {
-        //     impl <#(#generic_args),*> TryFrom<&Vec<u8>> for #struct_ident <#(#generic_args),*> {
-        //         type Error = SDKError;
-        //
-        //         fn try_from(bytes: &Vec<u8>) -> Result<Self, Self::Error> {
-        //             try_from_bytes(bytes)
-        //         }
-        //     }
-        // }
-    };
-
-    let try_from_vec_impl = if generic_args.is_empty() {
-        quote! {
-            impl TryFrom<Vec<u8>> for #struct_ident {
-                type Error = SDKError;
-
-                fn try_from(bytes: Vec<u8>) -> Result<Self, Self::Error> {
-                    try_from_bytes(&bytes)
-                }
-            }
-        }
-    } else {
-        quote! {}
-        // quote! {
-        //     impl <#(#generic_args),*> TryFrom<Vec<u8>> for #struct_ident <#(#generic_args),*> {
-        //         type Error = SDKError;
-        //
-        //         fn try_from(bytes: Vec<u8>) -> Result<Self, Self::Error> {
-        //             try_from_bytes(&bytes)
-        //         }
-        //     }
-        // }
-    };
-
-    Ok(quote! {
-        #struct_decl
-
-        #try_from_slice_impl
-
-        #try_from_vec_ref_impl
-
-        #try_from_vec_impl
-    })
+    Ok(quote! { #struct_decl })
 }
 
 /// Transforms a custom enum defined in [`Property`] into a [`TokenStream`]
