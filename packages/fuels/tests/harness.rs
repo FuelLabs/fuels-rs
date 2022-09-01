@@ -1255,6 +1255,7 @@ async fn test_large_return_data() -> Result<(), Error> {
     Ok(())
 }
 
+// TODO: FIXME
 #[tokio::test]
 async fn test_provider_launch_and_connect() -> Result<(), Error> {
     abigen!(
@@ -1599,61 +1600,61 @@ async fn test_multiple_args() -> Result<(), Error> {
     Ok(())
 }
 
-// #[tokio::test]
-// async fn test_tuples() -> Result<(), Error> {
-//     abigen!(
-//         MyContract,
-//         "packages/fuels/tests/test_projects/tuples/out/debug/tuples-flat-abi.json"
-//     );
-//
-//     let wallet = launch_provider_and_get_wallet().await;
-//
-//     let id = Contract::deploy(
-//         "tests/test_projects/tuples/out/debug/tuples.bin",
-//         &wallet,
-//         TxParameters::default(),
-//         StorageConfiguration::default(),
-//     )
-//     .await?;
-//
-//     let instance = MyContractBuilder::new(id.to_string(), wallet.clone()).build();
-//
-//     let response = instance.returns_tuple((1, 2)).call().await?;
-//
-//     assert_eq!(response.value, (1, 2));
-//
-//     // Tuple with struct.
-//     let my_struct_tuple = (
-//         42,
-//         Person {
-//             name: "Jane".to_string(),
-//         },
-//     );
-//     let response = instance
-//         .returns_struct_in_tuple(my_struct_tuple.clone())
-//         .call()
-//         .await?;
-//
-//     assert_eq!(response.value, my_struct_tuple);
-//
-//     // Tuple with enum.
-//     let my_enum_tuple: (u64, State) = (42, State::A());
-//
-//     let response = instance
-//         .returns_enum_in_tuple(my_enum_tuple.clone())
-//         .call()
-//         .await?;
-//
-//     assert_eq!(response.value, my_enum_tuple);
-//
-//     let id = *ContractId::zeroed();
-//     let my_b256_u8_tuple: ([u8; 32], u8) = (id, 10);
-//
-//     let response = instance.tuple_with_b256(my_b256_u8_tuple).call().await?;
-//
-//     assert_eq!(response.value, my_b256_u8_tuple);
-//     Ok(())
-// }
+#[tokio::test]
+async fn test_tuples() -> Result<(), Error> {
+    abigen!(
+        MyContract,
+        "packages/fuels/tests/test_projects/tuples/out/debug/tuples-flat-abi.json"
+    );
+
+    let wallet = launch_provider_and_get_wallet().await;
+
+    let id = Contract::deploy(
+        "tests/test_projects/tuples/out/debug/tuples.bin",
+        &wallet,
+        TxParameters::default(),
+        StorageConfiguration::default(),
+    )
+    .await?;
+
+    let instance = MyContractBuilder::new(id.to_string(), wallet.clone()).build();
+
+    let response = instance.returns_tuple((1, 2)).call().await?;
+
+    assert_eq!(response.value, (1, 2));
+
+    // Tuple with struct.
+    let my_struct_tuple = (
+        42,
+        Person {
+            name: "Jane".to_string(),
+        },
+    );
+    let response = instance
+        .returns_struct_in_tuple(my_struct_tuple.clone())
+        .call()
+        .await?;
+
+    assert_eq!(response.value, my_struct_tuple);
+
+    // Tuple with enum.
+    let my_enum_tuple: (u64, State) = (42, State::A());
+
+    let response = instance
+        .returns_enum_in_tuple(my_enum_tuple.clone())
+        .call()
+        .await?;
+
+    assert_eq!(response.value, my_enum_tuple);
+
+    let id = *ContractId::zeroed();
+    let my_b256_u8_tuple: ([u8; 32], u8) = (id, 10);
+
+    let response = instance.tuple_with_b256(my_b256_u8_tuple).call().await?;
+
+    assert_eq!(response.value, my_b256_u8_tuple);
+    Ok(())
+}
 
 #[tokio::test]
 async fn test_array() -> Result<(), Error> {
@@ -1731,34 +1732,34 @@ async fn test_arrays_with_custom_types() -> Result<(), Error> {
     assert_eq!(states[1], response.value[1]);
     Ok(())
 }
-// // TODO: Enable test
-// // #[tokio::test]
-// // async fn test_auth_msg_sender_from_sdk() -> Result<(), Error> {
-// //     abigen!(
-// //         AuthContract,
-// //         "packages/fuels/tests/test_projects/auth_testing_contract/out/debug/auth_testing_contract-flat-abi.json"
-// //     );
-//
-// //     let id = Contract::deploy(
-// //         "tests/test_projects/auth_testing_contract/out/debug/auth_testing_contract.bin",
-// //         &wallet,
-// //         TxParameters::default(),
-// //         StorageConfiguration::default(),
-// //     )
-// //     .await?;
-//
-// //     let auth_instance = AuthContractBuilder::new(id.to_string(), wallet.clone()).build();
-//
-// //     // Contract returns true if `msg_sender()` matches `wallet.address()`.
-// //     let response = auth_instance
-// //         .check_msg_sender(wallet.address().into())
-// //         .call()
-// //         .await?;
-//
-// //     assert!(response.value);
-// //     Ok(())
-// // }
-//
+
+// #[tokio::test]
+// async fn test_auth_msg_sender_from_sdk() -> Result<(), Error> {
+//     abigen!(
+//         AuthContract,
+//         "packages/fuels/tests/test_projects/auth_testing_contract/out/debug/auth_testing_contract-flat-abi.json"
+//     );
+
+//     let id = Contract::deploy(
+//         "tests/test_projects/auth_testing_contract/out/debug/auth_testing_contract.bin",
+//         &wallet,
+//         TxParameters::default(),
+//         StorageConfiguration::default(),
+//     )
+//     .await?;
+
+//     let auth_instance = AuthContractBuilder::new(id.to_string(), wallet.clone()).build();
+
+//     // Contract returns true if `msg_sender()` matches `wallet.address()`.
+//     let response = auth_instance
+//         .check_msg_sender(wallet.address().into())
+//         .call()
+//         .await?;
+
+//     assert!(response.value);
+//     Ok(())
+// }
+
 #[tokio::test]
 async fn workflow_enum_inside_struct() -> Result<(), Error> {
     abigen!(
@@ -3461,19 +3462,19 @@ async fn mutl_call_has_same_estimated_and_used_gas() -> Result<(), Error> {
     Ok(())
 }
 
-// #[tokio::test]
-// async fn generics_preview() -> Result<(), Error> {
-//     let project_path = Path::new("/tmp/generics_project");
-//     abigen_to_project(
-//         "tests/test_projects/generics/out/debug/generics-flat-abi.json",
-//         &project_path,
-//         false,
-//     )?;
-//
-//     open_in_terminal(&project_path)?;
-//
-//     Ok(())
-// }
+#[tokio::test]
+async fn generics_preview() -> Result<(), Error> {
+    let project_path = Path::new("/tmp/generics_project");
+    abigen_to_project(
+        "tests/test_projects/generics/out/debug/generics-flat-abi.json",
+        &project_path,
+        false,
+    )?;
+
+    open_in_terminal(&project_path)?;
+
+    Ok(())
+}
 
 #[tokio::test]
 async fn generics_compiling() -> Result<(), Error> {
@@ -3519,7 +3520,8 @@ async fn generics_compiling() -> Result<(), Error> {
 //
 //     let c = MyStruct { foo: 40, boo: b };
 //
-//     let result = contract_instance.identity(c).call().await?;
+//     let arg = AGenericEn::two(c);
+//     let result = contract_instance.enum_using(arg).call().await?;
 //     dbg!(result);
 //
 //     Ok(())

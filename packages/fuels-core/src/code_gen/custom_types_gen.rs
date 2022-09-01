@@ -468,6 +468,9 @@ pub fn _new_expand_custom_enum(
         ))),
     }?;
 
+    let mut generic_args = Vec::new();
+    let mut seen_generic_types: HashSet<String> = Default::default();
+
     let mut enum_variants = Vec::with_capacity(components.len());
 
     // Holds a TokenStream representing the process of creating an enum [`Token`].
@@ -488,16 +491,12 @@ pub fn _new_expand_custom_enum(
 
         match param_type {
             // Case where an enum takes another enum
-            ParamType::Enum(_params) => {
-                let inner_enum_name = &_new_extract_custom_type_name_from_abi_property(
-                    t,
-                    Some(CustomType::Enum),
-                    types,
-                )?;
+            ParamType::Enum(_) | ParamType::Struct(_) => {
+                let inner_name = &_new_extract_custom_type_name_from_abi_property(t, None, types)?;
 
-                let inner_enum_ident = ident(inner_enum_name);
+                let inner_ident = ident(inner_name);
                 // Enum variant declaration
-                enum_variants.push(quote! { #variant_name(#inner_enum_ident)});
+                enum_variants.push(quote! { #variant_name(#inner_ident)});
 
                 // Token creation
                 enum_selector_builder.push(quote! {
@@ -507,39 +506,12 @@ pub fn _new_expand_custom_enum(
 
                 args.push(quote! {
                     (#dis, token, _) => {
-                        let variant_content = <#inner_enum_ident>::from_token(token)?;
+                        let variant_content = <#inner_ident>::from_token(token)?;
                         Ok(#enum_ident::#variant_name(variant_content))
                     }
                 });
 
-                param_types.push(quote! { types.push(#inner_enum_ident::param_type()) });
-            }
-            ParamType::Struct(_params) => {
-                let inner_struct_name = &_new_extract_custom_type_name_from_abi_property(
-                    t,
-                    Some(CustomType::Struct),
-                    types,
-                )?;
-                let inner_struct_ident = ident(inner_struct_name);
-                // Enum variant declaration
-                enum_variants.push(quote! { #variant_name(#inner_struct_ident)});
-
-                // Token creation
-                enum_selector_builder.push(quote! {
-                    #enum_ident::#variant_name(inner_struct) =>
-                    (#dis, inner_struct.into_token())
-                });
-
-                args.push(quote! {
-                    (#dis, token, _) => {
-                        let variant_content = <#inner_struct_ident>::from_token(token)?;
-                        Ok(#enum_ident::#variant_name(variant_content))
-                        }
-                });
-
-                // This is used to get the correct nested types of the enum
-                param_types.push(quote! { types.push(#inner_struct_ident::param_type())
-                });
+                param_types.push(quote! { types.push(#inner_ident::param_type()) });
             }
             // Unit type
             ParamType::Unit => {
@@ -586,6 +558,13 @@ pub fn _new_expand_custom_enum(
                             #enum_ident::#variant_name(value) => (#dis, Token::#param_type_string_ident(vec![value.into_token()]))
                         });
                     }
+                    ParamType::Generic(name) => {
+                        if !seen_generic_types.contains(&name) {
+                            seen_generic_types.insert(name.clone());
+                            let generic_arg = ident(&name);
+                            generic_args.push(quote! { #generic_arg });
+                        }
+                    }
                     // Primitive type
                     _ => {
                         enum_selector_builder.push(quote! {
@@ -597,73 +576,19 @@ pub fn _new_expand_custom_enum(
         }
     }
 
+    let generic_args_tokenized = if generic_args.is_empty() {
+        quote! {}
+    } else {
+        quote! { < #(#generic_args,)* > }
+    };
+
     // Actual creation of the enum, using the inner TokenStreams from above
     // to produce the TokenStream that represents the whole enum + methods
     // declaration.
     Ok(quote! {
         #[derive(Clone, Debug, Eq, PartialEq)]
-        pub enum #enum_ident {
+        pub enum #enum_ident #generic_args_tokenized {
             #( #enum_variants ),*
-        }
-
-        impl Parameterize for #enum_ident {
-            fn param_type() -> ParamType {
-                let mut types = Vec::new();
-                #( #param_types; )*
-
-                let variants = EnumVariants::new(types).expect(concat!("Enum ", #enum_name, " has no variants! 'abigen!' should not have succeeded!"));
-
-                ParamType::Enum(variants)
-            }
-        }
-
-        impl Tokenizable for #enum_ident {
-            fn into_token(self) -> Token {
-                let (dis, tok) = match self {
-                    #( #enum_selector_builder, )*
-                };
-
-                let variants = match Self::param_type() {
-                    ParamType::Enum(variants) => variants,
-                    other => panic!("Calling ::param_type() on a custom enum must return a ParamType::Enum but instead it returned: {}", other)
-                };
-
-                let selector = (dis, tok, variants);
-                Token::Enum(Box::new(selector))
-            }
-
-            fn from_token(token: Token)  -> Result<Self, SDKError> {
-                if let Token::Enum(enum_selector) = token {
-                        match *enum_selector {
-                            #( #args )*
-                            (_, _, _) => Err(SDKError::InstantiationError(format!("Could not construct '{}'. Failed to match with discriminant selector {:?}", #enum_name, enum_selector)))
-                        }
-                }
-                else {
-                    Err(SDKError::InstantiationError(format!("Could not construct '{}'. Expected a token of type Token::Enum, got {:?}", #enum_name, token)))
-                }
-            }
-        }
-
-        impl TryFrom<&[u8]> for #enum_ident {
-            type Error = SDKError;
-            fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
-                try_from_bytes(bytes)
-            }
-        }
-
-        impl TryFrom<&Vec<u8>> for #enum_ident {
-            type Error = SDKError;
-            fn try_from(bytes: &Vec<u8>) -> Result<Self, Self::Error> {
-                try_from_bytes(bytes)
-            }
-        }
-
-        impl TryFrom<Vec<u8>> for #enum_ident {
-            type Error = SDKError;
-            fn try_from(bytes: Vec<u8>) -> Result<Self, Self::Error> {
-                try_from_bytes(&bytes)
-            }
         }
     })
 }
@@ -870,6 +795,7 @@ mod tests {
         assert_enum_cannot_be_constructed_from(None)?;
         Ok(())
     }
+
     #[test]
     fn nested_enum_w_no_variants_cannot_be_constructed() -> anyhow::Result<()> {
         let nested_enum_w_components = |components| {

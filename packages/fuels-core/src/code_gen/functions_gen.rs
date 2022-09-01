@@ -13,13 +13,15 @@ use fuels_types::{
     STRUCT_KEYWORD,
 };
 use inflector::Inflector;
-use itertools::{chain, Itertools};
+use itertools::{chain, Either, Itertools};
 use proc_macro2::{Ident, Literal, TokenStream};
 use quote::{quote, ToTokens};
 use regex::Regex;
 use std::collections::{HashMap, HashSet, VecDeque};
+use std::fmt::{Display, Formatter};
 use std::hash::{Hash, Hasher};
 use std::iter;
+use std::str::FromStr;
 use syn::Expr::Type;
 
 /// Functions used by the Abigen to expand functions defined in an ABI spec.
@@ -222,6 +224,12 @@ fn expand_fn_outputs(outputs: &[Property]) -> Result<TokenStream, Error> {
 struct ResolvedType {
     pub type_name: TokenStream,
     pub generic_params: Vec<ResolvedType>,
+}
+
+impl Display for ResolvedType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", TokenStream::from(self.clone()).to_string())
+    }
 }
 
 impl From<ResolvedType> for TokenStream {
@@ -504,6 +512,22 @@ fn resolve_type(
         });
     }
 
+    if base_type.is_tuple() {
+        let inner_types = base_type
+            .components
+            .iter()
+            .flatten()
+            .map(|array_type| resolve_type(&array_type, &types))
+            .map_ok(|resolved_type| TokenStream::from(resolved_type))
+            .collect::<Result<Vec<_>, _>>()?;
+
+        let resolved_type1 = ResolvedType {
+            type_name: quote! {(#(#inner_types,)*)},
+            generic_params: vec![],
+        };
+        return Ok(resolved_type1);
+    }
+
     let base_type_name = _new_extract_custom_type_name_from_abi_property(&base_type, None, &types)?;
     let inner_types = type_application
         .type_arguments
@@ -702,9 +726,9 @@ pub fn gen_trait_impls(
             [
                 gen_parameterize_impl(&type_application, &types),
                 gen_tokenize_impl(&type_application, &types),
-                gen_try_from_byte_slice(&type_application, &types),
-                gen_try_from_bytevec_ref(&type_application, &types),
-                gen_try_from_bytevec(&type_application, &types),
+                gen_try_from_byte_slice_struct(&type_application, &types),
+                gen_try_from_bytevec_ref_struct(&type_application, &types),
+                gen_try_from_bytevec_struct(&type_application, &types),
             ]
         })
         .collect()
@@ -715,9 +739,7 @@ fn only_types_which_should_generate_impls(
     types: &HashMap<usize, TypeDeclaration>,
 ) -> bool {
     let type_decl = types.get(&type_application.type_id).unwrap();
-    type_decl.is_struct_type() // because tuples are not yet implemented
-        && type_decl.is_custom_type(&types)
-        && !type_decl.is_array()
+    (type_decl.is_struct_type() || type_decl.is_enum_type())
         && !FlatAbigen::is_sway_native_type(&type_decl.type_field)
 }
 
@@ -769,6 +791,30 @@ fn gen_parameterize_impl(
     input_type: &TypeApplication,
     types: &HashMap<usize, TypeDeclaration>,
 ) -> Result<TokenStream, Error> {
+    let base_type = types.get(&input_type.type_id).unwrap();
+    if base_type.is_struct_type() {
+        gen_parameterize_impl_struct(input_type, types)
+    } else {
+        gen_parameterize_impl_enum(input_type, types)
+    }
+}
+
+fn gen_tokenize_impl(
+    type_application: &TypeApplication,
+    types: &HashMap<usize, TypeDeclaration>,
+) -> Result<TokenStream, Error> {
+    let base_type = types.get(&type_application.type_id).unwrap();
+    if base_type.is_struct_type() {
+        gen_tokenize_impl_struct(&type_application, &types)
+    } else {
+        gen_tokenize_impl_enum(&type_application, &types)
+    }
+}
+
+fn gen_parameterize_impl_struct(
+    input_type: &TypeApplication,
+    types: &HashMap<usize, TypeDeclaration>,
+) -> Result<TokenStream, Error> {
     let resolved_type = resolve_type(&input_type, &types)?;
 
     let mut resolved_generics = &resolved_type.generic_params;
@@ -807,7 +853,7 @@ fn gen_parameterize_impl(
                     quote! {types.push(#stream)}
                 }
                 _ => {
-                    let param_type_string_ident_tok: proc_macro2::TokenStream =
+                    let param_type_string_ident_tok: TokenStream =
                         param_type.to_string().parse()?;
 
                     quote! { types.push(ParamType::#param_type_string_ident_tok) }
@@ -829,6 +875,241 @@ fn gen_parameterize_impl(
         }
     })
 }
+fn gen_parameterize_impl_enum(
+    input_type: &TypeApplication,
+    types: &HashMap<usize, TypeDeclaration>,
+) -> Result<TokenStream, Error> {
+    let resolved_type = resolve_type(&input_type, &types)?;
+    let base_type = types.get(&input_type.type_id).unwrap();
+
+    let mut resolved_generics = &resolved_type.generic_params;
+    let mut current_generic_index = 0;
+    let mut prev_generic_name = String::new();
+
+    let components = match &base_type.components {
+        Some(components) if !components.is_empty() => Ok(components),
+        _ => Err(Error::InvalidType(format!(
+            "Enum '{}' must have at least one variant!",
+            TokenStream::from(resolved_type.clone()).to_string()
+        ))),
+    }?;
+
+    let param_types = components
+        .iter()
+        .map(|component| {
+            let t = types.get(&component.type_id).expect("couldn't find type");
+            let param_type = ParamType::from_type_declaration(t, types)?;
+
+            let stream = match param_type {
+                // Case where an enum takes another enum
+                ParamType::Enum(_) | ParamType::Struct(_) => {
+                    let inner_name =
+                        &_new_extract_custom_type_name_from_abi_property(t, None, types)?;
+
+                    let inner_ident = ident(inner_name);
+
+                    quote! { types.push(#inner_ident::param_type()) }
+                }
+                ParamType::Generic(name) => {
+                    if prev_generic_name != "" && name != prev_generic_name {
+                        current_generic_index += 1;
+                    }
+                    prev_generic_name = name;
+                    let resolved_generic = resolved_generics[current_generic_index].clone();
+
+                    let type_name = resolved_generic.type_name;
+                    let tokenized_generic_parameters = resolved_generic
+                        .generic_params
+                        .into_iter()
+                        .map(|param| TokenStream::from(param))
+                        .collect::<Vec<_>>();
+
+                    let stream = if tokenized_generic_parameters.is_empty() {
+                        quote! { #type_name::param_type() }
+                    } else {
+                        quote! { #type_name::<#(#tokenized_generic_parameters,)*>::param_type() }
+                    };
+                    quote! { types.push(#stream) }
+                }
+                _ => {
+                    let param_type_string_ident_tok =
+                        TokenStream::from_str(&param_type.to_string())?;
+                    quote! { types.push(ParamType::#param_type_string_ident_tok) }
+                }
+            };
+            Ok::<TokenStream, Error>(stream)
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+
+    let type_name: TokenStream = resolved_type.into();
+    let stringified_type_name = type_name.to_string();
+    Ok(quote! {
+        impl Parameterize for #type_name {
+            fn param_type() -> ParamType {
+                let mut types = Vec::new();
+                #( #param_types; )*
+
+                let variants = EnumVariants::new(types).expect(concat!("Enum ", #stringified_type_name, " has no variants! 'abigen!' should not have succeeded!"));
+
+                ParamType::Enum(variants)
+            }
+        }
+    })
+}
+
+fn gen_tokenize_impl_enum(
+    input_type: &TypeApplication,
+    types: &HashMap<usize, TypeDeclaration>,
+) -> Result<TokenStream, Error> {
+    let resolved_type = resolve_type(&input_type, &types)?;
+
+    let mut resolved_generics = &resolved_type.generic_params;
+    let mut current_generic_index = 0;
+    let mut prev_generic_name = String::new();
+
+    let base_type = types.get(&input_type.type_id).unwrap();
+    let enum_name =
+        &_new_extract_custom_type_name_from_abi_property(base_type, Some(CustomType::Enum), types)?;
+
+    let components = match &base_type.components {
+        Some(components) if !components.is_empty() => Ok(components),
+        _ => Err(Error::InvalidType(format!(
+            "Enum '{}' must have at least one variant!",
+            enum_name
+        ))),
+    }?;
+
+    // Holds a TokenStream representing the process of creating an enum [`Token`].
+    let mut enum_selector_builder = Vec::new();
+
+    // Holds the TokenStream representing the process of creating a Self enum from each `Token`.
+    // Used when creating a struct from tokens with `Tokenizable::from_token()`.
+    let mut args = Vec::new();
+
+    let enum_ident: TokenStream = resolved_type.type_name.clone();
+
+    for (discriminant, component) in components.iter().enumerate() {
+        let variant_name = ident(&component.name);
+        let dis = discriminant as u8;
+        let t = types.get(&component.type_id).expect("couldn't find type");
+        let param_type = ParamType::from_type_declaration(t, types)?;
+
+        match param_type {
+            // Case where an enum takes another enum
+            ParamType::Enum(_) | ParamType::Struct(_) => {
+                let inner_name = &_new_extract_custom_type_name_from_abi_property(t, None, types)?;
+
+                let inner_ident = ident(inner_name);
+                // Token creation
+                enum_selector_builder.push(quote! {
+                    #enum_ident::#variant_name(inner_enum) =>
+                    (#dis, inner_enum.into_token())
+                });
+
+                args.push(quote! {
+                    (#dis, token, _) => {
+                        let variant_content = <#inner_ident>::from_token(token)?;
+                        Ok(#enum_ident::#variant_name(variant_content))
+                    }
+                });
+            }
+            _ => {
+                let ty = expand_type(&param_type)?;
+
+                let param_type_string = match param_type {
+                    ParamType::Array(..) => "Array".to_string(),
+                    ParamType::String(..) => "String".to_string(),
+                    _ => param_type.to_string(),
+                };
+                let param_type_string_ident = ident(&param_type_string);
+
+                // Token creation
+                match param_type {
+                    ParamType::String(len) => {
+                        args.push(
+                            quote! {(#dis, token, _) => Ok(#enum_ident::#variant_name(<#ty>::from_token(token)?)),},
+                        );
+                        enum_selector_builder.push(quote! {
+                            #enum_ident::#variant_name(value) => (#dis, Token::#param_type_string_ident(
+                                    StringToken::new(value,  #len)))
+                        });
+                    }
+                    ParamType::Array(_t, _s) => {
+                        args.push(
+                            quote! {(#dis, token, _) => Ok(#enum_ident::#variant_name(<#ty>::from_token(token)?)),},
+                        );
+                        enum_selector_builder.push(quote! {
+                            #enum_ident::#variant_name(value) => (#dis, Token::#param_type_string_ident(vec![value.into_token()]))
+                        });
+                    }
+                    ParamType::Unit => {
+                        args.push(quote! {(#dis, token, _) => Ok(#enum_ident::#variant_name()),});
+                        enum_selector_builder.push(quote! {
+                            #enum_ident::#variant_name() => (#dis, Token::#param_type_string_ident)
+                        });
+                    }
+                    ParamType::Generic(name) => {
+                        if prev_generic_name != "" && name != prev_generic_name {
+                            current_generic_index += 1;
+                        }
+                        prev_generic_name = name;
+                        let resolved_generic = resolved_generics[current_generic_index].clone();
+
+                        let tokenized_generic = TokenStream::from(resolved_generic);
+
+                        args.push(
+                            quote! {(#dis, token, _) => Ok(#enum_ident::<#tokenized_generic>::#variant_name(<#tokenized_generic>::from_token(token)?)),},
+                        );
+
+                        enum_selector_builder.push(quote! {
+                                #enum_ident::<#tokenized_generic>::#variant_name(value) => (#dis, value.into_token())
+                        });
+                    }
+                    // Primitive type
+                    _ => {
+                        args.push(
+                            quote! {(#dis, token, _) => Ok(#enum_ident::#variant_name(<#ty>::from_token(token)?)),},
+                        );
+                        enum_selector_builder.push(quote! {
+                            #enum_ident::#variant_name(value) => (#dis, Token::#param_type_string_ident(value))
+                        });
+                    }
+                }
+            }
+        }
+    }
+
+    let resolve_type_tokenstream: TokenStream = resolved_type.into();
+    Ok(quote! {
+        impl Tokenizable for #resolve_type_tokenstream {
+            fn into_token(self) -> Token {
+                let (dis, tok) = match self {
+                    #( #enum_selector_builder, )*
+                };
+
+                let variants = match Self::param_type() {
+                    ParamType::Enum(variants) => variants,
+                    other => panic!("Calling ::param_type() on a custom enum must return a ParamType::Enum but instead it returned: {}", other)
+                };
+
+                let selector = (dis, tok, variants);
+                Token::Enum(Box::new(selector))
+            }
+
+            fn from_token(token: Token)  -> Result<Self, SDKError> {
+                if let Token::Enum(enum_selector) = token {
+                        match *enum_selector {
+                            #( #args )*
+                            (_, _, _) => Err(SDKError::InstantiationError(format!("Could not construct '{}'. Failed to match with discriminant selector {:?}", #enum_name, enum_selector)))
+                        }
+                }
+                else {
+                    Err(SDKError::InstantiationError(format!("Could not construct '{}'. Expected a token of type Token::Enum, got {:?}", #enum_name, token)))
+                }
+            }
+        }
+    })
+}
 
 fn extract_components<'a>(
     input_type: &'a TypeApplication,
@@ -845,7 +1126,7 @@ fn extract_components<'a>(
         .collect()
 }
 
-fn gen_tokenize_impl(
+fn gen_tokenize_impl_struct(
     input_type: &TypeApplication,
     types: &HashMap<usize, TypeDeclaration>,
 ) -> Result<TokenStream, Error> {
@@ -963,7 +1244,7 @@ fn gen_tokenize_impl(
     })
 }
 
-fn gen_try_from_byte_slice(
+fn gen_try_from_byte_slice_struct(
     type_application: &TypeApplication,
     types: &HashMap<usize, TypeDeclaration>,
 ) -> Result<TokenStream, Error> {
@@ -980,7 +1261,7 @@ fn gen_try_from_byte_slice(
     Ok(token_stream)
 }
 
-fn gen_try_from_bytevec_ref(
+fn gen_try_from_bytevec_ref_struct(
     type_application: &TypeApplication,
     types: &HashMap<usize, TypeDeclaration>,
 ) -> Result<TokenStream, Error> {
@@ -997,7 +1278,7 @@ fn gen_try_from_bytevec_ref(
     Ok(token_stream)
 }
 
-fn gen_try_from_bytevec(
+fn gen_try_from_bytevec_struct(
     type_application: &TypeApplication,
     types: &HashMap<usize, TypeDeclaration>,
 ) -> Result<TokenStream, Error> {
