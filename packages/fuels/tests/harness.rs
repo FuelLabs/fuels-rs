@@ -3333,7 +3333,7 @@ async fn test_connect_wallet() -> anyhow::Result<()> {
 async fn contract_call_fee_estimation() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
