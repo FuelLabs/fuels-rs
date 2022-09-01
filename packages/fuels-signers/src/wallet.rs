@@ -594,7 +594,9 @@ impl WalletUnlocked {
             .get_spendable_coins(predicate_address, asset_id, amount)
             .await?;
 
-        let total_amount_in_predicate: u64 = spendable_predicate_coins
+        // input amount is: amount < input_amount < 2*amount
+        // because of "random improve" used by get_spendable_coins()
+        let input_amount: u64 = spendable_predicate_coins
             .iter()
             .map(|coin| coin.amount.0)
             .sum();
@@ -617,8 +619,8 @@ impl WalletUnlocked {
             .collect::<Vec<_>>();
 
         let outputs = [
-            Output::coin(to.into(), total_amount_in_predicate, asset_id),
-            Output::change(self.address().into(), 0, asset_id),
+            Output::coin(to.into(), amount, asset_id),
+            Output::coin(predicate_address.into(), input_amount - amount, asset_id),
         ];
 
         let mut tx = Wallet::build_transfer_tx(&inputs, &outputs, TxParameters::default());
