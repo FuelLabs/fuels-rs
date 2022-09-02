@@ -25,6 +25,7 @@ use fuel_gql_client::{
 };
 use fuels_core::constants::{DEFAULT_GAS_ESTIMATION_TOLERANCE, MAX_GAS_PER_TX};
 use std::collections::HashMap;
+use fuel_types::Address;
 use thiserror::Error;
 
 use fuels_core::parameters::TxParameters;
@@ -79,13 +80,13 @@ impl Provider {
     ///   let (provider, _) = setup_test_provider(vec![], None).await;
     ///   let tx = Transaction::default();
     ///
-    ///   let receipts = provider.send_transaction(&tx).await?;
+    ///   let receipts = provider.send_transaction(&tx,false).await?;
     ///   dbg!(receipts);
     ///
     ///   Ok(())
     /// }
     /// ```
-    pub async fn send_transaction(&self, tx: &Transaction) -> Result<Vec<Receipt>, Error> {
+    pub async fn send_transaction(&self, tx: &Transaction, spend_message: bool) -> Result<Vec<Receipt>, Error> {
         let tolerance = 0.0;
         let TransactionCost {
             gas_used,
@@ -93,18 +94,36 @@ impl Provider {
             ..
         } = self.estimate_transaction_cost(tx, Some(tolerance)).await?;
 
-        if gas_used > tx.gas_limit() {
-            return Err(Error::ProviderError(format!(
-                "gas_limit({}) is lower than the estimated gas_used({})",
-                tx.gas_limit(),
-                gas_used
-            )));
-        } else if min_gas_price > tx.gas_price() {
-            return Err(Error::ProviderError(format!(
-                "gas_price({}) is lower than the required min_gas_price({})",
-                tx.gas_price(),
-                min_gas_price
-            )));
+        // println!("-------------------XOXO------------------------------------------------------\n");
+        // println!("gas_used: {:?} min_gas_price: {:?} spend_message: {:?}", gas_used, min_gas_price, spend_message);
+        // println!("tx.gas_price(): {:?} tx.gas_limit: {:?}", tx.gas_price(), tx.gas_limit());
+
+        // println!("-------------------XOXO------------------------------------------------------\n");
+        // println!("{:?} \n", tx.inputs());
+
+        // println!("M: {:?}", tx.inputs()[1]);
+        // println!("-------------------XOXO------------------------------------------------------\n");
+        // println!("C: {:?}", tx.inputs()[0]);
+
+
+        if spend_message {
+            // println!("{:?}", tx.inputs().get(0));
+            // println!("{:?}", tx.inputs().get(1));
+            // println!("{:?}", tx.inputs().get(2));
+        } else {
+            if gas_used > tx.gas_limit() {
+                return Err(Error::ProviderError(format!(
+                    "gas_limit({}) is lower than the estimated gas_used({})",
+                    tx.gas_limit(),
+                    gas_used
+                )));
+            } else if min_gas_price > tx.gas_price() {
+                return Err(Error::ProviderError(format!(
+                    "gas_price({}) is lower than the required min_gas_price({})",
+                    tx.gas_price(),
+                    min_gas_price
+                )));
+            }
         }
 
         let (status, receipts) = self.submit_with_feedback(tx).await?;
@@ -486,7 +505,7 @@ impl Provider {
         ];
 
         let tx = self.build_transfer_tx(&inputs, &outputs, TxParameters::default());
-        self.send_transaction(&tx).await
+        self.send_transaction(&tx, false).await
     }
 
     pub async fn estimate_transaction_cost(
@@ -556,12 +575,26 @@ impl Provider {
         &self,
         from: &Bech32Address,
     ) -> Result<Vec<Message>, ProviderError> {
-        let pagination = PaginationRequest {
-            cursor: None,
-            results: 100,
-            direction: PageDirection::Forward,
-        };
-        Ok(self.client.messages(Some(from.hrp.as_str()), pagination).await?.results)
+        let mut messages: Vec<Message> = vec![];
+
+        let mut cursor = None;
+
+        loop {
+            let pagination = PaginationRequest {
+                cursor: cursor.clone(),
+                results: 9999,
+                direction: PageDirection::Forward,
+            };
+            let res = self.client.messages(Some(&from.hash().to_string()), pagination).await?;
+
+            if res.results.is_empty() {
+                break;
+            }
+            messages.extend(res.results);
+            cursor = res.cursor;
+        }
+
+        Ok(messages)
     }
 
 }

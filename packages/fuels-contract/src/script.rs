@@ -360,8 +360,21 @@ impl Script {
             &chain_info.consensus_parameters.into(),
         )?;
 
-        provider.send_transaction(&self.tx).await
+        provider.send_transaction(&self.tx, false).await
     }
+
+
+    pub async fn call_spend_messages(self, provider: &Provider, spend_message: bool) -> Result<Vec<Receipt>, Error> {
+        let chain_info = provider.chain_info().await?;
+
+        self.tx.validate_without_signature(
+            chain_info.latest_block.height.0,
+            &chain_info.consensus_parameters.into(),
+        )?;
+
+        provider.send_transaction(&self.tx, spend_message).await
+    }
+
 
     /// Execute the transaction in a simulated manner, not modifying blockchain state
     pub async fn simulate(self, provider: &Provider) -> Result<Vec<Receipt>, Error> {

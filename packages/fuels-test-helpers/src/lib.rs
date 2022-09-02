@@ -181,7 +181,7 @@ pub async fn setup_test_client(
             data: message.data,
             da_height: message.da_height
         })
-        .collect::<Vec<_>>();
+        .collect();
 
     // Setup node config with genesis coins and utxo_validation enabled
 

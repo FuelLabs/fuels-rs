@@ -3478,7 +3478,7 @@ async fn test_input_message() -> Result<(), Error> {
         DEFAULT_COIN_AMOUNT,
     );
 
-    println!("{:?} \n", messages);
+    // println!("{:?} \n", messages);
     // owner is address
     let (launched_provider, address) = setup_test_client(coins, None, None, Some(messages)).await;
     let connected_provider = Provider::connect(address).await?;
@@ -3498,7 +3498,7 @@ async fn test_input_message() -> Result<(), Error> {
 
     let response = contract_instance_connected
         .initialize_counter(42) // Build the ABI call
-        .call() // Perform the network call
+        .call_spend_message() // Perform the network call
         .await?;
     assert_eq!(42, response.value);
     //

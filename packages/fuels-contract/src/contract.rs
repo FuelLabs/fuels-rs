@@ -10,6 +10,7 @@ use fuel_gql_client::{
     fuel_tx::{Contract as FuelContract, Output, Receipt, StorageSlot, Transaction},
     fuel_types::{Address, AssetId, Salt},
 };
+use tracing::span_enabled;
 
 use fuels_core::abi_decoder::ABIDecoder;
 use fuels_core::abi_encoder::ABIEncoder;
@@ -168,7 +169,7 @@ impl Contract {
     fn should_compute_custom_input_offset(args: &[Token]) -> bool {
         args.len() > 1
             || args.iter().any(|t| {
-                matches!(
+            matches!(
                     t,
                     Token::String(_)
                         | Token::Struct(_)
@@ -178,7 +179,7 @@ impl Contract {
                         | Token::Array(_)
                         | Token::Byte(_)
                 )
-            })
+        })
     }
 
     /// Loads a compiled contract and deploys it to a running node
@@ -249,7 +250,7 @@ impl Contract {
             &chain_info.consensus_parameters.into(),
         )?;
 
-        provider.send_transaction(&tx, ).await?;
+        provider.send_transaction(&tx, false).await?;
 
         Ok(contract_id)
     }
@@ -334,16 +335,23 @@ impl Contract {
         // the witness list.
         let coin_witness_index = 1;
 
-        let inputs = wallet
+        let mut inputs= vec![];
+        let coins = wallet
             .get_asset_inputs_for_amount(
                 AssetId::default(),
                 DEFAULT_SPENDABLE_COIN_AMOUNT,
                 coin_witness_index,
             )
             .await?;
+        inputs.extend(coins);
 
-        let coin_witness_index = 1;
-        let mesages = wallet.get_messages().await?;
+        let messages_witness_index = 1;
+        let messages = wallet.get_inputs_for_messages(messages_witness_index).await?;
+
+        inputs.extend(messages);
+
+        // println!("{:?}", inputs[0]);
+        // println!("{:?}", inputs[1]);
 
         let tx = Transaction::create(
             params.gas_price,
@@ -442,8 +450,8 @@ pub struct ContractCallHandler<D> {
 }
 
 impl<D> ContractCallHandler<D>
-where
-    D: Tokenizable + Debug,
+    where
+        D: Tokenizable + Debug,
 {
     /// Sets external contracts as dependencies to this contract's call.
     /// Effectively, this will be used to create Input::Contract/Output::Contract
@@ -513,6 +521,20 @@ where
         self.get_response(receipts)
     }
 
+
+    #[tracing::instrument]
+    async fn call_or_simulate_message(self, simulate: bool, spend_messages: bool) -> Result<CallResponse<D>, Error> {
+        let script = self.get_call_execution_script().await?;
+
+        let receipts =
+            script.call_spend_messages(&self.provider, spend_messages).await?;
+        tracing::debug!(target: "receipts", "{:?}", receipts);
+
+        self.get_response(receipts)
+    }
+
+
+
     /// Returns the script that executes the contract call
     pub async fn get_call_execution_script(&self) -> Result<Script, Error> {
         Script::from_contract_calls(
@@ -520,7 +542,7 @@ where
             &self.tx_parameters,
             &self.wallet,
         )
-        .await
+            .await
     }
 
     /// Call a contract's method on the node, in a state-modifying manner.
@@ -529,7 +551,7 @@ where
     }
 
     pub async fn call_spend_message(self) -> Result<CallResponse<D>, Error> {
-        Self::call_or_simulate(self, false).await
+        Self::call_or_simulate_message(self, false, true).await
     }
 
     /// Call a contract's method on the node, in a simulated manner, meaning the state of the
@@ -610,7 +632,7 @@ impl MultiContractCallHandler {
             &self.tx_parameters,
             &self.wallet,
         )
-        .await
+            .await
     }
 
     /// Call contract methods on the node, in a state-modifying manner.
@@ -700,8 +722,8 @@ mod test {
             TxParameters::default(),
             StorageConfiguration::default(),
         )
-        .await
-        .unwrap();
+            .await
+            .unwrap();
     }
 
     #[tokio::test]
@@ -717,7 +739,7 @@ mod test {
             StorageConfiguration::default(),
             Salt::default(),
         )
-        .await
-        .unwrap();
+            .await
+            .unwrap();
     }
 }

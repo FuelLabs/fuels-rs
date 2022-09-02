@@ -1,11 +1,12 @@
+use slice::from_raw_parts;
 use crate::provider::Provider;
 use crate::Signer;
 use async_trait::async_trait;
 use elliptic_curve::rand_core;
 use eth_keystore::KeystoreError;
-use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
+use fuel_crypto::{Hasher, Message, PublicKey, SecretKey, Signature};
 use fuel_gql_client::{
-    client::{schema::coin::Coin, types::TransactionResponse, PaginatedResult, PaginationRequest},
+    client::{schema::coin::Coin ,schema::MessageId, types::TransactionResponse, PaginatedResult, PaginationRequest},
     fuel_tx::{
         AssetId, Bytes32, ContractId, Input, Output, Receipt, Transaction, TxPointer, UtxoId,
         Witness,
@@ -15,7 +16,8 @@ use fuels_core::parameters::TxParameters;
 use fuels_types::bech32::{Bech32Address, Bech32ContractId, FUEL_BECH32_HRP};
 use fuels_types::errors::Error;
 use rand::{CryptoRng, Rng};
-use std::{collections::HashMap, fmt, ops, path::Path};
+use std::{collections::HashMap, fmt, mem, ops, path::Path, slice};
+use std::any::Any;
 use fuel_gql_client::client::schema;
 use thiserror::Error;
 
@@ -222,9 +224,61 @@ impl Wallet {
     }
 
     pub async fn get_messages(&self) -> Result<Vec<schema::message::Message,>, Error>  {
-            Ok(self
-                .get_provider()?.get_messages(&self.address).await?)
+        Ok(self
+            .get_provider()?.get_messages(&self.address).await?)
     }
+
+    pub async fn get_inputs_for_messages(
+        &self,
+        witness_index: u8,
+    ) -> Result<Vec<Input>, Error> {
+
+        let as_u8_slice = |v: &[i32]| -> &[u8] {
+            let element_size = mem::size_of::<i32>();
+            unsafe { from_raw_parts(v.as_ptr() as *const u8, v.len() * element_size) }
+        };
+
+        let messages = self.get_provider()?.get_messages(&self.address).await?;
+        let mut inputs = vec![];
+        for message in messages {
+
+            let message_id = Input::compute_message_id(
+                &message.sender.0.0,
+                &message.recipient.0.0.into(),
+                message.nonce.0.clone(),
+                &message.owner.0.0.into(),
+                message.amount.0.clone(),
+                as_u8_slice(&message.data)
+            );
+
+            let input_messages = Input::message_signed(
+                message_id,
+                message.sender.into(),
+                message.recipient.into(),
+                message.amount.into(),
+                message.nonce.into(),
+                message.owner.into(),
+                witness_index,
+                vec![]
+            );
+            inputs.push(input_messages);
+        }
+        Ok(inputs)
+    }
+
+    pub fn get_asset_outputs_for_messages(
+        &self,
+        to: &Bech32Address,
+        amount: u64,
+    ) -> Vec<Output> {
+        vec![
+            Output::message(to.into(), amount),
+            // Note that the change will be computed by the node.
+            // Here we only have to tell the node who will own the change and its asset ID.
+            // Output::change((&self.address).into(), 0, asset_id),
+        ]
+    }
+
     /// Unlock the wallet with the given `private_key`.
     ///
     /// The private key will be stored in memory until `wallet.lock()` is called or until the
@@ -295,10 +349,10 @@ impl WalletUnlocked {
         password: S,
         provider: Option<Provider>,
     ) -> Result<(Self, String), WalletError>
-    where
-        P: AsRef<Path>,
-        R: Rng + CryptoRng + rand_core::CryptoRng,
-        S: AsRef<[u8]>,
+        where
+            P: AsRef<Path>,
+            R: Rng + CryptoRng + rand_core::CryptoRng,
+            S: AsRef<[u8]>,
     {
         let (secret, uuid) = eth_keystore::new(dir, rng, password)?;
 
@@ -312,9 +366,9 @@ impl WalletUnlocked {
     /// Encrypts the wallet's private key with the given password and saves it
     /// to the given path.
     pub fn encrypt<P, S>(&self, dir: P, password: S) -> Result<String, WalletError>
-    where
-        P: AsRef<Path>,
-        S: AsRef<[u8]>,
+        where
+            P: AsRef<Path>,
+            S: AsRef<[u8]>,
     {
         let mut rng = rand::thread_rng();
 
@@ -332,9 +386,9 @@ impl WalletUnlocked {
         password: S,
         provider: Option<Provider>,
     ) -> Result<Self, WalletError>
-    where
-        P: AsRef<Path>,
-        S: AsRef<[u8]>,
+        where
+            P: AsRef<Path>,
+            S: AsRef<[u8]>,
     {
         let secret = eth_keystore::decrypt_key(keypath, password)?;
         let secret_key = unsafe { SecretKey::from_slice_unchecked(&secret) };
@@ -391,10 +445,22 @@ impl WalletUnlocked {
         asset_id: AssetId,
         tx_parameters: TxParameters,
     ) -> Result<(String, Vec<Receipt>), Error> {
-        let inputs = self
+
+        let mut inputs = vec![];
+
+        let coins_input = self
             .get_asset_inputs_for_amount(asset_id, amount, 0)
             .await?;
-        let outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
+
+        let messages_input = self
+            .get_inputs_for_messages(0)
+            .await?;
+
+        // inputs.extend(coins_input, messages_input);
+
+        let outputs = vec![];
+
+        self.get_asset_outputs_for_amount(to, asset_id, amount);
 
         // Build transaction and sign it
         let mut tx = self
@@ -402,7 +468,7 @@ impl WalletUnlocked {
             .build_transfer_tx(&inputs, &outputs, tx_parameters);
         self.sign_transaction(&mut tx).await?;
 
-        let receipts = self.get_provider()?.send_transaction(&tx).await?;
+        let receipts = self.get_provider()?.send_transaction(&tx, false).await?;
 
         Ok((tx.id().to_string(), receipts))
     }
@@ -474,7 +540,7 @@ impl WalletUnlocked {
         );
         self.sign_transaction(&mut tx).await?;
 
-        let receipts = self.get_provider()?.send_transaction(&tx).await?;
+        let receipts = self.get_provider()?.send_transaction(&tx, false).await?;
 
         Ok((tx.id().to_string(), receipts))
     }
