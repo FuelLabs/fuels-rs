@@ -3,7 +3,7 @@
 [The Fuel Rust SDK](./README.md)
 
 - [Getting Started](./getting-started/index.md)
-  - [Setup](./getting-started/setup.md)
+  - [Setup and Run](./getting-started/setup.md)
   - [Terminology](./getting-started/terminology.md)
   - [Connecting to a Fuel node](./getting-started/connecting.md)
     - [Connecting to an external Fuel node](./providers/external-node.md)

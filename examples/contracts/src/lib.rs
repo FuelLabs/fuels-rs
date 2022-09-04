@@ -102,7 +102,7 @@ mod tests {
             .await?;
         // ANCHOR_END: contract_call_cost_estimation
 
-        assert_eq!(transaction_cost.gas_used, 631);
+        assert_eq!(transaction_cost.gas_used, 592);
 
         Ok(())
     }
@@ -228,6 +228,7 @@ mod tests {
         let contract_instance =
             MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
         // ANCHOR_END: instantiate_contract
+
         // ANCHOR: tx_parameters
         // In order: gas_price, gas_limit, and maturity
         let my_tx_params = TxParameters::new(None, Some(1_000_000), None);
@@ -248,7 +249,6 @@ mod tests {
             .await?;
 
         // ANCHOR_END: tx_parameters_default
-        // ANCHOR: tx_parameters
         // In order: gas_price, gas_limit, and maturity
         let my_tx_params = TxParameters::new(None, Some(1_000_000), None);
 
@@ -257,8 +257,6 @@ mod tests {
             .tx_params(my_tx_params) // Chain the tx params setting method.
             .call() // Perform the contract call.
             .await?; // This is an async call, `.await` for it.
-
-        // ANCHOR_END: tx_parameters
 
         // ANCHOR: call_parameters
 
@@ -292,8 +290,7 @@ mod tests {
         use fuels::prelude::*;
         abigen!(
             MyContract,
-            "packages/fuels/tests/test_projects/token_ops/out/debug/token_ops-abi\
-            .json"
+            "packages/fuels/tests/test_projects/token_ops/out/debug/token_ops-abi.json"
         );
 
         let wallet = launch_provider_and_get_wallet().await;
@@ -314,15 +311,14 @@ mod tests {
         // ANCHOR_END: simulate
         let response = contract_instance.mint_coins(1_000_000).call().await?;
         // ANCHOR: variable_outputs
-        // TODO: Enable test
-        // let address = wallet.address();
+        let address = wallet.address();
 
         // withdraw some tokens to wallet
-        // let response = contract_instance
-        //     .transfer_coins_to_output(1_000_000, contract_id.into(), address.into())
-        //     .append_variable_outputs(1)
-        //     .call()
-        //     .await?;
+        let response = contract_instance
+            .transfer_coins_to_output(1_000_000, contract_id.into(), address.into())
+            .append_variable_outputs(1)
+            .call()
+            .await?;
         // ANCHOR_END: variable_outputs
         Ok(())
     }
@@ -520,7 +516,7 @@ mod tests {
             .await?;
         // ANCHOR_END: multi_call_cost_estimation
 
-        assert_eq!(transaction_cost.gas_used, 1051);
+        assert_eq!(transaction_cost.gas_used, 1012);
 
         Ok(())
     }
