@@ -386,7 +386,8 @@ async fn compile_bindings_string_input() {
     // `SimpleContract` is the name of the contract
     let contract_instance = SimpleContractBuilder::new(null_contract_id(), wallet).build();
 
-    let call_handler = contract_instance.takes_string("This is a full sentence".into());
+    let call_handler =
+        contract_instance.takes_string("This is a full sentence".try_into().unwrap());
 
     let encoded = format!(
         "{}{}",
@@ -548,7 +549,7 @@ async fn compile_bindings_struct_input() {
     // and can be used!
     let input = MyStruct {
         foo: vec![10, 2],
-        bar: "fuel".to_string(),
+        bar: "fuel".try_into().unwrap(),
     };
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -990,7 +991,7 @@ async fn type_safe_output_values() -> Result<(), Error> {
 
     // `response`'s type matches the return type of `return_my_string()`
     let response = contract_instance
-        .return_my_string("fuel".to_string())
+        .return_my_string("fuel".try_into().unwrap())
         .call()
         .await?;
 
@@ -1625,7 +1626,7 @@ async fn test_tuples() -> Result<(), Error> {
     let my_struct_tuple = (
         42,
         Person {
-            name: "Jane".to_string(),
+            name: "Jane".try_into()?,
         },
     );
     let response = instance
@@ -1707,10 +1708,10 @@ async fn test_arrays_with_custom_types() -> Result<(), Error> {
 
     let persons = vec![
         Person {
-            name: "John".to_string(),
+            name: "John".try_into()?,
         },
         Person {
-            name: "Jane".to_string(),
+            name: "Jane".try_into()?,
         },
     ];
 
@@ -2360,7 +2361,7 @@ async fn type_inside_enum() -> Result<(), Error> {
     let instance = MyContractBuilder::new(id.to_string(), wallet.clone()).build();
 
     // String inside enum
-    let enum_string = SomeEnum::SomeStr("asdf".to_owned());
+    let enum_string = SomeEnum::SomeStr("asdf".try_into()?);
     let response = instance.str_inside_enum(enum_string.clone()).call().await?;
     assert_eq!(response.value, enum_string);
 
@@ -2993,7 +2994,9 @@ async fn str_in_array() -> Result<(), Error> {
 
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
 
-    let input = vec!["foo".to_string(), "bar".to_string(), "baz".to_string()];
+    let input = ["foo", "bar", "baz"]
+        .map(|str| str.try_into().unwrap())
+        .to_vec();
     let response = contract_instance
         .take_array_string_shuffle(input.clone())
         .call()
@@ -3062,7 +3065,7 @@ async fn strings_must_have_correct_length() {
 
     let wallet = launch_provider_and_get_wallet().await;
     let contract_instance = SimpleContractBuilder::new(null_contract_id(), wallet).build();
-    let _ = contract_instance.takes_string("fuell".into());
+    let _ = contract_instance.takes_string("fuell".try_into().unwrap());
 }
 
 #[tokio::test]
@@ -3109,7 +3112,7 @@ async fn strings_must_have_all_ascii_chars() {
 
     let wallet = launch_provider_and_get_wallet().await;
     let contract_instance = SimpleContractBuilder::new(null_contract_id(), wallet).build();
-    let _ = contract_instance.takes_string("fueŁ".into());
+    let _ = contract_instance.takes_string("fueŁ".try_into().unwrap());
 }
 
 #[tokio::test]
@@ -3191,7 +3194,7 @@ async fn strings_must_have_correct_length_custom_types() {
 
     let wallet = launch_provider_and_get_wallet().await;
     let contract_instance = SimpleContractBuilder::new(null_contract_id(), wallet).build();
-    let _ = contract_instance.takes_enum(MyEnum::bar("fuell".to_string()));
+    let _ = contract_instance.takes_enum(MyEnum::bar("fuell".try_into().unwrap()));
 }
 
 #[tokio::test]
@@ -3272,7 +3275,7 @@ async fn strings_must_have_all_ascii_chars_custom_types() {
     );
 
     let inner_struct = InnerStruct {
-        bar: "fueŁ".to_string(),
+        bar: "fueŁ".try_into().unwrap(),
     };
     let input = MyNestedStruct {
         x: 10,
@@ -3461,12 +3464,13 @@ async fn mutl_call_has_same_estimated_and_used_gas() -> Result<(), Error> {
 
     Ok(())
 }
-
+//
 // #[tokio::test]
 // async fn generics_preview() -> Result<(), Error> {
 //     let project_path = Path::new("/tmp/generics_project");
 //     abigen_to_project(
-//         "tests/test_projects/generics/out/debug/generics-abi.json",
+//         // "tests/test_projects/generics/out/debug/generics-abi.json",
+//         "tests/test_projects/contract_test/out/debug/contract_test-abi.json",
 //         &project_path,
 //         false,
 //     )?;
@@ -3475,13 +3479,14 @@ async fn mutl_call_has_same_estimated_and_used_gas() -> Result<(), Error> {
 //
 //     Ok(())
 // }
-
+//
 // #[tokio::test]
 // async fn generics_compiling() -> Result<(), Error> {
 //     let project_path = Path::new("/tmp/generics_project");
 //
 //     abigen_to_project(
-//         "tests/test_projects/generics/out/debug/generics-abi.json",
+//         // "tests/test_projects/generics/out/debug/generics-abi.json",
+//         "tests/test_projects/contract_test/out/debug/contract_test-abi.json",
 //         &project_path,
 //         true,
 //     )?;

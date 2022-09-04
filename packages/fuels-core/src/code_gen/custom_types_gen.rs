@@ -169,8 +169,7 @@ pub fn expand_custom_enum(
                 match param_type {
                     ParamType::String(len) => {
                         enum_selector_builder.push(quote! {
-                            #enum_ident::#variant_name(value) => (#dis, Token::#param_type_string_ident(
-                                    StringToken::new(value,  #len)))
+                            #enum_ident::#variant_name(value) => (#dis, value.into_token())
                         });
                     }
                     ParamType::Array(_t, _s) => {

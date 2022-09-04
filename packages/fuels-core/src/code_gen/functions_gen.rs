@@ -328,11 +328,7 @@ fn expand_function_arguments(
         args.push(quote! { #name: #tok });
 
         // This `name` TokenStream is also added to the call arguments
-        if let ParamType::String(len) = &kind {
-            call_args.push(quote! {Token::String(StringToken::new(#name, #len))});
-        } else {
-            call_args.push(name);
-        }
+        call_args.push(name);
     }
 
     // The final TokenStream of the argument declaration in a function declaration
@@ -701,13 +697,12 @@ fn gen_tokenize_impl_enum(
 
                 // Token creation
                 match param_type {
-                    ParamType::String(len) => {
+                    ParamType::String(_len) => {
                         args.push(
                             quote! {(#dis, token, _) => Ok(#enum_ident::#variant_name(<#ty>::from_token(token)?)),},
                         );
                         enum_selector_builder.push(quote! {
-                            #enum_ident::#variant_name(value) => (#dis, Token::#param_type_string_ident(
-                                    StringToken::new(value,  #len)))
+                            #enum_ident::#variant_name(value) => (#dis, value.into_token())
                         });
                     }
                     ParamType::Array(_t, _s) => {
@@ -878,16 +873,15 @@ fn gen_tokenize_impl_struct(
 
                     let stream = match param_type {
                         ParamType::String(len) => {
-                            quote! {StringToken::new(self.#field_name,  #len)}
+                            quote! {tokens.push(self.#field_name.into_token())}
                         }
                         ParamType::Array(..) => {
-                            quote! {vec![self.#field_name.into_token()]}
+                            quote! {tokens.push(Token::#param_type_string_ident(vec![self.#field_name.into_token()]))}
                         }
                         _ => {
-                            quote! {self.#field_name}
+                            quote! {tokens.push(Token::#param_type_string_ident(self.#field_name))}
                         }
                     };
-                    let stream = quote! { tokens.push(Token::#param_type_string_ident(#stream))};
                     struct_fields_tokens.push(stream);
                 }
             }
