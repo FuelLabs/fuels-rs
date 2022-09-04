@@ -16,7 +16,7 @@ pub fn expand_type(kind: &ParamType) -> Result<TokenStream, Error> {
         ParamType::U32 => Ok(quote! { u32 }),
         ParamType::U64 => Ok(quote! { u64 }),
         ParamType::Bool => Ok(quote! { bool }),
-        ParamType::B256 => Ok(quote! { [u8; 32] }),
+        ParamType::B256 => Ok(quote! { Bits256 }),
         ParamType::String(len) => Ok(quote! { SizedAsciiString<#len> }),
         ParamType::Array(t, _size) => {
             let inner = expand_type(t)?;

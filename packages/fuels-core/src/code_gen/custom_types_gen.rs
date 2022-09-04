@@ -187,7 +187,7 @@ pub fn expand_custom_enum(
                     // Primitive type
                     _ => {
                         enum_selector_builder.push(quote! {
-                            #enum_ident::#variant_name(value) => (#dis, Token::#param_type_string_ident(value))
+                            #enum_ident::#variant_name(value) => (#dis, value.into_token())
                         });
                     }
                 }

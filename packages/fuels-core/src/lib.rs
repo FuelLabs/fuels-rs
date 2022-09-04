@@ -1,5 +1,6 @@
 #![allow(warnings)] // temp remove me later
 use crate::abi_decoder::ABIDecoder;
+use crate::abi_types::Bits256;
 use core::fmt;
 use fuel_types::bytes::padded_len;
 use fuels_types::{
@@ -28,7 +29,6 @@ pub mod tx {
 
 pub type ByteArray = [u8; 8];
 pub type Selector = ByteArray;
-pub type Bits256 = [u8; 32];
 pub type EnumSelector = (u8, Token, EnumVariants);
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -73,7 +73,7 @@ pub enum Token {
     U64(u64),
     Bool(bool),
     Byte(u8),
-    B256(Bits256),
+    B256([u8; 32]),
     Array(Vec<Token>),
     String(StringToken),
     Struct(Vec<Token>),
@@ -164,21 +164,6 @@ impl Tokenizable for String {
     fn into_token(self) -> Token {
         let len = self.len();
         Token::String(StringToken::new(self, len))
-    }
-}
-
-impl Tokenizable for Bits256 {
-    fn from_token(token: Token) -> Result<Self, Error> {
-        match token {
-            Token::B256(data) => Ok(data),
-            other => Err(Error::InstantiationError(format!(
-                "Expected `String`, got {:?}",
-                other
-            ))),
-        }
-    }
-    fn into_token(self) -> Token {
-        Token::B256(self)
     }
 }
 
@@ -383,8 +368,8 @@ impl Tokenizable for fuel_tx::ContractId {
     }
 
     fn into_token(self) -> Token {
-        let underlying_data: &Bits256 = &self;
-        Token::Struct(vec![underlying_data.into_token()])
+        let underlying_data: &[u8; 32] = &self;
+        Token::Struct(vec![Bits256(*underlying_data).into_token()])
     }
 }
 
@@ -412,9 +397,9 @@ impl Tokenizable for fuel_tx::Address {
     }
 
     fn into_token(self) -> Token {
-        let underlying_data: &Bits256 = &self;
+        let underlying_data: &[u8; 32] = &self;
 
-        Token::Struct(vec![underlying_data.into_token()])
+        Token::Struct(vec![Bits256(*underlying_data).into_token()])
     }
 }
 
@@ -436,8 +421,8 @@ impl Tokenizable for fuel_tx::AssetId {
     }
 
     fn into_token(self) -> Token {
-        let underlying_data: &Bits256 = &self;
-        Token::Struct(vec![underlying_data.into_token()])
+        let underlying_data: &[u8; 32] = &self;
+        Token::Struct(vec![Bits256(*underlying_data).into_token()])
     }
 }
 
@@ -498,12 +483,6 @@ impl Parameterize for u32 {
 impl Parameterize for u64 {
     fn param_type() -> ParamType {
         ParamType::U64
-    }
-}
-
-impl Parameterize for Bits256 {
-    fn param_type() -> ParamType {
-        ParamType::B256
     }
 }
 

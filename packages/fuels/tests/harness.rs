@@ -21,6 +21,7 @@ use fuels_core::tx::{Address, Bytes32, StorageSlot};
 use fuels_core::{constants::BASE_ASSET_ID, Token};
 use fuels_core::{try_from_bytes, Tokenizable};
 
+use fuels_core::abi_types::Bits256;
 use fuels_core::code_gen::abigen::Abigen;
 use sha2::{Digest, Sha256};
 use std::str::FromStr;
@@ -452,9 +453,9 @@ async fn compile_bindings_b256_input() {
     let mut hasher = Sha256::new();
     hasher.update("test string".as_bytes());
 
-    let arg = hasher.finalize();
+    let arg: [u8; 32] = hasher.finalize().into();
 
-    let call_handler = contract_instance.takes_b256(arg.into());
+    let call_handler = contract_instance.takes_b256(Bits256(arg));
 
     let encoded = format!(
         "{}{}",
@@ -1218,7 +1219,7 @@ async fn test_large_return_data() -> Result<(), Error> {
     let res = contract_instance.get_id().call().await?;
 
     assert_eq!(
-        res.value,
+        res.value.0,
         [
             255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
             255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255
@@ -1351,8 +1352,9 @@ async fn test_contract_calling_contract() -> Result<(), Error> {
     // Calls the contract that calls the `FooContract` contract, also just
     // flips the bool value passed to it.
     // ANCHOR: external_contract
+    let x = *foo_contract_id.hash();
     let res = foo_caller_contract_instance
-        .call_foo_contract(*foo_contract_id.hash(), true)
+        .call_foo_contract(Bits256(x), true)
         .set_contracts(&[foo_contract_id]) // Sets the external contract
         .call()
         .await?;
@@ -1647,7 +1649,7 @@ async fn test_tuples() -> Result<(), Error> {
     assert_eq!(response.value, my_enum_tuple);
 
     let id = *ContractId::zeroed();
-    let my_b256_u8_tuple: ([u8; 32], u8) = (id, 10);
+    let my_b256_u8_tuple = (Bits256(id), 10);
 
     let response = instance.tuple_with_b256(my_b256_u8_tuple).call().await?;
 
@@ -1822,12 +1824,12 @@ async fn test_logd_receipts() -> Result<(), Error> {
     value[13] = 0xBB;
     value[14] = 0xCC;
     let response = contract_instance
-        .use_logd_opcode(value, 3, 6)
+        .use_logd_opcode(Bits256(value), 3, 6)
         .call()
         .await?;
     assert_eq!(response.logs, vec!["ffeedd", "ffeedd000000"]);
     let response = contract_instance
-        .use_logd_opcode(value, 14, 15)
+        .use_logd_opcode(Bits256(value), 14, 15)
         .call()
         .await?;
     assert_eq!(
@@ -2271,11 +2273,11 @@ async fn test_storage_initialization() -> Result<(), Error> {
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
 
     let result = contract_instance
-        .get_value_b256(key.into())
+        .get_value_b256(Bits256(key.into()))
         .call()
         .await?
         .value;
-    assert_eq!(result.as_slice(), value.as_slice());
+    assert_eq!(result.0, *value);
 
     Ok(())
 }
@@ -2428,10 +2430,18 @@ async fn test_init_storage_automatically() -> Result<(), Error> {
 
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
 
-    let value = contract_instance.get_value_b256(*key1).call().await?.value;
-    assert_eq!(value, [1u8; 32]);
+    let value = contract_instance
+        .get_value_b256(Bits256(*key1))
+        .call()
+        .await?
+        .value;
+    assert_eq!(value.0, [1u8; 32]);
 
-    let value = contract_instance.get_value_u64(*key2).call().await?.value;
+    let value = contract_instance
+        .get_value_u64(Bits256(*key2))
+        .call()
+        .await?
+        .value;
     assert_eq!(value, 64);
 
     Ok(())

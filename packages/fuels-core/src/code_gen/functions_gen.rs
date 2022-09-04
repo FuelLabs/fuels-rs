@@ -278,7 +278,7 @@ fn expand_tuple_w_custom_types(
 
 fn expand_b256_into_array_form(type_field: &str) -> String {
     let re = Regex::new(r"\bb256\b").unwrap();
-    re.replace_all(type_field, "[u8; 32]").to_string()
+    re.replace_all(type_field, "Bits256").to_string()
 }
 
 fn remove_words(from: &str, words: &[&str]) -> String {
@@ -742,7 +742,7 @@ fn gen_tokenize_impl_enum(
                             quote! {(#dis, token, _) => Ok(#enum_ident::#variant_name(<#ty>::from_token(token)?)),},
                         );
                         enum_selector_builder.push(quote! {
-                            #enum_ident::#variant_name(value) => (#dis, Token::#param_type_string_ident(value))
+                            #enum_ident::#variant_name(value) => (#dis, value.into_token())
                         });
                     }
                 }
@@ -879,7 +879,7 @@ fn gen_tokenize_impl_struct(
                             quote! {tokens.push(Token::#param_type_string_ident(vec![self.#field_name.into_token()]))}
                         }
                         _ => {
-                            quote! {tokens.push(Token::#param_type_string_ident(self.#field_name))}
+                            quote! {tokens.push(self.#field_name.into_token())}
                         }
                     };
                     struct_fields_tokens.push(stream);
