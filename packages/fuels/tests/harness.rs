@@ -190,7 +190,7 @@ async fn compile_bindings_array_input() {
     // `SimpleContract` is the name of the contract
     let contract_instance = SimpleContractBuilder::new(null_contract_id(), wallet).build();
 
-    let input: Vec<u16> = vec![1, 2, 3, 4];
+    let input = [1, 2, 3];
     let call_handler = contract_instance.takes_array(input);
 
     let encoded = format!(
@@ -200,7 +200,7 @@ async fn compile_bindings_array_input() {
     );
 
     assert_eq!(
-        "00000000101cbeb50000000000000001000000000000000200000000000000030000000000000004",
+        "00000000101cbeb5000000000000000100000000000000020000000000000003",
         encoded
     );
 }
@@ -265,7 +265,7 @@ async fn compile_bindings_bool_array_input() {
     // `SimpleContract` is the name of the contract
     let contract_instance = SimpleContractBuilder::new(null_contract_id(), wallet).build();
 
-    let input: Vec<bool> = vec![true, false, true];
+    let input = [true, false, true];
     let call_handler = contract_instance.takes_array(input);
 
     let encoded = format!(
@@ -549,7 +549,7 @@ async fn compile_bindings_struct_input() {
     // Because of the abigen! macro, `MyStruct` is now in scope
     // and can be used!
     let input = MyStruct {
-        foo: vec![10, 2],
+        foo: [10, 2],
         bar: "fuel".try_into().unwrap(),
     };
 
@@ -1241,7 +1241,7 @@ async fn test_large_return_data() -> Result<(), Error> {
 
     // Array will be returned in `ReturnData`.
     let res = contract_instance.get_large_array().call().await?;
-    assert_eq!(res.value, &[1, 2]);
+    assert_eq!(res.value, [1, 2]);
 
     let res = contract_instance.get_contract_id().call().await?;
 
@@ -1677,11 +1677,7 @@ async fn test_array() -> Result<(), Error> {
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
 
     assert_eq!(
-        contract_instance
-            .get_array([42; 2].to_vec())
-            .call()
-            .await?
-            .value,
+        contract_instance.get_array([42; 2]).call().await?.value,
         [42; 2]
     );
     Ok(())
@@ -1708,7 +1704,7 @@ async fn test_arrays_with_custom_types() -> Result<(), Error> {
 
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
 
-    let persons = vec![
+    let persons = [
         Person {
             name: "John".try_into()?,
         },
@@ -1722,7 +1718,7 @@ async fn test_arrays_with_custom_types() -> Result<(), Error> {
     assert_eq!("John", response.value[0].name);
     assert_eq!("Jane", response.value[1].name);
 
-    let states = vec![State::A(), State::B()];
+    let states = [State::A(), State::B()];
 
     let response = contract_instance
         .array_of_enums(states.clone())
@@ -2186,7 +2182,7 @@ async fn test_multi_call() -> Result<(), Error> {
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
 
     let call_handler_1 = contract_instance.initialize_counter(42);
-    let call_handler_2 = contract_instance.get_array([42; 2].to_vec());
+    let call_handler_2 = contract_instance.get_array([42; 2]);
 
     let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
 
@@ -2223,7 +2219,7 @@ async fn test_multi_call_script_workflow() -> Result<(), Error> {
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
 
     let call_handler_1 = contract_instance.initialize_counter(42);
-    let call_handler_2 = contract_instance.get_array([42; 2].to_vec());
+    let call_handler_2 = contract_instance.get_array([42; 2]);
 
     let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
 
@@ -2368,7 +2364,7 @@ async fn type_inside_enum() -> Result<(), Error> {
     assert_eq!(response.value, enum_string);
 
     // Array inside enum
-    let enum_array = SomeEnum::SomeArr(vec![1, 2, 3, 4, 5, 6, 7]);
+    let enum_array = SomeEnum::SomeArr([1, 2, 3, 4, 5, 6, 7]);
     let response = instance.arr_inside_enum(enum_array.clone()).call().await?;
     assert_eq!(response.value, enum_array);
 
@@ -3004,9 +3000,7 @@ async fn str_in_array() -> Result<(), Error> {
 
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
 
-    let input = ["foo", "bar", "baz"]
-        .map(|str| str.try_into().unwrap())
-        .to_vec();
+    let input = ["foo", "bar", "baz"].map(|str| str.try_into().unwrap());
     let response = contract_instance
         .take_array_string_shuffle(input.clone())
         .call()
@@ -3454,7 +3448,7 @@ async fn mutl_call_has_same_estimated_and_used_gas() -> Result<(), Error> {
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
 
     let call_handler_1 = contract_instance.initialize_counter(42);
-    let call_handler_2 = contract_instance.get_array([42; 2].to_vec());
+    let call_handler_2 = contract_instance.get_array([42; 2]);
 
     let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
 
@@ -3474,7 +3468,7 @@ async fn mutl_call_has_same_estimated_and_used_gas() -> Result<(), Error> {
 
     Ok(())
 }
-//
+
 // #[tokio::test]
 // async fn generics_preview() -> Result<(), Error> {
 //     let project_path = Path::new("/tmp/generics_project");

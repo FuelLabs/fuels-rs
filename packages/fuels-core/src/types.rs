@@ -18,9 +18,9 @@ pub fn expand_type(kind: &ParamType) -> Result<TokenStream, Error> {
         ParamType::Bool => Ok(quote! { bool }),
         ParamType::B256 => Ok(quote! { Bits256 }),
         ParamType::String(len) => Ok(quote! { SizedAsciiString<#len> }),
-        ParamType::Array(t, _size) => {
+        ParamType::Array(t, size) => {
             let inner = expand_type(t)?;
-            Ok(quote! { ::std::vec::Vec<#inner> })
+            Ok(quote! { [#inner; #size] })
         }
         ParamType::Struct(members) => {
             if members.is_empty() {

@@ -148,11 +148,14 @@ fn resolve_type(
             .flatten()
             .map(|array_type| resolve_type(&array_type, &types))
             .next()
-            .expect("An array must have components!")?;
+            .expect("An array must have components!")
+            .map(TokenStream::from)?;
+
+        let len = extract_arr_length(base_type);
 
         return Ok(ResolvedType {
-            type_name: quote! { ::std::vec::Vec },
-            generic_params: vec![array_type],
+            type_name: quote! { [#array_type; #len] },
+            generic_params: vec![],
         });
     }
 
@@ -184,6 +187,12 @@ fn resolve_type(
         type_name: base_type_name.parse().unwrap(),
         generic_params: inner_types,
     })
+}
+
+fn extract_arr_length(base_type: &TypeDeclaration) -> usize {
+    let regex = Regex::new(r"^\[.*;\s*(\d+)]").unwrap();
+    let x = &regex.captures(&base_type.type_field).unwrap()[1];
+    x.parse().unwrap()
 }
 
 fn expand_fn_output(
@@ -223,12 +232,11 @@ fn expand_fn_output(
         .parse()
         .expect("couldn't parse custom type name");
 
+        let len = extract_arr_length(&output_type);
+
         Ok(ResolvedType {
-            type_name: quote! { ::std::vec::Vec },
-            generic_params: vec![ResolvedType {
-                type_name: parsed_custom_type_name,
-                generic_params: vec![],
-            }],
+            type_name: quote! { [#parsed_custom_type_name; #len] },
+            generic_params: vec![],
         })
     } else {
         let type_name = expand_tuple_w_custom_types(output_type, types)?;
@@ -970,10 +978,10 @@ fn expand_input_param(
     types: &HashMap<usize, TypeDeclaration>,
 ) -> Result<TokenStream, Error> {
     match kind {
-        ParamType::Array(ty, _) => {
+        ParamType::Array(ty, size) => {
             let ty = expand_input_param(fun, type_application, ty, types)?;
             Ok(quote! {
-                ::std::vec::Vec<#ty>
+                [#ty; #size]
             })
         }
         ParamType::Enum(_) => {
