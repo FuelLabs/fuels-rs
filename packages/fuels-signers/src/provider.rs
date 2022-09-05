@@ -1,5 +1,4 @@
 use std::io;
-use std::net::SocketAddr;
 
 #[cfg(feature = "fuel-core")]
 use fuel_core::service::{Config, FuelService};
@@ -141,12 +140,9 @@ impl Provider {
     /// ```
     /// async fn connect_to_fuel_node() {
     ///     use fuels::prelude::*;
-    ///     use std::net::SocketAddr;
     ///
     ///     // This is the address of a running node.
-    ///     let server_address: SocketAddr = "127.0.0.1:4000"
-    ///         .parse()
-    ///         .expect("Unable to parse socket address");
+    ///     let server_address = "127.0.0.1:4000";
     ///
     ///     // Create the provider using the client.
     ///     let provider = Provider::connect(server_address).await.unwrap();
@@ -155,10 +151,9 @@ impl Provider {
     ///     let _wallet = WalletUnlocked::new_random(Some(provider));
     /// }
     /// ```
-    pub async fn connect(socket: SocketAddr) -> Result<Provider, Error> {
-        Ok(Self {
-            client: FuelClient::from(socket),
-        })
+    pub async fn connect(url: impl AsRef<str>) -> Result<Provider, Error> {
+        let client = FuelClient::new(url)?;
+        Ok(Provider::new(client))
     }
 
     pub async fn chain_info(&self) -> Result<ChainInfo, ProviderError> {

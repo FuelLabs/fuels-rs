@@ -10,12 +10,11 @@ use fuels::prelude::{
     DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
 };
 use fuels_core::abi_encoder::ABIEncoder;
-
 use fuels_core::parameters::StorageConfiguration;
 use fuels_core::tx::{Address, Bytes32, StorageSlot};
 use fuels_core::Tokenizable;
 use fuels_core::{constants::BASE_ASSET_ID, Token};
-
+use fuels_signers::fuel_crypto::SecretKey;
 use sha2::{Digest, Sha256};
 use std::str::FromStr;
 
@@ -1265,7 +1264,7 @@ async fn test_provider_launch_and_connect() -> Result<(), Error> {
         DEFAULT_COIN_AMOUNT,
     );
     let (launched_provider, address) = setup_test_provider(coins, None).await;
-    let connected_provider = Provider::connect(address).await?;
+    let connected_provider = Provider::connect(address.to_string()).await?;
 
     wallet.set_provider(connected_provider);
 
@@ -2948,7 +2947,7 @@ async fn test_network_error() -> Result<(), anyhow::Error> {
 
     let config = CoreConfig::local_node();
     let service = FuelService::new_node(config).await?;
-    let provider = Provider::connect(service.bound_address).await?;
+    let provider = Provider::connect(service.bound_address.to_string()).await?;
 
     wallet.set_provider(provider);
 
@@ -3452,6 +3451,64 @@ async fn mutl_call_has_same_estimated_and_used_gas() -> Result<(), Error> {
     let gas_used = multi_call_handler.call::<(u64, Vec<u64>)>().await?.gas_used;
 
     assert_eq!(estimated_gas_used, gas_used);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn testnet_hello_world() -> Result<(), Error> {
+    // Note that this test might become flaky.
+    // This test depends on:
+    // 1. The testnet being up and running;
+    // 2. The testnet address being the same as the one in the test;
+    // 3. The hardcoded wallet having enough funds to pay for the transaction.
+    // This is a nice test to showcase the SDK interaction with
+    // the testnet. But, if it becomes too problematic, we should remove it.
+    abigen!(
+        MyContract,
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json"
+    );
+
+    // Create a provider pointing to the testnet.
+    let provider = Provider::connect("node-beta-1.fuel.network").await.unwrap();
+
+    // Setup the private key.
+    let secret =
+        SecretKey::from_str("a0447cd75accc6b71a976fd3401a1f6ce318d27ba660b0315ee6ac347bf39568")
+            .unwrap();
+
+    // Create the wallet.
+    let wallet = WalletUnlocked::new_from_private_key(secret, Some(provider));
+
+    dbg!(&wallet.address().to_string());
+
+    let params = TxParameters::new(Some(100_000_000), Some(2000), None);
+
+    let contract_id = Contract::deploy(
+        "tests/test_projects/contract_test/out/debug/contract_test.bin",
+        &wallet,
+        params,
+        StorageConfiguration::default(),
+    )
+    .await?;
+
+    let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
+
+    let response = contract_instance
+        .initialize_counter(42) // Build the ABI call
+        .tx_params(params)
+        .call() // Perform the network call
+        .await?;
+
+    assert_eq!(42, response.value);
+
+    let response = contract_instance
+        .increment_counter(10)
+        .tx_params(params)
+        .call()
+        .await?;
+
+    assert_eq!(52, response.value);
 
     Ok(())
 }
