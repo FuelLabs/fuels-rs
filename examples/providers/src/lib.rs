@@ -1,25 +1,34 @@
 #[cfg(test)]
 mod tests {
-    use std::net::SocketAddr;
-
     use fuels::prelude::Error;
 
     #[tokio::test]
     async fn connect_to_fuel_node() {
-        // ANCHOR: connect_to_node
+        // TODO: enable this code when the tesnet is online and remove code in the documentation
+        // TODO: the code is in providers/external-node.md
+        // AXXNCHOR: connect_to_node
         use fuels::prelude::*;
+        use std::net::{SocketAddr, ToSocketAddrs};
 
-        // This is the address of a running node.
-        let server_address: SocketAddr = "127.0.0.1:4000"
-            .parse()
-            .expect("Unable to parse socket address");
+        // This is the testnet's address
+        let server_address: SocketAddr = "node-beta-1.fuel.network/graphql:443"
+            .to_socket_addrs()
+            .expect("Unable to parse or lookup address")
+            .next() // Take the first resolved address
+            .unwrap();
 
         // Create the provider using the client.
         let provider = Provider::connect(server_address).await.unwrap();
 
         // Create the wallet.
         let _wallet = WalletUnlocked::new_random(Some(provider));
-        // ANCHOR_END: connect_to_node
+        // AXXNCHOR_END: connect_to_node
+
+        // ANCHOR: local_node_address
+        let _server_address: SocketAddr = "127.0.0.1:4000"
+            .parse()
+            .expect("Unable to parse socket address");
+        // ANCHOR_END: local_node_address
     }
 
     #[tokio::test]
