@@ -20,41 +20,49 @@ mod tests {
         abigen!(
             MyContract,
             r#"
-    [
-        {
-            "type": "function",
-            "inputs": [
-                {
-                    "name": "arg",
-                    "type": "u64"
-                }
-            ],
-            "name": "initialize_counter",
-            "outputs": [
-                {
-                    "name": "arg",
-                    "type": "u64"
-                }
-            ]
-        },
-        {
-            "type": "function",
-            "inputs": [
-                {
-                    "name": "arg",
-                    "type": "u64"
-                }
-            ],
-            "name": "increment_counter",
-            "outputs": [
-                {
-                    "name": "arg",
-                    "type": "u64"
-                }
-            ]
-        }
-    ]
-    "#
+            {
+                "types": [
+                  {
+                    "typeId": 0,
+                    "type": "u64",
+                    "components": null,
+                    "typeParameters": null
+                  }
+                ],
+                "functions": [
+                  {
+                    "inputs": [
+                      {
+                        "name": "value",
+                        "type": 0,
+                        "typeArguments": null
+                      }
+                    ],
+                    "name": "initialize_counter",
+                    "output": {
+                      "name": "",
+                      "type": 0,
+                      "typeArguments": null
+                    }
+                  },
+                  {
+                    "inputs": [
+                      {
+                        "name": "value",
+                        "type": 0,
+                        "typeArguments": null
+                      }
+                    ],
+                    "name": "increment_counter",
+                    "output": {
+                      "name": "",
+                      "type": 0,
+                      "typeArguments": null
+                    }
+                  }
+                ]
+              }
+            "#
         );
         // ANCHOR_END: abigen_with_string
         Ok(())
