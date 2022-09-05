@@ -10,12 +10,10 @@ use fuels::prelude::{
     DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
 };
 use fuels_core::abi_encoder::ABIEncoder;
-
 use fuels_core::parameters::StorageConfiguration;
 use fuels_core::tx::{Address, Bytes32, StorageSlot};
 use fuels_core::Tokenizable;
 use fuels_core::{constants::BASE_ASSET_ID, Token};
-
 use sha2::{Digest, Sha256};
 use std::str::FromStr;
 
@@ -1265,7 +1263,7 @@ async fn test_provider_launch_and_connect() -> Result<(), Error> {
         DEFAULT_COIN_AMOUNT,
     );
     let (launched_provider, address) = setup_test_provider(coins, None).await;
-    let connected_provider = Provider::connect(address).await?;
+    let connected_provider = Provider::connect(address.to_string()).await?;
 
     wallet.set_provider(connected_provider);
 
@@ -2948,7 +2946,7 @@ async fn test_network_error() -> Result<(), anyhow::Error> {
 
     let config = CoreConfig::local_node();
     let service = FuelService::new_node(config).await?;
-    let provider = Provider::connect(service.bound_address).await?;
+    let provider = Provider::connect(service.bound_address.to_string()).await?;
 
     wallet.set_provider(provider);
 
