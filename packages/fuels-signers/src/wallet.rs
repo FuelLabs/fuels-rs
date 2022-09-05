@@ -460,7 +460,7 @@ impl WalletUnlocked {
 
         let mut new_base_amount = transaction_fee.total() + previous_base_amount;
         // If the tx doesn't consume any UTXOs, attempting to repeat it will lead to an
-        // error due to non unique tx ids (e.g. repeated contract call with configured gas fee of 0).
+        // error due to non unique tx ids (e.g. repeated contract call with configured gas cost of 0).
         // Here we enforce a minimum amount on the base asset to avoid this
         const MIN_AMOUNT: u64 = 1;
         let is_using_coins = tx
@@ -784,6 +784,7 @@ mod tests {
     use super::*;
     use fuel_core::service::{Config, FuelService};
     use fuel_gql_client::client::FuelClient;
+    use fuels_test_helpers::{launch_custom_provider_and_get_wallets, AssetConfig, WalletsConfig};
     use fuels_types::errors::Error;
     use tempfile::tempdir;
 
@@ -901,5 +902,147 @@ mod tests {
         let srv = FuelService::new_node(Config::local_node()).await.unwrap();
         let client = FuelClient::from(srv.bound_address);
         Provider::new(client)
+    }
+
+    fn compare_inputs(inputs: &[Input], expected_inputs: &mut Vec<Input>) -> bool {
+        let zero_utxo_id = UtxoId::new(Bytes32::zeroed(), 0);
+
+        // change UTXO_ids to 0s for comparison, because we can't guess the genesis coin ids
+        let inputs: Vec<Input> = inputs
+            .iter()
+            .map(|input| match input {
+                Input::CoinSigned {
+                    owner,
+                    amount,
+                    asset_id,
+                    tx_pointer,
+                    witness_index,
+                    maturity,
+                    ..
+                } => Input::coin_signed(
+                    zero_utxo_id.clone(),
+                    *owner,
+                    *amount,
+                    *asset_id,
+                    *tx_pointer,
+                    *witness_index,
+                    *maturity,
+                ),
+                other => other.clone(),
+            })
+            .collect();
+
+        let comparison_results: Vec<bool> = inputs
+            .iter()
+            .map(|input| {
+                let found_index = expected_inputs
+                    .iter()
+                    .position(|expected| expected == input);
+                if let Some(index) = found_index {
+                    expected_inputs.remove(index);
+                    true
+                } else {
+                    false
+                }
+            })
+            .collect();
+
+        if !expected_inputs.is_empty() {
+            return false;
+        }
+
+        return comparison_results.iter().all(|&r| r);
+    }
+
+    #[tokio::test]
+    async fn add_fee_coins_empty_transaction() -> Result<(), Error> {
+        let asset_configs = vec![
+            AssetConfig {
+                id: BASE_ASSET_ID,
+                num_coins: 30,
+                coin_amount: 10,
+            },
+            AssetConfig {
+                id: BASE_ASSET_ID,
+                num_coins: 20,
+                coin_amount: 20,
+            },
+            AssetConfig {
+                id: BASE_ASSET_ID,
+                num_coins: 10,
+                coin_amount: 30,
+            },
+        ];
+        let wallet_config = WalletsConfig::new_multiple_assets(1, asset_configs);
+
+        let wallet = launch_custom_provider_and_get_wallets(wallet_config, None)
+            .await
+            .pop()
+            .unwrap();
+        let mut tx = Wallet::build_transfer_tx(&[], &[], TxParameters::default());
+        wallet.add_fee_coins(&mut tx, 0, 0).await?;
+
+        let zero_utxo_id = UtxoId::new(Bytes32::zeroed(), 0);
+        let mut expected_inputs = vec![Input::coin_signed(
+            zero_utxo_id.clone(),
+            wallet.address().into(),
+            10,
+            BASE_ASSET_ID,
+            TxPointer::default(),
+            0,
+            0,
+        )];
+        let expected_outputs = vec![Output::change(wallet.address().into(), 0, BASE_ASSET_ID)];
+
+        assert!(compare_inputs(tx.inputs(), &mut expected_inputs));
+        assert_eq!(tx.outputs(), expected_outputs);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn add_fee_coins_empty_transaction() -> Result<(), Error> {
+        let asset_configs = vec![
+            AssetConfig {
+                id: BASE_ASSET_ID,
+                num_coins: 30,
+                coin_amount: 10,
+            },
+            AssetConfig {
+                id: BASE_ASSET_ID,
+                num_coins: 20,
+                coin_amount: 20,
+            },
+            AssetConfig {
+                id: BASE_ASSET_ID,
+                num_coins: 10,
+                coin_amount: 30,
+            },
+        ];
+        let wallet_config = WalletsConfig::new_multiple_assets(1, asset_configs);
+
+        let wallet = launch_custom_provider_and_get_wallets(wallet_config, None)
+            .await
+            .pop()
+            .unwrap();
+        let mut tx = Wallet::build_transfer_tx(&[], &[], TxParameters::default());
+        wallet.add_fee_coins(&mut tx, 0, 0).await?;
+
+        let zero_utxo_id = UtxoId::new(Bytes32::zeroed(), 0);
+        let mut expected_inputs = vec![Input::coin_signed(
+            zero_utxo_id.clone(),
+            wallet.address().into(),
+            10,
+            BASE_ASSET_ID,
+            TxPointer::default(),
+            0,
+            0,
+        )];
+        let expected_outputs = vec![Output::change(wallet.address().into(), 0, BASE_ASSET_ID)];
+
+        assert!(compare_inputs(tx.inputs(), &mut expected_inputs));
+        assert_eq!(tx.outputs(), expected_outputs);
+
+        Ok(())
     }
 }
