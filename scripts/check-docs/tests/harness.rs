@@ -20,6 +20,7 @@ fn contains_any(vec: &TestEnum, str: &str) -> bool {
     }
 }
 
+#[ignore]
 #[test]
 fn test_anchors() -> anyhow::Result<()> {
     let test_data = search_for_patterns_in_project("ANCHOR")?;
