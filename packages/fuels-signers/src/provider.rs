@@ -1,5 +1,4 @@
 use std::io;
-use std::net::SocketAddr;
 
 #[cfg(feature = "fuel-core")]
 use fuel_core::service::{Config, FuelService};
