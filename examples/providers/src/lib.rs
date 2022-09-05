@@ -1,6 +1,5 @@
 #[cfg(test)]
 mod tests {
-    use std::net::SocketAddr;
 
     use fuels::prelude::Error;
 
@@ -9,13 +8,8 @@ mod tests {
         // ANCHOR: connect_to_node
         use fuels::prelude::*;
 
-        // This is the address of a running node.
-        let server_address: SocketAddr = "127.0.0.1:4000"
-            .parse()
-            .expect("Unable to parse socket address");
-
         // Create the provider using the client.
-        let provider = Provider::connect(server_address).await.unwrap();
+        let provider = Provider::connect("127.0.0.1:4000").await.unwrap();
 
         // Create the wallet.
         let _wallet = WalletUnlocked::new_random(Some(provider));
