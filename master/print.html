@@ -231,13 +231,8 @@ development.</p>
 <p>If you want your SDK code to connect to an already running Fuel node, which could be devnet, testnet, mainnet, or a local instance through <code>fuel-core</code>, this is how you do it:</p>
 <pre><code class="language-rust ignore">        use fuels::prelude::*;
 
-        // This is the address of a running node.
-        let server_address: SocketAddr = &quot;127.0.0.1:4000&quot;
-            .parse()
-            .expect(&quot;Unable to parse socket address&quot;);
-
         // Create the provider using the client.
-        let provider = Provider::connect(server_address).await.unwrap();
+        let provider = Provider::connect(&quot;127.0.0.1:4000&quot;).await.unwrap();
 
         // Create the wallet.
         let _wallet = WalletUnlocked::new_random(Some(provider));
