@@ -581,6 +581,7 @@ impl WalletUnlocked {
         Ok((tx.id().to_string(), receipts))
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn spend_predicate(
         &self,
         predicate_address: &Bech32Address,
