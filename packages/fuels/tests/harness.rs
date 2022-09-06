@@ -3480,7 +3480,7 @@ async fn testnet_hello_world() -> Result<(), Error> {
     // Create the wallet.
     let wallet = WalletUnlocked::new_from_private_key(secret, Some(provider));
 
-    println!("Tesnet harness wallet address: {}", wallet.address());
+    dbg!(wallet.address().to_string());
 
     let params = TxParameters::new(Some(1), Some(2000), None);
 

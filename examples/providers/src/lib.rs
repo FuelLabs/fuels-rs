@@ -22,7 +22,7 @@ mod tests {
         let wallet = WalletUnlocked::new_from_private_key(secret, Some(provider));
 
         // Get the wallet address. Used later with the faucet
-        println!("Tesnet docs wallet address: {}", wallet.address());
+        dbg!(wallet.address().to_string());
         // ANCHOR_END: connect_to_testnet
 
         // ANCHOR: local_node_address
