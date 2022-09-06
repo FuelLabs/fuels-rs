@@ -5,22 +5,28 @@ mod tests {
 
     #[tokio::test]
     async fn connect_to_fuel_node() {
-        // TODO: enable this code when the tesnet is online and remove code in the documentation
-        // TODO: the code is in providers/external-node.md
-        // ANCHOR: connect_to_node
+        // ANCHOR: connect_to_testnet
         use fuels::prelude::*;
+        use fuels::signers::fuel_crypto::SecretKey;
+        use std::str::FromStr;
 
         // Create a provider pointing to the testnet.
         let provider = Provider::connect("node-beta-1.fuel.network").await.unwrap();
 
-        // Create the wallet.
-        let _wallet = WalletUnlocked::new_random(Some(provider));
-        // ANCHOR_END: connect_to_node
+        // Setup a private key
+        let secret =
+            SecretKey::from_str("a1447cd75accc6b71a976fd3401a1f6ce318d27ba660b0315ee6ac347bf39568")
+                .unwrap();
+
+        // Create the wallet
+        let wallet = WalletUnlocked::new_from_private_key(secret, Some(provider));
+
+        // Get the wallet address. Used later with the faucet
+        println!("Tesnet docs wallet address: {}", wallet.address());
+        // ANCHOR_END: connect_to_testnet
 
         // ANCHOR: local_node_address
-        let _server_address: SocketAddr = "127.0.0.1:4000"
-            .parse()
-            .expect("Unable to parse socket address");
+        let _provider = Provider::connect("127.0.0.1:4000").await.unwrap();
         // ANCHOR_END: local_node_address
     }
 
