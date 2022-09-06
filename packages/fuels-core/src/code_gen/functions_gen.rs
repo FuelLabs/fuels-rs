@@ -1,9 +1,9 @@
 use crate::code_gen::abigen::Abigen;
 use crate::code_gen::custom_types_gen::extract_custom_type_name_from_abi_property;
 use crate::code_gen::docs_gen::expand_doc;
-use crate::types::expand_type;
 use crate::utils::{first_four_bytes_of_sha256_hash, ident, safe_ident};
 use crate::{ParamType, Selector};
+use anyhow::anyhow;
 use fuels_types::errors::Error;
 use fuels_types::function_selector::build_fn_selector;
 use fuels_types::{
@@ -11,6 +11,7 @@ use fuels_types::{
 };
 use inflector::Inflector;
 use itertools::{chain, Either, Itertools};
+use lazy_static::lazy_static;
 use proc_macro2::{Ident, Literal, TokenStream};
 use quote::{quote, ToTokens};
 use regex::Regex;
@@ -152,84 +153,168 @@ pub fn resolve_type(
     type_application: &TypeApplication,
     types: &HashMap<usize, TypeDeclaration>,
 ) -> Result<ResolvedType, Error> {
+    let recursively_resolve = |type_applications: &Option<Vec<TypeApplication>>| {
+        type_applications
+            .iter()
+            .flatten()
+            .map(|array_type| resolve_type(&array_type, &types))
+            .collect::<Result<Vec<_>, _>>()
+    };
+
     let base_type = types.get(&type_application.type_id).unwrap();
     let param_type = ParamType::from_type_declaration(base_type, types)?;
 
-    if !base_type.is_custom_type(&types) {
-        return if let ParamType::String(len) = param_type {
+    match &param_type {
+        ParamType::Generic(name) => Ok(ResolvedType {
+            type_name: name.parse().unwrap(),
+            generic_params: vec![],
+            param_type,
+        }),
+        ParamType::U8 => Ok(ResolvedType {
+            type_name: quote! {u8},
+            generic_params: vec![],
+            param_type,
+        }),
+        ParamType::U16 => Ok(ResolvedType {
+            type_name: quote! {u16},
+            generic_params: vec![],
+            param_type,
+        }),
+        ParamType::U32 => Ok(ResolvedType {
+            type_name: quote! {u32},
+            generic_params: vec![],
+            param_type,
+        }),
+        ParamType::U64 => Ok(ResolvedType {
+            type_name: quote! {u64},
+            generic_params: vec![],
+            param_type,
+        }),
+        ParamType::Bool => Ok(ResolvedType {
+            type_name: quote! {bool},
+            generic_params: vec![],
+            param_type,
+        }),
+        ParamType::Byte => Ok(ResolvedType {
+            type_name: quote! {u8},
+            generic_params: vec![],
+            param_type,
+        }),
+        ParamType::B256 => Ok(ResolvedType {
+            type_name: quote! {Bits256},
+            generic_params: vec![],
+            param_type,
+        }),
+        ParamType::Unit => Ok(ResolvedType {
+            type_name: quote! {()},
+            generic_params: vec![],
+            param_type,
+        }),
+        ParamType::Array(_, len) => {
+            let array_components = recursively_resolve(&base_type.components)?;
+
+            let type_inside: TokenStream = match array_components.as_slice() {
+                [single_type] => single_type.into(),
+                _ => {
+                    return Err(Error::InvalidData(format!("Array had multiple components when only a single one is allowed! {array_components:?}")));
+                }
+            };
+
             Ok(ResolvedType {
-                type_name: quote! { SizedAsciiString },
-                generic_params: vec![ResolvedType {
-                    type_name: quote! {#len},
-                    generic_params: vec![],
-                    param_type: ParamType::U64,
-                }],
-                param_type,
-            })
-        } else {
-            Ok(ResolvedType {
-                type_name: expand_type(&param_type)?,
+                type_name: quote! { [#type_inside; #len] },
                 generic_params: vec![],
                 param_type,
             })
-        };
-    }
-
-    if base_type.is_array() {
-        let array_type = base_type
-            .components
-            .iter()
-            .flatten()
-            .map(|array_type| resolve_type(&array_type, &types))
-            .next()
-            .expect("An array must have components!")
-            .map(TokenStream::from)?;
-
-        let len = extract_arr_length(base_type);
-
-        return Ok(ResolvedType {
-            type_name: quote! { [#array_type; #len] },
-            generic_params: vec![],
+        }
+        ParamType::String(len) => Ok(ResolvedType {
+            type_name: quote! { SizedAsciiString },
+            generic_params: vec![ResolvedType {
+                type_name: quote! {#len},
+                generic_params: vec![],
+                param_type: ParamType::U64,
+            }],
             param_type,
-        });
+        }),
+        ParamType::Struct(_) | ParamType::Enum(_) => {
+            let type_name = extract_custom_type_name_from_abi_property(&base_type)?;
+            let generic_params = recursively_resolve(&type_application.type_arguments)?;
+
+            Ok(ResolvedType {
+                type_name: quote! {#type_name},
+                generic_params,
+                param_type,
+            })
+        }
+        ParamType::Tuple(_) => {
+            let inner_types = recursively_resolve(&base_type.components)?
+                .into_iter()
+                .map(TokenStream::from);
+
+            Ok(ResolvedType {
+                type_name: quote! {(#(#inner_types,)*)},
+                generic_params: vec![],
+                param_type,
+            })
+        }
     }
+}
 
-    if base_type.is_tuple() {
-        let inner_types = base_type
-            .components
-            .iter()
-            .flatten()
-            .map(|array_type| resolve_type(&array_type, &types))
-            .map_ok(|resolved_type| TokenStream::from(resolved_type))
-            .collect::<Result<Vec<_>, _>>()?;
+/// Expands a [`ParamType`] into a TokenStream.
+/// Used to expand functions when generating type-safe bindings of a JSON ABI.
+pub fn expand_type(kind: &ParamType) -> Result<TokenStream, Error> {
+    match kind {
+        ParamType::Generic(name) => Ok(ident(name).into_token_stream()),
+        ParamType::Unit => Ok(quote! {()}),
+        ParamType::U8 | ParamType::Byte => Ok(quote! { u8 }),
+        ParamType::U16 => Ok(quote! { u16 }),
+        ParamType::U32 => Ok(quote! { u32 }),
+        ParamType::U64 => Ok(quote! { u64 }),
+        ParamType::Bool => Ok(quote! { bool }),
+        ParamType::B256 => Ok(quote! { Bits256 }),
+        ParamType::String(len) => Ok(quote! { SizedAsciiString<#len> }),
+        ParamType::Array(t, size) => {
+            let inner = expand_type(t)?;
+            Ok(quote! { [#inner; #size] })
+        }
+        ParamType::Struct(members) => {
+            if members.is_empty() {
+                return Err(Error::InvalidData("struct members can not be empty".into()));
+            }
+            let members = members
+                .iter()
+                .map(expand_type)
+                .collect::<Result<Vec<_>, _>>()?;
+            Ok(quote! { (#(#members,)*) })
+        }
+        ParamType::Enum(members) => {
+            let members = members
+                .param_types()
+                .iter()
+                .map(expand_type)
+                .collect::<Result<Vec<_>, _>>()?;
+            Ok(quote! { (#(#members,)*) })
+        }
+        ParamType::Tuple(members) => {
+            if members.is_empty() {
+                return Err(Error::InvalidData("tuple members can not be empty".into()));
+            }
 
-        let resolved_type1 = ResolvedType {
-            type_name: quote! {(#(#inner_types,)*)},
-            generic_params: vec![],
-            param_type,
-        };
-        return Ok(resolved_type1);
+            let members = members
+                .iter()
+                .map(expand_type)
+                .collect::<Result<Vec<_>, _>>()?;
+            Ok(quote! { (#(#members,)*) })
+        }
     }
-
-    let base_type_name = extract_custom_type_name_from_abi_property(&base_type, None, &types)?;
-    let inner_types = type_application
-        .type_arguments
-        .iter()
-        .flatten()
-        .map(|something| resolve_type(something, types))
-        .collect::<Result<Vec<_>, _>>()?;
-
-    Ok(ResolvedType {
-        type_name: base_type_name.parse().unwrap(),
-        generic_params: inner_types,
-        param_type,
-    })
 }
 
 fn extract_arr_length(base_type: &TypeDeclaration) -> usize {
-    let regex = Regex::new(r"^\[.*;\s*(\d+)]").unwrap();
-    let x = &regex.captures(&base_type.type_field).unwrap()[1];
-    x.parse().unwrap()
+    lazy_static! {
+        static ref RE: Regex = Regex::new(r"^\[.*;\s*(\d+)]").unwrap();
+    }
+    RE.captures(&base_type.type_field).unwrap()[1]
+        .parse()
+        .unwrap()
 }
 
 fn expand_fn_output(
@@ -258,17 +343,8 @@ fn expand_fn_output(
             )
             .expect("couldn't find type");
 
-        let parsed_custom_type_name: TokenStream = extract_custom_type_name_from_abi_property(
-            type_inside_array,
-            Some(
-                type_inside_array
-                    .get_custom_type()
-                    .expect("Custom type in array should be set"),
-            ),
-            types,
-        )?
-        .parse()
-        .expect("couldn't parse custom type name");
+        let parsed_custom_type_name =
+            extract_custom_type_name_from_abi_property(type_inside_array)?;
 
         let len = extract_arr_length(&output_type);
 
@@ -325,8 +401,10 @@ fn expand_tuple_w_custom_types(
 }
 
 fn expand_b256_into_array_form(type_field: &str) -> String {
-    let re = Regex::new(r"\bb256\b").unwrap();
-    re.replace_all(type_field, "Bits256").to_string()
+    lazy_static! {
+        static ref RE: Regex = Regex::new(r"\bb256\b").unwrap();
+    }
+    RE.replace_all(type_field, "Bits256").to_string()
 }
 
 fn remove_words(from: &str, words: &[&str]) -> String {

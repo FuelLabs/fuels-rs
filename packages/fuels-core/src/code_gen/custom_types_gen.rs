@@ -1,5 +1,4 @@
 use crate::code_gen::functions_gen::{resolve_type, ResolvedType};
-use crate::types::expand_type;
 use crate::utils::ident;
 use crate::{try_from_bytes, ParamType, Parameterize, Token, Tokenizable};
 use anyhow::{anyhow, bail};
@@ -9,8 +8,10 @@ use fuels_types::utils::has_array_format;
 use fuels_types::{CustomType, TypeApplication, TypeDeclaration};
 use inflector::Inflector;
 use itertools::Itertools;
+use lazy_static::lazy_static;
 use proc_macro2::{Ident, LexError, TokenStream};
 use quote::{quote, ToTokens};
+use regex::{Captures, Regex};
 use std::collections::{HashMap, HashSet};
 use std::iter::Map;
 use std::slice::Iter;
@@ -45,10 +46,7 @@ pub fn expand_custom_struct(
     prop: &TypeDeclaration,
     types: &HashMap<usize, TypeDeclaration>,
 ) -> Result<TokenStream, Error> {
-    let struct_name =
-        extract_custom_type_name_from_abi_property(prop, Some(CustomType::Struct), types)?;
-
-    let struct_ident = ident(&struct_name);
+    let struct_ident = extract_custom_type_name_from_abi_property(prop)?;
 
     let field_entries = extract_components(&prop, types, true)?;
     let generic_parameters = extract_generic_parameters(&field_entries)?;
@@ -78,9 +76,7 @@ pub fn expand_custom_enum(
     prop: &TypeDeclaration,
     types: &HashMap<usize, TypeDeclaration>,
 ) -> Result<TokenStream, Error> {
-    let enum_name =
-        &extract_custom_type_name_from_abi_property(prop, Some(CustomType::Enum), types)?;
-    let enum_ident = ident(enum_name);
+    let enum_ident = &extract_custom_type_name_from_abi_property(prop)?;
 
     let field_entries = extract_components(&prop, types, false)?;
     let generics = extract_generic_parameters(&field_entries)?;
@@ -410,51 +406,18 @@ fn extract_generic_parameters(field_types: &[Component]) -> Result<Vec<TokenStre
 // A custom type name should be passed to this function as `{struct,enum} $name`,
 pub(crate) fn extract_custom_type_name_from_abi_property(
     prop: &TypeDeclaration,
-    expected: Option<CustomType>,
-    types: &HashMap<usize, TypeDeclaration>,
-) -> Result<String, Error> {
-    let t = types.get(&prop.type_id).expect("couldn't find type id");
-
-    let type_field = match has_array_format(&t.type_field) {
-        // Check for custom type inside array.
-        true => {
-            if let Some([custom_type_in_array]) = prop.components.as_deref() {
-                let c = types
-                    .get(&custom_type_in_array.type_id)
-                    .expect("couldn't find type id");
-
-                c.type_field.clone()
-            } else {
-                panic!("array should have components");
-            }
-        }
-        // If it's not inside an array, return the `{struct,enum} $name`.
-        false => prop.type_field.clone(),
-    };
-
-    // Split `{struct,enum} $name` into `{struct,enum}` and `$name`.
-    let type_field: Vec<&str> = type_field.split_whitespace().collect();
-
-    if type_field.len() != 2 {
-        return Err(Error::InvalidData(
-            r#"The declared type was not in the format `{enum,struct} name`"#
-                .parse()
-                .unwrap(),
-        ));
-    };
-
-    if let Some(expected_type) = expected {
-        if expected_type.to_string() != type_field[0] {
-            return Err(Error::InvalidType(format!(
-                "Expected {} but {} was declared",
-                expected_type.to_string(),
-                type_field[0]
-            )));
-        }
+) -> Result<Ident, Error> {
+    lazy_static! {
+        static ref RE: Regex = Regex::new(r"(?:struct|enum)\s*(.*)").unwrap();
     }
 
-    // Return the `$name`.
-    Ok(type_field[1].to_string())
+    RE.captures(&prop.type_field)
+        .map(|captures| ident(&captures[1]))
+        .ok_or_else(|| {
+            Error::InvalidData(
+                "The declared type was not in the format `(enum|struct) name`".to_string(),
+            )
+        })
 }
 
 // Doing string -> TokenStream -> string isn't pretty but gives us the opportunity to
