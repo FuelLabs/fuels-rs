@@ -2,7 +2,6 @@ use itertools::Itertools;
 use std::collections::HashMap;
 
 use crate::code_gen::bindings::ContractBindings;
-use crate::code_gen::functions_gen::gen_trait_impls;
 use crate::constants::{ADDRESS_SWAY_NATIVE_TYPE, CONTRACT_ID_SWAY_NATIVE_TYPE};
 use crate::source::Source;
 use crate::utils::ident;
@@ -78,7 +77,6 @@ impl Abigen {
         ));
 
         let abi_structs = self.abi_structs()?;
-        let trait_specializations = gen_trait_impls(&self.abi.functions, &self.types)?;
         let abi_enums = self.abi_enums()?;
         let contract_functions = self.functions()?;
 
@@ -174,7 +172,6 @@ impl Abigen {
                 #code
 
                 #abi_structs
-                #trait_specializations
                 #abi_enums
             }
         })

@@ -2,6 +2,7 @@ use crate::code_gen::functions_gen::{resolve_type, ResolvedType};
 use crate::types::expand_type;
 use crate::utils::ident;
 use crate::{try_from_bytes, ParamType, Parameterize, Token, Tokenizable};
+use anyhow::{anyhow, bail};
 use fuels_types::errors::Error;
 use fuels_types::param_types::EnumVariants;
 use fuels_types::utils::has_array_format;
@@ -16,20 +17,25 @@ use std::slice::Iter;
 use std::str::FromStr;
 use syn::parse_macro_input;
 
-#[derive(Debug)]
-struct FieldEntry {
-    pub field_name: String,
+struct Component {
+    pub field_name: Ident,
     pub field_type: ResolvedType,
 }
 
-impl FieldEntry {
-    pub fn from_component(
+impl Component {
+    pub fn new(
         component: &TypeApplication,
         types: &HashMap<usize, TypeDeclaration>,
-    ) -> anyhow::Result<FieldEntry> {
-        let field_name = component.name.to_owned();
-        Ok(FieldEntry {
-            field_name,
+        snake_case: bool,
+    ) -> anyhow::Result<Component> {
+        let field_name = if snake_case {
+            component.name.to_snake_case()
+        } else {
+            component.name.to_owned()
+        };
+
+        Ok(Component {
+            field_name: ident(&field_name),
             field_type: resolve_type(component, types)?,
         })
     }
@@ -44,20 +50,16 @@ pub fn expand_custom_struct(
 
     let struct_ident = ident(&struct_name);
 
-    let components = prop
-        .components
-        .as_ref()
-        .expect("Fail to extract components from custom type");
-
-    let field_entries = extract_field_entries(components, types)?;
-
+    let field_entries = extract_components(&prop, types, true)?;
     let generic_parameters = extract_generic_parameters(&field_entries)?;
 
     let struct_decl = struct_decl(&struct_ident, &field_entries, &generic_parameters);
 
-    let parameterized_impl = parameterized_impl(&field_entries, &struct_ident, &generic_parameters);
+    let parameterized_impl =
+        struct_parameterized_impl(&field_entries, &struct_ident, &generic_parameters);
 
-    let tokenizable_impl = tokenizable_impl(&struct_ident, &field_entries, &generic_parameters);
+    let tokenizable_impl =
+        struct_tokenizable_impl(&struct_ident, &field_entries, &generic_parameters);
 
     let try_from = impl_try_from(&struct_ident, &generic_parameters);
 
@@ -72,85 +74,32 @@ pub fn expand_custom_struct(
     })
 }
 
-// enum SomeEnum<T> {
-//     one(u64),
-//     two(T),
-// }
-// impl<T: Parameterize> Parameterize for SomeEnum<T> {
-//     fn param_type() -> ParamType {
-//         let mut param_types = vec![];
-//         param_types.push(u64::param_type());
-//         param_types.push(<T>::param_type());
-//         let variants = EnumVariants::new(param_types)
-//             .expect("SomeEnum<T> has no variants which isn't allowed!");
-//         ParamType::Enum(variants)
-//     }
-// }
-//
-// impl<T: Tokenizable + Parameterize> Tokenizable for SomeEnum<T> {
-//     fn from_token(token: Token) -> Result<Self, Error>
-//     where
-//         Self: Sized,
-//     {
-//         let gen_err = |msg| {
-//             Error::InvalidData(format!(
-//                 "Error while instantiating SomeEnum<T> from token! {msg}"
-//             ))
-//         };
-//         match token {
-//             Token::Enum(selector) => {
-//                 let (discriminant, variant_token, _) = *selector;
-//                 match discriminant {
-//                     0 => Ok(Self::one(<u64>::from_token(variant_token)?)),
-//                     1 => Ok(Self::two(<T>::from_token(variant_token)?)),
-//                     _ => Err(gen_err(format!(
-//                         "Determinant {discriminant} doesn't point to any of the enums variants."
-//                     ))),
-//                 }
-//             }
-//             _ => Err(gen_err(format!(
-//                 "Given token ({token}) is not of the type Token::Enum!"
-//             ))),
-//         }
-//     }
-//
-//     fn into_token(self) -> Token {
-//         let (discriminant, token) = match self {
-//             SomeEnum::one(inner) => (0, inner.into_token()),
-//             SomeEnum::two(inner) => (1, inner.into_token()),
-//         };
-//
-//         let variants = match Self::param_type() {
-//             ParamType::Enum(variants) => variants,
-//             other => panic!("Calling ::param_type() on a custom enum must return a ParamType::Enum but instead it returned: {}", other)
-//         };
-//
-//         Token::Enum(Box::new((discriminant, token, variants)))
-//     }
-// }
-//
-// impl<T: Tokenizable + Parameterize> TryFrom<&[u8]> for SomeEnum<T> {
-//     type Error = Error;
-//
-//     fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
-//         try_from_bytes(bytes)
-//     }
-// }
-// impl<T: Tokenizable + Parameterize> TryFrom<&Vec<u8>> for SomeEnum<T> {
-//     type Error = Error;
-//
-//     fn try_from(bytes: &Vec<u8>) -> Result<Self, Self::Error> {
-//         try_from_bytes(&bytes)
-//     }
-// }
-//
-// impl<T: Tokenizable + Parameterize> TryFrom<Vec<u8>> for SomeEnum<T> {
-//     type Error = Error;
-//
-//     fn try_from(bytes: Vec<u8>) -> Result<Self, Self::Error> {
-//         try_from_bytes(&bytes)
-//     }
-// }
+pub fn expand_custom_enum(
+    prop: &TypeDeclaration,
+    types: &HashMap<usize, TypeDeclaration>,
+) -> Result<TokenStream, Error> {
+    let enum_name =
+        &extract_custom_type_name_from_abi_property(prop, Some(CustomType::Enum), types)?;
+    let enum_ident = ident(enum_name);
+
+    let field_entries = extract_components(&prop, types, false)?;
+    let generics = extract_generic_parameters(&field_entries)?;
+
+    let enum_def = enum_decl(&enum_ident, &field_entries, &generics);
+    let parameterize_impl = enum_parameterize_impl(&enum_ident, &field_entries, &generics);
+    let tokenize_impl = enum_tokenizable_impl(&enum_ident, &field_entries, &generics);
+    let try_from = impl_try_from(&enum_ident, &generics);
+
+    Ok(quote! {
+        #enum_def
+
+        #parameterize_impl
+
+        #tokenize_impl
+
+        #try_from
+    })
+}
 
 fn impl_try_from(ident: &Ident, generics: &[TokenStream]) -> TokenStream {
     quote! {
@@ -179,25 +128,16 @@ fn impl_try_from(ident: &Ident, generics: &[TokenStream]) -> TokenStream {
     }
 }
 
-pub fn expand_custom_enum(
-    prop: &TypeDeclaration,
-    types: &HashMap<usize, TypeDeclaration>,
-) -> Result<TokenStream, Error> {
-    let enum_name =
-        &extract_custom_type_name_from_abi_property(prop, Some(CustomType::Enum), types)?;
-    let enum_ident = ident(enum_name);
-
-    let enum_components = prop.components.clone().unwrap_or_default();
-    let mut field_entries = extract_field_entries(&enum_components, types)?;
-
-    let generics = extract_generic_parameters(&field_entries)?;
-
+fn enum_decl(
+    enum_ident: &Ident,
+    field_entries: &[Component],
+    generics: &[TokenStream],
+) -> TokenStream {
     let enum_variants = field_entries.iter().map(
-        |FieldEntry {
+        |Component {
              field_name,
              field_type,
          }| {
-            let field_name = ident(field_name);
             let field_type = if let ParamType::Unit = field_type.param_type {
                 quote! {}
             } else {
@@ -210,32 +150,17 @@ pub fn expand_custom_enum(
         },
     );
 
-    let enum_def = quote! {
+    quote! {
         #[derive(Clone, Debug, Eq, PartialEq)]
         pub enum #enum_ident <#(#generics: Tokenizable + Parameterize,)*> {
             #(#enum_variants,)*
         }
-    };
-
-    let parameterize_impl = parameterize_enum_impl(&enum_ident, &field_entries, &generics);
-    let tokenize_impl = tokenizable_enum_impl(&enum_ident, &field_entries, &generics);
-
-    let try_from = impl_try_from(&enum_ident, &generics);
-
-    Ok(quote! {
-        #enum_def
-
-        #parameterize_impl
-
-        #tokenize_impl
-
-        #try_from
-    })
+    }
 }
 
-fn tokenizable_enum_impl(
+fn enum_tokenizable_impl(
     enum_ident: &Ident,
-    field_entries: &[FieldEntry],
+    field_entries: &[Component],
     generics: &[TokenStream],
 ) -> TokenStream {
     let enum_name = enum_ident.to_string();
@@ -243,19 +168,18 @@ fn tokenizable_enum_impl(
     let match_discriminant_from_token = field_entries.iter().enumerate().map(
         |(
             discriminant,
-            FieldEntry {
+            Component {
                 field_name,
                 field_type,
             },
         )| {
-            let value = if matches!(field_type.param_type, ParamType::Unit) {
+            let value = if let ParamType::Unit = field_type.param_type {
                 quote! {}
             } else {
                 let field_type: TokenStream = field_type.into();
                 quote! { <#field_type>::from_token(variant_token)? }
             };
 
-            let field_name = ident(field_name);
             let u8_discriminant = discriminant as u8;
             quote! { #u8_discriminant => Ok(Self::#field_name(#value))}
         },
@@ -264,12 +188,11 @@ fn tokenizable_enum_impl(
     let match_discriminant_into_token = field_entries.iter().enumerate().map(
         |(
             discriminant,
-            FieldEntry {
+            Component {
                 field_name,
                 field_type,
             },
         )| {
-            let field_name = ident(&field_name);
             let u8_discriminant = discriminant as u8;
             if let ParamType::Unit = field_type.param_type {
                 quote! { Self::#field_name() => (#u8_discriminant, ().into_token())}
@@ -322,9 +245,9 @@ fn tokenizable_enum_impl(
     }
 }
 
-fn parameterize_enum_impl(
+fn enum_parameterize_impl(
     enum_ident: &Ident,
-    field_entries: &[FieldEntry],
+    field_entries: &[Component],
     generics: &[TokenStream],
 ) -> TokenStream {
     let param_type_calls = param_type_calls(&field_entries);
@@ -344,10 +267,18 @@ fn parameterize_enum_impl(
 
 fn struct_decl(
     struct_ident: &Ident,
-    field_entries: &Vec<FieldEntry>,
+    field_entries: &Vec<Component>,
     generic_parameters: &Vec<TokenStream>,
 ) -> TokenStream {
-    let fields = fields_decl(&field_entries);
+    let fields = field_entries.iter().map(
+        |(Component {
+             field_name,
+             field_type,
+         })| {
+            let field_type: TokenStream = field_type.into();
+            quote! { pub #field_name: #field_type }
+        },
+    );
 
     quote! {
         #[derive(Clone, Debug, Eq, PartialEq)]
@@ -357,14 +288,34 @@ fn struct_decl(
     }
 }
 
-fn tokenizable_impl(
+fn struct_tokenizable_impl(
     struct_ident: &Ident,
-    field_entries: &[FieldEntry],
+    field_entries: &[Component],
     generic_parameters: &Vec<TokenStream>,
 ) -> TokenStream {
     let struct_name_str = struct_ident.to_string();
-    let from_token_calls = from_token_calls(field_entries);
-    let into_token_calls = into_token_calls(field_entries);
+    let from_token_calls = field_entries
+        .iter()
+        .map(
+            |(Component {
+                 field_name,
+                 field_type,
+             })| {
+                let resolved: TokenStream = field_type.into();
+                quote! {
+                    #field_name: <#resolved>::from_token(next_token()?)?
+                }
+            },
+        )
+        .collect::<Vec<_>>();
+
+    let into_token_calls = field_entries
+        .iter()
+        .map(|Component { field_name, .. }| {
+            quote! {self.#field_name.into_token()}
+        })
+        .collect::<Vec<_>>();
+
     quote! {
         impl <#(#generic_parameters: Tokenizable + Parameterize, )*> Tokenizable for #struct_ident <#(#generic_parameters, )*> {
             fn into_token(self) -> Token {
@@ -390,8 +341,8 @@ fn tokenizable_impl(
     }
 }
 
-fn parameterized_impl(
-    field_entries: &[FieldEntry],
+fn struct_parameterized_impl(
+    field_entries: &[Component],
     struct_ident: &Ident,
     generic_parameters: &[TokenStream],
 ) -> TokenStream {
@@ -407,43 +358,10 @@ fn parameterized_impl(
     }
 }
 
-fn fields_decl(
-    field_entries: &[FieldEntry],
-) -> Map<Iter<FieldEntry>, fn(&FieldEntry) -> TokenStream> {
-    field_entries.iter().map(
-        |(FieldEntry {
-             field_name,
-             field_type,
-         })| {
-            let field_name = ident(&field_name.to_snake_case());
-            let field_type: TokenStream = field_type.into();
-            quote! { pub #field_name: #field_type }
-        },
-    )
-}
-
-fn from_token_calls(field_entries: &[FieldEntry]) -> Vec<TokenStream> {
+fn param_type_calls(field_entries: &[Component]) -> Vec<TokenStream> {
     field_entries
         .iter()
-        .map(
-            |(FieldEntry {
-                 field_name,
-                 field_type,
-             })| {
-                let field_name = ident(&field_name.to_snake_case());
-                let resolved: TokenStream = field_type.clone().into();
-                quote! {
-                    #field_name: <#resolved>::from_token(next_token()?)?
-                }
-            },
-        )
-        .collect()
-}
-
-fn param_type_calls(field_entries: &[FieldEntry]) -> Vec<TokenStream> {
-    field_entries
-        .iter()
-        .map(|FieldEntry { field_type, .. }| {
+        .map(|Component { field_type, .. }| {
             let type_name = &field_type.type_name;
             let parameters = field_type
                 .generic_params
@@ -457,38 +375,36 @@ fn param_type_calls(field_entries: &[FieldEntry]) -> Vec<TokenStream> {
                 quote! { #type_name::<#(#parameters,)*>::param_type() }
             }
         })
-        .collect::<Vec<_>>()
-}
-
-fn into_token_calls(field_entries: &[FieldEntry]) -> Vec<TokenStream> {
-    let into_token_calls = field_entries
-        .iter()
-        .map(|FieldEntry { field_name, .. }| {
-            let field_name = ident(&field_name.to_snake_case());
-            quote! {self.#field_name.into_token()}
-        })
-        .collect::<Vec<_>>();
-    into_token_calls
-}
-
-fn extract_field_entries(
-    components: &Vec<TypeApplication>,
-    types: &HashMap<usize, TypeDeclaration>,
-) -> anyhow::Result<Vec<FieldEntry>> {
-    components
-        .into_iter()
-        .map(|component| FieldEntry::from_component(component, types))
         .collect()
 }
 
-fn extract_generic_parameters(field_types: &[FieldEntry]) -> Result<Vec<TokenStream>, LexError> {
+fn extract_components(
+    type_decl: &TypeDeclaration,
+    types: &HashMap<usize, TypeDeclaration>,
+    snake_case: bool,
+) -> anyhow::Result<Vec<Component>> {
+    let components = match &type_decl.components {
+        Some(components) if !components.is_empty() => Ok(components),
+        _ => Err(anyhow!(
+            "Custom type {} must have at least one component!",
+            type_decl.type_field
+        )),
+    }?;
+
+    components
+        .iter()
+        .map(|component| Component::new(component, types, snake_case))
+        .collect()
+}
+
+fn extract_generic_parameters(field_types: &[Component]) -> Result<Vec<TokenStream>, LexError> {
     field_types
         .iter()
-        .map(|FieldEntry { field_type, .. }| field_type.get_generic_types())
+        .map(|Component { field_type, .. }| field_type.get_generic_types())
         .flatten()
         .unique()
         .map(|arg| arg.parse())
-        .collect::<Result<Vec<TokenStream>, _>>()
+        .collect()
 }
 
 // A custom type name should be passed to this function as `{struct,enum} $name`,

@@ -384,6 +384,7 @@ mod test {
     use fuels_core::constants::BASE_ASSET_ID;
     use fuels_core::parameters::CallParameters;
     use fuels_types::bech32::Bech32ContractId;
+    use fuels_types::param_types::ParamType;
     use rand::Rng;
     use std::slice;
 
@@ -423,7 +424,7 @@ mod test {
                 compute_custom_input_offset: i == 1,
                 variable_outputs: None,
                 external_contracts: vec![],
-                output_param: None,
+                output_param: ParamType::Unit,
             })
             .collect();
 
@@ -773,7 +774,7 @@ mod test {
                 compute_custom_input_offset: false,
                 variable_outputs: None,
                 external_contracts: Default::default(),
-                output_param: None,
+                output_param: ParamType::Unit,
             }
         }
     }

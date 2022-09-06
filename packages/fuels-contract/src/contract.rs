@@ -130,7 +130,7 @@ impl Contract {
         contract_id: Bech32ContractId,
         wallet: &WalletUnlocked,
         signature: Selector,
-        output_param: Option<ParamType>,
+        output_param: ParamType,
         args: &[Token],
     ) -> Result<ContractCallHandler<D>, Error> {
         let encoded_args = ABIEncoder::encode(args).unwrap();
@@ -386,7 +386,7 @@ pub struct ContractCall {
     pub compute_custom_input_offset: bool,
     pub variable_outputs: Option<Vec<Output>>,
     pub external_contracts: Vec<Bech32ContractId>,
-    pub output_param: Option<ParamType>,
+    pub output_param: ParamType,
 }
 
 impl ContractCall {
@@ -549,13 +549,9 @@ where
 
     /// Create a CallResponse from call receipts
     pub fn get_response(&self, mut receipts: Vec<Receipt>) -> Result<CallResponse<D>, Error> {
-        match self.contract_call.output_param.as_ref() {
-            None => Ok(CallResponse::new(D::from_token(Token::Unit)?, receipts)),
-            Some(param_type) => {
-                let token = ContractCall::get_decoded_output(param_type, &mut receipts)?;
-                Ok(CallResponse::new(D::from_token(token)?, receipts))
-            }
-        }
+        let token =
+            ContractCall::get_decoded_output(&self.contract_call.output_param, &mut receipts)?;
+        Ok(CallResponse::new(D::from_token(token)?, receipts))
     }
 }
 
@@ -662,11 +658,9 @@ impl MultiContractCallHandler {
 
         for call in self.contract_calls.as_ref().unwrap().iter() {
             // We only aggregate the tokens if the contract call has an output parameter
-            if let Some(param_type) = call.output_param.as_ref() {
-                let decoded = ContractCall::get_decoded_output(param_type, &mut receipts)?;
+            let decoded = ContractCall::get_decoded_output(&call.output_param, &mut receipts)?;
 
-                final_tokens.push(decoded.clone());
-            }
+            final_tokens.push(decoded.clone());
         }
 
         let tokens_as_tuple = Token::Tuple(final_tokens);
