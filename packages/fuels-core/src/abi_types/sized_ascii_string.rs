@@ -9,14 +9,14 @@ pub struct SizedAsciiString<const LEN: usize> {
 
 impl<const LEN: usize> SizedAsciiString<LEN> {
     pub fn new(data: String) -> Result<Self, Error> {
-        if data.len() != LEN {
-            return Err(Error::InvalidData(format!(
-                "SizedAsciiString<{LEN}> can only be constructed from a String of length {LEN}"
-            )));
-        }
         if !data.is_ascii() {
             return Err(Error::InvalidData(format!(
-                "SizedAsciiString<{LEN}> must be constructed from a string containing only ascii encodable characters. Got: {data}"
+                "SizedAsciiString must be constructed from a string containing only ascii encodable characters. Got: {data}"
+            )));
+        }
+        if data.len() != LEN {
+            return Err(Error::InvalidData(format!(
+                "SizedAsciiString<{LEN}> can only be constructed from a String of length {LEN}. Got: {data}"
             )));
         }
         Ok(Self { data })

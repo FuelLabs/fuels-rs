@@ -3026,7 +3026,9 @@ async fn str_in_array() -> Result<(), Error> {
 }
 
 #[tokio::test]
-#[should_panic(expected = "String data has len ")]
+#[should_panic(
+    expected = "SizedAsciiString<4> can only be constructed from a String of length 4. Got: fuell"
+)]
 async fn strings_must_have_correct_length() {
     abigen!(
         SimpleContract,
@@ -3073,7 +3075,9 @@ async fn strings_must_have_correct_length() {
 }
 
 #[tokio::test]
-#[should_panic(expected = "String data can only have ascii values")]
+#[should_panic(
+    expected = "SizedAsciiString must be constructed from a string containing only ascii encodable characters. Got: fueŁ"
+)]
 async fn strings_must_have_all_ascii_chars() {
     abigen!(
         SimpleContract,
@@ -3120,7 +3124,9 @@ async fn strings_must_have_all_ascii_chars() {
 }
 
 #[tokio::test]
-#[should_panic(expected = "String data has len ")]
+#[should_panic(
+    expected = "SizedAsciiString<4> can only be constructed from a String of length 4. Got: fuell"
+)]
 async fn strings_must_have_correct_length_custom_types() {
     abigen!(
         SimpleContract,
@@ -3202,7 +3208,9 @@ async fn strings_must_have_correct_length_custom_types() {
 }
 
 #[tokio::test]
-#[should_panic(expected = "String data can only have ascii values")]
+#[should_panic(
+    expected = "SizedAsciiString must be constructed from a string containing only ascii encodable characters. Got: fueŁ"
+)]
 async fn strings_must_have_all_ascii_chars_custom_types() {
     abigen!(
         SimpleContract,

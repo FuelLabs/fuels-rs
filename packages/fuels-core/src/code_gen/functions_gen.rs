@@ -69,8 +69,12 @@ pub fn expand_function(
     Ok(quote! {
         #doc
         pub fn #name(&self #input) -> #result {
-            Contract::method_hash(&self.wallet.get_provider().expect("Provider not set up"), self.contract_id.clone(), &self.wallet,
-                #tokenized_signature, #arg).expect("method not found (this should never happen)")
+            let provider = self.wallet.get_provider().expect("Provider not set up");
+            Contract::method_hash(&provider,
+                self.contract_id.clone(),
+                &self.wallet,
+                #tokenized_signature,
+                #arg).expect("method not found (this should never happen)")
         }
     })
 }
@@ -287,15 +291,14 @@ mod tests {
             r#"
             #[doc = "Calls the contract's `some_abi_funct` (0x00000000652399f3) function"]
             pub fn some_abi_funct(&self, s_1: MyStruct1, s_2: MyStruct2) -> ContractCallHandler<MyStruct1> {
+                let provider = self.wallet.get_provider().expect("Provider not set up");
                 Contract::method_hash(
-                    &self.wallet.get_provider().expect("Provider not set up"),
+                    &provider,
                     self.contract_id.clone(),
                     &self.wallet,
                     [0, 0, 0, 0, 101 , 35 , 153 , 243],
-                    Some(ParamType::Struct(vec![ParamType::U64, ParamType::B256])),
                     &[s_1.into_token(), s_2.into_token(),]
-                )
-                .expect("method not found (this should never happen)")
+                ).expect("method not found (this should never happen)")
             }
 
             "#,
