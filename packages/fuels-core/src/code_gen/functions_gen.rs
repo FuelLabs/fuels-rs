@@ -100,9 +100,26 @@ fn expand_selector(selector: Selector) -> TokenStream {
     quote! { [#( #bytes ),*] }
 }
 #[derive(Debug, Clone)]
-struct ResolvedType {
+pub struct ResolvedType {
     pub type_name: TokenStream,
     pub generic_params: Vec<ResolvedType>,
+    pub param_type: ParamType,
+}
+
+impl ResolvedType {
+    pub fn get_generic_types(&self) -> Vec<String> {
+        let mut generic_params = vec![];
+
+        if let ParamType::Generic(name) = &self.param_type {
+            generic_params.push(name.clone());
+        }
+
+        for param in &self.generic_params {
+            generic_params.extend(param.get_generic_types());
+        }
+
+        generic_params
+    }
 }
 
 impl Display for ResolvedType {
@@ -111,34 +128,52 @@ impl Display for ResolvedType {
     }
 }
 
-impl From<ResolvedType> for TokenStream {
-    fn from(resolved_type: ResolvedType) -> Self {
-        let type_name = resolved_type.type_name;
+impl From<&ResolvedType> for TokenStream {
+    fn from(resolved_type: &ResolvedType) -> Self {
+        let type_name = &resolved_type.type_name;
         if resolved_type.generic_params.is_empty() {
             return quote! { #type_name };
         }
 
         let generic_params = resolved_type
             .generic_params
-            .into_iter()
-            .map(|generic_type| TokenStream::from(generic_type))
-            .collect::<Vec<_>>();
+            .iter()
+            .map(|generic_type| TokenStream::from(generic_type));
 
         quote! { #type_name<#( #generic_params ),*> }
     }
 }
+impl From<ResolvedType> for TokenStream {
+    fn from(resolved_type: ResolvedType) -> Self {
+        (&resolved_type).into()
+    }
+}
 
-fn resolve_type(
+pub fn resolve_type(
     type_application: &TypeApplication,
     types: &HashMap<usize, TypeDeclaration>,
 ) -> Result<ResolvedType, Error> {
     let base_type = types.get(&type_application.type_id).unwrap();
+    let param_type = ParamType::from_type_declaration(base_type, types)?;
 
     if !base_type.is_custom_type(&types) {
-        return Ok(ResolvedType {
-            type_name: expand_type(&ParamType::from_type_declaration(base_type, types)?)?,
-            generic_params: vec![],
-        });
+        return if let ParamType::String(len) = param_type {
+            Ok(ResolvedType {
+                type_name: quote! { SizedAsciiString },
+                generic_params: vec![ResolvedType {
+                    type_name: quote! {#len},
+                    generic_params: vec![],
+                    param_type: ParamType::U64,
+                }],
+                param_type,
+            })
+        } else {
+            Ok(ResolvedType {
+                type_name: expand_type(&param_type)?,
+                generic_params: vec![],
+                param_type,
+            })
+        };
     }
 
     if base_type.is_array() {
@@ -156,6 +191,7 @@ fn resolve_type(
         return Ok(ResolvedType {
             type_name: quote! { [#array_type; #len] },
             generic_params: vec![],
+            param_type,
         });
     }
 
@@ -171,6 +207,7 @@ fn resolve_type(
         let resolved_type1 = ResolvedType {
             type_name: quote! {(#(#inner_types,)*)},
             generic_params: vec![],
+            param_type,
         };
         return Ok(resolved_type1);
     }
@@ -186,6 +223,7 @@ fn resolve_type(
     Ok(ResolvedType {
         type_name: base_type_name.parse().unwrap(),
         generic_params: inner_types,
+        param_type,
     })
 }
 
@@ -200,6 +238,7 @@ fn expand_fn_output(
     types: &HashMap<usize, TypeDeclaration>,
 ) -> Result<ResolvedType, Error> {
     let output_type = types.get(&output.type_id).expect("couldn't find type");
+    let param_type = ParamType::from_type_declaration(output_type, types)?;
 
     // If it's a primitive type, simply parse and expand.
     if !output_type.is_custom_type(types) {
@@ -237,12 +276,14 @@ fn expand_fn_output(
         Ok(ResolvedType {
             type_name: quote! { [#parsed_custom_type_name; #len] },
             generic_params: vec![],
+            param_type: Default::default(),
         })
     } else {
         let type_name = expand_tuple_w_custom_types(output_type, types)?;
         Ok(ResolvedType {
             type_name,
             generic_params: vec![],
+            param_type,
         })
     }
 }
@@ -401,7 +442,8 @@ fn gen_parameterize_impl(
 ) -> Result<TokenStream, Error> {
     let base_type = types.get(&input_type.type_id).unwrap();
     if base_type.is_struct_type() {
-        gen_parameterize_impl_struct(input_type, types)
+        // gen_parameterize_impl_struct(input_type, types)
+        Ok(quote! {})
     } else {
         gen_parameterize_impl_enum(input_type, types)
     }
@@ -411,9 +453,10 @@ fn only_types_which_should_generate_impls(
     type_application: &TypeApplication,
     types: &HashMap<usize, TypeDeclaration>,
 ) -> bool {
-    let type_decl = types.get(&type_application.type_id).unwrap();
-    (type_decl.is_struct_type() || type_decl.is_enum_type())
-        && !Abigen::is_sway_native_type(&type_decl.type_field)
+    return false;
+    // let type_decl = types.get(&type_application.type_id).unwrap();
+    // (type_decl.is_struct_type() || type_decl.is_enum_type())
+    //     && !Abigen::is_sway_native_type(&type_decl.type_field)
 }
 
 pub fn extract_nongeneric_type_declarations(
@@ -486,7 +529,8 @@ fn gen_tokenize_impl(
 ) -> Result<TokenStream, Error> {
     let base_type = types.get(&type_application.type_id).unwrap();
     if base_type.is_struct_type() {
-        gen_tokenize_impl_struct(&type_application, &types)
+        // gen_tokenize_impl_struct(&type_application, &types)
+        Ok(quote! {})
     } else {
         gen_tokenize_impl_enum(&type_application, &types)
     }
@@ -879,18 +923,7 @@ fn gen_tokenize_impl_struct(
                         #field_name: <#ty>::from_token(next_token()?)?
                     });
 
-                    let stream = match param_type {
-                        ParamType::String(len) => {
-                            quote! {tokens.push(self.#field_name.into_token())}
-                        }
-                        ParamType::Array(..) => {
-                            quote! {tokens.push(Token::#param_type_string_ident(vec![self.#field_name.into_token()]))}
-                        }
-                        _ => {
-                            quote! {tokens.push(self.#field_name.into_token())}
-                        }
-                    };
-                    struct_fields_tokens.push(stream);
+                    struct_fields_tokens.push(quote! {tokens.push(self.#field_name.into_token())});
                 }
             }
         }
@@ -1629,7 +1662,7 @@ mod tests {
 
         assert_eq!(
             result,
-            "([u8; 32], Someb256WeirdStructName, [u8; 32], [u8; 32])"
+            "(Bits256, Someb256WeirdStructName, Bits256, Bits256)"
         );
     }
 }

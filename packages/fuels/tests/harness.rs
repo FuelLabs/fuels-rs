@@ -18,10 +18,10 @@ use std::process::{Command, ExitStatus};
 
 use fuels_core::parameters::StorageConfiguration;
 use fuels_core::tx::{Address, Bytes32, StorageSlot};
-use fuels_core::{constants::BASE_ASSET_ID, Token};
+use fuels_core::{constants::BASE_ASSET_ID, Parameterize, Token};
 use fuels_core::{try_from_bytes, Tokenizable};
 
-use fuels_core::abi_types::Bits256;
+use fuels_core::abi_types::{Bits256, SizedAsciiString};
 use fuels_core::code_gen::abigen::Abigen;
 use sha2::{Digest, Sha256};
 use std::str::FromStr;
@@ -3471,9 +3471,12 @@ async fn mutl_call_has_same_estimated_and_used_gas() -> Result<(), Error> {
 
 // #[tokio::test]
 // async fn generics_preview() -> Result<(), Error> {
+//     SizedAsciiString::<4usize>::param_type();
 //     let project_path = Path::new("/tmp/generics_project");
 //     abigen_to_project(
+//         // ABI,
 //         // "tests/test_projects/generics/out/debug/generics-abi.json",
+//         // "tests/test_projects/contract_test/out/debug/contract_test-abi.json",
 //         "tests/test_projects/contract_test/out/debug/contract_test-abi.json",
 //         &project_path,
 //         false,
@@ -3483,14 +3486,15 @@ async fn mutl_call_has_same_estimated_and_used_gas() -> Result<(), Error> {
 //
 //     Ok(())
 // }
-//
+
 // #[tokio::test]
 // async fn generics_compiling() -> Result<(), Error> {
 //     let project_path = Path::new("/tmp/generics_project");
 //
 //     abigen_to_project(
-//         // "tests/test_projects/generics/out/debug/generics-abi.json",
-//         "tests/test_projects/contract_test/out/debug/contract_test-abi.json",
+//         "tests/test_projects/generics/out/debug/generics-abi.json",
+//         // "tests/test_projects/contract_test/out/debug/contract_test-abi.json",
+//         // "tests/test_projects/contract_test/out/debug/contract_test-abi.json",
 //         &project_path,
 //         true,
 //     )?;

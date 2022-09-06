@@ -12,7 +12,7 @@ struct AnotherOne<T> {
 }
 
 struct MyStruct<T, K> {
-    foo: T,
+    foo: AnotherOne<AGenericEn<T>>,
     boo: K,
 }
 
@@ -23,14 +23,14 @@ enum AGenericEn<T> {
 
 abi MyContract {
     fn identity(arg: MyStruct<u64, AnotherOne<BraveOne>>) -> MyStruct<u64, AnotherOne<BraveOne>>;
-    fn enum_using(arg: AGenericEn<MyStruct<u64, AnotherOne<BraveOne>>>) -> u64;
+    //fn enum_using(arg: AGenericEn<MyStruct<u64, AnotherOne<BraveOne>>>) -> u64;
 }
 
 impl MyContract for Contract {
-    fn identity(arg: MyStruct<u64, AnotherOne<BraveOne>>) -> MyStruct<u64, AnotherOne<BraveOne>> {
+    fn identity(arg: MyStruct<u32, AnotherOne<BraveOne>>) -> MyStruct<u64, AnotherOne<BraveOne>> {
         arg
     }
-    fn enum_using(arg: AGenericEn<MyStruct<u64, AnotherOne<BraveOne>>>) -> u64 {
-        64
-    }
+    //fn enum_using(arg: AGenericEn<MyStruct<u64, AnotherOne<BraveOne>>>) -> u64 {
+    //    64
+    //}
 }
