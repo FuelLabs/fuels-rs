@@ -5,15 +5,29 @@ mod tests {
 
     #[tokio::test]
     async fn connect_to_fuel_node() {
-        // ANCHOR: connect_to_node
+        // ANCHOR: connect_to_testnet
         use fuels::prelude::*;
+        use fuels::signers::fuel_crypto::SecretKey;
+        use std::str::FromStr;
 
-        // Create the provider using the client.
-        let provider = Provider::connect("127.0.0.1:4000").await.unwrap();
+        // Create a provider pointing to the testnet.
+        let provider = Provider::connect("node-beta-1.fuel.network").await.unwrap();
 
-        // Create the wallet.
-        let _wallet = WalletUnlocked::new_random(Some(provider));
-        // ANCHOR_END: connect_to_node
+        // Setup a private key
+        let secret =
+            SecretKey::from_str("a1447cd75accc6b71a976fd3401a1f6ce318d27ba660b0315ee6ac347bf39568")
+                .unwrap();
+
+        // Create the wallet
+        let wallet = WalletUnlocked::new_from_private_key(secret, Some(provider));
+
+        // Get the wallet address. Used later with the faucet
+        dbg!(wallet.address().to_string());
+        // ANCHOR_END: connect_to_testnet
+
+        // ANCHOR: local_node_address
+        let _provider = Provider::connect("127.0.0.1:4000").await.unwrap();
+        // ANCHOR_END: local_node_address
     }
 
     #[tokio::test]

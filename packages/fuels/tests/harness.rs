@@ -3480,9 +3480,9 @@ async fn testnet_hello_world() -> Result<(), Error> {
     // Create the wallet.
     let wallet = WalletUnlocked::new_from_private_key(secret, Some(provider));
 
-    dbg!(&wallet.address().to_string());
+    dbg!(wallet.address().to_string());
 
-    let params = TxParameters::new(Some(100_000_000), Some(2000), None);
+    let params = TxParameters::new(Some(1), Some(2000), None);
 
     let contract_id = Contract::deploy(
         "tests/test_projects/contract_test/out/debug/contract_test.bin",

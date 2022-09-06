@@ -6,7 +6,7 @@
   - [Setup and Run](./getting-started/setup.md)
   - [Terminology](./getting-started/terminology.md)
   - [Connecting to a Fuel node](./getting-started/connecting.md)
-    - [Connecting to an external Fuel node](./providers/external-node.md)
+    - [Connecting to the Testnet or an external node](./providers/external-node.md)
     - [Running a short-lived Fuel node with the SDK](./providers/short-lived.md)
     - [Querying the blockchain](./providers/querying.md)
   - [Managing wallets](./getting-started/managing-wallets.md)
