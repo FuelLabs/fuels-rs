@@ -1,5 +1,4 @@
 use crate::code_gen::abigen::Abigen;
-use crate::code_gen::custom_types_gen::extract_custom_type_name_from_abi_property;
 use crate::code_gen::docs_gen::expand_doc;
 use crate::code_gen::resolved_type;
 use crate::code_gen::resolved_type::ResolvedType;
