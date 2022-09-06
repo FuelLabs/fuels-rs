@@ -18,7 +18,7 @@ use fuels_core::tx::{Bytes32, ContractId};
 use fuels_core::{
     constants::{BASE_ASSET_ID, DEFAULT_SPENDABLE_COIN_AMOUNT},
     parameters::{CallParameters, TxParameters},
-    Selector, Token, Tokenizable,
+    Parameterize, Selector, Token, Tokenizable,
 };
 use fuels_signers::{
     provider::{Provider, TransactionCost},
@@ -125,12 +125,11 @@ impl Contract {
     /// }
     /// For more details see `code_gen/functions_gen.rs`.
     /// Note that this needs a wallet because the contract instance needs a wallet for the calls
-    pub fn method_hash<D: Tokenizable + Debug>(
+    pub fn method_hash<D: Tokenizable + Parameterize + Debug>(
         provider: &Provider,
         contract_id: Bech32ContractId,
         wallet: &WalletUnlocked,
         signature: Selector,
-        output_param: ParamType,
         args: &[Token],
     ) -> Result<ContractCallHandler<D>, Error> {
         let encoded_args = ABIEncoder::encode(args).unwrap();
@@ -149,7 +148,7 @@ impl Contract {
             compute_custom_input_offset,
             variable_outputs: None,
             external_contracts: vec![],
-            output_param,
+            output_param: D::param_type(),
         };
 
         Ok(ContractCallHandler {

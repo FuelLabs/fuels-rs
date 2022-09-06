@@ -1,4 +1,4 @@
-use crate::code_gen::functions_gen::{resolve_type, ResolvedType};
+use crate::code_gen::resolved_type::{resolve_type, ResolvedType};
 use crate::utils::ident;
 use crate::{try_from_bytes, ParamType, Parameterize, Token, Tokenizable};
 use anyhow::{anyhow, bail};
@@ -396,7 +396,7 @@ fn extract_components(
 fn extract_generic_parameters(field_types: &[Component]) -> Result<Vec<TokenStream>, LexError> {
     field_types
         .iter()
-        .map(|Component { field_type, .. }| field_type.get_generic_types())
+        .map(|Component { field_type, .. }| field_type.get_used_generic_type_names())
         .flatten()
         .unique()
         .map(|arg| arg.parse())

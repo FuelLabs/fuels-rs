@@ -1,6 +1,8 @@
 use crate::code_gen::abigen::Abigen;
 use crate::code_gen::custom_types_gen::extract_custom_type_name_from_abi_property;
 use crate::code_gen::docs_gen::expand_doc;
+use crate::code_gen::resolved_type;
+use crate::code_gen::resolved_type::ResolvedType;
 use crate::utils::{first_four_bytes_of_sha256_hash, ident, safe_ident};
 use crate::{ParamType, Selector};
 use anyhow::anyhow;
@@ -15,6 +17,7 @@ use lazy_static::lazy_static;
 use proc_macro2::{Ident, Literal, TokenStream};
 use quote::{quote, ToTokens};
 use regex::Regex;
+use resolved_type::resolve_type;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::fmt::{Display, Formatter};
 use std::hash::{Hash, Hasher};
@@ -53,8 +56,6 @@ pub fn expand_function(
 
     let tokenized_signature = expand_selector(encoded);
 
-    let resolved_output_type = expand_fn_output(&function.output, types)?;
-
     let (input, arg) = expand_function_arguments(function, types)?;
 
     let doc = expand_doc(&format!(
@@ -63,34 +64,14 @@ pub fn expand_function(
         hex::encode(encoded)
     ));
 
-    let t = types
-        .get(&function.output.type_id)
-        .expect("couldn't find type");
-
-    let param_type = ParamType::from_type_declaration(t, types)?;
-
-    let generics = resolved_output_type
-        .generic_params
-        .iter()
-        .cloned()
-        .map(|gen| TokenStream::from(gen))
-        .collect::<Vec<_>>();
-    let output_type_name = resolved_output_type.type_name.clone();
-
-    let output_param = if generics.is_empty() {
-        quote! { <#output_type_name>::param_type()}
-    } else {
-        quote! { #output_type_name::<#(#generics,)*>::param_type() }
-    };
-
-    let output_type_tokenized: TokenStream = resolved_output_type.into();
+    let output_type_tokenized: TokenStream = resolve_type(&function.output, types)?.into();
     let result = quote! { ContractCallHandler<#output_type_tokenized> };
 
     Ok(quote! {
         #doc
         pub fn #name(&self #input) -> #result {
             Contract::method_hash(&self.wallet.get_provider().expect("Provider not set up"), self.contract_id.clone(), &self.wallet,
-                #tokenized_signature, #output_param, #arg).expect("method not found (this should never happen)")
+                #tokenized_signature, #arg).expect("method not found (this should never happen)")
         }
     })
 }
@@ -99,408 +80,39 @@ fn expand_selector(selector: Selector) -> TokenStream {
     let bytes = selector.iter().copied().map(Literal::u8_unsuffixed);
     quote! { [#( #bytes ),*] }
 }
-#[derive(Debug, Clone)]
-pub struct ResolvedType {
-    pub type_name: TokenStream,
-    pub generic_params: Vec<ResolvedType>,
-    pub param_type: ParamType,
-}
-
-impl ResolvedType {
-    pub fn get_generic_types(&self) -> Vec<String> {
-        let mut generic_params = vec![];
-
-        if let ParamType::Generic(name) = &self.param_type {
-            generic_params.push(name.clone());
-        }
-
-        for param in &self.generic_params {
-            generic_params.extend(param.get_generic_types());
-        }
-
-        generic_params
-    }
-}
-
-impl Display for ResolvedType {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", TokenStream::from(self.clone()).to_string())
-    }
-}
-
-impl From<&ResolvedType> for TokenStream {
-    fn from(resolved_type: &ResolvedType) -> Self {
-        let type_name = &resolved_type.type_name;
-        if resolved_type.generic_params.is_empty() {
-            return quote! { #type_name };
-        }
-
-        let generic_params = resolved_type
-            .generic_params
-            .iter()
-            .map(|generic_type| TokenStream::from(generic_type));
-
-        quote! { #type_name<#( #generic_params ),*> }
-    }
-}
-impl From<ResolvedType> for TokenStream {
-    fn from(resolved_type: ResolvedType) -> Self {
-        (&resolved_type).into()
-    }
-}
-
-pub fn resolve_type(
-    type_application: &TypeApplication,
-    types: &HashMap<usize, TypeDeclaration>,
-) -> Result<ResolvedType, Error> {
-    let recursively_resolve = |type_applications: &Option<Vec<TypeApplication>>| {
-        type_applications
-            .iter()
-            .flatten()
-            .map(|array_type| resolve_type(&array_type, &types))
-            .collect::<Result<Vec<_>, _>>()
-    };
-
-    let base_type = types.get(&type_application.type_id).unwrap();
-    let param_type = ParamType::from_type_declaration(base_type, types)?;
-
-    match &param_type {
-        ParamType::Generic(name) => Ok(ResolvedType {
-            type_name: name.parse().unwrap(),
-            generic_params: vec![],
-            param_type,
-        }),
-        ParamType::U8 => Ok(ResolvedType {
-            type_name: quote! {u8},
-            generic_params: vec![],
-            param_type,
-        }),
-        ParamType::U16 => Ok(ResolvedType {
-            type_name: quote! {u16},
-            generic_params: vec![],
-            param_type,
-        }),
-        ParamType::U32 => Ok(ResolvedType {
-            type_name: quote! {u32},
-            generic_params: vec![],
-            param_type,
-        }),
-        ParamType::U64 => Ok(ResolvedType {
-            type_name: quote! {u64},
-            generic_params: vec![],
-            param_type,
-        }),
-        ParamType::Bool => Ok(ResolvedType {
-            type_name: quote! {bool},
-            generic_params: vec![],
-            param_type,
-        }),
-        ParamType::Byte => Ok(ResolvedType {
-            type_name: quote! {u8},
-            generic_params: vec![],
-            param_type,
-        }),
-        ParamType::B256 => Ok(ResolvedType {
-            type_name: quote! {Bits256},
-            generic_params: vec![],
-            param_type,
-        }),
-        ParamType::Unit => Ok(ResolvedType {
-            type_name: quote! {()},
-            generic_params: vec![],
-            param_type,
-        }),
-        ParamType::Array(_, len) => {
-            let array_components = recursively_resolve(&base_type.components)?;
-
-            let type_inside: TokenStream = match array_components.as_slice() {
-                [single_type] => single_type.into(),
-                _ => {
-                    return Err(Error::InvalidData(format!("Array had multiple components when only a single one is allowed! {array_components:?}")));
-                }
-            };
-
-            Ok(ResolvedType {
-                type_name: quote! { [#type_inside; #len] },
-                generic_params: vec![],
-                param_type,
-            })
-        }
-        ParamType::String(len) => Ok(ResolvedType {
-            type_name: quote! { SizedAsciiString },
-            generic_params: vec![ResolvedType {
-                type_name: quote! {#len},
-                generic_params: vec![],
-                param_type: ParamType::U64,
-            }],
-            param_type,
-        }),
-        ParamType::Struct(_) | ParamType::Enum(_) => {
-            let type_name = extract_custom_type_name_from_abi_property(&base_type)?;
-            let generic_params = recursively_resolve(&type_application.type_arguments)?;
-
-            Ok(ResolvedType {
-                type_name: quote! {#type_name},
-                generic_params,
-                param_type,
-            })
-        }
-        ParamType::Tuple(_) => {
-            let inner_types = recursively_resolve(&base_type.components)?
-                .into_iter()
-                .map(TokenStream::from);
-
-            Ok(ResolvedType {
-                type_name: quote! {(#(#inner_types,)*)},
-                generic_params: vec![],
-                param_type,
-            })
-        }
-    }
-}
-
-/// Expands a [`ParamType`] into a TokenStream.
-/// Used to expand functions when generating type-safe bindings of a JSON ABI.
-pub fn expand_type(kind: &ParamType) -> Result<TokenStream, Error> {
-    match kind {
-        ParamType::Generic(name) => Ok(ident(name).into_token_stream()),
-        ParamType::Unit => Ok(quote! {()}),
-        ParamType::U8 | ParamType::Byte => Ok(quote! { u8 }),
-        ParamType::U16 => Ok(quote! { u16 }),
-        ParamType::U32 => Ok(quote! { u32 }),
-        ParamType::U64 => Ok(quote! { u64 }),
-        ParamType::Bool => Ok(quote! { bool }),
-        ParamType::B256 => Ok(quote! { Bits256 }),
-        ParamType::String(len) => Ok(quote! { SizedAsciiString<#len> }),
-        ParamType::Array(t, size) => {
-            let inner = expand_type(t)?;
-            Ok(quote! { [#inner; #size] })
-        }
-        ParamType::Struct(members) => {
-            if members.is_empty() {
-                return Err(Error::InvalidData("struct members can not be empty".into()));
-            }
-            let members = members
-                .iter()
-                .map(expand_type)
-                .collect::<Result<Vec<_>, _>>()?;
-            Ok(quote! { (#(#members,)*) })
-        }
-        ParamType::Enum(members) => {
-            let members = members
-                .param_types()
-                .iter()
-                .map(expand_type)
-                .collect::<Result<Vec<_>, _>>()?;
-            Ok(quote! { (#(#members,)*) })
-        }
-        ParamType::Tuple(members) => {
-            if members.is_empty() {
-                return Err(Error::InvalidData("tuple members can not be empty".into()));
-            }
-
-            let members = members
-                .iter()
-                .map(expand_type)
-                .collect::<Result<Vec<_>, _>>()?;
-            Ok(quote! { (#(#members,)*) })
-        }
-    }
-}
-
-fn extract_arr_length(base_type: &TypeDeclaration) -> usize {
-    lazy_static! {
-        static ref RE: Regex = Regex::new(r"^\[.*;\s*(\d+)]").unwrap();
-    }
-    RE.captures(&base_type.type_field).unwrap()[1]
-        .parse()
-        .unwrap()
-}
-
-fn expand_fn_output(
-    output: &TypeApplication,
-    types: &HashMap<usize, TypeDeclaration>,
-) -> Result<ResolvedType, Error> {
-    let output_type = types.get(&output.type_id).expect("couldn't find type");
-    let param_type = ParamType::from_type_declaration(output_type, types)?;
-
-    // If it's a primitive type, simply parse and expand.
-    if !output_type.is_custom_type(types) {
-        return resolve_type(&output, &types);
-    }
-
-    // If it's a {struct, enum} as the type of a function's output, use its tokenized name only.
-    if output_type.is_custom_type(&types) {
-        Ok(resolve_type(&output, &types)?.into())
-    } else if output_type.has_custom_type_in_array(types) {
-        let type_inside_array = types
-            .get(
-                &output_type
-                    .components
-                    .as_ref()
-                    .expect("array should have components")[0]
-                    .type_id,
-            )
-            .expect("couldn't find type");
-
-        let parsed_custom_type_name =
-            extract_custom_type_name_from_abi_property(type_inside_array)?;
-
-        let len = extract_arr_length(&output_type);
-
-        Ok(ResolvedType {
-            type_name: quote! { [#parsed_custom_type_name; #len] },
-            generic_params: vec![],
-            param_type: Default::default(),
-        })
-    } else {
-        let type_name = expand_tuple_w_custom_types(output_type, types)?;
-        Ok(ResolvedType {
-            type_name,
-            generic_params: vec![],
-            param_type,
-        })
-    }
-}
-
-fn expand_tuple_w_custom_types(
-    output: &TypeDeclaration,
-    types: &HashMap<usize, TypeDeclaration>,
-) -> Result<TokenStream, Error> {
-    if !output.has_custom_type_in_tuple(types) {
-        panic!("Output is of custom type, but not an enum, struct or enum/struct inside an array/tuple. This should never happen. Output received: {:?}", output);
-    }
-
-    let mut final_signature: String = "(".into();
-    let mut type_strings: Vec<String> = vec![];
-
-    for c in output
-        .components
-        .as_ref()
-        .expect("tuples should have components")
-        .iter()
-    {
-        let type_string = types.get(&c.type_id).unwrap().type_field.clone();
-
-        // If custom type is inside a tuple `(struct | enum <name>, ...)`,
-        // the type signature should be only `(<name>, ...)`.
-        // To do that, we remove the `STRUCT_KEYWORD` and `ENUM_KEYWORD` from it.
-        let keywords_removed = remove_words(&type_string, &[STRUCT_KEYWORD, ENUM_KEYWORD]);
-
-        let tuple_type_signature = expand_b256_into_array_form(&keywords_removed)
-            .parse()
-            .expect("could not parse tuple type signature");
-
-        type_strings.push(tuple_type_signature);
-    }
-
-    final_signature.push_str(&type_strings.join(", "));
-    final_signature.push(')');
-
-    Ok(final_signature.parse().unwrap())
-}
-
-fn expand_b256_into_array_form(type_field: &str) -> String {
-    lazy_static! {
-        static ref RE: Regex = Regex::new(r"\bb256\b").unwrap();
-    }
-    RE.replace_all(type_field, "Bits256").to_string()
-}
-
-fn remove_words(from: &str, words: &[&str]) -> String {
-    words
-        .iter()
-        .fold(from.to_string(), |str_in_construction, word| {
-            str_in_construction.replace(word, "")
-        })
-}
 
 /// Expands the arguments in a function declaration and the same arguments as input
 fn expand_function_arguments(
     fun: &ABIFunction,
     types: &HashMap<usize, TypeDeclaration>,
 ) -> Result<(TokenStream, TokenStream), Error> {
-    let mut args = vec![];
-    let mut call_args = vec![];
+    let resolved_inputs = fun
+        .inputs
+        .iter()
+        .map(|input| resolve_type(input, types))
+        .map_ok(TokenStream::from)
+        .collect::<Result<Vec<_>, _>>()?;
 
-    for fn_type_application in &fun.inputs {
-        // For each [`TypeDeclaration`] in a function input we expand:
-        // 1. The name of the argument;
-        // 2. The type of the argument;
-        // Note that _any_ significant change in the way the JSON ABI is generated
-        // could affect this function expansion.
-        // TokenStream representing the name of the argument
+    let arg_names = fun
+        .inputs
+        .iter()
+        .map(|input| expand_input_name(&input.name))
+        .collect::<Result<Vec<_>, _>>()?;
 
-        let name = expand_input_name(&fn_type_application.name)?;
+    let args = arg_names
+        .iter()
+        .zip(resolved_inputs.iter())
+        .map(|(arg_name, arg_type)| {
+            quote! { #arg_name: #arg_type }
+        });
 
-        let param = types
-            .get(&fn_type_application.type_id)
-            .expect("couldn't find type");
-
-        // TokenStream representing the type of the argument
-        let kind = ParamType::from_type_declaration(param, types)?;
-
-        // If it's a tuple, don't expand it, just use the type signature as it is (minus the string "struct " | "enum ").
-        let tok = if let ParamType::Tuple(_tuple) = &kind {
-            let toks = build_expanded_tuple_params(param, types)
-                .expect("failed to build expanded tuple parameters");
-
-            toks.parse::<TokenStream>().unwrap()
-        } else {
-            resolve_type(&fn_type_application, &types)?.into()
-        };
-
-        // Add the TokenStream to argument declarations
-        args.push(quote! { #name: #tok });
-
-        // This `name` TokenStream is also added to the call arguments
-        call_args.push(name);
-    }
-
-    // The final TokenStream of the argument declaration in a function declaration
-    let args = quote! { #( , #args )* };
-
-    // The final TokenStream of the arguments being passed in a function call
-    // It'll look like `&[my_arg.into_token(), another_arg.into_token()]`
-    // as the [`Contract`] `method_hash` function expects a slice of Tokens
-    // in order to encode the call.
-    let call_args = quote! { &[ #(#call_args.into_token(), )* ] };
-
-    Ok((args, call_args))
-}
-
-// Builds a string "(type_1,type_2,type_3,...,type_n,)"
-fn build_expanded_tuple_params(
-    tuple_param: &TypeDeclaration,
-    types: &HashMap<usize, TypeDeclaration>,
-) -> Result<String, Error> {
-    let mut toks: String = "(".to_string();
-    for type_application in tuple_param
-        .components
-        .as_ref()
-        .expect("tuple parameter should have components")
-    {
-        let component = types
-            .get(&type_application.type_id)
-            .expect("couldn't find type");
-
-        if !component.is_custom_type(types) {
-            let p = ParamType::from_type_declaration(component, types)?;
-            let tok = expand_type(&p)?;
-            toks.push_str(&tok.to_string());
-        } else {
-            let tok: TokenStream = resolve_type(&type_application, &types)?.into();
-
-            toks.push_str(&tok.to_string());
-        }
-        toks.push(',');
-    }
-    toks.push(')');
-    Ok(toks)
+    Ok((
+        quote! { #( , #args )* },
+        quote! { &[ #(#arg_names.into_token(),) * ] },
+    ))
 }
 
 /// Expands a positional identifier string that may be empty.
-///
 /// Note that this expands the parameter name with `safe_ident`, meaning that
 /// identifiers that are reserved keywords get `_` appended to them.
 pub fn expand_input_name(name: &str) -> Result<TokenStream, Error> {
@@ -1122,14 +734,4 @@ mod tests {
 
     //     Ok(())
     // }
-
-    #[test]
-    fn will_not_replace_b256_in_middle_of_word() {
-        let result = expand_b256_into_array_form("(b256, Someb256WeirdStructName, b256, b256)");
-
-        assert_eq!(
-            result,
-            "(Bits256, Someb256WeirdStructName, Bits256, Bits256)"
-        );
-    }
 }
