@@ -4,12 +4,6 @@ use crate::errors::Error;
 use crate::utils::{has_array_format, has_tuple_format};
 use crate::TypeDeclaration;
 
-pub struct FunctionSelector {
-    pub signature: String,
-    pub encoded_selector: String,
-    pub final_selector: Vec<u8>,
-}
-
 /// Builds a string representation of a function selector,
 /// i.e: <fn_name>(<type_1>, <type_2>, ..., <type_n>)
 pub fn build_fn_selector(
