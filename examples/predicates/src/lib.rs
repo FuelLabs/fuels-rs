@@ -101,6 +101,7 @@ mod tests {
                 asset_id,
                 receiver.address(),
                 Some(predicate_data),
+                TxParameters::default(),
             )
             .await?;
 

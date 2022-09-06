@@ -1521,15 +1521,14 @@ async fn test_amount_and_asset_forwarding() -> Result<(), Error> {
     assert_eq!(call_response.unwrap().amount().unwrap(), 1_000_000);
     assert_eq!(call_response.unwrap().asset_id().unwrap(), &BASE_ASSET_ID);
 
-    // TODO: Enable test
-    //let address = wallet.address();
+    let address = wallet.address();
 
     // withdraw some tokens to wallet
-    // instance
-    //     .transfer_coins_to_output(1_000_000, (&id).into(), address.into())
-    //     .append_variable_outputs(1)
-    //     .call()
-    //     .await?;
+    instance
+        .transfer_coins_to_output(1_000_000, (&id).into(), address.into())
+        .append_variable_outputs(1)
+        .call()
+        .await?;
 
     let asset_id = AssetId::from(*id.hash());
     let call_params = CallParameters::new(Some(0), Some(asset_id), None);
@@ -2641,6 +2640,7 @@ async fn predicate_with_multiple_coins() -> Result<(), Error> {
             amount_to_predicate,
             asset_id,
             None,
+            TxParameters::default(),
         )
         .await?;
 
@@ -2692,6 +2692,7 @@ async fn can_call_no_arg_predicate_returns_true() -> Result<(), Error> {
             amount_to_predicate,
             asset_id,
             None,
+            TxParameters::default(),
         )
         .await?;
 
@@ -2743,6 +2744,7 @@ async fn can_call_no_arg_predicate_returns_false() -> Result<(), Error> {
             amount_to_predicate,
             asset_id,
             None,
+            TxParameters::default(),
         )
         .await
         .expect_err("should error");
@@ -2794,6 +2796,7 @@ async fn can_call_predicate_with_u32_data() -> Result<(), Error> {
             amount_to_predicate,
             asset_id,
             Some(predicate_data),
+            TxParameters::default(),
         )
         .await
         .expect_err("should error");
@@ -2817,6 +2820,7 @@ async fn can_call_predicate_with_u32_data() -> Result<(), Error> {
             amount_to_predicate,
             asset_id,
             Some(predicate_data),
+            TxParameters::default(),
         )
         .await?;
 
@@ -2872,6 +2876,7 @@ async fn can_call_predicate_with_address_data() -> Result<(), Error> {
             amount_to_predicate,
             asset_id,
             Some(predicate_data),
+            TxParameters::default(),
         )
         .await?;
 
@@ -2925,6 +2930,7 @@ async fn can_call_predicate_with_struct_data() -> Result<(), Error> {
             amount_to_predicate,
             asset_id,
             Some(predicate_data),
+            TxParameters::default(),
         )
         .await
         .expect_err("should error");
@@ -2948,6 +2954,7 @@ async fn can_call_predicate_with_struct_data() -> Result<(), Error> {
             amount_to_predicate,
             asset_id,
             Some(predicate_data),
+            TxParameters::default(),
         )
         .await?;
 

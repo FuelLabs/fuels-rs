@@ -589,6 +589,7 @@ impl WalletUnlocked {
         asset_id: AssetId,
         to: &Bech32Address,
         data: Option<Vec<u8>>,
+        tx_parameters: TxParameters,
     ) -> Result<Vec<Receipt>, Error> {
         let spendable_predicate_coins = self
             .get_provider()?
@@ -624,7 +625,7 @@ impl WalletUnlocked {
             Output::coin(predicate_address.into(), input_amount - amount, asset_id),
         ];
 
-        let mut tx = Wallet::build_transfer_tx(&inputs, &outputs, TxParameters::default());
+        let mut tx = Wallet::build_transfer_tx(&inputs, &outputs, tx_parameters);
         // we set previous base amount to 0 because it only applies to signed coins, not predicate coins
         self.add_fee_coins(&mut tx, 0, 0).await?;
         self.sign_transaction(&mut tx).await?;
@@ -639,6 +640,7 @@ impl WalletUnlocked {
         amount: u64,
         asset_id: AssetId,
         predicate_data: Option<Vec<u8>>,
+        tx_parameters: TxParameters,
     ) -> Result<Vec<Receipt>, Error> {
         self.spend_predicate(
             predicate_address,
@@ -647,6 +649,7 @@ impl WalletUnlocked {
             asset_id,
             self.address(),
             predicate_data,
+            tx_parameters,
         )
         .await
     }
