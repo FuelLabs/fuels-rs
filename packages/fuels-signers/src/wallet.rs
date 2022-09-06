@@ -782,6 +782,7 @@ pub fn generate_mnemonic_phrase<R: Rng>(rng: &mut R, count: usize) -> Result<Str
 #[cfg(feature = "test-helpers")]
 mod tests {
     use super::*;
+    use core::iter::repeat;
     use fuel_core::service::{Config, FuelService};
     use fuel_gql_client::client::FuelClient;
     use fuel_gql_client::fuel_tx::Address;
@@ -972,6 +973,7 @@ mod tests {
             .pop()
             .unwrap();
         let mut tx = Wallet::build_transfer_tx(&[], &[], TxParameters::default());
+
         wallet.add_fee_coins(&mut tx, 0, 0).await?;
 
         let zero_utxo_id = UtxoId::new(Bytes32::zeroed(), 0);
@@ -1004,30 +1006,27 @@ mod tests {
         let inputs = wallet
             .get_asset_inputs_for_amount(BASE_ASSET_ID, base_amount, 0)
             .await?;
-
         let outputs = wallet.get_asset_outputs_for_amount(
             &Address::zeroed().into(),
             BASE_ASSET_ID,
             base_amount,
         );
-
         let mut tx = Wallet::build_transfer_tx(&inputs, &outputs, TxParameters::default());
+
         wallet.add_fee_coins(&mut tx, base_amount, 0).await?;
 
         let zero_utxo_id = UtxoId::new(Bytes32::zeroed(), 0);
-        let mut expected_inputs: Vec<Input> = (0..3)
-            .map(|_| {
-                Input::coin_signed(
-                    zero_utxo_id,
-                    wallet.address().into(),
-                    20,
-                    BASE_ASSET_ID,
-                    TxPointer::default(),
-                    0,
-                    0,
-                )
-            })
-            .collect();
+        let mut expected_inputs = repeat(Input::coin_signed(
+            zero_utxo_id,
+            wallet.address().into(),
+            20,
+            BASE_ASSET_ID,
+            TxPointer::default(),
+            0,
+            0,
+        ))
+        .take(3)
+        .collect::<Vec<_>>();
         let expected_outputs = vec![
             Output::coin(Address::zeroed(), base_amount, BASE_ASSET_ID),
             Output::change(wallet.address().into(), 0, BASE_ASSET_ID),
