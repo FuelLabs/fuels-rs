@@ -185,7 +185,7 @@ impl LiquidityPool for Contract {
 <p>The first step towards interacting with any contract in the Rust SDK is calling the <code>abigen!</code> macro to generate type-safe Rust bindings for the contract methods:</p>
 <pre><code class="language-rust ignore">        abigen!(
             MyContract,
-            &quot;packages/fuels/tests/test_projects/liquidity_pool/out/debug/liquidity_pool-flat-abi.json&quot;
+            &quot;packages/fuels/tests/test_projects/liquidity_pool/out/debug/liquidity_pool-abi.json&quot;
         );
 </code></pre>
 <p>Next, we set up a wallet with custom-defined assets. We give our wallet some of the contracts <code>BASE_TOKEN</code> and the default asset (required for contract deployment):</p>
