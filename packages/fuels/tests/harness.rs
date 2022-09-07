@@ -2615,7 +2615,7 @@ async fn predicate_with_multiple_coins() -> Result<(), Error> {
             predicate.address(),
             amount_to_predicate,
             asset_id,
-            TxParameters::new(Some(0), None, None),
+            TxParameters::new(Some(1), None, None),
         )
         .await?;
 
@@ -2624,7 +2624,7 @@ async fn predicate_with_multiple_coins() -> Result<(), Error> {
             predicate.address(),
             amount_to_predicate,
             asset_id,
-            TxParameters::new(Some(0), None, None),
+            TxParameters::new(Some(1), None, None),
         )
         .await?;
 
@@ -2640,7 +2640,7 @@ async fn predicate_with_multiple_coins() -> Result<(), Error> {
             amount_to_predicate,
             asset_id,
             None,
-            TxParameters::default(),
+            TxParameters::new(Some(1), None, None),
         )
         .await?;
 
@@ -2648,7 +2648,7 @@ async fn predicate_with_multiple_coins() -> Result<(), Error> {
         .get_asset_balance(receiver.address(), asset_id)
         .await?;
     assert_eq!(
-        receiver_balance_before + amount_to_predicate,
+        receiver_balance_before + amount_to_predicate - 1,
         receiver_balance_after
     );
 
@@ -2676,7 +2676,7 @@ async fn can_call_no_arg_predicate_returns_true() -> Result<(), Error> {
             predicate.address(),
             amount_to_predicate,
             asset_id,
-            TxParameters::new(Some(0), None, None),
+            TxParameters::default(),
         )
         .await?;
 
@@ -2728,7 +2728,7 @@ async fn can_call_no_arg_predicate_returns_false() -> Result<(), Error> {
             predicate.address(),
             amount_to_predicate,
             asset_id,
-            TxParameters::new(Some(0), None, None),
+            TxParameters::default(),
         )
         .await?;
 
@@ -2778,7 +2778,7 @@ async fn can_call_predicate_with_u32_data() -> Result<(), Error> {
             predicate.address(),
             amount_to_predicate,
             asset_id,
-            TxParameters::new(Some(0), None, None),
+            TxParameters::default(),
         )
         .await?;
 
@@ -2856,7 +2856,7 @@ async fn can_call_predicate_with_address_data() -> Result<(), Error> {
             predicate.address(),
             amount_to_predicate,
             asset_id,
-            TxParameters::new(Some(0), None, None),
+            TxParameters::default(),
         )
         .await?;
 
@@ -2912,7 +2912,7 @@ async fn can_call_predicate_with_struct_data() -> Result<(), Error> {
             predicate.address(),
             amount_to_predicate,
             asset_id,
-            TxParameters::new(Some(0), None, None),
+            TxParameters::default(),
         )
         .await?;
 
