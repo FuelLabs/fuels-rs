@@ -1742,7 +1742,7 @@ async fn test_auth_msg_sender_from_sdk() -> Result<(), Error> {
         TxParameters::default(),
         StorageConfiguration::default(),
     )
-    .await?;
+        .await?;
 
     let auth_instance = AuthContractBuilder::new(id.to_string(), wallet.clone()).build();
 
@@ -3482,7 +3482,7 @@ async fn test_input_message() -> Result<(), Error> {
 
     dbg!(&messages);
 
-    let (launched_provider, address) = setup_test_client(coins, None, None, Some(messages)).await;
+    let (launched_provider, address) = setup_test_client(vec![], None, None, Some(messages)).await;
     let connected_provider = Provider::connect(address).await?;
 
     wallet.set_provider(connected_provider);

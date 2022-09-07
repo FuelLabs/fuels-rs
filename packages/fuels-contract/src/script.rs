@@ -69,6 +69,9 @@ impl Script {
         let mut inputs = Self::generate_contract_inputs(a);
         inputs.extend(wallet.get_inputs_for_messages(0).await?);
         // let outputs = vec![Output::change(wallet.address().into(), 0, BASE_ASSET_ID)];
+
+        // let (inputs, outputs) = (vec![], vec![]);
+
         let outputs = vec![Output::contract(
             0,
             Default::default(),
@@ -81,7 +84,6 @@ impl Script {
         //
         // let (inputs, outputs) =
         //     Self::get_transaction_inputs_outputs(calls, wallet.address(), spendable_coins);
-        // }
 
         let mut tx = Transaction::script(
             tx_parameters.gas_price,
@@ -94,9 +96,9 @@ impl Script {
             vec![],
         );
 
-        dbg!("Script -------------------------------------------------------------------");
-        dbg!(tx.clone());
-        dbg!("--------------------------------------------------------------------------");
+        // dbg!("Script -------------------------------------------------------------------");
+        // dbg!(tx.clone());
+        // dbg!("--------------------------------------------------------------------------");
 
         wallet.sign_transaction(&mut tx).await.unwrap();
 

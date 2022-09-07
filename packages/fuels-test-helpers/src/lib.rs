@@ -4,17 +4,16 @@ use std::net::SocketAddr;
 
 #[cfg(feature = "fuel-core-lib")]
 use fuel_core::{
-    chain_config::{ChainConfig, CoinConfig, StateConfig},
+    chain_config::{ChainConfig, CoinConfig, StateConfig, MessageConfig},
     model::{Coin, CoinStatus},
     service::{DbType, FuelService},
 };
-use fuel_core::chain_config::MessageConfig;
 
 #[cfg(feature = "fuel-core-lib")]
 pub use fuel_core::service::Config;
 
 #[cfg(not(feature = "fuel-core-lib"))]
-pub use node::{get_socket_address, new_fuel_node, CoinConfig, Config};
+pub use node::{get_socket_address, new_fuel_node, CoinConfig, Config, MessageConfig};
 
 #[cfg(not(feature = "fuel-core-lib"))]
 pub use fuel_core_interfaces::model::{Coin, CoinStatus};
@@ -133,25 +132,12 @@ pub fn setup_single_message(
     owner: &Bech32Address,
     amount_per_message: u64,
 ) -> Vec<Message> {
-    let mut rng = rand::thread_rng();
-
-    // let message = Message {
-    //     sender: Default::default(),
-    //     recipient: owner.into(),
-    //     owner: owner.into(),
-    //     nonce: 0,
-    //     amount: amount_per_message,
-    //     data: vec![],
-    //     da_height: 0,
-    //     fuel_block_spend: None
-    // };
 
     let message = Message {
         owner: owner.into(),
         amount: amount_per_message,
         ..Default::default()
     };
-
 
     vec![message]
 }
@@ -218,7 +204,7 @@ pub async fn setup_test_client(
     coins: Vec<(UtxoId, Coin)>,
     node_config: Option<Config>,
     consensus_parameters_config: Option<ConsensusParameters>,
-    messages: Option<Vec<(UtxoId, Message)>>
+    messages: Option<Vec<Message>>
 ) -> (FuelClient, SocketAddr) {
     let config = node_config.unwrap_or_else(Config::local_node);
     let requested_port = config.addr.port();
@@ -238,6 +224,7 @@ pub async fn setup_test_client(
             addr: bound_address,
             ..config
         },
+        messages
     )
         .await;
 

@@ -241,9 +241,6 @@ impl Wallet {
 
         let messages = self.get_provider()?.get_messages(&self.address).await?;
 
-        dbg!("client get messages");
-        dbg!(&messages);
-
         let mut inputs = vec![];
 
         for message in messages {
