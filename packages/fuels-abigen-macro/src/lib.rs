@@ -1,6 +1,7 @@
 use fuels_core::code_gen::abigen::Abigen;
 use proc_macro::TokenStream;
 use proc_macro2::Span;
+use quote::quote;
 
 use std::ops::Deref;
 use syn::parse::{Parse, ParseStream, Result as ParseResult};
@@ -16,6 +17,50 @@ pub fn abigen(input: TokenStream) -> TokenStream {
         .expand()
         .unwrap()
         .into()
+}
+
+/// Abigen proc macro definition and helper functions/types.
+#[proc_macro]
+pub fn get_contract_instance(input: TokenStream) -> TokenStream {
+    let args = parse_macro_input!(input as Spanned<ContractArgs>);
+
+    let mut abi_path = "packages/fuels/tests/test_projects/".to_string();
+    abi_path.push_str(&args.abi);
+    abi_path.push_str("/out/debug/");
+    abi_path.push_str(&args.abi);
+    abi_path.push_str("-abi.json");
+
+    let mut bin_path = "tests/test_projects/".to_string();
+    bin_path.push_str(&args.abi);
+    bin_path.push_str("/out/debug/");
+    bin_path.push_str(&args.abi);
+    bin_path.push_str(".bin");
+
+    let mut abigen_token_stream: TokenStream = Abigen::new("MyContract", abi_path)
+        .unwrap()
+        .expand()
+        .unwrap()
+        .into();
+
+    let name = Ident::new(&args.name, Span::call_site());
+
+    let added_token_stream: TokenStream = quote! {
+        let wallet = launch_provider_and_get_wallet().await;
+
+        let contract_id = Contract::deploy(
+            #bin_path,
+            &wallet,
+            TxParameters::default(),
+            StorageConfiguration::default(),
+        )
+        .await?;
+
+        let #name = MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
+    }
+    .into();
+
+    abigen_token_stream.extend(added_token_stream);
+    abigen_token_stream
 }
 
 #[proc_macro]

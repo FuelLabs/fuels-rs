@@ -4,10 +4,10 @@ use fuel_gql_client::fuel_tx::{AssetId, ContractId, Receipt};
 use fuels::contract::contract::MultiContractCallHandler;
 use fuels::contract::predicate::Predicate;
 use fuels::prelude::{
-    abigen, launch_custom_provider_and_get_wallets, launch_provider_and_get_wallet,
-    setup_multiple_assets_coins, setup_single_asset_coins, setup_test_provider, CallParameters,
-    Config, Contract, Error, Provider, Salt, TxParameters, WalletUnlocked, WalletsConfig,
-    DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
+    abigen, get_contract_instance, launch_custom_provider_and_get_wallets,
+    launch_provider_and_get_wallet, setup_multiple_assets_coins, setup_single_asset_coins,
+    setup_test_provider, CallParameters, Config, Contract, Error, Provider, Salt, TxParameters,
+    WalletUnlocked, WalletsConfig, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
 };
 use fuels_core::abi_encoder::ABIEncoder;
 use fuels_core::parameters::StorageConfiguration;
@@ -3510,5 +3510,17 @@ async fn testnet_hello_world() -> Result<(), Error> {
 
     assert_eq!(52, response.value);
 
+    Ok(())
+}
+#[tokio::test]
+async fn simple_test() -> Result<(), Error> {
+    get_contract_instance!(contract_instance, "contract_test");
+
+    let response = contract_instance
+        .initialize_counter(42) // Build the ABI call
+        .call() // Perform the network call
+        .await?;
+
+    assert_eq!(42, response.value);
     Ok(())
 }
