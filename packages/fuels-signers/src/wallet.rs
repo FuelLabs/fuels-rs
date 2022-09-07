@@ -18,6 +18,7 @@ use fuels_types::errors::Error;
 use rand::{CryptoRng, Rng};
 use std::{collections::HashMap, fmt, mem, ops, path::Path, slice};
 use std::any::Any;
+use std::borrow::Borrow;
 use fuel_gql_client::client::schema;
 use thiserror::Error;
 
@@ -239,44 +240,38 @@ impl Wallet {
         };
 
         let messages = self.get_provider()?.get_messages(&self.address).await?;
+
+        dbg!("client get messages");
+        dbg!(&messages);
+
         let mut inputs = vec![];
+
         for message in messages {
 
             let message_id = Input::compute_message_id(
-                &message.sender.0.0,
-                &message.recipient.0.0.into(),
-                message.nonce.0.clone(),
-                &message.owner.0.0.into(),
-                message.amount.0.clone(),
-                as_u8_slice(&message.data)
+                &message.sender.clone().into(),
+                &message.recipient.clone().into(),
+                message.nonce.into(),
+                &message.owner.clone().into(),
+                message.amount.0,
+                as_u8_slice(message.data.borrow())
             );
 
             let input_messages = Input::message_signed(
                 message_id,
                 message.sender.into(),
                 message.recipient.into(),
-                message.amount.into(),
-                message.nonce.into(),
+                message.amount.0,
+                0,
                 message.owner.into(),
                 witness_index,
                 vec![]
             );
             inputs.push(input_messages);
         }
-        Ok(inputs)
-    }
 
-    pub fn get_asset_outputs_for_messages(
-        &self,
-        to: &Bech32Address,
-        amount: u64,
-    ) -> Vec<Output> {
-        vec![
-            Output::message(to.into(), amount),
-            // Note that the change will be computed by the node.
-            // Here we only have to tell the node who will own the change and its asset ID.
-            // Output::change((&self.address).into(), 0, asset_id),
-        ]
+
+        Ok(inputs)
     }
 
     /// Unlock the wallet with the given `private_key`.

@@ -94,22 +94,8 @@ impl Provider {
             ..
         } = self.estimate_transaction_cost(tx, Some(tolerance)).await?;
 
-        // println!("-------------------XOXO------------------------------------------------------\n");
-        // println!("gas_used: {:?} min_gas_price: {:?} spend_message: {:?}", gas_used, min_gas_price, spend_message);
-        // println!("tx.gas_price(): {:?} tx.gas_limit: {:?}", tx.gas_price(), tx.gas_limit());
-
-        // println!("-------------------XOXO------------------------------------------------------\n");
-        // println!("{:?} \n", tx.inputs());
-
-        // println!("M: {:?}", tx.inputs()[1]);
-        // println!("-------------------XOXO------------------------------------------------------\n");
-        // println!("C: {:?}", tx.inputs()[0]);
-
-
         if spend_message {
-            // println!("{:?}", tx.inputs().get(0));
-            // println!("{:?}", tx.inputs().get(1));
-            // println!("{:?}", tx.inputs().get(2));
+
         } else {
             if gas_used > tx.gas_limit() {
                 return Err(Error::ProviderError(format!(

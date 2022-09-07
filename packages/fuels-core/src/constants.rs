@@ -4,6 +4,7 @@ use fuel_types::AssetId;
 pub const DEFAULT_GAS_LIMIT: u64 = 1_000_000;
 pub const DEFAULT_GAS_PRICE: u64 = 0;
 pub const DEFAULT_MATURITY: u64 = 0;
+pub const DEFAULT_SPEND_MESSAGE: bool = false;
 // ANCHOR_END: default_tx_parameters
 
 // ANCHOR: default_call_parameters

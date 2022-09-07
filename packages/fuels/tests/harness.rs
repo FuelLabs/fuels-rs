@@ -1,3 +1,4 @@
+use std::borrow::Borrow;
 use fuel_core::service::Config as CoreConfig;
 use fuel_core::service::FuelService;
 use fuel_gql_client::fuel_tx::{AssetId, ContractId, Receipt};
@@ -1390,7 +1391,7 @@ async fn test_gas_errors() -> Result<(), Error> {
     let gas_limit = 100;
     let contract_instace_call = contract_instance
         .initialize_counter(42) // Build the ABI call
-        .tx_params(TxParameters::new(None, Some(gas_limit), None));
+        .tx_params(TxParameters::new(None, Some(gas_limit), None, None));
 
     //  Test that the call will use more gas than the gas limit
     let gas_used = contract_instace_call
@@ -1410,7 +1411,7 @@ async fn test_gas_errors() -> Result<(), Error> {
     // Test for insufficient base asset amount to pay for the transaction fee
     let response = contract_instance
         .initialize_counter(42) // Build the ABI call
-        .tx_params(TxParameters::new(Some(100_000_000_000), None, None))
+        .tx_params(TxParameters::new(Some(100_000_000_000), None, None, None))
         .call()
         .await
         .expect_err("should error");
@@ -1443,7 +1444,7 @@ async fn test_call_param_gas_errors() -> Result<(), Error> {
     // Transaction gas_limit is sufficient, call gas_forwarded is too small
     let response = contract_instance
         .initialize_counter(42)
-        .tx_params(TxParameters::new(None, Some(1000), None))
+        .tx_params(TxParameters::new(None, Some(1000), None, None))
         .call_params(CallParameters::new(None, None, Some(1)))
         .call()
         .await
@@ -1455,7 +1456,7 @@ async fn test_call_param_gas_errors() -> Result<(), Error> {
     // Call params gas_forwarded exceeds transaction limit
     let response = contract_instance
         .initialize_counter(42)
-        .tx_params(TxParameters::new(None, Some(1), None))
+        .tx_params(TxParameters::new(None, Some(1), None, None))
         .call_params(CallParameters::new(None, None, Some(1000)))
         .call()
         .await
@@ -1499,7 +1500,7 @@ async fn test_amount_and_asset_forwarding() -> Result<(), Error> {
         .await?;
     assert_eq!(balance_response.value, 5_000_000);
 
-    let tx_params = TxParameters::new(None, Some(1_000_000), None);
+    let tx_params = TxParameters::new(None, Some(1_000_000), None, None);
     // Forward 1_000_000 coin amount of base asset_id
     // this is a big number for checking that amount can be a u64
     let call_params = CallParameters::new(Some(1_000_000), None, None);
@@ -1534,7 +1535,7 @@ async fn test_amount_and_asset_forwarding() -> Result<(), Error> {
 
     let asset_id = AssetId::from(*id.hash());
     let call_params = CallParameters::new(Some(0), Some(asset_id), None);
-    let tx_params = TxParameters::new(None, Some(1_000_000), None);
+    let tx_params = TxParameters::new(None, Some(1_000_000), None, None);
 
     let response = instance
         .get_msg_amount()
@@ -3302,7 +3303,7 @@ async fn test_connect_wallet() -> anyhow::Result<()> {
 
     // pay for call with wallet_1
     let contract_instance = MyContractBuilder::new(id.to_string(), wallet_1.clone()).build();
-    let tx_params = TxParameters::new(Some(10), Some(10000), None);
+    let tx_params = TxParameters::new(Some(10), Some(10000), None, None);
     contract_instance
         .initialize_counter(42)
         .tx_params(tx_params)
@@ -3360,7 +3361,7 @@ async fn contract_call_fee_estimation() -> Result<(), Error> {
 
     let estimated_transaction_cost = contract_instance
         .initialize_counter(42) // Build the ABI call
-        .tx_params(TxParameters::new(Some(gas_price), Some(gas_limit), None))
+        .tx_params(TxParameters::new(Some(gas_price), Some(gas_limit), None, None))
         .estimate_transaction_cost(Some(tolerance)) // Perform the network call
         .await?;
 
@@ -3479,8 +3480,8 @@ async fn test_input_message() -> Result<(), Error> {
         DEFAULT_COIN_AMOUNT,
     );
 
-    // println!("{:?} \n", messages);
-    // owner is address
+    dbg!(&messages);
+
     let (launched_provider, address) = setup_test_client(coins, None, None, Some(messages)).await;
     let connected_provider = Provider::connect(address).await?;
 
@@ -3489,29 +3490,19 @@ async fn test_input_message() -> Result<(), Error> {
     let contract_id = Contract::deploy(
         "tests/test_projects/contract_test/out/debug/contract_test.bin",
         &wallet,
-        TxParameters::default(),
+        TxParameters::new(None, None, None, Some(true)),
         StorageConfiguration::default(),
     )
         .await?;
-
+    dbg!(&contract_id);
     let contract_instance_connected =
         MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
 
     let response = contract_instance_connected
         .initialize_counter(42) // Build the ABI call
-        .call_spend_message() // Perform the network call
+        .call()
         .await?;
     assert_eq!(42, response.value);
-    //
-    // wallet.set_provider(launched_provider);
-    // let contract_instance_launched =
-    //     MyContractBuilder::new(contract_id.to_string(), wallet).build();
-    //
-    // let response = contract_instance_launched
-    //     .increment_counter(10)
-    //     .call()
-    //     .await?;
-    // assert_eq!(52, response.value);
-    assert!(false);
+
     Ok(())
 }

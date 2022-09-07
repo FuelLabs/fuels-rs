@@ -327,7 +327,8 @@ impl Contract {
             // Note that the change will be computed by the node.
             // Here we only have to tell the node who will own the change and its asset ID.
             // For now we use the BASE_ASSET_ID constant
-            Output::change(wallet.address().into(), 0, BASE_ASSET_ID),
+
+            // Output::change(wallet.address().into(), 0, BASE_ASSET_ID),
         ];
 
         // The first witness is the bytecode we're deploying.
@@ -336,22 +337,19 @@ impl Contract {
         let coin_witness_index = 1;
 
         let mut inputs= vec![];
-        let coins = wallet
-            .get_asset_inputs_for_amount(
-                AssetId::default(),
-                DEFAULT_SPENDABLE_COIN_AMOUNT,
-                coin_witness_index,
-            )
-            .await?;
-        inputs.extend(coins);
+        // let coins = wallet
+        //     .get_asset_inputs_for_amount(
+        //         AssetId::default(),
+        //         DEFAULT_SPENDABLE_COIN_AMOUNT,
+        //         coin_witness_index,
+        //     )
+        //     .await?;
+        // inputs.extend(coins);
 
         let messages_witness_index = 1;
         let messages = wallet.get_inputs_for_messages(messages_witness_index).await?;
 
         inputs.extend(messages);
-
-        // println!("{:?}", inputs[0]);
-        // println!("{:?}", inputs[1]);
 
         let tx = Transaction::create(
             params.gas_price,
@@ -364,6 +362,9 @@ impl Contract {
             outputs,
             witnesses,
         );
+
+        // dbg!("Contract deploy");
+        // dbg!(tx.clone());
 
         Ok((tx, contract_id.into()))
     }

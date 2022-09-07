@@ -1,3 +1,4 @@
+use std::borrow::Borrow;
 use anyhow::Result;
 use fuel_gql_client::fuel_tx::{ConsensusParameters, Receipt, Transaction};
 use fuel_gql_client::fuel_tx::{Input, Output, TxPointer, UtxoId};
@@ -8,7 +9,7 @@ use fuel_gql_client::fuel_vm::{consts::REG_ONE, prelude::Opcode};
 use itertools::{chain, Itertools};
 
 use fuel_gql_client::client::schema::coin::Coin;
-use fuels_core::constants::DEFAULT_SPENDABLE_COIN_AMOUNT;
+use fuels_core::constants::{BASE_ASSET_ID, DEFAULT_SPENDABLE_COIN_AMOUNT};
 use fuels_core::parameters::TxParameters;
 use fuels_signers::provider::Provider;
 use fuels_signers::{Signer, WalletUnlocked};
@@ -17,6 +18,7 @@ use fuels_types::{constants::WORD_SIZE, errors::Error};
 use futures::{stream, StreamExt};
 use std::collections::HashSet;
 use std::iter;
+use fuels_types::function_selector::build_fn_selector;
 
 use crate::contract::ContractCall;
 
@@ -61,10 +63,25 @@ impl Script {
 
         let script = Self::get_instructions(calls, call_param_offsets);
 
-        let spendable_coins = Self::get_spendable_coins(wallet, calls).await?;
+        let contract_id: ContractId = calls[0].contract_id.clone().into();
+        let a:HashSet<ContractId> = HashSet::from_iter(vec![contract_id].into_iter());
 
-        let (inputs, outputs) =
-            Self::get_transaction_inputs_outputs(calls, wallet.address(), spendable_coins);
+        let mut inputs = Self::generate_contract_inputs(a);
+        inputs.extend(wallet.get_inputs_for_messages(0).await?);
+        // let outputs = vec![Output::change(wallet.address().into(), 0, BASE_ASSET_ID)];
+        let outputs = vec![Output::contract(
+            0,
+            Default::default(),
+            Default::default()
+        )];
+
+        // if !tx_parameters.spend_message {
+
+        // let spendable_coins = Self::get_spendable_coins(wallet, calls).await?;
+        //
+        // let (inputs, outputs) =
+        //     Self::get_transaction_inputs_outputs(calls, wallet.address(), spendable_coins);
+        // }
 
         let mut tx = Transaction::script(
             tx_parameters.gas_price,
@@ -76,6 +93,11 @@ impl Script {
             outputs,
             vec![],
         );
+
+        dbg!("Script -------------------------------------------------------------------");
+        dbg!(tx.clone());
+        dbg!("--------------------------------------------------------------------------");
+
         wallet.sign_transaction(&mut tx).await.unwrap();
 
         Ok(Script::new(tx))

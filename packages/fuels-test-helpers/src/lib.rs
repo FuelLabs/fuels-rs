@@ -135,16 +135,23 @@ pub fn setup_single_message(
 ) -> Vec<Message> {
     let mut rng = rand::thread_rng();
 
+    // let message = Message {
+    //     sender: Default::default(),
+    //     recipient: owner.into(),
+    //     owner: owner.into(),
+    //     nonce: 0,
+    //     amount: amount_per_message,
+    //     data: vec![],
+    //     da_height: 0,
+    //     fuel_block_spend: None
+    // };
+
     let message = Message {
-        sender: Default::default(),
-        recipient: owner.into(),
         owner: owner.into(),
-        nonce: 0,
         amount: amount_per_message,
-        data: vec![],
-        da_height: 0,
-        fuel_block_spend: None
+        ..Default::default()
     };
+
 
     vec![message]
 }
@@ -169,7 +176,7 @@ pub async fn setup_test_client(
             amount: coin.amount,
             asset_id: coin.asset_id,
         })
-        .collect();
+        .collect::<Vec<_>>();
 
     let message_config = messages.unwrap_or_default().into_iter().map(|message|
         MessageConfig {
@@ -189,7 +196,8 @@ pub async fn setup_test_client(
         chain_conf: ChainConfig {
             initial_state: Some(StateConfig {
                 messages: Some(message_config),
-                coins: Some(coin_configs),
+                // coins: Some(coin_configs),
+                coins: None,
                 ..StateConfig::default()
             }),
             transaction_parameters: consensus_parameters_config.unwrap_or_default(),
