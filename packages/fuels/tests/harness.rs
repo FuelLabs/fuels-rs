@@ -42,7 +42,7 @@ async fn compile_bindings_from_contract_file() {
     // The generated bindings can be accessed through `SimpleContract`.
     abigen!(
         SimpleContract,
-        "packages/fuels/tests/takes_ints_returns_bool-flat-abi.json",
+        "packages/fuels/tests/takes_ints_returns_bool-abi.json",
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -962,7 +962,7 @@ async fn type_safe_output_values() -> Result<(), Error> {
     // The generated bindings can be accessed through `SimpleContract`.
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/contract_output_test/out/debug/contract_output_test-flat-abi.json"
+        "packages/fuels/tests/test_projects/contract_output_test/out/debug/contract_output_test-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -1005,7 +1005,7 @@ async fn call_with_structs() -> Result<(), Error> {
     // ANCHOR: struct_generation
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/complex_types_contract/out/debug/contract_test-flat-abi.json"
+        "packages/fuels/tests/test_projects/complex_types_contract/out/debug/contract_test-abi.json"
     );
 
     // Here we can use `CounterConfig`, a struct originally
@@ -1047,7 +1047,7 @@ async fn call_with_empty_return() -> Result<(), Error> {
     // The generated bindings can be accessed through `MyContract`.
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/call_empty_return/out/debug/contract_test-flat-abi.json"
+        "packages/fuels/tests/test_projects/call_empty_return/out/debug/contract_test-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -1073,7 +1073,7 @@ async fn call_with_empty_return() -> Result<(), Error> {
 async fn abigen_different_structs_same_arg_name() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/two_structs/out/debug/two_structs-flat-abi.json",
+        "packages/fuels/tests/test_projects/two_structs/out/debug/two_structs-abi.json",
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -1105,7 +1105,7 @@ async fn abigen_different_structs_same_arg_name() -> Result<(), Error> {
 async fn test_reverting_transaction() -> Result<(), Error> {
     abigen!(
         RevertingContract,
-        "packages/fuels/tests/test_projects/revert_transaction_error/out/debug/capture_revert_transaction_error-flat-abi.json"
+        "packages/fuels/tests/test_projects/revert_transaction_error/out/debug/capture_revert_transaction_error-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -1130,7 +1130,7 @@ async fn test_reverting_transaction() -> Result<(), Error> {
 async fn multiple_read_calls() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/multiple_read_calls/out/debug/demo-flat-abi.json"
+        "packages/fuels/tests/test_projects/multiple_read_calls/out/debug/demo-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -1165,7 +1165,7 @@ async fn test_methods_typeless_argument() -> Result<(), Error> {
     // The generated bindings can be accessed through `MyContract`.
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/empty_arguments/out/debug/method_four_arguments-flat-abi.json"
+        "packages/fuels/tests/test_projects/empty_arguments/out/debug/method_four_arguments-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -1192,7 +1192,7 @@ async fn test_methods_typeless_argument() -> Result<(), Error> {
 async fn test_large_return_data() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/large_return_data/out/debug/contract_test-flat-abi.json"
+        "packages/fuels/tests/test_projects/large_return_data/out/debug/contract_test-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -1252,7 +1252,7 @@ async fn test_large_return_data() -> Result<(), Error> {
 async fn test_provider_launch_and_connect() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json"
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
 
     let mut wallet = WalletUnlocked::new_random(None);
@@ -1302,12 +1302,12 @@ async fn test_contract_calling_contract() -> Result<(), Error> {
     // Tests a contract call that calls another contract (FooCaller calls FooContract underneath)
     abigen!(
         FooContract,
-        "packages/fuels/tests/test_projects/foo_contract/out/debug/foo_contract-flat-abi.json"
+        "packages/fuels/tests/test_projects/foo_contract/out/debug/foo_contract-abi.json"
     );
 
     abigen!(
         FooCaller,
-        "packages/fuels/tests/test_projects/foo_caller_contract/out/debug/foo_caller_contract-flat-abi.json"
+        "packages/fuels/tests/test_projects/foo_caller_contract/out/debug/foo_caller_contract-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -1358,7 +1358,7 @@ async fn test_contract_calling_contract() -> Result<(), Error> {
 async fn test_gas_errors() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json"
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
 
     let mut wallet = WalletUnlocked::new_random(None);
@@ -1423,7 +1423,7 @@ async fn test_gas_errors() -> Result<(), Error> {
 async fn test_call_param_gas_errors() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json"
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -1468,7 +1468,7 @@ async fn test_call_param_gas_errors() -> Result<(), Error> {
 async fn test_amount_and_asset_forwarding() -> Result<(), Error> {
     abigen!(
         TestFuelCoinContract,
-        "packages/fuels/tests/test_projects/token_ops/out/debug/token_ops-flat-abi.json"
+        "packages/fuels/tests/test_projects/token_ops/out/debug/token_ops-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -1562,7 +1562,7 @@ async fn test_amount_and_asset_forwarding() -> Result<(), Error> {
 async fn test_multiple_args() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json"
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -1595,7 +1595,7 @@ async fn test_multiple_args() -> Result<(), Error> {
 async fn test_tuples() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/tuples/out/debug/tuples-flat-abi.json"
+        "packages/fuels/tests/test_projects/tuples/out/debug/tuples-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -1651,7 +1651,7 @@ async fn test_tuples() -> Result<(), Error> {
 async fn test_array() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json"
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -1683,7 +1683,7 @@ async fn test_arrays_with_custom_types() -> Result<(), Error> {
     // The generated bindings can be accessed through `MyContract`.
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json"
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -1728,7 +1728,7 @@ async fn test_arrays_with_custom_types() -> Result<(), Error> {
 async fn test_auth_msg_sender_from_sdk() -> Result<(), Error> {
     abigen!(
         AuthContract,
-        "packages/fuels/tests/test_projects/auth_testing_contract/out/debug/auth_testing_contract-flat-abi.json"
+        "packages/fuels/tests/test_projects/auth_testing_contract/out/debug/auth_testing_contract-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -1758,7 +1758,7 @@ async fn workflow_enum_inside_struct() -> Result<(), Error> {
     abigen!(
         MyContract,
         "packages/fuels/tests/test_projects/enum_inside_struct/out/debug\
-        /enum_inside_struct-flat-abi.json"
+        /enum_inside_struct-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -1793,7 +1793,7 @@ async fn workflow_enum_inside_struct() -> Result<(), Error> {
 async fn test_logd_receipts() -> Result<(), Error> {
     abigen!(
         LoggingContract,
-        "packages/fuels/tests/test_projects/contract_logdata/out/debug/contract_logdata-flat-abi.json"
+        "packages/fuels/tests/test_projects/contract_logdata/out/debug/contract_logdata-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -1895,7 +1895,7 @@ async fn test_wallet_balance_api() -> Result<(), Error> {
 async fn sway_native_types_support() -> Result<(), Box<dyn std::error::Error>> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/sway_native_types/out/debug/sway_native_types-flat-abi.json"
+        "packages/fuels/tests/test_projects/sway_native_types/out/debug/sway_native_types-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -1931,7 +1931,7 @@ async fn sway_native_types_support() -> Result<(), Box<dyn std::error::Error>> {
 async fn test_transaction_script_workflow() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json"
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -1964,7 +1964,7 @@ async fn enum_coding_w_variable_width_variants() -> Result<(), Error> {
     abigen!(
         EnumTesting,
         "packages/fuels/tests/test_projects/enum_encoding/out/debug\
-        /enum_encoding-flat-abi.json"
+        /enum_encoding-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -2008,7 +2008,7 @@ async fn enum_coding_w_unit_enums() -> Result<(), Error> {
     abigen!(
         EnumTesting,
         "packages/fuels/tests/test_projects/enum_encoding/out/debug\
-        /enum_encoding-flat-abi.json"
+        /enum_encoding-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -2050,7 +2050,7 @@ async fn enum_as_input() -> Result<(), Error> {
     abigen!(
         EnumTesting,
         "packages/fuels/tests/test_projects/enum_as_input/out/debug\
-        /enum_as_input-flat-abi.json"
+        /enum_as_input-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -2100,7 +2100,7 @@ async fn nested_structs() -> Result<(), Error> {
     abigen!(
         NestedStructs,
         "packages/fuels/tests/test_projects/nested_structs/out/debug\
-        /nested_structs-flat-abi.json"
+        /nested_structs-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -2160,7 +2160,7 @@ async fn nested_structs() -> Result<(), Error> {
 async fn test_multi_call() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json"
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -2196,7 +2196,7 @@ async fn test_multi_call() -> Result<(), Error> {
 async fn test_multi_call_script_workflow() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json"
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -2237,7 +2237,7 @@ async fn test_multi_call_script_workflow() -> Result<(), Error> {
 async fn test_storage_initialization() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/contract_storage_test/out/debug/contract_storage_test-flat-abi.json"
+        "packages/fuels/tests/test_projects/contract_storage_test/out/debug/contract_storage_test-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -2277,7 +2277,7 @@ async fn can_use_try_into_to_construct_struct_from_bytes() -> Result<(), Error> 
     abigen!(
         MyContract,
         "packages/fuels/tests/test_projects/enum_inside_struct/out/debug\
-        /enum_inside_struct-flat-abi.json"
+        /enum_inside_struct-abi.json"
     );
     let cocktail_in_bytes: Vec<u8> = vec![
         0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 3,
@@ -2308,7 +2308,7 @@ async fn can_use_try_into_to_construct_enum_from_bytes() -> Result<(), Error> {
     abigen!(
         MyContract,
         "packages/fuels/tests/test_projects/enum_inside_struct/out/debug\
-        /enum_inside_struct-flat-abi.json"
+        /enum_inside_struct-abi.json"
     );
     // ANCHOR: manual_decode
     let shaker_in_bytes: Vec<u8> = vec![0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 2];
@@ -2337,7 +2337,7 @@ async fn type_inside_enum() -> Result<(), Error> {
     abigen!(
         MyContract,
         "packages/fuels/tests/test_projects/type_inside_enum/out/debug\
-        /type_inside_enum-flat-abi.json"
+        /type_inside_enum-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -2394,7 +2394,7 @@ async fn type_inside_enum() -> Result<(), Error> {
 async fn test_init_storage_automatically() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/contract_storage_test/out/debug/contract_storage_test-flat-abi.json"
+        "packages/fuels/tests/test_projects/contract_storage_test/out/debug/contract_storage_test-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -2433,7 +2433,7 @@ async fn test_init_storage_automatically() -> Result<(), Error> {
 async fn test_init_storage_automatically_bad_json_path() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/contract_storage_test/out/debug/contract_storage_test-flat-abi.json"
+        "packages/fuels/tests/test_projects/contract_storage_test/out/debug/contract_storage_test-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -2457,7 +2457,7 @@ async fn test_init_storage_automatically_bad_json_path() -> Result<(), Error> {
 async fn contract_method_call_respects_maturity() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/transaction_block_height/out/debug/transaction_block_height-flat-abi.json"
+        "packages/fuels/tests/test_projects/transaction_block_height/out/debug/transaction_block_height-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -2489,7 +2489,7 @@ async fn contract_method_call_respects_maturity() -> Result<(), Error> {
 async fn contract_deployment_respects_maturity() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/transaction_block_height/out/debug/transaction_block_height-flat-abi.json"
+        "packages/fuels/tests/test_projects/transaction_block_height/out/debug/transaction_block_height-abi.json"
     );
 
     let config = Config {
@@ -2553,7 +2553,7 @@ async fn can_increase_block_height() -> Result<(), Error> {
 async fn can_handle_sway_function_called_new() -> anyhow::Result<()> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/collision_in_fn_names/out/debug/collision_in_fn_names-flat-abi.json"
+        "packages/fuels/tests/test_projects/collision_in_fn_names/out/debug/collision_in_fn_names-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -2894,7 +2894,7 @@ async fn can_call_predicate_with_struct_data() -> Result<(), Error> {
 async fn test_get_gas_used() -> anyhow::Result<()> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json"
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -2920,7 +2920,7 @@ async fn test_get_gas_used() -> anyhow::Result<()> {
 async fn test_contract_id_and_wallet_getters() {
     abigen!(
         SimpleContract,
-        "packages/fuels/tests/takes_ints_returns_bool-flat-abi.json",
+        "packages/fuels/tests/takes_ints_returns_bool-abi.json",
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -2940,7 +2940,7 @@ async fn test_contract_id_and_wallet_getters() {
 async fn test_network_error() -> Result<(), anyhow::Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json"
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
 
     let mut wallet = WalletUnlocked::new_random(None);
@@ -2971,7 +2971,7 @@ async fn test_network_error() -> Result<(), anyhow::Error> {
 async fn str_in_array() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/str_in_array/out/debug/str_in_array-flat-abi.json"
+        "packages/fuels/tests/test_projects/str_in_array/out/debug/str_in_array-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -3281,7 +3281,7 @@ async fn strings_must_have_all_ascii_chars_custom_types() {
 async fn test_connect_wallet() -> anyhow::Result<()> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json"
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
 
     let config = WalletsConfig::new(Some(2), Some(1), Some(DEFAULT_COIN_AMOUNT));
@@ -3332,7 +3332,7 @@ async fn test_connect_wallet() -> anyhow::Result<()> {
 async fn contract_call_fee_estimation() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json"
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -3381,7 +3381,7 @@ async fn contract_call_fee_estimation() -> Result<(), Error> {
 async fn contract_call_has_same_estimated_and_used_gas() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json"
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -3418,7 +3418,7 @@ async fn contract_call_has_same_estimated_and_used_gas() -> Result<(), Error> {
 async fn mutl_call_has_same_estimated_and_used_gas() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json"
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -3466,7 +3466,7 @@ async fn testnet_hello_world() -> Result<(), Error> {
     // the testnet. But, if it becomes too problematic, we should remove it.
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json"
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
 
     // Create a provider pointing to the testnet.
