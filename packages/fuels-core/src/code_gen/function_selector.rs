@@ -9,7 +9,7 @@ use std::ptr::replace;
 #[derive(Debug, Clone)]
 struct Something {
     param_type: ParamType,
-    original_type: TypeDeclaration,
+    type_id: usize,
     generic_params: Vec<Something>,
     components: Vec<Something>,
 }
@@ -20,8 +20,8 @@ fn replace_generics(
 ) -> Vec<Something> {
     args.into_iter()
         .map(|arg| {
-            if let ParamType::Generic(name) = arg.param_type {
-                (*generics_lookup.get(&arg.original_type.type_id).unwrap()).clone()
+            if let ParamType::Generic(_) = arg.param_type {
+                (*generics_lookup.get(&arg.type_id).unwrap()).clone()
             } else {
                 let components = replace_generics(arg.components, generics_lookup);
                 let generic_params = replace_generics(arg.generic_params, generics_lookup);
@@ -61,10 +61,10 @@ fn resolve_type_application(
         zip(type_ids_of_used_generics, generic_params.clone()).collect::<HashMap<_, _>>();
     let components = replace_generics(components, &generics_lookup);
 
-    let original_type = type_decl.clone();
+    let type_id = type_decl.type_id;
     Something {
         param_type,
-        original_type,
+        type_id,
         generic_params,
         components,
     }

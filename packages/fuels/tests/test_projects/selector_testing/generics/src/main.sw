@@ -5,20 +5,20 @@ struct BraveOne {
     two: u64,
 }
 
-struct AnotherOne<Z> {
+struct AnotherOne<T> {
     rodrigo: u64,
     john: str[15],
-    juicy: Z,
+    juicy: T,
 }
 
 struct MyStruct<T, K> {
-    foo: AnotherOne<AGenericEn<K>>,
-    boo: T,
+    foo: AnotherOne<AGenericEn<T>>,
+    boo: K,
 }
 
-enum AGenericEn<J> {
+enum AGenericEn<T> {
     one: u64,
-    two: J,
+    two: T,
 }
 
 abi MyContract {
@@ -27,7 +27,7 @@ abi MyContract {
 }
 
 impl MyContract for Contract {
-    fn identity(arg: MyStruct<u32, AnotherOne<BraveOne>>) -> MyStruct<u32, AnotherOne<BraveOne>> {
+    fn identity(arg: MyStruct<u32, AnotherOne<BraveOne>>) -> MyStruct<u64, AnotherOne<BraveOne>> {
         arg
     }
     //fn enum_using(arg: AGenericEn<MyStruct<u64, AnotherOne<BraveOne>>>) -> u64 {

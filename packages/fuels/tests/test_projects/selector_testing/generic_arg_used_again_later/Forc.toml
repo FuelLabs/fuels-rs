@@ -1,0 +1,7 @@
+[project]
+authors = ["Ahmed Sagdati"]
+entry = "main.sw"
+license = "Apache-2.0"
+name = "generic_arg_used_again_later"
+
+[dependencies]

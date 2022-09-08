@@ -3477,105 +3477,12 @@ async fn mutl_call_has_same_estimated_and_used_gas() -> Result<(), Error> {
     Ok(())
 }
 
-const ABI: &str = r#"
-    {
-        "types": [
-          {
-            "typeId": 0,
-            "type": "()",
-            "components": [],
-            "typeParameters": null
-          },
-          {
-            "typeId": 1,
-            "type": "b256",
-            "components": null,
-            "typeParameters": null
-          },
-          {
-            "typeId": 2,
-            "type": "bool",
-            "components": null,
-            "typeParameters": null
-          },
-          {
-            "typeId": 3,
-            "type": "struct AnotherEvent",
-            "components": [
-              {
-                "name": "id",
-                "type": 5,
-                "typeArguments": null
-              },
-              {
-                "name": "hash",
-                "type": 1,
-                "typeArguments": null
-              },
-              {
-                "name": "bar",
-                "type": 2,
-                "typeArguments": null
-              }
-            ],
-            "typeParameters": null
-          },
-          {
-            "typeId": 4,
-            "type": "struct SomeEvent",
-            "components": [
-              {
-                "name": "id",
-                "type": 5,
-                "typeArguments": null
-              },
-              {
-                "name": "account",
-                "type": 1,
-                "typeArguments": null
-              }
-            ],
-            "typeParameters": null
-          },
-          {
-            "typeId": 5,
-            "type": "u64",
-            "components": null,
-            "typeParameters": null
-          }
-        ],
-        "functions": [
-          {
-            "inputs": [
-              {
-                "name": "e1",
-                "type": 4,
-                "typeArguments": null
-              },
-              {
-                "name": "e2",
-                "type": 3,
-                "typeArguments": null
-              }
-            ],
-            "name": "takes_struct",
-            "output": {
-              "name": "",
-              "type": 0,
-              "typeArguments": null
-            }
-          }
-        ]
-      }
-    "#;
-
 // #[tokio::test]
 // async fn generics_preview() -> Result<(), Error> {
 //     SizedAsciiString::<4usize>::param_type();
 //     let project_path = Path::new("/tmp/generics_project");
 //     abigen_to_project(
-//         ABI,
-//         // "tests/test_projects/generics/out/debug/generics-abi.json",
+//         "tests/test_projects/generics/out/debug/generics-abi.json",
 //         // "tests/test_projects/contract_test/out/debug/contract_test-abi.json",
 //         // "tests/test_projects/contract_test/out/debug/contract_test-abi.json",
 //         &project_path,
