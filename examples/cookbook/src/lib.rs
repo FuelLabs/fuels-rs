@@ -103,8 +103,13 @@ mod tests {
 
         // ANCHOR: custom_chain_client
         let node_config = Config::local_node();
-        let (client, _) =
-            setup_test_client(coins, Some(node_config), Some(consensus_parameters_config), None).await;
+        let (client, _) = setup_test_client(
+            coins,
+            Some(node_config),
+            Some(consensus_parameters_config),
+            None,
+        )
+        .await;
         let _provider = Provider::new(client);
         // ANCHOR_END: custom_chain_client
         Ok(())
@@ -156,7 +161,7 @@ mod tests {
         let mut tx = Wallet::build_transfer_tx(&inputs, &outputs, TxParameters::default());
         wallet_1.sign_transaction(&mut tx).await?;
 
-        let _receipts = provider.send_transaction(&tx, ).await?;
+        let _receipts = provider.send_transaction(&tx).await?;
 
         let balances = wallet_2.get_balances().await?;
 

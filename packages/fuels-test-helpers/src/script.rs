@@ -35,7 +35,7 @@ pub async fn run_compiled_script(binary_filepath: &str) -> Result<Vec<Receipt>, 
 
     let script = get_script(script_binary);
 
-    script.call(provider, ).await
+    script.call(provider).await
 }
 
 fn get_script(script_binary: Vec<u8>) -> Script {

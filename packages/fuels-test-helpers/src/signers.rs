@@ -106,7 +106,7 @@ pub async fn launch_custom_provider_and_get_wallets(
 pub async fn setup_test_provider(
     coins: Vec<(UtxoId, Coin)>,
     node_config: Option<Config>,
-    messages: Option<Vec<Message>>
+    messages: Option<Vec<Message>>,
 ) -> (Provider, SocketAddr) {
     let (client, addr) = setup_test_client(coins, node_config, None, messages).await;
     (Provider::new(client), addr)

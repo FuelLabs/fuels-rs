@@ -4,7 +4,7 @@ use std::net::SocketAddr;
 
 #[cfg(feature = "fuel-core-lib")]
 use fuel_core::{
-    chain_config::{ChainConfig, CoinConfig, StateConfig, MessageConfig},
+    chain_config::{ChainConfig, CoinConfig, MessageConfig, StateConfig},
     model::{Coin, CoinStatus},
     service::{DbType, FuelService},
 };
@@ -15,9 +15,9 @@ pub use fuel_core::service::Config;
 #[cfg(not(feature = "fuel-core-lib"))]
 pub use node::{get_socket_address, new_fuel_node, CoinConfig, Config, MessageConfig};
 
+use fuel_core_interfaces::model::Message;
 #[cfg(not(feature = "fuel-core-lib"))]
 pub use fuel_core_interfaces::model::{Coin, CoinStatus};
-use fuel_core_interfaces::model::Message;
 
 #[cfg(not(feature = "fuel-core-lib"))]
 use portpicker::is_free;
@@ -128,11 +128,7 @@ pub fn setup_single_asset_coins(
     coins
 }
 
-pub fn setup_single_message(
-    owner: &Bech32Address,
-    amount_per_message: u64,
-) -> Vec<Message> {
-
+pub fn setup_single_message(owner: &Bech32Address, amount_per_message: u64) -> Vec<Message> {
     let message = Message {
         owner: owner.into(),
         amount: amount_per_message,
@@ -149,7 +145,7 @@ pub async fn setup_test_client(
     coins: Vec<(UtxoId, Coin)>,
     node_config: Option<Config>,
     consensus_parameters_config: Option<ConsensusParameters>,
-    messages: Option<Vec<Message>>
+    messages: Option<Vec<Message>>,
 ) -> (FuelClient, SocketAddr) {
     let coin_configs = coins
         .into_iter()
@@ -164,15 +160,17 @@ pub async fn setup_test_client(
         })
         .collect::<Vec<_>>();
 
-    let message_config = messages.unwrap_or_default().into_iter().map(|message|
-        MessageConfig {
+    let message_config = messages
+        .unwrap_or_default()
+        .into_iter()
+        .map(|message| MessageConfig {
             sender: message.sender,
             recipient: message.recipient,
             owner: message.owner,
             nonce: message.nonce,
             amount: message.amount,
             data: message.data,
-            da_height: message.da_height
+            da_height: message.da_height,
         })
         .collect();
 
@@ -181,7 +179,6 @@ pub async fn setup_test_client(
     // message can has coin ... kaze nam dali je coin ili neka data koja je prikacena na njega.
     // message change outputs -> Burned change...
     // Message can have only base asset...
-
 
     let config = Config {
         chain_conf: ChainConfig {
@@ -208,7 +205,7 @@ pub async fn setup_test_client(
     coins: Vec<(UtxoId, Coin)>,
     node_config: Option<Config>,
     consensus_parameters_config: Option<ConsensusParameters>,
-    messages: Option<Vec<Message>>
+    messages: Option<Vec<Message>>,
 ) -> (FuelClient, SocketAddr) {
     let config = node_config.unwrap_or_else(Config::local_node);
     let requested_port = config.addr.port();
@@ -228,9 +225,9 @@ pub async fn setup_test_client(
             addr: bound_address,
             ..config
         },
-        messages
+        messages,
     )
-        .await;
+    .await;
 
     let client = FuelClient::from(bound_address);
     server_health_check(&client).await;
@@ -406,7 +403,7 @@ mod tests {
             TxParameters::default(),
             StorageConfiguration::default(),
         )
-            .await;
+        .await;
 
         let expected = result.expect_err("should fail");
 

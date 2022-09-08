@@ -1,4 +1,3 @@
-use std::borrow::Borrow;
 use anyhow::Result;
 use fuel_gql_client::fuel_tx::{ConsensusParameters, Receipt, Transaction};
 use fuel_gql_client::fuel_tx::{Input, Output, TxPointer, UtxoId};
@@ -9,7 +8,6 @@ use fuel_gql_client::fuel_vm::{consts::REG_ONE, prelude::Opcode};
 use itertools::{chain, Itertools};
 
 use fuel_gql_client::client::schema::coin::Coin;
-use fuels_core::constants::{BASE_ASSET_ID};
 use fuels_core::parameters::TxParameters;
 use fuels_signers::provider::Provider;
 use fuels_signers::{Signer, WalletUnlocked};
@@ -18,7 +16,6 @@ use fuels_types::{constants::WORD_SIZE, errors::Error};
 use futures::{stream, StreamExt};
 use std::collections::HashSet;
 use std::iter;
-use fuels_types::function_selector::build_fn_selector;
 
 use crate::contract::ContractCall;
 
@@ -368,19 +365,6 @@ impl Script {
 
         provider.send_transaction(&self.tx).await
     }
-
-
-    pub async fn call_spend_messages(self, provider: &Provider, spend_message: bool) -> Result<Vec<Receipt>, Error> {
-        let chain_info = provider.chain_info().await?;
-
-        self.tx.validate_without_signature(
-            chain_info.latest_block.height.0,
-            &chain_info.consensus_parameters.into(),
-        )?;
-
-        provider.send_transaction(&self.tx).await
-    }
-
 
     /// Execute the transaction in a simulated manner, not modifying blockchain state
     pub async fn simulate(self, provider: &Provider) -> Result<Vec<Receipt>, Error> {

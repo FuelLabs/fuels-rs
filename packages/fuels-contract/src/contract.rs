@@ -10,7 +10,6 @@ use fuel_gql_client::{
     fuel_tx::{Contract as FuelContract, Output, Receipt, StorageSlot, Transaction},
     fuel_types::{Address, AssetId, Salt},
 };
-use tracing::span_enabled;
 
 use fuels_core::abi_decoder::ABIDecoder;
 use fuels_core::abi_encoder::ABIEncoder;
@@ -168,7 +167,7 @@ impl Contract {
     fn should_compute_custom_input_offset(args: &[Token]) -> bool {
         args.len() > 1
             || args.iter().any(|t| {
-            matches!(
+                matches!(
                     t,
                     Token::String(_)
                         | Token::Struct(_)
@@ -178,7 +177,7 @@ impl Contract {
                         | Token::Array(_)
                         | Token::Byte(_)
                 )
-        })
+            })
     }
 
     /// Loads a compiled contract and deploys it to a running node
@@ -426,8 +425,8 @@ pub struct ContractCallHandler<D> {
 }
 
 impl<D> ContractCallHandler<D>
-    where
-        D: Tokenizable + Debug,
+where
+    D: Tokenizable + Debug,
 {
     /// Sets external contracts as dependencies to this contract's call.
     /// Effectively, this will be used to create Input::Contract/Output::Contract
@@ -497,20 +496,6 @@ impl<D> ContractCallHandler<D>
         self.get_response(receipts)
     }
 
-
-    #[tracing::instrument]
-    async fn call_or_simulate_message(self, simulate: bool, spend_messages: bool) -> Result<CallResponse<D>, Error> {
-        let script = self.get_call_execution_script().await?;
-
-        let receipts =
-            script.call_spend_messages(&self.provider, spend_messages).await?;
-        tracing::debug!(target: "receipts", "{:?}", receipts);
-
-        self.get_response(receipts)
-    }
-
-
-
     /// Returns the script that executes the contract call
     pub async fn get_call_execution_script(&self) -> Result<Script, Error> {
         Script::from_contract_calls(
@@ -518,16 +503,12 @@ impl<D> ContractCallHandler<D>
             &self.tx_parameters,
             &self.wallet,
         )
-            .await
+        .await
     }
 
     /// Call a contract's method on the node, in a state-modifying manner.
     pub async fn call(self) -> Result<CallResponse<D>, Error> {
         Self::call_or_simulate(self, false).await
-    }
-
-    pub async fn call_spend_message(self) -> Result<CallResponse<D>, Error> {
-        Self::call_or_simulate_message(self, false, true).await
     }
 
     /// Call a contract's method on the node, in a simulated manner, meaning the state of the
@@ -608,7 +589,7 @@ impl MultiContractCallHandler {
             &self.tx_parameters,
             &self.wallet,
         )
-            .await
+        .await
     }
 
     /// Call contract methods on the node, in a state-modifying manner.
@@ -633,9 +614,9 @@ impl MultiContractCallHandler {
         let provider = self.wallet.get_provider()?;
 
         let receipts = if simulate {
-            script.simulate(provider, ).await?
+            script.simulate(provider).await?
         } else {
-            script.call(provider, ).await?
+            script.call(provider).await?
         };
         tracing::debug!(target: "receipts", "{:?}", receipts);
 
@@ -683,8 +664,9 @@ impl MultiContractCallHandler {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use fuels_test_helpers::launch_provider_and_get_wallet;
+
+    use super::*;
 
     #[tokio::test]
     #[should_panic(expected = "called `Result::unwrap()` on an `Err` value: InvalidData(\"json\")")]
@@ -698,8 +680,8 @@ mod test {
             TxParameters::default(),
             StorageConfiguration::default(),
         )
-            .await
-            .unwrap();
+        .await
+        .unwrap();
     }
 
     #[tokio::test]
@@ -715,7 +697,7 @@ mod test {
             StorageConfiguration::default(),
             Salt::default(),
         )
-            .await
-            .unwrap();
+        .await
+        .unwrap();
     }
 }

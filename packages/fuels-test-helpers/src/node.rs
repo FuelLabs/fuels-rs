@@ -8,8 +8,8 @@ use tokio::sync::oneshot;
 use portpicker::is_free;
 use portpicker::pick_unused_port;
 
-use fuel_core_interfaces::model::{BlockHeight, Message};
 use fuel_core_interfaces::model::Coin;
+use fuel_core_interfaces::model::{BlockHeight, Message};
 use fuel_gql_client::client::FuelClient;
 use fuel_gql_client::fuel_tx::{ConsensusParameters, UtxoId};
 use fuel_gql_client::fuel_vm::consts::WORD_SIZE;
@@ -113,21 +113,21 @@ pub(crate) struct HexType;
 
 impl<T: AsRef<[u8]>> SerializeAs<T> for HexType {
     fn serialize_as<S>(value: &T, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: Serializer,
+    where
+        S: Serializer,
     {
         serde_hex::serialize(value, serializer)
     }
 }
 
 impl<'de, T, E> DeserializeAs<'de, T> for HexType
-    where
-            for<'a> T: TryFrom<&'a [u8], Error = E>,
-            E: fmt::Display,
+where
+    for<'a> T: TryFrom<&'a [u8], Error = E>,
+    E: fmt::Display,
 {
     fn deserialize_as<D>(deserializer: D) -> Result<T, D::Error>
-        where
-            D: Deserializer<'de>,
+    where
+        D: Deserializer<'de>,
     {
         serde_hex::deserialize(deserializer)
     }
@@ -142,19 +142,19 @@ pub mod serde_hex {
     use serde::{Deserializer, Serializer};
 
     pub fn serialize<T, S>(target: T, ser: S) -> Result<S::Ok, S::Error>
-        where
-            S: Serializer,
-            T: ToHex,
+    where
+        S: Serializer,
+        T: ToHex,
     {
         let s = format!("0x{}", target.encode_hex::<String>());
         ser.serialize_str(&s)
     }
 
     pub fn deserialize<'de, T, E, D>(des: D) -> Result<T, D::Error>
-        where
-            D: Deserializer<'de>,
-            for<'a> T: TryFrom<&'a [u8], Error = E>,
-            E: fmt::Display,
+    where
+        D: Deserializer<'de>,
+        for<'a> T: TryFrom<&'a [u8], Error = E>,
+        E: fmt::Display,
     {
         let raw_string: String = serde::Deserialize::deserialize(des)?;
         let stripped_prefix = raw_string.trim_start_matches("0x");
@@ -168,8 +168,8 @@ pub(crate) struct HexNumber;
 
 impl SerializeAs<u64> for HexNumber {
     fn serialize_as<S>(value: &u64, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: Serializer,
+    where
+        S: Serializer,
     {
         let bytes = value.to_be_bytes();
         serde_hex::serialize(bytes, serializer)
@@ -178,8 +178,8 @@ impl SerializeAs<u64> for HexNumber {
 
 impl<'de> DeserializeAs<'de, Word> for HexNumber {
     fn deserialize_as<D>(deserializer: D) -> Result<Word, D::Error>
-        where
-            D: Deserializer<'de>,
+    where
+        D: Deserializer<'de>,
     {
         let mut bytes: Vec<u8> = serde_hex::deserialize(deserializer)?;
         match bytes.len() {
@@ -207,8 +207,8 @@ impl<'de> DeserializeAs<'de, Word> for HexNumber {
 
 impl SerializeAs<BlockHeight> for HexNumber {
     fn serialize_as<S>(value: &BlockHeight, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: Serializer,
+    where
+        S: Serializer,
     {
         let number: u64 = (*value).into();
         HexNumber::serialize_as(&number, serializer)
@@ -217,8 +217,8 @@ impl SerializeAs<BlockHeight> for HexNumber {
 
 impl<'de> DeserializeAs<'de, BlockHeight> for HexNumber {
     fn deserialize_as<D>(deserializer: D) -> Result<BlockHeight, D::Error>
-        where
-            D: Deserializer<'de>,
+    where
+        D: Deserializer<'de>,
     {
         let number: u64 = HexNumber::deserialize_as(deserializer)?;
         Ok(number.into())
@@ -228,7 +228,7 @@ impl<'de> DeserializeAs<'de, BlockHeight> for HexNumber {
 pub fn get_node_config_json(
     coins: Vec<(UtxoId, Coin)>,
     input_messages: Option<Vec<Message>>,
-    consensus_parameters_config: Option<ConsensusParameters>
+    consensus_parameters_config: Option<ConsensusParameters>,
 ) -> Value {
     let coins = get_coins_value(coins);
     let messages = get_messages_value(input_messages.unwrap_or_default());
@@ -265,7 +265,7 @@ fn get_coins_value(coins: Vec<(UtxoId, Coin)>) -> Value {
                 amount: coin.amount,
                 asset_id: coin.asset_id,
             })
-                .unwrap()
+            .unwrap()
         })
         .collect();
 
@@ -290,9 +290,9 @@ fn get_messages_value(input_messages: Vec<Message>) -> Value {
                 nonce: message.nonce,
                 amount: message.amount,
                 data: message.data,
-                da_height: message.da_height
+                da_height: message.da_height,
             })
-                .unwrap()
+            .unwrap()
         })
         .collect();
 
@@ -305,7 +305,6 @@ fn get_messages_value(input_messages: Vec<Message>) -> Value {
 
     messages
 }
-
 
 fn write_temp_config_file(config: Value) -> NamedTempFile {
     let config_file = NamedTempFile::new();
@@ -323,7 +322,7 @@ pub async fn new_fuel_node(
     coins: Vec<(UtxoId, Coin)>,
     consensus_parameters_config: Option<ConsensusParameters>,
     config: Config,
-    input_messages: Option<Vec<Message>>
+    input_messages: Option<Vec<Message>>,
 ) {
     // Create a new one-shot channel for sending single values across asynchronous tasks.
     let (tx, rx) = oneshot::channel();
@@ -427,9 +426,9 @@ impl FuelService {
                 addr: bound_address,
                 ..config
             },
-            None
+            None,
         )
-            .await;
+        .await;
 
         Ok(FuelService { bound_address })
     }

@@ -15,9 +15,9 @@ use fuels_core::tx::{Address, Bytes32, StorageSlot};
 use fuels_core::Tokenizable;
 use fuels_core::{constants::BASE_ASSET_ID, Token};
 use fuels_signers::fuel_crypto::SecretKey;
+use fuels_test_helpers::setup_single_message;
 use sha2::{Digest, Sha256};
 use std::str::FromStr;
-use fuels_test_helpers::{setup_single_message, setup_test_client};
 
 /// Note: all the tests and examples below require pre-compiled Sway projects.
 /// To compile these projects, run `cargo run --bin build-test-projects`.
@@ -974,7 +974,7 @@ async fn type_safe_output_values() -> Result<(), Error> {
         TxParameters::default(),
         StorageConfiguration::default(),
     )
-        .await?;
+    .await?;
 
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
 
@@ -1025,7 +1025,7 @@ async fn call_with_structs() -> Result<(), Error> {
         TxParameters::default(),
         StorageConfiguration::default(),
     )
-        .await?;
+    .await?;
 
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
 
@@ -1059,7 +1059,7 @@ async fn call_with_empty_return() -> Result<(), Error> {
         TxParameters::default(),
         StorageConfiguration::default(),
     )
-        .await?;
+    .await?;
 
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
 
@@ -1085,7 +1085,7 @@ async fn abigen_different_structs_same_arg_name() -> Result<(), Error> {
         TxParameters::default(),
         StorageConfiguration::default(),
     )
-        .await?;
+    .await?;
 
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
 
@@ -1142,7 +1142,7 @@ async fn multiple_read_calls() -> Result<(), Error> {
         TxParameters::default(),
         StorageConfiguration::default(),
     )
-        .await?;
+    .await?;
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
 
     contract_instance.store(42).call().await?;
@@ -1177,7 +1177,7 @@ async fn test_methods_typeless_argument() -> Result<(), Error> {
         TxParameters::default(),
         StorageConfiguration::default(),
     )
-        .await?;
+    .await?;
 
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
 
@@ -1204,7 +1204,7 @@ async fn test_large_return_data() -> Result<(), Error> {
         TxParameters::default(),
         StorageConfiguration::default(),
     )
-        .await?;
+    .await?;
 
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
 
@@ -1264,8 +1264,7 @@ async fn test_provider_launch_and_connect() -> Result<(), Error> {
         DEFAULT_NUM_COINS,
         DEFAULT_COIN_AMOUNT,
     );
-    let (launched_provider, address) = setup_test_provider(coins, None,             None
-    ).await;
+    let (launched_provider, address) = setup_test_provider(coins, None, None).await;
     let connected_provider = Provider::connect(address.to_string()).await?;
 
     wallet.set_provider(connected_provider);
@@ -1276,7 +1275,7 @@ async fn test_provider_launch_and_connect() -> Result<(), Error> {
         TxParameters::default(),
         StorageConfiguration::default(),
     )
-        .await?;
+    .await?;
 
     let contract_instance_connected =
         MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
@@ -1321,7 +1320,7 @@ async fn test_contract_calling_contract() -> Result<(), Error> {
         TxParameters::default(),
         StorageConfiguration::default(),
     )
-        .await?;
+    .await?;
 
     let foo_contract_instance =
         FooContractBuilder::new(foo_contract_id.to_string(), wallet.clone()).build();
@@ -1337,7 +1336,7 @@ async fn test_contract_calling_contract() -> Result<(), Error> {
         TxParameters::default(),
         StorageConfiguration::default(),
     )
-        .await?;
+    .await?;
 
     let foo_caller_contract_instance =
         FooCallerBuilder::new(foo_caller_contract_id.to_string(), wallet.clone()).build();
@@ -1373,8 +1372,7 @@ async fn test_gas_errors() -> Result<(), Error> {
         amount_per_coin,
     );
 
-    let (provider, _) = setup_test_provider(coins.clone(), None,             None
-    ).await;
+    let (provider, _) = setup_test_provider(coins.clone(), None, None).await;
     wallet.set_provider(provider);
 
     let contract_id = Contract::deploy(
@@ -1383,7 +1381,7 @@ async fn test_gas_errors() -> Result<(), Error> {
         TxParameters::default(),
         StorageConfiguration::default(),
     )
-        .await?;
+    .await?;
 
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
 
@@ -1437,7 +1435,7 @@ async fn test_call_param_gas_errors() -> Result<(), Error> {
         TxParameters::default(),
         StorageConfiguration::default(),
     )
-        .await?;
+    .await?;
 
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
 
@@ -1482,7 +1480,7 @@ async fn test_amount_and_asset_forwarding() -> Result<(), Error> {
         TxParameters::default(),
         StorageConfiguration::default(),
     )
-        .await?;
+    .await?;
 
     let instance = TestFuelCoinContractBuilder::new(id.to_string(), wallet.clone()).build();
 
@@ -1576,7 +1574,7 @@ async fn test_multiple_args() -> Result<(), Error> {
         TxParameters::default(),
         StorageConfiguration::default(),
     )
-        .await?;
+    .await?;
 
     let instance = MyContractBuilder::new(id.to_string(), wallet.clone()).build();
 
@@ -1609,7 +1607,7 @@ async fn test_tuples() -> Result<(), Error> {
         TxParameters::default(),
         StorageConfiguration::default(),
     )
-        .await?;
+    .await?;
 
     let instance = MyContractBuilder::new(id.to_string(), wallet.clone()).build();
 
@@ -1665,7 +1663,7 @@ async fn test_array() -> Result<(), Error> {
         TxParameters::default(),
         StorageConfiguration::default(),
     )
-        .await?;
+    .await?;
 
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
 
@@ -1697,7 +1695,7 @@ async fn test_arrays_with_custom_types() -> Result<(), Error> {
         TxParameters::default(),
         StorageConfiguration::default(),
     )
-        .await?;
+    .await?;
 
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
 
@@ -1742,7 +1740,7 @@ async fn test_auth_msg_sender_from_sdk() -> Result<(), Error> {
         TxParameters::default(),
         StorageConfiguration::default(),
     )
-        .await?;
+    .await?;
 
     let auth_instance = AuthContractBuilder::new(id.to_string(), wallet.clone()).build();
 
@@ -1772,7 +1770,7 @@ async fn workflow_enum_inside_struct() -> Result<(), Error> {
         TxParameters::default(),
         StorageConfiguration::default(),
     )
-        .await?;
+    .await?;
     let instance = MyContractBuilder::new(id.to_string(), wallet.clone()).build();
     let response = instance.return_enum_inside_struct(11).call().await?;
     let expected = Cocktail {
@@ -1807,7 +1805,7 @@ async fn test_logd_receipts() -> Result<(), Error> {
         TxParameters::default(),
         StorageConfiguration::default(),
     )
-        .await?;
+    .await?;
     let contract_instance = LoggingContractBuilder::new(id.to_string(), wallet.clone()).build();
     let mut value = [0u8; 32];
     value[0] = 0xFF;
@@ -1850,8 +1848,7 @@ async fn test_wallet_balance_api() -> Result<(), Error> {
         amount_per_coin,
     );
 
-    let (provider, _) = setup_test_provider(coins.clone(), None,             None
-    ).await;
+    let (provider, _) = setup_test_provider(coins.clone(), None, None).await;
     wallet.set_provider(provider);
     for (_utxo_id, coin) in coins {
         let balance = wallet.get_asset_balance(&coin.asset_id).await;
@@ -1878,8 +1875,7 @@ async fn test_wallet_balance_api() -> Result<(), Error> {
     );
     assert_eq!(coins.len() as u64, number_of_assets * coins_per_asset);
     assert_eq!(asset_ids.len() as u64, number_of_assets);
-    let (provider, _) = setup_test_provider(coins.clone(), None,             None
-    ).await;
+    let (provider, _) = setup_test_provider(coins.clone(), None, None).await;
     wallet.set_provider(provider);
     let balances = wallet.get_balances().await?;
     assert_eq!(balances.len() as u64, number_of_assets);
@@ -1911,7 +1907,7 @@ async fn sway_native_types_support() -> Result<(), Box<dyn std::error::Error>> {
         TxParameters::default(),
         StorageConfiguration::default(),
     )
-        .await?;
+    .await?;
 
     let instance = MyContractBuilder::new(id.to_string(), wallet.clone()).build();
 
@@ -1948,7 +1944,7 @@ async fn test_transaction_script_workflow() -> Result<(), Error> {
         TxParameters::default(),
         StorageConfiguration::default(),
     )
-        .await?;
+    .await?;
 
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
 
@@ -1980,7 +1976,7 @@ async fn enum_coding_w_variable_width_variants() -> Result<(), Error> {
         TxParameters::default(),
         StorageConfiguration::default(),
     )
-        .await?;
+    .await?;
 
     let instance = EnumTestingBuilder::new(id.to_string(), wallet).build();
 
@@ -2024,7 +2020,7 @@ async fn enum_coding_w_unit_enums() -> Result<(), Error> {
         TxParameters::default(),
         StorageConfiguration::default(),
     )
-        .await?;
+    .await?;
 
     let instance = EnumTestingBuilder::new(id.to_string(), wallet).build();
 
@@ -2066,7 +2062,7 @@ async fn enum_as_input() -> Result<(), Error> {
         TxParameters::default(),
         StorageConfiguration::default(),
     )
-        .await?;
+    .await?;
 
     let instance = EnumTestingBuilder::new(id.to_string(), wallet).build();
 
@@ -2116,7 +2112,7 @@ async fn nested_structs() -> Result<(), Error> {
         TxParameters::default(),
         StorageConfiguration::default(),
     )
-        .await?;
+    .await?;
 
     let instance = NestedStructsBuilder::new(id.to_string(), wallet).build();
 
@@ -2176,7 +2172,7 @@ async fn test_multi_call() -> Result<(), Error> {
         TxParameters::default(),
         StorageConfiguration::default(),
     )
-        .await?;
+    .await?;
 
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
 
@@ -2213,7 +2209,7 @@ async fn test_multi_call_script_workflow() -> Result<(), Error> {
         TxParameters::default(),
         StorageConfiguration::default(),
     )
-        .await?;
+    .await?;
 
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
 
@@ -2227,7 +2223,7 @@ async fn test_multi_call_script_workflow() -> Result<(), Error> {
         .add_call(call_handler_2);
 
     let script = multi_call_handler.get_call_execution_script().await?;
-    let receipts = script.call(provider, ).await.unwrap();
+    let receipts = script.call(provider).await.unwrap();
     let (counter, array) = multi_call_handler
         .get_response::<(u64, Vec<u64>)>(receipts)?
         .value;
@@ -2262,7 +2258,7 @@ async fn test_storage_initialization() -> Result<(), Error> {
         StorageConfiguration::with_manual_storage(Some(storage_vec)),
         Salt::from([0; 32]),
     )
-        .await?;
+    .await?;
     // ANCHOR_END: manual_storage
 
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
@@ -2353,7 +2349,7 @@ async fn type_inside_enum() -> Result<(), Error> {
         TxParameters::default(),
         StorageConfiguration::default(),
     )
-        .await?;
+    .await?;
 
     let instance = MyContractBuilder::new(id.to_string(), wallet.clone()).build();
 
@@ -2473,7 +2469,7 @@ async fn contract_method_call_respects_maturity() -> Result<(), Error> {
         TxParameters::default(),
         StorageConfiguration::default(),
     )
-        .await?;
+    .await?;
 
     let instance = MyContractBuilder::new(id.to_string(), wallet.clone()).build();
 
@@ -2569,7 +2565,7 @@ async fn can_handle_sway_function_called_new() -> anyhow::Result<()> {
         TxParameters::default(),
         StorageConfiguration::default(),
     )
-        .await?;
+    .await?;
 
     let instance = MyContractBuilder::new(id.to_string(), wallet.clone()).build();
 
@@ -2595,7 +2591,7 @@ async fn setup_predicate_test(
             ..Config::local_node()
         }),
     )
-        .await;
+    .await;
 
     let sender = wallets.pop().unwrap();
     let receiver = wallets.pop().unwrap();
@@ -2852,7 +2848,7 @@ async fn can_call_predicate_with_address_data() -> Result<(), Error> {
         1,
         16,
     )
-        .await?;
+    .await?;
     let provider = receiver.get_provider()?;
     let amount_to_predicate = 16;
 
@@ -2994,7 +2990,7 @@ async fn test_get_gas_used() -> anyhow::Result<()> {
         TxParameters::default(),
         StorageConfiguration::default(),
     )
-        .await?;
+    .await?;
 
     let instance = MyContractBuilder::new(id.to_string(), wallet.clone()).build();
 
@@ -3049,7 +3045,7 @@ async fn test_network_error() -> Result<(), anyhow::Error> {
         TxParameters::default(),
         StorageConfiguration::default(),
     )
-        .await;
+    .await;
 
     assert!(matches!(response, Err(Error::ProviderError(_))));
 
@@ -3071,7 +3067,7 @@ async fn str_in_array() -> Result<(), Error> {
         TxParameters::default(),
         StorageConfiguration::default(),
     )
-        .await?;
+    .await?;
 
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
 
@@ -3385,7 +3381,7 @@ async fn test_connect_wallet() -> anyhow::Result<()> {
         TxParameters::default(),
         StorageConfiguration::default(),
     )
-        .await?;
+    .await?;
 
     // pay for call with wallet_1
     let contract_instance = MyContractBuilder::new(id.to_string(), wallet_1.clone()).build();
@@ -3432,7 +3428,7 @@ async fn contract_call_fee_estimation() -> Result<(), Error> {
         TxParameters::default(),
         StorageConfiguration::default(),
     )
-        .await?;
+    .await?;
 
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
 
@@ -3481,7 +3477,7 @@ async fn contract_call_has_same_estimated_and_used_gas() -> Result<(), Error> {
         TxParameters::default(),
         StorageConfiguration::default(),
     )
-        .await?;
+    .await?;
 
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
 
@@ -3518,7 +3514,7 @@ async fn mutl_call_has_same_estimated_and_used_gas() -> Result<(), Error> {
         TxParameters::default(),
         StorageConfiguration::default(),
     )
-        .await?;
+    .await?;
 
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
 
@@ -3602,7 +3598,6 @@ async fn testnet_hello_world() -> Result<(), Error> {
     Ok(())
 }
 
-
 #[tokio::test]
 async fn test_input_message() -> Result<(), Error> {
     abigen!(
@@ -3611,10 +3606,7 @@ async fn test_input_message() -> Result<(), Error> {
     );
     let mut wallet = WalletUnlocked::new_random(None);
 
-    let messages = setup_single_message(
-        wallet.address(),
-        DEFAULT_COIN_AMOUNT,
-    );
+    let messages = setup_single_message(wallet.address(), DEFAULT_COIN_AMOUNT);
 
     let (provider, _) = setup_test_provider(vec![], None, Some(messages)).await;
     wallet.set_provider(provider);
@@ -3625,8 +3617,8 @@ async fn test_input_message() -> Result<(), Error> {
         TxParameters::new(None, None, None),
         StorageConfiguration::default(),
     )
-        .await?;
-    dbg!(&contract_id);
+    .await?;
+
     let contract_instance_connected =
         MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
 

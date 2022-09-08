@@ -7,7 +7,7 @@ use fuel_gql_client::{
     client::{
         schema::{
             balance::Balance, chain::ChainInfo, coin::Coin, contract::ContractBalance,
-            node_info::NodeInfo, message::Message
+            message::Message, node_info::NodeInfo,
         },
         types::{TransactionResponse, TransactionStatus},
         FuelClient, PageDirection, PaginatedResult, PaginationRequest,
@@ -17,7 +17,6 @@ use fuel_gql_client::{
 };
 use fuels_core::constants::{DEFAULT_GAS_ESTIMATION_TOLERANCE, MAX_GAS_PER_TX};
 use std::collections::HashMap;
-use fuel_types::Address;
 use thiserror::Error;
 
 use fuels_types::bech32::{Bech32Address, Bech32ContractId};
@@ -412,10 +411,7 @@ impl Provider {
             .unwrap_or(0)
     }
 
-    pub async fn get_messages(
-        &self,
-        from: &Bech32Address,
-    ) -> Result<Vec<Message>, ProviderError> {
+    pub async fn get_messages(&self, from: &Bech32Address) -> Result<Vec<Message>, ProviderError> {
         let mut messages: Vec<Message> = vec![];
 
         let mut cursor = None;
@@ -426,7 +422,10 @@ impl Provider {
                 results: 9999,
                 direction: PageDirection::Forward,
             };
-            let res = self.client.messages(Some(&from.hash().to_string()), pagination).await?;
+            let res = self
+                .client
+                .messages(Some(&from.hash().to_string()), pagination)
+                .await?;
 
             if res.results.is_empty() {
                 break;
@@ -437,5 +436,4 @@ impl Provider {
 
         Ok(messages)
     }
-
 }

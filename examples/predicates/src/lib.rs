@@ -45,7 +45,7 @@ mod tests {
                 utxo_validation: true,
                 ..Config::local_node()
             }),
-            None
+            None,
         )
         .await;
 

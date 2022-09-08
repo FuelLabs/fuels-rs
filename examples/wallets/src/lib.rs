@@ -8,8 +8,7 @@ mod tests {
         use fuels::prelude::*;
 
         // Use the test helper to setup a test provider.
-        let (provider, _address) = setup_test_provider(vec![], None,             None
-        ).await;
+        let (provider, _address) = setup_test_provider(vec![], None, None).await;
 
         // Create the wallet.
         let _wallet = WalletUnlocked::new_random(Some(provider));
@@ -24,8 +23,7 @@ mod tests {
         use std::str::FromStr;
 
         // Use the test helper to setup a test provider.
-        let (provider, _address) = setup_test_provider(vec![], None,             None
-        ).await;
+        let (provider, _address) = setup_test_provider(vec![], None, None).await;
 
         // Setup the private key.
         let secret = SecretKey::from_str(
@@ -47,8 +45,7 @@ mod tests {
             "oblige salon price punch saddle immune slogan rare snap desert retire surprise";
 
         // Use the test helper to setup a test provider.
-        let (provider, _address) = setup_test_provider(vec![], None,             None
-        ).await;
+        let (provider, _address) = setup_test_provider(vec![], None, None).await;
 
         // Create first account from mnemonic phrase.
         let _wallet = WalletUnlocked::new_from_mnemonic_phrase_with_path(
@@ -76,8 +73,7 @@ mod tests {
         let mut rng = rand::thread_rng();
 
         // Use the test helper to setup a test provider.
-        let (provider, _address) = setup_test_provider(vec![], None,             None
-        ).await;
+        let (provider, _address) = setup_test_provider(vec![], None, None).await;
 
         let password = "my_master_password";
 
@@ -103,8 +99,7 @@ mod tests {
             "oblige salon price punch saddle immune slogan rare snap desert retire surprise";
 
         // Use the test helper to setup a test provider.
-        let (provider, _address) = setup_test_provider(vec![], None,             None
-        ).await;
+        let (provider, _address) = setup_test_provider(vec![], None, None).await;
 
         // Create first account from mnemonic phrase.
         let wallet = WalletUnlocked::new_from_mnemonic_phrase(phrase, Some(provider))?;
@@ -231,7 +226,7 @@ mod tests {
             amount_per_coin,
         );
         // ANCHOR_END: multiple_assets_coins
-        let (provider, _socket_addr) = setup_test_provider(coins.clone(), None).await;
+        let (provider, _socket_addr) = setup_test_provider(coins.clone(), None, None).await;
         wallet.set_provider(provider);
         // ANCHOR_END: multiple_assets_wallet
         Ok(())
@@ -272,8 +267,7 @@ mod tests {
         let assets = vec![asset_base, asset_1, asset_2];
 
         let coins = setup_custom_assets_coins(wallet.address(), &assets);
-        let (provider, _socket_addr) = setup_test_provider(coins, None,             None
-        ).await;
+        let (provider, _socket_addr) = setup_test_provider(coins, None, None).await;
         wallet.set_provider(provider);
         // ANCHOR_END: custom_assets_wallet
         // ANCHOR: custom_assets_wallet_short,             None

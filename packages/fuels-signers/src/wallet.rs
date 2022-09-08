@@ -1,12 +1,12 @@
-use slice::from_raw_parts;
 use crate::provider::Provider;
 use crate::Signer;
 use async_trait::async_trait;
 use elliptic_curve::rand_core;
 use eth_keystore::KeystoreError;
-use fuel_crypto::{Hasher, Message, PublicKey, SecretKey, Signature};
+use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
+use fuel_gql_client::client::schema;
 use fuel_gql_client::{
-    client::{schema::coin::Coin ,schema::MessageId, types::TransactionResponse, PaginatedResult, PaginationRequest},
+    client::{schema::coin::Coin, types::TransactionResponse, PaginatedResult, PaginationRequest},
     fuel_tx::{
         AssetId, Bytes32, ConsensusParameters, ContractId, Input, Output, Receipt, Transaction,
         TransactionFee, TxPointer, UtxoId, Witness,
@@ -18,10 +18,9 @@ use fuels_core::{constants::BASE_ASSET_ID, parameters::TxParameters};
 use fuels_types::bech32::{Bech32Address, Bech32ContractId, FUEL_BECH32_HRP};
 use fuels_types::errors::Error;
 use rand::{CryptoRng, Rng};
-use std::{collections::HashMap, fmt, mem, ops, path::Path, slice};
-use std::any::Any;
+use slice::from_raw_parts;
 use std::borrow::Borrow;
-use fuel_gql_client::client::schema;
+use std::{collections::HashMap, fmt, mem, ops, path::Path, slice};
 use thiserror::Error;
 
 const DEFAULT_DERIVATION_PATH_PREFIX: &str = "m/44'/1179993420'/0'/0/";
@@ -226,16 +225,11 @@ impl Wallet {
             .map_err(Into::into)
     }
 
-    pub async fn get_messages(&self) -> Result<Vec<schema::message::Message,>, Error>  {
-        Ok(self
-            .get_provider()?.get_messages(&self.address).await?)
+    pub async fn get_messages(&self) -> Result<Vec<schema::message::Message>, Error> {
+        Ok(self.get_provider()?.get_messages(&self.address).await?)
     }
 
-    pub async fn get_inputs_for_messages(
-        &self,
-        witness_index: u8,
-    ) -> Result<Vec<Input>, Error> {
-
+    pub async fn get_inputs_for_messages(&self, witness_index: u8) -> Result<Vec<Input>, Error> {
         let as_u8_slice = |v: &[i32]| -> &[u8] {
             let element_size = mem::size_of::<i32>();
             unsafe { from_raw_parts(v.as_ptr() as *const u8, v.len() * element_size) }
@@ -246,14 +240,13 @@ impl Wallet {
         let mut inputs = vec![];
 
         for message in messages {
-
             let message_id = Input::compute_message_id(
                 &message.sender.clone().into(),
                 &message.recipient.clone().into(),
                 message.nonce.into(),
                 &message.owner.clone().into(),
                 message.amount.0,
-                as_u8_slice(message.data.borrow())
+                as_u8_slice(message.data.borrow()),
             );
 
             let input_messages = Input::message_signed(
@@ -264,11 +257,10 @@ impl Wallet {
                 0,
                 message.owner.into(),
                 witness_index,
-                vec![]
+                vec![],
             );
             inputs.push(input_messages);
         }
-
 
         Ok(inputs)
     }
@@ -425,10 +417,10 @@ impl WalletUnlocked {
         password: S,
         provider: Option<Provider>,
     ) -> Result<(Self, String), WalletError>
-        where
-            P: AsRef<Path>,
-            R: Rng + CryptoRng + rand_core::CryptoRng,
-            S: AsRef<[u8]>,
+    where
+        P: AsRef<Path>,
+        R: Rng + CryptoRng + rand_core::CryptoRng,
+        S: AsRef<[u8]>,
     {
         let (secret, uuid) = eth_keystore::new(dir, rng, password)?;
 
@@ -442,9 +434,9 @@ impl WalletUnlocked {
     /// Encrypts the wallet's private key with the given password and saves it
     /// to the given path.
     pub fn encrypt<P, S>(&self, dir: P, password: S) -> Result<String, WalletError>
-        where
-            P: AsRef<Path>,
-            S: AsRef<[u8]>,
+    where
+        P: AsRef<Path>,
+        S: AsRef<[u8]>,
     {
         let mut rng = rand::thread_rng();
 
@@ -462,9 +454,9 @@ impl WalletUnlocked {
         password: S,
         provider: Option<Provider>,
     ) -> Result<Self, WalletError>
-        where
-            P: AsRef<Path>,
-            S: AsRef<[u8]>,
+    where
+        P: AsRef<Path>,
+        S: AsRef<[u8]>,
     {
         let secret = eth_keystore::decrypt_key(keypath, password)?;
         let secret_key = unsafe { SecretKey::from_slice_unchecked(&secret) };
@@ -518,13 +510,20 @@ impl WalletUnlocked {
             .inputs()
             .iter()
             .any(|input| matches!(input, Input::CoinSigned { .. }));
+
         if !is_using_coins && new_base_amount == 0 {
             new_base_amount = MIN_AMOUNT;
         }
 
+        // This is a temporary solution till we get update on coins_to_spend function
         let new_base_inputs = self
             .get_asset_inputs_for_amount(BASE_ASSET_ID, new_base_amount, witness_index)
-            .await?;
+            .await
+            .unwrap_or(self.get_inputs_for_messages(witness_index).await?);
+        let is_using_messages = new_base_inputs
+            .iter()
+            .any(|input| matches!(input, Input::MessageSigned { .. }));
+
         let adjusted_inputs: Vec<_> = remaining_inputs
             .into_iter()
             .chain(new_base_inputs.into_iter())
@@ -534,8 +533,11 @@ impl WalletUnlocked {
             matches!(output, Output::Change { .. }) && *output.asset_id().unwrap() == BASE_ASSET_ID
         });
 
+        dbg!(is_using_messages);
+
         // add a change output for the base asset if it doesn't exist and there are base inputs
-        let change_output = if !is_base_change_present && new_base_amount != 0 {
+        let change_output = if !is_base_change_present && new_base_amount != 0 && !is_using_messages
+        {
             vec![Output::change(self.address().into(), 0, BASE_ASSET_ID)]
         } else {
             vec![]
@@ -559,6 +561,8 @@ impl WalletUnlocked {
                 outputs.extend(change_output);
             }
         };
+
+        // dbg!(&tx);
 
         Ok(())
     }
@@ -683,7 +687,7 @@ impl WalletUnlocked {
         self.add_fee_coins(&mut tx, 0, 0).await?;
         self.sign_transaction(&mut tx).await?;
 
-        self.get_provider()?.send_transaction(&tx, ).await
+        self.get_provider()?.send_transaction(&tx).await
     }
 
     pub async fn receive_from_predicate(
