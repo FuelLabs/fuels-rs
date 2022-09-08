@@ -8,7 +8,6 @@ use fuel_gql_client::fuel_vm::{consts::REG_ONE, prelude::Opcode};
 use itertools::{chain, Itertools};
 
 use fuel_gql_client::client::schema::coin::Coin;
-use fuels_core::constants::DEFAULT_SPENDABLE_COIN_AMOUNT;
 use fuels_core::parameters::TxParameters;
 use fuels_signers::provider::Provider;
 use fuels_signers::{Signer, WalletUnlocked};
@@ -61,7 +60,8 @@ impl Script {
 
         let script = Self::get_instructions(calls, call_param_offsets);
 
-        let spendable_coins = Self::get_spendable_coins(wallet, calls).await?;
+        let required_asset_amounts = Self::calculate_required_asset_amounts(calls);
+        let spendable_coins = Self::get_spendable_coins(wallet, &required_asset_amounts).await?;
 
         let (inputs, outputs) =
             Self::get_transaction_inputs_outputs(calls, wallet.address(), spendable_coins);
@@ -76,6 +76,14 @@ impl Script {
             outputs,
             vec![],
         );
+
+        let base_asset_amount = required_asset_amounts
+            .iter()
+            .find(|(asset_id, _)| *asset_id == AssetId::default());
+        match base_asset_amount {
+            Some((_, base_amount)) => wallet.add_fee_coins(&mut tx, *base_amount, 0).await?,
+            None => wallet.add_fee_coins(&mut tx, 0, 0).await?,
+        }
         wallet.sign_transaction(&mut tx).await.unwrap();
 
         Ok(Script::new(tx))
@@ -85,10 +93,10 @@ impl Script {
     /// proceeds to request spendable coins from `wallet` to cover that cost.
     async fn get_spendable_coins(
         wallet: &WalletUnlocked,
-        calls: &[ContractCall],
+        required_asset_amounts: &[(AssetId, u64)],
     ) -> Result<Vec<Coin>, Error> {
-        stream::iter(Self::calculate_required_asset_amounts(calls))
-            .map(|(asset_id, amount)| wallet.get_spendable_coins(asset_id, amount))
+        stream::iter(required_asset_amounts)
+            .map(|(asset_id, amount)| wallet.get_spendable_coins(*asset_id, *amount))
             .buffer_unordered(10)
             .collect::<Vec<_>>()
             .await
@@ -105,14 +113,9 @@ impl Script {
     fn extract_required_amounts_per_asset_id(
         calls: &[ContractCall],
     ) -> impl Iterator<Item = (AssetId, u64)> + '_ {
-        // TODO what to do about the default asset?
         calls
             .iter()
             .map(|call| (call.call_parameters.asset_id, call.call_parameters.amount))
-            .chain(iter::once((
-                AssetId::default(),
-                DEFAULT_SPENDABLE_COIN_AMOUNT,
-            )))
     }
 
     fn sum_up_amounts_for_each_asset_id(
@@ -381,7 +384,6 @@ impl Script {
 mod test {
     use super::*;
     use fuel_gql_client::client::schema::coin::CoinStatus;
-    use fuels_core::constants::BASE_ASSET_ID;
     use fuels_core::parameters::CallParameters;
     use fuels_types::bech32::Bech32ContractId;
     use rand::Rng;
@@ -728,15 +730,6 @@ mod test {
     }
 
     #[test]
-    fn will_require_base_asset_even_if_not_explicitly_asked_for() {
-        let asset_id_amounts = Script::calculate_required_asset_amounts(&[]);
-        assert_eq!(
-            asset_id_amounts,
-            [(BASE_ASSET_ID, DEFAULT_SPENDABLE_COIN_AMOUNT)]
-        )
-    }
-
-    #[test]
     fn will_collate_same_asset_ids() {
         let amounts = [100, 200];
 
@@ -751,11 +744,7 @@ mod test {
 
         let asset_id_amounts = Script::calculate_required_asset_amounts(&calls);
 
-        let expected_asset_id_amounts = [
-            (BASE_ASSET_ID, DEFAULT_SPENDABLE_COIN_AMOUNT),
-            (asset_id, amounts.iter().sum()),
-        ]
-        .into();
+        let expected_asset_id_amounts = [(asset_id, amounts.iter().sum())].into();
 
         assert_eq!(
             asset_id_amounts.into_iter().collect::<HashSet<_>>(),
