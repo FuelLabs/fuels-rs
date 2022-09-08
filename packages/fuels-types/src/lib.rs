@@ -42,7 +42,7 @@ pub struct ProgramABI {
     pub functions: Vec<ABIFunction>,
 }
 
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ABIFunction {
     pub inputs: Vec<TypeApplication>,
@@ -50,7 +50,7 @@ pub struct ABIFunction {
     pub output: TypeApplication,
 }
 
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TypeDeclaration {
     pub type_id: usize,

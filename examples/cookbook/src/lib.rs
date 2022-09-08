@@ -10,7 +10,7 @@ mod tests {
         // ANCHOR: liquidity_abigen
         abigen!(
             MyContract,
-            "packages/fuels/tests/test_projects/liquidity_pool/out/debug/liquidity_pool-flat-abi.json"
+            "packages/fuels/tests/test_projects/liquidity_pool/out/debug/liquidity_pool-abi.json"
         );
         // ANCHOR_END: liquidity_abigen
 
