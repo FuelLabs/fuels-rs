@@ -520,6 +520,12 @@ impl WalletUnlocked {
             .get_asset_inputs_for_amount(BASE_ASSET_ID, new_base_amount, witness_index)
             .await
             .unwrap_or(self.get_inputs_for_messages(witness_index).await?);
+        if new_base_inputs.is_empty() {
+            return Err(Error::ProviderError(
+                "Response errors; enough coins could not be found".to_string(),
+            ));
+        }
+
         let is_using_messages = new_base_inputs
             .iter()
             .any(|input| matches!(input, Input::MessageSigned { .. }));

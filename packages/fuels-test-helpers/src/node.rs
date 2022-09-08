@@ -274,8 +274,6 @@ fn get_coins_value(coins: Vec<(UtxoId, Coin)>) -> Value {
     let coins: Value =
         serde_json::from_str(result.as_str()).expect("Failed to build config_with_coins JSON");
 
-    dbg!(coins.clone());
-
     coins
 }
 
