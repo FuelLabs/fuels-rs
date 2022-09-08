@@ -420,13 +420,13 @@ impl WalletUnlocked {
         Ok(Self::new_from_private_key(secret_key, provider))
     }
 
-    // Add base asset inputs to the transaction to cover the estimated fee.
-    // The original base asset amount cannot be calculated reliably from
-    // the existing transaction inputs because the selected coins may exceed
-    // the required amount to avoid dust. Therefore we require it as an argument.
-    //
-    // Requires contract inputs to be at the start of the transactions inputs vec
-    // so that their indexes are retained
+    /// Add base asset inputs to the transaction to cover the estimated fee.
+    /// The original base asset amount cannot be calculated reliably from
+    /// the existing transaction inputs because the selected coins may exceed
+    /// the required amount to avoid dust. Therefore we require it as an argument.
+    ///
+    /// Requires contract inputs to be at the start of the transactions inputs vec
+    /// so that their indexes are retained
     pub async fn add_fee_coins(
         &self,
         tx: &mut Transaction,
@@ -569,6 +569,7 @@ impl WalletUnlocked {
 
         let mut tx = Wallet::build_transfer_tx(&inputs, &outputs, tx_parameters);
 
+        // if we are not transferring the base asset, previous base amount is 0
         if asset_id == AssetId::default() {
             self.add_fee_coins(&mut tx, amount, 0).await?;
         } else {
@@ -700,6 +701,7 @@ impl WalletUnlocked {
             &outputs,
             tx_parameters,
         );
+        // if we are not transferring the base asset, previous base amount is 0
         let base_amount = if asset_id == AssetId::default() {
             balance
         } else {
