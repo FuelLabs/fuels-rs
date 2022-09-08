@@ -122,7 +122,7 @@ mod tests {
 
         const NUM_ASSETS: u64 = 5;
         const AMOUNT: u64 = 100_000;
-        const NUM_COINS: u64 = 10;
+        const NUM_COINS: u64 = 1;
         let (coins, _) =
             setup_multiple_assets_coins(wallet_1.address(), NUM_ASSETS, NUM_COINS, AMOUNT);
 
@@ -140,6 +140,10 @@ mod tests {
         for (id_string, amount) in balances {
             let id = AssetId::from_str(&id_string).unwrap();
 
+            // leave the base asset to cover transaction fees
+            if id == BASE_ASSET_ID {
+                continue;
+            }
             let input = wallet_1.get_asset_inputs_for_amount(id, amount, 0).await?;
             inputs.extend(input);
 
@@ -149,13 +153,17 @@ mod tests {
         // ANCHOR_END: transfer_multiple_inout
 
         // ANCHOR: transfer_multiple_transaction
-        let mut tx = provider.build_transfer_tx(&inputs, &outputs, TxParameters::default());
+        let mut tx = Wallet::build_transfer_tx(&inputs, &outputs, TxParameters::default());
         wallet_1.sign_transaction(&mut tx).await?;
 
         let _receipts = provider.send_transaction(&tx).await?;
 
-        let balances = wallet_1.get_balances().await?;
-        assert!(balances.is_empty());
+        let balances = wallet_2.get_balances().await?;
+
+        assert_eq!(balances.len(), (NUM_ASSETS - 1) as usize);
+        for (_, balance) in balances {
+            assert_eq!(balance, AMOUNT);
+        }
         // ANCHOR_END: transfer_multiple_transaction
 
         // ANCHOR_END: transfer_multiple

@@ -27,7 +27,7 @@ mod tests {
         let mut wallet = WalletUnlocked::new_from_private_key(secret_key1, None);
         let mut wallet2 = WalletUnlocked::new_from_private_key(secret_key2, None);
         let mut wallet3 = WalletUnlocked::new_from_private_key(secret_key3, None);
-        let mut receiver = WalletUnlocked::new_random(None);
+        let receiver = WalletUnlocked::new_random(None);
         // ANCHOR_END: predicate_wallets
 
         // ANCHOR: predicate_coins
@@ -48,7 +48,7 @@ mod tests {
         )
         .await;
 
-        [&mut wallet, &mut wallet2, &mut wallet3, &mut receiver]
+        [&mut wallet, &mut wallet2, &mut wallet3]
             .iter_mut()
             .for_each(|wallet| wallet.set_provider(provider.clone()));
         // ANCHOR_END: predicate_coins
@@ -93,13 +93,15 @@ mod tests {
 
         // ANCHOR: predicate_spend
         let predicate_data = signatures.into_iter().flatten().collect();
-        receiver
-            .receive_from_predicate(
+        wallet
+            .spend_predicate(
                 predicate_address,
                 predicate_code,
                 amount_to_predicate,
                 asset_id,
+                receiver.address(),
                 Some(predicate_data),
+                TxParameters::default(),
             )
             .await?;
 

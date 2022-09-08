@@ -1,5 +1,4 @@
 use std::io;
-use std::net::SocketAddr;
 
 #[cfg(feature = "fuel-core")]
 use fuel_core::service::{Config, FuelService};
@@ -13,21 +12,13 @@ use fuel_gql_client::{
         types::{TransactionResponse, TransactionStatus},
         FuelClient, PageDirection, PaginatedResult, PaginationRequest,
     },
-    fuel_tx::{
-        ConsensusParameters, Input, Output, Receipt, Transaction, TransactionFee, TxPointer, UtxoId,
-    },
-    fuel_types::{AssetId, ContractId, Immediate18},
-    fuel_vm::{
-        consts::{REG_ONE, WORD_SIZE},
-        prelude::Opcode,
-        script_with_data_offset,
-    },
+    fuel_tx::{Receipt, Transaction, TransactionFee},
+    fuel_types::AssetId,
 };
 use fuels_core::constants::{DEFAULT_GAS_ESTIMATION_TOLERANCE, MAX_GAS_PER_TX};
 use std::collections::HashMap;
 use thiserror::Error;
 
-use fuels_core::parameters::TxParameters;
 use fuels_types::bech32::{Bech32Address, Bech32ContractId};
 use fuels_types::errors::Error;
 
@@ -141,12 +132,9 @@ impl Provider {
     /// ```
     /// async fn connect_to_fuel_node() {
     ///     use fuels::prelude::*;
-    ///     use std::net::SocketAddr;
     ///
     ///     // This is the address of a running node.
-    ///     let server_address: SocketAddr = "127.0.0.1:4000"
-    ///         .parse()
-    ///         .expect("Unable to parse socket address");
+    ///     let server_address = "127.0.0.1:4000";
     ///
     ///     // Create the provider using the client.
     ///     let provider = Provider::connect(server_address).await.unwrap();
@@ -155,10 +143,9 @@ impl Provider {
     ///     let _wallet = WalletUnlocked::new_random(Some(provider));
     /// }
     /// ```
-    pub async fn connect(socket: SocketAddr) -> Result<Provider, Error> {
-        Ok(Self {
-            client: FuelClient::from(socket),
-        })
+    pub async fn connect(url: impl AsRef<str>) -> Result<Provider, Error> {
+        let client = FuelClient::new(url)?;
+        Ok(Provider::new(client))
     }
 
     pub async fn chain_info(&self) -> Result<ChainInfo, ProviderError> {
@@ -234,90 +221,6 @@ impl Provider {
             )
             .await?;
         Ok(res)
-    }
-
-    /// Craft a transaction used to transfer funds between two addresses.
-    pub fn build_transfer_tx(
-        &self,
-        inputs: &[Input],
-        outputs: &[Output],
-        params: TxParameters,
-    ) -> Transaction {
-        // This script contains a single Opcode that returns immediately (RET)
-        // since all this transaction does is move Inputs and Outputs around.
-        let script = Opcode::RET(REG_ONE).to_bytes().to_vec();
-        Transaction::Script {
-            gas_price: params.gas_price,
-            gas_limit: params.gas_limit,
-            maturity: params.maturity,
-            receipts_root: Default::default(),
-            script,
-            script_data: vec![],
-            inputs: inputs.to_vec(),
-            outputs: outputs.to_vec(),
-            witnesses: vec![],
-            metadata: None,
-        }
-    }
-
-    /// Craft a transaction used to transfer funds to a contract.
-    pub fn build_contract_transfer_tx(
-        &self,
-        to: ContractId,
-        amount: u64,
-        asset_id: AssetId,
-        inputs: &[Input],
-        outputs: &[Output],
-        params: TxParameters,
-    ) -> Transaction {
-        let script_data: Vec<u8> = [
-            to.to_vec(),
-            amount.to_be_bytes().to_vec(),
-            asset_id.to_vec(),
-        ]
-        .into_iter()
-        .flatten()
-        .collect();
-
-        // This script loads:
-        //  - a pointer to the contract id,
-        //  - the actual amount
-        //  - a pointer to the asset id
-        // into the registers 0X10, 0x11, 0x12
-        // and calls the TR instruction
-        let (script, _) = script_with_data_offset!(
-            data_offset,
-            vec![
-                Opcode::MOVI(0x10, data_offset as Immediate18),
-                Opcode::MOVI(
-                    0x11,
-                    (data_offset as usize + ContractId::LEN) as Immediate18
-                ),
-                Opcode::LW(0x11, 0x11, 0),
-                Opcode::MOVI(
-                    0x12,
-                    (data_offset as usize + ContractId::LEN + WORD_SIZE) as Immediate18
-                ),
-                Opcode::TR(0x10, 0x11, 0x12),
-                Opcode::RET(REG_ONE)
-            ],
-            ConsensusParameters::DEFAULT.tx_offset()
-        );
-        #[allow(clippy::iter_cloned_collect)]
-        let script = script.iter().copied().collect();
-
-        Transaction::Script {
-            gas_price: params.gas_price,
-            gas_limit: params.gas_limit,
-            maturity: params.maturity,
-            receipts_root: Default::default(),
-            script,
-            script_data,
-            inputs: inputs.to_vec(),
-            outputs: outputs.to_vec(),
-            witnesses: vec![],
-            metadata: None,
-        }
     }
 
     /// Get the balance of all spendable coins `asset_id` for address `address`. This is different
@@ -443,50 +346,6 @@ impl Provider {
 
     pub async fn produce_blocks(&self, amount: u64) -> io::Result<u64> {
         self.client.produce_blocks(amount).await
-    }
-
-    pub async fn spend_predicate(
-        &self,
-        predicate_address: &Bech32Address,
-        code: Vec<u8>,
-        amount: u64,
-        asset_id: AssetId,
-        to: &Bech32Address,
-        data: Option<Vec<u8>>,
-    ) -> Result<Vec<Receipt>, Error> {
-        let spendable_predicate_coins = self
-            .get_spendable_coins(predicate_address, asset_id, amount)
-            .await?;
-
-        let total_amount_in_predicate: u64 = spendable_predicate_coins
-            .iter()
-            .map(|coin| coin.amount.0)
-            .sum();
-
-        let predicate_data = data.unwrap_or_default();
-        let inputs = spendable_predicate_coins
-            .into_iter()
-            .map(|coin| {
-                Input::coin_predicate(
-                    UtxoId::from(coin.utxo_id),
-                    coin.owner.into(),
-                    coin.amount.0,
-                    asset_id,
-                    TxPointer::default(),
-                    0,
-                    code.clone(),
-                    predicate_data.clone(),
-                )
-            })
-            .collect::<Vec<_>>();
-
-        let outputs = [
-            Output::coin(to.into(), total_amount_in_predicate, asset_id),
-            Output::change(predicate_address.into(), 0, asset_id),
-        ];
-
-        let tx = self.build_transfer_tx(&inputs, &outputs, TxParameters::default());
-        self.send_transaction(&tx).await
     }
 
     pub async fn estimate_transaction_cost(
