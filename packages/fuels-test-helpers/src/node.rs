@@ -301,8 +301,6 @@ fn get_messages_value(input_messages: Vec<Message>) -> Value {
     let messages: Value =
         serde_json::from_str(result.as_str()).expect("Failed to build config_with_coins JSON");
 
-    dbg!(messages.clone());
-
     messages
 }
 

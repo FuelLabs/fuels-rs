@@ -533,8 +533,6 @@ impl WalletUnlocked {
             matches!(output, Output::Change { .. }) && *output.asset_id().unwrap() == BASE_ASSET_ID
         });
 
-        dbg!(is_using_messages);
-
         // add a change output for the base asset if it doesn't exist and there are base inputs
         let change_output = if !is_base_change_present && new_base_amount != 0 && !is_using_messages
         {
