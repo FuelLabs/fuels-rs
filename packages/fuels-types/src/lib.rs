@@ -35,7 +35,7 @@ pub enum CustomType {
 ///
 /// This type may be used by compilers (e.g. Sway) and related tooling to convert an ABI
 /// representation into native Rust structs and vice-versa.
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ProgramABI {
     pub types: Vec<TypeDeclaration>,

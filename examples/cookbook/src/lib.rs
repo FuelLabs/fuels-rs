@@ -126,7 +126,7 @@ mod tests {
         let (coins, _) =
             setup_multiple_assets_coins(wallet_1.address(), NUM_ASSETS, NUM_COINS, AMOUNT);
 
-        let (provider, _) = setup_test_provider(coins, None).await;
+        let (provider, _) = setup_test_provider(coins, None, None).await;
 
         wallet_1.set_provider(provider.clone());
         wallet_2.set_provider(provider.clone());

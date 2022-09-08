@@ -253,7 +253,7 @@ impl Contract {
             &chain_info.consensus_parameters.into(),
         )?;
 
-        provider.send_transaction(&tx, false).await?;
+        provider.send_transaction(&tx).await?;
 
         Ok(contract_id)
     }

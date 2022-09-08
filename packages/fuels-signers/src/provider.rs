@@ -68,16 +68,16 @@ impl Provider {
     /// use fuels::prelude::*;
     /// async fn foo() -> Result<(), Box<dyn std::error::Error>> {
     ///   // Setup local test node
-    ///   let (provider, _) = setup_test_provider(vec![], None).await;
+    ///   let (provider, _) = setup_test_provider(vec![], None,             None).await;
     ///   let tx = Transaction::default();
     ///
-    ///   let receipts = provider.send_transaction(&tx,false).await?;
+    ///   let receipts = provider.send_transaction(&tx).await?;
     ///   dbg!(receipts);
     ///
     ///   Ok(())
     /// }
     /// ```
-    pub async fn send_transaction(&self, tx: &Transaction, spend_message: bool) -> Result<Vec<Receipt>, Error> {
+    pub async fn send_transaction(&self, tx: &Transaction) -> Result<Vec<Receipt>, Error> {
         let tolerance = 0.0;
         let TransactionCost {
             gas_used,
@@ -85,22 +85,18 @@ impl Provider {
             ..
         } = self.estimate_transaction_cost(tx, Some(tolerance)).await?;
 
-        if spend_message {
-
-        } else {
-            if gas_used > tx.gas_limit() {
-                return Err(Error::ProviderError(format!(
-                    "gas_limit({}) is lower than the estimated gas_used({})",
-                    tx.gas_limit(),
-                    gas_used
-                )));
-            } else if min_gas_price > tx.gas_price() {
-                return Err(Error::ProviderError(format!(
-                    "gas_price({}) is lower than the required min_gas_price({})",
-                    tx.gas_price(),
-                    min_gas_price
-                )));
-            }
+        if gas_used > tx.gas_limit() {
+            return Err(Error::ProviderError(format!(
+                "gas_limit({}) is lower than the estimated gas_used({})",
+                tx.gas_limit(),
+                gas_used
+            )));
+        } else if min_gas_price > tx.gas_price() {
+            return Err(Error::ProviderError(format!(
+                "gas_price({}) is lower than the required min_gas_price({})",
+                tx.gas_price(),
+                min_gas_price
+            )));
         }
 
         let (status, receipts) = self.submit_with_feedback(tx).await?;

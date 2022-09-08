@@ -9,7 +9,7 @@ use fuel_gql_client::fuel_vm::{consts::REG_ONE, prelude::Opcode};
 use itertools::{chain, Itertools};
 
 use fuel_gql_client::client::schema::coin::Coin;
-use fuels_core::constants::{BASE_ASSET_ID, DEFAULT_SPENDABLE_COIN_AMOUNT};
+use fuels_core::constants::{BASE_ASSET_ID};
 use fuels_core::parameters::TxParameters;
 use fuels_signers::provider::Provider;
 use fuels_signers::{Signer, WalletUnlocked};
@@ -66,12 +66,8 @@ impl Script {
         let required_asset_amounts = Self::calculate_required_asset_amounts(calls);
         let spendable_coins = Self::get_spendable_coins(wallet, &required_asset_amounts).await?;
 
-        // if !tx_parameters.spend_message {
-
-        // let spendable_coins = Self::get_spendable_coins(wallet, calls).await?;
-        //
-        // let (inputs, outputs) =
-        //     Self::get_transaction_inputs_outputs(calls, wallet.address(), spendable_coins);
+        let (inputs, outputs) =
+            Self::get_transaction_inputs_outputs(calls, wallet.address(), spendable_coins);
 
         let mut tx = Transaction::script(
             tx_parameters.gas_price,
@@ -370,7 +366,7 @@ impl Script {
             &chain_info.consensus_parameters.into(),
         )?;
 
-        provider.send_transaction(&self.tx, false).await
+        provider.send_transaction(&self.tx).await
     }
 
 
@@ -382,7 +378,7 @@ impl Script {
             &chain_info.consensus_parameters.into(),
         )?;
 
-        provider.send_transaction(&self.tx, spend_message).await
+        provider.send_transaction(&self.tx).await
     }
 
 

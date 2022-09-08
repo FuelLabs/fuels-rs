@@ -57,7 +57,7 @@ pub struct Wallet {
 ///
 /// async fn foo() -> Result<(), Error> {
 ///   // Setup local test node
-///   let (provider, _) = setup_test_provider(vec![], None).await;
+///   let (provider, _) = setup_test_provider(vec![], None,             None).await;
 ///
 ///   // Create a new local wallet with the newly generated key
 ///   let wallet = WalletUnlocked::new_random(Some(provider));
@@ -587,7 +587,7 @@ impl WalletUnlocked {
     ///   coins_1.extend(coins_2);
     ///
     ///   // Setup a provider and node with both set of coins
-    ///   let (provider, _) = setup_test_provider(coins_1, None).await;
+    ///   let (provider, _) = setup_test_provider(coins_1, None,            None).await;
     ///
     ///   // Set provider for wallets
     ///   wallet_1.set_provider(provider.clone());
@@ -628,7 +628,7 @@ impl WalletUnlocked {
         };
         self.sign_transaction(&mut tx).await?;
 
-        let receipts = self.get_provider()?.send_transaction(&tx, false).await?;
+        let receipts = self.get_provider()?.send_transaction(&tx).await?;
 
         Ok((tx.id().to_string(), receipts))
     }
@@ -683,7 +683,7 @@ impl WalletUnlocked {
         self.add_fee_coins(&mut tx, 0, 0).await?;
         self.sign_transaction(&mut tx).await?;
 
-        self.get_provider()?.send_transaction(&tx).await
+        self.get_provider()?.send_transaction(&tx, ).await
     }
 
     pub async fn receive_from_predicate(
@@ -761,7 +761,7 @@ impl WalletUnlocked {
         self.add_fee_coins(&mut tx, base_amount, 0).await?;
         self.sign_transaction(&mut tx).await?;
 
-        let receipts = self.get_provider()?.send_transaction(&tx, false).await?;
+        let receipts = self.get_provider()?.send_transaction(&tx).await?;
 
         Ok((tx.id().to_string(), receipts))
     }

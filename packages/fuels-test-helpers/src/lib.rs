@@ -178,12 +178,16 @@ pub async fn setup_test_client(
 
     // Setup node config with genesis coins and utxo_validation enabled
 
+    // message can has coin ... kaze nam dali je coin ili neka data koja je prikacena na njega.
+    // message change outputs -> Burned change...
+    // Message can have only base asset...
+
+
     let config = Config {
         chain_conf: ChainConfig {
             initial_state: Some(StateConfig {
                 messages: Some(message_config),
-                // coins: Some(coin_configs),
-                coins: None,
+                coins: Some(coin_configs),
                 ..StateConfig::default()
             }),
             transaction_parameters: consensus_parameters_config.unwrap_or_default(),
