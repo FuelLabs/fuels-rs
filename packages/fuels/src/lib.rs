@@ -19,7 +19,7 @@ pub mod client {
 }
 
 pub mod fuels_abigen {
-    pub use fuels_abigen_macro::*;
+    pub use fuels_abigen_macro::abigen;
 }
 
 pub mod contract {
@@ -69,7 +69,6 @@ pub mod prelude {
     pub use super::core::{Token, Tokenizable};
     pub use super::fuel_node::*;
     pub use super::fuels_abigen::abigen;
-    pub use super::fuels_abigen::get_contract_instance;
     pub use super::signers::provider::*;
     pub use super::signers::{wallet::generate_mnemonic_phrase, Signer, Wallet, WalletUnlocked};
     pub use super::test_helpers::Config;
