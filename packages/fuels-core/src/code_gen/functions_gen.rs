@@ -1,12 +1,12 @@
 use crate::code_gen::abigen::Abigen;
 use crate::code_gen::docs_gen::expand_doc;
+use crate::code_gen::function_selector::resolve_function_selector;
 use crate::code_gen::resolved_type;
 use crate::code_gen::resolved_type::ResolvedType;
 use crate::utils::{first_four_bytes_of_sha256_hash, ident, safe_ident};
 use crate::{ParamType, Selector};
 use anyhow::anyhow;
 use fuels_types::errors::Error;
-use fuels_types::function_selector::build_fn_selector;
 use fuels_types::{
     ABIFunction, CustomType, TypeApplication, TypeDeclaration, ENUM_KEYWORD, STRUCT_KEYWORD,
 };
@@ -42,14 +42,8 @@ pub fn expand_function(
         return Err(Error::InvalidData("Function name can not be empty".into()));
     }
 
-    let fn_param_types = function
-        .inputs
-        .iter()
-        .map(|t| types.get(&t.type_id).unwrap().clone())
-        .collect::<Vec<TypeDeclaration>>();
-
     let name = safe_ident(&function.name);
-    let fn_signature = build_fn_selector(&function.name, &fn_param_types, types)?;
+    let fn_signature = resolve_function_selector(&function, types);
 
     let encoded = first_four_bytes_of_sha256_hash(&fn_signature);
 

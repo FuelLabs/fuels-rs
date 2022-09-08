@@ -2,16 +2,22 @@ use std::collections::HashMap;
 
 use crate::errors::Error;
 use crate::utils::{has_array_format, has_tuple_format};
-use crate::TypeDeclaration;
+use crate::{ABIFunction, TypeDeclaration};
 
 /// Builds a string representation of a function selector,
 /// i.e: <fn_name>(<type_1>, <type_2>, ..., <type_n>)
 pub fn build_fn_selector(
-    fn_name: &str,
-    params: &[TypeDeclaration],
+    function: &ABIFunction,
     types: &HashMap<usize, TypeDeclaration>,
 ) -> Result<String, Error> {
-    let fn_selector = fn_name.to_owned();
+    let fn_selector = &function.name.to_owned();
+
+    let params = function
+        .inputs
+        .iter()
+        .map(|input| types.get(&input.type_id).unwrap())
+        .cloned()
+        .collect::<Vec<_>>();
 
     let mut result: String = format!("{}(", fn_selector);
 
@@ -234,12 +240,17 @@ mod tests {
             .map(|t| (t.type_id, t))
             .collect::<HashMap<usize, TypeDeclaration>>();
 
-        let fn_param_types = fn_params
-            .iter()
-            .map(|t| all_types.get(&t.type_id).unwrap().clone())
-            .collect::<Vec<TypeDeclaration>>();
+        let fun = ABIFunction {
+            inputs: fn_params,
+            name: fn_name.to_string(),
+            output: TypeApplication {
+                name: "".to_string(),
+                type_id: 0,
+                type_arguments: None,
+            },
+        };
 
-        let result = build_fn_selector(fn_name, &fn_param_types, &all_types).unwrap();
+        let result = build_fn_selector(&fun, &all_types).unwrap();
 
         assert_eq!("some_abi_fn(s(u64,b256),s(bool,s(u64,b256)))", result);
 
