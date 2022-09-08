@@ -520,7 +520,7 @@ impl WalletUnlocked {
             .get_asset_inputs_for_amount(BASE_ASSET_ID, new_base_amount, witness_index)
             .await
             .unwrap_or(self.get_inputs_for_messages(witness_index).await?);
-        if new_base_inputs.is_empty() {
+        if new_base_inputs.is_empty() && new_base_amount != 0 {
             return Err(Error::ProviderError(
                 "Response errors; enough coins could not be found".to_string(),
             ));
@@ -566,7 +566,7 @@ impl WalletUnlocked {
             }
         };
 
-        // dbg!(&tx);
+        dbg!(&tx);
 
         Ok(())
     }

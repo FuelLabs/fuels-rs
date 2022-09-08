@@ -73,7 +73,6 @@ mod tests {
         let base_balance = wallet.get_asset_balance(&base_asset_id).await?;
         assert_eq!(base_balance, deposit_amount);
         // ANCHOR_END: liquidity_withdraw
-
         Ok(())
     }
 
