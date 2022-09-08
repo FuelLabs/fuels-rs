@@ -337,9 +337,6 @@ impl Contract {
             witnesses,
         );
 
-        // dbg!("Contract deploy");
-        // dbg!(tx.clone());
-
         Ok((tx, contract_id.into()))
     }
 

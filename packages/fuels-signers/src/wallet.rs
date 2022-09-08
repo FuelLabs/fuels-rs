@@ -566,8 +566,6 @@ impl WalletUnlocked {
             }
         };
 
-        dbg!(&tx);
-
         Ok(())
     }
 
