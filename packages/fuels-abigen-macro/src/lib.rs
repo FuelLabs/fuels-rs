@@ -19,22 +19,42 @@ pub fn abigen(input: TokenStream) -> TokenStream {
         .into()
 }
 
-/// Abigen proc macro definition and helper functions/types.
+#[proc_macro]
+pub fn wasm_abigen(input: TokenStream) -> TokenStream {
+    let args = parse_macro_input!(input as Spanned<ContractArgs>);
+
+    Abigen::new(&args.name, &args.abi)
+        .unwrap()
+        .no_std()
+        .expand()
+        .unwrap()
+        .into()
+}
+
+/// This proc macro is used to reduce the amount of boilerplate code in integration tests.
+/// When expanded, the proc macro will: launch a local provider, generate one wallet,
+/// deploy the selected contract and create a contract instance with the specified name.
 #[proc_macro]
 pub fn get_contract_instance(input: TokenStream) -> TokenStream {
     let args = parse_macro_input!(input as Spanned<ContractArgs>);
 
-    let mut abi_path = "packages/fuels/tests/test_projects/".to_string();
-    abi_path.push_str(&args.abi);
-    abi_path.push_str("/out/debug/");
-    abi_path.push_str(&args.abi);
-    abi_path.push_str("-abi.json");
+    let abi_path = [
+        "packages/fuels/tests/test_projects/",
+        &args.abi,
+        "/out/debug/",
+        &args.abi,
+        "-abi.json",
+    ]
+    .concat();
 
-    let mut bin_path = "tests/test_projects/".to_string();
-    bin_path.push_str(&args.abi);
-    bin_path.push_str("/out/debug/");
-    bin_path.push_str(&args.abi);
-    bin_path.push_str(".bin");
+    let bin_path = [
+        "tests/test_projects/",
+        &args.abi,
+        "/out/debug/",
+        &args.abi,
+        ".bin",
+    ]
+    .concat();
 
     let mut abigen_token_stream: TokenStream = Abigen::new("MyContract", abi_path)
         .unwrap()
@@ -42,7 +62,7 @@ pub fn get_contract_instance(input: TokenStream) -> TokenStream {
         .unwrap()
         .into();
 
-    let name = Ident::new(&args.name, Span::call_site());
+    let contract_instance_name = Ident::new(&args.name, Span::call_site());
 
     let added_token_stream: TokenStream = quote! {
         let wallet = launch_provider_and_get_wallet().await;
@@ -55,24 +75,12 @@ pub fn get_contract_instance(input: TokenStream) -> TokenStream {
         )
         .await?;
 
-        let #name = MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
+        let #contract_instance_name = MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
     }
     .into();
 
     abigen_token_stream.extend(added_token_stream);
     abigen_token_stream
-}
-
-#[proc_macro]
-pub fn wasm_abigen(input: TokenStream) -> TokenStream {
-    let args = parse_macro_input!(input as Spanned<ContractArgs>);
-
-    Abigen::new(&args.name, &args.abi)
-        .unwrap()
-        .no_std()
-        .expand()
-        .unwrap()
-        .into()
 }
 
 /// Trait that abstracts functionality for inner data that can be parsed and
