@@ -3602,7 +3602,7 @@ async fn testnet_hello_world() -> Result<(), Error> {
 async fn test_input_message() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json"
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
     let mut wallet = WalletUnlocked::new_random(None);
 
