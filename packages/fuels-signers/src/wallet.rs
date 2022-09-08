@@ -7,15 +7,17 @@ use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
 use fuel_gql_client::{
     client::{schema::coin::Coin, types::TransactionResponse, PaginatedResult, PaginationRequest},
     fuel_tx::{
-        AssetId, Bytes32, ContractId, Input, Output, Receipt, Transaction, TxPointer, UtxoId,
-        Witness,
+        AssetId, Bytes32, ConsensusParameters, ContractId, Input, Output, Receipt, Transaction,
+        TransactionFee, TxPointer, UtxoId, Witness,
     },
+    fuel_vm::{consts::REG_ONE, prelude::Opcode, script_with_data_offset},
 };
-use fuels_core::parameters::TxParameters;
+use fuel_types::{bytes::WORD_SIZE, Immediate18};
+use fuels_core::{constants::BASE_ASSET_ID, parameters::TxParameters};
 use fuels_types::bech32::{Bech32Address, Bech32ContractId, FUEL_BECH32_HRP};
 use fuels_types::errors::Error;
 use rand::{CryptoRng, Rng};
-use std::{collections::HashMap, fmt, ops, path::Path};
+use std::{collections::HashMap, fmt, ops, path::Path, vec};
 use thiserror::Error;
 
 const DEFAULT_DERIVATION_PATH_PREFIX: &str = "m/44'/1179993420'/0'/0/";
@@ -230,6 +232,88 @@ impl Wallet {
             private_key,
         }
     }
+
+    /// Craft a transaction used to transfer funds between two addresses.
+    pub fn build_transfer_tx(
+        inputs: &[Input],
+        outputs: &[Output],
+        params: TxParameters,
+    ) -> Transaction {
+        // This script contains a single Opcode that returns immediately (RET)
+        // since all this transaction does is move Inputs and Outputs around.
+        let script = Opcode::RET(REG_ONE).to_bytes().to_vec();
+        Transaction::Script {
+            gas_price: params.gas_price,
+            gas_limit: params.gas_limit,
+            maturity: params.maturity,
+            receipts_root: Default::default(),
+            script,
+            script_data: vec![],
+            inputs: inputs.to_vec(),
+            outputs: outputs.to_vec(),
+            witnesses: vec![],
+            metadata: None,
+        }
+    }
+
+    /// Craft a transaction used to transfer funds to a contract.
+    pub fn build_contract_transfer_tx(
+        to: ContractId,
+        amount: u64,
+        asset_id: AssetId,
+        inputs: &[Input],
+        outputs: &[Output],
+        params: TxParameters,
+    ) -> Transaction {
+        let script_data: Vec<u8> = [
+            to.to_vec(),
+            amount.to_be_bytes().to_vec(),
+            asset_id.to_vec(),
+        ]
+        .into_iter()
+        .flatten()
+        .collect();
+
+        // This script loads:
+        //  - a pointer to the contract id,
+        //  - the actual amount
+        //  - a pointer to the asset id
+        // into the registers 0X10, 0x11, 0x12
+        // and calls the TR instruction
+        let (script, _) = script_with_data_offset!(
+            data_offset,
+            vec![
+                Opcode::MOVI(0x10, data_offset as Immediate18),
+                Opcode::MOVI(
+                    0x11,
+                    (data_offset as usize + ContractId::LEN) as Immediate18
+                ),
+                Opcode::LW(0x11, 0x11, 0),
+                Opcode::MOVI(
+                    0x12,
+                    (data_offset as usize + ContractId::LEN + WORD_SIZE) as Immediate18
+                ),
+                Opcode::TR(0x10, 0x11, 0x12),
+                Opcode::RET(REG_ONE)
+            ],
+            ConsensusParameters::DEFAULT.tx_offset()
+        );
+        #[allow(clippy::iter_cloned_collect)]
+        let script = script.iter().copied().collect();
+
+        Transaction::Script {
+            gas_price: params.gas_price,
+            gas_limit: params.gas_limit,
+            maturity: params.maturity,
+            receipts_root: Default::default(),
+            script,
+            script_data,
+            inputs: inputs.to_vec(),
+            outputs: outputs.to_vec(),
+            witnesses: vec![],
+            metadata: None,
+        }
+    }
 }
 
 impl WalletUnlocked {
@@ -336,6 +420,98 @@ impl WalletUnlocked {
         Ok(Self::new_from_private_key(secret_key, provider))
     }
 
+    /// Add base asset inputs to the transaction to cover the estimated fee.
+    /// The original base asset amount cannot be calculated reliably from
+    /// the existing transaction inputs because the selected coins may exceed
+    /// the required amount to avoid dust. Therefore we require it as an argument.
+    ///
+    /// Requires contract inputs to be at the start of the transactions inputs vec
+    /// so that their indexes are retained
+    pub async fn add_fee_coins(
+        &self,
+        tx: &mut Transaction,
+        previous_base_amount: u64,
+        witness_index: u8,
+    ) -> Result<(), Error> {
+        let consensus_parameters = self
+            .get_provider()?
+            .chain_info()
+            .await?
+            .consensus_parameters;
+        let transaction_fee = TransactionFee::checked_from_tx(&consensus_parameters.into(), &*tx)
+            .expect("Error calculating TransactionFee");
+
+        let (base_asset_inputs, remaining_inputs): (Vec<_>, Vec<_>) =
+            tx.inputs().iter().cloned().partition(|input| {
+                matches!(input, Input::CoinSigned { .. })
+                    && *input.asset_id().unwrap() == BASE_ASSET_ID
+            });
+
+        let base_inputs_sum: u64 = base_asset_inputs
+            .iter()
+            .map(|input| input.amount().unwrap())
+            .sum();
+        // either the inputs were setup incorrectly, or the passed base_asset_amount is wrong
+        if base_inputs_sum < previous_base_amount {
+            return Err(Error::WalletError(
+                "The provided base asset amount is less than the present input coins".to_string(),
+            ));
+        }
+
+        let mut new_base_amount = transaction_fee.total() + previous_base_amount;
+        // If the tx doesn't consume any UTXOs, attempting to repeat it will lead to an
+        // error due to non unique tx ids (e.g. repeated contract call with configured gas cost of 0).
+        // Here we enforce a minimum amount on the base asset to avoid this
+        const MIN_AMOUNT: u64 = 1;
+        let is_using_coins = tx
+            .inputs()
+            .iter()
+            .any(|input| matches!(input, Input::CoinSigned { .. }));
+        if !is_using_coins && new_base_amount == 0 {
+            new_base_amount = MIN_AMOUNT;
+        }
+
+        let new_base_inputs = self
+            .get_asset_inputs_for_amount(BASE_ASSET_ID, new_base_amount, witness_index)
+            .await?;
+        let adjusted_inputs: Vec<_> = remaining_inputs
+            .into_iter()
+            .chain(new_base_inputs.into_iter())
+            .collect();
+
+        let is_base_change_present = tx.outputs().iter().any(|output| {
+            matches!(output, Output::Change { .. }) && *output.asset_id().unwrap() == BASE_ASSET_ID
+        });
+
+        // add a change output for the base asset if it doesn't exist and there are base inputs
+        let change_output = if !is_base_change_present && new_base_amount != 0 {
+            vec![Output::change(self.address().into(), 0, BASE_ASSET_ID)]
+        } else {
+            vec![]
+        };
+
+        match tx {
+            Transaction::Script {
+                ref mut inputs,
+                ref mut outputs,
+                ..
+            } => {
+                *inputs = adjusted_inputs;
+                outputs.extend(change_output);
+            }
+            Transaction::Create {
+                ref mut inputs,
+                ref mut outputs,
+                ..
+            } => {
+                *inputs = adjusted_inputs;
+                outputs.extend(change_output);
+            }
+        };
+
+        Ok(())
+    }
+
     /// Transfer funds from this wallet to another `Address`.
     /// Fails if amount for asset ID is larger than address's spendable coins.
     /// Returns the transaction ID that was sent and the list of receipts.
@@ -391,15 +567,72 @@ impl WalletUnlocked {
             .await?;
         let outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
 
-        // Build transaction and sign it
-        let mut tx = self
-            .get_provider()?
-            .build_transfer_tx(&inputs, &outputs, tx_parameters);
+        let mut tx = Wallet::build_transfer_tx(&inputs, &outputs, tx_parameters);
+
+        // if we are not transferring the base asset, previous base amount is 0
+        if asset_id == AssetId::default() {
+            self.add_fee_coins(&mut tx, amount, 0).await?;
+        } else {
+            self.add_fee_coins(&mut tx, 0, 0).await?;
+        };
         self.sign_transaction(&mut tx).await?;
 
         let receipts = self.get_provider()?.send_transaction(&tx).await?;
 
         Ok((tx.id().to_string(), receipts))
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub async fn spend_predicate(
+        &self,
+        predicate_address: &Bech32Address,
+        code: Vec<u8>,
+        amount: u64,
+        asset_id: AssetId,
+        to: &Bech32Address,
+        data: Option<Vec<u8>>,
+        tx_parameters: TxParameters,
+    ) -> Result<Vec<Receipt>, Error> {
+        let spendable_predicate_coins = self
+            .get_provider()?
+            .get_spendable_coins(predicate_address, asset_id, amount)
+            .await?;
+
+        // input amount is: amount < input_amount < 2*amount
+        // because of "random improve" used by get_spendable_coins()
+        let input_amount: u64 = spendable_predicate_coins
+            .iter()
+            .map(|coin| coin.amount.0)
+            .sum();
+
+        let predicate_data = data.unwrap_or_default();
+        let inputs = spendable_predicate_coins
+            .into_iter()
+            .map(|coin| {
+                Input::coin_predicate(
+                    UtxoId::from(coin.utxo_id),
+                    coin.owner.into(),
+                    coin.amount.0,
+                    asset_id,
+                    TxPointer::default(),
+                    0,
+                    code.clone(),
+                    predicate_data.clone(),
+                )
+            })
+            .collect::<Vec<_>>();
+
+        let outputs = [
+            Output::coin(to.into(), amount, asset_id),
+            Output::coin(predicate_address.into(), input_amount - amount, asset_id),
+        ];
+
+        let mut tx = Wallet::build_transfer_tx(&inputs, &outputs, tx_parameters);
+        // we set previous base amount to 0 because it only applies to signed coins, not predicate coins
+        self.add_fee_coins(&mut tx, 0, 0).await?;
+        self.sign_transaction(&mut tx).await?;
+
+        self.get_provider()?.send_transaction(&tx).await
     }
 
     pub async fn receive_from_predicate(
@@ -409,17 +642,18 @@ impl WalletUnlocked {
         amount: u64,
         asset_id: AssetId,
         predicate_data: Option<Vec<u8>>,
+        tx_parameters: TxParameters,
     ) -> Result<Vec<Receipt>, Error> {
-        self.get_provider()?
-            .spend_predicate(
-                predicate_address,
-                predicate_code,
-                amount,
-                asset_id,
-                self.address(),
-                predicate_data,
-            )
-            .await
+        self.spend_predicate(
+            predicate_address,
+            predicate_code,
+            amount,
+            asset_id,
+            self.address(),
+            predicate_data,
+            tx_parameters,
+        )
+        .await
     }
 
     /// Unconditionally transfers `balance` of type `asset_id` to
@@ -459,7 +693,7 @@ impl WalletUnlocked {
         ];
 
         // Build transaction and sign it
-        let mut tx = self.get_provider()?.build_contract_transfer_tx(
+        let mut tx = Wallet::build_contract_transfer_tx(
             plain_contract_id,
             balance,
             asset_id,
@@ -467,6 +701,13 @@ impl WalletUnlocked {
             &outputs,
             tx_parameters,
         );
+        // if we are not transferring the base asset, previous base amount is 0
+        let base_amount = if asset_id == AssetId::default() {
+            balance
+        } else {
+            0
+        };
+        self.add_fee_coins(&mut tx, base_amount, 0).await?;
         self.sign_transaction(&mut tx).await?;
 
         let receipts = self.get_provider()?.send_transaction(&tx).await?;
@@ -547,8 +788,11 @@ pub fn generate_mnemonic_phrase<R: Rng>(rng: &mut R, count: usize) -> Result<Str
 #[cfg(feature = "test-helpers")]
 mod tests {
     use super::*;
+    use core::iter::repeat;
     use fuel_core::service::{Config, FuelService};
     use fuel_gql_client::client::FuelClient;
+    use fuel_gql_client::fuel_tx::Address;
+    use fuels_test_helpers::{launch_custom_provider_and_get_wallets, AssetConfig, WalletsConfig};
     use fuels_types::errors::Error;
     use tempfile::tempdir;
 
@@ -666,5 +910,137 @@ mod tests {
         let srv = FuelService::new_node(Config::local_node()).await.unwrap();
         let client = FuelClient::from(srv.bound_address);
         Provider::new(client)
+    }
+
+    fn add_fee_coins_wallet_config(num_wallets: u64) -> WalletsConfig {
+        let asset_configs = vec![AssetConfig {
+            id: BASE_ASSET_ID,
+            num_coins: 20,
+            coin_amount: 20,
+        }];
+        WalletsConfig::new_multiple_assets(num_wallets, asset_configs)
+    }
+
+    fn compare_inputs(inputs: &[Input], expected_inputs: &mut Vec<Input>) -> bool {
+        let zero_utxo_id = UtxoId::new(Bytes32::zeroed(), 0);
+
+        // change UTXO_ids to 0s for comparison, because we can't guess the genesis coin ids
+        let inputs: Vec<Input> = inputs
+            .iter()
+            .map(|input| match input {
+                Input::CoinSigned {
+                    owner,
+                    amount,
+                    asset_id,
+                    tx_pointer,
+                    witness_index,
+                    maturity,
+                    ..
+                } => Input::coin_signed(
+                    zero_utxo_id,
+                    *owner,
+                    *amount,
+                    *asset_id,
+                    *tx_pointer,
+                    *witness_index,
+                    *maturity,
+                ),
+                other => other.clone(),
+            })
+            .collect();
+
+        let comparison_results: Vec<bool> = inputs
+            .iter()
+            .map(|input| {
+                let found_index = expected_inputs
+                    .iter()
+                    .position(|expected| expected == input);
+                if let Some(index) = found_index {
+                    expected_inputs.remove(index);
+                    true
+                } else {
+                    false
+                }
+            })
+            .collect();
+
+        if !expected_inputs.is_empty() {
+            return false;
+        }
+
+        return comparison_results.iter().all(|&r| r);
+    }
+
+    #[tokio::test]
+    async fn add_fee_coins_empty_transaction() -> Result<(), Error> {
+        let wallet_config = add_fee_coins_wallet_config(1);
+        let wallet = launch_custom_provider_and_get_wallets(wallet_config, None)
+            .await
+            .pop()
+            .unwrap();
+        let mut tx = Wallet::build_transfer_tx(&[], &[], TxParameters::default());
+
+        wallet.add_fee_coins(&mut tx, 0, 0).await?;
+
+        let zero_utxo_id = UtxoId::new(Bytes32::zeroed(), 0);
+        let mut expected_inputs = vec![Input::coin_signed(
+            zero_utxo_id,
+            wallet.address().into(),
+            20,
+            BASE_ASSET_ID,
+            TxPointer::default(),
+            0,
+            0,
+        )];
+        let expected_outputs = vec![Output::change(wallet.address().into(), 0, BASE_ASSET_ID)];
+
+        assert!(compare_inputs(tx.inputs(), &mut expected_inputs));
+        assert_eq!(tx.outputs(), expected_outputs);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn add_fee_coins_to_transfer_with_base_asset() -> Result<(), Error> {
+        let wallet_config = add_fee_coins_wallet_config(1);
+        let wallet = launch_custom_provider_and_get_wallets(wallet_config, None)
+            .await
+            .pop()
+            .unwrap();
+
+        let base_amount = 30;
+        let inputs = wallet
+            .get_asset_inputs_for_amount(BASE_ASSET_ID, base_amount, 0)
+            .await?;
+        let outputs = wallet.get_asset_outputs_for_amount(
+            &Address::zeroed().into(),
+            BASE_ASSET_ID,
+            base_amount,
+        );
+        let mut tx = Wallet::build_transfer_tx(&inputs, &outputs, TxParameters::default());
+
+        wallet.add_fee_coins(&mut tx, base_amount, 0).await?;
+
+        let zero_utxo_id = UtxoId::new(Bytes32::zeroed(), 0);
+        let mut expected_inputs = repeat(Input::coin_signed(
+            zero_utxo_id,
+            wallet.address().into(),
+            20,
+            BASE_ASSET_ID,
+            TxPointer::default(),
+            0,
+            0,
+        ))
+        .take(3)
+        .collect::<Vec<_>>();
+        let expected_outputs = vec![
+            Output::coin(Address::zeroed(), base_amount, BASE_ASSET_ID),
+            Output::change(wallet.address().into(), 0, BASE_ASSET_ID),
+        ];
+
+        assert!(compare_inputs(tx.inputs(), &mut expected_inputs));
+        assert_eq!(tx.outputs(), expected_outputs);
+
+        Ok(())
     }
 }
