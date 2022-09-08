@@ -27,7 +27,7 @@ abi MyContract {
 }
 
 impl MyContract for Contract {
-    fn identity(arg: MyStruct<u32, AnotherOne<BraveOne>>) -> MyStruct<u64, AnotherOne<BraveOne>> {
+    fn identity(arg: MyStruct<u32, AnotherOne<BraveOne>>) -> MyStruct<u32, AnotherOne<BraveOne>> {
         arg
     }
     //fn enum_using(arg: AGenericEn<MyStruct<u64, AnotherOne<BraveOne>>>) -> u64 {

@@ -3603,43 +3603,51 @@ const ABI: &str = r#"
 //
 //     Ok(())
 // }
-// #[tokio::test]
-// async fn generics_test() -> Result<(), Error> {
-//     // this still fails ATTOW probably because of the fn selector
-//     abigen!(
-//         MyContract,
-//         "packages/fuels/tests/test_projects/generics/out/debug/generics-abi.json"
-//     );
-//
-//     let wallet = launch_provider_and_get_wallet().await;
-//
-//     let contract_id = Contract::deploy(
-//         "tests/test_projects/generics/out/debug/generics.bin",
-//         &wallet,
-//         TxParameters::default(),
-//         StorageConfiguration::default(),
-//     )
-//     .await?;
-//
-//     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
-//
-//     let a = BraveOne { one: 10, two: 20 };
-//
-//     let b = AnotherOne {
-//         rodrigo: 30,
-//         john: "123456789012345".to_string(),
-//         juicy: a,
-//     };
-//
-//     let c = MyStruct { foo: 40, boo: b };
-//
-//     let arg = AGenericEn::two(c);
-//     let result = contract_instance.enum_using(arg).call().await?;
-//     dbg!(result);
-//
-//     Ok(())
-// }
-//
+#[tokio::test]
+async fn generics_test() -> Result<(), Error> {
+    abigen!(
+        MyContract,
+        "packages/fuels/tests/test_projects/generics/out/debug/generics-abi.json"
+    );
+
+    let wallet = launch_provider_and_get_wallet().await;
+
+    let contract_id = Contract::deploy(
+        "tests/test_projects/generics/out/debug/generics.bin",
+        &wallet,
+        TxParameters::default(),
+        StorageConfiguration::default(),
+    )
+    .await?;
+
+    let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
+
+    let a_generic_en = AGenericEn::two(10u32);
+    let another_one = AnotherOne {
+        rodrigo: 10,
+        john: "111111111111111".try_into().unwrap(),
+        juicy: a_generic_en,
+    };
+
+    let brave_one = BraveOne { one: 1, two: 2 };
+
+    let yet_another_one = AnotherOne {
+        rodrigo: 12,
+        john: "111121111111111".try_into().unwrap(),
+        juicy: brave_one,
+    };
+
+    let arg = MyStruct {
+        foo: another_one,
+        boo: yet_another_one,
+    };
+
+    let result = contract_instance.identity(arg.clone()).call().await?;
+    assert_eq!(result.value, arg);
+
+    Ok(())
+}
+
 fn cargo_check(project_path: &Path) -> std::io::Result<ExitStatus> {
     Command::new(env!("CARGO"))
         .current_dir(project_path)
