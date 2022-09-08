@@ -195,7 +195,7 @@ fn main() -&gt; bool {
         let mut wallet = WalletUnlocked::new_from_private_key(secret_key1, None);
         let mut wallet2 = WalletUnlocked::new_from_private_key(secret_key2, None);
         let mut wallet3 = WalletUnlocked::new_from_private_key(secret_key3, None);
-        let mut receiver = WalletUnlocked::new_random(None);
+        let receiver = WalletUnlocked::new_random(None);
 </code></pre>
 <p>Next, let's add some coins, start a provider and connect it with the wallets.</p>
 <pre><code class="language-rust ignore">        let all_coins = [&amp;wallet, &amp;wallet2, &amp;wallet3]
@@ -215,7 +215,7 @@ fn main() -&gt; bool {
         )
         .await;
 
-        [&amp;mut wallet, &amp;mut wallet2, &amp;mut wallet3, &amp;mut receiver]
+        [&amp;mut wallet, &amp;mut wallet2, &amp;mut wallet3]
             .iter_mut()
             .for_each(|wallet| wallet.set_provider(provider.clone()));
 </code></pre>
@@ -254,13 +254,15 @@ fn main() -&gt; bool {
 </code></pre>
 <p>After generating the signatures, we can send a transaction to spend the predicate funds. We use the <code>receiver</code> wallet as the recipient. We have to provide the predicate byte code and the required signatures. As we provide the correct data, we receive the funds and verify that the amount is correct.</p>
 <pre><code class="language-rust ignore">        let predicate_data = signatures.into_iter().flatten().collect();
-        receiver
-            .receive_from_predicate(
+        wallet
+            .spend_predicate(
                 predicate_address,
                 predicate_code,
                 amount_to_predicate,
                 asset_id,
+                receiver.address(),
                 Some(predicate_data),
+                TxParameters::default(),
             )
             .await?;
 

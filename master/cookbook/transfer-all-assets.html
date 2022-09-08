@@ -145,7 +145,7 @@
 
         const NUM_ASSETS: u64 = 5;
         const AMOUNT: u64 = 100_000;
-        const NUM_COINS: u64 = 10;
+        const NUM_COINS: u64 = 1;
         let (coins, _) =
             setup_multiple_assets_coins(wallet_1.address(), NUM_ASSETS, NUM_COINS, AMOUNT);
 
@@ -155,7 +155,8 @@
         wallet_2.set_provider(provider.clone());
 </code></pre>
 <p>We prepare two wallets with randomized addresses. Next, we want one of our wallets to have some random assets, so we set them up with <code>setup_multiple_assets_coins()</code>. Having created the coins, we can start a provider and assign it to the previously created wallets.</p>
-<p>Transactions require us to define input and output coins. Let's assume we do not know the assets owned by <code>wallet_1</code>. We retrieve its balances, i.e. tuples consisting of a string representing the asset id and the respective amount. This lets us use the helpers <code>get_asset_inputs_for_amount()</code>, <code>get_asset_outputs_for_amount()</code> to create the appropriate inputs and outputs:</p>
+<p>Transactions require us to define input and output coins. Let's assume we do not know the assets owned by <code>wallet_1</code>. We retrieve its balances, i.e. tuples consisting of a string representing the asset id and the respective amount. This lets us use the helpers <code>get_asset_inputs_for_amount()</code>, <code>get_asset_outputs_for_amount()</code> to create the appropriate inputs and outputs.</p>
+<p>For the sake of simplicity, we avoid transferring the base asset so we don't have to worry about transaction fees:</p>
 <pre><code class="language-rust ignore">        let balances = wallet_1.get_balances().await?;
 
         let mut inputs = vec![];
@@ -163,6 +164,10 @@
         for (id_string, amount) in balances {
             let id = AssetId::from_str(&amp;id_string).unwrap();
 
+            // leave the base asset to cover transaction fees
+            if id == BASE_ASSET_ID {
+                continue;
+            }
             let input = wallet_1.get_asset_inputs_for_amount(id, amount, 0).await?;
             inputs.extend(input);
 
@@ -170,14 +175,18 @@
             outputs.extend(output);
         }
 </code></pre>
-<p>All that is left is to build the transaction with the provider's helper <code>build_transfer_transaction()</code>, have <code>wallet_1</code> sign it, and we can send it. Checking that the wallets balances are empty lets us confirm that we have indeed transferred all assets:</p>
-<pre><code class="language-rust ignore">        let mut tx = provider.build_transfer_tx(&amp;inputs, &amp;outputs, TxParameters::default());
+<p>All that is left is to build the transaction with the helper <code>build_transfer_transaction()</code>, have <code>wallet_1</code> sign it, and we can send it. We confirm this by checking the number of balances present in the receiving wallet and their amount:</p>
+<pre><code class="language-rust ignore">        let mut tx = Wallet::build_transfer_tx(&amp;inputs, &amp;outputs, TxParameters::default());
         wallet_1.sign_transaction(&amp;mut tx).await?;
 
         let _receipts = provider.send_transaction(&amp;tx).await?;
 
-        let balances = wallet_1.get_balances().await?;
-        assert!(balances.is_empty());
+        let balances = wallet_2.get_balances().await?;
+
+        assert_eq!(balances.len(), (NUM_ASSETS - 1) as usize);
+        for (_, balance) in balances {
+            assert_eq!(balance, AMOUNT);
+        }
 </code></pre>
 
                     </main>

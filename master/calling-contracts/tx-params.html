@@ -142,7 +142,6 @@
 <ol>
 <li>Gas price;</li>
 <li>Gas limit;</li>
-<li>Byte price;</li>
 <li>Maturity.</li>
 </ol>
 <p>You can configure these parameters by creating an instance of <a href="https://github.com/FuelLabs/fuels-rs/blob/adf81bd451d7637ce0976363bd7784408430031a/packages/fuels-contract/src/parameters.rs#L7"><code>TxParameters</code></a> and passing it to a chain method called <code>tx_params</code>:</p>
@@ -169,6 +168,7 @@ pub const DEFAULT_MATURITY: u64 = 0;
             .await?;
 
 </code></pre>
+<p>As you might have noticed already, <code>TxParameters</code> can also be specified when deploying contracts or transfering assets by passing it to the respective methods.</p>
 
                     </main>
 
