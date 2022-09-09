@@ -1,5 +1,3 @@
-#![feature(ptr_metadata)]
-
 use fuel_core::service::Config as CoreConfig;
 use fuel_core::service::FuelService;
 use fuel_gql_client::fuel_tx::{AssetId, ContractId, Receipt};
