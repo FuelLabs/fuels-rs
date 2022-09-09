@@ -227,11 +227,11 @@ impl<'de> DeserializeAs<'de, BlockHeight> for HexNumber {
 
 pub fn get_node_config_json(
     coins: Vec<(UtxoId, Coin)>,
-    input_messages: Option<Vec<Message>>,
+    messages: Vec<Message>,
     consensus_parameters_config: Option<ConsensusParameters>,
 ) -> Value {
     let coins = get_coins_value(coins);
-    let messages = get_messages_value(input_messages.unwrap_or_default());
+    let messages = get_messages_value(messages);
     let consensus_parameters =
         serde_json::to_value(consensus_parameters_config.unwrap_or_default())
             .expect("Failed to build transaction_parameters JSON");
@@ -277,8 +277,8 @@ fn get_coins_value(coins: Vec<(UtxoId, Coin)>) -> Value {
     coins
 }
 
-fn get_messages_value(input_messages: Vec<Message>) -> Value {
-    let message_configs: Vec<Value> = input_messages
+fn get_messages_value(messages: Vec<Message>) -> Value {
+    let message_configs: Vec<Value> = messages
         .into_iter()
         .map(|message| {
             serde_json::to_value(&MessageConfig {
@@ -316,15 +316,15 @@ fn write_temp_config_file(config: Value) -> NamedTempFile {
 
 pub async fn new_fuel_node(
     coins: Vec<(UtxoId, Coin)>,
-    consensus_parameters_config: Option<ConsensusParameters>,
+    messages: Vec<Message>,
     config: Config,
-    input_messages: Option<Vec<Message>>,
+    consensus_parameters_config: Option<ConsensusParameters>,
 ) {
     // Create a new one-shot channel for sending single values across asynchronous tasks.
     let (tx, rx) = oneshot::channel();
 
     tokio::spawn(async move {
-        let config_json = get_node_config_json(coins, input_messages, consensus_parameters_config);
+        let config_json = get_node_config_json(coins, messages, consensus_parameters_config);
         let temp_config_file = write_temp_config_file(config_json);
 
         let port = &config.addr.port().to_string();
@@ -417,7 +417,7 @@ impl FuelService {
 
         new_fuel_node(
             vec![],
-            None,
+            vec![],
             Config {
                 addr: bound_address,
                 ..config

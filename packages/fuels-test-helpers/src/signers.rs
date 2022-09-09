@@ -83,7 +83,7 @@ pub async fn launch_custom_provider_and_get_wallets(
         .flat_map(|wallet| setup_custom_assets_coins(wallet.address(), wallet_config.assets()))
         .collect::<Vec<_>>();
 
-    let (provider, _) = setup_test_provider(all_coins, provider_config, None).await;
+    let (provider, _) = setup_test_provider(all_coins, vec![], provider_config).await;
 
     wallets
         .iter_mut()
@@ -99,16 +99,16 @@ pub async fn launch_custom_provider_and_get_wallets(
 /// use fuels_test_helpers::setup_test_provider;
 ///
 /// async fn test_provider() -> Result<(), Box<dyn std::error::Error>> {
-///   let (_provider, _address) = setup_test_provider(vec![], None, None).await;
+///   let (_provider, _address) = setup_test_provider(vec![], vec![], None).await;
 ///   Ok(())
 /// }
 /// ```
 pub async fn setup_test_provider(
     coins: Vec<(UtxoId, Coin)>,
+    messages: Vec<Message>,
     node_config: Option<Config>,
-    messages: Option<Vec<Message>>,
 ) -> (Provider, SocketAddr) {
-    let (client, addr) = setup_test_client(coins, node_config, None, messages).await;
+    let (client, addr) = setup_test_client(coins, messages, node_config, None).await;
     (Provider::new(client), addr)
 }
 

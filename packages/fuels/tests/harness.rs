@@ -16,6 +16,7 @@ use fuels_core::Tokenizable;
 use fuels_core::{constants::BASE_ASSET_ID, Token};
 use fuels_signers::fuel_crypto::SecretKey;
 use fuels_test_helpers::setup_single_message;
+use fuels_types::bech32::Bech32Address;
 use sha2::{Digest, Sha256};
 use std::str::FromStr;
 
@@ -1264,7 +1265,7 @@ async fn test_provider_launch_and_connect() -> Result<(), Error> {
         DEFAULT_NUM_COINS,
         DEFAULT_COIN_AMOUNT,
     );
-    let (launched_provider, address) = setup_test_provider(coins, None, None).await;
+    let (launched_provider, address) = setup_test_provider(coins, vec![], None).await;
     let connected_provider = Provider::connect(address.to_string()).await?;
 
     wallet.set_provider(connected_provider);
@@ -1372,7 +1373,7 @@ async fn test_gas_errors() -> Result<(), Error> {
         amount_per_coin,
     );
 
-    let (provider, _) = setup_test_provider(coins.clone(), None, None).await;
+    let (provider, _) = setup_test_provider(coins.clone(), vec![], None).await;
     wallet.set_provider(provider);
 
     let contract_id = Contract::deploy(
@@ -1848,7 +1849,7 @@ async fn test_wallet_balance_api() -> Result<(), Error> {
         amount_per_coin,
     );
 
-    let (provider, _) = setup_test_provider(coins.clone(), None, None).await;
+    let (provider, _) = setup_test_provider(coins.clone(), vec![], None).await;
     wallet.set_provider(provider);
     for (_utxo_id, coin) in coins {
         let balance = wallet.get_asset_balance(&coin.asset_id).await;
@@ -1875,7 +1876,7 @@ async fn test_wallet_balance_api() -> Result<(), Error> {
     );
     assert_eq!(coins.len() as u64, number_of_assets * coins_per_asset);
     assert_eq!(asset_ids.len() as u64, number_of_assets);
-    let (provider, _) = setup_test_provider(coins.clone(), None, None).await;
+    let (provider, _) = setup_test_provider(coins.clone(), vec![], None).await;
     wallet.set_provider(provider);
     let balances = wallet.get_balances().await?;
     assert_eq!(balances.len() as u64, number_of_assets);
@@ -3606,15 +3607,24 @@ async fn test_input_message() -> Result<(), Error> {
     );
     let mut wallet = WalletUnlocked::new_random(None);
 
-    let messages = setup_single_message(wallet.address(), DEFAULT_COIN_AMOUNT);
+    let messages = setup_single_message(
+        &Bech32Address {
+            hrp: "".to_string(),
+            hash: Default::default(),
+        },
+        wallet.address(),
+        DEFAULT_COIN_AMOUNT,
+        0,
+        vec![],
+    );
 
-    let (provider, _) = setup_test_provider(vec![], None, Some(messages)).await;
+    let (provider, _) = setup_test_provider(vec![], messages.clone(), None).await;
     wallet.set_provider(provider);
 
     let contract_id = Contract::deploy(
         "tests/test_projects/contract_test/out/debug/contract_test.bin",
         &wallet,
-        TxParameters::new(None, None, None),
+        TxParameters::default(),
         StorageConfiguration::default(),
     )
     .await?;

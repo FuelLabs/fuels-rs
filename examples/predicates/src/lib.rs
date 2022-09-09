@@ -40,12 +40,12 @@ mod tests {
 
         let (provider, _) = setup_test_provider(
             all_coins,
+            vec![],
             Some(Config {
                 predicates: true,
                 utxo_validation: true,
                 ..Config::local_node()
             }),
-            None,
         )
         .await;
 

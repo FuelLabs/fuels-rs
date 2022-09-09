@@ -412,28 +412,15 @@ impl Provider {
     }
 
     pub async fn get_messages(&self, from: &Bech32Address) -> Result<Vec<Message>, ProviderError> {
-        let mut messages: Vec<Message> = vec![];
-
-        let mut cursor = None;
-
-        loop {
-            let pagination = PaginationRequest {
-                cursor: cursor.clone(),
-                results: 9999,
-                direction: PageDirection::Forward,
-            };
-            let res = self
-                .client
-                .messages(Some(&from.hash().to_string()), pagination)
-                .await?;
-
-            if res.results.is_empty() {
-                break;
-            }
-            messages.extend(res.results);
-            cursor = res.cursor;
-        }
-
-        Ok(messages)
+        let pagination = PaginationRequest {
+            cursor: None,
+            results: 100,
+            direction: PageDirection::Forward,
+        };
+        let res = self
+            .client
+            .messages(Some(&from.hash().to_string()), pagination)
+            .await?;
+        Ok(res.results)
     }
 }
