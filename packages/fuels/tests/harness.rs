@@ -1,3 +1,5 @@
+#![feature(ptr_metadata)]
+
 use fuel_core::service::Config as CoreConfig;
 use fuel_core::service::FuelService;
 use fuel_gql_client::fuel_tx::{AssetId, ContractId, Receipt};
@@ -15,7 +17,7 @@ use fuels_core::tx::{Address, Bytes32, StorageSlot};
 use fuels_core::Tokenizable;
 use fuels_core::{constants::BASE_ASSET_ID, Token};
 use fuels_signers::fuel_crypto::SecretKey;
-use fuels_test_helpers::setup_single_message;
+use fuels_test_helpers::{compare_messages, setup_single_message};
 use fuels_types::bech32::Bech32Address;
 use sha2::{Digest, Sha256};
 use std::str::FromStr;
@@ -3632,11 +3634,13 @@ async fn test_input_message() -> Result<(), Error> {
     let contract_instance_connected =
         MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
 
+    let messages_from_provider = wallet.get_messages().await?;
+    assert!(compare_messages(messages_from_provider, messages));
+
     let response = contract_instance_connected
         .initialize_counter(42) // Build the ABI call
         .call()
         .await?;
     assert_eq!(42, response.value);
-
     Ok(())
 }
