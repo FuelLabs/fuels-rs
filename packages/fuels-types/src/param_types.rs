@@ -1,10 +1,11 @@
 use crate::constants::{ENUM_DISCRIMINANT_WORD_WIDTH, WORD_SIZE};
 use crate::errors::Error;
 use core::fmt;
+use serde::Serialize;
 use strum_macros::EnumString;
 use thiserror::Error as ThisError;
 
-#[derive(Debug, Clone, EnumString, PartialEq, Eq)]
+#[derive(Debug, Clone, EnumString, PartialEq, Eq, Serialize)]
 #[strum(ascii_case_insensitive)]
 pub enum ParamType {
     U8,
@@ -131,7 +132,7 @@ impl fmt::Display for ParamType {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct EnumVariants {
     variants: Vec<ParamType>,
 }

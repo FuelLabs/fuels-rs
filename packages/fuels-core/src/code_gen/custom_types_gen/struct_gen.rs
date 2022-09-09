@@ -17,7 +17,7 @@ pub fn expand_custom_struct(
     let struct_ident = extract_custom_type_name_from_abi_property(prop)?;
 
     let field_entries = extract_components(&prop, types, true)?;
-    let generic_parameters = extract_generic_parameters(&field_entries)?;
+    let generic_parameters = extract_generic_parameters(prop, types)?;
 
     let struct_decl = struct_decl(&struct_ident, &field_entries, &generic_parameters);
 

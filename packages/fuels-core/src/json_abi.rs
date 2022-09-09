@@ -1,5 +1,5 @@
 use crate::code_gen::abigen::Abigen;
-use crate::code_gen::function_selector::resolve_function_selector;
+use crate::code_gen::function_selector::resolve_fn_selector;
 use crate::tokenizer::Tokenizer;
 use crate::utils::first_four_bytes_of_sha256_hash;
 use crate::Token;
@@ -74,7 +74,7 @@ impl ABIParser {
 
         let types = Abigen::get_types(&parsed_abi);
 
-        let fn_selector = resolve_function_selector(&entry, &types);
+        let fn_selector = resolve_fn_selector(&entry, &types);
 
         // Update the fn_selector field with the hash of the previously encoded function selector
         self.fn_selector = Some(first_four_bytes_of_sha256_hash(&fn_selector).to_vec());

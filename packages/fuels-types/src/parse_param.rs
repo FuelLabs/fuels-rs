@@ -30,13 +30,17 @@ impl ParamType {
                     return ParamType::parse_tuple_param(prop, types);
                 }
                 if prop.type_field.contains("generic") {
-                    let name = prop.type_field.split("generic").collect::<Vec<&str>>()[1].trim();
-                    return Ok(ParamType::Generic(name.into()));
+                    return Ok(Self::parse_generic_param(prop));
                 }
                 // Try to parse a free form enum or struct (e.g. `struct MySTruct`, `enum MyEnum`).
                 ParamType::parse_custom_type_param(prop, types)
             }
         }
+    }
+
+    fn parse_generic_param(prop: &TypeDeclaration) -> ParamType {
+        let name = prop.type_field.split("generic").collect::<Vec<&str>>()[1].trim();
+        return ParamType::Generic(name.into());
     }
 
     pub fn parse_tuple_param(
@@ -103,6 +107,8 @@ impl ParamType {
             Err(_) => {
                 if type_field.contains("str[") {
                     ParamType::parse_string_param(t)?
+                } else if type_field.contains("generic") {
+                    Self::parse_generic_param(t)
                 } else {
                     ParamType::parse_custom_type_param(t, types)?
                 }

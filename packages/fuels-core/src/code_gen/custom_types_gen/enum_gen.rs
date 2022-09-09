@@ -18,7 +18,7 @@ pub fn expand_custom_enum(
     let enum_ident = extract_custom_type_name_from_abi_property(prop)?;
 
     let field_entries = extract_components(&prop, types, false)?;
-    let generics = extract_generic_parameters(&field_entries)?;
+    let generics = extract_generic_parameters(prop, types)?;
 
     let enum_def = enum_decl(&enum_ident, &field_entries, &generics);
     let parameterize_impl = enum_parameterize_impl(&enum_ident, &field_entries, &generics);

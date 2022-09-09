@@ -10,7 +10,7 @@ use fuels::prelude::{
     DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
 };
 use fuels_core::abi_encoder::ABIEncoder;
-use fuels_core::abi_types::Bits256;
+use fuels_core::abi_types::{Bits256, SizedAsciiString};
 use fuels_core::code_gen::abigen::Abigen;
 use fuels_core::parameters::StorageConfiguration;
 use fuels_core::tx::{Address, Bytes32, StorageSlot};
@@ -3616,84 +3616,117 @@ async fn testnet_hello_world() -> Result<(), Error> {
     Ok(())
 }
 
-// #[tokio::test]
-// async fn generics_preview() -> Result<(), Error> {
-//     SizedAsciiString::<4usize>::param_type();
-//     let project_path = Path::new("/tmp/generics_project");
-//     abigen_to_project(
-//         "tests/test_projects/generics/out/debug/generics-abi.json",
-//         // "tests/test_projects/contract_test/out/debug/contract_test-abi.json",
-//         // "tests/test_projects/contract_test/out/debug/contract_test-abi.json",
-//         &project_path,
-//         false,
-//     )?;
-//
-//     open_in_terminal(&project_path)?;
-//
-//     Ok(())
-// }
-
-// #[tokio::test]
-// async fn generics_compiling() -> Result<(), Error> {
-//     let project_path = Path::new("/tmp/generics_project");
-//
-//     abigen_to_project(
-//         "tests/test_projects/generics/out/debug/generics-abi.json",
-//         // "tests/test_projects/contract_test/out/debug/contract_test-abi.json",
-//         // "tests/test_projects/contract_test/out/debug/contract_test-abi.json",
-//         &project_path,
-//         true,
-//     )?;
-//
-//     cargo_check(project_path)?;
-//
-//     Ok(())
-// }
 #[tokio::test]
-async fn generics_test() -> Result<(), Error> {
-    abigen!(
-        MyContract,
-        "packages/fuels/tests/test_projects/generics/out/debug/generics-abi.json"
-    );
+async fn generics_preview() -> Result<(), Error> {
+    let project_path = Path::new("/tmp/generics_project");
+    abigen_to_project(
+        "tests/test_projects/generics/out/debug/generics-abi.json",
+        // "tests/test_projects/contract_test/out/debug/contract_test-abi.json",
+        // "tests/test_projects/contract_test/out/debug/contract_test-abi.json",
+        &project_path,
+        false,
+    )?;
 
-    let wallet = launch_provider_and_get_wallet().await;
-
-    let contract_id = Contract::deploy(
-        "tests/test_projects/generics/out/debug/generics.bin",
-        &wallet,
-        TxParameters::default(),
-        StorageConfiguration::default(),
-    )
-    .await?;
-
-    let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
-
-    let a_generic_en = AGenericEn::two(10u32);
-    let another_one = AnotherOne {
-        rodrigo: 10,
-        john: "111111111111111".try_into().unwrap(),
-        juicy: a_generic_en,
-    };
-
-    let brave_one = BraveOne { one: 1, two: 2 };
-
-    let yet_another_one = AnotherOne {
-        rodrigo: 12,
-        john: "111121111111111".try_into().unwrap(),
-        juicy: brave_one,
-    };
-
-    let arg = MyStruct {
-        foo: another_one,
-        boo: yet_another_one,
-    };
-
-    let result = contract_instance.identity(arg.clone()).call().await?;
-    assert_eq!(result.value, arg);
+    open_in_terminal(&project_path)?;
 
     Ok(())
 }
 
+#[tokio::test]
+async fn generics_compiling() -> Result<(), Error> {
+    let project_path = Path::new("/tmp/generics_project");
+
+    abigen_to_project(
+        "tests/test_projects/generics/out/debug/generics-abi.json",
+        // "tests/test_projects/contract_test/out/debug/contract_test-abi.json",
+        // "tests/test_projects/contract_test/out/debug/contract_test-abi.json",
+        &project_path,
+        true,
+    )?;
+
+    // cargo_check(project_path)?;
+
+    Ok(())
+}
+// #[tokio::test]
+// async fn simple_generics_test() -> Result<(), Error> {
+//     abigen!(
+//         MyContract,
+//         "packages/fuels/tests/test_projects/generics/out/debug/generics-abi.json"
+//     );
+//
+//     let wallet = launch_provider_and_get_wallet().await;
+//
+//     let contract_id = Contract::deploy(
+//         "tests/test_projects/generics/out/debug/generics.bin",
+//         &wallet,
+//         TxParameters::default(),
+//         StorageConfiguration::default(),
+//     )
+//     .await?;
+//
+//     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
+//
+//     let arg = SimpleGeneric::<u32> {
+//         single_generic_param: 123,
+//     };
+//
+//     let response = contract_instance
+//         .struct_with_single_generic(arg.clone())
+//         .call()
+//         .await?;
+//
+//     assert_eq!(response.value, arg);
+//
+//     let arg = MultipleGenerics::<u32, u64> {
+//         one: 123u32,
+//         two: 22u64,
+//     };
+//
+//     let response = contract_instance
+//         .struct_with_multiple_generics(arg.clone())
+//         .call()
+//         .await?;
+//
+//     assert_eq!(response.value, arg);
+//
+//     let arg = PassTheGenericOn::<u32> {
+//         one: SimpleGeneric::<u32> {
+//             single_generic_param: 123u32,
+//         },
+//     };
+//
+//     let response = contract_instance
+//         .struct_passing_the_generic_on(arg.clone())
+//         .call()
+//         .await?;
+//
+//     assert_eq!(response.value, arg);
+//
+//     let arg = SimpleGenericEnum::<u32>::two(123u32);
+//
+//     let response = contract_instance
+//         .enum_with_single_generic(arg.clone())
+//         .call()
+//         .await?;
+//
+//     assert_eq!(response.value, arg);
+//     // arg1: MegaExample<PassTheGenericOn<u64>, SimpleGeneric<str[2]>, SimpleGenericEnum<u32>>
+//     // struct MegaExample<T,U,Z> {
+//     //     a: [T; 3],
+//     //     b: str[10],
+//     //     c: ([U;2], T),
+//     //     d: SimpleGenericEnum<Z>
+//     // }
+//     // let arg = MegaExample::<
+//     //     PassTheGenericOn<u64>,
+//     //     SimpleGeneric<SizedAsciiString<2>>,
+//     //     SimpleGenericEnum<u32>,
+//     // > {};
+//
+//     Ok(())
+// }
+//
 fn cargo_check(project_path: &Path) -> std::io::Result<ExitStatus> {
     Command::new(env!("CARGO"))
         .current_dir(project_path)

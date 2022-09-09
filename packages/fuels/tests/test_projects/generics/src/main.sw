@@ -1,36 +1,26 @@
 contract;
 
-struct BraveOne {
-    one: u8,
-    two: u64,
+use std::assert::assert;
+use core::ops::Eq;
+
+struct SimpleGeneric<T> {
+    single_generic_param: T,
 }
 
-struct AnotherOne<Z> {
-    rodrigo: u64,
-    john: str[15],
-    juicy: Z,
+struct PassTheGenericOn<T> {
+    one: SimpleGeneric<T>
 }
 
-struct MyStruct<T, K> {
-    foo: AnotherOne<AGenericEn<K>>,
-    boo: T,
-}
-
-enum AGenericEn<J> {
-    one: u64,
-    two: J,
+struct MegaExample<T,U> {
+    a: ([U;2], T),
 }
 
 abi MyContract {
-    fn identity(arg: MyStruct<u64, AnotherOne<BraveOne>>) -> MyStruct<u64, AnotherOne<BraveOne>>;
-    //fn enum_using(arg: AGenericEn<MyStruct<u64, AnotherOne<BraveOne>>>) -> u64;
+    fn complex_test(arg1: MegaExample<PassTheGenericOn<u64>, SimpleGeneric<str[2]>>);
+
 }
 
 impl MyContract for Contract {
-    fn identity(arg: MyStruct<u32, AnotherOne<BraveOne>>) -> MyStruct<u32, AnotherOne<BraveOne>> {
-        arg
+    fn complex_test(arg1: MegaExample<PassTheGenericOn<u64>, SimpleGeneric<str[2]>>){
     }
-    //fn enum_using(arg: AGenericEn<MyStruct<u64, AnotherOne<BraveOne>>>) -> u64 {
-    //    64
-    //}
 }

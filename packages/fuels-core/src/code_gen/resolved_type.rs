@@ -106,7 +106,6 @@ pub fn resolve_type(
         ParamType::Struct(_) | ParamType::Enum(_) => {
             let type_name = extract_custom_type_name_from_abi_property(&base_type)?;
             let generic_params = recursively_resolve(&type_application.type_arguments)?;
-
             Ok((quote! {#type_name}, generic_params))
         }
         ParamType::Tuple(_) => {

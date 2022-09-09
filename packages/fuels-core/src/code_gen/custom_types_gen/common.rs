@@ -2,6 +2,7 @@ use crate::code_gen::resolved_type::{resolve_type, ResolvedType};
 use crate::utils::ident;
 use anyhow::anyhow;
 use fuels_types::errors::Error;
+use fuels_types::param_types::ParamType;
 use fuels_types::{TypeApplication, TypeDeclaration};
 use inflector::Inflector;
 use itertools::Itertools;
@@ -11,6 +12,7 @@ use quote::quote;
 use regex::Regex;
 use std::collections::HashMap;
 
+#[derive(Debug)]
 pub struct Component {
     pub field_name: Ident,
     pub field_type: ResolvedType,
@@ -28,10 +30,12 @@ impl Component {
             component.name.to_owned()
         };
 
-        Ok(Component {
+        let component1 = Component {
             field_name: ident(&field_name),
             field_type: resolve_type(component, types)?,
-        })
+        };
+
+        Ok(component1)
     }
 }
 
@@ -81,13 +85,26 @@ pub fn extract_components(
         .collect()
 }
 
-pub fn extract_generic_parameters(field_types: &[Component]) -> Result<Vec<TokenStream>, LexError> {
-    field_types
+pub fn extract_generic_parameters(
+    type_decl: &TypeDeclaration,
+    types: &HashMap<usize, TypeDeclaration>,
+) -> Result<Vec<TokenStream>, Error> {
+    type_decl
+        .type_parameters
         .iter()
-        .map(|Component { field_type, .. }| field_type.get_used_generic_type_names())
         .flatten()
-        .unique()
-        .map(|arg| arg.parse())
+        .map(|id| types.get(&id).unwrap())
+        .map(
+            |decl| match ParamType::from_type_declaration(decl, types)? {
+                ParamType::Generic(name) => {
+                    let generic = ident(&name);
+                    Ok(quote! {#generic})
+                }
+                _ => {
+                    panic!("SHould only be generic")
+                }
+            },
+        )
         .collect()
 }
 

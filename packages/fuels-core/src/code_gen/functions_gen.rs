@@ -1,6 +1,6 @@
 use crate::code_gen::abigen::Abigen;
 use crate::code_gen::docs_gen::expand_doc;
-use crate::code_gen::function_selector::resolve_function_selector;
+use crate::code_gen::function_selector::resolve_fn_selector;
 use crate::code_gen::resolved_type;
 use crate::code_gen::resolved_type::ResolvedType;
 use crate::utils::{first_four_bytes_of_sha256_hash, ident, safe_ident};
@@ -43,7 +43,7 @@ pub fn expand_function(
     }
 
     let name = safe_ident(&function.name);
-    let fn_signature = resolve_function_selector(&function, types);
+    let fn_signature = resolve_fn_selector(&function, types);
 
     let encoded = first_four_bytes_of_sha256_hash(&fn_signature);
 
