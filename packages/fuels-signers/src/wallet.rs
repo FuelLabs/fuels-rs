@@ -56,7 +56,7 @@ pub struct Wallet {
 ///
 /// async fn foo() -> Result<(), Error> {
 ///   // Setup local test node
-///   let (provider, _) = setup_test_provider(vec![],             None, None).await;
+///   let (provider, _) = setup_test_provider(vec![], vec![], None).await;
 ///
 ///   // Create a new local wallet with the newly generated key
 ///   let wallet = WalletUnlocked::new_random(Some(provider));
@@ -593,7 +593,7 @@ impl WalletUnlocked {
     ///   coins_1.extend(coins_2);
     ///
     ///   // Setup a provider and node with both set of coins
-    ///   let (provider, _) = setup_test_provider(coins_1,            None, None).await;
+    ///   let (provider, _) = setup_test_provider(coins_1, vec![], None).await;
     ///
     ///   // Set provider for wallets
     ///   wallet_1.set_provider(provider.clone());
