@@ -236,7 +236,7 @@ pub fn get_node_config_json(
         serde_json::to_value(consensus_parameters_config.unwrap_or_default())
             .expect("Failed to build transaction_parameters JSON");
 
-    let config = json!({
+    json!({
       "chain_name": "local_testnet",
       "block_production": "Instant",
       "parent_network": {
@@ -247,9 +247,7 @@ pub fn get_node_config_json(
         "messages": messages
       },
       "transaction_parameters": consensus_parameters
-    });
-
-    config
+    })
 }
 
 fn get_coins_value(coins: Vec<(UtxoId, Coin)>) -> Value {
@@ -322,6 +320,7 @@ pub async fn new_fuel_node(
 ) {
     // Create a new one-shot channel for sending single values across asynchronous tasks.
     let (tx, rx) = oneshot::channel();
+
 
     tokio::spawn(async move {
         let config_json = get_node_config_json(coins, messages, consensus_parameters_config);

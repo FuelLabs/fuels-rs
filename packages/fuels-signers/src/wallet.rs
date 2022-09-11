@@ -18,9 +18,7 @@ use fuels_core::{constants::BASE_ASSET_ID, parameters::TxParameters};
 use fuels_types::bech32::{Bech32Address, Bech32ContractId, FUEL_BECH32_HRP};
 use fuels_types::errors::Error;
 use rand::{CryptoRng, Rng};
-use slice::from_raw_parts;
-use std::borrow::Borrow;
-use std::{collections::HashMap, fmt, mem, ops, path::Path, slice};
+use std::{collections::HashMap, fmt, ops, path::Path};
 use thiserror::Error;
 
 const DEFAULT_DERIVATION_PATH_PREFIX: &str = "m/44'/1179993420'/0'/0/";
@@ -230,38 +228,34 @@ impl Wallet {
     }
 
     pub async fn get_inputs_for_messages(&self, witness_index: u8) -> Result<Vec<Input>, Error> {
-        let as_u8_slice = |v: &[i32]| -> &[u8] {
-            let element_size = mem::size_of::<i32>();
-            unsafe { from_raw_parts(v.as_ptr() as *const u8, v.len() * element_size) }
-        };
+
+        let to_u8_bytes = |v: &[i32]| { v.iter().flat_map(|e| e.to_ne_bytes()).collect::<Vec<_>>() };
 
         let messages = self.get_provider()?.get_messages(&self.address).await?;
 
-        let mut inputs = vec![];
-
-        for message in messages {
-            let message_id = Input::compute_message_id(
-                &message.sender.clone().into(),
-                &message.recipient.clone().into(),
-                message.nonce.into(),
-                &message.owner.clone().into(),
-                message.amount.0,
-                as_u8_slice(message.data.borrow()),
-            );
-
-            let input_messages = Input::message_signed(
-                message_id,
-                message.sender.into(),
-                message.recipient.into(),
-                message.amount.0,
-                0,
-                message.owner.into(),
-                witness_index,
-                vec![],
-            );
-            inputs.push(input_messages);
-        }
-
+        let inputs = messages
+            .into_iter()
+            .map(|message| {
+                let message_id = Input::compute_message_id(
+                    &message.sender.clone().into(),
+                    &message.recipient.clone().into(),
+                    message.nonce.into(),
+                    &message.owner.clone().into(),
+                    message.amount.0,
+                    &to_u8_bytes(&message.data),
+                );
+                Input::message_signed(
+                    message_id,
+                    message.sender.into(),
+                    message.recipient.into(),
+                    message.amount.0,
+                    0,
+                    message.owner.into(),
+                    witness_index,
+                    vec![],
+                )
+            })
+            .collect();
         Ok(inputs)
     }
 
@@ -516,6 +510,9 @@ impl WalletUnlocked {
         }
 
         // This is a temporary solution till we get update on coins_to_spend function
+        // Get asset inputs for required amount expressed u Input::coin_signed or in
+        // Input::message_signed depending on what we have in stock.
+        // In the near future this will be replaced by one function.
         let new_base_inputs = self
             .get_asset_inputs_for_amount(BASE_ASSET_ID, new_base_amount, witness_index)
             .await
