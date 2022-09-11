@@ -321,7 +321,6 @@ pub async fn new_fuel_node(
     // Create a new one-shot channel for sending single values across asynchronous tasks.
     let (tx, rx) = oneshot::channel();
 
-
     tokio::spawn(async move {
         let config_json = get_node_config_json(coins, messages, consensus_parameters_config);
         let temp_config_file = write_temp_config_file(config_json);

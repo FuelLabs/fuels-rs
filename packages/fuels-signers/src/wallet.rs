@@ -228,8 +228,7 @@ impl Wallet {
     }
 
     pub async fn get_inputs_for_messages(&self, witness_index: u8) -> Result<Vec<Input>, Error> {
-
-        let to_u8_bytes = |v: &[i32]| { v.iter().flat_map(|e| e.to_ne_bytes()).collect::<Vec<_>>() };
+        let to_u8_bytes = |v: &[i32]| v.iter().flat_map(|e| e.to_ne_bytes()).collect::<Vec<_>>();
 
         let messages = self.get_provider()?.get_messages(&self.address).await?;
 
