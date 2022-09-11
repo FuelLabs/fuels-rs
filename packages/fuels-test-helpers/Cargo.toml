@@ -9,6 +9,7 @@ repository = "https://github.com/FuelLabs/fuels-rs"
 description = "Fuel Rust SDK test helpers."
 
 [dependencies]
+anyhow = { version = "1.0.58" }
 fuel-core = { version = "0.10.1", default-features = false, optional = true }
 fuel-core-interfaces = { version = "0.10.1", default-features = false }
 fuel-gql-client = { version = "0.10.1", default-features = false }
@@ -17,7 +18,6 @@ fuels-contract = { version = "0.23.0", path = "../fuels-contract" }
 fuels-core = { version = "0.23.0", path = "../fuels-core" }
 fuels-signers = { version = "0.23.0", path = "../fuels-signers", optional = true }
 fuels-types = { version = "0.23.0", path = "../fuels-types" }
-anyhow = { version = "1.0.58" }
 
 hex = { version = "0.4.3", default-features = false, features = ["std", "serde"] }
 portpicker = { version = "0.1.1" }

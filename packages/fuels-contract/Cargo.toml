@@ -16,7 +16,9 @@ fuel-tx = "0.18"
 fuels-core = { version = "0.23.0", path = "../fuels-core" }
 fuels-signers = { version = "0.23.0", path = "../fuels-signers" }
 fuels-types = { version = "0.23.0", path = "../fuels-types" }
+futures = "0.3.21"
 hex = { version = "0.4.3", default-features = false, features = ["std"] }
+itertools = "0.10.3"
 proc-macro2 = "1.0"
 quote = "1.0"
 rand = "0.8"
@@ -29,8 +31,6 @@ strum_macros = "0.21"
 thiserror = { version = "1.0.26", default-features = false }
 tokio = "1.12"
 tracing = "0.1"
-itertools = "0.10.3"
-futures = "0.3.21"
 
 [dev-dependencies]
 fuels-test-helpers = { path = "../fuels-test-helpers" }
