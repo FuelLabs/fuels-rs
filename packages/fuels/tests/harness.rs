@@ -15,10 +15,14 @@ use fuels_core::tx::{Address, Bytes32, StorageSlot};
 use fuels_core::Tokenizable;
 use fuels_core::{constants::BASE_ASSET_ID, Token};
 use fuels_signers::fuel_crypto::SecretKey;
-use fuels_test_helpers::{compare_messages, setup_single_message};
+use fuels_test_helpers::setup_single_message;
 use fuels_types::bech32::Bech32Address;
 use sha2::{Digest, Sha256};
+use std::iter::zip;
 use std::str::FromStr;
+
+use fuel_core_interfaces::model::Message;
+use fuel_gql_client::client::schema::message::Message as OtherMessage;
 
 /// Note: all the tests and examples below require pre-compiled Sway projects.
 /// To compile these projects, run `cargo run --bin build-test-projects`.
@@ -3605,6 +3609,18 @@ async fn test_input_message() -> Result<(), Error> {
         MyContract,
         "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
+
+    let compare_messages =
+        |messages_from_provider: Vec<OtherMessage>, used_messages: Vec<Message>| -> bool {
+            zip(&used_messages, &messages_from_provider).all(|(a, b)| {
+                a.sender == b.sender.0 .0
+                    && a.recipient == b.recipient.0 .0
+                    && a.owner == b.owner.0 .0
+                    && a.nonce == b.nonce.0
+                    && a.amount == b.amount.0
+            })
+        };
+
     let mut wallet = WalletUnlocked::new_random(None);
 
     let messages = setup_single_message(
