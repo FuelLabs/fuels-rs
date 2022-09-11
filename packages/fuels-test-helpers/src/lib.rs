@@ -2,7 +2,6 @@
 
 extern crate core;
 
-use std::iter::zip;
 use std::net::SocketAddr;
 
 #[cfg(feature = "fuel-core-lib")]
@@ -21,7 +20,6 @@ pub use node::{get_socket_address, new_fuel_node, CoinConfig, Config, MessageCon
 #[cfg(not(feature = "fuel-core-lib"))]
 pub use fuel_core_interfaces::model::{Coin, CoinStatus};
 use fuel_core_interfaces::model::{DaBlockHeight, Message};
-use fuel_gql_client::client::schema::message::Message as OtherMessage;
 
 #[cfg(not(feature = "fuel-core-lib"))]
 use portpicker::is_free;
