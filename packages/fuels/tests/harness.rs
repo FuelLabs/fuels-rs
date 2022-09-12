@@ -2187,7 +2187,7 @@ async fn test_multi_call() -> Result<(), Error> {
         .add_call(call_handler_1)
         .add_call(call_handler_2);
 
-    let (counter, array): (u64, Vec<u64>) = multi_call_handler.call().await?.value;
+    let (counter, array): (u64, [u64; 2]) = multi_call_handler.call().await?.value;
 
     assert_eq!(counter, 42);
     assert_eq!(array, [42; 2]);
@@ -2227,7 +2227,7 @@ async fn test_multi_call_script_workflow() -> Result<(), Error> {
     let script = multi_call_handler.get_call_execution_script().await?;
     let receipts = script.call(provider).await.unwrap();
     let (counter, array) = multi_call_handler
-        .get_response::<(u64, Vec<u64>)>(receipts)?
+        .get_response::<(u64, [u64; 2])>(receipts)?
         .value;
 
     assert_eq!(counter, 42);
@@ -3551,7 +3551,7 @@ async fn mutl_call_has_same_estimated_and_used_gas() -> Result<(), Error> {
         .await?
         .gas_used;
 
-    let gas_used = multi_call_handler.call::<(u64, Vec<u64>)>().await?.gas_used;
+    let gas_used = multi_call_handler.call::<(u64, [u64; 2])>().await?.gas_used;
 
     assert_eq!(estimated_gas_used, gas_used);
 
@@ -3623,11 +3623,11 @@ async fn generics_preview() -> Result<(), Error> {
         "tests/test_projects/generics/out/debug/generics-abi.json",
         // "tests/test_projects/contract_test/out/debug/contract_test-abi.json",
         // "tests/test_projects/contract_test/out/debug/contract_test-abi.json",
-        &project_path,
+        project_path,
         false,
     )?;
 
-    open_in_terminal(&project_path)?;
+    open_in_terminal(project_path)?;
 
     Ok(())
 }
@@ -3640,93 +3640,131 @@ async fn generics_compiling() -> Result<(), Error> {
         "tests/test_projects/generics/out/debug/generics-abi.json",
         // "tests/test_projects/contract_test/out/debug/contract_test-abi.json",
         // "tests/test_projects/contract_test/out/debug/contract_test-abi.json",
-        &project_path,
+        project_path,
         true,
     )?;
 
-    // cargo_check(project_path)?;
+    cargo_check(project_path)?;
 
     Ok(())
 }
-// #[tokio::test]
-// async fn simple_generics_test() -> Result<(), Error> {
-//     abigen!(
-//         MyContract,
-//         "packages/fuels/tests/test_projects/generics/out/debug/generics-abi.json"
-//     );
-//
-//     let wallet = launch_provider_and_get_wallet().await;
-//
-//     let contract_id = Contract::deploy(
-//         "tests/test_projects/generics/out/debug/generics.bin",
-//         &wallet,
-//         TxParameters::default(),
-//         StorageConfiguration::default(),
-//     )
-//     .await?;
-//
-//     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
-//
-//     let arg = SimpleGeneric::<u32> {
-//         single_generic_param: 123,
-//     };
-//
-//     let response = contract_instance
-//         .struct_with_single_generic(arg.clone())
-//         .call()
-//         .await?;
-//
-//     assert_eq!(response.value, arg);
-//
-//     let arg = MultipleGenerics::<u32, u64> {
-//         one: 123u32,
-//         two: 22u64,
-//     };
-//
-//     let response = contract_instance
-//         .struct_with_multiple_generics(arg.clone())
-//         .call()
-//         .await?;
-//
-//     assert_eq!(response.value, arg);
-//
-//     let arg = PassTheGenericOn::<u32> {
-//         one: SimpleGeneric::<u32> {
-//             single_generic_param: 123u32,
-//         },
-//     };
-//
-//     let response = contract_instance
-//         .struct_passing_the_generic_on(arg.clone())
-//         .call()
-//         .await?;
-//
-//     assert_eq!(response.value, arg);
-//
-//     let arg = SimpleGenericEnum::<u32>::two(123u32);
-//
-//     let response = contract_instance
-//         .enum_with_single_generic(arg.clone())
-//         .call()
-//         .await?;
-//
-//     assert_eq!(response.value, arg);
-//     // arg1: MegaExample<PassTheGenericOn<u64>, SimpleGeneric<str[2]>, SimpleGenericEnum<u32>>
-//     // struct MegaExample<T,U,Z> {
-//     //     a: [T; 3],
-//     //     b: str[10],
-//     //     c: ([U;2], T),
-//     //     d: SimpleGenericEnum<Z>
-//     // }
-//     // let arg = MegaExample::<
-//     //     PassTheGenericOn<u64>,
-//     //     SimpleGeneric<SizedAsciiString<2>>,
-//     //     SimpleGenericEnum<u32>,
-//     // > {};
-//
-//     Ok(())
-// }
-//
+#[tokio::test]
+async fn generics_test() -> anyhow::Result<()> {
+    abigen!(
+        MyContract,
+        "packages/fuels/tests/test_projects/generics/out/debug/generics-abi.json"
+    );
+
+    let wallet = launch_provider_and_get_wallet().await;
+
+    let contract_id = Contract::deploy(
+        "tests/test_projects/generics/out/debug/generics.bin",
+        &wallet,
+        TxParameters::default(),
+        StorageConfiguration::default(),
+    )
+    .await?;
+
+    let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
+
+    {
+        // simple struct with a single generic param
+        let arg1 = SimpleGeneric {
+            single_generic_param: 123u64,
+        };
+
+        let result = contract_instance
+            .struct_w_generic(arg1.clone())
+            .call()
+            .await?
+            .value;
+
+        assert_eq!(result, arg1);
+    }
+    {
+        // struct that delegates the generic param internally
+        let arg1 = PassTheGenericOn {
+            one: SimpleGeneric {
+                single_generic_param: "abc".try_into()?,
+            },
+        };
+
+        let result = contract_instance
+            .struct_delegating_generic(arg1.clone())
+            .call()
+            .await?
+            .value;
+
+        assert_eq!(result, arg1);
+    }
+    {
+        // struct that has the generic in an array
+        let arg1 = StructWArrayGeneric { a: [1u32, 2u32] };
+
+        let result = contract_instance
+            .struct_w_generic_in_array(arg1.clone())
+            .call()
+            .await?
+            .value;
+
+        assert_eq!(result, arg1);
+    }
+    {
+        // struct that has the generic in a tuple
+        let arg1 = StructWTupleGeneric { a: (1, 2) };
+
+        let result = contract_instance
+            .struct_w_generic_in_tuple(arg1.clone())
+            .call()
+            .await?
+            .value;
+
+        assert_eq!(result, arg1);
+    }
+    {
+        // struct with generic in variant
+        let arg1 = EnumWGeneric::b(10);
+        let result = contract_instance
+            .enum_w_generic(arg1.clone())
+            .call()
+            .await?
+            .value;
+
+        assert_eq!(result, arg1);
+    }
+    {
+        // complex case
+        let pass_through = PassTheGenericOn {
+            one: SimpleGeneric {
+                single_generic_param: "ab".try_into()?,
+            },
+        };
+        let w_arr_generic = StructWArrayGeneric {
+            a: [pass_through.clone(), pass_through],
+        };
+
+        let arg1 = MegaExample {
+            a: ([Bits256([0; 32]), Bits256([0; 32])], "ab".try_into()?),
+            b: (
+                [EnumWGeneric::b(StructWTupleGeneric {
+                    a: (w_arr_generic.clone(), w_arr_generic),
+                })],
+                10u32,
+            ),
+        };
+
+        let result = contract_instance
+            .complex_test(arg1.clone())
+            .call()
+            .await?
+            .value;
+
+        assert_eq!(result, arg1);
+    }
+
+    Ok(())
+}
+
 fn cargo_check(project_path: &Path) -> std::io::Result<ExitStatus> {
     Command::new(env!("CARGO"))
         .current_dir(project_path)

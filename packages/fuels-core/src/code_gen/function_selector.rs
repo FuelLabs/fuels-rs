@@ -34,33 +34,13 @@ fn resolve_type_application(
     generics: &Vec<(usize, Type)>,
 ) -> Type {
     let type_decl = types.get(&type_application.type_id).unwrap();
-    // eprintln!(
-    //     "doing type_appl: {} with generics: {}",
-    //     type_application.type_id,
-    //     print_lookup(generics)
-    // );
     let param_type = ParamType::from_type_declaration(&type_decl, &types).unwrap();
 
     if let ParamType::Generic(name) = &param_type {
         let lookup = generics.iter().cloned().collect::<HashMap<_, _>>();
-        let option = lookup.get(&type_application.type_id);
-        // if option.is_none() {
-        //     eprintln!(
-        //         "Came across a generic {name} in type_appl {} that had no match! Lookup was: {}",
-        //         type_application.type_id,
-        //         print_lookup(&generics)
-        //     );
-        // } else {
-        //     eprintln!(
-        //         "Resolved generic {name} id: {} to type {:?}",
-        //         type_application.type_id,
-        //         option.unwrap()
-        //     )
-        // }
-        return option.unwrap().clone();
+        return lookup.get(&type_application.type_id).unwrap().clone();
     }
 
-    // eprintln!("Resolving type_arguments to get the generics needed");
     let some_generics = type_application
         .type_arguments
         .iter()
@@ -69,7 +49,6 @@ fn resolve_type_application(
         .collect_vec();
 
     let final_generics = if some_generics.is_empty() {
-        // eprintln!("Type arguments had nothing, proceeding to use parent generics");
         generics.iter().map(|(_, ty)| ty.clone()).collect_vec()
     } else {
         some_generics
@@ -77,21 +56,10 @@ fn resolve_type_application(
 
     let final_generics = match &type_decl.type_parameters {
         Some(params) if !params.is_empty() => {
-            let final_generics =
-                zip(params.clone(), final_generics.iter().map(|ty| ty.clone())).collect_vec();
-            // eprintln!(
-            //     "After mapping to {params:?} generics are: {}",
-            //     print_lookup(&final_generics)
-            // );
-            final_generics
+            zip(params.clone(), final_generics.iter().map(|ty| ty.clone())).collect_vec()
         }
         _ => generics.clone(),
     };
-
-    // eprintln!(
-    //     "After applying generics to the type arguments we're ready to resolve components with generics: {}",
-    //     print_lookup(&final_generics)
-    // );
 
     let components = type_decl
         .components
@@ -100,8 +68,7 @@ fn resolve_type_application(
         .map(|component| resolve_type_application(component, types, &final_generics))
         .collect_vec();
 
-    // eprintln!("Resolved type id {}", type_application.type_id);
-    let x = Type {
+    Type {
         param_type,
         type_id: type_decl.type_id,
         components,
@@ -110,13 +77,7 @@ fn resolve_type_application(
             .iter()
             .map(|(_, ty)| ty.clone())
             .collect(),
-    };
-    eprintln!(
-        "Resolved type id {} = {}",
-        type_application.type_id,
-        x.to_fn_selector_format()
-    );
-    x
+    }
 }
 
 impl Type {
@@ -361,13 +322,13 @@ mod tests {
     fn super_generics() -> anyhow::Result<()> {
         let program_abi = load_abi_w_path("/home/segfault_magnet/fuel/github/fuels-rs/packages/fuels/tests/test_projects/generics/out/debug/generics-abi.json")?;
 
-        let mappings = [("struct_with_single_generic", "struct_with_single_generic(s<u32>(u32))"),
-        ("struct_with_multiple_generics", "struct_with_multiple_generics(s<u32,u64>(u32,u64))"),
-        ("struct_passing_the_generic_on", "struct_passing_the_generic_on(s<u32>(s<u32>(u32)))"),
-        ("enum_with_single_generic", "enum_with_single_generic(e<u32>((),u32))"),
-        ("generics_in_tuple", "generics_in_tuple(s<s<u64>(s<u64>(u64))>((u64,s<u64>(s<u64>(u64)))))"),
-        ("complex_test", "complex_test(s<s<u64>(s<u64>(u64)),s<str[2]>(str[2])>((a[s<str[2]>(str[2]);2],s<u64>(s<u64>(u64)))))")]
-            .map(|(lhs, rhs)| (lhs.to_string(), rhs.to_string()));
+        let mappings = [("struct_w_generic", "struct_w_generic(s<u64>(u64))"),
+        ("struct_delegating_generic", "struct_delegating_generic(s<str[3]>(s<str[3]>(str[3])))"),
+        ("struct_w_generic_in_array", "struct_w_generic_in_array(s<u32>(a[u32;2]))"),
+        ("struct_w_generic_in_tuple", "struct_w_generic_in_tuple(s<u32>((u32,u32)))"),
+        ("enum_w_generic", "enum_w_generic(e<u64>(u64,u64))"),
+        ("complex_test", "complex_test(s<str[2],b256>((a[b256;2],str[2]),(a[e<s<s<s<str[2]>(s<str[2]>(str[2]))>(a[s<str[2]>(s<str[2]>(str[2]));2])>((s<s<str[2]>(s<str[2]>(str[2]))>(a[s<str[2]>(s<str[2]>(str[2]));2]),s<s<str[2]>(s<str[2]>(str[2]))>(a[s<str[2]>(s<str[2]>(str[2]));2])))>(u64,s<s<s<str[2]>(s<str[2]>(str[2]))>(a[s<str[2]>(s<str[2]>(str[2]));2])>((s<s<str[2]>(s<str[2]>(str[2]))>(a[s<str[2]>(s<str[2]>(str[2]));2]),s<s<str[2]>(s<str[2]>(str[2]))>(a[s<str[2]>(s<str[2]>(str[2]));2]))));1],u32)))")]
+        .map(|(lhs, rhs)| (lhs.to_string(), rhs.to_string()));
 
         let types = program_abi
             .types
@@ -377,9 +338,6 @@ mod tests {
 
         for fun in &program_abi.functions {
             let (name, exp) = mappings.iter().find(|(lhs, _)| fun.name == *lhs).unwrap();
-            if name != "complex_test" {
-                continue;
-            }
 
             let result = resolve_fn_selector(&fun, &types);
 

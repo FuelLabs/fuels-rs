@@ -9,7 +9,7 @@ impl<const SIZE: usize, T: Parameterize> Parameterize for [T; SIZE] {
     }
 }
 
-impl<const SIZE: usize, T: Tokenizable + Clone + Debug> Tokenizable for [T; SIZE] {
+impl<const SIZE: usize, T: Tokenizable> Tokenizable for [T; SIZE] {
     fn from_token(token: Token) -> Result<Self, Error>
     where
         Self: Sized,
@@ -37,9 +37,9 @@ impl<const SIZE: usize, T: Tokenizable + Clone + Debug> Tokenizable for [T; SIZE
                         gen_error(format!(", not all elements could be detokenized: {err}"))
                     })?;
 
-                Ok(detokenized
-                    .try_into()
-                    .expect("This should never fail since we're checking the length beforehand."))
+                Ok(detokenized.try_into().unwrap_or_else(|_| {
+                    panic!("This should never fail since we're checking the length beforehand.")
+                }))
             }
             _ => Err(gen_error(format!("Expected a Token::Array, got {token}"))),
         }

@@ -136,63 +136,6 @@ impl Tokenizable for bool {
     }
 }
 
-impl Tokenizable for StringToken {
-    fn from_token(token: Token) -> Result<Self, Error> {
-        match token {
-            Token::String(string_token @ StringToken { .. }) => Ok(string_token),
-            other => Err(Error::InstantiationError(format!(
-                "Expected `String`, got {:?}",
-                other
-            ))),
-        }
-    }
-    fn into_token(self) -> Token {
-        Token::String(self)
-    }
-}
-
-impl Tokenizable for String {
-    fn from_token(token: Token) -> Result<Self, Error> {
-        match token {
-            Token::String(string_token) => Ok(string_token.data),
-            other => Err(Error::InstantiationError(format!(
-                "Expected `String`, got {:?}",
-                other
-            ))),
-        }
-    }
-    fn into_token(self) -> Token {
-        let len = self.len();
-        Token::String(StringToken::new(self, len))
-    }
-}
-
-impl<T: Tokenizable> Tokenizable for Vec<T> {
-    fn from_token(token: Token) -> Result<Self, Error> {
-        match token {
-            Token::Array(data) => {
-                let mut v: Vec<T> = Vec::new();
-                for tok in data {
-                    v.push(T::from_token(tok.clone()).unwrap());
-                }
-                Ok(v)
-            }
-            other => Err(Error::InstantiationError(format!(
-                "Expected `T`, got {:?}",
-                other
-            ))),
-        }
-    }
-    fn into_token(self) -> Token {
-        let mut v: Vec<Token> = Vec::new();
-        for t in self {
-            let tok = T::into_token(t);
-            v.push(tok);
-        }
-        Token::Array(v)
-    }
-}
-
 impl Tokenizable for () {
     fn from_token(token: Token) -> Result<Self, Error>
     where

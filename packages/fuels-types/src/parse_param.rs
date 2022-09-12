@@ -40,7 +40,7 @@ impl ParamType {
 
     fn parse_generic_param(prop: &TypeDeclaration) -> ParamType {
         let name = prop.type_field.split("generic").collect::<Vec<&str>>()[1].trim();
-        return ParamType::Generic(name.into());
+        ParamType::Generic(name.into())
     }
 
     pub fn parse_tuple_param(
