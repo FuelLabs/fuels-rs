@@ -4,6 +4,7 @@ use proc_macro2::Span;
 use quote::quote;
 
 use std::ops::Deref;
+use std::path::Path;
 use syn::parse::{Parse, ParseStream, Result as ParseResult};
 use syn::{parse_macro_input, Ident, LitStr, Token};
 
@@ -41,23 +42,30 @@ pub fn wasm_abigen(input: TokenStream) -> TokenStream {
 pub fn get_contract_instance(input: TokenStream) -> TokenStream {
     let args = parse_macro_input!(input as Spanned<ContractArgs>);
 
-    let abi_path = [
-        "packages/fuels/tests/test_projects/",
+    let abs_forc_dir = Path::new(&args.abi).canonicalize().expect(&format!(
+        "Unable to canonicalize forc project path: {}.",
         &args.abi,
-        "/out/debug/",
-        &args.abi,
-        "-abi.json",
-    ]
-    .concat();
+    ));
 
-    let bin_path = [
-        "tests/test_projects/",
-        &args.abi,
-        "/out/debug/",
-        &args.abi,
-        ".bin",
-    ]
-    .concat();
+    let forc_project_name = abs_forc_dir.file_name().unwrap().to_str().unwrap();
+
+    let abi_path = abs_forc_dir
+        .join(["out/debug/", forc_project_name, "-abi.json"].concat())
+        .to_str()
+        .unwrap()
+        .to_string();
+
+    let bin_path = abs_forc_dir
+        .join(["out/debug/", forc_project_name, ".bin"].concat())
+        .to_str()
+        .unwrap()
+        .to_string();
+
+    let storage_path = abs_forc_dir
+        .join(["out/debug/", forc_project_name, "-storage_slots.json"].concat())
+        .to_str()
+        .unwrap()
+        .to_string();
 
     let mut abigen_token_stream: TokenStream = Abigen::new("MyContract", abi_path)
         .unwrap()
@@ -74,7 +82,9 @@ pub fn get_contract_instance(input: TokenStream) -> TokenStream {
             #bin_path,
             &wallet,
             TxParameters::default(),
-            StorageConfiguration::default(),
+            StorageConfiguration::with_storage_path(Some(
+                #storage_path.to_string(),
+            )),
         )
         .await?;
 

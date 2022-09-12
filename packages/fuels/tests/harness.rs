@@ -959,7 +959,10 @@ async fn create_nested_struct_from_decoded_tokens() -> Result<(), Error> {
 
 #[tokio::test]
 async fn type_safe_output_values() -> Result<(), Error> {
-    get_contract_instance!(contract_instance, "contract_output_test");
+    get_contract_instance!(
+        contract_instance,
+        "packages/fuels/tests/test_projects/contract_output_test"
+    );
 
     // `response`'s type matches the return type of `is_event()`
     let response = contract_instance.is_even(10).call().await?;
@@ -1027,7 +1030,10 @@ async fn call_with_structs() -> Result<(), Error> {
 
 #[tokio::test]
 async fn call_with_empty_return() -> Result<(), Error> {
-    get_contract_instance!(contract_instance, "call_empty_return");
+    get_contract_instance!(
+        contract_instance,
+        "packages/fuels/tests/test_projects/call_empty_return"
+    );
 
     let _response = contract_instance
         .store_value(42) // Build the ABI call
@@ -1038,7 +1044,10 @@ async fn call_with_empty_return() -> Result<(), Error> {
 
 #[tokio::test]
 async fn abigen_different_structs_same_arg_name() -> Result<(), Error> {
-    get_contract_instance!(contract_instance, "two_structs");
+    get_contract_instance!(
+        contract_instance,
+        "packages/fuels/tests/test_projects/two_structs"
+    );
 
     let param_one = StructOne { foo: 42 };
     let param_two = StructTwo { bar: 42 };
@@ -1055,7 +1064,10 @@ async fn abigen_different_structs_same_arg_name() -> Result<(), Error> {
 
 #[tokio::test]
 async fn test_reverting_transaction() -> Result<(), Error> {
-    get_contract_instance!(contract_instance, "revert_transaction_error");
+    get_contract_instance!(
+        contract_instance,
+        "packages/fuels/tests/test_projects/revert_transaction_error"
+    );
 
     let response = contract_instance.make_transaction_fail(0).call().await;
 
@@ -1065,7 +1077,10 @@ async fn test_reverting_transaction() -> Result<(), Error> {
 
 #[tokio::test]
 async fn multiple_read_calls() -> Result<(), Error> {
-    get_contract_instance!(contract_instance, "multiple_read_calls");
+    get_contract_instance!(
+        contract_instance,
+        "packages/fuels/tests/test_projects/multiple_read_calls"
+    );
 
     contract_instance.store(42).call().await?;
 
@@ -1084,7 +1099,10 @@ async fn multiple_read_calls() -> Result<(), Error> {
 
 #[tokio::test]
 async fn test_methods_typeless_argument() -> Result<(), Error> {
-    get_contract_instance!(contract_instance, "empty_arguments");
+    get_contract_instance!(
+        contract_instance,
+        "packages/fuels/tests/test_projects/empty_arguments"
+    );
 
     let response = contract_instance
         .method_with_empty_argument()
@@ -1096,7 +1114,10 @@ async fn test_methods_typeless_argument() -> Result<(), Error> {
 
 #[tokio::test]
 async fn test_large_return_data() -> Result<(), Error> {
-    get_contract_instance!(contract_instance, "large_return_data");
+    get_contract_instance!(
+        contract_instance,
+        "packages/fuels/tests/test_projects/large_return_data"
+    );
 
     let res = contract_instance.get_id().call().await?;
 
@@ -1311,7 +1332,10 @@ async fn test_gas_errors() -> Result<(), Error> {
 
 #[tokio::test]
 async fn test_call_param_gas_errors() -> Result<(), Error> {
-    get_contract_instance!(contract_instance, "contract_test");
+    get_contract_instance!(
+        contract_instance,
+        "packages/fuels/tests/test_projects/contract_test"
+    );
 
     // Transaction gas_limit is sufficient, call gas_forwarded is too small
     let response = contract_instance
@@ -1341,7 +1365,10 @@ async fn test_call_param_gas_errors() -> Result<(), Error> {
 
 #[tokio::test]
 async fn test_amount_and_asset_forwarding() -> Result<(), Error> {
-    get_contract_instance!(contract_instance, "token_ops");
+    get_contract_instance!(
+        contract_instance,
+        "packages/fuels/tests/test_projects/token_ops"
+    );
 
     let mut balance_response = contract_instance
         .get_balance((&contract_id).into(), (&contract_id).into())
@@ -1420,7 +1447,10 @@ async fn test_amount_and_asset_forwarding() -> Result<(), Error> {
 
 #[tokio::test]
 async fn test_multiple_args() -> Result<(), Error> {
-    get_contract_instance!(contract_instance, "contract_test");
+    get_contract_instance!(
+        contract_instance,
+        "packages/fuels/tests/test_projects/contract_test"
+    );
 
     // Make sure we can call the contract with multiple arguments
     let response = contract_instance.get(5, 6).call().await?;
@@ -1438,7 +1468,10 @@ async fn test_multiple_args() -> Result<(), Error> {
 
 #[tokio::test]
 async fn test_tuples() -> Result<(), Error> {
-    get_contract_instance!(contract_instance, "tuples");
+    get_contract_instance!(
+        contract_instance,
+        "packages/fuels/tests/test_projects/tuples"
+    );
 
     let response = contract_instance.returns_tuple((1, 2)).call().await?;
 
@@ -1482,7 +1515,10 @@ async fn test_tuples() -> Result<(), Error> {
 
 #[tokio::test]
 async fn test_array() -> Result<(), Error> {
-    get_contract_instance!(contract_instance, "contract_test");
+    get_contract_instance!(
+        contract_instance,
+        "packages/fuels/tests/test_projects/contract_test"
+    );
 
     assert_eq!(
         contract_instance
@@ -1497,7 +1533,10 @@ async fn test_array() -> Result<(), Error> {
 
 #[tokio::test]
 async fn test_arrays_with_custom_types() -> Result<(), Error> {
-    get_contract_instance!(contract_instance, "contract_test");
+    get_contract_instance!(
+        contract_instance,
+        "packages/fuels/tests/test_projects/contract_test"
+    );
 
     let persons = vec![
         Person {
@@ -1527,7 +1566,10 @@ async fn test_arrays_with_custom_types() -> Result<(), Error> {
 
 #[tokio::test]
 async fn test_auth_msg_sender_from_sdk() -> Result<(), Error> {
-    get_contract_instance!(contract_instance, "auth_testing_contract");
+    get_contract_instance!(
+        contract_instance,
+        "packages/fuels/tests/test_projects/auth_testing_contract"
+    );
 
     // Contract returns true if `msg_sender()` matches `wallet.address()`.
     let response = contract_instance
@@ -1541,7 +1583,10 @@ async fn test_auth_msg_sender_from_sdk() -> Result<(), Error> {
 
 #[tokio::test]
 async fn workflow_enum_inside_struct() -> Result<(), Error> {
-    get_contract_instance!(contract_instance, "enum_inside_struct");
+    get_contract_instance!(
+        contract_instance,
+        "packages/fuels/tests/test_projects/enum_inside_struct"
+    );
 
     let expected = Cocktail {
         the_thing_you_mix_in: Shaker::Mojito(222),
@@ -1571,7 +1616,10 @@ async fn workflow_enum_inside_struct() -> Result<(), Error> {
 
 #[tokio::test]
 async fn test_logd_receipts() -> Result<(), Error> {
-    get_contract_instance!(contract_instance, "contract_logdata");
+    get_contract_instance!(
+        contract_instance,
+        "packages/fuels/tests/test_projects/contract_logdata"
+    );
 
     let mut value = [0u8; 32];
     value[0] = 0xFF;
@@ -1663,7 +1711,10 @@ async fn test_wallet_balance_api() -> Result<(), Error> {
 
 #[tokio::test]
 async fn sway_native_types_support() -> Result<(), Box<dyn std::error::Error>> {
-    get_contract_instance!(contract_instance, "sway_native_types");
+    get_contract_instance!(
+        contract_instance,
+        "packages/fuels/tests/test_projects/sway_native_types"
+    );
 
     let user = User {
         weight: 10,
@@ -1688,7 +1739,10 @@ async fn sway_native_types_support() -> Result<(), Box<dyn std::error::Error>> {
 
 #[tokio::test]
 async fn test_transaction_script_workflow() -> Result<(), Error> {
-    get_contract_instance!(contract_instance, "contract_test");
+    get_contract_instance!(
+        contract_instance,
+        "packages/fuels/tests/test_projects/contract_test"
+    );
 
     let call_handler = contract_instance.initialize_counter(42);
 
@@ -1705,7 +1759,10 @@ async fn test_transaction_script_workflow() -> Result<(), Error> {
 
 #[tokio::test]
 async fn enum_coding_w_variable_width_variants() -> Result<(), Error> {
-    get_contract_instance!(contract_instance, "enum_encoding");
+    get_contract_instance!(
+        contract_instance,
+        "packages/fuels/tests/test_projects/enum_encoding"
+    );
 
     // If we had a regression on the issue of enum encoding width, then we'll
     // probably end up mangling arg_2 and onward which will fail this test.
@@ -1733,7 +1790,10 @@ async fn enum_coding_w_variable_width_variants() -> Result<(), Error> {
 
 #[tokio::test]
 async fn enum_coding_w_unit_enums() -> Result<(), Error> {
-    get_contract_instance!(contract_instance, "enum_encoding");
+    get_contract_instance!(
+        contract_instance,
+        "packages/fuels/tests/test_projects/enum_encoding"
+    );
 
     // If we had a regression on the issue of unit enum encoding width, then
     // we'll end up mangling arg_2
@@ -1759,7 +1819,10 @@ async fn enum_coding_w_unit_enums() -> Result<(), Error> {
 
 #[tokio::test]
 async fn enum_as_input() -> Result<(), Error> {
-    get_contract_instance!(contract_instance, "enum_as_input");
+    get_contract_instance!(
+        contract_instance,
+        "packages/fuels/tests/test_projects/enum_as_input"
+    );
 
     let expected = StandardEnum::Two(12345);
     let actual = contract_instance.get_standard_enum().call().await?.value;
@@ -1793,7 +1856,10 @@ async fn enum_as_input() -> Result<(), Error> {
 
 #[tokio::test]
 async fn nested_structs() -> Result<(), Error> {
-    get_contract_instance!(contract_instance, "nested_structs");
+    get_contract_instance!(
+        contract_instance,
+        "packages/fuels/tests/test_projects/nested_structs"
+    );
 
     let expected = AllStruct {
         some_struct: SomeStruct { par_1: 12345 },
@@ -1838,7 +1904,10 @@ async fn nested_structs() -> Result<(), Error> {
 
 #[tokio::test]
 async fn test_multi_call() -> Result<(), Error> {
-    get_contract_instance!(contract_instance, "contract_test");
+    get_contract_instance!(
+        contract_instance,
+        "packages/fuels/tests/test_projects/contract_test"
+    );
 
     let call_handler_1 = contract_instance.initialize_counter(42);
     let call_handler_2 = contract_instance.get_array([42; 2].to_vec());
@@ -1858,7 +1927,10 @@ async fn test_multi_call() -> Result<(), Error> {
 
 #[tokio::test]
 async fn test_multi_call_script_workflow() -> Result<(), Error> {
-    get_contract_instance!(contract_instance, "contract_test");
+    get_contract_instance!(
+        contract_instance,
+        "packages/fuels/tests/test_projects/contract_test"
+    );
 
     let call_handler_1 = contract_instance.initialize_counter(42);
     let call_handler_2 = contract_instance.get_array([42; 2].to_vec());
@@ -1978,7 +2050,10 @@ async fn can_use_try_into_to_construct_enum_from_bytes() -> Result<(), Error> {
 
 #[tokio::test]
 async fn type_inside_enum() -> Result<(), Error> {
-    get_contract_instance!(contract_instance, "type_inside_enum");
+    get_contract_instance!(
+        contract_instance,
+        "packages/fuels/tests/test_projects/type_inside_enum"
+    );
 
     // String inside enum
     let enum_string = SomeEnum::SomeStr("asdf".to_owned());
@@ -2089,7 +2164,10 @@ async fn test_init_storage_automatically_bad_json_path() -> Result<(), Error> {
 
 #[tokio::test]
 async fn contract_method_call_respects_maturity() -> Result<(), Error> {
-    get_contract_instance!(contract_instance, "transaction_block_height");
+    get_contract_instance!(
+        contract_instance,
+        "packages/fuels/tests/test_projects/transaction_block_height"
+    );
 
     let call_w_maturity = |call_maturity| {
         let mut prepared_call = contract_instance.calling_this_will_produce_a_block();
@@ -2168,7 +2246,10 @@ async fn can_increase_block_height() -> Result<(), Error> {
 
 #[tokio::test]
 async fn can_handle_sway_function_called_new() -> anyhow::Result<()> {
-    get_contract_instance!(contract_instance, "collision_in_fn_names");
+    get_contract_instance!(
+        contract_instance,
+        "packages/fuels/tests/test_projects/collision_in_fn_names"
+    );
 
     let response = contract_instance.new().call().await?.value;
 
@@ -2571,7 +2652,10 @@ async fn can_call_predicate_with_struct_data() -> Result<(), Error> {
 
 #[tokio::test]
 async fn test_get_gas_used() -> Result<(), Error> {
-    get_contract_instance!(contract_instance, "contract_test");
+    get_contract_instance!(
+        contract_instance,
+        "packages/fuels/tests/test_projects/contract_test"
+    );
 
     let gas_used = contract_instance
         .initialize_counter(42)
@@ -2585,7 +2669,10 @@ async fn test_get_gas_used() -> Result<(), Error> {
 
 #[tokio::test]
 async fn test_contract_id_and_wallet_getters() -> Result<(), Error> {
-    get_contract_instance!(contract_instance, "contract_test");
+    get_contract_instance!(
+        contract_instance,
+        "packages/fuels/tests/test_projects/contract_test"
+    );
 
     assert_eq!(contract_instance._get_wallet().address(), wallet.address());
     assert_eq!(*contract_instance._get_contract_id(), contract_id);
@@ -2624,7 +2711,10 @@ async fn test_network_error() -> Result<(), anyhow::Error> {
 
 #[tokio::test]
 async fn str_in_array() -> Result<(), Error> {
-    get_contract_instance!(contract_instance, "str_in_array");
+    get_contract_instance!(
+        contract_instance,
+        "packages/fuels/tests/test_projects/str_in_array"
+    );
 
     let input = vec!["foo".to_string(), "bar".to_string(), "baz".to_string()];
     let response = contract_instance
@@ -2968,7 +3058,10 @@ async fn test_connect_wallet() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn contract_call_fee_estimation() -> Result<(), Error> {
-    get_contract_instance!(contract_instance, "contract_test");
+    get_contract_instance!(
+        contract_instance,
+        "packages/fuels/tests/test_projects/contract_test"
+    );
 
     let gas_price = 100_000_000;
     let gas_limit = 800;
@@ -3001,7 +3094,10 @@ async fn contract_call_fee_estimation() -> Result<(), Error> {
 
 #[tokio::test]
 async fn contract_call_has_same_estimated_and_used_gas() -> Result<(), Error> {
-    get_contract_instance!(contract_instance, "contract_test");
+    get_contract_instance!(
+        contract_instance,
+        "packages/fuels/tests/test_projects/contract_test"
+    );
 
     let tolerance = 0.0;
     let estimated_gas_used = contract_instance
@@ -3022,7 +3118,10 @@ async fn contract_call_has_same_estimated_and_used_gas() -> Result<(), Error> {
 
 #[tokio::test]
 async fn mutl_call_has_same_estimated_and_used_gas() -> Result<(), Error> {
-    get_contract_instance!(contract_instance, "contract_test");
+    get_contract_instance!(
+        contract_instance,
+        "packages/fuels/tests/test_projects/contract_test"
+    );
 
     let call_handler_1 = contract_instance.initialize_counter(42);
     let call_handler_2 = contract_instance.get_array([42; 2].to_vec());
