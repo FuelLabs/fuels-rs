@@ -18,7 +18,7 @@ use fuels_signers::fuel_crypto::SecretKey;
 use fuels_test_helpers::setup_single_message;
 use fuels_types::bech32::Bech32Address;
 use sha2::{Digest, Sha256};
-use std::iter::zip;
+use std::iter;
 use std::str::FromStr;
 
 use fuel_core_interfaces::model::Message;
@@ -3612,7 +3612,7 @@ async fn test_input_message() -> Result<(), Error> {
 
     let compare_messages =
         |messages_from_provider: Vec<OtherMessage>, used_messages: Vec<Message>| -> bool {
-            zip(&used_messages, &messages_from_provider).all(|(a, b)| {
+            iter::zip(&used_messages, &messages_from_provider).all(|(a, b)| {
                 a.sender == b.sender.0 .0
                     && a.recipient == b.recipient.0 .0
                     && a.owner == b.owner.0 .0
