@@ -5,11 +5,10 @@ use fuels::contract::contract::MultiContractCallHandler;
 use fuels::contract::predicate::Predicate;
 use fuels::prelude::{
     abigen, launch_custom_provider_and_get_wallets, launch_provider_and_get_wallet,
-    setup_multiple_assets_coins, setup_single_asset_coins, setup_test_provider, CallParameters,
-    Config, Contract, Error, Provider, Salt, TxParameters, WalletUnlocked, WalletsConfig,
-    DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
+    setup_contract_test, setup_multiple_assets_coins, setup_single_asset_coins,
+    setup_test_provider, CallParameters, Config, Contract, Error, Provider, Salt, TxParameters,
+    WalletUnlocked, WalletsConfig, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
 };
-use fuels_abigen_macro::get_contract_instance;
 use fuels_core::abi_encoder::ABIEncoder;
 use fuels_core::parameters::StorageConfiguration;
 use fuels_core::tx::{Address, Bytes32, StorageSlot};
@@ -959,7 +958,7 @@ async fn create_nested_struct_from_decoded_tokens() -> Result<(), Error> {
 
 #[tokio::test]
 async fn type_safe_output_values() -> Result<(), Error> {
-    get_contract_instance!(
+    setup_contract_test!(
         contract_instance,
         "packages/fuels/tests/test_projects/contract_output_test"
     );
@@ -1030,7 +1029,7 @@ async fn call_with_structs() -> Result<(), Error> {
 
 #[tokio::test]
 async fn call_with_empty_return() -> Result<(), Error> {
-    get_contract_instance!(
+    setup_contract_test!(
         contract_instance,
         "packages/fuels/tests/test_projects/call_empty_return"
     );
@@ -1044,7 +1043,7 @@ async fn call_with_empty_return() -> Result<(), Error> {
 
 #[tokio::test]
 async fn abigen_different_structs_same_arg_name() -> Result<(), Error> {
-    get_contract_instance!(
+    setup_contract_test!(
         contract_instance,
         "packages/fuels/tests/test_projects/two_structs"
     );
@@ -1064,7 +1063,7 @@ async fn abigen_different_structs_same_arg_name() -> Result<(), Error> {
 
 #[tokio::test]
 async fn test_reverting_transaction() -> Result<(), Error> {
-    get_contract_instance!(
+    setup_contract_test!(
         contract_instance,
         "packages/fuels/tests/test_projects/revert_transaction_error"
     );
@@ -1077,7 +1076,7 @@ async fn test_reverting_transaction() -> Result<(), Error> {
 
 #[tokio::test]
 async fn multiple_read_calls() -> Result<(), Error> {
-    get_contract_instance!(
+    setup_contract_test!(
         contract_instance,
         "packages/fuels/tests/test_projects/multiple_read_calls"
     );
@@ -1099,7 +1098,7 @@ async fn multiple_read_calls() -> Result<(), Error> {
 
 #[tokio::test]
 async fn test_methods_typeless_argument() -> Result<(), Error> {
-    get_contract_instance!(
+    setup_contract_test!(
         contract_instance,
         "packages/fuels/tests/test_projects/empty_arguments"
     );
@@ -1114,7 +1113,7 @@ async fn test_methods_typeless_argument() -> Result<(), Error> {
 
 #[tokio::test]
 async fn test_large_return_data() -> Result<(), Error> {
-    get_contract_instance!(
+    setup_contract_test!(
         contract_instance,
         "packages/fuels/tests/test_projects/large_return_data"
     );
@@ -1332,7 +1331,7 @@ async fn test_gas_errors() -> Result<(), Error> {
 
 #[tokio::test]
 async fn test_call_param_gas_errors() -> Result<(), Error> {
-    get_contract_instance!(
+    setup_contract_test!(
         contract_instance,
         "packages/fuels/tests/test_projects/contract_test"
     );
@@ -1365,7 +1364,7 @@ async fn test_call_param_gas_errors() -> Result<(), Error> {
 
 #[tokio::test]
 async fn test_amount_and_asset_forwarding() -> Result<(), Error> {
-    get_contract_instance!(
+    setup_contract_test!(
         contract_instance,
         "packages/fuels/tests/test_projects/token_ops"
     );
@@ -1447,7 +1446,7 @@ async fn test_amount_and_asset_forwarding() -> Result<(), Error> {
 
 #[tokio::test]
 async fn test_multiple_args() -> Result<(), Error> {
-    get_contract_instance!(
+    setup_contract_test!(
         contract_instance,
         "packages/fuels/tests/test_projects/contract_test"
     );
@@ -1468,7 +1467,7 @@ async fn test_multiple_args() -> Result<(), Error> {
 
 #[tokio::test]
 async fn test_tuples() -> Result<(), Error> {
-    get_contract_instance!(
+    setup_contract_test!(
         contract_instance,
         "packages/fuels/tests/test_projects/tuples"
     );
@@ -1515,7 +1514,7 @@ async fn test_tuples() -> Result<(), Error> {
 
 #[tokio::test]
 async fn test_array() -> Result<(), Error> {
-    get_contract_instance!(
+    setup_contract_test!(
         contract_instance,
         "packages/fuels/tests/test_projects/contract_test"
     );
@@ -1533,7 +1532,7 @@ async fn test_array() -> Result<(), Error> {
 
 #[tokio::test]
 async fn test_arrays_with_custom_types() -> Result<(), Error> {
-    get_contract_instance!(
+    setup_contract_test!(
         contract_instance,
         "packages/fuels/tests/test_projects/contract_test"
     );
@@ -1566,7 +1565,7 @@ async fn test_arrays_with_custom_types() -> Result<(), Error> {
 
 #[tokio::test]
 async fn test_auth_msg_sender_from_sdk() -> Result<(), Error> {
-    get_contract_instance!(
+    setup_contract_test!(
         contract_instance,
         "packages/fuels/tests/test_projects/auth_testing_contract"
     );
@@ -1583,7 +1582,7 @@ async fn test_auth_msg_sender_from_sdk() -> Result<(), Error> {
 
 #[tokio::test]
 async fn workflow_enum_inside_struct() -> Result<(), Error> {
-    get_contract_instance!(
+    setup_contract_test!(
         contract_instance,
         "packages/fuels/tests/test_projects/enum_inside_struct"
     );
@@ -1616,7 +1615,7 @@ async fn workflow_enum_inside_struct() -> Result<(), Error> {
 
 #[tokio::test]
 async fn test_logd_receipts() -> Result<(), Error> {
-    get_contract_instance!(
+    setup_contract_test!(
         contract_instance,
         "packages/fuels/tests/test_projects/contract_logdata"
     );
@@ -1711,7 +1710,7 @@ async fn test_wallet_balance_api() -> Result<(), Error> {
 
 #[tokio::test]
 async fn sway_native_types_support() -> Result<(), Box<dyn std::error::Error>> {
-    get_contract_instance!(
+    setup_contract_test!(
         contract_instance,
         "packages/fuels/tests/test_projects/sway_native_types"
     );
@@ -1739,7 +1738,7 @@ async fn sway_native_types_support() -> Result<(), Box<dyn std::error::Error>> {
 
 #[tokio::test]
 async fn test_transaction_script_workflow() -> Result<(), Error> {
-    get_contract_instance!(
+    setup_contract_test!(
         contract_instance,
         "packages/fuels/tests/test_projects/contract_test"
     );
@@ -1759,7 +1758,7 @@ async fn test_transaction_script_workflow() -> Result<(), Error> {
 
 #[tokio::test]
 async fn enum_coding_w_variable_width_variants() -> Result<(), Error> {
-    get_contract_instance!(
+    setup_contract_test!(
         contract_instance,
         "packages/fuels/tests/test_projects/enum_encoding"
     );
@@ -1790,7 +1789,7 @@ async fn enum_coding_w_variable_width_variants() -> Result<(), Error> {
 
 #[tokio::test]
 async fn enum_coding_w_unit_enums() -> Result<(), Error> {
-    get_contract_instance!(
+    setup_contract_test!(
         contract_instance,
         "packages/fuels/tests/test_projects/enum_encoding"
     );
@@ -1819,7 +1818,7 @@ async fn enum_coding_w_unit_enums() -> Result<(), Error> {
 
 #[tokio::test]
 async fn enum_as_input() -> Result<(), Error> {
-    get_contract_instance!(
+    setup_contract_test!(
         contract_instance,
         "packages/fuels/tests/test_projects/enum_as_input"
     );
@@ -1856,7 +1855,7 @@ async fn enum_as_input() -> Result<(), Error> {
 
 #[tokio::test]
 async fn nested_structs() -> Result<(), Error> {
-    get_contract_instance!(
+    setup_contract_test!(
         contract_instance,
         "packages/fuels/tests/test_projects/nested_structs"
     );
@@ -1904,7 +1903,7 @@ async fn nested_structs() -> Result<(), Error> {
 
 #[tokio::test]
 async fn test_multi_call() -> Result<(), Error> {
-    get_contract_instance!(
+    setup_contract_test!(
         contract_instance,
         "packages/fuels/tests/test_projects/contract_test"
     );
@@ -1927,7 +1926,7 @@ async fn test_multi_call() -> Result<(), Error> {
 
 #[tokio::test]
 async fn test_multi_call_script_workflow() -> Result<(), Error> {
-    get_contract_instance!(
+    setup_contract_test!(
         contract_instance,
         "packages/fuels/tests/test_projects/contract_test"
     );
@@ -2050,7 +2049,7 @@ async fn can_use_try_into_to_construct_enum_from_bytes() -> Result<(), Error> {
 
 #[tokio::test]
 async fn type_inside_enum() -> Result<(), Error> {
-    get_contract_instance!(
+    setup_contract_test!(
         contract_instance,
         "packages/fuels/tests/test_projects/type_inside_enum"
     );
@@ -2164,7 +2163,7 @@ async fn test_init_storage_automatically_bad_json_path() -> Result<(), Error> {
 
 #[tokio::test]
 async fn contract_method_call_respects_maturity() -> Result<(), Error> {
-    get_contract_instance!(
+    setup_contract_test!(
         contract_instance,
         "packages/fuels/tests/test_projects/transaction_block_height"
     );
@@ -2246,7 +2245,7 @@ async fn can_increase_block_height() -> Result<(), Error> {
 
 #[tokio::test]
 async fn can_handle_sway_function_called_new() -> anyhow::Result<()> {
-    get_contract_instance!(
+    setup_contract_test!(
         contract_instance,
         "packages/fuels/tests/test_projects/collision_in_fn_names"
     );
@@ -2652,7 +2651,7 @@ async fn can_call_predicate_with_struct_data() -> Result<(), Error> {
 
 #[tokio::test]
 async fn test_get_gas_used() -> Result<(), Error> {
-    get_contract_instance!(
+    setup_contract_test!(
         contract_instance,
         "packages/fuels/tests/test_projects/contract_test"
     );
@@ -2669,7 +2668,7 @@ async fn test_get_gas_used() -> Result<(), Error> {
 
 #[tokio::test]
 async fn test_contract_id_and_wallet_getters() -> Result<(), Error> {
-    get_contract_instance!(
+    setup_contract_test!(
         contract_instance,
         "packages/fuels/tests/test_projects/contract_test"
     );
@@ -2711,7 +2710,7 @@ async fn test_network_error() -> Result<(), anyhow::Error> {
 
 #[tokio::test]
 async fn str_in_array() -> Result<(), Error> {
-    get_contract_instance!(
+    setup_contract_test!(
         contract_instance,
         "packages/fuels/tests/test_projects/str_in_array"
     );
@@ -3058,7 +3057,7 @@ async fn test_connect_wallet() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn contract_call_fee_estimation() -> Result<(), Error> {
-    get_contract_instance!(
+    setup_contract_test!(
         contract_instance,
         "packages/fuels/tests/test_projects/contract_test"
     );
@@ -3094,7 +3093,7 @@ async fn contract_call_fee_estimation() -> Result<(), Error> {
 
 #[tokio::test]
 async fn contract_call_has_same_estimated_and_used_gas() -> Result<(), Error> {
-    get_contract_instance!(
+    setup_contract_test!(
         contract_instance,
         "packages/fuels/tests/test_projects/contract_test"
     );
@@ -3118,7 +3117,7 @@ async fn contract_call_has_same_estimated_and_used_gas() -> Result<(), Error> {
 
 #[tokio::test]
 async fn mutl_call_has_same_estimated_and_used_gas() -> Result<(), Error> {
-    get_contract_instance!(
+    setup_contract_test!(
         contract_instance,
         "packages/fuels/tests/test_projects/contract_test"
     );

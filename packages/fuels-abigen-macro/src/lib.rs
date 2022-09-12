@@ -39,13 +39,12 @@ pub fn wasm_abigen(input: TokenStream) -> TokenStream {
 /// get_contract_instance!(contract_instance, "contract_test")
 /// In addition, to the contract instance you can use the variables: wallet, contract_id
 #[proc_macro]
-pub fn get_contract_instance(input: TokenStream) -> TokenStream {
+pub fn setup_contract_test(input: TokenStream) -> TokenStream {
     let args = parse_macro_input!(input as Spanned<ContractArgs>);
 
-    let abs_forc_dir = Path::new(&args.abi).canonicalize().expect(&format!(
-        "Unable to canonicalize forc project path: {}.",
-        &args.abi,
-    ));
+    let abs_forc_dir = Path::new(&args.abi)
+        .canonicalize()
+        .unwrap_or_else(|_| panic!("Unable to canonicalize forc project path: {}.", &args.abi));
 
     let forc_project_name = abs_forc_dir.file_name().unwrap().to_str().unwrap();
 
