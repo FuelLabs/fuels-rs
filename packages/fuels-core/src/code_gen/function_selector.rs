@@ -36,7 +36,7 @@ fn resolve_type_application(
     let type_decl = types.get(&type_application.type_id).unwrap();
     let param_type = ParamType::from_type_declaration(&type_decl, &types).unwrap();
 
-    if let ParamType::Generic(name) = &param_type {
+    if let ParamType::Generic(_) = &param_type {
         let lookup = generics.iter().cloned().collect::<HashMap<_, _>>();
         return lookup.get(&type_application.type_id).unwrap().clone();
     }
@@ -141,13 +141,6 @@ impl Type {
         };
         a
     }
-}
-
-fn print_lookup(arg: &[(usize, Type)]) -> String {
-    let lookup = arg.iter().cloned().collect::<HashMap<_, _>>();
-    let ids = arg.iter().map(|(id, _)| id).collect_vec();
-    let map = serde_json::to_string_pretty(&lookup).unwrap();
-    format!("order {ids:?} {map}")
 }
 
 fn resolve_function_arg(arg: &TypeApplication, types: &HashMap<usize, TypeDeclaration>) -> String {

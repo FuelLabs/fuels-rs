@@ -17,12 +17,12 @@ pub fn expand_custom_enum(
 ) -> Result<TokenStream, Error> {
     let enum_ident = extract_custom_type_name_from_abi_property(prop)?;
 
-    let field_entries = extract_components(&prop, types, false)?;
+    let components = extract_components(&prop, types, false)?;
     let generics = extract_generic_parameters(prop, types)?;
 
-    let enum_def = enum_decl(&enum_ident, &field_entries, &generics);
-    let parameterize_impl = enum_parameterize_impl(&enum_ident, &field_entries, &generics);
-    let tokenize_impl = enum_tokenizable_impl(&enum_ident, &field_entries, &generics);
+    let enum_def = enum_decl(&enum_ident, &components, &generics);
+    let parameterize_impl = enum_parameterize_impl(&enum_ident, &components, &generics);
+    let tokenize_impl = enum_tokenizable_impl(&enum_ident, &components, &generics);
     let try_from = impl_try_from(&enum_ident, &generics);
 
     Ok(quote! {
@@ -38,10 +38,10 @@ pub fn expand_custom_enum(
 
 fn enum_decl(
     enum_ident: &Ident,
-    field_entries: &[Component],
+    components: &[Component],
     generics: &[TokenStream],
 ) -> TokenStream {
-    let enum_variants = field_entries.iter().map(
+    let enum_variants = components.iter().map(
         |Component {
              field_name,
              field_type,
@@ -68,12 +68,12 @@ fn enum_decl(
 
 fn enum_tokenizable_impl(
     enum_ident: &Ident,
-    field_entries: &[Component],
+    components: &[Component],
     generics: &[TokenStream],
 ) -> TokenStream {
-    let enum_name = enum_ident.to_string();
+    let enum_ident_stringified = enum_ident.to_string();
 
-    let match_discriminant_from_token = field_entries.iter().enumerate().map(
+    let match_discriminant_from_token = components.iter().enumerate().map(
         |(
             discriminant,
             Component {
@@ -93,7 +93,7 @@ fn enum_tokenizable_impl(
         },
     );
 
-    let match_discriminant_into_token = field_entries.iter().enumerate().map(
+    let match_discriminant_into_token = components.iter().enumerate().map(
         |(
             discriminant,
             Component {
@@ -118,7 +118,7 @@ fn enum_tokenizable_impl(
                 {
                     let gen_err = |msg| {
                         SDKError::InvalidData(format!(
-                            "Error while instantiating {} from token! {}", #enum_name, msg
+                            "Error while instantiating {} from token! {}", #enum_ident_stringified, msg
                         ))
                     };
                     match token {
@@ -144,7 +144,7 @@ fn enum_tokenizable_impl(
 
                     let variants = match Self::param_type() {
                         ParamType::Enum(variants) => variants,
-                        other => panic!("Calling {}::param_type() must return a ParamType::Enum but instead it returned: {}", #enum_name, other)
+                        other => panic!("Calling {}::param_type() must return a ParamType::Enum but instead it returned: {}", #enum_ident_stringified, other)
                     };
 
                     Token::Enum(Box::new((discriminant, token, variants)))
@@ -155,18 +155,18 @@ fn enum_tokenizable_impl(
 
 fn enum_parameterize_impl(
     enum_ident: &Ident,
-    field_entries: &[Component],
+    components: &[Component],
     generics: &[TokenStream],
 ) -> TokenStream {
-    let param_type_calls = param_type_calls(&field_entries);
-    let enum_name = enum_ident.to_string();
+    let param_type_calls = param_type_calls(&components);
+    let enum_ident_stringified = enum_ident.to_string();
     quote! {
         impl<#(#generics: Parameterize + Tokenizable),*> Parameterize for #enum_ident <#(#generics),*> {
             fn param_type() -> ParamType {
                 let mut param_types = vec![];
                 #(param_types.push(#param_type_calls);)*
 
-                let variants = EnumVariants::new(param_types).unwrap_or_else(|_| panic!("{} has no variants which isn't allowed!", #enum_name));
+                let variants = EnumVariants::new(param_types).unwrap_or_else(|_| panic!("{} has no variants which isn't allowed!", #enum_ident_stringified));
                 ParamType::Enum(variants)
             }
         }
