@@ -3617,38 +3617,6 @@ async fn testnet_hello_world() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn generics_preview() -> Result<(), Error> {
-    let project_path = Path::new("/tmp/generics_project");
-    abigen_to_project(
-        "tests/test_projects/generics/out/debug/generics-abi.json",
-        // "tests/test_projects/contract_test/out/debug/contract_test-abi.json",
-        // "tests/test_projects/contract_test/out/debug/contract_test-abi.json",
-        project_path,
-        false,
-    )?;
-
-    open_in_terminal(project_path)?;
-
-    Ok(())
-}
-
-#[tokio::test]
-async fn generics_compiling() -> Result<(), Error> {
-    let project_path = Path::new("/tmp/generics_project");
-
-    abigen_to_project(
-        "tests/test_projects/generics/out/debug/generics-abi.json",
-        // "tests/test_projects/contract_test/out/debug/contract_test-abi.json",
-        // "tests/test_projects/contract_test/out/debug/contract_test-abi.json",
-        project_path,
-        true,
-    )?;
-
-    cargo_check(project_path)?;
-
-    Ok(())
-}
-#[tokio::test]
 async fn generics_test() -> anyhow::Result<()> {
     abigen!(
         MyContract,
@@ -3765,6 +3733,38 @@ async fn generics_test() -> anyhow::Result<()> {
     Ok(())
 }
 
+#[tokio::test]
+async fn generics_preview() -> Result<(), Error> {
+    let project_path = Path::new("/tmp/generics_project");
+    abigen_to_project(
+        // "tests/test_projects/generics/out/debug/generics-abi.json",
+        "tests/test_projects/contract_test/out/debug/contract_test-abi.json",
+        // "tests/test_projects/contract_test/out/debug/contract_test-abi.json",
+        project_path,
+        false,
+    )?;
+
+    open_in_terminal(project_path)?;
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn generics_compiling() -> Result<(), Error> {
+    let project_path = Path::new("/tmp/generics_project");
+
+    abigen_to_project(
+        "tests/test_projects/generics/out/debug/generics-abi.json",
+        // "tests/test_projects/contract_test/out/debug/contract_test-abi.json",
+        // "tests/test_projects/contract_test/out/debug/contract_test-abi.json",
+        project_path,
+        true,
+    )?;
+
+    cargo_check(project_path)?;
+
+    Ok(())
+}
 fn cargo_check(project_path: &Path) -> std::io::Result<ExitStatus> {
     Command::new(env!("CARGO"))
         .current_dir(project_path)

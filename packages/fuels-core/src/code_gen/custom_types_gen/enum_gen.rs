@@ -125,7 +125,7 @@ fn enum_tokenizable_impl(
                         Token::Enum(selector) => {
                             let (discriminant, variant_token, _) = *selector;
                             match discriminant {
-                                #(#match_discriminant_from_token),*
+                                #(#match_discriminant_from_token,)*
                                 _ => Err(gen_err(format!(
                                     "Discriminant {} doesn't point to any of the enums variants.", discriminant
                                 ))),
