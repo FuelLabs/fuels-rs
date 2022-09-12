@@ -3631,7 +3631,7 @@ async fn test_input_message() -> Result<(), Error> {
         wallet.address(),
         DEFAULT_COIN_AMOUNT,
         0,
-        vec![1, 2, 3],
+        vec![1, 2],
     );
 
     let (provider, _) = setup_test_provider(vec![], messages.clone(), None).await;
@@ -3649,7 +3649,6 @@ async fn test_input_message() -> Result<(), Error> {
         MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
 
     let messages_from_provider = wallet.get_messages().await?;
-
     assert!(compare_messages(messages_from_provider, messages));
 
     let response = contract_instance_connected

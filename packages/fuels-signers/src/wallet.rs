@@ -232,16 +232,17 @@ impl Wallet {
 
         let messages = self.get_messages().await?;
 
-        let inputs = messages
+        let inputs: Vec<Input> = messages
             .into_iter()
             .map(|message| {
+                let data = to_u8_bytes(&message.data);
                 let message_id = Input::compute_message_id(
                     &message.sender.clone().into(),
                     &message.recipient.clone().into(),
                     message.nonce.into(),
                     &message.owner.clone().into(),
                     message.amount.0,
-                    &to_u8_bytes(&message.data),
+                    &data,
                 );
                 Input::message_signed(
                     message_id,
@@ -251,10 +252,11 @@ impl Wallet {
                     0,
                     message.owner.into(),
                     witness_index,
-                    vec![],
+                    data,
                 )
             })
             .collect();
+
         Ok(inputs)
     }
 
@@ -512,10 +514,15 @@ impl WalletUnlocked {
         // Get asset inputs for required amount expressed u Input::coin_signed or in
         // Input::message_signed depending on what we have in stock.
         // In the near future this will be replaced by one function.
-        let new_base_inputs = self
+        let base_coin_inputs = self
             .get_asset_inputs_for_amount(BASE_ASSET_ID, new_base_amount, witness_index)
-            .await
-            .unwrap_or(self.get_inputs_for_messages(witness_index).await?);
+            .await;
+        let new_base_inputs =
+            if base_coin_inputs.is_err() || base_coin_inputs.as_ref().unwrap().is_empty() {
+                self.get_inputs_for_messages(witness_index).await?
+            } else {
+                base_coin_inputs.unwrap()
+            };
         if new_base_inputs.is_empty() && new_base_amount != 0 {
             return Err(Error::ProviderError(
                 "Response errors; enough coins could not be found".to_string(),
