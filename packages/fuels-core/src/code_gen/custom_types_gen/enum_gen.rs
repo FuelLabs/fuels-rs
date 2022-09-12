@@ -11,14 +11,17 @@ use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 use std::collections::HashMap;
 
+/// Returns a TokenStream containing the declaration, `Parameterize`,
+/// `Tokenizable` and `TryFrom` implementations for the enum described by the
+/// given TypeDeclaration.
 pub fn expand_custom_enum(
-    prop: &TypeDeclaration,
+    type_decl: &TypeDeclaration,
     types: &HashMap<usize, TypeDeclaration>,
 ) -> Result<TokenStream, Error> {
-    let enum_ident = extract_custom_type_name_from_abi_property(prop)?;
+    let enum_ident = extract_custom_type_name_from_abi_property(type_decl)?;
 
-    let components = extract_components(&prop, types, false)?;
-    let generics = extract_generic_parameters(prop, types)?;
+    let components = extract_components(&type_decl, types, false)?;
+    let generics = extract_generic_parameters(type_decl, types)?;
 
     let enum_def = enum_decl(&enum_ident, &components, &generics);
     let parameterize_impl = enum_parameterize_impl(&enum_ident, &components, &generics);

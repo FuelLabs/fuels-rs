@@ -12,8 +12,10 @@ use quote::quote;
 use regex::Regex;
 use std::collections::HashMap;
 
+// Represents a component of either a struct(field name) or an enum(variant
+// name).
 #[derive(Debug)]
-pub struct Component {
+pub(crate) struct Component {
     pub field_name: Ident,
     pub field_type: ResolvedType,
 }
@@ -39,7 +41,20 @@ impl Component {
     }
 }
 
-pub fn impl_try_from(ident: &Ident, generics: &[TokenStream]) -> TokenStream {
+/// These TryFrom implementations improve devx by enabling users to easily
+/// construct contract types from bytes. These are generated due to the orphan
+/// rule prohibiting us from specifying an implementation for all possible
+/// types.
+///
+/// # Arguments
+///
+/// * `ident`: The name of the struct/enum for which we're generating the code.
+/// * `generics`: The generic types of the struct/enum -- i.e. For MyStruct<T,
+///               K> it would be ['T', 'K']
+///
+/// returns: a TokenStream containing the three TryFrom implementations for a
+/// &[u8], &Vec<u8> and a Vec<u8>
+pub(crate) fn impl_try_from(ident: &Ident, generics: &[TokenStream]) -> TokenStream {
     quote! {
         impl<#(#generics: Tokenizable + Parameterize),*> TryFrom<&[u8]> for #ident<#(#generics),*> {
             type Error = SDKError;
@@ -66,7 +81,9 @@ pub fn impl_try_from(ident: &Ident, generics: &[TokenStream]) -> TokenStream {
     }
 }
 
-pub fn extract_components(
+/// Transforms components from inside the given `TypeDeclaration` into a vector
+/// of `Components`. Will fail if there are no components.
+pub(crate) fn extract_components(
     type_decl: &TypeDeclaration,
     types: &HashMap<usize, TypeDeclaration>,
     snake_case: bool,
@@ -85,7 +102,9 @@ pub fn extract_components(
         .collect()
 }
 
-pub fn extract_generic_parameters(
+/// Returns a vector of TokenStreams, one for each of the generic parameters
+/// used by the given type.
+pub(crate) fn extract_generic_parameters(
     type_decl: &TypeDeclaration,
     types: &HashMap<usize, TypeDeclaration>,
 ) -> Result<Vec<TokenStream>, Error> {
@@ -123,6 +142,9 @@ pub fn extract_custom_type_name_from_abi_property(prop: &TypeDeclaration) -> Res
         })
 }
 
+/// Returns TokenStreams representing calls to `Parameterize::param_type` for
+/// all given Components. Makes sure to properly handle calls when generics are
+/// involved.
 pub(crate) fn param_type_calls(field_entries: &[Component]) -> Vec<TokenStream> {
     field_entries
         .iter()

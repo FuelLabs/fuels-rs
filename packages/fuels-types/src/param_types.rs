@@ -1,11 +1,10 @@
 use crate::constants::{ENUM_DISCRIMINANT_WORD_WIDTH, WORD_SIZE};
 use crate::errors::Error;
 use core::fmt;
-use serde::Serialize;
 use strum_macros::EnumString;
 use thiserror::Error as ThisError;
 
-#[derive(Debug, Clone, EnumString, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, EnumString, PartialEq, Eq)]
 #[strum(ascii_case_insensitive)]
 pub enum ParamType {
     U8,
@@ -79,7 +78,9 @@ impl ParamType {
             ParamType::Struct(params) => params.iter().map(|p| p.compute_encoding_width()).sum(),
             ParamType::Enum(variants) => variants.compute_encoding_width_of_enum(),
             ParamType::Tuple(params) => params.iter().map(|p| p.compute_encoding_width()).sum(),
-            ParamType::Generic(_) => unimplemented!(),
+            ParamType::Generic(_) => {
+                panic!("Generic parameters are not resolved and as such don't have a size!")
+            }
         }
     }
 }
@@ -132,7 +133,7 @@ impl fmt::Display for ParamType {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EnumVariants {
     variants: Vec<ParamType>,
 }

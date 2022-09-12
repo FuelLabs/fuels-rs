@@ -3,6 +3,9 @@ use fuels_types::errors::Error;
 use fuels_types::param_types::ParamType;
 use std::fmt::{Debug, Display, Formatter};
 
+// To be used when interacting with contracts which have strings in their ABI.
+// The length of a string in Sway is part of its type -- i.e. str[2] is a
+// different type from str[3]. Sway strings only support ascii characters.
 #[derive(Debug, PartialEq, Clone, Eq)]
 pub struct SizedAsciiString<const LEN: usize> {
     data: String,

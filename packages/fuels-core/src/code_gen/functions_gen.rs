@@ -21,6 +21,7 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use std::fmt::{Display, Formatter};
 use std::hash::{Hash, Hasher};
 use std::iter;
+use std::iter::zip;
 use std::str::FromStr;
 use syn::Expr::Type;
 
@@ -96,12 +97,9 @@ fn expand_function_arguments(
         .map(|input| expand_input_name(&input.name))
         .collect::<Result<Vec<_>, _>>()?;
 
-    let args = arg_names
-        .iter()
-        .zip(resolved_inputs.iter())
-        .map(|(arg_name, arg_type)| {
-            quote! { #arg_name: #arg_type }
-        });
+    let args = zip(&arg_names, &resolved_inputs).map(|(arg_name, arg_type)| {
+        quote! { #arg_name: #arg_type }
+    });
 
     Ok((
         quote! { #( , #args )* },

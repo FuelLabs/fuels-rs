@@ -2,6 +2,9 @@ use crate::{Parameterize, Token, Tokenizable};
 use fuels_types::errors::Error;
 use fuels_types::param_types::ParamType;
 
+// A simple wrapper around [u8;32] representing the `b256` type in Sway. Exists
+// mainly so that we may differentiate `Parameterize` and `Tokenizable`
+// implementations from what otherwise is just an array of 32 u8's.
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub struct Bits256(pub [u8; 32]);
 

@@ -31,7 +31,6 @@ pub struct Abigen {
 impl Abigen {
     /// Creates a new contract with the given ABI JSON source.
     pub fn new<S: AsRef<str>>(contract_name: &str, abi_source: S) -> Result<Self, Error> {
-        // Support for new JSON ABI file format.
         let source = Source::parse(abi_source).expect("failed to parse JSON ABI");
 
         let json_abi_str = source.get().expect("failed to parse JSON ABI from string");

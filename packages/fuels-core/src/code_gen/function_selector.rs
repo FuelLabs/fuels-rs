@@ -6,6 +6,8 @@ use std::collections::HashMap;
 use std::iter::zip;
 use std::ptr::replace;
 
+/// Given a `ABIFunction` will return a String representing the function
+/// selector as specified in the Fuel specs.
 pub fn resolve_fn_selector(
     function: &ABIFunction,
     types: &HashMap<usize, TypeDeclaration>,
@@ -27,6 +29,15 @@ struct Type {
     components: Vec<Type>,
 }
 
+/// Will recursively drill down the given generic parameters until all types are
+/// resolved.
+///
+/// # Arguments
+///
+/// * `type_application`: the type we wish to resolve
+/// * `types`: all types used in the function call
+/// * `parent_generic_params`: a slice of generic_type_id -> Type describing to
+///    what a generic parameter should resolve to
 fn resolve_type_application(
     type_application: &TypeApplication,
     types: &HashMap<usize, TypeDeclaration>,
@@ -44,9 +55,14 @@ fn resolve_type_application(
         return generic_type.clone();
     }
 
+    // Figure out what does the current type do with the inherited generic
+    // parameters and reestablish the mapping since the current type might have
+    // renamed the inherited generic parameters.
     let generic_params_lookup =
         determine_generics_for_type(type_application, types, parent_generic_params);
 
+    // Resolve the enclosed components (if any) with the newly resolved generic
+    // parameters.
     let components = type_decl
         .components
         .iter()
@@ -64,6 +80,15 @@ fn resolve_type_application(
     }
 }
 
+/// For the given type generates generic_type_id -> Type mapping describing to
+/// what generic parameters should be resolved.
+///
+/// # Arguments
+///
+/// * `type_application`: The type on which the generic parameters are defined.
+/// * `types`: All types used.
+/// * `parent_generic_params`: The generic parameters as inherited from the
+///                            enclosing type (a struct/enum/array etc.).
 fn determine_generics_for_type(
     type_application: &TypeApplication,
     types: &HashMap<usize, TypeDeclaration>,
@@ -71,7 +96,11 @@ fn determine_generics_for_type(
 ) -> Vec<(usize, Type)> {
     let type_decl = types.get(&type_application.type_id).unwrap();
     match &type_decl.type_parameters {
+        // The presence of type_parameters indicates that the current type
+        // (a struct or an enum) defines some generic parameters (i.e.
+        // SomeStruct<T, K>
         Some(params) if !params.is_empty() => {
+            // Determine what Types the generics will resolve to.
             let generic_params_from_current_type = type_application
                 .type_arguments
                 .iter()
@@ -82,12 +111,24 @@ fn determine_generics_for_type(
             let generics_to_use = if !generic_params_from_current_type.is_empty() {
                 generic_params_from_current_type
             } else {
+                // Types such as arrays and enums inherit and forward their
+                // generic parameters, without declaring their own.
                 parent_generic_params
                     .iter()
                     .map(|(_, ty)| ty)
                     .cloned()
                     .collect()
             };
+
+            // All inherited but unused generic types are dropped. The rest are
+            // re-mapped to new type_ids since child types are free to rename
+            // the generic parameters as they see fit -- i.e.
+            // struct ParentStruct<T>{
+            //     b: ChildStruct<T>
+            // }
+            // struct ChildStruct<K> {
+            //     c: K
+            // }
 
             zip(params.clone(), generics_to_use).collect()
         }
@@ -159,7 +200,9 @@ impl Type {
 }
 
 fn resolve_function_arg(arg: &TypeApplication, types: &HashMap<usize, TypeDeclaration>) -> String {
-    resolve_type_application(arg, types, Default::default()).to_fn_selector_format()
+    let resolved_type = resolve_type_application(arg, types, Default::default());
+
+    resolved_type.to_fn_selector_format()
 }
 
 #[cfg(test)]

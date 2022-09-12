@@ -7,27 +7,13 @@ use quote::quote;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 
+// Represents a type alongside its generic parameters. Can be converted into a
+// `TokenStream` via `.into()`.
 #[derive(Debug, Clone)]
-pub struct ResolvedType {
+pub(crate) struct ResolvedType {
     pub type_name: TokenStream,
     pub generic_params: Vec<ResolvedType>,
     pub param_type: ParamType,
-}
-
-impl ResolvedType {
-    pub fn get_used_generic_type_names(&self) -> Vec<String> {
-        let mut generic_params = vec![];
-
-        if let ParamType::Generic(name) = &self.param_type {
-            generic_params.push(name.clone());
-        }
-
-        for param in &self.generic_params {
-            generic_params.extend(param.get_used_generic_type_names());
-        }
-
-        generic_params
-    }
 }
 
 impl Display for ResolvedType {
@@ -58,7 +44,11 @@ impl From<ResolvedType> for TokenStream {
     }
 }
 
-pub fn resolve_type(
+/// Given a type, will recursively proceed to resolve it until it results in a
+/// `ResolvedType` which can be then be converted into a `TokenStream`. As such
+/// it can be used whenever you need the Rust type of the given
+/// `TypeApplication`.
+pub(crate) fn resolve_type(
     type_application: &TypeApplication,
     types: &HashMap<usize, TypeDeclaration>,
 ) -> Result<ResolvedType, Error> {

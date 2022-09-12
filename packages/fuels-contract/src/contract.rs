@@ -639,7 +639,6 @@ impl MultiContractCallHandler {
         let mut final_tokens = vec![];
 
         for call in self.contract_calls.as_ref().unwrap().iter() {
-            // We only aggregate the tokens if the contract call has an output parameter
             let decoded = ContractCall::get_decoded_output(&call.output_param, &mut receipts)?;
 
             final_tokens.push(decoded.clone());

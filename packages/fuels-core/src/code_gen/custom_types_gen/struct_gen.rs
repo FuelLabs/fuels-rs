@@ -10,14 +10,17 @@ use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 use std::collections::HashMap;
 
+/// Returns a TokenStream containing the declaration, `Parameterize`,
+/// `Tokenizable` and `TryFrom` implementations for the struct described by the
+/// given TypeDeclaration.
 pub fn expand_custom_struct(
-    prop: &TypeDeclaration,
+    type_decl: &TypeDeclaration,
     types: &HashMap<usize, TypeDeclaration>,
 ) -> Result<TokenStream, Error> {
-    let struct_ident = extract_custom_type_name_from_abi_property(prop)?;
+    let struct_ident = extract_custom_type_name_from_abi_property(type_decl)?;
 
-    let components = extract_components(&prop, types, true)?;
-    let generic_parameters = extract_generic_parameters(prop, types)?;
+    let components = extract_components(&type_decl, types, true)?;
+    let generic_parameters = extract_generic_parameters(type_decl, types)?;
 
     let struct_decl = struct_decl(&struct_ident, &components, &generic_parameters);
 
