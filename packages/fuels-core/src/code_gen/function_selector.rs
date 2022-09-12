@@ -20,10 +20,9 @@ pub fn resolve_fn_selector(
     format!("{}({})", function.name, fun_args)
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone)]
 struct Type {
     param_type: ParamType,
-    type_id: usize,
     generic_params: Vec<Type>,
     components: Vec<Type>,
 }
@@ -31,52 +30,68 @@ struct Type {
 fn resolve_type_application(
     type_application: &TypeApplication,
     types: &HashMap<usize, TypeDeclaration>,
-    generics: &Vec<(usize, Type)>,
+    parent_generic_params: &[(usize, Type)],
 ) -> Type {
     let type_decl = types.get(&type_application.type_id).unwrap();
     let param_type = ParamType::from_type_declaration(&type_decl, &types).unwrap();
 
     if let ParamType::Generic(_) = &param_type {
-        let lookup = generics.iter().cloned().collect::<HashMap<_, _>>();
-        return lookup.get(&type_application.type_id).unwrap().clone();
+        let (_, generic_type) = parent_generic_params
+            .into_iter()
+            .find(|(id, _)| *id == type_application.type_id)
+            .unwrap();
+
+        return generic_type.clone();
     }
 
-    let some_generics = type_application
-        .type_arguments
-        .iter()
-        .flatten()
-        .map(|ty| resolve_type_application(ty, types, &generics))
-        .collect_vec();
-
-    let final_generics = if some_generics.is_empty() {
-        generics.iter().map(|(_, ty)| ty.clone()).collect_vec()
-    } else {
-        some_generics
-    };
-
-    let final_generics = match &type_decl.type_parameters {
-        Some(params) if !params.is_empty() => {
-            zip(params.clone(), final_generics.iter().map(|ty| ty.clone())).collect_vec()
-        }
-        _ => generics.clone(),
-    };
+    let generic_params_lookup =
+        determine_generics_for_type(type_application, types, parent_generic_params);
 
     let components = type_decl
         .components
         .iter()
         .flatten()
-        .map(|component| resolve_type_application(component, types, &final_generics))
+        .map(|component| resolve_type_application(component, types, &generic_params_lookup))
         .collect_vec();
 
     Type {
         param_type,
-        type_id: type_decl.type_id,
         components,
-        generic_params: final_generics
-            .clone()
-            .iter()
-            .map(|(_, ty)| ty.clone())
+        generic_params: generic_params_lookup
+            .into_iter()
+            .map(|(_, ty)| ty)
             .collect(),
+    }
+}
+
+fn determine_generics_for_type(
+    type_application: &TypeApplication,
+    types: &HashMap<usize, TypeDeclaration>,
+    parent_generic_params: &[(usize, Type)],
+) -> Vec<(usize, Type)> {
+    let type_decl = types.get(&type_application.type_id).unwrap();
+    match &type_decl.type_parameters {
+        Some(params) if !params.is_empty() => {
+            let generic_params_from_current_type = type_application
+                .type_arguments
+                .iter()
+                .flatten()
+                .map(|ty| resolve_type_application(ty, types, parent_generic_params))
+                .collect_vec();
+
+            let generics_to_use = if !generic_params_from_current_type.is_empty() {
+                generic_params_from_current_type
+            } else {
+                parent_generic_params
+                    .iter()
+                    .map(|(_, ty)| ty)
+                    .cloned()
+                    .collect()
+            };
+
+            zip(params.clone(), generics_to_use).collect()
+        }
+        _ => parent_generic_params.into_iter().cloned().collect(),
     }
 }
 
@@ -144,7 +159,7 @@ impl Type {
 }
 
 fn resolve_function_arg(arg: &TypeApplication, types: &HashMap<usize, TypeDeclaration>) -> String {
-    resolve_type_application(arg, types, &Default::default()).to_fn_selector_format()
+    resolve_type_application(arg, types, Default::default()).to_fn_selector_format()
 }
 
 #[cfg(test)]
@@ -154,200 +169,525 @@ mod tests {
     use std::fs;
 
     #[test]
-    fn simple_case() -> anyhow::Result<()> {
-        let program_abi = load_abi("simple")?;
-        let fun = program_abi.functions.first().unwrap();
+    fn handles_primitive_types() {
+        let check_selector_for_type = |primitive_type: &str| {
+            let fun = ABIFunction {
+                inputs: vec![TypeApplication {
+                    name: "arg".to_string(),
+                    type_id: 0,
+                    type_arguments: None,
+                }],
+                name: "some_fun".to_string(),
+                output: Default::default(),
+            };
 
-        let types = program_abi
-            .types
-            .iter()
-            .map(|decl| (decl.type_id, decl.clone()))
-            .collect::<HashMap<_, _>>();
+            let types = [TypeDeclaration {
+                type_id: 0,
+                type_field: primitive_type.to_string(),
+                components: None,
+                type_parameters: None,
+            }]
+            .map(|decl| (decl.type_id, decl))
+            .into();
 
-        let result = resolve_fn_selector(&fun, &types);
+            let selector = resolve_fn_selector(&fun, &types);
 
-        assert_eq!(result, "test_function(s<u32>(u64,u32))");
+            assert_eq!(selector, format!("some_fun({})", primitive_type));
+        };
 
-        Ok(())
+        for primitive_type in [
+            "u8", "u16", "u32", "u64", "bool", "byte", "b256", "()", "str[15]",
+        ] {
+            check_selector_for_type(primitive_type);
+        }
     }
 
     #[test]
-    fn generic_parameter_reused_later() -> anyhow::Result<()> {
-        let program_abi = load_abi("generic_arg_used_again_later")?;
-        let fun = program_abi.functions.first().unwrap();
+    fn handles_arrays() {
+        let fun = ABIFunction {
+            inputs: vec![TypeApplication {
+                name: "arg".to_string(),
+                type_id: 0,
+                type_arguments: None,
+            }],
+            name: "some_fun".to_string(),
+            output: Default::default(),
+        };
 
-        let types = program_abi
-            .types
-            .iter()
-            .map(|decl| (decl.type_id, decl.clone()))
-            .collect::<HashMap<_, _>>();
-
-        let result = resolve_fn_selector(&fun, &types);
-
-        let correct_fn_selector = "test_function(s<u8,u32>(u64,u8,u32,u8))";
-
-        assert_eq!(result, correct_fn_selector);
-
-        Ok(())
-    }
-
-    #[test]
-    fn generic_param_forwarded_to_inner_generic() -> anyhow::Result<()> {
-        let program_abi = load_abi("generic_arg_forwarded_to_nested_generic")?;
-        let fun = program_abi.functions.first().unwrap();
-
-        let types = program_abi
-            .types
-            .iter()
-            .map(|decl| (decl.type_id, decl.clone()))
-            .collect::<HashMap<_, _>>();
-
-        let result = resolve_fn_selector(&fun, &types);
-
-        let correct_fn_selector = "test_function(s<u32>(s<u32>(u64,u32)))";
-
-        assert_eq!(result, correct_fn_selector);
-
-        Ok(())
-    }
-
-    #[test]
-    fn edge_case_regarding_generic_names() -> anyhow::Result<()> {
-        let program_abi = load_abi("extracting_generics_by_argument_name_is_faulty")?;
-        let fun = program_abi.functions.first().unwrap();
-
-        let types = program_abi
-            .types
-            .iter()
-            .map(|decl| (decl.type_id, decl.clone()))
-            .collect::<HashMap<_, _>>();
-
-        let result = resolve_fn_selector(&fun, &types);
-
-        let correct_fn_selector = "test_function(s<u64,u32>(u64,s<u32>(u32)))";
-
-        assert_eq!(result, correct_fn_selector);
-
-        Ok(())
-    }
-
-    #[test]
-    fn ultimate_test() -> anyhow::Result<()> {
-        let program_abi = load_abi("generics")?;
-        let fun = program_abi.functions.first().unwrap();
-
-        let types = program_abi
-            .types
-            .iter()
-            .map(|decl| (decl.type_id, decl.clone()))
-            .collect::<HashMap<_, _>>();
-
-        let result = resolve_fn_selector(&fun, &types);
-
-        let correct_fn_selector = "identity(s<u32,s<s(u8,u64)>(u64,str[15],s(u8,u64))>(s<e<u32>(u64,u32)>(u64,str[15],e<u32>(u64,u32)),s<s(u8,u64)>(u64,str[15],s(u8,u64))))";
-
-        assert_eq!(result, correct_fn_selector);
-
-        Ok(())
-    }
-
-    #[test]
-    fn weirdly_named_mutl_call() -> anyhow::Result<()> {
-        let program_abi = load_abi_w_path("/home/segfault_magnet/fuel/github/fuels-rs/packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json")?;
-        let mappings = [
-            ("get_msg_amount", "get_msg_amount()"),
-            ("initialize_counter", "initialize_counter(u64)"),
-            ("increment_counter", "increment_counter(u64)"),
-            ("get_counter", "get_counter()"),
-            ("get", "get(u64,u64)"),
-            ("get_alt", "get_alt(s(u64,u64))"),
-            ("get_single", "get_single(u64)"),
-            ("array_of_structs", "array_of_structs(a[s(str[4]);2])"),
-            ("array_of_enums", "array_of_enums(a[e((),(),());2])"),
-            ("get_array", "get_array(a[u64;2])"),
+        let types = [
+            TypeDeclaration {
+                type_id: 0,
+                type_field: "[_; 1]".to_string(),
+                components: Some(vec![TypeApplication {
+                    name: "__array_element".to_string(),
+                    type_id: 1,
+                    type_arguments: None,
+                }]),
+                type_parameters: None,
+            },
+            TypeDeclaration {
+                type_id: 1,
+                type_field: "u8".to_string(),
+                components: None,
+                type_parameters: None,
+            },
         ]
-        .map(|(lhs, rhs)| (lhs.to_string(), rhs.to_string()));
+        .map(|decl| (decl.type_id, decl))
+        .into();
 
-        let types = program_abi
-            .types
-            .iter()
-            .map(|decl| (decl.type_id, decl.clone()))
-            .collect::<HashMap<_, _>>();
+        let selector = resolve_fn_selector(&fun, &types);
 
-        for fun in &program_abi.functions {
-            let (name, exp) = mappings.iter().find(|(lhs, _)| fun.name == *lhs).unwrap();
-
-            let result = resolve_fn_selector(&fun, &types);
-
-            assert_eq!(result, *exp);
-        }
-
-        Ok(())
+        assert_eq!(selector, format!("some_fun(a[u8;1])"));
     }
 
     #[test]
-    fn understanding() -> anyhow::Result<()> {
-        let program_abi = load_abi_w_path("/home/segfault_magnet/tmp/out/debug/tmp-abi.json")?;
-        let mappings = [(
-            "test_function",
-            "test_function(s<u64,u32>(a[s<s<u32>(u32)>(s<u32>(u32));2],u64))",
-        )]
-        .map(|(lhs, rhs)| (lhs.to_string(), rhs.to_string()));
+    fn handles_tuples() {
+        let fun = ABIFunction {
+            inputs: vec![TypeApplication {
+                name: "arg".to_string(),
+                type_id: 0,
+                type_arguments: None,
+            }],
+            name: "some_fun".to_string(),
+            output: Default::default(),
+        };
 
-        let types = program_abi
-            .types
-            .iter()
-            .map(|decl| (decl.type_id, decl.clone()))
-            .collect::<HashMap<_, _>>();
+        let types = [
+            TypeDeclaration {
+                type_id: 0,
+                type_field: "(_, _)".to_string(),
+                components: Some(vec![
+                    TypeApplication {
+                        name: "__tuple_element".to_string(),
+                        type_id: 1,
+                        type_arguments: None,
+                    },
+                    TypeApplication {
+                        name: "__tuple_element".to_string(),
+                        type_id: 1,
+                        type_arguments: None,
+                    },
+                ]),
+                type_parameters: None,
+            },
+            TypeDeclaration {
+                type_id: 1,
+                type_field: "u8".to_string(),
+                components: None,
+                type_parameters: None,
+            },
+        ]
+        .map(|decl| (decl.type_id, decl))
+        .into();
 
-        for fun in &program_abi.functions {
-            let (name, exp) = mappings.iter().find(|(lhs, _)| fun.name == *lhs).unwrap();
+        let selector = resolve_fn_selector(&fun, &types);
 
-            let result = resolve_fn_selector(&fun, &types);
-
-            assert_eq!(result, *exp);
-        }
-
-        Ok(())
+        assert_eq!(selector, format!("some_fun((u8,u8))"));
     }
 
     #[test]
-    fn super_generics() -> anyhow::Result<()> {
-        let program_abi = load_abi_w_path("/home/segfault_magnet/fuel/github/fuels-rs/packages/fuels/tests/test_projects/generics/out/debug/generics-abi.json")?;
+    fn handles_structs() {
+        let fun = ABIFunction {
+            inputs: vec![TypeApplication {
+                name: "arg".to_string(),
+                type_id: 2,
+                type_arguments: Some(vec![TypeApplication {
+                    name: "".to_string(),
+                    type_id: 3,
+                    type_arguments: None,
+                }]),
+            }],
+            name: "some_fun".to_string(),
+            output: Default::default(),
+        };
 
-        let mappings = [("struct_w_generic", "struct_w_generic(s<u64>(u64))"),
-        ("struct_delegating_generic", "struct_delegating_generic(s<str[3]>(s<str[3]>(str[3])))"),
-        ("struct_w_generic_in_array", "struct_w_generic_in_array(s<u32>(a[u32;2]))"),
-        ("struct_w_generic_in_tuple", "struct_w_generic_in_tuple(s<u32>((u32,u32)))"),
-        ("enum_w_generic", "enum_w_generic(e<u64>(u64,u64))"),
-        ("complex_test", "complex_test(s<str[2],b256>((a[b256;2],str[2]),(a[e<s<s<s<str[2]>(s<str[2]>(str[2]))>(a[s<str[2]>(s<str[2]>(str[2]));2])>((s<s<str[2]>(s<str[2]>(str[2]))>(a[s<str[2]>(s<str[2]>(str[2]));2]),s<s<str[2]>(s<str[2]>(str[2]))>(a[s<str[2]>(s<str[2]>(str[2]));2])))>(u64,s<s<s<str[2]>(s<str[2]>(str[2]))>(a[s<str[2]>(s<str[2]>(str[2]));2])>((s<s<str[2]>(s<str[2]>(str[2]))>(a[s<str[2]>(s<str[2]>(str[2]));2]),s<s<str[2]>(s<str[2]>(str[2]))>(a[s<str[2]>(s<str[2]>(str[2]));2]))));1],u32)))")]
-        .map(|(lhs, rhs)| (lhs.to_string(), rhs.to_string()));
+        let types = [
+            TypeDeclaration {
+                type_id: 1,
+                type_field: "generic T".to_string(),
+                components: None,
+                type_parameters: None,
+            },
+            TypeDeclaration {
+                type_id: 2,
+                type_field: "struct SomeStruct".to_string(),
+                components: Some(vec![
+                    TypeApplication {
+                        name: "a".to_string(),
+                        type_id: 4,
+                        type_arguments: None,
+                    },
+                    TypeApplication {
+                        name: "b".to_string(),
+                        type_id: 1,
+                        type_arguments: None,
+                    },
+                ]),
+                type_parameters: Some(vec![1]),
+            },
+            TypeDeclaration {
+                type_id: 3,
+                type_field: "u32".to_string(),
+                components: None,
+                type_parameters: None,
+            },
+            TypeDeclaration {
+                type_id: 4,
+                type_field: "u64".to_string(),
+                components: None,
+                type_parameters: None,
+            },
+        ]
+        .map(|decl| (decl.type_id, decl))
+        .into();
 
-        let types = program_abi
+        let selector = resolve_fn_selector(&fun, &types);
+
+        assert_eq!(selector, format!("some_fun(s<u32>(u64,u32))"));
+    }
+
+    #[test]
+    fn handles_enums() {
+        let fun = ABIFunction {
+            inputs: vec![TypeApplication {
+                name: "arg".to_string(),
+                type_id: 2,
+                type_arguments: Some(vec![TypeApplication {
+                    name: "".to_string(),
+                    type_id: 3,
+                    type_arguments: None,
+                }]),
+            }],
+            name: "some_fun".to_string(),
+            output: Default::default(),
+        };
+
+        let types = [
+            TypeDeclaration {
+                type_id: 1,
+                type_field: "generic T".to_string(),
+                components: None,
+                type_parameters: None,
+            },
+            TypeDeclaration {
+                type_id: 2,
+                type_field: "enum SomeEnum".to_string(),
+                components: Some(vec![
+                    TypeApplication {
+                        name: "a".to_string(),
+                        type_id: 4,
+                        type_arguments: None,
+                    },
+                    TypeApplication {
+                        name: "b".to_string(),
+                        type_id: 1,
+                        type_arguments: None,
+                    },
+                ]),
+                type_parameters: Some(vec![1]),
+            },
+            TypeDeclaration {
+                type_id: 3,
+                type_field: "u32".to_string(),
+                components: None,
+                type_parameters: None,
+            },
+            TypeDeclaration {
+                type_id: 4,
+                type_field: "u64".to_string(),
+                components: None,
+                type_parameters: None,
+            },
+        ]
+        .map(|decl| (decl.type_id, decl))
+        .into();
+
+        let selector = resolve_fn_selector(&fun, &types);
+
+        assert_eq!(selector, format!("some_fun(e<u32>(u64,u32))"));
+    }
+
+    #[test]
+    fn ultimate_test() {
+        let abi = ProgramABI {
+            types: vec![
+                TypeDeclaration {
+                    type_id: 0,
+                    type_field: "()".to_string(),
+                    components: Some(vec![]),
+                    type_parameters: None,
+                },
+                TypeDeclaration {
+                    type_id: 1,
+                    type_field: "(_, _)".to_string(),
+                    components: Some(vec![
+                        TypeApplication {
+                            name: "__tuple_element".to_string(),
+                            type_id: 11,
+                            type_arguments: None,
+                        },
+                        TypeApplication {
+                            name: "__tuple_element".to_string(),
+                            type_id: 11,
+                            type_arguments: None,
+                        },
+                    ]),
+                    type_parameters: None,
+                },
+                TypeDeclaration {
+                    type_id: 2,
+                    type_field: "(_, _)".to_string(),
+                    components: Some(vec![
+                        TypeApplication {
+                            name: "__tuple_element".to_string(),
+                            type_id: 5,
+                            type_arguments: None,
+                        },
+                        TypeApplication {
+                            name: "__tuple_element".to_string(),
+                            type_id: 13,
+                            type_arguments: None,
+                        },
+                    ]),
+                    type_parameters: None,
+                },
+                TypeDeclaration {
+                    type_id: 3,
+                    type_field: "(_, _)".to_string(),
+                    components: Some(vec![
+                        TypeApplication {
+                            name: "__tuple_element".to_string(),
+                            type_id: 4,
+                            type_arguments: None,
+                        },
+                        TypeApplication {
+                            name: "__tuple_element".to_string(),
+                            type_id: 21,
+                            type_arguments: None,
+                        },
+                    ]),
+                    type_parameters: None,
+                },
+                TypeDeclaration {
+                    type_id: 4,
+                    type_field: "[_; 1]".to_string(),
+                    components: Some(vec![TypeApplication {
+                        name: "__array_element".to_string(),
+                        type_id: 8,
+                        type_arguments: Some(vec![TypeApplication {
+                            name: "".to_string(),
+                            type_id: 20,
+                            type_arguments: Some(vec![TypeApplication {
+                                name: "".to_string(),
+                                type_id: 19,
+                                type_arguments: Some(vec![TypeApplication {
+                                    name: "".to_string(),
+                                    type_id: 17,
+                                    type_arguments: Some(vec![TypeApplication {
+                                        name: "".to_string(),
+                                        type_id: 13,
+                                        type_arguments: None,
+                                    }]),
+                                }]),
+                            }]),
+                        }]),
+                    }]),
+                    type_parameters: None,
+                },
+                TypeDeclaration {
+                    type_id: 5,
+                    type_field: "[_; 2]".to_string(),
+                    components: Some(vec![TypeApplication {
+                        name: "__array_element".to_string(),
+                        type_id: 14,
+                        type_arguments: None,
+                    }]),
+                    type_parameters: None,
+                },
+                TypeDeclaration {
+                    type_id: 6,
+                    type_field: "[_; 2]".to_string(),
+                    components: Some(vec![TypeApplication {
+                        name: "__array_element".to_string(),
+                        type_id: 10,
+                        type_arguments: None,
+                    }]),
+                    type_parameters: None,
+                },
+                TypeDeclaration {
+                    type_id: 7,
+                    type_field: "b256".to_string(),
+                    components: None,
+                    type_parameters: None,
+                },
+                TypeDeclaration {
+                    type_id: 8,
+                    type_field: "enum EnumWGeneric".to_string(),
+                    components: Some(vec![
+                        TypeApplication {
+                            name: "a".to_string(),
+                            type_id: 22,
+                            type_arguments: None,
+                        },
+                        TypeApplication {
+                            name: "b".to_string(),
+                            type_id: 12,
+                            type_arguments: None,
+                        },
+                    ]),
+                    type_parameters: Some(vec![12]),
+                },
+                TypeDeclaration {
+                    type_id: 9,
+                    type_field: "generic K".to_string(),
+                    components: None,
+                    type_parameters: None,
+                },
+                TypeDeclaration {
+                    type_id: 10,
+                    type_field: "generic L".to_string(),
+                    components: None,
+                    type_parameters: None,
+                },
+                TypeDeclaration {
+                    type_id: 11,
+                    type_field: "generic M".to_string(),
+                    components: None,
+                    type_parameters: None,
+                },
+                TypeDeclaration {
+                    type_id: 12,
+                    type_field: "generic N".to_string(),
+                    components: None,
+                    type_parameters: None,
+                },
+                TypeDeclaration {
+                    type_id: 13,
+                    type_field: "generic T".to_string(),
+                    components: None,
+                    type_parameters: None,
+                },
+                TypeDeclaration {
+                    type_id: 14,
+                    type_field: "generic U".to_string(),
+                    components: None,
+                    type_parameters: None,
+                },
+                TypeDeclaration {
+                    type_id: 15,
+                    type_field: "str[2]".to_string(),
+                    components: None,
+                    type_parameters: None,
+                },
+                TypeDeclaration {
+                    type_id: 16,
+                    type_field: "struct MegaExample".to_string(),
+                    components: Some(vec![
+                        TypeApplication {
+                            name: "a".to_string(),
+                            type_id: 2,
+                            type_arguments: None,
+                        },
+                        TypeApplication {
+                            name: "b".to_string(),
+                            type_id: 3,
+                            type_arguments: None,
+                        },
+                    ]),
+                    type_parameters: Some(vec![13, 14]),
+                },
+                TypeDeclaration {
+                    type_id: 17,
+                    type_field: "struct PassTheGenericOn".to_string(),
+                    components: Some(vec![TypeApplication {
+                        name: "one".to_string(),
+                        type_id: 18,
+                        type_arguments: Some(vec![TypeApplication {
+                            name: "".to_string(),
+                            type_id: 9,
+                            type_arguments: None,
+                        }]),
+                    }]),
+                    type_parameters: Some(vec![9]),
+                },
+                TypeDeclaration {
+                    type_id: 18,
+                    type_field: "struct SimpleGeneric".to_string(),
+                    components: Some(vec![TypeApplication {
+                        name: "single_generic_param".to_string(),
+                        type_id: 13,
+                        type_arguments: None,
+                    }]),
+                    type_parameters: Some(vec![13]),
+                },
+                TypeDeclaration {
+                    type_id: 19,
+                    type_field: "struct StructWArrayGeneric".to_string(),
+                    components: Some(vec![TypeApplication {
+                        name: "a".to_string(),
+                        type_id: 6,
+                        type_arguments: None,
+                    }]),
+                    type_parameters: Some(vec![10]),
+                },
+                TypeDeclaration {
+                    type_id: 20,
+                    type_field: "struct StructWTupleGeneric".to_string(),
+                    components: Some(vec![TypeApplication {
+                        name: "a".to_string(),
+                        type_id: 1,
+                        type_arguments: None,
+                    }]),
+                    type_parameters: Some(vec![11]),
+                },
+                TypeDeclaration {
+                    type_id: 21,
+                    type_field: "u32".to_string(),
+                    components: None,
+                    type_parameters: None,
+                },
+                TypeDeclaration {
+                    type_id: 22,
+                    type_field: "u64".to_string(),
+                    components: None,
+                    type_parameters: None,
+                },
+            ],
+            functions: vec![ABIFunction {
+                inputs: vec![TypeApplication {
+                    name: "arg1".to_string(),
+                    type_id: 16,
+                    type_arguments: Some(vec![
+                        TypeApplication {
+                            name: "".to_string(),
+                            type_id: 15,
+                            type_arguments: None,
+                        },
+                        TypeApplication {
+                            name: "".to_string(),
+                            type_id: 7,
+                            type_arguments: None,
+                        },
+                    ]),
+                }],
+                name: "complex_test".to_string(),
+                output: TypeApplication {
+                    name: "".to_string(),
+                    type_id: 0,
+                    type_arguments: None,
+                },
+            }],
+        };
+
+        let the_fun = abi.functions.first().unwrap();
+        let types = abi
             .types
-            .iter()
-            .map(|decl| (decl.type_id, decl.clone()))
-            .collect::<HashMap<_, _>>();
+            .into_iter()
+            .map(|decl| (decl.type_id, decl))
+            .collect();
 
-        for fun in &program_abi.functions {
-            let (name, exp) = mappings.iter().find(|(lhs, _)| fun.name == *lhs).unwrap();
+        let selector = resolve_fn_selector(the_fun, &types);
 
-            let result = resolve_fn_selector(&fun, &types);
-
-            assert_eq!(result, *exp);
-        }
-
-        Ok(())
-    }
-
-    fn load_abi(name: &str) -> anyhow::Result<ProgramABI> {
-        let path = format!("/home/segfault_magnet/fuel/github/fuels-rs/packages/fuels/tests/test_projects/selector_testing/{name}/out/debug/{name}-abi.json");
-        load_abi_w_path(&path)
-    }
-
-    fn load_abi_w_path(path: &str) -> anyhow::Result<ProgramABI> {
-        let abi_contents = fs::read_to_string(&path)?;
-        let result = serde_json::from_str(&abi_contents)?;
-        Ok(result)
+        assert_eq!(selector, "complex_test(s<str[2],b256>((a[b256;2],str[2]),(a[e<s<s<s<str[2]>(s<str[2]>(str[2]))>(a[s<str[2]>(s<str[2]>(str[2]));2])>((s<s<str[2]>(s<str[2]>(str[2]))>(a[s<str[2]>(s<str[2]>(str[2]));2]),s<s<str[2]>(s<str[2]>(str[2]))>(a[s<str[2]>(s<str[2]>(str[2]));2])))>(u64,s<s<s<str[2]>(s<str[2]>(str[2]))>(a[s<str[2]>(s<str[2]>(str[2]));2])>((s<s<str[2]>(s<str[2]>(str[2]))>(a[s<str[2]>(s<str[2]>(str[2]));2]),s<s<str[2]>(s<str[2]>(str[2]))>(a[s<str[2]>(s<str[2]>(str[2]));2]))));1],u32)))");
     }
 }
