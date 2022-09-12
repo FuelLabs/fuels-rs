@@ -284,7 +284,23 @@ pub async fn new_fuel_node(
             args.push("--vm-backtrace");
         }
 
-        let mut command = Command::new("fuel-core");
+        // Warn if there is more than one binary in PATH.
+        let binary_name = "fuel-core";
+        let paths = which::which_all(binary_name)
+            .unwrap_or_else(|_| panic!("failed to list '{}' binaries", binary_name))
+            .collect::<Vec<_>>();
+        let path = paths
+            .first()
+            .unwrap_or_else(|| panic!("no '{}' in PATH", binary_name));
+        if paths.len() > 1 {
+            tracing::warn!(
+                "found more than one '{}' binary in PATH, using '{}'",
+                binary_name,
+                path.display()
+            );
+        }
+
+        let mut command = Command::new(path);
         command.stdin(Stdio::null());
         if config.silent {
             command.stdout(Stdio::null()).stderr(Stdio::null());
