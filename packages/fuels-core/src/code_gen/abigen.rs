@@ -34,8 +34,8 @@ impl Abigen {
         // Support for new JSON ABI file format.
         let source = Source::parse(abi_source).expect("failed to parse JSON ABI");
 
-        let s = source.get().expect("failed to parse JSON ABI from string");
-        let parsed_abi: ProgramABI = serde_json::from_str(&s)?;
+        let json_abi_str = source.get().expect("failed to parse JSON ABI from string");
+        let parsed_abi: ProgramABI = serde_json::from_str(&json_abi_str)?;
 
         Ok(Self {
             types: Abigen::get_types(&parsed_abi),
@@ -76,9 +76,9 @@ impl Abigen {
             self.contract_name.to_string().to_lowercase()
         ));
 
+        let contract_functions = self.functions()?;
         let abi_structs = self.abi_structs()?;
         let abi_enums = self.abi_enums()?;
-        let contract_functions = self.functions()?;
 
         let (includes, code) = if self.no_std {
             (
@@ -178,8 +178,6 @@ impl Abigen {
     }
 
     pub fn functions(&self) -> Result<TokenStream, Error> {
-        // Return empty TokenStream for now
-        // return Ok(quote! {}); // temp
         let tokenized_functions = self
             .abi
             .functions
@@ -210,8 +208,7 @@ impl Abigen {
             }
 
             if !seen_struct.contains(&prop.type_field.as_str()) {
-                let s = expand_custom_struct(prop, &self.types)?;
-                structs.extend(s);
+                structs.extend(expand_custom_struct(prop, &self.types)?);
                 seen_struct.push(&prop.type_field);
             }
         }
@@ -223,7 +220,7 @@ impl Abigen {
     // It's expected to come in as `"struct T"` or `"enum T"`.
     // `T` is a Sway-native type if it matches exactly one of
     // the reserved strings, such as "Address" or "ContractId".
-    pub fn is_sway_native_type(type_field: &str) -> bool {
+    fn is_sway_native_type(type_field: &str) -> bool {
         let split: Vec<&str> = type_field.split_whitespace().collect();
 
         if split.len() > 2 {
@@ -234,8 +231,6 @@ impl Abigen {
 
     fn abi_enums(&self) -> Result<TokenStream, Error> {
         let mut enums = TokenStream::new();
-
-        // return Ok(enums); // temp
 
         // Prevent expanding the same enum more than once
         let mut seen_enum: Vec<&str> = vec![];

@@ -60,8 +60,8 @@ fn enum_decl(
 
     quote! {
         #[derive(Clone, Debug, Eq, PartialEq)]
-        pub enum #enum_ident <#(#generics: Tokenizable + Parameterize,)*> {
-            #(#enum_variants,)*
+        pub enum #enum_ident <#(#generics: Tokenizable + Parameterize),*> {
+            #(#enum_variants),*
         }
     }
 }
@@ -111,7 +111,7 @@ fn enum_tokenizable_impl(
     );
 
     quote! {
-            impl<#(#generics: Tokenizable + Parameterize,)*> Tokenizable for #enum_ident <#(#generics,)*> {
+            impl<#(#generics: Tokenizable + Parameterize),*> Tokenizable for #enum_ident <#(#generics),*> {
                 fn from_token(token: Token) -> Result<Self, SDKError>
                 where
                     Self: Sized,
@@ -125,7 +125,7 @@ fn enum_tokenizable_impl(
                         Token::Enum(selector) => {
                             let (discriminant, variant_token, _) = *selector;
                             match discriminant {
-                                #(#match_discriminant_from_token,)*
+                                #(#match_discriminant_from_token),*
                                 _ => Err(gen_err(format!(
                                     "Discriminant {} doesn't point to any of the enums variants.", discriminant
                                 ))),
@@ -139,7 +139,7 @@ fn enum_tokenizable_impl(
 
                 fn into_token(self) -> Token {
                     let (discriminant, token) = match self {
-                        #(#match_discriminant_into_token,)*
+                        #(#match_discriminant_into_token),*
                     };
 
                     let variants = match Self::param_type() {
@@ -161,7 +161,7 @@ fn enum_parameterize_impl(
     let param_type_calls = param_type_calls(&field_entries);
     let enum_name = enum_ident.to_string();
     quote! {
-        impl<#(#generics: Parameterize + Tokenizable,)*> Parameterize for #enum_ident <#(#generics,)*> {
+        impl<#(#generics: Parameterize + Tokenizable),*> Parameterize for #enum_ident <#(#generics),*> {
             fn param_type() -> ParamType {
                 let mut param_types = vec![];
                 #(param_types.push(#param_type_calls);)*

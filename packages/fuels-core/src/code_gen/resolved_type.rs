@@ -113,7 +113,7 @@ pub fn resolve_type(
                 .into_iter()
                 .map(TokenStream::from);
 
-            Ok((quote! {(#(#inner_types,)*)}, vec![]))
+            Ok((quote! {(#(#inner_types),*)}, vec![]))
         }
     }?;
 

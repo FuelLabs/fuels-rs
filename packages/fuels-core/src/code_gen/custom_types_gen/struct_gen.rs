@@ -123,7 +123,7 @@ fn struct_parameterized_impl(
 ) -> TokenStream {
     let param_type_calls = param_type_calls(&field_entries);
     quote! {
-        impl <#(#generic_parameters: Parameterize + Tokenizable,)*> Parameterize for #struct_ident <#(#generic_parameters,)*> {
+        impl <#(#generic_parameters: Parameterize + Tokenizable),*> Parameterize for #struct_ident <#(#generic_parameters),*> {
             fn param_type() -> ParamType {
                 let mut types = Vec::new();
                 #( types.push(#param_type_calls); )*

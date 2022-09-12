@@ -41,14 +41,14 @@ impl Component {
 
 pub fn impl_try_from(ident: &Ident, generics: &[TokenStream]) -> TokenStream {
     quote! {
-        impl<#(#generics: Tokenizable + Parameterize,)*> TryFrom<&[u8]> for #ident<#(#generics,)*> {
+        impl<#(#generics: Tokenizable + Parameterize),*> TryFrom<&[u8]> for #ident<#(#generics),*> {
             type Error = SDKError;
 
             fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
                 try_from_bytes(bytes)
             }
         }
-        impl<#(#generics: Tokenizable + Parameterize,)*> TryFrom<&Vec<u8>> for #ident<#(#generics,)*> {
+        impl<#(#generics: Tokenizable + Parameterize),*> TryFrom<&Vec<u8>> for #ident<#(#generics),*> {
             type Error = SDKError;
 
             fn try_from(bytes: &Vec<u8>) -> Result<Self, Self::Error> {
@@ -56,7 +56,7 @@ pub fn impl_try_from(ident: &Ident, generics: &[TokenStream]) -> TokenStream {
             }
         }
 
-        impl<#(#generics: Tokenizable + Parameterize,)*> TryFrom<Vec<u8>> for #ident<#(#generics,)*> {
+        impl<#(#generics: Tokenizable + Parameterize),*> TryFrom<Vec<u8>> for #ident<#(#generics),*> {
             type Error = SDKError;
 
             fn try_from(bytes: Vec<u8>) -> Result<Self, Self::Error> {
@@ -101,7 +101,7 @@ pub fn extract_generic_parameters(
                     Ok(quote! {#generic})
                 }
                 _ => {
-                    panic!("SHould only be generic")
+                    panic!("Type parameters should only contain ids of generic types!")
                 }
             },
         )
@@ -131,14 +131,164 @@ pub(crate) fn param_type_calls(field_entries: &[Component]) -> Vec<TokenStream> 
             let parameters = field_type
                 .generic_params
                 .iter()
-                .cloned()
                 .map(TokenStream::from)
                 .collect::<Vec<_>>();
             if parameters.is_empty() {
                 quote! { <#type_name>::param_type() }
             } else {
-                quote! { #type_name::<#(#parameters,)*>::param_type() }
+                quote! { #type_name::<#(#parameters),*>::param_type() }
             }
         })
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn component_name_is_snake_case_when_requested() -> anyhow::Result<()> {
+        let type_application = TypeApplication {
+            name: "SomeNameHere".to_string(),
+            type_id: 0,
+            type_arguments: None,
+        };
+
+        let types = HashMap::from([(
+            0,
+            TypeDeclaration {
+                type_id: 0,
+                type_field: "()".to_string(),
+                components: None,
+                type_parameters: None,
+            },
+        )]);
+
+        let component = Component::new(&type_application, &types, true)?;
+
+        assert_eq!(component.field_name, ident("some_name_here"));
+
+        Ok(())
+    }
+    #[test]
+    fn extracts_generic_types() -> anyhow::Result<()> {
+        let declaration = TypeDeclaration {
+            type_id: 0,
+            type_field: "".to_string(),
+            components: None,
+            type_parameters: Some(vec![1, 2]),
+        };
+        let generic_1 = TypeDeclaration {
+            type_id: 1,
+            type_field: "generic T".to_string(),
+            components: None,
+            type_parameters: None,
+        };
+
+        let generic_2 = TypeDeclaration {
+            type_id: 2,
+            type_field: "generic K".to_string(),
+            components: None,
+            type_parameters: None,
+        };
+
+        let types = [generic_1, generic_2]
+            .map(|decl| (decl.type_id, decl))
+            .into_iter()
+            .collect();
+
+        let generics = extract_generic_parameters(&declaration, &types)?;
+
+        let stringified_generics = generics
+            .into_iter()
+            .map(|generic| generic.to_string())
+            .collect::<Vec<_>>();
+
+        assert_eq!(stringified_generics, vec!["T", "K"]);
+
+        Ok(())
+    }
+    #[test]
+    fn param_type_calls_correctly_generated() {
+        // arrange
+        let components = vec![
+            Component {
+                field_name: ident("a"),
+                field_type: ResolvedType {
+                    type_name: quote! {u8},
+                    generic_params: vec![],
+                    param_type: ParamType::U8,
+                },
+            },
+            Component {
+                field_name: ident("b"),
+                field_type: ResolvedType {
+                    type_name: quote! {SomeStruct},
+                    generic_params: vec![
+                        ResolvedType {
+                            type_name: quote! {T},
+                            generic_params: vec![],
+                            param_type: ParamType::Generic("T".to_string()),
+                        },
+                        ResolvedType {
+                            type_name: quote! {K},
+                            generic_params: vec![],
+                            param_type: ParamType::Generic("K".to_string()),
+                        },
+                    ],
+                    param_type: ParamType::Struct(vec![
+                        ParamType::Generic("T".to_string()),
+                        ParamType::Generic("K".to_string()),
+                    ]),
+                },
+            },
+        ];
+
+        // act
+        let result = param_type_calls(&components);
+
+        // assert
+        let stringified_result = result
+            .into_iter()
+            .map(|stream| stream.to_string())
+            .collect::<Vec<_>>();
+        assert_eq!(
+            stringified_result,
+            vec![
+                "< u8 > :: param_type ()",
+                "SomeStruct :: < T , K > :: param_type ()"
+            ]
+        )
+    }
+    #[test]
+    fn can_extract_struct_name() -> anyhow::Result<()> {
+        let declaration = TypeDeclaration {
+            type_id: 0,
+            type_field: "struct SomeName".to_string(),
+            components: None,
+            type_parameters: None,
+        };
+
+        let struct_name = extract_custom_type_name_from_abi_property(&declaration)?;
+
+        assert_eq!(struct_name, "SomeName");
+
+        Ok(())
+    }
+
+    #[test]
+    fn can_extract_enum_name() -> anyhow::Result<()> {
+        let declaration = TypeDeclaration {
+            type_id: 0,
+            type_field: "enum SomeEnumName".to_string(),
+            components: None,
+            type_parameters: None,
+        };
+
+        let struct_name = extract_custom_type_name_from_abi_property(&declaration)?;
+
+        assert_eq!(struct_name, "SomeEnumName");
+
+        Ok(())
+    }
 }
