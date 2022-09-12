@@ -36,8 +36,8 @@ struct Type {
 ///
 /// * `type_application`: the type we wish to resolve
 /// * `types`: all types used in the function call
-/// * `parent_generic_params`: a slice of generic_type_id -> Type describing to
-///    what a generic parameter should resolve to
+/// * `parent_generic_params`: a slice of generic_type_id -> Type mapping indicating
+///    to what type a generic parameter should resolve to.
 fn resolve_type_application(
     type_application: &TypeApplication,
     types: &HashMap<usize, TypeDeclaration>,
@@ -81,7 +81,7 @@ fn resolve_type_application(
 }
 
 /// For the given type generates generic_type_id -> Type mapping describing to
-/// what generic parameters should be resolved.
+/// which types generic parameters should be resolved.
 ///
 /// # Arguments
 ///
