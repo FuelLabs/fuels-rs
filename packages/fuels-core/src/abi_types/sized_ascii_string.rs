@@ -1,6 +1,7 @@
 use crate::{Parameterize, StringToken, Token, Tokenizable};
 use fuels_types::errors::Error;
 use fuels_types::param_types::ParamType;
+use std::fmt::{Debug, Display, Formatter};
 
 #[derive(Debug, PartialEq, Clone, Eq)]
 pub struct SizedAsciiString<const LEN: usize> {
@@ -59,6 +60,18 @@ impl<const LEN: usize> TryFrom<&str> for SizedAsciiString<LEN> {
     }
 }
 
+impl<const LEN: usize> From<SizedAsciiString<LEN>> for String {
+    fn from(sized_ascii_str: SizedAsciiString<LEN>) -> Self {
+        sized_ascii_str.data
+    }
+}
+
+impl<const LEN: usize> Display for SizedAsciiString<LEN> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.data)
+    }
+}
+
 impl<const LEN: usize> PartialEq<&str> for SizedAsciiString<LEN> {
     fn eq(&self, other: &&str) -> bool {
         self.data == *other
@@ -67,5 +80,112 @@ impl<const LEN: usize> PartialEq<&str> for SizedAsciiString<LEN> {
 impl<const LEN: usize> PartialEq<SizedAsciiString<LEN>> for &str {
     fn eq(&self, other: &SizedAsciiString<LEN>) -> bool {
         *self == other.data
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn accepts_ascii_of_correct_length() {
+        let ascii_data = "abc".to_string();
+
+        SizedAsciiString::<3>::new(ascii_data)
+            .expect("Should have succeeded since we gave ascii data of correct lenght!");
+    }
+
+    #[test]
+    fn refuses_non_ascii() {
+        let ascii_data = "ab©".to_string();
+
+        let err = SizedAsciiString::<3>::new(ascii_data)
+            .expect_err("Should not have succeeded since we gave non ascii data");
+
+        let expected_reason = "SizedAsciiString must be constructed from a string containing only ascii encodable characters. Got: ";
+        assert!(matches!(err, Error::InvalidData(reason) if reason.starts_with(expected_reason)));
+    }
+
+    #[test]
+    fn refuses_invalid_len() {
+        let ascii_data = "abcd".to_string();
+
+        let err = SizedAsciiString::<3>::new(ascii_data)
+            .expect_err("Should not have succeeded since we gave data of wrong length");
+
+        let expected_reason =
+            "SizedAsciiString<3> can only be constructed from a String of length 3. Got: abcd";
+        assert!(matches!(err, Error::InvalidData(reason) if reason.starts_with(expected_reason)));
+    }
+
+    #[test]
+    fn is_parameterized_correctly() {
+        let param_type = SizedAsciiString::<3>::param_type();
+
+        assert!(matches!(param_type, ParamType::String(3)));
+    }
+
+    #[test]
+    fn is_tokenized_correctly() -> anyhow::Result<()> {
+        let sut = SizedAsciiString::<3>::new("abc".to_string())?;
+
+        let token = sut.into_token();
+
+        match token {
+            Token::String(string_token) => {
+                assert_eq!(string_token.data, "abc");
+                assert_eq!(string_token.expected_len, 3);
+            }
+            _ => {
+                panic!("Not tokenized correctly! Should have gotten a Token::String")
+            }
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn is_detokenized_correctly() -> anyhow::Result<()> {
+        let token = Token::String(StringToken {
+            data: "abc".to_string(),
+            expected_len: 3,
+        });
+
+        let sized_ascii_string =
+            SizedAsciiString::<3>::from_token(token).expect("Should have succeeded");
+
+        assert_eq!(sized_ascii_string.data, "abc");
+
+        Ok(())
+    }
+
+    #[test]
+    fn can_be_constructed_from_str_ref() {
+        let sut: SizedAsciiString<3> = "abc".try_into().expect("Should have succeeded");
+    }
+
+    #[test]
+    fn can_be_converted_into_string() {
+        let sized_str = SizedAsciiString::<3>::new("abc".to_string()).unwrap();
+
+        let str: String = sized_str.into();
+
+        assert_eq!(str, "abc");
+    }
+
+    #[test]
+    fn can_be_printed() {
+        let sized_str = SizedAsciiString::<3>::new("abc".to_string()).unwrap();
+
+        assert_eq!(sized_str.to_string(), "abc");
+    }
+
+    #[test]
+    fn can_be_compared_w_str_ref() {
+        let sized_str = SizedAsciiString::<3>::new("abc".to_string()).unwrap();
+
+        assert_eq!(sized_str, "abc");
+        // and vice-versa
+        assert_eq!("abc", sized_str);
     }
 }
