@@ -1,7 +1,7 @@
 predicate;
 
 use std::{
-    tx::get_predicate_data,
+    inputs::input_predicate_data,
     ecr::ec_recover_address,
     constants::ZERO_B256,
     b512::B512,
@@ -18,7 +18,7 @@ fn extract_pulic_key_and_match(signature: B512, expected_public_key: b256) -> u6
 }
 
 fn main() -> bool {
-    let signatures: [B512;3] = get_predicate_data();
+    let signatures: [B512;3] = input_predicate_data(0);
 
     let public_keys = [
         0xd58573593432a30a800f97ad32f877425c223a9e427ab557aab5d5bb89156db0,

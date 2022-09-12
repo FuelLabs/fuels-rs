@@ -16,7 +16,6 @@ use fuels_core::abi_encoder::ABIEncoder;
 use fuels_core::parameters::StorageConfiguration;
 use fuels_core::tx::{Bytes32, ContractId};
 use fuels_core::{
-    constants::{BASE_ASSET_ID, DEFAULT_SPENDABLE_COIN_AMOUNT},
     parameters::{CallParameters, TxParameters},
     Selector, Token, Tokenizable,
 };
@@ -237,13 +236,17 @@ impl Contract {
         params: TxParameters,
     ) -> Result<Bech32ContractId, Error> {
         let (mut tx, contract_id) =
-            Self::contract_deployment_transaction(compiled_contract, wallet, params).await?;
+            Self::contract_deployment_transaction(compiled_contract, params).await?;
+
+        // The first witness is the bytecode we're deploying.
+        // The signature will be appended at position 1 of
+        // the witness list
+        wallet.add_fee_coins(&mut tx, 0, 1).await?;
+        wallet.sign_transaction(&mut tx).await?;
 
         let provider = wallet.get_provider()?;
-
         let chain_info = provider.chain_info().await?;
 
-        wallet.sign_transaction(&mut tx).await?;
         tx.validate_without_signature(
             chain_info.latest_block.height.0,
             &chain_info.consensus_parameters.into(),
@@ -312,7 +315,6 @@ impl Contract {
     /// Crafts a transaction used to deploy a contract
     pub async fn contract_deployment_transaction(
         compiled_contract: &CompiledContract,
-        wallet: &WalletUnlocked,
         params: TxParameters,
     ) -> Result<(Transaction, Bech32ContractId), Error> {
         let bytecode_witness_index = 0;
@@ -321,26 +323,7 @@ impl Contract {
 
         let (contract_id, state_root) = Self::compute_contract_id_and_state_root(compiled_contract);
 
-        let outputs: Vec<Output> = vec![
-            Output::contract_created(contract_id, state_root),
-            // Note that the change will be computed by the node.
-            // Here we only have to tell the node who will own the change and its asset ID.
-            // For now we use the BASE_ASSET_ID constant
-            Output::change(wallet.address().into(), 0, BASE_ASSET_ID),
-        ];
-
-        // The first witness is the bytecode we're deploying.
-        // So, the signature will be appended at position 1 of
-        // the witness list.
-        let coin_witness_index = 1;
-
-        let inputs = wallet
-            .get_asset_inputs_for_amount(
-                AssetId::default(),
-                DEFAULT_SPENDABLE_COIN_AMOUNT,
-                coin_witness_index,
-            )
-            .await?;
+        let outputs = vec![Output::contract_created(contract_id, state_root)];
 
         let tx = Transaction::create(
             params.gas_price,
@@ -349,7 +332,7 @@ impl Contract {
             bytecode_witness_index,
             compiled_contract.salt,
             storage_slots,
-            inputs,
+            vec![],
             outputs,
             witnesses,
         );

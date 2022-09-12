@@ -4,7 +4,6 @@ mod tests {
 
     #[tokio::test]
     async fn liquidity() -> Result<(), Error> {
-        // ANCHOR: liquidity
         use fuels::prelude::*;
         use fuels::test_helpers::{AssetConfig, WalletsConfig};
 
@@ -44,38 +43,37 @@ mod tests {
         )
         .await?;
 
-        let _contract_instance =
+        let contract_instance =
             MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
         // ANCHOR_END: liquidity_deploy
-        //TODO: Enable test
-        // // ANCHOR: liquidity_deposit
-        // let deposit_amount = 1_000_000;
-        // let call_params = CallParameters::new(Some(deposit_amount), Some(base_asset_id), None);
-        // contract_instance
-        //     .deposit(wallet.address().into())
-        //     .call_params(call_params)
-        //     .append_variable_outputs(1)
-        //     .call()
-        //     .await?;
-        // // ANCHOR_END: liquidity_deposit
 
-        // // ANCHOR: liquidity_withdraw
-        // let lp_asset_id = AssetId::from(*contract_id.hash());
-        // let lp_token_balance = wallet.get_asset_balance(&lp_asset_id).await?;
+        // ANCHOR: liquidity_deposit
+        let deposit_amount = 1_000_000;
+        let call_params = CallParameters::new(Some(deposit_amount), Some(base_asset_id), None);
+        contract_instance
+            .deposit(wallet.address().into())
+            .call_params(call_params)
+            .append_variable_outputs(1)
+            .call()
+            .await?;
+        // ANCHOR_END: liquidity_deposit
 
-        // let call_params = CallParameters::new(Some(lp_token_balance), Some(lp_asset_id), None);
-        // contract_instance
-        //     .withdraw(wallet.address().into())
-        //     .call_params(call_params)
-        //     .append_variable_outputs(1)
-        //     .call()
-        //     .await?;
+        // ANCHOR: liquidity_withdraw
+        let lp_asset_id = AssetId::from(*contract_id.hash());
+        let lp_token_balance = wallet.get_asset_balance(&lp_asset_id).await?;
 
-        // let base_balance = wallet.get_asset_balance(&base_asset_id).await?;
-        // assert_eq!(base_balance, deposit_amount);
+        let call_params = CallParameters::new(Some(lp_token_balance), Some(lp_asset_id), None);
+        contract_instance
+            .withdraw(wallet.address().into())
+            .call_params(call_params)
+            .append_variable_outputs(1)
+            .call()
+            .await?;
+
+        let base_balance = wallet.get_asset_balance(&base_asset_id).await?;
+        assert_eq!(base_balance, deposit_amount);
         // ANCHOR_END: liquidity_withdraw
 
-        // ANCHOR_END: deposit_and_withdraw
         Ok(())
     }
 
@@ -124,7 +122,7 @@ mod tests {
 
         const NUM_ASSETS: u64 = 5;
         const AMOUNT: u64 = 100_000;
-        const NUM_COINS: u64 = 10;
+        const NUM_COINS: u64 = 1;
         let (coins, _) =
             setup_multiple_assets_coins(wallet_1.address(), NUM_ASSETS, NUM_COINS, AMOUNT);
 
@@ -142,6 +140,10 @@ mod tests {
         for (id_string, amount) in balances {
             let id = AssetId::from_str(&id_string).unwrap();
 
+            // leave the base asset to cover transaction fees
+            if id == BASE_ASSET_ID {
+                continue;
+            }
             let input = wallet_1.get_asset_inputs_for_amount(id, amount, 0).await?;
             inputs.extend(input);
 
@@ -151,13 +153,17 @@ mod tests {
         // ANCHOR_END: transfer_multiple_inout
 
         // ANCHOR: transfer_multiple_transaction
-        let mut tx = provider.build_transfer_tx(&inputs, &outputs, TxParameters::default());
+        let mut tx = Wallet::build_transfer_tx(&inputs, &outputs, TxParameters::default());
         wallet_1.sign_transaction(&mut tx).await?;
 
         let _receipts = provider.send_transaction(&tx).await?;
 
-        let balances = wallet_1.get_balances().await?;
-        assert!(balances.is_empty());
+        let balances = wallet_2.get_balances().await?;
+
+        assert_eq!(balances.len(), (NUM_ASSETS - 1) as usize);
+        for (_, balance) in balances {
+            assert_eq!(balance, AMOUNT);
+        }
         // ANCHOR_END: transfer_multiple_transaction
 
         // ANCHOR_END: transfer_multiple

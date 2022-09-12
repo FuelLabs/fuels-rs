@@ -3,7 +3,7 @@
 Rust SDK for Fuel. It can be used for a variety of things, including but not limited to:
 
 - Compiling, deploying, and testing [Sway](https://github.com/FuelLabs/sway) contracts;
-- Launching a local Fuel node;
+- Use the [Testnet](../providers/external-node.md) or run a local Fuel node;
 - Crafting and signing transactions with hand-crafted scripts or contract calls;
 - Generating type-safe Rust bindings of contract ABI methods;
 - And more. `fuels-rs` is still in active development.
