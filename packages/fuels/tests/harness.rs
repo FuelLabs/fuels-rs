@@ -10,17 +10,13 @@ use fuels::prelude::{
     DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
 };
 use fuels_core::abi_encoder::ABIEncoder;
-use fuels_core::abi_types::{Bits256, SizedAsciiString};
-use fuels_core::code_gen::abigen::Abigen;
+use fuels_core::abi_types::Bits256;
 use fuels_core::parameters::StorageConfiguration;
 use fuels_core::tx::{Address, Bytes32, StorageSlot};
 use fuels_core::Tokenizable;
 use fuels_core::{constants::BASE_ASSET_ID, Token};
 use fuels_signers::fuel_crypto::SecretKey;
 use sha2::{Digest, Sha256};
-use std::fs;
-use std::path::Path;
-use std::process::{Command, ExitStatus};
 use std::str::FromStr;
 
 /// Note: all the tests and examples below require pre-compiled Sway projects.
