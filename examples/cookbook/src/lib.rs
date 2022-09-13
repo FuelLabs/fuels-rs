@@ -73,7 +73,6 @@ mod tests {
         let base_balance = wallet.get_asset_balance(&base_asset_id).await?;
         assert_eq!(base_balance, deposit_amount);
         // ANCHOR_END: liquidity_withdraw
-
         Ok(())
     }
 
@@ -103,8 +102,13 @@ mod tests {
 
         // ANCHOR: custom_chain_client
         let node_config = Config::local_node();
-        let (client, _) =
-            setup_test_client(coins, Some(node_config), Some(consensus_parameters_config)).await;
+        let (client, _) = setup_test_client(
+            coins,
+            vec![],
+            Some(node_config),
+            Some(consensus_parameters_config),
+        )
+        .await;
         let _provider = Provider::new(client);
         // ANCHOR_END: custom_chain_client
         Ok(())
@@ -126,7 +130,7 @@ mod tests {
         let (coins, _) =
             setup_multiple_assets_coins(wallet_1.address(), NUM_ASSETS, NUM_COINS, AMOUNT);
 
-        let (provider, _) = setup_test_provider(coins, None).await;
+        let (provider, _) = setup_test_provider(coins, vec![], None).await;
 
         wallet_1.set_provider(provider.clone());
         wallet_2.set_provider(provider.clone());
