@@ -19,6 +19,7 @@ use fuels_types::bech32::{Bech32Address, Bech32ContractId, FUEL_BECH32_HRP};
 use fuels_types::errors::Error;
 use rand::{CryptoRng, Rng};
 use std::{collections::HashMap, fmt, ops, path::Path};
+use fuel_gql_client::fuel_vm::prelude::GTFArgs;
 use thiserror::Error;
 
 const DEFAULT_DERIVATION_PATH_PREFIX: &str = "m/44'/1179993420'/0'/0/";
@@ -321,7 +322,7 @@ impl Wallet {
         let (script, _) = script_with_data_offset!(
             data_offset,
             vec![
-                Opcode::MOVI(0x10, data_offset as Immediate18),
+                Opcode::gtf(0x10, 0x00, GTFArgs::ScriptData),
                 Opcode::MOVI(
                     0x11,
                     (data_offset as usize + ContractId::LEN) as Immediate18
