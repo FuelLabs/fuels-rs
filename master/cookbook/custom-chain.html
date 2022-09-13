@@ -159,8 +159,13 @@
 </code></pre>
 <p>Finally, we call <code>setup_test_client()</code>, which starts a node with the given configs and returns a client:</p>
 <pre><code class="language-rust ignore">        let node_config = Config::local_node();
-        let (client, _) =
-            setup_test_client(coins, Some(node_config), Some(consensus_parameters_config)).await;
+        let (client, _) = setup_test_client(
+            coins,
+            vec![],
+            Some(node_config),
+            Some(consensus_parameters_config),
+        )
+        .await;
         let _provider = Provider::new(client);
 </code></pre>
 

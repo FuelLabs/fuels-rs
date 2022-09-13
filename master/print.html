@@ -275,7 +275,7 @@ development.</p>
 <pre><code class="language-rust ignore">        use fuels::prelude::*;
 
         // Use the test helper to setup a test provider.
-        let (provider, _address) = setup_test_provider(vec![], None).await;
+        let (provider, _address) = setup_test_provider(vec![], vec![], None).await;
 
         // Create the wallet.
         let _wallet = WalletUnlocked::new_random(Some(provider));
@@ -322,7 +322,7 @@ development.</p>
             amount_per_coin,
         );
 
-        let (provider, _) = setup_test_provider(coins.clone(), None).await;
+        let (provider, _) = setup_test_provider(coins.clone(), vec![], None).await;
 </code></pre>
 <h2 id="get-all-coins-from-an-address"><a class="header" href="#get-all-coins-from-an-address">Get all coins from an address</a></h2>
 <p>This method returns all coins (of a given asset ID) from a wallet, including spent ones.</p>
@@ -357,7 +357,7 @@ development.</p>
 <pre><code class="language-rust ignore">        use fuels::prelude::*;
 
         // Use the test helper to setup a test provider.
-        let (provider, _address) = setup_test_provider(vec![], None).await;
+        let (provider, _address) = setup_test_provider(vec![], vec![], None).await;
 
         // Create the wallet.
         let _wallet = WalletUnlocked::new_random(Some(provider));
@@ -368,7 +368,7 @@ development.</p>
         use std::str::FromStr;
 
         // Use the test helper to setup a test provider.
-        let (provider, _address) = setup_test_provider(vec![], None).await;
+        let (provider, _address) = setup_test_provider(vec![], vec![], None).await;
 
         // Setup the private key.
         let secret = SecretKey::from_str(
@@ -394,7 +394,7 @@ enables defining owners (wallet addresses) of genesis coins before a provider is
             &quot;oblige salon price punch saddle immune slogan rare snap desert retire surprise&quot;;
 
         // Use the test helper to setup a test provider.
-        let (provider, _address) = setup_test_provider(vec![], None).await;
+        let (provider, _address) = setup_test_provider(vec![], vec![], None).await;
 
         // Create first account from mnemonic phrase.
         let _wallet = WalletUnlocked::new_from_mnemonic_phrase_with_path(
@@ -457,7 +457,7 @@ vulnerabilities in downstream libraries and applications.</p>
         let mut rng = rand::thread_rng();
 
         // Use the test helper to setup a test provider.
-        let (provider, _address) = setup_test_provider(vec![], None).await;
+        let (provider, _address) = setup_test_provider(vec![], vec![], None).await;
 
         let password = &quot;my_master_password&quot;;
 
@@ -479,7 +479,7 @@ vulnerabilities in downstream libraries and applications.</p>
             &quot;oblige salon price punch saddle immune slogan rare snap desert retire surprise&quot;;
 
         // Use the test helper to setup a test provider.
-        let (provider, _address) = setup_test_provider(vec![], None).await;
+        let (provider, _address) = setup_test_provider(vec![], vec![], None).await;
 
         // Create first account from mnemonic phrase.
         let wallet = WalletUnlocked::new_from_mnemonic_phrase(phrase, Some(provider))?;
@@ -538,7 +538,7 @@ will have deterministic addresses.</p>
             coins_per_asset,
             amount_per_coin,
         );
-        let (provider, _socket_addr) = setup_test_provider(coins.clone(), None).await;
+        let (provider, _socket_addr) = setup_test_provider(coins.clone(), vec![], None).await;
         wallet.set_provider(provider);
 </code></pre>
 <ul>
@@ -578,7 +578,7 @@ will have deterministic addresses.</p>
         let assets = vec![asset_base, asset_1, asset_2];
 
         let coins = setup_custom_assets_coins(wallet.address(), &amp;assets);
-        let (provider, _socket_addr) = setup_test_provider(coins, None).await;
+        let (provider, _socket_addr) = setup_test_provider(coins, vec![], None).await;
         wallet.set_provider(provider);
 </code></pre>
 <p>This can also be achieved directly with the <code>WalletsConfig</code>.</p>
@@ -1447,6 +1447,7 @@ fn main() -&gt; bool {
 
         let (provider, _) = setup_test_provider(
             all_coins,
+            vec![],
             Some(Config {
                 predicates: true,
                 utxo_validation: true,
@@ -1799,8 +1800,13 @@ fn main() -&gt; bool {
 </code></pre>
 <p>Finally, we call <code>setup_test_client()</code>, which starts a node with the given configs and returns a client:</p>
 <pre><code class="language-rust ignore">        let node_config = Config::local_node();
-        let (client, _) =
-            setup_test_client(coins, Some(node_config), Some(consensus_parameters_config)).await;
+        let (client, _) = setup_test_client(
+            coins,
+            vec![],
+            Some(node_config),
+            Some(consensus_parameters_config),
+        )
+        .await;
         let _provider = Provider::new(client);
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="deposit-and-withdraw"><a class="header" href="#deposit-and-withdraw">Deposit and withdraw</a></h1>
@@ -1922,7 +1928,7 @@ impl LiquidityPool for Contract {
         let (coins, _) =
             setup_multiple_assets_coins(wallet_1.address(), NUM_ASSETS, NUM_COINS, AMOUNT);
 
-        let (provider, _) = setup_test_provider(coins, None).await;
+        let (provider, _) = setup_test_provider(coins, vec![], None).await;
 
         wallet_1.set_provider(provider.clone());
         wallet_2.set_provider(provider.clone());

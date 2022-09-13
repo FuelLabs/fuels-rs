@@ -171,7 +171,7 @@
             amount_per_coin,
         );
 
-        let (provider, _) = setup_test_provider(coins.clone(), None).await;
+        let (provider, _) = setup_test_provider(coins.clone(), vec![], None).await;
 </code></pre>
 <h2 id="get-all-coins-from-an-address"><a class="header" href="#get-all-coins-from-an-address">Get all coins from an address</a></h2>
 <p>This method returns all coins (of a given asset ID) from a wallet, including spent ones.</p>
