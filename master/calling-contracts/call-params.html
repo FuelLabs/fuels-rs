@@ -166,8 +166,7 @@
             .await?;
 </code></pre>
 <p>You can also use <code>CallParameters::default()</code> to use the default values:</p>
-<pre><code class="language-rust ignore">// Limit for the actual contract call
-pub const DEFAULT_FORWARDED_GAS: u64 = 1_000_000;
+<pre><code class="language-rust ignore">pub const DEFAULT_CALL_PARAMS_AMOUNT: u64 = 0;
 // Bytes representation of the asset ID of the &quot;base&quot; asset used for gas fees.
 pub const BASE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
 </code></pre>
@@ -193,6 +192,7 @@ pub const BASE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
             .call() // Perform the contract call.
             .await?;
 </code></pre>
+<p>If you don't set the call parameters or use <code>CallParameters::default()</code>, the transaction gas limit will be forwarded instead.</p>
 
                     </main>
 

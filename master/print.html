@@ -1185,6 +1185,9 @@ pub const DEFAULT_MATURITY: u64 = 0;
 
 </code></pre>
 <p>As you might have noticed already, <code>TxParameters</code> can also be specified when deploying contracts or transfering assets by passing it to the respective methods.</p>
+<blockquote>
+<p><strong>Note:</strong> whenever you perform an action that results in a transaction (contract deployment, contract call, asset transfer), the SDK will automatically estimate the fee based on the set gas limit and the transaction's byte size. This estimation is used when building the transaction. A side-effect of this is that your wallet must at least own a single coin of the base asset of any amount.</p>
+</blockquote>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="call-parameters"><a class="header" href="#call-parameters">Call parameters</a></h1>
 <p>Call parameters are:</p>
 <ol>
@@ -1214,8 +1217,7 @@ pub const DEFAULT_MATURITY: u64 = 0;
             .await?;
 </code></pre>
 <p>You can also use <code>CallParameters::default()</code> to use the default values:</p>
-<pre><code class="language-rust ignore">// Limit for the actual contract call
-pub const DEFAULT_FORWARDED_GAS: u64 = 1_000_000;
+<pre><code class="language-rust ignore">pub const DEFAULT_CALL_PARAMS_AMOUNT: u64 = 0;
 // Bytes representation of the asset ID of the &quot;base&quot; asset used for gas fees.
 pub const BASE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
 </code></pre>
@@ -1241,6 +1243,7 @@ pub const BASE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
             .call() // Perform the contract call.
             .await?;
 </code></pre>
+<p>If you don't set the call parameters or use <code>CallParameters::default()</code>, the transaction gas limit will be forwarded instead.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="call-response"><a class="header" href="#call-response">Call response</a></h1>
 <p>You've probably noticed that you're often chaining <code>.call().await.unwrap()</code>. That's because:</p>
 <ol>
@@ -1361,9 +1364,6 @@ pub const BASE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
             .await?;
 </code></pre>
 <p>The transaction cost estimation can be used to set the gas limit for an actual call, or to show the user the estimated cost.</p>
-<blockquote>
-<p><strong>Note:</strong> whenever you perform an action that starts a transaction (contract deployment, contract call, asset transfer), the SDK will automatically estimate the fee behind the scenes and prepare the transaction accordingly. A side-effect of this is that transactions require the wallet to own at least an amount of 1 of the base asset, even if the gas cost is set to 0 via <code>TxParameters</code>. </p>
-</blockquote>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="predicates"><a class="header" href="#predicates">Predicates</a></h1>
 <p>Predicates, in Sway, are programs that return a Boolean value, and they do not have any side effects (they are pure).</p>
 <h2 id="instantiating-predicates"><a class="header" href="#instantiating-predicates">Instantiating predicates</a></h2>
