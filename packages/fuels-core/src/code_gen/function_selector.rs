@@ -161,7 +161,7 @@ impl Type {
             }
         };
 
-        let a = match &self.param_type {
+        match &self.param_type {
             ParamType::U8 => "u8".to_owned(),
             ParamType::U16 => "u16".to_owned(),
             ParamType::U32 => "u32".to_owned(),
@@ -194,8 +194,7 @@ impl Type {
             ParamType::Generic(_name) => {
                 panic!("ParamType::Generic cannot appear in a function selector!")
             }
-        };
-        a
+        }
     }
 }
 
