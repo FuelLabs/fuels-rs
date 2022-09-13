@@ -3660,3 +3660,42 @@ async fn test_input_message() -> Result<(), Error> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<(), Error> {
+    abigen!(
+        MyContract,
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+    );
+
+    let wallet = launch_provider_and_get_wallet().await;
+
+    let contract_id = Contract::deploy(
+        "tests/test_projects/contract_test/out/debug/contract_test.bin",
+        &wallet,
+        TxParameters::default(),
+        StorageConfiguration::default(),
+    )
+    .await?;
+
+    let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
+
+    let gas_limit = 225883;
+    let response = contract_instance
+        .initialize_counter(42)
+        .tx_params(TxParameters::new(None, Some(gas_limit), None))
+        .call()
+        .await?;
+
+    let gas_forwarded = response
+        .receipts
+        .iter()
+        .find(|r| matches!(r, Receipt::Call { .. }))
+        .unwrap()
+        .gas()
+        .unwrap();
+
+    assert_eq!(gas_limit, gas_forwarded);
+
+    Ok(())
+}
