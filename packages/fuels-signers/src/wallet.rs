@@ -5,6 +5,7 @@ use elliptic_curve::rand_core;
 use eth_keystore::KeystoreError;
 use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
 use fuel_gql_client::client::schema;
+use fuel_gql_client::fuel_vm::prelude::GTFArgs;
 use fuel_gql_client::{
     client::{schema::coin::Coin, types::TransactionResponse, PaginatedResult, PaginationRequest},
     fuel_tx::{
@@ -19,7 +20,6 @@ use fuels_types::bech32::{Bech32Address, Bech32ContractId, FUEL_BECH32_HRP};
 use fuels_types::errors::Error;
 use rand::{CryptoRng, Rng};
 use std::{collections::HashMap, fmt, ops, path::Path};
-use fuel_gql_client::fuel_vm::prelude::GTFArgs;
 use thiserror::Error;
 
 const DEFAULT_DERIVATION_PATH_PREFIX: &str = "m/44'/1179993420'/0'/0/";
