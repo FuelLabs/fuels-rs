@@ -56,7 +56,8 @@ impl Script {
     ) -> Result<Self, Error> {
         let data_offset = Self::get_data_offset(calls.len());
 
-        let (script_data, call_param_offsets) = Self::get_script_data(calls, data_offset);
+        let (script_data, call_param_offsets) =
+            Self::get_script_data(calls, data_offset, tx_parameters.gas_limit);
 
         let script = Self::get_instructions(calls, call_param_offsets);
 
@@ -156,6 +157,7 @@ impl Script {
     fn get_script_data(
         calls: &[ContractCall],
         data_offset: usize,
+        gas_limit: u64,
     ) -> (Vec<u8>, Vec<CallParamOffsets>) {
         let mut script_data = vec![];
         let mut param_offsets = vec![];
@@ -176,7 +178,9 @@ impl Script {
 
             script_data.extend(call.call_parameters.amount.to_be_bytes());
 
-            script_data.extend(call.call_parameters.gas_forwarded.to_be_bytes());
+            // If gas_forwarded is not set, use the transaction gas limit
+            let gas_forwarded = call.call_parameters.gas_forwarded.unwrap_or(gas_limit);
+            script_data.extend(gas_forwarded.to_be_bytes());
 
             script_data.extend(call.contract_id.hash().as_ref());
 
@@ -430,7 +434,7 @@ mod test {
             .collect();
 
         // Act
-        let (script_data, param_offsets) = Script::get_script_data(&calls, 0);
+        let (script_data, param_offsets) = Script::get_script_data(&calls, 0, 0);
 
         // Assert
         assert_eq!(param_offsets.len(), NUM_CALLS);
@@ -735,11 +739,11 @@ mod test {
 
         let asset_id = [1; 32].into();
         let calls = amounts.map(|amount| {
-            ContractCall::new_with_random_id().with_call_parameters(CallParameters {
-                amount,
-                asset_id,
-                gas_forwarded: 0,
-            })
+            ContractCall::new_with_random_id().with_call_parameters(CallParameters::new(
+                Some(amount),
+                Some(asset_id),
+                None,
+            ))
         });
 
         let asset_id_amounts = Script::calculate_required_asset_amounts(&calls);
