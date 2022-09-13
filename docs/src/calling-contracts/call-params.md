@@ -38,4 +38,4 @@ The `gas_forwarded` parameter defines the limit for the actual contract call as 
 {{#include ../../../examples/contracts/src/lib.rs:call_params_gas}}
 ```
 
-If you don't set the call parameters, or use `CallParameters::default()` the transaction gas limit will be forwarded instead.
+If you don't set the call parameters or use `CallParameters::default()`, the transaction gas limit will be forwarded instead.
