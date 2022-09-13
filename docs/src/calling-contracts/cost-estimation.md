@@ -7,10 +7,9 @@ With with the function `estimate_transaction_cost(tolerance: Option<f64>)` provi
 TransactionCost {
     min_gas_price: u64,
     min_byte_price: u64,
-    byte_price: u64,
     gas_price: u64,
     gas_used: u64,
-    byte_size: u64,
+    metered_bytes_size: u64,
     total_fee: f64, // where total_fee is the sum of the gas and byte fees
 }
 ```
@@ -27,3 +26,4 @@ Below are examples that show how to get the estimated transaction cost from sing
 
 The transaction cost estimation can be used to set the gas limit for an actual call, or to show the user the estimated cost.
 
+> **Note:** whenever you perform an action that starts a transaction (contract deployment, contract call, asset transfer), the SDK will automatically estimate the fee behind the scenes and prepare the transaction accordingly. A side-effect of this is that transactions require the wallet to own at least an amount of 1 of the base asset, even if the gas cost is set to 0 via `TxParameters`. 

@@ -1,3 +1,5 @@
+extern crate core;
+
 pub mod provider;
 pub mod wallet;
 
@@ -9,9 +11,7 @@ use fuel_crypto::Signature;
 use fuel_gql_client::fuel_tx::Transaction;
 use fuels_types::bech32::Bech32Address;
 use std::error::Error;
-
-/// A wallet instantiated with a locally stored private key
-pub type LocalWallet = wallet::Wallet;
+pub use wallet::{Wallet, WalletUnlocked};
 
 /// Trait for signing transactions and messages
 ///
@@ -40,14 +40,14 @@ mod tests {
     use fuels_core::constants::BASE_ASSET_ID;
     use fuels_core::{
         parameters::TxParameters,
-        tx::{Address, AssetId, Bytes32, Input, Output, UtxoId},
+        tx::{Address, AssetId, Bytes32, Input, Output, TxPointer, UtxoId},
     };
     use fuels_test_helpers::{setup_single_asset_coins, setup_test_client};
     use rand::{rngs::StdRng, RngCore, SeedableRng};
     use std::str::FromStr;
 
     use crate::provider::Provider;
-    use crate::wallet::Wallet;
+    use crate::wallet::WalletUnlocked;
 
     use super::*;
 
@@ -61,7 +61,7 @@ mod tests {
         let secret = unsafe { SecretKey::from_bytes_unchecked(secret_seed) };
 
         // Create a wallet using the private key created above.
-        let wallet = Wallet::new_from_private_key(secret, None);
+        let wallet = WalletUnlocked::new_from_private_key(secret, None);
 
         let message = "my message";
 
@@ -88,7 +88,7 @@ mod tests {
         let secret = SecretKey::from_str(
             "5f70feeff1f229e4a95e1056e8b4d80d0b24b565674860cc213bdb07127ce1b1",
         )?;
-        let wallet = Wallet::new_from_private_key(secret, None);
+        let wallet = WalletUnlocked::new_from_private_key(secret, None);
 
         // Set up a dummy transaction.
         let input_coin = Input::coin_signed(
@@ -98,6 +98,7 @@ mod tests {
             )?,
             10000000,
             AssetId::from([0u8; 32]),
+            TxPointer::default(),
             0,
             0,
         );
@@ -114,7 +115,6 @@ mod tests {
             0,
             1000000,
             0,
-            0,
             hex::decode("24400000")?,
             vec![],
             vec![input_coin],
@@ -127,7 +127,7 @@ mod tests {
         let message = unsafe { Message::from_bytes_unchecked(*tx.id()) };
 
         // Check if signature is what we expect it to be
-        assert_eq!(signature, Signature::from_str("a1287a24af13fc102cb9e60988b558d5575d7870032f64bafcc2deda2c99125fb25eca55a29a169de156cb30700965e2b26278fcc7ad375bc720440ea50ba3cb")?);
+        assert_eq!(signature, Signature::from_str("34482a581d1fe01ba84900581f5321a8b7d4ec65c3e7ca0de318ff8fcf45eb2c793c4b99e96400673e24b81b7aa47f042cad658f05a84e2f96f365eb0ce5a511")?);
 
         // Recover address that signed the transaction
         let recovered_address = signature.recover(&message)?;
@@ -143,8 +143,8 @@ mod tests {
     #[tokio::test]
     async fn send_transfer_transactions() -> Result<(), fuels_types::errors::Error> {
         // Setup two sets of coins, one for each wallet, each containing 1 coin with 1 amount.
-        let mut wallet_1 = LocalWallet::new_random(None);
-        let mut wallet_2 = LocalWallet::new_random(None);
+        let mut wallet_1 = WalletUnlocked::new_random(None);
+        let mut wallet_2 = WalletUnlocked::new_random(None).lock();
 
         let mut coins_1 = setup_single_asset_coins(wallet_1.address(), BASE_ASSET_ID, 1, 1000000);
         let coins_2 = setup_single_asset_coins(wallet_2.address(), BASE_ASSET_ID, 1, 1000000);
@@ -152,7 +152,7 @@ mod tests {
         coins_1.extend(coins_2);
 
         // Setup a provider and node with both set of coins.
-        let (client, _) = setup_test_client(coins_1, None, None).await;
+        let (client, _) = setup_test_client(coins_1, vec![], None, None).await;
         let provider = Provider::new(client);
 
         wallet_1.set_provider(provider.clone());
@@ -168,13 +168,11 @@ mod tests {
         // Configure transaction parameters.
         let gas_price = 1;
         let gas_limit = 500_000;
-        let byte_price = 1;
         let maturity = 0;
 
         let tx_params = TxParameters {
             gas_price,
             gas_limit,
-            byte_price,
             maturity,
         };
 
@@ -189,7 +187,6 @@ mod tests {
             .get_transaction_by_id(&tx_id)
             .await?;
 
-        assert_eq!(res.transaction.byte_price(), byte_price);
         assert_eq!(res.transaction.gas_limit(), gas_limit);
         assert_eq!(res.transaction.gas_price(), gas_price);
         assert_eq!(res.transaction.maturity(), maturity);
@@ -223,15 +220,15 @@ mod tests {
     #[tokio::test]
     async fn transfer_coins_with_change() -> Result<(), fuels_types::errors::Error> {
         // Setup two sets of coins, one for each wallet, each containing 1 coin with 5 amounts each.
-        let mut wallet_1 = LocalWallet::new_random(None);
-        let mut wallet_2 = LocalWallet::new_random(None);
+        let mut wallet_1 = WalletUnlocked::new_random(None);
+        let mut wallet_2 = WalletUnlocked::new_random(None).lock();
 
         let mut coins_1 = setup_single_asset_coins(wallet_1.address(), BASE_ASSET_ID, 1, 5);
         let coins_2 = setup_single_asset_coins(wallet_2.address(), BASE_ASSET_ID, 1, 5);
 
         coins_1.extend(coins_2);
 
-        let (client, _) = setup_test_client(coins_1, None, None).await;
+        let (client, _) = setup_test_client(coins_1, vec![], None, None).await;
         let provider = Provider::new(client);
 
         wallet_1.set_provider(provider.clone());

@@ -77,6 +77,9 @@ impl ABIDecoder {
             ParamType::Enum(variants) => Self::decode_enum(ret_data, variants, aux_data),
             ParamType::Tuple(types) => Self::decode_tuple(types, ret_data, aux_data),
             ParamType::Vector(param_type) => Self::decode_vector(param_type, ret_data, aux_data),
+            ParamType::Generic(name) => {
+                panic!("Cannot decode a unresolved generic type {name}!")
+            }
         }
     }
 

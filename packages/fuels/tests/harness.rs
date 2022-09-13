@@ -6,10 +6,11 @@ use fuels::contract::predicate::Predicate;
 use fuels::prelude::{
     abigen, launch_custom_provider_and_get_wallets, launch_provider_and_get_wallet,
     setup_multiple_assets_coins, setup_single_asset_coins, setup_test_provider, CallParameters,
-    Config, Contract, Error, LocalWallet, Provider, Salt, Signer, TxParameters, WalletsConfig,
+    Config, Contract, Error, Provider, Salt, TxParameters, WalletUnlocked, WalletsConfig,
     DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
 };
 use fuels_core::abi_encoder::{ABIEncoder, UnresolvedBytes};
+use fuels_core::abi_types::Bits256;
 use itertools::Itertools;
 use std::slice;
 
@@ -17,12 +18,21 @@ use fuels_core::parameters::StorageConfiguration;
 use fuels_core::tx::{Address, Bytes32, StorageSlot, Transaction};
 use fuels_core::Tokenizable;
 use fuels_core::{constants::BASE_ASSET_ID, Token};
+use fuels_signers::fuel_crypto::SecretKey;
+use fuels_test_helpers::setup_single_message;
+use fuels_types::bech32::Bech32Address;
 
 use fuels_contract::contract::ContractCall;
 use fuels_contract::script::Script;
 use fuels_core::utils::first_four_bytes_of_sha256_hash;
 use sha2::{Digest, Sha256};
+use std::iter;
 use std::str::FromStr;
+
+use fuel_core_interfaces::model::Message;
+use fuel_gql_client::client::schema::message::Message as OtherMessage;
+use fuels_signers::Signer;
+use fuels_types::param_types::ParamType;
 
 /// Note: all the tests and examples below require pre-compiled Sway projects.
 /// To compile these projects, run `cargo run --bin build-test-projects`.
@@ -48,7 +58,7 @@ async fn compile_bindings_from_contract_file() {
     // The generated bindings can be accessed through `SimpleContract`.
     abigen!(
         SimpleContract,
-        "packages/fuels/tests/takes_ints_returns_bool-flat-abi.json",
+        "packages/fuels/tests/takes_ints_returns_bool-abi.json",
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -190,7 +200,7 @@ async fn compile_bindings_array_input() {
     // `SimpleContract` is the name of the contract
     let contract_instance = SimpleContractBuilder::new(null_contract_id(), wallet).build();
 
-    let input: Vec<u16> = vec![1, 2, 3, 4];
+    let input = [1, 2, 3];
     let call_handler = contract_instance.takes_array(input);
 
     let encoded_args = call_handler.contract_call.encoded_args.resolve(0);
@@ -201,7 +211,7 @@ async fn compile_bindings_array_input() {
     );
 
     assert_eq!(
-        "00000000101cbeb50000000000000001000000000000000200000000000000030000000000000004",
+        "00000000101cbeb5000000000000000100000000000000020000000000000003",
         encoded
     );
 }
@@ -266,7 +276,7 @@ async fn compile_bindings_bool_array_input() {
     // `SimpleContract` is the name of the contract
     let contract_instance = SimpleContractBuilder::new(null_contract_id(), wallet).build();
 
-    let input: Vec<bool> = vec![true, false, true];
+    let input = [true, false, true];
     let call_handler = contract_instance.takes_array(input);
 
     let encoded_args = call_handler.contract_call.encoded_args.resolve(0);
@@ -390,7 +400,8 @@ async fn compile_bindings_string_input() {
     // `SimpleContract` is the name of the contract
     let contract_instance = SimpleContractBuilder::new(null_contract_id(), wallet).build();
 
-    let call_handler = contract_instance.takes_string("This is a full sentence".into());
+    let call_handler =
+        contract_instance.takes_string("This is a full sentence".try_into().unwrap());
 
     let encoded_args = call_handler.contract_call.encoded_args.resolve(0);
     let encoded = format!(
@@ -456,9 +467,9 @@ async fn compile_bindings_b256_input() {
     let mut hasher = Sha256::new();
     hasher.update("test string".as_bytes());
 
-    let arg = hasher.finalize();
+    let arg: [u8; 32] = hasher.finalize().into();
 
-    let call_handler = contract_instance.takes_b256(arg.into());
+    let call_handler = contract_instance.takes_b256(Bits256(arg));
 
     let encoded_args = call_handler.contract_call.encoded_args.resolve(0);
     let encoded = format!(
@@ -553,8 +564,8 @@ async fn compile_bindings_struct_input() {
     // Because of the abigen! macro, `MyStruct` is now in scope
     // and can be used!
     let input = MyStruct {
-        foo: vec![10, 2],
-        bar: "fuel".to_string(),
+        foo: [10, 2],
+        bar: "fuel".try_into().unwrap(),
     };
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -982,7 +993,7 @@ async fn type_safe_output_values() -> Result<(), Error> {
     // The generated bindings can be accessed through `SimpleContract`.
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/contract_output_test/out/debug/contract_output_test-flat-abi.json"
+        "packages/fuels/tests/test_projects/contract_output_test/out/debug/contract_output_test-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -1003,7 +1014,7 @@ async fn type_safe_output_values() -> Result<(), Error> {
 
     // `response`'s type matches the return type of `return_my_string()`
     let response = contract_instance
-        .return_my_string("fuel".to_string())
+        .return_my_string("fuel".try_into().unwrap())
         .call()
         .await?;
 
@@ -1025,7 +1036,7 @@ async fn call_with_structs() -> Result<(), Error> {
     // ANCHOR: struct_generation
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/complex_types_contract/out/debug/contract_test-flat-abi.json"
+        "packages/fuels/tests/test_projects/complex_types_contract/out/debug/contract_test-abi.json"
     );
 
     // Here we can use `CounterConfig`, a struct originally
@@ -1067,7 +1078,7 @@ async fn call_with_empty_return() -> Result<(), Error> {
     // The generated bindings can be accessed through `MyContract`.
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/call_empty_return/out/debug/contract_test-flat-abi.json"
+        "packages/fuels/tests/test_projects/call_empty_return/out/debug/contract_test-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -1093,7 +1104,7 @@ async fn call_with_empty_return() -> Result<(), Error> {
 async fn abigen_different_structs_same_arg_name() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/two_structs/out/debug/two_structs-flat-abi.json",
+        "packages/fuels/tests/test_projects/two_structs/out/debug/two_structs-abi.json",
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -1125,7 +1136,7 @@ async fn abigen_different_structs_same_arg_name() -> Result<(), Error> {
 async fn test_reverting_transaction() -> Result<(), Error> {
     abigen!(
         RevertingContract,
-        "packages/fuels/tests/test_projects/revert_transaction_error/out/debug/capture_revert_transaction_error-flat-abi.json"
+        "packages/fuels/tests/test_projects/revert_transaction_error/out/debug/capture_revert_transaction_error-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -1150,7 +1161,7 @@ async fn test_reverting_transaction() -> Result<(), Error> {
 async fn multiple_read_calls() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/multiple_read_calls/out/debug/demo-flat-abi.json"
+        "packages/fuels/tests/test_projects/multiple_read_calls/out/debug/demo-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -1185,7 +1196,7 @@ async fn test_methods_typeless_argument() -> Result<(), Error> {
     // The generated bindings can be accessed through `MyContract`.
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/empty_arguments/out/debug/method_four_arguments-flat-abi.json"
+        "packages/fuels/tests/test_projects/empty_arguments/out/debug/method_four_arguments-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -1212,7 +1223,7 @@ async fn test_methods_typeless_argument() -> Result<(), Error> {
 async fn test_large_return_data() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/large_return_data/out/debug/contract_test-flat-abi.json"
+        "packages/fuels/tests/test_projects/large_return_data/out/debug/contract_test-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -1230,7 +1241,7 @@ async fn test_large_return_data() -> Result<(), Error> {
     let res = contract_instance.get_id().call().await?;
 
     assert_eq!(
-        res.value,
+        res.value.0,
         [
             255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
             255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255
@@ -1252,7 +1263,7 @@ async fn test_large_return_data() -> Result<(), Error> {
 
     // Array will be returned in `ReturnData`.
     let res = contract_instance.get_large_array().call().await?;
-    assert_eq!(res.value, &[1, 2]);
+    assert_eq!(res.value, [1, 2]);
 
     let res = contract_instance.get_contract_id().call().await?;
 
@@ -1272,10 +1283,10 @@ async fn test_large_return_data() -> Result<(), Error> {
 async fn test_provider_launch_and_connect() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json"
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
 
-    let mut wallet = LocalWallet::new_random(None);
+    let mut wallet = WalletUnlocked::new_random(None);
 
     let coins = setup_single_asset_coins(
         wallet.address(),
@@ -1283,8 +1294,8 @@ async fn test_provider_launch_and_connect() -> Result<(), Error> {
         DEFAULT_NUM_COINS,
         DEFAULT_COIN_AMOUNT,
     );
-    let (launched_provider, address) = setup_test_provider(coins, None).await;
-    let connected_provider = Provider::connect(address).await?;
+    let (launched_provider, address) = setup_test_provider(coins, vec![], None).await;
+    let connected_provider = Provider::connect(address.to_string()).await?;
 
     wallet.set_provider(connected_provider);
 
@@ -1322,12 +1333,12 @@ async fn test_contract_calling_contract() -> Result<(), Error> {
     // Tests a contract call that calls another contract (FooCaller calls FooContract underneath)
     abigen!(
         FooContract,
-        "packages/fuels/tests/test_projects/foo_contract/out/debug/foo_contract-flat-abi.json"
+        "packages/fuels/tests/test_projects/foo_contract/out/debug/foo_contract-abi.json"
     );
 
     abigen!(
         FooCaller,
-        "packages/fuels/tests/test_projects/foo_caller_contract/out/debug/foo_caller_contract-flat-abi.json"
+        "packages/fuels/tests/test_projects/foo_caller_contract/out/debug/foo_caller_contract-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -1363,8 +1374,9 @@ async fn test_contract_calling_contract() -> Result<(), Error> {
     // Calls the contract that calls the `FooContract` contract, also just
     // flips the bool value passed to it.
     // ANCHOR: external_contract
+    let bits = *foo_contract_id.hash();
     let res = foo_caller_contract_instance
-        .call_foo_contract(*foo_contract_id.hash(), true)
+        .call_foo_contract(Bits256(bits), true)
         .set_contracts(&[foo_contract_id]) // Sets the external contract
         .call()
         .await?;
@@ -1378,10 +1390,10 @@ async fn test_contract_calling_contract() -> Result<(), Error> {
 async fn test_gas_errors() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json"
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
 
-    let mut wallet = LocalWallet::new_random(None);
+    let mut wallet = WalletUnlocked::new_random(None);
     let number_of_coins = 1;
     let amount_per_coin = 1_000_000;
     let coins = setup_single_asset_coins(
@@ -1391,7 +1403,7 @@ async fn test_gas_errors() -> Result<(), Error> {
         amount_per_coin,
     );
 
-    let (provider, _) = setup_test_provider(coins.clone(), None).await;
+    let (provider, _) = setup_test_provider(coins.clone(), vec![], None).await;
     wallet.set_provider(provider);
 
     let contract_id = Contract::deploy(
@@ -1408,7 +1420,7 @@ async fn test_gas_errors() -> Result<(), Error> {
     let gas_limit = 100;
     let contract_instace_call = contract_instance
         .initialize_counter(42) // Build the ABI call
-        .tx_params(TxParameters::new(None, Some(gas_limit), None, None));
+        .tx_params(TxParameters::new(None, Some(gas_limit), None));
 
     //  Test that the call will use more gas than the gas limit
     let gas_used = contract_instace_call
@@ -1428,17 +1440,12 @@ async fn test_gas_errors() -> Result<(), Error> {
     // Test for insufficient base asset amount to pay for the transaction fee
     let response = contract_instance
         .initialize_counter(42) // Build the ABI call
-        .tx_params(TxParameters::new(
-            Some(100_000_000_000),
-            None,
-            Some(100_000_000_000),
-            None,
-        ))
+        .tx_params(TxParameters::new(Some(100_000_000_000), None, None))
         .call()
         .await
         .expect_err("should error");
 
-    let expected = "Provider error: Response errors; Transaction doesn't include enough value";
+    let expected = "Provider error: Response errors; enough coins could not be found";
     assert!(response.to_string().starts_with(expected));
 
     Ok(())
@@ -1448,7 +1455,7 @@ async fn test_gas_errors() -> Result<(), Error> {
 async fn test_call_param_gas_errors() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json"
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -1466,7 +1473,7 @@ async fn test_call_param_gas_errors() -> Result<(), Error> {
     // Transaction gas_limit is sufficient, call gas_forwarded is too small
     let response = contract_instance
         .initialize_counter(42)
-        .tx_params(TxParameters::new(None, Some(1000), None, None))
+        .tx_params(TxParameters::new(None, Some(1000), None))
         .call_params(CallParameters::new(None, None, Some(1)))
         .call()
         .await
@@ -1478,7 +1485,7 @@ async fn test_call_param_gas_errors() -> Result<(), Error> {
     // Call params gas_forwarded exceeds transaction limit
     let response = contract_instance
         .initialize_counter(42)
-        .tx_params(TxParameters::new(None, Some(1), None, None))
+        .tx_params(TxParameters::new(None, Some(1), None))
         .call_params(CallParameters::new(None, None, Some(1000)))
         .call()
         .await
@@ -1493,7 +1500,7 @@ async fn test_call_param_gas_errors() -> Result<(), Error> {
 async fn test_amount_and_asset_forwarding() -> Result<(), Error> {
     abigen!(
         TestFuelCoinContract,
-        "packages/fuels/tests/test_projects/token_ops/out/debug/token_ops-flat-abi.json"
+        "packages/fuels/tests/test_projects/token_ops/out/debug/token_ops-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -1517,12 +1524,12 @@ async fn test_amount_and_asset_forwarding() -> Result<(), Error> {
     instance.mint_coins(5_000_000).call().await?;
 
     balance_response = instance
-        .get_balance(id.clone().into(), (&id).into())
+        .get_balance((&id).into(), (&id).into())
         .call()
         .await?;
     assert_eq!(balance_response.value, 5_000_000);
 
-    let tx_params = TxParameters::new(None, Some(1_000_000), None, None);
+    let tx_params = TxParameters::new(None, Some(1_000_000), None);
     // Forward 1_000_000 coin amount of base asset_id
     // this is a big number for checking that amount can be a u64
     let call_params = CallParameters::new(Some(1_000_000), None, None);
@@ -1557,7 +1564,7 @@ async fn test_amount_and_asset_forwarding() -> Result<(), Error> {
 
     let asset_id = AssetId::from(*id.hash());
     let call_params = CallParameters::new(Some(0), Some(asset_id), None);
-    let tx_params = TxParameters::new(None, Some(1_000_000), None, None);
+    let tx_params = TxParameters::new(None, Some(1_000_000), None);
 
     let response = instance
         .get_msg_amount()
@@ -1587,7 +1594,7 @@ async fn test_amount_and_asset_forwarding() -> Result<(), Error> {
 async fn test_multiple_args() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json"
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -1620,7 +1627,7 @@ async fn test_multiple_args() -> Result<(), Error> {
 async fn test_tuples() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/tuples/out/debug/tuples-flat-abi.json"
+        "packages/fuels/tests/test_projects/tuples/out/debug/tuples-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -1643,7 +1650,7 @@ async fn test_tuples() -> Result<(), Error> {
     let my_struct_tuple = (
         42,
         Person {
-            name: "Jane".to_string(),
+            name: "Jane".try_into()?,
         },
     );
     let response = instance
@@ -1664,7 +1671,7 @@ async fn test_tuples() -> Result<(), Error> {
     assert_eq!(response.value, my_enum_tuple);
 
     let id = *ContractId::zeroed();
-    let my_b256_u8_tuple: ([u8; 32], u8) = (id, 10);
+    let my_b256_u8_tuple = (Bits256(id), 10);
 
     let response = instance.tuple_with_b256(my_b256_u8_tuple).call().await?;
 
@@ -1676,7 +1683,7 @@ async fn test_tuples() -> Result<(), Error> {
 async fn test_array() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json"
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -1692,11 +1699,7 @@ async fn test_array() -> Result<(), Error> {
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
 
     assert_eq!(
-        contract_instance
-            .get_array([42; 2].to_vec())
-            .call()
-            .await?
-            .value,
+        contract_instance.get_array([42; 2]).call().await?.value,
         [42; 2]
     );
     Ok(())
@@ -1708,7 +1711,7 @@ async fn test_arrays_with_custom_types() -> Result<(), Error> {
     // The generated bindings can be accessed through `MyContract`.
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json"
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -1723,12 +1726,12 @@ async fn test_arrays_with_custom_types() -> Result<(), Error> {
 
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
 
-    let persons = vec![
+    let persons = [
         Person {
-            name: "John".to_string(),
+            name: "John".try_into()?,
         },
         Person {
-            name: "Jane".to_string(),
+            name: "Jane".try_into()?,
         },
     ];
 
@@ -1737,7 +1740,7 @@ async fn test_arrays_with_custom_types() -> Result<(), Error> {
     assert_eq!("John", response.value[0].name);
     assert_eq!("Jane", response.value[1].name);
 
-    let states = vec![State::A(), State::B()];
+    let states = [State::A(), State::B()];
 
     let response = contract_instance
         .array_of_enums(states.clone())
@@ -1753,7 +1756,7 @@ async fn test_arrays_with_custom_types() -> Result<(), Error> {
 async fn test_auth_msg_sender_from_sdk() -> Result<(), Error> {
     abigen!(
         AuthContract,
-        "packages/fuels/tests/test_projects/auth_testing_contract/out/debug/auth_testing_contract-flat-abi.json"
+        "packages/fuels/tests/test_projects/auth_testing_contract/out/debug/auth_testing_contract-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -1783,7 +1786,7 @@ async fn workflow_enum_inside_struct() -> Result<(), Error> {
     abigen!(
         MyContract,
         "packages/fuels/tests/test_projects/enum_inside_struct/out/debug\
-        /enum_inside_struct-flat-abi.json"
+        /enum_inside_struct-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -1818,7 +1821,7 @@ async fn workflow_enum_inside_struct() -> Result<(), Error> {
 async fn test_logd_receipts() -> Result<(), Error> {
     abigen!(
         LoggingContract,
-        "packages/fuels/tests/test_projects/contract_logdata/out/debug/contract_logdata-flat-abi.json"
+        "packages/fuels/tests/test_projects/contract_logdata/out/debug/contract_logdata-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -1839,12 +1842,12 @@ async fn test_logd_receipts() -> Result<(), Error> {
     value[13] = 0xBB;
     value[14] = 0xCC;
     let response = contract_instance
-        .use_logd_opcode(value, 3, 6)
+        .use_logd_opcode(Bits256(value), 3, 6)
         .call()
         .await?;
     assert_eq!(response.logs, vec!["ffeedd", "ffeedd000000"]);
     let response = contract_instance
-        .use_logd_opcode(value, 14, 15)
+        .use_logd_opcode(Bits256(value), 14, 15)
         .call()
         .await?;
     assert_eq!(
@@ -1862,7 +1865,7 @@ async fn test_logd_receipts() -> Result<(), Error> {
 #[tokio::test]
 async fn test_wallet_balance_api() -> Result<(), Error> {
     // Single asset
-    let mut wallet = LocalWallet::new_random(None);
+    let mut wallet = WalletUnlocked::new_random(None);
     let number_of_coins = 21;
     let amount_per_coin = 11;
     let coins = setup_single_asset_coins(
@@ -1872,7 +1875,7 @@ async fn test_wallet_balance_api() -> Result<(), Error> {
         amount_per_coin,
     );
 
-    let (provider, _) = setup_test_provider(coins.clone(), None).await;
+    let (provider, _) = setup_test_provider(coins.clone(), vec![], None).await;
     wallet.set_provider(provider);
     for (_utxo_id, coin) in coins {
         let balance = wallet.get_asset_balance(&coin.asset_id).await;
@@ -1899,7 +1902,7 @@ async fn test_wallet_balance_api() -> Result<(), Error> {
     );
     assert_eq!(coins.len() as u64, number_of_assets * coins_per_asset);
     assert_eq!(asset_ids.len() as u64, number_of_assets);
-    let (provider, _) = setup_test_provider(coins.clone(), None).await;
+    let (provider, _) = setup_test_provider(coins.clone(), vec![], None).await;
     wallet.set_provider(provider);
     let balances = wallet.get_balances().await?;
     assert_eq!(balances.len() as u64, number_of_assets);
@@ -1920,7 +1923,7 @@ async fn test_wallet_balance_api() -> Result<(), Error> {
 async fn sway_native_types_support() -> Result<(), Box<dyn std::error::Error>> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/sway_native_types/out/debug/sway_native_types-flat-abi.json"
+        "packages/fuels/tests/test_projects/sway_native_types/out/debug/sway_native_types-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -1956,7 +1959,7 @@ async fn sway_native_types_support() -> Result<(), Box<dyn std::error::Error>> {
 async fn test_transaction_script_workflow() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json"
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -1989,7 +1992,7 @@ async fn enum_coding_w_variable_width_variants() -> Result<(), Error> {
     abigen!(
         EnumTesting,
         "packages/fuels/tests/test_projects/enum_encoding/out/debug\
-        /enum_encoding-flat-abi.json"
+        /enum_encoding-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -2033,7 +2036,7 @@ async fn enum_coding_w_unit_enums() -> Result<(), Error> {
     abigen!(
         EnumTesting,
         "packages/fuels/tests/test_projects/enum_encoding/out/debug\
-        /enum_encoding-flat-abi.json"
+        /enum_encoding-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -2075,7 +2078,7 @@ async fn enum_as_input() -> Result<(), Error> {
     abigen!(
         EnumTesting,
         "packages/fuels/tests/test_projects/enum_as_input/out/debug\
-        /enum_as_input-flat-abi.json"
+        /enum_as_input-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -2125,7 +2128,7 @@ async fn nested_structs() -> Result<(), Error> {
     abigen!(
         NestedStructs,
         "packages/fuels/tests/test_projects/nested_structs/out/debug\
-        /nested_structs-flat-abi.json"
+        /nested_structs-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -2185,7 +2188,7 @@ async fn nested_structs() -> Result<(), Error> {
 async fn test_multi_call() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json"
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -2201,7 +2204,7 @@ async fn test_multi_call() -> Result<(), Error> {
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
 
     let call_handler_1 = contract_instance.initialize_counter(42);
-    let call_handler_2 = contract_instance.get_array([42; 2].to_vec());
+    let call_handler_2 = contract_instance.get_array([42; 2]);
 
     let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
 
@@ -2209,7 +2212,7 @@ async fn test_multi_call() -> Result<(), Error> {
         .add_call(call_handler_1)
         .add_call(call_handler_2);
 
-    let (counter, array): (u64, Vec<u64>) = multi_call_handler.call().await?.value;
+    let (counter, array): (u64, [u64; 2]) = multi_call_handler.call().await?.value;
 
     assert_eq!(counter, 42);
     assert_eq!(array, [42; 2]);
@@ -2221,7 +2224,7 @@ async fn test_multi_call() -> Result<(), Error> {
 async fn test_multi_call_script_workflow() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json"
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -2238,7 +2241,7 @@ async fn test_multi_call_script_workflow() -> Result<(), Error> {
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
 
     let call_handler_1 = contract_instance.initialize_counter(42);
-    let call_handler_2 = contract_instance.get_array([42; 2].to_vec());
+    let call_handler_2 = contract_instance.get_array([42; 2]);
 
     let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
 
@@ -2249,7 +2252,7 @@ async fn test_multi_call_script_workflow() -> Result<(), Error> {
     let script = multi_call_handler.get_call_execution_script().await?;
     let receipts = script.call(provider).await.unwrap();
     let (counter, array) = multi_call_handler
-        .get_response::<(u64, Vec<u64>)>(receipts)?
+        .get_response::<(u64, [u64; 2])>(receipts)?
         .value;
 
     assert_eq!(counter, 42);
@@ -2262,7 +2265,7 @@ async fn test_multi_call_script_workflow() -> Result<(), Error> {
 async fn test_storage_initialization() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/contract_storage_test/out/debug/contract_storage_test-flat-abi.json"
+        "packages/fuels/tests/test_projects/contract_storage_test/out/debug/contract_storage_test-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -2288,11 +2291,11 @@ async fn test_storage_initialization() -> Result<(), Error> {
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
 
     let result = contract_instance
-        .get_value_b256(key.into())
+        .get_value_b256(Bits256(key.into()))
         .call()
         .await?
         .value;
-    assert_eq!(result.as_slice(), value.as_slice());
+    assert_eq!(result.0, *value);
 
     Ok(())
 }
@@ -2302,7 +2305,7 @@ async fn can_use_try_into_to_construct_struct_from_bytes() -> Result<(), Error> 
     abigen!(
         MyContract,
         "packages/fuels/tests/test_projects/enum_inside_struct/out/debug\
-        /enum_inside_struct-flat-abi.json"
+        /enum_inside_struct-abi.json"
     );
     let cocktail_in_bytes: Vec<u8> = vec![
         0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 3,
@@ -2333,7 +2336,7 @@ async fn can_use_try_into_to_construct_enum_from_bytes() -> Result<(), Error> {
     abigen!(
         MyContract,
         "packages/fuels/tests/test_projects/enum_inside_struct/out/debug\
-        /enum_inside_struct-flat-abi.json"
+        /enum_inside_struct-abi.json"
     );
     // ANCHOR: manual_decode
     let shaker_in_bytes: Vec<u8> = vec![0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 2];
@@ -2362,7 +2365,7 @@ async fn type_inside_enum() -> Result<(), Error> {
     abigen!(
         MyContract,
         "packages/fuels/tests/test_projects/type_inside_enum/out/debug\
-        /type_inside_enum-flat-abi.json"
+        /type_inside_enum-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -2378,12 +2381,12 @@ async fn type_inside_enum() -> Result<(), Error> {
     let instance = MyContractBuilder::new(id.to_string(), wallet.clone()).build();
 
     // String inside enum
-    let enum_string = SomeEnum::SomeStr("asdf".to_owned());
+    let enum_string = SomeEnum::SomeStr("asdf".try_into()?);
     let response = instance.str_inside_enum(enum_string.clone()).call().await?;
     assert_eq!(response.value, enum_string);
 
     // Array inside enum
-    let enum_array = SomeEnum::SomeArr(vec![1, 2, 3, 4, 5, 6, 7]);
+    let enum_array = SomeEnum::SomeArr([1, 2, 3, 4, 5, 6, 7]);
     let response = instance.arr_inside_enum(enum_array.clone()).call().await?;
     assert_eq!(response.value, enum_array);
 
@@ -2419,7 +2422,7 @@ async fn type_inside_enum() -> Result<(), Error> {
 async fn test_init_storage_automatically() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/contract_storage_test/out/debug/contract_storage_test-flat-abi.json"
+        "packages/fuels/tests/test_projects/contract_storage_test/out/debug/contract_storage_test-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -2445,10 +2448,18 @@ async fn test_init_storage_automatically() -> Result<(), Error> {
 
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
 
-    let value = contract_instance.get_value_b256(*key1).call().await?.value;
-    assert_eq!(value, [1u8; 32]);
+    let value = contract_instance
+        .get_value_b256(Bits256(*key1))
+        .call()
+        .await?
+        .value;
+    assert_eq!(value.0, [1u8; 32]);
 
-    let value = contract_instance.get_value_u64(*key2).call().await?.value;
+    let value = contract_instance
+        .get_value_u64(Bits256(*key2))
+        .call()
+        .await?
+        .value;
     assert_eq!(value, 64);
 
     Ok(())
@@ -2458,7 +2469,7 @@ async fn test_init_storage_automatically() -> Result<(), Error> {
 async fn test_init_storage_automatically_bad_json_path() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/contract_storage_test/out/debug/contract_storage_test-flat-abi.json"
+        "packages/fuels/tests/test_projects/contract_storage_test/out/debug/contract_storage_test-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -2482,7 +2493,7 @@ async fn test_init_storage_automatically_bad_json_path() -> Result<(), Error> {
 async fn contract_method_call_respects_maturity() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/transaction_block_height/out/debug/transaction_block_height-flat-abi.json"
+        "packages/fuels/tests/test_projects/transaction_block_height/out/debug/transaction_block_height-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -2514,7 +2525,7 @@ async fn contract_method_call_respects_maturity() -> Result<(), Error> {
 async fn contract_deployment_respects_maturity() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/transaction_block_height/out/debug/transaction_block_height-flat-abi.json"
+        "packages/fuels/tests/test_projects/transaction_block_height/out/debug/transaction_block_height-abi.json"
     );
 
     let config = Config {
@@ -2578,7 +2589,7 @@ async fn can_increase_block_height() -> Result<(), Error> {
 async fn can_handle_sway_function_called_new() -> anyhow::Result<()> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/collision_in_fn_names/out/debug/collision_in_fn_names-flat-abi.json"
+        "packages/fuels/tests/test_projects/collision_in_fn_names/out/debug/collision_in_fn_names-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -2602,11 +2613,13 @@ async fn can_handle_sway_function_called_new() -> anyhow::Result<()> {
 
 async fn setup_predicate_test(
     file_path: &str,
-) -> Result<(Predicate, LocalWallet, LocalWallet, AssetId), Error> {
+    num_coins: u64,
+    coin_amount: u64,
+) -> Result<(Predicate, WalletUnlocked, WalletUnlocked, AssetId), Error> {
     let predicate = Predicate::load_from(file_path)?;
 
     let mut wallets = launch_custom_provider_and_get_wallets(
-        WalletsConfig::new(Some(2), Some(1), Some(16)),
+        WalletsConfig::new(Some(2), Some(num_coins), Some(coin_amount)),
         Some(Config {
             predicates: true,
             utxo_validation: true,
@@ -2623,10 +2636,74 @@ async fn setup_predicate_test(
 }
 
 #[tokio::test]
+async fn predicate_with_multiple_coins() -> Result<(), Error> {
+    let (predicate, sender, receiver, asset_id) = setup_predicate_test(
+        "tests/test_projects/predicate_true/out/debug/predicate_true.bin",
+        3,
+        100,
+    )
+    .await?;
+    let provider = receiver.get_provider()?;
+    let amount_to_predicate = 10;
+
+    sender
+        .transfer(
+            predicate.address(),
+            amount_to_predicate,
+            asset_id,
+            TxParameters::new(Some(1), None, None),
+        )
+        .await?;
+
+    sender
+        .transfer(
+            predicate.address(),
+            amount_to_predicate,
+            asset_id,
+            TxParameters::new(Some(1), None, None),
+        )
+        .await?;
+
+    let receiver_balance_before = provider
+        .get_asset_balance(receiver.address(), asset_id)
+        .await?;
+    assert_eq!(receiver_balance_before, 300);
+
+    receiver
+        .receive_from_predicate(
+            predicate.address(),
+            predicate.code(),
+            amount_to_predicate,
+            asset_id,
+            None,
+            TxParameters::new(Some(1), None, None),
+        )
+        .await?;
+
+    let receiver_balance_after = provider
+        .get_asset_balance(receiver.address(), asset_id)
+        .await?;
+    assert_eq!(
+        receiver_balance_before + amount_to_predicate - 1,
+        receiver_balance_after
+    );
+
+    let predicate_balance = provider
+        .get_asset_balance(predicate.address(), asset_id)
+        .await?;
+    assert_eq!(predicate_balance, 10);
+
+    Ok(())
+}
+
+#[tokio::test]
 async fn can_call_no_arg_predicate_returns_true() -> Result<(), Error> {
-    let (predicate, sender, receiver, asset_id) =
-        setup_predicate_test("tests/test_projects/predicate_true/out/debug/predicate_true.bin")
-            .await?;
+    let (predicate, sender, receiver, asset_id) = setup_predicate_test(
+        "tests/test_projects/predicate_true/out/debug/predicate_true.bin",
+        1,
+        16,
+    )
+    .await?;
     let provider = receiver.get_provider()?;
     let amount_to_predicate = 2;
 
@@ -2651,6 +2728,7 @@ async fn can_call_no_arg_predicate_returns_true() -> Result<(), Error> {
             amount_to_predicate,
             asset_id,
             None,
+            TxParameters::default(),
         )
         .await?;
 
@@ -2672,9 +2750,12 @@ async fn can_call_no_arg_predicate_returns_true() -> Result<(), Error> {
 
 #[tokio::test]
 async fn can_call_no_arg_predicate_returns_false() -> Result<(), Error> {
-    let (predicate, sender, receiver, asset_id) =
-        setup_predicate_test("tests/test_projects/predicate_false/out/debug/predicate_false.bin")
-            .await?;
+    let (predicate, sender, receiver, asset_id) = setup_predicate_test(
+        "tests/test_projects/predicate_false/out/debug/predicate_false.bin",
+        1,
+        16,
+    )
+    .await?;
     let provider = receiver.get_provider()?;
     let amount_to_predicate = 4;
 
@@ -2699,6 +2780,7 @@ async fn can_call_no_arg_predicate_returns_false() -> Result<(), Error> {
             amount_to_predicate,
             asset_id,
             None,
+            TxParameters::default(),
         )
         .await
         .expect_err("should error");
@@ -2718,9 +2800,12 @@ async fn can_call_no_arg_predicate_returns_false() -> Result<(), Error> {
 
 #[tokio::test]
 async fn can_call_predicate_with_u32_data() -> Result<(), Error> {
-    let (predicate, sender, receiver, asset_id) =
-        setup_predicate_test("tests/test_projects/predicate_u32/out/debug/predicate_u32.bin")
-            .await?;
+    let (predicate, sender, receiver, asset_id) = setup_predicate_test(
+        "tests/test_projects/predicate_u32/out/debug/predicate_u32.bin",
+        1,
+        16,
+    )
+    .await?;
     let provider = receiver.get_provider()?;
     let amount_to_predicate = 8;
 
@@ -2749,6 +2834,7 @@ async fn can_call_predicate_with_u32_data() -> Result<(), Error> {
             amount_to_predicate,
             asset_id,
             Some(predicate_data),
+            TxParameters::default(),
         )
         .await
         .expect_err("should error");
@@ -2774,6 +2860,7 @@ async fn can_call_predicate_with_u32_data() -> Result<(), Error> {
             amount_to_predicate,
             asset_id,
             Some(predicate_data),
+            TxParameters::default(),
         )
         .await?;
 
@@ -2797,6 +2884,8 @@ async fn can_call_predicate_with_u32_data() -> Result<(), Error> {
 async fn can_call_predicate_with_address_data() -> Result<(), Error> {
     let (predicate, sender, receiver, asset_id) = setup_predicate_test(
         "tests/test_projects/predicate_address/out/debug/predicate_address.bin",
+        1,
+        16,
     )
     .await?;
     let provider = receiver.get_provider()?;
@@ -2827,6 +2916,7 @@ async fn can_call_predicate_with_address_data() -> Result<(), Error> {
             amount_to_predicate,
             asset_id,
             Some(predicate_data),
+            TxParameters::default(),
         )
         .await?;
 
@@ -2848,9 +2938,12 @@ async fn can_call_predicate_with_address_data() -> Result<(), Error> {
 
 #[tokio::test]
 async fn can_call_predicate_with_struct_data() -> Result<(), Error> {
-    let (predicate, sender, receiver, asset_id) =
-        setup_predicate_test("tests/test_projects/predicate_struct/out/debug/predicate_struct.bin")
-            .await?;
+    let (predicate, sender, receiver, asset_id) = setup_predicate_test(
+        "tests/test_projects/predicate_struct/out/debug/predicate_struct.bin",
+        1,
+        16,
+    )
+    .await?;
     let provider = receiver.get_provider()?;
     let amount_to_predicate = 8;
 
@@ -2879,6 +2972,7 @@ async fn can_call_predicate_with_struct_data() -> Result<(), Error> {
             amount_to_predicate,
             asset_id,
             Some(predicate_data),
+            TxParameters::default(),
         )
         .await
         .expect_err("should error");
@@ -2904,6 +2998,7 @@ async fn can_call_predicate_with_struct_data() -> Result<(), Error> {
             amount_to_predicate,
             asset_id,
             Some(predicate_data),
+            TxParameters::default(),
         )
         .await?;
 
@@ -2927,7 +3022,7 @@ async fn can_call_predicate_with_struct_data() -> Result<(), Error> {
 async fn test_get_gas_used() -> anyhow::Result<()> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json"
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -2953,7 +3048,7 @@ async fn test_get_gas_used() -> anyhow::Result<()> {
 async fn test_contract_id_and_wallet_getters() {
     abigen!(
         SimpleContract,
-        "packages/fuels/tests/takes_ints_returns_bool-flat-abi.json",
+        "packages/fuels/tests/takes_ints_returns_bool-abi.json",
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -2973,14 +3068,14 @@ async fn test_contract_id_and_wallet_getters() {
 async fn test_network_error() -> Result<(), anyhow::Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json"
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
 
-    let mut wallet = LocalWallet::new_random(None);
+    let mut wallet = WalletUnlocked::new_random(None);
 
     let config = CoreConfig::local_node();
     let service = FuelService::new_node(config).await?;
-    let provider = Provider::connect(service.bound_address).await?;
+    let provider = Provider::connect(service.bound_address.to_string()).await?;
 
     wallet.set_provider(provider);
 
@@ -3004,7 +3099,7 @@ async fn test_network_error() -> Result<(), anyhow::Error> {
 async fn str_in_array() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/str_in_array/out/debug/str_in_array-flat-abi.json"
+        "packages/fuels/tests/test_projects/str_in_array/out/debug/str_in_array-abi.json"
     );
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -3019,7 +3114,7 @@ async fn str_in_array() -> Result<(), Error> {
 
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
 
-    let input = vec!["foo".to_string(), "bar".to_string(), "baz".to_string()];
+    let input = ["foo", "bar", "baz"].map(|str| str.try_into().unwrap());
     let response = contract_instance
         .take_array_string_shuffle(input.clone())
         .call()
@@ -3045,7 +3140,9 @@ async fn str_in_array() -> Result<(), Error> {
 }
 
 #[tokio::test]
-#[should_panic(expected = "String data has len ")]
+#[should_panic(
+    expected = "SizedAsciiString<4> can only be constructed from a String of length 4. Got: fuell"
+)]
 async fn strings_must_have_correct_length() {
     abigen!(
         SimpleContract,
@@ -3088,11 +3185,13 @@ async fn strings_must_have_correct_length() {
 
     let wallet = launch_provider_and_get_wallet().await;
     let contract_instance = SimpleContractBuilder::new(null_contract_id(), wallet).build();
-    let _ = contract_instance.takes_string("fuell".into());
+    let _ = contract_instance.takes_string("fuell".try_into().unwrap());
 }
 
 #[tokio::test]
-#[should_panic(expected = "String data can only have ascii values")]
+#[should_panic(
+    expected = "SizedAsciiString must be constructed from a string containing only ascii encodable characters. Got: fueŁ"
+)]
 async fn strings_must_have_all_ascii_chars() {
     abigen!(
         SimpleContract,
@@ -3135,11 +3234,13 @@ async fn strings_must_have_all_ascii_chars() {
 
     let wallet = launch_provider_and_get_wallet().await;
     let contract_instance = SimpleContractBuilder::new(null_contract_id(), wallet).build();
-    let _ = contract_instance.takes_string("fueŁ".into());
+    let _ = contract_instance.takes_string("fueŁ".try_into().unwrap());
 }
 
 #[tokio::test]
-#[should_panic(expected = "String data has len ")]
+#[should_panic(
+    expected = "SizedAsciiString<4> can only be constructed from a String of length 4. Got: fuell"
+)]
 async fn strings_must_have_correct_length_custom_types() {
     abigen!(
         SimpleContract,
@@ -3217,11 +3318,13 @@ async fn strings_must_have_correct_length_custom_types() {
 
     let wallet = launch_provider_and_get_wallet().await;
     let contract_instance = SimpleContractBuilder::new(null_contract_id(), wallet).build();
-    let _ = contract_instance.takes_enum(MyEnum::bar("fuell".to_string()));
+    let _ = contract_instance.takes_enum(MyEnum::bar("fuell".try_into().unwrap()));
 }
 
 #[tokio::test]
-#[should_panic(expected = "String data can only have ascii values")]
+#[should_panic(
+    expected = "SizedAsciiString must be constructed from a string containing only ascii encodable characters. Got: fueŁ"
+)]
 async fn strings_must_have_all_ascii_chars_custom_types() {
     abigen!(
         SimpleContract,
@@ -3298,7 +3401,7 @@ async fn strings_must_have_all_ascii_chars_custom_types() {
     );
 
     let inner_struct = InnerStruct {
-        bar: "fueŁ".to_string(),
+        bar: "fueŁ".try_into().unwrap(),
     };
     let input = MyNestedStruct {
         x: 10,
@@ -3314,7 +3417,7 @@ async fn strings_must_have_all_ascii_chars_custom_types() {
 async fn test_connect_wallet() -> anyhow::Result<()> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-flat-abi.json"
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
     );
 
     let config = WalletsConfig::new(Some(2), Some(1), Some(DEFAULT_COIN_AMOUNT));
@@ -3333,7 +3436,7 @@ async fn test_connect_wallet() -> anyhow::Result<()> {
 
     // pay for call with wallet_1
     let contract_instance = MyContractBuilder::new(id.to_string(), wallet_1.clone()).build();
-    let tx_params = TxParameters::new(Some(10), Some(10000), None, None);
+    let tx_params = TxParameters::new(Some(10), Some(10000), None);
     contract_instance
         .initialize_counter(42)
         .tx_params(tx_params)
@@ -3380,25 +3483,32 @@ async fn contract_call_fee_estimation() -> Result<(), Error> {
 
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
 
+    let gas_price = 100_000_000;
+    let gas_limit = 800;
     let tolerance = 0.2;
+
+    let expected_min_gas_price = 0; // This is the default min_gas_price from the ConsensusParameters
+    let expected_gas_used = 710;
+    let expected_metered_bytes_size = 720;
+    let expected_total_fee = 359;
+
     let estimated_transaction_cost = contract_instance
         .initialize_counter(42) // Build the ABI call
-        .tx_params(TxParameters::new(
-            Some(10_000),
-            Some(500),
-            Some(10_000),
-            None,
-        ))
+        .tx_params(TxParameters::new(Some(gas_price), Some(gas_limit), None))
         .estimate_transaction_cost(Some(tolerance)) // Perform the network call
         .await?;
 
-    assert_eq!(estimated_transaction_cost.min_gas_price, 0);
-    assert_eq!(estimated_transaction_cost.min_byte_price, 0);
-    assert_eq!(estimated_transaction_cost.gas_price, 10_000);
-    assert_eq!(estimated_transaction_cost.byte_price, 10_000);
-    assert_eq!(estimated_transaction_cost.gas_used, 757);
-    assert_eq!(estimated_transaction_cost.byte_size, 704);
-    assert_eq!(estimated_transaction_cost.total_fee, 0.01461);
+    assert_eq!(
+        estimated_transaction_cost.min_gas_price,
+        expected_min_gas_price
+    );
+    assert_eq!(estimated_transaction_cost.gas_price, gas_price);
+    assert_eq!(estimated_transaction_cost.gas_used, expected_gas_used);
+    assert_eq!(
+        estimated_transaction_cost.metered_bytes_size,
+        expected_metered_bytes_size
+    );
+    assert_eq!(estimated_transaction_cost.total_fee, expected_total_fee);
 
     Ok(())
 }
@@ -3460,7 +3570,7 @@ async fn mutl_call_has_same_estimated_and_used_gas() -> Result<(), Error> {
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
 
     let call_handler_1 = contract_instance.initialize_counter(42);
-    let call_handler_2 = contract_instance.get_array([42; 2].to_vec());
+    let call_handler_2 = contract_instance.get_array([42; 2]);
 
     let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
 
@@ -3474,7 +3584,7 @@ async fn mutl_call_has_same_estimated_and_used_gas() -> Result<(), Error> {
         .await?
         .gas_used;
 
-    let gas_used = multi_call_handler.call::<(u64, Vec<u64>)>().await?.gas_used;
+    let gas_used = multi_call_handler.call::<(u64, [u64; 2])>().await?.gas_used;
 
     assert_eq!(estimated_gas_used, gas_used);
 
@@ -3482,173 +3592,405 @@ async fn mutl_call_has_same_estimated_and_used_gas() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_vector() -> Result<(), Error> {
-    // the changes I see that need to happen are
-    // * fix the fn selector -- should be done by Rodrigo in his generics task
-    // * make encoder return bytes with non-resolved final address
-    // * add vec token type
-    // * resolve encoded bytes with the custom_input_offset calculated in script.rs
-    let wallet = launch_provider_and_get_wallet().await;
+async fn testnet_hello_world() -> Result<(), Error> {
+    // Note that this test might become flaky.
+    // This test depends on:
+    // 1. The testnet being up and running;
+    // 2. The testnet address being the same as the one in the test;
+    // 3. The hardcoded wallet having enough funds to pay for the transaction.
+    // This is a nice test to showcase the SDK interaction with
+    // the testnet. But, if it becomes too problematic, we should remove it.
+    abigen!(
+        MyContract,
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+    );
+
+    // Create a provider pointing to the testnet.
+    let provider = Provider::connect("node-beta-1.fuel.network").await.unwrap();
+
+    // Setup the private key.
+    let secret =
+        SecretKey::from_str("a0447cd75accc6b71a976fd3401a1f6ce318d27ba660b0315ee6ac347bf39568")
+            .unwrap();
+
+    // Create the wallet.
+    let wallet = WalletUnlocked::new_from_private_key(secret, Some(provider));
+
+    dbg!(wallet.address().to_string());
+
+    let params = TxParameters::new(Some(1), Some(2000), None);
 
     let contract_id = Contract::deploy(
-        "tests/test_projects/vectors/out/debug/vectors.bin",
+        "tests/test_projects/contract_test/out/debug/contract_test.bin",
         &wallet,
-        TxParameters::default(),
+        params,
         StorageConfiguration::default(),
     )
     .await?;
 
-    // let json =
-    //     fs::read_to_string("tests/test_projects/vectors/out/debug/vectors-flat-abi.json").unwrap();
-    // let parsed_abi: ProgramABI = serde_json::from_str(&json)?;
-    // let fun = parsed_abi
-    //     .functions
-    //     .iter()
-    //     .find(|fun| fun.name == "real_vec")
-    //     .unwrap();
+    let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
 
-    // let types = FlatAbigen::get_types(&parsed_abi);
+    let response = contract_instance
+        .initialize_counter(42) // Build the ABI call
+        .tx_params(params)
+        .call() // Perform the network call
+        .await?;
 
-    let fn_signature = "real_vec(s<u64>(s<u64>(u64,u64),u64),s<u64>(s<u64>(u64,u64),u64))";
+    assert_eq!(42, response.value);
 
-    let encoded_selector = first_four_bytes_of_sha256_hash(fn_signature);
+    let response = contract_instance
+        .increment_counter(10)
+        .tx_params(params)
+        .call()
+        .await?;
 
-    let encoded_args = ABIEncoder::encode(&[
-        Token::Vector(vec![Token::U64(100), Token::U64(200), Token::U64(300)]),
-        Token::Vector(vec![Token::U64(100), Token::U64(200), Token::U64(300)]),
-    ])
-    .unwrap();
+    assert_eq!(52, response.value);
 
-    let call = ContractCall {
-        contract_id: contract_id.clone(),
-        encoded_selector,
-        encoded_args,
-        call_parameters: CallParameters::default(),
-        compute_custom_input_offset: true,
-        variable_outputs: None,
-        external_contracts: vec![],
-        output_param: None,
-    };
-
-    let calls: Vec<ContractCall> = vec![call];
-    let data_offset = Script::get_data_offset(calls.len());
-    println!("Data offset is: {data_offset}");
-    let tx_parameters: TxParameters = Default::default();
-
-    let (script_data, call_param_offsets) = Script::get_script_data(&calls, data_offset);
-    println!("Call param offsets are: {call_param_offsets:?}");
-
-    let script = Script::get_instructions(&calls, call_param_offsets);
-
-    let spendable_coins = Script::get_spendable_coins(&wallet, &calls).await?;
-
-    let (inputs, outputs) =
-        Script::get_transaction_inputs_outputs(&calls, wallet.address(), spendable_coins);
-
-    let mut tx = Transaction::script(
-        tx_parameters.gas_price,
-        tx_parameters.gas_limit,
-        tx_parameters.byte_price,
-        tx_parameters.maturity,
-        script,
-        script_data,
-        inputs,
-        outputs,
-        vec![],
-    );
-    wallet.sign_transaction(&mut tx).await.unwrap();
-
-    let script = Script::new(tx);
-    let receipts = script.call(wallet.get_provider().unwrap()).await.unwrap();
-    dbg!(receipts);
     Ok(())
 }
 
 #[tokio::test]
-async fn test_vector_rtn() -> Result<(), Error> {
-    let wallet = launch_provider_and_get_wallet().await;
+async fn test_input_message() -> Result<(), Error> {
+    abigen!(
+        MyContract,
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+    );
+
+    let compare_messages =
+        |messages_from_provider: Vec<OtherMessage>, used_messages: Vec<Message>| -> bool {
+            iter::zip(&used_messages, &messages_from_provider).all(|(a, b)| {
+                a.sender == b.sender.0 .0
+                    && a.recipient == b.recipient.0 .0
+                    && a.owner == b.owner.0 .0
+                    && a.nonce == b.nonce.0
+                    && a.amount == b.amount.0
+            })
+        };
+
+    let mut wallet = WalletUnlocked::new_random(None);
+
+    let messages = setup_single_message(
+        &Bech32Address {
+            hrp: "".to_string(),
+            hash: Default::default(),
+        },
+        wallet.address(),
+        DEFAULT_COIN_AMOUNT,
+        0,
+        vec![1, 2],
+    );
+
+    let (provider, _) = setup_test_provider(vec![], messages.clone(), None).await;
+    wallet.set_provider(provider);
 
     let contract_id = Contract::deploy(
-        "tests/test_projects/vectors/out/debug/vectors.bin",
+        "tests/test_projects/contract_test/out/debug/contract_test.bin",
         &wallet,
         TxParameters::default(),
         StorageConfiguration::default(),
     )
     .await?;
 
-    let fn_signature = "return_a_vec()";
+    let contract_instance_connected =
+        MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
 
-    let encoded_selector = first_four_bytes_of_sha256_hash(fn_signature);
+    let messages_from_provider = wallet.get_messages().await?;
+    assert!(compare_messages(messages_from_provider, messages));
 
-    let encoded_args = UnresolvedBytes::new(vec![]);
+    let response = contract_instance_connected
+        .initialize_counter(42) // Build the ABI call
+        .call()
+        .await?;
 
-    let call = ContractCall {
-        contract_id: contract_id.clone(),
-        encoded_selector,
-        encoded_args,
-        call_parameters: CallParameters::default(),
-        compute_custom_input_offset: true,
-        variable_outputs: None,
-        external_contracts: vec![],
-        output_param: None,
-    };
-
-    let calls: Vec<ContractCall> = vec![call];
-
-    let data_offset = Script::get_data_offset(calls.len());
-
-    let (script_data, call_param_offsets) = Script::get_script_data(&calls, data_offset);
-
-    let script = Script::get_instructions(&calls, call_param_offsets);
-
-    let spendable_coins = Script::get_spendable_coins(&wallet, &calls).await?;
-
-    let (inputs, outputs) =
-        Script::get_transaction_inputs_outputs(&calls, wallet.address(), spendable_coins);
-
-    let tx_parameters: TxParameters = Default::default();
-    let mut tx = Transaction::script(
-        tx_parameters.gas_price,
-        tx_parameters.gas_limit,
-        tx_parameters.byte_price,
-        tx_parameters.maturity,
-        script,
-        script_data,
-        inputs,
-        outputs,
-        vec![],
-    );
-    wallet.sign_transaction(&mut tx).await.unwrap();
-
-    let script = Script::new(tx);
-    let receipts = script.call(wallet.get_provider().unwrap()).await.unwrap();
-    let rtn = receipts
-        .iter()
-        .filter_map(|receipt| match receipt {
-            Receipt::ReturnData { data, .. } => Some(data.clone()),
-            _ => None,
-        })
-        .exactly_one()
-        .unwrap();
-    dbg!(&receipts);
-    let length = rtn
-        .chunks(8)
-        .map(|bytes| u64::from_be_bytes(bytes.try_into().unwrap()))
-        .last()
-        .unwrap();
-
-    let vec_logs = receipts
-        .iter()
-        .rev()
-        .filter_map(|receipt| match receipt {
-            Receipt::Log { ref ra, .. } => Some(ra),
-            _ => None,
-        })
-        .rev()
-        .take(length as usize)
-        .collect::<Vec<_>>();
-
-    dbg!(vec_logs);
+    assert_eq!(42, response.value);
 
     Ok(())
 }
+
+#[tokio::test]
+async fn generics_test() -> anyhow::Result<()> {
+    abigen!(
+        MyContract,
+        "packages/fuels/tests/test_projects/generics/out/debug/generics-abi.json"
+    );
+
+    let wallet = launch_provider_and_get_wallet().await;
+
+    let contract_id = Contract::deploy(
+        "tests/test_projects/generics/out/debug/generics.bin",
+        &wallet,
+        TxParameters::default(),
+        StorageConfiguration::default(),
+    )
+    .await?;
+
+    let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
+
+    {
+        // simple struct with a single generic param
+        let arg1 = SimpleGeneric {
+            single_generic_param: 123u64,
+        };
+
+        let result = contract_instance
+            .struct_w_generic(arg1.clone())
+            .call()
+            .await?
+            .value;
+
+        assert_eq!(result, arg1);
+    }
+    {
+        // struct that delegates the generic param internally
+        let arg1 = PassTheGenericOn {
+            one: SimpleGeneric {
+                single_generic_param: "abc".try_into()?,
+            },
+        };
+
+        let result = contract_instance
+            .struct_delegating_generic(arg1.clone())
+            .call()
+            .await?
+            .value;
+
+        assert_eq!(result, arg1);
+    }
+    {
+        // struct that has the generic in an array
+        let arg1 = StructWArrayGeneric { a: [1u32, 2u32] };
+
+        let result = contract_instance
+            .struct_w_generic_in_array(arg1.clone())
+            .call()
+            .await?
+            .value;
+
+        assert_eq!(result, arg1);
+    }
+    {
+        // struct that has the generic in a tuple
+        let arg1 = StructWTupleGeneric { a: (1, 2) };
+
+        let result = contract_instance
+            .struct_w_generic_in_tuple(arg1.clone())
+            .call()
+            .await?
+            .value;
+
+        assert_eq!(result, arg1);
+    }
+    {
+        // struct with generic in variant
+        let arg1 = EnumWGeneric::b(10);
+        let result = contract_instance
+            .enum_w_generic(arg1.clone())
+            .call()
+            .await?
+            .value;
+
+        assert_eq!(result, arg1);
+    }
+    {
+        // complex case
+        let pass_through = PassTheGenericOn {
+            one: SimpleGeneric {
+                single_generic_param: "ab".try_into()?,
+            },
+        };
+        let w_arr_generic = StructWArrayGeneric {
+            a: [pass_through.clone(), pass_through],
+        };
+
+        let arg1 = MegaExample {
+            a: ([Bits256([0; 32]), Bits256([0; 32])], "ab".try_into()?),
+            b: (
+                [EnumWGeneric::b(StructWTupleGeneric {
+                    a: (w_arr_generic.clone(), w_arr_generic),
+                })],
+                10u32,
+            ),
+        };
+
+        let result = contract_instance
+            .complex_test(arg1.clone())
+            .call()
+            .await?
+            .value;
+
+        assert_eq!(result, arg1);
+    }
+
+    Ok(())
+}
+
+// #[tokio::test]
+// async fn test_vector() -> Result<(), Error> {
+//     // the changes I see that need to happen are
+//     // * fix the fn selector -- should be done by Rodrigo in his generics task
+//     // * make encoder return bytes with non-resolved final address
+//     // * add vec token type
+//     // * resolve encoded bytes with the custom_input_offset calculated in script.rs
+//     let wallet = launch_provider_and_get_wallet().await;
+//
+//     let contract_id = Contract::deploy(
+//         "tests/test_projects/vectors/out/debug/vectors.bin",
+//         &wallet,
+//         TxParameters::default(),
+//         StorageConfiguration::default(),
+//     )
+//     .await?;
+//
+//     // let json =
+//     //     fs::read_to_string("tests/test_projects/vectors/out/debug/vectors-flat-abi.json").unwrap();
+//     // let parsed_abi: ProgramABI = serde_json::from_str(&json)?;
+//     // let fun = parsed_abi
+//     //     .functions
+//     //     .iter()
+//     //     .find(|fun| fun.name == "real_vec")
+//     //     .unwrap();
+//
+//     // let types = FlatAbigen::get_types(&parsed_abi);
+//
+//     let fn_signature = "real_vec(s<u64>(s<u64>(u64,u64),u64),s<u64>(s<u64>(u64,u64),u64))";
+//
+//     let encoded_selector = first_four_bytes_of_sha256_hash(fn_signature);
+//
+//     let encoded_args = ABIEncoder::encode(&[
+//         Token::Vector(vec![Token::U64(100), Token::U64(200), Token::U64(300)]),
+//         Token::Vector(vec![Token::U64(100), Token::U64(200), Token::U64(300)]),
+//     ])
+//     .unwrap();
+//
+//     let call = ContractCall {
+//         contract_id: contract_id.clone(),
+//         encoded_selector,
+//         encoded_args,
+//         call_parameters: CallParameters::default(),
+//         compute_custom_input_offset: true,
+//         variable_outputs: None,
+//         external_contracts: vec![],
+//         output_param: ParamType::Unit,
+//     };
+//
+//     let calls: Vec<ContractCall> = vec![call];
+//     let data_offset = Script::get_data_offset(calls.len());
+//     println!("Data offset is: {data_offset}");
+//     let tx_parameters: TxParameters = Default::default();
+//
+//     let (script_data, call_param_offsets) = Script::get_script_data(&calls, data_offset);
+//     println!("Call param offsets are: {call_param_offsets:?}");
+//
+//     let script = Script::get_instructions(&calls, call_param_offsets);
+//
+//     let spendable_coins = Script::get_spendable_coins(&wallet, &calls).await?;
+//
+//     let (inputs, outputs) =
+//         Script::get_transaction_inputs_outputs(&calls, wallet.address(), spendable_coins);
+//
+//     let mut tx = Transaction::script(
+//         tx_parameters.gas_price,
+//         tx_parameters.gas_limit,
+//         tx_parameters.maturity,
+//         script,
+//         script_data,
+//         inputs,
+//         outputs,
+//         vec![],
+//     );
+//     wallet.sign_transaction(&mut tx).await.unwrap();
+//
+//     let script = Script::new(tx);
+//     let receipts = script.call(wallet.get_provider().unwrap()).await.unwrap();
+//     dbg!(receipts);
+//     Ok(())
+// }
+
+// #[tokio::test]
+// async fn test_vector_rtn() -> Result<(), Error> {
+//     let wallet = launch_provider_and_get_wallet().await;
+//
+//     let contract_id = Contract::deploy(
+//         "tests/test_projects/vectors/out/debug/vectors.bin",
+//         &wallet,
+//         TxParameters::default(),
+//         StorageConfiguration::default(),
+//     )
+//     .await?;
+//
+//     let fn_signature = "return_a_vec()";
+//
+//     let encoded_selector = first_four_bytes_of_sha256_hash(fn_signature);
+//
+//     let encoded_args = UnresolvedBytes::new(vec![]);
+//
+//     let call = ContractCall {
+//         contract_id: contract_id.clone(),
+//         encoded_selector,
+//         encoded_args,
+//         call_parameters: CallParameters::default(),
+//         compute_custom_input_offset: true,
+//         variable_outputs: None,
+//         external_contracts: vec![],
+//         output_param: ParamType::Unit,
+//     };
+//
+//     let calls: Vec<ContractCall> = vec![call];
+//
+//     let data_offset = Script::get_data_offset(calls.len());
+//
+//     let (script_data, call_param_offsets) = Script::get_script_data(&calls, data_offset);
+//
+//     let script = Script::get_instructions(&calls, call_param_offsets);
+//
+//     let spendable_coins = Script::get_spendable_coins(&wallet, &calls).await?;
+//
+//     let (inputs, outputs) =
+//         Script::get_transaction_inputs_outputs(&calls, wallet.address(), spendable_coins);
+//
+//     let tx_parameters: TxParameters = Default::default();
+//     let mut tx = Transaction::script(
+//         tx_parameters.gas_price,
+//         tx_parameters.gas_limit,
+//         tx_parameters.byte_price,
+//         tx_parameters.maturity,
+//         script,
+//         script_data,
+//         inputs,
+//         outputs,
+//         vec![],
+//     );
+//     wallet.sign_transaction(&mut tx).await.unwrap();
+//
+//     let script = Script::new(tx);
+//     let receipts = script.call(wallet.get_provider().unwrap()).await.unwrap();
+//     let rtn = receipts
+//         .iter()
+//         .filter_map(|receipt| match receipt {
+//             Receipt::ReturnData { data, .. } => Some(data.clone()),
+//             _ => None,
+//         })
+//         .exactly_one()
+//         .unwrap();
+//     dbg!(&receipts);
+//     let length = rtn
+//         .chunks(8)
+//         .map(|bytes| u64::from_be_bytes(bytes.try_into().unwrap()))
+//         .last()
+//         .unwrap();
+//
+//     let vec_logs = receipts
+//         .iter()
+//         .rev()
+//         .filter_map(|receipt| match receipt {
+//             Receipt::Log { ref ra, .. } => Some(ra),
+//             _ => None,
+//         })
+//         .rev()
+//         .take(length as usize)
+//         .collect::<Vec<_>>();
+//
+//     dbg!(vec_logs);
+//
+//     Ok(())
+// }

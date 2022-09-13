@@ -4,7 +4,6 @@ mod tests {
 
     #[tokio::test]
     async fn liquidity() -> Result<(), Error> {
-        // ANCHOR: liquidity
         use fuels::prelude::*;
         use fuels::test_helpers::{AssetConfig, WalletsConfig};
 
@@ -74,8 +73,6 @@ mod tests {
         let base_balance = wallet.get_asset_balance(&base_asset_id).await?;
         assert_eq!(base_balance, deposit_amount);
         // ANCHOR_END: liquidity_withdraw
-
-        // ANCHOR_END: deposit_and_withdraw
         Ok(())
     }
 
@@ -94,7 +91,7 @@ mod tests {
         // ANCHOR_END: custom_chain_consensus
 
         // ANCHOR: custom_chain_coins
-        let wallet = LocalWallet::new_random(None);
+        let wallet = WalletUnlocked::new_random(None);
         let coins = setup_single_asset_coins(
             wallet.address(),
             Default::default(),
@@ -105,8 +102,13 @@ mod tests {
 
         // ANCHOR: custom_chain_client
         let node_config = Config::local_node();
-        let (client, _) =
-            setup_test_client(coins, Some(node_config), Some(consensus_parameters_config)).await;
+        let (client, _) = setup_test_client(
+            coins,
+            vec![],
+            Some(node_config),
+            Some(consensus_parameters_config),
+        )
+        .await;
         let _provider = Provider::new(client);
         // ANCHOR_END: custom_chain_client
         Ok(())
@@ -119,16 +121,16 @@ mod tests {
         use std::str::FromStr;
 
         // ANCHOR: transfer_multiple_setup
-        let mut wallet_1 = LocalWallet::new_random(None);
-        let mut wallet_2 = LocalWallet::new_random(None);
+        let mut wallet_1 = WalletUnlocked::new_random(None);
+        let mut wallet_2 = WalletUnlocked::new_random(None);
 
         const NUM_ASSETS: u64 = 5;
         const AMOUNT: u64 = 100_000;
-        const NUM_COINS: u64 = 10;
+        const NUM_COINS: u64 = 1;
         let (coins, _) =
             setup_multiple_assets_coins(wallet_1.address(), NUM_ASSETS, NUM_COINS, AMOUNT);
 
-        let (provider, _) = setup_test_provider(coins, None).await;
+        let (provider, _) = setup_test_provider(coins, vec![], None).await;
 
         wallet_1.set_provider(provider.clone());
         wallet_2.set_provider(provider.clone());
@@ -142,6 +144,10 @@ mod tests {
         for (id_string, amount) in balances {
             let id = AssetId::from_str(&id_string).unwrap();
 
+            // leave the base asset to cover transaction fees
+            if id == BASE_ASSET_ID {
+                continue;
+            }
             let input = wallet_1.get_asset_inputs_for_amount(id, amount, 0).await?;
             inputs.extend(input);
 
@@ -151,13 +157,17 @@ mod tests {
         // ANCHOR_END: transfer_multiple_inout
 
         // ANCHOR: transfer_multiple_transaction
-        let mut tx = provider.build_transfer_tx(&inputs, &outputs, TxParameters::default());
+        let mut tx = Wallet::build_transfer_tx(&inputs, &outputs, TxParameters::default());
         wallet_1.sign_transaction(&mut tx).await?;
 
         let _receipts = provider.send_transaction(&tx).await?;
 
-        let balances = wallet_1.get_balances().await?;
-        assert!(balances.is_empty());
+        let balances = wallet_2.get_balances().await?;
+
+        assert_eq!(balances.len(), (NUM_ASSETS - 1) as usize);
+        for (_, balance) in balances {
+            assert_eq!(balance, AMOUNT);
+        }
         // ANCHOR_END: transfer_multiple_transaction
 
         // ANCHOR_END: transfer_multiple

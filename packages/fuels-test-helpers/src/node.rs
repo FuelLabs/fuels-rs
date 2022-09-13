@@ -8,8 +8,8 @@ use tokio::sync::oneshot;
 use portpicker::is_free;
 use portpicker::pick_unused_port;
 
-use fuel_core_interfaces::model::BlockHeight;
 use fuel_core_interfaces::model::Coin;
+use fuel_core_interfaces::model::{BlockHeight, Message};
 use fuel_gql_client::client::FuelClient;
 use fuel_gql_client::fuel_tx::{ConsensusParameters, UtxoId};
 use fuel_gql_client::fuel_vm::consts::WORD_SIZE;
@@ -30,6 +30,7 @@ pub struct Config {
     pub utxo_validation: bool,
     pub predicates: bool,
     pub manual_blocks_enabled: bool,
+    pub vm_backtrace: bool,
     pub silent: bool,
 }
 
@@ -40,7 +41,46 @@ impl Config {
             utxo_validation: false,
             predicates: false,
             manual_blocks_enabled: false,
+            vm_backtrace: false,
             silent: true,
+        }
+    }
+}
+
+#[skip_serializing_none]
+#[serde_as]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, Eq, PartialEq)]
+pub struct MessageConfig {
+    #[serde_as(as = "HexType")]
+    pub sender: Address,
+    #[serde_as(as = "HexType")]
+    pub recipient: Address,
+    #[serde_as(as = "HexType")]
+    pub owner: Address,
+    #[serde_as(as = "HexNumber")]
+    pub nonce: Word,
+    #[serde_as(as = "HexNumber")]
+    pub amount: Word,
+    #[serde_as(as = "HexType")]
+    pub data: Vec<u8>,
+    /// The block height from the parent da layer that originated this message
+    #[serde_as(as = "HexNumber")]
+    pub da_height: DaBlockHeight,
+}
+
+pub type DaBlockHeight = u64;
+
+impl From<MessageConfig> for Message {
+    fn from(msg: MessageConfig) -> Self {
+        Message {
+            sender: msg.sender,
+            recipient: msg.recipient,
+            owner: msg.owner,
+            nonce: msg.nonce,
+            amount: msg.amount,
+            data: msg.data,
+            da_height: msg.da_height,
+            fuel_block_spend: None,
         }
     }
 }
@@ -187,8 +227,30 @@ impl<'de> DeserializeAs<'de, BlockHeight> for HexNumber {
 
 pub fn get_node_config_json(
     coins: Vec<(UtxoId, Coin)>,
+    messages: Vec<Message>,
     consensus_parameters_config: Option<ConsensusParameters>,
 ) -> Value {
+    let coins = get_coins_value(coins);
+    let messages = get_messages_value(messages);
+    let consensus_parameters =
+        serde_json::to_value(consensus_parameters_config.unwrap_or_default())
+            .expect("Failed to build transaction_parameters JSON");
+
+    json!({
+      "chain_name": "local_testnet",
+      "block_production": "Instant",
+      "parent_network": {
+        "type": "LocalTest"
+      },
+      "initial_state": {
+        "coins": coins,
+        "messages": messages
+      },
+      "transaction_parameters": consensus_parameters
+    })
+}
+
+fn get_coins_value(coins: Vec<(UtxoId, Coin)>) -> Value {
     let coin_configs: Vec<Value> = coins
         .into_iter()
         .map(|(utxo_id, coin)| {
@@ -210,23 +272,32 @@ pub fn get_node_config_json(
     let coins: Value =
         serde_json::from_str(result.as_str()).expect("Failed to build config_with_coins JSON");
 
-    let consensus_parameters =
-        serde_json::to_value(consensus_parameters_config.unwrap_or_default())
-            .expect("Failed to build transaction_parameters JSON");
+    coins
+}
 
-    let config = json!({
-      "chain_name": "local_testnet",
-      "block_production": "Instant",
-      "parent_network": {
-        "type": "LocalTest"
-      },
-      "initial_state": {
-        "coins": coins
-      },
-      "transaction_parameters": consensus_parameters
-    });
+fn get_messages_value(messages: Vec<Message>) -> Value {
+    let message_configs: Vec<Value> = messages
+        .into_iter()
+        .map(|message| {
+            serde_json::to_value(&MessageConfig {
+                sender: message.sender,
+                recipient: message.recipient,
+                owner: message.owner,
+                nonce: message.nonce,
+                amount: message.amount,
+                data: message.data,
+                da_height: message.da_height,
+            })
+            .unwrap()
+        })
+        .collect();
 
-    config
+    let result = serde_json::to_string(&message_configs).expect("Failed to stringify coins vector");
+
+    let messages: Value =
+        serde_json::from_str(result.as_str()).expect("Failed to build config_with_coins JSON");
+
+    messages
 }
 
 fn write_temp_config_file(config: Value) -> NamedTempFile {
@@ -243,14 +314,15 @@ fn write_temp_config_file(config: Value) -> NamedTempFile {
 
 pub async fn new_fuel_node(
     coins: Vec<(UtxoId, Coin)>,
-    consensus_parameters_config: Option<ConsensusParameters>,
+    messages: Vec<Message>,
     config: Config,
+    consensus_parameters_config: Option<ConsensusParameters>,
 ) {
     // Create a new one-shot channel for sending single values across asynchronous tasks.
     let (tx, rx) = oneshot::channel();
 
     tokio::spawn(async move {
-        let config_json = get_node_config_json(coins, consensus_parameters_config);
+        let config_json = get_node_config_json(coins, messages, consensus_parameters_config);
         let temp_config_file = write_temp_config_file(config_json);
 
         let port = &config.addr.port().to_string();
@@ -278,7 +350,27 @@ pub async fn new_fuel_node(
             args.push("--manual_blocks_enabled");
         }
 
-        let mut command = Command::new("fuel-core");
+        if config.vm_backtrace {
+            args.push("--vm-backtrace");
+        }
+
+        // Warn if there is more than one binary in PATH.
+        let binary_name = "fuel-core";
+        let paths = which::which_all(binary_name)
+            .unwrap_or_else(|_| panic!("failed to list '{}' binaries", binary_name))
+            .collect::<Vec<_>>();
+        let path = paths
+            .first()
+            .unwrap_or_else(|| panic!("no '{}' in PATH", binary_name));
+        if paths.len() > 1 {
+            tracing::warn!(
+                "found more than one '{}' binary in PATH, using '{}'",
+                binary_name,
+                path.display()
+            );
+        }
+
+        let mut command = Command::new(path);
         command.stdin(Stdio::null());
         if config.silent {
             command.stdout(Stdio::null()).stderr(Stdio::null());
@@ -339,11 +431,12 @@ impl FuelService {
 
         new_fuel_node(
             vec![],
-            None,
+            vec![],
             Config {
                 addr: bound_address,
                 ..config
             },
+            None,
         )
         .await;
 

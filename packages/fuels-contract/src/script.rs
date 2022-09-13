@@ -1,6 +1,6 @@
 use anyhow::Result;
 use fuel_gql_client::fuel_tx::{ConsensusParameters, Receipt, Transaction};
-use fuel_gql_client::fuel_tx::{Input, Output, UtxoId};
+use fuel_gql_client::fuel_tx::{Input, Output, TxPointer, UtxoId};
 use fuel_gql_client::fuel_types::{
     bytes::padded_len_usize, AssetId, Bytes32, ContractId, Immediate18, Word,
 };
@@ -8,10 +8,9 @@ use fuel_gql_client::fuel_vm::{consts::REG_ONE, prelude::Opcode};
 use itertools::{chain, Itertools};
 
 use fuel_gql_client::client::schema::coin::Coin;
-use fuels_core::constants::DEFAULT_SPENDABLE_COIN_AMOUNT;
 use fuels_core::parameters::TxParameters;
 use fuels_signers::provider::Provider;
-use fuels_signers::{LocalWallet, Signer};
+use fuels_signers::{Signer, WalletUnlocked};
 use fuels_types::bech32::Bech32Address;
 use fuels_types::{constants::WORD_SIZE, errors::Error};
 use futures::{stream, StreamExt};
@@ -53,7 +52,7 @@ impl Script {
     pub async fn from_contract_calls(
         calls: &[ContractCall],
         tx_parameters: &TxParameters,
-        wallet: &LocalWallet,
+        wallet: &WalletUnlocked,
     ) -> Result<Self, Error> {
         let data_offset = Self::get_data_offset(calls.len());
 
@@ -61,7 +60,8 @@ impl Script {
 
         let script = Self::get_instructions(calls, call_param_offsets);
 
-        let spendable_coins = Self::get_spendable_coins(wallet, calls).await?;
+        let required_asset_amounts = Self::calculate_required_asset_amounts(calls);
+        let spendable_coins = Self::get_spendable_coins(wallet, &required_asset_amounts).await?;
 
         let (inputs, outputs) =
             Self::get_transaction_inputs_outputs(calls, wallet.address(), spendable_coins);
@@ -69,7 +69,6 @@ impl Script {
         let mut tx = Transaction::script(
             tx_parameters.gas_price,
             tx_parameters.gas_limit,
-            tx_parameters.byte_price,
             tx_parameters.maturity,
             script,
             script_data,
@@ -77,6 +76,14 @@ impl Script {
             outputs,
             vec![],
         );
+
+        let base_asset_amount = required_asset_amounts
+            .iter()
+            .find(|(asset_id, _)| *asset_id == AssetId::default());
+        match base_asset_amount {
+            Some((_, base_amount)) => wallet.add_fee_coins(&mut tx, *base_amount, 0).await?,
+            None => wallet.add_fee_coins(&mut tx, 0, 0).await?,
+        }
         wallet.sign_transaction(&mut tx).await.unwrap();
 
         Ok(Script::new(tx))
@@ -85,11 +92,11 @@ impl Script {
     /// Calculates how much of each asset id the given calls require and
     /// proceeds to request spendable coins from `wallet` to cover that cost.
     pub async fn get_spendable_coins(
-        wallet: &LocalWallet,
-        calls: &[ContractCall],
+        wallet: &WalletUnlocked,
+        required_asset_amounts: &[(AssetId, u64)],
     ) -> Result<Vec<Coin>, Error> {
-        stream::iter(Self::calculate_required_asset_amounts(calls))
-            .map(|(asset_id, amount)| wallet.get_spendable_coins(asset_id, amount))
+        stream::iter(required_asset_amounts)
+            .map(|(asset_id, amount)| wallet.get_spendable_coins(*asset_id, *amount))
             .buffer_unordered(10)
             .collect::<Vec<_>>()
             .await
@@ -106,14 +113,9 @@ impl Script {
     fn extract_required_amounts_per_asset_id(
         calls: &[ContractCall],
     ) -> impl Iterator<Item = (AssetId, u64)> + '_ {
-        // TODO what to do about the default asset?
         calls
             .iter()
             .map(|call| (call.call_parameters.asset_id, call.call_parameters.amount))
-            .chain(iter::once((
-                AssetId::default(),
-                DEFAULT_SPENDABLE_COIN_AMOUNT,
-            )))
     }
 
     fn sum_up_amounts_for_each_asset_id(
@@ -306,6 +308,7 @@ impl Script {
                     coin.owner.into(),
                     coin.amount.0,
                     coin.asset_id.into(),
+                    TxPointer::default(),
                     0,
                     0,
                 )
@@ -322,6 +325,7 @@ impl Script {
                     UtxoId::new(Bytes32::zeroed(), idx as u8),
                     Bytes32::zeroed(),
                     Bytes32::zeroed(),
+                    TxPointer::default(),
                     contract_id,
                 )
             })
@@ -390,6 +394,7 @@ mod test {
     use fuels_core::parameters::CallParameters;
     use fuels_core::Token;
     use fuels_types::bech32::Bech32ContractId;
+    use fuels_types::param_types::ParamType;
     use rand::Rng;
     use std::slice;
 
@@ -414,7 +419,6 @@ mod test {
         let selectors = vec![[7u8; 8], [8u8; 8], [9u8; 8]];
 
         // Call 2 has a multiple inputs, compute_custom_input_offset will be true
-        // -        let args = vec![[10u8; 8].to_vec(), [11u8; 16].to_vec(), [12u8; 8].to_vec()];
 
         let args = vec![Token::U8(1), Token::U16(2), Token::U8(3)]
             .into_iter()
@@ -434,7 +438,7 @@ mod test {
                 compute_custom_input_offset: i == 1,
                 variable_outputs: None,
                 external_contracts: vec![],
-                output_param: None,
+                output_param: ParamType::Unit,
             })
             .collect();
 
@@ -509,6 +513,7 @@ mod test {
                 UtxoId::new(Bytes32::zeroed(), 0),
                 Bytes32::zeroed(),
                 Bytes32::zeroed(),
+                TxPointer::default(),
                 call.contract_id.into(),
             )]
         );
@@ -534,6 +539,7 @@ mod test {
                 UtxoId::new(Bytes32::zeroed(), 0),
                 Bytes32::zeroed(),
                 Bytes32::zeroed(),
+                TxPointer::default(),
                 calls[0].contract_id.clone().into(),
             )]
         );
@@ -579,11 +585,13 @@ mod test {
                     utxo_id,
                     balance_root,
                     state_root,
+                    tx_pointer,
                     contract_id,
                 } => {
                     assert_eq!(utxo_id, UtxoId::new(Bytes32::zeroed(), index as u8));
                     assert_eq!(balance_root, Bytes32::zeroed());
                     assert_eq!(state_root, Bytes32::zeroed());
+                    assert_eq!(tx_pointer, TxPointer::default());
                     assert!(expected_contract_ids.contains(&contract_id));
                     expected_contract_ids.remove(&contract_id);
                 }
@@ -695,6 +703,7 @@ mod test {
                     coin.owner.into(),
                     coin.amount.0,
                     coin.asset_id.into(),
+                    TxPointer::default(),
                     0,
                     0,
                 )
@@ -734,15 +743,6 @@ mod test {
     }
 
     #[test]
-    fn will_require_base_asset_even_if_not_explicitly_asked_for() {
-        let asset_id_amounts = Script::calculate_required_asset_amounts(&[]);
-        assert_eq!(
-            asset_id_amounts,
-            [(BASE_ASSET_ID, DEFAULT_SPENDABLE_COIN_AMOUNT)]
-        )
-    }
-
-    #[test]
     fn will_collate_same_asset_ids() {
         let amounts = [100, 200];
 
@@ -757,11 +757,7 @@ mod test {
 
         let asset_id_amounts = Script::calculate_required_asset_amounts(&calls);
 
-        let expected_asset_id_amounts = [
-            (BASE_ASSET_ID, DEFAULT_SPENDABLE_COIN_AMOUNT),
-            (asset_id, amounts.iter().sum()),
-        ]
-        .into();
+        let expected_asset_id_amounts = [(asset_id, amounts.iter().sum())].into();
 
         assert_eq!(
             asset_id_amounts.into_iter().collect::<HashSet<_>>(),
@@ -779,7 +775,7 @@ mod test {
                 compute_custom_input_offset: false,
                 variable_outputs: None,
                 external_contracts: Default::default(),
-                output_param: None,
+                output_param: ParamType::Unit,
             }
         }
     }

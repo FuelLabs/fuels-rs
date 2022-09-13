@@ -38,7 +38,6 @@ mod tests {
         // Optional: Configure deployment parameters or use `TxParameters::default()`
         let gas_price = 0;
         let gas_limit = 1_000_000;
-        let byte_price = 0;
         let maturity = 0;
 
         // This will deploy your contract binary onto the chain so that its ID can
@@ -47,12 +46,7 @@ mod tests {
             // This path is relative to the current crate (examples/contracts)
             "../../packages/fuels/tests/test_projects/contract_test/out/debug/contract_test.bin",
             &wallet,
-            TxParameters::new(
-                Some(gas_price),
-                Some(gas_limit),
-                Some(byte_price),
-                Some(maturity),
-            ),
+            TxParameters::new(Some(gas_price), Some(gas_limit), Some(maturity)),
             StorageConfiguration::default(),
         )
         .await?;
@@ -108,7 +102,7 @@ mod tests {
             .await?;
         // ANCHOR_END: contract_call_cost_estimation
 
-        assert_eq!(transaction_cost.gas_used, 631);
+        assert_eq!(transaction_cost.gas_used, 592);
 
         Ok(())
     }
@@ -183,7 +177,7 @@ mod tests {
 
         let response = contract_instance_1
             .initialize_counter(42) // Build the ABI call
-            .tx_params(TxParameters::new(None, Some(1_000_000), None, None))
+            .tx_params(TxParameters::new(None, Some(1_000_000), None))
             .call() // Perform the network call
             .await?;
 
@@ -203,7 +197,7 @@ mod tests {
 
         let response = contract_instance_2
             .initialize_counter(42) // Build the ABI call
-            .tx_params(TxParameters::new(None, Some(1_000_000), None, None))
+            .tx_params(TxParameters::new(None, Some(1_000_000), None))
             .call() // Perform the network call
             .await?;
 
@@ -234,9 +228,10 @@ mod tests {
         let contract_instance =
             MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
         // ANCHOR_END: instantiate_contract
+
         // ANCHOR: tx_parameters
-        // In order: gas_price, gas_limit, byte_price, and maturity
-        let my_tx_params = TxParameters::new(None, Some(1_000_000), None, None);
+        // In order: gas_price, gas_limit, and maturity
+        let my_tx_params = TxParameters::new(None, Some(1_000_000), None);
 
         let response = contract_instance
             .initialize_counter(42) // Our contract method.
@@ -254,17 +249,14 @@ mod tests {
             .await?;
 
         // ANCHOR_END: tx_parameters_default
-        // ANCHOR: tx_parameters
-        // In order: gas_price, gas_limit, byte_price, and maturity
-        let my_tx_params = TxParameters::new(None, Some(1_000_000), None, None);
+        // In order: gas_price, gas_limit, and maturity
+        let my_tx_params = TxParameters::new(None, Some(1_000_000), None);
 
         let response = contract_instance
             .initialize_counter(42) // Our contract method.
             .tx_params(my_tx_params) // Chain the tx params setting method.
             .call() // Perform the contract call.
             .await?; // This is an async call, `.await` for it.
-
-        // ANCHOR_END: tx_parameters
 
         // ANCHOR: call_parameters
 
@@ -298,8 +290,7 @@ mod tests {
         use fuels::prelude::*;
         abigen!(
             MyContract,
-            "packages/fuels/tests/test_projects/token_ops/out/debug/token_ops-abi\
-            .json"
+            "packages/fuels/tests/test_projects/token_ops/out/debug/token_ops-abi.json"
         );
 
         let wallet = launch_provider_and_get_wallet().await;
@@ -423,7 +414,7 @@ mod tests {
         // Set the transaction `gas_limit` to 1000 and `gas_forwarded` to 200 to specify that the
         // contract call transaction may consume up to 1000 gas, while the actual call may only use 200
         // gas
-        let tx_params = TxParameters::new(None, Some(1000), None, None);
+        let tx_params = TxParameters::new(None, Some(1000), None);
         let call_params = CallParameters::new(None, None, Some(200));
 
         let response = contract_instance
@@ -461,7 +452,7 @@ mod tests {
             MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
 
         let call_handler_1 = contract_instance.initialize_counter(42);
-        let call_handler_2 = contract_instance.get_array([42; 2].to_vec());
+        let call_handler_2 = contract_instance.get_array([42; 2]);
         // ANCHOR_END: multi_call_prepare
 
         // ANCHOR: multi_call_build
@@ -473,11 +464,11 @@ mod tests {
         // ANCHOR_END: multi_call_build
 
         // ANCHOR: multi_call_values
-        let (counter, array): (u64, Vec<u64>) = multi_call_handler.call().await?.value;
+        let (counter, array): (u64, [u64; 2]) = multi_call_handler.call().await?.value;
         // ANCHOR_END: multi_call_values
 
         // ANCHOR: multi_call_response
-        let response = multi_call_handler.call::<(u64, Vec<u64>)>().await?;
+        let response = multi_call_handler.call::<(u64, [u64; 2])>().await?;
         // ANCHOR_END: multi_call_response
 
         assert_eq!(counter, 42);
@@ -513,7 +504,7 @@ mod tests {
         let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
 
         let call_handler_1 = contract_instance.initialize_counter(42);
-        let call_handler_2 = contract_instance.get_array([42; 2].to_vec());
+        let call_handler_2 = contract_instance.get_array([42; 2]);
 
         multi_call_handler
             .add_call(call_handler_1)
@@ -525,7 +516,7 @@ mod tests {
             .await?;
         // ANCHOR_END: multi_call_cost_estimation
 
-        assert_eq!(transaction_cost.gas_used, 1051);
+        assert_eq!(transaction_cost.gas_used, 1012);
 
         Ok(())
     }

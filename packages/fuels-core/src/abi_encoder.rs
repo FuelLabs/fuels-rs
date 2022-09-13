@@ -1,6 +1,5 @@
 use crate::{
-    pad_string, pad_u16, pad_u32, pad_u8, Bits256, EnumSelector, EnumVariants, ParamType,
-    StringToken, Token,
+    pad_string, pad_u16, pad_u32, pad_u8, EnumSelector, EnumVariants, ParamType, StringToken, Token,
 };
 use fuels_types::{constants::WORD_SIZE, errors::CodecError};
 use itertools::Itertools;
@@ -121,7 +120,7 @@ impl ABIEncoder {
         Ok(Data::Inline(pad_string(arg_string.get_encodable_str()?)))
     }
 
-    fn encode_b256(arg_bits256: &Bits256) -> Data {
+    fn encode_b256(arg_bits256: &[u8; 32]) -> Data {
         Data::Inline(arg_bits256.to_vec())
     }
 
@@ -1021,7 +1020,7 @@ mod tests {
         // assert
         let discriminant = vec![0, 0, 0, 0, 0, 0, 0, 1];
 
-        const PADDING: usize = std::mem::size_of::<Bits256>() - VEC_METADATA_SIZE;
+        const PADDING: usize = std::mem::size_of::<[u8; 32]>() - VEC_METADATA_SIZE;
 
         let vec1_ptr = ((DISCRIMINANT_SIZE + PADDING + VEC_METADATA_SIZE + offset) as u64)
             .to_be_bytes()
@@ -1059,7 +1058,7 @@ mod tests {
         let result = ABIEncoder::encode(&[vec_token])?.resolve(offset as u64);
 
         // assert
-        const PADDING: usize = std::mem::size_of::<Bits256>() - WORD_SIZE;
+        const PADDING: usize = std::mem::size_of::<[u8; 32]>() - WORD_SIZE;
 
         let vec1_ptr = ((VEC_METADATA_SIZE + offset) as u64).to_be_bytes().to_vec();
         let vec1_cap = [0, 0, 0, 0, 0, 0, 0, 1];

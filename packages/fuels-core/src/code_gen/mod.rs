@@ -4,5 +4,6 @@ pub mod abigen;
 pub mod bindings;
 pub mod custom_types_gen;
 pub mod docs_gen;
-pub mod flat_abigen; // Temporary while we support both JSON ABI formats.
+pub mod function_selector;
 pub mod functions_gen;
+mod resolved_type;

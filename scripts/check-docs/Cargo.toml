@@ -1,0 +1,10 @@
+[package]
+name = "check-docs"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+anyhow = "1.0.62"
+itertools = "0.10.3"
+regex = "1.6.0"

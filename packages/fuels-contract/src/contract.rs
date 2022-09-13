@@ -16,13 +16,12 @@ use fuels_core::abi_encoder::{ABIEncoder, UnresolvedBytes};
 use fuels_core::parameters::StorageConfiguration;
 use fuels_core::tx::{Bytes32, ContractId};
 use fuels_core::{
-    constants::{BASE_ASSET_ID, DEFAULT_SPENDABLE_COIN_AMOUNT},
     parameters::{CallParameters, TxParameters},
-    Selector, Token, Tokenizable,
+    Parameterize, Selector, Token, Tokenizable,
 };
 use fuels_signers::{
     provider::{Provider, TransactionCost},
-    LocalWallet, Signer,
+    Signer, WalletUnlocked,
 };
 use fuels_types::bech32::Bech32ContractId;
 use fuels_types::{
@@ -45,7 +44,7 @@ pub struct CompiledContract {
 /// It allows doing calls without passing a wallet/signer each time.
 pub struct Contract {
     pub compiled_contract: CompiledContract,
-    pub wallet: LocalWallet,
+    pub wallet: WalletUnlocked,
 }
 
 /// CallResponse is a struct that is returned by a call to the contract. Its value field
@@ -92,7 +91,7 @@ impl<D> CallResponse<D> {
 }
 
 impl Contract {
-    pub fn new(compiled_contract: CompiledContract, wallet: LocalWallet) -> Self {
+    pub fn new(compiled_contract: CompiledContract, wallet: WalletUnlocked) -> Self {
         Self {
             compiled_contract,
             wallet,
@@ -125,12 +124,11 @@ impl Contract {
     /// }
     /// For more details see `code_gen/functions_gen.rs`.
     /// Note that this needs a wallet because the contract instance needs a wallet for the calls
-    pub fn method_hash<D: Tokenizable + Debug>(
+    pub fn method_hash<D: Tokenizable + Parameterize + Debug>(
         provider: &Provider,
         contract_id: Bech32ContractId,
-        wallet: &LocalWallet,
+        wallet: &WalletUnlocked,
         signature: Selector,
-        output_param: Option<ParamType>,
         args: &[Token],
     ) -> Result<ContractCallHandler<D>, Error> {
         let encoded_selector = signature;
@@ -149,7 +147,7 @@ impl Contract {
             compute_custom_input_offset,
             variable_outputs: None,
             external_contracts: vec![],
-            output_param,
+            output_param: D::param_type(),
         };
 
         Ok(ContractCallHandler {
@@ -184,7 +182,7 @@ impl Contract {
     /// Loads a compiled contract and deploys it to a running node
     pub async fn deploy(
         binary_filepath: &str,
-        wallet: &LocalWallet,
+        wallet: &WalletUnlocked,
         params: TxParameters,
         storage_configuration: StorageConfiguration,
     ) -> Result<Bech32ContractId, Error> {
@@ -199,7 +197,7 @@ impl Contract {
     /// Loads a compiled contract with salt and deploys it to a running node
     pub async fn deploy_with_parameters(
         binary_filepath: &str,
-        wallet: &LocalWallet,
+        wallet: &WalletUnlocked,
         params: TxParameters,
         storage_configuration: StorageConfiguration,
         salt: Salt,
@@ -233,17 +231,21 @@ impl Contract {
     /// wallet will also receive the change.
     pub async fn deploy_loaded(
         compiled_contract: &CompiledContract,
-        wallet: &LocalWallet,
+        wallet: &WalletUnlocked,
         params: TxParameters,
     ) -> Result<Bech32ContractId, Error> {
         let (mut tx, contract_id) =
-            Self::contract_deployment_transaction(compiled_contract, wallet, params).await?;
+            Self::contract_deployment_transaction(compiled_contract, params).await?;
+
+        // The first witness is the bytecode we're deploying.
+        // The signature will be appended at position 1 of
+        // the witness list
+        wallet.add_fee_coins(&mut tx, 0, 1).await?;
+        wallet.sign_transaction(&mut tx).await?;
 
         let provider = wallet.get_provider()?;
-
         let chain_info = provider.chain_info().await?;
 
-        wallet.sign_transaction(&mut tx).await?;
         tx.validate_without_signature(
             chain_info.latest_block.height.0,
             &chain_info.consensus_parameters.into(),
@@ -312,48 +314,24 @@ impl Contract {
     /// Crafts a transaction used to deploy a contract
     pub async fn contract_deployment_transaction(
         compiled_contract: &CompiledContract,
-        wallet: &LocalWallet,
         params: TxParameters,
     ) -> Result<(Transaction, Bech32ContractId), Error> {
         let bytecode_witness_index = 0;
         let storage_slots: Vec<StorageSlot> = compiled_contract.storage_slots.clone();
         let witnesses = vec![compiled_contract.raw.clone().into()];
 
-        let static_contracts = vec![];
-
         let (contract_id, state_root) = Self::compute_contract_id_and_state_root(compiled_contract);
 
-        let outputs: Vec<Output> = vec![
-            Output::contract_created(contract_id, state_root),
-            // Note that the change will be computed by the node.
-            // Here we only have to tell the node who will own the change and its asset ID.
-            // For now we use the BASE_ASSET_ID constant
-            Output::change(wallet.address().into(), 0, BASE_ASSET_ID),
-        ];
-
-        // The first witness is the bytecode we're deploying.
-        // So, the signature will be appended at position 1 of
-        // the witness list.
-        let coin_witness_index = 1;
-
-        let inputs = wallet
-            .get_asset_inputs_for_amount(
-                AssetId::default(),
-                DEFAULT_SPENDABLE_COIN_AMOUNT,
-                coin_witness_index,
-            )
-            .await?;
+        let outputs = vec![Output::contract_created(contract_id, state_root)];
 
         let tx = Transaction::create(
             params.gas_price,
             params.gas_limit,
-            params.byte_price,
             params.maturity,
             bytecode_witness_index,
             compiled_contract.salt,
-            static_contracts,
             storage_slots,
-            inputs,
+            vec![],
             outputs,
             witnesses,
         );
@@ -390,7 +368,7 @@ pub struct ContractCall {
     pub compute_custom_input_offset: bool,
     pub variable_outputs: Option<Vec<Output>>,
     pub external_contracts: Vec<Bech32ContractId>,
-    pub output_param: Option<ParamType>,
+    pub output_param: ParamType,
 }
 
 impl ContractCall {
@@ -437,7 +415,7 @@ impl ContractCall {
 pub struct ContractCallHandler<D> {
     pub contract_call: ContractCall,
     pub tx_parameters: TxParameters,
-    pub wallet: LocalWallet,
+    pub wallet: WalletUnlocked,
     pub provider: Provider,
     pub datatype: PhantomData<D>,
 }
@@ -458,7 +436,7 @@ where
 
     /// Sets the transaction parameters for a given transaction.
     /// Note that this is a builder method, i.e. use it as a chain:
-    /// let params = TxParameters { gas_price: 100, gas_limit: 1000000, byte_price: 100 };
+    /// let params = TxParameters { gas_price: 100, gas_limit: 1000000 };
     /// `my_contract_instance.my_method(...).tx_params(params).call()`.
     pub fn tx_params(mut self, params: TxParameters) -> Self {
         self.tx_parameters = params;
@@ -553,13 +531,9 @@ where
 
     /// Create a CallResponse from call receipts
     pub fn get_response(&self, mut receipts: Vec<Receipt>) -> Result<CallResponse<D>, Error> {
-        match self.contract_call.output_param.as_ref() {
-            None => Ok(CallResponse::new(D::from_token(Token::Unit)?, receipts)),
-            Some(param_type) => {
-                let token = ContractCall::get_decoded_output(param_type, &mut receipts)?;
-                Ok(CallResponse::new(D::from_token(token)?, receipts))
-            }
-        }
+        let token =
+            ContractCall::get_decoded_output(&self.contract_call.output_param, &mut receipts)?;
+        Ok(CallResponse::new(D::from_token(token)?, receipts))
     }
 }
 
@@ -569,11 +543,11 @@ where
 pub struct MultiContractCallHandler {
     pub contract_calls: Option<Vec<ContractCall>>,
     pub tx_parameters: TxParameters,
-    pub wallet: LocalWallet,
+    pub wallet: WalletUnlocked,
 }
 
 impl MultiContractCallHandler {
-    pub fn new(wallet: LocalWallet) -> Self {
+    pub fn new(wallet: WalletUnlocked) -> Self {
         Self {
             contract_calls: None,
             tx_parameters: TxParameters::default(),
@@ -665,12 +639,9 @@ impl MultiContractCallHandler {
         let mut final_tokens = vec![];
 
         for call in self.contract_calls.as_ref().unwrap().iter() {
-            // We only aggregate the tokens if the contract call has an output parameter
-            if let Some(param_type) = call.output_param.as_ref() {
-                let decoded = ContractCall::get_decoded_output(param_type, &mut receipts)?;
+            let decoded = ContractCall::get_decoded_output(&call.output_param, &mut receipts)?;
 
-                final_tokens.push(decoded.clone());
-            }
+            final_tokens.push(decoded.clone());
         }
 
         let tokens_as_tuple = Token::Tuple(final_tokens);
@@ -682,8 +653,9 @@ impl MultiContractCallHandler {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use fuels_test_helpers::launch_provider_and_get_wallet;
+
+    use super::*;
 
     #[tokio::test]
     #[should_panic(expected = "called `Result::unwrap()` on an `Err` value: InvalidData(\"json\")")]
