@@ -3,6 +3,7 @@ use proc_macro::TokenStream;
 use proc_macro2::Span;
 use quote::quote;
 
+use inflector::Inflector;
 use std::ops::Deref;
 use std::path::Path;
 use syn::parse::{Parse, ParseStream, Result as ParseResult};
@@ -40,11 +41,16 @@ pub fn wasm_abigen(input: TokenStream) -> TokenStream {
 /// In addition, to the contract instance you can use the variables: wallet, contract_id
 #[proc_macro]
 pub fn setup_contract_test(input: TokenStream) -> TokenStream {
-    let args = parse_macro_input!(input as Spanned<ContractArgs>);
+    let args = parse_macro_input!(input as Spanned<ContractTestArgs>);
 
-    let abs_forc_dir = Path::new(&args.abi)
+    let abs_forc_dir = Path::new(&args.project_path)
         .canonicalize()
-        .unwrap_or_else(|_| panic!("Unable to canonicalize forc project path: {}.", &args.abi));
+        .unwrap_or_else(|_| {
+            panic!(
+                "Unable to canonicalize forc project path: {}.",
+                &args.project_path
+            )
+        });
 
     let forc_project_name = abs_forc_dir.file_name().unwrap().to_str().unwrap();
 
@@ -66,20 +72,27 @@ pub fn setup_contract_test(input: TokenStream) -> TokenStream {
         .unwrap()
         .to_string();
 
-    let mut abigen_token_stream: TokenStream = Abigen::new("MyContract", abi_path)
+    let contract_struct_name = &args.instance_name.to_camel_case();
+    let mut abigen_token_stream: TokenStream = Abigen::new(contract_struct_name, abi_path)
         .unwrap()
         .expand()
         .unwrap()
         .into();
 
-    let contract_instance_name = Ident::new(&args.name, Span::call_site());
+    let contract_instance_name = Ident::new(&args.instance_name, Span::call_site());
+    let wallet_name = Ident::new(&args.wallet_name, Span::call_site());
+    let contract_id_name = Ident::new(&args.id_name, Span::call_site());
+    let builder_struct_name = Ident::new(
+        &[contract_struct_name, "Builder"].concat(),
+        Span::call_site(),
+    );
 
     let added_token_stream: TokenStream = quote! {
-        let wallet = launch_provider_and_get_wallet().await;
+        let #wallet_name = launch_provider_and_get_wallet().await;
 
-        let contract_id = Contract::deploy(
+        let #contract_id_name = Contract::deploy(
             #bin_path,
-            &wallet,
+            &#wallet_name,
             TxParameters::default(),
             StorageConfiguration::with_storage_path(Some(
                 #storage_path.to_string(),
@@ -87,7 +100,7 @@ pub fn setup_contract_test(input: TokenStream) -> TokenStream {
         )
         .await?;
 
-        let #contract_instance_name = MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
+        let #contract_instance_name = #builder_struct_name::new(#contract_id_name.to_string(), #wallet_name.clone()).build();
     }
     .into();
 
@@ -164,5 +177,45 @@ impl ParseInner for ContractArgs {
         }
 
         Ok((span, ContractArgs { name, abi }))
+    }
+}
+
+/// Contract procedural macro arguments.
+#[cfg_attr(test, derive(Debug, Eq, PartialEq))]
+pub(crate) struct ContractTestArgs {
+    instance_name: String,
+    wallet_name: String,
+    id_name: String,
+    project_path: String,
+}
+
+impl ParseInner for ContractTestArgs {
+    fn spanned_parse(input: ParseStream) -> ParseResult<(Span, Self)> {
+        let instance_name = input.parse::<Ident>()?.to_string();
+        input.parse::<Token![,]>()?;
+
+        let wallet_name = input.parse::<Ident>()?.to_string();
+        input.parse::<Token![,]>()?;
+
+        let id_name = input.parse::<Ident>()?.to_string();
+        input.parse::<Token![,]>()?;
+
+        let (span, project_path) = {
+            let literal = input.parse::<LitStr>()?;
+            (literal.span(), literal.value())
+        };
+        if !input.is_empty() {
+            input.parse::<Token![,]>()?;
+        }
+
+        Ok((
+            span,
+            ContractTestArgs {
+                instance_name,
+                wallet_name,
+                id_name,
+                project_path,
+            },
+        ))
     }
 }

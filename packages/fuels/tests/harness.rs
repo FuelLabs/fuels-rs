@@ -966,6 +966,8 @@ async fn create_nested_struct_from_decoded_tokens() -> Result<(), Error> {
 async fn type_safe_output_values() -> Result<(), Error> {
     setup_contract_test!(
         contract_instance,
+        wallet,
+        contract_id,
         "packages/fuels/tests/test_projects/contract_output_test"
     );
 
@@ -1037,6 +1039,8 @@ async fn call_with_structs() -> Result<(), Error> {
 async fn call_with_empty_return() -> Result<(), Error> {
     setup_contract_test!(
         contract_instance,
+        wallet,
+        contract_id,
         "packages/fuels/tests/test_projects/call_empty_return"
     );
 
@@ -1051,6 +1055,8 @@ async fn call_with_empty_return() -> Result<(), Error> {
 async fn abigen_different_structs_same_arg_name() -> Result<(), Error> {
     setup_contract_test!(
         contract_instance,
+        wallet,
+        contract_id,
         "packages/fuels/tests/test_projects/two_structs"
     );
 
@@ -1071,6 +1077,8 @@ async fn abigen_different_structs_same_arg_name() -> Result<(), Error> {
 async fn test_reverting_transaction() -> Result<(), Error> {
     setup_contract_test!(
         contract_instance,
+        wallet,
+        contract_id,
         "packages/fuels/tests/test_projects/revert_transaction_error"
     );
 
@@ -1084,6 +1092,8 @@ async fn test_reverting_transaction() -> Result<(), Error> {
 async fn multiple_read_calls() -> Result<(), Error> {
     setup_contract_test!(
         contract_instance,
+        wallet,
+        contract_id,
         "packages/fuels/tests/test_projects/multiple_read_calls"
     );
 
@@ -1106,6 +1116,8 @@ async fn multiple_read_calls() -> Result<(), Error> {
 async fn test_methods_typeless_argument() -> Result<(), Error> {
     setup_contract_test!(
         contract_instance,
+        wallet,
+        contract_id,
         "packages/fuels/tests/test_projects/empty_arguments"
     );
 
@@ -1121,6 +1133,8 @@ async fn test_methods_typeless_argument() -> Result<(), Error> {
 async fn test_large_return_data() -> Result<(), Error> {
     setup_contract_test!(
         contract_instance,
+        wallet,
+        contract_id,
         "packages/fuels/tests/test_projects/large_return_data"
     );
 
@@ -1217,45 +1231,34 @@ async fn test_provider_launch_and_connect() -> Result<(), Error> {
 #[tokio::test]
 async fn test_contract_calling_contract() -> Result<(), Error> {
     // Tests a contract call that calls another contract (FooCaller calls FooContract underneath)
-    abigen!(
-        FooContract,
-        "packages/fuels/tests/test_projects/foo_contract/out/debug/foo_contract-abi.json"
+    // Load and deploy the first compiled contract
+    setup_contract_test!(
+        foo_contract_instance,
+        foo_wallet,
+        foo_contract_id,
+        "packages/fuels/tests/test_projects/foo_contract"
     );
+
+    // Call the contract directly; it just flips the bool value that's passed.
+    let res = foo_contract_instance.foo(true).call().await?;
+    assert!(!res.value);
 
     abigen!(
         FooCaller,
         "packages/fuels/tests/test_projects/foo_caller_contract/out/debug/foo_caller_contract-abi.json"
     );
 
-    let wallet = launch_provider_and_get_wallet().await;
-
-    // Load and deploy the first compiled contract
-    let foo_contract_id = Contract::deploy(
-        "tests/test_projects/foo_contract/out/debug/foo_contract.bin",
-        &wallet,
-        TxParameters::default(),
-        StorageConfiguration::default(),
-    )
-    .await?;
-
-    let foo_contract_instance =
-        FooContractBuilder::new(foo_contract_id.to_string(), wallet.clone()).build();
-
-    // Call the contract directly; it just flips the bool value that's passed.
-    let res = foo_contract_instance.foo(true).call().await?;
-    assert!(!res.value);
-
     // Load and deploy the second compiled contract
     let foo_caller_contract_id = Contract::deploy(
         "tests/test_projects/foo_caller_contract/out/debug/foo_caller_contract.bin",
-        &wallet,
+        &foo_wallet,
         TxParameters::default(),
         StorageConfiguration::default(),
     )
     .await?;
 
     let foo_caller_contract_instance =
-        FooCallerBuilder::new(foo_caller_contract_id.to_string(), wallet.clone()).build();
+        FooCallerBuilder::new(foo_caller_contract_id.to_string(), foo_wallet.clone()).build();
 
     // Calls the contract that calls the `FooContract` contract, also just
     // flips the bool value passed to it.
@@ -1339,6 +1342,8 @@ async fn test_gas_errors() -> Result<(), Error> {
 async fn test_call_param_gas_errors() -> Result<(), Error> {
     setup_contract_test!(
         contract_instance,
+        wallet,
+        contract_id,
         "packages/fuels/tests/test_projects/contract_test"
     );
 
@@ -1372,6 +1377,8 @@ async fn test_call_param_gas_errors() -> Result<(), Error> {
 async fn test_amount_and_asset_forwarding() -> Result<(), Error> {
     setup_contract_test!(
         contract_instance,
+        wallet,
+        contract_id,
         "packages/fuels/tests/test_projects/token_ops"
     );
 
@@ -1454,6 +1461,8 @@ async fn test_amount_and_asset_forwarding() -> Result<(), Error> {
 async fn test_multiple_args() -> Result<(), Error> {
     setup_contract_test!(
         contract_instance,
+        wallet,
+        contract_id,
         "packages/fuels/tests/test_projects/contract_test"
     );
 
@@ -1475,6 +1484,8 @@ async fn test_multiple_args() -> Result<(), Error> {
 async fn test_tuples() -> Result<(), Error> {
     setup_contract_test!(
         contract_instance,
+        wallet,
+        contract_id,
         "packages/fuels/tests/test_projects/tuples"
     );
 
@@ -1522,6 +1533,8 @@ async fn test_tuples() -> Result<(), Error> {
 async fn test_array() -> Result<(), Error> {
     setup_contract_test!(
         contract_instance,
+        wallet,
+        contract_id,
         "packages/fuels/tests/test_projects/contract_test"
     );
 
@@ -1540,6 +1553,8 @@ async fn test_array() -> Result<(), Error> {
 async fn test_arrays_with_custom_types() -> Result<(), Error> {
     setup_contract_test!(
         contract_instance,
+        wallet,
+        contract_id,
         "packages/fuels/tests/test_projects/contract_test"
     );
 
@@ -1573,6 +1588,8 @@ async fn test_arrays_with_custom_types() -> Result<(), Error> {
 async fn test_auth_msg_sender_from_sdk() -> Result<(), Error> {
     setup_contract_test!(
         contract_instance,
+        wallet,
+        contract_id,
         "packages/fuels/tests/test_projects/auth_testing_contract"
     );
 
@@ -1590,6 +1607,8 @@ async fn test_auth_msg_sender_from_sdk() -> Result<(), Error> {
 async fn workflow_enum_inside_struct() -> Result<(), Error> {
     setup_contract_test!(
         contract_instance,
+        wallet,
+        contract_id,
         "packages/fuels/tests/test_projects/enum_inside_struct"
     );
 
@@ -1623,6 +1642,8 @@ async fn workflow_enum_inside_struct() -> Result<(), Error> {
 async fn test_logd_receipts() -> Result<(), Error> {
     setup_contract_test!(
         contract_instance,
+        wallet,
+        contract_id,
         "packages/fuels/tests/test_projects/contract_logdata"
     );
 
@@ -1718,6 +1739,8 @@ async fn test_wallet_balance_api() -> Result<(), Error> {
 async fn sway_native_types_support() -> Result<(), Box<dyn std::error::Error>> {
     setup_contract_test!(
         contract_instance,
+        wallet,
+        contract_id,
         "packages/fuels/tests/test_projects/sway_native_types"
     );
 
@@ -1746,6 +1769,8 @@ async fn sway_native_types_support() -> Result<(), Box<dyn std::error::Error>> {
 async fn test_transaction_script_workflow() -> Result<(), Error> {
     setup_contract_test!(
         contract_instance,
+        wallet,
+        contract_id,
         "packages/fuels/tests/test_projects/contract_test"
     );
 
@@ -1766,6 +1791,8 @@ async fn test_transaction_script_workflow() -> Result<(), Error> {
 async fn enum_coding_w_variable_width_variants() -> Result<(), Error> {
     setup_contract_test!(
         contract_instance,
+        wallet,
+        contract_id,
         "packages/fuels/tests/test_projects/enum_encoding"
     );
 
@@ -1797,6 +1824,8 @@ async fn enum_coding_w_variable_width_variants() -> Result<(), Error> {
 async fn enum_coding_w_unit_enums() -> Result<(), Error> {
     setup_contract_test!(
         contract_instance,
+        wallet,
+        contract_id,
         "packages/fuels/tests/test_projects/enum_encoding"
     );
 
@@ -1826,6 +1855,8 @@ async fn enum_coding_w_unit_enums() -> Result<(), Error> {
 async fn enum_as_input() -> Result<(), Error> {
     setup_contract_test!(
         contract_instance,
+        wallet,
+        contract_id,
         "packages/fuels/tests/test_projects/enum_as_input"
     );
 
@@ -1863,6 +1894,8 @@ async fn enum_as_input() -> Result<(), Error> {
 async fn nested_structs() -> Result<(), Error> {
     setup_contract_test!(
         contract_instance,
+        wallet,
+        contract_id,
         "packages/fuels/tests/test_projects/nested_structs"
     );
 
@@ -1911,6 +1944,8 @@ async fn nested_structs() -> Result<(), Error> {
 async fn test_multi_call() -> Result<(), Error> {
     setup_contract_test!(
         contract_instance,
+        wallet,
+        contract_id,
         "packages/fuels/tests/test_projects/contract_test"
     );
 
@@ -1934,6 +1969,8 @@ async fn test_multi_call() -> Result<(), Error> {
 async fn test_multi_call_script_workflow() -> Result<(), Error> {
     setup_contract_test!(
         contract_instance,
+        wallet,
+        contract_id,
         "packages/fuels/tests/test_projects/contract_test"
     );
 
@@ -2057,6 +2094,8 @@ async fn can_use_try_into_to_construct_enum_from_bytes() -> Result<(), Error> {
 async fn type_inside_enum() -> Result<(), Error> {
     setup_contract_test!(
         contract_instance,
+        wallet,
+        contract_id,
         "packages/fuels/tests/test_projects/type_inside_enum"
     );
 
@@ -2171,6 +2210,8 @@ async fn test_init_storage_automatically_bad_json_path() -> Result<(), Error> {
 async fn contract_method_call_respects_maturity() -> Result<(), Error> {
     setup_contract_test!(
         contract_instance,
+        wallet,
+        contract_id,
         "packages/fuels/tests/test_projects/transaction_block_height"
     );
 
@@ -2253,6 +2294,8 @@ async fn can_increase_block_height() -> Result<(), Error> {
 async fn can_handle_sway_function_called_new() -> anyhow::Result<()> {
     setup_contract_test!(
         contract_instance,
+        wallet,
+        contract_id,
         "packages/fuels/tests/test_projects/collision_in_fn_names"
     );
 
@@ -2659,6 +2702,8 @@ async fn can_call_predicate_with_struct_data() -> Result<(), Error> {
 async fn test_get_gas_used() -> Result<(), Error> {
     setup_contract_test!(
         contract_instance,
+        wallet,
+        contract_id,
         "packages/fuels/tests/test_projects/contract_test"
     );
 
@@ -2676,6 +2721,8 @@ async fn test_get_gas_used() -> Result<(), Error> {
 async fn test_contract_id_and_wallet_getters() -> Result<(), Error> {
     setup_contract_test!(
         contract_instance,
+        wallet,
+        contract_id,
         "packages/fuels/tests/test_projects/contract_test"
     );
 
@@ -2718,6 +2765,8 @@ async fn test_network_error() -> Result<(), anyhow::Error> {
 async fn str_in_array() -> Result<(), Error> {
     setup_contract_test!(
         contract_instance,
+        wallet,
+        contract_id,
         "packages/fuels/tests/test_projects/str_in_array"
     );
 
@@ -3065,6 +3114,8 @@ async fn test_connect_wallet() -> anyhow::Result<()> {
 async fn contract_call_fee_estimation() -> Result<(), Error> {
     setup_contract_test!(
         contract_instance,
+        wallet,
+        contract_id,
         "packages/fuels/tests/test_projects/contract_test"
     );
 
@@ -3101,6 +3152,8 @@ async fn contract_call_fee_estimation() -> Result<(), Error> {
 async fn contract_call_has_same_estimated_and_used_gas() -> Result<(), Error> {
     setup_contract_test!(
         contract_instance,
+        wallet,
+        contract_id,
         "packages/fuels/tests/test_projects/contract_test"
     );
 
@@ -3125,6 +3178,8 @@ async fn contract_call_has_same_estimated_and_used_gas() -> Result<(), Error> {
 async fn mutl_call_has_same_estimated_and_used_gas() -> Result<(), Error> {
     setup_contract_test!(
         contract_instance,
+        wallet,
+        contract_id,
         "packages/fuels/tests/test_projects/contract_test"
     );
 
@@ -3266,22 +3321,12 @@ async fn test_input_message() -> Result<(), Error> {
 
 #[tokio::test]
 async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<(), Error> {
-    abigen!(
-        MyContract,
-        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+    setup_contract_test!(
+        contract_instance,
+        wallet,
+        contract_id,
+        "packages/fuels/tests/test_projects/contract_test"
     );
-
-    let wallet = launch_provider_and_get_wallet().await;
-
-    let contract_id = Contract::deploy(
-        "tests/test_projects/contract_test/out/debug/contract_test.bin",
-        &wallet,
-        TxParameters::default(),
-        StorageConfiguration::default(),
-    )
-    .await?;
-
-    let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
 
     let gas_limit = 225883;
     let response = contract_instance
