@@ -15,7 +15,7 @@ pub struct TxParameters {
 pub struct CallParameters {
     pub amount: u64,
     pub asset_id: AssetId,
-    gas_forwarded: Option<u64>,
+    pub gas_forwarded: Option<u64>,
 }
 
 impl CallParameters {
@@ -25,11 +25,6 @@ impl CallParameters {
             asset_id: asset_id.unwrap_or(BASE_ASSET_ID),
             gas_forwarded,
         }
-    }
-
-    /// Returns gas_forwarded if set or default if None
-    pub fn gas_forwarded_or(&self, default: u64) -> u64 {
-        self.gas_forwarded.unwrap_or(default)
     }
 }
 
