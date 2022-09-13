@@ -15,8 +15,14 @@ use fuels_core::tx::{Address, Bytes32, StorageSlot};
 use fuels_core::Tokenizable;
 use fuels_core::{constants::BASE_ASSET_ID, Token};
 use fuels_signers::fuel_crypto::SecretKey;
+use fuels_test_helpers::setup_single_message;
+use fuels_types::bech32::Bech32Address;
 use sha2::{Digest, Sha256};
+use std::iter;
 use std::str::FromStr;
+
+use fuel_core_interfaces::model::Message;
+use fuel_gql_client::client::schema::message::Message as OtherMessage;
 
 /// Note: all the tests and examples below require pre-compiled Sway projects.
 /// To compile these projects, run `cargo run --bin build-test-projects`.
@@ -1263,7 +1269,7 @@ async fn test_provider_launch_and_connect() -> Result<(), Error> {
         DEFAULT_NUM_COINS,
         DEFAULT_COIN_AMOUNT,
     );
-    let (launched_provider, address) = setup_test_provider(coins, None).await;
+    let (launched_provider, address) = setup_test_provider(coins, vec![], None).await;
     let connected_provider = Provider::connect(address.to_string()).await?;
 
     wallet.set_provider(connected_provider);
@@ -1371,7 +1377,7 @@ async fn test_gas_errors() -> Result<(), Error> {
         amount_per_coin,
     );
 
-    let (provider, _) = setup_test_provider(coins.clone(), None).await;
+    let (provider, _) = setup_test_provider(coins.clone(), vec![], None).await;
     wallet.set_provider(provider);
 
     let contract_id = Contract::deploy(
@@ -1847,7 +1853,7 @@ async fn test_wallet_balance_api() -> Result<(), Error> {
         amount_per_coin,
     );
 
-    let (provider, _) = setup_test_provider(coins.clone(), None).await;
+    let (provider, _) = setup_test_provider(coins.clone(), vec![], None).await;
     wallet.set_provider(provider);
     for (_utxo_id, coin) in coins {
         let balance = wallet.get_asset_balance(&coin.asset_id).await;
@@ -1874,7 +1880,7 @@ async fn test_wallet_balance_api() -> Result<(), Error> {
     );
     assert_eq!(coins.len() as u64, number_of_assets * coins_per_asset);
     assert_eq!(asset_ids.len() as u64, number_of_assets);
-    let (provider, _) = setup_test_provider(coins.clone(), None).await;
+    let (provider, _) = setup_test_provider(coins.clone(), vec![], None).await;
     wallet.set_provider(provider);
     let balances = wallet.get_balances().await?;
     assert_eq!(balances.len() as u64, number_of_assets);
@@ -3593,6 +3599,64 @@ async fn testnet_hello_world() -> Result<(), Error> {
         .await?;
 
     assert_eq!(52, response.value);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_input_message() -> Result<(), Error> {
+    abigen!(
+        MyContract,
+        "packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json"
+    );
+
+    let compare_messages =
+        |messages_from_provider: Vec<OtherMessage>, used_messages: Vec<Message>| -> bool {
+            iter::zip(&used_messages, &messages_from_provider).all(|(a, b)| {
+                a.sender == b.sender.0 .0
+                    && a.recipient == b.recipient.0 .0
+                    && a.owner == b.owner.0 .0
+                    && a.nonce == b.nonce.0
+                    && a.amount == b.amount.0
+            })
+        };
+
+    let mut wallet = WalletUnlocked::new_random(None);
+
+    let messages = setup_single_message(
+        &Bech32Address {
+            hrp: "".to_string(),
+            hash: Default::default(),
+        },
+        wallet.address(),
+        DEFAULT_COIN_AMOUNT,
+        0,
+        vec![1, 2],
+    );
+
+    let (provider, _) = setup_test_provider(vec![], messages.clone(), None).await;
+    wallet.set_provider(provider);
+
+    let contract_id = Contract::deploy(
+        "tests/test_projects/contract_test/out/debug/contract_test.bin",
+        &wallet,
+        TxParameters::default(),
+        StorageConfiguration::default(),
+    )
+    .await?;
+
+    let contract_instance_connected =
+        MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
+
+    let messages_from_provider = wallet.get_messages().await?;
+    assert!(compare_messages(messages_from_provider, messages));
+
+    let response = contract_instance_connected
+        .initialize_counter(42) // Build the ABI call
+        .call()
+        .await?;
+
+    assert_eq!(42, response.value);
 
     Ok(())
 }

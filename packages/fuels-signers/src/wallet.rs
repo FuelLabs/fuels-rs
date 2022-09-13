@@ -4,6 +4,7 @@ use async_trait::async_trait;
 use elliptic_curve::rand_core;
 use eth_keystore::KeystoreError;
 use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
+use fuel_gql_client::client::schema;
 use fuel_gql_client::{
     client::{schema::coin::Coin, types::TransactionResponse, PaginatedResult, PaginationRequest},
     fuel_tx::{
@@ -17,7 +18,7 @@ use fuels_core::{constants::BASE_ASSET_ID, parameters::TxParameters};
 use fuels_types::bech32::{Bech32Address, Bech32ContractId, FUEL_BECH32_HRP};
 use fuels_types::errors::Error;
 use rand::{CryptoRng, Rng};
-use std::{collections::HashMap, fmt, ops, path::Path, vec};
+use std::{collections::HashMap, fmt, ops, path::Path};
 use thiserror::Error;
 
 const DEFAULT_DERIVATION_PATH_PREFIX: &str = "m/44'/1179993420'/0'/0/";
@@ -53,7 +54,7 @@ pub struct Wallet {
 ///
 /// async fn foo() -> Result<(), Error> {
 ///   // Setup local test node
-///   let (provider, _) = setup_test_provider(vec![], None).await;
+///   let (provider, _) = setup_test_provider(vec![], vec![], None).await;
 ///
 ///   // Create a new local wallet with the newly generated key
 ///   let wallet = WalletUnlocked::new_random(Some(provider));
@@ -220,6 +221,43 @@ impl Wallet {
             .get_balances(&self.address)
             .await
             .map_err(Into::into)
+    }
+
+    pub async fn get_messages(&self) -> Result<Vec<schema::message::Message>, Error> {
+        Ok(self.get_provider()?.get_messages(&self.address).await?)
+    }
+
+    pub async fn get_inputs_for_messages(&self, witness_index: u8) -> Result<Vec<Input>, Error> {
+        let to_u8_bytes = |v: &[i32]| v.iter().flat_map(|e| e.to_ne_bytes()).collect::<Vec<_>>();
+
+        let messages = self.get_messages().await?;
+
+        let inputs: Vec<Input> = messages
+            .into_iter()
+            .map(|message| {
+                let data = to_u8_bytes(&message.data);
+                let message_id = Input::compute_message_id(
+                    &message.sender.clone().into(),
+                    &message.recipient.clone().into(),
+                    message.nonce.into(),
+                    &message.owner.clone().into(),
+                    message.amount.0,
+                    &data,
+                );
+                Input::message_signed(
+                    message_id,
+                    message.sender.into(),
+                    message.recipient.into(),
+                    message.amount.0,
+                    0,
+                    message.owner.into(),
+                    witness_index,
+                    data,
+                )
+            })
+            .collect();
+
+        Ok(inputs)
     }
 
     /// Unlock the wallet with the given `private_key`.
@@ -467,13 +505,34 @@ impl WalletUnlocked {
             .inputs()
             .iter()
             .any(|input| matches!(input, Input::CoinSigned { .. }));
+
         if !is_using_coins && new_base_amount == 0 {
             new_base_amount = MIN_AMOUNT;
         }
 
-        let new_base_inputs = self
+        // This is a temporary solution till we get update on coins_to_spend function
+        // Get asset inputs for required amount expressed u Input::coin_signed or in
+        // Input::message_signed depending on what we have in stock.
+        // In the near future this will be replaced by one function.
+        let base_coin_inputs = self
             .get_asset_inputs_for_amount(BASE_ASSET_ID, new_base_amount, witness_index)
-            .await?;
+            .await;
+        let new_base_inputs =
+            if base_coin_inputs.is_err() || base_coin_inputs.as_ref().unwrap().is_empty() {
+                self.get_inputs_for_messages(witness_index).await?
+            } else {
+                base_coin_inputs.unwrap()
+            };
+        if new_base_inputs.is_empty() && new_base_amount != 0 {
+            return Err(Error::ProviderError(
+                "Response errors; enough coins could not be found".to_string(),
+            ));
+        }
+
+        let is_using_messages = new_base_inputs
+            .iter()
+            .any(|input| matches!(input, Input::MessageSigned { .. }));
+
         let adjusted_inputs: Vec<_> = remaining_inputs
             .into_iter()
             .chain(new_base_inputs.into_iter())
@@ -484,7 +543,8 @@ impl WalletUnlocked {
         });
 
         // add a change output for the base asset if it doesn't exist and there are base inputs
-        let change_output = if !is_base_change_present && new_base_amount != 0 {
+        let change_output = if !is_base_change_present && new_base_amount != 0 && !is_using_messages
+        {
             vec![Output::change(self.address().into(), 0, BASE_ASSET_ID)]
         } else {
             vec![]
@@ -536,7 +596,7 @@ impl WalletUnlocked {
     ///   coins_1.extend(coins_2);
     ///
     ///   // Setup a provider and node with both set of coins
-    ///   let (provider, _) = setup_test_provider(coins_1, None).await;
+    ///   let (provider, _) = setup_test_provider(coins_1, vec![], None).await;
     ///
     ///   // Set provider for wallets
     ///   wallet_1.set_provider(provider.clone());

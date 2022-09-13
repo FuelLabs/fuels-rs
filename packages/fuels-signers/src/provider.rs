@@ -7,7 +7,7 @@ use fuel_gql_client::{
     client::{
         schema::{
             balance::Balance, chain::ChainInfo, coin::Coin, contract::ContractBalance,
-            node_info::NodeInfo,
+            message::Message, node_info::NodeInfo,
         },
         types::{TransactionResponse, TransactionStatus},
         FuelClient, PageDirection, PaginatedResult, PaginationRequest,
@@ -67,7 +67,7 @@ impl Provider {
     /// use fuels::prelude::*;
     /// async fn foo() -> Result<(), Box<dyn std::error::Error>> {
     ///   // Setup local test node
-    ///   let (provider, _) = setup_test_provider(vec![], None).await;
+    ///   let (provider, _) = setup_test_provider(vec![], vec![], None).await;
     ///   let tx = Transaction::default();
     ///
     ///   let receipts = provider.send_transaction(&tx).await?;
@@ -409,5 +409,18 @@ impl Provider {
                     .expect("could not retrieve gas used from ScriptResult")
             })
             .unwrap_or(0)
+    }
+
+    pub async fn get_messages(&self, from: &Bech32Address) -> Result<Vec<Message>, ProviderError> {
+        let pagination = PaginationRequest {
+            cursor: None,
+            results: 100,
+            direction: PageDirection::Forward,
+        };
+        let res = self
+            .client
+            .messages(Some(&from.hash().to_string()), pagination)
+            .await?;
+        Ok(res.results)
     }
 }
