@@ -1,7 +1,0 @@
-[project]
-authors = ["Ahmed Sagdati"]
-entry = "lib.sw"
-license = "Apache-2.0"
-name = "vec_lib"
-
-[dependencies]

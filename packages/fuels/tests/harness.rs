@@ -3863,87 +3863,10 @@ async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<(), Error> {
     Ok(())
 }
 
-// #[tokio::test]
-// async fn test_vector() -> Result<(), Error> {
-//     // the changes I see that need to happen are
-//     // * fix the fn selector -- should be done by Rodrigo in his generics task
-//     // * make encoder return bytes with non-resolved final address
-//     // * add vec token type
-//     // * resolve encoded bytes with the custom_input_offset calculated in script.rs
-//     let wallet = launch_provider_and_get_wallet().await;
-//
-//     let contract_id = Contract::deploy(
-//         "tests/test_projects/vectors/out/debug/vectors.bin",
-//         &wallet,
-//         TxParameters::default(),
-//         StorageConfiguration::default(),
-//     )
-//     .await?;
-//
-//     // let json =
-//     //     fs::read_to_string("tests/test_projects/vectors/out/debug/vectors-flat-abi.json").unwrap();
-//     // let parsed_abi: ProgramABI = serde_json::from_str(&json)?;
-//     // let fun = parsed_abi
-//     //     .functions
-//     //     .iter()
-//     //     .find(|fun| fun.name == "real_vec")
-//     //     .unwrap();
-//
-//     // let types = FlatAbigen::get_types(&parsed_abi);
-//
-//     let fn_signature = "real_vec(s<u64>(s<u64>(u64,u64),u64),s<u64>(s<u64>(u64,u64),u64))";
-//
-//     let encoded_selector = first_four_bytes_of_sha256_hash(fn_signature);
-//
-//     let encoded_args = ABIEncoder::encode(&[
-//         Token::Vector(vec![Token::U64(100), Token::U64(200), Token::U64(300)]),
-//         Token::Vector(vec![Token::U64(100), Token::U64(200), Token::U64(300)]),
-//     ])
-//     .unwrap();
-//
-//     let call = ContractCall {
-//         contract_id: contract_id.clone(),
-//         encoded_selector,
-//         encoded_args,
-//         call_parameters: CallParameters::default(),
-//         compute_custom_input_offset: true,
-//         variable_outputs: None,
-//         external_contracts: vec![],
-//         output_param: ParamType::Unit,
-//     };
-//
-//     let calls: Vec<ContractCall> = vec![call];
-//     let data_offset = Script::get_data_offset(calls.len());
-//     println!("Data offset is: {data_offset}");
-//     let tx_parameters: TxParameters = Default::default();
-//
-//     let (script_data, call_param_offsets) = Script::get_script_data(&calls, data_offset);
-//     println!("Call param offsets are: {call_param_offsets:?}");
-//
-//     let script = Script::get_instructions(&calls, call_param_offsets);
-//
-//     let spendable_coins = Script::get_spendable_coins(&wallet, &calls).await?;
-//
-//     let (inputs, outputs) =
-//         Script::get_transaction_inputs_outputs(&calls, wallet.address(), spendable_coins);
-//
-//     let mut tx = Transaction::script(
-//         tx_parameters.gas_price,
-//         tx_parameters.gas_limit,
-//         tx_parameters.maturity,
-//         script,
-//         script_data,
-//         inputs,
-//         outputs,
-//         vec![],
-//     );
-//     wallet.sign_transaction(&mut tx).await.unwrap();
-//
-//     let script = Script::new(tx);
-//     let receipts = script.call(wallet.get_provider().unwrap()).await.unwrap();
-//     dbg!(receipts);
-//     Ok(())
-// }
+#[tokio::test]
+async fn test_vector() -> Result<(), Error> {
+    Ok(())
+}
 
 // #[tokio::test]
 // async fn test_vector_rtn() -> Result<(), Error> {

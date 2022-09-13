@@ -394,6 +394,99 @@ mod tests {
     }
 
     #[test]
+    fn handles_vectors() {
+        let types = [
+            TypeDeclaration {
+                type_id: 0,
+                type_field: "()".to_string(),
+                components: Some(vec![]),
+                type_parameters: None,
+            },
+            TypeDeclaration {
+                type_id: 1,
+                type_field: "generic T".to_string(),
+                components: None,
+                type_parameters: None,
+            },
+            TypeDeclaration {
+                type_id: 2,
+                type_field: "struct RawVec".to_string(),
+                components: Some(vec![
+                    TypeApplication {
+                        name: "ptr".to_string(),
+                        type_id: 5,
+                        type_arguments: None,
+                    },
+                    TypeApplication {
+                        name: "cap".to_string(),
+                        type_id: 5,
+                        type_arguments: None,
+                    },
+                ]),
+                type_parameters: Some(vec![1]),
+            },
+            TypeDeclaration {
+                type_id: 3,
+                type_field: "struct Vec".to_string(),
+                components: Some(vec![
+                    TypeApplication {
+                        name: "buf".to_string(),
+                        type_id: 2,
+                        type_arguments: Some(vec![TypeApplication {
+                            name: "".to_string(),
+                            type_id: 1,
+                            type_arguments: None,
+                        }]),
+                    },
+                    TypeApplication {
+                        name: "len".to_string(),
+                        type_id: 5,
+                        type_arguments: None,
+                    },
+                ]),
+                type_parameters: Some(vec![1]),
+            },
+            TypeDeclaration {
+                type_id: 4,
+                type_field: "u32".to_string(),
+                components: None,
+                type_parameters: None,
+            },
+            TypeDeclaration {
+                type_id: 5,
+                type_field: "u64".to_string(),
+                components: None,
+                type_parameters: None,
+            },
+        ]
+        .map(|ty| (ty.type_id, ty))
+        .into_iter()
+        .collect();
+
+        let function = ABIFunction {
+            inputs: vec![TypeApplication {
+                name: "arg".to_string(),
+                type_id: 3,
+                type_arguments: Some(vec![TypeApplication {
+                    name: "".to_string(),
+                    type_id: 4,
+                    type_arguments: None,
+                }]),
+            }],
+            name: "test_function".to_string(),
+            output: TypeApplication {
+                name: "".to_string(),
+                type_id: 0,
+                type_arguments: None,
+            },
+        };
+
+        let selector = resolve_fn_selector(&function, &types);
+
+        assert_eq!(selector, "test_function(s<u32>(s<u32>(u64,u64),u64))");
+    }
+
+    #[test]
     fn handles_enums() {
         let fun = ABIFunction {
             inputs: vec![TypeApplication {
