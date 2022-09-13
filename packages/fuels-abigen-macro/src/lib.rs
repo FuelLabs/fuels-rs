@@ -35,10 +35,20 @@ pub fn wasm_abigen(input: TokenStream) -> TokenStream {
 
 /// This proc macro is used to reduce the amount of boilerplate code in integration tests.
 /// When expanded, the proc macro will: launch a local provider, generate one wallet,
-/// deploy the selected contract and create a contract instance with the specified name.
-/// Inputs are the contract instance variable name and the test project name. For example,
-/// get_contract_instance!(contract_instance, "contract_test")
-/// In addition, to the contract instance you can use the variables: wallet, contract_id
+/// deploy the selected contract and create a contract instance.
+/// The names of the exposed variables must be provided as inputs. They are, in order:
+/// the contract instance name, wallet name, contract id name and the test project folder path.
+///
+/// # Example
+///
+/// ```
+/// setup_contract_test!(
+///     contract_instance,
+///     wallet,
+///     contract_id,
+///     "packages/fuels/tests/test_projects/contract_test"
+/// );
+/// ```
 #[proc_macro]
 pub fn setup_contract_test(input: TokenStream) -> TokenStream {
     let args = parse_macro_input!(input as Spanned<ContractTestArgs>);
