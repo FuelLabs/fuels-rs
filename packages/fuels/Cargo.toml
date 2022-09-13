@@ -23,6 +23,7 @@ fuels-types = { version = "0.23.0", path = "../fuels-types" }
 anyhow = "1.0.58"
 ctor = " 0.1"
 fuel-core = { version = "0.10.1", default-features = false }
+fuel-core-interfaces = { version = "0.10.1", default-features = false }
 fuel-gql-client = { version = "0.10.1", default-features = false }
 hex = { version = "0.4.3", default-features = false }
 sha2 = "0.9.5"

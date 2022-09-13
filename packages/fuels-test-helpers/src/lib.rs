@@ -1,10 +1,12 @@
 //! Testing helpers/utilities for Fuel SDK.
 
+extern crate core;
+
 use std::net::SocketAddr;
 
 #[cfg(feature = "fuel-core-lib")]
 use fuel_core::{
-    chain_config::{ChainConfig, CoinConfig, StateConfig},
+    chain_config::{ChainConfig, CoinConfig, MessageConfig, StateConfig},
     model::{Coin, CoinStatus},
     service::{DbType, FuelService},
 };
@@ -13,10 +15,11 @@ use fuel_core::{
 pub use fuel_core::service::Config;
 
 #[cfg(not(feature = "fuel-core-lib"))]
-pub use node::{get_socket_address, new_fuel_node, CoinConfig, Config};
+pub use node::{get_socket_address, new_fuel_node, CoinConfig, Config, MessageConfig};
 
 #[cfg(not(feature = "fuel-core-lib"))]
 pub use fuel_core_interfaces::model::{Coin, CoinStatus};
+use fuel_core_interfaces::model::{DaBlockHeight, Message};
 
 #[cfg(not(feature = "fuel-core-lib"))]
 use portpicker::is_free;
@@ -127,11 +130,31 @@ pub fn setup_single_asset_coins(
     coins
 }
 
+pub fn setup_single_message(
+    sender: &Bech32Address,
+    recipient: &Bech32Address,
+    amount: u64,
+    nonce: u64,
+    data: Vec<u8>,
+) -> Vec<Message> {
+    vec![Message {
+        sender: sender.into(),
+        recipient: recipient.into(),
+        owner: recipient.into(),
+        nonce,
+        amount,
+        data,
+        da_height: DaBlockHeight::default(),
+        fuel_block_spend: None,
+    }]
+}
+
 // Setup a test client with the given coins. We return the SocketAddr so the launched node
 // client can be connected to more easily (even though it is often ignored).
 #[cfg(feature = "fuel-core-lib")]
 pub async fn setup_test_client(
     coins: Vec<(UtxoId, Coin)>,
+    messages: Vec<Message>,
     node_config: Option<Config>,
     consensus_parameters_config: Option<ConsensusParameters>,
 ) -> (FuelClient, SocketAddr) {
@@ -146,13 +169,26 @@ pub async fn setup_test_client(
             amount: coin.amount,
             asset_id: coin.asset_id,
         })
+        .collect::<Vec<_>>();
+
+    let message_config = messages
+        .into_iter()
+        .map(|message| MessageConfig {
+            sender: message.sender,
+            recipient: message.recipient,
+            owner: message.owner,
+            nonce: message.nonce,
+            amount: message.amount,
+            data: message.data,
+            da_height: message.da_height,
+        })
         .collect();
 
     // Setup node config with genesis coins and utxo_validation enabled
-
     let config = Config {
         chain_conf: ChainConfig {
             initial_state: Some(StateConfig {
+                messages: Some(message_config),
                 coins: Some(coin_configs),
                 ..StateConfig::default()
             }),
@@ -172,6 +208,7 @@ pub async fn setup_test_client(
 #[cfg(not(feature = "fuel-core-lib"))]
 pub async fn setup_test_client(
     coins: Vec<(UtxoId, Coin)>,
+    messages: Vec<Message>,
     node_config: Option<Config>,
     consensus_parameters_config: Option<ConsensusParameters>,
 ) -> (FuelClient, SocketAddr) {
@@ -188,11 +225,12 @@ pub async fn setup_test_client(
 
     new_fuel_node(
         coins,
-        consensus_parameters_config,
+        messages,
         Config {
             addr: bound_address,
             ..config
         },
+        consensus_parameters_config,
     )
     .await;
 
@@ -340,7 +378,7 @@ mod tests {
             ..Config::local_node()
         };
 
-        let wallets = setup_test_client(coins, Some(config), None).await;
+        let wallets = setup_test_client(coins, vec![], Some(config), None).await;
 
         assert_eq!(wallets.1, socket);
         Ok(())
@@ -360,7 +398,7 @@ mod tests {
         );
 
         let (fuel_client, _) =
-            setup_test_client(coins, None, Some(consensus_parameters_config)).await;
+            setup_test_client(coins, vec![], None, Some(consensus_parameters_config)).await;
         let provider = Provider::new(fuel_client);
         wallet.set_provider(provider.clone());
 
