@@ -9,12 +9,12 @@ use fuel_gql_client::fuel_vm::prelude::GTFArgs;
 use fuel_gql_client::{
     client::{schema::coin::Coin, types::TransactionResponse, PaginatedResult, PaginationRequest},
     fuel_tx::{
-        AssetId, Bytes32, ConsensusParameters, ContractId, Input, Output, Receipt, Transaction,
-        TransactionFee, TxPointer, UtxoId, Witness,
+        AssetId, Bytes32, ContractId, Input, Output, Receipt, Transaction, TransactionFee,
+        TxPointer, UtxoId, Witness,
     },
-    fuel_vm::{consts::REG_ONE, prelude::Opcode, script_with_data_offset},
+    fuel_vm::{consts::REG_ONE, prelude::Opcode},
 };
-use fuel_types::{bytes::WORD_SIZE, Immediate18};
+use fuel_types::bytes::WORD_SIZE;
 use fuels_core::{constants::BASE_ASSET_ID, parameters::TxParameters};
 use fuels_types::bech32::{Bech32Address, Bech32ContractId, FUEL_BECH32_HRP};
 use fuels_types::errors::Error;
@@ -313,32 +313,16 @@ impl Wallet {
         .flatten()
         .collect();
 
-        // This script loads:
-        //  - a pointer to the contract id,
-        //  - the actual amount
-        //  - a pointer to the asset id
-        // into the registers 0X10, 0x11, 0x12
-        // and calls the TR instruction
-        let (script, _) = script_with_data_offset!(
-            data_offset,
-            vec![
-                Opcode::gtf(0x10, 0x00, GTFArgs::ScriptData),
-                Opcode::MOVI(
-                    0x11,
-                    (data_offset as usize + ContractId::LEN) as Immediate18
-                ),
-                Opcode::LW(0x11, 0x11, 0),
-                Opcode::MOVI(
-                    0x12,
-                    (data_offset as usize + ContractId::LEN + WORD_SIZE) as Immediate18
-                ),
-                Opcode::TR(0x10, 0x11, 0x12),
-                Opcode::RET(REG_ONE)
-            ],
-            ConsensusParameters::DEFAULT.tx_offset()
-        );
-        #[allow(clippy::iter_cloned_collect)]
-        let script = script.iter().copied().collect();
+        let script = vec![
+            Opcode::gtf(0x10, 0x00, GTFArgs::ScriptData),
+            Opcode::ADDI(0x11, 0x10, ContractId::LEN as u16),
+            Opcode::LW(0x13, 0x11, 0),
+            Opcode::ADDI(0x12, 0x11, WORD_SIZE as u16),
+            Opcode::TR(0x10, 0x11, 0x12),
+            Opcode::RET(REG_ONE),
+        ]
+        .into_iter()
+        .collect();
 
         Transaction::Script {
             gas_price: params.gas_price,
