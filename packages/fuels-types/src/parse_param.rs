@@ -32,7 +32,7 @@ impl ParamType {
                 if prop.type_field.contains("generic") {
                     return Ok(Self::parse_generic_param(prop));
                 }
-                // Try to parse a free form enum or struct (e.g. `struct MySTruct`, `enum MyEnum`).
+                // Try to parse a free form enum or struct (e.g. `struct MyStruct`, `enum MyEnum`).
                 ParamType::parse_custom_type_param(prop, types)
             }
         }
