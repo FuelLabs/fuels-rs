@@ -139,8 +139,9 @@
                     <main>
                         <h1 id="calling-other-contracts"><a class="header" href="#calling-other-contracts">Calling other contracts</a></h1>
 <p>Your contract method might be calling other contracts. To do so, you must feed the external contract IDs that your contract depends on to the method you're calling. You do it by chaining <code>.set_contracts(&amp;[external_contract_id, ...])</code> to the method you want to call. For instance:</p>
-<pre><code class="language-rust ignore">    let res = foo_caller_contract_instance
-        .call_foo_contract(*foo_contract_id.hash(), true)
+<pre><code class="language-rust ignore">    let bits = *foo_contract_id.hash();
+    let res = foo_caller_contract_instance
+        .call_foo_contract(Bits256(bits), true)
         .set_contracts(&amp;[foo_contract_id]) // Sets the external contract
         .call()
         .await?;

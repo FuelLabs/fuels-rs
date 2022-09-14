@@ -1297,8 +1297,9 @@ pub const BASE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
 <p>At the moment, it's up to you to know whether a contract method changes state or not, and use <code>.call()</code> or <code>.simulate()</code> accordingly.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="calling-other-contracts"><a class="header" href="#calling-other-contracts">Calling other contracts</a></h1>
 <p>Your contract method might be calling other contracts. To do so, you must feed the external contract IDs that your contract depends on to the method you're calling. You do it by chaining <code>.set_contracts(&amp;[external_contract_id, ...])</code> to the method you want to call. For instance:</p>
-<pre><code class="language-rust ignore">    let res = foo_caller_contract_instance
-        .call_foo_contract(*foo_contract_id.hash(), true)
+<pre><code class="language-rust ignore">    let bits = *foo_contract_id.hash();
+    let res = foo_caller_contract_instance
+        .call_foo_contract(Bits256(bits), true)
         .set_contracts(&amp;[foo_contract_id]) // Sets the external contract
         .call()
         .await?;
@@ -1309,7 +1310,7 @@ pub const BASE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
             MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
 
         let call_handler_1 = contract_instance.initialize_counter(42);
-        let call_handler_2 = contract_instance.get_array([42; 2].to_vec());
+        let call_handler_2 = contract_instance.get_array([42; 2]);
 </code></pre>
 <p>You can also set call parameters, variable outputs, or external contracts for every contract call, as long as you don't execute it with <code>call()</code> or <code>simulate()</code>.</p>
 <p>Next, you provide the prepared calls to your <code>ContractMultiCallHandler</code> and optionally configure transaction parameters:</p>
@@ -1324,10 +1325,10 @@ pub const BASE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
 </blockquote>
 <h2 id="output-values"><a class="header" href="#output-values">Output values</a></h2>
 <p>To get the output values of the bundled calls, you need to provide explicit type annotations when saving the result of <code>call()</code> or <code>simulate()</code> to a variable:</p>
-<pre><code class="language-rust ignore">        let (counter, array): (u64, Vec&lt;u64&gt;) = multi_call_handler.call().await?.value;
+<pre><code class="language-rust ignore">        let (counter, array): (u64, [u64; 2]) = multi_call_handler.call().await?.value;
 </code></pre>
 <p>You can also interact with the <code>CallResponse</code> by moving the type annotation to the invoked method:</p>
-<pre><code class="language-rust ignore">        let response = multi_call_handler.call::&lt;(u64, Vec&lt;u64&gt;)&gt;().await?;
+<pre><code class="language-rust ignore">        let response = multi_call_handler.call::&lt;(u64, [u64; 2])&gt;().await?;
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="estimating-contract-call-cost"><a class="header" href="#estimating-contract-call-cost">Estimating contract call cost</a></h1>
 <p>With with the function <code>estimate_transaction_cost(tolerance: Option&lt;f64&gt;)</code> provided by <code>ContractCallHandler</code> and <code>ContractMultiCallHandler</code>, you can get a cost estimation for a specific call. The return type, <code>TransactionCost</code>, is a struct that contains relevant information for the estimation:</p>
@@ -1352,7 +1353,7 @@ pub const BASE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
 <pre><code class="language-rust ignore">        let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
 
         let call_handler_1 = contract_instance.initialize_counter(42);
-        let call_handler_2 = contract_instance.get_array([42; 2].to_vec());
+        let call_handler_2 = contract_instance.get_array([42; 2]);
 
         multi_call_handler
             .add_call(call_handler_1)
