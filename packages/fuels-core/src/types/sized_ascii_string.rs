@@ -164,7 +164,7 @@ mod tests {
 
     #[test]
     fn can_be_constructed_from_str_ref() {
-        let sut: SizedAsciiString<3> = "abc".try_into().expect("Should have succeeded");
+        let _: SizedAsciiString<3> = "abc".try_into().expect("Should have succeeded");
     }
 
     #[test]

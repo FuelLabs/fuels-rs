@@ -5,9 +5,8 @@ use fuels_types::errors::Error;
 use fuels_types::param_types::ParamType;
 use fuels_types::{TypeApplication, TypeDeclaration};
 use inflector::Inflector;
-use itertools::Itertools;
 use lazy_static::lazy_static;
-use proc_macro2::{Ident, LexError, TokenStream};
+use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 use regex::Regex;
 use std::collections::HashMap;
@@ -110,7 +109,7 @@ pub(crate) fn extract_generic_parameters(
         .type_parameters
         .iter()
         .flatten()
-        .map(|id| types.get(&id).unwrap())
+        .map(|id| types.get(id).unwrap())
         .map(
             |decl| match ParamType::from_type_declaration(decl, types)? {
                 ParamType::Generic(name) => {

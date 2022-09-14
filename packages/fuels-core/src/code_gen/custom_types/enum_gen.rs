@@ -20,7 +20,7 @@ pub fn expand_custom_enum(
 ) -> Result<TokenStream, Error> {
     let enum_ident = extract_custom_type_name_from_abi_property(type_decl)?;
 
-    let components = extract_components(&type_decl, types, false)?;
+    let components = extract_components(type_decl, types, false)?;
     let generics = extract_generic_parameters(type_decl, types)?;
 
     let enum_def = enum_decl(&enum_ident, &components, &generics);
@@ -161,7 +161,7 @@ fn enum_parameterize_impl(
     components: &[Component],
     generics: &[TokenStream],
 ) -> TokenStream {
-    let param_type_calls = param_type_calls(&components);
+    let param_type_calls = param_type_calls(components);
     let enum_ident_stringified = enum_ident.to_string();
     quote! {
         impl<#(#generics: Parameterize + Tokenizable),*> Parameterize for #enum_ident <#(#generics),*> {

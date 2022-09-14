@@ -19,7 +19,7 @@ pub fn expand_custom_struct(
 ) -> Result<TokenStream, Error> {
     let struct_ident = extract_custom_type_name_from_abi_property(type_decl)?;
 
-    let components = extract_components(&type_decl, types, true)?;
+    let components = extract_components(type_decl, types, true)?;
     let generic_parameters = extract_generic_parameters(type_decl, types)?;
 
     let struct_decl = struct_decl(&struct_ident, &components, &generic_parameters);
@@ -44,14 +44,14 @@ pub fn expand_custom_struct(
 
 fn struct_decl(
     struct_ident: &Ident,
-    components: &Vec<Component>,
+    components: &[Component],
     generic_parameters: &Vec<TokenStream>,
 ) -> TokenStream {
     let fields = components.iter().map(
-        |(Component {
+        |Component {
              field_name,
              field_type,
-         })| {
+         }| {
             let field_type: TokenStream = field_type.into();
             quote! { pub #field_name: #field_type }
         },
@@ -74,10 +74,10 @@ fn struct_tokenizable_impl(
     let from_token_calls = components
         .iter()
         .map(
-            |(Component {
+            |Component {
                  field_name,
                  field_type,
-             })| {
+             }| {
                 let resolved: TokenStream = field_type.into();
                 quote! {
                     #field_name: <#resolved>::from_token(next_token()?)?
@@ -123,7 +123,7 @@ fn struct_parameterized_impl(
     struct_ident: &Ident,
     generic_parameters: &[TokenStream],
 ) -> TokenStream {
-    let param_type_calls = param_type_calls(&components);
+    let param_type_calls = param_type_calls(components);
     quote! {
         impl <#(#generic_parameters: Parameterize + Tokenizable),*> Parameterize for #struct_ident <#(#generic_parameters),*> {
             fn param_type() -> ParamType {

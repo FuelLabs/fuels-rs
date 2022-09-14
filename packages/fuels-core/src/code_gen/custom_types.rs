@@ -15,10 +15,6 @@ pub use utils::extract_custom_type_name_from_abi_property;
 // TODO(vnepveu): append extra `,` to last enum/struct field so it is aligned with rustfmt
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use fuels_types::ProgramABI;
-    use std::str::FromStr;
-
     // TODO: Move tests using the old abigen to the new one.
     // Currently, they will be skipped. Even though we're not fully testing these at
     // unit level, they're tested at integration level, in the main harness.rs file.

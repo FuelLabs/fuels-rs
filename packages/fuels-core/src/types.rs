@@ -1,6 +1,7 @@
-use anyhow::Result;
-use fuels_types::errors::Error;
-use proc_macro2::TokenStream;
-use quote::{quote, ToTokens};
+mod array;
+mod bits_256;
+mod sized_ascii_string;
 
-use crate::{utils::ident, ParamType};
+pub use crate::types::array::*;
+pub use crate::types::bits_256::*;
+pub use crate::types::sized_ascii_string::*;

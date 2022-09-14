@@ -1,29 +1,17 @@
-use crate::code_gen::abigen::Abigen;
 use crate::code_gen::docs_gen::expand_doc;
 use crate::code_gen::function_selector::resolve_fn_selector;
 use crate::code_gen::resolved_type;
-use crate::code_gen::resolved_type::ResolvedType;
-use crate::utils::{first_four_bytes_of_sha256_hash, ident, safe_ident};
-use crate::{ParamType, Selector};
-use anyhow::anyhow;
+use crate::utils::{first_four_bytes_of_sha256_hash, safe_ident};
+use crate::Selector;
 use fuels_types::errors::Error;
-use fuels_types::{
-    ABIFunction, CustomType, TypeApplication, TypeDeclaration, ENUM_KEYWORD, STRUCT_KEYWORD,
-};
+use fuels_types::{ABIFunction, TypeDeclaration};
 use inflector::Inflector;
-use itertools::{chain, Either, Itertools};
-use lazy_static::lazy_static;
-use proc_macro2::{Ident, Literal, TokenStream};
-use quote::{quote, ToTokens};
-use regex::Regex;
+use itertools::Itertools;
+use proc_macro2::{Literal, TokenStream};
+use quote::quote;
 use resolved_type::resolve_type;
-use std::collections::{HashMap, HashSet, VecDeque};
-use std::fmt::{Display, Formatter};
-use std::hash::{Hash, Hasher};
-use std::iter;
+use std::collections::HashMap;
 use std::iter::zip;
-use std::str::FromStr;
-use syn::Expr::Type;
 
 /// Functions used by the Abigen to expand functions defined in an ABI spec.
 
@@ -44,7 +32,7 @@ pub fn expand_function(
     }
 
     let name = safe_ident(&function.name);
-    let fn_signature = resolve_fn_selector(&function, types);
+    let fn_signature = resolve_fn_selector(function, types);
 
     let encoded = first_four_bytes_of_sha256_hash(&fn_signature);
 

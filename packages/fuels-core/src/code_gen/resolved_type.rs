@@ -18,7 +18,7 @@ pub(crate) struct ResolvedType {
 
 impl Display for ResolvedType {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", TokenStream::from(self.clone()).to_string())
+        write!(f, "{}", TokenStream::from(self.clone()))
     }
 }
 
@@ -29,10 +29,7 @@ impl From<&ResolvedType> for TokenStream {
             return quote! { #type_name };
         }
 
-        let generic_params = resolved_type
-            .generic_params
-            .iter()
-            .map(|generic_type| TokenStream::from(generic_type));
+        let generic_params = resolved_type.generic_params.iter().map(TokenStream::from);
 
         quote! { #type_name<#( #generic_params ),*> }
     }
@@ -56,7 +53,7 @@ pub(crate) fn resolve_type(
         type_applications
             .iter()
             .flatten()
-            .map(|array_type| resolve_type(&array_type, &types))
+            .map(|array_type| resolve_type(array_type, types))
             .collect::<Result<Vec<_>, _>>()
     };
 
@@ -97,7 +94,7 @@ pub(crate) fn resolve_type(
             }],
         )),
         ParamType::Struct(_) | ParamType::Enum(_) => {
-            let type_name = extract_custom_type_name_from_abi_property(&base_type)?;
+            let type_name = extract_custom_type_name_from_abi_property(base_type)?;
             let generic_params = recursively_resolve(&type_application.type_arguments)?;
             Ok((quote! {#type_name}, generic_params))
         }

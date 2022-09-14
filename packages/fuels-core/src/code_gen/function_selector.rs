@@ -1,10 +1,8 @@
 use fuels_types::param_types::ParamType;
 use fuels_types::{ABIFunction, TypeApplication, TypeDeclaration};
 use itertools::Itertools;
-use serde::Serialize;
 use std::collections::HashMap;
 use std::iter::zip;
-use std::ptr::replace;
 
 /// Given a `ABIFunction` will return a String representing the function
 /// selector as specified in the Fuel specs.
@@ -44,11 +42,11 @@ fn resolve_type_application(
     parent_generic_params: &[(usize, Type)],
 ) -> Type {
     let type_decl = types.get(&type_application.type_id).unwrap();
-    let param_type = ParamType::from_type_declaration(&type_decl, &types).unwrap();
+    let param_type = ParamType::from_type_declaration(type_decl, types).unwrap();
 
     if let ParamType::Generic(_) = &param_type {
         let (_, generic_type) = parent_generic_params
-            .into_iter()
+            .iter()
             .find(|(id, _)| *id == type_application.type_id)
             .unwrap();
 
@@ -132,7 +130,7 @@ fn determine_generics_for_type(
 
             zip(params.clone(), generics_to_use).collect()
         }
-        _ => parent_generic_params.into_iter().cloned().collect(),
+        _ => parent_generic_params.to_vec(),
     }
 }
 
@@ -208,7 +206,6 @@ fn resolve_function_arg(arg: &TypeApplication, types: &HashMap<usize, TypeDeclar
 mod tests {
     use super::*;
     use fuels_types::{ABIFunction, ProgramABI};
-    use std::fs;
 
     #[test]
     fn handles_primitive_types() {

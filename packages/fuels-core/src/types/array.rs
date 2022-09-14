@@ -1,7 +1,6 @@
 use crate::{Parameterize, Token, Tokenizable};
 use fuels_types::errors::Error;
 use fuels_types::param_types::ParamType;
-use std::fmt::Debug;
 
 impl<const SIZE: usize, T: Parameterize> Parameterize for [T; SIZE] {
     fn param_type() -> ParamType {
