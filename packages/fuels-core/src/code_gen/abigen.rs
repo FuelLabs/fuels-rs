@@ -10,7 +10,7 @@ use fuels_types::{ProgramABI, TypeApplication, TypeDeclaration};
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
-use super::custom_types_gen::{expand_custom_enum, expand_custom_struct};
+use super::custom_types::{expand_custom_enum, expand_custom_struct};
 use super::functions_gen::expand_function;
 
 pub struct Abigen {

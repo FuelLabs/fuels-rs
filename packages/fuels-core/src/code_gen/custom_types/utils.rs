@@ -32,12 +32,10 @@ impl Component {
             component.name.to_owned()
         };
 
-        let component1 = Component {
+        Ok(Component {
             field_name: ident(&field_name),
             field_type: resolve_type(component, types)?,
-        };
-
-        Ok(component1)
+        })
     }
 }
 

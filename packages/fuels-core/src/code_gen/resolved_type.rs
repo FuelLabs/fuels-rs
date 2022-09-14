@@ -1,4 +1,4 @@
-use crate::code_gen::custom_types_gen::extract_custom_type_name_from_abi_property;
+use crate::code_gen::custom_types::extract_custom_type_name_from_abi_property;
 use fuels_types::errors::Error;
 use fuels_types::param_types::ParamType;
 use fuels_types::{TypeApplication, TypeDeclaration};

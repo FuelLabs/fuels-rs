@@ -120,7 +120,7 @@ pub fn expand_input_name(name: &str) -> Result<TokenStream, Error> {
     Ok(quote! { #name })
 }
 
-// Regarding string->TokenStream->string, refer to `custom_types_gen` tests for more details.
+// Regarding string->TokenStream->string, refer to `custom_types` tests for more details.
 #[cfg(test)]
 mod tests {
     use super::*;

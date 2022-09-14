@@ -1,6 +1,6 @@
 #![allow(warnings)] // temp remove me later
 use crate::abi_decoder::ABIDecoder;
-use crate::abi_types::Bits256;
+use abi_types::Bits256;
 use core::fmt;
 use fuel_types::bytes::padded_len;
 use fuels_types::{

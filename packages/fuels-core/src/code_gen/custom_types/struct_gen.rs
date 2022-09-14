@@ -1,4 +1,4 @@
-use super::common::{
+use super::utils::{
     extract_components, extract_custom_type_name_from_abi_property, extract_generic_parameters,
     impl_try_from, param_type_calls, Component,
 };
