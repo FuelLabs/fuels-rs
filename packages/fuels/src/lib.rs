@@ -66,6 +66,7 @@ pub mod prelude {
     pub use super::core::constants::*;
     pub use super::core::parameters::*;
     pub use super::core::tx::{Address, AssetId, ContractId};
+    pub use super::core::types::*;
     pub use super::core::{Token, Tokenizable};
     pub use super::fuel_node::*;
     pub use super::fuels_abigen::abigen;

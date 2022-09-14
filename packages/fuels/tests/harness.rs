@@ -12,6 +12,7 @@ use fuels::prelude::{
 use fuels_core::abi_encoder::ABIEncoder;
 use fuels_core::parameters::StorageConfiguration;
 use fuels_core::tx::{Address, Bytes32, StorageSlot};
+use fuels_core::types::Bits256;
 use fuels_core::Tokenizable;
 use fuels_core::{constants::BASE_ASSET_ID, Token};
 use fuels_signers::fuel_crypto::SecretKey;
@@ -188,7 +189,7 @@ async fn compile_bindings_array_input() {
     // `SimpleContract` is the name of the contract
     let contract_instance = SimpleContractBuilder::new(null_contract_id(), wallet).build();
 
-    let input: Vec<u16> = vec![1, 2, 3, 4];
+    let input = [1, 2, 3];
     let call_handler = contract_instance.takes_array(input);
 
     let encoded = format!(
@@ -198,7 +199,7 @@ async fn compile_bindings_array_input() {
     );
 
     assert_eq!(
-        "00000000101cbeb50000000000000001000000000000000200000000000000030000000000000004",
+        "00000000101cbeb5000000000000000100000000000000020000000000000003",
         encoded
     );
 }
@@ -263,7 +264,7 @@ async fn compile_bindings_bool_array_input() {
     // `SimpleContract` is the name of the contract
     let contract_instance = SimpleContractBuilder::new(null_contract_id(), wallet).build();
 
-    let input: Vec<bool> = vec![true, false, true];
+    let input = [true, false, true];
     let call_handler = contract_instance.takes_array(input);
 
     let encoded = format!(
@@ -385,7 +386,8 @@ async fn compile_bindings_string_input() {
     // `SimpleContract` is the name of the contract
     let contract_instance = SimpleContractBuilder::new(null_contract_id(), wallet).build();
 
-    let call_handler = contract_instance.takes_string("This is a full sentence".into());
+    let call_handler =
+        contract_instance.takes_string("This is a full sentence".try_into().unwrap());
 
     let encoded = format!(
         "{}{}",
@@ -450,9 +452,9 @@ async fn compile_bindings_b256_input() {
     let mut hasher = Sha256::new();
     hasher.update("test string".as_bytes());
 
-    let arg = hasher.finalize();
+    let arg: [u8; 32] = hasher.finalize().into();
 
-    let call_handler = contract_instance.takes_b256(arg.into());
+    let call_handler = contract_instance.takes_b256(Bits256(arg));
 
     let encoded = format!(
         "{}{}",
@@ -546,8 +548,8 @@ async fn compile_bindings_struct_input() {
     // Because of the abigen! macro, `MyStruct` is now in scope
     // and can be used!
     let input = MyStruct {
-        foo: vec![10, 2],
-        bar: "fuel".to_string(),
+        foo: [10, 2],
+        bar: "fuel".try_into().unwrap(),
     };
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -989,7 +991,7 @@ async fn type_safe_output_values() -> Result<(), Error> {
 
     // `response`'s type matches the return type of `return_my_string()`
     let response = contract_instance
-        .return_my_string("fuel".to_string())
+        .return_my_string("fuel".try_into().unwrap())
         .call()
         .await?;
 
@@ -1216,7 +1218,7 @@ async fn test_large_return_data() -> Result<(), Error> {
     let res = contract_instance.get_id().call().await?;
 
     assert_eq!(
-        res.value,
+        res.value.0,
         [
             255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
             255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255
@@ -1238,7 +1240,7 @@ async fn test_large_return_data() -> Result<(), Error> {
 
     // Array will be returned in `ReturnData`.
     let res = contract_instance.get_large_array().call().await?;
-    assert_eq!(res.value, &[1, 2]);
+    assert_eq!(res.value, [1, 2]);
 
     let res = contract_instance.get_contract_id().call().await?;
 
@@ -1349,8 +1351,9 @@ async fn test_contract_calling_contract() -> Result<(), Error> {
     // Calls the contract that calls the `FooContract` contract, also just
     // flips the bool value passed to it.
     // ANCHOR: external_contract
+    let bits = *foo_contract_id.hash();
     let res = foo_caller_contract_instance
-        .call_foo_contract(*foo_contract_id.hash(), true)
+        .call_foo_contract(Bits256(bits), true)
         .set_contracts(&[foo_contract_id]) // Sets the external contract
         .call()
         .await?;
@@ -1616,40 +1619,56 @@ async fn test_tuples() -> Result<(), Error> {
 
     let instance = MyContractBuilder::new(id.to_string(), wallet.clone()).build();
 
-    let response = instance.returns_tuple((1, 2)).call().await?;
+    {
+        let response = instance.returns_tuple((1, 2)).call().await?;
 
-    assert_eq!(response.value, (1, 2));
+        assert_eq!(response.value, (1, 2));
+    }
 
-    // Tuple with struct.
-    let my_struct_tuple = (
-        42,
-        Person {
-            name: "Jane".to_string(),
-        },
-    );
-    let response = instance
-        .returns_struct_in_tuple(my_struct_tuple.clone())
-        .call()
-        .await?;
+    {
+        // Tuple with struct.
+        let my_struct_tuple = (
+            42,
+            Person {
+                name: "Jane".try_into()?,
+            },
+        );
+        let response = instance
+            .returns_struct_in_tuple(my_struct_tuple.clone())
+            .call()
+            .await?;
 
-    assert_eq!(response.value, my_struct_tuple);
+        assert_eq!(response.value, my_struct_tuple);
+    }
+    {
+        // Tuple with enum.
+        let my_enum_tuple: (u64, State) = (42, State::A());
 
-    // Tuple with enum.
-    let my_enum_tuple: (u64, State) = (42, State::A());
+        let response = instance
+            .returns_enum_in_tuple(my_enum_tuple.clone())
+            .call()
+            .await?;
 
-    let response = instance
-        .returns_enum_in_tuple(my_enum_tuple.clone())
-        .call()
-        .await?;
+        assert_eq!(response.value, my_enum_tuple);
+    }
+    {
+        // Tuple with single element
+        let my_enum_tuple = (123u64,);
 
-    assert_eq!(response.value, my_enum_tuple);
+        let response = instance.single_element_tuple(my_enum_tuple).call().await?;
 
-    let id = *ContractId::zeroed();
-    let my_b256_u8_tuple: ([u8; 32], u8) = (id, 10);
+        assert_eq!(response.value, my_enum_tuple);
+    }
 
-    let response = instance.tuple_with_b256(my_b256_u8_tuple).call().await?;
+    {
+        // tuple with b256
+        let id = *ContractId::zeroed();
+        let my_b256_u8_tuple = (Bits256(id), 10);
 
-    assert_eq!(response.value, my_b256_u8_tuple);
+        let response = instance.tuple_with_b256(my_b256_u8_tuple).call().await?;
+
+        assert_eq!(response.value, my_b256_u8_tuple);
+    }
     Ok(())
 }
 
@@ -1673,11 +1692,7 @@ async fn test_array() -> Result<(), Error> {
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
 
     assert_eq!(
-        contract_instance
-            .get_array([42; 2].to_vec())
-            .call()
-            .await?
-            .value,
+        contract_instance.get_array([42; 2]).call().await?.value,
         [42; 2]
     );
     Ok(())
@@ -1704,12 +1719,12 @@ async fn test_arrays_with_custom_types() -> Result<(), Error> {
 
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
 
-    let persons = vec![
+    let persons = [
         Person {
-            name: "John".to_string(),
+            name: "John".try_into()?,
         },
         Person {
-            name: "Jane".to_string(),
+            name: "Jane".try_into()?,
         },
     ];
 
@@ -1718,7 +1733,7 @@ async fn test_arrays_with_custom_types() -> Result<(), Error> {
     assert_eq!("John", response.value[0].name);
     assert_eq!("Jane", response.value[1].name);
 
-    let states = vec![State::A(), State::B()];
+    let states = [State::A(), State::B()];
 
     let response = contract_instance
         .array_of_enums(states.clone())
@@ -1820,12 +1835,12 @@ async fn test_logd_receipts() -> Result<(), Error> {
     value[13] = 0xBB;
     value[14] = 0xCC;
     let response = contract_instance
-        .use_logd_opcode(value, 3, 6)
+        .use_logd_opcode(Bits256(value), 3, 6)
         .call()
         .await?;
     assert_eq!(response.logs, vec!["ffeedd", "ffeedd000000"]);
     let response = contract_instance
-        .use_logd_opcode(value, 14, 15)
+        .use_logd_opcode(Bits256(value), 14, 15)
         .call()
         .await?;
     assert_eq!(
@@ -2182,7 +2197,7 @@ async fn test_multi_call() -> Result<(), Error> {
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
 
     let call_handler_1 = contract_instance.initialize_counter(42);
-    let call_handler_2 = contract_instance.get_array([42; 2].to_vec());
+    let call_handler_2 = contract_instance.get_array([42; 2]);
 
     let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
 
@@ -2190,7 +2205,7 @@ async fn test_multi_call() -> Result<(), Error> {
         .add_call(call_handler_1)
         .add_call(call_handler_2);
 
-    let (counter, array): (u64, Vec<u64>) = multi_call_handler.call().await?.value;
+    let (counter, array): (u64, [u64; 2]) = multi_call_handler.call().await?.value;
 
     assert_eq!(counter, 42);
     assert_eq!(array, [42; 2]);
@@ -2219,7 +2234,7 @@ async fn test_multi_call_script_workflow() -> Result<(), Error> {
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
 
     let call_handler_1 = contract_instance.initialize_counter(42);
-    let call_handler_2 = contract_instance.get_array([42; 2].to_vec());
+    let call_handler_2 = contract_instance.get_array([42; 2]);
 
     let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
 
@@ -2230,7 +2245,7 @@ async fn test_multi_call_script_workflow() -> Result<(), Error> {
     let script = multi_call_handler.get_call_execution_script().await?;
     let receipts = script.call(provider).await.unwrap();
     let (counter, array) = multi_call_handler
-        .get_response::<(u64, Vec<u64>)>(receipts)?
+        .get_response::<(u64, [u64; 2])>(receipts)?
         .value;
 
     assert_eq!(counter, 42);
@@ -2269,11 +2284,11 @@ async fn test_storage_initialization() -> Result<(), Error> {
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
 
     let result = contract_instance
-        .get_value_b256(key.into())
+        .get_value_b256(Bits256(key.into()))
         .call()
         .await?
         .value;
-    assert_eq!(result.as_slice(), value.as_slice());
+    assert_eq!(result.0, *value);
 
     Ok(())
 }
@@ -2359,12 +2374,12 @@ async fn type_inside_enum() -> Result<(), Error> {
     let instance = MyContractBuilder::new(id.to_string(), wallet.clone()).build();
 
     // String inside enum
-    let enum_string = SomeEnum::SomeStr("asdf".to_owned());
+    let enum_string = SomeEnum::SomeStr("asdf".try_into()?);
     let response = instance.str_inside_enum(enum_string.clone()).call().await?;
     assert_eq!(response.value, enum_string);
 
     // Array inside enum
-    let enum_array = SomeEnum::SomeArr(vec![1, 2, 3, 4, 5, 6, 7]);
+    let enum_array = SomeEnum::SomeArr([1, 2, 3, 4, 5, 6, 7]);
     let response = instance.arr_inside_enum(enum_array.clone()).call().await?;
     assert_eq!(response.value, enum_array);
 
@@ -2426,10 +2441,18 @@ async fn test_init_storage_automatically() -> Result<(), Error> {
 
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
 
-    let value = contract_instance.get_value_b256(*key1).call().await?.value;
-    assert_eq!(value, [1u8; 32]);
+    let value = contract_instance
+        .get_value_b256(Bits256(*key1))
+        .call()
+        .await?
+        .value;
+    assert_eq!(value.0, [1u8; 32]);
 
-    let value = contract_instance.get_value_u64(*key2).call().await?.value;
+    let value = contract_instance
+        .get_value_u64(Bits256(*key2))
+        .call()
+        .await?
+        .value;
     assert_eq!(value, 64);
 
     Ok(())
@@ -3076,7 +3099,7 @@ async fn str_in_array() -> Result<(), Error> {
 
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
 
-    let input = vec!["foo".to_string(), "bar".to_string(), "baz".to_string()];
+    let input = ["foo", "bar", "baz"].map(|str| str.try_into().unwrap());
     let response = contract_instance
         .take_array_string_shuffle(input.clone())
         .call()
@@ -3102,7 +3125,9 @@ async fn str_in_array() -> Result<(), Error> {
 }
 
 #[tokio::test]
-#[should_panic(expected = "String data has len ")]
+#[should_panic(
+    expected = "SizedAsciiString<4> can only be constructed from a String of length 4. Got: fuell"
+)]
 async fn strings_must_have_correct_length() {
     abigen!(
         SimpleContract,
@@ -3145,11 +3170,13 @@ async fn strings_must_have_correct_length() {
 
     let wallet = launch_provider_and_get_wallet().await;
     let contract_instance = SimpleContractBuilder::new(null_contract_id(), wallet).build();
-    let _ = contract_instance.takes_string("fuell".into());
+    let _ = contract_instance.takes_string("fuell".try_into().unwrap());
 }
 
 #[tokio::test]
-#[should_panic(expected = "String data can only have ascii values")]
+#[should_panic(
+    expected = "SizedAsciiString must be constructed from a string containing only ascii encodable characters. Got: fueŁ"
+)]
 async fn strings_must_have_all_ascii_chars() {
     abigen!(
         SimpleContract,
@@ -3192,11 +3219,13 @@ async fn strings_must_have_all_ascii_chars() {
 
     let wallet = launch_provider_and_get_wallet().await;
     let contract_instance = SimpleContractBuilder::new(null_contract_id(), wallet).build();
-    let _ = contract_instance.takes_string("fueŁ".into());
+    let _ = contract_instance.takes_string("fueŁ".try_into().unwrap());
 }
 
 #[tokio::test]
-#[should_panic(expected = "String data has len ")]
+#[should_panic(
+    expected = "SizedAsciiString<4> can only be constructed from a String of length 4. Got: fuell"
+)]
 async fn strings_must_have_correct_length_custom_types() {
     abigen!(
         SimpleContract,
@@ -3274,11 +3303,13 @@ async fn strings_must_have_correct_length_custom_types() {
 
     let wallet = launch_provider_and_get_wallet().await;
     let contract_instance = SimpleContractBuilder::new(null_contract_id(), wallet).build();
-    let _ = contract_instance.takes_enum(MyEnum::bar("fuell".to_string()));
+    let _ = contract_instance.takes_enum(MyEnum::bar("fuell".try_into().unwrap()));
 }
 
 #[tokio::test]
-#[should_panic(expected = "String data can only have ascii values")]
+#[should_panic(
+    expected = "SizedAsciiString must be constructed from a string containing only ascii encodable characters. Got: fueŁ"
+)]
 async fn strings_must_have_all_ascii_chars_custom_types() {
     abigen!(
         SimpleContract,
@@ -3355,7 +3386,7 @@ async fn strings_must_have_all_ascii_chars_custom_types() {
     );
 
     let inner_struct = InnerStruct {
-        bar: "fueŁ".to_string(),
+        bar: "fueŁ".try_into().unwrap(),
     };
     let input = MyNestedStruct {
         x: 10,
@@ -3524,7 +3555,7 @@ async fn mutl_call_has_same_estimated_and_used_gas() -> Result<(), Error> {
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
 
     let call_handler_1 = contract_instance.initialize_counter(42);
-    let call_handler_2 = contract_instance.get_array([42; 2].to_vec());
+    let call_handler_2 = contract_instance.get_array([42; 2]);
 
     let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
 
@@ -3538,7 +3569,7 @@ async fn mutl_call_has_same_estimated_and_used_gas() -> Result<(), Error> {
         .await?
         .gas_used;
 
-    let gas_used = multi_call_handler.call::<(u64, Vec<u64>)>().await?.gas_used;
+    let gas_used = multi_call_handler.call::<(u64, [u64; 2])>().await?.gas_used;
 
     assert_eq!(estimated_gas_used, gas_used);
 
@@ -3657,6 +3688,123 @@ async fn test_input_message() -> Result<(), Error> {
         .await?;
 
     assert_eq!(42, response.value);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn generics_test() -> anyhow::Result<()> {
+    abigen!(
+        MyContract,
+        "packages/fuels/tests/test_projects/generics/out/debug/generics-abi.json"
+    );
+
+    let wallet = launch_provider_and_get_wallet().await;
+
+    let contract_id = Contract::deploy(
+        "tests/test_projects/generics/out/debug/generics.bin",
+        &wallet,
+        TxParameters::default(),
+        StorageConfiguration::default(),
+    )
+    .await?;
+
+    let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
+
+    {
+        // simple struct with a single generic param
+        let arg1 = SimpleGeneric {
+            single_generic_param: 123u64,
+        };
+
+        let result = contract_instance
+            .struct_w_generic(arg1.clone())
+            .call()
+            .await?
+            .value;
+
+        assert_eq!(result, arg1);
+    }
+    {
+        // struct that delegates the generic param internally
+        let arg1 = PassTheGenericOn {
+            one: SimpleGeneric {
+                single_generic_param: "abc".try_into()?,
+            },
+        };
+
+        let result = contract_instance
+            .struct_delegating_generic(arg1.clone())
+            .call()
+            .await?
+            .value;
+
+        assert_eq!(result, arg1);
+    }
+    {
+        // struct that has the generic in an array
+        let arg1 = StructWArrayGeneric { a: [1u32, 2u32] };
+
+        let result = contract_instance
+            .struct_w_generic_in_array(arg1.clone())
+            .call()
+            .await?
+            .value;
+
+        assert_eq!(result, arg1);
+    }
+    {
+        // struct that has the generic in a tuple
+        let arg1 = StructWTupleGeneric { a: (1, 2) };
+
+        let result = contract_instance
+            .struct_w_generic_in_tuple(arg1.clone())
+            .call()
+            .await?
+            .value;
+
+        assert_eq!(result, arg1);
+    }
+    {
+        // struct with generic in variant
+        let arg1 = EnumWGeneric::b(10);
+        let result = contract_instance
+            .enum_w_generic(arg1.clone())
+            .call()
+            .await?
+            .value;
+
+        assert_eq!(result, arg1);
+    }
+    {
+        // complex case
+        let pass_through = PassTheGenericOn {
+            one: SimpleGeneric {
+                single_generic_param: "ab".try_into()?,
+            },
+        };
+        let w_arr_generic = StructWArrayGeneric {
+            a: [pass_through.clone(), pass_through],
+        };
+
+        let arg1 = MegaExample {
+            a: ([Bits256([0; 32]), Bits256([0; 32])], "ab".try_into()?),
+            b: (
+                [EnumWGeneric::b(StructWTupleGeneric {
+                    a: (w_arr_generic.clone(), w_arr_generic),
+                })],
+                10u32,
+            ),
+        };
+
+        let result = contract_instance
+            .complex_test(arg1.clone())
+            .call()
+            .await?
+            .value;
+
+        assert_eq!(result, arg1);
+    }
 
     Ok(())
 }

@@ -27,6 +27,7 @@ impl Tokenizer {
         let trimmed_value = value.trim();
 
         match param {
+            ParamType::Generic(_name) => panic!("Cannot tokenize an unresolved generic parameter!"),
             ParamType::Unit => Ok(Token::Unit),
             ParamType::U8 => Ok(Token::U8(trimmed_value.parse::<u8>()?)),
             ParamType::U16 => Ok(Token::U16(trimmed_value.parse::<u16>()?)),
