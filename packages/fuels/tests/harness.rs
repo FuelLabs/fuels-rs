@@ -1619,40 +1619,56 @@ async fn test_tuples() -> Result<(), Error> {
 
     let instance = MyContractBuilder::new(id.to_string(), wallet.clone()).build();
 
-    let response = instance.returns_tuple((1, 2)).call().await?;
+    {
+        let response = instance.returns_tuple((1, 2)).call().await?;
 
-    assert_eq!(response.value, (1, 2));
+        assert_eq!(response.value, (1, 2));
+    }
 
-    // Tuple with struct.
-    let my_struct_tuple = (
-        42,
-        Person {
-            name: "Jane".try_into()?,
-        },
-    );
-    let response = instance
-        .returns_struct_in_tuple(my_struct_tuple.clone())
-        .call()
-        .await?;
+    {
+        // Tuple with struct.
+        let my_struct_tuple = (
+            42,
+            Person {
+                name: "Jane".try_into()?,
+            },
+        );
+        let response = instance
+            .returns_struct_in_tuple(my_struct_tuple.clone())
+            .call()
+            .await?;
 
-    assert_eq!(response.value, my_struct_tuple);
+        assert_eq!(response.value, my_struct_tuple);
+    }
+    {
+        // Tuple with enum.
+        let my_enum_tuple: (u64, State) = (42, State::A());
 
-    // Tuple with enum.
-    let my_enum_tuple: (u64, State) = (42, State::A());
+        let response = instance
+            .returns_enum_in_tuple(my_enum_tuple.clone())
+            .call()
+            .await?;
 
-    let response = instance
-        .returns_enum_in_tuple(my_enum_tuple.clone())
-        .call()
-        .await?;
+        assert_eq!(response.value, my_enum_tuple);
+    }
+    {
+        // Tuple with single element
+        let my_enum_tuple = (123u64,);
 
-    assert_eq!(response.value, my_enum_tuple);
+        let response = instance.single_element_tuple(my_enum_tuple).call().await?;
 
-    let id = *ContractId::zeroed();
-    let my_b256_u8_tuple = (Bits256(id), 10);
+        assert_eq!(response.value, my_enum_tuple);
+    }
 
-    let response = instance.tuple_with_b256(my_b256_u8_tuple).call().await?;
+    {
+        // tuple with b256
+        let id = *ContractId::zeroed();
+        let my_b256_u8_tuple = (Bits256(id), 10);
 
-    assert_eq!(response.value, my_b256_u8_tuple);
+        let response = instance.tuple_with_b256(my_b256_u8_tuple).call().await?;
+
+        assert_eq!(response.value, my_b256_u8_tuple);
+    }
     Ok(())
 }
 

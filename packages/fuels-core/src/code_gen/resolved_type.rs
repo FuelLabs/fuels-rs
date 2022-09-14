@@ -64,7 +64,10 @@ pub(crate) fn resolve_type(
     let param_type = ParamType::from_type_declaration(base_type, types)?;
 
     let (type_name, generic_params) = match &param_type {
-        ParamType::Generic(name) => Ok::<_, Error>((name.parse().unwrap(), vec![])),
+        ParamType::Generic(name) => {
+            let token_stream = name.parse().expect("Failed to parse generic param name");
+            Ok::<_, Error>((token_stream, vec![]))
+        }
         ParamType::U8 => Ok((quote! {u8}, vec![])),
         ParamType::U16 => Ok((quote! {u16}, vec![])),
         ParamType::U32 => Ok((quote! {u32}, vec![])),
@@ -79,7 +82,7 @@ pub(crate) fn resolve_type(
             let type_inside: TokenStream = match array_components.as_slice() {
                 [single_type] => single_type.into(),
                 _ => {
-                    return Err(Error::InvalidData(format!("Array had multiple components when only a single one is allowed! {array_components:?}")));
+                    return Err(Error::InvalidData(format!("Array must have only one component! Actual components: {array_components:?}")));
                 }
             };
 
@@ -103,7 +106,10 @@ pub(crate) fn resolve_type(
                 .into_iter()
                 .map(TokenStream::from);
 
-            Ok((quote! {(#(#inner_types),*)}, vec![]))
+            // it is important to leave a trailing comma because a tuple with
+            // one element is written as (element,) not (element) which is
+            // resolved to just element
+            Ok((quote! {(#(#inner_types,)*)}, vec![]))
         }
     }?;
 
