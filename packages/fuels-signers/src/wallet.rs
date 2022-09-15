@@ -313,6 +313,12 @@ impl Wallet {
         .flatten()
         .collect();
 
+        // This script loads:
+        //  - a pointer to the contract id,
+        //  - the actual amount
+        //  - a pointer to the asset id
+        // into the registers 0X10, 0x11, 0x12
+        // and calls the TR instruction
         let script = vec![
             Opcode::gtf(0x10, 0x00, GTFArgs::ScriptData),
             Opcode::ADDI(0x11, 0x10, ContractId::LEN as u16),
