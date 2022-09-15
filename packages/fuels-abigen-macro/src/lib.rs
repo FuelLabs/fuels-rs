@@ -75,20 +75,20 @@ pub fn setup_contract_test(input: TokenStream) -> TokenStream {
         .expect("could not join path for storage file")
         .to_string();
 
-    let contract_struct_name = &args.instance_name.to_camel_case();
-    let mut abigen_token_stream: TokenStream = Abigen::new(contract_struct_name, abi_path)
+    let contract_struct_name = args.instance_name.to_camel_case();
+    let mut abigen_token_stream: TokenStream = Abigen::new(&contract_struct_name, abi_path)
         .unwrap()
         .expand()
         .unwrap()
         .into();
 
     // Generate random salt for contract deployment
-    let rng = &mut StdRng::from_entropy();
+    let mut rng = StdRng::from_entropy();
     let salt: [u8; 32] = rng.gen();
 
     let contract_instance_name = Ident::new(&args.instance_name, Span::call_site());
     let builder_struct_name = Ident::new(
-        &[contract_struct_name, "Builder"].concat(),
+        &[&contract_struct_name, "Builder"].concat(),
         Span::call_site(),
     );
 

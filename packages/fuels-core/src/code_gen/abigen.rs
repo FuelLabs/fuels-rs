@@ -111,8 +111,8 @@ impl Abigen {
                     impl #name {
                         #contract_functions
 
-                        pub fn _get_contract_id(&self) -> Bech32ContractId {
-                            self.contract_id.clone()
+                        pub fn _get_contract_id(&self) -> &Bech32ContractId {
+                            &self.contract_id
                         }
 
                         pub fn _get_wallet(&self) -> WalletUnlocked {

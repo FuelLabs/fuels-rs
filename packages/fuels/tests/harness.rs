@@ -1251,7 +1251,7 @@ async fn test_contract_calling_contract() -> Result<(), Error> {
     let bits = *foo_contract_id.hash();
     let res = foo_caller_contract_instance
         .call_foo_contract(Bits256(bits), true)
-        .set_contracts(&[foo_contract_id]) // Sets the external contract
+        .set_contracts(&[foo_contract_id.clone()]) // Sets the external contract
         .call()
         .await?;
     // ANCHOR_END: external_contract
@@ -1296,7 +1296,7 @@ async fn test_contract_setup_macro_deploy_with_salt() -> Result<(), Error> {
 
     let res = foo_caller_contract_instance2
         .call_foo_contract(Bits256(bits), true)
-        .set_contracts(&[foo_contract_id]) // Sets the external contract
+        .set_contracts(&[foo_contract_id.clone()]) // Sets the external contract
         .call()
         .await?;
     assert!(!res.value);
@@ -1412,7 +1412,7 @@ async fn test_amount_and_asset_forwarding() -> Result<(), Error> {
     let contract_id = contract_instance._get_contract_id();
 
     let mut balance_response = contract_instance
-        .get_balance((&contract_id).into(), (&contract_id).into())
+        .get_balance(contract_id.into(), contract_id.into())
         .call()
         .await?;
     assert_eq!(balance_response.value, 0);
@@ -1420,7 +1420,7 @@ async fn test_amount_and_asset_forwarding() -> Result<(), Error> {
     contract_instance.mint_coins(5_000_000).call().await?;
 
     balance_response = contract_instance
-        .get_balance((&contract_id).into(), (&contract_id).into())
+        .get_balance(contract_id.into(), contract_id.into())
         .call()
         .await?;
     assert_eq!(balance_response.value, 5_000_000);
@@ -1453,7 +1453,7 @@ async fn test_amount_and_asset_forwarding() -> Result<(), Error> {
 
     // withdraw some tokens to wallet
     contract_instance
-        .transfer_coins_to_output(1_000_000, (&contract_id).into(), address.into())
+        .transfer_coins_to_output(1_000_000, contract_id.into(), address.into())
         .append_variable_outputs(1)
         .call()
         .await?;
