@@ -503,9 +503,7 @@ where
     T: Parameterize + Tokenizable,
 {
     fn param_type() -> ParamType {
-        let mut types = Vec::new();
-        types.push(ParamType::Unit);
-        types.push(T::param_type());
+        let types = vec![ParamType::Unit, T::param_type()];
         let variants = EnumVariants::new(types).expect("should never happen");
         ParamType::Enum(variants)
     }
@@ -517,9 +515,7 @@ where
     E: Parameterize + Tokenizable,
 {
     fn param_type() -> ParamType {
-        let mut types = Vec::new();
-        types.push(T::param_type());
-        types.push(E::param_type());
+        let types = vec![T::param_type(), E::param_type()];
         let variants = EnumVariants::new(types).expect("should never happen");
         ParamType::Enum(variants)
     }
