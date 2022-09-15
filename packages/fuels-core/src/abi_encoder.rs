@@ -1,6 +1,5 @@
 use crate::{
-    pad_string, pad_u16, pad_u32, pad_u8, Bits256, EnumSelector, EnumVariants, ParamType,
-    StringToken, Token,
+    pad_string, pad_u16, pad_u32, pad_u8, EnumSelector, EnumVariants, ParamType, StringToken, Token,
 };
 use fuels_types::{constants::WORD_SIZE, errors::CodecError};
 pub struct ABIEncoder {
@@ -72,7 +71,7 @@ impl ABIEncoder {
         Ok(())
     }
 
-    fn encode_b256(&mut self, arg_bits256: &Bits256) {
+    fn encode_b256(&mut self, arg_bits256: &[u8; 32]) {
         self.buffer.extend(arg_bits256);
     }
 

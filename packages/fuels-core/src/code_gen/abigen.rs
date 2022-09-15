@@ -9,7 +9,7 @@ use fuels_types::{ProgramABI, TypeDeclaration};
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
-use super::custom_types_gen::{expand_custom_enum, expand_custom_struct};
+use super::custom_types::{expand_custom_enum, expand_custom_struct};
 use super::functions_gen::expand_function;
 
 pub struct Abigen {
@@ -32,8 +32,8 @@ impl Abigen {
     pub fn new<S: AsRef<str>>(contract_name: &str, abi_source: S) -> Result<Self, Error> {
         let source = Source::parse(abi_source).expect("failed to parse JSON ABI");
 
-        let parsed_abi: ProgramABI =
-            serde_json::from_str(&source.get().expect("failed to parse JSON ABI from string"))?;
+        let json_abi_str = source.get().expect("failed to parse JSON ABI from string");
+        let parsed_abi: ProgramABI = serde_json::from_str(&json_abi_str)?;
 
         Ok(Self {
             types: Abigen::get_types(&parsed_abi),
@@ -83,6 +83,7 @@ impl Abigen {
                 quote! {
                     use alloc::{vec, vec::Vec};
                     use fuels_core::{EnumSelector, Parameterize, Tokenizable, Token, try_from_bytes};
+                    use fuels_core::types::*;
                     use fuels_types::errors::Error as SDKError;
                     use fuels_types::param_types::{ParamType, EnumVariants};
                 },
@@ -93,6 +94,7 @@ impl Abigen {
                 quote! {
                     use fuels::contract::contract::{Contract, ContractCallHandler};
                     use fuels::core::{EnumSelector, StringToken, Parameterize, Tokenizable, Token, try_from_bytes};
+                    use fuels::core::types::*;
                     use fuels::signers::WalletUnlocked;
                     use fuels::tx::{ContractId, Address};
                     use fuels::types::bech32::Bech32ContractId;

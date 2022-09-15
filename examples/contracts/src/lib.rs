@@ -452,7 +452,7 @@ mod tests {
             MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
 
         let call_handler_1 = contract_instance.initialize_counter(42);
-        let call_handler_2 = contract_instance.get_array([42; 2].to_vec());
+        let call_handler_2 = contract_instance.get_array([42; 2]);
         // ANCHOR_END: multi_call_prepare
 
         // ANCHOR: multi_call_build
@@ -464,11 +464,11 @@ mod tests {
         // ANCHOR_END: multi_call_build
 
         // ANCHOR: multi_call_values
-        let (counter, array): (u64, Vec<u64>) = multi_call_handler.call().await?.value;
+        let (counter, array): (u64, [u64; 2]) = multi_call_handler.call().await?.value;
         // ANCHOR_END: multi_call_values
 
         // ANCHOR: multi_call_response
-        let response = multi_call_handler.call::<(u64, Vec<u64>)>().await?;
+        let response = multi_call_handler.call::<(u64, [u64; 2])>().await?;
         // ANCHOR_END: multi_call_response
 
         assert_eq!(counter, 42);
@@ -504,7 +504,7 @@ mod tests {
         let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
 
         let call_handler_1 = contract_instance.initialize_counter(42);
-        let call_handler_2 = contract_instance.get_array([42; 2].to_vec());
+        let call_handler_2 = contract_instance.get_array([42; 2]);
 
         multi_call_handler
             .add_call(call_handler_1)

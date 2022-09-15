@@ -42,17 +42,6 @@ pub fn wasm_abigen(input: TokenStream) -> TokenStream {
 /// The same contract can be deployed multiple times as the macro uses deployment with salt.
 /// If however; you need to have a shared wallet between macros, the first macro must set the
 /// wallet name to `shared_wallet`. The other ones must set the wallet name to `None`.
-///
-/// # Example
-///
-/// ```
-/// setup_contract_test!(
-///     contract_instance,
-///     wallet,
-///     contract_id,
-///     "packages/fuels/tests/test_projects/contract_test"
-/// );
-/// ```
 #[proc_macro]
 pub fn setup_contract_test(input: TokenStream) -> TokenStream {
     let args = parse_macro_input!(input as Spanned<ContractTestArgs>);
