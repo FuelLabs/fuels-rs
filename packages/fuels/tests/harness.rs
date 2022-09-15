@@ -3358,22 +3358,11 @@ async fn test_input_message() -> Result<(), Error> {
 
 #[tokio::test]
 async fn generics_test() -> anyhow::Result<()> {
-    abigen!(
-        MyContract,
-        "packages/fuels/tests/test_projects/generics/out/debug/generics-abi.json"
+    setup_contract_test!(
+        contract_instance,
+        wallet,
+        "packages/fuels/tests/test_projects/generics"
     );
-
-    let wallet = launch_provider_and_get_wallet().await;
-
-    let contract_id = Contract::deploy(
-        "tests/test_projects/generics/out/debug/generics.bin",
-        &wallet,
-        TxParameters::default(),
-        StorageConfiguration::default(),
-    )
-    .await?;
-
-    let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
 
     {
         // simple struct with a single generic param
