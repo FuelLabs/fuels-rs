@@ -4,8 +4,18 @@ use crate::{
     utils::{has_array_format, has_tuple_format},
     TypeDeclaration,
 };
+use lazy_static::lazy_static;
+use regex::Regex;
 use std::collections::HashMap;
 use std::str::FromStr;
+
+fn try_to_get_generic_name(field: &str) -> Option<String> {
+    lazy_static! {
+        static ref RE: Regex = Regex::new(r"^\s*generic\s+(\S+)\s*$").unwrap();
+    }
+    RE.captures(field)
+        .map(|captures| String::from(&captures[1]))
+}
 
 impl ParamType {
     pub fn from_type_declaration(
@@ -29,6 +39,9 @@ impl ParamType {
                     // Try to parse tuple (T, T, ..., T)
                     return ParamType::parse_tuple_param(prop, types);
                 }
+                if let Some(name) = try_to_get_generic_name(&prop.type_field) {
+                    return Ok(ParamType::Generic(name));
+                }
                 // Try to parse a free form enum or struct (e.g. `struct MySTruct`, `enum MyEnum`).
                 ParamType::parse_custom_type_param(prop, types)
             }
@@ -46,7 +59,7 @@ impl ParamType {
             .as_ref()
             .expect("tuples should have components")
         {
-            let tuple_component_type_declaration = types.get(&tuple_component.type_field).unwrap();
+            let tuple_component_type_declaration = types.get(&tuple_component.type_id).unwrap();
             params.push(Self::from_type_declaration(
                 tuple_component_type_declaration,
                 types,
@@ -86,7 +99,7 @@ impl ParamType {
 
         let t = if let Some([component]) = prop.components.as_deref() {
             types
-                .get(&component.type_field)
+                .get(&component.type_id)
                 .expect("couldn't find type declaration for array component")
         } else {
             panic!("array should have components");
@@ -99,6 +112,8 @@ impl ParamType {
             Err(_) => {
                 if type_field.contains("str[") {
                     ParamType::parse_string_param(t)?
+                } else if let Some(name) = try_to_get_generic_name(&type_field) {
+                    ParamType::Generic(name)
                 } else {
                     ParamType::parse_custom_type_param(t, types)?
                 }
@@ -120,7 +135,7 @@ impl ParamType {
                 let params = c
                     .iter()
                     .map(|component| {
-                        let component_type_declaration = types.get(&component.type_field).unwrap();
+                        let component_type_declaration = types.get(&component.type_id).unwrap();
                         Self::from_type_declaration(component_type_declaration, types).unwrap()
                     })
                     .collect();

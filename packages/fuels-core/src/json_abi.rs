@@ -1,11 +1,11 @@
 use crate::code_gen::abigen::Abigen;
+use crate::code_gen::function_selector::resolve_fn_selector;
 use crate::tokenizer::Tokenizer;
 use crate::utils::first_four_bytes_of_sha256_hash;
 use crate::Token;
 use crate::{abi_decoder::ABIDecoder, abi_encoder::ABIEncoder};
-use fuels_types::function_selector::build_fn_selector;
+use fuels_types::ProgramABI;
 use fuels_types::{errors::Error, param_types::ParamType};
-use fuels_types::{ProgramABI, TypeDeclaration};
 use serde_json;
 use std::str;
 
@@ -74,13 +74,7 @@ impl ABIParser {
 
         let types = Abigen::get_types(&parsed_abi);
 
-        let fn_param_types = entry
-            .inputs
-            .iter()
-            .map(|t| types.get(&t.type_field).unwrap().clone())
-            .collect::<Vec<TypeDeclaration>>();
-
-        let fn_selector = build_fn_selector(fn_name, &fn_param_types, &types)?;
+        let fn_selector = resolve_fn_selector(entry, &types);
 
         // Update the fn_selector field with the hash of the previously encoded function selector
         self.fn_selector = Some(first_four_bytes_of_sha256_hash(&fn_selector).to_vec());
@@ -90,7 +84,7 @@ impl ABIParser {
             .iter()
             .zip(values)
             .map(|(prop, val)| {
-                let t = types.get(&prop.type_field).unwrap();
+                let t = types.get(&prop.type_id).unwrap();
                 Ok((ParamType::from_type_declaration(t, &types)?, val.as_str()))
             })
             .collect::<Result<Vec<_>, Error>>()?;
@@ -220,7 +214,7 @@ impl ABIParser {
         let types = Abigen::get_types(&parsed_abi);
 
         let param_result = types
-            .get(&entry.unwrap().output.type_field)
+            .get(&entry.unwrap().output.type_id)
             .expect("No output type");
 
         let param_result = ParamType::from_type_declaration(param_result, &types);

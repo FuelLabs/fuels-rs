@@ -17,6 +17,7 @@ fuels-types = { version = "0.23.0", path = "../fuels-types" }
 hex = { version = "0.4.3", features = ["std"] }
 itertools = "0.10"
 proc-macro2 = "1.0"
+lazy_static = "1.4.0"
 quote = "1.0"
 rand = { version = "0.8.4" }
 regex = "1.6.0"

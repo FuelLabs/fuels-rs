@@ -17,7 +17,7 @@ use fuels_core::parameters::StorageConfiguration;
 use fuels_core::tx::{Bytes32, ContractId};
 use fuels_core::{
     parameters::{CallParameters, TxParameters},
-    Selector, Token, Tokenizable,
+    Parameterize, Selector, Token, Tokenizable,
 };
 use fuels_signers::{
     provider::{Provider, TransactionCost},
@@ -124,12 +124,11 @@ impl Contract {
     /// }
     /// For more details see `code_gen/functions_gen.rs`.
     /// Note that this needs a wallet because the contract instance needs a wallet for the calls
-    pub fn method_hash<D: Tokenizable + Debug>(
+    pub fn method_hash<D: Tokenizable + Parameterize + Debug>(
         provider: &Provider,
         contract_id: Bech32ContractId,
         wallet: &WalletUnlocked,
         signature: Selector,
-        output_param: Option<ParamType>,
         args: &[Token],
     ) -> Result<ContractCallHandler<D>, Error> {
         let encoded_args = ABIEncoder::encode(args).unwrap();
@@ -148,7 +147,7 @@ impl Contract {
             compute_custom_input_offset,
             variable_outputs: None,
             external_contracts: vec![],
-            output_param,
+            output_param: D::param_type(),
         };
 
         Ok(ContractCallHandler {
@@ -369,7 +368,7 @@ pub struct ContractCall {
     pub compute_custom_input_offset: bool,
     pub variable_outputs: Option<Vec<Output>>,
     pub external_contracts: Vec<Bech32ContractId>,
-    pub output_param: Option<ParamType>,
+    pub output_param: ParamType,
 }
 
 impl ContractCall {
@@ -532,13 +531,9 @@ where
 
     /// Create a CallResponse from call receipts
     pub fn get_response(&self, mut receipts: Vec<Receipt>) -> Result<CallResponse<D>, Error> {
-        match self.contract_call.output_param.as_ref() {
-            None => Ok(CallResponse::new(D::from_token(Token::Unit)?, receipts)),
-            Some(param_type) => {
-                let token = ContractCall::get_decoded_output(param_type, &mut receipts)?;
-                Ok(CallResponse::new(D::from_token(token)?, receipts))
-            }
-        }
+        let token =
+            ContractCall::get_decoded_output(&self.contract_call.output_param, &mut receipts)?;
+        Ok(CallResponse::new(D::from_token(token)?, receipts))
     }
 }
 
@@ -644,12 +639,9 @@ impl MultiContractCallHandler {
         let mut final_tokens = vec![];
 
         for call in self.contract_calls.as_ref().unwrap().iter() {
-            // We only aggregate the tokens if the contract call has an output parameter
-            if let Some(param_type) = call.output_param.as_ref() {
-                let decoded = ContractCall::get_decoded_output(param_type, &mut receipts)?;
+            let decoded = ContractCall::get_decoded_output(&call.output_param, &mut receipts)?;
 
-                final_tokens.push(decoded.clone());
-            }
+            final_tokens.push(decoded.clone());
         }
 
         let tokens_as_tuple = Token::Tuple(final_tokens);
