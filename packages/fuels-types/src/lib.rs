@@ -17,6 +17,8 @@ pub mod utils;
 // Since it would have the format `struct foo` or `enum bar`, there is a whitespace.
 pub const STRUCT_KEYWORD: &str = "struct ";
 pub const ENUM_KEYWORD: &str = "enum ";
+pub const OPTION_KEYWORD: &str = "Option";
+pub const RESULT_KEYWORD: &str = "Result";
 
 #[derive(Debug, Clone, Copy, ToString, PartialEq, Eq)]
 #[strum(serialize_all = "lowercase")]
@@ -69,7 +71,16 @@ impl TypeDeclaration {
     pub fn is_enum_type(&self) -> bool {
         self.type_field.starts_with(ENUM_KEYWORD)
     }
+
     pub fn is_struct_type(&self) -> bool {
         self.type_field.starts_with(STRUCT_KEYWORD)
+    }
+
+    pub fn is_option(&self) -> bool {
+        self.type_field.ends_with(OPTION_KEYWORD)
+    }
+
+    pub fn is_result(&self) -> bool {
+        self.type_field.ends_with(RESULT_KEYWORD)
     }
 }
