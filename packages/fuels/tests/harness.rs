@@ -3847,3 +3847,44 @@ async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<(), Error> {
 
     Ok(())
 }
+
+
+#[tokio::test]
+async fn test_logged_types() -> Result<(), Error> {
+    abigen!(
+        LoggedTypes,
+        "packages/fuels/tests/test_projects/logged_types/out/debug/logged_types-abi.json"
+    );
+
+    let wallet = launch_provider_and_get_wallet().await;
+    let contract_id = Contract::deploy(
+        "tests/test_projects/logged_types/out/debug/logged_types.bin",
+        &wallet,
+        TxParameters::default(),
+        StorageConfiguration::default(),
+    )
+    .await?;
+
+    let contract_instance = LoggedTypesBuilder::new(contract_id.to_string(), wallet.clone()).build();
+
+    let response = contract_instance
+        .produce_logs()
+        .call()
+        .await?;
+
+    let id = ContractId::from_str("0x8832a501204ced30154af01a5e46dd31556b879353115c1d49ef4a68d5824036").unwrap();
+    dbg!(&response.receipts);
+
+    dbg!(contract_instance._logs_with_type::<u8>(response.receipts));    
+
+    //let var: TestEnum = try_from_bytes(logdata.data().unwrap()).unwrap();
+    //dbg!(var);
+    
+    //ParamType::from_type_declaration(prop, types);
+
+    //let token = ABIDecoder::decode_single(&T::param_type(), bytes)?;
+
+    //T::from_token(token);
+
+    Ok(())
+}

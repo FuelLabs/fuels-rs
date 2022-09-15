@@ -91,7 +91,8 @@ wasm_abigen!(
               "typeArguments": null
             }
           }
-        ]
+        ],
+        "loggedTypes": []
       }
     "#
 );

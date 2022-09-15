@@ -78,6 +78,8 @@ impl Abigen {
         let abi_structs = self.abi_structs()?;
         let abi_enums = self.abi_enums()?;
 
+        let resolved_logs = self.resolve_logs();
+
         let (includes, code) = if self.no_std {
             (
                 quote! {
@@ -92,12 +94,14 @@ impl Abigen {
         } else {
             (
                 quote! {
+                    use fuel_gql_client::fuel_tx::Receipt;
                     use fuels::contract::contract::{Contract, ContractCallHandler};
                     use fuels::core::{EnumSelector, StringToken, Parameterize, Tokenizable, Token, try_from_bytes};
                     use fuels::core::types::*;
                     use fuels::signers::WalletUnlocked;
                     use fuels::tx::{ContractId, Address};
                     use fuels::types::bech32::Bech32ContractId;
+                    use fuels::types::ResolvedLog;
                     use fuels::types::errors::Error as SDKError;
                     use fuels::types::param_types::{EnumVariants, ParamType};
                     use std::str::FromStr;
@@ -105,7 +109,8 @@ impl Abigen {
                 quote! {
                     pub struct #name {
                         contract_id: Bech32ContractId,
-                        wallet: WalletUnlocked
+                        wallet: WalletUnlocked,
+                        logs_lookup: Vec<ResolvedLog>,
                     }
 
                     impl #name {
@@ -125,6 +130,17 @@ impl Abigen {
 
                            Ok(Self { contract_id: self.contract_id.clone(), wallet: wallet })
                         }
+
+                        pub fn _logs_with_type<D: Tokenizable + Parameterize>(&self, receipts: Vec<Receipt>) -> ParamType {
+                            let param_type = D::param_type();
+
+                            let logdata = receipts
+                                .iter()
+                                .find(|r| matches!(r, Receipt::LogData { id:id, .. }))
+                                .unwrap();
+
+                            param_type
+                        }
                     }
 
                     pub struct #builder_name {
@@ -135,6 +151,7 @@ impl Abigen {
                     impl #builder_name {
                         pub fn new(contract_id: String, wallet: WalletUnlocked) -> Self {
                             let contract_id = Bech32ContractId::from_str(&contract_id).expect("Invalid contract id");
+
                             Self { contract_id, wallet }
                         }
 
@@ -149,7 +166,11 @@ impl Abigen {
                         }
 
                         pub fn build(self) -> #name {
-                            #name { contract_id: self.contract_id, wallet: self.wallet }
+                            #name { 
+                                contract_id: self.contract_id, 
+                                wallet: self.wallet, 
+                                logs_lookup: vec![#(#resolved_logs),*]
+                            }
                         }
                     }
                 },
@@ -250,6 +271,25 @@ impl Abigen {
     /// Reads the parsed ABI and returns all the types in it.
     pub fn get_types(abi: &ProgramABI) -> HashMap<usize, TypeDeclaration> {
         abi.types.iter().map(|t| (t.type_id, t.clone())).collect()
+    }
+
+    pub fn resolve_logs(&self) -> Vec<TokenStream> {
+        self.abi.logged_types.as_ref()
+            .map_or(vec![], |logged_types| {
+                logged_types
+                .iter()
+                .map(|l| {
+                    //let type_declaration = self.types.get(&l.application.type_id).unwrap();
+                    //let param_type = ParamType::from_type_declaration(type_declaration, &self.types).unwrap();
+                    let id = l.log_id;
+
+                    quote! { ResolvedLog {
+                        log_id: #id,
+                        param_type: ParamType::U64,
+                    }}
+            })
+            .collect()
+            })  
     }
 }
 

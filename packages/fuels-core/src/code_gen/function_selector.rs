@@ -716,6 +716,7 @@ mod tests {
                     type_arguments: None,
                 },
             }],
+            logged_types: None,
         };
 
         let the_fun = abi.functions.first().unwrap();
