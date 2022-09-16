@@ -3847,3 +3847,207 @@ async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<(), Error> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn test_rust_option_can_be_decoded() -> Result<(), Box<dyn std::error::Error>> {
+    abigen!(
+        MyContract,
+        "packages/fuels/tests/test_projects/options/out/debug/options-abi.json"
+    );
+
+    let wallet = launch_provider_and_get_wallet().await;
+
+    let contract_id = Contract::deploy(
+        "tests/test_projects/options/out/debug/options.bin",
+        &wallet,
+        TxParameters::default(),
+        StorageConfiguration::default(),
+    )
+    .await?;
+
+    let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
+
+    let expected_address =
+        Address::from_str("0xd58573593432a30a800f97ad32f877425c223a9e427ab557aab5d5bb89156db0")?;
+
+    let s = TestStruct {
+        option: Some(expected_address),
+    };
+
+    let e = TestEnum::EnumOption(Some(expected_address));
+
+    let expected_some_address = Some(expected_address);
+    let response = contract_instance.get_some_address().call().await?;
+
+    assert_eq!(response.value, expected_some_address);
+
+    let expected_some_u64 = Some(10);
+    let response = contract_instance.get_some_u64().call().await?;
+
+    assert_eq!(response.value, expected_some_u64);
+
+    let response = contract_instance.get_some_struct().call().await?;
+    assert_eq!(response.value, Some(s.clone()));
+
+    let response = contract_instance.get_some_enum().call().await?;
+    assert_eq!(response.value, Some(e.clone()));
+
+    let response = contract_instance.get_some_tuple().call().await?;
+    assert_eq!(response.value, Some((s.clone(), e.clone())));
+
+    let expected_none = None;
+    let response = contract_instance.get_none().call().await?;
+
+    assert_eq!(response.value, expected_none);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_rust_option_can_be_encoded() -> Result<(), Box<dyn std::error::Error>> {
+    abigen!(
+        MyContract,
+        "packages/fuels/tests/test_projects/options/out/debug/options-abi.json"
+    );
+
+    let wallet = launch_provider_and_get_wallet().await;
+
+    let contract_id = Contract::deploy(
+        "tests/test_projects/options/out/debug/options.bin",
+        &wallet,
+        TxParameters::default(),
+        StorageConfiguration::default(),
+    )
+    .await?;
+
+    let expected_address =
+        Address::from_str("0xd58573593432a30a800f97ad32f877425c223a9e427ab557aab5d5bb89156db0")?;
+
+    let s = TestStruct {
+        option: Some(expected_address),
+    };
+
+    let e = TestEnum::EnumOption(Some(expected_address));
+
+    let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
+    let expected_u64 = Some(36);
+    let response = contract_instance
+        .input_primitive(expected_u64)
+        .call()
+        .await?;
+
+    assert!(response.value);
+
+    let expected_struct = Some(s);
+    let response = contract_instance
+        .input_struct(expected_struct)
+        .call()
+        .await?;
+
+    assert!(response.value);
+
+    let expected_enum = Some(e);
+    let response = contract_instance.input_enum(expected_enum).call().await?;
+
+    assert!(response.value);
+
+    let expected_none = None;
+    let response = contract_instance.input_none(expected_none).call().await?;
+
+    assert!(response.value);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_rust_result_can_be_decoded() -> Result<(), Box<dyn std::error::Error>> {
+    abigen!(
+        MyContract,
+        "packages/fuels/tests/test_projects/results/out/debug/results-abi.json"
+    );
+
+    let wallet = launch_provider_and_get_wallet().await;
+
+    let contract_id = Contract::deploy(
+        "tests/test_projects/results/out/debug/results.bin",
+        &wallet,
+        TxParameters::default(),
+        StorageConfiguration::default(),
+    )
+    .await?;
+
+    let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
+
+    let expected_address =
+        Address::from_str("0xd58573593432a30a800f97ad32f877425c223a9e427ab557aab5d5bb89156db0")?;
+
+    let s = TestStruct {
+        option: Some(expected_address),
+    };
+
+    let e = TestEnum::EnumOption(Some(expected_address));
+
+    let expected_ok_address = Ok(expected_address);
+    let response = contract_instance.get_ok_address().call().await?;
+
+    assert_eq!(response.value, expected_ok_address);
+
+    let expected_some_u64 = Ok(10);
+    let response = contract_instance.get_ok_u64().call().await?;
+
+    assert_eq!(response.value, expected_some_u64);
+
+    let response = contract_instance.get_ok_struct().call().await?;
+    assert_eq!(response.value, Ok(s.clone()));
+
+    let response = contract_instance.get_ok_enum().call().await?;
+    assert_eq!(response.value, Ok(e.clone()));
+
+    let response = contract_instance.get_ok_tuple().call().await?;
+    assert_eq!(response.value, Ok((s, e)));
+
+    let expected_error = Err(TestError::NoAddress("error".try_into().unwrap()));
+    let response = contract_instance.get_error().call().await?;
+
+    assert_eq!(response.value, expected_error);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_rust_result_can_be_encoded() -> Result<(), Box<dyn std::error::Error>> {
+    abigen!(
+        MyContract,
+        "packages/fuels/tests/test_projects/results/out/debug/results-abi.json"
+    );
+
+    let wallet = launch_provider_and_get_wallet().await;
+
+    let contract_id = Contract::deploy(
+        "tests/test_projects/results/out/debug/results.bin",
+        &wallet,
+        TxParameters::default(),
+        StorageConfiguration::default(),
+    )
+    .await?;
+
+    let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
+
+    let expected_address =
+        Address::from_str("0xd58573593432a30a800f97ad32f877425c223a9e427ab557aab5d5bb89156db0")?;
+
+    let expected_ok_address = Ok(expected_address);
+    let response = contract_instance
+        .input_ok(expected_ok_address)
+        .call()
+        .await?;
+
+    assert!(response.value);
+
+    let expected_error = Err(TestError::NoAddress("error".try_into().unwrap()));
+    let response = contract_instance.input_error(expected_error).call().await?;
+
+    assert!(response.value);
+
+    Ok(())
+}

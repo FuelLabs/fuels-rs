@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
 use crate::code_gen::bindings::ContractBindings;
-use crate::constants::{ADDRESS_SWAY_NATIVE_TYPE, CONTRACT_ID_SWAY_NATIVE_TYPE};
 use crate::source::Source;
 use crate::utils::ident;
 use fuels_types::errors::Error;
@@ -198,10 +197,10 @@ impl Abigen {
                 continue;
             }
 
-            // Skip custom type generation if the custom type is a Sway-native type.
-            // This means ABI methods receiving or returning a Sway-native type
+            // Skip custom type generation if the custom type is a native type.
+            // This means ABI methods receiving or returning a native type
             // can receive or return that native type directly.
-            if Abigen::is_sway_native_type(&prop.type_field) {
+            if Abigen::is_native_type(&prop.type_field) {
                 continue;
             }
 
@@ -214,17 +213,26 @@ impl Abigen {
         Ok(structs)
     }
 
-    // Checks whether the given type field is a Sway-native type.
+    // Checks whether the given type field is a native type.
     // It's expected to come in as `"struct T"` or `"enum T"`.
-    // `T` is a Sway-native type if it matches exactly one of
-    // the reserved strings, such as "Address" or "ContractId".
-    fn is_sway_native_type(type_field: &str) -> bool {
+    // `T` is a native `high-level language` or Rust type if it matches exactly one of
+    // the reserved strings, such as "Address", "ContractId", "Option" or "Result"
+    pub fn is_native_type(type_field: &str) -> bool {
+        const CONTRACT_ID_NATIVE_TYPE: &str = "ContractId";
+        const ADDRESS_NATIVE_TYPE: &str = "Address";
+        const OPTION_NATIVE_TYPE: &str = "Option";
+        const RESULT_NATIVE_TYPE: &str = "Result";
+
         let split: Vec<&str> = type_field.split_whitespace().collect();
 
         if split.len() > 2 {
             return false;
         }
-        split[1] == CONTRACT_ID_SWAY_NATIVE_TYPE || split[1] == ADDRESS_SWAY_NATIVE_TYPE
+
+        split[1] == CONTRACT_ID_NATIVE_TYPE
+            || split[1] == ADDRESS_NATIVE_TYPE
+            || split[1] == OPTION_NATIVE_TYPE
+            || split[1] == RESULT_NATIVE_TYPE
     }
 
     fn abi_enums(&self) -> Result<TokenStream, Error> {
@@ -234,7 +242,7 @@ impl Abigen {
         let mut seen_enum: Vec<&str> = vec![];
 
         for prop in &self.abi.types {
-            if !prop.is_enum_type() {
+            if !prop.is_enum_type() || prop.is_option() || prop.is_result() {
                 continue;
             }
 

@@ -13,11 +13,6 @@ pub mod param_types;
 pub mod parse_param;
 pub mod utils;
 
-// Both those constants are used to determine if a type field represents an `Enum` or a `Struct`.
-// Since it would have the format `struct foo` or `enum bar`, there is a whitespace.
-pub const STRUCT_KEYWORD: &str = "struct ";
-pub const ENUM_KEYWORD: &str = "enum ";
-
 #[derive(Debug, Clone, Copy, ToString, PartialEq, Eq)]
 #[strum(serialize_all = "lowercase")]
 pub enum CustomType {
@@ -67,9 +62,22 @@ pub struct TypeApplication {
 
 impl TypeDeclaration {
     pub fn is_enum_type(&self) -> bool {
+        const ENUM_KEYWORD: &str = "enum ";
         self.type_field.starts_with(ENUM_KEYWORD)
     }
+
     pub fn is_struct_type(&self) -> bool {
+        const STRUCT_KEYWORD: &str = "struct ";
         self.type_field.starts_with(STRUCT_KEYWORD)
+    }
+
+    pub fn is_option(&self) -> bool {
+        const OPTION_KEYWORD: &str = " Option";
+        self.type_field.ends_with(OPTION_KEYWORD)
+    }
+
+    pub fn is_result(&self) -> bool {
+        const RESULT_KEYWORD: &str = " Result";
+        self.type_field.ends_with(RESULT_KEYWORD)
     }
 }
