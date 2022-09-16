@@ -96,6 +96,7 @@ impl Abigen {
                 quote! {
                     use fuels::contract::contract::{Contract, ContractCallHandler};
                     use fuels::core::{EnumSelector, StringToken, Parameterize, Tokenizable, Token, try_from_bytes};
+                    use fuels::core::abi_decoder::ABIDecoder;
                     use fuels::core::types::*;
                     use fuels::signers::WalletUnlocked;
                     use fuels::tx::{ContractId, Address, Receipt};
@@ -134,28 +135,33 @@ impl Abigen {
                         pub fn _logs_with_type<D: Tokenizable + Parameterize>(&self, receipts: Vec<Receipt>) -> Vec<D> {
                             let param_type = D::param_type();
 
-                            let target_ids: HashSet<usize> = self.logs_lookup
+                            let target_ids: HashSet<u64> = self.logs_lookup
                                 .iter()
                                 .filter_map(|l| {
-                                    if l.param_type == param_type {
+                                    let id = if l.param_type == param_type {
                                         Some(l.log_id)
-                                    }
-                                    None
+                                    } else {
+                                        None
+                                    };
+
+                                    id
                                 })
                                 .collect();
 
                             let targets: Vec<D> = receipts
                                 .iter()
                                 .filter_map(|r| {
-                                    match r {
-                                        Receipt::LogData { rb, data, .. } if target_ids.contrains(&rb) => Some( ABIDecoder::decode_single(&D::param_type(), data).unwrap();),
-                                        Receipt::Log { rb, .. } if target_ids.contrains(&rb) => Some( ABIDecoder::decode_single(&D::param_type(), rb).unwrap();),
+                                    let log = match r {
+                                        Receipt::LogData { rb, data, .. } if target_ids.contains(rb) => {let dec = ABIDecoder::decode_single(&D::param_type(), data).unwrap(); Some(D::from_token(dec).unwrap())},
+                                        Receipt::Log { ra, rb, .. } if target_ids.contains(rb) => {let dec = ABIDecoder::decode_single(&D::param_type(), &ra.to_ne_bytes()).unwrap(); Some(D::from_token(dec).unwrap())},
                                         _ => None,
                                     };
+
+                                    log
                                 })
                                 .collect();
 
-                            targets
+                            vec![]
                         }
                     }
 

@@ -71,14 +71,14 @@ pub struct TypeApplication {
 #[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LoggedType {
-    pub log_id: usize,
+    pub log_id: u64,
     #[serde(rename = "loggedType")]
     pub application: TypeApplication,
 }
 
 #[derive(Default, Debug, Clone)]
 pub struct ResolvedLog {
-    pub log_id: usize,
+    pub log_id: u64,
     pub param_type: ParamType,
 }
 
