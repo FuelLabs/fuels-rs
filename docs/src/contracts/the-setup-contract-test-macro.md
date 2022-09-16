@@ -8,12 +8,11 @@ When deploying contracts with the `abigen!` macro, as shown in the previous sect
 
 The input of the macro are the contract instance variable name, wallet variable name and the forc project path. Both the contract instance and wallet variables get brought into context and they can be used further in the code.
 
-The same contract can be deployed several times as the macro deploys the contracts with salt.
+>**Note** The same contract can be deployed several times as the macro deploys the contracts with salt. You can also deploy different contracts to the same provider using a shared wallet.
 
-You can also deploy different contracts to the same provider using a shared wallet.
-
-This is done by setting the wallet name of the first macro to `shared_wallet` and all the remaining wallet names to `None`. The first macro will create `shared_wallet` and bring it into context and the other macros will use it instead of creating new ones. An example that showcases the deployment with salt and using the `shared_wallet` is given below.
+If you want to deploy contract to the same provider you have to set the wallet name of the first macro to `shared_wallet` and all the remaining wallet names to `None`. The first macro will create `shared_wallet` and bring it into context and the other macros will use it instead of creating new ones. Let's see it in an example.
 
 ```rust,ignore
 {{#include ../../../packages/fuels/tests/harness.rs:contract_setup_macro_multi}}
 ```
+In this example, three contracts are deploy on the same provider using the `shared_wallet`. The second and third macro use the same contract but they have different IDs because of the deployment with salt. Both of them can call the first contract by using its ID.

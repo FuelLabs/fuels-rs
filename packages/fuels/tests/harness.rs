@@ -1263,6 +1263,7 @@ async fn test_contract_calling_contract() -> Result<(), Error> {
 #[tokio::test]
 async fn test_contract_setup_macro_deploy_with_salt() -> Result<(), Error> {
     // ANCHOR: contract_setup_macro_multi
+    // The first wallet name must be `shared_wallet`
     setup_contract_test!(
         foo_contract_instance,
         shared_wallet,
@@ -1270,6 +1271,8 @@ async fn test_contract_setup_macro_deploy_with_salt() -> Result<(), Error> {
     );
     let foo_contract_id = foo_contract_instance._get_contract_id();
 
+    // The macros that want to use the `shared_wallet` have to set
+    // the wallet name to `None`
     setup_contract_test!(
         foo_caller_contract_instance,
         None,
@@ -1287,6 +1290,7 @@ async fn test_contract_setup_macro_deploy_with_salt() -> Result<(), Error> {
     // Because we deploy with salt we can deploy the same contract multiple times
     assert_ne!(foo_caller_contract_id, foo_caller_contract_id2);
 
+    // The first contract can be called because they were deployed on the same provider
     let bits = *foo_contract_id.hash();
     let res = foo_caller_contract_instance
         .call_foo_contract(Bits256(bits), true)
