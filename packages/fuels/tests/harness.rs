@@ -9,22 +9,18 @@ use fuels::prelude::{
     Config, Contract, Error, Provider, Salt, TxParameters, WalletUnlocked, WalletsConfig,
     DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
 };
-use fuels_core::abi_encoder::{ABIEncoder, UnresolvedBytes};
-use fuels_core::abi_types::Bits256;
-use itertools::Itertools;
+use fuels_core::abi_encoder::ABIEncoder;
 use std::slice;
 
 use fuels_core::parameters::StorageConfiguration;
-use fuels_core::tx::{Address, Bytes32, StorageSlot, Transaction};
+use fuels_core::tx::{Address, Bytes32, StorageSlot};
+use fuels_core::types::Bits256;
 use fuels_core::Tokenizable;
 use fuels_core::{constants::BASE_ASSET_ID, Token};
 use fuels_signers::fuel_crypto::SecretKey;
 use fuels_test_helpers::setup_single_message;
 use fuels_types::bech32::Bech32Address;
 
-use fuels_contract::contract::ContractCall;
-use fuels_contract::script::Script;
-use fuels_core::utils::first_four_bytes_of_sha256_hash;
 use sha2::{Digest, Sha256};
 use std::iter;
 use std::str::FromStr;
@@ -32,7 +28,6 @@ use std::str::FromStr;
 use fuel_core_interfaces::model::Message;
 use fuel_gql_client::client::schema::message::Message as OtherMessage;
 use fuels_signers::Signer;
-use fuels_types::param_types::ParamType;
 
 /// Note: all the tests and examples below require pre-compiled Sway projects.
 /// To compile these projects, run `cargo run --bin build-test-projects`.
@@ -1642,40 +1637,56 @@ async fn test_tuples() -> Result<(), Error> {
 
     let instance = MyContractBuilder::new(id.to_string(), wallet.clone()).build();
 
-    let response = instance.returns_tuple((1, 2)).call().await?;
+    {
+        let response = instance.returns_tuple((1, 2)).call().await?;
 
-    assert_eq!(response.value, (1, 2));
+        assert_eq!(response.value, (1, 2));
+    }
 
-    // Tuple with struct.
-    let my_struct_tuple = (
-        42,
-        Person {
-            name: "Jane".try_into()?,
-        },
-    );
-    let response = instance
-        .returns_struct_in_tuple(my_struct_tuple.clone())
-        .call()
-        .await?;
+    {
+        // Tuple with struct.
+        let my_struct_tuple = (
+            42,
+            Person {
+                name: "Jane".try_into()?,
+            },
+        );
+        let response = instance
+            .returns_struct_in_tuple(my_struct_tuple.clone())
+            .call()
+            .await?;
 
-    assert_eq!(response.value, my_struct_tuple);
+        assert_eq!(response.value, my_struct_tuple);
+    }
+    {
+        // Tuple with enum.
+        let my_enum_tuple: (u64, State) = (42, State::A());
 
-    // Tuple with enum.
-    let my_enum_tuple: (u64, State) = (42, State::A());
+        let response = instance
+            .returns_enum_in_tuple(my_enum_tuple.clone())
+            .call()
+            .await?;
 
-    let response = instance
-        .returns_enum_in_tuple(my_enum_tuple.clone())
-        .call()
-        .await?;
+        assert_eq!(response.value, my_enum_tuple);
+    }
+    {
+        // Tuple with single element
+        let my_enum_tuple = (123u64,);
 
-    assert_eq!(response.value, my_enum_tuple);
+        let response = instance.single_element_tuple(my_enum_tuple).call().await?;
 
-    let id = *ContractId::zeroed();
-    let my_b256_u8_tuple = (Bits256(id), 10);
+        assert_eq!(response.value, my_enum_tuple);
+    }
 
-    let response = instance.tuple_with_b256(my_b256_u8_tuple).call().await?;
+    {
+        // tuple with b256
+        let id = *ContractId::zeroed();
+        let my_b256_u8_tuple = (Bits256(id), 10);
 
-    assert_eq!(response.value, my_b256_u8_tuple);
+        let response = instance.tuple_with_b256(my_b256_u8_tuple).call().await?;
+
+        assert_eq!(response.value, my_b256_u8_tuple);
+    }
     Ok(())
 }
 

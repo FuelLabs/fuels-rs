@@ -10,7 +10,7 @@ use fuels_types::{ProgramABI, TypeApplication, TypeDeclaration};
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
-use super::custom_types_gen::{expand_custom_enum, expand_custom_struct};
+use super::custom_types::{expand_custom_enum, expand_custom_struct};
 use super::functions_gen::expand_function;
 
 pub struct Abigen {
@@ -84,7 +84,7 @@ impl Abigen {
                 quote! {
                     use alloc::{vec, vec::Vec};
                     use fuels_core::{EnumSelector, Parameterize, Tokenizable, Token, try_from_bytes};
-                    use fuels_core::abi_types::*;
+                    use fuels_core::types::*;
                     use fuels_types::errors::Error as SDKError;
                     use fuels_types::param_types::{ParamType, EnumVariants};
                 },
@@ -95,7 +95,7 @@ impl Abigen {
                 quote! {
                     use fuels::contract::contract::{Contract, ContractCallHandler};
                     use fuels::core::{EnumSelector, StringToken, Parameterize, Tokenizable, Token, try_from_bytes};
-                    use fuels::core::abi_types::*;
+                    use fuels::core::types::*;
                     use fuels::signers::WalletUnlocked;
                     use fuels::tx::{ContractId, Address};
                     use fuels::types::bech32::Bech32ContractId;

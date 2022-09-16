@@ -4,8 +4,18 @@ use crate::{
     utils::{has_array_format, has_tuple_format},
     TypeDeclaration,
 };
+use lazy_static::lazy_static;
+use regex::Regex;
 use std::collections::HashMap;
 use std::str::FromStr;
+
+fn try_to_get_generic_name(field: &str) -> Option<String> {
+    lazy_static! {
+        static ref RE: Regex = Regex::new(r"^\s*generic\s+(\S+)\s*$").unwrap();
+    }
+    RE.captures(field)
+        .map(|captures| String::from(&captures[1]))
+}
 
 impl ParamType {
     pub fn from_type_declaration(
@@ -29,18 +39,13 @@ impl ParamType {
                     // Try to parse tuple (T, T, ..., T)
                     return ParamType::parse_tuple_param(prop, types);
                 }
-                if prop.type_field.contains("generic") {
-                    return Ok(Self::parse_generic_param(prop));
+                if let Some(name) = try_to_get_generic_name(&prop.type_field) {
+                    return Ok(ParamType::Generic(name));
                 }
-                // Try to parse a free form enum or struct (e.g. `struct MyStruct`, `enum MyEnum`).
+                // Try to parse a free form enum or struct (e.g. `struct MySTruct`, `enum MyEnum`).
                 ParamType::parse_custom_type_param(prop, types)
             }
         }
-    }
-
-    fn parse_generic_param(prop: &TypeDeclaration) -> ParamType {
-        let name = prop.type_field.split("generic").collect::<Vec<&str>>()[1].trim();
-        ParamType::Generic(name.into())
     }
 
     pub fn parse_tuple_param(
@@ -107,8 +112,8 @@ impl ParamType {
             Err(_) => {
                 if type_field.contains("str[") {
                     ParamType::parse_string_param(t)?
-                } else if type_field.contains("generic") {
-                    Self::parse_generic_param(t)
+                } else if let Some(name) = try_to_get_generic_name(&type_field) {
+                    ParamType::Generic(name)
                 } else {
                     ParamType::parse_custom_type_param(t, types)?
                 }

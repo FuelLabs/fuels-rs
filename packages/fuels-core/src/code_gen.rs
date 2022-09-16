@@ -2,7 +2,7 @@
 //! from a fuel/sway ABI.
 pub mod abigen;
 pub mod bindings;
-pub mod custom_types_gen;
+pub mod custom_types;
 pub mod docs_gen;
 pub mod function_selector;
 pub mod functions_gen;

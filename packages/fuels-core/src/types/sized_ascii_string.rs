@@ -63,6 +63,14 @@ impl<const LEN: usize> TryFrom<&str> for SizedAsciiString<LEN> {
     }
 }
 
+impl<const LEN: usize> TryFrom<String> for SizedAsciiString<LEN> {
+    type Error = Error;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        Self::new(value)
+    }
+}
+
 impl<const LEN: usize> From<SizedAsciiString<LEN>> for String {
     fn from(sized_ascii_str: SizedAsciiString<LEN>) -> Self {
         sized_ascii_str.data
@@ -164,7 +172,12 @@ mod tests {
 
     #[test]
     fn can_be_constructed_from_str_ref() {
-        let sut: SizedAsciiString<3> = "abc".try_into().expect("Should have succeeded");
+        let _: SizedAsciiString<3> = "abc".try_into().expect("Should have succeeded");
+    }
+
+    #[test]
+    fn can_be_constructed_from_string() {
+        let _: SizedAsciiString<3> = "abc".to_string().try_into().expect("Should have succeeded");
     }
 
     #[test]

@@ -394,7 +394,6 @@ mod test {
     use super::*;
     use fuel_gql_client::client::schema::coin::CoinStatus;
     use fuels_core::abi_encoder::{ABIEncoder, UnresolvedBytes};
-    use fuels_core::constants::BASE_ASSET_ID;
     use fuels_core::parameters::CallParameters;
     use fuels_core::Token;
     use fuels_types::bech32::Bech32ContractId;

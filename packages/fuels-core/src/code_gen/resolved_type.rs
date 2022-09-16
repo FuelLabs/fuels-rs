@@ -1,4 +1,4 @@
-use crate::code_gen::custom_types_gen::extract_custom_type_name_from_abi_property;
+use crate::code_gen::custom_types::extract_custom_type_name_from_abi_property;
 use fuels_types::errors::Error;
 use fuels_types::param_types::ParamType;
 use fuels_types::{TypeApplication, TypeDeclaration};
@@ -18,7 +18,7 @@ pub(crate) struct ResolvedType {
 
 impl Display for ResolvedType {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", TokenStream::from(self.clone()).to_string())
+        write!(f, "{}", TokenStream::from(self.clone()))
     }
 }
 
@@ -29,10 +29,7 @@ impl From<&ResolvedType> for TokenStream {
             return quote! { #type_name };
         }
 
-        let generic_params = resolved_type
-            .generic_params
-            .iter()
-            .map(|generic_type| TokenStream::from(generic_type));
+        let generic_params = resolved_type.generic_params.iter().map(TokenStream::from);
 
         quote! { #type_name<#( #generic_params ),*> }
     }
@@ -56,7 +53,7 @@ pub(crate) fn resolve_type(
         type_applications
             .iter()
             .flatten()
-            .map(|array_type| resolve_type(&array_type, &types))
+            .map(|array_type| resolve_type(array_type, types))
             .collect::<Result<Vec<_>, _>>()
     };
 
@@ -64,7 +61,10 @@ pub(crate) fn resolve_type(
     let param_type = ParamType::from_type_declaration(base_type, types)?;
 
     let (type_name, generic_params) = match &param_type {
-        ParamType::Generic(name) => Ok::<_, Error>((name.parse().unwrap(), vec![])),
+        ParamType::Generic(name) => {
+            let token_stream = name.parse().expect("Failed to parse generic param name");
+            Ok::<_, Error>((token_stream, vec![]))
+        }
         ParamType::U8 => Ok((quote! {u8}, vec![])),
         ParamType::U16 => Ok((quote! {u16}, vec![])),
         ParamType::U32 => Ok((quote! {u32}, vec![])),
@@ -79,7 +79,7 @@ pub(crate) fn resolve_type(
             let type_inside: TokenStream = match array_components.as_slice() {
                 [single_type] => single_type.into(),
                 _ => {
-                    return Err(Error::InvalidData(format!("Array had multiple components when only a single one is allowed! {array_components:?}")));
+                    return Err(Error::InvalidData(format!("Array must have only one component! Actual components: {array_components:?}")));
                 }
             };
 
@@ -94,7 +94,7 @@ pub(crate) fn resolve_type(
             }],
         )),
         ParamType::Struct(_) | ParamType::Enum(_) => {
-            let type_name = extract_custom_type_name_from_abi_property(&base_type)?;
+            let type_name = extract_custom_type_name_from_abi_property(base_type)?;
             let generic_params = recursively_resolve(&type_application.type_arguments)?;
             Ok((quote! {#type_name}, generic_params))
         }
@@ -103,7 +103,10 @@ pub(crate) fn resolve_type(
                 .into_iter()
                 .map(TokenStream::from);
 
-            Ok((quote! {(#(#inner_types),*)}, vec![]))
+            // it is important to leave a trailing comma because a tuple with
+            // one element is written as (element,) not (element) which is
+            // resolved to just element
+            Ok((quote! {(#(#inner_types,)*)}, vec![]))
         }
         ParamType::Vector(_) => {
             unimplemented!()

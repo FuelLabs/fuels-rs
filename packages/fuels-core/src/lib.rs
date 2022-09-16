@@ -1,6 +1,6 @@
 #![allow(warnings)] // temp remove me later
 use crate::abi_decoder::ABIDecoder;
-use crate::abi_types::Bits256;
+use crate::types::Bits256;
 use core::fmt;
 use fuel_types::bytes::padded_len;
 use fuels_types::{
@@ -12,7 +12,6 @@ use strum_macros::EnumString;
 
 pub mod abi_decoder;
 pub mod abi_encoder;
-pub mod abi_types;
 pub mod code_gen;
 pub mod constants;
 pub mod json_abi;
