@@ -55,25 +55,23 @@ pub fn setup_contract_test(input: TokenStream) -> TokenStream {
             )
         });
 
-    let forc_project_name = abs_forc_dir.file_name().unwrap().to_str().unwrap();
-
-    let abi_path = abs_forc_dir
-        .join(["out/debug/", forc_project_name, "-abi.json"].concat())
+    let forc_project_name = abs_forc_dir
+        .file_name()
+        .expect("failed to get project name")
         .to_str()
-        .expect("could not join path for abi file")
-        .to_string();
+        .expect("failed to convert project name to string");
 
-    let bin_path = abs_forc_dir
-        .join(["out/debug/", forc_project_name, ".bin"].concat())
-        .to_str()
-        .expect("could not join path for bin file")
-        .to_string();
+    let compiled_file_path = |suffix: &str, desc: &str| {
+        abs_forc_dir
+            .join(["out/debug/", forc_project_name, suffix].concat())
+            .to_str()
+            .unwrap_or_else(|| panic!("could not join path for {desc}"))
+            .to_string()
+    };
 
-    let storage_path = abs_forc_dir
-        .join(["out/debug/", forc_project_name, "-storage_slots.json"].concat())
-        .to_str()
-        .expect("could not join path for storage file")
-        .to_string();
+    let abi_path = compiled_file_path("-abi.json", "the ABI file");
+    let bin_path = compiled_file_path(".bin", "the binary file");
+    let storage_path = compiled_file_path("-storage_slots.json", "the storage slots file");
 
     let contract_struct_name = args.instance_name.to_camel_case();
     let mut abigen_token_stream: TokenStream = Abigen::new(&contract_struct_name, abi_path)
