@@ -1,9 +1,6 @@
 use std::collections::HashMap;
 
 use crate::code_gen::bindings::ContractBindings;
-use crate::constants::{
-    ADDRESS_NATIVE_TYPE, CONTRACT_ID_NATIVE_TYPE, OPTION_NATIVE_TYPE, RESULT_NATIVE_TYPE,
-};
 use crate::source::Source;
 use crate::utils::ident;
 use fuels_types::errors::Error;
@@ -216,16 +213,22 @@ impl Abigen {
         Ok(structs)
     }
 
-    // Checks whether the given type field is a Native type.
+    // Checks whether the given type field is a native type.
     // It's expected to come in as `"struct T"` or `"enum T"`.
-    // `T` is a VM or Rust native type if it matches exactly one of
+    // `T` is a native `high-level language` or Rust type if it matches exactly one of
     // the reserved strings, such as "Address", "ContractId", "Option" or "Result"
     pub fn is_native_type(type_field: &str) -> bool {
+        const CONTRACT_ID_NATIVE_TYPE: &str = "ContractId";
+        const ADDRESS_NATIVE_TYPE: &str = "Address";
+        const OPTION_NATIVE_TYPE: &str = "Option";
+        const RESULT_NATIVE_TYPE: &str = "Result";
+
         let split: Vec<&str> = type_field.split_whitespace().collect();
 
         if split.len() > 2 {
             return false;
         }
+
         split[1] == CONTRACT_ID_NATIVE_TYPE
             || split[1] == ADDRESS_NATIVE_TYPE
             || split[1] == OPTION_NATIVE_TYPE

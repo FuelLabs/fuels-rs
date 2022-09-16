@@ -397,7 +397,7 @@ where
             let selector = (dis, tok, variants);
             Token::Enum(Box::new(selector))
         } else {
-            panic!("should never happen");
+            panic!("should never happen as Option::param_type() returns valid Enum variants");
         }
     }
 }
@@ -433,7 +433,7 @@ where
             let selector = (dis, tok, variants);
             Token::Enum(Box::new(selector))
         } else {
-            panic!("should never happen");
+            panic!("should never happen as Result::param_type() returns valid Enum variants");
         }
     }
 }
@@ -503,8 +503,9 @@ where
     T: Parameterize + Tokenizable,
 {
     fn param_type() -> ParamType {
-        let types = vec![ParamType::Unit, T::param_type()];
-        let variants = EnumVariants::new(types).expect("should never happen");
+        let param_types = vec![ParamType::Unit, T::param_type()];
+        let variants = EnumVariants::new(param_types)
+            .expect("should never happen as we provided valid Option param types");
         ParamType::Enum(variants)
     }
 }
@@ -515,8 +516,9 @@ where
     E: Parameterize + Tokenizable,
 {
     fn param_type() -> ParamType {
-        let types = vec![T::param_type(), E::param_type()];
-        let variants = EnumVariants::new(types).expect("should never happen");
+        let param_types = vec![T::param_type(), E::param_type()];
+        let variants = EnumVariants::new(param_types)
+            .expect("should never happen as we provided valid Result param types");
         ParamType::Enum(variants)
     }
 }
