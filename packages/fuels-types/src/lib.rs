@@ -72,12 +72,12 @@ impl TypeDeclaration {
     }
 
     pub fn is_option(&self) -> bool {
-        const OPTION_KEYWORD: &str = "Option";
+        const OPTION_KEYWORD: &str = " Option";
         self.type_field.ends_with(OPTION_KEYWORD)
     }
 
     pub fn is_result(&self) -> bool {
-        const RESULT_KEYWORD: &str = "Result";
+        const RESULT_KEYWORD: &str = " Result";
         self.type_field.ends_with(RESULT_KEYWORD)
     }
 }
