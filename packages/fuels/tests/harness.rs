@@ -1262,6 +1262,7 @@ async fn test_contract_calling_contract() -> Result<(), Error> {
 
 #[tokio::test]
 async fn test_contract_setup_macro_deploy_with_salt() -> Result<(), Error> {
+    // ANCHOR: contract_setup_macro_multi
     setup_contract_test!(
         foo_contract_instance,
         shared_wallet,
@@ -1300,6 +1301,7 @@ async fn test_contract_setup_macro_deploy_with_salt() -> Result<(), Error> {
         .call()
         .await?;
     assert!(!res.value);
+    // ANCHOR_END: contract_setup_macro_multi
 
     Ok(())
 }
