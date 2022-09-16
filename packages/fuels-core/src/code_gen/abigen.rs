@@ -11,6 +11,7 @@ use quote::quote;
 
 use super::custom_types::{expand_custom_enum, expand_custom_struct};
 use super::functions_gen::expand_function;
+use super::resolved_type::resolve_type;
 
 pub struct Abigen {
     /// Format the code using a locally installed copy of `rustfmt`.
@@ -77,8 +78,11 @@ impl Abigen {
         let contract_functions = self.functions()?;
         let abi_structs = self.abi_structs()?;
         let abi_enums = self.abi_enums()?;
+        let resolved_logs = self.resolve_logs()?;
 
-        let resolved_logs = self.resolve_logs();
+        if name == "LoggedTypes" {
+            dbg!(&resolved_logs[6].to_string());
+        }
 
         let (includes, code) = if self.no_std {
             (
@@ -161,7 +165,7 @@ impl Abigen {
                                 })
                                 .collect();
 
-                            vec![]
+                            targets
                         }
                     }
 
@@ -295,24 +299,30 @@ impl Abigen {
         abi.types.iter().map(|t| (t.type_id, t.clone())).collect()
     }
 
-    pub fn resolve_logs(&self) -> Vec<TokenStream> {
-        self.abi.logged_types.as_ref()
+    pub fn resolve_logs(&self) -> Result<Vec<TokenStream>, Error> {
+        let resolved = self.abi.logged_types
+            .as_ref()
             .map_or(vec![], |logged_types| {
                 logged_types
                 .iter()
                 .map(|l| {
                     //let type_declaration = self.types.get(&l.application.type_id).unwrap();
                     //let param_type = ParamType::from_type_declaration(type_declaration, &self.types).unwrap();
+                    let resolved_type = resolve_type(&l.application, &self.types)
+                        .unwrap();
+                    let type_token: TokenStream = resolved_type.into();
                     let id = l.log_id;
 
                     quote! { ResolvedLog { 
                         log_id: #id, 
-                        param_type: ParamType::U64 
+                        param_type: #type_token::param_type()
                     }
                 }
             })
             .collect()
-            })  
+            });
+
+            Ok(resolved)
     }
 }
 
