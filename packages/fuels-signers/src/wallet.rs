@@ -22,7 +22,7 @@ use rand::{CryptoRng, Rng};
 use std::{collections::HashMap, fmt, ops, path::Path};
 use thiserror::Error;
 
-const DEFAULT_DERIVATION_PATH_PREFIX: &str = "m/44'/1179993420'/0'/0/";
+pub const DEFAULT_DERIVATION_PATH_PREFIX: &str = "m/44'/1179993420'";
 
 /// A FuelVM-compatible wallet that can be used to list assets, balances and more.
 ///
@@ -380,7 +380,7 @@ impl WalletUnlocked {
         phrase: &str,
         provider: Option<Provider>,
     ) -> Result<Self, WalletError> {
-        let path = format!("{}{}", DEFAULT_DERIVATION_PATH_PREFIX, 0);
+        let path = format!("{}/0'/0/0", DEFAULT_DERIVATION_PATH_PREFIX);
         Self::new_from_mnemonic_phrase_with_path(phrase, provider, &path)
     }
 
