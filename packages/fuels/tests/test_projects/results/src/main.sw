@@ -2,7 +2,6 @@ contract;
 
 use std::{
     address::Address,
-    constants::ZERO_B256,
     result::Result,
     option::Option
 };
@@ -18,6 +17,8 @@ enum TestEnum {
 pub enum TestError {
     NoAddress: str[5],
 }
+
+const ADDR = 0xd58573593432a30a800f97ad32f877425c223a9e427ab557aab5d5bb89156db0;
 
 abi MyContract {
     fn get_ok_u64() -> Result<u64, TestError>;
@@ -37,20 +38,20 @@ impl MyContract for Contract {
     }
 
     fn get_ok_address() -> Result<Address, TestError> {
-        Result::Ok(~Address::from(ZERO_B256))
+        Result::Ok(~Address::from(ADDR))
     }
 
     fn get_ok_struct() -> Result<TestStruct, TestError> {
-        Result::Ok(TestStruct{option: Option::Some(~Address::from(ZERO_B256))})
+        Result::Ok(TestStruct{option: Option::Some(~Address::from(ADDR))})
     }
 
     fn get_ok_enum() -> Result<TestEnum, TestError> {
-        Result::Ok(TestEnum::EnumOption(Option::Some(~Address::from(ZERO_B256))))
+        Result::Ok(TestEnum::EnumOption(Option::Some(~Address::from(ADDR))))
     }
 
     fn get_ok_tuple() -> Result<(TestStruct, TestEnum), TestError> {
-        let s = TestStruct{option: Option::Some(~Address::from(ZERO_B256))};
-        let e = TestEnum::EnumOption(Option::Some(~Address::from(ZERO_B256)));
+        let s = TestStruct{option: Option::Some(~Address::from(ADDR))};
+        let e = TestEnum::EnumOption(Option::Some(~Address::from(ADDR)));
         Result::Ok((s,e))
     }
 
@@ -60,7 +61,7 @@ impl MyContract for Contract {
 
     fn input_ok(ok_address: Result<Address, TestError>) -> bool {
         if let Result::Ok(a) = ok_address {
-            return a == ~Address::from(ZERO_B256);
+            return a == ~Address::from(ADDR);
         }
         false
     }

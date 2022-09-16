@@ -2,7 +2,6 @@ contract;
 
 use std::{
     address::Address,
-    constants::ZERO_B256,
     option::Option,
 };
 
@@ -13,6 +12,8 @@ struct TestStruct {
 enum TestEnum {
     EnumOption: Option<Address>
 }
+
+const ADDR = 0xd58573593432a30a800f97ad32f877425c223a9e427ab557aab5d5bb89156db0;
 
 abi MyContract {
     fn get_some_u64() -> Option<u64>;
@@ -33,20 +34,20 @@ impl MyContract for Contract {
     }
 
     fn get_some_address() -> Option<Address> {
-        Option::Some(~Address::from(ZERO_B256))
+        Option::Some(~Address::from(ADDR))
     }
 
     fn get_some_struct() -> Option<TestStruct> {
-        Option::Some(TestStruct{option: Option::Some(~Address::from(ZERO_B256))})
+        Option::Some(TestStruct{option: Option::Some(~Address::from(ADDR))})
     }
 
     fn get_some_enum() -> Option<TestEnum> {
-        Option::Some(TestEnum::EnumOption(Option::Some(~Address::from(ZERO_B256))))
+        Option::Some(TestEnum::EnumOption(Option::Some(~Address::from(ADDR))))
     }
 
     fn get_some_tuple() -> Option<(TestStruct, TestEnum)> {
-        let s = TestStruct{option: Option::Some(~Address::from(ZERO_B256))};
-        let e = TestEnum::EnumOption(Option::Some(~Address::from(ZERO_B256)));
+        let s = TestStruct{option: Option::Some(~Address::from(ADDR))};
+        let e = TestEnum::EnumOption(Option::Some(~Address::from(ADDR)));
         Option::Some((s,e))
     }
 
@@ -64,7 +65,7 @@ impl MyContract for Contract {
     fn input_struct(input: Option<TestStruct>) -> bool {
         if let Option::Some(s) = input {
             if let Option::Some(a) = s.option {
-                return a == ~Address::from(ZERO_B256);
+                return a == ~Address::from(ADDR);
             }
         }
         false
@@ -74,7 +75,7 @@ impl MyContract for Contract {
         if let Option::Some(test_enum) = input {
             if let TestEnum::EnumOption(option) = test_enum {
                 if let Option::Some(a) = option {
-                    return a == ~Address::from(ZERO_B256);
+                    return a == ~Address::from(ADDR);
                 }
             }
         }

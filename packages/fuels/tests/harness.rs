@@ -3849,7 +3849,7 @@ async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_rust_option_can_be_decoded() -> Result<(), Error> {
+async fn test_rust_option_can_be_decoded() -> Result<(), Box<dyn std::error::Error>> {
     abigen!(
         MyContract,
         "packages/fuels/tests/test_projects/options/out/debug/options-abi.json"
@@ -3867,13 +3867,16 @@ async fn test_rust_option_can_be_decoded() -> Result<(), Error> {
 
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
 
+    let expected_address =
+        Address::from_str("0xd58573593432a30a800f97ad32f877425c223a9e427ab557aab5d5bb89156db0")?;
+
     let s = TestStruct {
-        option: Some(Address::zeroed()),
+        option: Some(expected_address),
     };
 
-    let e = TestEnum::EnumOption(Some(Address::zeroed()));
+    let e = TestEnum::EnumOption(Some(expected_address));
 
-    let expected_some_address = Some(Address::zeroed());
+    let expected_some_address = Some(expected_address);
     let response = contract_instance.get_some_address().call().await?;
 
     assert_eq!(response.value, expected_some_address);
@@ -3901,7 +3904,7 @@ async fn test_rust_option_can_be_decoded() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_rust_option_can_be_encoded() -> Result<(), Error> {
+async fn test_rust_option_can_be_encoded() -> Result<(), Box<dyn std::error::Error>> {
     abigen!(
         MyContract,
         "packages/fuels/tests/test_projects/options/out/debug/options-abi.json"
@@ -3917,11 +3920,14 @@ async fn test_rust_option_can_be_encoded() -> Result<(), Error> {
     )
     .await?;
 
+    let expected_address =
+        Address::from_str("0xd58573593432a30a800f97ad32f877425c223a9e427ab557aab5d5bb89156db0")?;
+
     let s = TestStruct {
-        option: Some(Address::zeroed()),
+        option: Some(expected_address),
     };
 
-    let e = TestEnum::EnumOption(Some(Address::zeroed()));
+    let e = TestEnum::EnumOption(Some(expected_address));
 
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
     let expected_u64 = Some(36);
@@ -3954,7 +3960,7 @@ async fn test_rust_option_can_be_encoded() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_rust_result_can_be_decoded() -> Result<(), Error> {
+async fn test_rust_result_can_be_decoded() -> Result<(), Box<dyn std::error::Error>> {
     abigen!(
         MyContract,
         "packages/fuels/tests/test_projects/results/out/debug/results-abi.json"
@@ -3972,13 +3978,16 @@ async fn test_rust_result_can_be_decoded() -> Result<(), Error> {
 
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
 
+    let expected_address =
+        Address::from_str("0xd58573593432a30a800f97ad32f877425c223a9e427ab557aab5d5bb89156db0")?;
+
     let s = TestStruct {
-        option: Some(Address::zeroed()),
+        option: Some(expected_address),
     };
 
-    let e = TestEnum::EnumOption(Some(Address::zeroed()));
+    let e = TestEnum::EnumOption(Some(expected_address));
 
-    let expected_ok_address = Ok(Address::zeroed());
+    let expected_ok_address = Ok(expected_address);
     let response = contract_instance.get_ok_address().call().await?;
 
     assert_eq!(response.value, expected_ok_address);
@@ -4006,7 +4015,7 @@ async fn test_rust_result_can_be_decoded() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_rust_result_can_be_encoded() -> Result<(), Error> {
+async fn test_rust_result_can_be_encoded() -> Result<(), Box<dyn std::error::Error>> {
     abigen!(
         MyContract,
         "packages/fuels/tests/test_projects/results/out/debug/results-abi.json"
@@ -4024,7 +4033,10 @@ async fn test_rust_result_can_be_encoded() -> Result<(), Error> {
 
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
 
-    let expected_ok_address = Ok(Address::zeroed());
+    let expected_address =
+        Address::from_str("0xd58573593432a30a800f97ad32f877425c223a9e427ab557aab5d5bb89156db0")?;
+
+    let expected_ok_address = Ok(expected_address);
     let response = contract_instance
         .input_ok(expected_ok_address)
         .call()
