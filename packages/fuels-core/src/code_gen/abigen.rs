@@ -94,17 +94,17 @@ impl Abigen {
         } else {
             (
                 quote! {
-                    use fuel_gql_client::fuel_tx::Receipt;
                     use fuels::contract::contract::{Contract, ContractCallHandler};
                     use fuels::core::{EnumSelector, StringToken, Parameterize, Tokenizable, Token, try_from_bytes};
                     use fuels::core::types::*;
                     use fuels::signers::WalletUnlocked;
-                    use fuels::tx::{ContractId, Address};
+                    use fuels::tx::{ContractId, Address, Receipt};
                     use fuels::types::bech32::Bech32ContractId;
                     use fuels::types::ResolvedLog;
                     use fuels::types::errors::Error as SDKError;
                     use fuels::types::param_types::{EnumVariants, ParamType};
                     use std::str::FromStr;
+                    use std::collections::HashSet;
                 },
                 quote! {
                     pub struct #name {
@@ -128,18 +128,34 @@ impl Abigen {
                            let provider = self.wallet.get_provider()?;
                            wallet.set_provider(provider.clone());
 
-                           Ok(Self { contract_id: self.contract_id.clone(), wallet: wallet })
+                           Ok(Self { contract_id: self.contract_id.clone(), wallet: wallet, logs_lookup: self.logs_lookup.clone() })
                         }
 
-                        pub fn _logs_with_type<D: Tokenizable + Parameterize>(&self, receipts: Vec<Receipt>) -> ParamType {
+                        pub fn _logs_with_type<D: Tokenizable + Parameterize>(&self, receipts: Vec<Receipt>) -> Vec<D> {
                             let param_type = D::param_type();
 
-                            let logdata = receipts
+                            let target_ids: HashSet<usize> = self.logs_lookup
                                 .iter()
-                                .find(|r| matches!(r, Receipt::LogData { id:id, .. }))
-                                .unwrap();
+                                .filter_map(|l| {
+                                    if l.param_type == param_type {
+                                        Some(l.log_id)
+                                    }
+                                    None
+                                })
+                                .collect();
 
-                            param_type
+                            let targets: Vec<D> = receipts
+                                .iter()
+                                .filter_map(|r| {
+                                    match r {
+                                        Receipt::LogData { rb, data, .. } if target_ids.contrains(&rb) => Some( ABIDecoder::decode_single(&D::param_type(), data).unwrap();),
+                                        Receipt::Log { rb, .. } if target_ids.contrains(&rb) => Some( ABIDecoder::decode_single(&D::param_type(), rb).unwrap();),
+                                        _ => None,
+                                    };
+                                })
+                                .collect();
+
+                            targets
                         }
                     }
 
@@ -283,10 +299,11 @@ impl Abigen {
                     //let param_type = ParamType::from_type_declaration(type_declaration, &self.types).unwrap();
                     let id = l.log_id;
 
-                    quote! { ResolvedLog {
-                        log_id: #id,
-                        param_type: ParamType::U64,
-                    }}
+                    quote! { ResolvedLog { 
+                        log_id: #id, 
+                        param_type: ParamType::U64 
+                    }
+                }
             })
             .collect()
             })  
