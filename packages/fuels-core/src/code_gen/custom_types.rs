@@ -1,6 +1,6 @@
 mod enum_gen;
 mod struct_gen;
-mod utils;
+pub mod utils;
 
 pub use enum_gen::expand_custom_enum;
 pub use struct_gen::expand_custom_struct;

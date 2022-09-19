@@ -9,9 +9,10 @@ use fuels_types::{ProgramABI, TypeDeclaration};
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
+use super::custom_types::utils::{extract_components, param_type_calls, Component};
 use super::custom_types::{expand_custom_enum, expand_custom_struct};
 use super::functions_gen::expand_function;
-use super::resolved_type::resolve_type;
+use super::resolved_type::{resolve_type, self};
 
 pub struct Abigen {
     /// Format the code using a locally installed copy of `rustfmt`.
@@ -81,7 +82,7 @@ impl Abigen {
         let resolved_logs = self.resolve_logs()?;
 
         if name == "LoggedTypes" {
-            dbg!(&resolved_logs[6].to_string());
+            dbg!(quote!{vec![#(#resolved_logs),*]}.to_string());
         }
 
         let (includes, code) = if self.no_std {
@@ -152,12 +153,13 @@ impl Abigen {
                                 })
                                 .collect();
 
+                                
                             let targets: Vec<D> = receipts
                                 .iter()
                                 .filter_map(|r| {
                                     let log = match r {
                                         Receipt::LogData { rb, data, .. } if target_ids.contains(rb) => {let dec = ABIDecoder::decode_single(&D::param_type(), data).unwrap(); Some(D::from_token(dec).unwrap())},
-                                        Receipt::Log { ra, rb, .. } if target_ids.contains(rb) => {let dec = ABIDecoder::decode_single(&D::param_type(), &ra.to_ne_bytes()).unwrap(); Some(D::from_token(dec).unwrap())},
+                                        Receipt::Log { ra, rb, .. } if target_ids.contains(rb) => {let dec = ABIDecoder::decode_single(&D::param_type(), &ra.to_be_bytes()).unwrap(); Some(D::from_token(dec).unwrap())},
                                         _ => None,
                                     };
 
@@ -195,7 +197,7 @@ impl Abigen {
                             #name { 
                                 contract_id: self.contract_id, 
                                 wallet: self.wallet, 
-                                logs_lookup: vec![#(#resolved_logs),*]
+                                logs_lookup: vec![#(#resolved_logs),*],
                             }
                         }
                     }
@@ -307,15 +309,16 @@ impl Abigen {
                 .iter()
                 .map(|l| {
                     //let type_declaration = self.types.get(&l.application.type_id).unwrap();
-                    //let param_type = ParamType::from_type_declaration(type_declaration, &self.types).unwrap();
-                    let resolved_type = resolve_type(&l.application, &self.types)
-                        .unwrap();
-                    let type_token: TokenStream = resolved_type.into();
+                    let component = Component::new(&l.application, &self.types, true).unwrap();
+                    let resolved_type = param_type_calls(&[component]);
+                    let type_token = resolved_type[0].clone();
+                    //let resolved_type = resolve_type(&l.application, &self.types).unwrap();
+                    //let type_token: TokenStream = resolved_type.into();
                     let id = l.log_id;
 
                     quote! { ResolvedLog { 
                         log_id: #id, 
-                        param_type: #type_token::param_type()
+                        param_type: #type_token
                     }
                 }
             })

@@ -25,11 +25,16 @@ impl Component {
         types: &HashMap<usize, TypeDeclaration>,
         snake_case: bool,
     ) -> anyhow::Result<Component> {
-        let field_name = if snake_case {
+        let mut field_name = if snake_case {
             component.name.to_snake_case()
         } else {
             component.name.to_owned()
         };
+
+        if field_name.is_empty()
+        {
+            field_name = "placeholder".to_string();
+        }
 
         Ok(Component {
             field_name: ident(&field_name),
@@ -101,7 +106,7 @@ pub(crate) fn extract_components(
 
 /// Returns a vector of TokenStreams, one for each of the generic parameters
 /// used by the given type.
-pub(crate) fn extract_generic_parameters(
+pub fn extract_generic_parameters(
     type_decl: &TypeDeclaration,
     types: &HashMap<usize, TypeDeclaration>,
 ) -> Result<Vec<TokenStream>, Error> {

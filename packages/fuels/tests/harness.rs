@@ -3692,6 +3692,7 @@ async fn test_input_message() -> Result<(), Error> {
     Ok(())
 }
 
+/*
 #[tokio::test]
 async fn generics_test() -> anyhow::Result<()> {
     abigen!(
@@ -3808,6 +3809,7 @@ async fn generics_test() -> anyhow::Result<()> {
 
     Ok(())
 }
+*/
 
 #[tokio::test]
 async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<(), Error> {
@@ -3872,10 +3874,9 @@ async fn test_logged_types() -> Result<(), Error> {
         .call()
         .await?;
 
-    let id = ContractId::from_str("0x8832a501204ced30154af01a5e46dd31556b879353115c1d49ef4a68d5824036").unwrap();
     dbg!(&response.receipts);
 
-    dbg!(contract_instance._logs_with_type::<u8>(response.receipts));    
+    dbg!(contract_instance._logs_with_type::<[u8; 3]>(response.receipts));    
 
     //let var: TestEnum = try_from_bytes(logdata.data().unwrap()).unwrap();
     //dbg!(var);

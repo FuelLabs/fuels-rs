@@ -35,7 +35,7 @@ impl TestContract for Contract {
         let test_enum = TestEnum::VariantTwo;
         __log(r);
         __log(k);
-        __log(42);
+        __log(41);
         __log(42u32);
         __log(42u16);
         __log(42u8);
