@@ -69,7 +69,7 @@ pub mod prelude {
     pub use super::core::types::*;
     pub use super::core::{Token, Tokenizable};
     pub use super::fuel_node::*;
-    pub use super::fuels_abigen::abigen;
+    pub use super::fuels_abigen::{abigen, setup_contract_test};
     pub use super::signers::provider::*;
     pub use super::signers::{wallet::generate_mnemonic_phrase, Signer, Wallet, WalletUnlocked};
     pub use super::test_helpers::Config;

@@ -23,6 +23,7 @@
     - [The FuelVM Binary file](./contracts/the-fuelvm-binary-file.md)
     - [The JSON ABI file](./contracts/the-json-abi-file.md)
     - [The `abigen!` macro](./contracts/the-abigen-macro.md)
+    - [The `setup_contract_test!` macro](./contracts/the-setup-contract-test-macro.md)
   - [Calling contracts](./getting-started/calling-contracts.md)
     - [Connecting wallets](./calling-contracts/calls-with-different-wallets.md)
     - [Transaction parameters](./calling-contracts/tx-params.md)
