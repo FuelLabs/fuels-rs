@@ -386,8 +386,13 @@ async fn compile_bindings_string_input() {
     // `SimpleContract` is the name of the contract
     let contract_instance = SimpleContractBuilder::new(null_contract_id(), wallet).build();
 
-    let call_handler =
-        contract_instance.takes_string("This is a full sentence".try_into().unwrap());
+    // ANCHOR: contract_takes_string
+    let call_handler = contract_instance.takes_string(
+        "This is a full sentence"
+            .try_into()
+            .expect("failed to convert string into SizedAsciiString"),
+    );
+    // ANCHOR_END: contract_takes_string
 
     let encoded = format!(
         "{}{}",
@@ -452,9 +457,11 @@ async fn compile_bindings_b256_input() {
     let mut hasher = Sha256::new();
     hasher.update("test string".as_bytes());
 
+    // ANCHOR: 256_arg
     let arg: [u8; 32] = hasher.finalize().into();
 
     let call_handler = contract_instance.takes_b256(Bits256(arg));
+    // ANCHOR_END: 256_arg
 
     let encoded = format!(
         "{}{}",
@@ -3712,6 +3719,7 @@ async fn generics_test() -> anyhow::Result<()> {
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
 
     {
+        // ANCHOR: generic
         // simple struct with a single generic param
         let arg1 = SimpleGeneric {
             single_generic_param: 123u64,
@@ -3724,6 +3732,7 @@ async fn generics_test() -> anyhow::Result<()> {
             .value;
 
         assert_eq!(result, arg1);
+        // ANCHOR_END: generic
     }
     {
         // struct that delegates the generic param internally

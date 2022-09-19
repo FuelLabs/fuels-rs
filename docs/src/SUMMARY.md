@@ -43,6 +43,8 @@
     - [Converting native types](./types/conversion.md)
     - [Bech32](./types/bech32.md)
     - [Structs and enums](./types/custom_types.md)
+    - [String](./types/string.md)
+    - [Bits256](./types/bits256.md)
 - [API](./getting-started/api.md)
 - [Debugging](./debugging/debugging.md)
   - [Debugging abigen errors](./debugging/abigen.md)
