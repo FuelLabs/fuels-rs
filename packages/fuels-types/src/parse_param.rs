@@ -141,10 +141,10 @@ impl ParamType {
                     .collect();
 
                 if prop.is_struct_type() {
-                    return Ok(ParamType::Struct(params));
+                    return Ok(ParamType::Struct(params, vec![]));
                 }
                 if prop.is_enum_type() {
-                    return Ok(ParamType::Enum(EnumVariants::new(params)?));
+                    return Ok(ParamType::Enum(EnumVariants::new(params)?, vec![]));
                 }
                 Err(Error::InvalidType(prop.type_field.clone()))
             }

@@ -21,9 +21,9 @@ pub enum ParamType {
     #[strum(serialize = "str")]
     String(usize),
     #[strum(disabled)]
-    Struct(Vec<ParamType>),
+    Struct(Vec<ParamType>, Vec<ParamType>),
     #[strum(disabled)]
-    Enum(EnumVariants),
+    Enum(EnumVariants, Vec<ParamType>),
     Tuple(Vec<ParamType>),
     Generic(String),
 }
@@ -75,8 +75,8 @@ impl ParamType {
             ParamType::B256 => 4,
             ParamType::Array(param, count) => param.compute_encoding_width() * count,
             ParamType::String(len) => count_words(*len),
-            ParamType::Struct(params) => params.iter().map(|p| p.compute_encoding_width()).sum(),
-            ParamType::Enum(variants) => variants.compute_encoding_width_of_enum(),
+            ParamType::Struct(params, _) => params.iter().map(|p| p.compute_encoding_width()).sum(),
+            ParamType::Enum(variants, _) => variants.compute_encoding_width_of_enum(),
             ParamType::Tuple(params) => params.iter().map(|p| p.compute_encoding_width()).sum(),
             ParamType::Generic(_) => {
                 panic!("Generic parameters are not resolved and as such don't have a size!")
@@ -97,14 +97,14 @@ impl fmt::Display for ParamType {
                 let arr_str = format!("Array({},{})", boxed_type_str, size);
                 write!(f, "{}", arr_str)
             }
-            ParamType::Struct(inner) => {
+            ParamType::Struct(inner, _) => {
                 let inner_strings: Vec<String> =
                     inner.iter().map(|p| format!("ParamType::{}", p)).collect();
 
                 let s = format!("Struct(vec![{}])", inner_strings.join(","));
                 write!(f, "{}", s)
             }
-            ParamType::Enum(variants) => {
+            ParamType::Enum(variants, _) => {
                 let inner_strings: Vec<String> = variants
                     .param_types()
                     .iter()
@@ -227,9 +227,10 @@ mod tests {
 
     #[test]
     fn structs_are_just_all_elements_combined() {
-        let inner_struct = ParamType::Struct(vec![ParamType::U32, ParamType::U32]);
+        let inner_struct = ParamType::Struct(vec![ParamType::U32, ParamType::U32], vec![]);
 
-        let a_struct = ParamType::Struct(vec![ParamType::B256, ParamType::Bool, inner_struct]);
+        let a_struct =
+            ParamType::Struct(vec![ParamType::B256, ParamType::Bool, inner_struct], vec![]);
 
         let width = a_struct.compute_encoding_width();
 
@@ -240,8 +241,11 @@ mod tests {
 
     #[test]
     fn enums_are_as_big_as_their_biggest_variant_plus_a_word() -> Result<(), Error> {
-        let inner_struct = ParamType::Struct(vec![ParamType::B256]);
-        let param = ParamType::Enum(EnumVariants::new(vec![ParamType::U32, inner_struct])?);
+        let inner_struct = ParamType::Struct(vec![ParamType::B256], vec![]);
+        let param = ParamType::Enum(
+            EnumVariants::new(vec![ParamType::U32, inner_struct])?,
+            vec![],
+        );
 
         let width = param.compute_encoding_width();
 

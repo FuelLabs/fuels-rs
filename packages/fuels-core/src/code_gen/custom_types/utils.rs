@@ -1,5 +1,5 @@
 use crate::code_gen::resolved_type::{resolve_type, ResolvedType};
-use crate::utils::ident;
+use crate::utils::{ident, safe_ident};
 use anyhow::anyhow;
 use fuels_types::errors::Error;
 use fuels_types::param_types::ParamType;
@@ -14,7 +14,7 @@ use std::collections::HashMap;
 // Represents a component of either a struct(field name) or an enum(variant
 // name).
 #[derive(Debug)]
-pub(crate) struct Component {
+pub struct Component {
     pub field_name: Ident,
     pub field_type: ResolvedType,
 }
@@ -32,7 +32,7 @@ impl Component {
         };
 
         Ok(Component {
-            field_name: ident(&field_name),
+            field_name: safe_ident(&field_name),
             field_type: resolve_type(component, types)?,
         })
     }
@@ -142,7 +142,7 @@ pub fn extract_custom_type_name_from_abi_property(prop: &TypeDeclaration) -> Res
 /// Returns TokenStreams representing calls to `Parameterize::param_type` for
 /// all given Components. Makes sure to properly handle calls when generics are
 /// involved.
-pub(crate) fn param_type_calls(field_entries: &[Component]) -> Vec<TokenStream> {
+pub fn param_type_calls(field_entries: &[Component]) -> Vec<TokenStream> {
     field_entries
         .iter()
         .map(|Component { field_type, .. }| {
@@ -255,10 +255,13 @@ mod tests {
                             param_type: ParamType::Generic("K".to_string()),
                         },
                     ],
-                    param_type: ParamType::Struct(vec![
-                        ParamType::Generic("T".to_string()),
-                        ParamType::Generic("K".to_string()),
-                    ]),
+                    param_type: ParamType::Struct(
+                        vec![
+                            ParamType::Generic("T".to_string()),
+                            ParamType::Generic("K".to_string()),
+                        ],
+                        vec![],
+                    ),
                 },
             },
         ];

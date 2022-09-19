@@ -10,7 +10,7 @@ use std::fmt::{Display, Formatter};
 // Represents a type alongside its generic parameters. Can be converted into a
 // `TokenStream` via `.into()`.
 #[derive(Debug, Clone)]
-pub(crate) struct ResolvedType {
+pub struct ResolvedType {
     pub type_name: TokenStream,
     pub generic_params: Vec<ResolvedType>,
     pub param_type: ParamType,
@@ -70,7 +70,7 @@ pub(crate) fn resolve_type(
         ParamType::U32 => Ok((quote! {u32}, vec![])),
         ParamType::U64 => Ok((quote! {u64}, vec![])),
         ParamType::Bool => Ok((quote! {bool}, vec![])),
-        ParamType::Byte => Ok((quote! {u8}, vec![])),
+        ParamType::Byte => Ok((quote! {Byte}, vec![])),
         ParamType::B256 => Ok((quote! {Bits256}, vec![])),
         ParamType::Unit => Ok((quote! {()}, vec![])),
         ParamType::Array(_, len) => {
@@ -93,7 +93,7 @@ pub(crate) fn resolve_type(
                 param_type: ParamType::U64,
             }],
         )),
-        ParamType::Struct(_) | ParamType::Enum(_) => {
+        ParamType::Struct(..) | ParamType::Enum(..) => {
             let type_name = extract_custom_type_name_from_abi_property(base_type)?;
             let generic_params = recursively_resolve(&type_application.type_arguments)?;
             Ok((quote! {#type_name}, generic_params))
