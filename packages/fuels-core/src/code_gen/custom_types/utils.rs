@@ -110,17 +110,15 @@ pub(crate) fn extract_generic_parameters(
         .iter()
         .flatten()
         .map(|id| types.get(id).unwrap())
-        .map(
-            |decl| match ParamType::from_type_declaration(decl, types)? {
-                ParamType::Generic(name) => {
-                    let generic = ident(&name);
-                    Ok(quote! {#generic})
-                }
-                _ => {
-                    panic!("Type parameters should only contain ids of generic types!")
-                }
-            },
-        )
+        .map(|decl| match decl.get_generic_param() {
+            Some(name) => {
+                let generic = ident(&name);
+                Ok(quote! {#generic})
+            }
+            _ => {
+                panic!("Type parameters should only contain ids of generic types!")
+            }
+        })
         .collect()
 }
 

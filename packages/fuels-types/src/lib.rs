@@ -3,6 +3,8 @@
 //! We declare these in a dedicated, minimal crate in order to allow for downstream projects to
 //! consume or generate these ABI-compatible types without needing to pull in the rest of the SDK.
 
+use lazy_static::lazy_static;
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 use strum_macros::ToString;
 
@@ -54,6 +56,17 @@ pub struct TypeDeclaration {
     pub type_field: String,
     pub components: Option<Vec<TypeApplication>>, // Used for custom types
     pub type_parameters: Option<Vec<usize>>,
+}
+
+impl TypeDeclaration {
+    // todo remove me
+    pub fn get_generic_param(&self) -> Option<String> {
+        lazy_static! {
+            static ref RE: Regex = Regex::new(r"^\s*generic\s+(\S+)\s*$").unwrap();
+        }
+        RE.captures(&self.type_field)
+            .map(|captures| String::from(&captures[1]))
+    }
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

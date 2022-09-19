@@ -87,54 +87,6 @@ impl ParamType {
     }
 }
 
-impl fmt::Display for ParamType {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            ParamType::String(size) => {
-                let t = format!("String({})", size);
-                write!(f, "{}", t)
-            }
-            ParamType::Array(t, size) => {
-                let boxed_type_str = format!("Box::new(ParamType::{})", t);
-                let arr_str = format!("Array({},{})", boxed_type_str, size);
-                write!(f, "{}", arr_str)
-            }
-            ParamType::Struct(inner) => {
-                let inner_strings: Vec<String> =
-                    inner.iter().map(|p| format!("ParamType::{}", p)).collect();
-
-                let s = format!("Struct(vec![{}])", inner_strings.join(","));
-                write!(f, "{}", s)
-            }
-            ParamType::Enum(variants) => {
-                let inner_strings: Vec<String> = variants
-                    .param_types()
-                    .iter()
-                    .map(|p| format!("ParamType::{}", p))
-                    .collect();
-
-                let s = format!(
-                    "Enum(EnumVariants::new(vec![{}]).unwrap())",
-                    inner_strings.join(",")
-                );
-                write!(f, "{}", s)
-            }
-            ParamType::Tuple(inner) => {
-                let inner_strings: Vec<String> =
-                    inner.iter().map(|p| format!("ParamType::{}", p)).collect();
-
-                let s = format!("Tuple(vec![{}])", inner_strings.join(","));
-                write!(f, "{}", s)
-            }
-            ParamType::Unit => write! {f, "Unit"},
-            ParamType::Generic(name) => write! {f, "{}", name},
-            _ => {
-                write!(f, "{:?}", self)
-            }
-        }
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EnumVariants {
     variants: Vec<ParamType>,

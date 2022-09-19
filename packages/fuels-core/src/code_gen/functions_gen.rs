@@ -32,13 +32,14 @@ pub fn expand_function(
     }
 
     let name = safe_ident(&function.name);
+
+    let (input, arg) = expand_function_arguments(function, types)?;
+
     let fn_signature = resolve_fn_selector(function, types);
 
     let encoded = first_four_bytes_of_sha256_hash(&fn_signature);
 
     let tokenized_signature = expand_selector(encoded);
-
-    let (input, arg) = expand_function_arguments(function, types)?;
 
     let doc = expand_doc(&format!(
         "Calls the contract's `{}` (0x{}) function",

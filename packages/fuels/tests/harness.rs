@@ -3893,12 +3893,56 @@ async fn test_vector() -> Result<(), Error> {
 
     let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
 
-    let receipts = contract_instance
-        .test_function(vec![0, 1, 2])
-        .call()
-        .await?;
-
-    dbg!(receipts);
+    {
+        // vec of u32s
+        let arg = vec![0, 1, 2];
+        contract_instance.u32_vec(arg).call().await?;
+    }
+    {
+        // vec of vecs of u32s
+        let arg = vec![vec![0, 1, 2], vec![0, 1, 2]];
+        contract_instance.vec_in_vec(arg).call().await?;
+    }
+    {
+        // vec of structs
+        let arg = vec![SomeStruct { a: 0 }, SomeStruct { a: 1 }];
+        contract_instance.struct_in_vec(arg).call().await?;
+    }
+    {
+        // vec in struct
+        let arg = SomeStruct { a: vec![0, 1, 2] };
+        contract_instance.vec_in_struct(arg).call().await?;
+    }
+    {
+        // array in vec
+        let arg = vec![[0u64, 1u64], [0u64, 1u64]];
+        contract_instance.array_in_vec(arg).call().await?;
+    }
+    {
+        // vec in array
+        let arg = [vec![0, 1, 2], vec![0, 1, 2]];
+        contract_instance.vec_in_array(arg).call().await?;
+    }
+    {
+        // vec in enum
+        let arg = SomeEnum::a(vec![0, 1, 2]);
+        contract_instance.vec_in_enum(arg).call().await?;
+    }
+    {
+        // enum in vec
+        let arg = vec![SomeEnum::a(0), SomeEnum::a(1)];
+        contract_instance.enum_in_vec(arg).call().await?;
+    }
+    {
+        // tuple in vec
+        let arg = vec![(0, 0), (1, 1)];
+        contract_instance.tuple_in_vec(arg).call().await?;
+    }
+    {
+        // vec in tuple
+        let arg = (vec![0, 1, 2], vec![0, 1, 2]);
+        contract_instance.vec_in_tuple(arg).call().await?;
+    }
 
     Ok(())
 }

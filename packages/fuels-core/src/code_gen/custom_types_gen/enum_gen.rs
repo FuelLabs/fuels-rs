@@ -147,7 +147,7 @@ fn enum_tokenizable_impl(
 
                     let variants = match Self::param_type() {
                         ParamType::Enum(variants) => variants,
-                        other => panic!("Calling {}::param_type() must return a ParamType::Enum but instead it returned: {}", #enum_ident_stringified, other)
+                        other => panic!("Calling {}::param_type() must return a ParamType::Enum but instead it returned: {:?}", #enum_ident_stringified, other)
                     };
 
                     Token::Enum(Box::new((discriminant, token, variants)))

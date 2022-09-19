@@ -42,9 +42,8 @@ fn resolve_type_application(
     parent_generic_params: &[(usize, Type)],
 ) -> Type {
     let type_decl = types.get(&type_application.type_id).unwrap();
-    let param_type = ParamType::from_type_declaration(type_decl, types).unwrap();
 
-    if let ParamType::Generic(_) = &param_type {
+    if let Some(_) = type_decl.get_generic_param() {
         let (_, generic_type) = parent_generic_params
             .iter()
             .find(|(id, _)| *id == type_application.type_id)
@@ -68,6 +67,7 @@ fn resolve_type_application(
         .map(|component| resolve_type_application(component, types, &generic_params_lookup))
         .collect_vec();
 
+    let param_type = ParamType::from_type_declaration(type_decl, types).unwrap();
     Type {
         param_type,
         components,
