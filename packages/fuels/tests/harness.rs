@@ -3876,6 +3876,30 @@ async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<(), Error> {
 
 #[tokio::test]
 async fn test_vector() -> Result<(), Error> {
+    abigen!(
+        MyContract,
+        "packages/fuels/tests/test_projects/vectors/out/debug/vectors-abi.json"
+    );
+
+    let wallet = launch_provider_and_get_wallet().await;
+
+    let contract_id = Contract::deploy(
+        "tests/test_projects/vectors/out/debug/vectors.bin",
+        &wallet,
+        TxParameters::default(),
+        StorageConfiguration::default(),
+    )
+    .await?;
+
+    let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
+
+    let receipts = contract_instance
+        .test_function(vec![0, 1, 2])
+        .call()
+        .await?;
+
+    dbg!(receipts);
+
     Ok(())
 }
 

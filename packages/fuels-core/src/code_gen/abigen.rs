@@ -2,6 +2,7 @@ use itertools::Itertools;
 use std::collections::HashMap;
 
 use crate::code_gen::bindings::ContractBindings;
+use crate::code_gen::custom_types::extract_custom_type_name_from_abi_property;
 use crate::constants::{ADDRESS_SWAY_NATIVE_TYPE, CONTRACT_ID_SWAY_NATIVE_TYPE};
 use crate::source::Source;
 use crate::utils::ident;
@@ -202,7 +203,7 @@ impl Abigen {
             // Skip custom type generation if the custom type is a Sway-native type.
             // This means ABI methods receiving or returning a Sway-native type
             // can receive or return that native type directly.
-            if Abigen::is_sway_native_type(&prop.type_field) {
+            if Abigen::is_sway_native_type(&prop)? {
                 continue;
             }
 
@@ -219,13 +220,18 @@ impl Abigen {
     // It's expected to come in as `"struct T"` or `"enum T"`.
     // `T` is a Sway-native type if it matches exactly one of
     // the reserved strings, such as "Address" or "ContractId".
-    fn is_sway_native_type(type_field: &str) -> bool {
-        let split: Vec<&str> = type_field.split_whitespace().collect();
+    fn is_sway_native_type(type_field: &TypeDeclaration) -> anyhow::Result<bool> {
+        let name = extract_custom_type_name_from_abi_property(type_field)?;
 
-        if split.len() > 2 {
-            return false;
-        }
-        split[1] == CONTRACT_ID_SWAY_NATIVE_TYPE || split[1] == ADDRESS_SWAY_NATIVE_TYPE
+        Ok([
+            CONTRACT_ID_SWAY_NATIVE_TYPE,
+            ADDRESS_SWAY_NATIVE_TYPE,
+            "Vec",
+            "RawVec",
+        ]
+        .map(|s| ident(s))
+        .into_iter()
+        .any(|e| e == name))
     }
 
     fn abi_enums(&self) -> Result<TokenStream, Error> {
