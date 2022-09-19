@@ -86,7 +86,8 @@ impl ABIParser {
             .zip(values)
             .map(|(prop, val)| {
                 let t = types.get(&prop.type_id).unwrap();
-                Ok((ParamType::from_type_declaration(t, &types)?, val.as_str()))
+                unimplemented!("fixme");
+                Ok((Default::default(), val.as_str()))
             })
             .collect::<Result<Vec<_>, Error>>()?;
 
@@ -218,7 +219,9 @@ impl ABIParser {
             .get(&entry.unwrap().output.type_id)
             .expect("No output type");
 
-        let param_result = ParamType::from_type_declaration(param_result, &types);
+        unimplemented!("fix me");
+        // let param_result = ParamType::from_type_declaration(param_result, &types);
+        let param_result = Ok(Default::default());
 
         match param_result {
             Ok(params) => Ok(ABIDecoder::decode(&[params], value)?),

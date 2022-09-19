@@ -5,7 +5,6 @@ use super::utils::{
 use core::result::Result;
 use core::result::Result::Ok;
 use fuels_types::errors::Error;
-use fuels_types::param_types::ParamType;
 use fuels_types::TypeDeclaration;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
@@ -49,7 +48,7 @@ fn enum_decl(
              field_name,
              field_type,
          }| {
-            let field_type = if let ParamType::Unit = field_type.param_type {
+            let field_type = if field_type.is_unit() {
                 quote! {}
             } else {
                 field_type.into()
@@ -84,7 +83,7 @@ fn enum_tokenizable_impl(
                 field_type,
             },
         )| {
-            let value = if let ParamType::Unit = field_type.param_type {
+            let value = if field_type.is_unit() {
                 quote! {}
             } else {
                 let field_type: TokenStream = field_type.into();
@@ -105,7 +104,7 @@ fn enum_tokenizable_impl(
             },
         )| {
             let u8_discriminant = discriminant as u8;
-            if let ParamType::Unit = field_type.param_type {
+            if field_type.is_unit() {
                 quote! { Self::#field_name() => (#u8_discriminant, ().into_token())}
             } else {
                 quote! { Self::#field_name(inner) => (#u8_discriminant, inner.into_token())}
