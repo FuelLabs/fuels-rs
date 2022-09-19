@@ -1287,7 +1287,7 @@ async fn test_contract_setup_macro_deploy_with_salt() -> Result<(), Error> {
     );
     let foo_caller_contract_id2 = foo_caller_contract_instance2._get_contract_id();
 
-    // Because we deploy with salt we can deploy the same contract multiple times
+    // Because we deploy with salt, we can deploy the same contract multiple times
     assert_ne!(foo_caller_contract_id, foo_caller_contract_id2);
 
     // The first contract can be called because they were deployed on the same provider

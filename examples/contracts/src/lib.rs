@@ -74,7 +74,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn setu_contract_test_example() -> Result<(), Error> {
+    async fn setup_contract_test_example() -> Result<(), Error> {
         use fuels::prelude::*;
 
         // ANCHOR: deploy_contract_setup_macro_short
