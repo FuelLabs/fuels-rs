@@ -3693,7 +3693,7 @@ async fn test_input_message() -> Result<(), Error> {
     Ok(())
 }
 
-/*
+
 #[tokio::test]
 async fn generics_test() -> anyhow::Result<()> {
     abigen!(
@@ -3810,7 +3810,6 @@ async fn generics_test() -> anyhow::Result<()> {
 
     Ok(())
 }
-*/
 
 #[tokio::test]
 async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<(), Error> {
