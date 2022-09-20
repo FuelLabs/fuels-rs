@@ -3,6 +3,7 @@ use fuel_core::service::FuelService;
 use fuel_gql_client::fuel_tx::{AssetId, ContractId, Receipt};
 use fuels::contract::contract::MultiContractCallHandler;
 use fuels::contract::predicate::Predicate;
+use fuels::prelude::SizedAsciiString;
 use fuels::prelude::{
     abigen, launch_custom_provider_and_get_wallets, launch_provider_and_get_wallet,
     setup_multiple_assets_coins, setup_single_asset_coins, setup_test_provider, CallParameters,
@@ -3850,7 +3851,6 @@ async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<(), Error> {
     Ok(())
 }
 
-
 #[tokio::test]
 async fn test_logged_types() -> Result<(), Error> {
     abigen!(
@@ -3867,25 +3867,41 @@ async fn test_logged_types() -> Result<(), Error> {
     )
     .await?;
 
-    let contract_instance = LoggedTypesBuilder::new(contract_id.to_string(), wallet.clone()).build();
+    let contract_instance =
+        LoggedTypesBuilder::new(contract_id.to_string(), wallet.clone()).build();
 
-    let response = contract_instance
-        .produce_logs()
-        .call()
-        .await?;
+    let response = contract_instance.produce_logs().call().await?;
 
-    dbg!(&response.receipts);
+    let log_u64 = contract_instance._logs_with_type::<u64>(&response.receipts)?;
+    let log_u32 = contract_instance._logs_with_type::<u32>(&response.receipts)?;
+    let log_u16 = contract_instance._logs_with_type::<u16>(&response.receipts)?;
+    let log_u8 = contract_instance._logs_with_type::<u8>(&response.receipts)?;
+    let log_bits256 = contract_instance._logs_with_type::<Bits256>(&response.receipts)?;
+    let log_string = contract_instance._logs_with_type::<SizedAsciiString<4>>(&response.receipts)?;
+    let log_array = contract_instance._logs_with_type::<[u8; 3]>(&response.receipts)?;
+    let log_test_struct = contract_instance._logs_with_type::<TestStruct>(&response.receipts)?;
+    let log_test_enum = contract_instance._logs_with_type::<TestEnum>(&response.receipts)?;
 
-    dbg!(contract_instance._logs_with_type::<[u8; 3]>(response.receipts));    
+    let expected_bits256 = Bits256([
+        239, 134, 175, 169, 105, 108, 240, 220, 99, 133, 226, 196, 7, 166, 225, 89, 161, 16, 60,
+        239, 183, 226, 174, 6, 54, 251, 51, 211, 203, 42, 158, 74,
+    ]);
+    let expected_struct = TestStruct {
+        field_1: true,
+        field_2: expected_bits256,
+        field_3: 64,
+    };
+    let expected_enum = TestEnum::VariantTwo();
 
-    //let var: TestEnum = try_from_bytes(logdata.data().unwrap()).unwrap();
-    //dbg!(var);
-    
-    //ParamType::from_type_declaration(prop, types);
-
-    //let token = ABIDecoder::decode_single(&T::param_type(), bytes)?;
-
-    //T::from_token(token);
+    assert_eq!(log_u64, vec![64, 64]);
+    assert_eq!(log_u32, vec![32]);
+    assert_eq!(log_u16, vec![16]);
+    assert_eq!(log_u8, vec![8]);
+    assert_eq!(log_bits256, vec![expected_bits256]);
+    assert_eq!(log_string, vec!["Fuel"]);
+    assert_eq!(log_array, vec![[1, 2, 3]]);
+    assert_eq!(log_test_struct, vec![expected_struct]);
+    assert_eq!(log_test_enum, vec![expected_enum]);
 
     Ok(())
 }

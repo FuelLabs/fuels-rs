@@ -1,10 +1,10 @@
 mod enum_gen;
 mod struct_gen;
-pub mod utils;
+mod utils;
 
 pub use enum_gen::expand_custom_enum;
 pub use struct_gen::expand_custom_struct;
-pub use utils::extract_custom_type_name_from_abi_property;
+pub use utils::{extract_custom_type_name_from_abi_property, single_param_type_call};
 
 // Doing string -> TokenStream -> string isn't pretty but gives us the opportunity to
 // have a better understanding of the generated code so we consider it ok.

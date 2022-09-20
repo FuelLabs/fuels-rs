@@ -10,7 +10,7 @@ use std::fmt::{Display, Formatter};
 // Represents a type alongside its generic parameters. Can be converted into a
 // `TokenStream` via `.into()`.
 #[derive(Debug, Clone)]
-pub(crate) struct ResolvedType {
+pub struct ResolvedType {
     pub type_name: TokenStream,
     pub generic_params: Vec<ResolvedType>,
     pub param_type: ParamType,

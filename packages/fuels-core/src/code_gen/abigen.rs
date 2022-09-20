@@ -9,10 +9,9 @@ use fuels_types::{ProgramABI, TypeDeclaration};
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
-use super::custom_types::utils::{extract_components, param_type_calls, Component};
-use super::custom_types::{expand_custom_enum, expand_custom_struct};
+use super::custom_types::{expand_custom_enum, expand_custom_struct, single_param_type_call};
 use super::functions_gen::expand_function;
-use super::resolved_type::{resolve_type, self};
+use super::resolved_type::resolve_type;
 
 pub struct Abigen {
     /// Format the code using a locally installed copy of `rustfmt`.
@@ -81,10 +80,6 @@ impl Abigen {
         let abi_enums = self.abi_enums()?;
         let resolved_logs = self.resolve_logs()?;
 
-        if name == "LoggedTypes" {
-            dbg!(quote!{vec![#(#resolved_logs),*]}.to_string());
-        }
-
         let (includes, code) = if self.no_std {
             (
                 quote! {
@@ -137,37 +132,45 @@ impl Abigen {
                            Ok(Self { contract_id: self.contract_id.clone(), wallet: wallet, logs_lookup: self.logs_lookup.clone() })
                         }
 
-                        pub fn _logs_with_type<D: Tokenizable + Parameterize>(&self, receipts: Vec<Receipt>) -> Vec<D> {
+                        pub fn _logs_with_type<D: Tokenizable + Parameterize>(&self, receipts: &[Receipt]) -> Result<Vec<D>, SDKError> {
                             let param_type = D::param_type();
 
-                            let target_ids: HashSet<u64> = self.logs_lookup
+                            let target_ids: HashSet<u64> = self
+                                .logs_lookup
                                 .iter()
                                 .filter_map(|l| {
-                                    let id = if l.param_type == param_type {
+                                    if l.param_type == param_type {
                                         Some(l.log_id)
                                     } else {
                                         None
-                                    };
-
-                                    id
+                                    }
                                 })
                                 .collect();
 
-                                
-                            let targets: Vec<D> = receipts
+                            let decode_log_content = |content: &[u8]| {
+                                let dec =
+                                    ABIDecoder::decode_single(&D::param_type(), content)?;
+                                D::from_token(dec)
+                            };
+
+                            let decoded_logs: Vec<D> = receipts
                                 .iter()
                                 .filter_map(|r| {
-                                    let log = match r {
-                                        Receipt::LogData { rb, data, .. } if target_ids.contains(rb) => {let dec = ABIDecoder::decode_single(&D::param_type(), data).unwrap(); Some(D::from_token(dec).unwrap())},
-                                        Receipt::Log { ra, rb, .. } if target_ids.contains(rb) => {let dec = ABIDecoder::decode_single(&D::param_type(), &ra.to_be_bytes()).unwrap(); Some(D::from_token(dec).unwrap())},
+                                    let decoded_log = match r {
+                                        Receipt::LogData { rb, data, .. } if target_ids.contains(rb) => {
+                                            Some(decode_log_content(data).expect("Failed to decode log"))
+                                        }
+                                        Receipt::Log { ra, rb, .. } if target_ids.contains(rb) => {
+                                            Some(decode_log_content(&ra.to_be_bytes()).expect("Failed to decode log"))
+                                        }
                                         _ => None,
                                     };
 
-                                    log
+                                    decoded_log
                                 })
                                 .collect();
 
-                            targets
+                            Ok(decoded_logs)
                         }
                     }
 
@@ -194,9 +197,9 @@ impl Abigen {
                         }
 
                         pub fn build(self) -> #name {
-                            #name { 
-                                contract_id: self.contract_id, 
-                                wallet: self.wallet, 
+                            #name {
+                                contract_id: self.contract_id,
+                                wallet: self.wallet,
                                 logs_lookup: vec![#(#resolved_logs),*],
                             }
                         }
@@ -302,30 +305,29 @@ impl Abigen {
     }
 
     pub fn resolve_logs(&self) -> Result<Vec<TokenStream>, Error> {
-        let resolved = self.abi.logged_types
+        let resolved = self
+            .abi
+            .logged_types
             .as_ref()
             .map_or(vec![], |logged_types| {
                 logged_types
-                .iter()
-                .map(|l| {
-                    //let type_declaration = self.types.get(&l.application.type_id).unwrap();
-                    let component = Component::new(&l.application, &self.types, true).unwrap();
-                    let resolved_type = param_type_calls(&[component]);
-                    let type_token = resolved_type[0].clone();
-                    //let resolved_type = resolve_type(&l.application, &self.types).unwrap();
-                    //let type_token: TokenStream = resolved_type.into();
-                    let id = l.log_id;
+                    .iter()
+                    .map(|l| {
+                        let resolved_type = resolve_type(&l.application, &self.types)
+                            .expect("Failed to resolve log type");
+                        let param_type_call = single_param_type_call(&resolved_type);
+                        let id = l.log_id;
 
-                    quote! { ResolvedLog { 
-                        log_id: #id, 
-                        param_type: #type_token
-                    }
-                }
-            })
-            .collect()
+                        quote! { ResolvedLog {
+                                log_id: #id,
+                                param_type: #param_type_call
+                            }
+                        }
+                    })
+                    .collect()
             });
 
-            Ok(resolved)
+        Ok(resolved)
     }
 }
 
