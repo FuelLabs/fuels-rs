@@ -3,12 +3,11 @@ use fuel_core::service::FuelService;
 use fuel_gql_client::fuel_tx::{AssetId, ContractId, Receipt};
 use fuels::contract::contract::MultiContractCallHandler;
 use fuels::contract::predicate::Predicate;
-use fuels::prelude::SizedAsciiString;
 use fuels::prelude::{
     abigen, launch_custom_provider_and_get_wallets, launch_provider_and_get_wallet,
     setup_contract_test, setup_multiple_assets_coins, setup_single_asset_coins,
     setup_test_provider, CallParameters, Config, Contract, Error, Provider, Salt, TxParameters,
-    WalletUnlocked, WalletsConfig, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
+    WalletUnlocked, WalletsConfig, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS, SizedAsciiString
 };
 use fuels_core::abi_encoder::ABIEncoder;
 use fuels_core::parameters::StorageConfiguration;
@@ -3369,7 +3368,6 @@ async fn test_input_message() -> Result<(), Error> {
 
     Ok(())
 }
-
 
 #[tokio::test]
 async fn generics_test() -> anyhow::Result<()> {
