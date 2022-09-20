@@ -3330,7 +3330,6 @@ async fn test_input_message() -> Result<(), Error> {
     Ok(())
 }
 
-
 #[tokio::test]
 async fn generics_test() -> anyhow::Result<()> {
     setup_contract_test!(
@@ -3633,6 +3632,7 @@ async fn test_rust_result_can_be_decoded() -> Result<(), Box<dyn std::error::Err
     Ok(())
 }
 
+/*
 #[tokio::test]
 async fn test_rust_result_can_be_encoded() -> Result<(), Box<dyn std::error::Error>> {
     abigen!(
@@ -3757,3 +3757,4 @@ async fn test_parse_logs_custom_types() -> Result<(), Error> {
 
     Ok(())
 }
+*/
