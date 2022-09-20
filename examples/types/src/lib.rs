@@ -29,6 +29,15 @@ mod tests {
         let b256 = Bytes32::from_str(hex_string).expect("failed to create Bytes32 from string");
         assert_eq!([0u8; 32], *b256);
         // ANCHOR_END: bytes32
+
+        // ANCHOR: bytes32_format
+        let b256_string = b256.to_string();
+        let b256_hex_string = format!("{:#x}", b256);
+        // ANCHOR_END: bytes32_format
+
+        assert_eq!(hex_string[2..], b256_string);
+        assert_eq!(hex_string, b256_hex_string);
+
         Ok(())
     }
     #[tokio::test]
