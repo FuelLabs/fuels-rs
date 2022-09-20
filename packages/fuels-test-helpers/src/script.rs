@@ -7,8 +7,11 @@ use fuels_signers::provider::Provider;
 #[cfg(not(feature = "fuel-core-lib"))]
 use crate::launch_provider_and_get_wallet;
 
-use fuel_gql_client::fuel_tx::{Receipt, Transaction};
+use fuel_gql_client::fuel_tx::{Input, Output, Receipt, Transaction, ContractId, AssetId};
+use fuel_gql_client::fuel_vm::consts::{REG_ONE, WORD_SIZE};
+use fuel_gql_client::fuel_vm::prelude::{GTFArgs, Opcode};
 use fuels_contract::script::Script;
+use fuels_core::parameters::TxParameters;
 use fuels_types::errors::Error;
 
 /// Run the Sway script binary located at `binary_filepath` and return its resulting receipts,
@@ -53,6 +56,70 @@ fn get_script(script_binary: Vec<u8>) -> Script {
     };
 
     Script::new(tx)
+}
+
+#[cfg(feature = "fuel-core-lib")]
+pub async fn build_and_run_script(
+    binary_filepath: &str,
+    // amount: u64,
+    // asset_id: AssetId,
+    inputs: &[Input],
+    outputs: &[Output],
+    script_data: Vec<u8>,
+    params: TxParameters,
+) -> Result<Vec<Receipt>, Error> {
+    // let script_data: Vec<u8> = [
+    //     to.to_vec(),
+    //     amount.to_be_bytes().to_vec(),
+    //     asset_id.to_vec(),
+    // ]
+    //     .into_iter()
+    //     .flatten()
+    //     .collect();
+
+    let script_binary = std::fs::read(binary_filepath)?;
+
+    // let script = vec![
+    //     Opcode::gtf(0x10, 0x00, GTFArgs::ScriptData),
+    //     Opcode::ADDI(0x11, 0x10, ContractId::LEN as u16),
+    //     Opcode::LW(0x13, 0x11, 0),
+    //     Opcode::ADDI(0x12, 0x11, WORD_SIZE as u16),
+    //     Opcode::TR(0x10, 0x11, 0x12),
+    //     Opcode::RET(REG_ONE),
+    // ]
+    //     .into_iter()
+    //     .collect();
+
+    let tx = Transaction::Script {
+        gas_price: params.gas_price,
+        gas_limit: params.gas_limit,
+        maturity: params.maturity,
+        receipts_root: Default::default(),
+        script: script_binary,
+        script_data,
+        inputs: inputs.to_vec(),
+        outputs: outputs.to_vec(),
+        witnesses: vec![],
+        metadata: None,
+    };
+
+    // let tx = Transaction::Script {
+    //     gas_price: 0,
+    //     gas_limit: 1000000,
+    //     maturity: 0,
+    //     receipts_root: Default::default(),
+    //     script: script_binary,
+    //     script_data: vec![],
+    //     inputs: vec![],
+    //     outputs: vec![],
+    //     witnesses: vec![vec![].into()],
+    //     metadata: None,
+    // };
+    let script = Script::new(tx);
+    let server = FuelService::new_node(Config::local_node()).await.unwrap();
+    let provider = Provider::connect(server.bound_address.to_string()).await?;
+    script.call(&provider).await
+
 }
 
 #[cfg(test)]

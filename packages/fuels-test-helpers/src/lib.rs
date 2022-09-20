@@ -17,6 +17,8 @@ pub use fuel_core::service::Config;
 #[cfg(not(feature = "fuel-core-lib"))]
 pub use node::{get_socket_address, new_fuel_node, CoinConfig, Config, MessageConfig};
 
+
+
 #[cfg(not(feature = "fuel-core-lib"))]
 pub use fuel_core_interfaces::model::{Coin, CoinStatus};
 use fuel_core_interfaces::model::{DaBlockHeight, Message};
@@ -39,7 +41,7 @@ use rand::Fill;
 pub mod node;
 
 mod chains;
-mod script;
+pub mod script;
 #[cfg(feature = "fuels-signers")]
 mod signers;
 mod utils;

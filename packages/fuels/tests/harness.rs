@@ -24,6 +24,7 @@ use std::str::FromStr;
 
 use fuel_core_interfaces::model::Message;
 use fuel_gql_client::client::schema::message::Message as OtherMessage;
+use fuels_test_helpers::script::build_and_run_script;
 
 /// Note: all the tests and examples below require pre-compiled Sway projects.
 /// To compile these projects, run `cargo run --bin build-test-projects`.
@@ -4049,5 +4050,34 @@ async fn test_rust_result_can_be_encoded() -> Result<(), Box<dyn std::error::Err
 
     assert!(response.value);
 
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_script_interface() -> Result<(), Error> {
+
+    let path_to_bin = "../fuels/tests/test_projects/logging/out/debug/logging.bin";
+
+    let run_script = build_and_run_script(
+        path_to_bin,
+        // 0,
+        // Default::default(),
+        &[],
+        &[],
+        vec![],
+        TxParameters::default()
+    ).await?;
+
+    dbg!(run_script);
+
+    // assert_eq!(response.value, "fuel");
+    //
+    // let my_struct = MyStruct { foo: 10, bar: true };
+    //
+    // let response = contract_instance.return_my_struct(my_struct).call().await?;
+    //
+    // assert_eq!(response.value.foo, 10);
+    // assert!(response.value.bar);
+    // assert!(false);
     Ok(())
 }
