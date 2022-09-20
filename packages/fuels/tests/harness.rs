@@ -6,8 +6,8 @@ use fuels::contract::predicate::Predicate;
 use fuels::prelude::{
     abigen, launch_custom_provider_and_get_wallets, launch_provider_and_get_wallet,
     setup_contract_test, setup_multiple_assets_coins, setup_single_asset_coins,
-    setup_test_provider, CallParameters, Config, Contract, Error, Provider, Salt, TxParameters,
-    WalletUnlocked, WalletsConfig, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS, SizedAsciiString
+    setup_test_provider, CallParameters, Config, Contract, Error, Provider, Salt, SizedAsciiString,
+    TxParameters, WalletUnlocked, WalletsConfig, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
 };
 use fuels_core::abi_encoder::ABIEncoder;
 use fuels_core::parameters::StorageConfiguration;
@@ -1689,45 +1689,6 @@ async fn workflow_enum_inside_struct() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_logd_receipts() -> Result<(), Error> {
-    setup_contract_test!(
-        contract_instance,
-        wallet,
-        "packages/fuels/tests/test_projects/contract_logdata"
-    );
-
-    let mut value = [0u8; 32];
-    value[0] = 0xFF;
-    value[1] = 0xEE;
-    value[2] = 0xDD;
-    value[12] = 0xAA;
-    value[13] = 0xBB;
-    value[14] = 0xCC;
-
-    let response = contract_instance
-        .use_logd_opcode(Bits256(value), 3, 6)
-        .call()
-        .await?;
-    assert_eq!(response.logs, vec!["ffeedd", "ffeedd000000"]);
-
-    let response = contract_instance
-        .use_logd_opcode(Bits256(value), 14, 15)
-        .call()
-        .await?;
-    assert_eq!(
-        response.logs,
-        vec![
-            "ffeedd000000000000000000aabb",
-            "ffeedd000000000000000000aabbcc"
-        ]
-    );
-
-    let response = contract_instance.dont_use_logd().call().await?;
-    assert!(response.logs.is_empty());
-    Ok(())
-}
-
-#[tokio::test]
 async fn test_wallet_balance_api() -> Result<(), Error> {
     // Single asset
     let mut wallet = WalletUnlocked::new_random(None);
@@ -3369,6 +3330,7 @@ async fn test_input_message() -> Result<(), Error> {
     Ok(())
 }
 
+
 #[tokio::test]
 async fn generics_test() -> anyhow::Result<()> {
     setup_contract_test!(
@@ -3710,33 +3672,72 @@ async fn test_rust_result_can_be_encoded() -> Result<(), Box<dyn std::error::Err
 }
 
 #[tokio::test]
-async fn test_logged_types() -> Result<(), Error> {
-    abigen!(
-        LoggedTypes,
-        "packages/fuels/tests/test_projects/logged_types/out/debug/logged_types-abi.json"
+async fn test_parse_logged_varibles() -> Result<(), Error> {
+    setup_contract_test!(
+        contract_instance,
+        wallet,
+        "packages/fuels/tests/test_projects/logged_types"
     );
 
-    let wallet = launch_provider_and_get_wallet().await;
-    let contract_id = Contract::deploy(
-        "tests/test_projects/logged_types/out/debug/logged_types.bin",
-        &wallet,
-        TxParameters::default(),
-        StorageConfiguration::default(),
-    )
-    .await?;
+    // ANCHOR: produce_logs
+    let response = contract_instance.produce_logs_variables().call().await?;
 
-    let contract_instance =
-        LoggedTypesBuilder::new(contract_id.to_string(), wallet.clone()).build();
+    let log_u64 = contract_instance._logs_with_type::<u64>(&response.receipts)?;
+    let log_bits256 = contract_instance._logs_with_type::<Bits256>(&response.receipts)?;
+    let log_string =
+        contract_instance._logs_with_type::<SizedAsciiString<4>>(&response.receipts)?;
+    let log_array = contract_instance._logs_with_type::<[u8; 3]>(&response.receipts)?;
 
-    let response = contract_instance.produce_logs().call().await?;
+    let expected_bits256 = Bits256([
+        239, 134, 175, 169, 105, 108, 240, 220, 99, 133, 226, 196, 7, 166, 225, 89, 161, 16, 60,
+        239, 183, 226, 174, 6, 54, 251, 51, 211, 203, 42, 158, 74,
+    ]);
+
+    assert_eq!(log_u64, vec![64]);
+    assert_eq!(log_bits256, vec![expected_bits256]);
+    assert_eq!(log_string, vec!["Fuel"]);
+    assert_eq!(log_array, vec![[1, 2, 3]]);
+    // ANCHOR_END: produce_logs
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_parse_logs_values() -> Result<(), Error> {
+    setup_contract_test!(
+        contract_instance,
+        wallet,
+        "packages/fuels/tests/test_projects/logged_types"
+    );
+
+    let response = contract_instance.produce_logs_values().call().await?;
 
     let log_u64 = contract_instance._logs_with_type::<u64>(&response.receipts)?;
     let log_u32 = contract_instance._logs_with_type::<u32>(&response.receipts)?;
     let log_u16 = contract_instance._logs_with_type::<u16>(&response.receipts)?;
     let log_u8 = contract_instance._logs_with_type::<u8>(&response.receipts)?;
-    let log_bits256 = contract_instance._logs_with_type::<Bits256>(&response.receipts)?;
-    let log_string = contract_instance._logs_with_type::<SizedAsciiString<4>>(&response.receipts)?;
-    let log_array = contract_instance._logs_with_type::<[u8; 3]>(&response.receipts)?;
+    // try to retrieve non existent log
+    let log_nonexistent = contract_instance._logs_with_type::<bool>(&response.receipts)?;
+
+    assert_eq!(log_u64, vec![64]);
+    assert_eq!(log_u32, vec![32]);
+    assert_eq!(log_u16, vec![16]);
+    assert_eq!(log_u8, vec![8]);
+    assert!(log_nonexistent.is_empty());
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_parse_logs_custom_types() -> Result<(), Error> {
+    setup_contract_test!(
+        contract_instance,
+        wallet,
+        "packages/fuels/tests/test_projects/logged_types"
+    );
+
+    let response = contract_instance.produce_logs_custom_types().call().await?;
+
     let log_test_struct = contract_instance._logs_with_type::<TestStruct>(&response.receipts)?;
     let log_test_enum = contract_instance._logs_with_type::<TestEnum>(&response.receipts)?;
 
@@ -3751,13 +3752,6 @@ async fn test_logged_types() -> Result<(), Error> {
     };
     let expected_enum = TestEnum::VariantTwo();
 
-    assert_eq!(log_u64, vec![64, 64]);
-    assert_eq!(log_u32, vec![32]);
-    assert_eq!(log_u16, vec![16]);
-    assert_eq!(log_u8, vec![8]);
-    assert_eq!(log_bits256, vec![expected_bits256]);
-    assert_eq!(log_string, vec!["Fuel"]);
-    assert_eq!(log_array, vec![[1, 2, 3]]);
     assert_eq!(log_test_struct, vec![expected_struct]);
     assert_eq!(log_test_enum, vec![expected_enum]);
 
