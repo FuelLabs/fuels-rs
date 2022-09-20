@@ -12,7 +12,8 @@ use fuels::prelude::{
 use fuels_core::abi_encoder::ABIEncoder;
 use fuels_core::parameters::StorageConfiguration;
 use fuels_core::tx::{Address, Bytes32, StorageSlot};
-use fuels_core::types::{Bits256, Byte};
+use fuels_core::types::{Bits256, Byte, SizedAsciiString};
+use fuels_core::Parameterize;
 use fuels_core::Tokenizable;
 use fuels_core::{constants::BASE_ASSET_ID, Token};
 use fuels_signers::fuel_crypto::SecretKey;
@@ -4051,16 +4052,4 @@ async fn test_rust_result_can_be_encoded() -> Result<(), Box<dyn std::error::Err
     assert!(response.value);
 
     Ok(())
-}
-
-#[test]
-fn something() {
-    let result = Abigen::new(
-        "MyContract",
-        "tests/test_projects/results/out/debug/results-abi.json",
-    )
-    .unwrap()
-    .expand()
-    .unwrap();
-    std::fs::write("/tmp/some_code.rs", result.to_string()).unwrap();
 }

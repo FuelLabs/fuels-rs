@@ -2,7 +2,6 @@ use crate::code_gen::resolved_type::{resolve_type, ResolvedType};
 use crate::utils::{ident, safe_ident};
 use anyhow::anyhow;
 use fuels_types::errors::Error;
-use fuels_types::param_types::ParamType;
 use fuels_types::{TypeApplication, TypeDeclaration};
 use inflector::Inflector;
 use lazy_static::lazy_static;
@@ -233,62 +232,52 @@ mod tests {
 
         Ok(())
     }
-    // TODO fixme
-    // #[test]
-    // fn param_type_calls_correctly_generated() {
-    //     // arrange
-    //     let components = vec![
-    //         Component {
-    //             field_name: ident("a"),
-    //             field_type: ResolvedType {
-    //                 type_name: quote! {u8},
-    //                 generic_params: vec![],
-    //                 param_type: ParamType::U8,
-    //             },
-    //         },
-    //         Component {
-    //             field_name: ident("b"),
-    //             field_type: ResolvedType {
-    //                 type_name: quote! {SomeStruct},
-    //                 generic_params: vec![
-    //                     ResolvedType {
-    //                         type_name: quote! {T},
-    //                         generic_params: vec![],
-    //                         param_type: ParamType::Generic("T".to_string()),
-    //                     },
-    //                     ResolvedType {
-    //                         type_name: quote! {K},
-    //                         generic_params: vec![],
-    //                         param_type: ParamType::Generic("K".to_string()),
-    //                     },
-    //                 ],
-    //                 param_type: ParamType::Struct(
-    //                     vec![
-    //                         ParamType::Generic("T".to_string()),
-    //                         ParamType::Generic("K".to_string()),
-    //                     ],
-    //                     vec![],
-    //                 ),
-    //             },
-    //         },
-    //     ];
-    //
-    //     // act
-    //     let result = param_type_calls(&components);
-    //
-    //     // assert
-    //     let stringified_result = result
-    //         .into_iter()
-    //         .map(|stream| stream.to_string())
-    //         .collect::<Vec<_>>();
-    //     assert_eq!(
-    //         stringified_result,
-    //         vec![
-    //             "< u8 > :: param_type ()",
-    //             "SomeStruct :: < T , K > :: param_type ()"
-    //         ]
-    //     )
-    // }
+
+    #[test]
+    fn param_type_calls_correctly_generated() {
+        // arrange
+        let components = vec![
+            Component {
+                field_name: ident("a"),
+                field_type: ResolvedType {
+                    type_name: quote! {u8},
+                    generic_params: vec![],
+                },
+            },
+            Component {
+                field_name: ident("b"),
+                field_type: ResolvedType {
+                    type_name: quote! {SomeStruct},
+                    generic_params: vec![
+                        ResolvedType {
+                            type_name: quote! {T},
+                            generic_params: vec![],
+                        },
+                        ResolvedType {
+                            type_name: quote! {K},
+                            generic_params: vec![],
+                        },
+                    ],
+                },
+            },
+        ];
+
+        // act
+        let result = param_type_calls(&components);
+
+        // assert
+        let stringified_result = result
+            .into_iter()
+            .map(|stream| stream.to_string())
+            .collect::<Vec<_>>();
+        assert_eq!(
+            stringified_result,
+            vec![
+                "< u8 > :: param_type ()",
+                "SomeStruct :: < T , K > :: param_type ()"
+            ]
+        )
+    }
     #[test]
     fn can_extract_struct_name() -> anyhow::Result<()> {
         let declaration = TypeDeclaration {
