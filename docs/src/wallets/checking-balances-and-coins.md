@@ -12,4 +12,8 @@ If you want to query all the balances (i.e., get the balance for each asset ID i
 {{#include ../../../examples/wallets/src/lib.rs:get_balances}}
 ```
 
-The return type is a `HashMap`, where the key is the _asset ID_, and the value is the corresponding balance.
+The return type is a `HashMap`, where the key is the _asset ID's_ hex string, and the value is the corresponding balance. For example, we can get the base asset balance with:
+
+```rust,ignore
+{{#include ../../../examples/wallets/src/lib.rs:get_balance_hashmap}}
+```

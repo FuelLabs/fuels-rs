@@ -1728,8 +1728,7 @@ async fn test_logd_receipts() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_wallet_balance_api() -> Result<(), Error> {
-    // Single asset
+async fn test_wallet_balance_api_single_asset() -> Result<(), Error> {
     let mut wallet = WalletUnlocked::new_random(None);
     let number_of_coins = 21;
     let amount_per_coin = 11;
@@ -1742,12 +1741,14 @@ async fn test_wallet_balance_api() -> Result<(), Error> {
 
     let (provider, _) = setup_test_provider(coins.clone(), vec![], None).await;
     wallet.set_provider(provider);
+
     for (_utxo_id, coin) in coins {
         let balance = wallet.get_asset_balance(&coin.asset_id).await;
         assert_eq!(balance?, number_of_coins * amount_per_coin);
     }
+
     let balances = wallet.get_balances().await?;
-    let expected_key = "0x".to_owned() + BASE_ASSET_ID.to_string().as_str();
+    let expected_key = format!("{:#x}", BASE_ASSET_ID);
     assert_eq!(balances.len(), 1); // only the base asset
     assert!(balances.contains_key(&expected_key));
     assert_eq!(
@@ -1755,7 +1756,12 @@ async fn test_wallet_balance_api() -> Result<(), Error> {
         number_of_coins * amount_per_coin
     );
 
-    // Multiple assets
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_wallet_balance_api_multi_asset() -> Result<(), Error> {
+    let mut wallet = WalletUnlocked::new_random(None);
     let number_of_assets = 7;
     let coins_per_asset = 21;
     let amount_per_coin = 11;
@@ -1765,22 +1771,24 @@ async fn test_wallet_balance_api() -> Result<(), Error> {
         coins_per_asset,
         amount_per_coin,
     );
-    assert_eq!(coins.len() as u64, number_of_assets * coins_per_asset);
-    assert_eq!(asset_ids.len() as u64, number_of_assets);
+
     let (provider, _) = setup_test_provider(coins.clone(), vec![], None).await;
     wallet.set_provider(provider);
     let balances = wallet.get_balances().await?;
     assert_eq!(balances.len() as u64, number_of_assets);
+
     for asset_id in asset_ids {
         let balance = wallet.get_asset_balance(&asset_id).await;
         assert_eq!(balance?, coins_per_asset * amount_per_coin);
-        let expected_key = "0x".to_owned() + asset_id.to_string().as_str();
+
+        let expected_key = format!("{:#x}", asset_id);
         assert!(balances.contains_key(&expected_key));
         assert_eq!(
             *balances.get(&expected_key).unwrap(),
             coins_per_asset * amount_per_coin
         );
     }
+
     Ok(())
 }
 
