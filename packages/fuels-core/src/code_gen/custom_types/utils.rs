@@ -131,12 +131,12 @@ pub(crate) fn extract_generic_parameters(
 }
 
 // A custom type name should be passed to this function as `{struct,enum} $name`,
-pub fn extract_custom_type_name_from_abi_property(prop: &TypeDeclaration) -> Result<Ident, Error> {
+pub fn extract_custom_type_name_from_abi_type_field(type_field: &str) -> Result<Ident, Error> {
     lazy_static! {
         static ref RE: Regex = Regex::new(r"(?:struct|enum)\s*(.*)").unwrap();
     }
 
-    RE.captures(&prop.type_field)
+    RE.captures(type_field)
         .map(|captures| ident(&captures[1]))
         .ok_or_else(|| {
             Error::InvalidData(
@@ -298,7 +298,7 @@ mod tests {
             type_parameters: None,
         };
 
-        let struct_name = extract_custom_type_name_from_abi_property(&declaration)?;
+        let struct_name = extract_custom_type_name_from_abi_type_field(&declaration.type_field)?;
 
         assert_eq!(struct_name, "SomeName");
 
@@ -314,7 +314,7 @@ mod tests {
             type_parameters: None,
         };
 
-        let struct_name = extract_custom_type_name_from_abi_property(&declaration)?;
+        let struct_name = extract_custom_type_name_from_abi_type_field(&declaration.type_field)?;
 
         assert_eq!(struct_name, "SomeEnumName");
 

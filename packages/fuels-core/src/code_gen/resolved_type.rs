@@ -1,11 +1,12 @@
-use crate::code_gen::custom_types::extract_custom_type_name_from_abi_property;
+use crate::code_gen::custom_types::extract_custom_type_name_from_abi_type_field;
 
 use fuels_types::errors::Error;
 
 use fuels_types::{TypeApplication, TypeDeclaration};
+use itertools::Itertools;
 use lazy_static::lazy_static;
 use proc_macro2::TokenStream;
-use quote::quote;
+use quote::{quote, ToTokens};
 use regex::Regex;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
@@ -49,40 +50,90 @@ impl From<ResolvedType> for TokenStream {
     }
 }
 
-fn try_to_get_generic_name(field: &str) -> Option<String> {
+fn to_generic(field: &str, _: &[ResolvedType], _: &[ResolvedType]) -> Option<ResolvedType> {
     lazy_static! {
         static ref RE: Regex = Regex::new(r"^\s*generic\s+(\S+)\s*$").unwrap();
     }
-    RE.captures(field)
-        .map(|captures| String::from(&captures[1]))
+    let name = RE
+        .captures(field)
+        .map(|captures| String::from(&captures[1]))?;
+
+    let type_name = name.parse().expect("Failed to parse generic param name");
+    Some(ResolvedType {
+        type_name,
+        generic_params: vec![],
+    })
 }
 
-fn try_to_get_array_length(field: &str) -> Option<usize> {
+fn to_array(field: &str, components: &[ResolvedType], _: &[ResolvedType]) -> Option<ResolvedType> {
     lazy_static! {
         static ref RE: Regex = Regex::new(r"^\s*\[.+;\s*(\d+)\s*\]\s*$").unwrap();
     }
-    RE.captures(field)
+    let len = RE
+        .captures(field)
         .map(|captures| captures[1].to_string())
-        .map(|length| {
-            str::parse(&length)
-                .unwrap_or_else(|_| panic!("Could not extract array length from {length}!"))
-        })
-}
+        .map(|length: String| {
+            length.parse::<usize>().unwrap_or_else(|_| {
+                panic!("Could not extract array length from {length}! Original field {field}")
+            })
+        })?;
 
-fn try_to_get_string_length(field: &str) -> Option<usize> {
-    lazy_static! {
-        static ref RE: Regex = Regex::new(r"^str\[(\d+)\]$").unwrap();
+    let type_inside: TokenStream = match components {
+        [single_type] => Ok(single_type.into()),
+        _ => Err(Error::InvalidData(format!(
+            "Array must have only one component! Actual components: {components:?}"
+        ))),
     }
-    RE.captures(field)
-        .map(|captures| captures[1].to_string())
-        .map(|length| {
-            str::parse(&length)
-                .unwrap_or_else(|_| panic!("Could not extract array length from {length}!"))
-        })
+    .unwrap();
+
+    Some(ResolvedType {
+        type_name: quote! { [#type_inside; #len] },
+        generic_params: vec![],
+    })
 }
 
-fn is_tuple(field: &str) -> bool {
-    field.starts_with('(') && field.ends_with(')')
+fn to_sized_ascii_string(
+    field: &str,
+    _: &[ResolvedType],
+    _: &[ResolvedType],
+) -> Option<ResolvedType> {
+    lazy_static! {
+        static ref RE: Regex = Regex::new(r"^\s*str\s*\[\s*(\d+)\s*\]\s*$").unwrap();
+    }
+    let len = RE
+        .captures(field)
+        .map(|captures| captures[1].to_string())
+        .map(|length: String| {
+            length.parse::<usize>().unwrap_or_else(|_| {
+                panic!("Could not extract string length from {length}! Original field '{field}'")
+            })
+        })?;
+
+    let generic_params = vec![ResolvedType {
+        type_name: quote! {#len},
+        generic_params: vec![],
+    }];
+
+    Some(ResolvedType {
+        type_name: quote! { SizedAsciiString },
+        generic_params,
+    })
+}
+
+fn to_tuple(field: &str, components: &[ResolvedType], _: &[ResolvedType]) -> Option<ResolvedType> {
+    if field.starts_with('(') && field.ends_with(')') {
+        let inner_types = components.into_iter().map(TokenStream::from);
+
+        // it is important to leave a trailing comma because a tuple with
+        // one element is written as (element,) not (element) which is
+        // resolved to just element
+        Some(ResolvedType {
+            type_name: quote! {(#(#inner_types,)*)},
+            generic_params: vec![],
+        })
+    } else {
+        None
+    }
 }
 
 /// Given a type, will recursively proceed to resolve it until it results in a
@@ -105,63 +156,76 @@ pub(crate) fn resolve_type(
 
     let components = recursively_resolve(&base_type.components)?;
     let type_arguments = recursively_resolve(&type_application.type_arguments)?;
+    let type_field = base_type.type_field.as_str();
 
-    something(base_type, components, type_arguments)
+    [
+        to_simple_type,
+        to_byte,
+        to_bits256,
+        to_generic,
+        to_array,
+        to_sized_ascii_string,
+        to_tuple,
+        to_struct,
+    ]
+    .into_iter()
+    .filter_map(|fun| fun(type_field, &components, &type_arguments))
+    .next()
+    .ok_or_else(|| Error::InvalidType(format!("Could not resolve {type_field} to any known type")))
 }
 
-fn is_primitive(type_field: &str) -> TokenStream {}
-
-fn something(
-    base_type: &TypeDeclaration,
-    components: Vec<ResolvedType>,
-    type_arguments: Vec<ResolvedType>,
-) -> anyhow::Result<ResolvedType, Error> {
-    let type_field = base_type.type_field.as_str();
-    let (type_name, generic_params) = match type_field {
-        "u8" | "u16" | "u32" | "u64" | "bool" | "()" => Ok((
-            type_field
+fn to_simple_type(
+    type_field: &str,
+    _: &[ResolvedType],
+    _: &[ResolvedType],
+) -> Option<ResolvedType> {
+    match type_field {
+        "u8" | "u16" | "u32" | "u64" | "bool" | "()" => {
+            let type_name = type_field
                 .parse()
-                .expect("Couldn't resolve primitive type. Cannot happen!"),
-            vec![],
-        )),
-        "byte" => Ok((quote! {Byte}, vec![])),
-        "b256" => Ok((quote! {Bits256}, vec![])),
-        _ => {
-            if let Some(name) = try_to_get_generic_name(type_field) {
-                let token_stream = name.parse().expect("Failed to parse generic param name");
-                Ok::<_, Error>((token_stream, vec![]))
-            } else if let Some(len) = try_to_get_array_length(type_field) {
-                let type_inside: TokenStream = match components.as_slice() {
-                    [single_type] => Ok(single_type.into()),
-                    _ => Err(Error::InvalidData(format!(
-                        "Array must have only one component! Actual components: {components:?}"
-                    ))),
-                }?;
+                .expect("Couldn't resolve primitive type. Cannot happen!");
 
-                Ok((quote! { [#type_inside; #len] }, vec![]))
-            } else if let Some(len) = try_to_get_string_length(type_field) {
-                let generic_params = vec![ResolvedType {
-                    type_name: quote! {#len},
-                    generic_params: vec![],
-                }];
-                Ok((quote! { SizedAsciiString }, generic_params))
-            } else if is_tuple(type_field) {
-                let inner_types = components.into_iter().map(TokenStream::from);
-
-                // it is important to leave a trailing comma because a tuple with
-                // one element is written as (element,) not (element) which is
-                // resolved to just element
-                Ok((quote! {(#(#inner_types,)*)}, vec![]))
-            } else if let Ok(type_name) = extract_custom_type_name_from_abi_property(base_type) {
-                Ok((quote! {#type_name}, type_arguments))
-            } else {
-                panic!("resolve_type: Could not resolve {type_field}")
-            }
+            Some(ResolvedType {
+                type_name,
+                generic_params: vec![],
+            })
         }
-    }?;
+        _ => None,
+    }
+}
 
-    Ok(ResolvedType {
-        type_name,
-        generic_params,
-    })
+fn to_byte(type_field: &str, _: &[ResolvedType], _: &[ResolvedType]) -> Option<ResolvedType> {
+    if type_field == "byte" {
+        let type_name = quote! {Byte};
+        Some(ResolvedType {
+            type_name,
+            generic_params: vec![],
+        })
+    } else {
+        None
+    }
+}
+fn to_bits256(type_field: &str, _: &[ResolvedType], _: &[ResolvedType]) -> Option<ResolvedType> {
+    if type_field == "b256" {
+        let type_name = quote! {Bits256};
+        Some(ResolvedType {
+            type_name,
+            generic_params: vec![],
+        })
+    } else {
+        None
+    }
+}
+
+fn to_struct(
+    field_name: &str,
+    _: &[ResolvedType],
+    type_arguments: &[ResolvedType],
+) -> Option<ResolvedType> {
+    extract_custom_type_name_from_abi_type_field(field_name)
+        .ok()
+        .map(|type_name| ResolvedType {
+            type_name: type_name.into_token_stream(),
+            generic_params: type_arguments.to_vec(),
+        })
 }
