@@ -24,7 +24,7 @@ pub enum CustomType {
 ///
 /// https://github.com/FuelLabs/fuel-specs/blob/master/specs/protocol/abi.md
 ///
-/// This type may be used by compilers (e.g. Sway) and related tooling to convert an ABI
+/// This type may be used by compilers and related tooling to convert an ABI
 /// representation into native Rust structs and vice-versa.
 #[derive(Default, Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

@@ -11,7 +11,7 @@ use fuel_gql_client::fuel_tx::{Receipt, Transaction};
 use fuels_contract::script::Script;
 use fuels_types::errors::Error;
 
-/// Run the Sway script binary located at `binary_filepath` and return its resulting receipts,
+/// Run the script binary located at `binary_filepath` and return its resulting receipts,
 /// without having to setup a node or contract bindings.
 #[allow(dead_code)]
 #[cfg(feature = "fuel-core-lib")]

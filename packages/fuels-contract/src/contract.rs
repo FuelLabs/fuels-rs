@@ -161,8 +161,7 @@ impl Contract {
 
     // If the data passed into the contract method is an integer or a
     // boolean, then the data itself should be passed. Otherwise, it
-    // should simply pass a pointer to the data in memory. For more
-    // information, see https://github.com/FuelLabs/sway/issues/1368.
+    // should simply pass a pointer to the data in memory.
     fn should_compute_custom_input_offset(args: &[Token]) -> bool {
         args.len() > 1
             || args.iter().any(|t| {
@@ -187,7 +186,7 @@ impl Contract {
         storage_configuration: StorageConfiguration,
     ) -> Result<Bech32ContractId, Error> {
         let mut compiled_contract =
-            Contract::load_sway_contract(binary_filepath, &storage_configuration.storage_path)?;
+            Contract::load_contract(binary_filepath, &storage_configuration.storage_path)?;
 
         Self::merge_storage_vectors(&storage_configuration, &mut compiled_contract);
 
@@ -202,7 +201,7 @@ impl Contract {
         storage_configuration: StorageConfiguration,
         salt: Salt,
     ) -> Result<Bech32ContractId, Error> {
-        let mut compiled_contract = Contract::load_sway_contract_with_parameters(
+        let mut compiled_contract = Contract::load_contract_with_parameters(
             binary_filepath,
             &storage_configuration.storage_path,
             salt,
@@ -256,18 +255,14 @@ impl Contract {
         Ok(contract_id)
     }
 
-    pub fn load_sway_contract(
+    pub fn load_contract(
         binary_filepath: &str,
         storage_path: &Option<String>,
     ) -> Result<CompiledContract, Error> {
-        Self::load_sway_contract_with_parameters(
-            binary_filepath,
-            storage_path,
-            Salt::from([0u8; 32]),
-        )
+        Self::load_contract_with_parameters(binary_filepath, storage_path, Salt::from([0u8; 32]))
     }
 
-    pub fn load_sway_contract_with_parameters(
+    pub fn load_contract_with_parameters(
         binary_filepath: &str,
         storage_path: &Option<String>,
         salt: Salt,
