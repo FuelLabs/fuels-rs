@@ -160,7 +160,11 @@
         let b256 = Bytes32::from_str(hex_string).expect(&quot;failed to create Bytes32 from string&quot;);
         assert_eq!([0u8; 32], *b256);
 </code></pre>
-<p>However, there are more ways to achieve that and <code>Bytes32</code> implements many more useful traits, see the <a href="https://docs.rs/fuel-types/latest/fuel_types/struct.Bytes32.html">fuel-types documentation</a>.</p>
+<p><code>Bytes32</code> also implements <em>fmt's</em> <code>Debug</code>, <code>Display</code>, <code>LowerHex</code> and <code>UpperHex</code> traits. For example, you can get the display and hex representations with:</p>
+<pre><code class="language-rust ignore">        let b256_string = b256.to_string();
+        let b256_hex_string = format!(&quot;{:#x}&quot;, b256);
+</code></pre>
+<p>For a full list of implemented methods and traits, see the <a href="https://docs.rs/fuel-types/latest/fuel_types/struct.Bytes32.html">fuel-types documentation</a>.</p>
 <blockquote>
 <p><strong>Note:</strong> In Fuel, there's a special type called <code>b256</code>, which is similar to <code>Bytes32</code>; also used to represent hashes, and it holds a 256-bit value. In Rust, through the SDK, this is represented as <code>Bits256(value)</code> where <code>value</code> is a <code>[u8; 32]</code>. If your contract method takes a <code>b256</code> as input, all you need to do is pass a <code>Bits256([u8; 32])</code> when calling it from the SDK.</p>
 </blockquote>

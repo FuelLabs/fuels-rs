@@ -145,7 +145,10 @@
 <p>If you want to query all the balances (i.e., get the balance for each asset ID in that wallet), then it is as simple as:</p>
 <pre><code class="language-rust ignore">        let balances: HashMap&lt;String, u64&gt; = wallet.get_balances().await?;
 </code></pre>
-<p>The return type is a <code>HashMap</code>, where the key is the <em>asset ID</em>, and the value is the corresponding balance.</p>
+<p>The return type is a <code>HashMap</code>, where the key is the <em>asset ID's</em> hex string, and the value is the corresponding balance. For example, we can get the base asset balance with:</p>
+<pre><code class="language-rust ignore">        let asset_id_key = format!(&quot;{:#x}&quot;, asset_id);
+        let asset_balance = balances.get(&amp;asset_id_key).unwrap();
+</code></pre>
 
                     </main>
 
