@@ -25,7 +25,6 @@ pub enum ParamType {
     #[strum(disabled)]
     Enum(EnumVariants, Vec<ParamType>),
     Tuple(Vec<ParamType>),
-    Generic(String),
 }
 
 impl Default for ParamType {
@@ -78,9 +77,6 @@ impl ParamType {
             ParamType::Struct(params, _) => params.iter().map(|p| p.compute_encoding_width()).sum(),
             ParamType::Enum(variants, _) => variants.compute_encoding_width_of_enum(),
             ParamType::Tuple(params) => params.iter().map(|p| p.compute_encoding_width()).sum(),
-            ParamType::Generic(_) => {
-                panic!("Generic parameters are not resolved and as such don't have a size!")
-            }
         }
     }
 }
@@ -125,7 +121,6 @@ impl fmt::Display for ParamType {
                 write!(f, "{}", s)
             }
             ParamType::Unit => write! {f, "Unit"},
-            ParamType::Generic(name) => write! {f, "{}", name},
             _ => {
                 write!(f, "{:?}", self)
             }

@@ -53,9 +53,6 @@ impl ABIDecoder {
             ParamType::Struct(props, _) => Self::decode_struct(data, props),
             ParamType::Enum(variants, _) => Self::decode_enum(data, variants),
             ParamType::Tuple(types) => Self::decode_tuple(data, types),
-            ParamType::Generic(_) => Err(CodecError::InvalidData(
-                "ParamType::Generic is not decodable!".to_string(),
-            )),
         }
     }
 

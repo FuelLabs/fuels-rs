@@ -59,9 +59,6 @@ fn resolve_arg(arg: &ParamType) -> String {
             let inner = resolve_args(inner);
             format!("({inner})")
         }
-        ParamType::Generic(_name) => {
-            panic!("ParamType::Generic cannot appear in a function selector!")
-        }
     }
 }
 

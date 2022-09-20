@@ -3,7 +3,6 @@ use crate::code_gen::custom_types::extract_custom_type_name_from_abi_type_field;
 use fuels_types::errors::Error;
 
 use fuels_types::{TypeApplication, TypeDeclaration};
-use itertools::Itertools;
 use lazy_static::lazy_static;
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
@@ -122,7 +121,7 @@ fn to_sized_ascii_string(
 
 fn to_tuple(field: &str, components: &[ResolvedType], _: &[ResolvedType]) -> Option<ResolvedType> {
     if field.starts_with('(') && field.ends_with(')') {
-        let inner_types = components.into_iter().map(TokenStream::from);
+        let inner_types = components.iter().map(TokenStream::from);
 
         // it is important to leave a trailing comma because a tuple with
         // one element is written as (element,) not (element) which is
