@@ -367,6 +367,77 @@ impl Tokenizable for fuel_tx::AssetId {
     }
 }
 
+impl<T> Tokenizable for Option<T>
+where
+    T: Parameterize + Tokenizable,
+{
+    fn from_token(token: Token) -> Result<Self, Error> {
+        if let Token::Enum(enum_selector) = token {
+            match *enum_selector {
+                (0u8, _, _) => Ok(None),
+                (1u8, token, _) => Ok(Option::<T>::Some(T::from_token(token)?)),
+                (_, _, _) => Err(Error::InstantiationError(format!(
+                    "Could not construct Option from enum_selector. Received: {:?}",
+                    enum_selector
+                ))),
+            }
+        } else {
+            Err(Error::InstantiationError(format!(
+                "Could not construct Option from token. Received: {:?}",
+                token
+            )))
+        }
+    }
+    fn into_token(self) -> Token {
+        let (dis, tok) = match self {
+            None => (0u8, Token::Unit),
+            Some(value) => (1u8, value.into_token()),
+        };
+        if let ParamType::Enum(variants) = Self::param_type() {
+            let selector = (dis, tok, variants);
+            Token::Enum(Box::new(selector))
+        } else {
+            panic!("should never happen as Option::param_type() returns valid Enum variants");
+        }
+    }
+}
+
+impl<T, E> Tokenizable for Result<T, E>
+where
+    T: Parameterize + Tokenizable,
+    E: Parameterize + Tokenizable,
+{
+    fn from_token(token: Token) -> Result<Self, Error> {
+        if let Token::Enum(enum_selector) = token {
+            match *enum_selector {
+                (0u8, token, _) => Ok(Result::<T, E>::Ok(T::from_token(token)?)),
+                (1u8, token, _) => Ok(Result::<T, E>::Err(E::from_token(token)?)),
+                (_, _, _) => Err(Error::InstantiationError(format!(
+                    "Could not construct Result from enum_selector. Received: {:?}",
+                    enum_selector
+                ))),
+            }
+        } else {
+            Err(Error::InstantiationError(format!(
+                "Could not construct Result from token. Received: {:?}",
+                token
+            )))
+        }
+    }
+    fn into_token(self) -> Token {
+        let (dis, tok) = match self {
+            Ok(value) => (0u8, value.into_token()),
+            Err(value) => (1u8, value.into_token()),
+        };
+        if let ParamType::Enum(variants) = Self::param_type() {
+            let selector = (dis, tok, variants);
+            Token::Enum(Box::new(selector))
+        } else {
+            panic!("should never happen as Result::param_type() returns valid Enum variants");
+        }
+    }
+}
+
 /// `abigen` requires `Parameterized` to construct nested types. It is also used by `try_from_bytes`
 /// to facilitate the instantiation of custom types from bytes.
 pub trait Parameterize {
@@ -424,6 +495,31 @@ impl Parameterize for u32 {
 impl Parameterize for u64 {
     fn param_type() -> ParamType {
         ParamType::U64
+    }
+}
+
+impl<T> Parameterize for Option<T>
+where
+    T: Parameterize + Tokenizable,
+{
+    fn param_type() -> ParamType {
+        let param_types = vec![ParamType::Unit, T::param_type()];
+        let variants = EnumVariants::new(param_types)
+            .expect("should never happen as we provided valid Option param types");
+        ParamType::Enum(variants)
+    }
+}
+
+impl<T, E> Parameterize for Result<T, E>
+where
+    T: Parameterize + Tokenizable,
+    E: Parameterize + Tokenizable,
+{
+    fn param_type() -> ParamType {
+        let param_types = vec![T::param_type(), E::param_type()];
+        let variants = EnumVariants::new(param_types)
+            .expect("should never happen as we provided valid Result param types");
+        ParamType::Enum(variants)
     }
 }
 
