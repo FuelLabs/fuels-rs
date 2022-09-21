@@ -32,3 +32,42 @@ Otherwise, for native types such as `u8`, `u32`,...,`ContractId` and others, you
 ```rust,ignore
 {{#include ../../../examples/rust_bindings/src/lib.rs:manual_decode_native}}
 ```
+
+## Generics
+
+The Fuel Rust SDK supports both generic enums and generic structs. If you're already familiar with Rust, it's your typical `struct MyStruct<T>` type of generics support.
+
+For instance, your Sway contract could look like this:
+
+```Rust
+contract;
+
+use std::assert::assert;
+use std::hash::sha256;
+
+struct SimpleGeneric<T> {
+    single_generic_param: T,
+}
+
+abi MyContract {
+  fn struct_w_generic(arg1: SimpleGeneric<u64>) -> SimpleGeneric<u64>;
+}
+
+impl MyContract for Contract {
+    fn struct_w_generic(arg1: SimpleGeneric<u64>) -> SimpleGeneric<u64> {
+        let expected = SimpleGeneric {
+            single_generic_param: 123u64,
+        };
+
+        assert(arg1.single_generic_param == expected.single_generic_param);
+
+        expected
+    }
+}
+```
+
+Your Rust code would look like this:
+
+```rust,ignore
+{{#include ../../../packages/fuels/tests/harness.rs:generic}}
+```

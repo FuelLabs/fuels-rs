@@ -170,6 +170,7 @@ impl Abigen {
 
                 #abi_structs
                 #abi_enums
+
             }
         })
     }

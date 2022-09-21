@@ -1,8 +1,8 @@
 [project]
-name = "demo"
-authors = ["Fuel Labs"]
+authors = ["Fuel Labs <contact@fuel.sh>"]
 entry = "main.sw"
 license = "Apache-2.0"
+name = "multiple_read_calls"
 
 [dependencies]
 
