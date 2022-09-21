@@ -7,8 +7,6 @@ use crate::node::{Config, FuelService};
 use fuels_signers::provider::Provider;
 
 use fuel_gql_client::fuel_tx::{Receipt, Transaction};
-use fuel_gql_client::fuel_vm::consts::{REG_ONE, WORD_SIZE};
-use fuel_gql_client::fuel_vm::prelude::{GTFArgs, Opcode};
 use fuels_contract::script::Script;
 use fuels_core::parameters::TxParameters;
 use fuels_types::errors::Error;
