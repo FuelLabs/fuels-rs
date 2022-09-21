@@ -1689,8 +1689,7 @@ async fn workflow_enum_inside_struct() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_wallet_balance_api() -> Result<(), Error> {
-    // Single asset
+async fn test_wallet_balance_api_single_asset() -> Result<(), Error> {
     let mut wallet = WalletUnlocked::new_random(None);
     let number_of_coins = 21;
     let amount_per_coin = 11;
