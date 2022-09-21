@@ -74,6 +74,25 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn setup_contract_test_example() -> Result<(), Error> {
+        use fuels::prelude::*;
+
+        // ANCHOR: deploy_contract_setup_macro_short
+        setup_contract_test!(
+            contract_instance,
+            wallet,
+            "packages/fuels/tests/test_projects/contract_test"
+        );
+
+        let response = contract_instance.initialize_counter(42).call().await?;
+
+        assert_eq!(42, response.value);
+        // ANCHOR_END: deploy_contract_setup_macro_short
+
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn contract_call_cost_estimation() -> Result<(), Error> {
         use fuels::prelude::*;
 
