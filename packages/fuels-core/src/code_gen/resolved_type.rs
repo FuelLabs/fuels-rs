@@ -1,7 +1,9 @@
-use crate::code_gen::custom_types::extract_custom_type_name_from_abi_type_field;
+use crate::code_gen::custom_types::{
+    extract_custom_type_name_from_abi_type_field, extract_generic_name,
+};
 
+use crate::utils::safe_ident;
 use fuels_types::errors::Error;
-
 use fuels_types::{TypeApplication, TypeDeclaration};
 use lazy_static::lazy_static;
 use proc_macro2::TokenStream;
@@ -50,14 +52,9 @@ impl From<ResolvedType> for TokenStream {
 }
 
 fn to_generic(field: &str, _: &[ResolvedType], _: &[ResolvedType]) -> Option<ResolvedType> {
-    lazy_static! {
-        static ref RE: Regex = Regex::new(r"^\s*generic\s+(\S+)\s*$").unwrap();
-    }
-    let name = RE
-        .captures(field)
-        .map(|captures| String::from(&captures[1]))?;
+    let name = extract_generic_name(field)?;
 
-    let type_name = name.parse().expect("Failed to parse generic param name");
+    let type_name = safe_ident(&name).into_token_stream();
     Some(ResolvedType {
         type_name,
         generic_params: vec![],

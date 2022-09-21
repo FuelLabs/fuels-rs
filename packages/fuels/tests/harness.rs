@@ -12,8 +12,7 @@ use fuels::prelude::{
 use fuels_core::abi_encoder::ABIEncoder;
 use fuels_core::parameters::StorageConfiguration;
 use fuels_core::tx::{Address, Bytes32, StorageSlot};
-use fuels_core::types::{Bits256, Byte, SizedAsciiString};
-use fuels_core::Parameterize;
+use fuels_core::types::{Bits256, Byte};
 use fuels_core::Tokenizable;
 use fuels_core::{constants::BASE_ASSET_ID, Token};
 use fuels_signers::fuel_crypto::SecretKey;
@@ -25,7 +24,6 @@ use std::str::FromStr;
 
 use fuel_core_interfaces::model::Message;
 use fuel_gql_client::client::schema::message::Message as OtherMessage;
-use fuels_core::code_gen::abigen::Abigen;
 
 /// Note: all the tests and examples below require pre-compiled Sway projects.
 /// To compile these projects, run `cargo run --bin build-test-projects`.

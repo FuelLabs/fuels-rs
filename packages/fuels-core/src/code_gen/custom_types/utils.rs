@@ -98,7 +98,7 @@ pub(crate) fn extract_components(
         .collect()
 }
 
-fn try_to_get_generic_name(field: &str) -> Option<String> {
+pub(crate) fn extract_generic_name(field: &str) -> Option<String> {
     lazy_static! {
         static ref RE: Regex = Regex::new(r"^\s*generic\s+(\S+)\s*$").unwrap();
     }
@@ -117,7 +117,7 @@ pub(crate) fn extract_generic_parameters(
         .iter()
         .flatten()
         .map(|id| types.get(id).unwrap())
-        .map(|decl| match try_to_get_generic_name(&decl.type_field) {
+        .map(|decl| match extract_generic_name(&decl.type_field) {
             Some(name) => {
                 let generic = ident(&name);
                 Ok(quote! {#generic})

@@ -12,7 +12,6 @@ pub mod abi_decoder;
 pub mod abi_encoder;
 pub mod code_gen;
 pub mod constants;
-pub mod json_abi;
 pub mod parameters;
 pub mod rustfmt;
 pub mod source;
