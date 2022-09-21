@@ -24,7 +24,7 @@ use std::str::FromStr;
 
 use fuel_core_interfaces::model::Message;
 use fuel_gql_client::client::schema::message::Message as OtherMessage;
-use fuels_test_helpers::script::build_and_run_script;
+use fuels_test_helpers::script::run_compiled_script;
 
 /// Note: all the tests and examples below require pre-compiled Sway projects.
 /// To compile these projects, run `cargo run --bin build-test-projects`.
@@ -4055,29 +4055,14 @@ async fn test_rust_result_can_be_encoded() -> Result<(), Box<dyn std::error::Err
 
 #[tokio::test]
 async fn test_script_interface() -> Result<(), Error> {
-
     let path_to_bin = "../fuels/tests/test_projects/logging/out/debug/logging.bin";
 
-    let run_script = build_and_run_script(
-        path_to_bin,
-        // 0,
-        // Default::default(),
-        &[],
-        &[],
-        vec![],
-        TxParameters::default()
-    ).await?;
+    let return_val =
+        run_compiled_script(path_to_bin, TxParameters::new(None, Some(2500), None)).await?;
 
-    dbg!(run_script);
+    let correct_hex =
+        hex::decode("ef86afa9696cf0dc6385e2c407a6e159a1103cefb7e2ae0636fb33d3cb2a9e4a");
 
-    // assert_eq!(response.value, "fuel");
-    //
-    // let my_struct = MyStruct { foo: 10, bar: true };
-    //
-    // let response = contract_instance.return_my_struct(my_struct).call().await?;
-    //
-    // assert_eq!(response.value.foo, 10);
-    // assert!(response.value.bar);
-    // assert!(false);
+    assert_eq!(correct_hex?, return_val[0].data().unwrap());
     Ok(())
 }
