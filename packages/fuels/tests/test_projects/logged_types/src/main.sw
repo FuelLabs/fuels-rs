@@ -32,7 +32,6 @@ impl TestContract for Contract {
 
     // ANCHOR: produce_logs
     fn produce_logs_variables() -> () {
-        
         let f: u64 = 64;
         let u: b256 = 0xef86afa9696cf0dc6385e2c407a6e159a1103cefb7e2ae0636fb33d3cb2a9e4a;
         let e: str[4] = "Fuel";
