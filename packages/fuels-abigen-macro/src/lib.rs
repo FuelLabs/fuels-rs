@@ -115,7 +115,8 @@ pub fn setup_contract_test(input: TokenStream) -> TokenStream {
                 )),
                 Salt::from([#(#salt),*]),
             )
-            .await?
+            .await
+            .expect("Failed to deploy the contract")
             .to_string(),
             #wallet_name.clone(),
         )
