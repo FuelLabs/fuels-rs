@@ -51,6 +51,44 @@ impl From<ResolvedType> for TokenStream {
     }
 }
 
+/// Given a type, will recursively proceed to resolve it until it results in a
+/// `ResolvedType` which can be then be converted into a `TokenStream`. As such
+/// it can be used whenever you need the Rust type of the given
+/// `TypeApplication`.
+pub(crate) fn resolve_type(
+    type_application: &TypeApplication,
+    types: &HashMap<usize, TypeDeclaration>,
+) -> Result<ResolvedType, Error> {
+    let recursively_resolve = |type_applications: &Option<Vec<TypeApplication>>| {
+        type_applications
+            .iter()
+            .flatten()
+            .map(|array_type| resolve_type(array_type, types))
+            .collect::<Result<Vec<_>, _>>()
+    };
+
+    let base_type = types.get(&type_application.type_id).unwrap();
+
+    let components = recursively_resolve(&base_type.components)?;
+    let type_arguments = recursively_resolve(&type_application.type_arguments)?;
+    let type_field = base_type.type_field.as_str();
+
+    [
+        to_simple_type,
+        to_byte,
+        to_bits256,
+        to_generic,
+        to_array,
+        to_sized_ascii_string,
+        to_tuple,
+        to_struct,
+    ]
+    .into_iter()
+    .filter_map(|fun| fun(type_field, &components, &type_arguments))
+    .next()
+    .ok_or_else(|| Error::InvalidType(format!("Could not resolve {type_field} to any known type")))
+}
+
 fn to_generic(field: &str, _: &[ResolvedType], _: &[ResolvedType]) -> Option<ResolvedType> {
     let name = extract_generic_name(field)?;
 
@@ -130,44 +168,6 @@ fn to_tuple(field: &str, components: &[ResolvedType], _: &[ResolvedType]) -> Opt
     } else {
         None
     }
-}
-
-/// Given a type, will recursively proceed to resolve it until it results in a
-/// `ResolvedType` which can be then be converted into a `TokenStream`. As such
-/// it can be used whenever you need the Rust type of the given
-/// `TypeApplication`.
-pub(crate) fn resolve_type(
-    type_application: &TypeApplication,
-    types: &HashMap<usize, TypeDeclaration>,
-) -> Result<ResolvedType, Error> {
-    let recursively_resolve = |type_applications: &Option<Vec<TypeApplication>>| {
-        type_applications
-            .iter()
-            .flatten()
-            .map(|array_type| resolve_type(array_type, types))
-            .collect::<Result<Vec<_>, _>>()
-    };
-
-    let base_type = types.get(&type_application.type_id).unwrap();
-
-    let components = recursively_resolve(&base_type.components)?;
-    let type_arguments = recursively_resolve(&type_application.type_arguments)?;
-    let type_field = base_type.type_field.as_str();
-
-    [
-        to_simple_type,
-        to_byte,
-        to_bits256,
-        to_generic,
-        to_array,
-        to_sized_ascii_string,
-        to_tuple,
-        to_struct,
-    ]
-    .into_iter()
-    .filter_map(|fun| fun(type_field, &components, &type_arguments))
-    .next()
-    .ok_or_else(|| Error::InvalidType(format!("Could not resolve {type_field} to any known type")))
 }
 
 fn to_simple_type(

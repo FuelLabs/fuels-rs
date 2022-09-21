@@ -32,9 +32,9 @@ pub fn expand_function(
 
     let arg_names = args.iter().map(|component| &component.field_name);
 
-    let param_types = param_type_calls(&args);
+    let param_type_calls = param_type_calls(&args);
 
-    let arg_declaration = args.iter().map(|component| {
+    let arg_declarations = args.iter().map(|component| {
         let name = &component.field_name;
         let field_type: TokenStream = (&component.field_type).into();
         quote! { #name: #field_type }
@@ -51,9 +51,9 @@ pub fn expand_function(
     let name_stringified = name.to_string();
     Ok(quote! {
         #doc
-        pub fn #name(&self #(,#arg_declaration)*) -> ContractCallHandler<#output_type> {
+        pub fn #name(&self #(,#arg_declarations)*) -> ContractCallHandler<#output_type> {
             let provider = self.wallet.get_provider().expect("Provider not set up");
-            let encoded_fn_selector = resolve_fn_selector(#name_stringified, &[#(#param_types),*]);
+            let encoded_fn_selector = resolve_fn_selector(#name_stringified, &[#(#param_type_calls),*]);
             let tokens = [#(#arg_names.into_token()),*];
             Contract::method_hash(&provider,
                 self.contract_id.clone(),
