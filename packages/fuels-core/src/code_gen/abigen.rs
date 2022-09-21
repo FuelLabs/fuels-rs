@@ -1,10 +1,12 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::code_gen::bindings::ContractBindings;
 use crate::source::Source;
 use crate::utils::ident;
+use crate::{try_from_bytes, Parameterize, Tokenizable};
+use fuel_tx::Receipt;
 use fuels_types::errors::Error;
-use fuels_types::{ProgramABI, TypeDeclaration};
+use fuels_types::{ProgramABI, ResolvedLog, TypeDeclaration};
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
@@ -77,7 +79,7 @@ impl Abigen {
         let contract_functions = self.functions()?;
         let abi_structs = self.abi_structs()?;
         let abi_enums = self.abi_enums()?;
-        let resolved_logs = self.resolve_logs()?;
+        let resolved_logs = self.resolve_logs();
 
         let (includes, code) = if self.no_std {
             (
@@ -95,6 +97,7 @@ impl Abigen {
                 quote! {
                     use fuels::contract::contract::{Contract, ContractCallHandler};
                     use fuels::core::{EnumSelector, StringToken, Parameterize, Tokenizable, Token, try_from_bytes};
+                    use fuels::core::code_gen::extract_and_parse_logs;
                     use fuels::core::abi_decoder::ABIDecoder;
                     use fuels::core::types::*;
                     use fuels::signers::WalletUnlocked;
@@ -132,44 +135,7 @@ impl Abigen {
                         }
 
                         pub fn _logs_with_type<D: Tokenizable + Parameterize>(&self, receipts: &[Receipt]) -> Result<Vec<D>, SDKError> {
-                            let param_type = D::param_type();
-
-                            let target_ids: HashSet<u64> = self
-                                .logs_lookup
-                                .iter()
-                                .filter_map(|l| {
-                                    if l.param_type == param_type {
-                                        Some(l.log_id)
-                                    } else {
-                                        None
-                                    }
-                                })
-                                .collect();
-
-                            let decode_log_content = |content: &[u8]| {
-                                let dec =
-                                    ABIDecoder::decode_single(&D::param_type(), content)?;
-                                D::from_token(dec)
-                            };
-
-                            let decoded_logs: Vec<D> = receipts
-                                .iter()
-                                .filter_map(|r| {
-                                    let decoded_log = match r {
-                                        Receipt::LogData { rb, data, .. } if target_ids.contains(rb) => {
-                                            Some(decode_log_content(data).expect("Failed to decode log"))
-                                        }
-                                        Receipt::Log { ra, rb, .. } if target_ids.contains(rb) => {
-                                            Some(decode_log_content(&ra.to_be_bytes()).expect("Failed to decode log"))
-                                        }
-                                        _ => None,
-                                    };
-
-                                    decoded_log
-                                })
-                                .collect();
-
-                            Ok(decoded_logs)
+                            extract_and_parse_logs(&self.logs_lookup, receipts)
                         }
                     }
 
@@ -313,31 +279,58 @@ impl Abigen {
         abi.types.iter().map(|t| (t.type_id, t.clone())).collect()
     }
 
-    pub fn resolve_logs(&self) -> Result<Vec<TokenStream>, Error> {
-        let resolved = self
-            .abi
+    pub fn resolve_logs(&self) -> Vec<TokenStream> {
+        self.abi
             .logged_types
             .as_ref()
-            .map_or(vec![], |logged_types| {
-                logged_types
-                    .iter()
-                    .map(|l| {
-                        let resolved_type = resolve_type(&l.application, &self.types)
-                            .expect("Failed to resolve log type");
-                        let param_type_call = single_param_type_call(&resolved_type);
-                        let id = l.log_id;
+            .into_iter()
+            .flatten()
+            .map(|l| {
+                let resolved_type =
+                    resolve_type(&l.application, &self.types).expect("Failed to resolve log type");
+                let param_type_call = single_param_type_call(&resolved_type);
+                let id = l.log_id;
 
-                        quote! { ResolvedLog {
-                                log_id: #id,
-                                param_type: #param_type_call
-                            }
-                        }
-                    })
-                    .collect()
-            });
-
-        Ok(resolved)
+                quote! { ResolvedLog {
+                        log_id: #id,
+                        param_type: #param_type_call
+                    }
+                }
+            })
+            .collect()
     }
+}
+
+pub fn extract_and_parse_logs<T: Tokenizable + Parameterize>(
+    logs_lookup: &[ResolvedLog],
+    receipts: &[Receipt],
+) -> Result<Vec<T>, Error> {
+    let param_type = T::param_type();
+
+    let target_ids: HashSet<u64> = logs_lookup
+        .iter()
+        .filter_map(|l| {
+            if l.param_type == param_type {
+                Some(l.log_id)
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    let decoded_logs: Vec<T> = receipts
+        .iter()
+        .filter_map(|r| match r {
+            Receipt::LogData { rb, data, .. } if target_ids.contains(rb) => Some(data.clone()),
+            Receipt::Log { ra, rb, .. } if target_ids.contains(rb) => {
+                Some(ra.to_be_bytes().to_vec())
+            }
+            _ => None,
+        })
+        .map(|data| try_from_bytes(&data))
+        .collect::<Result<Vec<_>, _>>()?;
+
+    Ok(decoded_logs)
 }
 
 // @todo all (or most, the applicable ones at least) tests in `abigen.rs` should be
