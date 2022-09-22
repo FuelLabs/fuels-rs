@@ -50,7 +50,7 @@ impl ABIDecoder {
             ParamType::B256 => Self::decode_b256(data),
             ParamType::String(length) => Self::decode_string(data, *length),
             ParamType::Array(ref t, length) => Self::decode_array(data, t, *length),
-            ParamType::Struct { fields: props, .. } => Self::decode_struct(data, props),
+            ParamType::Struct { fields, .. } => Self::decode_struct(data, fields),
             ParamType::Enum { variants, .. } => Self::decode_enum(data, variants),
             ParamType::Tuple(types) => Self::decode_tuple(data, types),
         }
