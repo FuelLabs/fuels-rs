@@ -50,19 +50,28 @@ impl<const SIZE: usize, T: Tokenizable> Tokenizable for [T; SIZE] {
 }
 impl Parameterize for fuel_tx::Address {
     fn param_type() -> ParamType {
-        ParamType::Struct(vec![ParamType::B256], vec![])
+        ParamType::Struct {
+            fields: vec![ParamType::B256],
+            generics: vec![],
+        }
     }
 }
 
 impl Parameterize for fuel_tx::ContractId {
     fn param_type() -> ParamType {
-        ParamType::Struct(vec![ParamType::B256], vec![])
+        ParamType::Struct {
+            fields: vec![ParamType::B256],
+            generics: vec![],
+        }
     }
 }
 
 impl Parameterize for fuel_tx::AssetId {
     fn param_type() -> ParamType {
-        ParamType::Struct(vec![ParamType::B256], vec![])
+        ParamType::Struct {
+            fields: vec![ParamType::B256],
+            generics: vec![],
+        }
     }
 }
 
@@ -110,7 +119,10 @@ where
         let param_types = vec![ParamType::Unit, T::param_type()];
         let variants = EnumVariants::new(param_types)
             .expect("should never happen as we provided valid Option param types");
-        ParamType::Enum(variants, vec![T::param_type()])
+        ParamType::Enum {
+            variants,
+            generics: vec![T::param_type()],
+        }
     }
 }
 
@@ -123,7 +135,10 @@ where
         let param_types = vec![T::param_type(), E::param_type()];
         let variants = EnumVariants::new(param_types.clone())
             .expect("should never happen as we provided valid Result param types");
-        ParamType::Enum(variants, param_types)
+        ParamType::Enum {
+            variants,
+            generics: param_types,
+        }
     }
 }
 
@@ -401,7 +416,7 @@ where
             None => (0u8, Token::Unit),
             Some(value) => (1u8, value.into_token()),
         };
-        if let ParamType::Enum(variants, _) = Self::param_type() {
+        if let ParamType::Enum { variants, .. } = Self::param_type() {
             let selector = (dis, tok, variants);
             Token::Enum(Box::new(selector))
         } else {
@@ -437,7 +452,7 @@ where
             Ok(value) => (0u8, value.into_token()),
             Err(value) => (1u8, value.into_token()),
         };
-        if let ParamType::Enum(variants, _) = Self::param_type() {
+        if let ParamType::Enum { variants, .. } = Self::param_type() {
             let selector = (dis, tok, variants);
             Token::Enum(Box::new(selector))
         } else {

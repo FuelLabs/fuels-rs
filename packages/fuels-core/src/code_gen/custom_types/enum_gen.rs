@@ -145,7 +145,7 @@ fn enum_tokenizable_impl(
                     };
 
                     let variants = match Self::param_type() {
-                        ParamType::Enum(variants, _) => variants,
+                        ParamType::Enum{variants, ..} => variants,
                         other => panic!("Calling {}::param_type() must return a ParamType::Enum but instead it returned: {}", #enum_ident_stringified, other)
                     };
 
@@ -169,7 +169,7 @@ fn enum_parameterize_impl(
                 #(param_types.push(#param_type_calls);)*
 
                 let variants = EnumVariants::new(param_types).unwrap_or_else(|_| panic!("{} has no variants which isn't allowed!", #enum_ident_stringified));
-                ParamType::Enum(variants, vec![#(#generics::param_type()),*])
+                ParamType::Enum{variants, generics: vec![#(#generics::param_type()),*]}
             }
         }
     }

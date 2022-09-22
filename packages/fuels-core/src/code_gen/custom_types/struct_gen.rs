@@ -129,7 +129,7 @@ fn struct_parameterized_impl(
             fn param_type() -> ParamType {
                 let mut types = Vec::new();
                 #( types.push(#param_type_calls); )*
-                ParamType::Struct(types, vec![#(#generic_parameters::param_type()),*])
+                ParamType::Struct{fields: types, generics: vec![#(#generic_parameters::param_type()),*]}
             }
         }
     }

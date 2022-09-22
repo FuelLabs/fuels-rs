@@ -51,10 +51,11 @@ impl Tokenizer {
                 trimmed_value.into(),
                 *length,
             ))),
-            ParamType::Struct(struct_params, _) => {
-                Ok(Self::tokenize_struct(trimmed_value, struct_params)?)
-            }
-            ParamType::Enum(variants, _) => {
+            ParamType::Struct {
+                fields: struct_params,
+                ..
+            } => Ok(Self::tokenize_struct(trimmed_value, struct_params)?),
+            ParamType::Enum { variants, .. } => {
                 let discriminant = get_enum_discriminant_from_string(trimmed_value);
                 let value = get_enum_value_from_string(trimmed_value);
 

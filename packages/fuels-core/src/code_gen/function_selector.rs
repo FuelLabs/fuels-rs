@@ -38,7 +38,7 @@ fn resolve_arg(arg: &ParamType) -> String {
             let inner = resolve_arg(internal_type);
             format!("a[{inner};{len}]")
         }
-        ParamType::Struct(fields, generics) => {
+        ParamType::Struct { fields, generics } => {
             let gen_params = resolve_args(generics);
             let field_params = resolve_args(fields);
             let gen_params = if !gen_params.is_empty() {
@@ -48,7 +48,10 @@ fn resolve_arg(arg: &ParamType) -> String {
             };
             format!("s{gen_params}({field_params})")
         }
-        ParamType::Enum(fields, generics) => {
+        ParamType::Enum {
+            variants: fields,
+            generics,
+        } => {
             let gen_params = resolve_args(generics);
             let field_params = resolve_args(fields.param_types());
             let gen_params = if !gen_params.is_empty() {
@@ -115,7 +118,7 @@ mod tests {
     fn handles_structs() {
         let fields = vec![ParamType::U64, ParamType::U32];
         let generics = vec![ParamType::U32];
-        let inputs = [ParamType::Struct(fields, generics)];
+        let inputs = [ParamType::Struct { fields, generics }];
 
         let selector = resolve_fn_signature("some_fun", &inputs);
 
@@ -126,7 +129,7 @@ mod tests {
     fn handles_enums() {
         let variants = EnumVariants::new(vec![ParamType::U64, ParamType::U32]).unwrap();
         let generics = vec![ParamType::U32];
-        let inputs = [ParamType::Enum(variants, generics)];
+        let inputs = [ParamType::Enum { variants, generics }];
 
         let selector = resolve_fn_signature("some_fun", &inputs);
 
@@ -135,40 +138,41 @@ mod tests {
 
     #[test]
     fn ultimate_test() {
-        let struct_a = ParamType::Struct(
-            vec![ParamType::Struct(
-                vec![ParamType::String(2)],
-                vec![ParamType::String(2)],
-            )],
-            vec![ParamType::String(2)],
-        );
-        let struct_b = ParamType::Struct(
-            vec![ParamType::Array(Box::new(struct_a.clone()), 2)],
-            vec![struct_a],
-        );
-        let struct_c = ParamType::Struct(
-            vec![ParamType::Tuple(vec![struct_b.clone(), struct_b.clone()])],
-            vec![struct_b],
-        );
-        let inputs = [ParamType::Struct(
-            vec![
+        let struct_a = ParamType::Struct {
+            fields: vec![ParamType::Struct {
+                fields: vec![ParamType::String(2)],
+                generics: vec![ParamType::String(2)],
+            }],
+            generics: vec![ParamType::String(2)],
+        };
+        let struct_b = ParamType::Struct {
+            fields: vec![ParamType::Array(Box::new(struct_a.clone()), 2)],
+            generics: vec![struct_a],
+        };
+        let struct_c = ParamType::Struct {
+            fields: vec![ParamType::Tuple(vec![struct_b.clone(), struct_b.clone()])],
+            generics: vec![struct_b],
+        };
+        let inputs = [ParamType::Struct {
+            fields: vec![
                 ParamType::Tuple(vec![
                     ParamType::Array(Box::new(ParamType::B256), 2),
                     ParamType::String(2),
                 ]),
                 ParamType::Tuple(vec![
                     ParamType::Array(
-                        Box::new(ParamType::Enum(
-                            EnumVariants::new(vec![ParamType::U64, struct_c.clone()]).unwrap(),
-                            vec![struct_c],
-                        )),
+                        Box::new(ParamType::Enum {
+                            variants: EnumVariants::new(vec![ParamType::U64, struct_c.clone()])
+                                .unwrap(),
+                            generics: vec![struct_c],
+                        }),
                         1,
                     ),
                     ParamType::U32,
                 ]),
             ],
-            vec![ParamType::String(2), ParamType::B256],
-        )];
+            generics: vec![ParamType::String(2), ParamType::B256],
+        }];
 
         let selector = resolve_fn_signature("complex_test", &inputs);
 

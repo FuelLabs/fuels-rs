@@ -655,13 +655,16 @@ mod tests {
         }
          */
 
-        let struct_a_type = ParamType::Struct(
-            vec![
-                ParamType::Enum(deeper_enum_variants.clone(), vec![]),
+        let struct_a_type = ParamType::Struct {
+            fields: vec![
+                ParamType::Enum {
+                    variants: deeper_enum_variants.clone(),
+                    generics: vec![],
+                },
                 ParamType::Bool,
             ],
-            vec![],
-        );
+            generics: vec![],
+        };
 
         let struct_a_token = Token::Struct(vec![
             Token::Enum(Box::new((1, deeper_enum_token, deeper_enum_variants))),
