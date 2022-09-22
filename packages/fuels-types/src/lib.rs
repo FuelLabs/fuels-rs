@@ -4,6 +4,7 @@
 //! consume or generate these ABI-compatible types without needing to pull in the rest of the SDK.
 
 use param_types::ParamType;
+use proc_macro2::TokenStream;
 use serde::{Deserialize, Serialize};
 use strum_macros::ToString;
 

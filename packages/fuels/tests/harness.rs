@@ -3765,3 +3765,17 @@ async fn test_parse_logs_custom_types() -> Result<(), Error> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn test_print_logs() -> Result<(), Error> {
+    setup_contract_test!(
+        contract_instance,
+        wallet,
+        "packages/fuels/tests/test_projects/logged_types"
+    );
+
+    let response = contract_instance.produce_all_logs().call().await?;
+    contract_instance._print_logs(&response.receipts);
+
+    Ok(())
+}
