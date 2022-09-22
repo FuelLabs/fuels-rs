@@ -8,6 +8,12 @@ impl<const SIZE: usize, T: Parameterize> Parameterize for [T; SIZE] {
     }
 }
 
+impl<T: Parameterize> Parameterize for Vec<T> {
+    fn param_type() -> ParamType {
+        ParamType::Vector(Box::new(T::param_type()))
+    }
+}
+
 impl Parameterize for fuel_tx::Address {
     fn param_type() -> ParamType {
         ParamType::Struct {
@@ -99,6 +105,26 @@ where
             variants,
             generics: param_types,
         }
+    }
+}
+
+impl<T: Tokenizable> Tokenizable for Vec<T> {
+    fn from_token(token: Token) -> Result<Self, Error>
+    where
+        Self: Sized,
+    {
+        if let Token::Vector(tokens) = token {
+            tokens.into_iter().map(Tokenizable::from_token).collect()
+        } else {
+            Err(Error::InvalidData(format!(
+                "Vec::from_token must only be given a Token::Vector. Got: {token}"
+            )))
+        }
+    }
+
+    fn into_token(self) -> Token {
+        let tokens = self.into_iter().map(Tokenizable::into_token).collect();
+        Token::Vector(tokens)
     }
 }
 

@@ -7,6 +7,7 @@ use fuels_types::param_types::ParamType;
 
 pub fn resolve_fn_selector(name: &str, inputs: &[ParamType]) -> ByteArray {
     let fn_signature = resolve_fn_signature(name, inputs);
+    eprintln!("resolved fn_signature: {fn_signature}");
 
     first_four_bytes_of_sha256_hash(&fn_signature)
 }
@@ -67,7 +68,7 @@ fn resolve_arg(arg: &ParamType) -> String {
         }
         ParamType::Vector(el_type) => {
             let inner = resolve_arg(el_type);
-            format!("s<{inner}>(s<{inner}>(u64, u64), u64)")
+            format!("s<{inner}>(s<{inner}>(u64,u64),u64)")
         }
     }
 }

@@ -19,8 +19,8 @@ use fuels_signers::fuel_crypto::SecretKey;
 use fuels_test_helpers::setup_single_message;
 use fuels_types::bech32::Bech32Address;
 use sha2::{Digest, Sha256};
-use std::iter;
 use std::str::FromStr;
+use std::{iter, slice};
 
 use fuel_core_interfaces::model::Message;
 use fuel_gql_client::client::schema::message::Message as OtherMessage;
