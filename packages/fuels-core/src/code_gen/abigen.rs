@@ -322,7 +322,7 @@ impl Abigen {
             }
         };
 
-       //dbg!(&str.to_string());
+        //dbg!(&str.to_string());
         str
     }
 
@@ -337,12 +337,12 @@ impl Abigen {
                     resolve_type(&l.application, &self.types).expect("Failed to resolve log type");
                 let param_type_call = single_param_type_call(&resolved_type);
                 let type_name = TokenStream::from(resolved_type);
-    
-                quote! { 
-                    else if *param_type == #param_type_call {
-                        dbg!(try_from_bytes::<#type_name>(&data).unwrap());
-                    }
-                 }
+
+                quote! {
+                   else if *param_type == #param_type_call {
+                       dbg!(try_from_bytes::<#type_name>(&data).unwrap());
+                   }
+                }
             })
             .collect()
     }
@@ -392,10 +392,13 @@ pub fn create_log_data_param_type_pairs(
     receipts
         .iter()
         .filter_map(|r| match r {
-            Receipt::LogData { rb, data, .. } => Some((id_to_param_type.get(rb).unwrap().clone(), data.clone())),
-            Receipt::Log { ra, rb, .. } => {
-                Some((id_to_param_type.get(rb).unwrap().clone(), ra.to_be_bytes().to_vec()))
+            Receipt::LogData { rb, data, .. } => {
+                Some((id_to_param_type.get(rb).unwrap().clone(), data.clone()))
             }
+            Receipt::Log { ra, rb, .. } => Some((
+                id_to_param_type.get(rb).unwrap().clone(),
+                ra.to_be_bytes().to_vec(),
+            )),
             _ => None,
         })
         .collect()

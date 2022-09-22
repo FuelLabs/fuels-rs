@@ -8,5 +8,4 @@ pub mod function_selector;
 pub mod functions_gen;
 mod resolved_type;
 
-pub use abigen::{extract_and_parse_logs, create_log_data_param_type_pairs};
-
+pub use abigen::{create_log_data_param_type_pairs, extract_and_parse_logs};
