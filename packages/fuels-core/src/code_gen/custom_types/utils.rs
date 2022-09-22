@@ -117,14 +117,12 @@ pub(crate) fn extract_generic_parameters(
         .iter()
         .flatten()
         .map(|id| types.get(id).unwrap())
-        .map(|decl| match extract_generic_name(&decl.type_field) {
-            Some(name) => {
-                let generic = ident(&name);
-                Ok(quote! {#generic})
-            }
-            _ => {
+        .map(|decl| {
+            let name = extract_generic_name(&decl.type_field).unwrap_or_else(|| {
                 panic!("Type parameters should only contain ids of generic types!")
-            }
+            });
+            let generic = ident(&name);
+            Ok(quote! {#generic})
         })
         .collect()
 }
