@@ -13,3 +13,5 @@ You can access the logged values in Rust by calling `_logs_with_type::<T>` from 
 ```rust,ignore
 {{#include ../../../packages/fuels/tests/harness.rs:produce_logs}}
 ```
+
+> **Note:** to be able to bind logged values in the SDK, you need to build your contract by supplying a feature flag: `forc build --generate-logged-types`.

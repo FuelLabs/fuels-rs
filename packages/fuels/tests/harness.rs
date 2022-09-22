@@ -3,6 +3,7 @@ use fuel_core::service::FuelService;
 use fuel_gql_client::fuel_tx::{AssetId, ContractId, Receipt};
 use fuels::contract::contract::MultiContractCallHandler;
 use fuels::contract::predicate::Predicate;
+use fuels::prelude::SizedAsciiString;
 use fuels::prelude::{
     abigen, launch_custom_provider_and_get_wallets, launch_provider_and_get_wallet,
     setup_contract_test, setup_multiple_assets_coins, setup_single_asset_coins,
@@ -3678,7 +3679,6 @@ async fn test_rust_result_can_be_encoded() -> Result<(), Box<dyn std::error::Err
     Ok(())
 }
 
-/*
 #[tokio::test]
 async fn test_parse_logged_varibles() -> Result<(), Error> {
     setup_contract_test!(
@@ -3765,4 +3765,3 @@ async fn test_parse_logs_custom_types() -> Result<(), Error> {
 
     Ok(())
 }
-*/
