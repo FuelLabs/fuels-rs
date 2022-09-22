@@ -100,10 +100,12 @@ mod tests {
 
     #[test]
     fn accepts_ascii_of_correct_length() {
+        // ANCHOR: string_simple_example
         let ascii_data = "abc".to_string();
 
         SizedAsciiString::<3>::new(ascii_data)
-            .expect("Should have succeeded since we gave ascii data of correct lenght!");
+            .expect("Should have succeeded since we gave ascii data of correct length!");
+        // ANCHOR_END: string_simple_example
     }
 
     #[test]
@@ -170,6 +172,7 @@ mod tests {
         Ok(())
     }
 
+    // ANCHOR: conversion
     #[test]
     fn can_be_constructed_from_str_ref() {
         let _: SizedAsciiString<3> = "abc".try_into().expect("Should have succeeded");
@@ -188,6 +191,7 @@ mod tests {
 
         assert_eq!(str, "abc");
     }
+    // ANCHOR_END: conversion
 
     #[test]
     fn can_be_printed() {

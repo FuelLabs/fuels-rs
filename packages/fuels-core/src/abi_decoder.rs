@@ -73,13 +73,10 @@ impl ABIDecoder {
             ParamType::B256 => Self::decode_b256(ret_data),
             ParamType::String(length) => Self::decode_string(ret_data, *length),
             ParamType::Array(ref t, length) => Self::decode_array(t, ret_data, aux_data, *length),
-            ParamType::Struct(props) => Self::decode_struct(props, ret_data, aux_data),
-            ParamType::Enum(variants) => Self::decode_enum(ret_data, variants, aux_data),
+            ParamType::Struct { fields, .. } => Self::decode_struct(fields, ret_data, aux_data),
+            ParamType::Enum { variants, .. } => Self::decode_enum(ret_data, variants, aux_data),
             ParamType::Tuple(types) => Self::decode_tuple(types, ret_data, aux_data),
             ParamType::Vector(param_type) => Self::decode_vector(param_type, ret_data, aux_data),
-            ParamType::Generic(name) => {
-                panic!("Cannot decode a unresolved generic type {name}!")
-            }
         }
     }
 
@@ -504,7 +501,10 @@ mod tests {
         let data = [
             0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
         ];
-        let param_type = ParamType::Struct(vec![ParamType::U8, ParamType::Bool]);
+        let param_type = ParamType::Struct {
+            fields: vec![ParamType::U8, ParamType::Bool],
+            generics: vec![],
+        };
 
         let decoded = ABIDecoder::decode_single(&param_type, &data, &[])?;
 
@@ -523,7 +523,10 @@ mod tests {
         // }
 
         let inner_enum_types = EnumVariants::new(vec![ParamType::U32, ParamType::Bool])?;
-        let types = vec![ParamType::Enum(inner_enum_types.clone())];
+        let types = vec![ParamType::Enum {
+            variants: inner_enum_types.clone(),
+            generics: vec![],
+        }];
 
         // "0" discriminant and 42 enum value
         let data = [
@@ -551,10 +554,16 @@ mod tests {
 
         let inner_enum_types = EnumVariants::new(vec![ParamType::B256, ParamType::U32])?;
 
-        let struct_type = ParamType::Struct(vec![
-            ParamType::Enum(inner_enum_types.clone()),
-            ParamType::U32,
-        ]);
+        let struct_type = ParamType::Struct {
+            fields: vec![
+                ParamType::Enum {
+                    variants: inner_enum_types.clone(),
+                    generics: vec![],
+                },
+                ParamType::U32,
+            ],
+            generics: vec![],
+        };
 
         let enum_discriminant_enc = vec![0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1];
         let enum_data_enc = vec![0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x30, 0x39];
@@ -594,13 +603,19 @@ mod tests {
         //     b: u8[2],
         // }
 
-        let nested_struct = ParamType::Struct(vec![
-            ParamType::U16,
-            ParamType::Struct(vec![
-                ParamType::Bool,
-                ParamType::Array(Box::new(ParamType::U8), 2),
-            ]),
-        ]);
+        let nested_struct = ParamType::Struct {
+            fields: vec![
+                ParamType::U16,
+                ParamType::Struct {
+                    fields: vec![
+                        ParamType::Bool,
+                        ParamType::Array(Box::new(ParamType::U8), 2),
+                    ],
+                    generics: vec![],
+                },
+            ],
+            generics: vec![],
+        };
 
         let data = [
             0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xa, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1, 0x0,
@@ -637,13 +652,19 @@ mod tests {
         // Sway fn: long_function(Foo,u8[2],b256,str[23])
 
         // Parameters
-        let nested_struct = ParamType::Struct(vec![
-            ParamType::U16,
-            ParamType::Struct(vec![
-                ParamType::Bool,
-                ParamType::Array(Box::new(ParamType::U8), 2),
-            ]),
-        ]);
+        let nested_struct = ParamType::Struct {
+            fields: vec![
+                ParamType::U16,
+                ParamType::Struct {
+                    fields: vec![
+                        ParamType::Bool,
+                        ParamType::Array(Box::new(ParamType::U8), 2),
+                    ],
+                    generics: vec![],
+                },
+            ],
+            generics: vec![],
+        };
 
         let u8_arr = ParamType::Array(Box::new(ParamType::U8), 2);
         let b256 = ParamType::B256;
@@ -699,7 +720,10 @@ mod tests {
         let data = [
             0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
         ];
-        let struct_type = ParamType::Struct(vec![ParamType::Unit, ParamType::U64]);
+        let struct_type = ParamType::Struct {
+            fields: vec![ParamType::Unit, ParamType::U64],
+            generics: vec![],
+        };
 
         let actual = ABIDecoder::decode_single(&struct_type, &data, &[])?;
 
@@ -712,7 +736,10 @@ mod tests {
     fn enums_with_all_unit_variants_are_decoded_from_one_word() -> Result<(), Error> {
         let data = [0, 0, 0, 0, 0, 0, 0, 1];
         let variants = EnumVariants::new(vec![ParamType::Unit, ParamType::Unit])?;
-        let enum_w_only_units = ParamType::Enum(variants.clone());
+        let enum_w_only_units = ParamType::Enum {
+            variants: variants.clone(),
+            generics: vec![],
+        };
 
         let result = ABIDecoder::decode_single(&enum_w_only_units, &data, &[])?;
 
@@ -725,7 +752,10 @@ mod tests {
     fn out_of_bounds_discriminant_is_detected() -> Result<(), Error> {
         let data = [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 2];
         let variants = EnumVariants::new(vec![ParamType::U32])?;
-        let enum_type = ParamType::Enum(variants);
+        let enum_type = ParamType::Enum {
+            variants,
+            generics: vec![],
+        };
 
         let result = ABIDecoder::decode_single(&enum_type, &data, &[]);
 

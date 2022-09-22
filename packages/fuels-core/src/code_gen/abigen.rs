@@ -1,13 +1,11 @@
-use itertools::Itertools;
 use std::collections::HashMap;
 
 use crate::code_gen::bindings::ContractBindings;
-use crate::code_gen::custom_types::extract_custom_type_name_from_abi_property;
-use crate::constants::{ADDRESS_SWAY_NATIVE_TYPE, CONTRACT_ID_SWAY_NATIVE_TYPE};
+use crate::code_gen::custom_types::extract_custom_type_name_from_abi_type_field;
 use crate::source::Source;
 use crate::utils::ident;
 use fuels_types::errors::Error;
-use fuels_types::{ProgramABI, TypeApplication, TypeDeclaration};
+use fuels_types::{ProgramABI, TypeDeclaration};
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
@@ -86,6 +84,7 @@ impl Abigen {
                     use alloc::{vec, vec::Vec};
                     use fuels_core::{EnumSelector, Parameterize, Tokenizable, Token, try_from_bytes};
                     use fuels_core::types::*;
+                    use fuels_core::code_gen::function_selector::resolve_fn_selector;
                     use fuels_types::errors::Error as SDKError;
                     use fuels_types::param_types::{ParamType, EnumVariants};
                 },
@@ -96,6 +95,7 @@ impl Abigen {
                 quote! {
                     use fuels::contract::contract::{Contract, ContractCallHandler};
                     use fuels::core::{EnumSelector, StringToken, Parameterize, Tokenizable, Token, try_from_bytes};
+                    use fuels::core::code_gen::function_selector::resolve_fn_selector;
                     use fuels::core::types::*;
                     use fuels::signers::WalletUnlocked;
                     use fuels::tx::{ContractId, Address};
@@ -173,6 +173,7 @@ impl Abigen {
 
                 #abi_structs
                 #abi_enums
+
             }
         })
     }
@@ -200,10 +201,10 @@ impl Abigen {
                 continue;
             }
 
-            // Skip custom type generation if the custom type is a Sway-native type.
-            // This means ABI methods receiving or returning a Sway-native type
+            // Skip custom type generation if the custom type is a native type.
+            // This means ABI methods receiving or returning a native type
             // can receive or return that native type directly.
-            if Abigen::is_sway_native_type(&prop)? {
+            if Abigen::is_native_type(&prop.type_field)? {
                 continue;
             }
 
@@ -216,22 +217,24 @@ impl Abigen {
         Ok(structs)
     }
 
-    // Checks whether the given type field is a Sway-native type.
+    // Checks whether the given type field is a native type.
     // It's expected to come in as `"struct T"` or `"enum T"`.
-    // `T` is a Sway-native type if it matches exactly one of
-    // the reserved strings, such as "Address" or "ContractId".
-    fn is_sway_native_type(type_field: &TypeDeclaration) -> anyhow::Result<bool> {
-        let name = extract_custom_type_name_from_abi_property(type_field)?;
+    // `T` is a native `high-level language` or Rust type if it matches exactly one of
+    // the reserved strings, such as "Address", "ContractId", "Option" or "Result"
+    pub fn is_native_type(type_field: &str) -> anyhow::Result<bool> {
+        const CONTRACT_ID_NATIVE_TYPE: &str = "ContractId";
+        const ADDRESS_NATIVE_TYPE: &str = "Address";
+        const OPTION_NATIVE_TYPE: &str = "Option";
+        const RESULT_NATIVE_TYPE: &str = "Result";
 
-        Ok([
-            CONTRACT_ID_SWAY_NATIVE_TYPE,
-            ADDRESS_SWAY_NATIVE_TYPE,
-            "Vec",
-            "RawVec",
-        ]
-        .map(|s| ident(s))
-        .into_iter()
-        .any(|e| e == name))
+        let name = extract_custom_type_name_from_abi_type_field(type_field)?;
+
+        Ok(
+            ["ContractId", "Address", "Option", "Result", "Vec", "RawVec"]
+                .map(|s| ident(s))
+                .into_iter()
+                .any(|e| e == name),
+        )
     }
 
     fn abi_enums(&self) -> Result<TokenStream, Error> {
@@ -241,7 +244,7 @@ impl Abigen {
         let mut seen_enum: Vec<&str> = vec![];
 
         for prop in &self.abi.types {
-            if !prop.is_enum_type() {
+            if !prop.is_enum_type() || prop.is_option() || prop.is_result() {
                 continue;
             }
 
