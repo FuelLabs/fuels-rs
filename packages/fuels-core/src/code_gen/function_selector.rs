@@ -144,7 +144,6 @@ mod tests {
                 generics: vec![ParamType::String(2)],
             }],
             generics: vec![ParamType::String(2)],
-            logged_types: None,
         };
         let struct_b = ParamType::Struct {
             fields: vec![ParamType::Array(Box::new(struct_a.clone()), 2)],
