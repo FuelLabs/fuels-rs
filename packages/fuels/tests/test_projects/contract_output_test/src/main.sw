@@ -2,7 +2,6 @@ contract;
 
 use std::*;
 use core::*;
-use std::storage::*;
 
 struct MyStruct {
   foo: u8,

@@ -322,7 +322,7 @@ impl Wallet {
         let script = vec![
             Opcode::gtf(0x10, 0x00, GTFArgs::ScriptData),
             Opcode::ADDI(0x11, 0x10, ContractId::LEN as u16),
-            Opcode::LW(0x13, 0x11, 0),
+            Opcode::LW(0x11, 0x11, 0),
             Opcode::ADDI(0x12, 0x11, WORD_SIZE as u16),
             Opcode::TR(0x10, 0x11, 0x12),
             Opcode::RET(REG_ONE),
