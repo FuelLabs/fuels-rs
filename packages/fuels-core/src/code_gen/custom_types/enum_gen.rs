@@ -1,11 +1,10 @@
 use super::utils::{
-    extract_components, extract_custom_type_name_from_abi_property, extract_generic_parameters,
+    extract_components, extract_custom_type_name_from_abi_type_field, extract_generic_parameters,
     impl_try_from, param_type_calls, Component,
 };
 use core::result::Result;
 use core::result::Result::Ok;
 use fuels_types::errors::Error;
-use fuels_types::param_types::ParamType;
 use fuels_types::TypeDeclaration;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
@@ -18,7 +17,7 @@ pub fn expand_custom_enum(
     type_decl: &TypeDeclaration,
     types: &HashMap<usize, TypeDeclaration>,
 ) -> Result<TokenStream, Error> {
-    let enum_ident = extract_custom_type_name_from_abi_property(type_decl)?;
+    let enum_ident = extract_custom_type_name_from_abi_type_field(&type_decl.type_field)?;
 
     let components = extract_components(type_decl, types, false)?;
     let generics = extract_generic_parameters(type_decl, types)?;
@@ -49,7 +48,7 @@ fn enum_decl(
              field_name,
              field_type,
          }| {
-            let field_type = if let ParamType::Unit = field_type.param_type {
+            let field_type = if field_type.is_unit() {
                 quote! {}
             } else {
                 field_type.into()
@@ -84,7 +83,7 @@ fn enum_tokenizable_impl(
                 field_type,
             },
         )| {
-            let value = if let ParamType::Unit = field_type.param_type {
+            let value = if field_type.is_unit() {
                 quote! {}
             } else {
                 let field_type: TokenStream = field_type.into();
@@ -105,7 +104,7 @@ fn enum_tokenizable_impl(
             },
         )| {
             let u8_discriminant = discriminant as u8;
-            if let ParamType::Unit = field_type.param_type {
+            if field_type.is_unit() {
                 quote! { Self::#field_name() => (#u8_discriminant, ().into_token())}
             } else {
                 quote! { Self::#field_name(inner) => (#u8_discriminant, inner.into_token())}
@@ -146,7 +145,7 @@ fn enum_tokenizable_impl(
                     };
 
                     let variants = match Self::param_type() {
-                        ParamType::Enum(variants) => variants,
+                        ParamType::Enum{variants, ..} => variants,
                         other => panic!("Calling {}::param_type() must return a ParamType::Enum but instead it returned: {}", #enum_ident_stringified, other)
                     };
 
@@ -170,7 +169,7 @@ fn enum_parameterize_impl(
                 #(param_types.push(#param_type_calls);)*
 
                 let variants = EnumVariants::new(param_types).unwrap_or_else(|_| panic!("{} has no variants which isn't allowed!", #enum_ident_stringified));
-                ParamType::Enum(variants)
+                ParamType::Enum{variants, generics: vec![#(#generics::param_type()),*]}
             }
         }
     }
