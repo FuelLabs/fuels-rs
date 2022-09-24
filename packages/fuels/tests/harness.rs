@@ -1,8 +1,6 @@
 use fuel_core::service::Config as CoreConfig;
 use fuel_core::service::FuelService;
-use fuel_gql_client::fuel_tx::{
-    AssetId, ContractId, Input, Output, Receipt, Transaction, TxPointer, UtxoId,
-};
+use fuel_gql_client::fuel_tx::{AssetId, ContractId, Input, Output, Receipt, TxPointer, UtxoId};
 use fuels::contract::contract::MultiContractCallHandler;
 use fuels::contract::predicate::Predicate;
 use fuels::prelude::{
@@ -13,7 +11,6 @@ use fuels::prelude::{
 };
 use fuels_core::abi_encoder::ABIEncoder;
 use fuels_core::parameters::StorageConfiguration;
-use fuels_core::tx::Contract as ContractHelper;
 use fuels_core::tx::{Address, Bytes32, StorageSlot};
 use fuels_core::types::Bits256;
 use fuels_core::Tokenizable;
@@ -29,9 +26,8 @@ use fuel_core_interfaces::model::Message;
 use fuel_gql_client::client::schema::message::Message as OtherMessage;
 use fuel_gql_client::fuel_vm::consts::{REG_ONE, WORD_SIZE};
 use fuel_gql_client::fuel_vm::prelude::{GTFArgs, Opcode};
-use fuels_contract::script::{Script, ScriptBuilder};
-use fuels_signers::{Signer, Wallet};
-use fuels_test_helpers::script::run_compiled_script;
+use fuels_contract::script::ScriptBuilder;
+use fuels_signers::Signer;
 
 /// Note: all the tests and examples below require pre-compiled Sway projects.
 /// To compile these projects, run `cargo run --bin build-test-projects`.
@@ -3787,7 +3783,7 @@ async fn test_script_interface() -> Result<(), Error> {
     .into_iter()
     .collect();
 
-    let mut tx = ScriptBuilder::new()
+    ScriptBuilder::new()
         .set_gas_price(tx_parameters.gas_price)
         .set_gas_limit(tx_parameters.gas_limit)
         .set_maturity(tx_parameters.maturity)
@@ -3795,43 +3791,18 @@ async fn test_script_interface() -> Result<(), Error> {
         .set_script_data(script_data)
         .set_inputs(inputs.to_vec())
         .set_outputs(outputs.to_vec())
+        .set_asset_id(Some(AssetId::default()))
+        .set_amount(Some(amount))
         .build(&wallet)
-        .await;
-
-    // let mut tx: Transaction = Transaction::Script {
-    //     gas_price: tx_parameters.gas_price,
-    //     gas_limit: tx_parameters.gas_limit,
-    //     maturity: tx_parameters.maturity,
-    //     receipts_root: Default::default(),
-    //     script,
-    //     script_data,
-    //     inputs: inputs.to_vec(),
-    //     outputs: outputs.to_vec(),
-    //     witnesses: vec![],
-    //     metadata: None,
-    // };
-
-    // if we are not transferring the base asset, previous base amount is 0
-    let base_amount = if asset_id == AssetId::default() {
-        amount
-    } else {
-        0
-    };
-    wallet.add_fee_coins(&mut tx, base_amount, 0).await?;
-    wallet.sign_transaction(&mut tx).await?;
-
-    let vec1 = Script::new(tx).call(wallet.get_provider()?).await?;
-
-    // let receipts = wallet.get_provider()?.send_transaction(&tx).await?;
+        .await?
+        .call(wallet.get_provider()?)
+        .await?;
 
     let contract_coins = wallet
         .get_provider()?
         .get_contract_balances(&contract_id)
         .await?;
     assert_eq!(contract_coins.len(), 1);
-    // let _receipts = wallet
-    //     .force_transfer_to_contract(&contract_id, amount, asset_id, tx_parameters)
-    //     .await?;
 
     Ok(())
 }

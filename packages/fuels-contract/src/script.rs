@@ -11,7 +11,7 @@ use fuel_gql_client::client::schema::coin::Coin;
 use fuel_tx::{Metadata, Witness};
 use fuels_core::parameters::TxParameters;
 use fuels_signers::provider::Provider;
-use fuels_signers::{Signer, Wallet, WalletUnlocked};
+use fuels_signers::{Signer, WalletUnlocked};
 use fuels_types::bech32::Bech32Address;
 use fuels_types::{constants::WORD_SIZE, errors::Error};
 use futures::{stream, StreamExt};
@@ -828,6 +828,8 @@ pub struct ScriptBuilder {
     outputs: Vec<Output>,
     witnesses: Vec<Witness>,
     metadata: Option<Metadata>,
+    asset_id: Option<AssetId>,
+    amount: Option<u64>,
 }
 
 impl ScriptBuilder {
@@ -843,6 +845,8 @@ impl ScriptBuilder {
             outputs: vec![],
             witnesses: vec![],
             metadata: None,
+            asset_id: None,
+            amount: None,
         }
     }
 
@@ -882,8 +886,18 @@ impl ScriptBuilder {
         self
     }
 
-    pub async fn build(self, wallet: &WalletUnlocked) -> Transaction {
-        let mut transaction = Transaction::Script {
+    pub fn set_asset_id(mut self, asset_id: Option<AssetId>) -> ScriptBuilder {
+        self.asset_id = asset_id;
+        self
+    }
+
+    pub fn set_amount(mut self, amount: Option<u64>) -> ScriptBuilder {
+        self.amount = amount;
+        self
+    }
+
+    pub async fn build(self, wallet: &WalletUnlocked) -> Result<Script, Error> {
+        let mut tx = Transaction::Script {
             gas_price: self.gas_price,
             gas_limit: self.gas_limit,
             maturity: self.maturity,
@@ -896,10 +910,16 @@ impl ScriptBuilder {
             metadata: self.metadata,
         };
 
-        // wallet.add_fee_coins(&mut transaction, base_amount, 0)
-        //     .await;
-        // wallet.sign_transaction(&mut transaction).await;
-        // Script::new(transaction)
-        transaction
+        let base_amount = if self.asset_id.is_some() && self.asset_id.unwrap() == AssetId::default()
+        {
+            self.amount.expect("Amount is missing")
+        } else {
+            0
+        };
+
+        wallet.add_fee_coins(&mut tx, base_amount, 0).await?;
+        wallet.sign_transaction(&mut tx).await?;
+
+        Ok(Script::new(tx))
     }
 }
