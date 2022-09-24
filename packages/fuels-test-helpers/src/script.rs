@@ -73,9 +73,9 @@ mod tests {
         let return_val = run_compiled_script(path_to_bin, TxParameters::default()).await?;
 
         let correct_hex =
-            hex::decode("ef86afa9696cf0dc6385e2c407a6e159a1103cefb7e2ae0636fb33d3cb2a9e4a");
+            hex::decode("ef86afa9696cf0dc6385e2c407a6e159a1103cefb7e2ae0636fb33d3cb2a9e4a")?;
 
-        assert_eq!(correct_hex?, return_val[0].data().unwrap());
+        assert_eq!(correct_hex, return_val[0].data().unwrap());
         // ANCHOR_END: run_compiled_script
         Ok(())
     }
