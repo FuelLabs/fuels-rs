@@ -92,7 +92,7 @@ impl Script {
 
     /// Calculates how much of each asset id the given calls require and
     /// proceeds to request spendable coins from `wallet` to cover that cost.
-    pub async fn get_spendable_coins(
+    async fn get_spendable_coins(
         wallet: &WalletUnlocked,
         required_asset_amounts: &[(AssetId, u64)],
     ) -> Result<Vec<Coin>, Error> {
@@ -133,7 +133,7 @@ impl Script {
     }
 
     /// Given a list of contract calls, create the actual opcodes used to call the contract
-    pub fn get_instructions(calls: &[ContractCall], offsets: Vec<CallParamOffsets>) -> Vec<u8> {
+    fn get_instructions(calls: &[ContractCall], offsets: Vec<CallParamOffsets>) -> Vec<u8> {
         let num_calls = calls.len();
 
         let mut instructions = vec![];
@@ -154,7 +154,7 @@ impl Script {
     /// 5. Function selector (1 * WORD_SIZE);
     /// 6. Calldata offset (optional) (1 * WORD_SIZE)
     /// 7. Encoded arguments (optional) (variable length)
-    pub fn get_script_data(
+    fn get_script_data(
         calls: &[ContractCall],
         data_offset: usize,
         gas_limit: u64,
@@ -243,7 +243,7 @@ impl Script {
 
     /// Returns the assets and contracts that will be consumed (inputs) and created (outputs)
     /// by the transaction
-    pub fn get_transaction_inputs_outputs(
+    fn get_transaction_inputs_outputs(
         calls: &[ContractCall],
         wallet_address: &Bech32Address,
         spendable_coins: Vec<Coin>,
@@ -350,7 +350,7 @@ impl Script {
 
     /// Calculates the length of the script based on the number of contract calls it
     /// has to make and returns the offset at which the script data begins
-    pub fn get_data_offset(num_calls: usize) -> usize {
+    fn get_data_offset(num_calls: usize) -> usize {
         // use placeholder for call param offsets, we only care about the length
         let mut len_script =
             Script::get_single_call_instructions(&CallParamOffsets::default()).len() * num_calls;
@@ -772,7 +772,7 @@ mod test {
         pub fn new_with_random_id() -> Self {
             ContractCall {
                 contract_id: random_bech32_contract_id(),
-                encoded_args: UnresolvedBytes::new(vec![]),
+                encoded_args: UnresolvedBytes::new(),
                 encoded_selector: [0; 8],
                 call_parameters: Default::default(),
                 compute_custom_input_offset: false,

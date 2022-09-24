@@ -2,11 +2,11 @@ use crate::{
     pad_string, pad_u16, pad_u32, pad_u8, EnumSelector, EnumVariants, ParamType, StringToken, Token,
 };
 use fuels_types::{constants::WORD_SIZE, errors::CodecError};
-use itertools::Itertools;
+use itertools::{chain, Either, Itertools};
 pub struct ABIEncoder;
 
 #[derive(Debug, Clone)]
-pub enum Data {
+enum Data {
     Inline(Vec<u8>),
     Dynamic(Vec<Data>),
 }
@@ -17,10 +17,9 @@ pub struct UnresolvedBytes {
 }
 
 impl UnresolvedBytes {
-    pub fn new(data: Vec<Data>) -> Self {
-        UnresolvedBytes { data }
+    pub fn new() -> Self {
+        Self { data: vec![] }
     }
-
     pub fn resolve(&self, start_addr: u64) -> Vec<u8> {
         Self::resolve_data(&self.data, start_addr)
     }
@@ -68,7 +67,7 @@ impl ABIEncoder {
     pub fn encode(args: &[Token]) -> Result<UnresolvedBytes, CodecError> {
         let data = Self::encode_tokens(args)?;
 
-        Ok(UnresolvedBytes::new(data))
+        Ok(UnresolvedBytes { data })
     }
 
     fn encode_tokens(tokens: &[Token]) -> Result<Vec<Data>, CodecError> {
