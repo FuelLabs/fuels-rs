@@ -25,7 +25,7 @@ use std::str::FromStr;
 use fuel_core_interfaces::model::Message;
 use fuel_gql_client::client::schema::message::Message as OtherMessage;
 
-/// Note: all the tests and examples below require pre-compiled Sway projects.
+/// Note: all the tests and examples below require pre-compiled test projects.
 /// To compile these projects, run `cargo run --bin build-test-projects`.
 /// It will build all test projects, creating their respective binaries,
 /// ABI files, and lock files. These are not to be committed to the repository.
@@ -1011,7 +1011,7 @@ async fn call_with_structs() -> Result<(), Error> {
     );
 
     // Here we can use `CounterConfig`, a struct originally
-    // defined in the Sway contract.
+    // defined in the contract.
     let counter_config = CounterConfig {
         dummy: true,
         initial_value: 42,
@@ -1170,7 +1170,7 @@ async fn test_large_return_data() -> Result<(), Error> {
     let res = contract_instance.get_contract_id().call().await?;
 
     // First `value` is from `CallResponse`.
-    // Second `value` is from Sway `ContractId` type.
+    // Second `value` is from the `ContractId` type.
     assert_eq!(
         res.value,
         ContractId::from([
@@ -1793,11 +1793,11 @@ async fn test_wallet_balance_api_multi_asset() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn sway_native_types_support() -> Result<(), Box<dyn std::error::Error>> {
+async fn native_types_support() -> Result<(), Box<dyn std::error::Error>> {
     setup_contract_test!(
         contract_instance,
         wallet,
-        "packages/fuels/tests/test_projects/sway_native_types"
+        "packages/fuels/tests/test_projects/native_types"
     );
 
     let user = User {
@@ -2347,7 +2347,7 @@ async fn can_increase_block_height() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn can_handle_sway_function_called_new() -> anyhow::Result<()> {
+async fn can_handle_function_called_new() -> anyhow::Result<()> {
     setup_contract_test!(
         contract_instance,
         wallet,
