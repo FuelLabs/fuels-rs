@@ -3791,8 +3791,7 @@ async fn test_script_interface() -> Result<(), Error> {
         .set_script_data(script_data)
         .set_inputs(inputs.to_vec())
         .set_outputs(outputs.to_vec())
-        .set_asset_id(Some(AssetId::default()))
-        .set_amount(Some(amount))
+        .set_amount(amount)
         .build(&wallet)
         .await?
         .call(wallet.get_provider()?)

@@ -828,8 +828,8 @@ pub struct ScriptBuilder {
     outputs: Vec<Output>,
     witnesses: Vec<Witness>,
     metadata: Option<Metadata>,
-    asset_id: Option<AssetId>,
-    amount: Option<u64>,
+    asset_id: AssetId,
+    amount: u64,
 }
 
 impl ScriptBuilder {
@@ -845,8 +845,8 @@ impl ScriptBuilder {
             outputs: vec![],
             witnesses: vec![],
             metadata: None,
-            asset_id: None,
-            amount: None,
+            asset_id: AssetId::default(),
+            amount: 0,
         }
     }
 
@@ -886,12 +886,12 @@ impl ScriptBuilder {
         self
     }
 
-    pub fn set_asset_id(mut self, asset_id: Option<AssetId>) -> ScriptBuilder {
+    pub fn set_asset_id(mut self, asset_id: AssetId) -> ScriptBuilder {
         self.asset_id = asset_id;
         self
     }
 
-    pub fn set_amount(mut self, amount: Option<u64>) -> ScriptBuilder {
+    pub fn set_amount(mut self, amount: u64) -> ScriptBuilder {
         self.amount = amount;
         self
     }
@@ -910,9 +910,8 @@ impl ScriptBuilder {
             metadata: self.metadata,
         };
 
-        let base_amount = if self.asset_id.is_some() && self.asset_id.unwrap() == AssetId::default()
-        {
-            self.amount.expect("Amount is missing")
+        let base_amount = if self.asset_id == AssetId::default() {
+            self.amount
         } else {
             0
         };
