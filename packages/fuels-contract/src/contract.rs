@@ -478,12 +478,14 @@ where
     /// Note that this is a builder method, i.e. use it as a chain:
     /// `my_contract_instance.my_method(...).add_message_outputs(num).call()`.
     pub fn append_message_outputs(mut self, num: u64) -> Self {
-        let new_message_outputs: Vec<Output> = (0..num)
-            .map(|_| Output::Message {
+
+        let new_message_outputs = vec![
+            Output::Message {
                 recipient: Address::zeroed(),
                 amount: 0,
-            })
-            .collect();
+            };
+            num as usize
+        ];
 
         match self.contract_call.message_outputs {
             Some(ref mut outputs) => outputs.extend(new_message_outputs),
