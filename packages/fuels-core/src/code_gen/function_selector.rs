@@ -7,6 +7,8 @@ use fuels_types::param_types::ParamType;
 
 pub fn resolve_fn_selector(name: &str, inputs: &[ParamType]) -> ByteArray {
     let fn_signature = resolve_fn_signature(name, inputs);
+    //the correct one tuple_in_vec(s<(u32,u32)>(s<(u32,u32)>(u64,u64),u64))
+    eprintln!("{fn_signature}");
 
     first_four_bytes_of_sha256_hash(&fn_signature)
 }

@@ -792,7 +792,6 @@ mod tests {
         let ret_data = [ptr, cap, len].into_iter().flatten().collect::<Vec<_>>();
 
         let receipts = vec![
-            given_logged_data(ret_data.clone()),
             given_logged_value(1),
             given_logged_value(2),
             given_logged_value(3),
@@ -905,31 +904,6 @@ mod tests {
         let detokenized = <(Vec<Vec<u64>>, u64)>::from_token(result)?;
 
         assert_eq!(detokenized, (vec![vec![0, 1], vec![2, 3]], 123));
-
-        Ok(())
-    }
-
-    #[test]
-    fn the_issue() -> Result<(), Error> {
-        let rtn_bytes = [
-            0, 0, 0, 0, 0, 127, 255, 200, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 3,
-        ];
-
-        let aux_bytes = [
-            0, 0, 0, 0, 0, 127, 255, 200, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 3, 72, 69,
-            89, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 127, 255, 120, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0,
-            0, 0, 3, 72, 69, 89, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 127, 255, 16, 0, 0, 0, 0, 0, 0, 0,
-            4, 0, 0, 0, 0, 0, 0, 0, 3, 72, 69, 89, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-            0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0,
-            0, 0, 2,
-        ];
-
-        let result = ABIDecoder::decode_param(
-            &ParamType::Vector(Box::new(ParamType::Vector(Box::new(ParamType::U32)))),
-            &rtn_bytes,
-            &aux_bytes,
-        )?;
 
         Ok(())
     }

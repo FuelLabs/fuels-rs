@@ -3784,41 +3784,76 @@ async fn test_vector() -> Result<(), Error> {
             .value;
         assert_eq!(result, arg);
     }
-    // {
-    //     // vec in struct
-    //     let arg = SomeStruct { a: vec![0, 1, 2] };
-    //     contract_instance.vec_in_struct(arg).call().await?;
-    // }
-    // {
-    //     // array in vec
-    //     let arg = vec![[0u64, 1u64], [0u64, 1u64]];
-    //     contract_instance.array_in_vec(arg).call().await?;
-    // }
-    // {
-    //     // vec in array
-    //     let arg = [vec![0, 1, 2], vec![0, 1, 2]];
-    //     contract_instance.vec_in_array(arg).call().await?;
-    // }
-    // {
-    //     // vec in enum
-    //     let arg = SomeEnum::a(vec![0, 1, 2]);
-    //     contract_instance.vec_in_enum(arg).call().await?;
-    // }
-    // {
-    //     // enum in vec
-    //     let arg = vec![SomeEnum::a(0), SomeEnum::a(1)];
-    //     contract_instance.enum_in_vec(arg).call().await?;
-    // }
-    // {
-    //     // tuple in vec
-    //     let arg = vec![(0, 0), (1, 1)];
-    //     contract_instance.tuple_in_vec(arg).call().await?;
-    // }
-    // {
-    //     // vec in tuple
-    //     let arg = (vec![0, 1, 2], vec![0, 1, 2]);
-    //     contract_instance.vec_in_tuple(arg).call().await?;
-    // }
+    {
+        // vec in struct
+        let arg = SomeStruct { a: vec![0, 1, 2] };
+        let result = contract_instance
+            .vec_in_struct(arg.clone())
+            .call()
+            .await?
+            .value;
+        assert_eq!(result, arg);
+    }
+    {
+        // array in vec
+        let arg = vec![[0u64, 1u64], [0u64, 1u64]];
+        let result = contract_instance
+            .array_in_vec(arg.clone())
+            .call()
+            .await?
+            .value;
+        assert_eq!(result, arg);
+    }
+    {
+        // vec in array
+        let arg = [vec![0, 1, 2], vec![0, 1, 2]];
+        let result = contract_instance
+            .vec_in_array(arg.clone())
+            .call()
+            .await?
+            .value;
+        assert_eq!(result, arg);
+    }
+    {
+        // vec in enum
+        let arg = SomeEnum::a(vec![0, 1, 2]);
+        let result = contract_instance
+            .vec_in_enum(arg.clone())
+            .call()
+            .await?
+            .value;
+        assert_eq!(result, arg);
+    }
+    {
+        // enum in vec
+        let arg = vec![SomeEnum::a(0), SomeEnum::a(1)];
+        let result = contract_instance
+            .enum_in_vec(arg.clone())
+            .call()
+            .await?
+            .value;
+        assert_eq!(result, arg);
+    }
+    {
+        // tuple in vec
+        let arg = vec![(0, 0), (1, 1)];
+        let result = contract_instance
+            .tuple_in_vec(arg.clone())
+            .call()
+            .await?
+            .value;
+        assert_eq!(result, arg);
+    }
+    {
+        // vec in tuple
+        let arg = (vec![0, 1, 2], vec![0, 1, 2]);
+        let result = contract_instance
+            .vec_in_tuple(arg.clone())
+            .call()
+            .await?
+            .value;
+        assert_eq!(result, arg);
+    }
 
     Ok(())
 }
