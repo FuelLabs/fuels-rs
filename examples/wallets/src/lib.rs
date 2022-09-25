@@ -281,7 +281,9 @@ mod tests {
     #[tokio::test]
     #[allow(unused_variables)]
     async fn get_balances() -> Result<(), Error> {
-        use fuels::prelude::{launch_provider_and_get_wallet, BASE_ASSET_ID};
+        use fuels::prelude::{
+            launch_provider_and_get_wallet, BASE_ASSET_ID, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
+        };
         use fuels::tx::AssetId;
         use std::collections::HashMap;
 
@@ -293,6 +295,14 @@ mod tests {
         // ANCHOR: get_balances
         let balances: HashMap<String, u64> = wallet.get_balances().await?;
         // ANCHOR_END: get_balances
+
+        // ANCHOR: get_balance_hashmap
+        let asset_id_key = format!("{:#x}", asset_id);
+        let asset_balance = balances.get(&asset_id_key).unwrap();
+        // ANCHOR_END: get_balance_hashmap
+
+        assert_eq!(*asset_balance, DEFAULT_COIN_AMOUNT * DEFAULT_NUM_COINS);
+
         Ok(())
     }
 }

@@ -1,19 +1,29 @@
-use crate::code_gen::custom_types::extract_custom_type_name_from_abi_property;
+use crate::code_gen::custom_types::{
+    extract_custom_type_name_from_abi_type_field, extract_generic_name,
+};
+
+use crate::utils::safe_ident;
 use fuels_types::errors::Error;
-use fuels_types::param_types::ParamType;
 use fuels_types::{TypeApplication, TypeDeclaration};
+use lazy_static::lazy_static;
 use proc_macro2::TokenStream;
-use quote::quote;
+use quote::{quote, ToTokens};
+use regex::Regex;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 
 // Represents a type alongside its generic parameters. Can be converted into a
 // `TokenStream` via `.into()`.
 #[derive(Debug, Clone)]
-pub(crate) struct ResolvedType {
+pub struct ResolvedType {
     pub type_name: TokenStream,
     pub generic_params: Vec<ResolvedType>,
-    pub param_type: ParamType,
+}
+
+impl ResolvedType {
+    pub fn is_unit(&self) -> bool {
+        self.type_name.to_string() == "()"
+    }
 }
 
 impl Display for ResolvedType {
@@ -58,61 +68,160 @@ pub(crate) fn resolve_type(
     };
 
     let base_type = types.get(&type_application.type_id).unwrap();
-    let param_type = ParamType::from_type_declaration(base_type, types)?;
 
-    let (type_name, generic_params) = match &param_type {
-        ParamType::Generic(name) => {
-            let token_stream = name.parse().expect("Failed to parse generic param name");
-            Ok::<_, Error>((token_stream, vec![]))
-        }
-        ParamType::U8 => Ok((quote! {u8}, vec![])),
-        ParamType::U16 => Ok((quote! {u16}, vec![])),
-        ParamType::U32 => Ok((quote! {u32}, vec![])),
-        ParamType::U64 => Ok((quote! {u64}, vec![])),
-        ParamType::Bool => Ok((quote! {bool}, vec![])),
-        ParamType::Byte => Ok((quote! {u8}, vec![])),
-        ParamType::B256 => Ok((quote! {Bits256}, vec![])),
-        ParamType::Unit => Ok((quote! {()}, vec![])),
-        ParamType::Array(_, len) => {
-            let array_components = recursively_resolve(&base_type.components)?;
+    let components = recursively_resolve(&base_type.components)?;
+    let type_arguments = recursively_resolve(&type_application.type_arguments)?;
+    let type_field = base_type.type_field.as_str();
 
-            let type_inside: TokenStream = match array_components.as_slice() {
-                [single_type] => single_type.into(),
-                _ => {
-                    return Err(Error::InvalidData(format!("Array must have only one component! Actual components: {array_components:?}")));
-                }
-            };
+    [
+        to_simple_type,
+        to_byte,
+        to_bits256,
+        to_generic,
+        to_array,
+        to_sized_ascii_string,
+        to_tuple,
+        to_struct,
+    ]
+    .into_iter()
+    .filter_map(|fun| fun(type_field, &components, &type_arguments))
+    .next()
+    .ok_or_else(|| Error::InvalidType(format!("Could not resolve {type_field} to any known type")))
+}
 
-            Ok((quote! { [#type_inside; #len] }, vec![]))
-        }
-        ParamType::String(len) => Ok((
-            quote! { SizedAsciiString },
-            vec![ResolvedType {
-                type_name: quote! {#len},
-                generic_params: vec![],
-                param_type: ParamType::U64,
-            }],
-        )),
-        ParamType::Struct(_) | ParamType::Enum(_) => {
-            let type_name = extract_custom_type_name_from_abi_property(base_type)?;
-            let generic_params = recursively_resolve(&type_application.type_arguments)?;
-            Ok((quote! {#type_name}, generic_params))
-        }
-        ParamType::Tuple(_) => {
-            let inner_types = recursively_resolve(&base_type.components)?
-                .into_iter()
-                .map(TokenStream::from);
+fn to_generic(field: &str, _: &[ResolvedType], _: &[ResolvedType]) -> Option<ResolvedType> {
+    let name = extract_generic_name(field)?;
 
-            // it is important to leave a trailing comma because a tuple with
-            // one element is written as (element,) not (element) which is
-            // resolved to just element
-            Ok((quote! {(#(#inner_types,)*)}, vec![]))
-        }
-    }?;
-
-    Ok(ResolvedType {
+    let type_name = safe_ident(&name).into_token_stream();
+    Some(ResolvedType {
         type_name,
-        generic_params,
-        param_type,
+        generic_params: vec![],
     })
+}
+
+fn to_array(field: &str, components: &[ResolvedType], _: &[ResolvedType]) -> Option<ResolvedType> {
+    lazy_static! {
+        static ref RE: Regex = Regex::new(r"^\s*\[.+;\s*(\d+)\s*\]\s*$").unwrap();
+    }
+    let len = RE
+        .captures(field)
+        .map(|captures| captures[1].to_string())
+        .map(|length: String| {
+            length.parse::<usize>().unwrap_or_else(|_| {
+                panic!("Could not extract array length from {length}! Original field {field}")
+            })
+        })?;
+
+    let type_inside: TokenStream = match components {
+        [single_type] => Ok(single_type.into()),
+        _ => Err(Error::InvalidData(format!(
+            "Array must have only one component! Actual components: {components:?}"
+        ))),
+    }
+    .unwrap();
+
+    Some(ResolvedType {
+        type_name: quote! { [#type_inside; #len] },
+        generic_params: vec![],
+    })
+}
+
+fn to_sized_ascii_string(
+    field: &str,
+    _: &[ResolvedType],
+    _: &[ResolvedType],
+) -> Option<ResolvedType> {
+    lazy_static! {
+        static ref RE: Regex = Regex::new(r"^\s*str\s*\[\s*(\d+)\s*\]\s*$").unwrap();
+    }
+    let len = RE
+        .captures(field)
+        .map(|captures| captures[1].to_string())
+        .map(|length: String| {
+            length.parse::<usize>().unwrap_or_else(|_| {
+                panic!("Could not extract string length from {length}! Original field '{field}'")
+            })
+        })?;
+
+    let generic_params = vec![ResolvedType {
+        type_name: quote! {#len},
+        generic_params: vec![],
+    }];
+
+    Some(ResolvedType {
+        type_name: quote! { SizedAsciiString },
+        generic_params,
+    })
+}
+
+fn to_tuple(field: &str, components: &[ResolvedType], _: &[ResolvedType]) -> Option<ResolvedType> {
+    if field.starts_with('(') && field.ends_with(')') {
+        let inner_types = components.iter().map(TokenStream::from);
+
+        // it is important to leave a trailing comma because a tuple with
+        // one element is written as (element,) not (element) which is
+        // resolved to just element
+        Some(ResolvedType {
+            type_name: quote! {(#(#inner_types,)*)},
+            generic_params: vec![],
+        })
+    } else {
+        None
+    }
+}
+
+fn to_simple_type(
+    type_field: &str,
+    _: &[ResolvedType],
+    _: &[ResolvedType],
+) -> Option<ResolvedType> {
+    match type_field {
+        "u8" | "u16" | "u32" | "u64" | "bool" | "()" => {
+            let type_name = type_field
+                .parse()
+                .expect("Couldn't resolve primitive type. Cannot happen!");
+
+            Some(ResolvedType {
+                type_name,
+                generic_params: vec![],
+            })
+        }
+        _ => None,
+    }
+}
+
+fn to_byte(type_field: &str, _: &[ResolvedType], _: &[ResolvedType]) -> Option<ResolvedType> {
+    if type_field == "byte" {
+        let type_name = quote! {Byte};
+        Some(ResolvedType {
+            type_name,
+            generic_params: vec![],
+        })
+    } else {
+        None
+    }
+}
+fn to_bits256(type_field: &str, _: &[ResolvedType], _: &[ResolvedType]) -> Option<ResolvedType> {
+    if type_field == "b256" {
+        let type_name = quote! {Bits256};
+        Some(ResolvedType {
+            type_name,
+            generic_params: vec![],
+        })
+    } else {
+        None
+    }
+}
+
+fn to_struct(
+    field_name: &str,
+    _: &[ResolvedType],
+    type_arguments: &[ResolvedType],
+) -> Option<ResolvedType> {
+    extract_custom_type_name_from_abi_type_field(field_name)
+        .ok()
+        .map(|type_name| ResolvedType {
+            type_name: type_name.into_token_stream(),
+            generic_params: type_arguments.to_vec(),
+        })
 }
