@@ -3761,142 +3761,64 @@ async fn test_vector() -> Result<(), Error> {
     {
         // vec of u32s
         let arg = vec![0, 1, 2];
-        contract_instance.u32_vec(arg).call().await?;
+        let result = contract_instance.u32_vec(arg.clone()).call().await?.value;
+        assert_eq!(result, arg);
     }
     {
         // vec of vecs of u32s
         let arg = vec![vec![0, 1, 2], vec![0, 1, 2]];
-        contract_instance.vec_in_vec(arg).call().await?;
+        let result = contract_instance
+            .vec_in_vec(arg.clone())
+            .call()
+            .await?
+            .value;
+        assert_eq!(result, arg);
     }
     {
         // vec of structs
         let arg = vec![SomeStruct { a: 0 }, SomeStruct { a: 1 }];
-        contract_instance.struct_in_vec(arg).call().await?;
+        let result = contract_instance
+            .struct_in_vec(arg.clone())
+            .call()
+            .await?
+            .value;
+        assert_eq!(result, arg);
     }
-    {
-        // vec in struct
-        let arg = SomeStruct { a: vec![0, 1, 2] };
-        contract_instance.vec_in_struct(arg).call().await?;
-    }
-    {
-        // array in vec
-        let arg = vec![[0u64, 1u64], [0u64, 1u64]];
-        contract_instance.array_in_vec(arg).call().await?;
-    }
-    {
-        // vec in array
-        let arg = [vec![0, 1, 2], vec![0, 1, 2]];
-        contract_instance.vec_in_array(arg).call().await?;
-    }
-    {
-        // vec in enum
-        let arg = SomeEnum::a(vec![0, 1, 2]);
-        contract_instance.vec_in_enum(arg).call().await?;
-    }
-    {
-        // enum in vec
-        let arg = vec![SomeEnum::a(0), SomeEnum::a(1)];
-        contract_instance.enum_in_vec(arg).call().await?;
-    }
-    {
-        // tuple in vec
-        let arg = vec![(0, 0), (1, 1)];
-        contract_instance.tuple_in_vec(arg).call().await?;
-    }
-    {
-        // vec in tuple
-        let arg = (vec![0, 1, 2], vec![0, 1, 2]);
-        contract_instance.vec_in_tuple(arg).call().await?;
-    }
+    // {
+    //     // vec in struct
+    //     let arg = SomeStruct { a: vec![0, 1, 2] };
+    //     contract_instance.vec_in_struct(arg).call().await?;
+    // }
+    // {
+    //     // array in vec
+    //     let arg = vec![[0u64, 1u64], [0u64, 1u64]];
+    //     contract_instance.array_in_vec(arg).call().await?;
+    // }
+    // {
+    //     // vec in array
+    //     let arg = [vec![0, 1, 2], vec![0, 1, 2]];
+    //     contract_instance.vec_in_array(arg).call().await?;
+    // }
+    // {
+    //     // vec in enum
+    //     let arg = SomeEnum::a(vec![0, 1, 2]);
+    //     contract_instance.vec_in_enum(arg).call().await?;
+    // }
+    // {
+    //     // enum in vec
+    //     let arg = vec![SomeEnum::a(0), SomeEnum::a(1)];
+    //     contract_instance.enum_in_vec(arg).call().await?;
+    // }
+    // {
+    //     // tuple in vec
+    //     let arg = vec![(0, 0), (1, 1)];
+    //     contract_instance.tuple_in_vec(arg).call().await?;
+    // }
+    // {
+    //     // vec in tuple
+    //     let arg = (vec![0, 1, 2], vec![0, 1, 2]);
+    //     contract_instance.vec_in_tuple(arg).call().await?;
+    // }
 
     Ok(())
 }
-
-// #[tokio::test]
-// async fn test_vector_rtn() -> Result<(), Error> {
-//     let wallet = launch_provider_and_get_wallet().await;
-//
-//     let contract_id = Contract::deploy(
-//         "tests/test_projects/vectors/out/debug/vectors.bin",
-//         &wallet,
-//         TxParameters::default(),
-//         StorageConfiguration::default(),
-//     )
-//     .await?;
-//
-//     let fn_signature = "return_a_vec()";
-//
-//     let encoded_selector = first_four_bytes_of_sha256_hash(fn_signature);
-//
-//     let encoded_args = UnresolvedBytes::new(vec![]);
-//
-//     let call = ContractCall {
-//         contract_id: contract_id.clone(),
-//         encoded_selector,
-//         encoded_args,
-//         call_parameters: CallParameters::default(),
-//         compute_custom_input_offset: true,
-//         variable_outputs: None,
-//         external_contracts: vec![],
-//         output_param: ParamType::Unit,
-//     };
-//
-//     let calls: Vec<ContractCall> = vec![call];
-//
-//     let data_offset = Script::get_data_offset(calls.len());
-//
-//     let (script_data, call_param_offsets) = Script::get_script_data(&calls, data_offset);
-//
-//     let script = Script::get_instructions(&calls, call_param_offsets);
-//
-//     let spendable_coins = Script::get_spendable_coins(&wallet, &calls).await?;
-//
-//     let (inputs, outputs) =
-//         Script::get_transaction_inputs_outputs(&calls, wallet.address(), spendable_coins);
-//
-//     let tx_parameters: TxParameters = Default::default();
-//     let mut tx = Transaction::script(
-//         tx_parameters.gas_price,
-//         tx_parameters.gas_limit,
-//         tx_parameters.byte_price,
-//         tx_parameters.maturity,
-//         script,
-//         script_data,
-//         inputs,
-//         outputs,
-//         vec![],
-//     );
-//     wallet.sign_transaction(&mut tx).await.unwrap();
-//
-//     let script = Script::new(tx);
-//     let receipts = script.call(wallet.get_provider().unwrap()).await.unwrap();
-//     let rtn = receipts
-//         .iter()
-//         .filter_map(|receipt| match receipt {
-//             Receipt::ReturnData { data, .. } => Some(data.clone()),
-//             _ => None,
-//         })
-//         .exactly_one()
-//         .unwrap();
-//     dbg!(&receipts);
-//     let length = rtn
-//         .chunks(8)
-//         .map(|bytes| u64::from_be_bytes(bytes.try_into().unwrap()))
-//         .last()
-//         .unwrap();
-//
-//     let vec_logs = receipts
-//         .iter()
-//         .rev()
-//         .filter_map(|receipt| match receipt {
-//             Receipt::Log { ref ra, .. } => Some(ra),
-//             _ => None,
-//         })
-//         .rev()
-//         .take(length as usize)
-//         .collect::<Vec<_>>();
-//
-//     dbg!(vec_logs);
-//
-//     Ok(())
-// }

@@ -1,4 +1,3 @@
-#![allow(warnings)] // temp remove me later
 use crate::abi_decoder::ABIDecoder;
 use crate::types::Bits256;
 use core::fmt;

@@ -383,7 +383,7 @@ impl ContractCall {
 
         let (encoded_value, index) = match param_type.get_return_location() {
             ReturnLocation::ReturnData => {
-                match receipts.iter().find(|&receipt| receipt.data().is_some()) {
+                match receipts.iter().find(|&receipt| matches!(receipt, Receipt::ReturnData { data, .. } if !data.is_empty())) {
                     Some(r) => {
                         let index = receipts.iter().position(|elt| elt == r).unwrap();
                         (r.data().unwrap().to_vec(), Some(index))
