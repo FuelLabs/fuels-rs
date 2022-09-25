@@ -104,8 +104,7 @@ impl ABIEncoder {
 
         self.encode_discriminant(*discriminant);
 
-        // The high-level language compiler has an optimization for enums which have only Units as variants -- such
-        // an enum is encoded only by encoding its discriminant.
+        // Enums that contain only Units as variants have only their discriminant encoded.
         if !variants.only_units_inside() {
             let variant_param_type = Self::type_of_chosen_variant(discriminant, variants)?;
             let padding_amount = variants.compute_padding_amount(variant_param_type);

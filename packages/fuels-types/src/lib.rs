@@ -19,7 +19,7 @@ pub enum CustomType {
     Enum,
 }
 
-/// Fuel ABI representation in JSON, originally specified here:
+/// FuelVM ABI representation in JSON, originally specified here:
 ///
 /// https://github.com/FuelLabs/fuel-specs/blob/master/specs/protocol/abi.md
 ///

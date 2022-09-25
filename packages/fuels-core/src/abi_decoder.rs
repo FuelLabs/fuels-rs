@@ -213,9 +213,8 @@ impl ABIDecoder {
         selected_variant: &ParamType,
         enum_width: usize,
     ) -> Result<Token, CodecError> {
-        // The FuelVM has an optimization where enums that only contain
-        // units for variants have only their discriminant encoded. Because of
-        // this we construct the Token::Unit rather than calling `decode_param`
+        // Enums that contain only Units as variants have only their discriminant encoded.
+        // Because of this we construct the Token::Unit rather than calling `decode_param`
         // since that will consume a WORD from `data`.
         if variants.only_units_inside() {
             Ok(Token::Unit)
