@@ -10,7 +10,6 @@ pub mod bech32;
 pub mod constants;
 pub mod errors;
 pub mod param_types;
-pub mod parse_param;
 pub mod utils;
 
 #[derive(Debug, Clone, Copy, ToString, PartialEq, Eq)]

@@ -106,7 +106,10 @@ pub fn the_fn() {
     ];
 
     let obj = ABIDecoder::decode_single(
-        &ParamType::Struct(vec![ParamType::U64, ParamType::B256]),
+        &ParamType::Struct {
+            fields: vec![ParamType::U64, ParamType::B256],
+            generics: vec![],
+        },
         &data,
     )
     .expect("Failed to decode");

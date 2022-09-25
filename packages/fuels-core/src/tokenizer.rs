@@ -27,7 +27,6 @@ impl Tokenizer {
         let trimmed_value = value.trim();
 
         match param {
-            ParamType::Generic(_name) => panic!("Cannot tokenize an unresolved generic parameter!"),
             ParamType::Unit => Ok(Token::Unit),
             ParamType::U8 => Ok(Token::U8(trimmed_value.parse::<u8>()?)),
             ParamType::U16 => Ok(Token::U16(trimmed_value.parse::<u16>()?)),
@@ -52,10 +51,11 @@ impl Tokenizer {
                 trimmed_value.into(),
                 *length,
             ))),
-            ParamType::Struct(struct_params) => {
-                Ok(Self::tokenize_struct(trimmed_value, struct_params)?)
-            }
-            ParamType::Enum(variants) => {
+            ParamType::Struct {
+                fields: struct_params,
+                ..
+            } => Ok(Self::tokenize_struct(trimmed_value, struct_params)?),
+            ParamType::Enum { variants, .. } => {
                 let discriminant = get_enum_discriminant_from_string(trimmed_value);
                 let value = get_enum_value_from_string(trimmed_value);
 

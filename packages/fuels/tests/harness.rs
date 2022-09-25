@@ -12,7 +12,7 @@ use fuels::prelude::{
 use fuels_core::abi_encoder::ABIEncoder;
 use fuels_core::parameters::StorageConfiguration;
 use fuels_core::tx::{Address, Bytes32, StorageSlot};
-use fuels_core::types::Bits256;
+use fuels_core::types::{Bits256, Byte};
 use fuels_core::Tokenizable;
 use fuels_core::{constants::BASE_ASSET_ID, Token};
 use fuels_signers::fuel_crypto::SecretKey;
@@ -327,7 +327,7 @@ async fn compile_bindings_byte_input() {
     // `SimpleContract` is the name of the contract
     let contract_instance = SimpleContractBuilder::new(null_contract_id(), wallet).build();
 
-    let call_handler = contract_instance.takes_byte(10u8);
+    let call_handler = contract_instance.takes_byte(Byte(10u8));
 
     let encoded = format!(
         "{}{}",

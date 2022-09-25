@@ -1,8 +1,7 @@
 use crate::code_gen::resolved_type::{resolve_type, ResolvedType};
-use crate::utils::ident;
+use crate::utils::{ident, safe_ident};
 use anyhow::anyhow;
 use fuels_types::errors::Error;
-use fuels_types::param_types::ParamType;
 use fuels_types::{TypeApplication, TypeDeclaration};
 use inflector::Inflector;
 use lazy_static::lazy_static;
@@ -14,7 +13,7 @@ use std::collections::HashMap;
 // Represents a component of either a struct(field name) or an enum(variant
 // name).
 #[derive(Debug)]
-pub(crate) struct Component {
+pub struct Component {
     pub field_name: Ident,
     pub field_type: ResolvedType,
 }
@@ -32,7 +31,7 @@ impl Component {
         };
 
         Ok(Component {
-            field_name: ident(&field_name),
+            field_name: safe_ident(&field_name),
             field_type: resolve_type(component, types)?,
         })
     }
@@ -99,6 +98,14 @@ pub(crate) fn extract_components(
         .collect()
 }
 
+pub(crate) fn extract_generic_name(field: &str) -> Option<String> {
+    lazy_static! {
+        static ref RE: Regex = Regex::new(r"^\s*generic\s+(\S+)\s*$").unwrap();
+    }
+    RE.captures(field)
+        .map(|captures| String::from(&captures[1]))
+}
+
 /// Returns a vector of TokenStreams, one for each of the generic parameters
 /// used by the given type.
 pub(crate) fn extract_generic_parameters(
@@ -110,27 +117,23 @@ pub(crate) fn extract_generic_parameters(
         .iter()
         .flatten()
         .map(|id| types.get(id).unwrap())
-        .map(
-            |decl| match ParamType::from_type_declaration(decl, types)? {
-                ParamType::Generic(name) => {
-                    let generic = ident(&name);
-                    Ok(quote! {#generic})
-                }
-                _ => {
-                    panic!("Type parameters should only contain ids of generic types!")
-                }
-            },
-        )
+        .map(|decl| {
+            let name = extract_generic_name(&decl.type_field).unwrap_or_else(|| {
+                panic!("Type parameters should only contain ids of generic types!")
+            });
+            let generic = ident(&name);
+            Ok(quote! {#generic})
+        })
         .collect()
 }
 
 // A custom type name should be passed to this function as `{struct,enum} $name`,
-pub fn extract_custom_type_name_from_abi_property(prop: &TypeDeclaration) -> Result<Ident, Error> {
+pub fn extract_custom_type_name_from_abi_type_field(type_field: &str) -> Result<Ident, Error> {
     lazy_static! {
         static ref RE: Regex = Regex::new(r"(?:struct|enum)\s*(.*)").unwrap();
     }
 
-    RE.captures(&prop.type_field)
+    RE.captures(type_field)
         .map(|captures| ident(&captures[1]))
         .ok_or_else(|| {
             Error::InvalidData(
@@ -142,7 +145,7 @@ pub fn extract_custom_type_name_from_abi_property(prop: &TypeDeclaration) -> Res
 /// Returns TokenStreams representing calls to `Parameterize::param_type` for
 /// all given Components. Makes sure to properly handle calls when generics are
 /// involved.
-pub(crate) fn param_type_calls(field_entries: &[Component]) -> Vec<TokenStream> {
+pub fn param_type_calls(field_entries: &[Component]) -> Vec<TokenStream> {
     field_entries
         .iter()
         .map(|Component { field_type, .. }| {
@@ -227,6 +230,7 @@ mod tests {
 
         Ok(())
     }
+
     #[test]
     fn param_type_calls_correctly_generated() {
         // arrange
@@ -236,7 +240,6 @@ mod tests {
                 field_type: ResolvedType {
                     type_name: quote! {u8},
                     generic_params: vec![],
-                    param_type: ParamType::U8,
                 },
             },
             Component {
@@ -247,18 +250,12 @@ mod tests {
                         ResolvedType {
                             type_name: quote! {T},
                             generic_params: vec![],
-                            param_type: ParamType::Generic("T".to_string()),
                         },
                         ResolvedType {
                             type_name: quote! {K},
                             generic_params: vec![],
-                            param_type: ParamType::Generic("K".to_string()),
                         },
                     ],
-                    param_type: ParamType::Struct(vec![
-                        ParamType::Generic("T".to_string()),
-                        ParamType::Generic("K".to_string()),
-                    ]),
                 },
             },
         ];
@@ -288,7 +285,7 @@ mod tests {
             type_parameters: None,
         };
 
-        let struct_name = extract_custom_type_name_from_abi_property(&declaration)?;
+        let struct_name = extract_custom_type_name_from_abi_type_field(&declaration.type_field)?;
 
         assert_eq!(struct_name, "SomeName");
 
@@ -304,7 +301,7 @@ mod tests {
             type_parameters: None,
         };
 
-        let struct_name = extract_custom_type_name_from_abi_property(&declaration)?;
+        let struct_name = extract_custom_type_name_from_abi_type_field(&declaration.type_field)?;
 
         assert_eq!(struct_name, "SomeEnumName");
 
