@@ -1757,7 +1757,7 @@ fn main() -&gt; bool {
     );
 
     // Here we can use `CounterConfig`, a struct originally
-    // defined in the Sway contract.
+    // defined in the contract.
     let counter_config = CounterConfig {
         dummy: true,
         initial_value: 42,
@@ -2142,7 +2142,7 @@ impl LiquidityPool for Contract {
 <p>Simple CLI program to encode Sway function calls and decode their output. The ABI being encoded and decoded is specified <a href="https://github.com/FuelLabs/fuel-specs/blob/master/specs/protocol/abi.md">here</a>.</p>
 <h2 id="usage"><a class="header" href="#usage">Usage</a></h2>
 <pre><code class="language-plaintext">sway-abi-cli 0.1.0
-Sway/Fuel ABI coder
+FuelVM ABI coder
 
 USAGE:
     sway-abi-cli &lt;SUBCOMMAND&gt;
@@ -2247,7 +2247,7 @@ SUBCOMMANDS:
     ],
     &quot;name&quot;:&quot;takes_nested_struct&quot;,
     &quot;outputs&quot;:[
-      
+
     ]
   }
 ]
