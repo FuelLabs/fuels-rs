@@ -47,8 +47,6 @@ impl Script {
         Self { tx }
     }
 
-    //builder pattern -> data & opcode, set_inputs and outputs, call after build.
-
     /// Creates a Script from a contract call. The internal Transaction is initialized
     /// with the actual script instructions, script data needed to perform the call
     /// and transaction inputs/outputs consisting of assets and contracts

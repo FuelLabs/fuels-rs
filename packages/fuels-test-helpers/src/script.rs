@@ -23,7 +23,7 @@ pub async fn run_compiled_script(
     let server = FuelService::new_node(Config::local_node()).await.unwrap();
     let provider = Provider::connect(server.bound_address.to_string()).await?;
 
-    let script = get_script(script_binary, tx_params);
+    let script = build_script(script_binary, tx_params);
 
     script.call(&provider).await
 }
@@ -38,12 +38,12 @@ pub async fn run_compiled_script(
     let server = FuelService::new_node(Config::local_node()).await.unwrap();
     let provider = Provider::connect(server.bound_address.to_string()).await?;
 
-    let script = get_script(script_binary, tx_params);
+    let script = build_script(script_binary, tx_params);
 
     script.call(&provider).await
 }
 
-fn get_script(script_binary: Vec<u8>, tx_params: TxParameters) -> Script {
+fn build_script(script_binary: Vec<u8>, tx_params: TxParameters) -> Script {
     let tx = Transaction::Script {
         gas_price: tx_params.gas_price,
         gas_limit: tx_params.gas_limit,
