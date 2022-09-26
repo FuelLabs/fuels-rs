@@ -883,21 +883,8 @@ pub struct ScriptBuilder {
 }
 
 impl ScriptBuilder {
-    pub fn new() -> ScriptBuilder {
-        ScriptBuilder {
-            gas_price: 0,
-            gas_limit: 0,
-            maturity: 0,
-            receipts_root: Default::default(),
-            script: vec![],
-            script_data: vec![],
-            inputs: vec![],
-            outputs: vec![],
-            witnesses: vec![],
-            metadata: None,
-            asset_id: AssetId::default(),
-            amount: 0,
-        }
+    pub fn new() -> Self {
+        Self::default()
     }
 
     pub fn set_script_data(mut self, script_data: Vec<u8>) -> ScriptBuilder {
