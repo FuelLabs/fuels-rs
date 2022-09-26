@@ -147,12 +147,12 @@
 <li>You can use it this way:</li>
 </ul>
 <pre><code class="language-rust ignore">        let path_to_bin = &quot;../fuels/tests/test_projects/logging/out/debug/logging.bin&quot;;
-        let return_val = run_compiled_script(path_to_bin).await?;
+        let return_val = run_compiled_script(path_to_bin, TxParameters::default()).await?;
 
         let correct_hex =
-            hex::decode(&quot;ef86afa9696cf0dc6385e2c407a6e159a1103cefb7e2ae0636fb33d3cb2a9e4a&quot;);
+            hex::decode(&quot;ef86afa9696cf0dc6385e2c407a6e159a1103cefb7e2ae0636fb33d3cb2a9e4a&quot;)?;
 
-        assert_eq!(correct_hex?, return_val[0].data().unwrap());
+        assert_eq!(correct_hex, return_val[0].data().unwrap());
 </code></pre>
 <p>Here you'll find an overview of the various test helpers located in <code>fuels-test-helpers</code>:</p>
 <ul>
