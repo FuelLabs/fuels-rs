@@ -104,8 +104,7 @@ impl ABIEncoder {
 
         self.encode_discriminant(*discriminant);
 
-        // The sway compiler has an optimization for enums which have only Units as variants -- such
-        // an enum is encoded only by encoding its discriminant.
+        // Enums that contain only Units as variants have only their discriminant encoded.
         if !variants.only_units_inside() {
             let variant_param_type = Self::type_of_chosen_variant(discriminant, variants)?;
             let padding_amount = variants.compute_padding_amount(variant_param_type);
@@ -157,13 +156,13 @@ mod tests {
 
     #[test]
     fn encode_function_signature() {
-        let sway_fn = "entry_one(u64)";
+        let fn_signature = "entry_one(u64)";
 
-        let result = first_four_bytes_of_sha256_hash(sway_fn);
+        let result = first_four_bytes_of_sha256_hash(fn_signature);
 
         println!(
             "Encoded function selector for ({}): {:#0x?}",
-            sway_fn, result
+            fn_signature, result
         );
 
         assert_eq!(result, [0x0, 0x0, 0x0, 0x0, 0x0c, 0x36, 0xcb, 0x9c]);
@@ -186,7 +185,7 @@ mod tests {
         // ]
         // "#;
 
-        let sway_fn = "entry_one(u32)";
+        let fn_signature = "entry_one(u32)";
         let arg = Token::U32(u32::MAX);
 
         let args: Vec<Token> = vec![arg];
@@ -195,11 +194,11 @@ mod tests {
 
         let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0xb7, 0x9e, 0xf7, 0x43];
 
-        let encoded_function_selector = first_four_bytes_of_sha256_hash(sway_fn);
+        let encoded_function_selector = first_four_bytes_of_sha256_hash(fn_signature);
 
         let encoded = ABIEncoder::encode(&args)?;
 
-        println!("Encoded ABI for ({}): {:#0x?}", sway_fn, encoded);
+        println!("Encoded ABI for ({}): {:#0x?}", fn_signature, encoded);
 
         assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
         assert_eq!(encoded_function_selector, expected_function_selector);
@@ -220,7 +219,7 @@ mod tests {
         // ]
         // "#;
 
-        let sway_fn = "takes_two(u32,u32)";
+        let fn_signature = "takes_two(u32,u32)";
         let first = Token::U32(u32::MAX);
         let second = Token::U32(u32::MAX);
 
@@ -232,10 +231,10 @@ mod tests {
 
         let expected_fn_selector = [0x0, 0x0, 0x0, 0x0, 0xa7, 0x07, 0xb0, 0x8e];
 
-        let encoded_function_selector = first_four_bytes_of_sha256_hash(sway_fn);
+        let encoded_function_selector = first_four_bytes_of_sha256_hash(fn_signature);
         let encoded = ABIEncoder::encode(&args)?;
 
-        println!("Encoded ABI for ({}): {:#0x?}", sway_fn, encoded);
+        println!("Encoded ABI for ({}): {:#0x?}", fn_signature, encoded);
 
         assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
         assert_eq!(encoded_function_selector, expected_fn_selector);
@@ -256,7 +255,7 @@ mod tests {
         // ]
         // "#;
 
-        let sway_fn = "entry_one(u64)";
+        let fn_signature = "entry_one(u64)";
         let arg = Token::U64(u64::MAX);
 
         let args: Vec<Token> = vec![arg];
@@ -265,11 +264,11 @@ mod tests {
 
         let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0x0c, 0x36, 0xcb, 0x9c];
 
-        let encoded_function_selector = first_four_bytes_of_sha256_hash(sway_fn);
+        let encoded_function_selector = first_four_bytes_of_sha256_hash(fn_signature);
 
         let encoded = ABIEncoder::encode(&args)?;
 
-        println!("Encoded ABI for ({}): {:#0x?}", sway_fn, encoded);
+        println!("Encoded ABI for ({}): {:#0x?}", fn_signature, encoded);
 
         assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
         assert_eq!(encoded_function_selector, expected_function_selector);
@@ -290,7 +289,7 @@ mod tests {
         // ]
         // "#;
 
-        let sway_fn = "bool_check(bool)";
+        let fn_signature = "bool_check(bool)";
         let arg = Token::Bool(true);
 
         let args: Vec<Token> = vec![arg];
@@ -299,11 +298,11 @@ mod tests {
 
         let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0x66, 0x8f, 0xff, 0x58];
 
-        let encoded_function_selector = first_four_bytes_of_sha256_hash(sway_fn);
+        let encoded_function_selector = first_four_bytes_of_sha256_hash(fn_signature);
 
         let encoded = ABIEncoder::encode(&args)?;
 
-        println!("Encoded ABI for ({}): {:#0x?}", sway_fn, encoded);
+        println!("Encoded ABI for ({}): {:#0x?}", fn_signature, encoded);
 
         assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
         assert_eq!(encoded_function_selector, expected_function_selector);
@@ -324,7 +323,7 @@ mod tests {
         // ]
         // "#;
 
-        let sway_fn = "takes_two_types(u32,bool)";
+        let fn_signature = "takes_two_types(u32,bool)";
         let first = Token::U32(u32::MAX);
         let second = Token::Bool(true);
 
@@ -336,11 +335,11 @@ mod tests {
 
         let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0xf5, 0x40, 0x73, 0x2b];
 
-        let encoded_function_selector = first_four_bytes_of_sha256_hash(sway_fn);
+        let encoded_function_selector = first_four_bytes_of_sha256_hash(fn_signature);
 
         let encoded = ABIEncoder::encode(&args)?;
 
-        println!("Encoded ABI for ({}) {:#0x?}", sway_fn, encoded);
+        println!("Encoded ABI for ({}) {:#0x?}", fn_signature, encoded);
 
         assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
         assert_eq!(encoded_function_selector, expected_function_selector);
@@ -361,7 +360,7 @@ mod tests {
         // ]
         // "#;
 
-        let sway_fn = "takes_one_byte(byte)";
+        let fn_signature = "takes_one_byte(byte)";
         let arg = Token::Byte(u8::MAX);
 
         let args: Vec<Token> = vec![arg];
@@ -370,11 +369,11 @@ mod tests {
 
         let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0x2e, 0xe3, 0xce, 0x1f];
 
-        let encoded_function_selector = first_four_bytes_of_sha256_hash(sway_fn);
+        let encoded_function_selector = first_four_bytes_of_sha256_hash(fn_signature);
 
         let encoded = ABIEncoder::encode(&args)?;
 
-        println!("Encoded ABI for ({}): {:#0x?}", sway_fn, encoded);
+        println!("Encoded ABI for ({}): {:#0x?}", fn_signature, encoded);
 
         assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
         assert_eq!(encoded_function_selector, expected_function_selector);
@@ -395,7 +394,7 @@ mod tests {
         // ]
         // "#;
 
-        let sway_fn = "takes_bits256(b256)";
+        let fn_signature = "takes_bits256(b256)";
 
         let mut hasher = Sha256::new();
         hasher.update("test string".as_bytes());
@@ -414,11 +413,11 @@ mod tests {
 
         let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0x01, 0x49, 0x42, 0x96];
 
-        let encoded_function_selector = first_four_bytes_of_sha256_hash(sway_fn);
+        let encoded_function_selector = first_four_bytes_of_sha256_hash(fn_signature);
 
         let encoded = ABIEncoder::encode(&args)?;
 
-        println!("Encoded ABI for ({}): {:#0x?}", sway_fn, encoded);
+        println!("Encoded ABI for ({}): {:#0x?}", fn_signature, encoded);
 
         assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
         assert_eq!(encoded_function_selector, expected_function_selector);
@@ -439,7 +438,7 @@ mod tests {
         // ]
         // "#;
 
-        let sway_fn = "takes_integer_array(u8[3])";
+        let fn_signature = "takes_integer_array(u8[3])";
 
         // Keeping the construction of the arguments array separate for better readability.
         let first = Token::U8(1);
@@ -458,11 +457,11 @@ mod tests {
 
         let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0x2c, 0x5a, 0x10, 0x2e];
 
-        let encoded_function_selector = first_four_bytes_of_sha256_hash(sway_fn);
+        let encoded_function_selector = first_four_bytes_of_sha256_hash(fn_signature);
 
         let encoded = ABIEncoder::encode(&args)?;
 
-        println!("Encoded ABI for ({}): {:#0x?}", sway_fn, encoded);
+        println!("Encoded ABI for ({}): {:#0x?}", fn_signature, encoded);
 
         assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
         assert_eq!(encoded_function_selector, expected_function_selector);
@@ -483,7 +482,7 @@ mod tests {
         // ]
         // "#;
 
-        let sway_fn = "takes_string(str[23])";
+        let fn_signature = "takes_string(str[23])";
 
         let args: Vec<Token> = vec![Token::String(StringToken::new(
             "This is a full sentence".into(),
@@ -497,11 +496,11 @@ mod tests {
 
         let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0xd5, 0x6e, 0x76, 0x51];
 
-        let encoded_function_selector = first_four_bytes_of_sha256_hash(sway_fn);
+        let encoded_function_selector = first_four_bytes_of_sha256_hash(fn_signature);
 
         let encoded = ABIEncoder::encode(&args)?;
 
-        println!("Encoded ABI for ({}): {:#0x?}", sway_fn, encoded);
+        println!("Encoded ABI for ({}): {:#0x?}", fn_signature, encoded);
 
         assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
         assert_eq!(encoded_function_selector, expected_function_selector);
@@ -522,9 +521,8 @@ mod tests {
         // ]
         // "#;
 
-        let sway_fn = "takes_my_struct(MyStruct)";
+        let fn_signature = "takes_my_struct(MyStruct)";
 
-        // Sway struct:
         // struct MyStruct {
         //     foo: u8,
         //     bar: bool,
@@ -544,13 +542,13 @@ mod tests {
 
         let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0xa8, 0x1e, 0x8d, 0xd7];
 
-        let encoded_function_selector = first_four_bytes_of_sha256_hash(sway_fn);
+        let encoded_function_selector = first_four_bytes_of_sha256_hash(fn_signature);
 
         let encoded = ABIEncoder::encode(&args)?;
 
-        println!("Encoded ABI for ({}): {:#0x?}", sway_fn, encoded);
+        println!("Encoded ABI for ({}): {:#0x?}", fn_signature, encoded);
 
-        println!("Encoded ABI for ({}): {:#0x?}", sway_fn, encoded);
+        println!("Encoded ABI for ({}): {:#0x?}", fn_signature, encoded);
 
         assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
         assert_eq!(encoded_function_selector, expected_function_selector);
@@ -571,9 +569,8 @@ mod tests {
         // ]
         // "#;
 
-        let sway_fn = "takes_my_enum(MyEnum)";
+        let fn_signature = "takes_my_enum(MyEnum)";
 
-        // Sway enum:
         // enum MyEnum {
         //     x: u32,
         //     y: bool,
@@ -596,7 +593,7 @@ mod tests {
 
         let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0x35, 0x5c, 0xa6, 0xfa];
 
-        let encoded_function_selector = first_four_bytes_of_sha256_hash(sway_fn);
+        let encoded_function_selector = first_four_bytes_of_sha256_hash(fn_signature);
 
         let encoded = ABIEncoder::encode(&args)?;
 
@@ -716,7 +713,6 @@ mod tests {
         // ]
         // "#;
 
-        // Sway nested struct:
         // struct Foo {
         //     x: u16,
         //     y: Bar,
@@ -727,7 +723,7 @@ mod tests {
         //     b: u8[2],
         // }
 
-        let sway_fn = "takes_my_nested_struct(Foo)";
+        let fn_signature = "takes_my_nested_struct(Foo)";
 
         let args: Vec<Token> = vec![Token::Struct(vec![
             Token::U16(10),
@@ -744,11 +740,11 @@ mod tests {
 
         let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0xea, 0x0a, 0xfd, 0x23];
 
-        let encoded_function_selector = first_four_bytes_of_sha256_hash(sway_fn);
+        let encoded_function_selector = first_four_bytes_of_sha256_hash(fn_signature);
 
         let encoded = ABIEncoder::encode(&args)?;
 
-        println!("Encoded ABI for ({}): {:#0x?}", sway_fn, encoded);
+        println!("Encoded ABI for ({}): {:#0x?}", fn_signature, encoded);
 
         assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
         assert_eq!(encoded_function_selector, expected_function_selector);
@@ -786,7 +782,6 @@ mod tests {
         // ]
         // "#;
 
-        // Sway nested struct:
         // struct Foo {
         //     x: u16,
         //     y: Bar,
@@ -797,7 +792,7 @@ mod tests {
         //     b: u8[2],
         // }
 
-        let sway_fn = "long_function(Foo,u8[2],b256,str[23])";
+        let fn_signature = "long_function(Foo,u8[2],b256,str[23])";
 
         let foo = Token::Struct(vec![
             Token::U16(10),
@@ -836,7 +831,7 @@ mod tests {
 
         let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0x10, 0x93, 0xb2, 0x12];
 
-        let encoded_function_selector = first_four_bytes_of_sha256_hash(sway_fn);
+        let encoded_function_selector = first_four_bytes_of_sha256_hash(fn_signature);
 
         let encoded = ABIEncoder::encode(&args)?;
 

@@ -46,8 +46,7 @@ pub enum ReturnLocation {
 
 impl ParamType {
     // Depending on the type, the returned value will be stored
-    // either in `Return` or `ReturnData`. For more information,
-    // see https://github.com/FuelLabs/sway/issues/1368.
+    // either in `Return` or `ReturnData`.
     pub fn get_return_location(&self) -> ReturnLocation {
         match self {
             Self::Unit | Self::U8 | Self::U16 | Self::U32 | Self::U64 | Self::Bool => {

@@ -5,7 +5,7 @@
 // TODO: currently disabled because it needs to be updated to the new JSON ABI.
 
 // #[derive(StructOpt, Debug)]
-// /// Sway/Fuel ABI coder.
+// /// FuelVM ABI coder.
 // enum Opt {
 //     /// Output Rust types file.
 //     Codegen(Codegen),
