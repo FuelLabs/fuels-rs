@@ -249,7 +249,6 @@ impl Contract {
             chain_info.latest_block.height.0,
             &chain_info.consensus_parameters.into(),
         )?;
-
         provider.send_transaction(&tx).await?;
 
         Ok(contract_id)
