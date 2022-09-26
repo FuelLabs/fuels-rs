@@ -40,8 +40,8 @@ pub fn wasm_abigen(input: TokenStream) -> TokenStream {
 /// The names for the contract instance and wallet variables must be provided as inputs.
 /// This macro can be called multiple times inside a function if the variables names are changed.
 /// The same contract can be deployed multiple times as the macro uses deployment with salt.
-/// If however; you need to have a shared wallet between macros, the first macro must set the
-/// wallet name to `shared_wallet`. The other ones must set the wallet name to `None`.
+/// However, if you need to have a shared wallet between macros, the first macro must set the
+/// wallet name to `wallet`. The other ones must set the wallet name to `None`.
 #[proc_macro]
 pub fn setup_contract_test(input: TokenStream) -> TokenStream {
     let args = parse_macro_input!(input as Spanned<ContractTestArgs>);
@@ -87,12 +87,9 @@ pub fn setup_contract_test(input: TokenStream) -> TokenStream {
     let contract_instance_name = Ident::new(&args.instance_name, Span::call_site());
     let contract_struct_name = Ident::new(&contract_struct_name, Span::call_site());
 
-    // If the wallet name is None, do not launch a new provider and use the default `shared_wallet` name
+    // If the wallet name is None, do not launch a new provider and use the default `wallet` name
     let (wallet_name, wallet_token_stream): (Ident, TokenStream) = if args.wallet_name == "None" {
-        (
-            Ident::new("shared_wallet", Span::call_site()),
-            quote! {}.into(),
-        )
+        (Ident::new("wallet", Span::call_site()), quote! {}.into())
     } else {
         let wallet_name = Ident::new(&args.wallet_name, Span::call_site());
         (
