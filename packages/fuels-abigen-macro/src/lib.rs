@@ -85,10 +85,7 @@ pub fn setup_contract_test(input: TokenStream) -> TokenStream {
     let salt: [u8; 32] = rng.gen();
 
     let contract_instance_name = Ident::new(&args.instance_name, Span::call_site());
-    let builder_struct_name = Ident::new(
-        &[&contract_struct_name, "Builder"].concat(),
-        Span::call_site(),
-    );
+    let contract_struct_name = Ident::new(&contract_struct_name, Span::call_site());
 
     // If the wallet name is None, do not launch a new provider and use the default `shared_wallet` name
     let (wallet_name, wallet_token_stream): (Ident, TokenStream) = if args.wallet_name == "None" {
@@ -105,7 +102,7 @@ pub fn setup_contract_test(input: TokenStream) -> TokenStream {
     };
 
     let contract_deploy_token_stream: TokenStream = quote! {
-        let #contract_instance_name = #builder_struct_name::new(
+        let #contract_instance_name = #contract_struct_name::new(
             Contract::deploy_with_parameters(
                 #bin_path,
                 &#wallet_name,
@@ -119,8 +116,7 @@ pub fn setup_contract_test(input: TokenStream) -> TokenStream {
             .expect("Failed to deploy the contract")
             .to_string(),
             #wallet_name.clone(),
-        )
-        .build();
+        );
     }
     .into();
 
