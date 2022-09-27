@@ -222,16 +222,11 @@ impl Abigen {
     // `T` is a native `high-level language` or Rust type if it matches exactly one of
     // the reserved strings, such as "Address", "ContractId", "Option" or "Result"
     pub fn is_native_type(type_field: &str) -> anyhow::Result<bool> {
-        const CONTRACT_ID_NATIVE_TYPE: &str = "ContractId";
-        const ADDRESS_NATIVE_TYPE: &str = "Address";
-        const OPTION_NATIVE_TYPE: &str = "Option";
-        const RESULT_NATIVE_TYPE: &str = "Result";
-
         let name = extract_custom_type_name_from_abi_type_field(type_field)?;
 
         Ok(
             ["ContractId", "Address", "Option", "Result", "Vec", "RawVec"]
-                .map(|s| ident(s))
+                .map(ident)
                 .into_iter()
                 .any(|e| e == name),
         )

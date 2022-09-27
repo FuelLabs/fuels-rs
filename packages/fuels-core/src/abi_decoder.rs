@@ -2,13 +2,13 @@ use crate::{StringToken, Token};
 use core::convert::TryInto;
 use core::str;
 use fuel_tx::Receipt;
-use fuel_types::bytes::{padded_len, padded_len_usize};
+use fuel_types::bytes::padded_len_usize;
 use fuels_types::{
     constants::WORD_SIZE,
     errors::CodecError,
     param_types::{EnumVariants, ParamType},
 };
-use hex::encode;
+
 use std::cmp::min;
 
 #[derive(Debug, Clone)]
@@ -43,7 +43,7 @@ impl ABIDecoder {
         ret_data: &[u8],
         receipts: &[Receipt],
     ) -> Result<Token, CodecError> {
-        let mut aux_bytes = Self::extract_bytes_from_receipts(receipts);
+        let aux_bytes = Self::extract_bytes_from_receipts(receipts);
         Ok(Self::decode_param(param_type, ret_data, &aux_bytes)?.token)
     }
 
@@ -64,7 +64,6 @@ impl ABIDecoder {
         ret_data: &[u8],
         aux_data: &[u8],
     ) -> Result<DecodeResult, CodecError> {
-        let id = rand::random::<u64>();
         match param_type {
             ParamType::Unit => Self::decode_unit(ret_data),
             ParamType::U8 => Self::decode_u8(ret_data),
@@ -88,7 +87,6 @@ impl ABIDecoder {
         ret_data: &[u8],
         aux_data: &[u8],
     ) -> Result<DecodeResult, CodecError> {
-        let id = rand::random::<u64>();
         let len = peek_u64(ret_data)?;
         let bytes_read: usize = 3 * WORD_SIZE;
 
@@ -123,13 +121,11 @@ impl ABIDecoder {
         ret_data: &[u8],
         aux_data: &[u8],
     ) -> Result<DecodeResult, CodecError> {
-        let id = rand::random::<u64>();
         let (tokens, ret_bytes_read, aux_bytes_read) =
             Self::decode_multiple(param_types, ret_data, aux_data)?;
 
-        let token = Token::Tuple(tokens);
         Ok(DecodeResult {
-            token: token,
+            token: Token::Tuple(tokens),
             ret_bytes_read,
             aux_bytes_read,
         })
@@ -155,7 +151,6 @@ impl ABIDecoder {
         ret_data: &[u8],
         aux_data: &[u8],
     ) -> Result<(Vec<Token>, usize, usize), CodecError> {
-        let id = rand::random::<u64>();
         let mut results = vec![];
 
         let mut ret_bytes_read = 0;
@@ -240,10 +235,8 @@ impl ABIDecoder {
     }
 
     fn decode_u64(ret_data: &[u8]) -> Result<DecodeResult, CodecError> {
-        let id = rand::random::<u64>();
-        let token = Token::U64(peek_u64(ret_data)?);
         Ok(DecodeResult {
-            token: token,
+            token: Token::U64(peek_u64(ret_data)?),
             ret_bytes_read: 8,
             aux_bytes_read: 0,
         })

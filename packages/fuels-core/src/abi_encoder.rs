@@ -2,7 +2,7 @@ use crate::{
     pad_string, pad_u16, pad_u32, pad_u8, EnumSelector, EnumVariants, ParamType, StringToken, Token,
 };
 use fuels_types::{constants::WORD_SIZE, errors::CodecError};
-use itertools::{chain, Either, Itertools};
+use itertools::Itertools;
 pub struct ABIEncoder;
 
 #[derive(Debug, Clone)]
@@ -11,14 +11,14 @@ enum Data {
     Dynamic(Vec<Data>),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct UnresolvedBytes {
     data: Vec<Data>,
 }
 
 impl UnresolvedBytes {
     pub fn new() -> Self {
-        Self { data: vec![] }
+        Default::default()
     }
     pub fn resolve(&self, start_addr: u64) -> Vec<u8> {
         Self::resolve_data(&self.data, start_addr)

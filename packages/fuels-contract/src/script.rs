@@ -393,7 +393,7 @@ impl Script {
 mod test {
     use super::*;
     use fuel_gql_client::client::schema::coin::CoinStatus;
-    use fuels_core::abi_encoder::{ABIEncoder, UnresolvedBytes};
+    use fuels_core::abi_encoder::ABIEncoder;
     use fuels_core::parameters::CallParameters;
     use fuels_core::Token;
     use fuels_types::bech32::Bech32ContractId;
@@ -772,7 +772,7 @@ mod test {
         pub fn new_with_random_id() -> Self {
             ContractCall {
                 contract_id: random_bech32_contract_id(),
-                encoded_args: UnresolvedBytes::new(),
+                encoded_args: Default::default(),
                 encoded_selector: [0; 8],
                 call_parameters: Default::default(),
                 compute_custom_input_offset: false,
