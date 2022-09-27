@@ -262,9 +262,9 @@ impl Script {
             Self::generate_contract_outputs(num_of_contracts),
             Self::generate_asset_change_outputs(wallet_address, asset_ids),
             Self::extract_variable_outputs(calls),
+            Self::extract_message_outputs(calls)
         )
         .collect();
-
         (inputs, outputs)
     }
 
@@ -279,6 +279,14 @@ impl Script {
         calls
             .iter()
             .filter_map(|call| call.variable_outputs.clone())
+            .flatten()
+            .collect()
+    }
+
+    fn extract_message_outputs(calls: &[ContractCall]) -> Vec<Output> {
+        calls
+            .iter()
+            .filter_map(|call| call.message_outputs.clone())
             .flatten()
             .collect()
     }
@@ -430,6 +438,7 @@ mod test {
                 ),
                 compute_custom_input_offset: i == 1,
                 variable_outputs: None,
+                message_outputs: None,
                 external_contracts: vec![],
                 output_param: ParamType::Unit,
             })
@@ -736,6 +745,34 @@ mod test {
     }
 
     #[test]
+    fn message_outputs_appended_to_outputs() {
+        // given
+        let message_outputs =
+            [100, 200].map(|amount| Output::message(random_bech32_addr().into(), amount));
+
+        let calls = message_outputs
+            .iter()
+            .cloned()
+            .map(|message_output| {
+                ContractCall::new_with_random_id().with_message_outputs(vec![message_output])
+            })
+            .collect::<Vec<_>>();
+
+        // when
+        let (_, outputs) = Script::get_transaction_inputs_outputs(
+            &calls,
+            &random_bech32_addr(),
+            Default::default(),
+        );
+
+        // then
+        let actual_message_outputs: HashSet<Output> = outputs[2..].iter().cloned().collect();
+        let expected_outputs: HashSet<Output> = message_outputs.into();
+
+        assert_eq!(expected_outputs, actual_message_outputs);
+    }
+
+    #[test]
     fn will_collate_same_asset_ids() {
         let amounts = [100, 200];
 
@@ -769,6 +806,7 @@ mod test {
                 variable_outputs: None,
                 external_contracts: Default::default(),
                 output_param: ParamType::Unit,
+                message_outputs: None,
             }
         }
     }
@@ -793,6 +831,13 @@ mod test {
         pub fn with_variable_outputs(self, variable_outputs: Vec<Output>) -> ContractCall {
             ContractCall {
                 variable_outputs: Some(variable_outputs),
+                ..self
+            }
+        }
+
+        pub fn with_message_outputs(self, message_outputs: Vec<Output>) -> ContractCall {
+            ContractCall {
+                message_outputs: Some(message_outputs),
                 ..self
             }
         }

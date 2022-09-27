@@ -146,6 +146,7 @@ impl Contract {
             call_parameters,
             compute_custom_input_offset,
             variable_outputs: None,
+            message_outputs: None,
             external_contracts: vec![],
             output_param: D::param_type(),
         };
@@ -361,6 +362,7 @@ pub struct ContractCall {
     pub call_parameters: CallParameters,
     pub compute_custom_input_offset: bool,
     pub variable_outputs: Option<Vec<Output>>,
+    pub message_outputs: Option<Vec<Output>>,
     pub external_contracts: Vec<Bech32ContractId>,
     pub output_param: ParamType,
 }
@@ -450,7 +452,7 @@ where
     /// Note that this is a builder method, i.e. use it as a chain:
     /// `my_contract_instance.my_method(...).add_variable_outputs(num).call()`.
     pub fn append_variable_outputs(mut self, num: u64) -> Self {
-        let new_outputs: Vec<Output> = (0..num)
+        let new_variable_outputs: Vec<Output> = (0..num)
             .map(|_| Output::Variable {
                 amount: 0,
                 to: Address::zeroed(),
@@ -459,10 +461,29 @@ where
             .collect();
 
         match self.contract_call.variable_outputs {
-            Some(ref mut outputs) => outputs.extend(new_outputs),
-            None => self.contract_call.variable_outputs = Some(new_outputs),
+            Some(ref mut outputs) => outputs.extend(new_variable_outputs),
+            None => self.contract_call.variable_outputs = Some(new_variable_outputs),
         }
 
+        self
+    }
+
+    /// Appends `num` `Output::Message`s to the transaction.
+    /// Note that this is a builder method, i.e. use it as a chain:
+    /// `my_contract_instance.my_method(...).add_message_outputs(num).call()`.
+    pub fn append_message_outputs(mut self, num: u64) -> Self {
+        let new_message_outputs = vec![
+            Output::Message {
+                recipient: Address::zeroed(),
+                amount: 0,
+            };
+            num as usize
+        ];
+
+        match self.contract_call.message_outputs {
+            Some(ref mut outputs) => outputs.extend(new_message_outputs),
+            None => self.contract_call.message_outputs = Some(new_message_outputs),
+        }
         self
     }
 
