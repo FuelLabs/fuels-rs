@@ -1,6 +1,6 @@
 # Logs
 
-Whenever you log a value within a contract call, the resulting log entry is added to the receipt and the variable type is recorded in the contracts ABI. The SDK lets you parse those values into Rust types.
+Whenever you log a value within a contract method, the resulting log entry is added to the log receipt and the variable type is recorded in the contract's ABI. The SDK lets you parse those values into Rust types.
 
 Consider the following contract method:
 
