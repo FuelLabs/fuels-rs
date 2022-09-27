@@ -45,13 +45,7 @@ impl MyContract for Contract {
 fn log_vec<T>(vec: Vec<T>) {
     let mut i = 0;
     while i < vec.len() {
-        let el = vec.get(i);
-
-        match el {
-            Option::Some(val) => log(val),
-            _ => assert(false),
-        };
-
+        log(vec.get(i).unwrap());
         i += 1;
     }
 }
