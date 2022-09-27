@@ -1,6 +1,7 @@
 # Vectors
 
 ## Passing in vectors
+
 You can pass a Rust `std::vec::Vec` into your contract method transparently. The following code calls a Sway function which accepts and then returns a `Vec<SomeStruct<u32>>`.
 
 ```rust,ignore
@@ -10,6 +11,7 @@ You can pass a Rust `std::vec::Vec` into your contract method transparently. The
 You can use a vector just like you would use any other type -- i.e. a `[Vec<u32>; 2]` or a `SomeStruct<Vec<Bits256>>` etc.
 
 ## Returning vectors
+
 There is a mandatory extra step to returning vectors -- you need to `log` every element before returning the vector.
 
 You must not mix any unrelated `log`s once you start logging vector elements. 
@@ -18,6 +20,7 @@ These logs must be the last ones you make.
 
 
 ### A simple case:
+
 ```Rust
 contract;
 
@@ -62,6 +65,7 @@ fn log_vec<T>(vec: Vec<T>) {
 ```
 
 ### Respect the order
+
 If you have vectors embedded in some other type, you must take care to log them in order:
 
 ```Rust
@@ -115,6 +119,7 @@ impl MyContract for Contract {
 ```
 
 ### Nested vectors
+
 There is one more step you must take if you're logging a vector nested immediately inside another vector -- i.e. `Vec<Vec<u32>>`
 
 An example:
