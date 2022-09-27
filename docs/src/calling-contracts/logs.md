@@ -14,7 +14,7 @@ You can access the logged values in Rust by calling `_logs_with_type::<T>` from 
 {{#include ../../../packages/fuels/tests/harness.rs:produce_logs}}
 ```
 
-You can also print all the logged values to stdout using `_print_logs()` :
+You can also get a vector of all the logged values as strings using `_print_logs()` :
 
 ```rust, ignore
 {{#include ../../../packages/fuels/tests/harness.rs:print_logs}}
