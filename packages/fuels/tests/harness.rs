@@ -3865,6 +3865,7 @@ async fn test_vector() -> Result<(), Error> {
     }
     {
         // vec of structs
+        // ANCHOR: passing_in_vec
         let arg = vec![SomeStruct { a: 0 }, SomeStruct { a: 1 }];
         let result = contract_instance
             .struct_in_vec(arg.clone())
@@ -3872,6 +3873,7 @@ async fn test_vector() -> Result<(), Error> {
             .await?
             .value;
         assert_eq!(result, arg);
+        // ANCHOR_END: passing_in_vec
     }
     {
         // vec in struct
