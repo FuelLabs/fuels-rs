@@ -3778,10 +3778,10 @@ async fn test_print_logs() -> Result<(), Error> {
         "packages/fuels/tests/test_projects/logged_types"
     );
 
-    // ANCHOR: produce_logs
+    // ANCHOR: print_logs
     let response = contract_instance.produce_multiple_logs().call().await?;
     contract_instance._print_logs(&response.receipts);
-    // ANCHOR_END: produce_logs
+    // ANCHOR_END: print_logs
 
     Ok(())
 }
