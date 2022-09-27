@@ -46,12 +46,8 @@ impl MyContract for Contract {
         let mut i = 0;
         while i < expected.len() {
             match expected.get(i) {
-                Option::Some(val) => {
-                    log_vec(val);
-                },
-                _ => {
-                    assert(false);
-                }
+                Option::Some(val) => log_vec(val),
+                _ => assert(false),
             }
             i += 1;
         }

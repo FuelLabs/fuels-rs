@@ -10,13 +10,9 @@ use std::option::Option;
 impl Eq for Option<u32> {
     fn eq(self, other: Self) -> bool {
         match self {
-            Option::Some(val) => {
-                match other {
-                    Option::Some(other_val) => {
-                        val == other_val
-                    },
-                    _ => false,
-                }
+            Option::Some(val) => match other {
+                Option::Some(other_val) => val == other_val,
+                _ => false,
             },
             Option::None => {
                 match other {
@@ -37,13 +33,9 @@ impl Eq for (u32, u32) {
 impl Eq for Option<(u32, u32)> {
     fn eq(self, other: Self) -> bool {
         match self {
-            Option::Some(val) => {
-                match other {
-                    Option::Some(other_val) => {
-                        val == other_val
-                    },
-                    _ => false,
-                }
+            Option::Some(val) => match other {
+                Option::Some(other_val) => val == other_val,
+                _ => false,
             },
             Option::None => {
                 match other {
@@ -72,13 +64,9 @@ impl Eq for SomeEnum<u32> {
 impl Eq for Option<SomeEnum<u32>> {
     fn eq(self, other: Self) -> bool {
         match self {
-            Option::Some(val) => {
-                match other {
-                    Option::Some(other_val) => {
-                        val == other_val
-                    },
-                    _ => false,
-                }
+            Option::Some(val) => match other {
+                Option::Some(other_val) => val == other_val,
+                _ => false,
             },
             Option::None => {
                 match other {
@@ -115,13 +103,9 @@ impl Eq for (Vec<u32>, Vec<u32>) {
 impl Eq for Option<Vec<u32>> {
     fn eq(self, other: Self) -> bool {
         match self {
-            Option::Some(val) => {
-                match other {
-                    Option::Some(other_val) => {
-                        val == other_val
-                    },
-                    _ => false,
-                }
+            Option::Some(val) => match other {
+                Option::Some(other_val) => val == other_val,
+                _ => false,
             },
             Option::None => {
                 match other {
@@ -158,13 +142,9 @@ impl Eq for SomeStruct<u32> {
 impl Eq for Option<SomeStruct<u32>> {
     fn eq(self, other: Self) -> bool {
         match self {
-            Option::Some(val) => {
-                match other {
-                    Option::Some(other_val) => {
-                        val == other_val
-                    },
-                    _ => false,
-                }
+            Option::Some(val) => match other {
+                Option::Some(other_val) => val == other_val,
+                _ => false,
             },
             Option::None => {
                 match other {
@@ -221,13 +201,9 @@ impl Eq for [u64; 2] {
 impl Eq for Option<[u64; 2]> {
     fn eq(self, other: Self) -> bool {
         match self {
-            Option::Some(val) => {
-                match other {
-                    Option::Some(other_val) => {
-                        val == other_val
-                    },
-                    _ => false,
-                }
+            Option::Some(val) => match other {
+                Option::Some(other_val) => val == other_val,
+                _ => false,
             },
             Option::None => {
                 match other {
@@ -312,13 +288,9 @@ impl Eq for SomeStruct<Vec<Vec<u32>>> {
 impl Eq for Option<SomeStruct<Vec<Vec<u32>>>> {
     fn eq(self, other: Self) -> bool {
         match self {
-            Option::Some(val) => {
-                match other {
-                    Option::Some(other_val) => {
-                        val == other_val
-                    },
-                    _ => false,
-                }
+            Option::Some(val) => match other {
+                Option::Some(other_val) => val == other_val,
+                _ => false,
             },
             Option::None => {
                 match other {

@@ -48,12 +48,8 @@ fn log_vec<T>(vec: Vec<T>) {
         let el = vec.get(i);
 
         match el {
-            Option::Some(val) => {
-                log(val)
-            },
-            _ => {
-                assert(false);
-            }
+            Option::Some(val) => log(val),
+            _ => assert(false),
         };
 
         i += 1;
