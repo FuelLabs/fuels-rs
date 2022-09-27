@@ -390,7 +390,6 @@ impl MyContract for Contract {
         expected.push(expected_vec());
 
         assert(expected == arg);
-        log_vec(expected);
         let mut i = 0;
         while i < expected.len() {
             match expected.get(i) {
@@ -403,6 +402,7 @@ impl MyContract for Contract {
             }
             i += 1;
         }
+        log_vec(expected);
 
         expected
     }

@@ -2,12 +2,13 @@ use crate::{StringToken, Token};
 use core::convert::TryInto;
 use core::str;
 use fuel_tx::Receipt;
-use fuel_types::bytes::padded_len;
+use fuel_types::bytes::{padded_len, padded_len_usize};
 use fuels_types::{
     constants::WORD_SIZE,
     errors::CodecError,
     param_types::{EnumVariants, ParamType},
 };
+use hex::encode;
 use std::cmp::min;
 
 #[derive(Debug, Clone)]
@@ -42,10 +43,7 @@ impl ABIDecoder {
         ret_data: &[u8],
         receipts: &[Receipt],
     ) -> Result<Token, CodecError> {
-        let aux_bytes = Self::extract_bytes_from_receipts(receipts);
-        eprintln!(
-            "decode_single({param_type}, {ret_data:?}, {receipts:?})\nreceipts={aux_bytes:?}"
-        );
+        let mut aux_bytes = Self::extract_bytes_from_receipts(receipts);
         Ok(Self::decode_param(param_type, ret_data, &aux_bytes)?.token)
     }
 
@@ -66,6 +64,7 @@ impl ABIDecoder {
         ret_data: &[u8],
         aux_data: &[u8],
     ) -> Result<DecodeResult, CodecError> {
+        let id = rand::random::<u64>();
         match param_type {
             ParamType::Unit => Self::decode_unit(ret_data),
             ParamType::U8 => Self::decode_u8(ret_data),
@@ -89,17 +88,20 @@ impl ABIDecoder {
         ret_data: &[u8],
         aux_data: &[u8],
     ) -> Result<DecodeResult, CodecError> {
-        let len = peek_u64(&ret_data[2 * WORD_SIZE..])?;
+        let id = rand::random::<u64>();
+        let len = peek_u64(ret_data)?;
         let bytes_read: usize = 3 * WORD_SIZE;
 
         let vec_contents_len = min(
             param_type.compute_encoding_width() * WORD_SIZE * len as usize,
             aux_data.len(),
         );
+        let contents_to_be_read = &aux_data;
+        let additional_aux_data = &aux_data[..aux_data.len() - vec_contents_len];
         let (elements, ret_bytes_read, aux_bytes_read) = Self::decode_multiple(
             &vec![param_type.clone(); len as usize],
-            aux_data,
-            &aux_data[vec_contents_len..],
+            contents_to_be_read,
+            additional_aux_data,
         )
         .map_err(|e| {
             CodecError::InvalidData(format!(
@@ -121,11 +123,13 @@ impl ABIDecoder {
         ret_data: &[u8],
         aux_data: &[u8],
     ) -> Result<DecodeResult, CodecError> {
+        let id = rand::random::<u64>();
         let (tokens, ret_bytes_read, aux_bytes_read) =
             Self::decode_multiple(param_types, ret_data, aux_data)?;
 
+        let token = Token::Tuple(tokens);
         Ok(DecodeResult {
-            token: Token::Tuple(tokens),
+            token: token,
             ret_bytes_read,
             aux_bytes_read,
         })
@@ -151,21 +155,24 @@ impl ABIDecoder {
         ret_data: &[u8],
         aux_data: &[u8],
     ) -> Result<(Vec<Token>, usize, usize), CodecError> {
+        let id = rand::random::<u64>();
         let mut results = vec![];
 
         let mut ret_bytes_read = 0;
         let mut aux_bytes_read = 0;
 
-        for param_type in param_types {
+        for param_type in param_types.iter().rev() {
             let res = Self::decode_param(
                 param_type,
-                &ret_data[ret_bytes_read..],
-                &aux_data[aux_bytes_read..],
+                &ret_data[..ret_data.len() - ret_bytes_read],
+                &aux_data[..aux_data.len() - aux_bytes_read],
             )?;
             ret_bytes_read += res.ret_bytes_read;
             aux_bytes_read += res.aux_bytes_read;
             results.push(res.token);
         }
+
+        results.reverse();
 
         Ok((results, ret_bytes_read, aux_bytes_read))
     }
@@ -187,13 +194,16 @@ impl ABIDecoder {
     }
 
     fn decode_string(ret_data: &[u8], length: usize) -> Result<DecodeResult, CodecError> {
-        let encoded_str = peek(ret_data, length)?;
+        let str_expected_byte_size = padded_len_usize(length);
+        let padding_size = str_expected_byte_size - length;
 
-        let decoded = str::from_utf8(encoded_str)?;
+        let encoded_str = peek(ret_data, str_expected_byte_size)?;
+
+        let decoded = str::from_utf8(&encoded_str[..encoded_str.len() - padding_size])?;
 
         let result = DecodeResult {
             token: Token::String(StringToken::new(decoded.into(), length)),
-            ret_bytes_read: padded_len(encoded_str),
+            ret_bytes_read: encoded_str.len(),
             aux_bytes_read: 0,
         };
 
@@ -230,8 +240,10 @@ impl ABIDecoder {
     }
 
     fn decode_u64(ret_data: &[u8]) -> Result<DecodeResult, CodecError> {
+        let id = rand::random::<u64>();
+        let token = Token::U64(peek_u64(ret_data)?);
         Ok(DecodeResult {
-            token: Token::U64(peek_u64(ret_data)?),
+            token: token,
             ret_bytes_read: 8,
             aux_bytes_read: 0,
         })
@@ -284,12 +296,13 @@ impl ABIDecoder {
         variants: &EnumVariants,
         aux_data: &[u8],
     ) -> Result<DecodeResult, CodecError> {
-        let discriminant = peek_u32(ret_data)?;
+        let enum_width = variants.compute_encoding_width_of_enum();
+
+        let discriminant =
+            peek_u32(&ret_data[..ret_data.len() - enum_width * WORD_SIZE + WORD_SIZE])?;
         let selected_variant = Self::type_of_selected_variant(variants, discriminant as usize)?;
 
-        let enum_width = variants.compute_encoding_width_of_enum();
-        let result =
-            Self::decode_token_in_enum(ret_data, aux_data, variants, selected_variant, enum_width)?;
+        let result = Self::decode_token_in_enum(ret_data, aux_data, variants, selected_variant)?;
 
         let selector = Box::new((discriminant as u8, result.token, variants.clone()));
         Ok(DecodeResult {
@@ -304,7 +317,6 @@ impl ABIDecoder {
         aux_data: &[u8],
         variants: &EnumVariants,
         selected_variant: &ParamType,
-        enum_width: usize,
     ) -> Result<DecodeResult, CodecError> {
         // The sway compiler has an optimization where enums that only contain
         // units for variants have only their discriminant encoded. Because of
@@ -317,13 +329,7 @@ impl ABIDecoder {
                 aux_bytes_read: 0,
             })
         } else {
-            let words_to_skip = enum_width - selected_variant.compute_encoding_width();
-
-            Self::decode_param(
-                selected_variant,
-                &ret_data[words_to_skip * WORD_SIZE..],
-                aux_data,
-            )
+            Self::decode_param(selected_variant, ret_data, aux_data)
         }
     }
 
@@ -394,16 +400,19 @@ fn peek(data: &[u8], len: usize) -> Result<&[u8], CodecError> {
             data.len()
         )))
     } else {
-        Ok(&data[..len])
+        Ok(&data[data.len() - len..])
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::abi_encoder::ABIEncoder;
     use crate::Tokenizable;
     use fuel_types::Word;
     use fuels_types::{errors::Error, param_types::EnumVariants};
+    use rand;
+    use rand::Rng;
     use std::vec;
 
     #[test]
@@ -479,6 +488,14 @@ mod tests {
             0x20, 0x73, 0x65, 0x6e, 0x74, 0x65, 0x6e, 0x63, 0x65, 0x00, 0x48, 0x65, 0x6c, 0x6c,
             0x6f, 0x0, 0x0, 0x0,
         ];
+
+        let correct_bytes = ABIEncoder::encode(&[
+            Token::String(StringToken::new("This is a full sentence".into(), 23)),
+            Token::String(StringToken::new("Hello".into(), 5)),
+        ])?
+        .resolve(0);
+
+        assert_eq!(correct_bytes, data.to_vec());
 
         let decoded = ABIDecoder::decode(&types, &data, &[])?;
 
@@ -792,6 +809,7 @@ mod tests {
         let ret_data = [ptr, cap, len].into_iter().flatten().collect::<Vec<_>>();
 
         let receipts = vec![
+            given_random_unrelated_log(),
             given_logged_value(1),
             given_logged_value(2),
             given_logged_value(3),
@@ -828,6 +846,7 @@ mod tests {
             .collect::<Vec<_>>();
 
         let receipts = vec![
+            given_random_unrelated_log(),
             given_logged_value(1),
             given_logged_value(2),
             given_logged_value(3),
@@ -890,7 +909,7 @@ mod tests {
             .collect::<Vec<_>>();
 
         let receipts =
-            [inner_vec_1, inner_vec_2, inner_vec_1_data, inner_vec_2_data].map(given_logged_data);
+            [inner_vec_1_data, inner_vec_2_data, inner_vec_1, inner_vec_2].map(given_logged_data);
 
         let ret_data = [parent_vec, 123u64.to_be_bytes().to_vec()]
             .into_iter()
@@ -906,6 +925,21 @@ mod tests {
         assert_eq!(detokenized, (vec![vec![0, 1], vec![2, 3]], 123));
 
         Ok(())
+    }
+
+    fn given_random_unrelated_log() -> Receipt {
+        let data = rand::thread_rng().gen::<[u8; 32]>().to_vec();
+        Receipt::LogData {
+            id: Default::default(),
+            ra: 0,
+            rb: 0,
+            ptr: 0,
+            len: 0,
+            digest: Default::default(),
+            data,
+            pc: 0,
+            is: 0,
+        }
     }
 
     fn given_logged_value(val: Word) -> Receipt {
