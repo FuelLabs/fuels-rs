@@ -3780,8 +3780,33 @@ async fn test_print_logs() -> Result<(), Error> {
 
     // ANCHOR: print_logs
     let response = contract_instance.produce_multiple_logs().call().await?;
-    contract_instance._print_logs(&response.receipts);
+    let logs = contract_instance._print_logs(&response.receipts);
     // ANCHOR_END: print_logs
+
+    let expected_bits256 = Bits256([
+        239, 134, 175, 169, 105, 108, 240, 220, 99, 133, 226, 196, 7, 166, 225, 89, 161, 16, 60,
+        239, 183, 226, 174, 6, 54, 251, 51, 211, 203, 42, 158, 74,
+    ]);
+    let expected_struct = TestStruct {
+        field_1: true,
+        field_2: expected_bits256,
+        field_3: 64,
+    };
+    let expected_enum = TestEnum::VariantTwo();
+    let expected_logs: Vec<String> = vec![
+        format!("{:#?}", 64u64),
+        format!("{:#?}", 32u32),
+        format!("{:#?}", 16u16),
+        format!("{:#?}", 8u8),
+        format!("{:#?}", 64u64),
+        format!("{:#?}", expected_bits256),
+        format!("{:#?}", SizedAsciiString::<4>::new("Fuel".to_string())?),
+        format!("{:#?}", [1, 2, 3]),
+        format!("{:#?}", expected_struct),
+        format!("{:#?}", expected_enum),
+    ];
+
+    assert_eq!(logs, expected_logs);
 
     Ok(())
 }
