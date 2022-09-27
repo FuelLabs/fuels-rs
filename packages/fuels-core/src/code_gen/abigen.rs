@@ -80,8 +80,10 @@ impl Abigen {
         let contract_functions = self.functions()?;
         let abi_structs = self.abi_structs()?;
         let abi_enums = self.abi_enums()?;
+
         let resolved_logs = self.resolve_logs();
-        let print_logs_foo = self.generate_print_logs();
+        let log_id_param_type_pairs = generate_log_id_param_type_pairs(&resolved_logs);
+        let print_logs = generate_print_logs(&resolved_logs);
 
         let (includes, code) = if self.no_std {
             (
@@ -100,7 +102,7 @@ impl Abigen {
                 quote! {
                     use fuels::contract::contract::{Contract, ContractCallHandler};
                     use fuels::core::{EnumSelector, StringToken, Parameterize, Tokenizable, Token, try_from_bytes};
-                    use fuels::core::code_gen::{extract_and_parse_logs, create_log_data_param_type_pairs};
+                    use fuels::core::code_gen::{extract_and_parse_logs, extract_log_ids_and_data};
                     use fuels::core::abi_decoder::ABIDecoder;
                     use fuels::core::code_gen::function_selector::resolve_fn_selector;
                     use fuels::core::types::*;
@@ -111,13 +113,13 @@ impl Abigen {
                     use fuels::types::errors::Error as SDKError;
                     use fuels::types::param_types::{EnumVariants, ParamType};
                     use std::str::FromStr;
-                    use std::collections::HashSet;
+                    use std::collections::{HashSet, HashMap};
                 },
                 quote! {
                     pub struct #name {
                         contract_id: Bech32ContractId,
                         wallet: WalletUnlocked,
-                        logs_lookup: Vec<ResolvedLog>,
+                        logs_lookup: Vec<(u64, ParamType)>,
                     }
 
                     impl #name {
@@ -142,7 +144,7 @@ impl Abigen {
                             extract_and_parse_logs(&self.logs_lookup, receipts)
                         }
 
-                        #print_logs_foo
+                        #print_logs
                     }
 
                     pub struct #builder_name {
@@ -171,7 +173,7 @@ impl Abigen {
                             #name {
                                 contract_id: self.contract_id,
                                 wallet: self.wallet,
-                                logs_lookup: vec![#(#resolved_logs),*],
+                                logs_lookup: vec![#(#log_id_param_type_pairs),*],
                             }
                         }
                     }
@@ -285,7 +287,9 @@ impl Abigen {
         abi.types.iter().map(|t| (t.type_id, t.clone())).collect()
     }
 
-    pub fn resolve_logs(&self) -> Vec<TokenStream> {
+    /// Reads the parsed logged types from the ABI and creates
+    /// ResolvedLogs
+    fn resolve_logs(&self) -> Vec<ResolvedLog> {
         self.abi
             .logged_types
             .as_ref()
@@ -295,72 +299,88 @@ impl Abigen {
                 let resolved_type =
                     resolve_type(&l.application, &self.types).expect("Failed to resolve log type");
                 let param_type_call = single_param_type_call(&resolved_type);
-                let id = l.log_id;
+                let resolved_type_name = TokenStream::from(resolved_type);
 
-                quote! { ResolvedLog {
-                        log_id: #id,
-                        param_type: #param_type_call,
-                    }
-                }
-            })
-            .collect()
-    }
-
-    pub fn generate_print_logs(&self) -> TokenStream {
-        let match_arms = self.generate_print_logs_if_branches();
-
-        let str = quote! {
-            pub fn _print_logs(&self, receipts: &[Receipt]) -> () {
-                let data_param_type_pairs = create_log_data_param_type_pairs(&self.logs_lookup, receipts);
-
-                data_param_type_pairs
-                .iter()
-                .for_each(|(param_type, data)|{
-                    if false {}
-                        #(#match_arms)*
-                        else { panic!() }
-                    }
-                );
-            }
-        };
-
-        //dbg!(&str.to_string());
-        str
-    }
-
-    pub fn generate_print_logs_if_branches(&self) -> Vec<TokenStream> {
-        self.abi
-            .logged_types
-            .as_ref()
-            .into_iter()
-            .flatten()
-            .map(|l| {
-                let resolved_type =
-                    resolve_type(&l.application, &self.types).expect("Failed to resolve log type");
-                let param_type_call = single_param_type_call(&resolved_type);
-                let type_name = TokenStream::from(resolved_type);
-
-                quote! {
-                   else if *param_type == #param_type_call {
-                       dbg!(try_from_bytes::<#type_name>(&data).unwrap());
-                   }
+                ResolvedLog {
+                    log_id: l.log_id,
+                    param_type_call,
+                    resolved_type_name,
                 }
             })
             .collect()
     }
 }
 
+pub fn generate_print_logs(resolved_logs: &[ResolvedLog]) -> TokenStream {
+    let branches = generate_param_type_if_branches(resolved_logs);
+
+    quote! {
+        pub fn _print_logs(&self, receipts: &[Receipt]) -> () {
+            let id_to_param_type: HashMap<_, _> = self.logs_lookup
+                .iter()
+                .map(|(id, param_type)| (id, param_type))
+                .collect();
+            let ids_with_data = extract_log_ids_and_data(receipts);
+
+            ids_with_data
+            .iter()
+            .for_each(|(id, data)|{
+                let param_type = id_to_param_type.get(id).expect("Failed to find log id.");
+
+                if false {
+                    //this serves as a placeholder so that the proc
+                    //macro can generate the branches as "else if..."
+                }
+                #(#branches)*
+            });
+        }
+    }
+}
+
+fn generate_param_type_if_branches(resolved_logs: &[ResolvedLog]) -> Vec<TokenStream> {
+    resolved_logs
+        .iter()
+        .map(|r| {
+            let type_name = &r.resolved_type_name;
+            let param_type_call = &r.param_type_call;
+
+            quote! {
+                else if **param_type == #param_type_call {
+                    println!(
+                        "{:#?}",
+                        try_from_bytes::<#type_name>(&data).expect("Failed to construct type from log data.")
+                    );
+                }
+            }
+        })
+        .collect()
+}
+
+fn generate_log_id_param_type_pairs(resolved_logs: &[ResolvedLog]) -> Vec<TokenStream> {
+    resolved_logs
+        .iter()
+        .map(|r| {
+            let id = r.log_id;
+            let param_type_call = &r.param_type_call;
+
+            quote! {
+                (#id, #param_type_call)
+            }
+        })
+        .collect()
+}
+
 pub fn extract_and_parse_logs<T: Tokenizable + Parameterize>(
-    logs_lookup: &[ResolvedLog],
+    logs_lookup: &[(u64, ParamType)],
     receipts: &[Receipt],
 ) -> Result<Vec<T>, Error> {
-    let param_type = T::param_type();
+    let target_param_type = T::param_type();
 
     let target_ids: HashSet<u64> = logs_lookup
         .iter()
-        .filter_map(|l| {
-            if l.param_type == param_type {
-                Some(l.log_id)
+        .filter_map(|(log_id, param_type)| {
+            if *param_type == target_param_type {
+                Some(*log_id)
             } else {
                 None
             }
@@ -382,25 +402,12 @@ pub fn extract_and_parse_logs<T: Tokenizable + Parameterize>(
     Ok(decoded_logs)
 }
 
-pub fn create_log_data_param_type_pairs(
-    logs_lookup: &[ResolvedLog],
-    receipts: &[Receipt],
-) -> Vec<(ParamType, Vec<u8>)> {
-    let id_to_param_type: HashMap<u64, ParamType> = logs_lookup
-        .iter()
-        .map(|l| (l.log_id, l.param_type.clone()))
-        .collect();
-
+pub fn extract_log_ids_and_data(receipts: &[Receipt]) -> Vec<(u64, Vec<u8>)> {
     receipts
         .iter()
         .filter_map(|r| match r {
-            Receipt::LogData { rb, data, .. } => {
-                Some((id_to_param_type.get(rb).unwrap().clone(), data.clone()))
-            }
-            Receipt::Log { ra, rb, .. } => Some((
-                id_to_param_type.get(rb).unwrap().clone(),
-                ra.to_be_bytes().to_vec(),
-            )),
+            Receipt::LogData { rb, data, .. } => Some((*rb, data.clone())),
+            Receipt::Log { ra, rb, .. } => Some((*rb, ra.to_be_bytes().to_vec())),
             _ => None,
         })
         .collect()

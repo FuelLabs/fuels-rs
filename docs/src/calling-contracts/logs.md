@@ -14,4 +14,12 @@ You can access the logged values in Rust by calling `_logs_with_type::<T>` from 
 {{#include ../../../packages/fuels/tests/harness.rs:produce_logs}}
 ```
 
+You can also print all the logged values to stdout using `_print_logs()` :
+
+```rust, ignore
+{{#include ../../../packages/fuels/tests/harness.rs:print_logs}}
+```
+
+Due to possible performance hits, it is not recommended to use `_print_logs()` outside of a debugging scenario.
+
 > **Note:** to be able to bind logged values in the SDK, you need to build your contract by supplying a feature flag: `forc build --generate-logged-types`.

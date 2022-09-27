@@ -3,7 +3,7 @@
 //! We declare these in a dedicated, minimal crate in order to allow for downstream projects to
 //! consume or generate these ABI-compatible types without needing to pull in the rest of the SDK.
 
-use param_types::ParamType;
+use proc_macro2::TokenStream;
 use serde::{Deserialize, Serialize};
 use strum_macros::ToString;
 
@@ -69,10 +69,11 @@ pub struct LoggedType {
     pub application: TypeApplication,
 }
 
-#[derive(Default, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub struct ResolvedLog {
     pub log_id: u64,
-    pub param_type: ParamType,
+    pub param_type_call: TokenStream,
+    pub resolved_type_name: TokenStream,
 }
 
 impl TypeDeclaration {

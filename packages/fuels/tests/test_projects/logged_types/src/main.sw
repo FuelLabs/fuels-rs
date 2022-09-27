@@ -20,7 +20,7 @@ abi TestContract {
     fn produce_logs_values() -> ();
     fn produce_logs_variables() -> ();
     fn produce_logs_custom_types() -> ();
-    fn produce_all_logs() -> ();
+    fn produce_multiple_logs() -> ();
 }
 
 impl TestContract for Contract {
@@ -60,7 +60,7 @@ impl TestContract for Contract {
         __log(test_enum);
     }
 
-    fn produce_all_logs() -> () {
+    fn produce_multiple_logs() -> () {
         let f: u64 = 64;
         let u: b256 = 0xef86afa9696cf0dc6385e2c407a6e159a1103cefb7e2ae0636fb33d3cb2a9e4a;
         let e: str[4] = "Fuel";
