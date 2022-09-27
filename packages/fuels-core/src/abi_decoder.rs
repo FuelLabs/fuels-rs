@@ -85,7 +85,11 @@ impl ABIDecoder {
         bytes: &[u8],
         log_bytes: &[u8],
     ) -> Result<DecodeResult, CodecError> {
-        let vec_len = peek_last_u64(bytes)?;
+        // even though from ptr, cap & len we only need the len part, we're
+        // still reading all three words to make sure they're there.
+        const METADATA_SIZE: usize = 3 * WORD_SIZE;
+        let vec_metadata = peek_last_fixed::<METADATA_SIZE>(bytes)?;
+        let vec_len = peek_last_u64(vec_metadata)?;
 
         let vec_contents_len = param_type.compute_encoding_width() * WORD_SIZE * vec_len as usize;
         let (elements, _, log_bytes_read) = Self::decode_multiple(
@@ -101,7 +105,7 @@ impl ABIDecoder {
 
         Ok(DecodeResult {
             token: Token::Vector(elements),
-            bytes_read: 3 * WORD_SIZE,
+            bytes_read: METADATA_SIZE,
             log_bytes_read: vec_contents_len + log_bytes_read,
         })
     }
@@ -279,7 +283,7 @@ impl ABIDecoder {
     ) -> Result<DecodeResult, CodecError> {
         let enum_width = variants.compute_encoding_width_of_enum();
 
-        let discriminant = peek_last_u32(shorten_slice(bytes, WORD_SIZE * (enum_width - 1))?)?;
+        let discriminant = Self::decode_discriminant(bytes, enum_width)?;
         let selected_variant = Self::type_of_selected_variant(variants, discriminant as usize)?;
 
         let result = Self::decode_token_in_enum(bytes, log_bytes, variants, selected_variant)?;
@@ -290,6 +294,11 @@ impl ABIDecoder {
             bytes_read: enum_width * WORD_SIZE,
             log_bytes_read: result.log_bytes_read,
         })
+    }
+
+    fn decode_discriminant(bytes: &[u8], enum_width: usize) -> Result<u32, CodecError> {
+        let bytes_before_enum_contents = shorten_slice(bytes, WORD_SIZE * (enum_width - 1))?;
+        peek_last_u32(bytes_before_enum_contents)
     }
 
     fn decode_token_in_enum(
