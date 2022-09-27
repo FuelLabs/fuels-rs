@@ -8,6 +8,7 @@ use fuel_gql_client::fuel_vm::{consts::REG_ONE, prelude::Opcode};
 use itertools::{chain, Itertools};
 
 use fuel_gql_client::client::schema::coin::Coin;
+use fuel_tx::{Metadata, Witness};
 use fuels_core::parameters::TxParameters;
 use fuels_signers::provider::Provider;
 use fuels_signers::{Signer, WalletUnlocked};
@@ -261,9 +262,9 @@ impl Script {
             Self::generate_contract_outputs(num_of_contracts),
             Self::generate_asset_change_outputs(wallet_address, asset_ids),
             Self::extract_variable_outputs(calls),
+            Self::extract_message_outputs(calls)
         )
         .collect();
-
         (inputs, outputs)
     }
 
@@ -278,6 +279,14 @@ impl Script {
         calls
             .iter()
             .filter_map(|call| call.variable_outputs.clone())
+            .flatten()
+            .collect()
+    }
+
+    fn extract_message_outputs(calls: &[ContractCall]) -> Vec<Output> {
+        calls
+            .iter()
+            .filter_map(|call| call.message_outputs.clone())
             .flatten()
             .collect()
     }
@@ -429,6 +438,7 @@ mod test {
                 ),
                 compute_custom_input_offset: i == 1,
                 variable_outputs: None,
+                message_outputs: None,
                 external_contracts: vec![],
                 output_param: ParamType::Unit,
             })
@@ -735,6 +745,34 @@ mod test {
     }
 
     #[test]
+    fn message_outputs_appended_to_outputs() {
+        // given
+        let message_outputs =
+            [100, 200].map(|amount| Output::message(random_bech32_addr().into(), amount));
+
+        let calls = message_outputs
+            .iter()
+            .cloned()
+            .map(|message_output| {
+                ContractCall::new_with_random_id().with_message_outputs(vec![message_output])
+            })
+            .collect::<Vec<_>>();
+
+        // when
+        let (_, outputs) = Script::get_transaction_inputs_outputs(
+            &calls,
+            &random_bech32_addr(),
+            Default::default(),
+        );
+
+        // then
+        let actual_message_outputs: HashSet<Output> = outputs[2..].iter().cloned().collect();
+        let expected_outputs: HashSet<Output> = message_outputs.into();
+
+        assert_eq!(expected_outputs, actual_message_outputs);
+    }
+
+    #[test]
     fn will_collate_same_asset_ids() {
         let amounts = [100, 200];
 
@@ -768,6 +806,7 @@ mod test {
                 variable_outputs: None,
                 external_contracts: Default::default(),
                 output_param: ParamType::Unit,
+                message_outputs: None,
             }
         }
     }
@@ -796,6 +835,13 @@ mod test {
             }
         }
 
+        pub fn with_message_outputs(self, message_outputs: Vec<Output>) -> ContractCall {
+            ContractCall {
+                message_outputs: Some(message_outputs),
+                ..self
+            }
+        }
+
         pub fn with_call_parameters(self, call_parameters: CallParameters) -> ContractCall {
             ContractCall {
                 call_parameters,
@@ -810,5 +856,112 @@ mod test {
 
     fn random_bech32_contract_id() -> Bech32ContractId {
         Bech32ContractId::new("fuel", rand::thread_rng().gen::<[u8; 32]>())
+    }
+}
+
+#[derive(Default)]
+pub struct ScriptBuilder {
+    gas_price: Word,
+    gas_limit: Word,
+    maturity: Word,
+    receipts_root: Bytes32,
+    script: Vec<u8>,
+    script_data: Vec<u8>,
+    inputs: Vec<Input>,
+    outputs: Vec<Output>,
+    witnesses: Vec<Witness>,
+    metadata: Option<Metadata>,
+    asset_id: AssetId,
+    amount: u64,
+}
+
+impl ScriptBuilder {
+    pub fn new() -> ScriptBuilder {
+        ScriptBuilder {
+            gas_price: 0,
+            gas_limit: 0,
+            maturity: 0,
+            receipts_root: Default::default(),
+            script: vec![],
+            script_data: vec![],
+            inputs: vec![],
+            outputs: vec![],
+            witnesses: vec![],
+            metadata: None,
+            asset_id: AssetId::default(),
+            amount: 0,
+        }
+    }
+
+    pub fn set_script_data(mut self, script_data: Vec<u8>) -> ScriptBuilder {
+        self.script_data = script_data;
+        self
+    }
+
+    pub fn set_script(mut self, script: Vec<Opcode>) -> ScriptBuilder {
+        let script: Vec<u8> = script.into_iter().collect();
+        self.script = script;
+        self
+    }
+
+    pub fn set_inputs(mut self, inputs: Vec<Input>) -> ScriptBuilder {
+        self.inputs = inputs;
+        self
+    }
+
+    pub fn set_outputs(mut self, outputs: Vec<Output>) -> ScriptBuilder {
+        self.outputs = outputs;
+        self
+    }
+
+    pub fn set_gas_price(mut self, gas_price: Word) -> ScriptBuilder {
+        self.gas_price = gas_price;
+        self
+    }
+
+    pub fn set_gas_limit(mut self, gas_limit: Word) -> ScriptBuilder {
+        self.gas_limit = gas_limit;
+        self
+    }
+
+    pub fn set_maturity(mut self, maturity: Word) -> ScriptBuilder {
+        self.maturity = maturity;
+        self
+    }
+
+    pub fn set_asset_id(mut self, asset_id: AssetId) -> ScriptBuilder {
+        self.asset_id = asset_id;
+        self
+    }
+
+    pub fn set_amount(mut self, amount: u64) -> ScriptBuilder {
+        self.amount = amount;
+        self
+    }
+
+    pub async fn build(self, wallet: &WalletUnlocked) -> Result<Script, Error> {
+        let mut tx = Transaction::Script {
+            gas_price: self.gas_price,
+            gas_limit: self.gas_limit,
+            maturity: self.maturity,
+            receipts_root: self.receipts_root,
+            script: self.script,
+            script_data: self.script_data,
+            inputs: self.inputs,
+            outputs: self.outputs,
+            witnesses: self.witnesses,
+            metadata: self.metadata,
+        };
+
+        let base_amount = if self.asset_id == AssetId::default() {
+            self.amount
+        } else {
+            0
+        };
+
+        wallet.add_fee_coins(&mut tx, base_amount, 0).await?;
+        wallet.sign_transaction(&mut tx).await?;
+
+        Ok(Script::new(tx))
     }
 }

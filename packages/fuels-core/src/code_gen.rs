@@ -1,5 +1,5 @@
 //! This module implements everything related to code generation/expansion
-//! from a fuel/sway ABI.
+//! from a FuelVM ABI.
 pub mod abigen;
 pub mod bindings;
 pub mod custom_types;

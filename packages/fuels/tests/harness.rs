@@ -1,6 +1,6 @@
 use fuel_core::service::Config as CoreConfig;
 use fuel_core::service::FuelService;
-use fuel_gql_client::fuel_tx::{AssetId, ContractId, Receipt};
+use fuel_gql_client::fuel_tx::{AssetId, ContractId, Input, Output, Receipt, TxPointer, UtxoId};
 use fuels::contract::contract::MultiContractCallHandler;
 use fuels::contract::predicate::Predicate;
 use fuels::prelude::SizedAsciiString;
@@ -25,8 +25,12 @@ use std::str::FromStr;
 
 use fuel_core_interfaces::model::Message;
 use fuel_gql_client::client::schema::message::Message as OtherMessage;
+use fuel_gql_client::fuel_vm::consts::{REG_ONE, WORD_SIZE};
+use fuel_gql_client::fuel_vm::prelude::{GTFArgs, Opcode};
+use fuels_contract::script::ScriptBuilder;
+use fuels_signers::Signer;
 
-/// Note: all the tests and examples below require pre-compiled Sway projects.
+/// Note: all the tests and examples below require pre-compiled test projects.
 /// To compile these projects, run `cargo run --bin build-test-projects`.
 /// It will build all test projects, creating their respective binaries,
 /// ABI files, and lock files. These are not to be committed to the repository.
@@ -1012,7 +1016,7 @@ async fn call_with_structs() -> Result<(), Error> {
     );
 
     // Here we can use `CounterConfig`, a struct originally
-    // defined in the Sway contract.
+    // defined in the contract.
     let counter_config = CounterConfig {
         dummy: true,
         initial_value: 42,
@@ -1171,7 +1175,7 @@ async fn test_large_return_data() -> Result<(), Error> {
     let res = contract_instance.get_contract_id().call().await?;
 
     // First `value` is from `CallResponse`.
-    // Second `value` is from Sway `ContractId` type.
+    // Second `value` is from the `ContractId` type.
     assert_eq!(
         res.value,
         ContractId::from([
@@ -1755,11 +1759,11 @@ async fn test_wallet_balance_api_multi_asset() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn sway_native_types_support() -> Result<(), Box<dyn std::error::Error>> {
+async fn native_types_support() -> Result<(), Box<dyn std::error::Error>> {
     setup_contract_test!(
         contract_instance,
         wallet,
-        "packages/fuels/tests/test_projects/sway_native_types"
+        "packages/fuels/tests/test_projects/native_types"
     );
 
     let user = User {
@@ -2309,7 +2313,7 @@ async fn can_increase_block_height() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn can_handle_sway_function_called_new() -> anyhow::Result<()> {
+async fn can_handle_function_called_new() -> anyhow::Result<()> {
     setup_contract_test!(
         contract_instance,
         wallet,
@@ -3778,6 +3782,91 @@ async fn test_print_logs() -> Result<(), Error> {
     let response = contract_instance.produce_multiple_logs().call().await?;
     contract_instance._print_logs(&response.receipts);
     // ANCHOR_END: produce_logs
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_script_interface() -> Result<(), Error> {
+    let wallet = launch_provider_and_get_wallet().await;
+
+    let contract_id = Contract::deploy(
+        "../../packages/fuels/tests/test_projects/contract_test/out/debug/contract_test.bin",
+        &wallet,
+        TxParameters::default(),
+        StorageConfiguration::default(),
+    )
+    .await?;
+
+    let contract_coins = wallet
+        .get_provider()?
+        .get_contract_balances(&contract_id)
+        .await?;
+    assert!(contract_coins.is_empty());
+
+    let amount = 100;
+    let asset_id = Default::default();
+    let tx_parameters = TxParameters::default();
+    let zeroes = Bytes32::zeroed();
+    let plain_contract_id: ContractId = contract_id.clone().into();
+
+    let mut inputs = vec![Input::contract(
+        UtxoId::new(zeroes, 0),
+        zeroes,
+        zeroes,
+        TxPointer::default(),
+        plain_contract_id,
+    )];
+    inputs.extend(
+        wallet
+            .get_asset_inputs_for_amount(asset_id, amount, 0)
+            .await?,
+    );
+
+    let outputs = vec![
+        Output::contract(0, zeroes, zeroes),
+        Output::change(wallet.address().into(), 0, asset_id),
+    ];
+
+    let script_data: Vec<u8> = [
+        plain_contract_id.to_vec(),
+        amount.to_be_bytes().to_vec(),
+        asset_id.to_vec(),
+    ]
+    .into_iter()
+    .flatten()
+    .collect();
+
+    let script = vec![
+        Opcode::gtf(0x10, 0x00, GTFArgs::ScriptData),
+        Opcode::ADDI(0x11, 0x10, ContractId::LEN as u16),
+        Opcode::LW(0x11, 0x11, 0),
+        Opcode::ADDI(0x12, 0x11, WORD_SIZE as u16),
+        Opcode::TR(0x10, 0x11, 0x12),
+        Opcode::RET(REG_ONE),
+    ]
+    .into_iter()
+    .collect();
+
+    ScriptBuilder::new()
+        .set_gas_price(tx_parameters.gas_price)
+        .set_gas_limit(tx_parameters.gas_limit)
+        .set_maturity(tx_parameters.maturity)
+        .set_script(script)
+        .set_script_data(script_data)
+        .set_inputs(inputs.to_vec())
+        .set_outputs(outputs.to_vec())
+        .set_amount(amount)
+        .build(&wallet)
+        .await?
+        .call(wallet.get_provider()?)
+        .await?;
+
+    let contract_coins = wallet
+        .get_provider()?
+        .get_contract_balances(&contract_id)
+        .await?;
+    assert_eq!(contract_coins.len(), 1);
 
     Ok(())
 }
