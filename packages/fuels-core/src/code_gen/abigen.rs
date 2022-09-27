@@ -8,6 +8,7 @@ use fuel_tx::Receipt;
 use fuels_types::errors::Error;
 use fuels_types::param_types::ParamType;
 use fuels_types::{ProgramABI, ResolvedLog, TypeDeclaration};
+use itertools::Itertools;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
@@ -312,10 +313,19 @@ impl Abigen {
 }
 
 pub fn generate_print_logs(resolved_logs: &[ResolvedLog]) -> TokenStream {
+    // if not logs are present, return an empty string vec
+    if resolved_logs.is_empty() {
+        return quote! {
+            pub fn _print_logs(&self, receipts: &[Receipt]) -> Vec<String> {
+                vec![]
+            }
+        };
+    }
+
     let branches = generate_param_type_if_branches(resolved_logs);
 
     quote! {
-        pub fn _print_logs(&self, receipts: &[Receipt]) -> () {
+        pub fn _print_logs(&self, receipts: &[Receipt]) -> Vec<String> {
             let id_to_param_type: HashMap<_, _> = self.logs_lookup
                 .iter()
                 .map(|(id, param_type)| (id, param_type))
@@ -324,15 +334,15 @@ pub fn generate_print_logs(resolved_logs: &[ResolvedLog]) -> TokenStream {
 
             ids_with_data
             .iter()
-            .for_each(|(id, data)|{
+            .map(|(id, data)|{
                 let param_type = id_to_param_type.get(id).expect("Failed to find log id.");
 
-                if false {
-                    //this serves as a placeholder so that the proc
-                    //macro can generate the branches as "else if..."
+                #(#branches)else*
+                else {
+                    panic!("Failed to parse param type.");
                 }
-                #(#branches)*
-            });
+            })
+            .collect()
         }
     }
 }
@@ -340,13 +350,14 @@ pub fn generate_print_logs(resolved_logs: &[ResolvedLog]) -> TokenStream {
 fn generate_param_type_if_branches(resolved_logs: &[ResolvedLog]) -> Vec<TokenStream> {
     resolved_logs
         .iter()
+        .unique_by(|r| r.param_type_call.to_string())
         .map(|r| {
             let type_name = &r.resolved_type_name;
             let param_type_call = &r.param_type_call;
 
             quote! {
-                else if **param_type == #param_type_call {
-                    println!(
+                if **param_type == #param_type_call {
+                    return format!(
                         "{:#?}",
                         try_from_bytes::<#type_name>(&data).expect("Failed to construct type from log data.")
                     );
