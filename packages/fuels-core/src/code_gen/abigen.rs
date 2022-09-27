@@ -115,16 +115,6 @@ impl Abigen {
                             Self { contract_id, wallet }
                         }
 
-                        pub fn contract_id(&mut self, contract_id: String) -> &mut Self {
-                            self.contract_id = Bech32ContractId::from_str(&contract_id).expect("Invalid contract id");
-                            self
-                        }
-
-                        pub fn wallet(&mut self, wallet: WalletUnlocked) -> &mut Self {
-                            self.wallet = wallet;
-                            self
-                        }
-
                         pub fn get_contract_id(&self) -> &Bech32ContractId {
                             &self.contract_id
                         }

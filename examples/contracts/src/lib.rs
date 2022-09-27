@@ -575,8 +575,8 @@ mod tests {
         // Perform contract call with wallet_2
         let response = contract_instance
             .with_wallet(wallet_2)? // Connect wallet_2
-            .methods()
-            .get_msg_amount() // Our contract method.
+            .methods() // Get contract methods
+            .get_msg_amount() // Our contract method
             .call() // Perform the contract call.
             .await?; // This is an async call, `.await` for it.
                      // ANCHOR_END: connect_wallet
