@@ -311,10 +311,8 @@ impl ABIDecoder {
         variants: &EnumVariants,
         selected_variant: &ParamType,
     ) -> Result<DecodeResult, CodecError> {
-        // The sway compiler has an optimization where enums that only contain
-        // units for variants have only their discriminant encoded. Because of
-        // this we construct the Token::Unit rather than calling `decode_param`
-        // since that will consume a WORD from `data`.
+        // Enums that contain only Units as variants have only their discriminant encoded.
+        // Because of this we construct the Token::Unit rather than calling `decode_param`
         if variants.only_units_inside() {
             Ok(DecodeResult {
                 token: Token::Unit,
@@ -518,7 +516,6 @@ mod tests {
 
     #[test]
     fn decode_struct() -> Result<(), Error> {
-        // Sway struct:
         // struct MyStruct {
         //     foo: u8,
         //     bar: bool,
@@ -542,7 +539,6 @@ mod tests {
 
     #[test]
     fn decode_enum() -> Result<(), Error> {
-        // Sway enum:
         // enum MyEnum {
         //     x: u32,
         //     y: bool,
@@ -618,7 +614,6 @@ mod tests {
 
     #[test]
     fn decode_nested_struct() -> Result<(), Error> {
-        // Sway nested struct:
         // struct Foo {
         //     x: u16,
         //     y: Bar,
@@ -664,7 +659,6 @@ mod tests {
 
     #[test]
     fn decode_comprehensive() -> Result<(), Error> {
-        // Sway nested struct:
         // struct Foo {
         //     x: u16,
         //     y: Bar,
@@ -675,7 +669,7 @@ mod tests {
         //     b: u8[2],
         // }
 
-        // Sway fn: long_function(Foo,u8[2],b256,str[23])
+        // fn: long_function(Foo,u8[2],b256,str[23])
 
         // Parameters
         let nested_struct = ParamType::Struct {

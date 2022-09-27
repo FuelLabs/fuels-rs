@@ -146,6 +146,7 @@ impl Contract {
             call_parameters,
             compute_custom_input_offset,
             variable_outputs: None,
+            message_outputs: None,
             external_contracts: vec![],
             output_param: D::param_type(),
         };
@@ -161,9 +162,8 @@ impl Contract {
 
     // If the data passed into the contract method is an integer or a
     // boolean, then the data itself should be passed. Otherwise, it
-    // should simply pass a pointer to the data in memory. For more
-    // information, see https://github.com/FuelLabs/sway/issues/1368.
-    pub fn should_compute_custom_input_offset(args: &[Token]) -> bool {
+    // should simply pass a pointer to the data in memory.
+    fn should_compute_custom_input_offset(args: &[Token]) -> bool {
         args.len() > 1
             || args.iter().any(|t| {
                 matches!(
@@ -188,7 +188,7 @@ impl Contract {
         storage_configuration: StorageConfiguration,
     ) -> Result<Bech32ContractId, Error> {
         let mut compiled_contract =
-            Contract::load_sway_contract(binary_filepath, &storage_configuration.storage_path)?;
+            Contract::load_contract(binary_filepath, &storage_configuration.storage_path)?;
 
         Self::merge_storage_vectors(&storage_configuration, &mut compiled_contract);
 
@@ -203,7 +203,7 @@ impl Contract {
         storage_configuration: StorageConfiguration,
         salt: Salt,
     ) -> Result<Bech32ContractId, Error> {
-        let mut compiled_contract = Contract::load_sway_contract_with_parameters(
+        let mut compiled_contract = Contract::load_contract_with_parameters(
             binary_filepath,
             &storage_configuration.storage_path,
             salt,
@@ -251,24 +251,19 @@ impl Contract {
             chain_info.latest_block.height.0,
             &chain_info.consensus_parameters.into(),
         )?;
-
         provider.send_transaction(&tx).await?;
 
         Ok(contract_id)
     }
 
-    pub fn load_sway_contract(
+    pub fn load_contract(
         binary_filepath: &str,
         storage_path: &Option<String>,
     ) -> Result<CompiledContract, Error> {
-        Self::load_sway_contract_with_parameters(
-            binary_filepath,
-            storage_path,
-            Salt::from([0u8; 32]),
-        )
+        Self::load_contract_with_parameters(binary_filepath, storage_path, Salt::from([0u8; 32]))
     }
 
-    pub fn load_sway_contract_with_parameters(
+    pub fn load_contract_with_parameters(
         binary_filepath: &str,
         storage_path: &Option<String>,
         salt: Salt,
@@ -368,6 +363,7 @@ pub struct ContractCall {
     pub call_parameters: CallParameters,
     pub compute_custom_input_offset: bool,
     pub variable_outputs: Option<Vec<Output>>,
+    pub message_outputs: Option<Vec<Output>>,
     pub external_contracts: Vec<Bech32ContractId>,
     pub output_param: ParamType,
 }
@@ -457,7 +453,7 @@ where
     /// Note that this is a builder method, i.e. use it as a chain:
     /// `my_contract_instance.my_method(...).add_variable_outputs(num).call()`.
     pub fn append_variable_outputs(mut self, num: u64) -> Self {
-        let new_outputs: Vec<Output> = (0..num)
+        let new_variable_outputs: Vec<Output> = (0..num)
             .map(|_| Output::Variable {
                 amount: 0,
                 to: Address::zeroed(),
@@ -466,8 +462,28 @@ where
             .collect();
 
         match self.contract_call.variable_outputs {
-            Some(ref mut outputs) => outputs.extend(new_outputs),
-            None => self.contract_call.variable_outputs = Some(new_outputs),
+            Some(ref mut outputs) => outputs.extend(new_variable_outputs),
+            None => self.contract_call.variable_outputs = Some(new_variable_outputs),
+        }
+
+        self
+    }
+
+    /// Appends `num` `Output::Message`s to the transaction.
+    /// Note that this is a builder method, i.e. use it as a chain:
+    /// `my_contract_instance.my_method(...).add_message_outputs(num).call()`.
+    pub fn append_message_outputs(mut self, num: u64) -> Self {
+        let new_message_outputs = vec![
+            Output::Message {
+                recipient: Address::zeroed(),
+                amount: 0,
+            };
+            num as usize
+        ];
+
+        match self.contract_call.message_outputs {
+            Some(ref mut outputs) => outputs.extend(new_message_outputs),
+            None => self.contract_call.message_outputs = Some(new_message_outputs),
         }
 
         self

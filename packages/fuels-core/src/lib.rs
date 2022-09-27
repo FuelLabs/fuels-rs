@@ -58,7 +58,6 @@ impl StringToken {
     }
 }
 
-// Sway types
 #[derive(Debug, Clone, PartialEq, EnumString)]
 #[strum(ascii_case_insensitive)]
 pub enum Token {

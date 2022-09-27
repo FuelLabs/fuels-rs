@@ -6,7 +6,7 @@ Simple CLI program to encode Sway function calls and decode their output. The AB
 
 ```plaintext
 sway-abi-cli 0.1.0
-Sway/Fuel ABI coder
+FuelVM ABI coder
 
 USAGE:
     sway-abi-cli <SUBCOMMAND>
@@ -134,7 +134,7 @@ Example with nested struct:
     ],
     "name":"takes_nested_struct",
     "outputs":[
-      
+
     ]
   }
 ]
