@@ -224,6 +224,8 @@ impl Abigen {
     pub fn is_native_type(type_field: &str) -> anyhow::Result<bool> {
         let name = extract_custom_type_name_from_abi_type_field(type_field)?;
 
+        // "RawVec" is part of the Vec structure. Not used in the SDK and thus
+        // not generated.
         Ok(
             ["ContractId", "Address", "Option", "Result", "Vec", "RawVec"]
                 .map(ident)

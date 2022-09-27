@@ -19,11 +19,31 @@ struct DecodeResult {
 pub struct ABIDecoder;
 
 impl ABIDecoder {
-    /// Decode takes an array of `ParamType` and the encoded data as raw bytes
-    /// and returns a vector of `Token`s containing the decoded values.
-    /// Note that the order of the types in the `types` array needs to match the order
-    /// of the expected values/types in `data`.
-    /// You can find comprehensive examples in the tests for this module.
+    /// Decodes types described by `param_types` into their respective `Token`s
+    /// using the data in `bytes` and `receipts`.
+    /// In the event of a vector being decoded, bytes extracted from `receipts`
+    /// will be used for the vector elements. `receipts` are filtered to only
+    /// contain `Receipt::Log` and `Receipt::LogData`. Vector elements should be
+    /// logged with accordance to the rules mentioned in the SDK book.
+    ///
+    /// # Arguments
+    ///
+    /// * `param_types`: The ParamType's of the types we expect are encoded
+    ///                  inside `bytes` and `receipts`.
+    /// * `bytes`:       The bytes to be used in the decoding process.
+    /// * `receipts`:    Receipts containing logs of Vector elements, if any are
+    ///                  present in the types that are to be decoded.
+    /// # Examples
+    ///
+    /// ```
+    /// use fuels_core::abi_decoder::ABIDecoder;
+    /// use fuels_core::Token;
+    /// use fuels_types::param_types::ParamType;
+    ///
+    /// let tokens = ABIDecoder::decode(&[ParamType::U8, ParamType::U8], &[0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,2], &[]).unwrap();
+    ///
+    /// assert_eq!(tokens, vec![Token::U8(1), Token::U8(2)])
+    /// ```
     pub fn decode(
         param_types: &[ParamType],
         bytes: &[u8],
@@ -36,6 +56,8 @@ impl ABIDecoder {
         Ok(tokens)
     }
 
+    /// The same as `decode` just for a single type. Used in most cases since
+    /// contract functions can only return one type.
     pub fn decode_single(
         param_type: &ParamType,
         bytes: &[u8],
@@ -405,10 +427,10 @@ fn shorten_slice(slice: &[u8], num_bytes: usize) -> Result<&[u8], CodecError> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::abi_encoder::ABIEncoder;
     use crate::Tokenizable;
     use fuel_types::Word;
     use fuels_types::{errors::Error, param_types::EnumVariants};
+    use itertools::chain;
     use rand;
     use rand::Rng;
     use std::vec;
@@ -486,14 +508,6 @@ mod tests {
             0x20, 0x73, 0x65, 0x6e, 0x74, 0x65, 0x6e, 0x63, 0x65, 0x00, 0x48, 0x65, 0x6c, 0x6c,
             0x6f, 0x0, 0x0, 0x0,
         ];
-
-        let correct_bytes = ABIEncoder::encode(&[
-            Token::String(StringToken::new("This is a full sentence".into(), 23)),
-            Token::String(StringToken::new("Hello".into(), 5)),
-        ])?
-        .resolve(0);
-
-        assert_eq!(correct_bytes, data.to_vec());
 
         let decoded = ABIDecoder::decode(&types, &data, &[])?;
 
@@ -792,6 +806,7 @@ mod tests {
         assert!(matches!(error, CodecError::InvalidData(str) if str.starts_with(expected_msg)));
         Ok(())
     }
+
     #[test]
     fn vector_is_decoded() -> Result<(), Error> {
         // given
@@ -902,8 +917,10 @@ mod tests {
             .flat_map(|num| num.to_be_bytes())
             .collect::<Vec<_>>();
 
-        let receipts =
+        let vec_logs =
             [inner_vec_1_data, inner_vec_2_data, inner_vec_1, inner_vec_2].map(given_logged_data);
+
+        let receipts = chain!([given_random_unrelated_log()], vec_logs).collect::<Vec<_>>();
 
         let bytes = [parent_vec, 123u64.to_be_bytes().to_vec()]
             .into_iter()

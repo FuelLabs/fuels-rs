@@ -3943,6 +3943,23 @@ async fn test_vector() -> Result<(), Error> {
             .value;
         assert_eq!(result, arg);
     }
+    {
+        // vec in a vec in a struct in a vec
+        let arg = vec![
+            SomeStruct {
+                a: vec![vec![0, 1, 2], vec![3, 4, 5]],
+            },
+            SomeStruct {
+                a: vec![vec![6, 7, 8], vec![9, 10, 11]],
+            },
+        ];
+        let result = contract_instance
+            .vec_in_a_vec_in_a_struct_in_a_vec(arg.clone())
+            .call()
+            .await?
+            .value;
+        assert_eq!(result, arg);
+    }
 
     Ok(())
 }

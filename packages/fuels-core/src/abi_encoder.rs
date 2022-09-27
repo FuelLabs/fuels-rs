@@ -11,6 +11,9 @@ enum Data {
     Dynamic(Vec<Data>),
 }
 
+// To get the final encoded bytes we need to know the address at which these
+// bytes are going to be loaded at. Once the address is given to `resolve`
+// normal bytes can be retrieved.
 #[derive(Debug, Clone, Default)]
 pub struct UnresolvedBytes {
     data: Vec<Data>,
@@ -20,12 +23,20 @@ impl UnresolvedBytes {
     pub fn new() -> Self {
         Default::default()
     }
+
+    /// Uses the `start_addr` to resolve any pointers contained within. Once
+    /// they are resolved the raw bytes are returned.
+    ///
+    /// # Arguments
+    ///
+    /// * `start_addr`: The address at which the encoded bytes are to be loaded
+    ///                 in.
     pub fn resolve(&self, start_addr: u64) -> Vec<u8> {
         Self::resolve_data(&self.data, start_addr)
     }
 
     fn resolve_data(data: &[Data], start_addr: u64) -> Vec<u8> {
-        let total_inline_size = Self::amount_of_inline_bytes(data);
+        let start_of_dynamic_data = start_addr + Self::amount_of_inline_bytes(data);
 
         let mut inline_data: Vec<u8> = vec![];
         let mut dynamic_data: Vec<u8> = vec![];
@@ -34,7 +45,7 @@ impl UnresolvedBytes {
                 Data::Inline(bytes) => inline_data.extend(bytes),
                 Data::Dynamic(chunk_of_dynamic_data) => {
                     let ptr_to_dynamic_chunk: u64 =
-                        start_addr + total_inline_size + dynamic_data.len() as u64;
+                        start_of_dynamic_data + dynamic_data.len() as u64;
 
                     inline_data.extend(ptr_to_dynamic_chunk.to_be_bytes().to_vec());
 
@@ -681,7 +692,7 @@ mod tests {
         let enum_padding = vec![0x0; 24];
 
         // notice the ordering, first the discriminant, then the necessary
-        // padding and then the value itSelf::
+        // padding and then the value itself.
         let expected: Vec<u8> = [enum_discriminant_enc, enum_padding, u64_enc]
             .into_iter()
             .flatten()

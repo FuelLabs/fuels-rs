@@ -23,11 +23,13 @@ abi MyContract {
     fn vec_in_tuple(arg: (Vec<u32>, Vec<u32>)) -> (Vec<u32>, Vec<u32>);
 
     fn vec_in_vec(arg: Vec<Vec<u32>>) -> Vec<Vec<u32>>;
+
+    fn vec_in_a_vec_in_a_struct_in_a_vec(arg: Vec<SomeStruct<Vec<Vec<u32>>>>) -> Vec<SomeStruct<Vec<Vec<u32>>>>;
 }
 
 impl MyContract for Contract {
     fn u32_vec(arg: Vec<u32>) -> Vec<u32> {
-        let expected = expected_vec();
+        let expected = vec_from([0, 1, 2]);
 
         assert(arg == expected);
 
@@ -37,8 +39,8 @@ impl MyContract for Contract {
 
     fn vec_in_vec(arg: Vec<Vec<u32>>) -> Vec<Vec<u32>> {
         let mut expected = ~Vec::new();
-        expected.push(expected_vec());
-        expected.push(expected_vec());
+        expected.push(vec_from([0, 1, 2]));
+        expected.push(vec_from([0, 1, 2]));
 
         assert(expected == arg);
         let mut i = 0;
@@ -69,7 +71,7 @@ impl MyContract for Contract {
     }
     fn vec_in_struct(arg: SomeStruct<Vec<u32>>) -> SomeStruct<Vec<u32>> {
         let expected = SomeStruct {
-            a: expected_vec(),
+            a: vec_from([0, 1, 2]),
         };
 
         assert(arg.a == expected.a);
@@ -88,8 +90,8 @@ impl MyContract for Contract {
 
     fn vec_in_array(arg: [Vec<u32>; 2]) -> [Vec<u32>; 2] {
         let expected = [
-            expected_vec(),
-            expected_vec(),
+            vec_from([0, 1, 2]),
+            vec_from([0, 1, 2]),
         ];
 
         assert(expected == arg);
@@ -99,7 +101,7 @@ impl MyContract for Contract {
         expected
     }
     fn vec_in_enum(arg: SomeEnum<Vec<u32>>) -> SomeEnum<Vec<u32>> {
-        let vec = expected_vec();
+        let vec = vec_from([0, 1, 2]);
         let expected = SomeEnum::a(vec);
 
         assert(expected == arg);
@@ -129,14 +131,53 @@ impl MyContract for Contract {
 
     fn vec_in_tuple(arg: (Vec<u32>, Vec<u32>)) -> (Vec<u32>, Vec<u32>) {
         let expected = (
-            expected_vec(),
-            expected_vec(),
+            vec_from([0, 1, 2]),
+            vec_from([0, 1, 2]),
         );
 
         assert(arg == expected);
 
         log_vec(expected.0);
         log_vec(expected.1);
+        expected
+    }
+    fn vec_in_a_vec_in_a_struct_in_a_vec(
+        arg: Vec<SomeStruct<Vec<Vec<u32>>>>,
+    ) -> Vec<SomeStruct<Vec<Vec<u32>>>> {
+        let mut expected = ~Vec::new();
+
+        let mut inner_vec_1 = ~Vec::new();
+
+        let inner_inner_vec_1 = vec_from([0, 1, 2]);
+        inner_vec_1.push(inner_inner_vec_1);
+
+        let inner_inner_vec_2 = vec_from([3, 4, 5]);
+        inner_vec_1.push(inner_inner_vec_2);
+
+        expected.push(SomeStruct { a: inner_vec_1 });
+
+        let mut inner_vec_2 = ~Vec::new();
+
+        let inner_inner_vec_3 = vec_from([6, 7, 8]);
+        inner_vec_2.push(inner_inner_vec_3);
+
+        let inner_inner_vec_4 = vec_from([9, 10, 11]);
+        inner_vec_2.push(inner_inner_vec_4);
+
+        expected.push(SomeStruct { a: inner_vec_2 });
+
+        assert(arg == expected);
+
+        log_vec(inner_inner_vec_1);
+        log_vec(inner_inner_vec_2);
+        log_vec(inner_vec_1);
+
+        log_vec(inner_inner_vec_3);
+        log_vec(inner_inner_vec_4);
+        log_vec(inner_vec_2);
+
+        log_vec(expected);
+
         expected
     }
 }

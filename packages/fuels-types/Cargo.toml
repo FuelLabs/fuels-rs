@@ -15,8 +15,6 @@ fuel-tx = "0.18"
 hex = { version = "0.4.3", features = ["std"] }
 proc-macro2 = "1.0"
 serde = { version = "1.0", features = ["derive"] }
-lazy_static = "1.4.0"
-regex = "1.6.0"
 serde_json = { version = "1.0.64", default-features = true }
 strum = "0.21"
 strum_macros = "0.21"

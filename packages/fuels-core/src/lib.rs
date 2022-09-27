@@ -6,7 +6,6 @@ use fuels_types::{
     errors::{CodecError, Error},
     param_types::{EnumVariants, ParamType},
 };
-use std::vec;
 use strum_macros::EnumString;
 
 pub mod abi_decoder;

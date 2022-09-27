@@ -302,3 +302,47 @@ impl Eq for Vec<(u32, u32)> {
         true
     }
 }
+
+impl Eq for SomeStruct<Vec<Vec<u32>>> {
+    fn eq(self, other: Self) -> bool {
+        self.a == other.a
+    }
+}
+
+impl Eq for Option<SomeStruct<Vec<Vec<u32>>>> {
+    fn eq(self, other: Self) -> bool {
+        match self {
+            Option::Some(val) => {
+                match other {
+                    Option::Some(other_val) => {
+                        val == other_val
+                    },
+                    _ => false,
+                }
+            },
+            Option::None => {
+                match other {
+                    Option::None => true,
+                    _ => false,
+                }
+            }
+        }
+    }
+}
+
+impl Eq for Vec<SomeStruct<Vec<Vec<u32>>>> {
+    fn eq(self, other: Self) -> bool {
+        if self.len() != other.len() {
+            return false;
+        }
+
+        let mut i = 0;
+        while i < self.len() {
+            if self.get(i) != other.get(i) {
+                return false;
+            }
+            i += 1;
+        }
+        true
+    }
+}
