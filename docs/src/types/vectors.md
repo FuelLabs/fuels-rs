@@ -25,9 +25,6 @@ These logs must be the last ones you make.
 contract;
 
 use std::logging::log;
-use std::vec::Vec;
-use std::option::Option;
-use std::assert::assert;
 
 abi MyContract {
     fn u32_vec(arg: Vec<u32>) -> Vec<u32>;
@@ -71,9 +68,7 @@ If you have vectors embedded in some other type, you must take care to log them 
 ```Rust
 contract;
 
-use std::option::Option;
 use std::logging::log;
-use std::assert::assert;
 
 struct Child {
     grandchild: Vec<u32>,
@@ -127,9 +122,7 @@ An example:
 ```Rust
 contract;
 
-use std::option::Option;
 use std::logging::log;
-use std::assert::assert;
 
 abi MyContract {
     fn test_function() -> Vec<Vec<u32>>;
