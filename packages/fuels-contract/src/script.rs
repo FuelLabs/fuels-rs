@@ -20,10 +20,10 @@ use std::iter;
 
 use crate::contract::ContractCall;
 
-#[derive(Default, Debug)]
+#[derive(Default)]
 /// Specifies offsets of Opcode::CALL parameters stored in the script
 /// data from which they can be loaded into registers
-pub struct CallParamOffsets {
+struct CallParamOffsets {
     pub asset_id_offset: usize,
     pub amount_offset: usize,
     pub gas_forwarded_offset: usize,
@@ -196,10 +196,7 @@ impl Script {
                 // including custom_input_offset
                 let custom_input_offset =
                     segment_offset + AssetId::LEN + 2 * WORD_SIZE + ContractId::LEN + 2 * WORD_SIZE;
-                {
-                    let custom_input_offset = custom_input_offset as Word;
-                    script_data.extend(&custom_input_offset.to_be_bytes());
-                }
+                script_data.extend(&(custom_input_offset as Word).to_be_bytes());
                 custom_input_offset
             } else {
                 segment_offset
@@ -430,12 +427,11 @@ mod test {
 
         let selectors = vec![[7u8; 8], [8u8; 8], [9u8; 8]];
 
-        // Call 2 has a multiple inputs, compute_custom_input_offset will be true
+        // Call 2 has multiple inputs, compute_custom_input_offset will be true
 
-        let args = vec![Token::U8(1), Token::U16(2), Token::U8(3)]
-            .into_iter()
+        let args = [Token::U8(1), Token::U16(2), Token::U8(3)]
             .map(|token| ABIEncoder::encode(&[token]).unwrap())
-            .collect::<Vec<_>>();
+            .to_vec();
 
         let calls: Vec<ContractCall> = (0..NUM_CALLS)
             .map(|i| ContractCall {

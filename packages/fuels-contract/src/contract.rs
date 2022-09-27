@@ -1,9 +1,9 @@
 use std::collections::HashSet;
 use std::fmt::Debug;
+use std::fs;
 use std::marker::PhantomData;
 use std::path::Path;
 use std::str::FromStr;
-use std::{fs, vec};
 
 use anyhow::Result;
 use fuel_gql_client::{
