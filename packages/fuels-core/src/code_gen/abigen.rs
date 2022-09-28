@@ -301,7 +301,7 @@ impl Abigen {
 }
 
 pub fn generate_print_logs(resolved_logs: &[ResolvedLog]) -> TokenStream {
-    // if not logs are present, return an empty string vec
+    // if logs are not present, return an empty string vec
     if resolved_logs.is_empty() {
         return quote! {
             pub fn _print_logs(&self, receipts: &[Receipt]) -> Vec<String> {
