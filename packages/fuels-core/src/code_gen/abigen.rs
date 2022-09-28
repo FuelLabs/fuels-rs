@@ -276,8 +276,7 @@ impl Abigen {
         abi.types.iter().map(|t| (t.type_id, t.clone())).collect()
     }
 
-    /// Reads the parsed logged types from the ABI and creates
-    /// ResolvedLogs
+    /// Reads the parsed logged types from the ABI and creates ResolvedLogs
     fn resolve_logs(&self) -> Vec<ResolvedLog> {
         self.abi
             .logged_types
