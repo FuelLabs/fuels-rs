@@ -3804,11 +3804,11 @@ async fn test_print_logs_with_no_logs() -> Result<(), Error> {
     setup_contract_test!(
         contract_instance,
         wallet,
-        "packages/fuels/tests/test_projects/logged_types"
+        "packages/fuels/tests/test_projects/contract_test"
     );
 
     let contract_methods = contract_instance.methods();
-    let response = contract_methods.produce_no_logs().call().await?;
+    let response = contract_methods.initialize_counter(42).call().await?;
     let logs = contract_instance.print_logs(&response.receipts);
 
     assert!(logs.is_empty());

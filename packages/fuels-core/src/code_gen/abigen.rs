@@ -303,7 +303,7 @@ pub fn generate_print_logs(resolved_logs: &[ResolvedLog]) -> TokenStream {
     // if logs are not present, return an empty string vec
     if resolved_logs.is_empty() {
         return quote! {
-            pub fn _print_logs(&self, receipts: &[Receipt]) -> Vec<String> {
+            pub fn print_logs(&self, receipts: &[Receipt]) -> Vec<String> {
                 vec![]
             }
         };
