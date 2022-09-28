@@ -3677,13 +3677,13 @@ async fn test_parse_logged_varibles() -> Result<(), Error> {
     );
 
     // ANCHOR: produce_logs
-    let response = contract_instance.produce_logs_variables().call().await?;
+    let contract_methods = contract_instance.methods();
+    let response = contract_methods.produce_logs_variables().call().await?;
 
-    let log_u64 = contract_instance._logs_with_type::<u64>(&response.receipts)?;
-    let log_bits256 = contract_instance._logs_with_type::<Bits256>(&response.receipts)?;
-    let log_string =
-        contract_instance._logs_with_type::<SizedAsciiString<4>>(&response.receipts)?;
-    let log_array = contract_instance._logs_with_type::<[u8; 3]>(&response.receipts)?;
+    let log_u64 = contract_instance.logs_with_type::<u64>(&response.receipts)?;
+    let log_bits256 = contract_instance.logs_with_type::<Bits256>(&response.receipts)?;
+    let log_string = contract_instance.logs_with_type::<SizedAsciiString<4>>(&response.receipts)?;
+    let log_array = contract_instance.logs_with_type::<[u8; 3]>(&response.receipts)?;
 
     let expected_bits256 = Bits256([
         239, 134, 175, 169, 105, 108, 240, 220, 99, 133, 226, 196, 7, 166, 225, 89, 161, 16, 60,
@@ -3707,14 +3707,15 @@ async fn test_parse_logs_values() -> Result<(), Error> {
         "packages/fuels/tests/test_projects/logged_types"
     );
 
-    let response = contract_instance.produce_logs_values().call().await?;
+    let contract_methods = contract_instance.methods();
+    let response = contract_methods.produce_logs_values().call().await?;
 
-    let log_u64 = contract_instance._logs_with_type::<u64>(&response.receipts)?;
-    let log_u32 = contract_instance._logs_with_type::<u32>(&response.receipts)?;
-    let log_u16 = contract_instance._logs_with_type::<u16>(&response.receipts)?;
-    let log_u8 = contract_instance._logs_with_type::<u8>(&response.receipts)?;
+    let log_u64 = contract_instance.logs_with_type::<u64>(&response.receipts)?;
+    let log_u32 = contract_instance.logs_with_type::<u32>(&response.receipts)?;
+    let log_u16 = contract_instance.logs_with_type::<u16>(&response.receipts)?;
+    let log_u8 = contract_instance.logs_with_type::<u8>(&response.receipts)?;
     // try to retrieve non existent log
-    let log_nonexistent = contract_instance._logs_with_type::<bool>(&response.receipts)?;
+    let log_nonexistent = contract_instance.logs_with_type::<bool>(&response.receipts)?;
 
     assert_eq!(log_u64, vec![64]);
     assert_eq!(log_u32, vec![32]);
@@ -3733,10 +3734,11 @@ async fn test_parse_logs_custom_types() -> Result<(), Error> {
         "packages/fuels/tests/test_projects/logged_types"
     );
 
-    let response = contract_instance.produce_logs_custom_types().call().await?;
+    let contract_methods = contract_instance.methods();
+    let response = contract_methods.produce_logs_custom_types().call().await?;
 
-    let log_test_struct = contract_instance._logs_with_type::<TestStruct>(&response.receipts)?;
-    let log_test_enum = contract_instance._logs_with_type::<TestEnum>(&response.receipts)?;
+    let log_test_struct = contract_instance.logs_with_type::<TestStruct>(&response.receipts)?;
+    let log_test_enum = contract_instance.logs_with_type::<TestEnum>(&response.receipts)?;
 
     let expected_bits256 = Bits256([
         239, 134, 175, 169, 105, 108, 240, 220, 99, 133, 226, 196, 7, 166, 225, 89, 161, 16, 60,
@@ -3764,8 +3766,9 @@ async fn test_print_logs() -> Result<(), Error> {
     );
 
     // ANCHOR: print_logs
-    let response = contract_instance.produce_multiple_logs().call().await?;
-    let logs = contract_instance._print_logs(&response.receipts);
+    let contract_methods = contract_instance.methods();
+    let response = contract_methods.produce_multiple_logs().call().await?;
+    let logs = contract_instance.print_logs(&response.receipts);
     // ANCHOR_END: print_logs
 
     let expected_bits256 = Bits256([

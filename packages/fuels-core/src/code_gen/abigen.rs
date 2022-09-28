@@ -126,7 +126,7 @@ impl Abigen {
                     impl #name {
                         pub fn new(contract_id: String, wallet: WalletUnlocked) -> Self {
                             let contract_id = Bech32ContractId::from_str(&contract_id).expect("Invalid contract id");
-                            Self { contract_id, wallet }
+                            Self { contract_id, wallet, logs_lookup: vec![#(#log_id_param_type_pairs),*]}
                         }
 
                         pub fn get_contract_id(&self) -> &Bech32ContractId {
@@ -151,7 +151,10 @@ impl Abigen {
                         #print_logs
 
                         pub fn methods(&self) -> #methods_name {
-                            #methods_name { contract_id: self.contract_id.clone(), wallet: self.wallet.clone() }
+                            #methods_name {
+                                contract_id: self.contract_id.clone(),
+                                wallet: self.wallet.clone(),
+                            }
                         }
                     }
 
