@@ -43,14 +43,13 @@ mod tests {
         )
         .await?;
 
-        let contract_instance =
-            MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
+        let contract_methods = MyContract::new(contract_id.to_string(), wallet.clone()).methods();
         // ANCHOR_END: liquidity_deploy
 
         // ANCHOR: liquidity_deposit
         let deposit_amount = 1_000_000;
         let call_params = CallParameters::new(Some(deposit_amount), Some(base_asset_id), None);
-        contract_instance
+        contract_methods
             .deposit(wallet.address().into())
             .call_params(call_params)
             .append_variable_outputs(1)
@@ -63,7 +62,7 @@ mod tests {
         let lp_token_balance = wallet.get_asset_balance(&lp_asset_id).await?;
 
         let call_params = CallParameters::new(Some(lp_token_balance), Some(lp_asset_id), None);
-        contract_instance
+        contract_methods
             .withdraw(wallet.address().into())
             .call_params(call_params)
             .append_variable_outputs(1)

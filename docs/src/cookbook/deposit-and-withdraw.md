@@ -20,7 +20,7 @@ Next, we set up a wallet with custom-defined assets. We give our wallet some of 
 {{#include ../../../examples/cookbook/src/lib.rs:liquidity_wallet}}
 ```
 
-Having launched a provider and created the wallet, we can deploy our contract and create an instance of it:
+Having launched a provider and created the wallet, we can deploy our contract and create an instance of its methods:
 
 ```rust,ignore
 {{#include ../../../examples/cookbook/src/lib.rs:liquidity_deploy}}

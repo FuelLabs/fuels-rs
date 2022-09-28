@@ -56,16 +56,21 @@ mod tests {
 
         // ANCHOR: use_deployed_contract
         // This is an instance of your contract which you can use to make calls to your functions
-        let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
+        let contract_instance = MyContract::new(contract_id.to_string(), wallet);
 
         let response = contract_instance
+            .methods()
             .initialize_counter(42) // Build the ABI call
             .call() // Perform the network call
             .await?;
 
         assert_eq!(42, response.value);
 
-        let response = contract_instance.increment_counter(10).call().await?;
+        let response = contract_instance
+            .methods()
+            .increment_counter(10)
+            .call()
+            .await?;
 
         assert_eq!(52, response.value);
         // ANCHOR_END: use_deployed_contract
@@ -84,7 +89,11 @@ mod tests {
             "packages/fuels/tests/test_projects/contract_test"
         );
 
-        let response = contract_instance.initialize_counter(42).call().await?;
+        let response = contract_instance
+            .methods()
+            .initialize_counter(42)
+            .call()
+            .await?;
 
         assert_eq!(42, response.value);
         // ANCHOR_END: deploy_contract_setup_macro_short
@@ -112,10 +121,11 @@ mod tests {
         .await?;
 
         // ANCHOR: contract_call_cost_estimation
-        let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
+        let contract_instance = MyContract::new(contract_id.to_string(), wallet);
 
         let tolerance = 0.0;
         let transaction_cost = contract_instance
+            .methods()
             .initialize_counter(42) // Build the ABI call
             .estimate_transaction_cost(Some(tolerance)) // Get estimated transaction cost
             .await?;
@@ -191,10 +201,10 @@ mod tests {
         .await?;
 
         println!("Contract deployed @ {contract_id_1}");
-        let contract_instance_1 =
-            MyContractBuilder::new(contract_id_1.to_string(), wallets[0].clone()).build();
+        let contract_instance_1 = MyContract::new(contract_id_1.to_string(), wallets[0].clone());
 
         let response = contract_instance_1
+            .methods()
             .initialize_counter(42) // Build the ABI call
             .tx_params(TxParameters::new(None, Some(1_000_000), None))
             .call() // Perform the network call
@@ -211,10 +221,10 @@ mod tests {
         .await?;
 
         println!("Contract deployed @ {contract_id_2}");
-        let contract_instance_2 =
-            MyContractBuilder::new(contract_id_2.to_string(), wallets[1].clone()).build();
+        let contract_instance_2 = MyContract::new(contract_id_2.to_string(), wallets[1].clone());
 
         let response = contract_instance_2
+            .methods()
             .initialize_counter(42) // Build the ABI call
             .tx_params(TxParameters::new(None, Some(1_000_000), None))
             .call() // Perform the network call
@@ -244,15 +254,14 @@ mod tests {
         .await?;
         println!("Contract deployed @ {contract_id}");
         // ANCHOR: instantiate_contract
-        let contract_instance =
-            MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
+        // ANCHOR: tx_parameters
+        let contract_methods = MyContract::new(contract_id.to_string(), wallet.clone()).methods();
         // ANCHOR_END: instantiate_contract
 
-        // ANCHOR: tx_parameters
         // In order: gas_price, gas_limit, and maturity
         let my_tx_params = TxParameters::new(None, Some(1_000_000), None);
 
-        let response = contract_instance
+        let response = contract_methods
             .initialize_counter(42) // Our contract method.
             .tx_params(my_tx_params) // Chain the tx params setting method.
             .call() // Perform the contract call.
@@ -261,7 +270,7 @@ mod tests {
         // ANCHOR_END: tx_parameters
 
         // ANCHOR: tx_parameters_default
-        let response = contract_instance
+        let response = contract_methods
             .initialize_counter(42)
             .tx_params(TxParameters::default())
             .call()
@@ -271,13 +280,14 @@ mod tests {
         // In order: gas_price, gas_limit, and maturity
         let my_tx_params = TxParameters::new(None, Some(1_000_000), None);
 
-        let response = contract_instance
+        let response = contract_methods
             .initialize_counter(42) // Our contract method.
             .tx_params(my_tx_params) // Chain the tx params setting method.
             .call() // Perform the contract call.
             .await?; // This is an async call, `.await` for it.
 
         // ANCHOR: call_parameters
+        let contract_methods = MyContract::new(contract_id.to_string(), wallet.clone()).methods();
 
         let tx_params = TxParameters::default();
 
@@ -285,7 +295,7 @@ mod tests {
         // this is a big number for checking that amount can be a u64
         let call_params = CallParameters::new(Some(1_000_000), None, None);
 
-        let response = contract_instance
+        let response = contract_methods
             .get_msg_amount() // Our contract method.
             .tx_params(tx_params) // Chain the tx params setting method.
             .call_params(call_params) // Chain the call params setting method.
@@ -293,7 +303,7 @@ mod tests {
             .await?;
         // ANCHOR_END: call_parameters
         // ANCHOR: call_parameters_default
-        let response = contract_instance
+        let response = contract_methods
             .initialize_counter(42)
             .call_params(CallParameters::default())
             .call()
@@ -322,18 +332,17 @@ mod tests {
         )
         .await?;
         println!("Contract deployed @ {contract_id}");
-        let contract_instance =
-            MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
+        let contract_methods = MyContract::new(contract_id.to_string(), wallet.clone()).methods();
         // ANCHOR: simulate
         // you would mint 100 coins if the transaction wasn't simulated
-        let counter = contract_instance.mint_coins(100).simulate().await?;
+        let counter = contract_methods.mint_coins(100).simulate().await?;
         // ANCHOR_END: simulate
-        let response = contract_instance.mint_coins(1_000_000).call().await?;
+        let response = contract_methods.mint_coins(1_000_000).call().await?;
         // ANCHOR: variable_outputs
         let address = wallet.address();
 
         // withdraw some tokens to wallet
-        let response = contract_instance
+        let response = contract_methods
             .transfer_coins_to_output(1_000_000, contract_id.into(), address.into())
             .append_variable_outputs(1)
             .call()
@@ -360,13 +369,13 @@ mod tests {
             StorageConfiguration::default(),
         )
         .await?;
-        let contract_instance = TestContractBuilder::new(contract_id.to_string(), wallet).build();
+        let contract_methods = TestContract::new(contract_id.to_string(), wallet).methods();
 
         // ANCHOR: good_practice
-        let response = contract_instance.increment_counter(162).call().await?;
+        let response = contract_methods.increment_counter(162).call().await?;
         // ANCHOR_END: good_practice
         // ANCHOR: contract_receipts
-        let response = contract_instance.increment_counter(162).call().await;
+        let response = contract_methods.increment_counter(162).call().await;
         match response {
             // The transaction is valid and executes to completion
             Ok(call_response) => {
@@ -401,7 +410,7 @@ mod tests {
         let contract_id =
             "fuel1vkm285ypjesypw7vhdlhnty3kjxxx4efckdycqh3ttna4xvmxtfs6murwy".to_string();
 
-        let connected_contract_instance = MyContractBuilder::new(contract_id, wallet).build();
+        let connected_contract_instance = MyContract::new(contract_id, wallet);
         // You can now use the `connected_contract_instance` just as you did above!
         // ANCHOR_END: deployed_contracts
         Ok(())
@@ -426,8 +435,7 @@ mod tests {
         )
         .await?;
 
-        let contract_instance =
-            MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
+        let contract_methods = MyContract::new(contract_id.to_string(), wallet.clone()).methods();
 
         // ANCHOR: call_params_gas
         // Set the transaction `gas_limit` to 1000 and `gas_forwarded` to 200 to specify that the
@@ -436,7 +444,7 @@ mod tests {
         let tx_params = TxParameters::new(None, Some(1000), None);
         let call_params = CallParameters::new(None, None, Some(200));
 
-        let response = contract_instance
+        let response = contract_methods
             .get_msg_amount() // Our contract method.
             .tx_params(tx_params) // Chain the tx params setting method.
             .call_params(call_params) // Chain the call params setting method.
@@ -467,11 +475,10 @@ mod tests {
         .await?;
 
         // ANCHOR: multi_call_prepare
-        let contract_instance =
-            MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
+        let contract_methods = MyContract::new(contract_id.to_string(), wallet.clone()).methods();
 
-        let call_handler_1 = contract_instance.initialize_counter(42);
-        let call_handler_2 = contract_instance.get_array([42; 2]);
+        let call_handler_1 = contract_methods.initialize_counter(42);
+        let call_handler_2 = contract_methods.get_array([42; 2]);
         // ANCHOR_END: multi_call_prepare
 
         // ANCHOR: multi_call_build
@@ -516,14 +523,13 @@ mod tests {
         )
         .await?;
 
-        let contract_instance =
-            MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
+        let contract_methods = MyContract::new(contract_id.to_string(), wallet.clone()).methods();
 
         // ANCHOR: multi_call_cost_estimation
         let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
 
-        let call_handler_1 = contract_instance.initialize_counter(42);
-        let call_handler_2 = contract_instance.get_array([42; 2]);
+        let call_handler_1 = contract_methods.initialize_counter(42);
+        let call_handler_2 = contract_methods.get_array([42; 2]);
 
         multi_call_handler
             .add_call(call_handler_1)
@@ -564,13 +570,13 @@ mod tests {
 
         // ANCHOR: connect_wallet
         // Create contract instance with wallet_1
-        let contract_instance =
-            MyContractBuilder::new(contract_id.to_string(), wallet_1.clone()).build();
+        let contract_instance = MyContract::new(contract_id.to_string(), wallet_1.clone());
 
         // Perform contract call with wallet_2
         let response = contract_instance
-            ._with_wallet(wallet_2)? // Connect wallet_2
-            .get_msg_amount() // Our contract method.
+            .with_wallet(wallet_2)? // Connect wallet_2
+            .methods() // Get contract methods
+            .get_msg_amount() // Our contract method
             .call() // Perform the contract call.
             .await?; // This is an async call, `.await` for it.
                      // ANCHOR_END: connect_wallet
