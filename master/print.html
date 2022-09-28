@@ -743,25 +743,29 @@ coins and coin amount</p>
 </code></pre>
 <p>You can also transfer assets to a contract via <code>wallet.force_transfer_to_contract</code>.</p>
 <pre><code class="language-rust ignore">        // Check the current balance of the contract with id 'contract_id'
-        let contract_coins = wallet
+        let contract_balances = wallet
             .get_provider()?
             .get_contract_balances(&amp;contract_id)
             .await?;
-        assert!(contract_coins.is_empty());
+        assert!(contract_balances.is_empty());
 
-        // Transfer an amount of 100 of the default asset to the contract
-        let amount = 100;
-        let asset_id = Default::default();
+        // Transfer an amount of 300 to the contract
+        let amount = 300;
+        let asset_id = random_asset_id;
         let _receipts = wallet
             .force_transfer_to_contract(&amp;contract_id, amount, asset_id, TxParameters::default())
             .await?;
 
         // Check that the contract now has 1 coin
-        let contract_coins = wallet
+        let contract_balances = wallet
             .get_provider()?
             .get_contract_balances(&amp;contract_id)
             .await?;
-        assert_eq!(contract_coins.len(), 1);
+        assert_eq!(contract_balances.len(), 1);
+
+        let random_asset_id_key = format!(&quot;{:#x}&quot;, random_asset_id);
+        let random_asset_balance = contract_balances.get(&amp;random_asset_id_key).unwrap();
+        assert_eq!(*random_asset_balance, 300);
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="deploying-contracts"><a class="header" href="#deploying-contracts">Deploying contracts</a></h1>
 <p>There are two main ways of working with contracts in the SDK: deploying a contract with SDK or using the SDK to interact with existing contracts.</p>
