@@ -8,7 +8,7 @@ You can pass a Rust `std::vec::Vec` into your contract method transparently. The
 {{#include ../../../packages/fuels/tests/harness.rs:passing_in_vec}}
 ```
 
-You can use a vector just like you would use any other type -- i.e. a `[Vec<u32>; 2]` or a `SomeStruct<Vec<Bits256>>` etc.
+You can use a vector just like you would use any other type -- e.g. a `[Vec<u32>; 2]` or a `SomeStruct<Vec<Bits256>>` etc.
 
 ## Returning vectors
 
