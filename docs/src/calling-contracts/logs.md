@@ -8,7 +8,7 @@ Consider the following contract method:
 {{#include ../../../packages/fuels/tests/test_projects/logged_types/src/main.sw:produce_logs}}
 ```
 
-You can access the logged values in Rust by calling `_logs_with_type::<T>` from a contract instance, where `T` is the type of the logged variables you want to retrieve. The result will be a `Vec<T>`:
+You can access the logged values in Rust by calling `logs_with_type::<T>` from a contract instance, where `T` is the type of the logged variables you want to retrieve. The result will be a `Vec<T>`:
 
 ```rust,ignore
 {{#include ../../../packages/fuels/tests/harness.rs:produce_logs}}
