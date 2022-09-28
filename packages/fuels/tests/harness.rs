@@ -3761,9 +3761,9 @@ async fn test_script_interface() -> Result<(), Error> {
     let script = vec![
         Opcode::gtf(0x10, 0x00, GTFArgs::ScriptData),
         Opcode::ADDI(0x11, 0x10, ContractId::LEN as u16),
-        Opcode::LW(0x11, 0x11, 0),
-        Opcode::ADDI(0x12, 0x11, WORD_SIZE as u16),
-        Opcode::TR(0x10, 0x11, 0x12),
+        Opcode::LW(0x12, 0x11, 0),
+        Opcode::ADDI(0x13, 0x11, WORD_SIZE as u16),
+        Opcode::TR(0x10, 0x12, 0x13),
         Opcode::RET(REG_ONE),
     ]
     .into_iter()
@@ -3783,11 +3783,15 @@ async fn test_script_interface() -> Result<(), Error> {
         .call(wallet.get_provider()?)
         .await?;
 
-    let contract_coins = wallet
+    let contract_balances = wallet
         .get_provider()?
         .get_contract_balances(&contract_id)
         .await?;
-    assert_eq!(contract_coins.len(), 1);
+    assert_eq!(contract_balances.len(), 1);
+
+    let asset_id_key = format!("{:#x}", BASE_ASSET_ID);
+    let balance = contract_balances.get(&asset_id_key).unwrap();
+    assert_eq!(*balance, 100);
 
     Ok(())
 }
