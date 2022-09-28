@@ -22,4 +22,4 @@ You can also get a vector of all the logged values as strings using `_print_logs
 
 Due to possible performance hits, it is not recommended to use `_print_logs()` outside of a debugging scenario.
 
-> **Note:** To be able to bind logged values in the SDK, you need to build your contract by supplying a feature flag: `forc build --generate-logged-types`. This is temporary and the flag won't be needed in the future
+> **Note:** To bind logged values in the SDK, you need to build your contract by supplying a feature flag: `forc build --generate-logged-types`. This is temporary and the flag won't be needed in the future
