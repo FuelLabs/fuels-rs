@@ -105,7 +105,7 @@ impl MyContract for Contract {
 
 ### Nested vectors
 
-There is one more step you must take if you're logging a vector nested immediately inside another vector -- i.e. `Vec<Vec<u32>>`
+There is one more step you must take if you're logging a vector nested immediately inside another vector -- e.g. `Vec<Vec<u32>>`
 
 An example:
 
