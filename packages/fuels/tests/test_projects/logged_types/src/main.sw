@@ -21,6 +21,7 @@ abi TestContract {
     fn produce_logs_variables() -> ();
     fn produce_logs_custom_types() -> ();
     fn produce_multiple_logs() -> ();
+    fn produce_no_logs() -> ();
 }
 
 impl TestContract for Contract {
@@ -82,5 +83,9 @@ impl TestContract for Contract {
         __log(l);
         __log(test_struct);
         __log(test_enum);
+    }
+
+    fn produce_no_logs() -> () {
+        let f: u64 = 64;
     }
 }

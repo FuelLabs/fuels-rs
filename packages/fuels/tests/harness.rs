@@ -3800,6 +3800,23 @@ async fn test_print_logs() -> Result<(), Error> {
 }
 
 #[tokio::test]
+async fn test_print_logs_with_no_logs() -> Result<(), Error> {
+    setup_contract_test!(
+        contract_instance,
+        wallet,
+        "packages/fuels/tests/test_projects/logged_types"
+    );
+
+    let contract_methods = contract_instance.methods();
+    let response = contract_methods.produce_no_logs().call().await?;
+    let logs = contract_instance.print_logs(&response.receipts);
+
+    assert!(logs.is_empty());
+
+    Ok(())
+}
+
+#[tokio::test]
 async fn test_script_interface() -> Result<(), Error> {
     let wallet = launch_provider_and_get_wallet().await;
 
