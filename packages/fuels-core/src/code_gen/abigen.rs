@@ -72,7 +72,7 @@ impl Abigen {
     /// after it is called through a procedural macro (`abigen!()` in our case).
     pub fn expand(&self) -> Result<TokenStream, Error> {
         let name = &self.contract_name;
-        let builder_name = ident(&format!("{}Builder", name));
+        let methods_name = ident(&format!("{}Methods", name));
         let name_mod = ident(&format!(
             "{}_mod",
             self.contract_name.to_string().to_lowercase()
@@ -124,59 +124,44 @@ impl Abigen {
                     }
 
                     impl #name {
-                        #contract_functions
+                        pub fn new(contract_id: String, wallet: WalletUnlocked) -> Self {
+                            let contract_id = Bech32ContractId::from_str(&contract_id).expect("Invalid contract id");
+                            Self { contract_id, wallet }
+                        }
 
-                        pub fn _get_contract_id(&self) -> &Bech32ContractId {
+                        pub fn get_contract_id(&self) -> &Bech32ContractId {
                             &self.contract_id
                         }
 
-                        pub fn _get_wallet(&self) -> WalletUnlocked {
+                        pub fn get_wallet(&self) -> WalletUnlocked {
                             self.wallet.clone()
                         }
 
-                        pub fn _with_wallet(&self, mut wallet: WalletUnlocked) -> Result<Self, SDKError> {
+                        pub fn with_wallet(&self, mut wallet: WalletUnlocked) -> Result<Self, SDKError> {
                            let provider = self.wallet.get_provider()?;
                            wallet.set_provider(provider.clone());
 
                            Ok(Self { contract_id: self.contract_id.clone(), wallet: wallet, logs_lookup: self.logs_lookup.clone() })
                         }
 
-                        pub fn _logs_with_type<D: Tokenizable + Parameterize>(&self, receipts: &[Receipt]) -> Result<Vec<D>, SDKError> {
+                        pub fn logs_with_type<D: Tokenizable + Parameterize>(&self, receipts: &[Receipt]) -> Result<Vec<D>, SDKError> {
                             extract_and_parse_logs(&self.logs_lookup, receipts)
                         }
 
                         #print_logs
+
+                        pub fn methods(&self) -> #methods_name {
+                            #methods_name { contract_id: self.contract_id.clone(), wallet: self.wallet.clone() }
+                        }
                     }
 
-                    pub struct #builder_name {
+                    pub struct #methods_name {
                         contract_id: Bech32ContractId,
                         wallet: WalletUnlocked
                     }
 
-                    impl #builder_name {
-                        pub fn new(contract_id: String, wallet: WalletUnlocked) -> Self {
-                            let contract_id = Bech32ContractId::from_str(&contract_id).expect("Invalid contract id");
-
-                            Self { contract_id, wallet }
-                        }
-
-                        pub fn contract_id(&mut self, contract_id: String) -> &mut Self {
-                            self.contract_id = Bech32ContractId::from_str(&contract_id).expect("Invalid contract id");
-                            self
-                        }
-
-                        pub fn wallet(&mut self, wallet: WalletUnlocked) -> &mut Self {
-                            self.wallet = wallet;
-                            self
-                        }
-
-                        pub fn build(self) -> #name {
-                            #name {
-                                contract_id: self.contract_id,
-                                wallet: self.wallet,
-                                logs_lookup: vec![#(#log_id_param_type_pairs),*],
-                            }
-                        }
+                    impl #methods_name {
+                        #contract_functions
                     }
                 },
             )
@@ -325,7 +310,7 @@ pub fn generate_print_logs(resolved_logs: &[ResolvedLog]) -> TokenStream {
     let branches = generate_param_type_if_branches(resolved_logs);
 
     quote! {
-        pub fn _print_logs(&self, receipts: &[Receipt]) -> Vec<String> {
+        pub fn print_logs(&self, receipts: &[Receipt]) -> Vec<String> {
             let id_to_param_type: HashMap<_, _> = self.logs_lookup
                 .iter()
                 .map(|(id, param_type)| (id, param_type))
