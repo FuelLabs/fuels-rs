@@ -207,7 +207,7 @@ impl LiquidityPool for Contract {
         let wallets = launch_custom_provider_and_get_wallets(wallet_config, None).await;
         let wallet = &amp;wallets[0];
 </code></pre>
-<p>Having launched a provider and created the wallet, we can deploy our contract and create an instance of it:</p>
+<p>Having launched a provider and created the wallet, we can deploy our contract and create an instance of its methods:</p>
 <pre><code class="language-rust ignore">        let contract_id = Contract::deploy(
             &quot;../../packages/fuels/tests/test_projects/liquidity_pool/out/debug/liquidity_pool.bin&quot;,
             wallet,
@@ -216,13 +216,12 @@ impl LiquidityPool for Contract {
         )
         .await?;
 
-        let contract_instance =
-            MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
+        let contract_methods = MyContract::new(contract_id.to_string(), wallet.clone()).methods();
 </code></pre>
 <p>With the preparations out of the way, we can finally deposit to the liquidity pool by calling <code>deposit()</code> via the contract instance. Since we have to transfer assets to the contract, we create the appropriate <code>CallParameters</code> and chain them to the method call. To receive the minted liquidity pool asset, we have to append a variable output to our contract call.</p>
 <pre><code class="language-rust ignore">        let deposit_amount = 1_000_000;
         let call_params = CallParameters::new(Some(deposit_amount), Some(base_asset_id), None);
-        contract_instance
+        contract_methods
             .deposit(wallet.address().into())
             .call_params(call_params)
             .append_variable_outputs(1)
@@ -234,7 +233,7 @@ impl LiquidityPool for Contract {
         let lp_token_balance = wallet.get_asset_balance(&amp;lp_asset_id).await?;
 
         let call_params = CallParameters::new(Some(lp_token_balance), Some(lp_asset_id), None);
-        contract_instance
+        contract_methods
             .withdraw(wallet.address().into())
             .call_params(call_params)
             .append_variable_outputs(1)

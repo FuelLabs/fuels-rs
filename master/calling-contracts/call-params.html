@@ -151,14 +151,15 @@
     }
 </code></pre>
 <p>Then, in Rust, after setting up and deploying the above contract, you can configure the amount being sent in the transaction like this:</p>
-<pre><code class="language-rust ignore">
+<pre><code class="language-rust ignore">        let contract_methods = MyContract::new(contract_id.to_string(), wallet.clone()).methods();
+
         let tx_params = TxParameters::default();
 
         // Forward 1_000_000 coin amount of base asset_id
         // this is a big number for checking that amount can be a u64
         let call_params = CallParameters::new(Some(1_000_000), None, None);
 
-        let response = contract_instance
+        let response = contract_methods
             .get_msg_amount() // Our contract method.
             .tx_params(tx_params) // Chain the tx params setting method.
             .call_params(call_params) // Chain the call params setting method.
@@ -171,7 +172,7 @@
 pub const BASE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
 </code></pre>
 <p>This way:</p>
-<pre><code class="language-rust ignore">        let response = contract_instance
+<pre><code class="language-rust ignore">        let response = contract_methods
             .initialize_counter(42)
             .call_params(CallParameters::default())
             .call()
@@ -185,7 +186,7 @@ pub const BASE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
         let tx_params = TxParameters::new(None, Some(1000), None);
         let call_params = CallParameters::new(None, None, Some(200));
 
-        let response = contract_instance
+        let response = contract_methods
             .get_msg_amount() // Our contract method.
             .tx_params(tx_params) // Chain the tx params setting method.
             .call_params(call_params) // Chain the call params setting method.

@@ -166,7 +166,7 @@
     }
 </code></pre>
 <p>If your contract's method takes and returns, for instance, a Sway's <code>str[23]</code>. When using the SDK, this method will take and return a <code>SizedAsciiString&lt;23&gt;</code>, and you can pass a string to it like this:</p>
-<pre><code class="language-rust ignore">    let call_handler = contract_instance.takes_string(
+<pre><code class="language-rust ignore">    let call_handler = contract_instance.methods().takes_string(
         &quot;This is a full sentence&quot;
             .try_into()
             .expect(&quot;failed to convert string into SizedAsciiString&quot;),

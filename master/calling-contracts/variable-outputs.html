@@ -147,7 +147,7 @@
 <pre><code class="language-rust ignore">        let address = wallet.address();
 
         // withdraw some tokens to wallet
-        let response = contract_instance
+        let response = contract_methods
             .transfer_coins_to_output(1_000_000, contract_id.into(), address.into())
             .append_variable_outputs(1)
             .call()

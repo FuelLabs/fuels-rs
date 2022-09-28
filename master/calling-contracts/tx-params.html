@@ -145,10 +145,12 @@
 <li>Maturity.</li>
 </ol>
 <p>You can configure these parameters by creating an instance of <a href="https://github.com/FuelLabs/fuels-rs/blob/adf81bd451d7637ce0976363bd7784408430031a/packages/fuels-contract/src/parameters.rs#L7"><code>TxParameters</code></a> and passing it to a chain method called <code>tx_params</code>:</p>
-<pre><code class="language-rust ignore">        // In order: gas_price, gas_limit, and maturity
+<pre><code class="language-rust ignore">        let contract_methods = MyContract::new(contract_id.to_string(), wallet.clone()).methods();
+
+        // In order: gas_price, gas_limit, and maturity
         let my_tx_params = TxParameters::new(None, Some(1_000_000), None);
 
-        let response = contract_instance
+        let response = contract_methods
             .initialize_counter(42) // Our contract method.
             .tx_params(my_tx_params) // Chain the tx params setting method.
             .call() // Perform the contract call.
@@ -161,7 +163,7 @@ pub const DEFAULT_GAS_PRICE: u64 = 0;
 pub const DEFAULT_MATURITY: u64 = 0;
 </code></pre>
 <p>This way:</p>
-<pre><code class="language-rust ignore">        let response = contract_instance
+<pre><code class="language-rust ignore">        let response = contract_methods
             .initialize_counter(42)
             .tx_params(TxParameters::default())
             .call()

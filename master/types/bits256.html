@@ -142,7 +142,7 @@
 <p>Here's an example:</p>
 <pre><code class="language-rust ignore">    let arg: [u8; 32] = hasher.finalize().into();
 
-    let call_handler = contract_instance.takes_b256(Bits256(arg));
+    let call_handler = contract_instance.methods().takes_b256(Bits256(arg));
 </code></pre>
 
                     </main>

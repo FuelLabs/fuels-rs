@@ -142,7 +142,7 @@
 <p>In this case, there's no need to generate an actual blockchain transaction; you only want to read a value quickly.</p>
 <p>You can do this with the SDK. Instead of <code>.call()</code>ing the method, use <code>.simulate()</code>:</p>
 <pre><code class="language-rust ignore">        // you would mint 100 coins if the transaction wasn't simulated
-        let counter = contract_instance.mint_coins(100).simulate().await?;
+        let counter = contract_methods.mint_coins(100).simulate().await?;
 </code></pre>
 <p>Note that if you use <code>.simulate()</code> on a method that <em>does</em> change the state of the blockchain, it won't work properly; it will just <code>dry-run</code> it.</p>
 <p>At the moment, it's up to you to know whether a contract method changes state or not, and use <code>.call()</code> or <code>.simulate()</code> accordingly.</p>

@@ -159,7 +159,11 @@
             &quot;packages/fuels/tests/test_projects/contract_test&quot;
         );
 
-        let response = contract_instance.initialize_counter(42).call().await?;
+        let response = contract_instance
+            .methods()
+            .initialize_counter(42)
+            .call()
+            .await?;
 
         assert_eq!(42, response.value);
 </code></pre>
@@ -167,30 +171,30 @@
 <blockquote>
 <p><strong>Note</strong> The same contract can be deployed several times as the macro deploys the contracts with salt. You can also deploy different contracts to the same provider using a shared wallet.</p>
 </blockquote>
-<p>If you want to deploy contract to the same provider you have to set the wallet name of the first macro to <code>shared_wallet</code> and all the remaining wallet names to <code>None</code>. The first macro will create <code>shared_wallet</code> and bring it into context and the other macros will use it instead of creating new ones. Let's see it in an example.</p>
-<pre><code class="language-rust ignore">    // The first wallet name must be `shared_wallet`
+<p>If you want to deploy contracts to the same provider, you have to set the wallet name of the first macro to <code>wallet</code> and all the remaining wallet names to <code>None</code>. The first macro will create <code>wallet</code> and bring it into context, and the other macros will use it instead of creating new ones. Let's see it in an example.</p>
+<pre><code class="language-rust ignore">    // The first wallet name must be `wallet`
     setup_contract_test!(
         foo_contract_instance,
-        shared_wallet,
+        wallet,
         &quot;packages/fuels/tests/test_projects/foo_contract&quot;
     );
-    let foo_contract_id = foo_contract_instance._get_contract_id();
+    let foo_contract_id = foo_contract_instance.get_contract_id();
 
-    // The macros that want to use the `shared_wallet` have to set
+    // The macros that want to use the `wallet` have to set
     // the wallet name to `None`
     setup_contract_test!(
         foo_caller_contract_instance,
         None,
         &quot;packages/fuels/tests/test_projects/foo_caller_contract&quot;
     );
-    let foo_caller_contract_id = foo_caller_contract_instance._get_contract_id();
+    let foo_caller_contract_id = foo_caller_contract_instance.get_contract_id();
 
     setup_contract_test!(
         foo_caller_contract_instance2,
         None,
         &quot;packages/fuels/tests/test_projects/foo_caller_contract&quot;
     );
-    let foo_caller_contract_id2 = foo_caller_contract_instance2._get_contract_id();
+    let foo_caller_contract_id2 = foo_caller_contract_instance2.get_contract_id();
 
     // Because we deploy with salt, we can deploy the same contract multiple times
     assert_ne!(foo_caller_contract_id, foo_caller_contract_id2);
@@ -198,6 +202,7 @@
     // The first contract can be called because they were deployed on the same provider
     let bits = *foo_contract_id.hash();
     let res = foo_caller_contract_instance
+        .methods()
         .call_foo_contract(Bits256(bits), true)
         .set_contracts(&amp;[foo_contract_id.clone()]) // Sets the external contract
         .call()
@@ -205,13 +210,27 @@
     assert!(!res.value);
 
     let res = foo_caller_contract_instance2
+        .methods()
         .call_foo_contract(Bits256(bits), true)
         .set_contracts(&amp;[foo_contract_id.clone()]) // Sets the external contract
         .call()
         .await?;
     assert!(!res.value);
 </code></pre>
-<p>In this example, three contracts are deploy on the same provider using the <code>shared_wallet</code>. The second and third macro use the same contract but they have different IDs because of the deployment with salt. Both of them can call the first contract by using its ID.</p>
+<p>In this example, three contracts are deployed on the same provider using the <code>wallet</code>. The second and third macro use the same contract but have different IDs because of the deployment with salt. Both of them can call the first contract by using its ID.</p>
+<p>In addition, you can manually create the <code>wallet</code> variable and then use it inside the macro. This is useful if you want to create custom wallets or providers, but still want to use the macro to reduce boilerplate code. Below is an example of this approach.</p>
+<pre><code class="language-rust ignore">    let config = WalletsConfig::new(Some(2), Some(1), Some(DEFAULT_COIN_AMOUNT));
+
+    let mut wallets = launch_custom_provider_and_get_wallets(config, None).await;
+    let wallet = wallets.pop().unwrap();
+    let wallet_2 = wallets.pop().unwrap();
+
+    setup_contract_test!(
+        contract_instance,
+        None,
+        &quot;packages/fuels/tests/test_projects/contract_test&quot;
+    );
+</code></pre>
 
                     </main>
 

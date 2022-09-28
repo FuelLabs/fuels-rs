@@ -807,16 +807,21 @@ coins and coin amount</p>
 </code></pre>
 <p>You can then use the contract methods very simply:</p>
 <pre><code class="language-rust ignore">        // This is an instance of your contract which you can use to make calls to your functions
-        let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
+        let contract_instance = MyContract::new(contract_id.to_string(), wallet);
 
         let response = contract_instance
+            .methods()
             .initialize_counter(42) // Build the ABI call
             .call() // Perform the network call
             .await?;
 
         assert_eq!(42, response.value);
 
-        let response = contract_instance.increment_counter(10).call().await?;
+        let response = contract_instance
+            .methods()
+            .increment_counter(10)
+            .call()
+            .await?;
 
         assert_eq!(52, response.value);
 </code></pre>
@@ -869,7 +874,7 @@ coins and coin amount</p>
         let contract_id =
             &quot;fuel1vkm285ypjesypw7vhdlhnty3kjxxx4efckdycqh3ttna4xvmxtfs6murwy&quot;.to_string();
 
-        let connected_contract_instance = MyContractBuilder::new(contract_id, wallet).build();
+        let connected_contract_instance = MyContract::new(contract_id, wallet);
         // You can now use the `connected_contract_instance` just as you did above!
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="the-fuelvm-binary-file"><a class="header" href="#the-fuelvm-binary-file">The FuelVM binary file</a></h1>
@@ -1042,16 +1047,21 @@ impl MyContract {
 </blockquote>
 <p>Then, you're able to use it to call the actual methods on the deployed contract:</p>
 <pre><code class="language-rust ignore">        // This is an instance of your contract which you can use to make calls to your functions
-        let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
+        let contract_instance = MyContract::new(contract_id.to_string(), wallet);
 
         let response = contract_instance
+            .methods()
             .initialize_counter(42) // Build the ABI call
             .call() // Perform the network call
             .await?;
 
         assert_eq!(42, response.value);
 
-        let response = contract_instance.increment_counter(10).call().await?;
+        let response = contract_instance
+            .methods()
+            .increment_counter(10)
+            .call()
+            .await?;
 
         assert_eq!(52, response.value);
 </code></pre>
@@ -1137,7 +1147,11 @@ impl MyContract {
             &quot;packages/fuels/tests/test_projects/contract_test&quot;
         );
 
-        let response = contract_instance.initialize_counter(42).call().await?;
+        let response = contract_instance
+            .methods()
+            .initialize_counter(42)
+            .call()
+            .await?;
 
         assert_eq!(42, response.value);
 </code></pre>
@@ -1145,30 +1159,30 @@ impl MyContract {
 <blockquote>
 <p><strong>Note</strong> The same contract can be deployed several times as the macro deploys the contracts with salt. You can also deploy different contracts to the same provider using a shared wallet.</p>
 </blockquote>
-<p>If you want to deploy contract to the same provider you have to set the wallet name of the first macro to <code>shared_wallet</code> and all the remaining wallet names to <code>None</code>. The first macro will create <code>shared_wallet</code> and bring it into context and the other macros will use it instead of creating new ones. Let's see it in an example.</p>
-<pre><code class="language-rust ignore">    // The first wallet name must be `shared_wallet`
+<p>If you want to deploy contracts to the same provider, you have to set the wallet name of the first macro to <code>wallet</code> and all the remaining wallet names to <code>None</code>. The first macro will create <code>wallet</code> and bring it into context, and the other macros will use it instead of creating new ones. Let's see it in an example.</p>
+<pre><code class="language-rust ignore">    // The first wallet name must be `wallet`
     setup_contract_test!(
         foo_contract_instance,
-        shared_wallet,
+        wallet,
         &quot;packages/fuels/tests/test_projects/foo_contract&quot;
     );
-    let foo_contract_id = foo_contract_instance._get_contract_id();
+    let foo_contract_id = foo_contract_instance.get_contract_id();
 
-    // The macros that want to use the `shared_wallet` have to set
+    // The macros that want to use the `wallet` have to set
     // the wallet name to `None`
     setup_contract_test!(
         foo_caller_contract_instance,
         None,
         &quot;packages/fuels/tests/test_projects/foo_caller_contract&quot;
     );
-    let foo_caller_contract_id = foo_caller_contract_instance._get_contract_id();
+    let foo_caller_contract_id = foo_caller_contract_instance.get_contract_id();
 
     setup_contract_test!(
         foo_caller_contract_instance2,
         None,
         &quot;packages/fuels/tests/test_projects/foo_caller_contract&quot;
     );
-    let foo_caller_contract_id2 = foo_caller_contract_instance2._get_contract_id();
+    let foo_caller_contract_id2 = foo_caller_contract_instance2.get_contract_id();
 
     // Because we deploy with salt, we can deploy the same contract multiple times
     assert_ne!(foo_caller_contract_id, foo_caller_contract_id2);
@@ -1176,6 +1190,7 @@ impl MyContract {
     // The first contract can be called because they were deployed on the same provider
     let bits = *foo_contract_id.hash();
     let res = foo_caller_contract_instance
+        .methods()
         .call_foo_contract(Bits256(bits), true)
         .set_contracts(&amp;[foo_contract_id.clone()]) // Sets the external contract
         .call()
@@ -1183,13 +1198,27 @@ impl MyContract {
     assert!(!res.value);
 
     let res = foo_caller_contract_instance2
+        .methods()
         .call_foo_contract(Bits256(bits), true)
         .set_contracts(&amp;[foo_contract_id.clone()]) // Sets the external contract
         .call()
         .await?;
     assert!(!res.value);
 </code></pre>
-<p>In this example, three contracts are deploy on the same provider using the <code>shared_wallet</code>. The second and third macro use the same contract but they have different IDs because of the deployment with salt. Both of them can call the first contract by using its ID.</p>
+<p>In this example, three contracts are deployed on the same provider using the <code>wallet</code>. The second and third macro use the same contract but have different IDs because of the deployment with salt. Both of them can call the first contract by using its ID.</p>
+<p>In addition, you can manually create the <code>wallet</code> variable and then use it inside the macro. This is useful if you want to create custom wallets or providers, but still want to use the macro to reduce boilerplate code. Below is an example of this approach.</p>
+<pre><code class="language-rust ignore">    let config = WalletsConfig::new(Some(2), Some(1), Some(DEFAULT_COIN_AMOUNT));
+
+    let mut wallets = launch_custom_provider_and_get_wallets(config, None).await;
+    let wallet = wallets.pop().unwrap();
+    let wallet_2 = wallets.pop().unwrap();
+
+    setup_contract_test!(
+        contract_instance,
+        None,
+        &quot;packages/fuels/tests/test_projects/contract_test&quot;
+    );
+</code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="calling-contracts"><a class="header" href="#calling-contracts">Calling contracts</a></h1>
 <p>Once you've deployed your contract, as seen in the previous sections, you'll likely want to:</p>
 <ol>
@@ -1200,31 +1229,36 @@ impl MyContract {
 </ol>
 <p>Here's an example. Suppose your Sway contract has two ABI methods called <code>initialize_counter(u64)</code> and <code>increment_counter(u64)</code>. Once you've deployed it the contract, you can call these methods like this:</p>
 <pre><code class="language-rust ignore">        // This is an instance of your contract which you can use to make calls to your functions
-        let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
+        let contract_instance = MyContract::new(contract_id.to_string(), wallet);
 
         let response = contract_instance
+            .methods()
             .initialize_counter(42) // Build the ABI call
             .call() // Perform the network call
             .await?;
 
         assert_eq!(42, response.value);
 
-        let response = contract_instance.increment_counter(10).call().await?;
+        let response = contract_instance
+            .methods()
+            .increment_counter(10)
+            .call()
+            .await?;
 
         assert_eq!(52, response.value);
 </code></pre>
 <p>The example above uses all the default configurations and performs a simple contract call.</p>
 <p>Next, we'll see how we can further configure the many different parameters in a contract call</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="calls-with-different-wallets"><a class="header" href="#calls-with-different-wallets">Calls with different wallets</a></h1>
-<p>You can use the <code>_with_wallet()</code> method on an existing contract instance as a shorthand for creating a new instance connected to the provided wallet. This lets you make contracts calls with different wallets in a chain like fashion.</p>
+<p>You can use the <code>with_wallet()</code> method on an existing contract instance as a shorthand for creating a new instance connected to the provided wallet. This lets you make contracts calls with different wallets in a chain like fashion.</p>
 <pre><code class="language-rust ignore">        // Create contract instance with wallet_1
-        let contract_instance =
-            MyContractBuilder::new(contract_id.to_string(), wallet_1.clone()).build();
+        let contract_instance = MyContract::new(contract_id.to_string(), wallet_1.clone());
 
         // Perform contract call with wallet_2
         let response = contract_instance
-            ._with_wallet(wallet_2)? // Connect wallet_2
-            .get_msg_amount() // Our contract method.
+            .with_wallet(wallet_2)? // Connect wallet_2
+            .methods() // Get contract methods
+            .get_msg_amount() // Our contract method
             .call() // Perform the contract call.
             .await?; // This is an async call, `.await` for it.
 </code></pre>
@@ -1239,10 +1273,12 @@ impl MyContract {
 <li>Maturity.</li>
 </ol>
 <p>You can configure these parameters by creating an instance of <a href="https://github.com/FuelLabs/fuels-rs/blob/adf81bd451d7637ce0976363bd7784408430031a/packages/fuels-contract/src/parameters.rs#L7"><code>TxParameters</code></a> and passing it to a chain method called <code>tx_params</code>:</p>
-<pre><code class="language-rust ignore">        // In order: gas_price, gas_limit, and maturity
+<pre><code class="language-rust ignore">        let contract_methods = MyContract::new(contract_id.to_string(), wallet.clone()).methods();
+
+        // In order: gas_price, gas_limit, and maturity
         let my_tx_params = TxParameters::new(None, Some(1_000_000), None);
 
-        let response = contract_instance
+        let response = contract_methods
             .initialize_counter(42) // Our contract method.
             .tx_params(my_tx_params) // Chain the tx params setting method.
             .call() // Perform the contract call.
@@ -1255,7 +1291,7 @@ pub const DEFAULT_GAS_PRICE: u64 = 0;
 pub const DEFAULT_MATURITY: u64 = 0;
 </code></pre>
 <p>This way:</p>
-<pre><code class="language-rust ignore">        let response = contract_instance
+<pre><code class="language-rust ignore">        let response = contract_methods
             .initialize_counter(42)
             .tx_params(TxParameters::default())
             .call()
@@ -1280,14 +1316,15 @@ pub const DEFAULT_MATURITY: u64 = 0;
     }
 </code></pre>
 <p>Then, in Rust, after setting up and deploying the above contract, you can configure the amount being sent in the transaction like this:</p>
-<pre><code class="language-rust ignore">
+<pre><code class="language-rust ignore">        let contract_methods = MyContract::new(contract_id.to_string(), wallet.clone()).methods();
+
         let tx_params = TxParameters::default();
 
         // Forward 1_000_000 coin amount of base asset_id
         // this is a big number for checking that amount can be a u64
         let call_params = CallParameters::new(Some(1_000_000), None, None);
 
-        let response = contract_instance
+        let response = contract_methods
             .get_msg_amount() // Our contract method.
             .tx_params(tx_params) // Chain the tx params setting method.
             .call_params(call_params) // Chain the call params setting method.
@@ -1300,7 +1337,7 @@ pub const DEFAULT_MATURITY: u64 = 0;
 pub const BASE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
 </code></pre>
 <p>This way:</p>
-<pre><code class="language-rust ignore">        let response = contract_instance
+<pre><code class="language-rust ignore">        let response = contract_methods
             .initialize_counter(42)
             .call_params(CallParameters::default())
             .call()
@@ -1314,7 +1351,7 @@ pub const BASE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
         let tx_params = TxParameters::new(None, Some(1000), None);
         let call_params = CallParameters::new(None, None, Some(200));
 
-        let response = contract_instance
+        let response = contract_methods
             .get_msg_amount() // Our contract method.
             .tx_params(tx_params) // Chain the tx params setting method.
             .call_params(call_params) // Chain the call params setting method.
@@ -1356,7 +1393,7 @@ pub const BASE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
 <pre><code class="language-rust ignore">        let address = wallet.address();
 
         // withdraw some tokens to wallet
-        let response = contract_instance
+        let response = contract_methods
             .transfer_coins_to_output(1_000_000, contract_id.into(), address.into())
             .append_variable_outputs(1)
             .call()
@@ -1369,7 +1406,7 @@ pub const BASE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
 <p>In this case, there's no need to generate an actual blockchain transaction; you only want to read a value quickly.</p>
 <p>You can do this with the SDK. Instead of <code>.call()</code>ing the method, use <code>.simulate()</code>:</p>
 <pre><code class="language-rust ignore">        // you would mint 100 coins if the transaction wasn't simulated
-        let counter = contract_instance.mint_coins(100).simulate().await?;
+        let counter = contract_methods.mint_coins(100).simulate().await?;
 </code></pre>
 <p>Note that if you use <code>.simulate()</code> on a method that <em>does</em> change the state of the blockchain, it won't work properly; it will just <code>dry-run</code> it.</p>
 <p>At the moment, it's up to you to know whether a contract method changes state or not, and use <code>.call()</code> or <code>.simulate()</code> accordingly.</p>
@@ -1377,6 +1414,7 @@ pub const BASE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
 <p>Your contract method might be calling other contracts. To do so, you must feed the external contract IDs that your contract depends on to the method you're calling. You do it by chaining <code>.set_contracts(&amp;[external_contract_id, ...])</code> to the method you want to call. For instance:</p>
 <pre><code class="language-rust ignore">    let bits = *foo_contract_id.hash();
     let res = foo_caller_contract_instance
+        .methods()
         .call_foo_contract(Bits256(bits), true)
         .set_contracts(&amp;[foo_contract_id.clone()]) // Sets the external contract
         .call()
@@ -1384,11 +1422,10 @@ pub const BASE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="multiple-contract-calls"><a class="header" href="#multiple-contract-calls">Multiple contract calls</a></h1>
 <p>With <code>ContractMultiCallHandler</code>, you can execute multiple contract calls within a single transaction. To achieve this, you first prepare all the contract calls that you want to bundle:</p>
-<pre><code class="language-rust ignore">        let contract_instance =
-            MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
+<pre><code class="language-rust ignore">        let contract_methods = MyContract::new(contract_id.to_string(), wallet.clone()).methods();
 
-        let call_handler_1 = contract_instance.initialize_counter(42);
-        let call_handler_2 = contract_instance.get_array([42; 2]);
+        let call_handler_1 = contract_methods.initialize_counter(42);
+        let call_handler_2 = contract_methods.get_array([42; 2]);
 </code></pre>
 <p>You can also set call parameters, variable outputs, or external contracts for every contract call, as long as you don't execute it with <code>call()</code> or <code>simulate()</code>.</p>
 <p>Next, you provide the prepared calls to your <code>ContractMultiCallHandler</code> and optionally configure transaction parameters:</p>
@@ -1420,18 +1457,19 @@ pub const BASE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
 }
 </code></pre>
 <p>Below are examples that show how to get the estimated transaction cost from single and multi call transactions.</p>
-<pre><code class="language-rust ignore">        let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
+<pre><code class="language-rust ignore">        let contract_instance = MyContract::new(contract_id.to_string(), wallet);
 
         let tolerance = 0.0;
         let transaction_cost = contract_instance
+            .methods()
             .initialize_counter(42) // Build the ABI call
             .estimate_transaction_cost(Some(tolerance)) // Get estimated transaction cost
             .await?;
 </code></pre>
 <pre><code class="language-rust ignore">        let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
 
-        let call_handler_1 = contract_instance.initialize_counter(42);
-        let call_handler_2 = contract_instance.get_array([42; 2]);
+        let call_handler_1 = contract_methods.initialize_counter(42);
+        let call_handler_2 = contract_methods.get_array([42; 2]);
 
         multi_call_handler
             .add_call(call_handler_1)
@@ -1828,7 +1866,7 @@ impl MyContract for Contract {
             single_generic_param: 123u64,
         };
 
-        let result = contract_instance
+        let result = contract_methods
             .struct_w_generic(arg1.clone())
             .call()
             .await?
@@ -1865,7 +1903,7 @@ impl MyContract for Contract {
     }
 </code></pre>
 <p>If your contract's method takes and returns, for instance, a Sway's <code>str[23]</code>. When using the SDK, this method will take and return a <code>SizedAsciiString&lt;23&gt;</code>, and you can pass a string to it like this:</p>
-<pre><code class="language-rust ignore">    let call_handler = contract_instance.takes_string(
+<pre><code class="language-rust ignore">    let call_handler = contract_instance.methods().takes_string(
         &quot;This is a full sentence&quot;
             .try_into()
             .expect(&quot;failed to convert string into SizedAsciiString&quot;),
@@ -1876,7 +1914,7 @@ impl MyContract for Contract {
 <p>Here's an example:</p>
 <pre><code class="language-rust ignore">    let arg: [u8; 32] = hasher.finalize().into();
 
-    let call_handler = contract_instance.takes_b256(Bits256(arg));
+    let call_handler = contract_instance.methods().takes_b256(Bits256(arg));
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="api"><a class="header" href="#api">API</a></h1>
 <p>For a more in-depth look at the APIs provided by the Fuel Rust SDK, head over to the <a href="https://docs.rs/fuels/latest/fuels/">official documentation</a>. In the actual rust docs, you can see the most up-to-date information about the API, which is synced with the code as it changes.</p>
@@ -2045,7 +2083,7 @@ impl LiquidityPool for Contract {
         let wallets = launch_custom_provider_and_get_wallets(wallet_config, None).await;
         let wallet = &amp;wallets[0];
 </code></pre>
-<p>Having launched a provider and created the wallet, we can deploy our contract and create an instance of it:</p>
+<p>Having launched a provider and created the wallet, we can deploy our contract and create an instance of its methods:</p>
 <pre><code class="language-rust ignore">        let contract_id = Contract::deploy(
             &quot;../../packages/fuels/tests/test_projects/liquidity_pool/out/debug/liquidity_pool.bin&quot;,
             wallet,
@@ -2054,13 +2092,12 @@ impl LiquidityPool for Contract {
         )
         .await?;
 
-        let contract_instance =
-            MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
+        let contract_methods = MyContract::new(contract_id.to_string(), wallet.clone()).methods();
 </code></pre>
 <p>With the preparations out of the way, we can finally deposit to the liquidity pool by calling <code>deposit()</code> via the contract instance. Since we have to transfer assets to the contract, we create the appropriate <code>CallParameters</code> and chain them to the method call. To receive the minted liquidity pool asset, we have to append a variable output to our contract call.</p>
 <pre><code class="language-rust ignore">        let deposit_amount = 1_000_000;
         let call_params = CallParameters::new(Some(deposit_amount), Some(base_asset_id), None);
-        contract_instance
+        contract_methods
             .deposit(wallet.address().into())
             .call_params(call_params)
             .append_variable_outputs(1)
@@ -2072,7 +2109,7 @@ impl LiquidityPool for Contract {
         let lp_token_balance = wallet.get_asset_balance(&amp;lp_asset_id).await?;
 
         let call_params = CallParameters::new(Some(lp_token_balance), Some(lp_asset_id), None);
-        contract_instance
+        contract_methods
             .withdraw(wallet.address().into())
             .call_params(call_params)
             .append_variable_outputs(1)

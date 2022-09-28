@@ -233,16 +233,21 @@ impl MyContract {
 </blockquote>
 <p>Then, you're able to use it to call the actual methods on the deployed contract:</p>
 <pre><code class="language-rust ignore">        // This is an instance of your contract which you can use to make calls to your functions
-        let contract_instance = MyContractBuilder::new(contract_id.to_string(), wallet).build();
+        let contract_instance = MyContract::new(contract_id.to_string(), wallet);
 
         let response = contract_instance
+            .methods()
             .initialize_counter(42) // Build the ABI call
             .call() // Perform the network call
             .await?;
 
         assert_eq!(42, response.value);
 
-        let response = contract_instance.increment_counter(10).call().await?;
+        let response = contract_instance
+            .methods()
+            .increment_counter(10)
+            .call()
+            .await?;
 
         assert_eq!(52, response.value);
 </code></pre>

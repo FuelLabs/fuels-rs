@@ -138,15 +138,15 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="calls-with-different-wallets"><a class="header" href="#calls-with-different-wallets">Calls with different wallets</a></h1>
-<p>You can use the <code>_with_wallet()</code> method on an existing contract instance as a shorthand for creating a new instance connected to the provided wallet. This lets you make contracts calls with different wallets in a chain like fashion.</p>
+<p>You can use the <code>with_wallet()</code> method on an existing contract instance as a shorthand for creating a new instance connected to the provided wallet. This lets you make contracts calls with different wallets in a chain like fashion.</p>
 <pre><code class="language-rust ignore">        // Create contract instance with wallet_1
-        let contract_instance =
-            MyContractBuilder::new(contract_id.to_string(), wallet_1.clone()).build();
+        let contract_instance = MyContract::new(contract_id.to_string(), wallet_1.clone());
 
         // Perform contract call with wallet_2
         let response = contract_instance
-            ._with_wallet(wallet_2)? // Connect wallet_2
-            .get_msg_amount() // Our contract method.
+            .with_wallet(wallet_2)? // Connect wallet_2
+            .methods() // Get contract methods
+            .get_msg_amount() // Our contract method
             .call() // Perform the contract call.
             .await?; // This is an async call, `.await` for it.
 </code></pre>

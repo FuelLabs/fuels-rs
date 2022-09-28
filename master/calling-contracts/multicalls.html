@@ -139,11 +139,10 @@
                     <main>
                         <h1 id="multiple-contract-calls"><a class="header" href="#multiple-contract-calls">Multiple contract calls</a></h1>
 <p>With <code>ContractMultiCallHandler</code>, you can execute multiple contract calls within a single transaction. To achieve this, you first prepare all the contract calls that you want to bundle:</p>
-<pre><code class="language-rust ignore">        let contract_instance =
-            MyContractBuilder::new(contract_id.to_string(), wallet.clone()).build();
+<pre><code class="language-rust ignore">        let contract_methods = MyContract::new(contract_id.to_string(), wallet.clone()).methods();
 
-        let call_handler_1 = contract_instance.initialize_counter(42);
-        let call_handler_2 = contract_instance.get_array([42; 2]);
+        let call_handler_1 = contract_methods.initialize_counter(42);
+        let call_handler_2 = contract_methods.get_array([42; 2]);
 </code></pre>
 <p>You can also set call parameters, variable outputs, or external contracts for every contract call, as long as you don't execute it with <code>call()</code> or <code>simulate()</code>.</p>
 <p>Next, you provide the prepared calls to your <code>ContractMultiCallHandler</code> and optionally configure transaction parameters:</p>
