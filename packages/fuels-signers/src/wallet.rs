@@ -317,14 +317,14 @@ impl Wallet {
         //  - a pointer to the contract id,
         //  - the actual amount
         //  - a pointer to the asset id
-        // into the registers 0X10, 0x11, 0x12
+        // into the registers 0x10, 0x12, 0x13
         // and calls the TR instruction
         let script = vec![
             Opcode::gtf(0x10, 0x00, GTFArgs::ScriptData),
             Opcode::ADDI(0x11, 0x10, ContractId::LEN as u16),
-            Opcode::LW(0x11, 0x11, 0),
-            Opcode::ADDI(0x12, 0x11, WORD_SIZE as u16),
-            Opcode::TR(0x10, 0x11, 0x12),
+            Opcode::LW(0x12, 0x11, 0),
+            Opcode::ADDI(0x13, 0x11, WORD_SIZE as u16),
+            Opcode::TR(0x10, 0x12, 0x13),
             Opcode::RET(REG_ONE),
         ]
         .into_iter()
