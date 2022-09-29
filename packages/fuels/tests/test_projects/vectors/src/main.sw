@@ -7,7 +7,6 @@ dep utils;
 use eq_impls::*;
 use utils::*;
 use data_structures::*;
-use std::logging::log;
 
 abi MyContract {
     fn u32_vec(arg: Vec<u32>);

@@ -1,7 +1,6 @@
 extern crate alloc;
 
 use fuels_abigen_macro::wasm_abigen;
-use std::vec;
 
 wasm_abigen!(
     no_name,
