@@ -3818,22 +3818,12 @@ async fn test_script_interface() -> Result<(), Error> {
 
 #[tokio::test]
 async fn test_vector() -> Result<(), Error> {
-    abigen!(
-        MyContract,
-        "packages/fuels/tests/test_projects/vectors/out/debug/vectors-abi.json"
+    setup_contract_test!(
+        contract_instance,
+        wallet,
+        "packages/fuels/tests/test_projects/vectors"
     );
 
-    let wallet = launch_provider_and_get_wallet().await;
-
-    let contract_id = Contract::deploy(
-        "tests/test_projects/vectors/out/debug/vectors.bin",
-        &wallet,
-        TxParameters::default(),
-        StorageConfiguration::default(),
-    )
-    .await?;
-
-    let contract_instance = MyContract::new(contract_id.to_string(), wallet);
     let methods = contract_instance.methods();
 
     {
