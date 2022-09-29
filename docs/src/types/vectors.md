@@ -70,31 +70,24 @@ Calling it from the SDK would look like this:
 
 To log a `Vec<Vec<u32>>` we need to do the following:
 
-Step 1. 
-We're logging the parent vector. The type is `Vec<Vec<..>>`.
+1. We're looking at the parent vector. The type is `Vec<Vec<..>>`.
 
-This is a vector with two elements `inner_vec_1` and `inner_vec_2`. Both are vectors themselves. Log the elements of `inner_vec_1`.
+    This is a vector with two elements `inner_vec_1` and `inner_vec_2`. Both are vectors themselves.
 
-Step 2.
-We're logging `inner_vec_1`. The type is `Vec<u32>`.
+2. We're looking at `inner_vec_1`. The type is `Vec<u32>`.
 
-This is a vector with one element: `1`. Log it.
+    This is a vector with one element: `1`. Log it.
 
-The logging of `inner_vec_1` is finished.
+3. We're looking at the second element of the parent vector `inner_vec_2`. The type is `Vec<u32>`.
 
-Step 3.
-We're logging the second element of the parent vector `inner_vec_2`. The type is `Vec<u32>`.
+   This is a vector with one element: `2`. Log it.
 
-This is a vector with one element: `2`. Log it.
+We've finished logging the elements of the parent vector. Since the type is `Vec<Vec<..>>` we have an additional step.
 
-The logging of `inner_vec_2` is finished.
+4. Call `log` on each element of the vector:
 
-Step 4.
-We've finished logging the elements of the parent vector. Since the type is `Vec<Vec<..>>` we have an additional step -- call `log` on each element of the vector:
+   `log(inner_vec_1)`
 
+   `log(inner_vec_2)`
 
-`log(inner_vec_1)`
-
-`log(inner_vec_2)`
-
-In the example this is done by the `log_vec` helper.
+   In the example this is done by the `log_vec` helper.
