@@ -6,10 +6,8 @@ dep utils;
 
 use eq_impls::*;
 use utils::*;
-use std::vec::Vec;
-use data_structures::{SomeEnum, SomeStruct};
-use std::option::Option;
-use std::assert::assert;
+use data_structures::*;
+use std::logging::log;
 
 abi MyContract {
     fn u32_vec(arg: Vec<u32>) -> Vec<u32>;
@@ -25,6 +23,11 @@ abi MyContract {
     fn vec_in_vec(arg: Vec<Vec<u32>>) -> Vec<Vec<u32>>;
 
     fn vec_in_a_vec_in_a_struct_in_a_vec(arg: Vec<SomeStruct<Vec<Vec<u32>>>>) -> Vec<SomeStruct<Vec<Vec<u32>>>>;
+
+    // examples
+    fn returning_a_vec() -> Vec<u32>;
+    fn returning_type_w_nested_vectors() -> Parent;
+    fn returning_immediately_nested_vectors() -> Vec<Vec<u32>>;
 }
 
 impl MyContract for Contract {
@@ -180,4 +183,67 @@ impl MyContract for Contract {
 
         expected
     }
+
+    //ANCHOR: sway_returning_a_vec
+    fn returning_a_vec() -> Vec<u32> {
+        let mut vec = ~Vec::new();
+        vec.push(1);
+        vec.push(2);
+
+        let mut i = 0;
+        while i < vec.len() {
+            log(vec.get(i).unwrap());
+            i += 1;
+        }
+
+        vec
+    }
+    //ANCHOR_END: sway_returning_a_vec
+    //ANCHOR: sway_returning_type_w_nested_vectors
+    fn returning_type_w_nested_vectors() -> Parent {
+        let mut grandchild_vec = ~Vec::new();
+        grandchild_vec.push(0);
+
+        let mut child_info_vec = ~Vec::new();
+        child_info_vec.push(1);
+
+        let child = Child {
+            grandchild: grandchild_vec,
+            info: child_info_vec,
+        };
+
+        let mut parent_info_vec = ~Vec::new();
+        parent_info_vec.push(2);
+
+        let parent = Parent {
+            child,
+            info: parent_info_vec,
+        };
+
+        log_vec(grandchild_vec);
+        log_vec(child_info_vec);
+        log_vec(parent_info_vec);
+
+        parent
+    }
+    //ANCHOR_END: sway_returning_type_w_nested_vectors
+    //ANCHOR: sway_returning_immediately_nested_vectors
+    fn returning_immediately_nested_vectors() -> Vec<Vec<u32>> {
+        let mut parent_vec = ~Vec::new();
+
+        let mut inner_vec_1 = ~Vec::new();
+        inner_vec_1.push(1);
+        parent_vec.push(inner_vec_1);
+
+        let mut inner_vec_2 = ~Vec::new();
+        inner_vec_2.push(2);
+        parent_vec.push(inner_vec_2);
+
+        log_vec(inner_vec_1);
+        log_vec(inner_vec_2);
+        log_vec(parent_vec);
+
+        parent_vec
+    }
+    //ANCHOR_END: sway_returning_immediately_nested_vectors
 }

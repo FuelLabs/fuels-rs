@@ -18,138 +18,55 @@ These logs must be the last ones you make.
 
 
 ### A simple case:
-```Rust
-contract;
+```rust,ignore
+{{#include ../../../packages/fuels/tests/test_projects/vectors/src/main.sw:sway_returning_a_vec}}
+```
 
-use std::logging::log;
-use std::vec::Vec;
-use std::option::Option;
-use std::assert::assert;
+Calling it from the SDK would look like this:
 
-abi MyContract {
-    fn u32_vec(arg: Vec<u32>) -> Vec<u32>;
-}
-
-
-impl MyContract for Contract {
-    fn some_fn() -> Vec<u32> {
-        let mut a_vec = ~Vec::new();
-        a_vec.push(1);
-        a_vec.push(2);
-
-        log_vec(expected);
-        a_vec
-    }
-}
-
-fn log_vec<T>(vec: Vec<T>) {
-    let mut i = 0;
-    while i < vec.len() {
-        let el = vec.get(i);
-
-        match el {
-            Option::Some(val) => {
-                log(val)
-            },
-            _ => {
-                assert(false);
-            }
-        };
-
-        i += 1;
-    }
-}
+```rust,ignore
+{{#include ../../../packages/fuels/tests/harness.rs:harness_returning_a_vec}}
 ```
 
 ### Respect the order
-If you have vectors embedded in some other type, you must take care to log them in order:
+If you have vectors embedded in some other type, for example:
 
-```Rust
-contract;
-
-use std::option::Option;
-use std::logging::log;
-use std::assert::assert;
-
-struct Child {
-    grandchild: Vec<u32>,
-    info: Vec<u32>,
-}
-struct Parent {
-    child: Child,
-    info: Vec<u32>,
-}
-
-abi MyContract {
-    fn test_function() -> Parent;
-}
-
-impl MyContract for Contract {
-    fn test_function() -> Parent {
-        let mut grandchild_vec = ~Vec::new();
-        grandchild_vec.push(0);
-
-        let mut child_info_vec = ~Vec::new();
-        child_info_vec.push(1);
-
-        let child = Child {
-            grandchild: grandchild_vec,
-            info: child_info_vec,
-        };
-
-        let mut parent_info_vec = ~Vec::new();
-        parent_info_vec.push(2);
-
-        let parent = Parent {
-            child,
-            info: parent_info_vec,
-        };
-
-        log_vec(grandchild_vec);
-        log_vec(child_info_vec);
-        log_vec(parent_info_vec);
-
-        parent
-    }
-}
+```rust,ignore
+{{#include ../../../packages/fuels/tests/test_projects/vectors/src/data_structures.sw:sway_nested_vec_types}}
 ```
 
+you must take care to log them in order:
+```rust,ignore
+{{#include ../../../packages/fuels/tests/test_projects/vectors/src/main.sw:sway_returning_type_w_nested_vectors}}
+```
+
+where `log_vec` is a helper defined as:
+```rust,ignore
+{{#include ../../../packages/fuels/tests/test_projects/vectors/src/utils.sw:sway_log_vec_helper}}
+```
+
+
+Calling it from the SDK would look like this:
+
+```rust,ignore
+{{#include ../../../packages/fuels/tests/harness.rs:harness_returning_type_w_nested_vectors}}
+```
+
+
 ### Nested vectors
-There is one more step you must take if you're logging a vector nested immediately inside another vector -- i.e. `Vec<Vec<u32>>`
+There is one more step you must take if you're logging a vector nested immediately inside another vector -- e.g. `Vec<Vec<u32>>`
 
 An example:
 
-```Rust
-contract;
-
-use std::option::Option;
-use std::logging::log;
-use std::assert::assert;
-
-abi MyContract {
-    fn test_function() -> Vec<Vec<u32>>;
-}
-
-impl MyContract for Contract {
-    fn test_function() -> Vec<Vec<u32>> {
-        let mut parent_vec = ~Vec::new();
-
-        let mut inner_vec_1 = ~Vec::new();
-        inner_vec_1.push(1);
-        parent_vec.push(inner_vec_1);
-
-        let mut inner_vec_2 = ~Vec::new();
-        inner_vec_2.push(2);
-        parent_vec.push(inner_vec_2);
-
-        log_vec(inner_vec_1);
-        log_vec(inner_vec_2);
-        log_vec(parent_vec);
-
-        parent_vec
-    }
-}
+```rust,ignore
+{{#include ../../../packages/fuels/tests/test_projects/vectors/src/main.sw:sway_returning_immediately_nested_vectors}}
 ```
+Calling it from the SDK would look like this:
+
+```rust,ignore
+{{#include ../../../packages/fuels/tests/harness.rs:harness_returning_immediately_nested_vectors}}
+```
+
 
 To log a `Vec<Vec<u32>>` we need to do the following:
 

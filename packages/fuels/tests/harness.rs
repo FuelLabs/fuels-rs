@@ -3915,6 +3915,50 @@ async fn test_vector() -> Result<(), Error> {
             .value;
         assert_eq!(result, arg);
     }
+    // testing examples for use in the SDK book
+    {
+        // ANCHOR: harness_returning_a_vec
+        let result = contract_instance
+            .methods()
+            .returning_a_vec()
+            .call()
+            .await?
+            .value;
+        assert_eq!(result, vec![1, 2]);
+        // ANCHOR_END: harness_returning_a_vec
+    }
+    {
+        // ANCHOR: harness_returning_type_w_nested_vectors
+        let result = contract_instance
+            .methods()
+            .returning_type_w_nested_vectors()
+            .call()
+            .await?
+            .value;
+
+        let expected = Parent {
+            child: Child {
+                grandchild: vec![0],
+                info: vec![1],
+            },
+            info: vec![2],
+        };
+        assert_eq!(result, expected);
+        // ANCHOR_END: harness_returning_type_w_nested_vectors
+    }
+
+    {
+        // ANCHOR: harness_returning_immediately_nested_vectors
+        let result = contract_instance
+            .methods()
+            .returning_immediately_nested_vectors()
+            .call()
+            .await?
+            .value;
+
+        assert_eq!(result, vec![vec![1], vec![2]]);
+        // ANCHOR_END: harness_returning_immediately_nested_vectors
+    }
 
     Ok(())
 }
