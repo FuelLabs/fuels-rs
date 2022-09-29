@@ -3833,64 +3833,54 @@ async fn test_vector() -> Result<(), Error> {
     {
         // vec of u32s
         let arg = vec![0, 1, 2];
-        let result = methods.u32_vec(arg.clone()).call().await?.value;
-        assert_eq!(result, arg);
+        methods.u32_vec(arg).call().await?;
     }
     {
         // vec of vecs of u32s
         let arg = vec![vec![0, 1, 2], vec![0, 1, 2]];
-        let result = methods.vec_in_vec(arg.clone()).call().await?.value;
-        assert_eq!(result, arg);
+        methods.vec_in_vec(arg.clone()).call().await?;
     }
     {
         // vec of structs
         // ANCHOR: passing_in_vec
         let arg = vec![SomeStruct { a: 0 }, SomeStruct { a: 1 }];
-        let result = methods.struct_in_vec(arg.clone()).call().await?.value;
-        assert_eq!(result, arg);
+        methods.struct_in_vec(arg.clone()).call().await?;
         // ANCHOR_END: passing_in_vec
     }
     {
         // vec in struct
         let arg = SomeStruct { a: vec![0, 1, 2] };
-        let result = methods.vec_in_struct(arg.clone()).call().await?.value;
-        assert_eq!(result, arg);
+        methods.vec_in_struct(arg.clone()).call().await?;
     }
     {
         // array in vec
         let arg = vec![[0u64, 1u64], [0u64, 1u64]];
-        let result = methods.array_in_vec(arg.clone()).call().await?.value;
-        assert_eq!(result, arg);
+        methods.array_in_vec(arg.clone()).call().await?;
     }
     {
         // vec in array
         let arg = [vec![0, 1, 2], vec![0, 1, 2]];
-        let result = methods.vec_in_array(arg.clone()).call().await?.value;
-        assert_eq!(result, arg);
+        methods.vec_in_array(arg.clone()).call().await?;
     }
     {
         // vec in enum
         let arg = SomeEnum::a(vec![0, 1, 2]);
-        let result = methods.vec_in_enum(arg.clone()).call().await?.value;
-        assert_eq!(result, arg);
+        methods.vec_in_enum(arg.clone()).call().await?;
     }
     {
         // enum in vec
         let arg = vec![SomeEnum::a(0), SomeEnum::a(1)];
-        let result = methods.enum_in_vec(arg.clone()).call().await?.value;
-        assert_eq!(result, arg);
+        methods.enum_in_vec(arg.clone()).call().await?;
     }
     {
         // tuple in vec
         let arg = vec![(0, 0), (1, 1)];
-        let result = methods.tuple_in_vec(arg.clone()).call().await?.value;
-        assert_eq!(result, arg);
+        methods.tuple_in_vec(arg.clone()).call().await?;
     }
     {
         // vec in tuple
         let arg = (vec![0, 1, 2], vec![0, 1, 2]);
-        let result = methods.vec_in_tuple(arg.clone()).call().await?.value;
-        assert_eq!(result, arg);
+        methods.vec_in_tuple(arg.clone()).call().await?;
     }
     {
         // vec in a vec in a struct in a vec
@@ -3902,56 +3892,10 @@ async fn test_vector() -> Result<(), Error> {
                 a: vec![vec![6, 7, 8], vec![9, 10, 11]],
             },
         ];
-        let result = methods
+        methods
             .vec_in_a_vec_in_a_struct_in_a_vec(arg.clone())
             .call()
-            .await?
-            .value;
-        assert_eq!(result, arg);
-    }
-    // testing examples for use in the SDK book
-    {
-        // ANCHOR: harness_returning_a_vec
-        let result = contract_instance
-            .methods()
-            .returning_a_vec()
-            .call()
-            .await?
-            .value;
-        assert_eq!(result, vec![1, 2]);
-        // ANCHOR_END: harness_returning_a_vec
-    }
-    {
-        // ANCHOR: harness_returning_type_w_nested_vectors
-        let result = contract_instance
-            .methods()
-            .returning_type_w_nested_vectors()
-            .call()
-            .await?
-            .value;
-
-        let expected = Parent {
-            child: Child {
-                grandchild: vec![0],
-                info: vec![1],
-            },
-            info: vec![2],
-        };
-        assert_eq!(result, expected);
-        // ANCHOR_END: harness_returning_type_w_nested_vectors
-    }
-
-    {
-        // ANCHOR: harness_returning_immediately_nested_vectors
-        let result = contract_instance
-            .methods()
-            .returning_immediately_nested_vectors()
-            .call()
-            .await?
-            .value;
-
-        assert_eq!(result, vec![vec![1], vec![2]]);
-        // ANCHOR_END: harness_returning_immediately_nested_vectors
+            .await?;
     }
 
     Ok(())

@@ -401,7 +401,7 @@ impl ContractCall {
             receipts.remove(i);
         }
 
-        let decoded_value = ABIDecoder::decode_single(param_type, &encoded_value, receipts)?;
+        let decoded_value = ABIDecoder::decode_single(param_type, &encoded_value)?;
         Ok(decoded_value)
     }
 }

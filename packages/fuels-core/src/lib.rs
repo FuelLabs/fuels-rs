@@ -104,7 +104,7 @@ pub fn try_from_bytes<T>(bytes: &[u8]) -> Result<T, Error>
 where
     T: Parameterize + Tokenizable,
 {
-    let token = ABIDecoder::decode_single(&T::param_type(), bytes, &[])?;
+    let token = ABIDecoder::decode_single(&T::param_type(), bytes)?;
 
     T::from_token(token)
 }

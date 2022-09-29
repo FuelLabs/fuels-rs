@@ -113,7 +113,6 @@ pub fn the_fn() {
             generics: vec![],
         },
         &data,
-        &[],
     )
     .expect("Failed to decode");
 
