@@ -1,33 +1,22 @@
-use fuel_core::service::Config as CoreConfig;
-use fuel_core::service::FuelService;
-use fuel_gql_client::fuel_tx::{AssetId, ContractId, Input, Output, Receipt, TxPointer, UtxoId};
-use fuels::contract::contract::MultiContractCallHandler;
-use fuels::contract::predicate::Predicate;
-use fuels::prelude::{
-    abigen, launch_custom_provider_and_get_wallets, launch_provider_and_get_wallet,
-    setup_contract_test, setup_multiple_assets_coins, setup_single_asset_coins,
-    setup_test_provider, CallParameters, Config, Contract, Error, Provider, Salt, TxParameters,
-    WalletUnlocked, WalletsConfig, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
-};
-use fuels_core::abi_encoder::ABIEncoder;
-use fuels_core::parameters::StorageConfiguration;
-use fuels_core::tx::{Address, Bytes32, StorageSlot};
-use fuels_core::types::{Bits256, Byte};
-use fuels_core::Tokenizable;
-use fuels_core::{constants::BASE_ASSET_ID, Token};
-use fuels_signers::fuel_crypto::SecretKey;
-use fuels_test_helpers::setup_single_message;
-use fuels_types::bech32::Bech32Address;
-use sha2::{Digest, Sha256};
-use std::iter;
-use std::str::FromStr;
-
+use fuel_core::service::{Config as CoreConfig, FuelService};
 use fuel_core_interfaces::model::Message;
-use fuel_gql_client::client::schema::message::Message as OtherMessage;
-use fuel_gql_client::fuel_vm::consts::{REG_ONE, WORD_SIZE};
-use fuel_gql_client::fuel_vm::prelude::{GTFArgs, Opcode};
+use fuel_gql_client::{
+    client::schema::message::Message as OtherMessage,
+    fuel_tx::{AssetId, ContractId, Input, Output, Receipt, TxPointer, UtxoId},
+    fuel_vm::{
+        consts::{REG_ONE, WORD_SIZE},
+        prelude::{GTFArgs, Opcode},
+    },
+};
+use fuels::prelude::*;
 use fuels_contract::script::ScriptBuilder;
-use fuels_signers::Signer;
+use fuels_core::{
+    abi_encoder::ABIEncoder,
+    tx::{Address, Bytes32, StorageSlot},
+};
+use fuels_signers::fuel_crypto::SecretKey;
+use sha2::{Digest, Sha256};
+use std::{iter, str::FromStr};
 
 /// Note: all the tests and examples below require pre-compiled test projects.
 /// To compile these projects, run `cargo run --bin build-test-projects`.
@@ -3792,6 +3781,121 @@ async fn test_script_interface() -> Result<(), Error> {
     let asset_id_key = format!("{:#x}", BASE_ASSET_ID);
     let balance = contract_balances.get(&asset_id_key).unwrap();
     assert_eq!(*balance, 100);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_identity_can_be_decoded() -> Result<(), Box<dyn std::error::Error>> {
+    setup_contract_test!(
+        contract_instance,
+        wallet,
+        "packages/fuels/tests/test_projects/identity"
+    );
+    let contract_methods = contract_instance.methods();
+
+    let expected_address =
+        Address::from_str("0xd58573593432a30a800f97ad32f877425c223a9e427ab557aab5d5bb89156db0")?;
+    let expected_contract_id =
+        ContractId::from_str("0xd58573593432a30a800f97ad32f877425c223a9e427ab557aab5d5bb89156db0")?;
+
+    let s = TestStruct {
+        identity: Identity::Address(expected_address),
+    };
+
+    let e = TestEnum::EnumIdentity(Identity::ContractId(expected_contract_id));
+
+    let response = contract_methods.get_identity_address().call().await?;
+    assert_eq!(response.value, Identity::Address(expected_address));
+
+    let response = contract_methods.get_identity_contract_id().call().await?;
+    assert_eq!(response.value, Identity::ContractId(expected_contract_id));
+
+    let response = contract_methods.get_struct_with_identity().call().await?;
+    assert_eq!(response.value, s.clone());
+
+    let response = contract_methods.get_enum_with_identity().call().await?;
+    assert_eq!(response.value, e.clone());
+
+    let response = contract_methods.get_identity_tuple().call().await?;
+    assert_eq!(response.value, (s, e));
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_identity_can_be_encoded() -> Result<(), Box<dyn std::error::Error>> {
+    setup_contract_test!(
+        contract_instance,
+        wallet,
+        "packages/fuels/tests/test_projects/identity"
+    );
+    let contract_methods = contract_instance.methods();
+
+    let expected_address =
+        Address::from_str("0xd58573593432a30a800f97ad32f877425c223a9e427ab557aab5d5bb89156db0")?;
+    let expected_contract_id =
+        ContractId::from_str("0xd58573593432a30a800f97ad32f877425c223a9e427ab557aab5d5bb89156db0")?;
+
+    let s = TestStruct {
+        identity: Identity::Address(expected_address),
+    };
+
+    let e = TestEnum::EnumIdentity(Identity::ContractId(expected_contract_id));
+
+    let response = contract_methods
+        .input_identity(Identity::Address(expected_address))
+        .call()
+        .await?;
+
+    assert!(response.value);
+
+    let response = contract_methods
+        .input_struct_with_identity(s)
+        .call()
+        .await?;
+
+    assert!(response.value);
+
+    let response = contract_methods.input_enum_with_identity(e).call().await?;
+
+    assert!(response.value);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_identity_with_two_contracts() -> Result<(), Box<dyn std::error::Error>> {
+    setup_contract_test!(
+        contract_instance,
+        wallet,
+        "packages/fuels/tests/test_projects/identity"
+    );
+
+    setup_contract_test!(
+        contract_instance2,
+        None,
+        "packages/fuels/tests/test_projects/identity"
+    );
+
+    let expected_address =
+        Address::from_str("0xd58573593432a30a800f97ad32f877425c223a9e427ab557aab5d5bb89156db0")?;
+
+    let response = contract_instance
+        .methods()
+        .input_identity(Identity::Address(expected_address))
+        .call()
+        .await?;
+
+    assert!(response.value);
+
+    let response = contract_instance2
+        .methods()
+        .input_identity(Identity::Address(expected_address))
+        .call()
+        .await?;
+
+    assert!(response.value);
 
     Ok(())
 }

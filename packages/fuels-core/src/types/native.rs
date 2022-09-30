@@ -1,4 +1,5 @@
-use crate::{Bits256, Parameterize, Token, Tokenizable};
+use crate::{Bits256, Identity, Parameterize, Token, Tokenizable};
+use fuel_tx::{Address, AssetId, ContractId};
 use fuels_types::errors::Error;
 use fuels_types::param_types::{EnumVariants, ParamType};
 
@@ -8,7 +9,7 @@ impl<const SIZE: usize, T: Parameterize> Parameterize for [T; SIZE] {
     }
 }
 
-impl Parameterize for fuel_tx::Address {
+impl Parameterize for Address {
     fn param_type() -> ParamType {
         ParamType::Struct {
             fields: vec![ParamType::B256],
@@ -17,7 +18,7 @@ impl Parameterize for fuel_tx::Address {
     }
 }
 
-impl Parameterize for fuel_tx::ContractId {
+impl Parameterize for ContractId {
     fn param_type() -> ParamType {
         ParamType::Struct {
             fields: vec![ParamType::B256],
@@ -26,7 +27,7 @@ impl Parameterize for fuel_tx::ContractId {
     }
 }
 
-impl Parameterize for fuel_tx::AssetId {
+impl Parameterize for AssetId {
     fn param_type() -> ParamType {
         ParamType::Struct {
             fields: vec![ParamType::B256],
@@ -98,6 +99,18 @@ where
         ParamType::Enum {
             variants,
             generics: param_types,
+        }
+    }
+}
+
+impl Parameterize for Identity {
+    fn param_type() -> ParamType {
+        let param_types = vec![Address::param_type(), ContractId::param_type()];
+        let variants = EnumVariants::new(param_types)
+            .expect("should never happen as we provided valid Identity param types");
+        ParamType::Enum {
+            variants,
+            generics: vec![],
         }
     }
 }
@@ -268,7 +281,7 @@ impl_tuples!(14, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M
 impl_tuples!(15, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13, O:14, );
 impl_tuples!(16, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13, O:14, P:15, );
 
-impl Tokenizable for fuel_tx::ContractId {
+impl Tokenizable for ContractId {
     fn from_token(token: Token) -> Result<Self, Error>
     where
         Self: Sized,
@@ -276,7 +289,7 @@ impl Tokenizable for fuel_tx::ContractId {
         if let Token::Struct(tokens) = token {
             let first_token = tokens.into_iter().next();
             if let Some(Token::B256(id)) = first_token {
-                Ok(fuel_tx::ContractId::from(id))
+                Ok(ContractId::from(id))
             } else {
                 Err(Error::InstantiationError(format!(
                     "Expected `b256`, got {:?}",
@@ -297,7 +310,7 @@ impl Tokenizable for fuel_tx::ContractId {
     }
 }
 
-impl Tokenizable for fuel_tx::Address {
+impl Tokenizable for Address {
     fn from_token(t: Token) -> Result<Self, Error>
     where
         Self: Sized,
@@ -305,7 +318,7 @@ impl Tokenizable for fuel_tx::Address {
         if let Token::Struct(tokens) = t {
             let first_token = tokens.into_iter().next();
             if let Some(Token::B256(id)) = first_token {
-                Ok(fuel_tx::Address::from(id))
+                Ok(Address::from(id))
             } else {
                 Err(Error::InstantiationError(format!(
                     "Expected `b256`, got {:?}",
@@ -327,7 +340,7 @@ impl Tokenizable for fuel_tx::Address {
     }
 }
 
-impl Tokenizable for fuel_tx::AssetId {
+impl Tokenizable for AssetId {
     fn from_token(token: Token) -> Result<Self, Error>
     where
         Self: Sized,
@@ -417,6 +430,38 @@ where
             Token::Enum(Box::new(selector))
         } else {
             panic!("should never happen as Result::param_type() returns valid Enum variants");
+        }
+    }
+}
+
+impl Tokenizable for Identity {
+    fn from_token(token: Token) -> Result<Self, Error> {
+        if let Token::Enum(enum_selector) = token {
+            match *enum_selector {
+                (0u8, token, _) => Ok(Identity::Address(Address::from_token(token)?)),
+                (1u8, token, _) => Ok(Identity::ContractId(ContractId::from_token(token)?)),
+                (_, _, _) => Err(Error::InstantiationError(format!(
+                    "Could not construct Identity from enum_selector. Received: {:?}",
+                    enum_selector
+                ))),
+            }
+        } else {
+            Err(Error::InstantiationError(format!(
+                "Could not construct Identity from token. Received: {:?}",
+                token
+            )))
+        }
+    }
+    fn into_token(self) -> Token {
+        let (dis, tok) = match self {
+            Self::Address(value) => (0u8, value.into_token()),
+            Self::ContractId(value) => (1u8, value.into_token()),
+        };
+        if let ParamType::Enum { variants, .. } = Self::param_type() {
+            let selector = (dis, tok, variants);
+            Token::Enum(Box::new(selector))
+        } else {
+            panic!("should never happen as Identity::param_type() returns valid Enum variants");
         }
     }
 }
