@@ -392,6 +392,12 @@ impl ContractCall {
         }
     }
 
+    fn is_missing_output_variables(receipts: &[Receipt]) -> bool {
+        receipts.iter().any(
+            |r| matches!(r, Receipt::Revert { ra, .. } if *ra == FAILED_TRANSFER_TO_ADDRESS_SIGNAL),
+        )
+    }
+
     /// Based on the returned Contract's output_params and the receipts returned from a call,
     /// decode the values and return them.
     pub fn get_decoded_output(&self, receipts: &mut Vec<Receipt>) -> Result<Token, Error> {
@@ -431,12 +437,6 @@ impl ContractCall {
         let decoded_value = ABIDecoder::decode_single(&self.output_param, &encoded_value)?;
         Ok(decoded_value)
     }
-}
-
-fn is_missing_output_variables(receipts: &[Receipt]) -> bool {
-    receipts.iter().any(
-        |r| matches!(r, Receipt::Revert { ra, .. } if *ra == FAILED_TRANSFER_TO_ADDRESS_SIGNAL),
-    )
 }
 
 #[derive(Debug)]
@@ -487,7 +487,6 @@ where
     /// `my_contract_instance.my_method(...).add_variable_outputs(num).call()`.
     pub fn append_variable_outputs(mut self, num: u64) -> Self {
         self.contract_call.append_variable_outputs(num);
-
         self
     }
 
@@ -496,7 +495,6 @@ where
     /// `my_contract_instance.my_method(...).add_message_outputs(num).call()`.
     pub fn append_message_outputs(mut self, num: u64) -> Self {
         self.contract_call.append_message_outputs(num);
-
         self
     }
 
@@ -555,7 +553,7 @@ where
 
             match result {
                 Err(Error::RevertTransactionError(_, receipts))
-                    if is_missing_output_variables(&receipts) =>
+                    if ContractCall::is_missing_output_variables(&receipts) =>
                 {
                     self = self.append_variable_outputs(1);
                 }
@@ -688,7 +686,7 @@ impl MultiContractCallHandler {
 
             match result {
                 Err(Error::RevertTransactionError(_, receipts))
-                    if is_missing_output_variables(&receipts) =>
+                    if ContractCall::is_missing_output_variables(&receipts) =>
                 {
                     self.contract_calls
                         .iter_mut()
@@ -731,7 +729,7 @@ impl MultiContractCallHandler {
         let mut final_tokens = vec![];
 
         for call in self.contract_calls.iter() {
-            let decoded = call.get_decoded_output(&mut receipts)?;
+            let decoded = ContractCall::get_decoded_output(&call, &mut receipts)?;
 
             final_tokens.push(decoded.clone());
         }
@@ -756,7 +754,7 @@ mod test {
 
         // Should panic as we are passing in a JSON instead of BIN
         Contract::deploy(
-            "tests/types/contract_output_test/out/debug/contract_output_test-abi.json",
+            "tests/test_projects/contract_output_test/out/debug/contract_output_test-abi.json",
             &wallet,
             TxParameters::default(),
             StorageConfiguration::default(),
@@ -772,7 +770,7 @@ mod test {
 
         // Should panic as we are passing in a JSON instead of BIN
         Contract::deploy_with_parameters(
-            "tests/types/contract_output_test/out/debug/contract_output_test-abi.json",
+            "tests/test_projects/contract_output_test/out/debug/contract_output_test-abi.json",
             &wallet,
             TxParameters::default(),
             StorageConfiguration::default(),
