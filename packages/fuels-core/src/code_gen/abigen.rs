@@ -300,38 +300,41 @@ impl Abigen {
 }
 
 pub fn generate_print_logs(resolved_logs: &[ResolvedLog]) -> TokenStream {
-    // if logs are not present, return an empty string vec
-    if resolved_logs.is_empty() {
-        return quote! {
+    let generate_method = |body: TokenStream| {
+        quote! {
             pub fn print_logs(&self, receipts: &[Receipt]) -> Vec<String> {
-                vec![]
+                #body
             }
-        };
+        }
+    };
+
+    // if logs are not present, print_logs should return an empty string vec
+    if resolved_logs.is_empty() {
+        return generate_method(quote! { vec![] });
     }
 
     let branches = generate_param_type_if_branches(resolved_logs);
-
-    quote! {
-        pub fn print_logs(&self, receipts: &[Receipt]) -> Vec<String> {
-            let id_to_param_type: HashMap<_, _> = self.logs_lookup
-                .iter()
-                .map(|(id, param_type)| (id, param_type))
-                .collect();
-            let ids_with_data = extract_log_ids_and_data(receipts);
-
-            ids_with_data
+    let body = quote! {
+        let id_to_param_type: HashMap<_, _> = self.logs_lookup
             .iter()
-            .map(|(id, data)|{
-                let param_type = id_to_param_type.get(id).expect("Failed to find log id.");
+            .map(|(id, param_type)| (id, param_type))
+            .collect();
+        let ids_with_data = extract_log_ids_and_data(receipts);
 
-                #(#branches)else*
-                else {
-                    panic!("Failed to parse param type.");
-                }
-            })
-            .collect()
-        }
-    }
+        ids_with_data
+        .iter()
+        .map(|(id, data)|{
+            let param_type = id_to_param_type.get(id).expect("Failed to find log id.");
+
+            #(#branches)else*
+            else {
+                panic!("Failed to parse param type.");
+            }
+        })
+        .collect()
+    };
+
+    generate_method(quote! { #body })
 }
 
 fn generate_param_type_if_branches(resolved_logs: &[ResolvedLog]) -> Vec<TokenStream> {
