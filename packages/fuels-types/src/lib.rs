@@ -79,4 +79,9 @@ impl TypeDeclaration {
         const RESULT_KEYWORD: &str = " Result";
         self.type_field.ends_with(RESULT_KEYWORD)
     }
+
+    pub fn is_identity(&self) -> bool {
+        const IDENTITY_KEYWORD: &str = " Identity";
+        self.type_field.ends_with(IDENTITY_KEYWORD)
+    }
 }

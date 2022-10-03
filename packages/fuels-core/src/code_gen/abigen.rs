@@ -82,7 +82,7 @@ impl Abigen {
             (
                 quote! {
                     use alloc::{vec, vec::Vec};
-                    use fuels_core::{EnumSelector, Parameterize, Tokenizable, Token, try_from_bytes};
+                    use fuels_core::{EnumSelector, Parameterize, Tokenizable, Token, Identity, try_from_bytes};
                     use fuels_core::types::*;
                     use fuels_core::code_gen::function_selector::resolve_fn_selector;
                     use fuels_types::errors::Error as SDKError;
@@ -94,7 +94,8 @@ impl Abigen {
             (
                 quote! {
                     use fuels::contract::contract::{Contract, ContractCallHandler};
-                    use fuels::core::{EnumSelector, StringToken, Parameterize, Tokenizable, Token, try_from_bytes};
+                    use fuels::core::{EnumSelector, StringToken, Parameterize, Tokenizable, Token,
+                                      Identity, try_from_bytes};
                     use fuels::core::code_gen::function_selector::resolve_fn_selector;
                     use fuels::core::types::*;
                     use fuels::signers::WalletUnlocked;
@@ -218,12 +219,18 @@ impl Abigen {
 
         // "RawVec" is part of the Vec structure. Not used in the SDK and thus
         // not generated.
-        Ok(
-            ["ContractId", "Address", "Option", "Result", "Vec", "RawVec"]
-                .map(ident)
-                .into_iter()
-                .any(|e| e == name),
-        )
+        Ok([
+            "ContractId",
+            "Address",
+            "Option",
+            "Identity",
+            "Result",
+            "Vec",
+            "RawVec",
+        ]
+        .map(ident)
+        .into_iter()
+        .any(|e| e == name))
     }
 
     fn abi_enums(&self) -> Result<TokenStream, Error> {
@@ -233,7 +240,7 @@ impl Abigen {
         let mut seen_enum: Vec<&str> = vec![];
 
         for prop in &self.abi.types {
-            if !prop.is_enum_type() || prop.is_option() || prop.is_result() {
+            if !prop.is_enum_type() || prop.is_option() || prop.is_result() || prop.is_identity() {
                 continue;
             }
 

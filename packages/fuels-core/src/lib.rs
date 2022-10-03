@@ -28,6 +28,12 @@ pub type ByteArray = [u8; 8];
 pub type Selector = ByteArray;
 pub type EnumSelector = (u8, Token, EnumVariants);
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Identity {
+    Address(fuel_tx::Address),
+    ContractId(fuel_tx::ContractId),
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct StringToken {
     data: String,
