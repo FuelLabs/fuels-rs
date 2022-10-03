@@ -3786,18 +3786,18 @@ async fn test_parse_logs_custom_types() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_print_logs() -> Result<(), Error> {
+async fn test_fetch_logs() -> Result<(), Error> {
     setup_contract_test!(
         contract_instance,
         wallet,
         "packages/fuels/tests/test_projects/logged_types"
     );
 
-    // ANCHOR: print_logs
+    // ANCHOR: fetch_logs
     let contract_methods = contract_instance.methods();
     let response = contract_methods.produce_multiple_logs().call().await?;
-    let logs = contract_instance.print_logs(&response.receipts);
-    // ANCHOR_END: print_logs
+    let logs = contract_instance.fetch_logs(&response.receipts);
+    // ANCHOR_END: fetch_logs
 
     let expected_bits256 = Bits256([
         239, 134, 175, 169, 105, 108, 240, 220, 99, 133, 226, 196, 7, 166, 225, 89, 161, 16, 60,
@@ -3828,7 +3828,7 @@ async fn test_print_logs() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_print_logs_with_no_logs() -> Result<(), Error> {
+async fn test_fetch_logs_with_no_logs() -> Result<(), Error> {
     setup_contract_test!(
         contract_instance,
         wallet,
@@ -3837,7 +3837,7 @@ async fn test_print_logs_with_no_logs() -> Result<(), Error> {
 
     let contract_methods = contract_instance.methods();
     let response = contract_methods.initialize_counter(42).call().await?;
-    let logs = contract_instance.print_logs(&response.receipts);
+    let logs = contract_instance.fetch_logs(&response.receipts);
 
     assert!(logs.is_empty());
 

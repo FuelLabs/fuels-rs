@@ -14,12 +14,12 @@ You can access the logged values in Rust by calling `logs_with_type::<T>` from a
 {{#include ../../../packages/fuels/tests/harness.rs:produce_logs}}
 ```
 
-You can also get a vector of all the logged values as strings using `print_logs()`:
+You can also get a vector of all the logged values as strings using `fetch_logs()`:
 
 ```rust, ignore
-{{#include ../../../packages/fuels/tests/harness.rs:print_logs}}
+{{#include ../../../packages/fuels/tests/harness.rs:fetch_logs}}
 ```
 
-Due to possible performance hits, it is not recommended to use `print_logs()` outside of a debugging scenario.
+Due to possible performance hits, it is not recommended to use `fetch_logs()` outside of a debugging scenario.
 
 > **Note:** To bind logged values in the SDK, you need to build your contract by supplying a feature flag: `forc build --generate-logged-types`. This is temporary and the flag won't be needed in the future

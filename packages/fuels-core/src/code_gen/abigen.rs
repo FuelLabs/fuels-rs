@@ -85,7 +85,7 @@ impl Abigen {
 
         let resolved_logs = self.resolve_logs();
         let log_id_param_type_pairs = generate_log_id_param_type_pairs(&resolved_logs);
-        let print_logs = generate_print_logs(&resolved_logs);
+        let fetch_logs = generate_fetch_logs(&resolved_logs);
 
         let (includes, code) = if self.no_std {
             (
@@ -150,7 +150,7 @@ impl Abigen {
                             extract_and_parse_logs(&self.logs_lookup, receipts)
                         }
 
-                        #print_logs
+                        #fetch_logs
 
                         pub fn methods(&self) -> #methods_name {
                             #methods_name {
@@ -302,16 +302,16 @@ impl Abigen {
     }
 }
 
-pub fn generate_print_logs(resolved_logs: &[ResolvedLog]) -> TokenStream {
+pub fn generate_fetch_logs(resolved_logs: &[ResolvedLog]) -> TokenStream {
     let generate_method = |body: TokenStream| {
         quote! {
-            pub fn print_logs(&self, receipts: &[Receipt]) -> Vec<String> {
+            pub fn fetch_logs(&self, receipts: &[Receipt]) -> Vec<String> {
                 #body
             }
         }
     };
 
-    // if logs are not present, print_logs should return an empty string vec
+    // if logs are not present, fetch_logs should return an empty string vec
     if resolved_logs.is_empty() {
         return generate_method(quote! { vec![] });
     }
