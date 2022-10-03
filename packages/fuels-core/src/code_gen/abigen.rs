@@ -90,7 +90,7 @@ impl Abigen {
             (
                 quote! {
                     use alloc::{vec, vec::Vec};
-                    use fuels_core::{EnumSelector, Parameterize, Tokenizable, Token, try_from_bytes};
+                    use fuels_core::{EnumSelector, Parameterize, Tokenizable, Token, Identity, try_from_bytes};
                     use fuels_core::types::*;
                     use fuels_core::code_gen::function_selector::resolve_fn_selector;
                     use fuels_types::errors::Error as SDKError;
@@ -102,7 +102,8 @@ impl Abigen {
             (
                 quote! {
                     use fuels::contract::contract::{Contract, ContractCallHandler};
-                    use fuels::core::{EnumSelector, StringToken, Parameterize, Tokenizable, Token, try_from_bytes};
+                     use fuels::core::{EnumSelector, StringToken, Parameterize, Tokenizable, Token,
+                                      Identity, try_from_bytes};
                     use fuels::core::code_gen::{extract_and_parse_logs, extract_log_ids_and_data};
                     use fuels::core::abi_decoder::ABIDecoder;
                     use fuels::core::code_gen::function_selector::resolve_fn_selector;
@@ -236,6 +237,7 @@ impl Abigen {
     pub fn is_native_type(type_field: &str) -> bool {
         const CONTRACT_ID_NATIVE_TYPE: &str = "ContractId";
         const ADDRESS_NATIVE_TYPE: &str = "Address";
+        const IDENTITY_NATIVE_TYPE: &str = "Identity";
         const OPTION_NATIVE_TYPE: &str = "Option";
         const RESULT_NATIVE_TYPE: &str = "Result";
 
@@ -247,6 +249,7 @@ impl Abigen {
 
         split[1] == CONTRACT_ID_NATIVE_TYPE
             || split[1] == ADDRESS_NATIVE_TYPE
+            || split[1] == IDENTITY_NATIVE_TYPE
             || split[1] == OPTION_NATIVE_TYPE
             || split[1] == RESULT_NATIVE_TYPE
     }
@@ -258,7 +261,7 @@ impl Abigen {
         let mut seen_enum: Vec<&str> = vec![];
 
         for prop in &self.abi.types {
-            if !prop.is_enum_type() || prop.is_option() || prop.is_result() {
+            if !prop.is_enum_type() || prop.is_option() || prop.is_result() || prop.is_identity() {
                 continue;
             }
 
