@@ -1,7 +1,7 @@
 use crate::{StringToken, Token};
 use core::convert::TryInto;
 use core::str;
-use fuel_types::bytes::padded_len;
+use fuel_types::bytes::padded_len_usize;
 use fuels_types::{
     constants::WORD_SIZE,
     errors::CodecError,
@@ -17,128 +17,139 @@ struct DecodeResult {
 pub struct ABIDecoder;
 
 impl ABIDecoder {
-    /// Decode takes an array of `ParamType` and the encoded data as raw bytes
-    /// and returns a vector of `Token`s containing the decoded values.
-    /// Note that the order of the types in the `types` array needs to match the order
-    /// of the expected values/types in `data`.
-    /// You can find comprehensive examples in the tests for this module.
-    pub fn decode(types: &[ParamType], data: &[u8]) -> Result<Vec<Token>, CodecError> {
-        let mut tokens: Vec<Token> = Vec::new();
-        let mut offset = 0;
-        for param in types {
-            let res = Self::decode_param(param, &data[offset..])?;
-            offset += res.bytes_read;
-            tokens.push(res.token);
-        }
+    /// Decodes types described by `param_types` into their respective `Token`s
+    /// using the data in `bytes` and `receipts`.
+    ///
+    /// # Arguments
+    ///
+    /// * `param_types`: The ParamType's of the types we expect are encoded
+    ///                  inside `bytes` and `receipts`.
+    /// * `bytes`:       The bytes to be used in the decoding process.
+    /// # Examples
+    ///
+    /// ```
+    /// use fuels_core::abi_decoder::ABIDecoder;
+    /// use fuels_core::Token;
+    /// use fuels_types::param_types::ParamType;
+    ///
+    /// let tokens = ABIDecoder::decode(&[ParamType::U8, ParamType::U8], &[0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,2]).unwrap();
+    ///
+    /// assert_eq!(tokens, vec![Token::U8(1), Token::U8(2)])
+    /// ```
+    pub fn decode(param_types: &[ParamType], bytes: &[u8]) -> Result<Vec<Token>, CodecError> {
+        let (tokens, _) = Self::decode_multiple(param_types, bytes)?;
 
         Ok(tokens)
     }
 
-    pub fn decode_single(param: &ParamType, data: &[u8]) -> Result<Token, CodecError> {
-        Ok(Self::decode_param(param, data)?.token)
+    /// The same as `decode` just for a single type. Used in most cases since
+    /// contract functions can only return one type.
+    pub fn decode_single(param_type: &ParamType, bytes: &[u8]) -> Result<Token, CodecError> {
+        Ok(Self::decode_param(param_type, bytes)?.token)
     }
 
-    fn decode_param(param: &ParamType, data: &[u8]) -> Result<DecodeResult, CodecError> {
-        match param {
-            ParamType::Unit => Self::decode_unit(data),
-            ParamType::U8 => Self::decode_u8(data),
-            ParamType::U16 => Self::decode_u16(data),
-            ParamType::U32 => Self::decode_u32(data),
-            ParamType::U64 => Self::decode_u64(data),
-            ParamType::Bool => Self::decode_bool(data),
-            ParamType::Byte => Self::decode_byte(data),
-            ParamType::B256 => Self::decode_b256(data),
-            ParamType::String(length) => Self::decode_string(data, *length),
-            ParamType::Array(ref t, length) => Self::decode_array(data, t, *length),
-            ParamType::Struct { fields, .. } => Self::decode_struct(data, fields),
-            ParamType::Enum { variants, .. } => Self::decode_enum(data, variants),
-            ParamType::Tuple(types) => Self::decode_tuple(data, types),
+    fn decode_param(param_type: &ParamType, bytes: &[u8]) -> Result<DecodeResult, CodecError> {
+        match param_type {
+            ParamType::Unit => Self::decode_unit(bytes),
+            ParamType::U8 => Self::decode_u8(bytes),
+            ParamType::U16 => Self::decode_u16(bytes),
+            ParamType::U32 => Self::decode_u32(bytes),
+            ParamType::U64 => Self::decode_u64(bytes),
+            ParamType::Bool => Self::decode_bool(bytes),
+            ParamType::Byte => Self::decode_byte(bytes),
+            ParamType::B256 => Self::decode_b256(bytes),
+            ParamType::String(length) => Self::decode_string(bytes, *length),
+            ParamType::Array(ref t, length) => Self::decode_array(t, bytes, *length),
+            ParamType::Struct { fields, .. } => Self::decode_struct(fields, bytes),
+            ParamType::Enum { variants, .. } => Self::decode_enum(bytes, variants),
+            ParamType::Tuple(types) => Self::decode_tuple(types, bytes),
+            ParamType::Vector(param_type) => Self::decode_vector(param_type, bytes),
         }
     }
 
-    fn decode_tuple(data: &[u8], types: &Vec<ParamType>) -> Result<DecodeResult, CodecError> {
-        let mut tokens = vec![];
-        let mut bytes_read = 0;
-        for t in types {
-            let res = Self::decode_param(t, &data[bytes_read..])?;
-            bytes_read += res.bytes_read;
-            tokens.push(res.token);
-        }
+    fn decode_vector(_param_type: &ParamType, _bytes: &[u8]) -> Result<DecodeResult, CodecError> {
+        unimplemented!("Cannot decode Vectors until we get support from the compiler.")
+    }
 
-        let result = DecodeResult {
+    fn decode_tuple(param_types: &[ParamType], bytes: &[u8]) -> Result<DecodeResult, CodecError> {
+        let (tokens, bytes_read) = Self::decode_multiple(param_types, bytes)?;
+
+        Ok(DecodeResult {
             token: Token::Tuple(tokens),
             bytes_read,
-        };
-
-        Ok(result)
+        })
     }
 
-    fn decode_struct(data: &[u8], props: &Vec<ParamType>) -> Result<DecodeResult, CodecError> {
-        let mut tokens = vec![];
+    fn decode_struct(param_types: &[ParamType], bytes: &[u8]) -> Result<DecodeResult, CodecError> {
+        let (tokens, bytes_read) = Self::decode_multiple(param_types, bytes)?;
 
-        let mut bytes_read = 0;
-        for prop in props {
-            let res = Self::decode_param(prop, &data[bytes_read..])?;
-            bytes_read += res.bytes_read;
-            tokens.push(res.token);
-        }
-
-        let result = DecodeResult {
+        Ok(DecodeResult {
             token: Token::Struct(tokens),
             bytes_read,
-        };
-
-        Ok(result)
+        })
     }
 
-    fn decode_array(data: &[u8], t: &ParamType, length: usize) -> Result<DecodeResult, CodecError> {
-        let mut tokens = vec![];
+    fn decode_multiple(
+        param_types: &[ParamType],
+        bytes: &[u8],
+    ) -> Result<(Vec<Token>, usize), CodecError> {
+        let mut results = vec![];
+
         let mut bytes_read = 0;
 
-        for _ in 0..length {
-            let res = Self::decode_param(t, &data[bytes_read..])?;
+        for param_type in param_types {
+            let res = Self::decode_param(param_type, skip(bytes, bytes_read)?)?;
             bytes_read += res.bytes_read;
-            tokens.push(res.token);
+            results.push(res.token);
         }
 
-        let result = DecodeResult {
-            token: Token::Array(tokens),
-            bytes_read,
-        };
-
-        Ok(result)
+        Ok((results, bytes_read))
     }
 
-    fn decode_string(data: &[u8], length: usize) -> Result<DecodeResult, CodecError> {
-        let encoded_str = peek(data, length)?;
+    fn decode_array(
+        param_type: &ParamType,
+        bytes: &[u8],
+        length: usize,
+    ) -> Result<DecodeResult, CodecError> {
+        let (tokens, bytes_read) = Self::decode_multiple(&vec![param_type.clone(); length], bytes)?;
 
-        let decoded = str::from_utf8(encoded_str)?;
+        Ok(DecodeResult {
+            token: Token::Array(tokens),
+            bytes_read,
+        })
+    }
+
+    fn decode_string(bytes: &[u8], length: usize) -> Result<DecodeResult, CodecError> {
+        let encoded_len = padded_len_usize(length);
+        let encoded_str = peek(bytes, encoded_len)?;
+
+        let decoded = str::from_utf8(&encoded_str[..length])?;
 
         let result = DecodeResult {
             token: Token::String(StringToken::new(decoded.into(), length)),
-            bytes_read: padded_len(encoded_str),
+            bytes_read: encoded_len,
         };
 
         Ok(result)
     }
 
-    fn decode_b256(data: &[u8]) -> Result<DecodeResult, CodecError> {
+    fn decode_b256(bytes: &[u8]) -> Result<DecodeResult, CodecError> {
         Ok(DecodeResult {
-            token: Token::B256(*peek_fixed::<32>(data)?),
+            token: Token::B256(*peek_fixed::<32>(bytes)?),
             bytes_read: 32,
         })
     }
 
-    fn decode_byte(data: &[u8]) -> Result<DecodeResult, CodecError> {
+    fn decode_byte(bytes: &[u8]) -> Result<DecodeResult, CodecError> {
         Ok(DecodeResult {
-            token: Token::Byte(peek_u8(data)?),
+            token: Token::Byte(peek_u8(bytes)?),
             bytes_read: 8,
         })
     }
 
-    fn decode_bool(data: &[u8]) -> Result<DecodeResult, CodecError> {
+    fn decode_bool(bytes: &[u8]) -> Result<DecodeResult, CodecError> {
         // Grab last byte of the word and compare it to 0x00
-        let b = peek_u8(data)? != 0u8;
+        let b = peek_u8(bytes)? != 0u8;
 
         let result = DecodeResult {
             token: Token::Bool(b),
@@ -148,38 +159,38 @@ impl ABIDecoder {
         Ok(result)
     }
 
-    fn decode_u64(data: &[u8]) -> Result<DecodeResult, CodecError> {
+    fn decode_u64(bytes: &[u8]) -> Result<DecodeResult, CodecError> {
         Ok(DecodeResult {
-            token: Token::U64(peek_u64(data)?),
+            token: Token::U64(peek_u64(bytes)?),
             bytes_read: 8,
         })
     }
 
-    fn decode_u32(data: &[u8]) -> Result<DecodeResult, CodecError> {
+    fn decode_u32(bytes: &[u8]) -> Result<DecodeResult, CodecError> {
         Ok(DecodeResult {
-            token: Token::U32(peek_u32(data)?),
+            token: Token::U32(peek_u32(bytes)?),
             bytes_read: 8,
         })
     }
 
-    fn decode_u16(data: &[u8]) -> Result<DecodeResult, CodecError> {
+    fn decode_u16(bytes: &[u8]) -> Result<DecodeResult, CodecError> {
         Ok(DecodeResult {
-            token: Token::U16(peek_u16(data)?),
+            token: Token::U16(peek_u16(bytes)?),
             bytes_read: 8,
         })
     }
 
-    fn decode_u8(data: &[u8]) -> Result<DecodeResult, CodecError> {
+    fn decode_u8(bytes: &[u8]) -> Result<DecodeResult, CodecError> {
         Ok(DecodeResult {
-            token: Token::U8(peek_u8(data)?),
+            token: Token::U8(peek_u8(bytes)?),
             bytes_read: 8,
         })
     }
 
-    fn decode_unit(data: &[u8]) -> Result<DecodeResult, CodecError> {
+    fn decode_unit(bytes: &[u8]) -> Result<DecodeResult, CodecError> {
         // We don't need the data, we're doing this purely as a bounds
         // check.
-        peek_fixed::<WORD_SIZE>(data)?;
+        peek_fixed::<WORD_SIZE>(bytes)?;
         Ok(DecodeResult {
             token: Token::Unit,
             bytes_read: WORD_SIZE,
@@ -193,14 +204,17 @@ impl ABIDecoder {
     ///
     /// * `data`: slice of encoded data on whose beginning we're expecting an encoded enum
     /// * `variants`: all types that this particular enum type could hold
-    fn decode_enum(data: &[u8], variants: &EnumVariants) -> Result<DecodeResult, CodecError> {
-        let discriminant = peek_u32(data)?;
+    fn decode_enum(bytes: &[u8], variants: &EnumVariants) -> Result<DecodeResult, CodecError> {
+        let enum_width = variants.compute_encoding_width_of_enum();
+
+        let discriminant = peek_u32(bytes)?;
         let selected_variant = Self::type_of_selected_variant(variants, discriminant as usize)?;
 
-        let enum_width = variants.compute_encoding_width_of_enum();
-        let token = Self::decode_token_in_enum(data, variants, selected_variant, enum_width)?;
+        let words_to_skip = enum_width - selected_variant.compute_encoding_width();
+        let enum_content_bytes = skip(bytes, words_to_skip * WORD_SIZE)?;
+        let result = Self::decode_token_in_enum(enum_content_bytes, variants, selected_variant)?;
 
-        let selector = Box::new((discriminant as u8, token, variants.clone()));
+        let selector = Box::new((discriminant as u8, result.token, variants.clone()));
         Ok(DecodeResult {
             token: Token::Enum(selector),
             bytes_read: enum_width * WORD_SIZE,
@@ -208,21 +222,19 @@ impl ABIDecoder {
     }
 
     fn decode_token_in_enum(
-        data: &[u8],
+        bytes: &[u8],
         variants: &EnumVariants,
         selected_variant: &ParamType,
-        enum_width: usize,
-    ) -> Result<Token, CodecError> {
+    ) -> Result<DecodeResult, CodecError> {
         // Enums that contain only Units as variants have only their discriminant encoded.
         // Because of this we construct the Token::Unit rather than calling `decode_param`
-        // since that will consume a WORD from `data`.
         if variants.only_units_inside() {
-            Ok(Token::Unit)
+            Ok(DecodeResult {
+                token: Token::Unit,
+                bytes_read: 0,
+            })
         } else {
-            let words_to_skip = enum_width - selected_variant.compute_encoding_width();
-
-            let res = Self::decode_param(selected_variant, &data[words_to_skip * WORD_SIZE..])?;
-            Ok(res.token)
+            Self::decode_param(selected_variant, bytes)
         }
     }
 
@@ -245,35 +257,35 @@ impl ABIDecoder {
     }
 }
 
-fn peek_u64(data: &[u8]) -> Result<u64, CodecError> {
-    let slice = peek_fixed::<WORD_SIZE>(data)?;
+fn peek_u64(bytes: &[u8]) -> Result<u64, CodecError> {
+    let slice = peek_fixed::<WORD_SIZE>(bytes)?;
     Ok(u64::from_be_bytes(*slice))
 }
 
-fn peek_u32(data: &[u8]) -> Result<u32, CodecError> {
+fn peek_u32(bytes: &[u8]) -> Result<u32, CodecError> {
     const BYTES: usize = std::mem::size_of::<u32>();
 
-    let slice = peek_fixed::<WORD_SIZE>(data)?;
+    let slice = peek_fixed::<WORD_SIZE>(bytes)?;
     let bytes = slice[WORD_SIZE - BYTES..]
         .try_into()
         .expect("peek_u32: You must use a slice containing exactly 4B.");
     Ok(u32::from_be_bytes(bytes))
 }
 
-fn peek_u16(data: &[u8]) -> Result<u16, CodecError> {
+fn peek_u16(bytes: &[u8]) -> Result<u16, CodecError> {
     const BYTES: usize = std::mem::size_of::<u16>();
 
-    let slice = peek_fixed::<WORD_SIZE>(data)?;
+    let slice = peek_fixed::<WORD_SIZE>(bytes)?;
     let bytes = slice[WORD_SIZE - BYTES..]
         .try_into()
         .expect("peek_u16: You must use a slice containing exactly 2B.");
     Ok(u16::from_be_bytes(bytes))
 }
 
-fn peek_u8(data: &[u8]) -> Result<u8, CodecError> {
+fn peek_u8(bytes: &[u8]) -> Result<u8, CodecError> {
     const BYTES: usize = std::mem::size_of::<u8>();
 
-    let slice = peek_fixed::<WORD_SIZE>(data)?;
+    let slice = peek_fixed::<WORD_SIZE>(bytes)?;
     let bytes = slice[WORD_SIZE - BYTES..]
         .try_into()
         .expect("peek_u8: You must use a slice containing exactly 1B.");
@@ -288,11 +300,23 @@ fn peek_fixed<const LEN: usize>(data: &[u8]) -> Result<&[u8; LEN], CodecError> {
 
 fn peek(data: &[u8], len: usize) -> Result<&[u8], CodecError> {
     if len > data.len() {
-        Err(CodecError::InvalidData(
-            "requested data out of bounds".into(),
-        ))
+        Err(CodecError::InvalidData(format!(
+            "tried to read {len} bytes from response but only had {} remaining!",
+            data.len()
+        )))
     } else {
         Ok(&data[..len])
+    }
+}
+
+fn skip(slice: &[u8], num_bytes: usize) -> Result<&[u8], CodecError> {
+    if num_bytes > slice.len() {
+        Err(CodecError::InvalidData(format!(
+            "tried to consume {num_bytes} bytes from response but only had {} remaining!",
+            slice.len()
+        )))
+    } else {
+        Ok(&slice[num_bytes..])
     }
 }
 
@@ -300,6 +324,7 @@ fn peek(data: &[u8], len: usize) -> Result<&[u8], CodecError> {
 mod tests {
     use super::*;
     use fuels_types::{errors::Error, param_types::EnumVariants};
+    use std::vec;
 
     #[test]
     fn decode_int() -> Result<(), Error> {
@@ -479,7 +504,7 @@ mod tests {
         // this padding is due to the biggest variant of MyEnum being 3 WORDs bigger than the chosen variant
         let enum_padding_enc = vec![0x0; 3 * WORD_SIZE];
         let struct_par2_enc = vec![0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xD4, 0x31];
-        let data: Vec<u8> = vec![
+        let bytes: Vec<u8> = vec![
             enum_discriminant_enc,
             enum_padding_enc,
             enum_data_enc,
@@ -489,7 +514,7 @@ mod tests {
         .flatten()
         .collect();
 
-        let decoded = ABIDecoder::decode_single(&struct_type, &data)?;
+        let decoded = ABIDecoder::decode_single(&struct_type, &bytes)?;
 
         let expected = Token::Struct(vec![
             Token::Enum(Box::new((1, Token::U32(12345), inner_enum_types))),

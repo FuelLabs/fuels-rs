@@ -18,6 +18,7 @@ pub enum ParamType {
     // similar to Rust.
     Unit,
     Array(Box<ParamType>, usize),
+    Vector(Box<ParamType>),
     #[strum(serialize = "str")]
     String(usize),
     #[strum(disabled)]
@@ -76,6 +77,7 @@ impl ParamType {
             | ParamType::U64
             | ParamType::Bool
             | ParamType::Byte => 1,
+            ParamType::Vector(_) => 3,
             ParamType::B256 => 4,
             ParamType::Array(param, count) => param.compute_encoding_width() * count,
             ParamType::String(len) => count_words(*len),

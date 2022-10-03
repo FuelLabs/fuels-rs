@@ -12,7 +12,7 @@ use fuel_gql_client::{
 };
 
 use fuels_core::abi_decoder::ABIDecoder;
-use fuels_core::abi_encoder::ABIEncoder;
+use fuels_core::abi_encoder::{ABIEncoder, UnresolvedBytes};
 use fuels_core::parameters::StorageConfiguration;
 use fuels_core::tx::{Bytes32, ContractId};
 use fuels_core::{
@@ -120,7 +120,6 @@ impl Contract {
         signature: Selector,
         args: &[Token],
     ) -> Result<ContractCallHandler<D>, Error> {
-        let encoded_args = ABIEncoder::encode(args).unwrap();
         let encoded_selector = signature;
 
         let tx_parameters = TxParameters::default();
@@ -128,10 +127,11 @@ impl Contract {
 
         let compute_custom_input_offset = Contract::should_compute_custom_input_offset(args);
 
+        let unresolved_bytes = ABIEncoder::encode(args)?;
         let contract_call = ContractCall {
             contract_id,
             encoded_selector,
-            encoded_args,
+            encoded_args: unresolved_bytes,
             call_parameters,
             compute_custom_input_offset,
             variable_outputs: None,
@@ -164,6 +164,7 @@ impl Contract {
                         | Token::Tuple(_)
                         | Token::Array(_)
                         | Token::Byte(_)
+                        | Token::Vector(_)
                 )
             })
     }
@@ -346,7 +347,7 @@ impl Contract {
 /// Contains all data relevant to a single contract call
 pub struct ContractCall {
     pub contract_id: Bech32ContractId,
-    pub encoded_args: Vec<u8>,
+    pub encoded_args: UnresolvedBytes,
     pub encoded_selector: Selector,
     pub call_parameters: CallParameters,
     pub compute_custom_input_offset: bool,
@@ -367,7 +368,7 @@ impl ContractCall {
 
         let (encoded_value, index) = match param_type.get_return_location() {
             ReturnLocation::ReturnData => {
-                match receipts.iter().find(|&receipt| receipt.data().is_some()) {
+                match receipts.iter().find(|&receipt| matches!(receipt, Receipt::ReturnData { data, .. } if !data.is_empty())) {
                     Some(r) => {
                         let index = receipts.iter().position(|elt| elt == r).unwrap();
                         (r.data().unwrap().to_vec(), Some(index))
@@ -473,6 +474,7 @@ where
             Some(ref mut outputs) => outputs.extend(new_message_outputs),
             None => self.contract_call.message_outputs = Some(new_message_outputs),
         }
+
         self
     }
 
