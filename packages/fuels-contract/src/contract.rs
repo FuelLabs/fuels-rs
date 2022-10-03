@@ -11,10 +11,10 @@ use fuel_gql_client::{
     fuel_types::{Address, AssetId, Salt},
 };
 
-use fuels_core::abi_decoder::ABIDecoder;
 use fuels_core::abi_encoder::ABIEncoder;
 use fuels_core::parameters::StorageConfiguration;
 use fuels_core::tx::{Bytes32, ContractId};
+use fuels_core::{abi_decoder::ABIDecoder, constants::FAILED_TRANSFER_TO_OUTPUT_SIGNAL};
 use fuels_core::{
     parameters::{CallParameters, TxParameters},
     Parameterize, Selector, Token, Tokenizable,
@@ -494,7 +494,7 @@ where
     /// `abigen!()`). The other field of CallResponse, `receipts`, contains the receipts of the
     /// transaction.
     #[tracing::instrument]
-    async fn call_or_simulate(self, simulate: bool) -> Result<CallResponse<D>, Error> {
+    async fn call_or_simulate(&self, simulate: bool) -> Result<CallResponse<D>, Error> {
         let script = self.get_call_execution_script().await?;
 
         let receipts = if simulate {
@@ -517,16 +517,42 @@ where
         .await
     }
 
+    /// Call a contract's method and try to adjust output variables automatically
+    pub async fn try_call(mut self) -> Result<CallResponse<D>, Error> {
+        let response = loop {
+            let response = Self::call_or_simulate(&self, true).await;
+
+            match response.as_ref() {
+                Err(Error::RevertTransactionError(_, receipts)) => {
+                    let revert_code = receipts.iter().find_map(|r| match r {
+                        Receipt::Revert { ra, .. } => Some(ra),
+                        _ => None,
+                    });
+
+                    match revert_code {
+                        Some(code) if *code == FAILED_TRANSFER_TO_OUTPUT_SIGNAL => {
+                            self = self.append_variable_outputs(1)
+                        }
+                        _ => break response,
+                    };
+                }
+                _ => break response,
+            };
+        };
+
+        response
+    }
+
     /// Call a contract's method on the node, in a state-modifying manner.
     pub async fn call(self) -> Result<CallResponse<D>, Error> {
-        Self::call_or_simulate(self, false).await
+        Self::call_or_simulate(&self, false).await
     }
 
     /// Call a contract's method on the node, in a simulated manner, meaning the state of the
     /// blockchain is *not* modified but simulated.
     /// It is the same as the `call` method because the API is more user-friendly this way.
     pub async fn simulate(self) -> Result<CallResponse<D>, Error> {
-        Self::call_or_simulate(self, true).await
+        Self::call_or_simulate(&self, true).await
     }
 
     /// Get a contract's estimated cost

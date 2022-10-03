@@ -3899,3 +3899,102 @@ async fn test_identity_with_two_contracts() -> Result<(), Box<dyn std::error::Er
 
     Ok(())
 }
+
+#[tokio::test]
+async fn test_automatic_output_variables() -> Result<(), Error> {
+    abigen!(
+        MyContract,
+        "packages/fuels/tests/test_projects/token_ops/out/debug/token_ops-abi.json"
+    );
+
+    let wallet_config = WalletsConfig::new(Some(3), None, None);
+    let wallets = launch_custom_provider_and_get_wallets(wallet_config, None).await;
+
+    let contract_id = Contract::deploy(
+        "tests/test_projects/contract_test/out/debug/contract_test.bin",
+        &wallets[0],
+        TxParameters::default(),
+        StorageConfiguration::default(),
+    )
+    .await?;
+
+    let contract_instance = MyContract::new(contract_id.to_string(), wallets[0].clone());
+    let contract_methods = contract_instance.methods();
+    let mint_asset_id = AssetId::from(*contract_id.hash());
+    let addresses: [Address; 3] = wallets
+        .iter()
+        .map(|wallet| wallet.address().into())
+        .collect::<Vec<Address>>()
+        .try_into()
+        .unwrap();
+    let amount = 1000;
+
+    {
+        // Should fail due to lack of output variables
+        let response = contract_methods
+            .mint_to_addresses(amount, addresses)
+            .simulate()
+            .await;
+
+        assert!(matches!(response, Err(Error::RevertTransactionError(..))));
+    }
+
+    {
+        let _ = contract_methods
+            .mint_to_addresses(amount, addresses)
+            .try_call()
+            .await?;
+
+        for wallet in wallets.iter() {
+            let balance = wallet.get_asset_balance(&mint_asset_id).await?;
+            assert_eq!(balance, amount);
+        }
+    }
+
+    Ok(())
+}
+
+/*
+#[tokio::test]
+async fn test_automatic_output_variables_multicall() -> Result<(), Error> {
+    abigen!(
+        MyContract,
+        "packages/fuels/tests/test_projects/token_ops/out/debug/token_ops-abi.json"
+    );
+
+    let wallet_config = WalletsConfig::new(Some(3), None, None);
+    let wallets = launch_custom_provider_and_get_wallets(wallet_config, None).await;
+
+    let contract_id = Contract::deploy(
+        "tests/test_projects/contract_test/out/debug/contract_test.bin",
+        &wallets[0],
+        TxParameters::default(),
+        StorageConfiguration::default(),
+    )
+    .await?;
+
+    let contract_instance = MyContract::new(contract_id.to_string(), wallets[0].clone());
+    let contract_methods = contract_instance.methods();
+    let mint_asset_id = AssetId::from(*contract_id.hash());
+    let addresses: [Address; 3] = wallets
+        .iter()
+        .map(|wallet| wallet.address().into())
+        .collect::<Vec<Address>>()
+        .try_into().unwrap();
+    let amount = 1000;
+
+    let mut multi_call_handler = MultiContractCallHandler::new(wallets[0].clone());
+    (0..3).for_each(|_| {
+        let call_handler = contract_methods.mint_to_addresses(amount, addresses);
+        multi_call_handler.add_call(call_handler);
+    });
+
+    let _: ((), (), ()) = multi_call_handler.try_call().await?.value;
+
+    for wallet in wallets.iter() {
+        let balance = wallet.get_asset_balance(&mint_asset_id).await?;
+        assert_eq!(balance, 3 * amount);
+    }
+
+    Ok(())
+}*/
