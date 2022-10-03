@@ -191,17 +191,19 @@ impl Script {
             // one argument, we need to calculate the `call_data_offset`,
             // which points to where the data for the custom types start in the
             // transaction. If it doesn't take any custom inputs, this isn't necessary.
-            if call.compute_custom_input_offset {
+            let encoded_args_start_offset = if call.compute_custom_input_offset {
                 // Custom inputs are stored after the previously added parameters,
                 // including custom_input_offset
                 let custom_input_offset =
                     segment_offset + AssetId::LEN + 2 * WORD_SIZE + ContractId::LEN + 2 * WORD_SIZE;
-                let custom_input_offset = custom_input_offset as Word;
+                script_data.extend(&(custom_input_offset as Word).to_be_bytes());
+                custom_input_offset
+            } else {
+                segment_offset
+            };
 
-                script_data.extend(&custom_input_offset.to_be_bytes());
-            }
-
-            script_data.extend(call.encoded_args.clone());
+            let bytes = call.encoded_args.resolve(encoded_args_start_offset as u64);
+            script_data.extend(bytes);
 
             // the data segment that holds the parameters for the next call
             // begins at the original offset + the data we added so far
@@ -397,7 +399,9 @@ impl Script {
 mod test {
     use super::*;
     use fuel_gql_client::client::schema::coin::CoinStatus;
+    use fuels_core::abi_encoder::ABIEncoder;
     use fuels_core::parameters::CallParameters;
+    use fuels_core::Token;
     use fuels_types::bech32::Bech32ContractId;
     use fuels_types::param_types::ParamType;
     use rand::Rng;
@@ -423,8 +427,11 @@ mod test {
 
         let selectors = vec![[7u8; 8], [8u8; 8], [9u8; 8]];
 
-        // Call 2 has a multiple inputs, compute_custom_input_offset will be true
-        let args = vec![[10u8; 8].to_vec(), [11u8; 16].to_vec(), [12u8; 8].to_vec()];
+        // Call 2 has multiple inputs, compute_custom_input_offset will be true
+
+        let args = [Token::U8(1), Token::U16(2), Token::U8(3)]
+            .map(|token| ABIEncoder::encode(&[token]).unwrap())
+            .to_vec();
 
         let calls: Vec<ContractCall> = (0..NUM_CALLS)
             .map(|i| ContractCall {
@@ -477,11 +484,11 @@ mod test {
         // Calls 1 and 3 have their input arguments after the selector
         let call_1_arg_offset = param_offsets[0].call_data_offset + ContractId::LEN + SELECTOR_LEN;
         let call_1_arg = script_data[call_1_arg_offset..call_1_arg_offset + WORD_SIZE].to_vec();
-        assert_eq!(call_1_arg, args[0].to_vec());
+        assert_eq!(call_1_arg, args[0].resolve(0));
 
         let call_3_arg_offset = param_offsets[2].call_data_offset + ContractId::LEN + SELECTOR_LEN;
         let call_3_arg = script_data[call_3_arg_offset..call_3_arg_offset + WORD_SIZE].to_vec();
-        assert_eq!(call_3_arg, args[2]);
+        assert_eq!(call_3_arg, args[2].resolve(0));
 
         // Call 2 has custom inputs and custom_input_offset
         let call_2_arg_offset = param_offsets[1].call_data_offset + ContractId::LEN + SELECTOR_LEN;
@@ -495,8 +502,8 @@ mod test {
         let custom_input_offset =
             param_offsets[1].call_data_offset + ContractId::LEN + SELECTOR_LEN + WORD_SIZE;
         let custom_input =
-            script_data[custom_input_offset..custom_input_offset + 2 * WORD_SIZE].to_vec();
-        assert_eq!(custom_input, args[1]);
+            script_data[custom_input_offset..custom_input_offset + WORD_SIZE].to_vec();
+        assert_eq!(custom_input, args[1].resolve(0));
     }
 
     #[test]

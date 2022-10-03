@@ -61,27 +61,10 @@ pub struct TypeApplication {
 
 impl TypeDeclaration {
     pub fn is_enum_type(&self) -> bool {
-        const ENUM_KEYWORD: &str = "enum ";
-        self.type_field.starts_with(ENUM_KEYWORD)
+        self.type_field.starts_with("enum ")
     }
 
     pub fn is_struct_type(&self) -> bool {
-        const STRUCT_KEYWORD: &str = "struct ";
-        self.type_field.starts_with(STRUCT_KEYWORD)
-    }
-
-    pub fn is_option(&self) -> bool {
-        const OPTION_KEYWORD: &str = " Option";
-        self.type_field.ends_with(OPTION_KEYWORD)
-    }
-
-    pub fn is_result(&self) -> bool {
-        const RESULT_KEYWORD: &str = " Result";
-        self.type_field.ends_with(RESULT_KEYWORD)
-    }
-
-    pub fn is_identity(&self) -> bool {
-        const IDENTITY_KEYWORD: &str = " Identity";
-        self.type_field.ends_with(IDENTITY_KEYWORD)
+        self.type_field.starts_with("struct ")
     }
 }

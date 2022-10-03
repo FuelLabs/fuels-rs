@@ -1,4 +1,5 @@
 use crate::abi_decoder::ABIDecoder;
+use crate::types::Bits256;
 use core::fmt;
 use fuel_types::bytes::padded_len;
 use fuels_types::{
@@ -6,7 +7,6 @@ use fuels_types::{
     param_types::{EnumVariants, ParamType},
 };
 use strum_macros::EnumString;
-use types::Bits256;
 
 pub mod abi_decoder;
 pub mod abi_encoder;
@@ -77,6 +77,7 @@ pub enum Token {
     Byte(u8),
     B256([u8; 32]),
     Array(Vec<Token>),
+    Vector(Vec<Token>),
     String(StringToken),
     Struct(Vec<Token>),
     #[strum(disabled)]

@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use crate::code_gen::bindings::ContractBindings;
+use crate::code_gen::custom_types::extract_custom_type_name_from_abi_type_field;
 use crate::source::Source;
 use crate::utils::ident;
 use fuels_types::errors::Error;
@@ -196,7 +197,7 @@ impl Abigen {
             // Skip custom type generation if the custom type is a native type.
             // This means ABI methods receiving or returning a native type
             // can receive or return that native type directly.
-            if Abigen::is_native_type(&prop.type_field) {
+            if Abigen::is_native_type(&prop.type_field)? {
                 continue;
             }
 
@@ -213,24 +214,23 @@ impl Abigen {
     // It's expected to come in as `"struct T"` or `"enum T"`.
     // `T` is a native `high-level language` or Rust type if it matches exactly one of
     // the reserved strings, such as "Address", "ContractId", "Option" or "Result"
-    pub fn is_native_type(type_field: &str) -> bool {
-        const CONTRACT_ID_NATIVE_TYPE: &str = "ContractId";
-        const ADDRESS_NATIVE_TYPE: &str = "Address";
-        const IDENTITY_NATIVE_TYPE: &str = "Identity";
-        const OPTION_NATIVE_TYPE: &str = "Option";
-        const RESULT_NATIVE_TYPE: &str = "Result";
+    pub fn is_native_type(type_field: &str) -> anyhow::Result<bool> {
+        let name = extract_custom_type_name_from_abi_type_field(type_field)?;
 
-        let split: Vec<&str> = type_field.split_whitespace().collect();
-
-        if split.len() > 2 {
-            return false;
-        }
-
-        split[1] == CONTRACT_ID_NATIVE_TYPE
-            || split[1] == ADDRESS_NATIVE_TYPE
-            || split[1] == IDENTITY_NATIVE_TYPE
-            || split[1] == OPTION_NATIVE_TYPE
-            || split[1] == RESULT_NATIVE_TYPE
+        // "RawVec" is part of the Vec structure. Not used in the SDK and thus
+        // not generated.
+        Ok([
+            "ContractId",
+            "Address",
+            "Option",
+            "Identity",
+            "Result",
+            "Vec",
+            "RawVec",
+        ]
+        .map(ident)
+        .into_iter()
+        .any(|e| e == name))
     }
 
     fn abi_enums(&self) -> Result<TokenStream, Error> {
@@ -240,7 +240,7 @@ impl Abigen {
         let mut seen_enum: Vec<&str> = vec![];
 
         for prop in &self.abi.types {
-            if !prop.is_enum_type() || prop.is_option() || prop.is_result() || prop.is_identity() {
+            if !prop.is_enum_type() || Abigen::is_native_type(&prop.type_field)? {
                 continue;
             }
 

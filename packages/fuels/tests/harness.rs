@@ -8,15 +8,29 @@ use fuel_gql_client::{
         prelude::{GTFArgs, Opcode},
     },
 };
+use fuels::contract::contract::MultiContractCallHandler;
+use fuels::contract::predicate::Predicate;
 use fuels::prelude::*;
+use fuels::prelude::{
+    abigen, launch_custom_provider_and_get_wallets, launch_provider_and_get_wallet,
+    setup_contract_test, setup_multiple_assets_coins, setup_single_asset_coins,
+    setup_test_provider, CallParameters, Config, Contract, Error, Provider, Salt, TxParameters,
+    WalletUnlocked, WalletsConfig, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
+};
 use fuels_contract::script::ScriptBuilder;
+use fuels_core::parameters::StorageConfiguration;
+use fuels_core::types::{Bits256, Byte};
+use fuels_core::Tokenizable;
 use fuels_core::{
     abi_encoder::ABIEncoder,
     tx::{Address, Bytes32, StorageSlot},
 };
+use fuels_core::{constants::BASE_ASSET_ID, Token};
 use fuels_signers::fuel_crypto::SecretKey;
+use fuels_test_helpers::setup_single_message;
+use fuels_types::bech32::Bech32Address;
 use sha2::{Digest, Sha256};
-use std::{iter, str::FromStr};
+use std::{iter, slice, str::FromStr};
 
 /// Note: all the tests and examples below require pre-compiled test projects.
 /// To compile these projects, run `cargo run --bin build-test-projects`.
@@ -52,10 +66,11 @@ async fn compile_bindings_from_contract_file() {
 
     let call_handler = contract_instance.methods().takes_ints_returns_bool(42);
 
+    let encoded_args = call_handler.contract_call.encoded_args.resolve(0);
     let encoded = format!(
         "{}{}",
         hex::encode(call_handler.contract_call.encoded_selector),
-        hex::encode(call_handler.contract_call.encoded_args)
+        hex::encode(encoded_args)
     );
 
     assert_eq!("000000009593586c000000000000002a", encoded);
@@ -111,10 +126,11 @@ async fn compile_bindings_from_inline_contract() -> Result<(), Error> {
 
     let call_handler = contract_instance.methods().takes_ints_returns_bool(42_u32);
 
+    let encoded_args = call_handler.contract_call.encoded_args.resolve(0);
     let encoded = format!(
         "{}{}",
         hex::encode(call_handler.contract_call.encoded_selector),
-        hex::encode(call_handler.contract_call.encoded_args)
+        hex::encode(&encoded_args)
     );
 
     assert_eq!("000000009593586c000000000000002a", encoded);
@@ -184,10 +200,11 @@ async fn compile_bindings_array_input() {
     let input = [1, 2, 3];
     let call_handler = contract_instance.methods().takes_array(input);
 
+    let encoded_args = call_handler.contract_call.encoded_args.resolve(0);
     let encoded = format!(
         "{}{}",
         hex::encode(call_handler.contract_call.encoded_selector),
-        hex::encode(call_handler.contract_call.encoded_args)
+        hex::encode(&encoded_args)
     );
 
     assert_eq!(
@@ -258,10 +275,11 @@ async fn compile_bindings_bool_array_input() {
     let input = [true, false, true];
     let call_handler = contract_instance.methods().takes_array(input);
 
+    let encoded_args = call_handler.contract_call.encoded_args.resolve(0);
     let encoded = format!(
         "{}{}",
         hex::encode(call_handler.contract_call.encoded_selector),
-        hex::encode(call_handler.contract_call.encoded_args)
+        hex::encode(&encoded_args)
     );
 
     assert_eq!(
@@ -319,10 +337,11 @@ async fn compile_bindings_byte_input() {
 
     let call_handler = contract_instance.methods().takes_byte(Byte(10u8));
 
+    let encoded_args = call_handler.contract_call.encoded_args.resolve(0);
     let encoded = format!(
         "{}{}",
         hex::encode(call_handler.contract_call.encoded_selector),
-        hex::encode(call_handler.contract_call.encoded_args)
+        hex::encode(&encoded_args)
     );
 
     assert_eq!("00000000a4bd3861000000000000000a", encoded);
@@ -383,10 +402,11 @@ async fn compile_bindings_string_input() {
     );
     // ANCHOR_END: contract_takes_string
 
+    let encoded_args = call_handler.contract_call.encoded_args.resolve(0);
     let encoded = format!(
         "{}{}",
         hex::encode(call_handler.contract_call.encoded_selector),
-        hex::encode(call_handler.contract_call.encoded_args)
+        hex::encode(&encoded_args)
     );
 
     assert_eq!(
@@ -451,10 +471,11 @@ async fn compile_bindings_b256_input() {
     let call_handler = contract_instance.methods().takes_b256(Bits256(arg));
     // ANCHOR_END: 256_arg
 
+    let encoded_args = call_handler.contract_call.encoded_args.resolve(0);
     let encoded = format!(
         "{}{}",
         hex::encode(call_handler.contract_call.encoded_selector),
-        hex::encode(call_handler.contract_call.encoded_args)
+        hex::encode(&encoded_args)
     );
 
     assert_eq!(
@@ -553,10 +574,11 @@ async fn compile_bindings_struct_input() {
 
     let call_handler = contract_instance.methods().takes_struct(input);
 
+    let encoded_args = call_handler.contract_call.encoded_args.resolve(0);
     let encoded = format!(
         "{}{}",
         hex::encode(call_handler.contract_call.encoded_selector),
-        hex::encode(call_handler.contract_call.encoded_args)
+        hex::encode(&encoded_args)
     );
 
     assert_eq!(
@@ -654,12 +676,17 @@ async fn compile_bindings_nested_struct_input() {
 
     let contract_instance = SimpleContract::new(null_contract_id(), wallet);
 
-    let call_handler = contract_instance.methods().takes_nested_struct(input);
+    let call_handler = contract_instance
+        .methods()
+        .takes_nested_struct(input.clone());
+    let encoded_arg = ABIEncoder::encode(slice::from_ref(&input.into_token()))
+        .unwrap()
+        .resolve(0);
 
     let encoded = format!(
         "{}{}",
         hex::encode(call_handler.contract_call.encoded_selector),
-        hex::encode(call_handler.contract_call.encoded_args)
+        hex::encode(encoded_arg)
     );
 
     assert_eq!("0000000088bf8a1b000000000000000a0000000000000001", encoded);
@@ -739,10 +766,11 @@ async fn compile_bindings_enum_input() {
 
     let call_handler = contract_instance.methods().takes_enum(variant);
 
+    let encoded_args = call_handler.contract_call.encoded_args.resolve(0);
     let encoded = format!(
         "{}{}",
         hex::encode(call_handler.contract_call.encoded_selector),
-        hex::encode(call_handler.contract_call.encoded_args)
+        hex::encode(&encoded_args)
     );
     let expected = "0000000021b2784f0000000000000000000000000000002a";
     assert_eq!(encoded, expected);
@@ -832,10 +860,11 @@ async fn create_struct_from_decoded_tokens() -> Result<(), Error> {
 
     let call_handler = contract_instance.methods().takes_struct(struct_from_tokens);
 
+    let encoded_args = call_handler.contract_call.encoded_args.resolve(0);
     let encoded = format!(
         "{}{}",
         hex::encode(call_handler.contract_call.encoded_selector),
-        hex::encode(call_handler.contract_call.encoded_args)
+        hex::encode(&encoded_args)
     );
 
     assert_eq!("00000000cb0b2f05000000000000000a0000000000000001", encoded);
@@ -946,10 +975,11 @@ async fn create_nested_struct_from_decoded_tokens() -> Result<(), Error> {
         .methods()
         .takes_nested_struct(nested_struct_from_tokens);
 
+    let encoded_args = call_handler.contract_call.encoded_args.resolve(0);
     let encoded = format!(
         "{}{}",
         hex::encode(call_handler.contract_call.encoded_selector),
-        hex::encode(call_handler.contract_call.encoded_args)
+        hex::encode(&encoded_args)
     );
 
     assert_eq!("0000000088bf8a1b000000000000000a0000000000000001", encoded);
@@ -2588,7 +2618,9 @@ async fn can_call_predicate_with_u32_data() -> Result<(), Error> {
     assert_eq!(receiver_balance_before, 16);
 
     // invalid predicate data
-    let predicate_data = ABIEncoder::encode(&[101_u32.into_token()]).unwrap();
+    let predicate_data = ABIEncoder::encode(&[101_u32.into_token()])
+        .unwrap()
+        .resolve(0);
     receiver
         .receive_from_predicate(
             predicate.address(),
@@ -2612,7 +2644,9 @@ async fn can_call_predicate_with_u32_data() -> Result<(), Error> {
     assert_eq!(predicate_balance, amount_to_predicate);
 
     // valid predicate data
-    let predicate_data = ABIEncoder::encode(&[1078_u32.into_token()]).unwrap();
+    let predicate_data = ABIEncoder::encode(&[1078_u32.into_token()])
+        .unwrap()
+        .resolve(0);
     receiver
         .receive_from_predicate(
             predicate.address(),
@@ -2667,7 +2701,7 @@ async fn can_call_predicate_with_address_data() -> Result<(), Error> {
     let addr =
         Address::from_str("0xef86afa9696cf0dc6385e2c407a6e159a1103cefb7e2ae0636fb33d3cb2a9e4a")
             .unwrap();
-    let predicate_data = ABIEncoder::encode(&[addr.into_token()]).unwrap();
+    let predicate_data = ABIEncoder::encode(&[addr.into_token()]).unwrap().resolve(0);
     receiver
         .receive_from_predicate(
             predicate.address(),
@@ -2720,7 +2754,9 @@ async fn can_call_predicate_with_struct_data() -> Result<(), Error> {
     assert_eq!(receiver_balance_before, 16);
 
     // invalid predicate data
-    let predicate_data = ABIEncoder::encode(&[true.into_token(), 55_u32.into_token()]).unwrap();
+    let predicate_data = ABIEncoder::encode(&[true.into_token(), 55_u32.into_token()])
+        .unwrap()
+        .resolve(0);
     receiver
         .receive_from_predicate(
             predicate.address(),
@@ -2744,7 +2780,9 @@ async fn can_call_predicate_with_struct_data() -> Result<(), Error> {
     assert_eq!(predicate_balance, amount_to_predicate);
 
     // valid predicate data
-    let predicate_data = ABIEncoder::encode(&[true.into_token(), 100_u32.into_token()]).unwrap();
+    let predicate_data = ABIEncoder::encode(&[true.into_token(), 100_u32.into_token()])
+        .unwrap()
+        .resolve(0);
     receiver
         .receive_from_predicate(
             predicate.address(),
@@ -3896,6 +3934,87 @@ async fn test_identity_with_two_contracts() -> Result<(), Box<dyn std::error::Er
         .await?;
 
     assert!(response.value);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_vector() -> Result<(), Error> {
+    setup_contract_test!(
+        contract_instance,
+        wallet,
+        "packages/fuels/tests/test_projects/vectors"
+    );
+
+    let methods = contract_instance.methods();
+
+    {
+        // vec of u32s
+        let arg = vec![0, 1, 2];
+        methods.u32_vec(arg).call().await?;
+    }
+    {
+        // vec of vecs of u32s
+        let arg = vec![vec![0, 1, 2], vec![0, 1, 2]];
+        methods.vec_in_vec(arg.clone()).call().await?;
+    }
+    {
+        // vec of structs
+        // ANCHOR: passing_in_vec
+        let arg = vec![SomeStruct { a: 0 }, SomeStruct { a: 1 }];
+        methods.struct_in_vec(arg.clone()).call().await?;
+        // ANCHOR_END: passing_in_vec
+    }
+    {
+        // vec in struct
+        let arg = SomeStruct { a: vec![0, 1, 2] };
+        methods.vec_in_struct(arg.clone()).call().await?;
+    }
+    {
+        // array in vec
+        let arg = vec![[0u64, 1u64], [0u64, 1u64]];
+        methods.array_in_vec(arg.clone()).call().await?;
+    }
+    {
+        // vec in array
+        let arg = [vec![0, 1, 2], vec![0, 1, 2]];
+        methods.vec_in_array(arg.clone()).call().await?;
+    }
+    {
+        // vec in enum
+        let arg = SomeEnum::a(vec![0, 1, 2]);
+        methods.vec_in_enum(arg.clone()).call().await?;
+    }
+    {
+        // enum in vec
+        let arg = vec![SomeEnum::a(0), SomeEnum::a(1)];
+        methods.enum_in_vec(arg.clone()).call().await?;
+    }
+    {
+        // tuple in vec
+        let arg = vec![(0, 0), (1, 1)];
+        methods.tuple_in_vec(arg.clone()).call().await?;
+    }
+    {
+        // vec in tuple
+        let arg = (vec![0, 1, 2], vec![0, 1, 2]);
+        methods.vec_in_tuple(arg.clone()).call().await?;
+    }
+    {
+        // vec in a vec in a struct in a vec
+        let arg = vec![
+            SomeStruct {
+                a: vec![vec![0, 1, 2], vec![3, 4, 5]],
+            },
+            SomeStruct {
+                a: vec![vec![6, 7, 8], vec![9, 10, 11]],
+            },
+        ];
+        methods
+            .vec_in_a_vec_in_a_struct_in_a_vec(arg.clone())
+            .call()
+            .await?;
+    }
 
     Ok(())
 }
