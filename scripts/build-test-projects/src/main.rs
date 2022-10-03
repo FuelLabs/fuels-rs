@@ -37,7 +37,7 @@ fn main() {
         }
 
         let output = std::process::Command::new("forc")
-            .args(["build", "--path"])
+            .args(["build", "--generate-logged-types", "--path"])
             .arg(&path)
             .output()
             .expect("failed to run `forc build` for example project");

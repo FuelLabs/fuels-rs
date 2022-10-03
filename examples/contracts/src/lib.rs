@@ -379,7 +379,6 @@ mod tests {
         match response {
             // The transaction is valid and executes to completion
             Ok(call_response) => {
-                let logs: Vec<String> = call_response.logs;
                 let receipts: Vec<Receipt> = call_response.receipts;
                 // Do things with logs and receipts
             }

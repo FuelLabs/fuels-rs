@@ -29,6 +29,7 @@
     - [Transaction parameters](./calling-contracts/tx-params.md)
     - [Call parameters](./calling-contracts/call-params.md)
     - [Call response](./calling-contracts/call-response.md)
+    - [Logs](./calling-contracts/logs.md)
     - [Variable outputs](./calling-contracts/variable-outputs.md)
     - [Read-only calls](./calling-contracts/read-only.md)
     - [Calling other contracts](./calling-contracts/other-contracts.md)

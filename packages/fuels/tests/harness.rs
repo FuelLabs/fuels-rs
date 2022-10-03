@@ -1,4 +1,5 @@
-use fuel_core::service::{Config as CoreConfig, FuelService};
+use fuel_core::service::Config as CoreConfig;
+use fuel_core::service::FuelService;
 use fuel_core_interfaces::model::Message;
 use fuel_gql_client::{
     client::schema::message::Message as OtherMessage,
@@ -10,6 +11,7 @@ use fuel_gql_client::{
 };
 use fuels::contract::contract::MultiContractCallHandler;
 use fuels::contract::predicate::Predicate;
+use fuels::prelude::SizedAsciiString;
 use fuels::prelude::*;
 use fuels::prelude::{
     abigen, launch_custom_provider_and_get_wallets, launch_provider_and_get_wallet,
@@ -1719,46 +1721,6 @@ async fn workflow_enum_inside_struct() -> Result<(), Error> {
         .await?;
 
     assert_eq!(response.value, 6666);
-    Ok(())
-}
-
-#[tokio::test]
-async fn test_logd_receipts() -> Result<(), Error> {
-    setup_contract_test!(
-        contract_instance,
-        wallet,
-        "packages/fuels/tests/test_projects/contract_logdata"
-    );
-
-    let mut value = [0u8; 32];
-    value[0] = 0xFF;
-    value[1] = 0xEE;
-    value[2] = 0xDD;
-    value[12] = 0xAA;
-    value[13] = 0xBB;
-    value[14] = 0xCC;
-
-    let contract_methods = contract_instance.methods();
-    let response = contract_methods
-        .use_logd_opcode(Bits256(value), 3, 6)
-        .call()
-        .await?;
-    assert_eq!(response.logs, vec!["ffeedd", "ffeedd000000"]);
-
-    let response = contract_methods
-        .use_logd_opcode(Bits256(value), 14, 15)
-        .call()
-        .await?;
-    assert_eq!(
-        response.logs,
-        vec![
-            "ffeedd000000000000000000aabb",
-            "ffeedd000000000000000000aabbcc"
-        ]
-    );
-
-    let response = contract_methods.dont_use_logd().call().await?;
-    assert!(response.logs.is_empty());
     Ok(())
 }
 
@@ -3730,6 +3692,154 @@ async fn test_rust_result_can_be_encoded() -> Result<(), Box<dyn std::error::Err
     let response = contract_methods.input_error(expected_error).call().await?;
 
     assert!(response.value);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_parse_logged_varibles() -> Result<(), Error> {
+    setup_contract_test!(
+        contract_instance,
+        wallet,
+        "packages/fuels/tests/test_projects/logged_types"
+    );
+
+    // ANCHOR: produce_logs
+    let contract_methods = contract_instance.methods();
+    let response = contract_methods.produce_logs_variables().call().await?;
+
+    let log_u64 = contract_instance.logs_with_type::<u64>(&response.receipts)?;
+    let log_bits256 = contract_instance.logs_with_type::<Bits256>(&response.receipts)?;
+    let log_string = contract_instance.logs_with_type::<SizedAsciiString<4>>(&response.receipts)?;
+    let log_array = contract_instance.logs_with_type::<[u8; 3]>(&response.receipts)?;
+
+    let expected_bits256 = Bits256([
+        239, 134, 175, 169, 105, 108, 240, 220, 99, 133, 226, 196, 7, 166, 225, 89, 161, 16, 60,
+        239, 183, 226, 174, 6, 54, 251, 51, 211, 203, 42, 158, 74,
+    ]);
+
+    assert_eq!(log_u64, vec![64]);
+    assert_eq!(log_bits256, vec![expected_bits256]);
+    assert_eq!(log_string, vec!["Fuel"]);
+    assert_eq!(log_array, vec![[1, 2, 3]]);
+    // ANCHOR_END: produce_logs
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_parse_logs_values() -> Result<(), Error> {
+    setup_contract_test!(
+        contract_instance,
+        wallet,
+        "packages/fuels/tests/test_projects/logged_types"
+    );
+
+    let contract_methods = contract_instance.methods();
+    let response = contract_methods.produce_logs_values().call().await?;
+
+    let log_u64 = contract_instance.logs_with_type::<u64>(&response.receipts)?;
+    let log_u32 = contract_instance.logs_with_type::<u32>(&response.receipts)?;
+    let log_u16 = contract_instance.logs_with_type::<u16>(&response.receipts)?;
+    let log_u8 = contract_instance.logs_with_type::<u8>(&response.receipts)?;
+    // try to retrieve non existent log
+    let log_nonexistent = contract_instance.logs_with_type::<bool>(&response.receipts)?;
+
+    assert_eq!(log_u64, vec![64]);
+    assert_eq!(log_u32, vec![32]);
+    assert_eq!(log_u16, vec![16]);
+    assert_eq!(log_u8, vec![8]);
+    assert!(log_nonexistent.is_empty());
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_parse_logs_custom_types() -> Result<(), Error> {
+    setup_contract_test!(
+        contract_instance,
+        wallet,
+        "packages/fuels/tests/test_projects/logged_types"
+    );
+
+    let contract_methods = contract_instance.methods();
+    let response = contract_methods.produce_logs_custom_types().call().await?;
+
+    let log_test_struct = contract_instance.logs_with_type::<TestStruct>(&response.receipts)?;
+    let log_test_enum = contract_instance.logs_with_type::<TestEnum>(&response.receipts)?;
+
+    let expected_bits256 = Bits256([
+        239, 134, 175, 169, 105, 108, 240, 220, 99, 133, 226, 196, 7, 166, 225, 89, 161, 16, 60,
+        239, 183, 226, 174, 6, 54, 251, 51, 211, 203, 42, 158, 74,
+    ]);
+    let expected_struct = TestStruct {
+        field_1: true,
+        field_2: expected_bits256,
+        field_3: 64,
+    };
+    let expected_enum = TestEnum::VariantTwo();
+
+    assert_eq!(log_test_struct, vec![expected_struct]);
+    assert_eq!(log_test_enum, vec![expected_enum]);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_fetch_logs() -> Result<(), Error> {
+    setup_contract_test!(
+        contract_instance,
+        wallet,
+        "packages/fuels/tests/test_projects/logged_types"
+    );
+
+    // ANCHOR: fetch_logs
+    let contract_methods = contract_instance.methods();
+    let response = contract_methods.produce_multiple_logs().call().await?;
+    let logs = contract_instance.fetch_logs(&response.receipts);
+    // ANCHOR_END: fetch_logs
+
+    let expected_bits256 = Bits256([
+        239, 134, 175, 169, 105, 108, 240, 220, 99, 133, 226, 196, 7, 166, 225, 89, 161, 16, 60,
+        239, 183, 226, 174, 6, 54, 251, 51, 211, 203, 42, 158, 74,
+    ]);
+    let expected_struct = TestStruct {
+        field_1: true,
+        field_2: expected_bits256,
+        field_3: 64,
+    };
+    let expected_enum = TestEnum::VariantTwo();
+    let expected_logs: Vec<String> = vec![
+        format!("{:#?}", 64u64),
+        format!("{:#?}", 32u32),
+        format!("{:#?}", 16u16),
+        format!("{:#?}", 8u8),
+        format!("{:#?}", 64u64),
+        format!("{:#?}", expected_bits256),
+        format!("{:#?}", SizedAsciiString::<4>::new("Fuel".to_string())?),
+        format!("{:#?}", [1, 2, 3]),
+        format!("{:#?}", expected_struct),
+        format!("{:#?}", expected_enum),
+    ];
+
+    assert_eq!(logs, expected_logs);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_fetch_logs_with_no_logs() -> Result<(), Error> {
+    setup_contract_test!(
+        contract_instance,
+        wallet,
+        "packages/fuels/tests/test_projects/contract_test"
+    );
+
+    let contract_methods = contract_instance.methods();
+    let response = contract_methods.initialize_counter(42).call().await?;
+    let logs = contract_instance.fetch_logs(&response.receipts);
+
+    assert!(logs.is_empty());
 
     Ok(())
 }

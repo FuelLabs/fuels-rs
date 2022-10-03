@@ -3,6 +3,7 @@
 //! We declare these in a dedicated, minimal crate in order to allow for downstream projects to
 //! consume or generate these ABI-compatible types without needing to pull in the rest of the SDK.
 
+use proc_macro2::TokenStream;
 use serde::{Deserialize, Serialize};
 use strum_macros::ToString;
 
@@ -30,6 +31,7 @@ pub enum CustomType {
 pub struct ProgramABI {
     pub types: Vec<TypeDeclaration>,
     pub functions: Vec<ABIFunction>,
+    pub logged_types: Option<Vec<LoggedType>>,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -57,6 +59,21 @@ pub struct TypeApplication {
     #[serde(rename = "type")]
     pub type_id: usize,
     pub type_arguments: Option<Vec<TypeApplication>>,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LoggedType {
+    pub log_id: u64,
+    #[serde(rename = "loggedType")]
+    pub application: TypeApplication,
+}
+
+#[derive(Debug, Clone)]
+pub struct ResolvedLog {
+    pub log_id: u64,
+    pub param_type_call: TokenStream,
+    pub resolved_type_name: TokenStream,
 }
 
 impl TypeDeclaration {
