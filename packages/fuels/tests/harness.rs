@@ -3933,7 +3933,7 @@ async fn test_automatic_output_variables() -> Result<(), Error> {
         // Should fail due to lack of output variables
         let response = contract_methods
             .mint_to_addresses(amount, addresses)
-            .simulate()
+            .call()
             .await;
 
         assert!(matches!(response, Err(Error::RevertTransactionError(..))));

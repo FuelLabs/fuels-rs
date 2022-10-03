@@ -519,7 +519,19 @@ where
 
     /// Call a contract's method and try to adjust output variables automatically
     pub async fn try_call(mut self) -> Result<CallResponse<D>, Error> {
-        let response = loop {
+        let response = self.try_simulate_and_resolve().await;
+
+        // Do a real call only if there was no error
+        match response {
+            Ok(_) => Self::call_or_simulate(&self, false).await,
+            Err(_) => response,
+        }
+    }
+
+    /// Simulates calls and attempts to ad based on the received error.
+    /// Forwards the reiceived error if it cannot be fixed.
+    async fn try_simulate_and_resolve(&mut self) -> Result<CallResponse<D>, Error> {
+        loop {
             let response = Self::call_or_simulate(&self, true).await;
 
             match response.as_ref() {
@@ -531,16 +543,14 @@ where
 
                     match revert_code {
                         Some(code) if *code == FAILED_TRANSFER_TO_OUTPUT_SIGNAL => {
-                            self = self.append_variable_outputs(1)
+                            self = self.append_variable_outputs(1);
                         }
                         _ => break response,
                     };
                 }
                 _ => break response,
             };
-        };
-
-        response
+        }
     }
 
     /// Call a contract's method on the node, in a state-modifying manner.
