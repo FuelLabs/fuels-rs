@@ -240,7 +240,7 @@ impl Abigen {
         let mut seen_enum: Vec<&str> = vec![];
 
         for prop in &self.abi.types {
-            if !prop.is_enum_type() || prop.is_option() || prop.is_result() || prop.is_identity() {
+            if !prop.is_enum_type() || Abigen::is_native_type(&prop.type_field)? {
                 continue;
             }
 
