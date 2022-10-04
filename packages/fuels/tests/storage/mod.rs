@@ -101,10 +101,14 @@ async fn test_init_storage_automatically_bad_json_path() -> Result<(), Error> {
         "tests/storage/contract_storage_test/out/debug/contract_storage_test.bin",
         &wallet,
         TxParameters::default(),
-        StorageConfiguration::with_storage_path(
-            Some("tests/storage/contract_storage_test/out/debug/contract_storage_test-storage_slts.json".to_string())),
+        StorageConfiguration::with_storage_path(Some(
+            "tests/storage/contract_storage_test/out/debug/contract_storage_test-storage_slts.json"
+                .to_string(),
+        )),
         Salt::default(),
-    ).await.expect_err("Should fail");
+    )
+    .await
+    .expect_err("Should fail");
 
     let expected = "Invalid data:";
     assert!(response.to_string().starts_with(expected));
