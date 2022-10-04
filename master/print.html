@@ -1199,7 +1199,7 @@ impl MyContract {
         .set_contracts(&amp;[foo_contract_id.clone()]) // Sets the external contract
         .call()
         .await?;
-    assert!(!res.value);
+    assert!(res.value);
 
     let res = foo_caller_contract_instance2
         .methods()
@@ -1207,7 +1207,7 @@ impl MyContract {
         .set_contracts(&amp;[foo_contract_id.clone()]) // Sets the external contract
         .call()
         .await?;
-    assert!(!res.value);
+    assert!(res.value);
 </code></pre>
 <p>In this example, three contracts are deployed on the same provider using the <code>wallet</code>. The second and third macro use the same contract but have different IDs because of the deployment with salt. Both of them can call the first contract by using its ID.</p>
 <p>In addition, you can manually create the <code>wallet</code> variable and then use it inside the macro. This is useful if you want to create custom wallets or providers, but still want to use the macro to reduce boilerplate code. Below is an example of this approach.</p>
