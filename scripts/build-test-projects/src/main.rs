@@ -1,5 +1,5 @@
 //! Runs `forc build` for all projects under the
-//! `fuels/tests/test_projects` directory.
+//! `fuels/tests` directory.
 //!
 //! NOTE: This expects both `forc` and `cargo` to be available in `PATH`.
 

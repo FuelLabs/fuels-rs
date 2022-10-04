@@ -670,7 +670,7 @@ mod test {
 
         // Should panic as we are passing in a JSON instead of BIN
         Contract::deploy(
-            "tests/test_projects/contract_output_test/out/debug/contract_output_test-abi.json",
+            "tests/types/contract_output_test/out/debug/contract_output_test-abi.json",
             &wallet,
             TxParameters::default(),
             StorageConfiguration::default(),
@@ -686,7 +686,7 @@ mod test {
 
         // Should panic as we are passing in a JSON instead of BIN
         Contract::deploy_with_parameters(
-            "tests/test_projects/contract_output_test/out/debug/contract_output_test-abi.json",
+            "tests/types/contract_output_test/out/debug/contract_output_test-abi.json",
             &wallet,
             TxParameters::default(),
             StorageConfiguration::default(),
