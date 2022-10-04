@@ -16,6 +16,6 @@ impl FooCaller for Contract {
         }
         (value);
 
-        response
+        !response
     }
 }
