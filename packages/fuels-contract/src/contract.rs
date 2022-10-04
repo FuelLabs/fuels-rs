@@ -517,40 +517,27 @@ where
         .await
     }
 
-    /// Call a contract's method and try to adjust output variables automatically
-    pub async fn try_call(mut self) -> Result<CallResponse<D>, Error> {
-        let response = self.try_simulate_and_resolve().await;
-
-        // Do a real call only if there was no error
-        match response {
-            Ok(_) => Self::call_or_simulate(&self, false).await,
-            Err(_) => response,
-        }
-    }
-
-    /// Simulates calls and attempts to ad based on the received error.
+    /// Simulates calls and attempts to set output variables based on the received error.
     /// Forwards the reiceived error if it cannot be fixed.
-    async fn try_simulate_and_resolve(&mut self) -> Result<CallResponse<D>, Error> {
-        loop {
+    pub async fn try_resolve(mut self, max_attempts: Option<u64>) -> Self {
+        let attempts = max_attempts.unwrap_or(10);
+
+        for _ in 0..attempts {
             let response = Self::call_or_simulate(&self, true).await;
 
-            match response.as_ref() {
-                Err(Error::RevertTransactionError(_, receipts)) => {
-                    let revert_code = receipts.iter().find_map(|r| match r {
-                        Receipt::Revert { ra, .. } => Some(ra),
-                        _ => None,
-                    });
-
-                    match revert_code {
-                        Some(code) if *code == FAILED_TRANSFER_TO_OUTPUT_SIGNAL => {
-                            self = self.append_variable_outputs(1);
-                        }
-                        _ => break response,
-                    };
+            match response {
+                Err(Error::RevertTransactionError(_, receipts))
+                    if receipts
+                        .iter()
+                        .any(|r| matches!(r, Receipt::Revert { ra, .. } if *ra == 0)) =>
+                {
+                    self = self.append_variable_outputs(1);
                 }
-                _ => break response,
-            };
+                _ => break,
+            }
         }
+
+        return self;
     }
 
     /// Call a contract's method on the node, in a state-modifying manner.
@@ -665,6 +652,20 @@ impl MultiContractCallHandler {
 
         self.get_response(receipts)
     }
+
+    /// Attempts to automatically set output variables for every call
+    /* pub async fn try_resolve(
+        mut self,
+        max_attempts: Option<u64>,
+    ) -> Self {
+        let attempts = max_attempts.unwrap_or(10);
+
+        self.contract_calls.iter().flatten().for_each(|call| {
+
+        });
+
+        return self;
+    }*/
 
     /// Get a contract's estimated cost
     pub async fn estimate_transaction_cost(

@@ -3911,7 +3911,7 @@ async fn test_automatic_output_variables() -> Result<(), Error> {
     let wallets = launch_custom_provider_and_get_wallets(wallet_config, None).await;
 
     let contract_id = Contract::deploy(
-        "tests/test_projects/contract_test/out/debug/contract_test.bin",
+        "tests/test_projects/token_ops/out/debug/token_ops.bin",
         &wallets[0],
         TxParameters::default(),
         StorageConfiguration::default(),
@@ -3940,9 +3940,24 @@ async fn test_automatic_output_variables() -> Result<(), Error> {
     }
 
     {
+        // Should fail due to insufficient attempts (needs at least 3)
+        let response = contract_methods
+            .mint_to_addresses(amount, addresses)
+            .try_resolve(Some(2))
+            .await
+            .call()
+            .await;
+
+        assert!(matches!(response, Err(Error::RevertTransactionError(..))));
+    }
+
+    {
+        // Should add 3 output variables automatically
         let _ = contract_methods
             .mint_to_addresses(amount, addresses)
-            .try_call()
+            .try_resolve(Some(3))
+            .await
+            .call()
             .await?;
 
         for wallet in wallets.iter() {
