@@ -1,0 +1,49 @@
+{
+  "types": [
+    {
+      "typeId": 0,
+      "type": "b256",
+      "components": null,
+      "typeParameters": null
+    },
+    {
+      "typeId": 1,
+      "type": "u64",
+      "components": null,
+      "typeParameters": null
+    }
+  ],
+  "functions": [
+    {
+      "inputs": [
+        {
+          "name": "key",
+          "type": 0,
+          "typeArguments": null
+        }
+      ],
+      "name": "get_value_b256",
+      "output": {
+        "name": "",
+        "type": 0,
+        "typeArguments": null
+      }
+    },
+    {
+      "inputs": [
+        {
+          "name": "key",
+          "type": 0,
+          "typeArguments": null
+        }
+      ],
+      "name": "get_value_u64",
+      "output": {
+        "name": "",
+        "type": 1,
+        "typeArguments": null
+      }
+    }
+  ],
+  "loggedTypes": []
+}

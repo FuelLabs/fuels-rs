@@ -58,7 +58,7 @@ use fuels::prelude::*;
 
 ## The Fuel Rust SDK source code
 
-Another way to experience the SDK is to look at the source code. The `packages/fuels/tests/harness.rs` file is full of integration tests that go through almost all aspects of the SDK.
+Another way to experience the SDK is to look at the source code. The `packages/fuels/tests/` folder is full of integration tests that go through almost all aspects of the SDK.
 
 > **Note** Before running the tests, we need to build all the Sway test projects. The SDK has a binary that will go through all projects and build them for us. You can use it with the following command.
 
