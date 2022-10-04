@@ -12,7 +12,7 @@ abi TestContract {
   fn is_even(value: u64) -> bool;
   fn return_my_string(value: str[4]) -> str[4];
   fn return_my_struct(value: MyStruct) -> MyStruct;
-  
+
 }
 
 impl TestContract for Contract {
@@ -23,6 +23,7 @@ impl TestContract for Contract {
       false
     }
   }
+
   fn return_my_string(value: str[4]) -> str[4] {
     value
   }
@@ -31,5 +32,4 @@ impl TestContract for Contract {
   fn return_my_struct(value: MyStruct) -> MyStruct {
     value
   }
-  
 }

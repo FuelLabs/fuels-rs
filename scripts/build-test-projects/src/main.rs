@@ -4,9 +4,9 @@
 //! NOTE: This expects both `forc` and `cargo` to be available in `PATH`.
 
 use std::{
-    env, fs,
+    fs,
     io::{self, Write},
-    path::{Path, PathBuf},
+    path::Path,
 };
 
 fn main() {
@@ -19,61 +19,25 @@ fn main() {
 
     println!("Building projects with: {:?}", version.trim());
 
-    let path = Path::new("packages/fuels/tests/test_projects");
-    let cwd = env::current_dir().unwrap();
-    let final_path = cwd.join(path);
+    let path = Path::new("packages/fuels/tests/");
+    let absolute_path = path.canonicalize().unwrap_or_else(|_| {
+        panic!(
+            "{path:?} could not be canonicalized.\nAre you running the comand from the root of `fuels-rs`?\n"
+        )
+    });
 
-    // Track discovered projects and whether or not they were successful.
-    let mut summary: Vec<(PathBuf, bool)> = vec![];
+    let summary = build_recursively(&absolute_path);
 
-    for res in fs::read_dir(final_path).expect("failed to walk examples directory") {
-        let entry = match res {
-            Ok(entry) => entry,
-            _ => continue,
-        };
-        let path = entry.path();
-        if !path.is_dir() || !dir_contains_forc_manifest(&path) {
-            continue;
-        }
+    let successes: u64 = summary.iter().sum();
+    let failures = summary.len() as u64 - successes;
 
-        let output = std::process::Command::new("forc")
-            .args(["build", "--path"])
-            .arg(&path)
-            .output()
-            .expect("failed to run `forc build` for example project");
-
-        // Print output on failure so we can read it in CI.
-        let success = if !output.status.success() {
-            io::stdout().write_all(&output.stdout).unwrap();
-            io::stdout().write_all(&output.stderr).unwrap();
-            false
-        } else {
-            true
-        };
-
-        summary.push((path, success));
-    }
-
-    println!("\nBuild all examples summary:");
-    let mut successes = 0;
-    for (path, success) in &summary {
-        let (checkmark, status) = if *success {
-            ("[✓]", "succeeded")
-        } else {
-            ("[x]", "failed")
-        };
-        println!("  {}: {} {}!", checkmark, path.display(), status);
-        if *success {
-            successes += 1;
-        }
-    }
-    let failures = summary.len() - successes;
     let successes_str = if successes == 1 {
         "success"
     } else {
         "successes"
     };
     let failures_str = if failures == 1 { "failure" } else { "failures" };
+
     println!(
         "{} {}, {} {}",
         successes, successes_str, failures, failures_str
@@ -82,6 +46,42 @@ fn main() {
     if failures > 0 {
         std::process::exit(1);
     }
+}
+
+fn build_recursively(path: &Path) -> Vec<u64> {
+    let mut summary: Vec<u64> = vec![];
+
+    for res in fs::read_dir(path).expect("failed to walk directory") {
+        let entry = match res {
+            Ok(entry) => entry,
+            _ => continue,
+        };
+        let child_path = entry.path();
+        if !child_path.is_dir() {
+            continue;
+        } else if !dir_contains_forc_manifest(&child_path) {
+            summary.extend(build_recursively(&child_path));
+        } else {
+            let output = std::process::Command::new("forc")
+                .args(["build", "--path"])
+                .arg(&child_path)
+                .output()
+                .expect("failed to run `forc build` for example project");
+
+            // Print output on failure so we can read it in CI.
+            let (success, checkmark, status) = if !output.status.success() {
+                io::stdout().write_all(&output.stdout).unwrap();
+                io::stdout().write_all(&output.stderr).unwrap();
+                (0, "[x]", "failed")
+            } else {
+                (1, "[✓]", "succeeded")
+            };
+            println!("  {}: {} {}!", checkmark, child_path.display(), status);
+
+            summary.push(success);
+        }
+    }
+    summary
 }
 
 // Check if the given directory contains `Forc.toml` at its root.
