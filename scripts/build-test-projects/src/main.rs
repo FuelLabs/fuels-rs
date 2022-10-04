@@ -63,7 +63,7 @@ fn build_recursively(path: &Path) -> Vec<u64> {
             summary.extend(build_recursively(&child_path));
         } else {
             let output = std::process::Command::new("forc")
-                .args(["build", "--path"])
+                .args(["build", "--generate-logged-types", "--path"])
                 .arg(&child_path)
                 .output()
                 .expect("failed to run `forc build` for example project");
