@@ -13,9 +13,9 @@ use fuel_gql_client::{
 
 use fuels_core::abi_decoder::ABIDecoder;
 use fuels_core::abi_encoder::{ABIEncoder, UnresolvedBytes};
+use fuels_core::constants::FAILED_TRANSFER_TO_OUTPUT_SIGNAL;
 use fuels_core::parameters::StorageConfiguration;
 use fuels_core::tx::{Bytes32, ContractId};
-use fuels_core::{abi_decoder::ABIDecoder, constants::FAILED_TRANSFER_TO_OUTPUT_SIGNAL};
 use fuels_core::{
     parameters::{CallParameters, TxParameters},
     Parameterize, Selector, Token, Tokenizable,
