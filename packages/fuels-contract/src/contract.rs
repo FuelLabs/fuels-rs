@@ -529,7 +529,8 @@ where
                 Err(Error::RevertTransactionError(_, receipts))
                     if receipts
                         .iter()
-                        .any(|r| matches!(r, Receipt::Revert { ra, .. } if *ra == 0)) =>
+                        .any(|r|
+                            matches!(r, Receipt::Revert { ra, .. } if *ra == FAILED_TRANSFER_TO_OUTPUT_SIGNAL)) =>
                 {
                     self = self.append_variable_outputs(1);
                 }
@@ -537,7 +538,7 @@ where
             }
         }
 
-        return self;
+        self
     }
 
     /// Call a contract's method on the node, in a state-modifying manner.
@@ -652,20 +653,6 @@ impl MultiContractCallHandler {
 
         self.get_response(receipts)
     }
-
-    /// Attempts to automatically set output variables for every call
-    /* pub async fn try_resolve(
-        mut self,
-        max_attempts: Option<u64>,
-    ) -> Self {
-        let attempts = max_attempts.unwrap_or(10);
-
-        self.contract_calls.iter().flatten().for_each(|call| {
-
-        });
-
-        return self;
-    }*/
 
     /// Get a contract's estimated cost
     pub async fn estimate_transaction_cost(

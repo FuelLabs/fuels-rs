@@ -391,7 +391,7 @@ impl Script {
         let receipts = provider.dry_run(&self.tx).await?;
         if receipts
             .iter()
-            .any(|r| 
+            .any(|r|
                 matches!(r, Receipt::ScriptResult { result, .. } if *result != ScriptExecutionResult::Success)
         ) {
             return Err(Error::RevertTransactionError(Default::default(), receipts));
