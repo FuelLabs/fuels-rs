@@ -46,6 +46,7 @@ impl Tokenizer {
                 let s: [u8; 32] = v.as_slice().try_into().unwrap();
                 Ok(Token::B256(s))
             }
+            ParamType::Vector(param_type) => Self::tokenize_vec(trimmed_value, param_type),
             ParamType::Array(t, _) => Ok(Self::tokenize_array(trimmed_value, t)?),
             ParamType::String(length) => Ok(Token::String(StringToken::new(
                 trimmed_value.into(),
@@ -178,17 +179,29 @@ impl Tokenizer {
     }
 
     /// Creates a `Token::Array` from one parameter type and a string of values. I.e. it takes a
-    /// string containing values "value_1, value_2, value_3" and a `ParamType` sepecifying the type.
+    /// string containing values "value_1, value_2, value_3" and a `ParamType` specifying the type.
     /// It works for nested/recursive arrays.
     pub fn tokenize_array(value: &str, param: &ParamType) -> Result<Token, Error> {
+        let result = Self::extract_multiple(&value, param)?;
+
+        Ok(Token::Array(result))
+    }
+
+    pub fn tokenize_vec(value: &str, param: &ParamType) -> Result<Token, Error> {
+        let result = Self::extract_multiple(&value, param)?;
+
+        Ok(Token::Vector(result))
+    }
+
+    fn extract_multiple(value: &&str, param: &ParamType) -> Result<Vec<Token>, Error> {
         if !value.starts_with('[') || !value.ends_with(']') {
             return Err(Error::InvalidData(
-                "array value string must start and end with square brackets".into(),
+                "array/vec value string must start and end with square brackets".into(),
             ));
         }
 
         if value.chars().count() == 2 {
-            return Ok(Token::Array(vec![]));
+            return Ok(vec![]);
         }
 
         // For more details about this algorithm, refer to the tokenize_struct method.
@@ -207,7 +220,7 @@ impl Tokenizer {
                     match nested.cmp(&0) {
                         std::cmp::Ordering::Less => {
                             return Err(Error::InvalidData(
-                                "array value string has excess closing brackets".into(),
+                                "array/vec value string has excess closing brackets".into(),
                             ));
                         }
                         std::cmp::Ordering::Equal => {
@@ -258,17 +271,16 @@ impl Tokenizer {
 
         if ignore {
             return Err(Error::InvalidData(
-                "array value string has excess quotes".into(),
+                "array/vec value string has excess quotes".into(),
             ));
         }
 
         if nested > 0 {
             return Err(Error::InvalidData(
-                "array value string has excess opening brackets".into(),
+                "array/vec value string has excess opening brackets".into(),
             ));
         }
-
-        Ok(Token::Array(result))
+        Ok(result)
     }
 
     /// Creates `Token::Tuple` from an array of parameter types and a string of values.
@@ -392,6 +404,7 @@ fn get_array_length_from_string(ele: &str) -> usize {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::Tokenizable;
 
     // TODO: Move tests using the old abigen to the new one.
     // Currently, they will be skipped. Even though we're not fully testing these at
@@ -695,7 +708,7 @@ mod tests {
             .to_string();
 
         assert_eq!(
-            "Invalid data: array value string must start and end with square brackets",
+            "Invalid data: array/vec value string must start and end with square brackets",
             error_message
         );
     }
@@ -709,7 +722,7 @@ mod tests {
             .to_string();
 
         assert_eq!(
-            "Invalid data: array value string has excess opening brackets",
+            "Invalid data: array/vec value string has excess opening brackets",
             error_message
         );
     }
@@ -723,7 +736,7 @@ mod tests {
             .to_string();
 
         assert_eq!(
-            "Invalid data: array value string has excess closing brackets",
+            "Invalid data: array/vec value string has excess closing brackets",
             error_message
         );
     }
@@ -736,7 +749,7 @@ mod tests {
             .to_string();
 
         assert_eq!(
-            "Invalid data: array value string has excess quotes",
+            "Invalid data: array/vec value string has excess quotes",
             error_message
         );
     }
@@ -890,6 +903,19 @@ mod tests {
         ])]);
 
         assert_eq!(tokens, expected_tokens);
+        Ok(())
+    }
+    #[test]
+    fn tokenize_vec() -> Result<(), Error> {
+        let param_type = ParamType::Vector(Box::new(ParamType::U8));
+        let input = "[1,2,3]".to_string();
+
+        let result = Tokenizer::tokenize(&param_type, input)?;
+
+        let the_vec = Vec::<u8>::from_token(result)?;
+
+        assert_eq!(the_vec, vec![1, 2, 3]);
+
         Ok(())
     }
 }

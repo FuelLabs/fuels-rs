@@ -108,7 +108,7 @@ pub(crate) fn extract_generic_name(field: &str) -> Option<String> {
 
 /// Returns a vector of TokenStreams, one for each of the generic parameters
 /// used by the given type.
-pub(crate) fn extract_generic_parameters(
+pub fn extract_generic_parameters(
     type_decl: &TypeDeclaration,
     types: &HashMap<usize, TypeDeclaration>,
 ) -> Result<Vec<TokenStream>, Error> {
@@ -148,20 +148,25 @@ pub fn extract_custom_type_name_from_abi_type_field(type_field: &str) -> Result<
 pub fn param_type_calls(field_entries: &[Component]) -> Vec<TokenStream> {
     field_entries
         .iter()
-        .map(|Component { field_type, .. }| {
-            let type_name = &field_type.type_name;
-            let parameters = field_type
-                .generic_params
-                .iter()
-                .map(TokenStream::from)
-                .collect::<Vec<_>>();
-            if parameters.is_empty() {
-                quote! { <#type_name>::param_type() }
-            } else {
-                quote! { #type_name::<#(#parameters),*>::param_type() }
-            }
-        })
+        .map(|Component { field_type, .. }| single_param_type_call(field_type))
         .collect()
+}
+
+/// Returns a TokenStream representing the call to `Parameterize::param_type` for
+/// the given ResolvedType. Makes sure to properly handle calls when generics are
+/// involved.
+pub fn single_param_type_call(field_type: &ResolvedType) -> TokenStream {
+    let type_name = &field_type.type_name;
+    let parameters = field_type
+        .generic_params
+        .iter()
+        .map(TokenStream::from)
+        .collect::<Vec<_>>();
+    if parameters.is_empty() {
+        quote! { <#type_name>::param_type() }
+    } else {
+        quote! { #type_name::<#(#parameters),*>::param_type() }
+    }
 }
 
 #[cfg(test)]

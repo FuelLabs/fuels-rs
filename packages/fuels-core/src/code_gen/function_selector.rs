@@ -65,6 +65,10 @@ fn resolve_arg(arg: &ParamType) -> String {
             let inner = resolve_args(inner);
             format!("({inner})")
         }
+        ParamType::Vector(el_type) => {
+            let inner = resolve_arg(el_type);
+            format!("s<{inner}>(s<{inner}>(u64,u64),u64)")
+        }
     }
 }
 

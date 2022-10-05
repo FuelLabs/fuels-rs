@@ -42,7 +42,6 @@ For instance, your Sway contract could look like this:
 ```Rust
 contract;
 
-use std::assert::assert;
 use std::hash::sha256;
 
 struct SimpleGeneric<T> {

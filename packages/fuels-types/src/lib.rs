@@ -3,6 +3,7 @@
 //! We declare these in a dedicated, minimal crate in order to allow for downstream projects to
 //! consume or generate these ABI-compatible types without needing to pull in the rest of the SDK.
 
+use proc_macro2::TokenStream;
 use serde::{Deserialize, Serialize};
 use strum_macros::ToString;
 
@@ -30,6 +31,7 @@ pub enum CustomType {
 pub struct ProgramABI {
     pub types: Vec<TypeDeclaration>,
     pub functions: Vec<ABIFunction>,
+    pub logged_types: Option<Vec<LoggedType>>,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -59,29 +61,27 @@ pub struct TypeApplication {
     pub type_arguments: Option<Vec<TypeApplication>>,
 }
 
+#[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LoggedType {
+    pub log_id: u64,
+    #[serde(rename = "loggedType")]
+    pub application: TypeApplication,
+}
+
+#[derive(Debug, Clone)]
+pub struct ResolvedLog {
+    pub log_id: u64,
+    pub param_type_call: TokenStream,
+    pub resolved_type_name: TokenStream,
+}
+
 impl TypeDeclaration {
     pub fn is_enum_type(&self) -> bool {
-        const ENUM_KEYWORD: &str = "enum ";
-        self.type_field.starts_with(ENUM_KEYWORD)
+        self.type_field.starts_with("enum ")
     }
 
     pub fn is_struct_type(&self) -> bool {
-        const STRUCT_KEYWORD: &str = "struct ";
-        self.type_field.starts_with(STRUCT_KEYWORD)
-    }
-
-    pub fn is_option(&self) -> bool {
-        const OPTION_KEYWORD: &str = " Option";
-        self.type_field.ends_with(OPTION_KEYWORD)
-    }
-
-    pub fn is_result(&self) -> bool {
-        const RESULT_KEYWORD: &str = " Result";
-        self.type_field.ends_with(RESULT_KEYWORD)
-    }
-
-    pub fn is_identity(&self) -> bool {
-        const IDENTITY_KEYWORD: &str = " Identity";
-        self.type_field.ends_with(IDENTITY_KEYWORD)
+        self.type_field.starts_with("struct ")
     }
 }
