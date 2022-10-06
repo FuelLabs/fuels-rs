@@ -16,10 +16,31 @@ enum TestEnum {
     VariantTwo: (),
 }
 
+struct StructWithGeneric<D> {
+    field_1: D,
+    field_2: u64,
+}
+
+enum EnumWithGeneric<D> {
+    VariantOne: (D),
+    VariantTwo: (),
+}
+
+struct StructWithNestedGeneric<D> {
+    field_1: D,
+    field_2: u64,
+}
+
+struct StructDeeplyNestedGeneric<D> {
+    field_1: D,
+    field_2: u64,
+}
+
 abi TestContract {
     fn produce_logs_values() -> ();
     fn produce_logs_variables() -> ();
     fn produce_logs_custom_types() -> ();
+    fn produce_logs_generic_types() -> ();
     fn produce_multiple_logs() -> ();
 }
 
@@ -58,6 +79,29 @@ impl TestContract for Contract {
 
         __log(test_struct);
         __log(test_enum);
+    }
+
+    fn produce_logs_generic_types() -> () {
+        let l: [u8; 3] = [1u8, 2u8, 3u8];
+
+        let test_struct = StructWithGeneric {
+            field_1: l,
+            field_2: 64,
+        };
+        let test_enum = EnumWithGeneric::VariantOne(l);
+        let test_struct_nested = StructWithNestedGeneric {
+            field_1: test_struct,
+            field_2: 64,
+        };
+        let test_deeply_nested_generic = StructDeeplyNestedGeneric {
+            field_1: test_struct_nested,
+            field_2: 64
+        };
+
+        __log(test_struct);
+        __log(test_enum);
+        __log(test_struct_nested);
+        __log(test_deeply_nested_generic);
     }
 
     fn produce_multiple_logs() -> () {
