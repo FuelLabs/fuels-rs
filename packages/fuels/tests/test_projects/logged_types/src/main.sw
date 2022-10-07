@@ -115,6 +115,10 @@ impl TestContract for Contract {
             field_3: f,
         };
         let test_enum = TestEnum::VariantTwo;
+        let test_generic_struct = StructWithGeneric {
+            field_1: test_struct,
+            field_2: 64,
+        };
 
         __log(64);
         __log(32u32);
@@ -126,5 +130,6 @@ impl TestContract for Contract {
         __log(l);
         __log(test_struct);
         __log(test_enum);
+        __log(test_generic_struct);
     }
 }

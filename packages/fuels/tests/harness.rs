@@ -3856,6 +3856,10 @@ async fn test_fetch_logs() -> Result<(), Error> {
         field_3: 64,
     };
     let expected_enum = TestEnum::VariantTwo();
+    let expected_generic_struct = StructWithGeneric {
+        field_1: expected_struct.clone(),
+        field_2: 64,
+    };
     let expected_logs: Vec<String> = vec![
         format!("{:#?}", 64u64),
         format!("{:#?}", 32u32),
@@ -3867,6 +3871,7 @@ async fn test_fetch_logs() -> Result<(), Error> {
         format!("{:#?}", [1, 2, 3]),
         format!("{:#?}", expected_struct),
         format!("{:#?}", expected_enum),
+        format!("{:#?}", expected_generic_struct),
     ];
 
     assert_eq!(logs, expected_logs);
