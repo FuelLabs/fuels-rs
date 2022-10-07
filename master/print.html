@@ -1429,9 +1429,9 @@ pub const BASE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
 <p><strong>Note:</strong> To bind logged values in the SDK, you need to build your contract by supplying a feature flag: <code>forc build --generate-logged-types</code>. This is temporary and the flag won't be needed in the future</p>
 </blockquote>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="variable-outputs"><a class="header" href="#variable-outputs">Variable outputs</a></h1>
-<p>In some cases, you might want to send funds to the output of a transaction. Sway has a specific method for that: <code>transfer_to_output</code>(coins, asset_id, recipient)`. So, if you have a contract that does something like this:</p>
+<p>In some cases, you might want to send funds to the output of a transaction. Sway has a specific method for that: <code>transfer_to_address</code>(coins, asset_id, recipient)`. So, if you have a contract that does something like this:</p>
 <pre><code class="language-rust ignore">    fn transfer_coins_to_output(coins: u64, asset_id: ContractId, recipient: Address) {
-        transfer_to_output(coins, asset_id, recipient);
+        transfer_to_address(coins, asset_id, recipient);
     }
 </code></pre>
 <p>With the SDK, you can call <code>transfer_coins_to_output</code> by chaining <code>append_variable_outputs(amount)</code> to your contract call. Like this:</p>
@@ -1445,7 +1445,7 @@ pub const BASE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
             .await?;
 </code></pre>
 <p><code>append_variable_outputs</code> effectively appends a given amount of <code>Output::Variable</code>s to the transaction's list of outputs. This output type indicates that the output's amount and the owner may vary based on transaction execution.</p>
-<p>Note that the Sway <code>lib-std</code> function <code>mint_to_address</code> calls <code>transfer_to_output</code> under the hood, so you need to call <code>append_variable_outputs</code> in the Rust SDK tests like you would for <code>transfer_to_output</code>.</p>
+<p>Note that the Sway <code>lib-std</code> function <code>mint_to_address</code> calls <code>transfer_to_address</code> under the hood, so you need to call <code>append_variable_outputs</code> in the Rust SDK tests like you would for <code>transfer_to_address</code>.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="read-only-calls"><a class="header" href="#read-only-calls">Read-only calls</a></h1>
 <p>Sometimes you want to call a contract method that doesn't change the state of the blockchain. For instance, a method that only reads a value from storage and returns it.</p>
 <p>In this case, there's no need to generate an actual blockchain transaction; you only want to read a value quickly.</p>
@@ -2076,7 +2076,7 @@ use std::{
     context::call_frames::{contract_id, msg_asset_id},
     context::msg_amount,
     contract_id::ContractId,
-    token::{mint_to_address, transfer_to_output}
+    token::{mint_to_address, transfer_to_address}
 };
 
 abi LiquidityPool {
@@ -2106,7 +2106,7 @@ impl LiquidityPool for Contract {
         let amount_to_transfer = msg_amount() / 2;
 
         // Transfer base token to recipient.
-        transfer_to_output(amount_to_transfer, ~ContractId::from(BASE_TOKEN), recipient);
+        transfer_to_address(amount_to_transfer, ~ContractId::from(BASE_TOKEN), recipient);
     }
 }
 </code></pre>

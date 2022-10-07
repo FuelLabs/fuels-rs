@@ -138,9 +138,9 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="variable-outputs"><a class="header" href="#variable-outputs">Variable outputs</a></h1>
-<p>In some cases, you might want to send funds to the output of a transaction. Sway has a specific method for that: <code>transfer_to_output</code>(coins, asset_id, recipient)`. So, if you have a contract that does something like this:</p>
+<p>In some cases, you might want to send funds to the output of a transaction. Sway has a specific method for that: <code>transfer_to_address</code>(coins, asset_id, recipient)`. So, if you have a contract that does something like this:</p>
 <pre><code class="language-rust ignore">    fn transfer_coins_to_output(coins: u64, asset_id: ContractId, recipient: Address) {
-        transfer_to_output(coins, asset_id, recipient);
+        transfer_to_address(coins, asset_id, recipient);
     }
 </code></pre>
 <p>With the SDK, you can call <code>transfer_coins_to_output</code> by chaining <code>append_variable_outputs(amount)</code> to your contract call. Like this:</p>
@@ -154,7 +154,7 @@
             .await?;
 </code></pre>
 <p><code>append_variable_outputs</code> effectively appends a given amount of <code>Output::Variable</code>s to the transaction's list of outputs. This output type indicates that the output's amount and the owner may vary based on transaction execution.</p>
-<p>Note that the Sway <code>lib-std</code> function <code>mint_to_address</code> calls <code>transfer_to_output</code> under the hood, so you need to call <code>append_variable_outputs</code> in the Rust SDK tests like you would for <code>transfer_to_output</code>.</p>
+<p>Note that the Sway <code>lib-std</code> function <code>mint_to_address</code> calls <code>transfer_to_address</code> under the hood, so you need to call <code>append_variable_outputs</code> in the Rust SDK tests like you would for <code>transfer_to_address</code>.</p>
 
                     </main>
 
