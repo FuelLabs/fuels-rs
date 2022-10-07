@@ -729,7 +729,7 @@ impl MultiContractCallHandler {
         let mut final_tokens = vec![];
 
         for call in self.contract_calls.iter() {
-            let decoded = ContractCall::get_decoded_output(&call, &mut receipts)?;
+            let decoded = call.get_decoded_output(&mut receipts)?;
 
             final_tokens.push(decoded.clone());
         }
