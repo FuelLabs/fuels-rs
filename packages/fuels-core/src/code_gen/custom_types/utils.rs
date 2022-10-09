@@ -1,4 +1,5 @@
 use crate::code_gen::resolved_type::{resolve_type, ResolvedType};
+use crate::code_gen::utils;
 use crate::utils::{ident, safe_ident};
 use anyhow::anyhow;
 use fuels_types::errors::Error;
@@ -98,14 +99,6 @@ pub(crate) fn extract_components(
         .collect()
 }
 
-pub(crate) fn extract_generic_name(field: &str) -> Option<String> {
-    lazy_static! {
-        static ref RE: Regex = Regex::new(r"^\s*generic\s+(\S+)\s*$").unwrap();
-    }
-    RE.captures(field)
-        .map(|captures| String::from(&captures[1]))
-}
-
 /// Returns a vector of TokenStreams, one for each of the generic parameters
 /// used by the given type.
 pub fn extract_generic_parameters(
@@ -118,7 +111,7 @@ pub fn extract_generic_parameters(
         .flatten()
         .map(|id| types.get(id).unwrap())
         .map(|decl| {
-            let name = extract_generic_name(&decl.type_field).unwrap_or_else(|| {
+            let name = utils::extract_generic_name(&decl.type_field).unwrap_or_else(|| {
                 panic!("Type parameters should only contain ids of generic types!")
             });
             let generic = ident(&name);

@@ -2,9 +2,9 @@ mod enum_gen;
 mod struct_gen;
 mod utils;
 
+pub(crate) use crate::code_gen::utils::extract_generic_name;
 pub use enum_gen::expand_custom_enum;
 pub use struct_gen::expand_custom_struct;
-pub(crate) use utils::extract_generic_name;
 pub use utils::{
     extract_custom_type_name_from_abi_type_field, param_type_calls, single_param_type_call,
     Component,
