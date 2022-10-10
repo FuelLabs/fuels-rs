@@ -4228,12 +4228,16 @@ async fn test_automatic_output_variables_multicall() -> Result<(), Error> {
     let amount = 1000;
 
     let mut multi_call_handler = MultiContractCallHandler::new(wallets[0].clone());
-    (0..1).for_each(|_| {
+    (0..3).for_each(|_| {
         let call_handler = contract_methods.mint_to_addresses(amount, addresses);
         multi_call_handler.add_call(call_handler);
     });
 
-    let _ = multi_call_handler.try_resolve(None).await.call::<((), (), ())>().await?;
+    let _ = multi_call_handler
+        .try_resolve(None)
+        .await
+        .call::<((), (), ())>()
+        .await?;
 
     for wallet in wallets.iter() {
         let balance = wallet.get_asset_balance(&mint_asset_id).await?;
