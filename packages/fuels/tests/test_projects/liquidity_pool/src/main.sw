@@ -6,7 +6,7 @@ use std::{
     context::call_frames::{contract_id, msg_asset_id},
     context::msg_amount,
     contract_id::ContractId,
-    token::{mint_to_address, transfer_to_output}
+    token::{mint_to_address, transfer_to_address}
 };
 
 abi LiquidityPool {
@@ -36,6 +36,6 @@ impl LiquidityPool for Contract {
         let amount_to_transfer = msg_amount() / 2;
 
         // Transfer base token to recipient.
-        transfer_to_output(amount_to_transfer, ~ContractId::from(BASE_TOKEN), recipient);
+        transfer_to_address(amount_to_transfer, ~ContractId::from(BASE_TOKEN), recipient);
     }
 }
