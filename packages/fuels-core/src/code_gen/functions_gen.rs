@@ -273,10 +273,6 @@ mod tests {
         Ok(())
     }
 
-    // TODO: Move tests using the old abigen to the new one.
-    // Currently, they will be skipped. Even though we're not fully testing these at
-    // unit level, they're tested at integration level, in the main harness.rs file.
-
     #[test]
     fn test_expand_function_simple() -> Result<(), Error> {
         let the_function = ABIFunction {
