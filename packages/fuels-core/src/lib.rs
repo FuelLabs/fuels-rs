@@ -12,9 +12,9 @@ pub mod abi_decoder;
 pub mod abi_encoder;
 pub mod code_gen;
 pub mod constants;
+mod param_type;
 pub mod parameters;
 pub mod rustfmt;
-mod something;
 pub mod source;
 pub mod tokenizer;
 pub mod types;
@@ -28,6 +28,8 @@ pub mod tx {
 pub type ByteArray = [u8; 8];
 pub type Selector = ByteArray;
 pub type EnumSelector = (u8, Token, EnumVariants);
+
+pub use param_type::*;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Identity {
