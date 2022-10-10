@@ -1,14 +1,12 @@
 use crate::code_gen::resolved_type::{resolve_type, ResolvedType};
-use crate::code_gen::utils;
 use crate::utils::{ident, safe_ident};
 use anyhow::anyhow;
 use fuels_types::errors::Error;
+use fuels_types::utils::extract_generic_name;
 use fuels_types::{TypeApplication, TypeDeclaration};
 use inflector::Inflector;
-use lazy_static::lazy_static;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
-use regex::Regex;
 use std::collections::HashMap;
 
 // Represents a component of either a struct(field name) or an enum(variant
@@ -111,28 +109,13 @@ pub fn extract_generic_parameters(
         .flatten()
         .map(|id| types.get(id).unwrap())
         .map(|decl| {
-            let name = utils::extract_generic_name(&decl.type_field).unwrap_or_else(|| {
+            let name = extract_generic_name(&decl.type_field).unwrap_or_else(|| {
                 panic!("Type parameters should only contain ids of generic types!")
             });
             let generic = ident(&name);
             Ok(quote! {#generic})
         })
         .collect()
-}
-
-// A custom type name should be passed to this function as `{struct,enum} $name`,
-pub fn extract_custom_type_name_from_abi_type_field(type_field: &str) -> Result<Ident, Error> {
-    lazy_static! {
-        static ref RE: Regex = Regex::new(r"(?:struct|enum)\s*(.*)").unwrap();
-    }
-
-    RE.captures(type_field)
-        .map(|captures| ident(&captures[1]))
-        .ok_or_else(|| {
-            Error::InvalidData(
-                "The declared type was not in the format `(enum|struct) name`".to_string(),
-            )
-        })
 }
 
 /// Returns TokenStreams representing calls to `Parameterize::param_type` for
@@ -165,6 +148,7 @@ pub fn single_param_type_call(field_type: &ResolvedType) -> TokenStream {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fuels_types::utils::custom_type_name;
 
     #[test]
     fn component_name_is_snake_case_when_requested() -> anyhow::Result<()> {
@@ -283,7 +267,7 @@ mod tests {
             type_parameters: None,
         };
 
-        let struct_name = extract_custom_type_name_from_abi_type_field(&declaration.type_field)?;
+        let struct_name = custom_type_name(&declaration.type_field)?;
 
         assert_eq!(struct_name, "SomeName");
 
@@ -299,7 +283,7 @@ mod tests {
             type_parameters: None,
         };
 
-        let struct_name = extract_custom_type_name_from_abi_type_field(&declaration.type_field)?;
+        let struct_name = custom_type_name(&declaration.type_field)?;
 
         assert_eq!(struct_name, "SomeEnumName");
 

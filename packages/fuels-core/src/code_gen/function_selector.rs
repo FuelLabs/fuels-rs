@@ -75,7 +75,7 @@ fn resolve_arg(arg: &ParamType) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fuels_types::param_types::EnumVariants;
+    use fuels_types::enum_variants::EnumVariants;
 
     #[test]
     fn handles_primitive_types() {

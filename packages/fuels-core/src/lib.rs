@@ -4,15 +4,15 @@ use core::fmt;
 use fuel_types::bytes::padded_len;
 use fuels_types::{
     errors::{CodecError, Error},
-    param_types::{EnumVariants, ParamType},
+    param_types::ParamType,
 };
 use strum_macros::EnumString;
+use fuels_types::enum_variants::EnumVariants;
 
 pub mod abi_decoder;
 pub mod abi_encoder;
 pub mod code_gen;
 pub mod constants;
-mod param_type;
 pub mod parameters;
 pub mod rustfmt;
 pub mod source;
@@ -28,8 +28,6 @@ pub mod tx {
 pub type ByteArray = [u8; 8];
 pub type Selector = ByteArray;
 pub type EnumSelector = (u8, Token, EnumVariants);
-
-pub use param_type::*;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Identity {

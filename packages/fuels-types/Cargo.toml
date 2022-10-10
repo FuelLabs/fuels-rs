@@ -9,6 +9,8 @@ repository = "https://github.com/FuelLabs/fuels-rs"
 description = "Serializable type representation for working with the Fuel VM ABI."
 
 [dependencies]
+regex = "1.6.0"
+lazy_static = "1.4.0"
 anyhow = "1"
 bech32 = "0.9.0"
 fuel-tx = "0.18"
@@ -18,5 +20,6 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0.64", default-features = true }
 strum = "0.21"
 strum_macros = "0.21"
+itertools = "0.10.5"
 thiserror = { version = "1.0.26", default-features = false }
 tokio = "1.15"

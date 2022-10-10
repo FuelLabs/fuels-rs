@@ -1,9 +1,9 @@
-use crate::code_gen::custom_types::extract_custom_type_name_from_abi_type_field;
-
-use crate::code_gen::utils;
-use crate::code_gen::utils::extract_generic_name;
-use crate::utils::safe_ident;
+use crate::utils::{ident, safe_ident};
 use fuels_types::errors::Error;
+use fuels_types::utils::custom_type_name;
+use fuels_types::utils::{
+    extract_array_len, extract_generic_name, extract_str_len, has_tuple_format,
+};
 use fuels_types::{TypeApplication, TypeDeclaration};
 use lazy_static::lazy_static;
 use proc_macro2::TokenStream;
@@ -11,7 +11,6 @@ use quote::{quote, ToTokens};
 use regex::Regex;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
-use utils::extract_array_len;
 
 // Represents a type alongside its generic parameters. Can be converted into a
 // `TokenStream` via `.into()`.
@@ -132,7 +131,7 @@ fn to_sized_ascii_string(
     _: &[ResolvedType],
     _: &[ResolvedType],
 ) -> Option<ResolvedType> {
-    let len = utils::extract_str_len(field)?;
+    let len = extract_str_len(field)?;
 
     let generic_params = vec![ResolvedType {
         type_name: quote! {#len},
@@ -146,7 +145,7 @@ fn to_sized_ascii_string(
 }
 
 fn to_tuple(field: &str, components: &[ResolvedType], _: &[ResolvedType]) -> Option<ResolvedType> {
-    if utils::has_tuple_format(field) {
+    if has_tuple_format(field) {
         let inner_types = components.iter().map(TokenStream::from);
 
         // it is important to leave a trailing comma because a tuple with
@@ -209,8 +208,9 @@ fn to_struct(
     _: &[ResolvedType],
     type_arguments: &[ResolvedType],
 ) -> Option<ResolvedType> {
-    extract_custom_type_name_from_abi_type_field(field_name)
+    custom_type_name(field_name)
         .ok()
+        .map(|type_name| ident(&type_name))
         .map(|type_name| ResolvedType {
             type_name: type_name.into_token_stream(),
             generic_params: type_arguments.to_vec(),
