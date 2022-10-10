@@ -24,6 +24,16 @@ impl ResolvedType {
     pub fn is_unit(&self) -> bool {
         self.type_name.to_string() == "()"
     }
+    // Used to prevent returning vectors until we get the compiler support for
+    // it.
+    #[must_use]
+    pub fn uses_vectors(&self) -> bool {
+        lazy_static! {
+            static ref RE: Regex = Regex::new(r"\bVec\b").unwrap();
+        }
+        RE.is_match(&self.type_name.to_string())
+            || self.generic_params.iter().any(ResolvedType::uses_vectors)
+    }
 }
 
 impl Display for ResolvedType {

@@ -12,7 +12,7 @@ pub fn first_four_bytes_of_sha256_hash(string: &str) -> ByteArray {
     hasher.update(string_as_bytes);
     let result = hasher.finalize();
     let mut output = ByteArray::default();
-    (&mut output[4..]).copy_from_slice(&result[..4]);
+    output[4..].copy_from_slice(&result[..4]);
     output
 }
 

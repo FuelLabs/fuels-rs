@@ -45,10 +45,11 @@ pub fn expand_function(
         function.name,
     ));
 
-    let output_type: TokenStream = resolve_type(&function.output, types)?.into();
-
     let name = safe_ident(&function.name);
     let name_stringified = name.to_string();
+
+    let output_type = resolve_fn_output_type(function, types)?;
+
     Ok(quote! {
         #doc
         pub fn #name(&self #(,#arg_declarations)*) -> ContractCallHandler<#output_type> {
@@ -62,6 +63,21 @@ pub fn expand_function(
                 &tokens).expect("method not found (this should never happen)")
         }
     })
+}
+
+fn resolve_fn_output_type(
+    function: &ABIFunction,
+    types: &HashMap<usize, TypeDeclaration>,
+) -> Result<TokenStream, Error> {
+    let output_type = resolve_type(&function.output, types)?;
+    if output_type.uses_vectors() {
+        Err(Error::CompilationError(format!(
+            "function '{}' contains a vector in its return type. This currently isn't supported.",
+            function.name
+        )))
+    } else {
+        Ok(output_type.into())
+    }
 }
 
 fn function_arguments(

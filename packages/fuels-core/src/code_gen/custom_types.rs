@@ -5,7 +5,10 @@ mod utils;
 pub use enum_gen::expand_custom_enum;
 pub use struct_gen::expand_custom_struct;
 pub(crate) use utils::extract_generic_name;
-pub use utils::{extract_custom_type_name_from_abi_type_field, param_type_calls, Component};
+pub use utils::{
+    extract_custom_type_name_from_abi_type_field, param_type_calls, single_param_type_call,
+    Component,
+};
 
 // Doing string -> TokenStream -> string isn't pretty but gives us the opportunity to
 // have a better understanding of the generated code so we consider it ok.

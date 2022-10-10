@@ -26,7 +26,7 @@ impl TestFuelCoin for Contract {
 
     // ANCHOR: variable_outputs
     fn transfer_coins_to_output(coins: u64, asset_id: ContractId, recipient: Address) {
-        transfer_to_output(coins, asset_id, recipient);
+        transfer_to_address(coins, asset_id, recipient);
     }
     // ANCHOR_END: variable_outputs
 

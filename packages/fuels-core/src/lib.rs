@@ -1,4 +1,5 @@
 use crate::abi_decoder::ABIDecoder;
+use crate::types::Bits256;
 use core::fmt;
 use fuel_types::bytes::padded_len;
 use fuels_types::{
@@ -6,7 +7,6 @@ use fuels_types::{
     param_types::{EnumVariants, ParamType},
 };
 use strum_macros::EnumString;
-use types::Bits256;
 
 pub mod abi_decoder;
 pub mod abi_encoder;
@@ -27,6 +27,12 @@ pub mod tx {
 pub type ByteArray = [u8; 8];
 pub type Selector = ByteArray;
 pub type EnumSelector = (u8, Token, EnumVariants);
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Identity {
+    Address(fuel_tx::Address),
+    ContractId(fuel_tx::ContractId),
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct StringToken {
@@ -71,6 +77,7 @@ pub enum Token {
     Byte(u8),
     B256([u8; 32]),
     Array(Vec<Token>),
+    Vector(Vec<Token>),
     String(StringToken),
     Struct(Vec<Token>),
     #[strum(disabled)]

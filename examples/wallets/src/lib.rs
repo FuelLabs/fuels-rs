@@ -146,8 +146,29 @@ mod tests {
     #[tokio::test]
     async fn wallet_contract_transfer() -> Result<(), Error> {
         use fuels::prelude::*;
+        use rand::Fill;
 
-        let wallet = launch_provider_and_get_wallet().await;
+        let mut rng = rand::thread_rng();
+
+        let base_asset = AssetConfig {
+            id: BASE_ASSET_ID,
+            num_coins: 1,
+            coin_amount: 1000,
+        };
+
+        let mut random_asset_id = AssetId::zeroed();
+        random_asset_id.try_fill(&mut rng).unwrap();
+        let random_asset = AssetConfig {
+            id: random_asset_id,
+            num_coins: 3,
+            coin_amount: 100,
+        };
+
+        let wallet_config = WalletsConfig::new_multiple_assets(1, vec![random_asset, base_asset]);
+        let wallet = launch_custom_provider_and_get_wallets(wallet_config, None)
+            .await
+            .pop()
+            .unwrap();
 
         let contract_id = Contract::deploy(
             "../../packages/fuels/tests/test_projects/contract_test/out/debug/contract_test.bin",
@@ -159,25 +180,29 @@ mod tests {
 
         // ANCHOR: wallet_contract_transfer
         // Check the current balance of the contract with id 'contract_id'
-        let contract_coins = wallet
+        let contract_balances = wallet
             .get_provider()?
             .get_contract_balances(&contract_id)
             .await?;
-        assert!(contract_coins.is_empty());
+        assert!(contract_balances.is_empty());
 
-        // Transfer an amount of 100 of the default asset to the contract
-        let amount = 100;
-        let asset_id = Default::default();
+        // Transfer an amount of 300 to the contract
+        let amount = 300;
+        let asset_id = random_asset_id;
         let _receipts = wallet
             .force_transfer_to_contract(&contract_id, amount, asset_id, TxParameters::default())
             .await?;
 
         // Check that the contract now has 1 coin
-        let contract_coins = wallet
+        let contract_balances = wallet
             .get_provider()?
             .get_contract_balances(&contract_id)
             .await?;
-        assert_eq!(contract_coins.len(), 1);
+        assert_eq!(contract_balances.len(), 1);
+
+        let random_asset_id_key = format!("{:#x}", random_asset_id);
+        let random_asset_balance = contract_balances.get(&random_asset_id_key).unwrap();
+        assert_eq!(*random_asset_balance, 300);
         // ANCHOR_END: wallet_contract_transfer
 
         Ok(())

@@ -1,4 +1,5 @@
 extern crate alloc;
+
 use fuels_abigen_macro::wasm_abigen;
 
 wasm_abigen!(
@@ -91,7 +92,8 @@ wasm_abigen!(
               "typeArguments": null
             }
           }
-        ]
+        ],
+        "loggedTypes": []
       }
     "#
 );
