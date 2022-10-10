@@ -87,6 +87,21 @@ impl ResultWriter {
         }
     }
 
+    pub fn display_forc_info(&mut self) -> Result<(), std::io::Error> {
+        let output = std::process::Command::new("forc")
+            .args(["--version"])
+            .output()?;
+
+        let version =
+            String::from_utf8(output.stdout).expect("failed to parse forc --version output");
+
+        self.stdout.set_color(self.green.clone().set_bold(true))?;
+        write!(&mut self.stdout, "\nBuilding ")?;
+        self.stdout.reset()?;
+        writeln!(&mut self.stdout, "projects with: {}", version)?;
+        Ok(())
+    }
+
     pub fn display_result(
         &mut self,
         abs_path: &PathBuf,

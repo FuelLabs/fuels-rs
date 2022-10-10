@@ -13,19 +13,15 @@ const TESTS_PATH: &str = "packages/fuels/tests/";
 fn main() {
     let mut result_writer = ResultWriter::new();
 
-    let output = std::process::Command::new("forc")
-        .args(["--version"])
-        .output()
-        .expect("failed to run `forc --version`");
-
-    let version = String::from_utf8(output.stdout).expect("failed to parse forc --version output");
-
-    println!("\nBuilding projects with: {:?}\n", version.trim());
+    result_writer
+        .display_forc_info()
+        .expect("could not display forc info");
 
     let path = Path::new(TESTS_PATH);
     let absolute_path = path.canonicalize().unwrap_or_else(|_| {
         panic!(
-            "{path:?} could not be canonicalized.\nAre you running the comand from the root of `fuels-rs`?\n"
+            "{path:?} could not be canonicalized.\n
+            Are you running the comand from the root of `fuels-rs`?\n"
         )
     });
 
