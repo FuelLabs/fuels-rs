@@ -1,9 +1,7 @@
-use crate::{
-    EnumSelector, pad_string, pad_u16, pad_u32, pad_u8, ParamType, StringToken, Token,
-};
+use crate::{pad_string, pad_u16, pad_u32, pad_u8, EnumSelector, ParamType, StringToken, Token};
+use fuels_types::enum_variants::EnumVariants;
 use fuels_types::{constants::WORD_SIZE, errors::CodecError};
 use itertools::Itertools;
-use fuels_types::enum_variants::EnumVariants;
 
 pub struct ABIEncoder;
 
@@ -240,14 +238,11 @@ impl ABIEncoder {
 mod tests {
     use super::*;
     use crate::utils::first_four_bytes_of_sha256_hash;
-    use fuels_types::{
-        errors::Error,
-        param_types::ParamType,
-    };
+    use fuels_types::enum_variants::EnumVariants;
+    use fuels_types::{errors::Error, param_types::ParamType};
     use itertools::chain;
     use sha2::{Digest, Sha256};
     use std::slice;
-    use fuels_types::enum_variants::EnumVariants;
 
     const VEC_METADATA_SIZE: usize = 3 * WORD_SIZE;
     const DISCRIMINANT_SIZE: usize = WORD_SIZE;

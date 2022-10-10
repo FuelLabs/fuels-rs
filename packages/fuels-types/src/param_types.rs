@@ -96,20 +96,19 @@ impl ParamType {
             ParamType::Tuple(params) => params.iter().map(|p| p.compute_encoding_width()).sum(),
         }
     }
-}
-
-/// For when you need to convert a ABI JSON's TypeApplication into a ParamType.
-///
-/// # Arguments
-///
-/// * `type_application`: The TypeApplication you wish to convert into a ParamType
-/// * `type_lookup`: A HashMap of TypeDeclarations mentioned in the
-///                  TypeApplication where the type id is the key.
-pub fn determine_param_type(
-    type_application: &TypeApplication,
-    type_lookup: &HashMap<usize, TypeDeclaration>,
-) -> Result<ParamType, Error> {
-    Type::from(type_application, type_lookup).try_into()
+    /// For when you need to convert a ABI JSON's TypeApplication into a ParamType.
+    ///
+    /// # Arguments
+    ///
+    /// * `type_application`: The TypeApplication you wish to convert into a ParamType
+    /// * `type_lookup`: A HashMap of TypeDeclarations mentioned in the
+    ///                  TypeApplication where the type id is the key.
+    pub fn try_from_type_application(
+        type_application: &TypeApplication,
+        type_lookup: &HashMap<usize, TypeDeclaration>,
+    ) -> Result<Self, Error> {
+        Type::from(type_application, type_lookup).try_into()
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -474,7 +473,7 @@ mod tests {
                 .map(|decl| (decl.type_id, decl))
                 .collect::<HashMap<_, _>>();
 
-            determine_param_type(&type_application, &type_lookup)
+            ParamType::try_from_type_application(&type_application, &type_lookup)
         };
 
         assert_eq!(parse_param_type("u8")?, ParamType::U8);
@@ -524,7 +523,7 @@ mod tests {
             .collect::<HashMap<_, _>>();
 
         // when
-        let result = determine_param_type(&type_application, &type_lookup)?;
+        let result = ParamType::try_from_type_application(&type_application, &type_lookup)?;
 
         // then
         assert_eq!(result, ParamType::Array(Box::new(ParamType::U8), 10));
@@ -610,7 +609,7 @@ mod tests {
             .collect::<HashMap<_, _>>();
 
         // when
-        let result = determine_param_type(&type_application, &type_lookup)?;
+        let result = ParamType::try_from_type_application(&type_application, &type_lookup)?;
 
         // then
         assert_eq!(result, ParamType::Vector(Box::new(ParamType::U8)));
@@ -662,7 +661,7 @@ mod tests {
             .collect::<HashMap<_, _>>();
 
         // when
-        let result = determine_param_type(&type_application, &type_lookup)?;
+        let result = ParamType::try_from_type_application(&type_application, &type_lookup)?;
 
         // then
         assert_eq!(
@@ -720,7 +719,7 @@ mod tests {
             .collect::<HashMap<_, _>>();
 
         // when
-        let result = determine_param_type(&type_application, &type_lookup)?;
+        let result = ParamType::try_from_type_application(&type_application, &type_lookup)?;
 
         // then
         assert_eq!(
@@ -780,7 +779,7 @@ mod tests {
             .collect::<HashMap<_, _>>();
 
         // when
-        let result = determine_param_type(&type_application, &type_lookup)?;
+        let result = ParamType::try_from_type_application(&type_application, &type_lookup)?;
 
         // then
         assert_eq!(
@@ -1097,7 +1096,7 @@ mod tests {
             .collect::<HashMap<_, _>>();
 
         // when
-        let result = determine_param_type(&type_application, &type_lookup)?;
+        let result = ParamType::try_from_type_application(&type_application, &type_lookup)?;
 
         // then
         let pass_the_generic_on = ParamType::Struct {
