@@ -362,13 +362,14 @@ pub struct ContractCall {
 
 impl ContractCall {
     pub fn append_variable_outputs(&mut self, num: u64) {
-        let new_variable_outputs: Vec<Output> = (0..num)
-            .map(|_| Output::Variable {
+        let new_variable_outputs = vec![
+            Output::Variable {
                 amount: 0,
                 to: Address::zeroed(),
                 asset_id: AssetId::default(),
-            })
-            .collect();
+            };
+            num as usize
+        ];
 
         match self.variable_outputs {
             Some(ref mut outputs) => outputs.extend(new_variable_outputs),
