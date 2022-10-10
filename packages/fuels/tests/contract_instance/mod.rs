@@ -52,7 +52,7 @@ async fn test_contract_setup_macro_deploy_with_salt() -> Result<(), Error> {
         .set_contracts(&[foo_contract_id.clone()]) // Sets the external contract
         .call()
         .await?;
-    assert!(!res.value);
+    assert!(res.value);
 
     let res = foo_caller_contract_instance2
         .methods()
@@ -60,7 +60,7 @@ async fn test_contract_setup_macro_deploy_with_salt() -> Result<(), Error> {
         .set_contracts(&[foo_contract_id.clone()]) // Sets the external contract
         .call()
         .await?;
-    assert!(!res.value);
+    assert!(res.value);
     // ANCHOR_END: contract_setup_macro_multi
 
     Ok(())

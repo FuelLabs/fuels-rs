@@ -360,15 +360,16 @@ pub struct ContractCall {
 impl ContractCall {
     /// Based on the returned Contract's output_params and the receipts returned from a call,
     /// decode the values and return them.
-    pub fn get_decoded_output(
-        param_type: &ParamType,
-        receipts: &mut Vec<Receipt>,
-    ) -> Result<Token, Error> {
+    pub fn get_decoded_output(&self, receipts: &mut Vec<Receipt>) -> Result<Token, Error> {
         // Multiple returns are handled as one `Tuple` (which has its own `ParamType`)
 
-        let (encoded_value, index) = match param_type.get_return_location() {
+        let contract_id: ContractId = (&self.contract_id).into();
+        let (encoded_value, index) = match self.output_param.get_return_location() {
             ReturnLocation::ReturnData => {
-                match receipts.iter().find(|&receipt| matches!(receipt, Receipt::ReturnData { data, .. } if !data.is_empty())) {
+                match receipts.iter().find(|&receipt| {
+                    matches!(receipt,
+                    Receipt::ReturnData { id, data, .. } if *id == contract_id && !data.is_empty())
+                }) {
                     Some(r) => {
                         let index = receipts.iter().position(|elt| elt == r).unwrap();
                         (r.data().unwrap().to_vec(), Some(index))
@@ -377,7 +378,10 @@ impl ContractCall {
                 }
             }
             ReturnLocation::Return => {
-                match receipts.iter().find(|&receipt| receipt.val().is_some()) {
+                match receipts.iter().find(|&receipt| {
+                    matches!(receipt,
+                    Receipt::Return { id, ..} if *id == contract_id)
+                }) {
                     Some(r) => {
                         let index = receipts.iter().position(|elt| elt == r).unwrap();
                         (r.val().unwrap().to_be_bytes().to_vec(), Some(index))
@@ -390,7 +394,7 @@ impl ContractCall {
             receipts.remove(i);
         }
 
-        let decoded_value = ABIDecoder::decode_single(param_type, &encoded_value)?;
+        let decoded_value = ABIDecoder::decode_single(&self.output_param, &encoded_value)?;
         Ok(decoded_value)
     }
 }
@@ -537,8 +541,7 @@ where
 
     /// Create a CallResponse from call receipts
     pub fn get_response(&self, mut receipts: Vec<Receipt>) -> Result<CallResponse<D>, Error> {
-        let token =
-            ContractCall::get_decoded_output(&self.contract_call.output_param, &mut receipts)?;
+        let token = self.contract_call.get_decoded_output(&mut receipts)?;
         Ok(CallResponse::new(D::from_token(token)?, receipts))
     }
 }
@@ -645,7 +648,7 @@ impl MultiContractCallHandler {
         let mut final_tokens = vec![];
 
         for call in self.contract_calls.as_ref().unwrap().iter() {
-            let decoded = ContractCall::get_decoded_output(&call.output_param, &mut receipts)?;
+            let decoded = call.get_decoded_output(&mut receipts)?;
 
             final_tokens.push(decoded.clone());
         }

@@ -58,7 +58,7 @@ async fn test_contract_calling_contract() -> Result<(), Error> {
         .await?;
     // ANCHOR_END: external_contract
 
-    assert!(!res.value);
+    assert!(res.value);
     Ok(())
 }
 
