@@ -532,7 +532,7 @@ where
         let attempts = max_attempts.unwrap_or(DEFAULT_AUTO_SETUP_ATTEMPTS);
 
         for _ in 0..attempts {
-            let response = Self::call_or_simulate(&self, true).await;
+            let response = self.call_or_simulate(true).await;
 
             match response {
                 Err(Error::RevertTransactionError(_, receipts))
