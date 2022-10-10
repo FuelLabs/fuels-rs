@@ -13,7 +13,7 @@ use fuel_gql_client::{
 
 use fuels_core::abi_decoder::ABIDecoder;
 use fuels_core::abi_encoder::{ABIEncoder, UnresolvedBytes};
-use fuels_core::constants::FAILED_TRANSFER_TO_OUTPUT_SIGNAL;
+use fuels_core::constants::FAILED_TRANSFER_TO_ADDRESS_SIGNAL;
 use fuels_core::parameters::StorageConfiguration;
 use fuels_core::tx::{Bytes32, ContractId};
 use fuels_core::{
@@ -31,6 +31,8 @@ use fuels_types::{
 };
 
 use crate::script::Script;
+
+pub const DEFAULT_AUTO_SETUP_ATTEMPTS: u64 = 10;
 
 #[derive(Debug, Clone, Default)]
 pub struct CompiledContract {
@@ -526,8 +528,8 @@ where
 
     /// Simulates calls and attempts to set output variables based on the received error.
     /// Forwards the reiceived error if it cannot be fixed.
-    pub async fn try_resolve(mut self, max_attempts: Option<u64>) -> Self {
-        let attempts = max_attempts.unwrap_or(10);
+    pub async fn auto_setup(mut self, max_attempts: Option<u64>) -> Self {
+        let attempts = max_attempts.unwrap_or(DEFAULT_AUTO_SETUP_ATTEMPTS);
 
         for _ in 0..attempts {
             let response = Self::call_or_simulate(&self, true).await;
@@ -537,7 +539,7 @@ where
                     if receipts
                         .iter()
                         .any(|r|
-                            matches!(r, Receipt::Revert { ra, .. } if *ra == FAILED_TRANSFER_TO_OUTPUT_SIGNAL)) =>
+                            matches!(r, Receipt::Revert { ra, .. } if *ra == FAILED_TRANSFER_TO_ADDRESS_SIGNAL)) =>
                 {
                     self = self.append_variable_outputs(1);
                 }
@@ -664,8 +666,8 @@ impl MultiContractCallHandler {
         Ok(())
     }
 
-    pub async fn try_resolve(mut self, max_attempts: Option<u64>) -> Self {
-        let attempts = max_attempts.unwrap_or(10);
+    pub async fn auto_setup(mut self, max_attempts: Option<u64>) -> Self {
+        let attempts = max_attempts.unwrap_or(DEFAULT_AUTO_SETUP_ATTEMPTS);
 
         for _ in 0..attempts {
             let response = self.simulate_without_response().await;
@@ -675,7 +677,7 @@ impl MultiContractCallHandler {
                     if receipts
                         .iter()
                         .any(|r|
-                            matches!(r, Receipt::Revert { ra, .. } if *ra == FAILED_TRANSFER_TO_OUTPUT_SIGNAL)) =>
+                            matches!(r, Receipt::Revert { ra, .. } if *ra == FAILED_TRANSFER_TO_ADDRESS_SIGNAL)) =>
                 {
                     // We can add to any ContractCall, they all combine into a single tx later
                     self.contract_calls.iter_mut().take(1).for_each(|call| call.append_variable_outputs(1));
