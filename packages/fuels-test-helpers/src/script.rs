@@ -71,7 +71,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_run_compiled_script_with_custom_provider() -> Result<(), Error> {
-        let path_to_bin = "../fuels/tests/test_projects/logging/out/debug/logging.bin";
+        let path_to_bin = "../fuels/tests/logs/logging/out/debug/logging.bin";
 
         let wallet = WalletUnlocked::new_random(None);
 
