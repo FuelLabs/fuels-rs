@@ -81,8 +81,7 @@ impl Tokenizer {
     /// And attempts to return a `Token::Struct()` containing the inner types.
     /// It works for nested/recursive structs.
     pub fn tokenize_struct(value: &str, params: &[ParamType]) -> Result<Token, Error> {
-        dbg!((value, params));
-        if !dbg!(value.starts_with('(')) || !dbg!(value.ends_with(')')) {
+        if !value.starts_with('(') || !value.ends_with(')') {
             return Err(Error::InvalidData(
                 "struct value string must start and end with round brackets".into(),
             ));
@@ -451,6 +450,57 @@ mod tests {
     }
 
     #[test]
+    fn tokenize_struct_invalid_start_end_bracket_expected_error() -> Result<(), Error> {
+        let struct_params = [
+            ParamType::U64,
+            ParamType::Array(Box::new(ParamType::U64), 3),
+        ];
+        let error_message = Tokenizer::tokenize_struct("0, [0,0,0])", &struct_params)
+            .unwrap_err()
+            .to_string();
+
+        assert_eq!(
+            "Invalid data: struct value string must start and end with round brackets",
+            error_message
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn tokenize_struct_excess_opening_bracket_expected_error() -> Result<(), Error> {
+        let struct_params = [
+            ParamType::U64,
+            ParamType::Array(Box::new(ParamType::U64), 3),
+        ];
+        let error_message = Tokenizer::tokenize_struct("((0, [0,0,0])", &struct_params)
+            .unwrap_err()
+            .to_string();
+
+        assert_eq!(
+            "Invalid data: struct value string has excess opening brackets",
+            error_message
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn tokenize_struct_excess_closing_bracket_expected_error() -> Result<(), Error> {
+        let struct_params = [
+            ParamType::U64,
+            ParamType::Array(Box::new(ParamType::U64), 3),
+        ];
+        let error_message = Tokenizer::tokenize_struct("(0, [0,0,0]))", &struct_params)
+            .unwrap_err()
+            .to_string();
+
+        assert_eq!(
+            "Invalid data: struct value string has excess closing brackets",
+            error_message
+        );
+        Ok(())
+    }
+
+    #[test]
     fn tokenize_uint_types_expected_error() {
         // We test only on U8 as it is the same error on all other unsigned int types
         let error_message = Tokenizer::tokenize(&ParamType::U8, "2,".to_string())
@@ -645,57 +695,6 @@ mod tests {
             "Invalid data: array/vec value string has excess quotes",
             error_message
         );
-    }
-
-    #[test]
-    fn tokenize_struct_invalid_start_end_bracket_expected_error() -> Result<(), Error> {
-        let struct_params = [
-            ParamType::U64,
-            ParamType::Array(Box::new(ParamType::U64), 3),
-        ];
-        let error_message = Tokenizer::tokenize_struct("0, [0,0,0])", &struct_params)
-            .unwrap_err()
-            .to_string();
-
-        assert_eq!(
-            "Invalid data: struct value string must start and end with round brackets",
-            error_message
-        );
-        Ok(())
-    }
-
-    #[test]
-    fn tokenize_struct_excess_opening_bracket_expected_error() -> Result<(), Error> {
-        let struct_params = [
-            ParamType::U64,
-            ParamType::Array(Box::new(ParamType::U64), 3),
-        ];
-        let error_message = Tokenizer::tokenize_struct("((0, [0,0,0])", &struct_params)
-            .unwrap_err()
-            .to_string();
-
-        assert_eq!(
-            "Invalid data: struct value string has excess opening brackets",
-            error_message
-        );
-        Ok(())
-    }
-
-    #[test]
-    fn tokenize_struct_excess_closing_bracket_expected_error() -> Result<(), Error> {
-        let struct_params = [
-            ParamType::U64,
-            ParamType::Array(Box::new(ParamType::U64), 3),
-        ];
-        let error_message = Tokenizer::tokenize_struct("(0, [0,0,0]))", &struct_params)
-            .unwrap_err()
-            .to_string();
-
-        assert_eq!(
-            "Invalid data: struct value string has excess closing brackets",
-            error_message
-        );
-        Ok(())
     }
 
     #[test]
