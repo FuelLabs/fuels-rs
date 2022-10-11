@@ -15,7 +15,7 @@ use fuels_types::errors::Error;
 /// without having to setup a node or contract bindings.
 pub async fn run_compiled_script(
     binary_filepath: &str,
-    tx_params: TxParameters,
+    tx_params: Option<TxParameters>,
     provider: Option<Provider>,
     script_data: Option<Vec<u8>>,
 ) -> Result<Vec<Receipt>, Error> {
@@ -27,7 +27,7 @@ pub async fn run_compiled_script(
         }
         Some(provider) => provider,
     };
-    let script = build_script(script_binary, tx_params, script_data);
+    let script = build_script(script_binary, tx_params.unwrap_or_default(), script_data);
 
     script.call(&provider).await
 }
@@ -60,7 +60,6 @@ mod tests {
         setup_single_asset_coins, setup_test_provider, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
     };
     use fuels_core::constants::BASE_ASSET_ID;
-    use fuels_core::parameters::TxParameters;
     use fuels_signers::WalletUnlocked;
     use fuels_types::errors::Error;
 
@@ -68,8 +67,7 @@ mod tests {
     async fn test_run_compiled_script() -> Result<(), Error> {
         // ANCHOR: run_compiled_script
         let path_to_bin = "../fuels/tests/logs/logging/out/debug/logging.bin";
-        let return_val =
-            run_compiled_script(path_to_bin, TxParameters::default(), None, None).await?;
+        let return_val = run_compiled_script(path_to_bin, None, None, None).await?;
 
         let correct_hex =
             hex::decode("ef86afa9696cf0dc6385e2c407a6e159a1103cefb7e2ae0636fb33d3cb2a9e4a")?;
@@ -93,8 +91,7 @@ mod tests {
         );
         let (provider, _) = setup_test_provider(coins, vec![], None).await;
 
-        let return_val =
-            run_compiled_script(path_to_bin, TxParameters::default(), Some(provider), None).await?;
+        let return_val = run_compiled_script(path_to_bin, None, Some(provider), None).await?;
 
         let correct_hex =
             hex::decode("ef86afa9696cf0dc6385e2c407a6e159a1103cefb7e2ae0636fb33d3cb2a9e4a")?;
