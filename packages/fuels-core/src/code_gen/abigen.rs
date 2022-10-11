@@ -1,6 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::code_gen::bindings::ContractBindings;
+use crate::code_gen::functions_gen::generate_script_argument_encoding_function;
 use crate::source::Source;
 use crate::utils::ident;
 use crate::{try_from_bytes, Parameterize, Tokenizable};
@@ -30,6 +31,8 @@ pub struct Abigen {
     abi: ProgramABI,
 
     types: HashMap<usize, TypeDeclaration>,
+
+    is_script: bool,
 }
 
 impl Abigen {
@@ -39,18 +42,23 @@ impl Abigen {
 
         let json_abi_str = source.get().expect("failed to parse JSON ABI from string");
         let parsed_abi: ProgramABI = serde_json::from_str(&json_abi_str)?;
-
         Ok(Self {
             types: Abigen::get_types(&parsed_abi),
             abi: parsed_abi,
             contract_name: ident(contract_name),
             rustfmt: true,
             no_std: false,
+            is_script: false,
         })
     }
 
     pub fn no_std(mut self) -> Self {
         self.no_std = true;
+        self
+    }
+
+    pub fn script(mut self) -> Self {
+        self.is_script = true;
         self
     }
 
@@ -72,6 +80,9 @@ impl Abigen {
     /// set of `TokenStream`. This generated Rust code is the brought into scope
     /// after it is called through a procedural macro (`abigen!()` in our case).
     pub fn expand(&self) -> Result<TokenStream, Error> {
+        if self.is_script {
+            return self.expand_script();
+        }
         let name = &self.contract_name;
         let methods_name = ident(&format!("{}Methods", name));
         let name_mod = ident(&format!(
@@ -194,13 +205,97 @@ impl Abigen {
         })
     }
 
+    pub fn expand_script(&self) -> Result<TokenStream, Error> {
+        let name = &self.contract_name;
+        let name_mod = ident(&format!(
+            "{}_mod",
+            self.contract_name.to_string().to_lowercase()
+        ));
+
+        let includes = self.includes()?;
+
+        let argument_encoding_function = self.functions()?;
+        let code = quote! {
+                pub struct #name {}
+                impl #name {
+                    pub fn new() -> Self {
+                        Self {}
+                    }
+
+                    #argument_encoding_function
+                }
+        };
+
+        let abi_structs = self.abi_structs()?;
+        let abi_enums = self.abi_enums()?;
+        Ok(quote! {
+            pub use #name_mod::*;
+
+            #[allow(clippy::too_many_arguments)]
+            pub mod #name_mod {
+                #![allow(clippy::enum_variant_names)]
+                #![allow(dead_code)]
+                #![allow(unused_imports)]
+
+                #includes
+                use fuels::core::abi_encoder::ABIEncoder;
+
+                #code
+
+                #abi_structs
+                #abi_enums
+
+            }
+        })
+    }
+
+    pub fn includes(&self) -> Result<TokenStream, Error> {
+        let includes = match self.no_std {
+            true => quote! {
+                use alloc::{vec, vec::Vec};
+                use fuels_core::{EnumSelector, Parameterize, Tokenizable, Token, Identity, try_from_bytes};
+                use fuels_core::types::*;
+                use fuels_core::code_gen::function_selector::resolve_fn_selector;
+                use fuels_types::errors::Error as SDKError;
+                use fuels_types::param_types::{ParamType, EnumVariants};
+            },
+            false => quote! {
+                use fuels::contract::contract::{Contract, ContractCallHandler};
+                 use fuels::core::{EnumSelector, StringToken, Parameterize, Tokenizable, Token,
+                                  Identity, try_from_bytes};
+                use fuels::core::code_gen::{extract_and_parse_logs, extract_log_ids_and_data};
+                use fuels::core::abi_decoder::ABIDecoder;
+                use fuels::core::code_gen::function_selector::resolve_fn_selector;
+                use fuels::core::types::*;
+                use fuels::signers::WalletUnlocked;
+                use fuels::tx::{ContractId, Address, Receipt};
+                use fuels::types::bech32::Bech32ContractId;
+                use fuels::types::ResolvedLog;
+                use fuels::types::errors::Error as SDKError;
+                use fuels::types::param_types::{EnumVariants, ParamType};
+                use std::str::FromStr;
+                use std::collections::{HashSet, HashMap};
+            },
+        };
+        Ok(includes)
+    }
+
     pub fn functions(&self) -> Result<TokenStream, Error> {
-        let tokenized_functions = self
-            .abi
-            .functions
-            .iter()
-            .map(|function| expand_function(function, &self.types))
-            .collect::<Result<Vec<TokenStream>, Error>>()?;
+        let tokenized_functions = match self.is_script {
+            false => self
+                .abi
+                .functions
+                .iter()
+                .map(|function| expand_function(function, &self.types))
+                .collect::<Result<Vec<TokenStream>, Error>>()?,
+            true => self
+                .abi
+                .functions
+                .iter()
+                .filter(|function| function.name == "main")
+                .map(|function| generate_script_argument_encoding_function(function, &self.types))
+                .collect::<Result<Vec<TokenStream>, Error>>()?,
+        };
 
         Ok(quote! { #( #tokenized_functions )* })
     }

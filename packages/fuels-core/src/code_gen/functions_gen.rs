@@ -65,6 +65,44 @@ pub fn expand_function(
     })
 }
 
+/// Generate the function (as a `TokenStream`) used to encode into script data the arguments to the
+/// `main` function of a deployed script.
+pub fn generate_script_argument_encoding_function(
+    main_function_abi: &ABIFunction,
+    types: &HashMap<usize, TypeDeclaration>,
+) -> Result<TokenStream, Error> {
+    if main_function_abi.name != "main" {
+        return Err(Error::InvalidData(
+            "Script `main` function name can not be different from `main`".into(),
+        ));
+    }
+
+    let args = function_arguments(main_function_abi, types)?;
+
+    let arg_names = args.iter().map(|component| &component.field_name);
+
+    let arg_declarations = args.iter().map(|component| {
+        let name = &component.field_name;
+        let field_type: TokenStream = (&component.field_type).into();
+        quote! { #name: #field_type }
+    });
+
+    let doc = expand_doc(
+        "Encode the arguments provided so they can be passed as argument to the script's main \
+        function",
+    );
+
+    let name = safe_ident("encode_main_arguments");
+
+    Ok(quote! {
+        #doc
+        pub fn #name(#(#arg_declarations,)*) -> Result<Vec<u8>, SDKError> {
+            let tokens = [#(#arg_names.into_token()),*];
+            Ok(ABIEncoder::encode(&tokens)?.resolve(0))
+        }
+    })
+}
+
 fn resolve_fn_output_type(
     function: &ABIFunction,
     types: &HashMap<usize, TypeDeclaration>,

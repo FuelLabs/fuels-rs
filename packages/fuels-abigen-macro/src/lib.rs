@@ -22,6 +22,19 @@ pub fn abigen(input: TokenStream) -> TokenStream {
         .into()
 }
 
+/// Abigen proc macro definition and helper functions/types for scripts
+#[proc_macro]
+pub fn script_abigen(input: TokenStream) -> TokenStream {
+    let args = parse_macro_input!(input as Spanned<ContractArgs>);
+
+    Abigen::new(&args.name, &args.abi)
+        .unwrap()
+        .script()
+        .expand()
+        .unwrap()
+        .into()
+}
+
 #[proc_macro]
 pub fn wasm_abigen(input: TokenStream) -> TokenStream {
     let args = parse_macro_input!(input as Spanned<ContractArgs>);

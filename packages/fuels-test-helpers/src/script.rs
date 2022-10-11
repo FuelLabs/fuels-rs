@@ -67,6 +67,7 @@ mod tests {
     async fn test_run_compiled_script() -> Result<(), Error> {
         // ANCHOR: run_compiled_script
         let path_to_bin = "../fuels/tests/logs/logging/out/debug/logging.bin";
+        // Provide `None` to all 3 other arguments so the function uses the default for each
         let return_val = run_compiled_script(path_to_bin, None, None, None).await?;
 
         let correct_hex =
