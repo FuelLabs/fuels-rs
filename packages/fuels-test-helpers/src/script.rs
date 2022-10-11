@@ -17,24 +17,33 @@ pub async fn run_compiled_script(
     binary_filepath: &str,
     tx_params: TxParameters,
     provider: Option<Provider>,
+    script_data: Option<Vec<u8>>,
 ) -> Result<Vec<Receipt>, Error> {
     let script_binary = std::fs::read(binary_filepath)?;
-    let server = FuelService::new_node(Config::local_node()).await.unwrap();
-    let provider = provider.unwrap_or(Provider::connect(server.bound_address.to_string()).await?);
-
-    let script = build_script(script_binary, tx_params);
+    let provider = match provider {
+        None => {
+            let server = FuelService::new_node(Config::local_node()).await.unwrap();
+            Provider::connect(server.bound_address.to_string()).await?
+        }
+        Some(provider) => provider,
+    };
+    let script = build_script(script_binary, tx_params, script_data);
 
     script.call(&provider).await
 }
 
-fn build_script(script_binary: Vec<u8>, tx_params: TxParameters) -> Script {
+pub fn build_script(
+    script_binary: Vec<u8>,
+    tx_params: TxParameters,
+    script_data: Option<Vec<u8>>,
+) -> Script {
     let tx = Transaction::Script {
         gas_price: tx_params.gas_price,
         gas_limit: tx_params.gas_limit,
         maturity: tx_params.maturity,
         receipts_root: Default::default(),
         script: script_binary, // Pass the compiled script into the tx
-        script_data: vec![],
+        script_data: script_data.unwrap_or_default(),
         inputs: vec![],
         outputs: vec![],
         witnesses: vec![vec![].into()],
@@ -59,7 +68,8 @@ mod tests {
     async fn test_run_compiled_script() -> Result<(), Error> {
         // ANCHOR: run_compiled_script
         let path_to_bin = "../fuels/tests/logs/logging/out/debug/logging.bin";
-        let return_val = run_compiled_script(path_to_bin, TxParameters::default(), None).await?;
+        let return_val =
+            run_compiled_script(path_to_bin, TxParameters::default(), None, None).await?;
 
         let correct_hex =
             hex::decode("ef86afa9696cf0dc6385e2c407a6e159a1103cefb7e2ae0636fb33d3cb2a9e4a")?;
@@ -84,7 +94,7 @@ mod tests {
         let (provider, _) = setup_test_provider(coins, vec![], None).await;
 
         let return_val =
-            run_compiled_script(path_to_bin, TxParameters::default(), Some(provider)).await?;
+            run_compiled_script(path_to_bin, TxParameters::default(), Some(provider), None).await?;
 
         let correct_hex =
             hex::decode("ef86afa9696cf0dc6385e2c407a6e159a1103cefb7e2ae0636fb33d3cb2a9e4a")?;
