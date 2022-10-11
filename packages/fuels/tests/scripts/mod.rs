@@ -14,7 +14,7 @@ async fn test_transaction_script_workflow() -> Result<(), Error> {
     setup_contract_test!(
         contract_instance,
         wallet,
-        "packages/fuels/tests/behaviors/contract_test"
+        "packages/fuels/tests/contracts/contract_test"
     );
 
     let call_handler = contract_instance.methods().initialize_counter(42);
@@ -35,7 +35,7 @@ async fn test_multi_call_script_workflow() -> Result<(), Error> {
     setup_contract_test!(
         contract_instance,
         wallet,
-        "packages/fuels/tests/behaviors/contract_test"
+        "packages/fuels/tests/contracts/contract_test"
     );
 
     let contract_methods = contract_instance.methods();
@@ -65,7 +65,7 @@ async fn test_script_interface() -> Result<(), Error> {
     let wallet = launch_provider_and_get_wallet().await;
 
     let contract_id = Contract::deploy(
-        "../../packages/fuels/tests/behaviors/contract_test/out/debug/contract_test.bin",
+        "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
         &wallet,
         TxParameters::default(),
         StorageConfiguration::default(),

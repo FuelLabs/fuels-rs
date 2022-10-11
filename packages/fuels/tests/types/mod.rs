@@ -287,7 +287,7 @@ async fn test_array() -> Result<(), Error> {
     setup_contract_test!(
         contract_instance,
         wallet,
-        "packages/fuels/tests/behaviors/contract_test"
+        "packages/fuels/tests/contracts/contract_test"
     );
 
     assert_eq!(
@@ -307,7 +307,7 @@ async fn test_arrays_with_custom_types() -> Result<(), Error> {
     setup_contract_test!(
         contract_instance,
         wallet,
-        "packages/fuels/tests/behaviors/contract_test"
+        "packages/fuels/tests/contracts/contract_test"
     );
 
     let persons = [

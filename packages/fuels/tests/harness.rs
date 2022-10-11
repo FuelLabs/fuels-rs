@@ -1,10 +1,10 @@
-mod behaviors;
 mod bindings;
-mod contract_instance;
+mod contracts;
 mod from_token;
-mod infrastructure;
 mod logs;
 mod predicates;
+mod providers;
 mod scripts;
 mod storage;
 mod types;
+mod wallets;

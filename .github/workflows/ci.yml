@@ -56,9 +56,11 @@ jobs:
         with:
           retention-days: 2
           name: sway-examples
-          # cache only the sway build artifacts, skip all test_project src files
+          # cache only the sway build artifacts, skip all src files
           path: |
             packages/fuels/tests
+            !packages/fuels/tests/*.rs
+            !packages/fuels/tests/**/*.rs
             !packages/fuels/tests/**/*.sw
             !packages/fuels/tests/**/Forc.toml
             !packages/fuels/tests/**/Forc.lock

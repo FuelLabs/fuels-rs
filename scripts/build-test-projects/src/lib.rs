@@ -98,7 +98,7 @@ impl ResultWriter {
         self.stdout.set_color(self.green.clone().set_bold(true))?;
         write!(&mut self.stdout, "\nBuilding ")?;
         self.stdout.reset()?;
-        writeln!(&mut self.stdout, "projects with: {}", version)?;
+        writeln!(&mut self.stdout, "projects with: `{}`\n", version.trim())?;
         Ok(())
     }
 
@@ -116,7 +116,6 @@ impl ResultWriter {
                 )?;
                 self.stdout.set_color(&self.green)?;
                 writeln!(&mut self.stdout, "ok")?;
-                self.stdout.reset()?;
             }
             BuildResult::Failure(c) => {
                 write!(
@@ -126,9 +125,9 @@ impl ResultWriter {
                 )?;
                 self.stdout.set_color(&self.red)?;
                 writeln!(&mut self.stdout, "FAILED")?;
-                self.stdout.reset()?;
             }
         }
+        self.stdout.reset()?;
         Ok(())
     }
 

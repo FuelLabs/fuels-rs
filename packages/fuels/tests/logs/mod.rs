@@ -136,7 +136,7 @@ async fn test_fetch_logs_with_no_logs() -> Result<(), Error> {
     setup_contract_test!(
         contract_instance,
         wallet,
-        "packages/fuels/tests/behaviors/contract_test"
+        "packages/fuels/tests/contracts/contract_test"
     );
 
     let contract_methods = contract_instance.methods();
