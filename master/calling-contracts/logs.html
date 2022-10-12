@@ -146,10 +146,10 @@
         let e: str[4] = &quot;Fuel&quot;;
         let l: [u8; 3] = [1u8, 2u8, 3u8];
 
-        __log(f);
-        __log(u);
-        __log(e);
-        __log(l);
+        log(f);
+        log(u);
+        log(e);
+        log(l);
     }
 </code></pre>
 <p>You can access the logged values in Rust by calling <code>logs_with_type::&lt;T&gt;</code> from a contract instance, where <code>T</code> is the type of the logged variables you want to retrieve. The result will be a <code>Vec&lt;T&gt;</code>:</p>

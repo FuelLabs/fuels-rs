@@ -1394,10 +1394,10 @@ pub const BASE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
         let e: str[4] = &quot;Fuel&quot;;
         let l: [u8; 3] = [1u8, 2u8, 3u8];
 
-        __log(f);
-        __log(u);
-        __log(e);
-        __log(l);
+        log(f);
+        log(u);
+        log(e);
+        log(l);
     }
 </code></pre>
 <p>You can access the logged values in Rust by calling <code>logs_with_type::&lt;T&gt;</code> from a contract instance, where <code>T</code> is the type of the logged variables you want to retrieve. The result will be a <code>Vec&lt;T&gt;</code>:</p>
@@ -1543,30 +1543,26 @@ pub const BASE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
 <p>Let's consider the following predicate example:</p>
 <pre><code class="language-rust ignore">predicate;
 
-use std::{
-    inputs::input_predicate_data,
-    ecr::ec_recover_address,
-    constants::ZERO_B256,
-    b512::B512,
-    result::*
-};
+use std::{b512::B512, constants::ZERO_B256, ecr::ec_recover_address, inputs::input_predicate_data};
 
-fn extract_pulic_key_and_match(signature: B512, expected_public_key: b256) -&gt; u64{
-    if let Result::Ok(pub_key_sig) = ec_recover_address(signature, ZERO_B256) {
-        if pub_key_sig.value == expected_public_key{
-           return 1;
+fn extract_pulic_key_and_match(signature: B512, expected_public_key: b256) -&gt; u64 {
+    if let Result::Ok(pub_key_sig) = ec_recover_address(signature, ZERO_B256)
+    {
+        if pub_key_sig.value == expected_public_key {
+            return 1;
         }
     }
-   0
+    0
 }
 
 fn main() -&gt; bool {
-    let signatures: [B512;3] = input_predicate_data(0);
+    let signatures: [B512; 3] = input_predicate_data(0);
 
     let public_keys = [
         0xd58573593432a30a800f97ad32f877425c223a9e427ab557aab5d5bb89156db0,
         0x14df7c7e4e662db31fe2763b1734a3d680e7b743516319a49baaa22b2032a857,
-        0x3ff494fb136978c3125844625dad6baf6e87cdb1328c8a51f35bda5afe72425c];
+        0x3ff494fb136978c3125844625dad6baf6e87cdb1328c8a51f35bda5afe72425c,
+    ];
 
     let mut matched_keys = 0;
 
@@ -2071,12 +2067,15 @@ impl MyContract for Contract {
 <pre><code class="language-rust ignore">contract;
 
 use std::{
-    address::Address,
-    assert::assert,
-    context::call_frames::{contract_id, msg_asset_id},
+    context::call_frames::{
+        contract_id,
+        msg_asset_id,
+    },
     context::msg_amount,
-    contract_id::ContractId,
-    token::{mint_to_address, transfer_to_address}
+    token::{
+        mint_to_address,
+        transfer_to_address,
+    },
 };
 
 abi LiquidityPool {
@@ -2099,8 +2098,8 @@ impl LiquidityPool for Contract {
     }
 
     fn withdraw(recipient: Address) {
-       assert(contract_id() == msg_asset_id());
-       assert(0 &lt; msg_amount());
+        assert(contract_id() == msg_asset_id());
+        assert(0 &lt; msg_amount());
 
         // Amount to withdraw.
         let amount_to_transfer = msg_amount() / 2;
