@@ -1,8 +1,6 @@
 contract;
 
-use std::*;
-use core::*;
-use std::storage::*;
+use std::storage::{get, store};
 use std::context::msg_amount;
 
 struct MyType {
@@ -44,7 +42,6 @@ impl TestContract for Contract {
         msg_amount()
     }
     // ANCHOR_END: msg_amount
-
     #[storage(write)]
     fn initialize_counter(value: u64) -> u64 {
         store(COUNTER_KEY, value);
