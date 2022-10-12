@@ -1,17 +1,11 @@
 contract;
 
-use std::{
-    address::Address,
-    result::Result,
-    option::Option
-};
-
 struct TestStruct {
-    option: Option<Address>
+    option: Option<Address>,
 }
 
 enum TestEnum {
-    EnumOption: Option<Address>
+    EnumOption: Option<Address>,
 }
 
 pub enum TestError {
@@ -29,7 +23,6 @@ abi MyContract {
     fn get_error() -> Result<Address, TestError>;
     fn input_ok(ok_address: Result<Address, TestError>) -> bool;
     fn input_error(test_error: Result<Address, TestError>) -> bool;
-
 }
 
 impl MyContract for Contract {
@@ -42,7 +35,9 @@ impl MyContract for Contract {
     }
 
     fn get_ok_struct() -> Result<TestStruct, TestError> {
-        Result::Ok(TestStruct{option: Option::Some(~Address::from(ADDR))})
+        Result::Ok(TestStruct {
+            option: Option::Some(~Address::from(ADDR)),
+        })
     }
 
     fn get_ok_enum() -> Result<TestEnum, TestError> {
@@ -50,9 +45,11 @@ impl MyContract for Contract {
     }
 
     fn get_ok_tuple() -> Result<(TestStruct, TestEnum), TestError> {
-        let s = TestStruct{option: Option::Some(~Address::from(ADDR))};
+        let s = TestStruct {
+            option: Option::Some(~Address::from(ADDR)),
+        };
         let e = TestEnum::EnumOption(Option::Some(~Address::from(ADDR)));
-        Result::Ok((s,e))
+        Result::Ok((s, e))
     }
 
     fn get_error() -> Result<Address, TestError> {
