@@ -62,10 +62,7 @@ impl MyContract for Contract {
     }
 
     fn vec_in_array(arg: [Vec<u32>; 2]) {
-        let expected = [
-            vec_from([0, 1, 2]),
-            vec_from([0, 1, 2]),
-        ];
+        let expected = [vec_from([0, 1, 2]), vec_from([0, 1, 2]), ];
 
         assert(expected == arg);
     }
@@ -93,10 +90,7 @@ impl MyContract for Contract {
     }
 
     fn vec_in_tuple(arg: (Vec<u32>, Vec<u32>)) {
-        let expected = (
-            vec_from([0, 1, 2]),
-            vec_from([0, 1, 2]),
-        );
+        let expected = (vec_from([0, 1, 2]), vec_from([0, 1, 2]), );
 
         assert(arg == expected);
     }

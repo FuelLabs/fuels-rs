@@ -1,7 +1,5 @@
 contract;
 
-use std::revert::revert;
-
 abi MyContract {
     fn make_transaction_fail(input: u64) -> u64;
 }
