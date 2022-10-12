@@ -191,8 +191,8 @@ impl Type {
         let type_decl = types.get(&type_application.type_id).unwrap();
         match &type_decl.type_parameters {
             // The presence of type_parameters indicates that the current type
-            // (a struct or an enum) defines some generic parameters (i.e.
-            // SomeStruct<T, K>
+            // (a struct or an enum) defines some generic parameters 
+            // (i.e. SomeStruct<T, K>).
             Some(params) if !params.is_empty() => {
                 // Determine what Types the generics will resolve to.
                 let generic_params_from_current_type = type_application
