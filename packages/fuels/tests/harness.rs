@@ -3786,6 +3786,53 @@ async fn test_parse_logs_custom_types() -> Result<(), Error> {
 }
 
 #[tokio::test]
+async fn test_parse_logs_generic_types() -> Result<(), Error> {
+    setup_contract_test!(
+        contract_instance,
+        wallet,
+        "packages/fuels/tests/test_projects/logged_types"
+    );
+
+    let contract_methods = contract_instance.methods();
+    let response = contract_methods.produce_logs_generic_types().call().await?;
+
+    let log_struct =
+        contract_instance.logs_with_type::<StructWithGeneric<[_; 3]>>(&response.receipts)?;
+    let log_enum =
+        contract_instance.logs_with_type::<EnumWithGeneric<[_; 3]>>(&response.receipts)?;
+    let log_struct_nested = contract_instance
+        .logs_with_type::<StructWithNestedGeneric<StructWithGeneric<[_; 3]>>>(&response.receipts)?;
+    let log_struct_deeply_nested = contract_instance.logs_with_type::<StructDeeplyNestedGeneric<
+        StructWithNestedGeneric<StructWithGeneric<[_; 3]>>,
+    >>(&response.receipts)?;
+
+    let l = [1u8, 2u8, 3u8];
+    let expected_struct = StructWithGeneric {
+        field_1: l,
+        field_2: 64,
+    };
+    let expected_enum = EnumWithGeneric::VariantOne(l);
+    let expected_nested_struct = StructWithNestedGeneric {
+        field_1: expected_struct.clone(),
+        field_2: 64,
+    };
+    let expected_deeply_nested_struct = StructDeeplyNestedGeneric {
+        field_1: expected_nested_struct.clone(),
+        field_2: 64,
+    };
+
+    assert_eq!(log_struct, vec![expected_struct]);
+    assert_eq!(log_enum, vec![expected_enum]);
+    assert_eq!(log_struct_nested, vec![expected_nested_struct]);
+    assert_eq!(
+        log_struct_deeply_nested,
+        vec![expected_deeply_nested_struct]
+    );
+
+    Ok(())
+}
+
+#[tokio::test]
 async fn test_fetch_logs() -> Result<(), Error> {
     setup_contract_test!(
         contract_instance,
@@ -3809,6 +3856,10 @@ async fn test_fetch_logs() -> Result<(), Error> {
         field_3: 64,
     };
     let expected_enum = TestEnum::VariantTwo();
+    let expected_generic_struct = StructWithGeneric {
+        field_1: expected_struct.clone(),
+        field_2: 64,
+    };
     let expected_logs: Vec<String> = vec![
         format!("{:#?}", 64u64),
         format!("{:#?}", 32u32),
@@ -3820,6 +3871,7 @@ async fn test_fetch_logs() -> Result<(), Error> {
         format!("{:#?}", [1, 2, 3]),
         format!("{:#?}", expected_struct),
         format!("{:#?}", expected_enum),
+        format!("{:#?}", expected_generic_struct),
     ];
 
     assert_eq!(logs, expected_logs);
