@@ -4172,8 +4172,8 @@ async fn test_automatic_output_variables() -> Result<(), Error> {
         // Should fail due to insufficient attempts (needs at least 3)
         let response = contract_methods
             .mint_to_addresses(amount, addresses)
-            .auto_setup(Some(2))
-            .await
+            .set_estimated_tx_dependencies(Some(2))
+            .await?
             .call()
             .await;
 
@@ -4184,8 +4184,8 @@ async fn test_automatic_output_variables() -> Result<(), Error> {
         // Should add 3 output variables automatically
         let _ = contract_methods
             .mint_to_addresses(amount, addresses)
-            .auto_setup(Some(3))
-            .await
+            .set_estimated_tx_dependencies(Some(3))
+            .await?
             .call()
             .await?;
 
@@ -4234,8 +4234,8 @@ async fn test_automatic_output_variables_multicall() -> Result<(), Error> {
     });
 
     let _ = multi_call_handler
-        .auto_setup(None)
-        .await
+        .set_estimated_tx_dependencies(None)
+        .await?
         .call::<((), (), ())>()
         .await?;
 

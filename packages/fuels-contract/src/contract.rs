@@ -529,7 +529,10 @@ where
 
     /// Simulates calls and attempts to set output variables based on the received error.
     /// Forwards the received error if it cannot be fixed.
-    pub async fn auto_setup(mut self, max_attempts: Option<u64>) -> Self {
+    pub async fn set_estimated_tx_dependencies(
+        mut self,
+        max_attempts: Option<u64>,
+    ) -> Result<Self, Error> {
         let attempts = max_attempts.unwrap_or(DEFAULT_AUTO_SETUP_ATTEMPTS);
 
         for _ in 0..attempts {
@@ -544,11 +547,12 @@ where
                 {
                     self = self.append_variable_outputs(1);
                 }
-                _ => break,
+                Err(e) => return Err(e),
+                _ => return Ok(self),
             }
         }
 
-        self
+        Ok(self)
     }
 
     /// Call a contract's method on the node, in a state-modifying manner.
@@ -667,13 +671,16 @@ impl MultiContractCallHandler {
         Ok(())
     }
 
-    pub async fn auto_setup(mut self, max_attempts: Option<u64>) -> Self {
+    pub async fn set_estimated_tx_dependencies(
+        mut self,
+        max_attempts: Option<u64>,
+    ) -> Result<Self, Error> {
         let attempts = max_attempts.unwrap_or(DEFAULT_AUTO_SETUP_ATTEMPTS);
 
         for _ in 0..attempts {
-            let response = self.simulate_without_response().await;
+            let result = self.simulate_without_response().await;
 
-            match response {
+            match result {
                 Err(Error::RevertTransactionError(_, receipts))
                     if receipts
                         .iter()
@@ -683,11 +690,12 @@ impl MultiContractCallHandler {
                     // We can add to any ContractCall, they all combine into a single tx later
                     self.contract_calls.iter_mut().take(1).for_each(|call| call.append_variable_outputs(1));
                 }
-                _ => break,
+                Err(e) => return Err(e),
+                _ => return Ok(self),
             }
         }
 
-        self
+        Ok(self)
     }
 
     /// Get a contract's estimated cost
