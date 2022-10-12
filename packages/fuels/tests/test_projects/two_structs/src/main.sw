@@ -15,12 +15,11 @@ abi MyTest {
 
 impl MyTest for Contract {
     fn something(input: StructOne) -> u64 {
-        let v = input.foo; 
+        let v = input.foo;
         v + 1
-    }    
-
+    }
     fn something_else(input: StructTwo) -> u64 {
-        let v = input.bar; 
+        let v = input.bar;
         v - 1
-    }    
+    }
 }
