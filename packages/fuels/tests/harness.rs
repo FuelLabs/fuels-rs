@@ -7,6 +7,6 @@ mod predicates; // calling predicates and encoding predicate data
 mod providers; // launching and querying providers
 mod scripts; // building and calling scripts
 mod storage; // storage initialization and forwarding
-mod types; // encoding and decoding of native and custom types
+mod types; // encoding/decoding of native and custom types
 mod wallets; // wallet creation and balance checks
              // ANCHOR_END: test_modules
