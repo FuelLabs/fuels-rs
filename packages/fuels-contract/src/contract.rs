@@ -528,7 +528,7 @@ where
     }
 
     /// Simulates calls and attempts to set output variables based on the received error.
-    /// Forwards the reiceived error if it cannot be fixed.
+    /// Forwards the received error if it cannot be fixed.
     pub async fn auto_setup(mut self, max_attempts: Option<u64>) -> Self {
         let attempts = max_attempts.unwrap_or(DEFAULT_AUTO_SETUP_ATTEMPTS);
 
