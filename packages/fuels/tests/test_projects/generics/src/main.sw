@@ -1,6 +1,5 @@
 contract;
 
-use std::assert::assert;
 use std::hash::sha256;
 
 struct SimpleGeneric<T> {
@@ -65,10 +64,7 @@ impl MyContract for Contract {
 
     fn struct_w_generic_in_array(arg1: StructWArrayGeneric<u32>) -> StructWArrayGeneric<u32> {
         let expected = StructWArrayGeneric {
-            a: [
-                1u32,
-                2u32,
-            ],
+            a: [1u32, 2u32, ],
         };
 
         assert(expected.a[0] == arg1.a[0]);
@@ -78,12 +74,7 @@ impl MyContract for Contract {
     }
 
     fn struct_w_generic_in_tuple(arg1: StructWTupleGeneric<u32>) -> StructWTupleGeneric<u32> {
-        let expected = StructWTupleGeneric {
-            a: (
-                1,
-                2,
-            ),
-        };
+        let expected = StructWTupleGeneric { a: (1, 2, ) };
         assert(expected.a.0 == arg1.a.0);
         assert(expected.a.1 == arg1.a.1);
 

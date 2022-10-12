@@ -1,16 +1,11 @@
 contract;
 
-use std::{
-    address::Address,
-    option::Option,
-};
-
 struct TestStruct {
-    option: Option<Address>
+    option: Option<Address>,
 }
 
 enum TestEnum {
-    EnumOption: Option<Address>
+    EnumOption: Option<Address>,
 }
 
 const ADDR = 0xd58573593432a30a800f97ad32f877425c223a9e427ab557aab5d5bb89156db0;
@@ -38,7 +33,9 @@ impl MyContract for Contract {
     }
 
     fn get_some_struct() -> Option<TestStruct> {
-        Option::Some(TestStruct{option: Option::Some(~Address::from(ADDR))})
+        Option::Some(TestStruct {
+            option: Option::Some(~Address::from(ADDR)),
+        })
     }
 
     fn get_some_enum() -> Option<TestEnum> {
@@ -46,16 +43,18 @@ impl MyContract for Contract {
     }
 
     fn get_some_tuple() -> Option<(TestStruct, TestEnum)> {
-        let s = TestStruct{option: Option::Some(~Address::from(ADDR))};
+        let s = TestStruct {
+            option: Option::Some(~Address::from(ADDR)),
+        };
         let e = TestEnum::EnumOption(Option::Some(~Address::from(ADDR)));
-        Option::Some((s,e))
+        Option::Some((s, e))
     }
 
     fn get_none() -> Option<Address> {
         Option::None
     }
 
-    fn input_primitive(input: Option<u64>) -> bool{
+    fn input_primitive(input: Option<u64>) -> bool {
         if let Option::Some(u) = input {
             return u == 36;
         }

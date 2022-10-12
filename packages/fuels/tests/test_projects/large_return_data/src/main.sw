@@ -1,10 +1,5 @@
 contract;
 
-use std::*;
-use core::*;
-use std::storage::*;
-use std::contract_id::ContractId;
-
 pub struct SmallStruct {
     foo: u32,
 }
@@ -20,8 +15,7 @@ abi TestContract {
     fn get_large_string() -> str[9];
     fn get_large_struct() -> LargeStruct;
     fn get_small_struct() -> SmallStruct;
-    fn get_large_array() -> [u32;
-    2];
+    fn get_large_array() -> [u32; 2];
     fn get_contract_id() -> ContractId;
 }
 
@@ -41,9 +35,7 @@ impl TestContract for Contract {
     }
 
     fn get_small_struct() -> SmallStruct {
-        SmallStruct {
-            foo: 100,
-        }
+        SmallStruct { foo: 100 }
     }
 
     fn get_large_struct() -> LargeStruct {
@@ -53,10 +45,8 @@ impl TestContract for Contract {
         }
     }
 
-    fn get_large_array() -> [u32;
-    2] {
-        let x: [u32;
-        2] = [1, 2];
+    fn get_large_array() -> [u32; 2] {
+        let x: [u32; 2] = [1, 2];
         x
     }
 

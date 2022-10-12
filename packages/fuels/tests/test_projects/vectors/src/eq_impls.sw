@@ -2,10 +2,8 @@ library eq_impls;
 
 dep data_structures;
 
-use std::vec::Vec;
 use data_structures::{SomeEnum, SomeStruct};
 use core::ops::Eq;
-use std::option::Option;
 
 impl Eq for (u32, u32) {
     fn eq(self, other: Self) -> bool {

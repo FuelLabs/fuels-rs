@@ -1,17 +1,11 @@
 contract;
 
-use std::{
-    address::Address,
-    contract_id::ContractId,
-    identity::Identity,
-};
-
 struct TestStruct {
-    identity: Identity
+    identity: Identity,
 }
 
 enum TestEnum {
-    EnumIdentity: Identity
+    EnumIdentity: Identity,
 }
 
 const ADDR = 0xd58573593432a30a800f97ad32f877425c223a9e427ab557aab5d5bb89156db0;
@@ -37,7 +31,9 @@ impl MyContract for Contract {
     }
 
     fn get_struct_with_identity() -> TestStruct {
-        TestStruct{identity: Identity::Address(~Address::from(ADDR))}
+        TestStruct {
+            identity: Identity::Address(~Address::from(ADDR)),
+        }
     }
 
     fn get_enum_with_identity() -> TestEnum {
@@ -45,13 +41,14 @@ impl MyContract for Contract {
     }
 
     fn get_identity_tuple() -> (TestStruct, TestEnum) {
-        let s = TestStruct{identity: Identity::Address(~Address::from(ADDR))};
+        let s = TestStruct {
+            identity: Identity::Address(~Address::from(ADDR)),
+        };
         let e = TestEnum::EnumIdentity(Identity::ContractId(~ContractId::from(ADDR)));
-        (s,e)
+        (s, e)
     }
 
-
-    fn input_identity(input: Identity) -> bool{
+    fn input_identity(input: Identity) -> bool {
         if let Identity::Address(a) = input {
             return a == ~Address::from(ADDR);
         }

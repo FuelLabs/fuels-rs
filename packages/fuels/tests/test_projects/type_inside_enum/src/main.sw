@@ -1,21 +1,17 @@
 contract;
 
-use std::*;
-use core::*;
-use std::storage::*;
-
 // String and array inside enum
 enum SomeEnum {
-	SomeStr: str[4],
-	SomeArr: [u64; 7]
+    SomeStr: str[4],
+    SomeArr: [u64; 7],
 }
 
 // Struct inside enum
 enum Shaker {
     Cosmopolitan: Recipe,
     Mojito: u32,
-
 }
+
 struct Recipe {
     ice: u8,
     sugar: u16,
@@ -57,13 +53,11 @@ impl MyContract for Contract {
     }
 
     fn return_struct_inside_enum(c: u64) -> Shaker {
-            let s = Shaker::Cosmopolitan(
-                Recipe{
-                    ice: 22,
-                    sugar: 99
-                }
-            );
-            s
+        let s = Shaker::Cosmopolitan(Recipe {
+            ice: 22,
+            sugar: 99,
+        });
+        s
     }
     fn take_struct_inside_enum(s: Shaker) -> u64 {
         8888
@@ -82,5 +76,4 @@ impl MyContract for Contract {
 
         arg_is_correct
     }
-
 }
