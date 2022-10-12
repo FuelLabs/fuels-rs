@@ -94,10 +94,10 @@ impl TestContract for Contract {
             field_2: 64
         };
 
-        __log(test_struct);
-        __log(test_enum);
-        __log(test_struct_nested);
-        __log(test_deeply_nested_generic);
+        log(test_struct);
+        log(test_enum);
+        log(test_struct_nested);
+        log(test_deeply_nested_generic);
     }
 
     fn produce_multiple_logs() -> () {
@@ -116,16 +116,16 @@ impl TestContract for Contract {
             field_2: 64,
         };
 
-        __log(64);
-        __log(32u32);
-        __log(16u16);
-        __log(8u8);
-        __log(f);
-        __log(u);
-        __log(e);
-        __log(l);
-        __log(test_struct);
-        __log(test_enum);
-        __log(test_generic_struct);
+        log(64);
+        log(32u32);
+        log(16u16);
+        log(8u8);
+        log(f);
+        log(u);
+        log(e);
+        log(l);
+        log(test_struct);
+        log(test_enum);
+        log(test_generic_struct);
     }
 }
