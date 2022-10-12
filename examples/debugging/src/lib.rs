@@ -50,7 +50,6 @@ mod tests {
         let selector = resolve_fn_selector(&a_fun.name, &inputs);
 
         assert_eq!(selector, [0, 0, 0, 0, 39, 152, 108, 146,]);
-
         // ANCHOR_END: example_fn_selector_json
 
         Ok(())
