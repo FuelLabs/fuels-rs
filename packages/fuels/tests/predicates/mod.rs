@@ -47,7 +47,7 @@ async fn can_call_no_arg_predicate_returns_true() -> Result<(), Error> {
         .await?;
 
     let receiver_balance_before = provider
-        .get_asset_balance(receiver.address(), asset_id)
+        .get_asset_balance(receiver.address(), &asset_id)
         .await?;
     assert_eq!(receiver_balance_before, 16);
 
@@ -63,7 +63,7 @@ async fn can_call_no_arg_predicate_returns_true() -> Result<(), Error> {
         .await?;
 
     let receiver_balance_after = provider
-        .get_asset_balance(receiver.address(), asset_id)
+        .get_asset_balance(receiver.address(), &asset_id)
         .await?;
     assert_eq!(
         receiver_balance_before + amount_to_predicate,
@@ -71,7 +71,7 @@ async fn can_call_no_arg_predicate_returns_true() -> Result<(), Error> {
     );
 
     let predicate_balance = provider
-        .get_asset_balance(predicate.address(), asset_id)
+        .get_asset_balance(predicate.address(), &asset_id)
         .await?;
     assert_eq!(predicate_balance, 0);
     Ok(())
@@ -98,7 +98,7 @@ async fn can_call_no_arg_predicate_returns_false() -> Result<(), Error> {
         .await?;
 
     let receiver_balance_before = provider
-        .get_asset_balance(receiver.address(), asset_id)
+        .get_asset_balance(receiver.address(), &asset_id)
         .await?;
     assert_eq!(receiver_balance_before, 16);
 
@@ -115,12 +115,12 @@ async fn can_call_no_arg_predicate_returns_false() -> Result<(), Error> {
         .expect_err("should error");
 
     let receiver_balance_after = provider
-        .get_asset_balance(receiver.address(), asset_id)
+        .get_asset_balance(receiver.address(), &asset_id)
         .await?;
     assert_eq!(receiver_balance_before, receiver_balance_after);
 
     let predicate_balance = provider
-        .get_asset_balance(predicate.address(), asset_id)
+        .get_asset_balance(predicate.address(), &asset_id)
         .await?;
     assert_eq!(predicate_balance, amount_to_predicate);
     Ok(())
@@ -147,7 +147,7 @@ async fn can_call_predicate_with_u32_data() -> Result<(), Error> {
         .await?;
 
     let receiver_balance_before = provider
-        .get_asset_balance(receiver.address(), asset_id)
+        .get_asset_balance(receiver.address(), &asset_id)
         .await?;
     assert_eq!(receiver_balance_before, 16);
 
@@ -168,12 +168,12 @@ async fn can_call_predicate_with_u32_data() -> Result<(), Error> {
         .expect_err("should error");
 
     let receiver_balance_after = provider
-        .get_asset_balance(receiver.address(), asset_id)
+        .get_asset_balance(receiver.address(), &asset_id)
         .await?;
     assert_eq!(receiver_balance_before, receiver_balance_after);
 
     let predicate_balance = provider
-        .get_asset_balance(predicate.address(), asset_id)
+        .get_asset_balance(predicate.address(), &asset_id)
         .await?;
     assert_eq!(predicate_balance, amount_to_predicate);
 
@@ -193,7 +193,7 @@ async fn can_call_predicate_with_u32_data() -> Result<(), Error> {
         .await?;
 
     let receiver_balance_after = provider
-        .get_asset_balance(receiver.address(), asset_id)
+        .get_asset_balance(receiver.address(), &asset_id)
         .await?;
     assert_eq!(
         receiver_balance_before + amount_to_predicate,
@@ -201,7 +201,7 @@ async fn can_call_predicate_with_u32_data() -> Result<(), Error> {
     );
 
     let predicate_balance = provider
-        .get_asset_balance(predicate.address(), asset_id)
+        .get_asset_balance(predicate.address(), &asset_id)
         .await?;
     assert_eq!(predicate_balance, 0);
     Ok(())
@@ -228,7 +228,7 @@ async fn can_call_predicate_with_address_data() -> Result<(), Error> {
         .await?;
 
     let receiver_balance_before = provider
-        .get_asset_balance(receiver.address(), asset_id)
+        .get_asset_balance(receiver.address(), &asset_id)
         .await?;
     assert_eq!(receiver_balance_before, 16);
 
@@ -248,7 +248,7 @@ async fn can_call_predicate_with_address_data() -> Result<(), Error> {
         .await?;
 
     let receiver_balance_after = provider
-        .get_asset_balance(receiver.address(), asset_id)
+        .get_asset_balance(receiver.address(), &asset_id)
         .await?;
     assert_eq!(
         receiver_balance_before + amount_to_predicate,
@@ -256,7 +256,7 @@ async fn can_call_predicate_with_address_data() -> Result<(), Error> {
     );
 
     let predicate_balance = provider
-        .get_asset_balance(predicate.address(), asset_id)
+        .get_asset_balance(predicate.address(), &asset_id)
         .await?;
     assert_eq!(predicate_balance, 0);
     Ok(())
@@ -283,7 +283,7 @@ async fn can_call_predicate_with_struct_data() -> Result<(), Error> {
         .await?;
 
     let receiver_balance_before = provider
-        .get_asset_balance(receiver.address(), asset_id)
+        .get_asset_balance(receiver.address(), &asset_id)
         .await?;
     assert_eq!(receiver_balance_before, 16);
 
@@ -304,12 +304,12 @@ async fn can_call_predicate_with_struct_data() -> Result<(), Error> {
         .expect_err("should error");
 
     let receiver_balance_after = provider
-        .get_asset_balance(receiver.address(), asset_id)
+        .get_asset_balance(receiver.address(), &asset_id)
         .await?;
     assert_eq!(receiver_balance_before, receiver_balance_after);
 
     let predicate_balance = provider
-        .get_asset_balance(predicate.address(), asset_id)
+        .get_asset_balance(predicate.address(), &asset_id)
         .await?;
     assert_eq!(predicate_balance, amount_to_predicate);
 
@@ -329,7 +329,7 @@ async fn can_call_predicate_with_struct_data() -> Result<(), Error> {
         .await?;
 
     let receiver_balance_after = provider
-        .get_asset_balance(receiver.address(), asset_id)
+        .get_asset_balance(receiver.address(), &asset_id)
         .await?;
     assert_eq!(
         receiver_balance_before + amount_to_predicate,
@@ -337,7 +337,7 @@ async fn can_call_predicate_with_struct_data() -> Result<(), Error> {
     );
 
     let predicate_balance = provider
-        .get_asset_balance(predicate.address(), asset_id)
+        .get_asset_balance(predicate.address(), &asset_id)
         .await?;
     assert_eq!(predicate_balance, 0);
     Ok(())
@@ -373,7 +373,7 @@ async fn predicate_with_multiple_coins() -> Result<(), Error> {
         .await?;
 
     let receiver_balance_before = provider
-        .get_asset_balance(receiver.address(), asset_id)
+        .get_asset_balance(receiver.address(), &asset_id)
         .await?;
     assert_eq!(receiver_balance_before, 300);
 
@@ -389,7 +389,7 @@ async fn predicate_with_multiple_coins() -> Result<(), Error> {
         .await?;
 
     let receiver_balance_after = provider
-        .get_asset_balance(receiver.address(), asset_id)
+        .get_asset_balance(receiver.address(), &asset_id)
         .await?;
     assert_eq!(
         receiver_balance_before + amount_to_predicate - 1,
@@ -397,7 +397,7 @@ async fn predicate_with_multiple_coins() -> Result<(), Error> {
     );
 
     let predicate_balance = provider
-        .get_asset_balance(predicate.address(), asset_id)
+        .get_asset_balance(predicate.address(), &asset_id)
         .await?;
     assert_eq!(predicate_balance, 10);
     Ok(())

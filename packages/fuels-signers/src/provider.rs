@@ -6,14 +6,14 @@ use fuel_core::service::{Config, FuelService};
 use fuel_gql_client::{
     client::{
         schema::{
-            balance::Balance, chain::ChainInfo, coin::Coin, contract::ContractBalance,
-            message::Message, node_info::NodeInfo, resource::Resource,
+            balance::Balance, block::Block, chain::ChainInfo, coin::Coin, contract::Contract,
+            contract::ContractBalance, message::Message, node_info::NodeInfo, resource::Resource,
         },
         types::{TransactionResponse, TransactionStatus},
         FuelClient, PageDirection, PaginatedResult, PaginationRequest,
     },
-    fuel_tx::{Receipt, Transaction, TransactionFee},
-    fuel_types::AssetId,
+    fuel_tx::{Receipt, Transaction, TransactionFee, UtxoId},
+    fuel_types::{AssetId, ContractId},
 };
 use fuels_core::constants::{DEFAULT_GAS_ESTIMATION_TOLERANCE, MAX_GAS_PER_TX};
 use std::collections::HashMap;
@@ -167,12 +167,17 @@ impl Provider {
         Ok(self.client.dry_run_opt(tx, Some(false)).await?)
     }
 
+    pub async fn get_coin(&self, id: &UtxoId) -> Result<Option<Coin>, ProviderError> {
+        let hex_id = format!("{:#x}", id);
+        self.client.coin(&hex_id).await.map_err(Into::into)
+    }
+
     /// Gets all coins owned by address `from`, with asset ID `asset_id`, *even spent ones*. This
     /// returns actual coins (UTXOs).
     pub async fn get_coins(
         &self,
         from: &Bech32Address,
-        asset_id: AssetId,
+        asset_id: &AssetId,
     ) -> Result<Vec<Coin>, ProviderError> {
         let mut coins: Vec<Coin> = vec![];
 
@@ -208,7 +213,7 @@ impl Provider {
     pub async fn get_spendable_coins(
         &self,
         from: &Bech32Address,
-        asset_id: AssetId,
+        asset_id: &AssetId,
         amount: u64,
     ) -> Result<Vec<Coin>, ProviderError> {
         let res = self
@@ -238,7 +243,7 @@ impl Provider {
     pub async fn get_asset_balance(
         &self,
         address: &Bech32Address,
-        asset_id: AssetId,
+        asset_id: &AssetId,
     ) -> Result<u64, ProviderError> {
         self.client
             .balance(&address.hash().to_string(), Some(&*asset_id.to_string()))
@@ -250,7 +255,7 @@ impl Provider {
     pub async fn get_contract_asset_balance(
         &self,
         contract_id: &Bech32ContractId,
-        asset_id: AssetId,
+        asset_id: &AssetId,
     ) -> Result<u64, ProviderError> {
         self.client
             .contract_balance(&contract_id.hash().to_string(), Some(&asset_id.to_string()))
@@ -319,6 +324,14 @@ impl Provider {
             )
             .collect();
         Ok(balances)
+    }
+
+    pub async fn get_contract(
+        &self,
+        id: &Bech32ContractId,
+    ) -> Result<Option<Contract>, ProviderError> {
+        let hex_id = format!("{:#x}", ContractId::from(id));
+        self.client.contract(&hex_id).await.map_err(Into::into)
     }
 
     /// Get transaction by id.
@@ -432,4 +445,256 @@ impl Provider {
             .await?;
         Ok(res.results)
     }
+
+    pub async fn get_block(&self, block_id: &str) -> Result<Option<Block>, ProviderError> {
+        self.client.block(block_id).await.map_err(Into::into)
+    }
+
+    pub async fn get_blocks(
+        &self,
+        request: PaginationRequest<String>,
+    ) -> Result<PaginatedResult<Block, String>, ProviderError> {
+        self.client.blocks(request).await.map_err(Into::into)
+    }
 }
+
+#[cfg(test)]
+mod tests {
+    #[cfg(feature = "test-helpers")]
+    use fuel_core::model::Coin;
+
+    use fuel_gql_client::fuel_tx::UtxoId;
+    use fuels::prelude::*;
+
+    async fn setup_provider_api_test() -> (
+        WalletUnlocked,
+        (Vec<(UtxoId, Coin)>, Vec<AssetId>),
+        Provider,
+    ) {
+        let mut wallet = WalletUnlocked::new_random(None);
+        let (coins, asset_ids) = setup_multiple_assets_coins(wallet.address(), 2, 4, 8);
+        let (provider, _) = setup_test_provider(coins.clone(), vec![], None).await;
+        wallet.set_provider(provider.clone());
+
+        (wallet, (coins, asset_ids), provider)
+    }
+
+    #[tokio::test]
+    async fn test_coin_api() -> Result<(), Error> {
+        let (_, (coins, _), provider) = setup_provider_api_test().await;
+
+        let (coin_id, _) = &coins[0];
+        let hex_coin_id = format!("{:#x}", coin_id);
+
+        let expected_coin = provider
+            .get_coin(coin_id)
+            .await?
+            .expect("could not find coin with provided id");
+
+        assert_eq!(hex_coin_id, expected_coin.utxo_id.0.to_string());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_coins_api() -> Result<(), Error> {
+        use std::collections::HashSet;
+
+        let (wallet, (coins, asset_ids), provider) = setup_provider_api_test().await;
+        let asset_id = &asset_ids[0];
+        let utxo_ids_of_coins_with_asset_id: HashSet<String> = coins
+            .iter()
+            .filter(|c| c.1.asset_id == *asset_id)
+            .map(|c| format!("{:#x}", c.0))
+            .collect();
+
+        let expected_coins = provider.get_coins(wallet.address(), asset_id).await?;
+
+        assert_eq!(expected_coins.len(), utxo_ids_of_coins_with_asset_id.len());
+        assert!(expected_coins
+            .iter()
+            .all(|ec| utxo_ids_of_coins_with_asset_id.contains(&ec.utxo_id.0.to_string())));
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_spendable_coins_api() -> Result<(), Error> {
+        use std::collections::HashSet;
+
+        let (wallet, (coins, asset_ids), provider) = setup_provider_api_test().await;
+        let asset_id = &asset_ids[0];
+        let amount = 18;
+        let utxo_ids_of_coins_with_asset_id: HashSet<String> = coins
+            .iter()
+            .filter(|c| c.1.asset_id == *asset_id)
+            .map(|c| format!("{:#x}", c.0))
+            .collect();
+
+        let expected_coins = provider
+            .get_spendable_coins(wallet.address(), asset_id, amount)
+            .await?;
+
+        assert!(expected_coins.iter().map(|ec| ec.amount.0).sum::<u64>() > amount);
+        assert!(expected_coins
+            .iter()
+            .all(|ec| utxo_ids_of_coins_with_asset_id.contains(&ec.utxo_id.0.to_string())));
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_balance_api() -> Result<(), Error> {
+        let (wallet, (coins, asset_ids), provider) = setup_provider_api_test().await;
+        let asset_id = &asset_ids[0];
+        let hex_asset_id = format!("{:#x}", asset_id);
+        let wallet_balance_asset_id: u64 = coins
+            .iter()
+            .filter(|c| c.1.asset_id == *asset_id)
+            .map(|c| c.1.amount)
+            .sum();
+
+        let wallet_balances = provider.get_balances(wallet.address()).await?;
+        let expected_asset_balance = wallet_balances
+            .get(&hex_asset_id)
+            .expect("could not get balance for asset id");
+
+        assert_eq!(*expected_asset_balance, wallet_balance_asset_id);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_asset_balance_api() -> Result<(), Error> {
+        let (wallet, (coins, asset_ids), provider) = setup_provider_api_test().await;
+        let asset_id = &asset_ids[0];
+        let balance_of_coins_with_asset_id: u64 = coins
+            .iter()
+            .filter(|c| c.1.asset_id == *asset_id)
+            .map(|c| c.1.amount)
+            .sum();
+
+        let expected_balance = provider
+            .get_asset_balance(wallet.address(), asset_id)
+            .await?;
+
+        assert_eq!(balance_of_coins_with_asset_id, expected_balance);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_contract_balance_api() -> Result<(), Error> {
+        let (wallet, (_, asset_ids), provider) = setup_provider_api_test().await;
+        let asset_id = &asset_ids[0];
+        let hex_asset_id = format!("{:#x}", asset_id);
+
+        let contract_id = Contract::deploy(
+            "../fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
+            &wallet,
+            TxParameters::default(),
+            StorageConfiguration::default(),
+        )
+        .await?;
+
+        let amount = 18;
+        let _receipts = wallet
+            .force_transfer_to_contract(&contract_id, amount, *asset_id, TxParameters::default())
+            .await?;
+
+        let contract_balances = provider.get_contract_balances(&contract_id).await?;
+
+        let expected_asset_balance = contract_balances
+            .get(&hex_asset_id)
+            .expect("could not get balance for asset id");
+        assert_eq!(*expected_asset_balance, amount);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_contract_asset_balance_api() -> Result<(), Error> {
+        let (wallet, (_, asset_ids), provider) = setup_provider_api_test().await;
+        let asset_id = &asset_ids[0];
+
+        let contract_id = Contract::deploy(
+            "../fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
+            &wallet,
+            TxParameters::default(),
+            StorageConfiguration::default(),
+        )
+        .await?;
+
+        let amount = 18;
+        let _receipts = wallet
+            .force_transfer_to_contract(&contract_id, amount, *asset_id, TxParameters::default())
+            .await?;
+
+        let expected_contract_balance = provider
+            .get_contract_asset_balance(&contract_id, asset_id)
+            .await?;
+
+        assert_eq!(expected_contract_balance, amount);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_transaction_by_id_api() -> Result<(), Error> {
+        let (wallet, (_, _), provider) = setup_provider_api_test().await;
+
+        let wallet2 = WalletUnlocked::new_random(Some(provider.clone()));
+
+        let gas_price = 1;
+        let gas_limit = 500_000;
+        let maturity = 0;
+        let tx_params = TxParameters {
+            gas_price,
+            gas_limit,
+            maturity,
+        };
+
+        let (tx_id, _receipts) = wallet
+            .transfer(wallet2.address(), 1, Default::default(), tx_params)
+            .await?;
+
+        let expected_response = provider.get_transaction_by_id(&tx_id).await?;
+
+        assert_eq!(expected_response.transaction.gas_limit(), gas_limit);
+        assert_eq!(expected_response.transaction.gas_price(), gas_price);
+        assert_eq!(expected_response.transaction.maturity(), maturity);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_contract_api() -> Result<(), Error> {
+        let (wallet, (_, _), provider) = setup_provider_api_test().await;
+
+        let contract_id = Contract::deploy(
+            "../fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
+            &wallet,
+            TxParameters::default(),
+            StorageConfiguration::default(),
+        )
+        .await?;
+        let hex_contract_id = format!("{:#x}", ContractId::from(&contract_id));
+
+        let expected_contract = provider
+            .get_contract(&contract_id)
+            .await?
+            .expect("could not find contract with specified id");
+
+        assert_eq!(hex_contract_id, expected_contract.id.to_string());
+
+        Ok(())
+    }
+}
+
+// TODO: update get_messages
+// pub async fn get_messages(&self, from: &Bech32Address) -> Result<Vec<Message>, ProviderError> {
+
+// TODO: make tests
+// pub async fn get_transactions
+// pub async fn get_transactions_by_owner
+// pub async fn get_block
+// pub async fn get_blocks

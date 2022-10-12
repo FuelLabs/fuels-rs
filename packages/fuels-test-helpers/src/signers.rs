@@ -179,7 +179,7 @@ mod tests {
         for asset in assets {
             for wallet in &wallets {
                 let coins = wallet
-                    .get_spendable_coins(asset.id, asset.num_coins * asset.coin_amount)
+                    .get_spendable_coins(&asset.id, asset.num_coins * asset.coin_amount)
                     .await?;
                 assert_eq!(coins.len() as u64, asset.num_coins);
 

@@ -98,7 +98,7 @@ impl Script {
         required_asset_amounts: &[(AssetId, u64)],
     ) -> Result<Vec<Coin>, Error> {
         stream::iter(required_asset_amounts)
-            .map(|(asset_id, amount)| wallet.get_spendable_coins(*asset_id, *amount))
+            .map(|(asset_id, amount)| wallet.get_spendable_coins(asset_id, *amount))
             .buffer_unordered(10)
             .collect::<Vec<_>>()
             .await

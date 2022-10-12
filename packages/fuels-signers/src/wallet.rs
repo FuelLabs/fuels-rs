@@ -148,7 +148,7 @@ impl Wallet {
         amount: u64,
         witness_index: u8,
     ) -> Result<Vec<Input>, Error> {
-        let spendable = self.get_spendable_coins(asset_id, amount).await?;
+        let spendable = self.get_spendable_coins(&asset_id, amount).await?;
         let mut inputs = vec![];
         for coin in spendable {
             let input_coin = Input::coin_signed(
@@ -186,7 +186,7 @@ impl Wallet {
     pub async fn get_coins(&self, asset_id: AssetId) -> Result<Vec<Coin>, Error> {
         Ok(self
             .get_provider()?
-            .get_coins(&self.address, asset_id)
+            .get_coins(&self.address, &asset_id)
             .await?)
     }
 
@@ -195,7 +195,7 @@ impl Wallet {
     /// of coins (UXTOs) is optimized to prevent dust accumulation.
     pub async fn get_spendable_coins(
         &self,
-        asset_id: AssetId,
+        asset_id: &AssetId,
         amount: u64,
     ) -> Result<Vec<Coin>, Error> {
         self.get_provider()?
@@ -209,7 +209,7 @@ impl Wallet {
     /// of the UTXOs.
     pub async fn get_asset_balance(&self, asset_id: &AssetId) -> Result<u64, Error> {
         self.get_provider()?
-            .get_asset_balance(&self.address, *asset_id)
+            .get_asset_balance(&self.address, asset_id)
             .await
             .map_err(Into::into)
     }
@@ -644,7 +644,7 @@ impl WalletUnlocked {
     ) -> Result<Vec<Receipt>, Error> {
         let spendable_predicate_coins = self
             .get_provider()?
-            .get_spendable_coins(predicate_address, asset_id, amount)
+            .get_spendable_coins(predicate_address, &asset_id, amount)
             .await?;
 
         // input amount is: amount < input_amount < 2*amount

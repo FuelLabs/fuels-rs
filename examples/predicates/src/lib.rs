@@ -78,7 +78,7 @@ mod tests {
             .await?;
 
         let predicate_balance = provider
-            .get_asset_balance(predicate.address(), asset_id)
+            .get_asset_balance(predicate.address(), &asset_id)
             .await?;
         assert_eq!(predicate_balance, amount_to_predicate);
         // ANCHOR_END: predicate_send
@@ -107,12 +107,12 @@ mod tests {
             .await?;
 
         let receiver_balance_after = provider
-            .get_asset_balance(receiver.address(), asset_id)
+            .get_asset_balance(receiver.address(), &asset_id)
             .await?;
         assert_eq!(amount_to_predicate, receiver_balance_after);
 
         let predicate_balance = provider
-            .get_asset_balance(predicate.address(), asset_id)
+            .get_asset_balance(predicate.address(), &asset_id)
             .await?;
         assert_eq!(predicate_balance, 0);
         // ANCHOR_END: predicate_spend
