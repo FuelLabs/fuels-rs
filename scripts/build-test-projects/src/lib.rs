@@ -87,6 +87,28 @@ impl ResultWriter {
         }
     }
 
+    fn write(&mut self, text: &str) -> Result<(), std::io::Error> {
+        write!(&mut self.stdout, "{}", text)
+    }
+
+    fn write_success(&mut self, text: &str) -> Result<(), std::io::Error> {
+        self.stdout.set_color(&self.green)?;
+        write!(&mut self.stdout, "{}", text)?;
+        self.stdout.reset()
+    }
+
+    fn write_success_bold(&mut self, text: &str) -> Result<(), std::io::Error> {
+        self.stdout.set_color(self.green.clone().set_bold(true))?;
+        write!(&mut self.stdout, "{}", text)?;
+        self.stdout.reset()
+    }
+
+    fn write_error(&mut self, text: &str) -> Result<(), std::io::Error> {
+        self.stdout.set_color(&self.red)?;
+        write!(&mut self.stdout, "{}", text)?;
+        self.stdout.reset()
+    }
+
     pub fn display_forc_info(&mut self) -> Result<(), std::io::Error> {
         let output = std::process::Command::new("forc")
             .args(["--version"])
@@ -95,11 +117,8 @@ impl ResultWriter {
         let version =
             String::from_utf8(output.stdout).expect("failed to parse forc --version output");
 
-        self.stdout.set_color(self.green.clone().set_bold(true))?;
-        write!(&mut self.stdout, "\nBuilding ")?;
-        self.stdout.reset()?;
-        writeln!(&mut self.stdout, "projects with: `{}`\n", version.trim())?;
-        Ok(())
+        self.write_success_bold("\nBuilding ")?;
+        self.write(&format!("projects with: `{}`\n\n", version.trim()))
     }
 
     pub fn display_result(
@@ -109,26 +128,20 @@ impl ResultWriter {
     ) -> Result<(), std::io::Error> {
         match build_result {
             BuildResult::Success(c) => {
-                write!(
-                    &mut self.stdout,
+                self.write(&format!(
                     "build {} ... ",
                     c.get_display_path(abs_path).display()
-                )?;
-                self.stdout.set_color(&self.green)?;
-                writeln!(&mut self.stdout, "ok")?;
+                ))?;
+                self.write_success("ok\n")
             }
             BuildResult::Failure(c) => {
-                write!(
-                    &mut self.stdout,
+                self.write(&format!(
                     "build {} ... ",
                     c.get_display_path(abs_path).display()
-                )?;
-                self.stdout.set_color(&self.red)?;
-                writeln!(&mut self.stdout, "FAILED")?;
+                ))?;
+                self.write_error("FAILED\n")
             }
         }
-        self.stdout.reset()?;
-        Ok(())
     }
 
     pub fn display_failed(
@@ -136,12 +149,12 @@ impl ResultWriter {
         abs_path: &PathBuf,
         failed: &[BuildResult],
     ) -> Result<(), std::io::Error> {
-        writeln!(&mut self.stdout, "\nfailures:\n")?;
+        self.write("\nfailures:\n\n")?;
         for f in failed {
             self.display_error(abs_path, f)?;
         }
 
-        writeln!(&mut self.stdout, "\nfailures:")?;
+        self.write("\nfailures:\n")?;
         for f in failed {
             self.display_failed_project(abs_path, f)?;
         }
@@ -154,12 +167,11 @@ impl ResultWriter {
         build_result: &BuildResult,
     ) -> Result<(), std::io::Error> {
         if let BuildResult::Failure(build_output) = build_result {
-            writeln!(
-                &mut self.stdout,
-                "---- {} ----",
-                build_output.get_display_path(abs_path).display()
-            )?;
-            writeln!(&mut self.stdout, "{}", build_output.stderr)?;
+            self.write(&format!(
+                "---- {} ----\n{}\n",
+                build_output.get_display_path(abs_path).display(),
+                build_output.stderr
+            ))?;
         }
         Ok(())
     }
@@ -170,11 +182,10 @@ impl ResultWriter {
         build_result: &BuildResult,
     ) -> Result<(), std::io::Error> {
         if let BuildResult::Failure(build_output) = build_result {
-            writeln!(
-                &mut self.stdout,
-                "    {}",
-                build_output.get_display_path(abs_path).display()
-            )?
+            self.write(&format!(
+                "    {}\n",
+                build_output.get_display_path(abs_path).display(),
+            ))?
         }
         Ok(())
     }
@@ -184,23 +195,18 @@ impl ResultWriter {
         num_succeeded: usize,
         num_failed: usize,
     ) -> Result<(), std::io::Error> {
-        write!(&mut self.stdout, "\nbuild result: ")?;
+        self.write("\nbuild result: ")?;
 
         if num_failed > 0 {
-            self.stdout.set_color(&self.red)?;
-            write!(&mut self.stdout, "FAILED")?;
+            self.write_error("FAILED")?;
         } else {
-            self.stdout.set_color(&self.green)?;
-            write!(&mut self.stdout, "ok")?;
+            self.write_success("ok")?;
         };
 
-        self.stdout.reset()?;
-        writeln!(
-            &mut self.stdout,
-            ". {} passed, {} failed",
+        self.write(&format!(
+            ". {} passed, {} failed\n",
             num_succeeded, num_failed
-        )?;
-        Ok(())
+        ))
     }
 }
 
