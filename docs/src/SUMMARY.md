@@ -53,6 +53,7 @@
   - [Debugging abigen errors](./debugging/abigen.md)
   - [Debugging contract call errors](./debugging/contract-calls.md)
   - [Debugging network errors](./debugging/network.md)
+  - [The Function selector](./debugging/function-selector.md)
 - [Testing](./testing/index.md)
   - [Running scripts](./testing/scripts.md)
   - [Tweaking the blockchain](./testing/chains.md)
