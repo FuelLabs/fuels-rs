@@ -1,7 +1,5 @@
 contract;
 
-use std::contract_id::ContractId;
-
 pub struct SomeStruct {
     par1: u32,
 }

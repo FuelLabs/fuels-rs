@@ -1,6 +1,6 @@
 contract;
 
-use std::{address::Address, context::balance_of, context::msg_amount, contract_id::ContractId, token::*};
+use std::{context::balance_of, context::msg_amount, token::*};
 
 abi TestFuelCoin {
     fn mint_coins(mint_amount: u64);
@@ -29,7 +29,6 @@ impl TestFuelCoin for Contract {
         transfer_to_address(coins, asset_id, recipient);
     }
     // ANCHOR_END: variable_outputs
-
     fn get_balance(target: ContractId, asset_id: ContractId) -> u64 {
         balance_of(target, asset_id)
     }

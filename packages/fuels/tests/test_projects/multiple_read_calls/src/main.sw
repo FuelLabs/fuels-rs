@@ -1,7 +1,6 @@
 contract;
 
-use std::storage::store;
-use std::storage::get;
+use std::storage::{get, store};
 
 abi MyContract {
     #[storage(write)]

@@ -1,12 +1,15 @@
 contract;
 
 use std::{
-    address::Address,
-    assert::assert,
-    context::call_frames::{contract_id, msg_asset_id},
+    context::call_frames::{
+        contract_id,
+        msg_asset_id,
+    },
     context::msg_amount,
-    contract_id::ContractId,
-    token::{mint_to_address, transfer_to_address}
+    token::{
+        mint_to_address,
+        transfer_to_address,
+    },
 };
 
 abi LiquidityPool {
@@ -29,8 +32,8 @@ impl LiquidityPool for Contract {
     }
 
     fn withdraw(recipient: Address) {
-       assert(contract_id() == msg_asset_id());
-       assert(0 < msg_amount());
+        assert(contract_id() == msg_asset_id());
+        assert(0 < msg_amount());
 
         // Amount to withdraw.
         let amount_to_transfer = msg_amount() / 2;

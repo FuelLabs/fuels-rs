@@ -1,10 +1,8 @@
 contract;
 
-use std::address::Address;
-
 struct User {
     address: Address,
-    weight: u64
+    weight: u64,
 }
 
 abi MyContract {
