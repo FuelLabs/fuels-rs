@@ -32,7 +32,7 @@ use fuels_types::{
 
 use crate::script::Script;
 
-pub const DEFAULT_AUTO_SETUP_ATTEMPTS: u64 = 10;
+pub const DEFAULT_TX_DEP_ESTIMATION_ATTEMPTS: u64 = 10;
 
 #[derive(Debug, Clone, Default)]
 pub struct CompiledContract {
@@ -549,7 +549,7 @@ where
         mut self,
         max_attempts: Option<u64>,
     ) -> Result<Self, Error> {
-        let attempts = max_attempts.unwrap_or(DEFAULT_AUTO_SETUP_ATTEMPTS);
+        let attempts = max_attempts.unwrap_or(DEFAULT_TX_DEP_ESTIMATION_ATTEMPTS);
 
         for _ in 0..attempts {
             let result = self.call_or_simulate(true).await;
@@ -682,7 +682,7 @@ impl MultiContractCallHandler {
         mut self,
         max_attempts: Option<u64>,
     ) -> Result<Self, Error> {
-        let attempts = max_attempts.unwrap_or(DEFAULT_AUTO_SETUP_ATTEMPTS);
+        let attempts = max_attempts.unwrap_or(DEFAULT_TX_DEP_ESTIMATION_ATTEMPTS);
 
         for _ in 0..attempts {
             let result = self.simulate_without_decode().await;
