@@ -1,10 +1,11 @@
 use super::utils::{
-    extract_components, extract_custom_type_name_from_abi_type_field, extract_generic_parameters,
-    impl_try_from, param_type_calls, Component,
+    extract_components, extract_generic_parameters, impl_try_from, param_type_calls, Component,
 };
+use crate::utils::ident;
 use core::result::Result;
 use core::result::Result::Ok;
 use fuels_types::errors::Error;
+use fuels_types::utils::custom_type_name;
 use fuels_types::TypeDeclaration;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
@@ -17,7 +18,7 @@ pub fn expand_custom_enum(
     type_decl: &TypeDeclaration,
     types: &HashMap<usize, TypeDeclaration>,
 ) -> Result<TokenStream, Error> {
-    let enum_ident = extract_custom_type_name_from_abi_type_field(&type_decl.type_field)?;
+    let enum_ident = ident(&custom_type_name(&type_decl.type_field)?);
 
     let components = extract_components(type_decl, types, false)?;
     let generics = extract_generic_parameters(type_decl, types)?;
@@ -146,7 +147,7 @@ fn enum_tokenizable_impl(
 
                     let variants = match Self::param_type() {
                         ParamType::Enum{variants, ..} => variants,
-                        other => panic!("Calling {}::param_type() must return a ParamType::Enum but instead it returned: {}", #enum_ident_stringified, other)
+                        other => panic!("Calling {}::param_type() must return a ParamType::Enum but instead it returned: {:?}", #enum_ident_stringified, other)
                     };
 
                     Token::Enum(Box::new((discriminant, token, variants)))

@@ -1,8 +1,8 @@
-use crate::{
-    pad_string, pad_u16, pad_u32, pad_u8, EnumSelector, EnumVariants, ParamType, StringToken, Token,
-};
+use crate::{pad_string, pad_u16, pad_u32, pad_u8, EnumSelector, ParamType, StringToken, Token};
+use fuels_types::enum_variants::EnumVariants;
 use fuels_types::{constants::WORD_SIZE, errors::CodecError};
 use itertools::Itertools;
+
 pub struct ABIEncoder;
 
 #[derive(Debug, Clone)]
@@ -238,10 +238,8 @@ impl ABIEncoder {
 mod tests {
     use super::*;
     use crate::utils::first_four_bytes_of_sha256_hash;
-    use fuels_types::{
-        errors::Error,
-        param_types::{EnumVariants, ParamType},
-    };
+    use fuels_types::enum_variants::EnumVariants;
+    use fuels_types::{errors::Error, param_types::ParamType};
     use itertools::chain;
     use sha2::{Digest, Sha256};
     use std::slice;

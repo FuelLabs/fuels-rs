@@ -1,13 +1,13 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::code_gen::bindings::ContractBindings;
-use crate::code_gen::custom_types::extract_custom_type_name_from_abi_type_field;
 use crate::source::Source;
 use crate::utils::ident;
 use crate::{try_from_bytes, Parameterize, Tokenizable};
 use fuel_tx::Receipt;
 use fuels_types::errors::Error;
 use fuels_types::param_types::ParamType;
+use fuels_types::utils::custom_type_name;
 use fuels_types::{ProgramABI, ResolvedLog, TypeDeclaration};
 use itertools::Itertools;
 use proc_macro2::{Ident, TokenStream};
@@ -95,7 +95,8 @@ impl Abigen {
                     use fuels_core::types::*;
                     use fuels_core::code_gen::function_selector::resolve_fn_selector;
                     use fuels_types::errors::Error as SDKError;
-                    use fuels_types::param_types::{ParamType, EnumVariants};
+                    use fuels_types::param_types::ParamType;
+                    use fuels_types::enum_variants::EnumVariants;
                 },
                 quote! {},
             )
@@ -114,7 +115,8 @@ impl Abigen {
                     use fuels::types::bech32::Bech32ContractId;
                     use fuels::types::ResolvedLog;
                     use fuels::types::errors::Error as SDKError;
-                    use fuels::types::param_types::{EnumVariants, ParamType};
+                    use fuels::types::param_types::ParamType;
+                    use fuels::types::enum_variants::EnumVariants;
                     use std::str::FromStr;
                     use std::collections::{HashSet, HashMap};
                 },
@@ -236,7 +238,7 @@ impl Abigen {
     // `T` is a native `high-level language` or Rust type if it matches exactly one of
     // the reserved strings, such as "Address", "ContractId", "Option" or "Result"
     pub fn is_native_type(type_field: &str) -> anyhow::Result<bool> {
-        let name = extract_custom_type_name_from_abi_type_field(type_field)?;
+        let name = custom_type_name(type_field)?;
 
         // "RawVec" is part of the Vec structure. Not used in the SDK and thus
         // not generated.
@@ -249,7 +251,6 @@ impl Abigen {
             "Vec",
             "RawVec",
         ]
-        .map(ident)
         .into_iter()
         .any(|e| e == name))
     }

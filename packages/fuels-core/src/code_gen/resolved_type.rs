@@ -1,9 +1,9 @@
-use crate::code_gen::custom_types::{
-    extract_custom_type_name_from_abi_type_field, extract_generic_name,
-};
-
-use crate::utils::safe_ident;
+use crate::utils::{ident, safe_ident};
 use fuels_types::errors::Error;
+use fuels_types::utils::custom_type_name;
+use fuels_types::utils::{
+    extract_array_len, extract_generic_name, extract_str_len, has_tuple_format,
+};
 use fuels_types::{TypeApplication, TypeDeclaration};
 use lazy_static::lazy_static;
 use proc_macro2::TokenStream;
@@ -110,17 +110,7 @@ fn to_generic(field: &str, _: &[ResolvedType], _: &[ResolvedType]) -> Option<Res
 }
 
 fn to_array(field: &str, components: &[ResolvedType], _: &[ResolvedType]) -> Option<ResolvedType> {
-    lazy_static! {
-        static ref RE: Regex = Regex::new(r"^\s*\[.+;\s*(\d+)\s*\]\s*$").unwrap();
-    }
-    let len = RE
-        .captures(field)
-        .map(|captures| captures[1].to_string())
-        .map(|length: String| {
-            length.parse::<usize>().unwrap_or_else(|_| {
-                panic!("Could not extract array length from {length}! Original field {field}")
-            })
-        })?;
+    let len = extract_array_len(field)?;
 
     let type_inside: TokenStream = match components {
         [single_type] => Ok(single_type.into()),
@@ -141,17 +131,7 @@ fn to_sized_ascii_string(
     _: &[ResolvedType],
     _: &[ResolvedType],
 ) -> Option<ResolvedType> {
-    lazy_static! {
-        static ref RE: Regex = Regex::new(r"^\s*str\s*\[\s*(\d+)\s*\]\s*$").unwrap();
-    }
-    let len = RE
-        .captures(field)
-        .map(|captures| captures[1].to_string())
-        .map(|length: String| {
-            length.parse::<usize>().unwrap_or_else(|_| {
-                panic!("Could not extract string length from {length}! Original field '{field}'")
-            })
-        })?;
+    let len = extract_str_len(field)?;
 
     let generic_params = vec![ResolvedType {
         type_name: quote! {#len},
@@ -165,7 +145,7 @@ fn to_sized_ascii_string(
 }
 
 fn to_tuple(field: &str, components: &[ResolvedType], _: &[ResolvedType]) -> Option<ResolvedType> {
-    if field.starts_with('(') && field.ends_with(')') {
+    if has_tuple_format(field) {
         let inner_types = components.iter().map(TokenStream::from);
 
         // it is important to leave a trailing comma because a tuple with
@@ -228,8 +208,9 @@ fn to_struct(
     _: &[ResolvedType],
     type_arguments: &[ResolvedType],
 ) -> Option<ResolvedType> {
-    extract_custom_type_name_from_abi_type_field(field_name)
+    custom_type_name(field_name)
         .ok()
+        .map(|type_name| ident(&type_name))
         .map(|type_name| ResolvedType {
             type_name: type_name.into_token_stream(),
             generic_params: type_arguments.to_vec(),
