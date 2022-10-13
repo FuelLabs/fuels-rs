@@ -377,9 +377,6 @@ impl ContractCall {
         }
     }
 
-    /// Appends `num` `Output::Message`s to the transaction.
-    /// Note that this is a builder method, i.e. use it as a chain:
-    /// `my_contract_instance.my_method(...).add_message_outputs(num).call()`.
     pub fn append_message_outputs(&mut self, num: u64) {
         let new_message_outputs = vec![
             Output::Message {
