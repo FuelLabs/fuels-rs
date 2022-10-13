@@ -403,7 +403,7 @@ mod tests {
         wallet.set_provider(provider.clone());
 
         let result = Contract::deploy(
-            "../fuels/tests/test_projects/contract_output_test/out/debug/contract_output_test.bin",
+            "../fuels/tests/types/contract_output_test/out/debug/contract_output_test.bin",
             &wallet,
             TxParameters::default(),
             StorageConfiguration::default(),

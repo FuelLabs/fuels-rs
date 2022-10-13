@@ -905,6 +905,7 @@ mod tests {
         assert_eq!(tokens, expected_tokens);
         Ok(())
     }
+
     #[test]
     fn tokenize_vec() -> Result<(), Error> {
         let param_type = ParamType::Vector(Box::new(ParamType::U8));

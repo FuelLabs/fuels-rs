@@ -23,7 +23,7 @@ mod tests {
     #[test]
     fn a_fn_selector_from_json_abi() -> anyhow::Result<()> {
         let json_abi_file =
-            "../../packages/fuels/tests/test_projects/contract_test/out/debug/contract_test-abi.json";
+            "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json";
         let abi_file_contents = std::fs::read_to_string(json_abi_file)?;
 
         // ANCHOR: example_fn_selector_json

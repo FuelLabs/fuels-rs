@@ -5,19 +5,19 @@ Whenever you log a value within a contract method, the resulting log entry is ad
 Consider the following contract method:
 
 ```rust,ignore
-{{#include ../../../packages/fuels/tests/test_projects/logged_types/src/main.sw:produce_logs}}
+{{#include ../../../packages/fuels/tests/logs/logged_types/src/main.sw:produce_logs}}
 ```
 
 You can access the logged values in Rust by calling `logs_with_type::<T>` from a contract instance, where `T` is the type of the logged variables you want to retrieve. The result will be a `Vec<T>`:
 
 ```rust,ignore
-{{#include ../../../packages/fuels/tests/harness.rs:produce_logs}}
+{{#include ../../../packages/fuels/tests/logs/mod.rs:produce_logs}}
 ```
 
 You can also get a vector of all the logged values as strings using `fetch_logs()`:
 
 ```rust, ignore
-{{#include ../../../packages/fuels/tests/harness.rs:fetch_logs}}
+{{#include ../../../packages/fuels/tests/logs/mod.rs:fetch_logs}}
 ```
 
 Due to possible performance hits, it is not recommended to use `fetch_logs()` outside of a debugging scenario.
