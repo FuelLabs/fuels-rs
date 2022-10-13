@@ -361,7 +361,7 @@ pub struct ContractCall {
 }
 
 impl ContractCall {
-    pub(crate) fn append_variable_outputs(&mut self, num: u64) {
+    pub fn append_variable_outputs(&mut self, num: u64) {
         let new_variable_outputs = vec![
             Output::Variable {
                 amount: 0,
@@ -377,7 +377,10 @@ impl ContractCall {
         }
     }
 
-    pub(crate) fn append_message_outputs(&mut self, num: u64) {
+    /// Appends `num` `Output::Message`s to the transaction.
+    /// Note that this is a builder method, i.e. use it as a chain:
+    /// `my_contract_instance.my_method(...).add_message_outputs(num).call()`.
+    pub fn append_message_outputs(&mut self, num: u64) {
         let new_message_outputs = vec![
             Output::Message {
                 recipient: Address::zeroed(),
@@ -542,10 +545,7 @@ where
 
     /// Simulates the call and attempts to resolve missing tx dependencies.
     /// Forwards the received error if it cannot be fixed.
-    pub async fn estimate_tx_dependencies(
-        mut self,
-        max_attempts: Option<u64>,
-    ) -> Result<Self, Error> {
+    pub async fn estimate_tx_dependencies(mut self, max_attempts: Option<u64>) -> Result<Self, Error> {
         let attempts = max_attempts.unwrap_or(DEFAULT_AUTO_SETUP_ATTEMPTS);
 
         for _ in 0..attempts {
@@ -698,11 +698,7 @@ impl MultiContractCallHandler {
             }
         }
 
-        // confirm if successful or propagate error
-        match self.simulate_without_decode().await {
-            Ok(_) => Ok(self),
-            Err(e) => Err(e),
-        }
+        Ok(self)
     }
 
     /// Get a contract's estimated cost
