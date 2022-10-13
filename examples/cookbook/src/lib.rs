@@ -10,7 +10,7 @@ mod tests {
         // ANCHOR: liquidity_abigen
         abigen!(
             MyContract,
-            "packages/fuels/tests/test_projects/liquidity_pool/out/debug/liquidity_pool-abi.json"
+            "packages/fuels/tests/contracts/liquidity_pool/out/debug/liquidity_pool-abi.json"
         );
         // ANCHOR_END: liquidity_abigen
 
@@ -36,7 +36,7 @@ mod tests {
 
         // ANCHOR: liquidity_deploy
         let contract_id = Contract::deploy(
-            "../../packages/fuels/tests/test_projects/liquidity_pool/out/debug/liquidity_pool.bin",
+            "../../packages/fuels/tests/contracts/liquidity_pool/out/debug/liquidity_pool.bin",
             wallet,
             TxParameters::default(),
             StorageConfiguration::default(),

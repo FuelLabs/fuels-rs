@@ -5,5 +5,5 @@ In Fuel, a type called `b256` represents hashes and holds a 256-bit value. The R
 Here's an example:
 
 ```rust,ignore
-{{#include ../../../packages/fuels/tests/harness.rs:256_arg}}
+{{#include ../../../packages/fuels/tests/bindings/mod.rs:256_arg}}
 ```

@@ -61,5 +61,7 @@
   - [Custom consensus parameters](./cookbook/custom-chain.md)
   - [Deposit and Withdraw](./cookbook/deposit-and-withdraw.md)
   - [Transfer all assets](./cookbook/transfer-all-assets.md)
+- [Contributing](./contributing/contributing.md)
+  - [Integration tests structure](./contributing/tests-structure.md)
 - [Command Line Interfaces](./cli/index.md)
   - [`fuels-abi-cli`](./cli/fuels-abi-cli.md)

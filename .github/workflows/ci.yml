@@ -56,13 +56,15 @@ jobs:
         with:
           retention-days: 2
           name: sway-examples
-          # cache only the sway build artifacts, skip all test_project src files
+          # cache only the sway build artifacts, skip all src files
           path: |
-            packages/fuels/tests/test_projects
-            !packages/fuels/tests/test_projects/**/*.sw
-            !packages/fuels/tests/test_projects/**/Forc.toml
-            !packages/fuels/tests/test_projects/**/Forc.lock
-            !packages/fuels/tests/test_projects/**/.gitignore
+            packages/fuels/tests
+            !packages/fuels/tests/*.rs
+            !packages/fuels/tests/**/*.rs
+            !packages/fuels/tests/**/*.sw
+            !packages/fuels/tests/**/Forc.toml
+            !packages/fuels/tests/**/Forc.lock
+            !packages/fuels/tests/.gitignore
 
   get-workspace-members:
     runs-on: ubuntu-latest
@@ -167,7 +169,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: sway-examples
-          path: packages/fuels/tests/test_projects/
+          path: packages/fuels/tests/
 
       - name: Cargo (workspace-level)
         if: ${{ !matrix.package }}
