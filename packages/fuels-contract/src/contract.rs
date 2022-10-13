@@ -361,7 +361,7 @@ pub struct ContractCall {
 }
 
 impl ContractCall {
-    pub fn append_variable_outputs(&mut self, num: u64) {
+    pub(crate) fn append_variable_outputs(&mut self, num: u64) {
         let new_variable_outputs = vec![
             Output::Variable {
                 amount: 0,
@@ -377,10 +377,7 @@ impl ContractCall {
         }
     }
 
-    /// Appends `num` `Output::Message`s to the transaction.
-    /// Note that this is a builder method, i.e. use it as a chain:
-    /// `my_contract_instance.my_method(...).add_message_outputs(num).call()`.
-    pub fn append_message_outputs(&mut self, num: u64) {
+    pub(crate) fn append_message_outputs(&mut self, num: u64) {
         let new_message_outputs = vec![
             Output::Message {
                 recipient: Address::zeroed(),
@@ -434,6 +431,12 @@ impl ContractCall {
         let decoded_value = ABIDecoder::decode_single(&self.output_param, &encoded_value)?;
         Ok(decoded_value)
     }
+}
+
+fn is_missing_output_variables(receipts: &[Receipt]) -> bool {
+    receipts.iter().any(
+        |r| matches!(r, Receipt::Revert { ra, .. } if *ra == FAILED_TRANSFER_TO_ADDRESS_SIGNAL),
+    )
 }
 
 #[derive(Debug)]
@@ -527,34 +530,6 @@ where
         .await
     }
 
-    /// Simulates calls and attempts to set output variables based on the received error.
-    /// Forwards the received error if it cannot be fixed.
-    pub async fn set_estimated_tx_dependencies(
-        mut self,
-        max_attempts: Option<u64>,
-    ) -> Result<Self, Error> {
-        let attempts = max_attempts.unwrap_or(DEFAULT_AUTO_SETUP_ATTEMPTS);
-
-        for _ in 0..attempts {
-            let response = self.call_or_simulate(true).await;
-
-            match response {
-                Err(Error::RevertTransactionError(_, receipts))
-                    if receipts
-                        .iter()
-                        .any(|r|
-                            matches!(r, Receipt::Revert { ra, .. } if *ra == FAILED_TRANSFER_TO_ADDRESS_SIGNAL)) =>
-                {
-                    self = self.append_variable_outputs(1);
-                }
-                Err(e) => return Err(e),
-                _ => return Ok(self),
-            }
-        }
-
-        Ok(self)
-    }
-
     /// Call a contract's method on the node, in a state-modifying manner.
     pub async fn call(self) -> Result<CallResponse<D>, Error> {
         Self::call_or_simulate(&self, false).await
@@ -565,6 +540,32 @@ where
     /// It is the same as the `call` method because the API is more user-friendly this way.
     pub async fn simulate(self) -> Result<CallResponse<D>, Error> {
         Self::call_or_simulate(&self, true).await
+    }
+
+    /// Simulates the call and attempts to resolve missing tx dependencies.
+    /// Forwards the received error if it cannot be fixed.
+    pub async fn estimate_tx_dependencies(mut self, max_attempts: Option<u64>) -> Result<Self, Error> {
+        let attempts = max_attempts.unwrap_or(DEFAULT_AUTO_SETUP_ATTEMPTS);
+
+        for _ in 0..attempts {
+            let result = self.call_or_simulate(true).await;
+
+            match result {
+                Err(Error::RevertTransactionError(_, receipts))
+                    if is_missing_output_variables(&receipts) =>
+                {
+                    self = self.append_variable_outputs(1);
+                }
+                Err(e) => return Err(e),
+                _ => return Ok(self),
+            }
+        }
+
+        // confirm if successful or propagate error
+        match self.call_or_simulate(true).await {
+            Ok(_) => Ok(self),
+            Err(e) => Err(e),
+        }
     }
 
     /// Get a contract's estimated cost
@@ -661,8 +662,8 @@ impl MultiContractCallHandler {
         self.get_response(receipts)
     }
 
-    /// Simulates a call without needing to specify the return type
-    async fn simulate_without_response(&self) -> Result<(), Error> {
+    /// Simulates a call without needing to resolve the generic for the return type
+    async fn simulate_without_decode(&self) -> Result<(), Error> {
         let script = self.get_call_execution_script().await?;
         let provider = self.wallet.get_provider()?;
 
@@ -671,31 +672,36 @@ impl MultiContractCallHandler {
         Ok(())
     }
 
-    pub async fn set_estimated_tx_dependencies(
+    /// Simulates the call and attempts to resolve missing tx dependencies.
+    /// Forwards the received error if it cannot be fixed.
+    pub async fn estimate_tx_dependencies(
         mut self,
         max_attempts: Option<u64>,
     ) -> Result<Self, Error> {
         let attempts = max_attempts.unwrap_or(DEFAULT_AUTO_SETUP_ATTEMPTS);
 
         for _ in 0..attempts {
-            let result = self.simulate_without_response().await;
+            let result = self.simulate_without_decode().await;
 
             match result {
                 Err(Error::RevertTransactionError(_, receipts))
-                    if receipts
-                        .iter()
-                        .any(|r|
-                            matches!(r, Receipt::Revert { ra, .. } if *ra == FAILED_TRANSFER_TO_ADDRESS_SIGNAL)) =>
+                    if is_missing_output_variables(&receipts) =>
                 {
-                    // We can add to any ContractCall, they all combine into a single tx later
-                    self.contract_calls.iter_mut().take(1).for_each(|call| call.append_variable_outputs(1));
+                    self.contract_calls
+                        .iter_mut()
+                        .take(1)
+                        .for_each(|call| call.append_variable_outputs(1));
                 }
                 Err(e) => return Err(e),
                 _ => return Ok(self),
             }
         }
 
-        Ok(self)
+        // confirm if successful or propagate error
+        match self.simulate_without_decode().await {
+            Ok(_) => Ok(self),
+            Err(e) => Err(e),
+        }
     }
 
     /// Get a contract's estimated cost
