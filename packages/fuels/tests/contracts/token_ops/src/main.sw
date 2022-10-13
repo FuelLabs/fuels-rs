@@ -16,7 +16,7 @@ impl TestFuelCoin for Contract {
     fn mint_coins(mint_amount: u64) {
         mint(mint_amount);
     }
-
+    
     fn mint_to_addresses(mint_amount: u64, addresses: [Address; 3]) {
         let mut counter = 0;
         while counter < 3 {
