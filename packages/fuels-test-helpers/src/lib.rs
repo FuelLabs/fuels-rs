@@ -39,6 +39,7 @@ use rand::Fill;
 pub mod node;
 
 mod chains;
+use fuels_core::tx;
 pub mod script;
 #[cfg(feature = "fuels-signers")]
 mod signers;
@@ -176,11 +177,11 @@ pub async fn setup_test_client(
         .map(|message| MessageConfig {
             sender: message.sender,
             recipient: message.recipient,
-            owner: message.owner,
+            // owner: message.owner,
             nonce: message.nonce,
             amount: message.amount,
             data: message.data,
-            da_height: message.da_height,
+            da_height: fuel_core::model::DaBlockHeight(message.da_height),
         })
         .collect();
 
@@ -232,7 +233,7 @@ pub async fn setup_test_client(
         },
         consensus_parameters_config,
     )
-    .await;
+        .await;
 
     let client = FuelClient::from(bound_address);
     server_health_check(&client).await;
@@ -408,7 +409,7 @@ mod tests {
             TxParameters::default(),
             StorageConfiguration::default(),
         )
-        .await;
+            .await;
 
         let expected = result.expect_err("should fail");
 

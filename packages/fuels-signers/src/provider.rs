@@ -1,6 +1,8 @@
 use std::io;
 
 #[cfg(feature = "fuel-core")]
+use fuel_core::schema::resource::Resource;
+#[cfg(feature = "fuel-core")]
 use fuel_core::service::{Config, FuelService};
 
 use fuel_gql_client::{
@@ -16,6 +18,10 @@ use fuel_gql_client::{
     fuel_types::AssetId,
 };
 use fuels_core::constants::{DEFAULT_GAS_ESTIMATION_TOLERANCE, MAX_GAS_PER_TX};
+
+use fuel_gql_client::client::schema::coin::CoinStatus;
+use fuel_gql_client::client::schema::U64;
+
 use std::collections::HashMap;
 use thiserror::Error;
 
@@ -205,7 +211,7 @@ impl Provider {
     /// Get some spendable coins of asset `asset_id` for address `from` that add up at least to
     /// amount `amount`. The returned coins (UTXOs) are actual coins that can be spent. The number
     /// of coins (UXTOs) is optimized to prevent dust accumulation.
-    pub async fn get_spendable_coins(
+    pub async fn get_spendable_resources(
         &self,
         from: &Bech32Address,
         asset_id: AssetId,
@@ -213,14 +219,23 @@ impl Provider {
     ) -> Result<Vec<Coin>, ProviderError> {
         let res = self
             .client
-            .coins_to_spend(
+            .resources_to_spend(
                 &from.hash().to_string(),
-                vec![(format!("{:#x}", asset_id).as_str(), amount)],
-                None,
+                vec![(format!("{:#x}", asset_id).as_str(), amount, None)],
                 None,
             )
             .await?;
-        Ok(res)
+
+        let vec = vec![Coin {
+            amount: U64(0),
+            block_created: U64(0),
+            asset_id: Default::default(),
+            utxo_id: Default::default(),
+            maturity: U64(0),
+            owner: Default::default(),
+            status: CoinStatus::Unspent,
+        }];
+        Ok(vec)
     }
 
     /// Get the balance of all spendable coins `asset_id` for address `address`. This is different

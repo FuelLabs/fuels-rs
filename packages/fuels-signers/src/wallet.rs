@@ -199,7 +199,7 @@ impl Wallet {
         amount: u64,
     ) -> Result<Vec<Coin>, Error> {
         self.get_provider()?
-            .get_spendable_coins(&self.address, asset_id, amount)
+            .get_spendable_resources(&self.address, asset_id, amount)
             .await
             .map_err(Into::into)
     }
@@ -241,7 +241,7 @@ impl Wallet {
                     &message.sender.clone().into(),
                     &message.recipient.clone().into(),
                     message.nonce.into(),
-                    &message.owner.clone().into(),
+                    // &message.owner.clone().into(),
                     message.amount.0,
                     &data,
                 );
@@ -251,7 +251,7 @@ impl Wallet {
                     message.recipient.into(),
                     message.amount.0,
                     0,
-                    message.owner.into(),
+                    // message.owner.into(),
                     witness_index,
                     data,
                 )
@@ -309,9 +309,9 @@ impl Wallet {
             amount.to_be_bytes().to_vec(),
             asset_id.to_vec(),
         ]
-        .into_iter()
-        .flatten()
-        .collect();
+            .into_iter()
+            .flatten()
+            .collect();
 
         // This script loads:
         //  - a pointer to the contract id,
@@ -327,8 +327,8 @@ impl Wallet {
             Opcode::TR(0x10, 0x12, 0x13),
             Opcode::RET(REG_ONE),
         ]
-        .into_iter()
-        .collect();
+            .into_iter()
+            .collect();
 
         Transaction::Script {
             gas_price: params.gas_price,
@@ -403,10 +403,10 @@ impl WalletUnlocked {
         password: S,
         provider: Option<Provider>,
     ) -> Result<(Self, String), WalletError>
-    where
-        P: AsRef<Path>,
-        R: Rng + CryptoRng + rand_core::CryptoRng,
-        S: AsRef<[u8]>,
+        where
+            P: AsRef<Path>,
+            R: Rng + CryptoRng + rand_core::CryptoRng,
+            S: AsRef<[u8]>,
     {
         let (secret, uuid) = eth_keystore::new(dir, rng, password)?;
 
@@ -420,9 +420,9 @@ impl WalletUnlocked {
     /// Encrypts the wallet's private key with the given password and saves it
     /// to the given path.
     pub fn encrypt<P, S>(&self, dir: P, password: S) -> Result<String, WalletError>
-    where
-        P: AsRef<Path>,
-        S: AsRef<[u8]>,
+        where
+            P: AsRef<Path>,
+            S: AsRef<[u8]>,
     {
         let mut rng = rand::thread_rng();
 
@@ -440,9 +440,9 @@ impl WalletUnlocked {
         password: S,
         provider: Option<Provider>,
     ) -> Result<Self, WalletError>
-    where
-        P: AsRef<Path>,
-        S: AsRef<[u8]>,
+        where
+            P: AsRef<Path>,
+            S: AsRef<[u8]>,
     {
         let secret = eth_keystore::decrypt_key(keypath, password)?;
         let secret_key = unsafe { SecretKey::from_slice_unchecked(&secret) };
@@ -646,7 +646,7 @@ impl WalletUnlocked {
     ) -> Result<Vec<Receipt>, Error> {
         let spendable_predicate_coins = self
             .get_provider()?
-            .get_spendable_coins(predicate_address, asset_id, amount)
+            .get_spendable_resources(predicate_address, asset_id, amount)
             .await?;
 
         // input amount is: amount < input_amount < 2*amount
@@ -704,7 +704,7 @@ impl WalletUnlocked {
             predicate_data,
             tx_parameters,
         )
-        .await
+            .await
     }
 
     /// Unconditionally transfers `balance` of type `asset_id` to
@@ -1082,8 +1082,8 @@ mod tests {
             0,
             0,
         ))
-        .take(3)
-        .collect::<Vec<_>>();
+            .take(3)
+            .collect::<Vec<_>>();
         let expected_outputs = vec![
             Output::coin(Address::zeroed(), base_amount, BASE_ASSET_ID),
             Output::change(wallet.address().into(), 0, BASE_ASSET_ID),
