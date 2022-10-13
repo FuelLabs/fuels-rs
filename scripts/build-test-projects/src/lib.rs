@@ -127,17 +127,17 @@ impl ResultWriter {
         build_result: &BuildResult,
     ) -> Result<(), std::io::Error> {
         match build_result {
-            BuildResult::Success(c) => {
+            BuildResult::Success(build_output) => {
                 self.write(&format!(
                     "build {} ... ",
-                    c.get_display_path(abs_path).display()
+                    build_output.get_display_path(abs_path).display()
                 ))?;
                 self.write_success("ok\n")
             }
-            BuildResult::Failure(c) => {
+            BuildResult::Failure(build_output) => {
                 self.write(&format!(
                     "build {} ... ",
-                    c.get_display_path(abs_path).display()
+                    build_output.get_display_path(abs_path).display()
                 ))?;
                 self.write_error("FAILED\n")
             }
