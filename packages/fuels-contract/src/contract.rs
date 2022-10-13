@@ -544,7 +544,10 @@ where
 
     /// Simulates the call and attempts to resolve missing tx dependencies.
     /// Forwards the received error if it cannot be fixed.
-    pub async fn estimate_tx_dependencies(mut self, max_attempts: Option<u64>) -> Result<Self, Error> {
+    pub async fn estimate_tx_dependencies(
+        mut self,
+        max_attempts: Option<u64>,
+    ) -> Result<Self, Error> {
         let attempts = max_attempts.unwrap_or(DEFAULT_AUTO_SETUP_ATTEMPTS);
 
         for _ in 0..attempts {
