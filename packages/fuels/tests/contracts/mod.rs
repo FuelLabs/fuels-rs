@@ -445,7 +445,7 @@ async fn setup_output_variable_estimation_test(
     let wallets = launch_custom_provider_and_get_wallets(wallet_config, None).await;
 
     let contract_id = Contract::deploy(
-        "tests/test_projects/token_ops/out/debug/token_ops.bin",
+        "tests/contracts/token_ops/out/debug/token_ops.bin",
         &wallets[0],
         TxParameters::default(),
         StorageConfiguration::default(),
@@ -467,7 +467,7 @@ async fn setup_output_variable_estimation_test(
 async fn test_output_variable_estimation() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/token_ops/out/debug/token_ops-abi.json"
+        "packages/fuels/tests/contracts/token_ops/out/debug/token_ops-abi.json"
     );
 
     let (wallets, addresses, mint_asset_id, contract_id) =
@@ -519,7 +519,7 @@ async fn test_output_variable_estimation() -> Result<(), Error> {
 async fn test_output_variable_estimation_default_attempts() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/token_ops/out/debug/token_ops-abi.json"
+        "packages/fuels/tests/contracts/token_ops/out/debug/token_ops-abi.json"
     );
 
     let (wallets, addresses, mint_asset_id, contract_id) =
@@ -548,7 +548,7 @@ async fn test_output_variable_estimation_default_attempts() -> Result<(), Error>
 async fn test_output_variable_estimation_multicall() -> Result<(), Error> {
     abigen!(
         MyContract,
-        "packages/fuels/tests/test_projects/token_ops/out/debug/token_ops-abi.json"
+        "packages/fuels/tests/contracts/token_ops/out/debug/token_ops-abi.json"
     );
 
     let (wallets, addresses, mint_asset_id, contract_id) =
