@@ -24,7 +24,7 @@ pub fn discover_projects(path: &Path) -> Vec<PathBuf> {
 pub fn build_recursively(path: &Path) -> impl Iterator<Item = BuildResult> {
     discover_projects(path).into_iter().map(|path| {
         let output = std::process::Command::new("forc")
-            .args(["build", "--generate-logged-types", "--path"])
+            .args(["build", "--path"])
             .arg(&path)
             .output()
             .expect("failed to run `forc build` for example project");
