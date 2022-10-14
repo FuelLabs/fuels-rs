@@ -86,6 +86,12 @@ mod tests {
             Bech32Address::from_str(string).expect("failed to create Bech32 address from string");
         assert_eq!([0u8; 32], *bech32_address.hash());
 
+        // From a hex string.
+        let string = "0x0000000000000000000000000000000000000000000000000000000000000000";
+        let bech32_address =
+            Bech32Address::from_str(string).expect("failed to create Bech32 address from string");
+        assert_eq!([0u8; 32], *bech32_address.hash());
+
         // From Address
         let plain_address = Address::new([0u8; 32]);
         let bech32_address = Bech32Address::from(plain_address);
