@@ -182,10 +182,10 @@ development.</p>
 </code></pre>
 <h2 id="importing-the-fuel-rust-sdk"><a class="header" href="#importing-the-fuel-rust-sdk">Importing the Fuel Rust SDK</a></h2>
 <p>Add these dependencies on your <code>Cargo.toml</code>:</p>
-<pre><code class="language-toml">fuels = &quot;0.20&quot;
+<pre><code class="language-toml">fuels = &quot;0.26&quot;
 </code></pre>
 <blockquote>
-<p><strong>Note</strong> We're using version <code>0.20</code> of the SDK, which is the latest version at the time of this writing.</p>
+<p><strong>Note</strong> We're using version <code>0.26</code> of the SDK, which is the latest version at the time of this writing.</p>
 </blockquote>
 <p>And then, in your Rust file that's going to make use of the SDK:</p>
 <pre><code class="language-rust ignore">use fuels::prelude::*;
@@ -286,7 +286,7 @@ development.</p>
 <h1 id="features"><a class="header" href="#features">Features</a></h1>
 <h2 id="fuel-core-lib"><a class="header" href="#fuel-core-lib">Fuel-core lib</a></h2>
 <p>The <code>fuel-core-lib</code> is a feature defined in the <code>fuels</code> library, allowing us to run a <code>fuel-core</code> node without installing the <code>fuel-core</code> binary on the local machine. Using the <code>fuel-core-lib</code> feature flag entails downloading all the dependencies needed to run the fuel-core node.</p>
-<pre><code class="language-rust ignore">fuels = { version = &quot;0.25.1&quot;, features = [&quot;fuel-core-lib&quot;] }
+<pre><code class="language-rust ignore">fuels = { version = &quot;0.26.0&quot;, features = [&quot;fuel-core-lib&quot;] }
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="interacting-with-the-blockchain"><a class="header" href="#interacting-with-the-blockchain">Interacting with the blockchain</a></h1>
 <p>Once you have set up a provider, you're ready to interact with the Fuel blockchain. Here are a few examples of what you can do with a provider; for a more in-depth overview of the API, check the <a href="https://docs.rs/fuels/latest/fuels/signers/provider/struct.Provider.html">official provider API documentation</a>.</p>
