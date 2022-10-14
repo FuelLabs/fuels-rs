@@ -35,10 +35,11 @@ macro_rules! bech32type {
                 &self.hrp
             }
 
-            fn try_from_bech32_str(s: &str) -> Result<Self, Error> {
-                let (hrp, pubkey_hash_base32, _) = bech32::decode(s)?;
-
-                let pubkey_hash: [u8; Bytes32::LEN] = Vec::<u8>::from_base32(&pubkey_hash_base32)?
+            fn try_from_decoded_bech32(
+                hrp: String,
+                pubkey_hash_base32: &[bech32::u5],
+            ) -> Result<Self, Error> {
+                let pubkey_hash: [u8; Bytes32::LEN] = Vec::<u8>::from_base32(pubkey_hash_base32)?
                     .as_slice()
                     .try_into()?;
 
@@ -62,10 +63,14 @@ macro_rules! bech32type {
             type Err = Error;
 
             fn from_str(s: &str) -> Result<Self, Self::Err> {
-                let result = Self::try_from_bech32_str(s);
+                let decode_result = bech32::decode(s);
 
-                match result {
-                    Ok(r) => Ok(r),
+                match decode_result {
+                    Ok((hrp, pubkey_hash_base32, _)) => {
+                        Self::try_from_decoded_bech32(hrp, &pubkey_hash_base32)
+                    }
+                    Err(e) if matches!(e, bech32::Error::InvalidChecksum) => Err(e.into()),
+                    // only try decoding as hex string if failure wasn't due to checksum
                     Err(_) => Self::try_from_hex_str(s),
                 }
             }
@@ -212,6 +217,27 @@ mod test {
             for i in 0..3 {
                 let bech32_contract_id = &Bech32Address::from_str(hex_encodings[i]).unwrap();
                 assert_eq!(*bech32_contract_id.hash(), pubkey_hashes[i]);
+            }
+        }
+    }
+
+    #[test]
+    fn test_from_invalid_bech32_string() {
+        {
+            let expected: Error = bech32::Error::InvalidChecksum.into();
+            let invalid_bech32_with_hex_chars =
+                "fadeaffe1dfed7c25adadadd715e3f309ecf07dca4e3a6d9de9cdadcddac50d7f";
+
+            {
+                let result = &Bech32ContractId::from_str(invalid_bech32_with_hex_chars)
+                    .expect_err("should error");
+                assert_eq!(result.to_string(), expected.to_string());
+            }
+
+            {
+                let result = &Bech32Address::from_str(invalid_bech32_with_hex_chars)
+                    .expect_err("should error");
+                assert_eq!(result.to_string(), expected.to_string());
             }
         }
     }
