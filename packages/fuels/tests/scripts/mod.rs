@@ -8,6 +8,7 @@ use fuel_gql_client::{
 use fuels::prelude::*;
 use fuels_contract::script::ScriptBuilder;
 use fuels_core::tx::Bytes32;
+use fuels_test_helpers::script::run_compiled_script;
 
 #[tokio::test]
 async fn test_transaction_script_workflow() -> Result<(), Error> {

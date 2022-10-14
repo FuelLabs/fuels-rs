@@ -42,6 +42,7 @@ impl Abigen {
 
         let json_abi_str = source.get().expect("failed to parse JSON ABI from string");
         let parsed_abi: ProgramABI = serde_json::from_str(&json_abi_str)?;
+
         Ok(Self {
             types: Abigen::get_types(&parsed_abi),
             abi: parsed_abi,
@@ -212,7 +213,23 @@ impl Abigen {
             self.contract_name.to_string().to_lowercase()
         ));
 
-        let includes = self.includes()?;
+        let includes = quote! {
+            use fuels::contract::contract::{Contract, ContractCallHandler};
+             use fuels::core::{EnumSelector, StringToken, Parameterize, Tokenizable, Token,
+                              Identity, try_from_bytes};
+            use fuels::core::code_gen::{extract_and_parse_logs, extract_log_ids_and_data};
+            use fuels::core::abi_decoder::ABIDecoder;
+            use fuels::core::code_gen::function_selector::resolve_fn_selector;
+            use fuels::core::types::*;
+            use fuels::signers::WalletUnlocked;
+            use fuels::tx::{ContractId, Address, Receipt};
+            use fuels::types::bech32::Bech32ContractId;
+            use fuels::types::ResolvedLog;
+            use fuels::types::errors::Error as SDKError;
+            use fuels::types::param_types::{EnumVariants, ParamType};
+            use std::str::FromStr;
+            use std::collections::{HashSet, HashMap};
+        };
 
         let argument_encoding_function = self.functions()?;
         let code = quote! {
@@ -247,37 +264,6 @@ impl Abigen {
 
             }
         })
-    }
-
-    pub fn includes(&self) -> Result<TokenStream, Error> {
-        let includes = match self.no_std {
-            true => quote! {
-                use alloc::{vec, vec::Vec};
-                use fuels_core::{EnumSelector, Parameterize, Tokenizable, Token, Identity, try_from_bytes};
-                use fuels_core::types::*;
-                use fuels_core::code_gen::function_selector::resolve_fn_selector;
-                use fuels_types::errors::Error as SDKError;
-                use fuels_types::param_types::{ParamType, EnumVariants};
-            },
-            false => quote! {
-                use fuels::contract::contract::{Contract, ContractCallHandler};
-                 use fuels::core::{EnumSelector, StringToken, Parameterize, Tokenizable, Token,
-                                  Identity, try_from_bytes};
-                use fuels::core::code_gen::{extract_and_parse_logs, extract_log_ids_and_data};
-                use fuels::core::abi_decoder::ABIDecoder;
-                use fuels::core::code_gen::function_selector::resolve_fn_selector;
-                use fuels::core::types::*;
-                use fuels::signers::WalletUnlocked;
-                use fuels::tx::{ContractId, Address, Receipt};
-                use fuels::types::bech32::Bech32ContractId;
-                use fuels::types::ResolvedLog;
-                use fuels::types::errors::Error as SDKError;
-                use fuels::types::param_types::{EnumVariants, ParamType};
-                use std::str::FromStr;
-                use std::collections::{HashSet, HashMap};
-            },
-        };
-        Ok(includes)
     }
 
     pub fn functions(&self) -> Result<TokenStream, Error> {

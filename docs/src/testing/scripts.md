@@ -12,7 +12,7 @@
 
 # Running scripts with arguments
 
-You can also run the scripts with arguments. For this, the setup is a little more heavy, because you have to use the `script_abigen!` macro, which is not unlike the `abigen!` macro seen [previously](../contracts/the-abigen-macro.md).
+You can also run the scripts with arguments. For this, the setup is a little heavier because you have to use the `script_abigen!` macro, which is not unlike the `abigen!` macro seen [previously](../contracts/the-abigen-macro.md).
 
 ````rust,ignore
 {{#include ../../../packages/fuels/tests/harness.rs:script_with_arguments}}
