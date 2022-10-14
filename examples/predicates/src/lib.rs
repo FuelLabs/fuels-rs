@@ -57,7 +57,7 @@ mod tests {
         // ANCHOR: predicate_load
         // ANCHOR: predicate_load_from
         let predicate = Predicate::load_from(
-            "../../packages/fuels/tests/test_projects/predicate_signatures/out/debug/predicate_signatures.bin",
+            "../../packages/fuels/tests/predicates/predicate_signatures/out/debug/predicate_signatures.bin",
         )?;
 
         let predicate_code = predicate.code();

@@ -11,3 +11,12 @@ Cargo.lock
 
 # Don't add the generated MDBook artifacts
 docs/book/
+
+# Don't add lock files in the fuels tests directory.
+packages/fuels/tests/**/**/Forc.lock
+
+# Don't add out/ files from test Sway projects.
+packages/fuels/tests/**/**/out/
+
+# Don't add target/ files from test Sway projects.
+packages/fuels/tests/**/**/target/

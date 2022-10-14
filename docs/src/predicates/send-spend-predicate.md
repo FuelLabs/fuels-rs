@@ -3,7 +3,7 @@
 Let's consider the following predicate example:
 
 ```rust,ignore
-{{#include ../../../packages/fuels/tests/test_projects/predicate_signatures/src/main.sw}}
+{{#include ../../../packages/fuels/tests/predicates/predicate_signatures/src/main.sw}}
 ```
 
 This predicate accepts three signatures and matches them to three predefined public keys. The `ec_recover_address` function is used to recover the public key from the signatures. If two of three extracted public keys match the predefined public keys, the funds can be spent. Note that the signature order has to match the order of the predefined public keys.

@@ -19,6 +19,7 @@ impl TestContract for Contract {
             false
         }
     }
+
     fn return_my_string(value: str[4]) -> str[4] {
         value
     }
