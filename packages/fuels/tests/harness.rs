@@ -4128,11 +4128,8 @@ async fn test_vector() -> Result<(), Error> {
     Ok(())
 }
 
-
 #[tokio::test]
 async fn test_contract_set_estimation() -> Result<(), Error> {
-    // Tests a contract call that calls another contract (FooCaller calls FooContract underneath)
-    // Load and deploy the first compiled contract
     setup_contract_test!(
         foo_contract_instance,
         wallet,
@@ -4140,39 +4137,24 @@ async fn test_contract_set_estimation() -> Result<(), Error> {
     );
     let foo_contract_id = foo_contract_instance.get_contract_id();
 
-    // Call the contract directly; it just flips the bool value that's passed.
     let res = foo_contract_instance.methods().foo(true).call().await?;
     assert!(!res.value);
 
-    // Load and deploy the second compiled contract
     setup_contract_test!(
         foo_caller_contract_instance,
         None,
         "packages/fuels/tests/test_projects/foo_caller_contract"
     );
 
-    // Calls the contract that calls the `FooContract` contract, also just
-    // flips the bool value passed to it.
-    // let bits = *foo_contract_id.hash();
-    // let res = foo_caller_contract_instance
-    //     .methods()
-    //     .call_foo_contract(Bits256(bits), true)
-    //     .set_contracts(&[foo_contract_id.clone()]) // Sets the external contract
-    //     .call()
-    //     .await?;
-
-    dbg!("glavno");
-    dbg!(&foo_contract_id);
-    // let contract_fake = Bech32ContractId::from(ContractId::new([5u8; 32]));
     let bits = *foo_contract_id.hash();
     let res = foo_caller_contract_instance
         .methods()
         .call_foo_contract(Bits256(bits), true)
-        .simulate()
+        .set_contracts_automatic()
+        .await?
+        .call()
         .await?;
 
-    // assert!(!res.value);
-    // assert!(false);
+    assert!(res.value);
     Ok(())
 }
-

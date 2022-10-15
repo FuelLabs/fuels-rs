@@ -10,6 +10,8 @@ use fuel_gql_client::{
     fuel_tx::{Contract as FuelContract, Output, Receipt, StorageSlot, Transaction},
     fuel_types::{Address, AssetId, Salt},
 };
+use fuel_gql_client::prelude::PanicReason;
+use fuel_tx::Receipt::Panic;
 
 use fuels_core::abi_decoder::ABIDecoder;
 use fuels_core::abi_encoder::{ABIEncoder, UnresolvedBytes};
@@ -155,7 +157,7 @@ impl Contract {
     fn should_compute_custom_input_offset(args: &[Token]) -> bool {
         args.len() > 1
             || args.iter().any(|t| {
-                matches!(
+            matches!(
                     t,
                     Token::String(_)
                         | Token::Struct(_)
@@ -166,7 +168,7 @@ impl Contract {
                         | Token::Byte(_)
                         | Token::Vector(_)
                 )
-            })
+        })
     }
 
     /// Loads a compiled contract and deploys it to a running node
@@ -397,6 +399,12 @@ impl ContractCall {
         let decoded_value = ABIDecoder::decode_single(&self.output_param, &encoded_value)?;
         Ok(decoded_value)
     }
+
+    fn check_if_contract_not_in_inputs(receipts: &[Receipt]) -> Option<&Receipt> {
+        receipts.iter().find(
+            |r| matches!(r, Receipt::Panic { reason, .. } if *reason.reason() == PanicReason::ContractNotInInputs ),
+        )
+    }
 }
 
 #[derive(Debug)]
@@ -411,8 +419,8 @@ pub struct ContractCallHandler<D> {
 }
 
 impl<D> ContractCallHandler<D>
-where
-    D: Tokenizable + Debug,
+    where
+        D: Tokenizable + Debug,
 {
     /// Sets external contracts as dependencies to this contract's call.
     /// Effectively, this will be used to create Input::Contract/Output::Contract
@@ -421,6 +429,11 @@ where
     /// `my_contract_instance.my_method(...).set_contracts(&[another_contract_id]).call()`.
     pub fn set_contracts(mut self, contract_ids: &[Bech32ContractId]) -> Self {
         self.contract_call.external_contracts = contract_ids.to_vec();
+        self
+    }
+
+    pub fn append_contracts(mut self, contract_id: Bech32ContractId) -> Self {
+        self.contract_call.external_contracts.push(contract_id);
         self
     }
 
@@ -489,7 +502,7 @@ where
     /// `abigen!()`). The other field of CallResponse, `receipts`, contains the receipts of the
     /// transaction.
     #[tracing::instrument]
-    async fn call_or_simulate(self, simulate: bool) -> Result<CallResponse<D>, Error> {
+    async fn call_or_simulate(&self, simulate: bool) -> Result<CallResponse<D>, Error> {
         let script = self.get_call_execution_script().await?;
 
         let receipts = if simulate {
@@ -509,19 +522,19 @@ where
             &self.tx_parameters,
             &self.wallet,
         )
-        .await
+            .await
     }
 
     /// Call a contract's method on the node, in a state-modifying manner.
     pub async fn call(self) -> Result<CallResponse<D>, Error> {
-        Self::call_or_simulate(self, false).await
+        Self::call_or_simulate(&self, false).await
     }
 
     /// Call a contract's method on the node, in a simulated manner, meaning the state of the
     /// blockchain is *not* modified but simulated.
     /// It is the same as the `call` method because the API is more user-friendly this way.
     pub async fn simulate(self) -> Result<CallResponse<D>, Error> {
-        Self::call_or_simulate(self, true).await
+        Self::call_or_simulate(&self, true).await
     }
 
     /// Get a contract's estimated cost
@@ -544,6 +557,29 @@ where
         let token = self.contract_call.get_decoded_output(&mut receipts)?;
         Ok(CallResponse::new(D::from_token(token)?, receipts))
     }
+
+    pub async fn set_contracts_automatic(
+        mut self,
+    ) -> Result<Self, Error> {
+
+        let mut script = self.get_call_execution_script().await?;
+        let mut receipts =  script.simulate(&self.provider).await?;
+
+        while let Some(receipt) = ContractCall::check_if_contract_not_in_inputs(&receipts) {
+            let a = Bech32ContractId::from(*receipt.contract_id().unwrap());
+            self = self.append_contracts(a);
+            script = self.get_call_execution_script().await?;
+            receipts =  script.simulate(&self.provider).await?;
+        }
+
+        match self.call_or_simulate(true).await {
+            Ok(_) => Ok(self),
+            Err(e) => Err(e),
+        }
+
+    }
+
+
 }
 
 #[derive(Debug)]
@@ -590,7 +626,7 @@ impl MultiContractCallHandler {
             &self.tx_parameters,
             &self.wallet,
         )
-        .await
+            .await
     }
 
     /// Call contract methods on the node, in a state-modifying manner.
@@ -678,8 +714,8 @@ mod test {
             TxParameters::default(),
             StorageConfiguration::default(),
         )
-        .await
-        .unwrap();
+            .await
+            .unwrap();
     }
 
     #[tokio::test]
@@ -695,7 +731,7 @@ mod test {
             StorageConfiguration::default(),
             Salt::default(),
         )
-        .await
-        .unwrap();
+            .await
+            .unwrap();
     }
 }

@@ -233,7 +233,7 @@ pub async fn setup_test_client(
         },
         consensus_parameters_config,
     )
-        .await;
+    .await;
 
     let client = FuelClient::from(bound_address);
     server_health_check(&client).await;
@@ -409,7 +409,7 @@ mod tests {
             TxParameters::default(),
             StorageConfiguration::default(),
         )
-            .await;
+        .await;
 
         let expected = result.expect_err("should fail");
 
