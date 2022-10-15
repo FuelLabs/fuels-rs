@@ -241,7 +241,6 @@ impl Wallet {
                     &message.sender.clone().into(),
                     &message.recipient.clone().into(),
                     message.nonce.into(),
-                    &message.owner.clone().into(),
                     message.amount.0,
                     &data,
                 );
@@ -251,7 +250,6 @@ impl Wallet {
                     message.recipient.into(),
                     message.amount.0,
                     0,
-                    message.owner.into(),
                     witness_index,
                     data,
                 )
