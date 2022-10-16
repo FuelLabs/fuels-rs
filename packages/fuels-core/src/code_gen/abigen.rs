@@ -219,15 +219,19 @@ impl Abigen {
         let includes = self.includes();
 
         let argument_encoding_function = self.functions()?;
-        let code = quote! {
-                pub struct #name {}
-                impl #name {
-                    pub fn new() -> Self {
-                        Self {}
-                    }
+        let code = if self.no_std {
+            quote! {}
+        } else {
+            quote! {
+                    pub struct #name {}
+                    impl #name {
+                        pub fn new() -> Self {
+                            Self {}
+                        }
 
-                    #argument_encoding_function
-                }
+                        #argument_encoding_function
+                    }
+            }
         };
 
         let abi_structs = self.abi_structs()?;
