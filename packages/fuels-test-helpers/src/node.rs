@@ -234,7 +234,11 @@ pub fn get_node_config_json(
 
     json!({
       "chain_name": "local_testnet",
-      "block_production": "ProofOfAuthority",
+      "block_production": {
+        "ProofOfAuthority": {
+          "trigger": "instant"
+        }
+      },
       "parent_network": {
         "type": "LocalTest"
       },
