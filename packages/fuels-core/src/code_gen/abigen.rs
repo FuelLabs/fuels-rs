@@ -83,7 +83,7 @@ impl Abigen {
     pub fn expand(&self) -> Result<TokenStream, Error> {
         if self.is_script {
             return self.expand_script();
-        }
+        };
         let name = &self.contract_name;
         let methods_name = ident(&format!("{}Methods", name));
         let name_mod = ident(&format!(
@@ -99,93 +99,63 @@ impl Abigen {
         let log_id_param_type_pairs = generate_log_id_param_type_pairs(&resolved_logs);
         let fetch_logs = generate_fetch_logs(&resolved_logs);
 
-        let (includes, code) = if self.no_std {
-            (
-                quote! {
-                    use alloc::{vec, vec::Vec};
-                    use fuels_core::{EnumSelector, Parameterize, Tokenizable, Token, Identity, try_from_bytes};
-                    use fuels_core::types::*;
-                    use fuels_core::code_gen::function_selector::resolve_fn_selector;
-                    use fuels_types::errors::Error as SDKError;
-                    use fuels_types::param_types::ParamType;
-                    use fuels_types::enum_variants::EnumVariants;
-                },
-                quote! {},
-            )
+        let includes = self.includes();
+
+        let code = if self.no_std {
+            quote! {}
         } else {
-            (
-                quote! {
-                    use fuels::contract::contract::{Contract, ContractCallHandler};
-                     use fuels::core::{EnumSelector, StringToken, Parameterize, Tokenizable, Token,
-                                      Identity, try_from_bytes};
-                    use fuels::core::code_gen::{extract_and_parse_logs, extract_log_ids_and_data};
-                    use fuels::core::abi_decoder::ABIDecoder;
-                    use fuels::core::code_gen::function_selector::resolve_fn_selector;
-                    use fuels::core::types::*;
-                    use fuels::signers::WalletUnlocked;
-                    use fuels::tx::{ContractId, Address, Receipt};
-                    use fuels::types::bech32::Bech32ContractId;
-                    use fuels::types::ResolvedLog;
-                    use fuels::types::errors::Error as SDKError;
-                    use fuels::types::param_types::ParamType;
-                    use fuels::types::enum_variants::EnumVariants;
-                    use std::str::FromStr;
-                    use std::collections::{HashSet, HashMap};
-                },
-                quote! {
-                    pub struct #name {
-                        contract_id: Bech32ContractId,
-                        wallet: WalletUnlocked,
-                        logs_lookup: Vec<(u64, ParamType)>,
-                    }
+            quote! {
+                 pub struct #name {
+                     contract_id: Bech32ContractId,
+                     wallet: WalletUnlocked,
+                     logs_lookup: Vec<(u64, ParamType)>,
+                 }
 
-                    impl #name {
-                        pub fn new(contract_id: String, wallet: WalletUnlocked) -> Self {
-                            let contract_id = Bech32ContractId::from_str(&contract_id).expect("Invalid contract id");
-                            Self { contract_id, wallet, logs_lookup: vec![#(#log_id_param_type_pairs),*]}
-                        }
+                 impl #name {
+                     pub fn new(contract_id: String, wallet: WalletUnlocked) -> Self {
+                         let contract_id = Bech32ContractId::from_str(&contract_id).expect("Invalid contract id");
+                         Self { contract_id, wallet, logs_lookup: vec![#(#log_id_param_type_pairs),*]}
+                     }
 
-                        pub fn get_contract_id(&self) -> &Bech32ContractId {
-                            &self.contract_id
-                        }
+                     pub fn get_contract_id(&self) -> &Bech32ContractId {
+                         &self.contract_id
+                     }
 
-                        pub fn get_wallet(&self) -> WalletUnlocked {
-                            self.wallet.clone()
-                        }
+                     pub fn get_wallet(&self) -> WalletUnlocked {
+                         self.wallet.clone()
+                     }
 
-                        pub fn with_wallet(&self, mut wallet: WalletUnlocked) -> Result<Self, SDKError> {
-                           let provider = self.wallet.get_provider()?;
-                           wallet.set_provider(provider.clone());
+                     pub fn with_wallet(&self, mut wallet: WalletUnlocked) -> Result<Self, SDKError> {
+                        let provider = self.wallet.get_provider()?;
+                        wallet.set_provider(provider.clone());
 
-                           Ok(Self { contract_id: self.contract_id.clone(), wallet: wallet, logs_lookup: self.logs_lookup.clone() })
-                        }
+                        Ok(Self { contract_id: self.contract_id.clone(), wallet: wallet, logs_lookup: self.logs_lookup.clone() })
+                     }
 
-                        pub fn logs_with_type<D: Tokenizable + Parameterize>(&self, receipts: &[Receipt]) -> Result<Vec<D>, SDKError> {
-                            extract_and_parse_logs(&self.logs_lookup, receipts)
-                        }
+                     pub fn logs_with_type<D: Tokenizable + Parameterize>(&self, receipts: &[Receipt]) -> Result<Vec<D>, SDKError> {
+                         extract_and_parse_logs(&self.logs_lookup, receipts)
+                     }
 
-                        #fetch_logs
+                     #fetch_logs
 
-                        pub fn methods(&self) -> #methods_name {
-                            #methods_name {
-                                contract_id: self.contract_id.clone(),
-                                wallet: self.wallet.clone(),
-                            }
-                        }
-                    }
+                     pub fn methods(&self) -> #methods_name {
+                         #methods_name {
+                             contract_id: self.contract_id.clone(),
+                             wallet: self.wallet.clone(),
+                         }
+                     }
+                 }
 
-                    pub struct #methods_name {
-                        contract_id: Bech32ContractId,
-                        wallet: WalletUnlocked
-                    }
+                 pub struct #methods_name {
+                     contract_id: Bech32ContractId,
+                     wallet: WalletUnlocked
+                 }
 
-                    impl #methods_name {
-                        #contract_functions
-                    }
-                },
-            )
+                 impl #methods_name {
+                     #contract_functions
+                 }
+            }
         };
-
         Ok(quote! {
             pub use #name_mod::*;
 
@@ -206,6 +176,39 @@ impl Abigen {
         })
     }
 
+    fn includes(&self) -> TokenStream {
+        if self.no_std {
+            quote! {
+                use alloc::{vec, vec::Vec};
+                use fuels_core::{EnumSelector, Parameterize, Tokenizable, Token, Identity, try_from_bytes};
+                use fuels_core::types::*;
+                use fuels_core::code_gen::function_selector::resolve_fn_selector;
+                use fuels_types::errors::Error as SDKError;
+                use fuels_types::param_types::ParamType;
+                use fuels_types::enum_variants::EnumVariants;
+            }
+        } else {
+            quote! {
+                use fuels::contract::contract::{Contract, ContractCallHandler};
+                 use fuels::core::{EnumSelector, StringToken, Parameterize, Tokenizable, Token,
+                                  Identity, try_from_bytes};
+                use fuels::core::code_gen::{extract_and_parse_logs, extract_log_ids_and_data};
+                use fuels::core::abi_decoder::ABIDecoder;
+                use fuels::core::code_gen::function_selector::resolve_fn_selector;
+                use fuels::core::types::*;
+                use fuels::signers::WalletUnlocked;
+                use fuels::tx::{ContractId, Address, Receipt};
+                use fuels::types::bech32::Bech32ContractId;
+                use fuels::types::ResolvedLog;
+                use fuels::types::errors::Error as SDKError;
+                use fuels::types::param_types::ParamType;
+                use fuels::types::enum_variants::EnumVariants;
+                use std::str::FromStr;
+                use std::collections::{HashSet, HashMap};
+            }
+        }
+    }
+
     pub fn expand_script(&self) -> Result<TokenStream, Error> {
         let name = &self.contract_name;
         let name_mod = ident(&format!(
@@ -213,23 +216,7 @@ impl Abigen {
             self.contract_name.to_string().to_lowercase()
         ));
 
-        let includes = quote! {
-            use fuels::contract::contract::{Contract, ContractCallHandler};
-             use fuels::core::{EnumSelector, StringToken, Parameterize, Tokenizable, Token,
-                              Identity, try_from_bytes};
-            use fuels::core::code_gen::{extract_and_parse_logs, extract_log_ids_and_data};
-            use fuels::core::abi_decoder::ABIDecoder;
-            use fuels::core::code_gen::function_selector::resolve_fn_selector;
-            use fuels::core::types::*;
-            use fuels::signers::WalletUnlocked;
-            use fuels::tx::{ContractId, Address, Receipt};
-            use fuels::types::bech32::Bech32ContractId;
-            use fuels::types::ResolvedLog;
-            use fuels::types::errors::Error as SDKError;
-            use fuels::types::param_types::{EnumVariants, ParamType};
-            use std::str::FromStr;
-            use std::collections::{HashSet, HashMap};
-        };
+        let includes = self.includes();
 
         let argument_encoding_function = self.functions()?;
         let code = quote! {
