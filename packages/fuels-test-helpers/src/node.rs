@@ -41,7 +41,7 @@ impl Config {
             predicates: false,
             manual_blocks_enabled: false,
             vm_backtrace: false,
-            silent: true,
+            silent: false, // Temp for debugging.
         }
     }
 }
