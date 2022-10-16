@@ -7,7 +7,7 @@ use fuel_gql_client::{
     client::{
         schema::{
             balance::Balance, chain::ChainInfo, coin::Coin, contract::ContractBalance,
-            message::Message, node_info::NodeInfo,
+            message::Message, node_info::NodeInfo, resource::Resource,
         },
         types::{TransactionResponse, TransactionStatus},
         FuelClient, PageDirection, PaginatedResult, PaginationRequest,
@@ -213,14 +213,23 @@ impl Provider {
     ) -> Result<Vec<Coin>, ProviderError> {
         let res = self
             .client
-            .coins_to_spend(
+            .resources_to_spend(
                 &from.hash().to_string(),
-                vec![(format!("{:#x}", asset_id).as_str(), amount)],
-                None,
+                vec![(format!("{:#x}", asset_id).as_str(), amount, None)],
                 None,
             )
             .await?;
-        Ok(res)
+
+        let coins = res
+            .into_iter()
+            .flatten()
+            .filter_map(|r| match r {
+                Resource::Coin(c) => Some(c),
+                _ => None,
+            })
+            .collect();
+
+        Ok(coins)
     }
 
     /// Get the balance of all spendable coins `asset_id` for address `address`. This is different
