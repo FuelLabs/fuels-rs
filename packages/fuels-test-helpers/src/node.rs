@@ -41,7 +41,7 @@ impl Config {
             predicates: false,
             manual_blocks_enabled: false,
             vm_backtrace: false,
-            silent: false, // Temp for debugging.
+            silent: true,
         }
     }
 }
@@ -234,7 +234,7 @@ pub fn get_node_config_json(
 
     json!({
       "chain_name": "local_testnet",
-      "block_production": "Instant",
+      "block_production": "ProofOfAuthority",
       "parent_network": {
         "type": "LocalTest"
       },
