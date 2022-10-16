@@ -239,6 +239,7 @@ pub fn get_node_config_json(
           "trigger": "instant"
         }
       },
+      "block_gas_limit": 1000000,
       "parent_network": {
         "type": "LocalTest"
       },
