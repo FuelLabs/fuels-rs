@@ -4,6 +4,7 @@ use std::{context::balance_of, context::msg_amount, token::*};
 
 abi TestFuelCoin {
     fn mint_coins(mint_amount: u64);
+    fn mint_to_addresses(mint_amount: u64, addresses: [Address; 3]);
     fn burn_coins(burn_amount: u64);
     fn force_transfer_coins(coins: u64, asset_id: ContractId, target: ContractId);
     fn transfer_coins_to_output(coins: u64, asset_id: ContractId, recipient: Address);
@@ -14,6 +15,13 @@ abi TestFuelCoin {
 impl TestFuelCoin for Contract {
     fn mint_coins(mint_amount: u64) {
         mint(mint_amount);
+    }
+    fn mint_to_addresses(mint_amount: u64, addresses: [Address; 3]) {
+        let mut counter = 0;
+        while counter < 3 {
+            mint_to_address(mint_amount, addresses[counter]);
+            counter = counter + 1;
+        }
     }
 
     fn burn_coins(burn_amount: u64) {
