@@ -157,7 +157,7 @@ async fn main_function_arguments() -> Result<(), Error> {
     // The abigen is used for the same purpose as with contracts (Rust bindings)
     script_abigen!(
         MyScript,
-        "packages/fuels/tests/scripts/script_with_arguments/out/debug/script_with_arguments-abi.json"
+        "packages/fuels/test/scripts/script_with_arguments/out/debug/script_with_arguments-abi.json"
     );
     let bim = Bimbam { val: 90 };
     let bam = SugarySnack {
@@ -167,7 +167,7 @@ async fn main_function_arguments() -> Result<(), Error> {
     // Convert the arguments as script data
     let script_data = MyScript::encode_main_arguments(bim.clone(), bam.clone())?;
     let bin_path =
-        "../fuels/tests/scripts/script_with_arguments/out/debug/script_with_arguments.bin";
+        "../fuels/test/scripts/script_with_arguments/out/debug/script_with_arguments.bin";
     let result = run_compiled_script(bin_path, None, None, Some(script_data)).await?;
     assert_eq!(result[0].val().unwrap(), bim.val + bam.twix + 2 * bam.mars);
     // ANCHOR_END: script_with_arguments
