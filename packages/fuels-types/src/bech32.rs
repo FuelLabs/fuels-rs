@@ -214,9 +214,9 @@ mod test {
                 assert_eq!(*bech32_contract_id.hash(), pbkh);
             }
 
-            for i in 0..3 {
-                let bech32_contract_id = &Bech32Address::from_str(hex_encodings[i]).unwrap();
-                assert_eq!(*bech32_contract_id.hash(), pubkey_hashes[i]);
+            for (hex_encoding, pubkey_hash) in hex_encodings.iter().zip(pubkey_hashes) {
+                let bech32_contract_id = &Bech32Address::from_str(hex_encoding).unwrap();
+                assert_eq!(*bech32_contract_id.hash(), pubkey_hash);
             }
         }
     }
