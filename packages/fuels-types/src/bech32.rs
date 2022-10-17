@@ -197,21 +197,21 @@ mod test {
         ];
 
         {
-            for i in 0..3 {
-                let bech32_contract_id = &Bech32ContractId::from_str(bech32m_encodings[i]).unwrap();
-                assert_eq!(*bech32_contract_id.hash(), pubkey_hashes[i]);
+            for (b32m_e, pbkh) in bech32m_encodings.iter().zip(pubkey_hashes) {
+                let bech32_contract_id = &Bech32ContractId::from_str(b32m_e).unwrap();
+                assert_eq!(*bech32_contract_id.hash(), pbkh);
             }
 
-            for i in 0..3 {
-                let bech32_contract_id = &Bech32ContractId::from_str(hex_encodings[i]).unwrap();
-                assert_eq!(*bech32_contract_id.hash(), pubkey_hashes[i]);
+            for (hex_e, pbkh) in hex_encodings.iter().zip(pubkey_hashes) {
+                let bech32_contract_id = &Bech32ContractId::from_str(hex_e).unwrap();
+                assert_eq!(*bech32_contract_id.hash(), pbkh);
             }
         }
 
         {
-            for i in 0..3 {
-                let bech32_contract_id = &Bech32Address::from_str(bech32m_encodings[i]).unwrap();
-                assert_eq!(*bech32_contract_id.hash(), pubkey_hashes[i]);
+            for (b32m_e, pbkh) in bech32m_encodings.iter().zip(pubkey_hashes) {
+                let bech32_contract_id = &Bech32Address::from_str(b32m_e).unwrap();
+                assert_eq!(*bech32_contract_id.hash(), pbkh);
             }
 
             for i in 0..3 {
