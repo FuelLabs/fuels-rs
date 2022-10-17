@@ -91,7 +91,6 @@ async fn test_input_message() -> Result<(), Error> {
             iter::zip(&used_messages, &messages_from_provider).all(|(a, b)| {
                 a.sender == b.sender.0 .0
                     && a.recipient == b.recipient.0 .0
-                    && a.owner == b.owner.0 .0
                     && a.nonce == b.nonce.0
                     && a.amount == b.amount.0
             })
@@ -422,6 +421,10 @@ async fn test_get_gas_used() -> Result<(), Error> {
 }
 
 #[tokio::test]
+// TODO: currently skipping this test because the testnet isn't running
+// the latest version of fuel-core. Once the testnet is updated, this test
+// should be re-enabled.
+#[ignore]
 async fn testnet_hello_world() -> Result<(), Error> {
     // Note that this test might become flaky.
     // This test depends on:
