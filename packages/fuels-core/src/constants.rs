@@ -15,3 +15,6 @@ pub const BASE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
 pub const DEFAULT_GAS_ESTIMATION_TOLERANCE: f64 = 0.2;
 pub const GAS_PRICE_FACTOR: u64 = 1_000_000_000;
 pub const MAX_GAS_PER_TX: u64 = 100_000_000;
+
+// Revert return value that indicates missing output variables
+pub const FAILED_TRANSFER_TO_ADDRESS_SIGNAL: u64 = 0xffff_ffff_ffff_0001;
