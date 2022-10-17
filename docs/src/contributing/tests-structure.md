@@ -2,9 +2,7 @@
 
 The integration tests of `fuels-rs` cover almost all aspects of the SDK and have grown significantly as more functionality was added. To make the test more manageable, they were split into several `modules` together with the corresponding `Sway` projects. The modules are defined in the `packages/fuels/test/harness.rs` file and currently have the following structure:
 
-```rust,ignore
-{{#include ../../../packages/fuels/tests/harness.rs:test_modules}}
-```
+//TODO: Add structure
 
 Even though test organization is subjective, please consider these guidelines before adding a new category (`module`):
  - Add a new module when creating a new section in the `Fuels Rust SDK` book - e.g. `Types`
