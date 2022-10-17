@@ -140,7 +140,6 @@ pub fn setup_single_message(
     vec![Message {
         sender: sender.into(),
         recipient: recipient.into(),
-        owner: recipient.into(),
         nonce,
         amount,
         data,
@@ -176,7 +175,6 @@ pub async fn setup_test_client(
         .map(|message| MessageConfig {
             sender: message.sender,
             recipient: message.recipient,
-            owner: message.owner,
             nonce: message.nonce,
             amount: message.amount,
             data: message.data,

@@ -8,8 +8,7 @@ use tokio::sync::oneshot;
 use portpicker::is_free;
 use portpicker::pick_unused_port;
 
-use fuel_core_interfaces::model::Coin;
-use fuel_core_interfaces::model::{BlockHeight, Message};
+use fuel_core_interfaces::model::{BlockHeight, Coin, DaBlockHeight, Message};
 use fuel_gql_client::client::FuelClient;
 use fuel_gql_client::fuel_tx::{ConsensusParameters, UtxoId};
 use fuel_gql_client::fuel_vm::consts::WORD_SIZE;
@@ -55,8 +54,6 @@ pub struct MessageConfig {
     pub sender: Address,
     #[serde_as(as = "HexType")]
     pub recipient: Address,
-    #[serde_as(as = "HexType")]
-    pub owner: Address,
     #[serde_as(as = "HexNumber")]
     pub nonce: Word,
     #[serde_as(as = "HexNumber")]
@@ -65,21 +62,20 @@ pub struct MessageConfig {
     pub data: Vec<u8>,
     /// The block height from the parent da layer that originated this message
     #[serde_as(as = "HexNumber")]
-    pub da_height: DaBlockHeight,
+    pub da_height: InternalDaBlockHeight,
 }
 
-pub type DaBlockHeight = u64;
+pub type InternalDaBlockHeight = u64;
 
 impl From<MessageConfig> for Message {
     fn from(msg: MessageConfig) -> Self {
         Message {
             sender: msg.sender,
             recipient: msg.recipient,
-            owner: msg.owner,
             nonce: msg.nonce,
             amount: msg.amount,
             data: msg.data,
-            da_height: msg.da_height,
+            da_height: DaBlockHeight(msg.da_height),
             fuel_block_spend: None,
         }
     }
@@ -238,7 +234,12 @@ pub fn get_node_config_json(
 
     json!({
       "chain_name": "local_testnet",
-      "block_production": "Instant",
+      "block_production": {
+        "ProofOfAuthority": {
+          "trigger": "instant"
+        }
+      },
+      "block_gas_limit": 1000000,
       "parent_network": {
         "type": "LocalTest"
       },
@@ -282,11 +283,10 @@ fn get_messages_value(messages: Vec<Message>) -> Value {
             serde_json::to_value(&MessageConfig {
                 sender: message.sender,
                 recipient: message.recipient,
-                owner: message.owner,
                 nonce: message.nonce,
                 amount: message.amount,
                 data: message.data,
-                da_height: message.da_height,
+                da_height: *message.da_height,
             })
             .unwrap()
         })
