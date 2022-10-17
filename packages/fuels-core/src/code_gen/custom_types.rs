@@ -81,59 +81,16 @@ mod tests {
     }
 
     #[test]
-    fn top_lvl_enum_w_no_variants_cannot_be_constructed() -> anyhow::Result<()> {
-        assert_enum_cannot_be_constructed_from(Some(vec![]))?;
-        assert_enum_cannot_be_constructed_from(None)?;
-        Ok(())
-    }
-
-    // TODO(oleksii): fix nested_enum_w_no_variants_cannot_be_constructed test
-    #[test]
-    #[ignore]
-    fn nested_enum_w_no_variants_cannot_be_constructed() -> anyhow::Result<()> {
-        let nested_enum_w_components = |components| {
-            Some(vec![(
-                String::from("nested"),
-                TypeDeclaration {
-                    type_id: 1,
-                    type_field: "enum SomeEmptyEnum".to_string(),
-                    components,
-                    ..Default::default()
-                },
-            )])
-        };
-
-        assert_enum_cannot_be_constructed_from(nested_enum_w_components(None))?;
-        assert_enum_cannot_be_constructed_from(nested_enum_w_components(Some(vec![])))?;
-
-        Ok(())
-    }
-
-    fn assert_enum_cannot_be_constructed_from(
-        types: Option<Vec<(String, TypeDeclaration)>>,
-    ) -> anyhow::Result<()> {
-        let components = types.as_ref().map(|v| {
-            v.iter()
-                .map(|(name, td)| TypeApplication {
-                    name: name.clone(),
-                    type_id: td.type_id,
-                    ..Default::default()
-                })
-                .collect()
-        });
+    fn test_enum_with_no_variants_cannot_be_constructed() -> anyhow::Result<()> {
         let p = TypeDeclaration {
             type_id: 0,
-            type_field: String::from("enum TheEmptyEnum"),
-            components,
-            ..TypeDeclaration::default()
+            type_field: "enum SomeEmptyEnum".to_string(),
+            components: Some(vec![]),
+            ..Default::default()
         };
+        let types = [(0, p.clone())].into_iter().collect::<HashMap<_, _>>();
 
-        let mut tm = [(0, p.clone())].into_iter().collect::<HashMap<_, _>>();
-        if let Some(extra_types) = types {
-            tm.extend(extra_types.into_iter().map(|(_, td)| (td.type_id, td)));
-        }
-
-        let err = expand_custom_enum(&p, &tm)
+        let err = expand_custom_enum(&p, &types)
             .err()
             .ok_or_else(|| anyhow!("Was able to construct an enum without variants"))?;
 
@@ -398,6 +355,28 @@ mod tests {
         )?.to_string();
 
         assert_eq!(actual, expected);
+        Ok(())
+    }
+
+    #[test]
+    fn test_struct_with_no_fields_cannot_be_constructed() -> anyhow::Result<()> {
+        let p = TypeDeclaration {
+            type_id: 0,
+            type_field: "struct SomeEmptyStruct".to_string(),
+            components: Some(vec![]),
+            ..Default::default()
+        };
+        let types = [(0, p.clone())].into_iter().collect::<HashMap<_, _>>();
+
+        let err = expand_custom_struct(&p, &types)
+            .err()
+            .ok_or_else(|| anyhow!("Was able to construct a struct without fields"))?;
+
+        assert!(
+            matches!(err, Error::ParseTokenStreamError(_)),
+            "Expected the error to be of the type 'ParseTokenStreamError'"
+        );
+
         Ok(())
     }
 
