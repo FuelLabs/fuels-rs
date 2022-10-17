@@ -8,7 +8,7 @@ use fuel_gql_client::fuel_vm::{consts::REG_ONE, prelude::Opcode};
 use itertools::{chain, Itertools};
 
 use fuel_gql_client::client::schema::coin::Coin;
-use fuel_tx::{Metadata, Witness};
+use fuel_tx::{Metadata, ScriptExecutionResult, Witness};
 use fuels_core::parameters::TxParameters;
 use fuels_signers::provider::Provider;
 use fuels_signers::{Signer, WalletUnlocked};
@@ -391,6 +391,14 @@ impl Script {
         )?;
 
         let receipts = provider.dry_run(&self.tx).await?;
+        if receipts
+            .iter()
+            .any(|r|
+                matches!(r, Receipt::ScriptResult { result, .. } if *result != ScriptExecutionResult::Success)
+        ) {
+            return Err(Error::RevertTransactionError(Default::default(), receipts));
+        }
+
         Ok(receipts)
     }
 }

@@ -2,9 +2,10 @@ use crate::abi_decoder::ABIDecoder;
 use crate::types::Bits256;
 use core::fmt;
 use fuel_types::bytes::padded_len;
+use fuels_types::enum_variants::EnumVariants;
 use fuels_types::{
     errors::{CodecError, Error},
-    param_types::{EnumVariants, ParamType},
+    param_types::ParamType,
 };
 use strum_macros::EnumString;
 

@@ -4,3 +4,6 @@ description = "Runs `forc build` for all projects under the main test suite"
 version = "0.0.0"
 edition = "2021"
 publish = false
+
+[dependencies]
+termcolor = "1.1"

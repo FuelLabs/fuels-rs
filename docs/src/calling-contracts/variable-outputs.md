@@ -3,7 +3,7 @@
 In some cases, you might want to send funds to the output of a transaction. Sway has a specific method for that: `transfer_to_address`(coins, asset_id, recipient)`. So, if you have a contract that does something like this:
 
 ```rust,ignore
-{{#include ../../../packages/fuels/tests/test_projects/token_ops/src/main.sw:variable_outputs}}
+{{#include ../../../packages/fuels/tests/contracts/token_ops/src/main.sw:variable_outputs}}
 ```
 
 With the SDK, you can call `transfer_coins_to_output` by chaining `append_variable_outputs(amount)` to your contract call. Like this:
