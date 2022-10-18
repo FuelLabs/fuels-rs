@@ -1,6 +1,6 @@
 # Integration tests structure in `fuels-rs`
 
-The integration tests of `fuels-rs` cover almost all aspects of the SDK and have grown significantly as more functionality was added. To make the tests and associated `Sway` projects more manageable, they were split into several categories. A category consist of a `.rs` file for the tests and, if needed, a separate directory for the `Sway` projects.
+The integration tests of `fuels-rs` cover almost all aspects of the SDK and have grown significantly as more functionality was added. To make the tests and associated `Sway` projects more manageable they were split into several categories. A category consist of a `.rs` file for the tests and, if needed, a separate directory for the `Sway` projects.
 
 Currently have the following structure:
 
