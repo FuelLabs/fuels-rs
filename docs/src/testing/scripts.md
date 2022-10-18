@@ -1,10 +1,10 @@
 # Running scripts
 
 `run_compiled_script` is a helper function for testing simple Sway scripts and reducing boilerplate code related to setting up contracts and deployment. As arguments, it takes: 
-- the path to the generated binary file (`.bin`)
-- the transactions parameters as an Option
-- the provider as an Option
-- the script data as an Option
+- The path to the generated binary file (`.bin`);
+- The transactions parameters as an Option;
+- The provider as an Option;
+- The script data as an Option.
 
 ````rust,ignore
 {{#include ../../../packages/fuels-test-helpers/src/script.rs:run_compiled_script}}
