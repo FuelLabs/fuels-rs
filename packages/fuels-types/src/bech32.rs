@@ -184,8 +184,8 @@ mod test {
         {
             let expected = [
                 Error::from(bech32::Error::InvalidChecksum),
-                Error::from(bech32::Error::InvalidChecksum),
-                Error::from(bech32::Error::InvalidChecksum),
+                Error::from(bech32::Error::InvalidChar('b')),
+                Error::from(bech32::Error::MissingSeparator),
             ];
             let invalid_bech32 = [
                 "fuel1x9f3ysyk7fmey5ac23s2p4rwg4gjye2kke3nu3pvrs5p4qc4m4qqwx32k3",
