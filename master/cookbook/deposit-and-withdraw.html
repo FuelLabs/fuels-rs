@@ -139,7 +139,50 @@
                     <main>
                         <h1 id="deposit-and-withdraw"><a class="header" href="#deposit-and-withdraw">Deposit and withdraw</a></h1>
 <p>Consider the following contract:</p>
-<pre><code class="language-rust ignore">{{#include ../../../packages/fuels/tests/examples/liquidity_pool/src/main.sw}}
+<pre><code class="language-rust ignore">contract;
+
+use std::{
+    context::call_frames::{
+        contract_id,
+        msg_asset_id,
+    },
+    context::msg_amount,
+    token::{
+        mint_to_address,
+        transfer_to_address,
+    },
+};
+
+abi LiquidityPool {
+    fn deposit(recipient: Address);
+    fn withdraw(recipient: Address);
+}
+
+const BASE_TOKEN: b256 = 0x9ae5b658754e096e4d681c548daf46354495a437cc61492599e33fc64dcdc30c;
+
+impl LiquidityPool for Contract {
+    fn deposit(recipient: Address) {
+        assert(~ContractId::from(BASE_TOKEN) == msg_asset_id());
+        assert(0 &lt; msg_amount());
+
+        // Mint two times the amount.
+        let amount_to_mint = msg_amount() * 2;
+
+        // Mint some LP token based upon the amount of the base token.
+        mint_to_address(amount_to_mint, recipient);
+    }
+
+    fn withdraw(recipient: Address) {
+        assert(contract_id() == msg_asset_id());
+        assert(0 &lt; msg_amount());
+
+        // Amount to withdraw.
+        let amount_to_transfer = msg_amount() / 2;
+
+        // Transfer base token to recipient.
+        transfer_to_address(amount_to_transfer, ~ContractId::from(BASE_TOKEN), recipient);
+    }
+}
 </code></pre>
 <p>As its name suggests, it represents a simplified example of a liquidity pool contract. The method <code>deposit()</code> expects you to supply an arbitrary amount of the <code>BASE_TOKEN</code>. As a result, it mints double the amount of the liquidity asset to the calling address. Analogously, if you call <code>withdraw()</code> supplying it with the liquidity asset, it will transfer half that amount of the <code>BASE_TOKEN</code> back to the calling address except for deducting it from the contract balance instead of minting it.</p>
 <p>The first step towards interacting with any contract in the Rust SDK is calling the <code>abigen!</code> macro to generate type-safe Rust bindings for the contract methods:</p>
