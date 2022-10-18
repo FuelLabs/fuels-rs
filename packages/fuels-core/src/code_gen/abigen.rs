@@ -9,7 +9,7 @@ use fuel_tx::Receipt;
 use fuels_types::errors::Error;
 use fuels_types::param_types::ParamType;
 use fuels_types::utils::custom_type_name;
-use fuels_types::{ProgramABI, ResolvedLog, TypeDeclaration};
+use fuels_types::{ABIFunction, ProgramABI, ResolvedLog, TypeDeclaration};
 use itertools::Itertools;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
@@ -192,7 +192,7 @@ impl Abigen {
 
         let includes = self.includes();
 
-        let argument_encoding_function = self.functions()?;
+        let main_script_function = self.functions()?;
         let code = if self.no_std {
             quote! {}
         } else {
@@ -203,7 +203,7 @@ impl Abigen {
                             Self {}
                         }
 
-                        #argument_encoding_function
+                        #main_script_function
                     }
             }
         };
@@ -274,13 +274,26 @@ impl Abigen {
                 .iter()
                 .map(|function| expand_function(function, &self.types))
                 .collect::<Result<Vec<TokenStream>, Error>>()?,
-            true => self
-                .abi
-                .functions
-                .iter()
-                .filter(|function| function.name == "main")
-                .map(|function| generate_script_argument_encoding_function(function, &self.types))
-                .collect::<Result<Vec<TokenStream>, Error>>()?,
+            true => {
+                let main_function = self
+                    .abi
+                    .functions
+                    .iter()
+                    .filter(|function| function.name == "main")
+                    .collect::<Vec<&ABIFunction>>();
+                if main_function.len() != 1 {
+                    return Err(Error::CompilationError(
+                        "The script does not have a function named `main` so it cannot compile!"
+                            .to_string(),
+                    ));
+                }
+                main_function
+                    .iter()
+                    .map(|function| {
+                        generate_script_argument_encoding_function(function, &self.types)
+                    })
+                    .collect::<Result<Vec<TokenStream>, Error>>()?
+            }
         };
 
         Ok(quote! { #( #tokenized_functions )* })
