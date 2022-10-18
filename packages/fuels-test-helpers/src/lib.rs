@@ -141,7 +141,6 @@ pub fn setup_single_message(
     vec![Message {
         sender: sender.into(),
         recipient: recipient.into(),
-        owner: recipient.into(),
         nonce,
         amount,
         data,
@@ -177,11 +176,10 @@ pub async fn setup_test_client(
         .map(|message| MessageConfig {
             sender: message.sender,
             recipient: message.recipient,
-            // owner: message.owner,
             nonce: message.nonce,
             amount: message.amount,
             data: message.data,
-            da_height: fuel_core::model::DaBlockHeight(message.da_height),
+            da_height: message.da_height,
         })
         .collect();
 
@@ -404,7 +402,7 @@ mod tests {
         wallet.set_provider(provider.clone());
 
         let result = Contract::deploy(
-            "../fuels/tests/test_projects/contract_output_test/out/debug/contract_output_test.bin",
+            "../fuels/tests/types/contract_output_test/out/debug/contract_output_test.bin",
             &wallet,
             TxParameters::default(),
             StorageConfiguration::default(),

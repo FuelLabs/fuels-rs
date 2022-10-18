@@ -1,7 +1,8 @@
 use crate::{Bits256, Identity, Parameterize, Token, Tokenizable};
 use fuel_tx::{Address, AssetId, ContractId};
+use fuels_types::enum_variants::EnumVariants;
 use fuels_types::errors::Error;
-use fuels_types::param_types::{EnumVariants, ParamType};
+use fuels_types::param_types::ParamType;
 
 impl<const SIZE: usize, T: Parameterize> Parameterize for [T; SIZE] {
     fn param_type() -> ParamType {

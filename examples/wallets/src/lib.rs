@@ -171,7 +171,7 @@ mod tests {
             .unwrap();
 
         let contract_id = Contract::deploy(
-            "../../packages/fuels/tests/test_projects/contract_test/out/debug/contract_test.bin",
+            "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
             &wallet,
             TxParameters::default(),
             StorageConfiguration::default(),

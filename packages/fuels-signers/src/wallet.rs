@@ -199,7 +199,7 @@ impl Wallet {
         amount: u64,
     ) -> Result<Vec<Coin>, Error> {
         self.get_provider()?
-            .get_spendable_resources(&self.address, asset_id, amount)
+            .get_spendable_coins(&self.address, asset_id, amount)
             .await
             .map_err(Into::into)
     }
@@ -241,7 +241,6 @@ impl Wallet {
                     &message.sender.clone().into(),
                     &message.recipient.clone().into(),
                     message.nonce.into(),
-                    // &message.owner.clone().into(),
                     message.amount.0,
                     &data,
                 );
@@ -251,7 +250,6 @@ impl Wallet {
                     message.recipient.into(),
                     message.amount.0,
                     0,
-                    // message.owner.into(),
                     witness_index,
                     data,
                 )
@@ -646,7 +644,7 @@ impl WalletUnlocked {
     ) -> Result<Vec<Receipt>, Error> {
         let spendable_predicate_coins = self
             .get_provider()?
-            .get_spendable_resources(predicate_address, asset_id, amount)
+            .get_spendable_coins(predicate_address, asset_id, amount)
             .await?;
 
         // input amount is: amount < input_amount < 2*amount
