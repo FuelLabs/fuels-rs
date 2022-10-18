@@ -33,7 +33,7 @@ async fn test_provider_launch_and_connect() -> Result<(), Error> {
     )
     .await?;
 
-    let contract_instance_connected = MyContract::new(contract_id.to_string(), wallet.clone());
+    let contract_instance_connected = MyContract::new(contract_id.clone(), wallet.clone());
 
     let response = contract_instance_connected
         .methods()
@@ -43,7 +43,7 @@ async fn test_provider_launch_and_connect() -> Result<(), Error> {
     assert_eq!(42, response.value);
 
     wallet.set_provider(launched_provider);
-    let contract_instance_launched = MyContract::new(contract_id.to_string(), wallet);
+    let contract_instance_launched = MyContract::new(contract_id, wallet);
 
     let response = contract_instance_launched
         .methods()
@@ -461,7 +461,7 @@ async fn testnet_hello_world() -> Result<(), Error> {
     )
     .await?;
 
-    let contract_methods = MyContract::new(contract_id.to_string(), wallet.clone()).methods();
+    let contract_methods = MyContract::new(contract_id, wallet.clone()).methods();
 
     let response = contract_methods
         .initialize_counter(42) // Build the ABI call

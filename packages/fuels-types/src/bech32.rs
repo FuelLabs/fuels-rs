@@ -34,12 +34,15 @@ macro_rules! bech32type {
             pub fn hrp(&self) -> &str {
                 &self.hrp
             }
+        }
 
-            fn try_from_decoded_bech32(
-                hrp: String,
-                pubkey_hash_base32: &[bech32::u5],
-            ) -> Result<Self, Error> {
-                let pubkey_hash: [u8; Bytes32::LEN] = Vec::<u8>::from_base32(pubkey_hash_base32)?
+        impl FromStr for $i {
+            type Err = Error;
+
+            fn from_str(s: &str) -> Result<Self, Self::Err> {
+                let (hrp, pubkey_hash_base32, _) = bech32::decode(s)?;
+
+                let pubkey_hash: [u8; Address::LEN] = Vec::<u8>::from_base32(&pubkey_hash_base32)?
                     .as_slice()
                     .try_into()?;
 
@@ -47,32 +50,6 @@ macro_rules! bech32type {
                     hrp,
                     hash: Bytes32::new(pubkey_hash),
                 })
-            }
-
-            fn try_from_hex_str(s: &str) -> Result<Self, Error> {
-                let hash = Bytes32::from_str(s)?;
-
-                Ok(Self {
-                    hrp: FUEL_BECH32_HRP.to_string(),
-                    hash,
-                })
-            }
-        }
-
-        impl FromStr for $i {
-            type Err = Error;
-
-            fn from_str(s: &str) -> Result<Self, Self::Err> {
-                let decode_result = bech32::decode(s);
-
-                match decode_result {
-                    Ok((hrp, pubkey_hash_base32, _)) => {
-                        Self::try_from_decoded_bech32(hrp, &pubkey_hash_base32)
-                    }
-                    Err(e) if matches!(e, bech32::Error::InvalidChecksum) => Err(e.into()),
-                    // only try decoding as hex string if failure wasn't due to checksum
-                    Err(_) => Self::try_from_hex_str(s),
-                }
             }
         }
 
@@ -190,54 +167,40 @@ mod test {
             "fuel1x9f3ysyk7fmey5ac23s2p4rwg4gjye2kke3nu3pvrs5p4qc4m4qqwx56k3",
             "fuel1xpjnzdpsvccrwvryx9skvafn8ycnyvpkxp3rqeps8qcn2vp5xy6qu7yyz7",
         ];
-        let hex_encodings = [
-            "0x6b32df5954e1badeaffefd2c0fc5e594dcff3713aae3dd18b7d966624b010027",
-            "0x3153124096f2779253b85460a0d46e4551226556b6633e442c1c281a8315dd40",
-            "0x3065313430663037306431616675333931323036306230643038313530343134 ",
-        ];
 
-        {
-            for (b32m_e, pbkh) in bech32m_encodings.iter().zip(pubkey_hashes) {
-                let bech32_contract_id = &Bech32ContractId::from_str(b32m_e).unwrap();
-                assert_eq!(*bech32_contract_id.hash(), pbkh);
-            }
-
-            for (hex_e, pbkh) in hex_encodings.iter().zip(pubkey_hashes) {
-                let bech32_contract_id = &Bech32ContractId::from_str(hex_e).unwrap();
-                assert_eq!(*bech32_contract_id.hash(), pbkh);
-            }
+        for (b32m_e, pbkh) in bech32m_encodings.iter().zip(pubkey_hashes) {
+            let bech32_contract_id = &Bech32ContractId::from_str(b32m_e).unwrap();
+            assert_eq!(*bech32_contract_id.hash(), pbkh);
         }
 
-        {
-            for (b32m_e, pbkh) in bech32m_encodings.iter().zip(pubkey_hashes) {
-                let bech32_contract_id = &Bech32Address::from_str(b32m_e).unwrap();
-                assert_eq!(*bech32_contract_id.hash(), pbkh);
-            }
-
-            for (hex_encoding, pubkey_hash) in hex_encodings.iter().zip(pubkey_hashes) {
-                let bech32_contract_id = &Bech32Address::from_str(hex_encoding).unwrap();
-                assert_eq!(*bech32_contract_id.hash(), pubkey_hash);
-            }
+        for (b32m_e, pbkh) in bech32m_encodings.iter().zip(pubkey_hashes) {
+            let bech32_contract_id = &Bech32Address::from_str(b32m_e).unwrap();
+            assert_eq!(*bech32_contract_id.hash(), pbkh);
         }
     }
 
     #[test]
     fn test_from_invalid_bech32_string() {
         {
-            let expected: Error = bech32::Error::InvalidChecksum.into();
-            let invalid_bech32_with_hex_chars =
-                "fadeaffe1dfed7c25adadadd715e3f309ecf07dca4e3a6d9de9cdadcddac50d7f";
+            let expected = [
+                Error::from(bech32::Error::InvalidChecksum),
+                Error::from(bech32::Error::InvalidChecksum),
+                Error::from(bech32::Error::InvalidChecksum),
+            ];
+            let invalid_bech32 = [
+                "fuel1x9f3ysyk7fmey5ac23s2p4rwg4gjye2kke3nu3pvrs5p4qc4m4qqwx32k3",
+                "fuel1xpjnzdpsvccrwvryx9skvafn8ycnyvpkxp3rqeps8qcn2vp5xy6qu7yyb7",
+                "fuelldved7k25uxadatl7l5kql309jnw07dcn4t3a6x9hm9nxyjcpqqns50p7n2",
+            ];
 
-            {
-                let result = &Bech32ContractId::from_str(invalid_bech32_with_hex_chars)
-                    .expect_err("should error");
-                assert_eq!(result.to_string(), expected.to_string());
+            for (b32m_e, e) in invalid_bech32.iter().zip(expected.iter()) {
+                let result = &Bech32ContractId::from_str(b32m_e).expect_err("should error");
+                assert_eq!(result.to_string(), e.to_string());
             }
 
-            {
-                let result = &Bech32Address::from_str(invalid_bech32_with_hex_chars)
-                    .expect_err("should error");
-                assert_eq!(result.to_string(), expected.to_string());
+            for (b32m_e, e) in invalid_bech32.iter().zip(expected) {
+                let result = &Bech32Address::from_str(b32m_e).expect_err("should error");
+                assert_eq!(result.to_string(), e.to_string());
             }
         }
     }

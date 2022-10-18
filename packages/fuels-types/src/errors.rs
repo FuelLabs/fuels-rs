@@ -27,8 +27,6 @@ impl From<Utf8Error> for CodecError {
 
 #[derive(Error, Debug)]
 pub enum Error {
-    #[error("General error: {0}")]
-    GeneralError(String),
     #[error("Invalid data: {0}")]
     InvalidData(String),
     #[error("Serialization error: {0}")]
@@ -99,11 +97,5 @@ impl From<TryFromSliceError> for Error {
 impl From<anyhow::Error> for Error {
     fn from(err: anyhow::Error) -> Error {
         Error::ParseTokenStreamError(err.to_string())
-    }
-}
-
-impl From<&'static str> for Error {
-    fn from(err: &'static str) -> Error {
-        Error::GeneralError(err.to_string())
     }
 }
