@@ -72,18 +72,24 @@ impl Abigen {
     }
 
     /// Entry point of the Abigen's expansion logic.
-    /// The high-level goal of this function is to expand* a contract
-    /// defined as a JSON into type-safe bindings of that contract that can be
-    /// used after it is brought into scope after a successful generation.
+    /// The high-level goal of this function is to expand* a contract/script defined as a JSON ABI
+    /// into type-safe bindings of that contract/script that can be used after it is brought into
+    /// scope after a successful generation.
     ///
-    /// *: To expand, in procedural macro terms, means to automatically generate
-    /// Rust code after a transformation of `TokenStream` to another
-    /// set of `TokenStream`. This generated Rust code is the brought into scope
-    /// after it is called through a procedural macro (`abigen!()` in our case).
+    /// *: To expand, in procedural macro terms, means to automatically generate Rust code after a
+    /// transformation of `TokenStream` to another set of `TokenStream`. This generated Rust code is
+    /// the brought into scope after it is called through a procedural macro
+    /// (`abigen!()/script_abigen!()` in our case).
     pub fn expand(&self) -> Result<TokenStream, Error> {
         if self.is_script {
-            return self.expand_script();
-        };
+            self.expand_script()
+        } else {
+            self.expand_contract()
+        }
+    }
+
+    /// Expand a contract into type-safe Rust bindings based on its ABI
+    pub fn expand_contract(&self) -> Result<TokenStream, Error> {
         let name = &self.contract_name;
         let methods_name = ident(&format!("{}Methods", name));
         let name_mod = ident(&format!(
@@ -176,39 +182,7 @@ impl Abigen {
         })
     }
 
-    fn includes(&self) -> TokenStream {
-        if self.no_std {
-            quote! {
-                use alloc::{vec, vec::Vec};
-                use fuels_core::{EnumSelector, Parameterize, Tokenizable, Token, Identity, try_from_bytes};
-                use fuels_core::types::*;
-                use fuels_core::code_gen::function_selector::resolve_fn_selector;
-                use fuels_types::errors::Error as SDKError;
-                use fuels_types::param_types::ParamType;
-                use fuels_types::enum_variants::EnumVariants;
-            }
-        } else {
-            quote! {
-                use fuels::contract::contract::{Contract, ContractCallHandler};
-                 use fuels::core::{EnumSelector, StringToken, Parameterize, Tokenizable, Token,
-                                  Identity, try_from_bytes};
-                use fuels::core::code_gen::{extract_and_parse_logs, extract_log_ids_and_data};
-                use fuels::core::abi_decoder::ABIDecoder;
-                use fuels::core::code_gen::function_selector::resolve_fn_selector;
-                use fuels::core::types::*;
-                use fuels::signers::WalletUnlocked;
-                use fuels::tx::{ContractId, Address, Receipt};
-                use fuels::types::bech32::Bech32ContractId;
-                use fuels::types::ResolvedLog;
-                use fuels::types::errors::Error as SDKError;
-                use fuels::types::param_types::ParamType;
-                use fuels::types::enum_variants::EnumVariants;
-                use std::str::FromStr;
-                use std::collections::{HashSet, HashMap};
-            }
-        }
-    }
-
+    /// Expand a script into type-safe Rust bindings based on its ABI
     pub fn expand_script(&self) -> Result<TokenStream, Error> {
         let name = &self.contract_name;
         let name_mod = ident(&format!(
@@ -255,6 +229,41 @@ impl Abigen {
 
             }
         })
+    }
+
+    /// Generates the includes necessary for the abigen.
+    /// TODO(iqdecay): change the necessary imports on scripts
+    fn includes(&self) -> TokenStream {
+        if self.no_std {
+            quote! {
+                use alloc::{vec, vec::Vec};
+                use fuels_core::{EnumSelector, Parameterize, Tokenizable, Token, Identity, try_from_bytes};
+                use fuels_core::types::*;
+                use fuels_core::code_gen::function_selector::resolve_fn_selector;
+                use fuels_types::errors::Error as SDKError;
+                use fuels_types::param_types::ParamType;
+                use fuels_types::enum_variants::EnumVariants;
+            }
+        } else {
+            quote! {
+                use fuels::contract::contract::{Contract, ContractCallHandler};
+                 use fuels::core::{EnumSelector, StringToken, Parameterize, Tokenizable, Token,
+                                  Identity, try_from_bytes};
+                use fuels::core::code_gen::{extract_and_parse_logs, extract_log_ids_and_data};
+                use fuels::core::abi_decoder::ABIDecoder;
+                use fuels::core::code_gen::function_selector::resolve_fn_selector;
+                use fuels::core::types::*;
+                use fuels::signers::WalletUnlocked;
+                use fuels::tx::{ContractId, Address, Receipt};
+                use fuels::types::bech32::Bech32ContractId;
+                use fuels::types::ResolvedLog;
+                use fuels::types::errors::Error as SDKError;
+                use fuels::types::param_types::ParamType;
+                use fuels::types::enum_variants::EnumVariants;
+                use std::str::FromStr;
+                use std::collections::{HashSet, HashMap};
+            }
+        }
     }
 
     pub fn functions(&self) -> Result<TokenStream, Error> {
