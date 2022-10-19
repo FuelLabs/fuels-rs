@@ -75,7 +75,9 @@ mod tests {
     fn test_into_token() {
         let data = [0u8; 32];
         let bits256 = Bits256(data);
+
         let token = bits256.into_token();
+
         assert_eq!(token, Token::B256(data));
     }
 
