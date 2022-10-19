@@ -19,7 +19,9 @@ impl Bits256 {
         };
 
         let mut bytes = [0u8; 32];
-        hex::decode_to_slice(hex, &mut bytes as &mut [u8]).expect("Decoding failed");
+        hex::decode_to_slice(hex, &mut bytes as &mut [u8]).map_err(|e| {
+            Error::InvalidData(format!("Could not convert hex str '{hex}' to Bits256! {e}"))
+        })?;
         Ok(Bits256(bytes))
     }
 }
