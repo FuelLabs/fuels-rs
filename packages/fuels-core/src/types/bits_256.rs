@@ -82,16 +82,22 @@ mod tests {
     }
 
     #[test]
-    fn from_hex_str() {
+    fn from_hex_str() -> Result<(), Error> {
         // ANCHOR: from_hex_str
         let hex_str = "0101010101010101010101010101010101010101010101010101010101010101";
-        let bits256 = Bits256::from_hex_str(hex_str).unwrap();
+
+        let bits256 = Bits256::from_hex_str(hex_str)?;
+
         assert_eq!(bits256.0, [1u8; 32]);
 
         // With the `0x0` prefix
         let hex_str = "0x0101010101010101010101010101010101010101010101010101010101010101";
-        let bits256 = Bits256::from_hex_str(hex_str).unwrap();
+
+        let bits256 = Bits256::from_hex_str(hex_str)?;
+
         assert_eq!(bits256.0, [1u8; 32]);
         // ANCHOR_END: from_hex_str
+
+        Ok(())
     }
 }
