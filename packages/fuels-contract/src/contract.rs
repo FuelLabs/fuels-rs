@@ -11,7 +11,6 @@ use fuel_gql_client::{
     fuel_types::{Address, AssetId, Salt},
 };
 use fuel_gql_client::prelude::PanicReason;
-use fuel_tx::Receipt::Panic;
 
 use fuels_core::abi_decoder::ABIDecoder;
 use fuels_core::abi_encoder::{ABIEncoder, UnresolvedBytes};
@@ -160,7 +159,7 @@ impl Contract {
     fn should_compute_custom_input_offset(args: &[Token]) -> bool {
         args.len() > 1
             || args.iter().any(|t| {
-                matches!(
+            matches!(
                     t,
                     Token::String(_)
                         | Token::Struct(_)
@@ -171,7 +170,7 @@ impl Contract {
                         | Token::Byte(_)
                         | Token::Vector(_)
                 )
-            })
+        })
     }
 
     /// Loads a compiled contract and deploys it to a running node
@@ -379,6 +378,10 @@ impl ContractCall {
         }
     }
 
+    pub fn append_external_contracts(&mut self, contract_id: Bech32ContractId) {
+        self.external_contracts.push(contract_id)
+    }
+
     pub fn append_message_outputs(&mut self, num: u64) {
         let new_message_outputs = vec![
             Output::Message {
@@ -459,8 +462,8 @@ pub struct ContractCallHandler<D> {
 }
 
 impl<D> ContractCallHandler<D>
-where
-    D: Tokenizable + Debug,
+    where
+        D: Tokenizable + Debug,
 {
     /// Sets external contracts as dependencies to this contract's call.
     /// Effectively, this will be used to create Input::Contract/Output::Contract
@@ -472,8 +475,13 @@ where
         self
     }
 
-    pub fn append_contracts(mut self, contract_id: Bech32ContractId) -> Self {
-        self.contract_call.external_contracts.push(contract_id);
+    /// Appends additional external contracts as dependencies to this contract's call.
+    /// Effectively, this will be used to create additional Input::Contract/Output::Contract
+    /// pairs and set them into the transaction.
+    /// Note that this is a builder method, i.e. use it as a chain:
+    /// `my_contract_instance.my_method(...).append_contracts(additional_contract_id).call()`.
+    pub fn append_contract(mut self, contract_id: Bech32ContractId) -> Self {
+        self.contract_call.append_external_contracts(contract_id);
         self
     }
 
@@ -538,7 +546,7 @@ where
             &self.tx_parameters,
             &self.wallet,
         )
-        .await
+            .await
     }
 
     /// Call a contract's method on the node, in a state-modifying manner.
@@ -553,6 +561,16 @@ where
         Self::call_or_simulate(&self, true).await
     }
 
+    /// Simulates a call without needing to resolve the generic for the return type
+    async fn simulate_without_decode(&self) -> Result<(), Error> {
+        let script = self.get_call_execution_script().await?;
+        let provider = self.wallet.get_provider()?;
+
+        script.simulate(provider).await?;
+
+        Ok(())
+    }
+
     /// Simulates the call and attempts to resolve missing tx dependencies.
     /// Forwards the received error if it cannot be fixed.
     pub async fn estimate_tx_dependencies(
@@ -562,14 +580,23 @@ where
         let attempts = max_attempts.unwrap_or(DEFAULT_TX_DEP_ESTIMATION_ATTEMPTS);
 
         for _ in 0..attempts {
-            let result = self.call_or_simulate(true).await;
+            let result = self.simulate_without_decode().await;
 
             match result {
                 Err(Error::RevertTransactionError(_, receipts))
-                    if ContractCall::is_missing_output_variables(&receipts) =>
-                {
-                    self = self.append_variable_outputs(1);
+                if ContractCall::is_missing_output_variables(&receipts) =>
+                    {
+                        self = self.append_variable_outputs(1);
+                    }
+
+                Err(Error::RevertTransactionError(_, receipts)) => {
+                    if let Some(receipt) = ContractCall::check_if_contract_not_in_inputs(&receipts)
+                    {
+                        let contract_id = Bech32ContractId::from(*receipt.contract_id().unwrap());
+                        self = self.append_contract(contract_id);
+                    }
                 }
+
                 Err(e) => return Err(e),
                 _ => return Ok(self),
             }
@@ -602,28 +629,6 @@ where
         let token = self.contract_call.get_decoded_output(&mut receipts)?;
         Ok(CallResponse::new(D::from_token(token)?, receipts))
     }
-
-    pub async fn set_contracts_automatic(
-        mut self,
-    ) -> Result<Self, Error> {
-
-        let mut script = self.get_call_execution_script().await?;
-        let mut receipts =  script.simulate(&self.provider).await?;
-
-        while let Some(receipt) = ContractCall::check_if_contract_not_in_inputs(&receipts) {
-            let a = Bech32ContractId::from(*receipt.contract_id().unwrap());
-            self = self.append_contracts(a);
-            script = self.get_call_execution_script().await?;
-            receipts =  script.simulate(&self.provider).await?;
-        }
-
-        match self.call_or_simulate(true).await {
-            Ok(_) => Ok(self),
-            Err(e) => Err(e),
-        }
-
-    }
-
 
 }
 
@@ -722,12 +727,22 @@ impl MultiContractCallHandler {
 
             match result {
                 Err(Error::RevertTransactionError(_, receipts))
-                    if ContractCall::is_missing_output_variables(&receipts) =>
-                {
-                    self.contract_calls
-                        .iter_mut()
-                        .take(1)
-                        .for_each(|call| call.append_variable_outputs(1));
+                if ContractCall::is_missing_output_variables(&receipts) =>
+                    {
+                        self.contract_calls
+                            .iter_mut()
+                            .take(1)
+                            .for_each(|call| call.append_variable_outputs(1));
+                    }
+
+                Err(Error::RevertTransactionError(_, receipts)) => {
+                    if let Some(receipt) = ContractCall::check_if_contract_not_in_inputs(&receipts)
+                    {
+                        let contract_id = Bech32ContractId::from(*receipt.contract_id().unwrap());
+                        self.contract_calls
+                            .iter_mut()
+                            .take(1)
+                            .for_each(|call| call.append_external_contracts(contract_id.clone()));                    }
                 }
                 Err(e) => return Err(e),
                 _ => return Ok(self),
@@ -791,8 +806,8 @@ mod test {
             TxParameters::default(),
             StorageConfiguration::default(),
         )
-        .await
-        .unwrap();
+            .await
+            .unwrap();
     }
 
     #[tokio::test]
@@ -808,7 +823,7 @@ mod test {
             StorageConfiguration::default(),
             Salt::default(),
         )
-        .await
-        .unwrap();
+            .await
+            .unwrap();
     }
 }

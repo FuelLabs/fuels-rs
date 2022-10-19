@@ -1,7 +1,5 @@
 //! Testing helpers/utilities for Fuel SDK.
 
-extern crate core;
-
 use std::net::SocketAddr;
 
 #[cfg(feature = "fuel-core-lib")]
@@ -39,7 +37,6 @@ use rand::Fill;
 pub mod node;
 
 mod chains;
-use fuels_core::tx;
 pub mod script;
 #[cfg(feature = "fuels-signers")]
 mod signers;
@@ -179,7 +176,7 @@ pub async fn setup_test_client(
             nonce: message.nonce,
             amount: message.amount,
             data: message.data,
-            da_height: message.da_height,
+            da_height: fuel_core::model::DaBlockHeight(message.da_height.0),
         })
         .collect();
 

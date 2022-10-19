@@ -65,7 +65,7 @@ mod tests {
 
         // ANCHOR: get_spendable_coins
         let spendable_coins = provider
-            .get_spendable_resources(wallet.address(), BASE_ASSET_ID, 1)
+            .get_spendable_coins(wallet.address(), BASE_ASSET_ID, 1)
             .await?;
         assert_eq!(spendable_coins.len(), 1);
         // ANCHOR_END: get_spendable_coins

@@ -1,6 +1,7 @@
 use anyhow::Result;
 use fuel_gql_client::fuel_tx::{ConsensusParameters, Receipt, Transaction};
-use fuel_gql_client::fuel_tx::{Input, Output, TxPointer, UtxoId};
+use fuel_gql_client::fuel_tx::{Input, Output, TxPointer, UtxoId, PanicReason};
+
 use fuel_gql_client::fuel_types::{
     bytes::padded_len_usize, AssetId, Bytes32, ContractId, Immediate18, Word,
 };
@@ -394,7 +395,8 @@ impl Script {
         if receipts
             .iter()
             .any(|r|
-                matches!(r, Receipt::ScriptResult { result, .. } if *result != ScriptExecutionResult::Success)
+                matches!(r, Receipt::ScriptResult { result, .. } if *result != ScriptExecutionResult::Success) |
+                    matches!(r, Receipt::Panic { reason, .. } if *reason.reason() == PanicReason::ContractNotInInputs )
         ) {
             return Err(Error::RevertTransactionError(Default::default(), receipts));
         }

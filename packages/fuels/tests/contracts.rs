@@ -575,5 +575,37 @@ async fn test_output_variable_estimation_multicall() -> Result<(), Error> {
         assert_eq!(balance, 3 * amount);
     }
 
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_contract_set_estimation() -> Result<(), Error> {
+    setup_contract_test!(
+        foo_contract_instance,
+        wallet,
+        "packages/fuels/tests/contracts/foo_contract"
+    );
+    let foo_contract_id = foo_contract_instance.get_contract_id();
+
+    let res = foo_contract_instance.methods().foo(true).call().await?;
+    assert!(!res.value);
+
+    setup_contract_test!(
+        foo_caller_contract_instance,
+        None,
+        "packages/fuels/tests/contracts/foo_caller_contract"
+    );
+
+    let bits = *foo_contract_id.hash();
+    let res = foo_caller_contract_instance
+        .methods()
+        .call_foo_contract(Bits256(bits), true)
+        .estimate_tx_dependencies(None)
+        .await?
+        .call()
+        .await?;
+
+    assert!(res.value);
     Ok(())
 }

@@ -32,3 +32,4 @@ fuel-core = { path = "../../fuel-fulstack/fuel-core/fuel-core" }
 fuel-gql-client = { path = "../../fuel-fulstack/fuel-core/fuel-client" }
 fuel-tx = { path = "../../fuel-fulstack/fuel-tx" }
 fuel-vm = { path = "../../fuel-fulstack/fuel-vm" }
+
