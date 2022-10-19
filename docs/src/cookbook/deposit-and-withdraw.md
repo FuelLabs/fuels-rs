@@ -3,7 +3,7 @@
 Consider the following contract:
 
 ```rust,ignore
-{{#include ../../../packages/fuels/tests/examples/liquidity_pool/src/main.sw}}
+{{#include ../../../packages/fuels/tests/contracts/liquidity_pool/src/main.sw}}
 ```
 
 As its name suggests, it represents a simplified example of a liquidity pool contract. The method `deposit()` expects you to supply an arbitrary amount of the `BASE_TOKEN`. As a result, it mints double the amount of the liquidity asset to the calling address. Analogously, if you call `withdraw()` supplying it with the liquidity asset, it will transfer half that amount of the `BASE_TOKEN` back to the calling address except for deducting it from the contract balance instead of minting it.
