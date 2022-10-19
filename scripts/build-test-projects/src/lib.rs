@@ -26,7 +26,7 @@ pub fn build_recursively(path: &Path, num_buf_futures: usize) -> impl Stream<Ite
     stream::iter(discover_projects(path))
         .map(|path| async {
             let output = tokio::process::Command::new("forc")
-                .args(["build", "--generate-logged-types", "--path"])
+                .args(["build", "--path"])
                 .arg(&path)
                 .output()
                 .await

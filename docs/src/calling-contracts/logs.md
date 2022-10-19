@@ -11,13 +11,13 @@ Consider the following contract method:
 You can access the logged values in Rust by calling `logs_with_type::<T>` from a contract instance, where `T` is the type of the logged variables you want to retrieve. The result will be a `Vec<T>`:
 
 ```rust,ignore
-{{#include ../../../packages/fuels/tests/logs/mod.rs:produce_logs}}
+{{#include ../../../packages/fuels/tests/logs.rs:produce_logs}}
 ```
 
 You can also get a vector of all the logged values as strings using `fetch_logs()`:
 
 ```rust, ignore
-{{#include ../../../packages/fuels/tests/logs/mod.rs:fetch_logs}}
+{{#include ../../../packages/fuels/tests/logs.rs:fetch_logs}}
 ```
 
 Due to possible performance hits, it is not recommended to use `fetch_logs()` outside of a debugging scenario.
