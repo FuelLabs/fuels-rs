@@ -60,11 +60,15 @@ mod tests {
     }
 
     #[test]
-    fn test_from_token() {
+    fn test_from_token() -> Result<(), Error> {
         let data = [0u8; 32];
         let token = Token::B256(data);
-        let bits256 = Bits256::from_token(token).unwrap();
+
+        let bits256 = Bits256::from_token(token)?;
+
         assert_eq!(bits256.0, data);
+
+        Ok(())
     }
 
     #[test]
