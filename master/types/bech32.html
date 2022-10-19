@@ -153,9 +153,9 @@
         let _bech32_address = Bech32Address::new(hrp, my_hash);
 
         // From a string.
-        let string = &quot;fuel1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqsx2mt2&quot;;
+        let address = &quot;fuel1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqsx2mt2&quot;;
         let bech32_address =
-            Bech32Address::from_str(string).expect(&quot;failed to create Bech32 address from string&quot;);
+            Bech32Address::from_str(address).expect(&quot;failed to create Bech32 address from string&quot;);
         assert_eq!([0u8; 32], *bech32_address.hash());
 
         // From Address

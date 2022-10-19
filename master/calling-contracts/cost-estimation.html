@@ -149,7 +149,7 @@
 }
 </code></pre>
 <p>Below are examples that show how to get the estimated transaction cost from single and multi call transactions.</p>
-<pre><code class="language-rust ignore">        let contract_instance = MyContract::new(contract_id.to_string(), wallet);
+<pre><code class="language-rust ignore">        let contract_instance = MyContract::new(contract_id, wallet);
 
         let tolerance = 0.0;
         let transaction_cost = contract_instance

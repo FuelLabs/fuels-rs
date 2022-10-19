@@ -219,7 +219,7 @@ impl LiquidityPool for Contract {
         )
         .await?;
 
-        let contract_methods = MyContract::new(contract_id.to_string(), wallet.clone()).methods();
+        let contract_methods = MyContract::new(contract_id.clone(), wallet.clone()).methods();
 </code></pre>
 <p>With the preparations out of the way, we can finally deposit to the liquidity pool by calling <code>deposit()</code> via the contract instance. Since we have to transfer assets to the contract, we create the appropriate <code>CallParameters</code> and chain them to the method call. To receive the minted liquidity pool asset, we have to append a variable output to our contract call.</p>
 <pre><code class="language-rust ignore">        let deposit_amount = 1_000_000;

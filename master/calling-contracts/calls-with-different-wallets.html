@@ -140,7 +140,7 @@
                         <h1 id="calls-with-different-wallets"><a class="header" href="#calls-with-different-wallets">Calls with different wallets</a></h1>
 <p>You can use the <code>with_wallet()</code> method on an existing contract instance as a shorthand for creating a new instance connected to the provided wallet. This lets you make contracts calls with different wallets in a chain like fashion.</p>
 <pre><code class="language-rust ignore">        // Create contract instance with wallet_1
-        let contract_instance = MyContract::new(contract_id.to_string(), wallet_1.clone());
+        let contract_instance = MyContract::new(contract_id, wallet_1.clone());
 
         // Perform contract call with wallet_2
         let response = contract_instance

@@ -811,7 +811,7 @@ coins and coin amount</p>
 </code></pre>
 <p>You can then use the contract methods very simply:</p>
 <pre><code class="language-rust ignore">        // This is an instance of your contract which you can use to make calls to your functions
-        let contract_instance = MyContract::new(contract_id.to_string(), wallet);
+        let contract_instance = MyContract::new(contract_id, wallet);
 
         let response = contract_instance
             .methods()
@@ -873,14 +873,26 @@ coins and coin amount</p>
             MyContract,
             &quot;packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json&quot;
         );
-        let wallet = launch_provider_and_get_wallet().await;
-        // Your contract ID as a String.
-        let contract_id =
-            &quot;fuel1vkm285ypjesypw7vhdlhnty3kjxxx4efckdycqh3ttna4xvmxtfs6murwy&quot;.to_string();
+        let wallet_original = launch_provider_and_get_wallet().await;
+
+        let wallet = wallet_original.clone();
+        // Your bech32m encoded contract ID.
+        let contract_id: Bech32ContractId =
+            &quot;fuel1vkm285ypjesypw7vhdlhnty3kjxxx4efckdycqh3ttna4xvmxtfs6murwy&quot;
+                .parse()
+                .expect(&quot;Invalid ID&quot;);
 
         let connected_contract_instance = MyContract::new(contract_id, wallet);
         // You can now use the `connected_contract_instance` just as you did above!
 </code></pre>
+<p>The above example assumes that your contract id string is encoded in the bech32m format. You can recognize it by the human-readable-part &quot;fuel&quot; followed by the separator &quot;1&quot;. However, when using other Fuel tools, you might end up with a hex-encoded contract id string. In that case, you can create your contract instance as follows:</p>
+<pre><code class="language-rust ignore">        let contract_id: ContractId =
+            &quot;0x65b6a3d081966040bbccbb7f79ac91b48c635729c59a4c02f15ae7da999b32d3&quot;
+                .parse()
+                .expect(&quot;Invalid ID&quot;);
+        let connected_contract_instance = MyContract::new(contract_id.into(), wallet);
+</code></pre>
+<p>You can learn more about the Fuel SDK bech32 types <a href="contracts/../types/bech32.html">here</a>.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="the-fuelvm-binary-file"><a class="header" href="#the-fuelvm-binary-file">The FuelVM binary file</a></h1>
 <p>The command <code>forc build</code> compiles your Sway code and generates the bytecode: the binary code that the Fuel Virtual Machine will interpret. For instance, the smart contract below:</p>
 <pre><code class="language-Rust">contract;
@@ -1051,7 +1063,7 @@ impl MyContract {
 </blockquote>
 <p>Then, you're able to use it to call the actual methods on the deployed contract:</p>
 <pre><code class="language-rust ignore">        // This is an instance of your contract which you can use to make calls to your functions
-        let contract_instance = MyContract::new(contract_id.to_string(), wallet);
+        let contract_instance = MyContract::new(contract_id, wallet);
 
         let response = contract_instance
             .methods()
@@ -1233,7 +1245,7 @@ impl MyContract {
 </ol>
 <p>Here's an example. Suppose your Sway contract has two ABI methods called <code>initialize_counter(u64)</code> and <code>increment_counter(u64)</code>. Once you've deployed it the contract, you can call these methods like this:</p>
 <pre><code class="language-rust ignore">        // This is an instance of your contract which you can use to make calls to your functions
-        let contract_instance = MyContract::new(contract_id.to_string(), wallet);
+        let contract_instance = MyContract::new(contract_id, wallet);
 
         let response = contract_instance
             .methods()
@@ -1256,7 +1268,7 @@ impl MyContract {
 <div style="break-before: page; page-break-before: always;"></div><h1 id="calls-with-different-wallets"><a class="header" href="#calls-with-different-wallets">Calls with different wallets</a></h1>
 <p>You can use the <code>with_wallet()</code> method on an existing contract instance as a shorthand for creating a new instance connected to the provided wallet. This lets you make contracts calls with different wallets in a chain like fashion.</p>
 <pre><code class="language-rust ignore">        // Create contract instance with wallet_1
-        let contract_instance = MyContract::new(contract_id.to_string(), wallet_1.clone());
+        let contract_instance = MyContract::new(contract_id, wallet_1.clone());
 
         // Perform contract call with wallet_2
         let response = contract_instance
@@ -1277,7 +1289,7 @@ impl MyContract {
 <li>Maturity.</li>
 </ol>
 <p>You can configure these parameters by creating an instance of <a href="https://github.com/FuelLabs/fuels-rs/blob/adf81bd451d7637ce0976363bd7784408430031a/packages/fuels-contract/src/parameters.rs#L7"><code>TxParameters</code></a> and passing it to a chain method called <code>tx_params</code>:</p>
-<pre><code class="language-rust ignore">        let contract_methods = MyContract::new(contract_id.to_string(), wallet.clone()).methods();
+<pre><code class="language-rust ignore">        let contract_methods = MyContract::new(contract_id.clone(), wallet.clone()).methods();
 
         // In order: gas_price, gas_limit, and maturity
         let my_tx_params = TxParameters::new(None, Some(1_000_000), None);
@@ -1320,7 +1332,7 @@ pub const DEFAULT_MATURITY: u64 = 0;
     }
 </code></pre>
 <p>Then, in Rust, after setting up and deploying the above contract, you can configure the amount being sent in the transaction like this:</p>
-<pre><code class="language-rust ignore">        let contract_methods = MyContract::new(contract_id.to_string(), wallet.clone()).methods();
+<pre><code class="language-rust ignore">        let contract_methods = MyContract::new(contract_id, wallet.clone()).methods();
 
         let tx_params = TxParameters::default();
 
@@ -1467,7 +1479,7 @@ pub const BASE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="multiple-contract-calls"><a class="header" href="#multiple-contract-calls">Multiple contract calls</a></h1>
 <p>With <code>ContractMultiCallHandler</code>, you can execute multiple contract calls within a single transaction. To achieve this, you first prepare all the contract calls that you want to bundle:</p>
-<pre><code class="language-rust ignore">        let contract_methods = MyContract::new(contract_id.to_string(), wallet.clone()).methods();
+<pre><code class="language-rust ignore">        let contract_methods = MyContract::new(contract_id, wallet.clone()).methods();
 
         let call_handler_1 = contract_methods.initialize_counter(42);
         let call_handler_2 = contract_methods.get_array([42; 2]);
@@ -1502,7 +1514,7 @@ pub const BASE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
 }
 </code></pre>
 <p>Below are examples that show how to get the estimated transaction cost from single and multi call transactions.</p>
-<pre><code class="language-rust ignore">        let contract_instance = MyContract::new(contract_id.to_string(), wallet);
+<pre><code class="language-rust ignore">        let contract_instance = MyContract::new(contract_id, wallet);
 
         let tolerance = 0.0;
         let transaction_cost = contract_instance
@@ -1696,8 +1708,8 @@ fn main() -&gt; bool {
         assert_eq!([1u8; 32], *b256);
 
         // From a hex string.
-        let hex_string = &quot;0x0000000000000000000000000000000000000000000000000000000000000000&quot;;
-        let b256 = Bytes32::from_str(hex_string).expect(&quot;failed to create Bytes32 from string&quot;);
+        let hex_str = &quot;0x0000000000000000000000000000000000000000000000000000000000000000&quot;;
+        let b256 = Bytes32::from_str(hex_str).expect(&quot;failed to create Bytes32 from string&quot;);
         assert_eq!([0u8; 32], *b256);
 </code></pre>
 <p><code>Bytes32</code> also implements <em>fmt's</em> <code>Debug</code>, <code>Display</code>, <code>LowerHex</code> and <code>UpperHex</code> traits. For example, you can get the display and hex representations with:</p>
@@ -1727,8 +1739,8 @@ fn main() -&gt; bool {
         assert_eq!([1u8; 32], *address);
 
         // From a string.
-        let hex_string = &quot;0x0000000000000000000000000000000000000000000000000000000000000000&quot;;
-        let address = Address::from_str(hex_string).expect(&quot;failed to create Address from string&quot;);
+        let hex_str = &quot;0x0000000000000000000000000000000000000000000000000000000000000000&quot;;
+        let address = Address::from_str(hex_str).expect(&quot;failed to create Address from string&quot;);
         assert_eq!([0u8; 32], *address);
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="contractid"><a class="header" href="#contractid">ContractId</a></h1>
@@ -1750,9 +1762,9 @@ fn main() -&gt; bool {
         assert_eq!([1u8; 32], *contract_id);
 
         // From a string.
-        let hex_string = &quot;0x0000000000000000000000000000000000000000000000000000000000000000&quot;;
+        let hex_str = &quot;0x0000000000000000000000000000000000000000000000000000000000000000&quot;;
         let contract_id =
-            ContractId::from_str(hex_string).expect(&quot;failed to create ContractId from string&quot;);
+            ContractId::from_str(hex_str).expect(&quot;failed to create ContractId from string&quot;);
         assert_eq!([0u8; 32], *contract_id);
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="assetid"><a class="header" href="#assetid">AssetId</a></h1>
@@ -1774,8 +1786,8 @@ fn main() -&gt; bool {
         assert_eq!([1u8; 32], *asset_id);
 
         // From a string.
-        let hex_string = &quot;0x0000000000000000000000000000000000000000000000000000000000000000&quot;;
-        let asset_id = AssetId::from_str(hex_string).expect(&quot;failed to create AssetId from string&quot;);
+        let hex_str = &quot;0x0000000000000000000000000000000000000000000000000000000000000000&quot;;
+        let asset_id = AssetId::from_str(hex_str).expect(&quot;failed to create AssetId from string&quot;);
         assert_eq!([0u8; 32], *asset_id);
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="converting-native-types"><a class="header" href="#converting-native-types">Converting native types</a></h1>
@@ -1804,9 +1816,9 @@ fn main() -&gt; bool {
         let _bech32_address = Bech32Address::new(hrp, my_hash);
 
         // From a string.
-        let string = &quot;fuel1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqsx2mt2&quot;;
+        let address = &quot;fuel1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqsx2mt2&quot;;
         let bech32_address =
-            Bech32Address::from_str(string).expect(&quot;failed to create Bech32 address from string&quot;);
+            Bech32Address::from_str(address).expect(&quot;failed to create Bech32 address from string&quot;);
         assert_eq!([0u8; 32], *bech32_address.hash());
 
         // From Address
@@ -2183,7 +2195,7 @@ impl LiquidityPool for Contract {
         )
         .await?;
 
-        let contract_methods = MyContract::new(contract_id.to_string(), wallet.clone()).methods();
+        let contract_methods = MyContract::new(contract_id.clone(), wallet.clone()).methods();
 </code></pre>
 <p>With the preparations out of the way, we can finally deposit to the liquidity pool by calling <code>deposit()</code> via the contract instance. Since we have to transfer assets to the contract, we create the appropriate <code>CallParameters</code> and chain them to the method call. To receive the minted liquidity pool asset, we have to append a variable output to our contract call.</p>
 <pre><code class="language-rust ignore">        let deposit_amount = 1_000_000;

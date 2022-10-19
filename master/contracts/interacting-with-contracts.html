@@ -144,14 +144,26 @@
             MyContract,
             &quot;packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json&quot;
         );
-        let wallet = launch_provider_and_get_wallet().await;
-        // Your contract ID as a String.
-        let contract_id =
-            &quot;fuel1vkm285ypjesypw7vhdlhnty3kjxxx4efckdycqh3ttna4xvmxtfs6murwy&quot;.to_string();
+        let wallet_original = launch_provider_and_get_wallet().await;
+
+        let wallet = wallet_original.clone();
+        // Your bech32m encoded contract ID.
+        let contract_id: Bech32ContractId =
+            &quot;fuel1vkm285ypjesypw7vhdlhnty3kjxxx4efckdycqh3ttna4xvmxtfs6murwy&quot;
+                .parse()
+                .expect(&quot;Invalid ID&quot;);
 
         let connected_contract_instance = MyContract::new(contract_id, wallet);
         // You can now use the `connected_contract_instance` just as you did above!
 </code></pre>
+<p>The above example assumes that your contract id string is encoded in the bech32m format. You can recognize it by the human-readable-part &quot;fuel&quot; followed by the separator &quot;1&quot;. However, when using other Fuel tools, you might end up with a hex-encoded contract id string. In that case, you can create your contract instance as follows:</p>
+<pre><code class="language-rust ignore">        let contract_id: ContractId =
+            &quot;0x65b6a3d081966040bbccbb7f79ac91b48c635729c59a4c02f15ae7da999b32d3&quot;
+                .parse()
+                .expect(&quot;Invalid ID&quot;);
+        let connected_contract_instance = MyContract::new(contract_id.into(), wallet);
+</code></pre>
+<p>You can learn more about the Fuel SDK bech32 types <a href="../types/bech32.html">here</a>.</p>
 
                     </main>
 

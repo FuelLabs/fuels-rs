@@ -151,7 +151,7 @@
     }
 </code></pre>
 <p>Then, in Rust, after setting up and deploying the above contract, you can configure the amount being sent in the transaction like this:</p>
-<pre><code class="language-rust ignore">        let contract_methods = MyContract::new(contract_id.to_string(), wallet.clone()).methods();
+<pre><code class="language-rust ignore">        let contract_methods = MyContract::new(contract_id, wallet.clone()).methods();
 
         let tx_params = TxParameters::default();
 

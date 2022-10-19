@@ -156,8 +156,8 @@
         assert_eq!([1u8; 32], *asset_id);
 
         // From a string.
-        let hex_string = &quot;0x0000000000000000000000000000000000000000000000000000000000000000&quot;;
-        let asset_id = AssetId::from_str(hex_string).expect(&quot;failed to create AssetId from string&quot;);
+        let hex_str = &quot;0x0000000000000000000000000000000000000000000000000000000000000000&quot;;
+        let asset_id = AssetId::from_str(hex_str).expect(&quot;failed to create AssetId from string&quot;);
         assert_eq!([0u8; 32], *asset_id);
 </code></pre>
 

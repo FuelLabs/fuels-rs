@@ -156,8 +156,8 @@
         assert_eq!([1u8; 32], *b256);
 
         // From a hex string.
-        let hex_string = &quot;0x0000000000000000000000000000000000000000000000000000000000000000&quot;;
-        let b256 = Bytes32::from_str(hex_string).expect(&quot;failed to create Bytes32 from string&quot;);
+        let hex_str = &quot;0x0000000000000000000000000000000000000000000000000000000000000000&quot;;
+        let b256 = Bytes32::from_str(hex_str).expect(&quot;failed to create Bytes32 from string&quot;);
         assert_eq!([0u8; 32], *b256);
 </code></pre>
 <p><code>Bytes32</code> also implements <em>fmt's</em> <code>Debug</code>, <code>Display</code>, <code>LowerHex</code> and <code>UpperHex</code> traits. For example, you can get the display and hex representations with:</p>
