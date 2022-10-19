@@ -1968,6 +1968,20 @@ impl MyContract for Contract {
 
     let call_handler = contract_instance.methods().takes_b256(Bits256(arg));
 </code></pre>
+<p>If you have a hexadecimal value as a string and wish to convert it to <code>Bits256</code>, you may do so with <code>from_hex_str</code>:</p>
+<pre><code>    let hex_str = &quot;0101010101010101010101010101010101010101010101010101010101010101&quot;;
+
+    let bits256 = Bits256::from_hex_str(hex_str)?;
+
+    assert_eq!(bits256.0, [1u8; 32]);
+
+    // With the `0x0` prefix
+    let hex_str = &quot;0x0101010101010101010101010101010101010101010101010101010101010101&quot;;
+
+    let bits256 = Bits256::from_hex_str(hex_str)?;
+
+    assert_eq!(bits256.0, [1u8; 32]);
+</code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="vectors"><a class="header" href="#vectors">Vectors</a></h1>
 <h2 id="passing-in-vectors"><a class="header" href="#passing-in-vectors">Passing in vectors</a></h2>
 <p>You can pass a Rust <code>std::vec::Vec</code> into your contract method transparently. The following code calls a Sway function which accepts and then returns a <code>Vec&lt;SomeStruct&lt;u32&gt;&gt;</code>.</p>

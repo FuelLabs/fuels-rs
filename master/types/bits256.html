@@ -144,6 +144,20 @@
 
     let call_handler = contract_instance.methods().takes_b256(Bits256(arg));
 </code></pre>
+<p>If you have a hexadecimal value as a string and wish to convert it to <code>Bits256</code>, you may do so with <code>from_hex_str</code>:</p>
+<pre><code>    let hex_str = &quot;0101010101010101010101010101010101010101010101010101010101010101&quot;;
+
+    let bits256 = Bits256::from_hex_str(hex_str)?;
+
+    assert_eq!(bits256.0, [1u8; 32]);
+
+    // With the `0x0` prefix
+    let hex_str = &quot;0x0101010101010101010101010101010101010101010101010101010101010101&quot;;
+
+    let bits256 = Bits256::from_hex_str(hex_str)?;
+
+    assert_eq!(bits256.0, [1u8; 32]);
+</code></pre>
 
                     </main>
 
