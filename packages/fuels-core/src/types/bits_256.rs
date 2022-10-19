@@ -48,6 +48,7 @@ impl Tokenizable for Bits256 {
     }
 }
 
+#[cfg(test)]
 mod tests {
     use super::*;
     use crate::Tokenizable;
