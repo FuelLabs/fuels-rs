@@ -142,8 +142,7 @@ async fn test_script_interface() -> Result<(), Error> {
         .await?;
     assert_eq!(contract_balances.len(), 1);
 
-    let asset_id_key = format!("{:#x}", BASE_ASSET_ID);
-    let balance = contract_balances.get(&asset_id_key).unwrap();
+    let balance = contract_balances.get(&BASE_ASSET_ID).unwrap();
     assert_eq!(*balance, 100);
 
     Ok(())

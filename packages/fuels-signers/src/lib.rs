@@ -182,7 +182,11 @@ mod tests {
             .await?;
 
         // Assert that the transaction was properly configured.
-        let res = wallet_1.get_provider()?.get_transaction(&tx_id).await?;
+        let res = wallet_1
+            .get_provider()?
+            .get_transaction(&tx_id)
+            .await?
+            .expect("could not find transaction with specified id");
 
         assert_eq!(res.transaction.gas_limit(), gas_limit);
         assert_eq!(res.transaction.gas_price(), gas_price);

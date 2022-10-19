@@ -117,7 +117,6 @@ mod tests {
     async fn transfer_multiple() -> Result<(), Error> {
         // ANCHOR: transfer_multiple
         use fuels::prelude::*;
-        use std::str::FromStr;
 
         // ANCHOR: transfer_multiple_setup
         let mut wallet_1 = WalletUnlocked::new_random(None);
@@ -140,9 +139,7 @@ mod tests {
 
         let mut inputs = vec![];
         let mut outputs = vec![];
-        for (id_string, amount) in balances {
-            let id = AssetId::from_str(&id_string).unwrap();
-
+        for (id, amount) in balances {
             // leave the base asset to cover transaction fees
             if id == BASE_ASSET_ID {
                 continue;

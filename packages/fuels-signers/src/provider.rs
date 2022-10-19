@@ -16,7 +16,7 @@ use fuel_gql_client::{
     fuel_types::{AssetId, ContractId},
 };
 use fuels_core::constants::{DEFAULT_GAS_ESTIMATION_TOLERANCE, MAX_GAS_PER_TX};
-use std::collections::HashMap;
+use std::{collections::HashMap, str::FromStr};
 use thiserror::Error;
 
 use fuels_types::bech32::{Bech32Address, Bech32ContractId};
@@ -266,11 +266,10 @@ impl Provider {
     /// Get all the spendable balances of all assets for address `address`. This is different from
     /// getting the coins because we are only returning the numbers (the sum of UTXOs coins amount
     /// for each asset id) and not the UTXOs coins themselves
-    //TODO: check if we need to change String to AssetId
     pub async fn get_balances(
         &self,
         address: &Bech32Address,
-    ) -> Result<HashMap<String, u64>, ProviderError> {
+    ) -> Result<HashMap<AssetId, u64>, ProviderError> {
         // We don't paginate results because there are likely at most ~100 different assets in one
         // wallet
         let pagination = PaginationRequest {
@@ -290,18 +289,22 @@ impl Provider {
                      owner: _,
                      amount,
                      asset_id,
-                 }| (asset_id.to_string(), amount.try_into().unwrap()),
+                 }| {
+                    (
+                        AssetId::from_str(&asset_id.to_string()).unwrap(),
+                        amount.try_into().unwrap(),
+                    )
+                },
             )
             .collect();
         Ok(balances)
     }
 
     /// Get all balances of all assets for the contract with id `contract_id`.
-    //TODO: check if we need to change String to AssetId
     pub async fn get_contract_balances(
         &self,
         contract_id: &Bech32ContractId,
-    ) -> Result<HashMap<String, u64>, ProviderError> {
+    ) -> Result<HashMap<AssetId, u64>, ProviderError> {
         // We don't paginate results because there are likely at most ~100 different assets in one
         // wallet
         let pagination = PaginationRequest {
@@ -322,12 +325,18 @@ impl Provider {
                      contract: _,
                      amount,
                      asset_id,
-                 }| (asset_id.to_string(), amount.try_into().unwrap()),
+                 }| {
+                    (
+                        AssetId::from_str(&asset_id.to_string()).unwrap(),
+                        amount.try_into().unwrap(),
+                    )
+                },
             )
             .collect();
         Ok(balances)
     }
 
+    // Get a Contract with fields: id, bytecode (as hex string) and salt, from the client
     pub async fn get_contract(
         &self,
         id: &Bech32ContractId,
@@ -336,8 +345,11 @@ impl Provider {
         self.client.contract(&hex_id).await.map_err(Into::into)
     }
 
-    pub async fn get_transaction(&self, tx_id: &str) -> Result<TransactionResponse, ProviderError> {
-        Ok(self.client.transaction(tx_id).await.unwrap().unwrap())
+    pub async fn get_transaction(
+        &self,
+        tx_id: &str,
+    ) -> Result<Option<TransactionResponse>, ProviderError> {
+        self.client.transaction(tx_id).await.map_err(Into::into)
     }
 
     pub async fn get_transactions(&self) -> Result<Vec<TransactionResponse>, ProviderError> {
@@ -632,7 +644,6 @@ mod tests {
     async fn test_balances_api() -> Result<(), Error> {
         let (wallet, (coins, asset_ids), provider) = setup_provider_api_test().await;
         let asset_id = &asset_ids[0];
-        let hex_asset_id = format!("{:#x}", asset_id);
         let wallet_balance_asset_id: u64 = coins
             .iter()
             .filter(|c| c.1.asset_id == *asset_id)
@@ -641,7 +652,7 @@ mod tests {
 
         let wallet_balances = provider.get_balances(wallet.address()).await?;
         let expected_asset_balance = wallet_balances
-            .get(&hex_asset_id)
+            .get(asset_id)
             .expect("could not get balance for asset id");
 
         assert_eq!(*expected_asset_balance, wallet_balance_asset_id);
@@ -653,7 +664,6 @@ mod tests {
     async fn test_contract_balances_api() -> Result<(), Error> {
         let (wallet, (_, asset_ids), provider) = setup_provider_api_test().await;
         let asset_id = &asset_ids[0];
-        let hex_asset_id = format!("{:#x}", asset_id);
 
         let contract_id = Contract::deploy(
             "../fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
@@ -671,7 +681,7 @@ mod tests {
         let contract_balances = provider.get_contract_balances(&contract_id).await?;
 
         let expected_asset_balance = contract_balances
-            .get(&hex_asset_id)
+            .get(asset_id)
             .expect("could not get balance for asset id");
         assert_eq!(*expected_asset_balance, amount);
 
@@ -720,11 +730,14 @@ mod tests {
             .transfer(wallet2.address(), 1, Default::default(), tx_params)
             .await?;
 
-        let expected_response = provider.get_transaction(&tx_id).await?;
+        let expected_tresponse = provider
+            .get_transaction(&tx_id)
+            .await?
+            .expect("could not find transaction with specified id");
 
-        assert_eq!(expected_response.transaction.gas_limit(), gas_limit);
-        assert_eq!(expected_response.transaction.gas_price(), gas_price);
-        assert_eq!(expected_response.transaction.maturity(), maturity);
+        assert_eq!(expected_tresponse.transaction.gas_limit(), gas_limit);
+        assert_eq!(expected_tresponse.transaction.gas_price(), gas_price);
+        assert_eq!(expected_tresponse.transaction.maturity(), maturity);
 
         Ok(())
     }
@@ -783,9 +796,12 @@ mod tests {
             .transfer(wallet2.address(), 1, Default::default(), Default::default())
             .await?;
 
-        if let TransactionStatus::Success { block_id, time, .. } =
-            provider.get_transaction(&tx_id).await?.status
-        {
+        let transaction_response = provider
+            .get_transaction(&tx_id)
+            .await?
+            .expect("could not find transaction with specified id");
+
+        if let TransactionStatus::Success { block_id, time, .. } = transaction_response.status {
             let expected_block = provider
                 .get_block(&block_id)
                 .await?

@@ -22,10 +22,9 @@ async fn test_wallet_balance_api_multi_asset() -> Result<(), Error> {
         let balance = wallet.get_asset_balance(&asset_id).await;
         assert_eq!(balance?, coins_per_asset * amount_per_coin);
 
-        let expected_key = format!("{:#x}", asset_id);
-        assert!(balances.contains_key(&expected_key));
+        assert!(balances.contains_key(&asset_id));
         assert_eq!(
-            *balances.get(&expected_key).unwrap(),
+            *balances.get(&asset_id).unwrap(),
             coins_per_asset * amount_per_coin
         );
     }
@@ -53,11 +52,10 @@ async fn test_wallet_balance_api_single_asset() -> Result<(), Error> {
     }
 
     let balances = wallet.get_balances().await?;
-    let expected_key = format!("{:#x}", BASE_ASSET_ID);
     assert_eq!(balances.len(), 1); // only the base asset
-    assert!(balances.contains_key(&expected_key));
+    assert!(balances.contains_key(&BASE_ASSET_ID));
     assert_eq!(
-        *balances.get(&expected_key).unwrap(),
+        *balances.get(&BASE_ASSET_ID).unwrap(),
         number_of_coins * amount_per_coin
     );
 
