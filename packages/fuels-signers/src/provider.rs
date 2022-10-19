@@ -10,7 +10,7 @@ use fuel_gql_client::{
             contract::ContractBalance, message::Message, node_info::NodeInfo, resource::Resource,
         },
         types::{TransactionResponse, TransactionStatus},
-        FuelClient, PageDirection, PaginatedResult, PaginationRequest,
+        FuelClient, PageDirection, PaginationRequest,
     },
     fuel_tx::{Receipt, Transaction, TransactionFee, UtxoId},
     fuel_types::{AssetId, ContractId},
@@ -266,6 +266,7 @@ impl Provider {
     /// Get all the spendable balances of all assets for address `address`. This is different from
     /// getting the coins because we are only returning the numbers (the sum of UTXOs coins amount
     /// for each asset id) and not the UTXOs coins themselves
+    //TODO: check if we need to change String to AssetId
     pub async fn get_balances(
         &self,
         address: &Bech32Address,
@@ -296,6 +297,7 @@ impl Provider {
     }
 
     /// Get all balances of all assets for the contract with id `contract_id`.
+    //TODO: check if we need to change String to AssetId
     pub async fn get_contract_balances(
         &self,
         contract_id: &Bech32ContractId,
@@ -334,32 +336,64 @@ impl Provider {
         self.client.contract(&hex_id).await.map_err(Into::into)
     }
 
-    /// Get transaction by id.
-    pub async fn get_transaction_by_id(
-        &self,
-        tx_id: &str,
-    ) -> Result<TransactionResponse, ProviderError> {
+    pub async fn get_transaction(&self, tx_id: &str) -> Result<TransactionResponse, ProviderError> {
         Ok(self.client.transaction(tx_id).await.unwrap().unwrap())
     }
 
-    // - Get transaction(s)
-    pub async fn get_transactions(
-        &self,
-        request: PaginationRequest<String>,
-    ) -> Result<PaginatedResult<TransactionResponse, String>, ProviderError> {
-        self.client.transactions(request).await.map_err(Into::into)
+    pub async fn get_transactions(&self) -> Result<Vec<TransactionResponse>, ProviderError> {
+        let mut transaction_responses: Vec<TransactionResponse> = vec![];
+
+        let mut cursor = None;
+
+        loop {
+            let res = self
+                .client
+                .transactions(PaginationRequest {
+                    cursor: cursor.clone(),
+                    results: 100,
+                    direction: PageDirection::Forward,
+                })
+                .await?;
+
+            if res.results.is_empty() {
+                break;
+            }
+            transaction_responses.extend(res.results);
+            cursor = res.cursor;
+        }
+
+        Ok(transaction_responses)
     }
 
-    // Get transaction(s) by owner
     pub async fn get_transactions_by_owner(
         &self,
         owner: &Bech32Address,
-        request: PaginationRequest<String>,
-    ) -> Result<PaginatedResult<TransactionResponse, String>, ProviderError> {
-        self.client
-            .transactions_by_owner(&owner.hash().to_string(), request)
-            .await
-            .map_err(Into::into)
+    ) -> Result<Vec<TransactionResponse>, ProviderError> {
+        let mut transaction_responses: Vec<TransactionResponse> = vec![];
+
+        let mut cursor = None;
+
+        loop {
+            let res = self
+                .client
+                .transactions_by_owner(
+                    &owner.hash().to_string(),
+                    PaginationRequest {
+                        cursor: cursor.clone(),
+                        results: 100,
+                        direction: PageDirection::Forward,
+                    },
+                )
+                .await?;
+
+            if res.results.is_empty() {
+                break;
+            }
+            transaction_responses.extend(res.results);
+            cursor = res.cursor;
+        }
+
+        Ok(transaction_responses)
     }
 
     pub async fn latest_block_height(&self) -> Result<u64, ProviderError> {
@@ -450,11 +484,16 @@ impl Provider {
         self.client.block(block_id).await.map_err(Into::into)
     }
 
-    pub async fn get_blocks(
-        &self,
-        request: PaginationRequest<String>,
-    ) -> Result<PaginatedResult<Block, String>, ProviderError> {
-        self.client.blocks(request).await.map_err(Into::into)
+    pub async fn get_blocks(&self) -> Result<Vec<Block>, ProviderError> {
+        let res = self
+            .client
+            .blocks(PaginationRequest {
+                cursor: None,
+                results: 999,
+                direction: PageDirection::Forward,
+            })
+            .await?;
+        Ok(res.results)
     }
 }
 
@@ -463,6 +502,7 @@ mod tests {
     #[cfg(feature = "test-helpers")]
     use fuel_core::model::Coin;
 
+    use fuel_gql_client::client::types::TransactionStatus;
     use fuel_gql_client::fuel_tx::UtxoId;
     use fuels::prelude::*;
 
@@ -543,27 +583,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_balance_api() -> Result<(), Error> {
-        let (wallet, (coins, asset_ids), provider) = setup_provider_api_test().await;
-        let asset_id = &asset_ids[0];
-        let hex_asset_id = format!("{:#x}", asset_id);
-        let wallet_balance_asset_id: u64 = coins
-            .iter()
-            .filter(|c| c.1.asset_id == *asset_id)
-            .map(|c| c.1.amount)
-            .sum();
-
-        let wallet_balances = provider.get_balances(wallet.address()).await?;
-        let expected_asset_balance = wallet_balances
-            .get(&hex_asset_id)
-            .expect("could not get balance for asset id");
-
-        assert_eq!(*expected_asset_balance, wallet_balance_asset_id);
-
-        Ok(())
-    }
-
-    #[tokio::test]
     async fn test_asset_balance_api() -> Result<(), Error> {
         let (wallet, (coins, asset_ids), provider) = setup_provider_api_test().await;
         let asset_id = &asset_ids[0];
@@ -578,35 +597,6 @@ mod tests {
             .await?;
 
         assert_eq!(balance_of_coins_with_asset_id, expected_balance);
-
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_contract_balance_api() -> Result<(), Error> {
-        let (wallet, (_, asset_ids), provider) = setup_provider_api_test().await;
-        let asset_id = &asset_ids[0];
-        let hex_asset_id = format!("{:#x}", asset_id);
-
-        let contract_id = Contract::deploy(
-            "../fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
-            &wallet,
-            TxParameters::default(),
-            StorageConfiguration::default(),
-        )
-        .await?;
-
-        let amount = 18;
-        let _receipts = wallet
-            .force_transfer_to_contract(&contract_id, amount, *asset_id, TxParameters::default())
-            .await?;
-
-        let contract_balances = provider.get_contract_balances(&contract_id).await?;
-
-        let expected_asset_balance = contract_balances
-            .get(&hex_asset_id)
-            .expect("could not get balance for asset id");
-        assert_eq!(*expected_asset_balance, amount);
 
         Ok(())
     }
@@ -639,29 +629,51 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_transaction_by_id_api() -> Result<(), Error> {
-        let (wallet, (_, _), provider) = setup_provider_api_test().await;
+    async fn test_balances_api() -> Result<(), Error> {
+        let (wallet, (coins, asset_ids), provider) = setup_provider_api_test().await;
+        let asset_id = &asset_ids[0];
+        let hex_asset_id = format!("{:#x}", asset_id);
+        let wallet_balance_asset_id: u64 = coins
+            .iter()
+            .filter(|c| c.1.asset_id == *asset_id)
+            .map(|c| c.1.amount)
+            .sum();
 
-        let wallet2 = WalletUnlocked::new_random(Some(provider.clone()));
+        let wallet_balances = provider.get_balances(wallet.address()).await?;
+        let expected_asset_balance = wallet_balances
+            .get(&hex_asset_id)
+            .expect("could not get balance for asset id");
 
-        let gas_price = 1;
-        let gas_limit = 500_000;
-        let maturity = 0;
-        let tx_params = TxParameters {
-            gas_price,
-            gas_limit,
-            maturity,
-        };
+        assert_eq!(*expected_asset_balance, wallet_balance_asset_id);
 
-        let (tx_id, _receipts) = wallet
-            .transfer(wallet2.address(), 1, Default::default(), tx_params)
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_contract_balances_api() -> Result<(), Error> {
+        let (wallet, (_, asset_ids), provider) = setup_provider_api_test().await;
+        let asset_id = &asset_ids[0];
+        let hex_asset_id = format!("{:#x}", asset_id);
+
+        let contract_id = Contract::deploy(
+            "../fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
+            &wallet,
+            TxParameters::default(),
+            StorageConfiguration::default(),
+        )
+        .await?;
+
+        let amount = 18;
+        let _receipts = wallet
+            .force_transfer_to_contract(&contract_id, amount, *asset_id, TxParameters::default())
             .await?;
 
-        let expected_response = provider.get_transaction_by_id(&tx_id).await?;
+        let contract_balances = provider.get_contract_balances(&contract_id).await?;
 
-        assert_eq!(expected_response.transaction.gas_limit(), gas_limit);
-        assert_eq!(expected_response.transaction.gas_price(), gas_price);
-        assert_eq!(expected_response.transaction.maturity(), maturity);
+        let expected_asset_balance = contract_balances
+            .get(&hex_asset_id)
+            .expect("could not get balance for asset id");
+        assert_eq!(*expected_asset_balance, amount);
 
         Ok(())
     }
@@ -688,13 +700,127 @@ mod tests {
 
         Ok(())
     }
+
+    #[tokio::test]
+    async fn test_transaction_api() -> Result<(), Error> {
+        let (wallet, (_, _), provider) = setup_provider_api_test().await;
+
+        let wallet2 = WalletUnlocked::new_random(Some(provider.clone()));
+
+        let gas_price = 1;
+        let gas_limit = 500_000;
+        let maturity = 0;
+        let tx_params = TxParameters {
+            gas_price,
+            gas_limit,
+            maturity,
+        };
+
+        let (tx_id, _receipts) = wallet
+            .transfer(wallet2.address(), 1, Default::default(), tx_params)
+            .await?;
+
+        let expected_response = provider.get_transaction(&tx_id).await?;
+
+        assert_eq!(expected_response.transaction.gas_limit(), gas_limit);
+        assert_eq!(expected_response.transaction.gas_price(), gas_price);
+        assert_eq!(expected_response.transaction.maturity(), maturity);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_transactions_api() -> Result<(), Error> {
+        let (wallet, (_, _), provider) = setup_provider_api_test().await;
+
+        let wallet2 = WalletUnlocked::new_random(Some(provider.clone()));
+
+        // Make two transactions
+        let (_tx_id1, _receipts) = wallet
+            .transfer(wallet2.address(), 1, Default::default(), Default::default())
+            .await?;
+        let (_tx_id2, _receipts) = wallet
+            .transfer(wallet2.address(), 1, Default::default(), Default::default())
+            .await?;
+
+        let expected_response = provider.get_transactions().await?;
+
+        assert_eq!(expected_response.len(), 2);
+        //TODO: check if I can test it in another way
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_transaction_by_owner_api() -> Result<(), Error> {
+        let (wallet, (_, _), provider) = setup_provider_api_test().await;
+
+        let wallet2 = WalletUnlocked::new_random(Some(provider.clone()));
+
+        // Make two transactions
+        let (_tx_id1, _receipts) = wallet
+            .transfer(wallet2.address(), 1, Default::default(), Default::default())
+            .await?;
+        let (_tx_id2, _receipts) = wallet
+            .transfer(wallet2.address(), 1, Default::default(), Default::default())
+            .await?;
+
+        let expected_response = provider.get_transactions_by_owner(wallet.address()).await?;
+
+        assert_eq!(expected_response.len(), 2);
+        //TODO: check if I can test it in another way
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_block_api() -> Result<(), Error> {
+        let (wallet, (_, _), provider) = setup_provider_api_test().await;
+
+        let wallet2 = WalletUnlocked::new_random(Some(provider.clone()));
+
+        let (tx_id, _receipts) = wallet
+            .transfer(wallet2.address(), 1, Default::default(), Default::default())
+            .await?;
+
+        if let TransactionStatus::Success { block_id, time, .. } =
+            provider.get_transaction(&tx_id).await?.status
+        {
+            let expected_block = provider
+                .get_block(&block_id)
+                .await?
+                .expect("could not find block with specified id");
+
+            assert_eq!(block_id, expected_block.id.to_string());
+            assert_eq!(expected_block.time, time);
+
+            return Ok(());
+        }
+
+        Err(Error::ProviderError(
+            "Transaction was not successfull".into(),
+        ))
+    }
+
+    #[tokio::test]
+    async fn test_blocks_api() -> Result<(), Error> {
+        let (wallet, (_, _), provider) = setup_provider_api_test().await;
+
+        let wallet2 = WalletUnlocked::new_random(Some(provider.clone()));
+
+        // Make two transactions
+        let (_tx_id1, _receipts) = wallet
+            .transfer(wallet2.address(), 1, Default::default(), Default::default())
+            .await?;
+        let (_tx_id2, _receipts) = wallet
+            .transfer(wallet2.address(), 1, Default::default(), Default::default())
+            .await?;
+
+        let expected_blocks = provider.get_blocks().await?;
+
+        assert_eq!(expected_blocks.len(), 2);
+        //TODO: check if I can test it in another way
+
+        Ok(())
+    }
 }
-
-// TODO: update get_messages
-// pub async fn get_messages(&self, from: &Bech32Address) -> Result<Vec<Message>, ProviderError> {
-
-// TODO: make tests
-// pub async fn get_transactions
-// pub async fn get_transactions_by_owner
-// pub async fn get_block
-// pub async fn get_blocks

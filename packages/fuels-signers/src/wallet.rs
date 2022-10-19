@@ -7,7 +7,7 @@ use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
 use fuel_gql_client::client::schema;
 use fuel_gql_client::fuel_vm::prelude::GTFArgs;
 use fuel_gql_client::{
-    client::{schema::coin::Coin, types::TransactionResponse, PaginatedResult, PaginationRequest},
+    client::{schema::coin::Coin, types::TransactionResponse},
     fuel_tx::{
         AssetId, Bytes32, ContractId, Input, Output, Receipt, Transaction, TransactionFee,
         TxPointer, UtxoId, Witness,
@@ -126,12 +126,9 @@ impl Wallet {
         &self.address
     }
 
-    pub async fn get_transactions(
-        &self,
-        request: PaginationRequest<String>,
-    ) -> Result<PaginatedResult<TransactionResponse, String>, Error> {
+    pub async fn get_transactions(&self) -> Result<Vec<TransactionResponse>, Error> {
         self.get_provider()?
-            .get_transactions_by_owner(&self.address, request)
+            .get_transactions_by_owner(&self.address)
             .await
             .map_err(Into::into)
     }
