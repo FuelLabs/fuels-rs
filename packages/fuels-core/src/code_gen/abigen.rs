@@ -25,8 +25,8 @@ pub struct Abigen {
     /// Generate no-std safe code
     no_std: bool,
 
-    /// The contract name as an identifier.
-    contract_name: Ident,
+    /// The contract or script name as an identifier.
+    program_name: Ident,
 
     abi: ProgramABI,
 
@@ -46,7 +46,7 @@ impl Abigen {
         Ok(Self {
             types: Abigen::get_types(&parsed_abi),
             abi: parsed_abi,
-            contract_name: ident(contract_name),
+            program_name: ident(contract_name),
             rustfmt: true,
             no_std: false,
             is_script: false,
@@ -90,11 +90,11 @@ impl Abigen {
 
     /// Expand a contract into type-safe Rust bindings based on its ABI
     pub fn expand_contract(&self) -> Result<TokenStream, Error> {
-        let name = &self.contract_name;
+        let name = &self.program_name;
         let methods_name = ident(&format!("{}Methods", name));
         let name_mod = ident(&format!(
             "{}_mod",
-            self.contract_name.to_string().to_lowercase()
+            self.program_name.to_string().to_lowercase()
         ));
 
         let contract_functions = self.functions()?;
@@ -183,10 +183,10 @@ impl Abigen {
 
     /// Expand a script into type-safe Rust bindings based on its ABI
     pub fn expand_script(&self) -> Result<TokenStream, Error> {
-        let name = &self.contract_name;
+        let name = &self.program_name;
         let name_mod = ident(&format!(
             "{}_mod",
-            self.contract_name.to_string().to_lowercase()
+            self.program_name.to_string().to_lowercase()
         ));
 
         let includes = self.includes();
@@ -196,14 +196,19 @@ impl Abigen {
             quote! {}
         } else {
             quote! {
-                    pub struct #name {}
-                    impl #name {
-                        pub fn new() -> Self {
-                            Self {}
-                        }
+                #[derive(Debug)]
+                pub struct #name{
+                    wallet: WalletUnlocked,
+                    binary_filepath: String,
+                }
 
-                        #main_script_function
+                impl #name {
+                    pub fn new(wallet: WalletUnlocked, binary_filepath: &str) -> Self {
+                        Self {wallet: wallet, binary_filepath: binary_filepath.to_string()}
                     }
+
+                    #main_script_function
+                }
             }
         };
 
@@ -219,7 +224,9 @@ impl Abigen {
                 #![allow(unused_imports)]
 
                 #includes
+                use fuels::contract::script::run_script_binary;
                 use fuels::core::abi_encoder::ABIEncoder;
+                use fuels::core::parameters::TxParameters;
 
                 #code
 
@@ -246,7 +253,7 @@ impl Abigen {
         } else {
             quote! {
                 use fuels::contract::contract::{Contract, ContractCallHandler};
-                 use fuels::core::{EnumSelector, StringToken, Parameterize, Tokenizable, Token,
+                use fuels::core::{EnumSelector, StringToken, Parameterize, Tokenizable, Token,
                                   Identity, try_from_bytes};
                 use fuels::core::code_gen::{extract_and_parse_logs, extract_log_ids_and_data};
                 use fuels::core::abi_decoder::ABIDecoder;

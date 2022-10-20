@@ -403,6 +403,51 @@ impl Script {
     }
 }
 
+/// Run the script binary located at `binary_filepath` and return its resulting receipts,
+/// without having to setup a node or contract bindings.
+pub async fn run_script_binary(
+    binary_filepath: &str,
+    tx_params: Option<TxParameters>,
+    provider: Option<Provider>,
+    script_data: Option<Vec<u8>>,
+) -> Result<Vec<Receipt>, Error> {
+    let script_binary = std::fs::read(binary_filepath)?;
+    let provider = match provider {
+        None => {
+            // let server = FuelService::new_node(Config::local_node()).await.unwrap();
+            // Provider::connect(server.bound_address.to_string()).await?
+            unimplemented!(
+                "This will be implemented in a future release, for now please have a provider as argument"
+            )
+        }
+        Some(provider) => provider,
+    };
+    let script = build_script(script_binary, tx_params.unwrap_or_default(), script_data);
+
+    script.call(&provider).await
+}
+
+pub fn build_script(
+    script_binary: Vec<u8>,
+    tx_params: TxParameters,
+    script_data: Option<Vec<u8>>,
+) -> Script {
+    let tx = Transaction::Script {
+        gas_price: tx_params.gas_price,
+        gas_limit: tx_params.gas_limit,
+        maturity: tx_params.maturity,
+        receipts_root: Default::default(),
+        script: script_binary, // Pass the compiled script into the tx
+        script_data: script_data.unwrap_or_default(),
+        inputs: vec![],
+        outputs: vec![],
+        witnesses: vec![vec![].into()],
+        metadata: None,
+    };
+
+    Script::new(tx)
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
