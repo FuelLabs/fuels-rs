@@ -67,7 +67,7 @@ pub fn expand_function(
 
 /// Generate the function (as a `TokenStream`) used to encode into script data the arguments to the
 /// `main` function of a deployed script.
-pub fn generate_script_argument_encoding_function(
+pub fn generate_script_main_function(
     main_function_abi: &ABIFunction,
     types: &HashMap<usize, TypeDeclaration>,
 ) -> Result<TokenStream, Error> {
@@ -92,13 +92,19 @@ pub fn generate_script_argument_encoding_function(
         function",
     );
 
-    let name = safe_ident("encode_main_arguments");
+    let name = safe_ident("main");
 
     Ok(quote! {
         #doc
-        pub fn #name(#(#arg_declarations,)*) -> Result<Vec<u8>, SDKError> {
+        pub async fn #name(&self #(,#arg_declarations)*) -> Result<Vec<Receipt>, SDKError> {
+            let provider = self.wallet.get_provider().expect("Provider not set up").clone();
             let tokens = [#(#arg_names.into_token()),*];
-            Ok(ABIEncoder::encode(&tokens)?.resolve(0))
+            let script_data = ABIEncoder::encode(&tokens)?.resolve(0);
+            Ok(run_script_binary(self.binary_filepath.as_str(),
+                                    Some(TxParameters::default()),
+                                    Some(provider),
+                                    Some(script_data)).await?
+            )
         }
     })
 }

@@ -295,9 +295,7 @@ impl Abigen {
                 }
                 main_function
                     .iter()
-                    .map(|function| {
-                        generate_script_argument_encoding_function(function, &self.types)
-                    })
+                    .map(|function| generate_script_main_function(function, &self.types))
                     .collect::<Result<Vec<TokenStream>, Error>>()?
             }
         };
