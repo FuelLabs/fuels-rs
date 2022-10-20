@@ -601,7 +601,7 @@ async fn test_contract_instance_get_balances() -> Result<(), Error> {
     let amount = 8;
     let _receipts = wallet
         .force_transfer_to_contract(
-            &contract_id,
+            contract_id,
             amount,
             *random_asset_id,
             TxParameters::default(),
