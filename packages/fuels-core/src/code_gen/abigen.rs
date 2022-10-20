@@ -117,11 +117,10 @@ impl Abigen {
                      logs_lookup: Vec<(u64, ParamType)>,
                  }
 
-                 impl #name {
-                     pub fn new(contract_id: String, wallet: WalletUnlocked) -> Self {
-                         let contract_id = Bech32ContractId::from_str(&contract_id).expect("Invalid contract id");
-                         Self { contract_id, wallet, logs_lookup: vec![#(#log_id_param_type_pairs),*]}
-                     }
+                    impl #name {
+                        pub fn new(contract_id: Bech32ContractId, wallet: WalletUnlocked) -> Self {
+                            Self { contract_id, wallet, logs_lookup: vec![#(#log_id_param_type_pairs),*]}
+                        }
 
                      pub fn get_contract_id(&self) -> &Bech32ContractId {
                          &self.contract_id

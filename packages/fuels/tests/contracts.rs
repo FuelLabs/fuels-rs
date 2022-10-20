@@ -473,7 +473,7 @@ async fn test_output_variable_estimation() -> Result<(), Error> {
     let (wallets, addresses, mint_asset_id, contract_id) =
         setup_output_variable_estimation_test().await?;
 
-    let contract_instance = MyContract::new(contract_id.to_string(), wallets[0].clone());
+    let contract_instance = MyContract::new(contract_id, wallets[0].clone());
     let contract_methods = contract_instance.methods();
     let amount = 1000;
 
@@ -525,7 +525,7 @@ async fn test_output_variable_estimation_default_attempts() -> Result<(), Error>
     let (wallets, addresses, mint_asset_id, contract_id) =
         setup_output_variable_estimation_test().await?;
 
-    let contract_instance = MyContract::new(contract_id.to_string(), wallets[0].clone());
+    let contract_instance = MyContract::new(contract_id, wallets[0].clone());
     let contract_methods = contract_instance.methods();
     let amount = 1000;
 
@@ -554,7 +554,7 @@ async fn test_output_variable_estimation_multicall() -> Result<(), Error> {
     let (wallets, addresses, mint_asset_id, contract_id) =
         setup_output_variable_estimation_test().await?;
 
-    let contract_instance = MyContract::new(contract_id.to_string(), wallets[0].clone());
+    let contract_instance = MyContract::new(contract_id, wallets[0].clone());
     let contract_methods = contract_instance.methods();
     let amount = 1000;
 

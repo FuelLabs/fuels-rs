@@ -5,7 +5,6 @@ mod from_token; // generating instances from decoded tokens
 mod logs; // parsing and decoding contract logs
 mod predicates; // calling predicates and encoding predicate data
 mod providers; // launching and querying providers
-               // TODO: rename to `scripts`, see issue #640
 mod script; // building and calling scripts
 mod storage; // storage initialization and forwarding
 mod types; // encoding/decoding of native and custom types

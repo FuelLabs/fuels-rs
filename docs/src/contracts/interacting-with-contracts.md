@@ -4,3 +4,12 @@ If you already have a deployed contract and want to call its methods using the S
 
 ```rust,ignore
 {{#include ../../../examples/contracts/src/lib.rs:deployed_contracts}}
+```
+
+The above example assumes that your contract id string is encoded in the bech32m format. You can recognize it by the human-readable-part "fuel" followed by the separator "1". However, when using other Fuel tools, you might end up with a hex-encoded contract id string. In that case, you can create your contract instance as follows:
+
+```rust,ignore
+{{#include ../../../examples/contracts/src/lib.rs:deployed_contracts_hex}}
+```
+
+You can learn more about the Fuel SDK bech32 types [here](../types/bech32.md).
