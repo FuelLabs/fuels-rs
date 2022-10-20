@@ -147,6 +147,10 @@ impl Abigen {
                            Ok(Self { contract_id: self.contract_id.clone(), wallet: wallet, logs_lookup: self.logs_lookup.clone() })
                         }
 
+                        pub async fn get_balances(&self) -> Result<HashMap<String, u64>, SDKError> {
+                            self.wallet.get_provider()?.get_contract_balances(&self.contract_id).await.map_err(Into::into)
+                        }
+
                         pub fn logs_with_type<D: Tokenizable + Parameterize>(&self, receipts: &[Receipt]) -> Result<Vec<D>, SDKError> {
                             extract_and_parse_logs(&self.logs_lookup, receipts)
                         }
