@@ -9,6 +9,7 @@ struct SugarySnack {
     mars: u64,
 }
 
-fn main(bim: Bimbam, bam: SugarySnack) -> u64 {
-    bam.twix + bim.val + (bam.mars * 2)
+fn main(bim: Bimbam, bam: SugarySnack) -> Bimbam {
+    let val = bam.twix + bim.val + (bam.mars * 2);
+    Bimbam{val: val}
 }

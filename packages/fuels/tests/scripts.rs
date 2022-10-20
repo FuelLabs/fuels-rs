@@ -163,14 +163,22 @@ async fn main_function_arguments() -> Result<(), Error> {
         twix: 100,
         mars: 1000,
     };
-    // TODO: use default provider
-    let (provider, _) = setup_test_provider(vec![], vec![], None).await;
-    // Convert the arguments as script data
-    let script_data = MyScript::encode_main_arguments(bim.clone(), bam.clone())?;
+    let wallet = launch_provider_and_get_wallet().await;
     let bin_path =
         "../fuels/tests/script/script_with_arguments/out/debug/script_with_arguments.bin";
-    let result = run_script_binary(bin_path, None, Some(provider), Some(script_data)).await?;
-    // assert_eq!(result[0].val().unwrap(), bim.val + bam.twix + 2 * bam.mars);
-    // ANCHOR_END: script_with_arguments
+    let instance = MyScript::new(wallet, bin_path);
+    let result = instance.main(bim, bam).await?;
+    let result_receipt = result[0];
+    println!("{:?}", result_receipt);
+    let tokens = result_receipt.data().unwrap();
+    println!("{:?}", Bimbam::from_token(result_receipt));
     Ok(())
 }
+
+//     // Convert the arguments as script data
+//     let script_data = MyScript::encode_main_arguments(bim.clone(), bam.clone())?;
+//     let result = run_script_binary(bin_path, None, None, Some(script_data)).await?;
+//     assert_eq!(result[0].val().unwrap(), bim.val + bam.twix + 2 * bam.mars);
+//     // ANCHOR_END: script_with_arguments
+//     Ok(())
+// }
