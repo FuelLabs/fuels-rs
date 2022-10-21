@@ -316,7 +316,66 @@ mod tests {
         )
     }
 
-    // TODO(oleksii): test_resolve_vector
+    #[test]
+    fn test_resolve_vector() -> anyhow::Result<()> {
+        test_resolve_first_type(
+            "Vec",
+            &[
+                TypeDeclaration {
+                    type_id: 0,
+                    type_field: "struct Vec".to_string(),
+                    components: Some(vec![
+                        TypeApplication {
+                            name: "buf".to_string(),
+                            type_id: 2,
+                            type_arguments: Some(vec![TypeApplication {
+                                type_id: 1,
+                                ..Default::default()
+                            }]),
+                        },
+                        TypeApplication {
+                            name: "len".to_string(),
+                            type_id: 3,
+                            ..Default::default()
+                        },
+                    ]),
+                    type_parameters: Some(vec![1]),
+                },
+                TypeDeclaration {
+                    type_id: 1,
+                    type_field: "generic T".to_string(),
+                    ..Default::default()
+                },
+                TypeDeclaration {
+                    type_id: 2,
+                    type_field: "struct RawVec".to_string(),
+                    components: Some(vec![
+                        TypeApplication {
+                            name: "ptr".to_string(),
+                            type_id: 3,
+                            ..Default::default()
+                        },
+                        TypeApplication {
+                            name: "cap".to_string(),
+                            type_id: 3,
+                            ..Default::default()
+                        },
+                    ]),
+                    type_parameters: Some(vec![1]),
+                },
+                TypeDeclaration {
+                    type_id: 3,
+                    type_field: "u64".to_string(),
+                    ..Default::default()
+                },
+                TypeDeclaration {
+                    type_id: 4,
+                    type_field: "u8".to_string(),
+                    ..Default::default()
+                },
+            ],
+        )
+    }
 
     #[test]
     fn test_resolve_string() -> anyhow::Result<()> {
