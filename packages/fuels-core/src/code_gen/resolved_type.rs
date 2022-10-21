@@ -390,15 +390,27 @@ mod tests {
                 TypeDeclaration {
                     type_id: 0,
                     type_field: "struct SomeStruct".to_string(),
-                    components: Some(vec![TypeApplication {
-                        name: "foo".to_string(),
-                        type_id: 1,
-                        ..Default::default()
-                    }]),
-                    ..Default::default()
+                    components: Some(vec![
+                        TypeApplication {
+                            name: "foo".to_string(),
+                            type_id: 1,
+                            ..Default::default()
+                        },
+                        TypeApplication {
+                            name: "bar".to_string(),
+                            type_id: 2,
+                            ..Default::default()
+                        },
+                    ]),
+                    type_parameters: Some(vec![1]),
                 },
                 TypeDeclaration {
                     type_id: 1,
+                    type_field: "generic T".to_string(),
+                    ..Default::default()
+                },
+                TypeDeclaration {
+                    type_id: 2,
                     type_field: "u8".to_string(),
                     ..Default::default()
                 },
@@ -414,15 +426,27 @@ mod tests {
                 TypeDeclaration {
                     type_id: 0,
                     type_field: "enum SomeEnum".to_string(),
-                    components: Some(vec![TypeApplication {
-                        name: "foo".to_string(),
-                        type_id: 1,
-                        ..Default::default()
-                    }]),
-                    ..Default::default()
+                    components: Some(vec![
+                        TypeApplication {
+                            name: "foo".to_string(),
+                            type_id: 1,
+                            ..Default::default()
+                        },
+                        TypeApplication {
+                            name: "bar".to_string(),
+                            type_id: 2,
+                            ..Default::default()
+                        },
+                    ]),
+                    type_parameters: Some(vec![1]),
                 },
                 TypeDeclaration {
                     type_id: 1,
+                    type_field: "generic T".to_string(),
+                    ..Default::default()
+                },
+                TypeDeclaration {
+                    type_id: 2,
                     type_field: "u8".to_string(),
                     ..Default::default()
                 },
@@ -433,11 +457,11 @@ mod tests {
     #[test]
     fn test_resolve_tuple() -> anyhow::Result<()> {
         test_resolve_first_type(
-            "(u8 , u16 , bool ,)",
+            "(u8 , u16 , bool , T ,)",
             &[
                 TypeDeclaration {
                     type_id: 0,
-                    type_field: "(u8, u16, bool)".to_string(),
+                    type_field: "(u8, u16, bool, T)".to_string(),
                     components: Some(vec![
                         TypeApplication {
                             type_id: 1,
@@ -451,8 +475,12 @@ mod tests {
                             type_id: 3,
                             ..Default::default()
                         },
+                        TypeApplication {
+                            type_id: 4,
+                            ..Default::default()
+                        },
                     ]),
-                    ..Default::default()
+                    type_parameters: Some(vec![4]),
                 },
                 TypeDeclaration {
                     type_id: 1,
@@ -467,6 +495,11 @@ mod tests {
                 TypeDeclaration {
                     type_id: 3,
                     type_field: "bool".to_string(),
+                    ..Default::default()
+                },
+                TypeDeclaration {
+                    type_id: 4,
+                    type_field: "generic T".to_string(),
                     ..Default::default()
                 },
             ],
