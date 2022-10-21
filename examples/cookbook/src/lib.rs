@@ -43,7 +43,7 @@ mod tests {
         )
         .await?;
 
-        let contract_methods = MyContract::new(contract_id.to_string(), wallet.clone()).methods();
+        let contract_methods = MyContract::new(contract_id.clone(), wallet.clone()).methods();
         // ANCHOR_END: liquidity_deploy
 
         // ANCHOR: liquidity_deposit

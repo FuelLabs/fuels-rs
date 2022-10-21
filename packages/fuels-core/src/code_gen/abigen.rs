@@ -128,8 +128,7 @@ impl Abigen {
                     }
 
                     impl #name {
-                        pub fn new(contract_id: String, wallet: WalletUnlocked) -> Self {
-                            let contract_id = Bech32ContractId::from_str(&contract_id).expect("Invalid contract id");
+                        pub fn new(contract_id: Bech32ContractId, wallet: WalletUnlocked) -> Self {
                             Self { contract_id, wallet, logs_lookup: vec![#(#log_id_param_type_pairs),*]}
                         }
 
@@ -146,6 +145,10 @@ impl Abigen {
                            wallet.set_provider(provider.clone());
 
                            Ok(Self { contract_id: self.contract_id.clone(), wallet: wallet, logs_lookup: self.logs_lookup.clone() })
+                        }
+
+                        pub async fn get_balances(&self) -> Result<HashMap<String, u64>, SDKError> {
+                            self.wallet.get_provider()?.get_contract_balances(&self.contract_id).await.map_err(Into::into)
                         }
 
                         pub fn logs_with_type<D: Tokenizable + Parameterize>(&self, receipts: &[Receipt]) -> Result<Vec<D>, SDKError> {

@@ -1,11 +1,12 @@
 use fuels::core::abi_encoder::ABIEncoder;
 use fuels::prelude::*;
 use sha2::{Digest, Sha256};
-use std::slice;
+use std::{slice, str::FromStr};
 
-pub fn null_contract_id() -> String {
+pub fn null_contract_id() -> Bech32ContractId {
     // a bech32 contract address that decodes to ~[0u8;32]
-    String::from("fuel1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqsx2mt2")
+    Bech32ContractId::from_str("fuel1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqsx2mt2")
+        .unwrap()
 }
 
 #[tokio::test]

@@ -473,7 +473,7 @@ async fn test_output_variable_estimation() -> Result<(), Error> {
     let (wallets, addresses, mint_asset_id, contract_id) =
         setup_output_variable_estimation_test().await?;
 
-    let contract_instance = MyContract::new(contract_id.to_string(), wallets[0].clone());
+    let contract_instance = MyContract::new(contract_id, wallets[0].clone());
     let contract_methods = contract_instance.methods();
     let amount = 1000;
 
@@ -525,7 +525,7 @@ async fn test_output_variable_estimation_default_attempts() -> Result<(), Error>
     let (wallets, addresses, mint_asset_id, contract_id) =
         setup_output_variable_estimation_test().await?;
 
-    let contract_instance = MyContract::new(contract_id.to_string(), wallets[0].clone());
+    let contract_instance = MyContract::new(contract_id, wallets[0].clone());
     let contract_methods = contract_instance.methods();
     let amount = 1000;
 
@@ -554,7 +554,7 @@ async fn test_output_variable_estimation_multicall() -> Result<(), Error> {
     let (wallets, addresses, mint_asset_id, contract_id) =
         setup_output_variable_estimation_test().await?;
 
-    let contract_instance = MyContract::new(contract_id.to_string(), wallets[0].clone());
+    let contract_instance = MyContract::new(contract_id, wallets[0].clone());
     let contract_methods = contract_instance.methods();
     let amount = 1000;
 
@@ -574,6 +574,47 @@ async fn test_output_variable_estimation_multicall() -> Result<(), Error> {
         let balance = wallet.get_asset_balance(&mint_asset_id).await?;
         assert_eq!(balance, 3 * amount);
     }
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_contract_instance_get_balances() -> Result<(), Error> {
+    let mut wallet = WalletUnlocked::new_random(None);
+    let (coins, asset_ids) = setup_multiple_assets_coins(wallet.address(), 2, 4, 8);
+    let random_asset_id = &asset_ids[1];
+    let (provider, _) = setup_test_provider(coins.clone(), vec![], None).await;
+    wallet.set_provider(provider.clone());
+
+    setup_contract_test!(
+        contract_instance,
+        None,
+        "packages/fuels/tests/contracts/contract_test"
+    );
+    let contract_id = contract_instance.get_contract_id();
+
+    // Check the current balance of the contract with id 'contract_id'
+    let contract_balances = contract_instance.get_balances().await?;
+    assert!(contract_balances.is_empty());
+
+    // Transfer an amount to the contract
+    let amount = 8;
+    let _receipts = wallet
+        .force_transfer_to_contract(
+            contract_id,
+            amount,
+            *random_asset_id,
+            TxParameters::default(),
+        )
+        .await?;
+
+    // Check that the contract now has 1 coin
+    let contract_balances = contract_instance.get_balances().await?;
+    assert_eq!(contract_balances.len(), 1);
+
+    let random_asset_id_key = format!("{:#x}", random_asset_id);
+    let random_asset_balance = contract_balances.get(&random_asset_id_key).unwrap();
+    assert_eq!(*random_asset_balance, amount);
 
     Ok(())
 }
