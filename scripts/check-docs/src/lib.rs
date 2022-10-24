@@ -181,11 +181,11 @@ pub fn extract_starts_and_ends(
 
 pub fn search_for_patterns_in_project(pattern: &str) -> anyhow::Result<String> {
     let grep_project = std::process::Command::new("grep")
+        .arg("-H") // print filename
+        .arg("-n") // print line-number
+        .arg("-r") // search recursively
         .arg("--binary-files=without-match")
-        .arg("--with-filename")
-        .arg("--dereference-recursive")
-        .arg("--line-number")
-        .arg("--exclude-dir=scripts")
+        .arg("--exclude-dir=check-docs")
         .arg(pattern)
         .arg(".")
         .output()

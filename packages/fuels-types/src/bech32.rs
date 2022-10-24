@@ -20,10 +20,10 @@ macro_rules! bech32type {
         }
 
         impl $i {
-            pub fn new<T: Into<Bytes32>>(hrp: &str, hash: T) -> Self {
+            pub fn new<T: Into<[u8; 32]>>(hrp: &str, hash: T) -> Self {
                 Self {
                     hrp: hrp.to_string(),
-                    hash: hash.into(),
+                    hash: Bytes32::from(hash.into()),
                 }
             }
 
@@ -114,32 +114,94 @@ mod test {
     #[test]
     fn test_new() {
         let pubkey_hash = [
-            48, 101, 49, 52, 48, 102, 48, 55, 48, 100, 49, 97, 102, 117, 51, 57, 49, 50, 48, 54,
-            48, 98, 48, 100, 48, 56, 49, 53, 48, 52, 49, 52,
+            107, 50, 223, 89, 84, 225, 186, 222, 175, 254, 253, 44, 15, 197, 229, 148, 220, 255,
+            55, 19, 170, 227, 221, 24, 183, 217, 102, 98, 75, 1, 0, 39,
         ];
-        let expected_address = Address::new(pubkey_hash);
 
-        let bech32_addr = &Bech32Address::new(FUEL_BECH32_HRP, Bytes32::new(pubkey_hash));
-        let plain_addr: Address = bech32_addr.into();
+        {
+            // Create from Bytes32
+            let bech32_addr = &Bech32Address::new(FUEL_BECH32_HRP, Bytes32::new(pubkey_hash));
+            let bech32_cid = &Bech32ContractId::new(FUEL_BECH32_HRP, Bytes32::new(pubkey_hash));
 
-        assert_eq!(plain_addr, expected_address);
+            assert_eq!(*bech32_addr.hash(), pubkey_hash);
+            assert_eq!(*bech32_cid.hash(), pubkey_hash);
+        }
+
+        {
+            // Create from ContractId
+            let bech32_addr = &Bech32Address::new(FUEL_BECH32_HRP, ContractId::new(pubkey_hash));
+            let bech32_cid = &Bech32ContractId::new(FUEL_BECH32_HRP, ContractId::new(pubkey_hash));
+
+            assert_eq!(*bech32_addr.hash(), pubkey_hash);
+            assert_eq!(*bech32_cid.hash(), pubkey_hash);
+        }
+
+        {
+            // Create from Address
+            let bech32_addr = &Bech32Address::new(FUEL_BECH32_HRP, Address::new(pubkey_hash));
+            let bech32_cid = &Bech32ContractId::new(FUEL_BECH32_HRP, Address::new(pubkey_hash));
+
+            assert_eq!(*bech32_addr.hash(), pubkey_hash);
+            assert_eq!(*bech32_cid.hash(), pubkey_hash);
+        }
     }
 
     #[test]
     fn test_from_str() {
-        let pubkey_hash = [
-            48, 101, 49, 52, 48, 102, 48, 55, 48, 100, 49, 97, 102, 117, 51, 57, 49, 50, 48, 54,
-            48, 98, 48, 100, 48, 56, 49, 53, 48, 52, 49, 52,
+        let pubkey_hashes = [
+            [
+                107, 50, 223, 89, 84, 225, 186, 222, 175, 254, 253, 44, 15, 197, 229, 148, 220,
+                255, 55, 19, 170, 227, 221, 24, 183, 217, 102, 98, 75, 1, 0, 39,
+            ],
+            [
+                49, 83, 18, 64, 150, 242, 119, 146, 83, 184, 84, 96, 160, 212, 110, 69, 81, 34,
+                101, 86, 182, 99, 62, 68, 44, 28, 40, 26, 131, 21, 221, 64,
+            ],
+            [
+                48, 101, 49, 52, 48, 102, 48, 55, 48, 100, 49, 97, 102, 117, 51, 57, 49, 50, 48,
+                54, 48, 98, 48, 100, 48, 56, 49, 53, 48, 52, 49, 52,
+            ],
+        ];
+        let bech32m_encodings = [
+            "fuel1dved7k25uxadatl7l5kql309jnw07dcn4t3a6x9hm9nxyjcpqqns50p7n2",
+            "fuel1x9f3ysyk7fmey5ac23s2p4rwg4gjye2kke3nu3pvrs5p4qc4m4qqwx56k3",
+            "fuel1xpjnzdpsvccrwvryx9skvafn8ycnyvpkxp3rqeps8qcn2vp5xy6qu7yyz7",
         ];
 
-        let bech32_contract_id = &Bech32ContractId::from_str(
-            "fuel1xpjnzdpsvccrwvryx9skvafn8ycnyvpkxp3rqeps8qcn2vp5xy6qu7yyz7",
-        )
-        .unwrap();
-        let plain_contract_id: ContractId = bech32_contract_id.into();
+        for (b32m_e, pbkh) in bech32m_encodings.iter().zip(pubkey_hashes) {
+            let bech32_contract_id = &Bech32ContractId::from_str(b32m_e).unwrap();
+            assert_eq!(*bech32_contract_id.hash(), pbkh);
+        }
 
-        let expected_contract_id = ContractId::new(pubkey_hash);
+        for (b32m_e, pbkh) in bech32m_encodings.iter().zip(pubkey_hashes) {
+            let bech32_contract_id = &Bech32Address::from_str(b32m_e).unwrap();
+            assert_eq!(*bech32_contract_id.hash(), pbkh);
+        }
+    }
 
-        assert_eq!(plain_contract_id, expected_contract_id);
+    #[test]
+    fn test_from_invalid_bech32_string() {
+        {
+            let expected = [
+                Error::from(bech32::Error::InvalidChecksum),
+                Error::from(bech32::Error::InvalidChar('b')),
+                Error::from(bech32::Error::MissingSeparator),
+            ];
+            let invalid_bech32 = [
+                "fuel1x9f3ysyk7fmey5ac23s2p4rwg4gjye2kke3nu3pvrs5p4qc4m4qqwx32k3",
+                "fuel1xpjnzdpsvccrwvryx9skvafn8ycnyvpkxp3rqeps8qcn2vp5xy6qu7yyb7",
+                "fuelldved7k25uxadatl7l5kql309jnw07dcn4t3a6x9hm9nxyjcpqqns50p7n2",
+            ];
+
+            for (b32m_e, e) in invalid_bech32.iter().zip(expected.iter()) {
+                let result = &Bech32ContractId::from_str(b32m_e).expect_err("should error");
+                assert_eq!(result.to_string(), e.to_string());
+            }
+
+            for (b32m_e, e) in invalid_bech32.iter().zip(expected) {
+                let result = &Bech32Address::from_str(b32m_e).expect_err("should error");
+                assert_eq!(result.to_string(), e.to_string());
+            }
+        }
     }
 }
