@@ -1,4 +1,4 @@
-use std::io;
+use std::{fmt::Debug, future::Future, io};
 
 #[cfg(feature = "fuel-core")]
 use fuel_core::service::{Config, FuelService};
@@ -10,7 +10,7 @@ use fuel_gql_client::{
             contract::ContractBalance, message::Message, node_info::NodeInfo, resource::Resource,
         },
         types::{TransactionResponse, TransactionStatus},
-        FuelClient, PageDirection, PaginationRequest,
+        FuelClient, PageDirection, PaginatedResult, PaginationRequest,
     },
     fuel_tx::{Receipt, Transaction, TransactionFee, UtxoId},
     fuel_types::{AssetId, ContractId},
@@ -41,6 +41,60 @@ pub enum ProviderError {
 impl From<ProviderError> for Error {
     fn from(e: ProviderError) -> Self {
         Error::ProviderError(e.to_string())
+    }
+}
+
+type BoxFutureResult<'a, U> = Box<dyn Future<Output = Result<U, ProviderError>> + 'a + Unpin>;
+type BoxFnFuture<'a, T, U> = Box<dyn Fn(PaginationRequest<T>) -> BoxFutureResult<'a, U> + 'a>;
+
+pub struct ProviderPaginationCaller<'a, T, U>
+where
+    T: Debug,
+{
+    /// The cursor returned from a previous query to indicate an offset
+    pub cursor: Option<T>,
+    /// The number of results to take
+    pub results: usize,
+    /// The direction of the query (e.g. asc, desc order).
+    pub direction: PageDirection,
+    // The function to call
+    pub function: BoxFnFuture<'a, T, U>,
+}
+
+impl<'a, T, U> ProviderPaginationCaller<'a, T, U>
+where
+    T: Debug,
+{
+    fn new(
+        results: usize,
+        function: impl Fn(PaginationRequest<T>) -> BoxFutureResult<'a, U> + 'a,
+    ) -> Self {
+        ProviderPaginationCaller {
+            cursor: None::<T>,
+            results,
+            direction: PageDirection::Forward,
+            function: Box::new(function),
+        }
+    }
+
+    pub fn with_cursor(mut self, cursor: Option<T>) -> Self {
+        self.cursor = cursor;
+        self
+    }
+
+    pub fn with_direction(mut self, direction: PageDirection) -> Self {
+        self.direction = direction;
+        self
+    }
+
+    pub async fn call(self) -> Result<U, ProviderError> {
+        let pagination = PaginationRequest {
+            cursor: self.cursor,
+            results: self.results,
+            direction: self.direction,
+        };
+
+        (self.function)(pagination).await
     }
 }
 
@@ -207,6 +261,28 @@ impl Provider {
         Ok(coins)
     }
 
+    /// Gets all coins owned by address `from`, with asset ID `asset_id`, *even spent ones*. This
+    /// returns actual coins (UTXOs).
+    pub fn get_coins_new<'a>(
+        &'a self,
+        from: &'a Bech32Address,
+        asset_id: &'a AssetId,
+        num_results: usize,
+    ) -> ProviderPaginationCaller<String, PaginatedResult<Coin, String>> {
+        ProviderPaginationCaller::new(num_results, |pr: PaginationRequest<String>| {
+            let hash = from.hash().to_string();
+            let asset_id_string = asset_id.to_string();
+            let provider_clone = self.clone();
+            Box::new(Box::pin(async move {
+                provider_clone
+                    .client
+                    .coins(&hash, Some(&asset_id_string), pr)
+                    .await
+                    .map_err(Into::into)
+            }))
+        })
+    }
+
     /// Get some spendable coins of asset `asset_id` for address `from` that add up at least to
     /// amount `amount`. The returned coins (UTXOs) are actual coins that can be spent. The number
     /// of coins (UXTOs) is optimized to prevent dust accumulation.
@@ -298,6 +374,40 @@ impl Provider {
             )
             .collect();
         Ok(balances)
+    }
+
+    /// Get all the spendable balances of all assets for address `address`. This is different from
+    /// getting the coins because we are only returning the numbers (the sum of UTXOs coins amount
+    /// for each asset id) and not the UTXOs coins themselves
+    pub fn get_balances_new<'a>(
+        &'a self,
+        from: &'a Bech32Address,
+        num_results: usize,
+    ) -> ProviderPaginationCaller<String, HashMap<AssetId, u64>> {
+        ProviderPaginationCaller::new(num_results, |pr: PaginationRequest<String>| {
+            let hash = from.hash().to_string();
+            let provider_clone = self.clone();
+            Box::new(Box::pin(async move {
+                let balances_vec = provider_clone.client.balances(&hash, pr).await?.results;
+
+                let balances = balances_vec
+                    .into_iter()
+                    .map(
+                        |Balance {
+                             owner: _,
+                             amount,
+                             asset_id,
+                         }| {
+                            (
+                                AssetId::from_str(&asset_id.to_string()).unwrap(),
+                                amount.try_into().unwrap(),
+                            )
+                        },
+                    )
+                    .collect();
+                Ok(balances)
+            }))
+        })
     }
 
     /// Get all balances of all assets for the contract with id `contract_id`.
@@ -515,6 +625,7 @@ mod tests {
     use fuel_core::model::Coin;
 
     use fuel_gql_client::client::types::TransactionStatus;
+    use fuel_gql_client::client::PageDirection;
     use fuel_gql_client::fuel_tx::UtxoId;
     use fuels::prelude::*;
 
@@ -836,6 +947,59 @@ mod tests {
 
         assert_eq!(expected_blocks.len(), 2);
         //TODO: check if I can test it in another way
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_coins_new_api() -> Result<(), Error> {
+        let (wallet, (_, asset_ids), provider) = setup_provider_api_test().await;
+        let asset_id = &asset_ids[0];
+
+        let pagineted_result = provider
+            .get_coins_new(wallet.address(), asset_id, 4)
+            .call()
+            .await?;
+        dbg!(pagineted_result.results.len());
+
+        let pagineted_result = provider
+            .get_coins_new(wallet.address(), asset_id, 2)
+            .with_cursor(None)
+            .with_direction(PageDirection::Forward)
+            .call()
+            .await?;
+        dbg!(pagineted_result.results.len());
+
+        let pagineted_result = provider
+            .get_coins_new(wallet.address(), asset_id, 2)
+            .with_cursor(pagineted_result.cursor)
+            .with_direction(PageDirection::Backward)
+            .call()
+            .await?;
+        dbg!(pagineted_result.results.len());
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_balances_new_api() -> Result<(), Error> {
+        let (wallet, (coins, asset_ids), provider) = setup_provider_api_test().await;
+        let asset_id = &asset_ids[0];
+        let wallet_balance_asset_id: u64 = coins
+            .iter()
+            .filter(|c| c.1.asset_id == *asset_id)
+            .map(|c| c.1.amount)
+            .sum();
+
+        let wallet_balances = provider
+            .get_balances_new(wallet.address(), 100)
+            .call()
+            .await?;
+        let asset_balance = wallet_balances
+            .get(asset_id)
+            .expect("could not get balance for asset id");
+
+        assert_eq!(*asset_balance, wallet_balance_asset_id);
 
         Ok(())
     }
