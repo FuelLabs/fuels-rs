@@ -111,7 +111,7 @@ impl Abigen {
                     use fuels::core::code_gen::function_selector::resolve_fn_selector;
                     use fuels::core::types::*;
                     use fuels::signers::WalletUnlocked;
-                    use fuels::tx::{ContractId, Address, Receipt};
+                    use fuels::tx::{ContractId, Address, Receipt, AssetId};
                     use fuels::types::bech32::Bech32ContractId;
                     use fuels::types::ResolvedLog;
                     use fuels::types::errors::Error as SDKError;
@@ -147,7 +147,7 @@ impl Abigen {
                            Ok(Self { contract_id: self.contract_id.clone(), wallet: wallet, logs_lookup: self.logs_lookup.clone() })
                         }
 
-                        pub async fn get_balances(&self) -> Result<HashMap<String, u64>, SDKError> {
+                        pub async fn get_balances(&self) -> Result<HashMap<AssetId, u64>, SDKError> {
                             self.wallet.get_provider()?.get_contract_balances(&self.contract_id).await.map_err(Into::into)
                         }
 
