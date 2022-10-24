@@ -16,4 +16,4 @@ You can also run the scripts with arguments. For this, the setup is a little hea
 
 ````rust,ignore
 {{#include ../../../packages/fuels/tests/scripts.rs:script_with_arguments}}
-```
+````
