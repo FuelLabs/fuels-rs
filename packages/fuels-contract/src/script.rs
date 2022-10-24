@@ -106,7 +106,7 @@ impl Script {
             .collect::<Vec<_>>()
             .await
             .into_iter()
-     bi       .flatten_ok()
+            .flatten_ok()
             .collect()
     }
 
