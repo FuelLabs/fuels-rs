@@ -1,6 +1,6 @@
 use anyhow::Result;
 use fuel_gql_client::fuel_tx::{ConsensusParameters, Receipt, Transaction};
-use fuel_gql_client::fuel_tx::{Input, Output, TxPointer, UtxoId, PanicReason};
+use fuel_gql_client::fuel_tx::{Input, Output, PanicReason, TxPointer, UtxoId};
 
 use fuel_gql_client::fuel_types::{
     bytes::padded_len_usize, AssetId, Bytes32, ContractId, Immediate18, Word,

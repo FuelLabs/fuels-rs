@@ -6,11 +6,11 @@ use std::marker::PhantomData;
 use std::path::Path;
 use std::str::FromStr;
 
+use fuel_gql_client::prelude::PanicReason;
 use fuel_gql_client::{
     fuel_tx::{Contract as FuelContract, Output, Receipt, StorageSlot, Transaction},
     fuel_types::{Address, AssetId, Salt},
 };
-use fuel_gql_client::prelude::PanicReason;
 
 use fuels_core::abi_decoder::ABIDecoder;
 use fuels_core::abi_encoder::{ABIEncoder, UnresolvedBytes};
@@ -159,7 +159,7 @@ impl Contract {
     fn should_compute_custom_input_offset(args: &[Token]) -> bool {
         args.len() > 1
             || args.iter().any(|t| {
-            matches!(
+                matches!(
                     t,
                     Token::String(_)
                         | Token::Struct(_)
@@ -170,7 +170,7 @@ impl Contract {
                         | Token::Byte(_)
                         | Token::Vector(_)
                 )
-        })
+            })
     }
 
     /// Loads a compiled contract and deploys it to a running node
@@ -462,8 +462,8 @@ pub struct ContractCallHandler<D> {
 }
 
 impl<D> ContractCallHandler<D>
-    where
-        D: Tokenizable + Debug,
+where
+    D: Tokenizable + Debug,
 {
     /// Sets external contracts as dependencies to this contract's call.
     /// Effectively, this will be used to create Input::Contract/Output::Contract
@@ -546,7 +546,7 @@ impl<D> ContractCallHandler<D>
             &self.tx_parameters,
             &self.wallet,
         )
-            .await
+        .await
     }
 
     /// Call a contract's method on the node, in a state-modifying manner.
@@ -584,10 +584,10 @@ impl<D> ContractCallHandler<D>
 
             match result {
                 Err(Error::RevertTransactionError(_, receipts))
-                if ContractCall::is_missing_output_variables(&receipts) =>
-                    {
-                        self = self.append_variable_outputs(1);
-                    }
+                    if ContractCall::is_missing_output_variables(&receipts) =>
+                {
+                    self = self.append_variable_outputs(1);
+                }
 
                 Err(Error::RevertTransactionError(_, receipts)) => {
                     if let Some(receipt) = ContractCall::check_if_contract_not_in_inputs(&receipts)
@@ -629,7 +629,6 @@ impl<D> ContractCallHandler<D>
         let token = self.contract_call.get_decoded_output(&mut receipts)?;
         Ok(CallResponse::new(D::from_token(token)?, receipts))
     }
-
 }
 
 #[derive(Debug)]
@@ -727,13 +726,13 @@ impl MultiContractCallHandler {
 
             match result {
                 Err(Error::RevertTransactionError(_, receipts))
-                if ContractCall::is_missing_output_variables(&receipts) =>
-                    {
-                        self.contract_calls
-                            .iter_mut()
-                            .take(1)
-                            .for_each(|call| call.append_variable_outputs(1));
-                    }
+                    if ContractCall::is_missing_output_variables(&receipts) =>
+                {
+                    self.contract_calls
+                        .iter_mut()
+                        .take(1)
+                        .for_each(|call| call.append_variable_outputs(1));
+                }
 
                 Err(Error::RevertTransactionError(_, receipts)) => {
                     if let Some(receipt) = ContractCall::check_if_contract_not_in_inputs(&receipts)
@@ -742,7 +741,8 @@ impl MultiContractCallHandler {
                         self.contract_calls
                             .iter_mut()
                             .take(1)
-                            .for_each(|call| call.append_external_contracts(contract_id.clone()));                    }
+                            .for_each(|call| call.append_external_contracts(contract_id.clone()));
+                    }
                 }
                 Err(e) => return Err(e),
                 _ => return Ok(self),
@@ -806,8 +806,8 @@ mod test {
             TxParameters::default(),
             StorageConfiguration::default(),
         )
-            .await
-            .unwrap();
+        .await
+        .unwrap();
     }
 
     #[tokio::test]
@@ -823,7 +823,7 @@ mod test {
             StorageConfiguration::default(),
             Salt::default(),
         )
-            .await
-            .unwrap();
+        .await
+        .unwrap();
     }
 }

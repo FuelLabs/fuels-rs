@@ -378,7 +378,7 @@ async fn test_call_param_gas_errors() -> Result<(), Error> {
     let contract_methods = contract_instance.methods();
     let response = contract_methods
         .initialize_counter(42)
-        .tx_params(TxParameters::new(None, Some(1000), None))
+        .tx_params(TxParameters::new(None, Some(10000), None))
         .call_params(CallParameters::new(None, None, Some(1)))
         .call()
         .await

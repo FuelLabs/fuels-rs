@@ -42,7 +42,7 @@ mod tests {
             all_coins,
             vec![],
             Some(Config {
-                predicates: true,
+                // predicates: true,
                 utxo_validation: true,
                 ..Config::local_node()
             }),

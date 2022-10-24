@@ -141,9 +141,9 @@ async fn test_contract_call_fee_estimation() -> Result<(), Error> {
     let tolerance = 0.2;
 
     let expected_min_gas_price = 0; // This is the default min_gas_price from the ConsensusParameters
-    let expected_gas_used = 710;
+    let expected_gas_used = 3474;
     let expected_metered_bytes_size = 720;
-    let expected_total_fee = 359;
+    let expected_total_fee = 636;
 
     let estimated_transaction_cost = contract_instance
         .methods()
@@ -559,6 +559,9 @@ async fn test_output_variable_estimation_multicall() -> Result<(), Error> {
     let amount = 1000;
 
     let mut multi_call_handler = MultiContractCallHandler::new(wallets[0].clone());
+
+    multi_call_handler.tx_params(TxParameters::new(None, Some(1200000), None));
+
     (0..3).for_each(|_| {
         let call_handler = contract_methods.mint_to_addresses(amount, addresses);
         multi_call_handler.add_call(call_handler);
@@ -574,7 +577,6 @@ async fn test_output_variable_estimation_multicall() -> Result<(), Error> {
         let balance = wallet.get_asset_balance(&mint_asset_id).await?;
         assert_eq!(balance, 3 * amount);
     }
-
 
     Ok(())
 }
@@ -648,5 +650,41 @@ async fn test_contract_set_estimation() -> Result<(), Error> {
         .await?;
 
     assert!(res.value);
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_output_variable_contract_id_estimation_multicall() -> Result<(), Error> {
+    setup_contract_test!(
+        foo_contract_instance,
+        wallet,
+        "packages/fuels/tests/contracts/foo_contract"
+    );
+
+    let foo_contract_id = foo_contract_instance.get_contract_id();
+
+    setup_contract_test!(
+        foo_caller_contract_instance,
+        None,
+        "packages/fuels/tests/contracts/foo_caller_contract"
+    );
+
+    let bits = *foo_contract_id.hash();
+    let contract_methods = foo_caller_contract_instance.methods();
+
+    let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
+    multi_call_handler.tx_params(Default::default());
+
+    (0..3).for_each(|_| {
+        let call_handler = contract_methods.call_foo_contract(Bits256(bits), true);
+        multi_call_handler.add_call(call_handler);
+    });
+
+    let _ = multi_call_handler
+        .estimate_tx_dependencies(None)
+        .await?
+        .call::<(bool, bool, bool)>()
+        .await?;
+
     Ok(())
 }
