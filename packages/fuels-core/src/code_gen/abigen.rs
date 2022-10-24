@@ -224,7 +224,7 @@ impl Abigen {
                 #![allow(unused_imports)]
 
                 #includes
-                use fuels::contract::script::run_script_binary;
+                use fuels::contract::script::{run_script_binary, get_decoded_output};
                 use fuels::core::abi_encoder::ABIEncoder;
                 use fuels::core::parameters::TxParameters;
 

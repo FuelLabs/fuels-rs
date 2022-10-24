@@ -1,4 +1,5 @@
 use anyhow::Result;
+use fuel_gql_client::client::schema::coin::Coin;
 use fuel_gql_client::fuel_tx::{ConsensusParameters, Receipt, Transaction};
 use fuel_gql_client::fuel_tx::{Input, Output, TxPointer, UtxoId};
 use fuel_gql_client::fuel_types::{
@@ -7,12 +8,14 @@ use fuel_gql_client::fuel_types::{
 use fuel_gql_client::fuel_vm::{consts::REG_ONE, prelude::Opcode};
 use itertools::{chain, Itertools};
 
-use fuel_gql_client::client::schema::coin::Coin;
 use fuel_tx::{Metadata, ScriptExecutionResult, Witness};
+use fuels_core::abi_decoder::ABIDecoder;
 use fuels_core::parameters::TxParameters;
+use fuels_core::Token;
 use fuels_signers::provider::Provider;
 use fuels_signers::{Signer, WalletUnlocked};
 use fuels_types::bech32::Bech32Address;
+use fuels_types::param_types::{ParamType, ReturnLocation};
 use fuels_types::{constants::WORD_SIZE, errors::Error};
 use futures::{stream, StreamExt};
 use std::collections::HashSet;
@@ -401,6 +404,46 @@ impl Script {
 
         Ok(receipts)
     }
+}
+
+/// Based on the returned Contract's output_params and the receipts returned from a call,
+/// decode the values and return them.
+pub fn get_decoded_output(
+    output_param: ParamType,
+    receipts: &mut Vec<Receipt>,
+) -> Result<Token, Error> {
+    // Multiple returns are handled as one `Tuple` (which has its own `ParamType`)
+    let (encoded_value, index) = match output_param.get_return_location() {
+        ReturnLocation::ReturnData => {
+            match receipts.iter().find(|&receipt| {
+                matches!(receipt,
+                    Receipt::ReturnData { id: _, data, .. } if !data.is_empty())
+            }) {
+                Some(r) => {
+                    let index = receipts.iter().position(|elt| elt == r).unwrap();
+                    (r.data().unwrap().to_vec(), Some(index))
+                }
+                None => (vec![], None),
+            }
+        }
+        ReturnLocation::Return => {
+            match receipts
+                .iter()
+                .find(|&receipt| matches!(receipt, Receipt::Return { .. }))
+            {
+                Some(r) => {
+                    let index = receipts.iter().position(|elt| elt == r).unwrap();
+                    (r.val().unwrap().to_be_bytes().to_vec(), Some(index))
+                }
+                None => (vec![], None),
+            }
+        }
+    };
+    if let Some(i) = index {
+        receipts.remove(i);
+    }
+    let decoded_value = ABIDecoder::decode_single(&output_param, &encoded_value)?;
+    Ok(decoded_value)
 }
 
 /// Run the script binary located at `binary_filepath` and return its resulting receipts,

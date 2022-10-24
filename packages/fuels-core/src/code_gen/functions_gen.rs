@@ -77,6 +77,8 @@ pub fn generate_script_main_function(
         ));
     }
 
+    let output_type = resolve_fn_output_type(main_function_abi, types)?;
+
     let args = function_arguments(main_function_abi, types)?;
     if args
         .iter()
@@ -107,15 +109,19 @@ pub fn generate_script_main_function(
 
     Ok(quote! {
         #doc
-        pub async fn #name(&self #(,#arg_declarations)*) -> Result<Vec<Receipt>, SDKError> {
+        pub async fn #name(&self #(,#arg_declarations)*) -> Result<#output_type, SDKError> {
             let provider = self.wallet.get_provider().expect("Provider not set up").clone();
-            let tokens = [#(#arg_names.into_token()),*];
-            let script_data = ABIEncoder::encode(&tokens)?.resolve(0);
-            Ok(run_script_binary(self.binary_filepath.as_str(),
-                                    Some(TxParameters::default()),
-                                    Some(provider),
-                                    Some(script_data)).await?
+            let arg_name_tokens = [#(#arg_names.into_token()),*];
+            let script_data = ABIEncoder::encode(&arg_name_tokens)?.resolve(0);
+            let mut receipts = run_script_binary(self.binary_filepath.as_str(),
+                                                    Some(TxParameters::default()),
+                                                    Some(provider),
+                                                    Some(script_data)
             )
+            .await?;
+            let output_param = #output_type::param_type();
+            let token = get_decoded_output(output_param, &mut receipts)?;
+            Ok(#output_type::from_token(token)?)
         }
     })
 }

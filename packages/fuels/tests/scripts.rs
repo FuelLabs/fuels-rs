@@ -6,7 +6,7 @@ use fuel_gql_client::{
     },
 };
 use fuels::prelude::*;
-use fuels_contract::script::{run_script_binary, ScriptBuilder};
+use fuels_contract::script::ScriptBuilder;
 use fuels_core::tx::Bytes32;
 
 #[tokio::test]
@@ -156,30 +156,21 @@ async fn main_function_arguments() -> Result<(), Error> {
     // The abigen is used for the same purpose as with contracts (Rust bindings)
     script_abigen!(
         MyScript,
-        "packages/fuels/tests/scripts/script_with_arguments/out/debug/script_with_arguments-abi\
-        .json"
+        "packages/fuels/tests/scripts/script_with_arguments/out/debug/script_with_arguments-abi.json"
     );
+    let wallet = launch_provider_and_get_wallet().await;
+    let bin_path =
+        "../fuels/tests/scripts/script_with_arguments/out/debug/script_with_arguments.bin";
+    let instance = MyScript::new(wallet, bin_path);
+
     let bim = Bimbam { val: 90 };
     let bam = SugarySnack {
         twix: 100,
         mars: 1000,
     };
-    let wallet = launch_provider_and_get_wallet().await;
-    let bin_path =
-        "../fuels/tests/script/script_with_arguments/out/debug/script_with_arguments.bin";
-    let instance = MyScript::new(wallet, bin_path);
     let result = instance.main(bim, bam).await?;
-    let result_receipt = result[0];
-    println!("{:?}", result_receipt);
-    let tokens = result_receipt.data().unwrap();
-    println!("{:?}", Bimbam::from_token(result_receipt));
+    let expected = Bimbam { val: 2190 };
+    assert_eq!(result, expected);
+    // ANCHOR_END: script_with_arguments
     Ok(())
 }
-
-//     // Convert the arguments as script data
-//     let script_data = MyScript::encode_main_arguments(bim.clone(), bam.clone())?;
-//     let result = run_script_binary(bin_path, None, None, Some(script_data)).await?;
-//     assert_eq!(result[0].val().unwrap(), bim.val + bam.twix + 2 * bam.mars);
-//     // ANCHOR_END: script_with_arguments
-//     Ok(())
-// }
