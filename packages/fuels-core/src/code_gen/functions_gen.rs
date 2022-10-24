@@ -80,17 +80,12 @@ pub fn generate_script_main_function(
     let output_type = resolve_fn_output_type(main_function_abi, types)?;
 
     let args = function_arguments(main_function_abi, types)?;
-    if args
-        .iter()
-        .filter(|c| c.field_type.uses_vectors())
-        .collect::<Vec<&Component>>()
-        .len()
-        != 0
-    {
-        return Err(Error::CompilationError(format!(
+    if !args.iter().filter(|c| c.field_type.uses_vectors()).count() != 0 {
+        return Err(Error::CompilationError(
             "Script main function contains a vector in its argument types. This currently isn't \
-            supported.",
-        )));
+            supported."
+                .to_string(),
+        ));
     }
     let arg_names = args.iter().map(|component| &component.field_name);
 
