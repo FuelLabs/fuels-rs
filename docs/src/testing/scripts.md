@@ -15,5 +15,5 @@
 You can also run the scripts with arguments. For this, the setup is a little heavier because you have to use the `script_abigen!` macro, which is not unlike the `abigen!` macro seen [previously](../contracts/the-abigen-macro.md).
 
 ````rust,ignore
-{{#include ../../../packages/fuels/tests/script/mod.rs:script_with_arguments}}
+{{#include ../../../packages/fuels/tests/scripts.rs:script_with_arguments}}
 ```
