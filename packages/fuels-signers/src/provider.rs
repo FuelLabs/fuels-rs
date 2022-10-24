@@ -44,8 +44,8 @@ impl From<ProviderError> for Error {
     }
 }
 
-type BoxFutureResult<'a, U> = Box<dyn Future<Output = Result<U, ProviderError>> + 'a + Unpin>;
 type BoxFnFuture<'a, T, U> = Box<dyn Fn(PaginationRequest<T>) -> BoxFutureResult<'a, U> + 'a>;
+type BoxFutureResult<'a, U> = Box<dyn Future<Output = Result<U, ProviderError>> + 'a + Unpin>;
 
 pub struct ProviderPaginationCaller<'a, T, U>
 where
@@ -956,27 +956,27 @@ mod tests {
         let (wallet, (_, asset_ids), provider) = setup_provider_api_test().await;
         let asset_id = &asset_ids[0];
 
-        let pagineted_result = provider
+        let paginated_result = provider
             .get_coins_new(wallet.address(), asset_id, 4)
             .call()
             .await?;
-        dbg!(pagineted_result.results.len());
+        dbg!(paginated_result.results.len());
 
-        let pagineted_result = provider
+        let paginated_result = provider
             .get_coins_new(wallet.address(), asset_id, 2)
             .with_cursor(None)
             .with_direction(PageDirection::Forward)
             .call()
             .await?;
-        dbg!(pagineted_result.results.len());
+        dbg!(paginated_result.results.len());
 
-        let pagineted_result = provider
+        let paginated_result = provider
             .get_coins_new(wallet.address(), asset_id, 2)
-            .with_cursor(pagineted_result.cursor)
+            .with_cursor(paginated_result.cursor)
             .with_direction(PageDirection::Backward)
             .call()
             .await?;
-        dbg!(pagineted_result.results.len());
+        dbg!(paginated_result.results.len());
 
         Ok(())
     }
