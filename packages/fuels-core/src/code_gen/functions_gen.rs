@@ -115,8 +115,9 @@ pub fn generate_script_main_function(
             )
             .await?;
             let output_param = #output_type::param_type();
-            let token = get_decoded_output(output_param, &mut receipts)?;
-            Ok(#output_type::from_token(token)?)
+            let output_tokens = get_decoded_output(output_param, &mut receipts)?;
+            let output = #output_type::from_token(output_tokens)?;
+            Ok(output)
         }
     })
 }
