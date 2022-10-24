@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::code_gen::bindings::ContractBindings;
-use crate::code_gen::functions_gen::generate_script_argument_encoding_function;
+use crate::code_gen::functions_gen::generate_script_main_function;
 use crate::source::Source;
 use crate::utils::ident;
 use crate::{try_from_bytes, Parameterize, Tokenizable};

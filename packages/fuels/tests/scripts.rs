@@ -156,7 +156,8 @@ async fn main_function_arguments() -> Result<(), Error> {
     // The abigen is used for the same purpose as with contracts (Rust bindings)
     script_abigen!(
         MyScript,
-        "packages/fuels/tests/script/script_with_arguments/out/debug/script_with_arguments-abi.json"
+        "packages/fuels/tests/scripts/script_with_arguments/out/debug/script_with_arguments-abi\
+        .json"
     );
     let bim = Bimbam { val: 90 };
     let bam = SugarySnack {
