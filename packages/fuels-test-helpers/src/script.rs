@@ -1,6 +1,3 @@
-#[cfg(feature = "fuel-core-lib")]
-use fuel_core::service::FuelService;
-
 #[cfg(test)]
 mod tests {
     use crate::{
