@@ -612,7 +612,7 @@ async fn test_contract_instance_get_balances() -> Result<(), Error> {
     let contract_balances = contract_instance.get_balances().await?;
     assert_eq!(contract_balances.len(), 1);
 
-    let random_asset_balance = contract_balances.get(&random_asset_id).unwrap();
+    let random_asset_balance = contract_balances.get(random_asset_id).unwrap();
     assert_eq!(*random_asset_balance, amount);
 
     Ok(())
