@@ -7,6 +7,6 @@ For this interaction to work, the SDK must be able to communicate with a `fuel-c
 1. Use the [Testnet](../providers/external-node.md) or run a Fuel node (using `fuel-core`) and instantiate a provider that points to that node's IP and port.
 2. Use the SDK's native `launch_provider_and_get_wallet()` that runs a short-lived test Fuel node;
 
-The first option is ideal for smart contract testing, as you can quickly spin up and tear down nodes between specific test cases.
+The second option is ideal for smart contract testing, as you can quickly spin up and tear down nodes between specific test cases.
 
-For application building, you probably want to go with the second option.
+For application building, you should use the first option.
