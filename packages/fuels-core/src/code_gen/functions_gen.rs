@@ -66,7 +66,7 @@ pub fn expand_function(
 }
 
 /// Generate the function (as a `TokenStream`) used to encode into script data the arguments to the
-/// `main` function of a deployed script.
+/// `main` function of a script.
 pub fn generate_script_main_function(
     main_function_abi: &ABIFunction,
     types: &HashMap<usize, TypeDeclaration>,
