@@ -1,5 +1,5 @@
 use anyhow::Result;
-use fuel_gql_client::fuel_tx::{ConsensusParameters, Receipt, Transaction};
+use fuel_gql_client::fuel_tx::{ConsensusParameters, Metadata, Receipt, Transaction};
 use fuel_gql_client::fuel_tx::{Input, Output, PanicReason, TxPointer, UtxoId};
 
 use fuel_gql_client::fuel_types::{
@@ -375,7 +375,7 @@ impl Script {
         let chain_info = provider.chain_info().await?;
 
         self.tx.validate_without_signature(
-            chain_info.latest_block.height.0,
+            chain_info.latest_block.header.height.0,
             &chain_info.consensus_parameters.into(),
         )?;
 
@@ -387,7 +387,7 @@ impl Script {
         let chain_info = provider.chain_info().await?;
 
         self.tx.validate_without_signature(
-            chain_info.latest_block.height.0,
+            chain_info.latest_block.header.height.0,
             &chain_info.consensus_parameters.into(),
         )?;
 
