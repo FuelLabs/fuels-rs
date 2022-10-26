@@ -257,9 +257,10 @@ impl TryFrom<&Type> for ParamType {
         .next();
 
         matched_param_type.map(Ok).unwrap_or_else(|| {
-            Err(Error::InvalidType(
-                "Type didn't match against any known ParamTypes".to_string(),
-            ))
+            Err(Error::InvalidType(format!(
+                "Type {} couldn't be converted into a ParamType",
+                the_type.type_field
+            )))
         })
     }
 }
@@ -376,7 +377,6 @@ mod tests {
 
     use super::*;
     use crate::param_types::ParamType;
-    use crate::ProgramABI;
 
     #[test]
     fn array_size_dependent_on_num_of_elements() {
@@ -527,15 +527,6 @@ mod tests {
         assert_eq!(result, ParamType::Array(Box::new(ParamType::U8), 10));
 
         Ok(())
-    }
-
-    #[test]
-    fn something() {
-        let str =
-            std::fs::read_to_string("/home/segfault_magnet/exmaple/out/debug/exmaple-abi.json")
-                .unwrap();
-        let abi: ProgramABI = serde_json::from_str(&str).unwrap();
-        dbg!(&abi.functions[0].inputs[0]);
     }
 
     #[test]
@@ -806,24 +797,370 @@ mod tests {
     #[test]
     fn ultimate_example() -> Result<(), Error> {
         // given
-        let declarations: [TypeDeclaration; 0] = [];
-
-        let type_application = TypeApplication {
-            name: "".to_string(),
-            type_id: 0,
-            type_arguments: None,
-        };
+        let declarations = [
+            TypeDeclaration {
+                type_id: 0,
+                type_field: "()".to_string(),
+                components: Some(vec![]),
+                type_parameters: None,
+            },
+            TypeDeclaration {
+                type_id: 1,
+                type_field: "(_, _)".to_string(),
+                components: Some(vec![
+                    TypeApplication {
+                        name: "__tuple_element".to_string(),
+                        type_id: 11,
+                        type_arguments: None,
+                    },
+                    TypeApplication {
+                        name: "__tuple_element".to_string(),
+                        type_id: 11,
+                        type_arguments: None,
+                    },
+                ]),
+                type_parameters: None,
+            },
+            TypeDeclaration {
+                type_id: 2,
+                type_field: "(_.to_string(), _)".to_string(),
+                components: Some(vec![
+                    TypeApplication {
+                        name: "__tuple_element".to_string(),
+                        type_id: 4,
+                        type_arguments: None,
+                    },
+                    TypeApplication {
+                        name: "__tuple_element".to_string(),
+                        type_id: 24,
+                        type_arguments: None,
+                    },
+                ]),
+                type_parameters: None,
+            },
+            TypeDeclaration {
+                type_id: 3,
+                type_field: "(_.to_string(), _)".to_string(),
+                components: Some(vec![
+                    TypeApplication {
+                        name: "__tuple_element".to_string(),
+                        type_id: 5,
+                        type_arguments: None,
+                    },
+                    TypeApplication {
+                        name: "__tuple_element".to_string(),
+                        type_id: 13,
+                        type_arguments: None,
+                    },
+                ]),
+                type_parameters: None,
+            },
+            TypeDeclaration {
+                type_id: 4,
+                type_field: "[_; 1]".to_string(),
+                components: Some(vec![TypeApplication {
+                    name: "__array_element".to_string(),
+                    type_id: 8,
+                    type_arguments: Some(vec![TypeApplication {
+                        name: "".to_string(),
+                        type_id: 22,
+                        type_arguments: Some(vec![TypeApplication {
+                            name: "".to_string(),
+                            type_id: 21,
+                            type_arguments: Some(vec![TypeApplication {
+                                name: "".to_string(),
+                                type_id: 18,
+                                type_arguments: Some(vec![TypeApplication {
+                                    name: "".to_string(),
+                                    type_id: 13,
+                                    type_arguments: None,
+                                }]),
+                            }]),
+                        }]),
+                    }]),
+                }]),
+                type_parameters: None,
+            },
+            TypeDeclaration {
+                type_id: 5,
+                type_field: "[_; 2]".to_string(),
+                components: Some(vec![TypeApplication {
+                    name: "__array_element".to_string(),
+                    type_id: 14,
+                    type_arguments: None,
+                }]),
+                type_parameters: None,
+            },
+            TypeDeclaration {
+                type_id: 6,
+                type_field: "[_; 2]".to_string(),
+                components: Some(vec![TypeApplication {
+                    name: "__array_element".to_string(),
+                    type_id: 10,
+                    type_arguments: None,
+                }]),
+                type_parameters: None,
+            },
+            TypeDeclaration {
+                type_id: 7,
+                type_field: "b256".to_string(),
+                components: None,
+                type_parameters: None,
+            },
+            TypeDeclaration {
+                type_id: 8,
+                type_field: "enum EnumWGeneric".to_string(),
+                components: Some(vec![
+                    TypeApplication {
+                        name: "a".to_string(),
+                        type_id: 25,
+                        type_arguments: None,
+                    },
+                    TypeApplication {
+                        name: "b".to_string(),
+                        type_id: 12,
+                        type_arguments: None,
+                    },
+                ]),
+                type_parameters: Some(vec![12]),
+            },
+            TypeDeclaration {
+                type_id: 9,
+                type_field: "generic K".to_string(),
+                components: None,
+                type_parameters: None,
+            },
+            TypeDeclaration {
+                type_id: 10,
+                type_field: "generic L".to_string(),
+                components: None,
+                type_parameters: None,
+            },
+            TypeDeclaration {
+                type_id: 11,
+                type_field: "generic M".to_string(),
+                components: None,
+                type_parameters: None,
+            },
+            TypeDeclaration {
+                type_id: 12,
+                type_field: "generic N".to_string(),
+                components: None,
+                type_parameters: None,
+            },
+            TypeDeclaration {
+                type_id: 13,
+                type_field: "generic T".to_string(),
+                components: None,
+                type_parameters: None,
+            },
+            TypeDeclaration {
+                type_id: 14,
+                type_field: "generic U".to_string(),
+                components: None,
+                type_parameters: None,
+            },
+            TypeDeclaration {
+                type_id: 15,
+                type_field: "raw untyped ptr".to_string(),
+                components: None,
+                type_parameters: None,
+            },
+            TypeDeclaration {
+                type_id: 16,
+                type_field: "str[2]".to_string(),
+                components: None,
+                type_parameters: None,
+            },
+            TypeDeclaration {
+                type_id: 17,
+                type_field: "struct MegaExample".to_string(),
+                components: Some(vec![
+                    TypeApplication {
+                        name: "a".to_string(),
+                        type_id: 3,
+                        type_arguments: None,
+                    },
+                    TypeApplication {
+                        name: "b".to_string(),
+                        type_id: 23,
+                        type_arguments: Some(vec![TypeApplication {
+                            name: "".to_string(),
+                            type_id: 2,
+                            type_arguments: None,
+                        }]),
+                    },
+                ]),
+                type_parameters: Some(vec![13, 14]),
+            },
+            TypeDeclaration {
+                type_id: 18,
+                type_field: "struct PassTheGenericOn".to_string(),
+                components: Some(vec![TypeApplication {
+                    name: "one".to_string(),
+                    type_id: 20,
+                    type_arguments: Some(vec![TypeApplication {
+                        name: "".to_string(),
+                        type_id: 9,
+                        type_arguments: None,
+                    }]),
+                }]),
+                type_parameters: Some(vec![9]),
+            },
+            TypeDeclaration {
+                type_id: 19,
+                type_field: "struct RawVec".to_string(),
+                components: Some(vec![
+                    TypeApplication {
+                        name: "ptr".to_string(),
+                        type_id: 15,
+                        type_arguments: None,
+                    },
+                    TypeApplication {
+                        name: "cap".to_string(),
+                        type_id: 25,
+                        type_arguments: None,
+                    },
+                ]),
+                type_parameters: Some(vec![13]),
+            },
+            TypeDeclaration {
+                type_id: 20,
+                type_field: "struct SimpleGeneric".to_string(),
+                components: Some(vec![TypeApplication {
+                    name: "single_generic_param".to_string(),
+                    type_id: 13,
+                    type_arguments: None,
+                }]),
+                type_parameters: Some(vec![13]),
+            },
+            TypeDeclaration {
+                type_id: 21,
+                type_field: "struct StructWArrayGeneric".to_string(),
+                components: Some(vec![TypeApplication {
+                    name: "a".to_string(),
+                    type_id: 6,
+                    type_arguments: None,
+                }]),
+                type_parameters: Some(vec![10]),
+            },
+            TypeDeclaration {
+                type_id: 22,
+                type_field: "struct StructWTupleGeneric".to_string(),
+                components: Some(vec![TypeApplication {
+                    name: "a".to_string(),
+                    type_id: 1,
+                    type_arguments: None,
+                }]),
+                type_parameters: Some(vec![11]),
+            },
+            TypeDeclaration {
+                type_id: 23,
+                type_field: "struct Vec".to_string(),
+                components: Some(vec![
+                    TypeApplication {
+                        name: "buf".to_string(),
+                        type_id: 19,
+                        type_arguments: Some(vec![TypeApplication {
+                            name: "".to_string(),
+                            type_id: 13,
+                            type_arguments: None,
+                        }]),
+                    },
+                    TypeApplication {
+                        name: "len".to_string(),
+                        type_id: 25,
+                        type_arguments: None,
+                    },
+                ]),
+                type_parameters: Some(vec![13]),
+            },
+            TypeDeclaration {
+                type_id: 24,
+                type_field: "u32".to_string(),
+                components: None,
+                type_parameters: None,
+            },
+            TypeDeclaration {
+                type_id: 25,
+                type_field: "u64".to_string(),
+                components: None,
+                type_parameters: None,
+            },
+        ];
 
         let type_lookup = declarations
             .into_iter()
             .map(|decl| (decl.type_id, decl))
             .collect::<HashMap<_, _>>();
 
+        let type_application = TypeApplication {
+            name: "arg1".to_string(),
+            type_id: 17,
+            type_arguments: Some(vec![
+                TypeApplication {
+                    name: "".to_string(),
+                    type_id: 16,
+                    type_arguments: None,
+                },
+                TypeApplication {
+                    name: "".to_string(),
+                    type_id: 7,
+                    type_arguments: None,
+                },
+            ]),
+        };
+
         // when
         let result = ParamType::try_from_type_application(&type_application, &type_lookup)?;
 
         // then
-        assert!(false);
+        let expected_param_type = {
+            let pass_the_generic_on = ParamType::Struct {
+                fields: vec![ParamType::Struct {
+                    fields: vec![ParamType::String(2)],
+                    generics: vec![ParamType::String(2)],
+                }],
+                generics: vec![ParamType::String(2)],
+            };
+            let struct_w_array_generic = ParamType::Struct {
+                fields: vec![ParamType::Array(Box::from(pass_the_generic_on.clone()), 2)],
+                generics: vec![pass_the_generic_on],
+            };
+            let struct_w_tuple_generic = ParamType::Struct {
+                fields: vec![ParamType::Tuple(vec![
+                    struct_w_array_generic.clone(),
+                    struct_w_array_generic.clone(),
+                ])],
+                generics: vec![struct_w_array_generic],
+            };
+
+            ParamType::Struct {
+                fields: vec![
+                    ParamType::Tuple(vec![
+                        ParamType::Array(Box::from(ParamType::B256), 2),
+                        ParamType::String(2),
+                    ]),
+                    ParamType::Vector(Box::from(ParamType::Tuple(vec![
+                        ParamType::Array(
+                            Box::from(ParamType::Enum {
+                                variants: EnumVariants::new(vec![
+                                    ParamType::U64,
+                                    struct_w_tuple_generic.clone(),
+                                ])
+                                .unwrap(),
+                                generics: vec![struct_w_tuple_generic],
+                            }),
+                            1,
+                        ),
+                        ParamType::U32,
+                    ]))),
+                ],
+                generics: vec![ParamType::String(2), ParamType::B256],
+            }
+        };
+
+        assert_eq!(result, expected_param_type);
 
         Ok(())
     }

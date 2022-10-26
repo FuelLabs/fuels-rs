@@ -1,6 +1,5 @@
 use fuels::prelude::*;
 use fuels_core::code_gen::abigen::Abigen;
-use fuels_types::ProgramABI;
 use std::str::FromStr;
 
 pub fn null_contract_id() -> Bech32ContractId {
@@ -1273,21 +1272,15 @@ async fn generics_test() -> anyhow::Result<()> {
 
         let arg1 = MegaExample {
             a: ([Bits256([0; 32]), Bits256([0; 32])], "ab".try_into()?),
-            b: (
+            b: vec![(
                 [EnumWGeneric::b(StructWTupleGeneric {
                     a: (w_arr_generic.clone(), w_arr_generic),
                 })],
                 10u32,
-            ),
+            )],
         };
 
-        let result = contract_methods
-            .complex_test(arg1.clone())
-            .call()
-            .await?
-            .value;
-
-        assert_eq!(result, arg1);
+        contract_methods.complex_test(arg1.clone()).call().await?;
     }
 
     Ok(())
