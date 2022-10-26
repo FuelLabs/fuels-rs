@@ -799,12 +799,6 @@ mod tests {
         // given
         let declarations = [
             TypeDeclaration {
-                type_id: 0,
-                type_field: "()".to_string(),
-                components: Some(vec![]),
-                type_parameters: None,
-            },
-            TypeDeclaration {
                 type_id: 1,
                 type_field: "(_, _)".to_string(),
                 components: Some(vec![
@@ -823,7 +817,7 @@ mod tests {
             },
             TypeDeclaration {
                 type_id: 2,
-                type_field: "(_.to_string(), _)".to_string(),
+                type_field: "(_, _)".to_string(),
                 components: Some(vec![
                     TypeApplication {
                         name: "__tuple_element".to_string(),
@@ -840,7 +834,7 @@ mod tests {
             },
             TypeDeclaration {
                 type_id: 3,
-                type_field: "(_.to_string(), _)".to_string(),
+                type_field: "(_, _)".to_string(),
                 components: Some(vec![
                     TypeApplication {
                         name: "__tuple_element".to_string(),
