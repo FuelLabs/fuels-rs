@@ -75,7 +75,7 @@ pub(crate) fn resolve_type(
             .flatten()
             .map(|array_type| resolve_type(array_type, types))
             .collect::<Result<Vec<_>, _>>()
-            .unwrap()
+            .expect("Failed to resolve types")
     };
 
     let base_type = types.get(&type_application.type_id).unwrap();
