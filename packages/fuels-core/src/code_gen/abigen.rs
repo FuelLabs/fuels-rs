@@ -234,9 +234,9 @@ impl Abigen {
     }
 
     // Checks whether the given type should not have code generated for it. This
-    // is mainly because the corresponding type in Rust might already exist --
-    // i.e. the contract's Vec type is mapped to std::vec::Vec from the Rust
-    // stdlib. ContractId is a custom type implemented by fuels-rs, etc.
+    // is mainly because the corresponding type in Rust already exists --
+    // e.g. the contract's Vec type is mapped to std::vec::Vec from the Rust
+    // stdlib, ContractId is a custom type implemented by fuels-rs, etc.
     // Others like 'raw untyped ptr' or 'RawVec' are skipped because they are
     // implementation details of the contract's Vec type and are not directly
     // used in the SDK.
