@@ -1,4 +1,5 @@
 use fuels::prelude::*;
+use fuels_core::code_gen::abigen::Abigen;
 use std::str::FromStr;
 
 pub fn null_contract_id() -> Bech32ContractId {
@@ -1289,6 +1290,17 @@ async fn generics_test() -> anyhow::Result<()> {
     }
 
     Ok(())
+}
+
+#[test]
+fn something() {
+    let abigen = Abigen::new(
+        "MyContract",
+        "tests/types/vectors/out/debug/vectors-abi.json",
+    )
+    .unwrap();
+
+    abigen.expand().unwrap();
 }
 
 #[tokio::test]

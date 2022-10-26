@@ -79,8 +79,15 @@ pub(crate) fn resolve_type(
 
     let base_type = types.get(&type_application.type_id).unwrap();
 
-    let components = recursively_resolve(&base_type.components)?;
     let type_arguments = recursively_resolve(&type_application.type_arguments)?;
+    if base_type.type_field == "struct Vec" {
+        return Ok(ResolvedType {
+            type_name: "::std::vec::Vec".parse().unwrap(),
+            generic_params: type_arguments,
+        });
+    }
+
+    let components = recursively_resolve(&base_type.components)?;
     let type_field = base_type.type_field.as_str();
 
     [
