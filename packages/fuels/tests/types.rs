@@ -1,5 +1,6 @@
 use fuels::prelude::*;
 use fuels_core::code_gen::abigen::Abigen;
+use fuels_types::ProgramABI;
 use std::str::FromStr;
 
 pub fn null_contract_id() -> Bech32ContractId {
