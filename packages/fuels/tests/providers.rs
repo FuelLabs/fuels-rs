@@ -118,7 +118,7 @@ async fn test_input_message() -> Result<(), Error> {
         "packages/fuels/tests/contracts/contract_test"
     );
 
-    let spendable_messages = wallet.get_spendable_messages(1).await?;
+    let spendable_messages = wallet.get_spendable_messages().await?;
 
     assert!(compare_messages(spendable_messages, messages));
 

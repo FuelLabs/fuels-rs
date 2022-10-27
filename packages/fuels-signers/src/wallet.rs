@@ -207,12 +207,12 @@ impl Wallet {
             .map_err(Into::into)
     }
 
-    /// Get some spendable messages owned by the wallet that add up at least to
-    /// amount `amount`. The returned messages are actual messages that can be spent. The number
+    /// Get some spendable messages owned by the wallet.
+    /// The returned messages are actual messages that can be spent. The number
     /// of messages (UXTOs) is optimized to prevent dust accumulation.
-    pub async fn get_spendable_messages(&self, amount: u64) -> Result<Vec<InputMessage>, Error> {
+    pub async fn get_spendable_messages(&self) -> Result<Vec<InputMessage>, Error> {
         self.get_provider()?
-            .get_spendable_messages(&self.address, amount)
+            .get_spendable_messages(&self.address)
             .await
             .map_err(Into::into)
     }

@@ -232,19 +232,18 @@ impl Provider {
         Ok(coins)
     }
 
-    /// Get some spendable messages for address `from` that add up at least to
-    /// amount `amount`. The returned messages are actual messages that can be spent. The number
+    /// Get some spendable messages for address `from`.
+    /// The returned messages are actual messages that can be spent. The number
     /// of messages is optimized to prevent dust accumulation.
     pub async fn get_spendable_messages(
         &self,
         from: &Bech32Address,
-        amount: u64,
     ) -> Result<Vec<Message>, ProviderError> {
         let res = self
             .client
             .resources_to_spend(
                 &from.hash().to_string(),
-                vec![(format!("{:#x}", AssetId::default()).as_str(), amount, None)],
+                vec![(format!("{:#x}", AssetId::default()).as_str(), 1, None)],
                 None,
             )
             .await?;
