@@ -7,3 +7,7 @@ Here's an example:
 ```rust,ignore
 {{#include ../../../packages/fuels/tests/bindings.rs:256_arg}}
 ```
+
+If you have a hexadecimal value as a string and wish to convert it to `Bits256`, you may do so with `from_hex_str`:
+
+{{#include ../../../packages/fuels-core/src/types/bits_256.rs:from_hex_str}}

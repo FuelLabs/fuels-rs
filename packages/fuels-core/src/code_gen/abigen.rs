@@ -128,8 +128,7 @@ impl Abigen {
                     }
 
                     impl #name {
-                        pub fn new(contract_id: String, wallet: WalletUnlocked) -> Self {
-                            let contract_id = Bech32ContractId::from_str(&contract_id).expect("Invalid contract id");
+                        pub fn new(contract_id: Bech32ContractId, wallet: WalletUnlocked) -> Self {
                             Self { contract_id, wallet, logs_lookup: vec![#(#log_id_param_type_pairs),*]}
                         }
 
@@ -146,6 +145,10 @@ impl Abigen {
                            wallet.set_provider(provider.clone());
 
                            Ok(Self { contract_id: self.contract_id.clone(), wallet: wallet, logs_lookup: self.logs_lookup.clone() })
+                        }
+
+                        pub async fn get_balances(&self) -> Result<HashMap<String, u64>, SDKError> {
+                            self.wallet.get_provider()?.get_contract_balances(&self.contract_id).await.map_err(Into::into)
                         }
 
                         pub fn logs_with_type<D: Tokenizable + Parameterize>(&self, receipts: &[Receipt]) -> Result<Vec<D>, SDKError> {
@@ -217,10 +220,7 @@ impl Abigen {
                 continue;
             }
 
-            // Skip custom type generation if the custom type is a native type.
-            // This means ABI methods receiving or returning a native type
-            // can receive or return that native type directly.
-            if Abigen::is_native_type(&prop.type_field)? {
+            if Abigen::should_skip_codegen(&prop.type_field)? {
                 continue;
             }
 
@@ -233,15 +233,16 @@ impl Abigen {
         Ok(structs)
     }
 
-    // Checks whether the given type field is a native type.
-    // It's expected to come in as `"struct T"` or `"enum T"`.
-    // `T` is a native `high-level language` or Rust type if it matches exactly one of
-    // the reserved strings, such as "Address", "ContractId", "Option" or "Result"
-    pub fn is_native_type(type_field: &str) -> anyhow::Result<bool> {
-        let name = custom_type_name(type_field)?;
+    // Checks whether the given type should not have code generated for it. This
+    // is mainly because the corresponding type in Rust already exists --
+    // e.g. the contract's Vec type is mapped to std::vec::Vec from the Rust
+    // stdlib, ContractId is a custom type implemented by fuels-rs, etc.
+    // Others like 'raw untyped ptr' or 'RawVec' are skipped because they are
+    // implementation details of the contract's Vec type and are not directly
+    // used in the SDK.
+    pub fn should_skip_codegen(type_field: &str) -> anyhow::Result<bool> {
+        let name = custom_type_name(type_field).unwrap_or_else(|_| type_field.to_string());
 
-        // "RawVec" is part of the Vec structure. Not used in the SDK and thus
-        // not generated.
         Ok([
             "ContractId",
             "Address",
@@ -249,6 +250,7 @@ impl Abigen {
             "Identity",
             "Result",
             "Vec",
+            "raw untyped ptr",
             "RawVec",
         ]
         .into_iter()
@@ -262,7 +264,7 @@ impl Abigen {
         let mut seen_enum: Vec<&str> = vec![];
 
         for prop in &self.abi.types {
-            if !prop.is_enum_type() || Abigen::is_native_type(&prop.type_field)? {
+            if !prop.is_enum_type() || Abigen::should_skip_codegen(&prop.type_field)? {
                 continue;
             }
 

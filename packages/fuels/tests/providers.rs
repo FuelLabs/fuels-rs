@@ -33,7 +33,7 @@ async fn test_provider_launch_and_connect() -> Result<(), Error> {
     )
     .await?;
 
-    let contract_instance_connected = MyContract::new(contract_id.to_string(), wallet.clone());
+    let contract_instance_connected = MyContract::new(contract_id.clone(), wallet.clone());
 
     let response = contract_instance_connected
         .methods()
@@ -43,7 +43,7 @@ async fn test_provider_launch_and_connect() -> Result<(), Error> {
     assert_eq!(42, response.value);
 
     wallet.set_provider(launched_provider);
-    let contract_instance_launched = MyContract::new(contract_id.to_string(), wallet);
+    let contract_instance_launched = MyContract::new(contract_id, wallet);
 
     let response = contract_instance_launched
         .methods()
@@ -118,8 +118,9 @@ async fn test_input_message() -> Result<(), Error> {
         "packages/fuels/tests/contracts/contract_test"
     );
 
-    let messages_from_provider = wallet.get_messages().await?;
-    assert!(compare_messages(messages_from_provider, messages));
+    let spendable_messages = wallet.get_spendable_messages().await?;
+
+    assert!(compare_messages(spendable_messages, messages));
 
     let response = contract_instance
         .methods()
@@ -128,7 +129,6 @@ async fn test_input_message() -> Result<(), Error> {
         .await?;
 
     assert_eq!(42, response.value);
-
     Ok(())
 }
 
@@ -461,7 +461,7 @@ async fn testnet_hello_world() -> Result<(), Error> {
     )
     .await?;
 
-    let contract_methods = MyContract::new(contract_id.to_string(), wallet.clone()).methods();
+    let contract_methods = MyContract::new(contract_id, wallet.clone()).methods();
 
     let response = contract_methods
         .initialize_counter(42) // Build the ABI call

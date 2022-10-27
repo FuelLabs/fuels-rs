@@ -1,9 +1,10 @@
 use fuels::prelude::*;
 use std::str::FromStr;
 
-pub fn null_contract_id() -> String {
+pub fn null_contract_id() -> Bech32ContractId {
     // a bech32 contract address that decodes to ~[0u8;32]
-    String::from("fuel1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqsx2mt2")
+    Bech32ContractId::from_str("fuel1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqsx2mt2")
+        .unwrap()
 }
 
 #[tokio::test]
@@ -98,7 +99,7 @@ async fn call_with_structs() -> Result<(), Error> {
     )
     .await?;
 
-    let contract_methods = MyContract::new(contract_id.to_string(), wallet).methods();
+    let contract_methods = MyContract::new(contract_id, wallet).methods();
 
     let response = contract_methods
         .initialize_counter(counter_config) // Build the ABI call
@@ -1270,21 +1271,15 @@ async fn generics_test() -> anyhow::Result<()> {
 
         let arg1 = MegaExample {
             a: ([Bits256([0; 32]), Bits256([0; 32])], "ab".try_into()?),
-            b: (
+            b: vec![(
                 [EnumWGeneric::b(StructWTupleGeneric {
                     a: (w_arr_generic.clone(), w_arr_generic),
                 })],
                 10u32,
-            ),
+            )],
         };
 
-        let result = contract_methods
-            .complex_test(arg1.clone())
-            .call()
-            .await?
-            .value;
-
-        assert_eq!(result, arg1);
+        contract_methods.complex_test(arg1.clone()).call().await?;
     }
 
     Ok(())
