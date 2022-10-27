@@ -77,12 +77,12 @@ impl<T, U> From<PaginatedResult<U, T>> for ProviderPaginatedResult<T, Vec<U>> {
 
 impl<'a, T, U> ProviderPaginationCaller<'a, T, U> {
     fn new(
-        results: usize,
+        results: u64,
         function: impl Fn(PaginationRequest<T>) -> BoxFutureResult<'a, T, U> + 'a,
     ) -> Self {
         ProviderPaginationCaller {
             cursor: None::<T>,
-            results,
+            results: results as usize,
             direction: PageDirection::Forward,
             function: Box::new(function),
         }
@@ -248,7 +248,7 @@ impl Provider {
         &self,
         from: &Bech32Address,
         asset_id: &AssetId,
-        num_results: usize,
+        num_results: u64,
     ) -> ProviderPaginationCaller<String, Vec<Coin>> {
         let hash = Arc::new(from.hash().to_string());
         let asset_id = Arc::new(asset_id.to_string());
@@ -297,6 +297,34 @@ impl Provider {
         Ok(coins)
     }
 
+    /// Get some spendable messages for address `from`.
+    /// The returned messages are actual messages that can be spent. The number
+    /// of messages is optimized to prevent dust accumulation.
+    pub async fn get_spendable_messages(
+        &self,
+        from: &Bech32Address,
+    ) -> Result<Vec<Message>, ProviderError> {
+        let res = self
+            .client
+            .resources_to_spend(
+                &from.hash().to_string(),
+                vec![(format!("{:#x}", AssetId::default()).as_str(), 1, None)],
+                None,
+            )
+            .await?;
+
+        let messages = res
+            .into_iter()
+            .flatten()
+            .filter_map(|r| match r {
+                Resource::Message(m) => Some(m),
+                _ => None,
+            })
+            .collect();
+
+        Ok(messages)
+    }
+
     /// Get the balance of all spendable coins `asset_id` for address `address`. This is different
     /// from getting coins because we are just returning a number (the sum of UTXOs amount) instead
     /// of the UTXOs.
@@ -329,7 +357,7 @@ impl Provider {
     pub fn get_balances(
         &self,
         from: &Bech32Address,
-        num_results: usize,
+        num_results: u64,
     ) -> ProviderPaginationCaller<String, HashMap<AssetId, u64>> {
         let hash = Arc::new(from.hash().to_string());
         let provider = Arc::new(self.clone());

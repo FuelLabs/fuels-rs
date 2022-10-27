@@ -7,7 +7,9 @@ use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
 use fuel_gql_client::client::schema;
 use fuel_gql_client::fuel_vm::prelude::GTFArgs;
 use fuel_gql_client::{
-    client::{schema::coin::Coin, types::TransactionResponse},
+    client::{
+        schema::coin::Coin, schema::message::Message as InputMessage, types::TransactionResponse,
+    },
     fuel_tx::{
         AssetId, Bytes32, ContractId, Input, Output, Receipt, Transaction, TransactionFee,
         TxPointer, UtxoId, Witness,
@@ -180,11 +182,7 @@ impl Wallet {
     /// Gets all coins of asset `asset_id` owned by the wallet, *even spent ones* (this is useful
     /// for some particular cases, but in general, you should use `get_spendable_coins`). This
     /// returns actual coins (UTXOs).
-    pub async fn get_coins(
-        &self,
-        asset_id: AssetId,
-        num_results: usize,
-    ) -> Result<Vec<Coin>, Error> {
+    pub async fn get_coins(&self, asset_id: AssetId, num_results: u64) -> Result<Vec<Coin>, Error> {
         Ok(self
             .get_provider()?
             .get_coins(&self.address, &asset_id, num_results)
@@ -207,6 +205,16 @@ impl Wallet {
             .map_err(Into::into)
     }
 
+    /// Get some spendable messages owned by the wallet.
+    /// The returned messages are actual messages that can be spent. The number
+    /// of messages (UXTOs) is optimized to prevent dust accumulation.
+    pub async fn get_spendable_messages(&self) -> Result<Vec<InputMessage>, Error> {
+        self.get_provider()?
+            .get_spendable_messages(&self.address)
+            .await
+            .map_err(Into::into)
+    }
+
     /// Get the balance of all spendable coins `asset_id` for address `address`. This is different
     /// from getting coins because we are just returning a number (the sum of UTXOs amount) instead
     /// of the UTXOs.
@@ -220,7 +228,7 @@ impl Wallet {
     /// Get all the spendable balances of all assets for the wallet. This is different from getting
     /// the coins because we are only returning the sum of UTXOs coins amount and not the UTXOs
     /// coins themselves.
-    pub async fn get_balances(&self, num_results: usize) -> Result<HashMap<AssetId, u64>, Error> {
+    pub async fn get_balances(&self, num_results: u64) -> Result<HashMap<AssetId, u64>, Error> {
         Ok(self
             .get_provider()?
             .get_balances(&self.address, num_results)

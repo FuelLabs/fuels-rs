@@ -59,7 +59,11 @@ mod tests {
         // ANCHOR_END: setup_test_blockchain
 
         // ANCHOR: get_coins
-        let coins = provider.get_coins(wallet.address(), &BASE_ASSET_ID).await?;
+        let coins = provider
+            .get_coins(wallet.address(), &BASE_ASSET_ID, number_of_coins)
+            .call()
+            .await?
+            .results;
         assert_eq!(coins.len(), 1);
         // ANCHOR_END: get_coins
 
@@ -71,7 +75,11 @@ mod tests {
         // ANCHOR_END: get_spendable_coins
 
         // ANCHOR: get_balances
-        let _balances = provider.get_balances(wallet.address()).await?;
+        let _balances = provider
+            .get_balances(wallet.address(), number_of_coins)
+            .call()
+            .await?
+            .results;
         // ANCHOR_END: get_balances
 
         Ok(())

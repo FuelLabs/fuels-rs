@@ -135,7 +135,7 @@ mod tests {
         // ANCHOR_END: transfer_multiple_setup
 
         // ANCHOR: transfer_multiple_inout
-        let balances = wallet_1.get_balances().await?;
+        let balances = wallet_1.get_balances(NUM_ASSETS * NUM_COINS).await?;
 
         let mut inputs = vec![];
         let mut outputs = vec![];
@@ -158,7 +158,7 @@ mod tests {
 
         let _receipts = provider.send_transaction(&tx).await?;
 
-        let balances = wallet_2.get_balances().await?;
+        let balances = wallet_2.get_balances(NUM_ASSETS * NUM_COINS).await?;
 
         assert_eq!(balances.len(), (NUM_ASSETS - 1) as usize);
         for (_, balance) in balances {

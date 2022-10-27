@@ -134,7 +134,7 @@ mod tests {
             .transfer(wallets[1].address(), 1, asset_id, TxParameters::default())
             .await?;
 
-        let wallet_2_final_coins = wallets[1].get_coins(BASE_ASSET_ID).await?;
+        let wallet_2_final_coins = wallets[1].get_coins(BASE_ASSET_ID, 1).await?;
 
         // Check that wallet 2 now has 2 coins
         assert_eq!(wallet_2_final_coins.len(), 2);
@@ -317,7 +317,7 @@ mod tests {
         let balance: u64 = wallet.get_asset_balance(&asset_id).await?;
         // ANCHOR_END: get_asset_balance
         // ANCHOR: get_balances
-        let balances: HashMap<AssetId, u64> = wallet.get_balances().await?;
+        let balances: HashMap<AssetId, u64> = wallet.get_balances(DEFAULT_NUM_COINS).await?;
         // ANCHOR_END: get_balances
 
         // ANCHOR: get_balance_hashmap
