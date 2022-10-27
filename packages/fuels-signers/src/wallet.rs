@@ -180,11 +180,17 @@ impl Wallet {
     /// Gets all coins of asset `asset_id` owned by the wallet, *even spent ones* (this is useful
     /// for some particular cases, but in general, you should use `get_spendable_coins`). This
     /// returns actual coins (UTXOs).
-    pub async fn get_coins(&self, asset_id: AssetId) -> Result<Vec<Coin>, Error> {
+    pub async fn get_coins(
+        &self,
+        asset_id: AssetId,
+        num_results: usize,
+    ) -> Result<Vec<Coin>, Error> {
         Ok(self
             .get_provider()?
-            .get_coins(&self.address, &asset_id)
-            .await?)
+            .get_coins(&self.address, &asset_id, num_results)
+            .call()
+            .await?
+            .results)
     }
 
     /// Get some spendable coins of asset `asset_id` owned by the wallet that add up at least to
@@ -214,11 +220,13 @@ impl Wallet {
     /// Get all the spendable balances of all assets for the wallet. This is different from getting
     /// the coins because we are only returning the sum of UTXOs coins amount and not the UTXOs
     /// coins themselves.
-    pub async fn get_balances(&self) -> Result<HashMap<AssetId, u64>, Error> {
-        self.get_provider()?
-            .get_balances(&self.address)
-            .await
-            .map_err(Into::into)
+    pub async fn get_balances(&self, num_results: usize) -> Result<HashMap<AssetId, u64>, Error> {
+        Ok(self
+            .get_provider()?
+            .get_balances(&self.address, num_results)
+            .call()
+            .await?
+            .results)
     }
 
     pub async fn get_messages(&self) -> Result<Vec<schema::message::Message>, Error> {
@@ -594,7 +602,7 @@ impl WalletUnlocked {
     ///        .await
     ///        .unwrap();
     ///
-    ///   let wallet_2_final_coins = wallet_2.get_coins(BASE_ASSET_ID).await.unwrap();
+    ///   let wallet_2_final_coins = wallet_2.get_coins(BASE_ASSET_ID, 4).await.unwrap();
     ///
     ///   // Check that wallet two now has two coins
     ///   assert_eq!(wallet_2_final_coins.len(), 2);
