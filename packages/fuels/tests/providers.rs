@@ -378,13 +378,14 @@ async fn test_call_param_gas_errors() -> Result<(), Error> {
     let contract_methods = contract_instance.methods();
     let response = contract_methods
         .initialize_counter(42)
-        .tx_params(TxParameters::new(None, Some(1000), None))
+        .tx_params(TxParameters::new(None, Some(2096), None))
         .call_params(CallParameters::new(None, None, Some(1)))
         .call()
         .await
         .expect_err("should error");
 
     let expected = "Revert transaction error: OutOfGas, receipts:";
+    dbg!(&response.to_string());
     assert!(response.to_string().starts_with(expected));
 
     // Call params gas_forwarded exceeds transaction limit

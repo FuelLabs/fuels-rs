@@ -240,7 +240,7 @@ impl Contract {
         let chain_info = provider.chain_info().await?;
 
         tx.validate_without_signature(
-            chain_info.latest_block.height.0,
+            chain_info.latest_block.header.height.0,
             &chain_info.consensus_parameters.into(),
         )?;
         provider.send_transaction(&tx).await?;

@@ -3,7 +3,7 @@
 use fuels_signers::fuel_crypto::fuel_types::AssetId;
 
 pub const DEFAULT_NUM_WALLETS: u64 = 10;
-pub const DEFAULT_NUM_COINS: u64 = 1;
+pub const DEFAULT_NUM_COINS: u64 = 1_000_0;
 pub const DEFAULT_COIN_AMOUNT: u64 = 1_000_000_000;
 
 #[derive(Debug, Clone)]

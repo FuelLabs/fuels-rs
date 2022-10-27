@@ -229,20 +229,20 @@ impl Wallet {
     }
 
     pub async fn get_inputs_for_messages(&self, witness_index: u8) -> Result<Vec<Input>, Error> {
-        let to_u8_bytes = |v: &[i32]| v.iter().flat_map(|e| e.to_ne_bytes()).collect::<Vec<_>>();
+        // let to_u8_bytes = |v: &[i32]| v.iter().flat_map(|e| e.to_ne_bytes()).collect::<Vec<_>>();
 
         let messages = self.get_messages().await?;
 
         let inputs: Vec<Input> = messages
             .into_iter()
             .map(|message| {
-                let data = to_u8_bytes(&message.data);
+                // let data = to_u8_bytes(&message.data);
                 let message_id = Input::compute_message_id(
                     &message.sender.clone().into(),
                     &message.recipient.clone().into(),
                     message.nonce.into(),
                     message.amount.0,
-                    &data,
+                    &message.data,
                 );
                 Input::message_signed(
                     message_id,
@@ -251,7 +251,7 @@ impl Wallet {
                     message.amount.0,
                     0,
                     witness_index,
-                    data,
+                    message.data.0.0,
                 )
             })
             .collect();

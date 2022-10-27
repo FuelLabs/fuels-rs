@@ -131,7 +131,7 @@ mod tests {
             .await?;
         // ANCHOR_END: contract_call_cost_estimation
 
-        assert_eq!(transaction_cost.gas_used, 592);
+        assert_eq!(transaction_cost.gas_used, 7706);
 
         Ok(())
     }
@@ -454,8 +454,8 @@ mod tests {
         // Set the transaction `gas_limit` to 1000 and `gas_forwarded` to 200 to specify that the
         // contract call transaction may consume up to 1000 gas, while the actual call may only use 200
         // gas
-        let tx_params = TxParameters::new(None, Some(1000), None);
-        let call_params = CallParameters::new(None, None, Some(200));
+        let tx_params = TxParameters::new(None, Some(10000), None);
+        let call_params = CallParameters::new(None, None, Some(5000));
 
         let response = contract_methods
             .get_msg_amount() // Our contract method.
@@ -554,7 +554,7 @@ mod tests {
             .await?;
         // ANCHOR_END: multi_call_cost_estimation
 
-        assert_eq!(transaction_cost.gas_used, 1006);
+        assert_eq!(transaction_cost.gas_used, 15736);
 
         Ok(())
     }
