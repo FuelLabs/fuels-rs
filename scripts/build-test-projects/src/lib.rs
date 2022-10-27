@@ -123,7 +123,7 @@ impl ResultWriter {
 
         self.write_success_bold("\nBuilding ")?;
         self.write(&format!(
-            "projects with: `{}`\n         num buffered futures: {}\n\n",
+            "projects with: `{}`\n         num concurrent builds: {}\n\n",
             version.trim(),
             num_buf_futures
         ))

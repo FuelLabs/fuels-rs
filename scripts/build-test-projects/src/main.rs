@@ -10,16 +10,16 @@ use futures_util::StreamExt;
 use std::{env, path::Path};
 
 const TESTS_PATH: &str = "packages/fuels/tests/";
-const DEF_NUM_BUF_FUTURES: usize = 8;
+const DEF_NUM_CONC_BUILDS: usize = 1;
 
 #[tokio::main]
 async fn main() {
     let mut result_writer = ResultWriter::new();
 
-    let num_buf_futures: usize = env::var("NUM_BUF_FUTURES")
+    let num_buf_futures: usize = env::var("NUM_CONC_BUILDS")
         .ok()
         .and_then(|e| e.parse().ok())
-        .unwrap_or(DEF_NUM_BUF_FUTURES);
+        .unwrap_or(DEF_NUM_CONC_BUILDS);
 
     result_writer
         .display_build_info(num_buf_futures)
