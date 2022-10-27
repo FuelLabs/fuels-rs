@@ -264,7 +264,7 @@ impl Wallet {
                     message.amount.0,
                     0,
                     witness_index,
-                    message.data.0.0,
+                    message.data.0 .0,
                 )
             })
             .collect();
