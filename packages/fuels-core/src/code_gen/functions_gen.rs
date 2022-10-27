@@ -1,6 +1,7 @@
-use crate::code_gen::custom_types::{param_type_calls, Component};
+use crate::code_gen::custom_types::{param_type_calls, single_param_type_call, Component};
 use crate::code_gen::docs_gen::expand_doc;
 use crate::code_gen::resolved_type;
+use crate::code_gen::resolved_type::ResolvedType;
 use crate::utils::safe_ident;
 use fuels_types::errors::Error;
 use fuels_types::{ABIFunction, TypeDeclaration};
@@ -48,7 +49,7 @@ pub fn expand_function(
     let name = safe_ident(&function.name);
     let name_stringified = name.to_string();
 
-    let output_type = resolve_fn_output_type(function, types)?;
+    let output_type: TokenStream = resolve_fn_output_type(function, types)?.into();
 
     Ok(quote! {
         #doc
@@ -77,7 +78,9 @@ pub fn generate_script_main_function(
         ));
     }
 
-    let output_type = resolve_fn_output_type(main_function_abi, types)?;
+    let output_type_resolved = resolve_fn_output_type(main_function_abi, types)?;
+    let output_params = single_param_type_call(&output_type_resolved);
+    let output_type: TokenStream = output_type_resolved.into();
 
     let args = function_arguments(main_function_abi, types)?;
     if args.iter().filter(|c| c.field_type.uses_vectors()).count() != 0 {
@@ -114,8 +117,7 @@ pub fn generate_script_main_function(
                                                     Some(script_data)
             )
             .await?;
-            let output_param = #output_type::param_type();
-            let output_tokens = get_decoded_output(output_param, &mut receipts)?;
+            let output_tokens = get_decoded_output(#output_params, &mut receipts)?;
             let output = #output_type::from_token(output_tokens)?;
             Ok(output)
         }
@@ -125,7 +127,7 @@ pub fn generate_script_main_function(
 fn resolve_fn_output_type(
     function: &ABIFunction,
     types: &HashMap<usize, TypeDeclaration>,
-) -> Result<TokenStream, Error> {
+) -> Result<ResolvedType, Error> {
     let output_type = resolve_type(&function.output, types)?;
     if output_type.uses_vectors() {
         Err(Error::CompilationError(format!(
@@ -133,7 +135,7 @@ fn resolve_fn_output_type(
             function.name
         )))
     } else {
-        Ok(output_type.into())
+        Ok(output_type)
     }
 }
 
