@@ -75,12 +75,11 @@ pub(crate) fn resolve_type(
             .flatten()
             .map(|array_type| resolve_type(array_type, types))
             .collect::<Result<Vec<_>, _>>()
+            .expect("Failed to resolve types")
     };
 
     let base_type = types.get(&type_application.type_id).unwrap();
 
-    let components = recursively_resolve(&base_type.components)?;
-    let type_arguments = recursively_resolve(&type_application.type_arguments)?;
     let type_field = base_type.type_field.as_str();
 
     [
@@ -94,13 +93,23 @@ pub(crate) fn resolve_type(
         to_struct,
     ]
     .into_iter()
-    .filter_map(|fun| fun(type_field, &components, &type_arguments))
+    .filter_map(|fun| {
+        fun(
+            type_field,
+            move || recursively_resolve(&base_type.components),
+            move || recursively_resolve(&type_application.type_arguments),
+        )
+    })
     .next()
     .ok_or_else(|| Error::InvalidType(format!("Could not resolve {type_field} to any known type")))
 }
 
-fn to_generic(field: &str, _: &[ResolvedType], _: &[ResolvedType]) -> Option<ResolvedType> {
-    let name = extract_generic_name(field)?;
+fn to_generic(
+    type_field: &str,
+    _: impl Fn() -> Vec<ResolvedType>,
+    _: impl Fn() -> Vec<ResolvedType>,
+) -> Option<ResolvedType> {
+    let name = extract_generic_name(type_field)?;
 
     let type_name = safe_ident(&name).into_token_stream();
     Some(ResolvedType {
@@ -109,13 +118,17 @@ fn to_generic(field: &str, _: &[ResolvedType], _: &[ResolvedType]) -> Option<Res
     })
 }
 
-fn to_array(field: &str, components: &[ResolvedType], _: &[ResolvedType]) -> Option<ResolvedType> {
-    let len = extract_array_len(field)?;
+fn to_array(
+    type_field: &str,
+    components_supplier: impl Fn() -> Vec<ResolvedType>,
+    _: impl Fn() -> Vec<ResolvedType>,
+) -> Option<ResolvedType> {
+    let len = extract_array_len(type_field)?;
 
-    let type_inside: TokenStream = match components {
+    let type_inside: TokenStream = match components_supplier().as_slice() {
         [single_type] => Ok(single_type.into()),
-        _ => Err(Error::InvalidData(format!(
-            "Array must have only one component! Actual components: {components:?}"
+        other => Err(Error::InvalidData(format!(
+            "Array must have only one component! Actual components: {other:?}"
         ))),
     }
     .unwrap();
@@ -127,11 +140,11 @@ fn to_array(field: &str, components: &[ResolvedType], _: &[ResolvedType]) -> Opt
 }
 
 fn to_sized_ascii_string(
-    field: &str,
-    _: &[ResolvedType],
-    _: &[ResolvedType],
+    type_field: &str,
+    _: impl Fn() -> Vec<ResolvedType>,
+    _: impl Fn() -> Vec<ResolvedType>,
 ) -> Option<ResolvedType> {
-    let len = extract_str_len(field)?;
+    let len = extract_str_len(type_field)?;
 
     let generic_params = vec![ResolvedType {
         type_name: quote! {#len},
@@ -144,9 +157,13 @@ fn to_sized_ascii_string(
     })
 }
 
-fn to_tuple(field: &str, components: &[ResolvedType], _: &[ResolvedType]) -> Option<ResolvedType> {
-    if has_tuple_format(field) {
-        let inner_types = components.iter().map(TokenStream::from);
+fn to_tuple(
+    type_field: &str,
+    components_supplier: impl Fn() -> Vec<ResolvedType>,
+    _: impl Fn() -> Vec<ResolvedType>,
+) -> Option<ResolvedType> {
+    if has_tuple_format(type_field) {
+        let inner_types = components_supplier().into_iter().map(TokenStream::from);
 
         // it is important to leave a trailing comma because a tuple with
         // one element is written as (element,) not (element) which is
@@ -162,8 +179,8 @@ fn to_tuple(field: &str, components: &[ResolvedType], _: &[ResolvedType]) -> Opt
 
 fn to_simple_type(
     type_field: &str,
-    _: &[ResolvedType],
-    _: &[ResolvedType],
+    _: impl Fn() -> Vec<ResolvedType>,
+    _: impl Fn() -> Vec<ResolvedType>,
 ) -> Option<ResolvedType> {
     match type_field {
         "u8" | "u16" | "u32" | "u64" | "bool" | "()" => {
@@ -180,7 +197,11 @@ fn to_simple_type(
     }
 }
 
-fn to_byte(type_field: &str, _: &[ResolvedType], _: &[ResolvedType]) -> Option<ResolvedType> {
+fn to_byte(
+    type_field: &str,
+    _: impl Fn() -> Vec<ResolvedType>,
+    _: impl Fn() -> Vec<ResolvedType>,
+) -> Option<ResolvedType> {
     if type_field == "byte" {
         let type_name = quote! {Byte};
         Some(ResolvedType {
@@ -191,7 +212,11 @@ fn to_byte(type_field: &str, _: &[ResolvedType], _: &[ResolvedType]) -> Option<R
         None
     }
 }
-fn to_bits256(type_field: &str, _: &[ResolvedType], _: &[ResolvedType]) -> Option<ResolvedType> {
+fn to_bits256(
+    type_field: &str,
+    _: impl Fn() -> Vec<ResolvedType>,
+    _: impl Fn() -> Vec<ResolvedType>,
+) -> Option<ResolvedType> {
     if type_field == "b256" {
         let type_name = quote! {Bits256};
         Some(ResolvedType {
@@ -204,15 +229,15 @@ fn to_bits256(type_field: &str, _: &[ResolvedType], _: &[ResolvedType]) -> Optio
 }
 
 fn to_struct(
-    field_name: &str,
-    _: &[ResolvedType],
-    type_arguments: &[ResolvedType],
+    type_field: &str,
+    _: impl Fn() -> Vec<ResolvedType>,
+    type_arguments_supplier: impl Fn() -> Vec<ResolvedType>,
 ) -> Option<ResolvedType> {
-    custom_type_name(field_name)
+    custom_type_name(type_field)
         .ok()
         .map(|type_name| ident(&type_name))
         .map(|type_name| ResolvedType {
             type_name: type_name.into_token_stream(),
-            generic_params: type_arguments.to_vec(),
+            generic_params: type_arguments_supplier(),
         })
 }

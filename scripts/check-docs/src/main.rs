@@ -13,13 +13,16 @@ fn main() -> anyhow::Result<(), Error> {
     let (valid_anchors, anchor_errors) = filter_valid_anchors(starts, ends);
 
     let text_mentioning_include = search_for_patterns_in_project("{{#include")?;
-    let includes = parse_includes(text_mentioning_include)?;
+    let (includes, include_path_errors) = parse_includes(text_mentioning_include);
 
     let (include_errors, additional_warnings) = validate_includes(includes, valid_anchors);
 
-    report_warnings(&additional_warnings);
+    if !additional_warnings.is_empty() {
+        report_warnings(&additional_warnings);
+    }
 
-    if !anchor_errors.is_empty() || !include_errors.is_empty() {
+    if !anchor_errors.is_empty() || !include_errors.is_empty() || !include_path_errors.is_empty() {
+        report_errors("include paths", &include_path_errors);
         report_errors("anchors", &anchor_errors);
         report_errors("includes", &include_errors);
         bail!("Finished with errors");
