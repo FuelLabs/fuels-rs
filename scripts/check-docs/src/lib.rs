@@ -4,15 +4,16 @@ use regex::Regex;
 use std::path::{Path, PathBuf};
 
 pub fn report_errors(error_type: &str, errors: &[Error]) {
-    eprintln!("Invalid {} detected!", error_type);
+    eprintln!("\n\nInvalid {error_type} detected!");
     for error in errors {
-        eprintln!("{error}")
+        eprintln!("\n{error}")
     }
 }
 
 pub fn report_warnings(warnings: &[Error]) {
+    eprintln!("\n\nWarnings detected!");
     for warning in warnings {
-        eprintln!("WARNING! {warning}")
+        eprintln!("\n{warning}")
     }
 }
 
@@ -22,6 +23,7 @@ pub fn validate_includes(
 ) -> (Vec<Error>, Vec<Error>) {
     let (pairs, errors): (Vec<_>, Vec<_>) = includes
         .into_iter()
+        .filter(|include| !include.anchor_name.is_empty())
         .map(|include| {
             let mut maybe_anchor = valid_anchors.iter().find(|anchor| {
                 anchor.file == include.anchor_file && anchor.name == include.anchor_name
@@ -57,22 +59,22 @@ pub struct Include {
     pub line_no: usize,
 }
 
-pub fn parse_includes(text_w_includes: String) -> anyhow::Result<Vec<Include>, Error> {
+pub fn parse_includes(text_w_includes: String) -> (Vec<Include>, Vec<Error>) {
     let apply_regex = |regex: Regex| {
-        text_w_includes
+        let (includes, errors): (Vec<_>, Vec<_>) = text_w_includes
             .lines()
             .filter_map(|line| regex.captures(line))
             .map(|capture| {
                 let include_file = PathBuf::from(&capture[1]).canonicalize()?;
                 let line_no = capture[2].parse()?;
                 let anchor_file = PathBuf::from(&capture[3]);
-                let anchor_name = capture[4].to_owned();
+                let anchor_name = capture.get(4).map_or("", |m| m.as_str()).to_string();
 
                 let the_path = include_file.parent().unwrap().join(anchor_file);
 
-                let anchor_file = the_path.canonicalize().unwrap_or_else(|err| {
-                    panic!("{the_path:?} when canonicalized gives error {:?}", err)
-                });
+                let anchor_file = the_path.canonicalize().map_err(|err| {
+                    anyhow!("{the_path:?} when canonicalized gives error {err:?}")
+                })?;
 
                 Ok(Include {
                     anchor_name,
@@ -81,12 +83,14 @@ pub fn parse_includes(text_w_includes: String) -> anyhow::Result<Vec<Include>, E
                     line_no,
                 })
             })
-            .collect::<Result<Vec<_>, Error>>()
+            .partition_result();
+        (includes, errors)
     };
 
-    apply_regex(Regex::new(
-        r"^(\S+):(\d+):\s*\{\{\s*#include\s*(\S+)\s*:\s*(\S+)\s*\}\}",
-    )?)
+    apply_regex(
+        Regex::new(r"^(\S+):(\d+):\s*\{\{\s*#include\s*(\S+?)\s*(?::\s*(\S+)\s*)?\}\}")
+            .expect("could not contstruct regex"),
+    )
 }
 
 pub fn filter_valid_anchors(starts: Vec<Anchor>, ends: Vec<Anchor>) -> (Vec<Anchor>, Vec<Error>) {
