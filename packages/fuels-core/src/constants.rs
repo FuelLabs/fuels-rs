@@ -1,4 +1,4 @@
-use fuel_types::AssetId;
+use fuel_types::{AssetId, MessageId};
 
 // ANCHOR: default_tx_parameters
 pub const DEFAULT_GAS_LIMIT: u64 = 1_000_000;
@@ -11,6 +11,8 @@ pub const DEFAULT_CALL_PARAMS_AMOUNT: u64 = 0;
 // Bytes representation of the asset ID of the "base" asset used for gas fees.
 pub const BASE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
 // ANCHOR_END: default_call_parameters
+
+pub const BASE_MESSAGE_ID: MessageId = MessageId::zeroed();
 
 pub const DEFAULT_GAS_ESTIMATION_TOLERANCE: f64 = 0.2;
 pub const GAS_PRICE_FACTOR: u64 = 1_000_000_000;

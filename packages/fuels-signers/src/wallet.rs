@@ -7,7 +7,10 @@ use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
 use fuel_gql_client::client::schema;
 use fuel_gql_client::fuel_vm::prelude::GTFArgs;
 use fuel_gql_client::{
-    client::{schema::coin::Coin, types::TransactionResponse, PaginatedResult, PaginationRequest},
+    client::{
+        schema::coin::Coin, schema::message::Message as InputMessage, types::TransactionResponse,
+        PaginatedResult, PaginationRequest,
+    },
     fuel_tx::{
         AssetId, Bytes32, ContractId, Input, Output, Receipt, Transaction, TransactionFee,
         TxPointer, UtxoId, Witness,
@@ -200,6 +203,16 @@ impl Wallet {
     ) -> Result<Vec<Coin>, Error> {
         self.get_provider()?
             .get_spendable_coins(&self.address, asset_id, amount)
+            .await
+            .map_err(Into::into)
+    }
+
+    /// Get some spendable messages owned by the wallet.
+    /// The returned messages are actual messages that can be spent. The number
+    /// of messages (UXTOs) is optimized to prevent dust accumulation.
+    pub async fn get_spendable_messages(&self) -> Result<Vec<InputMessage>, Error> {
+        self.get_provider()?
+            .get_spendable_messages(&self.address)
             .await
             .map_err(Into::into)
     }

@@ -18,7 +18,7 @@ env:
   RUSTFLAGS: "-D warnings"
   FUEL_CORE_VERSION: 0.11.2
   RUST_VERSION: 1.64.0
-  FORC_VERSION: 0.26.0
+  FORC_VERSION: 0.28.1
 
 jobs:
   setup-test-projects:

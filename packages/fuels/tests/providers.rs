@@ -118,8 +118,9 @@ async fn test_input_message() -> Result<(), Error> {
         "packages/fuels/tests/contracts/contract_test"
     );
 
-    let messages_from_provider = wallet.get_messages().await?;
-    assert!(compare_messages(messages_from_provider, messages));
+    let spendable_messages = wallet.get_spendable_messages().await?;
+
+    assert!(compare_messages(spendable_messages, messages));
 
     let response = contract_instance
         .methods()
@@ -128,7 +129,6 @@ async fn test_input_message() -> Result<(), Error> {
         .await?;
 
     assert_eq!(42, response.value);
-
     Ok(())
 }
 

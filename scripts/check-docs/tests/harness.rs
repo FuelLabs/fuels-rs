@@ -16,7 +16,7 @@ fn contains_any(vec: &TestEnum, str: &str) -> bool {
         TestEnum::Include(include_vec) => {
             include_vec.iter().any(|include| include.anchor_name == str)
         }
-        TestEnum::Errors(err_vec) => err_vec.iter().any(|err| err.to_string().starts_with(str)),
+        TestEnum::Errors(err_vec) => err_vec.iter().any(|err| err.to_string().contains(str)),
     }
 }
 
@@ -56,7 +56,7 @@ fn test_anchors() -> anyhow::Result<()> {
 
     let text_mentioning_include = search_for_patterns_in_project("{{#include")?;
 
-    let includes = parse_includes(text_mentioning_include)?;
+    let (includes, include_path_errors) = parse_includes(text_mentioning_include);
 
     let includes_vec = TestEnum::Include(includes.clone());
 
@@ -65,6 +65,19 @@ fn test_anchors() -> anyhow::Result<()> {
     assert!(contains_any(
         &includes_vec,
         "test_with_more_forward_slashes"
+    ));
+    assert!(contains_any(&includes_vec, "")); //Check the file include without anchor
+
+    let include_path_errors = TestEnum::Errors(include_path_errors);
+
+    assert!(contains_any(
+        &include_path_errors,
+        "test_anchor_data2.rs\" when canonicalized gives error Os { code: 2, kind: NotFound"
+    ));
+
+    assert!(contains_any(
+        &include_path_errors,
+        "test_anchor_data3.rs\" when canonicalized gives error Os { code: 2, kind: NotFound"
     ));
 
     let (include_errors, _) = validate_includes(includes, valid_anchors);
