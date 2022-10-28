@@ -13,7 +13,7 @@ regex = "1.6.0"
 lazy_static = "1.4.0"
 anyhow = "1"
 bech32 = "0.9.0"
-fuel-tx = "0.20.2"
+fuel-tx = "0.23"
 hex = { version = "0.4.3", features = ["std"] }
 proc-macro2 = "1.0"
 serde = { version = "1.0", features = ["derive"] }

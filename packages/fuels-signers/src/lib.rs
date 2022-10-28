@@ -8,7 +8,7 @@ pub use fuel_crypto;
 
 use async_trait::async_trait;
 use fuel_crypto::Signature;
-use fuel_gql_client::fuel_tx::Transaction;
+use fuels_core::tx::{field, UniqueIdentifier};
 use fuels_types::bech32::Bech32Address;
 use std::error::Error;
 pub use wallet::{Wallet, WalletUnlocked};
@@ -27,7 +27,10 @@ pub trait Signer: std::fmt::Debug + Send + Sync {
     ) -> Result<Signature, Self::Error>;
 
     /// Signs the transaction
-    async fn sign_transaction(&self, message: &mut Transaction) -> Result<Signature, Self::Error>;
+    async fn sign_transaction<Tx: UniqueIdentifier + field::Witnesses + Send>(
+        &self,
+        message: &mut Tx,
+    ) -> Result<Signature, Self::Error>;
 
     /// Returns the signer's Fuel Address
     fn address(&self) -> &Bech32Address;

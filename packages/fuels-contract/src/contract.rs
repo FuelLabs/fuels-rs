@@ -10,6 +10,7 @@ use fuel_gql_client::{
     fuel_tx::{Contract as FuelContract, Output, Receipt, StorageSlot, Transaction},
     fuel_types::{Address, AssetId, Salt},
 };
+use fuel_tx::{Checkable, Create};
 
 use fuels_core::abi_decoder::ABIDecoder;
 use fuels_core::abi_encoder::{ABIEncoder, UnresolvedBytes};
@@ -239,8 +240,8 @@ impl Contract {
         let provider = wallet.get_provider()?;
         let chain_info = provider.chain_info().await?;
 
-        tx.validate_without_signature(
-            chain_info.latest_block.height.0,
+        tx.check_without_signatures(
+            chain_info.latest_block.header.height.0,
             &chain_info.consensus_parameters.into(),
         )?;
         provider.send_transaction(&tx).await?;
@@ -303,7 +304,7 @@ impl Contract {
     pub async fn contract_deployment_transaction(
         compiled_contract: &CompiledContract,
         params: TxParameters,
-    ) -> Result<(Transaction, Bech32ContractId), Error> {
+    ) -> Result<(Create, Bech32ContractId), Error> {
         let bytecode_witness_index = 0;
         let storage_slots: Vec<StorageSlot> = compiled_contract.storage_slots.clone();
         let witnesses = vec![compiled_contract.raw.clone().into()];

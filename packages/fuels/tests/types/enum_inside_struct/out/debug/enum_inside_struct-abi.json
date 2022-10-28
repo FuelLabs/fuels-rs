@@ -1,0 +1,77 @@
+{
+  "types": [
+    {
+      "typeId": 0,
+      "type": "enum Shaker",
+      "components": [
+        {
+          "name": "Cosmopolitan",
+          "type": 2,
+          "typeArguments": null
+        },
+        {
+          "name": "Mojito",
+          "type": 2,
+          "typeArguments": null
+        }
+      ],
+      "typeParameters": null
+    },
+    {
+      "typeId": 1,
+      "type": "struct Cocktail",
+      "components": [
+        {
+          "name": "the_thing_you_mix_in",
+          "type": 0,
+          "typeArguments": null
+        },
+        {
+          "name": "glass",
+          "type": 2,
+          "typeArguments": null
+        }
+      ],
+      "typeParameters": null
+    },
+    {
+      "typeId": 2,
+      "type": "u64",
+      "components": null,
+      "typeParameters": null
+    }
+  ],
+  "functions": [
+    {
+      "inputs": [
+        {
+          "name": "a",
+          "type": 2,
+          "typeArguments": null
+        }
+      ],
+      "name": "return_enum_inside_struct",
+      "output": {
+        "name": "",
+        "type": 1,
+        "typeArguments": null
+      }
+    },
+    {
+      "inputs": [
+        {
+          "name": "c",
+          "type": 1,
+          "typeArguments": null
+        }
+      ],
+      "name": "take_enum_inside_struct",
+      "output": {
+        "name": "",
+        "type": 2,
+        "typeArguments": null
+      }
+    }
+  ],
+  "loggedTypes": []
+}

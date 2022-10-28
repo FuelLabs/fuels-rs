@@ -185,7 +185,7 @@ async fn contract_deployment_respects_maturity() -> Result<(), Error> {
     let err = deploy_w_maturity(1).await.expect_err("Should not have been able to deploy the contract since the block height (0) is less than the requested maturity (1)");
     assert!(matches!(
         err,
-        Error::ValidationError(fuel_gql_client::fuel_tx::ValidationError::TransactionMaturity)
+        Error::ValidationError(fuel_gql_client::fuel_tx::CheckError::TransactionMaturity)
     ));
 
     provider.produce_blocks(1).await?;
