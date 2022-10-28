@@ -710,7 +710,7 @@ mod tests {
         .await?;
 
         let amount = 18;
-        let _receipts = wallet
+        let _ = wallet
             .force_transfer_to_contract(&contract_id, amount, *asset_id, TxParameters::default())
             .await?;
 
@@ -761,7 +761,7 @@ mod tests {
         .await?;
 
         let amount = 18;
-        let _receipts = wallet
+        let _ = wallet
             .force_transfer_to_contract(&contract_id, amount, *asset_id, TxParameters::default())
             .await?;
 
@@ -817,7 +817,7 @@ mod tests {
             maturity,
         };
 
-        let (tx_id, _receipts) = wallet
+        let (tx_id, _) = wallet
             .transfer(wallet2.address(), 1, Default::default(), tx_params)
             .await?;
 
@@ -840,10 +840,10 @@ mod tests {
         let wallet2 = WalletUnlocked::new_random(Some(provider.clone()));
 
         // Make two transactions
-        let (_tx_id1, _receipts) = wallet
+        let (_tx_id1, _) = wallet
             .transfer(wallet2.address(), 1, Default::default(), Default::default())
             .await?;
-        let (_tx_id2, _receipts) = wallet
+        let (_tx_id2, _) = wallet
             .transfer(wallet2.address(), 1, Default::default(), Default::default())
             .await?;
 
@@ -867,10 +867,10 @@ mod tests {
         let wallet2 = WalletUnlocked::new_random(Some(provider.clone()));
 
         // Make two transactions
-        let (_tx_id1, _receipts) = wallet
+        let (_tx_id1, _) = wallet
             .transfer(wallet2.address(), 1, Default::default(), Default::default())
             .await?;
-        let (_tx_id2, _receipts) = wallet
+        let (_tx_id2, _) = wallet
             .transfer(wallet2.address(), 1, Default::default(), Default::default())
             .await?;
 
@@ -893,7 +893,7 @@ mod tests {
 
         let wallet2 = WalletUnlocked::new_random(Some(provider.clone()));
 
-        let (tx_id, _receipts) = wallet
+        let (tx_id, _) = wallet
             .transfer(wallet2.address(), 1, Default::default(), Default::default())
             .await?;
 
@@ -926,10 +926,10 @@ mod tests {
         let wallet2 = WalletUnlocked::new_random(Some(provider.clone()));
 
         // Make two transactions
-        let (_tx_id1, _receipts) = wallet
+        let (_tx_id1, _) = wallet
             .transfer(wallet2.address(), 1, Default::default(), Default::default())
             .await?;
-        let (_tx_id2, _receipts) = wallet
+        let (_tx_id2, _) = wallet
             .transfer(wallet2.address(), 1, Default::default(), Default::default())
             .await?;
 
@@ -942,6 +942,3 @@ mod tests {
         Ok(())
     }
 }
-
-// pub async fn get_messages(&self, from: &Bech32Address) -> Result<Vec<Message>, ProviderError> {
-// pub async fn get_blocks(&self) -> Result<Vec<Block>, ProviderError> {
