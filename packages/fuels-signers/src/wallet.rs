@@ -18,7 +18,7 @@ use fuel_gql_client::{
     fuel_vm::{consts::REG_ONE, prelude::Opcode},
 };
 use fuel_types::bytes::WORD_SIZE;
-use fuels_core::tx::{field, Chargeable, Script, TransactionBuilder, UniqueIdentifier};
+use fuels_core::tx::{field, Chargeable, Script, Transaction, UniqueIdentifier};
 use fuels_core::{constants::BASE_ASSET_ID, parameters::TxParameters};
 use fuels_types::bech32::{Bech32Address, Bech32ContractId, FUEL_BECH32_HRP};
 use fuels_types::errors::Error;
@@ -286,17 +286,16 @@ impl Wallet {
         // This script contains a single Opcode that returns immediately (RET)
         // since all this transaction does is move Inputs and Outputs around.
         let script = Opcode::RET(REG_ONE).to_bytes().to_vec();
-        let mut builder = TransactionBuilder::script(script, vec![]);
-        builder.gas_price(params.gas_price);
-        builder.gas_limit(params.gas_limit);
-        builder.maturity(params.maturity);
-        for input in inputs {
-            builder.add_input(input.clone());
-        }
-        for output in outputs {
-            builder.add_output(output.clone());
-        }
-        builder.finalize_without_signature()
+        Transaction::script(
+            params.gas_price,
+            params.gas_limit,
+            params.maturity,
+            script,
+            vec![],
+            inputs.to_vec(),
+            outputs.to_vec(),
+            vec![],
+        )
     }
 
     /// Craft a transaction used to transfer funds to a contract.
@@ -334,17 +333,16 @@ impl Wallet {
         .into_iter()
         .collect();
 
-        let mut builder = TransactionBuilder::script(script, script_data);
-        builder.gas_price(params.gas_price);
-        builder.gas_limit(params.gas_limit);
-        builder.maturity(params.maturity);
-        for input in inputs {
-            builder.add_input(input.clone());
-        }
-        for output in outputs {
-            builder.add_output(output.clone());
-        }
-        builder.finalize_without_signature()
+        Transaction::script(
+            params.gas_price,
+            params.gas_limit,
+            params.maturity,
+            script,
+            script_data,
+            inputs.to_vec(),
+            outputs.to_vec(),
+            vec![],
+        )
     }
 }
 

@@ -9,7 +9,7 @@ use fuels_signers::provider::Provider;
 use fuel_gql_client::fuel_tx::Receipt;
 use fuels_contract::script::Script;
 use fuels_core::parameters::TxParameters;
-use fuels_core::tx::TransactionBuilder;
+use fuels_core::tx::Transaction;
 use fuels_types::errors::Error;
 
 /// Run the script binary located at `binary_filepath` and return its resulting receipts,
@@ -29,13 +29,16 @@ pub async fn run_compiled_script(
 }
 
 fn build_script(script_binary: Vec<u8>, tx_params: TxParameters) -> Script {
-    Script::new(
-        TransactionBuilder::script(script_binary, vec![])
-            .gas_price(tx_params.gas_price)
-            .gas_limit(tx_params.gas_limit)
-            .maturity(tx_params.maturity)
-            .finalize_without_signature(),
-    )
+    Script::new(Transaction::script(
+        tx_params.gas_price,
+        tx_params.gas_limit,
+        tx_params.maturity,
+        script_binary,
+        vec![],
+        vec![],
+        vec![],
+        vec![],
+    ))
 }
 
 #[cfg(test)]

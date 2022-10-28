@@ -10,7 +10,7 @@ use fuel_gql_client::fuel_vm::{consts::REG_ONE, prelude::Opcode};
 use itertools::{chain, Itertools};
 
 use fuel_gql_client::client::schema::coin::Coin;
-use fuel_tx::{Checkable, ScriptExecutionResult, TransactionBuilder, Witness};
+use fuel_tx::{Checkable, ScriptExecutionResult, Witness};
 use fuels_core::parameters::TxParameters;
 use fuels_signers::provider::Provider;
 use fuels_signers::{Signer, WalletUnlocked};
@@ -953,21 +953,16 @@ impl ScriptBuilder {
     }
 
     pub async fn build(self, wallet: &WalletUnlocked) -> Result<Script, Error> {
-        let mut builder = TransactionBuilder::script(self.script, self.script_data);
-        builder.gas_price(self.gas_price);
-        builder.gas_limit(self.gas_limit);
-        builder.maturity(self.maturity);
-        for input in self.inputs {
-            builder.add_input(input);
-        }
-        for output in self.outputs {
-            builder.add_output(output);
-        }
-        for witness in self.witnesses {
-            builder.add_witness(witness);
-        }
-
-        let mut tx = builder.finalize_without_signature();
+        let mut tx = Transaction::script(
+            self.gas_price,
+            self.gas_limit,
+            self.maturity,
+            self.script,
+            self.script_data,
+            self.inputs.to_vec(),
+            self.outputs.to_vec(),
+            self.witnesses.to_vec(),
+        );
 
         let base_amount = if self.asset_id == AssetId::default() {
             self.amount
