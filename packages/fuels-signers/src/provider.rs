@@ -20,7 +20,7 @@ use fuels_core::constants::{DEFAULT_GAS_ESTIMATION_TOLERANCE, MAX_GAS_PER_TX};
 use std::collections::HashMap;
 use thiserror::Error;
 
-use crate::field;
+use crate::{field, UniqueIdentifier};
 use fuels_types::bech32::{Bech32Address, Bech32ContractId};
 use fuels_types::errors::Error;
 
@@ -116,9 +116,9 @@ impl Provider {
         &self,
         tx: &Transaction,
     ) -> Result<(TransactionStatus, Vec<Receipt>), ProviderError> {
-        let tx_id = self.client.submit(tx).await?.0.to_string();
+        let tx_id = tx.id().to_string();
+        let status = self.client.submit_and_await_commit(tx).await?;
         let receipts = self.client.receipts(&tx_id).await?;
-        let status = self.client.transaction_status(&tx_id).await?;
 
         Ok((status, receipts))
     }
