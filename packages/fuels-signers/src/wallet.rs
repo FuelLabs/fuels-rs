@@ -181,8 +181,7 @@ impl Wallet {
         ]
     }
 
-    /// TODO: change description
-    /// Gets all coins of asset `asset_id` owned by the wallet, *even spent ones* (this is useful
+    /// Gets a page of coins of asset `asset_id` owned by the wallet, *even spent ones* (this is useful
     /// for some particular cases, but in general, you should use `get_spendable_coins`). This
     /// returns actual coins (UTXOs).
     pub fn get_coins(
@@ -229,8 +228,7 @@ impl Wallet {
             .map_err(Into::into)
     }
 
-    /// TODO: change description
-    /// Get all the spendable balances of all assets for the wallet. This is different from getting
+    /// Get a page of spendable balances of all assets for the wallet. This is different from getting
     /// the coins because we are only returning the sum of UTXOs coins amount and not the UTXOs
     /// coins themselves.
     pub fn get_balances(
@@ -254,8 +252,7 @@ impl Wallet {
     pub async fn get_inputs_for_messages(&self, witness_index: u8) -> Result<Vec<Input>, Error> {
         let to_u8_bytes = |v: &[i32]| v.iter().flat_map(|e| e.to_ne_bytes()).collect::<Vec<_>>();
 
-        // TODO: make a loop to get all messages
-        let messages = self.get_messages(9999)?.call().await?.results;
+        let messages = self.get_spendable_messages().await?;
 
         let inputs: Vec<Input> = messages
             .into_iter()
