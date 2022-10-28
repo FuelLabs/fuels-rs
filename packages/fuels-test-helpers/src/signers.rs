@@ -132,7 +132,11 @@ mod tests {
         assert_eq!(wallets.len(), num_wallets as usize);
 
         for wallet in &wallets {
-            let coins = wallet.get_coins(BASE_ASSET_ID, num_coins).await?;
+            let coins = wallet
+                .get_coins(BASE_ASSET_ID, num_coins)?
+                .call()
+                .await?
+                .results;
 
             assert_eq!(coins.len(), num_coins as usize);
 

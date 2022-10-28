@@ -46,10 +46,9 @@ impl From<ProviderError> for Error {
 }
 
 type BoxFnFuture<'a, T, U> = Box<dyn Fn(PaginationRequest<T>) -> BoxFutureResult<'a, T, U> + 'a>;
-type BoxFutureResult<'a, T, U> =
-    BoxFuture<'a, Result<ProviderPaginatedResult<T, U>, ProviderError>>;
+type BoxFutureResult<'a, T, U> = BoxFuture<'a, Result<Page<T, U>, ProviderError>>;
 
-pub struct ProviderPaginationCaller<'a, T, U> {
+pub struct Paginator<'a, T, U> {
     pub cursor: Option<T>,
     pub results: usize,
     pub direction: PageDirection,
@@ -57,14 +56,14 @@ pub struct ProviderPaginationCaller<'a, T, U> {
 }
 
 #[derive(Debug)]
-pub struct ProviderPaginatedResult<T, U> {
+pub struct Page<T, U> {
     pub cursor: Option<T>,
     pub results: U,
     pub has_next_page: bool,
     pub has_previous_page: bool,
 }
 
-impl<T, U> From<PaginatedResult<U, T>> for ProviderPaginatedResult<T, Vec<U>> {
+impl<T, U> From<PaginatedResult<U, T>> for Page<T, Vec<U>> {
     fn from(pr: PaginatedResult<U, T>) -> Self {
         Self {
             cursor: pr.cursor,
@@ -75,12 +74,12 @@ impl<T, U> From<PaginatedResult<U, T>> for ProviderPaginatedResult<T, Vec<U>> {
     }
 }
 
-impl<'a, T, U> ProviderPaginationCaller<'a, T, U> {
+impl<'a, T, U> Paginator<'a, T, U> {
     fn new(
         results: u64,
         function: impl Fn(PaginationRequest<T>) -> BoxFutureResult<'a, T, U> + 'a,
     ) -> Self {
-        ProviderPaginationCaller {
+        Paginator {
             cursor: None::<T>,
             results: results as usize,
             direction: PageDirection::Forward,
@@ -103,7 +102,7 @@ impl<'a, T, U> ProviderPaginationCaller<'a, T, U> {
         self
     }
 
-    pub async fn call(self) -> Result<ProviderPaginatedResult<T, U>, ProviderError> {
+    pub async fn call(self) -> Result<Page<T, U>, ProviderError> {
         let pagination = PaginationRequest {
             cursor: self.cursor,
             results: self.results,
@@ -249,11 +248,11 @@ impl Provider {
         from: &Bech32Address,
         asset_id: &AssetId,
         num_results: u64,
-    ) -> ProviderPaginationCaller<String, Vec<Coin>> {
+    ) -> Paginator<String, Vec<Coin>> {
         let hash = Arc::new(from.hash().to_string());
         let asset_id = Arc::new(asset_id.to_string());
         let provider = Arc::new(self.clone());
-        ProviderPaginationCaller::new(num_results, move |pr: PaginationRequest<_>| {
+        Paginator::new(num_results, move |pr: PaginationRequest<_>| {
             let hash = Arc::clone(&hash);
             let asset_id_string = Arc::clone(&asset_id);
             let provider_clone = Arc::clone(&provider);
@@ -358,10 +357,10 @@ impl Provider {
         &self,
         from: &Bech32Address,
         num_results: u64,
-    ) -> ProviderPaginationCaller<String, HashMap<AssetId, u64>> {
+    ) -> Paginator<String, HashMap<AssetId, u64>> {
         let hash = Arc::new(from.hash().to_string());
         let provider = Arc::new(self.clone());
-        ProviderPaginationCaller::new(num_results, move |pr: PaginationRequest<_>| {
+        Paginator::new(num_results, move |pr: PaginationRequest<_>| {
             let hash = Arc::clone(&hash);
             let provider_clone = Arc::clone(&provider);
             Box::pin(async move {
@@ -384,7 +383,7 @@ impl Provider {
                     )
                     .collect();
 
-                Ok(ProviderPaginatedResult {
+                Ok(Page {
                     cursor: response.cursor,
                     results: balances,
                     has_next_page: response.has_next_page,
@@ -395,39 +394,44 @@ impl Provider {
     }
 
     /// Get all balances of all assets for the contract with id `contract_id`.
-    pub async fn get_contract_balances(
+    pub fn get_contract_balances(
         &self,
         contract_id: &Bech32ContractId,
-    ) -> Result<HashMap<AssetId, u64>, ProviderError> {
-        // We don't paginate results because there are likely at most ~100 different assets in one
-        // wallet
-        let pagination = PaginationRequest {
-            cursor: None,
-            results: 9999,
-            direction: PageDirection::Forward,
-        };
+        num_results: u64,
+    ) -> Paginator<String, HashMap<AssetId, u64>> {
+        let hash = Arc::new(contract_id.hash().to_string());
+        let provider = Arc::new(self.clone());
+        Paginator::new(num_results, move |pr: PaginationRequest<_>| {
+            let hash = Arc::clone(&hash);
+            let provider_clone = Arc::clone(&provider);
+            Box::pin(async move {
+                let response = provider_clone.client.contract_balances(&hash, pr).await?;
 
-        let balances_vec = self
-            .client
-            .contract_balances(&contract_id.hash().to_string(), pagination)
-            .await?
-            .results;
-        let balances = balances_vec
-            .into_iter()
-            .map(
-                |ContractBalance {
-                     contract: _,
-                     amount,
-                     asset_id,
-                 }| {
-                    (
-                        AssetId::from_str(&asset_id.to_string()).unwrap(),
-                        amount.try_into().unwrap(),
+                let balances = response
+                    .results
+                    .into_iter()
+                    .map(
+                        |ContractBalance {
+                             contract: _,
+                             amount,
+                             asset_id,
+                         }| {
+                            (
+                                AssetId::from_str(&asset_id.to_string()).unwrap(),
+                                amount.try_into().unwrap(),
+                            )
+                        },
                     )
-                },
-            )
-            .collect();
-        Ok(balances)
+                    .collect();
+
+                Ok(Page {
+                    cursor: response.cursor,
+                    results: balances,
+                    has_next_page: response.has_next_page,
+                    has_previous_page: response.has_previous_page,
+                })
+            })
+        })
     }
 
     // Get a Contract with fields: id, bytecode (as hex string) and salt, from the client
@@ -446,60 +450,38 @@ impl Provider {
         self.client.transaction(tx_id).await.map_err(Into::into)
     }
 
-    pub async fn get_transactions(&self) -> Result<Vec<TransactionResponse>, ProviderError> {
-        let mut transaction_responses: Vec<TransactionResponse> = vec![];
-
-        let mut cursor = None;
-
-        loop {
-            let res = self
-                .client
-                .transactions(PaginationRequest {
-                    cursor: cursor.clone(),
-                    results: 100,
-                    direction: PageDirection::Forward,
-                })
-                .await?;
-
-            if res.results.is_empty() {
-                break;
-            }
-            transaction_responses.extend(res.results);
-            cursor = res.cursor;
-        }
-
-        Ok(transaction_responses)
+    pub fn get_transactions(
+        &self,
+        num_results: u64,
+    ) -> Paginator<String, Vec<TransactionResponse>> {
+        let provider = Arc::new(self.clone());
+        Paginator::new(num_results, move |pr: PaginationRequest<_>| {
+            let provider_clone = Arc::clone(&provider);
+            Box::pin(async move {
+                let response = provider_clone.client.transactions(pr).await?;
+                Ok(response.into())
+            })
+        })
     }
 
-    pub async fn get_transactions_by_owner(
+    pub fn get_transactions_by_owner(
         &self,
         owner: &Bech32Address,
-    ) -> Result<Vec<TransactionResponse>, ProviderError> {
-        let mut transaction_responses: Vec<TransactionResponse> = vec![];
-
-        let mut cursor = None;
-
-        loop {
-            let res = self
-                .client
-                .transactions_by_owner(
-                    &owner.hash().to_string(),
-                    PaginationRequest {
-                        cursor: cursor.clone(),
-                        results: 100,
-                        direction: PageDirection::Forward,
-                    },
-                )
-                .await?;
-
-            if res.results.is_empty() {
-                break;
-            }
-            transaction_responses.extend(res.results);
-            cursor = res.cursor;
-        }
-
-        Ok(transaction_responses)
+        num_results: u64,
+    ) -> Paginator<String, Vec<TransactionResponse>> {
+        let hash = Arc::new(owner.hash().to_string());
+        let provider = Arc::new(self.clone());
+        Paginator::new(num_results, move |pr: PaginationRequest<_>| {
+            let hash = Arc::clone(&hash);
+            let provider_clone = Arc::clone(&provider);
+            Box::pin(async move {
+                let response = provider_clone
+                    .client
+                    .transactions_by_owner(&hash, pr)
+                    .await?;
+                Ok(response.into())
+            })
+        })
     }
 
     pub async fn latest_block_height(&self) -> Result<u64, ProviderError> {
@@ -573,33 +555,36 @@ impl Provider {
             .unwrap_or(0)
     }
 
-    pub async fn get_messages(&self, from: &Bech32Address) -> Result<Vec<Message>, ProviderError> {
-        let pagination = PaginationRequest {
-            cursor: None,
-            results: 100,
-            direction: PageDirection::Forward,
-        };
-        let res = self
-            .client
-            .messages(Some(&from.hash().to_string()), pagination)
-            .await?;
-        Ok(res.results)
+    pub fn get_messages(
+        &self,
+        from: &Bech32Address,
+        num_results: u64,
+    ) -> Paginator<String, Vec<Message>> {
+        let hash = Arc::new(from.hash().to_string());
+        let provider = Arc::new(self.clone());
+        Paginator::new(num_results, move |pr: PaginationRequest<_>| {
+            let hash = Arc::clone(&hash);
+            let provider_clone = Arc::clone(&provider);
+            Box::pin(async move {
+                let response = provider_clone.client.messages(Some(&hash), pr).await?;
+                Ok(response.into())
+            })
+        })
     }
 
     pub async fn get_block(&self, block_id: &str) -> Result<Option<Block>, ProviderError> {
         self.client.block(block_id).await.map_err(Into::into)
     }
 
-    pub async fn get_blocks(&self) -> Result<Vec<Block>, ProviderError> {
-        let res = self
-            .client
-            .blocks(PaginationRequest {
-                cursor: None,
-                results: 999,
-                direction: PageDirection::Forward,
+    pub fn get_blocks(&self, num_results: u64) -> Paginator<String, Vec<Block>> {
+        let provider = Arc::new(self.clone());
+        Paginator::new(num_results, move |pr: PaginationRequest<_>| {
+            let provider_clone = Arc::clone(&provider);
+            Box::pin(async move {
+                let response = provider_clone.client.blocks(pr).await?;
+                Ok(response.into())
             })
-            .await?;
-        Ok(res.results)
+        })
     }
 }
 
@@ -780,7 +765,11 @@ mod tests {
             .force_transfer_to_contract(&contract_id, amount, *asset_id, TxParameters::default())
             .await?;
 
-        let contract_balances = provider.get_contract_balances(&contract_id).await?;
+        let contract_balances = provider
+            .get_contract_balances(&contract_id, 12)
+            .call()
+            .await?
+            .results;
 
         let expected_asset_balance = contract_balances
             .get(asset_id)
@@ -858,9 +847,14 @@ mod tests {
             .transfer(wallet2.address(), 1, Default::default(), Default::default())
             .await?;
 
-        let expected_response = provider.get_transactions().await?;
+        let num_transactions = 2;
+        let response = provider
+            .get_transactions(num_transactions)
+            .call()
+            .await?
+            .results;
 
-        assert_eq!(expected_response.len(), 2);
+        assert_eq!(response.len() as u64, num_transactions);
         //TODO: check if I can test it in another way
 
         Ok(())
@@ -880,9 +874,14 @@ mod tests {
             .transfer(wallet2.address(), 1, Default::default(), Default::default())
             .await?;
 
-        let expected_response = provider.get_transactions_by_owner(wallet.address()).await?;
+        let num_transactions = 2;
+        let response = provider
+            .get_transactions_by_owner(wallet.address(), num_transactions)
+            .call()
+            .await?
+            .results;
 
-        assert_eq!(expected_response.len(), 2);
+        assert_eq!(response.len() as u64, num_transactions);
         //TODO: check if I can test it in another way
 
         Ok(())
@@ -934,17 +933,15 @@ mod tests {
             .transfer(wallet2.address(), 1, Default::default(), Default::default())
             .await?;
 
-        let expected_blocks = provider.get_blocks().await?;
+        let num_blocks = 2;
+        let blocks = provider.get_blocks(num_blocks).call().await?.results;
 
-        assert_eq!(expected_blocks.len(), 2);
+        assert_eq!(blocks.len() as u64, num_blocks);
         //TODO: check if I can test it in another way
 
         Ok(())
     }
 }
 
-// pub async fn get_contract_balances(
-// pub async fn get_transactions(&self) -> Result<Vec<TransactionResponse>, ProviderError> {
-// pub async fn get_transactions_by_owner(
 // pub async fn get_messages(&self, from: &Bech32Address) -> Result<Vec<Message>, ProviderError> {
 // pub async fn get_blocks(&self) -> Result<Vec<Block>, ProviderError> {

@@ -1,4 +1,4 @@
-use crate::provider::Provider;
+use crate::provider::{Paginator, Provider};
 use crate::Signer;
 use async_trait::async_trait;
 use elliptic_curve::rand_core;
@@ -128,11 +128,13 @@ impl Wallet {
         &self.address
     }
 
-    pub async fn get_transactions(&self) -> Result<Vec<TransactionResponse>, Error> {
-        self.get_provider()?
-            .get_transactions_by_owner(&self.address)
-            .await
-            .map_err(Into::into)
+    pub fn get_transactions(
+        &self,
+        num_results: u64,
+    ) -> Result<Paginator<String, Vec<TransactionResponse>>, Error> {
+        Ok(self
+            .get_provider()?
+            .get_transactions_by_owner(&self.address, num_results))
     }
 
     /// Returns a proper vector of `Input::Coin`s for the given asset ID, amount, and witness index.
@@ -179,16 +181,18 @@ impl Wallet {
         ]
     }
 
+    /// TODO: change description
     /// Gets all coins of asset `asset_id` owned by the wallet, *even spent ones* (this is useful
     /// for some particular cases, but in general, you should use `get_spendable_coins`). This
     /// returns actual coins (UTXOs).
-    pub async fn get_coins(&self, asset_id: AssetId, num_results: u64) -> Result<Vec<Coin>, Error> {
+    pub fn get_coins(
+        &self,
+        asset_id: AssetId,
+        num_results: u64,
+    ) -> Result<Paginator<String, Vec<Coin>>, Error> {
         Ok(self
             .get_provider()?
-            .get_coins(&self.address, &asset_id, num_results)
-            .call()
-            .await?
-            .results)
+            .get_coins(&self.address, &asset_id, num_results))
     }
 
     /// Get some spendable coins of asset `asset_id` owned by the wallet that add up at least to
@@ -225,26 +229,33 @@ impl Wallet {
             .map_err(Into::into)
     }
 
+    /// TODO: change description
     /// Get all the spendable balances of all assets for the wallet. This is different from getting
     /// the coins because we are only returning the sum of UTXOs coins amount and not the UTXOs
     /// coins themselves.
-    pub async fn get_balances(&self, num_results: u64) -> Result<HashMap<AssetId, u64>, Error> {
+    pub fn get_balances(
+        &self,
+        num_results: u64,
+    ) -> Result<Paginator<String, HashMap<AssetId, u64>>, Error> {
         Ok(self
             .get_provider()?
-            .get_balances(&self.address, num_results)
-            .call()
-            .await?
-            .results)
+            .get_balances(&self.address, num_results))
     }
 
-    pub async fn get_messages(&self) -> Result<Vec<schema::message::Message>, Error> {
-        Ok(self.get_provider()?.get_messages(&self.address).await?)
+    pub fn get_messages(
+        &self,
+        num_results: u64,
+    ) -> Result<Paginator<String, Vec<schema::message::Message>>, Error> {
+        Ok(self
+            .get_provider()?
+            .get_messages(&self.address, num_results))
     }
 
     pub async fn get_inputs_for_messages(&self, witness_index: u8) -> Result<Vec<Input>, Error> {
         let to_u8_bytes = |v: &[i32]| v.iter().flat_map(|e| e.to_ne_bytes()).collect::<Vec<_>>();
 
-        let messages = self.get_messages().await?;
+        // TODO: make a loop to get all messages
+        let messages = self.get_messages(9999)?.call().await?.results;
 
         let inputs: Vec<Input> = messages
             .into_iter()
@@ -610,7 +621,7 @@ impl WalletUnlocked {
     ///        .await
     ///        .unwrap();
     ///
-    ///   let wallet_2_final_coins = wallet_2.get_coins(BASE_ASSET_ID, 4).await.unwrap();
+    ///   let wallet_2_final_coins = wallet_2.get_coins(BASE_ASSET_ID, 4)?.call().await?.results;
     ///
     ///   // Check that wallet two now has two coins
     ///   assert_eq!(wallet_2_final_coins.len(), 2);

@@ -110,7 +110,7 @@ impl Abigen {
                     use fuels::core::abi_decoder::ABIDecoder;
                     use fuels::core::code_gen::function_selector::resolve_fn_selector;
                     use fuels::core::types::*;
-                    use fuels::signers::WalletUnlocked;
+                    use fuels::signers::{provider::Paginator, WalletUnlocked};
                     use fuels::tx::{ContractId, Address, Receipt, AssetId};
                     use fuels::types::bech32::Bech32ContractId;
                     use fuels::types::ResolvedLog;
@@ -147,8 +147,8 @@ impl Abigen {
                            Ok(Self { contract_id: self.contract_id.clone(), wallet: wallet, logs_lookup: self.logs_lookup.clone() })
                         }
 
-                        pub async fn get_balances(&self) -> Result<HashMap<AssetId, u64>, SDKError> {
-                            self.wallet.get_provider()?.get_contract_balances(&self.contract_id).await.map_err(Into::into)
+                        pub fn get_balances(&self, num_results: u64) -> Result<Paginator<String, HashMap<AssetId, u64>>, SDKError> {
+                            Ok(self.wallet.get_provider()?.get_contract_balances(&self.contract_id, num_results))
                         }
 
                         pub fn logs_with_type<D: Tokenizable + Parameterize>(&self, receipts: &[Receipt]) -> Result<Vec<D>, SDKError> {

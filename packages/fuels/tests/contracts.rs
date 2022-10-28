@@ -594,7 +594,7 @@ async fn test_contract_instance_get_balances() -> Result<(), Error> {
     let contract_id = contract_instance.get_contract_id();
 
     // Check the current balance of the contract with id 'contract_id'
-    let contract_balances = contract_instance.get_balances().await?;
+    let contract_balances = contract_instance.get_balances(1)?.call().await?.results;
     assert!(contract_balances.is_empty());
 
     // Transfer an amount to the contract
@@ -609,7 +609,7 @@ async fn test_contract_instance_get_balances() -> Result<(), Error> {
         .await?;
 
     // Check that the contract now has 1 coin
-    let contract_balances = contract_instance.get_balances().await?;
+    let contract_balances = contract_instance.get_balances(1)?.call().await?.results;
     assert_eq!(contract_balances.len(), 1);
 
     let random_asset_balance = contract_balances.get(random_asset_id).unwrap();

@@ -134,7 +134,11 @@ mod tests {
             .transfer(wallets[1].address(), 1, asset_id, TxParameters::default())
             .await?;
 
-        let wallet_2_final_coins = wallets[1].get_coins(BASE_ASSET_ID, 2).await?;
+        let wallet_2_final_coins = wallets[1]
+            .get_coins(BASE_ASSET_ID, 2)?
+            .call()
+            .await?
+            .results;
 
         // Check that wallet 2 now has 2 coins
         assert_eq!(wallet_2_final_coins.len(), 2);
@@ -182,8 +186,10 @@ mod tests {
         // Check the current balance of the contract with id 'contract_id'
         let contract_balances = wallet
             .get_provider()?
-            .get_contract_balances(&contract_id)
-            .await?;
+            .get_contract_balances(&contract_id, 1)
+            .call()
+            .await?
+            .results;
         assert!(contract_balances.is_empty());
 
         // Transfer an amount of 300 to the contract
@@ -196,8 +202,10 @@ mod tests {
         // Check that the contract now has 1 coin
         let contract_balances = wallet
             .get_provider()?
-            .get_contract_balances(&contract_id)
-            .await?;
+            .get_contract_balances(&contract_id, 1)
+            .call()
+            .await?
+            .results;
         assert_eq!(contract_balances.len(), 1);
 
         let random_asset_balance = contract_balances.get(&random_asset_id).unwrap();
@@ -317,7 +325,11 @@ mod tests {
         let balance: u64 = wallet.get_asset_balance(&asset_id).await?;
         // ANCHOR_END: get_asset_balance
         // ANCHOR: get_balances
-        let balances: HashMap<AssetId, u64> = wallet.get_balances(DEFAULT_NUM_COINS).await?;
+        let balances: HashMap<AssetId, u64> = wallet
+            .get_balances(DEFAULT_NUM_COINS)?
+            .call()
+            .await?
+            .results;
         // ANCHOR_END: get_balances
 
         // ANCHOR: get_balance_hashmap

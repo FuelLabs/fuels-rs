@@ -74,8 +74,10 @@ async fn test_script_interface() -> Result<(), Error> {
 
     let contract_coins = wallet
         .get_provider()?
-        .get_contract_balances(&contract_id)
-        .await?;
+        .get_contract_balances(&contract_id, 1)
+        .call()
+        .await?
+        .results;
     assert!(contract_coins.is_empty());
 
     let amount = 100;
@@ -138,8 +140,10 @@ async fn test_script_interface() -> Result<(), Error> {
 
     let contract_balances = wallet
         .get_provider()?
-        .get_contract_balances(&contract_id)
-        .await?;
+        .get_contract_balances(&contract_id, 1)
+        .call()
+        .await?
+        .results;
     assert_eq!(contract_balances.len(), 1);
 
     let balance = contract_balances.get(&BASE_ASSET_ID).unwrap();

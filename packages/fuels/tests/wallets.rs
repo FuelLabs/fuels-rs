@@ -16,8 +16,10 @@ async fn test_wallet_balance_api_multi_asset() -> Result<(), Error> {
     let (provider, _) = setup_test_provider(coins.clone(), vec![], None).await;
     wallet.set_provider(provider);
     let balances = wallet
-        .get_balances(number_of_assets * coins_per_asset)
-        .await?;
+        .get_balances(number_of_assets * coins_per_asset)?
+        .call()
+        .await?
+        .results;
     assert_eq!(balances.len() as u64, number_of_assets);
 
     for asset_id in asset_ids {
@@ -53,7 +55,7 @@ async fn test_wallet_balance_api_single_asset() -> Result<(), Error> {
         assert_eq!(balance?, number_of_coins * amount_per_coin);
     }
 
-    let balances = wallet.get_balances(number_of_coins).await?;
+    let balances = wallet.get_balances(number_of_coins)?.call().await?.results;
     assert_eq!(balances.len(), 1); // only the base asset
     assert!(balances.contains_key(&BASE_ASSET_ID));
     assert_eq!(
