@@ -65,12 +65,12 @@ impl Provider {
     /// ## Sending a transaction
     ///
     /// ```
-    /// use fuels::tx::Transaction;
+    /// use fuels::tx::Script;
     /// use fuels::prelude::*;
     /// async fn foo() -> Result<(), Box<dyn std::error::Error>> {
     ///   // Setup local test node
     ///   let (provider, _) = setup_test_provider(vec![], vec![], None).await;
-    ///   let tx = Transaction::default();
+    ///   let tx = Script::default();
     ///
     ///   let receipts = provider.send_transaction(&tx).await?;
     ///   dbg!(receipts);

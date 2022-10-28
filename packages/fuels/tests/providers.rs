@@ -98,6 +98,9 @@ async fn test_input_message() -> Result<(), Error> {
 
     let mut wallet = WalletUnlocked::new_random(None);
 
+    // Coin to pay transaction fee.
+    let coins = setup_single_asset_coins(wallet.address(), AssetId::BASE, 1, DEFAULT_COIN_AMOUNT);
+
     let messages = setup_single_message(
         &Bech32Address {
             hrp: "".to_string(),
@@ -109,7 +112,7 @@ async fn test_input_message() -> Result<(), Error> {
         vec![1, 2],
     );
 
-    let (provider, _) = setup_test_provider(vec![], messages.clone(), None).await;
+    let (provider, _) = setup_test_provider(coins, messages.clone(), None).await;
     wallet.set_provider(provider);
 
     setup_contract_test!(
@@ -378,7 +381,7 @@ async fn test_call_param_gas_errors() -> Result<(), Error> {
     let contract_methods = contract_instance.methods();
     let response = contract_methods
         .initialize_counter(42)
-        .tx_params(TxParameters::new(None, Some(1000), None))
+        .tx_params(TxParameters::new(None, Some(3000), None))
         .call_params(CallParameters::new(None, None, Some(1)))
         .call()
         .await

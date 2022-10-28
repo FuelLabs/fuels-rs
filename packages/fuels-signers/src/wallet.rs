@@ -12,8 +12,8 @@ use fuel_gql_client::{
         PaginatedResult, PaginationRequest,
     },
     fuel_tx::{
-        AssetId, Bytes32, ContractId, Input, Output, Receipt, TransactionFee, TxPointer, UtxoId,
-        Witness,
+        AssetId, Bytes32, Cacheable, ContractId, Input, Output, Receipt, TransactionFee, TxPointer,
+        UtxoId, Witness,
     },
     fuel_vm::{consts::REG_ONE, prelude::Opcode},
 };
@@ -769,10 +769,12 @@ impl Signer for WalletUnlocked {
         Ok(sig)
     }
 
-    async fn sign_transaction<Tx: UniqueIdentifier + field::Witnesses + Send>(
+    async fn sign_transaction<Tx: Cacheable + UniqueIdentifier + field::Witnesses + Send>(
         &self,
         tx: &mut Tx,
     ) -> Result<Signature, Self::Error> {
+        // Precompute the transaction `id` after all modification.
+        tx.precompute();
         let id = tx.id();
 
         // Safety: `Message::from_bytes_unchecked` is unsafe because
@@ -793,6 +795,8 @@ impl Signer for WalletUnlocked {
                 witnesses.extend(witness);
             }
         }
+        // Precompute the transaction serialized size after adding witnesses.
+        tx.precompute();
 
         Ok(sig)
     }
@@ -833,6 +837,7 @@ mod tests {
     use fuel_core::service::{Config, FuelService};
     use fuel_gql_client::client::FuelClient;
     use fuel_gql_client::fuel_tx::Address;
+    use fuels_core::tx::field::{Inputs, Outputs};
     use fuels_test_helpers::{launch_custom_provider_and_get_wallets, AssetConfig, WalletsConfig};
     use fuels_types::errors::Error;
     use tempfile::tempdir;
@@ -1036,7 +1041,7 @@ mod tests {
         let expected_outputs = vec![Output::change(wallet.address().into(), 0, BASE_ASSET_ID)];
 
         assert!(compare_inputs(tx.inputs(), &mut expected_inputs));
-        assert_eq!(tx.outputs(), expected_outputs);
+        assert_eq!(tx.outputs(), &expected_outputs);
 
         Ok(())
     }
@@ -1080,7 +1085,7 @@ mod tests {
         ];
 
         assert!(compare_inputs(tx.inputs(), &mut expected_inputs));
-        assert_eq!(tx.outputs(), expected_outputs);
+        assert_eq!(tx.outputs(), &expected_outputs);
 
         Ok(())
     }
