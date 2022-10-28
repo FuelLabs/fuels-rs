@@ -373,28 +373,33 @@ mod tests {
                 },
                 TypeDeclaration {
                     type_id: 2,
+                    type_field: "raw untyped ptr".to_string(),
+                    ..Default::default()
+                },
+                TypeDeclaration {
+                    type_id: 3,
                     type_field: "struct RawVec".to_string(),
                     components: Some(vec![
                         TypeApplication {
                             name: "ptr".to_string(),
-                            type_id: 3,
+                            type_id: 2,
                             ..Default::default()
                         },
                         TypeApplication {
                             name: "cap".to_string(),
-                            type_id: 3,
+                            type_id: 4,
                             ..Default::default()
                         },
                     ]),
                     type_parameters: Some(vec![1]),
                 },
                 TypeDeclaration {
-                    type_id: 3,
+                    type_id: 4,
                     type_field: "u64".to_string(),
                     ..Default::default()
                 },
                 TypeDeclaration {
-                    type_id: 4,
+                    type_id: 5,
                     type_field: "u8".to_string(),
                     ..Default::default()
                 },
