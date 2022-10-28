@@ -618,10 +618,15 @@ impl WalletUnlocked {
     ///        .await
     ///        .unwrap();
     ///
-    ///   let wallet_2_final_coins = wallet_2.get_coins(BASE_ASSET_ID, 4)?.call().await?.results;
+    ///   let wallet2_num_coins = 2;
+    ///   let wallet_2_final_coins = wallet_2
+    ///       .get_coins(BASE_ASSET_ID, wallet2_num_coins)?
+    ///       .call()
+    ///       .await?
+    ///       .results;
     ///
     ///   // Check that wallet two now has two coins
-    ///   assert_eq!(wallet_2_final_coins.len(), 2);
+    ///   assert_eq!(wallet_2_final_coins.len() as u64, wallet2_num_coins);
     ///   Ok(())
     /// }
     /// ```

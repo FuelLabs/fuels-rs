@@ -50,7 +50,7 @@ async fn test_multi_call_script_workflow() -> Result<(), Error> {
 
     let provider = &wallet.get_provider()?;
     let script = multi_call_handler.get_call_execution_script().await?;
-    let receipts = script.call(provider).await.unwrap();
+    let receipts = script.call(provider).await?;
     let (counter, array) = multi_call_handler
         .get_response::<(u64, [u64; 2])>(receipts)?
         .value;
@@ -72,9 +72,10 @@ async fn test_script_interface() -> Result<(), Error> {
     )
     .await?;
 
+    let num_coins = 1;
     let contract_coins = wallet
         .get_provider()?
-        .get_contract_balances(&contract_id, 1)
+        .get_contract_balances(&contract_id, num_coins)
         .call()
         .await?
         .results;
@@ -140,13 +141,15 @@ async fn test_script_interface() -> Result<(), Error> {
 
     let contract_balances = wallet
         .get_provider()?
-        .get_contract_balances(&contract_id, 1)
+        .get_contract_balances(&contract_id, num_coins)
         .call()
         .await?
         .results;
-    assert_eq!(contract_balances.len(), 1);
+    assert_eq!(contract_balances.len() as u64, num_coins);
 
-    let balance = contract_balances.get(&BASE_ASSET_ID).unwrap();
+    let balance = contract_balances
+        .get(&BASE_ASSET_ID)
+        .expect("could not find any balance for the provided asset_id");
     assert_eq!(*balance, 100);
 
     Ok(())

@@ -134,14 +134,15 @@ mod tests {
             .transfer(wallets[1].address(), 1, asset_id, TxParameters::default())
             .await?;
 
+        let wallet2_num_coins = 2;
         let wallet_2_final_coins = wallets[1]
-            .get_coins(BASE_ASSET_ID, 2)?
+            .get_coins(BASE_ASSET_ID, wallet2_num_coins)?
             .call()
             .await?
             .results;
 
         // Check that wallet 2 now has 2 coins
-        assert_eq!(wallet_2_final_coins.len(), 2);
+        assert_eq!(wallet_2_final_coins.len() as u64, wallet2_num_coins);
 
         // ANCHOR_END: wallet_transfer
         Ok(())
@@ -184,9 +185,10 @@ mod tests {
 
         // ANCHOR: wallet_contract_transfer
         // Check the current balance of the contract with id 'contract_id'
+        let num_coins = 1;
         let contract_balances = wallet
             .get_provider()?
-            .get_contract_balances(&contract_id, 1)
+            .get_contract_balances(&contract_id, num_coins)
             .call()
             .await?
             .results;
@@ -202,14 +204,16 @@ mod tests {
         // Check that the contract now has 1 coin
         let contract_balances = wallet
             .get_provider()?
-            .get_contract_balances(&contract_id, 1)
+            .get_contract_balances(&contract_id, num_coins)
             .call()
             .await?
             .results;
-        assert_eq!(contract_balances.len(), 1);
+        assert_eq!(contract_balances.len() as u64, num_coins);
 
-        let random_asset_balance = contract_balances.get(&random_asset_id).unwrap();
-        assert_eq!(*random_asset_balance, 300);
+        let random_asset_balance = contract_balances
+            .get(&random_asset_id)
+            .expect("could not find any balance for the provided asset_id");
+        assert_eq!(*random_asset_balance, amount);
         // ANCHOR_END: wallet_contract_transfer
 
         Ok(())
@@ -324,12 +328,20 @@ mod tests {
         let asset_id: AssetId = BASE_ASSET_ID;
         let balance: u64 = wallet.get_asset_balance(&asset_id).await?;
         // ANCHOR_END: get_asset_balance
+
+        // ANCHOR: get_spendable_coins
+        let asset_id: AssetId = BASE_ASSET_ID;
+        let amount = 32;
+        let coins = wallet.get_spendable_coins(&asset_id, amount).await?;
+        // ANCHOR_END: get_spendable_coins
+
         // ANCHOR: get_balances
-        let balances: HashMap<AssetId, u64> = wallet
+        let pager = wallet
             .get_balances(DEFAULT_NUM_COINS)?
-            .call()
-            .await?
-            .results;
+            .with_cursor(None)
+            .forward();
+        let page = pager.call().await?;
+        let balances: HashMap<AssetId, u64> = page.results;
         // ANCHOR_END: get_balances
 
         // ANCHOR: get_balance_hashmap

@@ -146,8 +146,11 @@ mod tests {
         let mut wallet_1 = WalletUnlocked::new_random(None);
         let mut wallet_2 = WalletUnlocked::new_random(None).lock();
 
-        let mut coins_1 = setup_single_asset_coins(wallet_1.address(), BASE_ASSET_ID, 1, 1000000);
-        let coins_2 = setup_single_asset_coins(wallet_2.address(), BASE_ASSET_ID, 1, 1000000);
+        let num_coins = 1;
+        let mut coins_1 =
+            setup_single_asset_coins(wallet_1.address(), BASE_ASSET_ID, num_coins, 1000000);
+        let coins_2 =
+            setup_single_asset_coins(wallet_2.address(), BASE_ASSET_ID, num_coins, 1000000);
 
         coins_1.extend(coins_2);
 
@@ -158,12 +161,20 @@ mod tests {
         wallet_1.set_provider(provider.clone());
         wallet_2.set_provider(provider);
 
-        let wallet_1_initial_coins = wallet_1.get_coins(BASE_ASSET_ID, 1)?.call().await?.results;
-        let wallet_2_initial_coins = wallet_2.get_coins(BASE_ASSET_ID, 1)?.call().await?.results;
+        let wallet_1_initial_coins = wallet_1
+            .get_coins(BASE_ASSET_ID, num_coins)?
+            .call()
+            .await?
+            .results;
+        let wallet_2_initial_coins = wallet_2
+            .get_coins(BASE_ASSET_ID, num_coins)?
+            .call()
+            .await?
+            .results;
 
         // Check initial wallet state.
-        assert_eq!(wallet_1_initial_coins.len(), 1);
-        assert_eq!(wallet_2_initial_coins.len(), 1);
+        assert_eq!(wallet_1_initial_coins.len() as u64, num_coins);
+        assert_eq!(wallet_2_initial_coins.len() as u64, num_coins);
 
         // Configure transaction parameters.
         let gas_price = 1;
@@ -193,14 +204,24 @@ mod tests {
         assert_eq!(res.transaction.maturity(), maturity);
 
         let wallet_1_spendable_coins = wallet_1.get_spendable_coins(&BASE_ASSET_ID, 0).await?;
-        let wallet_1_all_coins = wallet_1.get_coins(BASE_ASSET_ID, 2)?.call().await?.results;
-        let wallet_2_all_coins = wallet_2.get_coins(BASE_ASSET_ID, 2)?.call().await?.results;
+        let wallet_1_all_coins = wallet_1
+            .get_coins(BASE_ASSET_ID, num_coins)?
+            .call()
+            .await?
+            .results;
+
+        let wallet2_num_coins = 2;
+        let wallet_2_all_coins = wallet_2
+            .get_coins(BASE_ASSET_ID, wallet2_num_coins)?
+            .call()
+            .await?
+            .results;
 
         // wallet_1 has now only 1 spent coin (so 0 spendable)
         assert_eq!(wallet_1_spendable_coins.len(), 0);
-        assert_eq!(wallet_1_all_coins.len(), 1);
+        assert_eq!(wallet_1_all_coins.len() as u64, num_coins);
         // Check that wallet two now has two coins.
-        assert_eq!(wallet_2_all_coins.len(), 2);
+        assert_eq!(wallet_2_all_coins.len() as u64, wallet2_num_coins);
 
         // Transferring more than balance should fail.
         let response = wallet_1
@@ -213,8 +234,12 @@ mod tests {
             .await;
 
         assert!(response.is_err());
-        let wallet_2_coins = wallet_2.get_coins(BASE_ASSET_ID, 2)?.call().await?.results;
-        assert_eq!(wallet_2_coins.len(), 2); // Not changed
+        let wallet_2_coins = wallet_2
+            .get_coins(BASE_ASSET_ID, wallet2_num_coins)?
+            .call()
+            .await?
+            .results;
+        assert_eq!(wallet_2_coins.len() as u64, wallet2_num_coins); // Not changed
         Ok(())
     }
 
@@ -224,8 +249,9 @@ mod tests {
         let mut wallet_1 = WalletUnlocked::new_random(None);
         let mut wallet_2 = WalletUnlocked::new_random(None).lock();
 
-        let mut coins_1 = setup_single_asset_coins(wallet_1.address(), BASE_ASSET_ID, 1, 5);
-        let coins_2 = setup_single_asset_coins(wallet_2.address(), BASE_ASSET_ID, 1, 5);
+        let num_coins = 1;
+        let mut coins_1 = setup_single_asset_coins(wallet_1.address(), BASE_ASSET_ID, num_coins, 5);
+        let coins_2 = setup_single_asset_coins(wallet_2.address(), BASE_ASSET_ID, num_coins, 5);
 
         coins_1.extend(coins_2);
 
@@ -235,11 +261,19 @@ mod tests {
         wallet_1.set_provider(provider.clone());
         wallet_2.set_provider(provider);
 
-        let wallet_1_initial_coins = wallet_1.get_coins(BASE_ASSET_ID, 1)?.call().await?.results;
-        let wallet_2_initial_coins = wallet_2.get_coins(BASE_ASSET_ID, 1)?.call().await?.results;
+        let wallet_1_initial_coins = wallet_1
+            .get_coins(BASE_ASSET_ID, num_coins)?
+            .call()
+            .await?
+            .results;
+        let wallet_2_initial_coins = wallet_2
+            .get_coins(BASE_ASSET_ID, num_coins)?
+            .call()
+            .await?
+            .results;
 
-        assert_eq!(wallet_1_initial_coins.len(), 1);
-        assert_eq!(wallet_2_initial_coins.len(), 1);
+        assert_eq!(wallet_1_initial_coins.len() as u64, num_coins);
+        assert_eq!(wallet_2_initial_coins.len() as u64, num_coins);
 
         // Transfer 2 from wallet 1 to wallet 2.
         let _receipts = wallet_1
@@ -251,14 +285,23 @@ mod tests {
             )
             .await?;
 
-        let wallet_1_final_coins = wallet_1.get_coins(BASE_ASSET_ID, 2)?.call().await?.results;
+        let wallet_1_final_coins = wallet_1
+            .get_coins(BASE_ASSET_ID, num_coins)?
+            .call()
+            .await?
+            .results;
 
         // Assert that we've sent 2 from wallet 1, resulting in an amount of 3 in wallet 1.
         let resulting_amount = wallet_1_final_coins.first().unwrap();
         assert_eq!(resulting_amount.amount.0, 3);
 
-        let wallet_2_final_coins = wallet_2.get_coins(BASE_ASSET_ID, 2)?.call().await?.results;
-        assert_eq!(wallet_2_final_coins.len(), 2);
+        let wallet2_num_coins = 2;
+        let wallet_2_final_coins = wallet_2
+            .get_coins(BASE_ASSET_ID, wallet2_num_coins)?
+            .call()
+            .await?
+            .results;
+        assert_eq!(wallet_2_final_coins.len() as u64, wallet2_num_coins);
 
         // Check that wallet 2's amount is 7:
         // 5 initial + 2 that was sent to it.
