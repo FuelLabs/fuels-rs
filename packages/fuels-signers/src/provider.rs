@@ -55,25 +55,6 @@ pub struct Paginator<'a, T, U> {
     pub function: BoxFnFuture<'a, T, U>,
 }
 
-#[derive(Debug)]
-pub struct Page<T, U> {
-    pub cursor: Option<T>,
-    pub results: U,
-    pub has_next_page: bool,
-    pub has_previous_page: bool,
-}
-
-impl<T, U> From<PaginatedResult<U, T>> for Page<T, Vec<U>> {
-    fn from(pr: PaginatedResult<U, T>) -> Self {
-        Self {
-            cursor: pr.cursor,
-            results: pr.results,
-            has_next_page: pr.has_next_page,
-            has_previous_page: pr.has_previous_page,
-        }
-    }
-}
-
 impl<'a, T, U> Paginator<'a, T, U> {
     fn new(
         results: u64,
@@ -110,6 +91,25 @@ impl<'a, T, U> Paginator<'a, T, U> {
         };
 
         (self.function)(pagination).await
+    }
+}
+
+#[derive(Debug)]
+pub struct Page<T, U> {
+    pub cursor: Option<T>,
+    pub results: U,
+    pub has_next_page: bool,
+    pub has_previous_page: bool,
+}
+
+impl<T, U> From<PaginatedResult<U, T>> for Page<T, Vec<U>> {
+    fn from(pr: PaginatedResult<U, T>) -> Self {
+        Self {
+            cursor: pr.cursor,
+            results: pr.results,
+            has_next_page: pr.has_next_page,
+            has_previous_page: pr.has_previous_page,
+        }
     }
 }
 
@@ -253,6 +253,7 @@ impl Provider {
         let asset_id = Arc::new(asset_id.to_string());
         let provider = Arc::new(self.clone());
         Paginator::new(num_results, move |pr: PaginationRequest<_>| {
+            dbg!(&pr);
             let hash = Arc::clone(&hash);
             let asset_id_string = Arc::clone(&asset_id);
             let provider_clone = Arc::clone(&provider);
@@ -608,6 +609,59 @@ mod tests {
         wallet.set_provider(provider.clone());
 
         (wallet, (coins, asset_ids), provider)
+    }
+
+    #[tokio::test]
+    async fn test_pagination() -> Result<(), Error> {
+        let (wallet, (_, asset_ids), provider) = setup_provider_api_test().await;
+        let asset_id = &asset_ids[0];
+
+        // Get Page with 2 coins
+        let coins_per_page = 2;
+        let response = provider
+            .get_coins(wallet.address(), asset_id, coins_per_page)
+            .call()
+            .await?;
+
+        // assert_eq!(response.results.len() as u64, coins_per_page);
+        // assert!(response.has_next_page);
+        // assert!(!response.has_previous_page);
+
+        dbg!(&response.results.len());
+        dbg!(&response.has_previous_page);
+        dbg!(&response.has_next_page);
+
+        // Get next Page with 2 coins
+        let response = provider
+            .get_coins(wallet.address(), asset_id, coins_per_page)
+            .with_cursor(response.cursor)
+            .call()
+            .await?;
+
+        dbg!(&response.results.len());
+        dbg!(&response.has_previous_page);
+        dbg!(&response.has_next_page);
+
+        // assert_eq!(response.results.len() as u64, coins_per_page);
+        // assert!(!response.has_next_page);
+        // assert!(response.has_previous_page);
+
+        // There should not be any coins left as the total num of coins is 4
+        let response = provider
+            .get_coins(wallet.address(), asset_id, coins_per_page)
+            .with_cursor(response.cursor)
+            .call()
+            .await?;
+
+        dbg!(&response.results.len());
+        dbg!(&response.has_previous_page);
+        dbg!(&response.has_next_page);
+
+        // assert!(response.results.is_empty());
+        // assert!(!response.has_next_page);
+        // assert!(response.has_previous_page);
+
+        Ok(())
     }
 
     #[tokio::test]
