@@ -1984,7 +1984,7 @@ impl MyContract for Contract {
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="vectors"><a class="header" href="#vectors">Vectors</a></h1>
 <h2 id="passing-in-vectors"><a class="header" href="#passing-in-vectors">Passing in vectors</a></h2>
-<p>You can pass a Rust <code>std::vec::Vec</code> into your contract method transparently. The following code calls a Sway function which accepts and then returns a <code>Vec&lt;SomeStruct&lt;u32&gt;&gt;</code>.</p>
+<p>You can pass a Rust <code>std::vec::Vec</code> into your contract method transparently. The following code calls a Sway contract method which accepts a <code>Vec&lt;SomeStruct&lt;u32&gt;&gt;</code>.</p>
 <pre><code class="language-rust ignore">        let arg = vec![SomeStruct { a: 0 }, SomeStruct { a: 1 }];
         methods.struct_in_vec(arg.clone()).call().await?;
 </code></pre>
