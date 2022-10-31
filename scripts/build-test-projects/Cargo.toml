@@ -7,3 +7,5 @@ publish = false
 
 [dependencies]
 termcolor = "1.1"
+tokio = "1.21.2"
+futures-util ="0.3.24"
