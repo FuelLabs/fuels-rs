@@ -117,9 +117,8 @@ pub fn generate_script_main_function(
                                                     Some(script_data)
             )
             .await?;
-            let output_tokens = get_decoded_output(#output_params, &mut receipts)?;
-            let output = #output_type::from_token(output_tokens)?;
-            Ok(output)
+            let output_token = get_decoded_output(#output_params, &mut receipts)?;
+            Tokenizable::from_token(output_token)
         }
     })
 }
