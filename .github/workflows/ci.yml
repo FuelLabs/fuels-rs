@@ -52,19 +52,19 @@ jobs:
 #          command: run
 #          args: --bin build-test-projects
 
-      - uses: actions/upload-artifact@v2
-        with:
-          retention-days: 2
-          name: sway-examples
-          # cache only the sway build artifacts, skip all src files
-          path: |
-            packages/fuels/tests
-            !packages/fuels/tests/*.rs
-            !packages/fuels/tests/**/*.rs
-            !packages/fuels/tests/**/*.sw
-            !packages/fuels/tests/**/Forc.toml
-            !packages/fuels/tests/**/Forc.lock
-            !packages/fuels/tests/.gitignore
+#      - uses: actions/upload-artifact@v2
+#        with:
+#          retention-days: 2
+#          name: sway-examples
+#          # cache only the sway build artifacts, skip all src files
+#          path: |
+#            packages/fuels/tests
+#            !packages/fuels/tests/*.rs
+#            !packages/fuels/tests/**/*.rs
+#            !packages/fuels/tests/**/*.sw
+#            !packages/fuels/tests/**/Forc.toml
+#            !packages/fuels/tests/**/Forc.lock
+#            !packages/fuels/tests/.gitignore
 
   get-workspace-members:
     runs-on: ubuntu-latest
@@ -137,10 +137,10 @@ jobs:
 
       - name: Install WebAssembly Test harness
         if: ${{ matrix.command == 'test' }}
-        uses: actions-rs/cargo@v1
+        uses: baptiste0928/cargo-install@v1
         with:
-          command: install
-          args: webassembly-test-runner
+          crate: webassembly-test-runner
+          cache-key: '${{ matrix.command }} ${{ matrix.args }} ${{ matrix.package }}'
 
       # TODO: Enable WASM tests
       # - name: Test WASM package
@@ -166,12 +166,12 @@ jobs:
         if: ${{ matrix.command == 'clippy' }}
         run: rustup component add clippy
 
-      - name: Download sway example artifacts
-        if: ${{ matrix.command == 'test' || matrix.command == 'clippy' }}
-        uses: actions/download-artifact@v3
-        with:
-          name: sway-examples
-          path: packages/fuels/tests/
+#      - name: Download sway example artifacts
+#        if: ${{ matrix.command == 'test' || matrix.command == 'clippy' }}
+#        uses: actions/download-artifact@v3
+#        with:
+#          name: sway-examples
+#          path: packages/fuels/tests/
 
       - name: Cargo (workspace-level)
         if: ${{ !matrix.package }}
