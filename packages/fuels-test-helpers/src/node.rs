@@ -8,16 +8,15 @@ use tokio::sync::oneshot;
 use portpicker::is_free;
 use portpicker::pick_unused_port;
 
-use fuel_core_interfaces::model::{BlockHeight, Coin, DaBlockHeight, Message};
+use fuel_chain_config::{BlockProduction, ChainConfig, CoinConfig, MessageConfig, StateConfig};
+use fuel_core_interfaces::model::{BlockHeight, Coin, Message};
 use fuel_gql_client::client::FuelClient;
 use fuel_gql_client::fuel_tx::{ConsensusParameters, UtxoId};
 use fuel_gql_client::fuel_vm::consts::WORD_SIZE;
-use fuel_types::{Address, AssetId, Bytes32, Word};
+use fuel_types::Word;
 use serde::de::Error;
-use serde::{Deserialize, Serialize};
 use serde::{Deserializer, Serializer};
-use serde_json::{json, Value};
-use serde_with::{serde_as, skip_serializing_none};
+use serde_json::Value;
 use serde_with::{DeserializeAs, SerializeAs};
 use std::process::Stdio;
 use tempfile::NamedTempFile;
@@ -46,64 +45,7 @@ impl Config {
     }
 }
 
-#[skip_serializing_none]
-#[serde_as]
-#[derive(Clone, Debug, Default, Deserialize, Serialize, Eq, PartialEq)]
-pub struct MessageConfig {
-    #[serde_as(as = "HexType")]
-    pub sender: Address,
-    #[serde_as(as = "HexType")]
-    pub recipient: Address,
-    #[serde_as(as = "HexNumber")]
-    pub nonce: Word,
-    #[serde_as(as = "HexNumber")]
-    pub amount: Word,
-    #[serde_as(as = "HexType")]
-    pub data: Vec<u8>,
-    /// The block height from the parent da layer that originated this message
-    #[serde_as(as = "HexNumber")]
-    pub da_height: InternalDaBlockHeight,
-}
-
 pub type InternalDaBlockHeight = u64;
-
-impl From<MessageConfig> for Message {
-    fn from(msg: MessageConfig) -> Self {
-        Message {
-            sender: msg.sender,
-            recipient: msg.recipient,
-            nonce: msg.nonce,
-            amount: msg.amount,
-            data: msg.data,
-            da_height: DaBlockHeight(msg.da_height),
-            fuel_block_spend: None,
-        }
-    }
-}
-
-#[skip_serializing_none]
-#[serde_as]
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
-pub struct CoinConfig {
-    #[serde_as(as = "Option<HexType>")]
-    #[serde(default)]
-    pub tx_id: Option<Bytes32>,
-    #[serde_as(as = "Option<HexNumber>")]
-    #[serde(default)]
-    pub output_index: Option<u64>,
-    #[serde_as(as = "Option<HexNumber>")]
-    #[serde(default)]
-    pub block_created: Option<BlockHeight>,
-    #[serde_as(as = "Option<HexNumber>")]
-    #[serde(default)]
-    pub maturity: Option<BlockHeight>,
-    #[serde_as(as = "HexType")]
-    pub owner: Address,
-    #[serde_as(as = "HexNumber")]
-    pub amount: u64,
-    #[serde_as(as = "HexType")]
-    pub asset_id: AssetId,
-}
 
 pub(crate) struct HexType;
 
@@ -228,76 +170,53 @@ pub fn get_node_config_json(
 ) -> Value {
     let coins = get_coins_value(coins);
     let messages = get_messages_value(messages);
-    let consensus_parameters =
-        serde_json::to_value(consensus_parameters_config.unwrap_or_default())
-            .expect("Failed to build transaction_parameters JSON");
+    let transaction_parameters = consensus_parameters_config.unwrap_or_default();
 
-    json!({
-      "chain_name": "local_testnet",
-      "block_production": {
-        "ProofOfAuthority": {
-          "trigger": "instant"
-        }
-      },
-      "block_gas_limit": 1000000,
-      "parent_network": {
-        "type": "LocalTest"
-      },
-      "initial_state": {
-        "coins": coins,
-        "messages": messages
-      },
-      "transaction_parameters": consensus_parameters
-    })
+    let chain_config = ChainConfig {
+        chain_name: "local_testnet".to_string(),
+        block_production: BlockProduction::ProofOfAuthority {
+            trigger: Default::default(),
+        },
+        block_gas_limit: 1000000000,
+        initial_state: Some(StateConfig {
+            coins: Some(coins),
+            contracts: None,
+            messages: Some(messages),
+            height: None,
+        }),
+        transaction_parameters,
+    };
+
+    serde_json::to_value(&chain_config).expect("Failed to build `ChainConfig` JSON")
 }
 
-fn get_coins_value(coins: Vec<(UtxoId, Coin)>) -> Value {
-    let coin_configs: Vec<Value> = coins
-        .into_iter()
-        .map(|(utxo_id, coin)| {
-            serde_json::to_value(&CoinConfig {
-                tx_id: Some(*utxo_id.tx_id()),
-                output_index: Some(utxo_id.output_index() as u64),
-                block_created: Some(coin.block_created),
-                maturity: Some(coin.maturity),
-                owner: coin.owner,
-                amount: coin.amount,
-                asset_id: coin.asset_id,
-            })
-            .unwrap()
-        })
-        .collect();
-
-    let result = serde_json::to_string(&coin_configs).expect("Failed to stringify coins vector");
-
-    let coins: Value =
-        serde_json::from_str(result.as_str()).expect("Failed to build config_with_coins JSON");
-
+fn get_coins_value(coins: Vec<(UtxoId, Coin)>) -> Vec<CoinConfig> {
     coins
+        .into_iter()
+        .map(|(utxo_id, coin)| CoinConfig {
+            tx_id: Some(*utxo_id.tx_id()),
+            output_index: Some(utxo_id.output_index() as u64),
+            block_created: Some(coin.block_created),
+            maturity: Some(coin.maturity),
+            owner: coin.owner,
+            amount: coin.amount,
+            asset_id: coin.asset_id,
+        })
+        .collect()
 }
 
-fn get_messages_value(messages: Vec<Message>) -> Value {
-    let message_configs: Vec<Value> = messages
-        .into_iter()
-        .map(|message| {
-            serde_json::to_value(&MessageConfig {
-                sender: message.sender,
-                recipient: message.recipient,
-                nonce: message.nonce,
-                amount: message.amount,
-                data: message.data,
-                da_height: *message.da_height,
-            })
-            .unwrap()
-        })
-        .collect();
-
-    let result = serde_json::to_string(&message_configs).expect("Failed to stringify coins vector");
-
-    let messages: Value =
-        serde_json::from_str(result.as_str()).expect("Failed to build config_with_coins JSON");
-
+fn get_messages_value(messages: Vec<Message>) -> Vec<MessageConfig> {
     messages
+        .into_iter()
+        .map(|message| MessageConfig {
+            sender: message.sender,
+            recipient: message.recipient,
+            nonce: message.nonce,
+            amount: message.amount,
+            data: message.data,
+            da_height: (*message.da_height).into(),
+        })
+        .collect()
 }
 
 fn write_temp_config_file(config: Value) -> NamedTempFile {

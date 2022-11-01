@@ -16,9 +16,9 @@ env:
   CARGO_TERM_COLOR: always
   DASEL_VERSION: https://github.com/TomWright/dasel/releases/download/v1.24.3/dasel_linux_amd64
   RUSTFLAGS: "-D warnings"
-  FUEL_CORE_VERSION: 0.11.2
+  FUEL_CORE_VERSION: 0.13.1
   RUST_VERSION: 1.64.0
-  FORC_VERSION: 0.28.1
+  FORC_VERSION: 0.29.0
 
 jobs:
   setup-test-projects:
@@ -39,32 +39,32 @@ jobs:
         run: |
           git config --global core.bigfilethreshold 100m
 
-      - name: Install Forc
-        run: |
-          curl -sSLf https://github.com/FuelLabs/sway/releases/download/v${{ env.FORC_VERSION }}/forc-binaries-linux_amd64.tar.gz -L -o forc.tar.gz
-          tar -xvf forc.tar.gz
-          chmod +x forc-binaries/forc
-          mv forc-binaries/forc /usr/local/bin/forc
+#      - name: Install Forc
+#        run: |
+#          curl -sSLf https://github.com/FuelLabs/sway/releases/download/v${{ env.FORC_VERSION }}/forc-binaries-linux_amd64.tar.gz -L -o forc.tar.gz
+#          tar -xvf forc.tar.gz
+#          chmod +x forc-binaries/forc
+#          mv forc-binaries/forc /usr/local/bin/forc
+#
+#      - name: Build Sway Examples
+#        uses: actions-rs/cargo@v1
+#        with:
+#          command: run
+#          args: --bin build-test-projects
 
-      - name: Build Sway Examples
-        uses: actions-rs/cargo@v1
-        with:
-          command: run
-          args: --bin build-test-projects
-
-      - uses: actions/upload-artifact@v2
-        with:
-          retention-days: 2
-          name: sway-examples
-          # cache only the sway build artifacts, skip all src files
-          path: |
-            packages/fuels/tests
-            !packages/fuels/tests/*.rs
-            !packages/fuels/tests/**/*.rs
-            !packages/fuels/tests/**/*.sw
-            !packages/fuels/tests/**/Forc.toml
-            !packages/fuels/tests/**/Forc.lock
-            !packages/fuels/tests/.gitignore
+#      - uses: actions/upload-artifact@v2
+#        with:
+#          retention-days: 2
+#          name: sway-examples
+#          # cache only the sway build artifacts, skip all src files
+#          path: |
+#            packages/fuels/tests
+#            !packages/fuels/tests/*.rs
+#            !packages/fuels/tests/**/*.rs
+#            !packages/fuels/tests/**/*.sw
+#            !packages/fuels/tests/**/Forc.toml
+#            !packages/fuels/tests/**/Forc.lock
+#            !packages/fuels/tests/.gitignore
 
   get-workspace-members:
     runs-on: ubuntu-latest
@@ -78,8 +78,8 @@ jobs:
           # install dasel
           curl -sSLf "$DASEL_VERSION" -L -o dasel && chmod +x dasel
           mv ./dasel /usr/local/bin/dasel
-          members=$(cat Cargo.toml | dasel -r toml -w json 'workspace.members' | jq -r ".[]" | xargs -L 1 basename | jq -R '[.]' | jq -s -c 'add')
-          echo "::set-output name=members::$members"
+          members=$(cat Cargo.toml | dasel -r toml -w json 'workspace.members' | jq -r ".[]" | xargs -I '{}' dasel -f {}/Cargo.toml 'package.name' | jq -R '[.]' | jq -s -c 'add')
+          echo "members=$members" >> $GITHUB_OUTPUT
 
   verify-rust-version:
     runs-on: ubuntu-latest
@@ -117,6 +117,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
       - name: Install toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -124,7 +126,7 @@ jobs:
           override: true
         # selecting a toolchain either by action or manual `rustup` calls should happen
         # before the cache plugin, as it uses the current rustc version as its cache key
-      - uses: Swatinem/rust-cache@v1
+      - uses: Swatinem/rust-cache@v2.0.1
         continue-on-error: true
         with:
           key: "${{ matrix.command }} ${{ matrix.args }} ${{ matrix.package }}"
@@ -135,10 +137,10 @@ jobs:
 
       - name: Install WebAssembly Test harness
         if: ${{ matrix.command == 'test' }}
-        uses: actions-rs/cargo@v1
+        uses: baptiste0928/cargo-install@v1
         with:
-          command: install
-          args: webassembly-test-runner
+          crate: webassembly-test-runner
+          cache-key: '${{ matrix.command }} ${{ matrix.args }} ${{ matrix.package }}'
 
       # TODO: Enable WASM tests
       # - name: Test WASM package
@@ -164,12 +166,12 @@ jobs:
         if: ${{ matrix.command == 'clippy' }}
         run: rustup component add clippy
 
-      - name: Download sway example artifacts
-        if: ${{ matrix.command == 'test' || matrix.command == 'clippy' }}
-        uses: actions/download-artifact@v3
-        with:
-          name: sway-examples
-          path: packages/fuels/tests/
+#      - name: Download sway example artifacts
+#        if: ${{ matrix.command == 'test' || matrix.command == 'clippy' }}
+#        uses: actions/download-artifact@v3
+#        with:
+#          name: sway-examples
+#          path: packages/fuels/tests/
 
       - name: Cargo (workspace-level)
         if: ${{ !matrix.package }}
@@ -183,7 +185,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: ${{ matrix.command }}
-          args: ${{ matrix.args }}
+          args: -p ${{ matrix.package }} ${{ matrix.args }}
 
       - name: Check Docs. Validity
         uses: actions-rs/cargo@v1

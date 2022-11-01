@@ -23,41 +23,41 @@ abi MyContract {
 
 impl MyContract for Contract {
     fn get_identity_address() -> Identity {
-        Identity::Address(~Address::from(ADDR))
+        Identity::Address(Address::from(ADDR))
     }
 
     fn get_identity_contract_id() -> Identity {
-        Identity::ContractId(~ContractId::from(ADDR))
+        Identity::ContractId(ContractId::from(ADDR))
     }
 
     fn get_struct_with_identity() -> TestStruct {
         TestStruct {
-            identity: Identity::Address(~Address::from(ADDR)),
+            identity: Identity::Address(Address::from(ADDR)),
         }
     }
 
     fn get_enum_with_identity() -> TestEnum {
-        TestEnum::EnumIdentity(Identity::ContractId(~ContractId::from(ADDR)))
+        TestEnum::EnumIdentity(Identity::ContractId(ContractId::from(ADDR)))
     }
 
     fn get_identity_tuple() -> (TestStruct, TestEnum) {
         let s = TestStruct {
-            identity: Identity::Address(~Address::from(ADDR)),
+            identity: Identity::Address(Address::from(ADDR)),
         };
-        let e = TestEnum::EnumIdentity(Identity::ContractId(~ContractId::from(ADDR)));
+        let e = TestEnum::EnumIdentity(Identity::ContractId(ContractId::from(ADDR)));
         (s, e)
     }
 
     fn input_identity(input: Identity) -> bool {
         if let Identity::Address(a) = input {
-            return a == ~Address::from(ADDR);
+            return a == Address::from(ADDR);
         }
         false
     }
 
     fn input_struct_with_identity(input: TestStruct) -> bool {
         if let Identity::Address(a) = input.identity {
-            return a == ~Address::from(ADDR);
+            return a == Address::from(ADDR);
         }
         false
     }
@@ -65,7 +65,7 @@ impl MyContract for Contract {
     fn input_enum_with_identity(input: TestEnum) -> bool {
         if let TestEnum::EnumIdentity(identity) = input {
             if let Identity::ContractId(c) = identity {
-                return c == ~ContractId::from(ADDR);
+                return c == ContractId::from(ADDR);
             }
         }
         false

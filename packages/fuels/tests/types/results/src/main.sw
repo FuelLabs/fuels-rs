@@ -31,24 +31,24 @@ impl MyContract for Contract {
     }
 
     fn get_ok_address() -> Result<Address, TestError> {
-        Result::Ok(~Address::from(ADDR))
+        Result::Ok(Address::from(ADDR))
     }
 
     fn get_ok_struct() -> Result<TestStruct, TestError> {
         Result::Ok(TestStruct {
-            option: Option::Some(~Address::from(ADDR)),
+            option: Option::Some(Address::from(ADDR)),
         })
     }
 
     fn get_ok_enum() -> Result<TestEnum, TestError> {
-        Result::Ok(TestEnum::EnumOption(Option::Some(~Address::from(ADDR))))
+        Result::Ok(TestEnum::EnumOption(Option::Some(Address::from(ADDR))))
     }
 
     fn get_ok_tuple() -> Result<(TestStruct, TestEnum), TestError> {
         let s = TestStruct {
-            option: Option::Some(~Address::from(ADDR)),
+            option: Option::Some(Address::from(ADDR)),
         };
-        let e = TestEnum::EnumOption(Option::Some(~Address::from(ADDR)));
+        let e = TestEnum::EnumOption(Option::Some(Address::from(ADDR)));
         Result::Ok((s, e))
     }
 
@@ -58,7 +58,7 @@ impl MyContract for Contract {
 
     fn input_ok(ok_address: Result<Address, TestError>) -> bool {
         if let Result::Ok(a) = ok_address {
-            return a == ~Address::from(ADDR);
+            return a == Address::from(ADDR);
         }
         false
     }

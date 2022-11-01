@@ -8,7 +8,7 @@ pub use fuel_crypto;
 
 use async_trait::async_trait;
 use fuel_crypto::Signature;
-use fuel_gql_client::fuel_tx::Transaction;
+use fuels_core::tx::{field, Cacheable, UniqueIdentifier};
 use fuels_types::bech32::Bech32Address;
 use std::error::Error;
 pub use wallet::{Wallet, WalletUnlocked};
@@ -27,7 +27,10 @@ pub trait Signer: std::fmt::Debug + Send + Sync {
     ) -> Result<Signature, Self::Error>;
 
     /// Signs the transaction
-    async fn sign_transaction(&self, message: &mut Transaction) -> Result<Signature, Self::Error>;
+    async fn sign_transaction<Tx: Cacheable + UniqueIdentifier + field::Witnesses + Send>(
+        &self,
+        message: &mut Tx,
+    ) -> Result<Signature, Self::Error>;
 
     /// Returns the signer's Fuel Address
     fn address(&self) -> &Bech32Address;
@@ -40,7 +43,10 @@ mod tests {
     use fuels_core::constants::BASE_ASSET_ID;
     use fuels_core::{
         parameters::TxParameters,
-        tx::{Address, AssetId, Bytes32, Input, Output, TxPointer, UtxoId},
+        tx::{
+            field::Maturity, Address, AssetId, Bytes32, Chargeable, Input, Output, Transaction,
+            TxPointer, UtxoId,
+        },
     };
     use fuels_test_helpers::{setup_single_asset_coins, setup_test_client};
     use rand::{rngs::StdRng, RngCore, SeedableRng};
@@ -187,9 +193,10 @@ mod tests {
             .get_transaction_by_id(&tx_id)
             .await?;
 
-        assert_eq!(res.transaction.gas_limit(), gas_limit);
-        assert_eq!(res.transaction.gas_price(), gas_price);
-        assert_eq!(res.transaction.maturity(), maturity);
+        let script = res.transaction.as_script().cloned().unwrap();
+        assert_eq!(script.limit(), gas_limit);
+        assert_eq!(script.price(), gas_price);
+        assert_eq!(*script.maturity(), maturity);
 
         let wallet_1_spendable_coins = wallet_1.get_spendable_coins(BASE_ASSET_ID, 0).await?;
         let wallet_1_all_coins = wallet_1.get_coins(BASE_ASSET_ID).await?;
