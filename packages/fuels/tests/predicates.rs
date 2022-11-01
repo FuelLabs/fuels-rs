@@ -9,12 +9,12 @@ async fn setup_predicate_test(
 ) -> Result<(Predicate, WalletUnlocked, WalletUnlocked, AssetId), Error> {
     let predicate = Predicate::load_from(file_path)?;
 
+    let mut config = Config::local_node();
+    config.utxo_validation = true;
+    config.txpool.utxo_validation = true;
     let mut wallets = launch_custom_provider_and_get_wallets(
         WalletsConfig::new(Some(2), Some(num_coins), Some(coin_amount)),
-        Some(Config {
-            utxo_validation: true,
-            ..Config::local_node()
-        }),
+        Some(config),
     )
     .await;
 

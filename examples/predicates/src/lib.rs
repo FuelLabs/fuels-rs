@@ -38,15 +38,10 @@ mod tests {
             })
             .collect::<Vec<_>>();
 
-        let (provider, _) = setup_test_provider(
-            all_coins,
-            vec![],
-            Some(Config {
-                utxo_validation: true,
-                ..Config::local_node()
-            }),
-        )
-        .await;
+        let mut config = Config::local_node();
+        config.utxo_validation = true;
+        config.txpool.utxo_validation = true;
+        let (provider, _) = setup_test_provider(all_coins, vec![], Some(config)).await;
 
         [&mut wallet, &mut wallet2, &mut wallet3]
             .iter_mut()

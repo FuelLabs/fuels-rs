@@ -183,18 +183,22 @@ pub async fn setup_test_client(
         .collect();
 
     // Setup node config with genesis coins and utxo_validation enabled
+    let chain_config = ChainConfig {
+        initial_state: Some(StateConfig {
+            messages: Some(message_config),
+            coins: Some(coin_configs),
+            ..StateConfig::default()
+        }),
+        transaction_parameters: consensus_parameters_config.unwrap_or_default(),
+        ..ChainConfig::local_testnet()
+    };
+    let mut other_fields = node_config.unwrap_or_else(Config::local_node);
+    other_fields.txpool.utxo_validation = true;
+    other_fields.txpool.chain_config = chain_config.clone();
     let config = Config {
-        chain_conf: ChainConfig {
-            initial_state: Some(StateConfig {
-                messages: Some(message_config),
-                coins: Some(coin_configs),
-                ..StateConfig::default()
-            }),
-            transaction_parameters: consensus_parameters_config.unwrap_or_default(),
-            ..ChainConfig::local_testnet()
-        },
+        chain_conf: chain_config,
         database_type: DbType::InMemory,
-        ..node_config.unwrap_or_else(Config::local_node)
+        ..other_fields
     };
 
     let srv = FuelService::new_node(config).await.unwrap();
