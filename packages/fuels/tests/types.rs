@@ -1316,12 +1316,11 @@ async fn test_vector() -> Result<(), Error> {
         let arg = SomeStruct { a: vec![0, 1, 2] };
         methods.vec_in_struct(arg.clone()).call().await?;
     }
-    // TODO: It fails, I don't know why
-    // {
-    //     // array in vec
-    //     let arg = vec![[0u64, 1u64], [0u64, 1u64]];
-    //     methods.array_in_vec(arg.clone()).call().await?;
-    // }
+    {
+        // array in vec
+        let arg = vec![[0u64, 1u64], [0u64, 1u64]];
+        methods.array_in_vec(arg.clone()).call().await?;
+    }
     {
         // vec in array
         let arg = [vec![0, 1, 2], vec![0, 1, 2]];
