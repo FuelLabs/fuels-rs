@@ -16,9 +16,9 @@ env:
   CARGO_TERM_COLOR: always
   DASEL_VERSION: https://github.com/TomWright/dasel/releases/download/v1.24.3/dasel_linux_amd64
   RUSTFLAGS: "-D warnings"
-  FUEL_CORE_VERSION: 0.11.2
+  FUEL_CORE_VERSION: 0.13.1
   RUST_VERSION: 1.64.0
-  FORC_VERSION: 0.28.1
+  FORC_VERSION: 0.29.0
 
 jobs:
   setup-test-projects:
@@ -78,7 +78,7 @@ jobs:
           # install dasel
           curl -sSLf "$DASEL_VERSION" -L -o dasel && chmod +x dasel
           mv ./dasel /usr/local/bin/dasel
-          members=$(cat Cargo.toml | dasel -r toml -w json 'workspace.members' | jq -r ".[]" | xargs -L 1 basename | jq -R '[.]' | jq -s -c 'add')
+          members=$(cat Cargo.toml | dasel -r toml -w json 'workspace.members' | jq -r ".[]" | xargs -I '{}' dasel -f {}/Cargo.toml 'package.name' | jq -R '[.]' | jq -s -c 'add')
           echo "::set-output name=members::$members"
 
   verify-rust-version:
@@ -183,7 +183,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: ${{ matrix.command }}
-          args: ${{ matrix.args }}
+          args: -p ${{ matrix.package }} ${{ matrix.args }}
 
       - name: Check Docs. Validity
         uses: actions-rs/cargo@v1
