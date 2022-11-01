@@ -771,8 +771,6 @@ impl Signer for WalletUnlocked {
         &self,
         tx: &mut Tx,
     ) -> Result<Signature, Self::Error> {
-        // Precompute the transaction `id` after all modification.
-        tx.precompute();
         let id = tx.id();
 
         // Safety: `Message::from_bytes_unchecked` is unsafe because
@@ -793,8 +791,6 @@ impl Signer for WalletUnlocked {
                 witnesses.extend(witness);
             }
         }
-        // Precompute the transaction serialized size after adding witnesses.
-        tx.precompute();
 
         Ok(sig)
     }
