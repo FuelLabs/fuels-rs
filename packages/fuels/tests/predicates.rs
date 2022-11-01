@@ -11,7 +11,10 @@ async fn setup_predicate_test(
 
     let mut config = Config::local_node();
     config.utxo_validation = true;
-    config.txpool.utxo_validation = true;
+    #[cfg(feature = "fuel-core-lib")]
+    {
+        config.txpool.utxo_validation = true;
+    }
     let mut wallets = launch_custom_provider_and_get_wallets(
         WalletsConfig::new(Some(2), Some(num_coins), Some(coin_amount)),
         Some(config),

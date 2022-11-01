@@ -40,7 +40,10 @@ mod tests {
 
         let mut config = Config::local_node();
         config.utxo_validation = true;
-        config.txpool.utxo_validation = true;
+        #[cfg(feature = "fuel-core-lib")]
+        {
+            config.txpool.utxo_validation = true;
+        }
         let (provider, _) = setup_test_provider(all_coins, vec![], Some(config)).await;
 
         [&mut wallet, &mut wallet2, &mut wallet3]
