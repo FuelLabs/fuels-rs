@@ -174,3 +174,34 @@ async fn main_function_arguments() -> Result<(), Error> {
     // ANCHOR_END: script_with_arguments
     Ok(())
 }
+#[tokio::test]
+async fn main_function_generic_arguments() -> Result<(), Error> {
+    // ANCHOR: script_with_generic_arguments
+
+    // The abigen is used for the same purpose as with contracts (Rust bindings)
+    script_abigen!(
+        MyScript,
+        "packages/fuels/tests/scripts/script_generic_arguments/out/debug/script_generic_arguments-abi.json"
+    );
+    let wallet = launch_provider_and_get_wallet().await;
+    let bin_path =
+        "../fuels/tests/scripts/script_generic_arguments/out/debug/script_generic_arguments.bin";
+    let instance = MyScript::new(wallet, bin_path);
+
+    let bim = GenericBimbam { val: 90 };
+    let bam_comp = GenericBimbam { val: 4342 };
+    let bam = GenericSnack {
+        twix: bam_comp,
+        mars: 1000,
+    };
+    let result = instance.main(bim.clone(), bam.clone()).await?;
+    let expected = GenericSnack {
+        twix: GenericBimbam {
+            val: bam.mars as u64,
+        },
+        mars: 2 * bim.val as u32,
+    };
+    assert_eq!(result, expected);
+    // ANCHOR_END: script_with_generic_arguments
+    Ok(())
+}
