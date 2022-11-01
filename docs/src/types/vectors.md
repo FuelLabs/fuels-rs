@@ -2,7 +2,7 @@
 
 ## Passing in vectors
 
-You can pass a Rust `std::vec::Vec` into your contract method transparently. The following code calls a Sway function which accepts and then returns a `Vec<SomeStruct<u32>>`.
+You can pass a Rust `std::vec::Vec` into your contract method transparently. The following code calls a Sway contract method which accepts a `Vec<SomeStruct<u32>>`.
 
 ```rust,ignore
 {{#include ../../../packages/fuels/tests/types.rs:passing_in_vec}}
