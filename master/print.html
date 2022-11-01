@@ -1350,7 +1350,7 @@ pub const DEFAULT_MATURITY: u64 = 0;
 <p>You can also use <code>CallParameters::default()</code> to use the default values:</p>
 <pre><code class="language-rust ignore">pub const DEFAULT_CALL_PARAMS_AMOUNT: u64 = 0;
 // Bytes representation of the asset ID of the &quot;base&quot; asset used for gas fees.
-pub const BASE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
+pub const BASE_ASSET_ID: AssetId = AssetId::BASE;
 </code></pre>
 <p>This way:</p>
 <pre><code class="language-rust ignore">        let response = contract_methods
@@ -1361,11 +1361,11 @@ pub const BASE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
 
 </code></pre>
 <p>The <code>gas_forwarded</code> parameter defines the limit for the actual contract call as opposed to the gas limit for the whole transaction. This means that it is constrained by the transaction limit. If it is set to an amount greater than the available gas, all available gas will be forwarded.</p>
-<pre><code class="language-rust ignore">        // Set the transaction `gas_limit` to 1000 and `gas_forwarded` to 200 to specify that the
-        // contract call transaction may consume up to 1000 gas, while the actual call may only use 200
+<pre><code class="language-rust ignore">        // Set the transaction `gas_limit` to 10000 and `gas_forwarded` to 3000 to specify that the
+        // contract call transaction may consume up to 10000 gas, while the actual call may only use 3000
         // gas
-        let tx_params = TxParameters::new(None, Some(1000), None);
-        let call_params = CallParameters::new(None, None, Some(200));
+        let tx_params = TxParameters::new(None, Some(10000), None);
+        let call_params = CallParameters::new(None, None, Some(3000));
 
         let response = contract_methods
             .get_msg_amount() // Our contract method.
@@ -1619,7 +1619,6 @@ fn main() -&gt; bool {
             all_coins,
             vec![],
             Some(Config {
-                predicates: true,
                 utxo_validation: true,
                 ..Config::local_node()
             }),
@@ -2152,7 +2151,7 @@ const BASE_TOKEN: b256 = 0x9ae5b658754e096e4d681c548daf46354495a437cc61492599e33
 
 impl LiquidityPool for Contract {
     fn deposit(recipient: Address) {
-        assert(~ContractId::from(BASE_TOKEN) == msg_asset_id());
+        assert(ContractId::from(BASE_TOKEN) == msg_asset_id());
         assert(0 &lt; msg_amount());
 
         // Mint two times the amount.
@@ -2170,7 +2169,7 @@ impl LiquidityPool for Contract {
         let amount_to_transfer = msg_amount() / 2;
 
         // Transfer base token to recipient.
-        transfer_to_address(amount_to_transfer, ~ContractId::from(BASE_TOKEN), recipient);
+        transfer_to_address(amount_to_transfer, ContractId::from(BASE_TOKEN), recipient);
     }
 }
 </code></pre>
