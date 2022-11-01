@@ -262,7 +262,7 @@ impl Wallet {
                     message.amount.0,
                     0,
                     witness_index,
-                    message.data.clone().into(),
+                    message.data.into(),
                 )
             })
             .collect();
