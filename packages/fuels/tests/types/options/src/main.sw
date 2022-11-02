@@ -29,24 +29,24 @@ impl MyContract for Contract {
     }
 
     fn get_some_address() -> Option<Address> {
-        Option::Some(~Address::from(ADDR))
+        Option::Some(Address::from(ADDR))
     }
 
     fn get_some_struct() -> Option<TestStruct> {
         Option::Some(TestStruct {
-            option: Option::Some(~Address::from(ADDR)),
+            option: Option::Some(Address::from(ADDR)),
         })
     }
 
     fn get_some_enum() -> Option<TestEnum> {
-        Option::Some(TestEnum::EnumOption(Option::Some(~Address::from(ADDR))))
+        Option::Some(TestEnum::EnumOption(Option::Some(Address::from(ADDR))))
     }
 
     fn get_some_tuple() -> Option<(TestStruct, TestEnum)> {
         let s = TestStruct {
-            option: Option::Some(~Address::from(ADDR)),
+            option: Option::Some(Address::from(ADDR)),
         };
-        let e = TestEnum::EnumOption(Option::Some(~Address::from(ADDR)));
+        let e = TestEnum::EnumOption(Option::Some(Address::from(ADDR)));
         Option::Some((s, e))
     }
 
@@ -64,7 +64,7 @@ impl MyContract for Contract {
     fn input_struct(input: Option<TestStruct>) -> bool {
         if let Option::Some(s) = input {
             if let Option::Some(a) = s.option {
-                return a == ~Address::from(ADDR);
+                return a == Address::from(ADDR);
             }
         }
         false
@@ -74,7 +74,7 @@ impl MyContract for Contract {
         if let Option::Some(test_enum) = input {
             if let TestEnum::EnumOption(option) = test_enum {
                 if let Option::Some(a) = option {
-                    return a == ~Address::from(ADDR);
+                    return a == Address::from(ADDR);
                 }
             }
         }
