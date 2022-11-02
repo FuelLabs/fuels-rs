@@ -3,8 +3,8 @@ use std::io;
 #[cfg(feature = "fuel-core")]
 use fuel_core::service::{Config, FuelService};
 
-use fuel_gql_client::interpreter::ExecutableTransaction;
 use fuel_gql_client::client::schema::resource::Resource;
+use fuel_gql_client::interpreter::ExecutableTransaction;
 use fuel_gql_client::{
     client::{
         schema::{
@@ -20,7 +20,6 @@ use fuel_gql_client::{
 use fuels_core::constants::{DEFAULT_GAS_ESTIMATION_TOLERANCE, MAX_GAS_PER_TX};
 use std::collections::HashMap;
 use thiserror::Error;
-use fuels_core::tx::field;
 
 use crate::{field, UniqueIdentifier};
 use fuels_types::bech32::{Bech32Address, Bech32ContractId};

@@ -1,7 +1,7 @@
 use anyhow::Result;
 use fuel_gql_client::fuel_tx::{
-    field::Script as ScriptField, ConsensusParameters, Input, Output, Receipt, Transaction,
-    TxPointer, UtxoId, Metadata, PanicReason
+    field::Script as ScriptField, ConsensusParameters, Input, Metadata, Output, PanicReason,
+    Receipt, Transaction, TxPointer, UtxoId,
 };
 
 use fuel_gql_client::fuel_types::{
