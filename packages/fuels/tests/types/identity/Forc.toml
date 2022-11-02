@@ -5,3 +5,5 @@ license = "Apache-2.0"
 name = "identity"
 
 [dependencies]
+core = { git = "https://github.com/FuelLabs/sway", branch = "Voxelot/fuel-core-0.13" }
+std = { git = "https://github.com/FuelLabs/sway", branch = "Voxelot/fuel-core-0.13" }

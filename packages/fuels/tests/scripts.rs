@@ -20,7 +20,6 @@ async fn test_transaction_script_workflow() -> Result<(), Error> {
     let call_handler = contract_instance.methods().initialize_counter(42);
 
     let script = call_handler.get_call_execution_script().await?;
-    assert!(script.tx.is_script());
 
     let provider = wallet.get_provider()?;
     let receipts = script.call(provider).await?;

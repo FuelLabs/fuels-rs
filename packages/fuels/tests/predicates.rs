@@ -12,7 +12,6 @@ async fn setup_predicate_test(
     let mut wallets = launch_custom_provider_and_get_wallets(
         WalletsConfig::new(Some(2), Some(num_coins), Some(coin_amount)),
         Some(Config {
-            predicates: true,
             utxo_validation: true,
             ..Config::local_node()
         }),
