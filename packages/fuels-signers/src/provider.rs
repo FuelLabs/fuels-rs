@@ -628,6 +628,7 @@ mod tests {
         // assert!(!response.has_previous_page);
 
         dbg!(&response.results.len());
+        dbg!(&response.cursor);
         dbg!(&response.has_previous_page);
         dbg!(&response.has_next_page);
 
@@ -639,6 +640,7 @@ mod tests {
             .await?;
 
         dbg!(&response.results.len());
+        dbg!(&response.cursor);
         dbg!(&response.has_previous_page);
         dbg!(&response.has_next_page);
 
@@ -654,6 +656,7 @@ mod tests {
             .await?;
 
         dbg!(&response.results.len());
+        dbg!(&response.cursor);
         dbg!(&response.has_previous_page);
         dbg!(&response.has_next_page);
 
