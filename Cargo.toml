@@ -26,4 +26,3 @@ members = [
     "scripts/check-docs",
     "tools/fuels-abi-cli",
 ]
-

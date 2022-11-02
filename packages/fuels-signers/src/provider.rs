@@ -3,13 +3,12 @@ use std::io;
 #[cfg(feature = "fuel-core")]
 use fuel_core::service::{Config, FuelService};
 
-use fuel_gql_client::client::schema::resource::Resource;
 use fuel_gql_client::interpreter::ExecutableTransaction;
 use fuel_gql_client::{
     client::{
         schema::{
             balance::Balance, chain::ChainInfo, coin::Coin, contract::ContractBalance,
-            message::Message, node_info::NodeInfo,
+            message::Message, node_info::NodeInfo, resource::Resource,
         },
         types::{TransactionResponse, TransactionStatus},
         FuelClient, PageDirection, PaginatedResult, PaginationRequest,

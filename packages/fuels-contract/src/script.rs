@@ -1,6 +1,6 @@
 use anyhow::Result;
 use fuel_gql_client::fuel_tx::{
-    field::Script as ScriptField, ConsensusParameters, Input, Metadata, Output, PanicReason,
+    field::Script as ScriptField, ConsensusParameters, Input, Output, PanicReason,
     Receipt, Transaction, TxPointer, UtxoId,
 };
 

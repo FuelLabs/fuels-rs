@@ -1,5 +1,7 @@
 //! Testing helpers/utilities for Fuel SDK.
 
+extern crate core;
+
 use std::net::SocketAddr;
 
 #[cfg(feature = "fuel-core-lib")]
