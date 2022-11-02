@@ -1,7 +1,7 @@
 use anyhow::Result;
 use fuel_gql_client::fuel_tx::{
-    field::Script as ScriptField, ConsensusParameters, Input, Output, PanicReason,
-    Receipt, Transaction, TxPointer, UtxoId,
+    field::Script as ScriptField, ConsensusParameters, Input, Output, PanicReason, Receipt,
+    Transaction, TxPointer, UtxoId,
 };
 
 use fuel_gql_client::fuel_types::{
@@ -399,7 +399,7 @@ impl Script {
             .any(|r|
                 matches!(r, Receipt::ScriptResult { result, .. } if *result != ScriptExecutionResult::Success) |
                     matches!(r, Receipt::Panic { reason, .. } if *reason.reason() == PanicReason::ContractNotInInputs )
-        ) {
+            ) {
             return Err(Error::RevertTransactionError(Default::default(), receipts));
         }
 
