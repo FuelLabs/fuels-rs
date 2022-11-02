@@ -618,3 +618,24 @@ async fn test_contract_instance_get_balances() -> Result<(), Error> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn test_contract_multithreading() -> Result<(), Error> {
+
+    setup_contract_test!(
+        contract_instance,
+        wallet,
+        "packages/fuels/tests/contracts/contract_test"
+    );
+
+    tokio::task::spawn(async move {
+        contract_instance
+            .methods()
+            .initialize_counter(42)
+            .call()
+            .await
+            .unwrap();
+    });
+
+    Ok(())
+}
