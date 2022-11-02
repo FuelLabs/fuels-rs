@@ -50,6 +50,58 @@ impl Tokenizable for Bits256 {
     }
 }
 
+#[derive(Debug, PartialEq, Eq, Copy, Clone)]
+pub struct EvmAddress {
+    value: [u8; 32],
+}
+
+impl EvmAddress {
+    pub fn new(value: [u8; 32]) -> Self {
+        Self {
+            value: Self::clear_12_bytes(value),
+        }
+    }
+
+    fn clear_12_bytes(bytes: [u8; 32]) -> [u8; 32] {
+        let mut bytes = bytes;
+        bytes[..12].copy_from_slice(&[0u8; 12]);
+
+        bytes
+    }
+}
+
+impl From<Bits256> for EvmAddress {
+    fn from(b256: Bits256) -> Self {
+        EvmAddress {
+            value: Self::clear_12_bytes(b256.0),
+        }
+    }
+}
+
+impl Parameterize for EvmAddress {
+    fn param_type() -> ParamType {
+        ParamType::EvmAddress
+    }
+}
+
+impl Tokenizable for EvmAddress {
+    fn from_token(token: Token) -> Result<Self, Error>
+    where
+        Self: Sized,
+    {
+        match token {
+            Token::EvmAddress(data) => Ok(EvmAddress { value: data }),
+            _ => Err(Error::InvalidData(format!(
+                "Bits256 cannot be constructed from token {token}"
+            ))),
+        }
+    }
+
+    fn into_token(self) -> Token {
+        Token::EvmAddress(self.value)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -55,6 +55,7 @@ impl ABIDecoder {
             ParamType::Bool => Self::decode_bool(bytes),
             ParamType::Byte => Self::decode_byte(bytes),
             ParamType::B256 => Self::decode_b256(bytes),
+            ParamType::EvmAddress => Self::decode_evm_address(bytes),
             ParamType::String(length) => Self::decode_string(bytes, *length),
             ParamType::Array(ref t, length) => Self::decode_array(t, bytes, *length),
             ParamType::Struct { fields, .. } => Self::decode_struct(fields, bytes),
@@ -133,6 +134,13 @@ impl ABIDecoder {
     fn decode_b256(bytes: &[u8]) -> Result<DecodeResult, CodecError> {
         Ok(DecodeResult {
             token: Token::B256(*peek_fixed::<32>(bytes)?),
+            bytes_read: 32,
+        })
+    }
+
+    fn decode_evm_address(bytes: &[u8]) -> Result<DecodeResult, CodecError> {
+        Ok(DecodeResult {
+            token: Token::EvmAddress(*peek_fixed::<32>(bytes)?),
             bytes_read: 32,
         })
     }
