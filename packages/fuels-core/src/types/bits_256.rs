@@ -52,16 +52,10 @@ impl Tokenizable for Bits256 {
 
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub struct EvmAddress {
-    value: [u8; 32],
+    value: Bits256,
 }
 
 impl EvmAddress {
-    pub fn new(value: [u8; 32]) -> Self {
-        Self {
-            value: Self::clear_12_bytes(value),
-        }
-    }
-
     fn clear_12_bytes(bytes: [u8; 32]) -> [u8; 32] {
         let mut bytes = bytes;
         bytes[..12].copy_from_slice(&[0u8; 12]);
@@ -72,33 +66,46 @@ impl EvmAddress {
 
 impl From<Bits256> for EvmAddress {
     fn from(b256: Bits256) -> Self {
-        EvmAddress {
-            value: Self::clear_12_bytes(b256.0),
-        }
+        let value = Bits256(Self::clear_12_bytes(b256.0));
+
+        Self { value }
     }
 }
 
 impl Parameterize for EvmAddress {
     fn param_type() -> ParamType {
-        ParamType::EvmAddress
+        ParamType::Struct {
+            fields: vec![ParamType::B256],
+            generics: vec![],
+        }
     }
 }
 
 impl Tokenizable for EvmAddress {
-    fn from_token(token: Token) -> Result<Self, Error>
+    fn from_token(t: Token) -> Result<Self, Error>
     where
         Self: Sized,
     {
-        match token {
-            Token::EvmAddress(data) => Ok(EvmAddress { value: data }),
-            _ => Err(Error::InvalidData(format!(
-                "Bits256 cannot be constructed from token {token}"
-            ))),
+        if let Token::Struct(tokens) = t {
+            let first_token = tokens.into_iter().next();
+            if let Some(Token::B256(data)) = first_token {
+                Ok(EvmAddress::from(Bits256(data)))
+            } else {
+                Err(Error::InstantiationError(format!(
+                    "Expected `b256`, got {:?}",
+                    first_token
+                )))
+            }
+        } else {
+            Err(Error::InstantiationError(format!(
+                "Expected `EvmAddress`, got {:?}",
+                t
+            )))
         }
     }
 
     fn into_token(self) -> Token {
-        Token::EvmAddress(self.value)
+        Token::Struct(vec![Bits256(self.value.0).into_token()])
     }
 }
 
@@ -109,12 +116,12 @@ mod tests {
     use fuels_types::param_types::ParamType;
 
     #[test]
-    fn test_param_type() {
+    fn test_param_type_b256() {
         assert_eq!(Bits256::param_type(), ParamType::B256);
     }
 
     #[test]
-    fn test_from_token() -> Result<(), Error> {
+    fn test_from_token_b256() -> Result<(), Error> {
         let data = [0u8; 32];
         let token = Token::B256(data);
 
@@ -126,7 +133,7 @@ mod tests {
     }
 
     #[test]
-    fn test_into_token() {
+    fn test_into_token_b256() {
         let data = [0u8; 32];
         let bits256 = Bits256(data);
 
@@ -136,7 +143,7 @@ mod tests {
     }
 
     #[test]
-    fn from_hex_str() -> Result<(), Error> {
+    fn from_hex_str_b256() -> Result<(), Error> {
         // ANCHOR: from_hex_str
         let hex_str = "0101010101010101010101010101010101010101010101010101010101010101";
 
@@ -153,5 +160,38 @@ mod tests {
         // ANCHOR_END: from_hex_str
 
         Ok(())
+    }
+
+    #[test]
+    fn test_param_type_evm_addr() {
+        assert_eq!(
+            EvmAddress::param_type(),
+            ParamType::Struct {
+                fields: vec![ParamType::B256],
+                generics: vec![]
+            }
+        );
+    }
+
+    #[test]
+    fn test_from_token_evm_addr() -> Result<(), Error> {
+        let data = [0u8; 32];
+        let token = Token::Struct(vec![Token::B256(data)]);
+
+        let evm_address = EvmAddress::from_token(token)?;
+
+        assert_eq!(evm_address.value.0, data);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_into_token_evm_addr() {
+        let data = [0u8; 32];
+        let evm_address = EvmAddress::from(Bits256(data));
+
+        let token = evm_address.into_token();
+
+        assert_eq!(token, Token::Struct(vec![Token::B256(data)]));
     }
 }

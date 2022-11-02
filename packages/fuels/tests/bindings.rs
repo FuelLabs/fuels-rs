@@ -444,6 +444,73 @@ async fn compile_bindings_b256_input() {
 }
 
 #[tokio::test]
+async fn compile_bindings_evm_address_input() {
+    abigen!(
+        SimpleContract,
+        r#"
+        {
+            "types": [
+              {
+                "typeId": 0,
+                "type": "()",
+                "components": [],
+                "typeParameters": null
+              },
+              {
+                "typeId": 1,
+                "type": "struct EvmAddress",
+                "components": null,
+                "typeParameters": null
+              }
+            ],
+            "functions": [
+              {
+                "inputs": [
+                  {
+                    "name": "arg",
+                    "type": 1,
+                    "typeArguments": null
+                  }
+                ],
+                "name": "takes_evm_address",
+                "output": {
+                  "name": "",
+                  "type": 0,
+                  "typeArguments": null
+                }
+              }
+            ]
+          }
+        "#,
+    );
+
+    let wallet = launch_provider_and_get_wallet().await;
+
+    let contract_instance = SimpleContract::new(null_contract_id(), wallet);
+
+    let mut hasher = Sha256::new();
+    hasher.update("test string".as_bytes());
+
+    let arg = Bits256(hasher.finalize().into());
+
+    let call_handler = contract_instance
+        .methods()
+        .takes_evm_address(EvmAddress::from(arg));
+
+    let encoded_args = call_handler.contract_call.encoded_args.resolve(0);
+    let encoded = format!(
+        "{}{}",
+        hex::encode(call_handler.contract_call.encoded_selector),
+        hex::encode(&encoded_args)
+    );
+
+    assert_eq!(
+        "000000006ef3f9a50000000000000000000000005b44e4cb4e2c2298f4ac457ba8f82743f31e930b",
+        encoded
+    );
+}
+
+#[tokio::test]
 async fn compile_bindings_struct_input() {
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `SimpleContract`.

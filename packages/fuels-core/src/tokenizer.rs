@@ -38,10 +38,6 @@ impl Tokenizer {
                 let s: [u8; 32] = Self::value_str_to_b256(trimmed_value)?;
                 Ok(Token::B256(s))
             }
-            ParamType::EvmAddress => {
-                let s: [u8; 32] = Self::value_str_to_b256(trimmed_value)?;
-                Ok(Token::EvmAddress(s))
-            }
             ParamType::Vector(param_type) => Self::tokenize_vec(trimmed_value, param_type),
             ParamType::Array(t, _) => Ok(Self::tokenize_array(trimmed_value, t)?),
             ParamType::String(length) => Ok(Token::String(StringToken::new(

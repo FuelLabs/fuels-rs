@@ -29,7 +29,6 @@ fn resolve_arg(arg: &ParamType) -> String {
         ParamType::Bool => "bool".to_owned(),
         ParamType::Byte => "byte".to_owned(),
         ParamType::B256 => "b256".to_owned(),
-        ParamType::EvmAddress => "EvmAddress".to_owned(),
         ParamType::Unit => "()".to_owned(),
         ParamType::String(len) => {
             format!("str[{len}]")

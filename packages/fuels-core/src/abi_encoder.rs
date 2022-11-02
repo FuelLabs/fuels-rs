@@ -114,7 +114,6 @@ impl ABIEncoder {
             Token::Byte(arg_byte) => vec![Self::encode_byte(*arg_byte)],
             Token::Bool(arg_bool) => vec![Self::encode_bool(*arg_bool)],
             Token::B256(arg_bits256) => vec![Self::encode_b256(arg_bits256)],
-            Token::EvmAddress(arg_evm_address) => vec![Self::encode_evm_address(arg_evm_address)],
             Token::Array(arg_array) => Self::encode_array(arg_array)?,
             Token::Vector(data) => Self::encode_vector(data)?,
             Token::String(arg_string) => vec![Self::encode_string(arg_string)?],
@@ -149,10 +148,6 @@ impl ABIEncoder {
 
     fn encode_b256(arg_bits256: &[u8; 32]) -> Data {
         Data::Inline(arg_bits256.to_vec())
-    }
-
-    fn encode_evm_address(arg_evm_address: &[u8; 32]) -> Data {
-        Data::Inline(arg_evm_address.to_vec())
     }
 
     fn encode_bool(arg_bool: bool) -> Data {

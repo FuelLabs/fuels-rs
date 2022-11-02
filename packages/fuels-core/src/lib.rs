@@ -77,7 +77,6 @@ pub enum Token {
     Bool(bool),
     Byte(u8),
     B256([u8; 32]),
-    EvmAddress([u8; 32]),
     Array(Vec<Token>),
     Vector(Vec<Token>),
     String(StringToken),

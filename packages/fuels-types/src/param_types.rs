@@ -22,7 +22,6 @@ pub enum ParamType {
     Bool,
     Byte,
     B256,
-    EvmAddress,
     // The Unit paramtype is used for unit variants in Enums. The corresponding type field is `()`,
     // similar to Rust.
     Unit,
@@ -87,7 +86,7 @@ impl ParamType {
             | ParamType::Bool
             | ParamType::Byte => 1,
             ParamType::Vector(_) => 3,
-            ParamType::B256 | ParamType::EvmAddress => 4,
+            ParamType::B256 => 4,
             ParamType::Array(param, count) => param.compute_encoding_width() * count,
             ParamType::String(len) => count_words(*len),
             ParamType::Struct { fields, .. } => {
