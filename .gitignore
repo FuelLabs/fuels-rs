@@ -16,7 +16,7 @@ docs/book/
 packages/fuels/tests/**/**/Forc.lock
 
 # Don't add out/ files from test Sway projects.
-packages/fuels/tests/**/**/out/
+# packages/fuels/tests/**/**/out/
 
 # Don't add target/ files from test Sway projects.
 packages/fuels/tests/**/**/target/

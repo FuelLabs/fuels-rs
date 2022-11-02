@@ -6,9 +6,10 @@ use crate::node::{Config, FuelService};
 
 use fuels_signers::provider::Provider;
 
-use fuel_gql_client::fuel_tx::{Receipt, Transaction};
+use fuel_gql_client::fuel_tx::Receipt;
 use fuels_contract::script::Script;
 use fuels_core::parameters::TxParameters;
+use fuels_core::tx::Transaction;
 use fuels_types::errors::Error;
 
 /// Run the script binary located at `binary_filepath` and return its resulting receipts,
@@ -28,20 +29,16 @@ pub async fn run_compiled_script(
 }
 
 fn build_script(script_binary: Vec<u8>, tx_params: TxParameters) -> Script {
-    let tx = Transaction::Script {
-        gas_price: tx_params.gas_price,
-        gas_limit: tx_params.gas_limit,
-        maturity: tx_params.maturity,
-        receipts_root: Default::default(),
-        script: script_binary, // Pass the compiled script into the tx
-        script_data: vec![],
-        inputs: vec![],
-        outputs: vec![],
-        witnesses: vec![vec![].into()],
-        metadata: None,
-    };
-
-    Script::new(tx)
+    Script::new(Transaction::script(
+        tx_params.gas_price,
+        tx_params.gas_limit,
+        tx_params.maturity,
+        script_binary,
+        vec![],
+        vec![],
+        vec![],
+        vec![],
+    ))
 }
 
 #[cfg(test)]

@@ -1,0 +1,28 @@
+{
+  "types": [
+    {
+      "typeId": 0,
+      "type": "u64",
+      "components": null,
+      "typeParameters": null
+    }
+  ],
+  "functions": [
+    {
+      "inputs": [
+        {
+          "name": "input",
+          "type": 0,
+          "typeArguments": null
+        }
+      ],
+      "name": "make_transaction_fail",
+      "output": {
+        "name": "",
+        "type": 0,
+        "typeArguments": null
+      }
+    }
+  ],
+  "loggedTypes": []
+}
