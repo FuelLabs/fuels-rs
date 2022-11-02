@@ -1,0 +1,163 @@
+{
+  "types": [
+    {
+      "typeId": 0,
+      "type": "()",
+      "components": [],
+      "typeParameters": null
+    },
+    {
+      "typeId": 1,
+      "type": "b256",
+      "components": null,
+      "typeParameters": null
+    },
+    {
+      "typeId": 2,
+      "type": "bool",
+      "components": null,
+      "typeParameters": null
+    },
+    {
+      "typeId": 3,
+      "type": "enum EnumThatHasABigAndSmallVariant",
+      "components": [
+        {
+          "name": "Big",
+          "type": 1,
+          "typeArguments": null
+        },
+        {
+          "name": "Small",
+          "type": 7,
+          "typeArguments": null
+        }
+      ],
+      "typeParameters": null
+    },
+    {
+      "typeId": 4,
+      "type": "enum UnitEnum",
+      "components": [
+        {
+          "name": "var1",
+          "type": 0,
+          "typeArguments": null
+        },
+        {
+          "name": "var2",
+          "type": 0,
+          "typeArguments": null
+        }
+      ],
+      "typeParameters": null
+    },
+    {
+      "typeId": 5,
+      "type": "struct BigBundle",
+      "components": [
+        {
+          "name": "arg_1",
+          "type": 3,
+          "typeArguments": null
+        },
+        {
+          "name": "arg_2",
+          "type": 8,
+          "typeArguments": null
+        },
+        {
+          "name": "arg_3",
+          "type": 8,
+          "typeArguments": null
+        },
+        {
+          "name": "arg_4",
+          "type": 8,
+          "typeArguments": null
+        }
+      ],
+      "typeParameters": null
+    },
+    {
+      "typeId": 6,
+      "type": "struct UnitBundle",
+      "components": [
+        {
+          "name": "arg_1",
+          "type": 4,
+          "typeArguments": null
+        },
+        {
+          "name": "arg_2",
+          "type": 8,
+          "typeArguments": null
+        }
+      ],
+      "typeParameters": null
+    },
+    {
+      "typeId": 7,
+      "type": "u32",
+      "components": null,
+      "typeParameters": null
+    },
+    {
+      "typeId": 8,
+      "type": "u64",
+      "components": null,
+      "typeParameters": null
+    }
+  ],
+  "functions": [
+    {
+      "inputs": [],
+      "name": "get_big_bundle",
+      "output": {
+        "name": "",
+        "type": 5,
+        "typeArguments": null
+      }
+    },
+    {
+      "inputs": [
+        {
+          "name": "arg",
+          "type": 5,
+          "typeArguments": null
+        }
+      ],
+      "name": "check_big_bundle_integrity",
+      "output": {
+        "name": "",
+        "type": 2,
+        "typeArguments": null
+      }
+    },
+    {
+      "inputs": [],
+      "name": "get_unit_bundle",
+      "output": {
+        "name": "",
+        "type": 6,
+        "typeArguments": null
+      }
+    },
+    {
+      "inputs": [
+        {
+          "name": "arg",
+          "type": 6,
+          "typeArguments": null
+        }
+      ],
+      "name": "check_unit_bundle_integrity",
+      "output": {
+        "name": "",
+        "type": 2,
+        "typeArguments": null
+      }
+    }
+  ],
+  "loggedTypes": []
+}

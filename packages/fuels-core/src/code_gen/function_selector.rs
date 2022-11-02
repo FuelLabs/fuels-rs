@@ -66,7 +66,7 @@ fn resolve_arg(arg: &ParamType) -> String {
         }
         ParamType::Vector(el_type) => {
             let inner = resolve_arg(el_type);
-            format!("s<{inner}>(s<{inner}>(u64,u64),u64)")
+            format!("s<{inner}>(s<{inner}>(rawptr,u64),u64)")
         }
     }
 }
@@ -126,6 +126,15 @@ mod tests {
         let selector = resolve_fn_signature("some_fun", &inputs);
 
         assert_eq!(selector, format!("some_fun(s<u32>(u64,u32))"));
+    }
+
+    #[test]
+    fn handles_vectors() {
+        let inputs = [ParamType::Vector(Box::new(ParamType::U32))];
+
+        let selector = resolve_fn_signature("some_fun", &inputs);
+
+        assert_eq!(selector, "some_fun(s<u32>(s<u32>(rawptr,u64),u64))")
     }
 
     #[test]

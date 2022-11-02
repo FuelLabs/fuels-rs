@@ -1,0 +1,22 @@
+{
+  "types": [
+    {
+      "typeId": 0,
+      "type": "bool",
+      "components": null,
+      "typeParameters": null
+    }
+  ],
+  "functions": [
+    {
+      "inputs": [],
+      "name": "main",
+      "output": {
+        "name": "",
+        "type": 0,
+        "typeArguments": null
+      }
+    }
+  ],
+  "loggedTypes": []
+}

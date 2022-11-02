@@ -25,7 +25,7 @@ enum EnumWGeneric<N> {
 
 struct MegaExample<T, U> {
     a: ([U; 2], T),
-    b: ([EnumWGeneric<StructWTupleGeneric<StructWArrayGeneric<PassTheGenericOn<T>>>>; 1], u32),
+    b: Vec<([EnumWGeneric<StructWTupleGeneric<StructWArrayGeneric<PassTheGenericOn<T>>>>; 1], u32)>,
 }
 
 abi MyContract {
@@ -36,7 +36,7 @@ abi MyContract {
 
     fn enum_w_generic(arg1: EnumWGeneric<u64>) -> EnumWGeneric<u64>;
 
-    fn complex_test(arg1: MegaExample<str[2], b256>) -> MegaExample<str[2], b256>;
+    fn complex_test(arg1: MegaExample<str[2], b256>);
 }
 
 impl MyContract for Contract {
@@ -93,7 +93,5 @@ impl MyContract for Contract {
         EnumWGeneric::b(10)
     }
 
-    fn complex_test(arg1: MegaExample<str[2], b256>) -> MegaExample<str[2], b256> {
-        arg1
-    }
+    fn complex_test(arg1: MegaExample<str[2], b256>) {}
 }

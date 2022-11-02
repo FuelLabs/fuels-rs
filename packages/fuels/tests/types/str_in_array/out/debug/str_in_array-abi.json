@@ -1,0 +1,82 @@
+{
+  "types": [
+    {
+      "typeId": 0,
+      "type": "[_; 1]",
+      "components": [
+        {
+          "name": "__array_element",
+          "type": 2,
+          "typeArguments": null
+        }
+      ],
+      "typeParameters": null
+    },
+    {
+      "typeId": 1,
+      "type": "[_; 3]",
+      "components": [
+        {
+          "name": "__array_element",
+          "type": 2,
+          "typeArguments": null
+        }
+      ],
+      "typeParameters": null
+    },
+    {
+      "typeId": 2,
+      "type": "str[3]",
+      "components": null,
+      "typeParameters": null
+    }
+  ],
+  "functions": [
+    {
+      "inputs": [
+        {
+          "name": "a",
+          "type": 1,
+          "typeArguments": null
+        }
+      ],
+      "name": "take_array_string_shuffle",
+      "output": {
+        "name": "",
+        "type": 1,
+        "typeArguments": null
+      }
+    },
+    {
+      "inputs": [
+        {
+          "name": "a",
+          "type": 1,
+          "typeArguments": null
+        }
+      ],
+      "name": "take_array_string_return_single",
+      "output": {
+        "name": "",
+        "type": 0,
+        "typeArguments": null
+      }
+    },
+    {
+      "inputs": [
+        {
+          "name": "a",
+          "type": 1,
+          "typeArguments": null
+        }
+      ],
+      "name": "take_array_string_return_single_element",
+      "output": {
+        "name": "",
+        "type": 2,
+        "typeArguments": null
+      }
+    }
+  ],
+  "loggedTypes": []
+}

@@ -7,14 +7,18 @@ use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
 use fuel_gql_client::client::schema;
 use fuel_gql_client::fuel_vm::prelude::GTFArgs;
 use fuel_gql_client::{
-    client::{schema::coin::Coin, types::TransactionResponse, PaginatedResult, PaginationRequest},
+    client::{
+        schema::coin::Coin, schema::message::Message as InputMessage, types::TransactionResponse,
+        PaginatedResult, PaginationRequest,
+    },
     fuel_tx::{
-        AssetId, Bytes32, ContractId, Input, Output, Receipt, Transaction, TransactionFee,
-        TxPointer, UtxoId, Witness,
+        AssetId, Bytes32, Cacheable, ContractId, Input, Output, Receipt, TransactionFee, TxPointer,
+        UtxoId, Witness,
     },
     fuel_vm::{consts::REG_ONE, prelude::Opcode},
 };
 use fuel_types::bytes::WORD_SIZE;
+use fuels_core::tx::{field, Chargeable, Script, Transaction, UniqueIdentifier};
 use fuels_core::{constants::BASE_ASSET_ID, parameters::TxParameters};
 use fuels_types::bech32::{Bech32Address, Bech32ContractId, FUEL_BECH32_HRP};
 use fuels_types::errors::Error;
@@ -204,6 +208,16 @@ impl Wallet {
             .map_err(Into::into)
     }
 
+    /// Get some spendable messages owned by the wallet.
+    /// The returned messages are actual messages that can be spent. The number
+    /// of messages (UXTOs) is optimized to prevent dust accumulation.
+    pub async fn get_spendable_messages(&self) -> Result<Vec<InputMessage>, Error> {
+        self.get_provider()?
+            .get_spendable_messages(&self.address)
+            .await
+            .map_err(Into::into)
+    }
+
     /// Get the balance of all spendable coins `asset_id` for address `address`. This is different
     /// from getting coins because we are just returning a number (the sum of UTXOs amount) instead
     /// of the UTXOs.
@@ -229,7 +243,6 @@ impl Wallet {
     }
 
     pub async fn get_inputs_for_messages(&self, witness_index: u8) -> Result<Vec<Input>, Error> {
-
         let messages = self.get_messages().await?;
 
         let inputs: Vec<Input> = messages
@@ -240,7 +253,7 @@ impl Wallet {
                     &message.recipient.clone().into(),
                     message.nonce.into(),
                     message.amount.0,
-                    &message.data.0
+                    &message.data.0,
                 );
                 Input::message_signed(
                     message_id,
@@ -249,7 +262,7 @@ impl Wallet {
                     message.amount.0,
                     0,
                     witness_index,
-                    message.data.0.0,
+                    message.data.into(),
                 )
             })
             .collect();
@@ -269,26 +282,20 @@ impl Wallet {
     }
 
     /// Craft a transaction used to transfer funds between two addresses.
-    pub fn build_transfer_tx(
-        inputs: &[Input],
-        outputs: &[Output],
-        params: TxParameters,
-    ) -> Transaction {
+    pub fn build_transfer_tx(inputs: &[Input], outputs: &[Output], params: TxParameters) -> Script {
         // This script contains a single Opcode that returns immediately (RET)
         // since all this transaction does is move Inputs and Outputs around.
         let script = Opcode::RET(REG_ONE).to_bytes().to_vec();
-        Transaction::Script {
-            gas_price: params.gas_price,
-            gas_limit: params.gas_limit,
-            maturity: params.maturity,
-            receipts_root: Default::default(),
+        Transaction::script(
+            params.gas_price,
+            params.gas_limit,
+            params.maturity,
             script,
-            script_data: vec![],
-            inputs: inputs.to_vec(),
-            outputs: outputs.to_vec(),
-            witnesses: vec![],
-            metadata: None,
-        }
+            vec![],
+            inputs.to_vec(),
+            outputs.to_vec(),
+            vec![],
+        )
     }
 
     /// Craft a transaction used to transfer funds to a contract.
@@ -299,15 +306,15 @@ impl Wallet {
         inputs: &[Input],
         outputs: &[Output],
         params: TxParameters,
-    ) -> Transaction {
+    ) -> Script {
         let script_data: Vec<u8> = [
             to.to_vec(),
             amount.to_be_bytes().to_vec(),
             asset_id.to_vec(),
         ]
-            .into_iter()
-            .flatten()
-            .collect();
+        .into_iter()
+        .flatten()
+        .collect();
 
         // This script loads:
         //  - a pointer to the contract id,
@@ -323,21 +330,19 @@ impl Wallet {
             Opcode::TR(0x10, 0x12, 0x13),
             Opcode::RET(REG_ONE),
         ]
-            .into_iter()
-            .collect();
+        .into_iter()
+        .collect();
 
-        Transaction::Script {
-            gas_price: params.gas_price,
-            gas_limit: params.gas_limit,
-            maturity: params.maturity,
-            receipts_root: Default::default(),
+        Transaction::script(
+            params.gas_price,
+            params.gas_limit,
+            params.maturity,
             script,
             script_data,
-            inputs: inputs.to_vec(),
-            outputs: outputs.to_vec(),
-            witnesses: vec![],
-            metadata: None,
-        }
+            inputs.to_vec(),
+            outputs.to_vec(),
+            vec![],
+        )
     }
 }
 
@@ -399,10 +404,10 @@ impl WalletUnlocked {
         password: S,
         provider: Option<Provider>,
     ) -> Result<(Self, String), WalletError>
-        where
-            P: AsRef<Path>,
-            R: Rng + CryptoRng + rand_core::CryptoRng,
-            S: AsRef<[u8]>,
+    where
+        P: AsRef<Path>,
+        R: Rng + CryptoRng + rand_core::CryptoRng,
+        S: AsRef<[u8]>,
     {
         let (secret, uuid) = eth_keystore::new(dir, rng, password)?;
 
@@ -416,9 +421,9 @@ impl WalletUnlocked {
     /// Encrypts the wallet's private key with the given password and saves it
     /// to the given path.
     pub fn encrypt<P, S>(&self, dir: P, password: S) -> Result<String, WalletError>
-        where
-            P: AsRef<Path>,
-            S: AsRef<[u8]>,
+    where
+        P: AsRef<Path>,
+        S: AsRef<[u8]>,
     {
         let mut rng = rand::thread_rng();
 
@@ -436,9 +441,9 @@ impl WalletUnlocked {
         password: S,
         provider: Option<Provider>,
     ) -> Result<Self, WalletError>
-        where
-            P: AsRef<Path>,
-            S: AsRef<[u8]>,
+    where
+        P: AsRef<Path>,
+        S: AsRef<[u8]>,
     {
         let secret = eth_keystore::decrypt_key(keypath, password)?;
         let secret_key = unsafe { SecretKey::from_slice_unchecked(&secret) };
@@ -452,9 +457,9 @@ impl WalletUnlocked {
     ///
     /// Requires contract inputs to be at the start of the transactions inputs vec
     /// so that their indexes are retained
-    pub async fn add_fee_coins(
+    pub async fn add_fee_coins<Tx: Chargeable + field::Inputs + field::Outputs>(
         &self,
-        tx: &mut Transaction,
+        tx: &mut Tx,
         previous_base_amount: u64,
         witness_index: u8,
     ) -> Result<(), Error> {
@@ -463,7 +468,7 @@ impl WalletUnlocked {
             .chain_info()
             .await?
             .consensus_parameters;
-        let transaction_fee = TransactionFee::checked_from_tx(&consensus_parameters.into(), &*tx)
+        let transaction_fee = TransactionFee::checked_from_tx(&consensus_parameters.into(), tx)
             .expect("Error calculating TransactionFee");
 
         let (base_asset_inputs, remaining_inputs): (Vec<_>, Vec<_>) =
@@ -537,24 +542,8 @@ impl WalletUnlocked {
             vec![]
         };
 
-        match tx {
-            Transaction::Script {
-                ref mut inputs,
-                ref mut outputs,
-                ..
-            } => {
-                *inputs = adjusted_inputs;
-                outputs.extend(change_output);
-            }
-            Transaction::Create {
-                ref mut inputs,
-                ref mut outputs,
-                ..
-            } => {
-                *inputs = adjusted_inputs;
-                outputs.extend(change_output);
-            }
-        };
+        *tx.inputs_mut() = adjusted_inputs;
+        tx.outputs_mut().extend(change_output);
 
         Ok(())
     }
@@ -700,7 +689,7 @@ impl WalletUnlocked {
             predicate_data,
             tx_parameters,
         )
-            .await
+        .await
     }
 
     /// Unconditionally transfers `balance` of type `asset_id` to
@@ -757,9 +746,10 @@ impl WalletUnlocked {
         self.add_fee_coins(&mut tx, base_amount, 0).await?;
         self.sign_transaction(&mut tx).await?;
 
+        let tx_id = tx.id();
         let receipts = self.get_provider()?.send_transaction(&tx).await?;
 
-        Ok((tx.id().to_string(), receipts))
+        Ok((tx_id.to_string(), receipts))
     }
 }
 
@@ -777,7 +767,10 @@ impl Signer for WalletUnlocked {
         Ok(sig)
     }
 
-    async fn sign_transaction(&self, tx: &mut Transaction) -> Result<Signature, Self::Error> {
+    async fn sign_transaction<Tx: Cacheable + UniqueIdentifier + field::Witnesses + Send>(
+        &self,
+        tx: &mut Tx,
+    ) -> Result<Signature, Self::Error> {
         let id = tx.id();
 
         // Safety: `Message::from_bytes_unchecked` is unsafe because
@@ -790,13 +783,12 @@ impl Signer for WalletUnlocked {
 
         let witness = vec![Witness::from(sig.as_ref())];
 
-        let mut witnesses: Vec<Witness> = tx.witnesses().to_vec();
+        let witnesses: &mut Vec<Witness> = tx.witnesses_mut();
 
         match witnesses.len() {
-            0 => tx.set_witnesses(witness),
+            0 => *witnesses = witness,
             _ => {
                 witnesses.extend(witness);
-                tx.set_witnesses(witnesses)
             }
         }
 
@@ -839,6 +831,7 @@ mod tests {
     use fuel_core::service::{Config, FuelService};
     use fuel_gql_client::client::FuelClient;
     use fuel_gql_client::fuel_tx::Address;
+    use fuels_core::tx::field::{Inputs, Outputs};
     use fuels_test_helpers::{launch_custom_provider_and_get_wallets, AssetConfig, WalletsConfig};
     use fuels_types::errors::Error;
     use tempfile::tempdir;
@@ -1042,7 +1035,7 @@ mod tests {
         let expected_outputs = vec![Output::change(wallet.address().into(), 0, BASE_ASSET_ID)];
 
         assert!(compare_inputs(tx.inputs(), &mut expected_inputs));
-        assert_eq!(tx.outputs(), expected_outputs);
+        assert_eq!(tx.outputs(), &expected_outputs);
 
         Ok(())
     }
@@ -1078,15 +1071,15 @@ mod tests {
             0,
             0,
         ))
-            .take(3)
-            .collect::<Vec<_>>();
+        .take(3)
+        .collect::<Vec<_>>();
         let expected_outputs = vec![
             Output::coin(Address::zeroed(), base_amount, BASE_ASSET_ID),
             Output::change(wallet.address().into(), 0, BASE_ASSET_ID),
         ];
 
         assert!(compare_inputs(tx.inputs(), &mut expected_inputs));
-        assert_eq!(tx.outputs(), expected_outputs);
+        assert_eq!(tx.outputs(), &expected_outputs);
 
         Ok(())
     }

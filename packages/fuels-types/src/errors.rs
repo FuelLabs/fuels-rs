@@ -3,7 +3,7 @@ use core::str::Utf8Error;
 use std::array::TryFromSliceError;
 
 pub type Result<T> = core::result::Result<T, Error>;
-use fuel_tx::{Receipt, CheckError};
+use fuel_tx::{CheckError, Receipt};
 use strum::ParseError;
 use thiserror::Error;
 

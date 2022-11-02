@@ -16,7 +16,7 @@ mod tests {
 
         let selector = resolve_fn_selector(fn_name, &inputs);
 
-        assert_eq!(selector, [0, 0, 0, 0, 93, 206, 142, 135]);
+        assert_eq!(selector, [0, 0, 0, 0, 7, 161, 3, 203]);
         // ANCHOR_END: example_fn_selector
     }
 
