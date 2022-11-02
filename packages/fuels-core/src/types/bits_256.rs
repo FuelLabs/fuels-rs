@@ -51,9 +51,11 @@ impl Tokenizable for Bits256 {
 }
 
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
+// ANCHOR: evm_address
 pub struct EvmAddress {
     value: Bits256,
 }
+// ANCHOR_END: evm_address
 
 impl EvmAddress {
     fn clear_12_bytes(bytes: [u8; 32]) -> [u8; 32] {
