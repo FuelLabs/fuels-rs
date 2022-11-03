@@ -15,7 +15,8 @@ mod tests {
         // TODO: use default provider
         let (provider, _) = setup_test_provider(vec![], vec![], None, None).await;
         // Provide `None` to all 3 other arguments so the function uses the default for each
-        let return_val = run_script_binary(path_to_bin, None, Some(provider), None).await?;
+        let return_val =
+            run_script_binary(path_to_bin, None, Some(provider), None, None, None).await?;
 
         let correct_hex =
             hex::decode("ef86afa9696cf0dc6385e2c407a6e159a1103cefb7e2ae0636fb33d3cb2a9e4a")?;
@@ -39,7 +40,8 @@ mod tests {
         );
         let (provider, _) = setup_test_provider(coins, vec![], None, None).await;
 
-        let return_val = run_script_binary(path_to_bin, None, Some(provider), None).await?;
+        let return_val =
+            run_script_binary(path_to_bin, None, Some(provider), None, None, None).await?;
 
         let correct_hex =
             hex::decode("ef86afa9696cf0dc6385e2c407a6e159a1103cefb7e2ae0636fb33d3cb2a9e4a")?;

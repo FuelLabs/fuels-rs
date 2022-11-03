@@ -114,7 +114,9 @@ pub fn generate_script_main_function(
             let mut receipts = run_script_binary(self.binary_filepath.as_str(),
                                                     Some(TxParameters::default()),
                                                     Some(provider),
-                                                    Some(script_data)
+                                                    Some(script_data),
+                                                    None, // inputs
+                                                    None // outputs
             )
             .await?;
             let output_token = get_decoded_output(#output_params, &mut receipts)?;

@@ -10,7 +10,7 @@ use fuel_gql_client::fuel_vm::{consts::REG_ONE, prelude::Opcode};
 use itertools::{chain, Itertools};
 
 use fuel_gql_client::client::schema::coin::Coin;
-use fuel_tx::{Checkable, ScriptExecutionResult, Witness};
+use fuel_tx::{Checkable, ScriptExecutionResult};
 use fuels_core::abi_decoder::ABIDecoder;
 use fuels_core::parameters::TxParameters;
 use fuels_core::Token;
@@ -455,6 +455,8 @@ pub async fn run_script_binary(
     tx_params: Option<TxParameters>,
     provider: Option<Provider>,
     script_data: Option<Vec<u8>>,
+    inputs: Option<Vec<Input>>,
+    outputs: Option<Vec<Output>>,
 ) -> Result<Vec<Receipt>, Error> {
     let script_binary = std::fs::read(binary_filepath)?;
     let provider = match provider {
@@ -467,7 +469,13 @@ pub async fn run_script_binary(
         }
         Some(provider) => provider,
     };
-    let script = build_script(script_binary, tx_params.unwrap_or_default(), script_data);
+    let script = build_script(
+        script_binary,
+        tx_params.unwrap_or_default(),
+        script_data,
+        inputs,
+        outputs,
+    );
 
     script.call(&provider).await
 }
@@ -476,6 +484,8 @@ pub fn build_script(
     script_binary: Vec<u8>,
     tx_params: TxParameters,
     script_data: Option<Vec<u8>>,
+    inputs: Option<Vec<Input>>,
+    outputs: Option<Vec<Output>>,
 ) -> Script {
     let tx = Transaction::script(
         tx_params.gas_price,
@@ -483,103 +493,14 @@ pub fn build_script(
         tx_params.maturity,
         script_binary, // Pass the compiled script into the tx
         script_data.unwrap_or_default(),
-        vec![],
-        vec![],
+        inputs.unwrap_or_default(),
+        outputs.unwrap_or_default(),
         vec![vec![].into()],
     );
 
     Script::new(tx)
 }
 
-#[derive(Default)]
-pub struct ScriptBuilder {
-    gas_price: Word,
-    gas_limit: Word,
-    maturity: Word,
-    script: Vec<u8>,
-    script_data: Vec<u8>,
-    inputs: Vec<Input>,
-    outputs: Vec<Output>,
-    witnesses: Vec<Witness>,
-    asset_id: AssetId,
-    amount: u64,
-}
-
-impl ScriptBuilder {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    pub fn set_script_data(mut self, script_data: Vec<u8>) -> ScriptBuilder {
-        self.script_data = script_data;
-        self
-    }
-
-    pub fn set_script(mut self, script: Vec<Opcode>) -> ScriptBuilder {
-        let script: Vec<u8> = script.into_iter().collect();
-        self.script = script;
-        self
-    }
-
-    pub fn set_inputs(mut self, inputs: Vec<Input>) -> ScriptBuilder {
-        self.inputs = inputs;
-        self
-    }
-
-    pub fn set_outputs(mut self, outputs: Vec<Output>) -> ScriptBuilder {
-        self.outputs = outputs;
-        self
-    }
-
-    pub fn set_gas_price(mut self, gas_price: Word) -> ScriptBuilder {
-        self.gas_price = gas_price;
-        self
-    }
-
-    pub fn set_gas_limit(mut self, gas_limit: Word) -> ScriptBuilder {
-        self.gas_limit = gas_limit;
-        self
-    }
-
-    pub fn set_maturity(mut self, maturity: Word) -> ScriptBuilder {
-        self.maturity = maturity;
-        self
-    }
-
-    pub fn set_asset_id(mut self, asset_id: AssetId) -> ScriptBuilder {
-        self.asset_id = asset_id;
-        self
-    }
-
-    pub fn set_amount(mut self, amount: u64) -> ScriptBuilder {
-        self.amount = amount;
-        self
-    }
-
-    pub async fn build(self, wallet: &WalletUnlocked) -> Result<Script, Error> {
-        let mut tx = Transaction::script(
-            self.gas_price,
-            self.gas_limit,
-            self.maturity,
-            self.script,
-            self.script_data,
-            self.inputs.to_vec(),
-            self.outputs.to_vec(),
-            self.witnesses.to_vec(),
-        );
-
-        let base_amount = if self.asset_id == AssetId::default() {
-            self.amount
-        } else {
-            0
-        };
-
-        wallet.add_fee_coins(&mut tx, base_amount, 0).await?;
-        wallet.sign_transaction(&mut tx).await?;
-
-        Ok(Script::new(tx))
-    }
-}
 #[cfg(test)]
 mod test {
     use super::*;

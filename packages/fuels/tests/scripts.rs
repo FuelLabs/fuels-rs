@@ -6,7 +6,7 @@ use fuel_gql_client::{
     },
 };
 use fuels::prelude::*;
-use fuels_contract::script::ScriptBuilder;
+use fuels_contract::script::build_script;
 use fuels_core::tx::Bytes32;
 
 #[tokio::test]
@@ -121,19 +121,15 @@ async fn test_script_interface() -> Result<(), Error> {
     .into_iter()
     .collect();
 
-    ScriptBuilder::new()
-        .set_gas_price(tx_parameters.gas_price)
-        .set_gas_limit(tx_parameters.gas_limit)
-        .set_maturity(tx_parameters.maturity)
-        .set_script(script)
-        .set_script_data(script_data)
-        .set_inputs(inputs.to_vec())
-        .set_outputs(outputs.to_vec())
-        .set_amount(amount)
-        .build(&wallet)
-        .await?
-        .call(wallet.get_provider()?)
-        .await?;
+    let script = build_script(
+        script,
+        tx_parameters,
+        Some(script_data),
+        Some(inputs),
+        Some(outputs),
+    );
+    let provider = wallet.get_provider()?;
+    let _result = script.call(provider).await;
 
     let contract_balances = wallet
         .get_provider()?
