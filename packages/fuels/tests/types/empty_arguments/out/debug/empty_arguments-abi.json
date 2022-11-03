@@ -1,0 +1,22 @@
+{
+  "types": [
+    {
+      "typeId": 0,
+      "type": "u64",
+      "components": null,
+      "typeParameters": null
+    }
+  ],
+  "functions": [
+    {
+      "inputs": [],
+      "name": "method_with_empty_argument",
+      "output": {
+        "name": "",
+        "type": 0,
+        "typeArguments": null
+      }
+    }
+  ],
+  "loggedTypes": []
+}

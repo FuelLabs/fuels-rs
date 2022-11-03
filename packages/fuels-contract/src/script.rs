@@ -1,6 +1,8 @@
 use anyhow::Result;
-use fuel_gql_client::fuel_tx::{ConsensusParameters, Receipt, Transaction};
-use fuel_gql_client::fuel_tx::{Input, Output, TxPointer, UtxoId};
+use fuel_gql_client::fuel_tx::{
+    field::Script as ScriptField, ConsensusParameters, Input, Output, Receipt, Transaction,
+    TxPointer, UtxoId,
+};
 use fuel_gql_client::fuel_types::{
     bytes::padded_len_usize, AssetId, Bytes32, ContractId, Immediate18, Word,
 };
@@ -8,7 +10,7 @@ use fuel_gql_client::fuel_vm::{consts::REG_ONE, prelude::Opcode};
 use itertools::{chain, Itertools};
 
 use fuel_gql_client::client::schema::coin::Coin;
-use fuel_tx::{Metadata, ScriptExecutionResult, Witness};
+use fuel_tx::{Checkable, ScriptExecutionResult, Witness};
 use fuels_core::parameters::TxParameters;
 use fuels_signers::provider::Provider;
 use fuels_signers::{Signer, WalletUnlocked};
@@ -33,7 +35,7 @@ struct CallParamOffsets {
 /// Script provides methods to create and a call/simulate a
 /// script transaction that carries out contract method calls
 pub struct Script {
-    pub tx: Transaction,
+    pub tx: fuels_core::tx::Script,
 }
 
 #[derive(Debug, Clone)]
@@ -43,7 +45,7 @@ pub struct CompiledScript {
 }
 
 impl Script {
-    pub fn new(tx: Transaction) -> Self {
+    pub fn new(tx: fuels_core::tx::Script) -> Self {
         Self { tx }
     }
 
@@ -365,7 +367,7 @@ impl Script {
         len_script += Opcode::LEN;
 
         ConsensusParameters::DEFAULT.tx_offset()
-            + Transaction::script_offset()
+            + fuel_tx::Script::script_offset_static()
             + padded_len_usize(len_script)
     }
 
@@ -373,8 +375,8 @@ impl Script {
     pub async fn call(self, provider: &Provider) -> Result<Vec<Receipt>, Error> {
         let chain_info = provider.chain_info().await?;
 
-        self.tx.validate_without_signature(
-            chain_info.latest_block.height.0,
+        self.tx.check_without_signatures(
+            chain_info.latest_block.header.height.0,
             &chain_info.consensus_parameters.into(),
         )?;
 
@@ -385,12 +387,12 @@ impl Script {
     pub async fn simulate(self, provider: &Provider) -> Result<Vec<Receipt>, Error> {
         let chain_info = provider.chain_info().await?;
 
-        self.tx.validate_without_signature(
-            chain_info.latest_block.height.0,
+        self.tx.check_without_signatures(
+            chain_info.latest_block.header.height.0,
             &chain_info.consensus_parameters.into(),
         )?;
 
-        let receipts = provider.dry_run(&self.tx).await?;
+        let receipts = provider.dry_run(&self.tx.clone().into()).await?;
         if receipts
             .iter()
             .any(|r|
@@ -879,13 +881,11 @@ pub struct ScriptBuilder {
     gas_price: Word,
     gas_limit: Word,
     maturity: Word,
-    receipts_root: Bytes32,
     script: Vec<u8>,
     script_data: Vec<u8>,
     inputs: Vec<Input>,
     outputs: Vec<Output>,
     witnesses: Vec<Witness>,
-    metadata: Option<Metadata>,
     asset_id: AssetId,
     amount: u64,
 }
@@ -896,13 +896,11 @@ impl ScriptBuilder {
             gas_price: 0,
             gas_limit: 0,
             maturity: 0,
-            receipts_root: Default::default(),
             script: vec![],
             script_data: vec![],
             inputs: vec![],
             outputs: vec![],
             witnesses: vec![],
-            metadata: None,
             asset_id: AssetId::default(),
             amount: 0,
         }
@@ -955,18 +953,16 @@ impl ScriptBuilder {
     }
 
     pub async fn build(self, wallet: &WalletUnlocked) -> Result<Script, Error> {
-        let mut tx = Transaction::Script {
-            gas_price: self.gas_price,
-            gas_limit: self.gas_limit,
-            maturity: self.maturity,
-            receipts_root: self.receipts_root,
-            script: self.script,
-            script_data: self.script_data,
-            inputs: self.inputs,
-            outputs: self.outputs,
-            witnesses: self.witnesses,
-            metadata: self.metadata,
-        };
+        let mut tx = Transaction::script(
+            self.gas_price,
+            self.gas_limit,
+            self.maturity,
+            self.script,
+            self.script_data,
+            self.inputs.to_vec(),
+            self.outputs.to_vec(),
+            self.witnesses.to_vec(),
+        );
 
         let base_amount = if self.asset_id == AssetId::default() {
             self.amount

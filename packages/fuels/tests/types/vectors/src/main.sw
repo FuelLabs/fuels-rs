@@ -32,7 +32,7 @@ impl MyContract for Contract {
     }
 
     fn vec_in_vec(arg: Vec<Vec<u32>>) {
-        let mut expected = ~Vec::new();
+        let mut expected = Vec::new();
         expected.push(vec_from([0, 1, 2]));
         expected.push(vec_from([0, 1, 2]));
 
@@ -40,7 +40,7 @@ impl MyContract for Contract {
     }
 
     fn struct_in_vec(arg: Vec<SomeStruct<u32>>) {
-        let mut expected = ~Vec::new();
+        let mut expected = Vec::new();
         expected.push(SomeStruct { a: 0u32 });
         expected.push(SomeStruct { a: 1u32 });
 
@@ -54,7 +54,7 @@ impl MyContract for Contract {
         assert(arg.a == expected.a);
     }
     fn array_in_vec(arg: Vec<[u64; 2]>) {
-        let mut expected = ~Vec::new();
+        let mut expected = Vec::new();
         expected.push([0, 1]);
         expected.push([0, 1]);
 
@@ -74,7 +74,7 @@ impl MyContract for Contract {
         assert(expected == arg);
     }
     fn enum_in_vec(arg: Vec<SomeEnum<u32>>) {
-        let mut expected = ~Vec::new();
+        let mut expected = Vec::new();
         expected.push(SomeEnum::a(0));
         expected.push(SomeEnum::a(1));
 
@@ -82,7 +82,7 @@ impl MyContract for Contract {
     }
 
     fn tuple_in_vec(arg: Vec<(u32, u32)>) {
-        let mut expected = ~Vec::new();
+        let mut expected = Vec::new();
         expected.push((0, 0));
         expected.push((1, 1));
 
@@ -95,9 +95,9 @@ impl MyContract for Contract {
         assert(arg == expected);
     }
     fn vec_in_a_vec_in_a_struct_in_a_vec(arg: Vec<SomeStruct<Vec<Vec<u32>>>>) {
-        let mut expected = ~Vec::new();
+        let mut expected = Vec::new();
 
-        let mut inner_vec_1 = ~Vec::new();
+        let mut inner_vec_1 = Vec::new();
 
         let inner_inner_vec_1 = vec_from([0, 1, 2]);
         inner_vec_1.push(inner_inner_vec_1);
@@ -107,7 +107,7 @@ impl MyContract for Contract {
 
         expected.push(SomeStruct { a: inner_vec_1 });
 
-        let mut inner_vec_2 = ~Vec::new();
+        let mut inner_vec_2 = Vec::new();
 
         let inner_inner_vec_3 = vec_from([6, 7, 8]);
         inner_vec_2.push(inner_inner_vec_3);

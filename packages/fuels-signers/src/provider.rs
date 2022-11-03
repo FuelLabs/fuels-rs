@@ -4,6 +4,7 @@ use std::{io, sync::Arc};
 #[cfg(feature = "fuel-core")]
 use fuel_core::service::{Config, FuelService};
 
+use fuel_gql_client::interpreter::ExecutableTransaction;
 use fuel_gql_client::{
     client::{
         schema::{
@@ -20,6 +21,7 @@ use fuels_core::constants::{DEFAULT_GAS_ESTIMATION_TOLERANCE, MAX_GAS_PER_TX};
 use std::{collections::HashMap, str::FromStr};
 use thiserror::Error;
 
+use crate::{field, UniqueIdentifier};
 use fuels_types::bech32::{Bech32Address, Bech32ContractId};
 use fuels_types::errors::Error;
 
@@ -132,12 +134,12 @@ impl Provider {
     /// ## Sending a transaction
     ///
     /// ```
-    /// use fuels::tx::Transaction;
+    /// use fuels::tx::Script;
     /// use fuels::prelude::*;
     /// async fn foo() -> Result<(), Box<dyn std::error::Error>> {
     ///   // Setup local test node
     ///   let (provider, _) = setup_test_provider(vec![], vec![], None).await;
-    ///   let tx = Transaction::default();
+    ///   let tx = Script::default();
     ///
     ///   let receipts = provider.send_transaction(&tx).await?;
     ///   dbg!(receipts);
@@ -145,7 +147,10 @@ impl Provider {
     ///   Ok(())
     /// }
     /// ```
-    pub async fn send_transaction(&self, tx: &Transaction) -> Result<Vec<Receipt>, Error> {
+    pub async fn send_transaction<Tx>(&self, tx: &Tx) -> Result<Vec<Receipt>, Error>
+    where
+        Tx: ExecutableTransaction + field::GasLimit + field::GasPrice + Into<Transaction>,
+    {
         let tolerance = 0.0;
         let TransactionCost {
             gas_used,
@@ -153,13 +158,13 @@ impl Provider {
             ..
         } = self.estimate_transaction_cost(tx, Some(tolerance)).await?;
 
-        if gas_used > tx.gas_limit() {
+        if gas_used > *tx.gas_limit() {
             return Err(Error::ProviderError(format!(
                 "gas_limit({}) is lower than the estimated gas_used({})",
                 tx.gas_limit(),
                 gas_used
             )));
-        } else if min_gas_price > tx.gas_price() {
+        } else if min_gas_price > *tx.gas_price() {
             return Err(Error::ProviderError(format!(
                 "gas_price({}) is lower than the required min_gas_price({})",
                 tx.gas_price(),
@@ -167,7 +172,7 @@ impl Provider {
             )));
         }
 
-        let (status, receipts) = self.submit_with_feedback(tx).await?;
+        let (status, receipts) = self.submit_with_feedback(&tx.clone().into()).await?;
 
         if let TransactionStatus::Failure { reason, .. } = status {
             Err(Error::RevertTransactionError(reason, receipts))
@@ -180,9 +185,9 @@ impl Provider {
         &self,
         tx: &Transaction,
     ) -> Result<(TransactionStatus, Vec<Receipt>), ProviderError> {
-        let tx_id = self.client.submit(tx).await?.0.to_string();
+        let tx_id = tx.id().to_string();
+        let status = self.client.submit_and_await_commit(tx).await?;
         let receipts = self.client.receipts(&tx_id).await?;
-        let status = self.client.transaction_status(&tx_id).await?;
 
         Ok((status, receipts))
     }
@@ -486,18 +491,21 @@ impl Provider {
     }
 
     pub async fn latest_block_height(&self) -> Result<u64, ProviderError> {
-        Ok(self.client.chain_info().await?.latest_block.height.0)
+        Ok(self.client.chain_info().await?.latest_block.header.height.0)
     }
 
     pub async fn produce_blocks(&self, amount: u64) -> io::Result<u64> {
-        self.client.produce_blocks(amount).await
+        self.client.produce_blocks(amount, None).await
     }
 
-    pub async fn estimate_transaction_cost(
+    pub async fn estimate_transaction_cost<Tx>(
         &self,
-        tx: &Transaction,
+        tx: &Tx,
         tolerance: Option<f64>,
-    ) -> Result<TransactionCost, Error> {
+    ) -> Result<TransactionCost, Error>
+    where
+        Tx: ExecutableTransaction + field::GasLimit + field::GasPrice,
+    {
         let NodeInfo { min_gas_price, .. } = self.node_info().await?;
 
         let tolerance = tolerance.unwrap_or(DEFAULT_GAS_ESTIMATION_TOLERANCE);
@@ -506,11 +514,11 @@ impl Provider {
         let gas_used = self
             .get_gas_used_with_tolerance(&dry_run_tx, tolerance)
             .await?;
-        let gas_price = std::cmp::max(tx.gas_price(), min_gas_price.0);
+        let gas_price = std::cmp::max(*tx.gas_price(), min_gas_price.0);
 
         // Update the dry_run_tx with estimated gas_used and correct gas price to calculate the total_fee
-        dry_run_tx.set_gas_price(gas_price);
-        dry_run_tx.set_gas_limit(gas_used);
+        *dry_run_tx.gas_price_mut() = gas_price;
+        *dry_run_tx.gas_limit_mut() = gas_used;
 
         let transaction_fee =
             TransactionFee::checked_from_tx(&consensus_parameters.into(), &dry_run_tx)
@@ -526,21 +534,21 @@ impl Provider {
     }
 
     // Remove limits from an existing Transaction to get an accurate gas estimation
-    fn generate_dry_run_tx(tx: &Transaction) -> Transaction {
+    fn generate_dry_run_tx<Tx: field::GasPrice + field::GasLimit + Clone>(tx: &Tx) -> Tx {
         let mut dry_run_tx = tx.clone();
         // Simulate the contract call with MAX_GAS_PER_TX to get the complete gas_used
-        dry_run_tx.set_gas_limit(MAX_GAS_PER_TX);
-        dry_run_tx.set_gas_price(0);
+        *dry_run_tx.gas_limit_mut() = MAX_GAS_PER_TX;
+        *dry_run_tx.gas_price_mut() = 0;
         dry_run_tx
     }
 
     // Increase estimated gas by the provided tolerance
-    async fn get_gas_used_with_tolerance(
+    async fn get_gas_used_with_tolerance<Tx: Into<Transaction> + Clone>(
         &self,
-        tx: &Transaction,
+        tx: &Tx,
         tolerance: f64,
     ) -> Result<u64, ProviderError> {
-        let gas_used = self.get_gas_used(&self.dry_run_no_validation(tx).await?);
+        let gas_used = self.get_gas_used(&self.dry_run_no_validation(&tx.clone().into()).await?);
         Ok((gas_used as f64 * (1.0 + tolerance)) as u64)
     }
 
@@ -595,7 +603,7 @@ mod tests {
     use fuel_core::model::Coin;
 
     use fuel_gql_client::client::types::TransactionStatus;
-    use fuel_gql_client::fuel_tx::UtxoId;
+    use fuel_gql_client::fuel_tx::{field::Maturity, Chargeable, UtxoId};
     use fuels::prelude::*;
 
     async fn setup_provider_api_test() -> (
@@ -878,14 +886,15 @@ mod tests {
             .transfer(wallet2.address(), 1, Default::default(), tx_params)
             .await?;
 
-        let expected_tresponse = provider
+        let res = provider
             .get_transaction(&tx_id)
             .await?
             .expect("could not find transaction with specified id");
 
-        assert_eq!(expected_tresponse.transaction.gas_limit(), gas_limit);
-        assert_eq!(expected_tresponse.transaction.gas_price(), gas_price);
-        assert_eq!(expected_tresponse.transaction.maturity(), maturity);
+        let script = res.transaction.as_script().cloned().unwrap();
+        assert_eq!(script.limit(), gas_limit);
+        assert_eq!(script.price(), gas_price);
+        assert_eq!(*script.maturity(), maturity);
 
         Ok(())
     }
@@ -966,7 +975,7 @@ mod tests {
                 .expect("could not find block with specified id");
 
             assert_eq!(block_id, expected_block.id.to_string());
-            assert_eq!(expected_block.time, time);
+            assert_eq!(expected_block.header.time, time);
 
             return Ok(());
         }

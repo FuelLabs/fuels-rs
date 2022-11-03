@@ -5,8 +5,10 @@ extern crate core;
 use std::net::SocketAddr;
 
 #[cfg(feature = "fuel-core-lib")]
+use fuel_chain_config::{ChainConfig, CoinConfig, MessageConfig, StateConfig};
+
+#[cfg(feature = "fuel-core-lib")]
 use fuel_core::{
-    chain_config::{ChainConfig, CoinConfig, MessageConfig, StateConfig},
     model::{Coin, CoinStatus},
     service::{DbType, FuelService},
 };
@@ -15,7 +17,7 @@ use fuel_core::{
 pub use fuel_core::service::Config;
 
 #[cfg(not(feature = "fuel-core-lib"))]
-pub use node::{get_socket_address, new_fuel_node, CoinConfig, Config, MessageConfig};
+pub use node::{get_socket_address, new_fuel_node, Config};
 
 #[cfg(not(feature = "fuel-core-lib"))]
 pub use fuel_core_interfaces::model::{Coin, CoinStatus};

@@ -1,3 +1,4 @@
+use futures_util::{stream, Stream, StreamExt};
 use std::{
     fs,
     io::Write,
@@ -21,25 +22,28 @@ pub fn discover_projects(path: &Path) -> Vec<PathBuf> {
         .collect()
 }
 
-pub fn build_recursively(path: &Path) -> impl Iterator<Item = BuildResult> {
-    discover_projects(path).into_iter().map(|path| {
-        let output = std::process::Command::new("forc")
-            .args(["build", "--path"])
-            .arg(&path)
-            .output()
-            .expect("failed to run `forc build` for example project");
+pub fn build_recursively(path: &Path, num_buf_futures: usize) -> impl Stream<Item = BuildResult> {
+    stream::iter(discover_projects(path))
+        .map(|path| async {
+            let output = tokio::process::Command::new("forc")
+                .args(["build", "--path"])
+                .arg(&path)
+                .output()
+                .await
+                .expect("failed to run `forc build` for example project");
 
-        let compilation_result = BuildOutput {
-            path,
-            stderr: String::from_utf8(output.stderr).expect("Forc output is not valid utf8"),
-        };
+            let compilation_result = BuildOutput {
+                path,
+                stderr: String::from_utf8(output.stderr).expect("Forc output is not valid utf8"),
+            };
 
-        if output.status.success() {
-            BuildResult::Success(compilation_result)
-        } else {
-            BuildResult::Failure(compilation_result)
-        }
-    })
+            if output.status.success() {
+                BuildResult::Success(compilation_result)
+            } else {
+                BuildResult::Failure(compilation_result)
+            }
+        })
+        .buffer_unordered(num_buf_futures)
 }
 
 // Check if the given directory contains `Forc.toml` at its root.
@@ -109,7 +113,7 @@ impl ResultWriter {
         self.stdout.reset()
     }
 
-    pub fn display_forc_info(&mut self) -> Result<(), std::io::Error> {
+    pub fn display_build_info(&mut self, num_buf_futures: usize) -> Result<(), std::io::Error> {
         let output = std::process::Command::new("forc")
             .args(["--version"])
             .output()?;
@@ -118,7 +122,11 @@ impl ResultWriter {
             String::from_utf8(output.stdout).expect("failed to parse forc --version output");
 
         self.write_success_bold("\nBuilding ")?;
-        self.write(&format!("projects with: `{}`\n\n", version.trim()))
+        self.write(&format!(
+            "projects with: `{}`\n         num concurrent builds: {}\n\n",
+            version.trim(),
+            num_buf_futures
+        ))
     }
 
     pub fn display_result(

@@ -1,0 +1,452 @@
+{
+  "types": [
+    {
+      "typeId": 0,
+      "type": "()",
+      "components": [],
+      "typeParameters": null
+    },
+    {
+      "typeId": 1,
+      "type": "(_, _)",
+      "components": [
+        {
+          "name": "__tuple_element",
+          "type": 11,
+          "typeArguments": null
+        },
+        {
+          "name": "__tuple_element",
+          "type": 11,
+          "typeArguments": null
+        }
+      ],
+      "typeParameters": null
+    },
+    {
+      "typeId": 2,
+      "type": "(_, _)",
+      "components": [
+        {
+          "name": "__tuple_element",
+          "type": 10,
+          "typeArguments": [
+            {
+              "name": "",
+              "type": 11,
+              "typeArguments": null
+            }
+          ]
+        },
+        {
+          "name": "__tuple_element",
+          "type": 10,
+          "typeArguments": [
+            {
+              "name": "",
+              "type": 11,
+              "typeArguments": null
+            }
+          ]
+        }
+      ],
+      "typeParameters": null
+    },
+    {
+      "typeId": 3,
+      "type": "[_; 2]",
+      "components": [
+        {
+          "name": "__array_element",
+          "type": 12,
+          "typeArguments": null
+        }
+      ],
+      "typeParameters": null
+    },
+    {
+      "typeId": 4,
+      "type": "[_; 2]",
+      "components": [
+        {
+          "name": "__array_element",
+          "type": 10,
+          "typeArguments": [
+            {
+              "name": "",
+              "type": 11,
+              "typeArguments": null
+            }
+          ]
+        }
+      ],
+      "typeParameters": null
+    },
+    {
+      "typeId": 5,
+      "type": "enum SomeEnum",
+      "components": [
+        {
+          "name": "a",
+          "type": 6,
+          "typeArguments": null
+        }
+      ],
+      "typeParameters": [
+        6
+      ]
+    },
+    {
+      "typeId": 6,
+      "type": "generic T",
+      "components": null,
+      "typeParameters": null
+    },
+    {
+      "typeId": 7,
+      "type": "raw untyped ptr",
+      "components": null,
+      "typeParameters": null
+    },
+    {
+      "typeId": 8,
+      "type": "struct RawVec",
+      "components": [
+        {
+          "name": "ptr",
+          "type": 7,
+          "typeArguments": null
+        },
+        {
+          "name": "cap",
+          "type": 12,
+          "typeArguments": null
+        }
+      ],
+      "typeParameters": [
+        6
+      ]
+    },
+    {
+      "typeId": 9,
+      "type": "struct SomeStruct",
+      "components": [
+        {
+          "name": "a",
+          "type": 6,
+          "typeArguments": null
+        }
+      ],
+      "typeParameters": [
+        6
+      ]
+    },
+    {
+      "typeId": 10,
+      "type": "struct Vec",
+      "components": [
+        {
+          "name": "buf",
+          "type": 8,
+          "typeArguments": [
+            {
+              "name": "",
+              "type": 6,
+              "typeArguments": null
+            }
+          ]
+        },
+        {
+          "name": "len",
+          "type": 12,
+          "typeArguments": null
+        }
+      ],
+      "typeParameters": [
+        6
+      ]
+    },
+    {
+      "typeId": 11,
+      "type": "u32",
+      "components": null,
+      "typeParameters": null
+    },
+    {
+      "typeId": 12,
+      "type": "u64",
+      "components": null,
+      "typeParameters": null
+    }
+  ],
+  "functions": [
+    {
+      "inputs": [
+        {
+          "name": "arg",
+          "type": 10,
+          "typeArguments": [
+            {
+              "name": "",
+              "type": 11,
+              "typeArguments": null
+            }
+          ]
+        }
+      ],
+      "name": "u32_vec",
+      "output": {
+        "name": "",
+        "type": 0,
+        "typeArguments": null
+      }
+    },
+    {
+      "inputs": [
+        {
+          "name": "arg",
+          "type": 10,
+          "typeArguments": [
+            {
+              "name": "",
+              "type": 10,
+              "typeArguments": [
+                {
+                  "name": "",
+                  "type": 11,
+                  "typeArguments": null
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "name": "vec_in_vec",
+      "output": {
+        "name": "",
+        "type": 0,
+        "typeArguments": null
+      }
+    },
+    {
+      "inputs": [
+        {
+          "name": "arg",
+          "type": 10,
+          "typeArguments": [
+            {
+              "name": "",
+              "type": 9,
+              "typeArguments": [
+                {
+                  "name": "",
+                  "type": 11,
+                  "typeArguments": null
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "name": "struct_in_vec",
+      "output": {
+        "name": "",
+        "type": 0,
+        "typeArguments": null
+      }
+    },
+    {
+      "inputs": [
+        {
+          "name": "arg",
+          "type": 9,
+          "typeArguments": [
+            {
+              "name": "",
+              "type": 10,
+              "typeArguments": [
+                {
+                  "name": "",
+                  "type": 11,
+                  "typeArguments": null
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "name": "vec_in_struct",
+      "output": {
+        "name": "",
+        "type": 0,
+        "typeArguments": null
+      }
+    },
+    {
+      "inputs": [
+        {
+          "name": "arg",
+          "type": 10,
+          "typeArguments": [
+            {
+              "name": "",
+              "type": 3,
+              "typeArguments": null
+            }
+          ]
+        }
+      ],
+      "name": "array_in_vec",
+      "output": {
+        "name": "",
+        "type": 0,
+        "typeArguments": null
+      }
+    },
+    {
+      "inputs": [
+        {
+          "name": "arg",
+          "type": 4,
+          "typeArguments": null
+        }
+      ],
+      "name": "vec_in_array",
+      "output": {
+        "name": "",
+        "type": 0,
+        "typeArguments": null
+      }
+    },
+    {
+      "inputs": [
+        {
+          "name": "arg",
+          "type": 5,
+          "typeArguments": [
+            {
+              "name": "",
+              "type": 10,
+              "typeArguments": [
+                {
+                  "name": "",
+                  "type": 11,
+                  "typeArguments": null
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "name": "vec_in_enum",
+      "output": {
+        "name": "",
+        "type": 0,
+        "typeArguments": null
+      }
+    },
+    {
+      "inputs": [
+        {
+          "name": "arg",
+          "type": 10,
+          "typeArguments": [
+            {
+              "name": "",
+              "type": 5,
+              "typeArguments": [
+                {
+                  "name": "",
+                  "type": 11,
+                  "typeArguments": null
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "name": "enum_in_vec",
+      "output": {
+        "name": "",
+        "type": 0,
+        "typeArguments": null
+      }
+    },
+    {
+      "inputs": [
+        {
+          "name": "arg",
+          "type": 10,
+          "typeArguments": [
+            {
+              "name": "",
+              "type": 1,
+              "typeArguments": null
+            }
+          ]
+        }
+      ],
+      "name": "tuple_in_vec",
+      "output": {
+        "name": "",
+        "type": 0,
+        "typeArguments": null
+      }
+    },
+    {
+      "inputs": [
+        {
+          "name": "arg",
+          "type": 2,
+          "typeArguments": null
+        }
+      ],
+      "name": "vec_in_tuple",
+      "output": {
+        "name": "",
+        "type": 0,
+        "typeArguments": null
+      }
+    },
+    {
+      "inputs": [
+        {
+          "name": "arg",
+          "type": 10,
+          "typeArguments": [
+            {
+              "name": "",
+              "type": 9,
+              "typeArguments": [
+                {
+                  "name": "",
+                  "type": 10,
+                  "typeArguments": [
+                    {
+                      "name": "",
+                      "type": 10,
+                      "typeArguments": [
+                        {
+                          "name": "",
+                          "type": 11,
+                          "typeArguments": null
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "name": "vec_in_a_vec_in_a_struct_in_a_vec",
+      "output": {
+        "name": "",
+        "type": 0,
+        "typeArguments": null
+      }
+    }
+  ],
+  "loggedTypes": []
+}

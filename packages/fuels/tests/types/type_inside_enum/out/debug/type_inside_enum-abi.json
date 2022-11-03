@@ -1,0 +1,241 @@
+{
+  "types": [
+    {
+      "typeId": 0,
+      "type": "[_; 7]",
+      "components": [
+        {
+          "name": "__array_element",
+          "type": 11,
+          "typeArguments": null
+        }
+      ],
+      "typeParameters": null
+    },
+    {
+      "typeId": 1,
+      "type": "bool",
+      "components": null,
+      "typeParameters": null
+    },
+    {
+      "typeId": 2,
+      "type": "enum EnumLevel1",
+      "components": [
+        {
+          "name": "Num",
+          "type": 10,
+          "typeArguments": null
+        },
+        {
+          "name": "check",
+          "type": 1,
+          "typeArguments": null
+        }
+      ],
+      "typeParameters": null
+    },
+    {
+      "typeId": 3,
+      "type": "enum EnumLevel2",
+      "components": [
+        {
+          "name": "El1",
+          "type": 2,
+          "typeArguments": null
+        },
+        {
+          "name": "Check",
+          "type": 1,
+          "typeArguments": null
+        }
+      ],
+      "typeParameters": null
+    },
+    {
+      "typeId": 4,
+      "type": "enum EnumLevel3",
+      "components": [
+        {
+          "name": "El2",
+          "type": 3,
+          "typeArguments": null
+        },
+        {
+          "name": "Num",
+          "type": 12,
+          "typeArguments": null
+        }
+      ],
+      "typeParameters": null
+    },
+    {
+      "typeId": 5,
+      "type": "enum Shaker",
+      "components": [
+        {
+          "name": "Cosmopolitan",
+          "type": 8,
+          "typeArguments": null
+        },
+        {
+          "name": "Mojito",
+          "type": 10,
+          "typeArguments": null
+        }
+      ],
+      "typeParameters": null
+    },
+    {
+      "typeId": 6,
+      "type": "enum SomeEnum",
+      "components": [
+        {
+          "name": "SomeStr",
+          "type": 7,
+          "typeArguments": null
+        },
+        {
+          "name": "SomeArr",
+          "type": 0,
+          "typeArguments": null
+        }
+      ],
+      "typeParameters": null
+    },
+    {
+      "typeId": 7,
+      "type": "str[4]",
+      "components": null,
+      "typeParameters": null
+    },
+    {
+      "typeId": 8,
+      "type": "struct Recipe",
+      "components": [
+        {
+          "name": "ice",
+          "type": 12,
+          "typeArguments": null
+        },
+        {
+          "name": "sugar",
+          "type": 9,
+          "typeArguments": null
+        }
+      ],
+      "typeParameters": null
+    },
+    {
+      "typeId": 9,
+      "type": "u16",
+      "components": null,
+      "typeParameters": null
+    },
+    {
+      "typeId": 10,
+      "type": "u32",
+      "components": null,
+      "typeParameters": null
+    },
+    {
+      "typeId": 11,
+      "type": "u64",
+      "components": null,
+      "typeParameters": null
+    },
+    {
+      "typeId": 12,
+      "type": "u8",
+      "components": null,
+      "typeParameters": null
+    }
+  ],
+  "functions": [
+    {
+      "inputs": [
+        {
+          "name": "my_enum",
+          "type": 6,
+          "typeArguments": null
+        }
+      ],
+      "name": "str_inside_enum",
+      "output": {
+        "name": "",
+        "type": 6,
+        "typeArguments": null
+      }
+    },
+    {
+      "inputs": [
+        {
+          "name": "my_enum",
+          "type": 6,
+          "typeArguments": null
+        }
+      ],
+      "name": "arr_inside_enum",
+      "output": {
+        "name": "",
+        "type": 6,
+        "typeArguments": null
+      }
+    },
+    {
+      "inputs": [
+        {
+          "name": "c",
+          "type": 11,
+          "typeArguments": null
+        }
+      ],
+      "name": "return_struct_inside_enum",
+      "output": {
+        "name": "",
+        "type": 5,
+        "typeArguments": null
+      }
+    },
+    {
+      "inputs": [
+        {
+          "name": "s",
+          "type": 5,
+          "typeArguments": null
+        }
+      ],
+      "name": "take_struct_inside_enum",
+      "output": {
+        "name": "",
+        "type": 11,
+        "typeArguments": null
+      }
+    },
+    {
+      "inputs": [],
+      "name": "get_nested_enum",
+      "output": {
+        "name": "",
+        "type": 4,
+        "typeArguments": null
+      }
+    },
+    {
+      "inputs": [
+        {
+          "name": "e",
+          "type": 4,
+          "typeArguments": null
+        }
+      ],
+      "name": "check_nested_enum_integrity",
+      "output": {
+        "name": "",
+        "type": 1,
+        "typeArguments": null
+      }
+    }
+  ],
+  "loggedTypes": []
+}

@@ -21,7 +21,7 @@ const BASE_TOKEN: b256 = 0x9ae5b658754e096e4d681c548daf46354495a437cc61492599e33
 
 impl LiquidityPool for Contract {
     fn deposit(recipient: Address) {
-        assert(~ContractId::from(BASE_TOKEN) == msg_asset_id());
+        assert(ContractId::from(BASE_TOKEN) == msg_asset_id());
         assert(0 < msg_amount());
 
         // Mint two times the amount.
@@ -39,6 +39,6 @@ impl LiquidityPool for Contract {
         let amount_to_transfer = msg_amount() / 2;
 
         // Transfer base token to recipient.
-        transfer_to_address(amount_to_transfer, ~ContractId::from(BASE_TOKEN), recipient);
+        transfer_to_address(amount_to_transfer, ContractId::from(BASE_TOKEN), recipient);
     }
 }
