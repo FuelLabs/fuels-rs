@@ -204,3 +204,26 @@ async fn main_function_generic_arguments() -> Result<(), Error> {
     // ANCHOR_END: script_with_generic_arguments
     Ok(())
 }
+
+#[tokio::test]
+async fn main_function_option_result() -> Result<(), Error> {
+    // The abigen is used for the same purpose as with contracts (Rust bindings)
+    script_abigen!(
+        MyScript,
+        "packages/fuels/tests/scripts/script_with_option_result/out/debug\
+        /script_with_option_result-abi.json"
+    );
+    let wallet = launch_provider_and_get_wallet().await;
+    let bin_path =
+        "../fuels/tests/scripts/script_with_option_result/out/debug/script_with_option_result.bin";
+    let instance = MyScript::new(wallet, bin_path);
+
+    let result = instance.main(Some(42), None).await?;
+    assert_eq!(result, Ok(Some(true)));
+    let result = instance.main(Some(987), None).await?;
+    assert_eq!(result, Ok(None));
+    let expected_error = Err(TestError::ZimZam("error".try_into().unwrap()));
+    let result = instance.main(None, Some(987)).await?;
+    assert_eq!(result, expected_error);
+    Ok(())
+}
