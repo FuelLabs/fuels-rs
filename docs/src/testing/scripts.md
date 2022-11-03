@@ -4,7 +4,7 @@
 - The path to the generated binary file (`.bin`);
 - The transactions parameters as an `Option`;
 - The provider as an `Option`;
-- The script data as an Option.
+- The script data as an `Option`.
 
 ````rust,ignore
 {{#include ../../../packages/fuels-test-helpers/src/script.rs:run_compiled_script}}
