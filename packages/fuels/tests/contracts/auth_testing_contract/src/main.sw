@@ -1,6 +1,6 @@
 contract;
 
-use std::chain::auth::{AuthError, caller_is_external, msg_sender};
+use std::auth::{AuthError, caller_is_external, msg_sender};
 use auth_testing_abi::*;
 
 impl AuthTesting for Contract {
