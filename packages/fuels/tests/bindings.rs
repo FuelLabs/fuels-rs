@@ -495,9 +495,7 @@ async fn compile_bindings_evm_address_input() {
     let b256 = Bits256(hasher.finalize().into());
     let arg = EvmAddress::from(b256);
 
-    let call_handler = contract_instance
-        .methods()
-        .takes_evm_address(arg);
+    let call_handler = contract_instance.methods().takes_evm_address(arg);
     // ANCHOR: evm_address_arg
 
     let encoded_args = call_handler.contract_call.encoded_args.resolve(0);

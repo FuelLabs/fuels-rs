@@ -1244,7 +1244,6 @@ async fn test_identity_with_two_contracts() -> Result<(), Box<dyn std::error::Er
     Ok(())
 }
 
-/*
 #[tokio::test]
 async fn generics_test() -> anyhow::Result<()> {
     setup_contract_test!(
@@ -1346,7 +1345,6 @@ async fn generics_test() -> anyhow::Result<()> {
 
     Ok(())
 }
- */
 
 #[tokio::test]
 async fn test_vector() -> Result<(), Error> {
