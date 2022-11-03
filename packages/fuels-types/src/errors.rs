@@ -3,7 +3,7 @@ use core::str::Utf8Error;
 use std::array::TryFromSliceError;
 
 pub type Result<T> = core::result::Result<T, Error>;
-use fuel_tx::{Receipt, ValidationError};
+use fuel_tx::{CheckError, Receipt};
 use strum::ParseError;
 use thiserror::Error;
 
@@ -56,7 +56,7 @@ pub enum Error {
     #[error("Provider error: {0}")]
     ProviderError(String),
     #[error("Validation error: {0}")]
-    ValidationError(#[from] ValidationError),
+    ValidationError(#[from] CheckError),
     #[error("Revert transaction error: {}, receipts: {:?}", .0, .1)]
     RevertTransactionError(String, Vec<Receipt>),
 }

@@ -1,0 +1,155 @@
+{
+  "types": [
+    {
+      "typeId": 0,
+      "type": "b256",
+      "components": null,
+      "typeParameters": null
+    },
+    {
+      "typeId": 1,
+      "type": "bool",
+      "components": null,
+      "typeParameters": null
+    },
+    {
+      "typeId": 2,
+      "type": "struct AllStruct",
+      "components": [
+        {
+          "name": "some_struct",
+          "type": 6,
+          "typeArguments": null
+        }
+      ],
+      "typeParameters": null
+    },
+    {
+      "typeId": 3,
+      "type": "struct CallData",
+      "components": [
+        {
+          "name": "memory_address",
+          "type": 5,
+          "typeArguments": null
+        },
+        {
+          "name": "num_coins_to_forward",
+          "type": 8,
+          "typeArguments": null
+        },
+        {
+          "name": "asset_id_of_coins_to_forward",
+          "type": 4,
+          "typeArguments": null
+        },
+        {
+          "name": "amount_of_gas_to_forward",
+          "type": 8,
+          "typeArguments": null
+        }
+      ],
+      "typeParameters": null
+    },
+    {
+      "typeId": 4,
+      "type": "struct ContractId",
+      "components": [
+        {
+          "name": "value",
+          "type": 0,
+          "typeArguments": null
+        }
+      ],
+      "typeParameters": null
+    },
+    {
+      "typeId": 5,
+      "type": "struct MemoryAddress",
+      "components": [
+        {
+          "name": "contract_id",
+          "type": 4,
+          "typeArguments": null
+        },
+        {
+          "name": "function_selector",
+          "type": 8,
+          "typeArguments": null
+        },
+        {
+          "name": "function_data",
+          "type": 8,
+          "typeArguments": null
+        }
+      ],
+      "typeParameters": null
+    },
+    {
+      "typeId": 6,
+      "type": "struct SomeStruct",
+      "components": [
+        {
+          "name": "par1",
+          "type": 7,
+          "typeArguments": null
+        }
+      ],
+      "typeParameters": null
+    },
+    {
+      "typeId": 7,
+      "type": "u32",
+      "components": null,
+      "typeParameters": null
+    },
+    {
+      "typeId": 8,
+      "type": "u64",
+      "components": null,
+      "typeParameters": null
+    }
+  ],
+  "functions": [
+    {
+      "inputs": [],
+      "name": "get_struct",
+      "output": {
+        "name": "",
+        "type": 2,
+        "typeArguments": null
+      }
+    },
+    {
+      "inputs": [
+        {
+          "name": "arg",
+          "type": 2,
+          "typeArguments": null
+        }
+      ],
+      "name": "check_struct_integrity",
+      "output": {
+        "name": "",
+        "type": 1,
+        "typeArguments": null
+      }
+    },
+    {
+      "inputs": [
+        {
+          "name": "call_data",
+          "type": 3,
+          "typeArguments": null
+        }
+      ],
+      "name": "nested_struct_with_reserved_keyword_substring",
+      "output": {
+        "name": "",
+        "type": 3,
+        "typeArguments": null
+      }
+    }
+  ],
+  "loggedTypes": []
+}

@@ -9,7 +9,7 @@ pub const DEFAULT_MATURITY: u64 = 0;
 // ANCHOR: default_call_parameters
 pub const DEFAULT_CALL_PARAMS_AMOUNT: u64 = 0;
 // Bytes representation of the asset ID of the "base" asset used for gas fees.
-pub const BASE_ASSET_ID: AssetId = AssetId::new([0u8; 32]);
+pub const BASE_ASSET_ID: AssetId = AssetId::BASE;
 // ANCHOR_END: default_call_parameters
 
 pub const BASE_MESSAGE_ID: MessageId = MessageId::zeroed();

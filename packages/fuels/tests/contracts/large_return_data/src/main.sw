@@ -52,6 +52,6 @@ impl TestContract for Contract {
 
     fn get_contract_id() -> ContractId {
         let id = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF;
-        ~ContractId::from(id)
+        ContractId::from(id)
     }
 }
