@@ -16,9 +16,9 @@ env:
   CARGO_TERM_COLOR: always
   DASEL_VERSION: https://github.com/TomWright/dasel/releases/download/v1.24.3/dasel_linux_amd64
   RUSTFLAGS: "-D warnings"
-  FUEL_CORE_VERSION: 0.13.1
+  FUEL_CORE_VERSION: 0.13.2
   RUST_VERSION: 1.64.0
-  FORC_VERSION: 0.29.0
+  FORC_VERSION: 0.30.0
 
 jobs:
   setup-test-projects:
@@ -39,32 +39,32 @@ jobs:
         run: |
           git config --global core.bigfilethreshold 100m
 
-#      - name: Install Forc
-#        run: |
-#          curl -sSLf https://github.com/FuelLabs/sway/releases/download/v${{ env.FORC_VERSION }}/forc-binaries-linux_amd64.tar.gz -L -o forc.tar.gz
-#          tar -xvf forc.tar.gz
-#          chmod +x forc-binaries/forc
-#          mv forc-binaries/forc /usr/local/bin/forc
-#
-#      - name: Build Sway Examples
-#        uses: actions-rs/cargo@v1
-#        with:
-#          command: run
-#          args: --bin build-test-projects
+      - name: Install Forc
+        run: |
+          curl -sSLf https://github.com/FuelLabs/sway/releases/download/v${{ env.FORC_VERSION }}/forc-binaries-linux_amd64.tar.gz -L -o forc.tar.gz
+          tar -xvf forc.tar.gz
+          chmod +x forc-binaries/forc
+          mv forc-binaries/forc /usr/local/bin/forc
 
-#      - uses: actions/upload-artifact@v2
-#        with:
-#          retention-days: 2
-#          name: sway-examples
-#          # cache only the sway build artifacts, skip all src files
-#          path: |
-#            packages/fuels/tests
-#            !packages/fuels/tests/*.rs
-#            !packages/fuels/tests/**/*.rs
-#            !packages/fuels/tests/**/*.sw
-#            !packages/fuels/tests/**/Forc.toml
-#            !packages/fuels/tests/**/Forc.lock
-#            !packages/fuels/tests/.gitignore
+      - name: Build Sway Examples
+        uses: actions-rs/cargo@v1
+        with:
+          command: run
+          args: --bin build-test-projects
+
+      - uses: actions/upload-artifact@v2
+        with:
+          retention-days: 2
+          name: sway-examples
+          # cache only the sway build artifacts, skip all src files
+          path: |
+            packages/fuels/tests
+            !packages/fuels/tests/*.rs
+            !packages/fuels/tests/**/*.rs
+            !packages/fuels/tests/**/*.sw
+            !packages/fuels/tests/**/Forc.toml
+            !packages/fuels/tests/**/Forc.lock
+            !packages/fuels/tests/.gitignore
 
   get-workspace-members:
     runs-on: ubuntu-latest
@@ -140,7 +140,7 @@ jobs:
         uses: baptiste0928/cargo-install@v1
         with:
           crate: webassembly-test-runner
-          cache-key: '${{ matrix.command }} ${{ matrix.args }} ${{ matrix.package }}'
+          cache-key: "${{ matrix.command }} ${{ matrix.args }} ${{ matrix.package }}"
 
       # TODO: Enable WASM tests
       # - name: Test WASM package
@@ -166,12 +166,12 @@ jobs:
         if: ${{ matrix.command == 'clippy' }}
         run: rustup component add clippy
 
-#      - name: Download sway example artifacts
-#        if: ${{ matrix.command == 'test' || matrix.command == 'clippy' }}
-#        uses: actions/download-artifact@v3
-#        with:
-#          name: sway-examples
-#          path: packages/fuels/tests/
+      - name: Download sway example artifacts
+        if: ${{ matrix.command == 'test' || matrix.command == 'clippy' }}
+        uses: actions/download-artifact@v3
+        with:
+          name: sway-examples
+          path: packages/fuels/tests/
 
       - name: Cargo (workspace-level)
         if: ${{ !matrix.package }}
