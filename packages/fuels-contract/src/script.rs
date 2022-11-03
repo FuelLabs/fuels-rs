@@ -491,6 +491,95 @@ pub fn build_script(
     Script::new(tx)
 }
 
+#[derive(Default)]
+pub struct ScriptBuilder {
+    gas_price: Word,
+    gas_limit: Word,
+    maturity: Word,
+    script: Vec<u8>,
+    script_data: Vec<u8>,
+    inputs: Vec<Input>,
+    outputs: Vec<Output>,
+    witnesses: Vec<Witness>,
+    asset_id: AssetId,
+    amount: u64,
+}
+
+impl ScriptBuilder {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn set_script_data(mut self, script_data: Vec<u8>) -> ScriptBuilder {
+        self.script_data = script_data;
+        self
+    }
+
+    pub fn set_script(mut self, script: Vec<Opcode>) -> ScriptBuilder {
+        let script: Vec<u8> = script.into_iter().collect();
+        self.script = script;
+        self
+    }
+
+    pub fn set_inputs(mut self, inputs: Vec<Input>) -> ScriptBuilder {
+        self.inputs = inputs;
+        self
+    }
+
+    pub fn set_outputs(mut self, outputs: Vec<Output>) -> ScriptBuilder {
+        self.outputs = outputs;
+        self
+    }
+
+    pub fn set_gas_price(mut self, gas_price: Word) -> ScriptBuilder {
+        self.gas_price = gas_price;
+        self
+    }
+
+    pub fn set_gas_limit(mut self, gas_limit: Word) -> ScriptBuilder {
+        self.gas_limit = gas_limit;
+        self
+    }
+
+    pub fn set_maturity(mut self, maturity: Word) -> ScriptBuilder {
+        self.maturity = maturity;
+        self
+    }
+
+    pub fn set_asset_id(mut self, asset_id: AssetId) -> ScriptBuilder {
+        self.asset_id = asset_id;
+        self
+    }
+
+    pub fn set_amount(mut self, amount: u64) -> ScriptBuilder {
+        self.amount = amount;
+        self
+    }
+
+    pub async fn build(self, wallet: &WalletUnlocked) -> Result<Script, Error> {
+        let mut tx = Transaction::script(
+            self.gas_price,
+            self.gas_limit,
+            self.maturity,
+            self.script,
+            self.script_data,
+            self.inputs.to_vec(),
+            self.outputs.to_vec(),
+            self.witnesses.to_vec(),
+        );
+
+        let base_amount = if self.asset_id == AssetId::default() {
+            self.amount
+        } else {
+            0
+        };
+
+        wallet.add_fee_coins(&mut tx, base_amount, 0).await?;
+        wallet.sign_transaction(&mut tx).await?;
+
+        Ok(Script::new(tx))
+    }
+}
 #[cfg(test)]
 mod test {
     use super::*;
@@ -502,6 +591,30 @@ mod test {
     use fuels_types::param_types::ParamType;
     use rand::Rng;
     use std::slice;
+
+    impl ContractCall {
+        pub fn new_with_random_id() -> Self {
+            ContractCall {
+                contract_id: random_bech32_contract_id(),
+                encoded_args: Default::default(),
+                encoded_selector: [0; 8],
+                call_parameters: Default::default(),
+                compute_custom_input_offset: false,
+                variable_outputs: None,
+                external_contracts: Default::default(),
+                output_param: ParamType::Unit,
+                message_outputs: None,
+            }
+        }
+    }
+
+    fn random_bech32_addr() -> Bech32Address {
+        Bech32Address::new("fuel", rand::thread_rng().gen::<[u8; 32]>())
+    }
+
+    fn random_bech32_contract_id() -> Bech32ContractId {
+        Bech32ContractId::new("fuel", rand::thread_rng().gen::<[u8; 32]>())
+    }
 
     #[tokio::test]
     async fn test_script_data() {
@@ -896,158 +1009,5 @@ mod test {
             asset_id_amounts.into_iter().collect::<HashSet<_>>(),
             expected_asset_id_amounts
         )
-    }
-
-    impl ContractCall {
-        pub fn new_with_random_id() -> Self {
-            ContractCall {
-                contract_id: random_bech32_contract_id(),
-                encoded_args: Default::default(),
-                encoded_selector: [0; 8],
-                call_parameters: Default::default(),
-                compute_custom_input_offset: false,
-                variable_outputs: None,
-                external_contracts: Default::default(),
-                output_param: ParamType::Unit,
-                message_outputs: None,
-            }
-        }
-    }
-
-    impl ContractCall {
-        pub fn with_contract_id(self, contract_id: Bech32ContractId) -> Self {
-            ContractCall {
-                contract_id,
-                ..self
-            }
-        }
-        pub fn with_external_contracts(
-            self,
-            external_contracts: Vec<Bech32ContractId>,
-        ) -> ContractCall {
-            ContractCall {
-                external_contracts,
-                ..self
-            }
-        }
-
-        pub fn with_variable_outputs(self, variable_outputs: Vec<Output>) -> ContractCall {
-            ContractCall {
-                variable_outputs: Some(variable_outputs),
-                ..self
-            }
-        }
-
-        pub fn with_message_outputs(self, message_outputs: Vec<Output>) -> ContractCall {
-            ContractCall {
-                message_outputs: Some(message_outputs),
-                ..self
-            }
-        }
-
-        pub fn with_call_parameters(self, call_parameters: CallParameters) -> ContractCall {
-            ContractCall {
-                call_parameters,
-                ..self
-            }
-        }
-    }
-
-    fn random_bech32_addr() -> Bech32Address {
-        Bech32Address::new("fuel", rand::thread_rng().gen::<[u8; 32]>())
-    }
-
-    fn random_bech32_contract_id() -> Bech32ContractId {
-        Bech32ContractId::new("fuel", rand::thread_rng().gen::<[u8; 32]>())
-    }
-}
-
-#[derive(Default)]
-pub struct ScriptBuilder {
-    gas_price: Word,
-    gas_limit: Word,
-    maturity: Word,
-    script: Vec<u8>,
-    script_data: Vec<u8>,
-    inputs: Vec<Input>,
-    outputs: Vec<Output>,
-    witnesses: Vec<Witness>,
-    asset_id: AssetId,
-    amount: u64,
-}
-
-impl ScriptBuilder {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    pub fn set_script_data(mut self, script_data: Vec<u8>) -> ScriptBuilder {
-        self.script_data = script_data;
-        self
-    }
-
-    pub fn set_script(mut self, script: Vec<Opcode>) -> ScriptBuilder {
-        let script: Vec<u8> = script.into_iter().collect();
-        self.script = script;
-        self
-    }
-
-    pub fn set_inputs(mut self, inputs: Vec<Input>) -> ScriptBuilder {
-        self.inputs = inputs;
-        self
-    }
-
-    pub fn set_outputs(mut self, outputs: Vec<Output>) -> ScriptBuilder {
-        self.outputs = outputs;
-        self
-    }
-
-    pub fn set_gas_price(mut self, gas_price: Word) -> ScriptBuilder {
-        self.gas_price = gas_price;
-        self
-    }
-
-    pub fn set_gas_limit(mut self, gas_limit: Word) -> ScriptBuilder {
-        self.gas_limit = gas_limit;
-        self
-    }
-
-    pub fn set_maturity(mut self, maturity: Word) -> ScriptBuilder {
-        self.maturity = maturity;
-        self
-    }
-
-    pub fn set_asset_id(mut self, asset_id: AssetId) -> ScriptBuilder {
-        self.asset_id = asset_id;
-        self
-    }
-
-    pub fn set_amount(mut self, amount: u64) -> ScriptBuilder {
-        self.amount = amount;
-        self
-    }
-
-    pub async fn build(self, wallet: &WalletUnlocked) -> Result<Script, Error> {
-        let mut tx = Transaction::script(
-            self.gas_price,
-            self.gas_limit,
-            self.maturity,
-            self.script,
-            self.script_data,
-            self.inputs.to_vec(),
-            self.outputs.to_vec(),
-            self.witnesses.to_vec(),
-        );
-
-        let base_amount = if self.asset_id == AssetId::default() {
-            self.amount
-        } else {
-            0
-        };
-
-        wallet.add_fee_coins(&mut tx, base_amount, 0).await?;
-        wallet.sign_transaction(&mut tx).await?;
-
-        Ok(Script::new(tx))
     }
 }

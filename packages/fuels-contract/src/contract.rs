@@ -362,6 +362,42 @@ pub struct ContractCall {
 }
 
 impl ContractCall {
+    pub fn with_contract_id(self, contract_id: Bech32ContractId) -> Self {
+        ContractCall {
+            contract_id,
+            ..self
+        }
+    }
+    pub fn with_external_contracts(
+        self,
+        external_contracts: Vec<Bech32ContractId>,
+    ) -> ContractCall {
+        ContractCall {
+            external_contracts,
+            ..self
+        }
+    }
+
+    pub fn with_variable_outputs(self, variable_outputs: Vec<Output>) -> ContractCall {
+        ContractCall {
+            variable_outputs: Some(variable_outputs),
+            ..self
+        }
+    }
+
+    pub fn with_message_outputs(self, message_outputs: Vec<Output>) -> ContractCall {
+        ContractCall {
+            message_outputs: Some(message_outputs),
+            ..self
+        }
+    }
+
+    pub fn with_call_parameters(self, call_parameters: CallParameters) -> ContractCall {
+        ContractCall {
+            call_parameters,
+            ..self
+        }
+    }
     pub fn append_variable_outputs(&mut self, num: u64) {
         let new_variable_outputs = vec![
             Output::Variable {
