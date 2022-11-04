@@ -35,7 +35,15 @@ impl Tokenizer {
             ParamType::Bool => Ok(Token::Bool(trimmed_value.parse::<bool>()?)),
             ParamType::Byte => Ok(Token::Byte(trimmed_value.parse::<u8>()?)),
             ParamType::B256 => {
-                let s: [u8; 32] = Self::value_str_to_b256(trimmed_value)?;
+                const B256_HEX_ENC_LENGTH: usize = 64;
+                if trimmed_value.len() != B256_HEX_ENC_LENGTH {
+                    return Err(Error::InvalidData(format!(
+                        "the hex encoding of the b256 must have {} characters",
+                        B256_HEX_ENC_LENGTH
+                    )));
+                }
+                let v = Vec::from_hex(trimmed_value)?;
+                let s: [u8; 32] = v.as_slice().try_into().unwrap();
                 Ok(Token::B256(s))
             }
             ParamType::Vector(param_type) => Self::tokenize_vec(trimmed_value, param_type),
@@ -64,18 +72,6 @@ impl Tokenizer {
                 Ok(Self::tokenize_tuple(trimmed_value, tuple_params)?)
             }
         }
-    }
-
-    fn value_str_to_b256(s: &str) -> Result<[u8; 32], Error> {
-        const B256_HEX_ENC_LENGTH: usize = 64;
-        if s.len() != B256_HEX_ENC_LENGTH {
-            return Err(Error::InvalidData(format!(
-                "the hex encoding of the b256 must have {} characters",
-                B256_HEX_ENC_LENGTH
-            )));
-        }
-        let v = Vec::from_hex(s)?;
-        Ok(v.as_slice().try_into().unwrap())
     }
 
     /// Creates a `Token::Struct` from an array of parameter types and a string of values.
