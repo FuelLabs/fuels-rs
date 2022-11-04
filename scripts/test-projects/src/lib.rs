@@ -1,3 +1,4 @@
+use clap::{Parser, Subcommand};
 use futures_util::{stream, Stream, StreamExt};
 use std::{
     fs,
@@ -5,6 +6,44 @@ use std::{
     path::{Path, PathBuf},
 };
 use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
+
+const NUM_CONCURRENT: usize = 1;
+
+#[derive(Parser)]
+#[command(name = "test-projects", version, about, propagate_version = true)]
+pub struct Cli {
+    #[command(subcommand)]
+    pub command: Commands,
+
+    /// Number of concurrent projects
+    #[arg(short, long, default_value_t = NUM_CONCURRENT)]
+    #[arg(value_name = "NUM")]
+    pub num_concurrent: usize,
+
+    /// Specify where to find `forc` and `forc-fmt`
+    #[arg(long, value_name = "DIR")]
+    pub bin_path: Option<PathBuf>,
+
+    /// Specify test projects path
+    #[arg(long, value_name = "DIR")]
+    pub projects_path: Option<PathBuf>,
+}
+
+#[derive(Subcommand)]
+pub enum Commands {
+    /// Builds all test projects with `forc`
+    Build {
+        /// Cleans `forc` build output
+        #[arg(long)]
+        clean: bool,
+    },
+    /// Formats all test projects with `forc-fmt`
+    Format {
+        /// Checks format but doesn't modify files
+        #[arg(long)]
+        check: bool,
+    },
+}
 
 pub fn discover_projects(path: &Path) -> Vec<PathBuf> {
     fs::read_dir(path)
@@ -22,19 +61,28 @@ pub fn discover_projects(path: &Path) -> Vec<PathBuf> {
         .collect()
 }
 
-pub fn build_recursively(path: &Path, num_buf_futures: usize) -> impl Stream<Item = BuildResult> {
+pub fn build_recursively(
+    path: &Path,
+    num_conc_futures: usize,
+    clean: bool,
+) -> impl Stream<Item = BuildResult> {
     stream::iter(discover_projects(path))
-        .map(|path| async {
+        .map(move |path| async move {
+            let args = if clean {
+                ["clean", "--path", path.to_str().unwrap()]
+            } else {
+                ["build", "--path", path.to_str().unwrap()]
+            };
+
             let output = tokio::process::Command::new("forc")
-                .args(["build", "--path"])
-                .arg(&path)
+                .args(args)
                 .output()
                 .await
-                .expect("failed to run `forc build` for example project");
+                .expect("failed to run `forc build`");
 
             let compilation_result = BuildOutput {
                 path,
-                stderr: String::from_utf8(output.stderr).expect("Forc output is not valid utf8"),
+                stderr: String::from_utf8(output.stderr).expect("`forc` stderr is not valid utf8"),
             };
 
             if output.status.success() {
@@ -43,7 +91,39 @@ pub fn build_recursively(path: &Path, num_buf_futures: usize) -> impl Stream<Ite
                 BuildResult::Failure(compilation_result)
             }
         })
-        .buffer_unordered(num_buf_futures)
+        .buffer_unordered(num_conc_futures)
+}
+
+pub fn format_recursively(
+    path: &Path,
+    num_conc_futures: usize,
+    check: bool,
+) -> impl Stream<Item = BuildResult> {
+    stream::iter(discover_projects(path))
+        .map(move |path| async move {
+            let mut args = vec!["--path", path.to_str().unwrap()];
+            if check {
+                args.push("--check");
+            }
+
+            let output = tokio::process::Command::new("forc-fmt")
+                .args(args)
+                .output()
+                .await
+                .expect("failed to run `forc-fmt`");
+
+            let compilation_result = BuildOutput {
+                path,
+                stderr: String::from_utf8(output.stderr).expect("`forc` stderr is not valid utf8"),
+            };
+
+            if output.status.success() {
+                BuildResult::Success(compilation_result)
+            } else {
+                BuildResult::Failure(compilation_result)
+            }
+        })
+        .buffer_unordered(num_conc_futures)
 }
 
 // Check if the given directory contains `Forc.toml` at its root.
@@ -113,38 +193,101 @@ impl ResultWriter {
         self.stdout.reset()
     }
 
-    pub fn display_build_info(&mut self, num_buf_futures: usize) -> Result<(), std::io::Error> {
+    pub fn display_build_info(
+        &mut self,
+        num_conc_futures: usize,
+        clean: bool,
+    ) -> Result<(), std::io::Error> {
         let output = std::process::Command::new("forc")
             .args(["--version"])
             .output()?;
 
         let version =
-            String::from_utf8(output.stdout).expect("failed to parse forc --version output");
+            String::from_utf8(output.stdout).expect("failed to parse `forc --version` output");
 
-        self.write_success_bold("\nBuilding ")?;
+        if clean {
+            self.write_success_bold("\nCleaning ")?;
+        } else {
+            self.write_success_bold("\nBuilding ")?;
+        }
         self.write(&format!(
-            "projects with: `{}`\n         num concurrent builds: {}\n\n",
+            "projects with: `{}`\n         num concurrent projects: {}\n\n",
             version.trim(),
-            num_buf_futures
+            num_conc_futures
         ))
     }
 
-    pub fn display_result(
+    pub fn display_format_info(
+        &mut self,
+        num_conc_futures: usize,
+        check: bool,
+    ) -> Result<(), std::io::Error> {
+        let output = std::process::Command::new("forc-fmt")
+            .args(["--version"])
+            .output()?;
+
+        let version =
+            String::from_utf8(output.stdout).expect("failed to parse `forc-fmt --version` output");
+
+        if check {
+            self.write_success_bold("\nChecking   ")?;
+        } else {
+            self.write_success_bold("\nFormatting ")?;
+        }
+        self.write(&format!(
+            "projects with: `{}`\n           num concurrent projects: {}\n\n",
+            version.trim(),
+            num_conc_futures
+        ))
+    }
+
+    pub fn display_build_result(
         &mut self,
         abs_path: &PathBuf,
         build_result: &BuildResult,
+        clean: bool,
     ) -> Result<(), std::io::Error> {
+        let info_str = if clean { "clean" } else { "build" };
         match build_result {
             BuildResult::Success(build_output) => {
                 self.write(&format!(
-                    "build {} ... ",
+                    "{} {} ... ",
+                    info_str,
                     build_output.get_display_path(abs_path).display()
                 ))?;
                 self.write_success("ok\n")
             }
             BuildResult::Failure(build_output) => {
                 self.write(&format!(
-                    "build {} ... ",
+                    "{} {} ... ",
+                    info_str,
+                    build_output.get_display_path(abs_path).display()
+                ))?;
+                self.write_error("FAILED\n")
+            }
+        }
+    }
+
+    pub fn display_format_result(
+        &mut self,
+        abs_path: &PathBuf,
+        build_result: &BuildResult,
+        check: bool,
+    ) -> Result<(), std::io::Error> {
+        let info_str = if check { "check" } else { "format" };
+        match build_result {
+            BuildResult::Success(build_output) => {
+                self.write(&format!(
+                    "{} {} ... ",
+                    info_str,
+                    build_output.get_display_path(abs_path).display()
+                ))?;
+                self.write_success("ok\n")
+            }
+            BuildResult::Failure(build_output) => {
+                self.write(&format!(
+                    "{} {} ... ",
+                    info_str,
                     build_output.get_display_path(abs_path).display()
                 ))?;
                 self.write_error("FAILED\n")
