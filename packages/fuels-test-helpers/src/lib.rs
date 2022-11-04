@@ -362,7 +362,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_setup_test_client_custom_config() -> Result<(), rand::Error> {
-        let socket = SocketAddr::new(Ipv4Addr::new(127, 0, 0, 1).into(), 5000);
+        let socket = SocketAddr::new(Ipv4Addr::new(127, 0, 0, 1).into(), 4000);
 
         let wallet = WalletUnlocked::new_random(None);
 

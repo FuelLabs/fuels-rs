@@ -26,7 +26,6 @@ use tokio::process::Command;
 pub struct Config {
     pub addr: SocketAddr,
     pub utxo_validation: bool,
-    pub predicates: bool,
     pub manual_blocks_enabled: bool,
     pub vm_backtrace: bool,
     pub silent: bool,
@@ -37,7 +36,6 @@ impl Config {
         Self {
             addr: SocketAddr::new(Ipv4Addr::new(127, 0, 0, 1).into(), 0),
             utxo_validation: false,
-            predicates: false,
             manual_blocks_enabled: false,
             vm_backtrace: false,
             silent: true,
@@ -259,10 +257,6 @@ pub async fn new_fuel_node(
 
         if config.utxo_validation {
             args.push("--utxo-validation");
-        }
-
-        if config.predicates {
-            args.push("--predicates");
         }
 
         if config.manual_blocks_enabled {
