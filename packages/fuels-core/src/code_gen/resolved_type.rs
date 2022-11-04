@@ -241,3 +241,298 @@ fn to_struct(
             generic_params: type_arguments_supplier(),
         })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use anyhow::Context;
+
+    fn test_resolve_first_type(
+        expected: &str,
+        type_declarations: &[TypeDeclaration],
+    ) -> anyhow::Result<()> {
+        let types = type_declarations
+            .iter()
+            .map(|td| (td.type_id, td.clone()))
+            .collect::<HashMap<_, _>>();
+        let type_application = TypeApplication {
+            type_id: type_declarations[0].type_id,
+            ..Default::default()
+        };
+        let resolved_type = resolve_type(&type_application, &types)
+            .with_context(|| format!("failed to resolve {:?}", &type_application))?;
+        let actual = TokenStream::from(&resolved_type).to_string();
+        assert_eq!(actual, expected);
+        Ok(())
+    }
+
+    fn test_resolve_primitive_type(type_field: &str, expected: &str) -> anyhow::Result<()> {
+        test_resolve_first_type(
+            expected,
+            &[TypeDeclaration {
+                type_id: 0,
+                type_field: type_field.to_string(),
+                ..Default::default()
+            }],
+        )
+    }
+
+    #[test]
+    fn test_resolve_u8() -> anyhow::Result<()> {
+        test_resolve_primitive_type("u8", "u8")
+    }
+
+    #[test]
+    fn test_resolve_u16() -> anyhow::Result<()> {
+        test_resolve_primitive_type("u16", "u16")
+    }
+
+    #[test]
+    fn test_resolve_u32() -> anyhow::Result<()> {
+        test_resolve_primitive_type("u32", "u32")
+    }
+
+    #[test]
+    fn test_resolve_u64() -> anyhow::Result<()> {
+        test_resolve_primitive_type("u64", "u64")
+    }
+
+    #[test]
+    fn test_resolve_bool() -> anyhow::Result<()> {
+        test_resolve_primitive_type("bool", "bool")
+    }
+
+    #[test]
+    fn test_resolve_byte() -> anyhow::Result<()> {
+        test_resolve_primitive_type("byte", "Byte")
+    }
+
+    #[test]
+    fn test_resolve_b256() -> anyhow::Result<()> {
+        test_resolve_primitive_type("b256", "Bits256")
+    }
+
+    #[test]
+    fn test_resolve_unit() -> anyhow::Result<()> {
+        test_resolve_primitive_type("()", "()")
+    }
+
+    #[test]
+    fn test_resolve_array() -> anyhow::Result<()> {
+        test_resolve_first_type(
+            "[u8 ; 3usize]",
+            &[
+                TypeDeclaration {
+                    type_id: 0,
+                    type_field: "[u8; 3]".to_string(),
+                    components: Some(vec![TypeApplication {
+                        type_id: 1,
+                        ..Default::default()
+                    }]),
+                    ..Default::default()
+                },
+                TypeDeclaration {
+                    type_id: 1,
+                    type_field: "u8".to_string(),
+                    ..Default::default()
+                },
+            ],
+        )
+    }
+
+    #[test]
+    fn test_resolve_vector() -> anyhow::Result<()> {
+        test_resolve_first_type(
+            "Vec",
+            &[
+                TypeDeclaration {
+                    type_id: 0,
+                    type_field: "struct Vec".to_string(),
+                    components: Some(vec![
+                        TypeApplication {
+                            name: "buf".to_string(),
+                            type_id: 2,
+                            type_arguments: Some(vec![TypeApplication {
+                                type_id: 1,
+                                ..Default::default()
+                            }]),
+                        },
+                        TypeApplication {
+                            name: "len".to_string(),
+                            type_id: 3,
+                            ..Default::default()
+                        },
+                    ]),
+                    type_parameters: Some(vec![1]),
+                },
+                TypeDeclaration {
+                    type_id: 1,
+                    type_field: "generic T".to_string(),
+                    ..Default::default()
+                },
+                TypeDeclaration {
+                    type_id: 2,
+                    type_field: "raw untyped ptr".to_string(),
+                    ..Default::default()
+                },
+                TypeDeclaration {
+                    type_id: 3,
+                    type_field: "struct RawVec".to_string(),
+                    components: Some(vec![
+                        TypeApplication {
+                            name: "ptr".to_string(),
+                            type_id: 2,
+                            ..Default::default()
+                        },
+                        TypeApplication {
+                            name: "cap".to_string(),
+                            type_id: 4,
+                            ..Default::default()
+                        },
+                    ]),
+                    type_parameters: Some(vec![1]),
+                },
+                TypeDeclaration {
+                    type_id: 4,
+                    type_field: "u64".to_string(),
+                    ..Default::default()
+                },
+                TypeDeclaration {
+                    type_id: 5,
+                    type_field: "u8".to_string(),
+                    ..Default::default()
+                },
+            ],
+        )
+    }
+
+    #[test]
+    fn test_resolve_string() -> anyhow::Result<()> {
+        test_resolve_primitive_type("str[3]", "SizedAsciiString < 3usize >")
+    }
+
+    #[test]
+    fn test_resolve_struct() -> anyhow::Result<()> {
+        test_resolve_first_type(
+            "SomeStruct",
+            &[
+                TypeDeclaration {
+                    type_id: 0,
+                    type_field: "struct SomeStruct".to_string(),
+                    components: Some(vec![
+                        TypeApplication {
+                            name: "foo".to_string(),
+                            type_id: 1,
+                            ..Default::default()
+                        },
+                        TypeApplication {
+                            name: "bar".to_string(),
+                            type_id: 2,
+                            ..Default::default()
+                        },
+                    ]),
+                    type_parameters: Some(vec![1]),
+                },
+                TypeDeclaration {
+                    type_id: 1,
+                    type_field: "generic T".to_string(),
+                    ..Default::default()
+                },
+                TypeDeclaration {
+                    type_id: 2,
+                    type_field: "u8".to_string(),
+                    ..Default::default()
+                },
+            ],
+        )
+    }
+
+    #[test]
+    fn test_resolve_enum() -> anyhow::Result<()> {
+        test_resolve_first_type(
+            "SomeEnum",
+            &[
+                TypeDeclaration {
+                    type_id: 0,
+                    type_field: "enum SomeEnum".to_string(),
+                    components: Some(vec![
+                        TypeApplication {
+                            name: "foo".to_string(),
+                            type_id: 1,
+                            ..Default::default()
+                        },
+                        TypeApplication {
+                            name: "bar".to_string(),
+                            type_id: 2,
+                            ..Default::default()
+                        },
+                    ]),
+                    type_parameters: Some(vec![1]),
+                },
+                TypeDeclaration {
+                    type_id: 1,
+                    type_field: "generic T".to_string(),
+                    ..Default::default()
+                },
+                TypeDeclaration {
+                    type_id: 2,
+                    type_field: "u8".to_string(),
+                    ..Default::default()
+                },
+            ],
+        )
+    }
+
+    #[test]
+    fn test_resolve_tuple() -> anyhow::Result<()> {
+        test_resolve_first_type(
+            "(u8 , u16 , bool , T ,)",
+            &[
+                TypeDeclaration {
+                    type_id: 0,
+                    type_field: "(u8, u16, bool, T)".to_string(),
+                    components: Some(vec![
+                        TypeApplication {
+                            type_id: 1,
+                            ..Default::default()
+                        },
+                        TypeApplication {
+                            type_id: 2,
+                            ..Default::default()
+                        },
+                        TypeApplication {
+                            type_id: 3,
+                            ..Default::default()
+                        },
+                        TypeApplication {
+                            type_id: 4,
+                            ..Default::default()
+                        },
+                    ]),
+                    type_parameters: Some(vec![4]),
+                },
+                TypeDeclaration {
+                    type_id: 1,
+                    type_field: "u8".to_string(),
+                    ..Default::default()
+                },
+                TypeDeclaration {
+                    type_id: 2,
+                    type_field: "u16".to_string(),
+                    ..Default::default()
+                },
+                TypeDeclaration {
+                    type_id: 3,
+                    type_field: "bool".to_string(),
+                    ..Default::default()
+                },
+                TypeDeclaration {
+                    type_id: 4,
+                    type_field: "generic T".to_string(),
+                    ..Default::default()
+                },
+            ],
+        )
+    }
+}
