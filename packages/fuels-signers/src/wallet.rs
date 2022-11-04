@@ -1014,7 +1014,7 @@ mod tests {
     #[tokio::test]
     async fn add_fee_coins_empty_transaction() -> Result<(), Error> {
         let wallet_config = add_fee_coins_wallet_config(1);
-        let wallet = launch_custom_provider_and_get_wallets(wallet_config, None)
+        let wallet = launch_custom_provider_and_get_wallets(wallet_config, None, None)
             .await
             .pop()
             .unwrap();
@@ -1043,7 +1043,7 @@ mod tests {
     #[tokio::test]
     async fn add_fee_coins_to_transfer_with_base_asset() -> Result<(), Error> {
         let wallet_config = add_fee_coins_wallet_config(1);
-        let wallet = launch_custom_provider_and_get_wallets(wallet_config, None)
+        let wallet = launch_custom_provider_and_get_wallets(wallet_config, None, None)
             .await
             .pop()
             .unwrap();

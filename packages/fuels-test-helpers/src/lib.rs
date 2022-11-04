@@ -5,7 +5,7 @@ extern crate core;
 use std::net::SocketAddr;
 
 #[cfg(feature = "fuel-core-lib")]
-use fuel_chain_config::{ChainConfig, CoinConfig, MessageConfig, StateConfig};
+use fuel_chain_config::{CoinConfig, MessageConfig, StateConfig};
 
 #[cfg(feature = "fuel-core-lib")]
 use fuel_core::{
@@ -158,6 +158,7 @@ pub async fn setup_test_client(
     coins: Vec<(UtxoId, Coin)>,
     messages: Vec<Message>,
     node_config: Option<Config>,
+    chain_config: Option<ChainConfig>,
     consensus_parameters_config: Option<ConsensusParameters>,
 ) -> (FuelClient, SocketAddr) {
     let coin_configs = coins
@@ -186,16 +187,19 @@ pub async fn setup_test_client(
         .collect();
 
     // Setup node config with genesis coins and utxo_validation enabled
+    let chain_conf = chain_config.unwrap_or_else(|| ChainConfig {
+        initial_state: Some(StateConfig {
+            coins: Some(coin_configs),
+            contracts: None,
+            messages: Some(message_config),
+            ..StateConfig::default()
+        }),
+        transaction_parameters: consensus_parameters_config.unwrap_or_default(),
+        ..ChainConfig::local_testnet()
+    });
+
     let config = Config {
-        chain_conf: ChainConfig {
-            initial_state: Some(StateConfig {
-                messages: Some(message_config),
-                coins: Some(coin_configs),
-                ..StateConfig::default()
-            }),
-            transaction_parameters: consensus_parameters_config.unwrap_or_default(),
-            ..ChainConfig::local_testnet()
-        },
+        chain_conf,
         database_type: DbType::InMemory,
         ..node_config.unwrap_or_else(Config::local_node)
     };
