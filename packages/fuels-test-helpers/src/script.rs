@@ -78,7 +78,7 @@ mod tests {
             DEFAULT_NUM_COINS,
             DEFAULT_COIN_AMOUNT,
         );
-        let (provider, _) = setup_test_provider(coins, vec![], None).await;
+        let (provider, _) = setup_test_provider(coins, vec![], None, None).await;
 
         let return_val =
             run_compiled_script(path_to_bin, TxParameters::default(), Some(provider)).await?;

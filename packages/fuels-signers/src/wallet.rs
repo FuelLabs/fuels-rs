@@ -59,7 +59,7 @@ pub struct Wallet {
 ///
 /// async fn foo() -> Result<(), Error> {
 ///   // Setup local test node
-///   let (provider, _) = setup_test_provider(vec![], vec![], None).await;
+///   let (provider, _) = setup_test_provider(vec![], vec![], None, None).await;
 ///
 ///   // Create a new local wallet with the newly generated key
 ///   let wallet = WalletUnlocked::new_random(Some(provider));
@@ -572,7 +572,7 @@ impl WalletUnlocked {
     ///   coins_1.extend(coins_2);
     ///
     ///   // Setup a provider and node with both set of coins
-    ///   let (provider, _) = setup_test_provider(coins_1, vec![], None).await;
+    ///   let (provider, _) = setup_test_provider(coins_1, vec![], None, None).await;
     ///
     ///   // Set provider for wallets
     ///   wallet_1.set_provider(provider.clone());
@@ -1014,7 +1014,7 @@ mod tests {
     #[tokio::test]
     async fn add_fee_coins_empty_transaction() -> Result<(), Error> {
         let wallet_config = add_fee_coins_wallet_config(1);
-        let wallet = launch_custom_provider_and_get_wallets(wallet_config, None)
+        let wallet = launch_custom_provider_and_get_wallets(wallet_config, None, None)
             .await
             .pop()
             .unwrap();
@@ -1043,7 +1043,7 @@ mod tests {
     #[tokio::test]
     async fn add_fee_coins_to_transfer_with_base_asset() -> Result<(), Error> {
         let wallet_config = add_fee_coins_wallet_config(1);
-        let wallet = launch_custom_provider_and_get_wallets(wallet_config, None)
+        let wallet = launch_custom_provider_and_get_wallets(wallet_config, None, None)
             .await
             .pop()
             .unwrap();

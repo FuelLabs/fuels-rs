@@ -69,7 +69,7 @@ impl Provider {
     /// use fuels::prelude::*;
     /// async fn foo() -> Result<(), Box<dyn std::error::Error>> {
     ///   // Setup local test node
-    ///   let (provider, _) = setup_test_provider(vec![], vec![], None).await;
+    ///   let (provider, _) = setup_test_provider(vec![], vec![], None, None).await;
     ///   let tx = Script::default();
     ///
     ///   let receipts = provider.send_transaction(&tx).await?;
