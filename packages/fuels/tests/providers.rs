@@ -115,15 +115,15 @@ async fn test_input_message() -> Result<(), Error> {
     let (provider, _) = setup_test_provider(coins, messages.clone(), None).await;
     wallet.set_provider(provider);
 
+    let spendable_messages = wallet.get_spendable_messages().await?;
+
+    assert!(compare_messages(spendable_messages, messages));
+
     setup_contract_test!(
         contract_instance,
         None,
         "packages/fuels/tests/contracts/contract_test"
     );
-
-    let spendable_messages = wallet.get_spendable_messages().await?;
-
-    assert!(compare_messages(spendable_messages, messages));
 
     let response = contract_instance
         .methods()
