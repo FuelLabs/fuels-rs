@@ -148,7 +148,7 @@
             &quot;oblige salon price punch saddle immune slogan rare snap desert retire surprise&quot;;
 
         // Use the test helper to setup a test provider.
-        let (provider, _address) = setup_test_provider(vec![], vec![], None).await;
+        let (provider, _address) = setup_test_provider(vec![], vec![], None, None).await;
 
         // Create first account from mnemonic phrase.
         let _wallet = WalletUnlocked::new_from_mnemonic_phrase_with_path(

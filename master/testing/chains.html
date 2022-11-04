@@ -147,7 +147,7 @@
         ..Config::local_node()
     };
     let wallets =
-        launch_custom_provider_and_get_wallets(WalletsConfig::default(), Some(config)).await;
+        launch_custom_provider_and_get_wallets(WalletsConfig::default(), Some(config), None).await;
     let wallet = &amp;wallets[0];
     let provider = wallet.get_provider()?;
 

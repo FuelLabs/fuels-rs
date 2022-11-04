@@ -207,7 +207,7 @@ impl LiquidityPool for Contract {
             .into();
 
         let wallet_config = WalletsConfig::new_multiple_assets(1, asset_configs);
-        let wallets = launch_custom_provider_and_get_wallets(wallet_config, None).await;
+        let wallets = launch_custom_provider_and_get_wallets(wallet_config, None, None).await;
         let wallet = &amp;wallets[0];
 </code></pre>
 <p>Having launched a provider and created the wallet, we can deploy our contract and create an instance of its methods:</p>

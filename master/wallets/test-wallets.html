@@ -144,7 +144,8 @@
 <pre><code class="language-rust ignore">        use fuels::prelude::*;
         // This helper will launch a local node and provide 10 test wallets linked to it.
         // The initial balance defaults to 1 coin per wallet with an amount of 1_000_000_000
-        let wallets = launch_custom_provider_and_get_wallets(WalletsConfig::default(), None).await;
+        let wallets =
+            launch_custom_provider_and_get_wallets(WalletsConfig::default(), None, None).await;
 </code></pre>
 <p>You can customize your test wallets via <code>WalletsConfig</code>.</p>
 <pre><code class="language-rust ignore">        let num_wallets = 5;
@@ -157,7 +158,7 @@
             Some(amount_per_coin),
         );
         // Launches a local node and provides test wallets as specified by the config
-        let wallets = launch_custom_provider_and_get_wallets(config, None).await;
+        let wallets = launch_custom_provider_and_get_wallets(config, None, None).await;
 </code></pre>
 <blockquote>
 <p><strong>Note</strong> Wallets generated with <code>launch_provider_and_get_wallet</code> or <code>launch_custom_provider_and_get_wallets</code>
@@ -177,7 +178,7 @@ will have deterministic addresses.</p>
             coins_per_asset,
             amount_per_coin,
         );
-        let (provider, _socket_addr) = setup_test_provider(coins.clone(), vec![], None).await;
+        let (provider, _socket_addr) = setup_test_provider(coins.clone(), vec![], None, None).await;
         wallet.set_provider(provider);
 </code></pre>
 <ul>
@@ -217,13 +218,13 @@ will have deterministic addresses.</p>
         let assets = vec![asset_base, asset_1, asset_2];
 
         let coins = setup_custom_assets_coins(wallet.address(), &amp;assets);
-        let (provider, _socket_addr) = setup_test_provider(coins, vec![], None).await;
+        let (provider, _socket_addr) = setup_test_provider(coins, vec![], None, None).await;
         wallet.set_provider(provider);
 </code></pre>
 <p>This can also be achieved directly with the <code>WalletsConfig</code>.</p>
 <pre><code class="language-rust ignore">        let num_wallets = 1;
         let wallet_config = WalletsConfig::new_multiple_assets(num_wallets, assets);
-        let wallets = launch_custom_provider_and_get_wallets(wallet_config, None).await;
+        let wallets = launch_custom_provider_and_get_wallets(wallet_config, None, None).await;
 </code></pre>
 <blockquote>
 <p><strong>Note</strong> In this case, you need to manually add the base asset and the corresponding number of

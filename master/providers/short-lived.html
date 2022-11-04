@@ -154,7 +154,7 @@
 <pre><code class="language-rust ignore">        use fuels::prelude::*;
 
         // Use the test helper to setup a test provider.
-        let (provider, _address) = setup_test_provider(vec![], vec![], None).await;
+        let (provider, _address) = setup_test_provider(vec![], vec![], None, None).await;
 
         // Create the wallet.
         let _wallet = WalletUnlocked::new_random(Some(provider));
