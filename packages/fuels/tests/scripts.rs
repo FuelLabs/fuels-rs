@@ -226,7 +226,7 @@ async fn main_function_option_result() -> Result<(), Error> {
 
 #[tokio::test]
 async fn test_run_script_binary() -> Result<(), Error> {
-    // ANCHOR: run_compiled_script
+    // ANCHOR: run_script_binary
     let path_to_bin = "../fuels/tests/scripts/basic_script/out/debug/basic_script.bin";
     // TODO: use default provider
     let (provider, _) = setup_test_provider(vec![], vec![], None, None).await;
@@ -235,6 +235,6 @@ async fn test_run_script_binary() -> Result<(), Error> {
 
     let expected = 29879;
     assert_eq!(return_val[0].val().unwrap(), expected);
-    // ANCHOR_END: run_compiled_script
+    // ANCHOR_END: run_script_binary
     Ok(())
 }
