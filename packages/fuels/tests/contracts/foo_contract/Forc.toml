@@ -5,4 +5,5 @@ license = "Apache-2.0"
 name = "foo_contract"
 
 [dependencies]
+
 foo = { path = "../foo_contract_abi/", package = "foo_contract_abi" }
