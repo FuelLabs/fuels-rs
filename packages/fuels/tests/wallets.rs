@@ -13,7 +13,7 @@ async fn test_wallet_balance_api_multi_asset() -> Result<(), Error> {
         amount_per_coin,
     );
 
-    let (provider, _) = setup_test_provider(coins.clone(), vec![], None).await;
+    let (provider, _) = setup_test_provider(coins.clone(), vec![], None, None).await;
     wallet.set_provider(provider);
     let balances = wallet.get_balances().await?;
     assert_eq!(balances.len() as u64, number_of_assets);
@@ -44,7 +44,7 @@ async fn test_wallet_balance_api_single_asset() -> Result<(), Error> {
         amount_per_coin,
     );
 
-    let (provider, _) = setup_test_provider(coins.clone(), vec![], None).await;
+    let (provider, _) = setup_test_provider(coins.clone(), vec![], None, None).await;
     wallet.set_provider(provider);
 
     for (_utxo_id, coin) in coins {

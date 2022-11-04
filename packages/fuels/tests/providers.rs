@@ -20,7 +20,7 @@ async fn test_provider_launch_and_connect() -> Result<(), Error> {
         DEFAULT_NUM_COINS,
         DEFAULT_COIN_AMOUNT,
     );
-    let (launched_provider, address) = setup_test_provider(coins, vec![], None).await;
+    let (launched_provider, address) = setup_test_provider(coins, vec![], None, None).await;
     let connected_provider = Provider::connect(address.to_string()).await?;
 
     wallet.set_provider(connected_provider);
@@ -112,7 +112,7 @@ async fn test_input_message() -> Result<(), Error> {
         vec![1, 2],
     );
 
-    let (provider, _) = setup_test_provider(coins, messages.clone(), None).await;
+    let (provider, _) = setup_test_provider(coins, messages.clone(), None, None).await;
     wallet.set_provider(provider);
 
     setup_contract_test!(
@@ -143,7 +143,7 @@ async fn can_increase_block_height() -> Result<(), Error> {
         ..Config::local_node()
     };
     let wallets =
-        launch_custom_provider_and_get_wallets(WalletsConfig::default(), Some(config)).await;
+        launch_custom_provider_and_get_wallets(WalletsConfig::default(), Some(config), None).await;
     let wallet = &wallets[0];
     let provider = wallet.get_provider()?;
 
@@ -168,7 +168,7 @@ async fn contract_deployment_respects_maturity() -> Result<(), Error> {
         ..Config::local_node()
     };
     let wallets =
-        launch_custom_provider_and_get_wallets(WalletsConfig::default(), Some(config)).await;
+        launch_custom_provider_and_get_wallets(WalletsConfig::default(), Some(config), None).await;
     let wallet = &wallets[0];
     let provider = wallet.get_provider()?;
 
@@ -324,7 +324,7 @@ async fn test_gas_errors() -> Result<(), Error> {
         amount_per_coin,
     );
 
-    let (provider, _) = setup_test_provider(coins.clone(), vec![], None).await;
+    let (provider, _) = setup_test_provider(coins.clone(), vec![], None, None).await;
     wallet.set_provider(provider);
 
     setup_contract_test!(

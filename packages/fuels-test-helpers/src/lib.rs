@@ -26,6 +26,7 @@ use fuel_core_interfaces::model::{DaBlockHeight, Message};
 #[cfg(not(feature = "fuel-core-lib"))]
 use portpicker::is_free;
 
+use fuel_chain_config::ChainConfig;
 use fuel_gql_client::fuel_tx::ConsensusParameters;
 use fuel_gql_client::{
     client::FuelClient,
@@ -210,6 +211,7 @@ pub async fn setup_test_client(
     coins: Vec<(UtxoId, Coin)>,
     messages: Vec<Message>,
     node_config: Option<Config>,
+    chain_config: Option<ChainConfig>,
     consensus_parameters_config: Option<ConsensusParameters>,
 ) -> (FuelClient, SocketAddr) {
     let config = node_config.unwrap_or_else(Config::local_node);
@@ -230,6 +232,7 @@ pub async fn setup_test_client(
             addr: bound_address,
             ..config
         },
+        chain_config,
         consensus_parameters_config,
     )
     .await;
@@ -378,7 +381,7 @@ mod tests {
             ..Config::local_node()
         };
 
-        let wallets = setup_test_client(coins, vec![], Some(config), None).await;
+        let wallets = setup_test_client(coins, vec![], Some(config), None, None).await;
 
         assert_eq!(wallets.1, socket);
         Ok(())
@@ -398,7 +401,7 @@ mod tests {
         );
 
         let (fuel_client, _) =
-            setup_test_client(coins, vec![], None, Some(consensus_parameters_config)).await;
+            setup_test_client(coins, vec![], None, None, Some(consensus_parameters_config)).await;
         let provider = Provider::new(fuel_client);
         wallet.set_provider(provider.clone());
 
