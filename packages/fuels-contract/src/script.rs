@@ -41,15 +41,31 @@ pub struct Script {
     pub tx: fuels_core::tx::Script,
 }
 
-#[derive(Debug, Clone)]
-pub struct CompiledScript {
-    pub raw: Vec<u8>,
-    pub target_network_url: String,
-}
-
 impl Script {
     pub fn new(tx: fuels_core::tx::Script) -> Self {
         Self { tx }
+    }
+
+    /// Creates a script from the script binary.
+    pub fn from_binary(
+        script_binary: Vec<u8>,
+        tx_params: TxParameters,
+        script_data: Option<Vec<u8>>,
+        inputs: Option<Vec<Input>>,
+        outputs: Option<Vec<Output>>,
+    ) -> Self {
+        let tx = Transaction::script(
+            tx_params.gas_price,
+            tx_params.gas_limit,
+            tx_params.maturity,
+            script_binary, // Pass the compiled script into the tx
+            script_data.unwrap_or_default(),
+            inputs.unwrap_or_default(),
+            outputs.unwrap_or_default(),
+            vec![vec![].into()],
+        );
+
+        Self::new(tx)
     }
 
     /// Creates a Script from a contract call. The internal Transaction is initialized
@@ -469,7 +485,7 @@ pub async fn run_script_binary(
         }
         Some(provider) => provider,
     };
-    let script = build_script(
+    let script = Script::from_binary(
         script_binary,
         tx_params.unwrap_or_default(),
         script_data,
@@ -478,27 +494,6 @@ pub async fn run_script_binary(
     );
 
     script.call(&provider).await
-}
-
-pub fn build_script(
-    script_binary: Vec<u8>,
-    tx_params: TxParameters,
-    script_data: Option<Vec<u8>>,
-    inputs: Option<Vec<Input>>,
-    outputs: Option<Vec<Output>>,
-) -> Script {
-    let tx = Transaction::script(
-        tx_params.gas_price,
-        tx_params.gas_limit,
-        tx_params.maturity,
-        script_binary, // Pass the compiled script into the tx
-        script_data.unwrap_or_default(),
-        inputs.unwrap_or_default(),
-        outputs.unwrap_or_default(),
-        vec![vec![].into()],
-    );
-
-    Script::new(tx)
 }
 
 #[cfg(test)]

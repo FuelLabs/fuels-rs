@@ -6,7 +6,7 @@ use fuel_gql_client::{
     },
 };
 use fuels::prelude::*;
-use fuels_contract::script::{build_script, run_script_binary};
+use fuels_contract::script::{run_script_binary, Script};
 use fuels_core::tx::Bytes32;
 
 #[tokio::test]
@@ -110,7 +110,7 @@ async fn test_script_interface() -> Result<(), Error> {
     .flatten()
     .collect();
 
-    let script = vec![
+    let script_binary = vec![
         Opcode::gtf(0x10, 0x00, GTFArgs::ScriptData),
         Opcode::ADDI(0x11, 0x10, ContractId::LEN as u16),
         Opcode::LW(0x12, 0x11, 0),
@@ -121,8 +121,8 @@ async fn test_script_interface() -> Result<(), Error> {
     .into_iter()
     .collect();
 
-    let script = build_script(
-        script,
+    let script = Script::from_binary(
+        script_binary,
         tx_parameters,
         Some(script_data),
         Some(inputs),
