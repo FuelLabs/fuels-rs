@@ -26,7 +26,6 @@ use tokio::process::Command;
 pub struct Config {
     pub addr: SocketAddr,
     pub utxo_validation: bool,
-    pub predicates: bool,
     pub manual_blocks_enabled: bool,
     pub vm_backtrace: bool,
     pub silent: bool,
@@ -37,7 +36,6 @@ impl Config {
         Self {
             addr: SocketAddr::new(Ipv4Addr::new(127, 0, 0, 1).into(), 0),
             utxo_validation: false,
-            predicates: false,
             manual_blocks_enabled: false,
             vm_backtrace: false,
             silent: true,
@@ -166,13 +164,14 @@ impl<'de> DeserializeAs<'de, BlockHeight> for HexNumber {
 pub fn get_node_config_json(
     coins: Vec<(UtxoId, Coin)>,
     messages: Vec<Message>,
+    chain_config: Option<ChainConfig>,
     consensus_parameters_config: Option<ConsensusParameters>,
 ) -> Value {
     let coins = get_coins_value(coins);
     let messages = get_messages_value(messages);
     let transaction_parameters = consensus_parameters_config.unwrap_or_default();
 
-    let chain_config = ChainConfig {
+    let chain_config = chain_config.unwrap_or_else(|| ChainConfig {
         chain_name: "local_testnet".to_string(),
         block_production: BlockProduction::ProofOfAuthority {
             trigger: Default::default(),
@@ -185,7 +184,7 @@ pub fn get_node_config_json(
             height: None,
         }),
         transaction_parameters,
-    };
+    });
 
     serde_json::to_value(&chain_config).expect("Failed to build `ChainConfig` JSON")
 }
@@ -235,13 +234,15 @@ pub async fn new_fuel_node(
     coins: Vec<(UtxoId, Coin)>,
     messages: Vec<Message>,
     config: Config,
+    chain_config: Option<ChainConfig>,
     consensus_parameters_config: Option<ConsensusParameters>,
 ) {
     // Create a new one-shot channel for sending single values across asynchronous tasks.
     let (tx, rx) = oneshot::channel();
 
     tokio::spawn(async move {
-        let config_json = get_node_config_json(coins, messages, consensus_parameters_config);
+        let config_json =
+            get_node_config_json(coins, messages, chain_config, consensus_parameters_config);
         let temp_config_file = write_temp_config_file(config_json);
 
         let port = &config.addr.port().to_string();
@@ -259,10 +260,6 @@ pub async fn new_fuel_node(
 
         if config.utxo_validation {
             args.push("--utxo-validation");
-        }
-
-        if config.predicates {
-            args.push("--predicates");
         }
 
         if config.manual_blocks_enabled {
@@ -354,6 +351,7 @@ impl FuelService {
                 addr: bound_address,
                 ..config
             },
+            None,
             None,
         )
         .await;

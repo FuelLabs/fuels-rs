@@ -398,7 +398,7 @@ async fn test_connect_wallet() -> anyhow::Result<()> {
     // ANCHOR: contract_setup_macro_manual_wallet
     let config = WalletsConfig::new(Some(2), Some(1), Some(DEFAULT_COIN_AMOUNT));
 
-    let mut wallets = launch_custom_provider_and_get_wallets(config, None).await;
+    let mut wallets = launch_custom_provider_and_get_wallets(config, None, None).await;
     let wallet = wallets.pop().unwrap();
     let wallet_2 = wallets.pop().unwrap();
 
@@ -442,7 +442,7 @@ async fn test_connect_wallet() -> anyhow::Result<()> {
 async fn setup_output_variable_estimation_test(
 ) -> Result<(Vec<WalletUnlocked>, [Address; 3], AssetId, Bech32ContractId), Error> {
     let wallet_config = WalletsConfig::new(Some(3), None, None);
-    let wallets = launch_custom_provider_and_get_wallets(wallet_config, None).await;
+    let wallets = launch_custom_provider_and_get_wallets(wallet_config, None, None).await;
 
     let contract_id = Contract::deploy(
         "tests/contracts/token_ops/out/debug/token_ops.bin",
@@ -583,7 +583,7 @@ async fn test_contract_instance_get_balances() -> Result<(), Error> {
     let mut wallet = WalletUnlocked::new_random(None);
     let (coins, asset_ids) = setup_multiple_assets_coins(wallet.address(), 2, 4, 8);
     let random_asset_id = &asset_ids[1];
-    let (provider, _) = setup_test_provider(coins.clone(), vec![], None).await;
+    let (provider, _) = setup_test_provider(coins.clone(), vec![], None, None).await;
     wallet.set_provider(provider.clone());
 
     setup_contract_test!(

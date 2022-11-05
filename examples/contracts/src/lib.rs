@@ -190,7 +190,8 @@ mod tests {
             "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
         );
 
-        let wallets = launch_custom_provider_and_get_wallets(WalletsConfig::default(), None).await;
+        let wallets =
+            launch_custom_provider_and_get_wallets(WalletsConfig::default(), None, None).await;
 
         let contract_id_1 = Contract::deploy(
             "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
@@ -569,7 +570,7 @@ mod tests {
         );
 
         let config = WalletsConfig::new(Some(2), Some(1), Some(DEFAULT_COIN_AMOUNT));
-        let mut wallets = launch_custom_provider_and_get_wallets(config, None).await;
+        let mut wallets = launch_custom_provider_and_get_wallets(config, None, None).await;
         let wallet_1 = wallets.pop().unwrap();
         let wallet_2 = wallets.pop().unwrap();
 
