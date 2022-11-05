@@ -15,6 +15,7 @@ async fn setup_predicate_test(
             utxo_validation: true,
             ..Config::local_node()
         }),
+        None,
     )
     .await;
 

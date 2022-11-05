@@ -164,13 +164,14 @@ impl<'de> DeserializeAs<'de, BlockHeight> for HexNumber {
 pub fn get_node_config_json(
     coins: Vec<(UtxoId, Coin)>,
     messages: Vec<Message>,
+    chain_config: Option<ChainConfig>,
     consensus_parameters_config: Option<ConsensusParameters>,
 ) -> Value {
     let coins = get_coins_value(coins);
     let messages = get_messages_value(messages);
     let transaction_parameters = consensus_parameters_config.unwrap_or_default();
 
-    let chain_config = ChainConfig {
+    let chain_config = chain_config.unwrap_or_else(|| ChainConfig {
         chain_name: "local_testnet".to_string(),
         block_production: BlockProduction::ProofOfAuthority {
             trigger: Default::default(),
@@ -183,7 +184,7 @@ pub fn get_node_config_json(
             height: None,
         }),
         transaction_parameters,
-    };
+    });
 
     serde_json::to_value(&chain_config).expect("Failed to build `ChainConfig` JSON")
 }
@@ -233,13 +234,15 @@ pub async fn new_fuel_node(
     coins: Vec<(UtxoId, Coin)>,
     messages: Vec<Message>,
     config: Config,
+    chain_config: Option<ChainConfig>,
     consensus_parameters_config: Option<ConsensusParameters>,
 ) {
     // Create a new one-shot channel for sending single values across asynchronous tasks.
     let (tx, rx) = oneshot::channel();
 
     tokio::spawn(async move {
-        let config_json = get_node_config_json(coins, messages, consensus_parameters_config);
+        let config_json =
+            get_node_config_json(coins, messages, chain_config, consensus_parameters_config);
         let temp_config_file = write_temp_config_file(config_json);
 
         let port = &config.addr.port().to_string();
@@ -348,6 +351,7 @@ impl FuelService {
                 addr: bound_address,
                 ..config
             },
+            None,
             None,
         )
         .await;
