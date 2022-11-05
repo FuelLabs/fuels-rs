@@ -613,7 +613,7 @@ mod tests {
     ) {
         let mut wallet = WalletUnlocked::new_random(None);
         let (coins, asset_ids) = setup_multiple_assets_coins(wallet.address(), 2, 4, 8);
-        let (provider, _) = setup_test_provider(coins.clone(), vec![], None).await;
+        let (provider, _) = setup_test_provider(coins.clone(), vec![], None, None).await;
         wallet.set_provider(provider.clone());
 
         (wallet, (coins, asset_ids), provider)
