@@ -1,4 +1,4 @@
-use clap::{Parser, Subcommand};
+use clap::{command, Parser, Subcommand};
 use futures_util::{stream, Stream, StreamExt};
 use std::{
     fs,
@@ -45,6 +45,12 @@ pub enum Commands {
     },
 }
 
+pub struct Command2Run {
+    pub command: String,
+    pub args: Vec<String>,
+    pub info: String,
+}
+
 pub fn discover_projects(path: &Path) -> Vec<PathBuf> {
     fs::read_dir(path)
         .expect("failed to walk directory")
@@ -61,66 +67,35 @@ pub fn discover_projects(path: &Path) -> Vec<PathBuf> {
         .collect()
 }
 
-pub fn build_recursively(
+pub fn run_recursively(
     path: &Path,
     num_conc_futures: usize,
-    clean: bool,
+    command: String,
+    args: Vec<String>,
 ) -> impl Stream<Item = BuildResult> {
     stream::iter(discover_projects(path))
-        .map(move |path| async move {
-            let args = if clean {
-                ["clean", "--path", path.to_str().unwrap()]
-            } else {
-                ["build", "--path", path.to_str().unwrap()]
-            };
+        .map(move |path| {
+            let command = command.clone();
+            let args = args.clone();
 
-            let output = tokio::process::Command::new("forc")
-                .args(args)
-                .output()
-                .await
-                .expect("failed to run `forc build`");
+            async move {
+                let output = tokio::process::Command::new(command)
+                    .args(args)
+                    .arg(&path)
+                    .output()
+                    .await
+                    .expect("failed to run command");
 
-            let compilation_result = BuildOutput {
-                path,
-                stderr: String::from_utf8(output.stderr).expect("`forc` stderr is not valid utf8"),
-            };
+                let compilation_result = BuildOutput {
+                    path,
+                    stderr: String::from_utf8(output.stderr).expect("stderr is not valid utf8"),
+                };
 
-            if output.status.success() {
-                BuildResult::Success(compilation_result)
-            } else {
-                BuildResult::Failure(compilation_result)
-            }
-        })
-        .buffer_unordered(num_conc_futures)
-}
-
-pub fn format_recursively(
-    path: &Path,
-    num_conc_futures: usize,
-    check: bool,
-) -> impl Stream<Item = BuildResult> {
-    stream::iter(discover_projects(path))
-        .map(move |path| async move {
-            let mut args = vec!["--path", path.to_str().unwrap()];
-            if check {
-                args.push("--check");
-            }
-
-            let output = tokio::process::Command::new("forc-fmt")
-                .args(args)
-                .output()
-                .await
-                .expect("failed to run `forc-fmt`");
-
-            let compilation_result = BuildOutput {
-                path,
-                stderr: String::from_utf8(output.stderr).expect("`forc` stderr is not valid utf8"),
-            };
-
-            if output.status.success() {
-                BuildResult::Success(compilation_result)
-            } else {
-                BuildResult::Failure(compilation_result)
+                if output.status.success() {
+                    BuildResult::Success(compilation_result)
+                } else {
+                    BuildResult::Failure(compilation_result)
+                }
             }
         })
         .buffer_unordered(num_conc_futures)
@@ -193,66 +168,39 @@ impl ResultWriter {
         self.stdout.reset()
     }
 
-    pub fn display_build_info(
+    pub fn display_info(
         &mut self,
         num_conc_futures: usize,
-        clean: bool,
+        command: &str,
+        run_info: &str,
     ) -> Result<(), std::io::Error> {
-        let output = std::process::Command::new("forc")
+        let output = std::process::Command::new(command)
             .args(["--version"])
-            .output()?;
+            .output()
+            .unwrap_or_else(|err| panic!("failed to run `{command} --version`. {err}"));
 
-        let version =
-            String::from_utf8(output.stdout).expect("failed to parse `forc --version` output");
+        let version = String::from_utf8(output.stdout)
+            .unwrap_or_else(|_| panic!("failed to parse `{command} --version` output"));
 
-        if clean {
-            self.write_success_bold("\nCleaning ")?;
-        } else {
-            self.write_success_bold("\nBuilding ")?;
-        }
+        self.write_success_bold(&format!("\n{:>7} ", run_info))?;
         self.write(&format!(
-            "projects with: `{}`\n         num concurrent projects: {}\n\n",
+            "projects with: `{}`\n        num concurrent projects: {}\n\n",
             version.trim(),
             num_conc_futures
         ))
     }
 
-    pub fn display_format_info(
-        &mut self,
-        num_conc_futures: usize,
-        check: bool,
-    ) -> Result<(), std::io::Error> {
-        let output = std::process::Command::new("forc-fmt")
-            .args(["--version"])
-            .output()?;
-
-        let version =
-            String::from_utf8(output.stdout).expect("failed to parse `forc-fmt --version` output");
-
-        if check {
-            self.write_success_bold("\nChecking   ")?;
-        } else {
-            self.write_success_bold("\nFormatting ")?;
-        }
-        self.write(&format!(
-            "projects with: `{}`\n           num concurrent projects: {}\n\n",
-            version.trim(),
-            num_conc_futures
-        ))
-    }
-
-    pub fn display_build_result(
+    pub fn display_result(
         &mut self,
         abs_path: &PathBuf,
         build_result: &BuildResult,
-        clean: bool,
+        result_info: &str,
     ) -> Result<(), std::io::Error> {
-        let info_str = if clean { "clean" } else { "build" };
         match build_result {
             BuildResult::Success(build_output) => {
                 self.write(&format!(
                     "{} {} ... ",
-                    info_str,
+                    result_info,
                     build_output.get_display_path(abs_path).display()
                 ))?;
                 self.write_success("ok\n")
@@ -260,34 +208,7 @@ impl ResultWriter {
             BuildResult::Failure(build_output) => {
                 self.write(&format!(
                     "{} {} ... ",
-                    info_str,
-                    build_output.get_display_path(abs_path).display()
-                ))?;
-                self.write_error("FAILED\n")
-            }
-        }
-    }
-
-    pub fn display_format_result(
-        &mut self,
-        abs_path: &PathBuf,
-        build_result: &BuildResult,
-        check: bool,
-    ) -> Result<(), std::io::Error> {
-        let info_str = if check { "check" } else { "format" };
-        match build_result {
-            BuildResult::Success(build_output) => {
-                self.write(&format!(
-                    "{} {} ... ",
-                    info_str,
-                    build_output.get_display_path(abs_path).display()
-                ))?;
-                self.write_success("ok\n")
-            }
-            BuildResult::Failure(build_output) => {
-                self.write(&format!(
-                    "{} {} ... ",
-                    info_str,
+                    result_info,
                     build_output.get_display_path(abs_path).display()
                 ))?;
                 self.write_error("FAILED\n")

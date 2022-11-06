@@ -4,10 +4,8 @@
 
 use clap::Parser;
 use futures_util::StreamExt;
-use std::path::Path;
-use test_projects::{
-    build_recursively, format_recursively, BuildResult, Cli, Commands, ResultWriter,
-};
+use std::path::PathBuf;
+use test_projects::{run_recursively, BuildResult, Cli, Command2Run, Commands, ResultWriter};
 
 const TESTS_PATH: &str = "packages/fuels/tests/";
 
@@ -17,62 +15,85 @@ async fn main() {
 
     let mut result_writer = ResultWriter::new();
 
-    let path = Path::new(TESTS_PATH);
-    let absolute_path = path.canonicalize().unwrap_or_else(|_| {
+    let project_path = cli.projects_path.unwrap_or(PathBuf::from(TESTS_PATH));
+    let project_path = project_path.canonicalize().unwrap_or_else(|_| {
         panic!(
-            "{path:?} could not be canonicalized.\n
-            Are you running the comand from the root of `fuels-rs`?\n"
+            "project path
+            {:?} could not be canonicalized",
+            project_path
         )
     });
 
-    let (succeeded, failed) = match cli.command {
+    let bin_path = if let Some(bin_path) = cli.bin_path {
+        bin_path
+            .canonicalize()
+            .unwrap_or_else(|_| panic!("bin path {:?} could not be canonicalized", bin_path))
+    } else {
+        PathBuf::from("")
+    };
+
+    let command_2_run = match cli.command {
         Commands::Build { clean } => {
-            result_writer
-                .display_build_info(cli.num_concurrent, clean)
-                .expect("could not display build info");
+            let command = bin_path.join("forc").display().to_string();
+            let sub_command = if clean {
+                "clean".to_string()
+            } else {
+                "build".to_string()
+            };
 
-            let build_results: Vec<_> =
-                build_recursively(&absolute_path, cli.num_concurrent, clean)
-                    .inspect(|result| {
-                        result_writer
-                            .display_build_result(&absolute_path, result, clean)
-                            .expect("could not display build result")
-                    })
-                    .collect()
-                    .await;
-
-            let (succeeded, failed): (Vec<_>, Vec<_>) = build_results
-                .into_iter()
-                .partition(|result| matches! {result, BuildResult::Success(_)});
-
-            (succeeded, failed)
+            Command2Run {
+                command,
+                args: vec![sub_command.clone(), "--path".into()],
+                info: sub_command,
+            }
         }
         Commands::Format { check } => {
-            result_writer
-                .display_format_info(cli.num_concurrent, check)
-                .expect("could not display format info");
-
-            let build_results: Vec<_> =
-                format_recursively(&absolute_path, cli.num_concurrent, check)
-                    .inspect(|result| {
-                        result_writer
-                            .display_format_result(&absolute_path, result, check)
-                            .expect("could not display build result")
-                    })
-                    .collect()
-                    .await;
-
-            let (succeeded, failed): (Vec<_>, Vec<_>) = build_results
-                .into_iter()
-                .partition(|result| matches! {result, BuildResult::Success(_)});
-
-            (succeeded, failed)
+            let command = bin_path.join("forc-fmt").display().to_string();
+            if check {
+                Command2Run {
+                    command,
+                    args: vec!["--check".into(), "--path".into()],
+                    info: "check".into(),
+                }
+            } else {
+                Command2Run {
+                    command,
+                    args: vec!["--path".into()],
+                    info: "format".into(),
+                }
+            }
         }
     };
 
+    result_writer
+        .display_info(
+            cli.num_concurrent,
+            &command_2_run.command,
+            &command_2_run.info,
+        )
+        .expect("could not display build info");
+
+    let build_results: Vec<_> = run_recursively(
+        &project_path,
+        cli.num_concurrent,
+        command_2_run.command,
+        command_2_run.args,
+    )
+    .inspect(|result| {
+        result_writer
+            .display_result(&project_path, result, &command_2_run.info)
+            .expect("could not display build result")
+    })
+    .collect()
+    .await;
+
+    let (succeeded, failed): (Vec<_>, Vec<_>) = build_results
+        .into_iter()
+        .partition(|result| matches! {result, BuildResult::Success(_)});
+
     if !failed.is_empty() {
         result_writer
-            .display_failed(&absolute_path, &failed)
+            .display_failed(&project_path, &failed)
             .expect("could not display failed projects");
     }
 
