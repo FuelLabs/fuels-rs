@@ -21,5 +21,3 @@ You can also get a vector of all the logged values as strings using `fetch_logs(
 ```
 
 Due to possible performance hits, it is not recommended to use `fetch_logs()` outside of a debugging scenario.
-
-> **Note:** To bind logged values in the SDK, you need to build your contract by supplying a feature flag: `forc build --generate-logged-types`. This is temporary and the flag won't be needed in the future
