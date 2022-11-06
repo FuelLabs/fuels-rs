@@ -66,8 +66,7 @@ pub fn expand_function(
     })
 }
 
-/// Generate the function (as a `TokenStream`) used to encode into script data the arguments to the
-/// `main` function of a script.
+/// Generate the `main` function of a script as a `TokenStream`
 pub fn generate_script_main_function(
     main_function_abi: &ABIFunction,
     types: &HashMap<usize, TypeDeclaration>,
@@ -98,10 +97,7 @@ pub fn generate_script_main_function(
         quote! { #name: #field_type }
     });
 
-    let doc = expand_doc(
-        "Encode the arguments provided so they can be passed as argument to the script's main \
-        function",
-    );
+    let doc = expand_doc("Run the script's `main` function with the provided arguments");
 
     let name = safe_ident("main");
 
