@@ -559,9 +559,6 @@ async fn test_output_variable_estimation_multicall() -> Result<(), Error> {
     let amount = 1000;
 
     let mut multi_call_handler = MultiContractCallHandler::new(wallets[0].clone());
-
-    multi_call_handler.tx_params(TxParameters::new(None, Some(1200000), None));
-
     (0..3).for_each(|_| {
         let call_handler = contract_methods.mint_to_addresses(amount, addresses);
         multi_call_handler.add_call(call_handler);
