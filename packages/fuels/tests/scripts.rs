@@ -201,7 +201,7 @@ async fn main_function_generic_arguments() -> Result<(), Error> {
             },
             mars: 2 * bim.val as u32,
         },
-        GenericBimbam { val: 255 as u8 },
+        GenericBimbam { val: 255_u8 },
     );
     assert_eq!(result, expected);
     // ANCHOR_END: script_with_generic_arguments
