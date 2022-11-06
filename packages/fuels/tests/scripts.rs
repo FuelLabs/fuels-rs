@@ -194,12 +194,15 @@ async fn main_function_generic_arguments() -> Result<(), Error> {
         mars: 1000,
     };
     let result = instance.main(bim.clone(), bam.clone()).await?;
-    let expected = GenericSnack {
-        twix: GenericBimbam {
-            val: bam.mars as u64,
+    let expected = (
+        GenericSnack {
+            twix: GenericBimbam {
+                val: bam.mars as u64,
+            },
+            mars: 2 * bim.val as u32,
         },
-        mars: 2 * bim.val as u32,
-    };
+        GenericBimbam { val: 255 as u8 },
+    );
     assert_eq!(result, expected);
     // ANCHOR_END: script_with_generic_arguments
     Ok(())
@@ -253,6 +256,16 @@ async fn main_function_tuple_types() -> Result<(), Error> {
             },
         )
         .await?;
-    println!("{:?}", result);
+    let expected = (
+        (
+            Boum { boum: true },
+            Bim { bim: 193817 },
+            Bam {
+                bam: "hello".try_into()?,
+            },
+        ),
+        42242,
+    );
+    assert_eq!(result, expected);
     Ok(())
 }
