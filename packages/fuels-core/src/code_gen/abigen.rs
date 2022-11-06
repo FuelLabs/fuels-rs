@@ -228,7 +228,7 @@ impl Abigen {
                 #![allow(unused_imports)]
 
                 #includes
-                use fuels::contract::script::{run_script_binary, get_decoded_output};
+                use fuels::contract::script::run_script_binary;
                 use fuels::core::abi_encoder::ABIEncoder;
                 use fuels::core::parameters::TxParameters;
 
@@ -256,7 +256,7 @@ impl Abigen {
             }
         } else {
             quote! {
-                use fuels::contract::contract::{Contract, ContractCallHandler};
+                use fuels::contract::contract::{Contract, ContractCallHandler, get_decoded_output};
                 use fuels::core::{EnumSelector, StringToken, Parameterize, Tokenizable, Token,
                                   Identity, try_from_bytes};
                 use fuels::core::code_gen::{extract_and_parse_logs, extract_log_ids_and_data};
