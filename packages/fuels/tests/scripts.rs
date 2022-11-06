@@ -227,3 +227,32 @@ async fn main_function_option_result() -> Result<(), Error> {
     assert_eq!(result, expected_error);
     Ok(())
 }
+
+#[tokio::test]
+async fn main_function_tuple_types() -> Result<(), Error> {
+    // The abigen is used for the same purpose as with contracts (Rust bindings)
+    script_abigen!(
+        MyScript,
+        "packages/fuels/tests/scripts/script_tuple_argument/out/debug/script_tuple_argument-abi.json"
+    );
+    let wallet = launch_provider_and_get_wallet().await;
+    let bin_path =
+        "../fuels/tests/scripts/script_tuple_argument/out/debug/script_tuple_argument.bin";
+    let instance = MyScript::new(wallet, bin_path);
+
+    let bim = Bim { bim: 90 };
+    let bam = Bam {
+        bam: "itest".try_into()?,
+    };
+    let boum = Boum { boum: true };
+    let result = instance
+        .main(
+            (bim, bam, boum),
+            Bam {
+                bam: "secod".try_into()?,
+            },
+        )
+        .await?;
+    println!("{:?}", result);
+    Ok(())
+}
