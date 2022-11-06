@@ -182,7 +182,7 @@ pub async fn setup_test_client(
             nonce: message.nonce,
             amount: message.amount,
             data: message.data,
-            da_height: message.da_height
+            da_height: message.da_height,
         })
         .collect();
 
