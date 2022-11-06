@@ -228,8 +228,8 @@ impl Abigen {
                 #![allow(unused_imports)]
 
                 #includes
-                use fuels::contract::script::run_script_binary;
                 use fuels::core::abi_encoder::ABIEncoder;
+                use fuels::contract::script::Script;
                 use fuels::core::parameters::TxParameters;
 
                 #code

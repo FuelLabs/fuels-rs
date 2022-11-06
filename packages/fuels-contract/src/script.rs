@@ -65,6 +65,24 @@ impl Script {
         Self::new(tx)
     }
 
+    /// Creates a script from the binary located at `binary_filepath`.
+    pub fn from_binary_filepath(
+        binary_filepath: &str,
+        tx_params: Option<TxParameters>,
+        script_data: Option<Vec<u8>>,
+        inputs: Option<Vec<Input>>,
+        outputs: Option<Vec<Output>>,
+    ) -> Result<Self, Error> {
+        let script_binary = std::fs::read(binary_filepath)?;
+        Ok(Script::from_binary(
+            script_binary,
+            tx_params.unwrap_or_default(),
+            script_data,
+            inputs,
+            outputs,
+        ))
+    }
+
     /// Creates a Script from a contract call. The internal Transaction is initialized
     /// with the actual script instructions, script data needed to perform the call
     /// and transaction inputs/outputs consisting of assets and contracts
@@ -419,38 +437,6 @@ impl Script {
 
         Ok(receipts)
     }
-}
-
-/// Run the script binary located at `binary_filepath` and return its resulting receipts,
-/// without having to setup a node or contract bindings.
-pub async fn run_script_binary(
-    binary_filepath: &str,
-    tx_params: Option<TxParameters>,
-    provider: Option<Provider>,
-    script_data: Option<Vec<u8>>,
-    inputs: Option<Vec<Input>>,
-    outputs: Option<Vec<Output>>,
-) -> Result<Vec<Receipt>, Error> {
-    let script_binary = std::fs::read(binary_filepath)?;
-    let provider = match provider {
-        None => {
-            // let server = FuelService::new_node(Config::local_node()).await.unwrap();
-            // Provider::connect(server.bound_address.to_string()).await?
-            unimplemented!(
-                "This will be implemented in a future release, for now please have a provider as argument"
-            )
-        }
-        Some(provider) => provider,
-    };
-    let script = Script::from_binary(
-        script_binary,
-        tx_params.unwrap_or_default(),
-        script_data,
-        inputs,
-        outputs,
-    );
-
-    script.call(&provider).await
 }
 
 #[cfg(test)]

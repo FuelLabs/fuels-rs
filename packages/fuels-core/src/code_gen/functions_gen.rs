@@ -107,14 +107,14 @@ pub fn generate_script_main_function(
             let provider = self.wallet.get_provider().expect("Provider not set up").clone();
             let arg_name_tokens = [#(#arg_names.into_token()),*];
             let script_data = ABIEncoder::encode(&arg_name_tokens)?.resolve(0);
-            let mut receipts = run_script_binary(self.binary_filepath.as_str(),
-                                                    Some(TxParameters::default()),
-                                                    Some(provider),
-                                                    Some(script_data),
-                                                    None, // inputs
-                                                    None // outputs
-            )
-            .await?;
+            let script = Script::from_binary_filepath(
+                self.binary_filepath.as_str(),
+                Some(TxParameters::default()),
+                Some(script_data),
+                None, // inputs
+                None // outputs
+            )?;
+            let mut receipts = script.call(&provider).await?;
             let output_token = get_decoded_output(
                 &mut receipts,
                 None,

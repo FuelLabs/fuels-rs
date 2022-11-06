@@ -6,7 +6,7 @@ use fuel_gql_client::{
     },
 };
 use fuels::prelude::*;
-use fuels_contract::script::{run_script_binary, Script};
+use fuels_contract::script::Script;
 use fuels_core::tx::Bytes32;
 
 #[tokio::test]
@@ -225,16 +225,16 @@ async fn main_function_option_result() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_run_script_binary() -> Result<(), Error> {
-    // ANCHOR: run_script_binary
+async fn test_script_from_binary_filepath() -> Result<(), Error> {
+    // ANCHOR: script_from_binary_filepath
     let path_to_bin = "../fuels/tests/scripts/basic_script/out/debug/basic_script.bin";
-    // TODO: use default provider
     let (provider, _) = setup_test_provider(vec![], vec![], None, None).await;
     // Provide `None` to all other arguments so the function uses the default for each
-    let return_val = run_script_binary(path_to_bin, None, Some(provider), None, None, None).await?;
+    let script = Script::from_binary_filepath(path_to_bin, None, None, None, None)?;
+    let return_val = script.call(&provider).await?;
 
     let expected = 29879;
     assert_eq!(return_val[0].val().unwrap(), expected);
-    // ANCHOR_END: run_script_binary
+    // ANCHOR_END: script_from_binary_filepath
     Ok(())
 }

@@ -1,15 +1,10 @@
 # Running scripts
 
-`run_script_binary` is a helper function for testing simple Sway scripts and reducing boilerplate code related to setting up contracts and deployment. As arguments, it takes:
-- The path to the generated binary file (`.bin`);
-- The transactions parameters as an `Option`;
-- The provider as an `Option`;
-- The script data as an `Option`;
-- The inputs as an `Option`;
-- The outputs as an `Option`.
+To run a script whose binary is located at a certain path, you can use the `Script` struct as 
+such:
 
 ````rust,ignore
-{{#include ../../../packages/fuels/tests/scripts.rs:run_script_binary}}
+{{#include ../../../packages/fuels/tests/scripts.rs:script_from_binary_filepath}}
 ````
 
 # Running scripts with arguments
