@@ -13,7 +13,7 @@ mod tests {
         // ANCHOR: run_compiled_script
         let path_to_bin = "../fuels/tests/logs/logging/out/debug/logging.bin";
         // TODO: use default provider
-        let (provider, _) = setup_test_provider(vec![], vec![], None).await;
+        let (provider, _) = setup_test_provider(vec![], vec![], None, None).await;
         // Provide `None` to all 3 other arguments so the function uses the default for each
         let return_val = run_script_binary(path_to_bin, None, Some(provider), None).await?;
 
