@@ -190,12 +190,15 @@ async fn main_function_generic_arguments() -> Result<(), Error> {
         mars: 1000,
     };
     let result = instance.main(bim.clone(), bam.clone()).await?;
-    let expected = GenericSnack {
-        twix: GenericBimbam {
-            val: bam.mars as u64,
+    let expected = (
+        GenericSnack {
+            twix: GenericBimbam {
+                val: bam.mars as u64,
+            },
+            mars: 2 * bim.val as u32,
         },
-        mars: 2 * bim.val as u32,
-    };
+        GenericBimbam { val: 255 as u8 },
+    );
     assert_eq!(result, expected);
     // ANCHOR_END: script_with_generic_arguments
     Ok(())
@@ -206,12 +209,12 @@ async fn main_function_option_result() -> Result<(), Error> {
     // The abigen is used for the same purpose as with contracts (Rust bindings)
     script_abigen!(
         MyScript,
-        "packages/fuels/tests/scripts/script_with_option_result/out/debug\
-        /script_with_option_result-abi.json"
+        "packages/fuels/tests/scripts/script_option_result_types/out/debug\
+        /script_option_result_types-abi.json"
     );
     let wallet = launch_provider_and_get_wallet().await;
     let bin_path =
-        "../fuels/tests/scripts/script_with_option_result/out/debug/script_with_option_result.bin";
+        "../fuels/tests/scripts/script_option_result_types/out/debug/script_option_result_types.bin";
     let instance = MyScript::new(wallet, bin_path);
 
     let result = instance.main(Some(42), None).await?;
@@ -236,5 +239,43 @@ async fn test_script_from_binary_filepath() -> Result<(), Error> {
     let expected = 29879;
     assert_eq!(return_val[0].val().unwrap(), expected);
     // ANCHOR_END: script_from_binary_filepath
+    Ok(())
+}
+
+#[tokio::test]
+async fn main_function_tuple_types() -> Result<(), Error> {
+    // The abigen is used for the same purpose as with contracts (Rust bindings)
+    script_abigen!(
+        MyScript,
+        "packages/fuels/tests/scripts/script_tuple_types/out/debug/script_tuple_types-abi.json"
+    );
+    let wallet = launch_provider_and_get_wallet().await;
+    let bin_path = "../fuels/tests/scripts/script_tuple_types/out/debug/script_tuple_types.bin";
+    let instance = MyScript::new(wallet, bin_path);
+
+    let bim = Bim { bim: 90 };
+    let bam = Bam {
+        bam: "itest".try_into()?,
+    };
+    let boum = Boum { boum: true };
+    let result = instance
+        .main(
+            (bim, bam, boum),
+            Bam {
+                bam: "secod".try_into()?,
+            },
+        )
+        .await?;
+    let expected = (
+        (
+            Boum { boum: true },
+            Bim { bim: 193817 },
+            Bam {
+                bam: "hello".try_into()?,
+            },
+        ),
+        42242,
+    );
+    assert_eq!(result, expected);
     Ok(())
 }
