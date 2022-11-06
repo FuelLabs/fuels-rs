@@ -182,7 +182,7 @@ pub async fn setup_test_client(
             nonce: message.nonce,
             amount: message.amount,
             data: message.data,
-            da_height: fuel_core::model::DaBlockHeight(message.da_height.0),
+            da_height: message.da_height
         })
         .collect();
 
