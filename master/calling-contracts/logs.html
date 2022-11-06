@@ -177,9 +177,6 @@
     let logs = contract_instance.fetch_logs(&amp;response.receipts);
 </code></pre>
 <p>Due to possible performance hits, it is not recommended to use <code>fetch_logs()</code> outside of a debugging scenario.</p>
-<blockquote>
-<p><strong>Note:</strong> To bind logged values in the SDK, you need to build your contract by supplying a feature flag: <code>forc build --generate-logged-types</code>. This is temporary and the flag won't be needed in the future</p>
-</blockquote>
 
                     </main>
 

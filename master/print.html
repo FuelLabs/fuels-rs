@@ -1439,9 +1439,6 @@ pub const BASE_ASSET_ID: AssetId = AssetId::BASE;
     let logs = contract_instance.fetch_logs(&amp;response.receipts);
 </code></pre>
 <p>Due to possible performance hits, it is not recommended to use <code>fetch_logs()</code> outside of a debugging scenario.</p>
-<blockquote>
-<p><strong>Note:</strong> To bind logged values in the SDK, you need to build your contract by supplying a feature flag: <code>forc build --generate-logged-types</code>. This is temporary and the flag won't be needed in the future</p>
-</blockquote>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="variable-outputs"><a class="header" href="#variable-outputs">Variable outputs</a></h1>
 <p>In some cases, you might want to send funds to the output of a transaction. Sway has a specific method for that: <code>transfer_to_address</code>(coins, asset_id, recipient)`. So, if you have a contract that does something like this:</p>
 <pre><code class="language-rust ignore">    fn transfer_coins_to_output(coins: u64, asset_id: ContractId, recipient: Address) {
