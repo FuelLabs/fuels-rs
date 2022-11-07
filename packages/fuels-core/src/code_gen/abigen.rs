@@ -9,8 +9,9 @@ use fuels_types::errors::Error;
 use fuels_types::param_types::ParamType;
 use fuels_types::utils::custom_type_name;
 use fuels_types::{ProgramABI, ResolvedLog, TypeDeclaration};
+use inflector::Inflector;
 use itertools::Itertools;
-use proc_macro2::{Ident, TokenStream};
+use proc_macro2::TokenStream;
 use quote::quote;
 
 use super::custom_types::{expand_custom_enum, expand_custom_struct, single_param_type_call};
@@ -25,7 +26,7 @@ pub struct Abigen {
     no_std: bool,
 
     /// The contract name as an identifier.
-    contract_name: Ident,
+    contract_name: String,
 
     abi: ProgramABI,
 
@@ -43,7 +44,7 @@ impl Abigen {
         Ok(Self {
             types: Abigen::get_types(&parsed_abi),
             abi: parsed_abi,
-            contract_name: ident(contract_name),
+            contract_name: contract_name.to_string(),
             rustfmt: true,
             no_std: false,
         })
@@ -72,11 +73,12 @@ impl Abigen {
     /// set of `TokenStream`. This generated Rust code is the brought into scope
     /// after it is called through a procedural macro (`abigen!()` in our case).
     pub fn expand(&self) -> Result<TokenStream, Error> {
-        let name = &self.contract_name;
+        let name_str = &self.contract_name;
+        let name = ident(name_str);
         let methods_name = ident(&format!("{}Methods", name));
         let name_mod = ident(&format!(
             "{}_mod",
-            self.contract_name.to_string().to_lowercase()
+            self.contract_name.to_string().to_snake_case()
         ));
 
         let contract_functions = self.functions()?;
@@ -85,7 +87,7 @@ impl Abigen {
 
         let resolved_logs = self.resolve_logs();
         let log_id_param_type_pairs = generate_log_id_param_type_pairs(&resolved_logs);
-        let fetch_logs = generate_fetch_logs(&resolved_logs);
+        let get_logs = generate_get_logs(&resolved_logs, &log_id_param_type_pairs);
 
         let (includes, code) = if self.no_std {
             (
@@ -103,7 +105,7 @@ impl Abigen {
         } else {
             (
                 quote! {
-                    use fuels::contract::contract::{Contract, ContractCallHandler};
+                    use fuels::contract::contract::{Contract, ContractCallHandler, CallResponse, Logging};
                      use fuels::core::{EnumSelector, StringToken, Parameterize, Tokenizable, Token,
                                       Identity, try_from_bytes};
                     use fuels::core::code_gen::{extract_and_parse_logs, extract_log_ids_and_data};
@@ -119,17 +121,17 @@ impl Abigen {
                     use fuels::types::enum_variants::EnumVariants;
                     use std::str::FromStr;
                     use std::collections::{HashSet, HashMap};
+                    use std::fmt;
                 },
                 quote! {
                     pub struct #name {
                         contract_id: Bech32ContractId,
                         wallet: WalletUnlocked,
-                        logs_lookup: Vec<(u64, ParamType)>,
                     }
 
                     impl #name {
                         pub fn new(contract_id: Bech32ContractId, wallet: WalletUnlocked) -> Self {
-                            Self { contract_id, wallet, logs_lookup: vec![#(#log_id_param_type_pairs),*]}
+                            Self { contract_id, wallet}
                         }
 
                         pub fn get_contract_id(&self) -> &Bech32ContractId {
@@ -144,18 +146,19 @@ impl Abigen {
                            let provider = self.wallet.get_provider()?;
                            wallet.set_provider(provider.clone());
 
-                           Ok(Self { contract_id: self.contract_id.clone(), wallet: wallet, logs_lookup: self.logs_lookup.clone() })
+                           Ok(Self { contract_id: self.contract_id.clone(), wallet: wallet})
                         }
 
                         pub async fn get_balances(&self) -> Result<HashMap<String, u64>, SDKError> {
                             self.wallet.get_provider()?.get_contract_balances(&self.contract_id).await.map_err(Into::into)
                         }
 
-                        pub fn logs_with_type<D: Tokenizable + Parameterize>(&self, receipts: &[Receipt]) -> Result<Vec<D>, SDKError> {
-                            extract_and_parse_logs(&self.logs_lookup, receipts)
+                        fn logs_with_type<D: Tokenizable + Parameterize>(receipts: &[Receipt]) -> Result<Vec<D>, SDKError> {
+                            let logs_lookup = vec![#(#log_id_param_type_pairs),*];
+                            extract_and_parse_logs(&logs_lookup, receipts)
                         }
 
-                        #fetch_logs
+                        #get_logs
 
                         pub fn methods(&self) -> #methods_name {
                             #methods_name {
@@ -165,6 +168,7 @@ impl Abigen {
                         }
                     }
 
+                    // Implement struct that holds the contract methods
                     pub struct #methods_name {
                         contract_id: Bech32ContractId,
                         wallet: WalletUnlocked
@@ -172,6 +176,25 @@ impl Abigen {
 
                     impl #methods_name {
                         #contract_functions
+                    }
+
+
+                    impl Logging for #name
+                    {
+                        fn get_logs(receipts: &[Receipt]) -> Vec<String> {
+                            #name::get_logs(&receipts)
+                        }
+
+                        fn logs_with_type<D: Tokenizable + Parameterize>(receipts: &[Receipt]) -> Result<Vec<D>, SDKError> {
+                            Self::logs_with_type::<D>(receipts)
+                        }
+                    }
+
+                    // Implemented manually so that we can use Debug on types that use depend on the Logging trait
+                    impl fmt::Debug for #name {
+                        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                            write!(f, "{}", #name_str)
+                        }
                     }
                 },
             )
@@ -202,7 +225,7 @@ impl Abigen {
             .abi
             .functions
             .iter()
-            .map(|function| expand_function(function, &self.types))
+            .map(|function| expand_function(function, &self.types, &self.contract_name))
             .collect::<Result<Vec<TokenStream>, Error>>()?;
 
         Ok(quote! { #( #tokenized_functions )* })
@@ -306,10 +329,13 @@ impl Abigen {
     }
 }
 
-pub fn generate_fetch_logs(resolved_logs: &[ResolvedLog]) -> TokenStream {
+pub fn generate_get_logs(
+    resolved_logs: &[ResolvedLog],
+    log_id_param_type_pairs: &[TokenStream],
+) -> TokenStream {
     let generate_method = |body: TokenStream| {
         quote! {
-            pub fn fetch_logs(&self, receipts: &[Receipt]) -> Vec<String> {
+            fn get_logs(receipts: &[Receipt]) -> Vec<String> {
                 #body
             }
         }
@@ -322,7 +348,8 @@ pub fn generate_fetch_logs(resolved_logs: &[ResolvedLog]) -> TokenStream {
 
     let branches = generate_param_type_if_branches(resolved_logs);
     let body = quote! {
-        let id_to_param_type: HashMap<_, _> = self.logs_lookup
+        let log_lookup = vec![#(#log_id_param_type_pairs),*];
+        let id_to_param_type: HashMap<_, _> = log_lookup
             .iter()
             .map(|(id, param_type)| (id, param_type))
             .collect();
@@ -355,7 +382,7 @@ fn generate_param_type_if_branches(resolved_logs: &[ResolvedLog]) -> Vec<TokenSt
             quote! {
                 if **param_type == #param_type_call {
                     return format!(
-                        "{:#?}",
+                        "{:?}",
                         try_from_bytes::<#type_name>(&data).expect("Failed to construct type from log data.")
                     );
                 }

@@ -12,10 +12,10 @@ async fn test_parse_logged_varibles() -> Result<(), Error> {
     let contract_methods = contract_instance.methods();
     let response = contract_methods.produce_logs_variables().call().await?;
 
-    let log_u64 = contract_instance.logs_with_type::<u64>(&response.receipts)?;
-    let log_bits256 = contract_instance.logs_with_type::<Bits256>(&response.receipts)?;
-    let log_string = contract_instance.logs_with_type::<SizedAsciiString<4>>(&response.receipts)?;
-    let log_array = contract_instance.logs_with_type::<[u8; 3]>(&response.receipts)?;
+    let log_u64 = response.logs_with_type::<u64>()?;
+    let log_bits256 = response.logs_with_type::<Bits256>()?;
+    let log_string = response.logs_with_type::<SizedAsciiString<4>>()?;
+    let log_array = response.logs_with_type::<[u8; 3]>()?;
 
     let expected_bits256 = Bits256([
         239, 134, 175, 169, 105, 108, 240, 220, 99, 133, 226, 196, 7, 166, 225, 89, 161, 16, 60,
@@ -42,12 +42,12 @@ async fn test_parse_logs_values() -> Result<(), Error> {
     let contract_methods = contract_instance.methods();
     let response = contract_methods.produce_logs_values().call().await?;
 
-    let log_u64 = contract_instance.logs_with_type::<u64>(&response.receipts)?;
-    let log_u32 = contract_instance.logs_with_type::<u32>(&response.receipts)?;
-    let log_u16 = contract_instance.logs_with_type::<u16>(&response.receipts)?;
-    let log_u8 = contract_instance.logs_with_type::<u8>(&response.receipts)?;
+    let log_u64 = response.logs_with_type::<u64>()?;
+    let log_u32 = response.logs_with_type::<u32>()?;
+    let log_u16 = response.logs_with_type::<u16>()?;
+    let log_u8 = response.logs_with_type::<u8>()?;
     // try to retrieve non existent log
-    let log_nonexistent = contract_instance.logs_with_type::<bool>(&response.receipts)?;
+    let log_nonexistent = response.logs_with_type::<bool>()?;
 
     assert_eq!(log_u64, vec![64]);
     assert_eq!(log_u32, vec![32]);
@@ -69,8 +69,8 @@ async fn test_parse_logs_custom_types() -> Result<(), Error> {
     let contract_methods = contract_instance.methods();
     let response = contract_methods.produce_logs_custom_types().call().await?;
 
-    let log_test_struct = contract_instance.logs_with_type::<TestStruct>(&response.receipts)?;
-    let log_test_enum = contract_instance.logs_with_type::<TestEnum>(&response.receipts)?;
+    let log_test_struct = response.logs_with_type::<TestStruct>()?;
+    let log_test_enum = response.logs_with_type::<TestEnum>()?;
 
     let expected_bits256 = Bits256([
         239, 134, 175, 169, 105, 108, 240, 220, 99, 133, 226, 196, 7, 166, 225, 89, 161, 16, 60,
@@ -100,15 +100,13 @@ async fn test_parse_logs_generic_types() -> Result<(), Error> {
     let contract_methods = contract_instance.methods();
     let response = contract_methods.produce_logs_generic_types().call().await?;
 
-    let log_struct =
-        contract_instance.logs_with_type::<StructWithGeneric<[_; 3]>>(&response.receipts)?;
-    let log_enum =
-        contract_instance.logs_with_type::<EnumWithGeneric<[_; 3]>>(&response.receipts)?;
-    let log_struct_nested = contract_instance
-        .logs_with_type::<StructWithNestedGeneric<StructWithGeneric<[_; 3]>>>(&response.receipts)?;
-    let log_struct_deeply_nested = contract_instance.logs_with_type::<StructDeeplyNestedGeneric<
+    let log_struct = response.logs_with_type::<StructWithGeneric<[_; 3]>>()?;
+    let log_enum = response.logs_with_type::<EnumWithGeneric<[_; 3]>>()?;
+    let log_struct_nested =
+        response.logs_with_type::<StructWithNestedGeneric<StructWithGeneric<[_; 3]>>>()?;
+    let log_struct_deeply_nested = response.logs_with_type::<StructDeeplyNestedGeneric<
         StructWithNestedGeneric<StructWithGeneric<[_; 3]>>,
-    >>(&response.receipts)?;
+    >>()?;
 
     let l = [1u8, 2u8, 3u8];
     let expected_struct = StructWithGeneric {
@@ -137,18 +135,18 @@ async fn test_parse_logs_generic_types() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_fetch_logs() -> Result<(), Error> {
+async fn test_get_logs() -> Result<(), Error> {
     setup_contract_test!(
         contract_instance,
         wallet,
         "packages/fuels/tests/logs/logged_types"
     );
 
-    // ANCHOR: fetch_logs
+    // ANCHOR: get_logs
     let contract_methods = contract_instance.methods();
     let response = contract_methods.produce_multiple_logs().call().await?;
-    let logs = contract_instance.fetch_logs(&response.receipts);
-    // ANCHOR_END: fetch_logs
+    let logs = response.get_logs();
+    // ANCHOR_END: get_logs
 
     let expected_bits256 = Bits256([
         239, 134, 175, 169, 105, 108, 240, 220, 99, 133, 226, 196, 7, 166, 225, 89, 161, 16, 60,
@@ -165,17 +163,17 @@ async fn test_fetch_logs() -> Result<(), Error> {
         field_2: 64,
     };
     let expected_logs: Vec<String> = vec![
-        format!("{:#?}", 64u64),
-        format!("{:#?}", 32u32),
-        format!("{:#?}", 16u16),
-        format!("{:#?}", 8u8),
-        format!("{:#?}", 64u64),
-        format!("{:#?}", expected_bits256),
-        format!("{:#?}", SizedAsciiString::<4>::new("Fuel".to_string())?),
-        format!("{:#?}", [1, 2, 3]),
-        format!("{:#?}", expected_struct),
-        format!("{:#?}", expected_enum),
-        format!("{:#?}", expected_generic_struct),
+        format!("{:?}", 64u64),
+        format!("{:?}", 32u32),
+        format!("{:?}", 16u16),
+        format!("{:?}", 8u8),
+        format!("{:?}", 64u64),
+        format!("{:?}", expected_bits256),
+        format!("{:?}", SizedAsciiString::<4>::new("Fuel".to_string())?),
+        format!("{:?}", [1, 2, 3]),
+        format!("{:?}", expected_struct),
+        format!("{:?}", expected_enum),
+        format!("{:?}", expected_generic_struct),
     ];
 
     assert_eq!(logs, expected_logs);
@@ -184,7 +182,7 @@ async fn test_fetch_logs() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_fetch_logs_with_no_logs() -> Result<(), Error> {
+async fn test_get_logs_with_no_logs() -> Result<(), Error> {
     setup_contract_test!(
         contract_instance,
         wallet,
@@ -192,8 +190,11 @@ async fn test_fetch_logs_with_no_logs() -> Result<(), Error> {
     );
 
     let contract_methods = contract_instance.methods();
-    let response = contract_methods.initialize_counter(42).call().await?;
-    let logs = contract_instance.fetch_logs(&response.receipts);
+    let logs = contract_methods
+        .initialize_counter(42)
+        .call()
+        .await?
+        .get_logs();
 
     assert!(logs.is_empty());
 

@@ -73,7 +73,7 @@ pub fn setup_contract_test(input: TokenStream) -> TokenStream {
     let bin_path = compiled_file_path(".bin", "the binary file");
     let storage_path = compiled_file_path("-storage_slots.json", "the storage slots file");
 
-    let contract_struct_name = args.instance_name.to_camel_case();
+    let contract_struct_name = args.instance_name.to_class_case();
     let mut abigen_token_stream: TokenStream = Abigen::new(&contract_struct_name, abi_path)
         .unwrap()
         .expand()
