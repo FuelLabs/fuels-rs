@@ -79,9 +79,6 @@ jobs:
       members: ${{ steps.set-members.outputs.members }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
-        with:
-          override: true
       - id: set-members
         run: |
           # install dasel
