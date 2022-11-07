@@ -15,7 +15,9 @@ async fn main() {
 
     let mut result_writer = ResultWriter::new();
 
-    let project_path = cli.projects_path.unwrap_or(PathBuf::from(TESTS_PATH));
+    let project_path = cli
+        .projects_path
+        .unwrap_or_else(|| PathBuf::from(TESTS_PATH));
     let project_path = project_path.canonicalize().unwrap_or_else(|_| {
         panic!(
             "project path
