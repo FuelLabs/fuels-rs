@@ -7,8 +7,9 @@ use fuel_gql_client::interpreter::ExecutableTransaction;
 use fuel_gql_client::{
     client::{
         schema::{
-            balance::Balance, chain::ChainInfo, coin::Coin, contract::ContractBalance,
-            message::Message, node_info::NodeInfo, resource::Resource,
+            balance::Balance, block::TimeParameters as FuelTimeParameters, chain::ChainInfo,
+            coin::Coin, contract::ContractBalance, message::Message, node_info::NodeInfo,
+            resource::Resource,
         },
         types::{TransactionResponse, TransactionStatus},
         FuelClient, PageDirection, PaginatedResult, PaginationRequest,
@@ -31,6 +32,25 @@ pub struct TransactionCost {
     pub gas_used: u64,
     pub metered_bytes_size: u64,
     pub total_fee: u64,
+}
+
+#[derive(Debug)]
+// ANCHOR: time_parameters
+pub struct TimeParameters {
+    // The time to set on the first block
+    pub start_time: u64,
+    // The time interval between subsequent blocks
+    pub block_time_interval: u64,
+}
+// ANCHOR: time_parameters
+
+impl From<TimeParameters> for FuelTimeParameters {
+    fn from(time: TimeParameters) -> Self {
+        Self {
+            start_time: time.start_time.into(),
+            block_time_interval: time.block_time_interval.into(),
+        }
+    }
 }
 
 #[derive(Debug, Error)]
@@ -386,8 +406,13 @@ impl Provider {
         Ok(self.client.chain_info().await?.latest_block.header.height.0)
     }
 
-    pub async fn produce_blocks(&self, amount: u64) -> io::Result<u64> {
-        self.client.produce_blocks(amount, None).await
+    pub async fn produce_blocks(
+        &self,
+        amount: u64,
+        time: Option<TimeParameters>,
+    ) -> io::Result<u64> {
+        let fuel_time: Option<FuelTimeParameters> = time.map(|t| t.into());
+        self.client.produce_blocks(amount, fuel_time).await
     }
 
     pub async fn estimate_transaction_cost<Tx>(
