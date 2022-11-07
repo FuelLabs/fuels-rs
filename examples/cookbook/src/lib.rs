@@ -30,7 +30,7 @@ mod tests {
             .into();
 
         let wallet_config = WalletsConfig::new_multiple_assets(1, asset_configs);
-        let wallets = launch_custom_provider_and_get_wallets(wallet_config, None).await;
+        let wallets = launch_custom_provider_and_get_wallets(wallet_config, None, None).await;
         let wallet = &wallets[0];
         // ANCHOR_END: liquidity_wallet
 
@@ -105,6 +105,7 @@ mod tests {
             coins,
             vec![],
             Some(node_config),
+            None,
             Some(consensus_parameters_config),
         )
         .await;
@@ -129,7 +130,7 @@ mod tests {
         let (coins, _) =
             setup_multiple_assets_coins(wallet_1.address(), NUM_ASSETS, NUM_COINS, AMOUNT);
 
-        let (provider, _) = setup_test_provider(coins, vec![], None).await;
+        let (provider, _) = setup_test_provider(coins, vec![], None, None).await;
 
         wallet_1.set_provider(provider.clone());
         wallet_2.set_provider(provider.clone());
