@@ -272,18 +272,3 @@ async fn main_function_tuple_types() -> Result<(), Error> {
     assert_eq!(result, expected);
     Ok(())
 }
-
-#[tokio::test]
-async fn main_function_vector_arguments() -> Result<(), Error> {
-    script_abigen!(
-        MyScript,
-        "packages/fuels/tests/scripts/script_vector_arguments/out/debug/script_vector_arguments-abi.json"
-    );
-    let wallet = launch_provider_and_get_wallet().await;
-    let bin_path =
-        "../fuels/tests/scripts/script_vector_arguments/out/debug/script_vector_arguments.bin";
-    let instance = MyScript::new(wallet, bin_path);
-    let result = instance.main(vec![1, 2, 3, 4, 5]).await?;
-    println!("{:?}", result);
-    Ok(())
-}
