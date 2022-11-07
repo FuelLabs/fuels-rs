@@ -258,6 +258,7 @@ impl Abigen {
             }
         }
     }
+
     pub fn contract_functions(&self) -> Result<TokenStream, Error> {
         let tokenized_functions = self
             .abi

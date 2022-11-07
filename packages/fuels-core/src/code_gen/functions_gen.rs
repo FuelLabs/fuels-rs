@@ -66,7 +66,7 @@ pub fn expand_function(
     })
 }
 
-/// Generate the `main` function of a script as a `TokenStream`
+/// Generate the `main` function of a script
 pub fn generate_script_main_function(
     main_function_abi: &ABIFunction,
     types: &HashMap<usize, TypeDeclaration>,
