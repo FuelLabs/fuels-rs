@@ -17,7 +17,7 @@ pub fn abigen(input: TokenStream) -> TokenStream {
 
     Abigen::new(&args.name, &args.abi)
         .unwrap()
-        .expand()
+        .expand_contract()
         .unwrap()
         .into()
 }
@@ -29,8 +29,7 @@ pub fn script_abigen(input: TokenStream) -> TokenStream {
 
     Abigen::new(&args.name, &args.abi)
         .unwrap()
-        .script()
-        .expand()
+        .expand_script()
         .unwrap()
         .into()
 }
@@ -42,7 +41,7 @@ pub fn wasm_abigen(input: TokenStream) -> TokenStream {
     Abigen::new(&args.name, &args.abi)
         .unwrap()
         .no_std()
-        .expand()
+        .expand_contract()
         .unwrap()
         .into()
 }
@@ -89,7 +88,7 @@ pub fn setup_contract_test(input: TokenStream) -> TokenStream {
     let contract_struct_name = args.instance_name.to_camel_case();
     let mut abigen_token_stream: TokenStream = Abigen::new(&contract_struct_name, abi_path)
         .unwrap()
-        .expand()
+        .expand_contract()
         .unwrap()
         .into();
 
