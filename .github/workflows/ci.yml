@@ -78,6 +78,10 @@ jobs:
     outputs:
       members: ${{ steps.set-members.outputs.members }}
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.ref }}
       - id: set-members
         run: |
           # install dasel
