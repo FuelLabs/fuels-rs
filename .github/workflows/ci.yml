@@ -46,11 +46,17 @@ jobs:
           chmod +x forc-binaries/forc
           mv forc-binaries/forc /usr/local/bin/forc
 
-      - name: Build Sway Examples
+      - name: Build Sway test projects
         uses: actions-rs/cargo@v1
         with:
           command: run
-          args: --bin build-test-projects
+          args: --bin test-projects -- build
+
+      - name: Check format of Sway test projects
+        uses: actions-rs/cargo@v1
+        with:
+          command: run
+          args: --bin test-projects -- format --check
 
       - uses: actions/upload-artifact@v2
         with:

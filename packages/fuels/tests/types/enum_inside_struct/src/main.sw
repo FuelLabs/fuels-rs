@@ -1,8 +1,8 @@
 contract;
 
 enum Shaker {
-    Cosmopolitan: u64,
-    Mojito: u64,
+        Cosmopolitan: u64,
+        Mojito: u64,
 }
 
 struct Cocktail {
