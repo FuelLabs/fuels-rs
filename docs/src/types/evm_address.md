@@ -1,6 +1,6 @@
 # EvmAddress
 
-In the Rust SDK, evm addresses can be represented with the 'EvmAddress' type. Its definition matches with the Sway standard library type with the same name and will be converted accordingly when interacting with contracts:
+In the Rust SDK, Ethereum Virtual Machine (EVM) addresses can be represented with the 'EvmAddress' type. Its definition matches with the Sway standard library type with the same name and will be converted accordingly when interacting with contracts:
 
 ```rust,ignore
 {{#include ../../../packages/fuels-core/src/types/bits_256.rs:evm_address}}
