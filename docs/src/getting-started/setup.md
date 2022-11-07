@@ -65,8 +65,9 @@ Another way to experience the SDK is to look at the source code. The `packages/f
 ```
 cargo run --bin test-projects -- build
 ```
+> The `test-projects` binary can also be used to clean and format the test projects. Check the `help` output for more info.
 
-Then we can run the tests with
+After building the projects, we can run the tests with
 
 ```
 cargo test
