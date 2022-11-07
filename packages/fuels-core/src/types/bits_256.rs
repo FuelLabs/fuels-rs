@@ -40,7 +40,7 @@ impl Tokenizable for Bits256 {
         match token {
             Token::B256(data) => Ok(Bits256(data)),
             _ => Err(Error::InvalidData(format!(
-                "Bits256 cannot be constructed from token {token}"
+                "EvmAddress could not be constructed from the given token. Reason: Expected Struct(B256) got: {token:?}"
             ))),
         }
     }
@@ -68,6 +68,7 @@ impl EvmAddress {
 
 impl From<Bits256> for EvmAddress {
     fn from(b256: Bits256) -> Self {
+        // An evm address is only 20 bytes
         let value = Bits256(Self::clear_12_bytes(b256.0));
 
         Self { value }
@@ -124,7 +125,7 @@ mod tests {
 
     #[test]
     fn test_from_token_b256() -> Result<(), Error> {
-        let data = [0u8; 32];
+        let data = [1u8; 32];
         let token = Token::B256(data);
 
         let bits256 = Bits256::from_token(token)?;
@@ -136,7 +137,7 @@ mod tests {
 
     #[test]
     fn test_into_token_b256() {
-        let data = [0u8; 32];
+        let data = [1u8; 32];
         let bits256 = Bits256(data);
 
         let token = bits256.into_token();
@@ -177,23 +178,33 @@ mod tests {
 
     #[test]
     fn test_from_token_evm_addr() -> Result<(), Error> {
-        let data = [0u8; 32];
+        let data = [1u8; 32];
         let token = Token::Struct(vec![Token::B256(data)]);
 
         let evm_address = EvmAddress::from_token(token)?;
 
-        assert_eq!(evm_address.value.0, data);
+        let expected_data = [
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1,
+        ];
+
+        assert_eq!(evm_address.value.0, expected_data);
 
         Ok(())
     }
 
     #[test]
     fn test_into_token_evm_addr() {
-        let data = [0u8; 32];
+        let data = [1u8; 32];
         let evm_address = EvmAddress::from(Bits256(data));
 
         let token = evm_address.into_token();
 
-        assert_eq!(token, Token::Struct(vec![Token::B256(data)]));
+        let expected_data = [
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1,
+        ];
+
+        assert_eq!(token, Token::Struct(vec![Token::B256(expected_data)]));
     }
 }
