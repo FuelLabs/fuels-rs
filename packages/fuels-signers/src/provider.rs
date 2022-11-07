@@ -42,7 +42,7 @@ pub struct TimeParameters {
     // The time interval between subsequent blocks
     pub block_time_interval: u64,
 }
-// ANCHOR: time_parameters
+// ANCHOR_END: time_parameters
 
 impl From<TimeParameters> for FuelTimeParameters {
     fn from(time: TimeParameters) -> Self {
