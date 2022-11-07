@@ -31,12 +31,10 @@ pub struct Cli {
 
 #[derive(Subcommand)]
 pub enum Commands {
+    /// Cleans `forc` build output
+    Clean,
     /// Builds all test projects with `forc`
-    Build {
-        /// Cleans `forc` build output
-        #[arg(long)]
-        clean: bool,
-    },
+    Build,
     /// Formats all test projects with `forc-fmt`
     Format {
         /// Checks format but doesn't modify files

@@ -35,18 +35,22 @@ async fn main() {
     };
 
     let command_2_run = match cli.command {
-        Commands::Build { clean } => {
+        Commands::Clean => {
             let command = bin_path.join("forc").display().to_string();
-            let sub_command = if clean {
-                "clean".to_string()
-            } else {
-                "build".to_string()
-            };
 
             Command2Run {
                 command,
-                args: vec![sub_command.clone(), "--path".into()],
-                info: sub_command,
+                args: vec!["clean".into(), "--path".into()],
+                info: "clean".into(),
+            }
+        }
+        Commands::Build => {
+            let command = bin_path.join("forc").display().to_string();
+
+            Command2Run {
+                command,
+                args: vec!["build".into(), "--path".into()],
+                info: "build".into(),
             }
         }
         Commands::Format { check } => {
