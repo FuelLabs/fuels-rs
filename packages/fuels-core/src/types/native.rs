@@ -1,5 +1,5 @@
 use crate::{Bits256, Parameterize, Token, Tokenizable};
-use fuel_tx::{Address, AssetId, ContractId};
+pub use fuel_tx::{Address, AssetId, ContractId};
 use fuels_types::enum_variants::EnumVariants;
 use fuels_types::errors::Error;
 use fuels_types::param_types::ParamType;

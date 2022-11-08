@@ -218,9 +218,8 @@ fn to_bits256(
     _: impl Fn() -> Vec<ResolvedType>,
 ) -> Option<ResolvedType> {
     if type_field == "b256" {
-        let type_name = quote! {::fuels::core::types::Bits256};
         Some(ResolvedType {
-            type_name,
+            type_name: quote! {::fuels::core::types::Bits256},
             generic_params: vec![],
         })
     } else {
@@ -236,8 +235,9 @@ fn to_custom_type(
     custom_type_name(type_field)
         .ok()
         .map(|type_name| match type_name.as_str() {
-            "ContractId" => quote! {::fuels::tx::ContractId},
-            "Address" => quote! {::fuels::tx::Address},
+            "ContractId" => quote! {::fuels::core::types::ContractId},
+            "AssetId" => quote! {::fuels::core::types::AssetId},
+            "Address" => quote! {::fuels::core::types::Address},
             "Identity" => quote! {::fuels::core::types::Identity},
             "Option" => quote! {::std::option::Option},
             "Result" => quote! {::std::result::Result},

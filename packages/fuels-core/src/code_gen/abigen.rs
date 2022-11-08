@@ -212,6 +212,7 @@ impl Abigen {
 
         Ok([
             "ContractId",
+            "AssetId",
             "Address",
             "Option",
             "Identity",
