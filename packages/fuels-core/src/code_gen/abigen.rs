@@ -87,94 +87,63 @@ impl Abigen {
         let log_id_param_type_pairs = generate_log_id_param_type_pairs(&resolved_logs);
         let fetch_logs = generate_fetch_logs(&resolved_logs);
 
-        let (includes, code) = if self.no_std {
-            (
-                quote! {
-                    use alloc::{vec, vec::Vec};
-                    use fuels_core::{EnumSelector, Parameterize, Tokenizable, Token, Identity, try_from_bytes};
-                    use fuels_core::types::*;
-                    use fuels_core::code_gen::function_selector::resolve_fn_selector;
-                    use fuels_types::errors::Error as SDKError;
-                    use fuels_types::param_types::ParamType;
-                    use fuels_types::enum_variants::EnumVariants;
-                },
-                quote! {},
-            )
+        let code = if self.no_std {
+            quote! {}
         } else {
-            (
-                quote! {
-                    use fuels::contract::contract::{Contract, ContractCallHandler};
-                     use fuels::core::{EnumSelector, StringToken, Parameterize, Tokenizable, Token,
-                                      Identity, try_from_bytes};
-                    use fuels::core::code_gen::{extract_and_parse_logs, extract_log_ids_and_data};
-                    use fuels::core::abi_decoder::ABIDecoder;
-                    use fuels::core::code_gen::function_selector::resolve_fn_selector;
-                    use fuels::core::types::*;
-                    use fuels::signers::WalletUnlocked;
-                    use fuels::tx::{ContractId, Address, Receipt};
-                    use fuels::types::bech32::Bech32ContractId;
-                    use fuels::types::ResolvedLog;
-                    use fuels::types::errors::Error as SDKError;
-                    use fuels::types::param_types::ParamType;
-                    use fuels::types::enum_variants::EnumVariants;
-                    use std::str::FromStr;
-                    use std::collections::{HashSet, HashMap};
-                },
-                quote! {
-                    pub struct #name {
-                        contract_id: Bech32ContractId,
-                        wallet: WalletUnlocked,
-                        logs_lookup: Vec<(u64, ParamType)>,
+            quote! {
+                pub struct #name {
+                    contract_id: ::fuels::types::bech32::Bech32ContractId,
+                    wallet: ::fuels::signers::wallet::WalletUnlocked,
+                    logs_lookup: ::std::vec::Vec<(u64, ::fuels::types::param_types::ParamType)>,
+                }
+
+                impl #name {
+                    pub fn new(contract_id: ::fuels::types::bech32::Bech32ContractId, wallet: ::fuels::signers::wallet::WalletUnlocked) -> Self {
+                        Self { contract_id, wallet, logs_lookup: vec![#(#log_id_param_type_pairs),*]}
                     }
 
-                    impl #name {
-                        pub fn new(contract_id: Bech32ContractId, wallet: WalletUnlocked) -> Self {
-                            Self { contract_id, wallet, logs_lookup: vec![#(#log_id_param_type_pairs),*]}
-                        }
-
-                        pub fn get_contract_id(&self) -> &Bech32ContractId {
-                            &self.contract_id
-                        }
-
-                        pub fn get_wallet(&self) -> WalletUnlocked {
-                            self.wallet.clone()
-                        }
-
-                        pub fn with_wallet(&self, mut wallet: WalletUnlocked) -> Result<Self, SDKError> {
-                           let provider = self.wallet.get_provider()?;
-                           wallet.set_provider(provider.clone());
-
-                           Ok(Self { contract_id: self.contract_id.clone(), wallet: wallet, logs_lookup: self.logs_lookup.clone() })
-                        }
-
-                        pub async fn get_balances(&self) -> Result<HashMap<String, u64>, SDKError> {
-                            self.wallet.get_provider()?.get_contract_balances(&self.contract_id).await.map_err(Into::into)
-                        }
-
-                        pub fn logs_with_type<D: Tokenizable + Parameterize>(&self, receipts: &[Receipt]) -> Result<Vec<D>, SDKError> {
-                            extract_and_parse_logs(&self.logs_lookup, receipts)
-                        }
-
-                        #fetch_logs
-
-                        pub fn methods(&self) -> #methods_name {
-                            #methods_name {
-                                contract_id: self.contract_id.clone(),
-                                wallet: self.wallet.clone(),
-                            }
-                        }
+                    pub fn get_contract_id(&self) -> &::fuels::types::bech32::Bech32ContractId {
+                        &self.contract_id
                     }
 
-                    pub struct #methods_name {
-                        contract_id: Bech32ContractId,
-                        wallet: WalletUnlocked
+                    pub fn get_wallet(&self) -> ::fuels::signers::wallet::WalletUnlocked {
+                        self.wallet.clone()
                     }
 
-                    impl #methods_name {
-                        #contract_functions
+                    pub fn with_wallet(&self, mut wallet: ::fuels::signers::wallet::WalletUnlocked) -> ::std::result::Result<Self, ::fuels::types::errors::Error> {
+                       let provider = self.wallet.get_provider()?;
+                       wallet.set_provider(provider.clone());
+
+                       Ok(Self { contract_id: self.contract_id.clone(), wallet: wallet, logs_lookup: self.logs_lookup.clone() })
                     }
-                },
-            )
+
+                    pub async fn get_balances(&self) -> ::std::result::Result<::std::collections::HashMap<::std::string::String, u64>, ::fuels::types::errors::Error> {
+                        self.wallet.get_provider()?.get_contract_balances(&self.contract_id).await.map_err(Into::into)
+                    }
+
+                    pub fn logs_with_type<D: ::fuels::core::Tokenizable + ::fuels::core::Parameterize>(&self, receipts: &[::fuels::tx::Receipt]) -> ::std::result::Result<::std::vec::Vec<D>, ::fuels::types::errors::Error> {
+                        ::fuels::core::code_gen::extract_and_parse_logs(&self.logs_lookup, receipts)
+                    }
+
+                    #fetch_logs
+
+                    pub fn methods(&self) -> #methods_name {
+                        #methods_name {
+                            contract_id: self.contract_id.clone(),
+                            wallet: self.wallet.clone(),
+                        }
+                    }
+                }
+
+                pub struct #methods_name {
+                    contract_id: ::fuels::types::bech32::Bech32ContractId,
+                    wallet: ::fuels::signers::wallet::WalletUnlocked
+                }
+
+                impl #methods_name {
+                    #contract_functions
+                }
+            }
         };
 
         Ok(quote! {
@@ -185,8 +154,6 @@ impl Abigen {
                 #![allow(clippy::enum_variant_names)]
                 #![allow(dead_code)]
                 #![allow(unused_imports)]
-
-                #includes
 
                 #code
 
@@ -308,7 +275,7 @@ impl Abigen {
 pub fn generate_fetch_logs(resolved_logs: &[ResolvedLog]) -> TokenStream {
     let generate_method = |body: TokenStream| {
         quote! {
-            pub fn fetch_logs(&self, receipts: &[Receipt]) -> Vec<String> {
+            pub fn fetch_logs(&self, receipts: &[::fuels::tx::Receipt]) -> ::std::vec::Vec<::std::string::String> {
                 #body
             }
         }
@@ -321,11 +288,11 @@ pub fn generate_fetch_logs(resolved_logs: &[ResolvedLog]) -> TokenStream {
 
     let branches = generate_param_type_if_branches(resolved_logs);
     let body = quote! {
-        let id_to_param_type: HashMap<_, _> = self.logs_lookup
+        let id_to_param_type: ::std::collections::HashMap<_, _> = self.logs_lookup
             .iter()
             .map(|(id, param_type)| (id, param_type))
             .collect();
-        let ids_with_data = extract_log_ids_and_data(receipts);
+        let ids_with_data = ::fuels::core::code_gen::extract_log_ids_and_data(receipts);
 
         ids_with_data
         .iter()
@@ -355,7 +322,7 @@ fn generate_param_type_if_branches(resolved_logs: &[ResolvedLog]) -> Vec<TokenSt
                 if **param_type == #param_type_call {
                     return format!(
                         "{:#?}",
-                        try_from_bytes::<#type_name>(&data).expect("Failed to construct type from log data.")
+                        ::fuels::core::try_from_bytes::<#type_name>(&data).expect("Failed to construct type from log data.")
                     );
                 }
             }

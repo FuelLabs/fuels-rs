@@ -52,11 +52,12 @@ pub fn expand_function(
 
     Ok(quote! {
         #doc
-        pub fn #name(&self #(,#arg_declarations)*) -> ContractCallHandler<#output_type> {
+        pub fn #name(&self #(,#arg_declarations)*) -> ::fuels::contract::contract::ContractCallHandler<#output_type> {
+            use ::fuels::core::Tokenizable;
             let provider = self.wallet.get_provider().expect("Provider not set up");
-            let encoded_fn_selector = resolve_fn_selector(#name_stringified, &[#(#param_type_calls),*]);
+            let encoded_fn_selector = ::fuels::core::code_gen::function_selector::resolve_fn_selector(#name_stringified, &[#(#param_type_calls),*]);
             let tokens = [#(#arg_names.into_token()),*];
-            Contract::method_hash(&provider,
+            ::fuels::contract::contract::Contract::method_hash(&provider,
                 self.contract_id.clone(),
                 &self.wallet,
                 encoded_fn_selector,

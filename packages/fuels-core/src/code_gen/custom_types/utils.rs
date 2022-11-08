@@ -51,26 +51,26 @@ impl Component {
 /// &[u8], &Vec<u8> and a Vec<u8>
 pub(crate) fn impl_try_from(ident: &Ident, generics: &[TokenStream]) -> TokenStream {
     quote! {
-        impl<#(#generics: Tokenizable + Parameterize),*> TryFrom<&[u8]> for #ident<#(#generics),*> {
-            type Error = SDKError;
+        impl<#(#generics: ::fuels::core::Tokenizable + ::fuels::core::Parameterize),*> TryFrom<&[u8]> for #ident<#(#generics),*> {
+            type Error = ::fuels::types::errors::Error;
 
             fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
-                try_from_bytes(bytes)
+                ::fuels::core::try_from_bytes(bytes)
             }
         }
-        impl<#(#generics: Tokenizable + Parameterize),*> TryFrom<&Vec<u8>> for #ident<#(#generics),*> {
-            type Error = SDKError;
+        impl<#(#generics: ::fuels::core::Tokenizable + ::fuels::core::Parameterize),*> TryFrom<&Vec<u8>> for #ident<#(#generics),*> {
+            type Error = ::fuels::types::errors::Error;
 
             fn try_from(bytes: &Vec<u8>) -> Result<Self, Self::Error> {
-                try_from_bytes(&bytes)
+                ::fuels::core::try_from_bytes(&bytes)
             }
         }
 
-        impl<#(#generics: Tokenizable + Parameterize),*> TryFrom<Vec<u8>> for #ident<#(#generics),*> {
-            type Error = SDKError;
+        impl<#(#generics: ::fuels::core::Tokenizable + ::fuels::core::Parameterize),*> TryFrom<Vec<u8>> for #ident<#(#generics),*> {
+            type Error = ::fuels::types::errors::Error;
 
             fn try_from(bytes: Vec<u8>) -> Result<Self, Self::Error> {
-                try_from_bytes(&bytes)
+                ::fuels::core::try_from_bytes(&bytes)
             }
         }
     }
@@ -139,9 +139,9 @@ pub fn single_param_type_call(field_type: &ResolvedType) -> TokenStream {
         .map(TokenStream::from)
         .collect::<Vec<_>>();
     if parameters.is_empty() {
-        quote! { <#type_name>::param_type() }
+        quote! { <#type_name as ::fuels::core::Parameterize>::param_type() }
     } else {
-        quote! { #type_name::<#(#parameters),*>::param_type() }
+        quote! { <#type_name::<#(#parameters),*> as ::fuels::core::Parameterize>::param_type() }
     }
 }
 

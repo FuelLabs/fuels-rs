@@ -63,7 +63,7 @@ fn enum_decl(
 
     quote! {
         #[derive(Clone, Debug, Eq, PartialEq)]
-        pub enum #enum_ident <#(#generics: Tokenizable + Parameterize),*> {
+        pub enum #enum_ident <#(#generics: ::fuels::core::Tokenizable + ::fuels::core::Parameterize),*> {
             #(#enum_variants),*
         }
     }
@@ -114,18 +114,18 @@ fn enum_tokenizable_impl(
     );
 
     quote! {
-            impl<#(#generics: Tokenizable + Parameterize),*> Tokenizable for #enum_ident <#(#generics),*> {
-                fn from_token(token: Token) -> Result<Self, SDKError>
+            impl<#(#generics: ::fuels::core::Tokenizable + ::fuels::core::Parameterize),*> ::fuels::core::Tokenizable for #enum_ident <#(#generics),*> {
+                fn from_token(token: ::fuels::core::Token) -> Result<Self, ::fuels::types::errors::Error>
                 where
                     Self: Sized,
                 {
                     let gen_err = |msg| {
-                        SDKError::InvalidData(format!(
+                        ::fuels::types::errors::Error::InvalidData(format!(
                             "Error while instantiating {} from token! {}", #enum_ident_stringified, msg
                         ))
                     };
                     match token {
-                        Token::Enum(selector) => {
+                        ::fuels::core::Token::Enum(selector) => {
                             let (discriminant, variant_token, _) = *selector;
                             match discriminant {
                                 #(#match_discriminant_from_token,)*
@@ -140,17 +140,17 @@ fn enum_tokenizable_impl(
                     }
                 }
 
-                fn into_token(self) -> Token {
+                fn into_token(self) -> ::fuels::core::Token {
                     let (discriminant, token) = match self {
                         #(#match_discriminant_into_token),*
                     };
 
-                    let variants = match Self::param_type() {
-                        ParamType::Enum{variants, ..} => variants,
+                    let variants = match <Self as ::fuels::core::Parameterize>::param_type() {
+                        ::fuels::types::param_types::ParamType::Enum{variants, ..} => variants,
                         other => panic!("Calling {}::param_type() must return a ParamType::Enum but instead it returned: {:?}", #enum_ident_stringified, other)
                     };
 
-                    Token::Enum(Box::new((discriminant, token, variants)))
+                    ::fuels::core::Token::Enum(Box::new((discriminant, token, variants)))
                 }
             }
     }
@@ -164,13 +164,13 @@ fn enum_parameterize_impl(
     let param_type_calls = param_type_calls(components);
     let enum_ident_stringified = enum_ident.to_string();
     quote! {
-        impl<#(#generics: Parameterize + Tokenizable),*> Parameterize for #enum_ident <#(#generics),*> {
-            fn param_type() -> ParamType {
+        impl<#(#generics: ::fuels::core::Parameterize + ::fuels::core::Tokenizable),*> ::fuels::core::Parameterize for #enum_ident <#(#generics),*> {
+            fn param_type() -> ::fuels::types::param_types::ParamType {
                 let mut param_types = vec![];
                 #(param_types.push(#param_type_calls);)*
 
-                let variants = EnumVariants::new(param_types).unwrap_or_else(|_| panic!("{} has no variants which isn't allowed!", #enum_ident_stringified));
-                ParamType::Enum{variants, generics: vec![#(#generics::param_type()),*]}
+                let variants = ::fuels::types::enum_variants::EnumVariants::new(param_types).unwrap_or_else(|_| panic!("{} has no variants which isn't allowed!", #enum_ident_stringified));
+                ::fuels::types::param_types::ParamType::Enum{variants, generics: vec![#(#generics::param_type()),*]}
             }
         }
     }

@@ -68,7 +68,6 @@ pub mod prelude {
     pub use super::core::parameters::*;
     pub use super::core::tx::{Address, AssetId, ContractId};
     pub use super::core::types::*;
-    pub use super::core::Identity;
     pub use super::core::{Token, Tokenizable};
     pub use super::fuel_node::*;
     pub use super::fuels_abigen::{abigen, setup_contract_test};
@@ -80,4 +79,5 @@ pub mod prelude {
     pub use super::types::bech32::Bech32Address;
     pub use super::types::bech32::Bech32ContractId;
     pub use super::types::errors::Error;
+    pub use fuels_core::types::Identity;
 }

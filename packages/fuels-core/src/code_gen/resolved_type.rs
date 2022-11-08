@@ -90,7 +90,7 @@ pub(crate) fn resolve_type(
         to_array,
         to_sized_ascii_string,
         to_tuple,
-        to_struct,
+        to_custom_type,
     ]
     .into_iter()
     .filter_map(|fun| {
@@ -152,7 +152,7 @@ fn to_sized_ascii_string(
     }];
 
     Some(ResolvedType {
-        type_name: quote! { SizedAsciiString },
+        type_name: quote! { ::fuels::core::types::SizedAsciiString },
         generic_params,
     })
 }
@@ -203,7 +203,7 @@ fn to_byte(
     _: impl Fn() -> Vec<ResolvedType>,
 ) -> Option<ResolvedType> {
     if type_field == "byte" {
-        let type_name = quote! {Byte};
+        let type_name = quote! {::fuels::core::types::Byte};
         Some(ResolvedType {
             type_name,
             generic_params: vec![],
@@ -218,7 +218,7 @@ fn to_bits256(
     _: impl Fn() -> Vec<ResolvedType>,
 ) -> Option<ResolvedType> {
     if type_field == "b256" {
-        let type_name = quote! {Bits256};
+        let type_name = quote! {::fuels::core::types::Bits256};
         Some(ResolvedType {
             type_name,
             generic_params: vec![],
@@ -228,16 +228,27 @@ fn to_bits256(
     }
 }
 
-fn to_struct(
+fn to_custom_type(
     type_field: &str,
     _: impl Fn() -> Vec<ResolvedType>,
     type_arguments_supplier: impl Fn() -> Vec<ResolvedType>,
 ) -> Option<ResolvedType> {
     custom_type_name(type_field)
         .ok()
-        .map(|type_name| ident(&type_name))
+        .map(|type_name| match type_name.as_str() {
+            "ContractId" => quote! {::fuels::tx::ContractId},
+            "Address" => quote! {::fuels::tx::Address},
+            "Identity" => quote! {::fuels::core::types::Identity},
+            "Option" => quote! {::std::option::Option},
+            "Result" => quote! {::std::result::Result},
+            "Vec" => quote! {::std::vec::Vec},
+            other => {
+                let custom_type_name = ident(other);
+                quote! {self::#custom_type_name}
+            }
+        })
         .map(|type_name| ResolvedType {
-            type_name: type_name.into_token_stream(),
+            type_name,
             generic_params: type_arguments_supplier(),
         })
 }
