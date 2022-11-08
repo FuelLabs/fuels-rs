@@ -1,13 +1,8 @@
-use fuel_gql_client::{
-    fuel_tx::{ContractId, Input, Output, TxPointer, UtxoId},
-    fuel_vm::{
-        consts::{REG_ONE, WORD_SIZE},
-        prelude::{GTFArgs, Opcode},
-    },
-};
+use fuel_gql_client::fuel_vm::consts::{REG_ONE, WORD_SIZE};
+use fuel_gql_client::fuel_vm::prelude::{GTFArgs, Opcode};
+use fuels::contract::script::ScriptBuilder;
 use fuels::prelude::*;
-use fuels_contract::script::ScriptBuilder;
-use fuels_core::tx::Bytes32;
+use fuels::tx::{Bytes32, Input, Output, TxPointer, UtxoId};
 
 #[tokio::test]
 async fn test_transaction_script_workflow() -> Result<(), Error> {
