@@ -5,4 +5,3 @@ license = "Apache-2.0"
 name = "type_inside_enum"
 
 [dependencies]
-
