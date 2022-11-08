@@ -54,22 +54,22 @@ pub(crate) fn impl_try_from(ident: &Ident, generics: &[TokenStream]) -> TokenStr
         impl<#(#generics: ::fuels::core::Tokenizable + ::fuels::core::Parameterize),*> TryFrom<&[u8]> for #ident<#(#generics),*> {
             type Error = ::fuels::types::errors::Error;
 
-            fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
+            fn try_from(bytes: &[u8]) -> ::std::result::Result<Self, Self::Error> {
                 ::fuels::core::try_from_bytes(bytes)
             }
         }
-        impl<#(#generics: ::fuels::core::Tokenizable + ::fuels::core::Parameterize),*> TryFrom<&Vec<u8>> for #ident<#(#generics),*> {
+        impl<#(#generics: ::fuels::core::Tokenizable + ::fuels::core::Parameterize),*> TryFrom<&::std::vec::Vec<u8>> for #ident<#(#generics),*> {
             type Error = ::fuels::types::errors::Error;
 
-            fn try_from(bytes: &Vec<u8>) -> Result<Self, Self::Error> {
+            fn try_from(bytes: &::std::vec::Vec<u8>) -> ::std::result::Result<Self, Self::Error> {
                 ::fuels::core::try_from_bytes(&bytes)
             }
         }
 
-        impl<#(#generics: ::fuels::core::Tokenizable + ::fuels::core::Parameterize),*> TryFrom<Vec<u8>> for #ident<#(#generics),*> {
+        impl<#(#generics: ::fuels::core::Tokenizable + ::fuels::core::Parameterize),*> TryFrom<::std::vec::Vec<u8>> for #ident<#(#generics),*> {
             type Error = ::fuels::types::errors::Error;
 
-            fn try_from(bytes: Vec<u8>) -> Result<Self, Self::Error> {
+            fn try_from(bytes: ::std::vec::Vec<u8>) -> ::std::result::Result<Self, Self::Error> {
                 ::fuels::core::try_from_bytes(&bytes)
             }
         }

@@ -66,18 +66,15 @@ pub mod prelude {
     pub use super::contract::predicate::Predicate;
     pub use super::core::constants::*;
     pub use super::core::parameters::*;
-    pub use super::core::tx::{Address, AssetId, ContractId};
     pub use super::core::types::*;
     pub use super::core::{Token, Tokenizable};
     pub use super::fuel_node::*;
     pub use super::fuels_abigen::{abigen, setup_contract_test};
     pub use super::signers::provider::*;
     pub use super::signers::{wallet::generate_mnemonic_phrase, Signer, Wallet, WalletUnlocked};
-    pub use super::test_helpers::Config;
     pub use super::test_helpers::*;
     pub use super::tx::Salt;
     pub use super::types::bech32::Bech32Address;
     pub use super::types::bech32::Bech32ContractId;
     pub use super::types::errors::Error;
-    pub use fuels_core::types::Identity;
 }
