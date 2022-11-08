@@ -40,7 +40,7 @@ impl Tokenizable for Bits256 {
         match token {
             Token::B256(data) => Ok(Bits256(data)),
             _ => Err(Error::InvalidData(format!(
-                "EvmAddress could not be constructed from the given token. Reason: Expected Struct(B256) got: {token:?}"
+                "Bits256 cannot be constructed from token {token}"
             ))),
         }
     }
@@ -53,11 +53,13 @@ impl Tokenizable for Bits256 {
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
 // ANCHOR: evm_address
 pub struct EvmAddress {
+    // An evm address is only 20 bytes, the first 12 bytes should be set to 0
     value: Bits256,
 }
 // ANCHOR_END: evm_address
 
 impl EvmAddress {
+    // sets the leftmost 12 bytes to zero
     fn clear_12_bytes(bytes: [u8; 32]) -> [u8; 32] {
         let mut bytes = bytes;
         bytes[..12].copy_from_slice(&[0u8; 12]);
@@ -68,7 +70,6 @@ impl EvmAddress {
 
 impl From<Bits256> for EvmAddress {
     fn from(b256: Bits256) -> Self {
-        // An evm address is only 20 bytes
         let value = Bits256(Self::clear_12_bytes(b256.0));
 
         Self { value }
@@ -89,22 +90,16 @@ impl Tokenizable for EvmAddress {
     where
         Self: Sized,
     {
-        if let Token::Struct(tokens) = t {
-            let first_token = tokens.into_iter().next();
+        if let Token::Struct(tokens) = &t {
+            let first_token = tokens.iter().next();
             if let Some(Token::B256(data)) = first_token {
-                Ok(EvmAddress::from(Bits256(data)))
-            } else {
-                Err(Error::InstantiationError(format!(
-                    "Expected `b256`, got {:?}",
-                    first_token
-                )))
+                return Ok(EvmAddress::from(Bits256(*data)));
             }
-        } else {
-            Err(Error::InstantiationError(format!(
-                "Expected `EvmAddress`, got {:?}",
-                t
-            )))
         }
+
+        Err(Error::InstantiationError(format!(
+            "EvmAddress could not be constructed from the given token. Reason: Expected Struct(B256) got: {t:?}",
+        )))
     }
 
     fn into_token(self) -> Token {
