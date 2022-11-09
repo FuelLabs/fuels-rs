@@ -1,4 +1,5 @@
 use fuels::prelude::*;
+use std::future::Future;
 
 #[tokio::test]
 async fn test_multiple_args() -> Result<(), Error> {
@@ -620,7 +621,12 @@ async fn test_contract_instance_get_balances() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_contract_multithreading() -> Result<(), Error> {
+async fn contract_call_futures_implement_send() -> Result<(), Error> {
+    fn tokio_spawn_imitation<T>(_: T)
+    where
+        T: Future + Send + 'static,
+    {
+    }
 
     setup_contract_test!(
         contract_instance,
@@ -628,7 +634,7 @@ async fn test_contract_multithreading() -> Result<(), Error> {
         "packages/fuels/tests/contracts/contract_test"
     );
 
-    tokio::task::spawn(async move {
+    tokio_spawn_imitation(async move {
         contract_instance
             .methods()
             .initialize_counter(42)
