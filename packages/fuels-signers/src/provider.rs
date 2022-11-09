@@ -18,6 +18,7 @@ use fuel_gql_client::{
     fuel_types::AssetId,
 };
 use fuels_core::constants::{DEFAULT_GAS_ESTIMATION_TOLERANCE, MAX_GAS_PER_TX};
+use fuels_types::block::Block;
 use std::collections::HashMap;
 use thiserror::Error;
 
@@ -413,6 +414,23 @@ impl Provider {
     ) -> io::Result<u64> {
         let fuel_time: Option<FuelTimeParameters> = time.map(|t| t.into());
         self.client.produce_blocks(amount, fuel_time).await
+    }
+
+    /// Get block by id.
+    pub async fn block(
+        &self,
+        block_id: &str,
+    ) -> Result<Option<Block>, ProviderError> {
+        let block = self.client.block(block_id).await?.map(|b| b.into());
+        Ok(block)
+    }
+
+    // - Get block(s)
+    pub async fn get_blocks(
+        &self,
+        request: PaginationRequest<String>,
+    ) -> Result<PaginatedResult<Block, String>, ProviderError> {
+        self.client.blocks(request).await?.into()
     }
 
     pub async fn estimate_transaction_cost<Tx>(
