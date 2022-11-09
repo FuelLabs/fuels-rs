@@ -39,18 +39,25 @@ jobs:
         run: |
           git config --global core.bigfilethreshold 100m
 
-      - name: Install Forc
+      - name: Install forc and forc-fmt
         run: |
           curl -sSLf https://github.com/FuelLabs/sway/releases/download/v${{ env.FORC_VERSION }}/forc-binaries-linux_amd64.tar.gz -L -o forc.tar.gz
           tar -xvf forc.tar.gz
           chmod +x forc-binaries/forc
           mv forc-binaries/forc /usr/local/bin/forc
+          mv forc-binaries/forc-fmt /usr/local/bin/forc-fmt
 
-      - name: Build Sway Examples
+      - name: Build Sway test projects
         uses: actions-rs/cargo@v1
         with:
           command: run
-          args: --bin build-test-projects
+          args: --bin test-projects -- build
+
+      - name: Check format of Sway test projects
+        uses: actions-rs/cargo@v1
+        with:
+          command: run
+          args: --bin test-projects -- format --check
 
       - uses: actions/upload-artifact@v2
         with:
