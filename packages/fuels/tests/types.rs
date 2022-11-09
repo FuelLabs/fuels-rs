@@ -284,6 +284,67 @@ async fn test_tuples() -> Result<(), Error> {
 }
 
 #[tokio::test]
+async fn test_evm_address() -> Result<(), Error> {
+    setup_contract_test!(
+        contract_instance,
+        wallet,
+        "packages/fuels/tests/types/evm_address"
+    );
+
+    {
+        let b256 = Bits256::from_hex_str(
+            "0x1616060606060606060606060606060606060606060606060606060606060606",
+        )?;
+        let evm_address = EvmAddress::from(b256);
+
+        assert!(
+            contract_instance
+                .methods()
+                .evm_address_as_input(evm_address)
+                .call()
+                .await?
+                .value
+        );
+    }
+
+    {
+        let b256 = Bits256::from_hex_str(
+            "0x0606060606060606060606060606060606060606060606060606060606060606",
+        )?;
+        let expected_evm_address = EvmAddress::from(b256);
+
+        assert_eq!(
+            contract_instance
+                .methods()
+                .evm_address_from_literal()
+                .call()
+                .await?
+                .value,
+            expected_evm_address
+        );
+    }
+
+    {
+        let b256 = Bits256::from_hex_str(
+            "0x0606060606060606060606060606060606060606060606060606060606060606",
+        )?;
+        let expected_evm_address = EvmAddress::from(b256);
+
+        assert_eq!(
+            contract_instance
+                .methods()
+                .evm_address_from_argument(b256)
+                .call()
+                .await?
+                .value,
+            expected_evm_address
+        );
+    }
+
+    Ok(())
+}
+
+#[tokio::test]
 async fn test_array() -> Result<(), Error> {
     setup_contract_test!(
         contract_instance,

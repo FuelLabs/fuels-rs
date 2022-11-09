@@ -31,7 +31,7 @@ impl MyContract for Contract {
     }
 
     fn returns_struct_in_tuple(input: (u64, Person)) -> (u64, Person) {
-        let expected = (42, Person { name: "Jane" }, );
+        let expected = (42, Person { name: "Jane" });
         assert(input.0 == expected.0);
         assert(sha256(input.1.name) == sha256(expected.1.name));
 
@@ -62,7 +62,7 @@ impl MyContract for Contract {
     }
 
     fn tuple_with_b256(p: (b256, u8)) -> (b256, u8) {
-        let expected = (ZERO_B256, 10u8, );
+        let expected = (ZERO_B256, 10u8);
 
         assert(p.0 == expected.0);
         assert(p.1 == expected.1);
