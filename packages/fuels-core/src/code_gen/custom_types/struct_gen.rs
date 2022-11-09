@@ -98,22 +98,22 @@ fn struct_tokenizable_impl(
         impl <#(#generic_parameters: ::fuels::core::Tokenizable + ::fuels::core::Parameterize, )*> ::fuels::core::Tokenizable for #struct_ident <#(#generic_parameters, )*> {
             fn into_token(self) -> ::fuels::core::Token {
                 use ::fuels::core::Tokenizable;
-                let mut tokens = Vec::new();
+                let mut tokens = ::std::vec::Vec::new();
                 #( tokens.push(#into_token_calls); )*
                 ::fuels::core::Token::Struct(tokens)
             }
 
-            fn from_token(token: ::fuels::core::Token)  -> Result<Self, ::fuels::types::errors::Error> {
+            fn from_token(token: ::fuels::core::Token)  -> ::std::result::Result<Self, ::fuels::types::errors::Error> {
                 match token {
                     ::fuels::core::Token::Struct(tokens) => {
                         let mut tokens_iter = tokens.into_iter();
                         let mut next_token = move || { tokens_iter
                             .next()
-                            .ok_or_else(|| { ::fuels::types::errors::Error::InstantiationError(format!("Ran out of tokens before '{}' has finished construction!", #struct_name_str)) })
+                            .ok_or_else(|| { ::fuels::types::errors::Error::InstantiationError(::std::format!("Ran out of tokens before '{}' has finished construction!", #struct_name_str)) })
                         };
                         Ok(Self { #( #from_token_calls, )* })
                     },
-                    other => Err(::fuels::types::errors::Error::InstantiationError(format!("Error while constructing '{}'. Expected token of type Token::Struct, got {:?}", #struct_name_str, other))),
+                    other => Err(::fuels::types::errors::Error::InstantiationError(::std::format!("Error while constructing '{}'. Expected token of type Token::Struct, got {:?}", #struct_name_str, other))),
                 }
             }
         }
@@ -129,9 +129,9 @@ fn struct_parameterized_impl(
     quote! {
         impl <#(#generic_parameters: ::fuels::core::Parameterize + ::fuels::core::Tokenizable),*> ::fuels::core::Parameterize for #struct_ident <#(#generic_parameters),*> {
             fn param_type() -> ::fuels::types::param_types::ParamType {
-                let mut types = Vec::new();
+                let mut types = ::std::vec::Vec::new();
                 #( types.push(#param_type_calls); )*
-                ::fuels::types::param_types::ParamType::Struct{fields: types, generics: vec![#(#generic_parameters::param_type()),*]}
+                ::fuels::types::param_types::ParamType::Struct{fields: types, generics: ::std::vec![#(#generic_parameters::param_type()),*]}
             }
         }
     }
