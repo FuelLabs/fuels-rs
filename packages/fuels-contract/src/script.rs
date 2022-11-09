@@ -18,7 +18,7 @@ use fuels_types::bech32::Bech32Address;
 use fuels_types::{constants::WORD_SIZE, errors::Error};
 use futures::{stream, StreamExt};
 use std::collections::HashSet;
-use std::iter;
+use std::{iter, vec};
 
 use crate::contract::ContractCall;
 

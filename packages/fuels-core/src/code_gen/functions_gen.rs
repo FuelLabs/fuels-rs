@@ -97,7 +97,6 @@ pub fn generate_script_main_function(
     Ok(quote! {
         #doc
         pub async fn #name(&self #(,#arg_declarations)*) -> Result<#output_type, SDKError> {
-            let provider = self.wallet.get_provider().expect("Provider not set up").clone();
             let arg_name_tokens = [#(#arg_names.into_token()),*];
             let script_data = ABIEncoder::encode(&arg_name_tokens)?.resolve(0);
             let script = Script::from_binary_filepath(
@@ -107,6 +106,7 @@ pub fn generate_script_main_function(
                 None, // inputs
                 None // outputs
             )?;
+            let provider = self.wallet.get_provider()?;
             let mut receipts = script.call(&provider).await?;
             let output_token = get_decoded_output(
                 &mut receipts,

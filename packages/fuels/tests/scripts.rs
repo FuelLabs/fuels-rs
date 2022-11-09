@@ -169,6 +169,7 @@ async fn main_function_arguments() -> Result<(), Error> {
     // ANCHOR_END: script_with_arguments
     Ok(())
 }
+
 #[tokio::test]
 async fn main_function_generic_arguments() -> Result<(), Error> {
     script_abigen!(
