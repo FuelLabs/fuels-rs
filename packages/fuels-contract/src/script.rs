@@ -16,7 +16,6 @@ use fuels_signers::provider::Provider;
 use fuels_signers::{Signer, WalletUnlocked};
 use fuels_types::bech32::Bech32Address;
 use fuels_types::{constants::WORD_SIZE, errors::Error};
-use futures::{stream, StreamExt};
 use std::collections::HashSet;
 use std::iter;
 
@@ -99,14 +98,14 @@ impl Script {
         wallet: &WalletUnlocked,
         required_asset_amounts: &[(AssetId, u64)],
     ) -> Result<Vec<Coin>, Error> {
-        stream::iter(required_asset_amounts)
-            .map(|(asset_id, amount)| wallet.get_spendable_coins(*asset_id, *amount))
-            .buffer_unordered(10)
-            .collect::<Vec<_>>()
-            .await
-            .into_iter()
-            .flatten_ok()
-            .collect()
+        let mut coins = vec![];
+
+        for (asset_id, amount) in required_asset_amounts {
+            let spendable_coins = wallet.get_spendable_coins(*asset_id, *amount).await?;
+            coins.extend(spendable_coins);
+        }
+
+        Ok(coins)
     }
 
     fn calculate_required_asset_amounts(calls: &[ContractCall]) -> Vec<(AssetId, u64)> {
@@ -198,7 +197,7 @@ impl Script {
                 // including custom_input_offset
                 let custom_input_offset =
                     segment_offset + AssetId::LEN + 2 * WORD_SIZE + ContractId::LEN + 2 * WORD_SIZE;
-                script_data.extend(&(custom_input_offset as Word).to_be_bytes());
+                script_data.extend((custom_input_offset as Word).to_be_bytes());
                 custom_input_offset
             } else {
                 segment_offset
