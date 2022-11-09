@@ -619,6 +619,13 @@ async fn test_contract_instance_get_balances() -> Result<(), Error> {
     Ok(())
 }
 
+fn assert_is_revert_containing_msg(msg: &str, error: Error) {
+    assert!(matches!(error, Error::RevertTransactionError(..)));
+    if let Error::RevertTransactionError(error_message, _) = error {
+        assert!(error_message.contains(msg));
+    }
+}
+
 #[tokio::test]
 async fn test_require() -> Result<(), Error> {
     setup_contract_test!(
@@ -635,11 +642,8 @@ async fn test_require() -> Result<(), Error> {
             .await
             .expect_err("Should return a revert error");
         dbg!(&error); //TODO: remove after the PR review
-
-        assert!(matches!(error, Error::RevertTransactionError(..)));
-        if let Error::RevertTransactionError(error_message, _) = error {
-            assert!(error_message.contains("42"));
-        }
+                      //
+        assert_is_revert_containing_msg("42", error);
     }
     {
         let error = contract_methods
@@ -649,10 +653,7 @@ async fn test_require() -> Result<(), Error> {
             .expect_err("Should return a revert error");
         dbg!(&error); //TODO: remove after the PR review
 
-        assert!(matches!(error, Error::RevertTransactionError(..)));
-        if let Error::RevertTransactionError(error_message, _) = error {
-            assert!(error_message.contains("fuel"));
-        }
+        assert_is_revert_containing_msg("fuel", error);
     }
     {
         let error = contract_methods
@@ -662,10 +663,7 @@ async fn test_require() -> Result<(), Error> {
             .expect_err("Should return a revert error");
         dbg!(&error); //TODO: remove after the PR review
 
-        assert!(matches!(error, Error::RevertTransactionError(..)));
-        if let Error::RevertTransactionError(error_message, _) = error {
-            assert!(error_message.contains("StructDeeplyNestedGeneric"));
-        }
+        assert_is_revert_containing_msg("StructDeeplyNestedGeneric", error);
     }
     Ok(())
 }
@@ -680,8 +678,8 @@ async fn test_multi_call_require() -> Result<(), Error> {
 
     let contract_methods = contract_instance.methods();
 
-    // The script will return the first revert if finds so we will have different outputs
-    // depending on the order of the call handlers
+    // The output of the error depends on the order of the contract
+    // handlers as the script returns the first revert it finds.
     {
         let call_handler_1 = contract_methods.require_string();
         let call_handler_2 = contract_methods.require_custom_generic();
@@ -693,15 +691,12 @@ async fn test_multi_call_require() -> Result<(), Error> {
             .add_call(call_handler_2);
 
         let error = multi_call_handler
-            .call::<(bool, bool)>()
+            .call::<((), ())>()
             .await
             .expect_err("Should return a revert error");
         dbg!(&error); //TODO: remove after the PR review
 
-        assert!(matches!(error, Error::RevertTransactionError(..)));
-        if let Error::RevertTransactionError(error_message, _) = error {
-            assert!(error_message.contains("fuel"));
-        }
+        assert_is_revert_containing_msg("fuel", error);
     }
     {
         let call_handler_1 = contract_methods.require_custom_generic();
@@ -714,15 +709,12 @@ async fn test_multi_call_require() -> Result<(), Error> {
             .add_call(call_handler_2);
 
         let error = multi_call_handler
-            .call::<(bool, bool)>()
+            .call::<((), ())>()
             .await
             .expect_err("Should return a revert error");
         dbg!(&error); //TODO: remove after the PR review
 
-        assert!(matches!(error, Error::RevertTransactionError(..)));
-        if let Error::RevertTransactionError(error_message, _) = error {
-            assert!(error_message.contains("StructDeeplyNestedGeneric"));
-        }
+        assert_is_revert_containing_msg("StructDeeplyNestedGeneric", error);
     }
     Ok(())
 }

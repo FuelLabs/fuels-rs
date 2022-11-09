@@ -124,6 +124,7 @@ impl Abigen {
                     use std::fmt;
                 },
                 quote! {
+                    #[derive(Debug)]
                     pub struct #name {
                         contract_id: Bech32ContractId,
                         wallet: WalletUnlocked,
@@ -178,7 +179,6 @@ impl Abigen {
                         #contract_functions
                     }
 
-
                     impl Logging for #name
                     {
                         fn get_logs(receipts: &[Receipt]) -> Vec<String> {
@@ -187,13 +187,6 @@ impl Abigen {
 
                         fn logs_with_type<D: Tokenizable + Parameterize>(receipts: &[Receipt]) -> Result<Vec<D>, SDKError> {
                             Self::logs_with_type::<D>(receipts)
-                        }
-                    }
-
-                    // Implemented manually so that we can use Debug on types that use depend on the Logging trait
-                    impl fmt::Debug for #name {
-                        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                            write!(f, "{}", #name_str)
                         }
                     }
                 },
