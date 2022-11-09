@@ -6,7 +6,7 @@ use fuel_gql_client::{
     },
 };
 use fuels::prelude::*;
-use fuels_contract::script::ScriptBuilder;
+use fuels_contract::script::Script;
 use fuels_core::tx::Bytes32;
 
 #[tokio::test]
@@ -110,7 +110,7 @@ async fn test_script_interface() -> Result<(), Error> {
     .flatten()
     .collect();
 
-    let script = vec![
+    let script_binary = vec![
         Opcode::gtf(0x10, 0x00, GTFArgs::ScriptData),
         Opcode::ADDI(0x11, 0x10, ContractId::LEN as u16),
         Opcode::LW(0x12, 0x11, 0),
@@ -121,19 +121,15 @@ async fn test_script_interface() -> Result<(), Error> {
     .into_iter()
     .collect();
 
-    ScriptBuilder::new()
-        .set_gas_price(tx_parameters.gas_price)
-        .set_gas_limit(tx_parameters.gas_limit)
-        .set_maturity(tx_parameters.maturity)
-        .set_script(script)
-        .set_script_data(script_data)
-        .set_inputs(inputs.to_vec())
-        .set_outputs(outputs.to_vec())
-        .set_amount(amount)
-        .build(&wallet)
-        .await?
-        .call(wallet.get_provider()?)
-        .await?;
+    let script = Script::from_binary(
+        script_binary,
+        tx_parameters,
+        Some(script_data),
+        Some(inputs),
+        Some(outputs),
+    );
+    let provider = wallet.get_provider()?;
+    let _result = script.call(provider).await;
 
     let contract_balances = wallet
         .get_provider()?
@@ -175,16 +171,12 @@ async fn main_function_arguments() -> Result<(), Error> {
 }
 #[tokio::test]
 async fn main_function_generic_arguments() -> Result<(), Error> {
-    // ANCHOR: script_with_generic_arguments
-
-    // The abigen is used for the same purpose as with contracts (Rust bindings)
     script_abigen!(
         MyScript,
-        "packages/fuels/tests/scripts/script_generic_arguments/out/debug/script_generic_arguments-abi.json"
+        "packages/fuels/tests/scripts/script_generic_types/out/debug/script_generic_types-abi.json"
     );
     let wallet = launch_provider_and_get_wallet().await;
-    let bin_path =
-        "../fuels/tests/scripts/script_generic_arguments/out/debug/script_generic_arguments.bin";
+    let bin_path = "../fuels/tests/scripts/script_generic_types/out/debug/script_generic_types.bin";
     let instance = MyScript::new(wallet, bin_path);
 
     let bim = GenericBimbam { val: 90 };
@@ -204,21 +196,19 @@ async fn main_function_generic_arguments() -> Result<(), Error> {
         GenericBimbam { val: 255_u8 },
     );
     assert_eq!(result, expected);
-    // ANCHOR_END: script_with_generic_arguments
     Ok(())
 }
 
 #[tokio::test]
 async fn main_function_option_result() -> Result<(), Error> {
-    // The abigen is used for the same purpose as with contracts (Rust bindings)
     script_abigen!(
         MyScript,
-        "packages/fuels/tests/scripts/script_with_option_result/out/debug\
-        /script_with_option_result-abi.json"
+        "packages/fuels/tests/scripts/script_option_result_types/out/debug\
+        /script_option_result_types-abi.json"
     );
     let wallet = launch_provider_and_get_wallet().await;
     let bin_path =
-        "../fuels/tests/scripts/script_with_option_result/out/debug/script_with_option_result.bin";
+        "../fuels/tests/scripts/script_option_result_types/out/debug/script_option_result_types.bin";
     let instance = MyScript::new(wallet, bin_path);
 
     let result = instance.main(Some(42), None).await?;
@@ -232,15 +222,28 @@ async fn main_function_option_result() -> Result<(), Error> {
 }
 
 #[tokio::test]
+async fn test_script_from_binary_filepath() -> Result<(), Error> {
+    // ANCHOR: script_from_binary_filepath
+    let path_to_bin = "../fuels/tests/scripts/basic_script/out/debug/basic_script.bin";
+    let (provider, _) = setup_test_provider(vec![], vec![], None, None).await;
+    // Provide `None` to all other arguments so the function uses the default for each
+    let script = Script::from_binary_filepath(path_to_bin, None, None, None, None)?;
+    let return_val = script.call(&provider).await?;
+
+    let expected = 29879;
+    assert_eq!(return_val[0].val().unwrap(), expected);
+    // ANCHOR_END: script_from_binary_filepath
+    Ok(())
+}
+
+#[tokio::test]
 async fn main_function_tuple_types() -> Result<(), Error> {
-    // The abigen is used for the same purpose as with contracts (Rust bindings)
     script_abigen!(
         MyScript,
-        "packages/fuels/tests/scripts/script_tuple_argument/out/debug/script_tuple_argument-abi.json"
+        "packages/fuels/tests/scripts/script_tuple_types/out/debug/script_tuple_types-abi.json"
     );
     let wallet = launch_provider_and_get_wallet().await;
-    let bin_path =
-        "../fuels/tests/scripts/script_tuple_argument/out/debug/script_tuple_argument.bin";
+    let bin_path = "../fuels/tests/scripts/script_tuple_types/out/debug/script_tuple_types.bin";
     let instance = MyScript::new(wallet, bin_path);
 
     let bim = Bim { bim: 90 };

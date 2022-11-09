@@ -1,5 +1,3 @@
-use std::collections::{HashMap, HashSet};
-
 use crate::code_gen::bindings::ContractBindings;
 use crate::code_gen::functions_gen::generate_script_main_function;
 use crate::source::Source;
@@ -13,6 +11,7 @@ use fuels_types::{ABIFunction, ProgramABI, ResolvedLog, TypeDeclaration};
 use itertools::Itertools;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
+use std::collections::{HashMap, HashSet};
 
 use super::custom_types::{expand_custom_enum, expand_custom_struct, single_param_type_call};
 use super::functions_gen::expand_function;
@@ -31,8 +30,6 @@ pub struct Abigen {
     abi: ProgramABI,
 
     types: HashMap<usize, TypeDeclaration>,
-
-    is_script: bool,
 }
 
 impl Abigen {
@@ -49,7 +46,6 @@ impl Abigen {
             program_name: ident(contract_name),
             rustfmt: true,
             no_std: false,
-            is_script: false,
         })
     }
 
@@ -58,37 +54,23 @@ impl Abigen {
         self
     }
 
-    pub fn script(mut self) -> Self {
-        self.is_script = true;
-        self
-    }
-
     /// Generates the contract bindings.
     pub fn generate(self) -> Result<ContractBindings, Error> {
         let rustfmt = self.rustfmt;
-        let tokens = self.expand()?;
+        let tokens = self.expand_contract()?;
 
         Ok(ContractBindings { tokens, rustfmt })
     }
 
     /// Entry point of the Abigen's expansion logic.
-    /// The high-level goal of this function is to expand* a contract/script defined as a JSON ABI
-    /// into type-safe bindings of that contract/script that can be used after it is brought into
+    /// The high-level goal of this function is to expand* a contract defined as a JSON ABI
+    /// into type-safe bindings of that contract that can be used after it is brought into
     /// scope after a successful generation.
     ///
     /// *: To expand, in procedural macro terms, means to automatically generate Rust code after a
     /// transformation of `TokenStream` to another set of `TokenStream`. This generated Rust code is
     /// the brought into scope after it is called through a procedural macro
-    /// (`abigen!()/script_abigen!()` in our case).
-    pub fn expand(&self) -> Result<TokenStream, Error> {
-        if self.is_script {
-            self.expand_script()
-        } else {
-            self.expand_contract()
-        }
-    }
-
-    /// Expand a contract into type-safe Rust bindings based on its ABI
+    /// (`abigen!()` in our case).
     pub fn expand_contract(&self) -> Result<TokenStream, Error> {
         let name = &self.program_name;
         let methods_name = ident(&format!("{}Methods", name));
@@ -97,7 +79,7 @@ impl Abigen {
             self.program_name.to_string().to_lowercase()
         ));
 
-        let contract_functions = self.functions()?;
+        let contract_functions = self.contract_functions()?;
         let abi_structs = self.abi_structs()?;
         let abi_enums = self.abi_enums()?;
 
@@ -185,7 +167,8 @@ impl Abigen {
         })
     }
 
-    /// Expand a script into type-safe Rust bindings based on its ABI
+    /// Expand a script into type-safe Rust bindings based on its ABI. See `expand_contract` for
+    /// more details.
     pub fn expand_script(&self) -> Result<TokenStream, Error> {
         let name = &self.program_name;
         let name_mod = ident(&format!(
@@ -195,7 +178,7 @@ impl Abigen {
 
         let includes = self.includes();
 
-        let main_script_function = self.functions()?;
+        let main_script_function = self.script_function()?;
         let code = if self.no_std {
             quote! {}
         } else {
@@ -228,8 +211,8 @@ impl Abigen {
                 #![allow(unused_imports)]
 
                 #includes
-                use fuels::contract::script::{run_script_binary, get_decoded_output};
                 use fuels::core::abi_encoder::ABIEncoder;
+                use fuels::contract::script::Script;
                 use fuels::core::parameters::TxParameters;
 
                 #code
@@ -256,7 +239,7 @@ impl Abigen {
             }
         } else {
             quote! {
-                use fuels::contract::contract::{Contract, ContractCallHandler};
+                use fuels::contract::contract::{Contract, ContractCallHandler, get_decoded_output};
                 use fuels::core::{EnumSelector, StringToken, Parameterize, Tokenizable, Token,
                                   Identity, try_from_bytes};
                 use fuels::core::code_gen::{extract_and_parse_logs, extract_log_ids_and_data};
@@ -276,35 +259,35 @@ impl Abigen {
         }
     }
 
-    pub fn functions(&self) -> Result<TokenStream, Error> {
-        let tokenized_functions = match self.is_script {
-            false => self
-                .abi
-                .functions
-                .iter()
-                .map(|function| expand_function(function, &self.types))
-                .collect::<Result<Vec<TokenStream>, Error>>()?,
-            true => {
-                let main_function = self
-                    .abi
-                    .functions
-                    .iter()
-                    .filter(|function| function.name == "main")
-                    .collect::<Vec<&ABIFunction>>();
-                if main_function.len() != 1 {
-                    return Err(Error::CompilationError(
-                        "The script does not have a function named `main` so it cannot compile!"
-                            .to_string(),
-                    ));
-                }
-                main_function
-                    .iter()
-                    .map(|function| generate_script_main_function(function, &self.types))
-                    .collect::<Result<Vec<TokenStream>, Error>>()?
-            }
-        };
-
+    pub fn contract_functions(&self) -> Result<TokenStream, Error> {
+        let tokenized_functions = self
+            .abi
+            .functions
+            .iter()
+            .map(|function| expand_function(function, &self.types))
+            .collect::<Result<Vec<TokenStream>, Error>>()?;
         Ok(quote! { #( #tokenized_functions )* })
+    }
+
+    pub fn script_function(&self) -> Result<TokenStream, Error> {
+        let main_function = self
+            .abi
+            .functions
+            .iter()
+            .filter(|function| function.name == "main")
+            .collect::<Vec<&ABIFunction>>();
+        if main_function.len() != 1 {
+            return Err(Error::CompilationError(
+                "The script does not have a function named `main` so it cannot compile!"
+                    .to_string(),
+            ));
+        };
+        let tokenized_function = main_function
+            .iter()
+            .map(|function| generate_script_main_function(function, &self.types))
+            .collect::<Result<Vec<TokenStream>, Error>>()?;
+
+        Ok(quote! { #( #tokenized_function )* })
     }
 
     fn abi_structs(&self) -> Result<TokenStream, Error> {

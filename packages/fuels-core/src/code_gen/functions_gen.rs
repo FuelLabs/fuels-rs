@@ -66,8 +66,7 @@ pub fn expand_function(
     })
 }
 
-/// Generate the function (as a `TokenStream`) used to encode into script data the arguments to the
-/// `main` function of a script.
+/// Generate the `main` function of a script
 pub fn generate_script_main_function(
     main_function_abi: &ABIFunction,
     types: &HashMap<usize, TypeDeclaration>,
@@ -83,13 +82,6 @@ pub fn generate_script_main_function(
     let output_type: TokenStream = output_type_resolved.into();
 
     let args = function_arguments(main_function_abi, types)?;
-    if args.iter().filter(|c| c.field_type.uses_vectors()).count() != 0 {
-        return Err(Error::CompilationError(
-            "Script main function contains a vector in its argument types. This currently isn't \
-            supported."
-                .to_string(),
-        ));
-    }
     let arg_names = args.iter().map(|component| &component.field_name);
 
     let arg_declarations = args.iter().map(|component| {
@@ -98,10 +90,7 @@ pub fn generate_script_main_function(
         quote! { #name: #field_type }
     });
 
-    let doc = expand_doc(
-        "Encode the arguments provided so they can be passed as argument to the script's main \
-        function",
-    );
+    let doc = expand_doc("Run the script's `main` function with the provided arguments");
 
     let name = safe_ident("main");
 
@@ -111,13 +100,18 @@ pub fn generate_script_main_function(
             let provider = self.wallet.get_provider().expect("Provider not set up").clone();
             let arg_name_tokens = [#(#arg_names.into_token()),*];
             let script_data = ABIEncoder::encode(&arg_name_tokens)?.resolve(0);
-            let mut receipts = run_script_binary(self.binary_filepath.as_str(),
-                                                    Some(TxParameters::default()),
-                                                    Some(provider),
-                                                    Some(script_data)
-            )
-            .await?;
-            let output_token = get_decoded_output(#output_params, &mut receipts)?;
+            let script = Script::from_binary_filepath(
+                self.binary_filepath.as_str(),
+                Some(TxParameters::default()),
+                Some(script_data),
+                None, // inputs
+                None // outputs
+            )?;
+            let mut receipts = script.call(&provider).await?;
+            let output_token = get_decoded_output(
+                &mut receipts,
+                None,
+                &#output_params)?;
             Tokenizable::from_token(output_token)
         }
     })
