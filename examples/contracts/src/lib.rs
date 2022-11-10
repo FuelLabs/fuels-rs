@@ -182,7 +182,6 @@ mod tests {
 
     #[tokio::test]
     async fn deploy_with_multiple_wallets() -> Result<(), Error> {
-        // ANCHOR: deploy_with_multiple_wallets
         use fuels::prelude::*;
 
         abigen!(
@@ -232,7 +231,6 @@ mod tests {
             .await?;
 
         assert_eq!(42, response.value);
-        // ANCHOR_END: deploy_with_multiple_wallets
         Ok(())
     }
 
@@ -254,10 +252,8 @@ mod tests {
         )
         .await?;
         println!("Contract deployed @ {contract_id}");
-        // ANCHOR: instantiate_contract
         // ANCHOR: tx_parameters
         let contract_methods = MyContract::new(contract_id.clone(), wallet.clone()).methods();
-        // ANCHOR_END: instantiate_contract
 
         // In order: gas_price, gas_limit, and maturity
         let my_tx_params = TxParameters::new(None, Some(1_000_000), None);
@@ -372,10 +368,7 @@ mod tests {
         .await?;
         let contract_methods = TestContract::new(contract_id, wallet).methods();
 
-        // ANCHOR: good_practice
         let response = contract_methods.increment_counter(162).call().await?;
-        // ANCHOR_END: good_practice
-        // ANCHOR: contract_receipts
         let response = contract_methods.increment_counter(162).call().await;
         match response {
             // The transaction is valid and executes to completion
@@ -398,7 +391,6 @@ mod tests {
             }
             Err(_) => {}
         }
-        // ANCHOR_END: contract_receipts
         // ANCHOR: deployed_contracts
         // Replace with your contract ABI.json path
         abigen!(

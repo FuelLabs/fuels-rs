@@ -116,7 +116,6 @@ mod tests {
 
     #[tokio::test]
     async fn transfer_multiple() -> Result<(), Error> {
-        // ANCHOR: transfer_multiple
         use fuels::prelude::*;
         use std::str::FromStr;
 
@@ -170,7 +169,6 @@ mod tests {
         }
         // ANCHOR_END: transfer_multiple_transaction
 
-        // ANCHOR_END: transfer_multiple
         Ok(())
     }
 }
