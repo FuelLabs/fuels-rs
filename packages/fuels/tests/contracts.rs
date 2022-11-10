@@ -1,4 +1,5 @@
 use fuels::prelude::*;
+use std::future::Future;
 
 #[tokio::test]
 async fn test_multiple_args() -> Result<(), Error> {
@@ -615,6 +616,32 @@ async fn test_contract_instance_get_balances() -> Result<(), Error> {
     let random_asset_id_key = format!("{:#x}", random_asset_id);
     let random_asset_balance = contract_balances.get(&random_asset_id_key).unwrap();
     assert_eq!(*random_asset_balance, amount);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn contract_call_futures_implement_send() -> Result<(), Error> {
+    fn tokio_spawn_imitation<T>(_: T)
+    where
+        T: Future + Send + 'static,
+    {
+    }
+
+    setup_contract_test!(
+        contract_instance,
+        wallet,
+        "packages/fuels/tests/contracts/contract_test"
+    );
+
+    tokio_spawn_imitation(async move {
+        contract_instance
+            .methods()
+            .initialize_counter(42)
+            .call()
+            .await
+            .unwrap();
+    });
 
     Ok(())
 }
