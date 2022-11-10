@@ -665,6 +665,17 @@ async fn test_contract_set_estimation() -> Result<(), Error> {
     );
 
     let bits = *foo_contract_id.hash();
+
+    {
+        // Should fail due to lack of output variables
+        let res = foo_caller_contract_instance
+            .methods()
+            .call_foo_contract(Bits256(bits), true)
+            .call()
+            .await;
+        assert!(matches!(res, Err(Error::RevertTransactionError(..))));
+    }
+
     let res = foo_caller_contract_instance
         .methods()
         .call_foo_contract(Bits256(bits), true)
@@ -693,6 +704,12 @@ async fn test_output_variable_contract_id_estimation_multicall() -> Result<(), E
         "packages/fuels/tests/contracts/foo_caller_contract"
     );
 
+    setup_contract_test!(
+        contract_test_instance,
+        None,
+        "packages/fuels/tests/contracts/contract_test"
+    );
+
     let bits = *foo_contract_id.hash();
     let contract_methods = foo_caller_contract_instance.methods();
 
@@ -705,16 +722,18 @@ async fn test_output_variable_contract_id_estimation_multicall() -> Result<(), E
     });
 
     // add call that does not need ContractId
-    let call_handler = contract_methods.return_bool(false);
+    let contract_methods = contract_test_instance.methods();
+    let call_handler = contract_methods.get(5, 6);
+
     multi_call_handler.add_call(call_handler);
 
     let call_response = multi_call_handler
         .estimate_tx_dependencies(None)
         .await?
-        .call::<(bool, bool, bool, bool)>()
+        .call::<(bool, bool, bool, u64)>()
         .await?;
 
-    assert_eq!(call_response.value, (true, true, true, false));
+    assert_eq!(call_response.value, (true, true, true, 5));
 
     Ok(())
 }

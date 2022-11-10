@@ -5,7 +5,6 @@ use std::constants::ZERO_B256;
 
 abi FooCaller {
     fn call_foo_contract(target: b256, value: bool) -> bool;
-    fn return_bool(value: bool) -> bool;
 }
 
 impl FooCaller for Contract {
@@ -18,9 +17,5 @@ impl FooCaller for Contract {
         }(value);
 
         !response
-    }
-
-    fn return_bool(value: bool) -> bool {
-        value
     }
 }

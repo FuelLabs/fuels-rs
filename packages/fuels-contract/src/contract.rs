@@ -444,7 +444,7 @@ impl ContractCall {
         Ok(decoded_value)
     }
 
-    fn check_if_contract_not_in_inputs(receipts: &[Receipt]) -> Option<&Receipt> {
+    fn find_contract_not_in_inputs(receipts: &[Receipt]) -> Option<&Receipt> {
         receipts.iter().find(
             |r| matches!(r, Receipt::Panic { reason, .. } if *reason.reason() == PanicReason::ContractNotInInputs ),
         )
@@ -590,12 +590,12 @@ where
                     self = self.append_variable_outputs(1);
                 }
 
-                Err(Error::RevertTransactionError(_, receipts)) => {
-                    if let Some(receipt) = ContractCall::check_if_contract_not_in_inputs(&receipts)
-                    {
-                        let contract_id = Bech32ContractId::from(*receipt.contract_id().unwrap());
-                        self = self.append_contract(contract_id);
-                    }
+                Err(Error::RevertTransactionError(_, receipts))
+                    if ContractCall::find_contract_not_in_inputs(&receipts).is_some() =>
+                {
+                    let receipt = ContractCall::find_contract_not_in_inputs(&receipts).unwrap();
+                    let contract_id = Bech32ContractId::from(*receipt.contract_id().unwrap());
+                    self = self.append_contract(contract_id);
                 }
 
                 Err(e) => return Err(e),
@@ -735,15 +735,15 @@ impl MultiContractCallHandler {
                         .for_each(|call| call.append_variable_outputs(1));
                 }
 
-                Err(Error::RevertTransactionError(_, receipts)) => {
-                    if let Some(receipt) = ContractCall::check_if_contract_not_in_inputs(&receipts)
-                    {
-                        let contract_id = Bech32ContractId::from(*receipt.contract_id().unwrap());
-                        self.contract_calls
-                            .iter_mut()
-                            .take(1)
-                            .for_each(|call| call.append_external_contracts(contract_id.clone()));
-                    }
+                Err(Error::RevertTransactionError(_, receipts))
+                    if ContractCall::find_contract_not_in_inputs(&receipts).is_some() =>
+                {
+                    let receipt = ContractCall::find_contract_not_in_inputs(&receipts).unwrap();
+                    let contract_id = Bech32ContractId::from(*receipt.contract_id().unwrap());
+                    self.contract_calls
+                        .iter_mut()
+                        .take(1)
+                        .for_each(|call| call.append_external_contracts(contract_id.clone()));
                 }
                 Err(e) => return Err(e),
                 _ => return Ok(self),
