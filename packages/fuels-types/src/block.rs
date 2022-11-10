@@ -8,9 +8,7 @@ pub struct Block {
 
 impl From<SchemaBlock> for Block {
     fn from(schema_block: SchemaBlock) -> Self {
-        Self {
-            schema_block
-        }
+        Self { schema_block }
     }
 }
 

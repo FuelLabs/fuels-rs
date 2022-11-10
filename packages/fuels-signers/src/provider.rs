@@ -3,6 +3,7 @@ use std::io;
 #[cfg(feature = "fuel-core")]
 use fuel_core::service::{Config, FuelService};
 
+use fuel_gql_client::client::types::TransactionStatus;
 use fuel_gql_client::interpreter::ExecutableTransaction;
 use fuel_gql_client::{
     client::{
@@ -11,7 +12,6 @@ use fuel_gql_client::{
             coin::Coin, contract::ContractBalance, message::Message, node_info::NodeInfo,
             resource::Resource,
         },
-        types::{TransactionResponse, TransactionStatus},
         FuelClient, PageDirection, PaginatedResult, PaginationRequest,
     },
     fuel_tx::{Receipt, Transaction, TransactionFee},
@@ -19,6 +19,7 @@ use fuel_gql_client::{
 };
 use fuels_core::constants::{DEFAULT_GAS_ESTIMATION_TOLERANCE, MAX_GAS_PER_TX};
 use fuels_types::block::Block;
+use fuels_types::transaction_response::TransactionResponse;
 use std::collections::HashMap;
 use thiserror::Error;
 
@@ -379,8 +380,8 @@ impl Provider {
     pub async fn get_transaction_by_id(
         &self,
         tx_id: &str,
-    ) -> Result<TransactionResponse, ProviderError> {
-        Ok(self.client.transaction(tx_id).await.unwrap().unwrap())
+    ) -> Result<Option<TransactionResponse>, ProviderError> {
+        Ok(self.client.transaction(tx_id).await?.map(Into::into))
     }
 
     // - Get transaction(s)
@@ -388,7 +389,14 @@ impl Provider {
         &self,
         request: PaginationRequest<String>,
     ) -> Result<PaginatedResult<TransactionResponse, String>, ProviderError> {
-        self.client.transactions(request).await.map_err(Into::into)
+        let pr = self.client.transactions(request).await?;
+
+        Ok(PaginatedResult {
+            cursor: pr.cursor,
+            results: pr.results.into_iter().map(Into::into).collect(),
+            has_next_page: pr.has_next_page,
+            has_previous_page: pr.has_previous_page,
+        })
     }
 
     // Get transaction(s) by owner
@@ -397,10 +405,17 @@ impl Provider {
         owner: &Bech32Address,
         request: PaginationRequest<String>,
     ) -> Result<PaginatedResult<TransactionResponse, String>, ProviderError> {
-        self.client
+        let pr = self
+            .client
             .transactions_by_owner(&owner.hash().to_string(), request)
-            .await
-            .map_err(Into::into)
+            .await?;
+
+        Ok(PaginatedResult {
+            cursor: pr.cursor,
+            results: pr.results.into_iter().map(Into::into).collect(),
+            has_next_page: pr.has_next_page,
+            has_previous_page: pr.has_previous_page,
+        })
     }
 
     pub async fn latest_block_height(&self) -> Result<u64, ProviderError> {
@@ -417,11 +432,8 @@ impl Provider {
     }
 
     /// Get block by id.
-    pub async fn block(
-        &self,
-        block_id: &str,
-    ) -> Result<Option<Block>, ProviderError> {
-        let block = self.client.block(block_id).await?.map(|b| b.into());
+    pub async fn block(&self, block_id: &str) -> Result<Option<Block>, ProviderError> {
+        let block = self.client.block(block_id).await?.map(Into::into);
         Ok(block)
     }
 
@@ -430,7 +442,14 @@ impl Provider {
         &self,
         request: PaginationRequest<String>,
     ) -> Result<PaginatedResult<Block, String>, ProviderError> {
-        self.client.blocks(request).await?.into()
+        let pr = self.client.blocks(request).await?;
+
+        Ok(PaginatedResult {
+            cursor: pr.cursor,
+            results: pr.results.into_iter().map(Into::into).collect(),
+            has_next_page: pr.has_next_page,
+            has_previous_page: pr.has_previous_page,
+        })
     }
 
     pub async fn estimate_transaction_cost<Tx>(

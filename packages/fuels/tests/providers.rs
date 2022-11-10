@@ -2,10 +2,11 @@ use fuel_core::service::{Config as CoreConfig, FuelService};
 use fuel_core_interfaces::model::Message;
 use fuel_gql_client::{client::schema::message::Message as OtherMessage, fuel_tx::Receipt};
 use fuels::{
-    client::{schema::block::Block, PageDirection, PaginationRequest},
+    client::{PageDirection, PaginationRequest},
     prelude::*,
 };
 use fuels_signers::fuel_crypto::SecretKey;
+use fuels_types::block::Block;
 use std::{iter, str::FromStr};
 
 #[tokio::test]
@@ -186,11 +187,11 @@ async fn can_set_custom_block_time() -> Result<(), Error> {
         results: 10,
         direction: PageDirection::Forward,
     };
-    let blocks: Vec<Block> = provider.client.blocks(req).await?.results;
+    let blocks: Vec<Block> = provider.get_blocks(req).await?.results;
 
-    assert_eq!(blocks[2].header.time.0 .0, 100);
-    assert_eq!(blocks[1].header.time.0 .0, 110);
-    assert_eq!(blocks[0].header.time.0 .0, 120);
+    assert_eq!(blocks[2].time(), 100);
+    assert_eq!(blocks[1].time(), 110);
+    assert_eq!(blocks[0].time(), 120);
     // ANCHOR_END: use_produce_blocks_custom_time
     Ok(())
 }

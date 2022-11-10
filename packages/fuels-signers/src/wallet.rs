@@ -8,8 +8,8 @@ use fuel_gql_client::client::schema;
 use fuel_gql_client::fuel_vm::prelude::GTFArgs;
 use fuel_gql_client::{
     client::{
-        schema::coin::Coin, schema::message::Message as InputMessage, types::TransactionResponse,
-        PaginatedResult, PaginationRequest,
+        schema::coin::Coin, schema::message::Message as InputMessage, PaginatedResult,
+        PaginationRequest,
     },
     fuel_tx::{
         AssetId, Bytes32, Cacheable, ContractId, Input, Output, Receipt, TransactionFee, TxPointer,
@@ -22,6 +22,7 @@ use fuels_core::tx::{field, Chargeable, Script, Transaction, UniqueIdentifier};
 use fuels_core::{constants::BASE_ASSET_ID, parameters::TxParameters};
 use fuels_types::bech32::{Bech32Address, Bech32ContractId, FUEL_BECH32_HRP};
 use fuels_types::errors::Error;
+use fuels_types::transaction_response::TransactionResponse;
 use rand::{CryptoRng, Rng};
 use std::{collections::HashMap, fmt, ops, path::Path};
 use thiserror::Error;
@@ -134,10 +135,10 @@ impl Wallet {
         &self,
         request: PaginationRequest<String>,
     ) -> Result<PaginatedResult<TransactionResponse, String>, Error> {
-        self.get_provider()?
+        Ok(self
+            .get_provider()?
             .get_transactions_by_owner(&self.address, request)
-            .await
-            .map_err(Into::into)
+            .await?)
     }
 
     /// Returns a proper vector of `Input::Coin`s for the given asset ID, amount, and witness index.
