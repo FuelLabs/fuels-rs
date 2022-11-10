@@ -668,21 +668,11 @@ where
         Script::from_contract_calls(&self.contract_calls, &self.tx_parameters, &self.wallet).await
     }
 
-    fn revert_error_map(err: Error) -> Error {
-        if let Error::RevertTransactionError(_, receipts) = &err {
-            let logs = C::get_logs(receipts);
-            if let Some(log) = logs.into_iter().next() {
-                return Error::RevertTransactionError(log, receipts.to_owned());
-            }
-        }
-        err
-    }
-
     /// Call contract methods on the node, in a state-modifying manner.
     pub async fn call<D: Tokenizable + Debug>(&self) -> Result<CallResponse<D, C>, Error> {
         Self::call_or_simulate(self, false)
             .await
-            .map_err(Self::revert_error_map)
+            .map_err(ContractCallHandler::<D, C>::revert_error_map)
     }
 
     /// Call contract methods on the node, in a simulated manner, meaning the state of the
@@ -691,7 +681,7 @@ where
     pub async fn simulate<D: Tokenizable + Debug>(&self) -> Result<CallResponse<D, C>, Error> {
         Self::call_or_simulate(self, true)
             .await
-            .map_err(Self::revert_error_map)
+            .map_err(ContractCallHandler::<D, C>::revert_error_map)
     }
 
     async fn call_or_simulate<D: Tokenizable + Debug>(

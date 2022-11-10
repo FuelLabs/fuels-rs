@@ -25,7 +25,6 @@ pub struct Abigen {
     /// Generate no-std safe code
     no_std: bool,
 
-    /// The contract name as an identifier.
     contract_name: String,
 
     abi: ProgramABI,
@@ -73,8 +72,7 @@ impl Abigen {
     /// set of `TokenStream`. This generated Rust code is the brought into scope
     /// after it is called through a procedural macro (`abigen!()` in our case).
     pub fn expand(&self) -> Result<TokenStream, Error> {
-        let name_str = &self.contract_name;
-        let name = ident(name_str);
+        let name = ident(&self.contract_name);
         let methods_name = ident(&format!("{}Methods", name));
         let name_mod = ident(&format!(
             "{}_mod",
