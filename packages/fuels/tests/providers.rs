@@ -121,7 +121,7 @@ async fn test_input_message() -> Result<(), Error> {
         "packages/fuels/tests/contracts/contract_test"
     );
 
-    let spendable_messages = wallet.get_spendable_messages().await?;
+    let spendable_messages = wallet.get_messages().await?;
 
     assert!(compare_messages(spendable_messages, messages));
 
@@ -364,7 +364,7 @@ async fn test_gas_errors() -> Result<(), Error> {
         .await
         .expect_err("should error");
 
-    let expected = "Provider error: Response errors; enough coins could not be found";
+    let expected = "Provider error: Response errors; not enough resources to fit the target";
     assert!(response.to_string().starts_with(expected));
     Ok(())
 }
