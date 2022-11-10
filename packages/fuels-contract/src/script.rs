@@ -1,4 +1,5 @@
 use anyhow::Result;
+use fuel_gql_client::client::schema::resource::Resource;
 use fuel_gql_client::fuel_tx::{
     field::Script as ScriptField, ConsensusParameters, Input, Output, Receipt, Transaction,
     TxPointer, UtxoId,
@@ -7,9 +8,9 @@ use fuel_gql_client::fuel_types::{
     bytes::padded_len_usize, AssetId, Bytes32, ContractId, Immediate18, Word,
 };
 use fuel_gql_client::fuel_vm::{consts::REG_ONE, prelude::Opcode};
+use fuels_core::constants::BASE_ASSET_ID;
 use itertools::{chain, Itertools};
 
-use fuel_gql_client::client::schema::coin::Coin;
 use fuel_tx::{Checkable, ScriptExecutionResult, Witness};
 use fuels_core::parameters::TxParameters;
 use fuels_signers::provider::Provider;
@@ -64,10 +65,11 @@ impl Script {
         let script = Self::get_instructions(calls, call_param_offsets);
 
         let required_asset_amounts = Self::calculate_required_asset_amounts(calls);
-        let spendable_coins = Self::get_spendable_coins(wallet, &required_asset_amounts).await?;
+        let spendable_resources =
+            Self::get_spendable_resources(wallet, &required_asset_amounts).await?;
 
         let (inputs, outputs) =
-            Self::get_transaction_inputs_outputs(calls, wallet.address(), spendable_coins);
+            Self::get_transaction_inputs_outputs(calls, wallet.address(), spendable_resources);
 
         let mut tx = Transaction::script(
             tx_parameters.gas_price,
@@ -94,18 +96,18 @@ impl Script {
 
     /// Calculates how much of each asset id the given calls require and
     /// proceeds to request spendable coins from `wallet` to cover that cost.
-    async fn get_spendable_coins(
+    async fn get_spendable_resources(
         wallet: &WalletUnlocked,
         required_asset_amounts: &[(AssetId, u64)],
-    ) -> Result<Vec<Coin>, Error> {
-        let mut coins = vec![];
+    ) -> Result<Vec<Resource>, Error> {
+        let mut resources = vec![];
 
         for (asset_id, amount) in required_asset_amounts {
-            let spendable_coins = wallet.get_spendable_coins(*asset_id, *amount).await?;
-            coins.extend(spendable_coins);
+            let spendable_resources = wallet.get_spendable_resources(*asset_id, *amount).await?;
+            resources.extend(spendable_resources);
         }
 
-        Ok(coins)
+        Ok(resources)
     }
 
     fn calculate_required_asset_amounts(calls: &[ContractCall]) -> Vec<(AssetId, u64)> {
@@ -245,15 +247,15 @@ impl Script {
     fn get_transaction_inputs_outputs(
         calls: &[ContractCall],
         wallet_address: &Bech32Address,
-        spendable_coins: Vec<Coin>,
+        spendable_resources: Vec<Resource>,
     ) -> (Vec<Input>, Vec<Output>) {
-        let asset_ids = Self::extract_unique_asset_ids(&spendable_coins);
+        let asset_ids = Self::extract_unique_asset_ids(&spendable_resources);
         let contract_ids = Self::extract_unique_contract_ids(calls);
         let num_of_contracts = contract_ids.len();
 
         let inputs = chain!(
             Self::generate_contract_inputs(contract_ids),
-            Self::convert_to_signed_coins(spendable_coins),
+            Self::convert_to_signed_resources(spendable_resources),
         )
         .collect();
 
@@ -271,10 +273,13 @@ impl Script {
         (inputs, outputs)
     }
 
-    fn extract_unique_asset_ids(spendable_coins: &[Coin]) -> HashSet<AssetId> {
+    fn extract_unique_asset_ids(spendable_coins: &[Resource]) -> HashSet<AssetId> {
         spendable_coins
             .iter()
-            .map(|coin| coin.asset_id.clone().into())
+            .map(|resource| match resource {
+                Resource::Coin(coin) => coin.asset_id.clone().into(),
+                Resource::Message(_) => BASE_ASSET_ID,
+            })
             .collect()
     }
 
@@ -310,11 +315,11 @@ impl Script {
             .collect()
     }
 
-    fn convert_to_signed_coins(spendable_coins: Vec<Coin>) -> Vec<Input> {
-        spendable_coins
+    fn convert_to_signed_resources(spendable_resources: Vec<Resource>) -> Vec<Input> {
+        spendable_resources
             .into_iter()
-            .map(|coin| {
-                Input::coin_signed(
+            .map(|resource| match resource {
+                Resource::Coin(coin) => Input::coin_signed(
                     UtxoId::from(coin.utxo_id),
                     coin.owner.into(),
                     coin.amount.0,
@@ -322,7 +327,16 @@ impl Script {
                     TxPointer::default(),
                     0,
                     0,
-                )
+                ),
+                Resource::Message(message) => Input::message_signed(
+                    message.message_id.into(),
+                    message.sender.into(),
+                    message.recipient.into(),
+                    message.amount.into(),
+                    message.nonce.into(),
+                    0,
+                    message.data.into(),
+                ),
             })
             .collect()
     }
@@ -407,7 +421,7 @@ impl Script {
 #[cfg(test)]
 mod test {
     use super::*;
-    use fuel_gql_client::client::schema::coin::CoinStatus;
+    use fuel_gql_client::client::schema::coin::{Coin, CoinStatus};
     use fuels_core::abi_encoder::ABIEncoder;
     use fuels_core::parameters::CallParameters;
     use fuels_core::Token;
@@ -650,14 +664,16 @@ mod test {
 
         let coins = asset_ids
             .into_iter()
-            .map(|asset_id| Coin {
-                amount: 100u64.into(),
-                block_created: 0u64.into(),
-                asset_id: asset_id.into(),
-                utxo_id: Default::default(),
-                maturity: 0u64.into(),
-                owner: Default::default(),
-                status: CoinStatus::Unspent,
+            .map(|asset_id| {
+                Resource::Coin(Coin {
+                    amount: 100u64.into(),
+                    block_created: 0u64.into(),
+                    asset_id: asset_id.into(),
+                    utxo_id: Default::default(),
+                    maturity: 0u64.into(),
+                    owner: Default::default(),
+                    status: CoinStatus::Unspent,
+                })
             })
             .collect();
         let call = ContractCall::new_with_random_id();
@@ -685,18 +701,20 @@ mod test {
         // given
         let asset_ids = [AssetId::default(), AssetId::from([1; 32])];
 
-        let generate_spendable_coins = || {
+        let generate_spendable_resources = || {
             asset_ids
                 .into_iter()
                 .enumerate()
-                .map(|(index, asset_id)| Coin {
-                    amount: (index * 10).into(),
-                    block_created: 1u64.into(),
-                    asset_id: asset_id.into(),
-                    utxo_id: Default::default(),
-                    maturity: 0u64.into(),
-                    owner: Default::default(),
-                    status: CoinStatus::Unspent,
+                .map(|(index, asset_id)| {
+                    Resource::Coin(Coin {
+                        amount: (index * 10).into(),
+                        block_created: 1u64.into(),
+                        asset_id: asset_id.into(),
+                        utxo_id: Default::default(),
+                        maturity: 0u64.into(),
+                        owner: Default::default(),
+                        status: CoinStatus::Unspent,
+                    })
                 })
                 .collect::<Vec<_>>()
         };
@@ -707,16 +725,16 @@ mod test {
         let (inputs, _) = Script::get_transaction_inputs_outputs(
             &[call],
             &random_bech32_addr(),
-            generate_spendable_coins(),
+            generate_spendable_resources(),
         );
 
         // then
         let inputs_as_signed_coins: HashSet<Input> = inputs[1..].iter().cloned().collect();
 
-        let expected_inputs = generate_spendable_coins()
+        let expected_inputs = generate_spendable_resources()
             .into_iter()
-            .map(|coin| {
-                Input::coin_signed(
+            .map(|resource| match resource {
+                Resource::Coin(coin) => Input::coin_signed(
                     fuel_tx::UtxoId::from(coin.utxo_id),
                     coin.owner.into(),
                     coin.amount.0,
@@ -724,7 +742,8 @@ mod test {
                     TxPointer::default(),
                     0,
                     0,
-                )
+                ),
+                Resource::Message(_) => panic!("Resources contained messages."),
             })
             .collect::<HashSet<_>>();
 
