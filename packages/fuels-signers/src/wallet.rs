@@ -5,6 +5,7 @@ use elliptic_curve::rand_core;
 use eth_keystore::KeystoreError;
 use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
 use fuel_gql_client::client::schema;
+use fuel_gql_client::client::schema::resource::Resource;
 use fuel_gql_client::fuel_vm::prelude::GTFArgs;
 use fuel_gql_client::{
     client::{
@@ -152,21 +153,47 @@ impl Wallet {
         amount: u64,
         witness_index: u8,
     ) -> Result<Vec<Input>, Error> {
-        let spendable = self.get_spendable_coins(asset_id, amount).await?;
+        let spendable = self.get_spendable_resources(asset_id, amount).await?;
         let mut inputs = vec![];
-        for coin in spendable {
-            let input_coin = Input::coin_signed(
-                UtxoId::from(coin.utxo_id),
-                coin.owner.into(),
-                coin.amount.0,
-                asset_id,
-                TxPointer::default(),
-                witness_index,
-                0,
-            );
-            inputs.push(input_coin);
+        for resource in spendable {
+            let input = match resource {
+                Resource::Coin(coin) => self.create_coin_input(coin, asset_id, witness_index),
+                Resource::Message(message) => self.create_message_input(message, witness_index),
+            };
+            inputs.push(input);
         }
         Ok(inputs)
+    }
+
+    fn create_coin_input(&self, coin: Coin, asset_id: AssetId, witness_index: u8) -> Input {
+        Input::coin_signed(
+            UtxoId::from(coin.utxo_id),
+            coin.owner.into(),
+            coin.amount.0,
+            asset_id,
+            TxPointer::default(),
+            witness_index,
+            0,
+        )
+    }
+
+    fn create_message_input(&self, message: InputMessage, witness_index: u8) -> Input {
+        let message_id = Input::compute_message_id(
+            &message.sender.clone().into(),
+            &message.recipient.clone().into(),
+            message.nonce.into(),
+            message.amount.0,
+            &message.data.0,
+        );
+        Input::message_signed(
+            message_id,
+            message.sender.into(),
+            message.recipient.into(),
+            message.amount.0,
+            0,
+            witness_index,
+            message.data.into(),
+        )
     }
 
     /// Returns a vector containing the output coin and change output given an asset and amount
@@ -194,26 +221,16 @@ impl Wallet {
             .await?)
     }
 
-    /// Get some spendable coins of asset `asset_id` owned by the wallet that add up at least to
-    /// amount `amount`. The returned coins (UTXOs) are actual coins that can be spent. The number
-    /// of coins (UXTOs) is optimized to prevent dust accumulation.
-    pub async fn get_spendable_coins(
+    /// Get some spendable resources (coins and messages) of asset `asset_id` owned by the wallet
+    /// that add up at least to amount `amount`. The returned coins (UTXOs) are actual coins that
+    /// can be spent. The number of UXTOs is optimized to prevent dust accumulation.
+    pub async fn get_spendable_resources(
         &self,
         asset_id: AssetId,
         amount: u64,
-    ) -> Result<Vec<Coin>, Error> {
+    ) -> Result<Vec<Resource>, Error> {
         self.get_provider()?
-            .get_spendable_coins(&self.address, asset_id, amount)
-            .await
-            .map_err(Into::into)
-    }
-
-    /// Get some spendable messages owned by the wallet.
-    /// The returned messages are actual messages that can be spent. The number
-    /// of messages (UXTOs) is optimized to prevent dust accumulation.
-    pub async fn get_spendable_messages(&self) -> Result<Vec<InputMessage>, Error> {
-        self.get_provider()?
-            .get_spendable_messages(&self.address)
+            .get_spendable_resources(&self.address, asset_id, amount)
             .await
             .map_err(Into::into)
     }
@@ -240,34 +257,6 @@ impl Wallet {
 
     pub async fn get_messages(&self) -> Result<Vec<schema::message::Message>, Error> {
         Ok(self.get_provider()?.get_messages(&self.address).await?)
-    }
-
-    pub async fn get_inputs_for_messages(&self, witness_index: u8) -> Result<Vec<Input>, Error> {
-        let messages = self.get_messages().await?;
-
-        let inputs: Vec<Input> = messages
-            .into_iter()
-            .map(|message| {
-                let message_id = Input::compute_message_id(
-                    &message.sender.clone().into(),
-                    &message.recipient.clone().into(),
-                    message.nonce.into(),
-                    message.amount.0,
-                    &message.data.0,
-                );
-                Input::message_signed(
-                    message_id,
-                    message.sender.into(),
-                    message.recipient.into(),
-                    message.amount.0,
-                    0,
-                    witness_index,
-                    message.data.into(),
-                )
-            })
-            .collect();
-
-        Ok(inputs)
     }
 
     /// Unlock the wallet with the given `private_key`.
@@ -506,18 +495,12 @@ impl WalletUnlocked {
         // Get asset inputs for required amount expressed u Input::coin_signed or in
         // Input::message_signed depending on what we have in stock.
         // In the near future this will be replaced by one function.
-        let base_coin_inputs = self
+        let new_base_inputs = self
             .get_asset_inputs_for_amount(BASE_ASSET_ID, new_base_amount, witness_index)
-            .await;
-        let new_base_inputs =
-            if base_coin_inputs.is_err() || base_coin_inputs.as_ref().unwrap().is_empty() {
-                self.get_inputs_for_messages(witness_index).await?
-            } else {
-                base_coin_inputs.unwrap()
-            };
+            .await?;
         if new_base_inputs.is_empty() && new_base_amount != 0 {
             return Err(Error::ProviderError(
-                "Response errors; enough coins could not be found".to_string(),
+                "Response errors; enough resources could not be found".to_string(),
             ));
         }
 
@@ -629,32 +612,28 @@ impl WalletUnlocked {
         data: Option<Vec<u8>>,
         tx_parameters: TxParameters,
     ) -> Result<Vec<Receipt>, Error> {
-        let spendable_predicate_coins = self
+        let spendable_predicate_resources = self
             .get_provider()?
-            .get_spendable_coins(predicate_address, asset_id, amount)
+            .get_spendable_resources(predicate_address, asset_id, amount)
             .await?;
 
         // input amount is: amount < input_amount < 2*amount
         // because of "random improve" used by get_spendable_coins()
-        let input_amount: u64 = spendable_predicate_coins
+        let input_amount: u64 = spendable_predicate_resources
             .iter()
-            .map(|coin| coin.amount.0)
+            .map(|resource| resource.amount())
             .sum();
 
         let predicate_data = data.unwrap_or_default();
-        let inputs = spendable_predicate_coins
+        let inputs = spendable_predicate_resources
             .into_iter()
-            .map(|coin| {
-                Input::coin_predicate(
-                    UtxoId::from(coin.utxo_id),
-                    coin.owner.into(),
-                    coin.amount.0,
-                    asset_id,
-                    TxPointer::default(),
-                    0,
-                    code.clone(),
-                    predicate_data.clone(),
-                )
+            .map(|resource| match resource {
+                Resource::Coin(coin) => {
+                    self.create_coin_predicate(coin, asset_id, code.clone(), predicate_data.clone())
+                }
+                Resource::Message(message) => {
+                    self.create_message_predicate(message, code.clone(), predicate_data.clone())
+                }
             })
             .collect::<Vec<_>>();
 
@@ -669,6 +648,50 @@ impl WalletUnlocked {
         self.sign_transaction(&mut tx).await?;
 
         self.get_provider()?.send_transaction(&tx).await
+    }
+
+    fn create_coin_predicate(
+        &self,
+        coin: Coin,
+        asset_id: AssetId,
+        code: Vec<u8>,
+        predicate_data: Vec<u8>,
+    ) -> Input {
+        Input::coin_predicate(
+            UtxoId::from(coin.utxo_id),
+            coin.owner.into(),
+            coin.amount.0,
+            asset_id,
+            TxPointer::default(),
+            0,
+            code,
+            predicate_data,
+        )
+    }
+
+    fn create_message_predicate(
+        &self,
+        message: InputMessage,
+        code: Vec<u8>,
+        predicate_data: Vec<u8>,
+    ) -> Input {
+        let message_id = Input::compute_message_id(
+            &message.sender.clone().into(),
+            &message.recipient.clone().into(),
+            message.nonce.into(),
+            message.amount.0,
+            &message.data.0,
+        );
+        Input::message_predicate(
+            message_id,
+            message.sender.into(),
+            message.recipient.into(),
+            message.amount.0,
+            0,
+            vec![],
+            code,
+            predicate_data,
+        )
     }
 
     pub async fn receive_from_predicate(
