@@ -144,7 +144,7 @@
 <ul>
 <li><a href="#set-up">Set up</a></li>
 <li><a href="#get-all-coins-from-an-address">Get all coins from an address</a></li>
-<li><a href="#get-spendable-coins-from-an-address">Get spendable coins from an address</a></li>
+<li><a href="#get-spendable-resources-from-an-address">Get spendable resources from an address</a></li>
 <li><a href="#get-balances-from-an-address">Get balances from an address</a></li>
 </ul>
 </li>
@@ -178,12 +178,12 @@
 <pre><code class="language-rust ignore">        let coins = provider.get_coins(wallet.address(), BASE_ASSET_ID).await?;
         assert_eq!(coins.len(), 1);
 </code></pre>
-<h2 id="get-spendable-coins-from-an-address"><a class="header" href="#get-spendable-coins-from-an-address">Get spendable coins from an address</a></h2>
-<p>The last argument says how much you want to spend. This method returns only spendable, i.e., unspent coins (of a given asset ID). If you ask for more spendable than the amount of unspent coins you have, it returns an error.</p>
-<pre><code class="language-rust ignore">        let spendable_coins = provider
-            .get_spendable_coins(wallet.address(), BASE_ASSET_ID, 1)
+<h2 id="get-spendable-resources-from-an-address"><a class="header" href="#get-spendable-resources-from-an-address">Get spendable resources from an address</a></h2>
+<p>The last argument says how much you want to spend. This method returns only spendable, i.e., unspent coins (of a given asset ID) or messages. If you ask for more spendable resources than the amount of resources you have, it returns an error.</p>
+<pre><code class="language-rust ignore">        let spendable_resources = provider
+            .get_spendable_resources(wallet.address(), BASE_ASSET_ID, 1)
             .await?;
-        assert_eq!(spendable_coins.len(), 1);
+        assert_eq!(spendable_resources.len(), 1);
 </code></pre>
 <h2 id="get-balances-from-an-address"><a class="header" href="#get-balances-from-an-address">Get balances from an address</a></h2>
 <p>Get all the spendable balances of all assets for an address. This is different from getting the coins because we only return the numbers (the sum of UTXOs coins amount for each asset id) and not the UTXOs coins themselves.</p>
