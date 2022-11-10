@@ -100,14 +100,14 @@ impl Script {
         wallet: &WalletUnlocked,
         required_asset_amounts: &[(AssetId, u64)],
     ) -> Result<Vec<Resource>, Error> {
-        let mut coins = vec![];
+        let mut resources = vec![];
 
         for (asset_id, amount) in required_asset_amounts {
-            let spendable_coins = wallet.get_spendable_resources(*asset_id, *amount).await?;
-            coins.extend(spendable_coins);
+            let spendable_resources = wallet.get_spendable_resources(*asset_id, *amount).await?;
+            resources.extend(spendable_resources);
         }
 
-        Ok(coins)
+        Ok(resources)
     }
 
     fn calculate_required_asset_amounts(calls: &[ContractCall]) -> Vec<(AssetId, u64)> {
