@@ -704,11 +704,17 @@ async fn test_output_variable_contract_id_estimation_multicall() -> Result<(), E
         multi_call_handler.add_call(call_handler);
     });
 
-    let _ = multi_call_handler
+    // add call that does not need ContractId
+    let call_handler = contract_methods.return_bool(false);
+    multi_call_handler.add_call(call_handler);
+
+    let call_response = multi_call_handler
         .estimate_tx_dependencies(None)
         .await?
-        .call::<(bool, bool, bool)>()
+        .call::<(bool, bool, bool, bool)>()
         .await?;
+
+    assert_eq!(call_response.value, (true, true, true, false));
 
     Ok(())
 }
