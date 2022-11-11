@@ -314,19 +314,16 @@ impl Tokenizable for ContractId {
         Self: Sized,
     {
         if let Token::Struct(tokens) = token {
-            let first_token = tokens.into_iter().next();
-            if let Some(Token::B256(id)) = first_token {
-                Ok(ContractId::from(id))
+            if let [Token::B256(data)] = tokens.as_slice() {
+                Ok(ContractId::from(*data))
             } else {
                 Err(Error::InstantiationError(format!(
-                    "Expected `b256`, got {:?}",
-                    first_token
+                    "ContractId expected one `Token::B256`, got {tokens:?}"
                 )))
             }
         } else {
             Err(Error::InstantiationError(format!(
-                "Expected `ContractId`, got {:?}",
-                token
+                "Address expected `Token::Struct` got {token:?}",
             )))
         }
     }
@@ -343,8 +340,8 @@ impl Tokenizable for Address {
         Self: Sized,
     {
         if let Token::Struct(tokens) = token {
-            if let [Token::B256(id)] = tokens.as_slice() {
-                Ok(Address::from(*id))
+            if let [Token::B256(data)] = tokens.as_slice() {
+                Ok(Address::from(*data))
             } else {
                 Err(Error::InstantiationError(format!(
                     "Address expected one `Token::B256`, got {tokens:?}"
@@ -370,8 +367,8 @@ impl Tokenizable for AssetId {
         Self: Sized,
     {
         if let Token::Struct(tokens) = token {
-            if let [Token::B256(id)] = tokens.as_slice() {
-                Ok(AssetId::from(*id))
+            if let [Token::B256(data)] = tokens.as_slice() {
+                Ok(AssetId::from(*data))
             } else {
                 Err(Error::InstantiationError(format!(
                     "AssetId expected one `Token::B256`, got {tokens:?}"
