@@ -1,11 +1,10 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::code_gen::bindings::ContractBindings;
+use crate::code_gen::full_abi_types::{FullABIFunction, FullLoggedType, FullTypeDeclaration};
 use crate::source::Source;
 use crate::utils::ident;
-use crate::{
-    try_from_bytes, FullABIFunction, FullLoggedType, FullTypeDeclaration, Parameterize, Tokenizable,
-};
+use crate::{try_from_bytes, Parameterize, Tokenizable};
 use fuel_tx::Receipt;
 use fuels_types::errors::Error;
 use fuels_types::param_types::ParamType;
@@ -44,7 +43,7 @@ impl Abigen {
         let types = Abigen::get_types(&parsed_abi);
         let full_types = types
             .values()
-            .map(|decl| FullTypeDeclaration::from_type_declaration(decl, &types))
+            .map(|decl| FullTypeDeclaration::from_counterpart(decl, &types))
             .collect();
 
         let logged_types = parsed_abi
@@ -60,7 +59,7 @@ impl Abigen {
             functions: parsed_abi
                 .functions
                 .into_iter()
-                .map(|fun| FullABIFunction::from_abi_function(&fun, &types))
+                .map(|fun| FullABIFunction::from_counterpart(&fun, &types))
                 .collect(),
             rustfmt: true,
             types: full_types,

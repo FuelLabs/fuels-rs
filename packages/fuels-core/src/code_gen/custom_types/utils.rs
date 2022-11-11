@@ -1,6 +1,6 @@
+use crate::code_gen::full_abi_types::{FullTypeApplication, FullTypeDeclaration};
 use crate::code_gen::resolved_type::{resolve_type, ResolvedType};
 use crate::utils::{ident, safe_ident};
-use crate::{FullTypeApplication, FullTypeDeclaration};
 use anyhow::anyhow;
 use fuels_types::errors::Error;
 use fuels_types::utils::extract_generic_name;
@@ -163,7 +163,7 @@ mod tests {
         )]);
 
         let component = Component::new(
-            &FullTypeApplication::from_type_application(&type_application, &types),
+            &FullTypeApplication::from_counterpart(&type_application, &types),
             true,
         )?;
 
@@ -198,7 +198,7 @@ mod tests {
             .into_iter()
             .collect();
 
-        let generics = extract_generic_parameters(&FullTypeDeclaration::from_type_declaration(
+        let generics = extract_generic_parameters(&FullTypeDeclaration::from_counterpart(
             &declaration,
             &types,
         ))?;

@@ -1,8 +1,8 @@
 use super::utils::{
     extract_components, extract_generic_parameters, impl_try_from, param_type_calls, Component,
 };
+use crate::code_gen::full_abi_types::FullTypeDeclaration;
 use crate::utils::ident;
-use crate::FullTypeDeclaration;
 use core::result::Result;
 use core::result::Result::Ok;
 use fuels_types::errors::Error;

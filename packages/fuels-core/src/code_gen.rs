@@ -4,6 +4,7 @@ pub mod abigen;
 pub mod bindings;
 pub mod custom_types;
 pub mod docs_gen;
+mod full_abi_types;
 pub mod function_selector;
 pub mod functions_gen;
 mod resolved_type;

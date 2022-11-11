@@ -1,5 +1,5 @@
+use crate::code_gen::full_abi_types::FullTypeApplication;
 use crate::utils::{ident, safe_ident};
-use crate::FullTypeApplication;
 use fuels_types::errors::Error;
 use fuels_types::utils::custom_type_name;
 use fuels_types::utils::{
@@ -257,7 +257,7 @@ mod tests {
             type_id: type_declarations[0].type_id,
             ..Default::default()
         };
-        let application = FullTypeApplication::from_type_application(&type_application, &types);
+        let application = FullTypeApplication::from_counterpart(&type_application, &types);
         let resolved_type = resolve_type(&application)
             .with_context(|| format!("failed to resolve {:?}", &type_application))?;
         let actual = TokenStream::from(&resolved_type).to_string();
