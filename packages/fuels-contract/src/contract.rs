@@ -595,7 +595,7 @@ where
                         let contract_id = Bech32ContractId::from(*receipt.contract_id().unwrap());
                         self = self.append_contract(contract_id);
                     } else {
-                        return Err(result.err().unwrap());
+                        return Err(result.expect_err("Couldn't estimate tx dependencies because we couldn't find the missing contract input"));
                     }
                 }
 
@@ -744,7 +744,7 @@ impl MultiContractCallHandler {
                             .take(1)
                             .for_each(|call| call.append_external_contracts(contract_id.clone()));
                     } else {
-                        return Err(result.err().unwrap());
+                        return Err(result.expect_err("Couldn't estimate tx dependencies because we couldn't find the missing contract input"));
                     }
                 }
 
