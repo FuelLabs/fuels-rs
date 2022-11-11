@@ -1,10 +1,10 @@
 use crate::utils::{ident, safe_ident};
+use crate::FullTypeApplication;
 use fuels_types::errors::Error;
 use fuels_types::utils::custom_type_name;
 use fuels_types::utils::{
     extract_array_len, extract_generic_name, extract_str_len, has_tuple_format,
 };
-use fuels_types::FullTypeApplication;
 use lazy_static::lazy_static;
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
@@ -257,7 +257,7 @@ mod tests {
             type_id: type_declarations[0].type_id,
             ..Default::default()
         };
-        let application = type_application.to_full_application(&types);
+        let application = FullTypeApplication::from_type_application(&type_application, &types);
         let resolved_type = resolve_type(&application)
             .with_context(|| format!("failed to resolve {:?}", &type_application))?;
         let actual = TokenStream::from(&resolved_type).to_string();

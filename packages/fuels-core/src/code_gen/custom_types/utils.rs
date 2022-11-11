@@ -1,9 +1,9 @@
 use crate::code_gen::resolved_type::{resolve_type, ResolvedType};
 use crate::utils::{ident, safe_ident};
+use crate::{FullTypeApplication, FullTypeDeclaration};
 use anyhow::anyhow;
 use fuels_types::errors::Error;
 use fuels_types::utils::extract_generic_name;
-use fuels_types::{FullTypeApplication, FullTypeDeclaration};
 use inflector::Inflector;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
@@ -162,7 +162,10 @@ mod tests {
             },
         )]);
 
-        let component = Component::new(&type_application.to_full_application(&types), true)?;
+        let component = Component::new(
+            &FullTypeApplication::from_type_application(&type_application, &types),
+            true,
+        )?;
 
         assert_eq!(component.field_name, ident("some_name_here"));
 
@@ -195,7 +198,10 @@ mod tests {
             .into_iter()
             .collect();
 
-        let generics = extract_generic_parameters(&declaration.to_full_declaration(&types))?;
+        let generics = extract_generic_parameters(&FullTypeDeclaration::from_type_declaration(
+            &declaration,
+            &types,
+        ))?;
 
         let stringified_generics = generics
             .into_iter()

@@ -3,14 +3,14 @@ use std::collections::{HashMap, HashSet};
 use crate::code_gen::bindings::ContractBindings;
 use crate::source::Source;
 use crate::utils::ident;
-use crate::{try_from_bytes, Parameterize, Tokenizable};
+use crate::{
+    try_from_bytes, FullABIFunction, FullLoggedType, FullTypeDeclaration, Parameterize, Tokenizable,
+};
 use fuel_tx::Receipt;
 use fuels_types::errors::Error;
 use fuels_types::param_types::ParamType;
 use fuels_types::utils::custom_type_name;
-use fuels_types::{
-    FullABIFunction, FullLoggedType, FullTypeDeclaration, ProgramABI, ResolvedLog, TypeDeclaration,
-};
+use fuels_types::{ProgramABI, ResolvedLog, TypeDeclaration};
 use itertools::Itertools;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
@@ -44,7 +44,7 @@ impl Abigen {
         let types = Abigen::get_types(&parsed_abi);
         let full_types = types
             .values()
-            .map(|decl| decl.to_full_declaration(&types))
+            .map(|decl| FullTypeDeclaration::from_type_declaration(decl, &types))
             .collect();
 
         let logged_types = parsed_abi
@@ -52,7 +52,7 @@ impl Abigen {
             .take()
             .unwrap_or_default()
             .into_iter()
-            .map(|l_type| l_type.to_full_logged_type(&types))
+            .map(|l_type| FullLoggedType::from_logged_type(&l_type, &types))
             .collect();
 
         Ok(Self {
@@ -60,7 +60,7 @@ impl Abigen {
             functions: parsed_abi
                 .functions
                 .into_iter()
-                .map(|fun| fun.to_full_function(&types))
+                .map(|fun| FullABIFunction::from_abi_function(&fun, &types))
                 .collect(),
             rustfmt: true,
             types: full_types,

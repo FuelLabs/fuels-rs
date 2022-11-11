@@ -6,7 +6,9 @@ use fuels_types::enum_variants::EnumVariants;
 use fuels_types::{
     errors::{CodecError, Error},
     param_types::ParamType,
+    ABIFunction, LoggedType, TypeApplication, TypeDeclaration,
 };
+use std::collections::HashMap;
 use strum_macros::EnumString;
 
 pub mod abi_decoder;
@@ -209,5 +211,128 @@ mod tests {
             AssetId::new(bytes.as_slice().try_into()?)
         );
         Ok(())
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct FullABIFunction {
+    pub inputs: Vec<FullTypeApplication>,
+    pub name: String,
+    pub output: FullTypeApplication,
+}
+impl FullABIFunction {
+    pub fn from_abi_function(
+        abi_function: &ABIFunction,
+        types: &HashMap<usize, TypeDeclaration>,
+    ) -> FullABIFunction {
+        let inputs = abi_function
+            .inputs
+            .iter()
+            .map(|input| FullTypeApplication::from_type_application(input, types))
+            .collect();
+        FullABIFunction {
+            inputs,
+            name: abi_function.name.clone(),
+            output: FullTypeApplication::from_type_application(&abi_function.output, types),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FullTypeDeclaration {
+    pub type_field: String,
+    pub components: Vec<FullTypeApplication>,
+    pub type_parameters: Vec<FullTypeDeclaration>,
+}
+
+impl FullTypeDeclaration {
+    pub fn from_type_declaration(
+        type_decl: &TypeDeclaration,
+        types: &HashMap<usize, TypeDeclaration>,
+    ) -> FullTypeDeclaration {
+        let components = type_decl
+            .components
+            .clone()
+            .unwrap_or_default()
+            .into_iter()
+            .map(|application| FullTypeApplication::from_type_application(&application, types))
+            .collect();
+        let type_parameters = type_decl
+            .type_parameters
+            .clone()
+            .unwrap_or_default()
+            .into_iter()
+            .map(|id| FullTypeDeclaration::from_type_declaration(types.get(&id).unwrap(), types))
+            .collect();
+        FullTypeDeclaration {
+            type_field: type_decl.type_field.clone(),
+            components,
+            type_parameters,
+        }
+    }
+}
+impl FullTypeApplication {
+    pub fn from_type_application(
+        type_application: &TypeApplication,
+        types: &HashMap<usize, TypeDeclaration>,
+    ) -> FullTypeApplication {
+        let type_arguments = type_application
+            .type_arguments
+            .clone()
+            .unwrap_or_default()
+            .into_iter()
+            .map(|application| FullTypeApplication::from_type_application(&application, types))
+            .collect();
+
+        let type_decl = FullTypeDeclaration::from_type_declaration(
+            types.get(&type_application.type_id).unwrap(),
+            types,
+        );
+
+        FullTypeApplication {
+            name: type_application.name.clone(),
+            type_decl,
+            type_arguments,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FullTypeApplication {
+    pub name: String,
+    pub type_decl: FullTypeDeclaration,
+    pub type_arguments: Vec<FullTypeApplication>,
+}
+
+#[derive(Debug, Clone)]
+pub struct FullLoggedType {
+    pub log_id: u64,
+    pub application: FullTypeApplication,
+}
+
+impl FullLoggedType {
+    pub fn from_logged_type(
+        logged_type: &LoggedType,
+        types: &HashMap<usize, TypeDeclaration>,
+    ) -> FullLoggedType {
+        FullLoggedType {
+            log_id: logged_type.log_id,
+            application: FullTypeApplication::from_type_application(
+                &logged_type.application,
+                types,
+            ),
+        }
+    }
+}
+
+impl FullTypeDeclaration {
+    pub fn is_enum_type(&self) -> bool {
+        let type_field = &self.type_field;
+        type_field.starts_with("enum ")
+    }
+
+    pub fn is_struct_type(&self) -> bool {
+        let type_field = &self.type_field;
+        type_field.starts_with("struct ")
     }
 }

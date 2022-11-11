@@ -2,11 +2,11 @@ use super::utils::{
     extract_components, extract_generic_parameters, impl_try_from, param_type_calls, Component,
 };
 use crate::utils::ident;
+use crate::FullTypeDeclaration;
 use core::result::Result;
 use core::result::Result::Ok;
 use fuels_types::errors::Error;
 use fuels_types::utils::custom_type_name;
-use fuels_types::FullTypeDeclaration;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 

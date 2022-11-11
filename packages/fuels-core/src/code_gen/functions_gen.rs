@@ -2,8 +2,8 @@ use crate::code_gen::custom_types::{param_type_calls, Component};
 use crate::code_gen::docs_gen::expand_doc;
 use crate::code_gen::resolved_type;
 use crate::utils::safe_ident;
+use crate::{FullABIFunction, FullTypeApplication};
 use fuels_types::errors::Error;
-use fuels_types::{FullABIFunction, FullTypeApplication};
 use inflector::Inflector;
 use proc_macro2::TokenStream;
 use quote::quote;
@@ -251,7 +251,10 @@ mod tests {
             .collect::<HashMap<usize, TypeDeclaration>>();
 
         // Grabbing the one and only function in it.
-        let result = expand_function(&parsed_abi.functions[0].to_full_function(&types))?;
+        let result = expand_function(&FullABIFunction::from_abi_function(
+            &parsed_abi.functions[0],
+            &types,
+        ))?;
 
         let expected_code = r#"
                 #[doc = "Calls the contract's `some_abi_funct` function"]
@@ -311,7 +314,7 @@ mod tests {
         ]
         .into_iter()
         .collect::<HashMap<_, _>>();
-        let result = expand_function(&the_function.to_full_function(&types));
+        let result = expand_function(&FullABIFunction::from_abi_function(&the_function, &types));
         let expected = TokenStream::from_str(
             r#"
             #[doc = "Calls the contract's `HelloWorld` function"]
@@ -411,7 +414,7 @@ mod tests {
         ]
         .into_iter()
         .collect::<HashMap<_, _>>();
-        let result = expand_function(&the_function.to_full_function(&types));
+        let result = expand_function(&FullABIFunction::from_abi_function(&the_function, &types));
         // Some more editing was required because it is not rustfmt-compatible (adding/removing parentheses or commas)
         let expected = TokenStream::from_str(
             r#"
@@ -467,7 +470,8 @@ mod tests {
         )]
         .into_iter()
         .collect::<HashMap<_, _>>();
-        let result = function_arguments(&the_function.to_full_function(&types).inputs)?;
+        let result =
+            function_arguments(&FullABIFunction::from_abi_function(&the_function, &types).inputs)?;
         let component = &result[0];
 
         assert_eq!(&component.field_name.to_string(), "some_argument");
@@ -508,7 +512,8 @@ mod tests {
         ]
         .into_iter()
         .collect::<HashMap<_, _>>();
-        let result = function_arguments(&the_function.to_full_function(&types).inputs)?;
+        let result =
+            function_arguments(&FullABIFunction::from_abi_function(&the_function, &types).inputs)?;
         let component = &result[0];
 
         assert_eq!(&component.field_name.to_string(), "bim_bam");
@@ -575,12 +580,14 @@ mod tests {
         ]
         .into_iter()
         .collect::<HashMap<_, _>>();
-        let result = function_arguments(&function.to_full_function(&types).inputs)?;
+        let result =
+            function_arguments(&FullABIFunction::from_abi_function(&function, &types).inputs)?;
         assert_eq!(&result[0].field_name.to_string(), "bim_bam");
         assert_eq!(&result[0].field_type.to_string(), "CarMaker");
 
         function.inputs[0].type_id = 2;
-        let result = function_arguments(&function.to_full_function(&types).inputs)?;
+        let result =
+            function_arguments(&FullABIFunction::from_abi_function(&function, &types).inputs)?;
         assert_eq!(&result[0].field_name.to_string(), "bim_bam");
         assert_eq!(&result[0].field_type.to_string(), "Cocktail");
 
