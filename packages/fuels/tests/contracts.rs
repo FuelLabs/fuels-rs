@@ -667,7 +667,7 @@ async fn test_contract_set_estimation() -> Result<(), Error> {
     let bits = *foo_contract_id.hash();
 
     {
-        // Should fail due to lack of output variables
+        // Should fail due to missing external contracts
         let res = foo_caller_contract_instance
             .methods()
             .call_foo_contract(Bits256(bits), true)

@@ -590,12 +590,13 @@ where
                     self = self.append_variable_outputs(1);
                 }
 
-                Err(Error::RevertTransactionError(_, receipts))
-                    if ContractCall::find_contract_not_in_inputs(&receipts).is_some() =>
-                {
-                    let receipt = ContractCall::find_contract_not_in_inputs(&receipts).unwrap();
-                    let contract_id = Bech32ContractId::from(*receipt.contract_id().unwrap());
-                    self = self.append_contract(contract_id);
+                Err(Error::RevertTransactionError(_, ref receipts)) => {
+                    if let Some(receipt) = ContractCall::find_contract_not_in_inputs(receipts) {
+                        let contract_id = Bech32ContractId::from(*receipt.contract_id().unwrap());
+                        self = self.append_contract(contract_id);
+                    } else {
+                        return Err(result.err().unwrap());
+                    }
                 }
 
                 Err(e) => return Err(e),
@@ -735,16 +736,18 @@ impl MultiContractCallHandler {
                         .for_each(|call| call.append_variable_outputs(1));
                 }
 
-                Err(Error::RevertTransactionError(_, receipts))
-                    if ContractCall::find_contract_not_in_inputs(&receipts).is_some() =>
-                {
-                    let receipt = ContractCall::find_contract_not_in_inputs(&receipts).unwrap();
-                    let contract_id = Bech32ContractId::from(*receipt.contract_id().unwrap());
-                    self.contract_calls
-                        .iter_mut()
-                        .take(1)
-                        .for_each(|call| call.append_external_contracts(contract_id.clone()));
+                Err(Error::RevertTransactionError(_, ref receipts)) => {
+                    if let Some(receipt) = ContractCall::find_contract_not_in_inputs(receipts) {
+                        let contract_id = Bech32ContractId::from(*receipt.contract_id().unwrap());
+                        self.contract_calls
+                            .iter_mut()
+                            .take(1)
+                            .for_each(|call| call.append_external_contracts(contract_id.clone()));
+                    } else {
+                        return Err(result.err().unwrap());
+                    }
                 }
+
                 Err(e) => return Err(e),
                 _ => return Ok(self),
             }
