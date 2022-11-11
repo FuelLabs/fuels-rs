@@ -6,7 +6,7 @@ use core::result::Result;
 use core::result::Result::Ok;
 use fuels_types::errors::Error;
 use fuels_types::utils::custom_type_name;
-use fuels_types::TypeDeclaration;
+use fuels_types::{FullTypeDeclaration, TypeDeclaration};
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 use std::collections::HashMap;
@@ -14,14 +14,11 @@ use std::collections::HashMap;
 /// Returns a TokenStream containing the declaration, `Parameterize`,
 /// `Tokenizable` and `TryFrom` implementations for the struct described by the
 /// given TypeDeclaration.
-pub fn expand_custom_struct(
-    type_decl: &TypeDeclaration,
-    types: &HashMap<usize, TypeDeclaration>,
-) -> Result<TokenStream, Error> {
+pub fn expand_custom_struct(type_decl: &FullTypeDeclaration) -> Result<TokenStream, Error> {
     let struct_ident = ident(&custom_type_name(&type_decl.type_field)?);
 
-    let components = extract_components(type_decl, types, true)?;
-    let generic_parameters = extract_generic_parameters(type_decl, types)?;
+    let components = extract_components(type_decl, true)?;
+    let generic_parameters = extract_generic_parameters(type_decl)?;
 
     let struct_decl = struct_decl(&struct_ident, &components, &generic_parameters);
 

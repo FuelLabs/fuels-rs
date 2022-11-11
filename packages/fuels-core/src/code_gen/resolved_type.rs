@@ -4,12 +4,11 @@ use fuels_types::utils::custom_type_name;
 use fuels_types::utils::{
     extract_array_len, extract_generic_name, extract_str_len, has_tuple_format,
 };
-use fuels_types::{TypeApplication, TypeDeclaration};
+use fuels_types::FullTypeApplication;
 use lazy_static::lazy_static;
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 use regex::Regex;
-use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 
 // Represents a type alongside its generic parameters. Can be converted into a
@@ -65,20 +64,16 @@ impl From<ResolvedType> for TokenStream {
 /// `ResolvedType` which can be then be converted into a `TokenStream`. As such
 /// it can be used whenever you need the Rust type of the given
 /// `TypeApplication`.
-pub(crate) fn resolve_type(
-    type_application: &TypeApplication,
-    types: &HashMap<usize, TypeDeclaration>,
-) -> Result<ResolvedType, Error> {
-    let recursively_resolve = |type_applications: &Option<Vec<TypeApplication>>| {
+pub(crate) fn resolve_type(type_application: &FullTypeApplication) -> Result<ResolvedType, Error> {
+    let recursively_resolve = |type_applications: &Vec<FullTypeApplication>| {
         type_applications
             .iter()
-            .flatten()
-            .map(|array_type| resolve_type(array_type, types))
+            .map(|array_type| resolve_type(array_type))
             .collect::<Result<Vec<_>, _>>()
             .expect("Failed to resolve types")
     };
 
-    let base_type = types.get(&type_application.type_id).unwrap();
+    let base_type = &type_application.type_decl;
 
     let type_field = base_type.type_field.as_str();
 
@@ -245,8 +240,10 @@ fn to_struct(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::HashMap;
 
     use anyhow::Context;
+    use fuels_types::{TypeApplication, TypeDeclaration};
 
     fn test_resolve_first_type(
         expected: &str,
@@ -260,7 +257,8 @@ mod tests {
             type_id: type_declarations[0].type_id,
             ..Default::default()
         };
-        let resolved_type = resolve_type(&type_application, &types)
+        let application = type_application.to_full_application(&types);
+        let resolved_type = resolve_type(&application)
             .with_context(|| format!("failed to resolve {:?}", &type_application))?;
         let actual = TokenStream::from(&resolved_type).to_string();
         assert_eq!(actual, expected);

@@ -3,12 +3,11 @@ use crate::code_gen::docs_gen::expand_doc;
 use crate::code_gen::resolved_type;
 use crate::utils::safe_ident;
 use fuels_types::errors::Error;
-use fuels_types::{ABIFunction, TypeDeclaration};
+use fuels_types::{FullABIFunction, FullTypeApplication, TypeDeclaration};
 use inflector::Inflector;
 use proc_macro2::TokenStream;
 use quote::quote;
 use resolved_type::resolve_type;
-use std::collections::HashMap;
 
 /// Functions used by the Abigen to expand functions defined in an ABI spec.
 
@@ -20,15 +19,12 @@ use std::collections::HashMap;
 /// and the function parameters that will be used in the actual contract call.
 ///
 /// [`Contract`]: crate::contract::Contract
-pub fn expand_function(
-    function: &ABIFunction,
-    types: &HashMap<usize, TypeDeclaration>,
-) -> Result<TokenStream, Error> {
+pub fn expand_function(function: &FullABIFunction) -> Result<TokenStream, Error> {
     if function.name.is_empty() {
         return Err(Error::InvalidData("Function name can not be empty".into()));
     }
 
-    let args = function_arguments(function, types)?;
+    let args = function_arguments(&function.inputs)?;
 
     let arg_names = args.iter().map(|component| &component.field_name);
 
@@ -48,7 +44,7 @@ pub fn expand_function(
     let name = safe_ident(&function.name);
     let name_stringified = name.to_string();
 
-    let output_type = resolve_fn_output_type(function, types)?;
+    let output_type = resolve_fn_output_type(&function)?;
 
     Ok(quote! {
         #doc
@@ -65,11 +61,8 @@ pub fn expand_function(
     })
 }
 
-fn resolve_fn_output_type(
-    function: &ABIFunction,
-    types: &HashMap<usize, TypeDeclaration>,
-) -> Result<TokenStream, Error> {
-    let output_type = resolve_type(&function.output, types)?;
+fn resolve_fn_output_type(function: &FullABIFunction) -> Result<TokenStream, Error> {
+    let output_type = resolve_type(&function.output)?;
     if output_type.uses_vectors() {
         Err(Error::CompilationError(format!(
             "function '{}' contains a vector in its return type. This currently isn't supported.",
@@ -80,13 +73,10 @@ fn resolve_fn_output_type(
     }
 }
 
-fn function_arguments(
-    fun: &ABIFunction,
-    types: &HashMap<usize, TypeDeclaration>,
-) -> Result<Vec<Component>, Error> {
-    fun.inputs
+fn function_arguments(inputs: &[FullTypeApplication]) -> Result<Vec<Component>, Error> {
+    inputs
         .iter()
-        .map(|input| Component::new(input, types, true))
+        .map(|input| Component::new(input, true))
         .collect::<Result<Vec<_>, anyhow::Error>>()
         .map_err(|e| Error::InvalidType(e.to_string()))
 }
@@ -108,7 +98,8 @@ pub fn expand_input_name(name: &str) -> Result<TokenStream, Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fuels_types::{ProgramABI, TypeApplication};
+    use fuels_types::{ABIFunction, ProgramABI, TypeApplication};
+    use std::collections::HashMap;
     use std::str::FromStr;
 
     #[test]
@@ -253,14 +244,14 @@ mod tests {
               }
     "#;
         let parsed_abi: ProgramABI = serde_json::from_str(s)?;
-        let all_types = parsed_abi
+        let types = parsed_abi
             .types
             .into_iter()
             .map(|t| (t.type_id, t))
             .collect::<HashMap<usize, TypeDeclaration>>();
 
         // Grabbing the one and only function in it.
-        let result = expand_function(&parsed_abi.functions[0], &all_types)?;
+        let result = expand_function(&parsed_abi.functions[0].to_full_function(&types))?;
 
         let expected_code = r#"
                 #[doc = "Calls the contract's `some_abi_funct` function"]
@@ -320,7 +311,7 @@ mod tests {
         ]
         .into_iter()
         .collect::<HashMap<_, _>>();
-        let result = expand_function(&the_function, &types);
+        let result = expand_function(&the_function.to_full_function(&types));
         let expected = TokenStream::from_str(
             r#"
             #[doc = "Calls the contract's `HelloWorld` function"]
@@ -420,7 +411,7 @@ mod tests {
         ]
         .into_iter()
         .collect::<HashMap<_, _>>();
-        let result = expand_function(&the_function, &types);
+        let result = expand_function(&the_function.to_full_function(&types));
         // Some more editing was required because it is not rustfmt-compatible (adding/removing parentheses or commas)
         let expected = TokenStream::from_str(
             r#"
@@ -476,7 +467,7 @@ mod tests {
         )]
         .into_iter()
         .collect::<HashMap<_, _>>();
-        let result = function_arguments(&the_function, &types)?;
+        let result = function_arguments(&the_function.to_full_function(&types).inputs)?;
         let component = &result[0];
 
         assert_eq!(&component.field_name.to_string(), "some_argument");
@@ -517,7 +508,7 @@ mod tests {
         ]
         .into_iter()
         .collect::<HashMap<_, _>>();
-        let result = function_arguments(&the_function, &types)?;
+        let result = function_arguments(&the_function.to_full_function(&types).inputs)?;
         let component = &result[0];
 
         assert_eq!(&component.field_name.to_string(), "bim_bam");
@@ -584,12 +575,12 @@ mod tests {
         ]
         .into_iter()
         .collect::<HashMap<_, _>>();
-        let result = function_arguments(&function, &types)?;
+        let result = function_arguments(&function.to_full_function(&types).inputs)?;
         assert_eq!(&result[0].field_name.to_string(), "bim_bam");
         assert_eq!(&result[0].field_type.to_string(), "CarMaker");
 
         function.inputs[0].type_id = 2;
-        let result = function_arguments(&function, &types)?;
+        let result = function_arguments(&function.to_full_function(&types).inputs)?;
         assert_eq!(&result[0].field_name.to_string(), "bim_bam");
         assert_eq!(&result[0].field_type.to_string(), "Cocktail");
 

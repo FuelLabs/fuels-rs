@@ -6,7 +6,7 @@ use core::result::Result;
 use core::result::Result::Ok;
 use fuels_types::errors::Error;
 use fuels_types::utils::custom_type_name;
-use fuels_types::TypeDeclaration;
+use fuels_types::{FullTypeDeclaration, TypeDeclaration};
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 use std::collections::HashMap;
@@ -14,14 +14,11 @@ use std::collections::HashMap;
 /// Returns a TokenStream containing the declaration, `Parameterize`,
 /// `Tokenizable` and `TryFrom` implementations for the enum described by the
 /// given TypeDeclaration.
-pub fn expand_custom_enum(
-    type_decl: &TypeDeclaration,
-    types: &HashMap<usize, TypeDeclaration>,
-) -> Result<TokenStream, Error> {
+pub fn expand_custom_enum(type_decl: &FullTypeDeclaration) -> Result<TokenStream, Error> {
     let enum_ident = ident(&custom_type_name(&type_decl.type_field)?);
 
-    let components = extract_components(type_decl, types, false)?;
-    let generics = extract_generic_parameters(type_decl, types)?;
+    let components = extract_components(type_decl, false)?;
+    let generics = extract_generic_parameters(type_decl)?;
 
     let enum_def = enum_decl(&enum_ident, &components, &generics);
     let parameterize_impl = enum_parameterize_impl(&enum_ident, &components, &generics);

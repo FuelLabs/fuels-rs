@@ -801,3 +801,91 @@ async fn compile_bindings_enum_input() {
     let expected = "0000000021b2784f0000000000000000000000000000002a";
     assert_eq!(encoded, expected);
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fuels_core::code_gen::abigen::Abigen;
+
+    #[test]
+    fn something() {
+        Abigen::new(
+            "MyContract",
+            r#"
+        {
+            "types": [
+              {
+                "typeId": 0,
+                "type": "()",
+                "components": [],
+                "typeParameters": null
+              },
+              {
+                "typeId": 1,
+                "type": "bool",
+                "components": null,
+                "typeParameters": null
+              },
+              {
+                "typeId": 2,
+                "type": "struct InnerStruct",
+                "components": [
+                  {
+                    "name": "a",
+                    "type": 1,
+                    "typeArguments": null
+                  }
+                ],
+                "typeParameters": null
+              },
+              {
+                "typeId": 3,
+                "type": "struct MyNestedStruct",
+                "components": [
+                  {
+                    "name": "x",
+                    "type": 4,
+                    "typeArguments": null
+                  },
+                  {
+                    "name": "foo",
+                    "type": 2,
+                    "typeArguments": null
+                  }
+                ],
+                "typeParameters": null
+              },
+              {
+                "typeId": 4,
+                "type": "u16",
+                "components": null,
+                "typeParameters": null
+              }
+            ],
+            "functions": [
+              {
+                "inputs": [
+                  {
+                    "name": "top_value",
+                    "type": 3,
+                    "typeArguments": null
+                  }
+                ],
+                "name": "takes_nested_struct",
+                "output": {
+                  "name": "",
+                  "type": 0,
+                  "typeArguments": null
+                }
+              }
+            ]
+          }
+        "#,
+        )
+        .unwrap()
+        .generate()
+        .unwrap()
+        .write_to_file("/tmp/code.rs")
+        .unwrap();
+    }
+}

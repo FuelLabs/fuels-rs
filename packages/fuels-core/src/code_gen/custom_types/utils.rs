@@ -3,7 +3,7 @@ use crate::utils::{ident, safe_ident};
 use anyhow::anyhow;
 use fuels_types::errors::Error;
 use fuels_types::utils::extract_generic_name;
-use fuels_types::{TypeApplication, TypeDeclaration};
+use fuels_types::{FullTypeApplication, FullTypeDeclaration, TypeApplication, TypeDeclaration};
 use inflector::Inflector;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
@@ -18,11 +18,7 @@ pub struct Component {
 }
 
 impl Component {
-    pub fn new(
-        component: &TypeApplication,
-        types: &HashMap<usize, TypeDeclaration>,
-        snake_case: bool,
-    ) -> anyhow::Result<Component> {
+    pub fn new(component: &FullTypeApplication, snake_case: bool) -> anyhow::Result<Component> {
         let field_name = if snake_case {
             component.name.to_snake_case()
         } else {
@@ -31,7 +27,7 @@ impl Component {
 
         Ok(Component {
             field_name: safe_ident(&field_name),
-            field_type: resolve_type(component, types)?,
+            field_type: resolve_type(component)?,
         })
     }
 }
@@ -79,35 +75,32 @@ pub(crate) fn impl_try_from(ident: &Ident, generics: &[TokenStream]) -> TokenStr
 /// Transforms components from inside the given `TypeDeclaration` into a vector
 /// of `Components`. Will fail if there are no components.
 pub(crate) fn extract_components(
-    type_decl: &TypeDeclaration,
-    types: &HashMap<usize, TypeDeclaration>,
+    type_decl: &FullTypeDeclaration,
     snake_case: bool,
 ) -> anyhow::Result<Vec<Component>> {
-    let components = match &type_decl.components {
-        Some(components) if !components.is_empty() => Ok(components),
-        _ => Err(anyhow!(
+    let components = &type_decl.components;
+
+    if components.is_empty() {
+        return Err(anyhow!(
             "Custom type {} must have at least one component!",
             type_decl.type_field
-        )),
-    }?;
+        ));
+    };
 
     components
         .iter()
-        .map(|component| Component::new(component, types, snake_case))
+        .map(|component| Component::new(component, snake_case))
         .collect()
 }
 
 /// Returns a vector of TokenStreams, one for each of the generic parameters
 /// used by the given type.
 pub fn extract_generic_parameters(
-    type_decl: &TypeDeclaration,
-    types: &HashMap<usize, TypeDeclaration>,
+    type_decl: &FullTypeDeclaration,
 ) -> Result<Vec<TokenStream>, Error> {
     type_decl
         .type_parameters
         .iter()
-        .flatten()
-        .map(|id| types.get(id).unwrap())
         .map(|decl| {
             let name = extract_generic_name(&decl.type_field).unwrap_or_else(|| {
                 panic!("Type parameters should only contain ids of generic types!")
@@ -168,7 +161,7 @@ mod tests {
             },
         )]);
 
-        let component = Component::new(&type_application, &types, true)?;
+        let component = Component::new(&type_application.to_full_application(&types), true)?;
 
         assert_eq!(component.field_name, ident("some_name_here"));
 
@@ -201,7 +194,7 @@ mod tests {
             .into_iter()
             .collect();
 
-        let generics = extract_generic_parameters(&declaration, &types)?;
+        let generics = extract_generic_parameters(&declaration.to_full_declaration(&types))?;
 
         let stringified_generics = generics
             .into_iter()

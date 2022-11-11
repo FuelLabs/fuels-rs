@@ -8,7 +8,9 @@ use fuel_tx::Receipt;
 use fuels_types::errors::Error;
 use fuels_types::param_types::ParamType;
 use fuels_types::utils::custom_type_name;
-use fuels_types::{ProgramABI, ResolvedLog, TypeDeclaration};
+use fuels_types::{
+    FullABIFunction, FullLoggedType, FullTypeDeclaration, ProgramABI, ResolvedLog, TypeDeclaration,
+};
 use itertools::Itertools;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
@@ -26,10 +28,9 @@ pub struct Abigen {
 
     /// The contract name as an identifier.
     contract_name: Ident,
-
-    abi: ProgramABI,
-
-    types: HashMap<usize, TypeDeclaration>,
+    types: Vec<FullTypeDeclaration>,
+    functions: Vec<FullABIFunction>,
+    logged_types: Vec<FullLoggedType>,
 }
 
 impl Abigen {
@@ -38,14 +39,33 @@ impl Abigen {
         let source = Source::parse(abi_source).expect("failed to parse JSON ABI");
 
         let json_abi_str = source.get().expect("failed to parse JSON ABI from string");
-        let parsed_abi: ProgramABI = serde_json::from_str(&json_abi_str)?;
+        let mut parsed_abi: ProgramABI = serde_json::from_str(&json_abi_str)?;
+
+        let types = Abigen::get_types(&parsed_abi);
+        let full_types = types
+            .values()
+            .map(|decl| decl.to_full_declaration(&types))
+            .collect();
+
+        let logged_types = parsed_abi
+            .logged_types
+            .take()
+            .unwrap_or_default()
+            .into_iter()
+            .map(|l_type| l_type.to_full_logged_type(&types))
+            .collect();
 
         Ok(Self {
-            types: Abigen::get_types(&parsed_abi),
-            abi: parsed_abi,
             contract_name: ident(contract_name),
+            functions: parsed_abi
+                .functions
+                .into_iter()
+                .map(|fun| fun.to_full_function(&types))
+                .collect(),
             rustfmt: true,
+            types: full_types,
             no_std: false,
+            logged_types,
         })
     }
 
@@ -199,10 +219,9 @@ impl Abigen {
 
     pub fn functions(&self) -> Result<TokenStream, Error> {
         let tokenized_functions = self
-            .abi
             .functions
             .iter()
-            .map(|function| expand_function(function, &self.types))
+            .map(expand_function)
             .collect::<Result<Vec<TokenStream>, Error>>()?;
 
         Ok(quote! { #( #tokenized_functions )* })
@@ -214,21 +233,23 @@ impl Abigen {
         // Prevent expanding the same struct more than once
         let mut seen_struct: Vec<&str> = vec![];
 
-        for prop in &self.abi.types {
+        for type_decl in &self.types {
             // If it isn't a struct, skip.
-            if !prop.is_struct_type() {
+            if !type_decl.is_struct_type() {
                 continue;
             }
 
-            if Abigen::should_skip_codegen(&prop.type_field)? {
+            if Abigen::should_skip_codegen(&type_decl.type_field)? {
                 continue;
             }
 
-            if !seen_struct.contains(&prop.type_field.as_str()) {
-                structs.extend(expand_custom_struct(prop, &self.types)?);
-                seen_struct.push(&prop.type_field);
+            if !seen_struct.contains(&type_decl.type_field.as_str()) {
+                structs.extend(expand_custom_struct(type_decl)?);
+                seen_struct.push(&type_decl.type_field);
             }
         }
+
+        eprintln!("Analyzed the following structs: {seen_struct:?}");
 
         Ok(structs)
     }
@@ -264,13 +285,13 @@ impl Abigen {
         // Prevent expanding the same enum more than once
         let mut seen_enum: Vec<&str> = vec![];
 
-        for prop in &self.abi.types {
+        for prop in &self.types {
             if !prop.is_enum_type() || Abigen::should_skip_codegen(&prop.type_field)? {
                 continue;
             }
 
             if !seen_enum.contains(&prop.type_field.as_str()) {
-                enums.extend(expand_custom_enum(prop, &self.types)?);
+                enums.extend(expand_custom_enum(prop)?);
                 seen_enum.push(&prop.type_field);
             }
         }
@@ -285,14 +306,11 @@ impl Abigen {
 
     /// Reads the parsed logged types from the ABI and creates ResolvedLogs
     fn resolve_logs(&self) -> Vec<ResolvedLog> {
-        self.abi
-            .logged_types
-            .as_ref()
-            .into_iter()
-            .flatten()
+        self.logged_types
+            .iter()
             .map(|l| {
                 let resolved_type =
-                    resolve_type(&l.application, &self.types).expect("Failed to resolve log type");
+                    resolve_type(&l.application).expect("Failed to resolve log type");
                 let param_type_call = single_param_type_call(&resolved_type);
                 let resolved_type_name = TokenStream::from(resolved_type);
 
