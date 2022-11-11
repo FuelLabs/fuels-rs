@@ -3,7 +3,6 @@
 //! We declare these in a dedicated, minimal crate in order to allow for downstream projects to
 //! consume or generate these ABI-compatible types without needing to pull in the rest of the SDK.
 
-use itertools::chain;
 use proc_macro2::TokenStream;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

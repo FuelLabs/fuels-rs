@@ -68,7 +68,7 @@ pub(crate) fn resolve_type(type_application: &FullTypeApplication) -> Result<Res
     let recursively_resolve = |type_applications: &Vec<FullTypeApplication>| {
         type_applications
             .iter()
-            .map(|array_type| resolve_type(array_type))
+            .map(resolve_type)
             .collect::<Result<Vec<_>, _>>()
             .expect("Failed to resolve types")
     };

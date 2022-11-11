@@ -3,11 +3,10 @@ use crate::utils::{ident, safe_ident};
 use anyhow::anyhow;
 use fuels_types::errors::Error;
 use fuels_types::utils::extract_generic_name;
-use fuels_types::{FullTypeApplication, FullTypeDeclaration, TypeApplication, TypeDeclaration};
+use fuels_types::{FullTypeApplication, FullTypeDeclaration};
 use inflector::Inflector;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
-use std::collections::HashMap;
 
 // Represents a component of either a struct(field name) or an enum(variant
 // name).
@@ -142,6 +141,8 @@ pub fn single_param_type_call(field_type: &ResolvedType) -> TokenStream {
 mod tests {
     use super::*;
     use fuels_types::utils::custom_type_name;
+    use fuels_types::{TypeApplication, TypeDeclaration};
+    use std::collections::HashMap;
 
     #[test]
     fn component_name_is_snake_case_when_requested() -> anyhow::Result<()> {

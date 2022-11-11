@@ -3,7 +3,7 @@ use crate::code_gen::docs_gen::expand_doc;
 use crate::code_gen::resolved_type;
 use crate::utils::safe_ident;
 use fuels_types::errors::Error;
-use fuels_types::{FullABIFunction, FullTypeApplication, TypeDeclaration};
+use fuels_types::{FullABIFunction, FullTypeApplication};
 use inflector::Inflector;
 use proc_macro2::TokenStream;
 use quote::quote;
@@ -44,7 +44,7 @@ pub fn expand_function(function: &FullABIFunction) -> Result<TokenStream, Error>
     let name = safe_ident(&function.name);
     let name_stringified = name.to_string();
 
-    let output_type = resolve_fn_output_type(&function)?;
+    let output_type = resolve_fn_output_type(function)?;
 
     Ok(quote! {
         #doc
@@ -98,7 +98,7 @@ pub fn expand_input_name(name: &str) -> Result<TokenStream, Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fuels_types::{ABIFunction, ProgramABI, TypeApplication};
+    use fuels_types::{ABIFunction, ProgramABI, TypeApplication, TypeDeclaration};
     use std::collections::HashMap;
     use std::str::FromStr;
 

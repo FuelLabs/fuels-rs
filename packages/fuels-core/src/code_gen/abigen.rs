@@ -249,8 +249,6 @@ impl Abigen {
             }
         }
 
-        eprintln!("Analyzed the following structs: {seen_struct:?}");
-
         Ok(structs)
     }
 

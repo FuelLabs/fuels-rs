@@ -6,10 +6,9 @@ use core::result::Result;
 use core::result::Result::Ok;
 use fuels_types::errors::Error;
 use fuels_types::utils::custom_type_name;
-use fuels_types::{FullTypeDeclaration, TypeDeclaration};
+use fuels_types::FullTypeDeclaration;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
-use std::collections::HashMap;
 
 /// Returns a TokenStream containing the declaration, `Parameterize`,
 /// `Tokenizable` and `TryFrom` implementations for the struct described by the

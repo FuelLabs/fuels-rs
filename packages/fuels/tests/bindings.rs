@@ -804,7 +804,6 @@ async fn compile_bindings_enum_input() {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use fuels_core::code_gen::abigen::Abigen;
 
     #[test]
