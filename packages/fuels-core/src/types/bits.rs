@@ -76,26 +76,24 @@ impl Parameterize for B512 {
 }
 
 impl Tokenizable for B512 {
-    fn from_token(t: Token) -> Result<Self, Error>
+    fn from_token(token: Token) -> Result<Self, Error>
     where
         Self: Sized,
     {
-        if let Token::Struct(tokens) = t {
-            let first_token = tokens.into_iter().next();
-            if let Some(Token::Array(data)) = first_token {
-                Ok(Self {
-                    bytes: <[Bits256; 2usize]>::from_token(Token::Array(data))?,
+        if let Token::Struct(tokens) = token {
+            if let [Token::Array(data)] = tokens.as_slice() {
+                Ok(B512 {
+                    bytes: <[Bits256; 2usize]>::from_token(Token::Array(data.to_vec()))?,
                 })
             } else {
                 Err(Error::InstantiationError(format!(
-                    "Expected `Array`, got {:?}",
-                    first_token
+                    "B512 expected one `Token::Array`, got {tokens:?}",
                 )))
             }
         } else {
             Err(Error::InstantiationError(format!(
-            "EvmAddress could not be constructed from the given token. Reason: Expected Struct(B256) got: {t:?}",
-        )))
+                "B512 expected `Token::Struct`, got {token:?}",
+            )))
         }
     }
 
@@ -140,24 +138,21 @@ impl Parameterize for EvmAddress {
 }
 
 impl Tokenizable for EvmAddress {
-    fn from_token(t: Token) -> Result<Self, Error>
+    fn from_token(token: Token) -> Result<Self, Error>
     where
         Self: Sized,
     {
-        if let Token::Struct(tokens) = t {
-            let first_token = tokens.into_iter().next();
-            if let Some(Token::B256(data)) = first_token {
-                Ok(EvmAddress::from(Bits256(data)))
+        if let Token::Struct(tokens) = token {
+            if let [Token::B256(data)] = tokens.as_slice() {
+                Ok(EvmAddress::from(Bits256(*data)))
             } else {
                 Err(Error::InstantiationError(format!(
-                    "Expected `b256`, got {:?}",
-                    first_token
+                    "EvmAddress expected one `Token::B256`, got {tokens:?}",
                 )))
             }
         } else {
             Err(Error::InstantiationError(format!(
-                "EvmAddress could not be constructed from the given token.
-                Reason: Expected Struct(B256) got: {t:?}",
+                "EvmAddress expected `Token::Struct` got {token:?}",
             )))
         }
     }

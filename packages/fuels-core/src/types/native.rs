@@ -338,24 +338,21 @@ impl Tokenizable for ContractId {
 }
 
 impl Tokenizable for Address {
-    fn from_token(t: Token) -> Result<Self, Error>
+    fn from_token(token: Token) -> Result<Self, Error>
     where
         Self: Sized,
     {
-        if let Token::Struct(tokens) = t {
-            let first_token = tokens.into_iter().next();
-            if let Some(Token::B256(id)) = first_token {
-                Ok(Address::from(id))
+        if let Token::Struct(tokens) = token {
+            if let [Token::B256(id)] = tokens.as_slice() {
+                Ok(Address::from(*id))
             } else {
                 Err(Error::InstantiationError(format!(
-                    "Expected `b256`, got {:?}",
-                    first_token
+                    "Address expected one `Token::B256`, got {tokens:?}"
                 )))
             }
         } else {
             Err(Error::InstantiationError(format!(
-                "Expected `Address`, got {:?}",
-                t
+                "Address expected `Token::Struct` got {token:?}",
             )))
         }
     }
@@ -372,15 +369,18 @@ impl Tokenizable for AssetId {
     where
         Self: Sized,
     {
-        if let Token::Struct(inner_tokens) = token {
-            let first_token = inner_tokens.into_iter().next();
-            if let Some(Token::B256(id)) = first_token {
-                Ok(Self::from(id))
+        if let Token::Struct(tokens) = token {
+            if let [Token::B256(id)] = tokens.as_slice() {
+                Ok(AssetId::from(*id))
             } else {
-                Err(Error::InstantiationError(format!("Could not construct 'AssetId' from token. Wrong token inside of Struct '{:?} instead of B256'", first_token)))
+                Err(Error::InstantiationError(format!(
+                    "AssetId expected one `Token::B256`, got {tokens:?}"
+                )))
             }
         } else {
-            Err(Error::InstantiationError(format!("Could not construct 'AssetId' from token. Instead of a Struct with a B256 inside, received: {:?}", token)))
+            Err(Error::InstantiationError(format!(
+                "AssetId expected `Token::Struct` got {token:?}",
+            )))
         }
     }
 
@@ -406,8 +406,7 @@ where
             }
         } else {
             Err(Error::InstantiationError(format!(
-                "Could not construct Option from token. Received: {:?}",
-                token
+                "Could not construct Option from token. Received: {token:?}",
             )))
         }
     }
@@ -442,8 +441,7 @@ where
             }
         } else {
             Err(Error::InstantiationError(format!(
-                "Could not construct Result from token. Received: {:?}",
-                token
+                "Could not construct Result from token. Received: {token:?}",
             )))
         }
     }
@@ -474,8 +472,7 @@ impl Tokenizable for Identity {
             }
         } else {
             Err(Error::InstantiationError(format!(
-                "Could not construct Identity from token. Received: {:?}",
-                token
+                "Could not construct Identity from token. Received: {token:?}",
             )))
         }
     }
