@@ -9,7 +9,7 @@ use fuel_tx::Receipt;
 use fuels_types::errors::Error;
 use fuels_types::param_types::ParamType;
 use fuels_types::utils::custom_type_name;
-use fuels_types::{ProgramABI, ResolvedLog, TypeDeclaration};
+use fuels_types::{ProgramABI, ResolvedLog};
 use itertools::Itertools;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
@@ -25,22 +25,30 @@ pub struct Abigen {
     /// Generate no-std safe code
     no_std: bool,
 
-    /// The contract name as an identifier.
-    contract_name: Ident,
-    types: Vec<FullTypeDeclaration>,
-    functions: Vec<FullABIFunction>,
-    logged_types: Vec<FullLoggedType>,
+    contract: Contract,
 }
 
-impl Abigen {
-    /// Creates a new contract with the given ABI JSON source.
-    pub fn new<S: AsRef<str>>(contract_name: &str, abi_source: S) -> Result<Self, Error> {
+pub struct Contract {
+    /// The contract name as an identifier.
+    pub contract_name: Ident,
+    pub types: Vec<FullTypeDeclaration>,
+    pub functions: Vec<FullABIFunction>,
+    pub logged_types: Vec<FullLoggedType>,
+}
+
+impl Contract {
+    fn new<S: AsRef<str>>(contract_name: &str, abi_source: S) -> Result<Self, Error> {
         let source = Source::parse(abi_source).expect("failed to parse JSON ABI");
 
         let json_abi_str = source.get().expect("failed to parse JSON ABI from string");
         let mut parsed_abi: ProgramABI = serde_json::from_str(&json_abi_str)?;
 
-        let types = Abigen::get_types(&parsed_abi);
+        let types: HashMap<_, _> = parsed_abi
+            .types
+            .iter()
+            .map(|t| (t.type_id, t.clone()))
+            .collect();
+
         let full_types = types
             .values()
             .map(|decl| FullTypeDeclaration::from_counterpart(decl, &types))
@@ -61,27 +69,11 @@ impl Abigen {
                 .into_iter()
                 .map(|fun| FullABIFunction::from_counterpart(&fun, &types))
                 .collect(),
-            rustfmt: true,
             types: full_types,
-            no_std: false,
             logged_types,
         })
     }
 
-    pub fn no_std(mut self) -> Self {
-        self.no_std = true;
-        self
-    }
-
-    /// Generates the contract bindings.
-    pub fn generate(self) -> Result<ContractBindings, Error> {
-        let rustfmt = self.rustfmt;
-        let tokens = self.expand()?;
-
-        Ok(ContractBindings { tokens, rustfmt })
-    }
-
-    /// Entry point of the Abigen's expansion logic.
     /// The high-level goal of this function is to expand* a contract
     /// defined as a JSON into type-safe bindings of that contract that can be
     /// used after it is brought into scope after a successful generation.
@@ -90,7 +82,7 @@ impl Abigen {
     /// Rust code after a transformation of `TokenStream` to another
     /// set of `TokenStream`. This generated Rust code is the brought into scope
     /// after it is called through a procedural macro (`abigen!()` in our case).
-    pub fn expand(&self) -> Result<TokenStream, Error> {
+    pub fn expand(&self, no_std: bool) -> Result<TokenStream, Error> {
         let name = &self.contract_name;
         let methods_name = ident(&format!("{}Methods", name));
         let name_mod = ident(&format!(
@@ -99,14 +91,13 @@ impl Abigen {
         ));
 
         let contract_functions = self.functions()?;
-        let abi_structs = self.abi_structs()?;
-        let abi_enums = self.abi_enums()?;
+        let custom_types = self.custom_types()?;
 
         let resolved_logs = self.resolve_logs();
         let log_id_param_type_pairs = generate_log_id_param_type_pairs(&resolved_logs);
         let fetch_logs = generate_fetch_logs(&resolved_logs);
 
-        let (includes, code) = if self.no_std {
+        let (includes, code) = if no_std {
             (
                 quote! {
                     use alloc::{vec, vec::Vec};
@@ -209,14 +200,12 @@ impl Abigen {
 
                 #code
 
-                #abi_structs
-                #abi_enums
-
+                #custom_types
             }
         })
     }
 
-    pub fn functions(&self) -> Result<TokenStream, Error> {
+    fn functions(&self) -> Result<TokenStream, Error> {
         let tokenized_functions = self
             .functions
             .iter()
@@ -226,79 +215,24 @@ impl Abigen {
         Ok(quote! { #( #tokenized_functions )* })
     }
 
-    fn abi_structs(&self) -> Result<TokenStream, Error> {
-        let mut structs = TokenStream::new();
-
-        // Prevent expanding the same struct more than once
-        let mut seen_struct: Vec<&str> = vec![];
-
-        for type_decl in &self.types {
-            // If it isn't a struct, skip.
-            if !type_decl.is_struct_type() {
-                continue;
-            }
-
-            if Abigen::should_skip_codegen(&type_decl.type_field)? {
-                continue;
-            }
-
-            if !seen_struct.contains(&type_decl.type_field.as_str()) {
-                structs.extend(expand_custom_struct(type_decl)?);
-                seen_struct.push(&type_decl.type_field);
-            }
-        }
-
-        Ok(structs)
-    }
-
-    // Checks whether the given type should not have code generated for it. This
-    // is mainly because the corresponding type in Rust already exists --
-    // e.g. the contract's Vec type is mapped to std::vec::Vec from the Rust
-    // stdlib, ContractId is a custom type implemented by fuels-rs, etc.
-    // Others like 'raw untyped ptr' or 'RawVec' are skipped because they are
-    // implementation details of the contract's Vec type and are not directly
-    // used in the SDK.
-    pub fn should_skip_codegen(type_field: &str) -> anyhow::Result<bool> {
-        let name = custom_type_name(type_field).unwrap_or_else(|_| type_field.to_string());
-
-        Ok([
-            "ContractId",
-            "Address",
-            "Option",
-            "Identity",
-            "Result",
-            "Vec",
-            "raw untyped ptr",
-            "RawVec",
-            "EvmAddress",
-        ]
-        .into_iter()
-        .any(|e| e == name))
-    }
-
-    fn abi_enums(&self) -> Result<TokenStream, Error> {
-        let mut enums = TokenStream::new();
-
-        // Prevent expanding the same enum more than once
-        let mut seen_enum: Vec<&str> = vec![];
-
-        for prop in &self.types {
-            if !prop.is_enum_type() || Abigen::should_skip_codegen(&prop.type_field)? {
-                continue;
-            }
-
-            if !seen_enum.contains(&prop.type_field.as_str()) {
-                enums.extend(expand_custom_enum(prop)?);
-                seen_enum.push(&prop.type_field);
-            }
-        }
-
-        Ok(enums)
-    }
-
-    /// Reads the parsed ABI and returns all the types in it.
-    pub fn get_types(abi: &ProgramABI) -> HashMap<usize, TypeDeclaration> {
-        abi.types.iter().map(|t| (t.type_id, t.clone())).collect()
+    fn custom_types(&self) -> Result<TokenStream, Error> {
+        self.types
+            .iter()
+            .filter(|ttype| !Abigen::should_skip_codegen(&ttype.type_field))
+            .unique()
+            .filter_map(|ttype| {
+                if ttype.is_struct_type() {
+                    Some(expand_custom_struct(ttype))
+                } else if ttype.is_enum_type() {
+                    Some(expand_custom_enum(ttype))
+                } else {
+                    None
+                }
+            })
+            .fold_ok(TokenStream::default(), |mut acc, stream| {
+                acc.extend(stream);
+                acc
+            })
     }
 
     /// Reads the parsed logged types from the ABI and creates ResolvedLogs
@@ -318,6 +252,60 @@ impl Abigen {
                 }
             })
             .collect()
+    }
+}
+
+impl Abigen {
+    /// Creates a new contract with the given ABI JSON source.
+    pub fn new<S: AsRef<str>>(contract_name: &str, abi_source: S) -> Result<Self, Error> {
+        Ok(Self {
+            contract: Contract::new(contract_name, abi_source)?,
+            rustfmt: true,
+            no_std: false,
+        })
+    }
+
+    pub fn no_std(mut self) -> Self {
+        self.no_std = true;
+        self
+    }
+
+    /// Generates the contract bindings.
+    pub fn generate(self) -> Result<ContractBindings, Error> {
+        let rustfmt = self.rustfmt;
+        let tokens = self.expand()?;
+
+        Ok(ContractBindings { tokens, rustfmt })
+    }
+
+    /// Entry point of the Abigen's expansion logic.
+    pub fn expand(&self) -> Result<TokenStream, Error> {
+        self.contract.expand(self.no_std)
+    }
+
+    // Checks whether the given type should not have code generated for it. This
+    // is mainly because the corresponding type in Rust already exists --
+    // e.g. the contract's Vec type is mapped to std::vec::Vec from the Rust
+    // stdlib, ContractId is a custom type implemented by fuels-rs, etc.
+    // Others like 'raw untyped ptr' or 'RawVec' are skipped because they are
+    // implementation details of the contract's Vec type and are not directly
+    // used in the SDK.
+    pub fn should_skip_codegen(type_field: &str) -> bool {
+        let name = custom_type_name(type_field).unwrap_or_else(|_| type_field.to_string());
+
+        [
+            "ContractId",
+            "Address",
+            "Option",
+            "Identity",
+            "Result",
+            "Vec",
+            "raw untyped ptr",
+            "RawVec",
+            "EvmAddress",
+        ]
+        .into_iter()
+        .any(|e| e == name)
     }
 }
 

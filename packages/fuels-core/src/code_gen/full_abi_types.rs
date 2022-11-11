@@ -26,7 +26,7 @@ impl FullABIFunction {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct FullTypeDeclaration {
     pub type_field: String,
     pub components: Vec<FullTypeApplication>,
@@ -60,7 +60,7 @@ impl FullTypeDeclaration {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct FullTypeApplication {
     pub name: String,
     pub type_decl: FullTypeDeclaration,
