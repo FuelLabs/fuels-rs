@@ -453,6 +453,20 @@ impl ContractCall {
     }
 }
 
+// Decode the logged type from the receipt of a `RevertTransactionError` if available
+fn decode_revert_error<C>(err: Error) -> Error
+where
+    C: Logging,
+{
+    if let Error::RevertTransactionError(_, receipts) = &err {
+        let logs = C::get_logs(receipts);
+        if let Some(log) = logs.into_iter().next() {
+            return Error::RevertTransactionError(log, receipts.to_owned());
+        }
+    }
+    err
+}
+
 #[derive(Debug)]
 #[must_use = "contract calls do nothing unless you `call` them"]
 /// Helper that handles submitting a call to a client and formatting the response
@@ -542,21 +556,11 @@ where
         .await
     }
 
-    fn revert_error_map(err: Error) -> Error {
-        if let Error::RevertTransactionError(_, receipts) = &err {
-            let logs = C::get_logs(receipts);
-            if let Some(log) = logs.into_iter().next() {
-                return Error::RevertTransactionError(log, receipts.to_owned());
-            }
-        }
-        err
-    }
-
     /// Call a contract's method on the node, in a state-modifying manner.
     pub async fn call(self) -> Result<CallResponse<D, C>, Error> {
         Self::call_or_simulate(&self, false)
             .await
-            .map_err(Self::revert_error_map)
+            .map_err(decode_revert_error::<C>)
     }
 
     /// Call a contract's method on the node, in a simulated manner, meaning the state of the
@@ -565,7 +569,7 @@ where
     pub async fn simulate(self) -> Result<CallResponse<D, C>, Error> {
         Self::call_or_simulate(&self, true)
             .await
-            .map_err(Self::revert_error_map)
+            .map_err(decode_revert_error::<C>)
     }
 
     /// Simulates the call and attempts to resolve missing tx dependencies.
@@ -672,7 +676,7 @@ where
     pub async fn call<D: Tokenizable + Debug>(&self) -> Result<CallResponse<D, C>, Error> {
         Self::call_or_simulate(self, false)
             .await
-            .map_err(ContractCallHandler::<D, C>::revert_error_map)
+            .map_err(decode_revert_error::<C>)
     }
 
     /// Call contract methods on the node, in a simulated manner, meaning the state of the
@@ -681,7 +685,7 @@ where
     pub async fn simulate<D: Tokenizable + Debug>(&self) -> Result<CallResponse<D, C>, Error> {
         Self::call_or_simulate(self, true)
             .await
-            .map_err(ContractCallHandler::<D, C>::revert_error_map)
+            .map_err(decode_revert_error::<C>)
     }
 
     async fn call_or_simulate<D: Tokenizable + Debug>(
