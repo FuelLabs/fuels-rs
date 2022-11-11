@@ -4,16 +4,20 @@ use regex::Regex;
 use std::path::{Path, PathBuf};
 
 pub fn report_errors(error_type: &str, errors: &[Error]) {
-    eprintln!("\n\nInvalid {error_type} detected!");
-    for error in errors {
-        eprintln!("\n{error}")
+    if !errors.is_empty() {
+        eprintln!("\nInvalid {error_type} detected!\n");
+        for error in errors {
+            eprintln!("{error}\n")
+        }
     }
 }
 
 pub fn report_warnings(warnings: &[Error]) {
-    eprintln!("\n\nWarnings detected!");
-    for warning in warnings {
-        eprintln!("\n{warning}")
+    if !warnings.is_empty() {
+        eprintln!("\nWarnings detected!\n");
+        for warning in warnings {
+            eprintln!("{warning}\n")
+        }
     }
 }
 
@@ -73,7 +77,10 @@ pub fn parse_includes(text_w_includes: String) -> (Vec<Include>, Vec<Error>) {
                 let the_path = include_file.parent().unwrap().join(anchor_file);
 
                 let anchor_file = the_path.canonicalize().map_err(|err| {
-                    anyhow!("{the_path:?} when canonicalized gives error {err:?}")
+                    anyhow!(
+                        "{the_path:?} when canonicalized gives error {err:?}\ninclude_file: {:?}",
+                        include_file
+                    )
                 })?;
 
                 Ok(Include {

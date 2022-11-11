@@ -37,7 +37,6 @@ async fn compile_bindings_from_contract_file() {
 
 #[tokio::test]
 async fn compile_bindings_from_inline_contract() -> Result<(), Error> {
-    // ANCHOR: bindings_from_inline_contracts
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `SimpleContract`.
     abigen!(
@@ -93,7 +92,6 @@ async fn compile_bindings_from_inline_contract() -> Result<(), Error> {
     );
 
     assert_eq!("000000009593586c000000000000002a", encoded);
-    // ANCHOR_END: bindings_from_inline_contracts
     Ok(())
 }
 
