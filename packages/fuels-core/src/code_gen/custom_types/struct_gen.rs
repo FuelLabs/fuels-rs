@@ -13,10 +13,13 @@ use quote::quote;
 /// Returns a TokenStream containing the declaration, `Parameterize`,
 /// `Tokenizable` and `TryFrom` implementations for the struct described by the
 /// given TypeDeclaration.
-pub fn expand_custom_struct(type_decl: &FullTypeDeclaration) -> Result<TokenStream, Error> {
+pub fn expand_custom_struct(
+    type_decl: &FullTypeDeclaration,
+    is_common: bool,
+) -> Result<TokenStream, Error> {
     let struct_ident = ident(&custom_type_name(&type_decl.type_field)?);
 
-    let components = extract_components(type_decl, true)?;
+    let components = extract_components(type_decl, true, is_common)?;
     let generic_parameters = extract_generic_parameters(type_decl)?;
 
     let struct_decl = struct_decl(&struct_ident, &components, &generic_parameters);

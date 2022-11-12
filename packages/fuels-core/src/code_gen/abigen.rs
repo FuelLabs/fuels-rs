@@ -1,4 +1,5 @@
 use std::collections::{HashMap, HashSet};
+use std::fmt::Debug;
 
 use crate::code_gen::bindings::ContractBindings;
 use crate::code_gen::full_abi_types::{FullABIFunction, FullLoggedType, FullTypeDeclaration};
@@ -35,6 +36,50 @@ pub struct Contract {
     pub types: Vec<FullTypeDeclaration>,
     pub functions: Vec<FullABIFunction>,
     pub logged_types: Vec<FullLoggedType>,
+}
+
+fn generate_custom_types(
+    types: &[FullTypeDeclaration],
+    common_types: &[FullTypeDeclaration],
+) -> Result<TokenStream, Error> {
+    types
+        .iter()
+        .filter(|ttype| !Abigen::should_skip_codegen(&ttype.type_field))
+        .filter(|ttype| !common_types.contains(ttype))
+        .unique()
+        .filter_map(|ttype| {
+            if ttype.is_struct_type() {
+                Some(expand_custom_struct(ttype, false))
+            } else if ttype.is_enum_type() {
+                Some(expand_custom_enum(ttype, false))
+            } else {
+                None
+            }
+        })
+        .fold_ok(TokenStream::default(), |mut acc, stream| {
+            acc.extend(stream);
+            acc
+        })
+}
+
+fn generate_common_types(common_types: &[FullTypeDeclaration]) -> Result<TokenStream, Error> {
+    common_types
+        .iter()
+        .filter(|ttype| !Abigen::should_skip_codegen(&ttype.type_field))
+        .unique()
+        .filter_map(|ttype| {
+            if ttype.is_struct_type() {
+                Some(expand_custom_struct(ttype, true))
+            } else if ttype.is_enum_type() {
+                Some(expand_custom_enum(ttype, true))
+            } else {
+                None
+            }
+        })
+        .fold_ok(TokenStream::default(), |mut acc, stream| {
+            acc.extend(stream);
+            acc
+        })
 }
 
 impl Contract {
@@ -95,10 +140,9 @@ impl Contract {
             self.contract_name.to_string().to_lowercase()
         ));
 
-        let contract_functions = self.functions()?;
-        let custom_types = self.custom_types(common_types)?;
+        let contract_functions = self.functions(common_types)?;
 
-        let resolved_logs = self.resolve_logs();
+        let resolved_logs = self.resolve_logs(common_types);
         let log_id_param_type_pairs = generate_log_id_param_type_pairs(&resolved_logs);
         let fetch_logs = generate_fetch_logs(&resolved_logs);
 
@@ -192,6 +236,8 @@ impl Contract {
             )
         };
 
+        let custom_types = generate_custom_types(&self.types, common_types)?;
+
         Ok(quote! {
             pub use #name_mod::*;
 
@@ -203,52 +249,31 @@ impl Contract {
 
                 #includes
 
-                #code
-
                 #custom_types
+
+                #code
             }
         })
     }
 
-    fn functions(&self) -> Result<TokenStream, Error> {
+    fn functions(&self, common_types: &[FullTypeDeclaration]) -> Result<TokenStream, Error> {
         let tokenized_functions = self
             .functions
             .iter()
-            .map(expand_function)
+            .map(|fun| expand_function(fun, common_types))
             .collect::<Result<Vec<TokenStream>, Error>>()?;
 
         Ok(quote! { #( #tokenized_functions )* })
     }
 
-    fn custom_types(&self, ignore_types: &[FullTypeDeclaration]) -> Result<TokenStream, Error> {
-        self.types
-            .iter()
-            .filter(|ttype| {
-                !Abigen::should_skip_codegen(&ttype.type_field) || ignore_types.contains(ttype)
-            })
-            .unique()
-            .filter_map(|ttype| {
-                if ttype.is_struct_type() {
-                    Some(expand_custom_struct(ttype))
-                } else if ttype.is_enum_type() {
-                    Some(expand_custom_enum(ttype))
-                } else {
-                    None
-                }
-            })
-            .fold_ok(TokenStream::default(), |mut acc, stream| {
-                acc.extend(stream);
-                acc
-            })
-    }
-
     /// Reads the parsed logged types from the ABI and creates ResolvedLogs
-    fn resolve_logs(&self) -> Vec<ResolvedLog> {
+    fn resolve_logs(&self, common_types: &[FullTypeDeclaration]) -> Vec<ResolvedLog> {
         self.logged_types
             .iter()
             .map(|l| {
+                let is_common = common_types.contains(&l.application.type_decl);
                 let resolved_type =
-                    resolve_type(&l.application).expect("Failed to resolve log type");
+                    resolve_type(&l.application, is_common).expect("Failed to resolve log type");
                 let param_type_call = single_param_type_call(&resolved_type);
                 let resolved_type_name = TokenStream::from(resolved_type);
 
@@ -262,11 +287,19 @@ impl Contract {
     }
 }
 
+pub struct AbigenContract<'a> {
+    pub name: &'a str,
+    pub abi_source: &'a str,
+}
 impl Abigen {
     /// Creates a new contract with the given ABI JSON source.
-    pub fn new<S: AsRef<str>>(contract_name: &str, abi_source: S) -> Result<Self, Error> {
+    pub fn new<S: AsRef<str>>(contracts: &[(String, S)]) -> Result<Self, Error> {
+        let contracts = contracts
+            .iter()
+            .map(|(name, abi)| Contract::new(name, abi))
+            .collect::<Result<Vec<_>, _>>()?;
         Ok(Self {
-            contracts: vec![Contract::new(contract_name, abi_source)?],
+            contracts,
             rustfmt: true,
             no_std: false,
         })
@@ -285,25 +318,44 @@ impl Abigen {
         Ok(ContractBindings { tokens, rustfmt })
     }
 
-    /// Entry point of the Abigen's expansion logic.
     pub fn expand(&self) -> Result<TokenStream, Error> {
-        let common_types = self
-            .contracts
-            .iter()
-            .flat_map(|contract| &contract.types)
-            .group_by(|&el| el)
-            .into_iter()
-            .filter_map(|(g, a)| (a.count() > 1).then_some(g))
-            .cloned()
-            .collect::<Vec<_>>();
+        let common_types = self.determine_common_types();
+
+        let code = Self::generate_common_types(&common_types)?;
 
         self.contracts
             .iter()
             .map(|contract| contract.expand(self.no_std, &common_types))
-            .fold_ok(TokenStream::default(), |mut acc, contract_stream| {
+            .fold_ok(code, |mut acc, contract_stream| {
                 acc.extend(contract_stream);
                 acc
             })
+    }
+
+    fn generate_common_types(common_types: &[FullTypeDeclaration]) -> Result<TokenStream, Error> {
+        if common_types.is_empty() {
+            return Ok(Default::default());
+        }
+
+        let tokenized_common_types = generate_common_types(common_types)?;
+        Ok(quote! {
+            mod common {
+                #tokenized_common_types
+            }
+        })
+    }
+
+    fn determine_common_types(&self) -> Vec<FullTypeDeclaration> {
+        self.contracts
+            .iter()
+            .flat_map(|contract| &contract.types)
+            .filter(|ttype| ttype.is_enum_type() || ttype.is_struct_type())
+            .sorted()
+            .group_by(|&el| el)
+            .into_iter()
+            .filter_map(|(common_type, group)| (group.count() > 1).then_some(common_type))
+            .cloned()
+            .collect::<Vec<_>>()
     }
 
     // Checks whether the given type should not have code generated for it. This

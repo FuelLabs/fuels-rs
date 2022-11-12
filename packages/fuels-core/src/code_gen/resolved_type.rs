@@ -64,11 +64,14 @@ impl From<ResolvedType> for TokenStream {
 /// `ResolvedType` which can be then be converted into a `TokenStream`. As such
 /// it can be used whenever you need the Rust type of the given
 /// `TypeApplication`.
-pub(crate) fn resolve_type(type_application: &FullTypeApplication) -> Result<ResolvedType, Error> {
+pub(crate) fn resolve_type(
+    type_application: &FullTypeApplication,
+    is_common: bool,
+) -> Result<ResolvedType, Error> {
     let recursively_resolve = |type_applications: &Vec<FullTypeApplication>| {
         type_applications
             .iter()
-            .map(resolve_type)
+            .map(|type_application| resolve_type(type_application, is_common))
             .collect::<Result<Vec<_>, _>>()
             .expect("Failed to resolve types")
     };
@@ -85,7 +88,7 @@ pub(crate) fn resolve_type(type_application: &FullTypeApplication) -> Result<Res
         to_array,
         to_sized_ascii_string,
         to_tuple,
-        to_struct,
+        to_custom_type,
     ]
     .into_iter()
     .filter_map(|fun| {
@@ -93,6 +96,7 @@ pub(crate) fn resolve_type(type_application: &FullTypeApplication) -> Result<Res
             type_field,
             move || recursively_resolve(&base_type.components),
             move || recursively_resolve(&type_application.type_arguments),
+            is_common,
         )
     })
     .next()
@@ -103,6 +107,7 @@ fn to_generic(
     type_field: &str,
     _: impl Fn() -> Vec<ResolvedType>,
     _: impl Fn() -> Vec<ResolvedType>,
+    _: bool,
 ) -> Option<ResolvedType> {
     let name = extract_generic_name(type_field)?;
 
@@ -117,6 +122,7 @@ fn to_array(
     type_field: &str,
     components_supplier: impl Fn() -> Vec<ResolvedType>,
     _: impl Fn() -> Vec<ResolvedType>,
+    _: bool,
 ) -> Option<ResolvedType> {
     let len = extract_array_len(type_field)?;
 
@@ -138,6 +144,7 @@ fn to_sized_ascii_string(
     type_field: &str,
     _: impl Fn() -> Vec<ResolvedType>,
     _: impl Fn() -> Vec<ResolvedType>,
+    _: bool,
 ) -> Option<ResolvedType> {
     let len = extract_str_len(type_field)?;
 
@@ -156,6 +163,7 @@ fn to_tuple(
     type_field: &str,
     components_supplier: impl Fn() -> Vec<ResolvedType>,
     _: impl Fn() -> Vec<ResolvedType>,
+    _: bool,
 ) -> Option<ResolvedType> {
     if has_tuple_format(type_field) {
         let inner_types = components_supplier().into_iter().map(TokenStream::from);
@@ -176,6 +184,7 @@ fn to_simple_type(
     type_field: &str,
     _: impl Fn() -> Vec<ResolvedType>,
     _: impl Fn() -> Vec<ResolvedType>,
+    _: bool,
 ) -> Option<ResolvedType> {
     match type_field {
         "u8" | "u16" | "u32" | "u64" | "bool" | "()" => {
@@ -196,6 +205,7 @@ fn to_byte(
     type_field: &str,
     _: impl Fn() -> Vec<ResolvedType>,
     _: impl Fn() -> Vec<ResolvedType>,
+    _: bool,
 ) -> Option<ResolvedType> {
     if type_field == "byte" {
         let type_name = quote! {Byte};
@@ -211,6 +221,7 @@ fn to_bits256(
     type_field: &str,
     _: impl Fn() -> Vec<ResolvedType>,
     _: impl Fn() -> Vec<ResolvedType>,
+    _: bool,
 ) -> Option<ResolvedType> {
     if type_field == "b256" {
         let type_name = quote! {Bits256};
@@ -223,17 +234,26 @@ fn to_bits256(
     }
 }
 
-fn to_struct(
+fn to_custom_type(
     type_field: &str,
     _: impl Fn() -> Vec<ResolvedType>,
     type_arguments_supplier: impl Fn() -> Vec<ResolvedType>,
+    is_common: bool,
 ) -> Option<ResolvedType> {
     custom_type_name(type_field)
         .ok()
         .map(|type_name| ident(&type_name))
-        .map(|type_name| ResolvedType {
-            type_name: type_name.into_token_stream(),
-            generic_params: type_arguments_supplier(),
+        .map(|type_name| {
+            let tokens = type_name.into_token_stream();
+            let type_name = if is_common {
+                quote! {super::common::#tokens}
+            } else {
+                tokens
+            };
+            ResolvedType {
+                type_name,
+                generic_params: type_arguments_supplier(),
+            }
         })
 }
 
@@ -258,7 +278,7 @@ mod tests {
             ..Default::default()
         };
         let application = FullTypeApplication::from_counterpart(&type_application, &types);
-        let resolved_type = resolve_type(&application)
+        let resolved_type = resolve_type(&application, false)
             .with_context(|| format!("failed to resolve {:?}", &type_application))?;
         let actual = TokenStream::from(&resolved_type).to_string();
         assert_eq!(actual, expected);

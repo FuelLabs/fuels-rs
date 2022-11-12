@@ -13,10 +13,13 @@ use quote::quote;
 /// Returns a TokenStream containing the declaration, `Parameterize`,
 /// `Tokenizable` and `TryFrom` implementations for the enum described by the
 /// given TypeDeclaration.
-pub fn expand_custom_enum(type_decl: &FullTypeDeclaration) -> Result<TokenStream, Error> {
+pub fn expand_custom_enum(
+    type_decl: &FullTypeDeclaration,
+    is_common: bool,
+) -> Result<TokenStream, Error> {
     let enum_ident = ident(&custom_type_name(&type_decl.type_field)?);
 
-    let components = extract_components(type_decl, false)?;
+    let components = extract_components(type_decl, false, is_common)?;
     let generics = extract_generic_parameters(type_decl)?;
 
     let enum_def = enum_decl(&enum_ident, &components, &generics);

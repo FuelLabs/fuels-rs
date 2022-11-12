@@ -17,7 +17,11 @@ pub struct Component {
 }
 
 impl Component {
-    pub fn new(component: &FullTypeApplication, snake_case: bool) -> anyhow::Result<Component> {
+    pub fn new(
+        component: &FullTypeApplication,
+        snake_case: bool,
+        is_common: bool,
+    ) -> anyhow::Result<Component> {
         let field_name = if snake_case {
             component.name.to_snake_case()
         } else {
@@ -26,7 +30,7 @@ impl Component {
 
         Ok(Component {
             field_name: safe_ident(&field_name),
-            field_type: resolve_type(component)?,
+            field_type: resolve_type(component, is_common)?,
         })
     }
 }
@@ -76,6 +80,7 @@ pub(crate) fn impl_try_from(ident: &Ident, generics: &[TokenStream]) -> TokenStr
 pub(crate) fn extract_components(
     type_decl: &FullTypeDeclaration,
     snake_case: bool,
+    is_common: bool,
 ) -> anyhow::Result<Vec<Component>> {
     let components = &type_decl.components;
 
@@ -88,7 +93,7 @@ pub(crate) fn extract_components(
 
     components
         .iter()
-        .map(|component| Component::new(component, snake_case))
+        .map(|component| Component::new(component, snake_case, is_common))
         .collect()
 }
 
@@ -165,6 +170,7 @@ mod tests {
         let component = Component::new(
             &FullTypeApplication::from_counterpart(&type_application, &types),
             true,
+            false,
         )?;
 
         assert_eq!(component.field_name, ident("some_name_here"));

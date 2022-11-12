@@ -10,6 +10,7 @@ where
     S: AsRef<str>,
 {
     let mut rustfmt = Command::new("rustfmt")
+        .args(["--edition", "2021"])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .spawn()?;

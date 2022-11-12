@@ -1,5 +1,6 @@
 use fuels::core::abi_encoder::ABIEncoder;
 use fuels::prelude::*;
+use fuels_core::code_gen::abigen::Abigen;
 use sha2::{Digest, Sha256};
 use std::{slice, str::FromStr};
 
@@ -13,17 +14,15 @@ pub fn null_contract_id() -> Bech32ContractId {
 async fn compile_bindings_from_contract_file() {
     // Generates the bindings from an ABI definition in a JSON file
     // The generated bindings can be accessed through `SimpleContract`.
-    abigen!(
-        SimpleContract,
-        "packages/fuels/tests/bindings/takes_ints_returns_bool-abi.json",
+    setup_contract_test!(
+        simple_contract_instance,
+        wallet,
+        "packages/fuels/tests/bindings/simple_contract"
     );
 
-    let wallet = launch_provider_and_get_wallet().await;
-
-    // `SimpleContract` is the name of the contract
-    let contract_instance = SimpleContract::new(null_contract_id(), wallet);
-
-    let call_handler = contract_instance.methods().takes_ints_returns_bool(42);
+    let call_handler = simple_contract_instance
+        .methods()
+        .takes_ints_returns_bool(42);
 
     let encoded_args = call_handler.contract_call.encoded_args.resolve(0);
     let encoded = format!(
@@ -800,4 +799,30 @@ async fn compile_bindings_enum_input() {
 
     let expected = "0000000021b2784f0000000000000000000000000000002a";
     assert_eq!(encoded, expected);
+}
+
+#[tokio::test]
+async fn shared_types_between_contracts() {
+    // abigen!(
+    //     ContractA,
+    //     "packages/fuels/tests/bindings/contracts_sharing_types/contract_a/out/debug/contract_a-abi.json",
+    //     ContractB,
+    //     "packages/fuels/tests/bindings/contracts_sharing_types/contract_b/out/debug/contract_b-abi.json",
+    // );
+
+    // Abigen::new(&[
+    //     (
+    //         "ContractA".to_string(),
+    //         "tests/bindings/contracts_sharing_types/contract_a/out/debug/contract_a-abi.json",
+    //     ),
+    //     (
+    //         "ContractB".to_string(),
+    //         "tests/bindings/contracts_sharing_types/contract_b/out/debug/contract_b-abi.json",
+    //     ),
+    // ])
+    // .unwrap()
+    // .generate()
+    // .unwrap()
+    // .write_to_file("/tmp/code.rs")
+    // .unwrap();
 }
