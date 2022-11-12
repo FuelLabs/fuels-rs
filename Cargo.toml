@@ -22,7 +22,7 @@ members = [
     "packages/fuels-test-helpers",
     "packages/fuels-types",
     "packages/wasm-tests",
-    "scripts/build-test-projects",
+    "scripts/test-projects",
     "scripts/check-docs",
     "tools/fuels-abi-cli",
 ]

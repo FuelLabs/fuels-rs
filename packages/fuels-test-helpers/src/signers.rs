@@ -119,6 +119,7 @@ pub async fn setup_test_provider(
 #[cfg(test)]
 mod tests {
     use crate::{launch_custom_provider_and_get_wallets, AssetConfig, WalletsConfig};
+    use fuel_gql_client::client::schema::resource::Resource;
     use fuels_core::constants::BASE_ASSET_ID;
     use fuels_signers::fuel_crypto::fuel_types::AssetId;
     use fuels_types::errors::Error;
@@ -182,17 +183,20 @@ mod tests {
 
         for asset in assets {
             for wallet in &wallets {
-                let coins = wallet
-                    .get_spendable_coins(asset.id, asset.num_coins * asset.coin_amount)
+                let resources = wallet
+                    .get_spendable_resources(asset.id, asset.num_coins * asset.coin_amount)
                     .await?;
-                assert_eq!(coins.len() as u64, asset.num_coins);
+                assert_eq!(resources.len() as u64, asset.num_coins);
 
-                for coin in coins {
-                    assert_eq!(
-                        coin.owner.to_string(),
-                        format!("0x{}", wallet.address().hash())
-                    );
-                    assert_eq!(coin.amount.0, asset.coin_amount);
+                for resource in resources {
+                    assert_eq!(resource.amount(), asset.coin_amount);
+                    match resource {
+                        Resource::Coin(coin) => assert_eq!(
+                            coin.owner.to_string(),
+                            format!("0x{}", wallet.address().hash())
+                        ),
+                        Resource::Message(_) => panic!("Resources contained messages."),
+                    }
                 }
             }
         }

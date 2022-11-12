@@ -5,7 +5,7 @@ Once you have set up a provider, you're ready to interact with the Fuel blockcha
 - [Interacting with the blockchain](#interacting-with-the-blockchain)
   - [Set up](#set-up)
   - [Get all coins from an address](#get-all-coins-from-an-address)
-  - [Get spendable coins from an address](#get-spendable-coins-from-an-address)
+  - [Get spendable resources from an address](#get-spendable-resources-from-an-address)
   - [Get balances from an address](#get-balances-from-an-address)
 
 ## Set up
@@ -24,12 +24,12 @@ This method returns all coins (of a given asset ID) from a wallet, including spe
 {{#include ../../../examples/providers/src/lib.rs:get_coins}}
 ```
 
-## Get spendable coins from an address
+## Get spendable resources from an address
 
-The last argument says how much you want to spend. This method returns only spendable, i.e., unspent coins (of a given asset ID). If you ask for more spendable than the amount of unspent coins you have, it returns an error.
+The last argument says how much you want to spend. This method returns only spendable, i.e., unspent coins (of a given asset ID) or messages. If you ask for more spendable resources than the amount of resources you have, it returns an error.
 
 ```rust,ignore
-{{#include ../../../examples/providers/src/lib.rs:get_spendable_coins}}
+{{#include ../../../examples/providers/src/lib.rs:get_spendable_resources}}
 ```
 
 ## Get balances from an address

@@ -11,14 +11,11 @@ async fn test_storage_initialization() -> Result<(), Error> {
 
     let wallet = launch_provider_and_get_wallet().await;
 
-    // ANCHOR: storage_slot_create
     let key = Bytes32::from([1u8; 32]);
     let value = Bytes32::from([2u8; 32]);
     let storage_slot = StorageSlot::new(key, value);
     let storage_vec = vec![storage_slot.clone()];
-    // ANCHOR_END: storage_slot_create
 
-    // ANCHOR: manual_storage
     let contract_id = Contract::deploy_with_parameters(
         "tests/storage/contract_storage_test/out/debug/contract_storage_test.bin",
         &wallet,
@@ -27,7 +24,6 @@ async fn test_storage_initialization() -> Result<(), Error> {
         Salt::from([0; 32]),
     )
     .await?;
-    // ANCHOR_END: manual_storage
 
     let contract_instance = MyContract::new(contract_id, wallet.clone());
 
@@ -51,7 +47,6 @@ async fn test_init_storage_automatically() -> Result<(), Error> {
 
     let wallet = launch_provider_and_get_wallet().await;
 
-    // ANCHOR: automatic_storage
     let contract_id = Contract::deploy_with_parameters(
         "tests/storage/contract_storage_test/out/debug/contract_storage_test.bin",
         &wallet,
@@ -61,7 +56,6 @@ async fn test_init_storage_automatically() -> Result<(), Error> {
         Salt::default(),
     )
         .await?;
-    // ANCHOR_END: automatic_storage
 
     let key1 =
         Bytes32::from_str("de9090cb50e71c2588c773487d1da7066d0c719849a7e58dc8b6397a25c567c0")

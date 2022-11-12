@@ -239,6 +239,7 @@ fn to_custom_type(
             "AssetId" => quote! {::fuels::core::types::AssetId},
             "Address" => quote! {::fuels::core::types::Address},
             "Identity" => quote! {::fuels::core::types::Identity},
+            "EvmAddress" => quote! {::fuels::core::types::EvmAddress},
             "Option" => quote! {::std::option::Option},
             "Result" => quote! {::std::result::Result},
             "Vec" => quote! {::std::vec::Vec},
