@@ -99,7 +99,7 @@ impl Abigen {
 
                 impl #name {
                     pub fn new(contract_id: ::fuels::types::bech32::Bech32ContractId, wallet: ::fuels::signers::wallet::WalletUnlocked) -> Self {
-                        Self { contract_id, wallet, logs_lookup: ::std::vec![#(#log_id_param_type_pairs),*]}
+                        Self { contract_id, wallet, logs_lookup: vec![#(#log_id_param_type_pairs),*]}
                     }
 
                     pub fn get_contract_id(&self) -> &::fuels::types::bech32::Bech32ContractId {
@@ -107,18 +107,18 @@ impl Abigen {
                     }
 
                     pub fn get_wallet(&self) -> ::fuels::signers::wallet::WalletUnlocked {
-                        (self.wallet as ::std::clone::Clone).clone()
+                        self.wallet.clone()
                     }
 
                     pub fn with_wallet(&self, mut wallet: ::fuels::signers::wallet::WalletUnlocked) -> ::std::result::Result<Self, ::fuels::types::errors::Error> {
                        let provider = self.wallet.get_provider()?;
-                       wallet.set_provider((provider as ::std::clone::Clone).clone());
+                       wallet.set_provider(provider.clone());
 
-                       Ok(Self { contract_id: (self.contract_id as ::std::clone::Clone).clone(), wallet: wallet, logs_lookup: (self.logs_lookup as ::std::clone::Clone).clone() })
+                       ::std::result::Result::Ok(Self { contract_id: self.contract_id.clone(), wallet: wallet, logs_lookup: self.logs_lookup.clone() })
                     }
 
                     pub async fn get_balances(&self) -> ::std::result::Result<::std::collections::HashMap<::std::string::String, u64>, ::fuels::types::errors::Error> {
-                        self.wallet.get_provider()?.get_contract_balances(&self.contract_id).await.map_err(::std::convert::Into::into)
+                        self.wallet.get_provider()?.get_contract_balances(&self.contract_id).await.map_err(Into::into)
                     }
 
                     pub fn logs_with_type<D: ::fuels::core::Tokenizable + ::fuels::core::Parameterize>(&self, receipts: &[::fuels::tx::Receipt]) -> ::std::result::Result<::std::vec::Vec<D>, ::fuels::types::errors::Error> {
@@ -129,8 +129,8 @@ impl Abigen {
 
                     pub fn methods(&self) -> #methods_name {
                         #methods_name {
-                            contract_id: (self.contract_id as ::std::clone::Clone).clone(),
-                            wallet: (self.wallet as ::std::clone::Clone).clone(),
+                            contract_id: self.contract_id.clone(),
+                            wallet: self.wallet.clone(),
                         }
                     }
                 }
@@ -152,8 +152,14 @@ impl Abigen {
             #[allow(clippy::too_many_arguments)]
             #[no_implicit_prelude]
             pub mod #name_mod {
-                #![allow(clippy::enum_variant_names)]
-                #![allow(dead_code)]
+                use ::std::clone::Clone;
+                use ::std::iter::IntoIterator;
+                use ::std::panic;
+                use ::std::iter::Iterator;
+                use ::std::format;
+                use ::std::convert::{Into, TryFrom};
+                use ::std::vec;
+                use ::std::marker::Sized;
 
                 #code
 
@@ -283,7 +289,7 @@ pub fn generate_fetch_logs(resolved_logs: &[ResolvedLog]) -> TokenStream {
 
     // if logs are not present, fetch_logs should return an empty string vec
     if resolved_logs.is_empty() {
-        return generate_method(quote! { ::std::vec![] });
+        return generate_method(quote! { vec![] });
     }
 
     let branches = generate_param_type_if_branches(resolved_logs);
@@ -301,7 +307,7 @@ pub fn generate_fetch_logs(resolved_logs: &[ResolvedLog]) -> TokenStream {
 
             #(#branches)else*
             else {
-                ::std::panic!("Failed to parse param type.");
+                panic!("Failed to parse param type.");
             }
         })
         .collect()
@@ -320,7 +326,7 @@ fn generate_param_type_if_branches(resolved_logs: &[ResolvedLog]) -> Vec<TokenSt
 
             quote! {
                 if **param_type == #param_type_call {
-                    return ::std::format!(
+                    return format!(
                         "{:#?}",
                         ::fuels::core::try_from_bytes::<#type_name>(&data).expect("Failed to construct type from log data.")
                     );

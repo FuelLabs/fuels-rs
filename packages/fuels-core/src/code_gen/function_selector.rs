@@ -173,7 +173,7 @@ mod tests {
                 ]),
                 ParamType::Tuple(vec![
                     ParamType::Array(
-                        ::std::boxed::Box::new(ParamType::Enum {
+                        Box::new(ParamType::Enum {
                             variants: EnumVariants::new(vec![ParamType::U64, struct_c.clone()])
                                 .unwrap(),
                             generics: vec![struct_c],

@@ -1,9 +1,8 @@
-use crate::lib::{
+use anyhow::{bail, Error};
+use check_docs::{
     extract_starts_and_ends, filter_valid_anchors, parse_includes, report_errors, report_warnings,
     search_for_patterns_in_project, validate_includes,
 };
-use anyhow::{bail, Error};
-pub mod lib;
 
 fn main() -> anyhow::Result<(), Error> {
     let text_w_anchors = search_for_patterns_in_project("ANCHOR")?;

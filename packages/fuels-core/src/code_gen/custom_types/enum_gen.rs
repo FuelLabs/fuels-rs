@@ -87,12 +87,11 @@ fn enum_tokenizable_impl(
             let value = if field_type.is_unit() {
                 quote! {}
             } else {
-                let field_type: TokenStream = field_type.into();
-                quote! { (<#field_type> as Tokenizable)::from_token(variant_token)? }
+                quote! { ::fuels::core::Tokenizable::from_token(variant_token)? }
             };
 
             let u8_discriminant = discriminant as u8;
-            quote! { #u8_discriminant => Ok(Self::#field_name(#value))}
+            quote! { #u8_discriminant => ::std::result::Result::Ok(Self::#field_name(#value))}
         },
     );
 
@@ -108,7 +107,7 @@ fn enum_tokenizable_impl(
             if field_type.is_unit() {
                 quote! { Self::#field_name() => (#u8_discriminant, ().into_token())}
             } else {
-                quote! { Self::#field_name(inner) => (#u8_discriminant, (inner as Tokenizable).into_token())}
+                quote! { Self::#field_name(inner) => (#u8_discriminant, ::fuels::core::Tokenizable::into_token(inner))}
             }
         },
     );
@@ -117,10 +116,10 @@ fn enum_tokenizable_impl(
             impl<#(#generics: ::fuels::core::Tokenizable + ::fuels::core::Parameterize),*> ::fuels::core::Tokenizable for #enum_ident <#(#generics),*> {
                 fn from_token(token: ::fuels::core::Token) -> ::std::result::Result<Self, ::fuels::types::errors::Error>
                 where
-                    Self: ::std::marker::Sized,
+                    Self: Sized,
                 {
                     let gen_err = |msg| {
-                        ::fuels::types::errors::Error::InvalidData(::std::format!(
+                        ::fuels::types::errors::Error::InvalidData(format!(
                             "Error while instantiating {} from token! {}", #enum_ident_stringified, msg
                         ))
                     };
@@ -129,12 +128,12 @@ fn enum_tokenizable_impl(
                             let (discriminant, variant_token, _) = *selector;
                             match discriminant {
                                 #(#match_discriminant_from_token,)*
-                                _ => Err(gen_err(::std::format!(
+                                _ => ::std::result::Result::Err(gen_err(format!(
                                     "Discriminant {} doesn't point to any of the enums variants.", discriminant
                                 ))),
                             }
                         }
-                        _ => Err(gen_err(::std::format!(
+                        _ => ::std::result::Result::Err(gen_err(format!(
                             "Given token ({}) is not of the type Token::Enum!", token
                         ))),
                     }
@@ -166,11 +165,11 @@ fn enum_parameterize_impl(
     quote! {
         impl<#(#generics: ::fuels::core::Parameterize + ::fuels::core::Tokenizable),*> ::fuels::core::Parameterize for #enum_ident <#(#generics),*> {
             fn param_type() -> ::fuels::types::param_types::ParamType {
-                let mut param_types = ::std::vec![];
+                let mut param_types = vec![];
                 #(param_types.push(#param_type_calls);)*
 
                 let variants = ::fuels::types::enum_variants::EnumVariants::new(param_types).unwrap_or_else(|_| panic!("{} has no variants which isn't allowed!", #enum_ident_stringified));
-                ::fuels::types::param_types::ParamType::Enum{variants, generics: ::std::vec![#(#generics::param_type()),*]}
+                ::fuels::types::param_types::ParamType::Enum{variants, generics: vec![#(#generics::param_type()),*]}
             }
         }
     }

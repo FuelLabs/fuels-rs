@@ -3,9 +3,7 @@
 //!
 //! NOTE: This expects both `forc` and `cargo` to be available in `PATH`.
 
-mod lib;
-
-use crate::lib::{build_recursively, BuildResult, ResultWriter};
+use build_test_projects::{build_recursively, BuildResult, ResultWriter};
 use futures_util::StreamExt;
 use std::{env, path::Path};
 

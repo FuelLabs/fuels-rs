@@ -198,7 +198,7 @@ impl Script {
                 // including custom_input_offset
                 let custom_input_offset =
                     segment_offset + AssetId::LEN + 2 * WORD_SIZE + ContractId::LEN + 2 * WORD_SIZE;
-                script_data.extend(&(custom_input_offset as Word).to_be_bytes());
+                script_data.extend((custom_input_offset as Word).to_be_bytes());
                 custom_input_offset
             } else {
                 segment_offset
