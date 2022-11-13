@@ -1,3 +1,6 @@
+use chrono::DateTime;
+use chrono::NaiveDateTime;
+use chrono::Utc;
 use fuel_gql_client::client::types::TransactionResponse as SchemaTransactionResponse;
 use fuel_gql_client::client::types::TransactionStatus as SchemaTransactionStatus;
 use fuel_tx::Transaction;
@@ -50,12 +53,15 @@ impl TransactionResponse {
         }
     }
 
-    pub fn time(&self) -> Option<u64> {
+    pub fn time(&self) -> Option<DateTime<Utc>> {
         match &self.schema_response.status {
             SchemaTransactionStatus::Submitted { .. }
             | SchemaTransactionStatus::SqueezedOut { .. } => None,
             SchemaTransactionStatus::Success { time, .. }
-            | SchemaTransactionStatus::Failure { time, .. } => Some(time.0),
+            | SchemaTransactionStatus::Failure { time, .. } => Some(DateTime::<Utc>::from_utc(
+                NaiveDateTime::from_timestamp(time.0 as i64, 0),
+                Utc,
+            )),
         }
     }
 }

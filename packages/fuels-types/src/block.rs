@@ -1,3 +1,4 @@
+use chrono::{DateTime, NaiveDateTime, Utc};
 use fuel_gql_client::client::schema::block::Block as SchemaBlock;
 use fuel_tx::Bytes32;
 
@@ -53,7 +54,8 @@ impl Block {
         self.schema_block.header.application_hash.0 .0
     }
 
-    pub fn time(&self) -> u64 {
-        self.schema_block.header.time.0 .0
+    pub fn time(&self) -> DateTime<Utc> {
+        let native = NaiveDateTime::from_timestamp(self.schema_block.header.time.0 .0 as i64, 0);
+        DateTime::<Utc>::from_utc(native, Utc)
     }
 }
