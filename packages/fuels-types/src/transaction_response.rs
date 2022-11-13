@@ -12,6 +12,7 @@ pub enum TransactionStatus {
     Submitted(),
     Success(),
     Failure(),
+    SqueezedOut(),
 }
 
 impl From<SchemaTransactionResponse> for TransactionResponse {
@@ -26,6 +27,7 @@ impl From<&SchemaTransactionStatus> for TransactionStatus {
             SchemaTransactionStatus::Submitted { .. } => TransactionStatus::Submitted(),
             SchemaTransactionStatus::Success { .. } => TransactionStatus::Success(),
             SchemaTransactionStatus::Failure { .. } => TransactionStatus::Failure(),
+            SchemaTransactionStatus::SqueezedOut { .. } => TransactionStatus::SqueezedOut(),
         }
     }
 }
@@ -41,7 +43,8 @@ impl TransactionResponse {
 
     pub fn block_id(&self) -> Option<&str> {
         match &self.schema_response.status {
-            SchemaTransactionStatus::Submitted { .. } => None,
+            SchemaTransactionStatus::Submitted { .. }
+            | SchemaTransactionStatus::SqueezedOut { .. } => None,
             SchemaTransactionStatus::Success { block_id, .. }
             | SchemaTransactionStatus::Failure { block_id, .. } => Some(block_id),
         }
@@ -49,7 +52,8 @@ impl TransactionResponse {
 
     pub fn time(&self) -> Option<u64> {
         match &self.schema_response.status {
-            SchemaTransactionStatus::Submitted { .. } => None,
+            SchemaTransactionStatus::Submitted { .. }
+            | SchemaTransactionStatus::SqueezedOut { .. } => None,
             SchemaTransactionStatus::Success { time, .. }
             | SchemaTransactionStatus::Failure { time, .. } => Some(time.0),
         }
