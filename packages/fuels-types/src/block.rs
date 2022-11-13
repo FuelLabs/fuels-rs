@@ -54,8 +54,9 @@ impl Block {
         self.schema_block.header.application_hash.0 .0
     }
 
-    pub fn time(&self) -> DateTime<Utc> {
-        let native = NaiveDateTime::from_timestamp(self.schema_block.header.time.0 .0 as i64, 0);
-        DateTime::<Utc>::from_utc(native, Utc)
+    pub fn time(&self) -> Option<DateTime<Utc>> {
+        let native =
+            NaiveDateTime::from_timestamp_opt(self.schema_block.header.time.0 .0 as i64, 0);
+            native.map(|time| DateTime::<Utc>::from_utc(time, Utc))
     }
 }

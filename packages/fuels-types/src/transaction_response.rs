@@ -58,10 +58,10 @@ impl TransactionResponse {
             SchemaTransactionStatus::Submitted { .. }
             | SchemaTransactionStatus::SqueezedOut { .. } => None,
             SchemaTransactionStatus::Success { time, .. }
-            | SchemaTransactionStatus::Failure { time, .. } => Some(DateTime::<Utc>::from_utc(
-                NaiveDateTime::from_timestamp(time.0 as i64, 0),
-                Utc,
-            )),
+            | SchemaTransactionStatus::Failure { time, .. } => {
+                let native = NaiveDateTime::from_timestamp_opt(time.0 as i64, 0);
+                native.map(|time| DateTime::<Utc>::from_utc(time, Utc))
+            }
         }
     }
 }

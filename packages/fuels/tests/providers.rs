@@ -189,9 +189,9 @@ async fn can_set_custom_block_time() -> Result<(), Error> {
     };
     let blocks: Vec<Block> = provider.get_blocks(req).await?.results;
 
-    assert_eq!(blocks[2].time().timestamp(), 100);
-    assert_eq!(blocks[1].time().timestamp(), 110);
-    assert_eq!(blocks[0].time().timestamp(), 120);
+    assert_eq!(blocks[2].time().unwrap().timestamp(), 100);
+    assert_eq!(blocks[1].time().unwrap().timestamp(), 110);
+    assert_eq!(blocks[0].time().unwrap().timestamp(), 120);
     // ANCHOR_END: use_produce_blocks_custom_time
     Ok(())
 }
