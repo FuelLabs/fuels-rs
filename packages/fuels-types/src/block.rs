@@ -57,6 +57,6 @@ impl Block {
     pub fn time(&self) -> Option<DateTime<Utc>> {
         let native =
             NaiveDateTime::from_timestamp_opt(self.schema_block.header.time.0 .0 as i64, 0);
-            native.map(|time| DateTime::<Utc>::from_utc(time, Utc))
+        native.map(|time| DateTime::<Utc>::from_utc(time, Utc))
     }
 }
