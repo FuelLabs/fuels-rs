@@ -2,7 +2,7 @@ use crate::{Parameterize, Token, Tokenizable};
 use fuels_types::errors::Error;
 use fuels_types::param_types::ParamType;
 
-// A simple wrapper around [u8;32] representing the `b256` type. Exists
+// A simple wrapper around [u8; 32] representing the `b256` type. Exists
 // mainly so that we may differentiate `Parameterize` and `Tokenizable`
 // implementations from what otherwise is just an array of 32 u8's.
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
@@ -50,6 +50,58 @@ impl Tokenizable for Bits256 {
     }
 }
 
+// A simple wrapper around [Bits256; 2] representing the `B512` type.
+#[derive(Debug, PartialEq, Eq, Copy, Clone)]
+// ANCHOR: b512
+pub struct B512 {
+    bytes: [Bits256; 2],
+}
+// ANCHOR_END: b512
+
+impl From<(Bits256, Bits256)> for B512 {
+    fn from(bits_tuple: (Bits256, Bits256)) -> Self {
+        B512 {
+            bytes: [bits_tuple.0, bits_tuple.1],
+        }
+    }
+}
+
+impl Parameterize for B512 {
+    fn param_type() -> ParamType {
+        ParamType::Struct {
+            fields: vec![<[Bits256; 2usize]>::param_type()],
+            generics: vec![],
+        }
+    }
+}
+
+impl Tokenizable for B512 {
+    fn from_token(token: Token) -> Result<Self, Error>
+    where
+        Self: Sized,
+    {
+        if let Token::Struct(tokens) = token {
+            if let [Token::Array(data)] = tokens.as_slice() {
+                Ok(B512 {
+                    bytes: <[Bits256; 2usize]>::from_token(Token::Array(data.to_vec()))?,
+                })
+            } else {
+                Err(Error::InstantiationError(format!(
+                    "B512 expected one `Token::Array`, got {tokens:?}",
+                )))
+            }
+        } else {
+            Err(Error::InstantiationError(format!(
+                "B512 expected `Token::Struct`, got {token:?}",
+            )))
+        }
+    }
+
+    fn into_token(self) -> Token {
+        Token::Struct(vec![self.bytes.into_token()])
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
 // ANCHOR: evm_address
 pub struct EvmAddress {
@@ -86,20 +138,23 @@ impl Parameterize for EvmAddress {
 }
 
 impl Tokenizable for EvmAddress {
-    fn from_token(t: Token) -> Result<Self, Error>
+    fn from_token(token: Token) -> Result<Self, Error>
     where
         Self: Sized,
     {
-        if let Token::Struct(tokens) = &t {
-            let first_token = tokens.iter().next();
-            if let Some(Token::B256(data)) = first_token {
-                return Ok(EvmAddress::from(Bits256(*data)));
+        if let Token::Struct(tokens) = token {
+            if let [Token::B256(data)] = tokens.as_slice() {
+                Ok(EvmAddress::from(Bits256(*data)))
+            } else {
+                Err(Error::InstantiationError(format!(
+                    "EvmAddress expected one `Token::B256`, got {tokens:?}",
+                )))
             }
+        } else {
+            Err(Error::InstantiationError(format!(
+                "EvmAddress expected `Token::Struct` got {token:?}",
+            )))
         }
-
-        Err(Error::InstantiationError(format!(
-            "EvmAddress could not be constructed from the given token. Reason: Expected Struct(B256) got: {t:?}",
-        )))
     }
 
     fn into_token(self) -> Token {
