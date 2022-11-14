@@ -3,6 +3,7 @@ use std::io;
 #[cfg(feature = "fuel-core")]
 use fuel_core::service::{Config, FuelService};
 
+use fuel_gql_client::client::schema::message::MessageProof;
 use fuel_gql_client::interpreter::ExecutableTransaction;
 use fuel_gql_client::{
     client::{
@@ -433,5 +434,13 @@ impl Provider {
             .messages(Some(&from.hash().to_string()), pagination)
             .await?;
         Ok(res.results)
+    }
+
+    pub async fn get_message_proof(
+        &self,
+        tx_id: &str,
+        message_id: &str,
+    ) -> Result<Option<MessageProof>, ProviderError> {
+        Ok(self.client.message_proof(tx_id, message_id).await?)
     }
 }

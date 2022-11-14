@@ -131,7 +131,7 @@ mod tests {
 
         // Transfer the base asset with amount 1 from wallet 1 to wallet 2
         let asset_id = Default::default();
-        let _receipts = wallets[0]
+        let (_tx_id, _receipts) = wallets[0]
             .transfer(wallets[1].address(), 1, asset_id, TxParameters::default())
             .await?;
 
@@ -190,7 +190,7 @@ mod tests {
         // Transfer an amount of 300 to the contract
         let amount = 300;
         let asset_id = random_asset_id;
-        let _receipts = wallet
+        let (_tx_id, _receipts) = wallet
             .force_transfer_to_contract(&contract_id, amount, asset_id, TxParameters::default())
             .await?;
 
@@ -330,6 +330,33 @@ mod tests {
 
         assert_eq!(*asset_balance, DEFAULT_COIN_AMOUNT * DEFAULT_NUM_COINS);
 
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn wallet_transfer_to_base_layer() -> Result<(), Error> {
+        // ANCHOR: wallet_withdraw_to_base
+        use fuels::prelude::*;
+
+        let wallet = launch_provider_and_get_wallet().await;
+
+        // Transfer an amount of 1000 to the specified base layer address
+        let (tx_id, _receipts) = wallet
+            .withdraw_to_base_layer(
+                &Bech32Address::from(Address::default()),
+                1000,
+                TxParameters::default(),
+            )
+            .await?;
+
+        let output_message = wallet
+            .get_provider()?
+            .get_message_proof(&tx_id, &tx_id)
+            .await?;
+
+        assert!(output_message.is_some());
+
+        // ANCHOR_END: wallet_withdraw_to_base
         Ok(())
     }
 }
