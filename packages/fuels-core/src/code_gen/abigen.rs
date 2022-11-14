@@ -334,6 +334,8 @@ impl Abigen {
             "Vec",
             "raw untyped ptr",
             "RawVec",
+            "EvmAddress",
+            "B512",
         ]
         .into_iter()
         .any(|e| e == name))

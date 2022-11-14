@@ -19,7 +19,7 @@ struct StructWithGeneric<D> {
 }
 
 enum EnumWithGeneric<D> {
-    VariantOne: (D),
+    VariantOne: D,
     VariantTwo: (),
 }
 
@@ -91,7 +91,7 @@ impl TestContract for Contract {
         };
         let test_deeply_nested_generic = StructDeeplyNestedGeneric {
             field_1: test_struct_nested,
-            field_2: 64
+            field_2: 64,
         };
 
         log(test_struct);

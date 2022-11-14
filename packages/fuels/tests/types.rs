@@ -284,6 +284,67 @@ async fn test_tuples() -> Result<(), Error> {
 }
 
 #[tokio::test]
+async fn test_evm_address() -> Result<(), Error> {
+    setup_contract_test!(
+        contract_instance,
+        wallet,
+        "packages/fuels/tests/types/evm_address"
+    );
+
+    {
+        let b256 = Bits256::from_hex_str(
+            "0x1616060606060606060606060606060606060606060606060606060606060606",
+        )?;
+        let evm_address = EvmAddress::from(b256);
+
+        assert!(
+            contract_instance
+                .methods()
+                .evm_address_as_input(evm_address)
+                .call()
+                .await?
+                .value
+        );
+    }
+
+    {
+        let b256 = Bits256::from_hex_str(
+            "0x0606060606060606060606060606060606060606060606060606060606060606",
+        )?;
+        let expected_evm_address = EvmAddress::from(b256);
+
+        assert_eq!(
+            contract_instance
+                .methods()
+                .evm_address_from_literal()
+                .call()
+                .await?
+                .value,
+            expected_evm_address
+        );
+    }
+
+    {
+        let b256 = Bits256::from_hex_str(
+            "0x0606060606060606060606060606060606060606060606060606060606060606",
+        )?;
+        let expected_evm_address = EvmAddress::from(b256);
+
+        assert_eq!(
+            contract_instance
+                .methods()
+                .evm_address_from_argument(b256)
+                .call()
+                .await?
+                .value,
+            expected_evm_address
+        );
+    }
+
+    Ok(())
+}
+
+#[tokio::test]
 async fn test_array() -> Result<(), Error> {
     setup_contract_test!(
         contract_instance,
@@ -1360,6 +1421,35 @@ async fn test_vector() -> Result<(), Error> {
             .vec_in_a_vec_in_a_struct_in_a_vec(arg.clone())
             .call()
             .await?;
+    }
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_b512() -> Result<(), Error> {
+    setup_contract_test!(contract_instance, wallet, "packages/fuels/tests/types/b512");
+    let contract_methods = contract_instance.methods();
+
+    // ANCHOR: b512_example
+    let hi_bits = Bits256::from_hex_str(
+        "0xbd0c9b8792876713afa8bff383eebf31c43437823ed761cc3600d0016de5110c",
+    )?;
+    let lo_bits = Bits256::from_hex_str(
+        "0x44ac566bd156b4fc71a4a4cb2655d3dd360c695edb17dc3b64d611e122fea23d",
+    )?;
+    let b512 = B512::from((hi_bits, lo_bits));
+    // ANCHOR_END: b512_example
+
+    assert_eq!(b512, contract_methods.b512_as_output().call().await?.value);
+
+    {
+        let lo_bits2 = Bits256::from_hex_str(
+            "0x54ac566bd156b4fc71a4a4cb2655d3dd360c695edb17dc3b64d611e122fea23d",
+        )?;
+        let b512 = B512::from((hi_bits, lo_bits2));
+
+        assert!(contract_methods.b512_as_input(b512).call().await?.value);
     }
 
     Ok(())

@@ -210,12 +210,12 @@ impl Provider {
     /// Get some spendable coins of asset `asset_id` for address `from` that add up at least to
     /// amount `amount`. The returned coins (UTXOs) are actual coins that can be spent. The number
     /// of coins (UXTOs) is optimized to prevent dust accumulation.
-    pub async fn get_spendable_coins(
+    pub async fn get_spendable_resources(
         &self,
         from: &Bech32Address,
         asset_id: AssetId,
         amount: u64,
-    ) -> Result<Vec<Coin>, ProviderError> {
+    ) -> Result<Vec<Resource>, ProviderError> {
         let res = self
             .client
             .resources_to_spend(
@@ -223,46 +223,12 @@ impl Provider {
                 vec![(format!("{:#x}", asset_id).as_str(), amount, None)],
                 None,
             )
-            .await?;
-
-        let coins = res
+            .await?
             .into_iter()
             .flatten()
-            .filter_map(|r| match r {
-                Resource::Coin(c) => Some(c),
-                _ => None,
-            })
             .collect();
 
-        Ok(coins)
-    }
-
-    /// Get some spendable messages for address `from`.
-    /// The returned messages are actual messages that can be spent. The number
-    /// of messages is optimized to prevent dust accumulation.
-    pub async fn get_spendable_messages(
-        &self,
-        from: &Bech32Address,
-    ) -> Result<Vec<Message>, ProviderError> {
-        let res = self
-            .client
-            .resources_to_spend(
-                &from.hash().to_string(),
-                vec![(format!("{:#x}", AssetId::default()).as_str(), 1, None)],
-                None,
-            )
-            .await?;
-
-        let messages = res
-            .into_iter()
-            .flatten()
-            .filter_map(|r| match r {
-                Resource::Message(m) => Some(m),
-                _ => None,
-            })
-            .collect();
-
-        Ok(messages)
+        Ok(res)
     }
 
     /// Get the balance of all spendable coins `asset_id` for address `address`. This is different

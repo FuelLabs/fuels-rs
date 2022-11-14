@@ -45,7 +45,7 @@ RUST_LOG=receipts cargo test --test integration_tests
 Add these dependencies on your `Cargo.toml`:
 
 ```toml
-fuels = "0.26"
+fuels = "0.31.0"
 ```
 
 > **Note** We're using version `0.26` of the SDK, which is the latest version at the time of this writing.
@@ -63,10 +63,11 @@ Another way to experience the SDK is to look at the source code. The `packages/f
 > **Note** Before running the tests, we need to build all the Sway test projects. The SDK has a binary that will go through all projects and build them for us. You can use it with the following command.
 
 ```
-cargo run --bin build-test-projects
+cargo run --bin test-projects -- build
 ```
+> The `test-projects` binary can also be used to clean and format the test projects. Check the `help` output for more info.
 
-Then we can run the tests with
+After building the projects, we can run the tests with
 
 ```
 cargo test

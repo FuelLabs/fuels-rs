@@ -1,66 +1,13 @@
-use futures_util::{stream, Stream, StreamExt};
+use crate::cli::RunConfig;
 use std::{
-    fs,
     io::Write,
     path::{Path, PathBuf},
 };
 use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 
-pub fn discover_projects(path: &Path) -> Vec<PathBuf> {
-    fs::read_dir(path)
-        .expect("failed to walk directory")
-        .filter_map(|entry| entry.ok())
-        .map(|entry| entry.path())
-        .filter(|path| path.is_dir())
-        .flat_map(|path| {
-            if dir_contains_forc_manifest(&path) {
-                vec![path]
-            } else {
-                discover_projects(&path)
-            }
-        })
-        .collect()
-}
-
-pub fn build_recursively(path: &Path, num_buf_futures: usize) -> impl Stream<Item = BuildResult> {
-    stream::iter(discover_projects(path))
-        .map(|path| async {
-            let output = tokio::process::Command::new("forc")
-                .args(["build", "--path"])
-                .arg(&path)
-                .output()
-                .await
-                .expect("failed to run `forc build` for example project");
-
-            let compilation_result = BuildOutput {
-                path,
-                stderr: String::from_utf8(output.stderr).expect("Forc output is not valid utf8"),
-            };
-
-            if output.status.success() {
-                BuildResult::Success(compilation_result)
-            } else {
-                BuildResult::Failure(compilation_result)
-            }
-        })
-        .buffer_unordered(num_buf_futures)
-}
-
-// Check if the given directory contains `Forc.toml` at its root.
-pub fn dir_contains_forc_manifest(path: &Path) -> bool {
-    if let Ok(entries) = fs::read_dir(path) {
-        for entry in entries.flatten() {
-            if entry.path().file_name().and_then(|s| s.to_str()) == Some("Forc.toml") {
-                return true;
-            }
-        }
-    }
-    false
-}
-
 pub struct BuildOutput {
-    path: PathBuf,
-    stderr: String,
+    pub path: PathBuf,
+    pub stderr: String,
 }
 
 pub enum BuildResult {
@@ -113,19 +60,21 @@ impl ResultWriter {
         self.stdout.reset()
     }
 
-    pub fn display_build_info(&mut self, num_buf_futures: usize) -> Result<(), std::io::Error> {
-        let output = std::process::Command::new("forc")
+    pub fn display_info(&mut self, config: &RunConfig) -> Result<(), std::io::Error> {
+        let command = &config.prepared_command.command;
+        let output = std::process::Command::new(command)
             .args(["--version"])
-            .output()?;
+            .output()
+            .unwrap_or_else(|err| panic!("failed to run `{command} --version`. {err}"));
 
-        let version =
-            String::from_utf8(output.stdout).expect("failed to parse forc --version output");
+        let version = String::from_utf8(output.stdout)
+            .unwrap_or_else(|_| panic!("failed to parse `{command} --version` output"));
 
-        self.write_success_bold("\nBuilding ")?;
+        self.write_success_bold(&format!("\n{:>7} ", &config.prepared_command.info))?;
         self.write(&format!(
-            "projects with: `{}`\n         num concurrent builds: {}\n\n",
+            "projects with: `{}`\n        num concurrent projects: {}\n\n",
             version.trim(),
-            num_buf_futures
+            config.num_concurrent
         ))
     }
 
@@ -133,18 +82,21 @@ impl ResultWriter {
         &mut self,
         abs_path: &PathBuf,
         build_result: &BuildResult,
+        result_info: &str,
     ) -> Result<(), std::io::Error> {
         match build_result {
             BuildResult::Success(build_output) => {
                 self.write(&format!(
-                    "build {} ... ",
+                    "{} {} ... ",
+                    result_info,
                     build_output.get_display_path(abs_path).display()
                 ))?;
                 self.write_success("ok\n")
             }
             BuildResult::Failure(build_output) => {
                 self.write(&format!(
-                    "build {} ... ",
+                    "{} {} ... ",
+                    result_info,
                     build_output.get_display_path(abs_path).display()
                 ))?;
                 self.write_error("FAILED\n")
