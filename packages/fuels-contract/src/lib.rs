@@ -1,4 +1,5 @@
 pub mod contract;
+pub mod contract_calls_utils;
 pub mod predicate;
 pub mod script;
 
