@@ -27,5 +27,5 @@ To get the output values of the bundled calls, you need to provide explicit type
 You can also interact with the `CallResponse` by moving the type annotation to the invoked method:
 
 ```rust,ignore
-{{#include ../../../examples/contracts/src/lib.rs:multi_call_response}}
+{{#include ../../../examples/contracts/src/lib.rs:multi_contract_call_response}}
 ```

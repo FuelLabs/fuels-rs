@@ -55,15 +55,15 @@ pub struct Contract {
 /// holds the decoded typed value returned by the contract's method. The other field
 /// holds all the receipts returned by the call.
 #[derive(Debug)]
-// ANCHOR: call_response
-pub struct CallResponse<D> {
+// ANCHOR: contract_call_response
+pub struct ContractCallResponse<D> {
     pub value: D,
     pub receipts: Vec<Receipt>,
     pub gas_used: u64,
 }
-// ANCHOR_END: call_response
+// ANCHOR_END: contract_call_response
 
-impl<D> CallResponse<D> {
+impl<D> ContractCallResponse<D> {
     /// Get the gas used from ScriptResult receipt
     fn get_gas_used(receipts: &[Receipt]) -> u64 {
         receipts
@@ -551,7 +551,7 @@ where
     /// `abigen!()`). The other field of CallResponse, `receipts`, contains the receipts of the
     /// transaction.
     #[tracing::instrument]
-    async fn call_or_simulate(&self, simulate: bool) -> Result<CallResponse<D>, Error> {
+    async fn call_or_simulate(&self, simulate: bool) -> Result<ContractCallResponse<D>, Error> {
         let script = self.get_call_execution_script().await?;
 
         let receipts = if simulate {
@@ -575,14 +575,14 @@ where
     }
 
     /// Call a contract's method on the node, in a state-modifying manner.
-    pub async fn call(self) -> Result<CallResponse<D>, Error> {
+    pub async fn call(self) -> Result<ContractCallResponse<D>, Error> {
         Self::call_or_simulate(&self, false).await
     }
 
     /// Call a contract's method on the node, in a simulated manner, meaning the state of the
     /// blockchain is *not* modified but simulated.
     /// It is the same as the `call` method because the API is more user-friendly this way.
-    pub async fn simulate(self) -> Result<CallResponse<D>, Error> {
+    pub async fn simulate(self) -> Result<ContractCallResponse<D>, Error> {
         Self::call_or_simulate(&self, true).await
     }
 
@@ -631,13 +631,16 @@ where
     }
 
     /// Create a CallResponse from call receipts
-    pub fn get_response(&self, mut receipts: Vec<Receipt>) -> Result<CallResponse<D>, Error> {
+    pub fn get_response(
+        &self,
+        mut receipts: Vec<Receipt>,
+    ) -> Result<ContractCallResponse<D>, Error> {
         let token = get_decoded_output(
             &mut receipts,
             Some(&self.contract_call.contract_id),
             &self.contract_call.output_param,
         )?;
-        Ok(CallResponse::new(D::from_token(token)?, receipts))
+        Ok(ContractCallResponse::new(D::from_token(token)?, receipts))
     }
 }
 
@@ -683,14 +686,14 @@ impl MultiContractCallHandler {
     }
 
     /// Call contract methods on the node, in a state-modifying manner.
-    pub async fn call<D: Tokenizable + Debug>(&self) -> Result<CallResponse<D>, Error> {
+    pub async fn call<D: Tokenizable + Debug>(&self) -> Result<ContractCallResponse<D>, Error> {
         Self::call_or_simulate(self, false).await
     }
 
     /// Call contract methods on the node, in a simulated manner, meaning the state of the
     /// blockchain is *not* modified but simulated.
     /// It is the same as the `call` method because the API is more user-friendly this way.
-    pub async fn simulate<D: Tokenizable + Debug>(&self) -> Result<CallResponse<D>, Error> {
+    pub async fn simulate<D: Tokenizable + Debug>(&self) -> Result<ContractCallResponse<D>, Error> {
         Self::call_or_simulate(self, true).await
     }
 
@@ -698,7 +701,7 @@ impl MultiContractCallHandler {
     async fn call_or_simulate<D: Tokenizable + Debug>(
         &self,
         simulate: bool,
-    ) -> Result<CallResponse<D>, Error> {
+    ) -> Result<ContractCallResponse<D>, Error> {
         let script = self.get_call_execution_script().await?;
 
         let provider = self.wallet.get_provider()?;
@@ -771,7 +774,7 @@ impl MultiContractCallHandler {
     pub fn get_response<D: Tokenizable + Debug>(
         &self,
         mut receipts: Vec<Receipt>,
-    ) -> Result<CallResponse<D>, Error> {
+    ) -> Result<ContractCallResponse<D>, Error> {
         let mut final_tokens = vec![];
 
         for call in self.contract_calls.iter() {
@@ -782,7 +785,7 @@ impl MultiContractCallHandler {
         }
 
         let tokens_as_tuple = Token::Tuple(final_tokens);
-        let response = CallResponse::<D>::new(D::from_token(tokens_as_tuple)?, receipts);
+        let response = ContractCallResponse::<D>::new(D::from_token(tokens_as_tuple)?, receipts);
 
         Ok(response)
     }

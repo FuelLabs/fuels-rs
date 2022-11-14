@@ -34,6 +34,7 @@ struct CallParamOffsets {
 
 /// Script provides methods to create and a call/simulate a
 /// script transaction that carries out contract method calls
+#[derive(Debug)]
 pub struct Script {
     pub tx: fuels_core::tx::Script,
 }
@@ -406,7 +407,7 @@ impl Script {
     }
 
     /// Execute the transaction in a state-modifying manner.
-    pub async fn call(self, provider: &Provider) -> Result<Vec<Receipt>, Error> {
+    pub async fn call(&self, provider: &Provider) -> Result<Vec<Receipt>, Error> {
         let chain_info = provider.chain_info().await?;
 
         self.tx.check_without_signatures(
@@ -418,7 +419,7 @@ impl Script {
     }
 
     /// Execute the transaction in a simulated manner, not modifying blockchain state
-    pub async fn simulate(self, provider: &Provider) -> Result<Vec<Receipt>, Error> {
+    pub async fn simulate(&self, provider: &Provider) -> Result<Vec<Receipt>, Error> {
         let chain_info = provider.chain_info().await?;
 
         self.tx.check_without_signatures(
