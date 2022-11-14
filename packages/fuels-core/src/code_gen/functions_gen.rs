@@ -1,15 +1,13 @@
-use crate::abi_encoder::ABIEncoder;
-use crate::code_gen::custom_types_gen::extract_custom_type_name_from_abi_property;
+use crate::code_gen::custom_types::{param_type_calls, Component};
 use crate::code_gen::docs_gen::expand_doc;
-use crate::errors::Error;
-use crate::json_abi::{parse_param, ABIParser};
-use crate::types::expand_type;
-use crate::utils::{ident, safe_ident};
-use crate::{ParamType, Selector};
-use fuels_types::{CustomType, Function, Property, ENUM_KEYWORD, STRUCT_KEYWORD};
+use crate::code_gen::resolved_type;
+use crate::utils::safe_ident;
+use fuels_types::errors::Error;
+use fuels_types::{ABIFunction, TypeDeclaration};
 use inflector::Inflector;
-use proc_macro2::{Literal, TokenStream};
+use proc_macro2::TokenStream;
 use quote::quote;
+use resolved_type::resolve_type;
 use std::collections::HashMap;
 
 /// Functions used by the Abigen to expand functions defined in an ABI spec.
@@ -23,267 +21,77 @@ use std::collections::HashMap;
 ///
 /// [`Contract`]: crate::contract::Contract
 pub fn expand_function(
-    function: &Function,
-    abi_parser: &ABIParser,
-    custom_enums: &HashMap<String, Property>,
-    custom_structs: &HashMap<String, Property>,
+    function: &ABIFunction,
+    types: &HashMap<usize, TypeDeclaration>,
 ) -> Result<TokenStream, Error> {
     if function.name.is_empty() {
         return Err(Error::InvalidData("Function name can not be empty".into()));
     }
 
-    let name = safe_ident(&function.name);
-    let fn_signature = abi_parser.build_fn_selector(&function.name, &function.inputs)?;
+    let args = function_arguments(function, types)?;
 
-    let encoded = ABIEncoder::encode_function_selector(&fn_signature);
+    let arg_names = args.iter().map(|component| &component.field_name);
 
-    let tokenized_signature = expand_selector(encoded);
-    let tokenized_output = expand_fn_outputs(&function.outputs)?;
-    let result = quote! { ContractCallHandler<#tokenized_output> };
+    let param_type_calls = param_type_calls(&args);
 
-    let (input, arg) = expand_function_arguments(function, custom_enums, custom_structs)?;
+    let arg_declarations = args.iter().map(|component| {
+        let name = &component.field_name;
+        let field_type: TokenStream = (&component.field_type).into();
+        quote! { #name: #field_type }
+    });
 
     let doc = expand_doc(&format!(
-        "Calls the contract's `{}` (0x{}) function",
+        "Calls the contract's `{}` function",
         function.name,
-        hex::encode(encoded)
     ));
 
-    // Here we turn `ParamType`s into a custom stringified version that's identical
-    // to how we would declare a `ParamType` in Rust code. Which will then
-    // be used to be tokenized and passed onto `method_hash()`.
-    let output_param = match &function.outputs[..] {
-        [output] => {
-            let param_type = parse_param(output).unwrap();
+    let name = safe_ident(&function.name);
+    let name_stringified = name.to_string();
 
-            let tok: proc_macro2::TokenStream =
-                format!("Some(ParamType::{})", param_type).parse().unwrap();
-
-            Ok(tok)
-        }
-        [] => Ok("None".parse().unwrap()),
-        &_ => Err(Error::CompilationError(
-            "A function cannot have multiple outputs!".to_string(),
-        )),
-    }?;
+    let output_type = resolve_fn_output_type(function, types)?;
 
     Ok(quote! {
         #doc
-        pub fn #name(&self #input) -> #result {
-            Contract::method_hash(&self.wallet.get_provider().expect("Provider not set up"), self.contract_id, &self.wallet,
-                #tokenized_signature, #output_param, #arg).expect("method not found (this should never happen)")
+        pub fn #name(&self #(,#arg_declarations)*) -> ContractCallHandler<#output_type> {
+            let provider = self.wallet.get_provider().expect("Provider not set up");
+            let encoded_fn_selector = resolve_fn_selector(#name_stringified, &[#(#param_type_calls),*]);
+            let tokens = [#(#arg_names.into_token()),*];
+            Contract::method_hash(&provider,
+                self.contract_id.clone(),
+                &self.wallet,
+                encoded_fn_selector,
+                &tokens).expect("method not found (this should never happen)")
         }
     })
 }
 
-fn expand_selector(selector: Selector) -> TokenStream {
-    let bytes = selector.iter().copied().map(Literal::u8_unsuffixed);
-    quote! { [#( #bytes ),*] }
-}
-
-/// Expands the output of a function, i.e. what comes after `->` in a function signature.
-fn expand_fn_outputs(outputs: &[Property]) -> Result<TokenStream, Error> {
-    match outputs {
-        [] => Ok(quote! { () }),
-        [output] => {
-            // If it's a primitive type, simply parse and expand.
-            if !output.is_custom_type() {
-                return expand_type(&parse_param(output)?);
-            }
-
-            // If it's a {struct, enum} as the type of a function's output, use its tokenized name only.
-            match output.is_struct_type() {
-                true => {
-                    let parsed_custom_type_name = extract_custom_type_name_from_abi_property(
-                        output,
-                        Some(CustomType::Struct),
-                    )?
-                    .parse()
-                    .expect("Custom type name should be a valid Rust identifier");
-
-                    Ok(parsed_custom_type_name)
-                }
-                false => match output.is_enum_type() {
-                    true => {
-                        let parsed_custom_type_name = extract_custom_type_name_from_abi_property(
-                            output,
-                            Some(CustomType::Enum),
-                        )?
-                        .parse()
-                        .expect("Custom type name should be a valid Rust identifier");
-
-                        Ok(parsed_custom_type_name)
-                    }
-                    false => match output.has_custom_type_in_array() {
-                        true => {
-                            let parsed_custom_type_name: TokenStream =
-                                extract_custom_type_name_from_abi_property(
-                                    output,
-                                    Some(
-                                        output
-                                            .get_custom_type()
-                                            .expect("Custom type in array should be set"),
-                                    ),
-                                )?
-                                .parse()
-                                .unwrap();
-
-                            Ok(quote! { ::std::vec::Vec<#parsed_custom_type_name> })
-                        }
-                        false => match output.has_custom_type_in_tuple() {
-                            // If custom type is inside a tuple `(struct | enum <name>, ...)`,
-                            // the type signature should be only `(<name>, ...)`.
-                            // To do that, we remove the `STRUCT_KEYWORD` and `ENUM_KEYWORD` from it.
-                            true => {
-                                let tuple_type_signature: TokenStream = output
-                                    .type_field
-                                    .replace(STRUCT_KEYWORD, "")
-                                    .replace(ENUM_KEYWORD, "")
-                                    .parse()
-                                    .expect("could not parse tuple type signature");
-
-                                Ok(tuple_type_signature)
-                            }
-                            false => {
-                                panic!("{}", format!("Output is of custom type, but not an enum, struct or enum/struct inside an array/tuple. This shouldn't never happen. Output received: {:?}", output));
-                            }
-                        },
-                    },
-                },
-            }
-        }
-        _ => Err(Error::CompilationError(
-            "A function cannot have multiple outputs.".to_string(),
-        )),
+fn resolve_fn_output_type(
+    function: &ABIFunction,
+    types: &HashMap<usize, TypeDeclaration>,
+) -> Result<TokenStream, Error> {
+    let output_type = resolve_type(&function.output, types)?;
+    if output_type.uses_vectors() {
+        Err(Error::CompilationError(format!(
+            "function '{}' contains a vector in its return type. This currently isn't supported.",
+            function.name
+        )))
+    } else {
+        Ok(output_type.into())
     }
 }
 
-/// Expands the arguments in a function declaration and the same arguments as input
-/// to a function call. For instance:
-/// 1. The `my_arg: u32` in `pub fn my_func(my_arg: u32) -> ()`
-/// 2. The `my_arg.into_token()` in `another_fn_call(my_arg.into_token())`
-fn expand_function_arguments(
-    fun: &Function,
-    custom_enums: &HashMap<String, Property>,
-    custom_structs: &HashMap<String, Property>,
-) -> Result<(TokenStream, TokenStream), Error> {
-    let mut args = vec![];
-    let mut call_args = vec![];
-
-    for param in &fun.inputs {
-        // For each [`Property`] in a function input we expand:
-        // 1. The name of the argument;
-        // 2. The type of the argument;
-        // Note that _any_ significant change in the way the JSON ABI is generated
-        // could affect this function expansion.
-        // TokenStream representing the name of the argument
-
-        let name = expand_input_name(&param.name)?;
-
-        let custom_property = match param.is_custom_type() {
-            false => None,
-            true => {
-                if param.is_enum_type() {
-                    let name =
-                        extract_custom_type_name_from_abi_property(param, Some(CustomType::Enum))
-                            .expect("couldn't extract enum name from ABI property");
-                    custom_enums.get(&name)
-                } else if param.is_struct_type() {
-                    let name =
-                        extract_custom_type_name_from_abi_property(param, Some(CustomType::Struct))
-                            .expect("couldn't extract struct name from ABI property");
-                    custom_structs.get(&name)
-                } else {
-                    match param.has_custom_type_in_array() {
-                        true => match param.get_custom_type() {
-                            Some(custom_type) => {
-                                let name = extract_custom_type_name_from_abi_property(
-                                    param,
-                                    Some(custom_type),
-                                )
-                                .expect("couldn't extract custom type name from ABI property");
-
-                                match custom_type {
-                                    CustomType::Enum => custom_enums.get(&name),
-                                    CustomType::Struct => custom_structs.get(&name),
-                                }
-                            }
-                            None => {
-                                return Err(Error::InvalidType(format!(
-                                    "Custom type in array is not a struct or enum. Type: {:?}",
-                                    param
-                                )))
-                            }
-                        },
-                        false => None,
-                    }
-                }
-            }
-        };
-
-        // TokenStream representing the type of the argument
-        let kind = parse_param(param)?;
-
-        // If it's a tuple, don't expand it, just use the type signature as it is (minus the string "struct " | "enum ").
-        let tok = if let ParamType::Tuple(_tuple) = kind {
-            let toks = build_expanded_tuple_params(param)
-                .expect("failed to build expanded tuple parameters");
-
-            toks.parse::<TokenStream>().unwrap()
-        } else {
-            expand_input_param(fun, &param.name, &parse_param(param)?, &custom_property)?
-        };
-
-        // Add the TokenStream to argument declarations
-        args.push(quote! { #name: #tok });
-
-        // This `name` TokenStream is also added to the call arguments
-        call_args.push(name);
-    }
-
-    // The final TokenStream of the argument declaration in a function declaration
-    let args = quote! { #( , #args )* };
-
-    // The final TokenStream of the arguments being passed in a function call
-    // It'll look like `&[my_arg.into_token(), another_arg.into_token()]`
-    // as the [`Contract`] `method_hash` function expects a slice of Tokens
-    // in order to encode the call.
-    let call_args = quote! { &[ #(#call_args.into_token(), )* ] };
-
-    Ok((args, call_args))
-}
-
-// Builds a string "(type_1,type_2,type_3,...,type_n,)"
-// Where each type has been expanded through `expand_type()`
-// Except if it's a custom type, when just its name suffices.
-// For example, a tuple coming as "(b256, struct Person)"
-// Should be expanded as "([u8; 32], Person,)".
-fn build_expanded_tuple_params(tuple_param: &Property) -> Result<String, Error> {
-    let mut toks: String = "(".to_string();
-    for component in tuple_param
-        .components
-        .as_ref()
-        .expect("tuple parameter should have components")
-    {
-        if !component.is_custom_type() {
-            let p = parse_param(component)?;
-            let tok = expand_type(&p)?;
-            toks.push_str(&tok.to_string());
-        } else {
-            let tok = component
-                .type_field
-                .replace(STRUCT_KEYWORD, "")
-                .replace(ENUM_KEYWORD, "");
-            toks.push_str(&tok.to_string());
-        }
-        toks.push(',');
-    }
-    toks.push(')');
-    Ok(toks)
+fn function_arguments(
+    fun: &ABIFunction,
+    types: &HashMap<usize, TypeDeclaration>,
+) -> Result<Vec<Component>, Error> {
+    fun.inputs
+        .iter()
+        .map(|input| Component::new(input, types, true))
+        .collect::<Result<Vec<_>, anyhow::Error>>()
+        .map_err(|e| Error::InvalidType(e.to_string()))
 }
 
 /// Expands a positional identifier string that may be empty.
-///
 /// Note that this expands the parameter name with `safe_ident`, meaning that
 /// identifiers that are reserved keywords get `_` appended to them.
 pub fn expand_input_name(name: &str) -> Result<TokenStream, Error> {
@@ -296,79 +104,236 @@ pub fn expand_input_name(name: &str) -> Result<TokenStream, Error> {
     Ok(quote! { #name })
 }
 
-// Expands the type of an argument being passed in a function declaration.
-// I.e.: `pub fn my_func(my_arg: u32) -> ()`, in this case, `u32` is the
-// type, coming in as a `ParamType::U32`.
-fn expand_input_param(
-    fun: &Function,
-    param: &str,
-    kind: &ParamType,
-    custom_type_property: &Option<&Property>,
-) -> Result<TokenStream, Error> {
-    match kind {
-        ParamType::Array(ty, _) => {
-            let ty = expand_input_param(fun, param, ty, custom_type_property)?;
-            Ok(quote! {
-                ::std::vec::Vec<#ty>
-            })
-        }
-        ParamType::Enum(_) => {
-            let ident = ident(&extract_custom_type_name_from_abi_property(
-                custom_type_property.expect("Custom type property not found for enum"),
-                Some(CustomType::Enum),
-            )?);
-            Ok(quote! { #ident })
-        }
-        ParamType::Struct(_) => {
-            let ident = ident(&extract_custom_type_name_from_abi_property(
-                custom_type_property.expect("Custom type property not found for struct"),
-                Some(CustomType::Struct),
-            )?);
-            Ok(quote! { #ident })
-        }
-        // Primitive type
-        _ => expand_type(kind),
-    }
-}
-
-// Regarding string->TokenStream->string, refer to `custom_types_gen` tests for more details.
+// Regarding string->TokenStream->string, refer to `custom_types` tests for more details.
 #[cfg(test)]
 mod tests {
-    use crate::EnumVariants;
-
     use super::*;
+    use fuels_types::{ProgramABI, TypeApplication};
     use std::str::FromStr;
 
     #[test]
+    fn test_expand_function_simpleabi() -> Result<(), Error> {
+        let s = r#"
+            {
+                "types": [
+                  {
+                    "typeId": 6,
+                    "type": "u64",
+                    "components": null,
+                    "typeParameters": null
+                  },
+                  {
+                    "typeId": 8,
+                    "type": "b256",
+                    "components": null,
+                    "typeParameters": null
+                  },
+                  {
+                    "typeId": 6,
+                    "type": "u64",
+                    "components": null,
+                    "typeParameters": null
+                  },
+                  {
+                    "typeId": 8,
+                    "type": "b256",
+                    "components": null,
+                    "typeParameters": null
+                  },
+                  {
+                    "typeId": 10,
+                    "type": "bool",
+                    "components": null,
+                    "typeParameters": null
+                  },
+                  {
+                    "typeId": 12,
+                    "type": "struct MyStruct1",
+                    "components": [
+                      {
+                        "name": "x",
+                        "type": 6,
+                        "typeArguments": null
+                      },
+                      {
+                        "name": "y",
+                        "type": 8,
+                        "typeArguments": null
+                      }
+                    ],
+                    "typeParameters": null
+                  },
+                  {
+                    "typeId": 6,
+                    "type": "u64",
+                    "components": null,
+                    "typeParameters": null
+                  },
+                  {
+                    "typeId": 8,
+                    "type": "b256",
+                    "components": null,
+                    "typeParameters": null
+                  },
+                  {
+                    "typeId": 2,
+                    "type": "struct MyStruct1",
+                    "components": [
+                      {
+                        "name": "x",
+                        "type": 6,
+                        "typeArguments": null
+                      },
+                      {
+                        "name": "y",
+                        "type": 8,
+                        "typeArguments": null
+                      }
+                    ],
+                    "typeParameters": null
+                  },
+                  {
+                    "typeId": 3,
+                    "type": "struct MyStruct2",
+                    "components": [
+                      {
+                        "name": "x",
+                        "type": 10,
+                        "typeArguments": null
+                      },
+                      {
+                        "name": "y",
+                        "type": 12,
+                        "typeArguments": []
+                      }
+                    ],
+                    "typeParameters": null
+                  },
+                  {
+                    "typeId": 26,
+                    "type": "struct MyStruct1",
+                    "components": [
+                      {
+                        "name": "x",
+                        "type": 6,
+                        "typeArguments": null
+                      },
+                      {
+                        "name": "y",
+                        "type": 8,
+                        "typeArguments": null
+                      }
+                    ],
+                    "typeParameters": null
+                  }
+                ],
+                "functions": [
+                  {
+                    "type": "function",
+                    "inputs": [
+                      {
+                        "name": "s1",
+                        "type": 2,
+                        "typeArguments": []
+                      },
+                      {
+                        "name": "s2",
+                        "type": 3,
+                        "typeArguments": []
+                      }
+                    ],
+                    "name": "some_abi_funct",
+                    "output": {
+                      "name": "",
+                      "type": 26,
+                      "typeArguments": []
+                    }
+                  }
+                ]
+              }
+    "#;
+        let parsed_abi: ProgramABI = serde_json::from_str(s)?;
+        let all_types = parsed_abi
+            .types
+            .into_iter()
+            .map(|t| (t.type_id, t))
+            .collect::<HashMap<usize, TypeDeclaration>>();
+
+        // Grabbing the one and only function in it.
+        let result = expand_function(&parsed_abi.functions[0], &all_types)?;
+
+        let expected_code = r#"
+                #[doc = "Calls the contract's `some_abi_funct` function"]
+                pub fn some_abi_funct(&self, s_1: MyStruct1, s_2: MyStruct2) -> ContractCallHandler<MyStruct1> {
+                    let provider = self.wallet.get_provider().expect("Provider not set up");
+                    let encoded_fn_selector = resolve_fn_selector(
+                        "some_abi_funct",
+                        &[<MyStruct1> :: param_type(), <MyStruct2> :: param_type()]
+                    );
+                    let tokens = [s_1.into_token(), s_2.into_token()];
+                    Contract::method_hash(
+                        &provider,
+                        self.contract_id.clone(),
+                        &self.wallet,
+                        encoded_fn_selector,
+                        &tokens
+                    )
+                    .expect("method not found (this should never happen)")
+                }
+        "#;
+
+        let expected = TokenStream::from_str(expected_code).unwrap().to_string();
+
+        assert_eq!(result.to_string(), expected);
+
+        Ok(())
+    }
+
+    #[test]
     fn test_expand_function_simple() -> Result<(), Error> {
-        let mut the_function = Function {
-            type_field: "unused".to_string(),
-            inputs: vec![],
+        let the_function = ABIFunction {
+            inputs: vec![TypeApplication {
+                name: String::from("bimbam"),
+                type_id: 1,
+                ..Default::default()
+            }],
             name: "HelloWorld".to_string(),
-            outputs: vec![],
+            ..Default::default()
         };
-        the_function.inputs.push(Property {
-            name: String::from("bimbam"),
-            type_field: String::from("bool"),
-            components: None,
-        });
-        let result = expand_function(
-            &the_function,
-            &ABIParser::new(),
-            &Default::default(),
-            &Default::default(),
-        );
+        let types = [
+            (
+                0,
+                TypeDeclaration {
+                    type_id: 0,
+                    type_field: String::from("()"),
+                    ..Default::default()
+                },
+            ),
+            (
+                1,
+                TypeDeclaration {
+                    type_id: 1,
+                    type_field: String::from("bool"),
+                    ..Default::default()
+                },
+            ),
+        ]
+        .into_iter()
+        .collect::<HashMap<_, _>>();
+        let result = expand_function(&the_function, &types);
         let expected = TokenStream::from_str(
             r#"
-            #[doc = "Calls the contract's `HelloWorld` (0x0000000097d4de45) function"]
+            #[doc = "Calls the contract's `HelloWorld` function"]
             pub fn HelloWorld(&self, bimbam: bool) -> ContractCallHandler<()> {
+                let provider = self.wallet.get_provider().expect("Provider not set up");
+                let encoded_fn_selector = resolve_fn_selector("HelloWorld", &[<bool> :: param_type()]);
+                let tokens = [bimbam.into_token()];
                 Contract::method_hash(
-                    &self.wallet.get_provider().expect("Provider not set up"),
-                    self.contract_id,
+                    &provider,
+                    self.contract_id.clone(),
                     &self.wallet,
-                    [0, 0, 0, 0, 151, 212, 222, 69],
-                    None,
-                    &[bimbam.into_token() ,]
+                    encoded_fn_selector,
+                    &tokens
                 )
                 .expect("method not found (this should never happen)")
             }
@@ -382,86 +347,97 @@ mod tests {
 
     #[test]
     fn test_expand_function_complex() -> Result<(), Error> {
-        let mut the_function = Function {
-            type_field: "function".to_string(),
-            name: "hello_world".to_string(),
-            inputs: vec![],
-            outputs: vec![Property {
-                name: String::from("stillnotused"),
-                type_field: String::from("enum EntropyCirclesEnum"),
-                components: Some(vec![
-                    Property {
-                        name: String::from("Postcard"),
-                        type_field: String::from("bool"),
-                        components: None,
-                    },
-                    Property {
-                        name: String::from("Teacup"),
-                        type_field: String::from("u64"),
-                        components: None,
-                    },
-                ]),
+        let the_function = ABIFunction {
+            inputs: vec![TypeApplication {
+                name: String::from("the_only_allowed_input"),
+                type_id: 4,
+                ..Default::default()
             }],
+            name: "hello_world".to_string(),
+            output: TypeApplication {
+                name: String::from("stillnotused"),
+                type_id: 1,
+                ..Default::default()
+            },
         };
-        the_function.inputs.push(Property {
-            name: String::from("the_only_allowed_input"),
-            type_field: String::from("struct BurgundyBeefStruct"),
-            components: Some(vec![
-                Property {
-                    name: String::from("Beef"),
+        let types = [
+            (
+                1,
+                TypeDeclaration {
+                    type_id: 1,
+                    type_field: String::from("enum EntropyCirclesEnum"),
+                    components: Some(vec![
+                        TypeApplication {
+                            name: String::from("Postcard"),
+                            type_id: 2,
+                            ..Default::default()
+                        },
+                        TypeApplication {
+                            name: String::from("Teacup"),
+                            type_id: 3,
+                            ..Default::default()
+                        },
+                    ]),
+                    ..Default::default()
+                },
+            ),
+            (
+                2,
+                TypeDeclaration {
+                    type_id: 2,
                     type_field: String::from("bool"),
-                    components: None,
+                    ..Default::default()
                 },
-                Property {
-                    name: String::from("BurgundyWine"),
+            ),
+            (
+                3,
+                TypeDeclaration {
+                    type_id: 3,
                     type_field: String::from("u64"),
-                    components: None,
+                    ..Default::default()
                 },
-            ]),
-        });
-        let mut custom_structs = HashMap::new();
-        custom_structs.insert(
-            "BurgundyBeefStruct".to_string(),
-            Property {
-                name: "unused".to_string(),
-                type_field: "struct SomeWeirdFrenchCuisine".to_string(),
-                components: None,
-            },
-        );
-        custom_structs.insert(
-            "CoolIndieGame".to_string(),
-            Property {
-                name: "unused".to_string(),
-                type_field: "struct CoolIndieGame".to_string(),
-                components: None,
-            },
-        );
-        let mut custom_enums = HashMap::new();
-        custom_enums.insert(
-            "EntropyCirclesEnum".to_string(),
-            Property {
-                name: "unused".to_string(),
-                type_field: "enum EntropyCirclesEnum".to_string(),
-                components: None,
-            },
-        );
-        let abi_parser = ABIParser::new();
-        let result = expand_function(&the_function, &abi_parser, &custom_enums, &custom_structs);
+            ),
+            (
+                4,
+                TypeDeclaration {
+                    type_id: 4,
+                    type_field: String::from("struct SomeWeirdFrenchCuisine"),
+                    components: Some(vec![
+                        TypeApplication {
+                            name: String::from("Beef"),
+                            type_id: 2,
+                            ..Default::default()
+                        },
+                        TypeApplication {
+                            name: String::from("BurgundyWine"),
+                            type_id: 3,
+                            ..Default::default()
+                        },
+                    ]),
+                    ..Default::default()
+                },
+            ),
+        ]
+        .into_iter()
+        .collect::<HashMap<_, _>>();
+        let result = expand_function(&the_function, &types);
         // Some more editing was required because it is not rustfmt-compatible (adding/removing parentheses or commas)
         let expected = TokenStream::from_str(
             r#"
-            #[doc = "Calls the contract's `hello_world` (0x0000000076b25a24) function"]
+            #[doc = "Calls the contract's `hello_world` function"]
             pub fn hello_world(
                 &self,
                 the_only_allowed_input: SomeWeirdFrenchCuisine
             ) -> ContractCallHandler<EntropyCirclesEnum> {
+                let provider = self.wallet.get_provider().expect("Provider not set up");
+                let encoded_fn_selector = resolve_fn_selector("hello_world", &[<SomeWeirdFrenchCuisine> :: param_type()]);
+                let tokens = [the_only_allowed_input.into_token()];
                 Contract::method_hash(
-                    &self.wallet.get_provider().expect("Provider not set up"),
-                    self.contract_id,
+                    &provider,
+                    self.contract_id.clone(),
                     &self.wallet,
-                    [0, 0, 0, 0, 118, 178, 90, 36],
-                    Some(ParamType::Enum(EnumVariants::new(vec![ParamType::Bool, ParamType::U64]).unwrap())),
-                    &[the_only_allowed_input.into_token() ,]
+                    encoded_fn_selector,
+                    &tokens
                 )
                 .expect("method not found (this should never happen)")
             }
@@ -474,172 +450,149 @@ mod tests {
     }
 
     // --- expand_selector ---
-    #[test]
-    fn test_expand_selector() {
-        let result = expand_selector(Selector::default());
-        assert_eq!(result.to_string(), "[0 , 0 , 0 , 0 , 0 , 0 , 0 , 0]");
 
-        let result = expand_selector([1, 2, 3, 4, 5, 6, 7, 8]);
-        assert_eq!(result.to_string(), "[1 , 2 , 3 , 4 , 5 , 6 , 7 , 8]");
-    }
-
-    // --- expand_fn_outputs ---
-    #[test]
-    fn test_expand_fn_outputs() -> Result<(), Error> {
-        let result = expand_fn_outputs(&[]);
-        assert_eq!(result?.to_string(), "()");
-
-        // Primitive type
-        let result = expand_fn_outputs(&[Property {
-            name: "unused".to_string(),
-            type_field: "bool".to_string(),
-            components: None,
-        }]);
-        assert_eq!(result?.to_string(), "bool");
-
-        // Struct type
-        let result = expand_fn_outputs(&[Property {
-            name: "unused".to_string(),
-            type_field: String::from("struct streaming_services"),
-            components: Some(vec![
-                Property {
-                    name: String::from("unused"),
-                    type_field: String::from("thistypedoesntexist"),
-                    components: None,
-                },
-                Property {
-                    name: String::from("unused"),
-                    type_field: String::from("thistypedoesntexist"),
-                    components: None,
-                },
-            ]),
-        }]);
-        assert_eq!(result?.to_string(), "streaming_services");
-
-        // Enum type
-        let result = expand_fn_outputs(&[Property {
-            name: "unused".to_string(),
-            type_field: String::from("enum StreamingServices"),
-            components: Some(vec![
-                Property {
-                    name: String::from("unused"),
-                    type_field: String::from("bool"),
-                    components: None,
-                },
-                Property {
-                    name: String::from("unused"),
-                    type_field: String::from("u64"),
-                    components: None,
-                },
-            ]),
-        }]);
-        assert_eq!(result?.to_string(), "StreamingServices");
-        Ok(())
-    }
-
-    // --- expand_function_argument ---
+    // // --- expand_function_argument ---
     #[test]
     fn test_expand_function_arguments() -> Result<(), Error> {
-        let hm: HashMap<String, Property> = HashMap::new();
-        let the_argument = Property {
+        let the_argument = TypeApplication {
             name: "some_argument".to_string(),
-            type_field: String::from("u32"),
-            components: None,
+            type_id: 0,
+            ..Default::default()
         };
 
         // All arguments are here
-        let mut the_function = Function {
-            type_field: "".to_string(),
-            inputs: vec![],
-            name: "".to_string(),
-            outputs: vec![],
+        let the_function = ABIFunction {
+            inputs: vec![the_argument],
+            ..ABIFunction::default()
         };
-        the_function.inputs.push(the_argument);
 
-        let result = expand_function_arguments(&the_function, &hm, &hm);
-        let (args, call_args) = result?;
-        let result = format!("({},{})", args, call_args);
-        let expected = "(, some_argument : u32,& [some_argument . into_token () ,])";
+        let types = [(
+            0,
+            TypeDeclaration {
+                type_id: 0,
+                type_field: String::from("u32"),
+                ..Default::default()
+            },
+        )]
+        .into_iter()
+        .collect::<HashMap<_, _>>();
+        let result = function_arguments(&the_function, &types)?;
+        let component = &result[0];
 
-        assert_eq!(result, expected);
+        assert_eq!(&component.field_name.to_string(), "some_argument");
+        assert_eq!(&component.field_type.to_string(), "u32");
+
         Ok(())
     }
 
     #[test]
     fn test_expand_function_arguments_primitive() -> Result<(), Error> {
-        let hm: HashMap<String, Property> = HashMap::new();
-        let mut the_function = Function {
-            type_field: "function".to_string(),
-            inputs: vec![],
+        let the_function = ABIFunction {
+            inputs: vec![TypeApplication {
+                name: "bim_bam".to_string(),
+                type_id: 1,
+                ..Default::default()
+            }],
             name: "pip_pop".to_string(),
-            outputs: vec![],
+            ..Default::default()
         };
 
-        the_function.inputs.push(Property {
-            name: "bim_bam".to_string(),
-            type_field: String::from("u64"),
-            components: None,
-        });
-        let result = expand_function_arguments(&the_function, &hm, &hm);
-        let (args, call_args) = result?;
-        let result = format!("({},{})", args, call_args);
+        let types = [
+            (
+                0,
+                TypeDeclaration {
+                    type_id: 0,
+                    type_field: String::from("()"),
+                    ..Default::default()
+                },
+            ),
+            (
+                1,
+                TypeDeclaration {
+                    type_id: 1,
+                    type_field: String::from("u64"),
+                    ..Default::default()
+                },
+            ),
+        ]
+        .into_iter()
+        .collect::<HashMap<_, _>>();
+        let result = function_arguments(&the_function, &types)?;
+        let component = &result[0];
 
-        assert_eq!(result, "(, bim_bam : u64,& [bim_bam . into_token () ,])");
+        assert_eq!(&component.field_name.to_string(), "bim_bam");
+        assert_eq!(&component.field_type.to_string(), "u64");
+
         Ok(())
     }
 
     #[test]
     fn test_expand_function_arguments_composite() -> Result<(), Error> {
-        let mut function = Function {
-            type_field: "zig_zag".to_string(),
-            inputs: vec![],
+        let mut function = ABIFunction {
+            inputs: vec![TypeApplication {
+                name: "bim_bam".to_string(),
+                type_id: 0,
+                ..Default::default()
+            }],
             name: "PipPopFunction".to_string(),
-            outputs: vec![],
+            ..Default::default()
         };
-        function.inputs.push(Property {
-            name: "bim_bam".to_string(),
-            type_field: String::from("struct CarMaker"),
-            components: Some(vec![Property {
-                name: "name".to_string(),
-                type_field: "str[5]".to_string(),
-                components: None,
-            }]),
-        });
-        let mut custom_structs = HashMap::new();
-        custom_structs.insert(
-            "CarMaker".to_string(),
-            Property {
-                name: "unused".to_string(),
-                type_field: "struct CarMaker".to_string(),
-                components: None,
-            },
-        );
-        let mut custom_enums = HashMap::new();
-        custom_enums.insert(
-            "Cocktail".to_string(),
-            Property {
-                name: "Cocktail".to_string(),
-                type_field: "enum Cocktail".to_string(),
-                components: Some(vec![Property {
-                    name: "variant".to_string(),
+
+        let types = [
+            (
+                0,
+                TypeDeclaration {
+                    type_id: 0,
+                    type_field: "struct CarMaker".to_string(),
+                    components: Some(vec![TypeApplication {
+                        name: "name".to_string(),
+                        type_id: 1,
+                        ..Default::default()
+                    }]),
+                    ..Default::default()
+                },
+            ),
+            (
+                1,
+                TypeDeclaration {
+                    type_id: 1,
+                    type_field: "str[5]".to_string(),
+                    ..Default::default()
+                },
+            ),
+            (
+                2,
+                TypeDeclaration {
+                    type_id: 2,
+                    type_field: "enum Cocktail".to_string(),
+                    components: Some(vec![TypeApplication {
+                        name: "variant".to_string(),
+                        type_id: 3,
+                        ..Default::default()
+                    }]),
+                    ..Default::default()
+                },
+            ),
+            (
+                3,
+                TypeDeclaration {
+                    type_id: 3,
                     type_field: "u32".to_string(),
-                    components: None,
-                }]),
-            },
-        );
+                    ..Default::default()
+                },
+            ),
+        ]
+        .into_iter()
+        .collect::<HashMap<_, _>>();
+        let result = function_arguments(&function, &types)?;
+        assert_eq!(&result[0].field_name.to_string(), "bim_bam");
+        assert_eq!(&result[0].field_type.to_string(), "CarMaker");
 
-        let result = expand_function_arguments(&function, &custom_enums, &custom_structs);
-        let (args, call_args) = result?;
-        let result = format!("({},{})", args, call_args);
-        let expected = r#"(, bim_bam : CarMaker,& [bim_bam . into_token () ,])"#;
-        assert_eq!(result, expected);
+        function.inputs[0].type_id = 2;
+        let result = function_arguments(&function, &types)?;
+        assert_eq!(&result[0].field_name.to_string(), "bim_bam");
+        assert_eq!(&result[0].field_type.to_string(), "Cocktail");
 
-        function.inputs[0].type_field = "enum Cocktail".to_string();
-        let result = expand_function_arguments(&function, &custom_enums, &custom_structs);
-        let (args, call_args) = result?;
-        let result = format!("({},{})", args, call_args);
-        let expected = r#"(, bim_bam : Cocktail,& [bim_bam . into_token () ,])"#;
-        assert_eq!(result, expected);
         Ok(())
     }
 
@@ -658,81 +611,5 @@ mod tests {
         let result = expand_input_name("let");
         assert_eq!(result?.to_string(), "let_");
         Ok(())
-    }
-
-    // --- expand_input_param ---
-    #[test]
-    fn test_expand_input_param_primitive() -> Result<(), Error> {
-        let def = Function::default();
-        let result = expand_input_param(&def, "unused", &ParamType::Bool, &None);
-        assert_eq!(result?.to_string(), "bool");
-
-        let result = expand_input_param(&def, "unused", &ParamType::U64, &None);
-        assert_eq!(result?.to_string(), "u64");
-
-        let result = expand_input_param(&def, "unused", &ParamType::String(10), &None);
-        assert_eq!(result?.to_string(), "String");
-        Ok(())
-    }
-
-    #[test]
-    fn test_expand_input_param_array() -> Result<(), Error> {
-        let array_type = ParamType::Array(Box::new(ParamType::U64), 10);
-        let result = expand_input_param(&Function::default(), "unused", &array_type, &None);
-        assert_eq!(result?.to_string(), ":: std :: vec :: Vec < u64 >");
-        Ok(())
-    }
-
-    #[test]
-    fn test_expand_input_param_custom_type() -> Result<(), Error> {
-        let def = Function::default();
-        let struct_type = ParamType::Struct(vec![ParamType::Bool, ParamType::U64]);
-        let struct_prop = Property {
-            name: String::from("unused"),
-            type_field: String::from("struct Babies"),
-            components: None,
-        };
-        let struct_name = Some(&struct_prop);
-        let result = expand_input_param(&def, "unused", &struct_type, &struct_name);
-        assert_eq!(result?.to_string(), "Babies");
-
-        let enum_type = ParamType::Enum(EnumVariants::new(vec![ParamType::U8, ParamType::U32])?);
-        let enum_prop = Property {
-            name: String::from("unused"),
-            type_field: String::from("enum Babies"),
-            components: None,
-        };
-        let enum_name = Some(&enum_prop);
-        let result = expand_input_param(&def, "unused", &enum_type, &enum_name);
-        assert_eq!(result?.to_string(), "Babies");
-        Ok(())
-    }
-
-    #[test]
-    fn test_expand_input_param_struct_wrong_name() {
-        let def = Function::default();
-        let struct_type = ParamType::Struct(vec![ParamType::Bool, ParamType::U64]);
-        let struct_prop = Property {
-            name: String::from("unused"),
-            type_field: String::from("not_the_right_format"),
-            components: None,
-        };
-        let struct_name = Some(&struct_prop);
-        let result = expand_input_param(&def, "unused", &struct_type, &struct_name);
-        assert!(matches!(result, Err(Error::MissingData(_))));
-    }
-
-    #[test]
-    fn test_expand_input_param_struct_with_enum_name() {
-        let def = Function::default();
-        let struct_type = ParamType::Struct(vec![ParamType::Bool, ParamType::U64]);
-        let struct_prop = Property {
-            name: String::from("unused"),
-            type_field: String::from("enum Butitsastruct"),
-            components: None,
-        };
-        let struct_name = Some(&struct_prop);
-        let result = expand_input_param(&def, "unused", &struct_type, &struct_name);
-        assert!(matches!(result, Err(Error::InvalidType(_))));
     }
 }

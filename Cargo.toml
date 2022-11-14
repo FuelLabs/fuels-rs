@@ -7,8 +7,13 @@
 resolver = "2"
 members = [
     "examples/contracts",
+    "examples/cookbook",
+    "examples/predicates",
+    "examples/providers",
     "examples/rust_bindings",
+    "examples/types",
     "examples/wallets",
+    "examples/debugging",
     "packages/fuels",
     "packages/fuels-abigen-macro",
     "packages/fuels-contract",
@@ -17,6 +22,7 @@ members = [
     "packages/fuels-test-helpers",
     "packages/fuels-types",
     "packages/wasm-tests",
-    "scripts/build-test-projects",
+    "scripts/test-projects",
+    "scripts/check-docs",
     "tools/fuels-abi-cli",
 ]

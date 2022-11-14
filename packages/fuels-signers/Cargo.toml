@@ -1,6 +1,6 @@
 [package]
 name = "fuels-signers"
-version = "0.16.1"
+version = "0.31.0"
 authors = ["Fuel Labs <contact@fuel.sh>"]
 edition = "2021"
 homepage = "https://fuel.network/"
@@ -11,16 +11,16 @@ description = "Fuel Rust SDK signers."
 [dependencies]
 async-trait = { version = "0.1.50", default-features = false }
 bytes = { version = "1.1.0", features = ["serde"] }
-coins-bip32 = "0.6.0"
-coins-bip39 = "0.6.0"
 elliptic-curve = { version = "0.11.6", default-features = false }
 # TODO(oleksii): either properly release this or bring changes upstream to eth-keystore-rs
 fuel-eth-keystore = { version = "0.5.0", git = "https://github.com/FuelLabs/fuel-eth-keystore", tag = "v0.5.0" }
-fuel-core = { version = "0.9", default-features = false, optional = true }
-fuel-crypto = { version = "0.5", features = ["random"] }
+fuel-core = { version = "0.14", default-features = false, optional = true }
+fuel-crypto = { version = "0.6", features = ["random"] }
 # TODO(oleksii): bump fuel-gql-client for WASM support
-fuel-gql-client = { version = "0.9", default-features = false }
-fuels-core = { version = "0.16.1", path = "../fuels-core" }
+fuel-gql-client = { version = "0.14", default-features = false }
+fuel-types = { version = "0.5", default-features = false, features = ["random"] }
+fuels-core = { version = "0.31.0", path = "../fuels-core" }
+fuels-types = { version = "0.31.0", path = "../fuels-types" }
 hex = { version = "0.4.3", default-features = false, features = ["std"] }
 rand = { version = "0.8.4", default-features = false }
 serde = { version = "1.0.124", default-features = true, features = ["derive"] }
@@ -29,11 +29,10 @@ thiserror = { version = "1.0.30", default-features = false }
 tokio = { version = "1.10.1", default-features = false, features = ["rt", "macros"] }
 
 [dev-dependencies]
-fuel-types = { version = "0.5", default-features = false, features = ["random"] }
 fuels = { path = "../fuels" }
 fuels-test-helpers = { path = "../fuels-test-helpers", default-features = false }
 hex = { version = "0.4.3", default-features = false, features = ["std"] }
 tempfile = "3.3.0"
 
 [features]
-test-helpers = ["fuel-core/test-helpers", "fuel-core"]
+test-helpers = ["fuel-core"]
