@@ -231,7 +231,7 @@ async fn test_script_from_binary_filepath() -> Result<(), Error> {
     let script = Script::from_binary_filepath(path_to_bin, None, None, None, None)?;
     let return_val = script.call(&provider).await?;
 
-    let expected = 29879;
+    let expected = 44444;
     assert_eq!(return_val[0].val().unwrap(), expected);
     // ANCHOR_END: script_from_binary_filepath
     Ok(())
