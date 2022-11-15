@@ -667,8 +667,7 @@ async fn test_require() -> Result<(), Error> {
             .call()
             .await
             .expect_err("Should return a revert error");
-        dbg!(&error); //TODO: remove after the PR review
-                      //
+
         assert_is_revert_containing_msg("42", error);
     }
     {
@@ -677,7 +676,6 @@ async fn test_require() -> Result<(), Error> {
             .call()
             .await
             .expect_err("Should return a revert error");
-        dbg!(&error); //TODO: remove after the PR review
 
         assert_is_revert_containing_msg("fuel", error);
     }
@@ -687,7 +685,6 @@ async fn test_require() -> Result<(), Error> {
             .call()
             .await
             .expect_err("Should return a revert error");
-        dbg!(&error); //TODO: remove after the PR review
 
         assert_is_revert_containing_msg("StructDeeplyNestedGeneric", error);
     }
@@ -720,7 +717,6 @@ async fn test_multi_call_require() -> Result<(), Error> {
             .call::<((), ())>()
             .await
             .expect_err("Should return a revert error");
-        dbg!(&error); //TODO: remove after the PR review
 
         assert_is_revert_containing_msg("fuel", error);
     }
@@ -738,7 +734,6 @@ async fn test_multi_call_require() -> Result<(), Error> {
             .call::<((), ())>()
             .await
             .expect_err("Should return a revert error");
-        dbg!(&error); //TODO: remove after the PR review
 
         assert_is_revert_containing_msg("StructDeeplyNestedGeneric", error);
     }
