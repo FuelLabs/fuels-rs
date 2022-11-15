@@ -645,3 +645,95 @@ async fn contract_call_futures_implement_send() -> Result<(), Error> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn test_contract_set_estimation() -> Result<(), Error> {
+    setup_contract_test!(
+        foo_contract_instance,
+        wallet,
+        "packages/fuels/tests/contracts/foo_contract"
+    );
+    let foo_contract_id = foo_contract_instance.get_contract_id();
+
+    let res = foo_contract_instance.methods().foo(true).call().await?;
+    assert!(!res.value);
+
+    setup_contract_test!(
+        foo_caller_contract_instance,
+        None,
+        "packages/fuels/tests/contracts/foo_caller_contract"
+    );
+
+    let bits = *foo_contract_id.hash();
+
+    {
+        // Should fail due to missing external contracts
+        let res = foo_caller_contract_instance
+            .methods()
+            .call_foo_contract(Bits256(bits), true)
+            .call()
+            .await;
+        assert!(matches!(res, Err(Error::RevertTransactionError(..))));
+    }
+
+    let res = foo_caller_contract_instance
+        .methods()
+        .call_foo_contract(Bits256(bits), true)
+        .estimate_tx_dependencies(None)
+        .await?
+        .call()
+        .await?;
+
+    assert!(res.value);
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_output_variable_contract_id_estimation_multicall() -> Result<(), Error> {
+    setup_contract_test!(
+        foo_contract_instance,
+        wallet,
+        "packages/fuels/tests/contracts/foo_contract"
+    );
+
+    let foo_contract_id = foo_contract_instance.get_contract_id();
+
+    setup_contract_test!(
+        foo_caller_contract_instance,
+        None,
+        "packages/fuels/tests/contracts/foo_caller_contract"
+    );
+
+    setup_contract_test!(
+        contract_test_instance,
+        None,
+        "packages/fuels/tests/contracts/contract_test"
+    );
+
+    let bits = *foo_contract_id.hash();
+    let contract_methods = foo_caller_contract_instance.methods();
+
+    let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
+    multi_call_handler.tx_params(Default::default());
+
+    (0..3).for_each(|_| {
+        let call_handler = contract_methods.call_foo_contract(Bits256(bits), true);
+        multi_call_handler.add_call(call_handler);
+    });
+
+    // add call that does not need ContractId
+    let contract_methods = contract_test_instance.methods();
+    let call_handler = contract_methods.get(5, 6);
+
+    multi_call_handler.add_call(call_handler);
+
+    let call_response = multi_call_handler
+        .estimate_tx_dependencies(None)
+        .await?
+        .call::<(bool, bool, bool, u64)>()
+        .await?;
+
+    assert_eq!(call_response.value, (true, true, true, 5));
+
+    Ok(())
+}
