@@ -3,7 +3,7 @@ use std::io;
 #[cfg(feature = "fuel-core")]
 use fuel_core::service::{Config, FuelService};
 
-use fuel_gql_client::client::types::TransactionStatus;
+use fuel_gql_client::client::types::{TransactionStatus, TransactionResponse};
 use fuel_gql_client::interpreter::ExecutableTransaction;
 use fuel_gql_client::{
     client::{
@@ -19,7 +19,6 @@ use fuel_gql_client::{
 };
 use fuels_core::constants::{DEFAULT_GAS_ESTIMATION_TOLERANCE, MAX_GAS_PER_TX};
 use fuels_types::block::Block;
-use fuels_types::transaction_response::TransactionResponse;
 use std::collections::HashMap;
 use thiserror::Error;
 
@@ -346,8 +345,8 @@ impl Provider {
     pub async fn get_transaction_by_id(
         &self,
         tx_id: &str,
-    ) -> Result<Option<TransactionResponse>, ProviderError> {
-        Ok(self.client.transaction(tx_id).await?.map(Into::into))
+    ) -> Result<TransactionResponse, ProviderError> {
+        Ok(self.client.transaction(tx_id).await.unwrap().unwrap())
     }
 
     // - Get transaction(s)
@@ -355,14 +354,7 @@ impl Provider {
         &self,
         request: PaginationRequest<String>,
     ) -> Result<PaginatedResult<TransactionResponse, String>, ProviderError> {
-        let pr = self.client.transactions(request).await?;
-
-        Ok(PaginatedResult {
-            cursor: pr.cursor,
-            results: pr.results.into_iter().map(Into::into).collect(),
-            has_next_page: pr.has_next_page,
-            has_previous_page: pr.has_previous_page,
-        })
+        self.client.transactions(request).await.map_err(Into::into)
     }
 
     // Get transaction(s) by owner
@@ -371,17 +363,10 @@ impl Provider {
         owner: &Bech32Address,
         request: PaginationRequest<String>,
     ) -> Result<PaginatedResult<TransactionResponse, String>, ProviderError> {
-        let pr = self
-            .client
+        self.client
             .transactions_by_owner(&owner.hash().to_string(), request)
-            .await?;
-
-        Ok(PaginatedResult {
-            cursor: pr.cursor,
-            results: pr.results.into_iter().map(Into::into).collect(),
-            has_next_page: pr.has_next_page,
-            has_previous_page: pr.has_previous_page,
-        })
+            .await
+            .map_err(Into::into)
     }
 
     pub async fn latest_block_height(&self) -> Result<u64, ProviderError> {
