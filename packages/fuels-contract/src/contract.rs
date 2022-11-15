@@ -12,6 +12,7 @@ use fuel_gql_client::{
 };
 use fuel_tx::{Checkable, Create};
 
+use crate::execution_script::TransactionExecution;
 use fuels_core::abi_decoder::ABIDecoder;
 use fuels_core::abi_encoder::{ABIEncoder, UnresolvedBytes};
 use fuels_core::constants::FAILED_TRANSFER_TO_ADDRESS_SIGNAL;
@@ -30,8 +31,6 @@ use fuels_types::{
     errors::Error,
     param_types::{ParamType, ReturnLocation},
 };
-
-use crate::script::Script;
 
 pub const DEFAULT_TX_DEP_ESTIMATION_ATTEMPTS: u64 = 10;
 
@@ -557,7 +556,7 @@ where
         let receipts = if simulate {
             script.simulate(&self.provider).await?
         } else {
-            script.call(&self.provider).await?
+            script.execute(&self.provider).await?
         };
         tracing::debug!(target: "receipts", "{:?}", receipts);
 
@@ -565,8 +564,8 @@ where
     }
 
     /// Returns the script that executes the contract call
-    pub async fn get_call_execution_script(&self) -> Result<Script, Error> {
-        Script::from_contract_calls(
+    pub async fn get_call_execution_script(&self) -> Result<TransactionExecution, Error> {
+        TransactionExecution::from_contract_calls(
             std::slice::from_ref(&self.contract_call),
             &self.tx_parameters,
             &self.wallet,
@@ -677,12 +676,17 @@ impl MultiContractCallHandler {
     }
 
     /// Returns the script that executes the contract calls
-    pub async fn get_call_execution_script(&self) -> Result<Script, Error> {
+    pub async fn get_call_execution_script(&self) -> Result<TransactionExecution, Error> {
         if self.contract_calls.is_empty() {
             panic!("No calls added. Have you used '.add_calls()'?");
         }
 
-        Script::from_contract_calls(&self.contract_calls, &self.tx_parameters, &self.wallet).await
+        TransactionExecution::from_contract_calls(
+            &self.contract_calls,
+            &self.tx_parameters,
+            &self.wallet,
+        )
+        .await
     }
 
     /// Call contract methods on the node, in a state-modifying manner.
@@ -709,7 +713,7 @@ impl MultiContractCallHandler {
         let receipts = if simulate {
             script.simulate(provider).await?
         } else {
-            script.call(provider).await?
+            script.execute(provider).await?
         };
         tracing::debug!(target: "receipts", "{:?}", receipts);
 

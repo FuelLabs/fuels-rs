@@ -99,7 +99,7 @@ pub fn generate_script_main_function(
         pub async fn #name(&self #(,#arg_declarations)*) -> Result<#output_type, SDKError> {
             let arg_name_tokens = [#(#arg_names.into_token()),*];
             let script_data = ABIEncoder::encode(&arg_name_tokens)?.resolve(0);
-            let script = Script::from_binary_filepath(
+            let script = TransactionExecution::from_binary_filepath(
                 self.binary_filepath.as_str(),
                 Some(TxParameters::default()),
                 Some(script_data),
@@ -107,9 +107,9 @@ pub fn generate_script_main_function(
                 None // outputs
             )?;
             let provider = self.wallet.get_provider()?;
-            let mut receipts = script.call(&provider).await?;
+            // let mut receipts = script.call(&provider).await?;
             let output_token = get_decoded_output(
-                &mut receipts,
+                &mut vec![],
                 None,
                 &#output_params)?;
             Tokenizable::from_token(output_token)

@@ -1,6 +1,7 @@
 use anyhow::Result;
+use std::fmt::Debug;
 
-use fuel_gql_client::fuel_tx::{Input, Output, Receipt, Transaction};
+use fuel_gql_client::fuel_tx::{Receipt, Transaction};
 use fuel_gql_client::fuel_types::AssetId;
 
 use fuel_tx::{Checkable, ScriptExecutionResult};
@@ -18,61 +19,21 @@ use crate::contract_calls_utils::{
     get_instructions, get_transaction_inputs_outputs,
 };
 
-/// Script provides methods to create and a call/simulate a
-/// script transaction that carries out contract method calls
+/// TransactionExecution provides methods to create and a call/simulate a transaction that carries
+/// out contract method calls or script calls
 #[derive(Debug)]
-pub struct Script {
+pub struct TransactionExecution {
     pub tx: fuels_core::tx::Script,
 }
 
-impl Script {
+impl TransactionExecution {
     pub fn new(tx: fuels_core::tx::Script) -> Self {
         Self { tx }
     }
 
-    /// Creates a script from the script binary.
-    pub fn from_binary(
-        script_binary: Vec<u8>,
-        tx_params: TxParameters,
-        script_data: Option<Vec<u8>>,
-        inputs: Option<Vec<Input>>,
-        outputs: Option<Vec<Output>>,
-    ) -> Self {
-        let tx = Transaction::script(
-            tx_params.gas_price,
-            tx_params.gas_limit,
-            tx_params.maturity,
-            script_binary, // Pass the compiled script into the tx
-            script_data.unwrap_or_default(),
-            inputs.unwrap_or_default(),
-            outputs.unwrap_or_default(),
-            vec![vec![].into()],
-        );
-
-        Self::new(tx)
-    }
-
-    /// Creates a script from the binary located at `binary_filepath`.
-    pub fn from_binary_filepath(
-        binary_filepath: &str,
-        tx_params: Option<TxParameters>,
-        script_data: Option<Vec<u8>>,
-        inputs: Option<Vec<Input>>,
-        outputs: Option<Vec<Output>>,
-    ) -> Result<Self, Error> {
-        let script_binary = std::fs::read(binary_filepath)?;
-        Ok(Script::from_binary(
-            script_binary,
-            tx_params.unwrap_or_default(),
-            script_data,
-            inputs,
-            outputs,
-        ))
-    }
-
-    /// Creates a Script from a contract call. The internal Transaction is initialized
-    /// with the actual script instructions, script data needed to perform the call
-    /// and transaction inputs/outputs consisting of assets and contracts
+    /// Creates a TransactionExecution from contract calls. The internal Transaction is
+    /// initialized with the actual script instructions, script data needed to perform the call and
+    /// transaction inputs/outputs consisting of assets and contracts.
     pub async fn from_contract_calls(
         calls: &[ContractCall],
         tx_parameters: &TxParameters,
@@ -117,11 +78,11 @@ impl Script {
         }
         wallet.sign_transaction(&mut tx).await.unwrap();
 
-        Ok(Script::new(tx))
+        Ok(TransactionExecution::new(tx))
     }
 
     /// Execute the transaction in a state-modifying manner.
-    pub async fn call(&self, provider: &Provider) -> Result<Vec<Receipt>, Error> {
+    pub async fn execute(&self, provider: &Provider) -> Result<Vec<Receipt>, Error> {
         let chain_info = provider.chain_info().await?;
 
         self.tx.check_without_signatures(
@@ -151,5 +112,19 @@ impl Script {
         }
 
         Ok(receipts)
+    }
+}
+
+#[derive(Debug)]
+pub struct CompiledScript {
+    pub script_binary: Vec<u8>,
+}
+
+impl CompiledScript {
+    /// Creates a compiled script from the binary located at `binary_filepath`.
+    pub fn from_binary_filepath(binary_filepath: &str) -> Result<Self, Error> {
+        Ok(Self {
+            script_binary: std::fs::read(binary_filepath)?,
+        })
     }
 }

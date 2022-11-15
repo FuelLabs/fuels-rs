@@ -212,7 +212,6 @@ impl Abigen {
 
                 #includes
                 use fuels::core::abi_encoder::ABIEncoder;
-                use fuels::contract::script::Script;
                 use fuels::core::parameters::TxParameters;
 
                 #code
