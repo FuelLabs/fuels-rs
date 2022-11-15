@@ -96,23 +96,22 @@ pub fn generate_script_main_function(
 
     Ok(quote! {
         #doc
-        pub async fn #name(&self #(,#arg_declarations)*) -> Result<#output_type, SDKError> {
+        pub fn #name(&self #(,#arg_declarations)*) -> ScriptCallHandler<#output_type> {
             let arg_name_tokens = [#(#arg_names.into_token()),*];
-            let script_data = ABIEncoder::encode(&arg_name_tokens)?.resolve(0);
-            let script = TransactionExecution::from_binary_filepath(
-                self.binary_filepath.as_str(),
-                Some(TxParameters::default()),
-                Some(script_data),
-                None, // inputs
-                None // outputs
-            )?;
-            let provider = self.wallet.get_provider()?;
-            // let mut receipts = script.call(&provider).await?;
-            let output_token = get_decoded_output(
-                &mut vec![],
-                None,
-                &#output_params)?;
-            Tokenizable::from_token(output_token)
+            let script_data = ABIEncoder::encode(&arg_name_tokens).expect("Cannot encode script
+            arguments").resolve(0);
+            let compiled_script = CompiledScript::from_binary_filepath(self.binary_filepath
+                .as_str()).expect("Could not read from binary filepath");
+
+            ScriptCallHandler {
+                compiled_script,
+                script_data,
+                tx_parameters: TxParameters::default(),
+                wallet: self.wallet.clone(),
+                provider: self.wallet.get_provider().expect("Provider not set up").clone(),
+                output_param: #output_params,
+                datatype: PhantomData,
+            }
         }
     })
 }

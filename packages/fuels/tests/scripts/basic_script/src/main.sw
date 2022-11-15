@@ -1,9 +1,11 @@
 script;
 
-fn main(a: u64, b: u32) -> u64 {
+fn main(a: u64, b: u32) -> str[5] {
     if a < b {
-       33333
+        let my_string: str[5] = "hello";
+        my_string
     } else {
-       44444
+        let my_string: str[5] = "heyoo";
+        my_string
     }
 }
