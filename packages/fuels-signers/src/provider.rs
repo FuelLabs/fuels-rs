@@ -3,7 +3,7 @@ use std::io;
 #[cfg(feature = "fuel-core")]
 use fuel_core::service::{Config, FuelService};
 
-use fuel_gql_client::client::types::{TransactionStatus, TransactionResponse};
+use fuel_gql_client::client::types::{TransactionResponse, TransactionStatus};
 use fuel_gql_client::interpreter::ExecutableTransaction;
 use fuel_gql_client::{
     client::{
