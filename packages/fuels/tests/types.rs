@@ -1425,3 +1425,32 @@ async fn test_vector() -> Result<(), Error> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn test_b512() -> Result<(), Error> {
+    setup_contract_test!(contract_instance, wallet, "packages/fuels/tests/types/b512");
+    let contract_methods = contract_instance.methods();
+
+    // ANCHOR: b512_example
+    let hi_bits = Bits256::from_hex_str(
+        "0xbd0c9b8792876713afa8bff383eebf31c43437823ed761cc3600d0016de5110c",
+    )?;
+    let lo_bits = Bits256::from_hex_str(
+        "0x44ac566bd156b4fc71a4a4cb2655d3dd360c695edb17dc3b64d611e122fea23d",
+    )?;
+    let b512 = B512::from((hi_bits, lo_bits));
+    // ANCHOR_END: b512_example
+
+    assert_eq!(b512, contract_methods.b512_as_output().call().await?.value);
+
+    {
+        let lo_bits2 = Bits256::from_hex_str(
+            "0x54ac566bd156b4fc71a4a4cb2655d3dd360c695edb17dc3b64d611e122fea23d",
+        )?;
+        let b512 = B512::from((hi_bits, lo_bits2));
+
+        assert!(contract_methods.b512_as_input(b512).call().await?.value);
+    }
+
+    Ok(())
+}
