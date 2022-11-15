@@ -19,7 +19,7 @@ use fuel_gql_client::{
     fuel_vm::{consts::REG_ONE, prelude::Opcode},
 };
 use fuel_types::bytes::WORD_SIZE;
-use fuel_types::Address;
+use fuel_types::{Address, MessageId};
 use fuels_core::tx::{field, Chargeable, Script, Transaction, UniqueIdentifier};
 use fuels_core::{constants::BASE_ASSET_ID, parameters::TxParameters};
 use fuels_types::bech32::{Bech32Address, Bech32ContractId, FUEL_BECH32_HRP};
@@ -647,7 +647,7 @@ impl WalletUnlocked {
         to: &Bech32Address,
         amount: u64,
         tx_parameters: TxParameters,
-    ) -> Result<(String, Vec<Receipt>), Error> {
+    ) -> Result<(String, String, Vec<Receipt>), Error> {
         // TODO: can inputs consist of messages???
         let inputs = self
             .get_asset_inputs_for_amount(BASE_ASSET_ID, amount, 0)
@@ -662,7 +662,17 @@ impl WalletUnlocked {
 
         let receipts = self.get_provider()?.send_transaction(&tx).await?;
 
-        Ok((tx.id().to_string(), receipts))
+        let message_id = WalletUnlocked::extract_message_id(&receipts)
+            .expect("MessageId could not be retrieved from tx receipts.");
+
+        Ok((tx.id().to_string(), message_id.to_string(), receipts))
+    }
+
+    fn extract_message_id(receipts: &[Receipt]) -> Option<&MessageId> {
+        receipts
+            .iter()
+            .find(|r| matches!(r, Receipt::MessageOut { .. }))
+            .and_then(|m| m.message_id())
     }
 
     #[allow(clippy::too_many_arguments)]
