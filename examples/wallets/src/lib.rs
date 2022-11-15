@@ -340,18 +340,20 @@ mod tests {
 
         let wallet = launch_provider_and_get_wallet().await;
 
+        let amount = 1000;
         let base_layer_address = Bech32Address::from(Address::from([1; 32]));
         // Transfer an amount of 1000 to the specified base layer address
         let (tx_id, msg_id, _receipts) = wallet
-            .withdraw_to_base_layer(&base_layer_address, 1000, TxParameters::default())
+            .withdraw_to_base_layer(&base_layer_address, amount, TxParameters::default())
             .await?;
 
-        let output_message = wallet
+        let proof = wallet
             .get_provider()?
             .get_message_proof(&tx_id, &msg_id)
-            .await?;
+            .await?
+            .expect("The message proof could not be retrieved.");
 
-        assert!(output_message.is_some());
+        assert_eq!(proof.amount.0, amount);
 
         // ANCHOR_END: wallet_withdraw_to_base
         Ok(())
