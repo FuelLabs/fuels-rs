@@ -191,10 +191,9 @@ mod tests {
         let res = wallet_1
             .get_provider()?
             .get_transaction_by_id(&tx_id)
-            .await?
-            .expect("Transaction with id: {&tx_id} could not be found!");
+            .await?;
 
-        let script = res.transaction().as_script().cloned().unwrap();
+        let script = res.transaction.as_script().cloned().unwrap();
         assert_eq!(script.limit(), gas_limit);
         assert_eq!(script.price(), gas_price);
         assert_eq!(*script.maturity(), maturity);
