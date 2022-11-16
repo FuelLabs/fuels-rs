@@ -9,6 +9,7 @@ use lazy_static::lazy_static;
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 use regex::Regex;
+use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
 
 // Represents a type alongside its generic parameters. Can be converted into a
@@ -66,12 +67,12 @@ impl From<ResolvedType> for TokenStream {
 /// `TypeApplication`.
 pub(crate) fn resolve_type(
     type_application: &FullTypeApplication,
-    common_types: &[FullTypeDeclaration],
+    shared_types: &HashSet<FullTypeDeclaration>,
 ) -> Result<ResolvedType, Error> {
     let recursively_resolve = |type_applications: &Vec<FullTypeApplication>| {
         type_applications
             .iter()
-            .map(|type_application| resolve_type(type_application, common_types))
+            .map(|type_application| resolve_type(type_application, shared_types))
             .collect::<Result<Vec<_>, _>>()
             .expect("Failed to resolve types")
     };
@@ -92,7 +93,7 @@ pub(crate) fn resolve_type(
     ]
     .into_iter()
     .filter_map(|fun| {
-        let is_common = common_types.contains(base_type);
+        let is_common = shared_types.contains(base_type);
         fun(
             type_field,
             move || recursively_resolve(&base_type.components),
@@ -286,7 +287,7 @@ mod tests {
             ..Default::default()
         };
         let application = FullTypeApplication::from_counterpart(&type_application, &types);
-        let resolved_type = resolve_type(&application, &[])
+        let resolved_type = resolve_type(&application, &HashSet::default())
             .with_context(|| format!("failed to resolve {:?}", &type_application))?;
         let actual = TokenStream::from(&resolved_type).to_string();
         assert_eq!(actual, expected);

@@ -1216,30 +1216,34 @@ async fn test_identity_with_two_contracts() -> Result<(), Box<dyn std::error::Er
         "packages/fuels/tests/types/identity"
     );
 
-    setup_contract_test!(
-        contract_instance2,
-        None,
-        "packages/fuels/tests/types/identity"
-    );
-
     let expected_address =
         Address::from_str("0xd58573593432a30a800f97ad32f877425c223a9e427ab557aab5d5bb89156db0")?;
 
-    let response = contract_instance
-        .methods()
-        .input_identity(Identity::Address(expected_address))
-        .call()
-        .await?;
+    {
+        let response = contract_instance
+            .methods()
+            .input_identity(Identity::Address(expected_address))
+            .call()
+            .await?;
 
-    assert!(response.value);
+        assert!(response.value);
+    }
 
-    let response = contract_instance2
-        .methods()
-        .input_identity(Identity::Address(expected_address))
-        .call()
-        .await?;
+    {
+        setup_contract_test!(
+            contract_instance2,
+            None,
+            "packages/fuels/tests/types/identity"
+        );
 
-    assert!(response.value);
+        let response = contract_instance2
+            .methods()
+            .input_identity(Identity::Address(expected_address))
+            .call()
+            .await?;
+
+        assert!(response.value);
+    }
 
     Ok(())
 }

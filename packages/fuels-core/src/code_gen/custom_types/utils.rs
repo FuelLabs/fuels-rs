@@ -7,6 +7,7 @@ use fuels_types::utils::extract_generic_name;
 use inflector::Inflector;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
+use std::collections::HashSet;
 
 // Represents a component of either a struct(field name) or an enum(variant
 // name).
@@ -20,7 +21,7 @@ impl Component {
     pub fn new(
         component: &FullTypeApplication,
         snake_case: bool,
-        common_types: &[FullTypeDeclaration],
+        shared_types: &HashSet<FullTypeDeclaration>,
     ) -> anyhow::Result<Component> {
         let field_name = if snake_case {
             component.name.to_snake_case()
@@ -30,7 +31,7 @@ impl Component {
 
         Ok(Component {
             field_name: safe_ident(&field_name),
-            field_type: resolve_type(component, common_types)?,
+            field_type: resolve_type(component, shared_types)?,
         })
     }
 }
@@ -80,7 +81,7 @@ pub(crate) fn impl_try_from(ident: &Ident, generics: &[TokenStream]) -> TokenStr
 pub(crate) fn extract_components(
     type_decl: &FullTypeDeclaration,
     snake_case: bool,
-    common_types: &[FullTypeDeclaration],
+    shared_types: &HashSet<FullTypeDeclaration>,
 ) -> anyhow::Result<Vec<Component>> {
     let components = &type_decl.components;
 
@@ -93,7 +94,7 @@ pub(crate) fn extract_components(
 
     components
         .iter()
-        .map(|component| Component::new(component, snake_case, common_types))
+        .map(|component| Component::new(component, snake_case, shared_types))
         .collect()
 }
 
@@ -170,7 +171,7 @@ mod tests {
         let component = Component::new(
             &FullTypeApplication::from_counterpart(&type_application, &types),
             true,
-            &[],
+            &HashSet::default(),
         )?;
 
         assert_eq!(component.field_name, ident("some_name_here"));

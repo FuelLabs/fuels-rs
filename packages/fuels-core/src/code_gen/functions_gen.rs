@@ -8,6 +8,7 @@ use inflector::Inflector;
 use proc_macro2::TokenStream;
 use quote::quote;
 use resolved_type::resolve_type;
+use std::collections::HashSet;
 
 /// Functions used by the Abigen to expand functions defined in an ABI spec.
 
@@ -21,13 +22,13 @@ use resolved_type::resolve_type;
 /// [`Contract`]: crate::contract::Contract
 pub fn expand_function(
     function: &FullABIFunction,
-    common_types: &[FullTypeDeclaration],
+    shared_types: &HashSet<FullTypeDeclaration>,
 ) -> Result<TokenStream, Error> {
     if function.name.is_empty() {
         return Err(Error::InvalidData("Function name can not be empty".into()));
     }
 
-    let args = function_arguments(&function.inputs, common_types)?;
+    let args = function_arguments(&function.inputs, shared_types)?;
 
     let arg_names = args.iter().map(|component| &component.field_name);
 
@@ -47,7 +48,7 @@ pub fn expand_function(
     let name = safe_ident(&function.name);
     let name_stringified = name.to_string();
 
-    let output_type = resolve_fn_output_type(function, common_types)?;
+    let output_type = resolve_fn_output_type(function, shared_types)?;
 
     Ok(quote! {
         #doc
@@ -66,9 +67,9 @@ pub fn expand_function(
 
 fn resolve_fn_output_type(
     function: &FullABIFunction,
-    common_types: &[FullTypeDeclaration],
+    shared_types: &HashSet<FullTypeDeclaration>,
 ) -> Result<TokenStream, Error> {
-    let output_type = resolve_type(&function.output, common_types)?;
+    let output_type = resolve_type(&function.output, shared_types)?;
     if output_type.uses_vectors() {
         Err(Error::CompilationError(format!(
             "function '{}' contains a vector in its return type. This currently isn't supported.",
@@ -81,11 +82,11 @@ fn resolve_fn_output_type(
 
 fn function_arguments(
     inputs: &[FullTypeApplication],
-    common_types: &[FullTypeDeclaration],
+    shared_types: &HashSet<FullTypeDeclaration>,
 ) -> Result<Vec<Component>, Error> {
     inputs
         .iter()
-        .map(|input| Component::new(input, true, common_types))
+        .map(|input| Component::new(input, true, shared_types))
         .collect::<Result<Vec<_>, anyhow::Error>>()
         .map_err(|e| Error::InvalidType(e.to_string()))
 }
@@ -262,7 +263,7 @@ mod tests {
         // Grabbing the one and only function in it.
         let result = expand_function(
             &FullABIFunction::from_counterpart(&parsed_abi.functions[0], &types),
-            &[],
+            &HashSet::default(),
         )?;
 
         let expected_code = r#"
@@ -325,7 +326,7 @@ mod tests {
         .collect::<HashMap<_, _>>();
         let result = expand_function(
             &FullABIFunction::from_counterpart(&the_function, &types),
-            &[],
+            &HashSet::default(),
         );
         let expected = TokenStream::from_str(
             r#"
@@ -428,7 +429,7 @@ mod tests {
         .collect::<HashMap<_, _>>();
         let result = expand_function(
             &FullABIFunction::from_counterpart(&the_function, &types),
-            &[],
+            &HashSet::default(),
         );
         // Some more editing was required because it is not rustfmt-compatible (adding/removing parentheses or commas)
         let expected = TokenStream::from_str(
@@ -487,7 +488,7 @@ mod tests {
         .collect::<HashMap<_, _>>();
         let result = function_arguments(
             &FullABIFunction::from_counterpart(&the_function, &types).inputs,
-            &[],
+            &HashSet::default(),
         )?;
         let component = &result[0];
 
@@ -531,7 +532,7 @@ mod tests {
         .collect::<HashMap<_, _>>();
         let result = function_arguments(
             &FullABIFunction::from_counterpart(&the_function, &types).inputs,
-            &[],
+            &HashSet::default(),
         )?;
         let component = &result[0];
 
@@ -601,7 +602,7 @@ mod tests {
         .collect::<HashMap<_, _>>();
         let result = function_arguments(
             &FullABIFunction::from_counterpart(&function, &types).inputs,
-            &[],
+            &HashSet::default(),
         )?;
         assert_eq!(&result[0].field_name.to_string(), "bim_bam");
         assert_eq!(&result[0].field_type.to_string(), "CarMaker");
@@ -609,7 +610,7 @@ mod tests {
         function.inputs[0].type_id = 2;
         let result = function_arguments(
             &FullABIFunction::from_counterpart(&function, &types).inputs,
-            &[],
+            &HashSet::default(),
         )?;
         assert_eq!(&result[0].field_name.to_string(), "bim_bam");
         assert_eq!(&result[0].field_type.to_string(), "Cocktail");

@@ -1,6 +1,7 @@
 use super::utils::{
     extract_components, extract_generic_parameters, impl_try_from, param_type_calls, Component,
 };
+use crate::code_gen::abigen::{GeneratedCode, TypePath};
 use crate::code_gen::full_abi_types::FullTypeDeclaration;
 use crate::utils::ident;
 use core::result::Result;
@@ -9,17 +10,19 @@ use fuels_types::errors::Error;
 use fuels_types::utils::custom_type_name;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
+use std::collections::HashSet;
 
 /// Returns a TokenStream containing the declaration, `Parameterize`,
 /// `Tokenizable` and `TryFrom` implementations for the struct described by the
 /// given TypeDeclaration.
 pub fn expand_custom_struct(
     type_decl: &FullTypeDeclaration,
-    common_types: &[FullTypeDeclaration],
-) -> Result<TokenStream, Error> {
-    let struct_ident = ident(&custom_type_name(&type_decl.type_field)?);
+    shared_types: &HashSet<FullTypeDeclaration>,
+) -> Result<GeneratedCode, Error> {
+    let struct_name = custom_type_name(&type_decl.type_field)?;
+    let struct_ident = ident(&struct_name);
 
-    let components = extract_components(type_decl, true, common_types)?;
+    let components = extract_components(type_decl, true, shared_types)?;
     let generic_parameters = extract_generic_parameters(type_decl)?;
 
     let struct_decl = struct_decl(&struct_ident, &components, &generic_parameters);
@@ -31,7 +34,7 @@ pub fn expand_custom_struct(
 
     let try_from_impl = impl_try_from(&struct_ident, &generic_parameters);
 
-    Ok(quote! {
+    let code = quote! {
         #struct_decl
 
         #parameterized_impl
@@ -39,6 +42,12 @@ pub fn expand_custom_struct(
         #tokenizable_impl
 
         #try_from_impl
+    };
+    Ok(GeneratedCode {
+        code,
+        type_paths: HashSet::from(
+            [TypePath::new(&struct_name).expect("Struct name is not empty!")],
+        ),
     })
 }
 

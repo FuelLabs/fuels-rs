@@ -16,6 +16,7 @@ pub use utils::{param_type_calls, single_param_type_call, Component};
 // TODO(vnepveu): append extra `,` to last enum/struct field so it is aligned with rustfmt
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
     use std::{collections::HashMap, str::FromStr};
 
     use super::*;
@@ -66,8 +67,12 @@ mod tests {
         ]
         .into_iter()
         .collect::<HashMap<_, _>>();
-        let actual = expand_custom_enum(&FullTypeDeclaration::from_counterpart(&p, &types), &[])?
-            .to_string();
+        let actual = expand_custom_enum(
+            &FullTypeDeclaration::from_counterpart(&p, &types),
+            &HashSet::default(),
+        )?
+        .code
+        .to_string();
         let expected = TokenStream::from_str(
             r#"
             # [derive (Clone , Debug , Eq , PartialEq)] pub enum MatchaTea < > { LongIsland (u64) , MoscowMule (bool) } impl < > Parameterize for MatchaTea < > { fn param_type () -> ParamType { let mut param_types = vec ! [] ; param_types . push (< u64 > :: param_type ()) ; param_types . push (< bool > :: param_type ()) ; let variants = EnumVariants :: new (param_types) . unwrap_or_else (| _ | panic ! ("{} has no variants which isn't allowed!" , "MatchaTea")) ; ParamType :: Enum { variants , generics : vec ! [] } } } impl < > Tokenizable for MatchaTea < > { fn from_token (token : Token) -> Result < Self , SDKError > where Self : Sized , { let gen_err = | msg | { SDKError :: InvalidData (format ! ("Error while instantiating {} from token! {}" , "MatchaTea" , msg)) } ; match token { Token :: Enum (selector) => { let (discriminant , variant_token , _) = * selector ; match discriminant { 0u8 => Ok (Self :: LongIsland (< u64 > :: from_token (variant_token) ?)) , 1u8 => Ok (Self :: MoscowMule (< bool > :: from_token (variant_token) ?)) , _ => Err (gen_err (format ! ("Discriminant {} doesn't point to any of the enums variants." , discriminant))) , } } _ => Err (gen_err (format ! ("Given token ({}) is not of the type Token::Enum!" , token))) , } } fn into_token (self) -> Token { let (discriminant , token) = match self { Self :: LongIsland (inner) => (0u8 , inner . into_token ()) , Self :: MoscowMule (inner) => (1u8 , inner . into_token ()) } ; let variants = match Self :: param_type () { ParamType :: Enum { variants , .. } => variants , other => panic ! ("Calling {}::param_type() must return a ParamType::Enum but instead it returned: {:?}" , "MatchaTea" , other) } ; Token :: Enum (Box :: new ((discriminant , token , variants))) } } impl < > TryFrom < & [u8] > for MatchaTea < > { type Error = SDKError ; fn try_from (bytes : & [u8]) -> Result < Self , Self :: Error > { try_from_bytes (bytes) } } impl < > TryFrom < & Vec < u8 >> for MatchaTea < > { type Error = SDKError ; fn try_from (bytes : & Vec < u8 >) -> Result < Self , Self :: Error > { try_from_bytes (& bytes) } } impl < > TryFrom < Vec < u8 >> for MatchaTea < > { type Error = SDKError ; fn try_from (bytes : Vec < u8 >) -> Result < Self , Self :: Error > { try_from_bytes (& bytes) } }
@@ -89,9 +94,12 @@ mod tests {
         };
         let types = [(0, p.clone())].into_iter().collect::<HashMap<_, _>>();
 
-        let err = expand_custom_enum(&FullTypeDeclaration::from_counterpart(&p, &types), &[])
-            .err()
-            .ok_or_else(|| anyhow!("Was able to construct an enum without variants"))?;
+        let err = expand_custom_enum(
+            &FullTypeDeclaration::from_counterpart(&p, &types),
+            &HashSet::default(),
+        )
+        .err()
+        .ok_or_else(|| anyhow!("Was able to construct an enum without variants"))?;
 
         assert!(
             matches!(err, Error::ParseTokenStreamError(_)),
@@ -172,8 +180,12 @@ mod tests {
         ]
         .into_iter()
         .collect::<HashMap<_, _>>();
-        let actual = expand_custom_enum(&FullTypeDeclaration::from_counterpart(&p, &types), &[])?
-            .to_string();
+        let actual = expand_custom_enum(
+            &FullTypeDeclaration::from_counterpart(&p, &types),
+            &HashSet::default(),
+        )?
+        .code
+        .to_string();
         let expected = TokenStream::from_str(
             r#"
             # [derive (Clone , Debug , Eq , PartialEq)] pub enum Amsterdam < > { Infrastructure (Building) , Service (u32) } impl < > Parameterize for Amsterdam < > { fn param_type () -> ParamType { let mut param_types = vec ! [] ; param_types . push (< Building > :: param_type ()) ; param_types . push (< u32 > :: param_type ()) ; let variants = EnumVariants :: new (param_types) . unwrap_or_else (| _ | panic ! ("{} has no variants which isn't allowed!" , "Amsterdam")) ; ParamType :: Enum { variants , generics : vec ! [] } } } impl < > Tokenizable for Amsterdam < > { fn from_token (token : Token) -> Result < Self , SDKError > where Self : Sized , { let gen_err = | msg | { SDKError :: InvalidData (format ! ("Error while instantiating {} from token! {}" , "Amsterdam" , msg)) } ; match token { Token :: Enum (selector) => { let (discriminant , variant_token , _) = * selector ; match discriminant { 0u8 => Ok (Self :: Infrastructure (< Building > :: from_token (variant_token) ?)) , 1u8 => Ok (Self :: Service (< u32 > :: from_token (variant_token) ?)) , _ => Err (gen_err (format ! ("Discriminant {} doesn't point to any of the enums variants." , discriminant))) , } } _ => Err (gen_err (format ! ("Given token ({}) is not of the type Token::Enum!" , token))) , } } fn into_token (self) -> Token { let (discriminant , token) = match self { Self :: Infrastructure (inner) => (0u8 , inner . into_token ()) , Self :: Service (inner) => (1u8 , inner . into_token ()) } ; let variants = match Self :: param_type () { ParamType :: Enum { variants , .. } => variants , other => panic ! ("Calling {}::param_type() must return a ParamType::Enum but instead it returned: {:?}" , "Amsterdam" , other) } ; Token :: Enum (Box :: new ((discriminant , token , variants))) } } impl < > TryFrom < & [u8] > for Amsterdam < > { type Error = SDKError ; fn try_from (bytes : & [u8]) -> Result < Self , Self :: Error > { try_from_bytes (bytes) } } impl < > TryFrom < & Vec < u8 >> for Amsterdam < > { type Error = SDKError ; fn try_from (bytes : & Vec < u8 >) -> Result < Self , Self :: Error > { try_from_bytes (& bytes) } } impl < > TryFrom < Vec < u8 >> for Amsterdam < > { type Error = SDKError ; fn try_from (bytes : Vec < u8 >) -> Result < Self , Self :: Error > { try_from_bytes (& bytes) } }
@@ -222,8 +234,12 @@ mod tests {
         ]
         .into_iter()
         .collect::<HashMap<_, _>>();
-        let actual = expand_custom_enum(&FullTypeDeclaration::from_counterpart(&p, &types), &[])?
-            .to_string();
+        let actual = expand_custom_enum(
+            &FullTypeDeclaration::from_counterpart(&p, &types),
+            &HashSet::default(),
+        )?
+        .code
+        .to_string();
         let expected = TokenStream::from_str(
             r#"
             # [derive (Clone , Debug , Eq , PartialEq)] pub enum SomeEnum < > { SomeArr ([u64 ; 7usize]) } impl < > Parameterize for SomeEnum < > { fn param_type () -> ParamType { let mut param_types = vec ! [] ; param_types . push (< [u64 ; 7usize] > :: param_type ()) ; let variants = EnumVariants :: new (param_types) . unwrap_or_else (| _ | panic ! ("{} has no variants which isn't allowed!" , "SomeEnum")) ; ParamType :: Enum { variants , generics : vec ! [] } } } impl < > Tokenizable for SomeEnum < > { fn from_token (token : Token) -> Result < Self , SDKError > where Self : Sized , { let gen_err = | msg | { SDKError :: InvalidData (format ! ("Error while instantiating {} from token! {}" , "SomeEnum" , msg)) } ; match token { Token :: Enum (selector) => { let (discriminant , variant_token , _) = * selector ; match discriminant { 0u8 => Ok (Self :: SomeArr (< [u64 ; 7usize] > :: from_token (variant_token) ?)) , _ => Err (gen_err (format ! ("Discriminant {} doesn't point to any of the enums variants." , discriminant))) , } } _ => Err (gen_err (format ! ("Given token ({}) is not of the type Token::Enum!" , token))) , } } fn into_token (self) -> Token { let (discriminant , token) = match self { Self :: SomeArr (inner) => (0u8 , inner . into_token ()) } ; let variants = match Self :: param_type () { ParamType :: Enum { variants , .. } => variants , other => panic ! ("Calling {}::param_type() must return a ParamType::Enum but instead it returned: {:?}" , "SomeEnum" , other) } ; Token :: Enum (Box :: new ((discriminant , token , variants))) } } impl < > TryFrom < & [u8] > for SomeEnum < > { type Error = SDKError ; fn try_from (bytes : & [u8]) -> Result < Self , Self :: Error > { try_from_bytes (bytes) } } impl < > TryFrom < & Vec < u8 >> for SomeEnum < > { type Error = SDKError ; fn try_from (bytes : & Vec < u8 >) -> Result < Self , Self :: Error > { try_from_bytes (& bytes) } } impl < > TryFrom < Vec < u8 >> for SomeEnum < > { type Error = SDKError ; fn try_from (bytes : Vec < u8 >) -> Result < Self , Self :: Error > { try_from_bytes (& bytes) } }
@@ -285,8 +301,12 @@ mod tests {
         ]
         .into_iter()
         .collect::<HashMap<_, _>>();
-        let actual = expand_custom_enum(&FullTypeDeclaration::from_counterpart(&p, &types), &[])?
-            .to_string();
+        let actual = expand_custom_enum(
+            &FullTypeDeclaration::from_counterpart(&p, &types),
+            &HashSet::default(),
+        )?
+        .code
+        .to_string();
         let expected = TokenStream::from_str(
             r#"
             # [derive (Clone , Debug , Eq , PartialEq)] pub enum EnumLevel3 < > { El2 (EnumLevel2) } impl < > Parameterize for EnumLevel3 < > { fn param_type () -> ParamType { let mut param_types = vec ! [] ; param_types . push (< EnumLevel2 > :: param_type ()) ; let variants = EnumVariants :: new (param_types) . unwrap_or_else (| _ | panic ! ("{} has no variants which isn't allowed!" , "EnumLevel3")) ; ParamType :: Enum { variants , generics : vec ! [] } } } impl < > Tokenizable for EnumLevel3 < > { fn from_token (token : Token) -> Result < Self , SDKError > where Self : Sized , { let gen_err = | msg | { SDKError :: InvalidData (format ! ("Error while instantiating {} from token! {}" , "EnumLevel3" , msg)) } ; match token { Token :: Enum (selector) => { let (discriminant , variant_token , _) = * selector ; match discriminant { 0u8 => Ok (Self :: El2 (< EnumLevel2 > :: from_token (variant_token) ?)) , _ => Err (gen_err (format ! ("Discriminant {} doesn't point to any of the enums variants." , discriminant))) , } } _ => Err (gen_err (format ! ("Given token ({}) is not of the type Token::Enum!" , token))) , } } fn into_token (self) -> Token { let (discriminant , token) = match self { Self :: El2 (inner) => (0u8 , inner . into_token ()) } ; let variants = match Self :: param_type () { ParamType :: Enum { variants , .. } => variants , other => panic ! ("Calling {}::param_type() must return a ParamType::Enum but instead it returned: {:?}" , "EnumLevel3" , other) } ; Token :: Enum (Box :: new ((discriminant , token , variants))) } } impl < > TryFrom < & [u8] > for EnumLevel3 < > { type Error = SDKError ; fn try_from (bytes : & [u8]) -> Result < Self , Self :: Error > { try_from_bytes (bytes) } } impl < > TryFrom < & Vec < u8 >> for EnumLevel3 < > { type Error = SDKError ; fn try_from (bytes : & Vec < u8 >) -> Result < Self , Self :: Error > { try_from_bytes (& bytes) } } impl < > TryFrom < Vec < u8 >> for EnumLevel3 < > { type Error = SDKError ; fn try_from (bytes : Vec < u8 >) -> Result < Self , Self :: Error > { try_from_bytes (& bytes) } }
@@ -349,8 +369,12 @@ mod tests {
         ]
         .into_iter()
         .collect::<HashMap<_, _>>();
-        let actual = expand_custom_struct(&FullTypeDeclaration::from_counterpart(&p, &types), &[])?
-            .to_string();
+        let actual = expand_custom_struct(
+            &FullTypeDeclaration::from_counterpart(&p, &types),
+            &HashSet::default(),
+        )?
+        .code
+        .to_string();
         let expected = TokenStream::from_str(
             r#"
             # [derive (Clone , Debug , Eq , PartialEq)] pub struct Cocktail < > { pub long_island : bool , pub cosmopolitan : u64 , pub mojito : u32 } impl < > Parameterize for Cocktail < > { fn param_type () -> ParamType { let mut types = Vec :: new () ; types . push (< bool > :: param_type ()) ; types . push (< u64 > :: param_type ()) ; types . push (< u32 > :: param_type ()) ; ParamType :: Struct { fields : types , generics : vec ! [] } } } impl < > Tokenizable for Cocktail < > { fn into_token (self) -> Token { let mut tokens = Vec :: new () ; tokens . push (self . long_island . into_token ()) ; tokens . push (self . cosmopolitan . into_token ()) ; tokens . push (self . mojito . into_token ()) ; Token :: Struct (tokens) } fn from_token (token : Token) -> Result < Self , SDKError > { match token { Token :: Struct (tokens) => { let mut tokens_iter = tokens . into_iter () ; let mut next_token = move || { tokens_iter . next () . ok_or_else (|| { SDKError :: InstantiationError (format ! ("Ran out of tokens before '{}' has finished construction!" , "Cocktail")) }) } ; Ok (Self { long_island : < bool > :: from_token (next_token () ?) ? , cosmopolitan : < u64 > :: from_token (next_token () ?) ? , mojito : < u32 > :: from_token (next_token () ?) ? , }) } , other => Err (SDKError :: InstantiationError (format ! ("Error while constructing '{}'. Expected token of type Token::Struct, got {:?}" , "Cocktail" , other))) , } } } impl < > TryFrom < & [u8] > for Cocktail < > { type Error = SDKError ; fn try_from (bytes : & [u8]) -> Result < Self , Self :: Error > { try_from_bytes (bytes) } } impl < > TryFrom < & Vec < u8 >> for Cocktail < > { type Error = SDKError ; fn try_from (bytes : & Vec < u8 >) -> Result < Self , Self :: Error > { try_from_bytes (& bytes) } } impl < > TryFrom < Vec < u8 >> for Cocktail < > { type Error = SDKError ; fn try_from (bytes : Vec < u8 >) -> Result < Self , Self :: Error > { try_from_bytes (& bytes) } }
@@ -371,9 +395,12 @@ mod tests {
         };
         let types = [(0, p.clone())].into_iter().collect::<HashMap<_, _>>();
 
-        let err = expand_custom_struct(&FullTypeDeclaration::from_counterpart(&p, &types), &[])
-            .err()
-            .ok_or_else(|| anyhow!("Was able to construct a struct without fields"))?;
+        let err = expand_custom_struct(
+            &FullTypeDeclaration::from_counterpart(&p, &types),
+            &HashSet::default(),
+        )
+        .err()
+        .ok_or_else(|| anyhow!("Was able to construct a struct without fields"))?;
 
         assert!(
             matches!(err, Error::ParseTokenStreamError(_)),
@@ -451,8 +478,12 @@ mod tests {
         ]
         .into_iter()
         .collect::<HashMap<_, _>>();
-        let actual = expand_custom_struct(&FullTypeDeclaration::from_counterpart(&p, &types), &[])?
-            .to_string();
+        let actual = expand_custom_struct(
+            &FullTypeDeclaration::from_counterpart(&p, &types),
+            &HashSet::default(),
+        )?
+        .code
+        .to_string();
         let expected = TokenStream::from_str(
             r#"
             # [derive (Clone , Debug , Eq , PartialEq)] pub struct Cocktail < > { pub long_island : Shaker , pub mojito : u32 } impl < > Parameterize for Cocktail < > { fn param_type () -> ParamType { let mut types = Vec :: new () ; types . push (< Shaker > :: param_type ()) ; types . push (< u32 > :: param_type ()) ; ParamType :: Struct { fields : types , generics : vec ! [] } } } impl < > Tokenizable for Cocktail < > { fn into_token (self) -> Token { let mut tokens = Vec :: new () ; tokens . push (self . long_island . into_token ()) ; tokens . push (self . mojito . into_token ()) ; Token :: Struct (tokens) } fn from_token (token : Token) -> Result < Self , SDKError > { match token { Token :: Struct (tokens) => { let mut tokens_iter = tokens . into_iter () ; let mut next_token = move || { tokens_iter . next () . ok_or_else (|| { SDKError :: InstantiationError (format ! ("Ran out of tokens before '{}' has finished construction!" , "Cocktail")) }) } ; Ok (Self { long_island : < Shaker > :: from_token (next_token () ?) ? , mojito : < u32 > :: from_token (next_token () ?) ? , }) } , other => Err (SDKError :: InstantiationError (format ! ("Error while constructing '{}'. Expected token of type Token::Struct, got {:?}" , "Cocktail" , other))) , } } } impl < > TryFrom < & [u8] > for Cocktail < > { type Error = SDKError ; fn try_from (bytes : & [u8]) -> Result < Self , Self :: Error > { try_from_bytes (bytes) } } impl < > TryFrom < & Vec < u8 >> for Cocktail < > { type Error = SDKError ; fn try_from (bytes : & Vec < u8 >) -> Result < Self , Self :: Error > { try_from_bytes (& bytes) } } impl < > TryFrom < Vec < u8 >> for Cocktail < > { type Error = SDKError ; fn try_from (bytes : Vec < u8 >) -> Result < Self , Self :: Error > { try_from_bytes (& bytes) } }
@@ -613,8 +644,12 @@ mod tests {
 
         let s1 = types.get(&2).unwrap();
 
-        let actual = expand_custom_struct(&FullTypeDeclaration::from_counterpart(s1, &types), &[])?
-            .to_string();
+        let actual = expand_custom_struct(
+            &FullTypeDeclaration::from_counterpart(s1, &types),
+            &HashSet::default(),
+        )?
+        .code
+        .to_string();
 
         let expected = TokenStream::from_str(
                 r#"
@@ -626,8 +661,12 @@ mod tests {
 
         let s2 = types.get(&3).unwrap();
 
-        let actual = expand_custom_struct(&FullTypeDeclaration::from_counterpart(s2, &types), &[])?
-            .to_string();
+        let actual = expand_custom_struct(
+            &FullTypeDeclaration::from_counterpart(s2, &types),
+            &HashSet::default(),
+        )?
+        .code
+        .to_string();
 
         let expected = TokenStream::from_str(
                 r#"

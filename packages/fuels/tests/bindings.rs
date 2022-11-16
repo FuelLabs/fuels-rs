@@ -1,6 +1,5 @@
 use fuels::core::abi_encoder::ABIEncoder;
 use fuels::prelude::*;
-use fuels_core::code_gen::abigen::Abigen;
 use sha2::{Digest, Sha256};
 use std::path::Path;
 use std::process::Command;
@@ -949,4 +948,35 @@ async fn shared_types_between_contracts() -> Result<(), Error> {
     //     .unwrap();
     //
     // Ok(())
+}
+#[test]
+fn something() {
+    let code = fuels_core::code_gen::abigen::Abigen::new(&[(
+        "MyContract".to_string(),
+        "tests/contracts/contract_test/out/debug/contract_test-abi.json",
+    )])
+    .unwrap()
+    .expand()
+    .unwrap()
+    .to_string();
+
+    let project_path = Path::new("/home/segfault_magnet/debug_abigen");
+    let src_file = project_path.join("src/lib.rs");
+    std::fs::write(&src_file, code).unwrap();
+
+    Command::new("rustfmt")
+        .args(["--edition", "2021", src_file.as_os_str().to_str().unwrap()])
+        .status()
+        .unwrap();
+
+    Command::new("cargo")
+        .current_dir(project_path)
+        .arg("check")
+        .status()
+        .unwrap();
+
+    abigen!(
+        MyContract,
+        "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
+    );
 }

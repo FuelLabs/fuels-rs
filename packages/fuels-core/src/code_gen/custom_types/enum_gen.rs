@@ -1,6 +1,7 @@
 use super::utils::{
     extract_components, extract_generic_parameters, impl_try_from, param_type_calls, Component,
 };
+use crate::code_gen::abigen::{GeneratedCode, TypePath};
 use crate::code_gen::full_abi_types::FullTypeDeclaration;
 use crate::utils::ident;
 use core::result::Result;
@@ -9,17 +10,19 @@ use fuels_types::errors::Error;
 use fuels_types::utils::custom_type_name;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
+use std::collections::HashSet;
 
 /// Returns a TokenStream containing the declaration, `Parameterize`,
 /// `Tokenizable` and `TryFrom` implementations for the enum described by the
 /// given TypeDeclaration.
 pub fn expand_custom_enum(
     type_decl: &FullTypeDeclaration,
-    common_types: &[FullTypeDeclaration],
-) -> Result<TokenStream, Error> {
-    let enum_ident = ident(&custom_type_name(&type_decl.type_field)?);
+    shared_types: &HashSet<FullTypeDeclaration>,
+) -> Result<GeneratedCode, Error> {
+    let enum_name = custom_type_name(&type_decl.type_field)?;
+    let enum_ident = ident(&enum_name);
 
-    let components = extract_components(type_decl, false, common_types)?;
+    let components = extract_components(type_decl, false, shared_types)?;
     let generics = extract_generic_parameters(type_decl)?;
 
     let enum_def = enum_decl(&enum_ident, &components, &generics);
@@ -27,7 +30,7 @@ pub fn expand_custom_enum(
     let tokenize_impl = enum_tokenizable_impl(&enum_ident, &components, &generics);
     let try_from = impl_try_from(&enum_ident, &generics);
 
-    Ok(quote! {
+    let code = quote! {
         #enum_def
 
         #parameterize_impl
@@ -35,6 +38,10 @@ pub fn expand_custom_enum(
         #tokenize_impl
 
         #try_from
+    };
+    Ok(GeneratedCode {
+        code,
+        type_paths: HashSet::from([TypePath::new(&enum_name).expect("Enum name is not empty!")]),
     })
 }
 
