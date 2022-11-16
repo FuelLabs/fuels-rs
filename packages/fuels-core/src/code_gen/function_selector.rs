@@ -57,9 +57,10 @@ fn resolve_arg(arg: &ParamType) -> String {
         ParamType::Enum {
             variants: fields,
             generics,
+            ..
         } => {
             let gen_params = resolve_args(generics);
-            let field_params = resolve_args(fields.param_types());
+            let field_params = resolve_args(&fields.param_types());
             let gen_params = if !gen_params.is_empty() {
                 format!("<{gen_params}>")
             } else {
@@ -155,9 +156,17 @@ mod tests {
 
     #[test]
     fn handles_enums() {
-        let variants = EnumVariants::new(vec![ParamType::U64, ParamType::U32]).unwrap();
+        let variants = EnumVariants::new(zip_w_unused_field_names(vec![
+            ParamType::U64,
+            ParamType::U32,
+        ]))
+        .unwrap();
         let generics = vec![ParamType::U32];
-        let inputs = [ParamType::Enum { variants, generics }];
+        let inputs = [ParamType::Enum {
+            name: "".to_string(),
+            variants,
+            generics,
+        }];
 
         let selector = resolve_fn_signature("some_fun", &inputs);
 
@@ -198,8 +207,12 @@ mod tests {
                 ParamType::Tuple(vec![
                     ParamType::Array(
                         Box::new(ParamType::Enum {
-                            variants: EnumVariants::new(vec![ParamType::U64, struct_c.clone()])
-                                .unwrap(),
+                            name: "".to_string(),
+                            variants: EnumVariants::new(zip_w_unused_field_names(vec![
+                                ParamType::U64,
+                                struct_c.clone(),
+                            ]))
+                            .unwrap(),
                             generics: vec![struct_c],
                         }),
                         1,

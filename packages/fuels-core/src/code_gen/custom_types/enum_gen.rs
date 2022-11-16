@@ -162,15 +162,25 @@ fn enum_parameterize_impl(
     generics: &[TokenStream],
 ) -> TokenStream {
     let param_type_calls = param_type_calls(components);
+    let variants = components
+        .iter()
+        .map(|component| {
+            let type_name = component.field_name.to_string();
+            quote! {#type_name.to_string()}
+        })
+        .zip(param_type_calls)
+        .map(|(type_name, param_type_call)| {
+            quote! {(#type_name, #param_type_call)}
+        });
     let enum_ident_stringified = enum_ident.to_string();
     quote! {
         impl<#(#generics: Parameterize + Tokenizable),*> Parameterize for #enum_ident <#(#generics),*> {
             fn param_type() -> ParamType {
-                let mut param_types = vec![];
-                #(param_types.push(#param_type_calls);)*
+                let mut variants = vec![];
+                #(variants.push(#variants);)*
 
-                let variants = EnumVariants::new(param_types).unwrap_or_else(|_| panic!("{} has no variants which isn't allowed!", #enum_ident_stringified));
-                ParamType::Enum{variants, generics: vec![#(#generics::param_type()),*]}
+                let variants = EnumVariants::new(variants).unwrap_or_else(|_| panic!("{} has no variants which isn't allowed!", #enum_ident_stringified));
+                ParamType::Enum{name: #enum_ident_stringified.to_string(), variants, generics: vec![#(#generics::param_type()),*]}
             }
         }
     }

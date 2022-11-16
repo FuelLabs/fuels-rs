@@ -5,11 +5,11 @@ use thiserror::Error as ThisError;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EnumVariants {
-    variants: Vec<ParamType>,
+    variants: Vec<(String, ParamType)>,
 }
 
 impl EnumVariants {
-    pub fn new(variants: Vec<ParamType>) -> Result<EnumVariants, NoVariants> {
+    pub fn new(variants: Vec<(String, ParamType)>) -> Result<EnumVariants, NoVariants> {
         if !variants.is_empty() {
             Ok(EnumVariants { variants })
         } else {
@@ -17,14 +17,40 @@ impl EnumVariants {
         }
     }
 
-    pub fn param_types(&self) -> &Vec<ParamType> {
+    pub fn variants(&self) -> &Vec<(String, ParamType)> {
         &self.variants
+    }
+    pub fn param_types(&self) -> Vec<ParamType> {
+        self.variants
+            .iter()
+            .map(|(_, param_type)| param_type)
+            .cloned()
+            .collect()
+    }
+
+    pub fn type_of_selected_variant(
+        &self,
+        discriminant: u8,
+    ) -> Result<ParamType, DiscriminantOutOfBounds> {
+        if discriminant >= self.variants.len() as u8 {
+            let msg = format!(
+                concat!(
+                    "Error while decoding an enum. The discriminant '{}' doesn't ",
+                    "point to any of the following variants: {:?}"
+                ),
+                discriminant,
+                self.param_types()
+            );
+            return Err(DiscriminantOutOfBounds { msg });
+        }
+
+        Ok(self.param_types().swap_remove(discriminant as usize))
     }
 
     pub fn only_units_inside(&self) -> bool {
         self.variants
             .iter()
-            .all(|variant| *variant == ParamType::Unit)
+            .all(|(_, variant)| *variant == ParamType::Unit)
     }
 
     /// Calculates how many WORDs are needed to encode an enum.
@@ -57,5 +83,16 @@ pub struct NoVariants;
 impl fmt::Display for NoVariants {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "An Enum must have variants!")
+    }
+}
+
+#[derive(ThisError, Debug)]
+pub struct DiscriminantOutOfBounds {
+    pub msg: String,
+}
+
+impl fmt::Display for DiscriminantOutOfBounds {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.msg)
     }
 }

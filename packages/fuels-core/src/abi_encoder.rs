@@ -181,8 +181,10 @@ impl ABIEncoder {
 
         // Enums that contain only Units as variants have only their discriminant encoded.
         if !variants.only_units_inside() {
-            let variant_param_type = Self::type_of_chosen_variant(discriminant, variants)?;
-            let padding_amount = variants.compute_padding_amount(variant_param_type);
+            let variant_param_type = variants
+                .type_of_selected_variant(*discriminant)
+                .map_err(|e| CodecError::InvalidData(e.msg))?;
+            let padding_amount = variants.compute_padding_amount(&variant_param_type);
 
             encoded_enum.push(Data::Inline(vec![0; padding_amount]));
 
@@ -195,25 +197,6 @@ impl ABIEncoder {
 
     fn encode_discriminant(discriminant: u8) -> Data {
         Self::encode_u8(discriminant)
-    }
-
-    fn type_of_chosen_variant<'a>(
-        discriminant: &u8,
-        variants: &'a EnumVariants,
-    ) -> Result<&'a ParamType, CodecError> {
-        variants
-            .param_types()
-            .get(*discriminant as usize)
-            .ok_or_else(|| {
-                let msg = format!(
-                    concat!(
-                        "Error while encoding an enum. The discriminant '{}' doesn't ",
-                        "point to any of the following variants: {:?}"
-                    ),
-                    discriminant, variants
-                );
-                CodecError::InvalidData(msg)
-            })
     }
 
     fn encode_vector(data: &[Token]) -> Result<Vec<Data>, CodecError> {
@@ -673,7 +656,10 @@ mod tests {
         //     x: u32,
         //     y: bool,
         // }
-        let params = EnumVariants::new(vec![ParamType::U32, ParamType::Bool])?;
+        let params = EnumVariants::new(zip_w_unused_field_names(vec![
+            ParamType::U32,
+            ParamType::Bool,
+        ]))?;
 
         // An `EnumSelector` indicating that we've chosen the first Enum variant,
         // whose value is 42 of the type ParamType::U32 and that the Enum could
@@ -706,7 +692,10 @@ mod tests {
         // Our enum has two variants: B256, and U64. So the enum will set aside
         // 256b of space or 4 WORDS because that is the space needed to fit the
         // largest variant(B256).
-        let enum_variants = EnumVariants::new(vec![ParamType::B256, ParamType::U64])?;
+        let enum_variants = EnumVariants::new(zip_w_unused_field_names(vec![
+            ParamType::B256,
+            ParamType::U64,
+        ]))?;
         let enum_selector = Box::new((1, Token::U64(42), enum_variants));
 
         let encoded = ABIEncoder::encode(slice::from_ref(&Token::Enum(enum_selector)))?.resolve(0);
@@ -734,7 +723,10 @@ mod tests {
             v2: str[10]
         }
          */
-        let deeper_enum_variants = EnumVariants::new(vec![ParamType::Bool, ParamType::String(10)])?;
+        let deeper_enum_variants = EnumVariants::new(zip_w_unused_field_names(vec![
+            ParamType::Bool,
+            ParamType::String(10),
+        ]))?;
         let deeper_enum_token = Token::String(StringToken::new("0123456789".into(), 10));
 
         let str_enc = vec![
@@ -754,6 +746,7 @@ mod tests {
             name: "".to_string(),
             fields: zip_w_unused_field_names(vec![
                 ParamType::Enum {
+                    name: "".to_string(),
                     variants: deeper_enum_variants.clone(),
                     generics: vec![],
                 },
@@ -776,8 +769,11 @@ mod tests {
         }
         */
 
-        let top_level_enum_variants =
-            EnumVariants::new(vec![struct_a_type, ParamType::Bool, ParamType::U64])?;
+        let top_level_enum_variants = EnumVariants::new(zip_w_unused_field_names(vec![
+            struct_a_type,
+            ParamType::Bool,
+            ParamType::U64,
+        ]))?;
         let top_level_enum_token =
             Token::Enum(Box::new((0, struct_a_token, top_level_enum_variants)));
         let top_lvl_discriminant_enc = vec![0x0; 8];
@@ -946,7 +942,10 @@ mod tests {
         let enum_selector = Box::new((
             1,
             Token::Unit,
-            EnumVariants::new(vec![ParamType::Unit, ParamType::Unit])?,
+            EnumVariants::new(zip_w_unused_field_names(vec![
+                ParamType::Unit,
+                ParamType::Unit,
+            ]))?,
         ));
 
         let actual = ABIEncoder::encode(&[Token::Enum(enum_selector)])?.resolve(0);
@@ -975,7 +974,10 @@ mod tests {
         let enum_selector = Box::new((
             1,
             Token::Unit,
-            EnumVariants::new(vec![ParamType::B256, ParamType::Unit])?,
+            EnumVariants::new(zip_w_unused_field_names(vec![
+                ParamType::B256,
+                ParamType::Unit,
+            ]))?,
         ));
 
         let actual = ABIEncoder::encode(&[Token::Enum(enum_selector)])?.resolve(0);
@@ -1043,10 +1045,10 @@ mod tests {
     fn a_vec_in_an_enum() -> Result<(), Error> {
         // arrange
         let offset = 40;
-        let variants = EnumVariants::new(vec![
+        let variants = EnumVariants::new(zip_w_unused_field_names(vec![
             ParamType::B256,
             ParamType::Vector(Box::new(ParamType::U64)),
-        ])?;
+        ]))?;
         let selector = (1, Token::Vector(vec![Token::U64(5)]), variants);
         let token = Token::Enum(Box::new(selector));
 
@@ -1084,7 +1086,10 @@ mod tests {
     fn an_enum_in_a_vec() -> Result<(), Error> {
         // arrange
         let offset = 40;
-        let variants = EnumVariants::new(vec![ParamType::B256, ParamType::U8])?;
+        let variants = EnumVariants::new(zip_w_unused_field_names(vec![
+            ParamType::B256,
+            ParamType::U8,
+        ]))?;
         let selector = (1, Token::U8(8), variants);
         let enum_token = Token::Enum(Box::new(selector));
 

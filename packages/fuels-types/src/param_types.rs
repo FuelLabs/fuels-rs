@@ -37,6 +37,7 @@ pub enum ParamType {
     },
     #[strum(disabled)]
     Enum {
+        name: String,
         variants: EnumVariants,
         generics: Vec<ParamType>,
     },
@@ -268,14 +269,12 @@ impl TryFrom<&Type> for ParamType {
 
 fn try_struct(the_type: &Type) -> Result<Option<ParamType>, Error> {
     let result = if has_struct_format(&the_type.type_field) {
-        let generics = to_param_types(&the_type.generic_params)?;
+        let generics = param_types(&the_type.generic_params)?;
 
-        let fields = to_param_types(&the_type.components)?;
+        let fields = param_types_w_names(&the_type.components)?;
         Some(ParamType::Struct {
             name: "not_used".to_string(),
-            fields: std::iter::repeat("not_used".to_string())
-                .zip(fields)
-                .collect(),
+            fields,
             generics,
         })
     } else {
@@ -294,7 +293,7 @@ fn try_vector(the_type: &Type) -> Result<Option<ParamType>, Error> {
             )));
         }
 
-        let vec_elem_type = to_param_types(&the_type.generic_params)?.remove(0);
+        let (_, vec_elem_type) = param_types_w_names(&the_type.generic_params)?.remove(0);
 
         return Ok(Some(ParamType::Vector(Box::new(vec_elem_type))));
     }
@@ -304,12 +303,16 @@ fn try_vector(the_type: &Type) -> Result<Option<ParamType>, Error> {
 
 fn try_enum(the_type: &Type) -> Result<Option<ParamType>, Error> {
     let result = if has_enum_format(&the_type.type_field) {
-        let generics = to_param_types(&the_type.generic_params)?;
+        let generics = param_types(&the_type.generic_params)?;
 
-        let components = to_param_types(&the_type.components)?;
+        let components = param_types_w_names(&the_type.components)?;
         let variants = EnumVariants::new(components)?;
 
-        Some(ParamType::Enum { variants, generics })
+        Some(ParamType::Enum {
+            name: "".to_string(),
+            variants,
+            generics,
+        })
     } else {
         None
     };
@@ -319,7 +322,7 @@ fn try_enum(the_type: &Type) -> Result<Option<ParamType>, Error> {
 
 fn try_tuple(the_type: &Type) -> Result<Option<ParamType>, Error> {
     let result = if has_tuple_format(&the_type.type_field) {
-        let tuple_elements = to_param_types(&the_type.components)?;
+        let tuple_elements = param_types(&the_type.components)?;
         Some(ParamType::Tuple(tuple_elements))
     } else {
         None
@@ -328,7 +331,13 @@ fn try_tuple(the_type: &Type) -> Result<Option<ParamType>, Error> {
     Ok(result)
 }
 
-fn to_param_types(coll: &[Type]) -> Result<Vec<ParamType>, Error> {
+fn param_types_w_names(coll: &[Type]) -> Result<Vec<(String, ParamType)>, Error> {
+    coll.iter()
+        .map(|e| Ok(("unused".to_string(), e.try_into()?)))
+        .collect()
+}
+
+fn param_types(coll: &[Type]) -> Result<Vec<ParamType>, Error> {
     coll.iter().map(|e| e.try_into()).collect()
 }
 
@@ -440,7 +449,11 @@ mod tests {
             generics: vec![],
         };
         let param = ParamType::Enum {
-            variants: EnumVariants::new(vec![ParamType::U32, inner_struct])?,
+            name: "".to_string(),
+            variants: EnumVariants::new(zip_w_unused_field_names(vec![
+                ParamType::U32,
+                inner_struct,
+            ]))?,
             generics: vec![],
         };
 
@@ -744,7 +757,8 @@ mod tests {
         assert_eq!(
             result,
             ParamType::Enum {
-                variants: EnumVariants::new(vec![ParamType::U8])?,
+                name: "".to_string(),
+                variants: EnumVariants::new(zip_w_unused_field_names(vec![ParamType::U8]))?,
                 generics: vec![ParamType::U8]
             }
         );
@@ -1161,10 +1175,11 @@ mod tests {
                     ParamType::Vector(Box::from(ParamType::Tuple(vec![
                         ParamType::Array(
                             Box::from(ParamType::Enum {
-                                variants: EnumVariants::new(vec![
+                                name: "".to_string(),
+                                variants: EnumVariants::new(zip_w_unused_field_names(vec![
                                     ParamType::U64,
                                     struct_w_tuple_generic.clone(),
-                                ])
+                                ]))
                                 .unwrap(),
                                 generics: vec![struct_w_tuple_generic],
                             }),

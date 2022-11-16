@@ -214,11 +214,14 @@ impl ABIDecoder {
         let enum_width = variants.compute_encoding_width_of_enum();
 
         let discriminant = peek_u32(bytes)?;
-        let selected_variant = Self::type_of_selected_variant(variants, discriminant as usize)?;
+        let discriminant1 = discriminant as usize;
+        let selected_variant = variants
+            .type_of_selected_variant(discriminant1 as u8)
+            .map_err(|e| CodecError::InvalidData(e.msg))?;
 
         let words_to_skip = enum_width - selected_variant.compute_encoding_width();
         let enum_content_bytes = skip(bytes, words_to_skip * WORD_SIZE)?;
-        let result = Self::decode_token_in_enum(enum_content_bytes, variants, selected_variant)?;
+        let result = Self::decode_token_in_enum(enum_content_bytes, variants, &selected_variant)?;
 
         let selector = Box::new((discriminant as u8, result.token, variants.clone()));
         Ok(DecodeResult {
@@ -242,24 +245,6 @@ impl ABIDecoder {
         } else {
             Self::decode_param(selected_variant, bytes)
         }
-    }
-
-    /// Returns a variant from `variants` pointed to by `discriminant`.
-    /// Will fail if `discriminant` is out of bounds.
-    fn type_of_selected_variant(
-        variants: &EnumVariants,
-        discriminant: usize,
-    ) -> Result<&ParamType, CodecError> {
-        variants.param_types().get(discriminant).ok_or_else(|| {
-            let msg = format!(
-                concat!(
-                    "Error while decoding an enum. The discriminant '{}' doesn't ",
-                    "point to any of the following variants: {:?}"
-                ),
-                discriminant, variants
-            );
-            CodecError::InvalidData(msg)
-        })
     }
 }
 
@@ -470,8 +455,12 @@ mod tests {
         //     y: bool,
         // }
 
-        let inner_enum_types = EnumVariants::new(vec![ParamType::U32, ParamType::Bool])?;
+        let inner_enum_types = EnumVariants::new(zip_w_unused_field_names(vec![
+            ParamType::U32,
+            ParamType::Bool,
+        ]))?;
         let types = vec![ParamType::Enum {
+            name: "".to_string(),
             variants: inner_enum_types.clone(),
             generics: vec![],
         }];
@@ -500,12 +489,16 @@ mod tests {
         //     y: u32,
         // }
 
-        let inner_enum_types = EnumVariants::new(vec![ParamType::B256, ParamType::U32])?;
+        let inner_enum_types = EnumVariants::new(zip_w_unused_field_names(vec![
+            ParamType::B256,
+            ParamType::U32,
+        ]))?;
 
         let struct_type = ParamType::Struct {
             name: "".to_string(),
             fields: zip_w_unused_field_names(vec![
                 ParamType::Enum {
+                    name: "".to_string(),
                     variants: inner_enum_types.clone(),
                     generics: vec![],
                 },
@@ -687,8 +680,12 @@ mod tests {
     #[test]
     fn enums_with_all_unit_variants_are_decoded_from_one_word() -> Result<(), Error> {
         let data = [0, 0, 0, 0, 0, 0, 0, 1];
-        let variants = EnumVariants::new(vec![ParamType::Unit, ParamType::Unit])?;
+        let variants = EnumVariants::new(zip_w_unused_field_names(vec![
+            ParamType::Unit,
+            ParamType::Unit,
+        ]))?;
         let enum_w_only_units = ParamType::Enum {
+            name: "".to_string(),
             variants: variants.clone(),
             generics: vec![],
         };
@@ -703,8 +700,9 @@ mod tests {
     #[test]
     fn out_of_bounds_discriminant_is_detected() -> Result<(), Error> {
         let data = [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 2];
-        let variants = EnumVariants::new(vec![ParamType::U32])?;
+        let variants = EnumVariants::new(zip_w_unused_field_names(vec![ParamType::U32]))?;
         let enum_type = ParamType::Enum {
+            name: "".to_string(),
             variants,
             generics: vec![],
         };
