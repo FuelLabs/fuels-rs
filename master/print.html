@@ -781,7 +781,7 @@ coins and coin amount</p>
 <p>There are two intended ways to deploy a contract</p>
 <ul>
 <li><code>deploy</code></li>
-<li><code>deploy_with_salt</code></li>
+<li><code>deploy_with_parameters</code></li>
 </ul>
 <p>If you are only interested in a single instance of your contract, then use <code>deploy</code></p>
 <pre><code class="language-rust ignore">        // This will generate your contract's methods onto `MyContract`.
@@ -834,7 +834,7 @@ coins and coin amount</p>
 
         assert_eq!(52, response.value);
 </code></pre>
-<p>Alternatively, if you want multiple instances of the same contract then use <code>deploy_with_salt</code></p>
+<p>Alternatively, if you want multiple instances of the same contract then use <code>deploy_with_parameters</code> and set the salt parameter.</p>
 <pre><code class="language-rust ignore">        use fuels::prelude::*;
         use rand::prelude::{Rng, SeedableRng, StdRng};
 
