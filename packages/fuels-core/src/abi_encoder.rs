@@ -242,10 +242,15 @@ mod tests {
     use fuels_types::{errors::Error, param_types::ParamType};
     use itertools::chain;
     use sha2::{Digest, Sha256};
+    use std::iter::{repeat, zip};
     use std::slice;
 
     const VEC_METADATA_SIZE: usize = 3 * WORD_SIZE;
     const DISCRIMINANT_SIZE: usize = WORD_SIZE;
+
+    fn zip_w_unused_field_names(types: Vec<ParamType>) -> Vec<(String, ParamType)> {
+        zip(repeat("unused".to_string()), types).collect()
+    }
 
     #[test]
     fn encode_function_signature() {
@@ -746,13 +751,14 @@ mod tests {
          */
 
         let struct_a_type = ParamType::Struct {
-            fields: vec![
+            name: "".to_string(),
+            fields: zip_w_unused_field_names(vec![
                 ParamType::Enum {
                     variants: deeper_enum_variants.clone(),
                     generics: vec![],
                 },
                 ParamType::Bool,
-            ],
+            ]),
             generics: vec![],
         };
 

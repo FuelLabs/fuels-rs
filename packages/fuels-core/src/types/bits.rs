@@ -69,7 +69,8 @@ impl From<(Bits256, Bits256)> for B512 {
 impl Parameterize for B512 {
     fn param_type() -> ParamType {
         ParamType::Struct {
-            fields: vec![<[Bits256; 2usize]>::param_type()],
+            name: "B512".to_string(),
+            fields: vec![("bytes".to_string(), <[Bits256; 2usize]>::param_type())],
             generics: vec![],
         }
     }
@@ -131,7 +132,8 @@ impl From<Bits256> for EvmAddress {
 impl Parameterize for EvmAddress {
     fn param_type() -> ParamType {
         ParamType::Struct {
-            fields: vec![ParamType::B256],
+            name: "EvmAddress".to_string(),
+            fields: vec![("value".to_string(), ParamType::B256)],
             generics: vec![],
         }
     }
@@ -220,7 +222,8 @@ mod tests {
         assert_eq!(
             EvmAddress::param_type(),
             ParamType::Struct {
-                fields: vec![ParamType::B256],
+                name: "EvmAddress".to_string(),
+                fields: vec![("value".to_string(), ParamType::B256)],
                 generics: vec![]
             }
         );

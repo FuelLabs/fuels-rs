@@ -31,7 +31,8 @@ pub enum ParamType {
     String(usize),
     #[strum(disabled)]
     Struct {
-        fields: Vec<ParamType>,
+        name: String,
+        fields: Vec<(String, ParamType)>,
         generics: Vec<ParamType>,
     },
     #[strum(disabled)]
@@ -90,7 +91,7 @@ impl ParamType {
             ParamType::Array(param, count) => param.compute_encoding_width() * count,
             ParamType::String(len) => count_words(*len),
             ParamType::Struct { fields, .. } => {
-                fields.iter().map(|p| p.compute_encoding_width()).sum()
+                fields.iter().map(|(_, p)| p.compute_encoding_width()).sum()
             }
             ParamType::Enum { variants, .. } => variants.compute_encoding_width_of_enum(),
             ParamType::Tuple(params) => params.iter().map(|p| p.compute_encoding_width()).sum(),
@@ -270,7 +271,13 @@ fn try_struct(the_type: &Type) -> Result<Option<ParamType>, Error> {
         let generics = to_param_types(&the_type.generic_params)?;
 
         let fields = to_param_types(&the_type.components)?;
-        Some(ParamType::Struct { fields, generics })
+        Some(ParamType::Struct {
+            name: "not_used".to_string(),
+            fields: std::iter::repeat("not_used".to_string())
+                .zip(fields)
+                .collect(),
+            generics,
+        })
     } else {
         None
     };
@@ -378,6 +385,10 @@ mod tests {
     use super::*;
     use crate::param_types::ParamType;
 
+    fn zip_w_unused_field_names(types: Vec<ParamType>) -> Vec<(String, ParamType)> {
+        zip(std::iter::repeat("unused".to_string()), types).collect()
+    }
+
     #[test]
     fn array_size_dependent_on_num_of_elements() {
         const NUM_ELEMENTS: usize = 11;
@@ -403,12 +414,14 @@ mod tests {
     #[test]
     fn structs_are_just_all_elements_combined() {
         let inner_struct = ParamType::Struct {
-            fields: vec![ParamType::U32, ParamType::U32],
+            name: "".to_string(),
+            fields: zip_w_unused_field_names(vec![ParamType::U32, ParamType::U32]),
             generics: vec![],
         };
 
         let a_struct = ParamType::Struct {
-            fields: vec![ParamType::B256, ParamType::Bool, inner_struct],
+            name: "".to_string(),
+            fields: zip_w_unused_field_names(vec![ParamType::B256, ParamType::Bool, inner_struct]),
             generics: vec![],
         };
 
@@ -422,7 +435,8 @@ mod tests {
     #[test]
     fn enums_are_as_big_as_their_biggest_variant_plus_a_word() -> Result<(), Error> {
         let inner_struct = ParamType::Struct {
-            fields: vec![ParamType::B256],
+            name: "".to_string(),
+            fields: zip_w_unused_field_names(vec![ParamType::B256]),
             generics: vec![],
         };
         let param = ParamType::Enum {
@@ -671,7 +685,8 @@ mod tests {
         assert_eq!(
             result,
             ParamType::Struct {
-                fields: vec![ParamType::U8],
+                name: "".to_string(),
+                fields: zip_w_unused_field_names(vec![ParamType::U8]),
                 generics: vec![ParamType::U8]
             }
         );
@@ -1111,26 +1126,34 @@ mod tests {
         // then
         let expected_param_type = {
             let pass_the_generic_on = ParamType::Struct {
-                fields: vec![ParamType::Struct {
-                    fields: vec![ParamType::String(2)],
+                name: "".to_string(),
+                fields: zip_w_unused_field_names(vec![ParamType::Struct {
+                    name: "".to_string(),
+                    fields: zip_w_unused_field_names(vec![ParamType::String(2)]),
                     generics: vec![ParamType::String(2)],
-                }],
+                }]),
                 generics: vec![ParamType::String(2)],
             };
             let struct_w_array_generic = ParamType::Struct {
-                fields: vec![ParamType::Array(Box::from(pass_the_generic_on.clone()), 2)],
+                name: "".to_string(),
+                fields: zip_w_unused_field_names(vec![ParamType::Array(
+                    Box::from(pass_the_generic_on.clone()),
+                    2,
+                )]),
                 generics: vec![pass_the_generic_on],
             };
             let struct_w_tuple_generic = ParamType::Struct {
-                fields: vec![ParamType::Tuple(vec![
+                name: "".to_string(),
+                fields: zip_w_unused_field_names(vec![ParamType::Tuple(vec![
                     struct_w_array_generic.clone(),
                     struct_w_array_generic.clone(),
-                ])],
+                ])]),
                 generics: vec![struct_w_array_generic],
             };
 
             ParamType::Struct {
-                fields: vec![
+                name: "".to_string(),
+                fields: zip_w_unused_field_names(vec![
                     ParamType::Tuple(vec![
                         ParamType::Array(Box::from(ParamType::B256), 2),
                         ParamType::String(2),
@@ -1149,7 +1172,7 @@ mod tests {
                         ),
                         ParamType::U32,
                     ]))),
-                ],
+                ]),
                 generics: vec![ParamType::String(2), ParamType::B256],
             }
         };

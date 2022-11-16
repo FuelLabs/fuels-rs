@@ -19,7 +19,8 @@ impl<T: Parameterize> Parameterize for Vec<T> {
 impl Parameterize for Address {
     fn param_type() -> ParamType {
         ParamType::Struct {
-            fields: vec![ParamType::B256],
+            name: "Address".to_string(),
+            fields: vec![("0".to_string(), ParamType::B256)],
             generics: vec![],
         }
     }
@@ -28,7 +29,8 @@ impl Parameterize for Address {
 impl Parameterize for ContractId {
     fn param_type() -> ParamType {
         ParamType::Struct {
-            fields: vec![ParamType::B256],
+            name: "ContractId".to_string(),
+            fields: vec![("0".to_string(), ParamType::B256)],
             generics: vec![],
         }
     }
@@ -37,7 +39,8 @@ impl Parameterize for ContractId {
 impl Parameterize for AssetId {
     fn param_type() -> ParamType {
         ParamType::Struct {
-            fields: vec![ParamType::B256],
+            name: "AssetId".to_string(),
+            fields: vec![("0".to_string(), ParamType::B256)],
             generics: vec![],
         }
     }

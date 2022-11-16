@@ -1,6 +1,7 @@
 extern crate alloc;
 
 use fuels_abigen_macro::wasm_abigen;
+use std::iter::{repeat, zip};
 
 wasm_abigen!(
     no_name,
@@ -107,9 +108,14 @@ pub fn the_fn() {
         175,
     ];
 
+    fn zip_w_unused_field_names(types: Vec<ParamType>) -> Vec<(String, ParamType)> {
+        zip(repeat("unused".to_string()), types).collect()
+    }
+
     let obj = ABIDecoder::decode_single(
         &ParamType::Struct {
-            fields: vec![ParamType::U64, ParamType::B256],
+            name: "".to_string(),
+            fields: zip_w_unused_field_names(vec![ParamType::U64, ParamType::B256]),
             generics: vec![],
         },
         &data,

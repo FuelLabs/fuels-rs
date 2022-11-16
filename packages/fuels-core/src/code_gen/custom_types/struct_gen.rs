@@ -124,13 +124,23 @@ fn struct_parameterized_impl(
     struct_ident: &Ident,
     generic_parameters: &[TokenStream],
 ) -> TokenStream {
-    let param_type_calls = param_type_calls(components);
+    let field_name_w_param_type = components
+        .iter()
+        .map(|component| {
+            let field_name = component.field_name.to_string();
+            quote! {#field_name.to_string()}
+        })
+        .zip(param_type_calls(components))
+        .map(|(field_name, param_type_call)| {
+            quote! {(#field_name, #param_type_call)}
+        });
+    let struct_name_stringified = struct_ident.to_string();
     quote! {
         impl <#(#generic_parameters: Parameterize + Tokenizable),*> Parameterize for #struct_ident <#(#generic_parameters),*> {
             fn param_type() -> ParamType {
                 let mut types = Vec::new();
-                #( types.push(#param_type_calls); )*
-                ParamType::Struct{fields: types, generics: vec![#(#generic_parameters::param_type()),*]}
+                #( types.push(#field_name_w_param_type); )*
+                ParamType::Struct{name: #struct_name_stringified.to_string(), fields: types, generics: vec![#(#generic_parameters::param_type()),*]}
             }
         }
     }

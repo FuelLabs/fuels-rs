@@ -77,8 +77,17 @@ impl ABIDecoder {
         })
     }
 
-    fn decode_struct(param_types: &[ParamType], bytes: &[u8]) -> Result<DecodeResult, CodecError> {
-        let (tokens, bytes_read) = Self::decode_multiple(param_types, bytes)?;
+    fn decode_struct(
+        param_types: &Vec<(String, ParamType)>,
+        bytes: &[u8],
+    ) -> Result<DecodeResult, CodecError> {
+        let param_types = param_types
+            .iter()
+            .map(|(_, param_type)| param_type)
+            .cloned()
+            .collect::<Vec<_>>();
+
+        let (tokens, bytes_read) = Self::decode_multiple(&param_types, bytes)?;
 
         Ok(DecodeResult {
             token: Token::Struct(tokens),
@@ -320,9 +329,15 @@ fn skip(slice: &[u8], num_bytes: usize) -> Result<&[u8], CodecError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::iter::{repeat, zip};
+
     use fuels_types::enum_variants::EnumVariants;
     use fuels_types::errors::Error;
     use std::vec;
+
+    fn zip_w_unused_field_names(types: Vec<ParamType>) -> Vec<(String, ParamType)> {
+        zip(repeat("unused".to_string()), types).collect()
+    }
 
     #[test]
     fn decode_int() -> Result<(), Error> {
@@ -435,7 +450,8 @@ mod tests {
             0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
         ];
         let param_type = ParamType::Struct {
-            fields: vec![ParamType::U8, ParamType::Bool],
+            name: "".to_string(),
+            fields: zip_w_unused_field_names(vec![ParamType::U8, ParamType::Bool]),
             generics: vec![],
         };
 
@@ -487,13 +503,14 @@ mod tests {
         let inner_enum_types = EnumVariants::new(vec![ParamType::B256, ParamType::U32])?;
 
         let struct_type = ParamType::Struct {
-            fields: vec![
+            name: "".to_string(),
+            fields: zip_w_unused_field_names(vec![
                 ParamType::Enum {
                     variants: inner_enum_types.clone(),
                     generics: vec![],
                 },
                 ParamType::U32,
-            ],
+            ]),
             generics: vec![],
         };
 
@@ -535,16 +552,18 @@ mod tests {
         // }
 
         let nested_struct = ParamType::Struct {
-            fields: vec![
+            name: "".to_string(),
+            fields: zip_w_unused_field_names(vec![
                 ParamType::U16,
                 ParamType::Struct {
-                    fields: vec![
+                    name: "".to_string(),
+                    fields: zip_w_unused_field_names(vec![
                         ParamType::Bool,
                         ParamType::Array(Box::new(ParamType::U8), 2),
-                    ],
+                    ]),
                     generics: vec![],
                 },
-            ],
+            ]),
             generics: vec![],
         };
 
@@ -583,16 +602,18 @@ mod tests {
 
         // Parameters
         let nested_struct = ParamType::Struct {
-            fields: vec![
+            name: "".to_string(),
+            fields: zip_w_unused_field_names(vec![
                 ParamType::U16,
                 ParamType::Struct {
-                    fields: vec![
+                    name: "".to_string(),
+                    fields: zip_w_unused_field_names(vec![
                         ParamType::Bool,
                         ParamType::Array(Box::new(ParamType::U8), 2),
-                    ],
+                    ]),
                     generics: vec![],
                 },
-            ],
+            ]),
             generics: vec![],
         };
 
@@ -651,7 +672,8 @@ mod tests {
             0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
         ];
         let struct_type = ParamType::Struct {
-            fields: vec![ParamType::Unit, ParamType::U64],
+            name: "".to_string(),
+            fields: zip_w_unused_field_names(vec![ParamType::Unit, ParamType::U64]),
             generics: vec![],
         };
 

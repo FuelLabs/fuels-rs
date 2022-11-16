@@ -37,9 +37,16 @@ fn resolve_arg(arg: &ParamType) -> String {
             let inner = resolve_arg(internal_type);
             format!("a[{inner};{len}]")
         }
-        ParamType::Struct { fields, generics } => {
+        ParamType::Struct {
+            fields, generics, ..
+        } => {
             let gen_params = resolve_args(generics);
-            let field_params = resolve_args(fields);
+            let fields = fields
+                .iter()
+                .map(|(_, param_type)| param_type)
+                .cloned()
+                .collect::<Vec<_>>();
+            let field_params = resolve_args(&fields);
             let gen_params = if !gen_params.is_empty() {
                 format!("<{gen_params}>")
             } else {
@@ -75,6 +82,11 @@ fn resolve_arg(arg: &ParamType) -> String {
 mod tests {
     use super::*;
     use fuels_types::enum_variants::EnumVariants;
+    use std::iter::{repeat, zip};
+
+    fn zip_w_unused_field_names(types: Vec<ParamType>) -> Vec<(String, ParamType)> {
+        zip(repeat("unused".to_string()), types).collect()
+    }
 
     #[test]
     fn handles_primitive_types() {
@@ -119,9 +131,13 @@ mod tests {
 
     #[test]
     fn handles_structs() {
-        let fields = vec![ParamType::U64, ParamType::U32];
+        let fields = zip_w_unused_field_names(vec![ParamType::U64, ParamType::U32]);
         let generics = vec![ParamType::U32];
-        let inputs = [ParamType::Struct { fields, generics }];
+        let inputs = [ParamType::Struct {
+            name: "".to_string(),
+            fields,
+            generics,
+        }];
 
         let selector = resolve_fn_signature("some_fun", &inputs);
 
@@ -151,22 +167,30 @@ mod tests {
     #[test]
     fn ultimate_test() {
         let struct_a = ParamType::Struct {
-            fields: vec![ParamType::Struct {
-                fields: vec![ParamType::String(2)],
+            name: "".to_string(),
+            fields: zip_w_unused_field_names(vec![ParamType::Struct {
+                name: "".to_string(),
+                fields: zip_w_unused_field_names(vec![ParamType::String(2)]),
                 generics: vec![ParamType::String(2)],
-            }],
+            }]),
             generics: vec![ParamType::String(2)],
         };
         let struct_b = ParamType::Struct {
-            fields: vec![ParamType::Array(Box::new(struct_a.clone()), 2)],
+            name: "".to_string(),
+            fields: zip_w_unused_field_names(vec![ParamType::Array(Box::new(struct_a.clone()), 2)]),
             generics: vec![struct_a],
         };
         let struct_c = ParamType::Struct {
-            fields: vec![ParamType::Tuple(vec![struct_b.clone(), struct_b.clone()])],
+            name: "".to_string(),
+            fields: zip_w_unused_field_names(vec![ParamType::Tuple(vec![
+                struct_b.clone(),
+                struct_b.clone(),
+            ])]),
             generics: vec![struct_b],
         };
         let inputs = [ParamType::Struct {
-            fields: vec![
+            name: "".to_string(),
+            fields: zip_w_unused_field_names(vec![
                 ParamType::Tuple(vec![
                     ParamType::Array(Box::new(ParamType::B256), 2),
                     ParamType::String(2),
@@ -182,7 +206,7 @@ mod tests {
                     ),
                     ParamType::U32,
                 ]),
-            ],
+            ]),
             generics: vec![ParamType::String(2), ParamType::B256],
         }];
 
