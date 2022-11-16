@@ -13,7 +13,7 @@ Below is how you can deploy your contracts using the SDK. For more details about
 There are two intended ways to deploy a contract
 
 - `deploy`
-- `deploy_with_salt`
+- `deploy_with_parameters`
 
 If you are only interested in a single instance of your contract, then use `deploy`
 
@@ -27,7 +27,7 @@ You can then use the contract methods very simply:
 {{#include ../../../examples/contracts/src/lib.rs:use_deployed_contract}}
 ```
 
-Alternatively, if you want multiple instances of the same contract then use `deploy_with_salt`
+Alternatively, if you want multiple instances of the same contract then use `deploy_with_parameters` and set the salt parameter.
 
 ```rust,ignore
 {{#include ../../../examples/contracts/src/lib.rs:deploy_with_parameters}}

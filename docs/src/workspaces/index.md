@@ -1,1 +1,0 @@
-# fuels-rs Rust Workspaces
