@@ -192,7 +192,7 @@ async fn test_basic_script_with_tx_parameters() -> Result<(), Error> {
         ..Default::default()
     };
     let result = instance.main(a, b).tx_params(parameters).call().await?;
-    // ANCHOR: script_with_tx_params
+    // ANCHOR_END: script_with_tx_params
     assert_eq!(result.value, "hello");
 
     Ok(())
