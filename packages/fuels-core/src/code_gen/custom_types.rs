@@ -66,7 +66,7 @@ mod tests {
         ]
         .into_iter()
         .collect::<HashMap<_, _>>();
-        let actual = expand_custom_enum(&FullTypeDeclaration::from_counterpart(&p, &types), false)?
+        let actual = expand_custom_enum(&FullTypeDeclaration::from_counterpart(&p, &types), &[])?
             .to_string();
         let expected = TokenStream::from_str(
             r#"
@@ -89,7 +89,7 @@ mod tests {
         };
         let types = [(0, p.clone())].into_iter().collect::<HashMap<_, _>>();
 
-        let err = expand_custom_enum(&FullTypeDeclaration::from_counterpart(&p, &types), false)
+        let err = expand_custom_enum(&FullTypeDeclaration::from_counterpart(&p, &types), &[])
             .err()
             .ok_or_else(|| anyhow!("Was able to construct an enum without variants"))?;
 
@@ -172,7 +172,7 @@ mod tests {
         ]
         .into_iter()
         .collect::<HashMap<_, _>>();
-        let actual = expand_custom_enum(&FullTypeDeclaration::from_counterpart(&p, &types), false)?
+        let actual = expand_custom_enum(&FullTypeDeclaration::from_counterpart(&p, &types), &[])?
             .to_string();
         let expected = TokenStream::from_str(
             r#"
@@ -222,7 +222,7 @@ mod tests {
         ]
         .into_iter()
         .collect::<HashMap<_, _>>();
-        let actual = expand_custom_enum(&FullTypeDeclaration::from_counterpart(&p, &types), false)?
+        let actual = expand_custom_enum(&FullTypeDeclaration::from_counterpart(&p, &types), &[])?
             .to_string();
         let expected = TokenStream::from_str(
             r#"
@@ -285,7 +285,7 @@ mod tests {
         ]
         .into_iter()
         .collect::<HashMap<_, _>>();
-        let actual = expand_custom_enum(&FullTypeDeclaration::from_counterpart(&p, &types), false)?
+        let actual = expand_custom_enum(&FullTypeDeclaration::from_counterpart(&p, &types), &[])?
             .to_string();
         let expected = TokenStream::from_str(
             r#"
@@ -349,9 +349,8 @@ mod tests {
         ]
         .into_iter()
         .collect::<HashMap<_, _>>();
-        let actual =
-            expand_custom_struct(&FullTypeDeclaration::from_counterpart(&p, &types), false)?
-                .to_string();
+        let actual = expand_custom_struct(&FullTypeDeclaration::from_counterpart(&p, &types), &[])?
+            .to_string();
         let expected = TokenStream::from_str(
             r#"
             # [derive (Clone , Debug , Eq , PartialEq)] pub struct Cocktail < > { pub long_island : bool , pub cosmopolitan : u64 , pub mojito : u32 } impl < > Parameterize for Cocktail < > { fn param_type () -> ParamType { let mut types = Vec :: new () ; types . push (< bool > :: param_type ()) ; types . push (< u64 > :: param_type ()) ; types . push (< u32 > :: param_type ()) ; ParamType :: Struct { fields : types , generics : vec ! [] } } } impl < > Tokenizable for Cocktail < > { fn into_token (self) -> Token { let mut tokens = Vec :: new () ; tokens . push (self . long_island . into_token ()) ; tokens . push (self . cosmopolitan . into_token ()) ; tokens . push (self . mojito . into_token ()) ; Token :: Struct (tokens) } fn from_token (token : Token) -> Result < Self , SDKError > { match token { Token :: Struct (tokens) => { let mut tokens_iter = tokens . into_iter () ; let mut next_token = move || { tokens_iter . next () . ok_or_else (|| { SDKError :: InstantiationError (format ! ("Ran out of tokens before '{}' has finished construction!" , "Cocktail")) }) } ; Ok (Self { long_island : < bool > :: from_token (next_token () ?) ? , cosmopolitan : < u64 > :: from_token (next_token () ?) ? , mojito : < u32 > :: from_token (next_token () ?) ? , }) } , other => Err (SDKError :: InstantiationError (format ! ("Error while constructing '{}'. Expected token of type Token::Struct, got {:?}" , "Cocktail" , other))) , } } } impl < > TryFrom < & [u8] > for Cocktail < > { type Error = SDKError ; fn try_from (bytes : & [u8]) -> Result < Self , Self :: Error > { try_from_bytes (bytes) } } impl < > TryFrom < & Vec < u8 >> for Cocktail < > { type Error = SDKError ; fn try_from (bytes : & Vec < u8 >) -> Result < Self , Self :: Error > { try_from_bytes (& bytes) } } impl < > TryFrom < Vec < u8 >> for Cocktail < > { type Error = SDKError ; fn try_from (bytes : Vec < u8 >) -> Result < Self , Self :: Error > { try_from_bytes (& bytes) } }
@@ -372,7 +371,7 @@ mod tests {
         };
         let types = [(0, p.clone())].into_iter().collect::<HashMap<_, _>>();
 
-        let err = expand_custom_struct(&FullTypeDeclaration::from_counterpart(&p, &types), false)
+        let err = expand_custom_struct(&FullTypeDeclaration::from_counterpart(&p, &types), &[])
             .err()
             .ok_or_else(|| anyhow!("Was able to construct a struct without fields"))?;
 
@@ -452,9 +451,8 @@ mod tests {
         ]
         .into_iter()
         .collect::<HashMap<_, _>>();
-        let actual =
-            expand_custom_struct(&FullTypeDeclaration::from_counterpart(&p, &types), false)?
-                .to_string();
+        let actual = expand_custom_struct(&FullTypeDeclaration::from_counterpart(&p, &types), &[])?
+            .to_string();
         let expected = TokenStream::from_str(
             r#"
             # [derive (Clone , Debug , Eq , PartialEq)] pub struct Cocktail < > { pub long_island : Shaker , pub mojito : u32 } impl < > Parameterize for Cocktail < > { fn param_type () -> ParamType { let mut types = Vec :: new () ; types . push (< Shaker > :: param_type ()) ; types . push (< u32 > :: param_type ()) ; ParamType :: Struct { fields : types , generics : vec ! [] } } } impl < > Tokenizable for Cocktail < > { fn into_token (self) -> Token { let mut tokens = Vec :: new () ; tokens . push (self . long_island . into_token ()) ; tokens . push (self . mojito . into_token ()) ; Token :: Struct (tokens) } fn from_token (token : Token) -> Result < Self , SDKError > { match token { Token :: Struct (tokens) => { let mut tokens_iter = tokens . into_iter () ; let mut next_token = move || { tokens_iter . next () . ok_or_else (|| { SDKError :: InstantiationError (format ! ("Ran out of tokens before '{}' has finished construction!" , "Cocktail")) }) } ; Ok (Self { long_island : < Shaker > :: from_token (next_token () ?) ? , mojito : < u32 > :: from_token (next_token () ?) ? , }) } , other => Err (SDKError :: InstantiationError (format ! ("Error while constructing '{}'. Expected token of type Token::Struct, got {:?}" , "Cocktail" , other))) , } } } impl < > TryFrom < & [u8] > for Cocktail < > { type Error = SDKError ; fn try_from (bytes : & [u8]) -> Result < Self , Self :: Error > { try_from_bytes (bytes) } } impl < > TryFrom < & Vec < u8 >> for Cocktail < > { type Error = SDKError ; fn try_from (bytes : & Vec < u8 >) -> Result < Self , Self :: Error > { try_from_bytes (& bytes) } } impl < > TryFrom < Vec < u8 >> for Cocktail < > { type Error = SDKError ; fn try_from (bytes : Vec < u8 >) -> Result < Self , Self :: Error > { try_from_bytes (& bytes) } }
@@ -615,9 +613,8 @@ mod tests {
 
         let s1 = types.get(&2).unwrap();
 
-        let actual =
-            expand_custom_struct(&FullTypeDeclaration::from_counterpart(s1, &types), false)?
-                .to_string();
+        let actual = expand_custom_struct(&FullTypeDeclaration::from_counterpart(s1, &types), &[])?
+            .to_string();
 
         let expected = TokenStream::from_str(
                 r#"
@@ -629,9 +626,8 @@ mod tests {
 
         let s2 = types.get(&3).unwrap();
 
-        let actual =
-            expand_custom_struct(&FullTypeDeclaration::from_counterpart(s2, &types), false)?
-                .to_string();
+        let actual = expand_custom_struct(&FullTypeDeclaration::from_counterpart(s2, &types), &[])?
+            .to_string();
 
         let expected = TokenStream::from_str(
                 r#"

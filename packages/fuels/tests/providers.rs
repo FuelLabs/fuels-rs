@@ -1,8 +1,9 @@
-use fuel_core::service::{Config as CoreConfig, FuelService};
 use fuel_core_interfaces::model::Message;
-use fuel_gql_client::{client::schema::message::Message as OtherMessage, fuel_tx::Receipt};
+use fuels::client::schema::message::Message as OtherMessage;
+use fuels::fuel_node::{Config as CoreConfig, FuelService};
 use fuels::prelude::*;
-use fuels_signers::fuel_crypto::SecretKey;
+use fuels::signers::fuel_crypto::SecretKey;
+use fuels::tx::Receipt;
 use std::{iter, str::FromStr};
 
 #[tokio::test]

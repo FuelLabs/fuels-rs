@@ -2,6 +2,8 @@ use fuels::core::abi_encoder::ABIEncoder;
 use fuels::prelude::*;
 use fuels_core::code_gen::abigen::Abigen;
 use sha2::{Digest, Sha256};
+use std::path::Path;
+use std::process::Command;
 use std::{slice, str::FromStr};
 
 pub fn null_contract_id() -> Bech32ContractId {
@@ -802,15 +804,78 @@ async fn compile_bindings_enum_input() {
 }
 
 #[tokio::test]
-async fn shared_types_between_contracts() {
-    // abigen!(
-    //     ContractA,
-    //     "packages/fuels/tests/bindings/contracts_sharing_types/contract_a/out/debug/contract_a-abi.json",
-    //     ContractB,
-    //     "packages/fuels/tests/bindings/contracts_sharing_types/contract_b/out/debug/contract_b-abi.json",
-    // );
+async fn shared_types_between_contracts() -> Result<(), Error> {
+    mod contracts {
+        use super::*;
+        abigen!(
+            ContractA, "packages/fuels/tests/bindings/contracts_sharing_types/contract_a/out/debug/contract_a-abi.json",
+            ContractB, "packages/fuels/tests/bindings/contracts_sharing_types/contract_b/out/debug/contract_b-abi.json",
+        );
+    }
+    use contracts::*;
+    let wallet = launch_provider_and_get_wallet().await;
 
-    // Abigen::new(&[
+    let deploy_contract = |a_or_b: &str| {
+        let string = format!("tests/bindings/contracts_sharing_types/contract_{a_or_b}/out/debug/contract_{a_or_b}.bin");
+        let wallet = &wallet;
+        async move {
+            Contract::deploy(
+                &string,
+                wallet,
+                TxParameters::default(),
+                StorageConfiguration::default(),
+            )
+            .await
+        }
+    };
+
+    let contract_a = ContractA::new(deploy_contract("a").await?, wallet.clone());
+    {
+        let methods = contract_a.methods();
+
+        {
+            let shared_struct_2 = SharedStruct2 {
+                a: 11u32,
+                b: SharedStruct1 { a: 12u32 },
+            };
+            let shared_enum = SharedEnum::a(10u64);
+            let response = methods
+                .uses_shared_type(shared_struct_2.clone(), shared_enum.clone())
+                .call()
+                .await?
+                .value;
+
+            assert_eq!(response, (shared_struct_2, shared_enum));
+        }
+        {
+            let same_name_struct = contracta_mod::StructSameNameButDifferentInternals { a: 13 };
+            let same_name_enum = contracta_mod::EnumSameNameButDifferentInternals::a(14u32);
+            let response = methods
+                .uses_types_that_share_only_names(same_name_struct.clone(), same_name_enum.clone())
+                .call()
+                .await?
+                .value;
+            assert_eq!(response, (same_name_struct, same_name_enum));
+        }
+        {
+            let response = methods
+                .uses_shared_type_inside_owned_one(UniqueStructToContractA {
+                    a: SharedStruct2 {
+                        a: 15u32,
+                        b: SharedStruct1 { a: 5u8 },
+                    },
+                })
+                .call()
+                .await?
+                .value;
+        }
+    }
+
+    let contract_b = ContractA::new(deploy_contract("b").await?, wallet);
+
+    Ok(())
+
+    // let code = Abigen::new(&[
     //     (
     //         "ContractA".to_string(),
     //         "tests/bindings/contracts_sharing_types/contract_a/out/debug/contract_a-abi.json",
@@ -821,8 +886,24 @@ async fn shared_types_between_contracts() {
     //     ),
     // ])
     // .unwrap()
-    // .generate()
+    // .expand()
     // .unwrap()
-    // .write_to_file("/tmp/code.rs")
-    // .unwrap();
+    // .to_string();
+    //
+    // let project_path = Path::new("/home/segfault_magnet/debug_abigen");
+    // let src_file = project_path.join("src/lib.rs");
+    // std::fs::write(&src_file, code).unwrap();
+    //
+    // Command::new("rustfmt")
+    //     .args(["--edition", "2021", src_file.as_os_str().to_str().unwrap()])
+    //     .status()
+    //     .unwrap();
+    //
+    // Command::new("cargo")
+    //     .current_dir(project_path)
+    //     .arg("check")
+    //     .status()
+    //     .unwrap();
+    //
+    // Ok(())
 }

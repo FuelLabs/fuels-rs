@@ -27,7 +27,7 @@ pub fn expand_function(
         return Err(Error::InvalidData("Function name can not be empty".into()));
     }
 
-    let args = function_arguments(&function.inputs, &[])?;
+    let args = function_arguments(&function.inputs, common_types)?;
 
     let arg_names = args.iter().map(|component| &component.field_name);
 
@@ -51,11 +51,11 @@ pub fn expand_function(
 
     Ok(quote! {
         #doc
-        pub fn #name(&self #(,#arg_declarations)*) -> ContractCallHandler<#output_type> {
+        pub fn #name(&self #(,#arg_declarations)*) -> ::fuels::contract::contract::ContractCallHandler<#output_type> {
             let provider = self.wallet.get_provider().expect("Provider not set up");
-            let encoded_fn_selector = resolve_fn_selector(#name_stringified, &[#(#param_type_calls),*]);
-            let tokens = [#(#arg_names.into_token()),*];
-            Contract::method_hash(&provider,
+            let encoded_fn_selector = ::fuels::core::code_gen::function_selector::resolve_fn_selector(#name_stringified, &[#(#param_type_calls),*]);
+            let tokens = [#(::fuels::core::Tokenizable::into_token(#arg_names)),*];
+            ::fuels::contract::contract::Contract::method_hash(&provider,
                 self.contract_id.clone(),
                 &self.wallet,
                 encoded_fn_selector,
@@ -68,8 +68,7 @@ fn resolve_fn_output_type(
     function: &FullABIFunction,
     common_types: &[FullTypeDeclaration],
 ) -> Result<TokenStream, Error> {
-    let is_common = common_types.contains(&function.output.type_decl);
-    let output_type = resolve_type(&function.output, is_common)?;
+    let output_type = resolve_type(&function.output, common_types)?;
     if output_type.uses_vectors() {
         Err(Error::CompilationError(format!(
             "function '{}' contains a vector in its return type. This currently isn't supported.",
@@ -87,8 +86,7 @@ fn function_arguments(
     inputs
         .iter()
         .map(|input| {
-            let is_common = common_types.contains(&input.type_decl);
-            Component::new(input, true, is_common)
+            Component::new(input, true, common_types)
         })
         .collect::<Result<Vec<_>, anyhow::Error>>()
         .map_err(|e| Error::InvalidType(e.to_string()))

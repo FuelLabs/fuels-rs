@@ -1,4 +1,4 @@
-use crate::code_gen::full_abi_types::FullTypeApplication;
+use crate::code_gen::full_abi_types::{FullTypeApplication, FullTypeDeclaration};
 use crate::utils::{ident, safe_ident};
 use fuels_types::errors::Error;
 use fuels_types::utils::custom_type_name;
@@ -66,12 +66,12 @@ impl From<ResolvedType> for TokenStream {
 /// `TypeApplication`.
 pub(crate) fn resolve_type(
     type_application: &FullTypeApplication,
-    is_common: bool,
+    common_types: &[FullTypeDeclaration],
 ) -> Result<ResolvedType, Error> {
     let recursively_resolve = |type_applications: &Vec<FullTypeApplication>| {
         type_applications
             .iter()
-            .map(|type_application| resolve_type(type_application, is_common))
+            .map(|type_application| resolve_type(type_application, common_types))
             .collect::<Result<Vec<_>, _>>()
             .expect("Failed to resolve types")
     };
@@ -92,6 +92,7 @@ pub(crate) fn resolve_type(
     ]
     .into_iter()
     .filter_map(|fun| {
+        let is_common = common_types.contains(base_type);
         fun(
             type_field,
             move || recursively_resolve(&base_type.components),
@@ -154,7 +155,7 @@ fn to_sized_ascii_string(
     }];
 
     Some(ResolvedType {
-        type_name: quote! { SizedAsciiString },
+        type_name: quote! { ::fuels::core::types::SizedAsciiString },
         generic_params,
     })
 }
@@ -208,9 +209,8 @@ fn to_byte(
     _: bool,
 ) -> Option<ResolvedType> {
     if type_field == "byte" {
-        let type_name = quote! {Byte};
         Some(ResolvedType {
-            type_name,
+            type_name: quote! {::fuels::core::types::Byte},
             generic_params: vec![],
         })
     } else {
@@ -224,9 +224,8 @@ fn to_bits256(
     _: bool,
 ) -> Option<ResolvedType> {
     if type_field == "b256" {
-        let type_name = quote! {Bits256};
         Some(ResolvedType {
-            type_name,
+            type_name: quote! {::fuels::core::types::Bits256},
             generic_params: vec![],
         })
     } else {
@@ -242,18 +241,27 @@ fn to_custom_type(
 ) -> Option<ResolvedType> {
     custom_type_name(type_field)
         .ok()
-        .map(|type_name| ident(&type_name))
-        .map(|type_name| {
-            let tokens = type_name.into_token_stream();
-            let type_name = if is_common {
-                quote! {super::common::#tokens}
-            } else {
-                tokens
-            };
-            ResolvedType {
-                type_name,
-                generic_params: type_arguments_supplier(),
+        .map(|type_name| match type_name.as_str() {
+            "ContractId" => quote! {::fuels::core::types::ContractId},
+            "AssetId" => quote! {::fuels::core::types::AssetId},
+            "Address" => quote! {::fuels::core::types::Address},
+            "Identity" => quote! {::fuels::core::types::Identity},
+            "EvmAddress" => quote! {::fuels::core::types::EvmAddress},
+            "Option" => quote! {::std::option::Option},
+            "Result" => quote! {::std::result::Result},
+            "Vec" => quote! {::std::vec::Vec},
+            other => {
+                let custom_type_name = ident(other);
+                if is_common {
+                    quote! {super::shared_types::#custom_type_name}
+                } else {
+                    quote! {self::#custom_type_name}
+                }
             }
+        })
+        .map(|type_name| ResolvedType {
+            type_name,
+            generic_params: type_arguments_supplier(),
         })
 }
 
@@ -278,7 +286,7 @@ mod tests {
             ..Default::default()
         };
         let application = FullTypeApplication::from_counterpart(&type_application, &types);
-        let resolved_type = resolve_type(&application, false)
+        let resolved_type = resolve_type(&application, &[])
             .with_context(|| format!("failed to resolve {:?}", &type_application))?;
         let actual = TokenStream::from(&resolved_type).to_string();
         assert_eq!(actual, expected);

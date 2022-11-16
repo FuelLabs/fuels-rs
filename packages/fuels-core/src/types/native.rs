@@ -1,5 +1,5 @@
-use crate::{Bits256, Identity, Parameterize, Token, Tokenizable};
-use fuel_tx::{Address, AssetId, ContractId};
+use crate::{Bits256, Parameterize, Token, Tokenizable};
+pub use fuel_tx::{Address, AssetId, ContractId};
 use fuels_types::enum_variants::EnumVariants;
 use fuels_types::errors::Error;
 use fuels_types::param_types::ParamType;
@@ -532,4 +532,10 @@ impl<const SIZE: usize, T: Tokenizable> Tokenizable for [T; SIZE] {
     fn into_token(self) -> Token {
         Token::Array(self.map(Tokenizable::into_token).to_vec())
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Identity {
+    Address(fuel_tx::Address),
+    ContractId(fuel_tx::ContractId),
 }

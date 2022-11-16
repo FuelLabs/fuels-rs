@@ -20,7 +20,7 @@ impl Component {
     pub fn new(
         component: &FullTypeApplication,
         snake_case: bool,
-        is_common: bool,
+        common_types: &[FullTypeDeclaration],
     ) -> anyhow::Result<Component> {
         let field_name = if snake_case {
             component.name.to_snake_case()
@@ -30,7 +30,7 @@ impl Component {
 
         Ok(Component {
             field_name: safe_ident(&field_name),
-            field_type: resolve_type(component, is_common)?,
+            field_type: resolve_type(component, common_types)?,
         })
     }
 }
@@ -50,26 +50,26 @@ impl Component {
 /// &[u8], &Vec<u8> and a Vec<u8>
 pub(crate) fn impl_try_from(ident: &Ident, generics: &[TokenStream]) -> TokenStream {
     quote! {
-        impl<#(#generics: Tokenizable + Parameterize),*> TryFrom<&[u8]> for #ident<#(#generics),*> {
-            type Error = SDKError;
+        impl<#(#generics: ::fuels::core::Tokenizable + ::fuels::core::Parameterize),*> TryFrom<&[u8]> for self::#ident<#(#generics),*> {
+            type Error = ::fuels::types::errors::Error;
 
-            fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
-                try_from_bytes(bytes)
+            fn try_from(bytes: &[u8]) -> ::std::result::Result<Self, Self::Error> {
+                ::fuels::core::try_from_bytes(bytes)
             }
         }
-        impl<#(#generics: Tokenizable + Parameterize),*> TryFrom<&Vec<u8>> for #ident<#(#generics),*> {
-            type Error = SDKError;
+        impl<#(#generics: ::fuels::core::Tokenizable + ::fuels::core::Parameterize),*> TryFrom<&::std::vec::Vec<u8>> for self::#ident<#(#generics),*> {
+            type Error = ::fuels::types::errors::Error;
 
-            fn try_from(bytes: &Vec<u8>) -> Result<Self, Self::Error> {
-                try_from_bytes(&bytes)
+            fn try_from(bytes: &::std::vec::Vec<u8>) -> ::std::result::Result<Self, Self::Error> {
+                ::fuels::core::try_from_bytes(&bytes)
             }
         }
 
-        impl<#(#generics: Tokenizable + Parameterize),*> TryFrom<Vec<u8>> for #ident<#(#generics),*> {
-            type Error = SDKError;
+        impl<#(#generics: ::fuels::core::Tokenizable + ::fuels::core::Parameterize),*> TryFrom<::std::vec::Vec<u8>> for self::#ident<#(#generics),*> {
+            type Error = ::fuels::types::errors::Error;
 
-            fn try_from(bytes: Vec<u8>) -> Result<Self, Self::Error> {
-                try_from_bytes(&bytes)
+            fn try_from(bytes: ::std::vec::Vec<u8>) -> ::std::result::Result<Self, Self::Error> {
+                ::fuels::core::try_from_bytes(&bytes)
             }
         }
     }
@@ -80,7 +80,7 @@ pub(crate) fn impl_try_from(ident: &Ident, generics: &[TokenStream]) -> TokenStr
 pub(crate) fn extract_components(
     type_decl: &FullTypeDeclaration,
     snake_case: bool,
-    is_common: bool,
+    common_types: &[FullTypeDeclaration],
 ) -> anyhow::Result<Vec<Component>> {
     let components = &type_decl.components;
 
@@ -93,7 +93,7 @@ pub(crate) fn extract_components(
 
     components
         .iter()
-        .map(|component| Component::new(component, snake_case, is_common))
+        .map(|component| Component::new(component, snake_case, common_types))
         .collect()
 }
 
@@ -136,9 +136,9 @@ pub fn single_param_type_call(field_type: &ResolvedType) -> TokenStream {
         .map(TokenStream::from)
         .collect::<Vec<_>>();
     if parameters.is_empty() {
-        quote! { <#type_name>::param_type() }
+        quote! { <#type_name as ::fuels::core::Parameterize>::param_type() }
     } else {
-        quote! { #type_name::<#(#parameters),*>::param_type() }
+        quote! { <#type_name::<#(#parameters),*> as ::fuels::core::Parameterize>::param_type() }
     }
 }
 
@@ -170,7 +170,7 @@ mod tests {
         let component = Component::new(
             &FullTypeApplication::from_counterpart(&type_application, &types),
             true,
-            false,
+            &[],
         )?;
 
         assert_eq!(component.field_name, ident("some_name_here"));

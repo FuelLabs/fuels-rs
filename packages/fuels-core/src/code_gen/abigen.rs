@@ -1,5 +1,4 @@
 use std::collections::{HashMap, HashSet};
-use std::fmt::Debug;
 
 use crate::code_gen::bindings::ContractBindings;
 use crate::code_gen::full_abi_types::{FullABIFunction, FullLoggedType, FullTypeDeclaration};
@@ -13,7 +12,7 @@ use fuels_types::utils::custom_type_name;
 use fuels_types::{ProgramABI, ResolvedLog};
 use itertools::Itertools;
 use proc_macro2::{Ident, TokenStream};
-use quote::quote;
+use quote::{quote, ToTokens};
 
 use super::custom_types::{expand_custom_enum, expand_custom_struct, single_param_type_call};
 use super::functions_gen::expand_function;
@@ -38,6 +37,19 @@ pub struct Contract {
     pub logged_types: Vec<FullLoggedType>,
 }
 
+fn limited_std_prelude() -> TokenStream {
+    quote! {
+            use ::std::clone::Clone;
+            use ::std::iter::IntoIterator;
+            use ::std::panic;
+            use ::std::iter::Iterator;
+            use ::std::format;
+            use ::std::convert::{Into, TryFrom};
+            use ::std::vec;
+            use ::std::marker::Sized;
+    }
+}
+
 fn generate_custom_types(
     types: &[FullTypeDeclaration],
     common_types: &[FullTypeDeclaration],
@@ -49,29 +61,9 @@ fn generate_custom_types(
         .unique()
         .filter_map(|ttype| {
             if ttype.is_struct_type() {
-                Some(expand_custom_struct(ttype, false))
+                Some(expand_custom_struct(ttype, common_types))
             } else if ttype.is_enum_type() {
-                Some(expand_custom_enum(ttype, false))
-            } else {
-                None
-            }
-        })
-        .fold_ok(TokenStream::default(), |mut acc, stream| {
-            acc.extend(stream);
-            acc
-        })
-}
-
-fn generate_common_types(common_types: &[FullTypeDeclaration]) -> Result<TokenStream, Error> {
-    common_types
-        .iter()
-        .filter(|ttype| !Abigen::should_skip_codegen(&ttype.type_field))
-        .unique()
-        .filter_map(|ttype| {
-            if ttype.is_struct_type() {
-                Some(expand_custom_struct(ttype, true))
-            } else if ttype.is_enum_type() {
-                Some(expand_custom_enum(ttype, true))
+                Some(expand_custom_enum(ttype, common_types))
             } else {
                 None
             }
@@ -120,6 +112,13 @@ impl Contract {
         })
     }
 
+    pub fn mod_name(&self) -> Ident {
+        ident(&format!(
+            "{}_mod",
+            self.contract_name.to_string().to_lowercase()
+        ))
+    }
+
     /// The high-level goal of this function is to expand* a contract
     /// defined as a JSON into type-safe bindings of that contract that can be
     /// used after it is brought into scope after a successful generation.
@@ -135,10 +134,6 @@ impl Contract {
     ) -> Result<TokenStream, Error> {
         let name = &self.contract_name;
         let methods_name = ident(&format!("{}Methods", name));
-        let name_mod = ident(&format!(
-            "{}_mod",
-            self.contract_name.to_string().to_lowercase()
-        ));
 
         let contract_functions = self.functions(common_types)?;
 
@@ -146,113 +141,81 @@ impl Contract {
         let log_id_param_type_pairs = generate_log_id_param_type_pairs(&resolved_logs);
         let fetch_logs = generate_fetch_logs(&resolved_logs);
 
-        let (includes, code) = if no_std {
-            (
-                quote! {
-                    use alloc::{vec, vec::Vec};
-                    use fuels_core::{EnumSelector, Parameterize, Tokenizable, Token, Identity, try_from_bytes};
-                    use fuels_core::types::*;
-                    use fuels_core::code_gen::function_selector::resolve_fn_selector;
-                    use fuels_types::errors::Error as SDKError;
-                    use fuels_types::param_types::ParamType;
-                    use fuels_types::enum_variants::EnumVariants;
-                },
-                quote! {},
-            )
+        let code = if no_std {
+            quote! {}
         } else {
-            (
-                quote! {
-                    use fuels::contract::contract::{Contract, ContractCallHandler};
-                     use fuels::core::{EnumSelector, StringToken, Parameterize, Tokenizable, Token,
-                                      Identity, try_from_bytes};
-                    use fuels::core::code_gen::{extract_and_parse_logs, extract_log_ids_and_data};
-                    use fuels::core::abi_decoder::ABIDecoder;
-                    use fuels::core::code_gen::function_selector::resolve_fn_selector;
-                    use fuels::core::types::*;
-                    use fuels::signers::WalletUnlocked;
-                    use fuels::tx::{ContractId, Address, Receipt};
-                    use fuels::types::bech32::Bech32ContractId;
-                    use fuels::types::ResolvedLog;
-                    use fuels::types::errors::Error as SDKError;
-                    use fuels::types::param_types::ParamType;
-                    use fuels::types::enum_variants::EnumVariants;
-                    use std::str::FromStr;
-                    use std::collections::{HashSet, HashMap};
-                },
-                quote! {
-                    pub struct #name {
-                        contract_id: Bech32ContractId,
-                        wallet: WalletUnlocked,
-                        logs_lookup: Vec<(u64, ParamType)>,
+            quote! {
+                pub struct #name {
+                    contract_id: ::fuels::types::bech32::Bech32ContractId,
+                    wallet: ::fuels::signers::wallet::WalletUnlocked,
+                    logs_lookup: ::std::vec::Vec<(u64, ::fuels::types::param_types::ParamType)>,
+                }
+
+                impl #name {
+                    pub fn new(contract_id: ::fuels::types::bech32::Bech32ContractId, wallet: ::fuels::signers::wallet::WalletUnlocked) -> Self {
+                        Self { contract_id, wallet, logs_lookup: vec![#(#log_id_param_type_pairs),*]}
                     }
 
-                    impl #name {
-                        pub fn new(contract_id: Bech32ContractId, wallet: WalletUnlocked) -> Self {
-                            Self { contract_id, wallet, logs_lookup: vec![#(#log_id_param_type_pairs),*]}
-                        }
-
-                        pub fn get_contract_id(&self) -> &Bech32ContractId {
-                            &self.contract_id
-                        }
-
-                        pub fn get_wallet(&self) -> WalletUnlocked {
-                            self.wallet.clone()
-                        }
-
-                        pub fn with_wallet(&self, mut wallet: WalletUnlocked) -> Result<Self, SDKError> {
-                           let provider = self.wallet.get_provider()?;
-                           wallet.set_provider(provider.clone());
-
-                           Ok(Self { contract_id: self.contract_id.clone(), wallet: wallet, logs_lookup: self.logs_lookup.clone() })
-                        }
-
-                        pub async fn get_balances(&self) -> Result<HashMap<String, u64>, SDKError> {
-                            self.wallet.get_provider()?.get_contract_balances(&self.contract_id).await.map_err(Into::into)
-                        }
-
-                        pub fn logs_with_type<D: Tokenizable + Parameterize>(&self, receipts: &[Receipt]) -> Result<Vec<D>, SDKError> {
-                            extract_and_parse_logs(&self.logs_lookup, receipts)
-                        }
-
-                        #fetch_logs
-
-                        pub fn methods(&self) -> #methods_name {
-                            #methods_name {
-                                contract_id: self.contract_id.clone(),
-                                wallet: self.wallet.clone(),
-                            }
-                        }
+                    pub fn get_contract_id(&self) -> &::fuels::types::bech32::Bech32ContractId {
+                        &self.contract_id
                     }
 
-                    pub struct #methods_name {
-                        contract_id: Bech32ContractId,
-                        wallet: WalletUnlocked
+                    pub fn get_wallet(&self) -> ::fuels::signers::wallet::WalletUnlocked {
+                        self.wallet.clone()
                     }
 
-                    impl #methods_name {
-                        #contract_functions
+                    pub fn with_wallet(&self, mut wallet: ::fuels::signers::wallet::WalletUnlocked) -> ::std::result::Result<Self, ::fuels::types::errors::Error> {
+                       let provider = self.wallet.get_provider()?;
+                       wallet.set_provider(provider.clone());
+
+                       ::std::result::Result::Ok(Self { contract_id: self.contract_id.clone(), wallet: wallet, logs_lookup: self.logs_lookup.clone() })
                     }
-                },
-            )
+
+                    pub async fn get_balances(&self) -> ::std::result::Result<::std::collections::HashMap<::std::string::String, u64>, ::fuels::types::errors::Error> {
+                        self.wallet.get_provider()?.get_contract_balances(&self.contract_id).await.map_err(Into::into)
+                    }
+
+                    pub fn logs_with_type<D: ::fuels::core::Tokenizable + ::fuels::core::Parameterize>(&self, receipts: &[::fuels::tx::Receipt]) -> ::std::result::Result<::std::vec::Vec<D>, ::fuels::types::errors::Error> {
+                        ::fuels::core::code_gen::extract_and_parse_logs(&self.logs_lookup, receipts)
+                    }
+
+                    #fetch_logs
+
+                    pub fn methods(&self) -> #methods_name {
+                        #methods_name {
+                            contract_id: self.contract_id.clone(),
+                            wallet: self.wallet.clone(),
+                        }
+                    }
+                }
+
+                pub struct #methods_name {
+                    contract_id: ::fuels::types::bech32::Bech32ContractId,
+                    wallet: ::fuels::signers::wallet::WalletUnlocked
+                }
+
+                impl #methods_name {
+                    #contract_functions
+                }
+            }
         };
 
         let custom_types = generate_custom_types(&self.types, common_types)?;
+        let prelude = limited_std_prelude();
 
+        let name_mod = self.mod_name();
         Ok(quote! {
-            pub use #name_mod::*;
-
             #[allow(clippy::too_many_arguments)]
+            #[no_implicit_prelude]
             pub mod #name_mod {
-                #![allow(clippy::enum_variant_names)]
-                #![allow(dead_code)]
-                #![allow(unused_imports)]
-
-                #includes
+                #prelude
 
                 #custom_types
 
                 #code
             }
+
+            pub use #name_mod::{#name, #methods_name};
         })
     }
 
@@ -271,9 +234,8 @@ impl Contract {
         self.logged_types
             .iter()
             .map(|l| {
-                let is_common = common_types.contains(&l.application.type_decl);
                 let resolved_type =
-                    resolve_type(&l.application, is_common).expect("Failed to resolve log type");
+                    resolve_type(&l.application, common_types).expect("Failed to resolve log type");
                 let param_type_call = single_param_type_call(&resolved_type);
                 let resolved_type_name = TokenStream::from(resolved_type);
 
@@ -323,13 +285,51 @@ impl Abigen {
 
         let code = Self::generate_common_types(&common_types)?;
 
-        self.contracts
+        let code = self
+            .contracts
             .iter()
             .map(|contract| contract.expand(self.no_std, &common_types))
             .fold_ok(code, |mut acc, contract_stream| {
                 acc.extend(contract_stream);
                 acc
+            })?;
+
+        Ok(self
+            .contracts
+            .iter()
+            .flat_map(|contract| {
+                std::iter::repeat_with(|| contract.mod_name()).zip(&contract.types)
             })
+            .filter(|(_, ttype)| {
+                let should_use = (ttype.is_enum_type() || ttype.is_struct_type())
+                    && !Abigen::should_skip_codegen(&ttype.type_field);
+                eprintln!("Should use type {}: {should_use}", ttype.type_field);
+                should_use
+            })
+            .sorted_by(|(_, lhs_ttype), (_, rhs_ttype)| {
+                rhs_ttype.type_field.cmp(&lhs_ttype.type_field)
+            })
+            .group_by(|&(_, ttype)| &ttype.type_field)
+            .into_iter()
+            .filter_map(|(ttype, group)| {
+                let collected = group.collect::<Vec<_>>();
+                if collected.len() == 1 {
+                    Some((collected.into_iter().next().unwrap().0, ttype))
+                } else {
+                    None
+                }
+            })
+            .map(|(mod_name, type_field)| {
+                let custom_name: TokenStream =
+                    custom_type_name(&type_field).unwrap().parse().unwrap();
+                quote! {
+                    use #mod_name::#custom_name;
+                }
+            })
+            .fold(code, |mut acc, a| {
+                acc.extend(a);
+                acc
+            }))
     }
 
     fn generate_common_types(common_types: &[FullTypeDeclaration]) -> Result<TokenStream, Error> {
@@ -337,11 +337,33 @@ impl Abigen {
             return Ok(Default::default());
         }
 
-        let tokenized_common_types = generate_common_types(common_types)?;
+        let tokenized_common_types = common_types
+            .iter()
+            .filter(|ttype| !Abigen::should_skip_codegen(&ttype.type_field))
+            .unique()
+            .filter_map(|ttype| {
+                if ttype.is_struct_type() {
+                    Some(expand_custom_struct(ttype, common_types))
+                } else if ttype.is_enum_type() {
+                    Some(expand_custom_enum(ttype, common_types))
+                } else {
+                    None
+                }
+            })
+            .fold_ok(TokenStream::default(), |mut acc, stream| {
+                acc.extend(stream);
+                acc
+            })?;
+
+        let prelude = limited_std_prelude();
         Ok(quote! {
-            mod common {
+            #[no_implicit_prelude]
+            pub mod shared_types {
+                #prelude
+
                 #tokenized_common_types
             }
+            pub use shared_types::*;
         })
     }
 
@@ -370,6 +392,7 @@ impl Abigen {
 
         [
             "ContractId",
+            "AssetId",
             "Address",
             "Option",
             "Identity",
@@ -387,7 +410,7 @@ impl Abigen {
 pub fn generate_fetch_logs(resolved_logs: &[ResolvedLog]) -> TokenStream {
     let generate_method = |body: TokenStream| {
         quote! {
-            pub fn fetch_logs(&self, receipts: &[Receipt]) -> Vec<String> {
+            pub fn fetch_logs(&self, receipts: &[::fuels::tx::Receipt]) -> ::std::vec::Vec<::std::string::String> {
                 #body
             }
         }
@@ -400,11 +423,11 @@ pub fn generate_fetch_logs(resolved_logs: &[ResolvedLog]) -> TokenStream {
 
     let branches = generate_param_type_if_branches(resolved_logs);
     let body = quote! {
-        let id_to_param_type: HashMap<_, _> = self.logs_lookup
+        let id_to_param_type: ::std::collections::HashMap<_, _> = self.logs_lookup
             .iter()
             .map(|(id, param_type)| (id, param_type))
             .collect();
-        let ids_with_data = extract_log_ids_and_data(receipts);
+        let ids_with_data = ::fuels::core::code_gen::extract_log_ids_and_data(receipts);
 
         ids_with_data
         .iter()
@@ -434,7 +457,7 @@ fn generate_param_type_if_branches(resolved_logs: &[ResolvedLog]) -> Vec<TokenSt
                 if **param_type == #param_type_call {
                     return format!(
                         "{:#?}",
-                        try_from_bytes::<#type_name>(&data).expect("Failed to construct type from log data.")
+                        ::fuels::core::try_from_bytes::<#type_name>(&data).expect("Failed to construct type from log data.")
                     );
                 }
             }
