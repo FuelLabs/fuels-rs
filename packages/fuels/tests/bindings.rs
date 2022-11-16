@@ -829,8 +829,8 @@ async fn shared_types_between_contracts() -> Result<(), Error> {
         }
     };
 
-    let contract_a = ContractA::new(deploy_contract("a").await?, wallet.clone());
     {
+        let contract_a = ContractA::new(deploy_contract("a").await?, wallet.clone());
         let methods = contract_a.methods();
 
         {
@@ -848,7 +848,7 @@ async fn shared_types_between_contracts() -> Result<(), Error> {
             assert_eq!(response, (shared_struct_2, shared_enum));
         }
         {
-            let same_name_struct = contracta_mod::StructSameNameButDifferentInternals { a: 13 };
+            let same_name_struct = contracta_mod::StructSameNameButDifferentInternals { a: 13u32 };
             let same_name_enum = contracta_mod::EnumSameNameButDifferentInternals::a(14u32);
             let response = methods
                 .uses_types_that_share_only_names(same_name_struct.clone(), same_name_enum.clone())
@@ -858,20 +858,63 @@ async fn shared_types_between_contracts() -> Result<(), Error> {
             assert_eq!(response, (same_name_struct, same_name_enum));
         }
         {
+            let arg = UniqueStructToContractA {
+                a: SharedStruct2 {
+                    a: 15u32,
+                    b: SharedStruct1 { a: 5u8 },
+                },
+            };
             let response = methods
-                .uses_shared_type_inside_owned_one(UniqueStructToContractA {
-                    a: SharedStruct2 {
-                        a: 15u32,
-                        b: SharedStruct1 { a: 5u8 },
-                    },
-                })
+                .uses_shared_type_inside_owned_one(arg.clone())
                 .call()
                 .await?
                 .value;
+            assert_eq!(response, arg);
         }
     }
+    {
+        let contract_b = ContractB::new(deploy_contract("b").await?, wallet);
+        let methods = contract_b.methods();
 
-    let contract_b = ContractA::new(deploy_contract("b").await?, wallet);
+        {
+            let shared_struct_2 = SharedStruct2 {
+                a: 11u32,
+                b: SharedStruct1 { a: 12u32 },
+            };
+            let shared_enum = SharedEnum::a(10u64);
+            let response = methods
+                .uses_shared_type(shared_struct_2.clone(), shared_enum.clone())
+                .call()
+                .await?
+                .value;
+
+            assert_eq!(response, (shared_struct_2, shared_enum));
+        }
+        {
+            let same_name_struct = contractb_mod::StructSameNameButDifferentInternals { a: 13u64 };
+            let same_name_enum = contractb_mod::EnumSameNameButDifferentInternals::a(14u64);
+            let response = methods
+                .uses_types_that_share_only_names(same_name_struct.clone(), same_name_enum.clone())
+                .call()
+                .await?
+                .value;
+            assert_eq!(response, (same_name_struct, same_name_enum));
+        }
+        {
+            let arg = UniqueStructToContractB {
+                a: SharedStruct2 {
+                    a: 15u32,
+                    b: SharedStruct1 { a: 5u8 },
+                },
+            };
+            let response = methods
+                .uses_shared_type_inside_owned_one(arg.clone())
+                .call()
+                .await?
+                .value;
+            assert_eq!(response, arg);
+        }
+    }
 
     Ok(())
 

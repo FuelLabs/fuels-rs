@@ -301,10 +301,8 @@ impl Abigen {
                 std::iter::repeat_with(|| contract.mod_name()).zip(&contract.types)
             })
             .filter(|(_, ttype)| {
-                let should_use = (ttype.is_enum_type() || ttype.is_struct_type())
-                    && !Abigen::should_skip_codegen(&ttype.type_field);
-                eprintln!("Should use type {}: {should_use}", ttype.type_field);
-                should_use
+                (ttype.is_enum_type() || ttype.is_struct_type())
+                    && !Abigen::should_skip_codegen(&ttype.type_field)
             })
             .sorted_by(|(_, lhs_ttype), (_, rhs_ttype)| {
                 rhs_ttype.type_field.cmp(&lhs_ttype.type_field)
@@ -323,7 +321,7 @@ impl Abigen {
                 let custom_name: TokenStream =
                     custom_type_name(&type_field).unwrap().parse().unwrap();
                 quote! {
-                    use #mod_name::#custom_name;
+                    pub use #mod_name::#custom_name;
                 }
             })
             .fold(code, |mut acc, a| {

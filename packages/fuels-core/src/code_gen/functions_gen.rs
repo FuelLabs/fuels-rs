@@ -85,9 +85,7 @@ fn function_arguments(
 ) -> Result<Vec<Component>, Error> {
     inputs
         .iter()
-        .map(|input| {
-            Component::new(input, true, common_types)
-        })
+        .map(|input| Component::new(input, true, common_types))
         .collect::<Result<Vec<_>, anyhow::Error>>()
         .map_err(|e| Error::InvalidType(e.to_string()))
 }
