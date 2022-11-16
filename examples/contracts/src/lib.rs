@@ -131,7 +131,7 @@ mod tests {
             .await?;
         // ANCHOR_END: contract_call_cost_estimation
 
-        assert_eq!(transaction_cost.gas_used, 9826);
+        assert_eq!(transaction_cost.gas_used, 7146);
 
         Ok(())
     }
@@ -547,7 +547,7 @@ mod tests {
             .await?;
         // ANCHOR_END: multi_call_cost_estimation
 
-        assert_eq!(transaction_cost.gas_used, 16181);
+        assert_eq!(transaction_cost.gas_used, 15176);
 
         Ok(())
     }
