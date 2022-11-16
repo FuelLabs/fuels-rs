@@ -28,14 +28,31 @@ impl EnumVariants {
             .collect()
     }
 
+    pub fn select_variant(
+        &self,
+        discriminant: u8,
+    ) -> Result<&(String, ParamType), DiscriminantOutOfBounds> {
+        self.variants.get(discriminant as usize).ok_or_else(|| {
+            let msg = format!(
+                concat!(
+                    "The discriminant '{}' doesn't ",
+                    "point to any of the following variants: {:?}"
+                ),
+                discriminant,
+                self.variants()
+            );
+            DiscriminantOutOfBounds { msg }
+        })
+    }
     pub fn type_of_selected_variant(
         &self,
         discriminant: u8,
     ) -> Result<ParamType, DiscriminantOutOfBounds> {
+        // TODO use select_variant
         if discriminant >= self.variants.len() as u8 {
             let msg = format!(
                 concat!(
-                    "Error while decoding an enum. The discriminant '{}' doesn't ",
+                    "The discriminant '{}' doesn't ",
                     "point to any of the following variants: {:?}"
                 ),
                 discriminant,

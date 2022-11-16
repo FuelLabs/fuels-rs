@@ -7,6 +7,7 @@ use fuels_types::{
     errors::{CodecError, Error},
     param_types::ParamType,
 };
+use std::iter::zip;
 use strum_macros::EnumString;
 
 pub mod abi_decoder;
@@ -162,9 +163,91 @@ pub fn pad_string(s: &str) -> Vec<u8> {
     padded
 }
 
+pub trait OurDebug {
+    fn our_debug(&self, data: &[u8]) -> Result<String, Error>;
+}
+
+fn something(param_type: &ParamType, token: &Token) -> Result<String, Error> {
+    let result = match (param_type, token) {
+        (ParamType::U8, Token::U8(val)) => val.to_string(),
+        (ParamType::U16, Token::U16(val)) => val.to_string(),
+        (ParamType::U32, Token::U32(val)) => val.to_string(),
+        (ParamType::U64, Token::U64(val)) => val.to_string(),
+        (ParamType::Bool, Token::Bool(val)) => val.to_string(),
+        (ParamType::Byte, Token::Byte(val)) => val.to_string(),
+        (ParamType::B256, Token::B256(val)) => {
+            format!("b256({val:?})")
+        }
+        (ParamType::Unit, Token::Unit) => "()".to_string(),
+        (ParamType::String(size), Token::String(str_token)) => {
+            format!("\"{}\"", str_token.data)
+        }
+
+        (ParamType::Array(ttype, size), Token::Array(tokens)) => {
+            let elements = tokens
+                .iter()
+                .map(|token| something(ttype, &token))
+                .collect::<Result<Vec<_>, _>>()?
+                .join(",");
+            format!("[{elements}]")
+        }
+        (ParamType::Vector(ttype), Token::Vector(tokens)) => {
+            let elements = tokens
+                .iter()
+                .map(|token| something(ttype, &token))
+                .collect::<Result<Vec<_>, _>>()?
+                .join(",");
+            format!("Vec[{elements}]")
+        }
+        (ParamType::Struct { name, fields, .. }, Token::Struct(field_tokens)) => {
+            let fields = zip(fields, field_tokens)
+                .map(|((field_name, param_type), token)| -> Result<_, Error> {
+                    let field_stringified = something(param_type, token)?;
+                    Ok(format!("{field_name}: {}", field_stringified))
+                })
+                .collect::<Result<Vec<_>, _>>()?
+                .join(" ");
+
+            format!("{name} {{ {fields} }}")
+        }
+        (ParamType::Enum { name, variants, .. }, Token::Enum(selector)) => {
+            let (discriminant, token, variants) = selector.as_ref();
+
+            let selected_variant_param_type = variants
+                .type_of_selected_variant(*discriminant)
+                .map_err(|e| Error::InvalidData(e.msg))?;
+            let variant_stringified = something(&selected_variant_param_type, token)?;
+
+            let (variant_name, _) = variants
+                .select_variant(*discriminant)
+                .map_err(|e| Error::InvalidData(e.msg))?;
+
+            format!("{name}::{variant_name}({variant_stringified})")
+        }
+        (ParamType::Tuple(types), Token::Tuple(tokens)) => {
+            let elements = zip(types, tokens)
+                .map(|(ttype, token)| something(ttype, &token))
+                .collect::<Result<Vec<_>, _>>()?
+                .join(",");
+
+            format!("({elements})")
+        }
+        _ => return Err(Error::InvalidData("alaj nevalja".to_string())),
+    };
+    Ok(result)
+}
+
+impl OurDebug for ParamType {
+    fn our_debug(&self, data: &[u8]) -> Result<String, Error> {
+        let token = ABIDecoder::decode_single(self, data)?;
+        something(&self, &token)
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::try_from_bytes;
+    use crate::abi_encoder::ABIEncoder;
+    use crate::{try_from_bytes, Identity, OurDebug, Parameterize, Tokenizable};
     use fuel_types::{Address, AssetId, ContractId};
     use fuels_types::{constants::WORD_SIZE, errors::Error};
 
@@ -209,5 +292,18 @@ mod tests {
             AssetId::new(bytes.as_slice().try_into()?)
         );
         Ok(())
+    }
+    #[test]
+    fn something_testinranje() {
+        let identity = Identity::ContractId(ContractId::default());
+
+        let bytes = ABIEncoder::encode(&[identity.into_token()])
+            .unwrap()
+            .resolve(0);
+
+        let param_type = Identity::param_type();
+
+        let stringified = param_type.our_debug(&bytes).unwrap();
+        dbg!(stringified);
     }
 }
