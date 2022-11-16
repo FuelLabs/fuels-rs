@@ -6,6 +6,7 @@ use std::marker::PhantomData;
 use std::path::Path;
 use std::str::FromStr;
 
+use fuel_gql_client::prelude::PanicReason;
 use fuel_gql_client::{
     fuel_tx::{Contract as FuelContract, Output, Receipt, StorageSlot, Transaction},
     fuel_types::{Address, AssetId, Salt},
@@ -378,6 +379,10 @@ impl ContractCall {
         }
     }
 
+    pub fn append_external_contracts(&mut self, contract_id: Bech32ContractId) {
+        self.external_contracts.push(contract_id)
+    }
+
     pub fn append_message_outputs(&mut self, num: u64) {
         let new_message_outputs = vec![
             Output::Message {
@@ -438,6 +443,12 @@ impl ContractCall {
         let decoded_value = ABIDecoder::decode_single(&self.output_param, &encoded_value)?;
         Ok(decoded_value)
     }
+
+    fn find_contract_not_in_inputs(receipts: &[Receipt]) -> Option<&Receipt> {
+        receipts.iter().find(
+            |r| matches!(r, Receipt::Panic { reason, .. } if *reason.reason() == PanicReason::ContractNotInInputs ),
+        )
+    }
 }
 
 #[derive(Debug)]
@@ -462,6 +473,16 @@ where
     /// `my_contract_instance.my_method(...).set_contracts(&[another_contract_id]).call()`.
     pub fn set_contracts(mut self, contract_ids: &[Bech32ContractId]) -> Self {
         self.contract_call.external_contracts = contract_ids.to_vec();
+        self
+    }
+
+    /// Appends additional external contracts as dependencies to this contract's call.
+    /// Effectively, this will be used to create additional Input::Contract/Output::Contract
+    /// pairs and set them into the transaction.
+    /// Note that this is a builder method, i.e. use it as a chain:
+    /// `my_contract_instance.my_method(...).append_contracts(additional_contract_id).call()`.
+    pub fn append_contract(mut self, contract_id: Bech32ContractId) -> Self {
+        self.contract_call.append_external_contracts(contract_id);
         self
     }
 
@@ -541,6 +562,16 @@ where
         Self::call_or_simulate(&self, true).await
     }
 
+    /// Simulates a call without needing to resolve the generic for the return type
+    async fn simulate_without_decode(&self) -> Result<(), Error> {
+        let script = self.get_call_execution_script().await?;
+        let provider = self.wallet.get_provider()?;
+
+        script.simulate(provider).await?;
+
+        Ok(())
+    }
+
     /// Simulates the call and attempts to resolve missing tx dependencies.
     /// Forwards the received error if it cannot be fixed.
     pub async fn estimate_tx_dependencies(
@@ -550,7 +581,7 @@ where
         let attempts = max_attempts.unwrap_or(DEFAULT_TX_DEP_ESTIMATION_ATTEMPTS);
 
         for _ in 0..attempts {
-            let result = self.call_or_simulate(true).await;
+            let result = self.simulate_without_decode().await;
 
             match result {
                 Err(Error::RevertTransactionError(_, receipts))
@@ -558,6 +589,16 @@ where
                 {
                     self = self.append_variable_outputs(1);
                 }
+
+                Err(Error::RevertTransactionError(_, ref receipts)) => {
+                    if let Some(receipt) = ContractCall::find_contract_not_in_inputs(receipts) {
+                        let contract_id = Bech32ContractId::from(*receipt.contract_id().unwrap());
+                        self = self.append_contract(contract_id);
+                    } else {
+                        return Err(result.expect_err("Couldn't estimate tx dependencies because we couldn't find the missing contract input"));
+                    }
+                }
+
                 Err(e) => return Err(e),
                 _ => return Ok(self),
             }
@@ -694,6 +735,19 @@ impl MultiContractCallHandler {
                         .take(1)
                         .for_each(|call| call.append_variable_outputs(1));
                 }
+
+                Err(Error::RevertTransactionError(_, ref receipts)) => {
+                    if let Some(receipt) = ContractCall::find_contract_not_in_inputs(receipts) {
+                        let contract_id = Bech32ContractId::from(*receipt.contract_id().unwrap());
+                        self.contract_calls
+                            .iter_mut()
+                            .take(1)
+                            .for_each(|call| call.append_external_contracts(contract_id.clone()));
+                    } else {
+                        return Err(result.expect_err("Couldn't estimate tx dependencies because we couldn't find the missing contract input"));
+                    }
+                }
+
                 Err(e) => return Err(e),
                 _ => return Ok(self),
             }
