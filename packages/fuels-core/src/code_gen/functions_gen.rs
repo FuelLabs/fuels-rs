@@ -102,16 +102,14 @@ pub fn generate_script_main_function(
             arguments").resolve(0);
             let compiled_script = CompiledScript::from_binary_filepath(self.binary_filepath
                 .as_str()).expect("Could not read from binary filepath");
-
-            ScriptCallHandler {
+            let provider = self.wallet.get_provider().expect("Provider not set up").clone();
+            ScriptCallHandler::new(
                 compiled_script,
                 script_data,
-                tx_parameters: TxParameters::default(),
-                wallet: self.wallet.clone(),
-                provider: self.wallet.get_provider().expect("Provider not set up").clone(),
-                output_param: #output_params,
-                datatype: PhantomData,
-            }
+                self.wallet.clone(),
+                provider,
+                #output_params
+            )
         }
     })
 }

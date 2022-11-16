@@ -1,55 +1,29 @@
-#![allow(unused_imports)]
-#![allow(unused)]
 use std::fmt::Debug;
 use std::marker::PhantomData;
 
 use fuel_gql_client::{
     fuel_tx::{Output, Receipt, Transaction},
-    fuel_types::{Address, AssetId, Salt},
 };
+use fuel_tx::Input;
 
-use crate::contract::{get_decoded_output, DEFAULT_TX_DEP_ESTIMATION_ATTEMPTS};
-use fuels_core::abi_encoder::{ABIEncoder, UnresolvedBytes};
-use fuels_core::constants::FAILED_TRANSFER_TO_ADDRESS_SIGNAL;
-use fuels_core::tx::{Bytes32, ContractId};
+use crate::contract::{get_decoded_output};
+
+
+
 use fuels_core::{
-    parameters::{CallParameters, TxParameters},
-    Parameterize, Token, Tokenizable,
+    parameters::{CallParameters, TxParameters}, Tokenizable,
 };
 use fuels_signers::{
-    provider::{Provider, TransactionCost},
+    provider::{Provider},
     WalletUnlocked,
 };
-use fuels_types::bech32::Bech32ContractId;
+
 use fuels_types::{
     errors::Error,
-    param_types::{ParamType, ReturnLocation},
+    param_types::{ParamType},
 };
 
 use crate::execution_script::{CompiledScript, TransactionExecution};
-
-//
-//
-//
-//```rust
-//#[derive(Debug)]
-//SCRIPTS
-//pub struct #name{
-//wallet: WalletUnlocked,
-//binary_filepath: String,
-//}
-//
-//
-//
-//
-//pub struct #name {
-//contract_id: Bech32ContractId,
-//wallet: WalletUnlocked,
-//logs_lookup: Vec<(u64, ParamType)>,
-//}
-//```
-//
-//
 
 pub struct ScriptInterface {
     pub script: TransactionExecution,
@@ -86,89 +60,30 @@ impl<D> ScriptCallResponse<D> {
 #[derive(Debug)]
 /// Contains all data relevant to a single contract call
 pub struct ScriptCall {
-    pub script: TransactionExecution,
-    // pub encoded_args: UnresolvedBytes,
-    // pub call_parameters: CallParameters,
-    // pub compute_custom_input_offset: bool,
-    // pub variable_outputs: Option<Vec<Output>>,
-    // pub message_outputs: Option<Vec<Output>>,
-    // pub external_contracts: Vec<Bech32ContractId>,
-    // pub output_param: ParamType,
+    pub compiled_script: CompiledScript,
+    pub script_data: Vec<u8>,
+    pub inputs: Vec<Input>,
+    pub outputs: Vec<Output>,
+    pub call_parameters: CallParameters,
 }
 
-// impl ScriptCall {
-// pub fn with_external_contracts(self, external_contracts: Vec<Bech32ContractId>) -> ScriptCall {
-//     ScriptCall {
-//         external_contracts,
-//         ..self
-//     }
-// }
+impl ScriptCall {
+    pub fn with_outputs(mut self, outputs: Vec<Output>) -> Self {
+        self.outputs = outputs;
+        self
+    }
 
-// pub fn with_variable_outputs(self, variable_outputs: Vec<Output>) -> ScriptCall {
-//     ScriptCall {
-//         variable_outputs: Some(variable_outputs),
-//         ..self
-//     }
-// }
-//
-// pub fn with_message_outputs(self, message_outputs: Vec<Output>) -> ScriptCall {
-//     ScriptCall {
-//         message_outputs: Some(message_outputs),
-//         ..self
-//     }
-// }
-//
-// pub fn with_call_parameters(self, call_parameters: CallParameters) -> ScriptCall {
-//     ScriptCall {
-//         call_parameters,
-//         ..self
-//     }
-// }
-//
-// pub fn append_variable_outputs(&mut self, num: u64) {
-//     let new_variable_outputs = vec![
-//         Output::Variable {
-//             amount: 0,
-//             to: Address::zeroed(),
-//             asset_id: AssetId::default(),
-//         };
-//         num as usize
-//     ];
-//
-//     match self.variable_outputs {
-//         Some(ref mut outputs) => outputs.extend(new_variable_outputs),
-//         None => self.variable_outputs = Some(new_variable_outputs),
-//     }
-// }
-//
-// pub fn append_message_outputs(&mut self, num: u64) {
-//     let new_message_outputs = vec![
-//         Output::Message {
-//             recipient: Address::zeroed(),
-//             amount: 0,
-//         };
-//         num as usize
-//     ];
-//
-//     match self.message_outputs {
-//         Some(ref mut outputs) => outputs.extend(new_message_outputs),
-//         None => self.message_outputs = Some(new_message_outputs),
-//     }
-// }
-//
-// fn is_missing_output_variables(receipts: &[Receipt]) -> bool {
-//     receipts.iter().any(
-//         |r| matches!(r, Receipt::Revert { ra, .. } if *ra == FAILED_TRANSFER_TO_ADDRESS_SIGNAL),
-//     )
-// }
-// }
+    pub fn with_inputs(mut self, inputs: Vec<Input>) -> Self {
+        self.inputs = inputs;
+        self
+    }
+}
 
 #[derive(Debug)]
 #[must_use = "script calls do nothing unless you `call` them"]
 /// Helper that handles submitting a script call to a client and formatting the response
 pub struct ScriptCallHandler<D> {
-    pub compiled_script: CompiledScript,
-    pub script_data: Vec<u8>,
+    pub script_call: ScriptCall,
     pub tx_parameters: TxParameters,
     pub wallet: WalletUnlocked,
     pub provider: Provider,
@@ -180,15 +95,29 @@ impl<D> ScriptCallHandler<D>
 where
     D: Tokenizable + Debug,
 {
-    /// Sets external contracts as dependencies to this script's call.
-    /// Effectively, this will be used to create Input::Contract/Output::Contract
-    /// pairs and set them into the transaction.
-    /// Note that this is a builder method, i.e. use it as a chain:
-    /// `my_contract_instance.my_method(...).set_contracts(&[another_contract_id]).call()`.
-    // pub fn set_contracts(mut self, contract_ids: &[Bech32ContractId]) -> Self {
-    //     self.compiled_script.external_contracts = contract_ids.to_vec();
-    //     self
-    // }
+    pub fn new(
+        compiled_script: CompiledScript,
+        script_data: Vec<u8>,
+        wallet: WalletUnlocked,
+        provider: Provider,
+        output_param: ParamType,
+    ) -> Self {
+        let script_call = ScriptCall {
+            compiled_script,
+            script_data,
+            inputs: vec![],
+            outputs: vec![],
+            call_parameters: Default::default(),
+        };
+        Self {
+            script_call,
+            tx_parameters: TxParameters::default(),
+            wallet,
+            provider,
+            output_param,
+            datatype: PhantomData,
+        }
+    }
 
     /// Sets the transaction parameters for a given transaction.
     /// Note that this is a builder method, i.e. use it as a chain:
@@ -199,30 +128,15 @@ where
         self
     }
 
-    /// Sets the call parameters for a given contract call.
-    /// Note that this is a builder method, i.e. use it as a chain:
-    /// let params = CallParameters { amount: 1, asset_id: BASE_ASSET_ID };
-    /// `my_contract_instance.my_method(...).call_params(params).call()`.
-    // pub fn call_params(mut self, params: CallParameters) -> Self {
-    //     self.compiled_script.call_parameters = params;
-    //     self
-    // }
+    pub fn with_outputs(mut self, outputs: Vec<Output>) -> Self {
+        self.script_call = self.script_call.with_outputs(outputs);
+        self
+    }
 
-    /// Appends `num` `Output::Variable`s to the transaction.
-    /// Note that this is a builder method, i.e. use it as a chain:
-    /// `my_contract_instance.my_method(...).add_variable_outputs(num).call()`.
-    // pub fn append_variable_outputs(mut self, num: u64) -> Self {
-    //     self.compiled_script.append_variable_outputs(num);
-    //     self
-    // }
-
-    /// Appends `num` `Output::Message`s to the transaction.
-    /// Note that this is a builder method, i.e. use it as a chain:
-    /// `my_contract_instance.my_method(...).add_message_outputs(num).call()`.
-    // pub fn append_message_outputs(mut self, num: u64) -> Self {
-    //     self.compiled_script.append_message_outputs(num);
-    //     self
-    // }
+    pub fn with_inputs(mut self, inputs: Vec<Input>) -> Self {
+        self.script_call = self.script_call.with_inputs(inputs);
+        self
+    }
 
     /// Call a contract's method on the node. If `simulate==true`, then the call is done in a
     /// read-only manner, using a `dry-run`. Return a Result<CallResponse, Error>. The CallResponse
@@ -232,18 +146,20 @@ where
     /// transaction.
     #[tracing::instrument]
     async fn call_or_simulate(&self, simulate: bool) -> Result<ScriptCallResponse<D>, Error> {
-        let tx = Transaction::script(
+        let mut tx = Transaction::script(
             self.tx_parameters.gas_price,
             self.tx_parameters.gas_limit,
             self.tx_parameters.maturity,
-            self.compiled_script.script_binary.clone(),
-            self.script_data.clone(),
-            vec![], //TODO inputs
-            vec![], //TODO outputs
-            vec![], //TODO witnesses
+            self.script_call.compiled_script.script_binary.clone(),
+            self.script_call.script_data.clone(),
+            self.script_call.inputs.clone(),  // TODO
+            self.script_call.outputs.clone(), // TODO
+            vec![vec![0, 0].into()],          //TODO witnesses
         );
+        self.wallet.add_fee_coins(&mut tx, 0, 0).await?;
 
         let tx_execution = TransactionExecution { tx };
+
         let receipts = if simulate {
             tx_execution.simulate(&self.provider).await?
         } else {
@@ -265,48 +181,6 @@ where
     pub async fn simulate(self) -> Result<ScriptCallResponse<D>, Error> {
         Self::call_or_simulate(&self, true).await
     }
-
-    // /// Simulates the call and attempts to resolve missing tx dependencies.
-    // /// Forwards the received error if it cannot be fixed.
-    // pub async fn estimate_tx_dependencies(
-    //     mut self,
-    //     max_attempts: Option<u64>,
-    // ) -> Result<Self, Error> {
-    //     let attempts = max_attempts.unwrap_or(DEFAULT_TX_DEP_ESTIMATION_ATTEMPTS);
-    //
-    //     for _ in 0..attempts {
-    //         let result = self.call_or_simulate(true).await;
-    //
-    //         match result {
-    //             Err(Error::RevertTransactionError(_, receipts))
-    //                 if ScriptCall::is_missing_output_variables(&receipts) =>
-    //             {
-    //                 self = self.append_variable_outputs(1);
-    //             }
-    //             Err(e) => return Err(e),
-    //             _ => return Ok(self),
-    //         }
-    //     }
-    //
-    //     // confirm if successful or propagate error
-    //     match self.call_or_simulate(true).await {
-    //         Ok(_) => Ok(self),
-    //         Err(e) => Err(e),
-    //     }
-    // }
-
-    // /// Get a contract's estimated cost
-    // pub async fn estimate_transaction_cost(
-    //     &self,
-    //     tolerance: Option<f64>,
-    // ) -> Result<TransactionCost, Error> {
-    //     let transaction_cost = self
-    //         .provider
-    //         .estimate_transaction_cost(&self.compiled_script.script.tx, tolerance)
-    //         .await?;
-    //
-    //     Ok(transaction_cost)
-    // }
 
     /// Create a CallResponse from call receipts
     pub fn get_response(&self, mut receipts: Vec<Receipt>) -> Result<ScriptCallResponse<D>, Error> {
