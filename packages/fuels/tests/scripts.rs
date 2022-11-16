@@ -165,3 +165,33 @@ async fn main_function_tuple_types() -> Result<(), Error> {
     assert_eq!(result.value, expected);
     Ok(())
 }
+
+#[tokio::test]
+async fn test_basic_script_with_tx_parameters() -> Result<(), Error> {
+    script_abigen!(
+        bimbam_script,
+        "packages/fuels/tests/scripts/basic_script/out/debug/basic_script-abi.json"
+    );
+    let num_wallets = 1;
+    let num_coins = 1;
+    let amount = 1000;
+    let config = WalletsConfig::new(Some(num_wallets), Some(num_coins), Some(amount));
+
+    let mut wallets = launch_custom_provider_and_get_wallets(config, None, None).await;
+    let wallet = wallets.pop().unwrap();
+    let bin_path = "../fuels/tests/scripts/basic_script/out/debug/basic_script.bin";
+    let instance = bimbam_script::new(wallet.clone(), bin_path);
+
+    let a = 1000u64;
+    let b = 2000u32;
+    let result = instance.main(a, b).call().await?;
+    assert_eq!(result.value, "hello");
+
+    let mut tx_params = TxParameters::default();
+    tx_params.gas_price = 10000;
+    tx_params.gas_limit = 10000000;
+    let result = instance.main(a, b).tx_params(tx_params).call().await?;
+    assert_eq!(result.value, "hello");
+
+    Ok(())
+}
