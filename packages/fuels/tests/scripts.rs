@@ -53,7 +53,6 @@ async fn test_multi_call_script_workflow() -> Result<(), Error> {
 #[tokio::test]
 async fn main_function_arguments() -> Result<(), Error> {
     // ANCHOR: script_with_arguments
-
     // The abigen is used for the same purpose as with contracts (Rust bindings)
     script_abigen!(
         MyScript,
