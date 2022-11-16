@@ -7,10 +7,9 @@ use fuel_gql_client::fuel_types::{
 };
 use fuel_gql_client::fuel_vm::{consts::REG_ONE, prelude::Opcode};
 use fuels_core::constants::BASE_ASSET_ID;
-use itertools::{chain, Itertools};
-
 use fuels_types::bech32::Bech32Address;
 use fuels_types::constants::WORD_SIZE;
+use itertools::{chain, Itertools};
 use std::collections::HashSet;
 use std::{iter, vec};
 
@@ -140,7 +139,7 @@ pub(crate) fn build_script_data_from_contract_calls(
 ///
 /// Note that these are soft rules as we're picking this addresses simply because they
 /// non-reserved register.
-pub(crate) fn get_single_call_instructions(offsets: &CallOpcodeParamsOffset) -> Vec<u8> {
+fn get_single_call_instructions(offsets: &CallOpcodeParamsOffset) -> Vec<u8> {
     let instructions = vec![
         Opcode::MOVI(0x10, offsets.call_data_offset as Immediate18),
         Opcode::MOVI(0x11, offsets.gas_forwarded_offset as Immediate18),
@@ -186,7 +185,7 @@ pub(crate) fn get_transaction_inputs_outputs(
     (inputs, outputs)
 }
 
-pub(crate) fn extract_unique_asset_ids(spendable_coins: &[Resource]) -> HashSet<AssetId> {
+fn extract_unique_asset_ids(spendable_coins: &[Resource]) -> HashSet<AssetId> {
     spendable_coins
         .iter()
         .map(|resource| match resource {
@@ -196,7 +195,7 @@ pub(crate) fn extract_unique_asset_ids(spendable_coins: &[Resource]) -> HashSet<
         .collect()
 }
 
-pub(crate) fn extract_variable_outputs(calls: &[ContractCall]) -> Vec<Output> {
+fn extract_variable_outputs(calls: &[ContractCall]) -> Vec<Output> {
     calls
         .iter()
         .filter_map(|call| call.variable_outputs.clone())
@@ -204,7 +203,7 @@ pub(crate) fn extract_variable_outputs(calls: &[ContractCall]) -> Vec<Output> {
         .collect()
 }
 
-pub(crate) fn extract_message_outputs(calls: &[ContractCall]) -> Vec<Output> {
+fn extract_message_outputs(calls: &[ContractCall]) -> Vec<Output> {
     calls
         .iter()
         .filter_map(|call| call.message_outputs.clone())
@@ -212,7 +211,7 @@ pub(crate) fn extract_message_outputs(calls: &[ContractCall]) -> Vec<Output> {
         .collect()
 }
 
-pub(crate) fn generate_asset_change_outputs(
+fn generate_asset_change_outputs(
     wallet_address: &Bech32Address,
     asset_ids: HashSet<AssetId>,
 ) -> Vec<Output> {
@@ -222,13 +221,13 @@ pub(crate) fn generate_asset_change_outputs(
         .collect()
 }
 
-pub(crate) fn generate_contract_outputs(num_of_contracts: usize) -> Vec<Output> {
+fn generate_contract_outputs(num_of_contracts: usize) -> Vec<Output> {
     (0..num_of_contracts)
         .map(|idx| Output::contract(idx as u8, Bytes32::zeroed(), Bytes32::zeroed()))
         .collect()
 }
 
-pub(crate) fn convert_to_signed_resources(spendable_resources: Vec<Resource>) -> Vec<Input> {
+fn convert_to_signed_resources(spendable_resources: Vec<Resource>) -> Vec<Input> {
     spendable_resources
         .into_iter()
         .map(|resource| match resource {
@@ -269,7 +268,7 @@ pub(crate) fn get_data_offset(num_calls: usize) -> usize {
         + padded_len_usize(len_script)
 }
 
-pub(crate) fn generate_contract_inputs(contract_ids: HashSet<ContractId>) -> Vec<Input> {
+fn generate_contract_inputs(contract_ids: HashSet<ContractId>) -> Vec<Input> {
     contract_ids
         .into_iter()
         .enumerate()
@@ -296,6 +295,7 @@ fn extract_unique_contract_ids(calls: &[ContractCall]) -> HashSet<ContractId> {
         })
         .collect()
 }
+
 #[cfg(test)]
 mod test {
     use super::*;
