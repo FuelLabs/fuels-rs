@@ -661,6 +661,7 @@ async fn test_require() -> Result<(), Error> {
     );
 
     let contract_methods = contract_instance.methods();
+    dbg!(contract_methods.require_primitive().log_decoder);
     {
         let error = contract_methods
             .require_primitive()

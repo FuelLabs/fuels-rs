@@ -103,7 +103,7 @@ impl Abigen {
         } else {
             (
                 quote! {
-                    use fuels::contract::contract::{Contract, ContractCallHandler, CallResponse, Logging};
+                    use fuels::contract::contract::{Contract, ContractCallHandler, CallResponse, Logging, LogDecoder};
                      use fuels::core::{EnumSelector, StringToken, Parameterize, Tokenizable, Token,
                                       Identity, try_from_bytes};
                     use fuels::core::code_gen::{extract_and_parse_logs, extract_log_ids_and_data};
@@ -160,9 +160,15 @@ impl Abigen {
                         #get_logs
 
                         pub fn methods(&self) -> #methods_name {
+                            let logs_lookup : HashMap<_, _> = vec![#(#log_id_param_type_pairs),*]
+                                .into_iter()
+                                .map(|(id, param_type)| (id, param_type))
+                                .collect();
+
                             #methods_name {
                                 contract_id: self.contract_id.clone(),
                                 wallet: self.wallet.clone(),
+                                logs_lookup
                             }
                         }
                     }
@@ -170,7 +176,8 @@ impl Abigen {
                     // Implement struct that holds the contract methods
                     pub struct #methods_name {
                         contract_id: Bech32ContractId,
-                        wallet: WalletUnlocked
+                        wallet: WalletUnlocked,
+                        logs_lookup: HashMap<u64, ParamType>,
                     }
 
                     impl #methods_name {

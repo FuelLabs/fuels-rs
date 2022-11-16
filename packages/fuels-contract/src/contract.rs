@@ -11,6 +11,7 @@ use fuels_core::{
     constants::FAILED_TRANSFER_TO_ADDRESS_SIGNAL,
     parameters::StorageConfiguration,
     parameters::{CallParameters, TxParameters},
+    try_from_bytes,
     tx::{Bytes32, ContractId},
     Parameterize, Selector, Token, Tokenizable,
 };
@@ -23,6 +24,7 @@ use fuels_types::{
     errors::Error,
     param_types::{ParamType, ReturnLocation},
 };
+use std::collections::HashMap;
 use std::{collections::HashSet, fmt::Debug, fs, marker::PhantomData, path::Path, str::FromStr};
 
 pub const DEFAULT_TX_DEP_ESTIMATION_ATTEMPTS: u64 = 10;
@@ -32,6 +34,11 @@ pub trait Logging {
 
     fn logs_with_type<D: Tokenizable + Parameterize>(receipts: &[Receipt])
         -> Result<Vec<D>, Error>;
+}
+
+#[derive(Debug, Clone)]
+pub struct LogDecoder {
+    pub map: HashMap<u64, ParamType>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -60,6 +67,7 @@ pub struct CallResponse<D, C> {
     pub receipts: Vec<Receipt>,
     pub gas_used: u64,
     pub contract_type: PhantomData<C>,
+    pub log_decoder: LogDecoder,
 }
 // ANCHOR_END: call_response
 
@@ -67,12 +75,13 @@ impl<D, C> CallResponse<D, C>
 where
     C: Logging,
 {
-    pub fn new(value: D, receipts: Vec<Receipt>) -> Self {
+    pub fn new(value: D, receipts: Vec<Receipt>, log_decoder: LogDecoder) -> Self {
         Self {
             value,
             gas_used: Self::get_gas_used(&receipts),
             receipts,
             contract_type: PhantomData,
+            log_decoder,
         }
     }
 
@@ -91,7 +100,35 @@ where
     }
 
     pub fn logs_with_type<T: Tokenizable + Parameterize>(&self) -> Result<Vec<T>, Error> {
-        C::logs_with_type::<T>(&self.receipts)
+        let target_param_type = T::param_type();
+
+        let target_ids: HashSet<u64> = self
+            .log_decoder
+            .map
+            .iter()
+            .filter_map(|(log_id, param_type)| {
+                if *param_type == target_param_type {
+                    Some(*log_id)
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        let decoded_logs: Vec<T> = self
+            .receipts
+            .iter()
+            .filter_map(|r| match r {
+                Receipt::LogData { rb, data, .. } if target_ids.contains(rb) => Some(data.clone()),
+                Receipt::Log { ra, rb, .. } if target_ids.contains(rb) => {
+                    Some(ra.to_be_bytes().to_vec())
+                }
+                _ => None,
+            })
+            .map(|data| try_from_bytes(&data))
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(decoded_logs)
     }
 }
 
@@ -135,6 +172,7 @@ impl Contract {
         wallet: &WalletUnlocked,
         signature: Selector,
         args: &[Token],
+        log_decoder: LogDecoder,
     ) -> Result<ContractCallHandler<D, C>, Error> {
         let encoded_selector = signature;
 
@@ -163,6 +201,7 @@ impl Contract {
             provider: provider.clone(),
             datatype: PhantomData,
             contract_type: PhantomData,
+            log_decoder,
         })
     }
 
@@ -477,6 +516,7 @@ pub struct ContractCallHandler<D, C> {
     pub provider: Provider,
     pub datatype: PhantomData<D>,
     pub contract_type: PhantomData<C>,
+    pub log_decoder: LogDecoder,
 }
 
 impl<D, C> ContractCallHandler<D, C>
@@ -619,7 +659,11 @@ where
     /// Create a CallResponse from call receipts
     pub fn get_response(&self, mut receipts: Vec<Receipt>) -> Result<CallResponse<D, C>, Error> {
         let token = self.contract_call.get_decoded_output(&mut receipts)?;
-        Ok(CallResponse::new(D::from_token(token)?, receipts))
+        Ok(CallResponse::new(
+            D::from_token(token)?,
+            receipts,
+            self.log_decoder.to_owned(),
+        ))
     }
 }
 
@@ -773,7 +817,13 @@ where
         }
 
         let tokens_as_tuple = Token::Tuple(final_tokens);
-        let response = CallResponse::<D, C>::new(D::from_token(tokens_as_tuple)?, receipts);
+        let response = CallResponse::<D, C>::new(
+            D::from_token(tokens_as_tuple)?,
+            receipts,
+            LogDecoder {
+                map: HashMap::new(),
+            },
+        );
 
         Ok(response)
     }
