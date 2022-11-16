@@ -1,27 +1,18 @@
 use std::fmt::Debug;
 use std::marker::PhantomData;
 
-use fuel_gql_client::{
-    fuel_tx::{Output, Receipt, Transaction},
-};
+use fuel_gql_client::fuel_tx::{Output, Receipt, Transaction};
 use fuel_tx::Input;
 
-use crate::contract::{get_decoded_output};
-
-
+use crate::contract::get_decoded_output;
 
 use fuels_core::{
-    parameters::{CallParameters, TxParameters}, Tokenizable,
+    parameters::{CallParameters, TxParameters},
+    Tokenizable,
 };
-use fuels_signers::{
-    provider::{Provider},
-    WalletUnlocked,
-};
+use fuels_signers::{provider::Provider, WalletUnlocked};
 
-use fuels_types::{
-    errors::Error,
-    param_types::{ParamType},
-};
+use fuels_types::{errors::Error, param_types::ParamType};
 
 use crate::execution_script::{CompiledScript, TransactionExecution};
 
