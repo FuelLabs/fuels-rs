@@ -1,5 +1,6 @@
 use crate::script::Script;
 use core::panic;
+use fuel_gql_client::prelude::PanicReason;
 use fuel_gql_client::{
     fuel_tx::{Contract as FuelContract, Output, Receipt, StorageSlot, Transaction},
     fuel_types::{Address, AssetId, Salt},
@@ -42,29 +43,25 @@ pub struct LogDecoder {
 
 impl LogDecoder {
     fn get_logs(&self, receipts: &[Receipt]) -> Result<Vec<String>, Error> {
-        let ids_with_data: Vec<((Bech32ContractId, u64), Vec<u8>)> = receipts
-            .iter()
-            .filter_map(|r| match r {
-                Receipt::LogData { rb, data, id, .. } => {
-                    Some(((Bech32ContractId::from(*id), *rb), data.clone()))
-                }
-                Receipt::Log { ra, rb, id, .. } => Some((
-                    (Bech32ContractId::from(*id), *rb),
-                    ra.to_be_bytes().to_vec(),
-                )),
-                _ => None,
-            })
-            .collect();
+        let ids_with_data = receipts.iter().filter_map(|r| match r {
+            Receipt::LogData { rb, data, id, .. } => {
+                Some(((Bech32ContractId::from(*id), *rb), data.clone()))
+            }
+            Receipt::Log { ra, rb, id, .. } => Some((
+                (Bech32ContractId::from(*id), *rb),
+                ra.to_be_bytes().to_vec(),
+            )),
+            _ => None,
+        });
 
         ids_with_data
-            .iter()
             .map(|((c_id, id), data)| {
                 let param_type = self
                     .map
-                    .get(&(c_id.clone(), *id))
+                    .get(&(c_id, id))
                     .ok_or_else(|| Error::InvalidData("Failed to find log id".into()))?;
 
-                param_type.our_debug(data)
+                param_type.our_debug(&data)
             })
             .collect::<Result<Vec<String>, Error>>()
     }
@@ -464,6 +461,10 @@ impl ContractCall {
         }
     }
 
+    pub fn append_external_contracts(&mut self, contract_id: Bech32ContractId) {
+        self.external_contracts.push(contract_id)
+    }
+
     pub fn append_message_outputs(&mut self, num: u64) {
         let new_message_outputs = vec![
             Output::Message {
@@ -524,6 +525,12 @@ impl ContractCall {
         let decoded_value = ABIDecoder::decode_single(&self.output_param, &encoded_value)?;
         Ok(decoded_value)
     }
+
+    fn find_contract_not_in_inputs(receipts: &[Receipt]) -> Option<&Receipt> {
+        receipts.iter().find(
+            |r| matches!(r, Receipt::Panic { reason, .. } if *reason.reason() == PanicReason::ContractNotInInputs ),
+        )
+    }
 }
 
 // Decode the logged type from the receipt of a `RevertTransactionError` if available
@@ -561,6 +568,16 @@ where
     /// `my_contract_instance.my_method(...).set_contracts(&[another_contract_id]).call()`.
     pub fn set_contracts(mut self, contract_ids: &[Bech32ContractId]) -> Self {
         self.contract_call.external_contracts = contract_ids.to_vec();
+        self
+    }
+
+    /// Appends additional external contracts as dependencies to this contract's call.
+    /// Effectively, this will be used to create additional Input::Contract/Output::Contract
+    /// pairs and set them into the transaction.
+    /// Note that this is a builder method, i.e. use it as a chain:
+    /// `my_contract_instance.my_method(...).append_contracts(additional_contract_id).call()`.
+    pub fn append_contract(mut self, contract_id: Bech32ContractId) -> Self {
+        self.contract_call.append_external_contracts(contract_id);
         self
     }
 
@@ -642,6 +659,16 @@ where
             .map_err(|err| decode_revert_error(err, &self.log_decoder))
     }
 
+    /// Simulates a call without needing to resolve the generic for the return type
+    async fn simulate_without_decode(&self) -> Result<(), Error> {
+        let script = self.get_call_execution_script().await?;
+        let provider = self.wallet.get_provider()?;
+
+        script.simulate(provider).await?;
+
+        Ok(())
+    }
+
     /// Simulates the call and attempts to resolve missing tx dependencies.
     /// Forwards the received error if it cannot be fixed.
     pub async fn estimate_tx_dependencies(
@@ -651,7 +678,7 @@ where
         let attempts = max_attempts.unwrap_or(DEFAULT_TX_DEP_ESTIMATION_ATTEMPTS);
 
         for _ in 0..attempts {
-            let result = self.call_or_simulate(true).await;
+            let result = self.simulate_without_decode().await;
 
             match result {
                 Err(Error::RevertTransactionError(_, receipts))
@@ -659,6 +686,16 @@ where
                 {
                     self = self.append_variable_outputs(1);
                 }
+
+                Err(Error::RevertTransactionError(_, ref receipts)) => {
+                    if let Some(receipt) = ContractCall::find_contract_not_in_inputs(receipts) {
+                        let contract_id = Bech32ContractId::from(*receipt.contract_id().unwrap());
+                        self = self.append_contract(contract_id);
+                    } else {
+                        return Err(result.expect_err("Couldn't estimate tx dependencies because we couldn't find the missing contract input"));
+                    }
+                }
+
                 Err(e) => return Err(e),
                 _ => return Ok(self),
             }
@@ -808,6 +845,19 @@ impl MultiContractCallHandler {
                         .take(1)
                         .for_each(|call| call.append_variable_outputs(1));
                 }
+
+                Err(Error::RevertTransactionError(_, ref receipts)) => {
+                    if let Some(receipt) = ContractCall::find_contract_not_in_inputs(receipts) {
+                        let contract_id = Bech32ContractId::from(*receipt.contract_id().unwrap());
+                        self.contract_calls
+                            .iter_mut()
+                            .take(1)
+                            .for_each(|call| call.append_external_contracts(contract_id.clone()));
+                    } else {
+                        return Err(result.expect_err("Couldn't estimate tx dependencies because we couldn't find the missing contract input"));
+                    }
+                }
+
                 Err(e) => return Err(e),
                 _ => return Ok(self),
             }
