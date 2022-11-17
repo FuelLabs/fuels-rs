@@ -176,17 +176,7 @@ async fn test_get_logs() -> Result<(), Error> {
         format!("{:?}", expected_generic_struct),
     ];
 
-    assert_eq!(logs[0], expected_logs[0]);
-    assert_eq!(logs[1], expected_logs[1]);
-    assert_eq!(logs[2], expected_logs[2]);
-    assert_eq!(logs[3], expected_logs[3]);
-    assert_eq!(logs[4], expected_logs[4]);
-    assert_eq!(logs[5], expected_logs[5]);
-    assert_eq!(logs[6], expected_logs[6]);
-    assert_eq!(logs[7], expected_logs[7]);
-    assert_eq!(logs[8], expected_logs[8]);
-    assert_eq!(logs[9], expected_logs[9]);
-    assert_eq!(logs[10], expected_logs[10]);
+    assert_eq!(logs, expected_logs);
 
     Ok(())
 }
@@ -212,7 +202,50 @@ async fn test_get_logs_with_no_logs() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_multi_call_log() -> Result<(), Error> {
+async fn test_multi_call_log_single_contract() -> Result<(), Error> {
+    setup_contract_test!(
+        contract_instance,
+        wallet,
+        "packages/fuels/tests/logs/logged_types"
+    );
+
+    let contract_methods = contract_instance.methods();
+
+    let call_handler_1 = contract_methods.produce_logs_values();
+    let call_handler_2 = contract_methods.produce_logs_variables();
+
+    let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
+
+    multi_call_handler
+        .add_call(call_handler_1)
+        .add_call(call_handler_2);
+
+    let expected_logs: Vec<String> = vec![
+        format!("{:?}", 64u64),
+        format!("{:?}", 32u32),
+        format!("{:?}", 16u16),
+        format!("{:?}", 8u8),
+        format!("{:?}", 64u64),
+        format!(
+            "{:?}",
+            Bits256([
+                239, 134, 175, 169, 105, 108, 240, 220, 99, 133, 226, 196, 7, 166, 225, 89, 161,
+                16, 60, 239, 183, 226, 174, 6, 54, 251, 51, 211, 203, 42, 158, 74,
+            ])
+        ),
+        format!("{:?}", SizedAsciiString::<4>::new("Fuel".to_string())?),
+        format!("{:?}", [1, 2, 3]),
+    ];
+
+    let logs = multi_call_handler.call::<((), ())>().await?.get_logs()?;
+
+    assert_eq!(logs, expected_logs);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_multi_call_log_multiple_contracts() -> Result<(), Error> {
     setup_contract_test!(
         contract_instance,
         wallet,
@@ -225,11 +258,8 @@ async fn test_multi_call_log() -> Result<(), Error> {
         "packages/fuels/tests/logs/logged_types"
     );
 
-    let contract_methods = contract_instance.methods();
-    let contract_methods2 = contract_instance2.methods();
-
-    let call_handler_1 = contract_methods.produce_multiple_logs();
-    let call_handler_2 = contract_methods2.produce_multiple_logs();
+    let call_handler_1 = contract_instance.methods().produce_logs_values();
+    let call_handler_2 = contract_instance2.methods().produce_logs_variables();
 
     let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
 
@@ -237,10 +267,183 @@ async fn test_multi_call_log() -> Result<(), Error> {
         .add_call(call_handler_1)
         .add_call(call_handler_2);
 
-    let response = multi_call_handler.call::<((), ())>().await?;
+    let expected_logs: Vec<String> = vec![
+        format!("{:?}", 64u64),
+        format!("{:?}", 32u32),
+        format!("{:?}", 16u16),
+        format!("{:?}", 8u8),
+        format!("{:?}", 64u64),
+        format!(
+            "{:?}",
+            Bits256([
+                239, 134, 175, 169, 105, 108, 240, 220, 99, 133, 226, 196, 7, 166, 225, 89, 161,
+                16, 60, 239, 183, 226, 174, 6, 54, 251, 51, 211, 203, 42, 158, 74,
+            ])
+        ),
+        format!("{:?}", SizedAsciiString::<4>::new("Fuel".to_string())?),
+        format!("{:?}", [1, 2, 3]),
+    ];
 
-    // dbg!(&response.len());
-    dbg!(&response);
+    let logs = multi_call_handler.call::<((), ())>().await?.get_logs()?;
 
+    assert_eq!(logs, expected_logs);
+
+    Ok(())
+}
+
+fn assert_is_revert_containing_msg(msg: &str, error: Error) {
+    assert!(matches!(error, Error::RevertTransactionError(..)));
+    if let Error::RevertTransactionError(error_message, _) = error {
+        assert!(error_message.contains(msg));
+    }
+}
+
+#[tokio::test]
+async fn test_require_log() -> Result<(), Error> {
+    setup_contract_test!(
+        contract_instance,
+        wallet,
+        "packages/fuels/tests/contracts/require"
+    );
+
+    let contract_methods = contract_instance.methods();
+    {
+        let error = contract_methods
+            .require_primitive()
+            .call()
+            .await
+            .expect_err("Should return a revert error");
+        dbg!(&error);
+        assert_is_revert_containing_msg("42", error);
+    }
+    {
+        let error = contract_methods
+            .require_string()
+            .call()
+            .await
+            .expect_err("Should return a revert error");
+
+        dbg!(&error);
+        assert_is_revert_containing_msg("fuel", error);
+    }
+    {
+        let error = contract_methods
+            .require_custom_generic()
+            .call()
+            .await
+            .expect_err("Should return a revert error");
+
+        dbg!(&error);
+        assert_is_revert_containing_msg("StructDeeplyNestedGeneric", error);
+    }
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_multi_call_require_log_single_contract() -> Result<(), Error> {
+    setup_contract_test!(
+        contract_instance,
+        wallet,
+        "packages/fuels/tests/contracts/require"
+    );
+
+    let contract_methods = contract_instance.methods();
+
+    // The output of the error depends on the order of the contract
+    // handlers as the script returns the first revert it finds.
+    {
+        let call_handler_1 = contract_methods.require_string();
+        let call_handler_2 = contract_methods.require_custom_generic();
+
+        let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
+
+        multi_call_handler
+            .add_call(call_handler_1)
+            .add_call(call_handler_2);
+
+        let error = multi_call_handler
+            .call::<((), ())>()
+            .await
+            .expect_err("Should return a revert error");
+
+        dbg!(&error);
+        assert_is_revert_containing_msg("fuel", error);
+    }
+    {
+        let call_handler_1 = contract_methods.require_custom_generic();
+        let call_handler_2 = contract_methods.require_string();
+
+        let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
+
+        multi_call_handler
+            .add_call(call_handler_1)
+            .add_call(call_handler_2);
+
+        let error = multi_call_handler
+            .call::<((), ())>()
+            .await
+            .expect_err("Should return a revert error");
+
+        dbg!(&error);
+        assert_is_revert_containing_msg("StructDeeplyNestedGeneric", error);
+    }
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_multi_call_require_log_multi_contract() -> Result<(), Error> {
+    setup_contract_test!(
+        contract_instance,
+        wallet,
+        "packages/fuels/tests/contracts/require"
+    );
+
+    setup_contract_test!(
+        contract_instance2,
+        None,
+        "packages/fuels/tests/contracts/require"
+    );
+
+    let contract_methods = contract_instance.methods();
+    let contract_methods2 = contract_instance2.methods();
+
+    // The output of the error depends on the order of the contract
+    // handlers as the script returns the first revert it finds.
+    {
+        let call_handler_1 = contract_methods.require_string();
+        let call_handler_2 = contract_methods2.require_custom_generic();
+
+        let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
+
+        multi_call_handler
+            .add_call(call_handler_1)
+            .add_call(call_handler_2);
+
+        let error = multi_call_handler
+            .call::<((), ())>()
+            .await
+            .expect_err("Should return a revert error");
+
+        dbg!(&error);
+        assert_is_revert_containing_msg("fuel", error);
+    }
+    {
+        let call_handler_1 = contract_methods2.require_custom_generic();
+        let call_handler_2 = contract_methods.require_string();
+
+        let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
+
+        multi_call_handler
+            .add_call(call_handler_1)
+            .add_call(call_handler_2);
+
+        let error = multi_call_handler
+            .call::<((), ())>()
+            .await
+            .expect_err("Should return a revert error");
+
+        dbg!(&error);
+        assert_is_revert_containing_msg("StructDeeplyNestedGeneric", error);
+    }
     Ok(())
 }

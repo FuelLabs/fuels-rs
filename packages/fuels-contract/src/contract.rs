@@ -722,7 +722,9 @@ impl MultiContractCallHandler {
     /// Adds a contract call to be bundled in the transaction
     /// Note that this is a builder method
     pub fn add_call<D: Tokenizable>(&mut self, call_handler: ContractCallHandler<D>) -> &mut Self {
-        self.log_decoder = call_handler.log_decoder.clone();
+        self.log_decoder
+            .map
+            .extend(call_handler.log_decoder.map.clone().into_iter());
         self.contract_calls.push(call_handler.contract_call);
         self
     }
