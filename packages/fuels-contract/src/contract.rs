@@ -14,7 +14,7 @@ use fuels_core::{
     parameters::{CallParameters, TxParameters},
     try_from_bytes,
     tx::{Bytes32, ContractId},
-    OurDebug, Parameterize, Selector, Token, Tokenizable,
+    DecodeLog, Parameterize, Selector, Token, Tokenizable,
 };
 use fuels_signers::{
     provider::{Provider, TransactionCost},
@@ -61,7 +61,7 @@ impl LogDecoder {
                     .get(&(c_id, id))
                     .ok_or_else(|| Error::InvalidData("Failed to find log id".into()))?;
 
-                param_type.our_debug(&data)
+                param_type.decode_log(&data)
             })
             .collect::<Result<Vec<String>, Error>>()
     }

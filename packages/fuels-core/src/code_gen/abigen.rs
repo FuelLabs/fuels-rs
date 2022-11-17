@@ -314,7 +314,7 @@ pub fn get_logs_hashmap(
     contract_id: &Bech32ContractId,
 ) -> HashMap<(Bech32ContractId, u64), ParamType> {
     id_param_pairs
-        .into_iter()
+        .iter()
         .map(|(id, param_type)| ((contract_id.clone(), *id), param_type.to_owned()))
         .collect()
 }
