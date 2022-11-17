@@ -1,5 +1,5 @@
 use crate::constants::WORD_SIZE;
-use crate::enum_variants::{EnumVariants, NoVariants};
+use crate::enum_variants::EnumVariants;
 use crate::errors::Error;
 use crate::utils::custom_type_name;
 use crate::utils::{
@@ -377,12 +377,6 @@ fn try_primitive(the_type: &Type) -> Result<Option<ParamType>, Error> {
     };
 
     Ok(result)
-}
-
-impl From<NoVariants> for Error {
-    fn from(err: NoVariants) -> Self {
-        Error::InvalidType(format!("{}", err))
-    }
 }
 
 #[cfg(test)]

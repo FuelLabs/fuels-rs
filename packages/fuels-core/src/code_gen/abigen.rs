@@ -112,7 +112,6 @@ impl Abigen {
                     use std::fmt;
                 },
                 quote! {
-                    #[derive(Debug)]
                     pub struct #name {
                         contract_id: Bech32ContractId,
                         wallet: WalletUnlocked,

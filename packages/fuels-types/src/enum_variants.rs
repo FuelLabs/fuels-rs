@@ -1,7 +1,6 @@
 use crate::constants::{ENUM_DISCRIMINANT_WORD_WIDTH, WORD_SIZE};
+use crate::errors::CodecError;
 use crate::param_types::ParamType;
-use std::fmt;
-use thiserror::Error as ThisError;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EnumVariants {
@@ -9,11 +8,13 @@ pub struct EnumVariants {
 }
 
 impl EnumVariants {
-    pub fn new(variants: Vec<(String, ParamType)>) -> Result<EnumVariants, NoVariants> {
+    pub fn new(variants: Vec<(String, ParamType)>) -> Result<EnumVariants, CodecError> {
         if !variants.is_empty() {
             Ok(EnumVariants { variants })
         } else {
-            Err(NoVariants)
+            Err(CodecError::InvalidData(
+                "Enum variants can not be empty!".into(),
+            ))
         }
     }
 
@@ -28,40 +29,13 @@ impl EnumVariants {
             .collect()
     }
 
-    pub fn select_variant(
-        &self,
-        discriminant: u8,
-    ) -> Result<&(String, ParamType), DiscriminantOutOfBounds> {
+    pub fn select_variant(&self, discriminant: u8) -> Result<&(String, ParamType), CodecError> {
         self.variants.get(discriminant as usize).ok_or_else(|| {
-            let msg = format!(
-                concat!(
-                    "The discriminant '{}' doesn't ",
-                    "point to any of the following variants: {:?}"
-                ),
-                discriminant,
+            CodecError::InvalidData(format!(
+                "Discriminant '{discriminant}' doesn't point to any variant: {:?}",
                 self.variants()
-            );
-            DiscriminantOutOfBounds { msg }
+            ))
         })
-    }
-    pub fn type_of_selected_variant(
-        &self,
-        discriminant: u8,
-    ) -> Result<ParamType, DiscriminantOutOfBounds> {
-        // TODO use select_variant
-        if discriminant >= self.variants.len() as u8 {
-            let msg = format!(
-                concat!(
-                    "The discriminant '{}' doesn't ",
-                    "point to any of the following variants: {:?}"
-                ),
-                discriminant,
-                self.param_types()
-            );
-            return Err(DiscriminantOutOfBounds { msg });
-        }
-
-        Ok(self.param_types().swap_remove(discriminant as usize))
     }
 
     pub fn only_units_inside(&self) -> bool {
@@ -91,25 +65,5 @@ impl EnumVariants {
             self.compute_encoding_width_of_enum() - ENUM_DISCRIMINANT_WORD_WIDTH;
         let variant_width = variant_param_type.compute_encoding_width();
         (biggest_variant_width - variant_width) * WORD_SIZE
-    }
-}
-
-#[derive(ThisError, Debug)]
-pub struct NoVariants;
-
-impl fmt::Display for NoVariants {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "An Enum must have variants!")
-    }
-}
-
-#[derive(ThisError, Debug)]
-pub struct DiscriminantOutOfBounds {
-    pub msg: String,
-}
-
-impl fmt::Display for DiscriminantOutOfBounds {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.msg)
     }
 }

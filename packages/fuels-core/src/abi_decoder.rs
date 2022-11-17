@@ -215,13 +215,11 @@ impl ABIDecoder {
 
         let discriminant = peek_u32(bytes)?;
         let discriminant1 = discriminant as usize;
-        let selected_variant = variants
-            .type_of_selected_variant(discriminant1 as u8)
-            .map_err(|e| CodecError::InvalidData(e.msg))?;
+        let (_, selected_variant) = variants.select_variant(discriminant1 as u8)?;
 
         let words_to_skip = enum_width - selected_variant.compute_encoding_width();
         let enum_content_bytes = skip(bytes, words_to_skip * WORD_SIZE)?;
-        let result = Self::decode_token_in_enum(enum_content_bytes, variants, &selected_variant)?;
+        let result = Self::decode_token_in_enum(enum_content_bytes, variants, selected_variant)?;
 
         let selector = Box::new((discriminant as u8, result.token, variants.clone()));
         Ok(DecodeResult {
@@ -710,8 +708,9 @@ mod tests {
         let result = ABIDecoder::decode_single(&enum_type, &data);
 
         let error = result.expect_err("Should have resulted in an error");
+        dbg!(&error);
 
-        let expected_msg = "The discriminant '1' doesn't point to any of the following variants: ";
+        let expected_msg = "Discriminant '1' doesn't point to any variant: ";
         assert!(matches!(error, CodecError::InvalidData(str) if str.starts_with(expected_msg)));
         Ok(())
     }

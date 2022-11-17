@@ -224,19 +224,13 @@ fn paramtype_decode_log(param_type: &ParamType, token: &Token) -> Result<String,
         (ParamType::Enum { .. }, Token::Enum(selector)) => {
             let (discriminant, token, variants) = selector.as_ref();
 
-            let selected_variant_param_type = variants
-                .type_of_selected_variant(*discriminant)
-                .map_err(|e| Error::InvalidData(e.msg))?;
-            let variant_str = paramtype_decode_log(&selected_variant_param_type, token)?;
+            let (variant_name, variant_param_type) = variants.select_variant(*discriminant)?;
+            let variant_str = paramtype_decode_log(variant_param_type, token)?;
             let variant_str = if variant_str == "()" {
                 "".into()
             } else {
                 format!("({variant_str})")
             };
-
-            let (variant_name, _) = variants
-                .select_variant(*discriminant)
-                .map_err(|e| Error::InvalidData(e.msg))?;
 
             format!("{variant_name}{variant_str}")
         }
