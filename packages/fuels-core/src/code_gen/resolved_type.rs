@@ -240,6 +240,7 @@ fn to_custom_type(
     type_arguments_supplier: impl Fn() -> Vec<ResolvedType>,
     is_common: bool,
 ) -> Option<ResolvedType> {
+    // TODO: This should be deduped with Abigen::should_skip_code_gen
     custom_type_name(type_field)
         .ok()
         .map(|type_name| match type_name.as_str() {

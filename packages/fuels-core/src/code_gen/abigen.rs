@@ -156,6 +156,9 @@ fn generate_types(
     types: &HashSet<FullTypeDeclaration>,
     shared_types: &HashSet<FullTypeDeclaration>,
 ) -> Result<GeneratedCode, Error> {
+    // TODO: What if should_skip_abigen skips all types? Then the shared module
+    // will still be created bit it will contain nothing. It should not break
+    // the code, but we could have lived without it.
     types
         .difference(shared_types)
         .filter(|ttype| !Abigen::should_skip_codegen(&ttype.type_field))

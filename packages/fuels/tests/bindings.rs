@@ -804,6 +804,9 @@ async fn compile_bindings_enum_input() {
 
 #[tokio::test]
 async fn shared_types_between_contracts() -> Result<(), Error> {
+    // TODO the problem with using super:: inside a function, you cannot get
+    // back in and can't use shared_types mod.
+    // TODO: Bug when generating two contracts from same JSON ABI but with different contract names
     mod contracts {
         use super::*;
         abigen!(
@@ -916,67 +919,4 @@ async fn shared_types_between_contracts() -> Result<(), Error> {
     }
 
     Ok(())
-
-    // let code = Abigen::new(&[
-    //     (
-    //         "ContractA".to_string(),
-    //         "tests/bindings/contracts_sharing_types/contract_a/out/debug/contract_a-abi.json",
-    //     ),
-    //     (
-    //         "ContractB".to_string(),
-    //         "tests/bindings/contracts_sharing_types/contract_b/out/debug/contract_b-abi.json",
-    //     ),
-    // ])
-    // .unwrap()
-    // .expand()
-    // .unwrap()
-    // .to_string();
-    //
-    // let project_path = Path::new("/home/segfault_magnet/debug_abigen");
-    // let src_file = project_path.join("src/lib.rs");
-    // std::fs::write(&src_file, code).unwrap();
-    //
-    // Command::new("rustfmt")
-    //     .args(["--edition", "2021", src_file.as_os_str().to_str().unwrap()])
-    //     .status()
-    //     .unwrap();
-    //
-    // Command::new("cargo")
-    //     .current_dir(project_path)
-    //     .arg("check")
-    //     .status()
-    //     .unwrap();
-    //
-    // Ok(())
-}
-#[test]
-fn something() {
-    let code = fuels_core::code_gen::abigen::Abigen::new(&[(
-        "MyContract".to_string(),
-        "tests/contracts/contract_test/out/debug/contract_test-abi.json",
-    )])
-    .unwrap()
-    .expand()
-    .unwrap()
-    .to_string();
-
-    let project_path = Path::new("/home/segfault_magnet/debug_abigen");
-    let src_file = project_path.join("src/lib.rs");
-    std::fs::write(&src_file, code).unwrap();
-
-    Command::new("rustfmt")
-        .args(["--edition", "2021", src_file.as_os_str().to_str().unwrap()])
-        .status()
-        .unwrap();
-
-    Command::new("cargo")
-        .current_dir(project_path)
-        .arg("check")
-        .status()
-        .unwrap();
-
-    abigen!(
-        MyContract,
-        "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
-    );
 }
