@@ -5,7 +5,8 @@ use super::{
 };
 use crate::{code_gen::bindings::ContractBindings, source::Source, utils::ident};
 use fuels_types::{
-    errors::Error, utils::custom_type_name, ProgramABI, ResolvedLog, TypeDeclaration,
+    bech32::Bech32ContractId, errors::Error, param_types::ParamType, utils::custom_type_name,
+    ProgramABI, ResolvedLog, TypeDeclaration,
 };
 use inflector::Inflector;
 use proc_macro2::TokenStream;
@@ -92,9 +93,10 @@ impl Abigen {
         } else {
             (
                 quote! {
-                    use fuels::contract::contract::{Contract, ContractCallHandler, CallResponse, LogDecoder};
+                    use fuels::contract::contract::{Contract, ContractCallHandler, LogDecoder};
                      use fuels::core::{EnumSelector, StringToken, Parameterize, Tokenizable, Token,
                                       Identity, try_from_bytes};
+                    use fuels::core::code_gen::get_logs_hashmap;
                     use fuels::core::abi_decoder::ABIDecoder;
                     use fuels::core::code_gen::function_selector::resolve_fn_selector;
                     use fuels::core::types::*;
@@ -141,15 +143,10 @@ impl Abigen {
                         }
 
                         pub fn methods(&self) -> #methods_name {
-                            let logs_lookup : HashMap<(_,_), _> = vec![#(#log_id_param_type_pairs),*]
-                                .into_iter()
-                                .map(|(id, param_type)| ((self.contract_id.clone(), id), param_type))
-                                .collect();
-
                             #methods_name {
                                 contract_id: self.contract_id.clone(),
                                 wallet: self.wallet.clone(),
-                                logs_lookup
+                                logs_map: get_logs_hashmap(&[#(#log_id_param_type_pairs),*], &self.contract_id),
                             }
                         }
                     }
@@ -158,7 +155,7 @@ impl Abigen {
                     pub struct #methods_name {
                         contract_id: Bech32ContractId,
                         wallet: WalletUnlocked,
-                        logs_lookup: HashMap<(Bech32ContractId, u64), ParamType>,
+                        logs_map: HashMap<(Bech32ContractId, u64), ParamType>,
                     }
 
                     impl #methods_name {
@@ -309,6 +306,16 @@ fn generate_log_id_param_type_pairs(resolved_logs: &[ResolvedLog]) -> Vec<TokenS
                 (#id, #param_type_call)
             }
         })
+        .collect()
+}
+
+pub fn get_logs_hashmap(
+    id_param_pairs: &[(u64, ParamType)],
+    contract_id: &Bech32ContractId,
+) -> HashMap<(Bech32ContractId, u64), ParamType> {
+    id_param_pairs
+        .into_iter()
+        .map(|(id, param_type)| ((contract_id.clone(), *id), param_type.to_owned()))
         .collect()
 }
 

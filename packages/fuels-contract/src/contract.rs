@@ -38,7 +38,7 @@ pub const DEFAULT_TX_DEP_ESTIMATION_ATTEMPTS: u64 = 10;
 
 #[derive(Debug, Clone)]
 pub struct LogDecoder {
-    pub map: HashMap<(Bech32ContractId, u64), ParamType>,
+    pub logs_map: HashMap<(Bech32ContractId, u64), ParamType>,
 }
 
 impl LogDecoder {
@@ -57,7 +57,7 @@ impl LogDecoder {
         ids_with_data
             .map(|((c_id, id), data)| {
                 let param_type = self
-                    .map
+                    .logs_map
                     .get(&(c_id, id))
                     .ok_or_else(|| Error::InvalidData("Failed to find log id".into()))?;
 
@@ -73,7 +73,7 @@ impl LogDecoder {
         let target_param_type = T::param_type();
 
         let target_ids: HashSet<(Bech32ContractId, u64)> = self
-            .map
+            .logs_map
             .iter()
             .filter_map(|((c_id, log_id), param_type)| {
                 if *param_type == target_param_type {
@@ -751,7 +751,7 @@ impl MultiContractCallHandler {
             tx_parameters: TxParameters::default(),
             wallet,
             log_decoder: LogDecoder {
-                map: HashMap::new(),
+                logs_map: HashMap::new(),
             },
         }
     }
@@ -760,8 +760,8 @@ impl MultiContractCallHandler {
     /// Note that this is a builder method
     pub fn add_call<D: Tokenizable>(&mut self, call_handler: ContractCallHandler<D>) -> &mut Self {
         self.log_decoder
-            .map
-            .extend(call_handler.log_decoder.map.clone().into_iter());
+            .logs_map
+            .extend(call_handler.log_decoder.logs_map.clone().into_iter());
         self.contract_calls.push(call_handler.contract_call);
         self
     }

@@ -7,3 +7,5 @@ pub mod docs_gen;
 pub mod function_selector;
 pub mod functions_gen;
 mod resolved_type;
+
+pub use abigen::get_logs_hashmap;
