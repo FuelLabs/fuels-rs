@@ -1,13 +1,11 @@
-use crate::abi_decoder::ABIDecoder;
-use crate::types::Bits256;
-use core::fmt;
+use crate::{abi_decoder::ABIDecoder, types::Bits256};
 use fuel_types::bytes::padded_len;
-use fuels_types::enum_variants::EnumVariants;
 use fuels_types::{
+    enum_variants::EnumVariants,
     errors::{CodecError, Error},
     param_types::ParamType,
 };
-use std::iter::zip;
+use std::{fmt, iter::zip};
 use strum_macros::EnumString;
 
 pub mod abi_decoder;

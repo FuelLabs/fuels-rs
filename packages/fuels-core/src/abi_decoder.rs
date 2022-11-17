@@ -1,9 +1,9 @@
 use crate::{StringToken, Token};
-use core::convert::TryInto;
-use core::str;
 use fuel_types::bytes::padded_len_usize;
-use fuels_types::enum_variants::EnumVariants;
-use fuels_types::{constants::WORD_SIZE, errors::CodecError, param_types::ParamType};
+use fuels_types::{
+    constants::WORD_SIZE, enum_variants::EnumVariants, errors::CodecError, param_types::ParamType,
+};
+use std::{convert::TryInto, str};
 
 #[derive(Debug, Clone)]
 struct DecodeResult {

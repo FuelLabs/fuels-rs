@@ -1,9 +1,8 @@
 use crate::script::Script;
-use core::panic;
-use fuel_gql_client::prelude::PanicReason;
 use fuel_gql_client::{
     fuel_tx::{Contract as FuelContract, Output, Receipt, StorageSlot, Transaction},
     fuel_types::{Address, AssetId, Salt},
+    prelude::PanicReason,
 };
 use fuel_tx::{Checkable, Create};
 use fuels_core::{
@@ -30,6 +29,7 @@ use std::{
     fmt::Debug,
     fs,
     marker::PhantomData,
+    panic,
     path::Path,
     str::FromStr,
 };

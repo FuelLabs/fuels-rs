@@ -1,7 +1,5 @@
 use crate::{StringToken, Token};
-use fuels_types::errors::Error;
-use fuels_types::param_types::ParamType;
-use fuels_types::utils::has_array_format;
+use fuels_types::{errors::Error, param_types::ParamType, utils::has_array_format};
 use hex::FromHex;
 
 #[derive(Default)]

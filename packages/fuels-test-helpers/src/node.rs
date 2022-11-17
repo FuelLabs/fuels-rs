@@ -70,8 +70,7 @@ where
 }
 
 pub mod serde_hex {
-    use core::fmt;
-    use std::convert::TryFrom;
+    use std::{convert::TryFrom, fmt};
 
     use hex::{FromHex, ToHex};
     use serde::de::Error;

@@ -1,6 +1,8 @@
-use crate::constants::{ENUM_DISCRIMINANT_WORD_WIDTH, WORD_SIZE};
-use crate::errors::CodecError;
-use crate::param_types::ParamType;
+use crate::{
+    constants::{ENUM_DISCRIMINANT_WORD_WIDTH, WORD_SIZE},
+    errors::CodecError,
+    param_types::ParamType,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EnumVariants {

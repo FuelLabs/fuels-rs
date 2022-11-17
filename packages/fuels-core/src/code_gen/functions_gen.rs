@@ -1,9 +1,10 @@
-use crate::code_gen::custom_types::{param_type_calls, Component};
-use crate::code_gen::docs_gen::expand_doc;
-use crate::code_gen::resolved_type;
+use crate::code_gen::{
+    custom_types::{param_type_calls, Component},
+    docs_gen::expand_doc,
+    resolved_type,
+};
 use crate::utils::safe_ident;
-use fuels_types::errors::Error;
-use fuels_types::{ABIFunction, TypeDeclaration};
+use fuels_types::{errors::Error, ABIFunction, TypeDeclaration};
 use inflector::Inflector;
 use proc_macro2::TokenStream;
 use quote::quote;

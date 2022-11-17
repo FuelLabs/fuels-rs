@@ -1,8 +1,6 @@
 use crate::{Bits256, Identity, Parameterize, Token, Tokenizable};
 use fuel_tx::{Address, AssetId, ContractId};
-use fuels_types::enum_variants::EnumVariants;
-use fuels_types::errors::Error;
-use fuels_types::param_types::ParamType;
+use fuels_types::{enum_variants::EnumVariants, errors::Error, param_types::ParamType};
 use std::iter::zip;
 
 impl<const SIZE: usize, T: Parameterize> Parameterize for [T; SIZE] {
