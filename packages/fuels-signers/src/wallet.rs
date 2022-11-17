@@ -648,7 +648,6 @@ impl WalletUnlocked {
         amount: u64,
         tx_parameters: TxParameters,
     ) -> Result<(String, String, Vec<Receipt>), Error> {
-        // TODO: can inputs consist of messages???
         let inputs = self
             .get_asset_inputs_for_amount(BASE_ASSET_ID, amount, 0)
             .await?;

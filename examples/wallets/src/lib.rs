@@ -337,11 +337,15 @@ mod tests {
     async fn wallet_transfer_to_base_layer() -> Result<(), Error> {
         // ANCHOR: wallet_withdraw_to_base
         use fuels::prelude::*;
+        use std::str::FromStr;
 
         let wallet = launch_provider_and_get_wallet().await;
 
         let amount = 1000;
-        let base_layer_address = Bech32Address::from(Address::from([1; 32]));
+        let base_layer_address =
+            Address::from_str("0x4710162c2e3a95a6faff05139150017c9e38e5e280432d546fae345d6ce6d8fe")
+                .expect("Invlaid address.");
+        let base_layer_address = Bech32Address::from(base_layer_address);
         // Transfer an amount of 1000 to the specified base layer address
         let (tx_id, msg_id, _receipts) = wallet
             .withdraw_to_base_layer(&base_layer_address, amount, TxParameters::default())
@@ -351,7 +355,7 @@ mod tests {
             .get_provider()?
             .get_message_proof(&tx_id, &msg_id)
             .await?
-            .expect("The message proof could not be retrieved.");
+            .expect("Failed to retrieve message proof.");
 
         assert_eq!(proof.amount.0, amount);
 
