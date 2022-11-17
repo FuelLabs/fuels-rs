@@ -188,7 +188,7 @@ async fn test_basic_script_with_tx_parameters() -> Result<(), Error> {
     // ANCHOR: script_with_tx_params
     let parameters = TxParameters {
         gas_price: 1,
-        gas_limit: 1000,
+        gas_limit: 10000,
         ..Default::default()
     };
     let result = instance.main(a, b).tx_params(parameters).call().await?;
