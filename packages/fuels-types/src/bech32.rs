@@ -13,7 +13,7 @@ pub const FUEL_BECH32_HRP: &str = "fuel";
 /// consisting of a human-readable part (hrp) and a hash (e.g. pubkey-, contract hash)
 macro_rules! bech32type {
     ($i:ident) => {
-        #[derive(Debug, Clone, PartialEq, Eq)]
+        #[derive(Debug, Clone, PartialEq, Eq, Hash)]
         pub struct $i {
             pub hrp: String,
             pub hash: Bytes32,

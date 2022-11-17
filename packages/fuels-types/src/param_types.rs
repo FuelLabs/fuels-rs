@@ -698,7 +698,7 @@ mod tests {
         assert_eq!(
             result,
             ParamType::Struct {
-                name: "".to_string(),
+                name: "not_used".to_string(),
                 fields: zip_w_unused_field_names(vec![ParamType::U8]),
                 generics: vec![ParamType::U8]
             }
@@ -1140,16 +1140,16 @@ mod tests {
         // then
         let expected_param_type = {
             let pass_the_generic_on = ParamType::Struct {
-                name: "".to_string(),
+                name: "not_used".to_string(),
                 fields: zip_w_unused_field_names(vec![ParamType::Struct {
-                    name: "".to_string(),
+                    name: "not_used".to_string(),
                     fields: zip_w_unused_field_names(vec![ParamType::String(2)]),
                     generics: vec![ParamType::String(2)],
                 }]),
                 generics: vec![ParamType::String(2)],
             };
             let struct_w_array_generic = ParamType::Struct {
-                name: "".to_string(),
+                name: "not_used".to_string(),
                 fields: zip_w_unused_field_names(vec![ParamType::Array(
                     Box::from(pass_the_generic_on.clone()),
                     2,
@@ -1157,7 +1157,7 @@ mod tests {
                 generics: vec![pass_the_generic_on],
             };
             let struct_w_tuple_generic = ParamType::Struct {
-                name: "".to_string(),
+                name: "not_used".to_string(),
                 fields: zip_w_unused_field_names(vec![ParamType::Tuple(vec![
                     struct_w_array_generic.clone(),
                     struct_w_array_generic.clone(),
@@ -1166,7 +1166,7 @@ mod tests {
             };
 
             ParamType::Struct {
-                name: "".to_string(),
+                name: "not_used".to_string(),
                 fields: zip_w_unused_field_names(vec![
                     ParamType::Tuple(vec![
                         ParamType::Array(Box::from(ParamType::B256), 2),

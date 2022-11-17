@@ -1,5 +1,4 @@
-use crate::{pad_string, pad_u16, pad_u32, pad_u8, EnumSelector, ParamType, StringToken, Token};
-use fuels_types::enum_variants::EnumVariants;
+use crate::{pad_string, pad_u16, pad_u32, pad_u8, EnumSelector, StringToken, Token};
 use fuels_types::{constants::WORD_SIZE, errors::CodecError};
 use itertools::Itertools;
 

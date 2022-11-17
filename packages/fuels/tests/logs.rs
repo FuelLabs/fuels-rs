@@ -145,7 +145,7 @@ async fn test_get_logs() -> Result<(), Error> {
     // ANCHOR: get_logs
     let contract_methods = contract_instance.methods();
     let response = contract_methods.produce_multiple_logs().call().await?;
-    let logs = response.get_logs();
+    let logs = response.get_logs()?;
     // ANCHOR_END: get_logs
 
     let expected_bits256 = Bits256([
@@ -176,7 +176,17 @@ async fn test_get_logs() -> Result<(), Error> {
         format!("{:?}", expected_generic_struct),
     ];
 
-    assert_eq!(logs, expected_logs);
+    assert_eq!(logs[0], expected_logs[0]);
+    assert_eq!(logs[1], expected_logs[1]);
+    assert_eq!(logs[2], expected_logs[2]);
+    assert_eq!(logs[3], expected_logs[3]);
+    assert_eq!(logs[4], expected_logs[4]);
+    assert_eq!(logs[5], expected_logs[5]);
+    assert_eq!(logs[6], expected_logs[6]);
+    assert_eq!(logs[7], expected_logs[7]);
+    assert_eq!(logs[8], expected_logs[8]);
+    assert_eq!(logs[9], expected_logs[9]);
+    assert_eq!(logs[10], expected_logs[10]);
 
     Ok(())
 }
@@ -194,9 +204,43 @@ async fn test_get_logs_with_no_logs() -> Result<(), Error> {
         .initialize_counter(42)
         .call()
         .await?
-        .get_logs();
+        .get_logs()?;
 
     assert!(logs.is_empty());
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_multi_call_log() -> Result<(), Error> {
+    setup_contract_test!(
+        contract_instance,
+        wallet,
+        "packages/fuels/tests/logs/logged_types"
+    );
+
+    setup_contract_test!(
+        contract_instance2,
+        None,
+        "packages/fuels/tests/logs/logged_types"
+    );
+
+    let contract_methods = contract_instance.methods();
+    let contract_methods2 = contract_instance2.methods();
+
+    let call_handler_1 = contract_methods.produce_multiple_logs();
+    let call_handler_2 = contract_methods2.produce_multiple_logs();
+
+    let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
+
+    multi_call_handler
+        .add_call(call_handler_1)
+        .add_call(call_handler_2);
+
+    let response = multi_call_handler.call::<((), ())>().await?;
+
+    // dbg!(&response.len());
+    dbg!(&response);
 
     Ok(())
 }

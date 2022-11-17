@@ -1,7 +1,6 @@
 use crate::code_gen::custom_types::{param_type_calls, Component};
 use crate::code_gen::docs_gen::expand_doc;
 use crate::code_gen::resolved_type;
-use crate::utils::ident;
 use crate::utils::safe_ident;
 use fuels_types::errors::Error;
 use fuels_types::{ABIFunction, TypeDeclaration};
@@ -24,7 +23,6 @@ use std::collections::HashMap;
 pub fn expand_function(
     function: &ABIFunction,
     types: &HashMap<usize, TypeDeclaration>,
-    contract_name: &str,
 ) -> Result<TokenStream, Error> {
     if function.name.is_empty() {
         return Err(Error::InvalidData("Function name can not be empty".into()));
@@ -51,11 +49,10 @@ pub fn expand_function(
     let name_stringified = name.to_string();
 
     let output_type = resolve_fn_output_type(function, types)?;
-    let contract_name = ident(contract_name);
 
     Ok(quote! {
         #doc
-        pub fn #name(&self #(,#arg_declarations)*) -> ContractCallHandler<#output_type, #contract_name> {
+        pub fn #name(&self #(,#arg_declarations)*) -> ContractCallHandler<#output_type> {
             let provider = self.wallet.get_provider().expect("Provider not set up");
             let encoded_fn_selector = resolve_fn_selector(#name_stringified, &[#(#param_type_calls),*]);
             let tokens = [#(#arg_names.into_token()),*];
@@ -268,11 +265,11 @@ mod tests {
             .collect::<HashMap<usize, TypeDeclaration>>();
 
         // Grabbing the one and only function in it.
-        let result = expand_function(&parsed_abi.functions[0], &all_types, "Contract")?;
+        let result = expand_function(&parsed_abi.functions[0], &all_types)?;
 
         let expected_code = r#"
                 #[doc = "Calls the contract's `some_abi_funct` function"]
-                pub fn some_abi_funct(&self, s_1: MyStruct1, s_2: MyStruct2) -> ContractCallHandler<MyStruct1, Contract> {
+                pub fn some_abi_funct(&self, s_1: MyStruct1, s_2: MyStruct2) -> ContractCallHandler<MyStruct1> {
                     let provider = self.wallet.get_provider().expect("Provider not set up");
                     let encoded_fn_selector = resolve_fn_selector(
                         "some_abi_funct",
@@ -330,11 +327,11 @@ mod tests {
         ]
         .into_iter()
         .collect::<HashMap<_, _>>();
-        let result = expand_function(&the_function, &types, "Contract");
+        let result = expand_function(&the_function, &types);
         let expected = TokenStream::from_str(
             r#"
             #[doc = "Calls the contract's `HelloWorld` function"]
-            pub fn HelloWorld(&self, bimbam: bool) -> ContractCallHandler<(), Contract> {
+            pub fn HelloWorld(&self, bimbam: bool) -> ContractCallHandler<()> {
                 let provider = self.wallet.get_provider().expect("Provider not set up");
                 let encoded_fn_selector = resolve_fn_selector("HelloWorld", &[<bool> :: param_type()]);
                 let tokens = [bimbam.into_token()];
@@ -432,7 +429,7 @@ mod tests {
         ]
         .into_iter()
         .collect::<HashMap<_, _>>();
-        let result = expand_function(&the_function, &types, "Contract");
+        let result = expand_function(&the_function, &types);
         // Some more editing was required because it is not rustfmt-compatible (adding/removing parentheses or commas)
         let expected = TokenStream::from_str(
             r#"
@@ -440,7 +437,7 @@ mod tests {
             pub fn hello_world(
                 &self,
                 the_only_allowed_input: SomeWeirdFrenchCuisine
-            ) -> ContractCallHandler<EntropyCirclesEnum, Contract> {
+            ) -> ContractCallHandler<EntropyCirclesEnum> {
                 let provider = self.wallet.get_provider().expect("Provider not set up");
                 let encoded_fn_selector = resolve_fn_selector("hello_world", &[<SomeWeirdFrenchCuisine> :: param_type()]);
                 let tokens = [the_only_allowed_input.into_token()];

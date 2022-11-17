@@ -176,28 +176,28 @@ fn something(param_type: &ParamType, token: &Token) -> Result<String, Error> {
         (ParamType::Bool, Token::Bool(val)) => val.to_string(),
         (ParamType::Byte, Token::Byte(val)) => val.to_string(),
         (ParamType::B256, Token::B256(val)) => {
-            format!("b256({val:?})")
+            format!("Bits256({val:?})")
         }
         (ParamType::Unit, Token::Unit) => "()".to_string(),
-        (ParamType::String(size), Token::String(str_token)) => {
-            format!("\"{}\"", str_token.data)
+        (ParamType::String(..), Token::String(str_token)) => {
+            format!("SizedAsciiString {{ data: \"{}\" }}", str_token.data)
         }
 
-        (ParamType::Array(ttype, size), Token::Array(tokens)) => {
+        (ParamType::Array(inner_type, _), Token::Array(tokens)) => {
             let elements = tokens
                 .iter()
-                .map(|token| something(ttype, &token))
+                .map(|token| something(inner_type, token))
                 .collect::<Result<Vec<_>, _>>()?
-                .join(",");
+                .join(", ");
             format!("[{elements}]")
         }
-        (ParamType::Vector(ttype), Token::Vector(tokens)) => {
+        (ParamType::Vector(inner_type), Token::Vector(tokens)) => {
             let elements = tokens
                 .iter()
-                .map(|token| something(ttype, &token))
+                .map(|token| something(inner_type, token))
                 .collect::<Result<Vec<_>, _>>()?
-                .join(",");
-            format!("Vec[{elements}]")
+                .join(", ");
+            format!("[{elements}]")
         }
         (ParamType::Struct { name, fields, .. }, Token::Struct(field_tokens)) => {
             let fields = zip(fields, field_tokens)
@@ -206,27 +206,32 @@ fn something(param_type: &ParamType, token: &Token) -> Result<String, Error> {
                     Ok(format!("{field_name}: {}", field_stringified))
                 })
                 .collect::<Result<Vec<_>, _>>()?
-                .join(" ");
+                .join(", ");
 
             format!("{name} {{ {fields} }}")
         }
-        (ParamType::Enum { name, variants, .. }, Token::Enum(selector)) => {
+        (ParamType::Enum { .. }, Token::Enum(selector)) => {
             let (discriminant, token, variants) = selector.as_ref();
 
             let selected_variant_param_type = variants
                 .type_of_selected_variant(*discriminant)
                 .map_err(|e| Error::InvalidData(e.msg))?;
-            let variant_stringified = something(&selected_variant_param_type, token)?;
+            let variant_str = something(&selected_variant_param_type, token)?;
+            let variant_str = if variant_str == "()" {
+                "".into()
+            } else {
+                format!("({variant_str})")
+            };
 
             let (variant_name, _) = variants
                 .select_variant(*discriminant)
                 .map_err(|e| Error::InvalidData(e.msg))?;
 
-            format!("{name}::{variant_name}({variant_stringified})")
+            format!("{variant_name}{variant_str}")
         }
         (ParamType::Tuple(types), Token::Tuple(tokens)) => {
             let elements = zip(types, tokens)
-                .map(|(ttype, token)| something(ttype, &token))
+                .map(|(ttype, token)| something(ttype, token))
                 .collect::<Result<Vec<_>, _>>()?
                 .join(",");
 
@@ -240,7 +245,7 @@ fn something(param_type: &ParamType, token: &Token) -> Result<String, Error> {
 impl OurDebug for ParamType {
     fn our_debug(&self, data: &[u8]) -> Result<String, Error> {
         let token = ABIDecoder::decode_single(self, data)?;
-        something(&self, &token)
+        something(self, &token)
     }
 }
 

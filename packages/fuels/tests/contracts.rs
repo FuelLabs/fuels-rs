@@ -661,14 +661,13 @@ async fn test_require() -> Result<(), Error> {
     );
 
     let contract_methods = contract_instance.methods();
-    dbg!(contract_methods.require_primitive().log_decoder);
     {
         let error = contract_methods
             .require_primitive()
             .call()
             .await
             .expect_err("Should return a revert error");
-
+        dbg!(&error);
         assert_is_revert_containing_msg("42", error);
     }
     {
@@ -678,6 +677,7 @@ async fn test_require() -> Result<(), Error> {
             .await
             .expect_err("Should return a revert error");
 
+        dbg!(&error);
         assert_is_revert_containing_msg("fuel", error);
     }
     {
@@ -687,6 +687,7 @@ async fn test_require() -> Result<(), Error> {
             .await
             .expect_err("Should return a revert error");
 
+        dbg!(&error);
         assert_is_revert_containing_msg("StructDeeplyNestedGeneric", error);
     }
     Ok(())
@@ -719,6 +720,7 @@ async fn test_multi_call_require() -> Result<(), Error> {
             .await
             .expect_err("Should return a revert error");
 
+        dbg!(&error);
         assert_is_revert_containing_msg("fuel", error);
     }
     {
@@ -736,6 +738,7 @@ async fn test_multi_call_require() -> Result<(), Error> {
             .await
             .expect_err("Should return a revert error");
 
+        dbg!(&error);
         assert_is_revert_containing_msg("StructDeeplyNestedGeneric", error);
     }
     Ok(())

@@ -13,7 +13,7 @@ use fuels_core::{
     parameters::{CallParameters, TxParameters},
     try_from_bytes,
     tx::{Bytes32, ContractId},
-    Parameterize, Selector, Token, Tokenizable,
+    OurDebug, Parameterize, Selector, Token, Tokenizable,
 };
 use fuels_signers::{
     provider::{Provider, TransactionCost},
@@ -24,21 +24,89 @@ use fuels_types::{
     errors::Error,
     param_types::{ParamType, ReturnLocation},
 };
-use std::collections::HashMap;
-use std::{collections::HashSet, fmt::Debug, fs, marker::PhantomData, path::Path, str::FromStr};
+use std::{
+    collections::{HashMap, HashSet},
+    fmt::Debug,
+    fs,
+    marker::PhantomData,
+    path::Path,
+    str::FromStr,
+};
 
 pub const DEFAULT_TX_DEP_ESTIMATION_ATTEMPTS: u64 = 10;
 
-pub trait Logging {
-    fn get_logs(receipts: &[Receipt]) -> Vec<String>;
-
-    fn logs_with_type<D: Tokenizable + Parameterize>(receipts: &[Receipt])
-        -> Result<Vec<D>, Error>;
-}
-
 #[derive(Debug, Clone)]
 pub struct LogDecoder {
-    pub map: HashMap<u64, ParamType>,
+    pub map: HashMap<(Bech32ContractId, u64), ParamType>,
+}
+
+impl LogDecoder {
+    fn get_logs(&self, receipts: &[Receipt]) -> Result<Vec<String>, Error> {
+        let ids_with_data: Vec<((Bech32ContractId, u64), Vec<u8>)> = receipts
+            .iter()
+            .filter_map(|r| match r {
+                Receipt::LogData { rb, data, id, .. } => {
+                    Some(((Bech32ContractId::from(*id), *rb), data.clone()))
+                }
+                Receipt::Log { ra, rb, id, .. } => Some((
+                    (Bech32ContractId::from(*id), *rb),
+                    ra.to_be_bytes().to_vec(),
+                )),
+                _ => None,
+            })
+            .collect();
+
+        ids_with_data
+            .iter()
+            .map(|((c_id, id), data)| {
+                let param_type = self
+                    .map
+                    .get(&(c_id.clone(), *id))
+                    .ok_or_else(|| Error::InvalidData("Failed to find log id".into()))?;
+
+                param_type.our_debug(data)
+            })
+            .collect::<Result<Vec<String>, Error>>()
+    }
+
+    fn logs_with_type<T: Tokenizable + Parameterize>(
+        &self,
+        receipts: &[Receipt],
+    ) -> Result<Vec<T>, Error> {
+        let target_param_type = T::param_type();
+
+        let target_ids: HashSet<(Bech32ContractId, u64)> = self
+            .map
+            .iter()
+            .filter_map(|((c_id, log_id), param_type)| {
+                if *param_type == target_param_type {
+                    Some((c_id.clone(), *log_id))
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        let decoded_logs: Vec<T> = receipts
+            .iter()
+            .filter_map(|r| match r {
+                Receipt::LogData { id, rb, data, .. }
+                    if target_ids.contains(&(Bech32ContractId::from(*id), *rb)) =>
+                {
+                    Some(data.clone())
+                }
+                Receipt::Log { id, ra, rb, .. }
+                    if target_ids.contains(&(Bech32ContractId::from(*id), *rb)) =>
+                {
+                    Some(ra.to_be_bytes().to_vec())
+                }
+                _ => None,
+            })
+            .map(|data| try_from_bytes(&data))
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(decoded_logs)
+    }
 }
 
 #[derive(Debug, Clone, Default)]
@@ -62,25 +130,20 @@ pub struct Contract {
 /// holds all the receipts returned by the call.
 #[derive(Debug)]
 // ANCHOR: call_response
-pub struct CallResponse<D, C> {
+pub struct CallResponse<D> {
     pub value: D,
     pub receipts: Vec<Receipt>,
     pub gas_used: u64,
-    pub contract_type: PhantomData<C>,
     pub log_decoder: LogDecoder,
 }
 // ANCHOR_END: call_response
 
-impl<D, C> CallResponse<D, C>
-where
-    C: Logging,
-{
+impl<D> CallResponse<D> {
     pub fn new(value: D, receipts: Vec<Receipt>, log_decoder: LogDecoder) -> Self {
         Self {
             value,
             gas_used: Self::get_gas_used(&receipts),
             receipts,
-            contract_type: PhantomData,
             log_decoder,
         }
     }
@@ -95,40 +158,12 @@ where
             .expect("could not retrieve gas used from ScriptResult")
     }
 
-    pub fn get_logs(&self) -> Vec<String> {
-        C::get_logs(&self.receipts)
+    pub fn get_logs(&self) -> Result<Vec<String>, Error> {
+        self.log_decoder.get_logs(&self.receipts)
     }
 
     pub fn logs_with_type<T: Tokenizable + Parameterize>(&self) -> Result<Vec<T>, Error> {
-        let target_param_type = T::param_type();
-
-        let target_ids: HashSet<u64> = self
-            .log_decoder
-            .map
-            .iter()
-            .filter_map(|(log_id, param_type)| {
-                if *param_type == target_param_type {
-                    Some(*log_id)
-                } else {
-                    None
-                }
-            })
-            .collect();
-
-        let decoded_logs: Vec<T> = self
-            .receipts
-            .iter()
-            .filter_map(|r| match r {
-                Receipt::LogData { rb, data, .. } if target_ids.contains(rb) => Some(data.clone()),
-                Receipt::Log { ra, rb, .. } if target_ids.contains(rb) => {
-                    Some(ra.to_be_bytes().to_vec())
-                }
-                _ => None,
-            })
-            .map(|data| try_from_bytes(&data))
-            .collect::<Result<Vec<_>, _>>()?;
-
-        Ok(decoded_logs)
+        self.log_decoder.logs_with_type::<T>(&self.receipts)
     }
 }
 
@@ -166,14 +201,14 @@ impl Contract {
     /// }
     /// For more details see `code_gen/functions_gen.rs`.
     /// Note that this needs a wallet because the contract instance needs a wallet for the calls
-    pub fn method_hash<D: Tokenizable + Parameterize + Debug, C: Logging>(
+    pub fn method_hash<D: Tokenizable + Parameterize + Debug>(
         provider: &Provider,
         contract_id: Bech32ContractId,
         wallet: &WalletUnlocked,
         signature: Selector,
         args: &[Token],
         log_decoder: LogDecoder,
-    ) -> Result<ContractCallHandler<D, C>, Error> {
+    ) -> Result<ContractCallHandler<D>, Error> {
         let encoded_selector = signature;
 
         let tx_parameters = TxParameters::default();
@@ -200,7 +235,6 @@ impl Contract {
             wallet: wallet.clone(),
             provider: provider.clone(),
             datatype: PhantomData,
-            contract_type: PhantomData,
             log_decoder,
         })
     }
@@ -493,14 +527,12 @@ impl ContractCall {
 }
 
 // Decode the logged type from the receipt of a `RevertTransactionError` if available
-fn decode_revert_error<C>(err: Error) -> Error
-where
-    C: Logging,
-{
+fn decode_revert_error(err: Error, log_decoder: &LogDecoder) -> Error {
     if let Error::RevertTransactionError(_, receipts) = &err {
-        let logs = C::get_logs(receipts);
-        if let Some(log) = logs.into_iter().next() {
-            return Error::RevertTransactionError(log, receipts.to_owned());
+        if let Ok(logs) = log_decoder.get_logs(receipts) {
+            if let Some(log) = logs.into_iter().next() {
+                return Error::RevertTransactionError(log, receipts.to_owned());
+            }
         }
     }
     err
@@ -509,20 +541,18 @@ where
 #[derive(Debug)]
 #[must_use = "contract calls do nothing unless you `call` them"]
 /// Helper that handles submitting a call to a client and formatting the response
-pub struct ContractCallHandler<D, C> {
+pub struct ContractCallHandler<D> {
     pub contract_call: ContractCall,
     pub tx_parameters: TxParameters,
     pub wallet: WalletUnlocked,
     pub provider: Provider,
     pub datatype: PhantomData<D>,
-    pub contract_type: PhantomData<C>,
     pub log_decoder: LogDecoder,
 }
 
-impl<D, C> ContractCallHandler<D, C>
+impl<D> ContractCallHandler<D>
 where
     D: Tokenizable + Debug,
-    C: Logging,
 {
     /// Sets external contracts as dependencies to this contract's call.
     /// Effectively, this will be used to create Input::Contract/Output::Contract
@@ -574,7 +604,7 @@ where
     /// your method returns `bool`, it will be a bool, works also for structs thanks to the
     /// `abigen!()`). The other field of CallResponse, `receipts`, contains the receipts of the
     /// transaction.
-    async fn call_or_simulate(&self, simulate: bool) -> Result<CallResponse<D, C>, Error> {
+    async fn call_or_simulate(&self, simulate: bool) -> Result<CallResponse<D>, Error> {
         let script = self.get_call_execution_script().await?;
 
         let receipts = if simulate {
@@ -597,19 +627,19 @@ where
     }
 
     /// Call a contract's method on the node, in a state-modifying manner.
-    pub async fn call(self) -> Result<CallResponse<D, C>, Error> {
+    pub async fn call(self) -> Result<CallResponse<D>, Error> {
         Self::call_or_simulate(&self, false)
             .await
-            .map_err(decode_revert_error::<C>)
+            .map_err(|err| decode_revert_error(err, &self.log_decoder))
     }
 
     /// Call a contract's method on the node, in a simulated manner, meaning the state of the
     /// blockchain is *not* modified but simulated.
     /// It is the same as the `call` method because the API is more user-friendly this way.
-    pub async fn simulate(self) -> Result<CallResponse<D, C>, Error> {
+    pub async fn simulate(self) -> Result<CallResponse<D>, Error> {
         Self::call_or_simulate(&self, true)
             .await
-            .map_err(decode_revert_error::<C>)
+            .map_err(|err| decode_revert_error(err, &self.log_decoder))
     }
 
     /// Simulates the call and attempts to resolve missing tx dependencies.
@@ -657,7 +687,7 @@ where
     }
 
     /// Create a CallResponse from call receipts
-    pub fn get_response(&self, mut receipts: Vec<Receipt>) -> Result<CallResponse<D, C>, Error> {
+    pub fn get_response(&self, mut receipts: Vec<Receipt>) -> Result<CallResponse<D>, Error> {
         let token = self.contract_call.get_decoded_output(&mut receipts)?;
         Ok(CallResponse::new(
             D::from_token(token)?,
@@ -670,32 +700,29 @@ where
 #[derive(Debug)]
 #[must_use = "contract calls do nothing unless you `call` them"]
 /// Helper that handles bundling multiple calls into a single transaction
-pub struct MultiContractCallHandler<C> {
+pub struct MultiContractCallHandler {
     pub contract_calls: Vec<ContractCall>,
+    pub log_decoder: LogDecoder,
     pub tx_parameters: TxParameters,
     pub wallet: WalletUnlocked,
-    pub contract_type: PhantomData<C>,
 }
 
-impl<C> MultiContractCallHandler<C>
-where
-    C: Logging,
-{
+impl MultiContractCallHandler {
     pub fn new(wallet: WalletUnlocked) -> Self {
         Self {
             contract_calls: vec![],
             tx_parameters: TxParameters::default(),
             wallet,
-            contract_type: PhantomData,
+            log_decoder: LogDecoder {
+                map: HashMap::new(),
+            },
         }
     }
 
     /// Adds a contract call to be bundled in the transaction
     /// Note that this is a builder method
-    pub fn add_call<D: Tokenizable>(
-        &mut self,
-        call_handler: ContractCallHandler<D, C>,
-    ) -> &mut Self {
+    pub fn add_call<D: Tokenizable>(&mut self, call_handler: ContractCallHandler<D>) -> &mut Self {
+        self.log_decoder = call_handler.log_decoder.clone();
         self.contract_calls.push(call_handler.contract_call);
         self
     }
@@ -717,25 +744,25 @@ where
     }
 
     /// Call contract methods on the node, in a state-modifying manner.
-    pub async fn call<D: Tokenizable + Debug>(&self) -> Result<CallResponse<D, C>, Error> {
+    pub async fn call<D: Tokenizable + Debug>(&self) -> Result<CallResponse<D>, Error> {
         Self::call_or_simulate(self, false)
             .await
-            .map_err(decode_revert_error::<C>)
+            .map_err(|err| decode_revert_error(err, &self.log_decoder))
     }
 
     /// Call contract methods on the node, in a simulated manner, meaning the state of the
     /// blockchain is *not* modified but simulated.
     /// It is the same as the `call` method because the API is more user-friendly this way.
-    pub async fn simulate<D: Tokenizable + Debug>(&self) -> Result<CallResponse<D, C>, Error> {
+    pub async fn simulate<D: Tokenizable + Debug>(&self) -> Result<CallResponse<D>, Error> {
         Self::call_or_simulate(self, true)
             .await
-            .map_err(decode_revert_error::<C>)
+            .map_err(|err| decode_revert_error(err, &self.log_decoder))
     }
 
     async fn call_or_simulate<D: Tokenizable + Debug>(
         &self,
         simulate: bool,
-    ) -> Result<CallResponse<D, C>, Error> {
+    ) -> Result<CallResponse<D>, Error> {
         let script = self.get_call_execution_script().await?;
 
         let provider = self.wallet.get_provider()?;
@@ -807,7 +834,7 @@ where
     pub fn get_response<D: Tokenizable + Debug>(
         &self,
         mut receipts: Vec<Receipt>,
-    ) -> Result<CallResponse<D, C>, Error> {
+    ) -> Result<CallResponse<D>, Error> {
         let mut final_tokens = vec![];
 
         for call in self.contract_calls.iter() {
@@ -817,12 +844,10 @@ where
         }
 
         let tokens_as_tuple = Token::Tuple(final_tokens);
-        let response = CallResponse::<D, C>::new(
+        let response = CallResponse::<D>::new(
             D::from_token(tokens_as_tuple)?,
             receipts,
-            LogDecoder {
-                map: HashMap::new(),
-            },
+            self.log_decoder.clone(),
         );
 
         Ok(response)

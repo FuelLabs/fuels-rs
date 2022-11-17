@@ -78,7 +78,7 @@ impl ABIDecoder {
     }
 
     fn decode_struct(
-        param_types: &Vec<(String, ParamType)>,
+        param_types: &[(String, ParamType)],
         bytes: &[u8],
     ) -> Result<DecodeResult, CodecError> {
         let param_types = param_types
@@ -711,7 +711,7 @@ mod tests {
 
         let error = result.expect_err("Should have resulted in an error");
 
-        let expected_msg = "Error while decoding an enum. The discriminant '1' doesn't point to any of the following variants: ";
+        let expected_msg = "The discriminant '1' doesn't point to any of the following variants: ";
         assert!(matches!(error, CodecError::InvalidData(str) if str.starts_with(expected_msg)));
         Ok(())
     }
