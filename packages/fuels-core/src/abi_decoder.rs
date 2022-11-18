@@ -318,7 +318,7 @@ mod tests {
     use fuels_types::errors::Error;
     use std::vec;
 
-    fn zip_w_unused_field_names(types: Vec<ParamType>) -> Vec<(String, ParamType)> {
+    fn unused_field_names(types: Vec<ParamType>) -> Vec<(String, ParamType)> {
         zip(repeat("unused".to_string()), types).collect()
     }
 
@@ -434,7 +434,7 @@ mod tests {
         ];
         let param_type = ParamType::Struct {
             name: "".to_string(),
-            fields: zip_w_unused_field_names(vec![ParamType::U8, ParamType::Bool]),
+            fields: unused_field_names(vec![ParamType::U8, ParamType::Bool]),
             generics: vec![],
         };
 
@@ -453,10 +453,8 @@ mod tests {
         //     y: bool,
         // }
 
-        let inner_enum_types = EnumVariants::new(zip_w_unused_field_names(vec![
-            ParamType::U32,
-            ParamType::Bool,
-        ]))?;
+        let inner_enum_types =
+            EnumVariants::new(unused_field_names(vec![ParamType::U32, ParamType::Bool]))?;
         let types = vec![ParamType::Enum {
             name: "".to_string(),
             variants: inner_enum_types.clone(),
@@ -487,14 +485,12 @@ mod tests {
         //     y: u32,
         // }
 
-        let inner_enum_types = EnumVariants::new(zip_w_unused_field_names(vec![
-            ParamType::B256,
-            ParamType::U32,
-        ]))?;
+        let inner_enum_types =
+            EnumVariants::new(unused_field_names(vec![ParamType::B256, ParamType::U32]))?;
 
         let struct_type = ParamType::Struct {
             name: "".to_string(),
-            fields: zip_w_unused_field_names(vec![
+            fields: unused_field_names(vec![
                 ParamType::Enum {
                     name: "".to_string(),
                     variants: inner_enum_types.clone(),
@@ -544,11 +540,11 @@ mod tests {
 
         let nested_struct = ParamType::Struct {
             name: "".to_string(),
-            fields: zip_w_unused_field_names(vec![
+            fields: unused_field_names(vec![
                 ParamType::U16,
                 ParamType::Struct {
                     name: "".to_string(),
-                    fields: zip_w_unused_field_names(vec![
+                    fields: unused_field_names(vec![
                         ParamType::Bool,
                         ParamType::Array(Box::new(ParamType::U8), 2),
                     ]),
@@ -594,11 +590,11 @@ mod tests {
         // Parameters
         let nested_struct = ParamType::Struct {
             name: "".to_string(),
-            fields: zip_w_unused_field_names(vec![
+            fields: unused_field_names(vec![
                 ParamType::U16,
                 ParamType::Struct {
                     name: "".to_string(),
-                    fields: zip_w_unused_field_names(vec![
+                    fields: unused_field_names(vec![
                         ParamType::Bool,
                         ParamType::Array(Box::new(ParamType::U8), 2),
                     ]),
@@ -664,7 +660,7 @@ mod tests {
         ];
         let struct_type = ParamType::Struct {
             name: "".to_string(),
-            fields: zip_w_unused_field_names(vec![ParamType::Unit, ParamType::U64]),
+            fields: unused_field_names(vec![ParamType::Unit, ParamType::U64]),
             generics: vec![],
         };
 
@@ -678,10 +674,8 @@ mod tests {
     #[test]
     fn enums_with_all_unit_variants_are_decoded_from_one_word() -> Result<(), Error> {
         let data = [0, 0, 0, 0, 0, 0, 0, 1];
-        let variants = EnumVariants::new(zip_w_unused_field_names(vec![
-            ParamType::Unit,
-            ParamType::Unit,
-        ]))?;
+        let variants =
+            EnumVariants::new(unused_field_names(vec![ParamType::Unit, ParamType::Unit]))?;
         let enum_w_only_units = ParamType::Enum {
             name: "".to_string(),
             variants: variants.clone(),
@@ -698,7 +692,7 @@ mod tests {
     #[test]
     fn out_of_bounds_discriminant_is_detected() -> Result<(), Error> {
         let data = [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 2];
-        let variants = EnumVariants::new(zip_w_unused_field_names(vec![ParamType::U32]))?;
+        let variants = EnumVariants::new(unused_field_names(vec![ParamType::U32]))?;
         let enum_type = ParamType::Enum {
             name: "".to_string(),
             variants,

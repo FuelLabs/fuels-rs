@@ -729,7 +729,7 @@ where
         Ok(CallResponse::new(
             D::from_token(token)?,
             receipts,
-            self.log_decoder.to_owned(),
+            self.log_decoder.clone(),
         ))
     }
 }
