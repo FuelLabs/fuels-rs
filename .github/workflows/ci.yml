@@ -19,6 +19,8 @@ env:
   FUEL_CORE_VERSION: 0.14.1
   RUST_VERSION: 1.64.0
   FORC_VERSION: 0.30.1
+  FORC_PATCH_BRANCH: ""
+  FORC_PATCH_REVISION: ""
 
 jobs:
   setup-test-projects:
@@ -41,11 +43,19 @@ jobs:
 
       - name: Install forc and forc-fmt
         run: |
-          curl -sSLf https://github.com/FuelLabs/sway/releases/download/v${{ env.FORC_VERSION }}/forc-binaries-linux_amd64.tar.gz -L -o forc.tar.gz
-          tar -xvf forc.tar.gz
-          chmod +x forc-binaries/forc
-          mv forc-binaries/forc /usr/local/bin/forc
-          mv forc-binaries/forc-fmt /usr/local/bin/forc-fmt
+          if [[ -z $FORC_PATCH_BRANCH && -z $FORC_PATCH_REVISION ]]; then
+            curl -sSLf https://github.com/FuelLabs/sway/releases/download/v${{ env.FORC_VERSION }}/forc-binaries-linux_amd64.tar.gz -L -o forc.tar.gz
+            tar -xvf forc.tar.gz
+            chmod +x forc-binaries/forc
+            mv forc-binaries/forc /usr/local/bin/forc
+            mv forc-binaries/forc-fmt /usr/local/bin/forc-fmt
+          else
+            if [[ -n $FORC_PATCH_BRANCH ]]; then
+              cargo install forc forc-fmt --git https://github.com/FuelLabs/sway --branch $FORC_PATCH_BRANCH
+            else 
+              cargo install forc forc-fmt --git https://github.com/FuelLabs/sway --rev $FORC_PATCH_REVISION
+            fi
+          fi
 
       - name: Build Sway test projects
         uses: actions-rs/cargo@v1
