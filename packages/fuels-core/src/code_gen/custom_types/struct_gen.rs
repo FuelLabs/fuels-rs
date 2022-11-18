@@ -93,8 +93,7 @@ fn struct_tokenizable_impl(
     quote! {
         impl <#(#generic_parameters: Tokenizable + Parameterize, )*> Tokenizable for #struct_ident <#(#generic_parameters, )*> {
             fn into_token(self) -> Token {
-                let mut tokens = Vec::new();
-                #( tokens.push(#into_token_calls); )*
+                let tokens = [#(#into_token_calls),*].to_vec();
                 Token::Struct(tokens)
             }
 
@@ -130,13 +129,17 @@ fn struct_parameterized_impl(
         .map(|(field_name, param_type_call)| {
             quote! {(#field_name, #param_type_call)}
         });
-    let struct_name_stringified = struct_ident.to_string();
+    let struct_name_str = struct_ident.to_string();
     quote! {
         impl <#(#generic_parameters: Parameterize + Tokenizable),*> Parameterize for #struct_ident <#(#generic_parameters),*> {
             fn param_type() -> ParamType {
-                let mut types = Vec::new();
-                #( types.push(#field_name_w_param_type); )*
-                ParamType::Struct{name: #struct_name_stringified.to_string(), fields: types, generics: vec![#(#generic_parameters::param_type()),*]}
+                let types = [#(#field_name_w_param_type),*].to_vec();
+
+                ParamType::Struct{
+                    name: #struct_name_str.to_string(),
+                    fields: types,
+                    generics: [#(#generic_parameters::param_type()),*].to_vec()
+                }
             }
         }
     }

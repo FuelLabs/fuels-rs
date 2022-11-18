@@ -172,11 +172,13 @@ fn enum_parameterize_impl(
     quote! {
         impl<#(#generics: Parameterize + Tokenizable),*> Parameterize for #enum_ident <#(#generics),*> {
             fn param_type() -> ParamType {
-                let mut variants = vec![];
-                #(variants.push(#variants);)*
-
+                let variants = [#(#variants),*].to_vec();
                 let variants = EnumVariants::new(variants).unwrap_or_else(|_| panic!("{} has no variants which isn't allowed!", #enum_ident_stringified));
-                ParamType::Enum{name: #enum_ident_stringified.to_string(), variants, generics: vec![#(#generics::param_type()),*]}
+                ParamType::Enum{
+                    name: #enum_ident_stringified.to_string(),
+                    variants,
+                    generics: [#(#generics::param_type()),*].to_vec()
+                }
             }
         }
     }
