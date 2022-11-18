@@ -26,6 +26,8 @@ use crate::{field, UniqueIdentifier};
 use fuels_types::bech32::{Bech32Address, Bech32ContractId};
 use fuels_types::errors::Error;
 
+use chrono::{DateTime, Duration, Utc};
+
 #[derive(Debug)]
 pub struct TransactionCost {
     pub min_gas_price: u64,
@@ -39,17 +41,17 @@ pub struct TransactionCost {
 // ANCHOR: time_parameters
 pub struct TimeParameters {
     // The time to set on the first block
-    pub start_time: u64,
+    pub start_time: DateTime<Utc>,
     // The time interval between subsequent blocks
-    pub block_time_interval: u64,
+    pub block_time_interval: Duration,
 }
 // ANCHOR_END: time_parameters
 
 impl From<TimeParameters> for FuelTimeParameters {
     fn from(time: TimeParameters) -> Self {
         Self {
-            start_time: time.start_time.into(),
-            block_time_interval: time.block_time_interval.into(),
+            start_time: (time.start_time.timestamp() as u64).into(),
+            block_time_interval: (time.block_time_interval.num_seconds() as u64).into(),
         }
     }
 }

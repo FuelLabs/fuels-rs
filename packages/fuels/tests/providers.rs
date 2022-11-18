@@ -1,3 +1,4 @@
+use chrono::Duration;
 use fuel_core::service::{Config as CoreConfig, FuelService};
 use fuel_core_interfaces::model::Message;
 use fuel_gql_client::{client::schema::message::Message as OtherMessage, fuel_tx::Receipt};
@@ -162,6 +163,8 @@ async fn can_increase_block_height() -> Result<(), Error> {
 
 #[tokio::test]
 async fn can_set_custom_block_time() -> Result<(), Error> {
+    use chrono::{TimeZone, Utc};
+
     // ANCHOR: use_produce_blocks_custom_time
     let config = Config {
         manual_blocks_enabled: true, // Necessary so the `produce_blocks` API can be used locally
@@ -175,8 +178,8 @@ async fn can_set_custom_block_time() -> Result<(), Error> {
     assert_eq!(provider.latest_block_height().await?, 0);
 
     let time = TimeParameters {
-        start_time: 100,
-        block_time_interval: 10,
+        start_time: Utc.timestamp(100, 0),
+        block_time_interval: Duration::seconds(10),
     };
     provider.produce_blocks(3, Some(time)).await?;
 
