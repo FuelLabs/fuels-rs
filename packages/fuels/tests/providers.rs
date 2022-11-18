@@ -178,7 +178,7 @@ async fn can_set_custom_block_time() -> Result<(), Error> {
     assert_eq!(provider.latest_block_height().await?, 0);
 
     let time = TimeParameters {
-        start_time: Utc.timestamp(100, 0),
+        start_time: Utc.timestamp_opt(100, 0).unwrap(),
         block_time_interval: Duration::seconds(10),
     };
     provider.produce_blocks(3, Some(time)).await?;
