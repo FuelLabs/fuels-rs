@@ -49,7 +49,7 @@ impl<D> ScriptCallResponse<D> {
 }
 
 #[derive(Debug)]
-/// Contains all data relevant to a single contract call
+/// Contains all data relevant to a single script call
 pub struct ScriptCall {
     pub compiled_script: CompiledScript,
     pub script_data: Vec<u8>,
