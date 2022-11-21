@@ -25,7 +25,7 @@ pub struct Abigen {
     no_std: bool,
 
     /// The contract or script name as an identifier.
-    program_name: Ident,
+    name: Ident,
 
     abi: ProgramABI,
 
@@ -43,7 +43,7 @@ impl Abigen {
         Ok(Self {
             types: Abigen::get_types(&parsed_abi),
             abi: parsed_abi,
-            program_name: ident(contract_name),
+            name: ident(contract_name),
             rustfmt: true,
             no_std: false,
         })
@@ -72,12 +72,9 @@ impl Abigen {
     /// the brought into scope after it is called through a procedural macro
     /// (`abigen!()` in our case).
     pub fn expand_contract(&self) -> Result<TokenStream, Error> {
-        let name = &self.program_name;
+        let name = &self.name;
         let methods_name = ident(&format!("{}Methods", name));
-        let name_mod = ident(&format!(
-            "{}_mod",
-            self.program_name.to_string().to_lowercase()
-        ));
+        let name_mod = ident(&format!("{}_mod", self.name.to_string().to_lowercase()));
 
         let contract_functions = self.contract_functions()?;
         let abi_structs = self.abi_structs()?;
@@ -170,11 +167,8 @@ impl Abigen {
     /// Expand a script into type-safe Rust bindings based on its ABI. See `expand_contract` for
     /// more details.
     pub fn expand_script(&self) -> Result<TokenStream, Error> {
-        let name = &self.program_name;
-        let name_mod = ident(&format!(
-            "{}_mod",
-            self.program_name.to_string().to_lowercase()
-        ));
+        let name = &self.name;
+        let name_mod = ident(&format!("{}_mod", self.name.to_string().to_lowercase()));
 
         let includes = self.includes();
 
