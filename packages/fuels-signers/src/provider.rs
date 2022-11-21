@@ -320,12 +320,11 @@ impl Provider {
         Ok(balances)
     }
 
-    /// Get transaction by id.
     pub async fn get_transaction_by_id(
         &self,
         tx_id: &str,
-    ) -> Result<TransactionResponse, ProviderError> {
-        Ok(self.client.transaction(tx_id).await.unwrap().unwrap())
+    ) -> Result<Option<TransactionResponse>, ProviderError> {
+        Ok(self.client.transaction(tx_id).await?)
     }
 
     // - Get transaction(s)
@@ -333,7 +332,14 @@ impl Provider {
         &self,
         request: PaginationRequest<String>,
     ) -> Result<PaginatedResult<TransactionResponse, String>, ProviderError> {
-        self.client.transactions(request).await.map_err(Into::into)
+        let pr = self.client.transactions(request).await?;
+
+        Ok(PaginatedResult {
+            cursor: pr.cursor,
+            results: pr.results.into_iter().map(Into::into).collect(),
+            has_next_page: pr.has_next_page,
+            has_previous_page: pr.has_previous_page,
+        })
     }
 
     // Get transaction(s) by owner
@@ -342,10 +348,17 @@ impl Provider {
         owner: &Bech32Address,
         request: PaginationRequest<String>,
     ) -> Result<PaginatedResult<TransactionResponse, String>, ProviderError> {
-        self.client
+        let pr = self
+            .client
             .transactions_by_owner(&owner.hash().to_string(), request)
-            .await
-            .map_err(Into::into)
+            .await?;
+
+        Ok(PaginatedResult {
+            cursor: pr.cursor,
+            results: pr.results.into_iter().map(Into::into).collect(),
+            has_next_page: pr.has_next_page,
+            has_previous_page: pr.has_previous_page,
+        })
     }
 
     pub async fn latest_block_height(&self) -> Result<u64, ProviderError> {

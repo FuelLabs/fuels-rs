@@ -13,6 +13,10 @@ pub mod enum_variants;
 pub mod errors;
 pub mod param_types;
 pub mod utils;
+pub mod chain_info;
+pub mod node_info;
+pub mod message;
+pub mod coin;
 
 #[derive(Debug, Clone, Copy, ToString, PartialEq, Eq)]
 #[strum(serialize_all = "lowercase")]
