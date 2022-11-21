@@ -272,24 +272,21 @@ impl Abigen {
     }
 
     pub fn script_function(&self) -> Result<TokenStream, Error> {
-        let main_function = self
+        let functions = self
             .abi
             .functions
             .iter()
             .filter(|function| function.name == "main")
             .collect::<Vec<&ABIFunction>>();
-        if main_function.len() != 1 {
-            return Err(Error::CompilationError(
-                "The script does not have a function named `main` so it cannot compile!"
-                    .to_string(),
-            ));
-        };
-        let tokenized_function = main_function
-            .iter()
-            .map(|function| generate_script_main_function(function, &self.types))
-            .collect::<Result<Vec<TokenStream>, Error>>()?;
 
-        Ok(quote! { #( #tokenized_function )* })
+        if let [main_function] = functions.as_slice() {
+            let tokenized_function = generate_script_main_function(main_function, &self.types)?;
+            Ok(quote! { #tokenized_function })
+        } else {
+            Err(Error::CompilationError(
+                "The script must have one function named `main` to compile!".to_string(),
+            ))
+        }
     }
 
     fn abi_structs(&self) -> Result<TokenStream, Error> {
