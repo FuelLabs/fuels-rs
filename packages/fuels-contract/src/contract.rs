@@ -32,8 +32,10 @@ use fuels_types::{
     param_types::{ParamType, ReturnLocation},
 };
 
+/// How many times to attempt to resolve missing tx dependencies.
 pub const DEFAULT_TX_DEP_ESTIMATION_ATTEMPTS: u64 = 10;
 
+/// A compiled representation of a contract.
 #[derive(Debug, Clone, Default)]
 pub struct CompiledContract {
     pub raw: Vec<u8>,
@@ -41,7 +43,7 @@ pub struct CompiledContract {
     pub storage_slots: Vec<StorageSlot>,
 }
 
-/// Contract is a struct to interface with a contract. That includes things such as
+/// [`Contract`] is a struct to interface with a contract. That includes things such as
 /// compiling, deploying, and running transactions against a contract.
 /// The contract has a wallet attribute, used to pay for transactions and sign them.
 /// It allows doing calls without passing a wallet/signer each time.
@@ -50,7 +52,7 @@ pub struct Contract {
     pub wallet: WalletUnlocked,
 }
 
-/// CallResponse is a struct that is returned by a call to the contract. Its value field
+/// [`ContractCallResponse`] is a struct that is returned by a call to the contract. Its value field
 /// holds the decoded typed value returned by the contract's method. The other field
 /// holds all the receipts returned by the call.
 #[derive(Debug)]
@@ -102,19 +104,24 @@ impl Contract {
         (contract_id, state_root)
     }
 
-    /// Creates an ABI call based on a function selector and
-    /// the encoding of its call arguments, which is a slice of Tokens.
-    /// It returns a prepared ContractCall that can further be used to
+    /// Creates an ABI call based on a function [selector](Selector) and
+    /// the encoding of its call arguments, which is a slice of [`Token`]s.
+    /// It returns a prepared [`ContractCall`] that can further be used to
     /// make the actual transaction.
     /// This method is the underlying implementation of the functions
     /// generated from an ABI JSON spec, i.e, this is what's generated:
+    ///
+    /// ```
     /// quote! {
     ///     #doc
     ///     pub fn #name(&self #input) -> #result {
     ///         Contract::method_hash(#tokenized_signature, #arg)
     ///     }
     /// }
-    /// For more details see `code_gen/functions_gen.rs`.
+    /// ```
+    ///
+    /// For more details see `code_gen/functions_gen.rs` in `fuels-core`.
+    ///
     /// Note that this needs a wallet because the contract instance needs a wallet for the calls
     pub fn method_hash<D: Tokenizable + Parameterize + Debug>(
         provider: &Provider,
@@ -510,20 +517,33 @@ where
     D: Tokenizable + Debug,
 {
     /// Sets external contracts as dependencies to this contract's call.
-    /// Effectively, this will be used to create Input::Contract/Output::Contract
+    /// Effectively, this will be used to create [`Input::Contract`]/[`Output::Contract`]
     /// pairs and set them into the transaction.
     /// Note that this is a builder method, i.e. use it as a chain:
-    /// `my_contract_instance.my_method(...).set_contracts(&[another_contract_id]).call()`.
+    ///
+    /// ```ignore
+    /// my_contract_instance.my_method(...).set_contracts(&[another_contract_id]).call()
+    /// ```
+    ///
+    /// [`Input::Contract`]: fuel_tx::Input::Contract
+    /// [`Output::Contract`]: fuel_tx::Output::Contract
     pub fn set_contracts(mut self, contract_ids: &[Bech32ContractId]) -> Self {
         self.contract_call.external_contracts = contract_ids.to_vec();
         self
     }
 
     /// Appends additional external contracts as dependencies to this contract's call.
-    /// Effectively, this will be used to create additional Input::Contract/Output::Contract
-    /// pairs and set them into the transaction.
+    /// Effectively, this will be used to create additional
+    /// [`Input::Contract`]/[`Output::Contract`] pairs
+    /// and set them into the transaction.
     /// Note that this is a builder method, i.e. use it as a chain:
-    /// `my_contract_instance.my_method(...).append_contracts(additional_contract_id).call()`.
+    ///
+    /// ```ignore
+    /// my_contract_instance.my_method(...).append_contracts(additional_contract_id).call()
+    /// ```
+    ///
+    /// [`Input::Contract`]: fuel_tx::Input::Contract
+    /// [`Output::Contract`]: fuel_tx::Output::Contract
     pub fn append_contract(mut self, contract_id: Bech32ContractId) -> Self {
         self.contract_call.append_external_contracts(contract_id);
         self
@@ -531,8 +551,11 @@ where
 
     /// Sets the transaction parameters for a given transaction.
     /// Note that this is a builder method, i.e. use it as a chain:
+
+    /// ```ignore
     /// let params = TxParameters { gas_price: 100, gas_limit: 1000000 };
-    /// `my_contract_instance.my_method(...).tx_params(params).call()`.
+    /// my_contract_instance.my_method(...).tx_params(params).call()
+    /// ```
     pub fn tx_params(mut self, params: TxParameters) -> Self {
         self.tx_parameters = params;
         self
@@ -540,35 +563,47 @@ where
 
     /// Sets the call parameters for a given contract call.
     /// Note that this is a builder method, i.e. use it as a chain:
+    ///
+    /// ```ignore
     /// let params = CallParameters { amount: 1, asset_id: BASE_ASSET_ID };
-    /// `my_contract_instance.my_method(...).call_params(params).call()`.
+    /// my_contract_instance.my_method(...).call_params(params).call()
+    /// ```
     pub fn call_params(mut self, params: CallParameters) -> Self {
         self.contract_call.call_parameters = params;
         self
     }
 
-    /// Appends `num` `Output::Variable`s to the transaction.
+    /// Appends `num` [`Output::Variable`]s to the transaction.
     /// Note that this is a builder method, i.e. use it as a chain:
-    /// `my_contract_instance.my_method(...).add_variable_outputs(num).call()`.
+    ///
+    /// ```ignore
+    /// my_contract_instance.my_method(...).add_variable_outputs(num).call()
+    /// ```
+    ///
+    /// [`Output::Variable`]: fuel_tx::Output::Variable
     pub fn append_variable_outputs(mut self, num: u64) -> Self {
         self.contract_call.append_variable_outputs(num);
         self
     }
 
-    /// Appends `num` `Output::Message`s to the transaction.
+    /// Appends `num` [`Output::Message`]s to the transaction.
     /// Note that this is a builder method, i.e. use it as a chain:
-    /// `my_contract_instance.my_method(...).add_message_outputs(num).call()`.
+    ///
+    /// ```ignore
+    /// my_contract_instance.my_method(...).add_message_outputs(num).call()
+    /// ```
+    ///
+    /// [`Output::Message`]: fuel_tx::Output::Message
     pub fn append_message_outputs(mut self, num: u64) -> Self {
         self.contract_call.append_message_outputs(num);
         self
     }
 
-    /// Call a contract's method on the node. If `simulate==true`, then the call is done in a
-    /// read-only manner, using a `dry-run`. Return a Result<CallResponse, Error>. The CallResponse
-    /// struct contains the method's value in its `value` field as an actual typed value `D` (if
-    /// your method returns `bool`, it will be a bool, works also for structs thanks to the
-    /// `abigen!()`). The other field of CallResponse, `receipts`, contains the receipts of the
-    /// transaction.
+    /// Call a contract's method on the node. If `simulate == true`, then the call is done in a
+    /// read-only manner, using a `dry-run`. The [`ContractCallResponse`] struct contains the method's
+    /// value in its `value` field as an actual typed value `D` (if your method returns `bool`,
+    /// it will be a bool, works also for structs thanks to the `abigen!()`).
+    /// The other field of [`ContractCallResponse`], `receipts`, contains the receipts of the transaction.
     #[tracing::instrument]
     async fn call_or_simulate(&self, simulate: bool) -> Result<ContractCallResponse<D>, Error> {
         let script = self.get_call_execution_script().await?;
@@ -600,7 +635,9 @@ where
 
     /// Call a contract's method on the node, in a simulated manner, meaning the state of the
     /// blockchain is *not* modified but simulated.
-    /// It is the same as the `call` method because the API is more user-friendly this way.
+    /// It is the same as the [`call`] method because the API is more user-friendly this way.
+    ///
+    /// [`call`]: Self::call
     pub async fn simulate(self) -> Result<ContractCallResponse<D>, Error> {
         Self::call_or_simulate(&self, true).await
     }
@@ -669,7 +706,7 @@ where
         Ok(transaction_cost)
     }
 
-    /// Create a CallResponse from call receipts
+    /// Create a [`ContractCallResponse`] from call receipts
     pub fn get_response(
         &self,
         mut receipts: Vec<Receipt>,
@@ -736,7 +773,9 @@ impl MultiContractCallHandler {
 
     /// Call contract methods on the node, in a simulated manner, meaning the state of the
     /// blockchain is *not* modified but simulated.
-    /// It is the same as the `call` method because the API is more user-friendly this way.
+    /// It is the same as the [`call`] method because the API is more user-friendly this way.
+    ///
+    /// [`call`]: Self::call
     pub async fn simulate<D: Tokenizable + Debug>(&self) -> Result<ContractCallResponse<D>, Error> {
         Self::call_or_simulate(self, true).await
     }
@@ -827,7 +866,7 @@ impl MultiContractCallHandler {
         Ok(transaction_cost)
     }
 
-    /// Create a MultiCallResponse from call receipts
+    /// Create a [`ContractCallResponse`] from call receipts
     pub fn get_response<D: Tokenizable + Debug>(
         &self,
         mut receipts: Vec<Receipt>,

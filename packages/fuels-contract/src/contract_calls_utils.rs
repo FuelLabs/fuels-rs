@@ -16,7 +16,7 @@ use std::{iter, vec};
 use crate::contract::ContractCall;
 
 #[derive(Default)]
-/// Specifies offsets of Opcode::CALL parameters stored in the script
+/// Specifies offsets of [`Opcode::CALL`] parameters stored in the script
 /// data from which they can be loaded into registers
 pub(crate) struct CallOpcodeParamsOffset {
     pub asset_id_offset: usize,
@@ -63,12 +63,12 @@ pub(crate) fn get_instructions(
 }
 
 /// Returns script data, consisting of the following items in the given order:
-/// 1. Asset ID to be forwarded (AmountId::LEN)
-/// 2. Amount to be forwarded (1 * WORD_SIZE)
-/// 3. Gas to be forwarded (1 * WORD_SIZE)
-/// 4. Contract ID (ContractID::LEN);
-/// 5. Function selector (1 * WORD_SIZE);
-/// 6. Calldata offset (optional) (1 * WORD_SIZE)
+/// 1. Asset ID to be forwarded ([`AssetId::LEN`])
+/// 2. Amount to be forwarded `(1 * `[`WORD_SIZE`]`)`
+/// 3. Gas to be forwarded `(1 * `[`WORD_SIZE`]`)`
+/// 4. Contract ID ([`ContractId::LEN`]);
+/// 5. Function selector `(1 * `[`WORD_SIZE`]`)`
+/// 6. Calldata offset (optional) `(1 * `[`WORD_SIZE`]`)`
 /// 7. Encoded arguments (optional) (variable length)
 pub(crate) fn build_script_data_from_contract_calls(
     calls: &[ContractCall],
@@ -129,8 +129,8 @@ pub(crate) fn build_script_data_from_contract_calls(
 }
 
 /// Returns the VM instructions for calling a contract method
-/// We use the Opcode to call a contract: `CALL` pointing at the
-/// following registers;
+/// We use the [`Opcode`] to call a contract: [`CALL`](Opcode::CALL)
+/// pointing at the following registers:
 ///
 /// 0x10 Script data offset
 /// 0x11 Gas forwarded
@@ -154,8 +154,8 @@ fn get_single_call_instructions(offsets: &CallOpcodeParamsOffset) -> Vec<u8> {
     instructions.iter().copied().collect::<Vec<u8>>()
 }
 
-/// Returns the assets and contracts that will be consumed (inputs) and created (outputs)
-/// by the transaction
+/// Returns the assets and contracts that will be consumed ([`Input`]s)
+/// and created ([`Output`]s) by the transaction
 pub(crate) fn get_transaction_inputs_outputs(
     calls: &[ContractCall],
     wallet_address: &Bech32Address,
