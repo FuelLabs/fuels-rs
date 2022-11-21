@@ -8,7 +8,7 @@ You can run a script using its JSON-ABI and the path to its binary file. You can
 
 # Running scripts with transaction parameters
 
-The method for passing transaction parameters is the same as [with contracts](.. /calling-contracts/tx-params.md). As a reminder, the workflow would look like this: 
+The method for passing transaction parameters is the same as [with contracts](../calling-contracts/tx-params.md). As a reminder, the workflow would look like this:
 
 ```rust,ignore
 {{#include ../../../packages/fuels/tests/scripts.rs:script_with_tx_params}}
