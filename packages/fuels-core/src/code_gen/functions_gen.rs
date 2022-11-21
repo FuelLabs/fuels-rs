@@ -13,14 +13,17 @@ use std::collections::HashMap;
 
 /// Functions used by the Abigen to expand functions defined in an ABI spec.
 
-/// Transforms a function defined in [`Function`] into a [`TokenStream`]
+/// Transforms a function defined in [`ABIFunction`] into a [`TokenStream`]
 /// that represents that same function signature as a Rust-native function
 /// declaration.
-/// The actual logic inside the function is the function `method_hash` under
-/// [`Contract`], which is responsible for encoding the function selector
-/// and the function parameters that will be used in the actual contract call.
 ///
-/// [`Contract`]: crate::contract::Contract
+/// The actual logic inside the function is the function `method_hash` under
+/// [`Contract`], which is responsible for encoding
+/// the function selector and the function parameters that will be used
+/// in the actual contract call.
+///
+/// [`Contract`]: fuels_contract::contract::Contract
+// TODO (oleksii/docs): linkify the above `Contract` link properly
 pub fn expand_function(
     function: &ABIFunction,
     types: &HashMap<usize, TypeDeclaration>,
