@@ -113,7 +113,7 @@ where
     /// Sets the transaction parameters for a given transaction.
     /// Note that this is a builder method, i.e. use it as a chain:
     /// let params = TxParameters { gas_price: 100, gas_limit: 1000000 };
-    /// `my_contract_instance.my_method(...).tx_params(params).call()`.
+    /// `instance.main(...).tx_params(params).call()`.
     pub fn tx_params(mut self, params: TxParameters) -> Self {
         self.tx_parameters = params;
         self
