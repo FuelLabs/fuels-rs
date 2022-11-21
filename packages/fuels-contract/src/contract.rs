@@ -469,26 +469,33 @@ pub fn get_decoded_output(
     };
     let (encoded_value, index) = match output_param.get_return_location() {
         ReturnLocation::ReturnData => {
-            match receipts.iter().find(|&receipt| {
+            match receipts.iter().position(|receipt| {
                 matches!(receipt,
                     Receipt::ReturnData { id, data, .. } if *id == contract_id && !data.is_empty())
             }) {
-                Some(r) => {
-                    let index = receipts.iter().position(|elt| elt == r).unwrap();
-                    (r.data().unwrap().to_vec(), Some(index))
-                }
+                Some(idx) => (
+                    receipts[idx]
+                        .data()
+                        .expect("ReturnData should have data")
+                        .to_vec(),
+                    Some(idx),
+                ),
                 None => (vec![], None),
             }
         }
         ReturnLocation::Return => {
-            match receipts.iter().find(|&receipt| {
+            match receipts.iter().position(|receipt| {
                 matches!(receipt,
                     Receipt::Return { id, ..} if *id == contract_id)
             }) {
-                Some(r) => {
-                    let index = receipts.iter().position(|elt| elt == r).unwrap();
-                    (r.val().unwrap().to_be_bytes().to_vec(), Some(index))
-                }
+                Some(idx) => (
+                    receipts[idx]
+                        .val()
+                        .expect("Return should have val")
+                        .to_be_bytes()
+                        .to_vec(),
+                    Some(idx),
+                ),
                 None => (vec![], None),
             }
         }
