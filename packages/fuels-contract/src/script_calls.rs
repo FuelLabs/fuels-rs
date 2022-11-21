@@ -129,11 +129,11 @@ where
         self
     }
 
-    /// Call a contract's method on the node. If `simulate==true`, then the call is done in a
-    /// read-only manner, using a `dry-run`. Return a Result<CallResponse, Error>. The CallResponse
-    /// struct contains the method's value in its `value` field as an actual typed value `D` (if
+    /// Call a script on the node. If `simulate==true`, then the call is done in a
+    /// read-only manner, using a `dry-run`. Return a Result<ScriptCallResponse, Error>. The ScriptCallResponse
+    /// struct contains the main's value in its `value` field as an actual typed value `D` (if
     /// your method returns `bool`, it will be a bool, works also for structs thanks to the
-    /// `abigen!()`). The other field of CallResponse, `receipts`, contains the receipts of the
+    /// `script_abigen!()`). The other field of ScriptCallResponse, `receipts`, contains the receipts of the
     /// transaction.
     #[tracing::instrument]
     async fn call_or_simulate(&self, simulate: bool) -> Result<ScriptCallResponse<D>, Error> {
@@ -161,19 +161,19 @@ where
         self.get_response(receipts)
     }
 
-    /// Call a contract's method on the node, in a state-modifying manner.
+    /// Call a script on the node, in a state-modifying manner.
     pub async fn call(self) -> Result<ScriptCallResponse<D>, Error> {
         Self::call_or_simulate(&self, false).await
     }
 
-    /// Call a contract's method on the node, in a simulated manner, meaning the state of the
+    /// Call a script on the node, in a simulated manner, meaning the state of the
     /// blockchain is *not* modified but simulated.
     /// It is the same as the `call` method because the API is more user-friendly this way.
     pub async fn simulate(self) -> Result<ScriptCallResponse<D>, Error> {
         Self::call_or_simulate(&self, true).await
     }
 
-    /// Create a CallResponse from call receipts
+    /// Create a ScriptCallResponse from call receipts
     pub fn get_response(&self, mut receipts: Vec<Receipt>) -> Result<ScriptCallResponse<D>, Error> {
         let token = get_decoded_output(&mut receipts, None, &self.output_param)?;
         Ok(ScriptCallResponse::new(D::from_token(token)?, receipts))
