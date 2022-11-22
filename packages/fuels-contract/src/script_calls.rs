@@ -16,11 +16,6 @@ use fuels_types::{errors::Error, param_types::ParamType};
 
 use crate::execution_script::{CompiledScript, TransactionExecution};
 
-pub struct ScriptInterface {
-    pub script: TransactionExecution,
-    pub wallet: WalletUnlocked,
-}
-
 #[derive(Debug)]
 pub struct ScriptCallResponse<D> {
     pub value: D,
@@ -28,6 +23,7 @@ pub struct ScriptCallResponse<D> {
     pub gas_used: u64,
 }
 
+// TODO(iqdecay): merge with `ContractCallResponse`
 impl<D> ScriptCallResponse<D> {
     /// Get the gas used from [`ScriptResult`] receipt
     ///
@@ -57,6 +53,7 @@ pub struct ScriptCall {
     pub script_data: Vec<u8>,
     pub inputs: Vec<Input>,
     pub outputs: Vec<Output>,
+    // TODO(iqdecay): figure out if this field is still neeeded
     pub call_parameters: CallParameters,
 }
 
@@ -147,9 +144,9 @@ where
             self.tx_parameters.maturity,
             self.script_call.compiled_script.script_binary.clone(),
             self.script_call.script_data.clone(),
-            self.script_call.inputs.clone(),  // TODO
-            self.script_call.outputs.clone(), // TODO
-            vec![vec![0, 0].into()],          //TODO witnesses
+            self.script_call.inputs.clone(),  // TODO(iqdecay)
+            self.script_call.outputs.clone(), // TODO(iqdecay)
+            vec![vec![0, 0].into()],          //TODO(iqdecay): witnesses
         );
         self.wallet.add_fee_coins(&mut tx, 0, 0).await?;
 
