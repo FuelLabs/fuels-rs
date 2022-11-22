@@ -1,4 +1,4 @@
-use fuel_gql_client::client::schema::schema::{Coin as SchemaCoin, CoinStatus as SchemaCoinStatus};
+use fuel_gql_client::client::schema::coin::{Coin as SchemaCoin, CoinStatus as SchemaCoinStatus};
 use fuel_tx::{Address, AssetId, UtxoId};
 
 pub enum CoinStatus {
@@ -8,7 +8,10 @@ pub enum CoinStatus {
 
 impl From<SchemaCoinStatus> for CoinStatus {
     fn from(schema_coin_status: SchemaCoinStatus) -> Self {
-        match schema_coin_status {}
+        match schema_coin_status {
+            SchemaCoinStatus::Unspent => CoinStatus::Unspent,
+            SchemaCoinStatus::Spent => CoinStatus::Spent,
+        }
     }
 }
 
@@ -32,11 +35,11 @@ impl Coin {
     }
 
     pub fn asset_id(&self) -> AssetId {
-        self.schema_coin.asset_id.into()
+        AssetId::from(self.schema_coin.asset_id.0 .0)
     }
 
     pub fn utxo_id(&self) -> UtxoId {
-        self.schema_coin.utxo_id.0
+        self.schema_coin.utxo_id.0 .0
     }
 
     pub fn maturity(&self) -> u64 {
@@ -44,11 +47,7 @@ impl Coin {
     }
 
     pub fn owner(&self) -> Address {
-        self.schema_coin.owner.into()
-    }
-
-    pub fn da_height(&self) -> u64 {
-        self.schema_coin.da_height.0
+        Address::from(self.schema_coin.owner.0 .0)
     }
 
     pub fn status(&self) -> CoinStatus {

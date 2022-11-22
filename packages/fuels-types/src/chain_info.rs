@@ -29,28 +29,24 @@ impl ChainInfo {
     }
 
     pub fn latest_block(&self) -> Block {
-        self.schema_chain_info.latest_block.into()
+        Block {
+            schema_block: self.schema_chain_info.latest_block.clone(),
+        }
     }
 
     pub fn consensus_parameters(&self) -> ConsensusParameters {
-        self.schema_chain_info.consensus_parameters.into()
-    }
-}
-
-#[derive(Debug)]
-pub struct ConsensusParameters {
-    schema_consensus_params: SchemaConsensusParams,
-}
-
-impl From<SchemaConsensusParams> for ConsensusParameters {
-    fn from(schema_consensus_params: SchemaConsensusParams) -> Self {
-        Self {
-            schema_consensus_params,
+        ConsensusParameters {
+            schema_consensus_params: &self.schema_chain_info.consensus_parameters,
         }
     }
 }
 
-impl ConsensusParameters {
+#[derive(Debug)]
+pub struct ConsensusParameters<'a> {
+    schema_consensus_params: &'a SchemaConsensusParams,
+}
+
+impl<'a> ConsensusParameters<'a> {
     pub fn contract_max_size(&self) -> u64 {
         self.schema_consensus_params.contract_max_size.0
     }
