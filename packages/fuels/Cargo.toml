@@ -22,6 +22,7 @@ fuels-types = { version = "0.31.1", path = "../fuels-types" }
 [dev-dependencies]
 anyhow = "1.0.58"
 ctor = " 0.1"
+chrono = "0.4.2"
 fuel-core = { version = "0.14", default-features = false }
 fuel-core-interfaces = { version = "0.14", default-features = false }
 fuel-gql-client = { version = "0.14", default-features = false }
