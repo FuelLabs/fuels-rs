@@ -84,7 +84,7 @@ impl Abigen {
         let log_id_param_type_pairs = generate_log_id_param_type_pairs(&resolved_logs);
         let fetch_logs = generate_fetch_logs(&resolved_logs);
 
-        let includes = self.includes();
+        let includes = self.includes(false);
 
         let code = if self.no_std {
             quote! {}
@@ -170,7 +170,7 @@ impl Abigen {
         let name = &self.name;
         let name_mod = ident(&format!("{}_mod", self.name.to_string().to_lowercase()));
 
-        let includes = self.includes();
+        let includes = self.includes(true);
 
         let main_script_function = self.script_function()?;
         let code = if self.no_std {
@@ -202,14 +202,8 @@ impl Abigen {
             pub mod #name_mod {
                 #![allow(clippy::enum_variant_names)]
                 #![allow(dead_code)]
-                #![allow(unused_imports)]
 
                 #includes
-                use fuels::core::abi_encoder::ABIEncoder;
-                use fuels::core::parameters::TxParameters;
-                use fuels::contract::script_calls::{ScriptCallHandler, ScriptCall};
-                use fuels::contract::execution_script::CompiledScript;
-                use std::marker::PhantomData;
 
                 #code
 
@@ -221,36 +215,48 @@ impl Abigen {
     }
 
     /// Generates the includes necessary for the abigen.
-    /// TODO(iqdecay): change the necessary imports on scripts
-    fn includes(&self) -> TokenStream {
+    fn includes(&self, is_script: bool) -> TokenStream {
         if self.no_std {
             quote! {
                 use alloc::{vec, vec::Vec};
-                use fuels_core::{EnumSelector, Parameterize, Tokenizable, Token, Identity, try_from_bytes};
-                use fuels_core::types::*;
                 use fuels_core::code_gen::function_selector::resolve_fn_selector;
+                use fuels_core::types::*;
+                use fuels_core::{EnumSelector, Parameterize, Tokenizable, Token, Identity, try_from_bytes};
+                use fuels_types::enum_variants::EnumVariants;
                 use fuels_types::errors::Error as SDKError;
                 use fuels_types::param_types::ParamType;
-                use fuels_types::enum_variants::EnumVariants;
             }
         } else {
+            let specific_includes = if is_script {
+                quote! {
+                    use fuels::contract::execution_script::CompiledScript;
+                    use fuels::contract::script_calls::{ScriptCallHandler, ScriptCall};
+                    use fuels::core::abi_encoder::ABIEncoder;
+                    use fuels::core::parameters::TxParameters;
+                    use std::marker::PhantomData;
+                }
+            } else {
+                quote! {
+                    use fuels::contract::contract::{Contract, ContractCallHandler, get_decoded_output};
+                    use fuels::core::abi_decoder::ABIDecoder;
+                    use fuels::core::code_gen::function_selector::resolve_fn_selector;
+                    use fuels::core::code_gen::{extract_and_parse_logs, extract_log_ids_and_data};
+                    use fuels::core::{EnumSelector, StringToken, Identity, };
+                    use fuels::tx::{ContractId, Address, Receipt};
+                    use fuels::types::ResolvedLog;
+                    use fuels::types::bech32::Bech32ContractId;
+                    use std::collections::{HashSet, HashMap};
+                    use std::str::FromStr;
+                }
+            };
             quote! {
-                use fuels::contract::contract::{Contract, ContractCallHandler, get_decoded_output};
-                use fuels::core::{EnumSelector, StringToken, Parameterize, Tokenizable, Token,
-                                  Identity, try_from_bytes};
-                use fuels::core::code_gen::{extract_and_parse_logs, extract_log_ids_and_data};
-                use fuels::core::abi_decoder::ABIDecoder;
-                use fuels::core::code_gen::function_selector::resolve_fn_selector;
-                use fuels::core::types::*;
+                use fuels::core::{Tokenizable, Token, Parameterize, try_from_bytes};
                 use fuels::signers::WalletUnlocked;
-                use fuels::tx::{ContractId, Address, Receipt};
-                use fuels::types::bech32::Bech32ContractId;
-                use fuels::types::ResolvedLog;
+                use fuels::types::enum_variants::EnumVariants;
                 use fuels::types::errors::Error as SDKError;
                 use fuels::types::param_types::ParamType;
-                use fuels::types::enum_variants::EnumVariants;
-                use std::str::FromStr;
-                use std::collections::{HashSet, HashMap};
+                use fuels::core::types::*;
+                #specific_includes
             }
         }
     }
