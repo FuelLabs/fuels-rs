@@ -207,7 +207,7 @@ impl Abigen {
                 #includes
                 use fuels::core::abi_encoder::ABIEncoder;
                 use fuels::core::parameters::TxParameters;
-                use fuels::contract::script_calls::{ScriptCallResponse, ScriptCallHandler, ScriptCall};
+                use fuels::contract::script_calls::{ScriptCallHandler, ScriptCall};
                 use fuels::contract::execution_script::CompiledScript;
                 use std::marker::PhantomData;
 

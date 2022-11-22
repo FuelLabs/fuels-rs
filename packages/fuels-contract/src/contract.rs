@@ -11,6 +11,7 @@ use std::marker::PhantomData;
 use std::path::Path;
 use std::str::FromStr;
 
+use crate::call_response::VMCallResponse;
 use crate::execution_script::TransactionExecution;
 use fuel_gql_client::prelude::PanicReason;
 use fuels_core::abi_decoder::ABIDecoder;
@@ -52,38 +53,6 @@ pub struct Contract {
     pub wallet: WalletUnlocked,
 }
 
-/// [`ContractCallResponse`] is a struct that is returned by a call to the contract. Its value field
-/// holds the decoded typed value returned by the contract's method. The other field
-/// holds all the receipts returned by the call.
-#[derive(Debug)]
-// ANCHOR: contract_call_response
-pub struct ContractCallResponse<D> {
-    pub value: D,
-    pub receipts: Vec<Receipt>,
-    pub gas_used: u64,
-}
-// ANCHOR_END: contract_call_response
-
-impl<D> ContractCallResponse<D> {
-    /// Get the gas used from ScriptResult receipt
-    fn get_gas_used(receipts: &[Receipt]) -> u64 {
-        receipts
-            .iter()
-            .rfind(|r| matches!(r, Receipt::ScriptResult { .. }))
-            .expect("could not retrieve ScriptResult")
-            .gas_used()
-            .expect("could not retrieve gas used from ScriptResult")
-    }
-
-    pub fn new(value: D, receipts: Vec<Receipt>) -> Self {
-        Self {
-            value,
-            gas_used: Self::get_gas_used(&receipts),
-            receipts,
-        }
-    }
-}
-
 impl Contract {
     pub fn new(compiled_contract: CompiledContract, wallet: WalletUnlocked) -> Self {
         Self {
@@ -111,7 +80,7 @@ impl Contract {
     /// This method is the underlying implementation of the functions
     /// generated from an ABI JSON spec, i.e, this is what's generated:
     ///
-    /// ```
+    /// ```ignore
     /// quote! {
     ///     #doc
     ///     pub fn #name(&self #input) -> #result {
@@ -607,12 +576,12 @@ where
     }
 
     /// Call a contract's method on the node. If `simulate == true`, then the call is done in a
-    /// read-only manner, using a `dry-run`. The [`ContractCallResponse`] struct contains the method's
+    /// read-only manner, using a `dry-run`. The [`VMCallResponse`] struct contains the method's
     /// value in its `value` field as an actual typed value `D` (if your method returns `bool`,
     /// it will be a bool, works also for structs thanks to the `abigen!()`).
-    /// The other field of [`ContractCallResponse`], `receipts`, contains the receipts of the transaction.
+    /// The other field of [`VMCallResponse`], `receipts`, contains the receipts of the transaction.
     #[tracing::instrument]
-    async fn call_or_simulate(&self, simulate: bool) -> Result<ContractCallResponse<D>, Error> {
+    async fn call_or_simulate(&self, simulate: bool) -> Result<VMCallResponse<D>, Error> {
         let script = self.get_call_execution_script().await?;
 
         let receipts = if simulate {
@@ -636,7 +605,7 @@ where
     }
 
     /// Call a contract's method on the node, in a state-modifying manner.
-    pub async fn call(self) -> Result<ContractCallResponse<D>, Error> {
+    pub async fn call(self) -> Result<VMCallResponse<D>, Error> {
         Self::call_or_simulate(&self, false).await
     }
 
@@ -645,7 +614,7 @@ where
     /// It is the same as the [`call`] method because the API is more user-friendly this way.
     ///
     /// [`call`]: Self::call
-    pub async fn simulate(self) -> Result<ContractCallResponse<D>, Error> {
+    pub async fn simulate(self) -> Result<VMCallResponse<D>, Error> {
         Self::call_or_simulate(&self, true).await
     }
 
@@ -713,17 +682,14 @@ where
         Ok(transaction_cost)
     }
 
-    /// Create a [`ContractCallResponse`] from call receipts
-    pub fn get_response(
-        &self,
-        mut receipts: Vec<Receipt>,
-    ) -> Result<ContractCallResponse<D>, Error> {
+    /// Create a [`VMCallResponse`] from call receipts
+    pub fn get_response(&self, mut receipts: Vec<Receipt>) -> Result<VMCallResponse<D>, Error> {
         let token = get_decoded_output(
             &mut receipts,
             Some(&self.contract_call.contract_id),
             &self.contract_call.output_param,
         )?;
-        Ok(ContractCallResponse::new(D::from_token(token)?, receipts))
+        Ok(VMCallResponse::new(D::from_token(token)?, receipts))
     }
 }
 
@@ -774,7 +740,7 @@ impl MultiContractCallHandler {
     }
 
     /// Call contract methods on the node, in a state-modifying manner.
-    pub async fn call<D: Tokenizable + Debug>(&self) -> Result<ContractCallResponse<D>, Error> {
+    pub async fn call<D: Tokenizable + Debug>(&self) -> Result<VMCallResponse<D>, Error> {
         Self::call_or_simulate(self, false).await
     }
 
@@ -783,7 +749,7 @@ impl MultiContractCallHandler {
     /// It is the same as the [`call`] method because the API is more user-friendly this way.
     ///
     /// [`call`]: Self::call
-    pub async fn simulate<D: Tokenizable + Debug>(&self) -> Result<ContractCallResponse<D>, Error> {
+    pub async fn simulate<D: Tokenizable + Debug>(&self) -> Result<VMCallResponse<D>, Error> {
         Self::call_or_simulate(self, true).await
     }
 
@@ -791,7 +757,7 @@ impl MultiContractCallHandler {
     async fn call_or_simulate<D: Tokenizable + Debug>(
         &self,
         simulate: bool,
-    ) -> Result<ContractCallResponse<D>, Error> {
+    ) -> Result<VMCallResponse<D>, Error> {
         let script = self.get_call_execution_script().await?;
 
         let provider = self.wallet.get_provider()?;
@@ -873,11 +839,11 @@ impl MultiContractCallHandler {
         Ok(transaction_cost)
     }
 
-    /// Create a [`ContractCallResponse`] from call receipts
+    /// Create a [`VMCallResponse`] from call receipts
     pub fn get_response<D: Tokenizable + Debug>(
         &self,
         mut receipts: Vec<Receipt>,
-    ) -> Result<ContractCallResponse<D>, Error> {
+    ) -> Result<VMCallResponse<D>, Error> {
         let mut final_tokens = vec![];
 
         for call in self.contract_calls.iter() {
@@ -888,7 +854,7 @@ impl MultiContractCallHandler {
         }
 
         let tokens_as_tuple = Token::Tuple(final_tokens);
-        let response = ContractCallResponse::<D>::new(D::from_token(tokens_as_tuple)?, receipts);
+        let response = VMCallResponse::<D>::new(D::from_token(tokens_as_tuple)?, receipts);
 
         Ok(response)
     }

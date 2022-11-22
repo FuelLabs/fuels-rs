@@ -12,39 +12,10 @@ use fuels_core::{
 };
 use fuels_signers::{provider::Provider, WalletUnlocked};
 
+use crate::call_response::VMCallResponse;
 use fuels_types::{errors::Error, param_types::ParamType};
 
 use crate::execution_script::{CompiledScript, TransactionExecution};
-
-#[derive(Debug)]
-pub struct ScriptCallResponse<D> {
-    pub value: D,
-    pub receipts: Vec<Receipt>,
-    pub gas_used: u64,
-}
-
-// TODO(iqdecay): merge with `ContractCallResponse`
-impl<D> ScriptCallResponse<D> {
-    /// Get the gas used from [`ScriptResult`] receipt
-    ///
-    /// [`ScriptResult`]: Receipt::ScriptResult
-    fn get_gas_used(receipts: &[Receipt]) -> u64 {
-        receipts
-            .iter()
-            .rfind(|r| matches!(r, Receipt::ScriptResult { .. }))
-            .expect("could not retrieve ScriptResult")
-            .gas_used()
-            .expect("could not retrieve gas used from ScriptResult")
-    }
-
-    pub fn new(value: D, receipts: Vec<Receipt>) -> Self {
-        Self {
-            value,
-            gas_used: Self::get_gas_used(&receipts),
-            receipts,
-        }
-    }
-}
 
 #[derive(Debug)]
 /// Contains all data relevant to a single script call
@@ -132,12 +103,12 @@ where
     }
 
     /// Call a script on the node. If `simulate == true`, then the call is done in a
-    /// read-only manner, using a `dry-run`. The [`ScriptCallResponse`] struct contains the `main`'s value
+    /// read-only manner, using a `dry-run`. The [`VMCallResponse`] struct contains the `main`'s value
     /// in its `value` field as an actual typed value `D` (if your method returns `bool`,
     /// it will be a bool, works also for structs thanks to the `abigen!()`).
-    /// The other field of [`ScriptCallResponse`], `receipts`, contains the receipts of the transaction.
+    /// The other field of [`VMCallResponse`], `receipts`, contains the receipts of the transaction.
     #[tracing::instrument]
-    async fn call_or_simulate(&self, simulate: bool) -> Result<ScriptCallResponse<D>, Error> {
+    async fn call_or_simulate(&self, simulate: bool) -> Result<VMCallResponse<D>, Error> {
         let mut tx = Transaction::script(
             self.tx_parameters.gas_price,
             self.tx_parameters.gas_limit,
@@ -163,7 +134,7 @@ where
     }
 
     /// Call a script on the node, in a state-modifying manner.
-    pub async fn call(self) -> Result<ScriptCallResponse<D>, Error> {
+    pub async fn call(self) -> Result<VMCallResponse<D>, Error> {
         Self::call_or_simulate(&self, false).await
     }
 
@@ -172,13 +143,13 @@ where
     /// It is the same as the [`call`] method because the API is more user-friendly this way.
     ///
     /// [`call`]: Self::call
-    pub async fn simulate(self) -> Result<ScriptCallResponse<D>, Error> {
+    pub async fn simulate(self) -> Result<VMCallResponse<D>, Error> {
         Self::call_or_simulate(&self, true).await
     }
 
-    /// Create a [`ScriptCallResponse`] from call receipts
-    pub fn get_response(&self, mut receipts: Vec<Receipt>) -> Result<ScriptCallResponse<D>, Error> {
+    /// Create a [`VMCallResponse`] from call receipts
+    pub fn get_response(&self, mut receipts: Vec<Receipt>) -> Result<VMCallResponse<D>, Error> {
         let token = get_decoded_output(&mut receipts, None, &self.output_param)?;
-        Ok(ScriptCallResponse::new(D::from_token(token)?, receipts))
+        Ok(VMCallResponse::new(D::from_token(token)?, receipts))
     }
 }

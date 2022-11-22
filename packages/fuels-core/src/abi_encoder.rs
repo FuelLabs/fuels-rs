@@ -151,7 +151,7 @@ impl ABIEncoder {
     }
 
     fn encode_bool(arg_bool: bool) -> Data {
-        Data::Inline(pad_u8(if arg_bool { 1 } else { 0 }).to_vec())
+        Data::Inline(pad_u8(u8::from(arg_bool)).to_vec())
     }
 
     fn encode_byte(arg_byte: u8) -> Data {
