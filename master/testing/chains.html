@@ -153,9 +153,48 @@
 
     assert_eq!(provider.latest_block_height().await?, 0);
 
-    provider.produce_blocks(3).await?;
+    provider.produce_blocks(3, None).await?;
 
     assert_eq!(provider.latest_block_height().await?, 3);
+</code></pre>
+<p>You can also set a custom block time by providing <code>TimeParameters</code> as the second, optional argument. <code>TimeParameters</code> is defined as:</p>
+<pre><code class="language-rust ignore">pub struct TimeParameters {
+    // The time to set on the first block
+    pub start_time: DateTime&lt;Utc&gt;,
+    // The time interval between subsequent blocks
+    pub block_time_interval: Duration,
+}
+</code></pre>
+<p>And here is an example:</p>
+<pre><code class="language-rust ignore">    let config = Config {
+        manual_blocks_enabled: true, // Necessary so the `produce_blocks` API can be used locally
+        ..Config::local_node()
+    };
+    let wallets =
+        launch_custom_provider_and_get_wallets(WalletsConfig::default(), Some(config), None).await;
+    let wallet = &amp;wallets[0];
+    let provider = wallet.get_provider()?;
+
+    assert_eq!(provider.latest_block_height().await?, 0);
+
+    let time = TimeParameters {
+        start_time: Utc.timestamp_opt(100, 0).unwrap(),
+        block_time_interval: Duration::seconds(10),
+    };
+    provider.produce_blocks(3, Some(time)).await?;
+
+    assert_eq!(provider.latest_block_height().await?, 3);
+
+    let req = PaginationRequest {
+        cursor: None,
+        results: 10,
+        direction: PageDirection::Forward,
+    };
+    let blocks: Vec&lt;Block&gt; = provider.get_blocks(req).await?.results;
+
+    assert_eq!(blocks[2].header().time().unwrap().timestamp(), 100);
+    assert_eq!(blocks[1].header().time().unwrap().timestamp(), 110);
+    assert_eq!(blocks[0].header().time().unwrap().timestamp(), 120);
 </code></pre>
 
                     </main>
