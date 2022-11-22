@@ -357,8 +357,8 @@ mod tests {
             .await?
             .expect("Failed to retrieve message proof.");
 
-        assert_eq!(proof.amount.0, amount);
-
+        assert_eq!(proof.amount(), amount);
+        assert_eq!(proof.recipient(), base_layer_address.into());
         // ANCHOR_END: wallet_withdraw_to_base
         Ok(())
     }

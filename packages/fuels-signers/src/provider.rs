@@ -3,7 +3,6 @@ use std::io;
 #[cfg(feature = "fuel-core")]
 use fuel_core::service::{Config, FuelService};
 
-use fuel_gql_client::client::schema::message::MessageProof;
 use fuel_gql_client::client::types::{TransactionResponse, TransactionStatus};
 use fuel_gql_client::interpreter::ExecutableTransaction;
 use fuel_gql_client::{
@@ -20,6 +19,7 @@ use fuel_gql_client::{
 };
 use fuels_core::constants::{DEFAULT_GAS_ESTIMATION_TOLERANCE, MAX_GAS_PER_TX};
 use fuels_types::block::Block;
+use fuels_types::message_proof::MessageProof;
 use std::collections::HashMap;
 use thiserror::Error;
 
@@ -490,6 +490,11 @@ impl Provider {
         tx_id: &str,
         message_id: &str,
     ) -> Result<Option<MessageProof>, ProviderError> {
-        Ok(self.client.message_proof(tx_id, message_id).await?)
+        let proof = self
+            .client
+            .message_proof(tx_id, message_id)
+            .await?
+            .map(Into::into);
+        Ok(proof)
     }
 }

@@ -341,7 +341,6 @@ impl Wallet {
         to: Address,
         amount: u64,
         inputs: &[Input],
-        outputs: &[Output],
         params: TxParameters,
     ) -> Script {
         let script_data: Vec<u8> = [to.to_vec(), amount.to_be_bytes().to_vec()]
@@ -363,6 +362,11 @@ impl Wallet {
         ]
         .into_iter()
         .collect();
+
+        let outputs = vec![
+            Output::message(Address::zeroed(), 0),
+            Output::change(to, 0, BASE_ASSET_ID),
+        ];
 
         Transaction::script(
             params.gas_price,
@@ -652,10 +656,8 @@ impl WalletUnlocked {
         let inputs = self
             .get_asset_inputs_for_amount(BASE_ASSET_ID, amount, 0)
             .await?;
-        let outputs = vec![Output::change((&self.address).into(), 0, BASE_ASSET_ID)];
 
-        let mut tx =
-            Wallet::build_message_to_output_tx(to.into(), amount, &inputs, &outputs, tx_parameters);
+        let mut tx = Wallet::build_message_to_output_tx(to.into(), amount, &inputs, tx_parameters);
 
         self.add_fee_coins(&mut tx, amount, 0).await?;
         self.sign_transaction(&mut tx).await?;
