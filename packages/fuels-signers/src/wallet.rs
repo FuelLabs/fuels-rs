@@ -6,11 +6,12 @@ use eth_keystore::KeystoreError;
 use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
 use fuel_gql_client::client::schema;
 use fuel_gql_client::client::schema::resource::Resource;
+use fuel_gql_client::client::types::TransactionResponse;
 use fuel_gql_client::fuel_vm::prelude::GTFArgs;
 use fuel_gql_client::{
     client::{
-        schema::coin::Coin, schema::message::Message as InputMessage, types::TransactionResponse,
-        PaginatedResult, PaginationRequest,
+        schema::coin::Coin, schema::message::Message as InputMessage, PaginatedResult,
+        PaginationRequest,
     },
     fuel_tx::{
         AssetId, Bytes32, Cacheable, ContractId, Input, Output, Receipt, TransactionFee, TxPointer,
@@ -135,10 +136,10 @@ impl Wallet {
         &self,
         request: PaginationRequest<String>,
     ) -> Result<PaginatedResult<TransactionResponse, String>, Error> {
-        self.get_provider()?
+        Ok(self
+            .get_provider()?
             .get_transactions_by_owner(&self.address, request)
-            .await
-            .map_err(Into::into)
+            .await?)
     }
 
     /// Returns a proper vector of `Input::Coin`s for the given asset ID, amount, and witness index.

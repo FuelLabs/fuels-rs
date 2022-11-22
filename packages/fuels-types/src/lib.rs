@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use strum_macros::ToString;
 
 pub mod bech32;
+pub mod block;
 pub mod constants;
 pub mod enum_variants;
 pub mod errors;
