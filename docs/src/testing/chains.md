@@ -7,3 +7,15 @@ You can use `produce_blocks` to help achieve an arbitrary block height; this is 
 ````rust,ignore
 {{#include ../../../packages/fuels/tests/providers.rs:use_produce_blocks_to_increase_block_height}}
 ````
+
+You can also set a custom block time by providing `TimeParameters` as the second, optional argument. `TimeParameters` is defined as:
+
+````rust,ignore
+{{#include ../../../packages/fuels-signers/src/provider.rs:time_parameters}}
+````
+
+And here is an example:
+
+````rust,ignore
+{{#include ../../../packages/fuels/tests/providers.rs:use_produce_blocks_custom_time}}
+````

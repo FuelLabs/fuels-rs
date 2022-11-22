@@ -3,26 +3,30 @@ use std::io;
 #[cfg(feature = "fuel-core")]
 use fuel_core::service::{Config, FuelService};
 
+use fuel_gql_client::client::types::{TransactionResponse, TransactionStatus};
 use fuel_gql_client::interpreter::ExecutableTransaction;
 use fuel_gql_client::{
     client::{
         schema::{
-            balance::Balance, chain::ChainInfo, coin::Coin, contract::ContractBalance,
-            message::Message, node_info::NodeInfo, resource::Resource,
+            balance::Balance, block::TimeParameters as FuelTimeParameters, chain::ChainInfo,
+            coin::Coin, contract::ContractBalance, message::Message, node_info::NodeInfo,
+            resource::Resource,
         },
-        types::{TransactionResponse, TransactionStatus},
         FuelClient, PageDirection, PaginatedResult, PaginationRequest,
     },
     fuel_tx::{Receipt, Transaction, TransactionFee},
     fuel_types::AssetId,
 };
 use fuels_core::constants::{DEFAULT_GAS_ESTIMATION_TOLERANCE, MAX_GAS_PER_TX};
+use fuels_types::block::Block;
 use std::collections::HashMap;
 use thiserror::Error;
 
 use crate::{field, UniqueIdentifier};
 use fuels_types::bech32::{Bech32Address, Bech32ContractId};
 use fuels_types::errors::Error;
+
+use chrono::{DateTime, Duration, Utc};
 
 #[derive(Debug)]
 pub struct TransactionCost {
@@ -31,6 +35,25 @@ pub struct TransactionCost {
     pub gas_used: u64,
     pub metered_bytes_size: u64,
     pub total_fee: u64,
+}
+
+#[derive(Debug)]
+// ANCHOR: time_parameters
+pub struct TimeParameters {
+    // The time to set on the first block
+    pub start_time: DateTime<Utc>,
+    // The time interval between subsequent blocks
+    pub block_time_interval: Duration,
+}
+// ANCHOR_END: time_parameters
+
+impl From<TimeParameters> for FuelTimeParameters {
+    fn from(time: TimeParameters) -> Self {
+        Self {
+            start_time: (time.start_time.timestamp() as u64).into(),
+            block_time_interval: (time.block_time_interval.num_seconds() as u64).into(),
+        }
+    }
 }
 
 #[derive(Debug, Error)]
@@ -352,8 +375,34 @@ impl Provider {
         Ok(self.client.chain_info().await?.latest_block.header.height.0)
     }
 
-    pub async fn produce_blocks(&self, amount: u64) -> io::Result<u64> {
-        self.client.produce_blocks(amount, None).await
+    pub async fn produce_blocks(
+        &self,
+        amount: u64,
+        time: Option<TimeParameters>,
+    ) -> io::Result<u64> {
+        let fuel_time: Option<FuelTimeParameters> = time.map(|t| t.into());
+        self.client.produce_blocks(amount, fuel_time).await
+    }
+
+    /// Get block by id.
+    pub async fn block(&self, block_id: &str) -> Result<Option<Block>, ProviderError> {
+        let block = self.client.block(block_id).await?.map(Into::into);
+        Ok(block)
+    }
+
+    // - Get block(s)
+    pub async fn get_blocks(
+        &self,
+        request: PaginationRequest<String>,
+    ) -> Result<PaginatedResult<Block, String>, ProviderError> {
+        let pr = self.client.blocks(request).await?;
+
+        Ok(PaginatedResult {
+            cursor: pr.cursor,
+            results: pr.results.into_iter().map(Into::into).collect(),
+            has_next_page: pr.has_next_page,
+            has_previous_page: pr.has_previous_page,
+        })
     }
 
     pub async fn estimate_transaction_cost<Tx>(
