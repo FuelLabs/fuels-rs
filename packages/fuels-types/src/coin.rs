@@ -1,5 +1,5 @@
-use fuel_gql_client::client::schema::schema::{ Coin as SchemaCoin, CoinStatus as SchemaCoinStatus};
-use fuel_tx::{UtxoId, AssetId, Address};
+use fuel_gql_client::client::schema::schema::{Coin as SchemaCoin, CoinStatus as SchemaCoinStatus};
+use fuel_tx::{Address, AssetId, UtxoId};
 
 pub enum CoinStatus {
     Unspent,
@@ -8,14 +8,10 @@ pub enum CoinStatus {
 
 impl From<SchemaCoinStatus> for CoinStatus {
     fn from(schema_coin_status: SchemaCoinStatus) -> Self {
-        match schema_coin_status {
-            SchemaCoinStatus::Unspent => CoinStatus::Unspent,
-            SchemaCoinStatus::Spent => CoinStatus::Spent,
-        }
+        match schema_coin_status {}
     }
 }
 
-#[derive(Debug)]
 pub struct Coin {
     schema_coin: SchemaCoin,
 }
@@ -58,5 +54,4 @@ impl Coin {
     pub fn status(&self) -> CoinStatus {
         self.schema_coin.status.into()
     }
-    
 }

@@ -1,4 +1,6 @@
-use fuel_gql_client::client::schema::chain::{ChainInfo as SchemaChainInfo, ConsensusParameters as SchemaConsensusParams};
+use fuel_gql_client::client::schema::chain::{
+    ChainInfo as SchemaChainInfo, ConsensusParameters as SchemaConsensusParams,
+};
 
 use crate::block::Block;
 
@@ -42,7 +44,9 @@ pub struct ConsensusParameters {
 
 impl From<SchemaConsensusParams> for ConsensusParameters {
     fn from(schema_consensus_params: SchemaConsensusParams) -> Self {
-        Self { schema_consensus_params }
+        Self {
+            schema_consensus_params,
+        }
     }
 }
 

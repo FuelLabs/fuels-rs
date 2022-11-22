@@ -9,15 +9,15 @@ use strum_macros::ToString;
 
 pub mod bech32;
 pub mod block;
+pub mod chain_info;
+pub mod coin;
 pub mod constants;
 pub mod enum_variants;
 pub mod errors;
+pub mod message;
+pub mod node_info;
 pub mod param_types;
 pub mod utils;
-pub mod chain_info;
-pub mod node_info;
-pub mod message;
-pub mod coin;
 
 #[derive(Debug, Clone, Copy, ToString, PartialEq, Eq)]
 #[strum(serialize_all = "lowercase")]
