@@ -13,7 +13,7 @@ There are two main ways you can use the Fuel Rust SDK:
 
 ## Creating a new project with Forc
 
-You can create a new example Sway project with
+You can create a new Sway project with
 
 ```
 forc new <Project name>
