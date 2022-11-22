@@ -12,7 +12,7 @@ use fuels_core::{
 };
 use fuels_signers::{provider::Provider, WalletUnlocked};
 
-use crate::call_response::VMCallResponse;
+use crate::call_response::FuelCallResponse;
 use fuels_types::{errors::Error, param_types::ParamType};
 
 use crate::execution_script::{CompiledScript, TransactionExecution};
@@ -103,12 +103,12 @@ where
     }
 
     /// Call a script on the node. If `simulate == true`, then the call is done in a
-    /// read-only manner, using a `dry-run`. The [`VMCallResponse`] struct contains the `main`'s value
+    /// read-only manner, using a `dry-run`. The [`FuelCallResponse`] struct contains the `main`'s value
     /// in its `value` field as an actual typed value `D` (if your method returns `bool`,
     /// it will be a bool, works also for structs thanks to the `abigen!()`).
-    /// The other field of [`VMCallResponse`], `receipts`, contains the receipts of the transaction.
+    /// The other field of [`FuelCallResponse`], `receipts`, contains the receipts of the transaction.
     #[tracing::instrument]
-    async fn call_or_simulate(&self, simulate: bool) -> Result<VMCallResponse<D>, Error> {
+    async fn call_or_simulate(&self, simulate: bool) -> Result<FuelCallResponse<D>, Error> {
         let mut tx = Transaction::script(
             self.tx_parameters.gas_price,
             self.tx_parameters.gas_limit,
@@ -134,7 +134,7 @@ where
     }
 
     /// Call a script on the node, in a state-modifying manner.
-    pub async fn call(self) -> Result<VMCallResponse<D>, Error> {
+    pub async fn call(self) -> Result<FuelCallResponse<D>, Error> {
         Self::call_or_simulate(&self, false).await
     }
 
@@ -143,13 +143,13 @@ where
     /// It is the same as the [`call`] method because the API is more user-friendly this way.
     ///
     /// [`call`]: Self::call
-    pub async fn simulate(self) -> Result<VMCallResponse<D>, Error> {
+    pub async fn simulate(self) -> Result<FuelCallResponse<D>, Error> {
         Self::call_or_simulate(&self, true).await
     }
 
-    /// Create a [`VMCallResponse`] from call receipts
-    pub fn get_response(&self, mut receipts: Vec<Receipt>) -> Result<VMCallResponse<D>, Error> {
+    /// Create a [`FuelCallResponse`] from call receipts
+    pub fn get_response(&self, mut receipts: Vec<Receipt>) -> Result<FuelCallResponse<D>, Error> {
         let token = get_decoded_output(&mut receipts, None, &self.output_param)?;
-        Ok(VMCallResponse::new(D::from_token(token)?, receipts))
+        Ok(FuelCallResponse::new(D::from_token(token)?, receipts))
     }
 }

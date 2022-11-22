@@ -7,15 +7,15 @@ use fuel_tx::Receipt;
 /// The name is `VMCallResponse` instead of `CallResponse` because it would be ambiguous with the
 /// `CALL` opcode.
 #[derive(Debug)]
-// ANCHOR: vm_call_response
-pub struct VMCallResponse<D> {
+// ANCHOR: fuel_call_response
+pub struct FuelCallResponse<D> {
     pub value: D,
     pub receipts: Vec<Receipt>,
     pub gas_used: u64,
 }
-// ANCHOR_END: vm_call_response
+// ANCHOR_END: fuel_call_response
 
-impl<D> VMCallResponse<D> {
+impl<D> FuelCallResponse<D> {
     /// Get the gas used from ScriptResult receipt
     fn get_gas_used(receipts: &[Receipt]) -> u64 {
         receipts
