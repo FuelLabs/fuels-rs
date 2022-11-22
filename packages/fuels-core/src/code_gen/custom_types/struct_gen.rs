@@ -134,7 +134,6 @@ fn struct_parameterized_impl(
         impl <#(#generic_parameters: Parameterize + Tokenizable),*> Parameterize for #struct_ident <#(#generic_parameters),*> {
             fn param_type() -> ParamType {
                 let types = [#(#field_name_param_type),*].to_vec();
-
                 ParamType::Struct{
                     name: #struct_name_str.to_string(),
                     fields: types,

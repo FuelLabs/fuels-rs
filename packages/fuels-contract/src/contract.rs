@@ -36,8 +36,10 @@ use std::{
 
 pub const DEFAULT_TX_DEP_ESTIMATION_ATTEMPTS: u64 = 10;
 
+/// Struct used to pass the log mappings from the Abigen
 #[derive(Debug, Clone)]
 pub struct LogDecoder {
+    /// A mapping of (contract-id, log-id) and param-type
     pub logs_map: HashMap<(Bech32ContractId, u64), ParamType>,
 }
 
@@ -55,10 +57,10 @@ impl LogDecoder {
         });
 
         ids_with_data
-            .map(|((c_id, id), data)| {
+            .map(|((c_id, log_id), data)| {
                 let param_type = self
                     .logs_map
-                    .get(&(c_id, id))
+                    .get(&(c_id, log_id))
                     .ok_or_else(|| Error::InvalidData("Failed to find log id".into()))?;
 
                 param_type.decode_log(&data)
@@ -66,7 +68,7 @@ impl LogDecoder {
             .collect::<Result<Vec<String>, Error>>()
     }
 
-    fn logs_with_type<T: Tokenizable + Parameterize>(
+    fn get_logs_with_type<T: Tokenizable + Parameterize>(
         &self,
         receipts: &[Receipt],
     ) -> Result<Vec<T>, Error> {
@@ -159,8 +161,8 @@ impl<D> CallResponse<D> {
         self.log_decoder.get_logs(&self.receipts)
     }
 
-    pub fn logs_with_type<T: Tokenizable + Parameterize>(&self) -> Result<Vec<T>, Error> {
-        self.log_decoder.logs_with_type::<T>(&self.receipts)
+    pub fn get_logs_with_type<T: Tokenizable + Parameterize>(&self) -> Result<Vec<T>, Error> {
+        self.log_decoder.get_logs_with_type::<T>(&self.receipts)
     }
 }
 

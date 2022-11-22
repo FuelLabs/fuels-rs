@@ -2,7 +2,7 @@
 
 extern crate core;
 
-use std::net::SocketAddr;
+use std::{iter::repeat, iter::zip, net::SocketAddr};
 
 #[cfg(feature = "fuel-core-lib")]
 use fuel_chain_config::{CoinConfig, MessageConfig, StateConfig};
@@ -27,15 +27,14 @@ use fuel_core_interfaces::model::{DaBlockHeight, Message};
 use portpicker::is_free;
 
 use fuel_chain_config::ChainConfig;
-use fuel_gql_client::fuel_tx::ConsensusParameters;
 use fuel_gql_client::{
     client::FuelClient,
-    fuel_tx::{Bytes32, UtxoId},
+    fuel_tx::{Bytes32, ConsensusParameters, UtxoId},
 };
 
 use fuels_core::constants::BASE_ASSET_ID;
-use fuels_signers::fuel_crypto::fuel_types::AssetId;
-use fuels_signers::fuel_crypto::rand;
+use fuels_signers::fuel_crypto::{fuel_types::AssetId, rand};
+use fuels_types::param_types::ParamType;
 use rand::Fill;
 
 #[cfg(not(feature = "fuel-core-lib"))]
@@ -56,6 +55,10 @@ use fuels_types::bech32::Bech32Address;
 #[cfg(feature = "fuels-signers")]
 pub use signers::*;
 pub use wallets_config::*;
+
+pub fn generate_unused_field_names(types: Vec<ParamType>) -> Vec<(String, ParamType)> {
+    zip(repeat("unused".to_string()), types).collect()
+}
 
 /// Create a vector of `num_asset`*`coins_per_asset` UTXOs and a vector of the unique corresponding
 /// asset IDs. `AssetId`. Each UTXO (=coin) contains `amount_per_coin` amount of a random asset. The

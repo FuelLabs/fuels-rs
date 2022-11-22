@@ -388,7 +388,9 @@ mod tests {
     use super::*;
     use crate::param_types::ParamType;
 
-    fn unused_field_names(types: Vec<ParamType>) -> Vec<(String, ParamType)> {
+    // The same function from fuels-test-helpers cannot
+    // be used here because of a circular dependency
+    fn generate_unused_field_names(types: Vec<ParamType>) -> Vec<(String, ParamType)> {
         zip(std::iter::repeat("unused".to_string()), types).collect()
     }
 
@@ -418,13 +420,17 @@ mod tests {
     fn structs_are_just_all_elements_combined() {
         let inner_struct = ParamType::Struct {
             name: "".to_string(),
-            fields: unused_field_names(vec![ParamType::U32, ParamType::U32]),
+            fields: generate_unused_field_names(vec![ParamType::U32, ParamType::U32]),
             generics: vec![],
         };
 
         let a_struct = ParamType::Struct {
             name: "".to_string(),
-            fields: unused_field_names(vec![ParamType::B256, ParamType::Bool, inner_struct]),
+            fields: generate_unused_field_names(vec![
+                ParamType::B256,
+                ParamType::Bool,
+                inner_struct,
+            ]),
             generics: vec![],
         };
 
@@ -439,12 +445,15 @@ mod tests {
     fn enums_are_as_big_as_their_biggest_variant_plus_a_word() -> Result<(), Error> {
         let inner_struct = ParamType::Struct {
             name: "".to_string(),
-            fields: unused_field_names(vec![ParamType::B256]),
+            fields: generate_unused_field_names(vec![ParamType::B256]),
             generics: vec![],
         };
         let param = ParamType::Enum {
             name: "".to_string(),
-            variants: EnumVariants::new(unused_field_names(vec![ParamType::U32, inner_struct]))?,
+            variants: EnumVariants::new(generate_unused_field_names(vec![
+                ParamType::U32,
+                inner_struct,
+            ]))?,
             generics: vec![],
         };
 
@@ -690,7 +699,7 @@ mod tests {
             result,
             ParamType::Struct {
                 name: "not_used".to_string(),
-                fields: unused_field_names(vec![ParamType::U8]),
+                fields: generate_unused_field_names(vec![ParamType::U8]),
                 generics: vec![ParamType::U8]
             }
         );
@@ -749,7 +758,7 @@ mod tests {
             result,
             ParamType::Enum {
                 name: "".to_string(),
-                variants: EnumVariants::new(unused_field_names(vec![ParamType::U8]))?,
+                variants: EnumVariants::new(generate_unused_field_names(vec![ParamType::U8]))?,
                 generics: vec![ParamType::U8]
             }
         );
@@ -1132,16 +1141,16 @@ mod tests {
         let expected_param_type = {
             let pass_the_generic_on = ParamType::Struct {
                 name: "not_used".to_string(),
-                fields: unused_field_names(vec![ParamType::Struct {
+                fields: generate_unused_field_names(vec![ParamType::Struct {
                     name: "not_used".to_string(),
-                    fields: unused_field_names(vec![ParamType::String(2)]),
+                    fields: generate_unused_field_names(vec![ParamType::String(2)]),
                     generics: vec![ParamType::String(2)],
                 }]),
                 generics: vec![ParamType::String(2)],
             };
             let struct_w_array_generic = ParamType::Struct {
                 name: "not_used".to_string(),
-                fields: unused_field_names(vec![ParamType::Array(
+                fields: generate_unused_field_names(vec![ParamType::Array(
                     Box::from(pass_the_generic_on.clone()),
                     2,
                 )]),
@@ -1149,7 +1158,7 @@ mod tests {
             };
             let struct_w_tuple_generic = ParamType::Struct {
                 name: "not_used".to_string(),
-                fields: unused_field_names(vec![ParamType::Tuple(vec![
+                fields: generate_unused_field_names(vec![ParamType::Tuple(vec![
                     struct_w_array_generic.clone(),
                     struct_w_array_generic.clone(),
                 ])]),
@@ -1158,7 +1167,7 @@ mod tests {
 
             ParamType::Struct {
                 name: "not_used".to_string(),
-                fields: unused_field_names(vec![
+                fields: generate_unused_field_names(vec![
                     ParamType::Tuple(vec![
                         ParamType::Array(Box::from(ParamType::B256), 2),
                         ParamType::String(2),
@@ -1167,7 +1176,7 @@ mod tests {
                         ParamType::Array(
                             Box::from(ParamType::Enum {
                                 name: "".to_string(),
-                                variants: EnumVariants::new(unused_field_names(vec![
+                                variants: EnumVariants::new(generate_unused_field_names(vec![
                                     ParamType::U64,
                                     struct_w_tuple_generic.clone(),
                                 ]))

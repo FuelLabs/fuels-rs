@@ -12,10 +12,10 @@ async fn test_parse_logged_varibles() -> Result<(), Error> {
     let contract_methods = contract_instance.methods();
     let response = contract_methods.produce_logs_variables().call().await?;
 
-    let log_u64 = response.logs_with_type::<u64>()?;
-    let log_bits256 = response.logs_with_type::<Bits256>()?;
-    let log_string = response.logs_with_type::<SizedAsciiString<4>>()?;
-    let log_array = response.logs_with_type::<[u8; 3]>()?;
+    let log_u64 = response.get_logs_with_type::<u64>()?;
+    let log_bits256 = response.get_logs_with_type::<Bits256>()?;
+    let log_string = response.get_logs_with_type::<SizedAsciiString<4>>()?;
+    let log_array = response.get_logs_with_type::<[u8; 3]>()?;
 
     let expected_bits256 = Bits256([
         239, 134, 175, 169, 105, 108, 240, 220, 99, 133, 226, 196, 7, 166, 225, 89, 161, 16, 60,
@@ -42,12 +42,12 @@ async fn test_parse_logs_values() -> Result<(), Error> {
     let contract_methods = contract_instance.methods();
     let response = contract_methods.produce_logs_values().call().await?;
 
-    let log_u64 = response.logs_with_type::<u64>()?;
-    let log_u32 = response.logs_with_type::<u32>()?;
-    let log_u16 = response.logs_with_type::<u16>()?;
-    let log_u8 = response.logs_with_type::<u8>()?;
+    let log_u64 = response.get_logs_with_type::<u64>()?;
+    let log_u32 = response.get_logs_with_type::<u32>()?;
+    let log_u16 = response.get_logs_with_type::<u16>()?;
+    let log_u8 = response.get_logs_with_type::<u8>()?;
     // try to retrieve non existent log
-    let log_nonexistent = response.logs_with_type::<bool>()?;
+    let log_nonexistent = response.get_logs_with_type::<bool>()?;
 
     assert_eq!(log_u64, vec![64]);
     assert_eq!(log_u32, vec![32]);
@@ -69,8 +69,8 @@ async fn test_parse_logs_custom_types() -> Result<(), Error> {
     let contract_methods = contract_instance.methods();
     let response = contract_methods.produce_logs_custom_types().call().await?;
 
-    let log_test_struct = response.logs_with_type::<TestStruct>()?;
-    let log_test_enum = response.logs_with_type::<TestEnum>()?;
+    let log_test_struct = response.get_logs_with_type::<TestStruct>()?;
+    let log_test_enum = response.get_logs_with_type::<TestEnum>()?;
 
     let expected_bits256 = Bits256([
         239, 134, 175, 169, 105, 108, 240, 220, 99, 133, 226, 196, 7, 166, 225, 89, 161, 16, 60,
@@ -100,11 +100,11 @@ async fn test_parse_logs_generic_types() -> Result<(), Error> {
     let contract_methods = contract_instance.methods();
     let response = contract_methods.produce_logs_generic_types().call().await?;
 
-    let log_struct = response.logs_with_type::<StructWithGeneric<[_; 3]>>()?;
-    let log_enum = response.logs_with_type::<EnumWithGeneric<[_; 3]>>()?;
+    let log_struct = response.get_logs_with_type::<StructWithGeneric<[_; 3]>>()?;
+    let log_enum = response.get_logs_with_type::<EnumWithGeneric<[_; 3]>>()?;
     let log_struct_nested =
-        response.logs_with_type::<StructWithNestedGeneric<StructWithGeneric<[_; 3]>>>()?;
-    let log_struct_deeply_nested = response.logs_with_type::<StructDeeplyNestedGeneric<
+        response.get_logs_with_type::<StructWithNestedGeneric<StructWithGeneric<[_; 3]>>>()?;
+    let log_struct_deeply_nested = response.get_logs_with_type::<StructDeeplyNestedGeneric<
         StructWithNestedGeneric<StructWithGeneric<[_; 3]>>,
     >>()?;
 
