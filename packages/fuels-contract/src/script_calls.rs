@@ -29,7 +29,9 @@ pub struct ScriptCallResponse<D> {
 }
 
 impl<D> ScriptCallResponse<D> {
-    /// Get the gas used from ScriptResult receipt
+    /// Get the gas used from [`ScriptResult`] receipt
+    ///
+    /// [`ScriptResult`]: Receipt::ScriptResult
     fn get_gas_used(receipts: &[Receipt]) -> u64 {
         receipts
             .iter()
@@ -112,8 +114,11 @@ where
 
     /// Sets the transaction parameters for a given transaction.
     /// Note that this is a builder method, i.e. use it as a chain:
+    ///
+    /// ```ignore
     /// let params = TxParameters { gas_price: 100, gas_limit: 1000000 };
-    /// `instance.main(...).tx_params(params).call()`.
+    /// instance.main(...).tx_params(params).call()
+    /// ```
     pub fn tx_params(mut self, params: TxParameters) -> Self {
         self.tx_parameters = params;
         self
@@ -129,12 +134,11 @@ where
         self
     }
 
-    /// Call a script on the node. If `simulate==true`, then the call is done in a
-    /// read-only manner, using a `dry-run`. Return a Result<ScriptCallResponse, Error>. The ScriptCallResponse
-    /// struct contains the main's value in its `value` field as an actual typed value `D` (if
-    /// your method returns `bool`, it will be a bool, works also for structs thanks to the
-    /// `script_abigen!()`). The other field of ScriptCallResponse, `receipts`, contains the receipts of the
-    /// transaction.
+    /// Call a script on the node. If `simulate == true`, then the call is done in a
+    /// read-only manner, using a `dry-run`. The [`ScriptCallResponse`] struct contains the `main`'s value
+    /// in its `value` field as an actual typed value `D` (if your method returns `bool`,
+    /// it will be a bool, works also for structs thanks to the `abigen!()`).
+    /// The other field of [`ScriptCallResponse`], `receipts`, contains the receipts of the transaction.
     #[tracing::instrument]
     async fn call_or_simulate(&self, simulate: bool) -> Result<ScriptCallResponse<D>, Error> {
         let mut tx = Transaction::script(
@@ -168,12 +172,14 @@ where
 
     /// Call a script on the node, in a simulated manner, meaning the state of the
     /// blockchain is *not* modified but simulated.
-    /// It is the same as the `call` method because the API is more user-friendly this way.
+    /// It is the same as the [`call`] method because the API is more user-friendly this way.
+    ///
+    /// [`call`]: Self::call
     pub async fn simulate(self) -> Result<ScriptCallResponse<D>, Error> {
         Self::call_or_simulate(&self, true).await
     }
 
-    /// Create a ScriptCallResponse from call receipts
+    /// Create a [`ScriptCallResponse`] from call receipts
     pub fn get_response(&self, mut receipts: Vec<Receipt>) -> Result<ScriptCallResponse<D>, Error> {
         let token = get_decoded_output(&mut receipts, None, &self.output_param)?;
         Ok(ScriptCallResponse::new(D::from_token(token)?, receipts))
