@@ -22,11 +22,11 @@ use crate::contract_calls_utils::{
 /// [`TransactionExecution`] provides methods to create and call/simulate a transaction that carries
 /// out contract method calls or script calls
 #[derive(Debug)]
-pub struct TransactionExecution {
+pub struct ExecutableFuelCall {
     pub tx: fuels_core::tx::Script,
 }
 
-impl TransactionExecution {
+impl ExecutableFuelCall {
     pub fn new(tx: fuels_core::tx::Script) -> Self {
         Self { tx }
     }
@@ -78,7 +78,7 @@ impl TransactionExecution {
         }
         wallet.sign_transaction(&mut tx).await.unwrap();
 
-        Ok(TransactionExecution::new(tx))
+        Ok(ExecutableFuelCall::new(tx))
     }
 
     /// Execute the transaction in a state-modifying manner.

@@ -15,7 +15,7 @@ use fuels_signers::{provider::Provider, WalletUnlocked};
 use crate::call_response::FuelCallResponse;
 use fuels_types::{errors::Error, param_types::ParamType};
 
-use crate::execution_script::{CompiledScript, TransactionExecution};
+use crate::execution_script::{CompiledScript, ExecutableFuelCall};
 
 #[derive(Debug)]
 /// Contains all data relevant to a single script call
@@ -121,7 +121,7 @@ where
         );
         self.wallet.add_fee_coins(&mut tx, 0, 0).await?;
 
-        let tx_execution = TransactionExecution { tx };
+        let tx_execution = ExecutableFuelCall { tx };
 
         let receipts = if simulate {
             tx_execution.simulate(&self.provider).await?

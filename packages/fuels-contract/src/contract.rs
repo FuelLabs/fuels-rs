@@ -12,7 +12,7 @@ use std::path::Path;
 use std::str::FromStr;
 
 use crate::call_response::FuelCallResponse;
-use crate::execution_script::TransactionExecution;
+use crate::execution_script::ExecutableFuelCall;
 use fuel_gql_client::prelude::PanicReason;
 use fuels_core::abi_decoder::ABIDecoder;
 use fuels_core::abi_encoder::{ABIEncoder, UnresolvedBytes};
@@ -582,7 +582,7 @@ where
     /// The other field of [`FuelCallResponse`], `receipts`, contains the receipts of the transaction.
     #[tracing::instrument]
     async fn call_or_simulate(&self, simulate: bool) -> Result<FuelCallResponse<D>, Error> {
-        let script = self.get_call_execution_script().await?;
+        let script = self.get_executable_call().await?;
 
         let receipts = if simulate {
             script.simulate(&self.provider).await?
@@ -595,8 +595,8 @@ where
     }
 
     /// Returns the script that executes the contract call
-    pub async fn get_call_execution_script(&self) -> Result<TransactionExecution, Error> {
-        TransactionExecution::from_contract_calls(
+    pub async fn get_executable_call(&self) -> Result<ExecutableFuelCall, Error> {
+        ExecutableFuelCall::from_contract_calls(
             std::slice::from_ref(&self.contract_call),
             &self.tx_parameters,
             &self.wallet,
@@ -620,7 +620,7 @@ where
 
     /// Simulates a call without needing to resolve the generic for the return type
     async fn simulate_without_decode(&self) -> Result<(), Error> {
-        let script = self.get_call_execution_script().await?;
+        let script = self.get_executable_call().await?;
         let provider = self.wallet.get_provider()?;
 
         script.simulate(provider).await?;
@@ -672,7 +672,7 @@ where
         &self,
         tolerance: Option<f64>,
     ) -> Result<TransactionCost, Error> {
-        let script = self.get_call_execution_script().await?;
+        let script = self.get_executable_call().await?;
 
         let transaction_cost = self
             .provider
@@ -726,12 +726,12 @@ impl MultiContractCallHandler {
     }
 
     /// Returns the script that executes the contract calls
-    pub async fn get_call_execution_script(&self) -> Result<TransactionExecution, Error> {
+    pub async fn get_executable_call(&self) -> Result<ExecutableFuelCall, Error> {
         if self.contract_calls.is_empty() {
             panic!("No calls added. Have you used '.add_calls()'?");
         }
 
-        TransactionExecution::from_contract_calls(
+        ExecutableFuelCall::from_contract_calls(
             &self.contract_calls,
             &self.tx_parameters,
             &self.wallet,
@@ -758,7 +758,7 @@ impl MultiContractCallHandler {
         &self,
         simulate: bool,
     ) -> Result<FuelCallResponse<D>, Error> {
-        let script = self.get_call_execution_script().await?;
+        let script = self.get_executable_call().await?;
 
         let provider = self.wallet.get_provider()?;
 
@@ -774,7 +774,7 @@ impl MultiContractCallHandler {
 
     /// Simulates a call without needing to resolve the generic for the return type
     async fn simulate_without_decode(&self) -> Result<(), Error> {
-        let script = self.get_call_execution_script().await?;
+        let script = self.get_executable_call().await?;
         let provider = self.wallet.get_provider()?;
 
         script.simulate(provider).await?;
@@ -828,7 +828,7 @@ impl MultiContractCallHandler {
         &self,
         tolerance: Option<f64>,
     ) -> Result<TransactionCost, Error> {
-        let script = self.get_call_execution_script().await?;
+        let script = self.get_executable_call().await?;
 
         let transaction_cost = self
             .wallet
