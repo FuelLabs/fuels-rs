@@ -313,7 +313,7 @@ async fn test_require_log() -> Result<(), Error> {
             .call()
             .await
             .expect_err("Should return a revert error");
-        dbg!(&error);
+
         assert_is_revert_containing_msg("42", error);
     }
     {
@@ -323,7 +323,6 @@ async fn test_require_log() -> Result<(), Error> {
             .await
             .expect_err("Should return a revert error");
 
-        dbg!(&error);
         assert_is_revert_containing_msg("fuel", error);
     }
     {
@@ -333,7 +332,6 @@ async fn test_require_log() -> Result<(), Error> {
             .await
             .expect_err("Should return a revert error");
 
-        dbg!(&error);
         assert_is_revert_containing_msg("StructDeeplyNestedGeneric", error);
     }
     Ok(())
@@ -366,7 +364,6 @@ async fn test_multi_call_require_log_single_contract() -> Result<(), Error> {
             .await
             .expect_err("Should return a revert error");
 
-        dbg!(&error);
         assert_is_revert_containing_msg("fuel", error);
     }
     {
@@ -384,7 +381,6 @@ async fn test_multi_call_require_log_single_contract() -> Result<(), Error> {
             .await
             .expect_err("Should return a revert error");
 
-        dbg!(&error);
         assert_is_revert_containing_msg("StructDeeplyNestedGeneric", error);
     }
     Ok(())
@@ -424,7 +420,6 @@ async fn test_multi_call_require_log_multi_contract() -> Result<(), Error> {
             .await
             .expect_err("Should return a revert error");
 
-        dbg!(&error);
         assert_is_revert_containing_msg("fuel", error);
     }
     {
@@ -442,7 +437,6 @@ async fn test_multi_call_require_log_multi_contract() -> Result<(), Error> {
             .await
             .expect_err("Should return a revert error");
 
-        dbg!(&error);
         assert_is_revert_containing_msg("StructDeeplyNestedGeneric", error);
     }
     Ok(())

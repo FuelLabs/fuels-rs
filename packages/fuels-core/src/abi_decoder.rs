@@ -702,7 +702,6 @@ mod tests {
         let result = ABIDecoder::decode_single(&enum_type, &data);
 
         let error = result.expect_err("Should have resulted in an error");
-        dbg!(&error);
 
         let expected_msg = "Discriminant '1' doesn't point to any variant: ";
         assert!(matches!(error, CodecError::InvalidData(str) if str.starts_with(expected_msg)));
