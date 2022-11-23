@@ -1,4 +1,4 @@
-use crate::{StringToken, Token};
+use crate::{unzip_param_types, StringToken, Token};
 use fuel_types::bytes::padded_len_usize;
 use fuels_types::{
     constants::WORD_SIZE, enum_variants::EnumVariants, errors::CodecError, param_types::ParamType,
@@ -81,12 +81,7 @@ impl ABIDecoder {
         param_types: &[(String, ParamType)],
         bytes: &[u8],
     ) -> Result<DecodeResult, CodecError> {
-        let param_types = param_types
-            .iter()
-            .map(|(_, param_type)| param_type)
-            .cloned()
-            .collect::<Vec<_>>();
-
+        let param_types = unzip_param_types(param_types);
         let (tokens, bytes_read) = Self::decode_multiple(&param_types, bytes)?;
 
         Ok(DecodeResult {

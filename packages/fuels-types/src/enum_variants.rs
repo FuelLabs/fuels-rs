@@ -23,6 +23,7 @@ impl EnumVariants {
     pub fn variants(&self) -> &Vec<(String, ParamType)> {
         &self.variants
     }
+
     pub fn param_types(&self) -> Vec<ParamType> {
         self.variants
             .iter()
@@ -60,6 +61,7 @@ impl EnumVariants {
                 "Will never panic because EnumVariants must have at least one variant inside it!",
             )
     }
+
     /// Determines the padding needed for the provided enum variant (based on the width of the
     /// biggest variant) and returns it.
     pub fn compute_padding_amount(&self, variant_param_type: &ParamType) -> usize {

@@ -1,5 +1,5 @@
 use crate::utils::first_four_bytes_of_sha256_hash;
-use crate::ByteArray;
+use crate::{unzip_param_types, ByteArray};
 use fuels_types::param_types::ParamType;
 
 /// Given a function name and its inputs  will return a ByteArray representing
@@ -41,11 +41,7 @@ fn resolve_arg(arg: &ParamType) -> String {
             fields, generics, ..
         } => {
             let gen_params = resolve_args(generics);
-            let fields = fields
-                .iter()
-                .map(|(_, param_type)| param_type)
-                .cloned()
-                .collect::<Vec<_>>();
+            let fields = unzip_param_types(fields);
             let field_params = resolve_args(&fields);
             let gen_params = if !gen_params.is_empty() {
                 format!("<{gen_params}>")

@@ -161,6 +161,14 @@ pub fn pad_string(s: &str) -> Vec<u8> {
     padded
 }
 
+pub fn unzip_param_types(param_types: &[(String, ParamType)]) -> Vec<ParamType> {
+    param_types
+        .iter()
+        .map(|(_, param_type)| param_type)
+        .cloned()
+        .collect()
+}
+
 pub trait DecodeLog {
     fn decode_log(&self, data: &[u8]) -> Result<String, Error>;
 }
