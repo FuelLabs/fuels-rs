@@ -53,7 +53,7 @@ impl Tokenizable for Bits256 {
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
 // ANCHOR: b512
 pub struct B512 {
-    bytes: [Bits256; 2],
+    pub bytes: [Bits256; 2],
 }
 // ANCHOR_END: b512
 
@@ -106,7 +106,7 @@ impl Tokenizable for B512 {
 // ANCHOR: evm_address
 pub struct EvmAddress {
     // An evm address is only 20 bytes, the first 12 bytes should be set to 0
-    value: Bits256,
+    pub value: Bits256,
 }
 // ANCHOR_END: evm_address
 
