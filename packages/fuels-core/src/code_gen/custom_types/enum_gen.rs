@@ -21,6 +21,12 @@ pub fn expand_custom_enum(
     let enum_ident = ident(&custom_type_name(&type_decl.type_field)?);
 
     let components = extract_components(type_decl, types, false)?;
+    if components.is_empty() {
+        return Err(Error::InvalidData(
+            "Enum must have at least one component!".into(),
+        ));
+    }
+
     let generics = extract_generic_parameters(type_decl, types)?;
 
     let enum_def = enum_decl(&enum_ident, &components, &generics);

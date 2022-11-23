@@ -187,6 +187,32 @@ async fn nested_structs() -> Result<(), Error> {
 }
 
 #[tokio::test]
+async fn calls_with_empty_struct() -> Result<(), Error> {
+    setup_contract_test!(
+        contract_instance,
+        wallet,
+        "packages/fuels/tests/types/complex_types_contract"
+    );
+    let contract_methods = contract_instance.methods();
+
+    {
+        let response = contract_methods.get_empty_struct().call().await?;
+
+        assert_eq!(response.value, EmptyStruct {});
+    }
+    {
+        let response = contract_methods
+            .input_empty_struct(EmptyStruct {})
+            .call()
+            .await?;
+
+        assert!(response.value);
+    }
+
+    Ok(())
+}
+
+#[tokio::test]
 async fn can_use_try_into_to_construct_struct_from_bytes() -> Result<(), Error> {
     abigen!(
         MyContract,

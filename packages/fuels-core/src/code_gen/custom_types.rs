@@ -92,8 +92,8 @@ mod tests {
             .ok_or_else(|| anyhow!("Was able to construct an enum without variants"))?;
 
         assert!(
-            matches!(err, Error::ParseTokenStreamError(_)),
-            "Expected the error to be of the type 'ParseTokenStreamError'"
+            matches!(err, Error::InvalidData(_)),
+            "Expected the error to be of the type 'InvalidData'"
         );
 
         Ok(())
@@ -356,7 +356,7 @@ mod tests {
     }
 
     #[test]
-    fn test_struct_with_no_fields_cannot_be_constructed() -> anyhow::Result<()> {
+    fn test_struct_with_no_fields_can_be_constructed() -> Result<(), Error> {
         let p = TypeDeclaration {
             type_id: 0,
             type_field: "struct SomeEmptyStruct".to_string(),
@@ -365,15 +365,15 @@ mod tests {
         };
         let types = [(0, p.clone())].into_iter().collect::<HashMap<_, _>>();
 
-        let err = expand_custom_struct(&p, &types)
-            .err()
-            .ok_or_else(|| anyhow!("Was able to construct a struct without fields"))?;
+        let actual = expand_custom_struct(&p, &types)?.to_string();
 
-        assert!(
-            matches!(err, Error::ParseTokenStreamError(_)),
-            "Expected the error to be of the type 'ParseTokenStreamError'"
-        );
+        let expected = TokenStream::from_str(
+            r#"
+            # [derive (Clone , Debug , Eq , PartialEq)] pub struct SomeEmptyStruct < > { } impl < > Parameterize for SomeEmptyStruct < > { fn param_type () -> ParamType { let mut types = Vec :: new () ; ParamType :: Struct { fields : types , generics : vec ! [] } } } impl < > Tokenizable for SomeEmptyStruct < > { fn into_token (self) -> Token { let mut tokens = Vec :: new () ; Token :: Struct (tokens) } fn from_token (token : Token) -> Result < Self , SDKError > { match token { Token :: Struct (tokens) => { let mut tokens_iter = tokens . into_iter () ; let mut next_token = move || { tokens_iter . next () . ok_or_else (|| { SDKError :: InstantiationError (format ! ("Ran out of tokens before '{}' has finished construction!" , "SomeEmptyStruct")) }) } ; Ok (Self { }) } , other => Err (SDKError :: InstantiationError (format ! ("Error while constructing '{}'. Expected token of type Token::Struct, got {:?}" , "SomeEmptyStruct" , other))) , } } } impl < > TryFrom < & [u8] > for SomeEmptyStruct < > { type Error = SDKError ; fn try_from (bytes : & [u8]) -> Result < Self , Self :: Error > { try_from_bytes (bytes) } } impl < > TryFrom < & Vec < u8 >> for SomeEmptyStruct < > { type Error = SDKError ; fn try_from (bytes : & Vec < u8 >) -> Result < Self , Self :: Error > { try_from_bytes (& bytes) } } impl < > TryFrom < Vec < u8 >> for SomeEmptyStruct < > { type Error = SDKError ; fn try_from (bytes : Vec < u8 >) -> Result < Self , Self :: Error > { try_from_bytes (& bytes) } }
+            "#,
+        )?.to_string();
 
+        assert_eq!(actual, expected);
         Ok(())
     }
 
