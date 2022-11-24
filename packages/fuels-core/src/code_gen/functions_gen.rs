@@ -87,7 +87,7 @@ fn function_arguments(
     fun.inputs
         .iter()
         .map(|input| Component::new(input, types, true))
-        .collect::<Result<Vec<_>, anyhow::Error>>()
+        .collect::<Result<Vec<_>, Error>>()
         .map_err(|e| Error::InvalidType(e.to_string()))
 }
 
