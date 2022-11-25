@@ -242,8 +242,8 @@ impl Contract {
         let chain_info = provider.chain_info().await?;
 
         tx.check_without_signatures(
-            chain_info.latest_block.header.height.0,
-            &chain_info.consensus_parameters.into(),
+            chain_info.latest_block.header.height,
+            &chain_info.consensus_parameters,
         )?;
         provider.send_transaction(&tx).await?;
 

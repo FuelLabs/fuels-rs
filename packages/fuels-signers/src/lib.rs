@@ -191,7 +191,8 @@ mod tests {
         let res = wallet_1
             .get_provider()?
             .get_transaction_by_id(&tx_id)
-            .await?;
+            .await?
+            .unwrap();
 
         let script = res.transaction.as_script().cloned().unwrap();
         assert_eq!(script.limit(), gas_limit);
@@ -262,14 +263,14 @@ mod tests {
 
         // Assert that we've sent 2 from wallet 1, resulting in an amount of 3 in wallet 1.
         let resulting_amount = wallet_1_final_coins.first().unwrap();
-        assert_eq!(resulting_amount.amount.0, 3);
+        assert_eq!(resulting_amount.amount, 3);
 
         let wallet_2_final_coins = wallet_2.get_coins(BASE_ASSET_ID).await?;
         assert_eq!(wallet_2_final_coins.len(), 2);
 
         // Check that wallet 2's amount is 7:
         // 5 initial + 2 that was sent to it.
-        let total_amount: u64 = wallet_2_final_coins.iter().map(|c| c.amount.0).sum();
+        let total_amount: u64 = wallet_2_final_coins.iter().map(|c| c.amount).sum();
         assert_eq!(total_amount, 7);
         Ok(())
     }

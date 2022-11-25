@@ -3,14 +3,13 @@ use std::io;
 #[cfg(feature = "fuel-core")]
 use fuel_core::service::{Config, FuelService};
 
-use fuel_gql_client::client::types::{TransactionResponse, TransactionStatus};
+use fuel_gql_client::client::types::TransactionStatus;
 use fuel_gql_client::interpreter::ExecutableTransaction;
 use fuel_gql_client::{
     client::{
         schema::{
-            balance::Balance, block::TimeParameters as FuelTimeParameters, chain::ChainInfo,
-            coin::Coin, contract::ContractBalance, message::Message, node_info::NodeInfo,
-            resource::Resource,
+            balance::Balance, block::TimeParameters as FuelTimeParameters,
+            contract::ContractBalance,
         },
         FuelClient, PageDirection, PaginatedResult, PaginationRequest,
     },
@@ -19,6 +18,12 @@ use fuel_gql_client::{
 };
 use fuels_core::constants::{DEFAULT_GAS_ESTIMATION_TOLERANCE, MAX_GAS_PER_TX};
 use fuels_types::block::Block;
+use fuels_types::chain_info::ChainInfo;
+use fuels_types::coin::Coin;
+use fuels_types::message::Message;
+use fuels_types::node_info::NodeInfo;
+use fuels_types::resource::Resource;
+use fuels_types::transaction_response::TransactionResponse;
 use std::collections::HashMap;
 use thiserror::Error;
 
@@ -177,11 +182,11 @@ impl Provider {
     }
 
     pub async fn chain_info(&self) -> Result<ChainInfo, ProviderError> {
-        Ok(self.client.chain_info().await?)
+        Ok(self.client.chain_info().await?.into())
     }
 
     pub async fn node_info(&self) -> Result<NodeInfo, ProviderError> {
-        Ok(self.client.node_info().await?)
+        Ok(self.client.node_info().await?.into())
     }
 
     pub async fn dry_run(&self, tx: &Transaction) -> Result<Vec<Receipt>, ProviderError> {
@@ -223,7 +228,7 @@ impl Provider {
             if res.results.is_empty() {
                 break;
             }
-            coins.extend(res.results);
+            coins.extend(res.results.into_iter().map(Into::into));
             cursor = res.cursor;
         }
 
@@ -249,6 +254,7 @@ impl Provider {
             .await?
             .into_iter()
             .flatten()
+            .map(Into::into)
             .collect();
 
         Ok(res)
@@ -347,7 +353,7 @@ impl Provider {
         &self,
         tx_id: &str,
     ) -> Result<Option<TransactionResponse>, ProviderError> {
-        Ok(self.client.transaction(tx_id).await?)
+        Ok(self.client.transaction(tx_id).await?.map(Into::into))
     }
 
     // - Get transaction(s)
@@ -434,18 +440,17 @@ impl Provider {
         let gas_used = self
             .get_gas_used_with_tolerance(&dry_run_tx, tolerance)
             .await?;
-        let gas_price = std::cmp::max(*tx.gas_price(), min_gas_price.0);
+        let gas_price = std::cmp::max(*tx.gas_price(), min_gas_price);
 
         // Update the dry_run_tx with estimated gas_used and correct gas price to calculate the total_fee
         *dry_run_tx.gas_price_mut() = gas_price;
         *dry_run_tx.gas_limit_mut() = gas_used;
 
-        let transaction_fee =
-            TransactionFee::checked_from_tx(&consensus_parameters.into(), &dry_run_tx)
-                .expect("Error calculating TransactionFee");
+        let transaction_fee = TransactionFee::checked_from_tx(&consensus_parameters, &dry_run_tx)
+            .expect("Error calculating TransactionFee");
 
         Ok(TransactionCost {
-            min_gas_price: min_gas_price.0,
+            min_gas_price,
             gas_price,
             gas_used,
             metered_bytes_size: tx.metered_bytes_size() as u64,
@@ -493,7 +498,11 @@ impl Provider {
         let res = self
             .client
             .messages(Some(&from.hash().to_string()), pagination)
-            .await?;
-        Ok(res.results)
+            .await?
+            .results
+            .into_iter()
+            .map(Into::into)
+            .collect();
+        Ok(res)
     }
 }

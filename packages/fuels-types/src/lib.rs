@@ -17,6 +17,8 @@ pub mod errors;
 pub mod message;
 pub mod node_info;
 pub mod param_types;
+pub mod resource;
+pub mod transaction_response;
 pub mod utils;
 
 #[derive(Debug, Clone, Copy, ToString, PartialEq, Eq)]

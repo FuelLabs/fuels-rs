@@ -1,5 +1,4 @@
 use anyhow::Result;
-use fuel_gql_client::client::schema::resource::Resource;
 use fuel_gql_client::fuel_tx::{
     field::Script as ScriptField, ConsensusParameters, Input, Output, Receipt, Transaction,
     TxPointer, UtxoId,
@@ -10,6 +9,7 @@ use fuel_gql_client::fuel_types::{
 };
 use fuel_gql_client::fuel_vm::{consts::REG_ONE, prelude::Opcode};
 use fuels_core::constants::BASE_ASSET_ID;
+use fuels_types::resource::Resource;
 use itertools::{chain, Itertools};
 
 use fuel_tx::{Checkable, ScriptExecutionResult, Witness};
@@ -278,7 +278,7 @@ impl Script {
         spendable_coins
             .iter()
             .map(|resource| match resource {
-                Resource::Coin(coin) => coin.asset_id.clone().into(),
+                Resource::Coin(coin) => coin.asset_id,
                 Resource::Message(_) => BASE_ASSET_ID,
             })
             .collect()
@@ -321,22 +321,22 @@ impl Script {
             .into_iter()
             .map(|resource| match resource {
                 Resource::Coin(coin) => Input::coin_signed(
-                    UtxoId::from(coin.utxo_id),
-                    coin.owner.into(),
-                    coin.amount.0,
-                    coin.asset_id.into(),
+                    coin.utxo_id,
+                    coin.owner,
+                    coin.amount,
+                    coin.asset_id,
                     TxPointer::default(),
                     0,
                     0,
                 ),
                 Resource::Message(message) => Input::message_signed(
-                    message.message_id.into(),
-                    message.sender.into(),
-                    message.recipient.into(),
-                    message.amount.into(),
-                    message.nonce.into(),
+                    message.message_id,
+                    message.sender,
+                    message.recipient,
+                    message.amount,
+                    message.nonce,
                     0,
-                    message.data.into(),
+                    message.data,
                 ),
             })
             .collect()
@@ -390,8 +390,8 @@ impl Script {
         let chain_info = provider.chain_info().await?;
 
         self.tx.check_without_signatures(
-            chain_info.latest_block.header.height.0,
-            &chain_info.consensus_parameters.into(),
+            chain_info.latest_block.header.height,
+            &chain_info.consensus_parameters,
         )?;
 
         provider.send_transaction(&self.tx).await
@@ -402,8 +402,8 @@ impl Script {
         let chain_info = provider.chain_info().await?;
 
         self.tx.check_without_signatures(
-            chain_info.latest_block.header.height.0,
-            &chain_info.consensus_parameters.into(),
+            chain_info.latest_block.header.height,
+            &chain_info.consensus_parameters,
         )?;
 
         let receipts = provider.dry_run(&self.tx.clone().into()).await?;
@@ -422,11 +422,11 @@ impl Script {
 #[cfg(test)]
 mod test {
     use super::*;
-    use fuel_gql_client::client::schema::coin::{Coin, CoinStatus};
     use fuels_core::abi_encoder::ABIEncoder;
     use fuels_core::parameters::CallParameters;
     use fuels_core::Token;
     use fuels_types::bech32::Bech32ContractId;
+    use fuels_types::coin::{Coin, CoinStatus};
     use fuels_types::param_types::ParamType;
     use rand::Rng;
     use std::slice;
@@ -667,11 +667,11 @@ mod test {
             .into_iter()
             .map(|asset_id| {
                 Resource::Coin(Coin {
-                    amount: 100u64.into(),
-                    block_created: 0u64.into(),
-                    asset_id: asset_id.into(),
+                    amount: 100,
+                    block_created: 0,
+                    asset_id,
                     utxo_id: Default::default(),
-                    maturity: 0u64.into(),
+                    maturity: 0,
                     owner: Default::default(),
                     status: CoinStatus::Unspent,
                 })
@@ -708,11 +708,11 @@ mod test {
                 .enumerate()
                 .map(|(index, asset_id)| {
                     Resource::Coin(Coin {
-                        amount: (index * 10).into(),
-                        block_created: 1u64.into(),
-                        asset_id: asset_id.into(),
+                        amount: (index * 10) as u64,
+                        block_created: 1,
+                        asset_id,
                         utxo_id: Default::default(),
-                        maturity: 0u64.into(),
+                        maturity: 0,
                         owner: Default::default(),
                         status: CoinStatus::Unspent,
                     })
@@ -736,10 +736,10 @@ mod test {
             .into_iter()
             .map(|resource| match resource {
                 Resource::Coin(coin) => Input::coin_signed(
-                    fuel_tx::UtxoId::from(coin.utxo_id),
-                    coin.owner.into(),
-                    coin.amount.0,
-                    coin.asset_id.into(),
+                    coin.utxo_id,
+                    coin.owner,
+                    coin.amount,
+                    coin.asset_id,
                     TxPointer::default(),
                     0,
                     0,

@@ -4,15 +4,9 @@ use async_trait::async_trait;
 use elliptic_curve::rand_core;
 use eth_keystore::KeystoreError;
 use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
-use fuel_gql_client::client::schema;
-use fuel_gql_client::client::schema::resource::Resource;
-use fuel_gql_client::client::types::TransactionResponse;
 use fuel_gql_client::fuel_vm::prelude::GTFArgs;
 use fuel_gql_client::{
-    client::{
-        schema::coin::Coin, schema::message::Message as InputMessage, PaginatedResult,
-        PaginationRequest,
-    },
+    client::{PaginatedResult, PaginationRequest},
     fuel_tx::{
         AssetId, Bytes32, Cacheable, ContractId, Input, Output, Receipt, TransactionFee, TxPointer,
         UtxoId, Witness,
@@ -24,6 +18,8 @@ use fuels_core::tx::{field, Chargeable, Script, Transaction, UniqueIdentifier};
 use fuels_core::{constants::BASE_ASSET_ID, parameters::TxParameters};
 use fuels_types::bech32::{Bech32Address, Bech32ContractId, FUEL_BECH32_HRP};
 use fuels_types::errors::Error;
+use fuels_types::transaction_response::TransactionResponse;
+use fuels_types::{coin::Coin, message::Message as InputMessage, resource::Resource};
 use rand::{CryptoRng, Rng};
 use std::{collections::HashMap, fmt, ops, path::Path};
 use thiserror::Error;
@@ -168,9 +164,9 @@ impl Wallet {
 
     fn create_coin_input(&self, coin: Coin, asset_id: AssetId, witness_index: u8) -> Input {
         Input::coin_signed(
-            UtxoId::from(coin.utxo_id),
-            coin.owner.into(),
-            coin.amount.0,
+            coin.utxo_id,
+            coin.owner,
+            coin.amount,
             asset_id,
             TxPointer::default(),
             witness_index,
@@ -180,20 +176,20 @@ impl Wallet {
 
     fn create_message_input(&self, message: InputMessage, witness_index: u8) -> Input {
         let message_id = Input::compute_message_id(
-            &message.sender.clone().into(),
-            &message.recipient.clone().into(),
-            message.nonce.into(),
-            message.amount.0,
-            &message.data.0,
+            &message.sender,
+            &message.recipient,
+            message.nonce,
+            message.amount,
+            &message.data,
         );
         Input::message_signed(
             message_id,
-            message.sender.into(),
-            message.recipient.into(),
-            message.amount.0,
+            message.sender,
+            message.recipient,
+            message.amount,
             0,
             witness_index,
-            message.data.into(),
+            message.data,
         )
     }
 
@@ -256,7 +252,7 @@ impl Wallet {
             .map_err(Into::into)
     }
 
-    pub async fn get_messages(&self) -> Result<Vec<schema::message::Message>, Error> {
+    pub async fn get_messages(&self) -> Result<Vec<InputMessage>, Error> {
         Ok(self.get_provider()?.get_messages(&self.address).await?)
     }
 
@@ -458,7 +454,7 @@ impl WalletUnlocked {
             .chain_info()
             .await?
             .consensus_parameters;
-        let transaction_fee = TransactionFee::checked_from_tx(&consensus_parameters.into(), tx)
+        let transaction_fee = TransactionFee::checked_from_tx(&consensus_parameters, tx)
             .expect("Error calculating TransactionFee");
 
         let (base_asset_inputs, remaining_inputs): (Vec<_>, Vec<_>) =
@@ -659,9 +655,9 @@ impl WalletUnlocked {
         predicate_data: Vec<u8>,
     ) -> Input {
         Input::coin_predicate(
-            UtxoId::from(coin.utxo_id),
-            coin.owner.into(),
-            coin.amount.0,
+            coin.utxo_id,
+            coin.owner,
+            coin.amount,
             asset_id,
             TxPointer::default(),
             0,
@@ -677,17 +673,17 @@ impl WalletUnlocked {
         predicate_data: Vec<u8>,
     ) -> Input {
         let message_id = Input::compute_message_id(
-            &message.sender.clone().into(),
-            &message.recipient.clone().into(),
-            message.nonce.into(),
-            message.amount.0,
-            &message.data.0,
+            &message.sender,
+            &message.recipient,
+            message.nonce,
+            message.amount,
+            &message.data,
         );
         Input::message_predicate(
             message_id,
-            message.sender.into(),
-            message.recipient.into(),
-            message.amount.0,
+            message.sender,
+            message.recipient,
+            message.amount,
             0,
             vec![],
             code,

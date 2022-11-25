@@ -119,10 +119,9 @@ pub async fn setup_test_provider(
 #[cfg(test)]
 mod tests {
     use crate::{launch_custom_provider_and_get_wallets, AssetConfig, WalletsConfig};
-    use fuel_gql_client::client::schema::resource::Resource;
     use fuels_core::constants::BASE_ASSET_ID;
     use fuels_signers::fuel_crypto::fuel_types::AssetId;
-    use fuels_types::errors::Error;
+    use fuels_types::{errors::Error, resource::Resource};
     use rand::Fill;
 
     #[tokio::test]
@@ -142,7 +141,7 @@ mod tests {
             assert_eq!(coins.len(), num_coins as usize);
 
             for coin in &coins {
-                assert_eq!(coin.amount.0, amount);
+                assert_eq!(coin.amount, amount);
             }
         }
         Ok(())

@@ -1,56 +1,43 @@
-use fuel_gql_client::client::schema::coin::{Coin as SchemaCoin, CoinStatus as SchemaCoinStatus};
+use fuel_gql_client::client::schema::coin::{Coin as ClientCoin, CoinStatus as ClientCoinStatus};
 use fuel_tx::{Address, AssetId, UtxoId};
+
+#[derive(Debug)]
 
 pub enum CoinStatus {
     Unspent,
     Spent,
 }
 
-impl From<SchemaCoinStatus> for CoinStatus {
-    fn from(schema_coin_status: SchemaCoinStatus) -> Self {
-        match schema_coin_status {
-            SchemaCoinStatus::Unspent => CoinStatus::Unspent,
-            SchemaCoinStatus::Spent => CoinStatus::Spent,
+impl From<ClientCoinStatus> for CoinStatus {
+    fn from(client_coin_status: ClientCoinStatus) -> Self {
+        match client_coin_status {
+            ClientCoinStatus::Unspent => CoinStatus::Unspent,
+            ClientCoinStatus::Spent => CoinStatus::Spent,
         }
     }
 }
 
+#[derive(Debug)]
 pub struct Coin {
-    schema_coin: SchemaCoin,
+    pub amount: u64,
+    pub block_created: u64,
+    pub asset_id: AssetId,
+    pub utxo_id: UtxoId,
+    pub maturity: u64,
+    pub owner: Address,
+    pub status: CoinStatus,
 }
 
-impl From<SchemaCoin> for Coin {
-    fn from(schema_coin: SchemaCoin) -> Self {
-        Self { schema_coin }
-    }
-}
-
-impl Coin {
-    pub fn amount(&self) -> u64 {
-        self.schema_coin.amount.0
-    }
-
-    pub fn block_created(&self) -> u64 {
-        self.schema_coin.block_created.0
-    }
-
-    pub fn asset_id(&self) -> AssetId {
-        AssetId::from(self.schema_coin.asset_id.0 .0)
-    }
-
-    pub fn utxo_id(&self) -> UtxoId {
-        self.schema_coin.utxo_id.0 .0
-    }
-
-    pub fn maturity(&self) -> u64 {
-        self.schema_coin.maturity.0
-    }
-
-    pub fn owner(&self) -> Address {
-        Address::from(self.schema_coin.owner.0 .0)
-    }
-
-    pub fn status(&self) -> CoinStatus {
-        self.schema_coin.status.into()
+impl From<ClientCoin> for Coin {
+    fn from(client_coin: ClientCoin) -> Self {
+        Self {
+            amount: client_coin.amount.0,
+            block_created: client_coin.block_created.0,
+            asset_id: client_coin.asset_id.0 .0,
+            utxo_id: client_coin.utxo_id.0 .0,
+            maturity: client_coin.maturity.0,
+            owner: client_coin.owner.0 .0,
+            status: client_coin.status.into(),
+        }
     }
 }
