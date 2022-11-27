@@ -169,11 +169,11 @@ pub fn unzip_param_types(param_types: &[(String, ParamType)]) -> Vec<ParamType> 
         .collect()
 }
 
-pub trait DecodeLog {
+pub trait DecodableLog {
     fn decode_log(&self, data: &[u8]) -> Result<String, Error>;
 }
 
-impl DecodeLog for ParamType {
+impl DecodableLog for ParamType {
     fn decode_log(&self, data: &[u8]) -> Result<String, Error> {
         let token = ABIDecoder::decode_single(self, data)?;
         paramtype_decode_log(self, &token)
@@ -248,14 +248,18 @@ fn paramtype_decode_log(param_type: &ParamType, token: &Token) -> Result<String,
 
             format!("({elements})")
         }
-        _ => return Err(Error::InvalidData("alaj nevalja".to_string())),
+        _ => {
+            return Err(Error::InvalidData(format!(
+                "Could not decode log with param type: `{param_type:?}` and token: `{token:?}`"
+            )))
+        }
     };
     Ok(result)
 }
 
 #[cfg(test)]
 mod tests {
-    use super::DecodeLog;
+    use super::DecodableLog;
     use crate::{
         try_from_bytes,
         types::{Bits256, EvmAddress, SizedAsciiString},

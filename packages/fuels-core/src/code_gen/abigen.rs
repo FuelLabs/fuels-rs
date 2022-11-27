@@ -93,7 +93,7 @@ impl Abigen {
         } else {
             (
                 quote! {
-                    use fuels::contract::contract::{Contract, ContractCallHandler, LogDecoder};
+                    use fuels::contract::{contract::{Contract, ContractCallHandler}, logs::LogDecoder};
                      use fuels::core::{EnumSelector, StringToken, Parameterize, Tokenizable, Token,
                                       Identity, try_from_bytes};
                     use fuels::core::code_gen::get_logs_hashmap;

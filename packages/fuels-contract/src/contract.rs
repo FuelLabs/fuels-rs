@@ -1,3 +1,4 @@
+use crate::logs::LogDecoder;
 use crate::script::Script;
 use fuel_gql_client::{
     fuel_tx::{Contract as FuelContract, Output, Receipt, StorageSlot, Transaction},
@@ -11,9 +12,8 @@ use fuels_core::{
     constants::FAILED_TRANSFER_TO_ADDRESS_SIGNAL,
     parameters::StorageConfiguration,
     parameters::{CallParameters, TxParameters},
-    try_from_bytes,
     tx::{Bytes32, ContractId},
-    DecodeLog, Parameterize, Selector, Token, Tokenizable,
+    Parameterize, Selector, Token, Tokenizable,
 };
 use fuels_signers::{
     provider::{Provider, TransactionCost},
@@ -35,78 +35,6 @@ use std::{
 };
 
 pub const DEFAULT_TX_DEP_ESTIMATION_ATTEMPTS: u64 = 10;
-
-/// Struct used to pass the log mappings from the Abigen
-#[derive(Debug, Clone)]
-pub struct LogDecoder {
-    /// A mapping of (contract-id, log-id) and param-type
-    pub logs_map: HashMap<(Bech32ContractId, u64), ParamType>,
-}
-
-impl LogDecoder {
-    fn get_logs(&self, receipts: &[Receipt]) -> Result<Vec<String>, Error> {
-        let ids_with_data = receipts.iter().filter_map(|r| match r {
-            Receipt::LogData { rb, data, id, .. } => {
-                Some(((Bech32ContractId::from(*id), *rb), data.clone()))
-            }
-            Receipt::Log { ra, rb, id, .. } => Some((
-                (Bech32ContractId::from(*id), *rb),
-                ra.to_be_bytes().to_vec(),
-            )),
-            _ => None,
-        });
-
-        ids_with_data
-            .map(|((c_id, log_id), data)| {
-                let param_type = self
-                    .logs_map
-                    .get(&(c_id, log_id))
-                    .ok_or_else(|| Error::InvalidData("Failed to find log id".into()))?;
-
-                param_type.decode_log(&data)
-            })
-            .collect::<Result<Vec<String>, Error>>()
-    }
-
-    fn get_logs_with_type<T: Tokenizable + Parameterize>(
-        &self,
-        receipts: &[Receipt],
-    ) -> Result<Vec<T>, Error> {
-        let target_param_type = T::param_type();
-
-        let target_ids: HashSet<(Bech32ContractId, u64)> = self
-            .logs_map
-            .iter()
-            .filter_map(|((c_id, log_id), param_type)| {
-                if *param_type == target_param_type {
-                    Some((c_id.clone(), *log_id))
-                } else {
-                    None
-                }
-            })
-            .collect();
-
-        let decoded_logs: Vec<T> = receipts
-            .iter()
-            .filter_map(|r| match r {
-                Receipt::LogData { id, rb, data, .. }
-                    if target_ids.contains(&(Bech32ContractId::from(*id), *rb)) =>
-                {
-                    Some(data.clone())
-                }
-                Receipt::Log { id, ra, rb, .. }
-                    if target_ids.contains(&(Bech32ContractId::from(*id), *rb)) =>
-                {
-                    Some(ra.to_be_bytes().to_vec())
-                }
-                _ => None,
-            })
-            .map(|data| try_from_bytes(&data))
-            .collect::<Result<Vec<_>, _>>()?;
-
-        Ok(decoded_logs)
-    }
-}
 
 #[derive(Debug, Clone, Default)]
 pub struct CompiledContract {
@@ -761,9 +689,7 @@ impl MultiContractCallHandler {
     /// Adds a contract call to be bundled in the transaction
     /// Note that this is a builder method
     pub fn add_call<D: Tokenizable>(&mut self, call_handler: ContractCallHandler<D>) -> &mut Self {
-        self.log_decoder
-            .logs_map
-            .extend(call_handler.log_decoder.logs_map.clone().into_iter());
+        self.log_decoder.merge(&call_handler.log_decoder);
         self.contract_calls.push(call_handler.contract_call);
         self
     }
