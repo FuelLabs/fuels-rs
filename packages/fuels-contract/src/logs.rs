@@ -14,7 +14,7 @@ pub struct LogDecoder {
 }
 
 impl LogDecoder {
-    /// Get all decoded logs from the given receipts
+    /// Get all decoded logs from the given receipts as `String`
     pub fn get_logs(&self, receipts: &[Receipt]) -> Result<Vec<String>, Error> {
         let ids_with_data = receipts.iter().filter_map(|r| match r {
             Receipt::LogData { rb, data, id, .. } => {
