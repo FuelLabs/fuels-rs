@@ -114,17 +114,3 @@ impl ExecutableFuelCall {
         Ok(receipts)
     }
 }
-
-#[derive(Debug)]
-pub struct CompiledScript {
-    pub script_binary: Vec<u8>,
-}
-
-impl CompiledScript {
-    /// Creates a compiled script from the binary located at `binary_filepath`.
-    pub fn from_binary_filepath(binary_filepath: &str) -> Result<Self, Error> {
-        Ok(Self {
-            script_binary: std::fs::read(binary_filepath)?,
-        })
-    }
-}

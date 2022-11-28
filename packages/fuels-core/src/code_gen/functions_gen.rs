@@ -109,13 +109,13 @@ pub fn generate_script_main_function(
             let arg_name_tokens = [#(#arg_names.into_token()),*];
             let script_data = ABIEncoder::encode(&arg_name_tokens).expect("Cannot encode script
             arguments").resolve(0);
-            let compiled_script = CompiledScript::from_binary_filepath(self.binary_filepath
-                .as_str()).expect("Could not read from binary filepath");
+            let script_binary = std::fs::read(self.binary_filepath.as_str())
+                                        .expect("Could not read from binary filepath");
             let provider = self.wallet.get_provider().expect("Provider not set up").clone();
             // TODO(iqdecay): handle log decoding in scripts
             let log_decoder = LogDecoder::default();
             ScriptCallHandler::new(
-                compiled_script,
+                script_binary,
                 script_data,
                 self.wallet.clone(),
                 provider,

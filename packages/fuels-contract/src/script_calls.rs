@@ -1,8 +1,6 @@
 use crate::{
-    call_response::FuelCallResponse,
-    contract::get_decoded_output,
-    execution_script::{CompiledScript, ExecutableFuelCall},
-    logs::LogDecoder,
+    call_response::FuelCallResponse, contract::get_decoded_output,
+    execution_script::ExecutableFuelCall, logs::LogDecoder,
 };
 use fuel_gql_client::fuel_tx::{Output, Receipt, Transaction};
 use fuel_tx::Input;
@@ -17,7 +15,7 @@ use std::{fmt::Debug, marker::PhantomData};
 #[derive(Debug)]
 /// Contains all data relevant to a single script call
 pub struct ScriptCall {
-    pub compiled_script: CompiledScript,
+    pub script_binary: Vec<u8>,
     pub script_data: Vec<u8>,
     pub inputs: Vec<Input>,
     pub outputs: Vec<Output>,
@@ -55,7 +53,7 @@ where
     D: Tokenizable + Debug,
 {
     pub fn new(
-        compiled_script: CompiledScript,
+        script_binary: Vec<u8>,
         script_data: Vec<u8>,
         wallet: WalletUnlocked,
         provider: Provider,
@@ -63,7 +61,7 @@ where
         log_decoder: LogDecoder,
     ) -> Self {
         let script_call = ScriptCall {
-            compiled_script,
+            script_binary,
             script_data,
             inputs: vec![],
             outputs: vec![],
@@ -112,7 +110,7 @@ where
             self.tx_parameters.gas_price,
             self.tx_parameters.gas_limit,
             self.tx_parameters.maturity,
-            self.script_call.compiled_script.script_binary.clone(),
+            self.script_call.script_binary.clone(),
             self.script_call.script_data.clone(),
             self.script_call.inputs.clone(), // TODO(iqdecay): allow user to set inputs field
             self.script_call.outputs.clone(), // TODO(iqdecay): allow user to set outputs field

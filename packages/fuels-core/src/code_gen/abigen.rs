@@ -220,7 +220,6 @@ impl Abigen {
         } else {
             let specific_includes = if is_script {
                 quote! {
-                    use fuels::contract::execution_script::CompiledScript;
                     use fuels::contract::script_calls::{ScriptCallHandler, ScriptCall};
                     use fuels::core::abi_encoder::ABIEncoder;
                     use fuels::core::parameters::TxParameters;
