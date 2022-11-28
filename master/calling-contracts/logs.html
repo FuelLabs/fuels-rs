@@ -152,14 +152,14 @@
         log(l);
     }
 </code></pre>
-<p>You can access the logged values in Rust by calling <code>logs_with_type::&lt;T&gt;</code> from a contract instance, where <code>T</code> is the type of the logged variables you want to retrieve. The result will be a <code>Vec&lt;T&gt;</code>:</p>
+<p>You can access the logged values in Rust by calling <code>logs_with_type::&lt;T&gt;</code> from a <code>CallResponse</code>, where <code>T</code> is the type of the logged variables you want to retrieve. The result will be a <code>Vec&lt;T&gt;</code>:</p>
 <pre><code class="language-rust ignore">    let contract_methods = contract_instance.methods();
     let response = contract_methods.produce_logs_variables().call().await?;
 
-    let log_u64 = contract_instance.logs_with_type::&lt;u64&gt;(&amp;response.receipts)?;
-    let log_bits256 = contract_instance.logs_with_type::&lt;Bits256&gt;(&amp;response.receipts)?;
-    let log_string = contract_instance.logs_with_type::&lt;SizedAsciiString&lt;4&gt;&gt;(&amp;response.receipts)?;
-    let log_array = contract_instance.logs_with_type::&lt;[u8; 3]&gt;(&amp;response.receipts)?;
+    let log_u64 = response.get_logs_with_type::&lt;u64&gt;()?;
+    let log_bits256 = response.get_logs_with_type::&lt;Bits256&gt;()?;
+    let log_string = response.get_logs_with_type::&lt;SizedAsciiString&lt;4&gt;&gt;()?;
+    let log_array = response.get_logs_with_type::&lt;[u8; 3]&gt;()?;
 
     let expected_bits256 = Bits256([
         239, 134, 175, 169, 105, 108, 240, 220, 99, 133, 226, 196, 7, 166, 225, 89, 161, 16, 60,
@@ -171,12 +171,12 @@
     assert_eq!(log_string, vec![&quot;Fuel&quot;]);
     assert_eq!(log_array, vec![[1, 2, 3]]);
 </code></pre>
-<p>You can also get a vector of all the logged values as strings using <code>fetch_logs()</code>:</p>
+<p>You can also get a vector of all the logged values as strings using <code>get_logs()</code>:</p>
 <pre><code class="language-rust  ignore">    let contract_methods = contract_instance.methods();
     let response = contract_methods.produce_multiple_logs().call().await?;
-    let logs = contract_instance.fetch_logs(&amp;response.receipts);
+    let logs = response.get_logs()?;
 </code></pre>
-<p>Due to possible performance hits, it is not recommended to use <code>fetch_logs()</code> outside of a debugging scenario.</p>
+<p>Due to possible performance hits, it is not recommended to use <code>get_logs()</code> outside of a debugging scenario.</p>
 
                     </main>
 

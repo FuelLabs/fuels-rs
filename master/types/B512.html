@@ -140,7 +140,7 @@
                         <h1 id="b512"><a class="header" href="#b512">B512</a></h1>
 <p>In the Rust SDK, the <code>B512</code> definition matches the Sway standard library type with the same name and will be converted accordingly when interacting with contracts:</p>
 <pre><code class="language-rust ignore">pub struct B512 {
-    bytes: [Bits256; 2],
+    pub bytes: [Bits256; 2],
 }
 </code></pre>
 <p>Here's an example:</p>
