@@ -8,4 +8,4 @@ pub mod function_selector;
 pub mod functions_gen;
 mod resolved_type;
 
-pub use abigen::{extract_and_parse_logs, extract_log_ids_and_data};
+pub use abigen::get_logs_hashmap;

@@ -1,6 +1,5 @@
 use crate::{Parameterize, Token, Tokenizable};
-use fuels_types::errors::Error;
-use fuels_types::param_types::ParamType;
+use fuels_types::{errors::Error, param_types::ParamType};
 
 // A simple wrapper around [u8; 32] representing the `b256` type. Exists
 // mainly so that we may differentiate `Parameterize` and `Tokenizable`
@@ -54,7 +53,7 @@ impl Tokenizable for Bits256 {
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
 // ANCHOR: b512
 pub struct B512 {
-    bytes: [Bits256; 2],
+    pub bytes: [Bits256; 2],
 }
 // ANCHOR_END: b512
 
@@ -69,7 +68,8 @@ impl From<(Bits256, Bits256)> for B512 {
 impl Parameterize for B512 {
     fn param_type() -> ParamType {
         ParamType::Struct {
-            fields: vec![<[Bits256; 2usize]>::param_type()],
+            name: "B512".to_string(),
+            fields: vec![("bytes".to_string(), <[Bits256; 2usize]>::param_type())],
             generics: vec![],
         }
     }
@@ -106,7 +106,7 @@ impl Tokenizable for B512 {
 // ANCHOR: evm_address
 pub struct EvmAddress {
     // An evm address is only 20 bytes, the first 12 bytes should be set to 0
-    value: Bits256,
+    pub value: Bits256,
 }
 // ANCHOR_END: evm_address
 
@@ -131,7 +131,8 @@ impl From<Bits256> for EvmAddress {
 impl Parameterize for EvmAddress {
     fn param_type() -> ParamType {
         ParamType::Struct {
-            fields: vec![ParamType::B256],
+            name: "EvmAddress".to_string(),
+            fields: vec![("value".to_string(), ParamType::B256)],
             generics: vec![],
         }
     }
@@ -220,7 +221,8 @@ mod tests {
         assert_eq!(
             EvmAddress::param_type(),
             ParamType::Struct {
-                fields: vec![ParamType::B256],
+                name: "EvmAddress".to_string(),
+                fields: vec![("value".to_string(), ParamType::B256)],
                 generics: vec![]
             }
         );

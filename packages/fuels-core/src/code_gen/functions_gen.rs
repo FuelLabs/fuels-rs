@@ -1,10 +1,11 @@
-use crate::code_gen::custom_types::{param_type_calls, single_param_type_call, Component};
-use crate::code_gen::docs_gen::expand_doc;
-use crate::code_gen::resolved_type;
-use crate::code_gen::resolved_type::ResolvedType;
+use crate::code_gen::{
+    custom_types::{param_type_calls, single_param_type_call, Component},
+    docs_gen::expand_doc,
+    resolved_type,
+    resolved_type::ResolvedType,
+};
 use crate::utils::safe_ident;
-use fuels_types::errors::Error;
-use fuels_types::{ABIFunction, TypeDeclaration};
+use fuels_types::{errors::Error, ABIFunction, TypeDeclaration};
 use inflector::Inflector;
 use proc_macro2::TokenStream;
 use quote::quote;
@@ -60,11 +61,16 @@ pub fn expand_function(
             let provider = self.wallet.get_provider().expect("Provider not set up");
             let encoded_fn_selector = resolve_fn_selector(#name_stringified, &[#(#param_type_calls),*]);
             let tokens = [#(#arg_names.into_token()),*];
-            Contract::method_hash(&provider,
+            let log_decoder = LogDecoder{logs_map: self.logs_map.clone()};
+            Contract::method_hash(
+                &provider,
                 self.contract_id.clone(),
                 &self.wallet,
                 encoded_fn_selector,
-                &tokens).expect("method not found (this should never happen)")
+                &tokens,
+                log_decoder
+            )
+            .expect("method not found (this should never happen)")
         }
     })
 }
@@ -106,12 +112,15 @@ pub fn generate_script_main_function(
             let compiled_script = CompiledScript::from_binary_filepath(self.binary_filepath
                 .as_str()).expect("Could not read from binary filepath");
             let provider = self.wallet.get_provider().expect("Provider not set up").clone();
+            // TODO(iqdecay): handle log decoding in scripts
+            let log_decoder = LogDecoder::default();
             ScriptCallHandler::new(
                 compiled_script,
                 script_data,
                 self.wallet.clone(),
                 provider,
-                #output_params
+                #output_params,
+                log_decoder
             )
         }
     })
@@ -139,7 +148,7 @@ fn function_arguments(
     fun.inputs
         .iter()
         .map(|input| Component::new(input, types, true))
-        .collect::<Result<Vec<_>, anyhow::Error>>()
+        .collect::<Result<Vec<_>, Error>>()
         .map_err(|e| Error::InvalidType(e.to_string()))
 }
 
@@ -323,12 +332,14 @@ mod tests {
                         &[<MyStruct1> :: param_type(), <MyStruct2> :: param_type()]
                     );
                     let tokens = [s_1.into_token(), s_2.into_token()];
+                    let log_decoder = LogDecoder{logs_map: self.logs_map.clone()};
                     Contract::method_hash(
                         &provider,
                         self.contract_id.clone(),
                         &self.wallet,
                         encoded_fn_selector,
-                        &tokens
+                        &tokens,
+                        log_decoder
                     )
                     .expect("method not found (this should never happen)")
                 }
@@ -380,12 +391,14 @@ mod tests {
                 let provider = self.wallet.get_provider().expect("Provider not set up");
                 let encoded_fn_selector = resolve_fn_selector("HelloWorld", &[<bool> :: param_type()]);
                 let tokens = [bimbam.into_token()];
+                let log_decoder = LogDecoder{logs_map: self.logs_map.clone()};
                 Contract::method_hash(
                     &provider,
                     self.contract_id.clone(),
                     &self.wallet,
                     encoded_fn_selector,
-                    &tokens
+                    &tokens,
+                    log_decoder
                 )
                 .expect("method not found (this should never happen)")
             }
@@ -484,12 +497,14 @@ mod tests {
                 let provider = self.wallet.get_provider().expect("Provider not set up");
                 let encoded_fn_selector = resolve_fn_selector("hello_world", &[<SomeWeirdFrenchCuisine> :: param_type()]);
                 let tokens = [the_only_allowed_input.into_token()];
+                let log_decoder = LogDecoder{logs_map: self.logs_map.clone()};
                 Contract::method_hash(
                     &provider,
                     self.contract_id.clone(),
                     &self.wallet,
                     encoded_fn_selector,
-                    &tokens
+                    &tokens,
+                    log_decoder
                 )
                 .expect("method not found (this should never happen)")
             }

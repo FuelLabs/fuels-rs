@@ -25,19 +25,41 @@ Or you can initialize a project within an existing folder with
 forc init
 ```
 
-`forc` will setup an example project and we can test it with
+### Adding a Rust integration test to the Sway project
+
+Now that we have a new project, we can add a Rust integration test using a `cargo generate` template.
+If `cargo generate` is not already installed, you can instal it with:
 
 ```
-forc test
+cargo install cargo-generate
+```
+
+> **Note** You can learn more about cargo generate by visiting its [repository](https://github.com/cargo-generate/cargo-generate).
+
+Let's generate the default test harness with the following command:
+
+```
+cargo generate --init fuellabs/sway templates/sway-test-rs --name <Project name> --force
+```
+
+`--force` forces your `--name` input to retain your desired casing for the `{{project-name}}` placeholder in the template. Otherwise, `cargo-generate` automatically converts it to kebab-case. With `--force`, this means that both `my_fuel_project` and `my-fuel-project` are valid project names, depending on your needs.
+
+Before running test, we need to build the Sway project with:
+
+```
+forc build
+```
+
+Afterwards, we can run the test with:
+
+```
+cargo test
 ```
 
 > **Note** If you need to capture output from the tests, use one of the following commands:
 
 ```
-forc test -- --nocapture
-```
-```
-RUST_LOG=receipts cargo test --test integration_tests
+cargo test -- --nocapture
 ```
 
 ## Importing the Fuel Rust SDK

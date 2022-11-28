@@ -1,8 +1,7 @@
 use crate::{Bits256, Identity, Parameterize, Token, Tokenizable};
 use fuel_tx::{Address, AssetId, ContractId};
-use fuels_types::enum_variants::EnumVariants;
-use fuels_types::errors::Error;
-use fuels_types::param_types::ParamType;
+use fuels_types::{enum_variants::EnumVariants, errors::Error, param_types::ParamType};
+use std::iter::zip;
 
 impl<const SIZE: usize, T: Parameterize> Parameterize for [T; SIZE] {
     fn param_type() -> ParamType {
@@ -19,7 +18,8 @@ impl<T: Parameterize> Parameterize for Vec<T> {
 impl Parameterize for Address {
     fn param_type() -> ParamType {
         ParamType::Struct {
-            fields: vec![ParamType::B256],
+            name: "Address".to_string(),
+            fields: vec![("0".to_string(), ParamType::B256)],
             generics: vec![],
         }
     }
@@ -28,7 +28,8 @@ impl Parameterize for Address {
 impl Parameterize for ContractId {
     fn param_type() -> ParamType {
         ParamType::Struct {
-            fields: vec![ParamType::B256],
+            name: "ContractId".to_string(),
+            fields: vec![("0".to_string(), ParamType::B256)],
             generics: vec![],
         }
     }
@@ -37,7 +38,8 @@ impl Parameterize for ContractId {
 impl Parameterize for AssetId {
     fn param_type() -> ParamType {
         ParamType::Struct {
-            fields: vec![ParamType::B256],
+            name: "AssetId".to_string(),
+            fields: vec![("0".to_string(), ParamType::B256)],
             generics: vec![],
         }
     }
@@ -84,10 +86,14 @@ where
     T: Parameterize + Tokenizable,
 {
     fn param_type() -> ParamType {
-        let param_types = vec![ParamType::Unit, T::param_type()];
+        let param_types = vec![
+            ("None".to_string(), ParamType::Unit),
+            ("Some".to_string(), T::param_type()),
+        ];
         let variants = EnumVariants::new(param_types)
             .expect("should never happen as we provided valid Option param types");
         ParamType::Enum {
+            name: "Option".to_string(),
             variants,
             generics: vec![T::param_type()],
         }
@@ -101,9 +107,15 @@ where
 {
     fn param_type() -> ParamType {
         let param_types = vec![T::param_type(), E::param_type()];
-        let variants = EnumVariants::new(param_types.clone())
+        let variant_param_types = zip(
+            vec!["Ok".to_string(), "Err".to_string()],
+            param_types.clone(),
+        )
+        .collect();
+        let variants = EnumVariants::new(variant_param_types)
             .expect("should never happen as we provided valid Result param types");
         ParamType::Enum {
+            name: "Result".to_string(),
             variants,
             generics: param_types,
         }
@@ -112,10 +124,13 @@ where
 
 impl Parameterize for Identity {
     fn param_type() -> ParamType {
-        let param_types = vec![Address::param_type(), ContractId::param_type()];
-        let variants = EnumVariants::new(param_types)
-            .expect("should never happen as we provided valid Identity param types");
+        let variants = EnumVariants::new(vec![
+            ("Address".to_string(), Address::param_type()),
+            ("ContractId".to_string(), ContractId::param_type()),
+        ])
+        .expect("should never happen as we provided valid Identity param types");
         ParamType::Enum {
+            name: "Identity".to_string(),
             variants,
             generics: vec![],
         }

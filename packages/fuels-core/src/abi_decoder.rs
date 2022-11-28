@@ -1,9 +1,9 @@
-use crate::{StringToken, Token};
-use core::convert::TryInto;
-use core::str;
+use crate::{unzip_param_types, StringToken, Token};
 use fuel_types::bytes::padded_len_usize;
-use fuels_types::enum_variants::EnumVariants;
-use fuels_types::{constants::WORD_SIZE, errors::CodecError, param_types::ParamType};
+use fuels_types::{
+    constants::WORD_SIZE, enum_variants::EnumVariants, errors::CodecError, param_types::ParamType,
+};
+use std::{convert::TryInto, str};
 
 #[derive(Debug, Clone)]
 struct DecodeResult {
@@ -77,8 +77,12 @@ impl ABIDecoder {
         })
     }
 
-    fn decode_struct(param_types: &[ParamType], bytes: &[u8]) -> Result<DecodeResult, CodecError> {
-        let (tokens, bytes_read) = Self::decode_multiple(param_types, bytes)?;
+    fn decode_struct(
+        param_types: &[(String, ParamType)],
+        bytes: &[u8],
+    ) -> Result<DecodeResult, CodecError> {
+        let param_types = unzip_param_types(param_types);
+        let (tokens, bytes_read) = Self::decode_multiple(&param_types, bytes)?;
 
         Ok(DecodeResult {
             token: Token::Struct(tokens),
@@ -204,8 +208,8 @@ impl ABIDecoder {
     fn decode_enum(bytes: &[u8], variants: &EnumVariants) -> Result<DecodeResult, CodecError> {
         let enum_width = variants.compute_encoding_width_of_enum();
 
-        let discriminant = peek_u32(bytes)?;
-        let selected_variant = Self::type_of_selected_variant(variants, discriminant as usize)?;
+        let discriminant = peek_u32(bytes)? as u8;
+        let (_, selected_variant) = variants.select_variant(discriminant)?;
 
         let words_to_skip = enum_width - selected_variant.compute_encoding_width();
         let enum_content_bytes = skip(bytes, words_to_skip * WORD_SIZE)?;
@@ -233,24 +237,6 @@ impl ABIDecoder {
         } else {
             Self::decode_param(selected_variant, bytes)
         }
-    }
-
-    /// Returns a variant from `variants` pointed to by `discriminant`.
-    /// Will fail if `discriminant` is out of bounds.
-    fn type_of_selected_variant(
-        variants: &EnumVariants,
-        discriminant: usize,
-    ) -> Result<&ParamType, CodecError> {
-        variants.param_types().get(discriminant).ok_or_else(|| {
-            let msg = format!(
-                concat!(
-                    "Error while decoding an enum. The discriminant '{}' doesn't ",
-                    "point to any of the following variants: {:?}"
-                ),
-                discriminant, variants
-            );
-            CodecError::InvalidData(msg)
-        })
     }
 }
 
@@ -320,8 +306,8 @@ fn skip(slice: &[u8], num_bytes: usize) -> Result<&[u8], CodecError> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fuels_types::enum_variants::EnumVariants;
-    use fuels_types::errors::Error;
+    use fuels_test_helpers::generate_unused_field_names;
+    use fuels_types::{enum_variants::EnumVariants, errors::Error};
     use std::vec;
 
     #[test]
@@ -435,7 +421,8 @@ mod tests {
             0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
         ];
         let param_type = ParamType::Struct {
-            fields: vec![ParamType::U8, ParamType::Bool],
+            name: "".to_string(),
+            fields: generate_unused_field_names(vec![ParamType::U8, ParamType::Bool]),
             generics: vec![],
         };
 
@@ -454,8 +441,12 @@ mod tests {
         //     y: bool,
         // }
 
-        let inner_enum_types = EnumVariants::new(vec![ParamType::U32, ParamType::Bool])?;
+        let inner_enum_types = EnumVariants::new(generate_unused_field_names(vec![
+            ParamType::U32,
+            ParamType::Bool,
+        ]))?;
         let types = vec![ParamType::Enum {
+            name: "".to_string(),
             variants: inner_enum_types.clone(),
             generics: vec![],
         }];
@@ -484,16 +475,21 @@ mod tests {
         //     y: u32,
         // }
 
-        let inner_enum_types = EnumVariants::new(vec![ParamType::B256, ParamType::U32])?;
+        let inner_enum_types = EnumVariants::new(generate_unused_field_names(vec![
+            ParamType::B256,
+            ParamType::U32,
+        ]))?;
 
         let struct_type = ParamType::Struct {
-            fields: vec![
+            name: "".to_string(),
+            fields: generate_unused_field_names(vec![
                 ParamType::Enum {
+                    name: "".to_string(),
                     variants: inner_enum_types.clone(),
                     generics: vec![],
                 },
                 ParamType::U32,
-            ],
+            ]),
             generics: vec![],
         };
 
@@ -535,16 +531,18 @@ mod tests {
         // }
 
         let nested_struct = ParamType::Struct {
-            fields: vec![
+            name: "".to_string(),
+            fields: generate_unused_field_names(vec![
                 ParamType::U16,
                 ParamType::Struct {
-                    fields: vec![
+                    name: "".to_string(),
+                    fields: generate_unused_field_names(vec![
                         ParamType::Bool,
                         ParamType::Array(Box::new(ParamType::U8), 2),
-                    ],
+                    ]),
                     generics: vec![],
                 },
-            ],
+            ]),
             generics: vec![],
         };
 
@@ -583,16 +581,18 @@ mod tests {
 
         // Parameters
         let nested_struct = ParamType::Struct {
-            fields: vec![
+            name: "".to_string(),
+            fields: generate_unused_field_names(vec![
                 ParamType::U16,
                 ParamType::Struct {
-                    fields: vec![
+                    name: "".to_string(),
+                    fields: generate_unused_field_names(vec![
                         ParamType::Bool,
                         ParamType::Array(Box::new(ParamType::U8), 2),
-                    ],
+                    ]),
                     generics: vec![],
                 },
-            ],
+            ]),
             generics: vec![],
         };
 
@@ -651,7 +651,8 @@ mod tests {
             0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
         ];
         let struct_type = ParamType::Struct {
-            fields: vec![ParamType::Unit, ParamType::U64],
+            name: "".to_string(),
+            fields: generate_unused_field_names(vec![ParamType::Unit, ParamType::U64]),
             generics: vec![],
         };
 
@@ -665,8 +666,12 @@ mod tests {
     #[test]
     fn enums_with_all_unit_variants_are_decoded_from_one_word() -> Result<(), Error> {
         let data = [0, 0, 0, 0, 0, 0, 0, 1];
-        let variants = EnumVariants::new(vec![ParamType::Unit, ParamType::Unit])?;
+        let variants = EnumVariants::new(generate_unused_field_names(vec![
+            ParamType::Unit,
+            ParamType::Unit,
+        ]))?;
         let enum_w_only_units = ParamType::Enum {
+            name: "".to_string(),
             variants: variants.clone(),
             generics: vec![],
         };
@@ -681,8 +686,9 @@ mod tests {
     #[test]
     fn out_of_bounds_discriminant_is_detected() -> Result<(), Error> {
         let data = [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 2];
-        let variants = EnumVariants::new(vec![ParamType::U32])?;
+        let variants = EnumVariants::new(generate_unused_field_names(vec![ParamType::U32]))?;
         let enum_type = ParamType::Enum {
+            name: "".to_string(),
             variants,
             generics: vec![],
         };
@@ -691,7 +697,7 @@ mod tests {
 
         let error = result.expect_err("Should have resulted in an error");
 
-        let expected_msg = "Error while decoding an enum. The discriminant '1' doesn't point to any of the following variants: ";
+        let expected_msg = "Discriminant '1' doesn't point to any variant: ";
         assert!(matches!(error, CodecError::InvalidData(str) if str.starts_with(expected_msg)));
         Ok(())
     }

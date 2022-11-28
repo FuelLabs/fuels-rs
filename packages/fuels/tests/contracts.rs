@@ -302,7 +302,7 @@ async fn test_large_return_data() -> Result<(), Error> {
 
     let res = contract_methods.get_contract_id().call().await?;
 
-    // First `value` is from `CallResponse`.
+    // First `value` is from `FuelCallResponse`.
     // Second `value` is from the `ContractId` type.
     assert_eq!(
         res.value,
@@ -642,7 +642,6 @@ async fn contract_call_futures_implement_send() -> Result<(), Error> {
             .await
             .unwrap();
     });
-
     Ok(())
 }
 

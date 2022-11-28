@@ -70,8 +70,7 @@ where
 }
 
 pub mod serde_hex {
-    use core::fmt;
-    use std::convert::TryFrom;
+    use std::{convert::TryFrom, fmt};
 
     use hex::{FromHex, ToHex};
     use serde::de::Error;
@@ -279,7 +278,7 @@ pub async fn new_fuel_node(
             .first()
             .unwrap_or_else(|| panic!("no '{}' in PATH", binary_name));
         if paths.len() > 1 {
-            tracing::warn!(
+            eprintln!(
                 "found more than one '{}' binary in PATH, using '{}'",
                 binary_name,
                 path.display()

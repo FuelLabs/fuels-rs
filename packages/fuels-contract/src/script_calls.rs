@@ -1,21 +1,18 @@
-use std::fmt::Debug;
-use std::marker::PhantomData;
-
+use crate::{
+    call_response::FuelCallResponse,
+    contract::get_decoded_output,
+    execution_script::{CompiledScript, ExecutableFuelCall},
+    logs::LogDecoder,
+};
 use fuel_gql_client::fuel_tx::{Output, Receipt, Transaction};
 use fuel_tx::Input;
-
-use crate::contract::get_decoded_output;
-
 use fuels_core::{
     parameters::{CallParameters, TxParameters},
     Tokenizable,
 };
 use fuels_signers::{provider::Provider, WalletUnlocked};
-
-use crate::call_response::FuelCallResponse;
 use fuels_types::{errors::Error, param_types::ParamType};
-
-use crate::execution_script::{CompiledScript, ExecutableFuelCall};
+use std::{fmt::Debug, marker::PhantomData};
 
 #[derive(Debug)]
 /// Contains all data relevant to a single script call
@@ -24,7 +21,7 @@ pub struct ScriptCall {
     pub script_data: Vec<u8>,
     pub inputs: Vec<Input>,
     pub outputs: Vec<Output>,
-    // TODO(iqdecay): figure out if this field is still neeeded
+    // This field is not currently used but it will be in the future.
     pub call_parameters: CallParameters,
 }
 
@@ -50,6 +47,7 @@ pub struct ScriptCallHandler<D> {
     pub provider: Provider,
     pub output_param: ParamType,
     pub datatype: PhantomData<D>,
+    pub log_decoder: LogDecoder,
 }
 
 impl<D> ScriptCallHandler<D>
@@ -62,6 +60,7 @@ where
         wallet: WalletUnlocked,
         provider: Provider,
         output_param: ParamType,
+        log_decoder: LogDecoder,
     ) -> Self {
         let script_call = ScriptCall {
             compiled_script,
@@ -77,6 +76,7 @@ where
             provider,
             output_param,
             datatype: PhantomData,
+            log_decoder,
         }
     }
 
@@ -107,7 +107,6 @@ where
     /// in its `value` field as an actual typed value `D` (if your method returns `bool`,
     /// it will be a bool, works also for structs thanks to the `abigen!()`).
     /// The other field of [`FuelCallResponse`], `receipts`, contains the receipts of the transaction.
-    #[tracing::instrument]
     async fn call_or_simulate(&self, simulate: bool) -> Result<FuelCallResponse<D>, Error> {
         let mut tx = Transaction::script(
             self.tx_parameters.gas_price,
@@ -115,9 +114,9 @@ where
             self.tx_parameters.maturity,
             self.script_call.compiled_script.script_binary.clone(),
             self.script_call.script_data.clone(),
-            self.script_call.inputs.clone(),  // TODO(iqdecay)
-            self.script_call.outputs.clone(), // TODO(iqdecay)
-            vec![vec![0, 0].into()],          //TODO(iqdecay): witnesses
+            self.script_call.inputs.clone(), // TODO(iqdecay): allow user to set inputs field
+            self.script_call.outputs.clone(), // TODO(iqdecay): allow user to set outputs field
+            vec![vec![0, 0].into()], //TODO(iqdecay): figure out how to have the right witnesses
         );
         self.wallet.add_fee_coins(&mut tx, 0, 0).await?;
 
@@ -128,7 +127,6 @@ where
         } else {
             tx_execution.execute(&self.provider).await?
         };
-        tracing::debug!(target: "receipts", "{:?}", receipts);
 
         self.get_response(receipts)
     }
@@ -150,6 +148,10 @@ where
     /// Create a [`FuelCallResponse`] from call receipts
     pub fn get_response(&self, mut receipts: Vec<Receipt>) -> Result<FuelCallResponse<D>, Error> {
         let token = get_decoded_output(&mut receipts, None, &self.output_param)?;
-        Ok(FuelCallResponse::new(D::from_token(token)?, receipts))
+        Ok(FuelCallResponse::new(
+            D::from_token(token)?,
+            receipts,
+            self.log_decoder.clone(),
+        ))
     }
 }
