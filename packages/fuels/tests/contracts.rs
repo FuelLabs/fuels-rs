@@ -642,7 +642,6 @@ async fn contract_call_futures_implement_send() -> Result<(), Error> {
             .await
             .unwrap();
     });
-
     Ok(())
 }
 

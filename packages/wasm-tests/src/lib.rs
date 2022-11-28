@@ -109,7 +109,11 @@ pub fn the_fn() {
 
     let obj = ABIDecoder::decode_single(
         &ParamType::Struct {
-            fields: vec![ParamType::U64, ParamType::B256],
+            name: "".to_string(),
+            fields: vec![
+                ("unused".to_string(), ParamType::U64),
+                ("unused".to_string(), ParamType::B256),
+            ],
             generics: vec![],
         },
         &data,

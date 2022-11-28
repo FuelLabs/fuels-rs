@@ -1,10 +1,10 @@
 use crate::errors::Error;
-use bech32::Variant::Bech32m;
-use bech32::{FromBase32, ToBase32};
-use core::str;
+use bech32::{FromBase32, ToBase32, Variant::Bech32m};
 use fuel_tx::{Address, Bytes32, ContractId};
-use std::fmt::{Display, Formatter};
-use std::str::FromStr;
+use std::{
+    fmt::{Display, Formatter},
+    str::FromStr,
+};
 
 // Fuel Network human-readable part for bech32 encoding
 pub const FUEL_BECH32_HRP: &str = "fuel";
@@ -13,7 +13,7 @@ pub const FUEL_BECH32_HRP: &str = "fuel";
 /// consisting of a human-readable part (hrp) and a hash (e.g. pubkey-, contract hash)
 macro_rules! bech32type {
     ($i:ident) => {
-        #[derive(Debug, Clone, PartialEq, Eq)]
+        #[derive(Debug, Clone, PartialEq, Eq, Hash)]
         pub struct $i {
             pub hrp: String,
             pub hash: Bytes32,

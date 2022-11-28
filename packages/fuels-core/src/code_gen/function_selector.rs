@@ -1,5 +1,5 @@
 use crate::utils::first_four_bytes_of_sha256_hash;
-use crate::ByteArray;
+use crate::{unzip_param_types, ByteArray};
 use fuels_types::param_types::ParamType;
 
 /// Given a function name and its inputs  will return a ByteArray representing
@@ -37,9 +37,12 @@ fn resolve_arg(arg: &ParamType) -> String {
             let inner = resolve_arg(internal_type);
             format!("a[{inner};{len}]")
         }
-        ParamType::Struct { fields, generics } => {
+        ParamType::Struct {
+            fields, generics, ..
+        } => {
             let gen_params = resolve_args(generics);
-            let field_params = resolve_args(fields);
+            let fields = unzip_param_types(fields);
+            let field_params = resolve_args(&fields);
             let gen_params = if !gen_params.is_empty() {
                 format!("<{gen_params}>")
             } else {
@@ -50,9 +53,10 @@ fn resolve_arg(arg: &ParamType) -> String {
         ParamType::Enum {
             variants: fields,
             generics,
+            ..
         } => {
             let gen_params = resolve_args(generics);
-            let field_params = resolve_args(fields.param_types());
+            let field_params = resolve_args(&fields.param_types());
             let gen_params = if !gen_params.is_empty() {
                 format!("<{gen_params}>")
             } else {
@@ -74,6 +78,7 @@ fn resolve_arg(arg: &ParamType) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fuels_test_helpers::generate_unused_field_names;
     use fuels_types::enum_variants::EnumVariants;
 
     #[test]
@@ -119,9 +124,13 @@ mod tests {
 
     #[test]
     fn handles_structs() {
-        let fields = vec![ParamType::U64, ParamType::U32];
+        let fields = generate_unused_field_names(vec![ParamType::U64, ParamType::U32]);
         let generics = vec![ParamType::U32];
-        let inputs = [ParamType::Struct { fields, generics }];
+        let inputs = [ParamType::Struct {
+            name: "".to_string(),
+            fields,
+            generics,
+        }];
 
         let selector = resolve_fn_signature("some_fun", &inputs);
 
@@ -139,9 +148,17 @@ mod tests {
 
     #[test]
     fn handles_enums() {
-        let variants = EnumVariants::new(vec![ParamType::U64, ParamType::U32]).unwrap();
+        let variants = EnumVariants::new(generate_unused_field_names(vec![
+            ParamType::U64,
+            ParamType::U32,
+        ]))
+        .unwrap();
         let generics = vec![ParamType::U32];
-        let inputs = [ParamType::Enum { variants, generics }];
+        let inputs = [ParamType::Enum {
+            name: "".to_string(),
+            variants,
+            generics,
+        }];
 
         let selector = resolve_fn_signature("some_fun", &inputs);
 
@@ -151,22 +168,33 @@ mod tests {
     #[test]
     fn ultimate_test() {
         let struct_a = ParamType::Struct {
-            fields: vec![ParamType::Struct {
-                fields: vec![ParamType::String(2)],
+            name: "".to_string(),
+            fields: generate_unused_field_names(vec![ParamType::Struct {
+                name: "".to_string(),
+                fields: generate_unused_field_names(vec![ParamType::String(2)]),
                 generics: vec![ParamType::String(2)],
-            }],
+            }]),
             generics: vec![ParamType::String(2)],
         };
         let struct_b = ParamType::Struct {
-            fields: vec![ParamType::Array(Box::new(struct_a.clone()), 2)],
+            name: "".to_string(),
+            fields: generate_unused_field_names(vec![ParamType::Array(
+                Box::new(struct_a.clone()),
+                2,
+            )]),
             generics: vec![struct_a],
         };
         let struct_c = ParamType::Struct {
-            fields: vec![ParamType::Tuple(vec![struct_b.clone(), struct_b.clone()])],
+            name: "".to_string(),
+            fields: generate_unused_field_names(vec![ParamType::Tuple(vec![
+                struct_b.clone(),
+                struct_b.clone(),
+            ])]),
             generics: vec![struct_b],
         };
         let inputs = [ParamType::Struct {
-            fields: vec![
+            name: "".to_string(),
+            fields: generate_unused_field_names(vec![
                 ParamType::Tuple(vec![
                     ParamType::Array(Box::new(ParamType::B256), 2),
                     ParamType::String(2),
@@ -174,15 +202,19 @@ mod tests {
                 ParamType::Tuple(vec![
                     ParamType::Array(
                         Box::new(ParamType::Enum {
-                            variants: EnumVariants::new(vec![ParamType::U64, struct_c.clone()])
-                                .unwrap(),
+                            name: "".to_string(),
+                            variants: EnumVariants::new(generate_unused_field_names(vec![
+                                ParamType::U64,
+                                struct_c.clone(),
+                            ]))
+                            .unwrap(),
                             generics: vec![struct_c],
                         }),
                         1,
                     ),
                     ParamType::U32,
                 ]),
-            ],
+            ]),
             generics: vec![ParamType::String(2), ParamType::B256],
         }];
 
