@@ -344,7 +344,7 @@ mod tests {
         let amount = 1000;
         let base_layer_address =
             Address::from_str("0x4710162c2e3a95a6faff05139150017c9e38e5e280432d546fae345d6ce6d8fe")
-                .expect("Invlaid address.");
+                .expect("Invalid address.");
         let base_layer_address = Bech32Address::from(base_layer_address);
         // Transfer an amount of 1000 to the specified base layer address
         let (tx_id, msg_id, _receipts) = wallet
