@@ -30,7 +30,6 @@ strum = "0.21"
 strum_macros = "0.21"
 thiserror = { version = "1.0.26", default-features = false }
 tokio = "1.12"
-tracing = "0.1"
 
 [dev-dependencies]
 fuels-test-helpers = { path = "../fuels-test-helpers" }

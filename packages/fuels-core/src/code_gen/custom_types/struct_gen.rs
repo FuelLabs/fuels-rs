@@ -2,11 +2,7 @@ use super::utils::{
     extract_components, extract_generic_parameters, impl_try_from, param_type_calls, Component,
 };
 use crate::utils::ident;
-use core::result::Result;
-use core::result::Result::Ok;
-use fuels_types::errors::Error;
-use fuels_types::utils::custom_type_name;
-use fuels_types::TypeDeclaration;
+use fuels_types::{errors::Error, utils::custom_type_name, TypeDeclaration};
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 use std::collections::HashMap;
@@ -97,8 +93,7 @@ fn struct_tokenizable_impl(
     quote! {
         impl <#(#generic_parameters: Tokenizable + Parameterize, )*> Tokenizable for #struct_ident <#(#generic_parameters, )*> {
             fn into_token(self) -> Token {
-                let mut tokens = Vec::new();
-                #( tokens.push(#into_token_calls); )*
+                let tokens = [#(#into_token_calls),*].to_vec();
                 Token::Struct(tokens)
             }
 
@@ -124,13 +119,26 @@ fn struct_parameterized_impl(
     struct_ident: &Ident,
     generic_parameters: &[TokenStream],
 ) -> TokenStream {
-    let param_type_calls = param_type_calls(components);
+    let field_name_param_type = components
+        .iter()
+        .map(|component| {
+            let field_name = component.field_name.to_string();
+            quote! {#field_name.to_string()}
+        })
+        .zip(param_type_calls(components))
+        .map(|(field_name, param_type_call)| {
+            quote! {(#field_name, #param_type_call)}
+        });
+    let struct_name_str = struct_ident.to_string();
     quote! {
         impl <#(#generic_parameters: Parameterize + Tokenizable),*> Parameterize for #struct_ident <#(#generic_parameters),*> {
             fn param_type() -> ParamType {
-                let mut types = Vec::new();
-                #( types.push(#param_type_calls); )*
-                ParamType::Struct{fields: types, generics: vec![#(#generic_parameters::param_type()),*]}
+                let types = [#(#field_name_param_type),*].to_vec();
+                ParamType::Struct{
+                    name: #struct_name_str.to_string(),
+                    fields: types,
+                    generics: [#(#generic_parameters::param_type()),*].to_vec()
+                }
             }
         }
     }

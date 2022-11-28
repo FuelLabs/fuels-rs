@@ -851,13 +851,13 @@ pub fn generate_mnemonic_phrase<R: Rng>(rng: &mut R, count: usize) -> Result<Str
 #[cfg(feature = "test-helpers")]
 mod tests {
     use super::*;
-    use core::iter::repeat;
     use fuel_core::service::{Config, FuelService};
     use fuel_gql_client::client::FuelClient;
     use fuel_gql_client::fuel_tx::Address;
     use fuels_core::tx::field::{Inputs, Outputs};
     use fuels_test_helpers::{launch_custom_provider_and_get_wallets, AssetConfig, WalletsConfig};
     use fuels_types::errors::Error;
+    use std::iter::repeat;
     use tempfile::tempdir;
 
     #[tokio::test]

@@ -2,11 +2,7 @@ use super::utils::{
     extract_components, extract_generic_parameters, impl_try_from, param_type_calls, Component,
 };
 use crate::utils::ident;
-use core::result::Result;
-use core::result::Result::Ok;
-use fuels_types::errors::Error;
-use fuels_types::utils::custom_type_name;
-use fuels_types::TypeDeclaration;
+use fuels_types::{errors::Error, utils::custom_type_name, TypeDeclaration};
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 use std::collections::HashMap;
@@ -168,15 +164,27 @@ fn enum_parameterize_impl(
     generics: &[TokenStream],
 ) -> TokenStream {
     let param_type_calls = param_type_calls(components);
+    let variants = components
+        .iter()
+        .map(|component| {
+            let type_name = component.field_name.to_string();
+            quote! {#type_name.to_string()}
+        })
+        .zip(param_type_calls)
+        .map(|(type_name, param_type_call)| {
+            quote! {(#type_name, #param_type_call)}
+        });
     let enum_ident_stringified = enum_ident.to_string();
     quote! {
         impl<#(#generics: Parameterize + Tokenizable),*> Parameterize for #enum_ident <#(#generics),*> {
             fn param_type() -> ParamType {
-                let mut param_types = vec![];
-                #(param_types.push(#param_type_calls);)*
-
-                let variants = EnumVariants::new(param_types).unwrap_or_else(|_| panic!("{} has no variants which isn't allowed!", #enum_ident_stringified));
-                ParamType::Enum{variants, generics: vec![#(#generics::param_type()),*]}
+                let variants = [#(#variants),*].to_vec();
+                let variants = EnumVariants::new(variants).unwrap_or_else(|_| panic!("{} has no variants which isn't allowed!", #enum_ident_stringified));
+                ParamType::Enum{
+                    name: #enum_ident_stringified.to_string(),
+                    variants,
+                    generics: [#(#generics::param_type()),*].to_vec()
+                }
             }
         }
     }

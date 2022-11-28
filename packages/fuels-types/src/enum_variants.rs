@@ -1,30 +1,50 @@
-use crate::constants::{ENUM_DISCRIMINANT_WORD_WIDTH, WORD_SIZE};
-use crate::param_types::ParamType;
-use std::fmt;
-use thiserror::Error as ThisError;
+use crate::{
+    constants::{ENUM_DISCRIMINANT_WORD_WIDTH, WORD_SIZE},
+    errors::CodecError,
+    param_types::ParamType,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EnumVariants {
-    variants: Vec<ParamType>,
+    variants: Vec<(String, ParamType)>,
 }
 
 impl EnumVariants {
-    pub fn new(variants: Vec<ParamType>) -> Result<EnumVariants, NoVariants> {
+    pub fn new(variants: Vec<(String, ParamType)>) -> Result<EnumVariants, CodecError> {
         if !variants.is_empty() {
             Ok(EnumVariants { variants })
         } else {
-            Err(NoVariants)
+            Err(CodecError::InvalidData(
+                "Enum variants can not be empty!".into(),
+            ))
         }
     }
 
-    pub fn param_types(&self) -> &Vec<ParamType> {
+    pub fn variants(&self) -> &Vec<(String, ParamType)> {
         &self.variants
+    }
+
+    pub fn param_types(&self) -> Vec<ParamType> {
+        self.variants
+            .iter()
+            .map(|(_, param_type)| param_type)
+            .cloned()
+            .collect()
+    }
+
+    pub fn select_variant(&self, discriminant: u8) -> Result<&(String, ParamType), CodecError> {
+        self.variants.get(discriminant as usize).ok_or_else(|| {
+            CodecError::InvalidData(format!(
+                "Discriminant '{discriminant}' doesn't point to any variant: {:?}",
+                self.variants()
+            ))
+        })
     }
 
     pub fn only_units_inside(&self) -> bool {
         self.variants
             .iter()
-            .all(|variant| *variant == ParamType::Unit)
+            .all(|(_, variant)| *variant == ParamType::Unit)
     }
 
     /// Calculates how many WORDs are needed to encode an enum.
@@ -41,6 +61,7 @@ impl EnumVariants {
                 "Will never panic because EnumVariants must have at least one variant inside it!",
             )
     }
+
     /// Determines the padding needed for the provided enum variant (based on the width of the
     /// biggest variant) and returns it.
     pub fn compute_padding_amount(&self, variant_param_type: &ParamType) -> usize {
@@ -48,14 +69,5 @@ impl EnumVariants {
             self.compute_encoding_width_of_enum() - ENUM_DISCRIMINANT_WORD_WIDTH;
         let variant_width = variant_param_type.compute_encoding_width();
         (biggest_variant_width - variant_width) * WORD_SIZE
-    }
-}
-
-#[derive(ThisError, Debug)]
-pub struct NoVariants;
-
-impl fmt::Display for NoVariants {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "An Enum must have variants!")
     }
 }

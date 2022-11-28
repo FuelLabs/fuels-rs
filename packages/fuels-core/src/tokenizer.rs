@@ -1,7 +1,5 @@
-use crate::{StringToken, Token};
-use fuels_types::errors::Error;
-use fuels_types::param_types::ParamType;
-use fuels_types::utils::has_array_format;
+use crate::{unzip_param_types, StringToken, Token};
+use fuels_types::{errors::Error, param_types::ParamType, utils::has_array_format};
 use hex::FromHex;
 
 #[derive(Default)]
@@ -55,7 +53,10 @@ impl Tokenizer {
             ParamType::Struct {
                 fields: struct_params,
                 ..
-            } => Ok(Self::tokenize_struct(trimmed_value, struct_params)?),
+            } => Ok(Self::tokenize_struct(
+                trimmed_value,
+                &unzip_param_types(struct_params),
+            )?),
             ParamType::Enum { variants, .. } => {
                 let discriminant = get_enum_discriminant_from_string(trimmed_value);
                 let value = get_enum_value_from_string(trimmed_value);
