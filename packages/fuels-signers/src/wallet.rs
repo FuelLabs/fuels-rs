@@ -349,7 +349,7 @@ impl Wallet {
             .collect();
 
         // This script loads:
-        //  - a pointer to the recepient address,
+        //  - a pointer to the recipient address,
         //  - the amount
         // into the registers 0x10, 0x11
         // and calls the SMO instruction
