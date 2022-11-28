@@ -190,10 +190,9 @@ mod tests {
                 for resource in resources {
                     assert_eq!(resource.amount(), asset.coin_amount);
                     match resource {
-                        Resource::Coin(coin) => assert_eq!(
-                            coin.owner.to_string(),
-                            format!("0x{}", wallet.address().hash())
-                        ),
+                        Resource::Coin(coin) => {
+                            assert_eq!(coin.owner, wallet.address().into())
+                        }
                         Resource::Message(_) => panic!("Resources contained messages."),
                     }
                 }

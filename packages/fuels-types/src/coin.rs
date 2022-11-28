@@ -1,4 +1,5 @@
 use fuel_gql_client::client::schema::coin::{Coin as ClientCoin, CoinStatus as ClientCoinStatus};
+use fuel_chain_config::CoinConfig;
 use fuel_tx::{Address, AssetId, UtxoId};
 
 #[derive(Debug)]
@@ -38,6 +39,20 @@ impl From<ClientCoin> for Coin {
             maturity: client_coin.maturity.0,
             owner: client_coin.owner.0 .0,
             status: client_coin.status.into(),
+        }
+    }
+}
+
+impl From<Coin> for CoinConfig {
+    fn from(coin: Coin) -> CoinConfig {
+        Self {
+            tx_id: Some(*coin.utxo_id.tx_id()),
+            output_index: Some(coin.utxo_id.output_index() as u64),
+            block_created: Some(coin.block_created),
+            maturity: Some(coin.maturity),
+            owner: coin.owner,
+            amount: coin.amount,
+            asset_id: coin.asset_id,
         }
     }
 }
