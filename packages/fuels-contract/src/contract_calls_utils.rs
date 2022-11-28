@@ -25,7 +25,7 @@ pub(crate) struct CallOpcodeParamsOffset {
     pub call_data_offset: usize,
 }
 
-// TODO(iqdecay): doc-level comment
+/// Compute how much of each asset is required based on all `CallParameters` of the `ContractCalls`
 pub(crate) fn calculate_required_asset_amounts(calls: &[ContractCall]) -> Vec<(AssetId, u64)> {
     let amounts_per_asset_id = calls
         .iter()
@@ -33,7 +33,8 @@ pub(crate) fn calculate_required_asset_amounts(calls: &[ContractCall]) -> Vec<(A
     sum_up_amounts_for_each_asset_id(amounts_per_asset_id)
 }
 
-// TODO(iqdecay): doc-level comment
+/// Sum up the amounts required in each call for each asset ID, so you can get a total for each
+/// asset over all calls.
 fn sum_up_amounts_for_each_asset_id(
     amounts_per_asset_id: impl Iterator<Item = (AssetId, u64)>,
 ) -> Vec<(AssetId, u64)> {
