@@ -156,6 +156,11 @@ impl Wallet {
             let input = match resource {
                 Resource::Coin(coin) => self.create_coin_input(coin, asset_id, witness_index),
                 Resource::Message(message) => self.create_message_input(message, witness_index),
+                Resource::Unknown => {
+                    return Err(Error::InvalidType(
+                        "get_asset_inputs_for_amount".to_string(),
+                    ))
+                }
             };
             inputs.push(input);
         }
@@ -682,13 +687,19 @@ impl WalletUnlocked {
         let predicate_data = data.unwrap_or_default();
         let inputs = spendable_predicate_resources
             .into_iter()
-            .map(|resource| match resource {
-                Resource::Coin(coin) => {
-                    self.create_coin_predicate(coin, asset_id, code.clone(), predicate_data.clone())
-                }
-                Resource::Message(message) => {
-                    self.create_message_predicate(message, code.clone(), predicate_data.clone())
-                }
+            .filter_map(|resource| match resource {
+                Resource::Coin(coin) => Some(self.create_coin_predicate(
+                    coin,
+                    asset_id,
+                    code.clone(),
+                    predicate_data.clone(),
+                )),
+                Resource::Message(message) => Some(self.create_message_predicate(
+                    message,
+                    code.clone(),
+                    predicate_data.clone(),
+                )),
+                Resource::Unknown => None,
             })
             .collect::<Vec<_>>();
 
