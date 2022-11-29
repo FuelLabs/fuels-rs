@@ -238,7 +238,6 @@ impl Abigen {
                         get_logs_hashmap,
                     };
                     use fuels::core::{EnumSelector, StringToken, Identity};
-                    use fuels::tx::{ContractId, Address, Receipt};
                     use fuels::types::{
                         ResolvedLog,
                         bech32::Bech32ContractId
@@ -255,6 +254,7 @@ impl Abigen {
                 use fuels::types::enum_variants::EnumVariants;
                 use fuels::types::errors::Error as SDKError;
                 use fuels::types::param_types::ParamType;
+                use fuels::tx::{ContractId, Address, Receipt};
                 #specific_includes
             }
         }
