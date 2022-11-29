@@ -107,10 +107,7 @@ async fn test_input_message() -> Result<(), Error> {
     let coins = setup_single_asset_coins(wallet.address(), AssetId::BASE, 1, DEFAULT_COIN_AMOUNT);
 
     let messages = setup_single_message(
-        &Bech32Address {
-            hrp: "".to_string(),
-            hash: Default::default(),
-        },
+        &Bech32Address::default(),
         wallet.address(),
         DEFAULT_COIN_AMOUNT,
         0,
