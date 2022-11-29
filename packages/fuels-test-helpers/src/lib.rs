@@ -8,10 +8,7 @@ use std::{iter::repeat, iter::zip, net::SocketAddr};
 use fuel_chain_config::{CoinConfig, MessageConfig, StateConfig};
 
 #[cfg(feature = "fuel-core-lib")]
-use fuel_core::{
-    model::{Coin, CoinStatus},
-    service::{DbType, FuelService},
-};
+use fuel_core::service::{DbType, FuelService};
 
 #[cfg(feature = "fuel-core-lib")]
 pub use fuel_core::service::Config;
@@ -20,10 +17,12 @@ pub use fuel_core::service::Config;
 pub use node::{get_socket_address, new_fuel_node, Config};
 
 #[cfg(not(feature = "fuel-core-lib"))]
-use fuel_core_interfaces::model::{DaBlockHeight, Message};
-
-#[cfg(not(feature = "fuel-core-lib"))]
 use portpicker::is_free;
+
+use fuels_types::{
+    coin::{Coin, CoinStatus},
+    message::Message,
+};
 
 use fuel_chain_config::ChainConfig;
 use fuel_gql_client::{
@@ -145,7 +144,7 @@ pub fn setup_single_message(
         nonce,
         amount,
         data,
-        da_height: DaBlockHeight::default(),
+        da_height: 0,
         fuel_block_spend: None,
     }]
 }
@@ -173,7 +172,7 @@ pub async fn setup_test_client(
             nonce: message.nonce,
             amount: message.amount,
             data: message.data,
-            da_height: message.da_height,
+            da_height: message.da_height.into(),
         })
         .collect();
 
@@ -263,7 +262,7 @@ mod tests {
         let coins = setup_single_asset_coins(&address, asset_id, number_of_coins, amount_per_coin);
 
         assert_eq!(coins.len() as u64, number_of_coins);
-        for (_utxo_id, coin) in coins {
+        for coin in coins {
             assert_eq!(coin.asset_id, asset_id);
             assert_eq!(coin.amount, amount_per_coin);
             assert_eq!(*coin.owner, *address.hash());
@@ -299,10 +298,10 @@ mod tests {
             let coins_asset_id: Vec<Coin> = coins
                 .clone()
                 .into_iter()
-                .filter(|(_, c)| c.asset_id == asset_id)
+                .filter(|c| c.asset_id == asset_id)
                 .collect();
             assert_eq!(coins_asset_id.len() as u64, coins_per_asset);
-            for (_utxo_id, coin) in coins_asset_id {
+            for coin in coins_asset_id {
                 assert_eq!(*coin.owner, *address.hash());
                 assert_eq!(coin.amount, amount_per_coin);
             }
@@ -347,10 +346,10 @@ mod tests {
             let coins_asset_id: Vec<Coin> = coins
                 .clone()
                 .into_iter()
-                .filter(|(_, c)| c.asset_id == asset.id)
+                .filter(|c| c.asset_id == asset.id)
                 .collect();
             assert_eq!(coins_asset_id.len() as u64, asset.num_coins);
-            for (_utxo_id, coin) in coins_asset_id {
+            for coin in coins_asset_id {
                 assert_eq!(*coin.owner, *address.hash());
                 assert_eq!(coin.amount, asset.coin_amount);
             }

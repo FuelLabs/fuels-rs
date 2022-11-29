@@ -330,7 +330,7 @@ impl Script {
                     0,
                 ),
                 Resource::Message(message) => Input::message_signed(
-                    message.message_id,
+                    message.message_id(),
                     message.sender,
                     message.recipient,
                     message.amount,

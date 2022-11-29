@@ -1,15 +1,10 @@
 use fuel_chain_config::ChainConfig;
 use fuels_signers::fuel_crypto::SecretKey;
+use fuels_types::{coin::Coin, message::Message};
 use std::{mem::size_of, net::SocketAddr};
 
 #[cfg(feature = "fuel-core-lib")]
-use fuel_core::{model::Coin, service::Config};
-
-use fuel_gql_client::fuel_tx::UtxoId;
-
-#[cfg(not(feature = "fuel-core-lib"))]
-use fuel_core_interfaces::model::Coin;
-use fuel_core_interfaces::model::Message;
+use fuel_core::service::Config;
 
 #[cfg(not(feature = "fuel-core-lib"))]
 use crate::node::Config;
@@ -107,7 +102,7 @@ pub async fn launch_custom_provider_and_get_wallets(
 /// }
 /// ```
 pub async fn setup_test_provider(
-    coins: Vec<(UtxoId, Coin)>,
+    coins: Vec<Coin>,
     messages: Vec<Message>,
     node_config: Option<Config>,
     chain_config: Option<ChainConfig>,

@@ -1,9 +1,14 @@
-use fuel_gql_client::client::schema::message::Message as ClientMessage;
-use fuel_tx::{Address, MessageId};
+use fuel_chain_config::MessageConfig;
+#[cfg(feature = "fuel-core-lib")]
+use fuel_core::model::Message as ClientMessage;
 
-#[derive(Debug)]
+#[cfg(not(feature = "fuel-core-lib"))]
+use fuel_gql_client::client::schema::message::Message as ClientMessage;
+
+use fuel_tx::{Address, Input, MessageId};
+
+#[derive(Debug, Clone)]
 pub struct Message {
-    pub message_id: MessageId,
     pub amount: u64,
     pub sender: Address,
     pub recipient: Address,
@@ -13,17 +18,41 @@ pub struct Message {
     pub fuel_block_spend: Option<u64>,
 }
 
+impl Message {
+    pub fn message_id(&self) -> MessageId {
+        Input::compute_message_id(
+            &self.sender,
+            &self.recipient,
+            self.nonce,
+            self.amount,
+            &self.data,
+        )
+    }
+}
+
 impl From<ClientMessage> for Message {
-    fn from(client_message: ClientMessage) -> Self {
+    fn from(message: ClientMessage) -> Self {
         Self {
-            message_id: client_message.message_id.0 .0,
-            amount: client_message.amount.0,
-            sender: client_message.sender.0 .0,
-            recipient: client_message.recipient.0 .0,
-            nonce: client_message.nonce.0,
-            data: client_message.data.0 .0,
-            da_height: client_message.da_height.0,
-            fuel_block_spend: client_message.fuel_block_spend.map(|bs| bs.0),
+            amount: message.amount.0,
+            sender: message.sender.0 .0,
+            recipient: message.recipient.0 .0,
+            nonce: message.nonce.0,
+            data: message.data.0 .0,
+            da_height: message.da_height.0,
+            fuel_block_spend: message.fuel_block_spend.map(|bs| bs.0),
+        }
+    }
+}
+
+impl From<Message> for MessageConfig {
+    fn from(message: Message) -> MessageConfig {
+        MessageConfig {
+            sender: message.sender,
+            recipient: message.recipient,
+            nonce: message.nonce,
+            amount: message.amount,
+            data: message.data,
+            da_height: message.da_height.into(),
         }
     }
 }

@@ -1,6 +1,5 @@
 use chrono::Duration;
 use fuel_core::service::{Config as CoreConfig, FuelService};
-use fuel_core_interfaces::model::Message;
 use fuel_gql_client::fuel_tx::Receipt;
 use fuels::{
     client::{PageDirection, PaginationRequest},
@@ -8,7 +7,7 @@ use fuels::{
 };
 use fuels_signers::fuel_crypto::SecretKey;
 use fuels_types::block::Block;
-use fuels_types::message::Message as OtherMessage;
+use fuels_types::message::Message;
 use std::{iter, str::FromStr};
 
 #[tokio::test]
@@ -93,7 +92,7 @@ async fn test_network_error() -> Result<(), anyhow::Error> {
 #[tokio::test]
 async fn test_input_message() -> Result<(), Error> {
     let compare_messages =
-        |messages_from_provider: Vec<OtherMessage>, used_messages: Vec<Message>| -> bool {
+        |messages_from_provider: Vec<Message>, used_messages: Vec<Message>| -> bool {
             iter::zip(&used_messages, &messages_from_provider).all(|(a, b)| {
                 a.sender == b.sender
                     && a.recipient == b.recipient
