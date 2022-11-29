@@ -21,7 +21,7 @@ impl MessageProof {
         self.schema_message_proof
             .proof_set
             .iter()
-            .map(|proof| (*proof).0 .0)
+            .map(|proof| proof.0 .0)
             .collect()
     }
 

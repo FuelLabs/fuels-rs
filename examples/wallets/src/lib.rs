@@ -351,12 +351,14 @@ mod tests {
             .withdraw_to_base_layer(&base_layer_address, amount, TxParameters::default())
             .await?;
 
+        // Retrieve a message proof from the provider
         let proof = wallet
             .get_provider()?
             .get_message_proof(&tx_id, &msg_id)
             .await?
             .expect("Failed to retrieve message proof.");
 
+        // Verify the amount and recipient
         assert_eq!(proof.amount(), amount);
         assert_eq!(proof.recipient(), base_layer_address.into());
         // ANCHOR_END: wallet_withdraw_to_base

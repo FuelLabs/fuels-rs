@@ -336,7 +336,7 @@ impl Wallet {
         )
     }
 
-    /// Craft a transaction used to transfer funds to a contract.
+    /// Craft a transaction used to transfer funds to the base chain.
     pub fn build_message_to_output_tx(
         to: Address,
         amount: u64,
@@ -364,6 +364,7 @@ impl Wallet {
         .collect();
 
         let outputs = vec![
+            // when signing a transaction, recipient and amount are set to zero
             Output::message(Address::zeroed(), 0),
             Output::change(to, 0, BASE_ASSET_ID),
         ];
@@ -647,6 +648,9 @@ impl WalletUnlocked {
         Ok((tx.id().to_string(), receipts))
     }
 
+    /// Withdraws an amount of the base asset to
+    /// an address on the base chain.
+    /// Returns the transaction ID, message ID and the list of receipts.
     pub async fn withdraw_to_base_layer(
         &self,
         to: &Bech32Address,
