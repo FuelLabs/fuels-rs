@@ -1,5 +1,5 @@
-use fuel_gql_client::client::schema::coin::{Coin as ClientCoin, CoinStatus as ClientCoinStatus};
 use fuel_chain_config::CoinConfig;
+use fuel_gql_client::client::schema::coin::{Coin as ClientCoin, CoinStatus as ClientCoinStatus};
 use fuel_tx::{Address, AssetId, UtxoId};
 
 #[derive(Debug)]
