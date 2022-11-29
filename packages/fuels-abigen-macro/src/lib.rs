@@ -1,14 +1,14 @@
 use fuels_core::code_gen::abigen::Abigen;
+use inflector::Inflector;
 use proc_macro::TokenStream;
 use proc_macro2::Span;
 use quote::quote;
-
-use inflector::Inflector;
 use rand::prelude::{Rng, SeedableRng, StdRng};
-use std::ops::Deref;
-use std::path::Path;
-use syn::parse::{Parse, ParseStream, Result as ParseResult};
-use syn::{parse_macro_input, Ident, LitStr, Token};
+use std::{ops::Deref, path::Path};
+use syn::{
+    parse::{Parse, ParseStream, Result as ParseResult},
+    parse_macro_input, Ident, LitStr, Token,
+};
 
 /// Abigen proc macro definition and helper functions/types.
 #[proc_macro]
@@ -73,7 +73,7 @@ pub fn setup_contract_test(input: TokenStream) -> TokenStream {
     let bin_path = compiled_file_path(".bin", "the binary file");
     let storage_path = compiled_file_path("-storage_slots.json", "the storage slots file");
 
-    let contract_struct_name = args.instance_name.to_camel_case();
+    let contract_struct_name = args.instance_name.to_class_case();
     let mut abigen_token_stream: TokenStream = Abigen::new(&contract_struct_name, abi_path)
         .unwrap()
         .expand()

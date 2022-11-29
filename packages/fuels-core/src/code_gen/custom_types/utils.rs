@@ -1,6 +1,5 @@
 use crate::code_gen::resolved_type::{resolve_type, ResolvedType};
 use crate::utils::{ident, safe_ident};
-use anyhow::anyhow;
 use fuels_types::errors::Error;
 use fuels_types::utils::extract_generic_name;
 use fuels_types::{TypeApplication, TypeDeclaration};
@@ -22,7 +21,7 @@ impl Component {
         component: &TypeApplication,
         types: &HashMap<usize, TypeDeclaration>,
         snake_case: bool,
-    ) -> anyhow::Result<Component> {
+    ) -> Result<Component, Error> {
         let field_name = if snake_case {
             component.name.to_snake_case()
         } else {
@@ -82,16 +81,11 @@ pub(crate) fn extract_components(
     type_decl: &TypeDeclaration,
     types: &HashMap<usize, TypeDeclaration>,
     snake_case: bool,
-) -> anyhow::Result<Vec<Component>> {
-    let components = match &type_decl.components {
-        Some(components) if !components.is_empty() => Ok(components),
-        _ => Err(anyhow!(
-            "Custom type {} must have at least one component!",
-            type_decl.type_field
-        )),
-    }?;
-
-    components
+) -> Result<Vec<Component>, Error> {
+    type_decl
+        .components
+        .as_ref()
+        .unwrap_or(&vec![])
         .iter()
         .map(|component| Component::new(component, types, snake_case))
         .collect()

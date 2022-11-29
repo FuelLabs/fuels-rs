@@ -28,3 +28,6 @@ strum = "0.21"
 strum_macros = "0.21"
 syn = "1.0.12"
 thiserror = "1.0.30"
+
+[dev-dependencies]
+fuels-test-helpers = { version = "0.31.1", path = "../fuels-test-helpers" }

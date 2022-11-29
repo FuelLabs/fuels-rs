@@ -1,38 +1,38 @@
-use core::panic;
-use std::collections::HashSet;
-use std::fmt::Debug;
-use std::fs;
-use std::marker::PhantomData;
-use std::path::Path;
-use std::str::FromStr;
-
-use fuel_gql_client::prelude::PanicReason;
+use crate::logs::LogDecoder;
+use crate::script::Script;
 use fuel_gql_client::{
     fuel_tx::{Contract as FuelContract, Output, Receipt, StorageSlot, Transaction},
     fuel_types::{Address, AssetId, Salt},
+    prelude::PanicReason,
 };
 use fuel_tx::{Checkable, Create};
-
-use fuels_core::abi_decoder::ABIDecoder;
-use fuels_core::abi_encoder::{ABIEncoder, UnresolvedBytes};
-use fuels_core::constants::FAILED_TRANSFER_TO_ADDRESS_SIGNAL;
-use fuels_core::parameters::StorageConfiguration;
-use fuels_core::tx::{Bytes32, ContractId};
 use fuels_core::{
+    abi_decoder::ABIDecoder,
+    abi_encoder::{ABIEncoder, UnresolvedBytes},
+    constants::FAILED_TRANSFER_TO_ADDRESS_SIGNAL,
+    parameters::StorageConfiguration,
     parameters::{CallParameters, TxParameters},
+    tx::{Bytes32, ContractId},
     Parameterize, Selector, Token, Tokenizable,
 };
 use fuels_signers::{
     provider::{Provider, TransactionCost},
     Signer, WalletUnlocked,
 };
-use fuels_types::bech32::Bech32ContractId;
 use fuels_types::{
+    bech32::Bech32ContractId,
     errors::Error,
     param_types::{ParamType, ReturnLocation},
 };
-
-use crate::script::Script;
+use std::{
+    collections::{HashMap, HashSet},
+    fmt::Debug,
+    fs,
+    marker::PhantomData,
+    panic,
+    path::Path,
+    str::FromStr,
+};
 
 pub const DEFAULT_TX_DEP_ESTIMATION_ATTEMPTS: u64 = 10;
 
@@ -61,10 +61,20 @@ pub struct CallResponse<D> {
     pub value: D,
     pub receipts: Vec<Receipt>,
     pub gas_used: u64,
+    pub log_decoder: LogDecoder,
 }
 // ANCHOR_END: call_response
 
 impl<D> CallResponse<D> {
+    pub fn new(value: D, receipts: Vec<Receipt>, log_decoder: LogDecoder) -> Self {
+        Self {
+            value,
+            gas_used: Self::get_gas_used(&receipts),
+            receipts,
+            log_decoder,
+        }
+    }
+
     /// Get the gas used from ScriptResult receipt
     fn get_gas_used(receipts: &[Receipt]) -> u64 {
         receipts
@@ -75,12 +85,12 @@ impl<D> CallResponse<D> {
             .expect("could not retrieve gas used from ScriptResult")
     }
 
-    pub fn new(value: D, receipts: Vec<Receipt>) -> Self {
-        Self {
-            value,
-            gas_used: Self::get_gas_used(&receipts),
-            receipts,
-        }
+    pub fn get_logs(&self) -> Result<Vec<String>, Error> {
+        self.log_decoder.get_logs(&self.receipts)
+    }
+
+    pub fn get_logs_with_type<T: Tokenizable + Parameterize>(&self) -> Result<Vec<T>, Error> {
+        self.log_decoder.get_logs_with_type::<T>(&self.receipts)
     }
 }
 
@@ -124,6 +134,7 @@ impl Contract {
         wallet: &WalletUnlocked,
         signature: Selector,
         args: &[Token],
+        log_decoder: LogDecoder,
     ) -> Result<ContractCallHandler<D>, Error> {
         let encoded_selector = signature;
 
@@ -151,6 +162,7 @@ impl Contract {
             wallet: wallet.clone(),
             provider: provider.clone(),
             datatype: PhantomData,
+            log_decoder,
         })
     }
 
@@ -451,6 +463,18 @@ impl ContractCall {
     }
 }
 
+// Decode the logged type from the receipt of a `RevertTransactionError` if available
+fn decode_revert_error(err: Error, log_decoder: &LogDecoder) -> Error {
+    if let Error::RevertTransactionError(_, receipts) = &err {
+        if let Ok(logs) = log_decoder.get_logs(receipts) {
+            if let Some(log) = logs.into_iter().next() {
+                return Error::RevertTransactionError(log, receipts.to_owned());
+            }
+        }
+    }
+    err
+}
+
 #[derive(Debug)]
 #[must_use = "contract calls do nothing unless you `call` them"]
 /// Helper that handles submitting a call to a client and formatting the response
@@ -460,6 +484,7 @@ pub struct ContractCallHandler<D> {
     pub wallet: WalletUnlocked,
     pub provider: Provider,
     pub datatype: PhantomData<D>,
+    pub log_decoder: LogDecoder,
 }
 
 impl<D> ContractCallHandler<D>
@@ -526,7 +551,6 @@ where
     /// your method returns `bool`, it will be a bool, works also for structs thanks to the
     /// `abigen!()`). The other field of CallResponse, `receipts`, contains the receipts of the
     /// transaction.
-    #[tracing::instrument]
     async fn call_or_simulate(&self, simulate: bool) -> Result<CallResponse<D>, Error> {
         let script = self.get_call_execution_script().await?;
 
@@ -535,7 +559,6 @@ where
         } else {
             script.call(&self.provider).await?
         };
-        tracing::debug!(target: "receipts", "{:?}", receipts);
 
         self.get_response(receipts)
     }
@@ -552,14 +575,18 @@ where
 
     /// Call a contract's method on the node, in a state-modifying manner.
     pub async fn call(self) -> Result<CallResponse<D>, Error> {
-        Self::call_or_simulate(&self, false).await
+        Self::call_or_simulate(&self, false)
+            .await
+            .map_err(|err| decode_revert_error(err, &self.log_decoder))
     }
 
     /// Call a contract's method on the node, in a simulated manner, meaning the state of the
     /// blockchain is *not* modified but simulated.
     /// It is the same as the `call` method because the API is more user-friendly this way.
     pub async fn simulate(self) -> Result<CallResponse<D>, Error> {
-        Self::call_or_simulate(&self, true).await
+        Self::call_or_simulate(&self, true)
+            .await
+            .map_err(|err| decode_revert_error(err, &self.log_decoder))
     }
 
     /// Simulates a call without needing to resolve the generic for the return type
@@ -629,7 +656,11 @@ where
     /// Create a CallResponse from call receipts
     pub fn get_response(&self, mut receipts: Vec<Receipt>) -> Result<CallResponse<D>, Error> {
         let token = self.contract_call.get_decoded_output(&mut receipts)?;
-        Ok(CallResponse::new(D::from_token(token)?, receipts))
+        Ok(CallResponse::new(
+            D::from_token(token)?,
+            receipts,
+            self.log_decoder.clone(),
+        ))
     }
 }
 
@@ -638,6 +669,7 @@ where
 /// Helper that handles bundling multiple calls into a single transaction
 pub struct MultiContractCallHandler {
     pub contract_calls: Vec<ContractCall>,
+    pub log_decoder: LogDecoder,
     pub tx_parameters: TxParameters,
     pub wallet: WalletUnlocked,
 }
@@ -648,12 +680,16 @@ impl MultiContractCallHandler {
             contract_calls: vec![],
             tx_parameters: TxParameters::default(),
             wallet,
+            log_decoder: LogDecoder {
+                logs_map: HashMap::new(),
+            },
         }
     }
 
     /// Adds a contract call to be bundled in the transaction
     /// Note that this is a builder method
     pub fn add_call<D: Tokenizable>(&mut self, call_handler: ContractCallHandler<D>) -> &mut Self {
+        self.log_decoder.merge(&call_handler.log_decoder);
         self.contract_calls.push(call_handler.contract_call);
         self
     }
@@ -676,17 +712,20 @@ impl MultiContractCallHandler {
 
     /// Call contract methods on the node, in a state-modifying manner.
     pub async fn call<D: Tokenizable + Debug>(&self) -> Result<CallResponse<D>, Error> {
-        Self::call_or_simulate(self, false).await
+        Self::call_or_simulate(self, false)
+            .await
+            .map_err(|err| decode_revert_error(err, &self.log_decoder))
     }
 
     /// Call contract methods on the node, in a simulated manner, meaning the state of the
     /// blockchain is *not* modified but simulated.
     /// It is the same as the `call` method because the API is more user-friendly this way.
     pub async fn simulate<D: Tokenizable + Debug>(&self) -> Result<CallResponse<D>, Error> {
-        Self::call_or_simulate(self, true).await
+        Self::call_or_simulate(self, true)
+            .await
+            .map_err(|err| decode_revert_error(err, &self.log_decoder))
     }
 
-    #[tracing::instrument]
     async fn call_or_simulate<D: Tokenizable + Debug>(
         &self,
         simulate: bool,
@@ -700,7 +739,6 @@ impl MultiContractCallHandler {
         } else {
             script.call(provider).await?
         };
-        tracing::debug!(target: "receipts", "{:?}", receipts);
 
         self.get_response(receipts)
     }
@@ -786,7 +824,11 @@ impl MultiContractCallHandler {
         }
 
         let tokens_as_tuple = Token::Tuple(final_tokens);
-        let response = CallResponse::<D>::new(D::from_token(tokens_as_tuple)?, receipts);
+        let response = CallResponse::<D>::new(
+            D::from_token(tokens_as_tuple)?,
+            receipts,
+            self.log_decoder.clone(),
+        );
 
         Ok(response)
     }
