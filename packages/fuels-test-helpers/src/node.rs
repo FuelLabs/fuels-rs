@@ -11,7 +11,7 @@ use tokio::sync::oneshot;
 use portpicker::is_free;
 use portpicker::pick_unused_port;
 
-use fuel_chain_config::{BlockProduction, ChainConfig, CoinConfig, MessageConfig, StateConfig};
+use fuel_chain_config::{BlockProduction, ChainConfig, StateConfig};
 use fuel_gql_client::client::FuelClient;
 use fuel_gql_client::fuel_tx::ConsensusParameters;
 use fuel_gql_client::fuel_vm::consts::WORD_SIZE;
@@ -23,6 +23,8 @@ use serde_with::{DeserializeAs, SerializeAs};
 use std::process::Stdio;
 use tempfile::NamedTempFile;
 use tokio::process::Command;
+
+use crate::utils::{get_coin_configs, get_message_configs};
 
 #[derive(Clone, Copy, Debug)]
 pub struct Config {
@@ -188,20 +190,6 @@ pub fn get_node_config_json(
     });
 
     serde_json::to_value(&chain_config).expect("Failed to build `ChainConfig` JSON")
-}
-
-fn get_coin_configs(coins: Vec<Coin>) -> Vec<CoinConfig> {
-    coins
-        .into_iter()
-        .map(Into::into)
-        .collect::<Vec<CoinConfig>>()
-}
-
-fn get_message_configs(messages: Vec<Message>) -> Vec<MessageConfig> {
-    messages
-        .into_iter()
-        .map(Into::into)
-        .collect::<Vec<MessageConfig>>()
 }
 
 fn write_temp_config_file(config: Value) -> NamedTempFile {

@@ -322,7 +322,7 @@ impl Script {
             .map(|resource| match resource {
                 Resource::Coin(coin) => Input::coin_signed(
                     coin.utxo_id,
-                    coin.owner,
+                    coin.owner.into(),
                     coin.amount,
                     coin.asset_id,
                     TxPointer::default(),
@@ -331,8 +331,8 @@ impl Script {
                 ),
                 Resource::Message(message) => Input::message_signed(
                     message.message_id(),
-                    message.sender,
-                    message.recipient,
+                    message.sender.into(),
+                    message.recipient.into(),
                     message.amount,
                     message.nonce,
                     0,
@@ -737,7 +737,7 @@ mod test {
             .map(|resource| match resource {
                 Resource::Coin(coin) => Input::coin_signed(
                     coin.utxo_id,
-                    coin.owner,
+                    coin.owner.into(),
                     coin.amount,
                     coin.asset_id,
                     TxPointer::default(),

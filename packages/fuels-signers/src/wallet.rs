@@ -165,7 +165,7 @@ impl Wallet {
     fn create_coin_input(&self, coin: Coin, asset_id: AssetId, witness_index: u8) -> Input {
         Input::coin_signed(
             coin.utxo_id,
-            coin.owner,
+            coin.owner.into(),
             coin.amount,
             asset_id,
             TxPointer::default(),
@@ -175,17 +175,10 @@ impl Wallet {
     }
 
     fn create_message_input(&self, message: InputMessage, witness_index: u8) -> Input {
-        let message_id = Input::compute_message_id(
-            &message.sender,
-            &message.recipient,
-            message.nonce,
-            message.amount,
-            &message.data,
-        );
         Input::message_signed(
-            message_id,
-            message.sender,
-            message.recipient,
+            message.message_id(),
+            message.sender.into(),
+            message.recipient.into(),
             message.amount,
             0,
             witness_index,
@@ -656,7 +649,7 @@ impl WalletUnlocked {
     ) -> Input {
         Input::coin_predicate(
             coin.utxo_id,
-            coin.owner,
+            coin.owner.into(),
             coin.amount,
             asset_id,
             TxPointer::default(),
@@ -672,17 +665,10 @@ impl WalletUnlocked {
         code: Vec<u8>,
         predicate_data: Vec<u8>,
     ) -> Input {
-        let message_id = Input::compute_message_id(
-            &message.sender,
-            &message.recipient,
-            message.nonce,
-            message.amount,
-            &message.data,
-        );
         Input::message_predicate(
-            message_id,
-            message.sender,
-            message.recipient,
+            message.message_id(),
+            message.sender.into(),
+            message.recipient.into(),
             message.amount,
             0,
             vec![],

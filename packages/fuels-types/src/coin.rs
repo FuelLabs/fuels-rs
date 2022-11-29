@@ -5,7 +5,9 @@ use fuel_core::model::{Coin as ClientCoin, CoinStatus as ClientCoinStatus};
 use fuel_gql_client::client::schema::coin::{Coin as ClientCoin, CoinStatus as ClientCoinStatus};
 
 use fuel_chain_config::CoinConfig;
-use fuel_tx::{Address, AssetId, UtxoId};
+use fuel_tx::{AssetId, UtxoId};
+
+use crate::bech32::Bech32Address;
 
 #[derive(Debug, Clone)]
 
@@ -30,7 +32,7 @@ pub struct Coin {
     pub asset_id: AssetId,
     pub utxo_id: UtxoId,
     pub maturity: u64,
-    pub owner: Address,
+    pub owner: Bech32Address,
     pub status: CoinStatus,
 }
 
@@ -42,7 +44,7 @@ impl From<ClientCoin> for Coin {
             asset_id: coin.asset_id.0 .0,
             utxo_id: coin.utxo_id.0 .0,
             maturity: coin.maturity.0,
-            owner: coin.owner.0 .0,
+            owner: coin.owner.0 .0.into(),
             status: coin.status.into(),
         }
     }
@@ -55,7 +57,7 @@ impl From<Coin> for CoinConfig {
             output_index: Some(coin.utxo_id.output_index() as u64),
             block_created: Some(coin.block_created.into()),
             maturity: Some(coin.maturity.into()),
-            owner: coin.owner,
+            owner: coin.owner.into(),
             amount: coin.amount,
             asset_id: coin.asset_id,
         }

@@ -186,7 +186,7 @@ mod tests {
                     assert_eq!(resource.amount(), asset.coin_amount);
                     match resource {
                         Resource::Coin(coin) => {
-                            assert_eq!(coin.owner, wallet.address().into())
+                            assert_eq!(&coin.owner, wallet.address())
                         }
                         Resource::Message(_) => panic!("Resources contained messages."),
                     }

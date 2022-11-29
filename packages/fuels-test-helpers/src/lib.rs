@@ -5,13 +5,16 @@ extern crate core;
 use std::{iter::repeat, iter::zip, net::SocketAddr};
 
 #[cfg(feature = "fuel-core-lib")]
-use fuel_chain_config::{CoinConfig, MessageConfig, StateConfig};
+use fuel_chain_config::StateConfig;
 
 #[cfg(feature = "fuel-core-lib")]
 use fuel_core::service::{DbType, FuelService};
 
 #[cfg(feature = "fuel-core-lib")]
 pub use fuel_core::service::Config;
+
+#[cfg(feature = "fuel-core-lib")]
+pub use utils::{get_coin_configs, get_message_configs};
 
 #[cfg(not(feature = "fuel-core-lib"))]
 pub use node::{get_socket_address, new_fuel_node, Config};
@@ -117,7 +120,7 @@ pub fn setup_single_asset_coins(
             let utxo_id = UtxoId::new(r, 0);
 
             Coin {
-                owner: owner.into(),
+                owner: owner.clone(),
                 utxo_id,
                 amount: amount_per_coin,
                 asset_id,
@@ -139,8 +142,8 @@ pub fn setup_single_message(
     data: Vec<u8>,
 ) -> Vec<Message> {
     vec![Message {
-        sender: sender.into(),
-        recipient: recipient.into(),
+        sender: sender.clone(),
+        recipient: recipient.clone(),
         nonce,
         amount,
         data,
@@ -159,29 +162,15 @@ pub async fn setup_test_client(
     chain_config: Option<ChainConfig>,
     consensus_parameters_config: Option<ConsensusParameters>,
 ) -> (FuelClient, SocketAddr) {
-    let coin_configs = coins
-        .into_iter()
-        .map(Into::into)
-        .collect::<Vec<CoinConfig>>();
-
-    let message_config = messages
-        .into_iter()
-        .map(|message| MessageConfig {
-            sender: message.sender,
-            recipient: message.recipient,
-            nonce: message.nonce,
-            amount: message.amount,
-            data: message.data,
-            da_height: message.da_height.into(),
-        })
-        .collect();
+    let coin_configs = get_coin_configs(coins);
+    let message_configs = get_message_configs(messages);
 
     // Setup node config with genesis coins and utxo_validation enabled
     let chain_conf = chain_config.unwrap_or_else(|| ChainConfig {
         initial_state: Some(StateConfig {
             coins: Some(coin_configs),
             contracts: None,
-            messages: Some(message_config),
+            messages: Some(message_configs),
             ..StateConfig::default()
         }),
         transaction_parameters: consensus_parameters_config.unwrap_or_default(),
@@ -265,7 +254,7 @@ mod tests {
         for coin in coins {
             assert_eq!(coin.asset_id, asset_id);
             assert_eq!(coin.amount, amount_per_coin);
-            assert_eq!(*coin.owner, *address.hash());
+            assert_eq!(coin.owner, address);
         }
 
         Ok(())
@@ -302,7 +291,7 @@ mod tests {
                 .collect();
             assert_eq!(coins_asset_id.len() as u64, coins_per_asset);
             for coin in coins_asset_id {
-                assert_eq!(*coin.owner, *address.hash());
+                assert_eq!(coin.owner, address);
                 assert_eq!(coin.amount, amount_per_coin);
             }
         }
@@ -350,7 +339,7 @@ mod tests {
                 .collect();
             assert_eq!(coins_asset_id.len() as u64, asset.num_coins);
             for coin in coins_asset_id {
-                assert_eq!(*coin.owner, *address.hash());
+                assert_eq!(coin.owner, address);
                 assert_eq!(coin.amount, asset.coin_amount);
             }
         }

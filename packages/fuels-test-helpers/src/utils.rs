@@ -3,6 +3,10 @@ use std::fmt::{Debug, Display, Formatter};
 use std::future::Future;
 use std::time::Duration;
 
+use fuel_chain_config::{CoinConfig, MessageConfig};
+use fuels_types::coin::Coin;
+use fuels_types::message::Message;
+
 #[derive(Debug)]
 pub struct RetryExhausted {
     interval: Duration,
@@ -48,6 +52,20 @@ where
         abort_after,
         error_from_last_attempt: last_err,
     })
+}
+
+pub fn get_coin_configs(coins: Vec<Coin>) -> Vec<CoinConfig> {
+    coins
+        .into_iter()
+        .map(Into::into)
+        .collect::<Vec<CoinConfig>>()
+}
+
+pub fn get_message_configs(messages: Vec<Message>) -> Vec<MessageConfig> {
+    messages
+        .into_iter()
+        .map(Into::into)
+        .collect::<Vec<MessageConfig>>()
 }
 
 #[cfg(test)]
