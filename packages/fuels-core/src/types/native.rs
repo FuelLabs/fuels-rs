@@ -1,8 +1,13 @@
 use crate::{Bits256, Parameterize, Token, Tokenizable};
 pub use fuel_tx::{Address, AssetId, ContractId};
-use fuels_types::enum_variants::EnumVariants;
-use fuels_types::errors::Error;
-use fuels_types::param_types::ParamType;
+use fuels_types::{enum_variants::EnumVariants, errors::Error, param_types::ParamType};
+use std::iter::zip;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Identity {
+    Address(Address),
+    ContractId(ContractId),
+}
 
 impl<const SIZE: usize, T: Parameterize> Parameterize for [T; SIZE] {
     fn param_type() -> ParamType {
@@ -19,7 +24,8 @@ impl<T: Parameterize> Parameterize for Vec<T> {
 impl Parameterize for Address {
     fn param_type() -> ParamType {
         ParamType::Struct {
-            fields: vec![ParamType::B256],
+            name: "Address".to_string(),
+            fields: vec![("0".to_string(), ParamType::B256)],
             generics: vec![],
         }
     }
@@ -28,7 +34,8 @@ impl Parameterize for Address {
 impl Parameterize for ContractId {
     fn param_type() -> ParamType {
         ParamType::Struct {
-            fields: vec![ParamType::B256],
+            name: "ContractId".to_string(),
+            fields: vec![("0".to_string(), ParamType::B256)],
             generics: vec![],
         }
     }
@@ -37,7 +44,8 @@ impl Parameterize for ContractId {
 impl Parameterize for AssetId {
     fn param_type() -> ParamType {
         ParamType::Struct {
-            fields: vec![ParamType::B256],
+            name: "AssetId".to_string(),
+            fields: vec![("0".to_string(), ParamType::B256)],
             generics: vec![],
         }
     }
@@ -84,10 +92,14 @@ where
     T: Parameterize + Tokenizable,
 {
     fn param_type() -> ParamType {
-        let param_types = vec![ParamType::Unit, T::param_type()];
+        let param_types = vec![
+            ("None".to_string(), ParamType::Unit),
+            ("Some".to_string(), T::param_type()),
+        ];
         let variants = EnumVariants::new(param_types)
             .expect("should never happen as we provided valid Option param types");
         ParamType::Enum {
+            name: "Option".to_string(),
             variants,
             generics: vec![T::param_type()],
         }
@@ -101,9 +113,15 @@ where
 {
     fn param_type() -> ParamType {
         let param_types = vec![T::param_type(), E::param_type()];
-        let variants = EnumVariants::new(param_types.clone())
+        let variant_param_types = zip(
+            vec!["Ok".to_string(), "Err".to_string()],
+            param_types.clone(),
+        )
+        .collect();
+        let variants = EnumVariants::new(variant_param_types)
             .expect("should never happen as we provided valid Result param types");
         ParamType::Enum {
+            name: "Result".to_string(),
             variants,
             generics: param_types,
         }
@@ -112,10 +130,13 @@ where
 
 impl Parameterize for Identity {
     fn param_type() -> ParamType {
-        let param_types = vec![Address::param_type(), ContractId::param_type()];
-        let variants = EnumVariants::new(param_types)
-            .expect("should never happen as we provided valid Identity param types");
+        let variants = EnumVariants::new(vec![
+            ("Address".to_string(), Address::param_type()),
+            ("ContractId".to_string(), ContractId::param_type()),
+        ])
+        .expect("should never happen as we provided valid Identity param types");
         ParamType::Enum {
+            name: "Identity".to_string(),
             variants,
             generics: vec![],
         }
@@ -314,19 +335,16 @@ impl Tokenizable for ContractId {
         Self: Sized,
     {
         if let Token::Struct(tokens) = token {
-            let first_token = tokens.into_iter().next();
-            if let Some(Token::B256(id)) = first_token {
-                Ok(ContractId::from(id))
+            if let [Token::B256(data)] = tokens.as_slice() {
+                Ok(ContractId::from(*data))
             } else {
                 Err(Error::InstantiationError(format!(
-                    "Expected `b256`, got {:?}",
-                    first_token
+                    "ContractId expected one `Token::B256`, got {tokens:?}"
                 )))
             }
         } else {
             Err(Error::InstantiationError(format!(
-                "Expected `ContractId`, got {:?}",
-                token
+                "Address expected `Token::Struct` got {token:?}",
             )))
         }
     }
@@ -338,24 +356,21 @@ impl Tokenizable for ContractId {
 }
 
 impl Tokenizable for Address {
-    fn from_token(t: Token) -> Result<Self, Error>
+    fn from_token(token: Token) -> Result<Self, Error>
     where
         Self: Sized,
     {
-        if let Token::Struct(tokens) = t {
-            let first_token = tokens.into_iter().next();
-            if let Some(Token::B256(id)) = first_token {
-                Ok(Address::from(id))
+        if let Token::Struct(tokens) = token {
+            if let [Token::B256(data)] = tokens.as_slice() {
+                Ok(Address::from(*data))
             } else {
                 Err(Error::InstantiationError(format!(
-                    "Expected `b256`, got {:?}",
-                    first_token
+                    "Address expected one `Token::B256`, got {tokens:?}"
                 )))
             }
         } else {
             Err(Error::InstantiationError(format!(
-                "Expected `Address`, got {:?}",
-                t
+                "Address expected `Token::Struct` got {token:?}",
             )))
         }
     }
@@ -372,15 +387,18 @@ impl Tokenizable for AssetId {
     where
         Self: Sized,
     {
-        if let Token::Struct(inner_tokens) = token {
-            let first_token = inner_tokens.into_iter().next();
-            if let Some(Token::B256(id)) = first_token {
-                Ok(Self::from(id))
+        if let Token::Struct(tokens) = token {
+            if let [Token::B256(data)] = tokens.as_slice() {
+                Ok(AssetId::from(*data))
             } else {
-                Err(Error::InstantiationError(format!("Could not construct 'AssetId' from token. Wrong token inside of Struct '{:?} instead of B256'", first_token)))
+                Err(Error::InstantiationError(format!(
+                    "AssetId expected one `Token::B256`, got {tokens:?}"
+                )))
             }
         } else {
-            Err(Error::InstantiationError(format!("Could not construct 'AssetId' from token. Instead of a Struct with a B256 inside, received: {:?}", token)))
+            Err(Error::InstantiationError(format!(
+                "AssetId expected `Token::Struct` got {token:?}",
+            )))
         }
     }
 
@@ -406,8 +424,7 @@ where
             }
         } else {
             Err(Error::InstantiationError(format!(
-                "Could not construct Option from token. Received: {:?}",
-                token
+                "Could not construct Option from token. Received: {token:?}",
             )))
         }
     }
@@ -442,8 +459,7 @@ where
             }
         } else {
             Err(Error::InstantiationError(format!(
-                "Could not construct Result from token. Received: {:?}",
-                token
+                "Could not construct Result from token. Received: {token:?}",
             )))
         }
     }
@@ -474,8 +490,7 @@ impl Tokenizable for Identity {
             }
         } else {
             Err(Error::InstantiationError(format!(
-                "Could not construct Identity from token. Received: {:?}",
-                token
+                "Could not construct Identity from token. Received: {token:?}",
             )))
         }
     }
@@ -532,10 +547,4 @@ impl<const SIZE: usize, T: Tokenizable> Tokenizable for [T; SIZE] {
     fn into_token(self) -> Token {
         Token::Array(self.map(Tokenizable::into_token).to_vec())
     }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Identity {
-    Address(fuel_tx::Address),
-    ContractId(fuel_tx::ContractId),
 }

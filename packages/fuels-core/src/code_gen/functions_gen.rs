@@ -1,8 +1,12 @@
-use crate::code_gen::custom_types::{param_type_calls, Component};
-use crate::code_gen::docs_gen::expand_doc;
-use crate::code_gen::full_abi_types::{FullABIFunction, FullTypeApplication, FullTypeDeclaration};
-use crate::code_gen::resolved_type;
-use crate::utils::safe_ident;
+use crate::{
+    code_gen::{
+        custom_types::{param_type_calls, Component},
+        docs_gen::expand_doc,
+        full_abi_types::{FullABIFunction, FullTypeApplication, FullTypeDeclaration},
+        resolved_type,
+    },
+    utils::safe_ident,
+};
 use fuels_types::errors::Error;
 use inflector::Inflector;
 use proc_macro2::TokenStream;
@@ -56,11 +60,16 @@ pub fn expand_function(
             let provider = self.wallet.get_provider().expect("Provider not set up");
             let encoded_fn_selector = ::fuels::core::code_gen::function_selector::resolve_fn_selector(#name_stringified, &[#(#param_type_calls),*]);
             let tokens = [#(::fuels::core::Tokenizable::into_token(#arg_names)),*];
-            ::fuels::contract::contract::Contract::method_hash(&provider,
+            let log_decoder = ::fuels::contract::logs::LogDecoder{logs_map: self.logs_map.clone()};
+            ::fuels::contract::contract::Contract::method_hash(
+                &provider,
                 self.contract_id.clone(),
                 &self.wallet,
                 encoded_fn_selector,
-                &tokens).expect("method not found (this should never happen)")
+                &tokens,
+                log_decoder
+            )
+            .expect("method not found (this should never happen)")
         }
     })
 }
@@ -87,7 +96,7 @@ fn function_arguments(
     inputs
         .iter()
         .map(|input| Component::new(input, true, shared_types))
-        .collect::<Result<Vec<_>, anyhow::Error>>()
+        .collect::<Result<Vec<_>, Error>>()
         .map_err(|e| Error::InvalidType(e.to_string()))
 }
 
@@ -113,7 +122,7 @@ mod tests {
     use std::str::FromStr;
 
     #[test]
-    fn test_expand_function_simpleabi() -> Result<(), Error> {
+    fn test_expand_function_simple_abi() -> Result<(), Error> {
         let s = r#"
             {
                 "types": [
@@ -266,27 +275,41 @@ mod tests {
             &HashSet::default(),
         )?;
 
-        let expected_code = r#"
-                #[doc = "Calls the contract's `some_abi_funct` function"]
-                pub fn some_abi_funct(&self, s_1: MyStruct1, s_2: MyStruct2) -> ContractCallHandler<MyStruct1> {
-                    let provider = self.wallet.get_provider().expect("Provider not set up");
-                    let encoded_fn_selector = resolve_fn_selector(
-                        "some_abi_funct",
-                        &[<MyStruct1> :: param_type(), <MyStruct2> :: param_type()]
-                    );
-                    let tokens = [s_1.into_token(), s_2.into_token()];
-                    Contract::method_hash(
-                        &provider,
-                        self.contract_id.clone(),
-                        &self.wallet,
-                        encoded_fn_selector,
-                        &tokens
-                    )
-                    .expect("method not found (this should never happen)")
-                }
-        "#;
-
-        let expected = TokenStream::from_str(expected_code).unwrap().to_string();
+        let expected = TokenStream::from_str(
+            r#"
+            #[doc = "Calls the contract's `some_abi_funct` function"]
+            pub fn some_abi_funct(
+                &self,
+                s_1: self::MyStruct1,
+                s_2: self::MyStruct2
+            ) -> ::fuels::contract::contract::ContractCallHandler<self::MyStruct1> {
+                let provider = self.wallet.get_provider().expect("Provider not set up");
+                let encoded_fn_selector = ::fuels::core::code_gen::function_selector::resolve_fn_selector(
+                    "some_abi_funct",
+                    &[
+                        <self::MyStruct1 as ::fuels::core::Parameterize> ::param_type(),
+                        <self::MyStruct2 as ::fuels::core::Parameterize> ::param_type()
+                    ]
+                );
+                let tokens = [
+                    ::fuels::core::Tokenizable::into_token(s_1),
+                    ::fuels::core::Tokenizable::into_token(s_2)
+                ];
+                let log_decoder = ::fuels::contract::logs::LogDecoder {
+                    logs_map: self.logs_map.clone()
+                };
+                ::fuels::contract::contract::Contract::method_hash(
+                    &provider,
+                    self.contract_id.clone(),
+                    &self.wallet,
+                    encoded_fn_selector,
+                    &tokens,
+                    log_decoder
+                )
+                .expect("method not found (this should never happen)")
+            }
+            "#,
+        )?.to_string();
 
         assert_eq!(result.to_string(), expected);
 
@@ -328,27 +351,35 @@ mod tests {
             &FullABIFunction::from_counterpart(&the_function, &types),
             &HashSet::default(),
         );
+
         let expected = TokenStream::from_str(
             r#"
             #[doc = "Calls the contract's `HelloWorld` function"]
-            pub fn HelloWorld(&self, bimbam: bool) -> ContractCallHandler<()> {
+            pub fn HelloWorld(&self, bimbam: bool) -> ::fuels::contract::contract::ContractCallHandler<()> {
                 let provider = self.wallet.get_provider().expect("Provider not set up");
-                let encoded_fn_selector = resolve_fn_selector("HelloWorld", &[<bool> :: param_type()]);
-                let tokens = [bimbam.into_token()];
-                Contract::method_hash(
+                let encoded_fn_selector = ::fuels::core::code_gen::function_selector::resolve_fn_selector(
+                    "HelloWorld",
+                    &[<bool as ::fuels::core::Parameterize> ::param_type()]
+                );
+                let tokens = [::fuels::core::Tokenizable::into_token(bimbam)];
+                let log_decoder = ::fuels::contract::logs::LogDecoder {
+                    logs_map: self.logs_map.clone()
+                };
+                ::fuels::contract::contract::Contract::method_hash(
                     &provider,
                     self.contract_id.clone(),
                     &self.wallet,
                     encoded_fn_selector,
-                    &tokens
+                    &tokens,
+                    log_decoder
                 )
                 .expect("method not found (this should never happen)")
             }
             "#,
-        );
-        let expected = expected?.to_string();
+        )?.to_string();
 
         assert_eq!(result?.to_string(), expected);
+
         Ok(())
     }
 
@@ -437,31 +468,38 @@ mod tests {
             #[doc = "Calls the contract's `hello_world` function"]
             pub fn hello_world(
                 &self,
-                the_only_allowed_input: SomeWeirdFrenchCuisine
-            ) -> ContractCallHandler<EntropyCirclesEnum> {
+                the_only_allowed_input: self::SomeWeirdFrenchCuisine
+            ) -> ::fuels::contract::contract::ContractCallHandler<self::EntropyCirclesEnum> {
                 let provider = self.wallet.get_provider().expect("Provider not set up");
-                let encoded_fn_selector = resolve_fn_selector("hello_world", &[<SomeWeirdFrenchCuisine> :: param_type()]);
-                let tokens = [the_only_allowed_input.into_token()];
-                Contract::method_hash(
+                let encoded_fn_selector = ::fuels::core::code_gen::function_selector::resolve_fn_selector(
+                    "hello_world",
+                    &[<self::SomeWeirdFrenchCuisine as ::fuels::core::Parameterize> ::param_type()]
+                );
+                let tokens = [::fuels::core::Tokenizable::into_token(
+                    the_only_allowed_input
+                )];
+                let log_decoder = ::fuels::contract::logs::LogDecoder {
+                    logs_map: self.logs_map.clone()
+                };
+                ::fuels::contract::contract::Contract::method_hash(
                     &provider,
                     self.contract_id.clone(),
                     &self.wallet,
                     encoded_fn_selector,
-                    &tokens
+                    &tokens,
+                    log_decoder
                 )
                 .expect("method not found (this should never happen)")
             }
             "#,
-        );
-        let expected = expected?.to_string();
+        )?.to_string();
 
         assert_eq!(result?.to_string(), expected);
+
         Ok(())
     }
 
-    // --- expand_selector ---
-
-    // // --- expand_function_argument ---
+    // --- expand_function_argument ---
     #[test]
     fn test_expand_function_arguments() -> Result<(), Error> {
         let the_argument = TypeApplication {
@@ -604,16 +642,18 @@ mod tests {
             &FullABIFunction::from_counterpart(&function, &types).inputs,
             &HashSet::default(),
         )?;
+
         assert_eq!(&result[0].field_name.to_string(), "bim_bam");
-        assert_eq!(&result[0].field_type.to_string(), "CarMaker");
+        assert_eq!(&result[0].field_type.to_string(), "self :: CarMaker");
 
         function.inputs[0].type_id = 2;
         let result = function_arguments(
             &FullABIFunction::from_counterpart(&function, &types).inputs,
             &HashSet::default(),
         )?;
+
         assert_eq!(&result[0].field_name.to_string(), "bim_bam");
-        assert_eq!(&result[0].field_type.to_string(), "Cocktail");
+        assert_eq!(&result[0].field_type.to_string(), "self :: Cocktail");
 
         Ok(())
     }
@@ -621,17 +661,25 @@ mod tests {
     #[test]
     fn transform_name_to_snake_case() -> Result<(), Error> {
         let result = expand_input_name("CamelCaseHello");
+
         assert_eq!(result?.to_string(), "camel_case_hello");
+
         Ok(())
     }
 
     #[test]
     fn avoids_collisions_with_keywords() -> Result<(), Error> {
-        let result = expand_input_name("if");
-        assert_eq!(result?.to_string(), "if_");
+        {
+            let result = expand_input_name("if");
 
-        let result = expand_input_name("let");
-        assert_eq!(result?.to_string(), "let_");
+            assert_eq!(result?.to_string(), "if_");
+        }
+        {
+            let result = expand_input_name("let");
+
+            assert_eq!(result?.to_string(), "let_");
+        }
+
         Ok(())
     }
 }

@@ -1,7 +1,6 @@
 use crate::code_gen::full_abi_types::{FullTypeApplication, FullTypeDeclaration};
 use crate::code_gen::resolved_type::{resolve_type, ResolvedType};
 use crate::utils::{ident, safe_ident};
-use anyhow::anyhow;
 use fuels_types::errors::Error;
 use fuels_types::utils::extract_generic_name;
 use inflector::Inflector;
@@ -22,7 +21,7 @@ impl Component {
         component: &FullTypeApplication,
         snake_case: bool,
         shared_types: &HashSet<FullTypeDeclaration>,
-    ) -> anyhow::Result<Component> {
+    ) -> Result<Component, Error> {
         let field_name = if snake_case {
             component.name.to_snake_case()
         } else {
@@ -82,17 +81,9 @@ pub(crate) fn extract_components(
     type_decl: &FullTypeDeclaration,
     snake_case: bool,
     shared_types: &HashSet<FullTypeDeclaration>,
-) -> anyhow::Result<Vec<Component>> {
-    let components = &type_decl.components;
-
-    if components.is_empty() {
-        return Err(anyhow!(
-            "Custom type {} must have at least one component!",
-            type_decl.type_field
-        ));
-    };
-
-    components
+) -> Result<Vec<Component>, Error> {
+    type_decl
+        .components
         .iter()
         .map(|component| Component::new(component, snake_case, shared_types))
         .collect()
@@ -260,8 +251,8 @@ mod tests {
         assert_eq!(
             stringified_result,
             vec![
-                "< u8 > :: param_type ()",
-                "SomeStruct :: < T , K > :: param_type ()"
+                "< u8 as :: fuels :: core :: Parameterize > :: param_type ()",
+                "< SomeStruct :: < T , K > as :: fuels :: core :: Parameterize > :: param_type ()"
             ]
         )
     }

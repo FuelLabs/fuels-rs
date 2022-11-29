@@ -4,6 +4,7 @@ use fuel_gql_client::fuel_tx::{
     field::Script as ScriptField, ConsensusParameters, Input, Output, Receipt, Transaction,
     TxPointer, UtxoId,
 };
+
 use fuel_gql_client::fuel_types::{
     bytes::padded_len_usize, AssetId, Bytes32, ContractId, Immediate18, Word,
 };
@@ -410,7 +411,7 @@ impl Script {
             .iter()
             .any(|r|
                 matches!(r, Receipt::ScriptResult { result, .. } if *result != ScriptExecutionResult::Success)
-        ) {
+            ) {
             return Err(Error::RevertTransactionError(Default::default(), receipts));
         }
 

@@ -249,6 +249,7 @@ fn to_custom_type(
             "Address" => quote! {::fuels::core::types::Address},
             "Identity" => quote! {::fuels::core::types::Identity},
             "EvmAddress" => quote! {::fuels::core::types::EvmAddress},
+            "B512" => quote! {::fuels::core::types::B512},
             "Option" => quote! {::std::option::Option},
             "Result" => quote! {::std::result::Result},
             "Vec" => quote! {::std::vec::Vec},
@@ -287,11 +288,14 @@ mod tests {
             type_id: type_declarations[0].type_id,
             ..Default::default()
         };
+
         let application = FullTypeApplication::from_counterpart(&type_application, &types);
         let resolved_type = resolve_type(&application, &HashSet::default())
             .with_context(|| format!("failed to resolve {:?}", &type_application))?;
         let actual = TokenStream::from(&resolved_type).to_string();
+
         assert_eq!(actual, expected);
+
         Ok(())
     }
 
@@ -333,12 +337,12 @@ mod tests {
 
     #[test]
     fn test_resolve_byte() -> anyhow::Result<()> {
-        test_resolve_primitive_type("byte", "Byte")
+        test_resolve_primitive_type("byte", ":: fuels :: core :: types :: Byte")
     }
 
     #[test]
     fn test_resolve_b256() -> anyhow::Result<()> {
-        test_resolve_primitive_type("b256", "Bits256")
+        test_resolve_primitive_type("b256", ":: fuels :: core :: types :: Bits256")
     }
 
     #[test]
@@ -372,7 +376,7 @@ mod tests {
     #[test]
     fn test_resolve_vector() -> anyhow::Result<()> {
         test_resolve_first_type(
-            "Vec",
+            ":: std :: vec :: Vec",
             &[
                 TypeDeclaration {
                     type_id: 0,
@@ -437,13 +441,16 @@ mod tests {
 
     #[test]
     fn test_resolve_string() -> anyhow::Result<()> {
-        test_resolve_primitive_type("str[3]", "SizedAsciiString < 3usize >")
+        test_resolve_primitive_type(
+            "str[3]",
+            ":: fuels :: core :: types :: SizedAsciiString < 3usize >",
+        )
     }
 
     #[test]
     fn test_resolve_struct() -> anyhow::Result<()> {
         test_resolve_first_type(
-            "SomeStruct",
+            "self :: SomeStruct",
             &[
                 TypeDeclaration {
                     type_id: 0,
@@ -479,7 +486,7 @@ mod tests {
     #[test]
     fn test_resolve_enum() -> anyhow::Result<()> {
         test_resolve_first_type(
-            "SomeEnum",
+            "self :: SomeEnum",
             &[
                 TypeDeclaration {
                     type_id: 0,

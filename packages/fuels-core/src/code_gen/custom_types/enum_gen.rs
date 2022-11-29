@@ -4,10 +4,7 @@ use super::utils::{
 use crate::code_gen::abigen::{GeneratedCode, TypePath};
 use crate::code_gen::full_abi_types::FullTypeDeclaration;
 use crate::utils::ident;
-use core::result::Result;
-use core::result::Result::Ok;
-use fuels_types::errors::Error;
-use fuels_types::utils::custom_type_name;
+use fuels_types::{errors::Error, utils::custom_type_name};
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 use std::collections::HashSet;
@@ -23,6 +20,11 @@ pub fn expand_custom_enum(
     let enum_ident = ident(&enum_name);
 
     let components = extract_components(type_decl, false, shared_types)?;
+    if components.is_empty() {
+        return Err(Error::InvalidData(
+            "Enum must have at least one component!".into(),
+        ));
+    }
     let generics = extract_generic_parameters(type_decl)?;
 
     let enum_def = enum_decl(&enum_ident, &components, &generics);
@@ -167,15 +169,28 @@ fn enum_parameterize_impl(
     generics: &[TokenStream],
 ) -> TokenStream {
     let param_type_calls = param_type_calls(components);
+    let variants = components
+        .iter()
+        .map(|component| {
+            let type_name = component.field_name.to_string();
+            quote! {#type_name.to_string()}
+        })
+        .zip(param_type_calls)
+        .map(|(type_name, param_type_call)| {
+            quote! {(#type_name, #param_type_call)}
+        });
     let enum_ident_stringified = enum_ident.to_string();
     quote! {
         impl<#(#generics: ::fuels::core::Parameterize + ::fuels::core::Tokenizable),*> ::fuels::core::Parameterize for self::#enum_ident <#(#generics),*> {
             fn param_type() -> ::fuels::types::param_types::ParamType {
-                let mut param_types = vec![];
-                #(param_types.push(#param_type_calls);)*
+                let variants = [#(#variants),*].to_vec();
 
-                let variants = ::fuels::types::enum_variants::EnumVariants::new(param_types).unwrap_or_else(|_| panic!("{} has no variants which isn't allowed!", #enum_ident_stringified));
-                ::fuels::types::param_types::ParamType::Enum{variants, generics: vec![#(#generics::param_type()),*]}
+                let variants = ::fuels::types::enum_variants::EnumVariants::new(variants).unwrap_or_else(|_| panic!("{} has no variants which isn't allowed!", #enum_ident_stringified));
+                ::fuels::types::param_types::ParamType::Enum{
+                    name: #enum_ident_stringified.to_string(),
+                    variants,
+                    generics: [#(#generics::param_type()),*].to_vec()
+                }
             }
         }
     }

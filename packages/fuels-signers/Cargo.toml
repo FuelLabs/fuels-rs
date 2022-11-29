@@ -1,6 +1,6 @@
 [package]
 name = "fuels-signers"
-version = "0.31.0"
+version = "0.31.1"
 authors = ["Fuel Labs <contact@fuel.sh>"]
 edition = "2021"
 homepage = "https://fuel.network/"
@@ -11,14 +11,15 @@ description = "Fuel Rust SDK signers."
 [dependencies]
 async-trait = { version = "0.1.50", default-features = false }
 bytes = { version = "1.1.0", features = ["serde"] }
+chrono = "0.4.2"
 elliptic-curve = { version = "0.11.6", default-features = false }
 eth-keystore = { version = "0.3.0" }
 fuel-core = { version = "0.14", default-features = false, optional = true }
 fuel-crypto = { version = "0.6", features = ["random"] }
 fuel-gql-client = { version = "0.14", default-features = false }
 fuel-types = { version = "0.5", default-features = false, features = ["random"] }
-fuels-core = { version = "0.31.0", path = "../fuels-core" }
-fuels-types = { version = "0.31.0", path = "../fuels-types" }
+fuels-core = { version = "0.31.1", path = "../fuels-core" }
+fuels-types = { version = "0.31.1", path = "../fuels-types" }
 hex = { version = "0.4.3", default-features = false, features = ["std"] }
 rand = { version = "0.8.4", default-features = false }
 serde = { version = "1.0.124", default-features = true, features = ["derive"] }

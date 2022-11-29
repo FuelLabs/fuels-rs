@@ -6,11 +6,12 @@ use eth_keystore::KeystoreError;
 use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
 use fuel_gql_client::client::schema;
 use fuel_gql_client::client::schema::resource::Resource;
+use fuel_gql_client::client::types::TransactionResponse;
 use fuel_gql_client::fuel_vm::prelude::GTFArgs;
 use fuel_gql_client::{
     client::{
-        schema::coin::Coin, schema::message::Message as InputMessage, types::TransactionResponse,
-        PaginatedResult, PaginationRequest,
+        schema::coin::Coin, schema::message::Message as InputMessage, PaginatedResult,
+        PaginationRequest,
     },
     fuel_tx::{
         AssetId, Bytes32, Cacheable, ContractId, Input, Output, Receipt, TransactionFee, TxPointer,
@@ -135,10 +136,10 @@ impl Wallet {
         &self,
         request: PaginationRequest<String>,
     ) -> Result<PaginatedResult<TransactionResponse, String>, Error> {
-        self.get_provider()?
+        Ok(self
+            .get_provider()?
             .get_transactions_by_owner(&self.address, request)
-            .await
-            .map_err(Into::into)
+            .await?)
     }
 
     /// Returns a proper vector of `Input::Coin`s for the given asset ID, amount, and witness index.
@@ -850,13 +851,13 @@ pub fn generate_mnemonic_phrase<R: Rng>(rng: &mut R, count: usize) -> Result<Str
 #[cfg(feature = "test-helpers")]
 mod tests {
     use super::*;
-    use core::iter::repeat;
     use fuel_core::service::{Config, FuelService};
     use fuel_gql_client::client::FuelClient;
     use fuel_gql_client::fuel_tx::Address;
     use fuels_core::tx::field::{Inputs, Outputs};
     use fuels_test_helpers::{launch_custom_provider_and_get_wallets, AssetConfig, WalletsConfig};
     use fuels_types::errors::Error;
+    use std::iter::repeat;
     use tempfile::tempdir;
 
     #[tokio::test]

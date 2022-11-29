@@ -1,8 +1,6 @@
 use fuels::core::abi_encoder::ABIEncoder;
 use fuels::prelude::*;
 use sha2::{Digest, Sha256};
-use std::path::Path;
-use std::process::Command;
 use std::{slice, str::FromStr};
 
 pub fn null_contract_id() -> Bech32ContractId {
@@ -850,8 +848,8 @@ async fn shared_types_between_contracts() -> Result<(), Error> {
             assert_eq!(response, (shared_struct_2, shared_enum));
         }
         {
-            let same_name_struct = contracta_mod::StructSameNameButDifferentInternals { a: 13u32 };
-            let same_name_enum = contracta_mod::EnumSameNameButDifferentInternals::a(14u32);
+            let same_name_struct = contract_a_mod::StructSameNameButDifferentInternals { a: 13u32 };
+            let same_name_enum = contract_a_mod::EnumSameNameButDifferentInternals::a(14u32);
             let response = methods
                 .uses_types_that_share_only_names(same_name_struct.clone(), same_name_enum.clone())
                 .call()
@@ -893,8 +891,8 @@ async fn shared_types_between_contracts() -> Result<(), Error> {
             assert_eq!(response, (shared_struct_2, shared_enum));
         }
         {
-            let same_name_struct = contractb_mod::StructSameNameButDifferentInternals { a: 13u64 };
-            let same_name_enum = contractb_mod::EnumSameNameButDifferentInternals::a(14u64);
+            let same_name_struct = contract_b_mod::StructSameNameButDifferentInternals { a: 13u64 };
+            let same_name_enum = contract_b_mod::EnumSameNameButDifferentInternals::a(14u64);
             let response = methods
                 .uses_types_that_share_only_names(same_name_struct.clone(), same_name_enum.clone())
                 .call()

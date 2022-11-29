@@ -62,19 +62,24 @@ pub mod prelude {
     //! use fuels::prelude::*;
     //! ```
 
-    pub use super::contract::contract::{Contract, MultiContractCallHandler};
-    pub use super::contract::predicate::Predicate;
-    pub use super::core::constants::*;
-    pub use super::core::parameters::*;
-    pub use super::core::types::*;
-    pub use super::core::{Token, Tokenizable};
+    pub use super::contract::{
+        contract::{Contract, MultiContractCallHandler},
+        logs::LogDecoder,
+        predicate::Predicate,
+    };
+    pub use super::core::{
+        constants::*,
+        parameters::*,
+        types::*,
+        {Token, Tokenizable},
+    };
     pub use super::fuel_node::*;
     pub use super::fuels_abigen::{abigen, setup_contract_test};
-    pub use super::signers::provider::*;
-    pub use super::signers::{wallet::generate_mnemonic_phrase, Signer, Wallet, WalletUnlocked};
+    pub use super::signers::{
+        provider::*,
+        {wallet::generate_mnemonic_phrase, Signer, Wallet, WalletUnlocked},
+    };
     pub use super::test_helpers::*;
     pub use super::tx::Salt;
-    pub use super::types::bech32::Bech32Address;
-    pub use super::types::bech32::Bech32ContractId;
-    pub use super::types::errors::Error;
+    pub use super::types::{bech32::Bech32Address, bech32::Bech32ContractId, errors::Error};
 }

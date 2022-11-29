@@ -1,9 +1,19 @@
+// use fuel_core_interfaces::model::Message;
+// use fuels::client::schema::message::Message as OtherMessage;
+// use fuels::fuel_node::{Config as CoreConfig, FuelService};
+// use fuels::prelude::*;
+// use fuels::signers::fuel_crypto::SecretKey;
+// use fuels::tx::Receipt;
+use chrono::Duration;
+use fuel_core::service::{Config as CoreConfig, FuelService};
 use fuel_core_interfaces::model::Message;
-use fuels::client::schema::message::Message as OtherMessage;
-use fuels::fuel_node::{Config as CoreConfig, FuelService};
-use fuels::prelude::*;
-use fuels::signers::fuel_crypto::SecretKey;
-use fuels::tx::Receipt;
+use fuel_gql_client::{client::schema::message::Message as OtherMessage, fuel_tx::Receipt};
+use fuels::{
+    client::{PageDirection, PaginationRequest},
+    prelude::*,
+};
+use fuels_signers::fuel_crypto::SecretKey;
+use fuels_types::block::Block;
 use std::{iter, str::FromStr};
 
 #[tokio::test]
@@ -150,10 +160,48 @@ async fn can_increase_block_height() -> Result<(), Error> {
 
     assert_eq!(provider.latest_block_height().await?, 0);
 
-    provider.produce_blocks(3).await?;
+    provider.produce_blocks(3, None).await?;
 
     assert_eq!(provider.latest_block_height().await?, 3);
     // ANCHOR_END: use_produce_blocks_to_increase_block_height
+    Ok(())
+}
+
+#[tokio::test]
+async fn can_set_custom_block_time() -> Result<(), Error> {
+    use chrono::{TimeZone, Utc};
+
+    // ANCHOR: use_produce_blocks_custom_time
+    let config = Config {
+        manual_blocks_enabled: true, // Necessary so the `produce_blocks` API can be used locally
+        ..Config::local_node()
+    };
+    let wallets =
+        launch_custom_provider_and_get_wallets(WalletsConfig::default(), Some(config), None).await;
+    let wallet = &wallets[0];
+    let provider = wallet.get_provider()?;
+
+    assert_eq!(provider.latest_block_height().await?, 0);
+
+    let time = TimeParameters {
+        start_time: Utc.timestamp_opt(100, 0).unwrap(),
+        block_time_interval: Duration::seconds(10),
+    };
+    provider.produce_blocks(3, Some(time)).await?;
+
+    assert_eq!(provider.latest_block_height().await?, 3);
+
+    let req = PaginationRequest {
+        cursor: None,
+        results: 10,
+        direction: PageDirection::Forward,
+    };
+    let blocks: Vec<Block> = provider.get_blocks(req).await?.results;
+
+    assert_eq!(blocks[2].header().time().unwrap().timestamp(), 100);
+    assert_eq!(blocks[1].header().time().unwrap().timestamp(), 110);
+    assert_eq!(blocks[0].header().time().unwrap().timestamp(), 120);
+    // ANCHOR_END: use_produce_blocks_custom_time
     Ok(())
 }
 
@@ -192,7 +240,7 @@ async fn contract_deployment_respects_maturity() -> Result<(), Error> {
         Error::ValidationError(fuel_gql_client::fuel_tx::CheckError::TransactionMaturity)
     ));
 
-    provider.produce_blocks(1).await?;
+    provider.produce_blocks(1, None).await?;
     deploy_w_maturity(1)
         .await
         .expect("Should be able to deploy now since maturity (1) is <= than the block height (1)");
@@ -452,8 +500,6 @@ async fn testnet_hello_world() -> Result<(), Error> {
 
     // Create the wallet.
     let wallet = WalletUnlocked::new_from_private_key(secret, Some(provider));
-
-    dbg!(wallet.address().to_string());
 
     let params = TxParameters::new(Some(1), Some(2000), None);
 

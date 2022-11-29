@@ -131,7 +131,7 @@ mod tests {
             .await?;
         // ANCHOR_END: contract_call_cost_estimation
 
-        assert_eq!(transaction_cost.gas_used, 7146);
+        assert_eq!(transaction_cost.gas_used, 9826);
 
         Ok(())
     }
@@ -448,11 +448,11 @@ mod tests {
         let contract_methods = MyContract::new(contract_id, wallet.clone()).methods();
 
         // ANCHOR: call_params_gas
-        // Set the transaction `gas_limit` to 10000 and `gas_forwarded` to 3000 to specify that the
-        // contract call transaction may consume up to 10000 gas, while the actual call may only use 3000
+        // Set the transaction `gas_limit` to 10000 and `gas_forwarded` to 4300 to specify that the
+        // contract call transaction may consume up to 10000 gas, while the actual call may only use 4300
         // gas
         let tx_params = TxParameters::new(None, Some(10000), None);
-        let call_params = CallParameters::new(None, None, Some(3000));
+        let call_params = CallParameters::new(None, None, Some(4300));
 
         let response = contract_methods
             .get_msg_amount() // Our contract method.
@@ -551,7 +551,7 @@ mod tests {
             .await?;
         // ANCHOR_END: multi_call_cost_estimation
 
-        assert_eq!(transaction_cost.gas_used, 15176);
+        assert_eq!(transaction_cost.gas_used, 16181);
 
         Ok(())
     }
