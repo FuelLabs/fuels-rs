@@ -141,6 +141,54 @@ async fn test_input_message() -> Result<(), Error> {
 }
 
 #[tokio::test]
+async fn test_input_message_pays_fee() -> Result<(), Error> {
+    let mut wallet = WalletUnlocked::new_random(None);
+
+    let messages = setup_single_message(
+        &Bech32Address {
+            hrp: "".to_string(),
+            hash: Default::default(),
+        },
+        wallet.address(),
+        DEFAULT_COIN_AMOUNT,
+        0,
+        vec![],
+    );
+
+    let (provider, _) = setup_test_provider(vec![], messages, None, None).await;
+    wallet.set_provider(provider);
+
+    abigen!(
+        MyContract,
+        "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
+    );
+
+    let contract_id = Contract::deploy(
+        "tests/contracts/contract_test/out/debug/contract_test.bin",
+        &wallet,
+        TxParameters::default(),
+        StorageConfiguration::default(),
+    )
+    .await?;
+
+    let contract_instance = MyContract::new(contract_id, wallet.clone());
+
+    let response = contract_instance
+        .methods()
+        .initialize_counter(42)
+        .call()
+        .await?;
+
+    assert_eq!(42, response.value);
+
+    let balance = wallet.get_asset_balance(&BASE_ASSET_ID).await?;
+    // expect the initial amount because gas cost defaults to 0
+    assert_eq!(balance, DEFAULT_COIN_AMOUNT);
+
+    Ok(())
+}
+
+#[tokio::test]
 async fn can_increase_block_height() -> Result<(), Error> {
     // ANCHOR: use_produce_blocks_to_increase_block_height
     let config = Config {
