@@ -17,7 +17,19 @@ pub fn abigen(input: TokenStream) -> TokenStream {
 
     Abigen::new(&args.name, &args.abi)
         .unwrap()
-        .expand()
+        .expand_contract()
+        .unwrap()
+        .into()
+}
+
+/// Abigen proc macro definition and helper functions/types for scripts
+#[proc_macro]
+pub fn script_abigen(input: TokenStream) -> TokenStream {
+    let args = parse_macro_input!(input as Spanned<ContractArgs>);
+
+    Abigen::new(&args.name, &args.abi)
+        .unwrap()
+        .expand_script()
         .unwrap()
         .into()
 }
@@ -29,7 +41,7 @@ pub fn wasm_abigen(input: TokenStream) -> TokenStream {
     Abigen::new(&args.name, &args.abi)
         .unwrap()
         .no_std()
-        .expand()
+        .expand_contract()
         .unwrap()
         .into()
 }
@@ -76,7 +88,7 @@ pub fn setup_contract_test(input: TokenStream) -> TokenStream {
     let contract_struct_name = args.instance_name.to_class_case();
     let mut abigen_token_stream: TokenStream = Abigen::new(&contract_struct_name, abi_path)
         .unwrap()
-        .expand()
+        .expand_contract()
         .unwrap()
         .into();
 

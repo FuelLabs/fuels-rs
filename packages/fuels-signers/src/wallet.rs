@@ -79,7 +79,6 @@ pub struct Wallet {
 ///   Ok(())
 /// }
 /// ```
-/// [`Signature`]: fuels_core::signature::Signature
 #[derive(Clone, Debug)]
 pub struct WalletUnlocked {
     wallet: Wallet,
