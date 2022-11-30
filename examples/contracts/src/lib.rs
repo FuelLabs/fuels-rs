@@ -499,9 +499,9 @@ mod tests {
         let (counter, array): (u64, [u64; 2]) = multi_call_handler.call().await?.value;
         // ANCHOR_END: multi_call_values
 
-        // ANCHOR: multi_call_response
+        // ANCHOR: multi_contract_call_response
         let response = multi_call_handler.call::<(u64, [u64; 2])>().await?;
-        // ANCHOR_END: multi_call_response
+        // ANCHOR_END: multi_contract_call_response
 
         assert_eq!(counter, 42);
         assert_eq!(array, [42; 2]);
