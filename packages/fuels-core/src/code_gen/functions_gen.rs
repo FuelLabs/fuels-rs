@@ -1,7 +1,8 @@
 use crate::code_gen::{
-    custom_types::{param_type_calls, Component},
+    custom_types::{param_type_calls, single_param_type_call, Component},
     docs_gen::expand_doc,
     resolved_type,
+    resolved_type::ResolvedType,
 };
 use crate::utils::safe_ident;
 use fuels_types::{errors::Error, ABIFunction, TypeDeclaration};
@@ -13,14 +14,17 @@ use std::collections::HashMap;
 
 /// Functions used by the Abigen to expand functions defined in an ABI spec.
 
-/// Transforms a function defined in [`Function`] into a [`TokenStream`]
+/// Transforms a function defined in [`ABIFunction`] into a [`TokenStream`]
 /// that represents that same function signature as a Rust-native function
 /// declaration.
-/// The actual logic inside the function is the function `method_hash` under
-/// [`Contract`], which is responsible for encoding the function selector
-/// and the function parameters that will be used in the actual contract call.
 ///
-/// [`Contract`]: crate::contract::Contract
+/// The actual logic inside the function is the function `method_hash` under
+/// [`Contract`], which is responsible for encoding
+/// the function selector and the function parameters that will be used
+/// in the actual contract call.
+///
+/// [`Contract`]: fuels_contract::contract::Contract
+// TODO (oleksii/docs): linkify the above `Contract` link properly
 pub fn expand_function(
     function: &ABIFunction,
     types: &HashMap<usize, TypeDeclaration>,
@@ -49,7 +53,7 @@ pub fn expand_function(
     let name = safe_ident(&function.name);
     let name_stringified = name.to_string();
 
-    let output_type = resolve_fn_output_type(function, types)?;
+    let output_type: TokenStream = resolve_fn_output_type(function, types)?.into();
 
     Ok(quote! {
         #doc
@@ -71,10 +75,69 @@ pub fn expand_function(
     })
 }
 
+/// Generate the `main` function of a script
+pub fn generate_script_main_function(
+    main_function_abi: &ABIFunction,
+    types: &HashMap<usize, TypeDeclaration>,
+) -> Result<TokenStream, Error> {
+    if main_function_abi.name != "main" {
+        return Err(Error::InvalidData(
+            "Script `main` function name can not be different from `main`".into(),
+        ));
+    }
+
+    let output_type_resolved = resolve_fn_output_type(main_function_abi, types)?;
+    let output_params = single_param_type_call(&output_type_resolved);
+    let output_type: TokenStream = output_type_resolved.into();
+
+    let args = function_arguments(main_function_abi, types)?;
+
+    // TODO(iqdecay): enable support for vector inputs
+    if args.iter().any(|c| c.field_type.uses_vectors()) {
+        return Err(Error::CompilationError(
+            "Script main function contains a vector in its argument types. This currently isn't supported."
+                .to_string(),
+        ));
+    }
+    let arg_names = args.iter().map(|component| &component.field_name);
+
+    let arg_declarations = args.iter().map(|component| {
+        let name = &component.field_name;
+        let field_type: TokenStream = (&component.field_type).into();
+        quote! { #name: #field_type }
+    });
+
+    let doc = expand_doc("Run the script's `main` function with the provided arguments");
+
+    let name = safe_ident("main");
+
+    Ok(quote! {
+        #doc
+        pub fn #name(&self #(,#arg_declarations)*) -> ScriptCallHandler<#output_type> {
+            let arg_name_tokens = [#(#arg_names.into_token()),*];
+            let script_data = ABIEncoder::encode(&arg_name_tokens).expect("Cannot encode script
+            arguments").resolve(0);
+            let script_binary = std::fs::read(self.binary_filepath.as_str())
+                                        .expect("Could not read from binary filepath");
+            let provider = self.wallet.get_provider().expect("Provider not set up").clone();
+            // TODO(iqdecay): handle log decoding in scripts
+            let log_decoder = LogDecoder::default();
+            ScriptCallHandler::new(
+                script_binary,
+                script_data,
+                self.wallet.clone(),
+                provider,
+                #output_params,
+                log_decoder
+            )
+        }
+    })
+}
+
 fn resolve_fn_output_type(
     function: &ABIFunction,
     types: &HashMap<usize, TypeDeclaration>,
-) -> Result<TokenStream, Error> {
+) -> Result<ResolvedType, Error> {
     let output_type = resolve_type(&function.output, types)?;
     if output_type.uses_vectors() {
         Err(Error::CompilationError(format!(
@@ -82,7 +145,7 @@ fn resolve_fn_output_type(
             function.name
         )))
     } else {
-        Ok(output_type.into())
+        Ok(output_type)
     }
 }
 

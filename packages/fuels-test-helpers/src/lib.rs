@@ -41,7 +41,6 @@ use rand::Fill;
 pub mod node;
 
 mod chains;
-pub mod script;
 #[cfg(feature = "fuels-signers")]
 mod signers;
 mod utils;

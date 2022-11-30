@@ -85,9 +85,9 @@ mod tests {
 
         // ANCHOR: predicate_signatures
         let data_to_sign = [0; 32];
-        let signature1 = wallet.sign_message(&data_to_sign).await?.to_vec();
-        let signature2 = wallet2.sign_message(&data_to_sign).await?.to_vec();
-        let signature3 = wallet3.sign_message(&data_to_sign).await?.to_vec();
+        let signature1 = wallet.sign_message(data_to_sign).await?.to_vec();
+        let signature2 = wallet2.sign_message(data_to_sign).await?.to_vec();
+        let signature3 = wallet3.sign_message(data_to_sign).await?.to_vec();
 
         let signatures = vec![signature1, signature2, signature3];
         // ANCHOR_END: predicate_signatures

@@ -1,5 +1,6 @@
-use crate::logs::LogDecoder;
-use crate::script::Script;
+use crate::{
+    call_response::FuelCallResponse, execution_script::ExecutableFuelCall, logs::LogDecoder,
+};
 use fuel_gql_client::{
     fuel_tx::{Contract as FuelContract, Output, Receipt, StorageSlot, Transaction},
     fuel_types::{Address, AssetId, Salt},
@@ -34,8 +35,10 @@ use std::{
     str::FromStr,
 };
 
+/// How many times to attempt to resolve missing tx dependencies.
 pub const DEFAULT_TX_DEP_ESTIMATION_ATTEMPTS: u64 = 10;
 
+/// A compiled representation of a contract.
 #[derive(Debug, Clone, Default)]
 pub struct CompiledContract {
     pub raw: Vec<u8>,
@@ -43,55 +46,13 @@ pub struct CompiledContract {
     pub storage_slots: Vec<StorageSlot>,
 }
 
-/// Contract is a struct to interface with a contract. That includes things such as
+/// [`Contract`] is a struct to interface with a contract. That includes things such as
 /// compiling, deploying, and running transactions against a contract.
 /// The contract has a wallet attribute, used to pay for transactions and sign them.
 /// It allows doing calls without passing a wallet/signer each time.
 pub struct Contract {
     pub compiled_contract: CompiledContract,
     pub wallet: WalletUnlocked,
-}
-
-/// CallResponse is a struct that is returned by a call to the contract. Its value field
-/// holds the decoded typed value returned by the contract's method. The other field
-/// holds all the receipts returned by the call.
-#[derive(Debug)]
-// ANCHOR: call_response
-pub struct CallResponse<D> {
-    pub value: D,
-    pub receipts: Vec<Receipt>,
-    pub gas_used: u64,
-    pub log_decoder: LogDecoder,
-}
-// ANCHOR_END: call_response
-
-impl<D> CallResponse<D> {
-    pub fn new(value: D, receipts: Vec<Receipt>, log_decoder: LogDecoder) -> Self {
-        Self {
-            value,
-            gas_used: Self::get_gas_used(&receipts),
-            receipts,
-            log_decoder,
-        }
-    }
-
-    /// Get the gas used from ScriptResult receipt
-    fn get_gas_used(receipts: &[Receipt]) -> u64 {
-        receipts
-            .iter()
-            .rfind(|r| matches!(r, Receipt::ScriptResult { .. }))
-            .expect("could not retrieve ScriptResult")
-            .gas_used()
-            .expect("could not retrieve gas used from ScriptResult")
-    }
-
-    pub fn get_logs(&self) -> Result<Vec<String>, Error> {
-        self.log_decoder.get_logs(&self.receipts)
-    }
-
-    pub fn get_logs_with_type<T: Tokenizable + Parameterize>(&self) -> Result<Vec<T>, Error> {
-        self.log_decoder.get_logs_with_type::<T>(&self.receipts)
-    }
 }
 
 impl Contract {
@@ -114,19 +75,24 @@ impl Contract {
         (contract_id, state_root)
     }
 
-    /// Creates an ABI call based on a function selector and
-    /// the encoding of its call arguments, which is a slice of Tokens.
-    /// It returns a prepared ContractCall that can further be used to
+    /// Creates an ABI call based on a function [selector](Selector) and
+    /// the encoding of its call arguments, which is a slice of [`Token`]s.
+    /// It returns a prepared [`ContractCall`] that can further be used to
     /// make the actual transaction.
     /// This method is the underlying implementation of the functions
     /// generated from an ABI JSON spec, i.e, this is what's generated:
+    ///
+    /// ```ignore
     /// quote! {
     ///     #doc
     ///     pub fn #name(&self #input) -> #result {
     ///         Contract::method_hash(#tokenized_signature, #arg)
     ///     }
     /// }
-    /// For more details see `code_gen/functions_gen.rs`.
+    /// ```
+    ///
+    /// For more details see `code_gen/functions_gen.rs` in `fuels-core`.
+    ///
     /// Note that this needs a wallet because the contract instance needs a wallet for the calls
     pub fn method_hash<D: Tokenizable + Parameterize + Debug>(
         provider: &Provider,
@@ -375,6 +341,44 @@ pub struct ContractCall {
 }
 
 impl ContractCall {
+    pub fn with_contract_id(self, contract_id: Bech32ContractId) -> Self {
+        ContractCall {
+            contract_id,
+            ..self
+        }
+    }
+
+    pub fn with_external_contracts(
+        self,
+        external_contracts: Vec<Bech32ContractId>,
+    ) -> ContractCall {
+        ContractCall {
+            external_contracts,
+            ..self
+        }
+    }
+
+    pub fn with_variable_outputs(self, variable_outputs: Vec<Output>) -> ContractCall {
+        ContractCall {
+            variable_outputs: Some(variable_outputs),
+            ..self
+        }
+    }
+
+    pub fn with_message_outputs(self, message_outputs: Vec<Output>) -> ContractCall {
+        ContractCall {
+            message_outputs: Some(message_outputs),
+            ..self
+        }
+    }
+
+    pub fn with_call_parameters(self, call_parameters: CallParameters) -> ContractCall {
+        ContractCall {
+            call_parameters,
+            ..self
+        }
+    }
+
     pub fn append_variable_outputs(&mut self, num: u64) {
         let new_variable_outputs = vec![
             Output::Variable {
@@ -416,51 +420,65 @@ impl ContractCall {
         )
     }
 
-    /// Based on the returned Contract's output_params and the receipts returned from a call,
-    /// decode the values and return them.
-    pub fn get_decoded_output(&self, receipts: &mut Vec<Receipt>) -> Result<Token, Error> {
-        // Multiple returns are handled as one `Tuple` (which has its own `ParamType`)
-
-        let contract_id: ContractId = (&self.contract_id).into();
-        let (encoded_value, index) = match self.output_param.get_return_location() {
-            ReturnLocation::ReturnData => {
-                match receipts.iter().find(|&receipt| {
-                    matches!(receipt,
-                    Receipt::ReturnData { id, data, .. } if *id == contract_id && !data.is_empty())
-                }) {
-                    Some(r) => {
-                        let index = receipts.iter().position(|elt| elt == r).unwrap();
-                        (r.data().unwrap().to_vec(), Some(index))
-                    }
-                    None => (vec![], None),
-                }
-            }
-            ReturnLocation::Return => {
-                match receipts.iter().find(|&receipt| {
-                    matches!(receipt,
-                    Receipt::Return { id, ..} if *id == contract_id)
-                }) {
-                    Some(r) => {
-                        let index = receipts.iter().position(|elt| elt == r).unwrap();
-                        (r.val().unwrap().to_be_bytes().to_vec(), Some(index))
-                    }
-                    None => (vec![], None),
-                }
-            }
-        };
-        if let Some(i) = index {
-            receipts.remove(i);
-        }
-
-        let decoded_value = ABIDecoder::decode_single(&self.output_param, &encoded_value)?;
-        Ok(decoded_value)
-    }
-
     fn find_contract_not_in_inputs(receipts: &[Receipt]) -> Option<&Receipt> {
         receipts.iter().find(
             |r| matches!(r, Receipt::Panic { reason, .. } if *reason.reason() == PanicReason::ContractNotInInputs ),
         )
     }
+}
+
+/// Based on the receipts returned by the call, the contract ID (which is null in the case of a
+/// script), and the output param, decode the values and return them.
+pub fn get_decoded_output(
+    receipts: &mut Vec<Receipt>,
+    contract_id: Option<&Bech32ContractId>,
+    output_param: &ParamType,
+) -> Result<Token, Error> {
+    // Multiple returns are handled as one `Tuple` (which has its own `ParamType`)
+    let contract_id: ContractId = match contract_id {
+        Some(contract_id) => contract_id.into(),
+        // During a script execution, the script's contract id is the **null** contract id
+        None => ContractId::new([0u8; 32]),
+    };
+    let (encoded_value, index) = match output_param.get_return_location() {
+        ReturnLocation::ReturnData => {
+            match receipts.iter().position(|receipt| {
+                matches!(receipt,
+                    Receipt::ReturnData { id, data, .. } if *id == contract_id && !data.is_empty())
+            }) {
+                Some(idx) => (
+                    receipts[idx]
+                        .data()
+                        .expect("ReturnData should have data")
+                        .to_vec(),
+                    Some(idx),
+                ),
+                None => (vec![], None),
+            }
+        }
+        ReturnLocation::Return => {
+            match receipts.iter().position(|receipt| {
+                matches!(receipt,
+                    Receipt::Return { id, ..} if *id == contract_id)
+            }) {
+                Some(idx) => (
+                    receipts[idx]
+                        .val()
+                        .expect("Return should have val")
+                        .to_be_bytes()
+                        .to_vec(),
+                    Some(idx),
+                ),
+                None => (vec![], None),
+            }
+        }
+    };
+    if let Some(i) = index {
+        receipts.remove(i);
+    }
+
+    let decoded_value = ABIDecoder::decode_single(output_param, &encoded_value)?;
+    Ok(decoded_value)
 }
 
 // Decode the logged type from the receipt of a `RevertTransactionError` if available
@@ -492,20 +510,33 @@ where
     D: Tokenizable + Debug,
 {
     /// Sets external contracts as dependencies to this contract's call.
-    /// Effectively, this will be used to create Input::Contract/Output::Contract
+    /// Effectively, this will be used to create [`Input::Contract`]/[`Output::Contract`]
     /// pairs and set them into the transaction.
     /// Note that this is a builder method, i.e. use it as a chain:
-    /// `my_contract_instance.my_method(...).set_contracts(&[another_contract_id]).call()`.
+    ///
+    /// ```ignore
+    /// my_contract_instance.my_method(...).set_contracts(&[another_contract_id]).call()
+    /// ```
+    ///
+    /// [`Input::Contract`]: fuel_tx::Input::Contract
+    /// [`Output::Contract`]: fuel_tx::Output::Contract
     pub fn set_contracts(mut self, contract_ids: &[Bech32ContractId]) -> Self {
         self.contract_call.external_contracts = contract_ids.to_vec();
         self
     }
 
     /// Appends additional external contracts as dependencies to this contract's call.
-    /// Effectively, this will be used to create additional Input::Contract/Output::Contract
-    /// pairs and set them into the transaction.
+    /// Effectively, this will be used to create additional
+    /// [`Input::Contract`]/[`Output::Contract`] pairs
+    /// and set them into the transaction.
     /// Note that this is a builder method, i.e. use it as a chain:
-    /// `my_contract_instance.my_method(...).append_contracts(additional_contract_id).call()`.
+    ///
+    /// ```ignore
+    /// my_contract_instance.my_method(...).append_contracts(additional_contract_id).call()
+    /// ```
+    ///
+    /// [`Input::Contract`]: fuel_tx::Input::Contract
+    /// [`Output::Contract`]: fuel_tx::Output::Contract
     pub fn append_contract(mut self, contract_id: Bech32ContractId) -> Self {
         self.contract_call.append_external_contracts(contract_id);
         self
@@ -513,8 +544,11 @@ where
 
     /// Sets the transaction parameters for a given transaction.
     /// Note that this is a builder method, i.e. use it as a chain:
+
+    /// ```ignore
     /// let params = TxParameters { gas_price: 100, gas_limit: 1000000 };
-    /// `my_contract_instance.my_method(...).tx_params(params).call()`.
+    /// my_contract_instance.my_method(...).tx_params(params).call()
+    /// ```
     pub fn tx_params(mut self, params: TxParameters) -> Self {
         self.tx_parameters = params;
         self
@@ -522,50 +556,62 @@ where
 
     /// Sets the call parameters for a given contract call.
     /// Note that this is a builder method, i.e. use it as a chain:
+    ///
+    /// ```ignore
     /// let params = CallParameters { amount: 1, asset_id: BASE_ASSET_ID };
-    /// `my_contract_instance.my_method(...).call_params(params).call()`.
+    /// my_contract_instance.my_method(...).call_params(params).call()
+    /// ```
     pub fn call_params(mut self, params: CallParameters) -> Self {
         self.contract_call.call_parameters = params;
         self
     }
 
-    /// Appends `num` `Output::Variable`s to the transaction.
+    /// Appends `num` [`Output::Variable`]s to the transaction.
     /// Note that this is a builder method, i.e. use it as a chain:
-    /// `my_contract_instance.my_method(...).add_variable_outputs(num).call()`.
+    ///
+    /// ```ignore
+    /// my_contract_instance.my_method(...).add_variable_outputs(num).call()
+    /// ```
+    ///
+    /// [`Output::Variable`]: fuel_tx::Output::Variable
     pub fn append_variable_outputs(mut self, num: u64) -> Self {
         self.contract_call.append_variable_outputs(num);
         self
     }
 
-    /// Appends `num` `Output::Message`s to the transaction.
+    /// Appends `num` [`Output::Message`]s to the transaction.
     /// Note that this is a builder method, i.e. use it as a chain:
-    /// `my_contract_instance.my_method(...).add_message_outputs(num).call()`.
+    ///
+    /// ```ignore
+    /// my_contract_instance.my_method(...).add_message_outputs(num).call()
+    /// ```
+    ///
+    /// [`Output::Message`]: fuel_tx::Output::Message
     pub fn append_message_outputs(mut self, num: u64) -> Self {
         self.contract_call.append_message_outputs(num);
         self
     }
 
-    /// Call a contract's method on the node. If `simulate==true`, then the call is done in a
-    /// read-only manner, using a `dry-run`. Return a Result<CallResponse, Error>. The CallResponse
-    /// struct contains the method's value in its `value` field as an actual typed value `D` (if
-    /// your method returns `bool`, it will be a bool, works also for structs thanks to the
-    /// `abigen!()`). The other field of CallResponse, `receipts`, contains the receipts of the
-    /// transaction.
-    async fn call_or_simulate(&self, simulate: bool) -> Result<CallResponse<D>, Error> {
-        let script = self.get_call_execution_script().await?;
+    /// Call a contract's method on the node. If `simulate == true`, then the call is done in a
+    /// read-only manner, using a `dry-run`. The [`FuelCallResponse`] struct contains the method's
+    /// value in its `value` field as an actual typed value `D` (if your method returns `bool`,
+    /// it will be a bool, works also for structs thanks to the `abigen!()`).
+    /// The other field of [`FuelCallResponse`], `receipts`, contains the receipts of the transaction.
+    async fn call_or_simulate(&self, simulate: bool) -> Result<FuelCallResponse<D>, Error> {
+        let script = self.get_executable_call().await?;
 
         let receipts = if simulate {
             script.simulate(&self.provider).await?
         } else {
-            script.call(&self.provider).await?
+            script.execute(&self.provider).await?
         };
 
         self.get_response(receipts)
     }
 
     /// Returns the script that executes the contract call
-    pub async fn get_call_execution_script(&self) -> Result<Script, Error> {
-        Script::from_contract_calls(
+    pub async fn get_executable_call(&self) -> Result<ExecutableFuelCall, Error> {
+        ExecutableFuelCall::from_contract_calls(
             std::slice::from_ref(&self.contract_call),
             &self.tx_parameters,
             &self.wallet,
@@ -574,7 +620,7 @@ where
     }
 
     /// Call a contract's method on the node, in a state-modifying manner.
-    pub async fn call(self) -> Result<CallResponse<D>, Error> {
+    pub async fn call(self) -> Result<FuelCallResponse<D>, Error> {
         Self::call_or_simulate(&self, false)
             .await
             .map_err(|err| decode_revert_error(err, &self.log_decoder))
@@ -582,8 +628,10 @@ where
 
     /// Call a contract's method on the node, in a simulated manner, meaning the state of the
     /// blockchain is *not* modified but simulated.
-    /// It is the same as the `call` method because the API is more user-friendly this way.
-    pub async fn simulate(self) -> Result<CallResponse<D>, Error> {
+    /// It is the same as the [`call`] method because the API is more user-friendly this way.
+    ///
+    /// [`call`]: Self::call
+    pub async fn simulate(self) -> Result<FuelCallResponse<D>, Error> {
         Self::call_or_simulate(&self, true)
             .await
             .map_err(|err| decode_revert_error(err, &self.log_decoder))
@@ -591,7 +639,7 @@ where
 
     /// Simulates a call without needing to resolve the generic for the return type
     async fn simulate_without_decode(&self) -> Result<(), Error> {
-        let script = self.get_call_execution_script().await?;
+        let script = self.get_executable_call().await?;
         let provider = self.wallet.get_provider()?;
 
         script.simulate(provider).await?;
@@ -643,7 +691,7 @@ where
         &self,
         tolerance: Option<f64>,
     ) -> Result<TransactionCost, Error> {
-        let script = self.get_call_execution_script().await?;
+        let script = self.get_executable_call().await?;
 
         let transaction_cost = self
             .provider
@@ -653,10 +701,14 @@ where
         Ok(transaction_cost)
     }
 
-    /// Create a CallResponse from call receipts
-    pub fn get_response(&self, mut receipts: Vec<Receipt>) -> Result<CallResponse<D>, Error> {
-        let token = self.contract_call.get_decoded_output(&mut receipts)?;
-        Ok(CallResponse::new(
+    /// Create a [`FuelCallResponse`] from call receipts
+    pub fn get_response(&self, mut receipts: Vec<Receipt>) -> Result<FuelCallResponse<D>, Error> {
+        let token = get_decoded_output(
+            &mut receipts,
+            Some(&self.contract_call.contract_id),
+            &self.contract_call.output_param,
+        )?;
+        Ok(FuelCallResponse::new(
             D::from_token(token)?,
             receipts,
             self.log_decoder.clone(),
@@ -702,16 +754,21 @@ impl MultiContractCallHandler {
     }
 
     /// Returns the script that executes the contract calls
-    pub async fn get_call_execution_script(&self) -> Result<Script, Error> {
+    pub async fn get_executable_call(&self) -> Result<ExecutableFuelCall, Error> {
         if self.contract_calls.is_empty() {
             panic!("No calls added. Have you used '.add_calls()'?");
         }
 
-        Script::from_contract_calls(&self.contract_calls, &self.tx_parameters, &self.wallet).await
+        ExecutableFuelCall::from_contract_calls(
+            &self.contract_calls,
+            &self.tx_parameters,
+            &self.wallet,
+        )
+        .await
     }
 
     /// Call contract methods on the node, in a state-modifying manner.
-    pub async fn call<D: Tokenizable + Debug>(&self) -> Result<CallResponse<D>, Error> {
+    pub async fn call<D: Tokenizable + Debug>(&self) -> Result<FuelCallResponse<D>, Error> {
         Self::call_or_simulate(self, false)
             .await
             .map_err(|err| decode_revert_error(err, &self.log_decoder))
@@ -719,8 +776,10 @@ impl MultiContractCallHandler {
 
     /// Call contract methods on the node, in a simulated manner, meaning the state of the
     /// blockchain is *not* modified but simulated.
-    /// It is the same as the `call` method because the API is more user-friendly this way.
-    pub async fn simulate<D: Tokenizable + Debug>(&self) -> Result<CallResponse<D>, Error> {
+    /// It is the same as the [`call`] method because the API is more user-friendly this way.
+    ///
+    /// [`call`]: Self::call
+    pub async fn simulate<D: Tokenizable + Debug>(&self) -> Result<FuelCallResponse<D>, Error> {
         Self::call_or_simulate(self, true)
             .await
             .map_err(|err| decode_revert_error(err, &self.log_decoder))
@@ -729,15 +788,15 @@ impl MultiContractCallHandler {
     async fn call_or_simulate<D: Tokenizable + Debug>(
         &self,
         simulate: bool,
-    ) -> Result<CallResponse<D>, Error> {
-        let script = self.get_call_execution_script().await?;
+    ) -> Result<FuelCallResponse<D>, Error> {
+        let script = self.get_executable_call().await?;
 
         let provider = self.wallet.get_provider()?;
 
         let receipts = if simulate {
             script.simulate(provider).await?
         } else {
-            script.call(provider).await?
+            script.execute(provider).await?
         };
 
         self.get_response(receipts)
@@ -745,7 +804,7 @@ impl MultiContractCallHandler {
 
     /// Simulates a call without needing to resolve the generic for the return type
     async fn simulate_without_decode(&self) -> Result<(), Error> {
-        let script = self.get_call_execution_script().await?;
+        let script = self.get_executable_call().await?;
         let provider = self.wallet.get_provider()?;
 
         script.simulate(provider).await?;
@@ -799,7 +858,7 @@ impl MultiContractCallHandler {
         &self,
         tolerance: Option<f64>,
     ) -> Result<TransactionCost, Error> {
-        let script = self.get_call_execution_script().await?;
+        let script = self.get_executable_call().await?;
 
         let transaction_cost = self
             .wallet
@@ -810,21 +869,22 @@ impl MultiContractCallHandler {
         Ok(transaction_cost)
     }
 
-    /// Create a MultiCallResponse from call receipts
+    /// Create a [`FuelCallResponse`] from call receipts
     pub fn get_response<D: Tokenizable + Debug>(
         &self,
         mut receipts: Vec<Receipt>,
-    ) -> Result<CallResponse<D>, Error> {
+    ) -> Result<FuelCallResponse<D>, Error> {
         let mut final_tokens = vec![];
 
         for call in self.contract_calls.iter() {
-            let decoded = call.get_decoded_output(&mut receipts)?;
+            let decoded =
+                get_decoded_output(&mut receipts, Some(&call.contract_id), &call.output_param)?;
 
             final_tokens.push(decoded.clone());
         }
 
         let tokens_as_tuple = Token::Tuple(final_tokens);
-        let response = CallResponse::<D>::new(
+        let response = FuelCallResponse::<D>::new(
             D::from_token(tokens_as_tuple)?,
             receipts,
             self.log_decoder.clone(),
