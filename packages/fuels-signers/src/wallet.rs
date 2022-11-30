@@ -441,7 +441,7 @@ impl WalletUnlocked {
 
     /// Add base asset inputs to the transaction to cover the estimated fee.
     /// The original base asset amount cannot be calculated reliably from
-    /// the existing transaction inputs because the selected coins may exceed
+    /// the existing transaction inputs because the selected resources may exceed
     /// the required amount to avoid dust. Therefore we require it as an argument.
     ///
     /// Requires contract inputs to be at the start of the transactions inputs vec
@@ -462,8 +462,8 @@ impl WalletUnlocked {
 
         let (base_asset_inputs, remaining_inputs): (Vec<_>, Vec<_>) =
             tx.inputs().iter().cloned().partition(|input| {
-                matches!(input, Input::CoinSigned { .. })
-                    && *input.asset_id().unwrap() == BASE_ASSET_ID
+                matches!(input, Input::MessageSigned { .. })
+                || matches!(input, Input::CoinSigned { asset_id, .. } if asset_id == &BASE_ASSET_ID)
             });
 
         let base_inputs_sum: u64 = base_asset_inputs
@@ -491,10 +491,6 @@ impl WalletUnlocked {
             new_base_amount = MIN_AMOUNT;
         }
 
-        // This is a temporary solution till we get update on coins_to_spend function
-        // Get asset inputs for required amount expressed u Input::coin_signed or in
-        // Input::message_signed depending on what we have in stock.
-        // In the near future this will be replaced by one function.
         let new_base_inputs = self
             .get_asset_inputs_for_amount(BASE_ASSET_ID, new_base_amount, witness_index)
             .await?;
@@ -504,29 +500,20 @@ impl WalletUnlocked {
             ));
         }
 
-        let is_using_messages = new_base_inputs
-            .iter()
-            .any(|input| matches!(input, Input::MessageSigned { .. }));
-
         let adjusted_inputs: Vec<_> = remaining_inputs
             .into_iter()
             .chain(new_base_inputs.into_iter())
             .collect();
+        *tx.inputs_mut() = adjusted_inputs;
 
         let is_base_change_present = tx.outputs().iter().any(|output| {
-            matches!(output, Output::Change { .. }) && *output.asset_id().unwrap() == BASE_ASSET_ID
+            matches!(output, Output::Change { asset_id, .. } if asset_id == &BASE_ASSET_ID)
         });
-
         // add a change output for the base asset if it doesn't exist and there are base inputs
-        let change_output = if !is_base_change_present && new_base_amount != 0 && !is_using_messages
-        {
-            vec![Output::change(self.address().into(), 0, BASE_ASSET_ID)]
-        } else {
-            vec![]
-        };
-
-        *tx.inputs_mut() = adjusted_inputs;
-        tx.outputs_mut().extend(change_output);
+        if !is_base_change_present && new_base_amount != 0 {
+            tx.outputs_mut()
+                .push(Output::change(self.address().into(), 0, BASE_ASSET_ID));
+        }
 
         Ok(())
     }
