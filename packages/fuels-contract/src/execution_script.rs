@@ -2,9 +2,8 @@ use anyhow::Result;
 use std::fmt::Debug;
 
 use fuel_gql_client::fuel_tx::{Receipt, Transaction};
-use fuel_gql_client::fuel_types::AssetId;
 
-use fuel_tx::{Checkable, ScriptExecutionResult};
+use fuel_tx::{AssetId, Checkable, ScriptExecutionResult};
 use fuels_core::parameters::TxParameters;
 use fuels_signers::provider::Provider;
 use fuels_signers::{Signer, WalletUnlocked};
@@ -86,8 +85,8 @@ impl ExecutableFuelCall {
         let chain_info = provider.chain_info().await?;
 
         self.tx.check_without_signatures(
-            chain_info.latest_block.header.height.0,
-            &chain_info.consensus_parameters.into(),
+            chain_info.latest_block.header.height,
+            &chain_info.consensus_parameters,
         )?;
 
         provider.send_transaction(&self.tx).await
@@ -98,8 +97,8 @@ impl ExecutableFuelCall {
         let chain_info = provider.chain_info().await?;
 
         self.tx.check_without_signatures(
-            chain_info.latest_block.header.height.0,
-            &chain_info.consensus_parameters.into(),
+            chain_info.latest_block.header.height,
+            &chain_info.consensus_parameters,
         )?;
 
         let receipts = provider.dry_run(&self.tx.clone().into()).await?;

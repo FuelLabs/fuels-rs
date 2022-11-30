@@ -3,10 +3,9 @@ use crate::{
 };
 use fuel_gql_client::{
     fuel_tx::{Contract as FuelContract, Output, Receipt, StorageSlot, Transaction},
-    fuel_types::{Address, AssetId, Salt},
     prelude::PanicReason,
 };
-use fuel_tx::{Checkable, Create};
+use fuel_tx::{Address, AssetId, Checkable, Create, Salt};
 use fuels_core::{
     abi_decoder::ABIDecoder,
     abi_encoder::{ABIEncoder, UnresolvedBytes},
