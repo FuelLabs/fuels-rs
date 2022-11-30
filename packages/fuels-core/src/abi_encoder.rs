@@ -89,7 +89,7 @@ impl UnresolvedBytes {
 
 impl ABIEncoder {
     /// Encodes `Token`s in `args` following the ABI specs defined
-    /// https://github.com/FuelLabs/fuel-specs/blob/master/specs/protocol/abi.md
+    /// [here](https://github.com/FuelLabs/fuel-specs/blob/master/specs/protocol/abi.md)
     pub fn encode(args: &[Token]) -> Result<UnresolvedBytes, CodecError> {
         let data = Self::encode_tokens(args)?;
 

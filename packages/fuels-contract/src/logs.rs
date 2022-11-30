@@ -7,7 +7,7 @@ use std::{
 };
 
 /// Struct used to pass the log mappings from the Abigen
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct LogDecoder {
     /// A mapping of (contract-id, log-id) and param-type
     pub logs_map: HashMap<(Bech32ContractId, u64), ParamType>,

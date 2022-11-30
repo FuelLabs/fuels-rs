@@ -22,9 +22,8 @@ pub enum CustomType {
     Enum,
 }
 
-/// FuelVM ABI representation in JSON, originally specified here:
-///
-/// https://github.com/FuelLabs/fuel-specs/blob/master/specs/protocol/abi.md
+/// FuelVM ABI representation in JSON, originally specified
+/// [here](https://github.com/FuelLabs/fuel-specs/blob/master/specs/protocol/abi.md).
 ///
 /// This type may be used by compilers and related tooling to convert an ABI
 /// representation into native Rust structs and vice-versa.

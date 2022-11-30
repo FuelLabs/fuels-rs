@@ -1,13 +1,4 @@
-use fuel_gql_client::{
-    fuel_tx::{ContractId, Input, Output, TxPointer, UtxoId},
-    fuel_vm::{
-        consts::{REG_ONE, WORD_SIZE},
-        prelude::{GTFArgs, Opcode},
-    },
-};
 use fuels::prelude::*;
-use fuels_contract::script::ScriptBuilder;
-use fuels_core::tx::Bytes32;
 
 #[tokio::test]
 async fn test_transaction_script_workflow() -> Result<(), Error> {
@@ -19,10 +10,10 @@ async fn test_transaction_script_workflow() -> Result<(), Error> {
 
     let call_handler = contract_instance.methods().initialize_counter(42);
 
-    let script = call_handler.get_call_execution_script().await?;
+    let execution_script = call_handler.get_executable_call().await?;
 
     let provider = wallet.get_provider()?;
-    let receipts = script.call(provider).await?;
+    let receipts = execution_script.execute(provider).await?;
 
     let response = call_handler.get_response(receipts)?;
     assert_eq!(response.value, 42);
@@ -48,8 +39,8 @@ async fn test_multi_call_script_workflow() -> Result<(), Error> {
         .add_call(call_handler_2);
 
     let provider = &wallet.get_provider()?;
-    let script = multi_call_handler.get_call_execution_script().await?;
-    let receipts = script.call(provider).await.unwrap();
+    let execution_script = multi_call_handler.get_executable_call().await?;
+    let receipts = execution_script.execute(provider).await.unwrap();
     let (counter, array) = multi_call_handler
         .get_response::<(u64, [u64; 2])>(receipts)?
         .value;
@@ -60,90 +51,149 @@ async fn test_multi_call_script_workflow() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_script_interface() -> Result<(), Error> {
-    let wallet = launch_provider_and_get_wallet().await;
-
-    let contract_id = Contract::deploy(
-        "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
-        &wallet,
-        TxParameters::default(),
-        StorageConfiguration::default(),
-    )
-    .await?;
-
-    let contract_coins = wallet
-        .get_provider()?
-        .get_contract_balances(&contract_id)
-        .await?;
-    assert!(contract_coins.is_empty());
-
-    let amount = 100;
-    let asset_id = Default::default();
-    let tx_parameters = TxParameters::default();
-    let zeroes = Bytes32::zeroed();
-    let plain_contract_id: ContractId = contract_id.clone().into();
-
-    let mut inputs = vec![Input::contract(
-        UtxoId::new(zeroes, 0),
-        zeroes,
-        zeroes,
-        TxPointer::default(),
-        plain_contract_id,
-    )];
-    inputs.extend(
-        wallet
-            .get_asset_inputs_for_amount(asset_id, amount, 0)
-            .await?,
+async fn main_function_arguments() -> Result<(), Error> {
+    // ANCHOR: script_with_arguments
+    // The abigen is used for the same purpose as with contracts (Rust bindings)
+    script_abigen!(
+        MyScript,
+        "packages/fuels/tests/scripts/script_with_arguments/out/debug/script_with_arguments-abi.json"
     );
+    let wallet = launch_provider_and_get_wallet().await;
+    let bin_path =
+        "../fuels/tests/scripts/script_with_arguments/out/debug/script_with_arguments.bin";
+    let instance = MyScript::new(wallet, bin_path);
 
-    let outputs = vec![
-        Output::contract(0, zeroes, zeroes),
-        Output::change(wallet.address().into(), 0, asset_id),
-    ];
+    let bim = Bimbam { val: 90 };
+    let bam = SugarySnack {
+        twix: 100,
+        mars: 1000,
+    };
+    let result = instance.main(bim, bam).call().await?;
+    let expected = Bimbam { val: 2190 };
+    assert_eq!(result.value, expected);
+    // ANCHOR_END: script_with_arguments
+    Ok(())
+}
 
-    let script_data: Vec<u8> = [
-        plain_contract_id.to_vec(),
-        amount.to_be_bytes().to_vec(),
-        asset_id.to_vec(),
-    ]
-    .into_iter()
-    .flatten()
-    .collect();
+#[tokio::test]
+async fn main_function_generic_arguments() -> Result<(), Error> {
+    script_abigen!(
+        MyScript,
+        "packages/fuels/tests/scripts/script_generic_types/out/debug/script_generic_types-abi.json"
+    );
+    let wallet = launch_provider_and_get_wallet().await;
+    let bin_path = "../fuels/tests/scripts/script_generic_types/out/debug/script_generic_types.bin";
+    let instance = MyScript::new(wallet, bin_path);
 
-    let script = vec![
-        Opcode::gtf(0x10, 0x00, GTFArgs::ScriptData),
-        Opcode::ADDI(0x11, 0x10, ContractId::LEN as u16),
-        Opcode::LW(0x12, 0x11, 0),
-        Opcode::ADDI(0x13, 0x11, WORD_SIZE as u16),
-        Opcode::TR(0x10, 0x12, 0x13),
-        Opcode::RET(REG_ONE),
-    ]
-    .into_iter()
-    .collect();
+    let bim = GenericBimbam { val: 90 };
+    let bam_comp = GenericBimbam { val: 4342 };
+    let bam = GenericSnack {
+        twix: bam_comp,
+        mars: 1000,
+    };
+    let result = instance.main(bim.clone(), bam.clone()).call().await?;
+    let expected = (
+        GenericSnack {
+            twix: GenericBimbam {
+                val: bam.mars as u64,
+            },
+            mars: 2 * bim.val as u32,
+        },
+        GenericBimbam { val: 255_u8 },
+    );
+    assert_eq!(result.value, expected);
+    Ok(())
+}
 
-    ScriptBuilder::new()
-        .set_gas_price(tx_parameters.gas_price)
-        .set_gas_limit(tx_parameters.gas_limit)
-        .set_maturity(tx_parameters.maturity)
-        .set_script(script)
-        .set_script_data(script_data)
-        .set_inputs(inputs.to_vec())
-        .set_outputs(outputs.to_vec())
-        .set_amount(amount)
-        .build(&wallet)
-        .await?
-        .call(wallet.get_provider()?)
+#[tokio::test]
+async fn main_function_option_result() -> Result<(), Error> {
+    script_abigen!(
+        MyScript,
+        "packages/fuels/tests/scripts/script_option_result_types/out/debug\
+        /script_option_result_types-abi.json"
+    );
+    let wallet = launch_provider_and_get_wallet().await;
+    let bin_path =
+        "../fuels/tests/scripts/script_option_result_types/out/debug/script_option_result_types.bin";
+    let instance = MyScript::new(wallet, bin_path);
+
+    let result = instance.main(Some(42), None).call().await?;
+    assert_eq!(result.value, Ok(Some(true)));
+    let result = instance.main(Some(987), None).call().await?;
+    assert_eq!(result.value, Ok(None));
+    let expected_error = Err(TestError::ZimZam("error".try_into().unwrap()));
+    let result = instance.main(None, Some(987)).call().await?;
+    assert_eq!(result.value, expected_error);
+    Ok(())
+}
+
+#[tokio::test]
+async fn main_function_tuple_types() -> Result<(), Error> {
+    script_abigen!(
+        MyScript,
+        "packages/fuels/tests/scripts/script_tuple_types/out/debug/script_tuple_types-abi.json"
+    );
+    let wallet = launch_provider_and_get_wallet().await;
+    let bin_path = "../fuels/tests/scripts/script_tuple_types/out/debug/script_tuple_types.bin";
+    let instance = MyScript::new(wallet, bin_path);
+
+    let bim = Bim { bim: 90 };
+    let bam = Bam {
+        bam: "itest".try_into()?,
+    };
+    let boum = Boum { boum: true };
+    let result = instance
+        .main(
+            (bim, bam, boum),
+            Bam {
+                bam: "secod".try_into()?,
+            },
+        )
+        .call()
         .await?;
+    let expected = (
+        (
+            Boum { boum: true },
+            Bim { bim: 193817 },
+            Bam {
+                bam: "hello".try_into()?,
+            },
+        ),
+        42242,
+    );
+    assert_eq!(result.value, expected);
+    Ok(())
+}
 
-    let contract_balances = wallet
-        .get_provider()?
-        .get_contract_balances(&contract_id)
-        .await?;
-    assert_eq!(contract_balances.len(), 1);
+#[tokio::test]
+async fn test_basic_script_with_tx_parameters() -> Result<(), Error> {
+    script_abigen!(
+        bimbam_script,
+        "packages/fuels/tests/scripts/basic_script/out/debug/basic_script-abi.json"
+    );
+    let num_wallets = 1;
+    let num_coins = 1;
+    let amount = 1000;
+    let config = WalletsConfig::new(Some(num_wallets), Some(num_coins), Some(amount));
 
-    let asset_id_key = format!("{:#x}", BASE_ASSET_ID);
-    let balance = contract_balances.get(&asset_id_key).unwrap();
-    assert_eq!(*balance, 100);
+    let mut wallets = launch_custom_provider_and_get_wallets(config, None, None).await;
+    let wallet = wallets.pop().unwrap();
+    let bin_path = "../fuels/tests/scripts/basic_script/out/debug/basic_script.bin";
+    let instance = bimbam_script::new(wallet.clone(), bin_path);
+
+    let a = 1000u64;
+    let b = 2000u32;
+    let result = instance.main(a, b).call().await?;
+    assert_eq!(result.value, "hello");
+    // ANCHOR: script_with_tx_params
+    let parameters = TxParameters {
+        gas_price: 1,
+        gas_limit: 10000,
+        ..Default::default()
+    };
+    let result = instance.main(a, b).tx_params(parameters).call().await?;
+    // ANCHOR_END: script_with_tx_params
+    assert_eq!(result.value, "hello");
 
     Ok(())
 }

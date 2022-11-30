@@ -13,7 +13,7 @@ pub use utils::{param_type_calls, single_param_type_call, Component};
 // with code @9ca376, and formatted in-IDE using rustfmt. It should be noted that
 // rustfmt added an extra `,` after the last struct/enum field, which is not added
 // by the `expand_custom_*` functions, and so was removed from the expected string.
-// TODO(vnepveu): append extra `,` to last enum/struct field so it is aligned with rustfmt
+// TODO(iqdecay): append extra `,` to last enum/struct field so it is aligned with rustfmt
 #[cfg(test)]
 mod tests {
     use std::{collections::HashMap, str::FromStr};
