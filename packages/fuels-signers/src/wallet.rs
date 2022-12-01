@@ -20,6 +20,7 @@ use fuel_gql_client::{
     fuel_vm::{consts::REG_ONE, prelude::Opcode},
 };
 use fuel_types::bytes::WORD_SIZE;
+use fuel_types::{Address, MessageId};
 use fuels_core::tx::{field, Chargeable, Script, Transaction, UniqueIdentifier};
 use fuels_core::{constants::BASE_ASSET_ID, parameters::TxParameters};
 use fuels_types::bech32::{Bech32Address, Bech32ContractId, FUEL_BECH32_HRP};
@@ -333,6 +334,51 @@ impl Wallet {
             vec![],
         )
     }
+
+    /// Craft a transaction used to transfer funds to the base chain.
+    pub fn build_message_to_output_tx(
+        to: Address,
+        amount: u64,
+        inputs: &[Input],
+        params: TxParameters,
+    ) -> Script {
+        let script_data: Vec<u8> = [to.to_vec(), amount.to_be_bytes().to_vec()]
+            .into_iter()
+            .flatten()
+            .collect();
+
+        // This script loads:
+        //  - a pointer to the recipient address,
+        //  - the amount
+        // into the registers 0x10, 0x11
+        // and calls the SMO instruction
+        let script = vec![
+            Opcode::gtf(0x10, 0x00, GTFArgs::ScriptData),
+            Opcode::ADDI(0x11, 0x10, Bytes32::LEN as u16),
+            Opcode::LW(0x11, 0x11, 0),
+            Opcode::SMO(0x10, 0x00, 0x00, 0x11),
+            Opcode::RET(REG_ONE),
+        ]
+        .into_iter()
+        .collect();
+
+        let outputs = vec![
+            // when signing a transaction, recipient and amount are set to zero
+            Output::message(Address::zeroed(), 0),
+            Output::change(to, 0, BASE_ASSET_ID),
+        ];
+
+        Transaction::script(
+            params.gas_price,
+            params.gas_limit,
+            params.maturity,
+            script,
+            script_data,
+            inputs.to_vec(),
+            outputs.to_vec(),
+            vec![],
+        )
+    }
 }
 
 impl WalletUnlocked {
@@ -586,6 +632,39 @@ impl WalletUnlocked {
         let receipts = self.get_provider()?.send_transaction(&tx).await?;
 
         Ok((tx.id().to_string(), receipts))
+    }
+
+    /// Withdraws an amount of the base asset to
+    /// an address on the base chain.
+    /// Returns the transaction ID, message ID and the list of receipts.
+    pub async fn withdraw_to_base_layer(
+        &self,
+        to: &Bech32Address,
+        amount: u64,
+        tx_parameters: TxParameters,
+    ) -> Result<(String, String, Vec<Receipt>), Error> {
+        let inputs = self
+            .get_asset_inputs_for_amount(BASE_ASSET_ID, amount, 0)
+            .await?;
+
+        let mut tx = Wallet::build_message_to_output_tx(to.into(), amount, &inputs, tx_parameters);
+
+        self.add_fee_coins(&mut tx, amount, 0).await?;
+        self.sign_transaction(&mut tx).await?;
+
+        let receipts = self.get_provider()?.send_transaction(&tx).await?;
+
+        let message_id = WalletUnlocked::extract_message_id(&receipts)
+            .expect("MessageId could not be retrieved from tx receipts.");
+
+        Ok((tx.id().to_string(), message_id.to_string(), receipts))
+    }
+
+    fn extract_message_id(receipts: &[Receipt]) -> Option<&MessageId> {
+        receipts
+            .iter()
+            .find(|r| matches!(r, Receipt::MessageOut { .. }))
+            .and_then(|m| m.message_id())
     }
 
     #[allow(clippy::too_many_arguments)]

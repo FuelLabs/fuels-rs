@@ -4,7 +4,7 @@ use fuel_tx::Bytes32;
 
 #[derive(Debug)]
 pub struct Header<'a> {
-    schema_header: &'a SchemaHeader,
+    pub(crate) schema_header: &'a SchemaHeader,
 }
 
 impl<'a> Header<'a> {

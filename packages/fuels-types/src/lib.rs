@@ -12,6 +12,7 @@ pub mod block;
 pub mod constants;
 pub mod enum_variants;
 pub mod errors;
+pub mod message_proof;
 pub mod param_types;
 pub mod utils;
 
