@@ -19,6 +19,7 @@ use fuel_gql_client::{
 };
 use fuels_core::constants::{DEFAULT_GAS_ESTIMATION_TOLERANCE, MAX_GAS_PER_TX};
 use fuels_types::block::Block;
+use fuels_types::message_proof::MessageProof;
 use std::collections::HashMap;
 use thiserror::Error;
 
@@ -482,5 +483,18 @@ impl Provider {
             .messages(Some(&from.hash().to_string()), pagination)
             .await?;
         Ok(res.results)
+    }
+
+    pub async fn get_message_proof(
+        &self,
+        tx_id: &str,
+        message_id: &str,
+    ) -> Result<Option<MessageProof>, ProviderError> {
+        let proof = self
+            .client
+            .message_proof(tx_id, message_id)
+            .await?
+            .map(Into::into);
+        Ok(proof)
     }
 }

@@ -20,6 +20,7 @@ use fuel_gql_client::{
     fuel_vm::{consts::REG_ONE, prelude::Opcode},
 };
 use fuel_types::bytes::WORD_SIZE;
+use fuel_types::{Address, MessageId};
 use fuels_core::tx::{field, Chargeable, Script, Transaction, UniqueIdentifier};
 use fuels_core::{constants::BASE_ASSET_ID, parameters::TxParameters};
 use fuels_types::bech32::{Bech32Address, Bech32ContractId, FUEL_BECH32_HRP};
@@ -333,6 +334,51 @@ impl Wallet {
             vec![],
         )
     }
+
+    /// Craft a transaction used to transfer funds to the base chain.
+    pub fn build_message_to_output_tx(
+        to: Address,
+        amount: u64,
+        inputs: &[Input],
+        params: TxParameters,
+    ) -> Script {
+        let script_data: Vec<u8> = [to.to_vec(), amount.to_be_bytes().to_vec()]
+            .into_iter()
+            .flatten()
+            .collect();
+
+        // This script loads:
+        //  - a pointer to the recipient address,
+        //  - the amount
+        // into the registers 0x10, 0x11
+        // and calls the SMO instruction
+        let script = vec![
+            Opcode::gtf(0x10, 0x00, GTFArgs::ScriptData),
+            Opcode::ADDI(0x11, 0x10, Bytes32::LEN as u16),
+            Opcode::LW(0x11, 0x11, 0),
+            Opcode::SMO(0x10, 0x00, 0x00, 0x11),
+            Opcode::RET(REG_ONE),
+        ]
+        .into_iter()
+        .collect();
+
+        let outputs = vec![
+            // when signing a transaction, recipient and amount are set to zero
+            Output::message(Address::zeroed(), 0),
+            Output::change(to, 0, BASE_ASSET_ID),
+        ];
+
+        Transaction::script(
+            params.gas_price,
+            params.gas_limit,
+            params.maturity,
+            script,
+            script_data,
+            inputs.to_vec(),
+            outputs.to_vec(),
+            vec![],
+        )
+    }
 }
 
 impl WalletUnlocked {
@@ -441,7 +487,7 @@ impl WalletUnlocked {
 
     /// Add base asset inputs to the transaction to cover the estimated fee.
     /// The original base asset amount cannot be calculated reliably from
-    /// the existing transaction inputs because the selected coins may exceed
+    /// the existing transaction inputs because the selected resources may exceed
     /// the required amount to avoid dust. Therefore we require it as an argument.
     ///
     /// Requires contract inputs to be at the start of the transactions inputs vec
@@ -462,8 +508,8 @@ impl WalletUnlocked {
 
         let (base_asset_inputs, remaining_inputs): (Vec<_>, Vec<_>) =
             tx.inputs().iter().cloned().partition(|input| {
-                matches!(input, Input::CoinSigned { .. })
-                    && *input.asset_id().unwrap() == BASE_ASSET_ID
+                matches!(input, Input::MessageSigned { .. })
+                || matches!(input, Input::CoinSigned { asset_id, .. } if asset_id == &BASE_ASSET_ID)
             });
 
         let base_inputs_sum: u64 = base_asset_inputs
@@ -491,10 +537,6 @@ impl WalletUnlocked {
             new_base_amount = MIN_AMOUNT;
         }
 
-        // This is a temporary solution till we get update on coins_to_spend function
-        // Get asset inputs for required amount expressed u Input::coin_signed or in
-        // Input::message_signed depending on what we have in stock.
-        // In the near future this will be replaced by one function.
         let new_base_inputs = self
             .get_asset_inputs_for_amount(BASE_ASSET_ID, new_base_amount, witness_index)
             .await?;
@@ -504,29 +546,20 @@ impl WalletUnlocked {
             ));
         }
 
-        let is_using_messages = new_base_inputs
-            .iter()
-            .any(|input| matches!(input, Input::MessageSigned { .. }));
-
         let adjusted_inputs: Vec<_> = remaining_inputs
             .into_iter()
             .chain(new_base_inputs.into_iter())
             .collect();
+        *tx.inputs_mut() = adjusted_inputs;
 
         let is_base_change_present = tx.outputs().iter().any(|output| {
-            matches!(output, Output::Change { .. }) && *output.asset_id().unwrap() == BASE_ASSET_ID
+            matches!(output, Output::Change { asset_id, .. } if asset_id == &BASE_ASSET_ID)
         });
-
         // add a change output for the base asset if it doesn't exist and there are base inputs
-        let change_output = if !is_base_change_present && new_base_amount != 0 && !is_using_messages
-        {
-            vec![Output::change(self.address().into(), 0, BASE_ASSET_ID)]
-        } else {
-            vec![]
-        };
-
-        *tx.inputs_mut() = adjusted_inputs;
-        tx.outputs_mut().extend(change_output);
+        if !is_base_change_present && new_base_amount != 0 {
+            tx.outputs_mut()
+                .push(Output::change(self.address().into(), 0, BASE_ASSET_ID));
+        }
 
         Ok(())
     }
@@ -599,6 +632,39 @@ impl WalletUnlocked {
         let receipts = self.get_provider()?.send_transaction(&tx).await?;
 
         Ok((tx.id().to_string(), receipts))
+    }
+
+    /// Withdraws an amount of the base asset to
+    /// an address on the base chain.
+    /// Returns the transaction ID, message ID and the list of receipts.
+    pub async fn withdraw_to_base_layer(
+        &self,
+        to: &Bech32Address,
+        amount: u64,
+        tx_parameters: TxParameters,
+    ) -> Result<(String, String, Vec<Receipt>), Error> {
+        let inputs = self
+            .get_asset_inputs_for_amount(BASE_ASSET_ID, amount, 0)
+            .await?;
+
+        let mut tx = Wallet::build_message_to_output_tx(to.into(), amount, &inputs, tx_parameters);
+
+        self.add_fee_coins(&mut tx, amount, 0).await?;
+        self.sign_transaction(&mut tx).await?;
+
+        let receipts = self.get_provider()?.send_transaction(&tx).await?;
+
+        let message_id = WalletUnlocked::extract_message_id(&receipts)
+            .expect("MessageId could not be retrieved from tx receipts.");
+
+        Ok((tx.id().to_string(), message_id.to_string(), receipts))
+    }
+
+    fn extract_message_id(receipts: &[Receipt]) -> Option<&MessageId> {
+        receipts
+            .iter()
+            .find(|r| matches!(r, Receipt::MessageOut { .. }))
+            .and_then(|m| m.message_id())
     }
 
     #[allow(clippy::too_many_arguments)]
