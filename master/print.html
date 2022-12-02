@@ -1600,7 +1600,7 @@ pub const BASE_ASSET_ID: AssetId = AssetId::BASE;
     let expected = Bimbam { val: 2190 };
     assert_eq!(result.value, expected);
 </code></pre>
-<h1 id="running-scripts-with-transaction-parameters"><a class="header" href="#running-scripts-with-transaction-parameters">Running scripts with transaction parameters</a></h1>
+<h2 id="running-scripts-with-transaction-parameters"><a class="header" href="#running-scripts-with-transaction-parameters">Running scripts with transaction parameters</a></h2>
 <p>The method for passing transaction parameters is the same as <a href="getting-started/../calling-contracts/tx-params.html">with contracts</a>. As a reminder, the workflow would look like this:</p>
 <pre><code class="language-rust ignore">    let parameters = TxParameters {
         gas_price: 1,
@@ -1608,6 +1608,22 @@ pub const BASE_ASSET_ID: AssetId = AssetId::BASE;
         ..Default::default()
     };
     let result = instance.main(a, b).tx_params(parameters).call().await?;
+</code></pre>
+<h2 id="logs-1"><a class="header" href="#logs-1">Logs</a></h2>
+<p>Script calls provide the same logging functions, <code>get_logs()</code> and <code>get_logs_with_type&lt;T&gt;()</code>, as contract calls. As a reminder, the workflow looks like this:</p>
+<pre><code class="language-rust ignore">    script_abigen!(
+        log_script,
+        &quot;packages/fuels/tests/logs/script_logs/out/debug/script_logs-abi.json&quot;
+    );
+
+    let wallet = launch_provider_and_get_wallet().await;
+    let bin_path = &quot;../fuels/tests/logs/script_logs/out/debug/script_logs.bin&quot;;
+    let instance = log_script::new(wallet.clone(), bin_path);
+
+    let response = instance.main().call().await?;
+
+    let logs = response.get_logs()?;
+    let log_u64 = response.get_logs_with_type::&lt;u64&gt;()?;
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="predicates"><a class="header" href="#predicates">Predicates</a></h1>
 <p>Predicates, in Sway, are programs that return a Boolean value, and they do not have any side effects (they are pure).</p>
