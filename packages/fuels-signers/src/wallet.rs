@@ -180,7 +180,7 @@ impl Wallet {
             message.sender.into(),
             message.recipient.into(),
             message.amount,
-            0,
+            message.nonce,
             witness_index,
             message.data,
         )

@@ -240,7 +240,7 @@ fn convert_to_signed_resources(spendable_resources: Vec<Resource>) -> Vec<Input>
                 coin.asset_id,
                 TxPointer::default(),
                 0,
-                0,
+                coin.maturity,
             ),
             Resource::Message(message) => Input::message_signed(
                 message.message_id(),
