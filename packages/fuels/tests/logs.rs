@@ -446,6 +446,7 @@ async fn test_multi_call_require_log_multi_contract() -> Result<(), Error> {
 }
 
 #[tokio::test]
+#[allow(unused_variables)]
 async fn test_script_get_logs() -> Result<(), Error> {
     // ANCHOR: script_logs
     script_abigen!(
@@ -460,7 +461,7 @@ async fn test_script_get_logs() -> Result<(), Error> {
     let response = instance.main().call().await?;
 
     let logs = response.get_logs()?;
-    let _log_u64 = response.get_logs_with_type::<u64>()?;
+    let log_u64 = response.get_logs_with_type::<u64>()?;
     // ANCHOR_END: script_logs
 
     let l = [1u8, 2u8, 3u8];
