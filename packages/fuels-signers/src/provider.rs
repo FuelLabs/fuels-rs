@@ -21,10 +21,10 @@ use fuels_types::block::Block;
 use fuels_types::chain_info::ChainInfo;
 use fuels_types::coin::Coin;
 use fuels_types::message::Message;
+use fuels_types::message_proof::MessageProof;
 use fuels_types::node_info::NodeInfo;
 use fuels_types::resource::Resource;
 use fuels_types::transaction_response::TransactionResponse;
-use fuels_types::message_proof::MessageProof;
 use std::collections::HashMap;
 use thiserror::Error;
 
