@@ -24,6 +24,7 @@ use fuels_types::message::Message;
 use fuels_types::node_info::NodeInfo;
 use fuels_types::resource::Resource;
 use fuels_types::transaction_response::TransactionResponse;
+use fuels_types::message_proof::MessageProof;
 use std::collections::HashMap;
 use thiserror::Error;
 
@@ -504,5 +505,18 @@ impl Provider {
             .map(Into::into)
             .collect();
         Ok(res)
+    }
+
+    pub async fn get_message_proof(
+        &self,
+        tx_id: &str,
+        message_id: &str,
+    ) -> Result<Option<MessageProof>, ProviderError> {
+        let proof = self
+            .client
+            .message_proof(tx_id, message_id)
+            .await?
+            .map(Into::into);
+        Ok(proof)
     }
 }

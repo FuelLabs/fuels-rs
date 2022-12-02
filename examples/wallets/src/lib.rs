@@ -131,7 +131,7 @@ mod tests {
 
         // Transfer the base asset with amount 1 from wallet 1 to wallet 2
         let asset_id = Default::default();
-        let _receipts = wallets[0]
+        let (_tx_id, _receipts) = wallets[0]
             .transfer(wallets[1].address(), 1, asset_id, TxParameters::default())
             .await?;
 
@@ -190,7 +190,7 @@ mod tests {
         // Transfer an amount of 300 to the contract
         let amount = 300;
         let asset_id = random_asset_id;
-        let _receipts = wallet
+        let (_tx_id, _receipts) = wallet
             .force_transfer_to_contract(&contract_id, amount, asset_id, TxParameters::default())
             .await?;
 
@@ -330,6 +330,38 @@ mod tests {
 
         assert_eq!(*asset_balance, DEFAULT_COIN_AMOUNT * DEFAULT_NUM_COINS);
 
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn wallet_transfer_to_base_layer() -> Result<(), Error> {
+        // ANCHOR: wallet_withdraw_to_base
+        use fuels::prelude::*;
+        use std::str::FromStr;
+
+        let wallet = launch_provider_and_get_wallet().await;
+
+        let amount = 1000;
+        let base_layer_address =
+            Address::from_str("0x4710162c2e3a95a6faff05139150017c9e38e5e280432d546fae345d6ce6d8fe")
+                .expect("Invalid address.");
+        let base_layer_address = Bech32Address::from(base_layer_address);
+        // Transfer an amount of 1000 to the specified base layer address
+        let (tx_id, msg_id, _receipts) = wallet
+            .withdraw_to_base_layer(&base_layer_address, amount, TxParameters::default())
+            .await?;
+
+        // Retrieve a message proof from the provider
+        let proof = wallet
+            .get_provider()?
+            .get_message_proof(&tx_id, &msg_id)
+            .await?
+            .expect("Failed to retrieve message proof.");
+
+        // Verify the amount and recipient
+        assert_eq!(proof.amount(), amount);
+        assert_eq!(proof.recipient(), base_layer_address.into());
+        // ANCHOR_END: wallet_withdraw_to_base
         Ok(())
     }
 }

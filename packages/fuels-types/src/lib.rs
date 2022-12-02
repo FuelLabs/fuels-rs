@@ -16,6 +16,7 @@ pub mod enum_variants;
 pub mod errors;
 pub mod message;
 pub mod node_info;
+pub mod message_proof;
 pub mod param_types;
 pub mod resource;
 pub mod transaction_response;
