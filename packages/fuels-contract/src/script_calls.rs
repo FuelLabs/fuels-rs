@@ -1,6 +1,8 @@
 use crate::{
-    call_response::FuelCallResponse, contract::get_decoded_output,
-    execution_script::ExecutableFuelCall, logs::LogDecoder,
+    call_response::FuelCallResponse,
+    contract::get_decoded_output,
+    execution_script::ExecutableFuelCall,
+    logs::{decode_revert_error, LogDecoder},
 };
 use fuel_gql_client::fuel_tx::{Output, Receipt, Transaction};
 use fuel_tx::Input;
@@ -131,7 +133,9 @@ where
 
     /// Call a script on the node, in a state-modifying manner.
     pub async fn call(self) -> Result<FuelCallResponse<D>, Error> {
-        Self::call_or_simulate(&self, false).await
+        Self::call_or_simulate(&self, false)
+            .await
+            .map_err(|err| decode_revert_error(err, &self.log_decoder))
     }
 
     /// Call a script on the node, in a simulated manner, meaning the state of the
@@ -140,7 +144,9 @@ where
     ///
     /// [`call`]: Self::call
     pub async fn simulate(self) -> Result<FuelCallResponse<D>, Error> {
-        Self::call_or_simulate(&self, true).await
+        Self::call_or_simulate(&self, true)
+            .await
+            .map_err(|err| decode_revert_error(err, &self.log_decoder))
     }
 
     /// Create a [`FuelCallResponse`] from call receipts

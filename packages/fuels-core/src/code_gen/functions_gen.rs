@@ -120,8 +120,7 @@ pub fn generate_script_main_function(
             let script_binary = std::fs::read(self.binary_filepath.as_str())
                                         .expect("Could not read from binary filepath");
             let provider = self.wallet.get_provider().expect("Provider not set up").clone();
-            // TODO(iqdecay): handle log decoding in scripts
-            let log_decoder = LogDecoder::default();
+            let log_decoder = LogDecoder{logs_map: self.logs_map.clone()};
             ScriptCallHandler::new(
                 script_binary,
                 script_data,
