@@ -114,8 +114,7 @@ pub fn generate_script_main_function(
             let script_data = ABIEncoder::encode(&arg_name_tokens).expect("Cannot encode script
             arguments").resolve(script_offset as u64);
             let provider = self.wallet.get_provider().expect("Provider not set up").clone();
-            // TODO(iqdecay): handle log decoding in scripts
-            let log_decoder = LogDecoder::default();
+            let log_decoder = LogDecoder{logs_map: self.logs_map.clone()};
             ScriptCallHandler::new(
                 script_binary,
                 script_data,

@@ -162,6 +162,8 @@ impl Abigen {
         let name_mod = ident(&format!("{}_mod", self.name.to_string().to_snake_case()));
 
         let includes = self.includes(true);
+        let resolved_logs = self.resolve_logs();
+        let log_id_param_type_pairs = generate_log_id_param_type_pairs(&resolved_logs);
 
         let main_script_function = self.script_function()?;
         let code = if self.no_std {
@@ -172,11 +174,17 @@ impl Abigen {
                 pub struct #name{
                     wallet: WalletUnlocked,
                     binary_filepath: String,
+                    logs_map: HashMap<(Bech32ContractId, u64), ParamType>,
                 }
 
                 impl #name {
                     pub fn new(wallet: WalletUnlocked, binary_filepath: &str) -> Self {
-                        Self {wallet: wallet, binary_filepath: binary_filepath.to_string()}
+                        Self {
+                            wallet: wallet,
+                            binary_filepath: binary_filepath.to_string(),
+                            logs_map: get_logs_hashmap(&[#(#log_id_param_type_pairs),*],
+                                                       &Bech32ContractId::from(ContractId::zeroed()))
+                        }
                     }
 
                     #main_script_function
@@ -234,16 +242,9 @@ impl Abigen {
                         get_decoded_output
                     };
                     use fuels::core::abi_decoder::ABIDecoder;
-                    use fuels::core::code_gen::{
-                        function_selector::resolve_fn_selector,
-                        get_logs_hashmap,
-                    };
+                    use fuels::core::code_gen::function_selector::resolve_fn_selector;
                     use fuels::core::{EnumSelector, StringToken, Identity};
-                    use fuels::types::{
-                        ResolvedLog,
-                        bech32::Bech32ContractId
-                    };
-                    use std::collections::{HashSet, HashMap};
+                    use fuels::types::ResolvedLog;
                     use std::str::FromStr;
                 }
             };
@@ -256,6 +257,9 @@ impl Abigen {
                 use fuels::types::errors::Error as SDKError;
                 use fuels::types::param_types::ParamType;
                 use fuels::tx::{ContractId, Address, Receipt};
+                use fuels::types::bech32::Bech32ContractId;
+                use std::collections::{HashSet, HashMap};
+                use fuels::core::code_gen::get_logs_hashmap;
                 #specific_includes
             }
         }

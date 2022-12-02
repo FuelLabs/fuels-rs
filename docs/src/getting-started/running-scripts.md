@@ -6,10 +6,19 @@ You can run a script using its JSON-ABI and the path to its binary file. You can
 {{#include ../../../packages/fuels/tests/scripts.rs:script_with_arguments}}
 ````
 
-# Running scripts with transaction parameters
+## Running scripts with transaction parameters
 
 The method for passing transaction parameters is the same as [with contracts](../calling-contracts/tx-params.md). As a reminder, the workflow would look like this:
 
 ```rust,ignore
 {{#include ../../../packages/fuels/tests/scripts.rs:script_with_tx_params}}
 ```
+
+## Logs
+
+Script calls provide the same logging functions, `get_logs()` and `get_logs_with_type<T>()`, as contract calls. As a reminder, the workflow looks like this:
+
+```rust,ignore
+{{#include ../../../packages/fuels/tests/logs.rs:script_logs}}
+```
+

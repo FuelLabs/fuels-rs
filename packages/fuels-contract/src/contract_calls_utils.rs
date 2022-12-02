@@ -258,8 +258,7 @@ fn convert_to_signed_resources(spendable_resources: Vec<Resource>) -> Vec<Input>
 
 /// Get the base offset for a script
 pub fn get_base_script_offset() -> usize {
-    // Opcode::LEN is a placeholder for the RET instruction which is added later
-    ConsensusParameters::DEFAULT.tx_offset() + fuel_tx::Script::script_offset_static() + Opcode::LEN
+    ConsensusParameters::DEFAULT.tx_offset() + fuel_tx::Script::script_offset_static()
 }
 
 /// Calculates the length of the script based on the number of contract calls it
@@ -269,7 +268,10 @@ pub(crate) fn get_data_offset(num_calls: usize) -> usize {
     let len_script =
         get_single_call_instructions(&CallOpcodeParamsOffset::default()).len() * num_calls;
 
-    padded_len_usize(get_base_script_offset() + len_script)
+    // Opcode::LEN is a placeholder for the RET instruction which is added later
+    let opcode_len = Opcode::LEN;
+
+    get_base_script_offset() + padded_len_usize(len_script + opcode_len)
 }
 
 fn generate_contract_inputs(contract_ids: HashSet<ContractId>) -> Vec<Input> {
