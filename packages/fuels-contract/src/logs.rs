@@ -85,3 +85,15 @@ impl LogDecoder {
             .extend(log_decoder.logs_map.clone().into_iter());
     }
 }
+
+/// Decodes the logged type from the receipt of a `RevertTransactionError` if available
+pub fn decode_revert_error(err: Error, log_decoder: &LogDecoder) -> Error {
+    if let Error::RevertTransactionError(_, receipts) = &err {
+        if let Ok(logs) = log_decoder.get_logs(receipts) {
+            if let Some(log) = logs.into_iter().next() {
+                return Error::RevertTransactionError(log, receipts.to_owned());
+            }
+        }
+    }
+    err
+}

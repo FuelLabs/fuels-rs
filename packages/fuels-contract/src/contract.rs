@@ -1,5 +1,7 @@
 use crate::{
-    call_response::FuelCallResponse, execution_script::ExecutableFuelCall, logs::LogDecoder,
+    call_response::FuelCallResponse,
+    execution_script::ExecutableFuelCall,
+    logs::{decode_revert_error, LogDecoder},
 };
 use fuel_gql_client::{
     fuel_tx::{Contract as FuelContract, Output, Receipt, StorageSlot, Transaction},
@@ -479,18 +481,6 @@ pub fn get_decoded_output(
 
     let decoded_value = ABIDecoder::decode_single(output_param, &encoded_value)?;
     Ok(decoded_value)
-}
-
-// Decode the logged type from the receipt of a `RevertTransactionError` if available
-fn decode_revert_error(err: Error, log_decoder: &LogDecoder) -> Error {
-    if let Error::RevertTransactionError(_, receipts) = &err {
-        if let Ok(logs) = log_decoder.get_logs(receipts) {
-            if let Some(log) = logs.into_iter().next() {
-                return Error::RevertTransactionError(log, receipts.to_owned());
-            }
-        }
-    }
-    err
 }
 
 #[derive(Debug)]
