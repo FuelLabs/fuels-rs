@@ -3,9 +3,13 @@ use super::{
     functions_gen::expand_function,
     resolved_type::resolve_type,
 };
-use crate::code_gen::{bindings::ContractBindings, functions_gen::generate_script_main_function};
-use crate::source::Source;
-use crate::utils::ident;
+
+use crate::{
+    code_gen::{bindings::ContractBindings, functions_gen::generate_script_main_function},
+    source::Source,
+    utils::ident,
+};
+use fuel_tx::ContractId;
 use fuels_types::{
     bech32::Bech32ContractId, errors::Error, param_types::ParamType, utils::custom_type_name,
     ABIFunction, ProgramABI, ResolvedLog, TypeDeclaration,
@@ -117,7 +121,8 @@ impl Abigen {
                         #methods_name {
                             contract_id: self.contract_id.clone(),
                             wallet: self.wallet.clone(),
-                            logs_map: get_logs_hashmap(&[#(#log_id_param_type_pairs),*], &self.contract_id),
+                            logs_map: get_logs_hashmap(&[#(#log_id_param_type_pairs),*],
+                                                       Some(self.contract_id.clone())),
                         }
                     }
                 }
@@ -182,8 +187,7 @@ impl Abigen {
                         Self {
                             wallet: wallet,
                             binary_filepath: binary_filepath.to_string(),
-                            logs_map: get_logs_hashmap(&[#(#log_id_param_type_pairs),*],
-                                                       &Bech32ContractId::from(ContractId::zeroed()))
+                            logs_map: get_logs_hashmap(&[#(#log_id_param_type_pairs),*], None)
                         }
                     }
 
@@ -407,8 +411,9 @@ fn generate_log_id_param_type_pairs(resolved_logs: &[ResolvedLog]) -> Vec<TokenS
 
 pub fn get_logs_hashmap(
     id_param_pairs: &[(u64, ParamType)],
-    contract_id: &Bech32ContractId,
+    contract_id: Option<Bech32ContractId>,
 ) -> HashMap<(Bech32ContractId, u64), ParamType> {
+    let contract_id = contract_id.unwrap_or_else(|| Bech32ContractId::from(ContractId::zeroed()));
     id_param_pairs
         .iter()
         .map(|(id, param_type)| ((contract_id.clone(), *id), param_type.to_owned()))
