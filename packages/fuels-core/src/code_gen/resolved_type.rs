@@ -24,8 +24,8 @@ impl ResolvedType {
     pub fn is_unit(&self) -> bool {
         self.type_name.to_string() == "()"
     }
-    // Used to prevent returning vectors until we get the compiler support for
-    // it.
+    // Used to prevent returning vectors until we get
+    // the compiler support for it.
     #[must_use]
     pub fn uses_vectors(&self) -> bool {
         lazy_static! {

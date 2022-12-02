@@ -221,6 +221,7 @@ impl Abigen {
             let specific_includes = if is_script {
                 quote! {
                     use fuels::contract::script_calls::{ScriptCallHandler, ScriptCall};
+                    use fuels::contract::contract_calls_utils::get_base_script_offset;
                     use fuels::core::abi_encoder::ABIEncoder;
                     use fuels::core::parameters::TxParameters;
                     use std::marker::PhantomData;

@@ -162,6 +162,92 @@ async fn main_function_tuple_types() -> Result<(), Error> {
         42242,
     );
     assert_eq!(result.value, expected);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn main_function_vector_arguments() -> Result<(), Error> {
+    script_abigen!(
+        MyScript,
+        "packages/fuels/tests/scripts/script_vectors/out/debug/script_vectors-abi.json"
+    );
+    let wallet = launch_provider_and_get_wallet().await;
+    let bin_path = "../fuels/tests/scripts/script_vectors/out/debug/script_vectors.bin";
+    let instance = MyScript::new(wallet, bin_path);
+
+    let u32_vec = vec![0, 1, 2];
+    let vec_in_vec = vec![vec![0, 1, 2], vec![0, 1, 2]];
+    let struct_in_vec = vec![SomeStruct { a: 0 }, SomeStruct { a: 1 }];
+    let vec_in_struct = SomeStruct { a: vec![0, 1, 2] };
+    let array_in_vec = vec![[0u64, 1u64], [0u64, 1u64]];
+    let vec_in_array = [vec![0, 1, 2], vec![0, 1, 2]];
+
+    let result = instance
+        .main(
+            u32_vec.clone(),
+            u32_vec.clone(),
+            u32_vec.clone(),
+            u32_vec.clone(),
+            vec_in_vec,
+            struct_in_vec,
+            vec_in_struct,
+            array_in_vec,
+            vec_in_array,
+        )
+        .call()
+        .await?;
+
+    assert!(result.value);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_vectttttor() -> Result<(), Error> {
+    setup_contract_test!(
+        contract_instance,
+        wallet,
+        "packages/fuels/tests/types/vectors"
+    );
+    let methods = contract_instance.methods();
+
+    {
+        // vec in enum
+        let arg = SomeEnum::a(vec![0, 1, 2]);
+        methods.vec_in_enum(arg.clone()).call().await?;
+    }
+    {
+        // enum in vec
+        let arg = vec![SomeEnum::a(0), SomeEnum::a(1)];
+        methods.enum_in_vec(arg.clone()).call().await?;
+    }
+    {
+        // tuple in vec
+        let arg = vec![(0, 0), (1, 1)];
+        methods.tuple_in_vec(arg.clone()).call().await?;
+    }
+    {
+        // vec in tuple
+        let arg = (vec![0, 1, 2], vec![0, 1, 2]);
+        methods.vec_in_tuple(arg.clone()).call().await?;
+    }
+    {
+        // vec in a vec in a struct in a vec
+        let arg = vec![
+            SomeStruct {
+                a: vec![vec![0, 1, 2], vec![3, 4, 5]],
+            },
+            SomeStruct {
+                a: vec![vec![6, 7, 8], vec![9, 10, 11]],
+            },
+        ];
+        methods
+            .vec_in_a_vec_in_a_struct_in_a_vec(arg.clone())
+            .call()
+            .await?;
+    }
+
     Ok(())
 }
 
