@@ -5,6 +5,7 @@ use fuels_types::{
     errors::{CodecError, Error},
     param_types::ParamType,
 };
+use serde::{Deserialize, Serialize};
 use std::{fmt, iter::zip};
 use strum_macros::EnumString;
 
@@ -28,7 +29,7 @@ pub type ByteArray = [u8; 8];
 pub type Selector = ByteArray;
 pub type EnumSelector = (u8, Token, EnumVariants);
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Identity {
     Address(fuel_tx::Address),
     ContractId(fuel_tx::ContractId),
