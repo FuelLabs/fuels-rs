@@ -1,4 +1,6 @@
 use fuel_gql_client::fuel_tx::{Address, Contract};
+use fuels_core::abi_encoder::ABIEncoder;
+use fuels_core::{Token, Tokenizable};
 use fuels_types::errors::Error;
 
 use fuels_types::bech32::Bech32Address;
@@ -27,5 +29,11 @@ impl Predicate {
 
     pub fn code(&self) -> Vec<u8> {
         self.code.clone()
+    }
+
+    /// Encode the predicate data with the given arguments.
+    pub fn encode_data<D: Tokenizable>(&self, data: Vec<D>) -> Result<Vec<u8>, Error> {
+        let tokens: Vec<Token> = data.into_iter().map(|d| d.into_token()).collect();
+        Ok(ABIEncoder::encode(&tokens)?.resolve(0))
     }
 }
