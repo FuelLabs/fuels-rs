@@ -37,3 +37,5 @@ The predicate expects the data sent to it to be a `u64` type with the value `42`
 ```rust,ignore
 {{#include ../../../examples/predicates/src/lib.rs:predicate_data_unlock}}
 ```
+
+> **Note:** if the data you're encoding is already a `Vec<u8>`, e.g., in the [send and spend examples](./send-spend-predicate.md), then you don't need to call `encode_predicate_data()`, passing it as-is works.
