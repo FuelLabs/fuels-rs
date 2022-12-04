@@ -32,8 +32,7 @@ impl Predicate {
     }
 
     /// Encode the predicate data with the given arguments.
-    pub fn encode_data<D: Tokenizable>(&self, data: Vec<D>) -> Result<Vec<u8>, Error> {
-        let tokens: Vec<Token> = data.into_iter().map(|d| d.into_token()).collect();
-        Ok(ABIEncoder::encode(&tokens)?.resolve(0))
+    pub fn encode_data<D: Tokenizable>(&self, data: D) -> Result<Vec<u8>, Error> {
+        Ok(ABIEncoder::encode(&[data.into_token()])?.resolve(0))
     }
 }

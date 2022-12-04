@@ -176,7 +176,7 @@ mod tests {
         // send to the predicate.
 
         // ANCHOR: encode_predicate_data
-        let predicate_data: Vec<u8> = predicate.encode_data(vec![42_u64])?;
+        let predicate_data: Vec<u8> = predicate.encode_data(42_u64)?;
         // ANCHOR_END: encode_predicate_data
 
         let amount_to_unlock = 500;
