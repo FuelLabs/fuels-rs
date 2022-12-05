@@ -110,14 +110,13 @@ pub fn generate_script_main_function(
             let arg_name_tokens = [#(#arg_names.into_token()),*];
             let script_binary = std::fs::read(self.binary_filepath.as_str())
                                         .expect("Could not read from binary filepath");
-            let script_offset = get_base_script_offset() + script_binary.len();
-            let script_data = ABIEncoder::encode(&arg_name_tokens).expect("Cannot encode script
-            arguments").resolve(script_offset as u64);
+            let encoded_args = ABIEncoder::encode(&arg_name_tokens).expect("Cannot encode script
+            arguments");
             let provider = self.wallet.get_provider().expect("Provider not set up").clone();
             let log_decoder = LogDecoder{logs_map: self.logs_map.clone()};
             ScriptCallHandler::new(
                 script_binary,
-                script_data,
+                encoded_args,
                 self.wallet.clone(),
                 provider,
                 #output_params,

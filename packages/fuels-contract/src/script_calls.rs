@@ -1,6 +1,8 @@
 use crate::{
+    abi_encoder::UnresolvedBytes,
     call_response::FuelCallResponse,
     contract::get_decoded_output,
+    contract_calls_utils::get_base_script_offset,
     execution_script::ExecutableFuelCall,
     logs::{decode_revert_error, LogDecoder},
 };
@@ -18,7 +20,7 @@ use std::{fmt::Debug, marker::PhantomData};
 /// Contains all data relevant to a single script call
 pub struct ScriptCall {
     pub script_binary: Vec<u8>,
-    pub script_data: Vec<u8>,
+    pub encoded_args: UnresolvedBytes,
     pub inputs: Vec<Input>,
     pub outputs: Vec<Output>,
     // This field is not currently used but it will be in the future.
@@ -56,7 +58,7 @@ where
 {
     pub fn new(
         script_binary: Vec<u8>,
-        script_data: Vec<u8>,
+        encoded_args: UnresolvedBytes,
         wallet: WalletUnlocked,
         provider: Provider,
         output_param: ParamType,
@@ -64,7 +66,7 @@ where
     ) -> Self {
         let script_call = ScriptCall {
             script_binary,
-            script_data,
+            encoded_args,
             inputs: vec![],
             outputs: vec![],
             call_parameters: Default::default(),
@@ -102,6 +104,15 @@ where
         self
     }
 
+    /// Get the script data by calculating the script offset and resolving the encoded arguments
+    async fn get_script_data(&self) -> Result<Vec<u8>, Error> {
+        let consensus_parameters = self.provider.consensus_parameters().await?;
+        let script_offset =
+            get_base_script_offset(&consensus_parameters) + self.script_call.script_binary.len();
+
+        Ok(self.script_call.encoded_args.resolve(script_offset as u64))
+    }
+
     /// Call a script on the node. If `simulate == true`, then the call is done in a
     /// read-only manner, using a `dry-run`. The [`FuelCallResponse`] struct contains the `main`'s value
     /// in its `value` field as an actual typed value `D` (if your method returns `bool`,
@@ -113,7 +124,7 @@ where
             self.tx_parameters.gas_limit,
             self.tx_parameters.maturity,
             self.script_call.script_binary.clone(),
-            self.script_call.script_data.clone(),
+            self.get_script_data().await?,
             self.script_call.inputs.clone(), // TODO(iqdecay): allow user to set inputs field
             self.script_call.outputs.clone(), // TODO(iqdecay): allow user to set outputs field
             vec![vec![0, 0].into()], //TODO(iqdecay): figure out how to have the right witnesses

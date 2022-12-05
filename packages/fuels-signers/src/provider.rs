@@ -14,7 +14,7 @@ use fuel_gql_client::{
         },
         FuelClient, PageDirection, PaginatedResult, PaginationRequest,
     },
-    fuel_tx::{Receipt, Transaction, TransactionFee},
+    fuel_tx::{ConsensusParameters, Receipt, Transaction, TransactionFee},
     fuel_types::AssetId,
 };
 use fuels_core::constants::{DEFAULT_GAS_ESTIMATION_TOLERANCE, MAX_GAS_PER_TX};
@@ -179,6 +179,10 @@ impl Provider {
 
     pub async fn chain_info(&self) -> Result<ChainInfo, ProviderError> {
         Ok(self.client.chain_info().await?)
+    }
+
+    pub async fn consensus_parameters(&self) -> Result<ConsensusParameters, ProviderError> {
+        Ok(self.client.chain_info().await?.consensus_parameters.into())
     }
 
     pub async fn node_info(&self) -> Result<NodeInfo, ProviderError> {
