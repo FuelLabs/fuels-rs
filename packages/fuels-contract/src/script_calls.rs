@@ -127,7 +127,7 @@ where
             self.tx_parameters.gas_limit,
             self.tx_parameters.maturity,
             self.script_call.script_binary.clone(),
-            self.get_script_data().await?,
+            self.compute_script_data().await?,
             self.script_call.inputs.clone(), // TODO(iqdecay): allow user to set inputs field
             self.script_call.outputs.clone(), // TODO(iqdecay): allow user to set outputs field
             vec![vec![0, 0].into()], //TODO(iqdecay): figure out how to have the right witnesses
