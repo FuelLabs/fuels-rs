@@ -250,3 +250,45 @@ async fn test_basic_script_with_tx_parameters() -> Result<(), Error> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn test_script_call_with_non_default_max_input() -> Result<(), Error> {
+    #[cfg(feature = "fuel-core-lib")]
+    use fuel_core::model::Coin;
+
+    use fuel_gql_client::fuel_tx::{ConsensusParameters, UtxoId};
+
+    let consensus_parameters_config = ConsensusParameters::DEFAULT.with_max_inputs(128);
+
+    let mut wallet = WalletUnlocked::new_random(None);
+
+    let coins: Vec<(UtxoId, Coin)> = setup_single_asset_coins(
+        wallet.address(),
+        Default::default(),
+        DEFAULT_NUM_COINS,
+        DEFAULT_COIN_AMOUNT,
+    );
+
+    let (fuel_client, _) =
+        setup_test_client(coins, vec![], None, None, Some(consensus_parameters_config)).await;
+    let provider = Provider::new(fuel_client);
+    wallet.set_provider(provider.clone());
+
+    script_abigen!(
+        MyScript,
+        "packages/fuels/tests/scripts/script_vector/out/debug/script_vector-abi.json"
+    );
+
+    let bin_path = "../fuels/tests/scripts/script_vector/out/debug/script_vector.bin";
+    let instance = MyScript::new(wallet, bin_path);
+
+    let a = 2u32;
+    let b = 4u64;
+    let u64_vec: Vec<u64> = vec![1024, 2048, 4096];
+
+    let result = instance.main(a, b, u64_vec.clone()).call().await?;
+
+    assert_eq!(result.value, u64_vec[2]);
+
+    Ok(())
+}

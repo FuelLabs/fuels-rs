@@ -6,7 +6,10 @@ use crate::{
     execution_script::ExecutableFuelCall,
     logs::{decode_revert_error, LogDecoder},
 };
-use fuel_gql_client::fuel_tx::{Output, Receipt, Transaction};
+use fuel_gql_client::{
+    fuel_tx::{Output, Receipt, Transaction},
+    fuel_types::bytes::padded_len_usize,
+};
 use fuel_tx::Input;
 use fuels_core::{
     parameters::{CallParameters, TxParameters},
@@ -107,8 +110,8 @@ where
     /// Get the script data by calculating the script offset and resolving the encoded arguments
     async fn get_script_data(&self) -> Result<Vec<u8>, Error> {
         let consensus_parameters = self.provider.consensus_parameters().await?;
-        let script_offset =
-            get_base_script_offset(&consensus_parameters) + self.script_call.script_binary.len();
+        let script_offset = get_base_script_offset(&consensus_parameters)
+            + padded_len_usize(self.script_call.script_binary.len());
 
         Ok(self.script_call.encoded_args.resolve(script_offset as u64))
     }
