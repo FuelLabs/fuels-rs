@@ -256,7 +256,7 @@ fn convert_to_signed_resources(spendable_resources: Vec<Resource>) -> Vec<Input>
         .collect()
 }
 
-/// Get the base offset for a script. The offset depends on the `max_inputs`
+/// Gets the base offset for a script. The offset depends on the `max_inputs`
 /// field of the `ConsensusParameters` and the static offset
 pub fn get_base_script_offset(consensus_parameters: &ConsensusParameters) -> usize {
     consensus_parameters.tx_offset() + fuel_tx::Script::script_offset_static()
