@@ -28,7 +28,7 @@ members = [
 ]
 
 [patch.crates-io]
-fuel-core = { git = "https://github.com/FuelLabs/fuel-core" }
-fuel-chain-config = { git = "https://github.com/FuelLabs/fuel-core" }
-fuel-core-interfaces = { git = "https://github.com/FuelLabs/fuel-core" }
-fuel-gql-client = { git = "https://github.com/FuelLabs/fuel-core" }
+fuel-core = { git = "https://github.com/FuelLabs/fuel-core", branch = "feature/genesis-config" }
+fuel-chain-config = { git = "https://github.com/FuelLabs/fuel-core", branch = "feature/genesis-config" }
+fuel-core-interfaces = { git = "https://github.com/FuelLabs/fuel-core", branch = "feature/genesis-config" }
+fuel-gql-client = { git = "https://github.com/FuelLabs/fuel-core", branch = "feature/genesis-config" }
