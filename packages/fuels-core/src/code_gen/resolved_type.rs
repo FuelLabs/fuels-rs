@@ -1,3 +1,4 @@
+use crate::code_gen::abigen::{get_sdk_provided_types, TypePath};
 use crate::code_gen::full_abi_types::{FullTypeApplication, FullTypeDeclaration};
 use crate::utils::{ident, safe_ident};
 use fuels_types::errors::Error;
@@ -240,32 +241,25 @@ fn to_custom_type(
     type_arguments_supplier: impl Fn() -> Vec<ResolvedType>,
     is_common: bool,
 ) -> Option<ResolvedType> {
-    // TODO: This should be deduped with Abigen::should_skip_code_gen
-    custom_type_name(type_field)
-        .ok()
-        .map(|type_name| match type_name.as_str() {
-            "ContractId" => quote! {::fuels::core::types::ContractId},
-            "AssetId" => quote! {::fuels::core::types::AssetId},
-            "Address" => quote! {::fuels::core::types::Address},
-            "Identity" => quote! {::fuels::core::types::Identity},
-            "EvmAddress" => quote! {::fuels::core::types::EvmAddress},
-            "B512" => quote! {::fuels::core::types::B512},
-            "Option" => quote! {::std::option::Option},
-            "Result" => quote! {::std::result::Result},
-            "Vec" => quote! {::std::vec::Vec},
-            other => {
-                let custom_type_name = ident(other);
-                if is_common {
-                    quote! {super::shared_types::#custom_type_name}
-                } else {
-                    quote! {self::#custom_type_name}
-                }
-            }
-        })
-        .map(|type_name| ResolvedType {
-            type_name,
-            generic_params: type_arguments_supplier(),
-        })
+    let type_name = custom_type_name(type_field).ok()?;
+
+    let type_path = get_sdk_provided_types()
+        .into_iter()
+        .find(|provided_type| provided_type.type_name() == type_name)
+        .unwrap_or_else(|| {
+            let custom_type_name = ident(&type_name);
+            let path_str = if is_common {
+                format!("super::shared_types::{custom_type_name}")
+            } else {
+                format!("self::{custom_type_name}")
+            };
+            TypePath::new(&path_str).expect("Known to be well formed")
+        });
+
+    Some(ResolvedType {
+        type_name: type_path.into(),
+        generic_params: type_arguments_supplier(),
+    })
 }
 
 #[cfg(test)]

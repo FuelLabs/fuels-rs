@@ -88,6 +88,11 @@ impl From<&TypePath> for TokenStream {
         }
     }
 }
+impl From<TypePath> for TokenStream {
+    fn from(type_path: TypePath) -> Self {
+        (&type_path).into()
+    }
+}
 
 #[derive(Default)]
 pub struct GeneratedCode {
@@ -489,22 +494,36 @@ impl Abigen {
     pub fn should_skip_codegen(type_field: &str) -> bool {
         let name = custom_type_name(type_field).unwrap_or_else(|_| type_field.to_string());
 
-        [
-            "ContractId",
-            "AssetId",
-            "Address",
-            "Option",
-            "Identity",
-            "Result",
-            "Vec",
-            "raw untyped ptr",
-            "RawVec",
-            "EvmAddress",
-            "B512",
-        ]
-        .into_iter()
-        .any(|e| e == name)
+        Self::is_type_sdk_provided(&name) || Self::is_type_unused(&name)
     }
+
+    fn is_type_sdk_provided(name: &str) -> bool {
+        get_sdk_provided_types()
+            .iter()
+            .any(|type_path| type_path.type_name() == name)
+    }
+    fn is_type_unused(name: &str) -> bool {
+        ["raw untyped ptr", "RawVec"].contains(&name)
+    }
+}
+
+pub fn get_sdk_provided_types() -> Vec<TypePath> {
+    [
+        "ContractId",
+        "AssetId",
+        "Address",
+        "Identity",
+        "EvmAddress",
+        "B512",
+        "Vec",
+        "Result",
+        "Option",
+    ]
+    .map(|e| format!("::fuels::core::types::{e}"))
+    .map(|type_path_str| {
+        TypePath::new(&type_path_str).expect("known at compile time to be correctly formed")
+    })
+    .to_vec()
 }
 
 fn generate_log_id_param_type_pairs(resolved_logs: &[ResolvedLog]) -> Vec<TokenStream> {
