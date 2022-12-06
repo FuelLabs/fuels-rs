@@ -1,9 +1,6 @@
 use fuel_gql_client::fuel_tx::{Address, Contract};
-use fuels_core::abi_encoder::ABIEncoder;
-use fuels_core::Tokenizable;
-use fuels_types::errors::Error;
-
-use fuels_types::bech32::Bech32Address;
+use fuels_core::{abi_encoder::ABIEncoder, Tokenizable};
+use fuels_types::{bech32::Bech32Address, errors::Error};
 
 pub struct Predicate {
     address: Bech32Address,

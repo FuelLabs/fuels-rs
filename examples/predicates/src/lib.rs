@@ -102,7 +102,7 @@ mod tests {
                 amount_to_predicate,
                 asset_id,
                 receiver.address(),
-                Some(predicate_data),
+                predicate_data,
                 TxParameters::default(),
             )
             .await?;
@@ -188,7 +188,7 @@ mod tests {
                 amount_to_unlock,
                 AssetId::default(),
                 second_wallet.address(),
-                Some(predicate_data),
+                predicate_data,
                 TxParameters::default(),
             )
             .await?;

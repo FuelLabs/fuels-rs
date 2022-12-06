@@ -80,12 +80,6 @@ pub fn generate_script_main_function(
     main_function_abi: &ABIFunction,
     types: &HashMap<usize, TypeDeclaration>,
 ) -> Result<TokenStream, Error> {
-    if main_function_abi.name != "main" {
-        return Err(Error::InvalidData(
-            "Script `main` function name can not be different from `main`".into(),
-        ));
-    }
-
     let output_type_resolved = resolve_fn_output_type(main_function_abi, types)?;
     let output_params = single_param_type_call(&output_type_resolved);
     let output_type: TokenStream = output_type_resolved.into();
@@ -122,6 +116,47 @@ pub fn generate_script_main_function(
                 #output_params,
                 log_decoder
             )
+        }
+    })
+}
+
+pub fn generate_predicate_encode_function(
+    main_function_abi: &ABIFunction,
+    types: &HashMap<usize, TypeDeclaration>,
+) -> Result<TokenStream, Error> {
+    let args = function_arguments(main_function_abi, types)?;
+
+    // TODO(hal3e): enable support for vector inputs
+    if args.iter().any(|c| c.field_type.uses_vectors()) {
+        return Err(Error::CompilationError(
+            "Predicate main function contains a vector in its argument types. This currently isn't supported."
+                .to_string(),
+        ));
+    }
+    let arg_names = args.iter().map(|component| &component.field_name);
+
+    let arg_declarations = args.iter().map(|component| {
+        let name = &component.field_name;
+        let field_type: TokenStream = (&component.field_type).into();
+        quote! { #name: #field_type }
+    });
+
+    let doc = expand_doc("Run the predicate's encode function with the provided arguments");
+
+    let name = safe_ident("encode_data");
+
+    Ok(quote! {
+        #doc
+        pub fn #name(&self #(,#arg_declarations)*) -> Self{
+            let arg_name_tokens = [#(#arg_names.into_token()),*];
+            let data = ABIEncoder::encode(&arg_name_tokens)
+                .expect("Cannot encode predicate data").resolve(0);
+
+            Self {
+                address: self.address.clone(),
+                code: self.code.clone(),
+                data
+            }
         }
     })
 }

@@ -664,7 +664,7 @@ impl WalletUnlocked {
         amount: u64,
         asset_id: AssetId,
         to: &Bech32Address,
-        data: Option<Vec<u8>>,
+        predicate_data: Vec<u8>,
         tx_parameters: TxParameters,
     ) -> Result<Vec<Receipt>, Error> {
         let spendable_predicate_resources = self
@@ -679,7 +679,6 @@ impl WalletUnlocked {
             .map(|resource| resource.amount())
             .sum();
 
-        let predicate_data = data.unwrap_or_default();
         let inputs = spendable_predicate_resources
             .into_iter()
             .map(|resource| match resource {
@@ -748,7 +747,7 @@ impl WalletUnlocked {
         predicate_code: Vec<u8>,
         amount: u64,
         asset_id: AssetId,
-        predicate_data: Option<Vec<u8>>,
+        predicate_data: Vec<u8>,
         tx_parameters: TxParameters,
     ) -> Result<Vec<Receipt>, Error> {
         self.spend_predicate(
