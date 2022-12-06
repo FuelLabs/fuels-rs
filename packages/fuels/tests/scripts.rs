@@ -253,16 +253,14 @@ async fn test_basic_script_with_tx_parameters() -> Result<(), Error> {
 
 #[tokio::test]
 async fn test_script_call_with_non_default_max_input() -> Result<(), Error> {
-    #[cfg(feature = "fuel-core-lib")]
-    use fuel_core::model::Coin;
-
-    use fuel_gql_client::fuel_tx::{ConsensusParameters, UtxoId};
+    use fuels::tx::ConsensusParameters;
+    use fuels_types::coin::Coin;
 
     let consensus_parameters_config = ConsensusParameters::DEFAULT.with_max_inputs(128);
 
     let mut wallet = WalletUnlocked::new_random(None);
 
-    let coins: Vec<(UtxoId, Coin)> = setup_single_asset_coins(
+    let coins: Vec<Coin> = setup_single_asset_coins(
         wallet.address(),
         Default::default(),
         DEFAULT_NUM_COINS,
