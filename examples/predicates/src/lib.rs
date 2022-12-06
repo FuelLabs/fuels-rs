@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod tests {
     use fuels::prelude::Error;
+    use fuels::prelude::*;
 
     #[tokio::test]
     async fn predicate_example() -> Result<(), Error> {
@@ -117,6 +118,93 @@ mod tests {
         assert_eq!(predicate_balance, 0);
         // ANCHOR_END: predicate_spend
 
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn predicate_data_example() -> Result<(), Error> {
+        // ANCHOR: predicate_data_setup
+        let provider_config = Config {
+            utxo_validation: true,
+            ..Config::local_node()
+        };
+
+        let wallets_config = WalletsConfig::new_multiple_assets(
+            2,
+            vec![AssetConfig {
+                id: AssetId::default(),
+                num_coins: 1,
+                coin_amount: 1_000,
+            }],
+        );
+
+        let wallets =
+            &launch_custom_provider_and_get_wallets(wallets_config, Some(provider_config), None)
+                .await;
+
+        let first_wallet = &wallets[0];
+        let second_wallet = &wallets[1];
+
+        let predicate = Predicate::load_from( "../../packages/fuels/tests/predicates/predicate_data_example/out/debug/predicate_data_example.bin")?;
+
+        let predicate_code = predicate.code();
+        let predicate_address = predicate.address();
+        // ANCHOR_END: predicate_data_setup
+
+        // ANCHOR: predicate_data_lock_amount
+        // First wallet transfers amount to predicate.
+        let _result = first_wallet
+            .transfer(
+                predicate_address,
+                500,
+                AssetId::default(),
+                TxParameters::default(),
+            )
+            .await?;
+
+        // Check predicate balance.
+        let balance = first_wallet
+            .get_provider()?
+            .get_asset_balance(predicate_address, AssetId::default())
+            .await?;
+
+        assert_eq!(balance, 500);
+        // ANCHOR_END: predicate_data_lock_amount
+
+        // ANCHOR: predicate_data_unlock
+        // We use the Predicate's `encode_data()` to encode the data we want to
+        // send to the predicate.
+
+        // ANCHOR: encode_predicate_data
+        let predicate_data: Vec<u8> = predicate.encode_data(42_u64)?;
+        // ANCHOR_END: encode_predicate_data
+
+        let amount_to_unlock = 500;
+
+        let _result = second_wallet
+            .spend_predicate(
+                predicate_address,
+                predicate_code,
+                amount_to_unlock,
+                AssetId::default(),
+                second_wallet.address(),
+                Some(predicate_data),
+                TxParameters::default(),
+            )
+            .await?;
+
+        // Predicate balance is zero.
+        let balance = first_wallet
+            .get_provider()?
+            .get_asset_balance(predicate_address, AssetId::default())
+            .await?;
+
+        assert_eq!(balance, 0);
+
+        // Second wallet balance is updated.
+        let balance = second_wallet.get_asset_balance(&AssetId::default()).await?;
+        assert_eq!(balance, 1500);
+        // ANCHOR_END: predicate_data_unlock
         Ok(())
     }
 }
