@@ -140,7 +140,7 @@
                         <h1 id="predicates"><a class="header" href="#predicates">Predicates</a></h1>
 <p>Predicates, in Sway, are programs that return a Boolean value, and they do not have any side effects (they are pure).</p>
 <h2 id="instantiating-predicates"><a class="header" href="#instantiating-predicates">Instantiating predicates</a></h2>
-<p>Similar to contracts, once you've written a predicate in Sway and compiled it with <code>forc build</code> (read <a href="https://fuellabs.github.io/sway/master/introduction/overview.html">here</a> for more on how to work with Sway), you'll get the predicate binary. Using the binary, you can instantiate a <code>predicate</code> as shown in the code snippet below:</p>
+<p>Similar to contracts, once you've written a predicate in Sway and compiled it with <code>forc build</code> (read <a href="https://fuellabs.github.io/sway/master/introduction/sway_quickstart.html">here</a> for more on how to work with Sway), you'll get the predicate binary. Using the binary, you can instantiate a <code>predicate</code> as shown in the code snippet below:</p>
 <pre><code class="language-rust ignore">        let predicate = Predicate::load_from(
             &quot;../../packages/fuels/tests/predicates/predicate_signatures/out/debug/predicate_signatures.bin&quot;,
         )?;

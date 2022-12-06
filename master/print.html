@@ -225,7 +225,7 @@ If <code>cargo generate</code> is not already installed, you can instal it with:
 <pre><code>cargo test -- --nocapture
 </code></pre>
 <h2 id="more-in-depth-fuel-and-sway-knowledge"><a class="header" href="#more-in-depth-fuel-and-sway-knowledge">More in-depth Fuel and Sway knowledge</a></h2>
-<p>Read <a href="https://fuellabs.github.io/sway/master/introduction/overview.html">The Sway Book</a> for more in-depth knowledge about Sway, the official smart contract language for the Fuel Virtual Machine.</p>
+<p>Read <a href="https://fuellabs.github.io/sway/master/introduction/sway_quickstart.html">The Sway Book</a> for more in-depth knowledge about Sway, the official smart contract language for the Fuel Virtual Machine.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="terminology"><a class="header" href="#terminology">Terminology</a></h1>
 <p>These are the common terms you will find across this documentation and while using the SDK.</p>
 <h2 id="contract"><a class="header" href="#contract">Contract</a></h2>
@@ -816,7 +816,7 @@ coins and coin amount</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="deploying-contracts"><a class="header" href="#deploying-contracts">Deploying contracts</a></h1>
 <p>There are two main ways of working with contracts in the SDK: deploying a contract with SDK or using the SDK to interact with existing contracts.</p>
 <h2 id="deploying-a-contract-binary"><a class="header" href="#deploying-a-contract-binary">Deploying a contract binary</a></h2>
-<p>Once you've written a contract in Sway and compiled it with <code>forc build</code> (read <a href="https://fuellabs.github.io/sway/master/introduction/overview.html">here</a> for more on how to work with Sway), you'll have in your hands two important artifacts: the compiled binary file and the JSON ABI file.</p>
+<p>Once you've written a contract in Sway and compiled it with <code>forc build</code> (read <a href="https://fuellabs.github.io/sway/master/introduction/sway_quickstart.html">here</a> for more on how to work with Sway), you'll have in your hands two important artifacts: the compiled binary file and the JSON ABI file.</p>
 <p>Below is how you can deploy your contracts using the SDK. For more details about each component in this process, read <a href="getting-started/../contracts/the-abigen-macro.html">The abigen macro</a>, <a href="getting-started/../contracts/the-fuelvm-binary-file.html">The FuelVM binary file</a>, and <a href="getting-started/../contracts/the-json-abi-file.html">The JSON ABI file</a>.</p>
 <h3 id="the-deploy-functions"><a class="header" href="#the-deploy-functions">The deploy functions</a></h3>
 <p>There are two intended ways to deploy a contract</p>
@@ -981,7 +981,7 @@ half-word   byte   op                raw           notes
 </code></pre>
 <p>If you want to deploy your smart contract using the SDK, this binary file is important; it's what we'll be sending to the FuelVM in a transaction.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="the-json-abi-file"><a class="header" href="#the-json-abi-file">The JSON ABI file</a></h1>
-<p>Whether you want to deploy or connect to a pre-existing smart contract, the JSON ABI file is extremely important: it's what tells the SDK about the <a href="https://fuellabs.github.io/sway/master/introduction/overview.html#declare-abi-in-wallet_lib">ABI methods</a> in your smart contracts.</p>
+<p>Whether you want to deploy or connect to a pre-existing smart contract, the JSON ABI file is extremely important: it's what tells the SDK about the <a href="https://fuellabs.github.io/sway/master/introduction/sway_quickstart.html#abi">ABI methods</a> in your smart contracts.</p>
 <p>For the same example Sway code as above:</p>
 <pre><code class="language-Rust">contract;
 
@@ -1628,7 +1628,7 @@ pub const BASE_ASSET_ID: AssetId = AssetId::BASE;
 <div style="break-before: page; page-break-before: always;"></div><h1 id="predicates"><a class="header" href="#predicates">Predicates</a></h1>
 <p>Predicates, in Sway, are programs that return a Boolean value, and they do not have any side effects (they are pure).</p>
 <h2 id="instantiating-predicates"><a class="header" href="#instantiating-predicates">Instantiating predicates</a></h2>
-<p>Similar to contracts, once you've written a predicate in Sway and compiled it with <code>forc build</code> (read <a href="https://fuellabs.github.io/sway/master/introduction/overview.html">here</a> for more on how to work with Sway), you'll get the predicate binary. Using the binary, you can instantiate a <code>predicate</code> as shown in the code snippet below:</p>
+<p>Similar to contracts, once you've written a predicate in Sway and compiled it with <code>forc build</code> (read <a href="https://fuellabs.github.io/sway/master/introduction/sway_quickstart.html">here</a> for more on how to work with Sway), you'll get the predicate binary. Using the binary, you can instantiate a <code>predicate</code> as shown in the code snippet below:</p>
 <pre><code class="language-rust ignore">        let predicate = Predicate::load_from(
             &quot;../../packages/fuels/tests/predicates/predicate_signatures/out/debug/predicate_signatures.bin&quot;,
         )?;
