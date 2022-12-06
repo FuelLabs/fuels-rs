@@ -148,6 +148,10 @@ impl GeneratedCode {
             })
             .collect()
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.code.is_empty()
+    }
 }
 
 fn limited_std_prelude() -> TokenStream {
@@ -169,9 +173,6 @@ fn generate_types(
     types: &HashSet<FullTypeDeclaration>,
     shared_types: &HashSet<FullTypeDeclaration>,
 ) -> Result<GeneratedCode, Error> {
-    // TODO: What if should_skip_abigen skips all types? Then the shared module
-    // will still be created bit it will contain nothing. It should not break
-    // the code, but we could have lived without it.
     types
         .difference(shared_types)
         .filter(|ttype| !Abigen::should_skip_codegen(&ttype.type_field))
@@ -459,14 +460,19 @@ impl Abigen {
 
         let prelude = limited_std_prelude();
 
-        let code = quote! {
-            #[no_implicit_prelude]
-            pub mod #shared_mod_name {
-                #prelude
+        if !code.is_empty() {
+            return Ok(GeneratedCode {
+                code: quote! {
+                    #[no_implicit_prelude]
+                    pub mod #shared_mod_name {
+                        #prelude
 
-                #code
-            }
-        };
+                        #code
+                    }
+                },
+                type_paths,
+            });
+        }
 
         Ok(GeneratedCode { code, type_paths })
     }
@@ -502,6 +508,7 @@ impl Abigen {
             .iter()
             .any(|type_path| type_path.type_name() == name)
     }
+
     fn is_type_unused(name: &str) -> bool {
         ["raw untyped ptr", "RawVec"].contains(&name)
     }
@@ -509,17 +516,16 @@ impl Abigen {
 
 pub fn get_sdk_provided_types() -> Vec<TypePath> {
     [
-        "ContractId",
-        "AssetId",
-        "Address",
-        "Identity",
-        "EvmAddress",
-        "B512",
-        "Vec",
-        "Result",
-        "Option",
+        "::fuels::core::types::ContractId",
+        "::fuels::core::types::AssetId",
+        "::fuels::core::types::Address",
+        "::fuels::core::types::Identity",
+        "::fuels::core::types::EvmAddress",
+        "::fuels::core::types::B512",
+        "::std::vec::Vec",
+        "::std::result::Result",
+        "::std::option::Option",
     ]
-    .map(|e| format!("::fuels::core::types::{e}"))
     .map(|type_path_str| {
         TypePath::new(&type_path_str).expect("known at compile time to be correctly formed")
     })
