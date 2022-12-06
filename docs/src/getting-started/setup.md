@@ -109,4 +109,4 @@ cargo test -- --nocapture
 
 ## More in-depth Fuel and Sway knowledge
 
-Read [The Sway Book](https://fuellabs.github.io/sway/master/introduction/overview.html) for more in-depth knowledge about Sway, the official smart contract language for the Fuel Virtual Machine.
+Read [The Sway Book](https://fuellabs.github.io/sway/master/introduction/sway_quickstart.html) for more in-depth knowledge about Sway, the official smart contract language for the Fuel Virtual Machine.
