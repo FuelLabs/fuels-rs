@@ -809,8 +809,8 @@ coins and coin amount</p>
             .expect(&quot;Failed to retrieve message proof.&quot;);
 
         // Verify the amount and recipient
-        assert_eq!(proof.amount(), amount);
-        assert_eq!(proof.recipient(), base_layer_address.into());
+        assert_eq!(proof.amount, amount);
+        assert_eq!(proof.recipient, base_layer_address);
 </code></pre>
 <p>The above example creates an <code>Address</code> from a string and converts it to a <code>Bech32Address</code>. Next, it calls <code>wallet.withdraw_to_base_layer</code> by providing the address, the amount to be transferred, and the transaction parameters. Lastly, to verify that the transfer succeeded, the relevant message proof is retrieved with <code>provider.get_message_proof,</code> and the amount and the recipient is verified.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="deploying-contracts"><a class="header" href="#deploying-contracts">Deploying contracts</a></h1>
@@ -2327,9 +2327,9 @@ selector, but you have to jump through an extra hoop to get the ParamTypes:</p>
     };
     let blocks: Vec&lt;Block&gt; = provider.get_blocks(req).await?.results;
 
-    assert_eq!(blocks[2].header().time().unwrap().timestamp(), 100);
-    assert_eq!(blocks[1].header().time().unwrap().timestamp(), 110);
-    assert_eq!(blocks[0].header().time().unwrap().timestamp(), 120);
+    assert_eq!(blocks[2].header.time.unwrap().timestamp(), 100);
+    assert_eq!(blocks[1].header.time.unwrap().timestamp(), 110);
+    assert_eq!(blocks[0].header.time.unwrap().timestamp(), 120);
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="cookbook"><a class="header" href="#cookbook">Cookbook</a></h1>
 <p>This section covers more advanced use cases that can be satisfied by combining various features of the Rust SDK. As such, it assumes that you have already made yourself familiar with the previous chapters of this book.</p>

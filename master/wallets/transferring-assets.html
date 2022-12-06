@@ -215,8 +215,8 @@
             .expect(&quot;Failed to retrieve message proof.&quot;);
 
         // Verify the amount and recipient
-        assert_eq!(proof.amount(), amount);
-        assert_eq!(proof.recipient(), base_layer_address.into());
+        assert_eq!(proof.amount, amount);
+        assert_eq!(proof.recipient, base_layer_address);
 </code></pre>
 <p>The above example creates an <code>Address</code> from a string and converts it to a <code>Bech32Address</code>. Next, it calls <code>wallet.withdraw_to_base_layer</code> by providing the address, the amount to be transferred, and the transaction parameters. Lastly, to verify that the transfer succeeded, the relevant message proof is retrieved with <code>provider.get_message_proof,</code> and the amount and the recipient is verified.</p>
 
