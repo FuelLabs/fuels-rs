@@ -1,6 +1,6 @@
 [package]
 name = "fuels-abi-cli"
-version = "0.31.1"
+version = "0.32.0"
 authors = ["Fuel Labs <contact@fuel.sh>"]
 edition = "2021"
 homepage = "https://fuel.network/"
@@ -10,9 +10,9 @@ description = "Fuel Rust SDK CLI tool to parse ABI."
 
 [dependencies]
 anyhow = "1"
-fuels-contract = { version = "0.31.1", path = "../../packages/fuels-contract" }
-fuels-core = { version = "0.31.1", path = "../../packages/fuels-core" }
-fuels-types = { version = "0.31.1", path = "../../packages/fuels-types" }
+fuels-contract = { version = "0.32.0", path = "../../packages/fuels-contract" }
+fuels-core = { version = "0.32.0", path = "../../packages/fuels-core" }
+fuels-types = { version = "0.32.0", path = "../../packages/fuels-types" }
 hex = "0.4"
 itertools = "0.10"
 structopt = "0.3"
