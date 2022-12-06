@@ -162,6 +162,59 @@ async fn main_function_tuple_types() -> Result<(), Error> {
         42242,
     );
     assert_eq!(result.value, expected);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn main_function_vector_arguments() -> Result<(), Error> {
+    script_abigen!(
+        MyScript,
+        "packages/fuels/tests/scripts/script_vectors/out/debug/script_vectors-abi.json"
+    );
+    let wallet = launch_provider_and_get_wallet().await;
+    let bin_path = "../fuels/tests/scripts/script_vectors/out/debug/script_vectors.bin";
+    let instance = MyScript::new(wallet, bin_path);
+
+    let u32_vec = vec![0, 1, 2];
+    let vec_in_vec = vec![vec![0, 1, 2], vec![0, 1, 2]];
+    let struct_in_vec = vec![SomeStruct { a: 0 }, SomeStruct { a: 1 }];
+    let vec_in_struct = SomeStruct { a: vec![0, 1, 2] };
+    let array_in_vec = vec![[0u64, 1u64], [0u64, 1u64]];
+    let vec_in_array = [vec![0, 1, 2], vec![0, 1, 2]];
+    let vec_in_enum = SomeEnum::a(vec![0, 1, 2]);
+    let enum_in_vec = vec![SomeEnum::a(0), SomeEnum::a(1)];
+
+    let tuple_in_vec = vec![(0, 0), (1, 1)];
+    let vec_in_tuple = (vec![0, 1, 2], vec![0, 1, 2]);
+    let vec_in_a_vec_in_a_struct_in_a_vec = vec![
+        SomeStruct {
+            a: vec![vec![0, 1, 2], vec![3, 4, 5]],
+        },
+        SomeStruct {
+            a: vec![vec![6, 7, 8], vec![9, 10, 11]],
+        },
+    ];
+
+    let result = instance
+        .main(
+            u32_vec,
+            vec_in_vec,
+            struct_in_vec,
+            vec_in_struct,
+            array_in_vec,
+            vec_in_array,
+            vec_in_enum,
+            enum_in_vec,
+            tuple_in_vec,
+            vec_in_tuple,
+            vec_in_a_vec_in_a_struct_in_a_vec,
+        )
+        .call()
+        .await?;
+
+    assert!(result.value);
+
     Ok(())
 }
 
@@ -194,6 +247,46 @@ async fn test_basic_script_with_tx_parameters() -> Result<(), Error> {
     let result = instance.main(a, b).tx_params(parameters).call().await?;
     // ANCHOR_END: script_with_tx_params
     assert_eq!(result.value, "hello");
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_script_call_with_non_default_max_input() -> Result<(), Error> {
+    use fuels::tx::ConsensusParameters;
+    use fuels_types::coin::Coin;
+
+    let consensus_parameters_config = ConsensusParameters::DEFAULT.with_max_inputs(128);
+
+    let mut wallet = WalletUnlocked::new_random(None);
+
+    let coins: Vec<Coin> = setup_single_asset_coins(
+        wallet.address(),
+        Default::default(),
+        DEFAULT_NUM_COINS,
+        DEFAULT_COIN_AMOUNT,
+    );
+
+    let (fuel_client, _) =
+        setup_test_client(coins, vec![], None, None, Some(consensus_parameters_config)).await;
+    let provider = Provider::new(fuel_client);
+    wallet.set_provider(provider.clone());
+
+    script_abigen!(
+        MyScript,
+        "packages/fuels/tests/scripts/script_vector/out/debug/script_vector-abi.json"
+    );
+
+    let bin_path = "../fuels/tests/scripts/script_vector/out/debug/script_vector.bin";
+    let instance = MyScript::new(wallet, bin_path);
+
+    let a = 2u32;
+    let b = 4u64;
+    let u64_vec: Vec<u64> = vec![1024, 2048, 4096];
+
+    let result = instance.main(a, b, u64_vec.clone()).call().await?;
+
+    assert_eq!(result.value, u64_vec[2]);
 
     Ok(())
 }

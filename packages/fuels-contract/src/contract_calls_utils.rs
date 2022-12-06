@@ -255,19 +255,26 @@ fn convert_to_signed_resources(spendable_resources: Vec<Resource>) -> Vec<Input>
         .collect()
 }
 
+/// Gets the base offset for a script. The offset depends on the `max_inputs`
+/// field of the `ConsensusParameters` and the static offset
+pub fn get_base_script_offset(consensus_parameters: &ConsensusParameters) -> usize {
+    consensus_parameters.tx_offset() + fuel_tx::Script::script_offset_static()
+}
+
 /// Calculates the length of the script based on the number of contract calls it
 /// has to make and returns the offset at which the script data begins
-pub(crate) fn get_data_offset(num_calls: usize) -> usize {
+pub(crate) fn get_data_offset(
+    consensus_parameters: &ConsensusParameters,
+    num_calls: usize,
+) -> usize {
     // use placeholder for call param offsets, we only care about the length
-    let mut len_script =
+    let len_script =
         get_single_call_instructions(&CallOpcodeParamsOffset::default()).len() * num_calls;
 
-    // tunt for RET instruction which is added later
-    len_script += Opcode::LEN;
+    // Opcode::LEN is a placeholder for the RET instruction which is added later
+    let opcode_len = Opcode::LEN;
 
-    ConsensusParameters::DEFAULT.tx_offset()
-        + fuel_tx::Script::script_offset_static()
-        + padded_len_usize(len_script)
+    get_base_script_offset(consensus_parameters) + padded_len_usize(len_script + opcode_len)
 }
 
 fn generate_contract_inputs(contract_ids: HashSet<ContractId>) -> Vec<Input> {

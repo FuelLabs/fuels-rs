@@ -736,3 +736,37 @@ async fn test_output_variable_contract_id_estimation_multicall() -> Result<(), E
 
     Ok(())
 }
+
+#[tokio::test]
+async fn test_contract_call_with_non_default_max_input() -> Result<(), Error> {
+    use fuels::tx::ConsensusParameters;
+    use fuels_types::coin::Coin;
+
+    let consensus_parameters_config = ConsensusParameters::DEFAULT.with_max_inputs(123);
+
+    let mut wallet = WalletUnlocked::new_random(None);
+
+    let coins: Vec<Coin> = setup_single_asset_coins(
+        wallet.address(),
+        Default::default(),
+        DEFAULT_NUM_COINS,
+        DEFAULT_COIN_AMOUNT,
+    );
+
+    let (fuel_client, _) =
+        setup_test_client(coins, vec![], None, None, Some(consensus_parameters_config)).await;
+    let provider = Provider::new(fuel_client);
+    wallet.set_provider(provider.clone());
+
+    setup_contract_test!(
+        contract_instance,
+        None,
+        "packages/fuels/tests/contracts/contract_test"
+    );
+
+    let response = contract_instance.methods().get(5, 6).call().await?;
+
+    assert_eq!(response.value, 5);
+
+    Ok(())
+}

@@ -38,7 +38,8 @@ impl ExecutableFuelCall {
         tx_parameters: &TxParameters,
         wallet: &WalletUnlocked,
     ) -> Result<Self, Error> {
-        let data_offset = get_data_offset(calls.len());
+        let consensus_parameters = wallet.get_provider()?.consensus_parameters().await?;
+        let data_offset = get_data_offset(&consensus_parameters, calls.len());
 
         let (script_data, call_param_offsets) =
             build_script_data_from_contract_calls(calls, data_offset, tx_parameters.gas_limit);

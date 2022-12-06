@@ -92,13 +92,6 @@ pub fn generate_script_main_function(
 
     let args = function_arguments(main_function_abi, types)?;
 
-    // TODO(iqdecay): enable support for vector inputs
-    if args.iter().any(|c| c.field_type.uses_vectors()) {
-        return Err(Error::CompilationError(
-            "Script main function contains a vector in its argument types. This currently isn't supported."
-                .to_string(),
-        ));
-    }
     let arg_names = args.iter().map(|component| &component.field_name);
 
     let arg_declarations = args.iter().map(|component| {
@@ -115,15 +108,15 @@ pub fn generate_script_main_function(
         #doc
         pub fn #name(&self #(,#arg_declarations)*) -> ScriptCallHandler<#output_type> {
             let arg_name_tokens = [#(#arg_names.into_token()),*];
-            let script_data = ABIEncoder::encode(&arg_name_tokens).expect("Cannot encode script
-            arguments").resolve(0);
             let script_binary = std::fs::read(self.binary_filepath.as_str())
                                         .expect("Could not read from binary filepath");
+            let encoded_args = ABIEncoder::encode(&arg_name_tokens).expect("Cannot encode script
+            arguments");
             let provider = self.wallet.get_provider().expect("Provider not set up").clone();
             let log_decoder = LogDecoder{logs_map: self.logs_map.clone()};
             ScriptCallHandler::new(
                 script_binary,
-                script_data,
+                encoded_args,
                 self.wallet.clone(),
                 provider,
                 #output_params,

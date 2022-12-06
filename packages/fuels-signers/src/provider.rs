@@ -3,36 +3,36 @@ use std::io;
 #[cfg(feature = "fuel-core")]
 use fuel_core::service::{Config, FuelService};
 
-use fuel_gql_client::client::types::TransactionStatus;
-use fuel_gql_client::interpreter::ExecutableTransaction;
+use crate::{field, UniqueIdentifier};
+use chrono::{DateTime, Duration, Utc};
 use fuel_gql_client::{
     client::{
         schema::{
             balance::Balance, block::TimeParameters as FuelTimeParameters,
             contract::ContractBalance,
         },
+        types::TransactionStatus,
         FuelClient, PageDirection, PaginatedResult, PaginationRequest,
     },
-    fuel_tx::{Receipt, Transaction, TransactionFee},
+    fuel_tx::{ConsensusParameters, Receipt, Transaction, TransactionFee},
     fuel_types::AssetId,
+    interpreter::ExecutableTransaction,
 };
 use fuels_core::constants::{DEFAULT_GAS_ESTIMATION_TOLERANCE, MAX_GAS_PER_TX};
-use fuels_types::block::Block;
-use fuels_types::chain_info::ChainInfo;
-use fuels_types::coin::Coin;
-use fuels_types::message::Message;
-use fuels_types::message_proof::MessageProof;
-use fuels_types::node_info::NodeInfo;
-use fuels_types::resource::Resource;
-use fuels_types::transaction_response::TransactionResponse;
+use fuels_types::{
+    bech32::{Bech32Address, Bech32ContractId},
+    block::Block,
+    chain_info::ChainInfo,
+    coin::Coin,
+    errors::Error,
+    message::Message,
+    message_proof::MessageProof,
+    node_info::NodeInfo,
+    resource::Resource,
+    transaction_response::TransactionResponse,
+};
 use std::collections::HashMap;
 use thiserror::Error;
-
-use crate::{field, UniqueIdentifier};
-use fuels_types::bech32::{Bech32Address, Bech32ContractId};
-use fuels_types::errors::Error;
-
-use chrono::{DateTime, Duration, Utc};
 
 #[derive(Debug)]
 pub struct TransactionCost {
@@ -184,6 +184,10 @@ impl Provider {
 
     pub async fn chain_info(&self) -> Result<ChainInfo, ProviderError> {
         Ok(self.client.chain_info().await?.into())
+    }
+
+    pub async fn consensus_parameters(&self) -> Result<ConsensusParameters, ProviderError> {
+        Ok(self.client.chain_info().await?.consensus_parameters.into())
     }
 
     pub async fn node_info(&self) -> Result<NodeInfo, ProviderError> {
