@@ -4,7 +4,7 @@ Predicates, in Sway, are programs that return a Boolean value, and they do not h
 
 ## Instantiating predicates
 
-Similar to contracts, once you've written a predicate in Sway and compiled it with `forc build` (read [here](https://fuellabs.github.io/sway/master/introduction/overview.html) for more on how to work with Sway), you'll get the predicate binary. Using the binary, you can instantiate a `predicate` as shown in the code snippet below:
+Similar to contracts, once you've written a predicate in Sway and compiled it with `forc build` (read [here](https://fuellabs.github.io/sway/master/introduction/sway_quickstart.html) for more on how to work with Sway), you'll get the predicate binary. Using the binary, you can instantiate a `predicate` as shown in the code snippet below:
 
 ```rust,ignore
 {{#include ../../../examples/predicates/src/lib.rs:predicate_load_from}}

@@ -1,13 +1,13 @@
 use chrono::Duration;
 use fuel_core::service::{Config as CoreConfig, FuelService};
-use fuel_core_interfaces::model::Message;
-use fuel_gql_client::{client::schema::message::Message as OtherMessage, fuel_tx::Receipt};
+use fuel_gql_client::fuel_tx::Receipt;
 use fuels::{
     client::{PageDirection, PaginationRequest},
     prelude::*,
 };
 use fuels_signers::fuel_crypto::SecretKey;
 use fuels_types::block::Block;
+use fuels_types::message::Message;
 use std::{iter, str::FromStr};
 
 #[tokio::test]
@@ -92,12 +92,12 @@ async fn test_network_error() -> Result<(), anyhow::Error> {
 #[tokio::test]
 async fn test_input_message() -> Result<(), Error> {
     let compare_messages =
-        |messages_from_provider: Vec<OtherMessage>, used_messages: Vec<Message>| -> bool {
+        |messages_from_provider: Vec<Message>, used_messages: Vec<Message>| -> bool {
             iter::zip(&used_messages, &messages_from_provider).all(|(a, b)| {
-                a.sender == b.sender.0 .0
-                    && a.recipient == b.recipient.0 .0
-                    && a.nonce == b.nonce.0
-                    && a.amount == b.amount.0
+                a.sender == b.sender
+                    && a.recipient == b.recipient
+                    && a.nonce == b.nonce
+                    && a.amount == b.amount
             })
         };
 
@@ -107,10 +107,7 @@ async fn test_input_message() -> Result<(), Error> {
     let coins = setup_single_asset_coins(wallet.address(), AssetId::BASE, 1, DEFAULT_COIN_AMOUNT);
 
     let messages = setup_single_message(
-        &Bech32Address {
-            hrp: "".to_string(),
-            hash: Default::default(),
-        },
+        &Bech32Address::default(),
         wallet.address(),
         DEFAULT_COIN_AMOUNT,
         0,
@@ -240,9 +237,9 @@ async fn can_set_custom_block_time() -> Result<(), Error> {
     };
     let blocks: Vec<Block> = provider.get_blocks(req).await?.results;
 
-    assert_eq!(blocks[2].header().time().unwrap().timestamp(), 100);
-    assert_eq!(blocks[1].header().time().unwrap().timestamp(), 110);
-    assert_eq!(blocks[0].header().time().unwrap().timestamp(), 120);
+    assert_eq!(blocks[2].header.time.unwrap().timestamp(), 100);
+    assert_eq!(blocks[1].header.time.unwrap().timestamp(), 110);
+    assert_eq!(blocks[0].header.time.unwrap().timestamp(), 120);
     // ANCHOR_END: use_produce_blocks_custom_time
     Ok(())
 }

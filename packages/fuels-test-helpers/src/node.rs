@@ -1,4 +1,7 @@
 use anyhow::{bail, Error as AnyError};
+use fuel_core_interfaces::model::BlockHeight;
+use fuels_types::coin::Coin;
+use fuels_types::message::Message;
 use std::fmt;
 use std::io::Write;
 use std::net::{Ipv4Addr, SocketAddr};
@@ -8,10 +11,9 @@ use tokio::sync::oneshot;
 use portpicker::is_free;
 use portpicker::pick_unused_port;
 
-use fuel_chain_config::{BlockProduction, ChainConfig, CoinConfig, MessageConfig, StateConfig};
-use fuel_core_interfaces::model::{BlockHeight, Coin, Message};
+use fuel_chain_config::{BlockProduction, ChainConfig, StateConfig};
 use fuel_gql_client::client::FuelClient;
-use fuel_gql_client::fuel_tx::{ConsensusParameters, UtxoId};
+use fuel_gql_client::fuel_tx::ConsensusParameters;
 use fuel_gql_client::fuel_vm::consts::WORD_SIZE;
 use fuel_types::Word;
 use serde::de::Error;
@@ -21,6 +23,8 @@ use serde_with::{DeserializeAs, SerializeAs};
 use std::process::Stdio;
 use tempfile::NamedTempFile;
 use tokio::process::Command;
+
+use crate::utils::{get_coin_configs, get_message_configs};
 
 #[derive(Clone, Copy, Debug)]
 pub struct Config {
@@ -161,13 +165,13 @@ impl<'de> DeserializeAs<'de, BlockHeight> for HexNumber {
 }
 
 pub fn get_node_config_json(
-    coins: Vec<(UtxoId, Coin)>,
+    coins: Vec<Coin>,
     messages: Vec<Message>,
     chain_config: Option<ChainConfig>,
     consensus_parameters_config: Option<ConsensusParameters>,
 ) -> Value {
-    let coins = get_coins_value(coins);
-    let messages = get_messages_value(messages);
+    let coin_configs = get_coin_configs(coins);
+    let messages = get_message_configs(messages);
     let transaction_parameters = consensus_parameters_config.unwrap_or_default();
 
     let chain_config = chain_config.unwrap_or_else(|| ChainConfig {
@@ -177,7 +181,7 @@ pub fn get_node_config_json(
         },
         block_gas_limit: 1000000000,
         initial_state: Some(StateConfig {
-            coins: Some(coins),
+            coins: Some(coin_configs),
             contracts: None,
             messages: Some(messages),
             height: None,
@@ -186,35 +190,6 @@ pub fn get_node_config_json(
     });
 
     serde_json::to_value(&chain_config).expect("Failed to build `ChainConfig` JSON")
-}
-
-fn get_coins_value(coins: Vec<(UtxoId, Coin)>) -> Vec<CoinConfig> {
-    coins
-        .into_iter()
-        .map(|(utxo_id, coin)| CoinConfig {
-            tx_id: Some(*utxo_id.tx_id()),
-            output_index: Some(utxo_id.output_index() as u64),
-            block_created: Some(coin.block_created),
-            maturity: Some(coin.maturity),
-            owner: coin.owner,
-            amount: coin.amount,
-            asset_id: coin.asset_id,
-        })
-        .collect()
-}
-
-fn get_messages_value(messages: Vec<Message>) -> Vec<MessageConfig> {
-    messages
-        .into_iter()
-        .map(|message| MessageConfig {
-            sender: message.sender,
-            recipient: message.recipient,
-            nonce: message.nonce,
-            amount: message.amount,
-            data: message.data,
-            da_height: (*message.da_height).into(),
-        })
-        .collect()
 }
 
 fn write_temp_config_file(config: Value) -> NamedTempFile {
@@ -230,7 +205,7 @@ fn write_temp_config_file(config: Value) -> NamedTempFile {
 }
 
 pub async fn new_fuel_node(
-    coins: Vec<(UtxoId, Coin)>,
+    coins: Vec<Coin>,
     messages: Vec<Message>,
     config: Config,
     chain_config: Option<ChainConfig>,
