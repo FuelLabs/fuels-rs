@@ -5,10 +5,9 @@ use crate::{
 };
 use fuel_gql_client::{
     fuel_tx::{Contract as FuelContract, Output, Receipt, StorageSlot, Transaction},
-    fuel_types::{Address, AssetId, Salt},
     prelude::PanicReason,
 };
-use fuel_tx::{Checkable, Create};
+use fuel_tx::{Address, AssetId, Checkable, Create, Salt};
 use fuels_core::{
     abi_decoder::ABIDecoder,
     abi_encoder::{ABIEncoder, UnresolvedBytes},
@@ -222,8 +221,8 @@ impl Contract {
         let chain_info = provider.chain_info().await?;
 
         tx.check_without_signatures(
-            chain_info.latest_block.header.height.0,
-            &chain_info.consensus_parameters.into(),
+            chain_info.latest_block.header.height,
+            &chain_info.consensus_parameters,
         )?;
         provider.send_transaction(&tx).await?;
 

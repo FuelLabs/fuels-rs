@@ -9,11 +9,17 @@ use strum_macros::ToString;
 
 pub mod bech32;
 pub mod block;
+pub mod chain_info;
+pub mod coin;
 pub mod constants;
 pub mod enum_variants;
 pub mod errors;
+pub mod message;
 pub mod message_proof;
+pub mod node_info;
 pub mod param_types;
+pub mod resource;
+pub mod transaction_response;
 pub mod utils;
 
 #[derive(Debug, Clone, Copy, ToString, PartialEq, Eq)]

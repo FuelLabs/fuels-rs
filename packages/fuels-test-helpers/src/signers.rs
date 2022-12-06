@@ -1,15 +1,10 @@
 use fuel_chain_config::ChainConfig;
 use fuels_signers::fuel_crypto::SecretKey;
+use fuels_types::{coin::Coin, message::Message};
 use std::{mem::size_of, net::SocketAddr};
 
 #[cfg(feature = "fuel-core-lib")]
-use fuel_core::{model::Coin, service::Config};
-
-use fuel_gql_client::fuel_tx::UtxoId;
-
-#[cfg(not(feature = "fuel-core-lib"))]
-use fuel_core_interfaces::model::Coin;
-use fuel_core_interfaces::model::Message;
+use fuel_core::service::Config;
 
 #[cfg(not(feature = "fuel-core-lib"))]
 use crate::node::Config;
@@ -107,7 +102,7 @@ pub async fn launch_custom_provider_and_get_wallets(
 /// }
 /// ```
 pub async fn setup_test_provider(
-    coins: Vec<(UtxoId, Coin)>,
+    coins: Vec<Coin>,
     messages: Vec<Message>,
     node_config: Option<Config>,
     chain_config: Option<ChainConfig>,
@@ -119,10 +114,9 @@ pub async fn setup_test_provider(
 #[cfg(test)]
 mod tests {
     use crate::{launch_custom_provider_and_get_wallets, AssetConfig, WalletsConfig};
-    use fuel_gql_client::client::schema::resource::Resource;
     use fuels_core::constants::BASE_ASSET_ID;
     use fuels_signers::fuel_crypto::fuel_types::AssetId;
-    use fuels_types::errors::Error;
+    use fuels_types::{errors::Error, resource::Resource};
     use rand::Fill;
 
     #[tokio::test]
@@ -142,7 +136,7 @@ mod tests {
             assert_eq!(coins.len(), num_coins as usize);
 
             for coin in &coins {
-                assert_eq!(coin.amount.0, amount);
+                assert_eq!(coin.amount, amount);
             }
         }
         Ok(())
@@ -191,10 +185,9 @@ mod tests {
                 for resource in resources {
                     assert_eq!(resource.amount(), asset.coin_amount);
                     match resource {
-                        Resource::Coin(coin) => assert_eq!(
-                            coin.owner.to_string(),
-                            format!("0x{}", wallet.address().hash())
-                        ),
+                        Resource::Coin(coin) => {
+                            assert_eq!(&coin.owner, wallet.address())
+                        }
                         Resource::Message(_) => panic!("Resources contained messages."),
                     }
                 }

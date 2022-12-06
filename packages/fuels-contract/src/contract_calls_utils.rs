@@ -1,14 +1,13 @@
-use fuel_gql_client::client::schema::resource::Resource;
 use fuel_gql_client::fuel_tx::{
     field::Script as ScriptField, ConsensusParameters, Input, Output, TxPointer, UtxoId,
 };
-use fuel_gql_client::fuel_types::{
-    bytes::padded_len_usize, AssetId, Bytes32, ContractId, Immediate18, Word,
-};
+use fuel_gql_client::fuel_types::{bytes::padded_len_usize, Immediate18, Word};
 use fuel_gql_client::fuel_vm::{consts::REG_ONE, prelude::Opcode};
+use fuel_tx::{AssetId, Bytes32, ContractId};
 use fuels_core::constants::BASE_ASSET_ID;
 use fuels_types::bech32::Bech32Address;
 use fuels_types::constants::WORD_SIZE;
+use fuels_types::resource::Resource;
 use itertools::{chain, Itertools};
 use std::collections::HashSet;
 use std::{iter, vec};
@@ -192,7 +191,7 @@ fn extract_unique_asset_ids(spendable_coins: &[Resource]) -> HashSet<AssetId> {
     spendable_coins
         .iter()
         .map(|resource| match resource {
-            Resource::Coin(coin) => coin.asset_id.clone().into(),
+            Resource::Coin(coin) => coin.asset_id,
             Resource::Message(_) => BASE_ASSET_ID,
         })
         .collect()
@@ -235,22 +234,22 @@ fn convert_to_signed_resources(spendable_resources: Vec<Resource>) -> Vec<Input>
         .into_iter()
         .map(|resource| match resource {
             Resource::Coin(coin) => Input::coin_signed(
-                UtxoId::from(coin.utxo_id),
+                coin.utxo_id,
                 coin.owner.into(),
-                coin.amount.0,
-                coin.asset_id.into(),
+                coin.amount,
+                coin.asset_id,
                 TxPointer::default(),
                 0,
-                0,
+                coin.maturity,
             ),
             Resource::Message(message) => Input::message_signed(
-                message.message_id.into(),
+                message.message_id(),
                 message.sender.into(),
                 message.recipient.into(),
-                message.amount.into(),
-                message.nonce.into(),
+                message.amount,
+                message.nonce,
                 0,
-                message.data.into(),
+                message.data,
             ),
         })
         .collect()
@@ -302,11 +301,11 @@ fn extract_unique_contract_ids(calls: &[ContractCall]) -> HashSet<ContractId> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use fuel_gql_client::client::schema::coin::{Coin, CoinStatus};
     use fuels_core::abi_encoder::ABIEncoder;
     use fuels_core::parameters::CallParameters;
     use fuels_core::Token;
     use fuels_types::bech32::Bech32ContractId;
+    use fuels_types::coin::{Coin, CoinStatus};
     use fuels_types::param_types::ParamType;
     use rand::Rng;
     use std::slice;
@@ -561,11 +560,11 @@ mod test {
             .into_iter()
             .map(|asset_id| {
                 Resource::Coin(Coin {
-                    amount: 100u64.into(),
-                    block_created: 0u64.into(),
-                    asset_id: asset_id.into(),
+                    amount: 100,
+                    block_created: 0,
+                    asset_id,
                     utxo_id: Default::default(),
-                    maturity: 0u64.into(),
+                    maturity: 0,
                     owner: Default::default(),
                     status: CoinStatus::Unspent,
                 })
@@ -602,11 +601,11 @@ mod test {
                 .enumerate()
                 .map(|(index, asset_id)| {
                     Resource::Coin(Coin {
-                        amount: (index * 10).into(),
-                        block_created: 1u64.into(),
-                        asset_id: asset_id.into(),
+                        amount: (index * 10) as u64,
+                        block_created: 1,
+                        asset_id,
                         utxo_id: Default::default(),
-                        maturity: 0u64.into(),
+                        maturity: 0,
                         owner: Default::default(),
                         status: CoinStatus::Unspent,
                     })
@@ -630,10 +629,10 @@ mod test {
             .into_iter()
             .map(|resource| match resource {
                 Resource::Coin(coin) => Input::coin_signed(
-                    fuel_tx::UtxoId::from(coin.utxo_id),
+                    coin.utxo_id,
                     coin.owner.into(),
-                    coin.amount.0,
-                    coin.asset_id.into(),
+                    coin.amount,
+                    coin.asset_id,
                     TxPointer::default(),
                     0,
                     0,

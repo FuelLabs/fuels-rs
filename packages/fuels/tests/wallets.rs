@@ -47,7 +47,7 @@ async fn test_wallet_balance_api_single_asset() -> Result<(), Error> {
     let (provider, _) = setup_test_provider(coins.clone(), vec![], None, None).await;
     wallet.set_provider(provider);
 
-    for (_utxo_id, coin) in coins {
+    for coin in coins {
         let balance = wallet.get_asset_balance(&coin.asset_id).await;
         assert_eq!(balance?, number_of_coins * amount_per_coin);
     }
