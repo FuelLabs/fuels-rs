@@ -478,7 +478,7 @@ async fn can_call_predicate_with_u32_data_new() -> Result<(), Error> {
     // The provider has spent the funds
     assert_address_balance(predicate.address(), provider, asset_id, 0).await;
 
-    // No funds were transfered
+    // Funds were transferred
     assert_address_balance(
         receiver.address(),
         provider,
@@ -536,7 +536,7 @@ async fn can_call_predicate_with_struct_data_new() -> Result<(), Error> {
     // The provider has spent the funds
     assert_address_balance(predicate.address(), provider, asset_id, 0).await;
 
-    // No funds were transfered
+    // Funds were transferred
     assert_address_balance(
         receiver.address(),
         provider,

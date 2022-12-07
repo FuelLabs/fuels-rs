@@ -1,7 +1,5 @@
 predicate;
 
-use std::inputs::input_predicate_data;
-
 struct Validation {
     has_account: bool,
     total_complete: u64,
