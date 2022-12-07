@@ -1,6 +1,6 @@
+use crate::code_gen::utils::{param_type_calls, Component};
 use crate::{
     code_gen::{
-        custom_types::{param_type_calls, Component},
         docs_gen::expand_doc,
         full_abi_types::{FullABIFunction, FullTypeApplication, FullTypeDeclaration},
         resolved_type,
@@ -24,7 +24,7 @@ use std::collections::HashSet;
 /// and the function parameters that will be used in the actual contract call.
 ///
 /// [`Contract`]: crate::contract::Contract
-pub fn expand_function(
+pub(crate) fn expand_function(
     function: &FullABIFunction,
     shared_types: &HashSet<FullTypeDeclaration>,
 ) -> Result<TokenStream, Error> {

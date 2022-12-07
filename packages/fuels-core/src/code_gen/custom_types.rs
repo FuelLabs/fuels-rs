@@ -2,10 +2,10 @@ mod enum_gen;
 mod struct_gen;
 mod utils;
 
-pub use enum_gen::expand_custom_enum;
+pub(crate) use enum_gen::expand_custom_enum;
 pub use fuels_types::utils::custom_type_name;
-pub use struct_gen::expand_custom_struct;
-pub use utils::{param_type_calls, single_param_type_call, Component};
+pub(crate) use struct_gen::expand_custom_struct;
+pub use utils::single_param_type_call;
 
 // Doing string -> TokenStream -> string isn't pretty but gives us the opportunity to
 // have a better understanding of the generated code so we consider it ok.

@@ -2,7 +2,7 @@ use fuels_types::{ABIFunction, LoggedType, TypeApplication, TypeDeclaration};
 use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
-pub struct FullABIFunction {
+pub(crate) struct FullABIFunction {
     pub inputs: Vec<FullTypeApplication>,
     pub name: String,
     pub output: FullTypeApplication,
@@ -27,7 +27,7 @@ impl FullABIFunction {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct FullTypeDeclaration {
+pub(crate) struct FullTypeDeclaration {
     pub type_field: String,
     pub components: Vec<FullTypeApplication>,
     pub type_parameters: Vec<FullTypeDeclaration>,
@@ -61,7 +61,7 @@ impl FullTypeDeclaration {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct FullTypeApplication {
+pub(crate) struct FullTypeApplication {
     pub name: String,
     pub type_decl: FullTypeDeclaration,
     pub type_arguments: Vec<FullTypeApplication>,
@@ -94,7 +94,7 @@ impl FullTypeApplication {
 }
 
 #[derive(Debug, Clone)]
-pub struct FullLoggedType {
+pub(crate) struct FullLoggedType {
     pub log_id: u64,
     pub application: FullTypeApplication,
 }

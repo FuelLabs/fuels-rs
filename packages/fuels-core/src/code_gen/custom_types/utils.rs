@@ -1,5 +1,6 @@
 use crate::code_gen::full_abi_types::{FullTypeApplication, FullTypeDeclaration};
 use crate::code_gen::resolved_type::{resolve_type, ResolvedType};
+use crate::code_gen::utils::Component;
 use crate::utils::{ident, safe_ident};
 use fuels_types::errors::Error;
 use fuels_types::utils::extract_generic_name;
@@ -7,33 +8,6 @@ use inflector::Inflector;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 use std::collections::HashSet;
-
-// Represents a component of either a struct(field name) or an enum(variant
-// name).
-#[derive(Debug)]
-pub struct Component {
-    pub field_name: Ident,
-    pub field_type: ResolvedType,
-}
-
-impl Component {
-    pub fn new(
-        component: &FullTypeApplication,
-        snake_case: bool,
-        shared_types: &HashSet<FullTypeDeclaration>,
-    ) -> Result<Component, Error> {
-        let field_name = if snake_case {
-            component.name.to_snake_case()
-        } else {
-            component.name.to_owned()
-        };
-
-        Ok(Component {
-            field_name: safe_ident(&field_name),
-            field_type: resolve_type(component, shared_types)?,
-        })
-    }
-}
 
 /// These TryFrom implementations improve devx by enabling users to easily
 /// construct contract types from bytes. These are generated due to the orphan
@@ -91,7 +65,7 @@ pub(crate) fn extract_components(
 
 /// Returns a vector of TokenStreams, one for each of the generic parameters
 /// used by the given type.
-pub fn extract_generic_parameters(
+pub(crate) fn extract_generic_parameters(
     type_decl: &FullTypeDeclaration,
 ) -> Result<Vec<TokenStream>, Error> {
     type_decl
@@ -104,16 +78,6 @@ pub fn extract_generic_parameters(
             let generic = ident(&name);
             Ok(quote! {#generic})
         })
-        .collect()
-}
-
-/// Returns TokenStreams representing calls to `Parameterize::param_type` for
-/// all given Components. Makes sure to properly handle calls when generics are
-/// involved.
-pub fn param_type_calls(field_entries: &[Component]) -> Vec<TokenStream> {
-    field_entries
-        .iter()
-        .map(|Component { field_type, .. }| single_param_type_call(field_type))
         .collect()
 }
 
@@ -137,6 +101,7 @@ pub fn single_param_type_call(field_type: &ResolvedType) -> TokenStream {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::code_gen::utils::param_type_calls;
     use fuels_types::utils::custom_type_name;
     use fuels_types::{TypeApplication, TypeDeclaration};
     use std::collections::HashMap;

@@ -1,8 +1,7 @@
-use super::utils::{
-    extract_components, extract_generic_parameters, impl_try_from, param_type_calls, Component,
-};
+use super::utils::{extract_components, extract_generic_parameters, impl_try_from};
 use crate::code_gen::abigen::{GeneratedCode, TypePath};
 use crate::code_gen::full_abi_types::FullTypeDeclaration;
+use crate::code_gen::utils::{param_type_calls, Component};
 use crate::utils::ident;
 use fuels_types::{errors::Error, utils::custom_type_name};
 use proc_macro2::{Ident, TokenStream};
@@ -12,7 +11,7 @@ use std::collections::HashSet;
 /// Returns a TokenStream containing the declaration, `Parameterize`,
 /// `Tokenizable` and `TryFrom` implementations for the struct described by the
 /// given TypeDeclaration.
-pub fn expand_custom_struct(
+pub(crate) fn expand_custom_struct(
     type_decl: &FullTypeDeclaration,
     shared_types: &HashSet<FullTypeDeclaration>,
 ) -> Result<GeneratedCode, Error> {

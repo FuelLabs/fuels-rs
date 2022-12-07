@@ -1,8 +1,8 @@
 use super::{
-    custom_types::{expand_custom_enum, expand_custom_struct, single_param_type_call},
-    functions_gen::expand_function,
+    custom_types::single_param_type_call, functions_gen::expand_function,
     resolved_type::resolve_type,
 };
+use crate::code_gen::custom_types::{expand_custom_enum, expand_custom_struct};
 use crate::{
     code_gen::{
         bindings::ContractBindings,
@@ -101,7 +101,7 @@ pub struct GeneratedCode {
 }
 
 impl GeneratedCode {
-    pub fn merge(mut self, another: GeneratedCode) -> Self {
+    pub fn append(mut self, another: GeneratedCode) -> Self {
         self.code.extend(another.code);
         self.type_paths.extend(another.type_paths);
         self
@@ -148,10 +148,6 @@ impl GeneratedCode {
             })
             .collect()
     }
-
-    pub fn is_empty(&self) -> bool {
-        self.code.is_empty()
-    }
 }
 
 fn limited_std_prelude() -> TokenStream {
@@ -185,8 +181,8 @@ fn generate_types(
                 None
             }
         })
-        .fold_ok(Default::default(), |acc, generated_code| {
-            acc.merge(generated_code)
+        .fold_ok(GeneratedCode::default(), |acc, generated_code| {
+            acc.append(generated_code)
         })
 }
 
@@ -228,13 +224,6 @@ impl Contract {
         })
     }
 
-    pub fn mod_name(&self) -> Ident {
-        ident(&format!(
-            "{}_mod",
-            self.contract_name.to_string().to_snake_case()
-        ))
-    }
-
     /// The high-level goal of this function is to expand* a contract
     /// defined as a JSON into type-safe bindings of that contract that can be
     /// used after it is brought into scope after a successful generation.
@@ -243,18 +232,21 @@ impl Contract {
     /// Rust code after a transformation of `TokenStream` to another
     /// set of `TokenStream`. This generated Rust code is the brought into scope
     /// after it is called through a procedural macro (`abigen!()` in our case).
-    pub fn expand(
+    fn expand(
         &self,
         no_std: bool,
         shared_types: &HashSet<FullTypeDeclaration>,
     ) -> Result<GeneratedCode, Error> {
-        let name_mod = self.mod_name();
+        let name_mod = ident(&format!(
+            "{}_mod",
+            self.contract_name.to_string().to_snake_case()
+        ));
 
         let types_code = generate_types(&self.types, shared_types)?;
 
         let contract_code = self
             .generate_contract_code(no_std, shared_types)?
-            .merge(types_code)
+            .append(types_code)
             .prepend_mod_name_to_types(&name_mod);
 
         let code = contract_code.code;
@@ -440,10 +432,10 @@ impl Abigen {
             .iter()
             .map(|contract| contract.expand(self.no_std, &shared_types))
             .fold_ok(GeneratedCode::default(), |acc, generated_code| {
-                acc.merge(generated_code)
+                acc.append(generated_code)
             })?;
 
-        Ok(shared_types_code.merge(contract_code))
+        Ok(shared_types_code.append(contract_code))
     }
 
     fn generate_shared_types(
@@ -460,19 +452,18 @@ impl Abigen {
 
         let prelude = limited_std_prelude();
 
-        if !code.is_empty() {
-            return Ok(GeneratedCode {
-                code: quote! {
-                    #[no_implicit_prelude]
-                    pub mod #shared_mod_name {
-                        #prelude
+        let code = if code.is_empty() {
+            quote! {}
+        } else {
+            quote! {
+                #[no_implicit_prelude]
+                pub mod #shared_mod_name {
+                    #prelude
 
-                        #code
-                    }
-                },
-                type_paths,
-            });
-        }
+                    #code
+                }
+            }
+        };
 
         Ok(GeneratedCode { code, type_paths })
     }

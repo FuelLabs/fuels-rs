@@ -8,5 +8,6 @@ mod full_abi_types;
 pub mod function_selector;
 pub mod functions_gen;
 mod resolved_type;
+mod utils;
 
 pub use abigen::get_logs_hashmap;
