@@ -19,6 +19,7 @@ use fuel_gql_client::{
     interpreter::ExecutableTransaction,
 };
 use fuels_core::constants::{DEFAULT_GAS_ESTIMATION_TOLERANCE, MAX_GAS_PER_TX};
+use fuels_core::tx::{Checkable, Output, TxPointer};
 use fuels_types::{
     bech32::{Bech32Address, Bech32ContractId},
     block::Block,
@@ -139,6 +140,24 @@ impl Provider {
         } else {
             Ok(receipts)
         }
+    }
+
+    pub async fn mint_transaction(
+        &self,
+        outputs: Vec<Output>,
+    ) -> Result<(TransactionStatus, Vec<Receipt>), Error> {
+        let chain_info = self.chain_info().await?;
+
+        let latest_tx_ptr = TxPointer::new((chain_info.latest_block.header.height + 1) as u32, 0);
+
+        let mint = Transaction::mint(latest_tx_ptr, outputs);
+
+        mint.check_without_signatures(
+            latest_tx_ptr.block_height().into(),
+            &chain_info.consensus_parameters,
+        )?;
+
+        Ok(self.submit_with_feedback(&mint.into()).await?)
     }
 
     async fn submit_with_feedback(

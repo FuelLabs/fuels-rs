@@ -1,4 +1,5 @@
 use fuels::prelude::*;
+use fuels_core::tx::Output;
 use std::future::Future;
 
 #[tokio::test]
@@ -767,6 +768,29 @@ async fn test_contract_call_with_non_default_max_input() -> Result<(), Error> {
     let response = contract_instance.methods().get(5, 6).call().await?;
 
     assert_eq!(response.value, 5);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_transaction_mint() -> Result<(), Error> {
+    let wallets =
+        launch_custom_provider_and_get_wallets(WalletsConfig::default(), None, None).await;
+
+    let wallet = &wallets[0];
+    let provider = wallet.get_provider()?;
+
+    let output_coins = vec![Output::coin(
+        wallet.address().into(),
+        1,
+        AssetId::from([3u8; 32]),
+    )];
+
+    let a = provider.mint_transaction(output_coins).await?;
+
+    dbg!(&a);
+
+    dbg!(wallet.get_balances().await?);
 
     Ok(())
 }
