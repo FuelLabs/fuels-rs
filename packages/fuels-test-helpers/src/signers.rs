@@ -189,7 +189,6 @@ mod tests {
                             assert_eq!(&coin.owner, wallet.address())
                         }
                         Resource::Message(_) => panic!("Resources contained messages."),
-                        Resource::Unknown => panic!("Resources unknown."),
                     }
                 }
             }

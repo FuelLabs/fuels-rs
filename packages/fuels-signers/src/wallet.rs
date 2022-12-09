@@ -156,11 +156,6 @@ impl Wallet {
             let input = match resource {
                 Resource::Coin(coin) => self.create_coin_input(coin, asset_id, witness_index),
                 Resource::Message(message) => self.create_message_input(message, witness_index),
-                Resource::Unknown => {
-                    return Err(Error::InvalidType(
-                        "get_asset_inputs_for_amount".to_string(),
-                    ))
-                }
             };
             inputs.push(input);
         }
@@ -699,7 +694,6 @@ impl WalletUnlocked {
                     code.clone(),
                     predicate_data.clone(),
                 )),
-                Resource::Unknown => None,
             })
             .collect::<Vec<_>>();
 
