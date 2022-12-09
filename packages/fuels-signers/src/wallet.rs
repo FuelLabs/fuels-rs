@@ -682,18 +682,13 @@ impl WalletUnlocked {
         let predicate_data = data.unwrap_or_default();
         let inputs = spendable_predicate_resources
             .into_iter()
-            .filter_map(|resource| match resource {
-                Resource::Coin(coin) => Some(self.create_coin_predicate(
-                    coin,
-                    asset_id,
-                    code.clone(),
-                    predicate_data.clone(),
-                )),
-                Resource::Message(message) => Some(self.create_message_predicate(
-                    message,
-                    code.clone(),
-                    predicate_data.clone(),
-                )),
+            .map(|resource| match resource {
+                Resource::Coin(coin) => {
+                    self.create_coin_predicate(coin, asset_id, code.clone(), predicate_data.clone())
+                }
+                Resource::Message(message) => {
+                    self.create_message_predicate(message, code.clone(), predicate_data.clone())
+                }
             })
             .collect::<Vec<_>>();
 

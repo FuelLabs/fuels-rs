@@ -264,7 +264,7 @@ impl Provider {
             .map(|resource| {
                 let resource: Result<Resource, _> = resource.try_into();
 
-                resource.map_err(|e| ProviderError::ClientRequestError(e))
+                resource.map_err(ProviderError::ClientRequestError)
             })
             .try_collect()?;
 
