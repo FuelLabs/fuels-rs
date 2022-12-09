@@ -26,9 +26,3 @@ members = [
     "scripts/check-docs",
     "tools/fuels-abi-cli",
 ]
-
-[patch.crates-io]
-fuel-core = { git = "https://github.com/FuelLabs/fuel-core" }
-fuel-chain-config = { git = "https://github.com/FuelLabs/fuel-core" }
-fuel-core-interfaces = { git = "https://github.com/FuelLabs/fuel-core" }
-fuel-gql-client = { git = "https://github.com/FuelLabs/fuel-core" }
