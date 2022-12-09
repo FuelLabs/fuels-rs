@@ -28,16 +28,19 @@ pub(crate) struct CallOpcodeParamsOffset {
 pub(crate) fn calculate_required_asset_amounts(calls: &[ContractCall]) -> Vec<(AssetId, u64)> {
     let amounts_per_asset_id = calls
         .iter()
-        .map(|call| (call.call_parameters.asset_id, call.call_parameters.amount));
+        .map(|call| (call.call_parameters.asset_id, call.call_parameters.amount))
+        .collect::<Vec<_>>();
     sum_up_amounts_for_each_asset_id(amounts_per_asset_id)
 }
 
 /// Sum up the amounts required in each call for each asset ID, so you can get a total for each
 /// asset over all calls.
 fn sum_up_amounts_for_each_asset_id(
-    amounts_per_asset_id: impl Iterator<Item = (AssetId, u64)>,
+    amounts_per_asset_id: Vec<(AssetId, u64)>,
 ) -> Vec<(AssetId, u64)> {
     amounts_per_asset_id
+        .into_iter()
+        .sorted_by_key(|(asset_id, _)| *asset_id)
         .group_by(|(asset_id, _)| *asset_id)
         .into_iter()
         .map(|(asset_id, groups_w_same_asset_id)| {
@@ -316,6 +319,7 @@ mod test {
     use fuels_types::param_types::ParamType;
     use rand::Rng;
     use std::slice;
+
     impl ContractCall {
         pub fn new_with_random_id() -> Self {
             ContractCall {
@@ -704,20 +708,23 @@ mod test {
 
     #[test]
     fn will_collate_same_asset_ids() {
-        let amounts = [100, 200];
+        let asset_id_1 = AssetId::from([1; 32]);
+        let asset_id_2 = AssetId::from([2; 32]);
 
-        let asset_id = [1; 32].into();
-        let calls = amounts.map(|amount| {
-            ContractCall::new_with_random_id().with_call_parameters(CallParameters::new(
-                Some(amount),
-                Some(asset_id),
-                None,
-            ))
+        let calls = [
+            (asset_id_1, 100),
+            (asset_id_2, 200),
+            (asset_id_1, 300),
+            (asset_id_2, 400),
+        ]
+        .map(|(asset_id, amount)| CallParameters::new(Some(amount), Some(asset_id), None))
+        .map(|call_parameters| {
+            ContractCall::new_with_random_id().with_call_parameters(call_parameters)
         });
 
         let asset_id_amounts = calculate_required_asset_amounts(&calls);
 
-        let expected_asset_id_amounts = [(asset_id, amounts.iter().sum())].into();
+        let expected_asset_id_amounts = [(asset_id_1, 400), (asset_id_2, 600)].into();
 
         assert_eq!(
             asset_id_amounts.into_iter().collect::<HashSet<_>>(),
