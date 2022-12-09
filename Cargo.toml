@@ -28,7 +28,7 @@ members = [
 ]
 
 [patch.crates-io]
-fuel-core = { git = "https://github.com/FuelLabs/fuel-core", branch = "bugfix/empty-script-transaction" }
-fuel-chain-config = { git = "https://github.com/FuelLabs/fuel-core", branch = "bugfix/empty-script-transaction" }
-fuel-core-interfaces = { git = "https://github.com/FuelLabs/fuel-core", branch = "bugfix/empty-script-transaction" }
-fuel-gql-client = { git = "https://github.com/FuelLabs/fuel-core", branch = "bugfix/empty-script-transaction" }
+fuel-core = { git = "https://github.com/FuelLabs/fuel-core" }
+fuel-chain-config = { git = "https://github.com/FuelLabs/fuel-core" }
+fuel-core-interfaces = { git = "https://github.com/FuelLabs/fuel-core" }
+fuel-gql-client = { git = "https://github.com/FuelLabs/fuel-core" }
