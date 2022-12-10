@@ -505,7 +505,7 @@ impl WalletUnlocked {
             .iter()
             .map(|input| input.amount().unwrap())
             .sum();
-        // either the inputs were setup incorrectly, or the passed base_asset_amount is wrong
+        // either the inputs were setup incorrectly, or the passed previous_base_amount is wrong
         if base_inputs_sum < previous_base_amount {
             return Err(Error::WalletError(
                 "The provided base asset amount is less than the present input coins".to_string(),
@@ -516,25 +516,21 @@ impl WalletUnlocked {
         // If the tx doesn't consume any UTXOs, attempting to repeat it will lead to an
         // error due to non unique tx ids (e.g. repeated contract call with configured gas cost of 0).
         // Here we enforce a minimum amount on the base asset to avoid this
+        let is_consuming_utxos = tx.inputs().iter().any(|input| match input {
+            Input::CoinSigned { .. }
+            | Input::CoinPredicate { .. }
+            | Input::MessageSigned { .. }
+            | Input::MessagePredicate { .. } => true,
+            Input::Contract { .. } => false,
+        });
         const MIN_AMOUNT: u64 = 1;
-        let is_using_coins = tx
-            .inputs()
-            .iter()
-            .any(|input| matches!(input, Input::CoinSigned { .. }));
-
-        if !is_using_coins && new_base_amount == 0 {
+        if !is_consuming_utxos && new_base_amount == 0 {
             new_base_amount = MIN_AMOUNT;
         }
 
         let new_base_inputs = self
             .get_asset_inputs_for_amount(BASE_ASSET_ID, new_base_amount, witness_index)
             .await?;
-        if new_base_inputs.is_empty() && new_base_amount != 0 {
-            return Err(Error::ProviderError(
-                "Response errors; enough resources could not be found".to_string(),
-            ));
-        }
-
         let adjusted_inputs: Vec<_> = remaining_inputs
             .into_iter()
             .chain(new_base_inputs.into_iter())
