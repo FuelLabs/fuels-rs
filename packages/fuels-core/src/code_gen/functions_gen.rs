@@ -34,9 +34,7 @@ pub fn expand_function(
     }
 
     let args = function_arguments(function, types)?;
-
     let arg_names = args.iter().map(|component| &component.field_name);
-
     let param_type_calls = param_type_calls(&args);
 
     let arg_declarations = args.iter().map(|component| {
@@ -85,7 +83,6 @@ pub fn generate_script_main_function(
     let output_type: TokenStream = output_type_resolved.into();
 
     let args = function_arguments(main_function_abi, types)?;
-
     let arg_names = args.iter().map(|component| &component.field_name);
 
     let arg_declarations = args.iter().map(|component| {
@@ -95,7 +92,6 @@ pub fn generate_script_main_function(
     });
 
     let doc = expand_doc("Run the script's `main` function with the provided arguments");
-
     let name = safe_ident("main");
 
     Ok(quote! {
@@ -104,8 +100,8 @@ pub fn generate_script_main_function(
             let arg_name_tokens = [#(#arg_names.into_token()),*];
             let script_binary = std::fs::read(self.binary_filepath.as_str())
                                         .expect("Could not read from binary filepath");
-            let encoded_args = ABIEncoder::encode(&arg_name_tokens).expect("Cannot encode script
-            arguments");
+            let encoded_args = ABIEncoder::encode(&arg_name_tokens)
+                .expect("Cannot encode script arguments");
             let provider = self.wallet.get_provider().expect("Provider not set up").clone();
             let log_decoder = LogDecoder{logs_map: self.logs_map.clone()};
             ScriptCallHandler::new(
@@ -125,14 +121,6 @@ pub fn generate_predicate_encode_function(
     types: &HashMap<usize, TypeDeclaration>,
 ) -> Result<TokenStream, Error> {
     let args = function_arguments(main_function_abi, types)?;
-
-    // TODO(hal3e): enable support for vector inputs
-    if args.iter().any(|c| c.field_type.uses_vectors()) {
-        return Err(Error::CompilationError(
-            "Predicate main function contains a vector in its argument types. This currently isn't supported."
-                .to_string(),
-        ));
-    }
     let arg_names = args.iter().map(|component| &component.field_name);
 
     let arg_declarations = args.iter().map(|component| {
@@ -142,7 +130,6 @@ pub fn generate_predicate_encode_function(
     });
 
     let doc = expand_doc("Run the predicate's encode function with the provided arguments");
-
     let name = safe_ident("encode_data");
 
     Ok(quote! {
@@ -150,7 +137,7 @@ pub fn generate_predicate_encode_function(
         pub fn #name(&self #(,#arg_declarations)*) -> Self{
             let arg_name_tokens = [#(#arg_names.into_token()),*];
             let data = ABIEncoder::encode(&arg_name_tokens)
-                .expect("Cannot encode predicate data").resolve(0);
+                .expect("Cannot encode predicate data");
 
             Self {
                 address: self.address.clone(),

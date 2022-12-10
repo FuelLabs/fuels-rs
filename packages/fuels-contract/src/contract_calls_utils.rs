@@ -264,6 +264,16 @@ pub fn get_base_script_offset(consensus_parameters: &ConsensusParameters) -> usi
     consensus_parameters.tx_offset() + fuel_tx::Script::script_offset_static()
 }
 
+/// Gets the base offset for a predicate. The offset depends on the `max_inputs`
+/// field of the `ConsensusParameters` and the static offset of a transfer script
+pub fn get_predicate_offset(consensus_parameters: &ConsensusParameters) -> usize {
+    // Opcode::LEN is a placeholder for the RET instruction which is
+    // added for transfer transactions
+    let opcode_len = Opcode::LEN;
+
+    get_base_script_offset(consensus_parameters) + padded_len_usize(opcode_len)
+}
+
 /// Calculates the length of the script based on the number of contract calls it
 /// has to make and returns the offset at which the script data begins
 pub(crate) fn get_data_offset(

@@ -258,7 +258,7 @@ impl Abigen {
                 pub struct #name{
                     address: Bech32Address,
                     code: Vec<u8>,
-                    data: Vec<u8>
+                    data: UnresolvedBytes
                 }
 
                 impl #name {
@@ -267,7 +267,7 @@ impl Abigen {
                         Self {
                             address: address.into(),
                             code,
-                            data: vec![]
+                            data: UnresolvedBytes::new()
                         }
                     }
 
@@ -283,8 +283,14 @@ impl Abigen {
                         self.code.clone()
                     }
 
-                    pub fn data(&self) -> Vec<u8> {
+                    pub fn data(&self) -> UnresolvedBytes {
                         self.data.clone()
+                    }
+
+                    /// Compute the predicate data by calculating the predicate offset and resolving the encoded arguments
+                    async fn get_offset(&self, provider: &Provider) -> Result<u64, SDKError> {
+                        let consensus_parameters = provider.consensus_parameters().await?;
+                        Ok(get_predicate_offset(&consensus_parameters) as u64)
                     }
 
                     pub async fn receive_from_wallet(&self, wallet: &WalletUnlocked, amount:u64, asset_id: AssetId, tx_parameters: Option<TxParameters>) -> Result<(String, Vec<Receipt>), SDKError> {
@@ -307,14 +313,12 @@ impl Abigen {
                                 self.code(),
                                 amount,
                                 asset_id,
-                                self.data(),
-                                tx_parameters
+                                self.data.clone(),
+                                tx_parameters,
+                                self.get_offset(wallet.get_provider()?).await?
                             )
                             .await
                     }
-
-
-
 
                     #encode_data_function
                 }
@@ -378,9 +382,12 @@ impl Abigen {
                 },
                 AbigenType::Predicate => quote! {
                     use fuels::{
-                        core::{abi_encoder::ABIEncoder, parameters::TxParameters},
+                        core::{abi_encoder::{ABIEncoder, UnresolvedBytes}, parameters::TxParameters},
+                        contract::contract_calls_utils::get_predicate_offset,
                         tx::{Contract, AssetId},
+                        signers::provider::Provider
                     };
+                    use fuel_gql_client:: fuel_types::bytes::padded_len_usize;
                 },
             };
             quote! {

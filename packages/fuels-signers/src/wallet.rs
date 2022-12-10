@@ -13,8 +13,9 @@ use fuel_gql_client::{
     },
     fuel_vm::{consts::REG_ONE, prelude::Opcode},
 };
-use fuel_types::bytes::WORD_SIZE;
+use fuel_types::bytes::{padded_len_usize, WORD_SIZE};
 use fuel_types::{Address, MessageId};
+use fuels_core::abi_encoder::UnresolvedBytes;
 use fuels_core::tx::{field, Chargeable, Script, Transaction, UniqueIdentifier};
 use fuels_core::{constants::BASE_ASSET_ID, parameters::TxParameters};
 use fuels_types::bech32::{Bech32Address, Bech32ContractId, FUEL_BECH32_HRP};
@@ -656,6 +657,21 @@ impl WalletUnlocked {
             .and_then(|m| m.message_id())
     }
 
+    fn get_coin_predicate_data_offset(code_len: usize) -> u64 {
+        fuel_gql_client::fuel_tx::InputRepr::Coin
+            .coin_predicate_offset()
+            .expect("should have the predicate offset") as u64
+            + padded_len_usize(code_len) as u64
+    }
+
+    fn get_message_predicate_data_offset(message_data_len: usize, code_len: usize) -> u64 {
+        fuel_gql_client::fuel_tx::InputRepr::Message
+            .data_offset()
+            .expect("should have the data offset") as u64
+            + padded_len_usize(message_data_len) as u64
+            + padded_len_usize(code_len) as u64
+    }
+
     #[allow(clippy::too_many_arguments)]
     pub async fn spend_predicate(
         &self,
@@ -664,8 +680,9 @@ impl WalletUnlocked {
         amount: u64,
         asset_id: AssetId,
         to: &Bech32Address,
-        predicate_data: Vec<u8>,
+        predicate_data: UnresolvedBytes,
         tx_parameters: TxParameters,
+        base_offset: u64,
     ) -> Result<Vec<Receipt>, Error> {
         let spendable_predicate_resources = self
             .get_provider()?
@@ -679,14 +696,27 @@ impl WalletUnlocked {
             .map(|resource| resource.amount())
             .sum();
 
+        let mut offset = base_offset;
+
         let inputs = spendable_predicate_resources
             .into_iter()
             .map(|resource| match resource {
                 Resource::Coin(coin) => {
-                    self.create_coin_predicate(coin, asset_id, code.clone(), predicate_data.clone())
+                    offset += Self::get_coin_predicate_data_offset(code.len());
+
+                    let data = predicate_data.clone().resolve(offset);
+                    offset += data.len() as u64;
+
+                    self.create_coin_predicate(coin, asset_id, code.clone(), data)
                 }
                 Resource::Message(message) => {
-                    self.create_message_predicate(message, code.clone(), predicate_data.clone())
+                    offset +=
+                        Self::get_message_predicate_data_offset(message.data.len(), code.len());
+
+                    let data = predicate_data.clone().resolve(offset);
+                    offset += data.len() as u64;
+
+                    self.create_message_predicate(message, code.clone(), data)
                 }
             })
             .collect::<Vec<_>>();
@@ -747,8 +777,9 @@ impl WalletUnlocked {
         predicate_code: Vec<u8>,
         amount: u64,
         asset_id: AssetId,
-        predicate_data: Vec<u8>,
+        predicate_data: UnresolvedBytes,
         tx_parameters: TxParameters,
+        offset: u64,
     ) -> Result<Vec<Receipt>, Error> {
         self.spend_predicate(
             predicate_address,
@@ -758,6 +789,7 @@ impl WalletUnlocked {
             self.address(),
             predicate_data,
             tx_parameters,
+            offset,
         )
         .await
     }
