@@ -165,23 +165,25 @@ pub async fn setup_test_client(
     let message_configs = get_message_configs(messages);
 
     // Setup node config with genesis coins and utxo_validation enabled
-    let mut chain_conf = chain_config.unwrap_or_else(|| ChainConfig {
-        initial_state: Some(StateConfig {
-            coins: Some(coin_configs),
-            contracts: None,
-            messages: Some(message_configs),
-            ..StateConfig::default()
-        }),
-        ..ChainConfig::local_testnet()
-    });
+    let chain_conf = {
+        let chain_conf = chain_config.unwrap_or_else(|| ChainConfig {
+            initial_state: Some(StateConfig {
+                coins: Some(coin_configs),
+                contracts: None,
+                messages: Some(message_configs),
+                ..StateConfig::default()
+            }),
+            ..ChainConfig::local_testnet()
+        });
 
-    chain_conf = if consensus_parameters_config.is_some() {
-        ChainConfig {
-            transaction_parameters: consensus_parameters_config.unwrap(),
-            ..chain_conf
+        if let Some(transaction_parameters) = consensus_parameters_config {
+            ChainConfig {
+                transaction_parameters,
+                ..chain_conf
+            }
+        } else {
+            chain_conf
         }
-    } else {
-        chain_conf
     };
 
     let config = Config {
