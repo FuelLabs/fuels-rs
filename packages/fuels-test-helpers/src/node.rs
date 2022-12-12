@@ -174,7 +174,7 @@ pub fn get_node_config_json(
     let messages = get_message_configs(messages);
 
     let chain_config = {
-        let mut chain_config = chain_config.unwrap_or_else(|| ChainConfig {
+        let chain_config = chain_config.unwrap_or_else(|| ChainConfig {
             chain_name: "local_testnet".to_string(),
             block_production: BlockProduction::ProofOfAuthority {
                 trigger: Default::default(),
