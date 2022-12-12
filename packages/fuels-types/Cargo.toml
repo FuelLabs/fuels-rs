@@ -15,9 +15,9 @@ anyhow = "1"
 bech32 = "0.9.0"
 chrono = "0.4.2"
 fuel-tx = "0.23"
-fuel-core = { version = "0.14.1", default-features = false, optional = true }
-fuel-chain-config = { version = "0.14.1", default-features = false }
-fuel-gql-client = { version = "0.14.1", default-features = false }
+fuel-core = { version = "0.15", default-features = false, optional = true }
+fuel-chain-config = { version = "0.15", default-features = false }
+fuel-gql-client = { version = "0.15", default-features = false }
 hex = { version = "0.4.3", features = ["std"] }
 proc-macro2 = "1.0"
 serde = { version = "1.0", features = ["derive"] }
