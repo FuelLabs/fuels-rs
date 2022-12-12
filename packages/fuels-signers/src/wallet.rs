@@ -4,15 +4,9 @@ use async_trait::async_trait;
 use elliptic_curve::rand_core;
 use eth_keystore::KeystoreError;
 use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
-use fuel_gql_client::client::schema;
-use fuel_gql_client::client::schema::resource::Resource;
-use fuel_gql_client::client::types::TransactionResponse;
 use fuel_gql_client::fuel_vm::prelude::GTFArgs;
 use fuel_gql_client::{
-    client::{
-        schema::coin::Coin, schema::message::Message as InputMessage, PaginatedResult,
-        PaginationRequest,
-    },
+    client::{PaginatedResult, PaginationRequest},
     fuel_tx::{
         AssetId, Bytes32, Cacheable, ContractId, Input, Output, Receipt, TransactionFee, TxPointer,
         UtxoId, Witness,
@@ -20,10 +14,13 @@ use fuel_gql_client::{
     fuel_vm::{consts::REG_ONE, prelude::Opcode},
 };
 use fuel_types::bytes::WORD_SIZE;
+use fuel_types::{Address, MessageId};
 use fuels_core::tx::{field, Chargeable, Script, Transaction, UniqueIdentifier};
 use fuels_core::{constants::BASE_ASSET_ID, parameters::TxParameters};
 use fuels_types::bech32::{Bech32Address, Bech32ContractId, FUEL_BECH32_HRP};
 use fuels_types::errors::Error;
+use fuels_types::transaction_response::TransactionResponse;
+use fuels_types::{coin::Coin, message::Message as InputMessage, resource::Resource};
 use rand::{CryptoRng, Rng};
 use std::{collections::HashMap, fmt, ops, path::Path};
 use thiserror::Error;
@@ -83,7 +80,6 @@ pub struct Wallet {
 ///   Ok(())
 /// }
 /// ```
-/// [`Signature`]: fuels_core::signature::Signature
 #[derive(Clone, Debug)]
 pub struct WalletUnlocked {
     wallet: Wallet,
@@ -168,9 +164,9 @@ impl Wallet {
 
     fn create_coin_input(&self, coin: Coin, asset_id: AssetId, witness_index: u8) -> Input {
         Input::coin_signed(
-            UtxoId::from(coin.utxo_id),
+            coin.utxo_id,
             coin.owner.into(),
-            coin.amount.0,
+            coin.amount,
             asset_id,
             TxPointer::default(),
             witness_index,
@@ -179,21 +175,14 @@ impl Wallet {
     }
 
     fn create_message_input(&self, message: InputMessage, witness_index: u8) -> Input {
-        let message_id = Input::compute_message_id(
-            &message.sender.clone().into(),
-            &message.recipient.clone().into(),
-            message.nonce.into(),
-            message.amount.0,
-            &message.data.0,
-        );
         Input::message_signed(
-            message_id,
+            message.message_id(),
             message.sender.into(),
             message.recipient.into(),
-            message.amount.0,
-            0,
+            message.amount,
+            message.nonce,
             witness_index,
-            message.data.into(),
+            message.data,
         )
     }
 
@@ -256,7 +245,7 @@ impl Wallet {
             .map_err(Into::into)
     }
 
-    pub async fn get_messages(&self) -> Result<Vec<schema::message::Message>, Error> {
+    pub async fn get_messages(&self) -> Result<Vec<InputMessage>, Error> {
         Ok(self.get_provider()?.get_messages(&self.address).await?)
     }
 
@@ -322,6 +311,51 @@ impl Wallet {
         ]
         .into_iter()
         .collect();
+
+        Transaction::script(
+            params.gas_price,
+            params.gas_limit,
+            params.maturity,
+            script,
+            script_data,
+            inputs.to_vec(),
+            outputs.to_vec(),
+            vec![],
+        )
+    }
+
+    /// Craft a transaction used to transfer funds to the base chain.
+    pub fn build_message_to_output_tx(
+        to: Address,
+        amount: u64,
+        inputs: &[Input],
+        params: TxParameters,
+    ) -> Script {
+        let script_data: Vec<u8> = [to.to_vec(), amount.to_be_bytes().to_vec()]
+            .into_iter()
+            .flatten()
+            .collect();
+
+        // This script loads:
+        //  - a pointer to the recipient address,
+        //  - the amount
+        // into the registers 0x10, 0x11
+        // and calls the SMO instruction
+        let script = vec![
+            Opcode::gtf(0x10, 0x00, GTFArgs::ScriptData),
+            Opcode::ADDI(0x11, 0x10, Bytes32::LEN as u16),
+            Opcode::LW(0x11, 0x11, 0),
+            Opcode::SMO(0x10, 0x00, 0x00, 0x11),
+            Opcode::RET(REG_ONE),
+        ]
+        .into_iter()
+        .collect();
+
+        let outputs = vec![
+            // when signing a transaction, recipient and amount are set to zero
+            Output::message(Address::zeroed(), 0),
+            Output::change(to, 0, BASE_ASSET_ID),
+        ];
 
         Transaction::script(
             params.gas_price,
@@ -442,7 +476,7 @@ impl WalletUnlocked {
 
     /// Add base asset inputs to the transaction to cover the estimated fee.
     /// The original base asset amount cannot be calculated reliably from
-    /// the existing transaction inputs because the selected coins may exceed
+    /// the existing transaction inputs because the selected resources may exceed
     /// the required amount to avoid dust. Therefore we require it as an argument.
     ///
     /// Requires contract inputs to be at the start of the transactions inputs vec
@@ -458,13 +492,13 @@ impl WalletUnlocked {
             .chain_info()
             .await?
             .consensus_parameters;
-        let transaction_fee = TransactionFee::checked_from_tx(&consensus_parameters.into(), tx)
+        let transaction_fee = TransactionFee::checked_from_tx(&consensus_parameters, tx)
             .expect("Error calculating TransactionFee");
 
         let (base_asset_inputs, remaining_inputs): (Vec<_>, Vec<_>) =
             tx.inputs().iter().cloned().partition(|input| {
-                matches!(input, Input::CoinSigned { .. })
-                    && *input.asset_id().unwrap() == BASE_ASSET_ID
+                matches!(input, Input::MessageSigned { .. })
+                || matches!(input, Input::CoinSigned { asset_id, .. } if asset_id == &BASE_ASSET_ID)
             });
 
         let base_inputs_sum: u64 = base_asset_inputs
@@ -492,10 +526,6 @@ impl WalletUnlocked {
             new_base_amount = MIN_AMOUNT;
         }
 
-        // This is a temporary solution till we get update on coins_to_spend function
-        // Get asset inputs for required amount expressed u Input::coin_signed or in
-        // Input::message_signed depending on what we have in stock.
-        // In the near future this will be replaced by one function.
         let new_base_inputs = self
             .get_asset_inputs_for_amount(BASE_ASSET_ID, new_base_amount, witness_index)
             .await?;
@@ -505,29 +535,20 @@ impl WalletUnlocked {
             ));
         }
 
-        let is_using_messages = new_base_inputs
-            .iter()
-            .any(|input| matches!(input, Input::MessageSigned { .. }));
-
         let adjusted_inputs: Vec<_> = remaining_inputs
             .into_iter()
             .chain(new_base_inputs.into_iter())
             .collect();
+        *tx.inputs_mut() = adjusted_inputs;
 
         let is_base_change_present = tx.outputs().iter().any(|output| {
-            matches!(output, Output::Change { .. }) && *output.asset_id().unwrap() == BASE_ASSET_ID
+            matches!(output, Output::Change { asset_id, .. } if asset_id == &BASE_ASSET_ID)
         });
-
         // add a change output for the base asset if it doesn't exist and there are base inputs
-        let change_output = if !is_base_change_present && new_base_amount != 0 && !is_using_messages
-        {
-            vec![Output::change(self.address().into(), 0, BASE_ASSET_ID)]
-        } else {
-            vec![]
-        };
-
-        *tx.inputs_mut() = adjusted_inputs;
-        tx.outputs_mut().extend(change_output);
+        if !is_base_change_present && new_base_amount != 0 {
+            tx.outputs_mut()
+                .push(Output::change(self.address().into(), 0, BASE_ASSET_ID));
+        }
 
         Ok(())
     }
@@ -602,6 +623,39 @@ impl WalletUnlocked {
         Ok((tx.id().to_string(), receipts))
     }
 
+    /// Withdraws an amount of the base asset to
+    /// an address on the base chain.
+    /// Returns the transaction ID, message ID and the list of receipts.
+    pub async fn withdraw_to_base_layer(
+        &self,
+        to: &Bech32Address,
+        amount: u64,
+        tx_parameters: TxParameters,
+    ) -> Result<(String, String, Vec<Receipt>), Error> {
+        let inputs = self
+            .get_asset_inputs_for_amount(BASE_ASSET_ID, amount, 0)
+            .await?;
+
+        let mut tx = Wallet::build_message_to_output_tx(to.into(), amount, &inputs, tx_parameters);
+
+        self.add_fee_coins(&mut tx, amount, 0).await?;
+        self.sign_transaction(&mut tx).await?;
+
+        let receipts = self.get_provider()?.send_transaction(&tx).await?;
+
+        let message_id = WalletUnlocked::extract_message_id(&receipts)
+            .expect("MessageId could not be retrieved from tx receipts.");
+
+        Ok((tx.id().to_string(), message_id.to_string(), receipts))
+    }
+
+    fn extract_message_id(receipts: &[Receipt]) -> Option<&MessageId> {
+        receipts
+            .iter()
+            .find(|r| matches!(r, Receipt::MessageOut { .. }))
+            .and_then(|m| m.message_id())
+    }
+
     #[allow(clippy::too_many_arguments)]
     pub async fn spend_predicate(
         &self,
@@ -659,9 +713,9 @@ impl WalletUnlocked {
         predicate_data: Vec<u8>,
     ) -> Input {
         Input::coin_predicate(
-            UtxoId::from(coin.utxo_id),
+            coin.utxo_id,
             coin.owner.into(),
-            coin.amount.0,
+            coin.amount,
             asset_id,
             TxPointer::default(),
             0,
@@ -676,18 +730,11 @@ impl WalletUnlocked {
         code: Vec<u8>,
         predicate_data: Vec<u8>,
     ) -> Input {
-        let message_id = Input::compute_message_id(
-            &message.sender.clone().into(),
-            &message.recipient.clone().into(),
-            message.nonce.into(),
-            message.amount.0,
-            &message.data.0,
-        );
         Input::message_predicate(
-            message_id,
+            message.message_id(),
             message.sender.into(),
             message.recipient.into(),
-            message.amount.0,
+            message.amount,
             0,
             vec![],
             code,

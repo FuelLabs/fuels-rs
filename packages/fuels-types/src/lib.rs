@@ -9,10 +9,17 @@ use strum_macros::ToString;
 
 pub mod bech32;
 pub mod block;
+pub mod chain_info;
+pub mod coin;
 pub mod constants;
 pub mod enum_variants;
 pub mod errors;
+pub mod message;
+pub mod message_proof;
+pub mod node_info;
 pub mod param_types;
+pub mod resource;
+pub mod transaction_response;
 pub mod utils;
 
 #[derive(Debug, Clone, Copy, ToString, PartialEq, Eq)]
@@ -22,9 +29,8 @@ pub enum CustomType {
     Enum,
 }
 
-/// FuelVM ABI representation in JSON, originally specified here:
-///
-/// https://github.com/FuelLabs/fuel-specs/blob/master/specs/protocol/abi.md
+/// FuelVM ABI representation in JSON, originally specified
+/// [here](https://github.com/FuelLabs/fuel-specs/blob/master/specs/protocol/abi.md).
 ///
 /// This type may be used by compilers and related tooling to convert an ABI
 /// representation into native Rust structs and vice-versa.

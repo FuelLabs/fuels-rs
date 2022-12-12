@@ -36,6 +36,15 @@ macro_rules! bech32type {
             }
         }
 
+        impl Default for $i {
+            fn default() -> $i {
+                Self {
+                    hrp: FUEL_BECH32_HRP.to_string(),
+                    hash: Bytes32::new([0u8; 32]),
+                }
+            }
+        }
+
         impl FromStr for $i {
             type Err = Error;
 

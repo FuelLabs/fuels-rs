@@ -1,20 +1,18 @@
-use super::{
-    custom_types::single_param_type_call, functions_gen::expand_function,
-    resolved_type::resolve_type,
+use crate::code_gen::bindings::ContractBindings;
+use crate::code_gen::custom_types::{
+    expand_custom_enum, expand_custom_struct, single_param_type_call,
 };
-use crate::code_gen::custom_types::{expand_custom_enum, expand_custom_struct};
-use crate::{
-    code_gen::{
-        bindings::ContractBindings,
-        full_abi_types::{FullABIFunction, FullLoggedType, FullTypeDeclaration},
-    },
-    source::Source,
-    utils::ident,
-};
-use fuels_types::{
-    bech32::Bech32ContractId, errors::Error, param_types::ParamType, utils::custom_type_name,
-    ProgramABI, ResolvedLog,
-};
+use crate::code_gen::full_abi_types::{FullABIFunction, FullLoggedType, FullTypeDeclaration};
+use crate::code_gen::functions_gen::expand_function;
+use crate::code_gen::resolved_type::resolve_type;
+use crate::source::Source;
+use crate::utils::ident;
+use fuel_types::ContractId;
+use fuels_types::bech32::Bech32ContractId;
+use fuels_types::errors::Error;
+use fuels_types::param_types::ParamType;
+use fuels_types::utils::custom_type_name;
+use fuels_types::{ProgramABI, ResolvedLog};
 use inflector::Inflector;
 use itertools::Itertools;
 use proc_macro2::{Ident, TokenStream};
@@ -326,7 +324,7 @@ impl Contract {
                     #methods_name {
                         contract_id: self.contract_id.clone(),
                         wallet: self.wallet.clone(),
-                        logs_map: ::fuels::core::code_gen::get_logs_hashmap(&[#(#log_id_param_type_pairs),*], &self.contract_id),
+                        logs_map: ::fuels::core::code_gen::get_logs_hashmap(&[#(#log_id_param_type_pairs),*], Some(self.contract_id.clone())),
                     }
                 }
             }
@@ -362,6 +360,141 @@ impl Contract {
 
         Ok(quote! { #( #tokenized_functions )* })
     }
+    // /// Expand a script into type-safe Rust bindings based on its ABI. See `expand_contract` for
+    // /// more details.
+    // pub fn expand_script(&self) -> Result<TokenStream, Error> {
+    //     let name = ident(&self.name);
+    //     let name_mod = ident(&format!("{}_mod", self.name.to_string().to_snake_case()));
+    //
+    //     let includes = self.includes(true);
+    //     let resolved_logs = self.resolve_logs();
+    //     let log_id_param_type_pairs = generate_log_id_param_type_pairs(&resolved_logs);
+    //
+    //     let main_script_function = self.script_function()?;
+    //     let code = if self.no_std {
+    //         quote! {}
+    //     } else {
+    //         quote! {
+    //             #[derive(Debug)]
+    //             pub struct #name{
+    //                 wallet: WalletUnlocked,
+    //                 binary_filepath: String,
+    //                 logs_map: HashMap<(Bech32ContractId, u64), ParamType>,
+    //             }
+    //
+    //             impl #name {
+    //                 pub fn new(wallet: WalletUnlocked, binary_filepath: &str) -> Self {
+    //                     Self {
+    //                         wallet: wallet,
+    //                         binary_filepath: binary_filepath.to_string(),
+    //                         logs_map: get_logs_hashmap(&[#(#log_id_param_type_pairs),*], None)
+    //                     }
+    //                 }
+    //
+    //                 #main_script_function
+    //             }
+    //         }
+    //     };
+    //
+    //     let abi_structs = self.abi_structs()?;
+    //     let abi_enums = self.abi_enums()?;
+    //     Ok(quote! {
+    //         pub use #name_mod::*;
+    //
+    //         #[allow(clippy::too_many_arguments)]
+    //         pub mod #name_mod {
+    //             #![allow(clippy::enum_variant_names)]
+    //             #![allow(dead_code)]
+    //
+    //             #includes
+    //
+    //             #code
+    //
+    //             #abi_structs
+    //             #abi_enums
+    //
+    //         }
+    //     })
+    // }
+    //
+    // /// Generates the includes necessary for the abigen.
+    // fn includes(&self, is_script: bool) -> TokenStream {
+    //     if self.no_std {
+    //         quote! {
+    //             use alloc::{vec, vec::Vec};
+    //             use fuels_core::code_gen::function_selector::resolve_fn_selector;
+    //             use fuels_core::types::*;
+    //             use fuels_core::{EnumSelector, Parameterize, Tokenizable, Token, Identity, try_from_bytes};
+    //             use fuels_types::enum_variants::EnumVariants;
+    //             use fuels_types::errors::Error as SDKError;
+    //             use fuels_types::param_types::ParamType;
+    //         }
+    //     } else {
+    //         let specific_includes = if is_script {
+    //             quote! {
+    //                 use fuels::contract::script_calls::{ScriptCallHandler, ScriptCall};
+    //                 use fuels::core::abi_encoder::ABIEncoder;
+    //                 use fuels::core::parameters::TxParameters;
+    //                 use std::marker::PhantomData;
+    //             }
+    //         } else {
+    //             quote! {
+    //                 use fuels::contract::contract::{
+    //                     Contract,
+    //                     ContractCallHandler,
+    //                     get_decoded_output
+    //                 };
+    //                 use fuels::core::abi_decoder::ABIDecoder;
+    //                 use fuels::core::code_gen::function_selector::resolve_fn_selector;
+    //                 use fuels::core::{EnumSelector, StringToken, Identity};
+    //                 use fuels::types::ResolvedLog;
+    //                 use std::str::FromStr;
+    //             }
+    //         };
+    //         quote! {
+    //             use fuels::contract::logs::LogDecoder;
+    //             use fuels::core::types::*;
+    //             use fuels::core::{Tokenizable, Token, Parameterize, try_from_bytes};
+    //             use fuels::signers::WalletUnlocked;
+    //             use fuels::types::enum_variants::EnumVariants;
+    //             use fuels::types::errors::Error as SDKError;
+    //             use fuels::types::param_types::ParamType;
+    //             use fuels::tx::{ContractId, Address, Receipt};
+    //             use fuels::types::bech32::Bech32ContractId;
+    //             use std::collections::{HashSet, HashMap};
+    //             use fuels::core::code_gen::get_logs_hashmap;
+    //             #specific_includes
+    //         }
+    //     }
+    // }
+    //
+    // pub fn contract_functions(&self) -> Result<TokenStream, Error> {
+    //     let tokenized_functions = self
+    //         .abi
+    //         .functions
+    //         .iter()
+    //         .map(|function| expand_function(function, &self.types))
+    //         .collect::<Result<Vec<TokenStream>, Error>>()?;
+    //     Ok(quote! { #( #tokenized_functions )* })
+    // }
+    //
+    // pub fn script_function(&self) -> Result<TokenStream, Error> {
+    //     let functions = self
+    //         .abi
+    //         .functions
+    //         .iter()
+    //         .filter(|function| function.name == "main")
+    //         .collect::<Vec<&ABIFunction>>();
+    //
+    //     if let [main_function] = functions.as_slice() {
+    //         let tokenized_function = generate_script_main_function(main_function, &self.types)?;
+    //         Ok(quote! { #tokenized_function })
+    //     } else {
+    //         Err(Error::CompilationError(
+    //             "The script must have one function named `main` to compile!".to_string(),
+    //         ))
+    //     }
+    // }
 
     /// Reads the parsed logged types from the ABI and creates ResolvedLogs
     fn resolve_logs(&self, shared_types: &HashSet<FullTypeDeclaration>) -> Vec<ResolvedLog> {
@@ -539,8 +672,9 @@ fn generate_log_id_param_type_pairs(resolved_logs: &[ResolvedLog]) -> Vec<TokenS
 
 pub fn get_logs_hashmap(
     id_param_pairs: &[(u64, ParamType)],
-    contract_id: &Bech32ContractId,
+    contract_id: Option<Bech32ContractId>,
 ) -> HashMap<(Bech32ContractId, u64), ParamType> {
+    let contract_id = contract_id.unwrap_or_else(|| Bech32ContractId::from(ContractId::zeroed()));
     id_param_pairs
         .iter()
         .map(|(id, param_type)| ((contract_id.clone(), *id), param_type.to_owned()))

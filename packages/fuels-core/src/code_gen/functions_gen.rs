@@ -1,30 +1,32 @@
+use crate::code_gen::full_abi_types::{FullABIFunction, FullTypeApplication, FullTypeDeclaration};
 use crate::code_gen::utils::{param_type_calls, Component};
-use crate::{
-    code_gen::{
-        docs_gen::expand_doc,
-        full_abi_types::{FullABIFunction, FullTypeApplication, FullTypeDeclaration},
-        resolved_type,
-    },
-    utils::safe_ident,
+use crate::code_gen::{
+    custom_types::single_param_type_call, docs_gen::expand_doc, resolved_type,
+    resolved_type::ResolvedType,
 };
+use crate::utils::safe_ident;
 use fuels_types::errors::Error;
+use fuels_types::{ABIFunction, TypeDeclaration};
 use inflector::Inflector;
 use proc_macro2::TokenStream;
 use quote::quote;
 use resolved_type::resolve_type;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 /// Functions used by the Abigen to expand functions defined in an ABI spec.
 
-/// Transforms a function defined in [`Function`] into a [`TokenStream`]
+/// Transforms a function defined in [`ABIFunction`] into a [`TokenStream`]
 /// that represents that same function signature as a Rust-native function
 /// declaration.
-/// The actual logic inside the function is the function `method_hash` under
-/// [`Contract`], which is responsible for encoding the function selector
-/// and the function parameters that will be used in the actual contract call.
 ///
-/// [`Contract`]: crate::contract::Contract
-pub(crate) fn expand_function(
+/// The actual logic inside the function is the function `method_hash` under
+/// [`Contract`], which is responsible for encoding
+/// the function selector and the function parameters that will be used
+/// in the actual contract call.
+///
+/// [`Contract`]: fuels_contract::contract::Contract
+// TODO (oleksii/docs): linkify the above `Contract` link properly
+pub fn expand_function(
     function: &FullABIFunction,
     shared_types: &HashSet<FullTypeDeclaration>,
 ) -> Result<TokenStream, Error> {
@@ -70,6 +72,57 @@ pub(crate) fn expand_function(
                 log_decoder
             )
             .expect("method not found (this should never happen)")
+        }
+    })
+}
+
+/// Generate the `main` function of a script
+pub fn generate_script_main_function(
+    main_function_abi: &FullABIFunction,
+    shared_types: &HashSet<FullTypeDeclaration>,
+) -> Result<TokenStream, Error> {
+    if main_function_abi.name != "main" {
+        return Err(Error::InvalidData(
+            "Script `main` function name can not be different from `main`".into(),
+        ));
+    }
+
+    let output_type_resolved = resolve_fn_output_type(main_function_abi, shared_types)?;
+    let output_params = single_param_type_call(&output_type_resolved);
+    let output_type: TokenStream = output_type_resolved.into();
+
+    let args = function_arguments(main_function_abi, shared_types)?;
+
+    let arg_names = args.iter().map(|component| &component.field_name);
+
+    let arg_declarations = args.iter().map(|component| {
+        let name = &component.field_name;
+        let field_type: TokenStream = (&component.field_type).into();
+        quote! { #name: #field_type }
+    });
+
+    let doc = expand_doc("Run the script's `main` function with the provided arguments");
+
+    let name = safe_ident("main");
+
+    Ok(quote! {
+        #doc
+        pub fn #name(&self #(,#arg_declarations)*) -> ScriptCallHandler<#output_type> {
+            let arg_name_tokens = [#(#arg_names.into_token()),*];
+            let script_binary = std::fs::read(self.binary_filepath.as_str())
+                                        .expect("Could not read from binary filepath");
+            let encoded_args = ABIEncoder::encode(&arg_name_tokens).expect("Cannot encode script
+            arguments");
+            let provider = self.wallet.get_provider().expect("Provider not set up").clone();
+            let log_decoder = LogDecoder{logs_map: self.logs_map.clone()};
+            ScriptCallHandler::new(
+                script_binary,
+                encoded_args,
+                self.wallet.clone(),
+                provider,
+                #output_params,
+                log_decoder
+            )
         }
     })
 }

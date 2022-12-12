@@ -67,10 +67,10 @@ cargo test -- --nocapture
 Add these dependencies on your `Cargo.toml`:
 
 ```toml
-fuels = "0.31.1"
+fuels = "0.32"
 ```
 
-> **Note** We're using version `0.26` of the SDK, which is the latest version at the time of this writing.
+> **Note** We're using version `0.32` of the SDK, which is the latest version at the time of this writing.
 
 And then, in your Rust file that's going to make use of the SDK:
 
@@ -109,4 +109,4 @@ cargo test -- --nocapture
 
 ## More in-depth Fuel and Sway knowledge
 
-Read [The Sway Book](https://fuellabs.github.io/sway/master/introduction/overview.html) for more in-depth knowledge about Sway, the official smart contract language for the Fuel Virtual Machine.
+Read [The Sway Book](https://fuellabs.github.io/sway/master/introduction/sway_quickstart.html) for more in-depth knowledge about Sway, the official smart contract language for the Fuel Virtual Machine.
