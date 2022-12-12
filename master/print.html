@@ -2327,9 +2327,9 @@ selector, but you have to jump through an extra hoop to get the ParamTypes:</p>
     };
     let blocks: Vec&lt;Block&gt; = provider.get_blocks(req).await?.results;
 
-    assert_eq!(blocks[2].header.time.unwrap().timestamp(), 100);
-    assert_eq!(blocks[1].header.time.unwrap().timestamp(), 110);
-    assert_eq!(blocks[0].header.time.unwrap().timestamp(), 120);
+    assert_eq!(blocks[1].header.time.unwrap().timestamp(), 100);
+    assert_eq!(blocks[2].header.time.unwrap().timestamp(), 110);
+    assert_eq!(blocks[3].header.time.unwrap().timestamp(), 120);
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="cookbook"><a class="header" href="#cookbook">Cookbook</a></h1>
 <p>This section covers more advanced use cases that can be satisfied by combining various features of the Rust SDK. As such, it assumes that you have already made yourself familiar with the previous chapters of this book.</p>
