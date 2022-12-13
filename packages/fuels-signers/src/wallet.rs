@@ -151,16 +151,15 @@ impl Wallet {
         amount: u64,
         witness_index: u8,
     ) -> Result<Vec<Input>, Error> {
-        let spendable = self.get_spendable_resources(asset_id, amount).await?;
-        let mut inputs = vec![];
-        for resource in spendable {
-            let input = match resource {
+        Ok(self
+            .get_spendable_resources(asset_id, amount)
+            .await?
+            .into_iter()
+            .map(|resource| match resource {
                 Resource::Coin(coin) => self.create_coin_input(coin, asset_id, witness_index),
                 Resource::Message(message) => self.create_message_input(message, witness_index),
-            };
-            inputs.push(input);
-        }
-        Ok(inputs)
+            })
+            .collect::<Vec<Input>>())
     }
 
     fn create_coin_input(&self, coin: Coin, asset_id: AssetId, witness_index: u8) -> Input {
@@ -660,14 +659,14 @@ impl WalletUnlocked {
     fn get_coin_predicate_data_offset(code_len: usize) -> u64 {
         fuel_gql_client::fuel_tx::InputRepr::Coin
             .coin_predicate_offset()
-            .expect("should have the predicate offset") as u64
+            .expect("should have predicate offset") as u64
             + padded_len_usize(code_len) as u64
     }
 
     fn get_message_predicate_data_offset(message_data_len: usize, code_len: usize) -> u64 {
         fuel_gql_client::fuel_tx::InputRepr::Message
             .data_offset()
-            .expect("should have the data offset") as u64
+            .expect("should have data offset") as u64
             + padded_len_usize(message_data_len) as u64
             + padded_len_usize(code_len) as u64
     }
@@ -696,8 +695,9 @@ impl WalletUnlocked {
             .map(|resource| resource.amount())
             .sum();
 
+        // Iterate through the spendable resources and calculate the appropriate offsets
+        // for the coin or message predicates
         let mut offset = base_offset;
-
         let inputs = spendable_predicate_resources
             .into_iter()
             .map(|resource| match resource {
@@ -764,8 +764,8 @@ impl WalletUnlocked {
             message.sender.into(),
             message.recipient.into(),
             message.amount,
-            0,
-            vec![],
+            message.nonce,
+            message.data,
             code,
             predicate_data,
         )

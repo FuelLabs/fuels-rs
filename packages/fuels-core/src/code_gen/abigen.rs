@@ -313,7 +313,7 @@ impl Abigen {
                                 self.code(),
                                 amount,
                                 asset_id,
-                                self.data.clone(),
+                                self.data(),
                                 tx_parameters,
                                 self.get_offset(wallet.get_provider()?).await?
                             )
