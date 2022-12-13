@@ -65,7 +65,6 @@ pub mod prelude {
     pub use super::contract::{
         contract::{Contract, MultiContractCallHandler},
         logs::LogDecoder,
-        predicate::Predicate,
     };
     pub use super::core::constants::*;
     pub use super::core::parameters::*;

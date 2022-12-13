@@ -65,6 +65,19 @@ impl From<(Bits256, Bits256)> for B512 {
     }
 }
 
+impl TryFrom<&[u8]> for B512 {
+    type Error = Error;
+
+    fn try_from(slice: &[u8]) -> Result<Self, Self::Error> {
+        Ok(B512 {
+            bytes: [
+                Bits256(slice[0..32].try_into()?),
+                Bits256(slice[32..].try_into()?),
+            ],
+        })
+    }
+}
+
 impl Parameterize for B512 {
     fn param_type() -> ParamType {
         ParamType::Struct {
