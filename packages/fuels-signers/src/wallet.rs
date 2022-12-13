@@ -481,7 +481,7 @@ impl WalletUnlocked {
     ///
     /// Requires contract inputs to be at the start of the transactions inputs vec
     /// so that their indexes are retained
-    pub async fn add_fee_coins<Tx: Chargeable + field::Inputs + field::Outputs>(
+    pub async fn add_fee_resources<Tx: Chargeable + field::Inputs + field::Outputs>(
         &self,
         tx: &mut Tx,
         previous_base_amount: u64,
@@ -513,6 +513,75 @@ impl WalletUnlocked {
         }
 
         let mut new_base_amount = transaction_fee.total() + previous_base_amount;
+        // If the tx doesn't consume any UTXOs, attempting to repeat it will lead to an
+        // error due to non unique tx ids (e.g. repeated contract call with configured gas cost of 0).
+        // Here we enforce a minimum amount on the base asset to avoid this
+        let is_consuming_utxos = tx.inputs().iter().any(|input| match input {
+            Input::CoinSigned { .. }
+            | Input::CoinPredicate { .. }
+            | Input::MessageSigned { .. }
+            | Input::MessagePredicate { .. } => true,
+            Input::Contract { .. } => false,
+        });
+        const MIN_AMOUNT: u64 = 1;
+        if !is_consuming_utxos && new_base_amount == 0 {
+            new_base_amount = MIN_AMOUNT;
+        }
+
+        let new_base_inputs = self
+            .get_asset_inputs_for_amount(BASE_ASSET_ID, new_base_amount, witness_index)
+            .await?;
+        let adjusted_inputs: Vec<_> = remaining_inputs
+            .into_iter()
+            .chain(new_base_inputs.into_iter())
+            .collect();
+        *tx.inputs_mut() = adjusted_inputs;
+
+        let is_base_change_present = tx.outputs().iter().any(|output| {
+            matches!(output, Output::Change { asset_id, .. } if asset_id == &BASE_ASSET_ID)
+        });
+        // add a change output for the base asset if it doesn't exist and there are base inputs
+        if !is_base_change_present && new_base_amount != 0 {
+            tx.outputs_mut()
+                .push(Output::change(self.address().into(), 0, BASE_ASSET_ID));
+        }
+
+        Ok(())
+    }
+
+    /// Add base asset inputs to the transaction to cover the estimated fee.
+    /// The original base asset amount cannot be calculated reliably from
+    /// the existing transaction inputs because the selected resources may exceed
+    /// the required amount to avoid dust. Therefore we require it as an argument.
+    ///
+    /// Requires contract inputs to be at the start of the transactions inputs vec
+    /// so that their indexes are retained
+    pub async fn add_fee_resources1<Tx: Chargeable + field::Inputs + field::Outputs>(
+        &self,
+        tx: &mut Tx,
+        required_base_asset: u64,
+        witness_index: u8,
+    ) -> Result<(), Error> {
+        let consensus_parameters = self
+            .get_provider()?
+            .chain_info()
+            .await?
+            .consensus_parameters;
+        let transaction_fee = TransactionFee::checked_from_tx(&consensus_parameters, tx)
+            .expect("Error calculating TransactionFee");
+
+        let (base_asset_inputs, remaining_inputs): (Vec<_>, Vec<_>) =
+            tx.inputs().iter().cloned().partition(|input| {
+                matches!(input, Input::MessageSigned { .. })
+                || matches!(input, Input::CoinSigned { asset_id, .. } if asset_id == &BASE_ASSET_ID)
+            });
+
+        let base_inputs_sum: u64 = base_asset_inputs
+            .iter()
+            .map(|input| input.amount().unwrap())
+            .sum();
+
+        let mut new_base_amount = transaction_fee.total() + required_base_asset - base_inputs_sum;
         // If the tx doesn't consume any UTXOs, attempting to repeat it will lead to an
         // error due to non unique tx ids (e.g. repeated contract call with configured gas cost of 0).
         // Here we enforce a minimum amount on the base asset to avoid this
@@ -608,9 +677,9 @@ impl WalletUnlocked {
 
         // if we are not transferring the base asset, previous base amount is 0
         if asset_id == AssetId::default() {
-            self.add_fee_coins(&mut tx, amount, 0).await?;
+            self.add_fee_resources(&mut tx, amount, 0).await?;
         } else {
-            self.add_fee_coins(&mut tx, 0, 0).await?;
+            self.add_fee_resources(&mut tx, 0, 0).await?;
         };
         self.sign_transaction(&mut tx).await?;
 
@@ -634,7 +703,7 @@ impl WalletUnlocked {
 
         let mut tx = Wallet::build_message_to_output_tx(to.into(), amount, &inputs, tx_parameters);
 
-        self.add_fee_coins(&mut tx, amount, 0).await?;
+        self.add_fee_resources(&mut tx, amount, 0).await?;
         self.sign_transaction(&mut tx).await?;
 
         let receipts = self.get_provider()?.send_transaction(&tx).await?;
@@ -695,7 +764,7 @@ impl WalletUnlocked {
 
         let mut tx = Wallet::build_transfer_tx(&inputs, &outputs, tx_parameters);
         // we set previous base amount to 0 because it only applies to signed coins, not predicate coins
-        self.add_fee_coins(&mut tx, 0, 0).await?;
+        self.add_fee_resources(&mut tx, 0, 0).await?;
         self.sign_transaction(&mut tx).await?;
 
         self.get_provider()?.send_transaction(&tx).await
@@ -810,7 +879,7 @@ impl WalletUnlocked {
         } else {
             0
         };
-        self.add_fee_coins(&mut tx, base_amount, 0).await?;
+        self.add_fee_resources(&mut tx, base_amount, 0).await?;
         self.sign_transaction(&mut tx).await?;
 
         let tx_id = tx.id();
@@ -1019,7 +1088,7 @@ mod tests {
         Provider::new(client)
     }
 
-    fn add_fee_coins_wallet_config(num_wallets: u64) -> WalletsConfig {
+    fn add_fee_resources_wallet_config(num_wallets: u64) -> WalletsConfig {
         let asset_configs = vec![AssetConfig {
             id: BASE_ASSET_ID,
             num_coins: 20,
@@ -1079,15 +1148,15 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn add_fee_coins_empty_transaction() -> Result<(), Error> {
-        let wallet_config = add_fee_coins_wallet_config(1);
+    async fn add_fee_resources_empty_transaction() -> Result<(), Error> {
+        let wallet_config = add_fee_resources_wallet_config(1);
         let wallet = launch_custom_provider_and_get_wallets(wallet_config, None, None)
             .await
             .pop()
             .unwrap();
         let mut tx = Wallet::build_transfer_tx(&[], &[], TxParameters::default());
 
-        wallet.add_fee_coins(&mut tx, 0, 0).await?;
+        wallet.add_fee_resources(&mut tx, 0, 0).await?;
 
         let zero_utxo_id = UtxoId::new(Bytes32::zeroed(), 0);
         let mut expected_inputs = vec![Input::coin_signed(
@@ -1108,8 +1177,8 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn add_fee_coins_to_transfer_with_base_asset() -> Result<(), Error> {
-        let wallet_config = add_fee_coins_wallet_config(1);
+    async fn add_fee_resources_to_transfer_with_base_asset() -> Result<(), Error> {
+        let wallet_config = add_fee_resources_wallet_config(1);
         let wallet = launch_custom_provider_and_get_wallets(wallet_config, None, None)
             .await
             .pop()
@@ -1126,7 +1195,7 @@ mod tests {
         );
         let mut tx = Wallet::build_transfer_tx(&inputs, &outputs, TxParameters::default());
 
-        wallet.add_fee_coins(&mut tx, base_amount, 0).await?;
+        wallet.add_fee_resources(&mut tx, base_amount, 0).await?;
 
         let zero_utxo_id = UtxoId::new(Bytes32::zeroed(), 0);
         let mut expected_inputs = repeat(Input::coin_signed(

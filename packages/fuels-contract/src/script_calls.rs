@@ -132,7 +132,7 @@ where
             self.script_call.outputs.clone(), // TODO(iqdecay): allow user to set outputs field
             vec![vec![0, 0].into()], //TODO(iqdecay): figure out how to have the right witnesses
         );
-        self.wallet.add_fee_coins(&mut tx, 0, 0).await?;
+        self.wallet.add_fee_resources(&mut tx, 0, 0).await?;
 
         let tx_execution = ExecutableFuelCall { tx };
 
