@@ -1,7 +1,10 @@
-use crate::{unzip_param_types, StringToken, Token};
+use crate::{unzip_param_types, StringToken, Token, Tokenizable};
 use fuel_types::bytes::padded_len_usize;
 use fuels_types::{
-    constants::WORD_SIZE, enum_variants::EnumVariants, errors::CodecError, param_types::ParamType,
+    constants::WORD_SIZE,
+    enum_variants::EnumVariants,
+    errors::{CodecError, Error},
+    param_types::ParamType,
 };
 use std::{convert::TryInto, str};
 
@@ -61,6 +64,7 @@ impl ABIDecoder {
             ParamType::Enum { variants, .. } => Self::decode_enum(bytes, variants),
             ParamType::Tuple(types) => Self::decode_tuple(types, bytes),
             ParamType::Vector(param_type) => Self::decode_vector(param_type, bytes),
+            ParamType::RawSlice => Self::decode_raw_slice(bytes),
         }
     }
 
@@ -116,6 +120,29 @@ impl ABIDecoder {
 
         Ok(DecodeResult {
             token: Token::Array(tokens),
+            bytes_read,
+        })
+    }
+
+    fn decode_raw_slice(bytes: &[u8]) -> Result<DecodeResult, CodecError> {
+        // A raw slice is actually an array of u64. Hence, we divide the number of bytes (u8) by
+        // 8, because an u64 is 8 bytes.
+        if bytes.len() % 8 != 0 {
+            return Err(CodecError::InvalidData(format!(
+                "The bytes provided do not correspond to a raw slice with u64 numbers, got: {:?}",
+                bytes
+            )));
+        }
+        let u64_length = bytes.len() / 8;
+        let (tokens, bytes_read) = Self::decode_multiple(&vec![ParamType::U64; u64_length], bytes)?;
+        let elements = tokens
+            .into_iter()
+            .map(|tok| u64::from_token(tok))
+            .collect::<Result<Vec<u64>, Error>>()
+            .map_err(|e| CodecError::InvalidData(e.to_string()))?;
+
+        Ok(DecodeResult {
+            token: Token::RawSlice(elements),
             bytes_read,
         })
     }

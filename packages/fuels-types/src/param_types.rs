@@ -42,6 +42,7 @@ pub enum ParamType {
         generics: Vec<ParamType>,
     },
     Tuple(Vec<ParamType>),
+    RawSlice,
 }
 
 impl Default for ParamType {
@@ -96,6 +97,10 @@ impl ParamType {
             }
             ParamType::Enum { variants, .. } => variants.compute_encoding_width_of_enum(),
             ParamType::Tuple(params) => params.iter().map(|p| p.compute_encoding_width()).sum(),
+            // The ParamType::RawSlice is basically a wrapper around a U8 vector
+            ParamType::RawSlice => unimplemented!(
+                "Raw slices are not supported as inputs, so needing the encoding width of a RawSlice should not happen."
+            ),
         }
     }
     /// For when you need to convert a ABI JSON's TypeApplication into a ParamType.

@@ -91,6 +91,7 @@ pub(crate) fn resolve_type(
         to_sized_ascii_string,
         to_tuple,
         to_struct,
+        to_raw_slice,
     ]
     .into_iter()
     .filter_map(|fun| {
@@ -212,6 +213,7 @@ fn to_byte(
         None
     }
 }
+
 fn to_bits256(
     type_field: &str,
     _: impl Fn() -> Vec<ResolvedType>,
@@ -219,6 +221,22 @@ fn to_bits256(
 ) -> Option<ResolvedType> {
     if type_field == "b256" {
         let type_name = quote! {Bits256};
+        Some(ResolvedType {
+            type_name,
+            generic_params: vec![],
+        })
+    } else {
+        None
+    }
+}
+
+fn to_raw_slice(
+    type_field: &str,
+    _: impl Fn() -> Vec<ResolvedType>,
+    _: impl Fn() -> Vec<ResolvedType>,
+) -> Option<ResolvedType> {
+    if type_field == "raw untyped slice" {
+        let type_name = quote! {RawSlice};
         Some(ResolvedType {
             type_name,
             generic_params: vec![],

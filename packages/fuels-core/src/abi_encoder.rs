@@ -120,6 +120,9 @@ impl ABIEncoder {
             Token::Enum(arg_enum) => Self::encode_enum(arg_enum)?,
             Token::Tuple(arg_tuple) => Self::encode_tuple(arg_tuple)?,
             Token::Unit => vec![Self::encode_unit()],
+            Token::RawSlice(_) => unimplemented!(
+                "There should be no instance where a token should be encoded because no function accepts raw slice as input"
+            ),
         };
 
         Ok(encoded_token)

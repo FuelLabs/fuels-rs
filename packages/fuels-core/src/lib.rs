@@ -84,6 +84,7 @@ pub enum Token {
     #[strum(disabled)]
     Enum(Box<EnumSelector>),
     Tuple(Vec<Token>),
+    RawSlice(Vec<u64>),
 }
 
 impl fmt::Display for Token {

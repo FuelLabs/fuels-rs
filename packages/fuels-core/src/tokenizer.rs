@@ -72,6 +72,7 @@ impl Tokenizer {
             ParamType::Tuple(tuple_params) => {
                 Ok(Self::tokenize_tuple(trimmed_value, tuple_params)?)
             }
+            ParamType::RawSlice => unimplemented!("Raw slices are not supported as inputs, so tokenizing a RawSlice should not happen."),
         }
     }
 
