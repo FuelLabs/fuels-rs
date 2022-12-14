@@ -249,6 +249,8 @@ impl Provider {
         asset_id: AssetId,
         amount: u64,
     ) -> Result<Vec<Resource>, ProviderError> {
+        use itertools::Itertools;
+
         let res = self
             .client
             .resources_to_spend(
@@ -259,8 +261,12 @@ impl Provider {
             .await?
             .into_iter()
             .flatten()
-            .map(Into::into)
-            .collect();
+            .map(|resource| {
+                let resource: Result<Resource, _> = resource.try_into();
+
+                resource.map_err(ProviderError::ClientRequestError)
+            })
+            .try_collect()?;
 
         Ok(res)
     }
