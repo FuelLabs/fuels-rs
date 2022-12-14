@@ -1,6 +1,6 @@
 # Signatures in predicates example
 
-This is a more involved example where the predicate accepts three signatures and matches them to three predefined public keys. The `ec_recover_address` function is used to recover the public key from the signatures. If two of three extracted public keys match the predefined public keys, the funds can be spent. Note that the signature order has to match the order of the predefined public keys.
+This is a more involved example where the predicate accepts three signatures and matches them to three predefined public keys. The `ec_recover_address` function is used to recover the public key from the signatures. If two of the three extracted public keys match the predefined public keys, the funds can be spent. Note that the signature order has to match the order of the predefined public keys.
 
 
 ```rust,ignore
@@ -8,7 +8,7 @@ This is a more involved example where the predicate accepts three signatures and
 ```
 
 
-Let's use the SDK to interact with the predicate. First, let's create three wallets with specific keys. Their hashed public keys are already hard-coded in the predicate. Then we create the receiver wallet which we will use to spend the predicate funds.
+Let's use the SDK to interact with the predicate. First, let's create three wallets with specific keys. Their hashed public keys are already hard-coded in the predicate. Then we create the receiver wallet, which we will use to spend the predicate funds.
 
 ```rust,ignore
 {{#include ../../../examples/predicates/src/lib.rs:predicate_wallets}}
@@ -38,7 +38,7 @@ To spend the funds that are now locked in the predicate, we have to provide two 
 {{#include ../../../examples/predicates/src/lib.rs:predicate_signatures}}
 ```
 
-After generating the signatures, we can use the predicate's `encode_data` and `spend_to_wallet` functions to spend the funds. If the provided data is correct the `receiver` wallet will get the funds and we verify that the amount is indeed correct.
+After generating the signatures, we can use the predicate's `encode_data` and `spend_to_wallet` functions to spend the funds. If the provided data is correct, the `receiver` wallet will get the funds, and we will verify that the amount is indeed correct.
 
 ```rust,ignore
 {{#include ../../../examples/predicates/src/lib.rs:predicate_spend}}
