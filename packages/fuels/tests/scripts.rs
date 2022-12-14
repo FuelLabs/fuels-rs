@@ -308,7 +308,7 @@ async fn test_script_raw_slice() -> Result<(), Error> {
     let instance = bimbam_script::new(wallet.clone(), bin_path);
 
     let result = instance.main().call().await?;
-    println!("Result: {:?}", result);
+    assert_eq!(result.value, vec![42, 1337, 1987, 987]);
 
     Ok(())
 }
