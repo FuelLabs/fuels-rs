@@ -5,7 +5,7 @@ fn main(length: u64) -> raw_slice {
     vec.push(42);
     vec.push(1337);
     vec.push(1987);
-    if (length > 3 ){
+    if (length > 3) {
         let mut counter = 0;
         while counter < (length - 3) {
             vec.push(42234);
