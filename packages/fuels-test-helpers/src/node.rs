@@ -172,22 +172,32 @@ pub fn get_node_config_json(
 ) -> Value {
     let coin_configs = get_coin_configs(coins);
     let messages = get_message_configs(messages);
-    let transaction_parameters = consensus_parameters_config.unwrap_or_default();
 
-    let chain_config = chain_config.unwrap_or_else(|| ChainConfig {
-        chain_name: "local_testnet".to_string(),
-        block_production: BlockProduction::ProofOfAuthority {
-            trigger: Default::default(),
-        },
-        block_gas_limit: 1000000000,
-        initial_state: Some(StateConfig {
-            coins: Some(coin_configs),
-            contracts: None,
-            messages: Some(messages),
-            height: None,
-        }),
-        transaction_parameters,
-    });
+    let chain_config = {
+        let chain_config = chain_config.unwrap_or_else(|| ChainConfig {
+            chain_name: "local_testnet".to_string(),
+            block_production: BlockProduction::ProofOfAuthority {
+                trigger: Default::default(),
+            },
+            block_gas_limit: 1000000000,
+            initial_state: Some(StateConfig {
+                coins: Some(coin_configs),
+                contracts: None,
+                messages: Some(messages),
+                height: None,
+            }),
+            ..ChainConfig::local_testnet()
+        });
+
+        if let Some(transaction_parameters) = consensus_parameters_config {
+            ChainConfig {
+                transaction_parameters,
+                ..chain_config
+            }
+        } else {
+            chain_config
+        }
+    };
 
     serde_json::to_value(&chain_config).expect("Failed to build `ChainConfig` JSON")
 }

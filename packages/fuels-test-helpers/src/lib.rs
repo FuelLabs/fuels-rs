@@ -165,16 +165,26 @@ pub async fn setup_test_client(
     let message_configs = get_message_configs(messages);
 
     // Setup node config with genesis coins and utxo_validation enabled
-    let chain_conf = chain_config.unwrap_or_else(|| ChainConfig {
-        initial_state: Some(StateConfig {
-            coins: Some(coin_configs),
-            contracts: None,
-            messages: Some(message_configs),
-            ..StateConfig::default()
-        }),
-        transaction_parameters: consensus_parameters_config.unwrap_or_default(),
-        ..ChainConfig::local_testnet()
-    });
+    let chain_conf = {
+        let chain_conf = chain_config.unwrap_or_else(|| ChainConfig {
+            initial_state: Some(StateConfig {
+                coins: Some(coin_configs),
+                contracts: None,
+                messages: Some(message_configs),
+                ..StateConfig::default()
+            }),
+            ..ChainConfig::local_testnet()
+        });
+
+        if let Some(transaction_parameters) = consensus_parameters_config {
+            ChainConfig {
+                transaction_parameters,
+                ..chain_conf
+            }
+        } else {
+            chain_conf
+        }
+    };
 
     let config = Config {
         chain_conf,
@@ -400,5 +410,32 @@ mod tests {
         let error_string = "Validation error: TransactionGasLimit";
 
         assert!(expected.to_string().contains(error_string));
+    }
+
+    #[tokio::test]
+    async fn test_chain_config_and_consensus_parameters() {
+        let consensus_parameters_config = ConsensusParameters::DEFAULT
+            .with_max_inputs(123)
+            .with_gas_per_byte(456);
+
+        let chain_config = ChainConfig {
+            chain_name: "Solo_Munib".to_string(),
+            ..ChainConfig::local_testnet()
+        };
+
+        let (fuel_client, _) = setup_test_client(
+            vec![],
+            vec![],
+            None,
+            Some(chain_config),
+            Some(consensus_parameters_config),
+        )
+        .await;
+
+        let chain_info = fuel_client.chain_info().await.unwrap();
+
+        assert_eq!(chain_info.name, "Solo_Munib");
+        assert_eq!(chain_info.consensus_parameters.max_inputs.0, 123);
+        assert_eq!(chain_info.consensus_parameters.gas_per_byte.0, 456);
     }
 }
