@@ -287,9 +287,9 @@ impl Abigen {
                         self.data.clone()
                     }
 
-                    pub async fn receive_from_wallet(&self, wallet: &WalletUnlocked, amount:u64, asset_id: AssetId, tx_parameters: Option<TxParameters>) -> Result<(String, Vec<Receipt>), SDKError> {
+                    pub async fn receive(&self, from: &WalletUnlocked, amount:u64, asset_id: AssetId, tx_parameters: Option<TxParameters>) -> Result<(String, Vec<Receipt>), SDKError> {
                         let tx_parameters = tx_parameters.unwrap_or(TxParameters::default());
-                        wallet
+                        from
                             .transfer(
                                 self.address(),
                                 amount,
@@ -299,9 +299,9 @@ impl Abigen {
                             .await
                     }
 
-                    pub async fn spend_to_wallet(&self, wallet: &WalletUnlocked, amount:u64, asset_id: AssetId, tx_parameters: Option<TxParameters>) -> Result<Vec<Receipt>, SDKError> {
+                    pub async fn spend(&self, to: &WalletUnlocked, amount:u64, asset_id: AssetId, tx_parameters: Option<TxParameters>) -> Result<Vec<Receipt>, SDKError> {
                         let tx_parameters = tx_parameters.unwrap_or(TxParameters::default());
-                        wallet
+                        to
                             .receive_from_predicate(
                                 self.address(),
                                 self.code(),

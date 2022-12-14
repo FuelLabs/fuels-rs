@@ -102,7 +102,7 @@ async fn transfer_coins_and_messages_to_predicate() -> Result<(), Error> {
         MyPredicate::load_from("tests/predicates/predicate_basic/out/debug/predicate_basic.bin")?;
 
     predicate
-        .receive_from_wallet(&wallet, total_balance, asset_id, None)
+        .receive(&wallet, total_balance, asset_id, None)
         .await?;
 
     // The predicate has received the funds
@@ -130,7 +130,7 @@ async fn spend_predicate_coins_messages_basic() -> Result<(), Error> {
     // Run predicate with wrong data
     predicate
         .encode_data(4096, 4097)
-        .spend_to_wallet(&receiver, predicate_balance, asset_id, None)
+        .spend(&receiver, predicate_balance, asset_id, None)
         .await
         .expect_err("Should error");
 
@@ -139,7 +139,7 @@ async fn spend_predicate_coins_messages_basic() -> Result<(), Error> {
 
     predicate
         .encode_data(4096, 4096)
-        .spend_to_wallet(&receiver, predicate_balance, asset_id, None)
+        .spend(&receiver, predicate_balance, asset_id, None)
         .await?;
 
     // The predicate has spent the funds
@@ -181,7 +181,7 @@ async fn spend_predicate_coins_messages_address() -> Result<(), Error> {
     // Run predicate with wrong data
     predicate
         .encode_data(wrong_addr)
-        .spend_to_wallet(&receiver, predicate_balance, asset_id, None)
+        .spend(&receiver, predicate_balance, asset_id, None)
         .await
         .expect_err("Should error");
 
@@ -194,7 +194,7 @@ async fn spend_predicate_coins_messages_address() -> Result<(), Error> {
 
     predicate
         .encode_data(addr)
-        .spend_to_wallet(&receiver, predicate_balance, asset_id, None)
+        .spend(&receiver, predicate_balance, asset_id, None)
         .await?;
 
     // The predicate has spent the funds
@@ -231,7 +231,7 @@ async fn spend_predicate_coins_messages_enums() -> Result<(), Error> {
     // Run predicate with wrong data
     predicate
         .encode_data(TestEnum::A(32), AnotherTestEnum::A(32))
-        .spend_to_wallet(&receiver, predicate_balance, asset_id, None)
+        .spend(&receiver, predicate_balance, asset_id, None)
         .await
         .expect_err("Should error");
 
@@ -240,7 +240,7 @@ async fn spend_predicate_coins_messages_enums() -> Result<(), Error> {
 
     predicate
         .encode_data(TestEnum::A(32), AnotherTestEnum::B(32))
-        .spend_to_wallet(&receiver, predicate_balance, asset_id, None)
+        .spend(&receiver, predicate_balance, asset_id, None)
         .await?;
 
     // The predicate has spent the funds
@@ -284,7 +284,7 @@ async fn spend_predicate_coins_messages_structs() -> Result<(), Error> {
                 number: 127,
             },
         )
-        .spend_to_wallet(&receiver, predicate_balance, asset_id, None)
+        .spend(&receiver, predicate_balance, asset_id, None)
         .await
         .expect_err("Should error");
 
@@ -299,7 +299,7 @@ async fn spend_predicate_coins_messages_structs() -> Result<(), Error> {
                 number: 128,
             },
         )
-        .spend_to_wallet(&receiver, predicate_balance, asset_id, None)
+        .spend(&receiver, predicate_balance, asset_id, None)
         .await?;
 
     // The predicate has spent the funds
@@ -336,7 +336,7 @@ async fn spend_predicate_coins_messages_tuple() -> Result<(), Error> {
     // Run predicate with wrong data
     predicate
         .encode_data((15, TestStruct { value: 31 }, TestEnum::Value(63)), 127)
-        .spend_to_wallet(&receiver, predicate_balance, asset_id, None)
+        .spend(&receiver, predicate_balance, asset_id, None)
         .await
         .expect_err("Should error");
 
@@ -345,7 +345,7 @@ async fn spend_predicate_coins_messages_tuple() -> Result<(), Error> {
 
     predicate
         .encode_data((16, TestStruct { value: 32 }, TestEnum::Value(64)), 128)
-        .spend_to_wallet(&receiver, predicate_balance, asset_id, None)
+        .spend(&receiver, predicate_balance, asset_id, None)
         .await?;
 
     // The predicate has spent the funds
@@ -382,7 +382,7 @@ async fn spend_predicate_coins_messages_vector() -> Result<(), Error> {
     // Run predicate with wrong data
     predicate
         .encode_data(2, 4, vec![2, 4, 43])
-        .spend_to_wallet(&receiver, predicate_balance, asset_id, None)
+        .spend(&receiver, predicate_balance, asset_id, None)
         .await
         .expect_err("Should error");
 
@@ -391,7 +391,7 @@ async fn spend_predicate_coins_messages_vector() -> Result<(), Error> {
 
     predicate
         .encode_data(2, 4, vec![2, 4, 42])
-        .spend_to_wallet(&receiver, predicate_balance, asset_id, None)
+        .spend(&receiver, predicate_balance, asset_id, None)
         .await?;
 
     // The predicate has spent the funds
@@ -460,7 +460,7 @@ async fn spend_predicate_coins_messages_vectors() -> Result<(), Error> {
             vec_in_tuple.clone(),
             vec_in_a_vec_in_a_struct_in_a_vec.clone(),
         )
-        .spend_to_wallet(&receiver, predicate_balance, asset_id, None)
+        .spend(&receiver, predicate_balance, asset_id, None)
         .await
         .expect_err("Should error");
 
@@ -483,7 +483,7 @@ async fn spend_predicate_coins_messages_vectors() -> Result<(), Error> {
             vec_in_tuple,
             vec_in_a_vec_in_a_struct_in_a_vec,
         )
-        .spend_to_wallet(&receiver, predicate_balance, asset_id, None)
+        .spend(&receiver, predicate_balance, asset_id, None)
         .await?;
 
     // The predicate has spent the funds
@@ -524,7 +524,7 @@ async fn spend_predicate_coins_messages_generics() -> Result<(), Error> {
     // Run predicate with wrong data
     predicate
         .encode_data(generic_struct, generic_enum)
-        .spend_to_wallet(&receiver, predicate_balance, asset_id, None)
+        .spend(&receiver, predicate_balance, asset_id, None)
         .await
         .expect_err("Should error");
 
@@ -537,7 +537,7 @@ async fn spend_predicate_coins_messages_generics() -> Result<(), Error> {
 
     predicate
         .encode_data(generic_struct, generic_enum)
-        .spend_to_wallet(&receiver, predicate_balance, asset_id, None)
+        .spend(&receiver, predicate_balance, asset_id, None)
         .await?;
 
     // The predicate has spent the funds

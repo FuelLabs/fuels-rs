@@ -63,7 +63,7 @@ mod tests {
         let amount_to_predicate = 512;
 
         predicate
-            .receive_from_wallet(&wallet, amount_to_predicate, asset_id, None)
+            .receive(&wallet, amount_to_predicate, asset_id, None)
             .await?;
 
         let predicate_balance = provider
@@ -96,7 +96,7 @@ mod tests {
         // ANCHOR: predicate_spend
         predicate
             .encode_data(signatures)
-            .spend_to_wallet(&receiver, amount_to_predicate, asset_id, None)
+            .spend(&receiver, amount_to_predicate, asset_id, None)
             .await?;
 
         let receiver_balance_after = provider
@@ -146,9 +146,7 @@ mod tests {
 
         // ANCHOR: predicate_data_lock_amount
         // First wallet transfers amount to predicate.
-        predicate
-            .receive_from_wallet(first_wallet, 500, asset_id, None)
-            .await?;
+        predicate.receive(first_wallet, 500, asset_id, None).await?;
 
         // Check predicate balance.
         let balance = first_wallet
@@ -171,7 +169,7 @@ mod tests {
 
         predicate
             .encode_data(4096, 4096)
-            .spend_to_wallet(second_wallet, amount_to_unlock, asset_id, None)
+            .spend(second_wallet, amount_to_unlock, asset_id, None)
             .await?;
 
         // Predicate balance is zero.

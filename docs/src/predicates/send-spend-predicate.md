@@ -26,7 +26,7 @@ Now we can use the predicate abigen, which will create a predicate instance for 
 {{#include ../../../examples/predicates/src/lib.rs:predicate_load}}
 ```
 
-After the predicate instance is generated we can use the `receive_from_wallet` function to transfer funds to the predicate. We also make sure that the funds are indeed transferred.
+After the predicate instance is generated we can use the `receive` function to transfer funds to the predicate. We also make sure that the funds are indeed transferred.
 
 ```rust,ignore
 {{#include ../../../examples/predicates/src/lib.rs:predicate_receive}}
@@ -38,7 +38,7 @@ To spend the funds that are now locked in the predicate, we have to provide two 
 {{#include ../../../examples/predicates/src/lib.rs:predicate_signatures}}
 ```
 
-After generating the signatures, we can use the predicate's `encode_data` and `spend_to_wallet` functions to spend the funds. If the provided data is correct, the `receiver` wallet will get the funds, and we will verify that the amount is indeed correct.
+After generating the signatures, we can use the predicate's `encode_data` and `spend` functions to spend the funds. If the provided data is correct the `receiver` wallet will get the funds, and we will verify that the amount is indeed correct.
 
 ```rust,ignore
 {{#include ../../../examples/predicates/src/lib.rs:predicate_spend}}
