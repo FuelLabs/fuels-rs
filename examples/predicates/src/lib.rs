@@ -5,7 +5,7 @@ mod tests {
 
     #[tokio::test]
     async fn predicate_example() -> Result<(), Error> {
-        use fuels::core::vm::prelude::SecretKey;
+        use fuels::signers::fuel_crypto::SecretKey;
 
         // ANCHOR: predicate_wallets
         let secret_key1: SecretKey =

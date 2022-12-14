@@ -194,7 +194,7 @@ impl Abigen {
         let resolved_logs = self.resolve_logs();
         let log_id_param_type_pairs = generate_log_id_param_type_pairs(&resolved_logs);
 
-        let main_script_function = self.script_function()?;
+        let main_script_function = self.main_function()?;
         let code = if self.no_std {
             quote! {}
         } else {
@@ -249,7 +249,7 @@ impl Abigen {
 
         let includes = self.includes();
 
-        let encode_data_function = self.predicate_function()?;
+        let encode_data_function = self.main_function()?;
         let code = if self.no_std {
             quote! {}
         } else {
@@ -409,7 +409,7 @@ impl Abigen {
         Ok(quote! { #( #tokenized_functions )* })
     }
 
-    pub fn script_function(&self) -> Result<TokenStream, Error> {
+    pub fn main_function(&self) -> Result<TokenStream, Error> {
         let functions = self
             .abi
             .functions
@@ -418,30 +418,21 @@ impl Abigen {
             .collect::<Vec<&ABIFunction>>();
 
         if let [main_function] = functions.as_slice() {
-            let tokenized_function = generate_script_main_function(main_function, &self.types)?;
+            let tokenized_function = match self.abigen_type {
+                AbigenType::Script => generate_script_main_function(main_function, &self.types),
+
+                AbigenType::Predicate => {
+                    generate_predicate_encode_function(main_function, &self.types)
+                }
+                AbigenType::Contract => Err(Error::CompilationError(
+                    "Contract does not have a `main` function!".to_string(),
+                )),
+            }?;
+
             Ok(quote! { #tokenized_function })
         } else {
             Err(Error::CompilationError(
-                "The script must have one function named `main` to compile!".to_string(),
-            ))
-        }
-    }
-
-    pub fn predicate_function(&self) -> Result<TokenStream, Error> {
-        let functions = self
-            .abi
-            .functions
-            .iter()
-            .filter(|function| function.name == "main")
-            .collect::<Vec<&ABIFunction>>();
-
-        if let [main_function] = functions.as_slice() {
-            let tokenized_function =
-                generate_predicate_encode_function(main_function, &self.types)?;
-            Ok(quote! { #tokenized_function })
-        } else {
-            Err(Error::CompilationError(
-                "The script must have one function named `main` to compile!".to_string(),
+                "Only one function named `main` allowed!".to_string(),
             ))
         }
     }
