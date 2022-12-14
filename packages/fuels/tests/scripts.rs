@@ -305,7 +305,6 @@ async fn test_script_raw_slice() -> Result<(), Error> {
     let mut wallets = launch_custom_provider_and_get_wallets(config, None, None).await;
     let wallet = wallets.pop().unwrap();
     let bin_path = "../fuels/tests/scripts/script_raw_slice/out/debug/script_raw_slice.bin";
-    let tx_parameters = TxParameters::new(None, Some(100000000), None);
     let instance = bimbam_script::new(wallet.clone(), bin_path);
 
     let mut expected = vec![42, 1337, 1987];
@@ -319,12 +318,7 @@ async fn test_script_raw_slice() -> Result<(), Error> {
     assert_eq!(result.value, expected);
     for length in 4..=10 {
         expected.push(42234);
-        // We provide tx_params because the gas usage is too high otherwise
-        let result = instance
-            .main(length)
-            .tx_params(tx_parameters)
-            .call()
-            .await?;
+        let result = instance.main(length).call().await?;
         assert_eq!(result.value, expected);
     }
     Ok(())
