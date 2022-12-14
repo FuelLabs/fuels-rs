@@ -137,7 +137,7 @@ impl ABIDecoder {
         let (tokens, bytes_read) = Self::decode_multiple(&vec![ParamType::U64; u64_length], bytes)?;
         let elements = tokens
             .into_iter()
-            .map(|tok| u64::from_token(tok))
+            .map(u64::from_token)
             .collect::<Result<Vec<u64>, Error>>()
             .map_err(|e| CodecError::InvalidData(e.to_string()))?;
 
