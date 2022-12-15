@@ -98,7 +98,7 @@ pub struct ResolvedLog {
 #[serde(rename_all = "camelCase")]
 pub struct Attribute {
     pub name: String,
-    pub arguments: Option<Vec<String>>,
+    pub arguments: Vec<String>,
 }
 
 impl TypeDeclaration {
