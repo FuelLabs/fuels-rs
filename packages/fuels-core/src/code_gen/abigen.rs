@@ -1,35 +1,30 @@
-use crate::code_gen::bindings::ContractBindings;
-use crate::code_gen::custom_types::{
-    expand_custom_enum, expand_custom_struct, single_param_type_call,
-};
-use crate::code_gen::full_abi_types::{FullABIFunction, FullLoggedType, FullTypeDeclaration};
-use crate::code_gen::functions_gen::expand_function;
-use crate::code_gen::resolved_type::resolve_type;
-use crate::source::Source;
-use crate::utils::ident;
-use fuel_types::ContractId;
-use fuels_types::bech32::Bech32ContractId;
-use fuels_types::errors::Error;
-use fuels_types::param_types::ParamType;
-use fuels_types::utils::custom_type_name;
-use fuels_types::{ProgramABI, ResolvedLog};
-use inflector::Inflector;
-use itertools::Itertools;
-use proc_macro2::{Ident, TokenStream};
-use quote::quote;
 use std::{
     collections::{HashMap, HashSet},
     str::FromStr,
 };
 
-pub struct Abigen {
-    /// Format the code using a locally installed copy of `rustfmt`.
-    rustfmt: bool,
-    /// Generate no-std safe code
-    no_std: bool,
+use fuel_types::ContractId;
+use inflector::Inflector;
+use itertools::Itertools;
+use proc_macro2::{Ident, TokenStream};
+use quote::quote;
 
-    contracts: Vec<Contract>,
-}
+use fuels_types::bech32::Bech32ContractId;
+use fuels_types::errors::Error;
+use fuels_types::param_types::ParamType;
+use fuels_types::utils::custom_type_name;
+use fuels_types::ResolvedLog;
+
+use crate::code_gen::custom_types::{
+    expand_custom_enum, expand_custom_struct, single_param_type_call,
+};
+use crate::code_gen::full_abi_types::{
+    FullABIFunction, FullLoggedType, FullProgramABI, FullTypeDeclaration,
+};
+use crate::code_gen::functions_gen::expand_function;
+use crate::code_gen::resolved_type::resolve_type;
+use crate::source::Source;
+use crate::utils::ident;
 
 #[derive(Debug)]
 pub struct Contract {
@@ -38,6 +33,88 @@ pub struct Contract {
     types: HashSet<FullTypeDeclaration>,
     functions: Vec<FullABIFunction>,
     logged_types: Vec<FullLoggedType>,
+}
+
+pub struct Script;
+
+impl Script {
+    fn generate(
+        contract_name: &str,
+        abi: FullProgramABI,
+        no_std: bool,
+        shared_types: &HashSet<FullTypeDeclaration>,
+    ) -> Result<GeneratedCode, Error> {
+        let name = ident(&self.name);
+        let name_mod = ident(&format!("{}_mod", self.name.to_string().to_snake_case()));
+
+        let resolved_logs = self.resolve_logs();
+        let log_id_param_type_pairs = generate_log_id_param_type_pairs(&resolved_logs);
+
+        let main_script_function = self.script_function()?;
+        let code = if self.no_std {
+            quote! {}
+        } else {
+            quote! {
+                #[derive(Debug)]
+                pub struct #name{
+                    wallet: WalletUnlocked,
+                    binary_filepath: String,
+                    logs_map: HashMap<(Bech32ContractId, u64), ParamType>,
+                }
+
+                impl #name {
+                    pub fn new(wallet: WalletUnlocked, binary_filepath: &str) -> Self {
+                        Self {
+                            wallet: wallet,
+                            binary_filepath: binary_filepath.to_string(),
+                            logs_map: get_logs_hashmap(&[#(#log_id_param_type_pairs),*], None)
+                        }
+                    }
+
+                    #main_script_function
+                }
+            }
+        };
+
+        let abi_structs = self.abi_structs()?;
+        let abi_enums = self.abi_enums()?;
+        Ok(quote! {
+            pub use #name_mod::*;
+
+            #[allow(clippy::too_many_arguments)]
+            pub mod #name_mod {
+                #![allow(clippy::enum_variant_names)]
+                #![allow(dead_code)]
+
+                #includes
+
+                #code
+
+                #abi_structs
+                #abi_enums
+
+            }
+        })
+    }
+
+    //
+    // pub fn script_function(&self) -> Result<TokenStream, Error> {
+    //     let functions = self
+    //         .abi
+    //         .functions
+    //         .iter()
+    //         .filter(|function| function.name == "main")
+    //         .collect::<Vec<&ABIFunction>>();
+    //
+    //     if let [main_function] = functions.as_slice() {
+    //         let tokenized_function = generate_script_main_function(main_function, &self.types)?;
+    //         Ok(quote! { #tokenized_function })
+    //     } else {
+    //         Err(Error::CompilationError(
+    //             "The script must have one function named `main` to compile!".to_string(),
+    //         ))
+    //     }
+    // }
 }
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
@@ -107,16 +184,13 @@ impl GeneratedCode {
 
     pub fn prepend_mod_name_to_types(self, mod_name: &Ident) -> Self {
         let path = TypePath::new(&mod_name).unwrap();
-        let type_names = self
+        let type_paths = self
             .type_paths
             .into_iter()
             .map(|type_path| type_path.prepend(path.clone()))
             .collect();
 
-        Self {
-            type_paths: type_names,
-            ..self
-        }
+        Self { type_paths, ..self }
     }
 
     pub fn use_statements_for_uniquely_named_types(&self) -> TokenStream {
@@ -184,53 +258,28 @@ fn generate_types(
         })
 }
 
+fn parse_program_abi(abi_source: &str) -> Result<FullProgramABI, Error> {
+    let source = Source::parse(abi_source).expect("failed to parse JSON ABI");
+    let json_abi_str = source.get().expect("failed to parse JSON ABI from string");
+    FullProgramABI::from_json_abi(&json_abi_str)
+}
+
 impl Contract {
-    fn new<S: AsRef<str>>(contract_name: &str, abi_source: S) -> Result<Self, Error> {
-        let source = Source::parse(abi_source).expect("failed to parse JSON ABI");
-
-        let json_abi_str = source.get().expect("failed to parse JSON ABI from string");
-        let mut parsed_abi: ProgramABI = serde_json::from_str(&json_abi_str)?;
-
-        let types: HashMap<_, _> = parsed_abi
-            .types
-            .iter()
-            .map(|t| (t.type_id, t.clone()))
-            .collect();
-
-        let full_types = types
-            .values()
-            .map(|decl| FullTypeDeclaration::from_counterpart(decl, &types))
-            .collect();
-
-        let logged_types = parsed_abi
-            .logged_types
-            .take()
-            .unwrap_or_default()
-            .into_iter()
-            .map(|l_type| FullLoggedType::from_logged_type(&l_type, &types))
-            .collect();
-
-        Ok(Self {
+    fn generate(
+        contract_name: &str,
+        abi: FullProgramABI,
+        no_std: bool,
+        shared_types: &HashSet<FullTypeDeclaration>,
+    ) -> Result<GeneratedCode, Error> {
+        Self {
             contract_name: ident(contract_name),
-            functions: parsed_abi
-                .functions
-                .into_iter()
-                .map(|fun| FullABIFunction::from_counterpart(&fun, &types))
-                .collect(),
-            types: full_types,
-            logged_types,
-        })
+            functions: abi.functions,
+            types: abi.types.into_iter().collect(),
+            logged_types: abi.logged_types.into_iter().flatten().collect(),
+        }
+        .inner_generate(no_std, shared_types)
     }
-
-    /// The high-level goal of this function is to expand* a contract
-    /// defined as a JSON into type-safe bindings of that contract that can be
-    /// used after it is brought into scope after a successful generation.
-    ///
-    /// *: To expand, in procedural macro terms, means to automatically generate
-    /// Rust code after a transformation of `TokenStream` to another
-    /// set of `TokenStream`. This generated Rust code is the brought into scope
-    /// after it is called through a procedural macro (`abigen!()` in our case).
-    fn expand(
+    fn inner_generate(
         &self,
         no_std: bool,
         shared_types: &HashSet<FullTypeDeclaration>,
@@ -324,7 +373,7 @@ impl Contract {
                     #methods_name {
                         contract_id: self.contract_id.clone(),
                         wallet: self.wallet.clone(),
-                        logs_map: ::fuels::core::code_gen::get_logs_hashmap(&[#(#log_id_param_type_pairs),*], Some(self.contract_id.clone())),
+                        logs_map: ::fuels::core::code_gen::get_logs_hashmap(&[#(#log_id_param_type_pairs),*], ::std::option::Option::Some(self.contract_id.clone())),
                     }
                 }
             }
@@ -360,142 +409,6 @@ impl Contract {
 
         Ok(quote! { #( #tokenized_functions )* })
     }
-    // /// Expand a script into type-safe Rust bindings based on its ABI. See `expand_contract` for
-    // /// more details.
-    // pub fn expand_script(&self) -> Result<TokenStream, Error> {
-    //     let name = ident(&self.name);
-    //     let name_mod = ident(&format!("{}_mod", self.name.to_string().to_snake_case()));
-    //
-    //     let includes = self.includes(true);
-    //     let resolved_logs = self.resolve_logs();
-    //     let log_id_param_type_pairs = generate_log_id_param_type_pairs(&resolved_logs);
-    //
-    //     let main_script_function = self.script_function()?;
-    //     let code = if self.no_std {
-    //         quote! {}
-    //     } else {
-    //         quote! {
-    //             #[derive(Debug)]
-    //             pub struct #name{
-    //                 wallet: WalletUnlocked,
-    //                 binary_filepath: String,
-    //                 logs_map: HashMap<(Bech32ContractId, u64), ParamType>,
-    //             }
-    //
-    //             impl #name {
-    //                 pub fn new(wallet: WalletUnlocked, binary_filepath: &str) -> Self {
-    //                     Self {
-    //                         wallet: wallet,
-    //                         binary_filepath: binary_filepath.to_string(),
-    //                         logs_map: get_logs_hashmap(&[#(#log_id_param_type_pairs),*], None)
-    //                     }
-    //                 }
-    //
-    //                 #main_script_function
-    //             }
-    //         }
-    //     };
-    //
-    //     let abi_structs = self.abi_structs()?;
-    //     let abi_enums = self.abi_enums()?;
-    //     Ok(quote! {
-    //         pub use #name_mod::*;
-    //
-    //         #[allow(clippy::too_many_arguments)]
-    //         pub mod #name_mod {
-    //             #![allow(clippy::enum_variant_names)]
-    //             #![allow(dead_code)]
-    //
-    //             #includes
-    //
-    //             #code
-    //
-    //             #abi_structs
-    //             #abi_enums
-    //
-    //         }
-    //     })
-    // }
-    //
-    // /// Generates the includes necessary for the abigen.
-    // fn includes(&self, is_script: bool) -> TokenStream {
-    //     if self.no_std {
-    //         quote! {
-    //             use alloc::{vec, vec::Vec};
-    //             use fuels_core::code_gen::function_selector::resolve_fn_selector;
-    //             use fuels_core::types::*;
-    //             use fuels_core::{EnumSelector, Parameterize, Tokenizable, Token, Identity, try_from_bytes};
-    //             use fuels_types::enum_variants::EnumVariants;
-    //             use fuels_types::errors::Error as SDKError;
-    //             use fuels_types::param_types::ParamType;
-    //         }
-    //     } else {
-    //         let specific_includes = if is_script {
-    //             quote! {
-    //                 use fuels::contract::script_calls::{ScriptCallHandler, ScriptCall};
-    //                 use fuels::core::abi_encoder::ABIEncoder;
-    //                 use fuels::core::parameters::TxParameters;
-    //                 use std::marker::PhantomData;
-    //             }
-    //         } else {
-    //             quote! {
-    //                 use fuels::contract::contract::{
-    //                     Contract,
-    //                     ContractCallHandler,
-    //                     get_decoded_output
-    //                 };
-    //                 use fuels::core::abi_decoder::ABIDecoder;
-    //                 use fuels::core::code_gen::function_selector::resolve_fn_selector;
-    //                 use fuels::core::{EnumSelector, StringToken, Identity};
-    //                 use fuels::types::ResolvedLog;
-    //                 use std::str::FromStr;
-    //             }
-    //         };
-    //         quote! {
-    //             use fuels::contract::logs::LogDecoder;
-    //             use fuels::core::types::*;
-    //             use fuels::core::{Tokenizable, Token, Parameterize, try_from_bytes};
-    //             use fuels::signers::WalletUnlocked;
-    //             use fuels::types::enum_variants::EnumVariants;
-    //             use fuels::types::errors::Error as SDKError;
-    //             use fuels::types::param_types::ParamType;
-    //             use fuels::tx::{ContractId, Address, Receipt};
-    //             use fuels::types::bech32::Bech32ContractId;
-    //             use std::collections::{HashSet, HashMap};
-    //             use fuels::core::code_gen::get_logs_hashmap;
-    //             #specific_includes
-    //         }
-    //     }
-    // }
-    //
-    // pub fn contract_functions(&self) -> Result<TokenStream, Error> {
-    //     let tokenized_functions = self
-    //         .abi
-    //         .functions
-    //         .iter()
-    //         .map(|function| expand_function(function, &self.types))
-    //         .collect::<Result<Vec<TokenStream>, Error>>()?;
-    //     Ok(quote! { #( #tokenized_functions )* })
-    // }
-    //
-    // pub fn script_function(&self) -> Result<TokenStream, Error> {
-    //     let functions = self
-    //         .abi
-    //         .functions
-    //         .iter()
-    //         .filter(|function| function.name == "main")
-    //         .collect::<Vec<&ABIFunction>>();
-    //
-    //     if let [main_function] = functions.as_slice() {
-    //         let tokenized_function = generate_script_main_function(main_function, &self.types)?;
-    //         Ok(quote! { #tokenized_function })
-    //     } else {
-    //         Err(Error::CompilationError(
-    //             "The script must have one function named `main` to compile!".to_string(),
-    //         ))
-    //     }
-    // }
-
     /// Reads the parsed logged types from the ABI and creates ResolvedLogs
     fn resolve_logs(&self, shared_types: &HashSet<FullTypeDeclaration>) -> Vec<ResolvedLog> {
         self.logged_types
@@ -516,38 +429,54 @@ impl Contract {
     }
 }
 
-impl Abigen {
-    /// Creates a new contract with the given ABI JSON source.
-    pub fn new<S: AsRef<str>>(contracts: &[(String, S)]) -> Result<Self, Error> {
-        let contracts = contracts
-            .iter()
-            .map(|(name, abi)| Contract::new(name, abi))
-            .collect::<Result<Vec<_>, _>>()?;
+pub struct AbigenTarget {
+    pub name: String,
+    pub source: String,
+    pub program_type: ProgramType,
+}
+
+impl TryFrom<AbigenTarget> for ParsedAbigenTarget {
+    type Error = Error;
+
+    fn try_from(value: AbigenTarget) -> Result<Self, Self::Error> {
         Ok(Self {
-            contracts,
-            rustfmt: true,
-            no_std: false,
+            name: value.name,
+            source: parse_program_abi(&value.source)?,
+            program_type: value.program_type,
         })
     }
+}
 
-    pub fn no_std(mut self) -> Self {
-        self.no_std = true;
-        self
-    }
+struct ParsedAbigenTarget {
+    pub name: String,
+    pub source: FullProgramABI,
+    pub program_type: ProgramType,
+}
 
-    /// Generates the contract bindings.
-    pub fn generate(self) -> Result<ContractBindings, Error> {
-        let rustfmt = self.rustfmt;
-        let tokens = self.expand()?;
+#[derive(Clone, Copy)]
+pub enum ProgramType {
+    Script,
+    Contract,
+}
 
-        Ok(ContractBindings { tokens, rustfmt })
-    }
+pub struct Abigen;
 
-    pub fn expand(&self) -> Result<TokenStream, Error> {
-        let all_code = self.generate_code()?;
+impl Abigen {
+    /// Generate code which can be used to interact with the underlying
+    /// contract, script or predicate in a type-safe manner.
+    ///
+    /// # Arguments
+    ///
+    /// * `targets`: `AbigenTargets` detailing which ABI to generate bindings
+    /// for, and of what nature (Script or Contract).
+    /// * `no_std`: don't use the rust std library.
+    pub fn generate(targets: Vec<AbigenTarget>, no_std: bool) -> Result<TokenStream, Error> {
+        let parsed_targets = Self::parse_targets(targets)?;
 
-        let use_statements = all_code.use_statements_for_uniquely_named_types();
-        let code = all_code.code;
+        let generated_code = Self::generate_code(no_std, parsed_targets)?;
+
+        let use_statements = generated_code.use_statements_for_uniquely_named_types();
+        let code = generated_code.code;
 
         Ok(quote! {
             #code
@@ -555,22 +484,62 @@ impl Abigen {
         })
     }
 
-    fn generate_code(&self) -> Result<GeneratedCode, Error> {
-        let shared_types = self.determine_shared_types();
+    fn generate_code(
+        no_std: bool,
+        parsed_targets: Vec<ParsedAbigenTarget>,
+    ) -> Result<GeneratedCode, Error> {
+        let shared_types = Self::determine_shared_types(&parsed_targets);
 
-        let shared_types_code = Self::generate_shared_types(&shared_types)?;
-
-        let contract_code = self
-            .contracts
-            .iter()
-            .map(|contract| contract.expand(self.no_std, &shared_types))
-            .fold_ok(GeneratedCode::default(), |acc, generated_code| {
-                acc.append(generated_code)
-            })?;
-
-        Ok(shared_types_code.append(contract_code))
+        Ok([
+            Self::generate_shared_types(&shared_types)?,
+            Self::generate_contract_code(no_std, parsed_targets, &shared_types)?,
+        ]
+        .into_iter()
+        .reduce(|all_code, code_segment| all_code.append(code_segment))
+        .expect("There is at least one element."))
     }
 
+    fn generate_contract_code(
+        no_std: bool,
+        parsed_targets: Vec<ParsedAbigenTarget>,
+        shared_types: &HashSet<FullTypeDeclaration>,
+    ) -> Result<GeneratedCode, Error> {
+        parsed_targets
+            .into_iter()
+            .map(|target| match target.program_type {
+                ProgramType::Script => {
+                    panic!("not yet supported")
+                }
+                ProgramType::Contract => {
+                    Contract::generate(&target.name, target.source, no_std, shared_types)
+                }
+            })
+            .fold_ok(GeneratedCode::default(), |acc, generated_code| {
+                acc.append(generated_code)
+            })
+    }
+
+    fn parse_targets(targets: Vec<AbigenTarget>) -> Result<Vec<ParsedAbigenTarget>, Error> {
+        targets
+            .into_iter()
+            .map(|target| target.try_into())
+            .collect()
+    }
+
+    ///
+    ///
+    /// # Arguments
+    ///
+    /// * `shared_types`: types that appear in multiple contracts, scripts or
+    /// predicates.
+    ///
+    /// returns: Result<GeneratedCode, Error>
+    ///
+    /// # Examples
+    ///
+    /// ```
+    ///
+    /// ```
     fn generate_shared_types(
         shared_types: &HashSet<FullTypeDeclaration>,
     ) -> Result<GeneratedCode, Error> {
@@ -601,10 +570,10 @@ impl Abigen {
         Ok(GeneratedCode { code, type_paths })
     }
 
-    fn determine_shared_types(&self) -> HashSet<FullTypeDeclaration> {
-        self.contracts
+    fn determine_shared_types(all_types: &[ParsedAbigenTarget]) -> HashSet<FullTypeDeclaration> {
+        all_types
             .iter()
-            .flat_map(|contract| &contract.types)
+            .flat_map(|target| &target.source.types)
             .filter(|ttype| ttype.is_enum_type() || ttype.is_struct_type())
             .sorted()
             .group_by(|&el| el)

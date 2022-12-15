@@ -1,5 +1,4 @@
 use crate::{
-    abi_encoder::UnresolvedBytes,
     call_response::FuelCallResponse,
     contract::get_decoded_output,
     contract_calls_utils::get_base_script_offset,
@@ -11,6 +10,7 @@ use fuel_gql_client::{
     fuel_types::bytes::padded_len_usize,
 };
 use fuel_tx::Input;
+use fuels_core::abi_encoder::UnresolvedBytes;
 use fuels_core::{
     parameters::{CallParameters, TxParameters},
     Tokenizable,

@@ -770,3 +770,38 @@ async fn test_contract_call_with_non_default_max_input() -> Result<(), Error> {
 
     Ok(())
 }
+
+// #[cfg(test)]
+// mod tests {
+//     use super::*;
+//     use fuels_core::code_gen::abigen::{Abigen, AbigenTarget, ProgramType};
+//     use std::process::Command;
+//
+//     #[test]
+//     fn something() {
+//         let code = Abigen::generate(
+//             vec![AbigenTarget {
+//                 name: "Something".to_string(),
+//                 source: "tests/contracts/contract_test/out/debug/contract_test-abi.json"
+//                     .to_string(),
+//                 program_type: ProgramType::Contract,
+//             }],
+//             false,
+//         )
+//         .unwrap();
+//
+//         std::fs::write(
+//             "/home/segfault_magnet/debug_abigen/src/lib.rs",
+//             code.to_string(),
+//         )
+//         .unwrap();
+//         Command::new("rustfmt")
+//             .args([
+//                 "--edition",
+//                 "2021",
+//                 "/home/segfault_magnet/debug_abigen/src/lib.rs",
+//             ])
+//             .output()
+//             .unwrap();
+//     }
+// }

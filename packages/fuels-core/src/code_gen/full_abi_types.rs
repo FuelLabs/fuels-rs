@@ -1,5 +1,53 @@
-use fuels_types::{ABIFunction, LoggedType, TypeApplication, TypeDeclaration};
+use fuels_types::errors::Error;
+use fuels_types::{ABIFunction, LoggedType, ProgramABI, TypeApplication, TypeDeclaration};
 use std::collections::HashMap;
+
+#[derive(Debug, Clone)]
+pub(crate) struct FullProgramABI {
+    pub types: Vec<FullTypeDeclaration>,
+    pub functions: Vec<FullABIFunction>,
+    pub logged_types: Option<Vec<FullLoggedType>>,
+}
+
+impl FullProgramABI {
+    pub fn from_json_abi(abi: &str) -> Result<Self, Error> {
+        let parsed_abi: ProgramABI = serde_json::from_str(abi)?;
+        Ok(FullProgramABI::from_counterpart(&parsed_abi))
+    }
+
+    fn from_counterpart(program_abi: &ProgramABI) -> FullProgramABI {
+        let lookup: HashMap<_, _> = program_abi
+            .types
+            .iter()
+            .map(|ttype| (ttype.type_id, ttype.clone()))
+            .collect();
+
+        let types = program_abi
+            .types
+            .iter()
+            .map(|ttype| FullTypeDeclaration::from_counterpart(ttype, &lookup))
+            .collect();
+
+        let functions = program_abi
+            .functions
+            .iter()
+            .map(|fun| FullABIFunction::from_counterpart(fun, &lookup))
+            .collect();
+
+        let logged_types = program_abi.logged_types.as_ref().map(|logged_types| {
+            logged_types
+                .iter()
+                .map(|logged_type| FullLoggedType::from_counterpart(logged_type, &lookup))
+                .collect()
+        });
+
+        Self {
+            types,
+            functions,
+            logged_types,
+        }
+    }
+}
 
 #[derive(Debug, Clone)]
 pub(crate) struct FullABIFunction {
@@ -9,7 +57,7 @@ pub(crate) struct FullABIFunction {
 }
 
 impl FullABIFunction {
-    pub fn from_counterpart(
+    pub(crate) fn from_counterpart(
         abi_function: &ABIFunction,
         types: &HashMap<usize, TypeDeclaration>,
     ) -> FullABIFunction {
@@ -34,7 +82,7 @@ pub(crate) struct FullTypeDeclaration {
 }
 
 impl FullTypeDeclaration {
-    pub fn from_counterpart(
+    pub(crate) fn from_counterpart(
         type_decl: &TypeDeclaration,
         types: &HashMap<usize, TypeDeclaration>,
     ) -> FullTypeDeclaration {
@@ -68,7 +116,7 @@ pub(crate) struct FullTypeApplication {
 }
 
 impl FullTypeApplication {
-    pub fn from_counterpart(
+    fn from_counterpart(
         type_application: &TypeApplication,
         types: &HashMap<usize, TypeDeclaration>,
     ) -> FullTypeApplication {
@@ -100,7 +148,7 @@ pub(crate) struct FullLoggedType {
 }
 
 impl FullLoggedType {
-    pub fn from_logged_type(
+    fn from_counterpart(
         logged_type: &LoggedType,
         types: &HashMap<usize, TypeDeclaration>,
     ) -> FullLoggedType {

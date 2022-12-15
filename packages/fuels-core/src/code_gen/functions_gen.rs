@@ -26,7 +26,7 @@ use std::collections::{HashMap, HashSet};
 ///
 /// [`Contract`]: fuels_contract::contract::Contract
 // TODO (oleksii/docs): linkify the above `Contract` link properly
-pub fn expand_function(
+pub(crate) fn expand_function(
     function: &FullABIFunction,
     shared_types: &HashSet<FullTypeDeclaration>,
 ) -> Result<TokenStream, Error> {
@@ -54,7 +54,7 @@ pub fn expand_function(
     let name = safe_ident(&function.name);
     let name_stringified = name.to_string();
 
-    let output_type = resolve_fn_output_type(function, shared_types)?;
+    let output_type: TokenStream = resolve_fn_output_type(function, shared_types)?.into();
 
     Ok(quote! {
         #doc
@@ -77,7 +77,7 @@ pub fn expand_function(
 }
 
 /// Generate the `main` function of a script
-pub fn generate_script_main_function(
+pub(crate) fn generate_script_main_function(
     main_function_abi: &FullABIFunction,
     shared_types: &HashSet<FullTypeDeclaration>,
 ) -> Result<TokenStream, Error> {
@@ -91,7 +91,7 @@ pub fn generate_script_main_function(
     let output_params = single_param_type_call(&output_type_resolved);
     let output_type: TokenStream = output_type_resolved.into();
 
-    let args = function_arguments(main_function_abi, shared_types)?;
+    let args = function_arguments(&main_function_abi.inputs, shared_types)?;
 
     let arg_names = args.iter().map(|component| &component.field_name);
 
@@ -130,7 +130,7 @@ pub fn generate_script_main_function(
 fn resolve_fn_output_type(
     function: &FullABIFunction,
     shared_types: &HashSet<FullTypeDeclaration>,
-) -> Result<TokenStream, Error> {
+) -> Result<ResolvedType, Error> {
     let output_type = resolve_type(&function.output, shared_types)?;
     if output_type.uses_vectors() {
         Err(Error::CompilationError(format!(
@@ -138,7 +138,7 @@ fn resolve_fn_output_type(
             function.name
         )))
     } else {
-        Ok(output_type.into())
+        Ok(output_type)
     }
 }
 

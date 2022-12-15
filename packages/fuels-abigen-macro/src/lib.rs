@@ -1,4 +1,4 @@
-use fuels_core::code_gen::abigen::Abigen;
+use fuels_core::code_gen::abigen::{Abigen, AbigenTarget, ProgramType};
 use inflector::Inflector;
 use proc_macro::TokenStream;
 use proc_macro2::Span;
@@ -13,46 +13,41 @@ use syn::{
 /// Abigen proc macro definition and helper functions/types.
 #[proc_macro]
 pub fn abigen(input: TokenStream) -> TokenStream {
-    let args = parse_macro_input!(input as Spanned<MultipleContractArgs>);
+    let args = parse_macro_input!(input as Spanned<MultipleAbis>);
 
-    let abigen_args = args
-        .contracts
-        .clone()
-        .into_iter()
-        .map(|contract| (contract.name, contract.abi))
-        .collect::<Vec<_>>();
-    Abigen::new(&abigen_args).unwrap().expand().unwrap().into()
+    let targets = into_abigen_targets(args.clone(), ProgramType::Contract);
+
+    Abigen::generate(targets, false).unwrap().into()
 }
 
 /// Abigen proc macro definition and helper functions/types for scripts
 #[proc_macro]
 pub fn script_abigen(input: TokenStream) -> TokenStream {
-    let args = parse_macro_input!(input as Spanned<ContractArgs>);
+    let args = parse_macro_input!(input as Spanned<MultipleAbis>);
 
-    Abigen::new(&args.name, &args.abi)
-        .unwrap()
-        .expand_script()
-        .unwrap()
-        .into()
+    let targets = into_abigen_targets(args.clone(), ProgramType::Script);
+
+    Abigen::generate(targets, false).unwrap().into()
 }
 
 #[proc_macro]
 pub fn wasm_abigen(input: TokenStream) -> TokenStream {
-    let args = parse_macro_input!(input as Spanned<MultipleContractArgs>);
+    let args = parse_macro_input!(input as Spanned<MultipleAbis>);
 
-    let abigen_args = args
-        .contracts
-        .clone()
+    let targets = into_abigen_targets(args.clone(), ProgramType::Contract);
+
+    Abigen::generate(targets, true).unwrap().into()
+}
+
+fn into_abigen_targets(args: MultipleAbis, program_type: ProgramType) -> Vec<AbigenTarget> {
+    args.abis
         .into_iter()
-        .map(|contract| (contract.name, contract.abi))
-        .collect::<Vec<_>>();
-
-    Abigen::new(&abigen_args)
-        .unwrap()
-        .no_std()
-        .expand()
-        .unwrap()
-        .into()
+        .map(|abi_details| AbigenTarget {
+            name: abi_details.name,
+            source: abi_details.source,
+            program_type,
+        })
+        .collect()
 }
 
 /// This proc macro is used to reduce the amount of boilerplate code in integration tests.
@@ -95,12 +90,16 @@ pub fn setup_contract_test(input: TokenStream) -> TokenStream {
     let storage_path = compiled_file_path("-storage_slots.json", "the storage slots file");
 
     let contract_struct_name = args.instance_name.to_class_case();
-    let mut abigen_token_stream: TokenStream =
-        Abigen::new(&[(contract_struct_name.clone(), abi_path)])
-            .unwrap()
-            .expand()
-            .unwrap()
-            .into();
+    let mut abigen_token_stream: TokenStream = Abigen::generate(
+        vec![AbigenTarget {
+            name: contract_struct_name.clone(),
+            source: abi_path,
+            program_type: ProgramType::Contract,
+        }],
+        false,
+    )
+    .unwrap()
+    .into();
 
     // Generate random salt for contract deployment
     let mut rng = StdRng::from_entropy();
@@ -163,19 +162,18 @@ impl<T: ParseInner> Parse for Spanned<T> {
 }
 
 /// A struct that captures `Span` information for inner parsable data.
-#[cfg_attr(test, derive(Clone, Debug))]
 struct Spanned<T>(Span, T);
 
 impl<T> Spanned<T> {
     /// Retrieves the captured `Span` information for the parsed data.
     #[allow(dead_code)]
-    pub fn span(&self) -> Span {
+    fn span(&self) -> Span {
         self.0
     }
 
     /// Retrieves the inner data.
     #[allow(dead_code)]
-    pub fn into_inner(self) -> T {
+    fn into_inner(self) -> T {
         self.1
     }
 }
@@ -188,21 +186,18 @@ impl<T> Deref for Spanned<T> {
     }
 }
 
-/// Contract procedural macro arguments.
-#[cfg_attr(test, derive(Debug, Eq, PartialEq))]
 #[derive(Clone)]
-pub(crate) struct ContractArgs {
+struct Abi {
     name: String,
-    abi: String,
-}
-/// Contract procedural macro arguments.
-#[cfg_attr(test, derive(Debug, Eq, PartialEq))]
-#[derive(Clone)]
-pub(crate) struct MultipleContractArgs {
-    contracts: Vec<ContractArgs>,
+    source: String,
 }
 
-impl ParseInner for MultipleContractArgs {
+#[derive(Clone)]
+struct MultipleAbis {
+    abis: Vec<Abi>,
+}
+
+impl ParseInner for MultipleAbis {
     fn spanned_parse(input: ParseStream) -> ParseResult<(Span, Self)> {
         let mut contracts = vec![];
         let mut span = Span::call_site();
@@ -217,20 +212,20 @@ impl ParseInner for MultipleContractArgs {
             span = literal.span();
             let abi = literal.value();
 
-            contracts.push(ContractArgs { name, abi });
+            contracts.push(Abi { name, source: abi });
 
             if !input.is_empty() {
                 input.parse::<Token![,]>()?;
             }
         }
 
-        Ok((span, MultipleContractArgs { contracts }))
+        Ok((span, MultipleAbis { abis: contracts }))
     }
 }
 
 /// Contract procedural macro arguments.
 #[cfg_attr(test, derive(Debug, Eq, PartialEq))]
-pub(crate) struct ContractTestArgs {
+struct ContractTestArgs {
     instance_name: String,
     wallet_name: String,
     project_path: String,
