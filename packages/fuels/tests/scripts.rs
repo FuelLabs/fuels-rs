@@ -307,19 +307,9 @@ async fn test_script_raw_slice() -> Result<(), Error> {
     let bin_path = "../fuels/tests/scripts/script_raw_slice/out/debug/script_raw_slice.bin";
     let instance = bimbam_script::new(wallet.clone(), bin_path);
 
-    let mut expected = vec![42, 1337, 1987];
-    let result = instance.main(0).call().await?;
-    assert_eq!(result.value, expected);
-    let result = instance.main(1).call().await?;
-    assert_eq!(result.value, expected);
-    let result = instance.main(2).call().await?;
-    assert_eq!(result.value, expected);
-    let result = instance.main(3).call().await?;
-    assert_eq!(result.value, expected);
-    for length in 4..=10 {
-        expected.push(42234);
-        let result = instance.main(length).call().await?;
-        assert_eq!(result.value, expected);
+    for length in 0..=10 {
+        let response = instance.main(length).call().await?;
+        assert_eq!(response.value, (0..length).collect::<Vec<_>>());
     }
     Ok(())
 }
