@@ -71,8 +71,7 @@ async fn compile_bindings_from_inline_contract() -> Result<(), Error> {
                         "name": "",
                         "type": 0,
                         "typeArguments": null
-                    },
-                    "attributes": []
+                    }
                 }
             ]
         }
@@ -144,8 +143,7 @@ async fn compile_bindings_array_input() {
                   "name": "",
                   "type": 0,
                   "typeArguments": null
-                },
-                "attributes": []
+                }
               }
             ]
         }
@@ -220,8 +218,7 @@ async fn compile_bindings_bool_array_input() {
                   "name": "",
                   "type": 0,
                   "typeArguments": null
-                },
-                "attributes": []
+                }
               }
             ]
         }
@@ -284,8 +281,7 @@ async fn compile_bindings_byte_input() {
                   "name": "",
                   "type": 0,
                   "typeArguments": null
-                },
-                "attributes": []
+                }
               }
             ]
           }
@@ -344,8 +340,7 @@ async fn compile_bindings_string_input() {
                   "name": "",
                   "type": 0,
                   "typeArguments": null
-                },
-                "attributes": []
+                }
               }
             ]
           }
@@ -413,8 +408,7 @@ async fn compile_bindings_b256_input() {
                   "name": "",
                   "type": 0,
                   "typeArguments": null
-                },
-                "attributes": []
+                }
               }
             ]
           }
@@ -481,8 +475,7 @@ async fn compile_bindings_evm_address_input() {
                   "name": "",
                   "type": 0,
                   "typeArguments": null
-                },
-                "attributes": []
+                }
               }
             ]
           }
@@ -587,8 +580,7 @@ async fn compile_bindings_struct_input() {
                   "name": "",
                   "type": 0,
                   "typeArguments": null
-                },
-                "attributes": []
+                }
               }
             ]
           }
@@ -691,8 +683,7 @@ async fn compile_bindings_nested_struct_input() {
                   "name": "",
                   "type": 0,
                   "typeArguments": null
-                },
-                "attributes": []
+                }
               }
             ]
           }
@@ -785,8 +776,7 @@ async fn compile_bindings_enum_input() {
                   "name": "",
                   "type": 0,
                   "typeArguments": null
-                },
-                "attributes": []
+                }
               }
             ]
           }

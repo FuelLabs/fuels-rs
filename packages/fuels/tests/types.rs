@@ -747,8 +747,7 @@ async fn strings_must_have_correct_length() {
                 "name": "",
                 "type": 0,
                 "typeArguments": null
-              },
-              "attributes": []
+              }
             }
           ]
         }
@@ -799,8 +798,7 @@ async fn strings_must_have_all_ascii_chars() {
                 "name": "",
                 "type": 0,
                 "typeArguments": null
-              },
-              "attributes": []
+              }
             }
           ]
         }
@@ -886,8 +884,7 @@ async fn strings_must_have_correct_length_custom_types() {
                 "name": "",
                 "type": 0,
                 "typeArguments": null
-              },
-              "attributes": []
+              }
             }
           ]
         }
@@ -973,8 +970,7 @@ async fn strings_must_have_all_ascii_chars_custom_types() {
                 "name": "",
                 "type": 0,
                 "typeArguments": null
-              },
-              "attributes": []
+              }
             }
           ]
         }
