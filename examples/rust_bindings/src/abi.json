@@ -21,7 +21,8 @@
         "name": "",
         "type": 0,
         "typeArguments": null
-      }
+      },
+      "attributes": []
     },
     {
       "inputs": [
@@ -36,7 +37,8 @@
         "name": "",
         "type": 0,
         "typeArguments": null
-      }
+      },
+      "attributes": []
     }
   ]
 }

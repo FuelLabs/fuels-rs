@@ -308,7 +308,8 @@ mod tests {
                       "name": "",
                       "type": 26,
                       "typeArguments": []
-                    }
+                    },
+                    "attributes": []
                   }
                 ]
               }

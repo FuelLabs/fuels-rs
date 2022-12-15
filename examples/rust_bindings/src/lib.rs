@@ -43,7 +43,8 @@ mod tests {
                       "name": "",
                       "type": 0,
                       "typeArguments": null
-                    }
+                    },
+                    "attributes": []
                   },
                   {
                     "inputs": [
@@ -58,7 +59,8 @@ mod tests {
                       "name": "",
                       "type": 0,
                       "typeArguments": null
-                    }
+                    },
+                    "attributes": []
                   }
                 ]
               }

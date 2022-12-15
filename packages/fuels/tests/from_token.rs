@@ -67,7 +67,8 @@ async fn create_struct_from_decoded_tokens() -> Result<(), Error> {
                   "name": "",
                   "type": 0,
                   "typeArguments": null
-                }
+                },
+                "attributes": []
               }
             ]
           }
@@ -173,7 +174,8 @@ async fn create_nested_struct_from_decoded_tokens() -> Result<(), Error> {
                   "name": "",
                   "type": 0,
                   "typeArguments": null
-                }
+                },
+                "attributes": []
               }
             ]
           }
