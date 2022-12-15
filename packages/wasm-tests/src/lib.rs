@@ -90,7 +90,8 @@ wasm_abigen!(
               "name": "",
               "type": 0,
               "typeArguments": null
-            }
+            },
+            "attributes": []
           }
         ],
         "loggedTypes": []
