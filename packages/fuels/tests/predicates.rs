@@ -112,6 +112,52 @@ async fn transfer_coins_and_messages_to_predicate() -> Result<(), Error> {
 }
 
 #[tokio::test]
+async fn spend_predicate_coins_messages_single_u64() -> Result<(), Error> {
+    predicate_abigen!(
+        MyPredicate,
+        "packages/fuels/tests/predicates/predicate_u64/out/debug/predicate_u64-abi.json"
+    );
+
+    let predicate =
+        MyPredicate::load_from("tests/predicates/predicate_u64/out/debug/predicate_u64.bin")?;
+
+    let num_coins = 4;
+    let num_messages = 8;
+    let amount = 16;
+    let (provider, predicate_balance, receiver, receiver_balance, asset_id) =
+        setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
+
+    // Run predicate with wrong data
+    predicate
+        .encode_data(32767)
+        .spend(&receiver, predicate_balance, asset_id, None)
+        .await
+        .expect_err("Should error");
+
+    // No funds were transferred
+    assert_address_balance(receiver.address(), &provider, asset_id, receiver_balance).await;
+
+    predicate
+        .encode_data(32768)
+        .spend(&receiver, predicate_balance, asset_id, None)
+        .await?;
+
+    // The predicate has spent the funds
+    assert_address_balance(predicate.address(), &provider, asset_id, 0).await;
+
+    // Funds were transferred
+    assert_address_balance(
+        receiver.address(),
+        &provider,
+        asset_id,
+        receiver_balance + predicate_balance,
+    )
+    .await;
+
+    Ok(())
+}
+
+#[tokio::test]
 async fn spend_predicate_coins_messages_basic() -> Result<(), Error> {
     predicate_abigen!(
         MyPredicate,
