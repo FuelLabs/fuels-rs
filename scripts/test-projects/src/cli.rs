@@ -2,7 +2,7 @@ use clap::{command, Parser, Subcommand};
 use std::path::PathBuf;
 
 const TESTS_PATH: &str = "packages/fuels/tests/";
-const NUM_CONCURRENT: usize = 1;
+const NUM_CONCURRENT: usize = 8;
 
 #[derive(Parser)]
 #[command(name = "test-projects", version, about, propagate_version = true)]
