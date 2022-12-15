@@ -41,7 +41,7 @@ impl ExecutableFuelCall {
     ) -> Result<Self, Error> {
         let consensus_parameters = wallet.get_provider()?.consensus_parameters().await?;
 
-        // Calculate instructions lenght for call instructions
+        // Calculate instructions length for call instructions
         // Use placeholder for call param offsets, we only care about the length
         let calls_instructions_len =
             get_single_call_instructions(&CallOpcodeParamsOffset::default()).len() * calls.len();
