@@ -49,7 +49,7 @@ pub struct ABIFunction {
     pub inputs: Vec<TypeApplication>,
     pub name: String,
     pub output: TypeApplication,
-    pub attributes: Vec<Attribute>,
+    pub attributes: Option<Vec<Attribute>>,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
