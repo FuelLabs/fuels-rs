@@ -424,6 +424,7 @@ mod tests {
                 type_id: 1,
                 ..Default::default()
             },
+            ..Default::default()
         };
         let types = [
             (
