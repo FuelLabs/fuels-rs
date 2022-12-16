@@ -18,7 +18,7 @@ env:
   RUSTFLAGS: "-D warnings"
   FUEL_CORE_VERSION: 0.15.1
   RUST_VERSION: 1.64.0
-  FORC_VERSION: 0.31.1
+  FORC_VERSION: 0.32.2
   FORC_PATCH_BRANCH: ""
   FORC_PATCH_REVISION: ""
 
@@ -52,7 +52,7 @@ jobs:
           else
             if [[ -n $FORC_PATCH_BRANCH ]]; then
               cargo install forc forc-fmt --git https://github.com/FuelLabs/sway --branch $FORC_PATCH_BRANCH
-            else 
+            else
               cargo install forc forc-fmt --git https://github.com/FuelLabs/sway --rev $FORC_PATCH_REVISION
             fi
           fi
