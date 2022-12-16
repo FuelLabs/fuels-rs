@@ -49,6 +49,7 @@ pub struct ABIFunction {
     pub inputs: Vec<TypeApplication>,
     pub name: String,
     pub output: TypeApplication,
+    pub attributes: Option<Vec<Attribute>>,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -91,6 +92,13 @@ pub struct ResolvedLog {
     pub log_id: u64,
     pub param_type_call: TokenStream,
     pub resolved_type_name: TokenStream,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Attribute {
+    pub name: String,
+    pub arguments: Vec<String>,
 }
 
 impl TypeDeclaration {
