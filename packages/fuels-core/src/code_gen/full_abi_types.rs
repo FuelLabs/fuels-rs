@@ -6,7 +6,7 @@ use std::collections::HashMap;
 pub(crate) struct FullProgramABI {
     pub types: Vec<FullTypeDeclaration>,
     pub functions: Vec<FullABIFunction>,
-    pub logged_types: Option<Vec<FullLoggedType>>,
+    pub logged_types: Vec<FullLoggedType>,
 }
 
 impl FullProgramABI {
@@ -34,12 +34,12 @@ impl FullProgramABI {
             .map(|fun| FullABIFunction::from_counterpart(fun, &lookup))
             .collect();
 
-        let logged_types = program_abi.logged_types.as_ref().map(|logged_types| {
-            logged_types
-                .iter()
-                .map(|logged_type| FullLoggedType::from_counterpart(logged_type, &lookup))
-                .collect()
-        });
+        let logged_types = program_abi
+            .logged_types
+            .iter()
+            .flatten()
+            .map(|logged_type| FullLoggedType::from_counterpart(logged_type, &lookup))
+            .collect();
 
         Self {
             types,
