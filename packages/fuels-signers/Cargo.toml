@@ -27,6 +27,7 @@ serde = { version = "1.0.124", default-features = true, features = ["derive"] }
 sha2 = { version = "0.9.8", default-features = false }
 thiserror = { version = "1.0.30", default-features = false }
 tokio = { version = "1.10.1", features = ["full"] }
+tai64 = { version = "4.0", features = ["serde"] }
 
 [dev-dependencies]
 fuels = { path = "../fuels" }
