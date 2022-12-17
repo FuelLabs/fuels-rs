@@ -13,6 +13,7 @@ pub mod abi_decoder;
 pub mod abi_encoder;
 pub mod code_gen;
 pub mod constants;
+pub mod offsets;
 pub mod parameters;
 pub mod rustfmt;
 pub mod source;
@@ -23,6 +24,10 @@ pub mod utils;
 pub mod tx {
     #[doc(no_inline)]
     pub use fuel_tx::*;
+}
+
+pub mod vm {
+    pub use fuel_vm::*;
 }
 
 pub type ByteArray = [u8; 8];

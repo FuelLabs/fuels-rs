@@ -65,7 +65,6 @@ pub mod prelude {
     pub use super::contract::{
         contract::{Contract, MultiContractCallHandler},
         logs::LogDecoder,
-        predicate::Predicate,
     };
     pub use super::core::constants::*;
     pub use super::core::parameters::*;
@@ -74,7 +73,7 @@ pub mod prelude {
     pub use super::core::Identity;
     pub use super::core::{Token, Tokenizable};
     pub use super::fuel_node::*;
-    pub use super::fuels_abigen::{abigen, script_abigen, setup_contract_test};
+    pub use super::fuels_abigen::{abigen, predicate_abigen, script_abigen, setup_contract_test};
     pub use super::signers::provider::*;
     pub use super::signers::{wallet::generate_mnemonic_phrase, Signer, Wallet, WalletUnlocked};
     pub use super::test_helpers::Config;
