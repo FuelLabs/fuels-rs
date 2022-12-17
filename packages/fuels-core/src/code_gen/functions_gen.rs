@@ -25,7 +25,7 @@ use std::collections::HashMap;
 ///
 /// [`Contract`]: fuels_contract::contract::Contract
 // TODO (oleksii/docs): linkify the above `Contract` link properly
-pub fn expand_function(
+pub(crate) fn expand_function(
     function: &ABIFunction,
     types: &HashMap<usize, TypeDeclaration>,
 ) -> Result<TokenStream, Error> {
@@ -74,7 +74,7 @@ pub fn expand_function(
 }
 
 /// Generate the `main` function of a script
-pub fn generate_script_main_function(
+pub(crate) fn generate_script_main_function(
     main_function_abi: &ABIFunction,
     types: &HashMap<usize, TypeDeclaration>,
 ) -> Result<TokenStream, Error> {
@@ -116,7 +116,7 @@ pub fn generate_script_main_function(
     })
 }
 
-pub fn generate_predicate_encode_function(
+pub(crate) fn generate_predicate_encode_function(
     main_function_abi: &ABIFunction,
     types: &HashMap<usize, TypeDeclaration>,
 ) -> Result<TokenStream, Error> {
