@@ -6,12 +6,11 @@ use crate::code_gen::{
 };
 use crate::utils::safe_ident;
 use fuels_types::errors::Error;
-use fuels_types::{ABIFunction, TypeDeclaration};
 use inflector::Inflector;
 use proc_macro2::TokenStream;
 use quote::quote;
 use resolved_type::resolve_type;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 /// Functions used by the Abigen to expand functions defined in an ABI spec.
 
@@ -107,15 +106,15 @@ pub(crate) fn generate_script_main_function(
 
     Ok(quote! {
         #doc
-        pub fn #name(&self #(,#arg_declarations)*) -> ScriptCallHandler<#output_type> {
-            let arg_name_tokens = [#(#arg_names.into_token()),*];
-            let script_binary = std::fs::read(self.binary_filepath.as_str())
+        pub fn #name(&self #(,#arg_declarations)*) -> ::fuels::contract::script_calls::ScriptCallHandler<#output_type> {
+            let arg_name_tokens = [#(::fuels::core::Tokenizable::into_token(#arg_names)),*];
+            let script_binary = ::std::fs::read(&self.binary_filepath)
                                         .expect("Could not read from binary filepath");
-            let encoded_args = ABIEncoder::encode(&arg_name_tokens).expect("Cannot encode script
-            arguments");
+            let encoded_args = ::fuels::core::abi_encoder::ABIEncoder::encode(&arg_name_tokens).expect("Cannot encode script arguments");
             let provider = self.wallet.get_provider().expect("Provider not set up").clone();
-            let log_decoder = LogDecoder{logs_map: self.logs_map.clone()};
-            ScriptCallHandler::new(
+            let log_decoder = ::fuels::contract::logs::LogDecoder{logs_map: self.logs_map.clone()};
+
+            ::fuels::contract::script_calls::ScriptCallHandler::new(
                 script_binary,
                 encoded_args,
                 self.wallet.clone(),

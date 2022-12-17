@@ -69,6 +69,7 @@ fn enum_decl(
     );
 
     quote! {
+        #[allow(clippy::enum_variant_names)]
         #[derive(Clone, Debug, Eq, PartialEq)]
         pub enum #enum_ident <#(#generics: ::fuels::core::Tokenizable + ::fuels::core::Parameterize),*> {
             #(#enum_variants),*

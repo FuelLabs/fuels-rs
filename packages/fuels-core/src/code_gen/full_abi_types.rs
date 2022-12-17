@@ -116,7 +116,7 @@ pub(crate) struct FullTypeApplication {
 }
 
 impl FullTypeApplication {
-    fn from_counterpart(
+    pub(crate) fn from_counterpart(
         type_application: &TypeApplication,
         types: &HashMap<usize, TypeDeclaration>,
     ) -> FullTypeApplication {

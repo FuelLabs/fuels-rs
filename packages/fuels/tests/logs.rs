@@ -252,14 +252,16 @@ async fn test_multi_call_log_multiple_contracts() -> Result<(), Error> {
         "packages/fuels/tests/logs/contract_logs"
     );
 
-    setup_contract_test!(
-        contract_instance2,
-        None,
-        "packages/fuels/tests/logs/contract_logs"
-    );
-
     let call_handler_1 = contract_instance.methods().produce_logs_values();
-    let call_handler_2 = contract_instance2.methods().produce_logs_variables();
+    let call_handler_2 = {
+        setup_contract_test!(
+            contract_instance2,
+            None,
+            "packages/fuels/tests/logs/contract_logs"
+        );
+
+        contract_instance2.methods().produce_logs_variables()
+    };
 
     let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
 
@@ -396,14 +398,16 @@ async fn test_multi_call_require_log_multi_contract() -> Result<(), Error> {
         "packages/fuels/tests/contracts/require"
     );
 
-    setup_contract_test!(
-        contract_instance2,
-        None,
-        "packages/fuels/tests/contracts/require"
-    );
-
     let contract_methods = contract_instance.methods();
-    let contract_methods2 = contract_instance2.methods();
+
+    let contract_methods2 = {
+        setup_contract_test!(
+            contract_instance2,
+            None,
+            "packages/fuels/tests/contracts/require"
+        );
+        contract_instance2.methods()
+    };
 
     // The output of the error depends on the order of the contract
     // handlers as the script returns the first revert it finds.
