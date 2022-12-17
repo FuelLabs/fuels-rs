@@ -1,19 +1,12 @@
-// use fuel_core_interfaces::model::Message;
-// use fuels::client::schema::message::Message as OtherMessage;
-// use fuels::fuel_node::{Config as CoreConfig, FuelService};
-// use fuels::prelude::*;
-// use fuels::signers::fuel_crypto::SecretKey;
-// use fuels::tx::Receipt;
 use chrono::Duration;
 use fuel_core::service::{Config as CoreConfig, FuelService};
-use fuel_gql_client::fuel_tx::Receipt;
 use fuels::{
     client::{PageDirection, PaginationRequest},
     prelude::*,
+    signers::fuel_crypto::SecretKey,
+    tx::Receipt,
+    types::{block::Block, message::Message},
 };
-use fuels_signers::fuel_crypto::SecretKey;
-use fuels_types::block::Block;
-use fuels_types::message::Message;
 use std::{iter, str::FromStr};
 
 #[tokio::test]
