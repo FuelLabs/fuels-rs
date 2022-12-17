@@ -653,9 +653,11 @@ async fn test_contract_set_estimation() -> Result<(), Error> {
         "packages/fuels/tests/contracts/foo_contract"
     );
     let foo_contract_id = foo_contract_instance.get_contract_id();
+    dbg!(&foo_contract_id);
 
     let res = foo_contract_instance.methods().foo(true).call().await?;
     assert!(!res.value);
+    eprintln!("Called foo successfully!");
 
     setup_contract_test!(
         foo_caller_contract_instance,
@@ -672,16 +674,20 @@ async fn test_contract_set_estimation() -> Result<(), Error> {
             .call_foo_contract(Bits256(bits), true)
             .call()
             .await;
+        eprintln!("Called call_foo_contract, about to assert it!");
         assert!(matches!(res, Err(Error::RevertTransactionError(..))));
+        eprintln!("Asserted successfully");
     }
 
-    let res = foo_caller_contract_instance
+    let x = foo_caller_contract_instance
         .methods()
         .call_foo_contract(Bits256(bits), true)
         .estimate_tx_dependencies(None)
-        .await?
-        .call()
         .await?;
+    eprintln!("Estimating dependencies is successful");
+
+    let res = x.call().await?;
+    eprintln!("The call is successful");
 
     assert!(res.value);
     Ok(())
