@@ -31,7 +31,7 @@ impl LogDecoder {
             .filter_map(|((c_id, log_id), data)| {
                 self.logs_map
                     .get(&(c_id, log_id))
-                    .and_then(|param_type| Some((param_type, data)))
+                    .map(|param_type| (param_type, data))
             })
             .map(|(param_type, data)| param_type.decode_log(&data))
             .collect::<Result<Vec<String>, Error>>()
