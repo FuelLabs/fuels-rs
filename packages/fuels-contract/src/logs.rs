@@ -28,14 +28,12 @@ impl LogDecoder {
         });
 
         ids_with_data
-            .map(|((c_id, log_id), data)| {
-                let param_type = self
-                    .logs_map
+            .filter_map(|((c_id, log_id), data)| {
+                self.logs_map
                     .get(&(c_id, log_id))
-                    .ok_or_else(|| Error::InvalidData("Failed to find log id".into()))?;
-
-                param_type.decode_log(&data)
+                    .and_then(|param_type| Some((param_type, data)))
             })
+            .map(|(param_type, data)| param_type.decode_log(&data))
             .collect::<Result<Vec<String>, Error>>()
     }
 
@@ -90,7 +88,7 @@ impl LogDecoder {
 pub fn decode_revert_error(err: Error, log_decoder: &LogDecoder) -> Error {
     if let Error::RevertTransactionError(_, receipts) = &err {
         if let Ok(logs) = log_decoder.get_logs(receipts) {
-            if let Some(log) = logs.into_iter().next() {
+            if let Some(log) = logs.into_iter().last() {
                 return Error::RevertTransactionError(log, receipts.to_owned());
             }
         }

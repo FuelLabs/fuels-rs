@@ -334,6 +334,15 @@ async fn test_require_log() -> Result<(), Error> {
 
         assert_is_revert_containing_msg("StructDeeplyNestedGeneric", error);
     }
+    {
+        let error = contract_methods
+            .require_with_additional_logs()
+            .call()
+            .await
+            .expect_err("Should return a revert error");
+
+        assert_is_revert_containing_msg("64", error);
+    }
 
     Ok(())
 }
@@ -622,6 +631,16 @@ async fn test_script_require_log() -> Result<(), Error> {
             .expect_err("Should return a revert error");
 
         assert_is_revert_containing_msg("StructDeeplyNestedGeneric", error);
+    }
+    {
+        let instance = log_script::new(wallet.clone(), bin_path);
+        let error = instance
+            .main(MatchEnum::RequireWithAdditionalLogs())
+            .call()
+            .await
+            .expect_err("Should return a revert error");
+
+        assert_is_revert_containing_msg("64", error);
     }
 
     Ok(())
