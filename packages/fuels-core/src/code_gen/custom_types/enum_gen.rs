@@ -42,7 +42,7 @@ pub(crate) fn expand_custom_enum(
     };
     Ok(GeneratedCode {
         code,
-        type_paths: HashSet::from([TypePath::new(&enum_name).expect("Enum name is not empty!")]),
+        usable_types: HashSet::from([TypePath::new(&enum_name).expect("Enum name is not empty!")]),
     })
 }
 

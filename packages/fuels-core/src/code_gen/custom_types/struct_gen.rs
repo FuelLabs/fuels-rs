@@ -41,9 +41,9 @@ pub(crate) fn expand_custom_struct(
     };
     Ok(GeneratedCode {
         code,
-        type_paths: HashSet::from(
-            [TypePath::new(&struct_name).expect("Struct name is not empty!")],
-        ),
+        usable_types: HashSet::from([
+            TypePath::new(&struct_name).expect("Struct name is not empty!")
+        ]),
     })
 }
 

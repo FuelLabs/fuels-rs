@@ -1,3 +1,4 @@
+use std::default::Default;
 use std::{
     collections::{HashMap, HashSet},
     str::FromStr,
@@ -48,6 +49,23 @@ fn resolve_logs(
         .collect()
 }
 
+fn logs_hashmap_type() -> TokenStream {
+    quote! {::std::collections::HashMap<(::fuels::types::bech32::Bech32ContractId, u64), ::fuels::types::param_types::ParamType>}
+}
+
+fn logs_hashmap_instantiation_code(
+    contract_id: Option<TokenStream>,
+    logged_types: &[FullLoggedType],
+    shared_types: &HashSet<FullTypeDeclaration>,
+) -> TokenStream {
+    let resolved_logs = resolve_logs(&logged_types, shared_types);
+    let log_id_param_type_pairs = generate_log_id_param_type_pairs(&resolved_logs);
+    let contract_id = contract_id
+        .map(|id| quote! { ::std::option::Option::Some(#id) })
+        .unwrap_or_else(|| quote! {::std::option::Option::None});
+    quote! {::fuels::core::code_gen::get_logs_hashmap(&[#(#log_id_param_type_pairs),*], #contract_id)}
+}
+
 #[derive(Debug)]
 pub struct Contract;
 
@@ -63,30 +81,15 @@ impl Contract {
             contract_name.to_string().to_snake_case()
         ));
 
-        let types_code = generate_types(abi.types.clone(), shared_types)?;
+        let types = generate_types(abi.types.clone(), shared_types)?;
 
-        let contract_code =
-            Self::generate_contract_code(contract_name, &abi, no_std, shared_types)?
-                .append(types_code)
-                .prepend_mod_name_to_types(&name_mod);
+        let contract_bindings =
+            Self::generate_contract_code(contract_name, &abi, no_std, shared_types)?;
 
-        let code = contract_code.code;
-        let prelude = limited_std_prelude();
-
-        let code_wrapped_in_mod = quote! {
-            #[allow(clippy::too_many_arguments)]
-            #[no_implicit_prelude]
-            pub mod #name_mod {
-                #prelude
-
-                #code
-            }
-        };
-
-        Ok(GeneratedCode {
-            code: code_wrapped_in_mod,
-            type_paths: contract_code.type_paths,
-        })
+        Ok(limited_std_prelude()
+            .append(contract_bindings)
+            .append(types)
+            .wrap_in_mod(&name_mod))
     }
 
     fn generate_contract_code(
@@ -107,8 +110,12 @@ impl Contract {
         abi: &FullProgramABI,
         shared_types: &HashSet<FullTypeDeclaration>,
     ) -> Result<GeneratedCode, Error> {
-        let resolved_logs = resolve_logs(&abi.logged_types, shared_types);
-        let log_id_param_type_pairs = generate_log_id_param_type_pairs(&resolved_logs);
+        let logs_map = logs_hashmap_instantiation_code(
+            Some(quote! {self.contract_id.clone()}),
+            &abi.logged_types,
+            shared_types,
+        );
+        let logs_map_type = logs_hashmap_type();
 
         let methods_name = ident(&format!("{}Methods", &contract_name));
         let name = ident(contract_name);
@@ -149,7 +156,7 @@ impl Contract {
                     #methods_name {
                         contract_id: self.contract_id.clone(),
                         wallet: self.wallet.clone(),
-                        logs_map: ::fuels::core::code_gen::get_logs_hashmap(&[#(#log_id_param_type_pairs),*], ::std::option::Option::Some(self.contract_id.clone())),
+                        logs_map: #logs_map
                     }
                 }
             }
@@ -158,7 +165,7 @@ impl Contract {
             pub struct #methods_name {
                 contract_id: ::fuels::types::bech32::Bech32ContractId,
                 wallet: ::fuels::signers::wallet::WalletUnlocked,
-                logs_map: ::std::collections::HashMap<(::fuels::types::bech32::Bech32ContractId, u64), ::fuels::types::param_types::ParamType>,
+                logs_map: #logs_map_type
             }
 
             impl #methods_name {
@@ -173,7 +180,10 @@ impl Contract {
             .into_iter()
             .collect();
 
-        Ok(GeneratedCode { code, type_paths })
+        Ok(GeneratedCode {
+            code,
+            usable_types: type_paths,
+        })
     }
 
     fn functions(
@@ -202,27 +212,12 @@ impl Script {
 
         let types_code = generate_types(abi.types.clone(), shared_types)?;
 
-        let script_code = Self::generate_script_code(script_name, &abi, no_std, shared_types)?
-            .append(types_code)
-            .prepend_mod_name_to_types(&name_mod);
+        let script_code =
+            Self::generate_script_code(script_name, &abi, no_std, shared_types)?.append(types_code);
 
-        let code = script_code.code;
-        let prelude = limited_std_prelude();
-
-        let code_wrapped_in_mod = quote! {
-            #[allow(clippy::too_many_arguments)]
-            #[no_implicit_prelude]
-            pub mod #name_mod {
-                #prelude
-
-                #code
-            }
-        };
-
-        Ok(GeneratedCode {
-            code: code_wrapped_in_mod,
-            type_paths: script_code.type_paths,
-        })
+        Ok(limited_std_prelude()
+            .append(script_code)
+            .wrap_in_mod(&name_mod))
     }
 
     fn generate_script_code(
@@ -243,19 +238,19 @@ impl Script {
         abi: &FullProgramABI,
         shared_types: &HashSet<FullTypeDeclaration>,
     ) -> Result<GeneratedCode, Error> {
-        let resolved_logs = resolve_logs(&abi.logged_types, shared_types);
-        let log_id_param_type_pairs = generate_log_id_param_type_pairs(&resolved_logs);
-
         let name = ident(script_name);
 
         let main_function = Self::script_function(abi, shared_types)?;
+
+        let logs_map = logs_hashmap_instantiation_code(None, &abi.logged_types, shared_types);
+        let logs_map_type = logs_hashmap_type();
 
         let code = quote! {
             #[derive(Debug)]
             pub struct #name{
                 wallet: ::fuels::signers::wallet::WalletUnlocked,
                 binary_filepath: ::std::string::String,
-                logs_map: ::std::collections::HashMap<(::fuels::types::bech32::Bech32ContractId, u64), ::fuels::types::param_types::ParamType>,
+                logs_map: #logs_map_type
             }
 
             impl #name {
@@ -263,7 +258,7 @@ impl Script {
                     Self {
                         wallet,
                         binary_filepath: binary_filepath.to_string(),
-                        logs_map: ::fuels::core::code_gen::get_logs_hashmap(&[#(#log_id_param_type_pairs),*], ::std::option::Option::None),
+                        logs_map: #logs_map
                     }
                 }
 
@@ -273,7 +268,10 @@ impl Script {
 
         let type_paths = [TypePath::new(&name).expect("We know name is not empty.")].into();
 
-        Ok(GeneratedCode { code, type_paths })
+        Ok(GeneratedCode {
+            code,
+            usable_types: type_paths,
+        })
     }
 
     fn script_function(
@@ -352,25 +350,55 @@ impl From<TypePath> for TokenStream {
 #[derive(Default)]
 pub struct GeneratedCode {
     pub code: TokenStream,
-    pub type_paths: HashSet<TypePath>,
+    pub usable_types: HashSet<TypePath>,
 }
 
 impl GeneratedCode {
+    pub fn is_empty(&self) -> bool {
+        self.code.is_empty()
+    }
+
     pub fn append(mut self, another: GeneratedCode) -> Self {
         self.code.extend(another.code);
-        self.type_paths.extend(another.type_paths);
+        self.usable_types.extend(another.usable_types);
         self
+    }
+
+    pub fn wrap_in_mod(self, mod_name: &Ident) -> Self {
+        let mod_path = TypePath::new(&mod_name).unwrap();
+        let type_paths = self
+            .usable_types
+            .into_iter()
+            .map(|type_path| type_path.prepend(mod_path.clone()))
+            .collect();
+
+        let inner_code = self.code;
+        let code = quote! {
+            #[allow(clippy::too_many_arguments)]
+            #[no_implicit_prelude]
+            pub mod #mod_name {
+                #inner_code
+            }
+        };
+
+        Self {
+            code,
+            usable_types: type_paths,
+        }
     }
 
     pub fn prepend_mod_name_to_types(self, mod_name: &Ident) -> Self {
         let path = TypePath::new(&mod_name).unwrap();
         let type_paths = self
-            .type_paths
+            .usable_types
             .into_iter()
             .map(|type_path| type_path.prepend(path.clone()))
             .collect();
 
-        Self { type_paths, ..self }
+        Self {
+            usable_types: type_paths,
+            ..self
+        }
     }
 
     pub fn use_statements_for_uniquely_named_types(&self) -> TokenStream {
@@ -385,7 +413,7 @@ impl GeneratedCode {
     }
 
     fn types_with_unique_type_name(&self) -> Vec<&TypePath> {
-        self.type_paths
+        self.usable_types
             .iter()
             .sorted_by(|&lhs, &rhs| lhs.type_name().cmp(rhs.type_name()))
             .group_by(|&e| e.type_name())
@@ -402,8 +430,8 @@ impl GeneratedCode {
     }
 }
 
-fn limited_std_prelude() -> TokenStream {
-    quote! {
+fn limited_std_prelude() -> GeneratedCode {
+    let code = quote! {
             use ::std::{
                 clone::Clone,
                 convert::{Into, TryFrom},
@@ -414,6 +442,11 @@ fn limited_std_prelude() -> TokenStream {
                 panic, vec,
                 string::ToString
             };
+    };
+
+    GeneratedCode {
+        code,
+        ..Default::default()
     }
 }
 
@@ -558,32 +591,15 @@ impl Abigen {
     fn generate_shared_types(
         shared_types: &HashSet<FullTypeDeclaration>,
     ) -> Result<GeneratedCode, Error> {
-        if shared_types.is_empty() {
-            return Ok(Default::default());
-        }
+        let types = generate_types(shared_types.clone(), &HashSet::default())?;
 
-        let shared_mod_name = ident("shared_types");
-
-        let GeneratedCode { code, type_paths } =
-            generate_types(shared_types.clone(), &HashSet::default())?
-                .prepend_mod_name_to_types(&shared_mod_name);
-
-        let prelude = limited_std_prelude();
-
-        let code = if code.is_empty() {
-            quote! {}
+        if types.is_empty() {
+            Ok(Default::default())
         } else {
-            quote! {
-                #[no_implicit_prelude]
-                pub mod #shared_mod_name {
-                    #prelude
-
-                    #code
-                }
-            }
-        };
-
-        Ok(GeneratedCode { code, type_paths })
+            Ok(limited_std_prelude()
+                .append(types)
+                .wrap_in_mod(&ident("shared_types")))
+        }
     }
 
     fn determine_shared_types(all_types: &[ParsedAbigenTarget]) -> HashSet<FullTypeDeclaration> {
