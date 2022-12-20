@@ -34,7 +34,7 @@ impl LogDecoder {
                     .map(|param_type| (param_type, data))
             })
             .map(|(param_type, data)| param_type.decode_log(&data))
-            .collect::<Result<Vec<String>, Error>>()
+            .collect()
     }
 
     /// Get decoded logs with specific type from the given receipts.
@@ -57,7 +57,7 @@ impl LogDecoder {
             })
             .collect();
 
-        let decoded_logs: Vec<T> = receipts
+        receipts
             .iter()
             .filter_map(|r| match r {
                 Receipt::LogData { id, rb, data, .. }
@@ -73,9 +73,7 @@ impl LogDecoder {
                 _ => None,
             })
             .map(|data| try_from_bytes(&data))
-            .collect::<Result<Vec<_>, _>>()?;
-
-        Ok(decoded_logs)
+            .collect()
     }
 
     pub fn merge(&mut self, log_decoder: &LogDecoder) {
