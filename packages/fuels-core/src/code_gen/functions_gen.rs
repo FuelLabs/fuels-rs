@@ -29,11 +29,7 @@ pub(crate) fn expand_function(
     function: &FullABIFunction,
     shared_types: &HashSet<FullTypeDeclaration>,
 ) -> Result<TokenStream, Error> {
-    if function.name.is_empty() {
-        return Err(Error::InvalidData("Function name can not be empty".into()));
-    }
-
-    let args = function_arguments(&function.inputs, shared_types)?;
+    let args = function_arguments(&function.inputs(), shared_types)?;
 
     let arg_names = args.iter().map(|component| &component.field_name);
 
@@ -47,10 +43,10 @@ pub(crate) fn expand_function(
 
     let doc = expand_doc(&format!(
         "Calls the contract's `{}` function",
-        function.name,
+        function.name(),
     ));
 
-    let name = safe_ident(&function.name);
+    let name = safe_ident(&function.name());
     let name_stringified = name.to_string();
 
     let output_type: TokenStream = resolve_fn_output_type(function, shared_types)?.into();
@@ -75,12 +71,76 @@ pub(crate) fn expand_function(
     })
 }
 
+#[derive(Debug)]
+struct GeneratedFunction {
+    args: Vec<Component>,
+    output_type: ResolvedType,
+    body: TokenStream,
+}
+
+impl GeneratedFunction {
+    pub fn new(
+        fun: &FullABIFunction,
+        shared_types: &HashSet<FullTypeDeclaration>,
+    ) -> Result<Self, Error> {
+        let args = function_arguments(&function.inputs(), shared_types)?;
+
+        let output_type = resolve_fn_output_type(function, shared_types)?;
+
+        Ok(Self {
+            args,
+            output_type,
+            body: Default::default(),
+        })
+    }
+
+    pub fn fn_selector(&self) -> TokenStream {
+        let param_type_calls = param_type_calls(&self.args);
+
+        quote! {::fuels::core::code_gen::function_selector::resolve_fn_selector(#name_stringified, &[#(#param_type_calls),*])}
+    }
+
+    pub fn array_of_arg_tokens(&self) -> TokenStream {
+        let arg_names = self.args.iter().map(|component| component.field_name);
+        quote! {[#(::fuels::core::Tokenizable::into_token(#arg_names)),*]}
+    }
+}
+
+impl From<&GeneratedFunction> for TokenStream {
+    fn from(fun: &GeneratedFunction) -> Self {
+        let param_type_calls = param_type_calls(&fun.args);
+        todo!()
+    }
+}
+
+fn gen_fun() -> GeneratedFunction {
+    Ok(quote! {
+        #doc
+        pub fn #name(&self #(,#arg_declarations)*) -> ::fuels::contract::contract::ContractCallHandler<#output_type> {
+            let provider = self.wallet.get_provider().expect("Provider not set up");
+            let encoded_fn_selector = ::fuels::core::code_gen::function_selector::resolve_fn_selector(#name_stringified, &[#(#param_type_calls),*]);
+            let tokens = [#(::fuels::core::Tokenizable::into_token(#arg_names)),*];
+            let log_decoder = ::fuels::contract::logs::LogDecoder{logs_map: self.logs_map.clone()};
+            ::fuels::contract::contract::Contract::method_hash(
+                &provider,
+                self.contract_id.clone(),
+                &self.wallet,
+                encoded_fn_selector,
+                &tokens,
+                log_decoder
+            )
+            .expect("method not found (this should never happen)")
+        }
+    });
+    GeneratedFunction {}
+}
+
 /// Generate the `main` function of a script
 pub(crate) fn generate_script_main_function(
     main_function_abi: &FullABIFunction,
     shared_types: &HashSet<FullTypeDeclaration>,
 ) -> Result<TokenStream, Error> {
-    if main_function_abi.name != "main" {
+    if main_function_abi.name() != "main" {
         return Err(Error::InvalidData(
             "Script `main` function name can not be different from `main`".into(),
         ));
@@ -90,7 +150,7 @@ pub(crate) fn generate_script_main_function(
     let output_params = single_param_type_call(&output_type_resolved);
     let output_type: TokenStream = output_type_resolved.into();
 
-    let args = function_arguments(&main_function_abi.inputs, shared_types)?;
+    let args = function_arguments(&main_function_abi.inputs(), shared_types)?;
 
     let arg_names = args.iter().map(|component| &component.field_name);
 
@@ -130,11 +190,11 @@ fn resolve_fn_output_type(
     function: &FullABIFunction,
     shared_types: &HashSet<FullTypeDeclaration>,
 ) -> Result<ResolvedType, Error> {
-    let output_type = resolve_type(&function.output, shared_types)?;
+    let output_type = resolve_type(&function.output(), shared_types)?;
     if output_type.uses_vectors() {
         Err(Error::CompilationError(format!(
             "function '{}' contains a vector in its return type. This currently isn't supported.",
-            function.name
+            function.name()
         )))
     } else {
         Ok(output_type)
@@ -323,7 +383,7 @@ mod tests {
 
         // Grabbing the one and only function in it.
         let result = expand_function(
-            &FullABIFunction::from_counterpart(&parsed_abi.functions[0], &types),
+            &FullABIFunction::from_counterpart(&parsed_abi.functions[0], &types)?,
             &HashSet::default(),
         )?;
 
@@ -400,7 +460,7 @@ mod tests {
         .into_iter()
         .collect::<HashMap<_, _>>();
         let result = expand_function(
-            &FullABIFunction::from_counterpart(&the_function, &types),
+            &FullABIFunction::from_counterpart(&the_function, &types)?,
             &HashSet::default(),
         );
 
@@ -512,7 +572,7 @@ mod tests {
         .into_iter()
         .collect::<HashMap<_, _>>();
         let result = expand_function(
-            &FullABIFunction::from_counterpart(&the_function, &types),
+            &FullABIFunction::from_counterpart(&the_function, &types)?,
             &HashSet::default(),
         );
         // Some more editing was required because it is not rustfmt-compatible (adding/removing parentheses or commas)

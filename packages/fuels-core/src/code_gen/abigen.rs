@@ -281,7 +281,7 @@ impl Script {
         let functions = abi
             .functions
             .iter()
-            .filter(|function| function.name == "main")
+            .filter(|function| function.name() == "main")
             .collect::<Vec<&FullABIFunction>>();
 
         if let [main_function] = functions.as_slice() {

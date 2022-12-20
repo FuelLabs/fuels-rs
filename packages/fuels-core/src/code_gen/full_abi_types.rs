@@ -1,4 +1,5 @@
 use fuels_types::errors::Error;
+use fuels_types::errors::Error::InvalidData;
 use fuels_types::{ABIFunction, LoggedType, ProgramABI, TypeApplication, TypeDeclaration};
 use std::collections::HashMap;
 
@@ -12,10 +13,10 @@ pub(crate) struct FullProgramABI {
 impl FullProgramABI {
     pub fn from_json_abi(abi: &str) -> Result<Self, Error> {
         let parsed_abi: ProgramABI = serde_json::from_str(abi)?;
-        Ok(FullProgramABI::from_counterpart(&parsed_abi))
+        FullProgramABI::from_counterpart(&parsed_abi)
     }
 
-    fn from_counterpart(program_abi: &ProgramABI) -> FullProgramABI {
+    fn from_counterpart(program_abi: &ProgramABI) -> Result<FullProgramABI, Error> {
         let lookup: HashMap<_, _> = program_abi
             .types
             .iter()
@@ -32,7 +33,7 @@ impl FullProgramABI {
             .functions
             .iter()
             .map(|fun| FullABIFunction::from_counterpart(fun, &lookup))
-            .collect();
+            .collect::<Result<Vec<_>, _>>()?;
 
         let logged_types = program_abi
             .logged_types
@@ -41,36 +42,67 @@ impl FullProgramABI {
             .map(|logged_type| FullLoggedType::from_counterpart(logged_type, &lookup))
             .collect();
 
-        Self {
+        Ok(Self {
             types,
             functions,
             logged_types,
-        }
+        })
     }
 }
 
 #[derive(Debug, Clone)]
 pub(crate) struct FullABIFunction {
-    pub inputs: Vec<FullTypeApplication>,
-    pub name: String,
-    pub output: FullTypeApplication,
+    name: String,
+    inputs: Vec<FullTypeApplication>,
+    output: FullTypeApplication,
 }
 
 impl FullABIFunction {
+    pub(crate) fn new(
+        name: String,
+        inputs: Vec<FullTypeApplication>,
+        output: FullTypeApplication,
+    ) -> Result<Self, Error> {
+        if name.is_empty() {
+            Err(InvalidData(
+                "FullABIFunction's name cannot be empty!".to_string(),
+            ))
+        } else {
+            Ok(Self {
+                name,
+                inputs,
+                output,
+            })
+        }
+    }
+
+    pub(crate) fn name(&self) -> &str {
+        self.name.as_str()
+    }
+
+    pub(crate) fn inputs(&self) -> &[FullTypeApplication] {
+        self.inputs.as_slice()
+    }
+
+    pub(crate) fn output(&self) -> &FullTypeApplication {
+        &self.output
+    }
+
     pub(crate) fn from_counterpart(
         abi_function: &ABIFunction,
         types: &HashMap<usize, TypeDeclaration>,
-    ) -> FullABIFunction {
+    ) -> Result<FullABIFunction, Error> {
         let inputs = abi_function
             .inputs
             .iter()
             .map(|input| FullTypeApplication::from_counterpart(input, types))
             .collect();
-        FullABIFunction {
+
+        FullABIFunction::new(
+            abi_function.name.clone(),
             inputs,
-            name: abi_function.name.clone(),
-            output: FullTypeApplication::from_counterpart(&abi_function.output, types),
-        }
+            FullTypeApplication::from_counterpart(&abi_function.output, types),
+        )
     }
 }
 
