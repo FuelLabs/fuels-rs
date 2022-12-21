@@ -560,7 +560,7 @@ async fn test_script_logs_with_contract_logs() -> Result<(), Error> {
             Bytes32::zeroed(),
             Bytes32::zeroed(),
             TxPointer::default(),
-            contract_id.into(),
+            contract_id,
         )])
         .with_outputs(vec![Output::contract(
             0,
