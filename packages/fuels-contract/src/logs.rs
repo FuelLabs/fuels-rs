@@ -93,3 +93,5 @@ pub fn decode_revert_error(err: Error, log_decoder: &LogDecoder) -> Error {
     }
     err
 }
+
+//ignores_logs_it_cant_decode
