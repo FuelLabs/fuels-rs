@@ -86,8 +86,8 @@ impl LogDecoder {
 pub fn decode_revert_error(err: Error, log_decoder: &LogDecoder) -> Error {
     if let Error::RevertTransactionError(_, receipts) = &err {
         if let Ok(logs) = log_decoder.get_logs(receipts) {
-            if let Some(log) = logs.into_iter().last() {
-                return Error::RevertTransactionError(log, receipts.to_owned());
+            if let Some(log) = logs.last() {
+                return Error::RevertTransactionError(log.to_string(), receipts.to_owned());
             }
         }
     }
