@@ -571,16 +571,11 @@ async fn test_script_logs_with_contract_logs() -> Result<(), Error> {
         .await?;
 
     {
-        // Find number of logs coming from the contract
-        let num_contract_logs: u64 = response
+        let num_contract_logs = response
             .receipts
-            .clone()
-            .into_iter()
-            .map(|r| match r {
-                Receipt::LogData { id, .. } | Receipt::Log { id, .. } if id == contract_id => 1,
-                _ => 0,
-            })
-            .sum();
+            .iter()
+            .filter(|receipt| matches!(receipt, Receipt::LogData { id, .. } | Receipt::Log { id, .. } if *id == contract_id))
+            .count();
 
         assert_eq!(num_contract_logs, expected_num_contract_logs);
     }
