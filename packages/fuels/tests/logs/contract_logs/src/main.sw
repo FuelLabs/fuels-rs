@@ -1,6 +1,7 @@
 contract;
 
 use std::logging::log;
+use library::ContractLogs;
 
 struct TestStruct {
     field_1: bool,
@@ -33,17 +34,9 @@ struct StructDeeplyNestedGeneric<D> {
     field_2: u64,
 }
 
-abi TestContract {
-    fn produce_logs_values() -> ();
-    fn produce_logs_variables() -> ();
-    fn produce_logs_custom_types() -> ();
-    fn produce_logs_generic_types() -> ();
-    fn produce_multiple_logs() -> ();
-}
-
-impl TestContract for Contract {
-    fn produce_logs_values() {
-        log(64);
+impl ContractLogs for Contract {
+    fn produce_logs_values() -> () {
+        log(64u64);
         log(32u32);
         log(16u16);
         log(8u8);

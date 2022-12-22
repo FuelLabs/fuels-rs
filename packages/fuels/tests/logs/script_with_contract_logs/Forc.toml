@@ -2,7 +2,7 @@
 authors = ["Fuel Labs <contact@fuel.sh>"]
 entry = "main.sw"
 license = "Apache-2.0"
-name = "contract_logs"
+name = "script_with_contract_logs"
 
 [dependencies]
 library = { path = "../contract_logs_abi/", package = "contract_logs_abi" }
