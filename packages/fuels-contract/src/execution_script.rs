@@ -1,10 +1,11 @@
+use crate::contract_calls_utils::{get_single_call_instructions, CallOpcodeParamsOffset};
 use anyhow::Result;
 use std::fmt::Debug;
 
 use fuel_gql_client::fuel_tx::{Receipt, Transaction};
 
 use fuel_tx::{AssetId, Checkable, ScriptExecutionResult};
-use fuels_core::parameters::TxParameters;
+use fuels_core::{offsets::call_script_data_offset, parameters::TxParameters};
 use fuels_signers::provider::Provider;
 use fuels_signers::{Signer, WalletUnlocked};
 
@@ -14,8 +15,8 @@ use std::vec;
 
 use crate::contract::ContractCall;
 use crate::contract_calls_utils::{
-    build_script_data_from_contract_calls, calculate_required_asset_amounts, get_data_offset,
-    get_instructions, get_transaction_inputs_outputs,
+    build_script_data_from_contract_calls, calculate_required_asset_amounts, get_instructions,
+    get_transaction_inputs_outputs,
 };
 
 /// [`TransactionExecution`] provides methods to create and call/simulate a transaction that carries
@@ -39,7 +40,13 @@ impl ExecutableFuelCall {
         wallet: &WalletUnlocked,
     ) -> Result<Self, Error> {
         let consensus_parameters = wallet.get_provider()?.consensus_parameters().await?;
-        let data_offset = get_data_offset(&consensus_parameters, calls.len());
+
+        // Calculate instructions length for call instructions
+        // Use placeholder for call param offsets, we only care about the length
+        let calls_instructions_len =
+            get_single_call_instructions(&CallOpcodeParamsOffset::default()).len() * calls.len();
+
+        let data_offset = call_script_data_offset(&consensus_parameters, calls_instructions_len);
 
         let (script_data, call_param_offsets) =
             build_script_data_from_contract_calls(calls, data_offset, tx_parameters.gas_limit);

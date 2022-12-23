@@ -25,7 +25,7 @@ use std::collections::HashMap;
 ///
 /// [`Contract`]: fuels_contract::contract::Contract
 // TODO (oleksii/docs): linkify the above `Contract` link properly
-pub fn expand_function(
+pub(crate) fn expand_function(
     function: &ABIFunction,
     types: &HashMap<usize, TypeDeclaration>,
 ) -> Result<TokenStream, Error> {
@@ -34,9 +34,7 @@ pub fn expand_function(
     }
 
     let args = function_arguments(function, types)?;
-
     let arg_names = args.iter().map(|component| &component.field_name);
-
     let param_type_calls = param_type_calls(&args);
 
     let arg_declarations = args.iter().map(|component| {
@@ -76,22 +74,15 @@ pub fn expand_function(
 }
 
 /// Generate the `main` function of a script
-pub fn generate_script_main_function(
+pub(crate) fn generate_script_main_function(
     main_function_abi: &ABIFunction,
     types: &HashMap<usize, TypeDeclaration>,
 ) -> Result<TokenStream, Error> {
-    if main_function_abi.name != "main" {
-        return Err(Error::InvalidData(
-            "Script `main` function name can not be different from `main`".into(),
-        ));
-    }
-
     let output_type_resolved = resolve_fn_output_type(main_function_abi, types)?;
     let output_params = single_param_type_call(&output_type_resolved);
     let output_type: TokenStream = output_type_resolved.into();
 
     let args = function_arguments(main_function_abi, types)?;
-
     let arg_names = args.iter().map(|component| &component.field_name);
 
     let arg_declarations = args.iter().map(|component| {
@@ -101,7 +92,6 @@ pub fn generate_script_main_function(
     });
 
     let doc = expand_doc("Run the script's `main` function with the provided arguments");
-
     let name = safe_ident("main");
 
     Ok(quote! {
@@ -110,8 +100,8 @@ pub fn generate_script_main_function(
             let arg_name_tokens = [#(#arg_names.into_token()),*];
             let script_binary = std::fs::read(self.binary_filepath.as_str())
                                         .expect("Could not read from binary filepath");
-            let encoded_args = ABIEncoder::encode(&arg_name_tokens).expect("Cannot encode script
-            arguments");
+            let encoded_args = ABIEncoder::encode(&arg_name_tokens)
+                .expect("Cannot encode script arguments");
             let provider = self.wallet.get_provider().expect("Provider not set up").clone();
             let log_decoder = LogDecoder{logs_map: self.logs_map.clone()};
             ScriptCallHandler::new(
@@ -122,6 +112,38 @@ pub fn generate_script_main_function(
                 #output_params,
                 log_decoder
             )
+        }
+    })
+}
+
+pub(crate) fn generate_predicate_encode_function(
+    main_function_abi: &ABIFunction,
+    types: &HashMap<usize, TypeDeclaration>,
+) -> Result<TokenStream, Error> {
+    let args = function_arguments(main_function_abi, types)?;
+    let arg_names = args.iter().map(|component| &component.field_name);
+
+    let arg_declarations = args.iter().map(|component| {
+        let name = &component.field_name;
+        let field_type: TokenStream = (&component.field_type).into();
+        quote! { #name: #field_type }
+    });
+
+    let doc = expand_doc("Run the predicate's encode function with the provided arguments");
+    let name = safe_ident("encode_data");
+
+    Ok(quote! {
+        #doc
+        pub fn #name(&self #(,#arg_declarations)*) -> Self{
+            let arg_name_tokens = [#(#arg_names.into_token()),*];
+            let data = ABIEncoder::encode(&arg_name_tokens)
+                .expect("Cannot encode predicate data");
+
+            Self {
+                address: self.address.clone(),
+                code: self.code.clone(),
+                data
+            }
         }
     })
 }
