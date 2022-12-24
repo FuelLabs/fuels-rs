@@ -16,6 +16,10 @@ use fuel_gql_client::{
 use fuel_types::bytes::WORD_SIZE;
 use fuel_types::{Address, MessageId};
 use fuels_core::tx::{field, Chargeable, Script, Transaction, UniqueIdentifier};
+use fuels_core::{
+    abi_encoder::UnresolvedBytes,
+    offsets::{base_predicate_offset, coin_predicate_data_offset, message_predicate_data_offset},
+};
 use fuels_core::{constants::BASE_ASSET_ID, parameters::TxParameters};
 use fuels_types::bech32::{Bech32Address, Bech32ContractId, FUEL_BECH32_HRP};
 use fuels_types::errors::Error;
@@ -150,16 +154,15 @@ impl Wallet {
         amount: u64,
         witness_index: u8,
     ) -> Result<Vec<Input>, Error> {
-        let spendable = self.get_spendable_resources(asset_id, amount).await?;
-        let mut inputs = vec![];
-        for resource in spendable {
-            let input = match resource {
+        Ok(self
+            .get_spendable_resources(asset_id, amount)
+            .await?
+            .into_iter()
+            .map(|resource| match resource {
                 Resource::Coin(coin) => self.create_coin_input(coin, asset_id, witness_index),
                 Resource::Message(message) => self.create_message_input(message, witness_index),
-            };
-            inputs.push(input);
-        }
-        Ok(inputs)
+            })
+            .collect::<Vec<Input>>())
     }
 
     fn create_coin_input(&self, coin: Coin, asset_id: AssetId, witness_index: u8) -> Input {
@@ -664,11 +667,11 @@ impl WalletUnlocked {
         amount: u64,
         asset_id: AssetId,
         to: &Bech32Address,
-        data: Option<Vec<u8>>,
+        predicate_data: UnresolvedBytes,
         tx_parameters: TxParameters,
     ) -> Result<Vec<Receipt>, Error> {
-        let spendable_predicate_resources = self
-            .get_provider()?
+        let predicate = self.get_provider()?;
+        let spendable_predicate_resources = predicate
             .get_spendable_resources(predicate_address, asset_id, amount)
             .await?;
 
@@ -679,15 +682,27 @@ impl WalletUnlocked {
             .map(|resource| resource.amount())
             .sum();
 
-        let predicate_data = data.unwrap_or_default();
+        // Iterate through the spendable resources and calculate the appropriate offsets
+        // for the coin or message predicates
+        let mut offset = base_predicate_offset(&predicate.consensus_parameters().await?);
         let inputs = spendable_predicate_resources
             .into_iter()
             .map(|resource| match resource {
                 Resource::Coin(coin) => {
-                    self.create_coin_predicate(coin, asset_id, code.clone(), predicate_data.clone())
+                    offset += coin_predicate_data_offset(code.len());
+
+                    let data = predicate_data.clone().resolve(offset as u64);
+                    offset += data.len();
+
+                    self.create_coin_predicate(coin, asset_id, code.clone(), data)
                 }
                 Resource::Message(message) => {
-                    self.create_message_predicate(message, code.clone(), predicate_data.clone())
+                    offset += message_predicate_data_offset(message.data.len(), code.len());
+
+                    let data = predicate_data.clone().resolve(offset as u64);
+                    offset += data.len();
+
+                    self.create_message_predicate(message, code.clone(), data)
                 }
             })
             .collect::<Vec<_>>();
@@ -702,7 +717,7 @@ impl WalletUnlocked {
         self.add_fee_coins(&mut tx, 0, 0).await?;
         self.sign_transaction(&mut tx).await?;
 
-        self.get_provider()?.send_transaction(&tx).await
+        predicate.send_transaction(&tx).await
     }
 
     fn create_coin_predicate(
@@ -735,8 +750,8 @@ impl WalletUnlocked {
             message.sender.into(),
             message.recipient.into(),
             message.amount,
-            0,
-            vec![],
+            message.nonce,
+            message.data,
             code,
             predicate_data,
         )
@@ -748,7 +763,7 @@ impl WalletUnlocked {
         predicate_code: Vec<u8>,
         amount: u64,
         asset_id: AssetId,
-        predicate_data: Option<Vec<u8>>,
+        predicate_data: UnresolvedBytes,
         tx_parameters: TxParameters,
     ) -> Result<Vec<Receipt>, Error> {
         self.spend_predicate(

@@ -5,7 +5,10 @@ use super::{
 };
 
 use crate::{
-    code_gen::{bindings::ContractBindings, functions_gen::generate_script_main_function},
+    code_gen::{
+        bindings::ContractBindings,
+        functions_gen::{generate_predicate_encode_function, generate_script_main_function},
+    },
     source::Source,
     utils::ident,
 };
@@ -19,6 +22,12 @@ use proc_macro2::TokenStream;
 use quote::quote;
 use std::collections::HashMap;
 
+pub enum AbigenType {
+    Contract,
+    Script,
+    Predicate,
+}
+
 pub struct Abigen {
     /// Format the code using a locally installed copy of `rustfmt`.
     rustfmt: bool,
@@ -30,11 +39,17 @@ pub struct Abigen {
     abi: ProgramABI,
 
     types: HashMap<usize, TypeDeclaration>,
+
+    abigen_type: AbigenType,
 }
 
 impl Abigen {
     /// Creates a new contract with the given ABI JSON source.
-    pub fn new<S: AsRef<str>>(contract_name: &str, abi_source: S) -> Result<Self, Error> {
+    pub fn new<S: AsRef<str>>(
+        instance_name: &str,
+        abi_source: S,
+        abigen_type: AbigenType,
+    ) -> Result<Self, Error> {
         let source = Source::parse(abi_source).expect("failed to parse JSON ABI");
 
         let json_abi_str = source.get().expect("failed to parse JSON ABI from string");
@@ -43,9 +58,10 @@ impl Abigen {
         Ok(Self {
             types: Abigen::get_types(&parsed_abi),
             abi: parsed_abi,
-            name: contract_name.to_string(),
+            name: instance_name.to_string(),
             rustfmt: true,
             no_std: false,
+            abigen_type,
         })
     }
 
@@ -60,6 +76,14 @@ impl Abigen {
         let tokens = self.expand_contract()?;
 
         Ok(ContractBindings { tokens, rustfmt })
+    }
+
+    pub fn expand(&self) -> Result<TokenStream, Error> {
+        match self.abigen_type {
+            AbigenType::Contract => self.expand_contract(),
+            AbigenType::Script => self.expand_script(),
+            AbigenType::Predicate => self.expand_predicate(),
+        }
     }
 
     /// Entry point of the Abigen's expansion logic.
@@ -83,7 +107,7 @@ impl Abigen {
         let resolved_logs = self.resolve_logs();
         let log_id_param_type_pairs = generate_log_id_param_type_pairs(&resolved_logs);
 
-        let includes = self.includes(false);
+        let includes = self.includes();
 
         let code = if self.no_std {
             quote! {}
@@ -166,11 +190,11 @@ impl Abigen {
         let name = ident(&self.name);
         let name_mod = ident(&format!("{}_mod", self.name.to_string().to_snake_case()));
 
-        let includes = self.includes(true);
+        let includes = self.includes();
         let resolved_logs = self.resolve_logs();
         let log_id_param_type_pairs = generate_log_id_param_type_pairs(&resolved_logs);
 
-        let main_script_function = self.script_function()?;
+        let main_script_function = self.main_function()?;
         let code = if self.no_std {
             quote! {}
         } else {
@@ -217,52 +241,159 @@ impl Abigen {
         })
     }
 
+    /// Expand a predicate into type-safe Rust bindings based on its ABI. See `expand_contract` for
+    /// more details.
+    pub fn expand_predicate(&self) -> Result<TokenStream, Error> {
+        let name = ident(&self.name);
+        let name_mod = ident(&format!("{}_mod", self.name.to_string().to_snake_case()));
+
+        let includes = self.includes();
+
+        let encode_data_function = self.main_function()?;
+        let code = if self.no_std {
+            quote! {}
+        } else {
+            quote! {
+                #[derive(Debug)]
+                pub struct #name{
+                    address: Bech32Address,
+                    code: Vec<u8>,
+                    data: UnresolvedBytes
+                }
+
+                impl #name {
+                    pub fn new(code: Vec<u8>) -> Self {
+                        let address: Address = (*Contract::root_from_code(&code)).into();
+                        Self {
+                            address: address.into(),
+                            code,
+                            data: UnresolvedBytes::new()
+                        }
+                    }
+
+                    pub fn load_from(file_path: &str) -> Result<Self, SDKError> {
+                        Ok(Self::new(std::fs::read(file_path)?))
+                    }
+
+                    pub fn address(&self) -> &Bech32Address {
+                        &self.address
+                    }
+
+                    pub fn code(&self) -> Vec<u8> {
+                        self.code.clone()
+                    }
+
+                    pub fn data(&self) -> UnresolvedBytes {
+                        self.data.clone()
+                    }
+
+                    pub async fn receive(&self, from: &WalletUnlocked, amount:u64, asset_id: AssetId, tx_parameters: Option<TxParameters>) -> Result<(String, Vec<Receipt>), SDKError> {
+                        let tx_parameters = tx_parameters.unwrap_or(TxParameters::default());
+                        from
+                            .transfer(
+                                self.address(),
+                                amount,
+                                asset_id,
+                                tx_parameters
+                            )
+                            .await
+                    }
+
+                    pub async fn spend(&self, to: &WalletUnlocked, amount:u64, asset_id: AssetId, tx_parameters: Option<TxParameters>) -> Result<Vec<Receipt>, SDKError> {
+                        let tx_parameters = tx_parameters.unwrap_or(TxParameters::default());
+                        to
+                            .receive_from_predicate(
+                                self.address(),
+                                self.code(),
+                                amount,
+                                asset_id,
+                                self.data(),
+                                tx_parameters,
+                            )
+                            .await
+                    }
+
+                    #encode_data_function
+                }
+            }
+        };
+
+        let abi_structs = self.abi_structs()?;
+        let abi_enums = self.abi_enums()?;
+        Ok(quote! {
+            pub use #name_mod::*;
+
+            #[allow(clippy::too_many_arguments)]
+            pub mod #name_mod {
+                #![allow(clippy::enum_variant_names)]
+                #![allow(dead_code)]
+
+                #includes
+
+                #code
+
+                #abi_structs
+                #abi_enums
+
+            }
+        })
+    }
+
     /// Generates the includes necessary for the abigen.
-    fn includes(&self, is_script: bool) -> TokenStream {
+    fn includes(&self) -> TokenStream {
         if self.no_std {
             quote! {
                 use alloc::{vec, vec::Vec};
-                use fuels_core::code_gen::function_selector::resolve_fn_selector;
-                use fuels_core::types::*;
-                use fuels_core::{EnumSelector, Parameterize, Tokenizable, Token, Identity, try_from_bytes};
-                use fuels_types::enum_variants::EnumVariants;
-                use fuels_types::errors::Error as SDKError;
-                use fuels_types::param_types::ParamType;
+                use fuels_core::{
+                    code_gen::function_selector::resolve_fn_selector, try_from_bytes, types::*,
+                    EnumSelector, Identity, Parameterize, Token, Tokenizable,
+                };
+                use fuels_types::{
+                    enum_variants::EnumVariants, errors::Error as SDKError,
+                    param_types::ParamType,
+                };
             }
         } else {
-            let specific_includes = if is_script {
-                quote! {
-                    use fuels::contract::script_calls::{ScriptCallHandler, ScriptCall};
-                    use fuels::core::abi_encoder::ABIEncoder;
-                    use fuels::core::parameters::TxParameters;
-                    use std::marker::PhantomData;
-                }
-            } else {
-                quote! {
+            let specific_includes = match self.abigen_type {
+                AbigenType::Contract => quote! {
                     use fuels::contract::contract::{
-                        Contract,
-                        ContractCallHandler,
-                        get_decoded_output
+                        get_decoded_output, Contract, ContractCallHandler,
                     };
-                    use fuels::core::abi_decoder::ABIDecoder;
-                    use fuels::core::code_gen::function_selector::resolve_fn_selector;
-                    use fuels::core::{EnumSelector, StringToken, Identity};
+                    use fuels::core::{
+                        abi_decoder::ABIDecoder, code_gen::function_selector::resolve_fn_selector,
+                        EnumSelector, Identity, StringToken,
+                    };
                     use fuels::types::ResolvedLog;
                     use std::str::FromStr;
-                }
+                },
+                AbigenType::Script => quote! {
+                    use fuels::{
+                        contract::script_calls::{ScriptCall, ScriptCallHandler},
+                        core::{abi_encoder::ABIEncoder, parameters::TxParameters},
+                    };
+                    use std::marker::PhantomData;
+                },
+                AbigenType::Predicate => quote! {
+                    use fuels::{
+                        core::{abi_encoder::{ABIEncoder, UnresolvedBytes}, parameters::TxParameters},
+                        tx::{Contract, AssetId},
+                        signers::provider::Provider
+                    };
+                },
             };
             quote! {
                 use fuels::contract::logs::LogDecoder;
-                use fuels::core::types::*;
-                use fuels::core::{Tokenizable, Token, Parameterize, try_from_bytes};
+                use fuels::core::{
+                    code_gen::get_logs_hashmap, try_from_bytes, types::*, Parameterize, Token,
+                    Tokenizable,
+                };
                 use fuels::signers::WalletUnlocked;
-                use fuels::types::enum_variants::EnumVariants;
-                use fuels::types::errors::Error as SDKError;
-                use fuels::types::param_types::ParamType;
-                use fuels::tx::{ContractId, Address, Receipt};
-                use fuels::types::bech32::Bech32ContractId;
-                use std::collections::{HashSet, HashMap};
-                use fuels::core::code_gen::get_logs_hashmap;
+                use fuels::tx::{Address, ContractId, Receipt};
+                use fuels::types::{
+                    bech32::{Bech32ContractId, Bech32Address}, enum_variants::EnumVariants,
+                    errors::Error as SDKError, param_types::ParamType,
+                };
+                use std::collections::{HashMap, HashSet};
                 #specific_includes
             }
         }
@@ -278,7 +409,7 @@ impl Abigen {
         Ok(quote! { #( #tokenized_functions )* })
     }
 
-    pub fn script_function(&self) -> Result<TokenStream, Error> {
+    pub fn main_function(&self) -> Result<TokenStream, Error> {
         let functions = self
             .abi
             .functions
@@ -287,11 +418,21 @@ impl Abigen {
             .collect::<Vec<&ABIFunction>>();
 
         if let [main_function] = functions.as_slice() {
-            let tokenized_function = generate_script_main_function(main_function, &self.types)?;
+            let tokenized_function = match self.abigen_type {
+                AbigenType::Script => generate_script_main_function(main_function, &self.types),
+
+                AbigenType::Predicate => {
+                    generate_predicate_encode_function(main_function, &self.types)
+                }
+                AbigenType::Contract => Err(Error::CompilationError(
+                    "Contract does not have a `main` function!".to_string(),
+                )),
+            }?;
+
             Ok(quote! { #tokenized_function })
         } else {
             Err(Error::CompilationError(
-                "The script must have one function named `main` to compile!".to_string(),
+                "Only one function named `main` allowed!".to_string(),
             ))
         }
     }
