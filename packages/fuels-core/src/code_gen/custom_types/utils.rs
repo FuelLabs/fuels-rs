@@ -1,10 +1,9 @@
-use crate::code_gen::full_abi_types::{FullTypeApplication, FullTypeDeclaration};
-use crate::code_gen::resolved_type::{resolve_type, ResolvedType};
+use crate::code_gen::full_abi_types::FullTypeDeclaration;
+use crate::code_gen::resolved_type::ResolvedType;
 use crate::code_gen::utils::Component;
-use crate::utils::{ident, safe_ident};
+use crate::utils::ident;
 use fuels_types::errors::Error;
 use fuels_types::utils::extract_generic_name;
-use inflector::Inflector;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 use std::collections::HashSet;
@@ -101,41 +100,14 @@ pub fn single_param_type_call(field_type: &ResolvedType) -> TokenStream {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::code_gen::full_abi_types::FullTypeDeclaration;
     use crate::code_gen::utils::param_type_calls;
     use fuels_types::utils::custom_type_name;
-    use fuels_types::{TypeApplication, TypeDeclaration};
-    use std::collections::HashMap;
+    use fuels_types::TypeDeclaration;
 
-    #[test]
-    fn component_name_is_snake_case_when_requested() -> anyhow::Result<()> {
-        let type_application = TypeApplication {
-            name: "SomeNameHere".to_string(),
-            type_id: 0,
-            type_arguments: None,
-        };
-
-        let types = HashMap::from([(
-            0,
-            TypeDeclaration {
-                type_id: 0,
-                type_field: "()".to_string(),
-                components: None,
-                type_parameters: None,
-            },
-        )]);
-
-        let component = Component::new(
-            &FullTypeApplication::from_counterpart(&type_application, &types),
-            true,
-            &HashSet::default(),
-        )?;
-
-        assert_eq!(component.field_name, ident("some_name_here"));
-
-        Ok(())
-    }
     #[test]
     fn extracts_generic_types() -> anyhow::Result<()> {
+        // given
         let declaration = TypeDeclaration {
             type_id: 0,
             type_field: "".to_string(),
@@ -161,11 +133,13 @@ mod tests {
             .into_iter()
             .collect();
 
+        // when
         let generics = extract_generic_parameters(&FullTypeDeclaration::from_counterpart(
             &declaration,
             &types,
         ))?;
 
+        // then
         let stringified_generics = generics
             .into_iter()
             .map(|generic| generic.to_string())

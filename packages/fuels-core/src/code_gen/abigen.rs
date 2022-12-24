@@ -58,7 +58,7 @@ fn logs_hashmap_instantiation_code(
     logged_types: &[FullLoggedType],
     shared_types: &HashSet<FullTypeDeclaration>,
 ) -> TokenStream {
-    let resolved_logs = resolve_logs(&logged_types, shared_types);
+    let resolved_logs = resolve_logs(logged_types, shared_types);
     let log_id_param_type_pairs = generate_log_id_param_type_pairs(&resolved_logs);
     let contract_id = contract_id
         .map(|id| quote! { ::std::option::Option::Some(#id) })
