@@ -32,8 +32,8 @@ use fuels_types::{
     transaction_response::TransactionResponse,
 };
 use std::collections::HashMap;
-use thiserror::Error;
 use tai64::Tai64;
+use thiserror::Error;
 
 #[derive(Debug)]
 pub struct TransactionCost {
