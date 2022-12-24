@@ -13,10 +13,10 @@ use fuel_tx::Input;
 use fuels_core::abi_encoder::UnresolvedBytes;
 use fuels_core::{
     parameters::{CallParameters, TxParameters},
-    Tokenizable,
+    Parameterize, Tokenizable,
 };
 use fuels_signers::{provider::Provider, WalletUnlocked};
-use fuels_types::{errors::Error, param_types::ParamType};
+use fuels_types::errors::Error;
 use std::{fmt::Debug, marker::PhantomData};
 
 #[derive(Debug)]
@@ -50,21 +50,19 @@ pub struct ScriptCallHandler<D> {
     pub tx_parameters: TxParameters,
     pub wallet: WalletUnlocked,
     pub provider: Provider,
-    pub output_param: ParamType,
     pub datatype: PhantomData<D>,
     pub log_decoder: LogDecoder,
 }
 
 impl<D> ScriptCallHandler<D>
 where
-    D: Tokenizable + Debug,
+    D: Parameterize + Tokenizable + Debug,
 {
     pub fn new(
         script_binary: Vec<u8>,
         encoded_args: UnresolvedBytes,
         wallet: WalletUnlocked,
         provider: Provider,
-        output_param: ParamType,
         log_decoder: LogDecoder,
     ) -> Self {
         let script_call = ScriptCall {
@@ -79,7 +77,6 @@ where
             tx_parameters: TxParameters::default(),
             wallet,
             provider,
-            output_param,
             datatype: PhantomData,
             log_decoder,
         }
@@ -165,7 +162,7 @@ where
 
     /// Create a [`FuelCallResponse`] from call receipts
     pub fn get_response(&self, mut receipts: Vec<Receipt>) -> Result<FuelCallResponse<D>, Error> {
-        let token = get_decoded_output(&mut receipts, None, &self.output_param)?;
+        let token = get_decoded_output(&mut receipts, None, &D::param_type())?;
         Ok(FuelCallResponse::new(
             D::from_token(token)?,
             receipts,

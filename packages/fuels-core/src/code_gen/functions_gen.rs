@@ -1,12 +1,8 @@
 use crate::code_gen::full_abi_types::{FullABIFunction, FullTypeApplication, FullTypeDeclaration};
 use crate::code_gen::utils::{param_type_calls, Component};
-use crate::code_gen::{
-    custom_types::single_param_type_call, docs_gen::expand_doc, resolved_type,
-    resolved_type::ResolvedType,
-};
+use crate::code_gen::{docs_gen::expand_doc, resolved_type, resolved_type::ResolvedType};
 use crate::utils::safe_ident;
 use fuels_types::errors::Error;
-use inflector::Inflector;
 use proc_macro2::TokenStream;
 use quote::quote;
 use resolved_type::resolve_type;
@@ -26,151 +22,152 @@ use std::collections::HashSet;
 /// [`Contract`]: fuels_contract::contract::Contract
 // TODO (oleksii/docs): linkify the above `Contract` link properly
 pub(crate) fn expand_function(
-    function: &FullABIFunction,
+    abi_fun: &FullABIFunction,
     shared_types: &HashSet<FullTypeDeclaration>,
 ) -> Result<TokenStream, Error> {
-    let args = function_arguments(&function.inputs(), shared_types)?;
+    let mut generator = FunctionGenerator::new(abi_fun, shared_types)?;
 
-    let arg_names = args.iter().map(|component| &component.field_name);
-
-    let param_type_calls = param_type_calls(&args);
-
-    let arg_declarations = args.iter().map(|component| {
-        let name = &component.field_name;
-        let field_type: TokenStream = (&component.field_type).into();
-        quote! { #name: #field_type }
-    });
-
-    let doc = expand_doc(&format!(
+    generator.set_doc(format!(
         "Calls the contract's `{}` function",
-        function.name(),
+        abi_fun.name(),
     ));
 
-    let name = safe_ident(&function.name());
-    let name_stringified = name.to_string();
+    let original_output = generator.output_type();
+    generator.set_output_type(
+        quote! {::fuels::contract::contract::ContractCallHandler<#original_output> },
+    );
 
-    let output_type: TokenStream = resolve_fn_output_type(function, shared_types)?.into();
-
-    Ok(quote! {
-        #doc
-        pub fn #name(&self #(,#arg_declarations)*) -> ::fuels::contract::contract::ContractCallHandler<#output_type> {
+    let fn_selector = generator.fn_selector();
+    let arg_tokens = generator.tokenized_args();
+    let body = quote! {
             let provider = self.wallet.get_provider().expect("Provider not set up");
-            let encoded_fn_selector = ::fuels::core::code_gen::function_selector::resolve_fn_selector(#name_stringified, &[#(#param_type_calls),*]);
-            let tokens = [#(::fuels::core::Tokenizable::into_token(#arg_names)),*];
             let log_decoder = ::fuels::contract::logs::LogDecoder{logs_map: self.logs_map.clone()};
             ::fuels::contract::contract::Contract::method_hash(
                 &provider,
                 self.contract_id.clone(),
                 &self.wallet,
-                encoded_fn_selector,
-                &tokens,
+                #fn_selector,
+                &#arg_tokens,
                 log_decoder
             )
             .expect("method not found (this should never happen)")
-        }
-    })
+    };
+    generator.set_body(body);
+
+    Ok(generator.into())
 }
 
 #[derive(Debug)]
-struct GeneratedFunction {
+struct FunctionGenerator {
+    name: String,
     args: Vec<Component>,
-    output_type: ResolvedType,
+    output_type: TokenStream,
     body: TokenStream,
+    doc: Option<String>,
 }
 
-impl GeneratedFunction {
+impl FunctionGenerator {
     pub fn new(
         fun: &FullABIFunction,
         shared_types: &HashSet<FullTypeDeclaration>,
     ) -> Result<Self, Error> {
-        let args = function_arguments(&function.inputs(), shared_types)?;
+        let args = function_arguments(fun.inputs(), shared_types)?;
 
-        let output_type = resolve_fn_output_type(function, shared_types)?;
+        let output_type = resolve_fn_output_type(fun, shared_types)?;
 
         Ok(Self {
+            name: fun.name().to_string(),
             args,
-            output_type,
+            output_type: output_type.into(),
             body: Default::default(),
+            doc: None,
         })
+    }
+
+    pub fn set_body(&mut self, body: TokenStream) -> &mut Self {
+        self.body = body;
+        self
+    }
+
+    pub fn set_doc(&mut self, text: String) -> &mut Self {
+        self.doc = Some(text);
+        self
     }
 
     pub fn fn_selector(&self) -> TokenStream {
         let param_type_calls = param_type_calls(&self.args);
 
-        quote! {::fuels::core::code_gen::function_selector::resolve_fn_selector(#name_stringified, &[#(#param_type_calls),*])}
+        let name = &self.name;
+        quote! {::fuels::core::code_gen::function_selector::resolve_fn_selector(#name, &[#(#param_type_calls),*])}
     }
 
-    pub fn array_of_arg_tokens(&self) -> TokenStream {
-        let arg_names = self.args.iter().map(|component| component.field_name);
+    pub fn tokenized_args(&self) -> TokenStream {
+        let arg_names = self.args.iter().map(|component| &component.field_name);
         quote! {[#(::fuels::core::Tokenizable::into_token(#arg_names)),*]}
     }
-}
 
-impl From<&GeneratedFunction> for TokenStream {
-    fn from(fun: &GeneratedFunction) -> Self {
-        let param_type_calls = param_type_calls(&fun.args);
-        todo!()
+    pub fn set_output_type(&mut self, output_type: TokenStream) -> &mut Self {
+        self.output_type = output_type;
+        self
+    }
+
+    pub fn output_type(&self) -> &TokenStream {
+        &self.output_type
     }
 }
 
-fn gen_fun() -> GeneratedFunction {
-    Ok(quote! {
-        #doc
-        pub fn #name(&self #(,#arg_declarations)*) -> ::fuels::contract::contract::ContractCallHandler<#output_type> {
-            let provider = self.wallet.get_provider().expect("Provider not set up");
-            let encoded_fn_selector = ::fuels::core::code_gen::function_selector::resolve_fn_selector(#name_stringified, &[#(#param_type_calls),*]);
-            let tokens = [#(::fuels::core::Tokenizable::into_token(#arg_names)),*];
-            let log_decoder = ::fuels::contract::logs::LogDecoder{logs_map: self.logs_map.clone()};
-            ::fuels::contract::contract::Contract::method_hash(
-                &provider,
-                self.contract_id.clone(),
-                &self.wallet,
-                encoded_fn_selector,
-                &tokens,
-                log_decoder
-            )
-            .expect("method not found (this should never happen)")
+impl From<&FunctionGenerator> for TokenStream {
+    fn from(fun: &FunctionGenerator) -> Self {
+        let name = safe_ident(&fun.name);
+        let doc = fun
+            .doc
+            .as_ref()
+            .map(|text| expand_doc(text))
+            .unwrap_or_default();
+
+        let arg_declarations = fun.args.iter().map(|component| {
+            let name = &component.field_name;
+            let field_type: TokenStream = (&component.field_type).into();
+            quote! { #name: #field_type }
+        });
+
+        let output_type = fun.output_type();
+        let body = &fun.body;
+
+        quote! {
+            #doc
+            pub fn #name(&self #(,#arg_declarations)*) -> #output_type {
+                #body
+            }
         }
-    });
-    GeneratedFunction {}
+    }
+}
+
+impl From<FunctionGenerator> for TokenStream {
+    fn from(fun: FunctionGenerator) -> Self {
+        (&fun).into()
+    }
 }
 
 /// Generate the `main` function of a script
 pub(crate) fn generate_script_main_function(
-    main_function_abi: &FullABIFunction,
+    fun: &FullABIFunction,
     shared_types: &HashSet<FullTypeDeclaration>,
 ) -> Result<TokenStream, Error> {
-    if main_function_abi.name() != "main" {
-        return Err(Error::InvalidData(
-            "Script `main` function name can not be different from `main`".into(),
-        ));
-    }
+    let mut generator = FunctionGenerator::new(fun, shared_types)?;
 
-    let output_type_resolved = resolve_fn_output_type(main_function_abi, shared_types)?;
-    let output_params = single_param_type_call(&output_type_resolved);
-    let output_type: TokenStream = output_type_resolved.into();
+    let original_output_type = generator.output_type();
+    generator
+        .set_output_type(
+            quote! {::fuels::contract::script_calls::ScriptCallHandler<#original_output_type> },
+        )
+        .set_doc("Run the script's `main` function with the provided arguments".to_string());
 
-    let args = function_arguments(&main_function_abi.inputs(), shared_types)?;
-
-    let arg_names = args.iter().map(|component| &component.field_name);
-
-    let arg_declarations = args.iter().map(|component| {
-        let name = &component.field_name;
-        let field_type: TokenStream = (&component.field_type).into();
-        quote! { #name: #field_type }
-    });
-
-    let doc = expand_doc("Run the script's `main` function with the provided arguments");
-
-    let name = safe_ident("main");
-
-    Ok(quote! {
-        #doc
-        pub fn #name(&self #(,#arg_declarations)*) -> ::fuels::contract::script_calls::ScriptCallHandler<#output_type> {
-            let arg_name_tokens = [#(::fuels::core::Tokenizable::into_token(#arg_names)),*];
+    let arg_tokens = generator.tokenized_args();
+    let body = quote! {
             let script_binary = ::std::fs::read(&self.binary_filepath)
                                         .expect("Could not read from binary filepath");
-            let encoded_args = ::fuels::core::abi_encoder::ABIEncoder::encode(&arg_name_tokens).expect("Cannot encode script arguments");
+            let encoded_args = ::fuels::core::abi_encoder::ABIEncoder::encode(&#arg_tokens).expect("Cannot encode script arguments");
             let provider = self.wallet.get_provider().expect("Provider not set up").clone();
             let log_decoder = ::fuels::contract::logs::LogDecoder{logs_map: self.logs_map.clone()};
 
@@ -179,18 +176,20 @@ pub(crate) fn generate_script_main_function(
                 encoded_args,
                 self.wallet.clone(),
                 provider,
-                #output_params,
                 log_decoder
             )
-        }
-    })
+    };
+
+    generator.set_body(body);
+
+    Ok(generator.into())
 }
 
 fn resolve_fn_output_type(
     function: &FullABIFunction,
     shared_types: &HashSet<FullTypeDeclaration>,
 ) -> Result<ResolvedType, Error> {
-    let output_type = resolve_type(&function.output(), shared_types)?;
+    let output_type = resolve_type(function.output(), shared_types)?;
     if output_type.uses_vectors() {
         Err(Error::CompilationError(format!(
             "function '{}' contains a vector in its return type. This currently isn't supported.",
@@ -210,19 +209,6 @@ fn function_arguments(
         .map(|input| Component::new(input, true, shared_types))
         .collect::<Result<Vec<_>, Error>>()
         .map_err(|e| Error::InvalidType(e.to_string()))
-}
-
-/// Expands a positional identifier string that may be empty.
-/// Note that this expands the parameter name with `safe_ident`, meaning that
-/// identifiers that are reserved keywords get `_` appended to them.
-pub fn expand_input_name(name: &str) -> Result<TokenStream, Error> {
-    if name.is_empty() {
-        return Err(Error::InvalidData(
-            "Function arguments can not have empty names".into(),
-        ));
-    }
-    let name = safe_ident(&name.to_snake_case());
-    Ok(quote! { #name })
 }
 
 // Regarding string->TokenStream->string, refer to `custom_types` tests for more details.
@@ -638,7 +624,7 @@ mod tests {
         .into_iter()
         .collect::<HashMap<_, _>>();
         let result = function_arguments(
-            &FullABIFunction::from_counterpart(&the_function, &types).inputs,
+            FullABIFunction::from_counterpart(&the_function, &types)?.inputs(),
             &HashSet::default(),
         )?;
         let component = &result[0];
@@ -682,7 +668,7 @@ mod tests {
         .into_iter()
         .collect::<HashMap<_, _>>();
         let result = function_arguments(
-            &FullABIFunction::from_counterpart(&the_function, &types).inputs,
+            FullABIFunction::from_counterpart(&the_function, &types)?.inputs(),
             &HashSet::default(),
         )?;
         let component = &result[0];
@@ -752,7 +738,7 @@ mod tests {
         .into_iter()
         .collect::<HashMap<_, _>>();
         let result = function_arguments(
-            &FullABIFunction::from_counterpart(&function, &types).inputs,
+            FullABIFunction::from_counterpart(&function, &types)?.inputs(),
             &HashSet::default(),
         )?;
 
@@ -761,37 +747,12 @@ mod tests {
 
         function.inputs[0].type_id = 2;
         let result = function_arguments(
-            &FullABIFunction::from_counterpart(&function, &types).inputs,
+            FullABIFunction::from_counterpart(&function, &types)?.inputs(),
             &HashSet::default(),
         )?;
 
         assert_eq!(&result[0].field_name.to_string(), "bim_bam");
         assert_eq!(&result[0].field_type.to_string(), "self :: Cocktail");
-
-        Ok(())
-    }
-
-    #[test]
-    fn transform_name_to_snake_case() -> Result<(), Error> {
-        let result = expand_input_name("CamelCaseHello");
-
-        assert_eq!(result?.to_string(), "camel_case_hello");
-
-        Ok(())
-    }
-
-    #[test]
-    fn avoids_collisions_with_keywords() -> Result<(), Error> {
-        {
-            let result = expand_input_name("if");
-
-            assert_eq!(result?.to_string(), "if_");
-        }
-        {
-            let result = expand_input_name("let");
-
-            assert_eq!(result?.to_string(), "let_");
-        }
 
         Ok(())
     }

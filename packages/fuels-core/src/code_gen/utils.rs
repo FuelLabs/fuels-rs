@@ -43,3 +43,52 @@ pub(crate) fn param_type_calls(field_entries: &[Component]) -> Vec<TokenStream> 
         .map(|Component { field_type, .. }| custom_types::single_param_type_call(field_type))
         .collect()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn respects_snake_case_flag() -> Result<(), Error> {
+        let type_application = type_application_named("WasNotSnakeCased");
+
+        let sut = Component::new(&type_application, true, &Default::default())?;
+
+        assert_eq!(sut.field_name, "was_not_snake_cased");
+
+        Ok(())
+    }
+
+    #[test]
+    fn avoids_collisions_with_reserved_keywords() -> Result<(), Error> {
+        {
+            let type_application = type_application_named("if");
+
+            let sut = Component::new(&type_application, false, &Default::default())?;
+
+            assert_eq!(sut.field_name, "if_");
+        }
+
+        {
+            let type_application = type_application_named("let");
+
+            let sut = Component::new(&type_application, false, &Default::default())?;
+
+            assert_eq!(sut.field_name, "let_");
+        }
+
+        Ok(())
+    }
+
+    fn type_application_named(name: &str) -> FullTypeApplication {
+        FullTypeApplication {
+            name: name.to_string(),
+            type_decl: FullTypeDeclaration {
+                type_field: "u64".to_string(),
+                components: vec![],
+                type_parameters: vec![],
+            },
+            type_arguments: vec![],
+        }
+    }
+}
