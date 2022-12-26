@@ -126,13 +126,14 @@ impl ABIDecoder {
 
     fn decode_raw_slice(bytes: &[u8]) -> Result<DecodeResult, CodecError> {
         // A raw slice is actually an array of u64.
-        if bytes.len() % std::mem::size_of::<u64>() != 0 {
+        let u64_size = std::mem::size_of::<u64>();
+        if bytes.len() % u64_size != 0 {
             return Err(CodecError::InvalidData(format!(
                 "The bytes provided do not correspond to a raw slice with u64 numbers, got: {:?}",
                 bytes
             )));
         }
-        let u64_length = bytes.len() / 8;
+        let u64_length = bytes.len() / u64_size;
         let (tokens, bytes_read) = Self::decode_multiple(&vec![ParamType::U64; u64_length], bytes)?;
         let elements = tokens
             .into_iter()
