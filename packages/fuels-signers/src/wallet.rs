@@ -265,14 +265,12 @@ impl Wallet {
 
     /// Craft a transaction used to transfer funds between two addresses.
     pub fn build_transfer_tx(inputs: &[Input], outputs: &[Output], params: TxParameters) -> Script {
-        // This script contains a single Opcode that returns immediately (RET)
-        // since all this transaction does is move Inputs and Outputs around.
-        let script = Opcode::RET(REG_ONE).to_bytes().to_vec();
+        // This script is empty, since all this transaction does is move Inputs and Outputs around.
         Transaction::script(
             params.gas_price,
             params.gas_limit,
             params.maturity,
-            script,
+            vec![],
             vec![],
             inputs.to_vec(),
             outputs.to_vec(),
