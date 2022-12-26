@@ -492,6 +492,7 @@ async fn spend_predicate_coins_messages_vectors() -> Result<(), Error> {
     ];
 
     // Run predicate with wrong data
+    println!("Run predicate with wrong data");
     predicate
         .encode_data(
             u32_vec.clone(),
@@ -515,6 +516,7 @@ async fn spend_predicate_coins_messages_vectors() -> Result<(), Error> {
 
     let vec_in_array = [vec![0, 64, 2], vec![0, 1, 2]];
 
+    println!("\nRun predicate with right data");
     predicate
         .encode_data(
             u32_vec,

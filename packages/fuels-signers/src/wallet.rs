@@ -713,7 +713,9 @@ impl WalletUnlocked {
         let mut tx = Wallet::build_transfer_tx(&inputs, &outputs, tx_parameters);
         // we set previous base amount to 0 because it only applies to signed coins, not predicate coins
         self.add_fee_coins(&mut tx, 0, 0).await?;
+        println!("We have added fee coins!");
         self.sign_transaction(&mut tx).await?;
+        println!("We have signed the transaction");
 
         predicate.send_transaction(&tx).await
     }

@@ -117,6 +117,7 @@ impl Provider {
             min_gas_price,
             ..
         } = self.estimate_transaction_cost(tx, Some(tolerance)).await?;
+        println!("We have estimated tx cost");
 
         if gas_used > *tx.gas_limit() {
             return Err(Error::ProviderError(format!(
@@ -443,10 +444,12 @@ impl Provider {
     where
         Tx: ExecutableTransaction + field::GasLimit + field::GasPrice,
     {
+        println!("estimating transaction cost!");
         let NodeInfo { min_gas_price, .. } = self.node_info().await?;
 
         let tolerance = tolerance.unwrap_or(DEFAULT_GAS_ESTIMATION_TOLERANCE);
         let mut dry_run_tx = Self::generate_dry_run_tx(tx);
+        println!("dry_run_tx was generated!");
         let consensus_parameters = self.chain_info().await?.consensus_parameters;
         let gas_used = self
             .get_gas_used_with_tolerance(&dry_run_tx, tolerance)
@@ -484,7 +487,10 @@ impl Provider {
         tx: &Tx,
         tolerance: f64,
     ) -> Result<u64, ProviderError> {
-        let gas_used = self.get_gas_used(&self.dry_run_no_validation(&tx.clone().into()).await?);
+        println!("Trying to dry_run the tx with no validation");
+        let dry_run = &self.dry_run_no_validation(&tx.clone().into()).await?;
+        println!("Trying to get gas used");
+        let gas_used = self.get_gas_used(dry_run);
         Ok((gas_used as f64 * (1.0 + tolerance)) as u64)
     }
 
