@@ -1,57 +1,29 @@
-use crate::code_gen::abi_types::{FullABIFunction, FullProgramABI, FullTypeDeclaration};
+use std::collections::HashSet;
+
+use proc_macro2::{Ident, TokenStream};
+use quote::quote;
+
+use fuels_types::errors::Error;
+
+use crate::code_gen::abi_types::{FullProgramABI, FullTypeDeclaration};
 use crate::code_gen::abigen::function_generator::FunctionGenerator;
-use crate::code_gen::abigen::utils::{extract_main_fn, limited_std_prelude};
-use crate::code_gen::custom_types::generate_types;
+use crate::code_gen::abigen::utils::extract_main_fn;
 use crate::code_gen::generated_code::GeneratedCode;
 use crate::code_gen::type_path::TypePath;
-use crate::utils::ident;
-use fuels_types::errors::Error;
-use inflector::Inflector;
-use proc_macro2::TokenStream;
-use quote::quote;
-use std::collections::HashSet;
 
 pub struct Predicate;
 
 impl Predicate {
     pub(crate) fn generate(
-        name: &str,
+        name: &Ident,
         abi: FullProgramABI,
         no_std: bool,
         shared_types: &HashSet<FullTypeDeclaration>,
     ) -> Result<GeneratedCode, Error> {
-        let name_mod = ident(&format!("{}_mod", name.to_string().to_snake_case()));
-
-        let types_code = generate_types(abi.types.clone(), shared_types)?;
-
-        let predicate_code =
-            Self::generate_predicate_code(name, &abi, no_std, shared_types)?.append(types_code);
-
-        Ok(limited_std_prelude()
-            .append(predicate_code)
-            .wrap_in_mod(&name_mod))
-    }
-
-    fn generate_predicate_code(
-        name: &str,
-        abi: &FullProgramABI,
-        no_std: bool,
-        shared_types: &HashSet<FullTypeDeclaration>,
-    ) -> Result<GeneratedCode, Error> {
         if no_std {
-            Ok(GeneratedCode::default())
-        } else {
-            Self::generate_std_predicate_code(name, abi, shared_types)
+            return Ok(GeneratedCode::default());
         }
-    }
-
-    fn generate_std_predicate_code(
-        name: &str,
-        abi: &FullProgramABI,
-        shared_types: &HashSet<FullTypeDeclaration>,
-    ) -> Result<GeneratedCode, Error> {
-        let name = ident(name);
-        let encode_function = Self::predicate_function(abi, shared_types)?;
+        let encode_function = expand_fn(&abi, shared_types)?;
 
         let code = quote! {
             #[derive(Debug)]
@@ -124,19 +96,13 @@ impl Predicate {
             usable_types: type_paths,
         })
     }
-
-    fn predicate_function(
-        abi: &FullProgramABI,
-        shared_types: &HashSet<FullTypeDeclaration>,
-    ) -> Result<TokenStream, Error> {
-        extract_main_fn(&abi.functions).and_then(|fun| expand_predicate_main_fn(fun, shared_types))
-    }
 }
 
-fn expand_predicate_main_fn(
-    fun: &FullABIFunction,
+fn expand_fn(
+    abi: &FullProgramABI,
     shared_types: &HashSet<FullTypeDeclaration>,
 ) -> Result<TokenStream, Error> {
+    let fun = extract_main_fn(&abi.functions)?;
     let mut generator = FunctionGenerator::new(fun, shared_types)?;
 
     let arg_tokens = generator.tokenized_args();

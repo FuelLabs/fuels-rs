@@ -1,7 +1,6 @@
 use std::collections::HashSet;
 
-use inflector::Inflector;
-use proc_macro2::TokenStream;
+use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
 use fuels_types::errors::Error;
@@ -9,8 +8,6 @@ use fuels_types::errors::Error;
 use crate::code_gen::abi_types::{FullABIFunction, FullProgramABI, FullTypeDeclaration};
 use crate::code_gen::abigen::function_generator::FunctionGenerator;
 use crate::code_gen::abigen::logs::{logs_hashmap_instantiation_code, logs_hashmap_type};
-use crate::code_gen::abigen::utils::limited_std_prelude;
-use crate::code_gen::custom_types::generate_types;
 use crate::code_gen::generated_code::GeneratedCode;
 use crate::code_gen::type_path::TypePath;
 use crate::utils::ident;
@@ -20,45 +17,15 @@ pub(crate) struct Contract;
 
 impl Contract {
     pub(crate) fn generate(
-        contract_name: &str,
+        name: &Ident,
         abi: FullProgramABI,
         no_std: bool,
         shared_types: &HashSet<FullTypeDeclaration>,
     ) -> Result<GeneratedCode, Error> {
-        let name_mod = ident(&format!(
-            "{}_mod",
-            contract_name.to_string().to_snake_case()
-        ));
-
-        let types = generate_types(abi.types.clone(), shared_types)?;
-
-        let contract_bindings =
-            Self::generate_contract_code(contract_name, &abi, no_std, shared_types)?;
-
-        Ok(limited_std_prelude()
-            .append(contract_bindings)
-            .append(types)
-            .wrap_in_mod(&name_mod))
-    }
-
-    fn generate_contract_code(
-        contract_name: &str,
-        abi: &FullProgramABI,
-        no_std: bool,
-        shared_types: &HashSet<FullTypeDeclaration>,
-    ) -> Result<GeneratedCode, Error> {
         if no_std {
-            Ok(GeneratedCode::default())
-        } else {
-            Self::generate_std_contract_code(contract_name, abi, shared_types)
+            return Ok(GeneratedCode::default());
         }
-    }
 
-    fn generate_std_contract_code(
-        contract_name: &str,
-        abi: &FullProgramABI,
-        shared_types: &HashSet<FullTypeDeclaration>,
-    ) -> Result<GeneratedCode, Error> {
         let logs_map = logs_hashmap_instantiation_code(
             Some(quote! {self.contract_id.clone()}),
             &abi.logged_types,
@@ -66,8 +33,7 @@ impl Contract {
         );
         let logs_map_type = logs_hashmap_type();
 
-        let methods_name = ident(&format!("{}Methods", &contract_name));
-        let name = ident(contract_name);
+        let methods_name = ident(&format!("{}Methods", name));
 
         let contract_functions = Self::functions(&abi.functions, shared_types)?;
 
@@ -122,7 +88,7 @@ impl Contract {
             }
         };
 
-        let type_paths = [name, methods_name]
+        let type_paths = [name, &methods_name]
             .map(|type_name| {
                 TypePath::new(&type_name).expect("We know the given types are not empty")
             })

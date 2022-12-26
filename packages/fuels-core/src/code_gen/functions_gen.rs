@@ -1,16 +1,18 @@
+use std::collections::HashMap;
+
+use fuels_types::{ABIFunction, errors::Error, TypeDeclaration};
+use inflector::Inflector;
+use proc_macro2::TokenStream;
+use quote::quote;
+use resolved_type::resolve_type;
+
 use crate::code_gen::{
-    custom_types::{param_type_calls, single_param_type_call, Component},
+    custom_types::{Component, param_type_calls, single_param_type_call},
     docs_gen::expand_doc,
     resolved_type,
     resolved_type::ResolvedType,
 };
 use crate::utils::safe_ident;
-use fuels_types::{errors::Error, ABIFunction, TypeDeclaration};
-use inflector::Inflector;
-use proc_macro2::TokenStream;
-use quote::quote;
-use resolved_type::resolve_type;
-use std::collections::HashMap;
 
 /// Functions used by the Abigen to expand functions defined in an ABI spec.
 
@@ -190,9 +192,11 @@ pub fn expand_input_name(name: &str) -> Result<TokenStream, Error> {
 // Regarding string->TokenStream->string, refer to `custom_types` tests for more details.
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use fuels_types::{ProgramABI, TypeApplication};
     use std::str::FromStr;
+
+    use fuels_types::{ProgramABI, TypeApplication};
+
+    use super::*;
 
     #[test]
     fn test_expand_function_simpleabi() -> Result<(), Error> {

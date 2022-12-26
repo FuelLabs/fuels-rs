@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 
+use inflector::Inflector;
 use itertools::Itertools;
 use proc_macro2::TokenStream;
 use quote::quote;
@@ -12,7 +13,7 @@ use crate::code_gen::abigen::contract::Contract;
 use crate::code_gen::abigen::predicate::Predicate;
 use crate::code_gen::abigen::script::Script;
 use crate::code_gen::abigen::utils::{limited_std_prelude, ParsedAbigenTarget};
-use crate::code_gen::custom_types;
+use crate::code_gen::custom_types::generate_types;
 use crate::code_gen::generated_code::GeneratedCode;
 use crate::utils::ident;
 
@@ -56,7 +57,7 @@ impl Abigen {
 
         Ok([
             Self::generate_shared_types(&shared_types)?,
-            Self::generate_bindings(no_std, parsed_targets, &shared_types)?,
+            Self::generate_all_bindings(parsed_targets, no_std, &shared_types)?,
         ]
         .into_iter()
         .fold(GeneratedCode::default(), |all_code, code_segment| {
@@ -64,27 +65,43 @@ impl Abigen {
         }))
     }
 
-    fn generate_bindings(
-        no_std: bool,
+    fn generate_all_bindings(
         parsed_targets: Vec<ParsedAbigenTarget>,
+        no_std: bool,
         shared_types: &HashSet<FullTypeDeclaration>,
     ) -> Result<GeneratedCode, Error> {
         parsed_targets
             .into_iter()
-            .map(|target| match target.program_type {
-                ProgramType::Script => {
-                    Script::generate(&target.name, target.source, no_std, shared_types)
-                }
-                ProgramType::Contract => {
-                    Contract::generate(&target.name, target.source, no_std, shared_types)
-                }
-                ProgramType::Predicate => {
-                    Predicate::generate(&target.name, target.source, no_std, shared_types)
-                }
-            })
+            .map(|target| Self::generate_binding(target, no_std, shared_types))
             .fold_ok(GeneratedCode::default(), |acc, generated_code| {
                 acc.append(generated_code)
             })
+    }
+
+    fn generate_binding(
+        target: ParsedAbigenTarget,
+        no_std: bool,
+        shared_types: &HashSet<FullTypeDeclaration>,
+    ) -> Result<GeneratedCode, Error> {
+        let abi = target.source;
+
+        let mod_name = ident(&format!("{}_mod", target.name.to_snake_case()));
+        let name = ident(&target.name);
+
+        let types = generate_types(abi.types.clone(), shared_types)?;
+
+        let bindings_generator = match target.program_type {
+            ProgramType::Script => Script::generate,
+            ProgramType::Contract => Contract::generate,
+            ProgramType::Predicate => Predicate::generate,
+        };
+
+        let bindings = bindings_generator(&name, abi, no_std, shared_types)?;
+
+        Ok(limited_std_prelude()
+            .append(types)
+            .append(bindings)
+            .wrap_in_mod(&mod_name))
     }
 
     fn parse_targets(targets: Vec<AbigenTarget>) -> Result<Vec<ParsedAbigenTarget>, Error> {
@@ -111,7 +128,7 @@ impl Abigen {
     fn generate_shared_types(
         shared_types: &HashSet<FullTypeDeclaration>,
     ) -> Result<GeneratedCode, Error> {
-        let types = custom_types::generate_types(shared_types.clone(), &HashSet::default())?;
+        let types = generate_types(shared_types.clone(), &HashSet::default())?;
 
         if types.is_empty() {
             Ok(Default::default())

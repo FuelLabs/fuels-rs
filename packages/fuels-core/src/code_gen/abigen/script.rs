@@ -1,7 +1,6 @@
 use std::collections::HashSet;
 
-use inflector::Inflector;
-use proc_macro2::TokenStream;
+use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
 use fuels_types::errors::Error;
@@ -9,54 +8,24 @@ use fuels_types::errors::Error;
 use crate::code_gen::abi_types::{FullABIFunction, FullProgramABI, FullTypeDeclaration};
 use crate::code_gen::abigen::function_generator::FunctionGenerator;
 use crate::code_gen::abigen::logs::{logs_hashmap_instantiation_code, logs_hashmap_type};
-use crate::code_gen::abigen::utils::{extract_main_fn, limited_std_prelude};
-use crate::code_gen::custom_types::generate_types;
+use crate::code_gen::abigen::utils::extract_main_fn;
 use crate::code_gen::generated_code::GeneratedCode;
 use crate::code_gen::type_path::TypePath;
-use crate::utils::ident;
 
 pub(crate) struct Script;
 
 impl Script {
     pub(crate) fn generate(
-        script_name: &str,
+        name: &Ident,
         abi: FullProgramABI,
         no_std: bool,
         shared_types: &HashSet<FullTypeDeclaration>,
     ) -> Result<GeneratedCode, Error> {
-        let name_mod = ident(&format!("{}_mod", script_name.to_string().to_snake_case()));
-
-        let types_code = generate_types(abi.types.clone(), shared_types)?;
-
-        let script_code =
-            Self::generate_script_code(script_name, &abi, no_std, shared_types)?.append(types_code);
-
-        Ok(limited_std_prelude()
-            .append(script_code)
-            .wrap_in_mod(&name_mod))
-    }
-
-    fn generate_script_code(
-        script_name: &str,
-        abi: &FullProgramABI,
-        no_std: bool,
-        shared_types: &HashSet<FullTypeDeclaration>,
-    ) -> Result<GeneratedCode, Error> {
         if no_std {
-            Ok(GeneratedCode::default())
-        } else {
-            Self::generate_std_script_code(script_name, abi, shared_types)
+            return Ok(GeneratedCode::default());
         }
-    }
 
-    fn generate_std_script_code(
-        script_name: &str,
-        abi: &FullProgramABI,
-        shared_types: &HashSet<FullTypeDeclaration>,
-    ) -> Result<GeneratedCode, Error> {
-        let name = ident(script_name);
-
-        let main_function = Self::script_function(abi, shared_types)?;
+        let main_function = Self::script_function(&abi, shared_types)?;
 
         let logs_map = logs_hashmap_instantiation_code(None, &abi.logged_types, shared_types);
         let logs_map_type = logs_hashmap_type();
