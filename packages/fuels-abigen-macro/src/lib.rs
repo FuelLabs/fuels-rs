@@ -30,6 +30,16 @@ pub fn script_abigen(input: TokenStream) -> TokenStream {
     Abigen::generate(targets, false).unwrap().into()
 }
 
+/// Abigen proc macro definition and helper functions/types for scripts
+#[proc_macro]
+pub fn predicate_abigen(input: TokenStream) -> TokenStream {
+    let args = parse_macro_input!(input as Spanned<MultipleAbis>);
+
+    let targets = into_abigen_targets(args.clone(), ProgramType::Predicate);
+
+    Abigen::generate(targets, false).unwrap().into()
+}
+
 #[proc_macro]
 pub fn wasm_abigen(input: TokenStream) -> TokenStream {
     let args = parse_macro_input!(input as Spanned<MultipleAbis>);

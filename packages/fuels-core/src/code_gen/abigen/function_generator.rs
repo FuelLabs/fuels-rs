@@ -38,6 +38,10 @@ impl FunctionGenerator {
         })
     }
 
+    pub fn set_name(&mut self, name: String) -> &mut Self {
+        self.name = name;
+        self
+    }
     pub fn set_body(&mut self, body: TokenStream) -> &mut Self {
         self.body = body;
         self

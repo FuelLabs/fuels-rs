@@ -9,7 +9,7 @@ use fuels_types::errors::Error;
 use crate::code_gen::abi_types::{FullABIFunction, FullProgramABI, FullTypeDeclaration};
 use crate::code_gen::abigen::function_generator::FunctionGenerator;
 use crate::code_gen::abigen::logs::{logs_hashmap_instantiation_code, logs_hashmap_type};
-use crate::code_gen::abigen::utils::limited_std_prelude;
+use crate::code_gen::abigen::utils::{extract_main_fn, limited_std_prelude};
 use crate::code_gen::custom_types::generate_types;
 use crate::code_gen::generated_code::GeneratedCode;
 use crate::code_gen::type_path::TypePath;
@@ -94,28 +94,7 @@ impl Script {
         abi: &FullProgramABI,
         shared_types: &HashSet<FullTypeDeclaration>,
     ) -> Result<TokenStream, Error> {
-        Self::extract_main_fn(&abi.functions)
-            .and_then(|fun| expand_script_main_fn(fun, shared_types))
-    }
-
-    fn extract_main_fn(abi: &[FullABIFunction]) -> Result<&FullABIFunction, Error> {
-        let candidates = abi
-            .iter()
-            .filter(|function| function.name() == "main")
-            .collect::<Vec<_>>();
-
-        match candidates.as_slice() {
-            [single_main_fn] => Ok(single_main_fn),
-            _ => {
-                let fn_names = candidates
-                    .iter()
-                    .map(|candidate| candidate.name())
-                    .collect::<Vec<_>>();
-                Err(Error::CompilationError(format!(
-                    "A script must have one and only one function with the name 'main'. Got: {fn_names:?}"
-                )))
-            }
-        }
+        extract_main_fn(&abi.functions).and_then(|fun| expand_script_main_fn(fun, shared_types))
     }
 }
 

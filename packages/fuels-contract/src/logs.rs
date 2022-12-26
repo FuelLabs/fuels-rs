@@ -28,15 +28,13 @@ impl LogDecoder {
         });
 
         ids_with_data
-            .map(|((c_id, log_id), data)| {
-                let param_type = self
-                    .logs_map
+            .filter_map(|((c_id, log_id), data)| {
+                self.logs_map
                     .get(&(c_id, log_id))
-                    .ok_or_else(|| Error::InvalidData("Failed to find log id".into()))?;
-
-                param_type.decode_log(&data)
+                    .map(|param_type| (param_type, data))
             })
-            .collect::<Result<Vec<String>, Error>>()
+            .map(|(param_type, data)| param_type.decode_log(&data))
+            .collect()
     }
 
     /// Get decoded logs with specific type from the given receipts.
@@ -59,7 +57,7 @@ impl LogDecoder {
             })
             .collect();
 
-        let decoded_logs: Vec<T> = receipts
+        receipts
             .iter()
             .filter_map(|r| match r {
                 Receipt::LogData { id, rb, data, .. }
@@ -75,9 +73,7 @@ impl LogDecoder {
                 _ => None,
             })
             .map(|data| try_from_bytes(&data))
-            .collect::<Result<Vec<_>, _>>()?;
-
-        Ok(decoded_logs)
+            .collect()
     }
 
     pub fn merge(&mut self, log_decoder: &LogDecoder) {
@@ -90,8 +86,8 @@ impl LogDecoder {
 pub fn decode_revert_error(err: Error, log_decoder: &LogDecoder) -> Error {
     if let Error::RevertTransactionError(_, receipts) = &err {
         if let Ok(logs) = log_decoder.get_logs(receipts) {
-            if let Some(log) = logs.into_iter().next() {
-                return Error::RevertTransactionError(log, receipts.to_owned());
+            if let Some(log) = logs.last() {
+                return Error::RevertTransactionError(log.to_string(), receipts.to_owned());
             }
         }
     }

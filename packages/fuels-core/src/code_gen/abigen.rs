@@ -9,6 +9,7 @@ pub use utils::{AbigenTarget, ProgramType};
 
 use crate::code_gen::abi_types::FullTypeDeclaration;
 use crate::code_gen::abigen::contract::Contract;
+use crate::code_gen::abigen::predicate::Predicate;
 use crate::code_gen::abigen::script::Script;
 use crate::code_gen::abigen::utils::{limited_std_prelude, ParsedAbigenTarget};
 use crate::code_gen::custom_types;
@@ -18,6 +19,7 @@ use crate::utils::ident;
 mod contract;
 mod function_generator;
 mod logs;
+mod predicate;
 mod script;
 mod utils;
 
@@ -75,6 +77,9 @@ impl Abigen {
                 }
                 ProgramType::Contract => {
                     Contract::generate(&target.name, target.source, no_std, shared_types)
+                }
+                ProgramType::Predicate => {
+                    Predicate::generate(&target.name, target.source, no_std, shared_types)
                 }
             })
             .fold_ok(GeneratedCode::default(), |acc, generated_code| {

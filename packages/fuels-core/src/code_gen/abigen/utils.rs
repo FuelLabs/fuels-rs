@@ -2,7 +2,7 @@ use quote::quote;
 
 use fuels_types::errors::Error;
 
-use crate::code_gen::abi_types::FullProgramABI;
+use crate::code_gen::abi_types::{FullABIFunction, FullProgramABI};
 use crate::code_gen::generated_code::GeneratedCode;
 use crate::source::Source;
 
@@ -34,7 +34,7 @@ pub(crate) fn limited_std_prelude() -> GeneratedCode {
     let code = quote! {
             use ::std::{
                 clone::Clone,
-                convert::{Into, TryFrom},
+                convert::{Into, TryFrom, From},
                 format,
                 iter::IntoIterator,
                 iter::Iterator,
@@ -50,6 +50,26 @@ pub(crate) fn limited_std_prelude() -> GeneratedCode {
     }
 }
 
+pub(crate) fn extract_main_fn(abi: &[FullABIFunction]) -> Result<&FullABIFunction, Error> {
+    let candidates = abi
+        .iter()
+        .filter(|function| function.name() == "main")
+        .collect::<Vec<_>>();
+
+    match candidates.as_slice() {
+        [single_main_fn] => Ok(single_main_fn),
+        _ => {
+            let fn_names = candidates
+                .iter()
+                .map(|candidate| candidate.name())
+                .collect::<Vec<_>>();
+            Err(Error::CompilationError(format!(
+                "ABI must have one and only one function with the name 'main'. Got: {fn_names:?}"
+            )))
+        }
+    }
+}
+
 fn parse_program_abi(abi_source: &str) -> Result<FullProgramABI, Error> {
     let source = Source::parse(abi_source).expect("failed to parse JSON ABI");
     let json_abi_str = source.get().expect("failed to parse JSON ABI from string");
@@ -60,4 +80,5 @@ fn parse_program_abi(abi_source: &str) -> Result<FullProgramABI, Error> {
 pub enum ProgramType {
     Script,
     Contract,
+    Predicate,
 }

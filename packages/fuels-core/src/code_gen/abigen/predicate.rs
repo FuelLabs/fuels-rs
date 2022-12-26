@@ -1,0 +1,160 @@
+use crate::code_gen::abi_types::{FullABIFunction, FullProgramABI, FullTypeDeclaration};
+use crate::code_gen::abigen::function_generator::FunctionGenerator;
+use crate::code_gen::abigen::utils::{extract_main_fn, limited_std_prelude};
+use crate::code_gen::custom_types::generate_types;
+use crate::code_gen::generated_code::GeneratedCode;
+use crate::code_gen::type_path::TypePath;
+use crate::utils::ident;
+use fuels_types::errors::Error;
+use inflector::Inflector;
+use proc_macro2::TokenStream;
+use quote::quote;
+use std::collections::HashSet;
+
+pub struct Predicate;
+
+impl Predicate {
+    pub(crate) fn generate(
+        name: &str,
+        abi: FullProgramABI,
+        no_std: bool,
+        shared_types: &HashSet<FullTypeDeclaration>,
+    ) -> Result<GeneratedCode, Error> {
+        let name_mod = ident(&format!("{}_mod", name.to_string().to_snake_case()));
+
+        let types_code = generate_types(abi.types.clone(), shared_types)?;
+
+        let predicate_code =
+            Self::generate_predicate_code(name, &abi, no_std, shared_types)?.append(types_code);
+
+        Ok(limited_std_prelude()
+            .append(predicate_code)
+            .wrap_in_mod(&name_mod))
+    }
+
+    fn generate_predicate_code(
+        name: &str,
+        abi: &FullProgramABI,
+        no_std: bool,
+        shared_types: &HashSet<FullTypeDeclaration>,
+    ) -> Result<GeneratedCode, Error> {
+        if no_std {
+            Ok(GeneratedCode::default())
+        } else {
+            Self::generate_std_predicate_code(name, abi, shared_types)
+        }
+    }
+
+    fn generate_std_predicate_code(
+        name: &str,
+        abi: &FullProgramABI,
+        shared_types: &HashSet<FullTypeDeclaration>,
+    ) -> Result<GeneratedCode, Error> {
+        let name = ident(name);
+        let encode_function = Self::predicate_function(abi, shared_types)?;
+
+        let code = quote! {
+            #[derive(Debug)]
+            pub struct #name {
+                address: ::fuels::types::bech32::Bech32Address,
+                code: ::std::vec::Vec<u8>,
+                data: ::fuels::core::abi_encoder::UnresolvedBytes
+            }
+
+            impl #name {
+                pub fn new(code: ::std::vec::Vec<u8>) -> Self {
+                    let address: ::fuels::core::types::Address = (*::fuels::tx::Contract::root_from_code(&code)).into();
+                    Self {
+                        address: address.into(),
+                        code,
+                        data: ::fuels::core::abi_encoder::UnresolvedBytes::new()
+                    }
+                }
+
+                pub fn load_from(file_path: &str) -> ::std::result::Result<Self, ::fuels::types::errors::Error> {
+                    ::std::result::Result::Ok(Self::new(::std::fs::read(file_path)?))
+                }
+
+                pub fn address(&self) -> &::fuels::types::bech32::Bech32Address {
+                    &self.address
+                }
+
+                pub fn code(&self) -> ::std::vec::Vec<u8> {
+                    self.code.clone()
+                }
+
+                pub fn data(&self) -> ::fuels::core::abi_encoder::UnresolvedBytes {
+                    self.data.clone()
+                }
+
+                pub async fn receive(&self, from: &::fuels::signers::wallet::WalletUnlocked, amount: u64, asset_id: ::fuels::core::types::AssetId, tx_parameters: ::std::option::Option<::fuels::core::parameters::TxParameters>) -> ::std::result::Result<(::std::string::String, ::std::vec::Vec<::fuels::tx::Receipt>), ::fuels::types::errors::Error> {
+                    let tx_parameters = tx_parameters.unwrap_or_default();
+                    from
+                        .transfer(
+                            self.address(),
+                            amount,
+                            asset_id,
+                            tx_parameters
+                        )
+                        .await
+                }
+
+                pub async fn spend(&self, to: &::fuels::signers::wallet::WalletUnlocked, amount: u64, asset_id: ::fuels::core::types::AssetId, tx_parameters: ::std::option::Option<::fuels::core::parameters::TxParameters>) -> ::std::result::Result<::std::vec::Vec<::fuels::tx::Receipt>, ::fuels::types::errors::Error> {
+                    let tx_parameters = tx_parameters.unwrap_or_default();
+                    to
+                        .receive_from_predicate(
+                            self.address(),
+                            self.code(),
+                            amount,
+                            asset_id,
+                            self.data(),
+                            tx_parameters,
+                        )
+                        .await
+                }
+
+                #encode_function
+            }
+        };
+
+        let type_paths = [TypePath::new(&name).expect("We know name is not empty.")].into();
+
+        Ok(GeneratedCode {
+            code,
+            usable_types: type_paths,
+        })
+    }
+
+    fn predicate_function(
+        abi: &FullProgramABI,
+        shared_types: &HashSet<FullTypeDeclaration>,
+    ) -> Result<TokenStream, Error> {
+        extract_main_fn(&abi.functions).and_then(|fun| expand_predicate_main_fn(fun, shared_types))
+    }
+}
+
+fn expand_predicate_main_fn(
+    fun: &FullABIFunction,
+    shared_types: &HashSet<FullTypeDeclaration>,
+) -> Result<TokenStream, Error> {
+    let mut generator = FunctionGenerator::new(fun, shared_types)?;
+
+    let arg_tokens = generator.tokenized_args();
+    let body = quote! {
+        let data = ::fuels::core::abi_encoder::ABIEncoder::encode(&#arg_tokens).expect("Cannot encode predicate data");
+
+        Self {
+            address: self.address.clone(),
+            code: self.code.clone(),
+            data
+        }
+    };
+
+    generator
+        .set_doc("Run the predicate's encode function with the provided arguments".to_string())
+        .set_name("encode_data".to_string())
+        .set_output_type(quote! {Self})
+        .set_body(body);
+
+    Ok(generator.into())
+}
