@@ -1,12 +1,18 @@
-use crate::{abi_decoder::ABIDecoder, types::Bits256};
+use std::collections::HashMap;
+use std::{fmt, iter::zip};
+
 use fuel_types::bytes::padded_len;
+use fuel_types::ContractId;
+use strum_macros::EnumString;
+
+use fuels_types::bech32::Bech32ContractId;
 use fuels_types::{
     enum_variants::EnumVariants,
     errors::{CodecError, Error},
     param_types::ParamType,
 };
-use std::{fmt, iter::zip};
-use strum_macros::EnumString;
+
+use crate::{abi_decoder::ABIDecoder, types::Bits256};
 
 pub mod abi_decoder;
 pub mod abi_encoder;
@@ -251,16 +257,30 @@ fn paramtype_decode_log(param_type: &ParamType, token: &Token) -> Result<String,
     Ok(result)
 }
 
+pub fn get_logs_hashmap(
+    id_param_pairs: &[(u64, ParamType)],
+    contract_id: Option<Bech32ContractId>,
+) -> HashMap<(Bech32ContractId, u64), ParamType> {
+    let contract_id = contract_id.unwrap_or_else(|| Bech32ContractId::from(ContractId::zeroed()));
+    id_param_pairs
+        .iter()
+        .map(|(id, param_type)| ((contract_id.clone(), *id), param_type.to_owned()))
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
-    use super::DecodableLog;
+    use fuel_types::{Address, AssetId, ContractId};
+
+    use fuels_types::{constants::WORD_SIZE, errors::Error};
+
     use crate::{
         try_from_bytes,
         types::{Bits256, EvmAddress, SizedAsciiString},
         Parameterize,
     };
-    use fuel_types::{Address, AssetId, ContractId};
-    use fuels_types::{constants::WORD_SIZE, errors::Error};
+
+    use super::DecodableLog;
 
     #[test]
     fn can_convert_bytes_into_tuple() -> Result<(), Error> {

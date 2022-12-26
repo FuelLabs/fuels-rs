@@ -1,7 +1,8 @@
+use std::collections::HashMap;
+
 use fuels_types::errors::Error;
 use fuels_types::errors::Error::InvalidData;
 use fuels_types::{ABIFunction, LoggedType, ProgramABI, TypeApplication, TypeDeclaration};
-use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
 pub(crate) struct FullProgramABI {

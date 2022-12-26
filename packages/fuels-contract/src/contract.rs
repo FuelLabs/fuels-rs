@@ -92,7 +92,7 @@ impl Contract {
     /// }
     /// ```
     ///
-    /// For more details see `code_gen/functions_gen.rs` in `fuels-core`.
+    /// For more details see `code_gen/functions` in `fuels-core`.
     ///
     /// Note that this needs a wallet because the contract instance needs a wallet for the calls
     pub fn method_hash<D: Tokenizable + Parameterize + Debug>(

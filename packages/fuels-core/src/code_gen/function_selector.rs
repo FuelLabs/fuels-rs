@@ -1,6 +1,7 @@
+use fuels_types::param_types::ParamType;
+
 use crate::utils::first_four_bytes_of_sha256_hash;
 use crate::{unzip_param_types, ByteArray};
-use fuels_types::param_types::ParamType;
 
 /// Given a function name and its inputs  will return a ByteArray representing
 /// the function selector as specified in the Fuel specs.
@@ -77,9 +78,10 @@ fn resolve_arg(arg: &ParamType) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use fuels_test_helpers::generate_unused_field_names;
     use fuels_types::enum_variants::EnumVariants;
+
+    use super::*;
 
     #[test]
     fn handles_primitive_types() {

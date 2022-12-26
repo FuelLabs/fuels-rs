@@ -1,8 +1,9 @@
 //! This module implements basic `rustfmt` code formatting.
 
-use anyhow::{anyhow, Result};
 use std::io::Write;
 use std::process::{Command, Stdio};
+
+use anyhow::{anyhow, Result};
 
 /// Format the raw input source string and return formatted output.
 pub fn format<S>(source: S) -> Result<String>

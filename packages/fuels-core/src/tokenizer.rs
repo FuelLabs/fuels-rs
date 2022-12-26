@@ -1,6 +1,8 @@
-use crate::{unzip_param_types, StringToken, Token};
-use fuels_types::{errors::Error, param_types::ParamType, utils::has_array_format};
 use hex::FromHex;
+
+use fuels_types::{errors::Error, param_types::ParamType, utils::has_array_format};
+
+use crate::{unzip_param_types, StringToken, Token};
 
 #[derive(Default)]
 pub struct Tokenizer;
@@ -404,8 +406,9 @@ fn get_array_length_from_string(ele: &str) -> usize {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::Tokenizable;
+
+    use super::*;
 
     #[test]
     fn tokenize_struct_excess_value_elements_expected_error() -> Result<(), Error> {

@@ -1,8 +1,11 @@
-use crate::{Bits256, Parameterize, Token, Tokenizable};
-pub use fuel_tx::{Address, AssetId, ContractId};
-use fuels_types::{enum_variants::EnumVariants, errors::Error, param_types::ParamType};
-use serde::{Deserialize, Serialize};
 use std::iter::zip;
+
+pub use fuel_tx::{Address, AssetId, ContractId};
+use serde::{Deserialize, Serialize};
+
+use fuels_types::{enum_variants::EnumVariants, errors::Error, param_types::ParamType};
+
+use crate::{Bits256, Parameterize, Token, Tokenizable};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Identity {

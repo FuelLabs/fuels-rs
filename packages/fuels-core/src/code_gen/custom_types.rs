@@ -1,11 +1,63 @@
-mod enum_gen;
-mod struct_gen;
+use std::collections::HashSet;
+
+use itertools::Itertools;
+
+use fuels_types::errors::Error;
+use fuels_types::utils::custom_type_name;
+
+use crate::code_gen::abi_types::FullTypeDeclaration;
+use crate::code_gen::custom_types::enums::expand_custom_enum;
+use crate::code_gen::custom_types::structs::expand_custom_struct;
+use crate::code_gen::generated_code::GeneratedCode;
+use crate::code_gen::utils::get_sdk_provided_types;
+
+mod enums;
+mod structs;
 mod utils;
 
-pub(crate) use enum_gen::expand_custom_enum;
-pub use fuels_types::utils::custom_type_name;
-pub(crate) use struct_gen::expand_custom_struct;
-pub use utils::single_param_type_call;
+pub(crate) fn generate_types<T: IntoIterator<Item = FullTypeDeclaration>>(
+    types: T,
+    shared_types: &HashSet<FullTypeDeclaration>,
+) -> Result<GeneratedCode, Error> {
+    HashSet::from_iter(types)
+        .difference(shared_types)
+        .filter(|ttype| !should_skip_codegen(&ttype.type_field))
+        .filter_map(|ttype| {
+            if ttype.is_struct_type() {
+                Some(expand_custom_struct(ttype, shared_types))
+            } else if ttype.is_enum_type() {
+                Some(expand_custom_enum(ttype, shared_types))
+            } else {
+                None
+            }
+        })
+        .fold_ok(GeneratedCode::default(), |acc, generated_code| {
+            acc.append(generated_code)
+        })
+}
+
+// Checks whether the given type should not have code generated for it. This
+// is mainly because the corresponding type in Rust already exists --
+// e.g. the contract's Vec type is mapped to std::vec::Vec from the Rust
+// stdlib, ContractId is a custom type implemented by fuels-rs, etc.
+// Others like 'raw untyped ptr' or 'RawVec' are skipped because they are
+// implementation details of the contract's Vec type and are not directly
+// used in the SDK.
+fn should_skip_codegen(type_field: &str) -> bool {
+    let name = custom_type_name(type_field).unwrap_or_else(|_| type_field.to_string());
+
+    is_type_sdk_provided(&name) || is_type_unused(&name)
+}
+
+fn is_type_sdk_provided(name: &str) -> bool {
+    get_sdk_provided_types()
+        .iter()
+        .any(|type_path| type_path.type_name() == name)
+}
+
+fn is_type_unused(name: &str) -> bool {
+    ["raw untyped ptr", "RawVec"].contains(&name)
+}
 
 // Doing string -> TokenStream -> string isn't pretty but gives us the opportunity to
 // have a better understanding of the generated code so we consider it ok.
@@ -16,15 +68,17 @@ pub use utils::single_param_type_call;
 // TODO(iqdecay): append extra `,` to last enum/struct field so it is aligned with rustfmt
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::{code_gen::full_abi_types::FullTypeDeclaration, Error};
-    use anyhow::anyhow;
-    use fuels_types::{ProgramABI, TypeApplication, TypeDeclaration};
-    use proc_macro2::TokenStream;
     use std::{
         collections::{HashMap, HashSet},
         str::FromStr,
     };
+
+    use anyhow::anyhow;
+    use proc_macro2::TokenStream;
+
+    use fuels_types::{ProgramABI, TypeApplication, TypeDeclaration};
+
+    use super::*;
 
     #[test]
     fn test_expand_custom_enum() -> Result<(), Error> {

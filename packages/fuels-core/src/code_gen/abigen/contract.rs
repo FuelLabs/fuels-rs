@@ -1,16 +1,154 @@
-use crate::code_gen::full_abi_types::{FullABIFunction, FullTypeApplication, FullTypeDeclaration};
-use crate::code_gen::utils::{param_type_calls, Component};
-use crate::code_gen::{docs_gen::expand_doc, resolved_type, resolved_type::ResolvedType};
-use crate::utils::safe_ident;
-use fuels_types::errors::Error;
-use proc_macro2::TokenStream;
-use quote::quote;
-use resolved_type::resolve_type;
 use std::collections::HashSet;
 
-/// Functions used by the Abigen to expand functions defined in an ABI spec.
+use inflector::Inflector;
+use proc_macro2::TokenStream;
+use quote::quote;
 
-/// Transforms a function defined in [`ABIFunction`] into a [`TokenStream`]
+use fuels_types::errors::Error;
+
+use crate::code_gen::abi_types::{FullABIFunction, FullProgramABI, FullTypeDeclaration};
+use crate::code_gen::abigen::function_generator::FunctionGenerator;
+use crate::code_gen::abigen::logs::{logs_hashmap_instantiation_code, logs_hashmap_type};
+use crate::code_gen::abigen::utils::limited_std_prelude;
+use crate::code_gen::custom_types::generate_types;
+use crate::code_gen::generated_code::GeneratedCode;
+use crate::code_gen::type_path::TypePath;
+use crate::utils::ident;
+
+#[derive(Debug)]
+pub(crate) struct Contract;
+
+impl Contract {
+    pub(crate) fn generate(
+        contract_name: &str,
+        abi: FullProgramABI,
+        no_std: bool,
+        shared_types: &HashSet<FullTypeDeclaration>,
+    ) -> Result<GeneratedCode, Error> {
+        let name_mod = ident(&format!(
+            "{}_mod",
+            contract_name.to_string().to_snake_case()
+        ));
+
+        let types = generate_types(abi.types.clone(), shared_types)?;
+
+        let contract_bindings =
+            Self::generate_contract_code(contract_name, &abi, no_std, shared_types)?;
+
+        Ok(limited_std_prelude()
+            .append(contract_bindings)
+            .append(types)
+            .wrap_in_mod(&name_mod))
+    }
+
+    fn generate_contract_code(
+        contract_name: &str,
+        abi: &FullProgramABI,
+        no_std: bool,
+        shared_types: &HashSet<FullTypeDeclaration>,
+    ) -> Result<GeneratedCode, Error> {
+        if no_std {
+            Ok(GeneratedCode::default())
+        } else {
+            Self::generate_std_contract_code(contract_name, abi, shared_types)
+        }
+    }
+
+    fn generate_std_contract_code(
+        contract_name: &str,
+        abi: &FullProgramABI,
+        shared_types: &HashSet<FullTypeDeclaration>,
+    ) -> Result<GeneratedCode, Error> {
+        let logs_map = logs_hashmap_instantiation_code(
+            Some(quote! {self.contract_id.clone()}),
+            &abi.logged_types,
+            shared_types,
+        );
+        let logs_map_type = logs_hashmap_type();
+
+        let methods_name = ident(&format!("{}Methods", &contract_name));
+        let name = ident(contract_name);
+
+        let contract_functions = Self::functions(&abi.functions, shared_types)?;
+
+        let code = quote! {
+            pub struct #name {
+                contract_id: ::fuels::types::bech32::Bech32ContractId,
+                wallet: ::fuels::signers::wallet::WalletUnlocked,
+            }
+
+            impl #name {
+                pub fn new(contract_id: ::fuels::types::bech32::Bech32ContractId, wallet: ::fuels::signers::wallet::WalletUnlocked) -> Self {
+                    Self { contract_id, wallet }
+                }
+
+                pub fn get_contract_id(&self) -> &::fuels::types::bech32::Bech32ContractId {
+                    &self.contract_id
+                }
+
+                pub fn get_wallet(&self) -> ::fuels::signers::wallet::WalletUnlocked {
+                    self.wallet.clone()
+                }
+
+                pub fn with_wallet(&self, mut wallet: ::fuels::signers::wallet::WalletUnlocked) -> ::std::result::Result<Self, ::fuels::types::errors::Error> {
+                   let provider = self.wallet.get_provider()?;
+                   wallet.set_provider(provider.clone());
+
+                   ::std::result::Result::Ok(Self { contract_id: self.contract_id.clone(), wallet: wallet })
+                }
+
+                pub async fn get_balances(&self) -> ::std::result::Result<::std::collections::HashMap<::std::string::String, u64>, ::fuels::types::errors::Error> {
+                    self.wallet.get_provider()?.get_contract_balances(&self.contract_id).await.map_err(Into::into)
+                }
+
+                pub fn methods(&self) -> #methods_name {
+                    #methods_name {
+                        contract_id: self.contract_id.clone(),
+                        wallet: self.wallet.clone(),
+                        logs_map: #logs_map
+                    }
+                }
+            }
+
+            // Implement struct that holds the contract methods
+            pub struct #methods_name {
+                contract_id: ::fuels::types::bech32::Bech32ContractId,
+                wallet: ::fuels::signers::wallet::WalletUnlocked,
+                logs_map: #logs_map_type
+            }
+
+            impl #methods_name {
+                #contract_functions
+            }
+        };
+
+        let type_paths = [name, methods_name]
+            .map(|type_name| {
+                TypePath::new(&type_name).expect("We know the given types are not empty")
+            })
+            .into_iter()
+            .collect();
+
+        Ok(GeneratedCode {
+            code,
+            usable_types: type_paths,
+        })
+    }
+
+    fn functions(
+        functions: &[FullABIFunction],
+        shared_types: &HashSet<FullTypeDeclaration>,
+    ) -> Result<TokenStream, Error> {
+        let tokenized_functions = functions
+            .iter()
+            .map(|fun| expand_fn(fun, shared_types))
+            .collect::<Result<Vec<TokenStream>, Error>>()?;
+
+        Ok(quote! { #( #tokenized_functions )* })
+    }
+}
+
+/// Transforms a function defined in [`FullABIFunction`] into a [`TokenStream`]
 /// that represents that same function signature as a Rust-native function
 /// declaration.
 ///
@@ -21,7 +159,7 @@ use std::collections::HashSet;
 ///
 /// [`Contract`]: fuels_contract::contract::Contract
 // TODO (oleksii/docs): linkify the above `Contract` link properly
-pub(crate) fn expand_function(
+pub(crate) fn expand_fn(
     abi_fun: &FullABIFunction,
     shared_types: &HashSet<FullTypeDeclaration>,
 ) -> Result<TokenStream, Error> {
@@ -57,170 +195,17 @@ pub(crate) fn expand_function(
     Ok(generator.into())
 }
 
-#[derive(Debug)]
-struct FunctionGenerator {
-    name: String,
-    args: Vec<Component>,
-    output_type: TokenStream,
-    body: TokenStream,
-    doc: Option<String>,
-}
-
-impl FunctionGenerator {
-    pub fn new(
-        fun: &FullABIFunction,
-        shared_types: &HashSet<FullTypeDeclaration>,
-    ) -> Result<Self, Error> {
-        let args = function_arguments(fun.inputs(), shared_types)?;
-
-        let output_type = resolve_fn_output_type(fun, shared_types)?;
-
-        Ok(Self {
-            name: fun.name().to_string(),
-            args,
-            output_type: output_type.into(),
-            body: Default::default(),
-            doc: None,
-        })
-    }
-
-    pub fn set_body(&mut self, body: TokenStream) -> &mut Self {
-        self.body = body;
-        self
-    }
-
-    pub fn set_doc(&mut self, text: String) -> &mut Self {
-        self.doc = Some(text);
-        self
-    }
-
-    pub fn fn_selector(&self) -> TokenStream {
-        let param_type_calls = param_type_calls(&self.args);
-
-        let name = &self.name;
-        quote! {::fuels::core::code_gen::function_selector::resolve_fn_selector(#name, &[#(#param_type_calls),*])}
-    }
-
-    pub fn tokenized_args(&self) -> TokenStream {
-        let arg_names = self.args.iter().map(|component| &component.field_name);
-        quote! {[#(::fuels::core::Tokenizable::into_token(#arg_names)),*]}
-    }
-
-    pub fn set_output_type(&mut self, output_type: TokenStream) -> &mut Self {
-        self.output_type = output_type;
-        self
-    }
-
-    pub fn output_type(&self) -> &TokenStream {
-        &self.output_type
-    }
-}
-
-impl From<&FunctionGenerator> for TokenStream {
-    fn from(fun: &FunctionGenerator) -> Self {
-        let name = safe_ident(&fun.name);
-        let doc = fun
-            .doc
-            .as_ref()
-            .map(|text| expand_doc(text))
-            .unwrap_or_default();
-
-        let arg_declarations = fun.args.iter().map(|component| {
-            let name = &component.field_name;
-            let field_type: TokenStream = (&component.field_type).into();
-            quote! { #name: #field_type }
-        });
-
-        let output_type = fun.output_type();
-        let body = &fun.body;
-
-        quote! {
-            #doc
-            pub fn #name(&self #(,#arg_declarations)*) -> #output_type {
-                #body
-            }
-        }
-    }
-}
-
-impl From<FunctionGenerator> for TokenStream {
-    fn from(fun: FunctionGenerator) -> Self {
-        (&fun).into()
-    }
-}
-
-/// Generate the `main` function of a script
-pub(crate) fn generate_script_main_function(
-    fun: &FullABIFunction,
-    shared_types: &HashSet<FullTypeDeclaration>,
-) -> Result<TokenStream, Error> {
-    let mut generator = FunctionGenerator::new(fun, shared_types)?;
-
-    let original_output_type = generator.output_type();
-    generator
-        .set_output_type(
-            quote! {::fuels::contract::script_calls::ScriptCallHandler<#original_output_type> },
-        )
-        .set_doc("Run the script's `main` function with the provided arguments".to_string());
-
-    let arg_tokens = generator.tokenized_args();
-    let body = quote! {
-            let script_binary = ::std::fs::read(&self.binary_filepath)
-                                        .expect("Could not read from binary filepath");
-            let encoded_args = ::fuels::core::abi_encoder::ABIEncoder::encode(&#arg_tokens).expect("Cannot encode script arguments");
-            let provider = self.wallet.get_provider().expect("Provider not set up").clone();
-            let log_decoder = ::fuels::contract::logs::LogDecoder{logs_map: self.logs_map.clone()};
-
-            ::fuels::contract::script_calls::ScriptCallHandler::new(
-                script_binary,
-                encoded_args,
-                self.wallet.clone(),
-                provider,
-                log_decoder
-            )
-    };
-
-    generator.set_body(body);
-
-    Ok(generator.into())
-}
-
-fn resolve_fn_output_type(
-    function: &FullABIFunction,
-    shared_types: &HashSet<FullTypeDeclaration>,
-) -> Result<ResolvedType, Error> {
-    let output_type = resolve_type(function.output(), shared_types)?;
-    if output_type.uses_vectors() {
-        Err(Error::CompilationError(format!(
-            "function '{}' contains a vector in its return type. This currently isn't supported.",
-            function.name()
-        )))
-    } else {
-        Ok(output_type)
-    }
-}
-
-fn function_arguments(
-    inputs: &[FullTypeApplication],
-    shared_types: &HashSet<FullTypeDeclaration>,
-) -> Result<Vec<Component>, Error> {
-    inputs
-        .iter()
-        .map(|input| Component::new(input, true, shared_types))
-        .collect::<Result<Vec<_>, Error>>()
-        .map_err(|e| Error::InvalidType(e.to_string()))
-}
-
-// Regarding string->TokenStream->string, refer to `custom_types` tests for more details.
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use fuels_types::{ABIFunction, ProgramABI, TypeApplication, TypeDeclaration};
     use std::collections::HashMap;
     use std::str::FromStr;
 
+    use fuels_types::{ABIFunction, ProgramABI, TypeApplication, TypeDeclaration};
+
+    use super::*;
+
     #[test]
-    fn test_expand_function_simple_abi() -> Result<(), Error> {
+    fn test_expand_fn_simple_abi() -> Result<(), Error> {
         let s = r#"
             {
                 "types": [
@@ -368,7 +353,7 @@ mod tests {
             .collect::<HashMap<usize, TypeDeclaration>>();
 
         // Grabbing the one and only function in it.
-        let result = expand_function(
+        let result = expand_fn(
             &FullABIFunction::from_counterpart(&parsed_abi.functions[0], &types)?,
             &HashSet::default(),
         )?;
@@ -415,7 +400,7 @@ mod tests {
     }
 
     #[test]
-    fn test_expand_function_simple() -> Result<(), Error> {
+    fn test_expand_fn_simple() -> Result<(), Error> {
         let the_function = ABIFunction {
             inputs: vec![TypeApplication {
                 name: String::from("bimbam"),
@@ -445,7 +430,7 @@ mod tests {
         ]
         .into_iter()
         .collect::<HashMap<_, _>>();
-        let result = expand_function(
+        let result = expand_fn(
             &FullABIFunction::from_counterpart(&the_function, &types)?,
             &HashSet::default(),
         );
@@ -482,7 +467,7 @@ mod tests {
     }
 
     #[test]
-    fn test_expand_function_complex() -> Result<(), Error> {
+    fn test_expand_fn_complex() -> Result<(), Error> {
         let the_function = ABIFunction {
             inputs: vec![TypeApplication {
                 name: String::from("the_only_allowed_input"),
@@ -557,7 +542,7 @@ mod tests {
         ]
         .into_iter()
         .collect::<HashMap<_, _>>();
-        let result = expand_function(
+        let result = expand_fn(
             &FullABIFunction::from_counterpart(&the_function, &types)?,
             &HashSet::default(),
         );
@@ -594,165 +579,6 @@ mod tests {
         )?.to_string();
 
         assert_eq!(result?.to_string(), expected);
-
-        Ok(())
-    }
-
-    // --- expand_function_argument ---
-    #[test]
-    fn test_expand_function_arguments() -> Result<(), Error> {
-        let the_argument = TypeApplication {
-            name: "some_argument".to_string(),
-            type_id: 0,
-            ..Default::default()
-        };
-
-        // All arguments are here
-        let the_function = ABIFunction {
-            inputs: vec![the_argument],
-            ..ABIFunction::default()
-        };
-
-        let types = [(
-            0,
-            TypeDeclaration {
-                type_id: 0,
-                type_field: String::from("u32"),
-                ..Default::default()
-            },
-        )]
-        .into_iter()
-        .collect::<HashMap<_, _>>();
-        let result = function_arguments(
-            FullABIFunction::from_counterpart(&the_function, &types)?.inputs(),
-            &HashSet::default(),
-        )?;
-        let component = &result[0];
-
-        assert_eq!(&component.field_name.to_string(), "some_argument");
-        assert_eq!(&component.field_type.to_string(), "u32");
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_expand_function_arguments_primitive() -> Result<(), Error> {
-        let the_function = ABIFunction {
-            inputs: vec![TypeApplication {
-                name: "bim_bam".to_string(),
-                type_id: 1,
-                ..Default::default()
-            }],
-            name: "pip_pop".to_string(),
-            ..Default::default()
-        };
-
-        let types = [
-            (
-                0,
-                TypeDeclaration {
-                    type_id: 0,
-                    type_field: String::from("()"),
-                    ..Default::default()
-                },
-            ),
-            (
-                1,
-                TypeDeclaration {
-                    type_id: 1,
-                    type_field: String::from("u64"),
-                    ..Default::default()
-                },
-            ),
-        ]
-        .into_iter()
-        .collect::<HashMap<_, _>>();
-        let result = function_arguments(
-            FullABIFunction::from_counterpart(&the_function, &types)?.inputs(),
-            &HashSet::default(),
-        )?;
-        let component = &result[0];
-
-        assert_eq!(&component.field_name.to_string(), "bim_bam");
-        assert_eq!(&component.field_type.to_string(), "u64");
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_expand_function_arguments_composite() -> Result<(), Error> {
-        let mut function = ABIFunction {
-            inputs: vec![TypeApplication {
-                name: "bim_bam".to_string(),
-                type_id: 0,
-                ..Default::default()
-            }],
-            name: "PipPopFunction".to_string(),
-            ..Default::default()
-        };
-
-        let types = [
-            (
-                0,
-                TypeDeclaration {
-                    type_id: 0,
-                    type_field: "struct CarMaker".to_string(),
-                    components: Some(vec![TypeApplication {
-                        name: "name".to_string(),
-                        type_id: 1,
-                        ..Default::default()
-                    }]),
-                    ..Default::default()
-                },
-            ),
-            (
-                1,
-                TypeDeclaration {
-                    type_id: 1,
-                    type_field: "str[5]".to_string(),
-                    ..Default::default()
-                },
-            ),
-            (
-                2,
-                TypeDeclaration {
-                    type_id: 2,
-                    type_field: "enum Cocktail".to_string(),
-                    components: Some(vec![TypeApplication {
-                        name: "variant".to_string(),
-                        type_id: 3,
-                        ..Default::default()
-                    }]),
-                    ..Default::default()
-                },
-            ),
-            (
-                3,
-                TypeDeclaration {
-                    type_id: 3,
-                    type_field: "u32".to_string(),
-                    ..Default::default()
-                },
-            ),
-        ]
-        .into_iter()
-        .collect::<HashMap<_, _>>();
-        let result = function_arguments(
-            FullABIFunction::from_counterpart(&function, &types)?.inputs(),
-            &HashSet::default(),
-        )?;
-
-        assert_eq!(&result[0].field_name.to_string(), "bim_bam");
-        assert_eq!(&result[0].field_type.to_string(), "self :: CarMaker");
-
-        function.inputs[0].type_id = 2;
-        let result = function_arguments(
-            FullABIFunction::from_counterpart(&function, &types)?.inputs(),
-            &HashSet::default(),
-        )?;
-
-        assert_eq!(&result[0].field_name.to_string(), "bim_bam");
-        assert_eq!(&result[0].field_type.to_string(), "self :: Cocktail");
 
         Ok(())
     }

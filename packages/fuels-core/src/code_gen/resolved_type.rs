@@ -1,17 +1,21 @@
-use crate::code_gen::abigen::{get_sdk_provided_types, TypePath};
-use crate::code_gen::full_abi_types::{FullTypeApplication, FullTypeDeclaration};
-use crate::utils::{ident, safe_ident};
+use std::collections::HashSet;
+use std::fmt::{Display, Formatter};
+
+use lazy_static::lazy_static;
+use proc_macro2::TokenStream;
+use quote::{quote, ToTokens};
+use regex::Regex;
+
 use fuels_types::errors::Error;
 use fuels_types::utils::custom_type_name;
 use fuels_types::utils::{
     extract_array_len, extract_generic_name, extract_str_len, has_tuple_format,
 };
-use lazy_static::lazy_static;
-use proc_macro2::TokenStream;
-use quote::{quote, ToTokens};
-use regex::Regex;
-use std::collections::HashSet;
-use std::fmt::{Display, Formatter};
+
+use crate::code_gen::abi_types::{FullTypeApplication, FullTypeDeclaration};
+use crate::code_gen::type_path::TypePath;
+use crate::code_gen::utils::get_sdk_provided_types;
+use crate::utils::{ident, safe_ident};
 
 // Represents a type alongside its generic parameters. Can be converted into a
 // `TokenStream` via `.into()`.
@@ -264,11 +268,13 @@ fn to_custom_type(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::collections::HashMap;
 
     use anyhow::Context;
+
     use fuels_types::{TypeApplication, TypeDeclaration};
+
+    use super::*;
 
     fn test_resolve_first_type(
         expected: &str,

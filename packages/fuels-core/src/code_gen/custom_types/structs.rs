@@ -1,12 +1,17 @@
-use super::utils::{extract_components, extract_generic_parameters, impl_try_from};
-use crate::code_gen::abigen::{GeneratedCode, TypePath};
-use crate::code_gen::full_abi_types::FullTypeDeclaration;
-use crate::code_gen::utils::{param_type_calls, Component};
-use crate::utils::ident;
-use fuels_types::{errors::Error, utils::custom_type_name};
+use std::collections::HashSet;
+
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
-use std::collections::HashSet;
+
+use fuels_types::{errors::Error, utils::custom_type_name};
+
+use crate::code_gen::abi_types::FullTypeDeclaration;
+use crate::code_gen::generated_code::GeneratedCode;
+use crate::code_gen::type_path::TypePath;
+use crate::code_gen::utils::{param_type_calls, Component};
+use crate::utils::ident;
+
+use super::utils::{extract_components, extract_generic_parameters, impl_try_from};
 
 /// Returns a TokenStream containing the declaration, `Parameterize`,
 /// `Tokenizable` and `TryFrom` implementations for the struct described by the
