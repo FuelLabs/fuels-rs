@@ -33,7 +33,7 @@ impl Abigen {
     /// # Arguments
     ///
     /// * `targets`: `AbigenTargets` detailing which ABI to generate bindings
-    /// for, and of what nature (Script or Contract).
+    /// for, and of what nature (Contract, Script or Predicate).
     /// * `no_std`: don't use the rust std library.
     pub fn generate(targets: Vec<AbigenTarget>, no_std: bool) -> Result<TokenStream, Error> {
         let parsed_targets = Self::parse_targets(targets)?;
@@ -56,8 +56,8 @@ impl Abigen {
         let shared_types = Self::determine_shared_types(&parsed_targets);
 
         Ok([
-            Self::generate_shared_types(&shared_types)?,
             Self::generate_all_bindings(parsed_targets, no_std, &shared_types)?,
+            Self::generate_shared_types(shared_types)?,
         ]
         .into_iter()
         .fold(GeneratedCode::default(), |all_code, code_segment| {
@@ -126,9 +126,9 @@ impl Abigen {
     ///
     /// ```
     fn generate_shared_types(
-        shared_types: &HashSet<FullTypeDeclaration>,
+        shared_types: HashSet<FullTypeDeclaration>,
     ) -> Result<GeneratedCode, Error> {
-        let types = generate_types(shared_types.clone(), &HashSet::default())?;
+        let types = generate_types(shared_types, &HashSet::default())?;
 
         if types.is_empty() {
             Ok(Default::default())
