@@ -1,3 +1,8 @@
+use std::{collections::HashMap, iter::zip};
+
+use itertools::Itertools;
+use strum_macros::EnumString;
+
 use crate::{
     constants::WORD_SIZE,
     enum_variants::EnumVariants,
@@ -8,9 +13,6 @@ use crate::{
     },
     TypeApplication, TypeDeclaration,
 };
-use itertools::Itertools;
-use std::{collections::HashMap, iter::zip};
-use strum_macros::EnumString;
 
 #[derive(Debug, Clone, EnumString, PartialEq, Eq)]
 #[strum(ascii_case_insensitive)]
@@ -381,12 +383,13 @@ fn try_primitive(the_type: &Type) -> Result<Option<ParamType>, Error> {
 
 #[cfg(test)]
 mod tests {
+    use crate::param_types::ParamType;
+
+    use super::*;
+
     const WIDTH_OF_B256: usize = 4;
     const WIDTH_OF_U32: usize = 1;
     const WIDTH_OF_BOOL: usize = 1;
-
-    use super::*;
-    use crate::param_types::ParamType;
 
     // The same function from fuels-test-helpers cannot
     // be used here because of a circular dependency
