@@ -6,112 +6,105 @@ use quote::quote;
 use fuels_types::errors::Error;
 
 use crate::code_gen::abi_types::{FullABIFunction, FullProgramABI, FullTypeDeclaration};
-use crate::code_gen::abigen::function_generator::FunctionGenerator;
+use crate::code_gen::abigen::bindings::function_generator::FunctionGenerator;
 use crate::code_gen::abigen::logs::{logs_hashmap_instantiation_code, logs_hashmap_type};
 use crate::code_gen::generated_code::GeneratedCode;
 use crate::code_gen::type_path::TypePath;
 use crate::utils::ident;
 
-#[derive(Debug)]
-pub(crate) struct Contract;
+pub(crate) fn contract_bindings(
+    name: &Ident,
+    abi: FullProgramABI,
+    no_std: bool,
+    shared_types: &HashSet<FullTypeDeclaration>,
+) -> Result<GeneratedCode, Error> {
+    if no_std {
+        return Ok(GeneratedCode::default());
+    }
 
-impl Contract {
-    pub(crate) fn generate(
-        name: &Ident,
-        abi: FullProgramABI,
-        no_std: bool,
-        shared_types: &HashSet<FullTypeDeclaration>,
-    ) -> Result<GeneratedCode, Error> {
-        if no_std {
-            return Ok(GeneratedCode::default());
+    let logs_map = logs_hashmap_instantiation_code(
+        Some(quote! {self.contract_id.clone()}),
+        &abi.logged_types,
+        shared_types,
+    );
+    let logs_map_type = logs_hashmap_type();
+
+    let methods_name = ident(&format!("{}Methods", name));
+
+    let contract_functions = expand_functions(&abi.functions, shared_types)?;
+
+    let code = quote! {
+        pub struct #name {
+            contract_id: ::fuels::types::bech32::Bech32ContractId,
+            wallet: ::fuels::signers::wallet::WalletUnlocked,
         }
 
-        let logs_map = logs_hashmap_instantiation_code(
-            Some(quote! {self.contract_id.clone()}),
-            &abi.logged_types,
-            shared_types,
-        );
-        let logs_map_type = logs_hashmap_type();
-
-        let methods_name = ident(&format!("{}Methods", name));
-
-        let contract_functions = Self::functions(&abi.functions, shared_types)?;
-
-        let code = quote! {
-            pub struct #name {
-                contract_id: ::fuels::types::bech32::Bech32ContractId,
-                wallet: ::fuels::signers::wallet::WalletUnlocked,
+        impl #name {
+            pub fn new(contract_id: ::fuels::types::bech32::Bech32ContractId, wallet: ::fuels::signers::wallet::WalletUnlocked) -> Self {
+                Self { contract_id, wallet }
             }
 
-            impl #name {
-                pub fn new(contract_id: ::fuels::types::bech32::Bech32ContractId, wallet: ::fuels::signers::wallet::WalletUnlocked) -> Self {
-                    Self { contract_id, wallet }
-                }
-
-                pub fn get_contract_id(&self) -> &::fuels::types::bech32::Bech32ContractId {
-                    &self.contract_id
-                }
-
-                pub fn get_wallet(&self) -> ::fuels::signers::wallet::WalletUnlocked {
-                    self.wallet.clone()
-                }
-
-                pub fn with_wallet(&self, mut wallet: ::fuels::signers::wallet::WalletUnlocked) -> ::std::result::Result<Self, ::fuels::types::errors::Error> {
-                   let provider = self.wallet.get_provider()?;
-                   wallet.set_provider(provider.clone());
-
-                   ::std::result::Result::Ok(Self { contract_id: self.contract_id.clone(), wallet: wallet })
-                }
-
-                pub async fn get_balances(&self) -> ::std::result::Result<::std::collections::HashMap<::std::string::String, u64>, ::fuels::types::errors::Error> {
-                    self.wallet.get_provider()?.get_contract_balances(&self.contract_id).await.map_err(Into::into)
-                }
-
-                pub fn methods(&self) -> #methods_name {
-                    #methods_name {
-                        contract_id: self.contract_id.clone(),
-                        wallet: self.wallet.clone(),
-                        logs_map: #logs_map
-                    }
-                }
+            pub fn get_contract_id(&self) -> &::fuels::types::bech32::Bech32ContractId {
+                &self.contract_id
             }
 
-            // Implement struct that holds the contract methods
-            pub struct #methods_name {
-                contract_id: ::fuels::types::bech32::Bech32ContractId,
-                wallet: ::fuels::signers::wallet::WalletUnlocked,
-                logs_map: #logs_map_type
+            pub fn get_wallet(&self) -> ::fuels::signers::wallet::WalletUnlocked {
+                self.wallet.clone()
             }
 
-            impl #methods_name {
-                #contract_functions
+            pub fn with_wallet(&self, mut wallet: ::fuels::signers::wallet::WalletUnlocked) -> ::std::result::Result<Self, ::fuels::types::errors::Error> {
+               let provider = self.wallet.get_provider()?;
+               wallet.set_provider(provider.clone());
+
+               ::std::result::Result::Ok(Self { contract_id: self.contract_id.clone(), wallet: wallet })
             }
-        };
 
-        let type_paths = [name, &methods_name]
-            .map(|type_name| {
-                TypePath::new(&type_name).expect("We know the given types are not empty")
-            })
-            .into_iter()
-            .collect();
+            pub async fn get_balances(&self) -> ::std::result::Result<::std::collections::HashMap<::std::string::String, u64>, ::fuels::types::errors::Error> {
+                self.wallet.get_provider()?.get_contract_balances(&self.contract_id).await.map_err(Into::into)
+            }
 
-        Ok(GeneratedCode {
-            code,
-            usable_types: type_paths,
-        })
-    }
+            pub fn methods(&self) -> #methods_name {
+                #methods_name {
+                    contract_id: self.contract_id.clone(),
+                    wallet: self.wallet.clone(),
+                    logs_map: #logs_map
+                }
+            }
+        }
 
-    fn functions(
-        functions: &[FullABIFunction],
-        shared_types: &HashSet<FullTypeDeclaration>,
-    ) -> Result<TokenStream, Error> {
-        let tokenized_functions = functions
-            .iter()
-            .map(|fun| expand_fn(fun, shared_types))
-            .collect::<Result<Vec<TokenStream>, Error>>()?;
+        // Implement struct that holds the contract methods
+        pub struct #methods_name {
+            contract_id: ::fuels::types::bech32::Bech32ContractId,
+            wallet: ::fuels::signers::wallet::WalletUnlocked,
+            logs_map: #logs_map_type
+        }
 
-        Ok(quote! { #( #tokenized_functions )* })
-    }
+        impl #methods_name {
+            #contract_functions
+        }
+    };
+
+    let type_paths = [name, &methods_name]
+        .map(|type_name| TypePath::new(&type_name).expect("We know the given types are not empty"))
+        .into_iter()
+        .collect();
+
+    Ok(GeneratedCode {
+        code,
+        usable_types: type_paths,
+    })
+}
+
+fn expand_functions(
+    functions: &[FullABIFunction],
+    shared_types: &HashSet<FullTypeDeclaration>,
+) -> Result<TokenStream, Error> {
+    let tokenized_functions = functions
+        .iter()
+        .map(|fun| expand_fn(fun, shared_types))
+        .collect::<Result<Vec<TokenStream>, Error>>()?;
+
+    Ok(quote! { #( #tokenized_functions )* })
 }
 
 /// Transforms a function defined in [`FullABIFunction`] into a [`TokenStream`]

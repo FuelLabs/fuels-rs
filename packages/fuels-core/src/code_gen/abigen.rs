@@ -5,24 +5,19 @@ use itertools::Itertools;
 use proc_macro2::TokenStream;
 use quote::quote;
 
+pub use abigen_target::{AbigenTarget, ProgramType};
 use fuels_types::errors::Error;
-pub use utils::{AbigenTarget, ProgramType};
 
 use crate::code_gen::abi_types::FullTypeDeclaration;
-use crate::code_gen::abigen::contract::Contract;
-use crate::code_gen::abigen::predicate::Predicate;
-use crate::code_gen::abigen::script::Script;
-use crate::code_gen::abigen::utils::{limited_std_prelude, ParsedAbigenTarget};
+use crate::code_gen::abigen::abigen_target::ParsedAbigenTarget;
+use crate::code_gen::abigen::bindings::generate_bindings;
 use crate::code_gen::custom_types::generate_types;
 use crate::code_gen::generated_code::GeneratedCode;
 use crate::utils::ident;
 
-mod contract;
-mod function_generator;
+mod abigen_target;
+mod bindings;
 mod logs;
-mod predicate;
-mod script;
-mod utils;
 
 pub struct Abigen;
 
@@ -83,20 +78,10 @@ impl Abigen {
         no_std: bool,
         shared_types: &HashSet<FullTypeDeclaration>,
     ) -> Result<GeneratedCode, Error> {
-        let abi = target.source;
+        let mod_name = ident(&format!("{}_mod", &target.name.to_snake_case()));
 
-        let mod_name = ident(&format!("{}_mod", target.name.to_snake_case()));
-        let name = ident(&target.name);
-
-        let types = generate_types(abi.types.clone(), shared_types)?;
-
-        let bindings_generator = match target.program_type {
-            ProgramType::Script => Script::generate,
-            ProgramType::Contract => Contract::generate,
-            ProgramType::Predicate => Predicate::generate,
-        };
-
-        let bindings = bindings_generator(&name, abi, no_std, shared_types)?;
+        let types = generate_types(target.source.types.clone(), shared_types)?;
+        let bindings = generate_bindings(target, no_std, shared_types)?;
 
         Ok(limited_std_prelude()
             .append(types)
@@ -150,5 +135,25 @@ impl Abigen {
             .filter_map(|(common_type, group)| (group.count() > 1).then_some(common_type))
             .cloned()
             .collect()
+    }
+}
+
+fn limited_std_prelude() -> GeneratedCode {
+    let code = quote! {
+            use ::std::{
+                clone::Clone,
+                convert::{Into, TryFrom, From},
+                format,
+                iter::IntoIterator,
+                iter::Iterator,
+                marker::Sized,
+                panic, vec,
+                string::ToString
+            };
+    };
+
+    GeneratedCode {
+        code,
+        ..Default::default()
     }
 }
