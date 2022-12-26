@@ -579,7 +579,7 @@ async fn test_parse_block_time() -> Result<(), Error> {
     let tx_parameters = TxParameters::new(Some(1), Some(2000), None);
     let wallet_2 = WalletUnlocked::new_random(None).lock();
     let (tx_id, _) = wallet
-        .transfer(&wallet_2.address(), 100, BASE_ASSET_ID, tx_parameters)
+        .transfer(wallet_2.address(), 100, BASE_ASSET_ID, tx_parameters)
         .await?;
 
     let tx_response = wallet
