@@ -350,6 +350,97 @@ mod tests {
 
     #[tokio::test]
     #[allow(unused_variables)]
+    async fn output_messages_test() -> Result<(), Error> {
+        use fuels::prelude::*;
+        abigen!(
+            MyContract,
+            "packages/fuels/tests/contracts/token_ops/out/debug/token_ops-abi.json"
+        );
+
+        let wallet = launch_provider_and_get_wallet().await;
+        let contract_id = Contract::deploy(
+            "../../packages/fuels/tests/contracts/token_ops/out/debug/token_ops\
+        .bin",
+            &wallet,
+            TxParameters::default(),
+            StorageConfiguration::default(),
+        )
+        .await?;
+        let contract_methods = MyContract::new(contract_id.clone(), wallet.clone()).methods();
+        // ANCHOR: message_outputs
+        let base_layer_address = Bits256([1u8; 32]);
+        let amount = 1000;
+
+        let response = contract_methods
+            .send_message(base_layer_address, amount)
+            .append_message_outputs(1)
+            .call()
+            .await?;
+        // ANCHOR_END: message_outputs
+
+        // fails due to missing message output
+        let response = contract_methods
+            .send_message(base_layer_address, amount)
+            .call()
+            .await;
+        assert!(matches!(response, Err(Error::RevertTransactionError(..))));
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[allow(unused_variables)]
+    async fn dependency_estimation() -> Result<(), Error> {
+        use fuels::prelude::*;
+        abigen!(
+            MyContract,
+            "packages/fuels/tests/contracts/foo_caller_contract/out/debug/foo_caller_contract-abi.json"
+        );
+
+        let wallet = launch_provider_and_get_wallet().await;
+        let called_contract_id = Contract::deploy(
+            "../../packages/fuels/tests/contracts/foo_contract/out/debug/foo_contract\
+        .bin",
+            &wallet,
+            TxParameters::default(),
+            StorageConfiguration::default(),
+        )
+        .await?;
+
+        let caller_contract_id = Contract::deploy(
+            "../../packages/fuels/tests/contracts/foo_caller_contract/out/debug/foo_caller_contract\
+        .bin",
+            &wallet,
+            TxParameters::default(),
+            StorageConfiguration::default(),
+        )
+        .await?;
+
+        // ANCHOR: dependency_estimation
+        let contract_methods =
+            MyContract::new(caller_contract_id.clone(), wallet.clone()).methods();
+        let address = wallet.address();
+        let amount = 100;
+
+        let bits = *called_contract_id.hash();
+
+        let response = contract_methods
+            .call_foo_contract_mint(Bits256(bits), amount, address.into())
+            .estimate_tx_dependencies(Some(3))
+            .await?
+            .call()
+            .await?;
+        // ANCHOR_END: dependency_estimation
+
+        let asset_id = AssetId::from(*called_contract_id.hash());
+        let balance = wallet.get_asset_balance(&asset_id).await?;
+        assert_eq!(balance, amount);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[allow(unused_variables)]
     async fn get_contract_outputs() -> Result<(), Error> {
         use fuels::prelude::*;
         use fuels::tx::Receipt;

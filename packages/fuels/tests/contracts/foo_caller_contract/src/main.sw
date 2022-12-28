@@ -5,6 +5,7 @@ use std::constants::ZERO_B256;
 
 abi FooCaller {
     fn call_foo_contract(target: b256, value: bool) -> bool;
+    fn call_foo_contract_mint(target: b256, amount: u64, address: Address);
 }
 
 impl FooCaller for Contract {
@@ -17,5 +18,14 @@ impl FooCaller for Contract {
         }(value);
 
         !response
+    }
+
+    fn call_foo_contract_mint(target: b256, amount: u64, address: Address) {
+        let foo_contract = abi(FooContract, target);
+        foo_contract.mint_to_address {
+            gas: 100000,
+            coins: 0,
+            asset_id: ZERO_B256,
+        }(amount, address);
     }
 }
