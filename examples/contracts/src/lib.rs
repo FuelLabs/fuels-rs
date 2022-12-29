@@ -418,7 +418,7 @@ mod tests {
 
         let contract_methods =
             MyContract::new(caller_contract_id.clone(), wallet.clone()).methods();
-        
+
         // ANCHOR: dependency_estimation_fail
         let address = wallet.address();
         let amount = 100;
@@ -429,7 +429,7 @@ mod tests {
             .call()
             .await;
         // ANCHOR: dependency_estimation_fail
-        
+
         assert!(matches!(response, Err(Error::RevertTransactionError(..))));
 
         // ANCHOR: dependency_estimation_manual
@@ -441,9 +441,9 @@ mod tests {
             .await?;
         // ANCHOR: dependency_estimation_manual
 
-            let asset_id = AssetId::from(*caller_contract_id.hash());
-            let balance = wallet.get_asset_balance(&asset_id).await?;
-            assert_eq!(balance, amount);
+        let asset_id = AssetId::from(*caller_contract_id.hash());
+        let balance = wallet.get_asset_balance(&asset_id).await?;
+        assert_eq!(balance, amount);
 
         // ANCHOR: dependency_estimation
         let response = contract_methods
