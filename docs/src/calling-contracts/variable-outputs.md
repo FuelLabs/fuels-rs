@@ -1,6 +1,6 @@
 # Output variables
 
-In some cases, the contract you are calling might be transferring funds to a specific address, depending on its execution. The underlying transaction for such a contract call has to have the appropriate number of [variable outputs](https://github.com/FuelLabs/fuel-specs/blob/master/src/protocol/tx_format/output.md#outputvariable) to succeed.
+Sometimes, the contract you call might transfer funds to a specific address, depending on its execution. The underlying transaction for such a contract call has to have the appropriate number of [variable outputs](https://github.com/FuelLabs/fuel-specs/blob/master/src/protocol/tx_format/output.md#outputvariable) to succeed.
 
 Let's say you deployed a contract with the following method:
 
