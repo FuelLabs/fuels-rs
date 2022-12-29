@@ -416,25 +416,46 @@ mod tests {
         )
         .await?;
 
-        // ANCHOR: dependency_estimation
         let contract_methods =
             MyContract::new(caller_contract_id.clone(), wallet.clone()).methods();
+        
+        // ANCHOR: dependency_estimation_fail
         let address = wallet.address();
         let amount = 100;
-
-        let bits = *called_contract_id.hash();
+        let foo_id_bits = Bits256(*called_contract_id.hash());
 
         let response = contract_methods
-            .call_foo_contract_mint(Bits256(bits), amount, address.into())
-            .estimate_tx_dependencies(Some(3))
+            .call_foo_contract_then_mint(foo_id_bits, amount, address.into())
+            .call()
+            .await;
+        // ANCHOR: dependency_estimation_fail
+        
+        assert!(matches!(response, Err(Error::RevertTransactionError(..))));
+
+        // ANCHOR: dependency_estimation_manual
+        let response = contract_methods
+            .call_foo_contract_then_mint(foo_id_bits, amount, address.into())
+            .append_variable_outputs(1)
+            .set_contracts(&[called_contract_id.clone()])
+            .call()
+            .await?;
+        // ANCHOR: dependency_estimation_manual
+
+            let asset_id = AssetId::from(*caller_contract_id.hash());
+            let balance = wallet.get_asset_balance(&asset_id).await?;
+            assert_eq!(balance, amount);
+
+        // ANCHOR: dependency_estimation
+        let response = contract_methods
+            .call_foo_contract_then_mint(foo_id_bits, amount, address.into())
+            .estimate_tx_dependencies(Some(2))
             .await?
             .call()
             .await?;
         // ANCHOR_END: dependency_estimation
 
-        let asset_id = AssetId::from(*called_contract_id.hash());
         let balance = wallet.get_asset_balance(&asset_id).await?;
-        assert_eq!(balance, amount);
+        assert_eq!(balance, 2 * amount);
 
         Ok(())
     }
