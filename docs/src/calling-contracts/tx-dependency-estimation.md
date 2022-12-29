@@ -24,4 +24,4 @@ The minimal number of attempts corresponds to the number of external contracts a
 
 > **Note:** `.estimate_tx_dependencies()` can also be used when working with multi calls.
 
-> **Note:** if no resolution was found after exhausting all simulation attempts, the last received error will be propagated. The same will happen if an error occurs that is not related to the transactions dependencies.
+> **Note:** if no resolution was found after exhausting all simulation attempts, the last received error will be propagated. The same will happen if an error is unrelated to transaction dependencies.
