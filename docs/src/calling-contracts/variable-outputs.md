@@ -8,7 +8,7 @@ Let's say you deployed a contract with the following method:
 {{#include ../../../packages/fuels/tests/contracts/token_ops/src/main.sw:variable_outputs}}
 ```
 
-When calling `transfer_coins_to_output` with the SDK, you can specify the number of output variables by chaining `append_variable_outputs(amount)` to your call. Like this:
+When calling `transfer_coins_to_output` with the SDK, you can specify the number of variable outputs by chaining `append_variable_outputs(amount)` to your call. Like this:
 
 ```rust,ignore
 {{#include ../../../examples/contracts/src/lib.rs:variable_outputs}}
