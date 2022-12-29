@@ -428,9 +428,9 @@ mod tests {
             .call_foo_contract_then_mint(foo_id_bits, amount, address.into())
             .call()
             .await;
-        // ANCHOR: dependency_estimation_fail
 
         assert!(matches!(response, Err(Error::RevertTransactionError(..))));
+        // ANCHOR_END: dependency_estimation_fail
 
         // ANCHOR: dependency_estimation_manual
         let response = contract_methods
@@ -439,7 +439,7 @@ mod tests {
             .set_contracts(&[called_contract_id.clone()])
             .call()
             .await?;
-        // ANCHOR: dependency_estimation_manual
+        // ANCHOR_END: dependency_estimation_manual
 
         let asset_id = AssetId::from(*caller_contract_id.hash());
         let balance = wallet.get_asset_balance(&asset_id).await?;
