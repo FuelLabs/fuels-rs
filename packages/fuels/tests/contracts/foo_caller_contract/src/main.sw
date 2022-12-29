@@ -24,7 +24,7 @@ impl FooCaller for Contract {
     fn call_foo_contract_then_mint(target: b256, amount: u64, address: Address) {
         let foo_contract = abi(FooContract, target);
         let response = foo_contract.foo {
-            gas: 10000,
+            gas: 1000000,
             coins: 0,
             asset_id: ZERO_B256,
         }(true);
