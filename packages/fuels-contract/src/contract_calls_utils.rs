@@ -1,7 +1,5 @@
-use fuel_gql_client::fuel_tx::{
-    field::Script as ScriptField, ConsensusParameters, Input, Output, TxPointer, UtxoId,
-};
-use fuel_gql_client::fuel_types::{bytes::padded_len_usize, Immediate18, Word};
+use fuel_gql_client::fuel_tx::{Input, Output, TxPointer, UtxoId};
+use fuel_gql_client::fuel_types::{Immediate18, Word};
 use fuel_gql_client::fuel_vm::{consts::REG_ONE, prelude::Opcode};
 use fuel_tx::{AssetId, Bytes32, ContractId};
 use fuels_core::constants::BASE_ASSET_ID;
@@ -28,16 +26,19 @@ pub(crate) struct CallOpcodeParamsOffset {
 pub(crate) fn calculate_required_asset_amounts(calls: &[ContractCall]) -> Vec<(AssetId, u64)> {
     let amounts_per_asset_id = calls
         .iter()
-        .map(|call| (call.call_parameters.asset_id, call.call_parameters.amount));
+        .map(|call| (call.call_parameters.asset_id, call.call_parameters.amount))
+        .collect::<Vec<_>>();
     sum_up_amounts_for_each_asset_id(amounts_per_asset_id)
 }
 
 /// Sum up the amounts required in each call for each asset ID, so you can get a total for each
 /// asset over all calls.
 fn sum_up_amounts_for_each_asset_id(
-    amounts_per_asset_id: impl Iterator<Item = (AssetId, u64)>,
+    amounts_per_asset_id: Vec<(AssetId, u64)>,
 ) -> Vec<(AssetId, u64)> {
     amounts_per_asset_id
+        .into_iter()
+        .sorted_by_key(|(asset_id, _)| *asset_id)
         .group_by(|(asset_id, _)| *asset_id)
         .into_iter()
         .map(|(asset_id, groups_w_same_asset_id)| {
@@ -141,7 +142,7 @@ pub(crate) fn build_script_data_from_contract_calls(
 ///
 /// Note that these are soft rules as we're picking this addresses simply because they
 /// non-reserved register.
-fn get_single_call_instructions(offsets: &CallOpcodeParamsOffset) -> Vec<u8> {
+pub(crate) fn get_single_call_instructions(offsets: &CallOpcodeParamsOffset) -> Vec<u8> {
     let instructions = vec![
         Opcode::MOVI(0x10, offsets.call_data_offset as Immediate18),
         Opcode::MOVI(0x11, offsets.gas_forwarded_offset as Immediate18),
@@ -255,28 +256,6 @@ fn convert_to_signed_resources(spendable_resources: Vec<Resource>) -> Vec<Input>
         .collect()
 }
 
-/// Gets the base offset for a script. The offset depends on the `max_inputs`
-/// field of the `ConsensusParameters` and the static offset
-pub fn get_base_script_offset(consensus_parameters: &ConsensusParameters) -> usize {
-    consensus_parameters.tx_offset() + fuel_tx::Script::script_offset_static()
-}
-
-/// Calculates the length of the script based on the number of contract calls it
-/// has to make and returns the offset at which the script data begins
-pub(crate) fn get_data_offset(
-    consensus_parameters: &ConsensusParameters,
-    num_calls: usize,
-) -> usize {
-    // use placeholder for call param offsets, we only care about the length
-    let len_script =
-        get_single_call_instructions(&CallOpcodeParamsOffset::default()).len() * num_calls;
-
-    // Opcode::LEN is a placeholder for the RET instruction which is added later
-    let opcode_len = Opcode::LEN;
-
-    get_base_script_offset(consensus_parameters) + padded_len_usize(len_script + opcode_len)
-}
-
 fn generate_contract_inputs(contract_ids: HashSet<ContractId>) -> Vec<Input> {
     contract_ids
         .into_iter()
@@ -316,6 +295,7 @@ mod test {
     use fuels_types::param_types::ParamType;
     use rand::Rng;
     use std::slice;
+
     impl ContractCall {
         pub fn new_with_random_id() -> Self {
             ContractCall {
@@ -704,20 +684,23 @@ mod test {
 
     #[test]
     fn will_collate_same_asset_ids() {
-        let amounts = [100, 200];
+        let asset_id_1 = AssetId::from([1; 32]);
+        let asset_id_2 = AssetId::from([2; 32]);
 
-        let asset_id = [1; 32].into();
-        let calls = amounts.map(|amount| {
-            ContractCall::new_with_random_id().with_call_parameters(CallParameters::new(
-                Some(amount),
-                Some(asset_id),
-                None,
-            ))
+        let calls = [
+            (asset_id_1, 100),
+            (asset_id_2, 200),
+            (asset_id_1, 300),
+            (asset_id_2, 400),
+        ]
+        .map(|(asset_id, amount)| CallParameters::new(Some(amount), Some(asset_id), None))
+        .map(|call_parameters| {
+            ContractCall::new_with_random_id().with_call_parameters(call_parameters)
         });
 
         let asset_id_amounts = calculate_required_asset_amounts(&calls);
 
-        let expected_asset_id_amounts = [(asset_id, amounts.iter().sum())].into();
+        let expected_asset_id_amounts = [(asset_id_1, 400), (asset_id_2, 600)].into();
 
         assert_eq!(
             asset_id_amounts.into_iter().collect::<HashSet<_>>(),

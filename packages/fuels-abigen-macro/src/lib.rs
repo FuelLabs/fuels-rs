@@ -1,4 +1,4 @@
-use fuels_core::code_gen::abigen::Abigen;
+use fuels_core::code_gen::abigen::{Abigen, AbigenType};
 use inflector::Inflector;
 use proc_macro::TokenStream;
 use proc_macro2::Span;
@@ -13,11 +13,11 @@ use syn::{
 /// Abigen proc macro definition and helper functions/types.
 #[proc_macro]
 pub fn abigen(input: TokenStream) -> TokenStream {
-    let args = parse_macro_input!(input as Spanned<ContractArgs>);
+    let args = parse_macro_input!(input as Spanned<AbigenArgs>);
 
-    Abigen::new(&args.name, &args.abi)
+    Abigen::new(&args.name, &args.abi, AbigenType::Contract)
         .unwrap()
-        .expand_contract()
+        .expand()
         .unwrap()
         .into()
 }
@@ -25,23 +25,35 @@ pub fn abigen(input: TokenStream) -> TokenStream {
 /// Abigen proc macro definition and helper functions/types for scripts
 #[proc_macro]
 pub fn script_abigen(input: TokenStream) -> TokenStream {
-    let args = parse_macro_input!(input as Spanned<ContractArgs>);
+    let args = parse_macro_input!(input as Spanned<AbigenArgs>);
 
-    Abigen::new(&args.name, &args.abi)
+    Abigen::new(&args.name, &args.abi, AbigenType::Script)
         .unwrap()
-        .expand_script()
+        .expand()
+        .unwrap()
+        .into()
+}
+
+/// Abigen proc macro definition and helper functions/types for scripts
+#[proc_macro]
+pub fn predicate_abigen(input: TokenStream) -> TokenStream {
+    let args = parse_macro_input!(input as Spanned<AbigenArgs>);
+
+    Abigen::new(&args.name, &args.abi, AbigenType::Predicate)
+        .unwrap()
+        .expand()
         .unwrap()
         .into()
 }
 
 #[proc_macro]
 pub fn wasm_abigen(input: TokenStream) -> TokenStream {
-    let args = parse_macro_input!(input as Spanned<ContractArgs>);
+    let args = parse_macro_input!(input as Spanned<AbigenArgs>);
 
-    Abigen::new(&args.name, &args.abi)
+    Abigen::new(&args.name, &args.abi, AbigenType::Contract)
         .unwrap()
         .no_std()
-        .expand_contract()
+        .expand()
         .unwrap()
         .into()
 }
@@ -86,11 +98,12 @@ pub fn setup_contract_test(input: TokenStream) -> TokenStream {
     let storage_path = compiled_file_path("-storage_slots.json", "the storage slots file");
 
     let contract_struct_name = args.instance_name.to_class_case();
-    let mut abigen_token_stream: TokenStream = Abigen::new(&contract_struct_name, abi_path)
-        .unwrap()
-        .expand_contract()
-        .unwrap()
-        .into();
+    let mut abigen_token_stream: TokenStream =
+        Abigen::new(&contract_struct_name, abi_path, AbigenType::Contract)
+            .unwrap()
+            .expand()
+            .unwrap()
+            .into();
 
     // Generate random salt for contract deployment
     let mut rng = StdRng::from_entropy();
@@ -180,12 +193,12 @@ impl<T> Deref for Spanned<T> {
 
 /// Contract procedural macro arguments.
 #[cfg_attr(test, derive(Debug, Eq, PartialEq))]
-pub(crate) struct ContractArgs {
+pub(crate) struct AbigenArgs {
     name: String,
     abi: String,
 }
 
-impl ParseInner for ContractArgs {
+impl ParseInner for AbigenArgs {
     fn spanned_parse(input: ParseStream) -> ParseResult<(Span, Self)> {
         // read the contract name
         let name = input.parse::<Ident>()?.to_string();
@@ -201,7 +214,7 @@ impl ParseInner for ContractArgs {
             input.parse::<Token![,]>()?;
         }
 
-        Ok((span, ContractArgs { name, abi }))
+        Ok((span, AbigenArgs { name, abi }))
     }
 }
 

@@ -16,9 +16,9 @@ env:
   CARGO_TERM_COLOR: always
   DASEL_VERSION: https://github.com/TomWright/dasel/releases/download/v1.24.3/dasel_linux_amd64
   RUSTFLAGS: "-D warnings"
-  FUEL_CORE_VERSION: 0.14.1
+  FUEL_CORE_VERSION: 0.15.1
   RUST_VERSION: 1.64.0
-  FORC_VERSION: 0.31.1
+  FORC_VERSION: 0.32.2
   FORC_PATCH_BRANCH: ""
   FORC_PATCH_REVISION: ""
 
@@ -43,18 +43,16 @@ jobs:
 
       - name: Install forc and forc-fmt
         run: |
-          if [[ -z $FORC_PATCH_BRANCH && -z $FORC_PATCH_REVISION ]]; then
+          if [[ -n $FORC_PATCH_BRANCH ]]; then
+            cargo install forc forc-fmt --git https://github.com/FuelLabs/sway --branch $FORC_PATCH_BRANCH
+          elif [[ -n $FORC_PATCH_BRANCH ]]; then
+            cargo install forc forc-fmt --git https://github.com/FuelLabs/sway --rev $FORC_PATCH_REVISION
+          else
             curl -sSLf https://github.com/FuelLabs/sway/releases/download/v${{ env.FORC_VERSION }}/forc-binaries-linux_amd64.tar.gz -L -o forc.tar.gz
             tar -xvf forc.tar.gz
             chmod +x forc-binaries/forc
             mv forc-binaries/forc /usr/local/bin/forc
             mv forc-binaries/forc-fmt /usr/local/bin/forc-fmt
-          else
-            if [[ -n $FORC_PATCH_BRANCH ]]; then
-              cargo install forc forc-fmt --git https://github.com/FuelLabs/sway --branch $FORC_PATCH_BRANCH
-            else 
-              cargo install forc forc-fmt --git https://github.com/FuelLabs/sway --rev $FORC_PATCH_REVISION
-            fi
           fi
 
       - name: Build Sway test projects
@@ -241,4 +239,5 @@ jobs:
         uses: katyo/publish-crates@v1
         with:
           publish-delay: 30000
+          no-verify: true
           registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}

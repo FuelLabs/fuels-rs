@@ -1,5 +1,7 @@
 contract;
 
+use std::logging::log;
+
 enum EnumWithGeneric<D> {
     VariantOne: D,
     VariantTwo: (),
@@ -19,6 +21,7 @@ abi TestContract {
     fn require_primitive();
     fn require_string();
     fn require_custom_generic();
+    fn require_with_additional_logs();
 }
 
 impl TestContract for Contract {
@@ -44,5 +47,11 @@ impl TestContract for Contract {
         };
 
         require(false, test_deeply_nested_generic);
+    }
+
+    fn require_with_additional_logs() {
+        log(42);
+        log("fuel");
+        require(false, 64);
     }
 }

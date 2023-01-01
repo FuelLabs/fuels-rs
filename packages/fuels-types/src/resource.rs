@@ -7,11 +7,17 @@ pub enum Resource {
     Message(Message),
 }
 
-impl From<ClientResource> for Resource {
-    fn from(client_resource: ClientResource) -> Self {
+impl TryFrom<ClientResource> for Resource {
+    type Error = std::io::Error;
+
+    fn try_from(client_resource: ClientResource) -> Result<Self, Self::Error> {
         match client_resource {
-            ClientResource::Coin(coin) => Resource::Coin(coin.into()),
-            ClientResource::Message(message) => Resource::Message(message.into()),
+            ClientResource::Coin(coin) => Ok(Resource::Coin(coin.into())),
+            ClientResource::Message(message) => Ok(Resource::Message(message.into())),
+            ClientResource::Unknown => Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                "Got unknown `ClientResource`",
+            )),
         }
     }
 }
