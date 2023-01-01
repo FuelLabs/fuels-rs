@@ -20,6 +20,7 @@ pub(crate) fn predicate_bindings(
     if no_std {
         return Ok(GeneratedCode::default());
     }
+
     let encode_function = expand_fn(&abi, shared_types)?;
 
     let code = quote! {
