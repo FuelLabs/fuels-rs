@@ -1,31 +1,52 @@
 use fuels_core::code_gen::abigen::{Abigen, AbigenTarget, ProgramType};
 use inflector::Inflector;
+use itertools::Itertools;
 use proc_macro::TokenStream;
 use proc_macro2::Span;
 use quote::quote;
 use rand::prelude::{Rng, SeedableRng, StdRng};
-use std::{ops::Deref, path::Path};
+
+use std::path::Path;
+
+use syn::parse_macro_input::ParseMacroInput;
+use syn::punctuated::Punctuated;
+use syn::spanned::Spanned;
 use syn::{
+    parenthesized,
     parse::{Parse, ParseStream, Result as ParseResult},
-    parse_macro_input, Ident, LitStr, Token,
+    parse_macro_input, AttributeArgs, Ident, Lit, LitStr, Meta, MetaNameValue, NestedMeta, Token,
 };
 
 /// Abigen proc macro definition and helper functions/types.
 #[proc_macro]
 pub fn abigen(input: TokenStream) -> TokenStream {
-    let args = parse_macro_input!(input as Spanned<MultipleAbis>);
+    let args = parse_macro_input!(input as MultipleAbis);
 
-    let targets = into_abigen_targets(args.clone(), ProgramType::Contract);
+    let targets = into_abigen_targets(args, ProgramType::Contract);
 
     Abigen::generate(targets, false).unwrap().into()
 }
 
+#[proc_macro]
+pub fn new_abigen(input: TokenStream) -> TokenStream {
+    let args = parse_macro_input!(input as NewMultipleAbis);
+
+    let targets = new_into_abigen_targets(args);
+
+    Abigen::generate(targets, false).unwrap().into()
+}
+// abigen!(
+//             Contract(name=MyContract, abi="packages/fuels/tests/storage/contract_storage_test/out/debug/contract_storage_test-abi.json"),
+//             Script(name=MyContract, abi="packages/fuels/tests/storage/contract_storage_test/out/debug/contract_storage_test-abi.json"),
+//             Predicate(name=MyContract, abi="packages/fuels/tests/storage/contract_storage_test/out/debug/contract_storage_test-abi.json")
+//     );
+
 /// Abigen proc macro definition and helper functions/types for scripts
 #[proc_macro]
 pub fn script_abigen(input: TokenStream) -> TokenStream {
-    let args = parse_macro_input!(input as Spanned<MultipleAbis>);
+    let args = parse_macro_input!(input as MultipleAbis);
 
-    let targets = into_abigen_targets(args.clone(), ProgramType::Script);
+    let targets = into_abigen_targets(args, ProgramType::Script);
 
     Abigen::generate(targets, false).unwrap().into()
 }
@@ -33,18 +54,18 @@ pub fn script_abigen(input: TokenStream) -> TokenStream {
 /// Abigen proc macro definition and helper functions/types for scripts
 #[proc_macro]
 pub fn predicate_abigen(input: TokenStream) -> TokenStream {
-    let args = parse_macro_input!(input as Spanned<MultipleAbis>);
+    let args = parse_macro_input!(input as MultipleAbis);
 
-    let targets = into_abigen_targets(args.clone(), ProgramType::Predicate);
+    let targets = into_abigen_targets(args, ProgramType::Predicate);
 
     Abigen::generate(targets, false).unwrap().into()
 }
 
 #[proc_macro]
 pub fn wasm_abigen(input: TokenStream) -> TokenStream {
-    let args = parse_macro_input!(input as Spanned<MultipleAbis>);
+    let args = parse_macro_input!(input as MultipleAbis);
 
-    let targets = into_abigen_targets(args.clone(), ProgramType::Contract);
+    let targets = into_abigen_targets(args, ProgramType::Contract);
 
     Abigen::generate(targets, true).unwrap().into()
 }
@@ -60,6 +81,17 @@ fn into_abigen_targets(args: MultipleAbis, program_type: ProgramType) -> Vec<Abi
         .collect()
 }
 
+fn new_into_abigen_targets(args: NewMultipleAbis) -> Vec<AbigenTarget> {
+    args.abis
+        .into_iter()
+        .map(|abi_details| AbigenTarget {
+            name: abi_details.name,
+            source: abi_details.abi,
+            program_type: abi_details.program_type,
+        })
+        .collect()
+}
+
 /// This proc macro is used to reduce the amount of boilerplate code in integration tests.
 /// When expanded, the proc macro will: launch a local provider, generate one wallet,
 /// deploy the selected contract and create a contract instance.
@@ -70,7 +102,7 @@ fn into_abigen_targets(args: MultipleAbis, program_type: ProgramType) -> Vec<Abi
 /// wallet name to `wallet`. The other ones must set the wallet name to `None`.
 #[proc_macro]
 pub fn setup_contract_test(input: TokenStream) -> TokenStream {
-    let args = parse_macro_input!(input as Spanned<ContractTestArgs>);
+    let args = parse_macro_input!(input as ContractTestArgs);
 
     let abs_forc_dir = Path::new(&args.project_path)
         .canonicalize()
@@ -152,50 +184,6 @@ pub fn setup_contract_test(input: TokenStream) -> TokenStream {
     abigen_token_stream
 }
 
-/// Trait that abstracts functionality for inner data that can be parsed and
-/// wrapped with a specific `Span`.
-trait ParseInner: Sized {
-    fn spanned_parse(input: ParseStream) -> ParseResult<(Span, Self)>;
-}
-
-impl<T: Parse> ParseInner for T {
-    fn spanned_parse(input: ParseStream) -> ParseResult<(Span, Self)> {
-        Ok((input.span(), T::parse(input)?))
-    }
-}
-
-impl<T: ParseInner> Parse for Spanned<T> {
-    fn parse(input: ParseStream) -> ParseResult<Self> {
-        let (span, value) = T::spanned_parse(input)?;
-        Ok(Spanned(span, value))
-    }
-}
-
-/// A struct that captures `Span` information for inner parsable data.
-struct Spanned<T>(Span, T);
-
-impl<T> Spanned<T> {
-    /// Retrieves the captured `Span` information for the parsed data.
-    #[allow(dead_code)]
-    fn span(&self) -> Span {
-        self.0
-    }
-
-    /// Retrieves the inner data.
-    #[allow(dead_code)]
-    fn into_inner(self) -> T {
-        self.1
-    }
-}
-
-impl<T> Deref for Spanned<T> {
-    type Target = T;
-
-    fn deref(&self) -> &Self::Target {
-        &self.1
-    }
-}
-
 #[derive(Clone)]
 struct Abi {
     name: String,
@@ -207,29 +195,197 @@ struct MultipleAbis {
     abis: Vec<Abi>,
 }
 
-impl ParseInner for MultipleAbis {
-    fn spanned_parse(input: ParseStream) -> ParseResult<(Span, Self)> {
-        let mut contracts = vec![];
-        let mut span = Span::call_site();
-        while !input.is_empty() {
-            // read the contract name
-            let name = input.parse::<Ident>()?.to_string();
+#[derive(Clone)]
+struct NewAbi {
+    name: String,
+    abi: String,
+    program_type: ProgramType,
+}
 
-            // skip the comma
-            input.parse::<Token![,]>()?;
+#[derive(Clone)]
+struct NewMultipleAbis {
+    abis: Punctuated<NewAbi, Token![,]>,
+}
 
-            let literal = input.parse::<LitStr>()?;
-            span = literal.span();
-            let abi = literal.value();
+impl Parse for MultipleAbis {
+    fn parse(input: ParseStream) -> ParseResult<Self> {
+        let abis = input
+            .parse_terminated::<_, Token![,]>(ParseMacroInput::parse)?
+            .into_iter()
+            .collect::<Vec<_>>();
 
-            contracts.push(Abi { name, source: abi });
+        Ok(MultipleAbis { abis })
+    }
+}
 
-            if !input.is_empty() {
-                input.parse::<Token![,]>()?;
+impl Parse for NewMultipleAbis {
+    fn parse(input: ParseStream) -> ParseResult<Self> {
+        let abis = input.parse_terminated::<_, Token![,]>(ParseMacroInput::parse)?;
+
+        Ok(Self { abis })
+    }
+}
+
+fn parse_program_type(input: ParseStream) -> ParseResult<ProgramType> {
+    let ident = input.parse::<Ident>()?;
+
+    match ident.to_string().as_ref() {
+        "Contract" => Ok(ProgramType::Contract),
+        "Script" => Ok(ProgramType::Script),
+        "Predicate" => Ok(ProgramType::Predicate),
+        _ => Err(syn::Error::new_spanned(
+            ident,
+            "Unsupported program type. Expected: 'Contract', 'Script' or 'Predicate'",
+        )),
+    }
+}
+
+fn extract_attrs(input: ParseStream) -> syn::Result<Vec<MetaNameValue>> {
+    AttributeArgs::parse(input)?
+        .into_iter()
+        .map(|e| match e {
+            NestedMeta::Meta(Meta::NameValue(nv)) => Ok(nv),
+            _ => Err(syn::Error::new_spanned(
+                e,
+                "abigen macro accepts only attributes in the form `attr = \"<value>\"`",
+            )),
+        })
+        .collect::<Result<Vec<_>, _>>()
+}
+
+fn validate_args_names_valid(args: &[MetaNameValue]) -> syn::Result<()> {
+    let valid_attr_names = ["name", "abi", "program_type"];
+
+    args.iter()
+        .filter(|arg| {
+            !valid_attr_names
+                .iter()
+                .any(|valid_name| arg.path.is_ident(valid_name))
+        })
+        .map(|invalid_nv| {
+            let expected_names = valid_attr_names
+                .iter()
+                .map(|name| format!("'{name}'"))
+                .join(",");
+
+            syn::Error::new_spanned(
+                &invalid_nv.path,
+                format!("Unknown attribute, expected one of: [{expected_names}]"),
+            )
+        })
+        .reduce(|mut all_errors, current_err| {
+            all_errors.combine(current_err);
+            all_errors
+        })
+        .map(Err)
+        .unwrap_or(Ok(()))
+}
+
+fn validate_no_duplicates(args: &[MetaNameValue]) -> syn::Result<()> {
+    args.iter()
+        .map(|arg| {
+            arg.path
+                .get_ident()
+                .expect("Previously validated that the names were valid")
+        })
+        .sorted()
+        .group_by(|ident| *ident)
+        .into_iter()
+        .filter_map(|(_, group)| {
+            let group = group.collect_vec();
+
+            if group.len() > 1 {
+                let mut duplicates = group.iter();
+                let original = duplicates.next().expect("We know there is > 1 element");
+
+                let err = duplicates.fold(
+                    syn::Error::new_spanned(original, "Duplicate arguments! Original: "),
+                    |mut all_errs, duplicate| {
+                        all_errs.combine(syn::Error::new_spanned(duplicate, "Duplicate: "));
+                        all_errs
+                    },
+                );
+                Some(err)
+            } else {
+                None
             }
-        }
+        })
+        .reduce(|mut all_errs, err| {
+            all_errs.combine(err);
+            all_errs
+        })
+        .map(Err)
+        .unwrap_or(Ok(()))
+}
 
-        Ok((span, MultipleAbis { abis: contracts }))
+fn validate_args(args: &[MetaNameValue]) -> syn::Result<()> {
+    [
+        validate_args_names_valid(args),
+        validate_no_duplicates(args),
+    ]
+    .into_iter()
+    .filter_map(Result::err)
+    .reduce(|mut all_errs, err| {
+        all_errs.combine(err);
+        all_errs
+    })
+    .map(Err)
+    .unwrap_or(Ok(()))
+}
+
+impl Parse for NewAbi {
+    fn parse(input: ParseStream) -> ParseResult<Self> {
+        let program_type = parse_program_type(input)?;
+
+        let content;
+        parenthesized!(content in input);
+
+        let attrs = extract_attrs(&content)?;
+        validate_args(&attrs)?;
+
+        let content_start = attrs
+            .first()
+            .map(|f| f.span())
+            .unwrap_or_else(|| content.span());
+        let name = attr_value(&attrs, "name", content_start)?.value();
+        let abi = attr_value(&attrs, "abi", content_start)?.value();
+
+        Ok(Self {
+            name,
+            abi,
+            program_type,
+        })
+    }
+}
+
+fn attr_value(args: &[MetaNameValue], attr_name: &str, content_start: Span) -> ParseResult<LitStr> {
+    args.iter()
+        .find(|nv| nv.path.is_ident(attr_name))
+        .ok_or_else(|| {
+            syn::Error::new(
+                content_start,
+                format!("'{attr_name}' attribute is missing!"),
+            )
+        })
+        .and_then(|f| match &f.lit {
+            Lit::Str(lit_str) => Ok(lit_str.clone()),
+            _ => Err(syn::Error::new_spanned(
+                f,
+                format!("Expected a string for the '{attr_name}' attribute"),
+            )),
+        })
+}
+
+impl Parse for Abi {
+    fn parse(input: ParseStream) -> ParseResult<Self> {
+        let name = input.parse::<Ident>()?.to_string();
+
+        // skip the comma
+        input.parse::<Token![,]>()?;
+
+        let abi = input.parse::<LitStr>()?.value();
+
+        Ok(Abi { name, source: abi })
     }
 }
 
@@ -241,15 +397,15 @@ struct ContractTestArgs {
     project_path: String,
 }
 
-impl ParseInner for ContractTestArgs {
-    fn spanned_parse(input: ParseStream) -> ParseResult<(Span, Self)> {
+impl Parse for ContractTestArgs {
+    fn parse(input: ParseStream) -> ParseResult<Self> {
         let instance_name = input.parse::<Ident>()?.to_string();
         input.parse::<Token![,]>()?;
 
         let wallet_name = input.parse::<Ident>()?.to_string();
         input.parse::<Token![,]>()?;
 
-        let (span, project_path) = {
+        let (_, project_path) = {
             let literal = input.parse::<LitStr>()?;
             (literal.span(), literal.value())
         };
@@ -257,13 +413,10 @@ impl ParseInner for ContractTestArgs {
             input.parse::<Token![,]>()?;
         }
 
-        Ok((
-            span,
-            ContractTestArgs {
-                instance_name,
-                wallet_name,
-                project_path,
-            },
-        ))
+        Ok(ContractTestArgs {
+            instance_name,
+            wallet_name,
+            project_path,
+        })
     }
 }
