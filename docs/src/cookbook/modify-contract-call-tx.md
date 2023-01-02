@@ -8,7 +8,7 @@ First we need to include some traits to access the inputs/outputs of the transac
 {{#include ../../../examples/cookbook/src/lib.rs:modify_call_inputs_include}}
 ```
 
-Now let's setup 2 wallets that hold a base asset coin, and a coin of some other asset.
+Now let's set up two wallets that hold a base asset coin and a coin of another asset.
 
 ```rust,ignore
 {{#include ../../../examples/cookbook/src/lib.rs:modify_call_inputs_setup}}
