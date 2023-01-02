@@ -134,18 +134,8 @@ fn validate_no_duplicates(args: &[MetaNameValue]) -> syn::Result<()> {
 }
 
 fn validate_args(args: &[MetaNameValue]) -> syn::Result<()> {
-    [
-        validate_args_names_valid(args),
-        validate_no_duplicates(args),
-    ]
-    .into_iter()
-    .filter_map(Result::err)
-    .reduce(|mut all_errs, err| {
-        all_errs.combine(err);
-        all_errs
-    })
-    .map(Err)
-    .unwrap_or(Ok(()))
+    validate_args_names_valid(args)?;
+    validate_no_duplicates(args)
 }
 
 impl Parse for MacroAbigenTargets {
@@ -171,8 +161,8 @@ impl Parse for MacroAbigenTarget {
             .map(|f| f.span())
             .unwrap_or_else(|| content.span());
 
-        let name = attr_raw_str_value(&attrs, "name", content_start)?.value();
-        let abi = attr_raw_str_value(&attrs, "abi", content_start)?.value();
+        let name = attr_value(&attrs, "name", content_start)?.value();
+        let abi = attr_value(&attrs, "abi", content_start)?.value();
 
         Ok(Self {
             name,
@@ -182,11 +172,7 @@ impl Parse for MacroAbigenTarget {
     }
 }
 
-fn attr_raw_str_value(
-    args: &[MetaNameValue],
-    attr_name: &str,
-    content_start: Span,
-) -> ParseResult<LitStr> {
+fn attr_value(args: &[MetaNameValue], attr_name: &str, content_start: Span) -> ParseResult<LitStr> {
     args.iter()
         .find(|nv| nv.path.is_ident(attr_name))
         .ok_or_else(|| {
