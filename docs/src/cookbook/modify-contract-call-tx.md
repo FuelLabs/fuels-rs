@@ -21,7 +21,7 @@ finally, the underlying call by using `get_executable_call()`.
 {{#include ../../../examples/cookbook/src/lib.rs:modify_call_inputs_instance}}
 ```
 
-Since the executable call acts as a wrapper fot the actual transaction, we can use it to modify fields like the inputs, outputs, maturity etc. Here, we setup inputs coming from `wallet_1` to be transferred to `wallet_2`.
+Since the executable call acts as a wrapper for the actual transaction, we can use it to modify fields like the inputs, outputs, maturity, etc. Here, we set up inputs from `wallet_1` to be transferred to `wallet_2`.
 
 ```rust,ignore
 {{#include ../../../examples/cookbook/src/lib.rs:modify_call_inputs_execute}}
