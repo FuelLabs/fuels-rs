@@ -27,7 +27,7 @@ Since the executable call acts as a wrapper fot the actual transaction, we can u
 {{#include ../../../examples/cookbook/src/lib.rs:modify_call_inputs_execute}}
 ```
 
-Finally, we verify the result of the contract call and the transfer.
+Lastly, we verify the result of the contract call and the transfer.
 
 ```rust,ignore
 {{#include ../../../examples/cookbook/src/lib.rs:modify_call_inputs_verify}}
