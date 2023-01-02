@@ -14,7 +14,7 @@ Now let's setup 2 wallets that hold a base asset coin, and a coin of some other 
 {{#include ../../../examples/cookbook/src/lib.rs:modify_call_inputs_setup}}
 ```
 
-In the next step, we deploy our test contract, create an instance of the contract, get the call handler and
+In the next step, we deploy our test contract, create an instance of the contract and get the call handler. Finally, we get the underlying call using `get_executable_call()`. 
 
 ```rust,ignore
 {{#include ../../../examples/cookbook/src/lib.rs:modify_call_inputs_instance}}
