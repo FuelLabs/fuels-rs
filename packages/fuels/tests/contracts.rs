@@ -466,10 +466,10 @@ async fn setup_output_variable_estimation_test(
 
 #[tokio::test]
 async fn test_output_variable_estimation() -> Result<(), Error> {
-    abigen!(
-        MyContract,
-        "packages/fuels/tests/contracts/token_ops/out/debug/token_ops-abi.json"
-    );
+    abigen!(Contract(
+        name = "MyContract",
+        abi = "packages/fuels/tests/contracts/token_ops/out/debug/token_ops-abi.json"
+    ));
 
     let (wallets, addresses, mint_asset_id, contract_id) =
         setup_output_variable_estimation_test().await?;
@@ -518,10 +518,10 @@ async fn test_output_variable_estimation() -> Result<(), Error> {
 
 #[tokio::test]
 async fn test_output_variable_estimation_default_attempts() -> Result<(), Error> {
-    abigen!(
-        MyContract,
-        "packages/fuels/tests/contracts/token_ops/out/debug/token_ops-abi.json"
-    );
+    abigen!(Contract(
+        name = "MyContract",
+        abi = "packages/fuels/tests/contracts/token_ops/out/debug/token_ops-abi.json"
+    ));
 
     let (wallets, addresses, mint_asset_id, contract_id) =
         setup_output_variable_estimation_test().await?;
@@ -547,10 +547,10 @@ async fn test_output_variable_estimation_default_attempts() -> Result<(), Error>
 
 #[tokio::test]
 async fn test_output_variable_estimation_multicall() -> Result<(), Error> {
-    abigen!(
-        MyContract,
-        "packages/fuels/tests/contracts/token_ops/out/debug/token_ops-abi.json"
-    );
+    abigen!(Contract(
+        name = "MyContract",
+        abi = "packages/fuels/tests/contracts/token_ops/out/debug/token_ops-abi.json"
+    ));
 
     let (wallets, addresses, mint_asset_id, contract_id) =
         setup_output_variable_estimation_test().await?;

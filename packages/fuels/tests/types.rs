@@ -76,10 +76,7 @@ async fn call_with_structs() -> Result<(), Error> {
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `MyContract`.
     // ANCHOR: struct_generation
-    abigen!(
-        MyContract,
-        "packages/fuels/tests/types/complex_types_contract/out/debug/complex_types_contract-abi.json"
-    );
+    abigen!(Contract(name="MyContract", abi="packages/fuels/tests/types/complex_types_contract/out/debug/complex_types_contract-abi.json"));
 
     // Here we can use `CounterConfig`, a struct originally
     // defined in the contract.
@@ -214,11 +211,11 @@ async fn calls_with_empty_struct() -> Result<(), Error> {
 
 #[tokio::test]
 async fn can_use_try_into_to_construct_struct_from_bytes() -> Result<(), Error> {
-    abigen!(
-        MyContract,
-        "packages/fuels/tests/types/enum_inside_struct/out/debug\
+    abigen!(Contract(
+        name = "MyContract",
+        abi = "packages/fuels/tests/types/enum_inside_struct/out/debug\
         /enum_inside_struct-abi.json"
-    );
+    ));
     let cocktail_in_bytes: Vec<u8> = vec![
         0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 3,
     ];
@@ -630,11 +627,11 @@ async fn enum_as_input() -> Result<(), Error> {
 
 #[tokio::test]
 async fn can_use_try_into_to_construct_enum_from_bytes() -> Result<(), Error> {
-    abigen!(
-        MyContract,
-        "packages/fuels/tests/types/enum_inside_struct/out/debug\
+    abigen!(Contract(
+        name = "MyContract",
+        abi = "packages/fuels/tests/types/enum_inside_struct/out/debug\
         /enum_inside_struct-abi.json"
-    );
+    ));
     // ANCHOR: manual_decode
     let shaker_in_bytes: Vec<u8> = vec![0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 2];
 
@@ -715,9 +712,9 @@ async fn type_inside_enum() -> Result<(), Error> {
     expected = "SizedAsciiString<4> can only be constructed from a String of length 4. Got: fuell"
 )]
 async fn strings_must_have_correct_length() {
-    abigen!(
-        SimpleContract,
-        r#"
+    abigen!(Contract(
+        name = "SimpleContract",
+        abi = r#"
         {
           "types": [
             {
@@ -752,7 +749,7 @@ async fn strings_must_have_correct_length() {
           ]
         }
         "#,
-    );
+    ));
 
     let wallet = launch_provider_and_get_wallet().await;
     let contract_instance = SimpleContract::new(null_contract_id(), wallet);
@@ -766,9 +763,9 @@ async fn strings_must_have_correct_length() {
     expected = "SizedAsciiString must be constructed from a string containing only ascii encodable characters. Got: fueŁ"
 )]
 async fn strings_must_have_all_ascii_chars() {
-    abigen!(
-        SimpleContract,
-        r#"
+    abigen!(Contract(
+        name = "SimpleContract",
+        abi = r#"
         {
           "types": [
             {
@@ -803,7 +800,7 @@ async fn strings_must_have_all_ascii_chars() {
           ]
         }
         "#,
-    );
+    ));
 
     let wallet = launch_provider_and_get_wallet().await;
     let contract_instance = SimpleContract::new(null_contract_id(), wallet);
@@ -817,9 +814,9 @@ async fn strings_must_have_all_ascii_chars() {
     expected = "SizedAsciiString<4> can only be constructed from a String of length 4. Got: fuell"
 )]
 async fn strings_must_have_correct_length_custom_types() {
-    abigen!(
-        SimpleContract,
-        r#"
+    abigen!(Contract(
+        name = "SimpleContract",
+        abi = r#"
         {
           "types": [
             {
@@ -889,7 +886,7 @@ async fn strings_must_have_correct_length_custom_types() {
           ]
         }
         "#,
-    );
+    ));
 
     let wallet = launch_provider_and_get_wallet().await;
     let contract_instance = SimpleContract::new(null_contract_id(), wallet);
@@ -903,9 +900,9 @@ async fn strings_must_have_correct_length_custom_types() {
     expected = "SizedAsciiString must be constructed from a string containing only ascii encodable characters. Got: fueŁ"
 )]
 async fn strings_must_have_all_ascii_chars_custom_types() {
-    abigen!(
-        SimpleContract,
-        r#"
+    abigen!(Contract(
+        name = "SimpleContract",
+        abi = r#"
         {
           "types": [
             {
@@ -975,7 +972,7 @@ async fn strings_must_have_all_ascii_chars_custom_types() {
           ]
         }
         "#,
-    );
+    ));
 
     let inner_struct = InnerStruct {
         bar: "fueŁ".try_into().unwrap(),

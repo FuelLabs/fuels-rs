@@ -464,10 +464,10 @@ async fn test_multi_call_require_log_multi_contract() -> Result<(), Error> {
 #[allow(unused_variables)]
 async fn test_script_get_logs() -> Result<(), Error> {
     // ANCHOR: script_logs
-    script_abigen!(
-        log_script,
-        "packages/fuels/tests/logs/script_logs/out/debug/script_logs-abi.json"
-    );
+    abigen!(Script(
+        name = "log_script",
+        abi = "packages/fuels/tests/logs/script_logs/out/debug/script_logs-abi.json"
+    ));
 
     let wallet = launch_provider_and_get_wallet().await;
     let bin_path = "../fuels/tests/logs/script_logs/out/debug/script_logs.bin";
@@ -539,10 +539,7 @@ async fn test_script_logs_with_contract_logs() -> Result<(), Error> {
     .await?
     .into();
 
-    script_abigen!(
-        log_script,
-        "packages/fuels/tests/logs/script_with_contract_logs/out/debug/script_with_contract_logs-abi.json"
-    );
+    abigen!(Script(name="log_script", abi="packages/fuels/tests/logs/script_with_contract_logs/out/debug/script_with_contract_logs-abi.json"));
 
     let bin_path =
         "../fuels/tests/logs/script_with_contract_logs/out/debug/script_with_contract_logs.bin";
@@ -595,10 +592,10 @@ async fn test_script_logs_with_contract_logs() -> Result<(), Error> {
 
 #[tokio::test]
 async fn test_script_get_logs_with_type() -> Result<(), Error> {
-    script_abigen!(
-        log_script,
-        "packages/fuels/tests/logs/script_logs/out/debug/script_logs-abi.json"
-    );
+    abigen!(Script(
+        name = "log_script",
+        abi = "packages/fuels/tests/logs/script_logs/out/debug/script_logs-abi.json"
+    ));
 
     let wallet = launch_provider_and_get_wallet().await;
     let bin_path = "../fuels/tests/logs/script_logs/out/debug/script_logs.bin";
@@ -668,10 +665,10 @@ async fn test_script_get_logs_with_type() -> Result<(), Error> {
 
 #[tokio::test]
 async fn test_script_require_log() -> Result<(), Error> {
-    script_abigen!(
-        log_script,
-        "packages/fuels/tests/scripts/script_require/out/debug/script_require-abi.json"
-    );
+    abigen!(Script(
+        name = "log_script",
+        abi = "packages/fuels/tests/scripts/script_require/out/debug/script_require-abi.json"
+    ));
 
     let wallet = launch_provider_and_get_wallet().await;
     let bin_path = "../fuels/tests/scripts/script_require/out/debug/script_require.bin";

@@ -8,10 +8,10 @@ mod tests {
         use fuels::test_helpers::{AssetConfig, WalletsConfig};
 
         // ANCHOR: liquidity_abigen
-        abigen!(
-            MyContract,
-            "packages/fuels/tests/contracts/liquidity_pool/out/debug/liquidity_pool-abi.json"
-        );
+        abigen!(Contract(
+            name = "MyContract",
+            abi = "packages/fuels/tests/contracts/liquidity_pool/out/debug/liquidity_pool-abi.json"
+        ));
         // ANCHOR_END: liquidity_abigen
 
         // ANCHOR: liquidity_wallet

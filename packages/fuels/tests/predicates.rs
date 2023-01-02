@@ -93,10 +93,10 @@ async fn transfer_coins_and_messages_to_predicate() -> Result<(), Error> {
 
     wallet.set_provider(provider.clone());
 
-    predicate_abigen!(
-        MyPredicate,
-        "packages/fuels/tests/predicates/predicate_basic/out/debug/predicate_basic-abi.json"
-    );
+    abigen!(Predicate(
+        name = "MyPredicate",
+        abi = "packages/fuels/tests/predicates/predicate_basic/out/debug/predicate_basic-abi.json"
+    ));
 
     let predicate =
         MyPredicate::load_from("tests/predicates/predicate_basic/out/debug/predicate_basic.bin")?;
@@ -113,10 +113,10 @@ async fn transfer_coins_and_messages_to_predicate() -> Result<(), Error> {
 
 #[tokio::test]
 async fn spend_predicate_coins_messages_single_u64() -> Result<(), Error> {
-    predicate_abigen!(
-        MyPredicate,
-        "packages/fuels/tests/predicates/predicate_u64/out/debug/predicate_u64-abi.json"
-    );
+    abigen!(Predicate(
+        name = "MyPredicate",
+        abi = "packages/fuels/tests/predicates/predicate_u64/out/debug/predicate_u64-abi.json"
+    ));
 
     let predicate =
         MyPredicate::load_from("tests/predicates/predicate_u64/out/debug/predicate_u64.bin")?;
@@ -159,10 +159,10 @@ async fn spend_predicate_coins_messages_single_u64() -> Result<(), Error> {
 
 #[tokio::test]
 async fn spend_predicate_coins_messages_basic() -> Result<(), Error> {
-    predicate_abigen!(
-        MyPredicate,
-        "packages/fuels/tests/predicates/predicate_basic/out/debug/predicate_basic-abi.json"
-    );
+    abigen!(Predicate(
+        name = "MyPredicate",
+        abi = "packages/fuels/tests/predicates/predicate_basic/out/debug/predicate_basic-abi.json"
+    ));
 
     let predicate =
         MyPredicate::load_from("tests/predicates/predicate_basic/out/debug/predicate_basic.bin")?;
@@ -205,10 +205,7 @@ async fn spend_predicate_coins_messages_basic() -> Result<(), Error> {
 
 #[tokio::test]
 async fn spend_predicate_coins_messages_address() -> Result<(), Error> {
-    predicate_abigen!(
-        MyPredicate,
-        "packages/fuels/tests/predicates/predicate_address/out/debug/predicate_address-abi.json"
-    );
+    abigen!(Predicate(name="MyPredicate", abi="packages/fuels/tests/predicates/predicate_address/out/debug/predicate_address-abi.json"));
 
     let predicate = MyPredicate::load_from(
         "tests/predicates/predicate_address/out/debug/predicate_address.bin",
@@ -260,10 +257,10 @@ async fn spend_predicate_coins_messages_address() -> Result<(), Error> {
 
 #[tokio::test]
 async fn spend_predicate_coins_messages_enums() -> Result<(), Error> {
-    predicate_abigen!(
-        MyPredicate,
-        "packages/fuels/tests/predicates/predicate_enums/out/debug/predicate_enums-abi.json"
-    );
+    abigen!(Predicate(
+        name = "MyPredicate",
+        abi = "packages/fuels/tests/predicates/predicate_enums/out/debug/predicate_enums-abi.json"
+    ));
 
     let predicate =
         MyPredicate::load_from("tests/predicates/predicate_enums/out/debug/predicate_enums.bin")?;
@@ -306,10 +303,7 @@ async fn spend_predicate_coins_messages_enums() -> Result<(), Error> {
 
 #[tokio::test]
 async fn spend_predicate_coins_messages_structs() -> Result<(), Error> {
-    predicate_abigen!(
-        MyPredicate,
-        "packages/fuels/tests/predicates/predicate_structs/out/debug/predicate_structs-abi.json"
-    );
+    abigen!(Predicate(name="MyPredicate", abi="packages/fuels/tests/predicates/predicate_structs/out/debug/predicate_structs-abi.json"));
 
     let predicate = MyPredicate::load_from(
         "tests/predicates/predicate_structs/out/debug/predicate_structs.bin",
@@ -365,10 +359,10 @@ async fn spend_predicate_coins_messages_structs() -> Result<(), Error> {
 
 #[tokio::test]
 async fn spend_predicate_coins_messages_tuple() -> Result<(), Error> {
-    predicate_abigen!(
-        MyPredicate,
-        "packages/fuels/tests/predicates/predicate_tuple/out/debug/predicate_tuple-abi.json"
-    );
+    abigen!(Predicate(
+        name = "MyPredicate",
+        abi = "packages/fuels/tests/predicates/predicate_tuple/out/debug/predicate_tuple-abi.json"
+    ));
 
     let predicate =
         MyPredicate::load_from("tests/predicates/predicate_tuple/out/debug/predicate_tuple.bin")?;
@@ -411,10 +405,11 @@ async fn spend_predicate_coins_messages_tuple() -> Result<(), Error> {
 
 #[tokio::test]
 async fn spend_predicate_coins_messages_vector() -> Result<(), Error> {
-    predicate_abigen!(
-        MyPredicate,
-        "packages/fuels/tests/predicates/predicate_vector/out/debug/predicate_vector-abi.json"
-    );
+    abigen!(Predicate(
+        name = "MyPredicate",
+        abi =
+            "packages/fuels/tests/predicates/predicate_vector/out/debug/predicate_vector-abi.json"
+    ));
 
     let predicate =
         MyPredicate::load_from("tests/predicates/predicate_vector/out/debug/predicate_vector.bin")?;
@@ -457,10 +452,7 @@ async fn spend_predicate_coins_messages_vector() -> Result<(), Error> {
 
 #[tokio::test]
 async fn spend_predicate_coins_messages_vectors() -> Result<(), Error> {
-    predicate_abigen!(
-        MyPredicate,
-        "packages/fuels/tests/predicates/predicate_vectors/out/debug/predicate_vectors-abi.json"
-    );
+    abigen!(Predicate(name="MyPredicate", abi="packages/fuels/tests/predicates/predicate_vectors/out/debug/predicate_vectors-abi.json"));
 
     let predicate = MyPredicate::load_from(
         "tests/predicates/predicate_vectors/out/debug/predicate_vectors.bin",
@@ -549,10 +541,7 @@ async fn spend_predicate_coins_messages_vectors() -> Result<(), Error> {
 
 #[tokio::test]
 async fn spend_predicate_coins_messages_generics() -> Result<(), Error> {
-    predicate_abigen!(
-        MyPredicate,
-        "packages/fuels/tests/predicates/predicate_generics/out/debug/predicate_generics-abi.json"
-    );
+    abigen!(Predicate(name="MyPredicate", abi="packages/fuels/tests/predicates/predicate_generics/out/debug/predicate_generics-abi.json"));
 
     let predicate = MyPredicate::load_from(
         "tests/predicates/predicate_generics/out/debug/predicate_generics.bin",

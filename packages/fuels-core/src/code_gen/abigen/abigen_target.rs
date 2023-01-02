@@ -7,7 +7,7 @@ use crate::source::Source;
 
 pub struct AbigenTarget {
     pub name: String,
-    pub source: String,
+    pub abi: String,
     pub program_type: ProgramType,
 }
 
@@ -23,7 +23,7 @@ impl TryFrom<AbigenTarget> for ParsedAbigenTarget {
     fn try_from(value: AbigenTarget) -> Result<Self, Self::Error> {
         Ok(Self {
             name: value.name,
-            source: parse_program_abi(&value.source)?,
+            source: parse_program_abi(&value.abi)?,
             program_type: value.program_type,
         })
     }

@@ -5,9 +5,9 @@ use fuels::core::Tokenizable;
 use fuels::fuels_abigen::wasm_abigen;
 use fuels::types::param_types::ParamType;
 
-wasm_abigen!(
-    no_name,
-    r#"
+wasm_abigen!(Contract(
+    name = "no_name",
+    abi = r#"
     {
         "types": [
           {
@@ -99,7 +99,7 @@ wasm_abigen!(
         "loggedTypes": []
       }
     "#
-);
+));
 
 pub fn the_fn() {
     let data = vec![

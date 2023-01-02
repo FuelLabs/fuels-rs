@@ -12,14 +12,17 @@ mod tests {
         // ANCHOR: use_abigen
         use fuels::prelude::*;
         // Replace with your own JSON abi path (relative to the root of your crate)
-        abigen!(MyContractName, "examples/rust_bindings/src/abi.json");
+        abigen!(Contract(
+            name = "MyContractName",
+            abi = "examples/rust_bindings/src/abi.json"
+        ));
         // ANCHOR_END: use_abigen
 
         // ANCHOR: abigen_with_string
         // Don't forget to import the `abigen` macro as above
-        abigen!(
-            MyContract,
-            r#"
+        abigen!(Contract(
+            name = "MyContract",
+            abi = r#"
             {
                 "types": [
                   {
@@ -63,7 +66,7 @@ mod tests {
                 ]
               }
             "#
-        );
+        ));
         // ANCHOR_END: abigen_with_string
         Ok(())
     }

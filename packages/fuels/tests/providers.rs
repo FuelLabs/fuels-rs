@@ -11,10 +11,10 @@ use std::{iter, str::FromStr};
 
 #[tokio::test]
 async fn test_provider_launch_and_connect() -> Result<(), Error> {
-    abigen!(
-        MyContract,
-        "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
-    );
+    abigen!(Contract(
+        name = "MyContract",
+        abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
+    ));
 
     let mut wallet = WalletUnlocked::new_random(None);
 
@@ -60,10 +60,10 @@ async fn test_provider_launch_and_connect() -> Result<(), Error> {
 
 #[tokio::test]
 async fn test_network_error() -> Result<(), anyhow::Error> {
-    abigen!(
-        MyContract,
-        "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
-    );
+    abigen!(Contract(
+        name = "MyContract",
+        abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
+    ));
 
     let mut wallet = WalletUnlocked::new_random(None);
 
@@ -154,10 +154,10 @@ async fn test_input_message_pays_fee() -> Result<(), Error> {
     let (provider, _) = setup_test_provider(vec![], messages, None, None).await;
     wallet.set_provider(provider);
 
-    abigen!(
-        MyContract,
-        "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
-    );
+    abigen!(Contract(
+        name = "MyContract",
+        abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
+    ));
 
     let contract_id = Contract::deploy(
         "tests/contracts/contract_test/out/debug/contract_test.bin",
@@ -245,10 +245,7 @@ async fn can_set_custom_block_time() -> Result<(), Error> {
 
 #[tokio::test]
 async fn contract_deployment_respects_maturity() -> Result<(), Error> {
-    abigen!(
-        MyContract,
-        "packages/fuels/tests/contracts/transaction_block_height/out/debug/transaction_block_height-abi.json"
-    );
+    abigen!(Contract(name="MyContract", abi="packages/fuels/tests/contracts/transaction_block_height/out/debug/transaction_block_height-abi.json"));
 
     let config = Config {
         manual_blocks_enabled: true,
@@ -523,10 +520,10 @@ async fn testnet_hello_world() -> Result<(), Error> {
     // 3. The hardcoded wallet having enough funds to pay for the transaction.
     // This is a nice test to showcase the SDK interaction with
     // the testnet. But, if it becomes too problematic, we should remove it.
-    abigen!(
-        MyContract,
-        "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
-    );
+    abigen!(Contract(
+        name = "MyContract",
+        abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
+    ));
 
     // Create a provider pointing to the testnet.
     let provider = Provider::connect("node-beta-1.fuel.network").await.unwrap();

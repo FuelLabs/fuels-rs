@@ -37,9 +37,9 @@ async fn compile_bindings_from_contract_file() {
 async fn compile_bindings_from_inline_contract() -> Result<(), Error> {
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `SimpleContract`.
-    abigen!(
-        SimpleContract,
-        r#"
+    abigen!(Contract(
+        name = "SimpleContract",
+        abi = r#"
         {
             "types": [
                 {
@@ -74,7 +74,7 @@ async fn compile_bindings_from_inline_contract() -> Result<(), Error> {
             ]
         }
         "#,
-    );
+    ));
 
     let wallet = launch_provider_and_get_wallet().await;
 
@@ -97,9 +97,9 @@ async fn compile_bindings_from_inline_contract() -> Result<(), Error> {
 async fn compile_bindings_array_input() {
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `SimpleContract`.
-    abigen!(
-        SimpleContract,
-        r#"
+    abigen!(Contract(
+        name = "SimpleContract",
+        abi = r#"
         {
             "types": [
               {
@@ -146,7 +146,7 @@ async fn compile_bindings_array_input() {
             ]
         }
         "#,
-    );
+    ));
 
     let wallet = launch_provider_and_get_wallet().await;
 
@@ -172,9 +172,9 @@ async fn compile_bindings_array_input() {
 async fn compile_bindings_bool_array_input() {
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `SimpleContract`.
-    abigen!(
-        SimpleContract,
-        r#"
+    abigen!(Contract(
+        name = "SimpleContract",
+        abi = r#"
         {
             "types": [
               {
@@ -221,7 +221,7 @@ async fn compile_bindings_bool_array_input() {
             ]
         }
         "#,
-    );
+    ));
 
     let wallet = launch_provider_and_get_wallet().await;
 
@@ -247,9 +247,9 @@ async fn compile_bindings_bool_array_input() {
 async fn compile_bindings_byte_input() {
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `SimpleContract`.
-    abigen!(
-        SimpleContract,
-        r#"
+    abigen!(Contract(
+        name = "SimpleContract",
+        abi = r#"
         {
             "types": [
               {
@@ -284,7 +284,7 @@ async fn compile_bindings_byte_input() {
             ]
           }
         "#,
-    );
+    ));
 
     let wallet = launch_provider_and_get_wallet().await;
 
@@ -306,9 +306,9 @@ async fn compile_bindings_byte_input() {
 async fn compile_bindings_string_input() {
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `SimpleContract`.
-    abigen!(
-        SimpleContract,
-        r#"
+    abigen!(Contract(
+        name = "SimpleContract",
+        abi = r#"
         {
             "types": [
               {
@@ -343,7 +343,7 @@ async fn compile_bindings_string_input() {
             ]
           }
         "#,
-    );
+    ));
 
     let wallet = launch_provider_and_get_wallet().await;
 
@@ -374,9 +374,9 @@ async fn compile_bindings_string_input() {
 async fn compile_bindings_b256_input() {
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `SimpleContract`.
-    abigen!(
-        SimpleContract,
-        r#"
+    abigen!(Contract(
+        name = "SimpleContract",
+        abi = r#"
         {
             "types": [
               {
@@ -411,7 +411,7 @@ async fn compile_bindings_b256_input() {
             ]
           }
         "#,
-    );
+    ));
 
     let wallet = launch_provider_and_get_wallet().await;
 
@@ -441,9 +441,9 @@ async fn compile_bindings_b256_input() {
 
 #[tokio::test]
 async fn compile_bindings_evm_address_input() {
-    abigen!(
-        SimpleContract,
-        r#"
+    abigen!(Contract(
+        name = "SimpleContract",
+        abi = r#"
         {
             "types": [
               {
@@ -478,7 +478,7 @@ async fn compile_bindings_evm_address_input() {
             ]
           }
         "#,
-    );
+    ));
 
     let wallet = launch_provider_and_get_wallet().await;
 
@@ -511,9 +511,9 @@ async fn compile_bindings_evm_address_input() {
 async fn compile_bindings_struct_input() {
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `SimpleContract`.
-    abigen!(
-        SimpleContract,
-        r#"
+    abigen!(Contract(
+        name = "SimpleContract",
+        abi = r#"
         {
             "types": [
               {
@@ -583,7 +583,7 @@ async fn compile_bindings_struct_input() {
             ]
           }
         "#,
-    );
+    ));
     // Because of the abigen! macro, `MyStruct` is now in scope
     // and can be used!
     let input = MyStruct {
@@ -614,9 +614,9 @@ async fn compile_bindings_struct_input() {
 async fn compile_bindings_nested_struct_input() {
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `SimpleContract`.
-    abigen!(
-        SimpleContract,
-        r#"
+    abigen!(Contract(
+        name = "SimpleContract",
+        abi = r#"
         {
             "types": [
               {
@@ -686,7 +686,7 @@ async fn compile_bindings_nested_struct_input() {
             ]
           }
         "#,
-    );
+    ));
 
     let inner_struct = InnerStruct { a: true };
 
@@ -719,9 +719,9 @@ async fn compile_bindings_nested_struct_input() {
 async fn compile_bindings_enum_input() {
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `SimpleContract`.
-    abigen!(
-        SimpleContract,
-        r#"
+    abigen!(Contract(
+        name = "SimpleContract",
+        abi = r#"
         {
             "types": [
               {
@@ -779,7 +779,7 @@ async fn compile_bindings_enum_input() {
             ]
           }
         "#,
-    );
+    ));
 
     let variant = MyEnum::X(42);
 
@@ -808,8 +808,8 @@ async fn shared_types_between_contracts() -> Result<(), Error> {
     mod contracts {
         use super::*;
         abigen!(
-            ContractA, "packages/fuels/tests/bindings/contracts_sharing_types/contract_a/out/debug/contract_a-abi.json",
-            ContractB, "packages/fuels/tests/bindings/contracts_sharing_types/contract_b/out/debug/contract_b-abi.json",
+            Contract(name="ContractA", abi="packages/fuels/tests/bindings/contracts_sharing_types/contract_a/out/debug/contract_a-abi.json"),
+            Contract(name="ContractB", abi="packages/fuels/tests/bindings/contracts_sharing_types/contract_b/out/debug/contract_b-abi.json"),
         );
     }
     use contracts::*;
