@@ -127,7 +127,7 @@ pub(crate) fn get_sdk_provided_types() -> Vec<TypePath> {
         "::std::option::Option",
     ]
     .map(|type_path_str| {
-        TypePath::new(&type_path_str).expect("known at compile time to be correctly formed")
+        TypePath::new(type_path_str).expect("known at compile time to be correctly formed")
     })
     .to_vec()
 }

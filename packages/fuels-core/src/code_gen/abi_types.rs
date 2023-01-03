@@ -51,7 +51,7 @@ impl FullProgramABI {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct FullABIFunction {
     name: String,
     inputs: Vec<FullTypeApplication>,

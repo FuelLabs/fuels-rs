@@ -98,12 +98,12 @@ pub(crate) fn resolve_type(
     ]
     .into_iter()
     .filter_map(|fun| {
-        let is_common = shared_types.contains(base_type);
+        let is_shared = shared_types.contains(base_type);
         fun(
             type_field,
             move || recursively_resolve(&base_type.components),
             move || recursively_resolve(&type_application.type_arguments),
-            is_common,
+            is_shared,
         )
     })
     .next()
@@ -243,7 +243,7 @@ fn to_custom_type(
     type_field: &str,
     _: impl Fn() -> Vec<ResolvedType>,
     type_arguments_supplier: impl Fn() -> Vec<ResolvedType>,
-    is_common: bool,
+    is_shared: bool,
 ) -> Option<ResolvedType> {
     let type_name = custom_type_name(type_field).ok()?;
 
@@ -252,7 +252,7 @@ fn to_custom_type(
         .find(|provided_type| provided_type.type_name() == type_name)
         .unwrap_or_else(|| {
             let custom_type_name = ident(&type_name);
-            let path_str = if is_common {
+            let path_str = if is_shared {
                 format!("super::shared_types::{custom_type_name}")
             } else {
                 format!("self::{custom_type_name}")
@@ -568,6 +568,36 @@ mod tests {
                     ..Default::default()
                 },
             ],
+        )
+    }
+
+    #[test]
+    fn custom_types_uses_correct_path_for_sdk_provided_types() {
+        let provided_type_names = get_sdk_provided_types()
+            .into_iter()
+            .map(|type_path| (type_path.type_name().to_string(), type_path))
+            .collect::<HashMap<_, _>>();
+
+        for (type_name, expected_path) in provided_type_names {
+            let resolved_type =
+                to_custom_type(&format!("struct {type_name}"), Vec::new, Vec::new, false)
+                    .expect("Should have succeeded.");
+
+            let expected_type_name: TokenStream = expected_path.into();
+            assert_eq!(
+                resolved_type.type_name.to_string(),
+                expected_type_name.to_string()
+            );
+        }
+    }
+    #[test]
+    fn handles_shared_types() {
+        let resolved_type =
+            to_custom_type("struct SomeStruct", Vec::new, Vec::new, true).expect("should succeed");
+
+        assert_eq!(
+            resolved_type.type_name.to_string(),
+            "super :: shared_types :: SomeStruct"
         )
     }
 }

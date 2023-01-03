@@ -76,6 +76,8 @@ mod tests {
     use anyhow::anyhow;
     use proc_macro2::TokenStream;
 
+    use crate::code_gen::abi_types::FullTypeApplication;
+    use crate::code_gen::type_path::TypePath;
     use fuels_types::{ProgramABI, TypeApplication, TypeDeclaration};
 
     use super::*;
@@ -732,5 +734,37 @@ mod tests {
         assert_eq!(actual, expected);
 
         Ok(())
+    }
+
+    #[test]
+    fn will_skip_shared_types() {
+        // given
+        let types = ["struct SomeStruct", "enum SomeEnum"].map(given_a_custom_type);
+        let shared_types = HashSet::from_iter(types.iter().take(1).cloned());
+
+        // when
+        let generated_code = generate_types(types, &shared_types).expect("Should have succeeded.");
+
+        // then
+        assert_eq!(
+            generated_code.usable_types,
+            HashSet::from([TypePath::new("SomeEnum").expect("Hand crafted, should not fail")])
+        );
+    }
+
+    fn given_a_custom_type(type_field: &str) -> FullTypeDeclaration {
+        FullTypeDeclaration {
+            type_field: type_field.to_string(),
+            components: vec![FullTypeApplication {
+                name: "a".to_string(),
+                type_decl: FullTypeDeclaration {
+                    type_field: "u8".to_string(),
+                    components: vec![],
+                    type_parameters: vec![],
+                },
+                type_arguments: vec![],
+            }],
+            type_parameters: vec![],
+        }
     }
 }

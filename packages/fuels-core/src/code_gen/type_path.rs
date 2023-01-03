@@ -11,7 +11,7 @@ pub(crate) struct TypePath {
 }
 
 impl TypePath {
-    pub fn new<T: ToString>(path: &T) -> Result<Self, Error> {
+    pub fn new<T: ToString>(path: T) -> Result<Self, Error> {
         let path_str = path.to_string();
         let parts = path_str
             .split("::")

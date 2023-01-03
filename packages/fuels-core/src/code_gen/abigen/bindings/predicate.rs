@@ -95,7 +95,7 @@ pub(crate) fn predicate_bindings(
         }
     };
 
-    let type_paths = [TypePath::new(&name).expect("We know name is not empty.")].into();
+    let type_paths = [TypePath::new(name).expect("We know name is not empty.")].into();
 
     Ok(GeneratedCode {
         code,

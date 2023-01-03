@@ -86,7 +86,7 @@ pub(crate) fn contract_bindings(
     };
 
     let type_paths = [name, &methods_name]
-        .map(|type_name| TypePath::new(&type_name).expect("We know the given types are not empty"))
+        .map(|type_name| TypePath::new(type_name).expect("We know the given types are not empty"))
         .into_iter()
         .collect();
 
