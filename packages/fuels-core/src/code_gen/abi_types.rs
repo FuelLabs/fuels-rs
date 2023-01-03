@@ -203,3 +203,155 @@ impl FullTypeDeclaration {
         type_field.starts_with("struct ")
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashMap;
+
+    #[test]
+    fn abi_function_cannot_have_an_empty_name() {
+        let fn_output = FullTypeApplication {
+            name: "".to_string(),
+            type_decl: FullTypeDeclaration {
+                type_field: "SomeType".to_string(),
+                components: vec![],
+                type_parameters: vec![],
+            },
+            type_arguments: vec![],
+        };
+
+        let err = FullABIFunction::new("".to_string(), vec![], fn_output)
+            .expect_err("Should have failed.");
+
+        if let InvalidData(msg) = err {
+            assert_eq!(msg, "FullABIFunction's name cannot be empty!");
+        } else {
+            panic!("Unexpected error: {err}");
+        }
+    }
+    #[test]
+    fn can_convert_into_full_type_decl() {
+        // given
+        let type_0 = TypeDeclaration {
+            type_id: 0,
+            type_field: "type_0".to_string(),
+            components: Some(vec![TypeApplication {
+                name: "type_0_component_a".to_string(),
+                type_id: 1,
+                type_arguments: Some(vec![TypeApplication {
+                    name: "type_0_type_arg_0".to_string(),
+                    type_id: 2,
+                    type_arguments: None,
+                }]),
+            }]),
+            type_parameters: Some(vec![2]),
+        };
+
+        let type_1 = TypeDeclaration {
+            type_id: 1,
+            type_field: "type_1".to_string(),
+            components: None,
+            type_parameters: None,
+        };
+
+        let type_2 = TypeDeclaration {
+            type_id: 2,
+            type_field: "type_2".to_string(),
+            components: None,
+            type_parameters: None,
+        };
+
+        let types = [&type_0, &type_1, &type_2]
+            .iter()
+            .map(|&ttype| (ttype.type_id, ttype.clone()))
+            .collect::<HashMap<_, _>>();
+
+        // when
+        let sut = FullTypeDeclaration::from_counterpart(&type_0, &types);
+
+        // then
+        let type_2_decl = FullTypeDeclaration {
+            type_field: "type_2".to_string(),
+            components: vec![],
+            type_parameters: vec![],
+        };
+        assert_eq!(
+            sut,
+            FullTypeDeclaration {
+                type_field: "type_0".to_string(),
+                components: vec![FullTypeApplication {
+                    name: "type_0_component_a".to_string(),
+                    type_decl: FullTypeDeclaration {
+                        type_field: "type_1".to_string(),
+                        components: vec![],
+                        type_parameters: vec![],
+                    },
+                    type_arguments: vec![FullTypeApplication {
+                        name: "type_0_type_arg_0".to_string(),
+                        type_decl: type_2_decl.clone(),
+                        type_arguments: vec![],
+                    },],
+                },],
+                type_parameters: vec![type_2_decl],
+            }
+        )
+    }
+
+    #[test]
+    fn can_convert_into_full_type_appl() {
+        let application = TypeApplication {
+            name: "ta_0".to_string(),
+            type_id: 0,
+            type_arguments: Some(vec![TypeApplication {
+                name: "ta_1".to_string(),
+                type_id: 1,
+                type_arguments: None,
+            }]),
+        };
+
+        let type_0 = TypeDeclaration {
+            type_id: 0,
+            type_field: "type_0".to_string(),
+            components: None,
+            type_parameters: None,
+        };
+
+        let type_1 = TypeDeclaration {
+            type_id: 1,
+            type_field: "type_1".to_string(),
+            components: None,
+            type_parameters: None,
+        };
+
+        let types = [&type_0, &type_1]
+            .into_iter()
+            .map(|ttype| (ttype.type_id, ttype.clone()))
+            .collect::<HashMap<_, _>>();
+
+        // given
+        let sut = FullTypeApplication::from_counterpart(&application, &types);
+
+        // then
+        assert_eq!(
+            sut,
+            FullTypeApplication {
+                name: "ta_0".to_string(),
+                type_decl: FullTypeDeclaration {
+                    type_field: "type_0".to_string(),
+                    components: vec![],
+                    type_parameters: vec![],
+                },
+                type_arguments: vec![FullTypeApplication {
+                    name: "ta_1".to_string(),
+                    type_decl: FullTypeDeclaration {
+                        type_field: "type_1".to_string(),
+                        components: vec![],
+                        type_parameters: vec![],
+                    },
+                    type_arguments: vec![],
+                },],
+            }
+        )
+    }
+}

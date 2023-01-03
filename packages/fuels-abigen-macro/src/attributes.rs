@@ -8,6 +8,7 @@ use syn::{
     Result as ParseResult,
 };
 
+#[derive(Debug)]
 pub(crate) struct Attributes {
     content_start: Span,
     attrs: Vec<MetaNameValue>,
@@ -48,7 +49,7 @@ impl Attributes {
                 Lit::Str(lit_str) => Ok(lit_str.value()),
                 _ => Err(Error::new_spanned(
                     f,
-                    format!("Expected a string for the '{attr_name}' attribute"),
+                    format!("Expected a string for the value of the '{attr_name}' attribute."),
                 )),
             })
     }
@@ -67,13 +68,13 @@ impl Attributes {
     }
 
     fn validate_attrs(attrs: &[MetaNameValue]) -> syn::Result<()> {
-        Self::validate_names_valid(attrs)?;
-        // must come after `validate_names_valid`
-        Self::validate_no_duplicates(attrs)
+        Self::attr_names_are_valid(attrs)?;
+        // must come after `attr_names_are_valid`
+        Self::attr_names_are_not_duplicated(attrs)
     }
 
-    fn validate_names_valid(attrs: &[MetaNameValue]) -> syn::Result<()> {
-        let valid_attr_names = ["name", "abi", "program_type"];
+    fn attr_names_are_valid(attrs: &[MetaNameValue]) -> syn::Result<()> {
+        let valid_attr_names = ["name", "abi"];
         let has_invalid_name = |attr: &&MetaNameValue| {
             !valid_attr_names
                 .iter()
@@ -87,11 +88,11 @@ impl Attributes {
                 let expected_names = valid_attr_names
                     .iter()
                     .map(|name| format!("'{name}'"))
-                    .join(",");
+                    .join(", ");
 
                 Error::new_spanned(
                     invalid_attr,
-                    format!("Unknown attribute, expected one of: {expected_names}."),
+                    format!("Unknown attribute! Expected one of: {expected_names}."),
                 )
             })
             .reduce(|mut all_errors, current_err| {
@@ -102,7 +103,7 @@ impl Attributes {
             .unwrap_or(Ok(()))
     }
 
-    fn validate_no_duplicates(attrs: &[MetaNameValue]) -> syn::Result<()> {
+    fn attr_names_are_not_duplicated(attrs: &[MetaNameValue]) -> syn::Result<()> {
         attrs
             .iter()
             .map(|arg| {
@@ -113,7 +114,7 @@ impl Attributes {
             .sorted()
             .group_by(|ident| *ident)
             .into_iter()
-            .filter_map(|(_, group)| {
+            .filter_map(|(name, group)| {
                 let group = group.collect_vec();
                 if group.len() <= 1 {
                     return None;
@@ -125,7 +126,10 @@ impl Attributes {
                     .expect("there to be more than 1 element due to the check above");
 
                 let err = duplicates.fold(
-                    Error::new_spanned(original, "Duplicate arguments! Original: "),
+                    Error::new_spanned(
+                        original,
+                        format!("Duplicate attribute '{name}'! Original defined here:"),
+                    ),
                     |mut all_errs, duplicate| {
                         all_errs.combine(Error::new_spanned(duplicate, "Duplicate: "));
                         all_errs
@@ -139,5 +143,108 @@ impl Attributes {
             })
             .map(Err)
             .unwrap_or(Ok(()))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::attributes::Attributes;
+
+    use quote::quote;
+
+    use syn::parse::{Parse, ParseStream};
+
+    #[test]
+    fn fails_if_attr_names_are_not_recognized() -> syn::Result<()> {
+        syn::parse::Parser::parse2(
+            |input: ParseStream<'_>| {
+                let err = Attributes::parse(input).expect_err("Should have failed.");
+
+                assert_eq!(
+                    err.to_string(),
+                    "Unknown attribute! Expected one of: 'name', 'abi'."
+                );
+
+                Ok(())
+            },
+            quote! {(name = "some_value", some_typo="here")},
+        )?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn fails_if_name_or_abi_values_are_not_strings() -> syn::Result<()> {
+        syn::parse::Parser::parse2(
+            |input: ParseStream<'_>| {
+                let attributes = Attributes::parse(input)?;
+
+                {
+                    let err = attributes
+                        .get_as_str("name")
+                        .expect_err("Should have failed.");
+                    assert_eq!(
+                        err.to_string(),
+                        "Expected a string for the value of the 'name' attribute."
+                    )
+                }
+                {
+                    let err = attributes
+                        .get_as_str("abi")
+                        .expect_err("Should have failed.");
+                    assert_eq!(
+                        err.to_string(),
+                        "Expected a string for the value of the 'abi' attribute."
+                    )
+                }
+
+                Ok(())
+            },
+            quote! {(name = 123, abi=true)},
+        )?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn fails_if_names_are_duplicated() -> syn::Result<()> {
+        syn::parse::Parser::parse2(
+            |input: ParseStream<'_>| {
+                let err = Attributes::parse(input).expect_err("Should have failed.");
+
+                assert_eq!(
+                    err.to_string(),
+                    "Duplicate attribute 'name'! Original defined here:"
+                );
+
+                Ok(())
+            },
+            quote! {(name = "something", abi="else", name="something")},
+        )?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn can_extract_attr_values() -> syn::Result<()> {
+        syn::parse::Parser::parse2(
+            |input: ParseStream<'_>| {
+                let sut = Attributes::parse(input)?;
+
+                {
+                    let value = sut.get_as_str("name").unwrap();
+
+                    assert_eq!(value, "some_value");
+                }
+                {
+                    let value = sut.get_as_str("abi").unwrap();
+
+                    assert_eq!(value, "some_abi");
+                }
+
+                Ok(())
+            },
+            quote! {(name = "some_value", abi = "some_abi")},
+        )
     }
 }

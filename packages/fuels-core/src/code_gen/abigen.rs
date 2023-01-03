@@ -48,7 +48,8 @@ impl Abigen {
         no_std: bool,
         parsed_targets: Vec<ParsedAbigenTarget>,
     ) -> Result<GeneratedCode, Error> {
-        let shared_types = Self::determine_shared_types(&parsed_targets);
+        let all_custom_types = Self::extract_custom_types(&parsed_targets);
+        let shared_types = Self::filter_shared_types(all_custom_types);
 
         Ok([
             Self::generate_all_bindings(parsed_targets, no_std, &shared_types)?,
@@ -124,11 +125,20 @@ impl Abigen {
         }
     }
 
-    fn determine_shared_types(all_types: &[ParsedAbigenTarget]) -> HashSet<FullTypeDeclaration> {
+    fn extract_custom_types(
+        all_types: &[ParsedAbigenTarget],
+    ) -> impl Iterator<Item = &FullTypeDeclaration> {
         all_types
             .iter()
             .flat_map(|target| &target.source.types)
             .filter(|ttype| ttype.is_enum_type() || ttype.is_struct_type())
+    }
+
+    fn filter_shared_types<'a>(
+        types: impl IntoIterator<Item = &'a FullTypeDeclaration>,
+    ) -> HashSet<FullTypeDeclaration> {
+        types
+            .into_iter()
             .sorted()
             .group_by(|&el| el)
             .into_iter()
@@ -155,5 +165,23 @@ fn limited_std_prelude() -> GeneratedCode {
     GeneratedCode {
         code,
         ..Default::default()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn correctly_determines_shared_types() {
+        let types = ["type_0", "type_1", "type_0"].map(|type_field| FullTypeDeclaration {
+            type_field: type_field.to_string(),
+            components: vec![],
+            type_parameters: vec![],
+        });
+
+        let shared_types = Abigen::filter_shared_types(&types);
+
+        assert_eq!(shared_types, HashSet::from([types[0].clone()]))
     }
 }

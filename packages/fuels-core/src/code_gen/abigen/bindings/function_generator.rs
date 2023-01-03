@@ -81,7 +81,7 @@ fn function_arguments(
     inputs
         .iter()
         .map(|input| Component::new(input, true, shared_types))
-        .collect::<Result<Vec<_>, Error>>()
+        .collect::<Result<_, _>>()
         .map_err(|e| Error::InvalidType(e.to_string()))
 }
 
@@ -299,5 +299,120 @@ mod tests {
         assert_eq!(&result[0].field_type.to_string(), "self :: Cocktail");
 
         Ok(())
+    }
+
+    #[test]
+    fn correct_output_type() -> Result<(), Error> {
+        let function = given_a_fun();
+        let sut = FunctionGenerator::new(&function, &HashSet::default())?;
+
+        let output_type = sut.output_type();
+
+        assert_eq!(output_type.to_string(), "self :: CustomStruct < u64 >");
+
+        Ok(())
+    }
+
+    #[test]
+    fn correct_fn_selector_resolving_code() -> Result<(), Error> {
+        let function = given_a_fun();
+        let sut = FunctionGenerator::new(&function, &HashSet::default())?;
+
+        let fn_selector_code = sut.fn_selector();
+
+        assert_eq!(
+            fn_selector_code.to_string(),
+            r#":: fuels :: core :: code_gen :: function_selector :: resolve_fn_selector ("test_function" , & [< self :: CustomStruct :: < u8 > as :: fuels :: core :: Parameterize > :: param_type ()])"#
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn correct_tokenized_args() -> Result<(), Error> {
+        let function = given_a_fun();
+        let sut = FunctionGenerator::new(&function, &HashSet::default())?;
+
+        let tokenized_args = sut.tokenized_args();
+
+        assert_eq!(
+            tokenized_args.to_string(),
+            "[:: fuels :: core :: Tokenizable :: into_token (arg_0)]"
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn tokenizes_correctly() -> Result<(), Error> {
+        // given
+        let function = given_a_fun();
+        let mut sut = FunctionGenerator::new(&function, &HashSet::default())?;
+
+        sut.set_doc("This is a doc".to_string())
+            .set_body(quote! {this is ze body});
+
+        // when
+        let tokenized: TokenStream = sut.into();
+
+        // then
+        let expected = quote! {
+            #[doc = "This is a doc"]
+            pub fn test_function(&self, arg_0: self::CustomStruct<u8>) -> self::CustomStruct<u64> {
+                this is ze body
+            }
+        };
+
+        // then
+        assert_eq!(tokenized.to_string(), expected.to_string());
+
+        Ok(())
+    }
+
+    fn given_a_fun() -> FullABIFunction {
+        let generic_type_t = FullTypeDeclaration {
+            type_field: "generic T".to_string(),
+            components: vec![],
+            type_parameters: vec![],
+        };
+        let custom_struct_type = FullTypeDeclaration {
+            type_field: "struct CustomStruct".to_string(),
+            components: vec![FullTypeApplication {
+                name: "field_a".to_string(),
+                type_decl: generic_type_t.clone(),
+                type_arguments: vec![],
+            }],
+            type_parameters: vec![generic_type_t],
+        };
+
+        let fn_output = FullTypeApplication {
+            name: "".to_string(),
+            type_decl: custom_struct_type.clone(),
+            type_arguments: vec![FullTypeApplication {
+                name: "".to_string(),
+                type_decl: FullTypeDeclaration {
+                    type_field: "u64".to_string(),
+                    components: vec![],
+                    type_parameters: vec![],
+                },
+                type_arguments: vec![],
+            }],
+        };
+        let fn_inputs = vec![FullTypeApplication {
+            name: "arg_0".to_string(),
+            type_decl: custom_struct_type,
+            type_arguments: vec![FullTypeApplication {
+                name: "".to_string(),
+                type_decl: FullTypeDeclaration {
+                    type_field: "u8".to_string(),
+                    components: vec![],
+                    type_parameters: vec![],
+                },
+                type_arguments: vec![],
+            }],
+        }];
+
+        FullABIFunction::new("test_function".to_string(), fn_inputs, fn_output)
+            .expect("Hand crafted function known to be correct")
     }
 }
