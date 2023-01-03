@@ -396,9 +396,9 @@ mod tests {
         }
         {
             // ANCHOR: deployed_contracts
-            // Replace with your contract ABI.json path
             abigen!(Contract(
                 name = "MyContract",
+                // Replace with your contract ABI.json path
                 abi =
                     "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
             ));

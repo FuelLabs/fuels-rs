@@ -10,6 +10,7 @@ use syn::{parse_macro_input, Ident};
 use fuels_core::code_gen::abigen::{Abigen, AbigenTarget, ProgramType};
 use parsing::{ContractTestArgs, MacroAbigenTargets};
 
+mod attributes;
 mod parsing;
 
 #[proc_macro]
