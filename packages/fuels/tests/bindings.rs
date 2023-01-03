@@ -804,7 +804,6 @@ async fn compile_bindings_enum_input() {
 async fn shared_types_between_contracts() -> Result<(), Error> {
     // TODO the problem with using super:: inside a function, you cannot get
     // back in and can't use shared_types mod.
-    // TODO: Bug when generating two contracts from same JSON ABI but with different contract names
     mod contracts {
         use super::*;
         abigen!(
