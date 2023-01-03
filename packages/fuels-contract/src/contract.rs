@@ -2,6 +2,7 @@ use crate::{
     call_response::FuelCallResponse,
     execution_script::ExecutableFuelCall,
     logs::{decode_revert_error, LogDecoder},
+    SetableContract,
 };
 use fuel_gql_client::{
     fuel_tx::{Contract as FuelContract, Output, Receipt, StorageSlot, Transaction},
@@ -509,8 +510,16 @@ where
     ///
     /// [`Input::Contract`]: fuel_tx::Input::Contract
     /// [`Output::Contract`]: fuel_tx::Output::Contract
-    pub fn set_contracts(mut self, contract_ids: &[Bech32ContractId]) -> Self {
+    pub fn set_contract_ids(mut self, contract_ids: &[Bech32ContractId]) -> Self {
         self.contract_call.external_contracts = contract_ids.to_vec();
+        self
+    }
+
+    pub fn set_contracts<S: SetableContract>(mut self, contracts: &[S]) -> Self {
+        self.contract_call.external_contracts = contracts.iter().map(|c| c.id()).collect();
+        for c in contracts {
+            self.log_decoder.merge(&c.log_decoder());
+        }
         self
     }
 
