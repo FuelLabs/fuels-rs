@@ -802,8 +802,24 @@ async fn compile_bindings_enum_input() {
 
 #[tokio::test]
 async fn shared_types_between_contracts() -> Result<(), Error> {
-    // TODO the problem with using super:: inside a function, you cannot get
-    // back in and can't use shared_types mod.
+    // This is a caveat with the abigen! shared-types implementation.
+    // If run inside a function, like we're doing here in this test, then the
+    // normal types have issues referencing the shared types.
+    //
+    // A shared type, from inside a contract/script/predicate bindings mod,
+    // would normally be referenced like this:
+    // 'super::shared_types::SomeSharedType'. 'super' would get you out of the
+    // mod of current mod and then you step down into the 'shared_types' mod.
+    //
+    // For some reason, 'super' inside a function gets you out of your mod, but
+    // if that gets you to the 'root/self' mod, you can never get back in.
+    //
+    // A workaround is to wrap everything in another mod so that 'super' lands
+    // you inside of that one and not 'outside' of the function.
+    //
+    // Not a big issue since almost all usages call abigen! outside of any
+    // function.
+
     mod contracts {
         use super::*;
         abigen!(

@@ -20,7 +20,6 @@ pub mod code_gen;
 pub mod constants;
 pub mod offsets;
 pub mod parameters;
-pub mod rustfmt;
 pub mod source;
 pub mod tokenizer;
 pub mod types;

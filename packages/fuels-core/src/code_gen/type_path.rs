@@ -12,15 +12,26 @@ pub(crate) struct TypePath {
 
 impl TypePath {
     pub fn new<T: ToString>(path: T) -> Result<Self, Error> {
-        let path_str = path.to_string();
+        let path_str = path.to_string().trim().to_string();
+
+        if path_str.is_empty() {
+            return Err(Error::InvalidType(format!(
+                "TypePath cannot be constructed from '{path_str}' because it's empty!"
+            )));
+        }
+
         let parts = path_str
             .split("::")
-            .map(|part| part.to_string())
+            .map(|part| part.trim().to_string())
             .collect::<Vec<_>>();
 
-        if parts.is_empty() {
+        let type_name = parts
+            .last()
+            .expect("Cannot be empty, since we started off with a non-empty string");
+
+        if type_name.is_empty() {
             Err(Error::InvalidType(format!(
-                "TypePath cannot be constructed from {path_str} because it's empty!"
+                "TypePath cannot be constructed from '{path_str}'! Missing ident at the end."
             )))
         } else {
             Ok(Self { parts })
@@ -54,5 +65,70 @@ impl From<&TypePath> for TokenStream {
 impl From<TypePath> for TokenStream {
     fn from(type_path: TypePath) -> Self {
         (&type_path).into()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn cannot_be_empty() {
+        let empty_path = "   ";
+
+        let err = TypePath::new(empty_path).expect_err("Should have failed!");
+
+        if let Error::InvalidType(msg) = err {
+            assert_eq!(
+                msg,
+                "TypePath cannot be constructed from '' because it's empty!"
+            );
+        } else {
+            panic!("Expected an error of the type Error::InvalidType, got: {err}");
+        }
+    }
+
+    #[test]
+    fn must_have_ident_at_end() {
+        let no_ident = "  ::missing_ident:: ";
+
+        let err = TypePath::new(no_ident).expect_err("Should have failed!");
+
+        if let Error::InvalidType(msg) = err {
+            assert_eq!(
+                msg,
+                "TypePath cannot be constructed from '::missing_ident::'! Missing ident at the end."
+            );
+        } else {
+            panic!("Expected an error of the type Error::InvalidType, got: {err}");
+        }
+    }
+
+    #[test]
+    fn trims_whitespace() {
+        let path = " some_mod :: ident ";
+
+        let path = TypePath::new(path).expect("Should have passed.");
+
+        assert_eq!(path.parts, vec!["some_mod", "ident"])
+    }
+
+    #[test]
+    fn can_be_prepended_to() {
+        let path = TypePath::new(" some_mod :: ident ").expect("Should have passed.");
+        let another_path = TypePath::new(" something :: else ").expect("the type path is valid");
+
+        let joined = path.prepend(another_path);
+
+        assert_eq!(joined.parts, vec!["something", "else", "some_mod", "ident"])
+    }
+
+    #[test]
+    fn can_get_type_name() {
+        let path = TypePath::new(" some_mod :: ident ").expect("Should have passed.");
+
+        let type_name = path.type_name();
+
+        assert_eq!(type_name, "ident");
     }
 }
