@@ -2,20 +2,10 @@ use crate::tx::{field::Script, ConsensusParameters, InputRepr};
 use fuel_types::bytes::padded_len_usize;
 use fuel_vm::prelude::Opcode;
 
-/// Gets the base offset for a script. The offset depends on the `max_inputs`
-/// field of the `ConsensusParameters` and the static offset
-pub fn base_script_offset(consensus_parameters: &ConsensusParameters) -> usize {
+/// Gets the base offset for a script or a predicate. The offset depends on the `max_inputs`
+/// field of the `ConsensusParameters` and the static offset.
+pub fn base_offset(consensus_parameters: &ConsensusParameters) -> usize {
     consensus_parameters.tx_offset() + fuel_tx::Script::script_offset_static()
-}
-
-/// Gets the base offset for a predicate. The offset depends on the `max_inputs`
-/// field of the `ConsensusParameters` and the static offset of a transfer script
-pub fn base_predicate_offset(consensus_parameters: &ConsensusParameters) -> usize {
-    // Opcode::LEN is a placeholder for the RET instruction which is
-    // added for transfer transactions
-    let opcode_len = Opcode::LEN;
-
-    base_script_offset(consensus_parameters) + padded_len_usize(opcode_len)
 }
 
 /// Calculates the length of the script based on the number of contract calls it
@@ -24,10 +14,11 @@ pub fn call_script_data_offset(
     consensus_parameters: &ConsensusParameters,
     calls_instructions_len: usize,
 ) -> usize {
-    // Opcode::LEN is a placeholder for the RET instruction which is added later
+    // Opcode::LEN is a placeholder for the RET instruction which is added later for returning
+    // from the script. This doesn't happen in the predicate.
     let opcode_len = Opcode::LEN;
 
-    base_script_offset(consensus_parameters) + padded_len_usize(calls_instructions_len + opcode_len)
+    base_offset(consensus_parameters) + padded_len_usize(calls_instructions_len + opcode_len)
 }
 
 pub fn coin_predicate_data_offset(code_len: usize) -> usize {
