@@ -519,13 +519,10 @@ impl WalletUnlocked {
         // If the tx doesn't consume any UTXOs, attempting to repeat it will lead to an
         // error due to non unique tx ids (e.g. repeated contract call with configured gas cost of 0).
         // Here we enforce a minimum amount on the base asset to avoid this
-        let is_consuming_utxos = tx.inputs().iter().any(|input| match input {
-            Input::CoinSigned { .. }
-            | Input::CoinPredicate { .. }
-            | Input::MessageSigned { .. }
-            | Input::MessagePredicate { .. } => true,
-            Input::Contract { .. } => false,
-        });
+        let is_consuming_utxos = tx
+            .inputs()
+            .iter()
+            .any(|input| !matches!(input, Input::Contract { .. }));
         const MIN_AMOUNT: u64 = 1;
         if !is_consuming_utxos && new_base_amount == 0 {
             new_base_amount = MIN_AMOUNT;
