@@ -73,7 +73,7 @@ impl Attributes {
     }
 
     fn validate_names_valid(attrs: &[MetaNameValue]) -> syn::Result<()> {
-        let valid_attr_names = ["name", "abi", "program_type", "no_std"];
+        let valid_attr_names = ["name", "abi", "program_type"];
         let has_invalid_name = |attr: &&MetaNameValue| {
             !valid_attr_names
                 .iter()

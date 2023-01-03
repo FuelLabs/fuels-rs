@@ -76,7 +76,6 @@ impl MacroAbigenTarget {
 }
 
 /// Contract procedural macro arguments.
-#[cfg_attr(test, derive(Debug, Eq, PartialEq))]
 pub(crate) struct ContractTestArgs {
     pub(crate) instance_name: String,
     pub(crate) wallet_name: String,
@@ -91,10 +90,7 @@ impl Parse for ContractTestArgs {
         let wallet_name = input.parse::<Ident>()?.to_string();
         input.parse::<Token![,]>()?;
 
-        let (_, project_path) = {
-            let literal = input.parse::<LitStr>()?;
-            (literal.span(), literal.value())
-        };
+        let project_path = input.parse::<LitStr>()?.value();
         if !input.is_empty() {
             input.parse::<Token![,]>()?;
         }

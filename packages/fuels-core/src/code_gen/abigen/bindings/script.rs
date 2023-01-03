@@ -63,13 +63,6 @@ fn expand_fn(
     let fun = extract_main_fn(&abi.functions)?;
     let mut generator = FunctionGenerator::new(fun, shared_types)?;
 
-    let original_output_type = generator.output_type();
-    generator
-        .set_output_type(
-            quote! {::fuels::contract::script_calls::ScriptCallHandler<#original_output_type> },
-        )
-        .set_doc("Run the script's `main` function with the provided arguments".to_string());
-
     let arg_tokens = generator.tokenized_args();
     let body = quote! {
             let script_binary = ::std::fs::read(&self.binary_filepath)
@@ -87,7 +80,14 @@ fn expand_fn(
             )
     };
 
-    generator.set_body(body);
+    let original_output_type = generator.output_type();
+
+    generator
+        .set_output_type(
+            quote! {::fuels::contract::script_calls::ScriptCallHandler<#original_output_type> },
+        )
+        .set_doc("Run the script's `main` function with the provided arguments".to_string())
+        .set_body(body);
 
     Ok(generator.into())
 }

@@ -1,6 +1,6 @@
 [project]
-authors = ["Ahmed Sagdati"]
-entry = "lib.sw"
+authors = ["Fuel Labs <contact@fuel.sh>"]
+entry = "main.sw"
 license = "Apache-2.0"
 name = "shared_lib"
 

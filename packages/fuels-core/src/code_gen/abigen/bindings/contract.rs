@@ -1,7 +1,8 @@
+use itertools::Itertools;
 use std::collections::HashSet;
 
 use proc_macro2::{Ident, TokenStream};
-use quote::quote;
+use quote::{quote, TokenStreamExt};
 
 use fuels_types::errors::Error;
 
@@ -99,12 +100,13 @@ fn expand_functions(
     functions: &[FullABIFunction],
     shared_types: &HashSet<FullTypeDeclaration>,
 ) -> Result<TokenStream, Error> {
-    let tokenized_functions = functions
+    functions
         .iter()
         .map(|fun| expand_fn(fun, shared_types))
-        .collect::<Result<Vec<TokenStream>, Error>>()?;
-
-    Ok(quote! { #( #tokenized_functions )* })
+        .fold_ok(TokenStream::default(), |mut all_code, code| {
+            all_code.append_all(code);
+            all_code
+        })
 }
 
 /// Transforms a function defined in [`FullABIFunction`] into a [`TokenStream`]

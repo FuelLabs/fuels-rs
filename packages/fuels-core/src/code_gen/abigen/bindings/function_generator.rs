@@ -74,6 +74,32 @@ impl FunctionGenerator {
     }
 }
 
+fn function_arguments(
+    inputs: &[FullTypeApplication],
+    shared_types: &HashSet<FullTypeDeclaration>,
+) -> Result<Vec<Component>, Error> {
+    inputs
+        .iter()
+        .map(|input| Component::new(input, true, shared_types))
+        .collect::<Result<Vec<_>, Error>>()
+        .map_err(|e| Error::InvalidType(e.to_string()))
+}
+
+fn resolve_fn_output_type(
+    function: &FullABIFunction,
+    shared_types: &HashSet<FullTypeDeclaration>,
+) -> Result<ResolvedType, Error> {
+    let output_type = resolve_type(function.output(), shared_types)?;
+    if output_type.uses_vectors() {
+        Err(Error::CompilationError(format!(
+            "function '{}' contains a vector in its return type. This currently isn't supported.",
+            function.name()
+        )))
+    } else {
+        Ok(output_type)
+    }
+}
+
 impl From<&FunctionGenerator> for TokenStream {
     fn from(fun: &FunctionGenerator) -> Self {
         let name = safe_ident(&fun.name);
@@ -107,32 +133,6 @@ impl From<FunctionGenerator> for TokenStream {
     fn from(fun: FunctionGenerator) -> Self {
         (&fun).into()
     }
-}
-
-fn resolve_fn_output_type(
-    function: &FullABIFunction,
-    shared_types: &HashSet<FullTypeDeclaration>,
-) -> Result<ResolvedType, Error> {
-    let output_type = resolve_type(function.output(), shared_types)?;
-    if output_type.uses_vectors() {
-        Err(Error::CompilationError(format!(
-            "function '{}' contains a vector in its return type. This currently isn't supported.",
-            function.name()
-        )))
-    } else {
-        Ok(output_type)
-    }
-}
-
-fn function_arguments(
-    inputs: &[FullTypeApplication],
-    shared_types: &HashSet<FullTypeDeclaration>,
-) -> Result<Vec<Component>, Error> {
-    inputs
-        .iter()
-        .map(|input| Component::new(input, true, shared_types))
-        .collect::<Result<Vec<_>, Error>>()
-        .map_err(|e| Error::InvalidType(e.to_string()))
 }
 
 #[cfg(test)]

@@ -48,7 +48,7 @@ impl GeneratedCode {
 
     pub fn use_statements_for_uniquely_named_types(&self) -> TokenStream {
         let type_paths = self
-            .types_with_unique_type_name()
+            .types_with_unique_names()
             .into_iter()
             .map(TokenStream::from);
 
@@ -57,7 +57,7 @@ impl GeneratedCode {
         }
     }
 
-    fn types_with_unique_type_name(&self) -> Vec<&TypePath> {
+    fn types_with_unique_names(&self) -> Vec<&TypePath> {
         self.usable_types
             .iter()
             .sorted_by(|&lhs, &rhs| lhs.type_name().cmp(rhs.type_name()))
