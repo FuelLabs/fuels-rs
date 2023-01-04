@@ -154,7 +154,6 @@ pub(crate) fn expand_fn(
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
-    use std::str::FromStr;
 
     use fuels_types::{ABIFunction, ProgramABI, TypeApplication, TypeDeclaration};
 
@@ -314,8 +313,7 @@ mod tests {
             &HashSet::default(),
         )?;
 
-        let expected = TokenStream::from_str(
-            r#"
+        let expected = quote! {
             #[doc = "Calls the contract's `some_abi_funct` function"]
             pub fn some_abi_funct(
                 &self,
@@ -323,17 +321,6 @@ mod tests {
                 s_2: self::MyStruct2
             ) -> ::fuels::contract::contract::ContractCallHandler<self::MyStruct1> {
                 let provider = self.wallet.get_provider().expect("Provider not set up");
-                let encoded_fn_selector = ::fuels::core::code_gen::function_selector::resolve_fn_selector(
-                    "some_abi_funct",
-                    &[
-                        <self::MyStruct1 as ::fuels::core::Parameterize> ::param_type(),
-                        <self::MyStruct2 as ::fuels::core::Parameterize> ::param_type()
-                    ]
-                );
-                let tokens = [
-                    ::fuels::core::Tokenizable::into_token(s_1),
-                    ::fuels::core::Tokenizable::into_token(s_2)
-                ];
                 let log_decoder = ::fuels::contract::logs::LogDecoder {
                     logs_map: self.logs_map.clone()
                 };
@@ -341,16 +328,24 @@ mod tests {
                     &provider,
                     self.contract_id.clone(),
                     &self.wallet,
-                    encoded_fn_selector,
-                    &tokens,
+                    ::fuels::core::code_gen::function_selector::resolve_fn_selector(
+                        "some_abi_funct",
+                        &[
+                            <self::MyStruct1 as ::fuels::core::Parameterize>::param_type(),
+                            <self::MyStruct2 as ::fuels::core::Parameterize>::param_type()
+                        ]
+                    ),
+                    &[
+                        ::fuels::core::Tokenizable::into_token(s_1),
+                        ::fuels::core::Tokenizable::into_token(s_2)
+                    ],
                     log_decoder
                 )
                 .expect("method not found (this should never happen)")
             }
-            "#,
-        )?.to_string();
+        };
 
-        assert_eq!(result.to_string(), expected);
+        assert_eq!(result.to_string(), expected.to_string());
 
         Ok(())
     }
@@ -391,16 +386,10 @@ mod tests {
             &HashSet::default(),
         );
 
-        let expected = TokenStream::from_str(
-            r#"
+        let expected = quote! {
             #[doc = "Calls the contract's `HelloWorld` function"]
             pub fn HelloWorld(&self, bimbam: bool) -> ::fuels::contract::contract::ContractCallHandler<()> {
                 let provider = self.wallet.get_provider().expect("Provider not set up");
-                let encoded_fn_selector = ::fuels::core::code_gen::function_selector::resolve_fn_selector(
-                    "HelloWorld",
-                    &[<bool as ::fuels::core::Parameterize> ::param_type()]
-                );
-                let tokens = [::fuels::core::Tokenizable::into_token(bimbam)];
                 let log_decoder = ::fuels::contract::logs::LogDecoder {
                     logs_map: self.logs_map.clone()
                 };
@@ -408,22 +397,25 @@ mod tests {
                     &provider,
                     self.contract_id.clone(),
                     &self.wallet,
-                    encoded_fn_selector,
-                    &tokens,
+                    ::fuels::core::code_gen::function_selector::resolve_fn_selector(
+                        "HelloWorld",
+                        &[<bool as ::fuels::core::Parameterize>::param_type()]
+                    ),
+                    &[::fuels::core::Tokenizable::into_token(bimbam)],
                     log_decoder
                 )
                 .expect("method not found (this should never happen)")
             }
-            "#,
-        )?.to_string();
+        };
 
-        assert_eq!(result?.to_string(), expected);
+        assert_eq!(result?.to_string(), expected.to_string());
 
         Ok(())
     }
 
     #[test]
     fn test_expand_fn_complex() -> Result<(), Error> {
+        // given
         let the_function = ABIFunction {
             inputs: vec![TypeApplication {
                 name: String::from("the_only_allowed_input"),
@@ -498,26 +490,23 @@ mod tests {
         ]
         .into_iter()
         .collect::<HashMap<_, _>>();
+
+        // when
         let result = expand_fn(
             &FullABIFunction::from_counterpart(&the_function, &types)?,
             &HashSet::default(),
         );
+
+        //then
+
         // Some more editing was required because it is not rustfmt-compatible (adding/removing parentheses or commas)
-        let expected = TokenStream::from_str(
-            r#"
+        let expected = quote! {
             #[doc = "Calls the contract's `hello_world` function"]
             pub fn hello_world(
                 &self,
                 the_only_allowed_input: self::SomeWeirdFrenchCuisine
             ) -> ::fuels::contract::contract::ContractCallHandler<self::EntropyCirclesEnum> {
                 let provider = self.wallet.get_provider().expect("Provider not set up");
-                let encoded_fn_selector = ::fuels::core::code_gen::function_selector::resolve_fn_selector(
-                    "hello_world",
-                    &[<self::SomeWeirdFrenchCuisine as ::fuels::core::Parameterize> ::param_type()]
-                );
-                let tokens = [::fuels::core::Tokenizable::into_token(
-                    the_only_allowed_input
-                )];
                 let log_decoder = ::fuels::contract::logs::LogDecoder {
                     logs_map: self.logs_map.clone()
                 };
@@ -525,16 +514,20 @@ mod tests {
                     &provider,
                     self.contract_id.clone(),
                     &self.wallet,
-                    encoded_fn_selector,
-                    &tokens,
+                    ::fuels::core::code_gen::function_selector::resolve_fn_selector(
+                        "hello_world",
+                        &[<self::SomeWeirdFrenchCuisine as ::fuels::core::Parameterize>::param_type()]
+                    ),
+                    &[::fuels::core::Tokenizable::into_token(
+                        the_only_allowed_input
+                    )],
                     log_decoder
                 )
                 .expect("method not found (this should never happen)")
             }
-            "#,
-        )?.to_string();
+        };
 
-        assert_eq!(result?.to_string(), expected);
+        assert_eq!(result?.to_string(), expected.to_string());
 
         Ok(())
     }

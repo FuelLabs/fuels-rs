@@ -75,10 +75,12 @@ mod tests {
 
     use anyhow::anyhow;
     use proc_macro2::TokenStream;
+    use quote::quote;
+
+    use fuels_types::{ProgramABI, TypeApplication, TypeDeclaration};
 
     use crate::code_gen::abi_types::FullTypeApplication;
     use crate::code_gen::type_path::TypePath;
-    use fuels_types::{ProgramABI, TypeApplication, TypeDeclaration};
 
     use super::*;
 
@@ -126,16 +128,102 @@ mod tests {
             &FullTypeDeclaration::from_counterpart(&p, &types),
             &HashSet::default(),
         )?
-        .code
-        .to_string();
-        let expected = TokenStream::from_str(
-            r#"
-            # [derive (Clone , Debug , Eq , PartialEq)] pub enum MatchaTea < > { LongIsland (u64) , MoscowMule (bool) } impl < > :: fuels :: core :: Parameterize for self :: MatchaTea < > { fn param_type () -> :: fuels :: types :: param_types :: ParamType { let variants = [("LongIsland" . to_string () , < u64 as :: fuels :: core :: Parameterize > :: param_type ()) , ("MoscowMule" . to_string () , < bool as :: fuels :: core :: Parameterize > :: param_type ())] . to_vec () ; let variants = :: fuels :: types :: enum_variants :: EnumVariants :: new (variants) . unwrap_or_else (| _ | panic ! ("{} has no variants which isn't allowed!" , "MatchaTea")) ; :: fuels :: types :: param_types :: ParamType :: Enum { name : "MatchaTea" . to_string () , variants , generics : [] . to_vec () } } } impl < > :: fuels :: core :: Tokenizable for self :: MatchaTea < > { fn from_token (token : :: fuels :: core :: Token) -> :: std :: result :: Result < Self , :: fuels :: types :: errors :: Error > where Self : Sized , { let gen_err = | msg | { :: fuels :: types :: errors :: Error :: InvalidData (format ! ("Error while instantiating {} from token! {}" , "MatchaTea" , msg)) } ; match token { :: fuels :: core :: Token :: Enum (selector) => { let (discriminant , variant_token , _) = * selector ; match discriminant { 0u8 => :: std :: result :: Result :: Ok (Self :: LongIsland (:: fuels :: core :: Tokenizable :: from_token (variant_token) ?)) , 1u8 => :: std :: result :: Result :: Ok (Self :: MoscowMule (:: fuels :: core :: Tokenizable :: from_token (variant_token) ?)) , _ => :: std :: result :: Result :: Err (gen_err (format ! ("Discriminant {} doesn't point to any of the enums variants." , discriminant))) , } } _ => :: std :: result :: Result :: Err (gen_err (format ! ("Given token ({}) is not of the type Token::Enum!" , token))) , } } fn into_token (self) -> :: fuels :: core :: Token { let (discriminant , token) = match self { Self :: LongIsland (inner) => (0u8 , :: fuels :: core :: Tokenizable :: into_token (inner)) , Self :: MoscowMule (inner) => (1u8 , :: fuels :: core :: Tokenizable :: into_token (inner)) } ; let variants = match < Self as :: fuels :: core :: Parameterize > :: param_type () { :: fuels :: types :: param_types :: ParamType :: Enum { variants , .. } => variants , other => panic ! ("Calling {}::param_type() must return a ParamType::Enum but instead it returned: {:?}" , "MatchaTea" , other) } ; :: fuels :: core :: Token :: Enum (:: std :: boxed :: Box :: new ((discriminant , token , variants))) } } impl < > TryFrom < & [u8] > for self :: MatchaTea < > { type Error = :: fuels :: types :: errors :: Error ; fn try_from (bytes : & [u8]) -> :: std :: result :: Result < Self , Self :: Error > { :: fuels :: core :: try_from_bytes (bytes) } } impl < > TryFrom < & :: std :: vec :: Vec < u8 >> for self :: MatchaTea < > { type Error = :: fuels :: types :: errors :: Error ; fn try_from (bytes : & :: std :: vec :: Vec < u8 >) -> :: std :: result :: Result < Self , Self :: Error > { :: fuels :: core :: try_from_bytes (& bytes) } } impl < > TryFrom < :: std :: vec :: Vec < u8 >> for self :: MatchaTea < > { type Error = :: fuels :: types :: errors :: Error ; fn try_from (bytes : :: std :: vec :: Vec < u8 >) -> :: std :: result :: Result < Self , Self :: Error > { :: fuels :: core :: try_from_bytes (& bytes) } }
-            "#,
-        )?
-        .to_string();
+        .code;
 
-        assert_eq!(actual, expected);
+        let expected = quote! {
+            #[allow(clippy::enum_variant_names)]
+            #[derive(Clone, Debug, Eq, PartialEq)]
+            pub enum MatchaTea<> {
+                LongIsland(u64),
+                MoscowMule(bool)
+            }
+            impl<> ::fuels::core::Parameterize for self::MatchaTea<> {
+                fn param_type() -> ::fuels::types::param_types::ParamType {
+                    let variants = [
+                        (
+                            "LongIsland".to_string(),
+                            <u64 as ::fuels::core::Parameterize>::param_type()
+                        ),
+                        (
+                            "MoscowMule".to_string(),
+                            <bool as ::fuels::core::Parameterize>::param_type()
+                        )
+                    ]
+                    .to_vec();
+                    let variants = ::fuels::types::enum_variants::EnumVariants::new(variants)
+                        .unwrap_or_else(|_| panic!("{} has no variants which isn't allowed!", "MatchaTea"));
+                    ::fuels::types::param_types::ParamType::Enum {
+                        name: "MatchaTea".to_string(),
+                        variants,
+                        generics: [].to_vec()
+                    }
+                }
+            }
+            impl<> ::fuels::core::Tokenizable for self::MatchaTea<> {
+                fn from_token(
+                    token: ::fuels::core::Token
+                ) -> ::std::result::Result<Self, ::fuels::types::errors::Error>
+                where
+                    Self: Sized,
+                {
+                    let gen_err = |msg| {
+                        ::fuels::types::errors::Error::InvalidData(format!(
+                            "Error while instantiating {} from token! {}",
+                            "MatchaTea", msg
+                        ))
+                    };
+                    match token {
+                        ::fuels::core::Token::Enum(selector) => {
+                            let (discriminant, variant_token, _) = *selector;
+                            match discriminant {
+                                0u8 => ::std::result::Result::Ok(Self::LongIsland(
+                                    ::fuels::core::Tokenizable::from_token(variant_token)?
+                                )),
+                                1u8 => ::std::result::Result::Ok(Self::MoscowMule(
+                                    ::fuels::core::Tokenizable::from_token(variant_token)?
+                                )),
+                                _ => ::std::result::Result::Err(gen_err(format!(
+                                    "Discriminant {} doesn't point to any of the enums variants.",
+                                    discriminant
+                                ))),
+                            }
+                        }
+                        _ => ::std::result::Result::Err(gen_err(format!(
+                            "Given token ({}) is not of the type Token::Enum!",
+                            token
+                        ))),
+                    }
+                }
+                fn into_token(self) -> ::fuels::core::Token {
+                    let (discriminant, token) = match self {
+                        Self::LongIsland(inner) => (0u8, ::fuels::core::Tokenizable::into_token(inner)),
+                        Self::MoscowMule(inner) => (1u8, ::fuels::core::Tokenizable::into_token(inner))
+                    };
+                    let variants = match < Self as :: fuels :: core :: Parameterize > :: param_type () { :: fuels :: types :: param_types :: ParamType :: Enum { variants , .. } => variants , other => panic ! ("Calling {}::param_type() must return a ParamType::Enum but instead it returned: {:?}" , "MatchaTea" , other) } ;
+                    ::fuels::core::Token::Enum(::std::boxed::Box::new((discriminant, token, variants)))
+                }
+            }
+            impl<> TryFrom<&[u8]> for self::MatchaTea<> {
+                type Error = ::fuels::types::errors::Error;
+                fn try_from(bytes: &[u8]) -> ::std::result::Result<Self, Self::Error> {
+                    ::fuels::core::try_from_bytes(bytes)
+                }
+            }
+            impl<> TryFrom<&::std::vec::Vec<u8>> for self::MatchaTea<> {
+                type Error = ::fuels::types::errors::Error;
+                fn try_from(bytes: &::std::vec::Vec<u8>) -> ::std::result::Result<Self, Self::Error> {
+                    ::fuels::core::try_from_bytes(&bytes)
+                }
+            }
+            impl<> TryFrom<::std::vec::Vec<u8>> for self::MatchaTea<> {
+                type Error = ::fuels::types::errors::Error;
+                fn try_from(bytes: ::std::vec::Vec<u8>) -> ::std::result::Result<Self, Self::Error> {
+                    ::fuels::core::try_from_bytes(&bytes)
+                }
+            }
+        };
+
+        assert_eq!(actual.to_string(), expected.to_string());
         Ok(())
     }
 
@@ -239,15 +327,102 @@ mod tests {
             &FullTypeDeclaration::from_counterpart(&p, &types),
             &HashSet::default(),
         )?
-        .code
-        .to_string();
-        let expected = TokenStream::from_str(
-            r#"
-            # [derive (Clone , Debug , Eq , PartialEq)] pub enum Amsterdam < > { Infrastructure (self :: Building) , Service (u32) } impl < > :: fuels :: core :: Parameterize for self :: Amsterdam < > { fn param_type () -> :: fuels :: types :: param_types :: ParamType { let variants = [("Infrastructure" . to_string () , < self :: Building as :: fuels :: core :: Parameterize > :: param_type ()) , ("Service" . to_string () , < u32 as :: fuels :: core :: Parameterize > :: param_type ())] . to_vec () ; let variants = :: fuels :: types :: enum_variants :: EnumVariants :: new (variants) . unwrap_or_else (| _ | panic ! ("{} has no variants which isn't allowed!" , "Amsterdam")) ; :: fuels :: types :: param_types :: ParamType :: Enum { name : "Amsterdam" . to_string () , variants , generics : [] . to_vec () } } } impl < > :: fuels :: core :: Tokenizable for self :: Amsterdam < > { fn from_token (token : :: fuels :: core :: Token) -> :: std :: result :: Result < Self , :: fuels :: types :: errors :: Error > where Self : Sized , { let gen_err = | msg | { :: fuels :: types :: errors :: Error :: InvalidData (format ! ("Error while instantiating {} from token! {}" , "Amsterdam" , msg)) } ; match token { :: fuels :: core :: Token :: Enum (selector) => { let (discriminant , variant_token , _) = * selector ; match discriminant { 0u8 => :: std :: result :: Result :: Ok (Self :: Infrastructure (:: fuels :: core :: Tokenizable :: from_token (variant_token) ?)) , 1u8 => :: std :: result :: Result :: Ok (Self :: Service (:: fuels :: core :: Tokenizable :: from_token (variant_token) ?)) , _ => :: std :: result :: Result :: Err (gen_err (format ! ("Discriminant {} doesn't point to any of the enums variants." , discriminant))) , } } _ => :: std :: result :: Result :: Err (gen_err (format ! ("Given token ({}) is not of the type Token::Enum!" , token))) , } } fn into_token (self) -> :: fuels :: core :: Token { let (discriminant , token) = match self { Self :: Infrastructure (inner) => (0u8 , :: fuels :: core :: Tokenizable :: into_token (inner)) , Self :: Service (inner) => (1u8 , :: fuels :: core :: Tokenizable :: into_token (inner)) } ; let variants = match < Self as :: fuels :: core :: Parameterize > :: param_type () { :: fuels :: types :: param_types :: ParamType :: Enum { variants , .. } => variants , other => panic ! ("Calling {}::param_type() must return a ParamType::Enum but instead it returned: {:?}" , "Amsterdam" , other) } ; :: fuels :: core :: Token :: Enum (:: std :: boxed :: Box :: new ((discriminant , token , variants))) } } impl < > TryFrom < & [u8] > for self :: Amsterdam < > { type Error = :: fuels :: types :: errors :: Error ; fn try_from (bytes : & [u8]) -> :: std :: result :: Result < Self , Self :: Error > { :: fuels :: core :: try_from_bytes (bytes) } } impl < > TryFrom < & :: std :: vec :: Vec < u8 >> for self :: Amsterdam < > { type Error = :: fuels :: types :: errors :: Error ; fn try_from (bytes : & :: std :: vec :: Vec < u8 >) -> :: std :: result :: Result < Self , Self :: Error > { :: fuels :: core :: try_from_bytes (& bytes) } } impl < > TryFrom < :: std :: vec :: Vec < u8 >> for self :: Amsterdam < > { type Error = :: fuels :: types :: errors :: Error ; fn try_from (bytes : :: std :: vec :: Vec < u8 >) -> :: std :: result :: Result < Self , Self :: Error > { :: fuels :: core :: try_from_bytes (& bytes) } }
-            "#,
-        )?.to_string();
+        .code;
 
-        assert_eq!(actual, expected);
+        let expected = quote! {
+            #[allow(clippy::enum_variant_names)]
+            #[derive(Clone, Debug, Eq, PartialEq)]
+            pub enum Amsterdam<> {
+                Infrastructure(self::Building),
+                Service(u32)
+            }
+            impl<> ::fuels::core::Parameterize for self::Amsterdam<> {
+                fn param_type() -> ::fuels::types::param_types::ParamType {
+                    let variants = [
+                        (
+                            "Infrastructure".to_string(),
+                            <self::Building as ::fuels::core::Parameterize>::param_type()
+                        ),
+                        (
+                            "Service".to_string(),
+                            <u32 as ::fuels::core::Parameterize>::param_type()
+                        )
+                    ]
+                    .to_vec();
+                    let variants = ::fuels::types::enum_variants::EnumVariants::new(variants)
+                        .unwrap_or_else(|_| panic!("{} has no variants which isn't allowed!", "Amsterdam"));
+                    ::fuels::types::param_types::ParamType::Enum {
+                        name: "Amsterdam".to_string(),
+                        variants,
+                        generics: [].to_vec()
+                    }
+                }
+            }
+            impl<> ::fuels::core::Tokenizable for self::Amsterdam<> {
+                fn from_token(
+                    token: ::fuels::core::Token
+                ) -> ::std::result::Result<Self, ::fuels::types::errors::Error>
+                where
+                    Self: Sized,
+                {
+                    let gen_err = |msg| {
+                        ::fuels::types::errors::Error::InvalidData(format!(
+                            "Error while instantiating {} from token! {}",
+                            "Amsterdam", msg
+                        ))
+                    };
+                    match token {
+                        ::fuels::core::Token::Enum(selector) => {
+                            let (discriminant, variant_token, _) = *selector;
+                            match discriminant {
+                                0u8 => ::std::result::Result::Ok(Self::Infrastructure(
+                                    ::fuels::core::Tokenizable::from_token(variant_token)?
+                                )),
+                                1u8 => ::std::result::Result::Ok(Self::Service(
+                                    ::fuels::core::Tokenizable::from_token(variant_token)?
+                                )),
+                                _ => ::std::result::Result::Err(gen_err(format!(
+                                    "Discriminant {} doesn't point to any of the enums variants.",
+                                    discriminant
+                                ))),
+                            }
+                        }
+                        _ => ::std::result::Result::Err(gen_err(format!(
+                            "Given token ({}) is not of the type Token::Enum!",
+                            token
+                        ))),
+                    }
+                }
+                fn into_token(self) -> ::fuels::core::Token {
+                    let (discriminant, token) = match self {
+                        Self::Infrastructure(inner) => (0u8, ::fuels::core::Tokenizable::into_token(inner)),
+                        Self::Service(inner) => (1u8, ::fuels::core::Tokenizable::into_token(inner))
+                    };
+                    let variants = match < Self as :: fuels :: core :: Parameterize > :: param_type () { :: fuels :: types :: param_types :: ParamType :: Enum { variants , .. } => variants , other => panic ! ("Calling {}::param_type() must return a ParamType::Enum but instead it returned: {:?}" , "Amsterdam" , other) } ;
+                    ::fuels::core::Token::Enum(::std::boxed::Box::new((discriminant, token, variants)))
+                }
+            }
+            impl<> TryFrom<&[u8]> for self::Amsterdam<> {
+                type Error = ::fuels::types::errors::Error;
+                fn try_from(bytes: &[u8]) -> ::std::result::Result<Self, Self::Error> {
+                    ::fuels::core::try_from_bytes(bytes)
+                }
+            }
+            impl<> TryFrom<&::std::vec::Vec<u8>> for self::Amsterdam<> {
+                type Error = ::fuels::types::errors::Error;
+                fn try_from(bytes: &::std::vec::Vec<u8>) -> ::std::result::Result<Self, Self::Error> {
+                    ::fuels::core::try_from_bytes(&bytes)
+                }
+            }
+            impl<> TryFrom<::std::vec::Vec<u8>> for self::Amsterdam<> {
+                type Error = ::fuels::types::errors::Error;
+                fn try_from(bytes: ::std::vec::Vec<u8>) -> ::std::result::Result<Self, Self::Error> {
+                    ::fuels::core::try_from_bytes(&bytes)
+                }
+            }
+        };
+
+        assert_eq!(actual.to_string(), expected.to_string());
         Ok(())
     }
 
@@ -293,15 +468,91 @@ mod tests {
             &FullTypeDeclaration::from_counterpart(&p, &types),
             &HashSet::default(),
         )?
-        .code
-        .to_string();
-        let expected = TokenStream::from_str(
-            r#"
-            # [derive (Clone , Debug , Eq , PartialEq)] pub enum SomeEnum < > { SomeArr ([u64 ; 7usize]) } impl < > :: fuels :: core :: Parameterize for self :: SomeEnum < > { fn param_type () -> :: fuels :: types :: param_types :: ParamType { let variants = [("SomeArr" . to_string () , < [u64 ; 7usize] as :: fuels :: core :: Parameterize > :: param_type ())] . to_vec () ; let variants = :: fuels :: types :: enum_variants :: EnumVariants :: new (variants) . unwrap_or_else (| _ | panic ! ("{} has no variants which isn't allowed!" , "SomeEnum")) ; :: fuels :: types :: param_types :: ParamType :: Enum { name : "SomeEnum" . to_string () , variants , generics : [] . to_vec () } } } impl < > :: fuels :: core :: Tokenizable for self :: SomeEnum < > { fn from_token (token : :: fuels :: core :: Token) -> :: std :: result :: Result < Self , :: fuels :: types :: errors :: Error > where Self : Sized , { let gen_err = | msg | { :: fuels :: types :: errors :: Error :: InvalidData (format ! ("Error while instantiating {} from token! {}" , "SomeEnum" , msg)) } ; match token { :: fuels :: core :: Token :: Enum (selector) => { let (discriminant , variant_token , _) = * selector ; match discriminant { 0u8 => :: std :: result :: Result :: Ok (Self :: SomeArr (:: fuels :: core :: Tokenizable :: from_token (variant_token) ?)) , _ => :: std :: result :: Result :: Err (gen_err (format ! ("Discriminant {} doesn't point to any of the enums variants." , discriminant))) , } } _ => :: std :: result :: Result :: Err (gen_err (format ! ("Given token ({}) is not of the type Token::Enum!" , token))) , } } fn into_token (self) -> :: fuels :: core :: Token { let (discriminant , token) = match self { Self :: SomeArr (inner) => (0u8 , :: fuels :: core :: Tokenizable :: into_token (inner)) } ; let variants = match < Self as :: fuels :: core :: Parameterize > :: param_type () { :: fuels :: types :: param_types :: ParamType :: Enum { variants , .. } => variants , other => panic ! ("Calling {}::param_type() must return a ParamType::Enum but instead it returned: {:?}" , "SomeEnum" , other) } ; :: fuels :: core :: Token :: Enum (:: std :: boxed :: Box :: new ((discriminant , token , variants))) } } impl < > TryFrom < & [u8] > for self :: SomeEnum < > { type Error = :: fuels :: types :: errors :: Error ; fn try_from (bytes : & [u8]) -> :: std :: result :: Result < Self , Self :: Error > { :: fuels :: core :: try_from_bytes (bytes) } } impl < > TryFrom < & :: std :: vec :: Vec < u8 >> for self :: SomeEnum < > { type Error = :: fuels :: types :: errors :: Error ; fn try_from (bytes : & :: std :: vec :: Vec < u8 >) -> :: std :: result :: Result < Self , Self :: Error > { :: fuels :: core :: try_from_bytes (& bytes) } } impl < > TryFrom < :: std :: vec :: Vec < u8 >> for self :: SomeEnum < > { type Error = :: fuels :: types :: errors :: Error ; fn try_from (bytes : :: std :: vec :: Vec < u8 >) -> :: std :: result :: Result < Self , Self :: Error > { :: fuels :: core :: try_from_bytes (& bytes) } }
-            "#,
-        )?.to_string();
+        .code;
 
-        assert_eq!(actual, expected);
+        let expected = quote! {
+            #[allow(clippy::enum_variant_names)]
+            #[derive(Clone, Debug, Eq, PartialEq)]
+            pub enum SomeEnum < > {
+                SomeArr([u64; 7usize])
+            }
+            impl < > ::fuels::core::Parameterize for self::SomeEnum < > {
+                fn param_type() -> ::fuels::types::param_types::ParamType {
+                    let variants = [(
+                        "SomeArr".to_string(),
+                        <[u64; 7usize] as ::fuels::core::Parameterize>::param_type()
+                    )]
+                    .to_vec();
+                    let variants = ::fuels::types::enum_variants::EnumVariants::new(variants)
+                        .unwrap_or_else(|_| panic!("{} has no variants which isn't allowed!", "SomeEnum"));
+                    ::fuels::types::param_types::ParamType::Enum {
+                        name: "SomeEnum".to_string(),
+                        variants,
+                        generics: [].to_vec()
+                    }
+                }
+            }
+            impl < > ::fuels::core::Tokenizable for self::SomeEnum < > {
+                fn from_token(
+                    token: ::fuels::core::Token
+                ) -> ::std::result::Result<Self, ::fuels::types::errors::Error>
+                where
+                    Self: Sized,
+                {
+                    let gen_err = |msg| {
+                        ::fuels::types::errors::Error::InvalidData(format!(
+                            "Error while instantiating {} from token! {}",
+                            "SomeEnum", msg
+                        ))
+                    };
+                    match token {
+                        ::fuels::core::Token::Enum(selector) => {
+                            let (discriminant, variant_token, _) = *selector;
+                            match discriminant {
+                                0u8 => ::std::result::Result::Ok(Self::SomeArr(
+                                    ::fuels::core::Tokenizable::from_token(variant_token)?
+                                )),
+                                _ => ::std::result::Result::Err(gen_err(format!(
+                                    "Discriminant {} doesn't point to any of the enums variants.",
+                                    discriminant
+                                ))),
+                            }
+                        }
+                        _ => ::std::result::Result::Err(gen_err(format!(
+                            "Given token ({}) is not of the type Token::Enum!",
+                            token
+                        ))),
+                    }
+                }
+                fn into_token(self) -> ::fuels::core::Token {
+                    let (discriminant, token) = match self {
+                        Self::SomeArr(inner) => (0u8, ::fuels::core::Tokenizable::into_token(inner))
+                    };
+                    let variants = match < Self as :: fuels :: core :: Parameterize > :: param_type () { :: fuels :: types :: param_types :: ParamType :: Enum { variants , .. } => variants , other => panic ! ("Calling {}::param_type() must return a ParamType::Enum but instead it returned: {:?}" , "SomeEnum" , other) } ;
+                    ::fuels::core::Token::Enum(::std::boxed::Box::new((discriminant, token, variants)))
+                }
+            }
+            impl <> TryFrom<&[u8]> for self::SomeEnum < > {
+                type Error = ::fuels::types::errors::Error;
+                fn try_from(bytes: &[u8]) -> ::std::result::Result<Self, Self::Error> {
+                    ::fuels::core::try_from_bytes(bytes)
+                }
+            }
+            impl <> TryFrom<&::std::vec::Vec<u8>> for self::SomeEnum <>{
+                type Error = ::fuels::types::errors::Error;
+                fn try_from(bytes: &::std::vec::Vec<u8>) -> ::std::result::Result<Self, Self::Error> {
+                    ::fuels::core::try_from_bytes(&bytes)
+                }
+            }
+            impl <> TryFrom<::std::vec::Vec<u8>> for self::SomeEnum <>{
+                type Error = ::fuels::types::errors::Error;
+                fn try_from(bytes: ::std::vec::Vec<u8>) -> ::std::result::Result<Self, Self::Error> {
+                    ::fuels::core::try_from_bytes(&bytes)
+                }
+            }
+        };
+
+        assert_eq!(actual.to_string(), expected.to_string());
         Ok(())
     }
 
@@ -360,15 +611,91 @@ mod tests {
             &FullTypeDeclaration::from_counterpart(&p, &types),
             &HashSet::default(),
         )?
-        .code
-        .to_string();
-        let expected = TokenStream::from_str(
-            r#"
-            # [derive (Clone , Debug , Eq , PartialEq)] pub enum EnumLevel3 < > { El2 (self :: EnumLevel2) } impl < > :: fuels :: core :: Parameterize for self :: EnumLevel3 < > { fn param_type () -> :: fuels :: types :: param_types :: ParamType { let variants = [("El2" . to_string () , < self :: EnumLevel2 as :: fuels :: core :: Parameterize > :: param_type ())] . to_vec () ; let variants = :: fuels :: types :: enum_variants :: EnumVariants :: new (variants) . unwrap_or_else (| _ | panic ! ("{} has no variants which isn't allowed!" , "EnumLevel3")) ; :: fuels :: types :: param_types :: ParamType :: Enum { name : "EnumLevel3" . to_string () , variants , generics : [] . to_vec () } } } impl < > :: fuels :: core :: Tokenizable for self :: EnumLevel3 < > { fn from_token (token : :: fuels :: core :: Token) -> :: std :: result :: Result < Self , :: fuels :: types :: errors :: Error > where Self : Sized , { let gen_err = | msg | { :: fuels :: types :: errors :: Error :: InvalidData (format ! ("Error while instantiating {} from token! {}" , "EnumLevel3" , msg)) } ; match token { :: fuels :: core :: Token :: Enum (selector) => { let (discriminant , variant_token , _) = * selector ; match discriminant { 0u8 => :: std :: result :: Result :: Ok (Self :: El2 (:: fuels :: core :: Tokenizable :: from_token (variant_token) ?)) , _ => :: std :: result :: Result :: Err (gen_err (format ! ("Discriminant {} doesn't point to any of the enums variants." , discriminant))) , } } _ => :: std :: result :: Result :: Err (gen_err (format ! ("Given token ({}) is not of the type Token::Enum!" , token))) , } } fn into_token (self) -> :: fuels :: core :: Token { let (discriminant , token) = match self { Self :: El2 (inner) => (0u8 , :: fuels :: core :: Tokenizable :: into_token (inner)) } ; let variants = match < Self as :: fuels :: core :: Parameterize > :: param_type () { :: fuels :: types :: param_types :: ParamType :: Enum { variants , .. } => variants , other => panic ! ("Calling {}::param_type() must return a ParamType::Enum but instead it returned: {:?}" , "EnumLevel3" , other) } ; :: fuels :: core :: Token :: Enum (:: std :: boxed :: Box :: new ((discriminant , token , variants))) } } impl < > TryFrom < & [u8] > for self :: EnumLevel3 < > { type Error = :: fuels :: types :: errors :: Error ; fn try_from (bytes : & [u8]) -> :: std :: result :: Result < Self , Self :: Error > { :: fuels :: core :: try_from_bytes (bytes) } } impl < > TryFrom < & :: std :: vec :: Vec < u8 >> for self :: EnumLevel3 < > { type Error = :: fuels :: types :: errors :: Error ; fn try_from (bytes : & :: std :: vec :: Vec < u8 >) -> :: std :: result :: Result < Self , Self :: Error > { :: fuels :: core :: try_from_bytes (& bytes) } } impl < > TryFrom < :: std :: vec :: Vec < u8 >> for self :: EnumLevel3 < > { type Error = :: fuels :: types :: errors :: Error ; fn try_from (bytes : :: std :: vec :: Vec < u8 >) -> :: std :: result :: Result < Self , Self :: Error > { :: fuels :: core :: try_from_bytes (& bytes) } }
-            "#
-        )?.to_string();
+        .code;
 
-        assert_eq!(actual, expected);
+        let expected = quote! {
+            #[allow(clippy::enum_variant_names)]
+            #[derive(Clone, Debug, Eq, PartialEq)]
+            pub enum EnumLevel3<> {
+                El2(self::EnumLevel2)
+            }
+            impl<> ::fuels::core::Parameterize for self::EnumLevel3<> {
+                fn param_type() -> ::fuels::types::param_types::ParamType {
+                    let variants = [(
+                        "El2".to_string(),
+                        <self::EnumLevel2 as ::fuels::core::Parameterize>::param_type()
+                    )]
+                    .to_vec();
+                    let variants = ::fuels::types::enum_variants::EnumVariants::new(variants)
+                        .unwrap_or_else(|_| panic!("{} has no variants which isn't allowed!", "EnumLevel3"));
+                    ::fuels::types::param_types::ParamType::Enum {
+                        name: "EnumLevel3".to_string(),
+                        variants,
+                        generics: [].to_vec()
+                    }
+                }
+            }
+            impl<> ::fuels::core::Tokenizable for self::EnumLevel3<> {
+                fn from_token(
+                    token: ::fuels::core::Token
+                ) -> ::std::result::Result<Self, ::fuels::types::errors::Error>
+                where
+                    Self: Sized,
+                {
+                    let gen_err = |msg| {
+                        ::fuels::types::errors::Error::InvalidData(format!(
+                            "Error while instantiating {} from token! {}",
+                            "EnumLevel3", msg
+                        ))
+                    };
+                    match token {
+                        ::fuels::core::Token::Enum(selector) => {
+                            let (discriminant, variant_token, _) = *selector;
+                            match discriminant {
+                                0u8 => ::std::result::Result::Ok(Self::El2(
+                                    ::fuels::core::Tokenizable::from_token(variant_token)?
+                                )),
+                                _ => ::std::result::Result::Err(gen_err(format!(
+                                    "Discriminant {} doesn't point to any of the enums variants.",
+                                    discriminant
+                                ))),
+                            }
+                        }
+                        _ => ::std::result::Result::Err(gen_err(format!(
+                            "Given token ({}) is not of the type Token::Enum!",
+                            token
+                        ))),
+                    }
+                }
+                fn into_token(self) -> ::fuels::core::Token {
+                    let (discriminant, token) = match self {
+                        Self::El2(inner) => (0u8, ::fuels::core::Tokenizable::into_token(inner))
+                    };
+                    let variants = match < Self as :: fuels :: core :: Parameterize > :: param_type () { :: fuels :: types :: param_types :: ParamType :: Enum { variants , .. } => variants , other => panic ! ("Calling {}::param_type() must return a ParamType::Enum but instead it returned: {:?}" , "EnumLevel3" , other) } ;
+                    ::fuels::core::Token::Enum(::std::boxed::Box::new((discriminant, token, variants)))
+                }
+            }
+            impl<> TryFrom<&[u8]> for self::EnumLevel3<> {
+                type Error = ::fuels::types::errors::Error;
+                fn try_from(bytes: &[u8]) -> ::std::result::Result<Self, Self::Error> {
+                    ::fuels::core::try_from_bytes(bytes)
+                }
+            }
+            impl<> TryFrom<&::std::vec::Vec<u8>> for self::EnumLevel3<> {
+                type Error = ::fuels::types::errors::Error;
+                fn try_from(bytes: &::std::vec::Vec<u8>) -> ::std::result::Result<Self, Self::Error> {
+                    ::fuels::core::try_from_bytes(&bytes)
+                }
+            }
+            impl<> TryFrom<::std::vec::Vec<u8>> for self::EnumLevel3<> {
+                type Error = ::fuels::types::errors::Error;
+                fn try_from(bytes: ::std::vec::Vec<u8>) -> ::std::result::Result<Self, Self::Error> {
+                    ::fuels::core::try_from_bytes(&bytes)
+                }
+            }
+        };
+
+        assert_eq!(actual.to_string(), expected.to_string());
         Ok(())
     }
 

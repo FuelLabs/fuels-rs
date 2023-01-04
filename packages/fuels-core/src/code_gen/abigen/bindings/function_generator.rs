@@ -154,6 +154,7 @@ mod tests {
         // All arguments are here
         let the_function = ABIFunction {
             inputs: vec![the_argument],
+            name: "some_fun".to_string(),
             ..ABIFunction::default()
         };
 
