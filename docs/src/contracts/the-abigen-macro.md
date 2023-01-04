@@ -34,13 +34,46 @@ To generate these bindings, all you have to do is:
 {{#include ../../../examples/rust_bindings/src/lib.rs:use_abigen}}
 ```
 
-And this `abigen!` macro will _expand_ the code with the type-safe Rust bindings. It takes two arguments:
+And this `abigen!` macro will _expand_ the code with the type-safe Rust bindings. It accepts input in the form of:
 
-1. The name of the struct that will be generated (`MyContractName`);
-2. Either a path as a string to the JSON ABI file or the JSON ABI as a multiline string directly.
+
+`ProgramType(name = "SomeName", abi="some-abi.json")`, 
+
+where: 
+
+`ProgramType` is either `Contract`, `Script` or `Predicate`,
+
+`name = "SomeName"` is the name of the generated struct inside the generated mod `SomeName_mod`,
+
+`abi = "some-abi.json"` is the JSON file containing the ABI from which the bindings are to be generated.
+
 
 The same as the example above but passing the ABI definition directly:
 
 ```rust,ignore
 {{#include ../../../examples/rust_bindings/src/lib.rs:abigen_with_string}}
+```
+
+## Generating multiple bindings at once
+If your contracts, scripts or predicates share types via libraries, you should consider generating the bindings for all
+the programs at once:
+
+```rust,ignore
+{{#include ../../../packages/fuels/tests/bindings.rs:mixed_abigen_usage}}
+```
+
+This way, types that are equal in both name and contents will be extracted into a separate mod called `shared_types`.
+This way you can seamlessly use them between the various generated bindings.
+
+Otherwise, if you generate every binding separately, every binding is going to have its own type, and you'll need to
+convert between them.
+
+### Known caveat of shared-types
+If shared_types are being generated then you cannot call `abigen!` inside a function. This is due to the bindings
+internally referring to the shared types via `super::shared_types::SomeSharedType` which doesn't work if `super` refers
+to the crate root while the bindings are in a function.
+
+A workaround would be to wrap everything inside another mod so that `super::` refers to it instead of the crate root:
+```rust,ignore
+{{#include ../../../packages/fuels/tests/bindings.rs:shared_types_caveat_workaround}}
 ```

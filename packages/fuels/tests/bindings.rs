@@ -800,33 +800,38 @@ async fn compile_bindings_enum_input() {
     assert_eq!(encoded, expected);
 }
 
-#[tokio::test]
-async fn shared_types_between_contracts() -> Result<(), Error> {
-    // This is a caveat with the abigen! shared-types implementation.
-    // If run inside a function, like we're doing here in this test, then the
-    // normal types have issues referencing the shared types.
-    //
-    // A shared type, from inside a contract/script/predicate bindings mod,
-    // would normally be referenced like this:
-    // 'super::shared_types::SomeSharedType'. 'super' would get you out of the
-    // mod of current mod and then you step down into the 'shared_types' mod.
-    //
-    // For some reason, 'super' inside a function gets you out of your mod, but
-    // if that gets you to the 'root/self' mod, you can never get back in.
-    //
-    // A workaround is to wrap everything in another mod so that 'super' lands
-    // you inside of that one and not 'outside' of the function.
-    //
-    // Not a big issue since almost all usages call abigen! outside of any
-    // function.
+// This is a caveat with the abigen! shared-types implementation.
+// If run inside a function, like we're doing here in this test, then the
+// normal types have issues referencing the shared types.
+//
+// A shared type, from inside a contract/script/predicate bindings mod,
+// would normally be referenced like this:
+// 'super::shared_types::SomeSharedType'. 'super' would get you out of the
+// mod of current mod and then you step down into the 'shared_types' mod.
+//
+// For some reason, 'super' inside a function gets you out of your mod, but
+// if that gets you to the create root, you can never get back in.
+//
+// A workaround is to wrap everything in another mod so that 'super' lands
+// you inside of that one and not 'outside' of the function.
+//
+// Not a big issue since almost all usages call abigen! outside of any
+// function.
 
+// ANCHOR: shared_types_caveat_workaround
+#[tokio::test]
+async fn shared_types() -> Result<(), Error> {
     mod contracts {
         use super::*;
+        // ANCHOR: mixed_abigen_usage
         abigen!(
-            Contract(name="ContractA", abi="packages/fuels/tests/bindings/contracts_sharing_types/contract_a/out/debug/contract_a-abi.json"),
-            Contract(name="ContractB", abi="packages/fuels/tests/bindings/contracts_sharing_types/contract_b/out/debug/contract_b-abi.json"),
+            Contract(name="ContractA", abi="packages/fuels/tests/bindings/sharing_types/contract_a/out/debug/contract_a-abi.json"),
+            Contract(name="ContractB", abi="packages/fuels/tests/bindings/sharing_types/contract_b/out/debug/contract_b-abi.json"),
+            Script(name="SomeScript", abi="packages/fuels/tests/bindings/sharing_types/script/out/debug/script-abi.json")
         );
+        // ANCHOR_END: mixed_abigen_usage
     }
+    // ANCHOR_END: shared_types_caveat_workaround
     use contracts::*;
     let wallet = launch_provider_and_get_wallet().await;
 
