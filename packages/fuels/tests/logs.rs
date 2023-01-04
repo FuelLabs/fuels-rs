@@ -522,6 +522,52 @@ async fn test_script_get_logs() -> Result<(), Error> {
 }
 
 #[tokio::test]
+async fn test_contract_with_contract_logs() -> Result<(), Error> {
+    let wallet = launch_provider_and_get_wallet().await;
+
+    abigen!(
+        MyContract,
+        "packages/fuels/tests/logs/contract_logs/out/debug/contract_logs-abi.json",
+    );
+
+    let contract_id: ContractId = Contract::deploy(
+        "../../packages/fuels/tests/logs/contract_logs/out/debug/contract_logs.bin",
+        &wallet,
+        TxParameters::default(),
+        StorageConfiguration::default(),
+    )
+    .await?
+    .into();
+
+    let contract_instance = MyContract::new(contract_id.into(), wallet.clone());
+
+    setup_contract_test!(
+        contract_caller_instance,
+        None,
+        "packages/fuels/tests/logs/contract_with_contract_logs"
+    );
+
+    let expected_logs: Vec<String> = vec![
+        format!("{:?}", 64),
+        format!("{:?}", 32),
+        format!("{:?}", 16),
+        format!("{:?}", 8),
+    ];
+
+    let logs = contract_caller_instance
+        .methods()
+        .logs_from_extrenal_contract(contract_id)
+        .set_contracts(&[contract_instance])
+        .call()
+        .await?
+        .get_logs()?;
+
+    assert_eq!(expected_logs, logs);
+
+    Ok(())
+}
+
+#[tokio::test]
 async fn test_script_logs_with_contract_logs() -> Result<(), Error> {
     let wallet = launch_provider_and_get_wallet().await;
 
