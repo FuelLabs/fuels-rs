@@ -1,0 +1,5 @@
+error: Expected a string for the value of the 'name' attribute.
+ --> tests/ui/invalid_name_value.rs:3:18
+  |
+3 | abigen!(Contract(name = true, abi = "some-abi.json",));
+  |                  ^^^^^^^^^^^

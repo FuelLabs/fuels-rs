@@ -1,0 +1,5 @@
+error: Unknown attribute! Expected one of: 'name', 'abi'.
+ --> tests/ui/unrecognized_attribute.rs:6:5
+  |
+6 |     unknown = "something"
+  |     ^^^^^^^^^^^^^^^^^^^^^

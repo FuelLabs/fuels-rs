@@ -2,7 +2,6 @@ use itertools::Itertools;
 use proc_macro2::Span;
 use syn::parse::{Parse, ParseStream};
 use syn::parse_macro_input::ParseMacroInput;
-use syn::spanned::Spanned;
 use syn::{
     parenthesized, AttributeArgs, Error, Lit, Meta, MetaNameValue, NestedMeta,
     Result as ParseResult,
@@ -10,7 +9,7 @@ use syn::{
 
 #[derive(Debug)]
 pub(crate) struct Attributes {
-    content_start: Span,
+    content_span: Span,
     attrs: Vec<MetaNameValue>,
 }
 
@@ -19,16 +18,13 @@ impl Parse for Attributes {
         let content;
         parenthesized!(content in input);
 
+        let content_span = content.span();
+
         let attrs = Self::extract_attrs(&content)?;
         Self::validate_attrs(&attrs)?;
 
-        let content_start = attrs
-            .first()
-            .map(|f| f.span())
-            .unwrap_or_else(|| content.span());
-
         Ok(Self {
-            content_start,
+            content_span,
             attrs,
         })
     }
@@ -41,7 +37,7 @@ impl Attributes {
             .find(|nv| nv.path.is_ident(attr_name))
             .ok_or_else(|| {
                 Error::new(
-                    self.content_start,
+                    self.content_span,
                     format!("'{attr_name}' attribute is missing!"),
                 )
             })
