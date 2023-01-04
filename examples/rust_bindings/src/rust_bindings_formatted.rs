@@ -19,6 +19,7 @@ impl MyContract {
             [0, 0, 0, 0, 171, 100, 229, 242],
             &[ParamType::U64],
             &[arg.into_token()],
+            false,
         )
         .expect("method not found (this should never happen)")
     }
@@ -31,6 +32,7 @@ impl MyContract {
             [0, 0, 0, 0, 250, 249, 13, 211],
             &[ParamType::U64],
             &[arg.into_token()],
+            false,
         )
         .expect("method not found (this should never happen)")
     }

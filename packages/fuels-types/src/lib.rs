@@ -52,6 +52,16 @@ pub struct ABIFunction {
     pub attributes: Option<Vec<Attribute>>,
 }
 
+impl ABIFunction {
+    pub fn is_payable(&self) -> bool {
+        if let Some(attributes) = &self.attributes {
+            return attributes.iter().any(|attr| attr.name == "payable");
+        }
+
+        false
+    }
+}
+
 #[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TypeDeclaration {

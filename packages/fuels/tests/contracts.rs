@@ -770,3 +770,22 @@ async fn test_contract_call_with_non_default_max_input() -> Result<(), Error> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn test_payable_annotation() -> Result<(), Error> {
+    setup_contract_test!(
+        contract_instance,
+        wallet,
+        "packages/fuels/tests/contracts/payable_annotation"
+    );
+
+    let contract_methods = contract_instance.methods();
+
+    let response = contract_methods.payable().call().await?;
+    assert_eq!(response.value, 42);
+
+    let response = contract_methods.non_payable().call().await?;
+    assert_eq!(response.value, 42);
+
+    Ok(())
+}

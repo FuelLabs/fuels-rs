@@ -53,6 +53,8 @@ pub(crate) fn expand_function(
 
     let output_type: TokenStream = resolve_fn_output_type(function, types)?.into();
 
+    let is_payable = function.is_payable();
+
     Ok(quote! {
         #doc
         pub fn #name(&self #(,#arg_declarations)*) -> ContractCallHandler<#output_type> {
@@ -66,7 +68,8 @@ pub(crate) fn expand_function(
                 &self.wallet,
                 encoded_fn_selector,
                 &tokens,
-                log_decoder
+                log_decoder,
+                #is_payable,
             )
             .expect("method not found (this should never happen)")
         }
@@ -361,7 +364,8 @@ mod tests {
                         &self.wallet,
                         encoded_fn_selector,
                         &tokens,
-                        log_decoder
+                        log_decoder,
+                        false,
                     )
                     .expect("method not found (this should never happen)")
                 }
@@ -420,7 +424,8 @@ mod tests {
                     &self.wallet,
                     encoded_fn_selector,
                     &tokens,
-                    log_decoder
+                    log_decoder,
+                    false,
                 )
                 .expect("method not found (this should never happen)")
             }
@@ -527,7 +532,8 @@ mod tests {
                     &self.wallet,
                     encoded_fn_selector,
                     &tokens,
-                    log_decoder
+                    log_decoder,
+                    false,
                 )
                 .expect("method not found (this should never happen)")
             }
