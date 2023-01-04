@@ -43,7 +43,7 @@ where:
 
 `ProgramType` is either `Contract`, `Script` or `Predicate`,
 
-`name = "SomeName"` is the name of the generated struct inside the generated mod `SomeName_mod`,
+`name = "SomeName"` is the name of the generated struct inside the generated mod `some_name_mod`,
 
 `abi = "some-abi.json"` is the JSON file containing the ABI from which the bindings are to be generated.
 
