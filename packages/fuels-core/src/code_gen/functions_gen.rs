@@ -58,6 +58,8 @@ pub(crate) fn expand_function(
 
     let is_payable = function.is_payable();
 
+    let is_payable = function.is_payable();
+
     Ok(quote! {
         #doc
         pub fn #name(&self #(,#arg_declarations)*) -> ContractCallHandler<#output_type> {
@@ -70,7 +72,7 @@ pub(crate) fn expand_function(
                 &self.wallet,
                 encoded_fn_selector,
                 &tokens,
-                self.log_decoder.clone()
+                self.log_decoder.clone(),
                 #is_payable,
             )
             .expect("method not found (this should never happen)")

@@ -111,6 +111,7 @@ impl Contract {
         args: &[Token],
         log_decoder: LogDecoder,
         is_payable: bool,
+        is_payable: bool,
     ) -> Result<ContractCallHandler<D>, Error> {
         let encoded_selector = signature;
 
@@ -575,7 +576,9 @@ where
     /// ```
     pub fn call_params(mut self, params: CallParameters) -> Result<Self, Error> {
         if !self.is_payable() && params.amount > 0 {
-            return Err(Error::InvalidCallParameters());
+            return Err(Error::InvalidData(String::from(
+                "Assets can only be forwarded to payable contract methods.",
+            )));
         }
         self.contract_call.call_parameters = params;
         Ok(self)
