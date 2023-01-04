@@ -1,4 +1,5 @@
 use fuels::prelude::*;
+use fuels_core::tx::Input;
 use std::future::Future;
 
 #[tokio::test]
@@ -451,7 +452,7 @@ async fn setup_output_variable_estimation_test(
         TxParameters::default(),
         StorageConfiguration::default(),
     )
-    .await?;
+        .await?;
 
     let mint_asset_id = AssetId::from(*contract_id.hash());
     let addresses: [Address; 3] = wallets
@@ -484,7 +485,6 @@ async fn test_output_variable_estimation() -> Result<(), Error> {
             .mint_to_addresses(amount, addresses)
             .call()
             .await;
-
         assert!(matches!(response, Err(Error::RevertTransactionError(..))));
     }
 
@@ -494,7 +494,6 @@ async fn test_output_variable_estimation() -> Result<(), Error> {
             .mint_to_addresses(amount, addresses)
             .estimate_tx_dependencies(Some(2))
             .await;
-
         assert!(matches!(response, Err(Error::RevertTransactionError(..))));
     }
 
@@ -623,8 +622,8 @@ async fn test_contract_instance_get_balances() -> Result<(), Error> {
 #[tokio::test]
 async fn contract_call_futures_implement_send() -> Result<(), Error> {
     fn tokio_spawn_imitation<T>(_: T)
-    where
-        T: Future + Send + 'static,
+        where
+            T: Future + Send + 'static,
     {
     }
 
@@ -767,6 +766,66 @@ async fn test_contract_call_with_non_default_max_input() -> Result<(), Error> {
     let response = contract_instance.methods().get(5, 6).call().await?;
 
     assert_eq!(response.value, 5);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_extend_transaction_inputs() -> Result<(), Error> {
+    abigen!(
+        MyContract,
+        "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
+    );
+
+    let wallet_config = WalletsConfig::new(Some(1), Some(1), Some(1_000_000));
+    let wallet = launch_custom_provider_and_get_wallets(wallet_config, None, None)
+        .await
+        .pop()
+        .unwrap();
+
+    let contract_id = Contract::deploy(
+        "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
+        &wallet,
+        TxParameters::default(),
+        StorageConfiguration::default(),
+    )
+        .await?;
+
+    let call_params = CallParameters::new(Some(1_333), None, None);
+
+    let contract_instance = MyContract::new(contract_id, wallet.clone());
+
+    let call_handler = contract_instance
+        .methods()
+        .initialize_counter(42)
+        .call_params(call_params);
+
+    let mut execution_script = call_handler.get_executable_call().await?;
+
+    let coin = wallet
+        .get_asset_inputs_for_amount(Default::default(), 1, 0)
+        .await?;
+
+    let provider = wallet.get_provider()?;
+
+    let def_coin = vec![Input::CoinSigned {
+        utxo_id: Default::default(),
+        owner: wallet.address().into(),
+        amount: 333,
+        asset_id: Default::default(),
+        tx_pointer: Default::default(),
+        witness_index: 0,
+        maturity: 0,
+    }];
+
+    execution_script
+        .add_inputs(def_coin)
+        // .add_inputs(coin.clone())
+        // .add_inputs(coin)
+        .prepare()
+        .await?
+        .execute(provider)
+        .await?;
 
     Ok(())
 }

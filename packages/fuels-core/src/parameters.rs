@@ -11,7 +11,7 @@ pub struct TxParameters {
     pub maturity: u64,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct CallParameters {
     pub amount: u64,
     pub asset_id: AssetId,

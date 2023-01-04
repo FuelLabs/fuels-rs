@@ -1,6 +1,7 @@
+use crate::contract_calls_utils::calculate_required_asset_amounts;
+use crate::execution_script::PrepareFuelCall;
 use crate::{
     call_response::FuelCallResponse,
-    execution_script::ExecutableFuelCall,
     logs::{decode_revert_error, LogDecoder},
 };
 use fuel_gql_client::{
@@ -214,7 +215,7 @@ impl Contract {
         // The first witness is the bytecode we're deploying.
         // The signature will be appended at position 1 of
         // the witness list
-        wallet.add_fee_coins(&mut tx, 0, 1).await?;
+        wallet.add_fee_resources(&mut tx, 0, 1).await?;
         wallet.sign_transaction(&mut tx).await?;
 
         let provider = wallet.get_provider()?;
@@ -327,7 +328,7 @@ impl Contract {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 /// Contains all data relevant to a single contract call
 pub struct ContractCall {
     pub contract_id: Bech32ContractId,
@@ -587,7 +588,7 @@ where
     /// it will be a bool, works also for structs thanks to the `abigen!()`).
     /// The other field of [`FuelCallResponse`], `receipts`, contains the receipts of the transaction.
     async fn call_or_simulate(&self, simulate: bool) -> Result<FuelCallResponse<D>, Error> {
-        let script = self.get_executable_call().await?;
+        let script = self.get_executable_call().await?.prepare().await?;
 
         let receipts = if simulate {
             script.simulate(&self.provider).await?
@@ -599,8 +600,8 @@ where
     }
 
     /// Returns the script that executes the contract call
-    pub async fn get_executable_call(&self) -> Result<ExecutableFuelCall, Error> {
-        ExecutableFuelCall::from_contract_calls(
+    pub async fn get_executable_call(&self) -> Result<PrepareFuelCall, Error> {
+        PrepareFuelCall::from_contract_calls(
             std::slice::from_ref(&self.contract_call),
             &self.tx_parameters,
             &self.wallet,
@@ -628,7 +629,7 @@ where
 
     /// Simulates a call without needing to resolve the generic for the return type
     async fn simulate_without_decode(&self) -> Result<(), Error> {
-        let script = self.get_executable_call().await?;
+        let script = self.get_executable_call().await?.prepare().await?;
         let provider = self.wallet.get_provider()?;
 
         script.simulate(provider).await?;
@@ -680,7 +681,7 @@ where
         &self,
         tolerance: Option<f64>,
     ) -> Result<TransactionCost, Error> {
-        let script = self.get_executable_call().await?;
+        let mut script = self.get_executable_call().await?.prepare().await?;
 
         let transaction_cost = self
             .provider
@@ -743,12 +744,12 @@ impl MultiContractCallHandler {
     }
 
     /// Returns the script that executes the contract calls
-    pub async fn get_executable_call(&self) -> Result<ExecutableFuelCall, Error> {
+    pub async fn get_executable_call(&self) -> Result<PrepareFuelCall, Error> {
         if self.contract_calls.is_empty() {
             panic!("No calls added. Have you used '.add_calls()'?");
         }
 
-        ExecutableFuelCall::from_contract_calls(
+        PrepareFuelCall::from_contract_calls(
             &self.contract_calls,
             &self.tx_parameters,
             &self.wallet,
@@ -778,7 +779,7 @@ impl MultiContractCallHandler {
         &self,
         simulate: bool,
     ) -> Result<FuelCallResponse<D>, Error> {
-        let script = self.get_executable_call().await?;
+        let script = self.get_executable_call().await?.prepare().await?;
 
         let provider = self.wallet.get_provider()?;
 
@@ -793,7 +794,7 @@ impl MultiContractCallHandler {
 
     /// Simulates a call without needing to resolve the generic for the return type
     async fn simulate_without_decode(&self) -> Result<(), Error> {
-        let script = self.get_executable_call().await?;
+        let script = self.get_executable_call().await?.prepare().await?;
         let provider = self.wallet.get_provider()?;
 
         script.simulate(provider).await?;
@@ -847,7 +848,8 @@ impl MultiContractCallHandler {
         &self,
         tolerance: Option<f64>,
     ) -> Result<TransactionCost, Error> {
-        let script = self.get_executable_call().await?;
+
+        let mut script = self.get_executable_call().await?.prepare().await?;
 
         let transaction_cost = self
             .wallet

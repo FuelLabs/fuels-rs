@@ -1,22 +1,27 @@
-use crate::contract_calls_utils::{get_single_call_instructions, CallOpcodeParamsOffset};
+use crate::contract_calls_utils::{
+    extract_message_outputs, extract_unique_contract_ids, extract_variable_outputs,
+    get_single_call_instructions, CallOpcodeParamsOffset,
+};
 use anyhow::Result;
+use std::collections::HashSet;
 use std::fmt::Debug;
 
 use fuel_gql_client::fuel_tx::{Receipt, Transaction};
 
-use fuel_tx::{AssetId, Checkable, ScriptExecutionResult};
+use fuel_tx::{AssetId, Checkable, Input, Output, ScriptExecutionResult};
 use fuels_core::{offsets::call_script_data_offset, parameters::TxParameters};
 use fuels_signers::provider::Provider;
 use fuels_signers::{Signer, WalletUnlocked};
 
+use fuel_tx::field::Inputs;
+use fuels_core::tx::ContractId;
 use fuels_types::errors::Error;
-
 use std::vec;
 
 use crate::contract::ContractCall;
 use crate::contract_calls_utils::{
     build_script_data_from_contract_calls, calculate_required_asset_amounts, get_instructions,
-    get_transaction_inputs_outputs,
+    prepare_script_inputs_outputs,
 };
 
 /// [`TransactionExecution`] provides methods to create and call/simulate a transaction that carries
@@ -26,9 +31,32 @@ pub struct ExecutableFuelCall {
     pub tx: fuels_core::tx::Script,
 }
 
-impl ExecutableFuelCall {
-    pub fn new(tx: fuels_core::tx::Script) -> Self {
-        Self { tx }
+#[derive(Debug)]
+pub struct PrepareFuelCall {
+    pub(crate) tx: fuels_core::tx::Script,
+    pub(crate) calls: Calls,
+    pub(crate) wallet: WalletUnlocked,
+    pub(crate) inputs: Vec<Input>,
+    pub(crate) outputs: Vec<Output>,
+}
+
+#[derive(Debug, Default)]
+pub struct Calls {
+    pub required_asset_amounts: Vec<(AssetId, u64)>,
+    pub calls_contract_ids: HashSet<ContractId>,
+    pub calls_variable_outputs: Vec<Output>,
+    pub calls_message_outputs: Vec<Output>,
+}
+
+impl PrepareFuelCall {
+    pub fn new(tx: fuels_core::tx::Script, calls: Calls, wallet: WalletUnlocked) -> Self {
+        Self {
+            tx,
+            calls,
+            wallet,
+            inputs: vec![],
+            outputs: vec![],
+        }
     }
 
     /// Creates a [`TransactionExecution`] from contract calls. The internal [`Transaction`] is
@@ -53,39 +81,46 @@ impl ExecutableFuelCall {
 
         let script = get_instructions(calls, call_param_offsets);
 
-        let required_asset_amounts = calculate_required_asset_amounts(calls);
-        let mut spendable_resources = vec![];
-
-        // Find the spendable resources required for those calls
-        for (asset_id, amount) in &required_asset_amounts {
-            let resources = wallet.get_spendable_resources(*asset_id, *amount).await?;
-            spendable_resources.extend(resources);
-        }
-
-        let (inputs, outputs) =
-            get_transaction_inputs_outputs(calls, wallet.address(), spendable_resources);
-
-        let mut tx = Transaction::script(
+        let tx = Transaction::script(
             tx_parameters.gas_price,
             tx_parameters.gas_limit,
             tx_parameters.maturity,
             script,
             script_data,
-            inputs,
-            outputs,
+            vec![],
+            vec![],
             vec![],
         );
 
-        let base_asset_amount = required_asset_amounts
-            .iter()
-            .find(|(asset_id, _)| *asset_id == AssetId::default());
-        match base_asset_amount {
-            Some((_, base_amount)) => wallet.add_fee_coins(&mut tx, *base_amount, 0).await?,
-            None => wallet.add_fee_coins(&mut tx, 0, 0).await?,
-        }
-        wallet.sign_transaction(&mut tx).await.unwrap();
+        let calls = Calls {
+            required_asset_amounts: calculate_required_asset_amounts(calls),
+            calls_contract_ids: extract_unique_contract_ids(calls),
+            calls_variable_outputs: extract_variable_outputs(calls),
+            calls_message_outputs: extract_message_outputs(calls),
+        };
 
-        Ok(ExecutableFuelCall::new(tx))
+        Ok(PrepareFuelCall::new(tx, calls, wallet.clone()))
+    }
+
+    pub async fn prepare(&mut self) -> Result<ExecutableFuelCall, Error> {
+        prepare_script_inputs_outputs(self).await?;
+        Ok(ExecutableFuelCall::new(self.tx.clone()))
+    }
+
+    pub fn add_inputs(&mut self, inputs: Vec<Input>) -> &mut PrepareFuelCall {
+        self.inputs.extend(inputs);
+        self
+    }
+
+    pub fn add_outputs(&mut self, outputs: Vec<Output>) -> &mut PrepareFuelCall {
+        self.outputs.extend(outputs);
+        self
+    }
+}
+
+impl ExecutableFuelCall {
+    pub fn new(tx: fuels_core::tx::Script) -> Self {
+        Self { tx }
     }
 
     /// Execute the transaction in a state-modifying manner.
