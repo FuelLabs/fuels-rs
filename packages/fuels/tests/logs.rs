@@ -556,7 +556,7 @@ async fn test_contract_with_contract_logs() -> Result<(), Error> {
 
     let logs = contract_caller_instance
         .methods()
-        .logs_from_extrenal_contract(contract_id)
+        .logs_from_external_contract(contract_id)
         .set_contracts(&[contract_instance])
         .call()
         .await?
