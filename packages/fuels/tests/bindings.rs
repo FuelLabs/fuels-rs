@@ -836,7 +836,9 @@ async fn shared_types() -> Result<(), Error> {
     let wallet = launch_provider_and_get_wallet().await;
 
     let deploy_contract = |a_or_b: &str| {
-        let string = format!("tests/bindings/contracts_sharing_types/contract_{a_or_b}/out/debug/contract_{a_or_b}.bin");
+        let string = format!(
+            "tests/bindings/sharing_types/contract_{a_or_b}/out/debug/contract_{a_or_b}.bin"
+        );
         let wallet = &wallet;
         async move {
             Contract::deploy(
