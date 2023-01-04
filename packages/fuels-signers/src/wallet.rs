@@ -15,10 +15,11 @@ use fuel_gql_client::{
 };
 use fuel_types::bytes::WORD_SIZE;
 use fuel_types::{Address, MessageId};
+use fuels_core::offsets::base_offset;
 use fuels_core::tx::{field, Chargeable, Script, Transaction, UniqueIdentifier};
 use fuels_core::{
     abi_encoder::UnresolvedBytes,
-    offsets::{base_predicate_offset, coin_predicate_data_offset, message_predicate_data_offset},
+    offsets::{coin_predicate_data_offset, message_predicate_data_offset},
 };
 use fuels_core::{constants::BASE_ASSET_ID, parameters::TxParameters};
 use fuels_types::bech32::{Bech32Address, Bech32ContractId, FUEL_BECH32_HRP};
@@ -265,14 +266,12 @@ impl Wallet {
 
     /// Craft a transaction used to transfer funds between two addresses.
     pub fn build_transfer_tx(inputs: &[Input], outputs: &[Output], params: TxParameters) -> Script {
-        // This script contains a single Opcode that returns immediately (RET)
-        // since all this transaction does is move Inputs and Outputs around.
-        let script = Opcode::RET(REG_ONE).to_bytes().to_vec();
+        // This script is empty, since all this transaction does is move Inputs and Outputs around.
         Transaction::script(
             params.gas_price,
             params.gas_limit,
             params.maturity,
-            script,
+            vec![],
             vec![],
             inputs.to_vec(),
             outputs.to_vec(),
@@ -684,7 +683,7 @@ impl WalletUnlocked {
 
         // Iterate through the spendable resources and calculate the appropriate offsets
         // for the coin or message predicates
-        let mut offset = base_predicate_offset(&predicate.consensus_parameters().await?);
+        let mut offset = base_offset(&predicate.consensus_parameters().await?);
         let inputs = spendable_predicate_resources
             .into_iter()
             .map(|resource| match resource {
