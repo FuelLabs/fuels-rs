@@ -452,7 +452,7 @@ async fn setup_output_variable_estimation_test(
         TxParameters::default(),
         StorageConfiguration::default(),
     )
-        .await?;
+    .await?;
 
     let mint_asset_id = AssetId::from(*contract_id.hash());
     let addresses: [Address; 3] = wallets
@@ -622,8 +622,8 @@ async fn test_contract_instance_get_balances() -> Result<(), Error> {
 #[tokio::test]
 async fn contract_call_futures_implement_send() -> Result<(), Error> {
     fn tokio_spawn_imitation<T>(_: T)
-        where
-            T: Future + Send + 'static,
+    where
+        T: Future + Send + 'static,
     {
     }
 
@@ -789,7 +789,7 @@ async fn test_extend_transaction_inputs() -> Result<(), Error> {
         TxParameters::default(),
         StorageConfiguration::default(),
     )
-        .await?;
+    .await?;
 
     let call_params = CallParameters::new(Some(1_333), None, None);
 

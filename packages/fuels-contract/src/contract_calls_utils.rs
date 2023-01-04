@@ -4,6 +4,7 @@ use fuel_gql_client::fuel_vm::{consts::REG_ONE, prelude::Opcode};
 use fuel_tx::field::{Inputs, Outputs};
 use fuel_tx::{AssetId, Bytes32, ContractId};
 use fuels_core::constants::BASE_ASSET_ID;
+use fuels_signers::Signer;
 use fuels_types::bech32::Bech32Address;
 use fuels_types::constants::WORD_SIZE;
 use fuels_types::errors::Error;
@@ -11,7 +12,6 @@ use fuels_types::resource::Resource;
 use itertools::{chain, Itertools};
 use std::collections::HashSet;
 use std::{iter, vec};
-use fuels_signers::Signer;
 
 use crate::contract::ContractCall;
 use crate::execution_script::PrepareFuelCall;
@@ -163,7 +163,9 @@ pub(crate) fn get_single_call_instructions(offsets: &CallOpcodeParamsOffset) -> 
 
 /// Returns the assets and contracts that will be consumed ([`Input`]s)
 /// and created ([`Output`]s) by the transaction
-pub(crate) async fn prepare_script_inputs_outputs(script: &mut PrepareFuelCall) -> Result<(), Error> {
+pub(crate) async fn prepare_script_inputs_outputs(
+    script: &mut PrepareFuelCall,
+) -> Result<(), Error> {
     let mut spendable_resources = vec![];
 
     let script_inputs = script
@@ -197,7 +199,7 @@ pub(crate) async fn prepare_script_inputs_outputs(script: &mut PrepareFuelCall) 
         generate_contract_inputs(script.calls.calls_contract_ids.clone()),
         convert_to_signed_resources(spendable_resources),
     )
-        .collect::<Vec<Input>>();
+    .collect::<Vec<Input>>();
 
     // Note the contract_outputs need to come first since the
     // contract_inputs are referencing them via `output_index`. The node
@@ -215,17 +217,31 @@ pub(crate) async fn prepare_script_inputs_outputs(script: &mut PrepareFuelCall) 
             script_message_output
         ),
     )
-        .collect::<Vec<Output>>();
+    .collect::<Vec<Output>>();
 
     let base_asset_amount = merged_inputs
         .iter()
         .find(|(asset_id, _)| *asset_id == AssetId::default());
     match base_asset_amount {
-        Some((_, base_amount)) => script.wallet.add_fee_resources(&mut script.tx, *base_amount, 0).await?,
-        None => script.wallet.add_fee_resources(&mut script.tx, 0, 0).await?,
+        Some((_, base_amount)) => {
+            script
+                .wallet
+                .add_fee_resources(&mut script.tx, *base_amount, 0)
+                .await?
+        }
+        None => {
+            script
+                .wallet
+                .add_fee_resources(&mut script.tx, 0, 0)
+                .await?
+        }
     }
 
-    script.wallet.sign_transaction(&mut script.tx).await.unwrap();
+    script
+        .wallet
+        .sign_transaction(&mut script.tx)
+        .await
+        .unwrap();
 
     Ok(())
 }
@@ -329,16 +345,16 @@ pub fn extract_unique_contract_ids(calls: &[ContractCall]) -> HashSet<ContractId
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::contract::ContractCallHandler;
     use fuels_core::abi_encoder::ABIEncoder;
     use fuels_core::parameters::CallParameters;
     use fuels_core::Token;
+    use fuels_signers::provider::Provider;
+    use fuels_signers::WalletUnlocked;
     use fuels_types::bech32::Bech32ContractId;
     use fuels_types::param_types::ParamType;
     use rand::Rng;
     use std::slice;
-    use fuels_signers::provider::Provider;
-    use fuels_signers::WalletUnlocked;
-    use crate::contract::ContractCallHandler;
 
     impl ContractCall {
         pub fn new_with_random_id() -> Self {
@@ -465,7 +481,6 @@ mod test {
 
     #[tokio::test]
     async fn contract_input_present() -> Result<(), Error> {
-
         use fuels_test_helpers::launch_custom_provider_and_get_wallets;
         use fuels_test_helpers::WalletsConfig;
 
@@ -477,35 +492,44 @@ mod test {
         let wallet = launch_custom_provider_and_get_wallets(config, None, None)
             .await
             .pop()
-            .unwrap();;
+            .unwrap();
 
         let prepared_script = PrepareFuelCall::from_contract_calls(
             &[call.clone(), call_w_same_contract],
             &Default::default(),
-            &wallet
-        ).await.unwrap().prepare().await.unwrap();
+            &wallet,
+        )
+        .await
+        .unwrap()
+        .prepare()
+        .await
+        .unwrap();
 
         let coin = wallet
             .get_asset_inputs_for_amount(Default::default(), 1, 0)
-            .await?.pop().unwrap();
-
+            .await?
+            .pop()
+            .unwrap();
 
         assert_eq!(
             *prepared_script.tx.inputs(),
-            vec![Input::contract(
-                UtxoId::new(Bytes32::zeroed(), 0),
-                Bytes32::zeroed(),
-                Bytes32::zeroed(),
-                TxPointer::default(),
-                call.contract_id.into(),
-            ),
-                 coin]
+            vec![
+                Input::contract(
+                    UtxoId::new(Bytes32::zeroed(), 0),
+                    Bytes32::zeroed(),
+                    Bytes32::zeroed(),
+                    TxPointer::default(),
+                    call.contract_id.into(),
+                ),
+                coin
+            ]
         );
 
         assert_eq!(
             *prepared_script.tx.outputs(),
-            vec![Output::contract(0, Bytes32::zeroed(), Bytes32::zeroed()),
-                 Output::change(wallet.address().into(), 0, Default::default())
+            vec![
+                Output::contract(0, Bytes32::zeroed(), Bytes32::zeroed()),
+                Output::change(wallet.address().into(), 0, Default::default())
             ]
         );
 

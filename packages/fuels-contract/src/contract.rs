@@ -848,7 +848,6 @@ impl MultiContractCallHandler {
         &self,
         tolerance: Option<f64>,
     ) -> Result<TransactionCost, Error> {
-
         let mut script = self.get_executable_call().await?.prepare().await?;
 
         let transaction_cost = self

@@ -40,7 +40,12 @@ async fn test_multi_call_script_workflow() -> Result<(), Error> {
 
     let provider = &wallet.get_provider()?;
     let mut execution_script = multi_call_handler.get_executable_call().await?;
-    let receipts = execution_script.prepare().await?.execute(&provider).await.unwrap();
+    let receipts = execution_script
+        .prepare()
+        .await?
+        .execute(&provider)
+        .await
+        .unwrap();
     let (counter, array) = multi_call_handler
         .get_response::<(u64, [u64; 2])>(receipts)?
         .value;
