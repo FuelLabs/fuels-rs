@@ -97,20 +97,6 @@ impl Abigen {
             .collect()
     }
 
-    ///
-    ///
-    /// # Arguments
-    ///
-    /// * `shared_types`: types that appear in multiple contracts, scripts or
-    /// predicates.
-    ///
-    /// returns: Result<GeneratedCode, Error>
-    ///
-    /// # Examples
-    ///
-    /// ```
-    ///
-    /// ```
     fn generate_shared_types(
         shared_types: HashSet<FullTypeDeclaration>,
     ) -> Result<GeneratedCode, Error> {

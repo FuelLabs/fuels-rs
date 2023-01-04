@@ -7,6 +7,8 @@ use syn::{
     Result as ParseResult,
 };
 
+// Used to parse the attributes inside the parentheses of a Contract, Script or
+// Predicate command in the `abigen!` e.g. `abigen!(Contract(will_parse = "this_here"))`
 #[derive(Debug)]
 pub(crate) struct Attributes {
     content_span: Span,

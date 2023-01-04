@@ -113,13 +113,8 @@ fn expand_functions(
 /// that represents that same function signature as a Rust-native function
 /// declaration.
 ///
-/// The actual logic inside the function is the function `method_hash` under
-/// [`Contract`], which is responsible for encoding
-/// the function selector and the function parameters that will be used
-/// in the actual contract call.
-///
-/// [`Contract`]: fuels_contract::contract::Contract
-// TODO (oleksii/docs): linkify the above `Contract` link properly
+/// The generated function prepares the necessary data and proceeds to call
+/// [::fuels_contract::contract::Contrac::method_hash] for the actual call.
 pub(crate) fn expand_fn(
     abi_fun: &FullABIFunction,
     shared_types: &HashSet<FullTypeDeclaration>,

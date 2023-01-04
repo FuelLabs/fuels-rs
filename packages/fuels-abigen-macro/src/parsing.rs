@@ -24,6 +24,8 @@ impl From<MacroAbigenTarget> for AbigenTarget {
     }
 }
 
+// Although identical to `AbigenTarget` from fuels-core, due to the orphan rule
+// we cannot implement Parse for the latter.
 struct MacroAbigenTarget {
     name: String,
     abi: String,
