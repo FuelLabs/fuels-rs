@@ -39,8 +39,6 @@
   - [Predicates](./getting-started/predicates.md)
     - [Predicate data](./predicates/predicate-data.md)
     - [Signatures example](./predicates/send-spend-predicate.md)
-  - [Scripts](./scripts/index.md)
-    - [Running scripts](./scripts/scripts.md)
   - [Types](./getting-started/types.md)
     - [Bytes32](./types/bytes32.md)
     - [Address](./types/address.md)
