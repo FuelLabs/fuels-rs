@@ -1,4 +1,3 @@
-use crate::contract_calls_utils::calculate_required_asset_amounts;
 use crate::execution_script::PrepareFuelCall;
 use crate::{
     call_response::FuelCallResponse,
@@ -681,7 +680,7 @@ where
         &self,
         tolerance: Option<f64>,
     ) -> Result<TransactionCost, Error> {
-        let mut script = self.get_executable_call().await?.prepare().await?;
+        let script = self.get_executable_call().await?.prepare().await?;
 
         let transaction_cost = self
             .provider
@@ -848,7 +847,7 @@ impl MultiContractCallHandler {
         &self,
         tolerance: Option<f64>,
     ) -> Result<TransactionCost, Error> {
-        let mut script = self.get_executable_call().await?.prepare().await?;
+        let script = self.get_executable_call().await?.prepare().await?;
 
         let transaction_cost = self
             .wallet

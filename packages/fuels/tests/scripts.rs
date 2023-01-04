@@ -13,7 +13,7 @@ async fn test_transaction_script_workflow() -> Result<(), Error> {
     let mut execution_script = call_handler.get_executable_call().await?;
 
     let provider = wallet.get_provider()?;
-    let receipts = execution_script.prepare().await?.execute(&provider).await?;
+    let receipts = execution_script.prepare().await?.execute(provider).await?;
 
     let response = call_handler.get_response(receipts)?;
     assert_eq!(response.value, 42);
@@ -43,7 +43,7 @@ async fn test_multi_call_script_workflow() -> Result<(), Error> {
     let receipts = execution_script
         .prepare()
         .await?
-        .execute(&provider)
+        .execute(provider)
         .await
         .unwrap();
     let (counter, array) = multi_call_handler

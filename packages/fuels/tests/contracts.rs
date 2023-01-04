@@ -806,8 +806,6 @@ async fn test_extend_transaction_inputs() -> Result<(), Error> {
         .get_asset_inputs_for_amount(Default::default(), 1, 0)
         .await?;
 
-    let provider = wallet.get_provider()?;
-
     let def_coin = vec![Input::CoinSigned {
         utxo_id: Default::default(),
         owner: wallet.address().into(),
@@ -818,14 +816,14 @@ async fn test_extend_transaction_inputs() -> Result<(), Error> {
         maturity: 0,
     }];
 
-    execution_script
+    let receipts = execution_script
         .add_inputs(def_coin)
-        // .add_inputs(coin.clone())
-        // .add_inputs(coin)
+        .add_inputs(coin)
         .prepare()
-        .await?
-        .execute(provider)
-        .await?;
+        .await
+        .expect_err("Should fail");
 
+    let expected = "Provider error: Response errors; not enough resources to fit the target";
+    assert!(receipts.to_string().starts_with(expected));
     Ok(())
 }
