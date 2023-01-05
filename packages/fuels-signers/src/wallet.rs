@@ -15,10 +15,11 @@ use fuel_gql_client::{
 };
 use fuel_types::bytes::WORD_SIZE;
 use fuel_types::{Address, MessageId};
+use fuels_core::offsets::base_offset;
 use fuels_core::tx::{field, Chargeable, Script, Transaction, UniqueIdentifier};
 use fuels_core::{
     abi_encoder::UnresolvedBytes,
-    offsets::{base_predicate_offset, coin_predicate_data_offset, message_predicate_data_offset},
+    offsets::{coin_predicate_data_offset, message_predicate_data_offset},
 };
 use fuels_core::{constants::BASE_ASSET_ID, parameters::TxParameters};
 use fuels_types::bech32::{Bech32Address, Bech32ContractId, FUEL_BECH32_HRP};
@@ -265,14 +266,12 @@ impl Wallet {
 
     /// Craft a transaction used to transfer funds between two addresses.
     pub fn build_transfer_tx(inputs: &[Input], outputs: &[Output], params: TxParameters) -> Script {
-        // This script contains a single Opcode that returns immediately (RET)
-        // since all this transaction does is move Inputs and Outputs around.
-        let script = Opcode::RET(REG_ONE).to_bytes().to_vec();
+        // This script is empty, since all this transaction does is move Inputs and Outputs around.
         Transaction::script(
             params.gas_price,
             params.gas_limit,
             params.maturity,
-            script,
+            vec![],
             vec![],
             inputs.to_vec(),
             outputs.to_vec(),
@@ -509,7 +508,6 @@ impl WalletUnlocked {
             .map(|input| input.amount().unwrap())
             .sum();
         // either the inputs were setup incorrectly, or the passed previous_base_amount is wrong
-
         if base_inputs_sum < previous_base_amount {
             return Err(Error::WalletError(
                 "The provided base asset amount is less than the present input coins".to_string(),
@@ -524,7 +522,6 @@ impl WalletUnlocked {
             .inputs()
             .iter()
             .any(|input| !matches!(input, Input::Contract { .. }));
-
         const MIN_AMOUNT: u64 = 1;
         if !is_consuming_utxos && new_base_amount == 0 {
             new_base_amount = MIN_AMOUNT;
@@ -533,6 +530,11 @@ impl WalletUnlocked {
         let new_base_inputs = self
             .get_asset_inputs_for_amount(BASE_ASSET_ID, new_base_amount, witness_index)
             .await?;
+        if new_base_inputs.is_empty() && new_base_amount != 0 {
+            return Err(Error::ProviderError(
+                "Response errors; enough resources could not be found".to_string(),
+            ));
+        }
 
         let adjusted_inputs: Vec<_> = remaining_inputs
             .into_iter()
@@ -543,7 +545,6 @@ impl WalletUnlocked {
         let is_base_change_present = tx.outputs().iter().any(|output| {
             matches!(output, Output::Change { asset_id, .. } if asset_id == &BASE_ASSET_ID)
         });
-
         // add a change output for the base asset if it doesn't exist and there are base inputs
         if !is_base_change_present && new_base_amount != 0 {
             tx.outputs_mut()
@@ -681,7 +682,7 @@ impl WalletUnlocked {
 
         // Iterate through the spendable resources and calculate the appropriate offsets
         // for the coin or message predicates
-        let mut offset = base_predicate_offset(&predicate.consensus_parameters().await?);
+        let mut offset = base_offset(&predicate.consensus_parameters().await?);
         let inputs = spendable_predicate_resources
             .into_iter()
             .map(|resource| match resource {
