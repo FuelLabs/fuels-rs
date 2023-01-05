@@ -51,14 +51,12 @@ impl Abigen {
         let all_custom_types = Self::extract_custom_types(&parsed_targets);
         let shared_types = Self::filter_shared_types(all_custom_types);
 
-        Ok([
-            Self::generate_all_bindings(parsed_targets, no_std, &shared_types)?,
-            Self::generate_shared_types(shared_types)?,
-        ]
-        .into_iter()
-        .fold(GeneratedCode::default(), |all_code, code_segment| {
-            all_code.append(code_segment)
-        }))
+        let bindings = Self::generate_all_bindings(parsed_targets, no_std, &shared_types)?;
+        let shared_types = Self::generate_shared_types(shared_types)?;
+
+        Ok(bindings
+            .append(shared_types)
+            .wrap_in_mod(&ident("abigen_bindings")))
     }
 
     fn generate_all_bindings(
