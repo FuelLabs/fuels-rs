@@ -825,7 +825,6 @@ async fn compile_bindings_enum_input() {
 // Not a big issue since almost all usages call abigen! outside of any
 // function.
 
-// ANCHOR: shared_types_caveat_workaround
 #[tokio::test]
 async fn shared_types() -> Result<(), Error> {
     abigen!(

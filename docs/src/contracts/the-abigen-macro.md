@@ -37,9 +37,9 @@ To generate these bindings, all you have to do is:
 And this `abigen!` macro will _expand_ the code with the type-safe Rust bindings. It accepts input in the form of:
 
 
-`ProgramType(name = "SomeName", abi="some-abi.json")`, 
+`ProgramType(name = "SomeName", abi="some-abi.json")`,
 
-where: 
+where:
 
 `ProgramType` is either `Contract`, `Script` or `Predicate`,
 
@@ -58,10 +58,6 @@ The same as the example above but passing the ABI definition directly:
 If your contracts, scripts or predicates share types via libraries, you should consider generating the bindings for all
 the programs at once:
 
-```rust,ignore
-{{#include ../../../packages/fuels/tests/bindings.rs:mixed_abigen_usage}}
-```
-
 This way, types that are equal in both name and contents will be extracted into a separate mod called `shared_types`.
 This way you can seamlessly use them between the various generated bindings.
 
@@ -74,6 +70,3 @@ internally referring to the shared types via `super::shared_types::SomeSharedTyp
 to the crate root while the bindings are in a function.
 
 A workaround would be to wrap everything inside another mod so that `super::` refers to it instead of the crate root:
-```rust,ignore
-{{#include ../../../packages/fuels/tests/bindings.rs:shared_types_caveat_workaround}}
-```
