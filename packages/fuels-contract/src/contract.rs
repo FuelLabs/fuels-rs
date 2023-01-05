@@ -1,4 +1,4 @@
-use crate::execution_script::PrepareFuelCall;
+use crate::execution_script::PrepareExecutableFuelCall;
 use crate::{
     call_response::FuelCallResponse,
     logs::{decode_revert_error, LogDecoder},
@@ -599,8 +599,8 @@ where
     }
 
     /// Returns the script that executes the contract call
-    pub async fn get_executable_call(&self) -> Result<PrepareFuelCall, Error> {
-        PrepareFuelCall::from_contract_calls(
+    pub async fn get_executable_call(&self) -> Result<PrepareExecutableFuelCall, Error> {
+        PrepareExecutableFuelCall::from_contract_calls(
             std::slice::from_ref(&self.contract_call),
             &self.tx_parameters,
             &self.wallet,
@@ -743,12 +743,12 @@ impl MultiContractCallHandler {
     }
 
     /// Returns the script that executes the contract calls
-    pub async fn get_executable_call(&self) -> Result<PrepareFuelCall, Error> {
+    pub async fn get_executable_call(&self) -> Result<PrepareExecutableFuelCall, Error> {
         if self.contract_calls.is_empty() {
             panic!("No calls added. Have you used '.add_calls()'?");
         }
 
-        PrepareFuelCall::from_contract_calls(
+        PrepareExecutableFuelCall::from_contract_calls(
             &self.contract_calls,
             &self.tx_parameters,
             &self.wallet,

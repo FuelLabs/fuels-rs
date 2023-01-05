@@ -38,7 +38,7 @@ pub struct ExecutableFuelCall {
 }
 
 #[derive(Debug)]
-pub struct PrepareFuelCall {
+pub struct PrepareExecutableFuelCall {
     pub(crate) tx: fuels_core::tx::Script,
     pub(crate) calls: Calls,
     pub(crate) wallet: WalletUnlocked,
@@ -54,7 +54,7 @@ pub struct Calls {
     pub calls_message_outputs: Vec<Output>,
 }
 
-impl PrepareFuelCall {
+impl PrepareExecutableFuelCall {
     pub fn new(tx: fuels_core::tx::Script, calls: Calls, wallet: WalletUnlocked) -> Self {
         Self {
             tx,
@@ -65,7 +65,7 @@ impl PrepareFuelCall {
         }
     }
 
-    /// Creates a [`PrepareFuelCall`] from contract calls. The internal [`Transaction`] is
+    /// Creates a [`PrepareExecutableFuelCall`] from contract calls. The internal [`Transaction`] is
     /// initialized with the actual script instructions, script data needed to perform the call and
     /// transaction inputs/outputs consisting of assets and contracts
     pub async fn from_contract_calls(
@@ -105,20 +105,20 @@ impl PrepareFuelCall {
             calls_message_outputs: extract_message_outputs(calls),
         };
 
-        Ok(PrepareFuelCall::new(tx, calls, wallet.clone()))
+        Ok(PrepareExecutableFuelCall::new(tx, calls, wallet.clone()))
     }
 
-    pub fn add_inputs(&mut self, inputs: Vec<Input>) -> &mut PrepareFuelCall {
+    pub fn add_inputs(&mut self, inputs: Vec<Input>) -> &mut PrepareExecutableFuelCall {
         self.inputs.extend(inputs);
         self
     }
 
-    pub fn add_outputs(&mut self, outputs: Vec<Output>) -> &mut PrepareFuelCall {
+    pub fn add_outputs(&mut self, outputs: Vec<Output>) -> &mut PrepareExecutableFuelCall {
         self.outputs.extend(outputs);
         self
     }
 
-    /// This function creates an [`ExecutableFuelCall`] from a [`PrepareFuelCall`], which avoids
+    /// This function creates an [`ExecutableFuelCall`] from a [`PrepareExecutableFuelCall`], which avoids
     /// the possibility of duplication of inputs and outputs.
     /// For this reason, we strongly recommend the use of this function
     pub async fn prepare(&mut self) -> Result<ExecutableFuelCall, Error> {
@@ -126,7 +126,9 @@ impl PrepareFuelCall {
         Ok(ExecutableFuelCall::new(self.tx.clone()))
     }
 
-    pub async fn prepare_inputs_outputs(script: &mut PrepareFuelCall) -> Result<(), Error> {
+    pub async fn prepare_inputs_outputs(
+        script: &mut PrepareExecutableFuelCall,
+    ) -> Result<(), Error> {
         let mut spendable_resources = vec![];
 
         let script_inputs = script
