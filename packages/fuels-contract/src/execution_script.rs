@@ -29,7 +29,7 @@ use crate::contract_calls_utils::{
 /// [`TransactionExecution`] provides methods to create and call/simulate a transaction that carries
 /// out contract method calls or script calls.The [`ExecutableFuelCall`] structure contains a
 /// [`pub tx: fuels_core::tx::Script`] field that can be modified.
-/// Using this structure is recommended only when the user has a thorough understanding of what he
+/// Using this structure is recommended only when the user has a thorough understanding of what they
 /// is doing, since incorrect settings during execution may result in errors
 ///
 #[derive(Debug)]
