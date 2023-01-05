@@ -5,9 +5,16 @@ use fuels::tx::{Input, Output, Receipt, TxPointer, UtxoId};
 #[tokio::test]
 async fn test_parse_logged_varibles() -> Result<(), Error> {
     setup_contract_test!(
-        contract_instance,
-        wallet,
-        "packages/fuels/tests/logs/contract_logs"
+        Wallets("wallet"),
+        Abigen(
+            name = "LogContract",
+            abi = "packages/fuels/tests/logs/contract_logs"
+        ),
+        Deploy(
+            name = "contract_instance",
+            contract = "LogContract",
+            wallet = "wallet"
+        ),
     );
 
     // ANCHOR: produce_logs
@@ -36,9 +43,16 @@ async fn test_parse_logged_varibles() -> Result<(), Error> {
 #[tokio::test]
 async fn test_parse_logs_values() -> Result<(), Error> {
     setup_contract_test!(
-        contract_instance,
-        wallet,
-        "packages/fuels/tests/logs/contract_logs"
+        Wallets("wallet"),
+        Abigen(
+            name = "LogContract",
+            abi = "packages/fuels/tests/logs/contract_logs"
+        ),
+        Deploy(
+            name = "contract_instance",
+            contract = "LogContract",
+            wallet = "wallet"
+        ),
     );
 
     let contract_methods = contract_instance.methods();
@@ -63,9 +77,16 @@ async fn test_parse_logs_values() -> Result<(), Error> {
 #[tokio::test]
 async fn test_parse_logs_custom_types() -> Result<(), Error> {
     setup_contract_test!(
-        contract_instance,
-        wallet,
-        "packages/fuels/tests/logs/contract_logs"
+        Wallets("wallet"),
+        Abigen(
+            name = "LogContract",
+            abi = "packages/fuels/tests/logs/contract_logs"
+        ),
+        Deploy(
+            name = "contract_instance",
+            contract = "LogContract",
+            wallet = "wallet"
+        ),
     );
 
     let contract_methods = contract_instance.methods();
@@ -94,9 +115,16 @@ async fn test_parse_logs_custom_types() -> Result<(), Error> {
 #[tokio::test]
 async fn test_parse_logs_generic_types() -> Result<(), Error> {
     setup_contract_test!(
-        contract_instance,
-        wallet,
-        "packages/fuels/tests/logs/contract_logs"
+        Wallets("wallet"),
+        Abigen(
+            name = "LogContract",
+            abi = "packages/fuels/tests/logs/contract_logs"
+        ),
+        Deploy(
+            name = "contract_instance",
+            contract = "LogContract",
+            wallet = "wallet"
+        ),
     );
 
     let contract_methods = contract_instance.methods();
@@ -139,9 +167,16 @@ async fn test_parse_logs_generic_types() -> Result<(), Error> {
 #[tokio::test]
 async fn test_get_logs() -> Result<(), Error> {
     setup_contract_test!(
-        contract_instance,
-        wallet,
-        "packages/fuels/tests/logs/contract_logs"
+        Wallets("wallet"),
+        Abigen(
+            name = "LogContract",
+            abi = "packages/fuels/tests/logs/contract_logs"
+        ),
+        Deploy(
+            name = "contract_instance",
+            contract = "LogContract",
+            wallet = "wallet"
+        ),
     );
 
     // ANCHOR: get_logs
@@ -186,9 +221,16 @@ async fn test_get_logs() -> Result<(), Error> {
 #[tokio::test]
 async fn test_get_logs_with_no_logs() -> Result<(), Error> {
     setup_contract_test!(
-        contract_instance,
-        wallet,
-        "packages/fuels/tests/contracts/contract_test"
+        Wallets("wallet"),
+        Abigen(
+            name = "TestContract",
+            abi = "packages/fuels/tests/contracts/contract_test"
+        ),
+        Deploy(
+            name = "contract_instance",
+            contract = "TestContract",
+            wallet = "wallet"
+        ),
     );
 
     let contract_methods = contract_instance.methods();
@@ -206,9 +248,16 @@ async fn test_get_logs_with_no_logs() -> Result<(), Error> {
 #[tokio::test]
 async fn test_multi_call_log_single_contract() -> Result<(), Error> {
     setup_contract_test!(
-        contract_instance,
-        wallet,
-        "packages/fuels/tests/logs/contract_logs"
+        Wallets("wallet"),
+        Abigen(
+            name = "LogContract",
+            abi = "packages/fuels/tests/logs/contract_logs"
+        ),
+        Deploy(
+            name = "contract_instance",
+            contract = "LogContract",
+            wallet = "wallet"
+        ),
     );
 
     let contract_methods = contract_instance.methods();
@@ -249,21 +298,25 @@ async fn test_multi_call_log_single_contract() -> Result<(), Error> {
 #[tokio::test]
 async fn test_multi_call_log_multiple_contracts() -> Result<(), Error> {
     setup_contract_test!(
-        contract_instance,
-        wallet,
-        "packages/fuels/tests/logs/contract_logs"
+        Wallets("wallet"),
+        Abigen(
+            name = "LogContract",
+            abi = "packages/fuels/tests/logs/contract_logs"
+        ),
+        Deploy(
+            name = "contract_instance",
+            contract = "LogContract",
+            wallet = "wallet"
+        ),
+        Deploy(
+            name = "contract_instance2",
+            contract = "LogContract",
+            wallet = "wallet"
+        ),
     );
 
     let call_handler_1 = contract_instance.methods().produce_logs_values();
-    let call_handler_2 = {
-        setup_contract_test!(
-            contract_instance2,
-            None,
-            "packages/fuels/tests/logs/contract_logs"
-        );
-
-        contract_instance2.methods().produce_logs_variables()
-    };
+    let call_handler_2 = contract_instance2.methods().produce_logs_variables();
 
     let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
 
@@ -305,9 +358,16 @@ fn assert_is_revert_containing_msg(msg: &str, error: Error) {
 #[tokio::test]
 async fn test_require_log() -> Result<(), Error> {
     setup_contract_test!(
-        contract_instance,
-        wallet,
-        "packages/fuels/tests/contracts/require"
+        Wallets("wallet"),
+        Abigen(
+            name = "RequireContract",
+            abi = "packages/fuels/tests/contracts/require"
+        ),
+        Deploy(
+            name = "contract_instance",
+            contract = "RequireContract",
+            wallet = "wallet"
+        ),
     );
 
     let contract_methods = contract_instance.methods();
@@ -354,9 +414,16 @@ async fn test_require_log() -> Result<(), Error> {
 #[tokio::test]
 async fn test_multi_call_require_log_single_contract() -> Result<(), Error> {
     setup_contract_test!(
-        contract_instance,
-        wallet,
-        "packages/fuels/tests/contracts/require"
+        Wallets("wallet"),
+        Abigen(
+            name = "RequireContract",
+            abi = "packages/fuels/tests/contracts/require"
+        ),
+        Deploy(
+            name = "contract_instance",
+            contract = "RequireContract",
+            wallet = "wallet"
+        ),
     );
 
     let contract_methods = contract_instance.methods();
@@ -404,21 +471,25 @@ async fn test_multi_call_require_log_single_contract() -> Result<(), Error> {
 #[tokio::test]
 async fn test_multi_call_require_log_multi_contract() -> Result<(), Error> {
     setup_contract_test!(
-        contract_instance,
-        wallet,
-        "packages/fuels/tests/contracts/require"
+        Wallets("wallet"),
+        Abigen(
+            name = "RequireContract",
+            abi = "packages/fuels/tests/contracts/require"
+        ),
+        Deploy(
+            name = "contract_instance",
+            contract = "RequireContract",
+            wallet = "wallet"
+        ),
+        Deploy(
+            name = "contract_instance2",
+            contract = "RequireContract",
+            wallet = "wallet"
+        ),
     );
 
     let contract_methods = contract_instance.methods();
-
-    let contract_methods2 = {
-        setup_contract_test!(
-            contract_instance2,
-            None,
-            "packages/fuels/tests/contracts/require"
-        );
-        contract_instance2.methods()
-    };
+    let contract_methods2 = contract_instance2.methods();
 
     // The output of the error depends on the order of the contract
     // handlers as the script returns the first revert it finds.

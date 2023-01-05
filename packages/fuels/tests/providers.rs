@@ -117,9 +117,15 @@ async fn test_input_message() -> Result<(), Error> {
     wallet.set_provider(provider);
 
     setup_contract_test!(
-        contract_instance,
-        None,
-        "packages/fuels/tests/contracts/contract_test"
+        Abigen(
+            name = "TestContract",
+            abi = "packages/fuels/tests/contracts/contract_test"
+        ),
+        Deploy(
+            name = "contract_instance",
+            contract = "TestContract",
+            wallet = "wallet"
+        ),
     );
 
     let spendable_messages = wallet.get_messages().await?;
@@ -285,9 +291,16 @@ async fn contract_deployment_respects_maturity() -> Result<(), Error> {
 #[tokio::test]
 async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<(), Error> {
     setup_contract_test!(
-        contract_instance,
-        wallet,
-        "packages/fuels/tests/contracts/contract_test"
+        Wallets("wallet"),
+        Abigen(
+            name = "TestContract",
+            abi = "packages/fuels/tests/contracts/contract_test"
+        ),
+        Deploy(
+            name = "contract_instance",
+            contract = "TestContract",
+            wallet = "wallet"
+        ),
     );
 
     let gas_limit = 225883;
@@ -314,9 +327,16 @@ async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<(), Error> {
 #[tokio::test]
 async fn test_amount_and_asset_forwarding() -> Result<(), Error> {
     setup_contract_test!(
-        contract_instance,
-        wallet,
-        "packages/fuels/tests/contracts/token_ops"
+        Wallets("wallet"),
+        Abigen(
+            name = "TokenContract",
+            abi = "packages/fuels/tests/contracts/token_ops"
+        ),
+        Deploy(
+            name = "contract_instance",
+            contract = "TokenContract",
+            wallet = "wallet"
+        ),
     );
     let contract_id = contract_instance.get_contract_id();
     let contract_methods = contract_instance.methods();
@@ -412,9 +432,15 @@ async fn test_gas_errors() -> Result<(), Error> {
     wallet.set_provider(provider);
 
     setup_contract_test!(
-        contract_instance,
-        None,
-        "packages/fuels/tests/contracts/contract_test"
+        Abigen(
+            name = "TestContract",
+            abi = "packages/fuels/tests/contracts/contract_test"
+        ),
+        Deploy(
+            name = "contract_instance",
+            contract = "TestContract",
+            wallet = "wallet"
+        ),
     );
 
     // Test running out of gas. Gas price as `None` will be 0.
@@ -456,9 +482,16 @@ async fn test_gas_errors() -> Result<(), Error> {
 #[tokio::test]
 async fn test_call_param_gas_errors() -> Result<(), Error> {
     setup_contract_test!(
-        contract_instance,
-        wallet,
-        "packages/fuels/tests/contracts/contract_test"
+        Wallets("wallet"),
+        Abigen(
+            name = "TestContract",
+            abi = "packages/fuels/tests/contracts/contract_test"
+        ),
+        Deploy(
+            name = "contract_instance",
+            contract = "TestContract",
+            wallet = "wallet"
+        ),
     );
 
     // Transaction gas_limit is sufficient, call gas_forwarded is too small
@@ -491,9 +524,16 @@ async fn test_call_param_gas_errors() -> Result<(), Error> {
 #[tokio::test]
 async fn test_get_gas_used() -> Result<(), Error> {
     setup_contract_test!(
-        contract_instance,
-        wallet,
-        "packages/fuels/tests/contracts/contract_test"
+        Wallets("wallet"),
+        Abigen(
+            name = "TestContract",
+            abi = "packages/fuels/tests/contracts/contract_test"
+        ),
+        Deploy(
+            name = "contract_instance",
+            contract = "TestContract",
+            wallet = "wallet"
+        ),
     );
 
     let gas_used = contract_instance

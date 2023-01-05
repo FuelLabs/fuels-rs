@@ -14,9 +14,16 @@ async fn compile_bindings_from_contract_file() {
     // Generates the bindings from an ABI definition in a JSON file
     // The generated bindings can be accessed through `SimpleContract`.
     setup_contract_test!(
-        simple_contract_instance,
-        wallet,
-        "packages/fuels/tests/bindings/simple_contract"
+        Wallets("wallet"),
+        Abigen(
+            name = "SimpleContract",
+            abi = "packages/fuels/tests/bindings/simple_contract"
+        ),
+        Deploy(
+            name = "simple_contract_instance",
+            contract = "SimpleContract",
+            wallet = "wallet"
+        ),
     );
 
     let call_handler = simple_contract_instance

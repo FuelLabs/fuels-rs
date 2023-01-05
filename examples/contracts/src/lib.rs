@@ -84,9 +84,16 @@ mod tests {
 
         // ANCHOR: deploy_contract_setup_macro_short
         setup_contract_test!(
-            contract_instance,
-            wallet,
-            "packages/fuels/tests/contracts/contract_test"
+            Wallets("wallet"),
+            Abigen(
+                name = "TestContract",
+                abi = "packages/fuels/tests/contracts/contract_test"
+            ),
+            Deploy(
+                name = "contract_instance",
+                contract = "TestContract",
+                wallet = "wallet"
+            ),
         );
 
         let response = contract_instance

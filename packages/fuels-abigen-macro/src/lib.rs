@@ -1,14 +1,16 @@
+use fuels_core::{
+    code_gen::abigen::{Abigen, AbigenTarget, ProgramType},
+    utils::ident,
+};
+use parsing::{Command, MacroAbigenTargets, TestContractCommands};
 use proc_macro::TokenStream;
-use std::path::Path;
-
-use inflector::Inflector;
-use proc_macro2::Span;
 use quote::quote;
 use rand::prelude::{Rng, SeedableRng, StdRng};
-use syn::{parse_macro_input, Ident};
-
-use fuels_core::code_gen::abigen::{Abigen, AbigenTarget, ProgramType};
-use parsing::{ContractTestArgs, MacroAbigenTargets};
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+};
+use syn::parse_macro_input;
 
 mod attributes;
 mod parsing;
@@ -27,6 +29,50 @@ pub fn wasm_abigen(input: TokenStream) -> TokenStream {
     Abigen::generate(targets.into(), true).unwrap().into()
 }
 
+struct Project {
+    path: PathBuf,
+}
+
+impl Project {
+    fn new(dir: &str) -> Self {
+        let path = Path::new(dir).canonicalize().unwrap_or_else(|_| {
+            panic!(
+                "Unable to canonicalize forc project path: {}. Make sure the path is valid!",
+                &dir
+            )
+        });
+
+        Self { path }
+    }
+    fn compile_file_path(&self, suffix: &str, description: &str) -> String {
+        self.path
+            .join(["out/debug/", self.project_name(), suffix].concat())
+            .to_str()
+            .unwrap_or_else(|| panic!("could not join path for {description}"))
+            .to_string()
+    }
+
+    fn project_name(&self) -> &str {
+        self.path
+            .file_name()
+            .expect("failed to get project name")
+            .to_str()
+            .expect("failed to convert project name to string")
+    }
+
+    fn abi_path(&self) -> String {
+        self.compile_file_path("-abi.json", "the ABI file")
+    }
+
+    fn bin_path(&self) -> String {
+        self.compile_file_path(".bin", "the binary file")
+    }
+
+    fn storage_path(&self) -> String {
+        self.compile_file_path("-storage_slots.json", "the storage slots file")
+    }
+}
+
 /// This proc macro is used to reduce the amount of boilerplate code in integration tests.
 /// When expanded, the proc macro will: launch a local provider, generate one wallet,
 /// deploy the selected contract and create a contract instance.
@@ -37,84 +83,100 @@ pub fn wasm_abigen(input: TokenStream) -> TokenStream {
 /// wallet name to `wallet`. The other ones must set the wallet name to `None`.
 #[proc_macro]
 pub fn setup_contract_test(input: TokenStream) -> TokenStream {
-    let args = parse_macro_input!(input as ContractTestArgs);
+    let commands = parse_macro_input!(input as TestContractCommands).commands;
 
-    let abs_forc_dir = Path::new(&args.project_path)
-        .canonicalize()
-        .unwrap_or_else(|_| {
-            panic!(
-                "Unable to canonicalize forc project path: {}. Make sure the path is valid!",
-                &args.project_path
-            )
-        });
+    let projects: HashMap<_, _> = commands
+        .iter()
+        .filter_map(|c| {
+            if let Command::Abigen { name, abi } = c {
+                return Some((name.clone(), Project::new(abi)));
+            }
+            None
+        })
+        .collect();
 
-    let forc_project_name = abs_forc_dir
-        .file_name()
-        .expect("failed to get project name")
-        .to_str()
-        .expect("failed to convert project name to string");
-
-    let compiled_file_path = |suffix: &str, desc: &str| {
-        abs_forc_dir
-            .join(["out/debug/", forc_project_name, suffix].concat())
-            .to_str()
-            .unwrap_or_else(|| panic!("could not join path for {desc}"))
-            .to_string()
-    };
-
-    let abi_path = compiled_file_path("-abi.json", "the ABI file");
-    let bin_path = compiled_file_path(".bin", "the binary file");
-    let storage_path = compiled_file_path("-storage_slots.json", "the storage slots file");
-
-    let contract_struct_name = args.instance_name.to_class_case();
-    let mut abigen_token_stream: TokenStream = Abigen::generate(
-        vec![AbigenTarget {
-            name: contract_struct_name.clone(),
-            abi: abi_path,
+    let targets: Vec<_> = projects
+        .iter()
+        .map(|(name, project)| AbigenTarget {
+            name: name.clone(),
+            abi: project.abi_path(),
             program_type: ProgramType::Contract,
-        }],
-        false,
-    )
-    .unwrap()
-    .into();
+        })
+        .collect();
 
-    // Generate random salt for contract deployment
-    let mut rng = StdRng::from_entropy();
-    let salt: [u8; 32] = rng.gen();
+    let abigen_code = Abigen::generate(targets, false).expect("Failed to generate abigen");
 
-    let contract_instance_name = Ident::new(&args.instance_name, Span::call_site());
-    let contract_struct_name = Ident::new(&contract_struct_name, Span::call_site());
+    let wallet_names: Vec<_> = commands
+        .iter()
+        .find_map(|c| {
+            if let Command::Wallets { names, .. } = c {
+                return Some(names.iter().map(|wn| ident(&wn.value())).collect());
+            }
+            None
+        })
+        .unwrap_or_default();
 
-    // If the wallet name is None, do not launch a new provider and use the default `wallet` name
-    let (wallet_name, wallet_token_stream): (Ident, TokenStream) = if args.wallet_name == "None" {
-        (Ident::new("wallet", Span::call_site()), quote! {}.into())
-    } else {
-        let wallet_name = Ident::new(&args.wallet_name, Span::call_site());
-        (
-            wallet_name.clone(),
-            quote! {let #wallet_name = launch_provider_and_get_wallet().await;}.into(),
-        )
-    };
+    let num_wallets = wallet_names.len();
 
-    let contract_deploy_token_stream: TokenStream = quote! {
-        let #contract_instance_name = #contract_struct_name::new(
-            Contract::deploy_with_parameters(
-                #bin_path,
-                &#wallet_name,
-                TxParameters::default(),
-                StorageConfiguration::with_storage_path(Some(
-                    #storage_path.to_string(),
-                )),
-                Salt::from([#(#salt),*]),
+    let wallet_code = if !wallet_names.is_empty() {
+        quote! {
+            let [#(#wallet_names),*]: [_; #num_wallets] = launch_custom_provider_and_get_wallets(
+                WalletsConfig::new(Some(#num_wallets as u64), None, None),
+                None,
+                None,
             )
             .await
-            .expect("Failed to deploy the contract"),
-            #wallet_name.clone(),
-        );
-    }
-    .into();
+            .try_into()
+            .expect("Should have the exact number of wallets");
 
-    abigen_token_stream.extend(wallet_token_stream);
-    abigen_token_stream.extend(contract_deploy_token_stream);
-    abigen_token_stream
+        }
+    } else {
+        quote! {}
+    };
+
+    let deploy_code = commands.iter().filter_map(|c| {
+        if let Command::Deploy {
+            name,
+            contract,
+            wallet,
+        } = c
+        {
+            // Generate random salt for contract deployment
+            let mut rng = StdRng::from_entropy();
+            let salt: [u8; 32] = rng.gen();
+
+            let contract_instance_name = ident(name);
+            let contract_struct_name = ident(&contract.value());
+            let wallet_name = ident(wallet);
+
+            let project = projects.get(&contract.value()).expect("Should be there");
+            let bin_path = project.bin_path();
+            let storage_path = project.storage_path();
+
+            return Some(quote! {
+            let #contract_instance_name = #contract_struct_name::new(
+                Contract::deploy_with_parameters(
+                    #bin_path,
+                    &#wallet_name,
+                    TxParameters::default(),
+                    StorageConfiguration::with_storage_path(Some(
+                        #storage_path.to_string(),
+                    )),
+                    Salt::from([#(#salt),*]),
+                )
+                .await
+                .expect("Failed to deploy the contract"),
+                #wallet_name.clone(),
+            );
+                    });
+        }
+        None
+    });
+
+    quote! {
+       #abigen_code
+       #wallet_code
+       #(#deploy_code)*
+    }
+    .into()
 }
