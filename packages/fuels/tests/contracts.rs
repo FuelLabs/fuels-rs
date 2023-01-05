@@ -781,11 +781,18 @@ async fn test_payable_annotation() -> Result<(), Error> {
 
     let contract_methods = contract_instance.methods();
 
-    let response = contract_methods.payable().call().await?;
+    let response = contract_methods
+        .payable()
+        .call_params(CallParameters::new(Some(100), None, None))?
+        .call()
+        .await?;
     assert_eq!(response.value, 42);
 
-    let response = contract_methods.non_payable().call().await?;
-    assert_eq!(response.value, 42);
+    let response = contract_methods
+        .non_payable()
+        .call_params(CallParameters::new(Some(100), None, None))
+        .expect_err("Can't forward coins to non-payable methods.");
+    //assert_eq!(response.value, 42);
 
     Ok(())
 }
