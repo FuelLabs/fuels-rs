@@ -214,7 +214,7 @@ impl Contract {
         // The first witness is the bytecode we're deploying.
         // The signature will be appended at position 1 of
         // the witness list
-        wallet.add_fee_coins(&mut tx, 0, 1).await?;
+        wallet.add_fee_resources(&mut tx, 0, 1).await?;
         wallet.sign_transaction(&mut tx).await?;
 
         let provider = wallet.get_provider()?;
