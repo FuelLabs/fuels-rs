@@ -79,7 +79,6 @@ impl MacroAbigenTarget {
 }
 
 pub(crate) enum Command {
-    //TODO: only single Wallets command
     Wallets {
         span: Span,
         names: Vec<LitStr>,
@@ -143,13 +142,14 @@ impl Parse for Command {
 }
 
 pub(crate) struct TestContractCommands {
-    pub(crate) commands: Punctuated<Command, Token![,]>,
+    pub(crate) commands: Vec<Command>,
 }
 
 impl Parse for TestContractCommands {
     fn parse(input: ParseStream) -> ParseResult<Self> {
         let span = input.span();
-        let commands = input.parse_terminated(ParseMacroInput::parse)?;
+        let commands: Punctuated<Command, Token![,]> =
+            input.parse_terminated(ParseMacroInput::parse)?;
 
         let contract_to_abigen: HashSet<_> = commands
             .iter()
@@ -259,6 +259,8 @@ impl Parse for TestContractCommands {
             return Err(err);
         }
 
-        Ok(Self { commands })
+        Ok(Self {
+            commands: commands.into_iter().collect(),
+        })
     }
 }
