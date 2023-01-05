@@ -218,7 +218,7 @@ mod tests {
         let contract_instance = MyContract::new(contract_id, wallet_1.clone());
 
         let call_handler = contract_instance.methods().initialize_counter(42);
-        let mut executable_call = call_handler.get_executable_call().await?;
+        let mut executable_call = call_handler.get_executable_call().await?.prepare().await?;
         // ANCHOR_END: modify_call_inputs_instance
 
         // ANCHOR: modify_call_inputs_execute
