@@ -352,10 +352,10 @@ mod tests {
     #[allow(unused_variables)]
     async fn output_messages_test() -> Result<(), Error> {
         use fuels::prelude::*;
-        abigen!(
-            MyContract,
-            "packages/fuels/tests/contracts/token_ops/out/debug/token_ops-abi.json"
-        );
+        abigen!(Contract(
+            name = "MyContract",
+            abi = "packages/fuels/tests/contracts/token_ops/out/debug/token_ops-abi.json"
+        ));
 
         let wallet = launch_provider_and_get_wallet().await;
         let contract_id = Contract::deploy(
@@ -392,10 +392,10 @@ mod tests {
     #[allow(unused_variables)]
     async fn dependency_estimation() -> Result<(), Error> {
         use fuels::prelude::*;
-        abigen!(
-            MyContract,
-            "packages/fuels/tests/contracts/foo_caller_contract/out/debug/foo_caller_contract-abi.json"
-        );
+        abigen!(Contract(
+            name="MyContract",
+            abi="packages/fuels/tests/contracts/foo_caller_contract/out/debug/foo_caller_contract-abi.json"
+        ));
 
         let wallet = launch_provider_and_get_wallet().await;
         let called_contract_id = Contract::deploy(
