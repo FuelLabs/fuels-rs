@@ -171,4 +171,83 @@ mod tests {
 
         Ok(())
     }
+
+    #[tokio::test]
+    async fn modify_contract_call_transaction_inputs() -> Result<(), Error> {
+        // ANCHOR: modify_call_inputs
+
+        // ANCHOR: modify_call_inputs_include
+        use fuels::prelude::*;
+        use fuels::tx::field::Inputs;
+        use fuels::tx::field::Outputs;
+        // ANCHOR_END: modify_call_inputs_include
+
+        // ANCHOR: modify_call_inputs_setup
+        abigen!(
+            MyContract,
+            "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
+        );
+
+        let some_asset_id = AssetId::new([3; 32usize]);
+        let coin_amount = 1_000_000;
+        let asset_configs = [AssetId::default(), some_asset_id]
+            .map(|id| AssetConfig {
+                id,
+                num_coins: 1,
+                coin_amount,
+            })
+            .into();
+
+        const NUM_WALLETS: u64 = 2;
+        let wallet_config = WalletsConfig::new_multiple_assets(NUM_WALLETS, asset_configs);
+        let mut wallets = launch_custom_provider_and_get_wallets(wallet_config, None, None).await;
+
+        let wallet_1 = wallets.pop().unwrap();
+        let wallet_2 = wallets.pop().unwrap();
+        // ANCHOR_END: modify_call_inputs_setup
+
+        // ANCHOR: modify_call_inputs_instance
+        let contract_id = Contract::deploy(
+            "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
+            &wallet_1,
+            TxParameters::default(),
+            StorageConfiguration::default(),
+        )
+        .await?;
+
+        let contract_instance = MyContract::new(contract_id, wallet_1.clone());
+
+        let call_handler = contract_instance.methods().initialize_counter(42);
+        let mut executable_call = call_handler.get_executable_call().await?;
+        // ANCHOR_END: modify_call_inputs_instance
+
+        // ANCHOR: modify_call_inputs_execute
+        const SEND_AMOUNT: u64 = 1000;
+        let input = wallet_1
+            .get_asset_inputs_for_amount(some_asset_id, SEND_AMOUNT, 0)
+            .await?;
+        executable_call.tx.inputs_mut().extend(input);
+
+        let output =
+            wallet_1.get_asset_outputs_for_amount(wallet_2.address(), some_asset_id, SEND_AMOUNT);
+        executable_call.tx.outputs_mut().extend(output);
+
+        let provider = wallet_1.get_provider()?;
+        let receipts = executable_call.execute(provider).await?;
+        // ANCHOR_END: modify_call_inputs_execute
+
+        // ANCHOR: modify_call_inputs_verify
+        let response = call_handler.get_response(receipts)?;
+        assert_eq!(response.value, 42);
+
+        let balance_1 = wallet_1.get_asset_balance(&some_asset_id).await?;
+        assert_eq!(balance_1, coin_amount - SEND_AMOUNT);
+
+        let balance_2 = wallet_2.get_asset_balance(&some_asset_id).await?;
+        assert_eq!(balance_2, coin_amount + SEND_AMOUNT);
+        // ANCHOR_END: modify_call_inputs_verify
+
+        // ANCHOR_END: modify_call_inputs
+        Ok(())
+    }
 }

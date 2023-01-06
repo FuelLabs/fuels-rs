@@ -11,7 +11,7 @@ use fuel_gql_client::{
 };
 use fuel_tx::Input;
 use fuels_core::{
-    offsets::base_script_offset,
+    offsets::base_offset,
     parameters::{CallParameters, TxParameters},
     Tokenizable,
 };
@@ -110,7 +110,7 @@ where
     /// Compute the script data by calculating the script offset and resolving the encoded arguments
     async fn compute_script_data(&self) -> Result<Vec<u8>, Error> {
         let consensus_parameters = self.provider.consensus_parameters().await?;
-        let script_offset = base_script_offset(&consensus_parameters)
+        let script_offset = base_offset(&consensus_parameters)
             + padded_len_usize(self.script_call.script_binary.len());
 
         Ok(self.script_call.encoded_args.resolve(script_offset as u64))
@@ -132,7 +132,7 @@ where
             self.script_call.outputs.clone(), // TODO(iqdecay): allow user to set outputs field
             vec![vec![0, 0].into()], //TODO(iqdecay): figure out how to have the right witnesses
         );
-        self.wallet.add_fee_coins(&mut tx, 0, 0).await?;
+        self.wallet.add_fee_resources(&mut tx, 0, 0).await?;
 
         let tx_execution = ExecutableFuelCall { tx };
 
