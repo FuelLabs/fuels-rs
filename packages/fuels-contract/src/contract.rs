@@ -559,9 +559,7 @@ where
     /// ```
     pub fn call_params(mut self, params: CallParameters) -> Result<Self, Error> {
         if !self.is_payable() && params.amount > 0 {
-            return Err(Error::InvalidData(String::from(
-                "Assets can only be forwarded to payable contract methods.",
-            )));
+            return Err(Error::InvalidCallParameters());
         }
         self.contract_call.call_parameters = params;
         Ok(self)
