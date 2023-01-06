@@ -961,6 +961,7 @@ async fn test_payable_annotation() -> Result<(), Error> {
         .call()
         .await?;
 
+
     assert_eq!(response.value, 42);
 
     // ANCHOR: non_payable_params
