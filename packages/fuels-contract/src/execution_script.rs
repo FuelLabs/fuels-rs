@@ -80,8 +80,8 @@ impl ExecutableFuelCall {
             .iter()
             .find(|(asset_id, _)| *asset_id == AssetId::default());
         match base_asset_amount {
-            Some((_, base_amount)) => wallet.add_fee_coins(&mut tx, *base_amount, 0).await?,
-            None => wallet.add_fee_coins(&mut tx, 0, 0).await?,
+            Some((_, base_amount)) => wallet.add_fee_resources(&mut tx, *base_amount, 0).await?,
+            None => wallet.add_fee_resources(&mut tx, 0, 0).await?,
         }
         wallet.sign_transaction(&mut tx).await.unwrap();
 
