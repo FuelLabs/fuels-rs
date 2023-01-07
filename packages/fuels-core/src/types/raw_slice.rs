@@ -42,11 +42,13 @@ impl PartialEq<Vec<u64>> for RawSlice {
         self.0 == *other
     }
 }
+
 impl PartialEq<RawSlice> for Vec<u64> {
     fn eq(&self, other: &RawSlice) -> bool {
         *self == other.0
     }
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;
