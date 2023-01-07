@@ -1,6 +1,6 @@
 contract;
 
-use foo::LibContract;
+use lib_contract::LibContract;
 use std::token::mint_to_address;
 
 abi ContractCaller {

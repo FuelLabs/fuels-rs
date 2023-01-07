@@ -1,11 +1,10 @@
 use crate::{
     abi_encoder::UnresolvedBytes,
     call_response::FuelCallResponse,
-    contract::get_decoded_output,
+    contract::{get_decoded_output, SetableContract},
     contract_calls_utils::{generate_contract_inputs, generate_contract_outputs},
     execution_script::ExecutableFuelCall,
     logs::{decode_revert_error, LogDecoder},
-    SetableContract,
 };
 use fuel_gql_client::{
     fuel_tx::{Output, Receipt, Transaction},
@@ -157,7 +156,7 @@ where
 
         let inputs = chain!(
             generate_contract_inputs(contract_ids),
-            self.script_call.inputs.clone(), // TODO(iqdecay): allow user to set inputs field
+            self.script_call.inputs.clone(),
         )
         .collect();
 
@@ -167,7 +166,7 @@ where
         // `inputs` array we've sent over.
         let outputs = chain!(
             generate_contract_outputs(num_of_contracts),
-            self.script_call.outputs.clone(), // TODO(iqdecay): allow user to set outputs field
+            self.script_call.outputs.clone(),
         )
         .collect();
 
@@ -179,7 +178,7 @@ where
             self.compute_script_data().await?,
             inputs,
             outputs,
-            vec![vec![0, 0].into()], //TODO(iqdecay): figure out how to have the right witnesses
+            vec![vec![0, 0].into()], //TODO:(iqdecay): figure out how to have the right witnesses
         );
         self.wallet.add_fee_resources(&mut tx, 0, 0).await?;
 

@@ -1,7 +1,7 @@
 contract;
 
 use std::logging::log;
-use library::ContractLogs;
+use contract_logs::ContractLogs;
 
 struct TestStruct {
     field_1: bool,

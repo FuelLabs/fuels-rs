@@ -1,6 +1,6 @@
 contract;
 
-use foo::LibContract;
+use lib_contract::LibContract;
 
 impl LibContract for Contract {
     fn increment(value: u64) -> u64 {

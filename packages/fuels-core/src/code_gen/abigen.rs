@@ -405,7 +405,7 @@ impl Abigen {
                 },
             };
             quote! {
-                use fuels::contract::{SetableContract, logs::LogDecoder};
+                use fuels::contract::{contract::SetableContract, logs::LogDecoder};
                 use fuels::core::{
                     code_gen::get_logs_hashmap, try_from_bytes, types::*, Parameterize, Token,
                     Tokenizable,
