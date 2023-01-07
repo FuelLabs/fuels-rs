@@ -18,7 +18,7 @@ pub struct Header {
 
 impl From<ClientHeader> for Header {
     fn from(client_header: ClientHeader) -> Self {
-        let naive = NaiveDateTime::from_timestamp_opt(client_header.time.0 .0 as i64, 0);
+        let naive = NaiveDateTime::from_timestamp_opt(client_header.time.0.to_unix(), 0);
         let time = naive.map(|time| DateTime::<Utc>::from_utc(time, Utc));
 
         Self {

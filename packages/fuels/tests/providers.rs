@@ -569,3 +569,34 @@ async fn testnet_hello_world() -> Result<(), Error> {
     assert_eq!(52, response.value);
     Ok(())
 }
+
+#[tokio::test]
+async fn test_parse_block_time() -> Result<(), Error> {
+    let mut wallet = WalletUnlocked::new_random(None);
+    let coins = setup_single_asset_coins(wallet.address(), AssetId::BASE, 1, DEFAULT_COIN_AMOUNT);
+    let (provider, _) = setup_test_provider(coins.clone(), vec![], None, None).await;
+    wallet.set_provider(provider);
+    let tx_parameters = TxParameters::new(Some(1), Some(2000), None);
+    let wallet_2 = WalletUnlocked::new_random(None).lock();
+    let (tx_id, _) = wallet
+        .transfer(wallet_2.address(), 100, BASE_ASSET_ID, tx_parameters)
+        .await?;
+
+    let tx_response = wallet
+        .get_provider()
+        .unwrap()
+        .get_transaction_by_id(tx_id.as_str())
+        .await?
+        .unwrap();
+    assert!(tx_response.time.is_some());
+
+    let block = wallet
+        .get_provider()
+        .unwrap()
+        .block(tx_response.block_id.unwrap().to_string().as_str())
+        .await?
+        .unwrap();
+    assert!(block.header.time.is_some());
+
+    Ok(())
+}
