@@ -13,7 +13,7 @@ use fuels_types::errors::Error;
 
 use std::vec;
 
-use crate::contract::ContractCall;
+use crate::contract_calls::ContractCall;
 use crate::contract_calls_utils::{
     build_script_data_from_contract_calls, calculate_required_asset_amounts, get_instructions,
     get_transaction_inputs_outputs,

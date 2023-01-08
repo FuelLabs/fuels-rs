@@ -379,8 +379,9 @@ impl Abigen {
         } else {
             let specific_includes = match self.abigen_type {
                 AbigenType::Contract => quote! {
-                    use fuels::contract::contract::{
-                        get_decoded_output, Contract, ContractCallHandler,
+                    use fuels::contract::{
+                        contract::Contract,
+                        contract_calls::{ContractCallHandler, ContractCall, get_decoded_output}
                     };
                     use fuels::core::{
                         abi_decoder::ABIDecoder, code_gen::function_selector::resolve_fn_selector,

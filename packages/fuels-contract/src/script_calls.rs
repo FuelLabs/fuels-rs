@@ -1,8 +1,9 @@
+use crate::call_utils::{generate_contract_inputs, generate_contract_outputs};
 use crate::{
     abi_encoder::UnresolvedBytes,
     call_response::FuelCallResponse,
-    contract::{get_decoded_output, SettableContract},
-    contract_calls_utils::{generate_contract_inputs, generate_contract_outputs},
+    contract::SetableContract,
+    contract_calls::get_decoded_output,
     execution_script::ExecutableFuelCall,
     logs::{decode_revert_error, LogDecoder},
 };
