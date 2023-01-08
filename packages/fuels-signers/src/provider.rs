@@ -32,6 +32,7 @@ use fuels_types::{
     transaction_response::TransactionResponse,
 };
 use std::collections::HashMap;
+use tai64::Tai64;
 use thiserror::Error;
 
 #[derive(Debug)]
@@ -56,7 +57,7 @@ pub struct TimeParameters {
 impl From<TimeParameters> for FuelTimeParameters {
     fn from(time: TimeParameters) -> Self {
         Self {
-            start_time: (time.start_time.timestamp() as u64).into(),
+            start_time: Tai64::from_unix(time.start_time.timestamp()).0.into(),
             block_time_interval: (time.block_time_interval.num_seconds() as u64).into(),
         }
     }

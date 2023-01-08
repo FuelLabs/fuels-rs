@@ -41,7 +41,7 @@ impl From<ClientTransactionResponse> for TransactionResponse {
             | ClientTransactionStatus::SqueezedOut { .. } => None,
             ClientTransactionStatus::Success { time, .. }
             | ClientTransactionStatus::Failure { time, .. } => {
-                let native = NaiveDateTime::from_timestamp_opt(time.0 as i64, 0);
+                let native = NaiveDateTime::from_timestamp_opt(time.to_unix(), 0);
                 native.map(|time| DateTime::<Utc>::from_utc(time, Utc))
             }
         };
