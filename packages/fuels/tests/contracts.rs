@@ -25,6 +25,7 @@ async fn test_multiple_args() -> Result<(), Error> {
 }
 
 #[tokio::test]
+#[allow(unused_variables)]
 async fn test_contract_calling_contract() -> Result<(), Error> {
     // Tests a contract call that calls another contract (FooCaller calls FooContract underneath)
     // Load and deploy the first compiled contract
@@ -49,13 +50,24 @@ async fn test_contract_calling_contract() -> Result<(), Error> {
     // Calls the contract that calls the `LibContract` contract,
     // also just increments the given value
     // ANCHOR: external_contract
-    let res = contract_caller_instance
+    let response = contract_caller_instance
         .methods()
         .increment_from_contract(lib_contract_id.into(), 42)
-        .set_contract_ids(&[lib_contract_id.clone()]) // Sets the external contract
+        .set_contracts(&[&lib_contract_instance])
         .call()
         .await?;
     // ANCHOR_END: external_contract
+
+    assert_eq!(43, res.value);
+
+    // ANCHOR: external_contract_ids
+    let response = contract_caller_instance
+        .methods()
+        .increment_from_contract(lib_contract_id.into(), 42)
+        .set_contract_ids(&[lib_contract_id.clone()])
+        .call()
+        .await?;
+    // ANCHOR_END: external_contract_ids
 
     assert_eq!(43, res.value);
     Ok(())
@@ -361,17 +373,19 @@ async fn test_contract_setup_macro_deploy_with_salt() -> Result<(), Error> {
     let res = contract_caller_instance
         .methods()
         .increment_from_contract(lib_contract_id.into(), 42)
-        .set_contract_ids(&[lib_contract_id.clone()]) // Sets the external contract
+        .set_contracts(&[&lib_contract_instance])
         .call()
         .await?;
+
     assert_eq!(43, res.value);
 
     let res = contract_caller_instance2
         .methods()
         .increment_from_contract(lib_contract_id.into(), 42)
-        .set_contract_ids(&[lib_contract_id.clone()]) // Sets the external contract
+        .set_contracts(&[&lib_contract_instance])
         .call()
         .await?;
+
     assert_eq!(43, res.value);
     // ANCHOR_END: contract_setup_macro_multi
 

@@ -634,6 +634,7 @@ async fn test_contract_with_contract_logs() -> Result<(), Error> {
 }
 
 #[tokio::test]
+#[allow(unused_variables)]
 async fn test_script_logs_with_contract_logs() -> Result<(), Error> {
     let wallet = launch_provider_and_get_wallet().await;
 
@@ -677,11 +678,21 @@ async fn test_script_logs_with_contract_logs() -> Result<(), Error> {
         format!("{:?}", [1, 2, 3]),
     ];
 
+    // ANCHOR: external_contract_ids
     let response = instance
         .main(contract_id)
-        .set_contracts(&[&contract_instance]) // Sets the external contract
+        .set_contract_ids(&[contract_id.into()])
         .call()
         .await?;
+    // ANCHOR_END: external_contract_ids
+
+    // ANCHOR: external_contract
+    let response = instance
+        .main(contract_id)
+        .set_contracts(&[&contract_instance])
+        .call()
+        .await?;
+    // ANCHOR_END: external_contract
 
     {
         let num_contract_logs = response
@@ -856,7 +867,7 @@ async fn test_contract_require_from_contract() -> Result<(), Error> {
     let error = contract_caller_instance
         .methods()
         .require_from_contract(contract_id)
-        .set_contracts(&[&contract_instance]) // Sets the external contract
+        .set_contracts(&[&contract_instance])
         .call()
         .await
         .expect_err("Should return a revert error");
