@@ -1,9 +1,7 @@
 use fuel_tx::{Input, Output, Receipt, TxPointer, UtxoId};
 use fuels_types::bech32::Bech32Address;
 use std::collections::HashSet;
-use std::iter;
 
-use crate::contract_calls::ContractCall;
 use fuel_gql_client::prelude::PanicReason;
 use fuels_core::constants::{BASE_ASSET_ID, FAILED_TRANSFER_TO_ADDRESS_SIGNAL};
 use fuels_core::tx::{AssetId, Bytes32, ContractId};
@@ -20,18 +18,6 @@ pub(crate) fn find_contract_not_in_inputs(receipts: &[Receipt]) -> Option<&Recei
     receipts.iter().find(
             |r| matches!(r, Receipt::Panic { reason, .. } if *reason.reason() == PanicReason::ContractNotInInputs ),
         )
-}
-
-pub(crate) fn extract_unique_contract_ids(calls: &[ContractCall]) -> HashSet<ContractId> {
-    calls
-        .iter()
-        .flat_map(|call| {
-            call.external_contracts
-                .iter()
-                .map(|bech32| bech32.into())
-                .chain(iter::once((&call.contract_id).into()))
-        })
-        .collect()
 }
 
 pub(crate) fn generate_contract_inputs(contract_ids: HashSet<ContractId>) -> Vec<Input> {

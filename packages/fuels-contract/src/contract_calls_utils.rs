@@ -1,9 +1,10 @@
 use crate::call_utils::{
-    convert_to_signed_resources, extract_unique_asset_ids, extract_unique_contract_ids,
-    generate_asset_change_outputs, generate_contract_inputs, generate_contract_outputs,
-    sum_up_amounts_for_each_asset_id,
+    convert_to_signed_resources, extract_unique_asset_ids, generate_asset_change_outputs,
+    generate_contract_inputs, generate_contract_outputs, sum_up_amounts_for_each_asset_id,
 };
 use crate::contract_calls::ContractCall;
+use std::collections::HashSet;
+use std::iter;
 
 use fuel_gql_client::fuel_tx::{Input, Output};
 use fuel_gql_client::fuel_types::{Immediate18, Word};
@@ -31,6 +32,18 @@ pub(crate) fn calculate_required_asset_amounts(calls: &[ContractCall]) -> Vec<(A
         .map(|call| (call.call_parameters.asset_id, call.call_parameters.amount))
         .collect::<Vec<_>>();
     sum_up_amounts_for_each_asset_id(amounts_per_asset_id)
+}
+
+pub(crate) fn extract_unique_contract_ids(calls: &[ContractCall]) -> HashSet<ContractId> {
+    calls
+        .iter()
+        .flat_map(|call| {
+            call.external_contracts
+                .iter()
+                .map(|bech32| bech32.into())
+                .chain(iter::once((&call.contract_id).into()))
+        })
+        .collect()
 }
 
 /// Given a list of contract calls, create the actual opcodes used to call the contract
