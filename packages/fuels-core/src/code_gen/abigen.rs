@@ -381,7 +381,7 @@ impl Abigen {
                 AbigenType::Contract => quote! {
                     use fuels::contract::{
                         contract::Contract,
-                        contract_calls::{ContractCallHandler, ContractCall, get_decoded_output}
+                        contract_calls::{ContractCallHandler, ContractCall}
                     };
                     use fuels::core::{
                         abi_decoder::ABIDecoder, code_gen::function_selector::resolve_fn_selector,
@@ -405,7 +405,10 @@ impl Abigen {
                 },
             };
             quote! {
-                use fuels::contract::{contract::SettableContract, logs::LogDecoder};
+                use fuels::contract::{
+                    contract::SetableContract, logs::LogDecoder,
+                    call_utils::get_decoded_output,
+                };
                 use fuels::core::{
                     code_gen::get_logs_hashmap, try_from_bytes, types::*, Parameterize, Token,
                     Tokenizable,

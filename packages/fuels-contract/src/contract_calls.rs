@@ -8,22 +8,17 @@ use crate::{
 use fuel_gql_client::fuel_tx::{Output, Receipt};
 use fuel_tx::{Address, AssetId};
 
+use crate::call_utils::get_decoded_output;
 use fuels_core::{
-    abi_decoder::ABIDecoder,
     abi_encoder::UnresolvedBytes,
     parameters::{CallParameters, TxParameters},
-    tx::ContractId,
     Selector, Token, Tokenizable,
 };
 use fuels_signers::{
     provider::{Provider, TransactionCost},
     WalletUnlocked,
 };
-use fuels_types::{
-    bech32::Bech32ContractId,
-    errors::Error,
-    param_types::{ParamType, ReturnLocation},
-};
+use fuels_types::{bech32::Bech32ContractId, errors::Error, param_types::ParamType};
 use std::{collections::HashMap, fmt::Debug, marker::PhantomData, panic};
 
 #[derive(Debug)]
@@ -113,60 +108,6 @@ impl ContractCall {
             None => self.message_outputs = Some(new_message_outputs),
         }
     }
-}
-
-/// Based on the receipts returned by the call, the contract ID (which is null in the case of a
-/// script), and the output param, decode the values and return them.
-pub fn get_decoded_output(
-    receipts: &mut Vec<Receipt>,
-    contract_id: Option<&Bech32ContractId>,
-    output_param: &ParamType,
-) -> Result<Token, Error> {
-    // Multiple returns are handled as one `Tuple` (which has its own `ParamType`)
-    let contract_id: ContractId = match contract_id {
-        Some(contract_id) => contract_id.into(),
-        // During a script execution, the script's contract id is the **null** contract id
-        None => ContractId::new([0u8; 32]),
-    };
-    let (encoded_value, index) = match output_param.get_return_location() {
-        ReturnLocation::ReturnData => {
-            match receipts.iter().position(|receipt| {
-                matches!(receipt,
-                    Receipt::ReturnData { id, data, .. } if *id == contract_id && !data.is_empty())
-            }) {
-                Some(idx) => (
-                    receipts[idx]
-                        .data()
-                        .expect("ReturnData should have data")
-                        .to_vec(),
-                    Some(idx),
-                ),
-                None => (vec![], None),
-            }
-        }
-        ReturnLocation::Return => {
-            match receipts.iter().position(|receipt| {
-                matches!(receipt,
-                    Receipt::Return { id, ..} if *id == contract_id)
-            }) {
-                Some(idx) => (
-                    receipts[idx]
-                        .val()
-                        .expect("Return should have val")
-                        .to_be_bytes()
-                        .to_vec(),
-                    Some(idx),
-                ),
-                None => (vec![], None),
-            }
-        }
-    };
-    if let Some(i) = index {
-        receipts.remove(i);
-    }
-
-    let decoded_value = ABIDecoder::decode_single(output_param, &encoded_value)?;
-    Ok(decoded_value)
 }
 
 #[derive(Debug)]
