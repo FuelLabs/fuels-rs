@@ -21,6 +21,7 @@ use fuels_signers::{
     provider::{Provider, TransactionCost},
     Signer, WalletUnlocked,
 };
+use fuels_types::bech32::Bech32Address;
 use fuels_types::{
     bech32::Bech32ContractId,
     errors::Error,
@@ -328,6 +329,11 @@ impl Contract {
     }
 }
 
+// struct CustomAssetReq {
+//     key: (AssetId, Option<Bech32Address>),
+//     amount: u64,
+// }
+
 #[derive(Debug)]
 /// Contains all data relevant to a single contract call
 pub struct ContractCall {
@@ -340,7 +346,7 @@ pub struct ContractCall {
     pub message_outputs: Option<Vec<Output>>,
     pub external_contracts: Vec<Bech32ContractId>,
     pub output_param: ParamType,
-    pub custom_assets: HashMap<AssetId, u64>,
+    pub custom_assets: HashMap<(AssetId, Option<Bech32Address>), u64>,
 }
 
 impl ContractCall {
@@ -429,13 +435,10 @@ impl ContractCall {
         )
     }
 
-    pub fn add_custom_assets(&mut self, asset_id: AssetId, amount: u64) {
-        if self.custom_assets.contains_key(&asset_id) {
-            let sum = self.custom_assets.get(&asset_id).unwrap() + amount;
-            self.custom_assets.insert(asset_id, sum);
-        } else {
-            self.custom_assets.insert(asset_id, amount);
-        }
+    pub fn add_custom_assets(&mut self, asset_id: AssetId, amount: u64, to: Option<Bech32Address>) {
+        let key = (asset_id, to);
+        let sum = self.custom_assets.get(&key).unwrap_or(&0) + amount;
+        self.custom_assets.insert(key, sum);
     }
 }
 
@@ -525,8 +528,13 @@ where
         self
     }
 
-    pub fn add_custom_asset(mut self, asset_id: AssetId, amount: u64) -> Self {
-        self.contract_call.add_custom_assets(asset_id, amount);
+    pub fn add_custom_asset(
+        mut self,
+        asset_id: AssetId,
+        amount: u64,
+        to: Option<Bech32Address>,
+    ) -> Self {
+        self.contract_call.add_custom_assets(asset_id, amount, to);
         self
     }
 
