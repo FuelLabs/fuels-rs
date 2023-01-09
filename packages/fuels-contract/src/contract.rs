@@ -340,7 +340,7 @@ pub struct ContractCall {
     pub message_outputs: Option<Vec<Output>>,
     pub external_contracts: Vec<Bech32ContractId>,
     pub output_param: ParamType,
-    pub custom_assets: HashMap<AssetId, u64>
+    pub custom_assets: HashMap<AssetId, u64>,
 }
 
 impl ContractCall {
@@ -525,7 +525,7 @@ where
         self
     }
 
-    pub fn add_custom_asset(mut self,  asset_id: AssetId, amount: u64) -> Self {
+    pub fn add_custom_asset(mut self, asset_id: AssetId, amount: u64) -> Self {
         self.contract_call.add_custom_assets(asset_id, amount);
         self
     }
