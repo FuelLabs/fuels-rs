@@ -103,8 +103,8 @@ impl Contract {
             encoded_args: unresolved_bytes,
             call_parameters,
             compute_custom_input_offset,
-            variable_outputs: None,
-            message_outputs: None,
+            variable_outputs: vec![],
+            message_outputs: vec![],
             external_contracts: vec![],
             output_param: D::param_type(),
         };

@@ -189,16 +189,14 @@ pub(crate) fn get_transaction_inputs_outputs(
 fn extract_variable_outputs(calls: &[ContractCall]) -> Vec<Output> {
     calls
         .iter()
-        .filter_map(|call| call.variable_outputs.clone())
-        .flatten()
+        .flat_map(|call| call.variable_outputs.clone())
         .collect()
 }
 
 fn extract_message_outputs(calls: &[ContractCall]) -> Vec<Output> {
     calls
         .iter()
-        .filter_map(|call| call.message_outputs.clone())
-        .flatten()
+        .flat_map(|call| call.message_outputs.clone())
         .collect()
 }
 
@@ -227,10 +225,10 @@ mod test {
                 encoded_selector: [0; 8],
                 call_parameters: Default::default(),
                 compute_custom_input_offset: false,
-                variable_outputs: None,
+                variable_outputs: vec![],
                 external_contracts: Default::default(),
                 output_param: ParamType::Unit,
-                message_outputs: None,
+                message_outputs: vec![],
             }
         }
     }
@@ -280,8 +278,8 @@ mod test {
                     Some(i as u64),
                 ),
                 compute_custom_input_offset: i == 1,
-                variable_outputs: None,
-                message_outputs: None,
+                variable_outputs: vec![],
+                message_outputs: vec![],
                 external_contracts: vec![],
                 output_param: ParamType::Unit,
             })
