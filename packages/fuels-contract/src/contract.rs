@@ -529,7 +529,7 @@ where
     /// ```ignore
     /// my_contract_instance.my_method(...).set_contracts(&[another_contract_instance]).call()
     /// ```
-    pub fn set_contracts<S: SetableContract>(mut self, contracts: &[&S]) -> Self {
+    pub fn set_contracts(mut self, contracts: &[&dyn SetableContract]) -> Self {
         self.contract_call.external_contracts = contracts.iter().map(|c| c.id()).collect();
         for c in contracts {
             self.log_decoder.merge(c.log_decoder());

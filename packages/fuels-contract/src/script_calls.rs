@@ -123,7 +123,7 @@ where
         self
     }
 
-    pub fn set_contracts<S: SetableContract>(mut self, contracts: &[&S]) -> Self {
+    pub fn set_contracts(mut self, contracts: &[&dyn SetableContract]) -> Self {
         self.script_call.external_contracts = contracts.iter().map(|c| c.id()).collect();
         for c in contracts {
             self.log_decoder.merge(c.log_decoder());
