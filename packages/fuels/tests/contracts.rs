@@ -825,7 +825,7 @@ async fn test_add_custom_assets() -> Result<(), Error> {
         .add_custom_asset(asset_id_2, amount_2, Some(wallet_2.address().clone()))
         .call()
         .await?;
-    
+
     assert_eq!(response.value, 5);
 
     let balance_asset_1 = wallet_1.get_asset_balance(&asset_id_1).await?;

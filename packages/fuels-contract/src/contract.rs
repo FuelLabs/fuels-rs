@@ -435,7 +435,7 @@ impl ContractCall {
         )
     }
 
-    pub fn add_custom_assets(&mut self, asset_id: AssetId, amount: u64, to: Option<Bech32Address>) {
+    pub fn add_custom_asset(&mut self, asset_id: AssetId, amount: u64, to: Option<Bech32Address>) {
         let key = (asset_id, to);
         let sum = self.custom_assets.get(&key).unwrap_or(&0) + amount;
         self.custom_assets.insert(key, sum);
@@ -534,7 +534,7 @@ where
         amount: u64,
         to: Option<Bech32Address>,
     ) -> Self {
-        self.contract_call.add_custom_assets(asset_id, amount, to);
+        self.contract_call.add_custom_asset(asset_id, amount, to);
         self
     }
 
