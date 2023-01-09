@@ -26,18 +26,27 @@ pub struct ScriptCall {
     pub script_binary: Vec<u8>,
     pub encoded_args: UnresolvedBytes,
     pub inputs: Vec<Input>,
-    pub outputs: Vec<Output>,
+    pub variable_outputs: Vec<Output>,
+    pub message_outputs: Vec<Output>,
     pub external_contracts: Vec<Bech32ContractId>,
     // This field is not currently used but it will be in the future.
     pub call_parameters: CallParameters,
 }
 
 impl ScriptCall {
-    pub fn with_outputs(mut self, outputs: Vec<Output>) -> Self {
-        self.outputs = outputs;
-        self
+    pub fn with_variable_outputs(self, variable_outputs: Vec<Output>) -> Self {
+        Self {
+            variable_outputs,
+            ..self
+        }
     }
 
+    pub fn with_message_outputs(self, message_outputs: Vec<Output>) -> Self {
+        Self {
+            message_outputs,
+            ..self
+        }
+    }
     pub fn with_inputs(mut self, inputs: Vec<Input>) -> Self {
         self.inputs = inputs;
         self
@@ -78,7 +87,8 @@ where
             script_binary,
             encoded_args,
             inputs: vec![],
-            outputs: vec![],
+            message_outputs: vec![],
+            variable_outputs: vec![],
             external_contracts: vec![],
             call_parameters: Default::default(),
         };
@@ -104,8 +114,12 @@ where
         self
     }
 
-    pub fn with_outputs(mut self, outputs: Vec<Output>) -> Self {
-        self.script_call = self.script_call.with_outputs(outputs);
+    pub fn with_message_outputs(mut self, message_outputs: Vec<Output>) -> Self {
+        self.script_call = self.script_call.with_message_outputs(message_outputs);
+        self
+    }
+    pub fn with_variable_outputs(mut self, variable_outputs: Vec<Output>) -> Self {
+        self.script_call = self.script_call.with_variable_outputs(variable_outputs);
         self
     }
 
@@ -162,7 +176,8 @@ where
         // `inputs` array we've sent over.
         let outputs = chain!(
             generate_contract_outputs(num_of_contracts),
-            self.script_call.outputs.clone(),
+            self.script_call.variable_outputs.clone(),
+            self.script_call.message_outputs.clone(),
         )
         .collect();
 
