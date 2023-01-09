@@ -184,7 +184,7 @@ pub(crate) fn get_transaction_inputs_outputs(
         generate_contract_inputs(contract_ids),
         convert_to_signed_resources(spendable_resources),
     )
-        .collect();
+    .collect();
 
     // Note the contract_outputs need to come first since the
     // contract_inputs are referencing them via `output_index`. The node
@@ -197,7 +197,7 @@ pub(crate) fn get_transaction_inputs_outputs(
         extract_variable_outputs(calls),
         extract_message_outputs(calls)
     )
-        .collect();
+    .collect();
     (inputs, outputs)
 }
 
@@ -733,10 +733,10 @@ mod test {
             (asset_id_1, 300),
             (asset_id_2, 400),
         ]
-            .map(|(asset_id, amount)| CallParameters::new(Some(amount), Some(asset_id), None))
-            .map(|call_parameters| {
-                ContractCall::new_with_random_id().with_call_parameters(call_parameters)
-            });
+        .map(|(asset_id, amount)| CallParameters::new(Some(amount), Some(asset_id), None))
+        .map(|call_parameters| {
+            ContractCall::new_with_random_id().with_call_parameters(call_parameters)
+        });
 
         let asset_id_amounts = calculate_required_asset_amounts(&calls);
 
