@@ -28,7 +28,7 @@
     - [Connecting wallets](./calling-contracts/calls-with-different-wallets.md)
     - [Transaction parameters](./calling-contracts/tx-params.md)
     - [Call parameters](./calling-contracts/call-params.md)
-    - [Custom assets transfer](./calling-contracts/custom-assets-transfer.md)
+    - [Custom asset transfer](./calling-contracts/custom-assets-transfer.md)
     - [Call response](./calling-contracts/call-response.md)
     - [Logs](./calling-contracts/logs.md)
     - [Variable outputs and messages](./calling-contracts/variable-outputs.md)
