@@ -121,6 +121,7 @@ impl Contract {
             message_outputs: None,
             external_contracts: vec![],
             output_param: D::param_type(),
+            custom_assets: Default::default(),
         };
 
         Ok(ContractCallHandler {
@@ -339,6 +340,7 @@ pub struct ContractCall {
     pub message_outputs: Option<Vec<Output>>,
     pub external_contracts: Vec<Bech32ContractId>,
     pub output_param: ParamType,
+    pub custom_assets: HashMap<AssetId, u64>
 }
 
 impl ContractCall {
@@ -426,6 +428,15 @@ impl ContractCall {
             |r| matches!(r, Receipt::Panic { reason, .. } if *reason.reason() == PanicReason::ContractNotInInputs ),
         )
     }
+
+    pub fn add_custom_assets(&mut self, asset_id: AssetId, amount: u64) {
+        if self.custom_assets.contains_key(&asset_id) {
+            let sum = self.custom_assets.get(&asset_id).unwrap() + amount;
+            self.custom_assets.insert(asset_id, sum);
+        } else {
+            self.custom_assets.insert(asset_id, amount);
+        }
+    }
 }
 
 /// Based on the receipts returned by the call, the contract ID (which is null in the case of a
@@ -511,6 +522,11 @@ where
     /// [`Output::Contract`]: fuel_tx::Output::Contract
     pub fn set_contracts(mut self, contract_ids: &[Bech32ContractId]) -> Self {
         self.contract_call.external_contracts = contract_ids.to_vec();
+        self
+    }
+
+    pub fn add_custom_asset(mut self,  asset_id: AssetId, amount: u64) -> Self {
+        self.contract_call.add_custom_assets(asset_id, amount);
         self
     }
 
