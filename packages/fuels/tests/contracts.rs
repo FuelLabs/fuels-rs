@@ -772,35 +772,71 @@ async fn test_contract_call_with_non_default_max_input() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_test() -> Result<(), Error> {
-    use fuels::tx::ConsensusParameters;
-    use fuels_types::coin::Coin;
+async fn test_add_custom_assets() -> Result<(), Error> {
+    let initial_amount = 100_000;
+    let asset_base = AssetConfig {
+        id: BASE_ASSET_ID,
+        num_coins: 1,
+        coin_amount: initial_amount,
+    };
 
-    let consensus_parameters_config = ConsensusParameters::DEFAULT.with_max_inputs(123);
+    let asset_id_1 = AssetId::from([3u8; 32]);
+    let asset_1 = AssetConfig {
+        id: asset_id_1,
+        num_coins: 1,
+        coin_amount: initial_amount,
+    };
 
-    let mut wallet = WalletUnlocked::new_random(None);
+    let asset_id_2 = AssetId::from([1u8; 32]);
+    let asset_2 = AssetConfig {
+        id: asset_id_2,
+        num_coins: 1,
+        coin_amount: initial_amount,
+    };
 
-    let coins: Vec<Coin> = setup_single_asset_coins(
-        wallet.address(),
-        Default::default(),
-        DEFAULT_NUM_COINS,
-        DEFAULT_COIN_AMOUNT,
+    let assets = vec![asset_base, asset_1, asset_2];
+
+    let num_wallets = 2;
+    let wallet_config = WalletsConfig::new_multiple_assets(num_wallets, assets);
+    let mut wallets = launch_custom_provider_and_get_wallets(wallet_config, None, None).await;
+    let wallet_1 = wallets.pop().unwrap();
+    let wallet_2 = wallets.pop().unwrap();
+
+    abigen!(
+        MyContract,
+        "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
     );
 
-    let (fuel_client, _) =
-        setup_test_client(coins, vec![], None, None, Some(consensus_parameters_config)).await;
-    let provider = Provider::new(fuel_client);
-    wallet.set_provider(provider.clone());
+    let contract_id = Contract::deploy(
+        "tests/contracts/contract_test/out/debug/contract_test.bin",
+        &wallet_1,
+        TxParameters::default(),
+        StorageConfiguration::default(),
+    )
+    .await?;
+    let contract_instance = MyContract::new(contract_id, wallet_1.clone());
 
-    setup_contract_test!(
-        contract_instance,
-        None,
-        "packages/fuels/tests/contracts/contract_test"
-    );
-
-    let response = contract_instance.methods().get(5, 6).call().await?;
-
+    let amount_1 = 5000;
+    let amount_2 = 3000;
+    let response = contract_instance
+        .methods()
+        .get(5, 6)
+        .add_custom_asset(asset_id_1, amount_1, Some(wallet_2.address().clone()))
+        .add_custom_asset(asset_id_2, amount_2, Some(wallet_2.address().clone()))
+        .call()
+        .await?;
+    
     assert_eq!(response.value, 5);
+
+    let balance_asset_1 = wallet_1.get_asset_balance(&asset_id_1).await?;
+    let balance_asset_2 = wallet_1.get_asset_balance(&asset_id_2).await?;
+    assert_eq!(balance_asset_1, initial_amount - amount_1);
+    assert_eq!(balance_asset_2, initial_amount - amount_2);
+
+    let balance_asset_1 = wallet_1.get_asset_balance(&asset_id_1).await?;
+    let balance_asset_2 = wallet_1.get_asset_balance(&asset_id_2).await?;
+    assert_eq!(balance_asset_1, initial_amount - amount_1);
+    assert_eq!(balance_asset_2, initial_amount - amount_2);
 
     Ok(())
 }
