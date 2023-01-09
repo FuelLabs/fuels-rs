@@ -36,9 +36,17 @@ async fn test_contract_calling_contract() -> Result<(), Error> {
     );
     let lib_contract_id = lib_contract_instance.get_contract_id();
 
+    setup_contract_test!(
+        lib_contract_instance2,
+        None,
+        "packages/fuels/tests/contracts/lib_contract"
+    );
+    let lib_contract_id2 = lib_contract_instance2.get_contract_id();
+
     // Call the contract directly. It increments the given value.
-    let res = lib_contract_instance.methods().increment(42).call().await?;
-    assert_eq!(43, res.value);
+    let response = lib_contract_instance.methods().increment(42).call().await?;
+
+    assert_eq!(43, response.value);
 
     // Load and deploy the second compiled contract
     setup_contract_test!(
@@ -47,8 +55,16 @@ async fn test_contract_calling_contract() -> Result<(), Error> {
         "packages/fuels/tests/contracts/lib_contract_caller"
     );
 
-    // Calls the contract that calls the `LibContract` contract,
-    // also just increments the given value
+    let response = contract_caller_instance
+        .methods()
+        .increment_from_contracts(lib_contract_id.into(), lib_contract_id2.into(), 42)
+        // Note that the two lib_contract_instances have different types
+        .set_contracts(&[&lib_contract_instance, &lib_contract_instance2])
+        .call()
+        .await?;
+
+    assert_eq!(86, response.value);
+
     // ANCHOR: external_contract
     let response = contract_caller_instance
         .methods()
@@ -58,7 +74,7 @@ async fn test_contract_calling_contract() -> Result<(), Error> {
         .await?;
     // ANCHOR_END: external_contract
 
-    assert_eq!(43, res.value);
+    assert_eq!(43, response.value);
 
     // ANCHOR: external_contract_ids
     let response = contract_caller_instance
@@ -69,7 +85,7 @@ async fn test_contract_calling_contract() -> Result<(), Error> {
         .await?;
     // ANCHOR_END: external_contract_ids
 
-    assert_eq!(43, res.value);
+    assert_eq!(43, response.value);
     Ok(())
 }
 
@@ -370,23 +386,23 @@ async fn test_contract_setup_macro_deploy_with_salt() -> Result<(), Error> {
     assert_ne!(contract_caller_id, contract_caller_id2);
 
     // The first contract can be called because they were deployed on the same provider
-    let res = contract_caller_instance
+    let response = contract_caller_instance
         .methods()
         .increment_from_contract(lib_contract_id.into(), 42)
         .set_contracts(&[&lib_contract_instance])
         .call()
         .await?;
 
-    assert_eq!(43, res.value);
+    assert_eq!(43, response.value);
 
-    let res = contract_caller_instance2
+    let response = contract_caller_instance2
         .methods()
         .increment_from_contract(lib_contract_id.into(), 42)
         .set_contracts(&[&lib_contract_instance])
         .call()
         .await?;
 
-    assert_eq!(43, res.value);
+    assert_eq!(43, response.value);
     // ANCHOR_END: contract_setup_macro_multi
 
     Ok(())
