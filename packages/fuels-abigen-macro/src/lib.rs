@@ -1,12 +1,17 @@
-use fuels_core::code_gen::abigen::Abigen;
-use parsing::{MacroAbigenTargets, TestContractCommands};
+extern crate core;
+
 use proc_macro::TokenStream;
-use setup_contract_test::generate_setup_contract_test_code;
+
 use syn::parse_macro_input;
 
-mod attributes;
-mod parsing;
-mod setup_contract_test;
+use fuels_core::code_gen::abigen::Abigen;
+
+use crate::abigen_macro::MacroAbigenTargets;
+use crate::setup_contract_test_macro::{generate_setup_contract_test_code, TestContractCommands};
+
+mod abigen_macro;
+mod experimental;
+mod setup_contract_test_macro;
 
 #[proc_macro]
 pub fn abigen(input: TokenStream) -> TokenStream {

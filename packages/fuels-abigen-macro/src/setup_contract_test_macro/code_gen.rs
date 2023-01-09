@@ -1,14 +1,20 @@
-use crate::parsing::{Command, TestContractCommands};
-use fuels_core::{
-    code_gen::abigen::{Abigen, AbigenTarget, ProgramType},
-    utils::ident,
-};
-use proc_macro2::{Ident, TokenStream};
-use quote::quote;
-use rand::prelude::{Rng, SeedableRng, StdRng};
 use std::{
     collections::HashMap,
     path::{Path, PathBuf},
+};
+
+use proc_macro2::{Ident, TokenStream};
+use quote::quote;
+use rand::{prelude::StdRng, Rng};
+
+use fuels_core::{
+    code_gen::abigen::{Abigen, AbigenTarget, ProgramType},
+    utils::ident,
+    vm::fuel_crypto::coins_bip32::ecdsa::signature::rand_core::SeedableRng,
+};
+
+use crate::setup_contract_test_macro::parsing::{
+    Deploy, TestContractCommand, TestContractCommands,
 };
 
 pub(crate) fn generate_setup_contract_test_code(
@@ -28,11 +34,11 @@ pub(crate) fn generate_setup_contract_test_code(
     }
 }
 
-fn generate_project_lookup(commands: &[Command]) -> HashMap<String, Project> {
+fn generate_project_lookup(commands: &[TestContractCommand]) -> HashMap<String, Project> {
     commands
         .iter()
         .filter_map(|c| {
-            if let Command::Abigen { name, abi } = c {
+            if let TestContractCommand::Abigen { name, abi } = c {
                 return Some((name.clone(), Project::new(abi)));
             }
             None
@@ -56,11 +62,11 @@ fn abigen_code(project_lookup: &HashMap<String, Project>) -> TokenStream {
     Abigen::generate(targets, false).expect("Failed to generate abigen")
 }
 
-fn extract_wallet_names(commands: &[Command]) -> Vec<Ident> {
+fn extract_wallet_names(commands: &[TestContractCommand]) -> Vec<Ident> {
     commands
         .iter()
         .find_map(|c| {
-            if let Command::Wallets { names, .. } = c {
+            if let TestContractCommand::Wallets { names, .. } = c {
                 return Some(names.iter().map(|wn| ident(&wn.value())).collect());
             }
             None
@@ -68,7 +74,7 @@ fn extract_wallet_names(commands: &[Command]) -> Vec<Ident> {
         .unwrap_or_default()
 }
 
-fn wallet_initialization_code(commands: &[Command]) -> TokenStream {
+fn wallet_initialization_code(commands: &[TestContractCommand]) -> TokenStream {
     let wallet_names = extract_wallet_names(commands);
 
     if wallet_names.is_empty() {
@@ -89,17 +95,17 @@ fn wallet_initialization_code(commands: &[Command]) -> TokenStream {
 }
 
 fn contract_deploying_code(
-    commands: &[Command],
+    commands: &[TestContractCommand],
     project_lookup: &HashMap<String, Project>,
 ) -> TokenStream {
     commands
         .iter()
         .filter_map(|command| {
-            if let Command::Deploy {
+            if let TestContractCommand::Deploy(Deploy {
                 name,
                 contract,
                 wallet,
-            } = command
+            }) = command
             {
                 return Some((name, contract, wallet));
             }
