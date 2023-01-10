@@ -142,10 +142,9 @@
 <p>The following example uses a contract call that calls an external contract and later mints assets to a specified address. Calling it without including the dependencies will result in a revert:</p>
 <pre><code class="language-rust ignore">        let address = wallet.address();
         let amount = 100;
-        let foo_id_bits = Bits256(*called_contract_id.hash());
 
         let response = contract_methods
-            .call_foo_contract_then_mint(foo_id_bits, amount, address.into())
+            .increment_from_contract_then_mint(called_contract_id, amount, address.into())
             .call()
             .await;
 
@@ -153,15 +152,15 @@
 </code></pre>
 <p>As mentioned in previous chapters, you can specify the external contract with <code>.set_contracts()</code> and add an output variable with <code>append_variable_outputs()</code> to resolve this:</p>
 <pre><code class="language-rust ignore">        let response = contract_methods
-            .call_foo_contract_then_mint(foo_id_bits, amount, address.into())
+            .increment_from_contract_then_mint(called_contract_id, amount, address.into())
             .append_variable_outputs(1)
-            .set_contracts(&amp;[called_contract_id.clone()])
+            .set_contract_ids(&amp;[called_contract_id.into()])
             .call()
             .await?;
 </code></pre>
 <p>But this requires you to know the contract id of the external contract and the needed number of output variables. Alternatively, by chaining <code>.estimate_tx_dependencies()</code> instead, the dependencies will be estimated by the SDK and set automatically. The optional parameter is the maximum number of simulation attempts:</p>
 <pre><code class="language-rust ignore">        let response = contract_methods
-            .call_foo_contract_then_mint(foo_id_bits, amount, address.into())
+            .increment_from_contract_then_mint(called_contract_id, amount, address.into())
             .estimate_tx_dependencies(Some(2))
             .await?
             .call()
@@ -169,7 +168,10 @@
 </code></pre>
 <p>The minimal number of attempts corresponds to the number of external contracts and output variables needed and defaults to 10.</p>
 <blockquote>
-<p><strong>Note:</strong> <code>.estimate_tx_dependencies()</code> can also be used when working with multi calls.</p>
+<p><strong>Note:</strong> <code>estimate_tx_dependencies()</code> can also be used when working with multi calls.</p>
+</blockquote>
+<blockquote>
+<p><strong>Note:</strong> <code>estimate_tx_dependencies()</code> does not currently resolve the dependencies needed for logging from an external contract. For more information, see <a href="./calling-contracts/logs.html">here</a>.</p>
 </blockquote>
 <blockquote>
 <p><strong>Note:</strong> if no resolution was found after exhausting all simulation attempts, the last received error will be propagated. The same will happen if an error is unrelated to transaction dependencies.</p>

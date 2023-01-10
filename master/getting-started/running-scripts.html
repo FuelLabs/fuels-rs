@@ -183,6 +183,22 @@
     let logs = response.get_logs()?;
     let log_u64 = response.get_logs_with_type::&lt;u64&gt;()?;
 </code></pre>
+<h2 id="calling-contracts-from-scripts"><a class="header" href="#calling-contracts-from-scripts">Calling contracts from scripts</a></h2>
+<p>Scripts use the same interfaces for setting external contracts as <a href="../calling-contracts/other-contracts.html">contract methods</a>.</p>
+<p>Below is an example that uses <code>set_contracts(&amp;[&amp;contract_instance, ...])</code>.</p>
+<pre><code class="language-rust ignore">    let response = instance
+        .main(contract_id)
+        .set_contracts(&amp;[&amp;contract_instance])
+        .call()
+        .await?;
+</code></pre>
+<p>And this is an example that uses <code>set_contract_ids(&amp;[&amp;contract_id, ...])</code>.</p>
+<pre><code class="language-rust ignore">    let response = instance
+        .main(contract_id)
+        .set_contract_ids(&amp;[contract_id.into()])
+        .call()
+        .await?;
+</code></pre>
 
                     </main>
 
