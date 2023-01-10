@@ -22,3 +22,16 @@ Script calls provide the same logging functions, `get_logs()` and `get_logs_with
 {{#include ../../../packages/fuels/tests/logs.rs:script_logs}}
 ```
 
+## Calling contracts from scripts
+Scripts use the same interfaces for setting external contracts as [contract methods](../calling-contracts/other-contracts.md).
+
+Below is an example that uses `set_contracts(&[&contract_instance, ...])`.
+
+```rust,ignore
+{{#include ../../../packages/fuels/tests/logs.rs:external_contract}}
+```
+And this is an example that uses `set_contract_ids(&[&contract_id, ...])`.
+
+```rust,ignore
+{{#include ../../../packages/fuels/tests/logs.rs:external_contract_ids}}
+```

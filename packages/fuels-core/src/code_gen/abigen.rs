@@ -116,11 +116,19 @@ impl Abigen {
                 pub struct #name {
                  contract_id: Bech32ContractId,
                  wallet: WalletUnlocked,
+                 log_decoder: LogDecoder
                 }
 
                 impl #name {
                     pub fn new(contract_id: Bech32ContractId, wallet: WalletUnlocked) -> Self {
-                        Self { contract_id, wallet}
+                        Self {
+                            contract_id: contract_id.clone(),
+                            wallet,
+                            log_decoder: LogDecoder {
+                                logs_map: get_logs_hashmap(&[#(#log_id_param_type_pairs),*],
+                                                           Some(contract_id))
+                            }
+                        }
                     }
 
                     pub fn get_contract_id(&self) -> &Bech32ContractId {
@@ -134,7 +142,11 @@ impl Abigen {
                     pub fn with_wallet(&self, mut wallet: WalletUnlocked) -> Result<Self, SDKError> {
                         let provider = self.wallet.get_provider()?;
                         wallet.set_provider(provider.clone());
-                        Ok(Self { contract_id: self.contract_id.clone(), wallet: wallet})
+                        Ok(Self {
+                            contract_id: self.contract_id.clone(),
+                            wallet: wallet,
+                            log_decoder: self.log_decoder.clone()
+                        })
                      }
 
                     pub async fn get_balances(&self) -> Result<HashMap<String, u64>, SDKError> {
@@ -145,8 +157,7 @@ impl Abigen {
                         #methods_name {
                             contract_id: self.contract_id.clone(),
                             wallet: self.wallet.clone(),
-                            logs_map: get_logs_hashmap(&[#(#log_id_param_type_pairs),*],
-                                                       Some(self.contract_id.clone())),
+                            log_decoder: self.log_decoder.clone()
                         }
                     }
                 }
@@ -155,11 +166,20 @@ impl Abigen {
                 pub struct #methods_name {
                     contract_id: Bech32ContractId,
                     wallet: WalletUnlocked,
-                    logs_map: HashMap<(Bech32ContractId, u64), ParamType>,
+                    log_decoder: LogDecoder
                 }
 
                 impl #methods_name {
                     #contract_functions
+                }
+
+                impl SettableContract for #name {
+                    fn id(&self) -> Bech32ContractId{
+                        self.contract_id.clone()
+                    }
+                    fn log_decoder(&self) -> LogDecoder{
+                        self.log_decoder.clone()
+                    }
                 }
             }
         };
@@ -203,7 +223,7 @@ impl Abigen {
                 pub struct #name{
                     wallet: WalletUnlocked,
                     binary_filepath: String,
-                    logs_map: HashMap<(Bech32ContractId, u64), ParamType>,
+                    log_decoder: LogDecoder
                 }
 
                 impl #name {
@@ -211,7 +231,10 @@ impl Abigen {
                         Self {
                             wallet: wallet,
                             binary_filepath: binary_filepath.to_string(),
-                            logs_map: get_logs_hashmap(&[#(#log_id_param_type_pairs),*], None)
+                            log_decoder: LogDecoder {
+                                logs_map: get_logs_hashmap(&[#(#log_id_param_type_pairs),*],
+                                                           None)
+                            }
                         }
                     }
 
@@ -382,7 +405,7 @@ impl Abigen {
                 },
             };
             quote! {
-                use fuels::contract::logs::LogDecoder;
+                use fuels::contract::{contract::SettableContract, logs::LogDecoder};
                 use fuels::core::{
                     code_gen::get_logs_hashmap, try_from_bytes, types::*, Parameterize, Token,
                     Tokenizable,

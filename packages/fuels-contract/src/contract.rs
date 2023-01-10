@@ -39,6 +39,13 @@ use std::{
 /// How many times to attempt to resolve missing tx dependencies.
 pub const DEFAULT_TX_DEP_ESTIMATION_ATTEMPTS: u64 = 10;
 
+// Trait implemented by contract instances so that
+// they can be passed to the `set_contracts` method
+pub trait SettableContract {
+    fn id(&self) -> Bech32ContractId;
+    fn log_decoder(&self) -> LogDecoder;
+}
+
 /// A compiled representation of a contract.
 #[derive(Debug, Clone, Default)]
 pub struct CompiledContract {
@@ -504,13 +511,29 @@ where
     /// Note that this is a builder method, i.e. use it as a chain:
     ///
     /// ```ignore
-    /// my_contract_instance.my_method(...).set_contracts(&[another_contract_id]).call()
+    /// my_contract_instance.my_method(...).set_contract_ids(&[another_contract_id]).call()
     /// ```
     ///
     /// [`Input::Contract`]: fuel_tx::Input::Contract
     /// [`Output::Contract`]: fuel_tx::Output::Contract
-    pub fn set_contracts(mut self, contract_ids: &[Bech32ContractId]) -> Self {
+    pub fn set_contract_ids(mut self, contract_ids: &[Bech32ContractId]) -> Self {
         self.contract_call.external_contracts = contract_ids.to_vec();
+        self
+    }
+
+    /// Sets external contract instances as dependencies to this contract's call.
+    /// Effectively, this will be used to: merge `LogDecoder`s and create
+    /// [`Input::Contract`]/[`Output::Contract`] pairs and set them into the transaction.
+    /// Note that this is a builder method, i.e. use it as a chain:
+    ///
+    /// ```ignore
+    /// my_contract_instance.my_method(...).set_contracts(&[another_contract_instance]).call()
+    /// ```
+    pub fn set_contracts(mut self, contracts: &[&dyn SettableContract]) -> Self {
+        self.contract_call.external_contracts = contracts.iter().map(|c| c.id()).collect();
+        for c in contracts {
+            self.log_decoder.merge(c.log_decoder());
+        }
         self
     }
 
@@ -730,7 +753,7 @@ impl MultiContractCallHandler {
     /// Adds a contract call to be bundled in the transaction
     /// Note that this is a builder method
     pub fn add_call<D: Tokenizable>(&mut self, call_handler: ContractCallHandler<D>) -> &mut Self {
-        self.log_decoder.merge(&call_handler.log_decoder);
+        self.log_decoder.merge(call_handler.log_decoder);
         self.contract_calls.push(call_handler.contract_call);
         self
     }
