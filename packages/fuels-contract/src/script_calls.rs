@@ -1,7 +1,8 @@
 use crate::{
     abi_encoder::UnresolvedBytes,
     call_response::FuelCallResponse,
-    contract::get_decoded_output,
+    contract::{get_decoded_output, SettableContract},
+    contract_calls_utils::{generate_contract_inputs, generate_contract_outputs},
     execution_script::ExecutableFuelCall,
     logs::{decode_revert_error, LogDecoder},
 };
@@ -9,15 +10,16 @@ use fuel_gql_client::{
     fuel_tx::{Output, Receipt, Transaction},
     fuel_types::bytes::padded_len_usize,
 };
-use fuel_tx::Input;
+use fuel_tx::{ContractId, Input};
 use fuels_core::{
     offsets::base_offset,
     parameters::{CallParameters, TxParameters},
     Tokenizable,
 };
 use fuels_signers::{provider::Provider, WalletUnlocked};
-use fuels_types::{errors::Error, param_types::ParamType};
-use std::{fmt::Debug, marker::PhantomData};
+use fuels_types::{bech32::Bech32ContractId, errors::Error, param_types::ParamType};
+use itertools::chain;
+use std::{collections::HashSet, fmt::Debug, marker::PhantomData};
 
 #[derive(Debug)]
 /// Contains all data relevant to a single script call
@@ -26,6 +28,7 @@ pub struct ScriptCall {
     pub encoded_args: UnresolvedBytes,
     pub inputs: Vec<Input>,
     pub outputs: Vec<Output>,
+    pub external_contracts: Vec<Bech32ContractId>,
     // This field is not currently used but it will be in the future.
     pub call_parameters: CallParameters,
 }
@@ -39,6 +42,13 @@ impl ScriptCall {
     pub fn with_inputs(mut self, inputs: Vec<Input>) -> Self {
         self.inputs = inputs;
         self
+    }
+
+    pub fn with_external_contracts(self, external_contracts: Vec<Bech32ContractId>) -> ScriptCall {
+        ScriptCall {
+            external_contracts,
+            ..self
+        }
     }
 }
 
@@ -72,6 +82,7 @@ where
             encoded_args,
             inputs: vec![],
             outputs: vec![],
+            external_contracts: vec![],
             call_parameters: Default::default(),
         };
         Self {
@@ -107,6 +118,19 @@ where
         self
     }
 
+    pub fn set_contract_ids(mut self, contract_ids: &[Bech32ContractId]) -> Self {
+        self.script_call.external_contracts = contract_ids.to_vec();
+        self
+    }
+
+    pub fn set_contracts(mut self, contracts: &[&dyn SettableContract]) -> Self {
+        self.script_call.external_contracts = contracts.iter().map(|c| c.id()).collect();
+        for c in contracts {
+            self.log_decoder.merge(c.log_decoder());
+        }
+        self
+    }
+
     /// Compute the script data by calculating the script offset and resolving the encoded arguments
     async fn compute_script_data(&self) -> Result<Vec<u8>, Error> {
         let consensus_parameters = self.provider.consensus_parameters().await?;
@@ -122,15 +146,39 @@ where
     /// it will be a bool, works also for structs thanks to the `abigen!()`).
     /// The other field of [`FuelCallResponse`], `receipts`, contains the receipts of the transaction.
     async fn call_or_simulate(&self, simulate: bool) -> Result<FuelCallResponse<D>, Error> {
+        let contract_ids: HashSet<ContractId> = self
+            .script_call
+            .external_contracts
+            .iter()
+            .map(|bech32| bech32.into())
+            .collect();
+        let num_of_contracts = contract_ids.len();
+
+        let inputs = chain!(
+            generate_contract_inputs(contract_ids),
+            self.script_call.inputs.clone(),
+        )
+        .collect();
+
+        // Note the contract_outputs need to come first since the
+        // contract_inputs are referencing them via `output_index`. The node
+        // will, upon receiving our request, use `output_index` to index the
+        // `inputs` array we've sent over.
+        let outputs = chain!(
+            generate_contract_outputs(num_of_contracts),
+            self.script_call.outputs.clone(),
+        )
+        .collect();
+
         let mut tx = Transaction::script(
             self.tx_parameters.gas_price,
             self.tx_parameters.gas_limit,
             self.tx_parameters.maturity,
             self.script_call.script_binary.clone(),
             self.compute_script_data().await?,
-            self.script_call.inputs.clone(), // TODO(iqdecay): allow user to set inputs field
-            self.script_call.outputs.clone(), // TODO(iqdecay): allow user to set outputs field
-            vec![vec![0, 0].into()], //TODO(iqdecay): figure out how to have the right witnesses
+            inputs,
+            outputs,
+            vec![vec![0, 0].into()], //TODO:(iqdecay): figure out how to have the right witnesses
         );
         self.wallet.add_fee_resources(&mut tx, 0, 0).await?;
 
