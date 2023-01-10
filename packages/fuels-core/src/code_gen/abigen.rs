@@ -173,7 +173,7 @@ impl Abigen {
                     #contract_functions
                 }
 
-                impl SetableContract for #name {
+                impl SettableContract for #name {
                     fn id(&self) -> Bech32ContractId{
                         self.contract_id.clone()
                     }
@@ -405,7 +405,7 @@ impl Abigen {
                 },
             };
             quote! {
-                use fuels::contract::{contract::SetableContract, logs::LogDecoder};
+                use fuels::contract::{contract::SettableContract, logs::LogDecoder};
                 use fuels::core::{
                     code_gen::get_logs_hashmap, try_from_bytes, types::*, Parameterize, Token,
                     Tokenizable,

@@ -1,7 +1,7 @@
 use crate::{
     abi_encoder::UnresolvedBytes,
     call_response::FuelCallResponse,
-    contract::{get_decoded_output, SetableContract},
+    contract::{get_decoded_output, SettableContract},
     contract_calls_utils::{generate_contract_inputs, generate_contract_outputs},
     execution_script::ExecutableFuelCall,
     logs::{decode_revert_error, LogDecoder},
@@ -123,7 +123,7 @@ where
         self
     }
 
-    pub fn set_contracts(mut self, contracts: &[&dyn SetableContract]) -> Self {
+    pub fn set_contracts(mut self, contracts: &[&dyn SettableContract]) -> Self {
         self.script_call.external_contracts = contracts.iter().map(|c| c.id()).collect();
         for c in contracts {
             self.log_decoder.merge(c.log_decoder());
