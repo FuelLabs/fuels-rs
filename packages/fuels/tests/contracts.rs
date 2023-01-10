@@ -783,7 +783,7 @@ async fn test_payable_annotation() -> Result<(), Error> {
 
     let response = contract_methods
         .payable()
-        .call_params(CallParameters::new(Some(100), None, None))?
+        .call_params(CallParameters::new(Some(100), None, Some(20000)))?
         .call()
         .await?;
 
@@ -796,7 +796,14 @@ async fn test_payable_annotation() -> Result<(), Error> {
         .expect_err("Should return call params error.");
 
     assert!(matches!(err, Error::InvalidCallParameters()));
-    // ANCHOR_END: non_payable_params
+    // ANCHOR_END: non_payable_params */
+    let response = contract_methods
+        .non_payable()
+        .call_params(CallParameters::new(None, None, Some(20000)))?
+        .call()
+        .await?;
+
+    assert_eq!(response.value, 42);
 
     Ok(())
 }
