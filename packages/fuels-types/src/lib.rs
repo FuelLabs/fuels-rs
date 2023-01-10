@@ -54,11 +54,10 @@ pub struct ABIFunction {
 
 impl ABIFunction {
     pub fn is_payable(&self) -> bool {
-        if let Some(attributes) = &self.attributes {
-            return attributes.iter().any(|attr| attr.name == "payable");
-        }
-
-        false
+        self.attributes
+            .iter()
+            .flatten()
+            .any(|attr| attr.name == "payable")
     }
 }
 
