@@ -212,8 +212,8 @@ where
     }
 
     /// Create a [`FuelCallResponse`] from call receipts
-    pub fn get_response(&self, mut receipts: Vec<Receipt>) -> Result<FuelCallResponse<D>, Error> {
-        let token = get_decoded_output(&mut receipts, None, &self.output_param)?;
+    pub fn get_response(&self, receipts: Vec<Receipt>) -> Result<FuelCallResponse<D>, Error> {
+        let token = get_decoded_output(&receipts, None, &self.output_param)?;
         Ok(FuelCallResponse::new(
             D::from_token(token)?,
             receipts,

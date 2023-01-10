@@ -438,7 +438,7 @@ impl ContractCall {
 /// Based on the receipts returned by the call, the contract ID (which is null in the case of a
 /// script), and the output param, decode the values and return them.
 pub fn get_decoded_output(
-    receipts: &mut Vec<Receipt>,
+    receipts: &[Receipt],
     contract_id: Option<&Bech32ContractId>,
     output_param: &ParamType,
 ) -> Result<Token, Error> {
@@ -448,42 +448,34 @@ pub fn get_decoded_output(
         // During a script execution, the script's contract id is the **null** contract id
         None => ContractId::new([0u8; 32]),
     };
-    let (encoded_value, index) = match output_param.get_return_location() {
-        ReturnLocation::ReturnData => {
-            match receipts.iter().position(|receipt| {
+    let encoded_value = match output_param.get_return_location() {
+        ReturnLocation::ReturnData => receipts
+            .iter()
+            .find(|receipt| {
                 matches!(receipt,
                     Receipt::ReturnData { id, data, .. } if *id == contract_id && !data.is_empty())
-            }) {
-                Some(idx) => (
-                    receipts[idx]
-                        .data()
-                        .expect("ReturnData should have data")
-                        .to_vec(),
-                    Some(idx),
-                ),
-                None => (vec![], None),
-            }
-        }
-        ReturnLocation::Return => {
-            match receipts.iter().position(|receipt| {
+            })
+            .map(|receipt| {
+                receipt
+                    .data()
+                    .expect("ReturnData should have data")
+                    .to_vec()
+            }),
+        ReturnLocation::Return => receipts
+            .iter()
+            .find(|receipt| {
                 matches!(receipt,
                     Receipt::Return { id, ..} if *id == contract_id)
-            }) {
-                Some(idx) => (
-                    receipts[idx]
-                        .val()
-                        .expect("Return should have val")
-                        .to_be_bytes()
-                        .to_vec(),
-                    Some(idx),
-                ),
-                None => (vec![], None),
-            }
-        }
-    };
-    if let Some(i) = index {
-        receipts.remove(i);
+            })
+            .map(|receipt| {
+                receipt
+                    .val()
+                    .expect("Return should have val")
+                    .to_be_bytes()
+                    .to_vec()
+            }),
     }
+    .unwrap_or_default();
 
     let decoded_value = ABIDecoder::decode_single(output_param, &encoded_value)?;
     Ok(decoded_value)
@@ -714,9 +706,9 @@ where
     }
 
     /// Create a [`FuelCallResponse`] from call receipts
-    pub fn get_response(&self, mut receipts: Vec<Receipt>) -> Result<FuelCallResponse<D>, Error> {
+    pub fn get_response(&self, receipts: Vec<Receipt>) -> Result<FuelCallResponse<D>, Error> {
         let token = get_decoded_output(
-            &mut receipts,
+            &receipts,
             Some(&self.contract_call.contract_id),
             &self.contract_call.output_param,
         )?;
@@ -884,13 +876,13 @@ impl MultiContractCallHandler {
     /// Create a [`FuelCallResponse`] from call receipts
     pub fn get_response<D: Tokenizable + Debug>(
         &self,
-        mut receipts: Vec<Receipt>,
+        receipts: Vec<Receipt>,
     ) -> Result<FuelCallResponse<D>, Error> {
         let mut final_tokens = vec![];
 
         for call in self.contract_calls.iter() {
             let decoded =
-                get_decoded_output(&mut receipts, Some(&call.contract_id), &call.output_param)?;
+                get_decoded_output(&receipts, Some(&call.contract_id), &call.output_param)?;
 
             final_tokens.push(decoded.clone());
         }
