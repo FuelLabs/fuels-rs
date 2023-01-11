@@ -5,6 +5,7 @@ use fuels_types::errors::Error;
 use crate::code_gen::abi_types::FullProgramABI;
 use crate::source::Source;
 
+#[derive(Debug, Clone)]
 pub struct AbigenTarget {
     pub name: String,
     pub abi: String,
@@ -35,7 +36,7 @@ fn parse_program_abi(abi_source: &str) -> Result<FullProgramABI, Error> {
     FullProgramABI::from_json_abi(&json_abi_str)
 }
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub enum ProgramType {
     Script,
     Contract,

@@ -830,7 +830,6 @@ async fn shared_types() -> Result<(), Error> {
     abigen!(
             Contract(name="ContractA", abi="packages/fuels/tests/bindings/sharing_types/contract_a/out/debug/contract_a-abi.json"),
             Contract(name="ContractB", abi="packages/fuels/tests/bindings/sharing_types/contract_b/out/debug/contract_b-abi.json"),
-            Script(name="SomeScript", abi="packages/fuels/tests/bindings/sharing_types/script/out/debug/script-abi.json")
         );
     let wallet = launch_provider_and_get_wallet().await;
 
