@@ -10,11 +10,29 @@ mod command;
 mod unique_lit_strs;
 mod unique_name_values;
 
-pub(crate) fn combine_errors<T: IntoIterator<Item = Error>>(errs: T) -> Option<Error> {
-    errs.into_iter().reduce(|mut errors, error| {
-        errors.combine(error);
-        errors
-    })
+pub(crate) trait ErrorsExt: Iterator<Item = Error> + Sized {
+    fn combine_errors(self) -> Option<Self::Item>;
+    fn validate_no_errors(self) -> Result<(), Self::Item>;
+}
+
+impl<T> ErrorsExt for T
+where
+    T: Iterator<Item = Error> + Sized,
+{
+    fn combine_errors(self) -> Option<Self::Item> {
+        self.reduce(|mut errors, error| {
+            errors.combine(error);
+            errors
+        })
+    }
+
+    fn validate_no_errors(self) -> Result<(), Self::Item> {
+        if let Some(err) = self.combine_errors() {
+            Err(err)
+        } else {
+            Ok(())
+        }
+    }
 }
 
 fn generate_duplicate_error<T>(duplicates: &[&T]) -> Error
@@ -31,7 +49,9 @@ where
         .map(|duplicate| Error::new_spanned(duplicate, "Duplicate!"))
         .collect::<Vec<_>>();
 
-    combine_errors(chain!(original_error, the_rest)).expect("Has to be at least one error!")
+    chain!(original_error, the_rest)
+        .validate_no_errors()
+        .expect_err("Has to be at least one error!")
 }
 
 fn group_up_duplicates<T, K, KeyFn>(name_values: &[T], key: KeyFn) -> Vec<Vec<&T>>

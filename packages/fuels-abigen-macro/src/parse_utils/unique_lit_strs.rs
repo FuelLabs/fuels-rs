@@ -1,5 +1,6 @@
 use crate::parse_utils;
-use itertools::Itertools;
+use itertools::{chain, Itertools};
+use parse_utils::ErrorsExt;
 use proc_macro2::Span;
 use quote::ToTokens;
 use std::vec::IntoIter;
@@ -28,11 +29,9 @@ impl UniqueLitStrs {
             })
             .partition_result();
 
-        if let Some(error) = parse_utils::combine_errors(errors) {
-            return Err(error);
-        }
+        let maybe_error = parse_utils::validate_no_duplicates(&lit_strs, |e| e.value()).err();
 
-        parse_utils::validate_no_duplicates(&lit_strs, |e| e.value())?;
+        chain!(errors, maybe_error).validate_no_errors()?;
 
         Ok(Self { span, lit_strs })
     }

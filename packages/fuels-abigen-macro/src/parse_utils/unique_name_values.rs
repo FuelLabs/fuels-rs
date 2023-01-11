@@ -12,6 +12,7 @@ use syn::{Error, Lit, LitStr, MetaNameValue, NestedMeta};
 use fuels_core::utils::ident;
 
 use crate::parse_utils;
+use crate::parse_utils::ErrorsExt;
 
 #[derive(Debug)]
 pub struct UniqueNameValues {
@@ -103,12 +104,9 @@ impl UniqueNameValues {
             })
             .partition_result();
 
-        let maybe_error = parse_utils::combine_errors(chain!(name_value_errs, name_format_errors));
-        if let Some(error) = maybe_error {
-            Err(error)
-        } else {
-            Ok(ident_values)
-        }
+        chain!(name_value_errs, name_format_errors).validate_no_errors()?;
+
+        Ok(ident_values)
     }
 
     fn extract_name_value(meta: NestedMeta) -> syn::Result<MetaNameValue> {

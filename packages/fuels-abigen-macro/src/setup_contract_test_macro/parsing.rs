@@ -7,7 +7,7 @@ use syn::{
     Error, LitStr, Result as ParseResult,
 };
 
-use crate::parse_utils::{combine_errors, Command, UniqueLitStrs, UniqueNameValues};
+use crate::parse_utils::{Command, ErrorsExt, UniqueLitStrs, UniqueNameValues};
 
 trait MacroName {
     fn macro_command_name() -> &'static str;
@@ -146,11 +146,9 @@ fn parse_test_contract_commands(
     let (deploy_contracts, deploy_errs): (Vec<_>, Vec<_>) =
         deploy_contracts.into_iter().partition_result();
 
-    if let Some(err) = combine_errors(chain!(errors, wallet_errs, gen_errs, deploy_errs)) {
-        Err(err)
-    } else {
-        Ok((init_wallets, gen_contracts, deploy_contracts))
-    }
+    chain!(errors, wallet_errs, gen_errs, deploy_errs).validate_no_errors()?;
+
+    Ok((init_wallets, gen_contracts, deploy_contracts))
 }
 
 pub(crate) struct TestContractCommands {
@@ -196,45 +194,33 @@ impl TestContractCommands {
         generate_contracts: &[GenerateContract],
         deploy_contracts: &[DeployContract],
     ) -> syn::Result<()> {
-        let map = Self::names_of_deployed_contracts(deploy_contracts)
+        Self::names_of_deployed_contracts(deploy_contracts)
             .difference(&Self::names_of_generated_contracts(generate_contracts))
-            .map(|unknown_contract| {
-                let mut unknown_contract_err =
-                    Error::new_spanned(unknown_contract, "Contract is unknown");
-
-                unknown_contract_err.combine(Error::new(
-                    span,
-                    format!(
-                        "Consider adding: Abigen(name=\"{}\", abi=...)",
-                        unknown_contract.value()
+            .flat_map(|unknown_contract| {
+                [
+                    Error::new_spanned(unknown_contract, "Contract is unknown"),
+                    Error::new(
+                        span,
+                        format!(
+                            "Consider adding: Abigen(name=\"{}\", abi=...)",
+                            unknown_contract.value()
+                        ),
                     ),
-                ));
-
-                unknown_contract_err
+                ]
             })
-            .collect::<Vec<_>>();
-
-        let maybe_missing_contracts = combine_errors(map);
-
-        if let Some(err) = maybe_missing_contracts {
-            Err(err)
-        } else {
-            Ok(())
-        }
+            .validate_no_errors()
     }
 
     fn validate_zero_or_one_wallet_command_present(
         commands: &[InitializeWallet],
     ) -> syn::Result<()> {
         if commands.len() > 1 {
-            combine_errors(
-                commands
-                    .iter()
-                    .map(|command| Error::new(command.span, "Only one `Wallets` command allowed"))
-                    .collect::<Vec<_>>(),
-            )
-            .map(Err)
-            .expect("Known to have at least one error")
+            commands
+                .iter()
+                .map(|command| Error::new(command.span, "Only one `Wallets` command allowed"))
+                .combine_errors()
+                .map(Err)
+                .expect("Known to have at least one error")
         } else {
             Ok(())
         }
