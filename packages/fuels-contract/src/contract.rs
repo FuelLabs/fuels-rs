@@ -538,6 +538,20 @@ where
         self
     }
 
+    /// Adds a custom `asset_id` with its `amount` and an optional `address` to be used for
+    /// generating outputs to this contract's call.
+    ///
+    /// # Parameters
+    /// - `asset_id`: The unique identifier of the asset being added.
+    /// - `amount`: The amount of the asset being added.
+    /// - `address`: The optional wallet address that the output amount will be sent to. If not provided, the asset will be sent to the users wallet address.
+    /// Note that this is a builder method, i.e. use it as a chain:
+    ///
+    /// ```ignore
+    /// let asset_id = AssetId::from([3u8; 32]);
+    /// let amount = 5000;
+    /// my_contract_instance.my_method(...).add_custom_asset(asset_id, amount, None).call()
+    /// ```
     pub fn add_custom_asset(
         mut self,
         asset_id: AssetId,
