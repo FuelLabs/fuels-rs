@@ -770,3 +770,25 @@ async fn test_contract_call_with_non_default_max_input() -> Result<(), Error> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn test_contract_raw_slice() -> Result<(), Error> {
+    let num_wallets = 1;
+    let num_coins = 1;
+    let amount = 1000;
+    let config = WalletsConfig::new(Some(num_wallets), Some(num_coins), Some(amount));
+
+    let mut wallets = launch_custom_provider_and_get_wallets(config, None, None).await;
+    let wallet = wallets.pop().unwrap();
+    setup_contract_test!(
+        contract_instance,
+        None,
+        "packages/fuels/tests/contracts/contract_raw_slice"
+    );
+    let contract_methods = contract_instance.methods();
+    for length in 0..=10 {
+        let response = contract_methods.return_raw_slice(length).call().await?;
+        assert_eq!(response.value, (0..length).collect::<Vec<_>>());
+    }
+    Ok(())
+}
