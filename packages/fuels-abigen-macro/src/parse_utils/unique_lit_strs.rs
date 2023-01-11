@@ -65,10 +65,13 @@ mod tests {
 
     #[test]
     fn correctly_reads_lit_strs() -> syn::Result<()> {
+        // given
         let stream = quote! {SomeCommand("lit1", "lit2")};
 
+        // when
         let unique_lit_strs = parse_unique_lit_strs(stream)?;
 
+        // then
         let stringified = unique_lit_strs
             .iter()
             .map(|lit_str| lit_str.value())
@@ -88,7 +91,6 @@ mod tests {
         let err = parse_unique_lit_strs(stream).expect_err("Should have failed");
 
         // then
-
         let messages = err.into_iter().map(|e| e.to_string()).collect::<Vec<_>>();
         assert_eq!(messages, vec!["Original defined here:", "Duplicate!"]);
     }

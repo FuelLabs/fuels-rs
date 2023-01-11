@@ -44,8 +44,7 @@ impl UniqueNameValues {
             .map(|name| format!("'{name}'"))
             .join(", ");
 
-        let maybe_error: Option<Error> = self
-            .name_values
+        self.name_values
             .keys()
             .filter(|name| !allowed_names.contains(&name.to_string().as_str()))
             .map(|name| {
@@ -56,16 +55,7 @@ impl UniqueNameValues {
                     ),
                 )
             })
-            .reduce(|mut errors, error| {
-                errors.combine(error);
-                errors
-            });
-
-        if let Some(error) = maybe_error {
-            Err(error)
-        } else {
-            Ok(())
-        }
+            .validate_no_errors()
     }
 
     pub fn get_as_lit_str(&self, name: &str) -> syn::Result<&LitStr> {

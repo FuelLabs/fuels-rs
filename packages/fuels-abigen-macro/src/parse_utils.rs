@@ -45,13 +45,11 @@ where
         .next()
         .map(|first_el| Error::new_spanned(first_el, "Original defined here:"));
 
-    let the_rest = iter
-        .map(|duplicate| Error::new_spanned(duplicate, "Duplicate!"))
-        .collect::<Vec<_>>();
+    let the_rest = iter.map(|duplicate| Error::new_spanned(duplicate, "Duplicate!"));
 
     chain!(original_error, the_rest)
-        .validate_no_errors()
-        .expect_err("Has to be at least one error!")
+        .combine_errors()
+        .expect("Has to be at least one error!")
 }
 
 fn group_up_duplicates<T, K, KeyFn>(name_values: &[T], key: KeyFn) -> Vec<Vec<&T>>
@@ -78,17 +76,8 @@ where
     T: ToTokens,
     K: Ord,
 {
-    let maybe_err = group_up_duplicates(elements, key_fn)
+    group_up_duplicates(elements, key_fn)
         .into_iter()
         .map(|duplicates| generate_duplicate_error(&duplicates))
-        .reduce(|mut errors, error| {
-            errors.combine(error);
-            errors
-        });
-
-    if let Some(err) = maybe_err {
-        Err(err)
-    } else {
-        Ok(())
-    }
+        .validate_no_errors()
 }
