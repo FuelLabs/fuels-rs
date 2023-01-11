@@ -16,13 +16,12 @@ pub use utils::{param_type_calls, single_param_type_call, Component};
 // TODO(iqdecay): append extra `,` to last enum/struct field so it is aligned with rustfmt
 #[cfg(test)]
 mod tests {
-    use std::{collections::HashMap, str::FromStr};
-
     use super::*;
     use crate::Error;
+    use fuel_abi_types::program_abi::{ProgramABI, TypeApplication, TypeDeclaration};
+    use std::{collections::HashMap, str::FromStr};
 
     use anyhow::anyhow;
-    use fuels_types::{ProgramABI, TypeApplication, TypeDeclaration};
     use proc_macro2::TokenStream;
 
     #[test]

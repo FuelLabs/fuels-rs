@@ -1,10 +1,10 @@
 use crate::utils::{ident, safe_ident};
+use fuel_abi_types::program_abi::{TypeApplication, TypeDeclaration};
 use fuels_types::errors::Error;
 use fuels_types::utils::custom_type_name;
 use fuels_types::utils::{
     extract_array_len, extract_generic_name, extract_str_len, has_tuple_format,
 };
-use fuels_types::{TypeApplication, TypeDeclaration};
 use lazy_static::lazy_static;
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};

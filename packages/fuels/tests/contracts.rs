@@ -25,40 +25,67 @@ async fn test_multiple_args() -> Result<(), Error> {
 }
 
 #[tokio::test]
+#[allow(unused_variables)]
 async fn test_contract_calling_contract() -> Result<(), Error> {
     // Tests a contract call that calls another contract (FooCaller calls FooContract underneath)
     // Load and deploy the first compiled contract
     setup_contract_test!(
-        foo_contract_instance,
+        lib_contract_instance,
         wallet,
-        "packages/fuels/tests/contracts/foo_contract"
+        "packages/fuels/tests/contracts/lib_contract"
     );
-    let foo_contract_id = foo_contract_instance.get_contract_id();
+    let lib_contract_id = lib_contract_instance.get_contract_id();
 
-    // Call the contract directly; it just flips the bool value that's passed.
-    let res = foo_contract_instance.methods().foo(true).call().await?;
-    assert!(!res.value);
+    setup_contract_test!(
+        lib_contract_instance2,
+        None,
+        "packages/fuels/tests/contracts/lib_contract"
+    );
+    let lib_contract_id2 = lib_contract_instance2.get_contract_id();
+
+    // Call the contract directly. It increments the given value.
+    let response = lib_contract_instance.methods().increment(42).call().await?;
+
+    assert_eq!(43, response.value);
 
     // Load and deploy the second compiled contract
     setup_contract_test!(
-        foo_caller_contract_instance,
+        contract_caller_instance,
         None,
-        "packages/fuels/tests/contracts/foo_caller_contract"
+        "packages/fuels/tests/contracts/lib_contract_caller"
     );
 
-    // Calls the contract that calls the `FooContract` contract, also just
-    // flips the bool value passed to it.
-    // ANCHOR: external_contract
-    let bits = *foo_contract_id.hash();
-    let res = foo_caller_contract_instance
+    let response = contract_caller_instance
         .methods()
-        .call_foo_contract(Bits256(bits), true)
-        .set_contracts(&[foo_contract_id.clone()]) // Sets the external contract
+        .increment_from_contracts(lib_contract_id.into(), lib_contract_id2.into(), 42)
+        // Note that the two lib_contract_instances have different types
+        .set_contracts(&[&lib_contract_instance, &lib_contract_instance2])
+        .call()
+        .await?;
+
+    assert_eq!(86, response.value);
+
+    // ANCHOR: external_contract
+    let response = contract_caller_instance
+        .methods()
+        .increment_from_contract(lib_contract_id.into(), 42)
+        .set_contracts(&[&lib_contract_instance])
         .call()
         .await?;
     // ANCHOR_END: external_contract
 
-    assert!(res.value);
+    assert_eq!(43, response.value);
+
+    // ANCHOR: external_contract_ids
+    let response = contract_caller_instance
+        .methods()
+        .increment_from_contract(lib_contract_id.into(), 42)
+        .set_contract_ids(&[lib_contract_id.clone()])
+        .call()
+        .await?;
+    // ANCHOR_END: external_contract_ids
+
+    assert_eq!(43, response.value);
     Ok(())
 }
 
@@ -333,48 +360,49 @@ async fn test_contract_setup_macro_deploy_with_salt() -> Result<(), Error> {
     // ANCHOR: contract_setup_macro_multi
     // The first wallet name must be `wallet`
     setup_contract_test!(
-        foo_contract_instance,
+        lib_contract_instance,
         wallet,
-        "packages/fuels/tests/contracts/foo_contract"
+        "packages/fuels/tests/contracts/lib_contract"
     );
-    let foo_contract_id = foo_contract_instance.get_contract_id();
+    let lib_contract_id = lib_contract_instance.get_contract_id();
 
     // The macros that want to use the `wallet` have to set
     // the wallet name to `None`
     setup_contract_test!(
-        foo_caller_contract_instance,
+        contract_caller_instance,
         None,
-        "packages/fuels/tests/contracts/foo_caller_contract"
+        "packages/fuels/tests/contracts/lib_contract_caller"
     );
-    let foo_caller_contract_id = foo_caller_contract_instance.get_contract_id();
+    let contract_caller_id = contract_caller_instance.get_contract_id();
 
     setup_contract_test!(
-        foo_caller_contract_instance2,
+        contract_caller_instance2,
         None,
-        "packages/fuels/tests/contracts/foo_caller_contract"
+        "packages/fuels/tests/contracts/lib_contract_caller"
     );
-    let foo_caller_contract_id2 = foo_caller_contract_instance2.get_contract_id();
+    let contract_caller_id2 = contract_caller_instance2.get_contract_id();
 
     // Because we deploy with salt, we can deploy the same contract multiple times
-    assert_ne!(foo_caller_contract_id, foo_caller_contract_id2);
+    assert_ne!(contract_caller_id, contract_caller_id2);
 
     // The first contract can be called because they were deployed on the same provider
-    let bits = *foo_contract_id.hash();
-    let res = foo_caller_contract_instance
+    let response = contract_caller_instance
         .methods()
-        .call_foo_contract(Bits256(bits), true)
-        .set_contracts(&[foo_contract_id.clone()]) // Sets the external contract
+        .increment_from_contract(lib_contract_id.into(), 42)
+        .set_contracts(&[&lib_contract_instance])
         .call()
         .await?;
-    assert!(res.value);
 
-    let res = foo_caller_contract_instance2
+    assert_eq!(43, response.value);
+
+    let response = contract_caller_instance2
         .methods()
-        .call_foo_contract(Bits256(bits), true)
-        .set_contracts(&[foo_contract_id.clone()]) // Sets the external contract
+        .increment_from_contract(lib_contract_id.into(), 42)
+        .set_contracts(&[&lib_contract_instance])
         .call()
         .await?;
-    assert!(res.value);
+
+    assert_eq!(43, response.value);
     // ANCHOR_END: contract_setup_macro_multi
 
     Ok(())
@@ -648,59 +676,57 @@ async fn contract_call_futures_implement_send() -> Result<(), Error> {
 #[tokio::test]
 async fn test_contract_set_estimation() -> Result<(), Error> {
     setup_contract_test!(
-        foo_contract_instance,
+        lib_contract_instance,
         wallet,
-        "packages/fuels/tests/contracts/foo_contract"
+        "packages/fuels/tests/contracts/lib_contract"
     );
-    let foo_contract_id = foo_contract_instance.get_contract_id();
+    let lib_contract_id = lib_contract_instance.get_contract_id();
 
-    let res = foo_contract_instance.methods().foo(true).call().await?;
-    assert!(!res.value);
+    let res = lib_contract_instance.methods().increment(42).call().await?;
+    assert_eq!(43, res.value);
 
     setup_contract_test!(
-        foo_caller_contract_instance,
+        contract_caller_instance,
         None,
-        "packages/fuels/tests/contracts/foo_caller_contract"
+        "packages/fuels/tests/contracts/lib_contract_caller"
     );
-
-    let bits = *foo_contract_id.hash();
 
     {
         // Should fail due to missing external contracts
-        let res = foo_caller_contract_instance
+        let res = contract_caller_instance
             .methods()
-            .call_foo_contract(Bits256(bits), true)
+            .increment_from_contract(lib_contract_id.into(), 42)
             .call()
             .await;
         assert!(matches!(res, Err(Error::RevertTransactionError(..))));
     }
 
-    let res = foo_caller_contract_instance
+    let res = contract_caller_instance
         .methods()
-        .call_foo_contract(Bits256(bits), true)
+        .increment_from_contract(lib_contract_id.into(), 42)
         .estimate_tx_dependencies(None)
         .await?
         .call()
         .await?;
 
-    assert!(res.value);
+    assert_eq!(43, res.value);
     Ok(())
 }
 
 #[tokio::test]
 async fn test_output_variable_contract_id_estimation_multicall() -> Result<(), Error> {
     setup_contract_test!(
-        foo_contract_instance,
+        lib_contract_instance,
         wallet,
-        "packages/fuels/tests/contracts/foo_contract"
+        "packages/fuels/tests/contracts/lib_contract"
     );
 
-    let foo_contract_id = foo_contract_instance.get_contract_id();
+    let lib_contract_id = lib_contract_instance.get_contract_id();
 
     setup_contract_test!(
-        foo_caller_contract_instance,
+        contract_caller_instance,
         None,
-        "packages/fuels/tests/contracts/foo_caller_contract"
+        "packages/fuels/tests/contracts/lib_contract_caller"
     );
 
     setup_contract_test!(
@@ -709,14 +735,13 @@ async fn test_output_variable_contract_id_estimation_multicall() -> Result<(), E
         "packages/fuels/tests/contracts/contract_test"
     );
 
-    let bits = *foo_contract_id.hash();
-    let contract_methods = foo_caller_contract_instance.methods();
+    let contract_methods = contract_caller_instance.methods();
 
     let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
     multi_call_handler.tx_params(Default::default());
 
     (0..3).for_each(|_| {
-        let call_handler = contract_methods.call_foo_contract(Bits256(bits), true);
+        let call_handler = contract_methods.increment_from_contract(lib_contract_id.into(), 42);
         multi_call_handler.add_call(call_handler);
     });
 
@@ -729,10 +754,10 @@ async fn test_output_variable_contract_id_estimation_multicall() -> Result<(), E
     let call_response = multi_call_handler
         .estimate_tx_dependencies(None)
         .await?
-        .call::<(bool, bool, bool, u64)>()
+        .call::<(u64, u64, u64, u64)>()
         .await?;
 
-    assert_eq!(call_response.value, (true, true, true, 5));
+    assert_eq!(call_response.value, (43, 43, 43, 5));
 
     Ok(())
 }

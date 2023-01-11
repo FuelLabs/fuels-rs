@@ -1,7 +1,7 @@
 contract;
 
 use std::logging::log;
-use library::ContractLogs;
+use contract_logs::ContractLogs;
 
 struct TestStruct {
     field_1: bool,
@@ -35,7 +35,7 @@ struct StructDeeplyNestedGeneric<D> {
 }
 
 impl ContractLogs for Contract {
-    fn produce_logs_values() -> () {
+    fn produce_logs_values() {
         log(64u64);
         log(32u32);
         log(16u16);
@@ -43,7 +43,7 @@ impl ContractLogs for Contract {
     }
 
     // ANCHOR: produce_logs
-    fn produce_logs_variables() -> () {
+    fn produce_logs_variables() {
         let f: u64 = 64;
         let u: b256 = 0xef86afa9696cf0dc6385e2c407a6e159a1103cefb7e2ae0636fb33d3cb2a9e4a;
         let e: str[4] = "Fuel";
@@ -55,7 +55,7 @@ impl ContractLogs for Contract {
         log(l);
     }
     // ANCHOR_END: produce_logs
-    fn produce_logs_custom_types() -> () {
+    fn produce_logs_custom_types() {
         let f: u64 = 64;
         let u: b256 = 0xef86afa9696cf0dc6385e2c407a6e159a1103cefb7e2ae0636fb33d3cb2a9e4a;
 
@@ -70,7 +70,7 @@ impl ContractLogs for Contract {
         log(test_enum);
     }
 
-    fn produce_logs_generic_types() -> () {
+    fn produce_logs_generic_types() {
         let l: [u8; 3] = [1u8, 2u8, 3u8];
 
         let test_struct = StructWithGeneric {
@@ -93,7 +93,7 @@ impl ContractLogs for Contract {
         log(test_deeply_nested_generic);
     }
 
-    fn produce_multiple_logs() -> () {
+    fn produce_multiple_logs() {
         let f: u64 = 64;
         let u: b256 = 0xef86afa9696cf0dc6385e2c407a6e159a1103cefb7e2ae0636fb33d3cb2a9e4a;
         let e: str[4] = "Fuel";
