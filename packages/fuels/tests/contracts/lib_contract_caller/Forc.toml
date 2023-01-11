@@ -2,7 +2,7 @@
 authors = ["Fuel Labs <contact@fuel.sh>"]
 entry = "main.sw"
 license = "Apache-2.0"
-name = "foo_caller_contract"
+name = "lib_contract_caller"
 
 [dependencies]
-foo = { path = "../foo_contract_abi/", package = "foo_contract_abi" }
+lib_contract = { path = "../lib_contract_abi/", package = "lib_contract_abi" }

@@ -3,15 +3,13 @@ use std::collections::HashSet;
 use proc_macro2::TokenStream;
 use quote::quote;
 
-use fuels_types::ResolvedLog;
+use fuel_abi_types::program_abi::ResolvedLog;
 
-use crate::code_gen::abi_types::{FullLoggedType, FullTypeDeclaration};
-use crate::code_gen::resolved_type::resolve_type;
-use crate::code_gen::utils::single_param_type_call;
-
-pub(crate) fn logs_hashmap_type() -> TokenStream {
-    quote! {::std::collections::HashMap<(::fuels::types::bech32::Bech32ContractId, u64), ::fuels::types::param_types::ParamType>}
-}
+use crate::code_gen::{
+    abi_types::{FullLoggedType, FullTypeDeclaration},
+    resolved_type::resolve_type,
+    utils::single_param_type_call,
+};
 
 pub(crate) fn logs_hashmap_instantiation_code(
     contract_id: Option<TokenStream>,

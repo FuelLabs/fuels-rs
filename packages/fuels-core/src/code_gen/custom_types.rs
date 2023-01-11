@@ -77,10 +77,11 @@ mod tests {
     use proc_macro2::TokenStream;
     use quote::quote;
 
-    use fuels_types::{ProgramABI, TypeApplication, TypeDeclaration};
-
-    use crate::code_gen::abi_types::FullTypeApplication;
-    use crate::code_gen::type_path::TypePath;
+    use crate::code_gen::{
+        abi_types::{FullTypeApplication, FullTypeDeclaration},
+        type_path::TypePath,
+    };
+    use fuel_abi_types::program_abi::{ProgramABI, TypeApplication, TypeDeclaration};
 
     use super::*;
 

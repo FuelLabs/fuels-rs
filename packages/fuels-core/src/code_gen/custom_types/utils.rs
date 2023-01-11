@@ -84,8 +84,8 @@ pub(crate) fn extract_generic_parameters(
 
 #[cfg(test)]
 mod tests {
+    use fuel_abi_types::program_abi::TypeDeclaration;
     use fuels_types::utils::custom_type_name;
-    use fuels_types::TypeDeclaration;
 
     use crate::code_gen::resolved_type::ResolvedType;
     use crate::code_gen::utils::param_type_calls;

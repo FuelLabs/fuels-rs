@@ -399,24 +399,23 @@ mod tests {
     #[allow(unused_variables)]
     async fn dependency_estimation() -> Result<(), Error> {
         use fuels::prelude::*;
-        abigen!(Contract(
-            name="MyContract",
-            abi="packages/fuels/tests/contracts/foo_caller_contract/out/debug/foo_caller_contract-abi.json"
+        abigen!(
+            Contract(name="MyContract",
+            abi="packages/fuels/tests/contracts/lib_contract_caller/out/debug/lib_contract_caller-abi.json"
         ));
 
         let wallet = launch_provider_and_get_wallet().await;
-        let called_contract_id = Contract::deploy(
-            "../../packages/fuels/tests/contracts/foo_contract/out/debug/foo_contract\
-        .bin",
+        let called_contract_id: ContractId = Contract::deploy(
+            "../../packages/fuels/tests/contracts/lib_contract/out/debug/lib_contract.bin",
             &wallet,
             TxParameters::default(),
             StorageConfiguration::default(),
         )
-        .await?;
+        .await?
+        .into();
 
         let caller_contract_id = Contract::deploy(
-            "../../packages/fuels/tests/contracts/foo_caller_contract/out/debug/foo_caller_contract\
-        .bin",
+            "../../packages/fuels/tests/contracts/lib_contract_caller/out/debug/lib_contract_caller.bin",
             &wallet,
             TxParameters::default(),
             StorageConfiguration::default(),
@@ -429,10 +428,9 @@ mod tests {
         // ANCHOR: dependency_estimation_fail
         let address = wallet.address();
         let amount = 100;
-        let foo_id_bits = Bits256(*called_contract_id.hash());
 
         let response = contract_methods
-            .call_foo_contract_then_mint(foo_id_bits, amount, address.into())
+            .increment_from_contract_then_mint(called_contract_id, amount, address.into())
             .call()
             .await;
 
@@ -441,9 +439,9 @@ mod tests {
 
         // ANCHOR: dependency_estimation_manual
         let response = contract_methods
-            .call_foo_contract_then_mint(foo_id_bits, amount, address.into())
+            .increment_from_contract_then_mint(called_contract_id, amount, address.into())
             .append_variable_outputs(1)
-            .set_contracts(&[called_contract_id.clone()])
+            .set_contract_ids(&[called_contract_id.into()])
             .call()
             .await?;
         // ANCHOR_END: dependency_estimation_manual
@@ -454,7 +452,7 @@ mod tests {
 
         // ANCHOR: dependency_estimation
         let response = contract_methods
-            .call_foo_contract_then_mint(foo_id_bits, amount, address.into())
+            .increment_from_contract_then_mint(called_contract_id, amount, address.into())
             .estimate_tx_dependencies(Some(2))
             .await?
             .call()

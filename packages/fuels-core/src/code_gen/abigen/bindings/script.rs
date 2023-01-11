@@ -8,7 +8,7 @@ use fuels_types::errors::Error;
 use crate::code_gen::abi_types::{FullProgramABI, FullTypeDeclaration};
 use crate::code_gen::abigen::bindings::function_generator::FunctionGenerator;
 use crate::code_gen::abigen::bindings::utils::extract_main_fn;
-use crate::code_gen::abigen::logs::{logs_hashmap_instantiation_code, logs_hashmap_type};
+use crate::code_gen::abigen::logs::logs_hashmap_instantiation_code;
 use crate::code_gen::generated_code::GeneratedCode;
 use crate::code_gen::type_path::TypePath;
 
@@ -25,14 +25,13 @@ pub(crate) fn script_bindings(
     let main_function = expand_fn(&abi, shared_types)?;
 
     let logs_map = logs_hashmap_instantiation_code(None, &abi.logged_types, shared_types);
-    let logs_map_type = logs_hashmap_type();
 
     let code = quote! {
         #[derive(Debug)]
         pub struct #name{
             wallet: ::fuels::signers::wallet::WalletUnlocked,
             binary_filepath: ::std::string::String,
-            logs_map: #logs_map_type
+            log_decoder: ::fuels::contract::logs::LogDecoder
         }
 
         impl #name {
@@ -40,7 +39,7 @@ pub(crate) fn script_bindings(
                 Self {
                     wallet,
                     binary_filepath: binary_filepath.to_string(),
-                    logs_map: #logs_map
+                    log_decoder: ::fuels::contract::logs::LogDecoder {logs_map: #logs_map}
                 }
             }
 
@@ -69,14 +68,13 @@ fn expand_fn(
                                         .expect("Could not read from binary filepath");
             let encoded_args = ::fuels::core::abi_encoder::ABIEncoder::encode(&#arg_tokens).expect("Cannot encode script arguments");
             let provider = self.wallet.get_provider().expect("Provider not set up").clone();
-            let log_decoder = ::fuels::contract::logs::LogDecoder{logs_map: self.logs_map.clone()};
 
             ::fuels::contract::script_calls::ScriptCallHandler::new(
                 script_binary,
                 encoded_args,
                 self.wallet.clone(),
                 provider,
-                log_decoder
+                self.log_decoder.clone()
             )
     };
 

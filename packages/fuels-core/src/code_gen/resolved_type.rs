@@ -6,16 +6,20 @@ use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 use regex::Regex;
 
-use fuels_types::errors::Error;
-use fuels_types::utils::custom_type_name;
-use fuels_types::utils::{
-    extract_array_len, extract_generic_name, extract_str_len, has_tuple_format,
+use fuels_types::{
+    errors::Error,
+    utils::custom_type_name,
+    utils::{extract_array_len, extract_generic_name, extract_str_len, has_tuple_format},
 };
 
-use crate::code_gen::abi_types::{FullTypeApplication, FullTypeDeclaration};
-use crate::code_gen::type_path::TypePath;
-use crate::code_gen::utils::get_sdk_provided_types;
-use crate::utils::{ident, safe_ident};
+use crate::{
+    code_gen::{
+        abi_types::{FullTypeApplication, FullTypeDeclaration},
+        type_path::TypePath,
+        utils::get_sdk_provided_types,
+    },
+    utils::{ident, safe_ident},
+};
 
 // Represents a type alongside its generic parameters. Can be converted into a
 // `TokenStream` via `.into()`.
@@ -272,7 +276,7 @@ mod tests {
 
     use anyhow::Context;
 
-    use fuels_types::{TypeApplication, TypeDeclaration};
+    use fuel_abi_types::program_abi::{TypeApplication, TypeDeclaration};
 
     use super::*;
 

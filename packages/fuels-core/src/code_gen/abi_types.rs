@@ -1,8 +1,10 @@
 use std::collections::HashMap;
 
+use fuel_abi_types::program_abi::{
+    ABIFunction, LoggedType, ProgramABI, TypeApplication, TypeDeclaration,
+};
 use fuels_types::errors::Error;
 use fuels_types::errors::Error::InvalidData;
-use fuels_types::{ABIFunction, LoggedType, ProgramABI, TypeApplication, TypeDeclaration};
 // 'Full' versions of the ABI structures are needed to simplify duplicate
 // detection later on. The original ones are not suited for this due to their
 // use of ids, which might differ between contracts even though the type they

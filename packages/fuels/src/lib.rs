@@ -63,7 +63,7 @@ pub mod prelude {
     //! ```
 
     pub use super::contract::{
-        contract::{Contract, MultiContractCallHandler},
+        contract::{Contract, MultiContractCallHandler, SettableContract},
         logs::LogDecoder,
     };
     pub use super::core::constants::*;

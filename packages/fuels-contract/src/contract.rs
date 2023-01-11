@@ -39,6 +39,13 @@ use std::{
 /// How many times to attempt to resolve missing tx dependencies.
 pub const DEFAULT_TX_DEP_ESTIMATION_ATTEMPTS: u64 = 10;
 
+// Trait implemented by contract instances so that
+// they can be passed to the `set_contracts` method
+pub trait SettableContract {
+    fn id(&self) -> Bech32ContractId;
+    fn log_decoder(&self) -> LogDecoder;
+}
+
 /// A compiled representation of a contract.
 #[derive(Debug, Clone, Default)]
 pub struct CompiledContract {
@@ -431,7 +438,7 @@ impl ContractCall {
 /// Based on the receipts returned by the call, the contract ID (which is null in the case of a
 /// script), and the output param, decode the values and return them.
 pub fn get_decoded_output(
-    receipts: &mut Vec<Receipt>,
+    receipts: &[Receipt],
     contract_id: Option<&Bech32ContractId>,
     output_param: &ParamType,
 ) -> Result<Token, Error> {
@@ -441,42 +448,34 @@ pub fn get_decoded_output(
         // During a script execution, the script's contract id is the **null** contract id
         None => ContractId::new([0u8; 32]),
     };
-    let (encoded_value, index) = match output_param.get_return_location() {
-        ReturnLocation::ReturnData => {
-            match receipts.iter().position(|receipt| {
+    let encoded_value = match output_param.get_return_location() {
+        ReturnLocation::ReturnData => receipts
+            .iter()
+            .find(|receipt| {
                 matches!(receipt,
                     Receipt::ReturnData { id, data, .. } if *id == contract_id && !data.is_empty())
-            }) {
-                Some(idx) => (
-                    receipts[idx]
-                        .data()
-                        .expect("ReturnData should have data")
-                        .to_vec(),
-                    Some(idx),
-                ),
-                None => (vec![], None),
-            }
-        }
-        ReturnLocation::Return => {
-            match receipts.iter().position(|receipt| {
+            })
+            .map(|receipt| {
+                receipt
+                    .data()
+                    .expect("ReturnData should have data")
+                    .to_vec()
+            }),
+        ReturnLocation::Return => receipts
+            .iter()
+            .find(|receipt| {
                 matches!(receipt,
                     Receipt::Return { id, ..} if *id == contract_id)
-            }) {
-                Some(idx) => (
-                    receipts[idx]
-                        .val()
-                        .expect("Return should have val")
-                        .to_be_bytes()
-                        .to_vec(),
-                    Some(idx),
-                ),
-                None => (vec![], None),
-            }
-        }
-    };
-    if let Some(i) = index {
-        receipts.remove(i);
+            })
+            .map(|receipt| {
+                receipt
+                    .val()
+                    .expect("Return should have val")
+                    .to_be_bytes()
+                    .to_vec()
+            }),
     }
+    .unwrap_or_default();
 
     let decoded_value = ABIDecoder::decode_single(output_param, &encoded_value)?;
     Ok(decoded_value)
@@ -504,10 +503,26 @@ where
     /// method, i.e. use it as a chain:
     ///
     /// ```ignore
-    /// my_contract_instance.my_method(...).set_contracts(&[another_contract_id]).call()
+    /// my_contract_instance.my_method(...).set_contract_ids(&[another_contract_id]).call()
     /// ```
-    pub fn set_contracts(mut self, contract_ids: &[Bech32ContractId]) -> Self {
+    pub fn set_contract_ids(mut self, contract_ids: &[Bech32ContractId]) -> Self {
         self.contract_call.external_contracts = contract_ids.to_vec();
+        self
+    }
+
+    /// Sets external contract instances as dependencies to this contract's call.
+    /// Effectively, this will be used to: merge `LogDecoder`s and create
+    /// [`Input::Contract`]/[`Output::Contract`] pairs and set them into the transaction.
+    /// Note that this is a builder method, i.e. use it as a chain:
+    ///
+    /// ```ignore
+    /// my_contract_instance.my_method(...).set_contracts(&[another_contract_instance]).call()
+    /// ```
+    pub fn set_contracts(mut self, contracts: &[&dyn SettableContract]) -> Self {
+        self.contract_call.external_contracts = contracts.iter().map(|c| c.id()).collect();
+        for c in contracts {
+            self.log_decoder.merge(c.log_decoder());
+        }
         self
     }
 
@@ -684,10 +699,10 @@ where
         Ok(transaction_cost)
     }
 
-    /// Create a [FuelCallResponse] from call receipts
-    pub fn get_response(&self, mut receipts: Vec<Receipt>) -> Result<FuelCallResponse<D>, Error> {
+    /// Create a [`FuelCallResponse`] from call receipts
+    pub fn get_response(&self, receipts: Vec<Receipt>) -> Result<FuelCallResponse<D>, Error> {
         let token = get_decoded_output(
-            &mut receipts,
+            &receipts,
             Some(&self.contract_call.contract_id),
             &self.contract_call.output_param,
         )?;
@@ -724,7 +739,7 @@ impl MultiContractCallHandler {
     /// Adds a contract call to be bundled in the transaction
     /// Note that this is a builder method
     pub fn add_call<D: Tokenizable>(&mut self, call_handler: ContractCallHandler<D>) -> &mut Self {
-        self.log_decoder.merge(&call_handler.log_decoder);
+        self.log_decoder.merge(call_handler.log_decoder);
         self.contract_calls.push(call_handler.contract_call);
         self
     }
@@ -855,13 +870,13 @@ impl MultiContractCallHandler {
     /// Create a [FuelCallResponse] from call receipts
     pub fn get_response<D: Tokenizable + Debug>(
         &self,
-        mut receipts: Vec<Receipt>,
+        receipts: Vec<Receipt>,
     ) -> Result<FuelCallResponse<D>, Error> {
         let mut final_tokens = vec![];
 
         for call in self.contract_calls.iter() {
             let decoded =
-                get_decoded_output(&mut receipts, Some(&call.contract_id), &call.output_param)?;
+                get_decoded_output(&receipts, Some(&call.contract_id), &call.output_param)?;
 
             final_tokens.push(decoded.clone());
         }
