@@ -33,7 +33,7 @@ impl TryFrom<Command> for InitializeWallet {
         let wallets = UniqueLitStrs::new(command.contents)?;
 
         Ok(Self {
-            span: wallets.span(),
+            span: command.name.span(),
             names: wallets.into_iter().collect(),
         })
     }
@@ -41,7 +41,7 @@ impl TryFrom<Command> for InitializeWallet {
 
 pub(crate) struct GenerateContract {
     pub(crate) name: LitStr,
-    pub(crate) abi: String,
+    pub(crate) abi: LitStr,
 }
 
 impl MacroName for GenerateContract {
@@ -60,7 +60,7 @@ impl TryFrom<Command> for GenerateContract {
         name_values.validate_has_no_other_names(&["name", "abi"])?;
 
         let name = name_values.get_as_lit_str("name")?.clone();
-        let abi = name_values.get_as_lit_str("abi")?.value();
+        let abi = name_values.get_as_lit_str("abi")?.clone();
 
         Ok(Self { name, abi })
     }

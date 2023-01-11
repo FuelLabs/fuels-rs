@@ -17,19 +17,18 @@ pub(crate) fn combine_errors<T: IntoIterator<Item = Error>>(errs: T) -> Option<E
     })
 }
 
-fn generate_duplicate_error<T, K, KeyFn>(duplicates: &[&T], key_fn: KeyFn) -> Error
+fn generate_duplicate_error<T>(duplicates: &[&T]) -> Error
 where
-    KeyFn: Fn(&&T) -> K,
-    K: ToTokens,
+    T: ToTokens,
 {
     let mut iter = duplicates.iter();
 
     let original_error = iter
         .next()
-        .map(|first_el| Error::new_spanned(key_fn(first_el), "Original defined here:"));
+        .map(|first_el| Error::new_spanned(first_el, "Original defined here:"));
 
     let the_rest = iter
-        .map(|duplicate| Error::new_spanned(key_fn(duplicate), "Duplicate!"))
+        .map(|duplicate| Error::new_spanned(duplicate, "Duplicate!"))
         .collect::<Vec<_>>();
 
     combine_errors(chain!(original_error, the_rest)).expect("Has to be at least one error!")
@@ -56,11 +55,12 @@ where
 fn validate_no_duplicates<T, K, KeyFn>(elements: &[T], key_fn: KeyFn) -> syn::Result<()>
 where
     KeyFn: Fn(&&T) -> K + Copy,
-    K: Ord + ToTokens,
+    T: ToTokens,
+    K: Ord,
 {
     let maybe_err = group_up_duplicates(elements, key_fn)
         .into_iter()
-        .map(|duplicates| generate_duplicate_error(&duplicates, key_fn))
+        .map(|duplicates| generate_duplicate_error(&duplicates))
         .reduce(|mut errors, error| {
             errors.combine(error);
             errors

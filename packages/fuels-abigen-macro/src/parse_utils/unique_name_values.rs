@@ -24,7 +24,8 @@ impl UniqueNameValues {
         let span = nested_metas.span();
         let name_values = Self::extract_name_values(nested_metas.into_iter())?;
 
-        parse_utils::validate_no_duplicates(&name_values, |(name, _)| name.clone())?;
+        let names = name_values.iter().map(|(name, _)| name).collect::<Vec<_>>();
+        parse_utils::validate_no_duplicates(&names, |&&name| name.clone())?;
 
         Ok(Self {
             span,

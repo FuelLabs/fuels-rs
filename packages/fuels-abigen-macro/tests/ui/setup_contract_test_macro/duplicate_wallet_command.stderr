@@ -1,0 +1,11 @@
+error: Only one `Wallets` command allowed
+ --> tests/ui/setup_contract_test_macro/duplicate_wallet_command.rs:4:5
+  |
+4 |     Wallets("wallet1"),
+  |     ^^^^^^^
+
+error: Only one `Wallets` command allowed
+ --> tests/ui/setup_contract_test_macro/duplicate_wallet_command.rs:5:5
+  |
+5 |     Wallets("wallet2"),
+  |     ^^^^^^^

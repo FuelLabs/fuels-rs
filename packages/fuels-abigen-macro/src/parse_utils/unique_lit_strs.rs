@@ -42,6 +42,7 @@ impl UniqueLitStrs {
         self.lit_strs.iter()
     }
 
+    #[allow(dead_code)]
     pub fn span(&self) -> Span {
         self.span
     }

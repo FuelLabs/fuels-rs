@@ -6,6 +6,7 @@ use std::{
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 use rand::{prelude::StdRng, Rng};
+use syn::LitStr;
 
 use fuels_core::{
     code_gen::abigen::{Abigen, AbigenTarget, ProgramType},
@@ -17,14 +18,16 @@ use crate::setup_contract_test_macro::parsing::{
     DeployContract, GenerateContract, InitializeWallet, TestContractCommands,
 };
 
-pub(crate) fn generate_setup_contract_test_code(commands: TestContractCommands) -> TokenStream {
+pub(crate) fn generate_setup_contract_test_code(
+    commands: TestContractCommands,
+) -> syn::Result<TokenStream> {
     let TestContractCommands {
         initialize_wallets,
         generate_contract,
         deploy_contract,
     } = commands;
 
-    let project_lookup = generate_project_lookup(&generate_contract);
+    let project_lookup = generate_project_lookup(&generate_contract)?;
 
     let abigen_code = abigen_code(&project_lookup);
 
@@ -32,18 +35,23 @@ pub(crate) fn generate_setup_contract_test_code(commands: TestContractCommands) 
 
     let deploy_code = contract_deploying_code(deploy_contract.as_slice(), &project_lookup);
 
-    quote! {
+    Ok(quote! {
        #abigen_code
        #wallet_code
        #deploy_code
-    }
+    })
 }
 
-fn generate_project_lookup(commands: &[GenerateContract]) -> HashMap<String, Project> {
-    commands
+fn generate_project_lookup(commands: &[GenerateContract]) -> syn::Result<HashMap<String, Project>> {
+    let pairs = commands
         .iter()
-        .map(|command| (command.name.value(), Project::new(&command.abi)))
-        .collect()
+        .map(|command| -> syn::Result<_> {
+            let project = Project::new(&command.abi)?;
+            Ok((command.name.value(), project))
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+
+    Ok(pairs.into_iter().collect())
 }
 
 fn abigen_code(project_lookup: &HashMap<String, Project>) -> TokenStream {
@@ -146,15 +154,15 @@ struct Project {
 }
 
 impl Project {
-    fn new(dir: &str) -> Self {
-        let path = Path::new(dir).canonicalize().unwrap_or_else(|_| {
-            panic!(
-                "Unable to canonicalize forc project path: {}. Make sure the path is valid!",
-                &dir
+    fn new(dir: &LitStr) -> syn::Result<Self> {
+        let path = Path::new(&dir.value()).canonicalize().map_err(|_| {
+            syn::Error::new_spanned(
+                dir.clone(),
+                "Unable to canonicalize forc project path. Make sure the path is valid!",
             )
-        });
+        })?;
 
-        Self { path }
+        Ok(Self { path })
     }
 
     fn compile_file_path(&self, suffix: &str, description: &str) -> String {
