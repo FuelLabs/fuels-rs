@@ -31,7 +31,7 @@ pub(crate) fn script_bindings(
         pub struct #name{
             wallet: ::fuels::signers::wallet::WalletUnlocked,
             binary_filepath: ::std::string::String,
-            log_decoder: ::fuels::contract::logs::LogDecoder
+            log_decoder: ::fuels::programs::logs::LogDecoder
         }
 
         impl #name {
@@ -39,7 +39,7 @@ pub(crate) fn script_bindings(
                 Self {
                     wallet,
                     binary_filepath: binary_filepath.to_string(),
-                    log_decoder: ::fuels::contract::logs::LogDecoder {logs_map: #logs_map}
+                    log_decoder: ::fuels::programs::logs::LogDecoder {logs_map: #logs_map}
                 }
             }
 
@@ -69,7 +69,7 @@ fn expand_fn(
             let encoded_args = ::fuels::core::abi_encoder::ABIEncoder::encode(&#arg_tokens).expect("Cannot encode script arguments");
             let provider = self.wallet.get_provider().expect("Provider not set up").clone();
 
-            ::fuels::contract::script_calls::ScriptCallHandler::new(
+            ::fuels::programs::script_calls::ScriptCallHandler::new(
                 script_binary,
                 encoded_args,
                 self.wallet.clone(),
@@ -82,7 +82,7 @@ fn expand_fn(
 
     generator
         .set_output_type(
-            quote! {::fuels::contract::script_calls::ScriptCallHandler<#original_output_type> },
+            quote! {::fuels::programs::script_calls::ScriptCallHandler<#original_output_type> },
         )
         .set_doc("Run the script's `main` function with the provided arguments".to_string())
         .set_body(body);

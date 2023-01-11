@@ -37,12 +37,12 @@ pub(crate) fn contract_bindings(
         pub struct #name {
             contract_id: ::fuels::types::bech32::Bech32ContractId,
             wallet: ::fuels::signers::wallet::WalletUnlocked,
-            log_decoder: ::fuels::contract::logs::LogDecoder
+            log_decoder: ::fuels::programs::logs::LogDecoder
         }
 
         impl #name {
             pub fn new(contract_id: ::fuels::types::bech32::Bech32ContractId, wallet: ::fuels::signers::wallet::WalletUnlocked) -> Self {
-                let log_decoder = ::fuels::contract::logs::LogDecoder { logs_map: #logs_map };
+                let log_decoder = ::fuels::programs::logs::LogDecoder { logs_map: #logs_map };
                 Self { contract_id, wallet, log_decoder }
             }
 
@@ -78,18 +78,18 @@ pub(crate) fn contract_bindings(
         pub struct #methods_name {
             contract_id: ::fuels::types::bech32::Bech32ContractId,
             wallet: ::fuels::signers::wallet::WalletUnlocked,
-            log_decoder: ::fuels::contract::logs::LogDecoder
+            log_decoder: ::fuels::programs::logs::LogDecoder
         }
 
         impl #methods_name {
             #contract_functions
         }
 
-        impl ::fuels::contract::contract::SettableContract for #name {
+        impl ::fuels::programs::contract::SettableContract for #name {
             fn id(&self) -> ::fuels::types::bech32::Bech32ContractId {
                 self.contract_id.clone()
             }
-            fn log_decoder(&self) -> ::fuels::contract::logs::LogDecoder {
+            fn log_decoder(&self) -> ::fuels::programs::logs::LogDecoder {
                 self.log_decoder.clone()
             }
         }
@@ -138,14 +138,14 @@ pub(crate) fn expand_fn(
 
     let original_output = generator.output_type();
     generator.set_output_type(
-        quote! {::fuels::contract::contract::ContractCallHandler<#original_output> },
+        quote! {::fuels::programs::contract::ContractCallHandler<#original_output> },
     );
 
     let fn_selector = generator.fn_selector();
     let arg_tokens = generator.tokenized_args();
     let body = quote! {
             let provider = self.wallet.get_provider().expect("Provider not set up");
-            ::fuels::contract::contract::Contract::method_hash(
+            ::fuels::programs::contract::Contract::method_hash(
                 &provider,
                 self.contract_id.clone(),
                 &self.wallet,
@@ -328,9 +328,9 @@ mod tests {
                 &self,
                 s_1: self::MyStruct1,
                 s_2: self::MyStruct2
-            ) -> ::fuels::contract::contract::ContractCallHandler<self::MyStruct1> {
+            ) -> ::fuels::programs::contract::ContractCallHandler<self::MyStruct1> {
                 let provider = self.wallet.get_provider().expect("Provider not set up");
-                ::fuels::contract::contract::Contract::method_hash(
+                ::fuels::programs::contract::Contract::method_hash(
                     &provider,
                     self.contract_id.clone(),
                     &self.wallet,
@@ -394,9 +394,9 @@ mod tests {
 
         let expected = quote! {
             #[doc = "Calls the contract's `HelloWorld` function"]
-            pub fn HelloWorld(&self, bimbam: bool) -> ::fuels::contract::contract::ContractCallHandler<()> {
+            pub fn HelloWorld(&self, bimbam: bool) -> ::fuels::programs::contract::ContractCallHandler<()> {
                 let provider = self.wallet.get_provider().expect("Provider not set up");
-                ::fuels::contract::contract::Contract::method_hash(
+                ::fuels::programs::contract::Contract::method_hash(
                     &provider,
                     self.contract_id.clone(),
                     &self.wallet,
@@ -508,9 +508,9 @@ mod tests {
             pub fn hello_world(
                 &self,
                 the_only_allowed_input: self::SomeWeirdFrenchCuisine
-            ) -> ::fuels::contract::contract::ContractCallHandler<self::EntropyCirclesEnum> {
+            ) -> ::fuels::programs::contract::ContractCallHandler<self::EntropyCirclesEnum> {
                 let provider = self.wallet.get_provider().expect("Provider not set up");
-                ::fuels::contract::contract::Contract::method_hash(
+                ::fuels::programs::contract::Contract::method_hash(
                     &provider,
                     self.contract_id.clone(),
                     &self.wallet,

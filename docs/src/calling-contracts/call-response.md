@@ -9,7 +9,7 @@ You've probably noticed that you're often chaining `.call().await.unwrap()`. Tha
 Once you unwrap the `FuelCallResponse`, you have access to this struct:
 
 ```rust,ignore
-{{#include ../../../packages/fuels-contract/src/call_response.rs:fuel_call_response}}
+{{#include ../../../packages/fuels-programs/src/call_response.rs:fuel_call_response}}
 ```
 
 Where `value` will hold the value returned by its respective contract method, represented by the exact type returned by the FuelVM, E.g., if your contract returns a FuelVM's `u64`, `value`'s `D` will be a `u64`. If it's a FuelVM's tuple `(u8,bool)`, then `D` will be a `(u8,bool)`. If it's a custom type, for instance, a Sway struct `MyStruct` containing two components, a `u64`, and a `b256`, `D` will be a struct generated at compile-time, called `MyStruct` with `u64` and a `[u8; 32]` (the equivalent of `b256` in Rust-land).

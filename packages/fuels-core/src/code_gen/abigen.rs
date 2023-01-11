@@ -1,19 +1,22 @@
-use std::collections::HashSet;
+use crate::{
+    code_gen::{
+        abi_types::FullTypeDeclaration,
+        abigen::{abigen_target::ParsedAbigenTarget, bindings::generate_bindings},
+        custom_types::generate_types,
+        generated_code::GeneratedCode,
+    },
+    utils::ident,
+};
 
+use fuels_types::errors::Error;
 use inflector::Inflector;
 use itertools::Itertools;
 use proc_macro2::TokenStream;
 use quote::quote;
 
-pub use abigen_target::{AbigenTarget, ProgramType};
-use fuels_types::errors::Error;
+use std::collections::HashSet;
 
-use crate::code_gen::abi_types::FullTypeDeclaration;
-use crate::code_gen::abigen::abigen_target::ParsedAbigenTarget;
-use crate::code_gen::abigen::bindings::generate_bindings;
-use crate::code_gen::custom_types::generate_types;
-use crate::code_gen::generated_code::GeneratedCode;
-use crate::utils::ident;
+pub use abigen_target::{AbigenTarget, ProgramType};
 
 mod abigen_target;
 mod bindings;

@@ -1,16 +1,13 @@
-use fuel_gql_client::fuel_tx::{Input, Output, TxPointer, UtxoId};
-use fuel_gql_client::fuel_types::{Immediate18, Word};
-use fuel_gql_client::fuel_vm::{consts::REG_ONE, prelude::Opcode};
-use fuel_tx::{AssetId, Bytes32, ContractId};
-use fuels_core::constants::BASE_ASSET_ID;
-use fuels_types::bech32::Bech32Address;
-use fuels_types::constants::WORD_SIZE;
-use fuels_types::resource::Resource;
-use itertools::{chain, Itertools};
-use std::collections::HashSet;
-use std::{iter, vec};
-
 use crate::contract::ContractCall;
+use fuels_core::constants::BASE_ASSET_ID;
+use fuels_types::{bech32::Bech32Address, constants::WORD_SIZE, resource::Resource};
+
+use fuel_tx::{AssetId, Bytes32, ContractId, Input, Output, TxPointer, UtxoId};
+use fuel_types::{Immediate18, Word};
+use fuel_vm::{consts::REG_ONE, prelude::Opcode};
+
+use itertools::{chain, Itertools};
+use std::{collections::HashSet, iter, vec};
 
 #[derive(Default)]
 /// Specifies offsets of [`Opcode::CALL`] parameters stored in the script

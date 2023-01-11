@@ -6,7 +6,7 @@ Transaction parameters are:
 2. Gas limit;
 3. Maturity.
 
-You can configure these parameters by creating an instance of [`TxParameters`](https://github.com/FuelLabs/fuels-rs/blob/adf81bd451d7637ce0976363bd7784408430031a/packages/fuels-contract/src/parameters.rs#L7) and passing it to a chain method called `tx_params`:
+You can configure these parameters by creating an instance of [`TxParameters`](https://github.com/FuelLabs/fuels-rs/blob/adf81bd451d7637ce0976363bd7784408430031a/packages/fuels-programs/src/parameters.rs#L7) and passing it to a chain method called `tx_params`:
 
 ```rust,ignore
 {{#include ../../../examples/contracts/src/lib.rs:tx_parameters}}

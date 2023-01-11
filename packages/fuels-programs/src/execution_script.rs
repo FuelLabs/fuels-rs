@@ -1,23 +1,17 @@
-use crate::contract_calls_utils::{get_single_call_instructions, CallOpcodeParamsOffset};
-use anyhow::Result;
-use std::fmt::Debug;
+use crate::{
+    call_utils::{
+        build_script_data_from_contract_calls, calculate_required_asset_amounts, get_instructions,
+        get_single_call_instructions, get_transaction_inputs_outputs, CallOpcodeParamsOffset,
+    },
+    contract::ContractCall,
+};
 
-use fuel_gql_client::fuel_tx::{Receipt, Transaction};
-
-use fuel_tx::{AssetId, Checkable, ScriptExecutionResult};
+use fuel_tx::{AssetId, Checkable, Receipt, ScriptExecutionResult, Transaction};
 use fuels_core::{offsets::call_script_data_offset, parameters::TxParameters};
-use fuels_signers::provider::Provider;
-use fuels_signers::{Signer, WalletUnlocked};
-
+use fuels_signers::{provider::Provider, Signer, WalletUnlocked};
 use fuels_types::errors::Error;
 
-use std::vec;
-
-use crate::contract::ContractCall;
-use crate::contract_calls_utils::{
-    build_script_data_from_contract_calls, calculate_required_asset_amounts, get_instructions,
-    get_transaction_inputs_outputs,
-};
+use std::{fmt::Debug, vec};
 
 /// [ExecutableFuelCall] provides methods to create and call/simulate a transaction that carries
 /// out contract method calls or script calls

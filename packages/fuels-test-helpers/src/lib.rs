@@ -238,8 +238,8 @@ pub async fn setup_test_client(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fuels_contract::contract::Contract;
     use fuels_core::parameters::{StorageConfiguration, TxParameters};
+    use fuels_programs::contract::Contract;
     use fuels_signers::provider::Provider;
     use fuels_signers::WalletUnlocked;
     use fuels_types::bech32::FUEL_BECH32_HRP;

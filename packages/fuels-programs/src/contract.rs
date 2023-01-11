@@ -3,18 +3,11 @@ use crate::{
     execution_script::ExecutableFuelCall,
     logs::{decode_revert_error, LogDecoder},
 };
-use fuel_gql_client::{
-    fuel_tx::{Contract as FuelContract, Output, Receipt, StorageSlot, Transaction},
-    prelude::PanicReason,
-};
-use fuel_tx::{Address, AssetId, Checkable, Create, Salt};
 use fuels_core::{
     abi_decoder::ABIDecoder,
     abi_encoder::{ABIEncoder, UnresolvedBytes},
     constants::FAILED_TRANSFER_TO_ADDRESS_SIGNAL,
-    parameters::StorageConfiguration,
-    parameters::{CallParameters, TxParameters},
-    tx::{Bytes32, ContractId},
+    parameters::{CallParameters, StorageConfiguration, TxParameters},
     Parameterize, Selector, Token, Tokenizable,
 };
 use fuels_signers::{
@@ -26,6 +19,13 @@ use fuels_types::{
     errors::Error,
     param_types::{ParamType, ReturnLocation},
 };
+
+use fuel_tx::{
+    Address, AssetId, Bytes32, Checkable, Contract as FuelContract, ContractId, Create, Output,
+    Receipt, Salt, StorageSlot, Transaction,
+};
+use fuel_vm::fuel_asm::PanicReason;
+
 use std::{
     collections::{HashMap, HashSet},
     fmt::Debug,

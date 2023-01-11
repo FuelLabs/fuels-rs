@@ -1,6 +1,8 @@
-use fuel_gql_client::fuel_tx::Receipt;
 use fuels_core::{try_from_bytes, DecodableLog, Parameterize, Tokenizable};
 use fuels_types::{bech32::Bech32ContractId, errors::Error, param_types::ParamType};
+
+use fuel_tx::Receipt;
+
 use std::{
     collections::{HashMap, HashSet},
     fmt::Debug,
