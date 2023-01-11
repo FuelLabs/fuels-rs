@@ -14,18 +14,23 @@ use fuels_core::{
 };
 
 use crate::setup_contract_test_macro::parsing::{
-    Deploy, TestContractCommand, TestContractCommands,
+    DeployContract, GenerateContract, InitializeWallet, TestContractCommands,
 };
 
-pub(crate) fn generate_setup_contract_test_code(
-    test_contarct_commands: TestContractCommands,
-) -> TokenStream {
-    let commands = test_contarct_commands.commands;
+pub(crate) fn generate_setup_contract_test_code(commands: TestContractCommands) -> TokenStream {
+    let TestContractCommands {
+        initialize_wallets,
+        generate_contract,
+        deploy_contract,
+    } = commands;
 
-    let project_lookup = generate_project_lookup(&commands);
+    let project_lookup = generate_project_lookup(&generate_contract);
+
     let abigen_code = abigen_code(&project_lookup);
-    let wallet_code = wallet_initialization_code(&commands);
-    let deploy_code = contract_deploying_code(&commands, &project_lookup);
+
+    let wallet_code = wallet_initialization_code(initialize_wallets);
+
+    let deploy_code = contract_deploying_code(deploy_contract.as_slice(), &project_lookup);
 
     quote! {
        #abigen_code
@@ -34,16 +39,16 @@ pub(crate) fn generate_setup_contract_test_code(
     }
 }
 
-fn generate_project_lookup(commands: &[TestContractCommand]) -> HashMap<String, Project> {
+fn generate_project_lookup(commands: &[GenerateContract]) -> HashMap<String, Project> {
     commands
         .iter()
-        .filter_map(|c| {
-            if let TestContractCommand::Abigen { name, abi } = c {
-                return Some((name.clone(), Project::new(abi)));
-            }
-            None
-        })
+        .map(|command| (command.name.value(), Project::new(&command.abi)))
         .collect()
+}
+
+fn abigen_code(project_lookup: &HashMap<String, Project>) -> TokenStream {
+    let targets = generate_abigen_targets(project_lookup);
+    Abigen::generate(targets, false).expect("Failed to generate abigen")
 }
 
 fn generate_abigen_targets(project_lookup: &HashMap<String, Project>) -> Vec<AbigenTarget> {
@@ -57,25 +62,14 @@ fn generate_abigen_targets(project_lookup: &HashMap<String, Project>) -> Vec<Abi
         .collect()
 }
 
-fn abigen_code(project_lookup: &HashMap<String, Project>) -> TokenStream {
-    let targets = generate_abigen_targets(project_lookup);
-    Abigen::generate(targets, false).expect("Failed to generate abigen")
-}
+fn wallet_initialization_code(maybe_command: Option<InitializeWallet>) -> TokenStream {
+    let command = if let Some(command) = maybe_command {
+        command
+    } else {
+        return TokenStream::default();
+    };
 
-fn extract_wallet_names(commands: &[TestContractCommand]) -> Vec<Ident> {
-    commands
-        .iter()
-        .find_map(|c| {
-            if let TestContractCommand::Wallets { names, .. } = c {
-                return Some(names.iter().map(|wn| ident(&wn.value())).collect());
-            }
-            None
-        })
-        .unwrap_or_default()
-}
-
-fn wallet_initialization_code(commands: &[TestContractCommand]) -> TokenStream {
-    let wallet_names = extract_wallet_names(commands);
+    let wallet_names = extract_wallet_names(&command);
 
     if wallet_names.is_empty() {
         return quote! {};
@@ -94,34 +88,31 @@ fn wallet_initialization_code(commands: &[TestContractCommand]) -> TokenStream {
     }
 }
 
+fn extract_wallet_names(command: &InitializeWallet) -> Vec<Ident> {
+    command
+        .names
+        .iter()
+        .map(|name| ident(&name.value()))
+        .collect()
+}
+
 fn contract_deploying_code(
-    commands: &[TestContractCommand],
+    commands: &[DeployContract],
     project_lookup: &HashMap<String, Project>,
 ) -> TokenStream {
     commands
         .iter()
-        .filter_map(|command| {
-            if let TestContractCommand::Deploy(Deploy {
-                name,
-                contract,
-                wallet,
-            }) = command
-            {
-                return Some((name, contract, wallet));
-            }
-            None
-        })
-        .map(|(name, contract, wallet)| {
+        .map(|command| {
             // Generate random salt for contract deployment
             let mut rng = StdRng::from_entropy();
             let salt: [u8; 32] = rng.gen();
 
-            let contract_instance_name = ident(name);
-            let contract_struct_name = ident(&contract.value());
-            let wallet_name = ident(wallet);
+            let contract_instance_name = ident(&command.name);
+            let contract_struct_name = ident(&command.contract.value());
+            let wallet_name = ident(&command.wallet);
 
             let project = project_lookup
-                .get(&contract.value())
+                .get(&command.contract.value())
                 .expect("Project should be in lookup");
             let bin_path = project.bin_path();
             let storage_path = project.storage_path();

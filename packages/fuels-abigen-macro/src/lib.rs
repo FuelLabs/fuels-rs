@@ -10,7 +10,7 @@ use crate::abigen_macro::MacroAbigenTargets;
 use crate::setup_contract_test_macro::{generate_setup_contract_test_code, TestContractCommands};
 
 mod abigen_macro;
-mod experimental;
+mod parse_utils;
 mod setup_contract_test_macro;
 
 #[proc_macro]
