@@ -1,8 +1,8 @@
 use crate::code_gen::resolved_type::{resolve_type, ResolvedType};
 use crate::utils::{ident, safe_ident};
+use fuel_abi_types::program_abi::{TypeApplication, TypeDeclaration};
 use fuels_types::errors::Error;
 use fuels_types::utils::extract_generic_name;
-use fuels_types::{TypeApplication, TypeDeclaration};
 use inflector::Inflector;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;

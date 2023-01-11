@@ -14,6 +14,7 @@ anyhow = "1"
 fuel-tx = "0.23"
 fuel-vm = "0.22"
 fuel-types = "0.5"
+fuel-abi-types = "0.1.0"
 fuels-types = { version = "0.33.0", path = "../fuels-types" }
 hex = { version = "0.4.3", features = ["std"] }
 itertools = "0.10"

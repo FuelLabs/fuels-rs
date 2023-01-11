@@ -5,7 +5,8 @@ use crate::code_gen::{
     resolved_type::ResolvedType,
 };
 use crate::utils::safe_ident;
-use fuels_types::{errors::Error, ABIFunction, TypeDeclaration};
+use fuel_abi_types::program_abi::{ABIFunction, TypeDeclaration};
+use fuels_types::errors::Error;
 use inflector::Inflector;
 use proc_macro2::TokenStream;
 use quote::quote;
@@ -189,7 +190,7 @@ pub fn expand_input_name(name: &str) -> Result<TokenStream, Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fuels_types::{ProgramABI, TypeApplication};
+    use fuel_abi_types::program_abi::{ProgramABI, TypeApplication};
     use std::str::FromStr;
 
     #[test]

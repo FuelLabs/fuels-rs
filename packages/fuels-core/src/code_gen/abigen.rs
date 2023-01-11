@@ -12,10 +12,10 @@ use crate::{
     source::Source,
     utils::ident,
 };
+use fuel_abi_types::program_abi::{ABIFunction, ProgramABI, ResolvedLog, TypeDeclaration};
 use fuel_tx::ContractId;
 use fuels_types::{
     bech32::Bech32ContractId, errors::Error, param_types::ParamType, utils::custom_type_name,
-    ABIFunction, ProgramABI, ResolvedLog, TypeDeclaration,
 };
 use inflector::Inflector;
 use proc_macro2::TokenStream;
@@ -386,7 +386,6 @@ impl Abigen {
                         abi_decoder::ABIDecoder, code_gen::function_selector::resolve_fn_selector,
                         EnumSelector, Identity, StringToken,
                     };
-                    use fuels::types::ResolvedLog;
                     use std::str::FromStr;
                 },
                 AbigenType::Script => quote! {
