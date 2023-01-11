@@ -2,13 +2,13 @@ use itertools::{chain, Itertools};
 use quote::ToTokens;
 use syn::Error;
 
+pub(crate) use command::Command;
+pub(crate) use unique_lit_strs::UniqueLitStrs;
+pub(crate) use unique_name_values::UniqueNameValues;
+
 mod command;
 mod unique_lit_strs;
 mod unique_name_values;
-
-pub use command::Command;
-pub use unique_lit_strs::UniqueLitStrs;
-pub use unique_name_values::UniqueNameValues;
 
 pub(crate) fn combine_errors<T: IntoIterator<Item = Error>>(errs: T) -> Option<Error> {
     errs.into_iter().reduce(|mut errors, error| {
