@@ -224,7 +224,7 @@ fn generate_asset_change_outputs(
         .collect()
 }
 
-fn generate_contract_outputs(num_of_contracts: usize) -> Vec<Output> {
+pub(crate) fn generate_contract_outputs(num_of_contracts: usize) -> Vec<Output> {
     (0..num_of_contracts)
         .map(|idx| Output::contract(idx as u8, Bytes32::zeroed(), Bytes32::zeroed()))
         .collect()
@@ -256,7 +256,7 @@ fn convert_to_signed_resources(spendable_resources: Vec<Resource>) -> Vec<Input>
         .collect()
 }
 
-fn generate_contract_inputs(contract_ids: HashSet<ContractId>) -> Vec<Input> {
+pub(crate) fn generate_contract_inputs(contract_ids: HashSet<ContractId>) -> Vec<Input> {
     contract_ids
         .into_iter()
         .enumerate()
