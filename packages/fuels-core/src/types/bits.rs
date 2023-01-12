@@ -1,6 +1,8 @@
+use crate::{
+    traits::{Parameterize, Tokenizable},
+    Token,
+};
 use fuels_types::{errors::Error, param_types::ParamType};
-
-use crate::{Parameterize, Token, Tokenizable};
 
 // A simple wrapper around [u8; 32] representing the `b256` type. Exists
 // mainly so that we may differentiate `Parameterize` and `Tokenizable`

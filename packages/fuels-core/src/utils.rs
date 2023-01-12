@@ -1,8 +1,12 @@
+use crate::ByteArray;
+use fuels_types::{bech32::Bech32ContractId, param_types::ParamType};
+
+use fuel_types::ContractId;
 use proc_macro2::{Ident, Span};
 use sha2::{Digest, Sha256};
 use syn::Ident as SynIdent;
 
-use crate::ByteArray;
+use std::collections::HashMap;
 
 /// Hashes an encoded function selector using SHA256 and returns the first 4 bytes.
 /// The function selector has to have been already encoded following the ABI specs defined
@@ -28,4 +32,15 @@ pub fn ident(name: &str) -> Ident {
 /// Parsing keywords like `self` can fail, in this case we add an underscore.
 pub fn safe_ident(name: &str) -> Ident {
     syn::parse_str::<SynIdent>(name).unwrap_or_else(|_| ident(&format!("{}_", name)))
+}
+
+pub fn get_logs_hashmap(
+    id_param_pairs: &[(u64, ParamType)],
+    contract_id: Option<Bech32ContractId>,
+) -> HashMap<(Bech32ContractId, u64), ParamType> {
+    let contract_id = contract_id.unwrap_or_else(|| Bech32ContractId::from(ContractId::zeroed()));
+    id_param_pairs
+        .iter()
+        .map(|(id, param_type)| ((contract_id.clone(), *id), param_type.to_owned()))
+        .collect()
 }

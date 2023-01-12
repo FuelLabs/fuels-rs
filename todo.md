@@ -6,4 +6,9 @@
 [x] Define the role of fuels-contract and rename it to what ever is appropriate
 [x] Delete tools/fuels-abi-cli from the repo (It should probably live somewhere else in Fuels)
 
-export some `fuel_types` in `fuels_types`
+export some `fuel_types` in `fuels_types` check what we did use and export only that
+
+graph_ql and fuel_tx and fuel_vm
+
+move types from fuel-core to fuels_types and implement the parameterize thing there
+

@@ -12,7 +12,9 @@
 //! Examples on how you can use the types imported by the prelude can be found in
 //! the [main test suite](https://github.com/FuelLabs/fuels-rs/blob/master/fuels/tests/harness.rs)
 
-pub use fuels_core::tx;
+pub mod tx {
+    pub use fuel_tx::*;
+}
 
 pub mod client {
     pub use fuel_gql_client::client::*;
@@ -61,24 +63,20 @@ pub mod prelude {
     //! # #![allow(unused_imports)]
     //! use fuels::prelude::*;
     //! ```
-
-    pub use super::core::constants::*;
-    pub use super::core::parameters::*;
-    pub use super::core::tx::{Address, AssetId, ContractId};
-    pub use super::core::types::*;
-    pub use super::core::{Token, Tokenizable};
-    pub use super::fuel_node::*;
-    pub use super::fuels_abigen::{abigen, setup_contract_test};
-    pub use super::programs::{
-        contract::{Contract, MultiContractCallHandler, SettableContract},
-        logs::LogDecoder,
+    pub use super::{
+        core::{constants::*, parameters::*, types::*, Token},
+        fuel_node::*,
+        fuels_abigen::{abigen, setup_contract_test},
+        programs::{
+            contract::{Contract, MultiContractCallHandler, SettableContract},
+            logs::LogDecoder,
+        },
+        signers::{provider::*, wallet::generate_mnemonic_phrase, Signer, Wallet, WalletUnlocked},
+        test_helpers::*,
+        tx::{Address, AssetId, ContractId, Salt},
+        types::{
+            bech32::{Bech32Address, Bech32ContractId},
+            errors::Error,
+        },
     };
-    pub use super::signers::provider::*;
-    pub use super::signers::{wallet::generate_mnemonic_phrase, Signer, Wallet, WalletUnlocked};
-    pub use super::test_helpers::Config;
-    pub use super::test_helpers::*;
-    pub use super::tx::Salt;
-    pub use super::types::bech32::Bech32Address;
-    pub use super::types::bech32::Bech32ContractId;
-    pub use super::types::errors::Error;
 }

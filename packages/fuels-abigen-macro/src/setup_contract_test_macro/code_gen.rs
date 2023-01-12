@@ -5,13 +5,12 @@ use std::{
 
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
-use rand::{prelude::StdRng, Rng};
+use rand::{prelude::StdRng, Rng, SeedableRng};
 use syn::LitStr;
 
 use fuels_core::{
     code_gen::abigen::{Abigen, AbigenTarget, ProgramType},
     utils::ident,
-    vm::fuel_crypto::coins_bip32::ecdsa::signature::rand_core::SeedableRng,
 };
 
 use crate::setup_contract_test_macro::parsing::{

@@ -10,6 +10,7 @@ rust-version = "1.64.0"
 description = "Fuel Rust SDK."
 
 [dependencies]
+fuel-tx = "0.23"
 fuel-core = { version = "0.15", default-features = false, optional = true }
 fuel-gql-client = { version = "0.15", default-features = false }
 fuels-abigen-macro = { version = "0.33.0", path = "../fuels-abigen-macro" }

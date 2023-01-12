@@ -59,9 +59,9 @@ pub fn single_param_type_call(field_type: &ResolvedType) -> TokenStream {
         .map(TokenStream::from)
         .collect::<Vec<_>>();
     if parameters.is_empty() {
-        quote! { <#type_name as ::fuels::core::Parameterize>::param_type() }
+        quote! { <#type_name as ::fuels::core::traits::Parameterize>::param_type() }
     } else {
-        quote! { <#type_name::<#(#parameters),*> as ::fuels::core::Parameterize>::param_type() }
+        quote! { <#type_name::<#(#parameters),*> as ::fuels::core::traits::Parameterize>::param_type() }
     }
 }
 

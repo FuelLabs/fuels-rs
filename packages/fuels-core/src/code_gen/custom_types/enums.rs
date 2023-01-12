@@ -76,7 +76,7 @@ fn enum_decl(
     quote! {
         #[allow(clippy::enum_variant_names)]
         #[derive(Clone, Debug, Eq, PartialEq)]
-        pub enum #enum_ident <#(#generics: ::fuels::core::Tokenizable + ::fuels::core::Parameterize),*> {
+        pub enum #enum_ident <#(#generics: ::fuels::core::traits::Tokenizable + ::fuels::core::traits::Parameterize),*> {
             #(#enum_variants),*
         }
     }
@@ -100,7 +100,7 @@ fn enum_tokenizable_impl(
             let value = if field_type.is_unit() {
                 quote! {}
             } else {
-                quote! { ::fuels::core::Tokenizable::from_token(variant_token)? }
+                quote! { ::fuels::core::traits::Tokenizable::from_token(variant_token)? }
             };
 
             let u8_discriminant = discriminant as u8;
@@ -120,13 +120,13 @@ fn enum_tokenizable_impl(
             if field_type.is_unit() {
                 quote! { Self::#field_name() => (#u8_discriminant, ().into_token())}
             } else {
-                quote! { Self::#field_name(inner) => (#u8_discriminant, ::fuels::core::Tokenizable::into_token(inner))}
+                quote! { Self::#field_name(inner) => (#u8_discriminant, ::fuels::core::traits::Tokenizable::into_token(inner))}
             }
         },
     );
 
     quote! {
-            impl<#(#generics: ::fuels::core::Tokenizable + ::fuels::core::Parameterize),*> ::fuels::core::Tokenizable for self::#enum_ident <#(#generics),*> {
+            impl<#(#generics: ::fuels::core::traits::Tokenizable + ::fuels::core::traits::Parameterize),*> ::fuels::core::traits::Tokenizable for self::#enum_ident <#(#generics),*> {
                 fn from_token(token: ::fuels::core::Token) -> ::std::result::Result<Self, ::fuels::types::errors::Error>
                 where
                     Self: Sized,
@@ -157,7 +157,7 @@ fn enum_tokenizable_impl(
                         #(#match_discriminant_into_token),*
                     };
 
-                    let variants = match <Self as ::fuels::core::Parameterize>::param_type() {
+                    let variants = match <Self as ::fuels::core::traits::Parameterize>::param_type() {
                         ::fuels::types::param_types::ParamType::Enum{variants, ..} => variants,
                         other => panic!("Calling {}::param_type() must return a ParamType::Enum but instead it returned: {:?}", #enum_ident_stringified, other)
                     };
@@ -186,7 +186,7 @@ fn enum_parameterize_impl(
         });
     let enum_ident_stringified = enum_ident.to_string();
     quote! {
-        impl<#(#generics: ::fuels::core::Parameterize + ::fuels::core::Tokenizable),*> ::fuels::core::Parameterize for self::#enum_ident <#(#generics),*> {
+        impl<#(#generics: ::fuels::core::traits::Parameterize + ::fuels::core::traits::Tokenizable),*> ::fuels::core::traits::Parameterize for self::#enum_ident <#(#generics),*> {
             fn param_type() -> ::fuels::types::param_types::ParamType {
                 let variants = [#(#variants),*].to_vec();
 

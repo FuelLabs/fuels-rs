@@ -8,7 +8,8 @@ use fuels_core::{
     abi_encoder::{ABIEncoder, UnresolvedBytes},
     constants::FAILED_TRANSFER_TO_ADDRESS_SIGNAL,
     parameters::{CallParameters, StorageConfiguration, TxParameters},
-    Parameterize, Selector, Token, Tokenizable,
+    traits::{Parameterize, Tokenizable},
+    Selector, Token,
 };
 use fuels_signers::{
     provider::{Provider, TransactionCost},

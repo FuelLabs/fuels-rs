@@ -8,9 +8,10 @@ pub use fuel_crypto;
 
 use async_trait::async_trait;
 use fuel_crypto::Signature;
-use fuels_core::tx::{field, Cacheable, UniqueIdentifier};
+use fuel_tx::{field, Cacheable, UniqueIdentifier};
 use fuels_types::bech32::Bech32Address;
 use std::error::Error;
+
 pub use wallet::{Wallet, WalletUnlocked};
 
 /// Trait for signing transactions and messages
@@ -40,14 +41,11 @@ pub trait Signer: std::fmt::Debug + Send + Sync {
 #[cfg(feature = "test-helpers")]
 mod tests {
     use fuel_crypto::{Message, SecretKey};
-    use fuels_core::constants::BASE_ASSET_ID;
-    use fuels_core::{
-        parameters::TxParameters,
-        tx::{
-            field::Maturity, Address, AssetId, Bytes32, Chargeable, Input, Output, Transaction,
-            TxPointer, UtxoId,
-        },
+    use fuel_tx::{
+        field::Maturity, Address, AssetId, Bytes32, Chargeable, Input, Output, Transaction,
+        TxPointer, UtxoId,
     };
+    use fuels_core::{constants::BASE_ASSET_ID, parameters::TxParameters};
     use fuels_test_helpers::{setup_single_asset_coins, setup_test_client};
     use rand::{rngs::StdRng, RngCore, SeedableRng};
     use std::str::FromStr;

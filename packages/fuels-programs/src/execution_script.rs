@@ -5,11 +5,11 @@ use crate::{
     },
     contract::ContractCall,
 };
-
-use fuel_tx::{AssetId, Checkable, Receipt, ScriptExecutionResult, Transaction};
 use fuels_core::{offsets::call_script_data_offset, parameters::TxParameters};
 use fuels_signers::{provider::Provider, Signer, WalletUnlocked};
 use fuels_types::errors::Error;
+
+use fuel_tx::{AssetId, Checkable, Receipt, Script, ScriptExecutionResult, Transaction};
 
 use std::{fmt::Debug, vec};
 
@@ -17,11 +17,11 @@ use std::{fmt::Debug, vec};
 /// out contract method calls or script calls
 #[derive(Debug)]
 pub struct ExecutableFuelCall {
-    pub tx: fuels_core::tx::Script,
+    pub tx: Script,
 }
 
 impl ExecutableFuelCall {
-    pub fn new(tx: fuels_core::tx::Script) -> Self {
+    pub fn new(tx: Script) -> Self {
         Self { tx }
     }
 

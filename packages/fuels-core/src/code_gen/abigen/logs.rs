@@ -21,7 +21,7 @@ pub(crate) fn logs_hashmap_instantiation_code(
     let contract_id = contract_id
         .map(|id| quote! { ::std::option::Option::Some(#id) })
         .unwrap_or_else(|| quote! {::std::option::Option::None});
-    quote! {::fuels::core::get_logs_hashmap(&[#(#log_id_param_type_pairs),*], #contract_id)}
+    quote! {::fuels::core::utils::get_logs_hashmap(&[#(#log_id_param_type_pairs),*], #contract_id)}
 }
 
 /// Reads the parsed logged types from the ABI and creates ResolvedLogs

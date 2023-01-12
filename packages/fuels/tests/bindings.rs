@@ -1,5 +1,7 @@
-use fuels::core::abi_encoder::ABIEncoder;
-use fuels::prelude::*;
+use fuels::{
+    core::{abi_encoder::ABIEncoder, traits::Tokenizable},
+    prelude::*,
+};
 use sha2::{Digest, Sha256};
 use std::{slice, str::FromStr};
 

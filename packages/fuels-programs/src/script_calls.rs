@@ -5,12 +5,11 @@ use crate::{
     execution_script::ExecutableFuelCall,
     logs::{decode_revert_error, LogDecoder},
 };
-
 use fuels_core::{
     abi_encoder::UnresolvedBytes,
     offsets::base_offset,
     parameters::{CallParameters, TxParameters},
-    Parameterize, Tokenizable,
+    traits::{Parameterize, Tokenizable},
 };
 use fuels_signers::{provider::Provider, WalletUnlocked};
 use fuels_types::{bech32::Bech32ContractId, errors::Error};

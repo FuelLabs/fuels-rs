@@ -1,4 +1,7 @@
-use fuels_core::{try_from_bytes, DecodableLog, Parameterize, Tokenizable};
+use fuels_core::{
+    traits::{DecodableLog, Parameterize, Tokenizable},
+    try_from_bytes,
+};
 use fuels_types::{bech32::Bech32ContractId, errors::Error, param_types::ParamType};
 
 use fuel_tx::Receipt;
