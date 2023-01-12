@@ -116,12 +116,12 @@ mod tests {
 
 pub(crate) fn get_sdk_provided_types() -> Vec<TypePath> {
     [
-        "::fuels::core::types::ContractId",
-        "::fuels::core::types::AssetId",
-        "::fuels::core::types::Address",
-        "::fuels::core::types::Identity",
-        "::fuels::core::types::EvmAddress",
-        "::fuels::core::types::B512",
+        "::fuels::types::ContractId",
+        "::fuels::types::AssetId",
+        "::fuels::types::Address",
+        "::fuels::types::Identity",
+        "::fuels::types::EvmAddress",
+        "::fuels::types::B512",
         "::std::vec::Vec",
         "::std::result::Result",
         "::std::option::Option",

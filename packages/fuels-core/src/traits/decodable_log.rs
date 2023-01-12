@@ -1,5 +1,5 @@
-use crate::{abi_decoder::ABIDecoder, Token};
-use fuels_types::{errors::Error, param_types::ParamType};
+use crate::abi_decoder::ABIDecoder;
+use fuels_types::{core::Token, errors::Error, param_types::ParamType};
 
 use std::iter::zip;
 
@@ -93,12 +93,11 @@ fn paramtype_decode_log(param_type: &ParamType, token: &Token) -> Result<String,
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        traits::DecodableLog,
-        types::{Bits256, EvmAddress, SizedAsciiString},
-        Parameterize,
+    use crate::{traits::DecodableLog, Parameterize};
+    use fuels_types::{
+        core::{Bits256, EvmAddress, SizedAsciiString},
+        errors::Error,
     };
-    use fuels_types::errors::Error;
 
     #[test]
     fn test_param_type_decode_log() -> Result<(), Error> {

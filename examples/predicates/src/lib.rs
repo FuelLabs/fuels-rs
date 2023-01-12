@@ -1,7 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use fuels::prelude::Error;
-    use fuels::prelude::*;
+    use fuels::{prelude::*, types::B512};
 
     #[tokio::test]
     async fn predicate_example() -> Result<(), Error> {

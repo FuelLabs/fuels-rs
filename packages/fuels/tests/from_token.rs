@@ -1,4 +1,4 @@
-use fuels::{core::traits::Tokenizable, prelude::*};
+use fuels::{core::traits::Tokenizable, prelude::*, types::Token};
 
 use std::str::FromStr;
 

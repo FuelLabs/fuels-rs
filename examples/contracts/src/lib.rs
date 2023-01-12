@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use fuels::prelude::Error;
+    use fuels::{prelude::Error, types::Bits256};
 
     #[tokio::test]
     async fn instantiate_client() -> Result<(), Error> {

@@ -1,7 +1,5 @@
-use crate::ByteArray;
-use fuels_types::{bech32::Bech32ContractId, param_types::ParamType};
+use fuels_types::{bech32::Bech32ContractId, core::ByteArray, param_types::ParamType, ContractId};
 
-use fuel_types::ContractId;
 use proc_macro2::{Ident, Span};
 use sha2::{Digest, Sha256};
 use syn::Ident as SynIdent;

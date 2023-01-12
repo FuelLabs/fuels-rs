@@ -99,14 +99,14 @@ fn struct_tokenizable_impl(
 
     quote! {
         impl <#(#generic_parameters: ::fuels::core::traits::Tokenizable + ::fuels::core::traits::Parameterize, )*> ::fuels::core::traits::Tokenizable for self::#struct_ident <#(#generic_parameters, )*> {
-            fn into_token(self) -> ::fuels::core::Token {
+            fn into_token(self) -> ::fuels::types::Token {
                 let tokens = [#(#into_token_calls),*].to_vec();
-                ::fuels::core::Token::Struct(tokens)
+                ::fuels::types::Token::Struct(tokens)
             }
 
-            fn from_token(token: ::fuels::core::Token)  -> ::std::result::Result<Self, ::fuels::types::errors::Error> {
+            fn from_token(token: ::fuels::types::Token)  -> ::std::result::Result<Self, ::fuels::types::errors::Error> {
                 match token {
-                    ::fuels::core::Token::Struct(tokens) => {
+                    ::fuels::types::Token::Struct(tokens) => {
                         let mut tokens_iter = tokens.into_iter();
                         let mut next_token = move || { tokens_iter
                             .next()

@@ -286,9 +286,9 @@ mod test {
     use super::*;
     use fuels_core::abi_encoder::ABIEncoder;
     use fuels_core::parameters::CallParameters;
-    use fuels_core::Token;
     use fuels_types::bech32::Bech32ContractId;
     use fuels_types::coin::{Coin, CoinStatus};
+    use fuels_types::core::Token;
     use fuels_types::param_types::ParamType;
     use rand::Rng;
     use std::slice;

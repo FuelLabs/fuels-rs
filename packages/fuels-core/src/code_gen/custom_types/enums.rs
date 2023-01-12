@@ -127,7 +127,7 @@ fn enum_tokenizable_impl(
 
     quote! {
             impl<#(#generics: ::fuels::core::traits::Tokenizable + ::fuels::core::traits::Parameterize),*> ::fuels::core::traits::Tokenizable for self::#enum_ident <#(#generics),*> {
-                fn from_token(token: ::fuels::core::Token) -> ::std::result::Result<Self, ::fuels::types::errors::Error>
+                fn from_token(token: ::fuels::types::Token) -> ::std::result::Result<Self, ::fuels::types::errors::Error>
                 where
                     Self: Sized,
                 {
@@ -137,7 +137,7 @@ fn enum_tokenizable_impl(
                         ))
                     };
                     match token {
-                        ::fuels::core::Token::Enum(selector) => {
+                        ::fuels::types::Token::Enum(selector) => {
                             let (discriminant, variant_token, _) = *selector;
                             match discriminant {
                                 #(#match_discriminant_from_token,)*
@@ -152,7 +152,7 @@ fn enum_tokenizable_impl(
                     }
                 }
 
-                fn into_token(self) -> ::fuels::core::Token {
+                fn into_token(self) -> ::fuels::types::Token {
                     let (discriminant, token) = match self {
                         #(#match_discriminant_into_token),*
                     };
@@ -162,7 +162,7 @@ fn enum_tokenizable_impl(
                         other => panic!("Calling {}::param_type() must return a ParamType::Enum but instead it returned: {:?}", #enum_ident_stringified, other)
                     };
 
-                    ::fuels::core::Token::Enum(::std::boxed::Box::new((discriminant, token, variants)))
+                    ::fuels::types::Token::Enum(::std::boxed::Box::new((discriminant, token, variants)))
                 }
             }
     }

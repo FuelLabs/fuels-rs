@@ -9,7 +9,6 @@ use fuels_core::{
     constants::FAILED_TRANSFER_TO_ADDRESS_SIGNAL,
     parameters::{CallParameters, StorageConfiguration, TxParameters},
     traits::{Parameterize, Tokenizable},
-    Selector, Token,
 };
 use fuels_signers::{
     provider::{Provider, TransactionCost},
@@ -17,6 +16,7 @@ use fuels_signers::{
 };
 use fuels_types::{
     bech32::Bech32ContractId,
+    core::{Selector, Token},
     errors::Error,
     param_types::{ParamType, ReturnLocation},
 };

@@ -165,7 +165,7 @@ fn to_sized_ascii_string(
     }];
 
     Some(ResolvedType {
-        type_name: quote! { ::fuels::core::types::SizedAsciiString },
+        type_name: quote! { ::fuels::types::SizedAsciiString },
         generic_params,
     })
 }
@@ -220,7 +220,7 @@ fn to_byte(
 ) -> Option<ResolvedType> {
     if type_field == "byte" {
         Some(ResolvedType {
-            type_name: quote! {::fuels::core::types::Byte},
+            type_name: quote! {::fuels::types::Byte},
             generic_params: vec![],
         })
     } else {
@@ -235,7 +235,7 @@ fn to_bits256(
 ) -> Option<ResolvedType> {
     if type_field == "b256" {
         Some(ResolvedType {
-            type_name: quote! {::fuels::core::types::Bits256},
+            type_name: quote! {::fuels::types::Bits256},
             generic_params: vec![],
         })
     } else {
@@ -341,12 +341,12 @@ mod tests {
 
     #[test]
     fn test_resolve_byte() -> anyhow::Result<()> {
-        test_resolve_primitive_type("byte", ":: fuels :: core :: types :: Byte")
+        test_resolve_primitive_type("byte", ":: fuels :: types :: Byte")
     }
 
     #[test]
     fn test_resolve_b256() -> anyhow::Result<()> {
-        test_resolve_primitive_type("b256", ":: fuels :: core :: types :: Bits256")
+        test_resolve_primitive_type("b256", ":: fuels :: types :: Bits256")
     }
 
     #[test]
@@ -445,10 +445,7 @@ mod tests {
 
     #[test]
     fn test_resolve_string() -> anyhow::Result<()> {
-        test_resolve_primitive_type(
-            "str[3]",
-            ":: fuels :: core :: types :: SizedAsciiString < 3usize >",
-        )
+        test_resolve_primitive_type("str[3]", ":: fuels :: types :: SizedAsciiString < 3usize >")
     }
 
     #[test]

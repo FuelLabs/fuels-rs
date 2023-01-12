@@ -1,5 +1,9 @@
-use fuels::prelude::*;
-use fuels::tx::{Bytes32, StorageSlot};
+use fuels::{
+    prelude::*,
+    tx::{Bytes32, StorageSlot},
+    types::Bits256,
+};
+
 use std::str::FromStr;
 
 #[tokio::test]

@@ -37,6 +37,7 @@ pub mod signers {
 }
 
 pub mod types {
+    pub use fuels_types::core::*;
     pub use fuels_types::*;
 }
 
@@ -64,7 +65,7 @@ pub mod prelude {
     //! use fuels::prelude::*;
     //! ```
     pub use super::{
-        core::{constants::*, parameters::*, types::*, Token},
+        core::{constants::*, parameters::*},
         fuel_node::*,
         fuels_abigen::{abigen, setup_contract_test},
         programs::{
@@ -73,10 +74,11 @@ pub mod prelude {
         },
         signers::{provider::*, wallet::generate_mnemonic_phrase, Signer, Wallet, WalletUnlocked},
         test_helpers::*,
-        tx::{Address, AssetId, ContractId, Salt},
+        tx::Salt,
         types::{
             bech32::{Bech32Address, Bech32ContractId},
             errors::Error,
+            Address, AssetId, ContractId,
         },
     };
 }
