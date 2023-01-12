@@ -220,17 +220,15 @@ impl ABIEncoder {
 
 #[cfg(test)]
 mod tests {
-    use std::slice;
+    use super::*;
+    use crate::utils::first_four_bytes_of_sha256_hash;
+    use fuels_test_helpers::generate_unused_field_names;
+    use fuels_types::{enum_variants::EnumVariants, errors::Error, param_types::ParamType};
 
     use itertools::chain;
     use sha2::{Digest, Sha256};
 
-    use fuels_test_helpers::generate_unused_field_names;
-    use fuels_types::{enum_variants::EnumVariants, errors::Error, param_types::ParamType};
-
-    use crate::utils::first_four_bytes_of_sha256_hash;
-
-    use super::*;
+    use std::slice;
 
     const VEC_METADATA_SIZE: usize = 3 * WORD_SIZE;
     const DISCRIMINANT_SIZE: usize = WORD_SIZE;

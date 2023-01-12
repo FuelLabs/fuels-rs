@@ -1,5 +1,3 @@
-use chrono::Duration;
-use fuel_core::service::{Config as CoreConfig, FuelService};
 use fuels::{
     client::{PageDirection, PaginationRequest},
     prelude::*,
@@ -7,6 +5,10 @@ use fuels::{
     tx::Receipt,
     types::{block::Block, message::Message},
 };
+
+use chrono::Duration;
+use fuel_core::service::{Config as CoreConfig, FuelService};
+
 use std::{iter, str::FromStr};
 
 #[tokio::test]

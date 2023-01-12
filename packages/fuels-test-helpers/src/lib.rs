@@ -1,8 +1,5 @@
 //! Testing helpers/utilities for Fuel SDK.
-
 extern crate core;
-
-use std::{iter::repeat, iter::zip, net::SocketAddr};
 
 #[cfg(feature = "fuel-core-lib")]
 use fuel_chain_config::StateConfig;
@@ -22,21 +19,20 @@ pub use node::{get_socket_address, new_fuel_node, Config};
 #[cfg(not(feature = "fuel-core-lib"))]
 use portpicker::is_free;
 
+use fuels_core::constants::BASE_ASSET_ID;
+use fuels_signers::fuel_crypto::{fuel_types::AssetId, rand};
 use fuels_types::{
     coin::{Coin, CoinStatus},
     message::Message,
+    param_types::ParamType,
 };
 
 use fuel_chain_config::ChainConfig;
-use fuel_gql_client::{
-    client::FuelClient,
-    fuel_tx::{Bytes32, ConsensusParameters, UtxoId},
-};
-
-use fuels_core::constants::BASE_ASSET_ID;
-use fuels_signers::fuel_crypto::{fuel_types::AssetId, rand};
-use fuels_types::param_types::ParamType;
+use fuel_gql_client::client::FuelClient;
+use fuel_tx::{Bytes32, ConsensusParameters, UtxoId};
 use rand::Fill;
+
+use std::{iter::repeat, iter::zip, net::SocketAddr};
 
 #[cfg(not(feature = "fuel-core-lib"))]
 pub mod node;
@@ -240,9 +236,9 @@ mod tests {
     use super::*;
     use fuels_core::parameters::{StorageConfiguration, TxParameters};
     use fuels_programs::contract::Contract;
-    use fuels_signers::provider::Provider;
-    use fuels_signers::WalletUnlocked;
+    use fuels_signers::{provider::Provider, WalletUnlocked};
     use fuels_types::bech32::FUEL_BECH32_HRP;
+
     use std::net::Ipv4Addr;
 
     #[tokio::test]

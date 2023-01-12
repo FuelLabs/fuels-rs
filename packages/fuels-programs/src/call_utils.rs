@@ -284,13 +284,16 @@ fn extract_unique_contract_ids(calls: &[ContractCall]) -> HashSet<ContractId> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use fuels_core::abi_encoder::ABIEncoder;
-    use fuels_core::parameters::CallParameters;
-    use fuels_types::bech32::Bech32ContractId;
-    use fuels_types::coin::{Coin, CoinStatus};
-    use fuels_types::core::Token;
-    use fuels_types::param_types::ParamType;
+    use fuels_core::{abi_encoder::ABIEncoder, parameters::CallParameters};
+    use fuels_types::{
+        bech32::Bech32ContractId,
+        coin::{Coin, CoinStatus},
+        core::Token,
+        param_types::ParamType,
+    };
+
     use rand::Rng;
+
     use std::slice;
 
     impl ContractCall {

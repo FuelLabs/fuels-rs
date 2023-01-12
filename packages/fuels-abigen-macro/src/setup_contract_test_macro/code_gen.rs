@@ -1,6 +1,6 @@
-use std::{
-    collections::HashMap,
-    path::{Path, PathBuf},
+use fuels_core::{
+    code_gen::abigen::{Abigen, AbigenTarget, ProgramType},
+    utils::ident,
 };
 
 use proc_macro2::{Ident, TokenStream};
@@ -8,9 +8,9 @@ use quote::quote;
 use rand::{prelude::StdRng, Rng, SeedableRng};
 use syn::LitStr;
 
-use fuels_core::{
-    code_gen::abigen::{Abigen, AbigenTarget, ProgramType},
-    utils::ident,
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
 };
 
 use crate::setup_contract_test_macro::parsing::{

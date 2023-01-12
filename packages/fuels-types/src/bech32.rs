@@ -1,12 +1,12 @@
-use std::{
-    fmt::{Display, Formatter},
-    str::FromStr,
-};
+use crate::errors::Error;
 
 use bech32::{FromBase32, ToBase32, Variant::Bech32m};
 use fuel_tx::{Address, Bytes32, ContractId};
 
-use crate::errors::Error;
+use std::{
+    fmt::{Display, Formatter},
+    str::FromStr,
+};
 
 // Fuel Network human-readable part for bech32 encoding
 pub const FUEL_BECH32_HRP: &str = "fuel";

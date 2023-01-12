@@ -1,15 +1,13 @@
-use std::collections::HashSet;
+use crate::code_gen::{
+    abi_types::FullTypeDeclaration,
+    custom_types::{enums::expand_custom_enum, structs::expand_custom_struct},
+    generated_code::GeneratedCode,
+    utils::get_sdk_provided_types,
+};
+use fuels_types::{errors::Error, utils::custom_type_name};
 
 use itertools::Itertools;
-
-use fuels_types::errors::Error;
-use fuels_types::utils::custom_type_name;
-
-use crate::code_gen::abi_types::FullTypeDeclaration;
-use crate::code_gen::custom_types::enums::expand_custom_enum;
-use crate::code_gen::custom_types::structs::expand_custom_struct;
-use crate::code_gen::generated_code::GeneratedCode;
-use crate::code_gen::utils::get_sdk_provided_types;
+use std::collections::HashSet;
 
 mod enums;
 mod structs;
@@ -68,22 +66,21 @@ fn is_type_unused(name: &str) -> bool {
 // TODO(iqdecay): append extra `,` to last enum/struct field so it is aligned with rustfmt
 #[cfg(test)]
 mod tests {
-    use std::{
-        collections::{HashMap, HashSet},
-        str::FromStr,
-    };
-
-    use anyhow::anyhow;
-    use proc_macro2::TokenStream;
-    use quote::quote;
-
+    use super::*;
     use crate::code_gen::{
         abi_types::{FullTypeApplication, FullTypeDeclaration},
         type_path::TypePath,
     };
     use fuel_abi_types::program_abi::{ProgramABI, TypeApplication, TypeDeclaration};
 
-    use super::*;
+    use anyhow::anyhow;
+    use proc_macro2::TokenStream;
+    use quote::quote;
+
+    use std::{
+        collections::{HashMap, HashSet},
+        str::FromStr,
+    };
 
     #[test]
     fn test_expand_custom_enum() -> Result<(), Error> {

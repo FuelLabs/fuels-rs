@@ -25,10 +25,11 @@ use fuel_gql_client::{
         types::TransactionStatus,
         FuelClient, PageDirection, PaginatedResult, PaginationRequest,
     },
-    fuel_types::AssetId,
     interpreter::ExecutableTransaction,
 };
-use fuel_tx::{field, ConsensusParameters, Receipt, Transaction, TransactionFee, UniqueIdentifier};
+use fuel_tx::{
+    field, AssetId, ConsensusParameters, Receipt, Transaction, TransactionFee, UniqueIdentifier,
+};
 use tai64::Tai64;
 use thiserror::Error;
 

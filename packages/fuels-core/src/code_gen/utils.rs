@@ -1,15 +1,18 @@
-use std::collections::HashSet;
+use crate::{
+    code_gen::{
+        abi_types::{FullTypeApplication, FullTypeDeclaration},
+        resolved_type::{resolve_type, ResolvedType},
+        type_path::TypePath,
+    },
+    utils::safe_ident,
+};
+use fuels_types::errors::Error;
 
 use inflector::Inflector;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
-use fuels_types::errors::Error;
-
-use crate::code_gen::abi_types::{FullTypeApplication, FullTypeDeclaration};
-use crate::code_gen::resolved_type::{resolve_type, ResolvedType};
-use crate::code_gen::type_path::TypePath;
-use crate::utils::safe_ident;
+use std::collections::HashSet;
 
 // Represents a component of either a struct(field name) or an enum(variant
 // name).

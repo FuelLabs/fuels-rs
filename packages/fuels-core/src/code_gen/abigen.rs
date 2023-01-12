@@ -7,8 +7,8 @@ use crate::{
     },
     utils::ident,
 };
-
 use fuels_types::errors::Error;
+
 use inflector::Inflector;
 use itertools::Itertools;
 use proc_macro2::TokenStream;

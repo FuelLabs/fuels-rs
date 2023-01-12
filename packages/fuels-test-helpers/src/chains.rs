@@ -1,7 +1,9 @@
 use crate::utils::retry;
-use anyhow::bail;
+
 use fuels_signers::provider::Provider;
 use fuels_types::errors::Error;
+
+use anyhow::bail;
 use std::time::Duration;
 
 pub async fn confirm_blocks_created(

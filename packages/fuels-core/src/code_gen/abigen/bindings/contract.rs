@@ -1,17 +1,21 @@
-use itertools::Itertools;
-use std::collections::HashSet;
+use crate::{
+    code_gen::{
+        abi_types::{FullABIFunction, FullProgramABI, FullTypeDeclaration},
+        abigen::{
+            bindings::function_generator::FunctionGenerator, logs::logs_hashmap_instantiation_code,
+        },
+        generated_code::GeneratedCode,
+        type_path::TypePath,
+    },
+    utils::ident,
+};
+use fuels_types::errors::Error;
 
+use itertools::Itertools;
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, TokenStreamExt};
 
-use fuels_types::errors::Error;
-
-use crate::code_gen::abi_types::{FullABIFunction, FullProgramABI, FullTypeDeclaration};
-use crate::code_gen::abigen::bindings::function_generator::FunctionGenerator;
-use crate::code_gen::abigen::logs::logs_hashmap_instantiation_code;
-use crate::code_gen::generated_code::GeneratedCode;
-use crate::code_gen::type_path::TypePath;
-use crate::utils::ident;
+use std::collections::HashSet;
 
 pub(crate) fn contract_bindings(
     name: &Ident,

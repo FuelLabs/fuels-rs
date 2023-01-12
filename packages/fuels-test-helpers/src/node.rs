@@ -1,30 +1,28 @@
+use crate::utils::{get_coin_configs, get_message_configs};
+
+use fuels_types::{coin::Coin, message::Message};
+
 use anyhow::{bail, Error as AnyError};
-use fuel_core_interfaces::model::BlockHeight;
-use fuels_types::coin::Coin;
-use fuels_types::message::Message;
-use std::fmt;
-use std::io::Write;
-use std::net::{Ipv4Addr, SocketAddr};
-use std::time::Duration;
-use tokio::sync::oneshot;
-
-use portpicker::is_free;
-use portpicker::pick_unused_port;
-
 use fuel_chain_config::{BlockProduction, ChainConfig, StateConfig};
+use fuel_core_interfaces::model::BlockHeight;
 use fuel_gql_client::client::FuelClient;
-use fuel_gql_client::fuel_tx::ConsensusParameters;
-use fuel_gql_client::fuel_vm::consts::WORD_SIZE;
+use fuel_tx::ConsensusParameters;
 use fuel_types::Word;
-use serde::de::Error;
-use serde::{Deserializer, Serializer};
+use fuel_vm::consts::WORD_SIZE;
+use portpicker::{is_free, pick_unused_port};
+use serde::{de::Error, Deserializer, Serializer};
 use serde_json::Value;
 use serde_with::{DeserializeAs, SerializeAs};
-use std::process::Stdio;
 use tempfile::NamedTempFile;
-use tokio::process::Command;
+use tokio::{process::Command, sync::oneshot};
 
-use crate::utils::{get_coin_configs, get_message_configs};
+use std::{
+    fmt,
+    io::Write,
+    net::{Ipv4Addr, SocketAddr},
+    process::Stdio,
+    time::Duration,
+};
 
 #[derive(Clone, Copy, Debug)]
 pub struct Config {

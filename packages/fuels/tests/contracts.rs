@@ -1,4 +1,5 @@
 use fuels::prelude::*;
+
 use std::future::Future;
 
 #[tokio::test]

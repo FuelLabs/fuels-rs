@@ -1,15 +1,14 @@
-use std::collections::HashSet;
-
-use proc_macro2::TokenStream;
-use quote::quote;
-
-use fuel_abi_types::program_abi::ResolvedLog;
-
 use crate::code_gen::{
     abi_types::{FullLoggedType, FullTypeDeclaration},
     resolved_type::resolve_type,
     utils::single_param_type_call,
 };
+
+use fuel_abi_types::program_abi::ResolvedLog;
+use proc_macro2::TokenStream;
+use quote::quote;
+
+use std::collections::HashSet;
 
 pub(crate) fn logs_hashmap_instantiation_code(
     contract_id: Option<TokenStream>,

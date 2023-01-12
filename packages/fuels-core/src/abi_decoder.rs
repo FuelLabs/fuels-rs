@@ -309,12 +309,11 @@ fn skip(slice: &[u8], num_bytes: usize) -> Result<&[u8], CodecError> {
 
 #[cfg(test)]
 mod tests {
-    use std::vec;
-
+    use super::*;
     use fuels_test_helpers::generate_unused_field_names;
     use fuels_types::{enum_variants::EnumVariants, errors::Error};
 
-    use super::*;
+    use std::vec;
 
     #[test]
     fn decode_int() -> Result<(), Error> {

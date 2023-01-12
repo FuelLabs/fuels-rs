@@ -4,6 +4,7 @@ use fuels::{
     types::{Bits256, Byte, EvmAddress},
 };
 use sha2::{Digest, Sha256};
+
 use std::{slice, str::FromStr};
 
 pub fn null_contract_id() -> Bech32ContractId {

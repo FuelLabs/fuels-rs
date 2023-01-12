@@ -18,18 +18,16 @@ use async_trait::async_trait;
 use elliptic_curve::rand_core;
 use eth_keystore::KeystoreError;
 use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
-use fuel_gql_client::{
-    client::{PaginatedResult, PaginationRequest},
-    fuel_vm::{
-        consts::REG_ONE,
-        prelude::{GTFArgs, Opcode},
-    },
-};
+use fuel_gql_client::client::{PaginatedResult, PaginationRequest};
 use fuel_tx::{
     field, AssetId, Bytes32, Cacheable, Chargeable, ContractId, Input, Output, Receipt, Script,
     Transaction, TransactionFee, TxPointer, UniqueIdentifier, UtxoId, Witness,
 };
 use fuel_types::{bytes::WORD_SIZE, Address, MessageId};
+use fuel_vm::{
+    consts::REG_ONE,
+    prelude::{GTFArgs, Opcode},
+};
 use rand::{CryptoRng, Rng};
 use thiserror::Error;
 
@@ -918,8 +916,10 @@ mod tests {
     };
     use fuels_test_helpers::{launch_custom_provider_and_get_wallets, AssetConfig, WalletsConfig};
     use fuels_types::errors::Error;
-    use std::iter::repeat;
+
     use tempfile::tempdir;
+
+    use std::iter::repeat;
 
     #[tokio::test]
     async fn encrypted_json_keystore() -> Result<(), Error> {

@@ -1,6 +1,8 @@
-use fuel_chain_config::ChainConfig;
 use fuels_signers::fuel_crypto::SecretKey;
 use fuels_types::{coin::Coin, message::Message};
+
+use fuel_chain_config::ChainConfig;
+
 use std::{mem::size_of, net::SocketAddr};
 
 #[cfg(feature = "fuel-core-lib")]
@@ -117,6 +119,7 @@ mod tests {
     use fuels_core::constants::BASE_ASSET_ID;
     use fuels_signers::fuel_crypto::fuel_types::AssetId;
     use fuels_types::{errors::Error, resource::Resource};
+
     use rand::Fill;
 
     #[tokio::test]

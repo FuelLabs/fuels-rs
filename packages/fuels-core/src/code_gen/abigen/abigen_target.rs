@@ -1,9 +1,8 @@
-use std::convert::TryFrom;
-
-use fuels_types::errors::Error;
-
 use crate::code_gen::abi_types::FullProgramABI;
 use crate::source::Source;
+use fuels_types::errors::Error;
+
+use std::convert::TryFrom;
 
 #[derive(Debug, Clone)]
 pub struct AbigenTarget {

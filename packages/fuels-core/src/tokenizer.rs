@@ -4,6 +4,7 @@ use fuels_types::{
     param_types::ParamType,
     utils::has_array_format,
 };
+
 use hex::FromHex;
 
 #[derive(Default)]
@@ -408,9 +409,8 @@ fn get_array_length_from_string(ele: &str) -> usize {
 }
 #[cfg(test)]
 mod tests {
-    use crate::Tokenizable;
-
     use super::*;
+    use crate::Tokenizable;
 
     #[test]
     fn tokenize_struct_excess_value_elements_expected_error() -> Result<(), Error> {

@@ -1,8 +1,8 @@
-use std::{array::TryFromSliceError, fmt, str::Utf8Error};
-
 use fuel_tx::{CheckError, Receipt};
 use strum::ParseError;
 use thiserror::Error;
+
+use std::{array::TryFromSliceError, fmt, str::Utf8Error};
 
 #[derive(Debug)]
 pub enum CodecError {

@@ -27,9 +27,7 @@ where
 #[cfg(test)]
 mod tests {
     use crate::try_from_bytes;
-    use fuels_types::{constants::WORD_SIZE, errors::Error};
-
-    use fuel_types::{Address, AssetId, ContractId};
+    use fuels_types::{constants::WORD_SIZE, errors::Error, Address, AssetId, ContractId};
 
     #[test]
     fn can_convert_bytes_into_tuple() -> Result<(), Error> {
