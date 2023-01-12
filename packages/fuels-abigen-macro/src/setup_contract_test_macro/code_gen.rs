@@ -33,7 +33,7 @@ pub(crate) fn generate_setup_contract_test_code(
 
     let wallet_code = wallet_initialization_code(initialize_wallets);
 
-    let deploy_code = contract_deploying_code(deploy_contract.as_slice(), &project_lookup);
+    let deploy_code = contract_deploying_code(&deploy_contract, &project_lookup);
 
     Ok(quote! {
        #abigen_code
@@ -74,13 +74,13 @@ fn wallet_initialization_code(maybe_command: Option<InitializeWallet>) -> TokenS
     let command = if let Some(command) = maybe_command {
         command
     } else {
-        return TokenStream::default();
+        return Default::default();
     };
 
     let wallet_names = extract_wallet_names(&command);
 
     if wallet_names.is_empty() {
-        return quote! {};
+        return Default::default();
     }
 
     let num_wallets = wallet_names.len();
