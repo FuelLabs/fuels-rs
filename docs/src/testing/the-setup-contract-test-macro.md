@@ -58,8 +58,7 @@ The setup code that you have seen in previous sections gets reduced to:
 {{#include ../../../examples/contracts/src/lib.rs:deploy_contract_setup_macro_short}}
 ```
 
-> **Note** The same contract can be deployed several times as the macro deploys the contracts with salt. You can also
-> deploy different contracts to the same provider by referencing the same wallet in the `Deploy` command.
+> **Note** The same contract can be deployed several times as the macro deploys the contracts with salt. You can also deploy different contracts to the same provider by referencing the same wallet in the `Deploy` command.
 
 ```rust,ignore
 {{#include ../../../packages/fuels/tests/contracts.rs:contract_setup_macro_multi}}
