@@ -817,7 +817,7 @@ async fn compile_bindings_enum_input() {
 // mod of current mod and then you step down into the 'shared_types' mod.
 //
 // For some reason, 'super' inside a function gets you out of your mod, but
-// if that gets you to the create root, you can never get back in.
+// if that gets you to the crate root, you can never get back in.
 //
 // A workaround is to wrap everything in another mod so that 'super' lands
 // you inside of that one and not 'outside' of the function.
