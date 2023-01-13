@@ -57,10 +57,7 @@ One extra `mod` called `shared_types` is generated if `abigen!` detects that the
 
 A type is deemed shared if its name and definition match up. This can happen either because you've used the same library (a custom one or a type from the stdlib) or because you've happened to define the exact same type.
 
-Finally `pub use` statements are inserted, so you don't have to fully qualify the generated types. To avoid conflict
-only types which have unique names will get a `pub use` statement. If you find rustc can't find your type it might just
-be that there is another generated type with the same name. To fix the issue just qualify the path by doing
-`abigen_bindings::whatever_contract_mod::TheType`.
+Finally, `pub use` statements are inserted, so you don't have to fully qualify the generated types. To avoid conflict, only types that have unique names will get a `pub use` statement. If you find rustc can't find your type, it might just be that there is another generated type with the same name. To fix the issue just qualify the path by doing `abigen_bindings::whatever_contract_mod::TheType`.
 
 > **Note:**
 > It is **highly** encouraged that you generate all your bindings in one `abigen!` call. Doing it in this manner will
