@@ -48,13 +48,7 @@ Deploy
 
 Example: `Deploy(name="instance_name", contract="MyContract", wallet="a_wallet")`
 
-Description: Deploys the `contract` (with salt) using `wallet`. Will create
-a contract instance accessible via `name`.
-Due to salt usage, the same contract can be deployed multiple times.
-Requires that an `Abigen` command be present with `name` equal to
-`contract`.
-`wallet` can either be one of the wallets in the `Wallets` `COMMAND` or the
-name of a wallet you've previously generated yourself.
+Description: Deploys the `contract` (with salt) using `wallet`. Will create a contract instance accessible via `name`. Due to salt usage, the same contract can be deployed multiple times. Requires that an `Abigen` command be present with `name` equal to `contract`. `wallet` can either be one of the wallets in the `Wallets` `COMMAND` or the name of a wallet you've previously generated yourself.
 
 Cardinality: 0 or N.
 
