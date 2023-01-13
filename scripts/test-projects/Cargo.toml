@@ -7,7 +7,12 @@ edition = "2021"
 publish = false
 
 [dependencies]
+forc-pkg = "0.32.2"
+forc-util = "0.32.2"
+forc-fmt = "0.32.2"
+
 termcolor = "1.1"
 tokio = { version = "1.21.2", features = ["process", "macros", "rt", "rt-multi-thread"] }
 futures-util ="0.3.24"
 clap = { version ="4.0.15", features =["cargo", "color", "derive"] }
+anyhow = "1.0.68"

@@ -1,15 +1,16 @@
 use crate::cli::RunConfig;
+use forc_pkg::Built;
 use std::{
     io::Write,
     path::{Path, PathBuf},
 };
 use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
-
+#[derive(Debug)]
 pub struct BuildOutput {
     pub path: PathBuf,
     pub stderr: String,
 }
-
+#[derive(Debug)]
 pub enum BuildResult {
     Success(BuildOutput),
     Failure(BuildOutput),
@@ -19,6 +20,12 @@ pub struct ResultWriter {
     stdout: StandardStream,
     green: ColorSpec,
     red: ColorSpec,
+}
+
+pub enum ReturnValue {
+    Some(anyhow::Result<Built>),
+    Clean(anyhow::Result<()>),
+    Format(BuildResult),
 }
 
 impl BuildOutput {

@@ -2,16 +2,15 @@
 //!
 //! NOTE: This expects `forc`, `forc-fmt` and `cargo` to be available in `PATH`.
 
+use anyhow::Error;
 use test_projects::{
-    cli::parse_cli, display_failed, display_info, display_stats, run_command, types::ResultWriter,
+    cli::parse_cli, display_failed, display_stats, run_command, types::ResultWriter,
 };
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<(), Error> {
     let mut result_writer = ResultWriter::new();
     let run_config = parse_cli();
-
-    display_info(&mut result_writer, &run_config);
 
     let (succeded, failed) = run_command(&mut result_writer, &run_config).await;
 
@@ -21,4 +20,6 @@ async fn main() {
     if !failed.is_empty() {
         std::process::exit(1);
     }
+
+    Ok(())
 }
