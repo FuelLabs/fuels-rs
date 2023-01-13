@@ -1,5 +1,17 @@
 # The setup_contract_test! macro
 
+When deploying contracts with the `abigen!` macro, as shown in the previous sections, the user can:
+
+- change the default configuration parameters
+- launch several providers
+- create multiple wallets
+- create specific assets, etc.
+
+However, it is often the case that we want to test only the contract methods, and we want to simply deploy the contract
+with the default configuration parameters. The `setup_contract_test!` macro can do exactly that.
+
+---
+
 Used to reduce boilerplate in integration tests. Accepts input in the form
 of `COMMAND(ARG...)...`
 
@@ -47,15 +59,6 @@ name of a wallet you've previously generated yourself.
 
 Cardinality: 0 or N.
 
-When deploying contracts with the `abigen!` macro, as shown in the previous sections, the user can:
-
-- change the default configuration parameters
-- launch several providers
-- create multiple wallets
-- create specific assets, etc.
-
-However, it is often the case that we want to test only the contract methods, and we want to simply deploy the contract
-with the default configuration parameters. The `setup_contract_test!` macro can do exactly that.
 
 The setup code that you have seen in previous sections gets reduced to:
 
