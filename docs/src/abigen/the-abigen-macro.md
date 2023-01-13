@@ -55,8 +55,7 @@ Each `ProgramType` gets its own `mod` based on the `name` given in the `abigen!`
 
 One extra `mod` called `shared_types` is generated if `abigen!` detects that the given programs share types. Instead of each `mod` regenerating the type for itself, the type is lifted out into the `shared_types` module, generated only once, and then shared between all programs that use it.
 
-A type is deemed shared if its name and definition match up. This can happen either because you've used the same library
-(a custom one or a type from the stdlib) or because you've happened to define the exact same type.
+A type is deemed shared if its name and definition match up. This can happen either because you've used the same library (a custom one or a type from the stdlib) or because you've happened to define the exact same type.
 
 Finally `pub use` statements are inserted, so you don't have to fully qualify the generated types. To avoid conflict
 only types which have unique names will get a `pub use` statement. If you find rustc can't find your type it might just
