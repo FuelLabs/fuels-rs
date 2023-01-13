@@ -51,8 +51,7 @@ pub use my_predicate_mod::{/*..*/};
 pub use shared_types::{/*..*/};
 ```
 
-Each `ProgramType` gets its own `mod` based on the `name` given in the `abigen!`. Inside the respective mods the custom
-types used by that program are generated, as well as the bindings through which the actual calls can be made.
+Each `ProgramType` gets its own `mod` based on the `name` given in the `abigen!`. Inside the respective mods, the custom types used by that program are generated, and the bindings through which the actual calls can be made.
 
 There is one extra `mod` called `shared_types` which is generated if `abigen!` detects that the given programs share
 types. Instead of each `mod` regenerating the type for itself, the type is lifted out into the `shared_types` module and
