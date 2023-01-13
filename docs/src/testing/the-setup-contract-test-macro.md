@@ -7,8 +7,7 @@ When deploying contracts with the `abigen!` macro, as shown in the previous sect
 - create multiple wallets
 - create specific assets, etc.
 
-However, it is often the case that we want to test only the contract methods, and we want to simply deploy the contract
-with the default configuration parameters. The `setup_contract_test!` macro can do exactly that.
+However, it is often the case that we want to test only the contract methods and we want to deploy the contract with the default configuration parameters. The `setup_contract_test!` macro can do exactly that.
 
 ---
 
