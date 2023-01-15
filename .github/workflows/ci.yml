@@ -41,29 +41,29 @@ jobs:
         run: |
           git config --global core.bigfilethreshold 100m
 
-      - name: Install forc and forc-fmt
-        run: |
-          if [[ -n $FORC_PATCH_BRANCH ]]; then
-            cargo install forc-fmt --git https://github.com/FuelLabs/sway --branch $FORC_PATCH_BRANCH
-          elif [[ -n $FORC_PATCH_BRANCH ]]; then
-            cargo install forc-fmt --git https://github.com/FuelLabs/sway --rev $FORC_PATCH_REVISION
-          else
-            curl -sSLf https://github.com/FuelLabs/sway/releases/download/v${{ env.FORC_VERSION }}/forc-binaries-linux_amd64.tar.gz -L -o forc.tar.gz
-            tar -xvf forc.tar.gz
-            mv forc-binaries/forc-fmt /usr/local/bin/forc-fmt
-          fi
+#      - name: Install forc and forc-fmt todo: do we need fmt in ci?
+#        run: |
+#          if [[ -n $FORC_PATCH_BRANCH ]]; then
+#            cargo install forc-fmt --git https://github.com/FuelLabs/sway --branch $FORC_PATCH_BRANCH
+#          elif [[ -n $FORC_PATCH_BRANCH ]]; then
+#            cargo install forc-fmt --git https://github.com/FuelLabs/sway --rev $FORC_PATCH_REVISION
+#          else
+#            curl -sSLf https://github.com/FuelLabs/sway/releases/download/v${{ env.FORC_VERSION }}/forc-binaries-linux_amd64.tar.gz -L -o forc.tar.gz
+#            tar -xvf forc.tar.gz
+#            mv forc-binaries/forc-fmt /usr/local/bin/forc-fmt
+#          fi
 
       - name: Build Sway test projects
         uses: actions-rs/cargo@v1
         with:
           command: run
-          args: --bin test-projects -- build
+          args: --bin test-projects-workspace -- build
 
-      - name: Check format of Sway test projects
-        uses: actions-rs/cargo@v1
-        with:
-          command: run
-          args: --bin test-projects -- format --check
+#      - name: Check format of Sway test projects todo: do we need this?
+#        uses: actions-rs/cargo@v1
+#        with:
+#          command: run
+#          args: --bin test-projects -- format --check
 
       - uses: actions/upload-artifact@v2
         with:

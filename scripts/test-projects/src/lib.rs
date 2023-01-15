@@ -1,16 +1,11 @@
-use anyhow::{anyhow, bail};
-use forc_pkg::{BuildOpts, Built, PkgOpts};
-use forc_util::{default_output_directory, find_manifest_dir};
+use crate::{
+    cli::RunConfig,
+    types::{BuildOutput, BuildResult, ResultWriter},
+};
 use futures_util::{stream, Stream, StreamExt};
 use std::{
     fs,
     path::{Path, PathBuf},
-};
-
-use crate::types::ReturnValue;
-use crate::{
-    cli::RunConfig,
-    types::{BuildOutput, BuildResult, ResultWriter},
 };
 
 pub mod cli;
@@ -22,6 +17,7 @@ pub async fn run_command(
 ) -> (Vec<BuildResult>, Vec<BuildResult>) {
     let build_results: Vec<_> = run_recursively(
         &config.project_path,
+        config.num_concurrent,
         config.prepared_command.command.clone(),
         config.prepared_command.args.clone(),
     )
@@ -84,64 +80,36 @@ pub fn discover_projects(path: &Path) -> Vec<PathBuf> {
 
 pub fn run_recursively(
     path: &Path,
+    num_conc_futures: usize,
     command: String,
     args: Vec<String>,
 ) -> impl Stream<Item = BuildResult> {
     stream::iter(discover_projects(path))
         .map(move |path| {
-            let command: String = command.clone();
-            let args: Vec<String> = args.clone();
-            let path_string: String = path.display().to_string();
+            let command = command.clone();
+            let args = args.clone();
+
             async move {
-                let output = match (command.as_str(), args.get(0).unwrap().as_str()) {
-                    ("forc", "build") => ReturnValue::Some(build(Some(path_string))),
-                    ("forc", "clean") => ReturnValue::Clean(clean(Some(path_string))),
-                    ("forc-fmt", _) => ReturnValue::Format(fmt(path.clone(), command, args).await),
-                    _ => ReturnValue::Clean(Err(anyhow!("no command"))),
+                let output = tokio::process::Command::new(command)
+                    .args(args)
+                    .arg(&path)
+                    .output()
+                    .await
+                    .expect("failed to run command");
+
+                let compilation_result = BuildOutput {
+                    path,
+                    stderr: String::from_utf8(output.stderr).expect("stderr is not valid utf8"),
                 };
 
-                match output {
-                    ReturnValue::Some(output) => {
-                        if output.is_ok() {
-                            let compilation_result = BuildOutput {
-                                path,
-                                stderr: String::new(),
-                            };
-                            BuildResult::Success(compilation_result)
-                        } else {
-                            let compilation_result = BuildOutput {
-                                path,
-                                stderr: output.err().map(|err| err.to_string()).unwrap_or_default(),
-                            };
-                            BuildResult::Failure(compilation_result)
-                        }
-                    }
-                    ReturnValue::Clean(output) => {
-                        if output.is_ok() {
-                            let compilation_result = BuildOutput {
-                                path,
-                                stderr: String::new(),
-                            };
-                            BuildResult::Success(compilation_result)
-                        } else {
-                            let compilation_result = BuildOutput {
-                                path,
-                                stderr: output.err().map(|err| err.to_string()).unwrap_or_default(),
-                            };
-                            BuildResult::Failure(compilation_result)
-                        }
-                    }
-                    ReturnValue::Format(_) => {
-                        let compilation_result = BuildOutput {
-                            path,
-                            stderr: String::new(),
-                        };
-                        BuildResult::Success(compilation_result)
-                    }
+                if output.status.success() {
+                    BuildResult::Success(compilation_result)
+                } else {
+                    BuildResult::Failure(compilation_result)
                 }
             }
         })
-        .buffer_unordered(1)
+        .buffer_unordered(num_conc_futures)
 }
 
 // Check if the given directory contains `Forc.toml` at its root.
@@ -154,66 +122,4 @@ pub fn dir_contains_forc_manifest(path: &Path) -> bool {
         }
     }
     false
-}
-
-pub fn build(path: Option<String>) -> anyhow::Result<Built> {
-    let pkg_opts = forc_pkg::PkgOpts {
-        path,
-        ..PkgOpts::default()
-    };
-
-    let build_opts = BuildOpts {
-        pkg: pkg_opts,
-        ..BuildOpts::default()
-    };
-
-    forc_pkg::build_with_options(build_opts)
-}
-
-pub fn clean(path: Option<String>) -> anyhow::Result<()> {
-    // let path = Some("packages/fuels/tests/types/b512test".to_string());
-
-    // find manifest directory, even if in subdirectory
-    let this_dir = if let Some(ref path) = path {
-        PathBuf::from(path)
-    } else {
-        std::env::current_dir().map_err(|e| anyhow!("{:?}", e))?
-    };
-    let manifest_dir = match find_manifest_dir(&this_dir) {
-        Some(dir) => dir,
-        None => {
-            bail!(
-                "could not find `{}` in `{}` or any parent directory",
-                "Forc.toml",
-                this_dir.display(),
-            )
-        }
-    };
-
-    // Clear `<project>/out` directory.
-    // Ignore I/O errors telling us `out_dir` isn't there.
-    let out_dir = default_output_directory(&manifest_dir);
-    let _ = std::fs::remove_dir_all(out_dir);
-
-    Ok(())
-}
-
-pub async fn fmt(path: PathBuf, command: String, args: Vec<String>) -> BuildResult {
-    let output = tokio::process::Command::new(command)
-        .args(args)
-        .arg(&path)
-        .output()
-        .await
-        .expect("failed to run command");
-
-    let compilation_result = BuildOutput {
-        path,
-        stderr: String::from_utf8(output.stderr).expect("stderr is not valid utf8"),
-    };
-
-    if output.status.success() {
-        BuildResult::Success(compilation_result)
-    } else {
-        BuildResult::Failure(compilation_result)
-    }
 }

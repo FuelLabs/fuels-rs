@@ -25,4 +25,5 @@ members = [
     "scripts/test-projects",
     "scripts/check-docs",
     "tools/fuels-abi-cli",
+    "scripts/test-projects-workspace"
 ]
