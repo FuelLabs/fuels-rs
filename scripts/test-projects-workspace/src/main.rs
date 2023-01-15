@@ -1,6 +1,6 @@
 //! Build all tests in tests workspace
 
-use test_projects_workspace::{build};
+use test_projects_workspace::build;
 
 #[tokio::main]
 async fn main() {
