@@ -15,6 +15,17 @@ mod enums;
 mod structs;
 mod utils;
 
+/// Generates rust code for each type inside `types` if:
+/// * the type is not present inside `shared_types`, and
+/// * if it should be generated (see: [`should_skip_codegen`], and
+/// * if it is a struct or an enum.
+///
+///
+/// # Arguments
+///
+/// * `types`: Types you wish to generate rust code for.
+/// * `shared_types`: Types that are shared between multiple
+///                   contracts/scripts/predicates and thus generated elsewhere.
 pub(crate) fn generate_types<T: IntoIterator<Item = FullTypeDeclaration>>(
     types: T,
     shared_types: &HashSet<FullTypeDeclaration>,
