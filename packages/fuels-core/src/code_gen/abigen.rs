@@ -51,8 +51,8 @@ impl Abigen {
         let all_custom_types = Self::extract_custom_types(&parsed_targets);
         let shared_types = Self::filter_shared_types(all_custom_types);
 
-        let bindings = Self::generate_all_bindings(parsed_targets, no_std, &shared_types)?;
         let shared_types = Self::generate_shared_types(shared_types)?;
+        let bindings = Self::generate_all_bindings(parsed_targets, no_std, &shared_types)?;
 
         Ok(bindings
             .append(shared_types)
@@ -118,10 +118,17 @@ impl Abigen {
             .filter(|ttype| ttype.is_enum_type() || ttype.is_struct_type())
     }
 
+    /// A type is considered "shared" if it appears at least twice in
+    /// `all_custom_types`.
+    ///
+    /// # Arguments
+    ///
+    /// * `all_custom_types`: types from all ABIs whose bindings are being
+    /// generated.
     fn filter_shared_types<'a>(
-        types: impl IntoIterator<Item = &'a FullTypeDeclaration>,
+        all_custom_types: impl IntoIterator<Item = &'a FullTypeDeclaration>,
     ) -> HashSet<FullTypeDeclaration> {
-        types.into_iter().duplicates().cloned().collect()
+        all_custom_types.into_iter().duplicates().cloned().collect()
     }
 }
 
