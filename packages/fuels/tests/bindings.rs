@@ -809,30 +809,29 @@ async fn compile_bindings_enum_input() {
 
 #[tokio::test]
 async fn shared_types() -> Result<(), Error> {
-    abigen!(
-            Contract(name="ContractA", abi="packages/fuels/tests/bindings/sharing_types/contract_a/out/debug/contract_a-abi.json"),
-            Contract(name="ContractB", abi="packages/fuels/tests/bindings/sharing_types/contract_b/out/debug/contract_b-abi.json"),
-        );
-    let wallet = launch_provider_and_get_wallet().await;
-
-    let deploy_contract = |a_or_b: &str| {
-        let string = format!(
-            "tests/bindings/sharing_types/contract_{a_or_b}/out/debug/contract_{a_or_b}.bin"
-        );
-        let wallet = &wallet;
-        async move {
-            Contract::deploy(
-                &string,
-                wallet,
-                TxParameters::default(),
-                StorageConfiguration::default(),
-            )
-            .await
-        }
-    };
+    setup_contract_test!(
+        Wallets("wallet"),
+        Abigen(
+            name = "ContractA",
+            abi = "packages/fuels/tests/bindings/sharing_types/contract_a"
+        ),
+        Abigen(
+            name = "ContractB",
+            abi = "packages/fuels/tests/bindings/sharing_types/contract_b"
+        ),
+        Deploy(
+            name = "contract_a",
+            contract = "ContractA",
+            wallet = "wallet"
+        ),
+        Deploy(
+            name = "contract_b",
+            contract = "ContractB",
+            wallet = "wallet"
+        ),
+    );
 
     {
-        let contract_a = ContractA::new(deploy_contract("a").await?, wallet.clone());
         let methods = contract_a.methods();
 
         {
@@ -877,7 +876,6 @@ async fn shared_types() -> Result<(), Error> {
         }
     }
     {
-        let contract_b = ContractB::new(deploy_contract("b").await?, wallet);
         let methods = contract_b.methods();
 
         {
@@ -896,9 +894,9 @@ async fn shared_types() -> Result<(), Error> {
         }
         {
             let same_name_struct =
-                abigen_bindings::contract_b_mod::StructSameNameButDifferentInternals { a: 13u64 };
+                abigen_bindings::contract_b_mod::StructSameNameButDifferentInternals { a: [13u64] };
             let same_name_enum =
-                abigen_bindings::contract_b_mod::EnumSameNameButDifferentInternals::a(14u64);
+                abigen_bindings::contract_b_mod::EnumSameNameButDifferentInternals::a([14u64]);
             let response = methods
                 .uses_types_that_share_only_names(same_name_struct.clone(), same_name_enum.clone())
                 .call()
