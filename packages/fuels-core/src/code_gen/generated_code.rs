@@ -65,11 +65,7 @@ impl GeneratedCode {
             .into_iter()
             .filter_map(|(_, group)| {
                 let mut types = group.collect::<Vec<_>>();
-                if types.len() == 1 {
-                    Some(types.pop().unwrap())
-                } else {
-                    None
-                }
+                (types.len() == 1).then_some(types.pop().unwrap())
             })
             .collect()
     }
