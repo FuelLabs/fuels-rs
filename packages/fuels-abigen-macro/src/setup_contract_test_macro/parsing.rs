@@ -180,11 +180,11 @@ impl Parse for TestContractCommands {
 }
 
 impl TestContractCommands {
-    fn names_of_generated_contracts(commands: &[GenerateContract]) -> HashSet<&LitStr> {
+    fn contracts_to_generate(commands: &[GenerateContract]) -> HashSet<&LitStr> {
         commands.iter().map(|c| &c.name).collect()
     }
 
-    fn names_of_deployed_contracts(commands: &[DeployContract]) -> HashSet<&LitStr> {
+    fn contracts_to_deploy(commands: &[DeployContract]) -> HashSet<&LitStr> {
         commands.iter().map(|c| &c.contract).collect()
     }
 
@@ -193,8 +193,8 @@ impl TestContractCommands {
         generate_contracts: &[GenerateContract],
         deploy_contracts: &[DeployContract],
     ) -> syn::Result<()> {
-        Self::names_of_deployed_contracts(deploy_contracts)
-            .difference(&Self::names_of_generated_contracts(generate_contracts))
+        Self::contracts_to_deploy(deploy_contracts)
+            .difference(&Self::contracts_to_generate(generate_contracts))
             .flat_map(|unknown_contract| {
                 [
                     Error::new_spanned(unknown_contract, "Contract is unknown"),
