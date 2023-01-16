@@ -1,3 +1,10 @@
+use std::collections::HashSet;
+
+use fuels_types::errors::Error;
+use itertools::Itertools;
+use proc_macro2::{Ident, TokenStream};
+use quote::{quote, TokenStreamExt};
+
 use crate::{
     code_gen::{
         abi_types::{FullABIFunction, FullProgramABI, FullTypeDeclaration},
@@ -9,13 +16,6 @@ use crate::{
     },
     utils::ident,
 };
-use fuels_types::errors::Error;
-
-use itertools::Itertools;
-use proc_macro2::{Ident, TokenStream};
-use quote::{quote, TokenStreamExt};
-
-use std::collections::HashSet;
 
 pub(crate) fn contract_bindings(
     name: &Ident,

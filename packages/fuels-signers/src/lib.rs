@@ -3,17 +3,14 @@ extern crate core;
 pub mod provider;
 pub mod wallet;
 
-#[doc(no_inline)]
-pub use fuel_crypto;
-
-use fuels_types::bech32::Bech32Address;
-
-use async_trait::async_trait;
-use fuel_crypto::Signature;
-use fuel_tx::{field, Cacheable, UniqueIdentifier};
-
 use std::error::Error;
 
+use async_trait::async_trait;
+#[doc(no_inline)]
+pub use fuel_crypto;
+use fuel_crypto::Signature;
+use fuel_tx::{field, Cacheable, UniqueIdentifier};
+use fuels_types::bech32::Bech32Address;
 pub use wallet::{Wallet, WalletUnlocked};
 
 /// Trait for signing transactions and messages
@@ -42,9 +39,8 @@ pub trait Signer: std::fmt::Debug + Send + Sync {
 #[cfg(test)]
 #[cfg(feature = "test-helpers")]
 mod tests {
-    use super::*;
-    use crate::provider::Provider;
-    use crate::wallet::WalletUnlocked;
+    use std::str::FromStr;
+
     use fuel_crypto::{Message, SecretKey};
     use fuel_tx::{
         field::Maturity, Address, AssetId, Bytes32, Chargeable, Input, Output, Transaction,
@@ -52,9 +48,10 @@ mod tests {
     };
     use fuels_core::{constants::BASE_ASSET_ID, parameters::TxParameters};
     use fuels_test_helpers::{setup_single_asset_coins, setup_test_client};
-
     use rand::{rngs::StdRng, RngCore, SeedableRng};
-    use std::str::FromStr;
+
+    use super::*;
+    use crate::{provider::Provider, wallet::WalletUnlocked};
 
     #[tokio::test]
     async fn sign_and_verify() -> Result<(), Box<dyn Error>> {

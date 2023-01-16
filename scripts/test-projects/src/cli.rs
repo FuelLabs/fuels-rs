@@ -1,5 +1,6 @@
-use clap::{command, Parser, Subcommand};
 use std::path::PathBuf;
+
+use clap::{command, Parser, Subcommand};
 
 const TESTS_PATH: &str = "packages/fuels/tests/";
 const NUM_CONCURRENT: usize = 8;

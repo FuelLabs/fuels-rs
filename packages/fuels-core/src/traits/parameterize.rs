@@ -1,11 +1,11 @@
+use std::iter::zip;
+
 use fuels_types::{
     core::{Bits256, Byte, EvmAddress, Identity, SizedAsciiString, B512},
     enum_variants::EnumVariants,
     param_types::ParamType,
     Address, AssetId, ContractId,
 };
-
-use std::iter::zip;
 
 /// `abigen` requires `Parameterized` to construct nested types. It is also used by `try_from_bytes`
 /// to facilitate the instantiation of custom types from bytes.

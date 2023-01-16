@@ -1,10 +1,11 @@
-use crate::traits::Parameterize;
 use fuels_types::{
     core::{Bits256, Byte, EvmAddress, Identity, SizedAsciiString, StringToken, Token, B512},
     errors::Error,
     param_types::ParamType,
     Address, AssetId, ContractId,
 };
+
+use crate::traits::Parameterize;
 
 pub trait Tokenizable {
     /// Converts a `Token` into expected type.

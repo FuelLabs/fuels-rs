@@ -1,9 +1,9 @@
-use crate::{enum_variants::EnumVariants, errors::CodecError, param_types::ParamType};
+use std::fmt;
 
 use fuel_types::bytes::padded_len;
 use strum_macros::EnumString;
 
-use std::fmt;
+use crate::{enum_variants::EnumVariants, errors::CodecError, param_types::ParamType};
 
 mod bits;
 mod byte;

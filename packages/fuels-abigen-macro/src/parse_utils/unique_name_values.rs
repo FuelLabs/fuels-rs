@@ -1,6 +1,6 @@
-use crate::parse_utils;
-use crate::parse_utils::ErrorsExt;
+use std::collections::HashMap;
 
+use fuels_core::utils::ident;
 use itertools::{chain, Itertools};
 use proc_macro2::{Ident, Span};
 use quote::ToTokens;
@@ -9,9 +9,7 @@ use syn::{
     NestedMeta, NestedMeta::Meta,
 };
 
-use fuels_core::utils::ident;
-
-use std::collections::HashMap;
+use crate::{parse_utils, parse_utils::ErrorsExt};
 
 #[derive(Debug)]
 pub struct UniqueNameValues {
@@ -109,12 +107,12 @@ impl UniqueNameValues {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::parse_utils::command::Command;
-
     use proc_macro2::TokenStream;
     use quote::quote;
     use syn::LitBool;
+
+    use super::*;
+    use crate::parse_utils::command::Command;
 
     #[test]
     fn name_values_correctly_parsed() -> syn::Result<()> {

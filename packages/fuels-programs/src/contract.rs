@@ -1,8 +1,18 @@
-use crate::{
-    call_response::FuelCallResponse,
-    execution_script::ExecutableFuelCall,
-    logs::{decode_revert_error, LogDecoder},
+use std::{
+    collections::{HashMap, HashSet},
+    fmt::Debug,
+    fs,
+    marker::PhantomData,
+    panic,
+    path::Path,
+    str::FromStr,
 };
+
+use fuel_tx::{
+    Address, AssetId, Bytes32, Checkable, Contract as FuelContract, ContractId, Create, Output,
+    Receipt, Salt, StorageSlot, Transaction,
+};
+use fuel_vm::fuel_asm::PanicReason;
 use fuels_core::{
     abi_decoder::ABIDecoder,
     abi_encoder::{ABIEncoder, UnresolvedBytes},
@@ -21,20 +31,10 @@ use fuels_types::{
     param_types::{ParamType, ReturnLocation},
 };
 
-use fuel_tx::{
-    Address, AssetId, Bytes32, Checkable, Contract as FuelContract, ContractId, Create, Output,
-    Receipt, Salt, StorageSlot, Transaction,
-};
-use fuel_vm::fuel_asm::PanicReason;
-
-use std::{
-    collections::{HashMap, HashSet},
-    fmt::Debug,
-    fs,
-    marker::PhantomData,
-    panic,
-    path::Path,
-    str::FromStr,
+use crate::{
+    call_response::FuelCallResponse,
+    execution_script::ExecutableFuelCall,
+    logs::{decode_revert_error, LogDecoder},
 };
 
 /// How many times to attempt to resolve missing tx dependencies.
@@ -901,8 +901,9 @@ impl MultiContractCallHandler {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use fuels_test_helpers::launch_provider_and_get_wallet;
+
+    use super::*;
 
     #[tokio::test]
     #[should_panic(expected = "called `Result::unwrap()` on an `Err` value: InvalidData(\"json\")")]

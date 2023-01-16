@@ -1,3 +1,9 @@
+use std::collections::HashSet;
+
+use fuels_types::errors::Error;
+use proc_macro2::{Ident, TokenStream};
+use quote::quote;
+
 use crate::code_gen::{
     abi_types::{FullProgramABI, FullTypeDeclaration},
     abigen::{
@@ -7,12 +13,6 @@ use crate::code_gen::{
     generated_code::GeneratedCode,
     type_path::TypePath,
 };
-use fuels_types::errors::Error;
-
-use proc_macro2::{Ident, TokenStream};
-use quote::quote;
-
-use std::collections::HashSet;
 
 pub(crate) fn script_bindings(
     name: &Ident,

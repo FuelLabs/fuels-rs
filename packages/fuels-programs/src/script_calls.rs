@@ -1,10 +1,7 @@
-use crate::{
-    call_response::FuelCallResponse,
-    call_utils::{generate_contract_inputs, generate_contract_outputs},
-    contract::{get_decoded_output, SettableContract},
-    execution_script::ExecutableFuelCall,
-    logs::{decode_revert_error, LogDecoder},
-};
+use std::{collections::HashSet, fmt::Debug, marker::PhantomData};
+
+use fuel_tx::{ContractId, Input, Output, Receipt, Transaction};
+use fuel_types::bytes::padded_len_usize;
 use fuels_core::{
     abi_encoder::UnresolvedBytes,
     offsets::base_offset,
@@ -13,12 +10,15 @@ use fuels_core::{
 };
 use fuels_signers::{provider::Provider, WalletUnlocked};
 use fuels_types::{bech32::Bech32ContractId, errors::Error};
-
-use fuel_tx::{ContractId, Input, Output, Receipt, Transaction};
-use fuel_types::bytes::padded_len_usize;
-
 use itertools::chain;
-use std::{collections::HashSet, fmt::Debug, marker::PhantomData};
+
+use crate::{
+    call_response::FuelCallResponse,
+    call_utils::{generate_contract_inputs, generate_contract_outputs},
+    contract::{get_decoded_output, SettableContract},
+    execution_script::ExecutableFuelCall,
+    logs::{decode_revert_error, LogDecoder},
+};
 
 #[derive(Debug)]
 /// Contains all data relevant to a single script call

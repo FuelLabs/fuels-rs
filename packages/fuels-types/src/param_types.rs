@@ -1,3 +1,9 @@
+use std::{collections::HashMap, iter::zip};
+
+use fuel_abi_types::program_abi::{TypeApplication, TypeDeclaration};
+use itertools::Itertools;
+use strum_macros::EnumString;
+
 use crate::{
     constants::WORD_SIZE,
     enum_variants::EnumVariants,
@@ -7,12 +13,6 @@ use crate::{
         has_enum_format, has_struct_format, has_tuple_format,
     },
 };
-use fuel_abi_types::program_abi::{TypeApplication, TypeDeclaration};
-
-use itertools::Itertools;
-use strum_macros::EnumString;
-
-use std::{collections::HashMap, iter::zip};
 
 #[derive(Debug, Clone, EnumString, PartialEq, Eq)]
 #[strum(ascii_case_insensitive)]

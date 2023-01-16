@@ -129,8 +129,9 @@ pub fn the_fn() {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use webassembly_test::webassembly_test;
+
+    use super::*;
 
     #[webassembly_test]
     fn test() {

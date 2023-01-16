@@ -1,4 +1,4 @@
-use crate::parse_utils::{Command, ErrorsExt, UniqueLitStrs, UniqueNameValues};
+use std::collections::HashSet;
 
 use itertools::{chain, Itertools};
 use proc_macro2::Span;
@@ -7,7 +7,7 @@ use syn::{
     Error, LitStr, Result as ParseResult,
 };
 
-use std::collections::HashSet;
+use crate::parse_utils::{Command, ErrorsExt, UniqueLitStrs, UniqueNameValues};
 
 trait MacroName {
     fn macro_command_name() -> &'static str;

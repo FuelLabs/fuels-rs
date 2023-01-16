@@ -4,7 +4,6 @@ use fuels_types::{
     param_types::ParamType,
     utils::has_array_format,
 };
-
 use hex::FromHex;
 
 #[derive(Default)]

@@ -1,10 +1,9 @@
-use fuels_types::{bech32::Bech32ContractId, core::ByteArray, param_types::ParamType, ContractId};
+use std::collections::HashMap;
 
+use fuels_types::{bech32::Bech32ContractId, core::ByteArray, param_types::ParamType, ContractId};
 use proc_macro2::{Ident, Span};
 use sha2::{Digest, Sha256};
 use syn::Ident as SynIdent;
-
-use std::collections::HashMap;
 
 /// Hashes an encoded function selector using SHA256 and returns the first 4 bytes.
 /// The function selector has to have been already encoded following the ABI specs defined

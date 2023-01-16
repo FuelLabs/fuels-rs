@@ -1,10 +1,10 @@
-use crate::code_gen::type_path::TypePath;
+use std::collections::HashSet;
 
 use itertools::Itertools;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
-use std::collections::HashSet;
+use crate::code_gen::type_path::TypePath;
 
 #[derive(Default)]
 pub(crate) struct GeneratedCode {

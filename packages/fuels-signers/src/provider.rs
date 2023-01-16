@@ -1,21 +1,8 @@
-#[cfg(feature = "fuel-core")]
-use fuel_core::service::{Config, FuelService};
-
-use fuels_core::constants::{DEFAULT_GAS_ESTIMATION_TOLERANCE, MAX_GAS_PER_TX};
-use fuels_types::{
-    bech32::{Bech32Address, Bech32ContractId},
-    block::Block,
-    chain_info::ChainInfo,
-    coin::Coin,
-    errors::Error,
-    message::Message,
-    message_proof::MessageProof,
-    node_info::NodeInfo,
-    resource::Resource,
-    transaction_response::TransactionResponse,
-};
+use std::{collections::HashMap, io};
 
 use chrono::{DateTime, Duration, Utc};
+#[cfg(feature = "fuel-core")]
+use fuel_core::service::{Config, FuelService};
 use fuel_gql_client::{
     client::{
         schema::{
@@ -30,10 +17,21 @@ use fuel_gql_client::{
 use fuel_tx::{
     field, AssetId, ConsensusParameters, Receipt, Transaction, TransactionFee, UniqueIdentifier,
 };
+use fuels_core::constants::{DEFAULT_GAS_ESTIMATION_TOLERANCE, MAX_GAS_PER_TX};
+use fuels_types::{
+    bech32::{Bech32Address, Bech32ContractId},
+    block::Block,
+    chain_info::ChainInfo,
+    coin::Coin,
+    errors::Error,
+    message::Message,
+    message_proof::MessageProof,
+    node_info::NodeInfo,
+    resource::Resource,
+    transaction_response::TransactionResponse,
+};
 use tai64::Tai64;
 use thiserror::Error;
-
-use std::{collections::HashMap, io};
 
 #[derive(Debug)]
 pub struct TransactionCost {

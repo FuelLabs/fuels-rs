@@ -1,11 +1,11 @@
-use crate::bech32::Bech32Address;
-
 use fuel_chain_config::MessageConfig;
 #[cfg(feature = "fuel-core-lib")]
 use fuel_core::model::Message as ClientMessage;
 #[cfg(not(feature = "fuel-core-lib"))]
 use fuel_gql_client::client::schema::message::Message as ClientMessage;
 use fuel_tx::{Input, MessageId};
+
+use crate::bech32::Bech32Address;
 
 #[derive(Debug, Clone)]
 pub struct Message {

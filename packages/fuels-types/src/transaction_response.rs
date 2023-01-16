@@ -1,10 +1,10 @@
+use std::str::FromStr;
+
 use chrono::{DateTime, NaiveDateTime, Utc};
 use fuel_gql_client::client::types::{
     TransactionResponse as ClientTransactionResponse, TransactionStatus as ClientTransactionStatus,
 };
 use fuel_tx::{Bytes32, Transaction};
-
-use std::str::FromStr;
 
 #[derive(Debug, Clone)]
 pub struct TransactionResponse {

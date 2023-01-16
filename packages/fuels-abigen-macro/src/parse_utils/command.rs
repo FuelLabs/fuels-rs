@@ -52,9 +52,9 @@ impl Command {
 }
 #[cfg(test)]
 mod tests {
-    use crate::parse_utils::command::Command;
-
     use quote::quote;
+
+    use crate::parse_utils::command::Command;
 
     #[test]
     fn command_name_is_properly_extracted() -> syn::Result<()> {

@@ -1,3 +1,12 @@
+use std::collections::HashSet;
+
+pub use abigen_target::{AbigenTarget, ProgramType};
+use fuels_types::errors::Error;
+use inflector::Inflector;
+use itertools::Itertools;
+use proc_macro2::TokenStream;
+use quote::quote;
+
 use crate::{
     code_gen::{
         abi_types::FullTypeDeclaration,
@@ -7,16 +16,6 @@ use crate::{
     },
     utils::ident,
 };
-use fuels_types::errors::Error;
-
-use inflector::Inflector;
-use itertools::Itertools;
-use proc_macro2::TokenStream;
-use quote::quote;
-
-use std::collections::HashSet;
-
-pub use abigen_target::{AbigenTarget, ProgramType};
 
 mod abigen_target;
 mod bindings;

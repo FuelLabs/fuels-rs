@@ -1,15 +1,14 @@
+use std::{
+    collections::{HashMap, HashSet},
+    fmt::Debug,
+};
+
+use fuel_tx::Receipt;
 use fuels_core::{
     traits::{DecodableLog, Parameterize, Tokenizable},
     try_from_bytes,
 };
 use fuels_types::{bech32::Bech32ContractId, errors::Error, param_types::ParamType};
-
-use fuel_tx::Receipt;
-
-use std::{
-    collections::{HashMap, HashSet},
-    fmt::Debug,
-};
 
 /// Struct used to pass the log mappings from the Abigen
 #[derive(Debug, Clone, Default)]

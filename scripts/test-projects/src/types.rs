@@ -1,9 +1,11 @@
-use crate::cli::RunConfig;
 use std::{
     io::Write,
     path::{Path, PathBuf},
 };
+
 use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
+
+use crate::cli::RunConfig;
 
 pub struct BuildOutput {
     pub path: PathBuf,

@@ -1,12 +1,12 @@
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+
     use fuel_abi_types::program_abi::ProgramABI;
     use fuels::{
         core::{code_gen::function_selector::resolve_fn_selector, traits::Parameterize},
         types::{param_types::ParamType, SizedAsciiString},
     };
-
-    use std::collections::HashMap;
 
     #[test]
     fn get_a_fn_selector() {

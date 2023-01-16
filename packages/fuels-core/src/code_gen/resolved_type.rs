@@ -1,11 +1,8 @@
-use crate::{
-    code_gen::{
-        abi_types::{FullTypeApplication, FullTypeDeclaration},
-        type_path::TypePath,
-        utils::get_sdk_provided_types,
-    },
-    utils::{ident, safe_ident},
+use std::{
+    collections::HashSet,
+    fmt::{Display, Formatter},
 };
+
 use fuels_types::{
     errors::Error,
     utils::{
@@ -13,15 +10,18 @@ use fuels_types::{
         has_tuple_format,
     },
 };
-
 use lazy_static::lazy_static;
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 use regex::Regex;
 
-use std::{
-    collections::HashSet,
-    fmt::{Display, Formatter},
+use crate::{
+    code_gen::{
+        abi_types::{FullTypeApplication, FullTypeDeclaration},
+        type_path::TypePath,
+        utils::get_sdk_provided_types,
+    },
+    utils::{ident, safe_ident},
 };
 
 // Represents a type alongside its generic parameters. Can be converted into a
@@ -274,12 +274,12 @@ fn to_custom_type(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use fuel_abi_types::program_abi::{TypeApplication, TypeDeclaration};
+    use std::collections::HashMap;
 
     use anyhow::Context;
+    use fuel_abi_types::program_abi::{TypeApplication, TypeDeclaration};
 
-    use std::collections::HashMap;
+    use super::*;
 
     fn test_resolve_first_type(
         expected: &str,

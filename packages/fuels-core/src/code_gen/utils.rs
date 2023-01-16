@@ -1,3 +1,10 @@
+use std::collections::HashSet;
+
+use fuels_types::errors::Error;
+use inflector::Inflector;
+use proc_macro2::{Ident, TokenStream};
+use quote::quote;
+
 use crate::{
     code_gen::{
         abi_types::{FullTypeApplication, FullTypeDeclaration},
@@ -6,13 +13,6 @@ use crate::{
     },
     utils::safe_ident,
 };
-use fuels_types::errors::Error;
-
-use inflector::Inflector;
-use proc_macro2::{Ident, TokenStream};
-use quote::quote;
-
-use std::collections::HashSet;
 
 // Represents a component of either a struct(field name) or an enum(variant
 // name).

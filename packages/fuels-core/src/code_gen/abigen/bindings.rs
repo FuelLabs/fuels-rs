@@ -1,3 +1,7 @@
+use std::collections::HashSet;
+
+use fuels_types::errors::Error;
+
 use crate::{
     code_gen::{
         abi_types::FullTypeDeclaration,
@@ -11,9 +15,6 @@ use crate::{
     },
     utils::ident,
 };
-use fuels_types::errors::Error;
-
-use std::collections::HashSet;
 
 mod contract;
 mod function_generator;

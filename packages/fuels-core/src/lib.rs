@@ -1,8 +1,9 @@
+use fuels_types::errors::Error;
+
 use crate::{
     abi_decoder::ABIDecoder,
     traits::{Parameterize, Tokenizable},
 };
-use fuels_types::errors::Error;
 
 pub mod abi_decoder;
 pub mod abi_encoder;
@@ -26,8 +27,9 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::try_from_bytes;
     use fuels_types::{constants::WORD_SIZE, errors::Error, Address, AssetId, ContractId};
+
+    use crate::try_from_bytes;
 
     #[test]
     fn can_convert_bytes_into_tuple() -> Result<(), Error> {

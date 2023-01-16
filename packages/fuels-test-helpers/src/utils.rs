@@ -1,13 +1,12 @@
-use fuels_types::{coin::Coin, message::Message};
-
-use fuel_chain_config::{CoinConfig, MessageConfig};
-
 use std::{
     error::Error,
     fmt::{Debug, Display, Formatter},
     future::Future,
     time::Duration,
 };
+
+use fuel_chain_config::{CoinConfig, MessageConfig};
+use fuels_types::{coin::Coin, message::Message};
 
 #[derive(Debug)]
 pub struct RetryExhausted {
@@ -73,12 +72,12 @@ pub fn get_message_configs(messages: Vec<Message>) -> Vec<MessageConfig> {
 #[cfg(test)]
 mod tests {
     mod retry_until {
-        use crate::utils::retry;
+        use std::time::{Duration, Instant};
 
         use anyhow::anyhow;
         use tokio::sync::Mutex;
 
-        use std::time::{Duration, Instant};
+        use crate::utils::retry;
 
         #[tokio::test]
         async fn gives_up_after_timeout() -> anyhow::Result<()> {

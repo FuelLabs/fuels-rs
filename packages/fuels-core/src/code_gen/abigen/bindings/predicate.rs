@@ -1,15 +1,15 @@
+use std::collections::HashSet;
+
+use fuels_types::errors::Error;
+use proc_macro2::{Ident, TokenStream};
+use quote::quote;
+
 use crate::code_gen::{
     abi_types::{FullProgramABI, FullTypeDeclaration},
     abigen::bindings::{function_generator::FunctionGenerator, utils::extract_main_fn},
     generated_code::GeneratedCode,
     type_path::TypePath,
 };
-use fuels_types::errors::Error;
-
-use proc_macro2::{Ident, TokenStream};
-use quote::quote;
-
-use std::collections::HashSet;
 
 pub(crate) fn predicate_bindings(
     name: &Ident,

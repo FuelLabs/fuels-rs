@@ -1,3 +1,6 @@
+use std::{convert::TryInto, str};
+
+use fuel_types::bytes::padded_len_usize;
 use fuels_types::{
     constants::WORD_SIZE,
     core::{unzip_param_types, StringToken, Token},
@@ -5,10 +8,6 @@ use fuels_types::{
     errors::CodecError,
     param_types::ParamType,
 };
-
-use fuel_types::bytes::padded_len_usize;
-
-use std::{convert::TryInto, str};
 
 #[derive(Debug, Clone)]
 struct DecodeResult {
@@ -309,11 +308,12 @@ fn skip(slice: &[u8], num_bytes: usize) -> Result<&[u8], CodecError> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use std::vec;
+
     use fuels_test_helpers::generate_unused_field_names;
     use fuels_types::{enum_variants::EnumVariants, errors::Error};
 
-    use std::vec;
+    use super::*;
 
     #[test]
     fn decode_int() -> Result<(), Error> {

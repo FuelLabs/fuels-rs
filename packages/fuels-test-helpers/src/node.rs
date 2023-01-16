@@ -1,6 +1,10 @@
-use crate::utils::{get_coin_configs, get_message_configs};
-
-use fuels_types::{coin::Coin, message::Message};
+use std::{
+    fmt,
+    io::Write,
+    net::{Ipv4Addr, SocketAddr},
+    process::Stdio,
+    time::Duration,
+};
 
 use anyhow::{bail, Error as AnyError};
 use fuel_chain_config::{BlockProduction, ChainConfig, StateConfig};
@@ -9,6 +13,7 @@ use fuel_gql_client::client::FuelClient;
 use fuel_tx::ConsensusParameters;
 use fuel_types::Word;
 use fuel_vm::consts::WORD_SIZE;
+use fuels_types::{coin::Coin, message::Message};
 use portpicker::{is_free, pick_unused_port};
 use serde::{de::Error, Deserializer, Serializer};
 use serde_json::Value;
@@ -16,13 +21,7 @@ use serde_with::{DeserializeAs, SerializeAs};
 use tempfile::NamedTempFile;
 use tokio::{process::Command, sync::oneshot};
 
-use std::{
-    fmt,
-    io::Write,
-    net::{Ipv4Addr, SocketAddr},
-    process::Stdio,
-    time::Duration,
-};
+use crate::utils::{get_coin_configs, get_message_configs};
 
 #[derive(Clone, Copy, Debug)]
 pub struct Config {
@@ -75,8 +74,7 @@ pub mod serde_hex {
     use std::{convert::TryFrom, fmt};
 
     use hex::{FromHex, ToHex};
-    use serde::de::Error;
-    use serde::{Deserializer, Serializer};
+    use serde::{de::Error, Deserializer, Serializer};
 
     pub fn serialize<T, S>(target: T, ser: S) -> Result<S::Ok, S::Error>
     where

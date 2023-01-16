@@ -1,3 +1,10 @@
+use std::collections::HashSet;
+
+use fuels_types::errors::Error;
+use proc_macro2::TokenStream;
+use quote::quote;
+use resolved_type::resolve_type;
+
 use crate::{
     code_gen::{
         abi_types::{FullABIFunction, FullTypeApplication, FullTypeDeclaration},
@@ -7,13 +14,6 @@ use crate::{
     },
     utils::safe_ident,
 };
-use fuels_types::errors::Error;
-use resolved_type::resolve_type;
-
-use proc_macro2::TokenStream;
-use quote::quote;
-
-use std::collections::HashSet;
 
 #[derive(Debug)]
 pub(crate) struct FunctionGenerator {

@@ -1,10 +1,10 @@
+use std::str::FromStr;
+
 use fuels::{
     prelude::*,
     tx::{Bytes32, StorageSlot},
     types::Bits256,
 };
-
-use std::str::FromStr;
 
 #[tokio::test]
 async fn test_storage_initialization() -> Result<(), Error> {

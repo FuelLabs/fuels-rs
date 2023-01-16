@@ -1,9 +1,9 @@
+use std::str::FromStr;
+
 use fuels::{
     prelude::*,
     types::{Bits256, EvmAddress, Identity, B512},
 };
-
-use std::str::FromStr;
 
 pub fn null_contract_id() -> Bech32ContractId {
     // a bech32 contract address that decodes to [0u8;32]

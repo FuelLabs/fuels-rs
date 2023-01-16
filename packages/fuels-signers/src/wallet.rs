@@ -1,18 +1,4 @@
-use crate::{provider::Provider, Signer};
-use fuels_core::{
-    abi_encoder::UnresolvedBytes,
-    constants::BASE_ASSET_ID,
-    offsets::{base_offset, coin_predicate_data_offset, message_predicate_data_offset},
-    parameters::TxParameters,
-};
-use fuels_types::{
-    bech32::{Bech32Address, Bech32ContractId, FUEL_BECH32_HRP},
-    coin::Coin,
-    errors::Error,
-    message::Message as InputMessage,
-    resource::Resource,
-    transaction_response::TransactionResponse,
-};
+use std::{collections::HashMap, fmt, ops, path::Path};
 
 use async_trait::async_trait;
 use elliptic_curve::rand_core;
@@ -28,10 +14,24 @@ use fuel_vm::{
     consts::REG_ONE,
     prelude::{GTFArgs, Opcode},
 };
+use fuels_core::{
+    abi_encoder::UnresolvedBytes,
+    constants::BASE_ASSET_ID,
+    offsets::{base_offset, coin_predicate_data_offset, message_predicate_data_offset},
+    parameters::TxParameters,
+};
+use fuels_types::{
+    bech32::{Bech32Address, Bech32ContractId, FUEL_BECH32_HRP},
+    coin::Coin,
+    errors::Error,
+    message::Message as InputMessage,
+    resource::Resource,
+    transaction_response::TransactionResponse,
+};
 use rand::{CryptoRng, Rng};
 use thiserror::Error;
 
-use std::{collections::HashMap, fmt, ops, path::Path};
+use crate::{provider::Provider, Signer};
 
 pub const DEFAULT_DERIVATION_PATH_PREFIX: &str = "m/44'/1179993420'";
 
@@ -907,7 +907,8 @@ pub fn generate_mnemonic_phrase<R: Rng>(rng: &mut R, count: usize) -> Result<Str
 #[cfg(test)]
 #[cfg(feature = "test-helpers")]
 mod tests {
-    use super::*;
+    use std::iter::repeat;
+
     use fuel_core::service::{Config, FuelService};
     use fuel_gql_client::client::FuelClient;
     use fuel_tx::{
@@ -916,10 +917,9 @@ mod tests {
     };
     use fuels_test_helpers::{launch_custom_provider_and_get_wallets, AssetConfig, WalletsConfig};
     use fuels_types::errors::Error;
-
     use tempfile::tempdir;
 
-    use std::iter::repeat;
+    use super::*;
 
     #[tokio::test]
     async fn encrypted_json_keystore() -> Result<(), Error> {

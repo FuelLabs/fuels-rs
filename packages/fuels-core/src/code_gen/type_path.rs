@@ -1,9 +1,8 @@
-use fuels_types::errors::Error;
+use std::str::FromStr;
 
+use fuels_types::errors::Error;
 use proc_macro2::TokenStream;
 use quote::quote;
-
-use std::str::FromStr;
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub(crate) struct TypePath {
