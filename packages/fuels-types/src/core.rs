@@ -18,8 +18,8 @@ pub type EnumSelector = (u8, Token, EnumVariants);
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct StringToken {
-    pub data: String,
-    pub expected_len: usize,
+    data: String,
+    expected_len: usize,
 }
 
 impl StringToken {
@@ -27,7 +27,7 @@ impl StringToken {
         StringToken { data, expected_len }
     }
 
-    pub fn get_encodable_str(&self) -> Result<&str, CodecError> {
+    fn validate(&self) -> Result<(), CodecError> {
         if !self.data.is_ascii() {
             return Err(CodecError::InvalidData(
                 "String data can only have ascii values".into(),
@@ -41,7 +41,21 @@ impl StringToken {
                 self.expected_len
             )));
         }
+
+        Ok(())
+    }
+
+    pub fn get_encodable_str(&self) -> Result<&str, CodecError> {
+        self.validate()?;
         Ok(self.data.as_str())
+    }
+}
+
+impl TryFrom<StringToken> for String {
+    type Error = CodecError;
+    fn try_from(string_token: StringToken) -> Result<String, Self::Error> {
+        string_token.validate()?;
+        Ok(string_token.data)
     }
 }
 

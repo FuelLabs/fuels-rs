@@ -514,10 +514,11 @@ impl<const LEN: usize> Tokenizable for SizedAsciiString<LEN> {
     {
         match token {
             Token::String(contents) => {
-                if contents.expected_len != LEN {
-                    return Err(Error::InvalidData(format!("SizedAsciiString<{LEN}>::from_token got a Token::String whose expected length({}) is != {LEN}", contents.expected_len)))
+                let expected_len = contents.get_encodable_str()?.len() ;
+                if expected_len!= LEN {
+                    return Err(Error::InvalidData(format!("SizedAsciiString<{LEN}>::from_token got a Token::String whose expected length({}) is != {LEN}", expected_len)))
                 }
-                Self::new(contents.data)
+                Self::new(contents.try_into()?)
             },
             _ => {
                 Err(Error::InvalidData(format!("SizedAsciiString<{LEN}>::from_token expected a token of the variant Token::String, got: {token}")))
@@ -526,7 +527,7 @@ impl<const LEN: usize> Tokenizable for SizedAsciiString<LEN> {
     }
 
     fn into_token(self) -> Token {
-        Token::String(StringToken::new(self.data, LEN))
+        Token::String(StringToken::new(self.into(), LEN))
     }
 }
 
@@ -589,15 +590,15 @@ mod tests {
     }
 
     #[test]
-    fn sized_ascii_string_is_tokenized_correctly() -> anyhow::Result<()> {
+    fn sized_ascii_string_is_tokenized_correctly() -> Result<(), Error> {
         let sut = SizedAsciiString::<3>::new("abc".to_string())?;
 
         let token = sut.into_token();
 
         match token {
             Token::String(string_token) => {
-                assert_eq!(string_token.data, "abc");
-                assert_eq!(string_token.expected_len, 3);
+                let contents = string_token.get_encodable_str()?;
+                assert_eq!(contents, "abc");
             }
             _ => {
                 panic!("Not tokenized correctly! Should have gotten a Token::String")
@@ -609,15 +610,12 @@ mod tests {
 
     #[test]
     fn sized_ascii_string_is_detokenized_correctly() -> anyhow::Result<()> {
-        let token = Token::String(StringToken {
-            data: "abc".to_string(),
-            expected_len: 3,
-        });
+        let token = Token::String(StringToken::new("abc".to_string(), 3));
 
         let sized_ascii_string =
             SizedAsciiString::<3>::from_token(token).expect("Should have succeeded");
 
-        assert_eq!(sized_ascii_string.data, "abc");
+        assert_eq!(sized_ascii_string, "abc");
 
         Ok(())
     }

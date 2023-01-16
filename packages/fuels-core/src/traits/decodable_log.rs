@@ -42,7 +42,10 @@ fn paramtype_decode_log(param_type: &ParamType, token: &Token) -> Result<String,
         }
         (ParamType::Unit, Token::Unit) => "()".to_string(),
         (ParamType::String(..), Token::String(str_token)) => {
-            format!("SizedAsciiString {{ data: \"{}\" }}", str_token.data)
+            format!(
+                "SizedAsciiString {{ data: \"{}\" }}",
+                str_token.get_encodable_str()?
+            )
         }
         (ParamType::Array(inner_type, _), Token::Array(tokens)) => {
             let elements = inner_types_log(tokens, inner_type, ", ")?;

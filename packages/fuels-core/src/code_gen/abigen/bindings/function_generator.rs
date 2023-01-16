@@ -3,13 +3,11 @@ use std::collections::HashSet;
 use fuels_types::errors::Error;
 use proc_macro2::TokenStream;
 use quote::quote;
-use resolved_type::resolve_type;
 
 use crate::{
     code_gen::{
         abi_types::{FullABIFunction, FullTypeApplication, FullTypeDeclaration},
-        resolved_type,
-        resolved_type::ResolvedType,
+        resolved_type::{resolve_type, ResolvedType},
         utils::{param_type_calls, Component},
     },
     utils::safe_ident,

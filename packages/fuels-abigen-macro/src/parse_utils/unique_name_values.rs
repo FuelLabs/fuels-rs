@@ -9,7 +9,7 @@ use syn::{
     NestedMeta, NestedMeta::Meta,
 };
 
-use crate::{parse_utils, parse_utils::ErrorsExt};
+use crate::parse_utils::{validate_no_duplicates, ErrorsExt};
 
 #[derive(Debug)]
 pub struct UniqueNameValues {
@@ -23,7 +23,7 @@ impl UniqueNameValues {
         let name_values = Self::extract_name_values(nested_metas.into_iter())?;
 
         let names = name_values.iter().map(|(name, _)| name).collect::<Vec<_>>();
-        parse_utils::validate_no_duplicates(&names, |&&name| name.clone())?;
+        validate_no_duplicates(&names, |&&name| name.clone())?;
 
         Ok(Self {
             span,

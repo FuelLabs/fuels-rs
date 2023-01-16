@@ -7,7 +7,7 @@ use crate::errors::Error;
 // different type from str[3]. The FuelVM strings only support ascii characters.
 #[derive(Debug, PartialEq, Clone, Eq)]
 pub struct SizedAsciiString<const LEN: usize> {
-    pub data: String,
+    data: String,
 }
 
 impl<const LEN: usize> SizedAsciiString<LEN> {

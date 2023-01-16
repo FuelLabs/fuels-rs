@@ -4,10 +4,10 @@ use fuels_types::{errors::Error, utils::custom_type_name};
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
-use super::utils::{extract_components, extract_generic_parameters, impl_try_from};
 use crate::{
     code_gen::{
         abi_types::FullTypeDeclaration,
+        custom_types::utils::{extract_components, extract_generic_parameters, impl_try_from},
         generated_code::GeneratedCode,
         type_path::TypePath,
         utils::{param_type_calls, Component},

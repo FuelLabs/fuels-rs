@@ -1,12 +1,11 @@
 use std::vec::IntoIter;
 
 use itertools::{chain, Itertools};
-use parse_utils::{validate_no_duplicates, ErrorsExt};
 use proc_macro2::Span;
 use quote::ToTokens;
 use syn::{punctuated::Punctuated, spanned::Spanned, Error, Lit, LitStr, NestedMeta};
 
-use crate::parse_utils;
+use crate::parse_utils::{validate_no_duplicates, ErrorsExt};
 
 #[derive(Debug)]
 pub struct UniqueLitStrs {
