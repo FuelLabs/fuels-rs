@@ -99,6 +99,7 @@ pub(crate) fn contract_bindings(
         }
     };
 
+    // All publicly available types generated above should be listed here.
     let type_paths = [name, &methods_name]
         .map(|type_name| TypePath::new(type_name).expect("We know the given types are not empty"))
         .into_iter()

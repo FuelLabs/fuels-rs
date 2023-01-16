@@ -51,26 +51,16 @@ pub use my_predicate_mod::{/*..*/};
 pub use shared_types::{/*..*/};
 ```
 
-Each `ProgramType` gets its own `mod` based on the `name` given in the `abigen!`. Inside the respective mods the custom
-types used by that program are generated, as well as the bindings through which the actual calls can be made.
+Each `ProgramType` gets its own `mod` based on the `name` given in the `abigen!`. Inside the respective mods, the custom types used by that program are generated, and the bindings through which the actual calls can be made.
 
-There is one extra `mod` called `shared_types` which is generated if `abigen!` detects that the given programs share
-types. Instead of each `mod` regenerating the type for itself, the type is lifted out into the `shared_types` module and
-generated only once and then shared between all programs that use it.
+One extra `mod` called `shared_types` is generated if `abigen!` detects that the given programs share types. Instead of each `mod` regenerating the type for itself, the type is lifted out into the `shared_types` module, generated only once, and then shared between all programs that use it.
 
-A type is deemed shared if its name and definition match up. This can happen either because you've used the same library
-(a custom one or a type from the stdlib) or because you've happened to define the exact same type.
+A type is deemed shared if its name and definition match up. This can happen either because you've used the same library (a custom one or a type from the stdlib) or because you've happened to define the exact same type.
 
-Finally `pub use` statements are inserted, so you don't have to fully qualify the generated types. To avoid conflict
-only types which have unique names will get a `pub use` statement. If you find rustc can't find your type it might just
-be that there is another generated type with the same name. To fix the issue just qualify the path by doing
-`abigen_bindings::whatever_contract_mod::TheType`.
+Finally, `pub use` statements are inserted, so you don't have to fully qualify the generated types. To avoid conflict, only types that have unique names will get a `pub use` statement. If you find rustc can't find your type, it might just be that there is another generated type with the same name. To fix the issue just qualify the path by doing `abigen_bindings::whatever_contract_mod::TheType`.
 
 > **Note:**
-> It is **highly** encouraged that you generate all your bindings in one `abigen!` call. Doing it in this manner will
-allow type sharing and avoid  name collisions you'd normally get when calling `abigen!` multiple times inside the same
-namespace. If you choose to proceed otherwise, then keep in mind the generated code overview presented above and
-separate the `abigen!` calls into different modules appropriately to resolve the collision.
+> It is **highly** encouraged that you generate all your bindings in one `abigen!` call. Doing it in this manner will allow type sharing and avoid name collisions you'd normally get when calling `abigen!` multiple times inside the same namespace. If you choose to proceed otherwise, keep in mind the generated code overview presented above and appropriately separate the `abigen!` calls into different modules to resolve the collision.
 
 ## Using the bindings
 Let's look at a contract with two methods: `initialize_counter(arg: u64) -> u64` and `increment_counter(arg: u64) -> u64`, with the following JSON ABI:

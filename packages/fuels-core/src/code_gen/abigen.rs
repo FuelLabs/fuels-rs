@@ -124,14 +124,7 @@ impl Abigen {
     fn filter_shared_types<'a>(
         types: impl IntoIterator<Item = &'a FullTypeDeclaration>,
     ) -> HashSet<FullTypeDeclaration> {
-        types
-            .into_iter()
-            .sorted()
-            .group_by(|&el| el)
-            .into_iter()
-            .filter_map(|(common_type, group)| (group.count() > 1).then_some(common_type))
-            .cloned()
-            .collect()
+        types.into_iter().duplicates().cloned().collect()
     }
 }
 
