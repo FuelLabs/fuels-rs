@@ -51,7 +51,7 @@ pub(crate) fn param_type_calls(field_entries: &[Component]) -> Vec<TokenStream> 
 /// Returns a TokenStream representing the call to `Parameterize::param_type` for
 /// the given ResolvedType. Makes sure to properly handle calls when generics are
 /// involved.
-pub fn single_param_type_call(field_type: &ResolvedType) -> TokenStream {
+pub(crate) fn single_param_type_call(field_type: &ResolvedType) -> TokenStream {
     let type_name = &field_type.type_name;
     let parameters = field_type
         .generic_params

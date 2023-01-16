@@ -101,7 +101,7 @@ pub(crate) fn resolve_type(
         to_custom_type,
     ]
     .into_iter()
-    .filter_map(|fun| {
+    .find_map(|fun| {
         let is_shared = shared_types.contains(base_type);
         fun(
             type_field,
@@ -110,7 +110,6 @@ pub(crate) fn resolve_type(
             is_shared,
         )
     })
-    .next()
     .ok_or_else(|| Error::InvalidType(format!("Could not resolve {type_field} to any known type")))
 }
 

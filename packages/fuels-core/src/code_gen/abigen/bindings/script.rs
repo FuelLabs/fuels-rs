@@ -47,6 +47,7 @@ pub(crate) fn script_bindings(
         }
     };
 
+    // All publicly available types generated above should be listed here.
     let type_paths = [TypePath::new(name).expect("We know name is not empty.")].into();
 
     Ok(GeneratedCode {
