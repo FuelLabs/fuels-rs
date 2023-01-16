@@ -50,7 +50,7 @@ pub(crate) fn impl_try_from(ident: &Ident, generics: &[TokenStream]) -> TokenStr
     }
 }
 
-/// Transforms components from inside the given `TypeDeclaration` into a vector
+/// Transforms components from inside the given `FullTypeDeclaration` into a vector
 /// of `Components`. Will fail if there are no components.
 pub(crate) fn extract_components(
     type_decl: &FullTypeDeclaration,
