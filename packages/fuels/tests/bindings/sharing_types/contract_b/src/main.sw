@@ -6,11 +6,11 @@ struct UniqueStructToContractB<T> {
 }
 
 struct StructSameNameButDifferentInternals {
-    a: u64,
+    a: [u64; 1],
 }
 
 enum EnumSameNameButDifferentInternals {
-    a: u64,
+    a: [u64; 1],
 }
 
 abi MyContract {
