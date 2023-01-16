@@ -4,7 +4,7 @@ Predicates, in Sway, are programs that return a Boolean value, and they do not h
 
 ## Instantiating predicates
 
-Once you've written a predicate in Sway and compiled it with `forc build`, you can use the `predicate_abigen!` to generate all the types specified in the predicate. Additionally, you will get a `predicate` instance with methods for receiving and spending funds and encoding the predicate data. The code snippet below shows how to use the abigen and generate a predicate instance.
+Once you've written a predicate in Sway and compiled it with `forc build`, you can use the `abigen!` to generate all the types specified in the predicate. Additionally, you will get a `predicate` instance with methods for receiving and spending funds and encoding the predicate data. The code snippet below shows how to use the abigen and generate a predicate instance.
 
 ```rust,ignore
 {{#include ../../../examples/predicates/src/lib.rs:predicate_load}}
