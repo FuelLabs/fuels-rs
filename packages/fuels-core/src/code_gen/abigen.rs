@@ -29,7 +29,7 @@ impl Abigen {
     ///
     /// * `targets`: `AbigenTargets` detailing which ABI to generate bindings
     /// for, and of what nature (Contract, Script or Predicate).
-    /// * `no_std`: don't use the rust std library.
+    /// * `no_std`: don't use the Rust std library.
     pub fn generate(targets: Vec<AbigenTarget>, no_std: bool) -> Result<TokenStream, Error> {
         let parsed_targets = Self::parse_targets(targets)?;
 
