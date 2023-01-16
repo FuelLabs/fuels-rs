@@ -5,10 +5,10 @@ use strum_macros::EnumString;
 
 use std::fmt;
 
-pub mod bits;
-pub mod byte;
-pub mod native;
-pub mod sized_ascii_string;
+mod bits;
+mod byte;
+mod native;
+mod sized_ascii_string;
 
 pub use crate::core::{bits::*, byte::*, native::*, sized_ascii_string::*};
 
