@@ -9,7 +9,7 @@ publish = false
 [dependencies]
 forc-pkg = "0.32.2"
 forc-util = "0.32.2"
-#forc-fmt = "0.32.2" todo do we need this
+
 walkdir = "2.3.2"
 glob = "0.3.1"
 
