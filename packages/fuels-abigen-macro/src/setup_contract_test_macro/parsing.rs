@@ -150,6 +150,9 @@ fn parse_test_contract_commands(
     Ok((init_wallets, gen_contracts, deploy_contracts))
 }
 
+// Contains the result of parsing the input to the `setup_contract_test` macro.
+// Contents represent the users wishes with regards to wallet initialization,
+// bindings generation and contract deployment.
 pub(crate) struct TestContractCommands {
     pub(crate) initialize_wallets: Option<InitializeWallet>,
     pub(crate) generate_contract: Vec<GenerateContract>,
