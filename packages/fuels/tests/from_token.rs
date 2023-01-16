@@ -12,9 +12,9 @@ pub fn null_contract_id() -> Bech32ContractId {
 async fn create_struct_from_decoded_tokens() -> Result<(), Error> {
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `SimpleContract`.
-    abigen!(
-        SimpleContract,
-        r#"
+    abigen!(Contract(
+        name = "SimpleContract",
+        abi = r#"
         {
             "types": [
               {
@@ -72,7 +72,7 @@ async fn create_struct_from_decoded_tokens() -> Result<(), Error> {
             ]
           }
         "#,
-    );
+    ));
 
     // Decoded tokens
     let u8_token = Token::U8(10);
@@ -106,9 +106,9 @@ async fn create_struct_from_decoded_tokens() -> Result<(), Error> {
 async fn create_nested_struct_from_decoded_tokens() -> Result<(), Error> {
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `SimpleContract`.
-    abigen!(
-        SimpleContract,
-        r#"
+    abigen!(Contract(
+        name = "SimpleContract",
+        abi = r#"
         {
             "types": [
               {
@@ -178,7 +178,7 @@ async fn create_nested_struct_from_decoded_tokens() -> Result<(), Error> {
             ]
           }
         "#,
-    );
+    ));
 
     // Creating just the InnerStruct is possible
     let a = Token::Bool(true);

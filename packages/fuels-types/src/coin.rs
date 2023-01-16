@@ -1,10 +1,8 @@
+use fuel_chain_config::CoinConfig;
 #[cfg(feature = "fuel-core-lib")]
 use fuel_core::model::{Coin as ClientCoin, CoinStatus as ClientCoinStatus};
-
 #[cfg(not(feature = "fuel-core-lib"))]
 use fuel_gql_client::client::schema::coin::{Coin as ClientCoin, CoinStatus as ClientCoinStatus};
-
-use fuel_chain_config::CoinConfig;
 use fuel_tx::{AssetId, UtxoId};
 
 use crate::bech32::Bech32Address;

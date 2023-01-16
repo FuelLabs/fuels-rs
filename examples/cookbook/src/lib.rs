@@ -8,10 +8,10 @@ mod tests {
         use fuels::test_helpers::{AssetConfig, WalletsConfig};
 
         // ANCHOR: liquidity_abigen
-        abigen!(
-            MyContract,
-            "packages/fuels/tests/contracts/liquidity_pool/out/debug/liquidity_pool-abi.json"
-        );
+        abigen!(Contract(
+            name = "MyContract",
+            abi = "packages/fuels/tests/contracts/liquidity_pool/out/debug/liquidity_pool-abi.json"
+        ));
         // ANCHOR_END: liquidity_abigen
 
         // ANCHOR: liquidity_wallet
@@ -181,10 +181,10 @@ mod tests {
         // ANCHOR_END: modify_call_inputs_include
 
         // ANCHOR: modify_call_inputs_setup
-        abigen!(
-            MyContract,
-            "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
-        );
+        abigen!(Contract(
+            name = "MyContract",
+            abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
+        ));
 
         let some_asset_id = AssetId::new([3; 32usize]);
         let coin_amount = 1_000_000;
@@ -244,6 +244,7 @@ mod tests {
         let balance_2 = wallet_2.get_asset_balance(&some_asset_id).await?;
         assert_eq!(balance_2, coin_amount + SEND_AMOUNT);
         // ANCHOR_END: modify_call_inputs_verify
+
         Ok(())
     }
 }

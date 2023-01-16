@@ -13,17 +13,22 @@ pub fn null_contract_id() -> Bech32ContractId {
 async fn compile_bindings_from_contract_file() {
     // Generates the bindings from an ABI definition in a JSON file
     // The generated bindings can be accessed through `SimpleContract`.
-    abigen!(
-        SimpleContract,
-        "packages/fuels/tests/bindings/takes_ints_returns_bool-abi.json",
+    setup_contract_test!(
+        Wallets("wallet"),
+        Abigen(
+            name = "SimpleContract",
+            abi = "packages/fuels/tests/bindings/simple_contract"
+        ),
+        Deploy(
+            name = "simple_contract_instance",
+            contract = "SimpleContract",
+            wallet = "wallet"
+        ),
     );
 
-    let wallet = launch_provider_and_get_wallet().await;
-
-    // `SimpleContract` is the name of the contract
-    let contract_instance = SimpleContract::new(null_contract_id(), wallet);
-
-    let call_handler = contract_instance.methods().takes_ints_returns_bool(42);
+    let call_handler = simple_contract_instance
+        .methods()
+        .takes_ints_returns_bool(42);
 
     let encoded_args = call_handler.contract_call.encoded_args.resolve(0);
     let encoded = format!(
@@ -39,9 +44,9 @@ async fn compile_bindings_from_contract_file() {
 async fn compile_bindings_from_inline_contract() -> Result<(), Error> {
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `SimpleContract`.
-    abigen!(
-        SimpleContract,
-        r#"
+    abigen!(Contract(
+        name = "SimpleContract",
+        abi = r#"
         {
             "types": [
                 {
@@ -76,7 +81,7 @@ async fn compile_bindings_from_inline_contract() -> Result<(), Error> {
             ]
         }
         "#,
-    );
+    ));
 
     let wallet = launch_provider_and_get_wallet().await;
 
@@ -99,9 +104,9 @@ async fn compile_bindings_from_inline_contract() -> Result<(), Error> {
 async fn compile_bindings_array_input() {
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `SimpleContract`.
-    abigen!(
-        SimpleContract,
-        r#"
+    abigen!(Contract(
+        name = "SimpleContract",
+        abi = r#"
         {
             "types": [
               {
@@ -148,7 +153,7 @@ async fn compile_bindings_array_input() {
             ]
         }
         "#,
-    );
+    ));
 
     let wallet = launch_provider_and_get_wallet().await;
 
@@ -174,9 +179,9 @@ async fn compile_bindings_array_input() {
 async fn compile_bindings_bool_array_input() {
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `SimpleContract`.
-    abigen!(
-        SimpleContract,
-        r#"
+    abigen!(Contract(
+        name = "SimpleContract",
+        abi = r#"
         {
             "types": [
               {
@@ -223,7 +228,7 @@ async fn compile_bindings_bool_array_input() {
             ]
         }
         "#,
-    );
+    ));
 
     let wallet = launch_provider_and_get_wallet().await;
 
@@ -249,9 +254,9 @@ async fn compile_bindings_bool_array_input() {
 async fn compile_bindings_byte_input() {
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `SimpleContract`.
-    abigen!(
-        SimpleContract,
-        r#"
+    abigen!(Contract(
+        name = "SimpleContract",
+        abi = r#"
         {
             "types": [
               {
@@ -286,7 +291,7 @@ async fn compile_bindings_byte_input() {
             ]
           }
         "#,
-    );
+    ));
 
     let wallet = launch_provider_and_get_wallet().await;
 
@@ -308,9 +313,9 @@ async fn compile_bindings_byte_input() {
 async fn compile_bindings_string_input() {
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `SimpleContract`.
-    abigen!(
-        SimpleContract,
-        r#"
+    abigen!(Contract(
+        name = "SimpleContract",
+        abi = r#"
         {
             "types": [
               {
@@ -345,7 +350,7 @@ async fn compile_bindings_string_input() {
             ]
           }
         "#,
-    );
+    ));
 
     let wallet = launch_provider_and_get_wallet().await;
 
@@ -376,9 +381,9 @@ async fn compile_bindings_string_input() {
 async fn compile_bindings_b256_input() {
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `SimpleContract`.
-    abigen!(
-        SimpleContract,
-        r#"
+    abigen!(Contract(
+        name = "SimpleContract",
+        abi = r#"
         {
             "types": [
               {
@@ -413,7 +418,7 @@ async fn compile_bindings_b256_input() {
             ]
           }
         "#,
-    );
+    ));
 
     let wallet = launch_provider_and_get_wallet().await;
 
@@ -443,9 +448,9 @@ async fn compile_bindings_b256_input() {
 
 #[tokio::test]
 async fn compile_bindings_evm_address_input() {
-    abigen!(
-        SimpleContract,
-        r#"
+    abigen!(Contract(
+        name = "SimpleContract",
+        abi = r#"
         {
             "types": [
               {
@@ -480,7 +485,7 @@ async fn compile_bindings_evm_address_input() {
             ]
           }
         "#,
-    );
+    ));
 
     let wallet = launch_provider_and_get_wallet().await;
 
@@ -513,9 +518,9 @@ async fn compile_bindings_evm_address_input() {
 async fn compile_bindings_struct_input() {
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `SimpleContract`.
-    abigen!(
-        SimpleContract,
-        r#"
+    abigen!(Contract(
+        name = "SimpleContract",
+        abi = r#"
         {
             "types": [
               {
@@ -585,7 +590,7 @@ async fn compile_bindings_struct_input() {
             ]
           }
         "#,
-    );
+    ));
     // Because of the abigen! macro, `MyStruct` is now in scope
     // and can be used!
     let input = MyStruct {
@@ -616,9 +621,9 @@ async fn compile_bindings_struct_input() {
 async fn compile_bindings_nested_struct_input() {
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `SimpleContract`.
-    abigen!(
-        SimpleContract,
-        r#"
+    abigen!(Contract(
+        name = "SimpleContract",
+        abi = r#"
         {
             "types": [
               {
@@ -688,7 +693,7 @@ async fn compile_bindings_nested_struct_input() {
             ]
           }
         "#,
-    );
+    ));
 
     let inner_struct = InnerStruct { a: true };
 
@@ -721,9 +726,9 @@ async fn compile_bindings_nested_struct_input() {
 async fn compile_bindings_enum_input() {
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `SimpleContract`.
-    abigen!(
-        SimpleContract,
-        r#"
+    abigen!(Contract(
+        name = "SimpleContract",
+        abi = r#"
         {
             "types": [
               {
@@ -781,7 +786,7 @@ async fn compile_bindings_enum_input() {
             ]
           }
         "#,
-    );
+    ));
 
     let variant = MyEnum::X(42);
 
@@ -800,4 +805,120 @@ async fn compile_bindings_enum_input() {
 
     let expected = "0000000021b2784f0000000000000000000000000000002a";
     assert_eq!(encoded, expected);
+}
+
+#[tokio::test]
+async fn shared_types() -> Result<(), Error> {
+    setup_contract_test!(
+        Wallets("wallet"),
+        Abigen(
+            name = "ContractA",
+            abi = "packages/fuels/tests/bindings/sharing_types/contract_a"
+        ),
+        Abigen(
+            name = "ContractB",
+            abi = "packages/fuels/tests/bindings/sharing_types/contract_b"
+        ),
+        Deploy(
+            name = "contract_a",
+            contract = "ContractA",
+            wallet = "wallet"
+        ),
+        Deploy(
+            name = "contract_b",
+            contract = "ContractB",
+            wallet = "wallet"
+        ),
+    );
+
+    {
+        let methods = contract_a.methods();
+
+        {
+            let shared_struct_2 = SharedStruct2 {
+                a: 11u32,
+                b: SharedStruct1 { a: 12u32 },
+            };
+            let shared_enum = SharedEnum::a(10u64);
+            let response = methods
+                .uses_shared_type(shared_struct_2.clone(), shared_enum.clone())
+                .call()
+                .await?
+                .value;
+
+            assert_eq!(response, (shared_struct_2, shared_enum));
+        }
+        {
+            let same_name_struct =
+                abigen_bindings::contract_a_mod::StructSameNameButDifferentInternals { a: 13u32 };
+            let same_name_enum =
+                abigen_bindings::contract_a_mod::EnumSameNameButDifferentInternals::a(14u32);
+            let response = methods
+                .uses_types_that_share_only_names(same_name_struct.clone(), same_name_enum.clone())
+                .call()
+                .await?
+                .value;
+            assert_eq!(response, (same_name_struct, same_name_enum));
+        }
+        {
+            let arg = UniqueStructToContractA {
+                a: SharedStruct2 {
+                    a: 15u32,
+                    b: SharedStruct1 { a: 5u8 },
+                },
+            };
+            let response = methods
+                .uses_shared_type_inside_owned_one(arg.clone())
+                .call()
+                .await?
+                .value;
+            assert_eq!(response, arg);
+        }
+    }
+    {
+        let methods = contract_b.methods();
+
+        {
+            let shared_struct_2 = SharedStruct2 {
+                a: 11u32,
+                b: SharedStruct1 { a: 12u32 },
+            };
+            let shared_enum = SharedEnum::a(10u64);
+            let response = methods
+                .uses_shared_type(shared_struct_2.clone(), shared_enum.clone())
+                .call()
+                .await?
+                .value;
+
+            assert_eq!(response, (shared_struct_2, shared_enum));
+        }
+        {
+            let same_name_struct =
+                abigen_bindings::contract_b_mod::StructSameNameButDifferentInternals { a: [13u64] };
+            let same_name_enum =
+                abigen_bindings::contract_b_mod::EnumSameNameButDifferentInternals::a([14u64]);
+            let response = methods
+                .uses_types_that_share_only_names(same_name_struct.clone(), same_name_enum.clone())
+                .call()
+                .await?
+                .value;
+            assert_eq!(response, (same_name_struct, same_name_enum));
+        }
+        {
+            let arg = UniqueStructToContractB {
+                a: SharedStruct2 {
+                    a: 15u32,
+                    b: SharedStruct1 { a: 5u8 },
+                },
+            };
+            let response = methods
+                .uses_shared_type_inside_owned_one(arg.clone())
+                .call()
+                .await?
+                .value;
+            assert_eq!(response, arg);
+        }
+    }
+
+    Ok(())
 }

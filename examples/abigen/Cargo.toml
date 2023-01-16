@@ -1,0 +1,15 @@
+[package]
+name = "fuels-example-abigen"
+publish = false
+version = "0.0.0"
+authors = ["Fuel Labs <contact@fuel.sh>"]
+edition = "2021"
+homepage = "https://fuel.network/"
+license = "Apache-2.0"
+repository = "https://github.com/FuelLabs/fuels-rs"
+description = "Fuel Rust SDK abigen examples."
+
+[dev-dependencies]
+fuels = { version = "0.33.0", path = "../../packages/fuels" }
+tokio = { version = "1.10", features = ["full"] }
+anyhow = "1.0.68"

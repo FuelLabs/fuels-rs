@@ -1,6 +1,7 @@
-use crate::errors::Error;
 use lazy_static::lazy_static;
 use regex::Regex;
+
+use crate::errors::Error;
 
 pub fn has_array_format(element: &str) -> bool {
     element.starts_with('[') && element.ends_with(']')
