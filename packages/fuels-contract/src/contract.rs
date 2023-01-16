@@ -99,7 +99,7 @@ impl Contract {
     /// }
     /// ```
     ///
-    /// For more details see `code_gen/functions_gen.rs` in `fuels-core`.
+    /// For more details see `code_gen` in `fuels-core`.
     ///
     /// Note that this needs a wallet because the contract instance needs a wallet for the calls
     pub fn method_hash<D: Tokenizable + Parameterize + Debug>(
@@ -499,8 +499,8 @@ where
 {
     /// Sets external contracts as dependencies to this contract's call.
     /// Effectively, this will be used to create [`Input::Contract`]/[`Output::Contract`]
-    /// pairs and set them into the transaction.
-    /// Note that this is a builder method, i.e. use it as a chain:
+    /// pairs and set them into the transaction. Note that this is a builder
+    /// method, i.e. use it as a chain:
     ///
     /// ```ignore
     /// my_contract_instance.my_method(...).set_contract_ids(&[another_contract_id]).call()
@@ -529,11 +529,11 @@ where
         self
     }
 
-    /// Appends additional external contracts as dependencies to this contract's call.
-    /// Effectively, this will be used to create additional
-    /// [`Input::Contract`]/[`Output::Contract`] pairs
-    /// and set them into the transaction.
-    /// Note that this is a builder method, i.e. use it as a chain:
+    /// Appends additional external contracts as dependencies to this contract's
+    /// call. Effectively, this will be used to create additional
+    /// [`Input::Contract`]/[`Output::Contract`]
+    /// pairs and set them into the transaction. Note that this is a builder
+    /// method, i.e. use it as a chain:
     ///
     /// ```ignore
     /// my_contract_instance.my_method(...).append_contracts(additional_contract_id).call()
@@ -780,9 +780,9 @@ impl MultiContractCallHandler {
 
     /// Call contract methods on the node, in a simulated manner, meaning the state of the
     /// blockchain is *not* modified but simulated.
-    /// It is the same as the [`call`] method because the API is more user-friendly this way.
+    /// It is the same as the [call] method because the API is more user-friendly this way.
     ///
-    /// [`call`]: Self::call
+    /// [call]: Self::call
     pub async fn simulate<D: Tokenizable + Debug>(&self) -> Result<FuelCallResponse<D>, Error> {
         Self::call_or_simulate(self, true)
             .await

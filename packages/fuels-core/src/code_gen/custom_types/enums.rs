@@ -1,37 +1,42 @@
-use super::utils::{
-    extract_components, extract_generic_parameters, impl_try_from, param_type_calls, Component,
-};
-use crate::utils::ident;
-use fuel_abi_types::program_abi::TypeDeclaration;
-use fuels_types::{errors::Error, utils::custom_type_name};
+use std::collections::HashSet;
+
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
-use std::collections::HashMap;
+
+use fuels_types::{errors::Error, utils::custom_type_name};
+
+use crate::code_gen::abi_types::FullTypeDeclaration;
+use crate::code_gen::generated_code::GeneratedCode;
+use crate::code_gen::type_path::TypePath;
+use crate::code_gen::utils::{param_type_calls, Component};
+use crate::utils::ident;
+
+use super::utils::{extract_components, extract_generic_parameters, impl_try_from};
 
 /// Returns a TokenStream containing the declaration, `Parameterize`,
 /// `Tokenizable` and `TryFrom` implementations for the enum described by the
 /// given TypeDeclaration.
-pub fn expand_custom_enum(
-    type_decl: &TypeDeclaration,
-    types: &HashMap<usize, TypeDeclaration>,
-) -> Result<TokenStream, Error> {
-    let enum_ident = ident(&custom_type_name(&type_decl.type_field)?);
+pub(crate) fn expand_custom_enum(
+    type_decl: &FullTypeDeclaration,
+    shared_types: &HashSet<FullTypeDeclaration>,
+) -> Result<GeneratedCode, Error> {
+    let enum_name = custom_type_name(&type_decl.type_field)?;
+    let enum_ident = ident(&enum_name);
 
-    let components = extract_components(type_decl, types, false)?;
+    let components = extract_components(type_decl, false, shared_types)?;
     if components.is_empty() {
         return Err(Error::InvalidData(
             "Enum must have at least one component!".into(),
         ));
     }
-
-    let generics = extract_generic_parameters(type_decl, types)?;
+    let generics = extract_generic_parameters(type_decl)?;
 
     let enum_def = enum_decl(&enum_ident, &components, &generics);
     let parameterize_impl = enum_parameterize_impl(&enum_ident, &components, &generics);
     let tokenize_impl = enum_tokenizable_impl(&enum_ident, &components, &generics);
     let try_from = impl_try_from(&enum_ident, &generics);
 
-    Ok(quote! {
+    let code = quote! {
         #enum_def
 
         #parameterize_impl
@@ -39,6 +44,10 @@ pub fn expand_custom_enum(
         #tokenize_impl
 
         #try_from
+    };
+    Ok(GeneratedCode {
+        code,
+        usable_types: HashSet::from([TypePath::new(&enum_name).expect("Enum name is not empty!")]),
     })
 }
 
@@ -65,8 +74,9 @@ fn enum_decl(
     );
 
     quote! {
+        #[allow(clippy::enum_variant_names)]
         #[derive(Clone, Debug, Eq, PartialEq)]
-        pub enum #enum_ident <#(#generics: Tokenizable + Parameterize),*> {
+        pub enum #enum_ident <#(#generics: ::fuels::core::Tokenizable + ::fuels::core::Parameterize),*> {
             #(#enum_variants),*
         }
     }
@@ -90,12 +100,11 @@ fn enum_tokenizable_impl(
             let value = if field_type.is_unit() {
                 quote! {}
             } else {
-                let field_type: TokenStream = field_type.into();
-                quote! { <#field_type>::from_token(variant_token)? }
+                quote! { ::fuels::core::Tokenizable::from_token(variant_token)? }
             };
 
             let u8_discriminant = discriminant as u8;
-            quote! { #u8_discriminant => Ok(Self::#field_name(#value))}
+            quote! { #u8_discriminant => ::std::result::Result::Ok(Self::#field_name(#value))}
         },
     );
 
@@ -111,49 +120,49 @@ fn enum_tokenizable_impl(
             if field_type.is_unit() {
                 quote! { Self::#field_name() => (#u8_discriminant, ().into_token())}
             } else {
-                quote! { Self::#field_name(inner) => (#u8_discriminant, inner.into_token())}
+                quote! { Self::#field_name(inner) => (#u8_discriminant, ::fuels::core::Tokenizable::into_token(inner))}
             }
         },
     );
 
     quote! {
-            impl<#(#generics: Tokenizable + Parameterize),*> Tokenizable for #enum_ident <#(#generics),*> {
-                fn from_token(token: Token) -> Result<Self, SDKError>
+            impl<#(#generics: ::fuels::core::Tokenizable + ::fuels::core::Parameterize),*> ::fuels::core::Tokenizable for self::#enum_ident <#(#generics),*> {
+                fn from_token(token: ::fuels::core::Token) -> ::std::result::Result<Self, ::fuels::types::errors::Error>
                 where
                     Self: Sized,
                 {
                     let gen_err = |msg| {
-                        SDKError::InvalidData(format!(
+                        ::fuels::types::errors::Error::InvalidData(format!(
                             "Error while instantiating {} from token! {}", #enum_ident_stringified, msg
                         ))
                     };
                     match token {
-                        Token::Enum(selector) => {
+                        ::fuels::core::Token::Enum(selector) => {
                             let (discriminant, variant_token, _) = *selector;
                             match discriminant {
                                 #(#match_discriminant_from_token,)*
-                                _ => Err(gen_err(format!(
+                                _ => ::std::result::Result::Err(gen_err(format!(
                                     "Discriminant {} doesn't point to any of the enums variants.", discriminant
                                 ))),
                             }
                         }
-                        _ => Err(gen_err(format!(
+                        _ => ::std::result::Result::Err(gen_err(format!(
                             "Given token ({}) is not of the type Token::Enum!", token
                         ))),
                     }
                 }
 
-                fn into_token(self) -> Token {
+                fn into_token(self) -> ::fuels::core::Token {
                     let (discriminant, token) = match self {
                         #(#match_discriminant_into_token),*
                     };
 
-                    let variants = match Self::param_type() {
-                        ParamType::Enum{variants, ..} => variants,
+                    let variants = match <Self as ::fuels::core::Parameterize>::param_type() {
+                        ::fuels::types::param_types::ParamType::Enum{variants, ..} => variants,
                         other => panic!("Calling {}::param_type() must return a ParamType::Enum but instead it returned: {:?}", #enum_ident_stringified, other)
                     };
 
-                    Token::Enum(Box::new((discriminant, token, variants)))
+                    ::fuels::core::Token::Enum(::std::boxed::Box::new((discriminant, token, variants)))
                 }
             }
     }
@@ -177,11 +186,12 @@ fn enum_parameterize_impl(
         });
     let enum_ident_stringified = enum_ident.to_string();
     quote! {
-        impl<#(#generics: Parameterize + Tokenizable),*> Parameterize for #enum_ident <#(#generics),*> {
-            fn param_type() -> ParamType {
+        impl<#(#generics: ::fuels::core::Parameterize + ::fuels::core::Tokenizable),*> ::fuels::core::Parameterize for self::#enum_ident <#(#generics),*> {
+            fn param_type() -> ::fuels::types::param_types::ParamType {
                 let variants = [#(#variants),*].to_vec();
-                let variants = EnumVariants::new(variants).unwrap_or_else(|_| panic!("{} has no variants which isn't allowed!", #enum_ident_stringified));
-                ParamType::Enum{
+
+                let variants = ::fuels::types::enum_variants::EnumVariants::new(variants).unwrap_or_else(|_| panic!("{} has no variants which isn't allowed!", #enum_ident_stringified));
+                ::fuels::types::param_types::ParamType::Enum{
                     name: #enum_ident_stringified.to_string(),
                     variants,
                     generics: [#(#generics::param_type()),*].to_vec()

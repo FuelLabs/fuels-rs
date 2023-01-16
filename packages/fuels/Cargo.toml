@@ -25,7 +25,6 @@ ctor = " 0.1"
 chrono = "0.4.2"
 fuel-core = { version = "0.15", default-features = false }
 fuel-core-interfaces = { version = "0.15", default-features = false }
-fuel-gql-client = { version = "0.15", default-features = false }
 hex = { version = "0.4.3", default-features = false }
 sha2 = "0.9.5"
 tokio = "1.15.0"

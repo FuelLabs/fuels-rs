@@ -1,39 +1,14 @@
-use crate::code_gen::resolved_type::{resolve_type, ResolvedType};
-use crate::utils::{ident, safe_ident};
-use fuel_abi_types::program_abi::{TypeApplication, TypeDeclaration};
-use fuels_types::errors::Error;
-use fuels_types::utils::extract_generic_name;
-use inflector::Inflector;
+use std::collections::HashSet;
+
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
-use std::collections::HashMap;
 
-// Represents a component of either a struct(field name) or an enum(variant
-// name).
-#[derive(Debug)]
-pub struct Component {
-    pub field_name: Ident,
-    pub field_type: ResolvedType,
-}
+use fuels_types::errors::Error;
+use fuels_types::utils::extract_generic_name;
 
-impl Component {
-    pub fn new(
-        component: &TypeApplication,
-        types: &HashMap<usize, TypeDeclaration>,
-        snake_case: bool,
-    ) -> Result<Component, Error> {
-        let field_name = if snake_case {
-            component.name.to_snake_case()
-        } else {
-            component.name.to_owned()
-        };
-
-        Ok(Component {
-            field_name: safe_ident(&field_name),
-            field_type: resolve_type(component, types)?,
-        })
-    }
-}
+use crate::code_gen::abi_types::FullTypeDeclaration;
+use crate::code_gen::utils::Component;
+use crate::utils::ident;
 
 /// These TryFrom implementations improve devx by enabling users to easily
 /// construct contract types from bytes. These are generated due to the orphan
@@ -50,58 +25,53 @@ impl Component {
 /// &[u8], &Vec<u8> and a Vec<u8>
 pub(crate) fn impl_try_from(ident: &Ident, generics: &[TokenStream]) -> TokenStream {
     quote! {
-        impl<#(#generics: Tokenizable + Parameterize),*> TryFrom<&[u8]> for #ident<#(#generics),*> {
-            type Error = SDKError;
+        impl<#(#generics: ::fuels::core::Tokenizable + ::fuels::core::Parameterize),*> TryFrom<&[u8]> for self::#ident<#(#generics),*> {
+            type Error = ::fuels::types::errors::Error;
 
-            fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
-                try_from_bytes(bytes)
+            fn try_from(bytes: &[u8]) -> ::std::result::Result<Self, Self::Error> {
+                ::fuels::core::try_from_bytes(bytes)
             }
         }
-        impl<#(#generics: Tokenizable + Parameterize),*> TryFrom<&Vec<u8>> for #ident<#(#generics),*> {
-            type Error = SDKError;
+        impl<#(#generics: ::fuels::core::Tokenizable + ::fuels::core::Parameterize),*> TryFrom<&::std::vec::Vec<u8>> for self::#ident<#(#generics),*> {
+            type Error = ::fuels::types::errors::Error;
 
-            fn try_from(bytes: &Vec<u8>) -> Result<Self, Self::Error> {
-                try_from_bytes(&bytes)
+            fn try_from(bytes: &::std::vec::Vec<u8>) -> ::std::result::Result<Self, Self::Error> {
+                ::fuels::core::try_from_bytes(&bytes)
             }
         }
 
-        impl<#(#generics: Tokenizable + Parameterize),*> TryFrom<Vec<u8>> for #ident<#(#generics),*> {
-            type Error = SDKError;
+        impl<#(#generics: ::fuels::core::Tokenizable + ::fuels::core::Parameterize),*> TryFrom<::std::vec::Vec<u8>> for self::#ident<#(#generics),*> {
+            type Error = ::fuels::types::errors::Error;
 
-            fn try_from(bytes: Vec<u8>) -> Result<Self, Self::Error> {
-                try_from_bytes(&bytes)
+            fn try_from(bytes: ::std::vec::Vec<u8>) -> ::std::result::Result<Self, Self::Error> {
+                ::fuels::core::try_from_bytes(&bytes)
             }
         }
     }
 }
 
-/// Transforms components from inside the given `TypeDeclaration` into a vector
+/// Transforms components from inside the given `FullTypeDeclaration` into a vector
 /// of `Components`. Will fail if there are no components.
 pub(crate) fn extract_components(
-    type_decl: &TypeDeclaration,
-    types: &HashMap<usize, TypeDeclaration>,
+    type_decl: &FullTypeDeclaration,
     snake_case: bool,
+    shared_types: &HashSet<FullTypeDeclaration>,
 ) -> Result<Vec<Component>, Error> {
     type_decl
         .components
-        .as_ref()
-        .unwrap_or(&vec![])
         .iter()
-        .map(|component| Component::new(component, types, snake_case))
+        .map(|component| Component::new(component, snake_case, shared_types))
         .collect()
 }
 
 /// Returns a vector of TokenStreams, one for each of the generic parameters
 /// used by the given type.
-pub fn extract_generic_parameters(
-    type_decl: &TypeDeclaration,
-    types: &HashMap<usize, TypeDeclaration>,
+pub(crate) fn extract_generic_parameters(
+    type_decl: &FullTypeDeclaration,
 ) -> Result<Vec<TokenStream>, Error> {
     type_decl
         .type_parameters
         .iter()
-        .flatten()
-        .map(|id| types.get(id).unwrap())
         .map(|decl| {
             let name = extract_generic_name(&decl.type_field).unwrap_or_else(|| {
                 panic!("Type parameters should only contain ids of generic types!")
@@ -112,64 +82,19 @@ pub fn extract_generic_parameters(
         .collect()
 }
 
-/// Returns TokenStreams representing calls to `Parameterize::param_type` for
-/// all given Components. Makes sure to properly handle calls when generics are
-/// involved.
-pub fn param_type_calls(field_entries: &[Component]) -> Vec<TokenStream> {
-    field_entries
-        .iter()
-        .map(|Component { field_type, .. }| single_param_type_call(field_type))
-        .collect()
-}
-
-/// Returns a TokenStream representing the call to `Parameterize::param_type` for
-/// the given ResolvedType. Makes sure to properly handle calls when generics are
-/// involved.
-pub fn single_param_type_call(field_type: &ResolvedType) -> TokenStream {
-    let type_name = &field_type.type_name;
-    let parameters = field_type
-        .generic_params
-        .iter()
-        .map(TokenStream::from)
-        .collect::<Vec<_>>();
-    if parameters.is_empty() {
-        quote! { <#type_name>::param_type() }
-    } else {
-        quote! { #type_name::<#(#parameters),*>::param_type() }
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use fuel_abi_types::program_abi::TypeDeclaration;
     use fuels_types::utils::custom_type_name;
 
-    #[test]
-    fn component_name_is_snake_case_when_requested() -> anyhow::Result<()> {
-        let type_application = TypeApplication {
-            name: "SomeNameHere".to_string(),
-            type_id: 0,
-            type_arguments: None,
-        };
+    use crate::code_gen::resolved_type::ResolvedType;
+    use crate::code_gen::utils::param_type_calls;
 
-        let types = HashMap::from([(
-            0,
-            TypeDeclaration {
-                type_id: 0,
-                type_field: "()".to_string(),
-                components: None,
-                type_parameters: None,
-            },
-        )]);
+    use super::*;
 
-        let component = Component::new(&type_application, &types, true)?;
-
-        assert_eq!(component.field_name, ident("some_name_here"));
-
-        Ok(())
-    }
     #[test]
     fn extracts_generic_types() -> anyhow::Result<()> {
+        // given
         let declaration = TypeDeclaration {
             type_id: 0,
             type_field: "".to_string(),
@@ -195,8 +120,13 @@ mod tests {
             .into_iter()
             .collect();
 
-        let generics = extract_generic_parameters(&declaration, &types)?;
+        // when
+        let generics = extract_generic_parameters(&FullTypeDeclaration::from_counterpart(
+            &declaration,
+            &types,
+        ))?;
 
+        // then
         let stringified_generics = generics
             .into_iter()
             .map(|generic| generic.to_string())
@@ -247,8 +177,8 @@ mod tests {
         assert_eq!(
             stringified_result,
             vec![
-                "< u8 > :: param_type ()",
-                "SomeStruct :: < T , K > :: param_type ()"
+                "< u8 as :: fuels :: core :: Parameterize > :: param_type ()",
+                "< SomeStruct :: < T , K > as :: fuels :: core :: Parameterize > :: param_type ()"
             ]
         )
     }
