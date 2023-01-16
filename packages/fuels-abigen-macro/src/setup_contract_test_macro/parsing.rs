@@ -9,8 +9,19 @@ use syn::{
 
 use crate::parse_utils::{Command, ErrorsExt, UniqueLitStrs, UniqueNameValues};
 
-trait MacroName {
-    fn macro_command_name() -> &'static str;
+trait MacroCommand {
+    fn expected_name() -> &'static str;
+    fn validate_command_name(command: &Command) -> syn::Result<()> {
+        let expected_name = Self::expected_name();
+        if command.name == expected_name {
+            Ok(())
+        } else {
+            Err(Error::new_spanned(
+                command.name.clone(),
+                format!("Expected command to have name: '{expected_name}'."),
+            ))
+        }
+    }
 }
 
 pub(crate) struct InitializeWallet {
@@ -18,8 +29,8 @@ pub(crate) struct InitializeWallet {
     pub(crate) names: Vec<LitStr>,
 }
 
-impl MacroName for InitializeWallet {
-    fn macro_command_name() -> &'static str {
+impl MacroCommand for InitializeWallet {
+    fn expected_name() -> &'static str {
         "Wallets"
     }
 }
@@ -28,7 +39,7 @@ impl TryFrom<Command> for InitializeWallet {
     type Error = Error;
 
     fn try_from(command: Command) -> Result<Self, Self::Error> {
-        validate_command_has_correct_name::<Self>(&command)?;
+        Self::validate_command_name(&command)?;
 
         let wallets = UniqueLitStrs::new(command.contents)?;
 
@@ -44,8 +55,8 @@ pub(crate) struct GenerateContract {
     pub(crate) abi: LitStr,
 }
 
-impl MacroName for GenerateContract {
-    fn macro_command_name() -> &'static str {
+impl MacroCommand for GenerateContract {
+    fn expected_name() -> &'static str {
         "Abigen"
     }
 }
@@ -54,7 +65,7 @@ impl TryFrom<Command> for GenerateContract {
     type Error = Error;
 
     fn try_from(command: Command) -> Result<Self, Self::Error> {
-        validate_command_has_correct_name::<Self>(&command)?;
+        Self::validate_command_name(&command)?;
 
         let name_values = UniqueNameValues::new(command.contents)?;
         name_values.validate_has_no_other_names(&["name", "abi"])?;
@@ -72,8 +83,8 @@ pub(crate) struct DeployContract {
     pub wallet: String,
 }
 
-impl MacroName for DeployContract {
-    fn macro_command_name() -> &'static str {
+impl MacroCommand for DeployContract {
+    fn expected_name() -> &'static str {
         "Deploy"
     }
 }
@@ -82,7 +93,7 @@ impl TryFrom<Command> for DeployContract {
     type Error = Error;
 
     fn try_from(command: Command) -> Result<Self, Self::Error> {
-        validate_command_has_correct_name::<Self>(&command)?;
+        Self::validate_command_name(&command)?;
         let name_values = UniqueNameValues::new(command.contents)?;
         name_values.validate_has_no_other_names(&["name", "contract", "wallet"])?;
 
@@ -95,18 +106,6 @@ impl TryFrom<Command> for DeployContract {
             contract,
             wallet,
         })
-    }
-}
-
-fn validate_command_has_correct_name<T: MacroName>(command: &Command) -> syn::Result<()> {
-    let expected_name = T::macro_command_name();
-    if command.name == expected_name {
-        Ok(())
-    } else {
-        Err(Error::new_spanned(
-            command.name.clone(),
-            format!("Expected command to have name: '{expected_name}'."),
-        ))
     }
 }
 
@@ -127,11 +126,11 @@ fn parse_test_contract_commands(
 
     for command in commands {
         let command_name = &command.name;
-        if command_name == InitializeWallet::macro_command_name() {
+        if command_name == InitializeWallet::expected_name() {
             init_wallets.push(command.try_into());
-        } else if command_name == GenerateContract::macro_command_name() {
+        } else if command_name == GenerateContract::expected_name() {
             gen_contracts.push(command.try_into());
-        } else if command_name == DeployContract::macro_command_name() {
+        } else if command_name == DeployContract::expected_name() {
             deploy_contracts.push(command.try_into());
         } else {
             errors.push(Error::new_spanned(
@@ -151,6 +150,9 @@ fn parse_test_contract_commands(
     Ok((init_wallets, gen_contracts, deploy_contracts))
 }
 
+// Contains the result of parsing the input to the `setup_contract_test` macro.
+// Contents represent the users wishes with regards to wallet initialization,
+// bindings generation and contract deployment.
 pub(crate) struct TestContractCommands {
     pub(crate) initialize_wallets: Option<InitializeWallet>,
     pub(crate) generate_contract: Vec<GenerateContract>,
@@ -181,11 +183,11 @@ impl Parse for TestContractCommands {
 }
 
 impl TestContractCommands {
-    fn names_of_generated_contracts(commands: &[GenerateContract]) -> HashSet<&LitStr> {
+    fn contracts_to_generate(commands: &[GenerateContract]) -> HashSet<&LitStr> {
         commands.iter().map(|c| &c.name).collect()
     }
 
-    fn names_of_deployed_contracts(commands: &[DeployContract]) -> HashSet<&LitStr> {
+    fn contracts_to_deploy(commands: &[DeployContract]) -> HashSet<&LitStr> {
         commands.iter().map(|c| &c.contract).collect()
     }
 
@@ -194,8 +196,8 @@ impl TestContractCommands {
         generate_contracts: &[GenerateContract],
         deploy_contracts: &[DeployContract],
     ) -> syn::Result<()> {
-        Self::names_of_deployed_contracts(deploy_contracts)
-            .difference(&Self::names_of_generated_contracts(generate_contracts))
+        Self::contracts_to_deploy(deploy_contracts)
+            .difference(&Self::contracts_to_generate(generate_contracts))
             .flat_map(|unknown_contract| {
                 [
                     Error::new_spanned(unknown_contract, "Contract is unknown"),

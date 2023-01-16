@@ -31,7 +31,7 @@ impl Abigen {
     ///
     /// * `targets`: `AbigenTargets` detailing which ABI to generate bindings
     /// for, and of what nature (Contract, Script or Predicate).
-    /// * `no_std`: don't use the rust std library.
+    /// * `no_std`: don't use the Rust std library.
     pub fn generate(targets: Vec<AbigenTarget>, no_std: bool) -> Result<TokenStream, Error> {
         let parsed_targets = Self::parse_targets(targets)?;
 
@@ -56,8 +56,8 @@ impl Abigen {
         let bindings = Self::generate_all_bindings(parsed_targets, no_std, &shared_types)?;
         let shared_types = Self::generate_shared_types(shared_types)?;
 
-        Ok(bindings
-            .append(shared_types)
+        Ok(shared_types
+            .append(bindings)
             .wrap_in_mod(&ident("abigen_bindings")))
     }
 
@@ -120,10 +120,17 @@ impl Abigen {
             .filter(|ttype| ttype.is_enum_type() || ttype.is_struct_type())
     }
 
+    /// A type is considered "shared" if it appears at least twice in
+    /// `all_custom_types`.
+    ///
+    /// # Arguments
+    ///
+    /// * `all_custom_types`: types from all ABIs whose bindings are being
+    /// generated.
     fn filter_shared_types<'a>(
-        types: impl IntoIterator<Item = &'a FullTypeDeclaration>,
+        all_custom_types: impl IntoIterator<Item = &'a FullTypeDeclaration>,
     ) -> HashSet<FullTypeDeclaration> {
-        types.into_iter().duplicates().cloned().collect()
+        all_custom_types.into_iter().duplicates().cloned().collect()
     }
 }
 

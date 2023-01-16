@@ -5,11 +5,11 @@ use fuel_abi_types::program_abi::{
 };
 use fuels_types::errors::{Error, Error::InvalidData};
 
-// 'Full' versions of the ABI structures are needed to simplify duplicate
-// detection later on. The original ones are not suited for this due to their
-// use of ids, which might differ between contracts even though the type they
-// represent is virtually the same.
-
+/// 'Full' versions of the ABI structures are needed to simplify duplicate
+/// detection later on. The original ones([`ProgramABI`], [`TypeApplication`],
+/// [`TypeDeclaration`] and others) are not suited for this due to their use of
+/// ids, which might differ between contracts even though the type they
+/// represent is virtually the same.
 #[derive(Debug, Clone)]
 pub(crate) struct FullProgramABI {
     pub types: Vec<FullTypeDeclaration>,
