@@ -1,12 +1,12 @@
-use crate::logs::LogDecoder;
 use fuel_tx::Receipt;
-use fuels_core::{Parameterize, Tokenizable};
+use fuels_core::traits::{Parameterize, Tokenizable};
 use fuels_types::errors::Error;
+
+use crate::logs::LogDecoder;
 
 /// [`FuelCallResponse`] is a struct that is returned by a call to the contract or script. Its value
 /// field holds the decoded typed value returned by the contract's method. The other field holds all
 /// the receipts returned by the call.
-//
 /// The name is `FuelCallResponse` instead of `CallResponse` because it would be ambiguous with the
 /// `CALL` opcode.
 #[derive(Debug)]

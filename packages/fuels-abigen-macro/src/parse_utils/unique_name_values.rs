@@ -1,18 +1,15 @@
 use std::collections::HashMap;
 
+use fuels_core::utils::ident;
 use itertools::{chain, Itertools};
 use proc_macro2::{Ident, Span};
 use quote::ToTokens;
-use syn::punctuated::Punctuated;
-use syn::spanned::Spanned;
-use syn::Meta::NameValue;
-use syn::NestedMeta::Meta;
-use syn::{Error, Lit, LitStr, MetaNameValue, NestedMeta};
+use syn::{
+    punctuated::Punctuated, spanned::Spanned, Error, Lit, LitStr, Meta::NameValue, MetaNameValue,
+    NestedMeta, NestedMeta::Meta,
+};
 
-use fuels_core::utils::ident;
-
-use crate::parse_utils;
-use crate::parse_utils::ErrorsExt;
+use crate::parse_utils::{validate_no_duplicates, ErrorsExt};
 
 #[derive(Debug)]
 pub struct UniqueNameValues {
@@ -26,7 +23,7 @@ impl UniqueNameValues {
         let name_values = Self::extract_name_values(nested_metas.into_iter())?;
 
         let names = name_values.iter().map(|(name, _)| name).collect::<Vec<_>>();
-        parse_utils::validate_no_duplicates(&names, |&&name| name.clone())?;
+        validate_no_duplicates(&names, |&&name| name.clone())?;
 
         Ok(Self {
             span,
@@ -114,9 +111,8 @@ mod tests {
     use quote::quote;
     use syn::LitBool;
 
-    use crate::parse_utils::command::Command;
-
     use super::*;
+    use crate::parse_utils::command::Command;
 
     #[test]
     fn name_values_correctly_parsed() -> syn::Result<()> {

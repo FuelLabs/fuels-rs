@@ -1,7 +1,9 @@
-use fuels_types::param_types::ParamType;
+use fuels_types::{
+    core::{unzip_param_types, ByteArray},
+    param_types::ParamType,
+};
 
 use crate::utils::first_four_bytes_of_sha256_hash;
-use crate::{unzip_param_types, ByteArray};
 
 /// Given a function name and its inputs  will return a ByteArray representing
 /// the function selector as specified in the Fuel specs.

@@ -1,16 +1,13 @@
-use fuel_chain_config::ChainConfig;
-use fuels_signers::fuel_crypto::SecretKey;
-use fuels_types::{coin::Coin, message::Message};
 use std::{mem::size_of, net::SocketAddr};
 
+use fuel_chain_config::ChainConfig;
 #[cfg(feature = "fuel-core-lib")]
 use fuel_core::service::Config;
+use fuels_signers::{fuel_crypto::SecretKey, provider::Provider, WalletUnlocked};
+use fuels_types::{coin::Coin, message::Message};
 
 #[cfg(not(feature = "fuel-core-lib"))]
 use crate::node::Config;
-
-use fuels_signers::{provider::Provider, WalletUnlocked};
-
 use crate::{setup_custom_assets_coins, setup_test_client, wallets_config::*};
 
 /// Launches a local Fuel node, instantiates a provider, and returns a wallet.
@@ -113,11 +110,12 @@ pub async fn setup_test_provider(
 
 #[cfg(test)]
 mod tests {
-    use crate::{launch_custom_provider_and_get_wallets, AssetConfig, WalletsConfig};
     use fuels_core::constants::BASE_ASSET_ID;
     use fuels_signers::fuel_crypto::fuel_types::AssetId;
     use fuels_types::{errors::Error, resource::Resource};
     use rand::Fill;
+
+    use crate::{launch_custom_provider_and_get_wallets, AssetConfig, WalletsConfig};
 
     #[tokio::test]
     async fn test_wallet_config() -> Result<(), Error> {

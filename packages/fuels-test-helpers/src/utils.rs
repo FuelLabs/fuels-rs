@@ -1,11 +1,12 @@
-use std::error::Error;
-use std::fmt::{Debug, Display, Formatter};
-use std::future::Future;
-use std::time::Duration;
+use std::{
+    error::Error,
+    fmt::{Debug, Display, Formatter},
+    future::Future,
+    time::Duration,
+};
 
 use fuel_chain_config::{CoinConfig, MessageConfig};
-use fuels_types::coin::Coin;
-use fuels_types::message::Message;
+use fuels_types::{coin::Coin, message::Message};
 
 #[derive(Debug)]
 pub struct RetryExhausted {
@@ -71,10 +72,13 @@ pub fn get_message_configs(messages: Vec<Message>) -> Vec<MessageConfig> {
 #[cfg(test)]
 mod tests {
     mod retry_until {
-        use crate::utils::retry;
-        use anyhow::anyhow;
         use std::time::{Duration, Instant};
+
+        use anyhow::anyhow;
         use tokio::sync::Mutex;
+
+        use crate::utils::retry;
+
         #[tokio::test]
         async fn gives_up_after_timeout() -> anyhow::Result<()> {
             let timestamp_of_last_attempt = Mutex::new(Instant::now());

@@ -1,12 +1,11 @@
-use crate::parse_utils;
+use std::vec::IntoIter;
+
 use itertools::{chain, Itertools};
-use parse_utils::{validate_no_duplicates, ErrorsExt};
 use proc_macro2::Span;
 use quote::ToTokens;
-use std::vec::IntoIter;
-use syn::punctuated::Punctuated;
-use syn::spanned::Spanned;
-use syn::{Error, Lit, LitStr, NestedMeta};
+use syn::{punctuated::Punctuated, spanned::Spanned, Error, Lit, LitStr, NestedMeta};
+
+use crate::parse_utils::{validate_no_duplicates, ErrorsExt};
 
 #[derive(Debug)]
 pub struct UniqueLitStrs {
@@ -58,10 +57,11 @@ impl IntoIterator for UniqueLitStrs {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::parse_utils::Command;
     use proc_macro2::TokenStream;
     use quote::quote;
+
+    use super::*;
+    use crate::parse_utils::Command;
 
     #[test]
     fn correctly_reads_lit_strs() -> syn::Result<()> {

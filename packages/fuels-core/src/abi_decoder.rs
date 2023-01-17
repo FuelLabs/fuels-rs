@@ -1,12 +1,13 @@
 use std::{convert::TryInto, str};
 
 use fuel_types::bytes::padded_len_usize;
-
 use fuels_types::{
-    constants::WORD_SIZE, enum_variants::EnumVariants, errors::CodecError, param_types::ParamType,
+    constants::WORD_SIZE,
+    core::{unzip_param_types, StringToken, Token},
+    enum_variants::EnumVariants,
+    errors::CodecError,
+    param_types::ParamType,
 };
-
-use crate::{unzip_param_types, StringToken, Token};
 
 #[derive(Debug, Clone)]
 struct DecodeResult {
@@ -29,8 +30,7 @@ impl ABIDecoder {
     ///
     /// ```
     /// use fuels_core::abi_decoder::ABIDecoder;
-    /// use fuels_core::Token;
-    /// use fuels_types::param_types::ParamType;
+    /// use fuels_types::{core::Token, param_types::ParamType};
     ///
     /// let tokens = ABIDecoder::decode(&[ParamType::U8, ParamType::U8], &[0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,2]).unwrap();
     ///

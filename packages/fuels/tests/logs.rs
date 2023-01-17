@@ -1,5 +1,8 @@
-use fuels::prelude::*;
-use fuels::tx::Receipt;
+use fuels::{
+    prelude::*,
+    tx::Receipt,
+    types::{Bits256, SizedAsciiString},
+};
 
 #[tokio::test]
 async fn test_parse_logged_varibles() -> Result<(), Error> {
@@ -1033,7 +1036,7 @@ async fn test_multi_call_contract_require_from_contract() -> Result<(), Error> {
 async fn test_script_require_from_contract() -> Result<(), Error> {
     let wallet = launch_provider_and_get_wallet().await;
 
-    abigen!(Contract(name = "MyContract", abi = "packages/fuels/tests/contracts/lib_contract/out/debug/lib_contract-abi.json"), 
+    abigen!(Contract(name = "MyContract", abi = "packages/fuels/tests/contracts/lib_contract/out/debug/lib_contract-abi.json"),
             Script(name = "log_script", abi = "packages/fuels/tests/scripts/script_require_from_contract/out/debug/script_require_from_contract-abi.json"));
 
     let contract_id: ContractId = Contract::deploy(
