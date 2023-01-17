@@ -1,8 +1,8 @@
-use fuel_tx::Output;
-
+use fuel_tx::{Output, Receipt};
 use fuel_types::{Address, AssetId};
-use fuels_core::parameters::CallParameters;
+use fuel_vm::fuel_asm::PanicReason;
 
+use fuels_core::{constants::FAILED_TRANSFER_TO_ADDRESS_SIGNAL, parameters::CallParameters};
 use fuels_types::bech32::Bech32ContractId;
 
 use crate::{contract_call::ContractCall, script_call::ScriptCall};
@@ -15,6 +15,16 @@ pub(crate) trait ProgramCall {
     fn append_variable_outputs(&mut self, num: u64);
     fn append_external_contracts(&mut self, contract_id: Bech32ContractId);
     fn append_message_outputs(&mut self, num: u64);
+    fn is_missing_output_variables(receipts: &[Receipt]) -> bool {
+        receipts.iter().any(
+            |r| matches!(r, Receipt::Revert { ra, .. } if *ra == FAILED_TRANSFER_TO_ADDRESS_SIGNAL),
+        )
+    }
+    fn find_contract_not_in_inputs(receipts: &[Receipt]) -> Option<&Receipt> {
+        receipts.iter().find(
+            |r| matches!(r, Receipt::Panic { reason, .. } if *reason.reason() == PanicReason::ContractNotInInputs ),
+        )
+    }
 }
 
 macro_rules! impl_builder_fns {

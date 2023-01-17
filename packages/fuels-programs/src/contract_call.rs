@@ -2,10 +2,8 @@ use std::{collections::HashMap, fmt::Debug, marker::PhantomData, panic};
 
 use fuel_tx::{Output, Receipt};
 
-use fuel_vm::fuel_asm::PanicReason;
 use fuels_core::{
     abi_encoder::UnresolvedBytes,
-    constants::FAILED_TRANSFER_TO_ADDRESS_SIGNAL,
     parameters::{CallParameters, TxParameters},
     traits::Tokenizable,
 };
@@ -58,18 +56,6 @@ impl ContractCall {
             contract_id,
             ..self
         }
-    }
-
-    fn is_missing_output_variables(receipts: &[Receipt]) -> bool {
-        receipts.iter().any(
-            |r| matches!(r, Receipt::Revert { ra, .. } if *ra == FAILED_TRANSFER_TO_ADDRESS_SIGNAL),
-        )
-    }
-
-    fn find_contract_not_in_inputs(receipts: &[Receipt]) -> Option<&Receipt> {
-        receipts.iter().find(
-            |r| matches!(r, Receipt::Panic { reason, .. } if *reason.reason() == PanicReason::ContractNotInInputs ),
-        )
     }
 }
 
