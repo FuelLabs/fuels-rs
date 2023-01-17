@@ -27,7 +27,7 @@ pub(crate) trait ProgramCall {
     }
 }
 
-macro_rules! impl_builder_fns {
+macro_rules! impl_programcall_trait_methods {
     ($target:ty) => {
         impl ProgramCall for $target {
             fn with_external_contracts(self, external_contracts: Vec<Bech32ContractId>) -> Self {
@@ -88,5 +88,5 @@ macro_rules! impl_builder_fns {
     };
 }
 
-impl_builder_fns!(ContractCall);
-impl_builder_fns!(ScriptCall);
+impl_programcall_trait_methods!(ContractCall);
+impl_programcall_trait_methods!(ScriptCall);
