@@ -214,7 +214,7 @@ mod test {
     use rand::Rng;
 
     use super::*;
-    use crate::callable::ProgramCall;
+    use crate::call::ProgramCall;
 
     impl ContractCall {
         pub fn new_with_random_id() -> Self {

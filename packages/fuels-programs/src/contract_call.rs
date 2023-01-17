@@ -19,9 +19,9 @@ use fuels_types::{
 };
 
 use crate::{
+    call::ProgramCall,
     call_response::FuelCallResponse,
     call_utils::get_decoded_output,
-    callable::ProgramCall,
     execution_script::ExecutableFuelCall,
     logs::{decode_revert_error, LogDecoder},
 };
