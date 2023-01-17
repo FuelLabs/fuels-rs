@@ -976,7 +976,6 @@ async fn test_add_custom_assets() -> Result<(), Error> {
     let wallet_2 = wallets.pop().unwrap();
 
     setup_contract_test!(
-        Wallets("wallet"),
         Abigen(
             name = "MyContract",
             abi = "packages/fuels/tests/contracts/contract_test"
@@ -984,7 +983,7 @@ async fn test_add_custom_assets() -> Result<(), Error> {
         Deploy(
             name = "contract_instance",
             contract = "MyContract",
-            wallet = "wallet"
+            wallet = "wallet_1"
         ),
     );
 
