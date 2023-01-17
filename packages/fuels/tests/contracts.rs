@@ -975,19 +975,18 @@ async fn test_add_custom_assets() -> Result<(), Error> {
     let wallet_1 = wallets.pop().unwrap();
     let wallet_2 = wallets.pop().unwrap();
 
-    abigen!(
-        MyContract,
-        "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
+    setup_contract_test!(
+        Wallets("wallet"),
+        Abigen(
+            name = "MyContract",
+            abi = "packages/fuels/tests/contracts/contract_test"
+        ),
+        Deploy(
+            name = "contract_instance",
+            contract = "MyContract",
+            wallet = "wallet"
+        ),
     );
-
-    let contract_id = Contract::deploy(
-        "tests/contracts/contract_test/out/debug/contract_test.bin",
-        &wallet_1,
-        TxParameters::default(),
-        StorageConfiguration::default(),
-    )
-    .await?;
-    let contract_instance = MyContract::new(contract_id, wallet_1.clone());
 
     let amount_1 = 5000;
     let amount_2 = 3000;

@@ -717,10 +717,10 @@ mod tests {
     async fn custom_assets_example() -> Result<(), Error> {
         use fuels::prelude::*;
 
-        abigen!(
-            MyContract,
-            "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
-        );
+        abigen!(Contract(
+            name = "MyContract",
+            abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
+        ));
 
         let wallet = launch_provider_and_get_wallet().await;
         let other_wallet = WalletUnlocked::new_random(None);
