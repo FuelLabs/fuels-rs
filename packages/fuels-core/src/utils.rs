@@ -31,7 +31,7 @@ pub fn safe_ident(name: &str) -> Ident {
     syn::parse_str::<SynIdent>(name).unwrap_or_else(|_| ident(&format!("{}_", name)))
 }
 
-pub fn get_logs_hashmap(
+pub fn log_type_lookup(
     id_param_pairs: &[(u64, ParamType)],
     contract_id: Option<Bech32ContractId>,
 ) -> HashMap<(Bech32ContractId, u64), ParamType> {

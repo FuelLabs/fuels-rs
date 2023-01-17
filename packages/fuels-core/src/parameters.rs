@@ -6,11 +6,13 @@ use crate::constants::{
 };
 
 #[derive(Debug, Copy, Clone)]
+//ANCHOR: tx_parameter
 pub struct TxParameters {
     pub gas_price: u64,
     pub gas_limit: u64,
     pub maturity: u64,
 }
+//ANCHOR_END: tx_parameter
 
 #[derive(Debug)]
 pub struct CallParameters {

@@ -8,7 +8,7 @@ use crate::code_gen::{
     abi_types::{FullProgramABI, FullTypeDeclaration},
     abigen::{
         bindings::{function_generator::FunctionGenerator, utils::extract_main_fn},
-        logs::logs_hashmap_instantiation_code,
+        logs::logs_lookup_instantiation_code,
     },
     generated_code::GeneratedCode,
     type_path::TypePath,
@@ -26,7 +26,7 @@ pub(crate) fn script_bindings(
 
     let main_function = expand_fn(&abi, shared_types)?;
 
-    let logs_map = logs_hashmap_instantiation_code(None, &abi.logged_types, shared_types);
+    let log_type_lookup = logs_lookup_instantiation_code(None, &abi.logged_types, shared_types);
 
     let code = quote! {
         #[derive(Debug)]
@@ -41,7 +41,7 @@ pub(crate) fn script_bindings(
                 Self {
                     wallet,
                     binary_filepath: binary_filepath.to_string(),
-                    log_decoder: ::fuels::programs::logs::LogDecoder {logs_map: #logs_map}
+                    log_decoder: ::fuels::programs::logs::LogDecoder {type_lookup: #log_type_lookup}
                 }
             }
 

@@ -9,7 +9,7 @@ use crate::{
     code_gen::{
         abi_types::{FullABIFunction, FullProgramABI, FullTypeDeclaration},
         abigen::{
-            bindings::function_generator::FunctionGenerator, logs::logs_hashmap_instantiation_code,
+            bindings::function_generator::FunctionGenerator, logs::logs_lookup_instantiation_code,
         },
         generated_code::GeneratedCode,
         type_path::TypePath,
@@ -27,7 +27,7 @@ pub(crate) fn contract_bindings(
         return Ok(GeneratedCode::default());
     }
 
-    let logs_map = logs_hashmap_instantiation_code(
+    let log_type_lookup = logs_lookup_instantiation_code(
         Some(quote! {contract_id.clone()}),
         &abi.logged_types,
         shared_types,
@@ -46,7 +46,7 @@ pub(crate) fn contract_bindings(
 
         impl #name {
             pub fn new(contract_id: ::fuels::types::bech32::Bech32ContractId, wallet: ::fuels::signers::wallet::WalletUnlocked) -> Self {
-                let log_decoder = ::fuels::programs::logs::LogDecoder { logs_map: #logs_map };
+                let log_decoder = ::fuels::programs::logs::LogDecoder { type_lookup: #log_type_lookup };
                 Self { contract_id, wallet, log_decoder }
             }
 
