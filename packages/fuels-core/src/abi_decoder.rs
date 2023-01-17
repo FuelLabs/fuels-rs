@@ -1,12 +1,16 @@
-use crate::{unzip_param_types, StringToken, Token, Tokenizable};
+use std::{convert::TryInto, str};
+
 use fuel_types::bytes::padded_len_usize;
+use fuels_types::errors::Error;
 use fuels_types::{
     constants::WORD_SIZE,
+    core::{unzip_param_types, StringToken, Token},
     enum_variants::EnumVariants,
-    errors::{CodecError, Error},
+    errors::CodecError,
     param_types::ParamType,
 };
-use std::{convert::TryInto, str};
+
+use crate::Tokenizable;
 
 #[derive(Debug, Clone)]
 struct DecodeResult {
@@ -29,8 +33,7 @@ impl ABIDecoder {
     ///
     /// ```
     /// use fuels_core::abi_decoder::ABIDecoder;
-    /// use fuels_core::Token;
-    /// use fuels_types::param_types::ParamType;
+    /// use fuels_types::{core::Token, param_types::ParamType};
     ///
     /// let tokens = ABIDecoder::decode(&[ParamType::U8, ParamType::U8], &[0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,2]).unwrap();
     ///
@@ -332,10 +335,12 @@ fn skip(slice: &[u8], num_bytes: usize) -> Result<&[u8], CodecError> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use std::vec;
+
     use fuels_test_helpers::generate_unused_field_names;
     use fuels_types::{enum_variants::EnumVariants, errors::Error};
-    use std::vec;
+
+    use super::*;
 
     #[test]
     fn decode_int() -> Result<(), Error> {

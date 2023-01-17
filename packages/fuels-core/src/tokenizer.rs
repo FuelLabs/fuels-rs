@@ -1,5 +1,9 @@
-use crate::{unzip_param_types, StringToken, Token};
-use fuels_types::{errors::Error, param_types::ParamType, utils::has_array_format};
+use fuels_types::{
+    core::{unzip_param_types, StringToken, Token},
+    errors::Error,
+    param_types::ParamType,
+    utils::has_array_format,
+};
 use hex::FromHex;
 
 #[derive(Default)]

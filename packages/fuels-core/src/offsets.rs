@@ -1,4 +1,4 @@
-use crate::tx::{field::Script, ConsensusParameters, InputRepr};
+use fuel_tx::{field::Script, ConsensusParameters, InputRepr};
 use fuel_types::bytes::padded_len_usize;
 use fuel_vm::prelude::Opcode;
 

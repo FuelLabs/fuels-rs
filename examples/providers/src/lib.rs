@@ -6,9 +6,9 @@ mod tests {
     #[tokio::test]
     async fn connect_to_fuel_node() {
         // ANCHOR: connect_to_testnet
-        use fuels::prelude::*;
-        use fuels::signers::fuel_crypto::SecretKey;
         use std::str::FromStr;
+
+        use fuels::{prelude::*, signers::fuel_crypto::SecretKey};
 
         // Create a provider pointing to the testnet.
         let provider = Provider::connect("node-beta-1.fuel.network").await.unwrap();

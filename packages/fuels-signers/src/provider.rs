@@ -1,10 +1,8 @@
-use std::io;
+use std::{collections::HashMap, io};
 
+use chrono::{DateTime, Duration, Utc};
 #[cfg(feature = "fuel-core")]
 use fuel_core::service::{Config, FuelService};
-
-use crate::{field, UniqueIdentifier};
-use chrono::{DateTime, Duration, Utc};
 use fuel_gql_client::{
     client::{
         schema::{
@@ -14,9 +12,10 @@ use fuel_gql_client::{
         types::TransactionStatus,
         FuelClient, PageDirection, PaginatedResult, PaginationRequest,
     },
-    fuel_tx::{ConsensusParameters, Receipt, Transaction, TransactionFee},
-    fuel_types::AssetId,
     interpreter::ExecutableTransaction,
+};
+use fuel_tx::{
+    field, AssetId, ConsensusParameters, Receipt, Transaction, TransactionFee, UniqueIdentifier,
 };
 use fuels_core::constants::{DEFAULT_GAS_ESTIMATION_TOLERANCE, MAX_GAS_PER_TX};
 use fuels_types::{
@@ -31,7 +30,6 @@ use fuels_types::{
     resource::Resource,
     transaction_response::TransactionResponse,
 };
-use std::collections::HashMap;
 use tai64::Tai64;
 use thiserror::Error;
 

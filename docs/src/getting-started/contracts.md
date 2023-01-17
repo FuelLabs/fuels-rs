@@ -6,7 +6,7 @@ There are two main ways of working with contracts in the SDK: deploying a contra
 
 Once you've written a contract in Sway and compiled it with `forc build` (read [here](https://fuellabs.github.io/sway/master/introduction/sway_quickstart.html) for more on how to work with Sway), you'll have in your hands two important artifacts: the compiled binary file and the JSON ABI file.
 
-Below is how you can deploy your contracts using the SDK. For more details about each component in this process, read [The abigen macro](../contracts/the-abigen-macro.md), [The FuelVM binary file](../contracts/the-fuelvm-binary-file.md), and [The JSON ABI file](../contracts/the-json-abi-file.md).
+Below is how you can deploy your contracts using the SDK. For more details about each component in this process, read [The abigen macro](../abigen/the-abigen-macro.md), [The FuelVM binary file](../contracts/the-fuelvm-binary-file.md), and [The JSON ABI file](../abigen/the-json-abi-file.md).
 
 ### The deploy functions
 

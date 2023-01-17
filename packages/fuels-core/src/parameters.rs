@@ -1,15 +1,18 @@
+use fuel_tx::{AssetId, StorageSlot};
+
 use crate::constants::{
     BASE_ASSET_ID, DEFAULT_CALL_PARAMS_AMOUNT, DEFAULT_GAS_LIMIT, DEFAULT_GAS_PRICE,
     DEFAULT_MATURITY,
 };
-use fuel_tx::{AssetId, StorageSlot};
 
 #[derive(Debug, Copy, Clone)]
+//ANCHOR: tx_parameter
 pub struct TxParameters {
     pub gas_price: u64,
     pub gas_limit: u64,
     pub maturity: u64,
 }
+//ANCHOR_END: tx_parameter
 
 #[derive(Debug)]
 pub struct CallParameters {

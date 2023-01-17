@@ -6,17 +6,18 @@
 # https://doc.rust-lang.org/edition-guide/rust-2021/default-cargo-resolver.html#details
 resolver = "2"
 members = [
+    "examples/abigen",
     "examples/contracts",
     "examples/cookbook",
+    "examples/debugging",
     "examples/predicates",
     "examples/providers",
     "examples/rust_bindings",
     "examples/types",
     "examples/wallets",
-    "examples/debugging",
     "packages/fuels",
     "packages/fuels-abigen-macro",
-    "packages/fuels-contract",
+    "packages/fuels-programs",
     "packages/fuels-core",
     "packages/fuels-signers",
     "packages/fuels-test-helpers",
@@ -24,5 +25,4 @@ members = [
     "packages/wasm-tests",
     "scripts/test-projects",
     "scripts/check-docs",
-    "tools/fuels-abi-cli",
 ]

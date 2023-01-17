@@ -1,0 +1,5 @@
+error: Missing attribute 'name'.
+ --> tests/ui/abigen_macro/missing_name_attr.rs:3:18
+  |
+3 | abigen!(Contract(abi = "some-abi.json"));
+  |                  ^^^

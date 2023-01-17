@@ -18,9 +18,9 @@ mod tests {
     #[tokio::test]
     async fn create_wallet_from_secret_key() -> Result<(), Box<dyn std::error::Error>> {
         // ANCHOR: create_wallet_from_secret_key
-        use fuels::prelude::*;
-        use fuels::signers::fuel_crypto::SecretKey;
         use std::str::FromStr;
+
+        use fuels::{prelude::*, signers::fuel_crypto::SecretKey};
 
         // Use the test helper to setup a test provider.
         let (provider, _address) = setup_test_provider(vec![], vec![], None, None).await;
@@ -308,11 +308,15 @@ mod tests {
     #[tokio::test]
     #[allow(unused_variables)]
     async fn get_balances() -> Result<(), Error> {
-        use fuels::prelude::{
-            launch_provider_and_get_wallet, BASE_ASSET_ID, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
-        };
-        use fuels::tx::AssetId;
         use std::collections::HashMap;
+
+        use fuels::{
+            prelude::{
+                launch_provider_and_get_wallet, BASE_ASSET_ID, DEFAULT_COIN_AMOUNT,
+                DEFAULT_NUM_COINS,
+            },
+            tx::AssetId,
+        };
 
         let wallet = launch_provider_and_get_wallet().await;
         // ANCHOR: get_asset_balance
@@ -336,8 +340,9 @@ mod tests {
     #[tokio::test]
     async fn wallet_transfer_to_base_layer() -> Result<(), Error> {
         // ANCHOR: wallet_withdraw_to_base
-        use fuels::prelude::*;
         use std::str::FromStr;
+
+        use fuels::prelude::*;
 
         let wallet = launch_provider_and_get_wallet().await;
 

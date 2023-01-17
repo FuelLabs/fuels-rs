@@ -1,25 +1,32 @@
 #[cfg(test)]
 mod tests {
-    use fuels::core::try_from_bytes;
-    use fuels::prelude::Error;
-    use fuels::prelude::{AssetId, ContractId};
+    use fuels::{
+        core::try_from_bytes,
+        prelude::{AssetId, ContractId, Error},
+    };
 
     #[tokio::test]
     #[allow(unused_variables)]
     async fn transform_json_to_bindings() -> Result<(), Error> {
         use fuels::test_helpers::launch_provider_and_get_wallet;
         let wallet = launch_provider_and_get_wallet().await;
-        // ANCHOR: use_abigen
-        use fuels::prelude::*;
-        // Replace with your own JSON abi path (relative to the root of your crate)
-        abigen!(MyContractName, "examples/rust_bindings/src/abi.json");
-        // ANCHOR_END: use_abigen
+        {
+            // ANCHOR: use_abigen
+            use fuels::prelude::*;
+            // Replace with your own JSON abi path (relative to the root of your crate)
+            abigen!(Contract(
+                name = "MyContractName",
+                abi = "examples/rust_bindings/src/abi.json"
+            ));
+            // ANCHOR_END: use_abigen
+        }
 
-        // ANCHOR: abigen_with_string
-        // Don't forget to import the `abigen` macro as above
-        abigen!(
-            MyContract,
-            r#"
+        {
+            // ANCHOR: abigen_with_string
+            use fuels::prelude::*;
+            abigen!(Contract(
+                name = "MyContract",
+                abi = r#"
             {
                 "types": [
                   {
@@ -63,8 +70,9 @@ mod tests {
                 ]
               }
             "#
-        );
-        // ANCHOR_END: abigen_with_string
+            ));
+            // ANCHOR_END: abigen_with_string
+        }
         Ok(())
     }
 

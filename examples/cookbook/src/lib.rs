@@ -4,14 +4,16 @@ mod tests {
 
     #[tokio::test]
     async fn liquidity() -> Result<(), Error> {
-        use fuels::prelude::*;
-        use fuels::test_helpers::{AssetConfig, WalletsConfig};
+        use fuels::{
+            prelude::*,
+            test_helpers::{AssetConfig, WalletsConfig},
+        };
 
         // ANCHOR: liquidity_abigen
-        abigen!(
-            MyContract,
-            "packages/fuels/tests/contracts/liquidity_pool/out/debug/liquidity_pool-abi.json"
-        );
+        abigen!(Contract(
+            name = "MyContract",
+            abi = "packages/fuels/tests/contracts/liquidity_pool/out/debug/liquidity_pool-abi.json"
+        ));
         // ANCHOR_END: liquidity_abigen
 
         // ANCHOR: liquidity_wallet
@@ -116,8 +118,9 @@ mod tests {
 
     #[tokio::test]
     async fn transfer_multiple() -> Result<(), Error> {
-        use fuels::prelude::*;
         use std::str::FromStr;
+
+        use fuels::prelude::*;
 
         // ANCHOR: transfer_multiple_setup
         let mut wallet_1 = WalletUnlocked::new_random(None);
@@ -175,16 +178,17 @@ mod tests {
     #[tokio::test]
     async fn modify_contract_call_transaction_inputs() -> Result<(), Error> {
         // ANCHOR: modify_call_inputs_include
-        use fuels::prelude::*;
-        use fuels::tx::field::Inputs;
-        use fuels::tx::field::Outputs;
+        use fuels::{
+            prelude::*,
+            tx::field::{Inputs, Outputs},
+        };
         // ANCHOR_END: modify_call_inputs_include
 
         // ANCHOR: modify_call_inputs_setup
-        abigen!(
-            MyContract,
-            "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
-        );
+        abigen!(Contract(
+            name = "MyContract",
+            abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
+        ));
 
         let some_asset_id = AssetId::new([3; 32usize]);
         let coin_amount = 1_000_000;
@@ -244,6 +248,7 @@ mod tests {
         let balance_2 = wallet_2.get_asset_balance(&some_asset_id).await?;
         assert_eq!(balance_2, coin_amount + SEND_AMOUNT);
         // ANCHOR_END: modify_call_inputs_verify
+
         Ok(())
     }
 }

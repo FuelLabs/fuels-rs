@@ -1,0 +1,11 @@
+error: Contract is unknown
+ --> tests/ui/setup_contract_test_macro/contract_not_generated.rs:5:16
+  |
+5 |     contract = "SomeUnknownContract",
+  |                ^^^^^^^^^^^^^^^^^^^^^
+
+error: Consider adding: Abigen(name="SomeUnknownContract", abi=...)
+ --> tests/ui/setup_contract_test_macro/contract_not_generated.rs:3:22
+  |
+3 | setup_contract_test!(Deploy(
+  |                      ^^^^^^

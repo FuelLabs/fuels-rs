@@ -8,9 +8,7 @@ publish = false
 crate-type = ['cdylib']
 
 [dependencies]
-fuels-abigen-macro = { path = "../fuels-abigen-macro" }
-fuels-core = { path = "../fuels-core" }
-fuels-types = { path = "../fuels-types" }
+fuels = { path = "../fuels" }
 getrandom = { version = "0.2", features = ["js"] }
 
 [dev-dependencies]
