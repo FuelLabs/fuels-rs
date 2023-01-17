@@ -140,8 +140,9 @@
                         <h1 id="address"><a class="header" href="#address">Address</a></h1>
 <p>Like <code>Bytes32</code>, <code>Address</code> is a wrapper on <code>[u8; 32]</code> with similar methods and implements the same traits (see <a href="https://docs.rs/fuel-types/latest/fuel_types/struct.Address.html">fuel-types documentation</a>).</p>
 <p>These are the main ways of creating an <code>Address</code>:</p>
-<pre><code class="language-rust ignore">        use fuels::tx::Address;
-        use std::str::FromStr;
+<pre><code class="language-rust ignore">        use std::str::FromStr;
+
+        use fuels::tx::Address;
 
         // Zeroed Bytes32
         let address = Address::zeroed();

@@ -148,9 +148,9 @@
         let _wallet = WalletUnlocked::new_random(Some(provider));
 </code></pre>
 <p>Alternatively, you can create a wallet from a predefined <code>SecretKey</code>.</p>
-<pre><code class="language-rust ignore">        use fuels::prelude::*;
-        use fuels::signers::fuel_crypto::SecretKey;
-        use std::str::FromStr;
+<pre><code class="language-rust ignore">        use std::str::FromStr;
+
+        use fuels::{prelude::*, signers::fuel_crypto::SecretKey};
 
         // Use the test helper to setup a test provider.
         let (provider, _address) = setup_test_provider(vec![], vec![], None, None).await;

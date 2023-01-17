@@ -144,7 +144,14 @@
 <li>Gas limit;</li>
 <li>Maturity.</li>
 </ol>
-<p>You can configure these parameters by creating an instance of <a href="https://github.com/FuelLabs/fuels-rs/blob/adf81bd451d7637ce0976363bd7784408430031a/packages/fuels-contract/src/parameters.rs#L7"><code>TxParameters</code></a> and passing it to a chain method called <code>tx_params</code>:</p>
+<p>You can configure these parameters by creating an instance of <code>TxParameters</code>:</p>
+<pre><code class="language-rust ignore">pub struct TxParameters {
+    pub gas_price: u64,
+    pub gas_limit: u64,
+    pub maturity: u64,
+}
+</code></pre>
+<p>and passing it to a chain method called <code>tx_params</code>:</p>
 <pre><code class="language-rust ignore">        let contract_methods = MyContract::new(contract_id.clone(), wallet.clone()).methods();
 
         // In order: gas_price, gas_limit, and maturity

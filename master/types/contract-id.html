@@ -140,8 +140,9 @@
                         <h1 id="contractid"><a class="header" href="#contractid">ContractId</a></h1>
 <p>Like <code>Bytes32</code>, <code>ContractId</code> is a wrapper on <code>[u8; 32]</code> with similar methods and implements the same traits (see <a href="https://docs.rs/fuel-types/latest/fuel_types/struct.ContractId.html">fuel-types documentation</a>).</p>
 <p>These are the main ways of creating a <code>ContractId</code>:</p>
-<pre><code class="language-rust ignore">        use fuels::tx::ContractId;
-        use std::str::FromStr;
+<pre><code class="language-rust ignore">        use std::str::FromStr;
+
+        use fuels::tx::ContractId;
 
         // Zeroed Bytes32
         let contract_id = ContractId::zeroed();

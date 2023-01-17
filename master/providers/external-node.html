@@ -139,9 +139,9 @@
                     <main>
                         <h1 id="connecting-to-the-testnet-or-an-external-node"><a class="header" href="#connecting-to-the-testnet-or-an-external-node">Connecting to the Testnet or an external node</a></h1>
 <p>We can interact with the <code>Testnet</code> node by using the following example.</p>
-<pre><code class="language-rust ignore">        use fuels::prelude::*;
-        use fuels::signers::fuel_crypto::SecretKey;
-        use std::str::FromStr;
+<pre><code class="language-rust ignore">        use std::str::FromStr;
+
+        use fuels::{prelude::*, signers::fuel_crypto::SecretKey};
 
         // Create a provider pointing to the testnet.
         let provider = Provider::connect(&quot;node-beta-1.fuel.network&quot;).await.unwrap();

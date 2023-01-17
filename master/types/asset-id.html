@@ -140,8 +140,9 @@
                         <h1 id="assetid"><a class="header" href="#assetid">AssetId</a></h1>
 <p>Like <code>Bytes32</code>, <code>AssetId</code> is a wrapper on <code>[u8; 32]</code> with similar methods and implements the same traits (see <a href="https://docs.rs/fuel-types/latest/fuel_types/struct.AssetId.html">fuel-types documentation</a>).</p>
 <p>These are the main ways of creating an <code>AssetId</code>:</p>
-<pre><code class="language-rust ignore">        use fuels::tx::AssetId;
-        use std::str::FromStr;
+<pre><code class="language-rust ignore">        use std::str::FromStr;
+
+        use fuels::tx::AssetId;
 
         // Zeroed Bytes32
         let asset_id = AssetId::zeroed();

@@ -139,8 +139,10 @@
                     <main>
                         <h1 id="running-a-short-lived-fuel-node-with-the-sdk"><a class="header" href="#running-a-short-lived-fuel-node-with-the-sdk">Running a short-lived Fuel node with the SDK</a></h1>
 <p>You can use the SDK to spin up a local, ideally short-lived Fuel node. Then, you can instantiate a Fuel client, pointing to this node.</p>
-<pre><code class="language-rust ignore">        use fuels::client::FuelClient;
-        use fuels::fuel_node::{Config, FuelService};
+<pre><code class="language-rust ignore">        use fuels::{
+            client::FuelClient,
+            fuel_node::{Config, FuelService},
+        };
 
         // Run the fuel node.
         let server = FuelService::new_node(Config::local_node()).await?;

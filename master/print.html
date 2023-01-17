@@ -245,9 +245,9 @@ If <code>cargo generate</code> is not already installed, you can instal it with:
 <p>For application building, you should use the first option.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="connecting-to-the-testnet-or-an-external-node"><a class="header" href="#connecting-to-the-testnet-or-an-external-node">Connecting to the Testnet or an external node</a></h1>
 <p>We can interact with the <code>Testnet</code> node by using the following example.</p>
-<pre><code class="language-rust ignore">        use fuels::prelude::*;
-        use fuels::signers::fuel_crypto::SecretKey;
-        use std::str::FromStr;
+<pre><code class="language-rust ignore">        use std::str::FromStr;
+
+        use fuels::{prelude::*, signers::fuel_crypto::SecretKey};
 
         // Create a provider pointing to the testnet.
         let provider = Provider::connect(&quot;node-beta-1.fuel.network&quot;).await.unwrap();
@@ -276,8 +276,10 @@ If <code>cargo generate</code> is not already installed, you can instal it with:
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="running-a-short-lived-fuel-node-with-the-sdk"><a class="header" href="#running-a-short-lived-fuel-node-with-the-sdk">Running a short-lived Fuel node with the SDK</a></h1>
 <p>You can use the SDK to spin up a local, ideally short-lived Fuel node. Then, you can instantiate a Fuel client, pointing to this node.</p>
-<pre><code class="language-rust ignore">        use fuels::client::FuelClient;
-        use fuels::fuel_node::{Config, FuelService};
+<pre><code class="language-rust ignore">        use fuels::{
+            client::FuelClient,
+            fuel_node::{Config, FuelService},
+        };
 
         // Run the fuel node.
         let server = FuelService::new_node(Config::local_node()).await?;
@@ -379,9 +381,9 @@ If <code>cargo generate</code> is not already installed, you can instal it with:
         let _wallet = WalletUnlocked::new_random(Some(provider));
 </code></pre>
 <p>Alternatively, you can create a wallet from a predefined <code>SecretKey</code>.</p>
-<pre><code class="language-rust ignore">        use fuels::prelude::*;
-        use fuels::signers::fuel_crypto::SecretKey;
-        use std::str::FromStr;
+<pre><code class="language-rust ignore">        use std::str::FromStr;
+
+        use fuels::{prelude::*, signers::fuel_crypto::SecretKey};
 
         // Use the test helper to setup a test provider.
         let (provider, _address) = setup_test_provider(vec![], vec![], None, None).await;
@@ -786,8 +788,9 @@ coins and coin amount</p>
         assert_eq!(*random_asset_balance, 300);
 </code></pre>
 <p>For transferring assets to the base layer chain, you can use <code>wallet.withdraw_to_base_layer</code>.</p>
-<pre><code class="language-rust ignore">        use fuels::prelude::*;
-        use std::str::FromStr;
+<pre><code class="language-rust ignore">        use std::str::FromStr;
+
+        use fuels::prelude::*;
 
         let wallet = launch_provider_and_get_wallet().await;
 
@@ -878,7 +881,7 @@ impl MyContract for Contract {
             Contract(name=&quot;ContractA&quot;, abi=&quot;packages/fuels/tests/bindings/sharing_types/contract_a/out/debug/contract_a-abi.json&quot;),
             Contract(name=&quot;ContractB&quot;, abi=&quot;packages/fuels/tests/bindings/sharing_types/contract_b/out/debug/contract_b-abi.json&quot;),
             Script(name=&quot;MyScript&quot;, abi=&quot;packages/fuels/tests/scripts/script_with_arguments/out/debug/script_with_arguments-abi.json&quot;),
-            Predicate(name=&quot;MyPredicate&quot;, abi=&quot;packages/fuels/tests/predicates/predicate_basic/out/debug/predicate_basic-abi.json&quot;), 
+            Predicate(name=&quot;MyPredicate&quot;, abi=&quot;packages/fuels/tests/predicates/predicate_basic/out/debug/predicate_basic-abi.json&quot;),
         );
 </code></pre>
 <h2 id="how-does-the-generated-code-look"><a class="header" href="#how-does-the-generated-code-look">How does the generated code look?</a></h2>
@@ -1359,7 +1362,14 @@ half-word   byte   op                raw           notes
 <li>Gas limit;</li>
 <li>Maturity.</li>
 </ol>
-<p>You can configure these parameters by creating an instance of <a href="https://github.com/FuelLabs/fuels-rs/blob/adf81bd451d7637ce0976363bd7784408430031a/packages/fuels-contract/src/parameters.rs#L7"><code>TxParameters</code></a> and passing it to a chain method called <code>tx_params</code>:</p>
+<p>You can configure these parameters by creating an instance of <code>TxParameters</code>:</p>
+<pre><code class="language-rust ignore">pub struct TxParameters {
+    pub gas_price: u64,
+    pub gas_limit: u64,
+    pub maturity: u64,
+}
+</code></pre>
+<p>and passing it to a chain method called <code>tx_params</code>:</p>
 <pre><code class="language-rust ignore">        let contract_methods = MyContract::new(contract_id.clone(), wallet.clone()).methods();
 
         // In order: gas_price, gas_limit, and maturity
@@ -1941,8 +1951,9 @@ fn main(signatures: [B512; 3]) -&gt; bool {
 <div style="break-before: page; page-break-before: always;"></div><h1 id="bytes32"><a class="header" href="#bytes32">Bytes32</a></h1>
 <p>In Sway and the FuelVM, <code>Bytes32</code> represents hashes. They hold a 256-bit (32-byte) value. <code>Bytes32</code> is a wrapper on a 32-sized slice of <code>u8</code>: <code>pub struct Bytes32([u8; 32]);</code>.</p>
 <p>These are the main ways of creating a <code>Bytes32</code>:</p>
-<pre><code class="language-rust ignore">        use fuels::tx::Bytes32;
-        use std::str::FromStr;
+<pre><code class="language-rust ignore">        use std::str::FromStr;
+
+        use fuels::tx::Bytes32;
 
         // Zeroed Bytes32
         let b256 = Bytes32::zeroed();
@@ -1972,8 +1983,9 @@ fn main(signatures: [B512; 3]) -&gt; bool {
 <div style="break-before: page; page-break-before: always;"></div><h1 id="address"><a class="header" href="#address">Address</a></h1>
 <p>Like <code>Bytes32</code>, <code>Address</code> is a wrapper on <code>[u8; 32]</code> with similar methods and implements the same traits (see <a href="https://docs.rs/fuel-types/latest/fuel_types/struct.Address.html">fuel-types documentation</a>).</p>
 <p>These are the main ways of creating an <code>Address</code>:</p>
-<pre><code class="language-rust ignore">        use fuels::tx::Address;
-        use std::str::FromStr;
+<pre><code class="language-rust ignore">        use std::str::FromStr;
+
+        use fuels::tx::Address;
 
         // Zeroed Bytes32
         let address = Address::zeroed();
@@ -1995,8 +2007,9 @@ fn main(signatures: [B512; 3]) -&gt; bool {
 <div style="break-before: page; page-break-before: always;"></div><h1 id="contractid"><a class="header" href="#contractid">ContractId</a></h1>
 <p>Like <code>Bytes32</code>, <code>ContractId</code> is a wrapper on <code>[u8; 32]</code> with similar methods and implements the same traits (see <a href="https://docs.rs/fuel-types/latest/fuel_types/struct.ContractId.html">fuel-types documentation</a>).</p>
 <p>These are the main ways of creating a <code>ContractId</code>:</p>
-<pre><code class="language-rust ignore">        use fuels::tx::ContractId;
-        use std::str::FromStr;
+<pre><code class="language-rust ignore">        use std::str::FromStr;
+
+        use fuels::tx::ContractId;
 
         // Zeroed Bytes32
         let contract_id = ContractId::zeroed();
@@ -2019,8 +2032,9 @@ fn main(signatures: [B512; 3]) -&gt; bool {
 <div style="break-before: page; page-break-before: always;"></div><h1 id="assetid"><a class="header" href="#assetid">AssetId</a></h1>
 <p>Like <code>Bytes32</code>, <code>AssetId</code> is a wrapper on <code>[u8; 32]</code> with similar methods and implements the same traits (see <a href="https://docs.rs/fuel-types/latest/fuel_types/struct.AssetId.html">fuel-types documentation</a>).</p>
 <p>These are the main ways of creating an <code>AssetId</code>:</p>
-<pre><code class="language-rust ignore">        use fuels::tx::AssetId;
-        use std::str::FromStr;
+<pre><code class="language-rust ignore">        use std::str::FromStr;
+
+        use fuels::tx::AssetId;
 
         // Zeroed Bytes32
         let asset_id = AssetId::zeroed();
@@ -2052,8 +2066,10 @@ fn main(signatures: [B512; 3]) -&gt; bool {
 <div style="break-before: page; page-break-before: always;"></div><h1 id="bech32"><a class="header" href="#bech32">Bech32</a></h1>
 <p><code>Bech32Address</code> and <code>Bech32ContractId</code> enable the use of addresses and contract ids in the bech32 format. They can easily be converted to their counterparts <code>Address</code> and <code>ContractId</code>.</p>
 <p>Here are the main ways of creating a <code>Bech32Address</code>, but note that the same applies to <code>Bech32ContractId</code>: </p>
-<pre><code class="language-rust ignore">        use fuels::prelude::Bech32Address;
-        use fuels::tx::{Address, Bytes32};
+<pre><code class="language-rust ignore">        use fuels::{
+            prelude::Bech32Address,
+            tx::{Address, Bytes32},
+        };
 
         // New from HRP string and a hash
         let hrp = &quot;fuel&quot;;

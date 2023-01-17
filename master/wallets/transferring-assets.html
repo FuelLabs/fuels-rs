@@ -192,8 +192,9 @@
         assert_eq!(*random_asset_balance, 300);
 </code></pre>
 <p>For transferring assets to the base layer chain, you can use <code>wallet.withdraw_to_base_layer</code>.</p>
-<pre><code class="language-rust ignore">        use fuels::prelude::*;
-        use std::str::FromStr;
+<pre><code class="language-rust ignore">        use std::str::FromStr;
+
+        use fuels::prelude::*;
 
         let wallet = launch_provider_and_get_wallet().await;
 

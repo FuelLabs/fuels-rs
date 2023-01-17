@@ -140,8 +140,9 @@
                         <h1 id="bytes32"><a class="header" href="#bytes32">Bytes32</a></h1>
 <p>In Sway and the FuelVM, <code>Bytes32</code> represents hashes. They hold a 256-bit (32-byte) value. <code>Bytes32</code> is a wrapper on a 32-sized slice of <code>u8</code>: <code>pub struct Bytes32([u8; 32]);</code>.</p>
 <p>These are the main ways of creating a <code>Bytes32</code>:</p>
-<pre><code class="language-rust ignore">        use fuels::tx::Bytes32;
-        use std::str::FromStr;
+<pre><code class="language-rust ignore">        use std::str::FromStr;
+
+        use fuels::tx::Bytes32;
 
         // Zeroed Bytes32
         let b256 = Bytes32::zeroed();
