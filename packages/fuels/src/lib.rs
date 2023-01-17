@@ -67,8 +67,10 @@ pub mod prelude {
         fuel_node::*,
         fuels_abigen::{abigen, setup_contract_test},
         programs::{
-            contract::{Contract, SettableContract},
-            contract_call::{ContractCall, ContractCallHandler, MultiContractCallHandler},
+            contract::Contract,
+            contract_call::{
+                ContractCall, ContractCallHandler, MultiContractCallHandler, SettableContract,
+            },
             logs::LogDecoder,
         },
         signers::{provider::*, wallet::generate_mnemonic_phrase, Signer, Wallet, WalletUnlocked},

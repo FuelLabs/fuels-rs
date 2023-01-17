@@ -22,13 +22,6 @@ use crate::logs::LogDecoder;
 /// How many times to attempt to resolve missing tx dependencies.
 pub const DEFAULT_TX_DEP_ESTIMATION_ATTEMPTS: u64 = 10;
 
-// Trait implemented by contract instances so that
-// they can be passed to the `set_contracts` method
-pub trait SettableContract {
-    fn id(&self) -> Bech32ContractId;
-    fn log_decoder(&self) -> LogDecoder;
-}
-
 /// A compiled representation of a contract.
 #[derive(Debug, Clone, Default)]
 pub struct CompiledContract {

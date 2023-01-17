@@ -89,7 +89,7 @@ pub(crate) fn contract_bindings(
             #contract_functions
         }
 
-        impl ::fuels::programs::contract::SettableContract for #name {
+        impl ::fuels::programs::contract_call::SettableContract for #name {
             fn id(&self) -> ::fuels::types::bech32::Bech32ContractId {
                 self.contract_id.clone()
             }
@@ -333,7 +333,7 @@ mod tests {
                 &self,
                 s_1: self::MyStruct1,
                 s_2: self::MyStruct2
-            ) -> ::fuels::programs::contract::ContractCallHandler<self::MyStruct1> {
+            ) -> ::fuels::programs::contract_call::ContractCallHandler<self::MyStruct1> {
                 let provider = self.wallet.get_provider().expect("Provider not set up");
                 ::fuels::programs::contract::Contract::method_hash(
                     &provider,
@@ -399,7 +399,8 @@ mod tests {
 
         let expected = quote! {
             #[doc = "Calls the contract's `HelloWorld` function"]
-            pub fn HelloWorld(&self, bimbam: bool) -> ::fuels::programs::contract::ContractCallHandler<()> {
+            pub fn HelloWorld(&self, bimbam: bool) ->
+            ::fuels::programs::contract_call::ContractCallHandler<()> {
                 let provider = self.wallet.get_provider().expect("Provider not set up");
                 ::fuels::programs::contract::Contract::method_hash(
                     &provider,
@@ -513,7 +514,7 @@ mod tests {
             pub fn hello_world(
                 &self,
                 the_only_allowed_input: self::SomeWeirdFrenchCuisine
-            ) -> ::fuels::programs::contract::ContractCallHandler<self::EntropyCirclesEnum> {
+            ) -> ::fuels::programs::contract_call::ContractCallHandler<self::EntropyCirclesEnum> {
                 let provider = self.wallet.get_provider().expect("Provider not set up");
                 ::fuels::programs::contract::Contract::method_hash(
                     &provider,
