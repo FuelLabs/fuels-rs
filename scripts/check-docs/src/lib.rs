@@ -1,7 +1,8 @@
+use std::path::{Path, PathBuf};
+
 use anyhow::{anyhow, bail, Error};
 use itertools::{chain, Itertools};
 use regex::Regex;
-use std::path::{Path, PathBuf};
 
 pub fn report_errors(error_type: &str, errors: &[Error]) {
     if !errors.is_empty() {

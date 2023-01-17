@@ -1,9 +1,10 @@
 extern crate alloc;
 
-use fuels::core::abi_decoder::ABIDecoder;
-use fuels::core::Tokenizable;
-use fuels::fuels_abigen::wasm_abigen;
-use fuels::types::param_types::ParamType;
+use fuels::{
+    core::{abi_decoder::ABIDecoder, traits::Tokenizable},
+    fuels_abigen::wasm_abigen,
+    types::param_types::ParamType,
+};
 
 wasm_abigen!(Contract(
     name = "no_name",
@@ -128,8 +129,9 @@ pub fn the_fn() {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use webassembly_test::webassembly_test;
+
+    use super::*;
 
     #[webassembly_test]
     fn test() {

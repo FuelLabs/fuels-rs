@@ -1,9 +1,8 @@
 use std::collections::HashSet;
 
+use fuel_abi_types::program_abi::ResolvedLog;
 use proc_macro2::TokenStream;
 use quote::quote;
-
-use fuel_abi_types::program_abi::ResolvedLog;
 
 use crate::code_gen::{
     abi_types::{FullLoggedType, FullTypeDeclaration},
@@ -11,7 +10,7 @@ use crate::code_gen::{
     utils::single_param_type_call,
 };
 
-pub(crate) fn logs_hashmap_instantiation_code(
+pub(crate) fn logs_lookup_instantiation_code(
     contract_id: Option<TokenStream>,
     logged_types: &[FullLoggedType],
     shared_types: &HashSet<FullTypeDeclaration>,
@@ -21,7 +20,7 @@ pub(crate) fn logs_hashmap_instantiation_code(
     let contract_id = contract_id
         .map(|id| quote! { ::std::option::Option::Some(#id) })
         .unwrap_or_else(|| quote! {::std::option::Option::None});
-    quote! {::fuels::core::get_logs_hashmap(&[#(#log_id_param_type_pairs),*], #contract_id)}
+    quote! {::fuels::core::utils::log_type_lookup(&[#(#log_id_param_type_pairs),*], #contract_id)}
 }
 
 /// Reads the parsed logged types from the ABI and creates ResolvedLogs

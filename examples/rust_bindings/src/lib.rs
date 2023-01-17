@@ -1,8 +1,9 @@
 #[cfg(test)]
 mod tests {
-    use fuels::core::try_from_bytes;
-    use fuels::prelude::Error;
-    use fuels::prelude::{AssetId, ContractId};
+    use fuels::{
+        core::try_from_bytes,
+        prelude::{AssetId, ContractId, Error},
+    };
 
     #[tokio::test]
     #[allow(unused_variables)]

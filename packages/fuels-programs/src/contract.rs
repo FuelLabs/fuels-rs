@@ -1,32 +1,3 @@
-use crate::{
-    call_response::FuelCallResponse,
-    execution_script::ExecutableFuelCall,
-    logs::{decode_revert_error, LogDecoder},
-};
-use fuel_gql_client::{
-    fuel_tx::{Contract as FuelContract, Output, Receipt, StorageSlot, Transaction},
-    prelude::PanicReason,
-};
-use fuel_tx::{Address, AssetId, Checkable, Create, Salt};
-use fuels_core::{
-    abi_decoder::ABIDecoder,
-    abi_encoder::{ABIEncoder, UnresolvedBytes},
-    constants::FAILED_TRANSFER_TO_ADDRESS_SIGNAL,
-    parameters::StorageConfiguration,
-    parameters::{CallParameters, TxParameters},
-    tx::{Bytes32, ContractId},
-    Parameterize, Selector, Token, Tokenizable,
-};
-use fuels_signers::{
-    provider::{Provider, TransactionCost},
-    Signer, WalletUnlocked,
-};
-use fuels_types::bech32::Bech32Address;
-use fuels_types::{
-    bech32::Bech32ContractId,
-    errors::Error,
-    param_types::{ParamType, ReturnLocation},
-};
 use std::{
     collections::{HashMap, HashSet},
     fmt::Debug,
@@ -35,6 +6,35 @@ use std::{
     panic,
     path::Path,
     str::FromStr,
+};
+
+use fuel_tx::{
+    Address, AssetId, Bytes32, Checkable, Contract as FuelContract, ContractId, Create, Output,
+    Receipt, Salt, StorageSlot, Transaction,
+};
+use fuel_vm::fuel_asm::PanicReason;
+use fuels_core::{
+    abi_decoder::ABIDecoder,
+    abi_encoder::{ABIEncoder, UnresolvedBytes},
+    constants::FAILED_TRANSFER_TO_ADDRESS_SIGNAL,
+    parameters::{CallParameters, StorageConfiguration, TxParameters},
+    traits::{Parameterize, Tokenizable},
+};
+use fuels_signers::{
+    provider::{Provider, TransactionCost},
+    Signer, WalletUnlocked,
+};
+use fuels_types::{
+    bech32::Bech32ContractId,
+    core::{Selector, Token},
+    errors::Error,
+    param_types::{ParamType, ReturnLocation},
+};
+
+use crate::{
+    call_response::FuelCallResponse,
+    execution_script::ExecutableFuelCall,
+    logs::{decode_revert_error, LogDecoder},
 };
 
 /// How many times to attempt to resolve missing tx dependencies.
@@ -129,7 +129,6 @@ impl Contract {
             message_outputs: None,
             external_contracts: vec![],
             output_param: D::param_type(),
-            custom_assets: Default::default(),
         };
 
         Ok(ContractCallHandler {
@@ -348,7 +347,6 @@ pub struct ContractCall {
     pub message_outputs: Option<Vec<Output>>,
     pub external_contracts: Vec<Bech32ContractId>,
     pub output_param: ParamType,
-    pub custom_assets: HashMap<(AssetId, Option<Bech32Address>), u64>,
 }
 
 impl ContractCall {
@@ -435,12 +433,6 @@ impl ContractCall {
         receipts.iter().find(
             |r| matches!(r, Receipt::Panic { reason, .. } if *reason.reason() == PanicReason::ContractNotInInputs ),
         )
-    }
-
-    pub fn add_custom_asset(&mut self, asset_id: AssetId, amount: u64, to: Option<Bech32Address>) {
-        let key = (asset_id, to);
-        let sum = self.custom_assets.get(&key).unwrap_or(&0) + amount;
-        self.custom_assets.insert(key, sum);
     }
 }
 
@@ -535,30 +527,6 @@ where
         for c in contracts {
             self.log_decoder.merge(c.log_decoder());
         }
-        self
-    }
-
-    /// Adds a custom `asset_id` with its `amount` and an optional `address` to be used for
-    /// generating outputs to this contract's call.
-    ///
-    /// # Parameters
-    /// - `asset_id`: The unique identifier of the asset being added.
-    /// - `amount`: The amount of the asset being added.
-    /// - `address`: The optional wallet address that the output amount will be sent to. If not provided, the asset will be sent to the users wallet address.
-    /// Note that this is a builder method, i.e. use it as a chain:
-    ///
-    /// ```ignore
-    /// let asset_id = AssetId::from([3u8; 32]);
-    /// let amount = 5000;
-    /// my_contract_instance.my_method(...).add_custom_asset(asset_id, amount, None).call()
-    /// ```
-    pub fn add_custom_asset(
-        mut self,
-        asset_id: AssetId,
-        amount: u64,
-        to: Option<Bech32Address>,
-    ) -> Self {
-        self.contract_call.add_custom_asset(asset_id, amount, to);
         self
     }
 
@@ -770,7 +738,7 @@ impl MultiContractCallHandler {
             tx_parameters: TxParameters::default(),
             wallet,
             log_decoder: LogDecoder {
-                logs_map: HashMap::new(),
+                type_lookup: HashMap::new(),
             },
         }
     }

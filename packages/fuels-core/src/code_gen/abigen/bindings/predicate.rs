@@ -1,15 +1,15 @@
 use std::collections::HashSet;
 
+use fuels_types::errors::Error;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
-use fuels_types::errors::Error;
-
-use crate::code_gen::abi_types::{FullProgramABI, FullTypeDeclaration};
-use crate::code_gen::abigen::bindings::function_generator::FunctionGenerator;
-use crate::code_gen::abigen::bindings::utils::extract_main_fn;
-use crate::code_gen::generated_code::GeneratedCode;
-use crate::code_gen::type_path::TypePath;
+use crate::code_gen::{
+    abi_types::{FullProgramABI, FullTypeDeclaration},
+    abigen::bindings::{function_generator::FunctionGenerator, utils::extract_main_fn},
+    generated_code::GeneratedCode,
+    type_path::TypePath,
+};
 
 pub(crate) fn predicate_bindings(
     name: &Ident,
@@ -33,7 +33,7 @@ pub(crate) fn predicate_bindings(
 
         impl #name {
             pub fn new(code: ::std::vec::Vec<u8>) -> Self {
-                let address: ::fuels::core::types::Address = (*::fuels::tx::Contract::root_from_code(&code)).into();
+                let address: ::fuels::types::Address = (*::fuels::tx::Contract::root_from_code(&code)).into();
                 Self {
                     address: address.into(),
                     code,
@@ -59,7 +59,7 @@ pub(crate) fn predicate_bindings(
 
             pub async fn receive(&self, from: &::fuels::signers::wallet::WalletUnlocked,
                                  amount: u64,
-                                 asset_id: ::fuels::core::types::AssetId,
+                                 asset_id: ::fuels::types::AssetId,
                                  tx_parameters: ::std::option::Option<::fuels::core::parameters::TxParameters>
             ) -> ::std::result::Result<(::std::string::String, ::std::vec::Vec<::fuels::tx::Receipt>), ::fuels::types::errors::Error> {
                 let tx_parameters = tx_parameters.unwrap_or_default();
@@ -75,7 +75,7 @@ pub(crate) fn predicate_bindings(
 
             pub async fn spend(&self, to: &::fuels::signers::wallet::WalletUnlocked,
                                 amount: u64,
-                                asset_id: ::fuels::core::types::AssetId,
+                                asset_id: ::fuels::types::AssetId,
                                 tx_parameters: ::std::option::Option<::fuels::core::parameters::TxParameters>
             ) -> ::std::result::Result<::std::vec::Vec<::fuels::tx::Receipt>, ::fuels::types::errors::Error> {
                 let tx_parameters = tx_parameters.unwrap_or_default();

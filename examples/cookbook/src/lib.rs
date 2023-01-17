@@ -4,8 +4,10 @@ mod tests {
 
     #[tokio::test]
     async fn liquidity() -> Result<(), Error> {
-        use fuels::prelude::*;
-        use fuels::test_helpers::{AssetConfig, WalletsConfig};
+        use fuels::{
+            prelude::*,
+            test_helpers::{AssetConfig, WalletsConfig},
+        };
 
         // ANCHOR: liquidity_abigen
         abigen!(Contract(
@@ -116,8 +118,9 @@ mod tests {
 
     #[tokio::test]
     async fn transfer_multiple() -> Result<(), Error> {
-        use fuels::prelude::*;
         use std::str::FromStr;
+
+        use fuels::prelude::*;
 
         // ANCHOR: transfer_multiple_setup
         let mut wallet_1 = WalletUnlocked::new_random(None);
@@ -175,9 +178,10 @@ mod tests {
     #[tokio::test]
     async fn modify_contract_call_transaction_inputs() -> Result<(), Error> {
         // ANCHOR: modify_call_inputs_include
-        use fuels::prelude::*;
-        use fuels::tx::field::Inputs;
-        use fuels::tx::field::Outputs;
+        use fuels::{
+            prelude::*,
+            tx::field::{Inputs, Outputs},
+        };
         // ANCHOR_END: modify_call_inputs_include
 
         // ANCHOR: modify_call_inputs_setup

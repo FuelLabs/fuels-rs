@@ -1,12 +1,14 @@
 #[cfg(test)]
 mod tests {
-    use fuels::prelude::Error;
+    use fuels::{prelude::Error, types::Bits256};
 
     #[tokio::test]
     async fn instantiate_client() -> Result<(), Error> {
         // ANCHOR: instantiate_client
-        use fuels::client::FuelClient;
-        use fuels::fuel_node::{Config, FuelService};
+        use fuels::{
+            client::FuelClient,
+            fuel_node::{Config, FuelService},
+        };
 
         // Run the fuel node.
         let server = FuelService::new_node(Config::local_node()).await?;
@@ -468,8 +470,7 @@ mod tests {
     #[tokio::test]
     #[allow(unused_variables)]
     async fn get_contract_outputs() -> Result<(), Error> {
-        use fuels::prelude::*;
-        use fuels::tx::Receipt;
+        use fuels::{prelude::*, tx::Receipt};
         {
             abigen!(Contract(
                 name = "TestContract",

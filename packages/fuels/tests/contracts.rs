@@ -1,5 +1,6 @@
-use fuels::prelude::*;
 use std::future::Future;
+
+use fuels::prelude::*;
 
 #[tokio::test]
 async fn test_multiple_args() -> Result<(), Error> {

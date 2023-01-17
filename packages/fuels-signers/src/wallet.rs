@@ -1,34 +1,37 @@
-use crate::provider::Provider;
-use crate::Signer;
+use std::{collections::HashMap, fmt, ops, path::Path};
+
 use async_trait::async_trait;
 use elliptic_curve::rand_core;
 use eth_keystore::KeystoreError;
 use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
-use fuel_gql_client::fuel_vm::prelude::GTFArgs;
-use fuel_gql_client::{
-    client::{PaginatedResult, PaginationRequest},
-    fuel_tx::{
-        AssetId, Bytes32, Cacheable, ContractId, Input, Output, Receipt, TransactionFee, TxPointer,
-        UtxoId, Witness,
-    },
-    fuel_vm::{consts::REG_ONE, prelude::Opcode},
+use fuel_gql_client::client::{PaginatedResult, PaginationRequest};
+use fuel_tx::{
+    field, AssetId, Bytes32, Cacheable, Chargeable, ContractId, Input, Output, Receipt, Script,
+    Transaction, TransactionFee, TxPointer, UniqueIdentifier, UtxoId, Witness,
 };
-use fuel_types::bytes::WORD_SIZE;
-use fuel_types::{Address, MessageId};
-use fuels_core::offsets::base_offset;
-use fuels_core::tx::{field, Chargeable, Script, Transaction, UniqueIdentifier};
+use fuel_types::{bytes::WORD_SIZE, Address, MessageId};
+use fuel_vm::{
+    consts::REG_ONE,
+    prelude::{GTFArgs, Opcode},
+};
 use fuels_core::{
     abi_encoder::UnresolvedBytes,
-    offsets::{coin_predicate_data_offset, message_predicate_data_offset},
+    constants::BASE_ASSET_ID,
+    offsets::{base_offset, coin_predicate_data_offset, message_predicate_data_offset},
+    parameters::TxParameters,
 };
-use fuels_core::{constants::BASE_ASSET_ID, parameters::TxParameters};
-use fuels_types::bech32::{Bech32Address, Bech32ContractId, FUEL_BECH32_HRP};
-use fuels_types::errors::Error;
-use fuels_types::transaction_response::TransactionResponse;
-use fuels_types::{coin::Coin, message::Message as InputMessage, resource::Resource};
+use fuels_types::{
+    bech32::{Bech32Address, Bech32ContractId, FUEL_BECH32_HRP},
+    coin::Coin,
+    errors::Error,
+    message::Message as InputMessage,
+    resource::Resource,
+    transaction_response::TransactionResponse,
+};
 use rand::{CryptoRng, Rng};
-use std::{collections::HashMap, fmt, ops, path::Path};
 use thiserror::Error;
+
+use crate::{provider::Provider, Signer};
 
 pub const DEFAULT_DERIVATION_PATH_PREFIX: &str = "m/44'/1179993420'";
 
@@ -904,15 +907,19 @@ pub fn generate_mnemonic_phrase<R: Rng>(rng: &mut R, count: usize) -> Result<Str
 #[cfg(test)]
 #[cfg(feature = "test-helpers")]
 mod tests {
-    use super::*;
+    use std::iter::repeat;
+
     use fuel_core::service::{Config, FuelService};
     use fuel_gql_client::client::FuelClient;
-    use fuel_gql_client::fuel_tx::Address;
-    use fuels_core::tx::field::{Inputs, Outputs};
+    use fuel_tx::{
+        field::{Inputs, Outputs},
+        Address,
+    };
     use fuels_test_helpers::{launch_custom_provider_and_get_wallets, AssetConfig, WalletsConfig};
     use fuels_types::errors::Error;
-    use std::iter::repeat;
     use tempfile::tempdir;
+
+    use super::*;
 
     #[tokio::test]
     async fn encrypted_json_keystore() -> Result<(), Error> {
