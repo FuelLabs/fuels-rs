@@ -72,7 +72,7 @@ fn expand_fn(
             let encoded_args = ::fuels::core::abi_encoder::ABIEncoder::encode(&#arg_tokens).expect("Cannot encode script arguments");
             let provider = self.wallet.get_provider().expect("Provider not set up").clone();
 
-            ::fuels::programs::script_calls::ScriptCallHandler::new(
+            ::fuels::programs::script_call::ScriptCallHandler::new(
                 script_binary,
                 encoded_args,
                 self.wallet.clone(),
@@ -85,7 +85,7 @@ fn expand_fn(
 
     generator
         .set_output_type(
-            quote! {::fuels::programs::script_calls::ScriptCallHandler<#original_output_type> },
+            quote! {::fuels::programs::script_call::ScriptCallHandler<#original_output_type> },
         )
         .set_doc("Run the script's `main` function with the provided arguments".to_string())
         .set_body(body);
