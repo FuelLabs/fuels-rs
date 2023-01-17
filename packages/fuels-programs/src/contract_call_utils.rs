@@ -11,6 +11,7 @@ use crate::call_utils::{
     convert_to_signed_resources, extract_unique_asset_ids, generate_asset_change_outputs,
     generate_contract_inputs, generate_contract_outputs, sum_up_amounts_for_each_asset_id,
 };
+
 use crate::contract_call::ContractCall;
 
 #[derive(Default)]
@@ -213,6 +214,7 @@ mod test {
     use rand::Rng;
 
     use super::*;
+    use crate::callable::ProgramCall;
 
     impl ContractCall {
         pub fn new_with_random_id() -> Self {

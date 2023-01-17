@@ -1,21 +1,13 @@
-
-
-use fuel_tx::{Output};
+use fuel_tx::Output;
 
 use fuel_types::{Address, AssetId};
-use fuels_core::{
-    parameters::{CallParameters},
-};
+use fuels_core::parameters::CallParameters;
 
-use fuels_types::{bech32::Bech32ContractId};
+use fuels_types::bech32::Bech32ContractId;
 
+use crate::{contract_call::ContractCall, script_call::ScriptCall};
 
-use crate::{
-    contract_call::ContractCall,
-    script_call::ScriptCall,
-};
-
-pub(crate) trait Callable {
+pub(crate) trait ProgramCall {
     fn with_external_contracts(self, external_contracts: Vec<Bech32ContractId>) -> Self;
     fn with_call_parameters(self, call_parameters: CallParameters) -> Self;
     fn with_variable_outputs(self, variable_outputs: Vec<Output>) -> Self;
@@ -27,7 +19,7 @@ pub(crate) trait Callable {
 
 macro_rules! impl_builder_fns {
     ($target:ty) => {
-        impl Callable for $target {
+        impl ProgramCall for $target {
             fn with_external_contracts(self, external_contracts: Vec<Bech32ContractId>) -> Self {
                 Self {
                     external_contracts,

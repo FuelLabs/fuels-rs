@@ -23,7 +23,7 @@ use fuels_types::{
 use crate::{
     call_response::FuelCallResponse,
     call_utils::get_decoded_output,
-    callable::Callable,
+    callable::ProgramCall,
     execution_script::ExecutableFuelCall,
     logs::{decode_revert_error, LogDecoder},
 };
