@@ -143,7 +143,7 @@ pub(crate) fn expand_fn(
 
     let original_output = generator.output_type();
     generator.set_output_type(
-        quote! {::fuels::programs::contract::ContractCallHandler<#original_output> },
+        quote! {::fuels::programs::contract_call::ContractCallHandler<#original_output> },
     );
 
     let fn_selector = generator.fn_selector();

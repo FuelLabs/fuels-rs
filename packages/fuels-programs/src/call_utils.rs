@@ -1,13 +1,61 @@
-use std::{collections::HashSet};
+use std::collections::HashSet;
 
-use fuel_tx::{AssetId, Bytes32, ContractId, Input, Output, TxPointer, UtxoId};
+use fuel_tx::{AssetId, Bytes32, ContractId, Input, Output, Receipt, TxPointer, UtxoId};
 
-
+use fuels_core::abi_decoder::ABIDecoder;
 use fuels_core::constants::BASE_ASSET_ID;
+use fuels_types::bech32::Bech32ContractId;
+use fuels_types::core::Token;
+use fuels_types::errors::Error;
+use fuels_types::param_types::{ParamType, ReturnLocation};
 use fuels_types::{bech32::Bech32Address, resource::Resource};
-use itertools::{Itertools};
+use itertools::Itertools;
 
+/// Based on the receipts returned by the call, the contract ID (which is null in the case of a
+/// script), and the output param, decode the values and return them.
+pub fn get_decoded_output(
+    receipts: &[Receipt],
+    contract_id: Option<&Bech32ContractId>,
+    output_param: &ParamType,
+) -> Result<Token, Error> {
+    // Multiple returns are handled as one `Tuple` (which has its own `ParamType`)
+    let contract_id: ContractId = match contract_id {
+        Some(contract_id) => contract_id.into(),
+        // During a script execution, the script's contract id is the **null** contract id
+        None => ContractId::new([0u8; 32]),
+    };
+    let encoded_value = match output_param.get_return_location() {
+        ReturnLocation::ReturnData => receipts
+            .iter()
+            .find(|receipt| {
+                matches!(receipt,
+                    Receipt::ReturnData { id, data, .. } if *id == contract_id && !data.is_empty())
+            })
+            .map(|receipt| {
+                receipt
+                    .data()
+                    .expect("ReturnData should have data")
+                    .to_vec()
+            }),
+        ReturnLocation::Return => receipts
+            .iter()
+            .find(|receipt| {
+                matches!(receipt,
+                    Receipt::Return { id, ..} if *id == contract_id)
+            })
+            .map(|receipt| {
+                receipt
+                    .val()
+                    .expect("Return should have val")
+                    .to_be_bytes()
+                    .to_vec()
+            }),
+    }
+    .unwrap_or_default();
 
+    let decoded_value = ABIDecoder::decode_single(output_param, &encoded_value)?;
+    Ok(decoded_value)
+}
 
 /// Sum up the amounts required in each call for each asset ID, so you can get a total for each
 /// asset over all calls.
