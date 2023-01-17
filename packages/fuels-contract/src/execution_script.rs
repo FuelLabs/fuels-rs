@@ -19,7 +19,7 @@ use crate::contract_calls_utils::{
     get_transaction_inputs_outputs,
 };
 
-/// [`TransactionExecution`] provides methods to create and call/simulate a transaction that carries
+/// [`ExecutableFuelCall`] provides methods to create and call/simulate a transaction that carries
 /// out contract method calls or script calls
 #[derive(Debug)]
 pub struct ExecutableFuelCall {
@@ -31,7 +31,7 @@ impl ExecutableFuelCall {
         Self { tx }
     }
 
-    /// Creates a [`TransactionExecution`] from contract calls. The internal [`Transaction`] is
+    /// Creates a [`ExecutableFuelCall`] from contract calls. The internal [Transaction] is
     /// initialized with the actual script instructions, script data needed to perform the call and
     /// transaction inputs/outputs consisting of assets and contracts.
     pub async fn from_contract_calls(

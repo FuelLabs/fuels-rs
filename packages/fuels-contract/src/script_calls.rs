@@ -1,5 +1,4 @@
 use crate::{
-    abi_encoder::UnresolvedBytes,
     call_response::FuelCallResponse,
     contract::{get_decoded_output, SettableContract},
     contract_calls_utils::{generate_contract_inputs, generate_contract_outputs},
@@ -11,15 +10,19 @@ use fuel_gql_client::{
     fuel_types::bytes::padded_len_usize,
 };
 use fuel_tx::{ContractId, Input};
+use fuels_core::abi_encoder::UnresolvedBytes;
 use fuels_core::{
     offsets::base_offset,
     parameters::{CallParameters, TxParameters},
-    Tokenizable,
+    Parameterize, Tokenizable,
 };
 use fuels_signers::{provider::Provider, WalletUnlocked};
-use fuels_types::{bech32::Bech32ContractId, errors::Error, param_types::ParamType};
+use fuels_types::bech32::Bech32ContractId;
+use fuels_types::errors::Error;
 use itertools::chain;
-use std::{collections::HashSet, fmt::Debug, marker::PhantomData};
+use std::collections::HashSet;
+use std::fmt::Debug;
+use std::marker::PhantomData;
 
 #[derive(Debug)]
 /// Contains all data relevant to a single script call
@@ -60,21 +63,19 @@ pub struct ScriptCallHandler<D> {
     pub tx_parameters: TxParameters,
     pub wallet: WalletUnlocked,
     pub provider: Provider,
-    pub output_param: ParamType,
     pub datatype: PhantomData<D>,
     pub log_decoder: LogDecoder,
 }
 
 impl<D> ScriptCallHandler<D>
 where
-    D: Tokenizable + Debug,
+    D: Parameterize + Tokenizable + Debug,
 {
     pub fn new(
         script_binary: Vec<u8>,
         encoded_args: UnresolvedBytes,
         wallet: WalletUnlocked,
         provider: Provider,
-        output_param: ParamType,
         log_decoder: LogDecoder,
     ) -> Self {
         let script_call = ScriptCall {
@@ -90,7 +91,6 @@ where
             tx_parameters: TxParameters::default(),
             wallet,
             provider,
-            output_param,
             datatype: PhantomData,
             log_decoder,
         }
@@ -213,7 +213,7 @@ where
 
     /// Create a [`FuelCallResponse`] from call receipts
     pub fn get_response(&self, receipts: Vec<Receipt>) -> Result<FuelCallResponse<D>, Error> {
-        let token = get_decoded_output(&receipts, None, &self.output_param)?;
+        let token = get_decoded_output(&receipts, None, &D::param_type())?;
         Ok(FuelCallResponse::new(
             D::from_token(token)?,
             receipts,

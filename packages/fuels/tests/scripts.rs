@@ -3,9 +3,16 @@ use fuels::prelude::*;
 #[tokio::test]
 async fn test_transaction_script_workflow() -> Result<(), Error> {
     setup_contract_test!(
-        contract_instance,
-        wallet,
-        "packages/fuels/tests/contracts/contract_test"
+        Wallets("wallet"),
+        Abigen(
+            name = "TestContract",
+            abi = "packages/fuels/tests/contracts/contract_test"
+        ),
+        Deploy(
+            name = "contract_instance",
+            contract = "TestContract",
+            wallet = "wallet"
+        ),
     );
 
     let call_handler = contract_instance.methods().initialize_counter(42);
@@ -23,9 +30,16 @@ async fn test_transaction_script_workflow() -> Result<(), Error> {
 #[tokio::test]
 async fn test_multi_call_script_workflow() -> Result<(), Error> {
     setup_contract_test!(
-        contract_instance,
-        wallet,
-        "packages/fuels/tests/contracts/contract_test"
+        Wallets("wallet"),
+        Abigen(
+            name = "TestContract",
+            abi = "packages/fuels/tests/contracts/contract_test"
+        ),
+        Deploy(
+            name = "contract_instance",
+            contract = "TestContract",
+            wallet = "wallet"
+        ),
     );
 
     let contract_methods = contract_instance.methods();
@@ -54,10 +68,7 @@ async fn test_multi_call_script_workflow() -> Result<(), Error> {
 async fn main_function_arguments() -> Result<(), Error> {
     // ANCHOR: script_with_arguments
     // The abigen is used for the same purpose as with contracts (Rust bindings)
-    script_abigen!(
-        MyScript,
-        "packages/fuels/tests/scripts/script_with_arguments/out/debug/script_with_arguments-abi.json"
-    );
+    abigen!(Script(name="MyScript", abi="packages/fuels/tests/scripts/script_with_arguments/out/debug/script_with_arguments-abi.json"));
     let wallet = launch_provider_and_get_wallet().await;
     let bin_path =
         "../fuels/tests/scripts/script_with_arguments/out/debug/script_with_arguments.bin";
@@ -77,10 +88,7 @@ async fn main_function_arguments() -> Result<(), Error> {
 
 #[tokio::test]
 async fn main_function_generic_arguments() -> Result<(), Error> {
-    script_abigen!(
-        MyScript,
-        "packages/fuels/tests/scripts/script_generic_types/out/debug/script_generic_types-abi.json"
-    );
+    abigen!(Script(name="MyScript", abi="packages/fuels/tests/scripts/script_generic_types/out/debug/script_generic_types-abi.json"));
     let wallet = launch_provider_and_get_wallet().await;
     let bin_path = "../fuels/tests/scripts/script_generic_types/out/debug/script_generic_types.bin";
     let instance = MyScript::new(wallet, bin_path);
@@ -107,11 +115,11 @@ async fn main_function_generic_arguments() -> Result<(), Error> {
 
 #[tokio::test]
 async fn main_function_option_result() -> Result<(), Error> {
-    script_abigen!(
-        MyScript,
-        "packages/fuels/tests/scripts/script_option_result_types/out/debug\
+    abigen!(Script(
+        name = "MyScript",
+        abi = "packages/fuels/tests/scripts/script_option_result_types/out/debug\
         /script_option_result_types-abi.json"
-    );
+    ));
     let wallet = launch_provider_and_get_wallet().await;
     let bin_path =
         "../fuels/tests/scripts/script_option_result_types/out/debug/script_option_result_types.bin";
@@ -129,10 +137,11 @@ async fn main_function_option_result() -> Result<(), Error> {
 
 #[tokio::test]
 async fn main_function_tuple_types() -> Result<(), Error> {
-    script_abigen!(
-        MyScript,
-        "packages/fuels/tests/scripts/script_tuple_types/out/debug/script_tuple_types-abi.json"
-    );
+    abigen!(Script(
+        name = "MyScript",
+        abi =
+            "packages/fuels/tests/scripts/script_tuple_types/out/debug/script_tuple_types-abi.json"
+    ));
     let wallet = launch_provider_and_get_wallet().await;
     let bin_path = "../fuels/tests/scripts/script_tuple_types/out/debug/script_tuple_types.bin";
     let instance = MyScript::new(wallet, bin_path);
@@ -168,10 +177,10 @@ async fn main_function_tuple_types() -> Result<(), Error> {
 
 #[tokio::test]
 async fn main_function_vector_arguments() -> Result<(), Error> {
-    script_abigen!(
-        MyScript,
-        "packages/fuels/tests/scripts/script_vectors/out/debug/script_vectors-abi.json"
-    );
+    abigen!(Script(
+        name = "MyScript",
+        abi = "packages/fuels/tests/scripts/script_vectors/out/debug/script_vectors-abi.json"
+    ));
     let wallet = launch_provider_and_get_wallet().await;
     let bin_path = "../fuels/tests/scripts/script_vectors/out/debug/script_vectors.bin";
     let instance = MyScript::new(wallet, bin_path);
@@ -220,10 +229,10 @@ async fn main_function_vector_arguments() -> Result<(), Error> {
 
 #[tokio::test]
 async fn test_basic_script_with_tx_parameters() -> Result<(), Error> {
-    script_abigen!(
-        bimbam_script,
-        "packages/fuels/tests/scripts/basic_script/out/debug/basic_script-abi.json"
-    );
+    abigen!(Script(
+        name = "bimbam_script",
+        abi = "packages/fuels/tests/scripts/basic_script/out/debug/basic_script-abi.json"
+    ));
     let num_wallets = 1;
     let num_coins = 1;
     let amount = 1000;
@@ -272,10 +281,10 @@ async fn test_script_call_with_non_default_max_input() -> Result<(), Error> {
     let provider = Provider::new(fuel_client);
     wallet.set_provider(provider.clone());
 
-    script_abigen!(
-        MyScript,
-        "packages/fuels/tests/scripts/script_vector/out/debug/script_vector-abi.json"
-    );
+    abigen!(Script(
+        name = "MyScript",
+        abi = "packages/fuels/tests/scripts/script_vector/out/debug/script_vector-abi.json"
+    ));
 
     let bin_path = "../fuels/tests/scripts/script_vector/out/debug/script_vector.bin";
     let instance = MyScript::new(wallet, bin_path);

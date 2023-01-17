@@ -1,6 +1,7 @@
-use crate::{Parameterize, Token, Tokenizable};
 use fuels_types::errors::Error;
 use fuels_types::param_types::ParamType;
+
+use crate::{Parameterize, Token, Tokenizable};
 
 pub struct Byte(pub u8);
 

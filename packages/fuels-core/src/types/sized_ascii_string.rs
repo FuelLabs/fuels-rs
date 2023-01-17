@@ -1,7 +1,9 @@
-use crate::{Parameterize, StringToken, Token, Tokenizable};
+use std::fmt::{Debug, Display, Formatter};
+
 use fuels_types::errors::Error;
 use fuels_types::param_types::ParamType;
-use std::fmt::{Debug, Display, Formatter};
+
+use crate::{Parameterize, StringToken, Token, Tokenizable};
 
 // To be used when interacting with contracts which have strings in their ABI.
 // The length of a string is part of its type -- i.e. str[2] is a

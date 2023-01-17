@@ -1,13 +1,10 @@
+use fuels::core::tx::{Bytes32, StorageSlot};
 use fuels::prelude::*;
-use fuels_core::tx::{Bytes32, StorageSlot};
 use std::str::FromStr;
 
 #[tokio::test]
 async fn test_storage_initialization() -> Result<(), Error> {
-    abigen!(
-        MyContract,
-        "packages/fuels/tests/storage/contract_storage_test/out/debug/contract_storage_test-abi.json"
-    );
+    abigen!(Contract(name="MyContract", abi="packages/fuels/tests/storage/contract_storage_test/out/debug/contract_storage_test-abi.json"));
 
     let wallet = launch_provider_and_get_wallet().await;
 
@@ -40,10 +37,7 @@ async fn test_storage_initialization() -> Result<(), Error> {
 
 #[tokio::test]
 async fn test_init_storage_automatically() -> Result<(), Error> {
-    abigen!(
-        MyContract,
-        "packages/fuels/tests/storage/contract_storage_test/out/debug/contract_storage_test-abi.json"
-    );
+    abigen!(Contract(name="MyContract", abi="packages/fuels/tests/storage/contract_storage_test/out/debug/contract_storage_test-abi.json"));
 
     let wallet = launch_provider_and_get_wallet().await;
 
@@ -84,10 +78,7 @@ async fn test_init_storage_automatically() -> Result<(), Error> {
 
 #[tokio::test]
 async fn test_init_storage_automatically_bad_json_path() -> Result<(), Error> {
-    abigen!(
-        MyContract,
-        "packages/fuels/tests/storage/contract_storage_test/out/debug/contract_storage_test-abi.json"
-    );
+    abigen!(Contract(name="MyContract", abi="packages/fuels/tests/storage/contract_storage_test/out/debug/contract_storage_test-abi.json"));
 
     let wallet = launch_provider_and_get_wallet().await;
 

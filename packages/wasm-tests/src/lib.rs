@@ -1,10 +1,13 @@
 extern crate alloc;
 
-use fuels_abigen_macro::wasm_abigen;
+use fuels::core::abi_decoder::ABIDecoder;
+use fuels::core::Tokenizable;
+use fuels::fuels_abigen::wasm_abigen;
+use fuels::types::param_types::ParamType;
 
-wasm_abigen!(
-    no_name,
-    r#"
+wasm_abigen!(Contract(
+    name = "no_name",
+    abi = r#"
     {
         "types": [
           {
@@ -96,11 +99,9 @@ wasm_abigen!(
         "loggedTypes": []
       }
     "#
-);
+));
 
 pub fn the_fn() {
-    use fuels_core::{abi_decoder::ABIDecoder, Tokenizable};
-    use fuels_types::param_types::ParamType;
     let data = vec![
         0, 0, 0, 0, 0, 0, 3, 252, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175,
         175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175,

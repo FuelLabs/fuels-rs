@@ -1,5 +1,6 @@
-use fuel_tx::{CheckError, Receipt};
 use std::{array::TryFromSliceError, fmt, str::Utf8Error};
+
+use fuel_tx::{CheckError, Receipt};
 use strum::ParseError;
 use thiserror::Error;
 
