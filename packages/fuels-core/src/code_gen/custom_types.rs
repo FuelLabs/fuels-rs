@@ -1,15 +1,14 @@
 use std::collections::HashSet;
 
+use fuels_types::{errors::Error, utils::custom_type_name};
 use itertools::Itertools;
 
-use fuels_types::errors::Error;
-use fuels_types::utils::custom_type_name;
-
-use crate::code_gen::abi_types::FullTypeDeclaration;
-use crate::code_gen::custom_types::enums::expand_custom_enum;
-use crate::code_gen::custom_types::structs::expand_custom_struct;
-use crate::code_gen::generated_code::GeneratedCode;
-use crate::code_gen::utils::get_sdk_provided_types;
+use crate::code_gen::{
+    abi_types::FullTypeDeclaration,
+    custom_types::{enums::expand_custom_enum, structs::expand_custom_struct},
+    generated_code::GeneratedCode,
+    utils::get_sdk_provided_types,
+};
 
 mod enums;
 mod structs;
@@ -85,16 +84,15 @@ mod tests {
     };
 
     use anyhow::anyhow;
+    use fuel_abi_types::program_abi::{ProgramABI, TypeApplication, TypeDeclaration};
     use proc_macro2::TokenStream;
     use quote::quote;
 
+    use super::*;
     use crate::code_gen::{
         abi_types::{FullTypeApplication, FullTypeDeclaration},
         type_path::TypePath,
     };
-    use fuel_abi_types::program_abi::{ProgramABI, TypeApplication, TypeDeclaration};
-
-    use super::*;
 
     #[test]
     fn test_expand_custom_enum() -> Result<(), Error> {
@@ -149,16 +147,16 @@ mod tests {
                 LongIsland(u64),
                 MoscowMule(bool)
             }
-            impl<> ::fuels::core::Parameterize for self::MatchaTea<> {
+            impl<> ::fuels::core::traits::Parameterize for self::MatchaTea<> {
                 fn param_type() -> ::fuels::types::param_types::ParamType {
                     let variants = [
                         (
                             "LongIsland".to_string(),
-                            <u64 as ::fuels::core::Parameterize>::param_type()
+                            <u64 as ::fuels::core::traits::Parameterize>::param_type()
                         ),
                         (
                             "MoscowMule".to_string(),
-                            <bool as ::fuels::core::Parameterize>::param_type()
+                            <bool as ::fuels::core::traits::Parameterize>::param_type()
                         )
                     ]
                     .to_vec();
@@ -171,9 +169,9 @@ mod tests {
                     }
                 }
             }
-            impl<> ::fuels::core::Tokenizable for self::MatchaTea<> {
+            impl<> ::fuels::core::traits::Tokenizable for self::MatchaTea<> {
                 fn from_token(
-                    token: ::fuels::core::Token
+                    token: ::fuels::types::Token
                 ) -> ::std::result::Result<Self, ::fuels::types::errors::Error>
                 where
                     Self: Sized,
@@ -185,14 +183,14 @@ mod tests {
                         ))
                     };
                     match token {
-                        ::fuels::core::Token::Enum(selector) => {
+                        ::fuels::types::Token::Enum(selector) => {
                             let (discriminant, variant_token, _) = *selector;
                             match discriminant {
                                 0u8 => ::std::result::Result::Ok(Self::LongIsland(
-                                    ::fuels::core::Tokenizable::from_token(variant_token)?
+                                    ::fuels::core::traits::Tokenizable::from_token(variant_token)?
                                 )),
                                 1u8 => ::std::result::Result::Ok(Self::MoscowMule(
-                                    ::fuels::core::Tokenizable::from_token(variant_token)?
+                                    ::fuels::core::traits::Tokenizable::from_token(variant_token)?
                                 )),
                                 _ => ::std::result::Result::Err(gen_err(format!(
                                     "Discriminant {} doesn't point to any of the enums variants.",
@@ -206,13 +204,13 @@ mod tests {
                         ))),
                     }
                 }
-                fn into_token(self) -> ::fuels::core::Token {
+                fn into_token(self) -> ::fuels::types::Token {
                     let (discriminant, token) = match self {
-                        Self::LongIsland(inner) => (0u8, ::fuels::core::Tokenizable::into_token(inner)),
-                        Self::MoscowMule(inner) => (1u8, ::fuels::core::Tokenizable::into_token(inner))
+                        Self::LongIsland(inner) => (0u8, ::fuels::core::traits::Tokenizable::into_token(inner)),
+                        Self::MoscowMule(inner) => (1u8, ::fuels::core::traits::Tokenizable::into_token(inner))
                     };
-                    let variants = match < Self as :: fuels :: core :: Parameterize > :: param_type () { :: fuels :: types :: param_types :: ParamType :: Enum { variants , .. } => variants , other => panic ! ("Calling {}::param_type() must return a ParamType::Enum but instead it returned: {:?}" , "MatchaTea" , other) } ;
-                    ::fuels::core::Token::Enum(::std::boxed::Box::new((discriminant, token, variants)))
+                    let variants = match < Self as :: fuels :: core :: traits :: Parameterize > :: param_type () { :: fuels :: types :: param_types :: ParamType :: Enum { variants , .. } => variants , other => panic ! ("Calling {}::param_type() must return a ParamType::Enum but instead it returned: {:?}" , "MatchaTea" , other) } ;
+                    ::fuels::types::Token::Enum(::std::boxed::Box::new((discriminant, token, variants)))
                 }
             }
             impl<> TryFrom<&[u8]> for self::MatchaTea<> {
@@ -348,16 +346,16 @@ mod tests {
                 Infrastructure(self::Building),
                 Service(u32)
             }
-            impl<> ::fuels::core::Parameterize for self::Amsterdam<> {
+            impl<> ::fuels::core::traits::Parameterize for self::Amsterdam<> {
                 fn param_type() -> ::fuels::types::param_types::ParamType {
                     let variants = [
                         (
                             "Infrastructure".to_string(),
-                            <self::Building as ::fuels::core::Parameterize>::param_type()
+                            <self::Building as ::fuels::core::traits::Parameterize>::param_type()
                         ),
                         (
                             "Service".to_string(),
-                            <u32 as ::fuels::core::Parameterize>::param_type()
+                            <u32 as ::fuels::core::traits::Parameterize>::param_type()
                         )
                     ]
                     .to_vec();
@@ -370,9 +368,9 @@ mod tests {
                     }
                 }
             }
-            impl<> ::fuels::core::Tokenizable for self::Amsterdam<> {
+            impl<> ::fuels::core::traits::Tokenizable for self::Amsterdam<> {
                 fn from_token(
-                    token: ::fuels::core::Token
+                    token: ::fuels::types::Token
                 ) -> ::std::result::Result<Self, ::fuels::types::errors::Error>
                 where
                     Self: Sized,
@@ -384,14 +382,14 @@ mod tests {
                         ))
                     };
                     match token {
-                        ::fuels::core::Token::Enum(selector) => {
+                        ::fuels::types::Token::Enum(selector) => {
                             let (discriminant, variant_token, _) = *selector;
                             match discriminant {
                                 0u8 => ::std::result::Result::Ok(Self::Infrastructure(
-                                    ::fuels::core::Tokenizable::from_token(variant_token)?
+                                    ::fuels::core::traits::Tokenizable::from_token(variant_token)?
                                 )),
                                 1u8 => ::std::result::Result::Ok(Self::Service(
-                                    ::fuels::core::Tokenizable::from_token(variant_token)?
+                                    ::fuels::core::traits::Tokenizable::from_token(variant_token)?
                                 )),
                                 _ => ::std::result::Result::Err(gen_err(format!(
                                     "Discriminant {} doesn't point to any of the enums variants.",
@@ -405,13 +403,13 @@ mod tests {
                         ))),
                     }
                 }
-                fn into_token(self) -> ::fuels::core::Token {
+                fn into_token(self) -> ::fuels::types::Token {
                     let (discriminant, token) = match self {
-                        Self::Infrastructure(inner) => (0u8, ::fuels::core::Tokenizable::into_token(inner)),
-                        Self::Service(inner) => (1u8, ::fuels::core::Tokenizable::into_token(inner))
+                        Self::Infrastructure(inner) => (0u8, ::fuels::core::traits::Tokenizable::into_token(inner)),
+                        Self::Service(inner) => (1u8, ::fuels::core::traits::Tokenizable::into_token(inner))
                     };
-                    let variants = match < Self as :: fuels :: core :: Parameterize > :: param_type () { :: fuels :: types :: param_types :: ParamType :: Enum { variants , .. } => variants , other => panic ! ("Calling {}::param_type() must return a ParamType::Enum but instead it returned: {:?}" , "Amsterdam" , other) } ;
-                    ::fuels::core::Token::Enum(::std::boxed::Box::new((discriminant, token, variants)))
+                    let variants = match < Self as :: fuels :: core :: traits :: Parameterize > :: param_type () { :: fuels :: types :: param_types :: ParamType :: Enum { variants , .. } => variants , other => panic ! ("Calling {}::param_type() must return a ParamType::Enum but instead it returned: {:?}" , "Amsterdam" , other) } ;
+                    ::fuels::types::Token::Enum(::std::boxed::Box::new((discriminant, token, variants)))
                 }
             }
             impl<> TryFrom<&[u8]> for self::Amsterdam<> {
@@ -488,11 +486,11 @@ mod tests {
             pub enum SomeEnum < > {
                 SomeArr([u64; 7usize])
             }
-            impl < > ::fuels::core::Parameterize for self::SomeEnum < > {
+            impl < > ::fuels::core::traits::Parameterize for self::SomeEnum < > {
                 fn param_type() -> ::fuels::types::param_types::ParamType {
                     let variants = [(
                         "SomeArr".to_string(),
-                        <[u64; 7usize] as ::fuels::core::Parameterize>::param_type()
+                        <[u64; 7usize] as ::fuels::core::traits::Parameterize>::param_type()
                     )]
                     .to_vec();
                     let variants = ::fuels::types::enum_variants::EnumVariants::new(variants)
@@ -504,9 +502,9 @@ mod tests {
                     }
                 }
             }
-            impl < > ::fuels::core::Tokenizable for self::SomeEnum < > {
+            impl < > ::fuels::core::traits::Tokenizable for self::SomeEnum < > {
                 fn from_token(
-                    token: ::fuels::core::Token
+                    token: ::fuels::types::Token
                 ) -> ::std::result::Result<Self, ::fuels::types::errors::Error>
                 where
                     Self: Sized,
@@ -518,11 +516,11 @@ mod tests {
                         ))
                     };
                     match token {
-                        ::fuels::core::Token::Enum(selector) => {
+                        ::fuels::types::Token::Enum(selector) => {
                             let (discriminant, variant_token, _) = *selector;
                             match discriminant {
                                 0u8 => ::std::result::Result::Ok(Self::SomeArr(
-                                    ::fuels::core::Tokenizable::from_token(variant_token)?
+                                    ::fuels::core::traits::Tokenizable::from_token(variant_token)?
                                 )),
                                 _ => ::std::result::Result::Err(gen_err(format!(
                                     "Discriminant {} doesn't point to any of the enums variants.",
@@ -536,12 +534,12 @@ mod tests {
                         ))),
                     }
                 }
-                fn into_token(self) -> ::fuels::core::Token {
+                fn into_token(self) -> ::fuels::types::Token {
                     let (discriminant, token) = match self {
-                        Self::SomeArr(inner) => (0u8, ::fuels::core::Tokenizable::into_token(inner))
+                        Self::SomeArr(inner) => (0u8, ::fuels::core::traits::Tokenizable::into_token(inner))
                     };
-                    let variants = match < Self as :: fuels :: core :: Parameterize > :: param_type () { :: fuels :: types :: param_types :: ParamType :: Enum { variants , .. } => variants , other => panic ! ("Calling {}::param_type() must return a ParamType::Enum but instead it returned: {:?}" , "SomeEnum" , other) } ;
-                    ::fuels::core::Token::Enum(::std::boxed::Box::new((discriminant, token, variants)))
+                    let variants = match < Self as :: fuels :: core :: traits :: Parameterize > :: param_type () { :: fuels :: types :: param_types :: ParamType :: Enum { variants , .. } => variants , other => panic ! ("Calling {}::param_type() must return a ParamType::Enum but instead it returned: {:?}" , "SomeEnum" , other) } ;
+                    ::fuels::types::Token::Enum(::std::boxed::Box::new((discriminant, token, variants)))
                 }
             }
             impl <> TryFrom<&[u8]> for self::SomeEnum < > {
@@ -631,11 +629,11 @@ mod tests {
             pub enum EnumLevel3<> {
                 El2(self::EnumLevel2)
             }
-            impl<> ::fuels::core::Parameterize for self::EnumLevel3<> {
+            impl<> ::fuels::core::traits::Parameterize for self::EnumLevel3<> {
                 fn param_type() -> ::fuels::types::param_types::ParamType {
                     let variants = [(
                         "El2".to_string(),
-                        <self::EnumLevel2 as ::fuels::core::Parameterize>::param_type()
+                        <self::EnumLevel2 as ::fuels::core::traits::Parameterize>::param_type()
                     )]
                     .to_vec();
                     let variants = ::fuels::types::enum_variants::EnumVariants::new(variants)
@@ -647,9 +645,9 @@ mod tests {
                     }
                 }
             }
-            impl<> ::fuels::core::Tokenizable for self::EnumLevel3<> {
+            impl<> ::fuels::core::traits::Tokenizable for self::EnumLevel3<> {
                 fn from_token(
-                    token: ::fuels::core::Token
+                    token: ::fuels::types::Token
                 ) -> ::std::result::Result<Self, ::fuels::types::errors::Error>
                 where
                     Self: Sized,
@@ -661,11 +659,11 @@ mod tests {
                         ))
                     };
                     match token {
-                        ::fuels::core::Token::Enum(selector) => {
+                        ::fuels::types::Token::Enum(selector) => {
                             let (discriminant, variant_token, _) = *selector;
                             match discriminant {
                                 0u8 => ::std::result::Result::Ok(Self::El2(
-                                    ::fuels::core::Tokenizable::from_token(variant_token)?
+                                    ::fuels::core::traits::Tokenizable::from_token(variant_token)?
                                 )),
                                 _ => ::std::result::Result::Err(gen_err(format!(
                                     "Discriminant {} doesn't point to any of the enums variants.",
@@ -679,12 +677,12 @@ mod tests {
                         ))),
                     }
                 }
-                fn into_token(self) -> ::fuels::core::Token {
+                fn into_token(self) -> ::fuels::types::Token {
                     let (discriminant, token) = match self {
-                        Self::El2(inner) => (0u8, ::fuels::core::Tokenizable::into_token(inner))
+                        Self::El2(inner) => (0u8, ::fuels::core::traits::Tokenizable::into_token(inner))
                     };
-                    let variants = match < Self as :: fuels :: core :: Parameterize > :: param_type () { :: fuels :: types :: param_types :: ParamType :: Enum { variants , .. } => variants , other => panic ! ("Calling {}::param_type() must return a ParamType::Enum but instead it returned: {:?}" , "EnumLevel3" , other) } ;
-                    ::fuels::core::Token::Enum(::std::boxed::Box::new((discriminant, token, variants)))
+                    let variants = match < Self as :: fuels :: core :: traits :: Parameterize > :: param_type () { :: fuels :: types :: param_types :: ParamType :: Enum { variants , .. } => variants , other => panic ! ("Calling {}::param_type() must return a ParamType::Enum but instead it returned: {:?}" , "EnumLevel3" , other) } ;
+                    ::fuels::types::Token::Enum(::std::boxed::Box::new((discriminant, token, variants)))
                 }
             }
             impl<> TryFrom<&[u8]> for self::EnumLevel3<> {
@@ -771,7 +769,7 @@ mod tests {
         .to_string();
         let expected = TokenStream::from_str(
             r#"
-            # [derive (Clone , Debug , Eq , PartialEq)] pub struct Cocktail < > { pub long_island : bool , pub cosmopolitan : u64 , pub mojito : u32 } impl < > :: fuels :: core :: Parameterize for self :: Cocktail < > { fn param_type () -> :: fuels :: types :: param_types :: ParamType { let types = [("long_island" . to_string () , < bool as :: fuels :: core :: Parameterize > :: param_type ()) , ("cosmopolitan" . to_string () , < u64 as :: fuels :: core :: Parameterize > :: param_type ()) , ("mojito" . to_string () , < u32 as :: fuels :: core :: Parameterize > :: param_type ())] . to_vec () ; :: fuels :: types :: param_types :: ParamType :: Struct { name : "Cocktail" . to_string () , fields : types , generics : [] . to_vec () } } } impl < > :: fuels :: core :: Tokenizable for self :: Cocktail < > { fn into_token (self) -> :: fuels :: core :: Token { let tokens = [self . long_island . into_token () , self . cosmopolitan . into_token () , self . mojito . into_token ()] . to_vec () ; :: fuels :: core :: Token :: Struct (tokens) } fn from_token (token : :: fuels :: core :: Token) -> :: std :: result :: Result < Self , :: fuels :: types :: errors :: Error > { match token { :: fuels :: core :: Token :: Struct (tokens) => { let mut tokens_iter = tokens . into_iter () ; let mut next_token = move || { tokens_iter . next () . ok_or_else (|| { :: fuels :: types :: errors :: Error :: InstantiationError (format ! ("Ran out of tokens before '{}' has finished construction!" , "Cocktail")) }) } ; :: std :: result :: Result :: Ok (Self { long_island : :: fuels :: core :: Tokenizable :: from_token (next_token () ?) ? , cosmopolitan : :: fuels :: core :: Tokenizable :: from_token (next_token () ?) ? , mojito : :: fuels :: core :: Tokenizable :: from_token (next_token () ?) ? , }) } , other => :: std :: result :: Result :: Err (:: fuels :: types :: errors :: Error :: InstantiationError (format ! ("Error while constructing '{}'. Expected token of type Token::Struct, got {:?}" , "Cocktail" , other))) , } } } impl < > TryFrom < & [u8] > for self :: Cocktail < > { type Error = :: fuels :: types :: errors :: Error ; fn try_from (bytes : & [u8]) -> :: std :: result :: Result < Self , Self :: Error > { :: fuels :: core :: try_from_bytes (bytes) } } impl < > TryFrom < & :: std :: vec :: Vec < u8 >> for self :: Cocktail < > { type Error = :: fuels :: types :: errors :: Error ; fn try_from (bytes : & :: std :: vec :: Vec < u8 >) -> :: std :: result :: Result < Self , Self :: Error > { :: fuels :: core :: try_from_bytes (& bytes) } } impl < > TryFrom < :: std :: vec :: Vec < u8 >> for self :: Cocktail < > { type Error = :: fuels :: types :: errors :: Error ; fn try_from (bytes : :: std :: vec :: Vec < u8 >) -> :: std :: result :: Result < Self , Self :: Error > { :: fuels :: core :: try_from_bytes (& bytes) } }
+            # [derive (Clone , Debug , Eq , PartialEq)] pub struct Cocktail < > { pub long_island : bool , pub cosmopolitan : u64 , pub mojito : u32 } impl < > :: fuels :: core :: traits :: Parameterize for self :: Cocktail < > { fn param_type () -> :: fuels :: types :: param_types :: ParamType { let types = [("long_island" . to_string () , < bool as :: fuels :: core :: traits :: Parameterize > :: param_type ()) , ("cosmopolitan" . to_string () , < u64 as :: fuels :: core :: traits :: Parameterize > :: param_type ()) , ("mojito" . to_string () , < u32 as :: fuels :: core :: traits :: Parameterize > :: param_type ())] . to_vec () ; :: fuels :: types :: param_types :: ParamType :: Struct { name : "Cocktail" . to_string () , fields : types , generics : [] . to_vec () } } } impl < > :: fuels :: core :: traits :: Tokenizable for self :: Cocktail < > { fn into_token (self) -> :: fuels :: types :: Token { let tokens = [self . long_island . into_token () , self . cosmopolitan . into_token () , self . mojito . into_token ()] . to_vec () ; :: fuels :: types :: Token :: Struct (tokens) } fn from_token (token : :: fuels :: types :: Token) -> :: std :: result :: Result < Self , :: fuels :: types :: errors :: Error > { match token { :: fuels :: types :: Token :: Struct (tokens) => { let mut tokens_iter = tokens . into_iter () ; let mut next_token = move || { tokens_iter . next () . ok_or_else (|| { :: fuels :: types :: errors :: Error :: InstantiationError (format ! ("Ran out of tokens before '{}' has finished construction!" , "Cocktail")) }) } ; :: std :: result :: Result :: Ok (Self { long_island : :: fuels :: core :: traits :: Tokenizable :: from_token (next_token () ?) ? , cosmopolitan : :: fuels :: core :: traits :: Tokenizable :: from_token (next_token () ?) ? , mojito : :: fuels :: core :: traits :: Tokenizable :: from_token (next_token () ?) ? , }) } , other => :: std :: result :: Result :: Err (:: fuels :: types :: errors :: Error :: InstantiationError (format ! ("Error while constructing '{}'. Expected token of type Token::Struct, got {:?}" , "Cocktail" , other))) , } } } impl < > TryFrom < & [u8] > for self :: Cocktail < > { type Error = :: fuels :: types :: errors :: Error ; fn try_from (bytes : & [u8]) -> :: std :: result :: Result < Self , Self :: Error > { :: fuels :: core :: try_from_bytes (bytes) } } impl < > TryFrom < & :: std :: vec :: Vec < u8 >> for self :: Cocktail < > { type Error = :: fuels :: types :: errors :: Error ; fn try_from (bytes : & :: std :: vec :: Vec < u8 >) -> :: std :: result :: Result < Self , Self :: Error > { :: fuels :: core :: try_from_bytes (& bytes) } } impl < > TryFrom < :: std :: vec :: Vec < u8 >> for self :: Cocktail < > { type Error = :: fuels :: types :: errors :: Error ; fn try_from (bytes : :: std :: vec :: Vec < u8 >) -> :: std :: result :: Result < Self , Self :: Error > { :: fuels :: core :: try_from_bytes (& bytes) } }
             "#,
         )?.to_string();
 
@@ -798,7 +796,7 @@ mod tests {
 
         let expected = TokenStream::from_str(
             r#"
-            # [derive (Clone , Debug , Eq , PartialEq)] pub struct SomeEmptyStruct < > { } impl < > :: fuels :: core :: Parameterize for self :: SomeEmptyStruct < > { fn param_type () -> :: fuels :: types :: param_types :: ParamType { let types = [] . to_vec () ; :: fuels :: types :: param_types :: ParamType :: Struct { name : "SomeEmptyStruct" . to_string () , fields : types , generics : [] . to_vec () } } } impl < > :: fuels :: core :: Tokenizable for self :: SomeEmptyStruct < > { fn into_token (self) -> :: fuels :: core :: Token { let tokens = [] . to_vec () ; :: fuels :: core :: Token :: Struct (tokens) } fn from_token (token : :: fuels :: core :: Token) -> :: std :: result :: Result < Self , :: fuels :: types :: errors :: Error > { match token { :: fuels :: core :: Token :: Struct (tokens) => { let mut tokens_iter = tokens . into_iter () ; let mut next_token = move || { tokens_iter . next () . ok_or_else (|| { :: fuels :: types :: errors :: Error :: InstantiationError (format ! ("Ran out of tokens before '{}' has finished construction!" , "SomeEmptyStruct")) }) } ; :: std :: result :: Result :: Ok (Self { }) } , other => :: std :: result :: Result :: Err (:: fuels :: types :: errors :: Error :: InstantiationError (format ! ("Error while constructing '{}'. Expected token of type Token::Struct, got {:?}" , "SomeEmptyStruct" , other))) , } } } impl < > TryFrom < & [u8] > for self :: SomeEmptyStruct < > { type Error = :: fuels :: types :: errors :: Error ; fn try_from (bytes : & [u8]) -> :: std :: result :: Result < Self , Self :: Error > { :: fuels :: core :: try_from_bytes (bytes) } } impl < > TryFrom < & :: std :: vec :: Vec < u8 >> for self :: SomeEmptyStruct < > { type Error = :: fuels :: types :: errors :: Error ; fn try_from (bytes : & :: std :: vec :: Vec < u8 >) -> :: std :: result :: Result < Self , Self :: Error > { :: fuels :: core :: try_from_bytes (& bytes) } } impl < > TryFrom < :: std :: vec :: Vec < u8 >> for self :: SomeEmptyStruct < > { type Error = :: fuels :: types :: errors :: Error ; fn try_from (bytes : :: std :: vec :: Vec < u8 >) -> :: std :: result :: Result < Self , Self :: Error > { :: fuels :: core :: try_from_bytes (& bytes) } }
+            # [derive (Clone , Debug , Eq , PartialEq)] pub struct SomeEmptyStruct < > { } impl < > :: fuels :: core :: traits :: Parameterize for self :: SomeEmptyStruct < > { fn param_type () -> :: fuels :: types :: param_types :: ParamType { let types = [] . to_vec () ; :: fuels :: types :: param_types :: ParamType :: Struct { name : "SomeEmptyStruct" . to_string () , fields : types , generics : [] . to_vec () } } } impl < > :: fuels :: core :: traits :: Tokenizable for self :: SomeEmptyStruct < > { fn into_token (self) -> :: fuels :: types :: Token { let tokens = [] . to_vec () ; :: fuels :: types :: Token :: Struct (tokens) } fn from_token (token : :: fuels :: types :: Token) -> :: std :: result :: Result < Self , :: fuels :: types :: errors :: Error > { match token { :: fuels :: types :: Token :: Struct (tokens) => { let mut tokens_iter = tokens . into_iter () ; let mut next_token = move || { tokens_iter . next () . ok_or_else (|| { :: fuels :: types :: errors :: Error :: InstantiationError (format ! ("Ran out of tokens before '{}' has finished construction!" , "SomeEmptyStruct")) }) } ; :: std :: result :: Result :: Ok (Self { }) } , other => :: std :: result :: Result :: Err (:: fuels :: types :: errors :: Error :: InstantiationError (format ! ("Error while constructing '{}'. Expected token of type Token::Struct, got {:?}" , "SomeEmptyStruct" , other))) , } } } impl < > TryFrom < & [u8] > for self :: SomeEmptyStruct < > { type Error = :: fuels :: types :: errors :: Error ; fn try_from (bytes : & [u8]) -> :: std :: result :: Result < Self , Self :: Error > { :: fuels :: core :: try_from_bytes (bytes) } } impl < > TryFrom < & :: std :: vec :: Vec < u8 >> for self :: SomeEmptyStruct < > { type Error = :: fuels :: types :: errors :: Error ; fn try_from (bytes : & :: std :: vec :: Vec < u8 >) -> :: std :: result :: Result < Self , Self :: Error > { :: fuels :: core :: try_from_bytes (& bytes) } } impl < > TryFrom < :: std :: vec :: Vec < u8 >> for self :: SomeEmptyStruct < > { type Error = :: fuels :: types :: errors :: Error ; fn try_from (bytes : :: std :: vec :: Vec < u8 >) -> :: std :: result :: Result < Self , Self :: Error > { :: fuels :: core :: try_from_bytes (& bytes) } }
             "#,
         )?.to_string();
 
@@ -882,7 +880,7 @@ mod tests {
         .to_string();
         let expected = TokenStream::from_str(
             r#"
-            # [derive (Clone , Debug , Eq , PartialEq)] pub struct Cocktail < > { pub long_island : self :: Shaker , pub mojito : u32 } impl < > :: fuels :: core :: Parameterize for self :: Cocktail < > { fn param_type () -> :: fuels :: types :: param_types :: ParamType { let types = [("long_island" . to_string () , < self :: Shaker as :: fuels :: core :: Parameterize > :: param_type ()) , ("mojito" . to_string () , < u32 as :: fuels :: core :: Parameterize > :: param_type ())] . to_vec () ; :: fuels :: types :: param_types :: ParamType :: Struct { name : "Cocktail" . to_string () , fields : types , generics : [] . to_vec () } } } impl < > :: fuels :: core :: Tokenizable for self :: Cocktail < > { fn into_token (self) -> :: fuels :: core :: Token { let tokens = [self . long_island . into_token () , self . mojito . into_token ()] . to_vec () ; :: fuels :: core :: Token :: Struct (tokens) } fn from_token (token : :: fuels :: core :: Token) -> :: std :: result :: Result < Self , :: fuels :: types :: errors :: Error > { match token { :: fuels :: core :: Token :: Struct (tokens) => { let mut tokens_iter = tokens . into_iter () ; let mut next_token = move || { tokens_iter . next () . ok_or_else (|| { :: fuels :: types :: errors :: Error :: InstantiationError (format ! ("Ran out of tokens before '{}' has finished construction!" , "Cocktail")) }) } ; :: std :: result :: Result :: Ok (Self { long_island : :: fuels :: core :: Tokenizable :: from_token (next_token () ?) ? , mojito : :: fuels :: core :: Tokenizable :: from_token (next_token () ?) ? , }) } , other => :: std :: result :: Result :: Err (:: fuels :: types :: errors :: Error :: InstantiationError (format ! ("Error while constructing '{}'. Expected token of type Token::Struct, got {:?}" , "Cocktail" , other))) , } } } impl < > TryFrom < & [u8] > for self :: Cocktail < > { type Error = :: fuels :: types :: errors :: Error ; fn try_from (bytes : & [u8]) -> :: std :: result :: Result < Self , Self :: Error > { :: fuels :: core :: try_from_bytes (bytes) } } impl < > TryFrom < & :: std :: vec :: Vec < u8 >> for self :: Cocktail < > { type Error = :: fuels :: types :: errors :: Error ; fn try_from (bytes : & :: std :: vec :: Vec < u8 >) -> :: std :: result :: Result < Self , Self :: Error > { :: fuels :: core :: try_from_bytes (& bytes) } } impl < > TryFrom < :: std :: vec :: Vec < u8 >> for self :: Cocktail < > { type Error = :: fuels :: types :: errors :: Error ; fn try_from (bytes : :: std :: vec :: Vec < u8 >) -> :: std :: result :: Result < Self , Self :: Error > { :: fuels :: core :: try_from_bytes (& bytes) } }
+            # [derive (Clone , Debug , Eq , PartialEq)] pub struct Cocktail < > { pub long_island : self :: Shaker , pub mojito : u32 } impl < > :: fuels :: core :: traits :: Parameterize for self :: Cocktail < > { fn param_type () -> :: fuels :: types :: param_types :: ParamType { let types = [("long_island" . to_string () , < self :: Shaker as :: fuels :: core :: traits :: Parameterize > :: param_type ()) , ("mojito" . to_string () , < u32 as :: fuels :: core :: traits :: Parameterize > :: param_type ())] . to_vec () ; :: fuels :: types :: param_types :: ParamType :: Struct { name : "Cocktail" . to_string () , fields : types , generics : [] . to_vec () } } } impl < > :: fuels :: core :: traits :: Tokenizable for self :: Cocktail < > { fn into_token (self) -> :: fuels :: types :: Token { let tokens = [self . long_island . into_token () , self . mojito . into_token ()] . to_vec () ; :: fuels :: types :: Token :: Struct (tokens) } fn from_token (token : :: fuels :: types :: Token) -> :: std :: result :: Result < Self , :: fuels :: types :: errors :: Error > { match token { :: fuels :: types :: Token :: Struct (tokens) => { let mut tokens_iter = tokens . into_iter () ; let mut next_token = move || { tokens_iter . next () . ok_or_else (|| { :: fuels :: types :: errors :: Error :: InstantiationError (format ! ("Ran out of tokens before '{}' has finished construction!" , "Cocktail")) }) } ; :: std :: result :: Result :: Ok (Self { long_island : :: fuels :: core :: traits :: Tokenizable :: from_token (next_token () ?) ? , mojito : :: fuels :: core :: traits :: Tokenizable :: from_token (next_token () ?) ? , }) } , other => :: std :: result :: Result :: Err (:: fuels :: types :: errors :: Error :: InstantiationError (format ! ("Error while constructing '{}'. Expected token of type Token::Struct, got {:?}" , "Cocktail" , other))) , } } } impl < > TryFrom < & [u8] > for self :: Cocktail < > { type Error = :: fuels :: types :: errors :: Error ; fn try_from (bytes : & [u8]) -> :: std :: result :: Result < Self , Self :: Error > { :: fuels :: core :: try_from_bytes (bytes) } } impl < > TryFrom < & :: std :: vec :: Vec < u8 >> for self :: Cocktail < > { type Error = :: fuels :: types :: errors :: Error ; fn try_from (bytes : & :: std :: vec :: Vec < u8 >) -> :: std :: result :: Result < Self , Self :: Error > { :: fuels :: core :: try_from_bytes (& bytes) } } impl < > TryFrom < :: std :: vec :: Vec < u8 >> for self :: Cocktail < > { type Error = :: fuels :: types :: errors :: Error ; fn try_from (bytes : :: std :: vec :: Vec < u8 >) -> :: std :: result :: Result < Self , Self :: Error > { :: fuels :: core :: try_from_bytes (& bytes) } }
             "#,
         )?.to_string();
 
@@ -1049,7 +1047,7 @@ mod tests {
 
         let expected = TokenStream::from_str(
             r#"
-            # [derive (Clone , Debug , Eq , PartialEq)] pub struct MyStruct1 < > { pub x : u64 , pub y : :: fuels :: core :: types :: Bits256 } impl < > :: fuels :: core :: Parameterize for self :: MyStruct1 < > { fn param_type () -> :: fuels :: types :: param_types :: ParamType { let types = [("x" . to_string () , < u64 as :: fuels :: core :: Parameterize > :: param_type ()) , ("y" . to_string () , < :: fuels :: core :: types :: Bits256 as :: fuels :: core :: Parameterize > :: param_type ())] . to_vec () ; :: fuels :: types :: param_types :: ParamType :: Struct { name : "MyStruct1" . to_string () , fields : types , generics : [] . to_vec () } } } impl < > :: fuels :: core :: Tokenizable for self :: MyStruct1 < > { fn into_token (self) -> :: fuels :: core :: Token { let tokens = [self . x . into_token () , self . y . into_token ()] . to_vec () ; :: fuels :: core :: Token :: Struct (tokens) } fn from_token (token : :: fuels :: core :: Token) -> :: std :: result :: Result < Self , :: fuels :: types :: errors :: Error > { match token { :: fuels :: core :: Token :: Struct (tokens) => { let mut tokens_iter = tokens . into_iter () ; let mut next_token = move || { tokens_iter . next () . ok_or_else (|| { :: fuels :: types :: errors :: Error :: InstantiationError (format ! ("Ran out of tokens before '{}' has finished construction!" , "MyStruct1")) }) } ; :: std :: result :: Result :: Ok (Self { x : :: fuels :: core :: Tokenizable :: from_token (next_token () ?) ? , y : :: fuels :: core :: Tokenizable :: from_token (next_token () ?) ? , }) } , other => :: std :: result :: Result :: Err (:: fuels :: types :: errors :: Error :: InstantiationError (format ! ("Error while constructing '{}'. Expected token of type Token::Struct, got {:?}" , "MyStruct1" , other))) , } } } impl < > TryFrom < & [u8] > for self :: MyStruct1 < > { type Error = :: fuels :: types :: errors :: Error ; fn try_from (bytes : & [u8]) -> :: std :: result :: Result < Self , Self :: Error > { :: fuels :: core :: try_from_bytes (bytes) } } impl < > TryFrom < & :: std :: vec :: Vec < u8 >> for self :: MyStruct1 < > { type Error = :: fuels :: types :: errors :: Error ; fn try_from (bytes : & :: std :: vec :: Vec < u8 >) -> :: std :: result :: Result < Self , Self :: Error > { :: fuels :: core :: try_from_bytes (& bytes) } } impl < > TryFrom < :: std :: vec :: Vec < u8 >> for self :: MyStruct1 < > { type Error = :: fuels :: types :: errors :: Error ; fn try_from (bytes : :: std :: vec :: Vec < u8 >) -> :: std :: result :: Result < Self , Self :: Error > { :: fuels :: core :: try_from_bytes (& bytes) } }
+            # [derive (Clone , Debug , Eq , PartialEq)] pub struct MyStruct1 < > { pub x : u64 , pub y : :: fuels :: types :: Bits256 } impl < > :: fuels :: core :: traits :: Parameterize for self :: MyStruct1 < > { fn param_type () -> :: fuels :: types :: param_types :: ParamType { let types = [("x" . to_string () , < u64 as :: fuels :: core :: traits :: Parameterize > :: param_type ()) , ("y" . to_string () , < :: fuels :: types :: Bits256 as :: fuels :: core :: traits :: Parameterize > :: param_type ())] . to_vec () ; :: fuels :: types :: param_types :: ParamType :: Struct { name : "MyStruct1" . to_string () , fields : types , generics : [] . to_vec () } } } impl < > :: fuels :: core :: traits :: Tokenizable for self :: MyStruct1 < > { fn into_token (self) -> :: fuels :: types :: Token { let tokens = [self . x . into_token () , self . y . into_token ()] . to_vec () ; :: fuels :: types :: Token :: Struct (tokens) } fn from_token (token : :: fuels :: types :: Token) -> :: std :: result :: Result < Self , :: fuels :: types :: errors :: Error > { match token { :: fuels :: types :: Token :: Struct (tokens) => { let mut tokens_iter = tokens . into_iter () ; let mut next_token = move || { tokens_iter . next () . ok_or_else (|| { :: fuels :: types :: errors :: Error :: InstantiationError (format ! ("Ran out of tokens before '{}' has finished construction!" , "MyStruct1")) }) } ; :: std :: result :: Result :: Ok (Self { x : :: fuels :: core :: traits :: Tokenizable :: from_token (next_token () ?) ? , y : :: fuels :: core :: traits :: Tokenizable :: from_token (next_token () ?) ? , }) } , other => :: std :: result :: Result :: Err (:: fuels :: types :: errors :: Error :: InstantiationError (format ! ("Error while constructing '{}'. Expected token of type Token::Struct, got {:?}" , "MyStruct1" , other))) , } } } impl < > TryFrom < & [u8] > for self :: MyStruct1 < > { type Error = :: fuels :: types :: errors :: Error ; fn try_from (bytes : & [u8]) -> :: std :: result :: Result < Self , Self :: Error > { :: fuels :: core :: try_from_bytes (bytes) } } impl < > TryFrom < & :: std :: vec :: Vec < u8 >> for self :: MyStruct1 < > { type Error = :: fuels :: types :: errors :: Error ; fn try_from (bytes : & :: std :: vec :: Vec < u8 >) -> :: std :: result :: Result < Self , Self :: Error > { :: fuels :: core :: try_from_bytes (& bytes) } } impl < > TryFrom < :: std :: vec :: Vec < u8 >> for self :: MyStruct1 < > { type Error = :: fuels :: types :: errors :: Error ; fn try_from (bytes : :: std :: vec :: Vec < u8 >) -> :: std :: result :: Result < Self , Self :: Error > { :: fuels :: core :: try_from_bytes (& bytes) } }
             "#,
             )?.to_string();
 
@@ -1066,7 +1064,7 @@ mod tests {
 
         let expected = TokenStream::from_str(
             r#"
-            # [derive (Clone , Debug , Eq , PartialEq)] pub struct MyStruct2 < > { pub x : bool , pub y : self :: MyStruct1 } impl < > :: fuels :: core :: Parameterize for self :: MyStruct2 < > { fn param_type () -> :: fuels :: types :: param_types :: ParamType { let types = [("x" . to_string () , < bool as :: fuels :: core :: Parameterize > :: param_type ()) , ("y" . to_string () , < self :: MyStruct1 as :: fuels :: core :: Parameterize > :: param_type ())] . to_vec () ; :: fuels :: types :: param_types :: ParamType :: Struct { name : "MyStruct2" . to_string () , fields : types , generics : [] . to_vec () } } } impl < > :: fuels :: core :: Tokenizable for self :: MyStruct2 < > { fn into_token (self) -> :: fuels :: core :: Token { let tokens = [self . x . into_token () , self . y . into_token ()] . to_vec () ; :: fuels :: core :: Token :: Struct (tokens) } fn from_token (token : :: fuels :: core :: Token) -> :: std :: result :: Result < Self , :: fuels :: types :: errors :: Error > { match token { :: fuels :: core :: Token :: Struct (tokens) => { let mut tokens_iter = tokens . into_iter () ; let mut next_token = move || { tokens_iter . next () . ok_or_else (|| { :: fuels :: types :: errors :: Error :: InstantiationError (format ! ("Ran out of tokens before '{}' has finished construction!" , "MyStruct2")) }) } ; :: std :: result :: Result :: Ok (Self { x : :: fuels :: core :: Tokenizable :: from_token (next_token () ?) ? , y : :: fuels :: core :: Tokenizable :: from_token (next_token () ?) ? , }) } , other => :: std :: result :: Result :: Err (:: fuels :: types :: errors :: Error :: InstantiationError (format ! ("Error while constructing '{}'. Expected token of type Token::Struct, got {:?}" , "MyStruct2" , other))) , } } } impl < > TryFrom < & [u8] > for self :: MyStruct2 < > { type Error = :: fuels :: types :: errors :: Error ; fn try_from (bytes : & [u8]) -> :: std :: result :: Result < Self , Self :: Error > { :: fuels :: core :: try_from_bytes (bytes) } } impl < > TryFrom < & :: std :: vec :: Vec < u8 >> for self :: MyStruct2 < > { type Error = :: fuels :: types :: errors :: Error ; fn try_from (bytes : & :: std :: vec :: Vec < u8 >) -> :: std :: result :: Result < Self , Self :: Error > { :: fuels :: core :: try_from_bytes (& bytes) } } impl < > TryFrom < :: std :: vec :: Vec < u8 >> for self :: MyStruct2 < > { type Error = :: fuels :: types :: errors :: Error ; fn try_from (bytes : :: std :: vec :: Vec < u8 >) -> :: std :: result :: Result < Self , Self :: Error > { :: fuels :: core :: try_from_bytes (& bytes) } }
+            # [derive (Clone , Debug , Eq , PartialEq)] pub struct MyStruct2 < > { pub x : bool , pub y : self :: MyStruct1 } impl < > :: fuels :: core :: traits :: Parameterize for self :: MyStruct2 < > { fn param_type () -> :: fuels :: types :: param_types :: ParamType { let types = [("x" . to_string () , < bool as :: fuels :: core :: traits :: Parameterize > :: param_type ()) , ("y" . to_string () , < self :: MyStruct1 as :: fuels :: core :: traits :: Parameterize > :: param_type ())] . to_vec () ; :: fuels :: types :: param_types :: ParamType :: Struct { name : "MyStruct2" . to_string () , fields : types , generics : [] . to_vec () } } } impl < > :: fuels :: core :: traits :: Tokenizable for self :: MyStruct2 < > { fn into_token (self) -> :: fuels :: types :: Token { let tokens = [self . x . into_token () , self . y . into_token ()] . to_vec () ; :: fuels :: types :: Token :: Struct (tokens) } fn from_token (token : :: fuels :: types :: Token) -> :: std :: result :: Result < Self , :: fuels :: types :: errors :: Error > { match token { :: fuels :: types :: Token :: Struct (tokens) => { let mut tokens_iter = tokens . into_iter () ; let mut next_token = move || { tokens_iter . next () . ok_or_else (|| { :: fuels :: types :: errors :: Error :: InstantiationError (format ! ("Ran out of tokens before '{}' has finished construction!" , "MyStruct2")) }) } ; :: std :: result :: Result :: Ok (Self { x : :: fuels :: core :: traits :: Tokenizable :: from_token (next_token () ?) ? , y : :: fuels :: core :: traits :: Tokenizable :: from_token (next_token () ?) ? , }) } , other => :: std :: result :: Result :: Err (:: fuels :: types :: errors :: Error :: InstantiationError (format ! ("Error while constructing '{}'. Expected token of type Token::Struct, got {:?}" , "MyStruct2" , other))) , } } } impl < > TryFrom < & [u8] > for self :: MyStruct2 < > { type Error = :: fuels :: types :: errors :: Error ; fn try_from (bytes : & [u8]) -> :: std :: result :: Result < Self , Self :: Error > { :: fuels :: core :: try_from_bytes (bytes) } } impl < > TryFrom < & :: std :: vec :: Vec < u8 >> for self :: MyStruct2 < > { type Error = :: fuels :: types :: errors :: Error ; fn try_from (bytes : & :: std :: vec :: Vec < u8 >) -> :: std :: result :: Result < Self , Self :: Error > { :: fuels :: core :: try_from_bytes (& bytes) } } impl < > TryFrom < :: std :: vec :: Vec < u8 >> for self :: MyStruct2 < > { type Error = :: fuels :: types :: errors :: Error ; fn try_from (bytes : :: std :: vec :: Vec < u8 >) -> :: std :: result :: Result < Self , Self :: Error > { :: fuels :: core :: try_from_bytes (& bytes) } }
             "#,
             )?.to_string();
 

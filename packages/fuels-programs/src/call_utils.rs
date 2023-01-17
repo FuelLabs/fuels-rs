@@ -1,14 +1,11 @@
-use fuel_gql_client::fuel_tx::{Input, Output, TxPointer, UtxoId};
-use fuel_gql_client::fuel_types::{Immediate18, Word};
-use fuel_gql_client::fuel_vm::{consts::REG_ONE, prelude::Opcode};
-use fuel_tx::{AssetId, Bytes32, ContractId};
+use std::{collections::HashSet, iter, vec};
+
+use fuel_tx::{AssetId, Bytes32, ContractId, Input, Output, TxPointer, UtxoId};
+use fuel_types::{Immediate18, Word};
+use fuel_vm::{consts::REG_ONE, prelude::Opcode};
 use fuels_core::constants::BASE_ASSET_ID;
-use fuels_types::bech32::Bech32Address;
-use fuels_types::constants::WORD_SIZE;
-use fuels_types::resource::Resource;
+use fuels_types::{bech32::Bech32Address, constants::WORD_SIZE, resource::Resource};
 use itertools::{chain, Itertools};
-use std::collections::HashSet;
-use std::{iter, vec};
 
 use crate::contract::ContractCall;
 
@@ -286,15 +283,18 @@ fn extract_unique_contract_ids(calls: &[ContractCall]) -> HashSet<ContractId> {
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use fuels_core::abi_encoder::ABIEncoder;
-    use fuels_core::parameters::CallParameters;
-    use fuels_core::Token;
-    use fuels_types::bech32::Bech32ContractId;
-    use fuels_types::coin::{Coin, CoinStatus};
-    use fuels_types::param_types::ParamType;
-    use rand::Rng;
     use std::slice;
+
+    use fuels_core::{abi_encoder::ABIEncoder, parameters::CallParameters};
+    use fuels_types::{
+        bech32::Bech32ContractId,
+        coin::{Coin, CoinStatus},
+        core::Token,
+        param_types::ParamType,
+    };
+    use rand::Rng;
+
+    use super::*;
 
     impl ContractCall {
         pub fn new_with_random_id() -> Self {

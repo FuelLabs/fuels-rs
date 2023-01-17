@@ -1,149 +1,115 @@
-use std::iter::zip;
+use fuels_types::{
+    core::{Bits256, Byte, EvmAddress, Identity, SizedAsciiString, StringToken, Token, B512},
+    errors::Error,
+    param_types::ParamType,
+    Address, AssetId, ContractId,
+};
 
-pub use fuel_tx::{Address, AssetId, ContractId};
-use serde::{Deserialize, Serialize};
+use crate::traits::Parameterize;
 
-use fuels_types::{enum_variants::EnumVariants, errors::Error, param_types::ParamType};
-
-use crate::{Bits256, Parameterize, Token, Tokenizable};
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub enum Identity {
-    Address(Address),
-    ContractId(ContractId),
+pub trait Tokenizable {
+    /// Converts a `Token` into expected type.
+    fn from_token(token: Token) -> Result<Self, Error>
+    where
+        Self: Sized;
+    /// Converts a specified type back into token.
+    fn into_token(self) -> Token;
 }
 
-impl<const SIZE: usize, T: Parameterize> Parameterize for [T; SIZE] {
-    fn param_type() -> ParamType {
-        ParamType::Array(Box::new(T::param_type()), SIZE)
+impl Tokenizable for Token {
+    fn from_token(token: Token) -> Result<Self, Error> {
+        Ok(token)
+    }
+    fn into_token(self) -> Token {
+        self
     }
 }
 
-impl<T: Parameterize> Parameterize for Vec<T> {
-    fn param_type() -> ParamType {
-        ParamType::Vector(Box::new(T::param_type()))
-    }
-}
-
-impl Parameterize for Address {
-    fn param_type() -> ParamType {
-        ParamType::Struct {
-            name: "Address".to_string(),
-            fields: vec![("0".to_string(), ParamType::B256)],
-            generics: vec![],
+impl Tokenizable for Bits256 {
+    fn from_token(token: Token) -> Result<Self, Error>
+    where
+        Self: Sized,
+    {
+        match token {
+            Token::B256(data) => Ok(Bits256(data)),
+            _ => Err(Error::InvalidData(format!(
+                "Bits256 cannot be constructed from token {token}"
+            ))),
         }
     }
+
+    fn into_token(self) -> Token {
+        Token::B256(self.0)
+    }
 }
 
-impl Parameterize for ContractId {
-    fn param_type() -> ParamType {
-        ParamType::Struct {
-            name: "ContractId".to_string(),
-            fields: vec![("0".to_string(), ParamType::B256)],
-            generics: vec![],
+impl Tokenizable for B512 {
+    fn from_token(token: Token) -> Result<Self, Error>
+    where
+        Self: Sized,
+    {
+        if let Token::Struct(tokens) = token {
+            if let [Token::Array(data)] = tokens.as_slice() {
+                Ok(B512 {
+                    bytes: <[Bits256; 2usize]>::from_token(Token::Array(data.to_vec()))?,
+                })
+            } else {
+                Err(Error::InstantiationError(format!(
+                    "B512 expected one `Token::Array`, got {tokens:?}",
+                )))
+            }
+        } else {
+            Err(Error::InstantiationError(format!(
+                "B512 expected `Token::Struct`, got {token:?}",
+            )))
         }
     }
+
+    fn into_token(self) -> Token {
+        Token::Struct(vec![self.bytes.into_token()])
+    }
 }
 
-impl Parameterize for AssetId {
-    fn param_type() -> ParamType {
-        ParamType::Struct {
-            name: "AssetId".to_string(),
-            fields: vec![("0".to_string(), ParamType::B256)],
-            generics: vec![],
+impl Tokenizable for EvmAddress {
+    fn from_token(token: Token) -> Result<Self, Error>
+    where
+        Self: Sized,
+    {
+        if let Token::Struct(tokens) = token {
+            if let [Token::B256(data)] = tokens.as_slice() {
+                Ok(EvmAddress::from(Bits256(*data)))
+            } else {
+                Err(Error::InstantiationError(format!(
+                    "EvmAddress expected one `Token::B256`, got {tokens:?}",
+                )))
+            }
+        } else {
+            Err(Error::InstantiationError(format!(
+                "EvmAddress expected `Token::Struct` got {token:?}",
+            )))
         }
     }
-}
 
-impl Parameterize for () {
-    fn param_type() -> ParamType {
-        ParamType::Unit
+    fn into_token(self) -> Token {
+        Token::Struct(vec![Bits256(self.value.0).into_token()])
     }
 }
 
-impl Parameterize for bool {
-    fn param_type() -> ParamType {
-        ParamType::Bool
-    }
-}
-
-impl Parameterize for u8 {
-    fn param_type() -> ParamType {
-        ParamType::U8
-    }
-}
-
-impl Parameterize for u16 {
-    fn param_type() -> ParamType {
-        ParamType::U16
-    }
-}
-
-impl Parameterize for u32 {
-    fn param_type() -> ParamType {
-        ParamType::U32
-    }
-}
-
-impl Parameterize for u64 {
-    fn param_type() -> ParamType {
-        ParamType::U64
-    }
-}
-
-impl<T> Parameterize for Option<T>
-where
-    T: Parameterize + Tokenizable,
-{
-    fn param_type() -> ParamType {
-        let param_types = vec![
-            ("None".to_string(), ParamType::Unit),
-            ("Some".to_string(), T::param_type()),
-        ];
-        let variants = EnumVariants::new(param_types)
-            .expect("should never happen as we provided valid Option param types");
-        ParamType::Enum {
-            name: "Option".to_string(),
-            variants,
-            generics: vec![T::param_type()],
+impl Tokenizable for Byte {
+    fn from_token(token: Token) -> Result<Self, Error>
+    where
+        Self: Sized,
+    {
+        match token {
+            Token::Byte(value) => Ok(Byte(value)),
+            _ => Err(Error::InvalidData(format!(
+                "Byte::from_token failed! Can only handle Token::Byte, got {token:?}"
+            ))),
         }
     }
-}
 
-impl<T, E> Parameterize for Result<T, E>
-where
-    T: Parameterize + Tokenizable,
-    E: Parameterize + Tokenizable,
-{
-    fn param_type() -> ParamType {
-        let param_types = vec![T::param_type(), E::param_type()];
-        let variant_param_types = zip(
-            vec!["Ok".to_string(), "Err".to_string()],
-            param_types.clone(),
-        )
-        .collect();
-        let variants = EnumVariants::new(variant_param_types)
-            .expect("should never happen as we provided valid Result param types");
-        ParamType::Enum {
-            name: "Result".to_string(),
-            variants,
-            generics: param_types,
-        }
-    }
-}
-
-impl Parameterize for Identity {
-    fn param_type() -> ParamType {
-        let variants = EnumVariants::new(vec![
-            ("Address".to_string(), Address::param_type()),
-            ("ContractId".to_string(), ContractId::param_type()),
-        ])
-        .expect("should never happen as we provided valid Identity param types");
-        ParamType::Enum {
-            name: "Identity".to_string(),
-            variants,
-            generics: vec![],
-        }
+    fn into_token(self) -> Token {
+        Token::Byte(self.0)
     }
 }
 
@@ -265,7 +231,7 @@ impl Tokenizable for u64 {
 // This is done this way because we can't use `impl<T> Tokenizable for (T,)`.
 // So we implement `Tokenizable` for each tuple length, covering
 // a reasonable range of tuple lengths.
-macro_rules! impl_tuples {
+macro_rules! impl_tokenizable_tuples {
     ($num: expr, $( $ty: ident : $no: tt, )+) => {
         impl<$($ty, )+> Tokenizable for ($($ty,)+) where
             $(
@@ -299,39 +265,27 @@ macro_rules! impl_tuples {
             }
         }
 
-        impl<$($ty, )+> Parameterize for ($($ty,)+) where
-            $(
-                $ty: Parameterize,
-            )+
-        {
-            fn param_type() -> ParamType {
-                ParamType::Tuple(vec![
-                    $( $ty::param_type(), )+
-                ])
-            }
-
-        }
     }
 }
 
 // And where we actually implement the `Tokenizable` for tuples
 // from size 1 to size 16.
-impl_tuples!(1, A:0, );
-impl_tuples!(2, A:0, B:1, );
-impl_tuples!(3, A:0, B:1, C:2, );
-impl_tuples!(4, A:0, B:1, C:2, D:3, );
-impl_tuples!(5, A:0, B:1, C:2, D:3, E:4, );
-impl_tuples!(6, A:0, B:1, C:2, D:3, E:4, F:5, );
-impl_tuples!(7, A:0, B:1, C:2, D:3, E:4, F:5, G:6, );
-impl_tuples!(8, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, );
-impl_tuples!(9, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, );
-impl_tuples!(10, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, );
-impl_tuples!(11, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, );
-impl_tuples!(12, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, );
-impl_tuples!(13, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, );
-impl_tuples!(14, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13, );
-impl_tuples!(15, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13, O:14, );
-impl_tuples!(16, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13, O:14, P:15, );
+impl_tokenizable_tuples!(1, A:0, );
+impl_tokenizable_tuples!(2, A:0, B:1, );
+impl_tokenizable_tuples!(3, A:0, B:1, C:2, );
+impl_tokenizable_tuples!(4, A:0, B:1, C:2, D:3, );
+impl_tokenizable_tuples!(5, A:0, B:1, C:2, D:3, E:4, );
+impl_tokenizable_tuples!(6, A:0, B:1, C:2, D:3, E:4, F:5, );
+impl_tokenizable_tuples!(7, A:0, B:1, C:2, D:3, E:4, F:5, G:6, );
+impl_tokenizable_tuples!(8, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, );
+impl_tokenizable_tuples!(9, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, );
+impl_tokenizable_tuples!(10, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, );
+impl_tokenizable_tuples!(11, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, );
+impl_tokenizable_tuples!(12, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, );
+impl_tokenizable_tuples!(13, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, );
+impl_tokenizable_tuples!(14, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13, );
+impl_tokenizable_tuples!(15, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13, O:14, );
+impl_tokenizable_tuples!(16, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13, O:14, P:15, );
 
 impl Tokenizable for ContractId {
     fn from_token(token: Token) -> Result<Self, Error>
@@ -414,7 +368,7 @@ impl Tokenizable for AssetId {
 
 impl<T> Tokenizable for Option<T>
 where
-    T: Parameterize + Tokenizable,
+    T: Tokenizable + Parameterize,
 {
     fn from_token(token: Token) -> Result<Self, Error> {
         if let Token::Enum(enum_selector) = token {
@@ -448,8 +402,8 @@ where
 
 impl<T, E> Tokenizable for Result<T, E>
 where
-    T: Parameterize + Tokenizable,
-    E: Parameterize + Tokenizable,
+    T: Tokenizable + Parameterize,
+    E: Tokenizable + Parameterize,
 {
     fn from_token(token: Token) -> Result<Self, Error> {
         if let Token::Enum(enum_selector) = token {
@@ -550,5 +504,119 @@ impl<const SIZE: usize, T: Tokenizable> Tokenizable for [T; SIZE] {
 
     fn into_token(self) -> Token {
         Token::Array(self.map(Tokenizable::into_token).to_vec())
+    }
+}
+
+impl<const LEN: usize> Tokenizable for SizedAsciiString<LEN> {
+    fn from_token(token: Token) -> Result<Self, Error>
+    where
+        Self: Sized,
+    {
+        match token {
+            Token::String(contents) => {
+                let expected_len = contents.get_encodable_str()?.len() ;
+                if expected_len!= LEN {
+                    return Err(Error::InvalidData(format!("SizedAsciiString<{LEN}>::from_token got a Token::String whose expected length({}) is != {LEN}", expected_len)))
+                }
+                Self::new(contents.try_into()?)
+            },
+            _ => {
+                Err(Error::InvalidData(format!("SizedAsciiString<{LEN}>::from_token expected a token of the variant Token::String, got: {token}")))
+            }
+        }
+    }
+
+    fn into_token(self) -> Token {
+        Token::String(StringToken::new(self.into(), LEN))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_from_token_b256() -> Result<(), Error> {
+        let data = [1u8; 32];
+        let token = Token::B256(data);
+
+        let bits256 = Bits256::from_token(token)?;
+
+        assert_eq!(bits256.0, data);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_into_token_b256() {
+        let data = [1u8; 32];
+        let bits256 = Bits256(data);
+
+        let token = bits256.into_token();
+
+        assert_eq!(token, Token::B256(data));
+    }
+
+    #[test]
+    fn test_from_token_evm_addr() -> Result<(), Error> {
+        let data = [1u8; 32];
+        let token = Token::Struct(vec![Token::B256(data)]);
+
+        let evm_address = EvmAddress::from_token(token)?;
+
+        let expected_data = [
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1,
+        ];
+
+        assert_eq!(evm_address.value.0, expected_data);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_into_token_evm_addr() {
+        let data = [1u8; 32];
+        let evm_address = EvmAddress::from(Bits256(data));
+
+        let token = evm_address.into_token();
+
+        let expected_data = [
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1,
+        ];
+
+        assert_eq!(token, Token::Struct(vec![Token::B256(expected_data)]));
+    }
+
+    #[test]
+    fn sized_ascii_string_is_tokenized_correctly() -> Result<(), Error> {
+        let sut = SizedAsciiString::<3>::new("abc".to_string())?;
+
+        let token = sut.into_token();
+
+        match token {
+            Token::String(string_token) => {
+                let contents = string_token.get_encodable_str()?;
+                assert_eq!(contents, "abc");
+            }
+            _ => {
+                panic!("Not tokenized correctly! Should have gotten a Token::String")
+            }
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn sized_ascii_string_is_detokenized_correctly() -> anyhow::Result<()> {
+        let token = Token::String(StringToken::new("abc".to_string(), 3));
+
+        let sized_ascii_string =
+            SizedAsciiString::<3>::from_token(token).expect("Should have succeeded");
+
+        assert_eq!(sized_ascii_string, "abc");
+
+        Ok(())
     }
 }

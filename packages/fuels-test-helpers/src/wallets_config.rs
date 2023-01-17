@@ -1,7 +1,7 @@
+use fuel_types::AssetId;
+
 // These constants define the default number of wallets to be setup,
 // the number of coins per wallet and the amount per coin
-use fuels_signers::fuel_crypto::fuel_types::AssetId;
-
 pub const DEFAULT_NUM_WALLETS: u64 = 10;
 pub const DEFAULT_NUM_COINS: u64 = 1;
 pub const DEFAULT_COIN_AMOUNT: u64 = 1_000_000_000;

@@ -1,13 +1,13 @@
 extern crate core;
 
+use fuels_core::code_gen::abigen::Abigen;
 use proc_macro::TokenStream;
-
 use syn::parse_macro_input;
 
-use fuels_core::code_gen::abigen::Abigen;
-
-use crate::abigen_macro::MacroAbigenTargets;
-use crate::setup_contract_test_macro::{generate_setup_contract_test_code, TestContractCommands};
+use crate::{
+    abigen_macro::MacroAbigenTargets,
+    setup_contract_test_macro::{generate_setup_contract_test_code, TestContractCommands},
+};
 
 mod abigen_macro;
 mod parse_utils;

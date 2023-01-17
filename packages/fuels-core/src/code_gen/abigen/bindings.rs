@@ -2,13 +2,19 @@ use std::collections::HashSet;
 
 use fuels_types::errors::Error;
 
-use crate::code_gen::abi_types::FullTypeDeclaration;
-use crate::code_gen::abigen::abigen_target::{ParsedAbigenTarget, ProgramType};
-use crate::code_gen::abigen::bindings::contract::contract_bindings;
-use crate::code_gen::abigen::bindings::predicate::predicate_bindings;
-use crate::code_gen::abigen::bindings::script::script_bindings;
-use crate::code_gen::generated_code::GeneratedCode;
-use crate::utils::ident;
+use crate::{
+    code_gen::{
+        abi_types::FullTypeDeclaration,
+        abigen::{
+            abigen_target::{ParsedAbigenTarget, ProgramType},
+            bindings::{
+                contract::contract_bindings, predicate::predicate_bindings, script::script_bindings,
+            },
+        },
+        generated_code::GeneratedCode,
+    },
+    utils::ident,
+};
 
 mod contract;
 mod function_generator;

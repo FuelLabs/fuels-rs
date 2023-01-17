@@ -1,42 +1,34 @@
 //! Testing helpers/utilities for Fuel SDK.
-
 extern crate core;
 
-use std::{iter::repeat, iter::zip, net::SocketAddr};
-
-#[cfg(feature = "fuel-core-lib")]
-use fuel_chain_config::StateConfig;
-
-#[cfg(feature = "fuel-core-lib")]
-use fuel_core::service::{DbType, FuelService};
-
-#[cfg(feature = "fuel-core-lib")]
-pub use fuel_core::service::Config;
-
-#[cfg(feature = "fuel-core-lib")]
-pub use utils::{get_coin_configs, get_message_configs};
-
-#[cfg(not(feature = "fuel-core-lib"))]
-pub use node::{get_socket_address, new_fuel_node, Config};
-
-#[cfg(not(feature = "fuel-core-lib"))]
-use portpicker::is_free;
-
-use fuels_types::{
-    coin::{Coin, CoinStatus},
-    message::Message,
+use std::{
+    iter::{repeat, zip},
+    net::SocketAddr,
 };
 
 use fuel_chain_config::ChainConfig;
-use fuel_gql_client::{
-    client::FuelClient,
-    fuel_tx::{Bytes32, ConsensusParameters, UtxoId},
-};
-
+#[cfg(feature = "fuel-core-lib")]
+use fuel_chain_config::StateConfig;
+#[cfg(feature = "fuel-core-lib")]
+pub use fuel_core::service::Config;
+#[cfg(feature = "fuel-core-lib")]
+use fuel_core::service::{DbType, FuelService};
+use fuel_gql_client::client::FuelClient;
+use fuel_tx::{Bytes32, ConsensusParameters, UtxoId};
 use fuels_core::constants::BASE_ASSET_ID;
 use fuels_signers::fuel_crypto::{fuel_types::AssetId, rand};
-use fuels_types::param_types::ParamType;
+use fuels_types::{
+    coin::{Coin, CoinStatus},
+    message::Message,
+    param_types::ParamType,
+};
+#[cfg(not(feature = "fuel-core-lib"))]
+pub use node::{get_socket_address, new_fuel_node, Config};
+#[cfg(not(feature = "fuel-core-lib"))]
+use portpicker::is_free;
 use rand::Fill;
+#[cfg(feature = "fuel-core-lib")]
+pub use utils::{get_coin_configs, get_message_configs};
 
 #[cfg(not(feature = "fuel-core-lib"))]
 pub mod node;
@@ -47,11 +39,10 @@ mod signers;
 mod utils;
 mod wallets_config;
 
-#[cfg(not(feature = "fuel-core-lib"))]
-pub use node::*;
-
 pub use chains::*;
 use fuels_types::bech32::Bech32Address;
+#[cfg(not(feature = "fuel-core-lib"))]
+pub use node::*;
 #[cfg(feature = "fuels-signers")]
 pub use signers::*;
 pub use wallets_config::*;
@@ -237,13 +228,14 @@ pub async fn setup_test_client(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use fuels_contract::contract::Contract;
-    use fuels_core::parameters::{StorageConfiguration, TxParameters};
-    use fuels_signers::provider::Provider;
-    use fuels_signers::WalletUnlocked;
-    use fuels_types::bech32::FUEL_BECH32_HRP;
     use std::net::Ipv4Addr;
+
+    use fuels_core::parameters::{StorageConfiguration, TxParameters};
+    use fuels_programs::contract::Contract;
+    use fuels_signers::{provider::Provider, WalletUnlocked};
+    use fuels_types::bech32::FUEL_BECH32_HRP;
+
+    use super::*;
 
     #[tokio::test]
     async fn test_setup_single_asset_coins() -> Result<(), rand::Error> {

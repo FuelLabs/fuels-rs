@@ -1,28 +1,24 @@
+use std::{collections::HashSet, fmt::Debug, marker::PhantomData};
+
+use fuel_tx::{ContractId, Input, Output, Receipt, Transaction};
+use fuel_types::bytes::padded_len_usize;
+use fuels_core::{
+    abi_encoder::UnresolvedBytes,
+    offsets::base_offset,
+    parameters::{CallParameters, TxParameters},
+    traits::{Parameterize, Tokenizable},
+};
+use fuels_signers::{provider::Provider, WalletUnlocked};
+use fuels_types::{bech32::Bech32ContractId, errors::Error};
+use itertools::chain;
+
 use crate::{
     call_response::FuelCallResponse,
+    call_utils::{generate_contract_inputs, generate_contract_outputs},
     contract::{get_decoded_output, SettableContract},
-    contract_calls_utils::{generate_contract_inputs, generate_contract_outputs},
     execution_script::ExecutableFuelCall,
     logs::{decode_revert_error, LogDecoder},
 };
-use fuel_gql_client::{
-    fuel_tx::{Output, Receipt, Transaction},
-    fuel_types::bytes::padded_len_usize,
-};
-use fuel_tx::{ContractId, Input};
-use fuels_core::abi_encoder::UnresolvedBytes;
-use fuels_core::{
-    offsets::base_offset,
-    parameters::{CallParameters, TxParameters},
-    Parameterize, Tokenizable,
-};
-use fuels_signers::{provider::Provider, WalletUnlocked};
-use fuels_types::bech32::Bech32ContractId;
-use fuels_types::errors::Error;
-use itertools::chain;
-use std::collections::HashSet;
-use std::fmt::Debug;
-use std::marker::PhantomData;
 
 #[derive(Debug)]
 /// Contains all data relevant to a single script call

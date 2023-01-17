@@ -1,14 +1,13 @@
 use std::collections::HashSet;
 
+use fuels_types::{errors::Error, utils::extract_generic_name};
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
-use fuels_types::errors::Error;
-use fuels_types::utils::extract_generic_name;
-
-use crate::code_gen::abi_types::FullTypeDeclaration;
-use crate::code_gen::utils::Component;
-use crate::utils::ident;
+use crate::{
+    code_gen::{abi_types::FullTypeDeclaration, utils::Component},
+    utils::ident,
+};
 
 /// These TryFrom implementations improve devx by enabling users to easily
 /// construct contract types from bytes. These are generated due to the orphan
@@ -25,14 +24,14 @@ use crate::utils::ident;
 /// &[u8], &Vec<u8> and a Vec<u8>
 pub(crate) fn impl_try_from(ident: &Ident, generics: &[TokenStream]) -> TokenStream {
     quote! {
-        impl<#(#generics: ::fuels::core::Tokenizable + ::fuels::core::Parameterize),*> TryFrom<&[u8]> for self::#ident<#(#generics),*> {
+        impl<#(#generics: ::fuels::core::traits::Tokenizable + ::fuels::core::traits::Parameterize),*> TryFrom<&[u8]> for self::#ident<#(#generics),*> {
             type Error = ::fuels::types::errors::Error;
 
             fn try_from(bytes: &[u8]) -> ::std::result::Result<Self, Self::Error> {
                 ::fuels::core::try_from_bytes(bytes)
             }
         }
-        impl<#(#generics: ::fuels::core::Tokenizable + ::fuels::core::Parameterize),*> TryFrom<&::std::vec::Vec<u8>> for self::#ident<#(#generics),*> {
+        impl<#(#generics: ::fuels::core::traits::Tokenizable + ::fuels::core::traits::Parameterize),*> TryFrom<&::std::vec::Vec<u8>> for self::#ident<#(#generics),*> {
             type Error = ::fuels::types::errors::Error;
 
             fn try_from(bytes: &::std::vec::Vec<u8>) -> ::std::result::Result<Self, Self::Error> {
@@ -40,7 +39,7 @@ pub(crate) fn impl_try_from(ident: &Ident, generics: &[TokenStream]) -> TokenStr
             }
         }
 
-        impl<#(#generics: ::fuels::core::Tokenizable + ::fuels::core::Parameterize),*> TryFrom<::std::vec::Vec<u8>> for self::#ident<#(#generics),*> {
+        impl<#(#generics: ::fuels::core::traits::Tokenizable + ::fuels::core::traits::Parameterize),*> TryFrom<::std::vec::Vec<u8>> for self::#ident<#(#generics),*> {
             type Error = ::fuels::types::errors::Error;
 
             fn try_from(bytes: ::std::vec::Vec<u8>) -> ::std::result::Result<Self, Self::Error> {
@@ -87,10 +86,8 @@ mod tests {
     use fuel_abi_types::program_abi::TypeDeclaration;
     use fuels_types::utils::custom_type_name;
 
-    use crate::code_gen::resolved_type::ResolvedType;
-    use crate::code_gen::utils::param_type_calls;
-
     use super::*;
+    use crate::code_gen::{resolved_type::ResolvedType, utils::param_type_calls};
 
     #[test]
     fn extracts_generic_types() -> anyhow::Result<()> {
@@ -177,8 +174,8 @@ mod tests {
         assert_eq!(
             stringified_result,
             vec![
-                "< u8 as :: fuels :: core :: Parameterize > :: param_type ()",
-                "< SomeStruct :: < T , K > as :: fuels :: core :: Parameterize > :: param_type ()"
+                "< u8 as :: fuels :: core :: traits :: Parameterize > :: param_type ()",
+                "< SomeStruct :: < T , K > as :: fuels :: core :: traits :: Parameterize > :: param_type ()"
             ]
         )
     }
