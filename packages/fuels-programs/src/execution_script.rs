@@ -6,11 +6,11 @@ use fuels_signers::{provider::Provider, Signer, WalletUnlocked};
 use fuels_types::errors::Error;
 
 use crate::{
-    call_utils::{
+    contract_call::ContractCall,
+    contract_call_utils::{
         build_script_data_from_contract_calls, calculate_required_asset_amounts, get_instructions,
         get_single_call_instructions, get_transaction_inputs_outputs, CallOpcodeParamsOffset,
     },
-    contract::ContractCall,
 };
 
 /// [`ExecutableFuelCall`] provides methods to create and call/simulate a transaction that carries
