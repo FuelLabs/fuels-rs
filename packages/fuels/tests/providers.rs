@@ -339,7 +339,7 @@ async fn test_amount_and_asset_forwarding() -> Result<(), Error> {
             wallet = "wallet"
         ),
     );
-    let contract_id = contract_instance.get_contract_id();
+    let contract_id = contract_instance.contract_id();
     let contract_methods = contract_instance.methods();
 
     let mut balance_response = contract_methods
