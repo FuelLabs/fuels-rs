@@ -2,6 +2,7 @@ use std::{collections::HashSet, fmt::Debug, marker::PhantomData};
 
 use fuel_tx::{ContractId, Input, Output, Receipt, Transaction};
 use fuel_types::bytes::padded_len_usize;
+
 use fuels_core::{
     abi_encoder::UnresolvedBytes,
     offsets::base_offset,
@@ -34,29 +35,9 @@ pub struct ScriptCall {
 }
 
 impl ScriptCall {
-    pub fn with_variable_outputs(self, variable_outputs: Vec<Output>) -> Self {
-        Self {
-            variable_outputs,
-            ..self
-        }
-    }
-
-    pub fn with_message_outputs(self, message_outputs: Vec<Output>) -> Self {
-        Self {
-            message_outputs,
-            ..self
-        }
-    }
     pub fn with_inputs(mut self, inputs: Vec<Input>) -> Self {
         self.inputs = inputs;
         self
-    }
-
-    pub fn with_external_contracts(self, external_contracts: Vec<Bech32ContractId>) -> ScriptCall {
-        ScriptCall {
-            external_contracts,
-            ..self
-        }
     }
 }
 

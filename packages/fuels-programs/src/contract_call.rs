@@ -1,6 +1,7 @@
 use std::{collections::HashMap, fmt::Debug, marker::PhantomData, panic};
 
-use fuel_tx::{Address, AssetId, Output, Receipt};
+use fuel_tx::{Output, Receipt};
+
 use fuel_vm::fuel_asm::PanicReason;
 use fuels_core::{
     abi_encoder::UnresolvedBytes,
@@ -22,6 +23,7 @@ use fuels_types::{
 use crate::{
     call_response::FuelCallResponse,
     call_utils::get_decoded_output,
+    callable::Callable,
     execution_script::ExecutableFuelCall,
     logs::{decode_revert_error, LogDecoder},
 };
@@ -56,64 +58,6 @@ impl ContractCall {
             contract_id,
             ..self
         }
-    }
-
-    pub fn with_external_contracts(
-        self,
-        external_contracts: Vec<Bech32ContractId>,
-    ) -> ContractCall {
-        ContractCall {
-            external_contracts,
-            ..self
-        }
-    }
-
-    pub fn with_variable_outputs(self, variable_outputs: Vec<Output>) -> ContractCall {
-        Self {
-            variable_outputs,
-            ..self
-        }
-    }
-
-    pub fn with_message_outputs(self, message_outputs: Vec<Output>) -> ContractCall {
-        Self {
-            message_outputs,
-            ..self
-        }
-    }
-
-    pub fn with_call_parameters(self, call_parameters: CallParameters) -> ContractCall {
-        ContractCall {
-            call_parameters,
-            ..self
-        }
-    }
-
-    pub fn append_variable_outputs(&mut self, num: u64) {
-        let new_variable_outputs = vec![
-            Output::Variable {
-                amount: 0,
-                to: Address::zeroed(),
-                asset_id: AssetId::default(),
-            };
-            num as usize
-        ];
-        self.variable_outputs.extend(new_variable_outputs)
-    }
-
-    pub fn append_external_contracts(&mut self, contract_id: Bech32ContractId) {
-        self.external_contracts.push(contract_id)
-    }
-
-    pub fn append_message_outputs(&mut self, num: u64) {
-        let new_message_outputs = vec![
-            Output::Message {
-                recipient: Address::zeroed(),
-                amount: 0,
-            };
-            num as usize
-        ];
-        self.message_outputs.extend(new_message_outputs)
     }
 
     fn is_missing_output_variables(receipts: &[Receipt]) -> bool {
