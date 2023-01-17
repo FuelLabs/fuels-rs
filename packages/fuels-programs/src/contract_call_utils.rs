@@ -1,11 +1,16 @@
 use std::{collections::HashSet, iter, vec};
 
-use fuel_tx::{AssetId, Bytes32, ContractId, Input, Output, TxPointer, UtxoId};
+use fuel_tx::{AssetId, ContractId, Input, Output};
 use fuel_types::{Immediate18, Word};
 use fuel_vm::{consts::REG_ONE, prelude::Opcode};
-use fuels_core::constants::BASE_ASSET_ID;
+
 use fuels_types::{bech32::Bech32Address, constants::WORD_SIZE, resource::Resource};
-use itertools::{chain, Itertools};
+use itertools::chain;
+
+use crate::call_utils::{
+    convert_to_signed_resources, extract_unique_asset_ids, generate_asset_change_outputs,
+    generate_contract_inputs, generate_contract_outputs, sum_up_amounts_for_each_asset_id,
+};
 
 use crate::contract::ContractCall;
 
@@ -26,23 +31,6 @@ pub(crate) fn calculate_required_asset_amounts(calls: &[ContractCall]) -> Vec<(A
         .map(|call| (call.call_parameters.asset_id, call.call_parameters.amount))
         .collect::<Vec<_>>();
     sum_up_amounts_for_each_asset_id(amounts_per_asset_id)
-}
-
-/// Sum up the amounts required in each call for each asset ID, so you can get a total for each
-/// asset over all calls.
-fn sum_up_amounts_for_each_asset_id(
-    amounts_per_asset_id: Vec<(AssetId, u64)>,
-) -> Vec<(AssetId, u64)> {
-    amounts_per_asset_id
-        .into_iter()
-        .sorted_by_key(|(asset_id, _)| *asset_id)
-        .group_by(|(asset_id, _)| *asset_id)
-        .into_iter()
-        .map(|(asset_id, groups_w_same_asset_id)| {
-            let total_amount_in_group = groups_w_same_asset_id.map(|(_, amount)| amount).sum();
-            (asset_id, total_amount_in_group)
-        })
-        .collect()
 }
 
 /// Given a list of contract calls, create the actual opcodes used to call the contract
@@ -185,16 +173,6 @@ pub(crate) fn get_transaction_inputs_outputs(
     (inputs, outputs)
 }
 
-fn extract_unique_asset_ids(spendable_coins: &[Resource]) -> HashSet<AssetId> {
-    spendable_coins
-        .iter()
-        .map(|resource| match resource {
-            Resource::Coin(coin) => coin.asset_id,
-            Resource::Message(_) => BASE_ASSET_ID,
-        })
-        .collect()
-}
-
 fn extract_variable_outputs(calls: &[ContractCall]) -> Vec<Output> {
     calls
         .iter()
@@ -208,64 +186,6 @@ fn extract_message_outputs(calls: &[ContractCall]) -> Vec<Output> {
         .iter()
         .filter_map(|call| call.message_outputs.clone())
         .flatten()
-        .collect()
-}
-
-fn generate_asset_change_outputs(
-    wallet_address: &Bech32Address,
-    asset_ids: HashSet<AssetId>,
-) -> Vec<Output> {
-    asset_ids
-        .into_iter()
-        .map(|asset_id| Output::change(wallet_address.into(), 0, asset_id))
-        .collect()
-}
-
-pub(crate) fn generate_contract_outputs(num_of_contracts: usize) -> Vec<Output> {
-    (0..num_of_contracts)
-        .map(|idx| Output::contract(idx as u8, Bytes32::zeroed(), Bytes32::zeroed()))
-        .collect()
-}
-
-fn convert_to_signed_resources(spendable_resources: Vec<Resource>) -> Vec<Input> {
-    spendable_resources
-        .into_iter()
-        .map(|resource| match resource {
-            Resource::Coin(coin) => Input::coin_signed(
-                coin.utxo_id,
-                coin.owner.into(),
-                coin.amount,
-                coin.asset_id,
-                TxPointer::default(),
-                0,
-                coin.maturity,
-            ),
-            Resource::Message(message) => Input::message_signed(
-                message.message_id(),
-                message.sender.into(),
-                message.recipient.into(),
-                message.amount,
-                message.nonce,
-                0,
-                message.data,
-            ),
-        })
-        .collect()
-}
-
-pub(crate) fn generate_contract_inputs(contract_ids: HashSet<ContractId>) -> Vec<Input> {
-    contract_ids
-        .into_iter()
-        .enumerate()
-        .map(|(idx, contract_id)| {
-            Input::contract(
-                UtxoId::new(Bytes32::zeroed(), idx as u8),
-                Bytes32::zeroed(),
-                Bytes32::zeroed(),
-                TxPointer::default(),
-                contract_id,
-            )
-        })
         .collect()
 }
 
@@ -285,6 +205,7 @@ fn extract_unique_contract_ids(calls: &[ContractCall]) -> HashSet<ContractId> {
 mod test {
     use std::slice;
 
+    use fuel_tx::{Bytes32, TxPointer, UtxoId};
     use fuels_core::{abi_encoder::ABIEncoder, parameters::CallParameters};
     use fuels_types::{
         bech32::Bech32ContractId,
