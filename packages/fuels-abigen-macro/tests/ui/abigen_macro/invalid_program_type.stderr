@@ -1,0 +1,5 @@
+error: Unsupported program type. Expected: 'Contract', 'Script' or 'Predicate'
+ --> tests/ui/abigen_macro/invalid_program_type.rs:3:9
+  |
+3 | abigen!(SomeInvalidProgramType(
+  |         ^^^^^^^^^^^^^^^^^^^^^^

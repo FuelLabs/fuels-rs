@@ -76,9 +76,8 @@ impl LogDecoder {
             .collect()
     }
 
-    pub fn merge(&mut self, log_decoder: &LogDecoder) {
-        self.logs_map
-            .extend(log_decoder.logs_map.clone().into_iter());
+    pub fn merge(&mut self, log_decoder: LogDecoder) {
+        self.logs_map.extend(log_decoder.logs_map.into_iter());
     }
 }
 

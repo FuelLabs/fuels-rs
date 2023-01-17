@@ -1,10 +1,10 @@
 #[cfg(test)]
 mod tests {
+    use fuel_abi_types::program_abi::ProgramABI;
     use fuels::core::code_gen::function_selector::resolve_fn_selector;
     use fuels::core::Parameterize;
     use fuels::prelude::SizedAsciiString;
     use fuels::types::param_types::ParamType;
-    use fuels::types::ProgramABI;
     use std::collections::HashMap;
 
     #[test]

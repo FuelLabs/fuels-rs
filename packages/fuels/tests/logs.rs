@@ -1,13 +1,19 @@
-use fuels::core::tx::Bytes32;
 use fuels::prelude::*;
-use fuels::tx::{Input, Output, Receipt, TxPointer, UtxoId};
+use fuels::tx::Receipt;
 
 #[tokio::test]
 async fn test_parse_logged_varibles() -> Result<(), Error> {
     setup_contract_test!(
-        contract_instance,
-        wallet,
-        "packages/fuels/tests/logs/contract_logs"
+        Wallets("wallet"),
+        Abigen(
+            name = "LogContract",
+            abi = "packages/fuels/tests/logs/contract_logs"
+        ),
+        Deploy(
+            name = "contract_instance",
+            contract = "LogContract",
+            wallet = "wallet"
+        ),
     );
 
     // ANCHOR: produce_logs
@@ -36,9 +42,16 @@ async fn test_parse_logged_varibles() -> Result<(), Error> {
 #[tokio::test]
 async fn test_parse_logs_values() -> Result<(), Error> {
     setup_contract_test!(
-        contract_instance,
-        wallet,
-        "packages/fuels/tests/logs/contract_logs"
+        Wallets("wallet"),
+        Abigen(
+            name = "LogContract",
+            abi = "packages/fuels/tests/logs/contract_logs"
+        ),
+        Deploy(
+            name = "contract_instance",
+            contract = "LogContract",
+            wallet = "wallet"
+        ),
     );
 
     let contract_methods = contract_instance.methods();
@@ -63,9 +76,16 @@ async fn test_parse_logs_values() -> Result<(), Error> {
 #[tokio::test]
 async fn test_parse_logs_custom_types() -> Result<(), Error> {
     setup_contract_test!(
-        contract_instance,
-        wallet,
-        "packages/fuels/tests/logs/contract_logs"
+        Wallets("wallet"),
+        Abigen(
+            name = "LogContract",
+            abi = "packages/fuels/tests/logs/contract_logs"
+        ),
+        Deploy(
+            name = "contract_instance",
+            contract = "LogContract",
+            wallet = "wallet"
+        ),
     );
 
     let contract_methods = contract_instance.methods();
@@ -94,9 +114,16 @@ async fn test_parse_logs_custom_types() -> Result<(), Error> {
 #[tokio::test]
 async fn test_parse_logs_generic_types() -> Result<(), Error> {
     setup_contract_test!(
-        contract_instance,
-        wallet,
-        "packages/fuels/tests/logs/contract_logs"
+        Wallets("wallet"),
+        Abigen(
+            name = "LogContract",
+            abi = "packages/fuels/tests/logs/contract_logs"
+        ),
+        Deploy(
+            name = "contract_instance",
+            contract = "LogContract",
+            wallet = "wallet"
+        ),
     );
 
     let contract_methods = contract_instance.methods();
@@ -139,9 +166,16 @@ async fn test_parse_logs_generic_types() -> Result<(), Error> {
 #[tokio::test]
 async fn test_get_logs() -> Result<(), Error> {
     setup_contract_test!(
-        contract_instance,
-        wallet,
-        "packages/fuels/tests/logs/contract_logs"
+        Wallets("wallet"),
+        Abigen(
+            name = "LogContract",
+            abi = "packages/fuels/tests/logs/contract_logs"
+        ),
+        Deploy(
+            name = "contract_instance",
+            contract = "LogContract",
+            wallet = "wallet"
+        ),
     );
 
     // ANCHOR: get_logs
@@ -186,9 +220,16 @@ async fn test_get_logs() -> Result<(), Error> {
 #[tokio::test]
 async fn test_get_logs_with_no_logs() -> Result<(), Error> {
     setup_contract_test!(
-        contract_instance,
-        wallet,
-        "packages/fuels/tests/contracts/contract_test"
+        Wallets("wallet"),
+        Abigen(
+            name = "TestContract",
+            abi = "packages/fuels/tests/contracts/contract_test"
+        ),
+        Deploy(
+            name = "contract_instance",
+            contract = "TestContract",
+            wallet = "wallet"
+        ),
     );
 
     let contract_methods = contract_instance.methods();
@@ -206,9 +247,16 @@ async fn test_get_logs_with_no_logs() -> Result<(), Error> {
 #[tokio::test]
 async fn test_multi_call_log_single_contract() -> Result<(), Error> {
     setup_contract_test!(
-        contract_instance,
-        wallet,
-        "packages/fuels/tests/logs/contract_logs"
+        Wallets("wallet"),
+        Abigen(
+            name = "LogContract",
+            abi = "packages/fuels/tests/logs/contract_logs"
+        ),
+        Deploy(
+            name = "contract_instance",
+            contract = "LogContract",
+            wallet = "wallet"
+        ),
     );
 
     let contract_methods = contract_instance.methods();
@@ -249,15 +297,21 @@ async fn test_multi_call_log_single_contract() -> Result<(), Error> {
 #[tokio::test]
 async fn test_multi_call_log_multiple_contracts() -> Result<(), Error> {
     setup_contract_test!(
-        contract_instance,
-        wallet,
-        "packages/fuels/tests/logs/contract_logs"
-    );
-
-    setup_contract_test!(
-        contract_instance2,
-        None,
-        "packages/fuels/tests/logs/contract_logs"
+        Wallets("wallet"),
+        Abigen(
+            name = "LogContract",
+            abi = "packages/fuels/tests/logs/contract_logs"
+        ),
+        Deploy(
+            name = "contract_instance",
+            contract = "LogContract",
+            wallet = "wallet"
+        ),
+        Deploy(
+            name = "contract_instance2",
+            contract = "LogContract",
+            wallet = "wallet"
+        ),
     );
 
     let call_handler_1 = contract_instance.methods().produce_logs_values();
@@ -293,6 +347,76 @@ async fn test_multi_call_log_multiple_contracts() -> Result<(), Error> {
     Ok(())
 }
 
+#[tokio::test]
+async fn test_multi_call_contract_with_contract_logs() -> Result<(), Error> {
+    let wallet = launch_provider_and_get_wallet().await;
+
+    setup_contract_test!(
+        Abigen(
+            name = "MyContract",
+            abi = "packages/fuels/tests/logs/contract_logs"
+        ),
+        Abigen(
+            name = "ContractCaller",
+            abi = "packages/fuels/tests/logs/contract_with_contract_logs"
+        ),
+        Deploy(
+            name = "contract_caller_instance",
+            contract = "ContractCaller",
+            wallet = "wallet"
+        ),
+        Deploy(
+            name = "contract_caller_instance2",
+            contract = "ContractCaller",
+            wallet = "wallet"
+        ),
+    );
+
+    let contract_id: ContractId = Contract::deploy(
+        "../../packages/fuels/tests/logs/contract_logs/out/debug/contract_logs.bin",
+        &wallet,
+        TxParameters::default(),
+        StorageConfiguration::default(),
+    )
+    .await?
+    .into();
+
+    let contract_instance = MyContract::new(contract_id.into(), wallet.clone());
+
+    let call_handler_1 = contract_caller_instance
+        .methods()
+        .logs_from_external_contract(contract_id)
+        .set_contracts(&[&contract_instance]);
+
+    let call_handler_2 = contract_caller_instance2
+        .methods()
+        .logs_from_external_contract(contract_id)
+        .set_contracts(&[&contract_instance]);
+
+    let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
+
+    multi_call_handler
+        .add_call(call_handler_1)
+        .add_call(call_handler_2);
+
+    let expected_logs: Vec<String> = vec![
+        format!("{:?}", 64),
+        format!("{:?}", 32),
+        format!("{:?}", 16),
+        format!("{:?}", 8),
+        format!("{:?}", 64),
+        format!("{:?}", 32),
+        format!("{:?}", 16),
+        format!("{:?}", 8),
+    ];
+
+    let logs = multi_call_handler.call::<((), ())>().await?.get_logs()?;
+
+    assert_eq!(logs, expected_logs);
+
+    Ok(())
+}
+
 fn assert_is_revert_containing_msg(msg: &str, error: Error) {
     assert!(matches!(error, Error::RevertTransactionError(..)));
     if let Error::RevertTransactionError(error_message, _) = error {
@@ -303,9 +427,16 @@ fn assert_is_revert_containing_msg(msg: &str, error: Error) {
 #[tokio::test]
 async fn test_require_log() -> Result<(), Error> {
     setup_contract_test!(
-        contract_instance,
-        wallet,
-        "packages/fuels/tests/contracts/require"
+        Wallets("wallet"),
+        Abigen(
+            name = "RequireContract",
+            abi = "packages/fuels/tests/contracts/require"
+        ),
+        Deploy(
+            name = "contract_instance",
+            contract = "RequireContract",
+            wallet = "wallet"
+        ),
     );
 
     let contract_methods = contract_instance.methods();
@@ -352,9 +483,16 @@ async fn test_require_log() -> Result<(), Error> {
 #[tokio::test]
 async fn test_multi_call_require_log_single_contract() -> Result<(), Error> {
     setup_contract_test!(
-        contract_instance,
-        wallet,
-        "packages/fuels/tests/contracts/require"
+        Wallets("wallet"),
+        Abigen(
+            name = "RequireContract",
+            abi = "packages/fuels/tests/contracts/require"
+        ),
+        Deploy(
+            name = "contract_instance",
+            contract = "RequireContract",
+            wallet = "wallet"
+        ),
     );
 
     let contract_methods = contract_instance.methods();
@@ -402,15 +540,21 @@ async fn test_multi_call_require_log_single_contract() -> Result<(), Error> {
 #[tokio::test]
 async fn test_multi_call_require_log_multi_contract() -> Result<(), Error> {
     setup_contract_test!(
-        contract_instance,
-        wallet,
-        "packages/fuels/tests/contracts/require"
-    );
-
-    setup_contract_test!(
-        contract_instance2,
-        None,
-        "packages/fuels/tests/contracts/require"
+        Wallets("wallet"),
+        Abigen(
+            name = "RequireContract",
+            abi = "packages/fuels/tests/contracts/require"
+        ),
+        Deploy(
+            name = "contract_instance",
+            contract = "RequireContract",
+            wallet = "wallet"
+        ),
+        Deploy(
+            name = "contract_instance2",
+            contract = "RequireContract",
+            wallet = "wallet"
+        ),
     );
 
     let contract_methods = contract_instance.methods();
@@ -460,10 +604,10 @@ async fn test_multi_call_require_log_multi_contract() -> Result<(), Error> {
 #[allow(unused_variables)]
 async fn test_script_get_logs() -> Result<(), Error> {
     // ANCHOR: script_logs
-    script_abigen!(
-        log_script,
-        "packages/fuels/tests/logs/script_logs/out/debug/script_logs-abi.json"
-    );
+    abigen!(Script(
+        name = "log_script",
+        abi = "packages/fuels/tests/logs/script_logs/out/debug/script_logs-abi.json"
+    ));
 
     let wallet = launch_provider_and_get_wallet().await;
     let bin_path = "../fuels/tests/logs/script_logs/out/debug/script_logs.bin";
@@ -523,8 +667,24 @@ async fn test_script_get_logs() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_script_logs_with_contract_logs() -> Result<(), Error> {
+async fn test_contract_with_contract_logs() -> Result<(), Error> {
     let wallet = launch_provider_and_get_wallet().await;
+
+    setup_contract_test!(
+        Abigen(
+            name = "MyContract",
+            abi = "packages/fuels/tests/logs/contract_logs",
+        ),
+        Abigen(
+            name = "ContractCaller",
+            abi = "packages/fuels/tests/logs/contract_with_contract_logs",
+        ),
+        Deploy(
+            name = "contract_caller_instance",
+            contract = "ContractCaller",
+            wallet = "wallet"
+        )
+    );
 
     let contract_id: ContractId = Contract::deploy(
         "../../packages/fuels/tests/logs/contract_logs/out/debug/contract_logs.bin",
@@ -535,10 +695,53 @@ async fn test_script_logs_with_contract_logs() -> Result<(), Error> {
     .await?
     .into();
 
-    script_abigen!(
-        log_script,
-        "packages/fuels/tests/logs/script_with_contract_logs/out/debug/script_with_contract_logs-abi.json"
+    let contract_instance = MyContract::new(contract_id.into(), wallet.clone());
+
+    let expected_logs: Vec<String> = vec![
+        format!("{:?}", 64),
+        format!("{:?}", 32),
+        format!("{:?}", 16),
+        format!("{:?}", 8),
+    ];
+
+    let logs = contract_caller_instance
+        .methods()
+        .logs_from_external_contract(contract_id)
+        .set_contracts(&[&contract_instance])
+        .call()
+        .await?
+        .get_logs()?;
+
+    assert_eq!(expected_logs, logs);
+
+    Ok(())
+}
+
+#[tokio::test]
+#[allow(unused_variables)]
+async fn test_script_logs_with_contract_logs() -> Result<(), Error> {
+    let wallet = launch_provider_and_get_wallet().await;
+
+    abigen!(
+        Contract(
+        name="MyContract",
+        abi="packages/fuels/tests/logs/contract_logs/out/debug/contract_logs-abi.json",
+    ),Script(
+        name="log_script",
+        abi="packages/fuels/tests/logs/script_with_contract_logs/out/debug/script_with_contract_logs-abi.json"
+    )
     );
+
+    let contract_id: ContractId = Contract::deploy(
+        "../../packages/fuels/tests/logs/contract_logs/out/debug/contract_logs.bin",
+        &wallet,
+        TxParameters::default(),
+        StorageConfiguration::default(),
+    )
+    .await?
+    .into();
+
+    let contract_instance = MyContract::new(contract_id.into(), wallet.clone());
 
     let bin_path =
         "../fuels/tests/logs/script_with_contract_logs/out/debug/script_with_contract_logs.bin";
@@ -547,28 +750,33 @@ async fn test_script_logs_with_contract_logs() -> Result<(), Error> {
     let expected_num_contract_logs = 4;
 
     let expected_script_logs: Vec<String> = vec![
+        // Contract logs
+        format!("{:?}", 64),
+        format!("{:?}", 32),
+        format!("{:?}", 16),
+        format!("{:?}", 8),
+        // Script logs
         format!("{:?}", true),
         format!("{:?}", 42),
         format!("{:?}", SizedAsciiString::<4>::new("Fuel".to_string())?),
         format!("{:?}", [1, 2, 3]),
     ];
 
+    // ANCHOR: external_contract_ids
     let response = instance
         .main(contract_id)
-        .with_inputs(vec![Input::contract(
-            UtxoId::new(Bytes32::zeroed(), 0),
-            Bytes32::zeroed(),
-            Bytes32::zeroed(),
-            TxPointer::default(),
-            contract_id,
-        )])
-        .with_outputs(vec![Output::contract(
-            0,
-            Bytes32::zeroed(),
-            Bytes32::zeroed(),
-        )])
+        .set_contract_ids(&[contract_id.into()])
         .call()
         .await?;
+    // ANCHOR_END: external_contract_ids
+
+    // ANCHOR: external_contract
+    let response = instance
+        .main(contract_id)
+        .set_contracts(&[&contract_instance])
+        .call()
+        .await?;
+    // ANCHOR_END: external_contract
 
     {
         let num_contract_logs = response
@@ -580,7 +788,6 @@ async fn test_script_logs_with_contract_logs() -> Result<(), Error> {
         assert_eq!(num_contract_logs, expected_num_contract_logs);
     }
     {
-        // Assert that the logs that we can decode are the ones generated by the script
         let logs = response.get_logs()?;
 
         assert_eq!(logs, expected_script_logs);
@@ -591,10 +798,10 @@ async fn test_script_logs_with_contract_logs() -> Result<(), Error> {
 
 #[tokio::test]
 async fn test_script_get_logs_with_type() -> Result<(), Error> {
-    script_abigen!(
-        log_script,
-        "packages/fuels/tests/logs/script_logs/out/debug/script_logs-abi.json"
-    );
+    abigen!(Script(
+        name = "log_script",
+        abi = "packages/fuels/tests/logs/script_logs/out/debug/script_logs-abi.json"
+    ));
 
     let wallet = launch_provider_and_get_wallet().await;
     let bin_path = "../fuels/tests/logs/script_logs/out/debug/script_logs.bin";
@@ -664,10 +871,10 @@ async fn test_script_get_logs_with_type() -> Result<(), Error> {
 
 #[tokio::test]
 async fn test_script_require_log() -> Result<(), Error> {
-    script_abigen!(
-        log_script,
-        "packages/fuels/tests/scripts/script_require/out/debug/script_require-abi.json"
-    );
+    abigen!(Script(
+        name = "log_script",
+        abi = "packages/fuels/tests/scripts/script_require/out/debug/script_require-abi.json"
+    ));
 
     let wallet = launch_provider_and_get_wallet().await;
     let bin_path = "../fuels/tests/scripts/script_require/out/debug/script_require.bin";
@@ -711,6 +918,147 @@ async fn test_script_require_log() -> Result<(), Error> {
 
         assert_is_revert_containing_msg("64", error);
     }
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_contract_require_from_contract() -> Result<(), Error> {
+    let wallet = launch_provider_and_get_wallet().await;
+
+    setup_contract_test!(
+        Abigen(
+            name = "MyContract",
+            abi = "packages/fuels/tests/contracts/lib_contract",
+        ),
+        Abigen(
+            name = "ContractCaller",
+            abi = "packages/fuels/tests/contracts/lib_contract_caller",
+        ),
+        Deploy(
+            name = "contract_caller_instance",
+            contract = "ContractCaller",
+            wallet = "wallet"
+        )
+    );
+
+    let contract_id: ContractId = Contract::deploy(
+        "../../packages/fuels/tests/contracts/lib_contract/out/debug/lib_contract.bin",
+        &wallet,
+        TxParameters::default(),
+        StorageConfiguration::default(),
+    )
+    .await?
+    .into();
+
+    let contract_instance = MyContract::new(contract_id.into(), wallet.clone());
+
+    let error = contract_caller_instance
+        .methods()
+        .require_from_contract(contract_id)
+        .set_contracts(&[&contract_instance])
+        .call()
+        .await
+        .expect_err("Should return a revert error");
+
+    assert_is_revert_containing_msg("require from contract", error);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_multi_call_contract_require_from_contract() -> Result<(), Error> {
+    let wallet = launch_provider_and_get_wallet().await;
+
+    setup_contract_test!(
+        Abigen(
+            name = "MyContract",
+            abi = "packages/fuels/tests/contracts/lib_contract",
+        ),
+        Abigen(
+            name = "ContractLogs",
+            abi = "packages/fuels/tests/logs/contract_logs",
+        ),
+        Abigen(
+            name = "ContractCaller",
+            abi = "packages/fuels/tests/contracts/lib_contract_caller",
+        ),
+        Deploy(
+            name = "contract_instance",
+            contract = "ContractLogs",
+            wallet = "wallet"
+        ),
+        Deploy(
+            name = "contract_caller_instance",
+            contract = "ContractCaller",
+            wallet = "wallet"
+        ),
+    );
+
+    let contract_id: ContractId = Contract::deploy(
+        "../../packages/fuels/tests/contracts/lib_contract/out/debug/lib_contract.bin",
+        &wallet,
+        TxParameters::default(),
+        StorageConfiguration::default(),
+    )
+    .await?
+    .into();
+
+    let lib_contract_instance = MyContract::new(contract_id.into(), wallet.clone());
+
+    let call_handler_1 = contract_instance.methods().produce_logs_values();
+
+    let call_handler_2 = contract_caller_instance
+        .methods()
+        .require_from_contract(contract_id)
+        .set_contracts(&[&lib_contract_instance]);
+
+    let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
+
+    multi_call_handler
+        .add_call(call_handler_1)
+        .add_call(call_handler_2);
+
+    let error = multi_call_handler
+        .call::<((), ())>()
+        .await
+        .expect_err("Should return a revert error");
+
+    assert_is_revert_containing_msg("require from contract", error);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_script_require_from_contract() -> Result<(), Error> {
+    let wallet = launch_provider_and_get_wallet().await;
+
+    abigen!(Contract(name = "MyContract", abi = "packages/fuels/tests/contracts/lib_contract/out/debug/lib_contract-abi.json"), 
+            Script(name = "log_script", abi = "packages/fuels/tests/scripts/script_require_from_contract/out/debug/script_require_from_contract-abi.json"));
+
+    let contract_id: ContractId = Contract::deploy(
+        "../../packages/fuels/tests/contracts/lib_contract/out/debug/lib_contract.bin",
+        &wallet,
+        TxParameters::default(),
+        StorageConfiguration::default(),
+    )
+    .await?
+    .into();
+
+    let contract_instance = MyContract::new(contract_id.into(), wallet.clone());
+
+    let bin_path =
+        "../fuels/tests/scripts/script_require_from_contract/out/debug/script_require_from_contract.bin";
+    let instance = log_script::new(wallet.clone(), bin_path);
+
+    let error = instance
+        .main(contract_id)
+        .set_contracts(&[&contract_instance])
+        .call()
+        .await
+        .expect_err("Should return a revert error");
+
+    assert_is_revert_containing_msg("require from contract", error);
 
     Ok(())
 }

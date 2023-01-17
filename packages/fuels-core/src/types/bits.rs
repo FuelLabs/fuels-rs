@@ -1,5 +1,6 @@
-use crate::{Parameterize, Token, Tokenizable};
 use fuels_types::{errors::Error, param_types::ParamType};
+
+use crate::{Parameterize, Token, Tokenizable};
 
 // A simple wrapper around [u8; 32] representing the `b256` type. Exists
 // mainly so that we may differentiate `Parameterize` and `Tokenizable`
@@ -178,9 +179,11 @@ impl Tokenizable for EvmAddress {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::Tokenizable;
     use fuels_types::param_types::ParamType;
+
+    use crate::Tokenizable;
+
+    use super::*;
 
     #[test]
     fn test_param_type_b256() {

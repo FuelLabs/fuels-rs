@@ -1,5 +1,6 @@
-use crate::{coin::Coin, message::Message};
 use fuel_gql_client::client::schema::resource::Resource as ClientResource;
+
+use crate::{coin::Coin, message::Message};
 
 #[derive(Debug)]
 pub enum Resource {
