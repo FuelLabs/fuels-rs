@@ -254,7 +254,7 @@ fn to_raw_slice(
     _: bool,
 ) -> Option<ResolvedType> {
     if type_field == "raw untyped slice" {
-        let type_name = quote! {RawSlice};
+        let type_name = quote! {::fuels::types::RawSlice};
         Some(ResolvedType {
             type_name,
             generic_params: vec![],

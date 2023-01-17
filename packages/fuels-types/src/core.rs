@@ -11,7 +11,8 @@ mod native;
 mod raw_slice;
 mod sized_ascii_string;
 
-pub use crate::core::{bits::*, byte::*, native::*, raw_slice::*, sized_ascii_string::*};
+pub use crate::core::raw_slice::RawSlice;
+pub use crate::core::{bits::*, byte::*, native::*, sized_ascii_string::*};
 
 pub type ByteArray = [u8; 8];
 pub type Selector = ByteArray;

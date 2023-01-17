@@ -302,10 +302,10 @@ async fn test_script_call_with_non_default_max_input() -> Result<(), Error> {
 
 #[tokio::test]
 async fn test_script_raw_slice() -> Result<(), Error> {
-    script_abigen!(
-        bimbam_script,
-        "packages/fuels/tests/scripts/script_raw_slice/out/debug/script_raw_slice-abi.json"
-    );
+    abigen!(Script(
+        name = "BimBamScript",
+        abi = "packages/fuels/tests/scripts/script_raw_slice/out/debug/script_raw_slice-abi.json",
+    ));
     let num_wallets = 1;
     let num_coins = 1;
     let amount = 1000;
@@ -314,7 +314,7 @@ async fn test_script_raw_slice() -> Result<(), Error> {
     let mut wallets = launch_custom_provider_and_get_wallets(config, None, None).await;
     let wallet = wallets.pop().unwrap();
     let bin_path = "../fuels/tests/scripts/script_raw_slice/out/debug/script_raw_slice.bin";
-    let instance = bimbam_script::new(wallet.clone(), bin_path);
+    let instance = BimBamScript::new(wallet.clone(), bin_path);
 
     for length in 0..=10 {
         let response = instance.main(length).call().await?;
