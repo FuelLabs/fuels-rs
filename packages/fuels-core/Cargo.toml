@@ -1,6 +1,6 @@
 [package]
 name = "fuels-core"
-version = "0.33.0"
+version = "0.34.0"
 authors = ["Fuel Labs <contact@fuel.sh>"]
 edition = "2021"
 homepage = "https://fuel.network/"
@@ -15,7 +15,7 @@ fuel-tx = "0.23"
 fuel-vm = "0.22"
 fuel-types = "0.5"
 fuel-abi-types = "0.1.0"
-fuels-types = { version = "0.33.0", path = "../fuels-types" }
+fuels-types = { version = "0.34.0", path = "../fuels-types" }
 hex = { version = "0.4.3", features = ["std"] }
 itertools = "0.10"
 proc-macro2 = "1.0"
@@ -32,4 +32,4 @@ syn = "1.0.12"
 thiserror = "1.0.30"
 
 [dev-dependencies]
-fuels-test-helpers = { version = "0.33.0", path = "../fuels-test-helpers" }
+fuels-test-helpers = { version = "0.34.0", path = "../fuels-test-helpers" }
