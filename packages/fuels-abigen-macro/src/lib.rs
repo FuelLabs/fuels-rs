@@ -1,15 +1,19 @@
 extern crate core;
 
-use fuels_core::code_gen::abigen::Abigen;
 use proc_macro::TokenStream;
-use syn::parse_macro_input;
+
+use syn::{parse_macro_input, DeriveInput};
+
+use fuels_core::code_gen::abigen::Abigen;
 
 use crate::{
     abigen_macro::MacroAbigenTargets,
+    derive_macro::generate_parameterize_impl,
     setup_contract_test_macro::{generate_setup_contract_test_code, TestContractCommands},
 };
 
 mod abigen_macro;
+mod derive_macro;
 mod parse_utils;
 mod setup_contract_test_macro;
 
@@ -74,6 +78,15 @@ pub fn setup_contract_test(input: TokenStream) -> TokenStream {
     let test_contract_commands = parse_macro_input!(input as TestContractCommands);
 
     generate_setup_contract_test_code(test_contract_commands)
+        .unwrap_or_else(|e| e.to_compile_error())
+        .into()
+}
+
+#[proc_macro_derive(Parameterize)]
+pub fn parameterize(stream: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(stream as DeriveInput);
+
+    generate_parameterize_impl(input)
         .unwrap_or_else(|e| e.to_compile_error())
         .into()
 }

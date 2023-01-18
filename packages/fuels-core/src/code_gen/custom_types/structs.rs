@@ -10,7 +10,7 @@ use crate::{
         custom_types::utils::{extract_components, extract_generic_parameters, impl_try_from},
         generated_code::GeneratedCode,
         type_path::TypePath,
-        utils::{param_type_calls, Component},
+        utils::Component,
     },
     utils::ident,
 };
@@ -30,17 +30,12 @@ pub(crate) fn expand_custom_struct(
 
     let struct_decl = struct_decl(&struct_ident, &components, &generic_parameters);
 
-    let parameterized_impl =
-        struct_parameterized_impl(&components, &struct_ident, &generic_parameters);
-
     let tokenizable_impl = struct_tokenizable_impl(&struct_ident, &components, &generic_parameters);
 
     let try_from_impl = impl_try_from(&struct_ident, &generic_parameters);
 
     let code = quote! {
         #struct_decl
-
-        #parameterized_impl
 
         #tokenizable_impl
 
@@ -70,7 +65,7 @@ fn struct_decl(
     );
 
     quote! {
-        #[derive(Clone, Debug, Eq, PartialEq)]
+        #[derive(Clone, Debug, Eq, PartialEq, ::fuels::fuels_abigen::Parameterize)]
         pub struct #struct_ident <#(#generic_parameters: ::fuels::core::traits::Tokenizable + ::fuels::core::traits::Parameterize, )*> {
             #(#fields),*
         }
@@ -117,36 +112,6 @@ fn struct_tokenizable_impl(
                         ::std::result::Result::Ok(Self { #( #from_token_calls, )* })
                     },
                     other => ::std::result::Result::Err(::fuels::types::errors::Error::InstantiationError(format!("Error while constructing '{}'. Expected token of type Token::Struct, got {:?}", #struct_name_str, other))),
-                }
-            }
-        }
-    }
-}
-
-fn struct_parameterized_impl(
-    components: &[Component],
-    struct_ident: &Ident,
-    generic_parameters: &[TokenStream],
-) -> TokenStream {
-    let field_name_param_type = components
-        .iter()
-        .map(|component| {
-            let field_name = component.field_name.to_string();
-            quote! {#field_name.to_string()}
-        })
-        .zip(param_type_calls(components))
-        .map(|(field_name, param_type_call)| {
-            quote! {(#field_name, #param_type_call)}
-        });
-    let struct_name_str = struct_ident.to_string();
-    quote! {
-        impl <#(#generic_parameters: ::fuels::core::traits::Parameterize + ::fuels::core::traits::Tokenizable),*> ::fuels::core::traits::Parameterize for self::#struct_ident <#(#generic_parameters),*> {
-            fn param_type() -> ::fuels::types::param_types::ParamType {
-                let types = [#(#field_name_param_type),*].to_vec();
-                ::fuels::types::param_types::ParamType::Struct{
-                    name: #struct_name_str.to_string(),
-                    fields: types,
-                    generics: [#(#generic_parameters::param_type()),*].to_vec()
                 }
             }
         }
