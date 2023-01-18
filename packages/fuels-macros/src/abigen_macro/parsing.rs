@@ -1,4 +1,4 @@
-use fuels_core::code_gen::abigen::{AbigenTarget, ProgramType};
+use crate::abigen_macro::AbigenTarget;
 use proc_macro2::Ident;
 use syn::{
     parse::{Parse, ParseStream},

@@ -18,19 +18,6 @@ pub fn first_four_bytes_of_sha256_hash(string: &str) -> ByteArray {
     output
 }
 
-/// Expands a identifier string into an token.
-pub fn ident(name: &str) -> Ident {
-    Ident::new(name, Span::call_site())
-}
-
-// Expands an identifier string into a token and appending `_` if the
-/// identifier is for a reserved keyword.
-///
-/// Parsing keywords like `self` can fail, in this case we add an underscore.
-pub fn safe_ident(name: &str) -> Ident {
-    syn::parse_str::<SynIdent>(name).unwrap_or_else(|_| ident(&format!("{}_", name)))
-}
-
 pub fn log_type_lookup(
     id_param_pairs: &[(u64, ParamType)],
     contract_id: Option<Bech32ContractId>,

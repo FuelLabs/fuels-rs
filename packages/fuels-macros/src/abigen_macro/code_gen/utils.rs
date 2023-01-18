@@ -1,18 +1,21 @@
 use std::collections::HashSet;
 
-use fuels_types::errors::Error;
 use inflector::Inflector;
-use proc_macro2::{Ident, TokenStream};
+use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
 
-use crate::{
-    code_gen::{
-        abi_types::{FullTypeApplication, FullTypeDeclaration},
-        resolved_type::{resolve_type, ResolvedType},
-        type_path::TypePath,
-    },
-    utils::safe_ident,
-};
+/// Expands a identifier string into an token.
+pub(crate) fn ident(name: &str) -> Ident {
+    Ident::new(name, Span::call_site())
+}
+
+pub fn safe_ident(name: &str) -> Ident {
+    syn::parse_str::<Ident>(name).unwrap_or_else(|_| ident(&format!("{}_", name)))
+}
+
+use crate::abigen_macro::code_gen::abi_types::{FullTypeApplication, FullTypeDeclaration};
+use crate::abigen_macro::code_gen::resolved_type::{resolve_type, ResolvedType};
+use crate::abigen_macro::code_gen::type_path::TypePath;
 
 // Represents a component of either a struct(field name) or an enum(variant
 // name).
@@ -27,7 +30,7 @@ impl Component {
         component: &FullTypeApplication,
         snake_case: bool,
         shared_types: &HashSet<FullTypeDeclaration>,
-    ) -> Result<Component, Error> {
+    ) -> syn::Result<Component> {
         let field_name = if snake_case {
             component.name.to_snake_case()
         } else {
@@ -73,7 +76,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn respects_snake_case_flag() -> Result<(), Error> {
+    fn respects_snake_case_flag() -> syn::Result<()> {
         let type_application = type_application_named("WasNotSnakeCased");
 
         let sut = Component::new(&type_application, true, &Default::default())?;
@@ -84,7 +87,7 @@ mod tests {
     }
 
     #[test]
-    fn avoids_collisions_with_reserved_keywords() -> Result<(), Error> {
+    fn avoids_collisions_with_reserved_keywords() -> syn::Result<()> {
         {
             let type_application = type_application_named("if");
 

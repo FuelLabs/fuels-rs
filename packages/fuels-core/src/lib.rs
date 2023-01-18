@@ -7,8 +7,8 @@ use crate::{
 
 pub mod abi_decoder;
 pub mod abi_encoder;
-pub mod code_gen;
 pub mod constants;
+pub mod function_selector;
 pub mod offsets;
 pub mod parameters;
 pub mod source;

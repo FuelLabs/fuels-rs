@@ -1,10 +1,9 @@
 use std::collections::HashSet;
 
+use crate::abigen_macro::code_gen::type_path::TypePath;
 use itertools::Itertools;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
-
-use crate::code_gen::type_path::TypePath;
 
 #[derive(Default)]
 pub(crate) struct GeneratedCode {
@@ -74,7 +73,7 @@ impl GeneratedCode {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::utils::ident;
+    use crate::abigen_macro::code_gen::utils::ident;
 
     #[test]
     fn will_wrap_code_in_mod() {

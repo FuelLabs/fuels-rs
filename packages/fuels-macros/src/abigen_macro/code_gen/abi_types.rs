@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use fuel_abi_types::program_abi::{
     ABIFunction, LoggedType, ProgramABI, TypeApplication, TypeDeclaration,
 };
-use fuels_types::errors::{Error, Error::InvalidData};
 
 /// 'Full' versions of the ABI structures are needed to simplify duplicate
 /// detection later on. The original ones([`ProgramABI`], [`TypeApplication`],
