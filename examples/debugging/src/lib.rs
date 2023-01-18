@@ -3,8 +3,9 @@ mod tests {
     use std::collections::HashMap;
 
     use fuel_abi_types::program_abi::ProgramABI;
+    use fuels::types::traits::Parameterize;
     use fuels::{
-        core::{code_gen::function_selector::resolve_fn_selector, traits::Parameterize},
+        core::code_gen::function_selector::resolve_fn_selector,
         types::{param_types::ParamType, SizedAsciiString},
     };
 

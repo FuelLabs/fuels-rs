@@ -147,16 +147,16 @@ mod tests {
                 LongIsland(u64),
                 MoscowMule(bool)
             }
-            impl<> ::fuels::core::traits::Parameterize for self::MatchaTea<> {
+            impl<> ::fuels::types::traits::Parameterize for self::MatchaTea<> {
                 fn param_type() -> ::fuels::types::param_types::ParamType {
                     let variants = [
                         (
                             "LongIsland".to_string(),
-                            <u64 as ::fuels::core::traits::Parameterize>::param_type()
+                            <u64 as ::fuels::types::traits::Parameterize>::param_type()
                         ),
                         (
                             "MoscowMule".to_string(),
-                            <bool as ::fuels::core::traits::Parameterize>::param_type()
+                            <bool as ::fuels::types::traits::Parameterize>::param_type()
                         )
                     ]
                     .to_vec();
@@ -169,7 +169,7 @@ mod tests {
                     }
                 }
             }
-            impl<> ::fuels::core::traits::Tokenizable for self::MatchaTea<> {
+            impl<> ::fuels::types::traits::Tokenizable for self::MatchaTea<> {
                 fn from_token(
                     token: ::fuels::types::Token
                 ) -> ::std::result::Result<Self, ::fuels::types::errors::Error>
@@ -187,10 +187,10 @@ mod tests {
                             let (discriminant, variant_token, _) = *selector;
                             match discriminant {
                                 0u8 => ::std::result::Result::Ok(Self::LongIsland(
-                                    ::fuels::core::traits::Tokenizable::from_token(variant_token)?
+                                    ::fuels::types::traits::Tokenizable::from_token(variant_token)?
                                 )),
                                 1u8 => ::std::result::Result::Ok(Self::MoscowMule(
-                                    ::fuels::core::traits::Tokenizable::from_token(variant_token)?
+                                    ::fuels::types::traits::Tokenizable::from_token(variant_token)?
                                 )),
                                 _ => ::std::result::Result::Err(gen_err(format!(
                                     "Discriminant {} doesn't point to any of the enums variants.",
@@ -206,8 +206,8 @@ mod tests {
                 }
                 fn into_token(self) -> ::fuels::types::Token {
                     let (discriminant, token) = match self {
-                        Self::LongIsland(inner) => (0u8, ::fuels::core::traits::Tokenizable::into_token(inner)),
-                        Self::MoscowMule(inner) => (1u8, ::fuels::core::traits::Tokenizable::into_token(inner))
+                        Self::LongIsland(inner) => (0u8, ::fuels::types::traits::Tokenizable::into_token(inner)),
+                        Self::MoscowMule(inner) => (1u8, ::fuels::types::traits::Tokenizable::into_token(inner))
                     };
                     let variants = match < Self as :: fuels :: core :: traits :: Parameterize > :: param_type () { :: fuels :: types :: param_types :: ParamType :: Enum { variants , .. } => variants , other => panic ! ("Calling {}::param_type() must return a ParamType::Enum but instead it returned: {:?}" , "MatchaTea" , other) } ;
                     ::fuels::types::Token::Enum(::std::boxed::Box::new((discriminant, token, variants)))
@@ -346,16 +346,16 @@ mod tests {
                 Infrastructure(self::Building),
                 Service(u32)
             }
-            impl<> ::fuels::core::traits::Parameterize for self::Amsterdam<> {
+            impl<> ::fuels::types::traits::Parameterize for self::Amsterdam<> {
                 fn param_type() -> ::fuels::types::param_types::ParamType {
                     let variants = [
                         (
                             "Infrastructure".to_string(),
-                            <self::Building as ::fuels::core::traits::Parameterize>::param_type()
+                            <self::Building as ::fuels::types::traits::Parameterize>::param_type()
                         ),
                         (
                             "Service".to_string(),
-                            <u32 as ::fuels::core::traits::Parameterize>::param_type()
+                            <u32 as ::fuels::types::traits::Parameterize>::param_type()
                         )
                     ]
                     .to_vec();
@@ -368,7 +368,7 @@ mod tests {
                     }
                 }
             }
-            impl<> ::fuels::core::traits::Tokenizable for self::Amsterdam<> {
+            impl<> ::fuels::types::traits::Tokenizable for self::Amsterdam<> {
                 fn from_token(
                     token: ::fuels::types::Token
                 ) -> ::std::result::Result<Self, ::fuels::types::errors::Error>
@@ -386,10 +386,10 @@ mod tests {
                             let (discriminant, variant_token, _) = *selector;
                             match discriminant {
                                 0u8 => ::std::result::Result::Ok(Self::Infrastructure(
-                                    ::fuels::core::traits::Tokenizable::from_token(variant_token)?
+                                    ::fuels::types::traits::Tokenizable::from_token(variant_token)?
                                 )),
                                 1u8 => ::std::result::Result::Ok(Self::Service(
-                                    ::fuels::core::traits::Tokenizable::from_token(variant_token)?
+                                    ::fuels::types::traits::Tokenizable::from_token(variant_token)?
                                 )),
                                 _ => ::std::result::Result::Err(gen_err(format!(
                                     "Discriminant {} doesn't point to any of the enums variants.",
@@ -405,8 +405,8 @@ mod tests {
                 }
                 fn into_token(self) -> ::fuels::types::Token {
                     let (discriminant, token) = match self {
-                        Self::Infrastructure(inner) => (0u8, ::fuels::core::traits::Tokenizable::into_token(inner)),
-                        Self::Service(inner) => (1u8, ::fuels::core::traits::Tokenizable::into_token(inner))
+                        Self::Infrastructure(inner) => (0u8, ::fuels::types::traits::Tokenizable::into_token(inner)),
+                        Self::Service(inner) => (1u8, ::fuels::types::traits::Tokenizable::into_token(inner))
                     };
                     let variants = match < Self as :: fuels :: core :: traits :: Parameterize > :: param_type () { :: fuels :: types :: param_types :: ParamType :: Enum { variants , .. } => variants , other => panic ! ("Calling {}::param_type() must return a ParamType::Enum but instead it returned: {:?}" , "Amsterdam" , other) } ;
                     ::fuels::types::Token::Enum(::std::boxed::Box::new((discriminant, token, variants)))
@@ -486,11 +486,11 @@ mod tests {
             pub enum SomeEnum < > {
                 SomeArr([u64; 7usize])
             }
-            impl < > ::fuels::core::traits::Parameterize for self::SomeEnum < > {
+            impl < > ::fuels::types::traits::Parameterize for self::SomeEnum < > {
                 fn param_type() -> ::fuels::types::param_types::ParamType {
                     let variants = [(
                         "SomeArr".to_string(),
-                        <[u64; 7usize] as ::fuels::core::traits::Parameterize>::param_type()
+                        <[u64; 7usize] as ::fuels::types::traits::Parameterize>::param_type()
                     )]
                     .to_vec();
                     let variants = ::fuels::types::enum_variants::EnumVariants::new(variants)
@@ -502,7 +502,7 @@ mod tests {
                     }
                 }
             }
-            impl < > ::fuels::core::traits::Tokenizable for self::SomeEnum < > {
+            impl < > ::fuels::types::traits::Tokenizable for self::SomeEnum < > {
                 fn from_token(
                     token: ::fuels::types::Token
                 ) -> ::std::result::Result<Self, ::fuels::types::errors::Error>
@@ -520,7 +520,7 @@ mod tests {
                             let (discriminant, variant_token, _) = *selector;
                             match discriminant {
                                 0u8 => ::std::result::Result::Ok(Self::SomeArr(
-                                    ::fuels::core::traits::Tokenizable::from_token(variant_token)?
+                                    ::fuels::types::traits::Tokenizable::from_token(variant_token)?
                                 )),
                                 _ => ::std::result::Result::Err(gen_err(format!(
                                     "Discriminant {} doesn't point to any of the enums variants.",
@@ -536,7 +536,7 @@ mod tests {
                 }
                 fn into_token(self) -> ::fuels::types::Token {
                     let (discriminant, token) = match self {
-                        Self::SomeArr(inner) => (0u8, ::fuels::core::traits::Tokenizable::into_token(inner))
+                        Self::SomeArr(inner) => (0u8, ::fuels::types::traits::Tokenizable::into_token(inner))
                     };
                     let variants = match < Self as :: fuels :: core :: traits :: Parameterize > :: param_type () { :: fuels :: types :: param_types :: ParamType :: Enum { variants , .. } => variants , other => panic ! ("Calling {}::param_type() must return a ParamType::Enum but instead it returned: {:?}" , "SomeEnum" , other) } ;
                     ::fuels::types::Token::Enum(::std::boxed::Box::new((discriminant, token, variants)))
@@ -629,11 +629,11 @@ mod tests {
             pub enum EnumLevel3<> {
                 El2(self::EnumLevel2)
             }
-            impl<> ::fuels::core::traits::Parameterize for self::EnumLevel3<> {
+            impl<> ::fuels::types::traits::Parameterize for self::EnumLevel3<> {
                 fn param_type() -> ::fuels::types::param_types::ParamType {
                     let variants = [(
                         "El2".to_string(),
-                        <self::EnumLevel2 as ::fuels::core::traits::Parameterize>::param_type()
+                        <self::EnumLevel2 as ::fuels::types::traits::Parameterize>::param_type()
                     )]
                     .to_vec();
                     let variants = ::fuels::types::enum_variants::EnumVariants::new(variants)
@@ -645,7 +645,7 @@ mod tests {
                     }
                 }
             }
-            impl<> ::fuels::core::traits::Tokenizable for self::EnumLevel3<> {
+            impl<> ::fuels::types::traits::Tokenizable for self::EnumLevel3<> {
                 fn from_token(
                     token: ::fuels::types::Token
                 ) -> ::std::result::Result<Self, ::fuels::types::errors::Error>
@@ -663,7 +663,7 @@ mod tests {
                             let (discriminant, variant_token, _) = *selector;
                             match discriminant {
                                 0u8 => ::std::result::Result::Ok(Self::El2(
-                                    ::fuels::core::traits::Tokenizable::from_token(variant_token)?
+                                    ::fuels::types::traits::Tokenizable::from_token(variant_token)?
                                 )),
                                 _ => ::std::result::Result::Err(gen_err(format!(
                                     "Discriminant {} doesn't point to any of the enums variants.",
@@ -679,7 +679,7 @@ mod tests {
                 }
                 fn into_token(self) -> ::fuels::types::Token {
                     let (discriminant, token) = match self {
-                        Self::El2(inner) => (0u8, ::fuels::core::traits::Tokenizable::into_token(inner))
+                        Self::El2(inner) => (0u8, ::fuels::types::traits::Tokenizable::into_token(inner))
                     };
                     let variants = match < Self as :: fuels :: core :: traits :: Parameterize > :: param_type () { :: fuels :: types :: param_types :: ParamType :: Enum { variants , .. } => variants , other => panic ! ("Calling {}::param_type() must return a ParamType::Enum but instead it returned: {:?}" , "EnumLevel3" , other) } ;
                     ::fuels::types::Token::Enum(::std::boxed::Box::new((discriminant, token, variants)))

@@ -1,9 +1,7 @@
-use fuels_types::errors::Error;
+use fuels_types::traits::Tokenizable;
+use fuels_types::{errors::Error, traits::Parameterize};
 
-use crate::{
-    abi_decoder::ABIDecoder,
-    traits::{Parameterize, Tokenizable},
-};
+use crate::abi_decoder::ABIDecoder;
 
 pub mod abi_decoder;
 pub mod abi_encoder;

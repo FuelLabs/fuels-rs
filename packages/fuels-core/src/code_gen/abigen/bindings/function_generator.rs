@@ -63,7 +63,7 @@ impl FunctionGenerator {
 
     pub fn tokenized_args(&self) -> TokenStream {
         let arg_names = self.args.iter().map(|component| &component.field_name);
-        quote! {[#(::fuels::core::traits::Tokenizable::into_token(#arg_names)),*]}
+        quote! {[#(::fuels::types::traits::Tokenizable::into_token(#arg_names)),*]}
     }
 
     pub fn set_output_type(&mut self, output_type: TokenStream) -> &mut Self {

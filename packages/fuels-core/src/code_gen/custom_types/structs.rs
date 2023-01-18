@@ -66,7 +66,7 @@ fn struct_decl(
 
     quote! {
         #[derive(Clone, Debug, Eq, PartialEq, ::fuels::fuels_abigen::Parameterize)]
-        pub struct #struct_ident <#(#generic_parameters: ::fuels::core::traits::Tokenizable + ::fuels::core::traits::Parameterize, )*> {
+        pub struct #struct_ident <#(#generic_parameters: ::fuels::types::traits::Tokenizable + ::fuels::types::traits::Parameterize, )*> {
             #(#fields),*
         }
     }
@@ -82,7 +82,7 @@ fn struct_tokenizable_impl(
         .iter()
         .map(|Component { field_name, .. }| {
             quote! {
-                #field_name: ::fuels::core::traits::Tokenizable::from_token(next_token()?)?
+                #field_name: ::fuels::types::traits::Tokenizable::from_token(next_token()?)?
             }
         })
         .collect::<Vec<_>>();
@@ -95,7 +95,7 @@ fn struct_tokenizable_impl(
         .collect::<Vec<_>>();
 
     quote! {
-        impl <#(#generic_parameters: ::fuels::core::traits::Tokenizable + ::fuels::core::traits::Parameterize, )*> ::fuels::core::traits::Tokenizable for self::#struct_ident <#(#generic_parameters, )*> {
+        impl <#(#generic_parameters: ::fuels::types::traits::Tokenizable + ::fuels::types::traits::Parameterize, )*> ::fuels::types::traits::Tokenizable for self::#struct_ident <#(#generic_parameters, )*> {
             fn into_token(self) -> ::fuels::types::Token {
                 let tokens = [#(#into_token_calls),*].to_vec();
                 ::fuels::types::Token::Struct(tokens)

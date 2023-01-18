@@ -1,6 +1,6 @@
 use std::iter::zip;
 
-use fuels_types::{
+use crate::{
     core::{Bits256, Byte, EvmAddress, Identity, SizedAsciiString, B512},
     enum_variants::EnumVariants,
     param_types::ParamType,

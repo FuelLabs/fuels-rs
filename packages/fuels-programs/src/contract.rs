@@ -18,12 +18,12 @@ use fuels_core::{
     abi_encoder::{ABIEncoder, UnresolvedBytes},
     constants::FAILED_TRANSFER_TO_ADDRESS_SIGNAL,
     parameters::{CallParameters, StorageConfiguration, TxParameters},
-    traits::{Parameterize, Tokenizable},
 };
 use fuels_signers::{
     provider::{Provider, TransactionCost},
     Signer, WalletUnlocked,
 };
+use fuels_types::traits::{Parameterize, Tokenizable};
 use fuels_types::{
     bech32::Bech32ContractId,
     core::{Selector, Token},

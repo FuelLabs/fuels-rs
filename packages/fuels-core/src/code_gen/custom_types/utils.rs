@@ -24,14 +24,14 @@ use crate::{
 /// &[u8], &Vec<u8> and a Vec<u8>
 pub(crate) fn impl_try_from(ident: &Ident, generics: &[TokenStream]) -> TokenStream {
     quote! {
-        impl<#(#generics: ::fuels::core::traits::Tokenizable + ::fuels::core::traits::Parameterize),*> TryFrom<&[u8]> for self::#ident<#(#generics),*> {
+        impl<#(#generics: ::fuels::types::traits::Tokenizable + ::fuels::types::traits::Parameterize),*> TryFrom<&[u8]> for self::#ident<#(#generics),*> {
             type Error = ::fuels::types::errors::Error;
 
             fn try_from(bytes: &[u8]) -> ::std::result::Result<Self, Self::Error> {
                 ::fuels::core::try_from_bytes(bytes)
             }
         }
-        impl<#(#generics: ::fuels::core::traits::Tokenizable + ::fuels::core::traits::Parameterize),*> TryFrom<&::std::vec::Vec<u8>> for self::#ident<#(#generics),*> {
+        impl<#(#generics: ::fuels::types::traits::Tokenizable + ::fuels::types::traits::Parameterize),*> TryFrom<&::std::vec::Vec<u8>> for self::#ident<#(#generics),*> {
             type Error = ::fuels::types::errors::Error;
 
             fn try_from(bytes: &::std::vec::Vec<u8>) -> ::std::result::Result<Self, Self::Error> {
@@ -39,7 +39,7 @@ pub(crate) fn impl_try_from(ident: &Ident, generics: &[TokenStream]) -> TokenStr
             }
         }
 
-        impl<#(#generics: ::fuels::core::traits::Tokenizable + ::fuels::core::traits::Parameterize),*> TryFrom<::std::vec::Vec<u8>> for self::#ident<#(#generics),*> {
+        impl<#(#generics: ::fuels::types::traits::Tokenizable + ::fuels::types::traits::Parameterize),*> TryFrom<::std::vec::Vec<u8>> for self::#ident<#(#generics),*> {
             type Error = ::fuels::types::errors::Error;
 
             fn try_from(bytes: ::std::vec::Vec<u8>) -> ::std::result::Result<Self, Self::Error> {

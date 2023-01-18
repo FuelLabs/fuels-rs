@@ -22,7 +22,7 @@ pub fn generate_parameterize_impl(input: DeriveInput) -> syn::Result<TokenStream
             let ident = field.ident.unwrap().to_string();
             let ttype = field.ty.to_token_stream();
 
-            quote! {(#ident.to_string(), <#ttype as ::fuels::core::traits::Parameterize>::param_type())}
+            quote! {(#ident.to_string(), <#ttype as ::fuels::types::traits::Parameterize>::param_type())}
         })
         .collect::<Vec<_>>();
 
@@ -33,7 +33,7 @@ pub fn generate_parameterize_impl(input: DeriveInput) -> syn::Result<TokenStream
         .map(|generic_param| match generic_param {
             syn::GenericParam::Type(type_param) => {
                 let ident = &type_param.ident;
-                quote! {<#ident as ::fuels::core::traits::Parameterize>::param_type()}
+                quote! {<#ident as ::fuels::types::traits::Parameterize>::param_type()}
             }
             _ => {
                 panic!("Should only have types as generics")
@@ -42,7 +42,7 @@ pub fn generate_parameterize_impl(input: DeriveInput) -> syn::Result<TokenStream
         .collect::<Vec<_>>();
 
     Ok(quote! {
-        impl #impl_gen ::fuels::core::traits::Parameterize for #struct_name #type_gen #where_clause {
+        impl #impl_gen ::fuels::types::traits::Parameterize for #struct_name #type_gen #where_clause {
             fn param_type() -> ::fuels::types::param_types::ParamType {
                 ::fuels::types::param_types::ParamType::Struct{
                     name: #struct_name_str.to_string(),

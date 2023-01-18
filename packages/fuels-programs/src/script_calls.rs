@@ -6,9 +6,9 @@ use fuels_core::{
     abi_encoder::UnresolvedBytes,
     offsets::base_offset,
     parameters::{CallParameters, TxParameters},
-    traits::{Parameterize, Tokenizable},
 };
 use fuels_signers::{provider::Provider, WalletUnlocked};
+use fuels_types::traits::{Parameterize, Tokenizable};
 use fuels_types::{bech32::Bech32ContractId, errors::Error};
 use itertools::chain;
 
