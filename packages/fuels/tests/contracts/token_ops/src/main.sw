@@ -1,6 +1,6 @@
 contract;
 
-use std::{context::balance_of, context::msg_amount, message::send_message, token::*};
+use std::{bytes::Bytes, context::balance_of, context::msg_amount, message::send_message, token::*};
 
 abi TestFuelCoin {
     fn mint_coins(mint_amount: u64);
@@ -47,11 +47,11 @@ impl TestFuelCoin for Contract {
     }
 
     fn send_message(recipient: b256, coins: u64) {
-        let mut vec = Vec::new();
-        vec.push(1);
-        vec.push(2);
-        vec.push(3);
+        let mut data = Bytes::new();
+        data.push(1);
+        data.push(2);
+        data.push(3);
 
-        send_message(recipient, vec, coins);
+        send_message(recipient, data, coins);
     }
 }
