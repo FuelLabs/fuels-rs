@@ -1,17 +1,26 @@
 use proc_macro2::TokenStream;
 use quote::quote;
 use quote::ToTokens;
-use syn::{Data, DeriveInput};
+use syn::{Data, DeriveInput, Error, Fields};
 
 pub fn generate_parameterize_impl(input: DeriveInput) -> syn::Result<TokenStream> {
-    let struct_name = input.ident;
+    match input.data {
+        Data::Struct(_) => parameterize_struct(input),
+        Data::Enum(_) => parameterize_enum(input),
+        _ => {
+            panic!("Union type is not supported")
+        }
+    }
+}
 
+fn parameterize_struct(input: DeriveInput) -> Result<TokenStream, Error> {
     let fields = match input.data {
         Data::Struct(struct_contents) => struct_contents.fields,
         _ => {
             panic!("Nije trebalo ovo metchat")
         }
     };
+    let struct_name = input.ident;
 
     let (impl_gen, type_gen, where_clause) = input.generics.split_for_impl();
 
@@ -52,4 +61,8 @@ pub fn generate_parameterize_impl(input: DeriveInput) -> syn::Result<TokenStream
             }
         }
     })
+}
+
+fn parameterize_enum(input: DeriveInput) -> Result<TokenStream, Error> {
+    todo!()
 }

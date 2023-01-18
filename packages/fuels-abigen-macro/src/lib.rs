@@ -8,12 +8,12 @@ use fuels_core::code_gen::abigen::Abigen;
 
 use crate::{
     abigen_macro::MacroAbigenTargets,
-    derive_macro::generate_parameterize_impl,
+    parameterize_macro::generate_parameterize_impl,
     setup_contract_test_macro::{generate_setup_contract_test_code, TestContractCommands},
 };
 
 mod abigen_macro;
-mod derive_macro;
+mod parameterize_macro;
 mod parse_utils;
 mod setup_contract_test_macro;
 
