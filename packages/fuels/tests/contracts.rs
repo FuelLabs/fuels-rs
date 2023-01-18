@@ -948,7 +948,7 @@ async fn test_contract_call_with_non_default_max_input() -> Result<(), Error> {
 async fn test_deploy_error_messages() -> Result<(), Error> {
     let wallet = launch_provider_and_get_wallet().await;
     let mut response = Contract::deploy(
-        "../../packages/fuels/tests/contracts/contract_test/out/debug/ontract_test.bin",
+        "../../packages/fuels/tests/contracts/contract_test/out/debug/no_file_on_path.bin",
         &wallet,
         TxParameters::default(),
         StorageConfiguration::default(),
