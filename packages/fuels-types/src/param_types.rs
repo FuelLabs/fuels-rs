@@ -1,14 +1,16 @@
 use std::{collections::HashMap, iter::zip};
 
-use fuel_abi_types::program_abi::{TypeApplication, TypeDeclaration};
+use fuel_abi_types::{
+    program_abi::{TypeApplication, TypeDeclaration},
+    utils::{
+        custom_type_name, extract_array_len, extract_generic_name, extract_str_len,
+        has_enum_format, has_struct_format, has_tuple_format,
+    },
+};
 use itertools::Itertools;
 use strum_macros::EnumString;
 
 use crate::{constants::WORD_SIZE, enum_variants::EnumVariants, errors::Error};
-use fuel_abi_types::utils::{
-    custom_type_name, extract_array_len, extract_generic_name, extract_str_len, has_enum_format,
-    has_struct_format, has_tuple_format,
-};
 
 #[derive(Debug, Clone, EnumString, PartialEq, Eq)]
 #[strum(ascii_case_insensitive)]

@@ -1,17 +1,20 @@
 use std::collections::HashSet;
 
-use crate::abigen_macro::code_gen::abi_types::FullTypeDeclaration;
 pub use abigen_target::{AbigenTarget, ProgramType};
 use inflector::Inflector;
 use itertools::Itertools;
 use proc_macro2::TokenStream;
 use quote::quote;
 
-use crate::abigen_macro::code_gen::abigen::abigen_target::ParsedAbigenTarget;
-use crate::abigen_macro::code_gen::abigen::bindings::generate_bindings;
-use crate::abigen_macro::code_gen::custom_types::generate_types;
-use crate::abigen_macro::code_gen::generated_code::GeneratedCode;
-use crate::utils::ident;
+use crate::{
+    abigen_macro::code_gen::{
+        abi_types::FullTypeDeclaration,
+        abigen::{abigen_target::ParsedAbigenTarget, bindings::generate_bindings},
+        custom_types::generate_types,
+        generated_code::GeneratedCode,
+    },
+    utils::ident,
+};
 
 mod abigen_target;
 mod bindings;

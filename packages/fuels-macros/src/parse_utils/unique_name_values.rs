@@ -8,8 +8,10 @@ use syn::{
     NestedMeta, NestedMeta::Meta,
 };
 
-use crate::parse_utils::{validate_no_duplicates, ErrorsExt};
-use crate::utils::ident;
+use crate::{
+    parse_utils::{validate_no_duplicates, ErrorsExt},
+    utils::ident,
+};
 
 #[derive(Debug)]
 pub struct UniqueNameValues {

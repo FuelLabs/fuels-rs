@@ -4,14 +4,17 @@ use itertools::Itertools;
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, TokenStreamExt};
 
-use crate::abigen_macro::code_gen::abi_types::{
-    FullABIFunction, FullProgramABI, FullTypeDeclaration,
+use crate::{
+    abigen_macro::code_gen::{
+        abi_types::{FullABIFunction, FullProgramABI, FullTypeDeclaration},
+        abigen::{
+            bindings::function_generator::FunctionGenerator, logs::logs_lookup_instantiation_code,
+        },
+        generated_code::GeneratedCode,
+        type_path::TypePath,
+    },
+    utils::ident,
 };
-use crate::abigen_macro::code_gen::abigen::bindings::function_generator::FunctionGenerator;
-use crate::abigen_macro::code_gen::abigen::logs::logs_lookup_instantiation_code;
-use crate::abigen_macro::code_gen::generated_code::GeneratedCode;
-use crate::abigen_macro::code_gen::type_path::TypePath;
-use crate::utils::ident;
 
 pub(crate) fn contract_bindings(
     name: &Ident,

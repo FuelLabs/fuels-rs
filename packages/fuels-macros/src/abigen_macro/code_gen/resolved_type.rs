@@ -1,19 +1,24 @@
-use fuel_abi_types::utils::{
-    custom_type_name, extract_array_len, extract_generic_name, extract_str_len, has_tuple_format,
-};
 use std::{
     collections::HashSet,
     fmt::{Display, Formatter},
 };
 
-use crate::abigen_macro::code_gen::abi_types::{FullTypeApplication, FullTypeDeclaration};
-use crate::abigen_macro::code_gen::type_path::TypePath;
-use crate::abigen_macro::code_gen::utils::get_sdk_provided_types;
-use crate::utils::{ident, safe_ident};
+use fuel_abi_types::utils::{
+    custom_type_name, extract_array_len, extract_generic_name, extract_str_len, has_tuple_format,
+};
 use lazy_static::lazy_static;
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 use regex::Regex;
+
+use crate::{
+    abigen_macro::code_gen::{
+        abi_types::{FullTypeApplication, FullTypeDeclaration},
+        type_path::TypePath,
+        utils::get_sdk_provided_types,
+    },
+    utils::{ident, safe_ident},
+};
 
 // Represents a type alongside its generic parameters. Can be converted into a
 // `TokenStream` via `.into()`.

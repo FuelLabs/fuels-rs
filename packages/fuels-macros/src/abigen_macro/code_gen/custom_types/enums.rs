@@ -1,16 +1,19 @@
-use fuel_abi_types::utils::custom_type_name;
 use std::collections::HashSet;
 
-use crate::abigen_macro::code_gen::abi_types::FullTypeDeclaration;
-use crate::abigen_macro::code_gen::custom_types::utils::{
-    extract_components, extract_generic_parameters, impl_try_from,
-};
-use crate::abigen_macro::code_gen::generated_code::GeneratedCode;
-use crate::abigen_macro::code_gen::type_path::TypePath;
-use crate::abigen_macro::code_gen::utils::{param_type_calls, Component};
-use crate::utils::ident;
+use fuel_abi_types::utils::custom_type_name;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
+
+use crate::{
+    abigen_macro::code_gen::{
+        abi_types::FullTypeDeclaration,
+        custom_types::utils::{extract_components, extract_generic_parameters, impl_try_from},
+        generated_code::GeneratedCode,
+        type_path::TypePath,
+        utils::{param_type_calls, Component},
+    },
+    utils::ident,
+};
 
 /// Returns a TokenStream containing the declaration, `Parameterize`,
 /// `Tokenizable` and `TryFrom` implementations for the enum described by the

@@ -1,12 +1,14 @@
 use std::collections::HashSet;
 
-use crate::abigen_macro::code_gen::abi_types::{FullProgramABI, FullTypeDeclaration};
-use crate::abigen_macro::code_gen::abigen::bindings::function_generator::FunctionGenerator;
-use crate::abigen_macro::code_gen::abigen::bindings::utils::extract_main_fn;
-use crate::abigen_macro::code_gen::generated_code::GeneratedCode;
-use crate::abigen_macro::code_gen::type_path::TypePath;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
+
+use crate::abigen_macro::code_gen::{
+    abi_types::{FullProgramABI, FullTypeDeclaration},
+    abigen::bindings::{function_generator::FunctionGenerator, utils::extract_main_fn},
+    generated_code::GeneratedCode,
+    type_path::TypePath,
+};
 
 pub(crate) fn predicate_bindings(
     name: &Ident,

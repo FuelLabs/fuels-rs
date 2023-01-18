@@ -4,10 +4,14 @@ use inflector::Inflector;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
-use crate::abigen_macro::code_gen::abi_types::{FullTypeApplication, FullTypeDeclaration};
-use crate::abigen_macro::code_gen::resolved_type::{resolve_type, ResolvedType};
-use crate::abigen_macro::code_gen::type_path::TypePath;
-use crate::utils::safe_ident;
+use crate::{
+    abigen_macro::code_gen::{
+        abi_types::{FullTypeApplication, FullTypeDeclaration},
+        resolved_type::{resolve_type, ResolvedType},
+        type_path::TypePath,
+    },
+    utils::safe_ident,
+};
 
 // Represents a component of either a struct(field name) or an enum(variant
 // name).

@@ -1,11 +1,13 @@
-use crate::abigen_macro::{AbigenTarget, ProgramType};
 use proc_macro2::Ident;
 use syn::{
     parse::{Parse, ParseStream},
     Error, Result as ParseResult,
 };
 
-use crate::parse_utils::{Command, UniqueNameValues};
+use crate::{
+    abigen_macro::{AbigenTarget, ProgramType},
+    parse_utils::{Command, UniqueNameValues},
+};
 
 impl From<MacroAbigenTargets> for Vec<AbigenTarget> {
     fn from(targets: MacroAbigenTargets) -> Self {

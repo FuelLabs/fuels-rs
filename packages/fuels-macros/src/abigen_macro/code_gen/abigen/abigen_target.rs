@@ -1,7 +1,6 @@
 use std::convert::TryFrom;
 
-use crate::abigen_macro::code_gen::abi_types::FullProgramABI;
-use crate::abigen_macro::code_gen::source::Source;
+use crate::abigen_macro::code_gen::{abi_types::FullProgramABI, source::Source};
 
 #[derive(Debug, Clone)]
 pub struct AbigenTarget {

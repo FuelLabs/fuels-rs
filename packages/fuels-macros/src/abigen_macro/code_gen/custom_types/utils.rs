@@ -1,12 +1,13 @@
-use fuel_abi_types::utils::extract_generic_name;
 use std::collections::HashSet;
 
+use fuel_abi_types::utils::extract_generic_name;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
-use crate::abigen_macro::code_gen::abi_types::FullTypeDeclaration;
-use crate::abigen_macro::code_gen::utils::Component;
-use crate::utils::ident;
+use crate::{
+    abigen_macro::code_gen::{abi_types::FullTypeDeclaration, utils::Component},
+    utils::ident,
+};
 
 /// These TryFrom implementations improve devx by enabling users to easily
 /// construct contract types from bytes. These are generated due to the orphan
@@ -82,12 +83,10 @@ pub(crate) fn extract_generic_parameters(
 
 #[cfg(test)]
 mod tests {
-    use crate::abigen_macro::code_gen::resolved_type::ResolvedType;
-    use crate::abigen_macro::code_gen::utils::param_type_calls;
-    use fuel_abi_types::program_abi::TypeDeclaration;
-    use fuel_abi_types::utils::custom_type_name;
+    use fuel_abi_types::{program_abi::TypeDeclaration, utils::custom_type_name};
 
     use super::*;
+    use crate::abigen_macro::code_gen::{resolved_type::ResolvedType, utils::param_type_calls};
 
     #[test]
     fn extracts_generic_types() -> crate::Result<()> {

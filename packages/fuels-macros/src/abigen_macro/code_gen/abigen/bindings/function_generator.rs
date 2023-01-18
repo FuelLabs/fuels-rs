@@ -1,13 +1,16 @@
 use std::collections::HashSet;
 
-use crate::abigen_macro::code_gen::abi_types::{
-    FullABIFunction, FullTypeApplication, FullTypeDeclaration,
-};
-use crate::abigen_macro::code_gen::resolved_type::{resolve_type, ResolvedType};
-use crate::abigen_macro::code_gen::utils::{param_type_calls, Component};
-use crate::utils::safe_ident;
 use proc_macro2::TokenStream;
 use quote::quote;
+
+use crate::{
+    abigen_macro::code_gen::{
+        abi_types::{FullABIFunction, FullTypeApplication, FullTypeDeclaration},
+        resolved_type::{resolve_type, ResolvedType},
+        utils::{param_type_calls, Component},
+    },
+    utils::safe_ident,
+};
 
 #[derive(Debug)]
 pub(crate) struct FunctionGenerator {

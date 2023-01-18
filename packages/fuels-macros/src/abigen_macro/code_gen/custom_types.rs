@@ -1,12 +1,14 @@
-use fuel_abi_types::utils::custom_type_name;
 use std::collections::HashSet;
 
-use crate::abigen_macro::code_gen::abi_types::FullTypeDeclaration;
-use crate::abigen_macro::code_gen::custom_types::enums::expand_custom_enum;
-use crate::abigen_macro::code_gen::custom_types::structs::expand_custom_struct;
-use crate::abigen_macro::code_gen::generated_code::GeneratedCode;
-use crate::abigen_macro::code_gen::utils::get_sdk_provided_types;
+use fuel_abi_types::utils::custom_type_name;
 use itertools::Itertools;
+
+use crate::abigen_macro::code_gen::{
+    abi_types::FullTypeDeclaration,
+    custom_types::{enums::expand_custom_enum, structs::expand_custom_struct},
+    generated_code::GeneratedCode,
+    utils::get_sdk_provided_types,
+};
 
 mod enums;
 mod structs;
@@ -81,13 +83,12 @@ mod tests {
         str::FromStr,
     };
 
-    use crate::abigen_macro::code_gen::abi_types::FullTypeApplication;
-    use crate::abigen_macro::code_gen::type_path::TypePath;
     use fuel_abi_types::program_abi::{ProgramABI, TypeApplication, TypeDeclaration};
     use proc_macro2::TokenStream;
     use quote::quote;
 
     use super::*;
+    use crate::abigen_macro::code_gen::{abi_types::FullTypeApplication, type_path::TypePath};
 
     #[test]
     fn test_expand_custom_enum() -> crate::Result<()> {
