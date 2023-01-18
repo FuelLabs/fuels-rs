@@ -3,14 +3,16 @@ use crate::code_gen::{
     docs_gen::expand_doc,
     resolved_type,
     resolved_type::ResolvedType,
+    utils::safe_ident,
 };
-use crate::utils::safe_ident;
 use fuel_abi_types::program_abi::{ABIFunction, TypeDeclaration};
 use fuels_types::errors::Error;
+
 use inflector::Inflector;
 use proc_macro2::TokenStream;
 use quote::quote;
 use resolved_type::resolve_type;
+
 use std::collections::HashMap;
 
 /// Functions used by the Abigen to expand functions defined in an ABI spec.
@@ -191,6 +193,7 @@ pub fn expand_input_name(name: &str) -> Result<TokenStream, Error> {
 mod tests {
     use super::*;
     use fuel_abi_types::program_abi::{ProgramABI, TypeApplication};
+
     use std::str::FromStr;
 
     #[test]

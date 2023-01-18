@@ -8,6 +8,7 @@ pub mod block;
 pub mod chain_info;
 pub mod coin;
 pub mod constants;
+pub mod core;
 pub mod enum_variants;
 pub mod errors;
 pub mod message;
@@ -17,3 +18,5 @@ pub mod param_types;
 pub mod resource;
 pub mod transaction_response;
 pub mod utils;
+
+pub use fuel_tx::{Address, AssetId, ContractId};

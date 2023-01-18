@@ -11,5 +11,5 @@ Here's an example:
 If you have a hexadecimal value as a string and wish to convert it to `Bits256`, you may do so with `from_hex_str`:
 
 ```rust,ignore
-{{#include ../../../packages/fuels-core/src/types/bits.rs:from_hex_str}}
+{{#include ../../../packages/fuels-types/src/core/bits.rs:from_hex_str}}
 ```

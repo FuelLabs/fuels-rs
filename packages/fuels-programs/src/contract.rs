@@ -1,31 +1,3 @@
-use crate::{
-    call_response::FuelCallResponse,
-    execution_script::ExecutableFuelCall,
-    logs::{decode_revert_error, LogDecoder},
-};
-use fuel_gql_client::{
-    fuel_tx::{Contract as FuelContract, Output, Receipt, StorageSlot, Transaction},
-    prelude::PanicReason,
-};
-use fuel_tx::{Address, AssetId, Checkable, Create, Salt};
-use fuels_core::{
-    abi_decoder::ABIDecoder,
-    abi_encoder::{ABIEncoder, UnresolvedBytes},
-    constants::FAILED_TRANSFER_TO_ADDRESS_SIGNAL,
-    parameters::StorageConfiguration,
-    parameters::{CallParameters, TxParameters},
-    tx::{Bytes32, ContractId},
-    Parameterize, Selector, Token, Tokenizable,
-};
-use fuels_signers::{
-    provider::{Provider, TransactionCost},
-    Signer, WalletUnlocked,
-};
-use fuels_types::{
-    bech32::Bech32ContractId,
-    errors::Error,
-    param_types::{ParamType, ReturnLocation},
-};
 use std::{
     collections::{HashMap, HashSet},
     fmt::Debug,
@@ -34,6 +6,35 @@ use std::{
     panic,
     path::Path,
     str::FromStr,
+};
+
+use fuel_tx::{
+    Address, AssetId, Bytes32, Checkable, Contract as FuelContract, ContractId, Create, Output,
+    Receipt, Salt, StorageSlot, Transaction,
+};
+use fuel_vm::fuel_asm::PanicReason;
+use fuels_core::{
+    abi_decoder::ABIDecoder,
+    abi_encoder::{ABIEncoder, UnresolvedBytes},
+    constants::FAILED_TRANSFER_TO_ADDRESS_SIGNAL,
+    parameters::{CallParameters, StorageConfiguration, TxParameters},
+    traits::{Parameterize, Tokenizable},
+};
+use fuels_signers::{
+    provider::{Provider, TransactionCost},
+    Signer, WalletUnlocked,
+};
+use fuels_types::{
+    bech32::Bech32ContractId,
+    core::{Selector, Token},
+    errors::Error,
+    param_types::{ParamType, ReturnLocation},
+};
+
+use crate::{
+    call_response::FuelCallResponse,
+    execution_script::ExecutableFuelCall,
+    logs::{decode_revert_error, LogDecoder},
 };
 
 /// How many times to attempt to resolve missing tx dependencies.
@@ -737,7 +738,7 @@ impl MultiContractCallHandler {
             tx_parameters: TxParameters::default(),
             wallet,
             log_decoder: LogDecoder {
-                logs_map: HashMap::new(),
+                type_lookup: HashMap::new(),
             },
         }
     }

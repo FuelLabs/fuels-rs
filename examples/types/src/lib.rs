@@ -9,8 +9,9 @@ mod tests {
     #[tokio::test]
     async fn bytes32() -> Result<(), Error> {
         // ANCHOR: bytes32
-        use fuels::tx::Bytes32;
         use std::str::FromStr;
+
+        use fuels::tx::Bytes32;
 
         // Zeroed Bytes32
         let b256 = Bytes32::zeroed();
@@ -43,8 +44,9 @@ mod tests {
     #[tokio::test]
     async fn address() -> Result<(), Error> {
         // ANCHOR: address
-        use fuels::tx::Address;
         use std::str::FromStr;
+
+        use fuels::tx::Address;
 
         // Zeroed Bytes32
         let address = Address::zeroed();
@@ -68,8 +70,10 @@ mod tests {
     #[tokio::test]
     async fn bech32() -> Result<(), Error> {
         // ANCHOR: bech32
-        use fuels::prelude::Bech32Address;
-        use fuels::tx::{Address, Bytes32};
+        use fuels::{
+            prelude::Bech32Address,
+            tx::{Address, Bytes32},
+        };
 
         // New from HRP string and a hash
         let hrp = "fuel";
@@ -101,8 +105,9 @@ mod tests {
     #[tokio::test]
     async fn asset_id() -> Result<(), Error> {
         // ANCHOR: asset_id
-        use fuels::tx::AssetId;
         use std::str::FromStr;
+
+        use fuels::tx::AssetId;
 
         // Zeroed Bytes32
         let asset_id = AssetId::zeroed();
@@ -126,8 +131,9 @@ mod tests {
     #[tokio::test]
     async fn contract_id() -> Result<(), Error> {
         // ANCHOR: contract_id
-        use fuels::tx::ContractId;
         use std::str::FromStr;
+
+        use fuels::tx::ContractId;
 
         // Zeroed Bytes32
         let contract_id = ContractId::zeroed();

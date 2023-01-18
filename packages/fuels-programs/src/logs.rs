@@ -1,16 +1,20 @@
-use fuel_gql_client::fuel_tx::Receipt;
-use fuels_core::{try_from_bytes, DecodableLog, Parameterize, Tokenizable};
-use fuels_types::{bech32::Bech32ContractId, errors::Error, param_types::ParamType};
 use std::{
     collections::{HashMap, HashSet},
     fmt::Debug,
 };
 
+use fuel_tx::Receipt;
+use fuels_core::{
+    traits::{DecodableLog, Parameterize, Tokenizable},
+    try_from_bytes,
+};
+use fuels_types::{bech32::Bech32ContractId, errors::Error, param_types::ParamType};
+
 /// Struct used to pass the log mappings from the Abigen
 #[derive(Debug, Clone, Default)]
 pub struct LogDecoder {
     /// A mapping of (contract-id, log-id) and param-type
-    pub logs_map: HashMap<(Bech32ContractId, u64), ParamType>,
+    pub type_lookup: HashMap<(Bech32ContractId, u64), ParamType>,
 }
 
 impl LogDecoder {
@@ -29,7 +33,7 @@ impl LogDecoder {
 
         ids_with_data
             .filter_map(|((c_id, log_id), data)| {
-                self.logs_map
+                self.type_lookup
                     .get(&(c_id, log_id))
                     .map(|param_type| (param_type, data))
             })
@@ -46,7 +50,7 @@ impl LogDecoder {
         let target_param_type = T::param_type();
 
         let target_ids: HashSet<(Bech32ContractId, u64)> = self
-            .logs_map
+            .type_lookup
             .iter()
             .filter_map(|((c_id, log_id), param_type)| {
                 if *param_type == target_param_type {
@@ -77,7 +81,7 @@ impl LogDecoder {
     }
 
     pub fn merge(&mut self, log_decoder: LogDecoder) {
-        self.logs_map.extend(log_decoder.logs_map.into_iter());
+        self.type_lookup.extend(log_decoder.type_lookup.into_iter());
     }
 }
 

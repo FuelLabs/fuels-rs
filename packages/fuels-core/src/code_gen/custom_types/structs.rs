@@ -1,17 +1,19 @@
 use std::collections::HashSet;
 
+use fuels_types::{errors::Error, utils::custom_type_name};
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
-use fuels_types::{errors::Error, utils::custom_type_name};
-
-use crate::code_gen::abi_types::FullTypeDeclaration;
-use crate::code_gen::generated_code::GeneratedCode;
-use crate::code_gen::type_path::TypePath;
-use crate::code_gen::utils::{param_type_calls, Component};
-use crate::utils::ident;
-
-use super::utils::{extract_components, extract_generic_parameters, impl_try_from};
+use crate::{
+    code_gen::{
+        abi_types::FullTypeDeclaration,
+        custom_types::utils::{extract_components, extract_generic_parameters, impl_try_from},
+        generated_code::GeneratedCode,
+        type_path::TypePath,
+        utils::{param_type_calls, Component},
+    },
+    utils::ident,
+};
 
 /// Returns a TokenStream containing the declaration, `Parameterize`,
 /// `Tokenizable` and `TryFrom` implementations for the struct described by the
@@ -69,7 +71,7 @@ fn struct_decl(
 
     quote! {
         #[derive(Clone, Debug, Eq, PartialEq)]
-        pub struct #struct_ident <#(#generic_parameters: ::fuels::core::Tokenizable + ::fuels::core::Parameterize, )*> {
+        pub struct #struct_ident <#(#generic_parameters: ::fuels::core::traits::Tokenizable + ::fuels::core::traits::Parameterize, )*> {
             #(#fields),*
         }
     }
@@ -85,7 +87,7 @@ fn struct_tokenizable_impl(
         .iter()
         .map(|Component { field_name, .. }| {
             quote! {
-                #field_name: ::fuels::core::Tokenizable::from_token(next_token()?)?
+                #field_name: ::fuels::core::traits::Tokenizable::from_token(next_token()?)?
             }
         })
         .collect::<Vec<_>>();
@@ -98,15 +100,15 @@ fn struct_tokenizable_impl(
         .collect::<Vec<_>>();
 
     quote! {
-        impl <#(#generic_parameters: ::fuels::core::Tokenizable + ::fuels::core::Parameterize, )*> ::fuels::core::Tokenizable for self::#struct_ident <#(#generic_parameters, )*> {
-            fn into_token(self) -> ::fuels::core::Token {
+        impl <#(#generic_parameters: ::fuels::core::traits::Tokenizable + ::fuels::core::traits::Parameterize, )*> ::fuels::core::traits::Tokenizable for self::#struct_ident <#(#generic_parameters, )*> {
+            fn into_token(self) -> ::fuels::types::Token {
                 let tokens = [#(#into_token_calls),*].to_vec();
-                ::fuels::core::Token::Struct(tokens)
+                ::fuels::types::Token::Struct(tokens)
             }
 
-            fn from_token(token: ::fuels::core::Token)  -> ::std::result::Result<Self, ::fuels::types::errors::Error> {
+            fn from_token(token: ::fuels::types::Token)  -> ::std::result::Result<Self, ::fuels::types::errors::Error> {
                 match token {
-                    ::fuels::core::Token::Struct(tokens) => {
+                    ::fuels::types::Token::Struct(tokens) => {
                         let mut tokens_iter = tokens.into_iter();
                         let mut next_token = move || { tokens_iter
                             .next()
@@ -138,7 +140,7 @@ fn struct_parameterized_impl(
         });
     let struct_name_str = struct_ident.to_string();
     quote! {
-        impl <#(#generic_parameters: ::fuels::core::Parameterize + ::fuels::core::Tokenizable),*> ::fuels::core::Parameterize for self::#struct_ident <#(#generic_parameters),*> {
+        impl <#(#generic_parameters: ::fuels::core::traits::Parameterize + ::fuels::core::traits::Tokenizable),*> ::fuels::core::traits::Parameterize for self::#struct_ident <#(#generic_parameters),*> {
             fn param_type() -> ::fuels::types::param_types::ParamType {
                 let types = [#(#field_name_param_type),*].to_vec();
                 ::fuels::types::param_types::ParamType::Struct{
