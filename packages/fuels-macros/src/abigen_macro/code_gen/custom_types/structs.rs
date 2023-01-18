@@ -12,6 +12,7 @@ use crate::{
         type_path::TypePath,
         utils::{param_type_calls, Component},
     },
+    err::{Error, Result},
     utils::ident,
 };
 
@@ -21,10 +22,10 @@ use crate::{
 pub(crate) fn expand_custom_struct(
     type_decl: &FullTypeDeclaration,
     shared_types: &HashSet<FullTypeDeclaration>,
-) -> crate::Result<GeneratedCode> {
+) -> Result<GeneratedCode> {
     let type_field = &type_decl.type_field;
     let struct_name = custom_type_name(&type_decl.type_field).ok_or_else(|| {
-        crate::Error(format!(
+        Error(format!(
             "Couldn't parse struct name from type field {type_field}"
         ))
     })?;

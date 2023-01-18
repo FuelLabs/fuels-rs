@@ -13,6 +13,7 @@ use crate::{
         custom_types::generate_types,
         generated_code::GeneratedCode,
     },
+    err::Result,
     utils::ident,
 };
 
@@ -31,7 +32,7 @@ impl Abigen {
     /// * `targets`: `AbigenTargets` detailing which ABI to generate bindings
     /// for, and of what nature (Contract, Script or Predicate).
     /// * `no_std`: don't use the Rust std library.
-    pub(crate) fn generate(targets: Vec<AbigenTarget>, no_std: bool) -> crate::Result<TokenStream> {
+    pub(crate) fn generate(targets: Vec<AbigenTarget>, no_std: bool) -> Result<TokenStream> {
         let parsed_targets = Self::parse_targets(targets)?;
 
         let generated_code = Self::generate_code(no_std, parsed_targets)?;
@@ -48,7 +49,7 @@ impl Abigen {
     fn generate_code(
         no_std: bool,
         parsed_targets: Vec<ParsedAbigenTarget>,
-    ) -> crate::Result<GeneratedCode> {
+    ) -> Result<GeneratedCode> {
         let all_custom_types = Self::extract_custom_types(&parsed_targets);
         let shared_types = Self::filter_shared_types(all_custom_types);
 
@@ -64,7 +65,7 @@ impl Abigen {
         parsed_targets: Vec<ParsedAbigenTarget>,
         no_std: bool,
         shared_types: &HashSet<FullTypeDeclaration>,
-    ) -> crate::Result<GeneratedCode> {
+    ) -> Result<GeneratedCode> {
         parsed_targets
             .into_iter()
             .map(|target| Self::generate_binding(target, no_std, shared_types))
@@ -77,7 +78,7 @@ impl Abigen {
         target: ParsedAbigenTarget,
         no_std: bool,
         shared_types: &HashSet<FullTypeDeclaration>,
-    ) -> crate::Result<GeneratedCode> {
+    ) -> Result<GeneratedCode> {
         let mod_name = ident(&format!("{}_mod", &target.name.to_snake_case()));
 
         let types = generate_types(target.source.types.clone(), shared_types)?;
@@ -89,16 +90,14 @@ impl Abigen {
             .wrap_in_mod(&mod_name))
     }
 
-    fn parse_targets(targets: Vec<AbigenTarget>) -> crate::Result<Vec<ParsedAbigenTarget>> {
+    fn parse_targets(targets: Vec<AbigenTarget>) -> Result<Vec<ParsedAbigenTarget>> {
         targets
             .into_iter()
             .map(|target| target.try_into())
             .collect()
     }
 
-    fn generate_shared_types(
-        shared_types: HashSet<FullTypeDeclaration>,
-    ) -> crate::Result<GeneratedCode> {
+    fn generate_shared_types(shared_types: HashSet<FullTypeDeclaration>) -> Result<GeneratedCode> {
         let types = generate_types(shared_types, &HashSet::default())?;
 
         if types.is_empty() {

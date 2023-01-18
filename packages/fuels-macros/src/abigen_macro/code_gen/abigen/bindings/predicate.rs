@@ -3,11 +3,14 @@ use std::collections::HashSet;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
-use crate::abigen_macro::code_gen::{
-    abi_types::{FullProgramABI, FullTypeDeclaration},
-    abigen::bindings::{function_generator::FunctionGenerator, utils::extract_main_fn},
-    generated_code::GeneratedCode,
-    type_path::TypePath,
+use crate::{
+    abigen_macro::code_gen::{
+        abi_types::{FullProgramABI, FullTypeDeclaration},
+        abigen::bindings::{function_generator::FunctionGenerator, utils::extract_main_fn},
+        generated_code::GeneratedCode,
+        type_path::TypePath,
+    },
+    err::Result,
 };
 
 pub(crate) fn predicate_bindings(
@@ -15,7 +18,7 @@ pub(crate) fn predicate_bindings(
     abi: FullProgramABI,
     no_std: bool,
     shared_types: &HashSet<FullTypeDeclaration>,
-) -> crate::Result<GeneratedCode> {
+) -> Result<GeneratedCode> {
     if no_std {
         return Ok(GeneratedCode::default());
     }
@@ -106,7 +109,7 @@ pub(crate) fn predicate_bindings(
 fn expand_fn(
     abi: &FullProgramABI,
     shared_types: &HashSet<FullTypeDeclaration>,
-) -> crate::Result<TokenStream> {
+) -> Result<TokenStream> {
     let fun = extract_main_fn(&abi.functions)?;
     let mut generator = FunctionGenerator::new(fun, shared_types)?;
 

@@ -12,6 +12,7 @@ use crate::{
         type_path::TypePath,
         utils::{param_type_calls, Component},
     },
+    err::{Error, Result},
     utils::ident,
 };
 
@@ -21,10 +22,10 @@ use crate::{
 pub(crate) fn expand_custom_enum(
     type_decl: &FullTypeDeclaration,
     shared_types: &HashSet<FullTypeDeclaration>,
-) -> crate::Result<GeneratedCode> {
+) -> Result<GeneratedCode> {
     let type_field = &type_decl.type_field;
     let enum_name = custom_type_name(type_field).ok_or_else(|| {
-        crate::Error(format!(
+        Error(format!(
             "Could not extract enum name from type_field: {}",
             type_field
         ))
@@ -33,9 +34,7 @@ pub(crate) fn expand_custom_enum(
 
     let components = extract_components(type_decl, false, shared_types)?;
     if components.is_empty() {
-        return Err(crate::Error(
-            "Enum must have at least one component!".into(),
-        ));
+        return Err(Error("Enum must have at least one component!".into()));
     }
     let generics = extract_generic_parameters(type_decl)?;
 

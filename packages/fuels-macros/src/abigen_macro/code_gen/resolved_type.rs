@@ -17,6 +17,7 @@ use crate::{
         type_path::TypePath,
         utils::get_sdk_provided_types,
     },
+    err::{Error, Result},
     utils::{ident, safe_ident},
 };
 
@@ -76,12 +77,12 @@ impl From<ResolvedType> for TokenStream {
 pub(crate) fn resolve_type(
     type_application: &FullTypeApplication,
     shared_types: &HashSet<FullTypeDeclaration>,
-) -> crate::Result<ResolvedType> {
+) -> Result<ResolvedType> {
     let recursively_resolve = |type_applications: &Vec<FullTypeApplication>| {
         type_applications
             .iter()
             .map(|type_application| resolve_type(type_application, shared_types))
-            .collect::<Result<Vec<_>, _>>()
+            .collect::<Result<Vec<_>>>()
             .expect("Failed to resolve types")
     };
 
@@ -109,7 +110,7 @@ pub(crate) fn resolve_type(
             is_shared,
         )
     })
-    .ok_or_else(|| crate::Error(format!("Could not resolve {type_field} to any known type")))
+    .ok_or_else(|| Error(format!("Could not resolve {type_field} to any known type")))
 }
 
 fn to_generic(
@@ -137,7 +138,7 @@ fn to_array(
 
     let type_inside: TokenStream = match components_supplier().as_slice() {
         [single_type] => Ok(single_type.into()),
-        other => Err(crate::Error(format!(
+        other => Err(Error(format!(
             "Array must have only one component! Actual components: {other:?}"
         ))),
     }
@@ -279,7 +280,7 @@ mod tests {
     fn test_resolve_first_type(
         expected: &str,
         type_declarations: &[TypeDeclaration],
-    ) -> crate::Result<()> {
+    ) -> Result<()> {
         let types = type_declarations
             .iter()
             .map(|td| (td.type_id, td.clone()))
@@ -290,9 +291,8 @@ mod tests {
         };
 
         let application = FullTypeApplication::from_counterpart(&type_application, &types);
-        let resolved_type = resolve_type(&application, &HashSet::default()).map_err(|e| {
-            crate::Error(format!("{} failed to resolve {:?}", e, &type_application))
-        })?;
+        let resolved_type = resolve_type(&application, &HashSet::default())
+            .map_err(|e| Error(format!("{} failed to resolve {:?}", e, &type_application)))?;
         let actual = TokenStream::from(&resolved_type).to_string();
 
         assert_eq!(actual, expected);
@@ -300,7 +300,7 @@ mod tests {
         Ok(())
     }
 
-    fn test_resolve_primitive_type(type_field: &str, expected: &str) -> crate::Result<()> {
+    fn test_resolve_primitive_type(type_field: &str, expected: &str) -> Result<()> {
         test_resolve_first_type(
             expected,
             &[TypeDeclaration {
@@ -312,47 +312,47 @@ mod tests {
     }
 
     #[test]
-    fn test_resolve_u8() -> crate::Result<()> {
+    fn test_resolve_u8() -> Result<()> {
         test_resolve_primitive_type("u8", "u8")
     }
 
     #[test]
-    fn test_resolve_u16() -> crate::Result<()> {
+    fn test_resolve_u16() -> Result<()> {
         test_resolve_primitive_type("u16", "u16")
     }
 
     #[test]
-    fn test_resolve_u32() -> crate::Result<()> {
+    fn test_resolve_u32() -> Result<()> {
         test_resolve_primitive_type("u32", "u32")
     }
 
     #[test]
-    fn test_resolve_u64() -> crate::Result<()> {
+    fn test_resolve_u64() -> Result<()> {
         test_resolve_primitive_type("u64", "u64")
     }
 
     #[test]
-    fn test_resolve_bool() -> crate::Result<()> {
+    fn test_resolve_bool() -> Result<()> {
         test_resolve_primitive_type("bool", "bool")
     }
 
     #[test]
-    fn test_resolve_byte() -> crate::Result<()> {
+    fn test_resolve_byte() -> Result<()> {
         test_resolve_primitive_type("byte", ":: fuels :: types :: Byte")
     }
 
     #[test]
-    fn test_resolve_b256() -> crate::Result<()> {
+    fn test_resolve_b256() -> Result<()> {
         test_resolve_primitive_type("b256", ":: fuels :: types :: Bits256")
     }
 
     #[test]
-    fn test_resolve_unit() -> crate::Result<()> {
+    fn test_resolve_unit() -> Result<()> {
         test_resolve_primitive_type("()", "()")
     }
 
     #[test]
-    fn test_resolve_array() -> crate::Result<()> {
+    fn test_resolve_array() -> Result<()> {
         test_resolve_first_type(
             "[u8 ; 3usize]",
             &[
@@ -375,7 +375,7 @@ mod tests {
     }
 
     #[test]
-    fn test_resolve_vector() -> crate::Result<()> {
+    fn test_resolve_vector() -> Result<()> {
         test_resolve_first_type(
             ":: std :: vec :: Vec",
             &[
@@ -441,12 +441,12 @@ mod tests {
     }
 
     #[test]
-    fn test_resolve_string() -> crate::Result<()> {
+    fn test_resolve_string() -> Result<()> {
         test_resolve_primitive_type("str[3]", ":: fuels :: types :: SizedAsciiString < 3usize >")
     }
 
     #[test]
-    fn test_resolve_struct() -> crate::Result<()> {
+    fn test_resolve_struct() -> Result<()> {
         test_resolve_first_type(
             "self :: SomeStruct",
             &[
@@ -482,7 +482,7 @@ mod tests {
     }
 
     #[test]
-    fn test_resolve_enum() -> crate::Result<()> {
+    fn test_resolve_enum() -> Result<()> {
         test_resolve_first_type(
             "self :: SomeEnum",
             &[
@@ -518,7 +518,7 @@ mod tests {
     }
 
     #[test]
-    fn test_resolve_tuple() -> crate::Result<()> {
+    fn test_resolve_tuple() -> Result<()> {
         test_resolve_first_type(
             "(u8 , u16 , bool , T ,)",
             &[

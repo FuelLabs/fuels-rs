@@ -10,6 +10,7 @@ use crate::{
         resolved_type::{resolve_type, ResolvedType},
         type_path::TypePath,
     },
+    err::Result,
     utils::safe_ident,
 };
 
@@ -26,7 +27,7 @@ impl Component {
         component: &FullTypeApplication,
         snake_case: bool,
         shared_types: &HashSet<FullTypeDeclaration>,
-    ) -> crate::Result<Component> {
+    ) -> Result<Component> {
         let field_name = if snake_case {
             component.name.to_snake_case()
         } else {
@@ -72,7 +73,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn respects_snake_case_flag() -> crate::Result<()> {
+    fn respects_snake_case_flag() -> Result<()> {
         let type_application = type_application_named("WasNotSnakeCased");
 
         let sut = Component::new(&type_application, true, &Default::default())?;
@@ -83,7 +84,7 @@ mod tests {
     }
 
     #[test]
-    fn avoids_collisions_with_reserved_keywords() -> crate::Result<()> {
+    fn avoids_collisions_with_reserved_keywords() -> Result<()> {
         {
             let type_application = type_application_named("if");
 

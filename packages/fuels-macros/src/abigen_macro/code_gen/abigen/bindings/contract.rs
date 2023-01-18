@@ -13,6 +13,7 @@ use crate::{
         generated_code::GeneratedCode,
         type_path::TypePath,
     },
+    err::Result,
     utils::ident,
 };
 
@@ -21,7 +22,7 @@ pub(crate) fn contract_bindings(
     abi: FullProgramABI,
     no_std: bool,
     shared_types: &HashSet<FullTypeDeclaration>,
-) -> crate::Result<GeneratedCode> {
+) -> Result<GeneratedCode> {
     if no_std {
         return Ok(GeneratedCode::default());
     }
@@ -113,7 +114,7 @@ pub(crate) fn contract_bindings(
 fn expand_functions(
     functions: &[FullABIFunction],
     shared_types: &HashSet<FullTypeDeclaration>,
-) -> crate::Result<TokenStream> {
+) -> Result<TokenStream> {
     functions
         .iter()
         .map(|fun| expand_fn(fun, shared_types))
@@ -132,7 +133,7 @@ fn expand_functions(
 pub(crate) fn expand_fn(
     abi_fun: &FullABIFunction,
     shared_types: &HashSet<FullTypeDeclaration>,
-) -> crate::Result<TokenStream> {
+) -> Result<TokenStream> {
     let mut generator = FunctionGenerator::new(abi_fun, shared_types)?;
 
     generator.set_doc(format!(
@@ -173,7 +174,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_expand_fn_simple_abi() -> crate::Result<()> {
+    fn test_expand_fn_simple_abi() -> Result<()> {
         let s = r#"
             {
                 "types": [
@@ -361,7 +362,7 @@ mod tests {
     }
 
     #[test]
-    fn test_expand_fn_simple() -> crate::Result<()> {
+    fn test_expand_fn_simple() -> Result<()> {
         let the_function = ABIFunction {
             inputs: vec![TypeApplication {
                 name: String::from("bimbam"),
@@ -421,7 +422,7 @@ mod tests {
     }
 
     #[test]
-    fn test_expand_fn_complex() -> crate::Result<()> {
+    fn test_expand_fn_complex() -> Result<()> {
         // given
         let the_function = ABIFunction {
             inputs: vec![TypeApplication {

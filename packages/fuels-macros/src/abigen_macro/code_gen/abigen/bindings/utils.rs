@@ -1,6 +1,9 @@
-use crate::abigen_macro::code_gen::abi_types::FullABIFunction;
+use crate::{
+    abigen_macro::code_gen::abi_types::FullABIFunction,
+    err::{Error, Result},
+};
 
-pub(crate) fn extract_main_fn(abi: &[FullABIFunction]) -> crate::Result<&FullABIFunction> {
+pub(crate) fn extract_main_fn(abi: &[FullABIFunction]) -> Result<&FullABIFunction> {
     let candidates = abi
         .iter()
         .filter(|function| function.name() == "main")
@@ -13,7 +16,7 @@ pub(crate) fn extract_main_fn(abi: &[FullABIFunction]) -> crate::Result<&FullABI
                 .iter()
                 .map(|candidate| candidate.name())
                 .collect::<Vec<_>>();
-            Err(crate::Error(format!(
+            Err(Error(format!(
                 "ABI must have one and only one function with the name 'main'. Got: {fn_names:?}"
             )))
         }

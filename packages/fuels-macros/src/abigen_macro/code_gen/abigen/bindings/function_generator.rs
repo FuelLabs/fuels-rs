@@ -9,6 +9,7 @@ use crate::{
         resolved_type::{resolve_type, ResolvedType},
         utils::{param_type_calls, Component},
     },
+    err::{Error, Result},
     utils::safe_ident,
 };
 
@@ -22,10 +23,7 @@ pub(crate) struct FunctionGenerator {
 }
 
 impl FunctionGenerator {
-    pub fn new(
-        fun: &FullABIFunction,
-        shared_types: &HashSet<FullTypeDeclaration>,
-    ) -> crate::Result<Self> {
+    pub fn new(fun: &FullABIFunction, shared_types: &HashSet<FullTypeDeclaration>) -> Result<Self> {
         let args = function_arguments(fun.inputs(), shared_types)?;
 
         let output_type = resolve_fn_output_type(fun, shared_types)?;
@@ -78,21 +76,21 @@ impl FunctionGenerator {
 fn function_arguments(
     inputs: &[FullTypeApplication],
     shared_types: &HashSet<FullTypeDeclaration>,
-) -> crate::Result<Vec<Component>> {
+) -> Result<Vec<Component>> {
     inputs
         .iter()
         .map(|input| Component::new(input, true, shared_types))
-        .collect::<Result<_, _>>()
-        .map_err(|e| crate::Error(e.to_string()))
+        .collect::<Result<_>>()
+        .map_err(|e| Error(e.to_string()))
 }
 
 fn resolve_fn_output_type(
     function: &FullABIFunction,
     shared_types: &HashSet<FullTypeDeclaration>,
-) -> crate::Result<ResolvedType> {
+) -> Result<ResolvedType> {
     let output_type = resolve_type(function.output(), shared_types)?;
     if output_type.uses_vectors() {
-        Err(crate::Error(format!(
+        Err(Error(format!(
             "function '{}' contains a vector in its return type. This currently isn't supported.",
             function.name()
         )))
@@ -145,7 +143,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_expand_fn_arguments() -> crate::Result<()> {
+    fn test_expand_fn_arguments() -> Result<()> {
         let the_argument = TypeApplication {
             name: "some_argument".to_string(),
             type_id: 0,
@@ -182,7 +180,7 @@ mod tests {
     }
 
     #[test]
-    fn test_expand_fn_arguments_primitive() -> crate::Result<()> {
+    fn test_expand_fn_arguments_primitive() -> Result<()> {
         let the_function = ABIFunction {
             inputs: vec![TypeApplication {
                 name: "bim_bam".to_string(),
@@ -226,7 +224,7 @@ mod tests {
     }
 
     #[test]
-    fn test_expand_fn_arguments_composite() -> crate::Result<()> {
+    fn test_expand_fn_arguments_composite() -> Result<()> {
         let mut function = ABIFunction {
             inputs: vec![TypeApplication {
                 name: "bim_bam".to_string(),
@@ -304,7 +302,7 @@ mod tests {
     }
 
     #[test]
-    fn correct_output_type() -> crate::Result<()> {
+    fn correct_output_type() -> Result<()> {
         let function = given_a_fun();
         let sut = FunctionGenerator::new(&function, &HashSet::default())?;
 
@@ -316,7 +314,7 @@ mod tests {
     }
 
     #[test]
-    fn correct_fn_selector_resolving_code() -> crate::Result<()> {
+    fn correct_fn_selector_resolving_code() -> Result<()> {
         let function = given_a_fun();
         let sut = FunctionGenerator::new(&function, &HashSet::default())?;
 
@@ -331,7 +329,7 @@ mod tests {
     }
 
     #[test]
-    fn correct_tokenized_args() -> crate::Result<()> {
+    fn correct_tokenized_args() -> Result<()> {
         let function = given_a_fun();
         let sut = FunctionGenerator::new(&function, &HashSet::default())?;
 
@@ -346,7 +344,7 @@ mod tests {
     }
 
     #[test]
-    fn tokenizes_correctly() -> crate::Result<()> {
+    fn tokenizes_correctly() -> Result<()> {
         // given
         let function = given_a_fun();
         let mut sut = FunctionGenerator::new(&function, &HashSet::default())?;

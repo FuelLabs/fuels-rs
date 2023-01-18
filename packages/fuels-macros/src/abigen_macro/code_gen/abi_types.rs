@@ -4,6 +4,8 @@ use fuel_abi_types::program_abi::{
     ABIFunction, LoggedType, ProgramABI, TypeApplication, TypeDeclaration,
 };
 
+use crate::err::{Error, Result};
+
 /// 'Full' versions of the ABI structures are needed to simplify duplicate
 /// detection later on. The original ones([`ProgramABI`], [`TypeApplication`],
 /// [`TypeDeclaration`] and others) are not suited for this due to their use of
@@ -17,12 +19,12 @@ pub(crate) struct FullProgramABI {
 }
 
 impl FullProgramABI {
-    pub fn from_json_abi(abi: &str) -> crate::Result<Self> {
+    pub fn from_json_abi(abi: &str) -> Result<Self> {
         let parsed_abi: ProgramABI = serde_json::from_str(abi)?;
         FullProgramABI::from_counterpart(&parsed_abi)
     }
 
-    fn from_counterpart(program_abi: &ProgramABI) -> crate::Result<FullProgramABI> {
+    fn from_counterpart(program_abi: &ProgramABI) -> Result<FullProgramABI> {
         let lookup: HashMap<_, _> = program_abi
             .types
             .iter()
@@ -39,7 +41,7 @@ impl FullProgramABI {
             .functions
             .iter()
             .map(|fun| FullABIFunction::from_counterpart(fun, &lookup))
-            .collect::<Result<Vec<_>, _>>()?;
+            .collect::<Result<Vec<_>>>()?;
 
         let logged_types = program_abi
             .logged_types
@@ -68,11 +70,9 @@ impl FullABIFunction {
         name: String,
         inputs: Vec<FullTypeApplication>,
         output: FullTypeApplication,
-    ) -> crate::Result<Self> {
+    ) -> Result<Self> {
         if name.is_empty() {
-            Err(crate::Error(
-                "FullABIFunction's name cannot be empty!".to_string(),
-            ))
+            Err(Error("FullABIFunction's name cannot be empty!".to_string()))
         } else {
             Ok(Self {
                 name,
@@ -97,7 +97,7 @@ impl FullABIFunction {
     pub(crate) fn from_counterpart(
         abi_function: &ABIFunction,
         types: &HashMap<usize, TypeDeclaration>,
-    ) -> crate::Result<FullABIFunction> {
+    ) -> Result<FullABIFunction> {
         let inputs = abi_function
             .inputs
             .iter()

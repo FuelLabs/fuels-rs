@@ -12,6 +12,7 @@ use crate::{
         },
         generated_code::GeneratedCode,
     },
+    err::Result,
     utils::ident,
 };
 
@@ -25,7 +26,7 @@ pub(crate) fn generate_bindings(
     target: ParsedAbigenTarget,
     no_std: bool,
     shared_types: &HashSet<FullTypeDeclaration>,
-) -> crate::Result<GeneratedCode> {
+) -> Result<GeneratedCode> {
     let bindings_generator = match target.program_type {
         ProgramType::Script => script_bindings,
         ProgramType::Contract => contract_bindings,

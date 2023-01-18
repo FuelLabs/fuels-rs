@@ -3,17 +3,19 @@ use std::str::FromStr;
 use proc_macro2::TokenStream;
 use quote::quote;
 
+use crate::err::{Error, Result};
+
 #[derive(Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub(crate) struct TypePath {
     parts: Vec<String>,
 }
 
 impl TypePath {
-    pub fn new<T: ToString>(path: T) -> crate::Result<Self> {
+    pub fn new<T: ToString>(path: T) -> Result<Self> {
         let path_str = path.to_string().trim().to_string();
 
         if path_str.is_empty() {
-            return Err(crate::Error(format!(
+            return Err(Error(format!(
                 "TypePath cannot be constructed from '{path_str}' because it's empty!"
             )));
         }
@@ -28,7 +30,7 @@ impl TypePath {
             .expect("Cannot be empty, since we started off with a non-empty string");
 
         if type_name.is_empty() {
-            Err(crate::Error(format!(
+            Err(Error(format!(
                 "TypePath cannot be constructed from '{path_str}'! Missing ident at the end."
             )))
         } else {

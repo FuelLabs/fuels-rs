@@ -5,6 +5,8 @@ use std::{
     str::FromStr,
 };
 
+use crate::err::{Error, Result};
+
 /// A source of a Truffle artifact JSON.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) enum Source {
@@ -28,7 +30,7 @@ impl Source {
     /// To specify the root for relative paths, use `Source::with_root`.
     ///
     /// - `/absolute/path/to/Contract.json to an ABI JSON file.
-    pub fn parse<S>(source: S) -> crate::Result<Self>
+    pub fn parse<S>(source: S) -> Result<Self>
     where
         S: AsRef<str>,
     {
@@ -63,7 +65,7 @@ impl Source {
     /// Retrieves the source JSON of the artifact this will either read the JSON
     /// from the file system or retrieve a contract ABI from the network
     /// dependending on the source type.
-    pub fn get(&self) -> crate::Result<String> {
+    pub fn get(&self) -> Result<String> {
         match self {
             Source::Local(path) => get_local_contract(path),
             Source::String(abi) => Ok(abi.clone()),
@@ -71,10 +73,10 @@ impl Source {
     }
 }
 
-fn get_local_contract(path: &Path) -> crate::Result<String> {
+fn get_local_contract(path: &Path) -> Result<String> {
     let path = if path.is_relative() {
         let absolute_path = path.canonicalize().map_err(|e| {
-            crate::Error(format!(
+            Error(format!(
                 "{} unable to canonicalize file from working dir {} with path {}",
                 e,
                 env::current_dir()
@@ -89,7 +91,7 @@ fn get_local_contract(path: &Path) -> crate::Result<String> {
     };
 
     let json = fs::read_to_string(&path).map_err(|e| {
-        crate::Error(format!(
+        Error(format!(
             "{} failed to read artifact JSON file with path {}",
             e,
             &path.display()
@@ -99,9 +101,9 @@ fn get_local_contract(path: &Path) -> crate::Result<String> {
 }
 
 impl FromStr for Source {
-    type Err = crate::Error;
+    type Err = Error;
 
-    fn from_str(s: &str) -> crate::Result<Self> {
+    fn from_str(s: &str) -> Result<Self> {
         Source::parse(s)
     }
 }

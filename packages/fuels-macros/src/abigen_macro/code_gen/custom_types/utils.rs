@@ -6,6 +6,7 @@ use quote::quote;
 
 use crate::{
     abigen_macro::code_gen::{abi_types::FullTypeDeclaration, utils::Component},
+    err::Result,
     utils::ident,
 };
 
@@ -55,7 +56,7 @@ pub(crate) fn extract_components(
     type_decl: &FullTypeDeclaration,
     snake_case: bool,
     shared_types: &HashSet<FullTypeDeclaration>,
-) -> crate::Result<Vec<Component>> {
+) -> Result<Vec<Component>> {
     type_decl
         .components
         .iter()
@@ -67,7 +68,7 @@ pub(crate) fn extract_components(
 /// used by the given type.
 pub(crate) fn extract_generic_parameters(
     type_decl: &FullTypeDeclaration,
-) -> crate::Result<Vec<TokenStream>> {
+) -> Result<Vec<TokenStream>> {
     type_decl
         .type_parameters
         .iter()
@@ -89,7 +90,7 @@ mod tests {
     use crate::abigen_macro::code_gen::{resolved_type::ResolvedType, utils::param_type_calls};
 
     #[test]
-    fn extracts_generic_types() -> crate::Result<()> {
+    fn extracts_generic_types() -> Result<()> {
         // given
         let declaration = TypeDeclaration {
             type_id: 0,
