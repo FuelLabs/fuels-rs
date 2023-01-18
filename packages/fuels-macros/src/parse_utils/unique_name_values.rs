@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-use fuels_core::utils::ident;
 use itertools::{chain, Itertools};
 use proc_macro2::{Ident, Span};
 use quote::ToTokens;
@@ -10,6 +9,7 @@ use syn::{
 };
 
 use crate::parse_utils::{validate_no_duplicates, ErrorsExt};
+use crate::utils::ident;
 
 #[derive(Debug)]
 pub struct UniqueNameValues {

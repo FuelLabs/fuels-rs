@@ -12,13 +12,20 @@ description = "Fuel Rust SDK marcros to generate types from ABI."
 proc-macro = true
 
 [dependencies]
-fuel-abi-types="0.1.0"
+# TODO: Change this
+#fuel-abi-types="0.1.0"
+fuel-abi-types = { path = "/home/segfault_magnet/fuel/github/fuel-abi-types" }
+
+lazy_static = "1.4.0"
+regex = "1.7.1"
+
 Inflector = "0.11"
 proc-macro2 = "1.0"
 quote = "1.0"
 rand = "0.8"
 syn = "1.0.12"
 itertools = "0.10.5"
+serde_json = "1.0.91"
 
 [dev-dependencies]
 trybuild = "1.0.73"

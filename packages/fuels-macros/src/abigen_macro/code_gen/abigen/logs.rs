@@ -1,14 +1,11 @@
 use std::collections::HashSet;
 
+use crate::abigen_macro::code_gen::abi_types::{FullLoggedType, FullTypeDeclaration};
+use crate::abigen_macro::code_gen::resolved_type::resolve_type;
+use crate::abigen_macro::code_gen::utils::single_param_type_call;
 use fuel_abi_types::program_abi::ResolvedLog;
 use proc_macro2::TokenStream;
 use quote::quote;
-
-use crate::code_gen::{
-    abi_types::{FullLoggedType, FullTypeDeclaration},
-    resolved_type::resolve_type,
-    utils::single_param_type_call,
-};
 
 pub(crate) fn logs_lookup_instantiation_code(
     contract_id: Option<TokenStream>,

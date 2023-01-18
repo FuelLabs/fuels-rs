@@ -1,6 +1,7 @@
-extern crate core;
-
 use proc_macro::TokenStream;
+use proc_macro2::LexError;
+use std::fmt::{Debug, Display, Formatter};
+use std::io;
 use syn::parse_macro_input;
 
 use crate::{
@@ -11,6 +12,7 @@ use crate::{
 mod abigen_macro;
 mod parse_utils;
 mod setup_contract_test_macro;
+mod utils;
 
 /// Used to generate bindings for Contracts, Scripts and Predicates. Accepts
 /// input in the form of `ProgramType(name="MyBindings", abi=ABI_SOURCE)...`
@@ -75,4 +77,39 @@ pub fn setup_contract_test(input: TokenStream) -> TokenStream {
     generate_setup_contract_test_code(test_contract_commands)
         .unwrap_or_else(|e| e.to_compile_error())
         .into()
+}
+
+pub(crate) struct Error(String);
+pub(crate) type Result<T> = std::result::Result<T, Error>;
+
+impl Debug for Error {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self.0)
+    }
+}
+
+impl Display for Error {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl std::error::Error for Error {}
+
+impl From<serde_json::Error> for Error {
+    fn from(err: serde_json::Error) -> Self {
+        Error(err.to_string())
+    }
+}
+
+impl From<io::Error> for Error {
+    fn from(err: io::Error) -> Self {
+        Error(err.to_string())
+    }
+}
+
+impl From<LexError> for Error {
+    fn from(err: LexError) -> Self {
+        Error(err.to_string())
+    }
 }

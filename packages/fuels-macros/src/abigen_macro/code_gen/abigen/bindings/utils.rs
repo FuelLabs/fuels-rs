@@ -1,8 +1,6 @@
-use fuels_types::errors::Error;
+use crate::abigen_macro::code_gen::abi_types::FullABIFunction;
 
-use crate::code_gen::abi_types::FullABIFunction;
-
-pub(crate) fn extract_main_fn(abi: &[FullABIFunction]) -> Result<&FullABIFunction, Error> {
+pub(crate) fn extract_main_fn(abi: &[FullABIFunction]) -> crate::Result<&FullABIFunction> {
     let candidates = abi
         .iter()
         .filter(|function| function.name() == "main")
@@ -15,7 +13,7 @@ pub(crate) fn extract_main_fn(abi: &[FullABIFunction]) -> Result<&FullABIFunctio
                 .iter()
                 .map(|candidate| candidate.name())
                 .collect::<Vec<_>>();
-            Err(Error::CompilationError(format!(
+            Err(crate::Error(format!(
                 "ABI must have one and only one function with the name 'main'. Got: {fn_names:?}"
             )))
         }
@@ -25,7 +23,7 @@ pub(crate) fn extract_main_fn(abi: &[FullABIFunction]) -> Result<&FullABIFunctio
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::code_gen::abi_types::{FullTypeApplication, FullTypeDeclaration};
+    use crate::abigen_macro::code_gen::abi_types::{FullTypeApplication, FullTypeDeclaration};
 
     #[test]
     fn correctly_extracts_the_main_fn() {
@@ -42,14 +40,10 @@ mod tests {
 
         let err = extract_main_fn(&functions).expect_err("Should have failed.");
 
-        if let Error::CompilationError(msg) = err {
-            assert_eq!(
-                msg,
-                r#"ABI must have one and only one function with the name 'main'. Got: ["main", "another", "main"]"#
-            );
-        } else {
-            panic!("Should have received a CompilationError!");
-        }
+        assert_eq!(
+            err.to_string(),
+            r#"ABI must have one and only one function with the name 'main'. Got: ["main", "another", "main"]"#
+        );
     }
 
     fn given_a_fun_named(fn_name: &str) -> FullABIFunction {

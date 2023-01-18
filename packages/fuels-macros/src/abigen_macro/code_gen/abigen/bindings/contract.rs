@@ -1,28 +1,24 @@
 use std::collections::HashSet;
 
-use fuels_types::errors::Error;
 use itertools::Itertools;
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, TokenStreamExt};
 
-use crate::{
-    code_gen::{
-        abi_types::{FullABIFunction, FullProgramABI, FullTypeDeclaration},
-        abigen::{
-            bindings::function_generator::FunctionGenerator, logs::logs_lookup_instantiation_code,
-        },
-        generated_code::GeneratedCode,
-        type_path::TypePath,
-    },
-    utils::ident,
+use crate::abigen_macro::code_gen::abi_types::{
+    FullABIFunction, FullProgramABI, FullTypeDeclaration,
 };
+use crate::abigen_macro::code_gen::abigen::bindings::function_generator::FunctionGenerator;
+use crate::abigen_macro::code_gen::abigen::logs::logs_lookup_instantiation_code;
+use crate::abigen_macro::code_gen::generated_code::GeneratedCode;
+use crate::abigen_macro::code_gen::type_path::TypePath;
+use crate::utils::ident;
 
 pub(crate) fn contract_bindings(
     name: &Ident,
     abi: FullProgramABI,
     no_std: bool,
     shared_types: &HashSet<FullTypeDeclaration>,
-) -> Result<GeneratedCode, Error> {
+) -> crate::Result<GeneratedCode> {
     if no_std {
         return Ok(GeneratedCode::default());
     }
@@ -114,7 +110,7 @@ pub(crate) fn contract_bindings(
 fn expand_functions(
     functions: &[FullABIFunction],
     shared_types: &HashSet<FullTypeDeclaration>,
-) -> Result<TokenStream, Error> {
+) -> crate::Result<TokenStream> {
     functions
         .iter()
         .map(|fun| expand_fn(fun, shared_types))
@@ -133,7 +129,7 @@ fn expand_functions(
 pub(crate) fn expand_fn(
     abi_fun: &FullABIFunction,
     shared_types: &HashSet<FullTypeDeclaration>,
-) -> Result<TokenStream, Error> {
+) -> crate::Result<TokenStream> {
     let mut generator = FunctionGenerator::new(abi_fun, shared_types)?;
 
     generator.set_doc(format!(
@@ -174,7 +170,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_expand_fn_simple_abi() -> Result<(), Error> {
+    fn test_expand_fn_simple_abi() -> crate::Result<()> {
         let s = r#"
             {
                 "types": [
@@ -339,7 +335,7 @@ mod tests {
                     &provider,
                     self.contract_id.clone(),
                     &self.wallet,
-                    ::fuels::core::code_gen::function_selector::resolve_fn_selector(
+                    ::fuels::core::function_selector::resolve_fn_selector(
                         "some_abi_funct",
                         &[
                             <self::MyStruct1 as ::fuels::core::traits::Parameterize>::param_type(),
@@ -362,7 +358,7 @@ mod tests {
     }
 
     #[test]
-    fn test_expand_fn_simple() -> Result<(), Error> {
+    fn test_expand_fn_simple() -> crate::Result<()> {
         let the_function = ABIFunction {
             inputs: vec![TypeApplication {
                 name: String::from("bimbam"),
@@ -405,7 +401,7 @@ mod tests {
                     &provider,
                     self.contract_id.clone(),
                     &self.wallet,
-                    ::fuels::core::code_gen::function_selector::resolve_fn_selector(
+                    ::fuels::core::function_selector::resolve_fn_selector(
                         "HelloWorld",
                         &[<bool as ::fuels::core::traits::Parameterize>::param_type()]
                     ),
@@ -422,7 +418,7 @@ mod tests {
     }
 
     #[test]
-    fn test_expand_fn_complex() -> Result<(), Error> {
+    fn test_expand_fn_complex() -> crate::Result<()> {
         // given
         let the_function = ABIFunction {
             inputs: vec![TypeApplication {
@@ -519,7 +515,7 @@ mod tests {
                     &provider,
                     self.contract_id.clone(),
                     &self.wallet,
-                    ::fuels::core::code_gen::function_selector::resolve_fn_selector(
+                    ::fuels::core::function_selector::resolve_fn_selector(
                         "hello_world",
                         &[<self::SomeWeirdFrenchCuisine as ::fuels::core::traits::Parameterize>::param_type()]
                     ),

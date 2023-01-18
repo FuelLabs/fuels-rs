@@ -10,7 +10,9 @@ repository = "https://github.com/FuelLabs/fuels-rs"
 description = "Fuel Rust SDK debugging examples."
 
 [dependencies]
-fuel-abi-types = "0.1.0"
+# TODO: revert this
+#fuel-abi-types = "0.1.0"
+fuel-abi-types = { path = "/home/segfault_magnet/fuel/github/fuel-abi-types" }
 fuels = { version = "0.33.0", path = "../../packages/fuels" }
 rand = "0.8.5"
 tokio = { version = "1.10", features = ["full"] }

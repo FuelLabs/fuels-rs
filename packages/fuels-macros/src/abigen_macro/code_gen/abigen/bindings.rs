@@ -1,20 +1,12 @@
+use crate::abigen_macro::code_gen::abi_types::FullTypeDeclaration;
+use crate::abigen_macro::code_gen::abigen::abigen_target::ParsedAbigenTarget;
+use crate::abigen_macro::code_gen::abigen::bindings::contract::contract_bindings;
+use crate::abigen_macro::code_gen::abigen::bindings::predicate::predicate_bindings;
+use crate::abigen_macro::code_gen::abigen::bindings::script::script_bindings;
+use crate::abigen_macro::code_gen::abigen::ProgramType;
+use crate::abigen_macro::code_gen::generated_code::GeneratedCode;
+use crate::utils::ident;
 use std::collections::HashSet;
-
-use fuels_types::errors::Error;
-
-use crate::{
-    code_gen::{
-        abi_types::FullTypeDeclaration,
-        abigen::{
-            abigen_target::{ParsedAbigenTarget, ProgramType},
-            bindings::{
-                contract::contract_bindings, predicate::predicate_bindings, script::script_bindings,
-            },
-        },
-        generated_code::GeneratedCode,
-    },
-    utils::ident,
-};
 
 mod contract;
 mod function_generator;
@@ -26,7 +18,7 @@ pub(crate) fn generate_bindings(
     target: ParsedAbigenTarget,
     no_std: bool,
     shared_types: &HashSet<FullTypeDeclaration>,
-) -> Result<GeneratedCode, Error> {
+) -> crate::Result<GeneratedCode> {
     let bindings_generator = match target.program_type {
         ProgramType::Script => script_bindings,
         ProgramType::Contract => contract_bindings,

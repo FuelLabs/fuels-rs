@@ -1,14 +1,12 @@
+use fuel_abi_types::utils::custom_type_name;
 use std::collections::HashSet;
 
-use fuels_types::{errors::Error, utils::custom_type_name};
+use crate::abigen_macro::code_gen::abi_types::FullTypeDeclaration;
+use crate::abigen_macro::code_gen::custom_types::enums::expand_custom_enum;
+use crate::abigen_macro::code_gen::custom_types::structs::expand_custom_struct;
+use crate::abigen_macro::code_gen::generated_code::GeneratedCode;
+use crate::abigen_macro::code_gen::utils::get_sdk_provided_types;
 use itertools::Itertools;
-
-use crate::code_gen::{
-    abi_types::FullTypeDeclaration,
-    custom_types::{enums::expand_custom_enum, structs::expand_custom_struct},
-    generated_code::GeneratedCode,
-    utils::get_sdk_provided_types,
-};
 
 mod enums;
 mod structs;
@@ -28,7 +26,7 @@ mod utils;
 pub(crate) fn generate_types<T: IntoIterator<Item = FullTypeDeclaration>>(
     types: T,
     shared_types: &HashSet<FullTypeDeclaration>,
-) -> Result<GeneratedCode, Error> {
+) -> crate::Result<GeneratedCode> {
     HashSet::from_iter(types)
         .difference(shared_types)
         .filter(|ttype| !should_skip_codegen(&ttype.type_field))
@@ -54,7 +52,7 @@ pub(crate) fn generate_types<T: IntoIterator<Item = FullTypeDeclaration>>(
 // implementation details of the contract's Vec type and are not directly
 // used in the SDK.
 fn should_skip_codegen(type_field: &str) -> bool {
-    let name = custom_type_name(type_field).unwrap_or_else(|_| type_field.to_string());
+    let name = custom_type_name(type_field).unwrap_or_else(|| type_field.to_string());
 
     is_type_sdk_provided(&name) || is_type_unused(&name)
 }
@@ -83,19 +81,16 @@ mod tests {
         str::FromStr,
     };
 
-    use anyhow::anyhow;
+    use crate::abigen_macro::code_gen::abi_types::FullTypeApplication;
+    use crate::abigen_macro::code_gen::type_path::TypePath;
     use fuel_abi_types::program_abi::{ProgramABI, TypeApplication, TypeDeclaration};
     use proc_macro2::TokenStream;
     use quote::quote;
 
     use super::*;
-    use crate::code_gen::{
-        abi_types::{FullTypeApplication, FullTypeDeclaration},
-        type_path::TypePath,
-    };
 
     #[test]
-    fn test_expand_custom_enum() -> Result<(), Error> {
+    fn test_expand_custom_enum() -> crate::Result<()> {
         let p = TypeDeclaration {
             type_id: 0,
             type_field: String::from("enum MatchaTea"),
@@ -238,7 +233,7 @@ mod tests {
     }
 
     #[test]
-    fn test_enum_with_no_variants_cannot_be_constructed() -> anyhow::Result<()> {
+    fn test_enum_with_no_variants_cannot_be_constructed() -> crate::Result<()> {
         let p = TypeDeclaration {
             type_id: 0,
             type_field: "enum SomeEmptyEnum".to_string(),
@@ -247,23 +242,17 @@ mod tests {
         };
         let types = [(0, p.clone())].into_iter().collect::<HashMap<_, _>>();
 
-        let err = expand_custom_enum(
+        expand_custom_enum(
             &FullTypeDeclaration::from_counterpart(&p, &types),
             &HashSet::default(),
         )
-        .err()
-        .ok_or_else(|| anyhow!("Was able to construct an enum without variants"))?;
-
-        assert!(
-            matches!(err, Error::InvalidData(_)),
-            "Expected the error to be of the type 'InvalidData'"
-        );
+        .expect_err("Was able to construct an enum without variants");
 
         Ok(())
     }
 
     #[test]
-    fn test_expand_struct_inside_enum() -> Result<(), Error> {
+    fn test_expand_struct_inside_enum() -> crate::Result<()> {
         let inner_struct = TypeApplication {
             name: String::from("Infrastructure"),
             type_id: 1,
@@ -437,7 +426,7 @@ mod tests {
     }
 
     #[test]
-    fn test_expand_array_inside_enum() -> Result<(), Error> {
+    fn test_expand_array_inside_enum() -> crate::Result<()> {
         let enum_components = vec![TypeApplication {
             name: "SomeArr".to_string(),
             type_id: 1,
@@ -567,7 +556,7 @@ mod tests {
     }
 
     #[test]
-    fn test_expand_custom_enum_with_enum() -> Result<(), Error> {
+    fn test_expand_custom_enum_with_enum() -> crate::Result<()> {
         let p = TypeDeclaration {
             type_id: 3,
             type_field: String::from("enum EnumLevel3"),
@@ -710,7 +699,7 @@ mod tests {
     }
 
     #[test]
-    fn test_expand_custom_struct() -> Result<(), Error> {
+    fn test_expand_custom_struct() -> crate::Result<()> {
         let p = TypeDeclaration {
             type_field: String::from("struct Cocktail"),
             components: Some(vec![
@@ -778,7 +767,7 @@ mod tests {
     }
 
     #[test]
-    fn test_struct_with_no_fields_can_be_constructed() -> Result<(), Error> {
+    fn test_struct_with_no_fields_can_be_constructed() -> crate::Result<()> {
         let p = TypeDeclaration {
             type_id: 0,
             type_field: "struct SomeEmptyStruct".to_string(),
@@ -805,7 +794,7 @@ mod tests {
     }
 
     #[test]
-    fn test_expand_custom_struct_with_struct() -> Result<(), Error> {
+    fn test_expand_custom_struct_with_struct() -> crate::Result<()> {
         let p = TypeDeclaration {
             type_id: 0,
             type_field: String::from("struct Cocktail"),
@@ -889,7 +878,7 @@ mod tests {
     }
 
     #[test]
-    fn test_expand_struct_new_abi() -> Result<(), Error> {
+    fn test_expand_struct_new_abi() -> crate::Result<()> {
         let s = r#"
             {
                 "types": [

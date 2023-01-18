@@ -1,4 +1,4 @@
-use crate::abigen_macro::AbigenTarget;
+use crate::abigen_macro::{AbigenTarget, ProgramType};
 use proc_macro2::Ident;
 use syn::{
     parse::{Parse, ParseStream},

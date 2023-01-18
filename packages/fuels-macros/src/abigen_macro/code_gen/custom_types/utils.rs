@@ -1,13 +1,12 @@
+use fuel_abi_types::utils::extract_generic_name;
 use std::collections::HashSet;
 
-use fuels_types::{errors::Error, utils::extract_generic_name};
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
-use crate::{
-    code_gen::{abi_types::FullTypeDeclaration, utils::Component},
-    utils::ident,
-};
+use crate::abigen_macro::code_gen::abi_types::FullTypeDeclaration;
+use crate::abigen_macro::code_gen::utils::Component;
+use crate::utils::ident;
 
 /// These TryFrom implementations improve devx by enabling users to easily
 /// construct contract types from bytes. These are generated due to the orphan
@@ -55,7 +54,7 @@ pub(crate) fn extract_components(
     type_decl: &FullTypeDeclaration,
     snake_case: bool,
     shared_types: &HashSet<FullTypeDeclaration>,
-) -> Result<Vec<Component>, Error> {
+) -> crate::Result<Vec<Component>> {
     type_decl
         .components
         .iter()
@@ -67,7 +66,7 @@ pub(crate) fn extract_components(
 /// used by the given type.
 pub(crate) fn extract_generic_parameters(
     type_decl: &FullTypeDeclaration,
-) -> Result<Vec<TokenStream>, Error> {
+) -> crate::Result<Vec<TokenStream>> {
     type_decl
         .type_parameters
         .iter()
@@ -83,14 +82,15 @@ pub(crate) fn extract_generic_parameters(
 
 #[cfg(test)]
 mod tests {
+    use crate::abigen_macro::code_gen::resolved_type::ResolvedType;
+    use crate::abigen_macro::code_gen::utils::param_type_calls;
     use fuel_abi_types::program_abi::TypeDeclaration;
-    use fuels_types::utils::custom_type_name;
+    use fuel_abi_types::utils::custom_type_name;
 
     use super::*;
-    use crate::code_gen::{resolved_type::ResolvedType, utils::param_type_calls};
 
     #[test]
-    fn extracts_generic_types() -> anyhow::Result<()> {
+    fn extracts_generic_types() -> crate::Result<()> {
         // given
         let declaration = TypeDeclaration {
             type_id: 0,
@@ -180,7 +180,7 @@ mod tests {
         )
     }
     #[test]
-    fn can_extract_struct_name() -> anyhow::Result<()> {
+    fn can_extract_struct_name() {
         let declaration = TypeDeclaration {
             type_id: 0,
             type_field: "struct SomeName".to_string(),
@@ -188,15 +188,13 @@ mod tests {
             type_parameters: None,
         };
 
-        let struct_name = custom_type_name(&declaration.type_field)?;
+        let struct_name = custom_type_name(&declaration.type_field).unwrap();
 
         assert_eq!(struct_name, "SomeName");
-
-        Ok(())
     }
 
     #[test]
-    fn can_extract_enum_name() -> anyhow::Result<()> {
+    fn can_extract_enum_name() {
         let declaration = TypeDeclaration {
             type_id: 0,
             type_field: "enum SomeEnumName".to_string(),
@@ -204,10 +202,8 @@ mod tests {
             type_parameters: None,
         };
 
-        let struct_name = custom_type_name(&declaration.type_field)?;
+        let struct_name = custom_type_name(&declaration.type_field).unwrap();
 
         assert_eq!(struct_name, "SomeEnumName");
-
-        Ok(())
     }
 }

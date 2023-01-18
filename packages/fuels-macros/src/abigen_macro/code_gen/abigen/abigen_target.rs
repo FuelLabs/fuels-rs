@@ -1,8 +1,7 @@
 use std::convert::TryFrom;
 
-use fuels_types::errors::Error;
-
-use crate::{code_gen::abi_types::FullProgramABI, source::Source};
+use crate::abigen_macro::code_gen::abi_types::FullProgramABI;
+use crate::abigen_macro::code_gen::source::Source;
 
 #[derive(Debug, Clone)]
 pub struct AbigenTarget {
@@ -18,7 +17,7 @@ pub(crate) struct ParsedAbigenTarget {
 }
 
 impl TryFrom<AbigenTarget> for ParsedAbigenTarget {
-    type Error = Error;
+    type Error = crate::Error;
 
     fn try_from(value: AbigenTarget) -> Result<Self, Self::Error> {
         Ok(Self {
@@ -29,7 +28,7 @@ impl TryFrom<AbigenTarget> for ParsedAbigenTarget {
     }
 }
 
-fn parse_program_abi(abi_source: &str) -> Result<FullProgramABI, Error> {
+fn parse_program_abi(abi_source: &str) -> crate::Result<FullProgramABI> {
     let source = Source::parse(abi_source).expect("failed to parse JSON ABI");
     let json_abi_str = source.get().expect("failed to parse JSON ABI from string");
     FullProgramABI::from_json_abi(&json_abi_str)

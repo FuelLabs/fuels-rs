@@ -16,7 +16,9 @@ bech32 = "0.9.0"
 chrono = "0.4.2"
 fuel-tx = "0.23"
 fuel-types = "0.5"
-fuel-abi-types = "0.1.0"
+# TODO revert this
+#fuel-abi-types = "0.1.0"
+fuel-abi-types = { path = "/home/segfault_magnet/fuel/github/fuel-abi-types" }
 fuel-core = { version = "0.15", default-features = false, optional = true }
 fuel-chain-config = { version = "0.15", default-features = false }
 fuel-gql-client = { version = "0.15", default-features = false }

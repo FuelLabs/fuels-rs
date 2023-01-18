@@ -5,7 +5,8 @@ mod abigen;
 mod custom_types;
 mod generated_code;
 mod resolved_type;
+mod source;
 mod type_path;
 mod utils;
 
-pub(crate) use abigen::{Abigen, AbigenTarget};
+pub(crate) use abigen::{Abigen, AbigenTarget, ProgramType};

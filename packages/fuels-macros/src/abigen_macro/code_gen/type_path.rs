@@ -1,6 +1,5 @@
 use std::str::FromStr;
 
-use fuels_types::errors::Error;
 use proc_macro2::TokenStream;
 use quote::quote;
 
@@ -10,11 +9,11 @@ pub(crate) struct TypePath {
 }
 
 impl TypePath {
-    pub fn new<T: ToString>(path: T) -> Result<Self, Error> {
+    pub fn new<T: ToString>(path: T) -> crate::Result<Self> {
         let path_str = path.to_string().trim().to_string();
 
         if path_str.is_empty() {
-            return Err(Error::InvalidType(format!(
+            return Err(crate::Error(format!(
                 "TypePath cannot be constructed from '{path_str}' because it's empty!"
             )));
         }
@@ -29,7 +28,7 @@ impl TypePath {
             .expect("Cannot be empty, since we started off with a non-empty string");
 
         if type_name.is_empty() {
-            Err(Error::InvalidType(format!(
+            Err(crate::Error(format!(
                 "TypePath cannot be constructed from '{path_str}'! Missing ident at the end."
             )))
         } else {
@@ -77,14 +76,10 @@ mod tests {
 
         let err = TypePath::new(empty_path).expect_err("Should have failed!");
 
-        if let Error::InvalidType(msg) = err {
-            assert_eq!(
-                msg,
-                "TypePath cannot be constructed from '' because it's empty!"
-            );
-        } else {
-            panic!("Expected an error of the type Error::InvalidType, got: {err}");
-        }
+        assert_eq!(
+            err.to_string(),
+            "TypePath cannot be constructed from '' because it's empty!"
+        );
     }
 
     #[test]
@@ -93,14 +88,10 @@ mod tests {
 
         let err = TypePath::new(no_ident).expect_err("Should have failed!");
 
-        if let Error::InvalidType(msg) = err {
-            assert_eq!(
-                msg,
-                "TypePath cannot be constructed from '::missing_ident::'! Missing ident at the end."
-            );
-        } else {
-            panic!("Expected an error of the type Error::InvalidType, got: {err}");
-        }
+        assert_eq!(
+            err.to_string(),
+            "TypePath cannot be constructed from '::missing_ident::'! Missing ident at the end."
+        );
     }
 
     #[test]

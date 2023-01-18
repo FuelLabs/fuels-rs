@@ -5,7 +5,7 @@ use itertools::Itertools;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub(crate) struct GeneratedCode {
     pub code: TokenStream,
     pub usable_types: HashSet<TypePath>,
@@ -73,7 +73,7 @@ impl GeneratedCode {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::abigen_macro::code_gen::utils::ident;
+    use crate::utils::ident;
 
     #[test]
     fn will_wrap_code_in_mod() {

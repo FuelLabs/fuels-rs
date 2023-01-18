@@ -1,17 +1,13 @@
 use std::collections::HashSet;
 
-use fuels_types::errors::Error;
+use crate::abigen_macro::code_gen::abi_types::{
+    FullABIFunction, FullTypeApplication, FullTypeDeclaration,
+};
+use crate::abigen_macro::code_gen::resolved_type::{resolve_type, ResolvedType};
+use crate::abigen_macro::code_gen::utils::{param_type_calls, Component};
+use crate::utils::safe_ident;
 use proc_macro2::TokenStream;
 use quote::quote;
-
-use crate::{
-    code_gen::{
-        abi_types::{FullABIFunction, FullTypeApplication, FullTypeDeclaration},
-        resolved_type::{resolve_type, ResolvedType},
-        utils::{param_type_calls, Component},
-    },
-    utils::safe_ident,
-};
 
 #[derive(Debug)]
 pub(crate) struct FunctionGenerator {
@@ -26,7 +22,7 @@ impl FunctionGenerator {
     pub fn new(
         fun: &FullABIFunction,
         shared_types: &HashSet<FullTypeDeclaration>,
-    ) -> Result<Self, Error> {
+    ) -> crate::Result<Self> {
         let args = function_arguments(fun.inputs(), shared_types)?;
 
         let output_type = resolve_fn_output_type(fun, shared_types)?;
@@ -58,7 +54,7 @@ impl FunctionGenerator {
         let param_type_calls = param_type_calls(&self.args);
 
         let name = &self.name;
-        quote! {::fuels::core::code_gen::function_selector::resolve_fn_selector(#name, &[#(#param_type_calls),*])}
+        quote! {::fuels::core::function_selector::resolve_fn_selector(#name, &[#(#param_type_calls),*])}
     }
 
     pub fn tokenized_args(&self) -> TokenStream {
@@ -79,21 +75,21 @@ impl FunctionGenerator {
 fn function_arguments(
     inputs: &[FullTypeApplication],
     shared_types: &HashSet<FullTypeDeclaration>,
-) -> Result<Vec<Component>, Error> {
+) -> crate::Result<Vec<Component>> {
     inputs
         .iter()
         .map(|input| Component::new(input, true, shared_types))
         .collect::<Result<_, _>>()
-        .map_err(|e| Error::InvalidType(e.to_string()))
+        .map_err(|e| crate::Error(e.to_string()))
 }
 
 fn resolve_fn_output_type(
     function: &FullABIFunction,
     shared_types: &HashSet<FullTypeDeclaration>,
-) -> Result<ResolvedType, Error> {
+) -> crate::Result<ResolvedType> {
     let output_type = resolve_type(function.output(), shared_types)?;
     if output_type.uses_vectors() {
-        Err(Error::CompilationError(format!(
+        Err(crate::Error(format!(
             "function '{}' contains a vector in its return type. This currently isn't supported.",
             function.name()
         )))
@@ -146,7 +142,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_expand_fn_arguments() -> Result<(), Error> {
+    fn test_expand_fn_arguments() -> crate::Result<()> {
         let the_argument = TypeApplication {
             name: "some_argument".to_string(),
             type_id: 0,
@@ -183,7 +179,7 @@ mod tests {
     }
 
     #[test]
-    fn test_expand_fn_arguments_primitive() -> Result<(), Error> {
+    fn test_expand_fn_arguments_primitive() -> crate::Result<()> {
         let the_function = ABIFunction {
             inputs: vec![TypeApplication {
                 name: "bim_bam".to_string(),
@@ -227,7 +223,7 @@ mod tests {
     }
 
     #[test]
-    fn test_expand_fn_arguments_composite() -> Result<(), Error> {
+    fn test_expand_fn_arguments_composite() -> crate::Result<()> {
         let mut function = ABIFunction {
             inputs: vec![TypeApplication {
                 name: "bim_bam".to_string(),
@@ -305,7 +301,7 @@ mod tests {
     }
 
     #[test]
-    fn correct_output_type() -> Result<(), Error> {
+    fn correct_output_type() -> crate::Result<()> {
         let function = given_a_fun();
         let sut = FunctionGenerator::new(&function, &HashSet::default())?;
 
@@ -317,7 +313,7 @@ mod tests {
     }
 
     #[test]
-    fn correct_fn_selector_resolving_code() -> Result<(), Error> {
+    fn correct_fn_selector_resolving_code() -> crate::Result<()> {
         let function = given_a_fun();
         let sut = FunctionGenerator::new(&function, &HashSet::default())?;
 
@@ -332,7 +328,7 @@ mod tests {
     }
 
     #[test]
-    fn correct_tokenized_args() -> Result<(), Error> {
+    fn correct_tokenized_args() -> crate::Result<()> {
         let function = given_a_fun();
         let sut = FunctionGenerator::new(&function, &HashSet::default())?;
 
@@ -347,7 +343,7 @@ mod tests {
     }
 
     #[test]
-    fn tokenizes_correctly() -> Result<(), Error> {
+    fn tokenizes_correctly() -> crate::Result<()> {
         // given
         let function = given_a_fun();
         let mut sut = FunctionGenerator::new(&function, &HashSet::default())?;

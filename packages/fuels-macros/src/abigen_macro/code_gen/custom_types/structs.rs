@@ -1,19 +1,16 @@
+use fuel_abi_types::utils::custom_type_name;
 use std::collections::HashSet;
 
-use fuels_types::{errors::Error, utils::custom_type_name};
+use crate::abigen_macro::code_gen::abi_types::FullTypeDeclaration;
+use crate::abigen_macro::code_gen::custom_types::utils::{
+    extract_components, extract_generic_parameters, impl_try_from,
+};
+use crate::abigen_macro::code_gen::generated_code::GeneratedCode;
+use crate::abigen_macro::code_gen::type_path::TypePath;
+use crate::abigen_macro::code_gen::utils::{param_type_calls, Component};
+use crate::utils::ident;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
-
-use crate::{
-    code_gen::{
-        abi_types::FullTypeDeclaration,
-        custom_types::utils::{extract_components, extract_generic_parameters, impl_try_from},
-        generated_code::GeneratedCode,
-        type_path::TypePath,
-        utils::{param_type_calls, Component},
-    },
-    utils::ident,
-};
 
 /// Returns a TokenStream containing the declaration, `Parameterize`,
 /// `Tokenizable` and `TryFrom` implementations for the struct described by the
@@ -21,8 +18,13 @@ use crate::{
 pub(crate) fn expand_custom_struct(
     type_decl: &FullTypeDeclaration,
     shared_types: &HashSet<FullTypeDeclaration>,
-) -> Result<GeneratedCode, Error> {
-    let struct_name = custom_type_name(&type_decl.type_field)?;
+) -> crate::Result<GeneratedCode> {
+    let type_field = &type_decl.type_field;
+    let struct_name = custom_type_name(&type_decl.type_field).ok_or_else(|| {
+        crate::Error(format!(
+            "Couldn't parse struct name from type field {type_field}"
+        ))
+    })?;
     let struct_ident = ident(&struct_name);
 
     let components = extract_components(type_decl, true, shared_types)?;

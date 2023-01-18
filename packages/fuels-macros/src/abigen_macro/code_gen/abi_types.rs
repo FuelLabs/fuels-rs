@@ -17,12 +17,12 @@ pub(crate) struct FullProgramABI {
 }
 
 impl FullProgramABI {
-    pub fn from_json_abi(abi: &str) -> Result<Self, Error> {
+    pub fn from_json_abi(abi: &str) -> crate::Result<Self> {
         let parsed_abi: ProgramABI = serde_json::from_str(abi)?;
         FullProgramABI::from_counterpart(&parsed_abi)
     }
 
-    fn from_counterpart(program_abi: &ProgramABI) -> Result<FullProgramABI, Error> {
+    fn from_counterpart(program_abi: &ProgramABI) -> crate::Result<FullProgramABI> {
         let lookup: HashMap<_, _> = program_abi
             .types
             .iter()
@@ -68,9 +68,9 @@ impl FullABIFunction {
         name: String,
         inputs: Vec<FullTypeApplication>,
         output: FullTypeApplication,
-    ) -> Result<Self, Error> {
+    ) -> crate::Result<Self> {
         if name.is_empty() {
-            Err(InvalidData(
+            Err(crate::Error(
                 "FullABIFunction's name cannot be empty!".to_string(),
             ))
         } else {
@@ -97,7 +97,7 @@ impl FullABIFunction {
     pub(crate) fn from_counterpart(
         abi_function: &ABIFunction,
         types: &HashMap<usize, TypeDeclaration>,
-    ) -> Result<FullABIFunction, Error> {
+    ) -> crate::Result<FullABIFunction> {
         let inputs = abi_function
             .inputs
             .iter()
@@ -230,11 +230,7 @@ mod tests {
         let err = FullABIFunction::new("".to_string(), vec![], fn_output)
             .expect_err("Should have failed.");
 
-        if let InvalidData(msg) = err {
-            assert_eq!(msg, "FullABIFunction's name cannot be empty!");
-        } else {
-            panic!("Unexpected error: {err}");
-        }
+        assert_eq!(err.to_string(), "FullABIFunction's name cannot be empty!");
     }
     #[test]
     fn can_convert_into_full_type_decl() {

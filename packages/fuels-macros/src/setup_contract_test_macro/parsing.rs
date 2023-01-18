@@ -50,6 +50,7 @@ impl TryFrom<Command> for InitializeWallet {
     }
 }
 
+#[derive(Debug)]
 pub(crate) struct GenerateContract {
     pub(crate) name: LitStr,
     pub(crate) abi: LitStr,
