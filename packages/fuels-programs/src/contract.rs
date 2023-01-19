@@ -255,7 +255,9 @@ impl Contract {
         if extension != "bin" {
             return Err(Error::InvalidData(format!(
                 "The file extension '{}' is not recognized. Did you mean '.bin'?",
-                extension.to_str().unwrap().to_owned()
+                extension
+                    .to_str()
+                    .expect("Could not convert extension to &str")
             )));
         }
 
