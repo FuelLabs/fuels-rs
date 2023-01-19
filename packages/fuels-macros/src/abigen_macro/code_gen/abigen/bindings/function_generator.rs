@@ -321,7 +321,7 @@ mod tests {
 
         assert_eq!(
             fn_selector_code.to_string(),
-            r#":: fuels :: core :: code_gen :: function_selector :: resolve_fn_selector ("test_function" , & [< self :: CustomStruct :: < u8 > as :: fuels :: core :: traits :: Parameterize > :: param_type ()])"#
+            r#":: fuels :: core :: function_selector :: resolve_fn_selector ("test_function" , & [< self :: CustomStruct :: < u8 > as :: fuels :: core :: traits :: Parameterize > :: param_type ()])"#
         );
 
         Ok(())

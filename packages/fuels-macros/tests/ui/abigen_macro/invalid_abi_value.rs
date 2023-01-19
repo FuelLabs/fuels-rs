@@ -1,4 +1,4 @@
-use fuels_abigen_macro::abigen;
+use fuels_macros::abigen;
 
 abigen!(Contract(name = "SomeName", abi = true,));
 

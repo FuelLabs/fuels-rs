@@ -1,4 +1,4 @@
-use fuels_abigen_macro::setup_contract_test;
+use fuels_macros::setup_contract_test;
 
 setup_contract_test!(Deploy(
     name = "some_instance",

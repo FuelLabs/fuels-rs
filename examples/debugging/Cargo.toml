@@ -13,7 +13,7 @@ description = "Fuel Rust SDK debugging examples."
 # TODO: Revert this once https://github.com/FuelLabs/fuel-abi-types/pull/7 is merged and a release is done.
 #fuel-abi-types="0.1.0"
 fuel-abi-types = { git = "https://github.com/FuelLabs/fuel-abi-types", branch = "segfault_magnet_hal3e/Abigen_migration" }
-fuels = { version = "0.33.0", path = "../../packages/fuels" }
+fuels = { version = "0.34.0", path = "../../packages/fuels" }
 rand = "0.8.5"
 tokio = { version = "1.10", features = ["full"] }
 
