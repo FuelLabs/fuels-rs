@@ -16,11 +16,7 @@ bech32 = "0.9.0"
 chrono = "0.4.2"
 fuel-tx = "0.23"
 fuel-types = "0.5"
-
-# TODO: Revert this once https://github.com/FuelLabs/fuel-abi-types/pull/7 is merged and a release is done.
-#fuel-abi-types="0.1.0"
-fuel-abi-types = { git = "https://github.com/FuelLabs/fuel-abi-types", branch = "segfault_magnet_hal3e/Abigen_migration" }
-
+fuel-abi-types = "0.2.0"
 fuel-core = { version = "0.15", default-features = false, optional = true }
 fuel-chain-config = { version = "0.15", default-features = false }
 fuel-gql-client = { version = "0.15", default-features = false }
