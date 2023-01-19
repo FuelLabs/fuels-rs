@@ -18,7 +18,7 @@ use crate::{
         type_path::TypePath,
         utils::get_sdk_provided_types,
     },
-    err::{error, Result},
+    error::{error, Result},
     utils::{ident, safe_ident},
 };
 

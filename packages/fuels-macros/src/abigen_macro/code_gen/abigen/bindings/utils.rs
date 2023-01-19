@@ -1,6 +1,6 @@
 use crate::{
     abigen_macro::code_gen::abi_types::FullABIFunction,
-    err::{error, Result},
+    error::{error, Result},
 };
 
 pub(crate) fn extract_main_fn(abi: &[FullABIFunction]) -> Result<&FullABIFunction> {

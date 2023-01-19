@@ -7,7 +7,7 @@ use crate::{
 };
 
 mod abigen_macro;
-mod err;
+mod error;
 mod parse_utils;
 mod setup_contract_test_macro;
 mod utils;

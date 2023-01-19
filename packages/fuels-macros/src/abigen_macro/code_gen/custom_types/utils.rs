@@ -6,7 +6,7 @@ use quote::quote;
 
 use crate::{
     abigen_macro::code_gen::{abi_types::FullTypeDeclaration, utils::Component},
-    err::Result,
+    error::Result,
     utils::ident,
 };
 

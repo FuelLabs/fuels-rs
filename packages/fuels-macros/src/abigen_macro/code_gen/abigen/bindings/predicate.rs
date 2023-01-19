@@ -10,7 +10,7 @@ use crate::{
         generated_code::GeneratedCode,
         type_path::TypePath,
     },
-    err::Result,
+    error::Result,
 };
 
 pub(crate) fn predicate_bindings(

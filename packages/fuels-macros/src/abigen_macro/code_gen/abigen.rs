@@ -13,7 +13,7 @@ use crate::{
         custom_types::generate_types,
         generated_code::GeneratedCode,
     },
-    err::Result,
+    error::Result,
     utils::ident,
 };
 

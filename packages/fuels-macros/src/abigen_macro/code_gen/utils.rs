@@ -10,7 +10,7 @@ use crate::{
         resolved_type::{resolve_type, ResolvedType},
         type_path::TypePath,
     },
-    err::Result,
+    error::Result,
     utils::safe_ident,
 };
 

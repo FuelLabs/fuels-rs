@@ -12,8 +12,9 @@ impl Error {
 }
 
 macro_rules! error {
-   ($fmt_str: literal $(,$arg: expr)*) => {crate::err::Error(format!($fmt_str,$($arg),*))}
+   ($fmt_str: literal $(,$arg: expr)*) => {crate::error::Error(format!($fmt_str,$($arg),*))}
 }
+
 pub(crate) use error;
 
 pub(crate) type Result<T> = std::result::Result<T, Error>;

@@ -12,7 +12,7 @@ use crate::{
         },
         generated_code::GeneratedCode,
     },
-    err::Result,
+    error::Result,
     utils::ident,
 };
 

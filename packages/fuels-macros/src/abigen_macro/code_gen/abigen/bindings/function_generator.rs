@@ -9,7 +9,7 @@ use crate::{
         resolved_type::{resolve_type, ResolvedType},
         utils::{param_type_calls, Component},
     },
-    err::{error, Result},
+    error::{error, Result},
     utils::safe_ident,
 };
 

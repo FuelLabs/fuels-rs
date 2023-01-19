@@ -10,7 +10,7 @@ use crate::{
         generated_code::GeneratedCode,
         utils::get_sdk_provided_types,
     },
-    err::Result,
+    error::Result,
 };
 
 mod enums;

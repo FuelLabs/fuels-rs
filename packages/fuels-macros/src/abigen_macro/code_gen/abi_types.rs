@@ -4,7 +4,7 @@ use fuel_abi_types::program_abi::{
     ABIFunction, LoggedType, ProgramABI, TypeApplication, TypeDeclaration,
 };
 
-use crate::err::{Error, Result};
+use crate::error::{error, Result};
 
 /// 'Full' versions of the ABI structures are needed to simplify duplicate
 /// detection later on. The original ones([`ProgramABI`], [`TypeApplication`],
@@ -72,7 +72,7 @@ impl FullABIFunction {
         output: FullTypeApplication,
     ) -> Result<Self> {
         if name.is_empty() {
-            Err(Error("FullABIFunction's name cannot be empty!".to_string()))
+            Err(error!("FullABIFunction's name cannot be empty!"))
         } else {
             Ok(Self {
                 name,

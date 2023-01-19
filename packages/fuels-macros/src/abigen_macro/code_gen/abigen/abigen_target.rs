@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 
 use crate::{
     abigen_macro::code_gen::{abi_types::FullProgramABI, source::Source},
-    err::{Error, Result},
+    error::{Error, Result},
 };
 
 #[derive(Debug, Clone)]

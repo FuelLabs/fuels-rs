@@ -12,7 +12,7 @@ use crate::{
         type_path::TypePath,
         utils::{param_type_calls, Component},
     },
-    err::{error, Result},
+    error::{error, Result},
     utils::ident,
 };
 

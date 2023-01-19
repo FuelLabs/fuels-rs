@@ -5,7 +5,7 @@ use std::{
     str::FromStr,
 };
 
-use crate::err::{error, Error, Result};
+use crate::error::{error, Error, Result};
 
 /// A source of a Truffle artifact JSON.
 #[derive(Clone, Debug, Eq, PartialEq)]
