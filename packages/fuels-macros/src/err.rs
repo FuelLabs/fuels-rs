@@ -4,6 +4,18 @@ use std::{
 };
 
 pub(crate) struct Error(pub(crate) String);
+
+impl Error {
+    pub(crate) fn combine<T: Into<Self>>(self, err: T) -> Self {
+        error!("{} {}", self.0, err.into().0)
+    }
+}
+
+macro_rules! error {
+   ($fmt_str: literal $(,$arg: expr)*) => {crate::err::Error(format!($fmt_str,$($arg),*))}
+}
+pub(crate) use error;
+
 pub(crate) type Result<T> = std::result::Result<T, Error>;
 
 impl Debug for Error {

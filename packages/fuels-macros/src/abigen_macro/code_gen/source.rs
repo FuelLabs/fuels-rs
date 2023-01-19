@@ -5,7 +5,7 @@ use std::{
     str::FromStr,
 };
 
-use crate::err::{Error, Result};
+use crate::err::{error, Error, Result};
 
 /// A source of a Truffle artifact JSON.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -76,14 +76,14 @@ impl Source {
 fn get_local_contract(path: &Path) -> Result<String> {
     let path = if path.is_relative() {
         let absolute_path = path.canonicalize().map_err(|e| {
-            Error(format!(
-                "{} unable to canonicalize file from working dir {} with path {}",
-                e,
+            error!(
+                "unable to canonicalize file from working dir {} with path {}",
                 env::current_dir()
                     .map(|cwd| cwd.display().to_string())
                     .unwrap_or_else(|err| format!("??? ({})", err)),
-                path.display(),
-            ))
+                path.display()
+            )
+            .combine(e)
         })?;
         Cow::Owned(absolute_path)
     } else {
@@ -91,11 +91,11 @@ fn get_local_contract(path: &Path) -> Result<String> {
     };
 
     let json = fs::read_to_string(&path).map_err(|e| {
-        Error(format!(
-            "{} failed to read artifact JSON file with path {}",
-            e,
-            &path.display()
-        ))
+        error!(
+            "failed to read artifact JSON file with path {}",
+            path.display()
+        )
+        .combine(e)
     })?;
     Ok(json)
 }

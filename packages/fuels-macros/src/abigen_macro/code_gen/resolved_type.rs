@@ -18,7 +18,7 @@ use crate::{
         type_path::TypePath,
         utils::get_sdk_provided_types,
     },
-    err::{Error, Result},
+    err::{error, Result},
     utils::{ident, safe_ident},
 };
 
@@ -111,7 +111,7 @@ pub(crate) fn resolve_type(
             is_shared,
         )
     })
-    .ok_or_else(|| Error(format!("Could not resolve {type_field} to any known type")))
+    .ok_or_else(|| error!("Could not resolve {type_field} to any known type"))
 }
 
 fn to_generic(
@@ -139,9 +139,9 @@ fn to_array(
 
     let type_inside: TokenStream = match components_supplier().as_slice() {
         [single_type] => Ok(single_type.into()),
-        other => Err(Error(format!(
+        other => Err(error!(
             "Array must have only one component! Actual components: {other:?}"
-        ))),
+        )),
     }
     .unwrap();
 
@@ -293,7 +293,7 @@ mod tests {
 
         let application = FullTypeApplication::from_counterpart(&type_application, &types);
         let resolved_type = resolve_type(&application, &HashSet::default())
-            .map_err(|e| Error(format!("{} failed to resolve {:?}", e, &type_application)))?;
+            .map_err(|e| e.combine(error!("failed to resolve {:?}", type_application)))?;
         let actual = TokenStream::from(&resolved_type).to_string();
 
         assert_eq!(actual, expected);

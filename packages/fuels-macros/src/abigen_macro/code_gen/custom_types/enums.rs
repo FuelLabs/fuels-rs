@@ -12,7 +12,7 @@ use crate::{
         type_path::TypePath,
         utils::{param_type_calls, Component},
     },
-    err::{Error, Result},
+    err::{error, Error, Result},
     utils::ident,
 };
 
@@ -25,10 +25,10 @@ pub(crate) fn expand_custom_enum(
 ) -> Result<GeneratedCode> {
     let type_field = &type_decl.type_field;
     let enum_name = extract_custom_type_name(type_field).ok_or_else(|| {
-        Error(format!(
+        error!(
             "Could not extract enum name from type_field: {}",
             type_field
-        ))
+        )
     })?;
     let enum_ident = ident(&enum_name);
 

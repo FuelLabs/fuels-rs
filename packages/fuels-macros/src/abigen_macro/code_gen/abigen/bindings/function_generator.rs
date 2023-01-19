@@ -9,7 +9,7 @@ use crate::{
         resolved_type::{resolve_type, ResolvedType},
         utils::{param_type_calls, Component},
     },
-    err::{Error, Result},
+    err::{error, Result},
     utils::safe_ident,
 };
 
@@ -81,7 +81,6 @@ fn function_arguments(
         .iter()
         .map(|input| Component::new(input, true, shared_types))
         .collect::<Result<_>>()
-        .map_err(|e| Error(e.to_string()))
 }
 
 fn resolve_fn_output_type(
@@ -90,10 +89,10 @@ fn resolve_fn_output_type(
 ) -> Result<ResolvedType> {
     let output_type = resolve_type(function.output(), shared_types)?;
     if output_type.uses_vectors() {
-        Err(Error(format!(
+        Err(error!(
             "function '{}' contains a vector in its return type. This currently isn't supported.",
             function.name()
-        )))
+        ))
     } else {
         Ok(output_type)
     }

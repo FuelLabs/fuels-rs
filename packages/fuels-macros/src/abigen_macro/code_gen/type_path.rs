@@ -3,7 +3,7 @@ use std::str::FromStr;
 use proc_macro2::TokenStream;
 use quote::quote;
 
-use crate::err::{Error, Result};
+use crate::err::{error, Result};
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub(crate) struct TypePath {
@@ -15,9 +15,9 @@ impl TypePath {
         let path_str = path.to_string().trim().to_string();
 
         if path_str.is_empty() {
-            return Err(Error(format!(
+            return Err(error!(
                 "TypePath cannot be constructed from '{path_str}' because it's empty!"
-            )));
+            ));
         }
 
         let parts = path_str
@@ -30,9 +30,9 @@ impl TypePath {
             .expect("Cannot be empty, since we started off with a non-empty string");
 
         if type_name.is_empty() {
-            Err(Error(format!(
+            Err(error!(
                 "TypePath cannot be constructed from '{path_str}'! Missing ident at the end."
-            )))
+            ))
         } else {
             Ok(Self { parts })
         }
