@@ -67,29 +67,20 @@ impl From<CodecError> for Error {
     }
 }
 
-impl From<ParseError> for Error {
-    fn from(err: ParseError) -> Error {
-        Error::InvalidType(err.to_string())
-    }
+macro_rules! impl_error_from {
+    ($err_variant:ident, $err_type:ty ) => {
+        impl From<$err_type> for Error {
+            fn from(err: $err_type) -> Error {
+                Error::$err_variant(err.to_string())
+            }
+        }
+    };
 }
 
-impl From<proc_macro2::LexError> for Error {
-    fn from(err: proc_macro2::LexError) -> Error {
-        Error::ParseTokenStreamError(err.to_string())
-    }
-}
-
-impl From<bech32::Error> for Error {
-    fn from(err: bech32::Error) -> Error {
-        Error::InvalidData(err.to_string())
-    }
-}
-
-impl From<TryFromSliceError> for Error {
-    fn from(err: TryFromSliceError) -> Error {
-        Error::InvalidData(err.to_string())
-    }
-}
+impl_error_from!(InvalidData, bech32::Error);
+impl_error_from!(InvalidData, TryFromSliceError);
+impl_error_from!(InvalidType, ParseError);
+impl_error_from!(ParseTokenStreamError, proc_macro2::LexError);
 
 impl From<anyhow::Error> for Error {
     fn from(err: anyhow::Error) -> Error {
