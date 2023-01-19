@@ -249,7 +249,9 @@ impl Contract {
         storage_path: &Option<String>,
         salt: Salt,
     ) -> Result<CompiledContract, Error> {
-        let extension = Path::new(binary_filepath).extension().unwrap();
+        let extension = Path::new(binary_filepath)
+            .extension()
+            .expect("Could not extract extension from file path");        
         if extension != "bin" {
             return Err(Error::InvalidData(format!(
                 "The file extension '{}' is not recognized. Did you mean '.bin'?",
