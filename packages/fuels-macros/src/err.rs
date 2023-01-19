@@ -41,25 +41,7 @@ macro_rules! impl_from {
                 }
             }
         )*
-    };
+    }
 }
 
 impl_from!(serde_json::Error, io::Error, proc_macro2::LexError);
-
-// impl From<io::Error> for Error {
-//     fn from(err: io::Error) -> Self {
-//         Error(err.to_string())
-//     }
-// }
-//
-// impl From<LexError> for Error {
-//     fn from(err: LexError) -> Self {
-//         Error(err.to_string())
-//     }
-// }
-
-// impl From<serde_json::Error> for Error {
-//     fn from(err: serde_json::Error) -> Self {
-//         Error(err.to_string())
-//     }
-// }
