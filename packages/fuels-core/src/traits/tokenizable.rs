@@ -584,7 +584,7 @@ mod tests {
 
         let slice = RawSlice::from_token(token)?;
 
-        assert_eq!(slice.0, data);
+        assert_eq!(slice, data);
 
         Ok(())
     }
