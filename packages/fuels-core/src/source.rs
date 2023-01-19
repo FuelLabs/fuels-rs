@@ -5,7 +5,7 @@ use std::{
     str::FromStr,
 };
 
-use anyhow::{Context, Error, Result};
+use fuels_types::errors::{error, Error};
 
 /// A source of a Truffle artifact JSON.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -65,7 +65,7 @@ impl Source {
     /// Retrieves the source JSON of the artifact this will either read the JSON
     /// from the file system or retrieve a contract ABI from the network
     /// dependending on the source type.
-    pub fn get(&self) -> Result<String> {
+    pub fn get(&self) -> Result<String, Error> {
         match self {
             Source::Local(path) => get_local_contract(path),
             Source::String(abi) => Ok(abi.clone()),
@@ -73,15 +73,16 @@ impl Source {
     }
 }
 
-fn get_local_contract(path: &Path) -> Result<String> {
+fn get_local_contract(path: &Path) -> Result<String, Error> {
     let path = if path.is_relative() {
-        let absolute_path = path.canonicalize().with_context(|| {
-            format!(
+        let absolute_path = path.canonicalize().map_err(|_| {
+            error!(
+                InvalidData,
                 "unable to canonicalize file from working dir {} with path {}",
                 env::current_dir()
                     .map(|cwd| cwd.display().to_string())
                     .unwrap_or_else(|err| format!("??? ({})", err)),
-                path.display(),
+                path.display()
             )
         })?;
         Cow::Owned(absolute_path)
@@ -89,17 +90,20 @@ fn get_local_contract(path: &Path) -> Result<String> {
         Cow::Borrowed(path)
     };
 
-    let json = fs::read_to_string(&path).context(format!(
-        "failed to read artifact JSON file with path {}",
-        &path.display()
-    ))?;
+    let json = fs::read_to_string(&path).map_err(|_| {
+        error!(
+            InvalidData,
+            "failed to read artifact JSON file with path {}",
+            &path.display()
+        )
+    })?;
     Ok(json)
 }
 
 impl FromStr for Source {
     type Err = Error;
 
-    fn from_str(s: &str) -> Result<Self> {
+    fn from_str(s: &str) -> Result<Self, Error> {
         Source::parse(s)
     }
 }

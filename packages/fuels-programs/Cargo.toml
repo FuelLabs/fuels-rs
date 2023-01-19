@@ -9,7 +9,6 @@ repository = "https://github.com/FuelLabs/fuels-rs"
 description = "Fuel Rust SDK contracts."
 
 [dependencies]
-anyhow = "1"
 bytes = { version = "1.0.1", features = ["serde"] }
 fuel-vm = "0.22"
 fuel-types = "0.5"

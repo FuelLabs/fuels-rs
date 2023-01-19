@@ -90,7 +90,7 @@ mod tests {
     use crate::code_gen::{resolved_type::ResolvedType, utils::param_type_calls};
 
     #[test]
-    fn extracts_generic_types() -> anyhow::Result<()> {
+    fn extracts_generic_types() -> Result<(), Error> {
         // given
         let declaration = TypeDeclaration {
             type_id: 0,
@@ -180,7 +180,7 @@ mod tests {
         )
     }
     #[test]
-    fn can_extract_struct_name() -> anyhow::Result<()> {
+    fn can_extract_struct_name() -> Result<(), Error> {
         let declaration = TypeDeclaration {
             type_id: 0,
             type_field: "struct SomeName".to_string(),
@@ -196,7 +196,7 @@ mod tests {
     }
 
     #[test]
-    fn can_extract_enum_name() -> anyhow::Result<()> {
+    fn can_extract_enum_name() -> Result<(), Error> {
         let declaration = TypeDeclaration {
             type_id: 0,
             type_field: "enum SomeEnumName".to_string(),

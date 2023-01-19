@@ -1442,7 +1442,7 @@ async fn test_identity_with_two_contracts() -> Result<(), Box<dyn std::error::Er
 }
 
 #[tokio::test]
-async fn generics_test() -> anyhow::Result<()> {
+async fn generics_test() -> Result<(), Error> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(

@@ -40,6 +40,17 @@ pub enum Error {
     RevertTransactionError(String, Vec<Receipt>),
 }
 
+// This macro can only be used for variants that have a String field
+// for example `InvalidData`, `InvalidType`, etc.
+#[macro_export]
+macro_rules! error {
+   ($err_variant:ident, $fmt_str: literal $(,$arg: expr)*) => {
+       Error::$err_variant(format!($fmt_str,$($arg),*))
+   }
+}
+
+pub use error;
+
 macro_rules! impl_error_from {
     ($err_variant:ident, $err_type:ty ) => {
         impl From<$err_type> for Error {
@@ -54,4 +65,3 @@ impl_error_from!(InvalidData, bech32::Error);
 impl_error_from!(InvalidData, TryFromSliceError);
 impl_error_from!(InvalidType, ParseError);
 impl_error_from!(ParseTokenStreamError, proc_macro2::LexError);
-impl_error_from!(ParseTokenStreamError, anyhow::Error);

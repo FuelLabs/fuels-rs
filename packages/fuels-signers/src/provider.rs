@@ -23,7 +23,7 @@ use fuels_types::{
     block::Block,
     chain_info::ChainInfo,
     coin::Coin,
-    errors::Error,
+    errors::{error, Error},
     message::Message,
     message_proof::MessageProof,
     node_info::NodeInfo,
@@ -177,7 +177,7 @@ impl Provider {
     /// }
     /// ```
     pub async fn connect(url: impl AsRef<str>) -> Result<Provider, Error> {
-        let client = FuelClient::new(url)?;
+        let client = FuelClient::new(url).map_err(|err| error!(InfrastructureError, "{err}"))?;
         Ok(Provider::new(client))
     }
 

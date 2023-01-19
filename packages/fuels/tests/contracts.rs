@@ -419,7 +419,7 @@ async fn test_large_return_data() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn can_handle_function_called_new() -> anyhow::Result<()> {
+async fn can_handle_function_called_new() -> Result<(), Error> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
@@ -522,7 +522,7 @@ async fn test_wallet_getter() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_connect_wallet() -> anyhow::Result<()> {
+async fn test_connect_wallet() -> Result<(), Error> {
     // ANCHOR: contract_setup_macro_manual_wallet
     let config = WalletsConfig::new(Some(2), Some(1), Some(DEFAULT_COIN_AMOUNT));
 

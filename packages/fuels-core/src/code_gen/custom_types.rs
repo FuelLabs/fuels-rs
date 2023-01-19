@@ -83,7 +83,6 @@ mod tests {
         str::FromStr,
     };
 
-    use anyhow::anyhow;
     use fuel_abi_types::program_abi::{ProgramABI, TypeApplication, TypeDeclaration};
     use proc_macro2::TokenStream;
     use quote::quote;
@@ -238,7 +237,7 @@ mod tests {
     }
 
     #[test]
-    fn test_enum_with_no_variants_cannot_be_constructed() -> anyhow::Result<()> {
+    fn test_enum_with_no_variants_cannot_be_constructed() -> Result<(), Error> {
         let p = TypeDeclaration {
             type_id: 0,
             type_field: "enum SomeEmptyEnum".to_string(),
@@ -252,7 +251,7 @@ mod tests {
             &HashSet::default(),
         )
         .err()
-        .ok_or_else(|| anyhow!("Was able to construct an enum without variants"))?;
+        .expect("Was able to construct an enum without variants");
 
         assert!(
             matches!(err, Error::InvalidData(_)),

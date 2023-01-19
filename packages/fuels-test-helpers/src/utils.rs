@@ -1,18 +1,18 @@
 use std::{
-    error::Error,
+    error::Error as StdError,
     fmt::{Debug, Display, Formatter},
     future::Future,
     time::Duration,
 };
 
 use fuel_chain_config::{CoinConfig, MessageConfig};
-use fuels_types::{coin::Coin, message::Message};
+use fuels_types::{coin::Coin, errors::Error, message::Message};
 
 #[derive(Debug)]
 pub struct RetryExhausted {
     interval: Duration,
     abort_after: Duration,
-    error_from_last_attempt: Option<anyhow::Error>,
+    error_from_last_attempt: Option<Error>,
 }
 
 impl Display for RetryExhausted {
@@ -25,7 +25,13 @@ impl Display for RetryExhausted {
     }
 }
 
-impl Error for RetryExhausted {}
+impl StdError for RetryExhausted {}
+
+impl From<RetryExhausted> for Error {
+    fn from(err: RetryExhausted) -> Error {
+        Error::InfrastructureError(err.to_string())
+    }
+}
 
 pub async fn retry<Fut, T>(
     action: impl Fn() -> Fut,
@@ -33,7 +39,7 @@ pub async fn retry<Fut, T>(
     abort_after: Duration,
 ) -> Result<T, RetryExhausted>
 where
-    Fut: Future<Output = anyhow::Result<T>>,
+    Fut: Future<Output = Result<T, Error>>,
 {
     let mut last_err = None;
 
@@ -72,15 +78,15 @@ pub fn into_message_configs(messages: Vec<Message>) -> Vec<MessageConfig> {
 #[cfg(test)]
 mod tests {
     mod retry_until {
+        use fuels_types::errors::{error, Error};
         use std::time::{Duration, Instant};
 
-        use anyhow::anyhow;
         use tokio::sync::Mutex;
 
         use crate::utils::retry;
 
         #[tokio::test]
-        async fn gives_up_after_timeout() -> anyhow::Result<()> {
+        async fn gives_up_after_timeout() -> Result<(), Error> {
             let timestamp_of_last_attempt = Mutex::new(Instant::now());
 
             let will_always_fail = || async {
@@ -105,9 +111,10 @@ mod tests {
         }
 
         #[tokio::test]
-        async fn returns_error_if_timeout_happened() -> anyhow::Result<()> {
-            let will_always_fail =
-                || async { Err(anyhow!("I fail because I must.")) as anyhow::Result<()> };
+        async fn returns_error_if_timeout_happened() -> Result<(), Error> {
+            let will_always_fail = || async {
+                Err(error!(InfrastructureError, "I fail because I must.")) as Result<(), Error>
+            };
 
             let interval = Duration::from_millis(100);
             let abort_after = Duration::from_millis(250);
@@ -128,8 +135,8 @@ mod tests {
         }
 
         #[tokio::test]
-        async fn returns_value_on_success() -> anyhow::Result<()> {
-            let successfully_generates_value = || async { Ok(12345u64) as anyhow::Result<u64> };
+        async fn returns_value_on_success() -> Result<(), Error> {
+            let successfully_generates_value = || async { Ok(12345u64) as Result<u64, Error> };
 
             let value = retry(
                 successfully_generates_value,
@@ -144,7 +151,7 @@ mod tests {
         }
 
         #[tokio::test]
-        async fn respects_delay_between_attempts() -> anyhow::Result<()> {
+        async fn respects_delay_between_attempts() -> Result<(), Error> {
             let timestamps_predicate_was_called_at: Mutex<Vec<Instant>> = Mutex::new(vec![]);
 
             let will_fail = || async {

@@ -7,7 +7,7 @@ use fuels::{
     prelude::*,
     signers::fuel_crypto::SecretKey,
     tx::Receipt,
-    types::{block::Block, message::Message},
+    types::{block::Block, errors::error, message::Message},
 };
 
 #[tokio::test]
@@ -60,7 +60,7 @@ async fn test_provider_launch_and_connect() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_network_error() -> Result<(), anyhow::Error> {
+async fn test_network_error() -> Result<(), Error> {
     abigen!(Contract(
         name = "MyContract",
         abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
@@ -69,7 +69,9 @@ async fn test_network_error() -> Result<(), anyhow::Error> {
     let mut wallet = WalletUnlocked::new_random(None);
 
     let config = CoreConfig::local_node();
-    let service = FuelService::new_node(config).await?;
+    let service = FuelService::new_node(config)
+        .await
+        .map_err(|err| error!(InfrastructureError, "{err}"))?;
     let provider = Provider::connect(service.bound_address.to_string()).await?;
 
     wallet.set_provider(provider);

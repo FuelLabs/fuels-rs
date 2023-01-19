@@ -5,7 +5,7 @@ mod tests {
     use fuel_abi_types::program_abi::ProgramABI;
     use fuels::{
         core::{code_gen::function_selector::resolve_fn_selector, traits::Parameterize},
-        types::{param_types::ParamType, SizedAsciiString},
+        types::{errors::Error, param_types::ParamType, SizedAsciiString},
     };
 
     #[test]
@@ -22,7 +22,7 @@ mod tests {
     }
 
     #[test]
-    fn a_fn_selector_from_json_abi() -> anyhow::Result<()> {
+    fn a_fn_selector_from_json_abi() -> Result<(), Error> {
         let json_abi_file =
             "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json";
         let abi_file_contents = std::fs::read_to_string(json_abi_file)?;

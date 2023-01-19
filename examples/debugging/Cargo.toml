@@ -17,4 +17,3 @@ tokio = { version = "1.10", features = ["full"] }
 
 [dev-dependencies]
 serde_json = "1.0.86"
-anyhow = "1.0.65"

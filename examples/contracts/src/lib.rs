@@ -1,6 +1,9 @@
 #[cfg(test)]
 mod tests {
-    use fuels::{prelude::Error, types::Bits256};
+    use fuels::{
+        prelude::Error,
+        types::{errors::error, Bits256},
+    };
 
     #[tokio::test]
     async fn instantiate_client() -> Result<(), Error> {
@@ -11,7 +14,9 @@ mod tests {
         };
 
         // Run the fuel node.
-        let server = FuelService::new_node(Config::local_node()).await?;
+        let server = FuelService::new_node(Config::local_node())
+            .await
+            .map_err(|err| error!(InfrastructureError, "{err}"))?;
 
         // Create a client that will talk to the node created above.
         let client = FuelClient::from(server.bound_address);
