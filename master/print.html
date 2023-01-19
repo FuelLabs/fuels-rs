@@ -1039,10 +1039,10 @@ It is <strong>highly</strong> encouraged that you generate all your bindings in 
                     wallet,
                 }
             }
-            pub fn get_contract_id(&amp;self) -&gt; &amp;Bech32ContractId {
+            pub fn contract_id(&amp;self) -&gt; &amp;Bech32ContractId {
                 &amp;self.contract_id
             }
-            pub fn get_wallet(&amp;self) -&gt; WalletUnlocked {
+            pub fn wallet(&amp;self) -&gt; WalletUnlocked {
                 self.wallet.clone()
             }
             pub fn with_wallet(&amp;self, mut wallet: WalletUnlocked) -&gt; Result&lt;Self, Error&gt; {
@@ -2479,11 +2479,11 @@ should point to the folder containing the <code>out</code> directory of the forc
             wallet = &quot;wallet&quot;
         ),
     );
-    let lib_contract_id = lib_contract_instance.get_contract_id();
+    let lib_contract_id = lib_contract_instance.contract_id();
 
-    let contract_caller_id = contract_caller_instance.get_contract_id();
+    let contract_caller_id = contract_caller_instance.contract_id();
 
-    let contract_caller_id2 = contract_caller_instance2.get_contract_id();
+    let contract_caller_id2 = contract_caller_instance2.contract_id();
 
     // Because we deploy with salt, we can deploy the same contract multiple times
     assert_ne!(contract_caller_id, contract_caller_id2);

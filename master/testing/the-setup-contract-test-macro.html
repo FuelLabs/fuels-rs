@@ -220,11 +220,11 @@ should point to the folder containing the <code>out</code> directory of the forc
             wallet = &quot;wallet&quot;
         ),
     );
-    let lib_contract_id = lib_contract_instance.get_contract_id();
+    let lib_contract_id = lib_contract_instance.contract_id();
 
-    let contract_caller_id = contract_caller_instance.get_contract_id();
+    let contract_caller_id = contract_caller_instance.contract_id();
 
-    let contract_caller_id2 = contract_caller_instance2.get_contract_id();
+    let contract_caller_id2 = contract_caller_instance2.contract_id();
 
     // Because we deploy with salt, we can deploy the same contract multiple times
     assert_ne!(contract_caller_id, contract_caller_id2);
