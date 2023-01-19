@@ -12,7 +12,7 @@ use crate::{
         type_path::TypePath,
         utils::{param_type_calls, Component},
     },
-    error::{error, Error, Result},
+    error::{error, Result},
     utils::ident,
 };
 
@@ -34,7 +34,7 @@ pub(crate) fn expand_custom_enum(
 
     let components = extract_components(type_decl, false, shared_types)?;
     if components.is_empty() {
-        return Err(Error("Enum must have at least one component!".into()));
+        return Err(error!("Enum must have at least one component!"));
     }
     let generics = extract_generic_parameters(type_decl)?;
 
