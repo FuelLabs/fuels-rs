@@ -1,1 +1,2 @@
+# This folder is generated whenever a UI test fails, so we don't want to track its content.
 wip/*
