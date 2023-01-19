@@ -6,7 +6,6 @@ abi TestContract {
     fn non_payable() -> u64;
 }
 
-
 impl TestContract for Contract {
     #[payable]
     fn payable() -> u64 {
