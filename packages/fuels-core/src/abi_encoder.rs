@@ -1,7 +1,7 @@
 use fuels_types::{
     constants::WORD_SIZE,
     core::{pad_string, pad_u16, pad_u32, pad_u8, EnumSelector, StringToken, Token},
-    errors::CodecError,
+    errors::Error,
 };
 use itertools::Itertools;
 
@@ -93,13 +93,13 @@ impl UnresolvedBytes {
 impl ABIEncoder {
     /// Encodes `Token`s in `args` following the ABI specs defined
     /// [here](https://github.com/FuelLabs/fuel-specs/blob/master/specs/protocol/abi.md)
-    pub fn encode(args: &[Token]) -> Result<UnresolvedBytes, CodecError> {
+    pub fn encode(args: &[Token]) -> Result<UnresolvedBytes, Error> {
         let data = Self::encode_tokens(args)?;
 
         Ok(UnresolvedBytes { data })
     }
 
-    fn encode_tokens(tokens: &[Token]) -> Result<Vec<Data>, CodecError> {
+    fn encode_tokens(tokens: &[Token]) -> Result<Vec<Data>, Error> {
         tokens
             .iter()
             .map(Self::encode_token)
@@ -107,7 +107,7 @@ impl ABIEncoder {
             .collect::<Result<Vec<_>, _>>()
     }
 
-    fn encode_token(arg: &Token) -> Result<Vec<Data>, CodecError> {
+    fn encode_token(arg: &Token) -> Result<Vec<Data>, Error> {
         let encoded_token = match arg {
             Token::U8(arg_u8) => vec![Self::encode_u8(*arg_u8)],
             Token::U16(arg_u16) => vec![Self::encode_u16(*arg_u16)],
@@ -132,19 +132,19 @@ impl ABIEncoder {
         Data::Inline(vec![0; WORD_SIZE])
     }
 
-    fn encode_tuple(arg_tuple: &[Token]) -> Result<Vec<Data>, CodecError> {
+    fn encode_tuple(arg_tuple: &[Token]) -> Result<Vec<Data>, Error> {
         Self::encode_tokens(arg_tuple)
     }
 
-    fn encode_struct(subcomponents: &[Token]) -> Result<Vec<Data>, CodecError> {
+    fn encode_struct(subcomponents: &[Token]) -> Result<Vec<Data>, Error> {
         Self::encode_tokens(subcomponents)
     }
 
-    fn encode_array(arg_array: &[Token]) -> Result<Vec<Data>, CodecError> {
+    fn encode_array(arg_array: &[Token]) -> Result<Vec<Data>, Error> {
         Self::encode_tokens(arg_array)
     }
 
-    fn encode_string(arg_string: &StringToken) -> Result<Data, CodecError> {
+    fn encode_string(arg_string: &StringToken) -> Result<Data, Error> {
         Ok(Data::Inline(pad_string(arg_string.get_encodable_str()?)))
     }
 
@@ -176,7 +176,7 @@ impl ABIEncoder {
         Data::Inline(pad_u8(arg_u8).to_vec())
     }
 
-    fn encode_enum(selector: &EnumSelector) -> Result<Vec<Data>, CodecError> {
+    fn encode_enum(selector: &EnumSelector) -> Result<Vec<Data>, Error> {
         let (discriminant, token_within_enum, variants) = selector;
 
         let mut encoded_enum = vec![Self::encode_discriminant(*discriminant)];
@@ -199,7 +199,7 @@ impl ABIEncoder {
         Self::encode_u8(discriminant)
     }
 
-    fn encode_vector(data: &[Token]) -> Result<Vec<Data>, CodecError> {
+    fn encode_vector(data: &[Token]) -> Result<Vec<Data>, Error> {
         let encoded_data = Self::encode_tokens(data)?;
         let cap = data.len() as u64;
         let len = data.len() as u64;

@@ -1,26 +1,8 @@
-use std::{array::TryFromSliceError, fmt, str::Utf8Error};
+use std::{array::TryFromSliceError, str::Utf8Error};
 
 use fuel_tx::{CheckError, Receipt};
 use strum::ParseError;
 use thiserror::Error;
-
-#[derive(Debug)]
-pub enum CodecError {
-    InvalidData(String),
-    Utf8Error(Utf8Error),
-}
-
-impl fmt::Display for CodecError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:?}", self)
-    }
-}
-
-impl From<Utf8Error> for CodecError {
-    fn from(e: Utf8Error) -> CodecError {
-        CodecError::Utf8Error(e)
-    }
-}
 
 #[derive(Error, Debug)]
 pub enum Error {
@@ -58,15 +40,6 @@ pub enum Error {
     RevertTransactionError(String, Vec<Receipt>),
 }
 
-impl From<CodecError> for Error {
-    fn from(err: CodecError) -> Error {
-        match err {
-            CodecError::InvalidData(s) => Error::InvalidData(s),
-            CodecError::Utf8Error(e) => Error::Utf8Error(e),
-        }
-    }
-}
-
 macro_rules! impl_error_from {
     ($err_variant:ident, $err_type:ty ) => {
         impl From<$err_type> for Error {
@@ -81,9 +54,4 @@ impl_error_from!(InvalidData, bech32::Error);
 impl_error_from!(InvalidData, TryFromSliceError);
 impl_error_from!(InvalidType, ParseError);
 impl_error_from!(ParseTokenStreamError, proc_macro2::LexError);
-
-impl From<anyhow::Error> for Error {
-    fn from(err: anyhow::Error) -> Error {
-        Error::ParseTokenStreamError(err.to_string())
-    }
-}
+impl_error_from!(ParseTokenStreamError, anyhow::Error);
