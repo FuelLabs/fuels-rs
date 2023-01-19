@@ -948,9 +948,16 @@ async fn test_contract_call_with_non_default_max_input() -> Result<(), Error> {
 #[tokio::test]
 async fn test_payable_annotation() -> Result<(), Error> {
     setup_contract_test!(
-        contract_instance,
-        wallet,
-        "packages/fuels/tests/contracts/payable_annotation"
+        Wallets("wallet"),
+        Abigen(
+            name = "TestContract",
+            abi = "packages/fuels/tests/contracts/payable_annotation"
+        ),
+        Deploy(
+            name = "contract_instance",
+            contract = "TestContract",
+            wallet = "wallet"
+        ),
     );
 
     let contract_methods = contract_instance.methods();
@@ -960,7 +967,6 @@ async fn test_payable_annotation() -> Result<(), Error> {
         .call_params(CallParameters::new(Some(100), None, Some(20000)))?
         .call()
         .await?;
-
 
     assert_eq!(response.value, 42);
 

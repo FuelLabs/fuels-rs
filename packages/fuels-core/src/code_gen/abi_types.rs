@@ -62,6 +62,7 @@ pub(crate) struct FullABIFunction {
     name: String,
     inputs: Vec<FullTypeApplication>,
     output: FullTypeApplication,
+    is_payable: bool,
 }
 
 impl FullABIFunction {
@@ -69,6 +70,7 @@ impl FullABIFunction {
         name: String,
         inputs: Vec<FullTypeApplication>,
         output: FullTypeApplication,
+        is_payable: bool,
     ) -> Result<Self, Error> {
         if name.is_empty() {
             Err(InvalidData(
@@ -79,6 +81,7 @@ impl FullABIFunction {
                 name,
                 inputs,
                 output,
+                is_payable,
             })
         }
     }
@@ -95,6 +98,10 @@ impl FullABIFunction {
         &self.output
     }
 
+    pub(crate) fn is_payable(&self) -> bool {
+        self.is_payable
+    }
+
     pub(crate) fn from_counterpart(
         abi_function: &ABIFunction,
         types: &HashMap<usize, TypeDeclaration>,
@@ -109,6 +116,7 @@ impl FullABIFunction {
             abi_function.name.clone(),
             inputs,
             FullTypeApplication::from_counterpart(&abi_function.output, types),
+            abi_function.is_payable(),
         )
     }
 }
@@ -228,7 +236,7 @@ mod tests {
             type_arguments: vec![],
         };
 
-        let err = FullABIFunction::new("".to_string(), vec![], fn_output)
+        let err = FullABIFunction::new("".to_string(), vec![], fn_output, false)
             .expect_err("Should have failed.");
 
         if let InvalidData(msg) = err {

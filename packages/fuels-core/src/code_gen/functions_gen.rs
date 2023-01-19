@@ -58,8 +58,6 @@ pub(crate) fn expand_function(
 
     let is_payable = function.is_payable();
 
-    let is_payable = function.is_payable();
-
     Ok(quote! {
         #doc
         pub fn #name(&self #(,#arg_declarations)*) -> ContractCallHandler<#output_type> {

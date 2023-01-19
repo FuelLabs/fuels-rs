@@ -62,6 +62,7 @@ pub mod abigen_bindings {
                     ),
                     &[Tokenizable::into_token(value)],
                     log_decoder,
+                    false,
                 )
                 .expect("method not found (this should never happen)")
             }
@@ -81,6 +82,7 @@ pub mod abigen_bindings {
                     ),
                     &[Tokenizable::into_token(value)],
                     log_decoder,
+                    false,
                 )
                 .expect("method not found (this should never happen)")
             }

@@ -415,7 +415,7 @@ mod tests {
             }],
         }];
 
-        FullABIFunction::new("test_function".to_string(), fn_inputs, fn_output)
+        FullABIFunction::new("test_function".to_string(), fn_inputs, fn_output, false)
             .expect("Hand crafted function known to be correct")
     }
 }
