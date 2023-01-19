@@ -21,7 +21,7 @@ use serde_with::{DeserializeAs, SerializeAs};
 use tempfile::NamedTempFile;
 use tokio::{process::Command, sync::oneshot};
 
-use crate::utils::{get_coin_configs, get_message_configs};
+use crate::utils::{into_coin_configs, into_message_configs};
 
 #[derive(Clone, Copy, Debug)]
 pub struct Config {
@@ -166,8 +166,8 @@ pub fn get_node_config_json(
     chain_config: Option<ChainConfig>,
     consensus_parameters_config: Option<ConsensusParameters>,
 ) -> Value {
-    let coin_configs = get_coin_configs(coins);
-    let messages = get_message_configs(messages);
+    let coin_configs = into_coin_configs(coins);
+    let messages = into_message_configs(messages);
 
     let chain_config = {
         let chain_config = chain_config.unwrap_or_else(|| ChainConfig {
