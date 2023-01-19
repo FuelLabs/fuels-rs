@@ -917,8 +917,7 @@ mod test {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "called `Result::unwrap()` on an `Err` value: InvalidData(\"The file extension 'json' is not recognized. Did you mean '.bin'?\")"
+    #[should_panic(expected = "The file extension 'json' is not recognized. Did you mean '.bin'?")]
     )]
     async fn deploy_panics_on_non_binary_file() {
         let wallet = launch_provider_and_get_wallet().await;
