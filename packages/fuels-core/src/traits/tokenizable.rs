@@ -609,7 +609,7 @@ mod tests {
     }
 
     #[test]
-    fn sized_ascii_string_is_detokenized_correctly() -> anyhow::Result<()> {
+    fn sized_ascii_string_is_detokenized_correctly() -> Result<(), Error> {
         let token = Token::String(StringToken::new("abc".to_string(), 3));
 
         let sized_ascii_string =
