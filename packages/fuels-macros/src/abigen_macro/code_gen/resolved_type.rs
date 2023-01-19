@@ -4,7 +4,8 @@ use std::{
 };
 
 use fuel_abi_types::utils::{
-    custom_type_name, extract_array_len, extract_generic_name, extract_str_len, has_tuple_format,
+    extract_array_len, extract_custom_type_name, extract_generic_name, extract_str_len,
+    has_tuple_format,
 };
 use lazy_static::lazy_static;
 use proc_macro2::TokenStream;
@@ -248,7 +249,7 @@ fn to_custom_type(
     type_arguments_supplier: impl Fn() -> Vec<ResolvedType>,
     is_shared: bool,
 ) -> Option<ResolvedType> {
-    let type_name = custom_type_name(type_field)?;
+    let type_name = extract_custom_type_name(type_field)?;
 
     let type_path = get_sdk_provided_types()
         .into_iter()

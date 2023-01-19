@@ -84,7 +84,7 @@ pub(crate) fn extract_generic_parameters(
 
 #[cfg(test)]
 mod tests {
-    use fuel_abi_types::{program_abi::TypeDeclaration, utils::custom_type_name};
+    use fuel_abi_types::{program_abi::TypeDeclaration, utils::extract_custom_type_name};
 
     use super::*;
     use crate::abigen_macro::code_gen::{resolved_type::ResolvedType, utils::param_type_calls};
@@ -188,7 +188,7 @@ mod tests {
             type_parameters: None,
         };
 
-        let struct_name = custom_type_name(&declaration.type_field).unwrap();
+        let struct_name = extract_custom_type_name(&declaration.type_field).unwrap();
 
         assert_eq!(struct_name, "SomeName");
     }
@@ -202,7 +202,7 @@ mod tests {
             type_parameters: None,
         };
 
-        let struct_name = custom_type_name(&declaration.type_field).unwrap();
+        let struct_name = extract_custom_type_name(&declaration.type_field).unwrap();
 
         assert_eq!(struct_name, "SomeEnumName");
     }

@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use fuel_abi_types::utils::custom_type_name;
+use fuel_abi_types::utils::extract_custom_type_name;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
@@ -24,7 +24,7 @@ pub(crate) fn expand_custom_enum(
     shared_types: &HashSet<FullTypeDeclaration>,
 ) -> Result<GeneratedCode> {
     let type_field = &type_decl.type_field;
-    let enum_name = custom_type_name(type_field).ok_or_else(|| {
+    let enum_name = extract_custom_type_name(type_field).ok_or_else(|| {
         Error(format!(
             "Could not extract enum name from type_field: {}",
             type_field

@@ -3,8 +3,8 @@ use std::{collections::HashMap, iter::zip};
 use fuel_abi_types::{
     program_abi::{TypeApplication, TypeDeclaration},
     utils::{
-        custom_type_name, extract_array_len, extract_generic_name, extract_str_len,
-        has_enum_format, has_struct_format, has_tuple_format,
+        extract_array_len, extract_custom_type_name, extract_generic_name, extract_str_len,
+        has_tuple_format,
     },
 };
 use itertools::Itertools;
@@ -290,10 +290,14 @@ fn try_struct(the_type: &Type) -> Result<Option<ParamType>, Error> {
     Ok(result)
 }
 
+fn has_struct_format(field: &str) -> bool {
+    field.starts_with("struct ")
+}
+
 fn try_vector(the_type: &Type) -> Result<Option<ParamType>, Error> {
     let type_field = &the_type.type_field;
     if has_struct_format(type_field)
-        && custom_type_name(type_field).ok_or_else(|| {
+        && extract_custom_type_name(type_field).ok_or_else(|| {
             Error::InvalidType(format!(
                 "Could not extract struct name from type_field {type_field}"
             ))
@@ -315,7 +319,8 @@ fn try_vector(the_type: &Type) -> Result<Option<ParamType>, Error> {
 }
 
 fn try_enum(the_type: &Type) -> Result<Option<ParamType>, Error> {
-    let result = if has_enum_format(&the_type.type_field) {
+    let field = &the_type.type_field;
+    let result = if field.starts_with("enum ") {
         let generics = param_types(&the_type.generic_params)?;
 
         let components = named_param_types(&the_type.components)?;

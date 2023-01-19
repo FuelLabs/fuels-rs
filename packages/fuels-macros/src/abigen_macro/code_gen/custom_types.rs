@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use fuel_abi_types::utils::custom_type_name;
+use fuel_abi_types::utils::extract_custom_type_name;
 use itertools::Itertools;
 
 use crate::{
@@ -57,7 +57,7 @@ pub(crate) fn generate_types<T: IntoIterator<Item = FullTypeDeclaration>>(
 // implementation details of the contract's Vec type and are not directly
 // used in the SDK.
 fn should_skip_codegen(type_field: &str) -> bool {
-    let name = custom_type_name(type_field).unwrap_or_else(|| type_field.to_string());
+    let name = extract_custom_type_name(type_field).unwrap_or_else(|| type_field.to_string());
 
     is_type_sdk_provided(&name) || is_type_unused(&name)
 }

@@ -1,6 +1,5 @@
 use std::collections::HashSet;
 
-use fuel_abi_types::program_abi::ResolvedLog;
 use proc_macro2::TokenStream;
 use quote::quote;
 
@@ -23,6 +22,12 @@ pub(crate) fn logs_lookup_instantiation_code(
     quote! {::fuels::core::utils::log_type_lookup(&[#(#log_id_param_type_pairs),*], #contract_id)}
 }
 
+#[derive(Debug)]
+struct ResolvedLog {
+    log_id: u64,
+    param_type_call: TokenStream,
+}
+
 /// Reads the parsed logged types from the ABI and creates ResolvedLogs
 fn resolve_logs(
     logged_types: &[FullLoggedType],
@@ -34,12 +39,10 @@ fn resolve_logs(
             let resolved_type =
                 resolve_type(&l.application, shared_types).expect("Failed to resolve log type");
             let param_type_call = single_param_type_call(&resolved_type);
-            let resolved_type_name = TokenStream::from(resolved_type);
 
             ResolvedLog {
                 log_id: l.log_id,
                 param_type_call,
-                resolved_type_name,
             }
         })
         .collect()
