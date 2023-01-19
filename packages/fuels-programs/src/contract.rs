@@ -251,7 +251,7 @@ impl Contract {
     ) -> Result<CompiledContract, Error> {
         let extension = Path::new(binary_filepath)
             .extension()
-            .expect("Could not extract extension from file path");        
+            .expect("Could not extract extension from file path");
         if extension != "bin" {
             return Err(Error::InvalidData(format!(
                 "The file extension '{}' is not recognized. Did you mean '.bin'?",
@@ -920,7 +920,6 @@ mod test {
 
     #[tokio::test]
     #[should_panic(expected = "The file extension 'json' is not recognized. Did you mean '.bin'?")]
-    )]
     async fn deploy_panics_on_non_binary_file() {
         let wallet = launch_provider_and_get_wallet().await;
 
