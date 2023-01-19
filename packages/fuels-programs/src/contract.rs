@@ -111,7 +111,6 @@ impl Contract {
         args: &[Token],
         log_decoder: LogDecoder,
         is_payable: bool,
-        is_payable: bool,
     ) -> Result<ContractCallHandler<D>, Error> {
         let encoded_selector = signature;
 
@@ -580,6 +579,10 @@ where
         }
         self.contract_call.call_parameters = params;
         Ok(self)
+
+    pub fn call_params(mut self, params: CallParameters) -> Self {
+        self.contract_call.call_parameters = params;
+        self
     }
 
     /// Appends `num` [`Output::Variable`]s to the transaction.
