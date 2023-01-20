@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use fuel_abi_types::program_abi::{
-    ABIFunction, LoggedType, ProgramABI, TypeApplication, TypeDeclaration,
+    ABIFunction, Attribute, LoggedType, ProgramABI, TypeApplication, TypeDeclaration,
 };
 use fuels_types::errors::{Error, Error::InvalidData};
 
@@ -62,7 +62,7 @@ pub(crate) struct FullABIFunction {
     name: String,
     inputs: Vec<FullTypeApplication>,
     output: FullTypeApplication,
-    is_payable: bool,
+    attributes: Option<Vec<Attribute>>,
 }
 
 impl FullABIFunction {
@@ -70,7 +70,7 @@ impl FullABIFunction {
         name: String,
         inputs: Vec<FullTypeApplication>,
         output: FullTypeApplication,
-        is_payable: bool,
+        attributes: Option<Vec<Attribute>>,
     ) -> Result<Self, Error> {
         if name.is_empty() {
             Err(InvalidData(
@@ -81,7 +81,7 @@ impl FullABIFunction {
                 name,
                 inputs,
                 output,
-                is_payable,
+                attributes,
             })
         }
     }
@@ -99,7 +99,10 @@ impl FullABIFunction {
     }
 
     pub(crate) fn is_payable(&self) -> bool {
-        self.is_payable
+        self.attributes
+            .iter()
+            .flatten()
+            .any(|attr| attr.name == "payable")
     }
 
     pub(crate) fn from_counterpart(
@@ -116,7 +119,7 @@ impl FullABIFunction {
             abi_function.name.clone(),
             inputs,
             FullTypeApplication::from_counterpart(&abi_function.output, types),
-            abi_function.is_payable(),
+            abi_function.attributes,
         )
     }
 }
