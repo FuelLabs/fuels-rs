@@ -347,6 +347,7 @@ mod test {
                 output_param: ParamType::Unit,
                 message_outputs: None,
                 custom_assets: Default::default(),
+
             }
         }
     }
