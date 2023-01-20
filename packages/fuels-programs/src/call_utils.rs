@@ -22,7 +22,6 @@ pub(crate) struct CallOpcodeParamsOffset {
 /// Compute how much of each asset is required based on all `CallParameters` of the `ContractCalls`
 pub(crate) fn calculate_required_asset_amounts(calls: &[ContractCall]) -> Vec<(AssetId, u64)> {
     let call_param_assets = calls
-    let call_param_assets = calls
         .iter()
         .map(|call| (call.call_parameters.asset_id, call.call_parameters.amount))
         .collect::<Vec<_>>();
@@ -347,7 +346,6 @@ mod test {
                 output_param: ParamType::Unit,
                 message_outputs: None,
                 custom_assets: Default::default(),
-
             }
         }
     }

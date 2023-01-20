@@ -28,7 +28,6 @@ pub use node::{get_socket_address, new_fuel_node, Config};
 use portpicker::is_free;
 use rand::Fill;
 #[cfg(feature = "fuel-core-lib")]
-pub use utils::{get_coin_configs, get_message_configs};
 pub use utils::{into_coin_configs, into_message_configs};
 
 #[cfg(not(feature = "fuel-core-lib"))]
