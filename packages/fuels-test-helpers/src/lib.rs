@@ -28,7 +28,7 @@ pub use node::{get_socket_address, new_fuel_node, Config};
 use portpicker::is_free;
 use rand::Fill;
 #[cfg(feature = "fuel-core-lib")]
-pub use utils::{get_coin_configs, get_message_configs};
+pub use utils::{into_coin_configs, into_message_configs};
 
 #[cfg(not(feature = "fuel-core-lib"))]
 pub mod node;
@@ -152,8 +152,8 @@ pub async fn setup_test_client(
     chain_config: Option<ChainConfig>,
     consensus_parameters_config: Option<ConsensusParameters>,
 ) -> (FuelClient, SocketAddr) {
-    let coin_configs = get_coin_configs(coins);
-    let message_configs = get_message_configs(messages);
+    let coin_configs = into_coin_configs(coins);
+    let message_configs = into_message_configs(messages);
 
     // Setup node config with genesis coins and utxo_validation enabled
     let chain_conf = {
