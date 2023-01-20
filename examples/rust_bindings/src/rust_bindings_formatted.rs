@@ -11,10 +11,10 @@ pub mod abigen_bindings {
                     wallet,
                 }
             }
-            pub fn get_contract_id(&self) -> &Bech32ContractId {
+            pub fn contract_id(&self) -> &Bech32ContractId {
                 &self.contract_id
             }
-            pub fn get_wallet(&self) -> WalletUnlocked {
+            pub fn wallet(&self) -> WalletUnlocked {
                 self.wallet.clone()
             }
             pub fn with_wallet(&self, mut wallet: WalletUnlocked) -> Result<Self, Error> {
