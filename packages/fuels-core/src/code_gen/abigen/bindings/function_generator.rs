@@ -325,7 +325,7 @@ mod tests {
 
         assert_eq!(
             fn_selector_code.to_string(),
-            r#":: fuels :: core :: code_gen :: function_selector :: resolve_fn_selector ("test_function" , & [< self :: CustomStruct :: < u8 > as :: fuels :: core :: traits :: Parameterize > :: param_type ()])"#
+            r#":: fuels :: core :: code_gen :: function_selector :: resolve_fn_selector ("test_function" , & [< self :: CustomStruct :: < u8 > as :: fuels :: types :: traits :: Parameterize > :: param_type ()])"#
         );
 
         Ok(())
@@ -340,7 +340,7 @@ mod tests {
 
         assert_eq!(
             tokenized_args.to_string(),
-            "[:: fuels :: core :: traits :: Tokenizable :: into_token (arg_0)]"
+            "[:: fuels :: types :: traits :: Tokenizable :: into_token (arg_0)]"
         );
 
         Ok(())

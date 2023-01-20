@@ -1,34 +1,31 @@
 use proc_macro2::TokenStream;
 use quote::quote;
 use quote::ToTokens;
-use syn::{Data, DeriveInput, Error, Fields};
+use syn::{Data, DataEnum, DataStruct, DeriveInput, Error};
 
 pub fn generate_parameterize_impl(input: DeriveInput) -> syn::Result<TokenStream> {
-    match input.data {
-        Data::Struct(_) => parameterize_struct(input),
-        Data::Enum(_) => parameterize_enum(input),
+    match &input.data {
+        Data::Struct(struct_contents) => parameterize_struct(&input, struct_contents),
+        Data::Enum(enum_contents) => parameterize_enum(&input, enum_contents),
         _ => {
             panic!("Union type is not supported")
         }
     }
 }
 
-fn parameterize_struct(input: DeriveInput) -> Result<TokenStream, Error> {
-    let fields = match input.data {
-        Data::Struct(struct_contents) => struct_contents.fields,
-        _ => {
-            panic!("Nije trebalo ovo metchat")
-        }
-    };
-    let struct_name = input.ident;
+fn parameterize_struct(
+    input: &DeriveInput,
+    struct_contents: &DataStruct,
+) -> Result<TokenStream, Error> {
+    let struct_name = &input.ident;
 
     let (impl_gen, type_gen, where_clause) = input.generics.split_for_impl();
 
     let struct_name_str = struct_name.to_string();
-    let field_pairs = fields
-        .into_iter()
+    let field_pairs = &struct_contents.fields
+        .iter()
         .map(|field| {
-            let ident = field.ident.unwrap().to_string();
+            let ident = field.ident.as_ref().unwrap().to_string();
             let ttype = field.ty.to_token_stream();
 
             quote! {(#ident.to_string(), <#ttype as ::fuels::types::traits::Parameterize>::param_type())}
@@ -63,6 +60,9 @@ fn parameterize_struct(input: DeriveInput) -> Result<TokenStream, Error> {
     })
 }
 
-fn parameterize_enum(input: DeriveInput) -> Result<TokenStream, Error> {
+fn parameterize_enum(
+    _input: &DeriveInput,
+    _enum_contents: &DataEnum,
+) -> Result<TokenStream, Error> {
     todo!()
 }

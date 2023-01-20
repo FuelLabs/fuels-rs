@@ -29,15 +29,10 @@ pub(crate) fn expand_custom_struct(
     let generic_parameters = extract_generic_parameters(type_decl)?;
 
     let struct_decl = struct_decl(&struct_ident, &components, &generic_parameters);
-
-    let tokenizable_impl = struct_tokenizable_impl(&struct_ident, &components, &generic_parameters);
-
     let try_from_impl = impl_try_from(&struct_ident, &generic_parameters);
 
     let code = quote! {
         #struct_decl
-
-        #tokenizable_impl
 
         #try_from_impl
     };
@@ -65,55 +60,9 @@ fn struct_decl(
     );
 
     quote! {
-        #[derive(Clone, Debug, Eq, PartialEq, ::fuels::fuels_abigen::Parameterize)]
+        #[derive(Clone, Debug, Eq, PartialEq, ::fuels::fuels_abigen::Parameterize, ::fuels::fuels_abigen::Tokenizable)]
         pub struct #struct_ident <#(#generic_parameters: ::fuels::types::traits::Tokenizable + ::fuels::types::traits::Parameterize, )*> {
             #(#fields),*
-        }
-    }
-}
-
-fn struct_tokenizable_impl(
-    struct_ident: &Ident,
-    components: &[Component],
-    generic_parameters: &Vec<TokenStream>,
-) -> TokenStream {
-    let struct_name_str = struct_ident.to_string();
-    let from_token_calls = components
-        .iter()
-        .map(|Component { field_name, .. }| {
-            quote! {
-                #field_name: ::fuels::types::traits::Tokenizable::from_token(next_token()?)?
-            }
-        })
-        .collect::<Vec<_>>();
-
-    let into_token_calls = components
-        .iter()
-        .map(|Component { field_name, .. }| {
-            quote! {self.#field_name.into_token()}
-        })
-        .collect::<Vec<_>>();
-
-    quote! {
-        impl <#(#generic_parameters: ::fuels::types::traits::Tokenizable + ::fuels::types::traits::Parameterize, )*> ::fuels::types::traits::Tokenizable for self::#struct_ident <#(#generic_parameters, )*> {
-            fn into_token(self) -> ::fuels::types::Token {
-                let tokens = [#(#into_token_calls),*].to_vec();
-                ::fuels::types::Token::Struct(tokens)
-            }
-
-            fn from_token(token: ::fuels::types::Token)  -> ::std::result::Result<Self, ::fuels::types::errors::Error> {
-                match token {
-                    ::fuels::types::Token::Struct(tokens) => {
-                        let mut tokens_iter = tokens.into_iter();
-                        let mut next_token = move || { tokens_iter
-                            .next()
-                            .ok_or_else(|| { ::fuels::types::errors::Error::InstantiationError(format!("Ran out of tokens before '{}' has finished construction!", #struct_name_str)) })
-                        };
-                        ::std::result::Result::Ok(Self { #( #from_token_calls, )* })
-                    },
-                    other => ::std::result::Result::Err(::fuels::types::errors::Error::InstantiationError(format!("Error while constructing '{}'. Expected token of type Token::Struct, got {:?}", #struct_name_str, other))),
-                }
-            }
         }
     }
 }
