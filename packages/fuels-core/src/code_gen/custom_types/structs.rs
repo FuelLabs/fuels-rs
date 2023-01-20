@@ -7,7 +7,7 @@ use quote::quote;
 use crate::{
     code_gen::{
         abi_types::FullTypeDeclaration,
-        custom_types::utils::{extract_components, extract_generic_parameters, impl_try_from},
+        custom_types::utils::{extract_components, extract_generic_parameters},
         generated_code::GeneratedCode,
         type_path::TypePath,
         utils::Component,
@@ -29,12 +29,9 @@ pub(crate) fn expand_custom_struct(
     let generic_parameters = extract_generic_parameters(type_decl)?;
 
     let struct_decl = struct_decl(&struct_ident, &components, &generic_parameters);
-    let try_from_impl = impl_try_from(&struct_ident, &generic_parameters);
 
     let code = quote! {
         #struct_decl
-
-        #try_from_impl
     };
     Ok(GeneratedCode {
         code,
@@ -60,7 +57,15 @@ fn struct_decl(
     );
 
     quote! {
-        #[derive(Clone, Debug, Eq, PartialEq, ::fuels::fuels_abigen::Parameterize, ::fuels::fuels_abigen::Tokenizable)]
+        #[derive(
+            Clone,
+            Debug,
+            Eq,
+            PartialEq,
+            ::fuels::fuels_abigen::Parameterize,
+            ::fuels::fuels_abigen::Tokenizable,
+            ::fuels::fuels_abigen::TryFrom
+        )]
         pub struct #struct_ident <#(#generic_parameters: ::fuels::types::traits::Tokenizable + ::fuels::types::traits::Parameterize, )*> {
             #(#fields),*
         }

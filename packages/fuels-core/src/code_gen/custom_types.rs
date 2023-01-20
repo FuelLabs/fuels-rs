@@ -78,14 +78,10 @@ fn is_type_unused(name: &str) -> bool {
 // TODO(iqdecay): append extra `,` to last enum/struct field so it is aligned with rustfmt
 #[cfg(test)]
 mod tests {
-    use std::{
-        collections::{HashMap, HashSet},
-        str::FromStr,
-    };
+    use std::collections::{HashMap, HashSet};
 
     use anyhow::anyhow;
     use fuel_abi_types::program_abi::{ProgramABI, TypeApplication, TypeDeclaration};
-    use proc_macro2::TokenStream;
     use quote::quote;
 
     use super::*;
@@ -142,7 +138,7 @@ mod tests {
 
         let expected = quote! {
             #[allow(clippy::enum_variant_names)]
-            #[derive(Clone, Debug, Eq, PartialEq)]
+            #[derive(Clone, Debug, Eq, PartialEq, ::fuels::fuels_abigen::TryFrom)]
             pub enum MatchaTea<> {
                 LongIsland(u64),
                 MoscowMule(bool)
@@ -211,24 +207,6 @@ mod tests {
                     };
                     let variants = match < Self as :: fuels :: types :: traits :: Parameterize > :: param_type () { :: fuels :: types :: param_types :: ParamType :: Enum { variants , .. } => variants , other => panic ! ("Calling {}::param_type() must return a ParamType::Enum but instead it returned: {:?}" , "MatchaTea" , other) } ;
                     ::fuels::types::Token::Enum(::std::boxed::Box::new((discriminant, token, variants)))
-                }
-            }
-            impl<> TryFrom<&[u8]> for self::MatchaTea<> {
-                type Error = ::fuels::types::errors::Error;
-                fn try_from(bytes: &[u8]) -> ::std::result::Result<Self, Self::Error> {
-                    ::fuels::core::try_from_bytes(bytes)
-                }
-            }
-            impl<> TryFrom<&::std::vec::Vec<u8>> for self::MatchaTea<> {
-                type Error = ::fuels::types::errors::Error;
-                fn try_from(bytes: &::std::vec::Vec<u8>) -> ::std::result::Result<Self, Self::Error> {
-                    ::fuels::core::try_from_bytes(&bytes)
-                }
-            }
-            impl<> TryFrom<::std::vec::Vec<u8>> for self::MatchaTea<> {
-                type Error = ::fuels::types::errors::Error;
-                fn try_from(bytes: ::std::vec::Vec<u8>) -> ::std::result::Result<Self, Self::Error> {
-                    ::fuels::core::try_from_bytes(&bytes)
                 }
             }
         };
@@ -341,7 +319,7 @@ mod tests {
 
         let expected = quote! {
             #[allow(clippy::enum_variant_names)]
-            #[derive(Clone, Debug, Eq, PartialEq)]
+            #[derive(Clone, Debug, Eq, PartialEq, ::fuels::fuels_abigen::TryFrom)]
             pub enum Amsterdam<> {
                 Infrastructure(self::Building),
                 Service(u32)
@@ -412,24 +390,6 @@ mod tests {
                     ::fuels::types::Token::Enum(::std::boxed::Box::new((discriminant, token, variants)))
                 }
             }
-            impl<> TryFrom<&[u8]> for self::Amsterdam<> {
-                type Error = ::fuels::types::errors::Error;
-                fn try_from(bytes: &[u8]) -> ::std::result::Result<Self, Self::Error> {
-                    ::fuels::core::try_from_bytes(bytes)
-                }
-            }
-            impl<> TryFrom<&::std::vec::Vec<u8>> for self::Amsterdam<> {
-                type Error = ::fuels::types::errors::Error;
-                fn try_from(bytes: &::std::vec::Vec<u8>) -> ::std::result::Result<Self, Self::Error> {
-                    ::fuels::core::try_from_bytes(&bytes)
-                }
-            }
-            impl<> TryFrom<::std::vec::Vec<u8>> for self::Amsterdam<> {
-                type Error = ::fuels::types::errors::Error;
-                fn try_from(bytes: ::std::vec::Vec<u8>) -> ::std::result::Result<Self, Self::Error> {
-                    ::fuels::core::try_from_bytes(&bytes)
-                }
-            }
         };
 
         assert_eq!(actual.to_string(), expected.to_string());
@@ -482,7 +442,7 @@ mod tests {
 
         let expected = quote! {
             #[allow(clippy::enum_variant_names)]
-            #[derive(Clone, Debug, Eq, PartialEq)]
+            #[derive(Clone, Debug, Eq, PartialEq, ::fuels::fuels_abigen::TryFrom)]
             pub enum SomeEnum < > {
                 SomeArr([u64; 7usize])
             }
@@ -540,24 +500,6 @@ mod tests {
                     };
                     let variants = match < Self as :: fuels :: types :: traits :: Parameterize > :: param_type () { :: fuels :: types :: param_types :: ParamType :: Enum { variants , .. } => variants , other => panic ! ("Calling {}::param_type() must return a ParamType::Enum but instead it returned: {:?}" , "SomeEnum" , other) } ;
                     ::fuels::types::Token::Enum(::std::boxed::Box::new((discriminant, token, variants)))
-                }
-            }
-            impl <> TryFrom<&[u8]> for self::SomeEnum < > {
-                type Error = ::fuels::types::errors::Error;
-                fn try_from(bytes: &[u8]) -> ::std::result::Result<Self, Self::Error> {
-                    ::fuels::core::try_from_bytes(bytes)
-                }
-            }
-            impl <> TryFrom<&::std::vec::Vec<u8>> for self::SomeEnum <>{
-                type Error = ::fuels::types::errors::Error;
-                fn try_from(bytes: &::std::vec::Vec<u8>) -> ::std::result::Result<Self, Self::Error> {
-                    ::fuels::core::try_from_bytes(&bytes)
-                }
-            }
-            impl <> TryFrom<::std::vec::Vec<u8>> for self::SomeEnum <>{
-                type Error = ::fuels::types::errors::Error;
-                fn try_from(bytes: ::std::vec::Vec<u8>) -> ::std::result::Result<Self, Self::Error> {
-                    ::fuels::core::try_from_bytes(&bytes)
                 }
             }
         };
@@ -625,7 +567,7 @@ mod tests {
 
         let expected = quote! {
             #[allow(clippy::enum_variant_names)]
-            #[derive(Clone, Debug, Eq, PartialEq)]
+            #[derive(Clone, Debug, Eq, PartialEq, ::fuels::fuels_abigen::TryFrom)]
             pub enum EnumLevel3<> {
                 El2(self::EnumLevel2)
             }
@@ -683,24 +625,6 @@ mod tests {
                     };
                     let variants = match < Self as :: fuels :: types :: traits :: Parameterize > :: param_type () { :: fuels :: types :: param_types :: ParamType :: Enum { variants , .. } => variants , other => panic ! ("Calling {}::param_type() must return a ParamType::Enum but instead it returned: {:?}" , "EnumLevel3" , other) } ;
                     ::fuels::types::Token::Enum(::std::boxed::Box::new((discriminant, token, variants)))
-                }
-            }
-            impl<> TryFrom<&[u8]> for self::EnumLevel3<> {
-                type Error = ::fuels::types::errors::Error;
-                fn try_from(bytes: &[u8]) -> ::std::result::Result<Self, Self::Error> {
-                    ::fuels::core::try_from_bytes(bytes)
-                }
-            }
-            impl<> TryFrom<&::std::vec::Vec<u8>> for self::EnumLevel3<> {
-                type Error = ::fuels::types::errors::Error;
-                fn try_from(bytes: &::std::vec::Vec<u8>) -> ::std::result::Result<Self, Self::Error> {
-                    ::fuels::core::try_from_bytes(&bytes)
-                }
-            }
-            impl<> TryFrom<::std::vec::Vec<u8>> for self::EnumLevel3<> {
-                type Error = ::fuels::types::errors::Error;
-                fn try_from(bytes: ::std::vec::Vec<u8>) -> ::std::result::Result<Self, Self::Error> {
-                    ::fuels::core::try_from_bytes(&bytes)
                 }
             }
         };
@@ -765,15 +689,27 @@ mod tests {
             &FullTypeDeclaration::from_counterpart(&p, &types),
             &HashSet::default(),
         )?
-        .code
-        .to_string();
-        let expected = TokenStream::from_str(
-            r#"
-            # [derive (Clone , Debug , Eq , PartialEq)] pub struct Cocktail < > { pub long_island : bool , pub cosmopolitan : u64 , pub mojito : u32 } impl < > :: fuels :: types :: traits :: Parameterize for self :: Cocktail < > { fn param_type () -> :: fuels :: types :: param_types :: ParamType { let types = [("long_island" . to_string () , < bool as :: fuels :: types :: traits :: Parameterize > :: param_type ()) , ("cosmopolitan" . to_string () , < u64 as :: fuels :: types :: traits :: Parameterize > :: param_type ()) , ("mojito" . to_string () , < u32 as :: fuels :: types :: traits :: Parameterize > :: param_type ())] . to_vec () ; :: fuels :: types :: param_types :: ParamType :: Struct { name : "Cocktail" . to_string () , fields : types , generics : [] . to_vec () } } } impl < > :: fuels :: types :: traits :: Tokenizable for self :: Cocktail < > { fn into_token (self) -> :: fuels :: types :: Token { let tokens = [self . long_island . into_token () , self . cosmopolitan . into_token () , self . mojito . into_token ()] . to_vec () ; :: fuels :: types :: Token :: Struct (tokens) } fn from_token (token : :: fuels :: types :: Token) -> :: std :: result :: Result < Self , :: fuels :: types :: errors :: Error > { match token { :: fuels :: types :: Token :: Struct (tokens) => { let mut tokens_iter = tokens . into_iter () ; let mut next_token = move || { tokens_iter . next () . ok_or_else (|| { :: fuels :: types :: errors :: Error :: InstantiationError (format ! ("Ran out of tokens before '{}' has finished construction!" , "Cocktail")) }) } ; :: std :: result :: Result :: Ok (Self { long_island : :: fuels :: types :: traits :: Tokenizable :: from_token (next_token () ?) ? , cosmopolitan : :: fuels :: types :: traits :: Tokenizable :: from_token (next_token () ?) ? , mojito : :: fuels :: types :: traits :: Tokenizable :: from_token (next_token () ?) ? , }) } , other => :: std :: result :: Result :: Err (:: fuels :: types :: errors :: Error :: InstantiationError (format ! ("Error while constructing '{}'. Expected token of type Token::Struct, got {:?}" , "Cocktail" , other))) , } } } impl < > TryFrom < & [u8] > for self :: Cocktail < > { type Error = :: fuels :: types :: errors :: Error ; fn try_from (bytes : & [u8]) -> :: std :: result :: Result < Self , Self :: Error > { :: fuels :: core :: try_from_bytes (bytes) } } impl < > TryFrom < & :: std :: vec :: Vec < u8 >> for self :: Cocktail < > { type Error = :: fuels :: types :: errors :: Error ; fn try_from (bytes : & :: std :: vec :: Vec < u8 >) -> :: std :: result :: Result < Self , Self :: Error > { :: fuels :: core :: try_from_bytes (& bytes) } } impl < > TryFrom < :: std :: vec :: Vec < u8 >> for self :: Cocktail < > { type Error = :: fuels :: types :: errors :: Error ; fn try_from (bytes : :: std :: vec :: Vec < u8 >) -> :: std :: result :: Result < Self , Self :: Error > { :: fuels :: core :: try_from_bytes (& bytes) } }
-            "#,
-        )?.to_string();
+        .code;
 
-        assert_eq!(actual, expected);
+        let expected = quote! {
+            #[derive(
+                Clone,
+                Debug,
+                Eq,
+                PartialEq,
+                ::fuels::fuels_abigen::Parameterize,
+                ::fuels::fuels_abigen::Tokenizable,
+                ::fuels::fuels_abigen::TryFrom
+            )]
+            pub struct Cocktail < > {
+                pub long_island: bool,
+                pub cosmopolitan: u64,
+                pub mojito: u32
+            }
+        };
+
+        assert_eq!(actual.to_string(), expected.to_string());
+
         Ok(())
     }
 
@@ -799,28 +735,11 @@ mod tests {
                 Debug,
                 Eq,
                 PartialEq,
-                :: fuels :: fuels_abigen :: Parameterize,
-                :: fuels :: fuels_abigen :: Tokenizable
+                ::fuels::fuels_abigen::Parameterize,
+                ::fuels::fuels_abigen::Tokenizable,
+                ::fuels::fuels_abigen::TryFrom
             )]
             pub struct SomeEmptyStruct < > {}
-            impl < > TryFrom<&[u8]> for self::SomeEmptyStruct < > {
-                type Error = ::fuels::types::errors::Error;
-                fn try_from(bytes: &[u8]) -> ::std::result::Result<Self, Self::Error> {
-                    ::fuels::core::try_from_bytes(bytes)
-                }
-            }
-            impl < > TryFrom<&::std::vec::Vec<u8>> for self::SomeEmptyStruct < > {
-                type Error = ::fuels::types::errors::Error;
-                fn try_from(bytes: &::std::vec::Vec<u8>) -> ::std::result::Result<Self, Self::Error> {
-                    ::fuels::core::try_from_bytes(&bytes)
-                }
-            }
-            impl < > TryFrom<::std::vec::Vec<u8>> for self::SomeEmptyStruct < > {
-                type Error = ::fuels::types::errors::Error;
-                fn try_from(bytes: ::std::vec::Vec<u8>) -> ::std::result::Result<Self, Self::Error> {
-                    ::fuels::core::try_from_bytes(&bytes)
-                }
-            }
         };
 
         assert_eq!(actual.to_string(), expected.to_string());
@@ -903,36 +822,19 @@ mod tests {
         .code;
 
         let expected = quote! {
-                #[derive(
-                    Clone,
-                    Debug,
-                    Eq,
-                    PartialEq,
-                    :: fuels :: fuels_abigen :: Parameterize,
-                    :: fuels :: fuels_abigen :: Tokenizable
-                )]
-                pub struct Cocktail < > {
-                    pub long_island: self::Shaker,
-                    pub mojito: u32
-                }
-                impl < > TryFrom<&[u8]> for self::Cocktail < > {
-                    type Error = ::fuels::types::errors::Error;
-                    fn try_from(bytes: &[u8]) -> ::std::result::Result<Self, Self::Error> {
-                        ::fuels::core::try_from_bytes(bytes)
-                    }
-                }
-                impl < > TryFrom<&::std::vec::Vec<u8>> for self::Cocktail < > {
-                    type Error = ::fuels::types::errors::Error;
-                    fn try_from(bytes: &::std::vec::Vec<u8>) -> ::std::result::Result<Self, Self::Error> {
-                        ::fuels::core::try_from_bytes(&bytes)
-                    }
-                }
-                impl < > TryFrom<::std::vec::Vec<u8>> for self::Cocktail < > {
-                    type Error = ::fuels::types::errors::Error;
-                    fn try_from(bytes: ::std::vec::Vec<u8>) -> ::std::result::Result<Self, Self::Error> {
-                        ::fuels::core::try_from_bytes(&bytes)
-                    }
-                }
+            #[derive(
+                Clone,
+                Debug,
+                Eq,
+                PartialEq,
+                ::fuels::fuels_abigen::Parameterize,
+                ::fuels::fuels_abigen::Tokenizable,
+                ::fuels::fuels_abigen::TryFrom
+            )]
+            pub struct Cocktail < > {
+                pub long_island: self::Shaker,
+                pub mojito: u32
+            }
         };
 
         assert_eq!(actual.to_string(), expected.to_string());
@@ -1101,30 +1003,13 @@ mod tests {
                 Debug,
                 Eq,
                 PartialEq,
-                :: fuels :: fuels_abigen :: Parameterize,
-                :: fuels :: fuels_abigen :: Tokenizable,
+                ::fuels::fuels_abigen::Parameterize,
+                ::fuels::fuels_abigen::Tokenizable,
+                ::fuels::fuels_abigen::TryFrom
             )]
-            pub struct MyStruct1 {
+            pub struct MyStruct1 < > {
                 pub x: u64,
-                pub y: ::fuels::types::Bits256,
-            }
-            impl TryFrom<&[u8]> for self::MyStruct1 {
-                type Error = ::fuels::types::errors::Error;
-                fn try_from(bytes: &[u8]) -> ::std::result::Result<Self, Self::Error> {
-                    ::fuels::core::try_from_bytes(bytes)
-                }
-            }
-            impl TryFrom<&::std::vec::Vec<u8>> for self::MyStruct1 {
-                type Error = ::fuels::types::errors::Error;
-                fn try_from(bytes: &::std::vec::Vec<u8>) -> ::std::result::Result<Self, Self::Error> {
-                    ::fuels::core::try_from_bytes(&bytes)
-                }
-            }
-            impl TryFrom<::std::vec::Vec<u8>> for self::MyStruct1 {
-                type Error = ::fuels::types::errors::Error;
-                fn try_from(bytes: ::std::vec::Vec<u8>) -> ::std::result::Result<Self, Self::Error> {
-                    ::fuels::core::try_from_bytes(&bytes)
-                }
+                pub y: ::fuels::types::Bits256
             }
         };
 
@@ -1136,16 +1021,25 @@ mod tests {
             &FullTypeDeclaration::from_counterpart(s2, &types),
             &HashSet::default(),
         )?
-        .code
-        .to_string();
+        .code;
 
-        let expected = TokenStream::from_str(
-            r#"
-            # [derive (Clone , Debug , Eq , PartialEq)] pub struct MyStruct2 < > { pub x : bool , pub y : self :: MyStruct1 } impl < > :: fuels :: types :: traits :: Parameterize for self :: MyStruct2 < > { fn param_type () -> :: fuels :: types :: param_types :: ParamType { let types = [("x" . to_string () , < bool as :: fuels :: types :: traits :: Parameterize > :: param_type ()) , ("y" . to_string () , < self :: MyStruct1 as :: fuels :: types :: traits :: Parameterize > :: param_type ())] . to_vec () ; :: fuels :: types :: param_types :: ParamType :: Struct { name : "MyStruct2" . to_string () , fields : types , generics : [] . to_vec () } } } impl < > :: fuels :: types :: traits :: Tokenizable for self :: MyStruct2 < > { fn into_token (self) -> :: fuels :: types :: Token { let tokens = [self . x . into_token () , self . y . into_token ()] . to_vec () ; :: fuels :: types :: Token :: Struct (tokens) } fn from_token (token : :: fuels :: types :: Token) -> :: std :: result :: Result < Self , :: fuels :: types :: errors :: Error > { match token { :: fuels :: types :: Token :: Struct (tokens) => { let mut tokens_iter = tokens . into_iter () ; let mut next_token = move || { tokens_iter . next () . ok_or_else (|| { :: fuels :: types :: errors :: Error :: InstantiationError (format ! ("Ran out of tokens before '{}' has finished construction!" , "MyStruct2")) }) } ; :: std :: result :: Result :: Ok (Self { x : :: fuels :: types :: traits :: Tokenizable :: from_token (next_token () ?) ? , y : :: fuels :: types :: traits :: Tokenizable :: from_token (next_token () ?) ? , }) } , other => :: std :: result :: Result :: Err (:: fuels :: types :: errors :: Error :: InstantiationError (format ! ("Error while constructing '{}'. Expected token of type Token::Struct, got {:?}" , "MyStruct2" , other))) , } } } impl < > TryFrom < & [u8] > for self :: MyStruct2 < > { type Error = :: fuels :: types :: errors :: Error ; fn try_from (bytes : & [u8]) -> :: std :: result :: Result < Self , Self :: Error > { :: fuels :: core :: try_from_bytes (bytes) } } impl < > TryFrom < & :: std :: vec :: Vec < u8 >> for self :: MyStruct2 < > { type Error = :: fuels :: types :: errors :: Error ; fn try_from (bytes : & :: std :: vec :: Vec < u8 >) -> :: std :: result :: Result < Self , Self :: Error > { :: fuels :: core :: try_from_bytes (& bytes) } } impl < > TryFrom < :: std :: vec :: Vec < u8 >> for self :: MyStruct2 < > { type Error = :: fuels :: types :: errors :: Error ; fn try_from (bytes : :: std :: vec :: Vec < u8 >) -> :: std :: result :: Result < Self , Self :: Error > { :: fuels :: core :: try_from_bytes (& bytes) } }
-            "#,
-            )?.to_string();
+        let expected = quote! {
+            #[derive(
+                Clone,
+                Debug,
+                Eq,
+                PartialEq,
+                ::fuels::fuels_abigen::Parameterize,
+                ::fuels::fuels_abigen::Tokenizable,
+                ::fuels::fuels_abigen::TryFrom
+            )]
+            pub struct MyStruct2 < > {
+                pub x: bool,
+                pub y: self::MyStruct1
+            }
+        };
 
-        assert_eq!(actual, expected);
+        assert_eq!(actual.to_string(), expected.to_string());
 
         Ok(())
     }

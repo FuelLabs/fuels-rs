@@ -1,53 +1,13 @@
 use std::collections::HashSet;
 
 use fuels_types::{errors::Error, utils::extract_generic_name};
-use proc_macro2::{Ident, TokenStream};
+use proc_macro2::TokenStream;
 use quote::quote;
 
 use crate::{
     code_gen::{abi_types::FullTypeDeclaration, utils::Component},
     utils::ident,
 };
-
-/// These TryFrom implementations improve devx by enabling users to easily
-/// construct contract types from bytes. These are generated due to the orphan
-/// rule prohibiting us from specifying an implementation for all possible
-/// types.
-///
-/// # Arguments
-///
-/// * `ident`: The name of the struct/enum for which we're generating the code.
-/// * `generics`: The generic types of the struct/enum -- i.e. For MyStruct<T,
-///               K> it would be ['T', 'K']
-///
-/// returns: a TokenStream containing the three TryFrom implementations for a
-/// &[u8], &Vec<u8> and a Vec<u8>
-pub(crate) fn impl_try_from(ident: &Ident, generics: &[TokenStream]) -> TokenStream {
-    quote! {
-        impl<#(#generics: ::fuels::types::traits::Tokenizable + ::fuels::types::traits::Parameterize),*> TryFrom<&[u8]> for self::#ident<#(#generics),*> {
-            type Error = ::fuels::types::errors::Error;
-
-            fn try_from(bytes: &[u8]) -> ::std::result::Result<Self, Self::Error> {
-                ::fuels::core::try_from_bytes(bytes)
-            }
-        }
-        impl<#(#generics: ::fuels::types::traits::Tokenizable + ::fuels::types::traits::Parameterize),*> TryFrom<&::std::vec::Vec<u8>> for self::#ident<#(#generics),*> {
-            type Error = ::fuels::types::errors::Error;
-
-            fn try_from(bytes: &::std::vec::Vec<u8>) -> ::std::result::Result<Self, Self::Error> {
-                ::fuels::core::try_from_bytes(&bytes)
-            }
-        }
-
-        impl<#(#generics: ::fuels::types::traits::Tokenizable + ::fuels::types::traits::Parameterize),*> TryFrom<::std::vec::Vec<u8>> for self::#ident<#(#generics),*> {
-            type Error = ::fuels::types::errors::Error;
-
-            fn try_from(bytes: ::std::vec::Vec<u8>) -> ::std::result::Result<Self, Self::Error> {
-                ::fuels::core::try_from_bytes(&bytes)
-            }
-        }
-    }
-}
 
 /// Transforms components from inside the given `FullTypeDeclaration` into a vector
 /// of `Components`. Will fail if there are no components.
@@ -174,8 +134,8 @@ mod tests {
         assert_eq!(
             stringified_result,
             vec![
-                "< u8 as :: fuels :: core :: traits :: Parameterize > :: param_type ()",
-                "< SomeStruct :: < T , K > as :: fuels :: core :: traits :: Parameterize > :: param_type ()"
+                "< u8 as :: fuels :: types :: traits :: Parameterize > :: param_type ()",
+                "< SomeStruct :: < T , K > as :: fuels :: types :: traits :: Parameterize > :: param_type ()"
             ]
         )
     }

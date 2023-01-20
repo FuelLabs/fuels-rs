@@ -11,6 +11,7 @@ use crate::{
     parameterize_macro::generate_parameterize_impl,
     setup_contract_test_macro::{generate_setup_contract_test_code, TestContractCommands},
     tokonizable_macro::generate_tokenizable_impl,
+    try_from_macro::generate_try_from_impl,
 };
 
 mod abigen_macro;
@@ -18,6 +19,7 @@ mod parameterize_macro;
 mod parse_utils;
 mod setup_contract_test_macro;
 mod tokonizable_macro;
+mod try_from_macro;
 
 /// Used to generate bindings for Contracts, Scripts and Predicates. Accepts
 /// input in the form of `ProgramType(name="MyBindings", abi=ABI_SOURCE)...`
@@ -98,6 +100,15 @@ pub fn tokenizable(stream: TokenStream) -> TokenStream {
     let input = parse_macro_input!(stream as DeriveInput);
 
     generate_tokenizable_impl(input)
+        .unwrap_or_else(|e| e.to_compile_error())
+        .into()
+}
+
+#[proc_macro_derive(TryFrom)]
+pub fn try_from(stream: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(stream as DeriveInput);
+
+    generate_try_from_impl(input)
         .unwrap_or_else(|e| e.to_compile_error())
         .into()
 }

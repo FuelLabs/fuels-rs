@@ -7,7 +7,7 @@ use quote::quote;
 use crate::{
     code_gen::{
         abi_types::FullTypeDeclaration,
-        custom_types::utils::{extract_components, extract_generic_parameters, impl_try_from},
+        custom_types::utils::{extract_components, extract_generic_parameters},
         generated_code::GeneratedCode,
         type_path::TypePath,
         utils::{param_type_calls, Component},
@@ -36,7 +36,6 @@ pub(crate) fn expand_custom_enum(
     let enum_def = enum_decl(&enum_ident, &components, &generics);
     let parameterize_impl = enum_parameterize_impl(&enum_ident, &components, &generics);
     let tokenize_impl = enum_tokenizable_impl(&enum_ident, &components, &generics);
-    let try_from = impl_try_from(&enum_ident, &generics);
 
     let code = quote! {
         #enum_def
@@ -44,8 +43,6 @@ pub(crate) fn expand_custom_enum(
         #parameterize_impl
 
         #tokenize_impl
-
-        #try_from
     };
     Ok(GeneratedCode {
         code,
@@ -77,7 +74,13 @@ fn enum_decl(
 
     quote! {
         #[allow(clippy::enum_variant_names)]
-        #[derive(Clone, Debug, Eq, PartialEq)]
+        #[derive(
+            Clone,
+            Debug,
+            Eq,
+            PartialEq,
+            ::fuels::fuels_abigen::TryFrom
+        )]
         pub enum #enum_ident <#(#generics: ::fuels::types::traits::Tokenizable + ::fuels::types::traits::Parameterize),*> {
             #(#enum_variants),*
         }
