@@ -14,11 +14,11 @@ proc-macro = true
 [dependencies]
 Inflector = "0.11"
 fuels-core = { version = "0.33.0", path = "../fuels-core" }
+itertools = "0.10.5"
 proc-macro2 = "1.0"
 quote = "1.0"
 rand = "0.8"
 syn = "1.0.12"
-itertools = "0.10.5"
 
 [dev-dependencies]
 trybuild = "1.0.73"

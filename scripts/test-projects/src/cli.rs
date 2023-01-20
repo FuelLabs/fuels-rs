@@ -3,18 +3,12 @@ use std::path::PathBuf;
 use clap::{command, Parser, Subcommand};
 
 const TESTS_PATH: &str = "packages/fuels/tests/";
-const NUM_CONCURRENT: usize = 8;
 
 #[derive(Parser)]
 #[command(name = "test-projects", version, about, propagate_version = true)]
 pub struct Cli {
     #[command(subcommand)]
     pub command: CliCommand,
-
-    /// Number of concurrent projects
-    #[arg(short, long, default_value_t = NUM_CONCURRENT)]
-    #[arg(value_name = "NUM")]
-    pub num_concurrent: usize,
 
     /// Specify where to find `forc` and `forc-fmt`
     #[arg(long, value_name = "DIR")]
@@ -43,7 +37,6 @@ pub struct RunConfig {
     pub project_path: PathBuf,
     pub bin_path: PathBuf,
     pub prepared_command: PreparedCommand,
-    pub num_concurrent: usize,
 }
 
 pub struct PreparedCommand {
@@ -103,7 +96,6 @@ pub fn parse_cli() -> RunConfig {
     };
 
     RunConfig {
-        num_concurrent: cli.num_concurrent,
         project_path,
         bin_path,
         prepared_command,
