@@ -10,17 +10,15 @@ description = "Fuel Rust SDK test helpers."
 
 [dependencies]
 anyhow = { version = "1.0.58" }
-fuel-vm = "0.22"
-fuel-tx = "0.23"
-fuel-core = { version = "0.15", default-features = false, optional = true }
 fuel-chain-config = { version = "0.15", default-features = false }
 fuel-core = { version = "0.15", default-features = false, optional = true }
 fuel-core-interfaces = { version = "0.15", default-features = false }
 fuel-gql-client = { version = "0.15", default-features = false }
 fuel-tx = "0.23"
 fuel-types = { version = "0.5", default-features = false, features = ["random"] }
-fuels-programs = { version = "0.34.0", path = "../fuels-programs" }
+fuel-vm = "0.22"
 fuels-core = { version = "0.34.0", path = "../fuels-core" }
+fuels-programs = { version = "0.34.0", path = "../fuels-programs" }
 fuels-signers = { version = "0.34.0", path = "../fuels-signers", optional = true }
 fuels-types = { version = "0.34.0", path = "../fuels-types" }
 hex = { version = "0.4.3", default-features = false, features = ["std", "serde"] }
