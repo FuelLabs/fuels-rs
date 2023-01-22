@@ -1,6 +1,6 @@
 use std::{fmt::Debug, vec};
 
-use fuel_tx::{AssetId, Checkable, Receipt, Script, ScriptExecutionResult, Transaction, Input, Output, ContractId, Address, Bytes32};
+use fuel_tx::{AssetId, Checkable, Receipt, Script, ScriptExecutionResult, Transaction, Input, Output, ContractId, Address, Bytes32, Witness};
 use fuel_types::bytes::WORD_SIZE;
 use fuel_vm::{prelude::{Opcode, GTFArgs}, consts::REG_ONE};
 use fuels_core::{offsets::call_script_data_offset, parameters::TxParameters, constants::BASE_ASSET_ID};
@@ -15,16 +15,53 @@ use crate::{
     contract::ContractCall,
 };
 
+use fuel_tx::field::{
+        GasLimit, GasPrice, Inputs, Maturity, Outputs, Script as ScriptField,
+        ScriptData, Witnesses,
+    };
+
 /// [`ExecutableFuelCall`] provides methods to create and call/simulate a transaction that carries
 /// out contract method calls or script calls
 #[derive(Debug)]
 pub struct ExecutableFuelCall {
-    pub tx: Script,
+    pub(crate) tx: Script,
 }
 
 impl ExecutableFuelCall {
     pub fn new(tx: Script) -> Self {
         Self { tx }
+    }
+
+    pub fn gas_price(&self) -> u64 {
+        *self.tx.gas_price()
+    }
+
+    pub fn gas_limit(&self) -> u64 {
+        *self.tx.gas_limit()
+    }
+
+    pub fn maturity(&self) -> u64 {
+        *self.tx.maturity()
+    }
+
+    pub fn script(&self) -> &Vec<u8> {
+        self.tx.script()
+    }
+
+    pub fn script_data(&self) -> &Vec<u8> {
+        self.tx.script_data()
+    }
+
+    pub fn inputs(&self) -> &Vec<Input> {
+        self.tx.inputs()
+    }
+
+    pub fn outputs(&self) -> &Vec<Output> {
+        self.tx.outputs()
+    }
+
+    pub fn witnesses(&self) -> &Vec<Witness> {
+        self.tx.witnesses()
     }
 
     /// Creates a [`ExecutableFuelCall`] from contract calls. The internal [Transaction] is
@@ -85,7 +122,7 @@ impl ExecutableFuelCall {
     }
 
       /// Craft a transaction used to transfer funds between two addresses.
-      pub fn build_transfer_tx(inputs: &[Input], outputs: &[Output], params: TxParameters) -> Self {
+    pub fn build_transfer_tx(inputs: &[Input], outputs: &[Output], params: TxParameters) -> Self {
         // This script is empty, since all this transaction does is move Inputs and Outputs around.
         let tx = Transaction::script(
             params.gas_price,

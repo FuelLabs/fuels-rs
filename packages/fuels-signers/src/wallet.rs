@@ -266,113 +266,6 @@ impl Wallet {
             private_key,
         }
     }
-
-    /// Craft a transaction used to transfer funds between two addresses.
-    pub fn build_transfer_tx(inputs: &[Input], outputs: &[Output], params: TxParameters) -> Script {
-        // This script is empty, since all this transaction does is move Inputs and Outputs around.
-        Transaction::script(
-            params.gas_price,
-            params.gas_limit,
-            params.maturity,
-            vec![],
-            vec![],
-            inputs.to_vec(),
-            outputs.to_vec(),
-            vec![],
-        )
-    }
-
-    /// Craft a transaction used to transfer funds to a contract.
-    pub fn build_contract_transfer_tx(
-        to: ContractId,
-        amount: u64,
-        asset_id: AssetId,
-        inputs: &[Input],
-        outputs: &[Output],
-        params: TxParameters,
-    ) -> Script {
-        let script_data: Vec<u8> = [
-            to.to_vec(),
-            amount.to_be_bytes().to_vec(),
-            asset_id.to_vec(),
-        ]
-        .into_iter()
-        .flatten()
-        .collect();
-
-        // This script loads:
-        //  - a pointer to the contract id,
-        //  - the actual amount
-        //  - a pointer to the asset id
-        // into the registers 0x10, 0x12, 0x13
-        // and calls the TR instruction
-        let script = vec![
-            Opcode::gtf(0x10, 0x00, GTFArgs::ScriptData),
-            Opcode::ADDI(0x11, 0x10, ContractId::LEN as u16),
-            Opcode::LW(0x12, 0x11, 0),
-            Opcode::ADDI(0x13, 0x11, WORD_SIZE as u16),
-            Opcode::TR(0x10, 0x12, 0x13),
-            Opcode::RET(REG_ONE),
-        ]
-        .into_iter()
-        .collect();
-
-        Transaction::script(
-            params.gas_price,
-            params.gas_limit,
-            params.maturity,
-            script,
-            script_data,
-            inputs.to_vec(),
-            outputs.to_vec(),
-            vec![],
-        )
-    }
-
-    /// Craft a transaction used to transfer funds to the base chain.
-    pub fn build_message_to_output_tx(
-        to: Address,
-        amount: u64,
-        inputs: &[Input],
-        params: TxParameters,
-    ) -> Script {
-        let script_data: Vec<u8> = [to.to_vec(), amount.to_be_bytes().to_vec()]
-            .into_iter()
-            .flatten()
-            .collect();
-
-        // This script loads:
-        //  - a pointer to the recipient address,
-        //  - the amount
-        // into the registers 0x10, 0x11
-        // and calls the SMO instruction
-        let script = vec![
-            Opcode::gtf(0x10, 0x00, GTFArgs::ScriptData),
-            Opcode::ADDI(0x11, 0x10, Bytes32::LEN as u16),
-            Opcode::LW(0x11, 0x11, 0),
-            Opcode::SMO(0x10, 0x00, 0x00, 0x11),
-            Opcode::RET(REG_ONE),
-        ]
-        .into_iter()
-        .collect();
-
-        let outputs = vec![
-            // when signing a transaction, recipient and amount are set to zero
-            Output::message(Address::zeroed(), 0),
-            Output::change(to, 0, BASE_ASSET_ID),
-        ];
-
-        Transaction::script(
-            params.gas_price,
-            params.gas_limit,
-            params.maturity,
-            script,
-            script_data,
-            inputs.to_vec(),
-            outputs.to_vec(),
-            vec![],
-        )
-    }
 }
 
 impl WalletUnlocked {
@@ -606,7 +499,7 @@ impl WalletUnlocked {
             .await?;
         let outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
 
-        let mut tx = Wallet::build_transfer_tx(&inputs, &outputs, tx_parameters);
+        let mut tx = ExecutableFuelCall::build_transfer_tx(&inputs, &outputs, tx_parameters);
 
         // if we are not transferring the base asset, previous base amount is 0
         if asset_id == AssetId::default() {
@@ -634,7 +527,7 @@ impl WalletUnlocked {
             .get_asset_inputs_for_amount(BASE_ASSET_ID, amount, 0)
             .await?;
 
-        let mut tx = Wallet::build_message_to_output_tx(to.into(), amount, &inputs, tx_parameters);
+        let mut tx = ExecutableFuelCall::build_message_to_output_tx(to.into(), amount, &inputs, tx_parameters);
 
         self.add_fee_resources(&mut tx, amount, 0).await?;
         self.sign_transaction(&mut tx).await?;
@@ -810,7 +703,7 @@ impl WalletUnlocked {
         ];
 
         // Build transaction and sign it
-        let mut tx = Wallet::build_contract_transfer_tx(
+        let mut tx = ExecutableFuelCall::build_contract_transfer_tx(
             plain_contract_id,
             balance,
             asset_id,
