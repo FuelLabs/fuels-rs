@@ -1009,6 +1009,37 @@ async fn test_add_custom_assets() -> Result<(), Error> {
     let balance_asset_2 = wallet_1.get_asset_balance(&asset_id_2).await?;
     assert_eq!(balance_asset_1, initial_amount - amount_1);
     assert_eq!(balance_asset_2, initial_amount - amount_2);
+ 
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_deploy_error_messages() -> Result<(), Error> {
+    let wallet = launch_provider_and_get_wallet().await;
+    let mut response = Contract::deploy(
+        "../../packages/fuels/tests/contracts/contract_test/out/debug/no_file_on_path.bin",
+        &wallet,
+        TxParameters::default(),
+        StorageConfiguration::default(),
+    )
+    .await
+    .expect_err("Should have failed");
+
+    let expected = "Invalid data: Failed to read binary file with path";
+    assert!(response.to_string().starts_with(expected));
+
+    response = Contract::deploy(
+        "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.biz",
+        &wallet,
+        TxParameters::default(),
+        StorageConfiguration::default(),
+    )
+    .await
+    .expect_err("Should have failed");
+
+    let expected = "Invalid data: The file extension 'biz' is not recognized. Did you mean '.bin'?";
+    assert!(response.to_string().starts_with(expected));
 
     Ok(())
 }
+
