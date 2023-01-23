@@ -12,7 +12,7 @@ use fuel_chain_config::StateConfig;
 #[cfg(feature = "fuel-core-lib")]
 pub use fuel_core::service::Config;
 #[cfg(feature = "fuel-core-lib")]
-use fuel_core::service::{DbType, FuelService};
+use fuel_core::service::FuelService;
 use fuel_gql_client::client::FuelClient;
 use fuel_tx::{Bytes32, ConsensusParameters, UtxoId};
 use fuels_core::constants::BASE_ASSET_ID;
@@ -28,7 +28,7 @@ pub use node::{get_socket_address, new_fuel_node, Config};
 use portpicker::is_free;
 use rand::Fill;
 #[cfg(feature = "fuel-core-lib")]
-pub use utils::{get_coin_configs, get_message_configs};
+pub use utils::{into_coin_configs, into_message_configs};
 
 #[cfg(not(feature = "fuel-core-lib"))]
 pub mod node;
@@ -152,36 +152,23 @@ pub async fn setup_test_client(
     chain_config: Option<ChainConfig>,
     consensus_parameters_config: Option<ConsensusParameters>,
 ) -> (FuelClient, SocketAddr) {
-    let coin_configs = get_coin_configs(coins);
-    let message_configs = get_message_configs(messages);
+    let coin_configs = into_coin_configs(coins);
+    let message_configs = into_message_configs(messages);
+    let mut chain_conf = chain_config.unwrap_or_else(ChainConfig::local_testnet);
 
-    // Setup node config with genesis coins and utxo_validation enabled
-    let chain_conf = {
-        let chain_conf = chain_config.unwrap_or_else(|| ChainConfig {
-            initial_state: Some(StateConfig {
-                coins: Some(coin_configs),
-                contracts: None,
-                messages: Some(message_configs),
-                ..StateConfig::default()
-            }),
-            ..ChainConfig::local_testnet()
-        });
+    chain_conf.initial_state = Some(StateConfig {
+        coins: Some(coin_configs),
+        contracts: None,
+        messages: Some(message_configs),
+        ..StateConfig::default()
+    });
 
-        if let Some(transaction_parameters) = consensus_parameters_config {
-            ChainConfig {
-                transaction_parameters,
-                ..chain_conf
-            }
-        } else {
-            chain_conf
-        }
-    };
+    if let Some(transaction_parameters) = consensus_parameters_config {
+        chain_conf.transaction_parameters = transaction_parameters;
+    }
 
-    let config = Config {
-        chain_conf,
-        database_type: DbType::InMemory,
-        ..node_config.unwrap_or_else(Config::local_node)
-    };
+    let mut config = node_config.unwrap_or_else(Config::local_node);
+    config.chain_conf = chain_conf;
 
     let srv = FuelService::new_node(config).await.unwrap();
     let client = FuelClient::from(srv.bound_address);

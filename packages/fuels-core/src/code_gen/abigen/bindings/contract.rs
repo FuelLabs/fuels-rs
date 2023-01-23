@@ -50,11 +50,11 @@ pub(crate) fn contract_bindings(
                 Self { contract_id, wallet, log_decoder }
             }
 
-            pub fn get_contract_id(&self) -> &::fuels::types::bech32::Bech32ContractId {
+            pub fn contract_id(&self) -> &::fuels::types::bech32::Bech32ContractId {
                 &self.contract_id
             }
 
-            pub fn get_wallet(&self) -> ::fuels::signers::wallet::WalletUnlocked {
+            pub fn wallet(&self) -> ::fuels::signers::wallet::WalletUnlocked {
                 self.wallet.clone()
             }
 

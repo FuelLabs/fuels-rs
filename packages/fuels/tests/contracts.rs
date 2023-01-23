@@ -61,8 +61,8 @@ async fn test_contract_calling_contract() -> Result<(), Error> {
             wallet = "wallet"
         ),
     );
-    let lib_contract_id = lib_contract_instance.get_contract_id();
-    let lib_contract_id2 = lib_contract_instance2.get_contract_id();
+    let lib_contract_id = lib_contract_instance.contract_id();
+    let lib_contract_id2 = lib_contract_instance2.contract_id();
 
     // Call the contract directly. It increments the given value.
     let response = lib_contract_instance.methods().increment(42).call().await?;
@@ -468,11 +468,11 @@ async fn test_contract_setup_macro_deploy_with_salt() -> Result<(), Error> {
             wallet = "wallet"
         ),
     );
-    let lib_contract_id = lib_contract_instance.get_contract_id();
+    let lib_contract_id = lib_contract_instance.contract_id();
 
-    let contract_caller_id = contract_caller_instance.get_contract_id();
+    let contract_caller_id = contract_caller_instance.contract_id();
 
-    let contract_caller_id2 = contract_caller_instance2.get_contract_id();
+    let contract_caller_id2 = contract_caller_instance2.contract_id();
 
     // Because we deploy with salt, we can deploy the same contract multiple times
     assert_ne!(contract_caller_id, contract_caller_id2);
@@ -515,8 +515,8 @@ async fn test_wallet_getter() -> Result<(), Error> {
         ),
     );
 
-    assert_eq!(contract_instance.get_wallet().address(), wallet.address());
-    //`get_contract_id()` is tested in
+    assert_eq!(contract_instance.wallet().address(), wallet.address());
+    //`contract_id()` is tested in
     // async fn test_contract_calling_contract() -> Result<(), Error> {
     Ok(())
 }
@@ -732,7 +732,7 @@ async fn test_contract_instance_get_balances() -> Result<(), Error> {
             wallet = "wallet"
         ),
     );
-    let contract_id = contract_instance.get_contract_id();
+    let contract_id = contract_instance.contract_id();
 
     // Check the current balance of the contract with id 'contract_id'
     let contract_balances = contract_instance.get_balances().await?;
@@ -815,7 +815,7 @@ async fn test_contract_set_estimation() -> Result<(), Error> {
             wallet = "wallet"
         ),
     );
-    let lib_contract_id = lib_contract_instance.get_contract_id();
+    let lib_contract_id = lib_contract_instance.contract_id();
 
     let res = lib_contract_instance.methods().increment(42).call().await?;
     assert_eq!(43, res.value);
@@ -875,7 +875,7 @@ async fn test_output_variable_contract_id_estimation_multicall() -> Result<(), E
         ),
     );
 
-    let lib_contract_id = lib_contract_instance.get_contract_id();
+    let lib_contract_id = lib_contract_instance.contract_id();
 
     let contract_methods = contract_caller_instance.methods();
 
@@ -941,6 +941,35 @@ async fn test_contract_call_with_non_default_max_input() -> Result<(), Error> {
     let response = contract_instance.methods().get(5, 6).call().await?;
 
     assert_eq!(response.value, 5);
+
+    Ok(())
+}
+#[tokio::test]
+async fn test_deploy_error_messages() -> Result<(), Error> {
+    let wallet = launch_provider_and_get_wallet().await;
+    let mut response = Contract::deploy(
+        "../../packages/fuels/tests/contracts/contract_test/out/debug/no_file_on_path.bin",
+        &wallet,
+        TxParameters::default(),
+        StorageConfiguration::default(),
+    )
+    .await
+    .expect_err("Should have failed");
+
+    let expected = "Invalid data: Failed to read binary file with path";
+    assert!(response.to_string().starts_with(expected));
+
+    response = Contract::deploy(
+        "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.biz",
+        &wallet,
+        TxParameters::default(),
+        StorageConfiguration::default(),
+    )
+    .await
+    .expect_err("Should have failed");
+
+    let expected = "Invalid data: The file extension 'biz' is not recognized. Did you mean '.bin'?";
+    assert!(response.to_string().starts_with(expected));
 
     Ok(())
 }
