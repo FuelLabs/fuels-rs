@@ -971,6 +971,8 @@ async fn test_contract_raw_slice() -> Result<(), Error> {
         let response = contract_methods.return_raw_slice(length).call().await?;
         assert_eq!(response.value, (0..length).collect::<Vec<_>>());
     }
+
+    Ok(())
 }
 
 #[tokio::test]
