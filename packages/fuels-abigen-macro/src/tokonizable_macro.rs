@@ -1,52 +1,40 @@
-use proc_macro2::TokenStream;
+use proc_macro2::{Ident, TokenStream};
 use quote::quote;
-use syn::{
-    Data, DataEnum, DataStruct, DeriveInput, Error,
-    Fields::{Unit, Unnamed},
-};
+use syn::{Data, DataEnum, DataStruct, DeriveInput, Error, Fields, Generics};
+
+use parse_utils::extract_struct_members;
+
+use crate::parse_utils;
 
 pub fn generate_tokenizable_impl(input: DeriveInput) -> syn::Result<TokenStream> {
-    match &input.data {
-        Data::Struct(struct_contents) => tokenizable_struct(&input, struct_contents),
-        Data::Enum(enum_contents) => tokenizable_enum(&input, enum_contents),
-        _ => {
-            panic!("Union type is not supported")
+    match input.data {
+        Data::Struct(struct_contents) => {
+            tokenizable_for_struct(input.ident, input.generics, struct_contents)
         }
+        Data::Enum(enum_contents) => {
+            tokenizable_for_enum(input.ident, input.generics, enum_contents)
+        }
+        _ => Err(Error::new_spanned(input, "Union type is not supported")),
     }
 }
 
-fn tokenizable_struct(
-    input: &DeriveInput,
-    struct_contents: &DataStruct,
+fn tokenizable_for_struct(
+    name: Ident,
+    generics: Generics,
+    contents: DataStruct,
 ) -> Result<TokenStream, Error> {
-    let struct_name = &input.ident;
+    let (impl_gen, type_gen, where_clause) = generics.split_for_impl();
 
-    let (impl_gen, type_gen, where_clause) = input.generics.split_for_impl();
+    let struct_name_str = name.to_string();
 
-    let struct_name_str = struct_name.to_string();
-
-    let from_token_calls = &struct_contents
-        .fields
-        .iter()
-        .filter_map(|field| field.ident.as_ref())
-        .map(|ident| {
-            quote! {#ident: ::fuels::types::traits::Tokenizable::from_token(next_token()?)?}
-        })
-        .collect::<Vec<_>>();
-
-    let into_token_calls = &struct_contents
-        .fields
-        .iter()
-        .filter_map(|field| field.ident.as_ref())
-        .map(|ident| {
-            quote! {self.#ident.into_token()}
-        })
+    let field_names = extract_struct_members(contents.fields)?
+        .names()
         .collect::<Vec<_>>();
 
     Ok(quote! {
-        impl #impl_gen ::fuels::types::traits::Tokenizable for #struct_name #type_gen #where_clause {
+        impl #impl_gen ::fuels::types::traits::Tokenizable for #name #type_gen #where_clause {
             fn into_token(self) -> ::fuels::types::Token {
-                let tokens = [#(#into_token_calls),*].to_vec();
+                let tokens = [#(::fuels::types::traits::Tokenizable::into_token(self.#field_names)),*].to_vec();
                 ::fuels::types::Token::Struct(tokens)
             }
 
@@ -58,7 +46,12 @@ fn tokenizable_struct(
                             .next()
                             .ok_or_else(|| { ::fuels::types::errors::Error::InstantiationError(format!("Ran out of tokens before '{}' has finished construction!", #struct_name_str)) })
                         };
-                        ::std::result::Result::Ok(Self { #( #from_token_calls, )* })
+                        ::std::result::Result::Ok(Self {
+                            #(
+                                #field_names: ::fuels::types::traits::Tokenizable::from_token(next_token()?)?
+                             ),*
+
+                        })
                     },
                     other => ::std::result::Result::Err(::fuels::types::errors::Error::InstantiationError(format!("Error while constructing '{}'. Expected token of type Token::Struct, got {:?}", #struct_name_str, other))),
                 }
@@ -67,10 +60,12 @@ fn tokenizable_struct(
     })
 }
 
-fn tokenizable_enum(input: &DeriveInput, enum_contents: &DataEnum) -> Result<TokenStream, Error> {
-    let enum_name = &input.ident;
-
-    let (impl_gen, type_gen, where_clause) = input.generics.split_for_impl();
+fn tokenizable_for_enum(
+    enum_name: Ident,
+    generics: Generics,
+    enum_contents: DataEnum,
+) -> Result<TokenStream, Error> {
+    let (impl_gen, type_gen, where_clause) = generics.split_for_impl();
 
     let enum_name_str = enum_name.to_string();
 
@@ -83,10 +78,10 @@ fn tokenizable_enum(input: &DeriveInput, enum_contents: &DataEnum) -> Result<Tok
 
             //TODO: use something else then 0,1,2
             let field = match &variant.fields {
-                Unnamed(fields_unnamed) => {
+                Fields::Unnamed(fields_unnamed) => {
                     fields_unnamed.unnamed.iter().next().map(|_| 0).unwrap_or(1)
                 }
-                Unit => 2,
+                Fields::Unit => 2,
                 //TODO: make nice syn error from this
                 _ => panic!("Named variants not supported"),
             };
@@ -161,4 +156,22 @@ fn tokenizable_enum(input: &DeriveInput, enum_contents: &DataEnum) -> Result<Tok
             }
         }
     })
+}
+
+enum SomeEnum {
+    a(),
+    b,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn sa() {
+        match SomeEnum::b {
+            SomeEnum::a() => {}
+            SomeEnum::b => {}
+        }
+    }
 }

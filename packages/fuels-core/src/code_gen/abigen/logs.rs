@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use fuel_abi_types::program_abi::ResolvedLog;
 use proc_macro2::TokenStream;
-use quote::quote;
+use quote::{quote, ToTokens};
 
 use crate::code_gen::{
     abi_types::{FullLoggedType, FullTypeDeclaration},
@@ -34,7 +34,7 @@ fn resolve_logs(
             let resolved_type =
                 resolve_type(&l.application, shared_types).expect("Failed to resolve log type");
             let param_type_call = single_param_type_call(&resolved_type);
-            let resolved_type_name = TokenStream::from(resolved_type);
+            let resolved_type_name = resolved_type.to_token_stream();
 
             ResolvedLog {
                 log_id: l.log_id,

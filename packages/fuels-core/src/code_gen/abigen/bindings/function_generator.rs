@@ -1,8 +1,9 @@
 use std::collections::HashSet;
 
-use fuels_types::errors::Error;
 use proc_macro2::TokenStream;
-use quote::quote;
+use quote::{quote, ToTokens};
+
+use fuels_types::errors::Error;
 
 use crate::{
     code_gen::{
@@ -34,7 +35,7 @@ impl FunctionGenerator {
         Ok(Self {
             name: fun.name().to_string(),
             args,
-            output_type: output_type.into(),
+            output_type: output_type.to_token_stream(),
             body: Default::default(),
             doc: None,
         })
@@ -115,7 +116,7 @@ impl From<&FunctionGenerator> for TokenStream {
 
         let arg_declarations = fun.args.iter().map(|component| {
             let name = &component.field_name;
-            let field_type: TokenStream = (&component.field_type).into();
+            let field_type = &component.field_type;
             quote! { #name: #field_type }
         });
 

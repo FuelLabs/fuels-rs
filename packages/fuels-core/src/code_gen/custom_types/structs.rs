@@ -1,8 +1,9 @@
 use std::collections::HashSet;
 
-use fuels_types::{errors::Error, utils::custom_type_name};
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
+
+use fuels_types::{errors::Error, utils::custom_type_name};
 
 use crate::{
     code_gen::{
@@ -28,16 +29,13 @@ pub(crate) fn expand_custom_struct(
     let components = extract_components(type_decl, true, shared_types)?;
     let generic_parameters = extract_generic_parameters(type_decl)?;
 
-    let struct_decl = struct_decl(&struct_ident, &components, &generic_parameters);
+    let code = struct_decl(&struct_ident, &components, &generic_parameters);
 
-    let code = quote! {
-        #struct_decl
-    };
+    let struct_type_path = TypePath::new(&struct_name).expect("Struct name is not empty!");
+
     Ok(GeneratedCode {
         code,
-        usable_types: HashSet::from([
-            TypePath::new(&struct_name).expect("Struct name is not empty!")
-        ]),
+        usable_types: HashSet::from([struct_type_path]),
     })
 }
 
@@ -51,7 +49,6 @@ fn struct_decl(
              field_name,
              field_type,
          }| {
-            let field_type: TokenStream = field_type.into();
             quote! { pub #field_name: #field_type }
         },
     );

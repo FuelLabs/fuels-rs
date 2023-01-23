@@ -1,9 +1,10 @@
 use std::collections::HashSet;
 
-use fuels_types::errors::Error;
 use inflector::Inflector;
 use proc_macro2::{Ident, TokenStream};
-use quote::quote;
+use quote::{quote, ToTokens};
+
+use fuels_types::errors::Error;
 
 use crate::{
     code_gen::{
@@ -59,8 +60,9 @@ pub(crate) fn single_param_type_call(field_type: &ResolvedType) -> TokenStream {
     let parameters = field_type
         .generic_params
         .iter()
-        .map(TokenStream::from)
+        .map(|resolved_type| resolved_type.to_token_stream())
         .collect::<Vec<_>>();
+
     if parameters.is_empty() {
         quote! { <#type_name as ::fuels::types::traits::Parameterize>::param_type() }
     } else {

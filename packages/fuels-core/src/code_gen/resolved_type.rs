@@ -3,6 +3,11 @@ use std::{
     fmt::{Display, Formatter},
 };
 
+use lazy_static::lazy_static;
+use proc_macro2::TokenStream;
+use quote::{quote, ToTokens};
+use regex::Regex;
+
 use fuels_types::{
     errors::Error,
     utils::{
@@ -10,10 +15,6 @@ use fuels_types::{
         has_tuple_format,
     },
 };
-use lazy_static::lazy_static;
-use proc_macro2::TokenStream;
-use quote::{quote, ToTokens};
-use regex::Regex;
 
 use crate::{
     code_gen::{
@@ -48,28 +49,24 @@ impl ResolvedType {
     }
 }
 
+impl ToTokens for ResolvedType {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let type_name = &self.type_name;
+
+        let tokenized_type = if self.generic_params.is_empty() {
+            type_name.clone()
+        } else {
+            let generic_params = self.generic_params.iter().map(ToTokens::to_token_stream);
+
+            quote! { #type_name<#( #generic_params ),*> }
+        };
+
+        tokens.extend(tokenized_type)
+    }
+}
 impl Display for ResolvedType {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", TokenStream::from(self.clone()))
-    }
-}
-
-impl From<&ResolvedType> for TokenStream {
-    fn from(resolved_type: &ResolvedType) -> Self {
-        let type_name = &resolved_type.type_name;
-        if resolved_type.generic_params.is_empty() {
-            return quote! { #type_name };
-        }
-
-        let generic_params = resolved_type.generic_params.iter().map(TokenStream::from);
-
-        quote! { #type_name<#( #generic_params ),*> }
-    }
-}
-
-impl From<ResolvedType> for TokenStream {
-    fn from(resolved_type: ResolvedType) -> Self {
-        (&resolved_type).into()
+        write!(f, "{}", self.to_token_stream())
     }
 }
 
@@ -139,8 +136,9 @@ fn to_array(
 ) -> Option<ResolvedType> {
     let len = extract_array_len(type_field)?;
 
-    let type_inside: TokenStream = match components_supplier().as_slice() {
-        [single_type] => Ok(single_type.into()),
+    let components = components_supplier();
+    let type_inside = match components.as_slice() {
+        [single_type] => Ok(single_type),
         other => Err(Error::InvalidData(format!(
             "Array must have only one component! Actual components: {other:?}"
         ))),
@@ -179,7 +177,7 @@ fn to_tuple(
     _: bool,
 ) -> Option<ResolvedType> {
     if has_tuple_format(type_field) {
-        let inner_types = components_supplier().into_iter().map(TokenStream::from);
+        let inner_types = components_supplier();
 
         // it is important to leave a trailing comma because a tuple with
         // one element is written as (element,) not (element) which is
@@ -297,7 +295,7 @@ mod tests {
         let application = FullTypeApplication::from_counterpart(&type_application, &types);
         let resolved_type = resolve_type(&application, &HashSet::default())
             .with_context(|| format!("failed to resolve {:?}", &type_application))?;
-        let actual = TokenStream::from(&resolved_type).to_string();
+        let actual = resolved_type.to_token_stream().to_string();
 
         assert_eq!(actual, expected);
 

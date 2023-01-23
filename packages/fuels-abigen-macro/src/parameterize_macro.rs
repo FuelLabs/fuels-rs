@@ -1,60 +1,46 @@
-use proc_macro2::TokenStream;
+use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
-use syn::{
-    Data, DataEnum, DataStruct, DeriveInput, Error,
-    Fields::{Unit, Unnamed},
-};
+use syn::{Data, DataEnum, DataStruct, DeriveInput, Error, Fields, Generics};
+
+use parse_utils::extract_enum_members;
+
+use crate::parse_utils;
+use crate::parse_utils::{extract_generic_types, extract_struct_members, Members};
 
 pub fn generate_parameterize_impl(input: DeriveInput) -> syn::Result<TokenStream> {
-    match &input.data {
-        Data::Struct(struct_contents) => parameterize_struct(&input, struct_contents),
-        Data::Enum(enum_contents) => parameterize_enum(&input, enum_contents),
-        _ => {
-            panic!("Union type is not supported")
+    match input.data {
+        Data::Struct(struct_contents) => {
+            parameterize_for_struct(input.ident, input.generics, struct_contents)
         }
+        Data::Enum(enum_contents) => {
+            parameterize_for_enum(input.ident, input.generics, enum_contents)
+        }
+        _ => Err(Error::new_spanned(input, "Union type is not supported")),
     }
 }
 
-fn parameterize_struct(
-    input: &DeriveInput,
-    struct_contents: &DataStruct,
+fn parameterize_for_struct(
+    name: Ident,
+    generics: Generics,
+    contents: DataStruct,
 ) -> Result<TokenStream, Error> {
-    let struct_name = &input.ident;
+    let (impl_gen, type_gen, where_clause) = generics.split_for_impl();
 
-    let (impl_gen, type_gen, where_clause) = input.generics.split_for_impl();
+    let name_stringified = name.to_string();
 
-    let struct_name_str = struct_name.to_string();
-    let field_pairs = &struct_contents.fields
-        .iter()
-        .map(|field| {
-            let ident = field.ident.as_ref().unwrap().to_string();
-            let ttype = field.ty.to_token_stream();
+    let members = extract_struct_members(contents.fields)?;
 
-            quote! {(#ident.to_string(), <#ttype as ::fuels::types::traits::Parameterize>::param_type())}
-        })
-        .collect::<Vec<_>>();
+    let field_names = members.names_as_strings();
+    let param_type_calls = members.param_type_calls();
 
-    let generic_param_types = input
-        .generics
-        .params
-        .iter()
-        .map(|generic_param| match generic_param {
-            syn::GenericParam::Type(type_param) => {
-                let ident = &type_param.ident;
-                quote! {<#ident as ::fuels::types::traits::Parameterize>::param_type()}
-            }
-            _ => {
-                panic!("Should only have types as generics")
-            }
-        })
-        .collect::<Vec<_>>();
+    let generic_param_types = parameterize_generic_params(&generics)?;
 
     Ok(quote! {
-        impl #impl_gen ::fuels::types::traits::Parameterize for #struct_name #type_gen #where_clause {
+        impl #impl_gen ::fuels::types::traits::Parameterize for #name #type_gen #where_clause {
             fn param_type() -> ::fuels::types::param_types::ParamType {
                 ::fuels::types::param_types::ParamType::Struct{
-                    name: #struct_name_str.to_string(),
-                    fields: vec![#(#field_pairs),*],
+                    name: #name_stringified.to_string(),
+                    fields: vec![#((#field_names, #param_type_calls)),*],
                     generics: vec![#(#generic_param_types),*],
                 }
             }
@@ -62,53 +48,42 @@ fn parameterize_struct(
     })
 }
 
-fn parameterize_enum(input: &DeriveInput, enum_contents: &DataEnum) -> Result<TokenStream, Error> {
-    let enum_name = &input.ident;
-
-    let (impl_gen, type_gen, where_clause) = input.generics.split_for_impl();
-
-    let enum_name_str = enum_name.to_string();
-
-    let variants = enum_contents.variants.iter().map(|v| {
-        let name = v.ident.to_string();
-
-        let field = match &v.fields {
-            Unnamed(fields_unnamed) => fields_unnamed
-                .unnamed
-                .iter()
-                .next()
-                .map(|f| f.ty.clone().into_token_stream())
-                .unwrap_or(quote! {()}),
-            Unit => quote! {()},
-            //TODO: make nice syn error from this
-            _ => panic!("Named variants not supported"),
-        };
-
-        quote!{ (#name.to_string(), <#field as ::fuels::types::traits::Parameterize>::param_type())}
-    });
-
-    let generic_param_types = input
-        .generics
-        .params
-        .iter()
-        .map(|generic_param| match generic_param {
-            syn::GenericParam::Type(type_param) => {
-                let ident = &type_param.ident;
-                quote! {<#ident as ::fuels::types::traits::Parameterize>::param_type()}
-            }
-            _ => {
-                panic!("Should only have types as generics")
-            }
+fn parameterize_generic_params(generics: &Generics) -> syn::Result<Vec<TokenStream>> {
+    let parameterize_calls = extract_generic_types(generics)?
+        .into_iter()
+        .map(|type_param| {
+            let ident = &type_param.ident;
+            quote! {<#ident as ::fuels::types::traits::Parameterize>::param_type()}
         })
-        .collect::<Vec<_>>();
+        .collect();
+
+    Ok(parameterize_calls)
+}
+
+fn parameterize_for_enum(
+    name: Ident,
+    generics: Generics,
+    contents: DataEnum,
+) -> Result<TokenStream, Error> {
+    let (impl_gen, type_gen, where_clause) = generics.split_for_impl();
+
+    let enum_name_str = name.to_string();
+
+    let declarations = extract_enum_members(contents.variants)?;
+
+    let variant_names = declarations.names_as_strings();
+
+    let variant_param_types = declarations.param_type_calls();
+
+    let generic_param_types = parameterize_generic_params(&generics)?;
 
     Ok(quote! {
-        impl #impl_gen ::fuels::types::traits::Parameterize for #enum_name #type_gen #where_clause {
+        impl #impl_gen ::fuels::types::traits::Parameterize for #name #type_gen #where_clause {
             fn param_type() -> ::fuels::types::param_types::ParamType {
-                let variants = [#(#variants),*].to_vec();
+                let variants = vec![#((#variant_names, #variant_param_types)),*];
 
                 let variants = ::fuels::types::enum_variants::EnumVariants::new(variants).unwrap_or_else(|_| panic!("{} has no variants which isn't allowed!", #enum_name_str));
-                ::fuels::types::param_types::ParamType::Enum{
+                ::fuels::types::param_types::ParamType::Enum {
                     name: #enum_name_str.to_string(),
                     variants,
                     generics: [#(#generic_param_types),*].to_vec()
@@ -116,4 +91,57 @@ fn parameterize_enum(input: &DeriveInput, enum_contents: &DataEnum) -> Result<To
             }
         }
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use syn::parse::{Parse, ParseStream};
+    use syn::Fields;
+
+    use super::*;
+
+    #[test]
+    fn something() -> syn::Result<()> {
+        let derive_input = syn::parse::Parser::parse2(
+            |stream: ParseStream| DeriveInput::parse(stream),
+            quote! {
+                    enum SomeEnum {
+                        a(),
+                        b
+                    }
+            },
+        )?;
+
+        let inner = match derive_input.data {
+            Data::Enum(inner) => inner,
+            _ => {
+                panic!("")
+            }
+        };
+
+        inner
+            .variants
+            .into_iter()
+            .for_each(|variant| match variant.fields {
+                Fields::Named(named) => {
+                    eprintln!("named");
+                    named
+                        .named
+                        .iter()
+                        .for_each(|f| eprintln!("{:?}: {}", f.ident, f.ty.to_token_stream()));
+                }
+                Fields::Unnamed(unnamed) => {
+                    eprintln!("unnamed");
+                    unnamed
+                        .unnamed
+                        .iter()
+                        .for_each(|f| eprintln!("{:?}: {}", f.ident, f.ty.to_token_stream()));
+                }
+                Fields::Unit => {
+                    eprintln!("unit")
+                }
+            });
+
+        panic!("Stop right there");
+    }
 }

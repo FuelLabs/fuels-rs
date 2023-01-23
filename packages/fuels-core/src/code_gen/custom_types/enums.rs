@@ -1,8 +1,9 @@
 use std::collections::HashSet;
 
-use fuels_types::{errors::Error, utils::custom_type_name};
 use proc_macro2::{Ident, TokenStream};
-use quote::quote;
+use quote::{quote, ToTokens};
+
+use fuels_types::{errors::Error, utils::custom_type_name};
 
 use crate::{
     code_gen::{
@@ -33,15 +34,13 @@ pub(crate) fn expand_custom_enum(
     }
     let generics = extract_generic_parameters(type_decl)?;
 
-    let enum_def = enum_decl(&enum_ident, &components, &generics);
+    let code = enum_decl(&enum_ident, &components, &generics);
 
-    let code = quote! {
-        #enum_def
+    let enum_type_path = TypePath::new(&enum_name).expect("Enum name is not empty!");
 
-    };
     Ok(GeneratedCode {
         code,
-        usable_types: HashSet::from([TypePath::new(&enum_name).expect("Enum name is not empty!")]),
+        usable_types: HashSet::from([enum_type_path]),
     })
 }
 
@@ -55,14 +54,10 @@ fn enum_decl(
              field_name,
              field_type,
          }| {
-            let field_type = if field_type.is_unit() {
-                quote! {}
+            if field_type.is_unit() {
+                quote! {#field_name}
             } else {
-                field_type.into()
-            };
-
-            quote! {
-                #field_name(#field_type)
+                quote! {#field_name(#field_type)}
             }
         },
     );

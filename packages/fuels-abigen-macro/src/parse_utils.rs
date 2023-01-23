@@ -1,7 +1,9 @@
-pub(crate) use command::Command;
 use itertools::{chain, Itertools};
-use quote::ToTokens;
-use syn::Error;
+use proc_macro2::{Ident, TokenStream};
+use quote::{quote, ToTokens};
+use syn::{Error, Fields, GenericParam, Generics, Type, TypeParam, Variant};
+
+pub(crate) use command::Command;
 pub(crate) use unique_lit_strs::UniqueLitStrs;
 pub(crate) use unique_name_values::UniqueNameValues;
 
@@ -79,4 +81,98 @@ where
         .into_iter()
         .map(|duplicates| generate_duplicate_error(&duplicates))
         .validate_no_errors()
+}
+
+pub(crate) fn extract_struct_members(fields: Fields) -> syn::Result<Members> {
+    let named_fields = match fields {
+        Fields::Named(named_fields) => Ok(named_fields.named),
+        Fields::Unnamed(fields) => Err(Error::new_spanned(
+            fields.unnamed,
+            "Tokenizable cannot be derived on tuple-like structs!",
+        )),
+        _ => {
+            todo!("Still don't know what are Unit fields in structs...")
+        }
+    }?;
+
+    let components = named_fields
+        .into_iter()
+        .map(|field| {
+            let name = field
+                .ident
+                .expect("FieldsNamed to only contain named fields!.");
+            let ty = field.ty.into_token_stream();
+            (name, ty)
+        })
+        .collect();
+
+    Ok(Members { components })
+}
+
+pub fn extract_generic_types(generics: &Generics) -> syn::Result<Vec<&TypeParam>> {
+    generics
+        .params
+        .iter()
+        .map(|generic_param| match generic_param {
+            GenericParam::Type(generic_type) => Ok(generic_type),
+            GenericParam::Lifetime(lifetime) => Err(Error::new_spanned(
+                lifetime,
+                "Deriving Parameterize doesn't support lifetimes",
+            )),
+            GenericParam::Const(const_generic) => Err(Error::new_spanned(
+                const_generic,
+                "Deriving Parameterize doesn't support const generics",
+            )),
+        })
+        .collect()
+}
+
+pub(crate) struct Members {
+    components: Vec<(Ident, TokenStream)>,
+}
+
+impl Members {
+    pub(crate) fn names(&self) -> impl Iterator<Item = Ident> + '_ {
+        self.components.iter().map(|(name, _)| name).cloned()
+    }
+
+    pub(crate) fn names_as_strings(&self) -> impl Iterator<Item = TokenStream> + '_ {
+        self.names().map(|ident| {
+            let name = ident.to_string();
+            quote! {#name.to_string()}
+        })
+    }
+    pub(crate) fn param_type_calls(&self) -> impl Iterator<Item = TokenStream> + '_ {
+        self.components.iter().map(|(_, ty)| {
+            quote! { <#ty as ::fuels::types::traits::Parameterize>::param_type() }
+        })
+    }
+}
+
+pub(crate) fn extract_enum_members(
+    variants: impl IntoIterator<Item = Variant>,
+) -> syn::Result<Members> {
+    let components = variants
+        .into_iter()
+        .map(|variant: Variant| {
+            let name = variant.ident;
+
+            let ty = match variant.fields {
+                Fields::Unnamed(fields_unnamed) => fields_unnamed.unnamed.into_iter().next(),
+                Fields::Unit => None,
+                Fields::Named(named_fields) => {
+                    return Err(Error::new_spanned(
+                        named_fields,
+                        "Named enum fields are not supported!",
+                    ))
+                }
+            }
+            .map(|field| field.ty.into_token_stream())
+            .unwrap_or_else(|| quote! {()});
+
+            Ok((name, ty))
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+
+    Ok(Members { components })
 }
