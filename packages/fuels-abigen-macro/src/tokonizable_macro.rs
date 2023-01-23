@@ -1,6 +1,10 @@
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::{Data, DataEnum, DataStruct, DeriveInput, Error};
+use quote::ToTokens;
+use syn::{
+    Data, DataEnum, DataStruct, DeriveInput, Error,
+    Fields::{Unit, Unnamed},
+};
 
 pub fn generate_tokenizable_impl(input: DeriveInput) -> syn::Result<TokenStream> {
     match &input.data {
@@ -21,6 +25,7 @@ fn tokenizable_struct(
     let (impl_gen, type_gen, where_clause) = input.generics.split_for_impl();
 
     let struct_name_str = struct_name.to_string();
+
     let from_token_calls = &struct_contents
         .fields
         .iter()
@@ -63,6 +68,90 @@ fn tokenizable_struct(
     })
 }
 
-fn tokenizable_enum(_input: &DeriveInput, _enum_contents: &DataEnum) -> Result<TokenStream, Error> {
-    todo!()
+fn tokenizable_enum(input: &DeriveInput, enum_contents: &DataEnum) -> Result<TokenStream, Error> {
+    let enum_name = &input.ident;
+
+    let (impl_gen, type_gen, where_clause) = input.generics.split_for_impl();
+
+    let enum_name_str = enum_name.to_string();
+
+    let variants_fields: Vec<_> = enum_contents
+        .variants
+        .iter()
+        .enumerate()
+        .map(|(discriminant, variant)| {
+            let name = variant.ident.clone();
+
+            let field = match &variant.fields {
+                Unnamed(fields_unnamed) => {
+                    fields_unnamed.unnamed.iter().next().map(|f| f.ty.clone())
+                }
+                Unit => None,
+                //TODO: make nice syn error from this
+                _ => panic!("Named variants not supported"),
+            };
+
+            (name, discriminant as u8, field)
+        })
+        .collect();
+
+    let discriminant_into_token = variants_fields.iter().map(|(name, discriminant, field)|{
+            if let Some(_) = field {
+                quote! { Self::#name(inner) => (#discriminant, ::fuels::types::traits::Tokenizable::into_token(inner))}
+            } else {
+                quote! { Self::#name() => (#discriminant, ().into_token())}
+            }
+    });
+
+    let discriminant_from_token = variants_fields.iter().map(|(name, discriminant, field)| {
+        let value = if let Some(_) = field {
+            quote! { ::fuels::types::traits::Tokenizable::from_token(variant_token)? }
+        } else {
+            quote! {}
+        };
+
+        quote! { #discriminant => ::std::result::Result::Ok(Self::#name(#value))}
+    });
+
+    Ok(quote! {
+        impl #impl_gen ::fuels::types::traits::Tokenizable for #enum_name #type_gen #where_clause {
+            fn into_token(self) -> ::fuels::types::Token {
+                let (discriminant, token) = match self {
+                    #(#discriminant_into_token),*
+                };
+
+                let variants = match <Self as ::fuels::types::traits::Parameterize>::param_type() {
+                    ::fuels::types::param_types::ParamType::Enum{variants, ..} => variants,
+                    other => panic!("Calling {}::param_type() must return a ParamType::Enum but instead it returned: {:?}", #enum_name_str, other)
+                };
+
+                ::fuels::types::Token::Enum(::std::boxed::Box::new((discriminant, token, variants)))
+            }
+
+            fn from_token(token: ::fuels::types::Token) -> ::std::result::Result<Self, ::fuels::types::errors::Error>
+            where
+                Self: Sized,
+            {
+                let gen_err = |msg| {
+                    ::fuels::types::errors::Error::InvalidData(format!(
+                        "Error while instantiating {} from token! {}", #enum_name_str, msg
+                    ))
+                };
+                match token {
+                    ::fuels::types::Token::Enum(selector) => {
+                        let (discriminant, variant_token, _) = *selector;
+                        match discriminant {
+                            #(#discriminant_from_token,)*
+                            _ => ::std::result::Result::Err(gen_err(format!(
+                                "Discriminant {} doesn't point to any of the enums variants.", discriminant
+                            ))),
+                        }
+                    }
+                    _ => ::std::result::Result::Err(gen_err(format!(
+                        "Given token ({}) is not of the type Token::Enum!", token
+                    ))),
+                }
+            }
+        }
+    })
 }
