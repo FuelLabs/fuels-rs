@@ -209,4 +209,51 @@ mod tests {
         );
         Ok(())
     }
+
+    #[tokio::test]
+    async fn generated_wallets_with_custom_chain_config() -> Result<(), Error> {
+        use fuel_chain_config::ChainConfig;
+        use fuel_tx::ConsensusParameters;
+
+        let chain_config = ChainConfig {
+            transaction_parameters: ConsensusParameters::DEFAULT
+                .with_max_gas_per_tx(10_000_000_000),
+            block_gas_limit: 10_000_000_000,
+            ..ChainConfig::default()
+        };
+
+        let wallets = launch_custom_provider_and_get_wallets(
+            WalletsConfig::new(Some(4), Some(3), Some(2_000_000_000)),
+            None,
+            Some(chain_config),
+        )
+        .await;
+
+        assert_eq!(wallets.len(), 4);
+
+        for wallet in wallets.into_iter() {
+            assert_eq!(
+                wallet
+                    .get_provider()?
+                    .client
+                    .chain_info()
+                    .await?
+                    .consensus_parameters
+                    .max_gas_per_tx
+                    .0,
+                10_000_000_000
+            );
+            assert_eq!(wallet.get_coins(AssetId::default()).await?.len(), 3);
+            assert_eq!(
+                wallet
+                    .get_balances()
+                    .await?
+                    .get("0x0000000000000000000000000000000000000000000000000000000000000000")
+                    .expect("Failed to get value"),
+                &6_000_000_000
+            );
+        }
+
+        Ok(())
+    }
 }
