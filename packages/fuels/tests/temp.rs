@@ -1,7 +1,8 @@
 #![allow(warnings)]
-use fuels::fuels_abigen::Parameterize;
-use fuels::types::traits::Parameterize;
-use fuels::types::traits::Tokenizable;
+use fuels::{
+    fuels_abigen::Parameterize,
+    types::traits::{Parameterize, Tokenizable},
+};
 use fuels_abigen_macro::Tokenizable;
 
 #[test]

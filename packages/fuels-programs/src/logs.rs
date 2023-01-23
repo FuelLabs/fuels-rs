@@ -5,8 +5,12 @@ use std::{
 
 use fuel_tx::Receipt;
 use fuels_core::{traits::DecodableLog, try_from_bytes};
-use fuels_types::traits::{Parameterize, Tokenizable};
-use fuels_types::{bech32::Bech32ContractId, errors::Error, param_types::ParamType};
+use fuels_types::{
+    bech32::Bech32ContractId,
+    errors::Error,
+    param_types::ParamType,
+    traits::{Parameterize, Tokenizable},
+};
 
 /// Struct used to pass the log mappings from the Abigen
 #[derive(Debug, Clone, Default)]

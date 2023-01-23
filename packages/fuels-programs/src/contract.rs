@@ -23,12 +23,12 @@ use fuels_signers::{
     provider::{Provider, TransactionCost},
     Signer, WalletUnlocked,
 };
-use fuels_types::traits::{Parameterize, Tokenizable};
 use fuels_types::{
     bech32::Bech32ContractId,
     core::{Selector, Token},
     errors::Error,
     param_types::{ParamType, ReturnLocation},
+    traits::{Parameterize, Tokenizable},
 };
 
 use crate::{

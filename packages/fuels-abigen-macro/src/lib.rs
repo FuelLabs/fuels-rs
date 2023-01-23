@@ -1,10 +1,8 @@
 extern crate core;
 
-use proc_macro::TokenStream;
-
-use syn::{parse_macro_input, DeriveInput};
-
 use fuels_core::code_gen::abigen::Abigen;
+use proc_macro::TokenStream;
+use syn::{parse_macro_input, DeriveInput};
 
 use crate::{
     abigen_macro::MacroAbigenTargets,

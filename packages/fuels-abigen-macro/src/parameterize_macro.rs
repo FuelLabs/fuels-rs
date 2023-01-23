@@ -1,6 +1,5 @@
 use proc_macro2::TokenStream;
-use quote::quote;
-use quote::ToTokens;
+use quote::{quote, ToTokens};
 use syn::{
     Data, DataEnum, DataStruct, DeriveInput, Error,
     Fields::{Unit, Unnamed},

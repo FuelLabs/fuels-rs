@@ -8,8 +8,11 @@ use fuels_core::{
     parameters::{CallParameters, TxParameters},
 };
 use fuels_signers::{provider::Provider, WalletUnlocked};
-use fuels_types::traits::{Parameterize, Tokenizable};
-use fuels_types::{bech32::Bech32ContractId, errors::Error};
+use fuels_types::{
+    bech32::Bech32ContractId,
+    errors::Error,
+    traits::{Parameterize, Tokenizable},
+};
 use itertools::chain;
 
 use crate::{
