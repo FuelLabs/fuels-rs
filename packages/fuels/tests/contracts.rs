@@ -1009,7 +1009,7 @@ async fn test_add_custom_assets() -> Result<(), Error> {
     let balance_asset_2 = wallet_1.get_asset_balance(&asset_id_2).await?;
     assert_eq!(balance_asset_1, initial_amount - amount_1);
     assert_eq!(balance_asset_2, initial_amount - amount_2);
- 
+
     Ok(())
 }
 
@@ -1042,4 +1042,3 @@ async fn test_deploy_error_messages() -> Result<(), Error> {
 
     Ok(())
 }
-
