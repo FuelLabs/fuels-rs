@@ -15,9 +15,14 @@ fn parameterize_for_enum() {
     enum SomeEnum<T: Parameterize + Tokenizable> {
         h(H<bool>),
         a(T),
+        e,
         b(),
-        // c,
         d(()),
+    }
+
+    #[derive(Parameterize, Tokenizable)]
+    enum SomeEnum2 {
+        c,
     }
 
     let ed = SomeEnum::<u64>::d(());

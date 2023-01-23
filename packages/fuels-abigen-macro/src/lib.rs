@@ -108,9 +108,7 @@ pub fn tokenizable(stream: TokenStream) -> TokenStream {
 pub fn try_from(stream: TokenStream) -> TokenStream {
     let input = parse_macro_input!(stream as DeriveInput);
 
-    let g = generate_try_from_impl(input).unwrap_or_else(|e| e.to_compile_error());
-
-    println!("{}", &g);
-
-    g.into()
+    generate_try_from_impl(input)
+        .unwrap_or_else(|e| e.to_compile_error())
+        .into()
 }

@@ -138,76 +138,18 @@ mod tests {
 
         let expected = quote! {
             #[allow(clippy::enum_variant_names)]
-            #[derive(Clone, Debug, Eq, PartialEq, ::fuels::fuels_abigen::TryFrom)]
+            #[derive(
+                Clone,
+                Debug,
+                Eq,
+                PartialEq,
+                ::fuels::fuels_abigen::Parameterize,
+                ::fuels::fuels_abigen::Tokenizable,
+                ::fuels::fuels_abigen::TryFrom
+            )]
             pub enum MatchaTea<> {
                 LongIsland(u64),
                 MoscowMule(bool)
-            }
-            impl<> ::fuels::types::traits::Parameterize for self::MatchaTea<> {
-                fn param_type() -> ::fuels::types::param_types::ParamType {
-                    let variants = [
-                        (
-                            "LongIsland".to_string(),
-                            <u64 as ::fuels::types::traits::Parameterize>::param_type()
-                        ),
-                        (
-                            "MoscowMule".to_string(),
-                            <bool as ::fuels::types::traits::Parameterize>::param_type()
-                        )
-                    ]
-                    .to_vec();
-                    let variants = ::fuels::types::enum_variants::EnumVariants::new(variants)
-                        .unwrap_or_else(|_| panic!("{} has no variants which isn't allowed!", "MatchaTea"));
-                    ::fuels::types::param_types::ParamType::Enum {
-                        name: "MatchaTea".to_string(),
-                        variants,
-                        generics: [].to_vec()
-                    }
-                }
-            }
-            impl<> ::fuels::types::traits::Tokenizable for self::MatchaTea<> {
-                fn from_token(
-                    token: ::fuels::types::Token
-                ) -> ::std::result::Result<Self, ::fuels::types::errors::Error>
-                where
-                    Self: Sized,
-                {
-                    let gen_err = |msg| {
-                        ::fuels::types::errors::Error::InvalidData(format!(
-                            "Error while instantiating {} from token! {}",
-                            "MatchaTea", msg
-                        ))
-                    };
-                    match token {
-                        ::fuels::types::Token::Enum(selector) => {
-                            let (discriminant, variant_token, _) = *selector;
-                            match discriminant {
-                                0u8 => ::std::result::Result::Ok(Self::LongIsland(
-                                    ::fuels::types::traits::Tokenizable::from_token(variant_token)?
-                                )),
-                                1u8 => ::std::result::Result::Ok(Self::MoscowMule(
-                                    ::fuels::types::traits::Tokenizable::from_token(variant_token)?
-                                )),
-                                _ => ::std::result::Result::Err(gen_err(format!(
-                                    "Discriminant {} doesn't point to any of the enums variants.",
-                                    discriminant
-                                ))),
-                            }
-                        }
-                        _ => ::std::result::Result::Err(gen_err(format!(
-                            "Given token ({}) is not of the type Token::Enum!",
-                            token
-                        ))),
-                    }
-                }
-                fn into_token(self) -> ::fuels::types::Token {
-                    let (discriminant, token) = match self {
-                        Self::LongIsland(inner) => (0u8, ::fuels::types::traits::Tokenizable::into_token(inner)),
-                        Self::MoscowMule(inner) => (1u8, ::fuels::types::traits::Tokenizable::into_token(inner))
-                    };
-                    let variants = match < Self as :: fuels :: types :: traits :: Parameterize > :: param_type () { :: fuels :: types :: param_types :: ParamType :: Enum { variants , .. } => variants , other => panic ! ("Calling {}::param_type() must return a ParamType::Enum but instead it returned: {:?}" , "MatchaTea" , other) } ;
-                    ::fuels::types::Token::Enum(::std::boxed::Box::new((discriminant, token, variants)))
-                }
             }
         };
 
@@ -319,76 +261,18 @@ mod tests {
 
         let expected = quote! {
             #[allow(clippy::enum_variant_names)]
-            #[derive(Clone, Debug, Eq, PartialEq, ::fuels::fuels_abigen::TryFrom)]
+            #[derive(
+                Clone,
+                Debug,
+                Eq,
+                PartialEq,
+                ::fuels::fuels_abigen::Parameterize,
+                ::fuels::fuels_abigen::Tokenizable,
+                ::fuels::fuels_abigen::TryFrom
+            )]
             pub enum Amsterdam<> {
                 Infrastructure(self::Building),
                 Service(u32)
-            }
-            impl<> ::fuels::types::traits::Parameterize for self::Amsterdam<> {
-                fn param_type() -> ::fuels::types::param_types::ParamType {
-                    let variants = [
-                        (
-                            "Infrastructure".to_string(),
-                            <self::Building as ::fuels::types::traits::Parameterize>::param_type()
-                        ),
-                        (
-                            "Service".to_string(),
-                            <u32 as ::fuels::types::traits::Parameterize>::param_type()
-                        )
-                    ]
-                    .to_vec();
-                    let variants = ::fuels::types::enum_variants::EnumVariants::new(variants)
-                        .unwrap_or_else(|_| panic!("{} has no variants which isn't allowed!", "Amsterdam"));
-                    ::fuels::types::param_types::ParamType::Enum {
-                        name: "Amsterdam".to_string(),
-                        variants,
-                        generics: [].to_vec()
-                    }
-                }
-            }
-            impl<> ::fuels::types::traits::Tokenizable for self::Amsterdam<> {
-                fn from_token(
-                    token: ::fuels::types::Token
-                ) -> ::std::result::Result<Self, ::fuels::types::errors::Error>
-                where
-                    Self: Sized,
-                {
-                    let gen_err = |msg| {
-                        ::fuels::types::errors::Error::InvalidData(format!(
-                            "Error while instantiating {} from token! {}",
-                            "Amsterdam", msg
-                        ))
-                    };
-                    match token {
-                        ::fuels::types::Token::Enum(selector) => {
-                            let (discriminant, variant_token, _) = *selector;
-                            match discriminant {
-                                0u8 => ::std::result::Result::Ok(Self::Infrastructure(
-                                    ::fuels::types::traits::Tokenizable::from_token(variant_token)?
-                                )),
-                                1u8 => ::std::result::Result::Ok(Self::Service(
-                                    ::fuels::types::traits::Tokenizable::from_token(variant_token)?
-                                )),
-                                _ => ::std::result::Result::Err(gen_err(format!(
-                                    "Discriminant {} doesn't point to any of the enums variants.",
-                                    discriminant
-                                ))),
-                            }
-                        }
-                        _ => ::std::result::Result::Err(gen_err(format!(
-                            "Given token ({}) is not of the type Token::Enum!",
-                            token
-                        ))),
-                    }
-                }
-                fn into_token(self) -> ::fuels::types::Token {
-                    let (discriminant, token) = match self {
-                        Self::Infrastructure(inner) => (0u8, ::fuels::types::traits::Tokenizable::into_token(inner)),
-                        Self::Service(inner) => (1u8, ::fuels::types::traits::Tokenizable::into_token(inner))
-                    };
-                    let variants = match < Self as :: fuels :: types :: traits :: Parameterize > :: param_type () { :: fuels :: types :: param_types :: ParamType :: Enum { variants , .. } => variants , other => panic ! ("Calling {}::param_type() must return a ParamType::Enum but instead it returned: {:?}" , "Amsterdam" , other) } ;
-                    ::fuels::types::Token::Enum(::std::boxed::Box::new((discriminant, token, variants)))
-                }
             }
         };
 
@@ -442,65 +326,17 @@ mod tests {
 
         let expected = quote! {
             #[allow(clippy::enum_variant_names)]
-            #[derive(Clone, Debug, Eq, PartialEq, ::fuels::fuels_abigen::TryFrom)]
+            #[derive(
+                Clone,
+                Debug,
+                Eq,
+                PartialEq,
+                ::fuels::fuels_abigen::Parameterize,
+                ::fuels::fuels_abigen::Tokenizable,
+                ::fuels::fuels_abigen::TryFrom
+            )]
             pub enum SomeEnum < > {
                 SomeArr([u64; 7usize])
-            }
-            impl < > ::fuels::types::traits::Parameterize for self::SomeEnum < > {
-                fn param_type() -> ::fuels::types::param_types::ParamType {
-                    let variants = [(
-                        "SomeArr".to_string(),
-                        <[u64; 7usize] as ::fuels::types::traits::Parameterize>::param_type()
-                    )]
-                    .to_vec();
-                    let variants = ::fuels::types::enum_variants::EnumVariants::new(variants)
-                        .unwrap_or_else(|_| panic!("{} has no variants which isn't allowed!", "SomeEnum"));
-                    ::fuels::types::param_types::ParamType::Enum {
-                        name: "SomeEnum".to_string(),
-                        variants,
-                        generics: [].to_vec()
-                    }
-                }
-            }
-            impl < > ::fuels::types::traits::Tokenizable for self::SomeEnum < > {
-                fn from_token(
-                    token: ::fuels::types::Token
-                ) -> ::std::result::Result<Self, ::fuels::types::errors::Error>
-                where
-                    Self: Sized,
-                {
-                    let gen_err = |msg| {
-                        ::fuels::types::errors::Error::InvalidData(format!(
-                            "Error while instantiating {} from token! {}",
-                            "SomeEnum", msg
-                        ))
-                    };
-                    match token {
-                        ::fuels::types::Token::Enum(selector) => {
-                            let (discriminant, variant_token, _) = *selector;
-                            match discriminant {
-                                0u8 => ::std::result::Result::Ok(Self::SomeArr(
-                                    ::fuels::types::traits::Tokenizable::from_token(variant_token)?
-                                )),
-                                _ => ::std::result::Result::Err(gen_err(format!(
-                                    "Discriminant {} doesn't point to any of the enums variants.",
-                                    discriminant
-                                ))),
-                            }
-                        }
-                        _ => ::std::result::Result::Err(gen_err(format!(
-                            "Given token ({}) is not of the type Token::Enum!",
-                            token
-                        ))),
-                    }
-                }
-                fn into_token(self) -> ::fuels::types::Token {
-                    let (discriminant, token) = match self {
-                        Self::SomeArr(inner) => (0u8, ::fuels::types::traits::Tokenizable::into_token(inner))
-                    };
-                    let variants = match < Self as :: fuels :: types :: traits :: Parameterize > :: param_type () { :: fuels :: types :: param_types :: ParamType :: Enum { variants , .. } => variants , other => panic ! ("Calling {}::param_type() must return a ParamType::Enum but instead it returned: {:?}" , "SomeEnum" , other) } ;
-                    ::fuels::types::Token::Enum(::std::boxed::Box::new((discriminant, token, variants)))
-                }
             }
         };
 
@@ -567,65 +403,17 @@ mod tests {
 
         let expected = quote! {
             #[allow(clippy::enum_variant_names)]
-            #[derive(Clone, Debug, Eq, PartialEq, ::fuels::fuels_abigen::TryFrom)]
+            #[derive(
+                Clone,
+                Debug,
+                Eq,
+                PartialEq,
+                ::fuels::fuels_abigen::Parameterize,
+                ::fuels::fuels_abigen::Tokenizable,
+                ::fuels::fuels_abigen::TryFrom
+            )]
             pub enum EnumLevel3<> {
                 El2(self::EnumLevel2)
-            }
-            impl<> ::fuels::types::traits::Parameterize for self::EnumLevel3<> {
-                fn param_type() -> ::fuels::types::param_types::ParamType {
-                    let variants = [(
-                        "El2".to_string(),
-                        <self::EnumLevel2 as ::fuels::types::traits::Parameterize>::param_type()
-                    )]
-                    .to_vec();
-                    let variants = ::fuels::types::enum_variants::EnumVariants::new(variants)
-                        .unwrap_or_else(|_| panic!("{} has no variants which isn't allowed!", "EnumLevel3"));
-                    ::fuels::types::param_types::ParamType::Enum {
-                        name: "EnumLevel3".to_string(),
-                        variants,
-                        generics: [].to_vec()
-                    }
-                }
-            }
-            impl<> ::fuels::types::traits::Tokenizable for self::EnumLevel3<> {
-                fn from_token(
-                    token: ::fuels::types::Token
-                ) -> ::std::result::Result<Self, ::fuels::types::errors::Error>
-                where
-                    Self: Sized,
-                {
-                    let gen_err = |msg| {
-                        ::fuels::types::errors::Error::InvalidData(format!(
-                            "Error while instantiating {} from token! {}",
-                            "EnumLevel3", msg
-                        ))
-                    };
-                    match token {
-                        ::fuels::types::Token::Enum(selector) => {
-                            let (discriminant, variant_token, _) = *selector;
-                            match discriminant {
-                                0u8 => ::std::result::Result::Ok(Self::El2(
-                                    ::fuels::types::traits::Tokenizable::from_token(variant_token)?
-                                )),
-                                _ => ::std::result::Result::Err(gen_err(format!(
-                                    "Discriminant {} doesn't point to any of the enums variants.",
-                                    discriminant
-                                ))),
-                            }
-                        }
-                        _ => ::std::result::Result::Err(gen_err(format!(
-                            "Given token ({}) is not of the type Token::Enum!",
-                            token
-                        ))),
-                    }
-                }
-                fn into_token(self) -> ::fuels::types::Token {
-                    let (discriminant, token) = match self {
-                        Self::El2(inner) => (0u8, ::fuels::types::traits::Tokenizable::into_token(inner))
-                    };
-                    let variants = match < Self as :: fuels :: types :: traits :: Parameterize > :: param_type () { :: fuels :: types :: param_types :: ParamType :: Enum { variants , .. } => variants , other => panic ! ("Calling {}::param_type() must return a ParamType::Enum but instead it returned: {:?}" , "EnumLevel3" , other) } ;
-                    ::fuels::types::Token::Enum(::std::boxed::Box::new((discriminant, token, variants)))
-                }
             }
         };
 

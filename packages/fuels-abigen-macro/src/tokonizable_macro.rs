@@ -1,6 +1,5 @@
 use proc_macro2::TokenStream;
 use quote::quote;
-use quote::ToTokens;
 use syn::{
     Data, DataEnum, DataStruct, DeriveInput, Error,
     Fields::{Unit, Unnamed},
@@ -82,11 +81,12 @@ fn tokenizable_enum(input: &DeriveInput, enum_contents: &DataEnum) -> Result<Tok
         .map(|(discriminant, variant)| {
             let name = variant.ident.clone();
 
+            //TODO: use something else then 0,1,2
             let field = match &variant.fields {
                 Unnamed(fields_unnamed) => {
-                    fields_unnamed.unnamed.iter().next().map(|f| f.ty.clone())
+                    fields_unnamed.unnamed.iter().next().map(|_| 0).unwrap_or(1)
                 }
-                Unit => None,
+                Unit => 2,
                 //TODO: make nice syn error from this
                 _ => panic!("Named variants not supported"),
             };
@@ -96,21 +96,28 @@ fn tokenizable_enum(input: &DeriveInput, enum_contents: &DataEnum) -> Result<Tok
         .collect();
 
     let discriminant_into_token = variants_fields.iter().map(|(name, discriminant, field)|{
-            if let Some(_) = field {
+        //TODO: use something else then 0,1,2
+            if *field == 0 {
                 quote! { Self::#name(inner) => (#discriminant, ::fuels::types::traits::Tokenizable::into_token(inner))}
-            } else {
+            } else  if *field == 1 {
                 quote! { Self::#name() => (#discriminant, ().into_token())}
+            }
+            else{
+                quote! { Self::#name => (#discriminant, ().into_token())}
             }
     });
 
     let discriminant_from_token = variants_fields.iter().map(|(name, discriminant, field)| {
-        let value = if let Some(_) = field {
-            quote! { ::fuels::types::traits::Tokenizable::from_token(variant_token)? }
+        //TODO: use something else then 0,1,2
+        let self_name = if *field == 0 {
+            quote! { #name(::fuels::types::traits::Tokenizable::from_token(variant_token)?) }
+        } else if *field == 1 {
+            quote! { #name() }
         } else {
-            quote! {}
+            quote! { #name }
         };
 
-        quote! { #discriminant => ::std::result::Result::Ok(Self::#name(#value))}
+        quote! { #discriminant => ::std::result::Result::Ok(Self::#self_name)}
     });
 
     Ok(quote! {

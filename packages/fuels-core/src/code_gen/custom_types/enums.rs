@@ -10,7 +10,7 @@ use crate::{
         custom_types::utils::{extract_components, extract_generic_parameters},
         generated_code::GeneratedCode,
         type_path::TypePath,
-        utils::{param_type_calls, Component},
+        utils::Component,
     },
     utils::ident,
 };
@@ -34,15 +34,10 @@ pub(crate) fn expand_custom_enum(
     let generics = extract_generic_parameters(type_decl)?;
 
     let enum_def = enum_decl(&enum_ident, &components, &generics);
-    let parameterize_impl = enum_parameterize_impl(&enum_ident, &components, &generics);
-    let tokenize_impl = enum_tokenizable_impl(&enum_ident, &components, &generics);
 
     let code = quote! {
         #enum_def
 
-        #parameterize_impl
-
-        #tokenize_impl
     };
     Ok(GeneratedCode {
         code,
@@ -79,129 +74,12 @@ fn enum_decl(
             Debug,
             Eq,
             PartialEq,
+            ::fuels::fuels_abigen::Parameterize,
+            ::fuels::fuels_abigen::Tokenizable,
             ::fuels::fuels_abigen::TryFrom
         )]
         pub enum #enum_ident <#(#generics: ::fuels::types::traits::Tokenizable + ::fuels::types::traits::Parameterize),*> {
             #(#enum_variants),*
-        }
-    }
-}
-
-fn enum_tokenizable_impl(
-    enum_ident: &Ident,
-    components: &[Component],
-    generics: &[TokenStream],
-) -> TokenStream {
-    let enum_ident_stringified = enum_ident.to_string();
-
-    let match_discriminant_from_token = components.iter().enumerate().map(
-        |(
-            discriminant,
-            Component {
-                field_name,
-                field_type,
-            },
-        )| {
-            let value = if field_type.is_unit() {
-                quote! {}
-            } else {
-                quote! { ::fuels::types::traits::Tokenizable::from_token(variant_token)? }
-            };
-
-            let u8_discriminant = discriminant as u8;
-            quote! { #u8_discriminant => ::std::result::Result::Ok(Self::#field_name(#value))}
-        },
-    );
-
-    let match_discriminant_into_token = components.iter().enumerate().map(
-        |(
-            discriminant,
-            Component {
-                field_name,
-                field_type,
-            },
-        )| {
-            let u8_discriminant = discriminant as u8;
-            if field_type.is_unit() {
-                quote! { Self::#field_name() => (#u8_discriminant, ().into_token())}
-            } else {
-                quote! { Self::#field_name(inner) => (#u8_discriminant, ::fuels::types::traits::Tokenizable::into_token(inner))}
-            }
-        },
-    );
-
-    quote! {
-            impl<#(#generics: ::fuels::types::traits::Tokenizable + ::fuels::types::traits::Parameterize),*> ::fuels::types::traits::Tokenizable for self::#enum_ident <#(#generics),*> {
-                fn from_token(token: ::fuels::types::Token) -> ::std::result::Result<Self, ::fuels::types::errors::Error>
-                where
-                    Self: Sized,
-                {
-                    let gen_err = |msg| {
-                        ::fuels::types::errors::Error::InvalidData(format!(
-                            "Error while instantiating {} from token! {}", #enum_ident_stringified, msg
-                        ))
-                    };
-                    match token {
-                        ::fuels::types::Token::Enum(selector) => {
-                            let (discriminant, variant_token, _) = *selector;
-                            match discriminant {
-                                #(#match_discriminant_from_token,)*
-                                _ => ::std::result::Result::Err(gen_err(format!(
-                                    "Discriminant {} doesn't point to any of the enums variants.", discriminant
-                                ))),
-                            }
-                        }
-                        _ => ::std::result::Result::Err(gen_err(format!(
-                            "Given token ({}) is not of the type Token::Enum!", token
-                        ))),
-                    }
-                }
-
-                fn into_token(self) -> ::fuels::types::Token {
-                    let (discriminant, token) = match self {
-                        #(#match_discriminant_into_token),*
-                    };
-
-                    let variants = match <Self as ::fuels::types::traits::Parameterize>::param_type() {
-                        ::fuels::types::param_types::ParamType::Enum{variants, ..} => variants,
-                        other => panic!("Calling {}::param_type() must return a ParamType::Enum but instead it returned: {:?}", #enum_ident_stringified, other)
-                    };
-
-                    ::fuels::types::Token::Enum(::std::boxed::Box::new((discriminant, token, variants)))
-                }
-            }
-    }
-}
-
-fn enum_parameterize_impl(
-    enum_ident: &Ident,
-    components: &[Component],
-    generics: &[TokenStream],
-) -> TokenStream {
-    let param_type_calls = param_type_calls(components);
-    let variants = components
-        .iter()
-        .map(|component| {
-            let type_name = component.field_name.to_string();
-            quote! {#type_name.to_string()}
-        })
-        .zip(param_type_calls)
-        .map(|(type_name, param_type_call)| {
-            quote! {(#type_name, #param_type_call)}
-        });
-    let enum_ident_stringified = enum_ident.to_string();
-    quote! {
-        impl<#(#generics: ::fuels::types::traits::Parameterize + ::fuels::types::traits::Tokenizable),*> ::fuels::types::traits::Parameterize for self::#enum_ident <#(#generics),*> {
-            fn param_type() -> ::fuels::types::param_types::ParamType {
-                let variants = [#(#variants),*].to_vec();
-
-                let variants = ::fuels::types::enum_variants::EnumVariants::new(variants).unwrap_or_else(|_| panic!("{} has no variants which isn't allowed!", #enum_ident_stringified));
-                ::fuels::types::param_types::ParamType::Enum{
-                    name: #enum_ident_stringified.to_string(),
-                    variants,
-                    generics: [#(#generics::param_type()),*].to_vec()
-                }
-            }
         }
     }
 }
