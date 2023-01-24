@@ -1,4 +1,11 @@
-use crate::errors::Error;
+use fuels_macros::{Parameterize, Tokenizable};
+
+use crate::{
+    core::Token,
+    errors::Error,
+    param_types::ParamType,
+    traits::{Parameterize, Tokenizable},
+};
 
 // A simple wrapper around [u8; 32] representing the `b256` type. Exists
 // mainly so that we may differentiate `Parameterize` and `Tokenizable`
@@ -16,16 +23,16 @@ impl Bits256 {
             hex
         };
 
-        let mut bytes = [0u8; 32];
-        hex::decode_to_slice(hex, &mut bytes as &mut [u8]).map_err(|e| {
+        let mut bits = [0u8; 32];
+        hex::decode_to_slice(hex, &mut bits as &mut [u8]).map_err(|e| {
             Error::InvalidData(format!("Could not convert hex str '{hex}' to Bits256! {e}"))
         })?;
-        Ok(Bits256(bytes))
+        Ok(Bits256(bits))
     }
 }
 
 // A simple wrapper around [Bits256; 2] representing the `B512` type.
-#[derive(Debug, PartialEq, Eq, Copy, Clone)]
+#[derive(Debug, PartialEq, Eq, Copy, Clone, Parameterize, Tokenizable)]
 // ANCHOR: b512
 pub struct B512 {
     pub bytes: [Bits256; 2],
@@ -53,7 +60,7 @@ impl TryFrom<&[u8]> for B512 {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Copy, Clone)]
+#[derive(Debug, PartialEq, Eq, Copy, Clone, Parameterize)]
 // ANCHOR: evm_address
 pub struct EvmAddress {
     // An evm address is only 20 bytes, the first 12 bytes should be set to 0
@@ -101,5 +108,49 @@ mod tests {
         // ANCHOR_END: from_hex_str
 
         Ok(())
+    }
+
+    #[test]
+    fn test_param_type_evm_addr() {
+        assert_eq!(
+            EvmAddress::param_type(),
+            ParamType::Struct {
+                name: "EvmAddress".to_string(),
+                fields: vec![("value".to_string(), ParamType::B256)],
+                generics: vec![]
+            }
+        );
+    }
+
+    #[test]
+    fn test_from_token_evm_addr() -> Result<(), Error> {
+        let data = [1u8; 32];
+        let token = Token::Struct(vec![Token::B256(data)]);
+
+        let evm_address = EvmAddress::from_token(token)?;
+
+        let expected_data = [
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1,
+        ];
+
+        assert_eq!(evm_address.value.0, expected_data);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_into_token_evm_addr() {
+        let bits = [1u8; 32];
+        let evm_address = EvmAddress::from(Bits256(bits));
+
+        let token = evm_address.into_token();
+
+        let expected_data = [
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1,
+        ];
+
+        assert_eq!(token, Token::Struct(vec![Token::B256(expected_data)]));
     }
 }

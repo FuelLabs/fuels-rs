@@ -1,10 +1,10 @@
 use std::iter::zip;
 
+use crate::core::{Bits256, Byte};
+
 use crate::{
-    core::{Bits256, Byte, EvmAddress, Identity, SizedAsciiString, B512},
-    enum_variants::EnumVariants,
-    param_types::ParamType,
-    Address, AssetId, ContractId,
+    core::SizedAsciiString, enum_variants::EnumVariants, param_types::ParamType, Address, AssetId,
+    ContractId,
 };
 
 /// `abigen` requires `Parameterized` to construct nested types. It is also used by `try_from_bytes`
@@ -13,35 +13,15 @@ pub trait Parameterize {
     fn param_type() -> ParamType;
 }
 
-impl Parameterize for Bits256 {
-    fn param_type() -> ParamType {
-        ParamType::B256
-    }
-}
-
-impl Parameterize for B512 {
-    fn param_type() -> ParamType {
-        ParamType::Struct {
-            name: "B512".to_string(),
-            fields: vec![("bytes".to_string(), <[Bits256; 2usize]>::param_type())],
-            generics: vec![],
-        }
-    }
-}
-
-impl Parameterize for EvmAddress {
-    fn param_type() -> ParamType {
-        ParamType::Struct {
-            name: "EvmAddress".to_string(),
-            fields: vec![("value".to_string(), ParamType::B256)],
-            generics: vec![],
-        }
-    }
-}
-
 impl Parameterize for Byte {
     fn param_type() -> ParamType {
         ParamType::Byte
+    }
+}
+
+impl Parameterize for Bits256 {
+    fn param_type() -> ParamType {
+        ParamType::B256
     }
 }
 
@@ -164,21 +144,6 @@ where
     }
 }
 
-impl Parameterize for Identity {
-    fn param_type() -> ParamType {
-        let variants = EnumVariants::new(vec![
-            ("Address".to_string(), Address::param_type()),
-            ("ContractId".to_string(), ContractId::param_type()),
-        ])
-        .expect("should never happen as we provided valid Identity param types");
-        ParamType::Enum {
-            name: "Identity".to_string(),
-            variants,
-            generics: vec![],
-        }
-    }
-}
-
 impl<const LEN: usize> Parameterize for SizedAsciiString<LEN> {
     fn param_type() -> ParamType {
         ParamType::String(LEN)
@@ -230,26 +195,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_param_type_b256() {
-        assert_eq!(Bits256::param_type(), ParamType::B256);
-    }
-
-    #[test]
-    fn test_param_type_evm_addr() {
-        assert_eq!(
-            EvmAddress::param_type(),
-            ParamType::Struct {
-                name: "EvmAddress".to_string(),
-                fields: vec![("value".to_string(), ParamType::B256)],
-                generics: vec![]
-            }
-        );
-    }
-
-    #[test]
     fn sized_ascii_string_is_parameterized_correctly() {
         let param_type = SizedAsciiString::<3>::param_type();
 
         assert!(matches!(param_type, ParamType::String(3)));
+    }
+
+    #[test]
+    fn test_param_type_b256() {
+        assert_eq!(Bits256::param_type(), ParamType::B256);
     }
 }

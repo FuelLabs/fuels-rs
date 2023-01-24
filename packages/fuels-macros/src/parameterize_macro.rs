@@ -29,9 +29,9 @@ fn parameterize_for_struct(
     let generic_param_types = parameterize_generic_params(&generics)?;
 
     Ok(quote! {
-        impl #impl_gen ::fuels::types::traits::Parameterize for #name #type_gen #where_clause {
-            fn param_type() -> ::fuels::types::param_types::ParamType {
-                ::fuels::types::param_types::ParamType::Struct{
+        impl #impl_gen Parameterize for #name #type_gen #where_clause {
+            fn param_type() -> ParamType {
+                ParamType::Struct{
                     name: #name_stringified.to_string(),
                     fields: vec![#((#field_names, #param_type_calls)),*],
                     generics: vec![#(#generic_param_types),*],
@@ -46,7 +46,7 @@ fn parameterize_generic_params(generics: &Generics) -> syn::Result<Vec<TokenStre
         .into_iter()
         .map(|type_param| {
             let ident = &type_param.ident;
-            quote! {<#ident as ::fuels::types::traits::Parameterize>::param_type()}
+            quote! {<#ident as Parameterize>::param_type()}
         })
         .collect();
 
@@ -66,12 +66,12 @@ fn parameterize_for_enum(
     let generic_param_types = parameterize_generic_params(&generics)?;
 
     Ok(quote! {
-        impl #impl_gen ::fuels::types::traits::Parameterize for #name #type_gen #where_clause {
-            fn param_type() -> ::fuels::types::param_types::ParamType {
+        impl #impl_gen Parameterize for #name #type_gen #where_clause {
+            fn param_type() -> ParamType {
                 let variants = vec![#((#variant_names, #variant_param_types)),*];
 
-                let variants = ::fuels::types::enum_variants::EnumVariants::new(variants).unwrap_or_else(|_| panic!("{} has no variants which isn't allowed!", #enum_name_str));
-                ::fuels::types::param_types::ParamType::Enum {
+                let variants = EnumVariants::new(variants).unwrap_or_else(|_| panic!("{} has no variants which isn't allowed!", #enum_name_str));
+                ParamType::Enum {
                     name: #enum_name_str.to_string(),
                     variants,
                     generics: [#(#generic_param_types),*].to_vec()

@@ -34,28 +34,28 @@ fn tokenizable_for_struct(
         .collect::<Vec<_>>();
 
     Ok(quote! {
-        impl #impl_gen ::fuels::types::traits::Tokenizable for #name #type_gen #where_clause {
-            fn into_token(self) -> ::fuels::types::Token {
-                let tokens = [#(::fuels::types::traits::Tokenizable::into_token(self.#field_names)),*].to_vec();
-                ::fuels::types::Token::Struct(tokens)
+        impl #impl_gen Tokenizable for #name #type_gen #where_clause {
+            fn into_token(self) -> Token {
+                let tokens = [#(Tokenizable::into_token(self.#field_names)),*].to_vec();
+                Token::Struct(tokens)
             }
 
-            fn from_token(token: ::fuels::types::Token)  -> ::std::result::Result<Self, ::fuels::types::errors::Error> {
+            fn from_token(token: Token)  -> ::std::result::Result<Self, Error> {
                 match token {
-                    ::fuels::types::Token::Struct(tokens) => {
+                    Token::Struct(tokens) => {
                         let mut tokens_iter = tokens.into_iter();
                         let mut next_token = move || { tokens_iter
                             .next()
-                            .ok_or_else(|| { ::fuels::types::errors::Error::InstantiationError(format!("Ran out of tokens before '{}' has finished construction!", #struct_name_str)) })
+                            .ok_or_else(|| { Error::InstantiationError(format!("Ran out of tokens before '{}' has finished construction!", #struct_name_str)) })
                         };
                         ::std::result::Result::Ok(Self {
                             #(
-                                #field_names: ::fuels::types::traits::Tokenizable::from_token(next_token()?)?
+                                #field_names: Tokenizable::from_token(next_token()?)?
                              ),*
 
                         })
                     },
-                    other => ::std::result::Result::Err(::fuels::types::errors::Error::InstantiationError(format!("Error while constructing '{}'. Expected token of type Token::Struct, got {:?}", #struct_name_str, other))),
+                    other => ::std::result::Result::Err(Error::InstantiationError(format!("Error while constructing '{}'. Expected token of type Token::Struct, got {:?}", #struct_name_str, other))),
                 }
             }
         }
@@ -78,9 +78,9 @@ impl ExtractedVariants {
             let discriminant = variant.discriminant;
             let name = &variant.name;
             if variant.is_unit {
-                quote! { Self::#name => (#discriminant, ::fuels::types::traits::Tokenizable::into_token(())) }
+                quote! { Self::#name => (#discriminant, Tokenizable::into_token(())) }
             } else {
-                quote! { Self::#name(inner) => (#discriminant, ::fuels::types::traits::Tokenizable::into_token(inner))}
+                quote! { Self::#name(inner) => (#discriminant, Tokenizable::into_token(inner))}
             }
         });
 
@@ -98,7 +98,7 @@ impl ExtractedVariants {
             let arg = if variant.is_unit {
                 quote! {}
             } else {
-                quote! { (::fuels::types::traits::Tokenizable::from_token(variant_token)?) }
+                quote! { (Tokenizable::from_token(variant_token)?) }
             };
 
             quote! { #discriminant => ::std::result::Result::Ok(Self::#name #arg)}
@@ -149,29 +149,29 @@ fn tokenizable_for_enum(
     let constructed_variant = variants.variant_from_discriminant_and_token();
 
     Ok(quote! {
-        impl #impl_gen ::fuels::types::traits::Tokenizable for #name #type_gen #where_clause {
-            fn into_token(self) -> ::fuels::types::Token {
+        impl #impl_gen Tokenizable for #name #type_gen #where_clause {
+            fn into_token(self) -> Token {
                 let (discriminant, token) = #discriminant_and_token;
 
-                let variants = match <Self as ::fuels::types::traits::Parameterize>::param_type() {
-                    ::fuels::types::param_types::ParamType::Enum{variants, ..} => variants,
+                let variants = match <Self as Parameterize>::param_type() {
+                    ParamType::Enum{variants, ..} => variants,
                     other => panic!("Calling {}::param_type() must return a ParamType::Enum but instead it returned: {:?}", #name_stringified, other)
                 };
 
-                ::fuels::types::Token::Enum(::std::boxed::Box::new((discriminant, token, variants)))
+                Token::Enum(::std::boxed::Box::new((discriminant, token, variants)))
             }
 
-            fn from_token(token: ::fuels::types::Token) -> ::std::result::Result<Self, ::fuels::types::errors::Error>
+            fn from_token(token: Token) -> ::std::result::Result<Self, Error>
             where
                 Self: Sized,
             {
                 match token {
-                    ::fuels::types::Token::Enum(selector) => {
+                    Token::Enum(selector) => {
                         let (discriminant, variant_token, _) = *selector;
                         #constructed_variant
                     }
                     _ => ::std::result::Result::Err(format!("Given token ({}) is not of the type Token::Enum!", token)),
-                }.map_err(|e| ::fuels::types::errors::Error::InvalidData(format!("Error while instantiating {} from token! {}", #name_stringified, e)) )
+                }.map_err(|e| Error::InvalidData(format!("Error while instantiating {} from token! {}", #name_stringified, e)) )
             }
         }
     })

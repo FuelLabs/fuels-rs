@@ -118,7 +118,7 @@ impl Members {
     }
     pub(crate) fn param_type_calls(&self) -> impl Iterator<Item = TokenStream> + '_ {
         self.types.iter().map(|ty| {
-            quote! { <#ty as ::fuels::types::traits::Parameterize>::param_type() }
+            quote! { <#ty as Parameterize>::param_type() }
         })
     }
 }
