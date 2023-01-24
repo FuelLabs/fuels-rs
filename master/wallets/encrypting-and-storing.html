@@ -157,7 +157,7 @@
 
         let path = dir.join(uuid);
 
-        let _recovered_wallet = WalletUnlocked::load_keystore(&amp;path, password, Some(provider))?;
+        let _recovered_wallet = WalletUnlocked::load_keystore(path, password, Some(provider))?;
 </code></pre>
 <h2 id="encrypting-and-storing-a-wallet-created-from-a-mnemonic-or-private-key"><a class="header" href="#encrypting-and-storing-a-wallet-created-from-a-mnemonic-or-private-key">Encrypting and storing a wallet created from a mnemonic or private key</a></h2>
 <p>If you have already created a wallet using a mnemonic phrase or a private key, you can also encrypt it and save it to disk:</p>
