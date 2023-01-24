@@ -1,9 +1,8 @@
 use std::collections::HashSet;
 
-use proc_macro2::{Ident, TokenStream};
-use quote::{quote, ToTokens};
-
 use fuels_types::{errors::Error, utils::custom_type_name};
+use proc_macro2::{Ident, TokenStream};
+use quote::quote;
 
 use crate::{
     code_gen::{

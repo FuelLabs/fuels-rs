@@ -3,11 +3,6 @@ use std::{
     fmt::{Display, Formatter},
 };
 
-use lazy_static::lazy_static;
-use proc_macro2::TokenStream;
-use quote::{quote, ToTokens};
-use regex::Regex;
-
 use fuels_types::{
     errors::Error,
     utils::{
@@ -15,6 +10,10 @@ use fuels_types::{
         has_tuple_format,
     },
 };
+use lazy_static::lazy_static;
+use proc_macro2::TokenStream;
+use quote::{quote, ToTokens};
+use regex::Regex;
 
 use crate::{
     code_gen::{

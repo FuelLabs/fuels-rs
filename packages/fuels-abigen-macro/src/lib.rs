@@ -8,7 +8,7 @@ use crate::{
     abigen_macro::MacroAbigenTargets,
     parameterize_macro::generate_parameterize_impl,
     setup_contract_test_macro::{generate_setup_contract_test_code, TestContractCommands},
-    tokonizable_macro::generate_tokenizable_impl,
+    tokenizable_macro::generate_tokenizable_impl,
     try_from_macro::generate_try_from_impl,
 };
 
@@ -16,7 +16,7 @@ mod abigen_macro;
 mod parameterize_macro;
 mod parse_utils;
 mod setup_contract_test_macro;
-mod tokonizable_macro;
+mod tokenizable_macro;
 mod try_from_macro;
 
 /// Used to generate bindings for Contracts, Scripts and Predicates. Accepts

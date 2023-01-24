@@ -1,9 +1,8 @@
+pub(crate) use command::Command;
 use itertools::{chain, Itertools};
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
-use syn::{Error, Fields, GenericParam, Generics, Type, TypeParam, Variant};
-
-pub(crate) use command::Command;
+use syn::{Error, Fields, GenericParam, Generics, TypeParam, Variant};
 pub(crate) use unique_lit_strs::UniqueLitStrs;
 pub(crate) use unique_name_values::UniqueNameValues;
 

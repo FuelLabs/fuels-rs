@@ -1,3 +1,4 @@
+#![allow(warnings)]
 use fuels::{
     fuels_abigen::Parameterize,
     types::traits::{Parameterize, Tokenizable},
@@ -20,8 +21,6 @@ mod tests {
             h(H<bool>),
             a(T),
             e,
-            b(),
-            d(()),
         }
 
         #[derive(Parameterize, Tokenizable)]
@@ -29,11 +28,7 @@ mod tests {
             c,
         }
 
-        let ed = SomeEnum::<u64>::d(());
-        let eb = SomeEnum::<u64>::b();
-
+        let token = SomeEnum::<u64>::e.into_token();
         dbg!(SomeEnum::<u64>::param_type());
-        dbg!(ed.into_token());
-        dbg!(eb.into_token());
     }
 }

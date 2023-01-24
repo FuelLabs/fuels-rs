@@ -1,10 +1,9 @@
 use std::collections::HashSet;
 
+use fuels_types::errors::Error;
 use inflector::Inflector;
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
-
-use fuels_types::errors::Error;
 
 use crate::{
     code_gen::{
