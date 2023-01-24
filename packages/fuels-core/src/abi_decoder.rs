@@ -5,7 +5,7 @@ use fuels_types::{
     constants::WORD_SIZE,
     core::{unzip_param_types, StringToken, Token},
     enum_variants::EnumVariants,
-    errors::Error,
+    errors::{error, Error},
     param_types::ParamType,
 };
 
@@ -130,10 +130,11 @@ impl ABIDecoder {
         // A raw slice is actually an array of u64.
         let u64_size = std::mem::size_of::<u64>();
         if bytes.len() % u64_size != 0 {
-            return Err(Error::InvalidData(format!(
+            return Err(error!(
+                InvalidData,
                 "The bytes provided do not correspond to a raw slice with u64 numbers, got: {:?}",
                 bytes
-            )));
+            ));
         }
         let u64_length = bytes.len() / u64_size;
         let (tokens, bytes_read) = Self::decode_multiple(&vec![ParamType::U64; u64_length], bytes)?;
@@ -312,10 +313,11 @@ fn peek_fixed<const LEN: usize>(data: &[u8]) -> Result<&[u8; LEN], Error> {
 
 fn peek(data: &[u8], len: usize) -> Result<&[u8], Error> {
     if len > data.len() {
-        Err(Error::InvalidData(format!(
+        Err(error!(
+            InvalidData,
             "tried to read {len} bytes from response but only had {} remaining!",
             data.len()
-        )))
+        ))
     } else {
         Ok(&data[..len])
     }
@@ -323,10 +325,11 @@ fn peek(data: &[u8], len: usize) -> Result<&[u8], Error> {
 
 fn skip(slice: &[u8], num_bytes: usize) -> Result<&[u8], Error> {
     if num_bytes > slice.len() {
-        Err(Error::InvalidData(format!(
+        Err(error!(
+            InvalidData,
             "tried to consume {num_bytes} bytes from response but only had {} remaining!",
             slice.len()
-        )))
+        ))
     } else {
         Ok(&slice[num_bytes..])
     }

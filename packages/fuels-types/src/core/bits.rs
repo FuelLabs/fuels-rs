@@ -1,4 +1,4 @@
-use crate::errors::Error;
+use crate::errors::{error, Error};
 
 // A simple wrapper around [u8; 32] representing the `b256` type. Exists
 // mainly so that we may differentiate `Parameterize` and `Tokenizable`
@@ -18,7 +18,10 @@ impl Bits256 {
 
         let mut bytes = [0u8; 32];
         hex::decode_to_slice(hex, &mut bytes as &mut [u8]).map_err(|e| {
-            Error::InvalidData(format!("Could not convert hex str '{hex}' to Bits256! {e}"))
+            error!(
+                InvalidData,
+                "Could not convert hex str '{hex}' to Bits256! {e}"
+            )
         })?;
         Ok(Bits256(bytes))
     }

@@ -23,7 +23,7 @@ use fuels_core::{
 use fuels_types::{
     bech32::{Bech32Address, Bech32ContractId, FUEL_BECH32_HRP},
     coin::Coin,
-    errors::Error,
+    errors::{error, Error},
     message::Message as InputMessage,
     resource::Resource,
     transaction_response::TransactionResponse,
@@ -512,8 +512,9 @@ impl WalletUnlocked {
             .sum();
         // either the inputs were setup incorrectly, or the passed previous_base_amount is wrong
         if base_inputs_sum < previous_base_amount {
-            return Err(Error::WalletError(
-                "The provided base asset amount is less than the present input coins".to_string(),
+            return Err(error!(
+                WalletError,
+                "The provided base asset amount is less than the present input coins"
             ));
         }
 

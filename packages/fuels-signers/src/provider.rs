@@ -118,17 +118,19 @@ impl Provider {
         } = self.estimate_transaction_cost(tx, Some(tolerance)).await?;
 
         if gas_used > *tx.gas_limit() {
-            return Err(Error::ProviderError(format!(
+            return Err(error!(
+                ProviderError,
                 "gas_limit({}) is lower than the estimated gas_used({})",
                 tx.gas_limit(),
                 gas_used
-            )));
+            ));
         } else if min_gas_price > *tx.gas_price() {
-            return Err(Error::ProviderError(format!(
+            return Err(error!(
+                ProviderError,
                 "gas_price({}) is lower than the required min_gas_price({})",
                 tx.gas_price(),
                 min_gas_price
-            )));
+            ));
         }
 
         let (status, receipts) = self.submit_with_feedback(&tx.clone().into()).await?;

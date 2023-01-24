@@ -1,7 +1,6 @@
 use std::{array::TryFromSliceError, str::Utf8Error};
 
 use fuel_tx::{CheckError, Receipt};
-use strum::ParseError;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -14,18 +13,8 @@ pub enum Error {
     IOError(#[from] std::io::Error),
     #[error("Invalid type: {0}")]
     InvalidType(String),
-    #[error("Parse integer error: {0}")]
-    ParseIntError(#[from] std::num::ParseIntError),
-    #[error("Parse boolean error: {0}")]
-    ParseBoolError(#[from] std::str::ParseBoolError),
-    #[error("Parse hex error: {0}")]
-    ParseHexError(#[from] hex::FromHexError),
-    #[error("Parse token stream error: {0}")]
-    ParseTokenStreamError(String),
     #[error("Utf8 error: {0}")]
     Utf8Error(#[from] Utf8Error),
-    #[error("Compilation error: {0}")]
-    CompilationError(String),
     #[error("Instantiation error: {0}")]
     InstantiationError(String),
     #[error("Infrastructure error: {0}")]
@@ -40,15 +29,15 @@ pub enum Error {
     RevertTransactionError(String, Vec<Receipt>),
 }
 
-// This macro can only be used for variants that have a String field
-// for example `InvalidData`, `InvalidType`, etc.
+/// This macro can only be used for `Error` variants that have a `String` field.
+/// Those are: `InvalidData`, `InvalidType`, `InfrastructureError`,
+/// `InstantiationError`, `WalletError`, `ProviderError`
 #[macro_export]
 macro_rules! error {
    ($err_variant:ident, $fmt_str: literal $(,$arg: expr)*) => {
        Error::$err_variant(format!($fmt_str,$($arg),*))
    }
 }
-
 pub use error;
 
 macro_rules! impl_error_from {
@@ -63,5 +52,3 @@ macro_rules! impl_error_from {
 
 impl_error_from!(InvalidData, bech32::Error);
 impl_error_from!(InvalidData, TryFromSliceError);
-impl_error_from!(InvalidType, ParseError);
-impl_error_from!(ParseTokenStreamError, proc_macro2::LexError);

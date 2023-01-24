@@ -27,7 +27,7 @@ use fuels_signers::{
 use fuels_types::{
     bech32::Bech32ContractId,
     core::{Selector, Token},
-    errors::Error,
+    errors::{error, Error},
     param_types::{ParamType, ReturnLocation},
 };
 
@@ -253,19 +253,20 @@ impl Contract {
             .extension()
             .expect("Could not extract extension from file path");
         if extension != "bin" {
-            return Err(Error::InvalidData(format!(
+            return Err(error!(
+                InvalidData,
                 "The file extension '{}' is not recognized. Did you mean '.bin'?",
                 extension
                     .to_str()
                     .expect("Could not convert extension to &str")
-            )));
+            ));
         }
 
         let bin = std::fs::read(binary_filepath).map_err(|_| {
-            Error::InvalidData(format!(
-                "Failed to read binary file with path '{}'",
-                &binary_filepath
-            ))
+            error!(
+                InvalidData,
+                "Failed to read binary file with path '{}'", &binary_filepath
+            )
         })?;
 
         let storage = match storage_path {

@@ -3,7 +3,11 @@ use std::fmt;
 use fuel_types::bytes::padded_len;
 use strum_macros::EnumString;
 
-use crate::{enum_variants::EnumVariants, errors::Error, param_types::ParamType};
+use crate::{
+    enum_variants::EnumVariants,
+    errors::{error, Error},
+    param_types::ParamType,
+};
 
 mod bits;
 mod byte;
@@ -31,17 +35,19 @@ impl StringToken {
 
     fn validate(&self) -> Result<(), Error> {
         if !self.data.is_ascii() {
-            return Err(Error::InvalidData(
-                "String data can only have ascii values".into(),
+            return Err(error!(
+                InvalidData,
+                "String data can only have ascii values"
             ));
         }
 
         if self.data.len() != self.expected_len {
-            return Err(Error::InvalidData(format!(
+            return Err(error!(
+                InvalidData,
                 "String data has len {}, but the expected len is {}",
                 self.data.len(),
                 self.expected_len
-            )));
+            ));
         }
 
         Ok(())

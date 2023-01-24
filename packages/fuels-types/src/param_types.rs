@@ -10,7 +10,11 @@ use fuel_abi_types::{
 use itertools::Itertools;
 use strum_macros::EnumString;
 
-use crate::{constants::WORD_SIZE, enum_variants::EnumVariants, errors::Error};
+use crate::{
+    constants::WORD_SIZE,
+    enum_variants::EnumVariants,
+    errors::{error, Error},
+};
 
 #[derive(Debug, Clone, EnumString, PartialEq, Eq)]
 #[strum(ascii_case_insensitive)]
@@ -264,10 +268,10 @@ impl TryFrom<&Type> for ParamType {
         .next();
 
         matched_param_type.map(Ok).unwrap_or_else(|| {
-            Err(Error::InvalidType(format!(
-                "Type {} couldn't be converted into a ParamType",
-                the_type.type_field
-            )))
+            Err(error!(
+                InvalidType,
+                "Type {} couldn't be converted into a ParamType", the_type.type_field
+            ))
         })
     }
 }
@@ -303,16 +307,18 @@ fn try_vector(the_type: &Type) -> Result<Option<ParamType>, Error> {
     let type_field = &the_type.type_field;
     if has_struct_format(type_field)
         && extract_custom_type_name(type_field).ok_or_else(|| {
-            Error::InvalidType(format!(
+            error!(
+                InvalidType,
                 "Could not extract struct name from type_field {type_field}"
-            ))
+            )
         })? == "Vec"
     {
         if the_type.generic_params.len() != 1 {
-            return Err(Error::InvalidType(format!(
+            return Err(error!(
+                InvalidType,
                 "Vec must have exactly one generic argument for its type. Found: {:?}",
                 the_type.generic_params
-            )));
+            ));
         }
 
         let (_, vec_elem_type) = named_param_types(&the_type.generic_params)?.remove(0);
@@ -371,10 +377,11 @@ fn try_array(the_type: &Type) -> Result<Option<ParamType>, Error> {
                 let array_type = single_type.try_into()?;
                 Ok(Some(ParamType::Array(Box::new(array_type), len)))
             }
-            _ => Err(Error::InvalidType(format!(
+            _ => Err(error!(
+                InvalidType,
                 "An array must have elements of exactly one type. Array types: {:?}",
                 the_type.components
-            ))),
+            )),
         };
     }
     Ok(None)

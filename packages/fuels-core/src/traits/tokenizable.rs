@@ -2,7 +2,7 @@ use fuels_types::{
     core::{
         Bits256, Byte, EvmAddress, Identity, RawSlice, SizedAsciiString, StringToken, Token, B512,
     },
-    errors::Error,
+    errors::{error, Error},
     param_types::ParamType,
     Address, AssetId, ContractId,
 };
@@ -34,9 +34,10 @@ impl Tokenizable for Bits256 {
     {
         match token {
             Token::B256(data) => Ok(Bits256(data)),
-            _ => Err(Error::InvalidData(format!(
+            _ => Err(error!(
+                InvalidData,
                 "Bits256 cannot be constructed from token {token}"
-            ))),
+            )),
         }
     }
 
@@ -56,14 +57,16 @@ impl Tokenizable for B512 {
                     bytes: <[Bits256; 2usize]>::from_token(Token::Array(data.to_vec()))?,
                 })
             } else {
-                Err(Error::InstantiationError(format!(
-                    "B512 expected one `Token::Array`, got {tokens:?}",
-                )))
+                Err(error!(
+                    InstantiationError,
+                    "B512 expected one `Token::Array`, got {tokens:?}"
+                ))
             }
         } else {
-            Err(Error::InstantiationError(format!(
-                "B512 expected `Token::Struct`, got {token:?}",
-            )))
+            Err(error!(
+                InstantiationError,
+                "B512 expected `Token::Struct`, got {token:?}"
+            ))
         }
     }
 
@@ -81,14 +84,16 @@ impl Tokenizable for EvmAddress {
             if let [Token::B256(data)] = tokens.as_slice() {
                 Ok(EvmAddress::from(Bits256(*data)))
             } else {
-                Err(Error::InstantiationError(format!(
-                    "EvmAddress expected one `Token::B256`, got {tokens:?}",
-                )))
+                Err(error!(
+                    InstantiationError,
+                    "EvmAddress expected one `Token::B256`, got {tokens:?}"
+                ))
             }
         } else {
-            Err(Error::InstantiationError(format!(
-                "EvmAddress expected `Token::Struct` got {token:?}",
-            )))
+            Err(error!(
+                InstantiationError,
+                "EvmAddress expected `Token::Struct` got {token:?}"
+            ))
         }
     }
 
@@ -104,9 +109,10 @@ impl Tokenizable for Byte {
     {
         match token {
             Token::Byte(value) => Ok(Byte(value)),
-            _ => Err(Error::InvalidData(format!(
+            _ => Err(error!(
+                InvalidData,
                 "Byte::from_token failed! Can only handle Token::Byte, got {token:?}"
-            ))),
+            )),
         }
     }
 
@@ -123,9 +129,10 @@ impl<T: Tokenizable> Tokenizable for Vec<T> {
         if let Token::Vector(tokens) = token {
             tokens.into_iter().map(Tokenizable::from_token).collect()
         } else {
-            Err(Error::InvalidData(format!(
+            Err(error!(
+                InvalidData,
                 "Vec::from_token must only be given a Token::Vector. Got: {token}"
-            )))
+            ))
         }
     }
 
@@ -139,10 +146,10 @@ impl Tokenizable for bool {
     fn from_token(token: Token) -> Result<Self, Error> {
         match token {
             Token::Bool(data) => Ok(data),
-            other => Err(Error::InstantiationError(format!(
-                "Expected `bool`, got {:?}",
-                other
-            ))),
+            other => Err(error!(
+                InstantiationError,
+                "Expected `bool`, got {:?}", other
+            )),
         }
     }
     fn into_token(self) -> Token {
@@ -157,10 +164,10 @@ impl Tokenizable for () {
     {
         match token {
             Token::Unit => Ok(()),
-            other => Err(Error::InstantiationError(format!(
-                "Expected `Unit`, got {:?}",
-                other
-            ))),
+            other => Err(error!(
+                InstantiationError,
+                "Expected `Unit`, got {:?}", other
+            )),
         }
     }
 
@@ -173,10 +180,7 @@ impl Tokenizable for u8 {
     fn from_token(token: Token) -> Result<Self, Error> {
         match token {
             Token::U8(data) => Ok(data),
-            other => Err(Error::InstantiationError(format!(
-                "Expected `u8`, got {:?}",
-                other
-            ))),
+            other => Err(error!(InstantiationError, "Expected `u8`, got {:?}", other)),
         }
     }
     fn into_token(self) -> Token {
@@ -188,10 +192,10 @@ impl Tokenizable for u16 {
     fn from_token(token: Token) -> Result<Self, Error> {
         match token {
             Token::U16(data) => Ok(data),
-            other => Err(Error::InstantiationError(format!(
-                "Expected `u16`, got {:?}",
-                other
-            ))),
+            other => Err(error!(
+                InstantiationError,
+                "Expected `u16`, got {:?}", other
+            )),
         }
     }
     fn into_token(self) -> Token {
@@ -203,10 +207,10 @@ impl Tokenizable for u32 {
     fn from_token(token: Token) -> Result<Self, Error> {
         match token {
             Token::U32(data) => Ok(data),
-            other => Err(Error::InstantiationError(format!(
-                "Expected `u32`, got {:?}",
-                other
-            ))),
+            other => Err(error!(
+                InstantiationError,
+                "Expected `u32`, got {:?}", other
+            )),
         }
     }
     fn into_token(self) -> Token {
@@ -218,10 +222,10 @@ impl Tokenizable for u64 {
     fn from_token(token: Token) -> Result<Self, Error> {
         match token {
             Token::U64(data) => Ok(data),
-            other => Err(Error::InstantiationError(format!(
-                "Expected `u64`, got {:?}",
-                other
-            ))),
+            other => Err(error!(
+                InstantiationError,
+                "Expected `u64`, got {:?}", other
+            )),
         }
     }
     fn into_token(self) -> Token {
@@ -236,9 +240,9 @@ impl Tokenizable for RawSlice {
     {
         match token {
             Token::RawSlice(contents) => Ok(Self(contents)),
-            _ => Err(Error::InvalidData(format!(
+            _ => Err(error!(InvalidData,
                 "RawSlice::from_token expected a token of the variant Token::RawSlice, got: {token}"
-            ))),
+            )),
         }
     }
 
@@ -264,17 +268,17 @@ macro_rules! impl_tokenizable_tuples {
                         let mut it = tokens.into_iter();
                         let mut next_token = move || {
                             it.next().ok_or_else(|| {
-                                Error::InstantiationError("Ran out of tokens before tuple could be constructed".to_string())
+                                error!(InstantiationError,"Ran out of tokens before tuple could be constructed")
                             })
                         };
                         Ok(($(
                           $ty::from_token(next_token()?)?,
                         )+))
                     },
-                    other => Err(Error::InstantiationError(format!(
+                    other => Err(error!(InstantiationError,
                         "Expected `Tuple`, got {:?}",
-                        other,
-                    ))),
+                        other
+                    )),
                 }
             }
 
@@ -316,14 +320,16 @@ impl Tokenizable for ContractId {
             if let [Token::B256(data)] = tokens.as_slice() {
                 Ok(ContractId::from(*data))
             } else {
-                Err(Error::InstantiationError(format!(
+                Err(error!(
+                    InstantiationError,
                     "ContractId expected one `Token::B256`, got {tokens:?}"
-                )))
+                ))
             }
         } else {
-            Err(Error::InstantiationError(format!(
-                "Address expected `Token::Struct` got {token:?}",
-            )))
+            Err(error!(
+                InstantiationError,
+                "Address expected `Token::Struct` got {token:?}"
+            ))
         }
     }
 
@@ -342,14 +348,16 @@ impl Tokenizable for Address {
             if let [Token::B256(data)] = tokens.as_slice() {
                 Ok(Address::from(*data))
             } else {
-                Err(Error::InstantiationError(format!(
+                Err(error!(
+                    InstantiationError,
                     "Address expected one `Token::B256`, got {tokens:?}"
-                )))
+                ))
             }
         } else {
-            Err(Error::InstantiationError(format!(
-                "Address expected `Token::Struct` got {token:?}",
-            )))
+            Err(error!(
+                InstantiationError,
+                "Address expected `Token::Struct` got {token:?}"
+            ))
         }
     }
 
@@ -369,14 +377,16 @@ impl Tokenizable for AssetId {
             if let [Token::B256(data)] = tokens.as_slice() {
                 Ok(AssetId::from(*data))
             } else {
-                Err(Error::InstantiationError(format!(
+                Err(error!(
+                    InstantiationError,
                     "AssetId expected one `Token::B256`, got {tokens:?}"
-                )))
+                ))
             }
         } else {
-            Err(Error::InstantiationError(format!(
-                "AssetId expected `Token::Struct` got {token:?}",
-            )))
+            Err(error!(
+                InstantiationError,
+                "AssetId expected `Token::Struct` got {token:?}"
+            ))
         }
     }
 
@@ -395,15 +405,16 @@ where
             match *enum_selector {
                 (0u8, _, _) => Ok(None),
                 (1u8, token, _) => Ok(Option::<T>::Some(T::from_token(token)?)),
-                (_, _, _) => Err(Error::InstantiationError(format!(
-                    "Could not construct Option from enum_selector. Received: {:?}",
-                    enum_selector
-                ))),
+                (_, _, _) => Err(error!(
+                    InstantiationError,
+                    "Could not construct Option from enum_selector. Received: {:?}", enum_selector
+                )),
             }
         } else {
-            Err(Error::InstantiationError(format!(
-                "Could not construct Option from token. Received: {token:?}",
-            )))
+            Err(error!(
+                InstantiationError,
+                "Could not construct Option from token. Received: {token:?}"
+            ))
         }
     }
     fn into_token(self) -> Token {
@@ -430,15 +441,16 @@ where
             match *enum_selector {
                 (0u8, token, _) => Ok(Result::<T, E>::Ok(T::from_token(token)?)),
                 (1u8, token, _) => Ok(Result::<T, E>::Err(E::from_token(token)?)),
-                (_, _, _) => Err(Error::InstantiationError(format!(
-                    "Could not construct Result from enum_selector. Received: {:?}",
-                    enum_selector
-                ))),
+                (_, _, _) => Err(error!(
+                    InstantiationError,
+                    "Could not construct Result from enum_selector. Received: {:?}", enum_selector
+                )),
             }
         } else {
-            Err(Error::InstantiationError(format!(
-                "Could not construct Result from token. Received: {token:?}",
-            )))
+            Err(error!(
+                InstantiationError,
+                "Could not construct Result from token. Received: {token:?}"
+            ))
         }
     }
     fn into_token(self) -> Token {
@@ -461,15 +473,17 @@ impl Tokenizable for Identity {
             match *enum_selector {
                 (0u8, token, _) => Ok(Identity::Address(Address::from_token(token)?)),
                 (1u8, token, _) => Ok(Identity::ContractId(ContractId::from_token(token)?)),
-                (_, _, _) => Err(Error::InstantiationError(format!(
+                (_, _, _) => Err(error!(
+                    InstantiationError,
                     "Could not construct Identity from enum_selector. Received: {:?}",
                     enum_selector
-                ))),
+                )),
             }
         } else {
-            Err(Error::InstantiationError(format!(
-                "Could not construct Identity from token. Received: {token:?}",
-            )))
+            Err(error!(
+                InstantiationError,
+                "Could not construct Identity from token. Received: {token:?}"
+            ))
         }
     }
     fn into_token(self) -> Token {
@@ -492,9 +506,10 @@ impl<const SIZE: usize, T: Tokenizable> Tokenizable for [T; SIZE] {
         Self: Sized,
     {
         let gen_error = |reason| {
-            Error::InvalidData(format!(
+            error!(
+                InvalidData,
                 "While constructing an array of size {SIZE}: {reason}"
-            ))
+            )
         };
 
         match token {
@@ -536,12 +551,12 @@ impl<const LEN: usize> Tokenizable for SizedAsciiString<LEN> {
             Token::String(contents) => {
                 let expected_len = contents.get_encodable_str()?.len() ;
                 if expected_len!= LEN {
-                    return Err(Error::InvalidData(format!("SizedAsciiString<{LEN}>::from_token got a Token::String whose expected length({}) is != {LEN}", expected_len)))
+                    return Err(error!(InvalidData,"SizedAsciiString<{LEN}>::from_token got a Token::String whose expected length({}) is != {LEN}", expected_len))
                 }
                 Self::new(contents.try_into()?)
             },
             _ => {
-                Err(Error::InvalidData(format!("SizedAsciiString<{LEN}>::from_token expected a token of the variant Token::String, got: {token}")))
+                Err(error!(InvalidData,"SizedAsciiString<{LEN}>::from_token expected a token of the variant Token::String, got: {token}"))
             }
         }
     }

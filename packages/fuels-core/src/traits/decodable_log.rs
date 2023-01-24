@@ -1,6 +1,10 @@
 use std::iter::zip;
 
-use fuels_types::{core::Token, errors::Error, param_types::ParamType};
+use fuels_types::{
+    core::Token,
+    errors::{error, Error},
+    param_types::ParamType,
+};
 
 use crate::abi_decoder::ABIDecoder;
 
@@ -87,9 +91,10 @@ fn paramtype_decode_log(param_type: &ParamType, token: &Token) -> Result<String,
             format!("({elements})")
         }
         _ => {
-            return Err(Error::InvalidData(format!(
+            return Err(error!(
+                InvalidData,
                 "Could not decode log with param type: `{param_type:?}` and token: `{token:?}`"
-            )))
+            ))
         }
     };
     Ok(result)
