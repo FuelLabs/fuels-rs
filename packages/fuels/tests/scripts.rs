@@ -299,3 +299,26 @@ async fn test_script_call_with_non_default_max_input() -> Result<(), Error> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn test_script_raw_slice() -> Result<(), Error> {
+    abigen!(Script(
+        name = "BimBamScript",
+        abi = "packages/fuels/tests/scripts/script_raw_slice/out/debug/script_raw_slice-abi.json",
+    ));
+    let num_wallets = 1;
+    let num_coins = 1;
+    let amount = 1000;
+    let config = WalletsConfig::new(Some(num_wallets), Some(num_coins), Some(amount));
+
+    let mut wallets = launch_custom_provider_and_get_wallets(config, None, None).await;
+    let wallet = wallets.pop().unwrap();
+    let bin_path = "../fuels/tests/scripts/script_raw_slice/out/debug/script_raw_slice.bin";
+    let instance = BimBamScript::new(wallet.clone(), bin_path);
+
+    for length in 0..=10 {
+        let response = instance.main(length).call().await?;
+        assert_eq!(response.value, (0..length).collect::<Vec<_>>());
+    }
+    Ok(())
+}

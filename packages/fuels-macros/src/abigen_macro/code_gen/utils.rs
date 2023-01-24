@@ -125,6 +125,7 @@ pub(crate) fn get_sdk_provided_types() -> Vec<TypePath> {
         "::fuels::types::Identity",
         "::fuels::types::EvmAddress",
         "::fuels::types::B512",
+        "::fuels::types::RawSlice",
         "::std::vec::Vec",
         "::std::result::Result",
         "::std::option::Option",

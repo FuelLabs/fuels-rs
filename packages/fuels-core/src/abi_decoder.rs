@@ -1,6 +1,7 @@
 use std::{convert::TryInto, str};
 
 use fuel_types::bytes::padded_len_usize;
+use fuels_types::errors::Error;
 use fuels_types::{
     constants::WORD_SIZE,
     core::{unzip_param_types, StringToken, Token},
@@ -8,6 +9,8 @@ use fuels_types::{
     errors::CodecError,
     param_types::ParamType,
 };
+
+use crate::Tokenizable;
 
 #[derive(Debug, Clone)]
 struct DecodeResult {
@@ -64,6 +67,7 @@ impl ABIDecoder {
             ParamType::Enum { variants, .. } => Self::decode_enum(bytes, variants),
             ParamType::Tuple(types) => Self::decode_tuple(types, bytes),
             ParamType::Vector(param_type) => Self::decode_vector(param_type, bytes),
+            ParamType::RawSlice => Self::decode_raw_slice(bytes),
         }
     }
 
@@ -119,6 +123,29 @@ impl ABIDecoder {
 
         Ok(DecodeResult {
             token: Token::Array(tokens),
+            bytes_read,
+        })
+    }
+
+    fn decode_raw_slice(bytes: &[u8]) -> Result<DecodeResult, CodecError> {
+        // A raw slice is actually an array of u64.
+        let u64_size = std::mem::size_of::<u64>();
+        if bytes.len() % u64_size != 0 {
+            return Err(CodecError::InvalidData(format!(
+                "The bytes provided do not correspond to a raw slice with u64 numbers, got: {:?}",
+                bytes
+            )));
+        }
+        let u64_length = bytes.len() / u64_size;
+        let (tokens, bytes_read) = Self::decode_multiple(&vec![ParamType::U64; u64_length], bytes)?;
+        let elements = tokens
+            .into_iter()
+            .map(u64::from_token)
+            .collect::<Result<Vec<u64>, Error>>()
+            .map_err(|e| CodecError::InvalidData(e.to_string()))?;
+
+        Ok(DecodeResult {
+            token: Token::RawSlice(elements),
             bytes_read,
         })
     }

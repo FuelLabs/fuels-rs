@@ -20,3 +20,6 @@ packages/fuels/tests/**/**/out/
 
 # Don't add target/ files from test Sway projects.
 packages/fuels/tests/**/**/target/
+
+# Don't add .gitignore files from test Sway projects.
+packages/fuels/tests/**/**/.gitignore
