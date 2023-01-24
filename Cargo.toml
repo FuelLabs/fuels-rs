@@ -16,7 +16,7 @@ members = [
     "examples/types",
     "examples/wallets",
     "packages/fuels",
-    "packages/fuels-abigen-macro",
+    "packages/fuels-macros",
     "packages/fuels-programs",
     "packages/fuels-core",
     "packages/fuels-signers",

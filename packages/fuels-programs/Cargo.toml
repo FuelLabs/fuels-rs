@@ -21,7 +21,6 @@ futures = "0.3.21"
 hex = { version = "0.4.3", default-features = false, features = ["std"] }
 itertools = "0.10.3"
 proc-macro2 = "1.0"
-quote = "1.0"
 rand = "0.8"
 regex = "1.5.4"
 serde = { version = "1.0.124", default-features = false, features = ["derive"] }

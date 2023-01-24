@@ -83,7 +83,7 @@ mod tests {
 
         let path = dir.join(uuid);
 
-        let _recovered_wallet = WalletUnlocked::load_keystore(&path, password, Some(provider))?;
+        let _recovered_wallet = WalletUnlocked::load_keystore(path, password, Some(provider))?;
         // ANCHOR_END: create_and_restore_json_wallet
         Ok(())
     }

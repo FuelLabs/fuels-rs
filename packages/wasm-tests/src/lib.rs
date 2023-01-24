@@ -2,7 +2,7 @@ extern crate alloc;
 
 use fuels::{
     core::abi_decoder::ABIDecoder,
-    fuels_abigen::wasm_abigen,
+    macros::wasm_abigen,
     types::{param_types::ParamType, traits::Tokenizable},
 };
 
