@@ -26,7 +26,10 @@ fn tokenizable_for_struct(
 
     let struct_name_str = name.to_string();
 
-    let field_names = extract_struct_members(contents.fields)?
+    // TODO: The quote below references `field_names` twice.
+    // Check if it somehow collects it internally,
+    // otherwise the iterator would be exhausted for the first repetition in quote leaving no elements behind for the second. Collecting it here is a workaround.
+    let field_names = extract_struct_members(contents)?
         .names()
         .collect::<Vec<_>>();
 

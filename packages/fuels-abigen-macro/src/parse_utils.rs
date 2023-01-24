@@ -2,7 +2,7 @@ pub(crate) use command::Command;
 use itertools::{chain, Itertools};
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
-use syn::{Error, Fields, GenericParam, Generics, TypeParam, Variant};
+use syn::{DataEnum, DataStruct, Error, Fields, GenericParam, Generics, TypeParam, Variant};
 pub(crate) use unique_lit_strs::UniqueLitStrs;
 pub(crate) use unique_name_values::UniqueNameValues;
 
@@ -82,15 +82,15 @@ where
         .validate_no_errors()
 }
 
-pub(crate) fn extract_struct_members(fields: Fields) -> syn::Result<Members> {
-    let named_fields = match fields {
+pub(crate) fn extract_struct_members(fields: DataStruct) -> syn::Result<Members> {
+    let named_fields = match fields.fields {
         Fields::Named(named_fields) => Ok(named_fields.named),
         Fields::Unnamed(fields) => Err(Error::new_spanned(
             fields.unnamed,
             "Tokenizable cannot be derived on tuple-like structs!",
         )),
         _ => {
-            todo!("Still don't know what are Unit fields in structs...")
+            panic!("This cannot happen in valid Rust code. Fields::Unit only appears in enums")
         }
     }?;
 
@@ -148,10 +148,9 @@ impl Members {
     }
 }
 
-pub(crate) fn extract_enum_members(
-    variants: impl IntoIterator<Item = Variant>,
-) -> syn::Result<Members> {
-    let components = variants
+pub(crate) fn extract_enum_members(data: DataEnum) -> syn::Result<Members> {
+    let components = data
+        .variants
         .into_iter()
         .map(|variant: Variant| {
             let name = variant.ident;

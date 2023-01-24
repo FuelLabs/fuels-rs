@@ -25,7 +25,7 @@ fn parameterize_for_struct(
 
     let name_stringified = name.to_string();
 
-    let members = extract_struct_members(contents.fields)?;
+    let members = extract_struct_members(contents)?;
 
     let field_names = members.names_as_strings();
     let param_type_calls = members.param_type_calls();
@@ -66,7 +66,7 @@ fn parameterize_for_enum(
 
     let enum_name_str = name.to_string();
 
-    let declarations = extract_enum_members(contents.variants)?;
+    let declarations = extract_enum_members(contents)?;
 
     let variant_names = declarations.names_as_strings();
 
