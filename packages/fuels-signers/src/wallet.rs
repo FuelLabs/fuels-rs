@@ -939,7 +939,7 @@ mod tests {
         // Read from the encrypted JSON keystore and decrypt it.
         let path = Path::new(dir.path()).join(uuid);
         let recovered_wallet =
-            WalletUnlocked::load_keystore(&path.clone(), "password", Some(provider.clone()))?;
+            WalletUnlocked::load_keystore(path.clone(), "password", Some(provider.clone()))?;
 
         // Sign the same message as before and assert that the signature is the same.
         let signature2 = recovered_wallet.sign_message(message).await?;

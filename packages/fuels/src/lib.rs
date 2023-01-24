@@ -20,8 +20,8 @@ pub mod client {
     pub use fuel_gql_client::client::*;
 }
 
-pub mod fuels_abigen {
-    pub use fuels_abigen_macro::*;
+pub mod macros {
+    pub use fuels_macros::*;
 }
 
 pub mod programs {
@@ -65,7 +65,7 @@ pub mod prelude {
     pub use super::{
         core::{constants::*, parameters::*},
         fuel_node::*,
-        fuels_abigen::{abigen, setup_contract_test},
+        macros::{abigen, setup_contract_test},
         programs::{
             contract::{Contract, MultiContractCallHandler, SettableContract},
             logs::LogDecoder,

@@ -16,7 +16,7 @@ bech32 = "0.9.0"
 chrono = "0.4.2"
 fuel-tx = "0.23"
 fuel-types = "0.5"
-fuel-abi-types = "0.1.0"
+fuel-abi-types = "0.2.0"
 fuel-core = { version = "0.15", default-features = false, optional = true }
 fuel-chain-config = { version = "0.15", default-features = false }
 fuel-gql-client = { version = "0.15", default-features = false }
