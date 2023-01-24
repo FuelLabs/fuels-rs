@@ -261,7 +261,7 @@ fn to_custom_type(
             } else {
                 format!("self::{custom_type_name}")
             };
-            TypePath::new(&path_str).expect("Known to be well formed")
+            TypePath::new(path_str).expect("Known to be well formed")
         });
 
     Some(ResolvedType {
