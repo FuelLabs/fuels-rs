@@ -1,6 +1,6 @@
 use crate::{
     constants::{ENUM_DISCRIMINANT_WORD_WIDTH, WORD_SIZE},
-    errors::Error,
+    errors::{error, Error},
     param_types::ParamType,
 };
 
@@ -14,7 +14,7 @@ impl EnumVariants {
         if !variants.is_empty() {
             Ok(EnumVariants { variants })
         } else {
-            Err(Error::InvalidData("Enum variants can not be empty!".into()))
+            Err(error!(InvalidData, "Enum variants can not be empty!"))
         }
     }
 
@@ -32,10 +32,11 @@ impl EnumVariants {
 
     pub fn select_variant(&self, discriminant: u8) -> Result<&(String, ParamType), Error> {
         self.variants.get(discriminant as usize).ok_or_else(|| {
-            Error::InvalidData(format!(
+            error!(
+                InvalidData,
                 "Discriminant '{discriminant}' doesn't point to any variant: {:?}",
                 self.variants()
-            ))
+            )
         })
     }
 
