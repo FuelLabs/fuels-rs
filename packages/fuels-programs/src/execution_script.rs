@@ -1,11 +1,19 @@
 use std::{fmt::Debug, vec};
 
-use fuel_tx::{AssetId, Checkable, Receipt, Script, ScriptExecutionResult, Transaction, Input, Output, ContractId, Address, Bytes32, Witness};
+use fuel_tx::{
+    Address, AssetId, Bytes32, Checkable, ContractId, Input, Output, Receipt, Script,
+    ScriptExecutionResult, Transaction, Witness,
+};
 use fuel_types::bytes::WORD_SIZE;
-use fuel_vm::{prelude::{Opcode, GTFArgs}, consts::REG_ONE};
-use fuels_core::{offsets::call_script_data_offset, parameters::TxParameters, constants::BASE_ASSET_ID};
+use fuel_vm::{
+    consts::REG_ONE,
+    prelude::{GTFArgs, Opcode},
+};
+use fuels_core::{
+    constants::BASE_ASSET_ID, offsets::call_script_data_offset, parameters::TxParameters,
+};
 use fuels_signers::{provider::Provider, Signer, WalletUnlocked};
-use fuels_types::errors::Error;
+use fuels_types::{errors::Error, script_transaction::ScriptTransaction};
 
 use crate::{
     call_utils::{
@@ -16,9 +24,8 @@ use crate::{
 };
 
 use fuel_tx::field::{
-        GasLimit, GasPrice, Inputs, Maturity, Outputs, Script as ScriptField,
-        ScriptData, Witnesses,
-    };
+    GasLimit, GasPrice, Inputs, Maturity, Outputs, Script as ScriptField, ScriptData, Witnesses,
+};
 
 /// [`ExecutableFuelCall`] provides methods to create and call/simulate a transaction that carries
 /// out contract method calls or script calls
@@ -98,7 +105,7 @@ impl ExecutableFuelCall {
         let (inputs, outputs) =
             get_transaction_inputs_outputs(calls, wallet.address(), spendable_resources);
 
-        let mut tx = Transaction::script(
+        let mut tx = ScriptTransaction::script(
             tx_parameters.gas_price,
             tx_parameters.gas_limit,
             tx_parameters.maturity,
@@ -121,7 +128,7 @@ impl ExecutableFuelCall {
         Ok(ExecutableFuelCall::new(tx))
     }
 
-      /// Craft a transaction used to transfer funds between two addresses.
+    /// Craft a transaction used to transfer funds between two addresses.
     pub fn build_transfer_tx(inputs: &[Input], outputs: &[Output], params: TxParameters) -> Self {
         // This script is empty, since all this transaction does is move Inputs and Outputs around.
         let tx = Transaction::script(
@@ -135,9 +142,7 @@ impl ExecutableFuelCall {
             vec![],
         );
 
-        Self {
-            tx
-        }
+        Self { tx }
     }
 
     /// Craft a transaction used to transfer funds to a contract.
@@ -186,9 +191,7 @@ impl ExecutableFuelCall {
             vec![],
         );
 
-        Self {
-            tx
-        }
+        Self { tx }
     }
 
     /// Craft a transaction used to transfer funds to the base chain.
@@ -235,9 +238,7 @@ impl ExecutableFuelCall {
             vec![],
         );
 
-        Self {
-            tx
-        }
+        Self { tx }
     }
 
     /// Execute the transaction in a state-modifying manner.
