@@ -1,9 +1,7 @@
 use std::collections::HashMap;
 
 use fuels_types::{bech32::Bech32ContractId, core::ByteArray, param_types::ParamType, ContractId};
-use proc_macro2::{Ident, Span};
 use sha2::{Digest, Sha256};
-use syn::Ident as SynIdent;
 
 /// Hashes an encoded function selector using SHA256 and returns the first 4 bytes.
 /// The function selector has to have been already encoded following the ABI specs defined
@@ -16,19 +14,6 @@ pub fn first_four_bytes_of_sha256_hash(string: &str) -> ByteArray {
     let mut output = ByteArray::default();
     output[4..].copy_from_slice(&result[..4]);
     output
-}
-
-/// Expands a identifier string into an token.
-pub fn ident(name: &str) -> Ident {
-    Ident::new(name, Span::call_site())
-}
-
-// Expands an identifier string into a token and appending `_` if the
-/// identifier is for a reserved keyword.
-///
-/// Parsing keywords like `self` can fail, in this case we add an underscore.
-pub fn safe_ident(name: &str) -> Ident {
-    syn::parse_str::<SynIdent>(name).unwrap_or_else(|_| ident(&format!("{}_", name)))
 }
 
 pub fn log_type_lookup(
