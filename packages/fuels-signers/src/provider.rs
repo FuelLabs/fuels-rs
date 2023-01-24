@@ -28,7 +28,8 @@ use fuels_types::{
     message_proof::MessageProof,
     node_info::NodeInfo,
     resource::Resource,
-    transaction_response::TransactionResponse, script_transaction::ScriptTransaction,
+    script_transaction::ScriptTransaction,
+    transaction_response::TransactionResponse,
 };
 use tai64::Tai64;
 use thiserror::Error;
@@ -438,8 +439,7 @@ impl Provider {
         &self,
         tx: &ScriptTransaction,
         tolerance: Option<f64>,
-    ) -> Result<TransactionCost, Error>
-    {
+    ) -> Result<TransactionCost, Error> {
         let NodeInfo { min_gas_price, .. } = self.node_info().await?;
 
         let tolerance = tolerance.unwrap_or(DEFAULT_GAS_ESTIMATION_TOLERANCE);
@@ -454,7 +454,8 @@ impl Provider {
         *dry_run_tx.gas_price_mut() = gas_price;
         *dry_run_tx.gas_limit_mut() = gas_used;
 
-        let transaction_fee = dry_run_tx.fee_checked_from_tx(&consensus_parameters)
+        let transaction_fee = dry_run_tx
+            .fee_checked_from_tx(&consensus_parameters)
             .expect("Error calculating TransactionFee");
 
         Ok(TransactionCost {

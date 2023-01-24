@@ -176,7 +176,9 @@ where
             outputs,
             vec![vec![0, 0].into()], //TODO:(iqdecay): figure out how to have the right witnesses
         );
-        self.wallet.add_fee_resources(&mut ScriptTransaction::new(tx.clone()), 0, 0).await?;
+        self.wallet
+            .add_fee_resources(&mut ScriptTransaction::new(tx.clone()), 0, 0)
+            .await?;
 
         let tx_execution = ExecutableFuelCall { tx };
 

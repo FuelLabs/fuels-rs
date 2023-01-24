@@ -5,7 +5,8 @@ use fuel_tx::field::{
     GasLimit, GasPrice, Inputs, Maturity, Outputs, Script as ScriptField, ScriptData, Witnesses,
 };
 use fuel_tx::{
-    Bytes32, ConsensusParameters, Input, Output, Script, TransactionFee, UniqueIdentifier, Witness, Checkable, Chargeable, Transaction,
+    Bytes32, Chargeable, Checkable, ConsensusParameters, Input, Output, Script, Transaction,
+    TransactionFee, UniqueIdentifier, Witness,
 };
 
 use crate::errors::Error;

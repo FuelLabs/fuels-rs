@@ -39,7 +39,7 @@ impl ExecutableFuelCall {
         Self { tx }
     }
 
-    /* 
+    /*
     pub fn gas_price(&self) -> u64 {
         *self.tx.gas_price()
     }
@@ -141,7 +141,8 @@ impl ExecutableFuelCall {
             inputs.to_vec(),
             outputs.to_vec(),
             vec![],
-        ).into();
+        )
+        .into();
 
         Self { tx }
     }
@@ -190,7 +191,8 @@ impl ExecutableFuelCall {
             inputs.to_vec(),
             outputs.to_vec(),
             vec![],
-        ).into();
+        )
+        .into();
 
         Self { tx }
     }
