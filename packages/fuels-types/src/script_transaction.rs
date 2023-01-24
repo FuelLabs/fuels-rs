@@ -1,6 +1,5 @@
 use std::fmt::Debug;
 
-use fuel_tx::default_parameters::MAX_GAS_PER_TX;
 use fuel_tx::field::{
     GasLimit, GasPrice, Inputs, Maturity, Outputs, Script as ScriptField, ScriptData, Witnesses,
 };

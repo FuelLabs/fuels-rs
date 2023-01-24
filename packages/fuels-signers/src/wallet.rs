@@ -6,8 +6,8 @@ use eth_keystore::KeystoreError;
 use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
 use fuel_gql_client::client::{PaginatedResult, PaginationRequest};
 use fuel_tx::{
-    AssetId, Bytes32, ContractId, Input, Output, Receipt, Script, Transaction, TxPointer, UtxoId,
-    Witness,
+    field, AssetId, Bytes32, Cacheable, Chargeable, ContractId, Input, Output, Receipt, Script,
+    Transaction, TransactionFee, TxPointer, UniqueIdentifier, UtxoId, Witness,
 };
 use fuel_types::{bytes::WORD_SIZE, Address, MessageId};
 use fuel_vm::{
@@ -494,9 +494,9 @@ impl WalletUnlocked {
     ///
     /// Requires contract inputs to be at the start of the transactions inputs vec
     /// so that their indexes are retained
-    pub async fn add_fee_resources(
+    pub async fn add_fee_resources<Tx: Chargeable + field::Inputs + field::Outputs>(
         &self,
-        tx: &mut ScriptTransaction,
+        tx: &mut Tx,
         previous_base_amount: u64,
         witness_index: u8,
     ) -> Result<(), Error> {
@@ -505,8 +505,7 @@ impl WalletUnlocked {
             .chain_info()
             .await?
             .consensus_parameters;
-        let transaction_fee = tx
-            .fee_checked_from_tx(&consensus_parameters)
+        let transaction_fee = TransactionFee::checked_from_tx(&consensus_parameters, tx)
             .expect("Error calculating TransactionFee");
 
         let (base_asset_inputs, remaining_inputs): (Vec<_>, Vec<_>) =
@@ -615,7 +614,7 @@ impl WalletUnlocked {
             .await?;
         let outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
 
-        let mut tx = Wallet::build_transfer_tx(&inputs, &outputs, tx_parameters);
+        let mut tx: Script = Wallet::build_transfer_tx(&inputs, &outputs, tx_parameters).into();
 
         // if we are not transferring the base asset, previous base amount is 0
         if asset_id == AssetId::default() {
@@ -647,7 +646,8 @@ impl WalletUnlocked {
             .get_asset_inputs_for_amount(BASE_ASSET_ID, amount, 0)
             .await?;
 
-        let mut tx = Wallet::build_message_to_output_tx(to.into(), amount, &inputs, tx_parameters);
+        let mut tx: Script =
+            Wallet::build_message_to_output_tx(to.into(), amount, &inputs, tx_parameters).into();
 
         self.add_fee_resources(&mut tx, amount, 0).await?;
         self.sign_transaction(&mut tx).await?;
@@ -724,7 +724,7 @@ impl WalletUnlocked {
             Output::coin(predicate_address.into(), input_amount - amount, asset_id),
         ];
 
-        let mut tx = Wallet::build_transfer_tx(&inputs, &outputs, tx_parameters);
+        let mut tx: Script = Wallet::build_transfer_tx(&inputs, &outputs, tx_parameters).into();
         // we set previous base amount to 0 because it only applies to signed coins, not predicate coins
         self.add_fee_resources(&mut tx, 0, 0).await?;
         self.sign_transaction(&mut tx).await?;
@@ -827,14 +827,15 @@ impl WalletUnlocked {
         ];
 
         // Build transaction and sign it
-        let mut tx = Wallet::build_contract_transfer_tx(
+        let mut tx: Script = Wallet::build_contract_transfer_tx(
             plain_contract_id,
             balance,
             asset_id,
             &inputs,
             &outputs,
             tx_parameters,
-        );
+        )
+        .into();
         // if we are not transferring the base asset, previous base amount is 0
         let base_amount = if asset_id == AssetId::default() {
             balance
@@ -868,7 +869,10 @@ impl Signer for WalletUnlocked {
         Ok(sig)
     }
 
-    async fn sign_transaction(&self, tx: &mut ScriptTransaction) -> Result<Signature, Self::Error> {
+    async fn sign_transaction<Tx: Cacheable + UniqueIdentifier + field::Witnesses + Send>(
+        &self,
+        tx: &mut Tx,
+    ) -> Result<Signature, Self::Error> {
         let id = tx.id();
 
         // Safety: `Message::from_bytes_unchecked` is unsafe because

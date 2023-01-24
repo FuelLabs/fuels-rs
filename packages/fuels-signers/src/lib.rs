@@ -9,7 +9,8 @@ use async_trait::async_trait;
 #[doc(no_inline)]
 pub use fuel_crypto;
 use fuel_crypto::Signature;
-use fuels_types::{bech32::Bech32Address, script_transaction::ScriptTransaction};
+use fuel_tx::{field, Cacheable, UniqueIdentifier};
+use fuels_types::bech32::Bech32Address;
 pub use wallet::{Wallet, WalletUnlocked};
 
 /// Trait for signing transactions and messages
@@ -26,9 +27,9 @@ pub trait Signer: std::fmt::Debug + Send + Sync {
     ) -> Result<Signature, Self::Error>;
 
     /// Signs the transaction
-    async fn sign_transaction(
+    async fn sign_transaction<Tx: Cacheable + UniqueIdentifier + field::Witnesses + Send>(
         &self,
-        message: &mut ScriptTransaction,
+        message: &mut Tx,
     ) -> Result<Signature, Self::Error>;
 
     /// Returns the signer's Fuel Address

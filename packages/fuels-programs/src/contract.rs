@@ -10,7 +10,7 @@ use std::{
 
 use fuel_tx::{
     Address, AssetId, Bytes32, Checkable, Contract as FuelContract, ContractId, Create, Output,
-    Receipt, Salt, StorageSlot, Transaction,
+    Receipt, Salt, Script, StorageSlot, Transaction,
 };
 use fuel_vm::fuel_asm::PanicReason;
 use fuels_core::{
@@ -696,11 +696,11 @@ where
         &self,
         tolerance: Option<f64>,
     ) -> Result<TransactionCost, Error> {
-        let script = self.get_executable_call().await?;
+        let script: Script = self.get_executable_call().await?.tx.into();
 
         let transaction_cost = self
             .provider
-            .estimate_transaction_cost(&script.tx, tolerance)
+            .estimate_transaction_cost(&script, tolerance)
             .await?;
 
         Ok(transaction_cost)
@@ -863,12 +863,12 @@ impl MultiContractCallHandler {
         &self,
         tolerance: Option<f64>,
     ) -> Result<TransactionCost, Error> {
-        let script = self.get_executable_call().await?;
+        let script: Script = self.get_executable_call().await?.tx.into();
 
         let transaction_cost = self
             .wallet
             .get_provider()?
-            .estimate_transaction_cost(&script.tx, tolerance)
+            .estimate_transaction_cost(&script, tolerance)
             .await?;
 
         Ok(transaction_cost)
