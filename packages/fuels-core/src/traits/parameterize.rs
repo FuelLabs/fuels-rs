@@ -1,7 +1,7 @@
 use std::iter::zip;
 
 use fuels_types::{
-    core::{Bits256, Byte, EvmAddress, Identity, SizedAsciiString, B512},
+    core::{Bits256, Byte, EvmAddress, Identity, RawSlice, SizedAsciiString, B512},
     enum_variants::EnumVariants,
     param_types::ParamType,
     Address, AssetId, ContractId,
@@ -36,6 +36,12 @@ impl Parameterize for EvmAddress {
             fields: vec![("value".to_string(), ParamType::B256)],
             generics: vec![],
         }
+    }
+}
+
+impl Parameterize for RawSlice {
+    fn param_type() -> ParamType {
+        ParamType::RawSlice
     }
 }
 
@@ -251,5 +257,10 @@ mod tests {
         let param_type = SizedAsciiString::<3>::param_type();
 
         assert!(matches!(param_type, ParamType::String(3)));
+    }
+
+    #[test]
+    fn test_param_type_raw_slice() {
+        assert_eq!(RawSlice::param_type(), ParamType::RawSlice);
     }
 }

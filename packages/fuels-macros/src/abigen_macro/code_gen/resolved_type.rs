@@ -99,6 +99,7 @@ pub(crate) fn resolve_type(
         to_array,
         to_sized_ascii_string,
         to_tuple,
+        to_raw_slice,
         to_custom_type,
     ]
     .into_iter()
@@ -227,6 +228,7 @@ fn to_byte(
         None
     }
 }
+
 fn to_bits256(
     type_field: &str,
     _: impl Fn() -> Vec<ResolvedType>,
@@ -236,6 +238,23 @@ fn to_bits256(
     if type_field == "b256" {
         Some(ResolvedType {
             type_name: quote! {::fuels::types::Bits256},
+            generic_params: vec![],
+        })
+    } else {
+        None
+    }
+}
+
+fn to_raw_slice(
+    type_field: &str,
+    _: impl Fn() -> Vec<ResolvedType>,
+    _: impl Fn() -> Vec<ResolvedType>,
+    _: bool,
+) -> Option<ResolvedType> {
+    if type_field == "raw untyped slice" {
+        let type_name = quote! {::fuels::types::RawSlice};
+        Some(ResolvedType {
+            type_name,
             generic_params: vec![],
         })
     } else {
