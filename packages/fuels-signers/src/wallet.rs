@@ -6,8 +6,8 @@ use eth_keystore::KeystoreError;
 use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
 use fuel_gql_client::client::{PaginatedResult, PaginationRequest};
 use fuel_tx::{
-    field, AssetId, Bytes32, Cacheable, Chargeable, ContractId, Input, Output, Receipt, Script,
-    Transaction, TransactionFee, TxPointer, UniqueIdentifier, UtxoId, Witness,
+    AssetId, Bytes32, ContractId, Input, Output, Receipt, Script,
+    Transaction, TxPointer, UtxoId, Witness,
 };
 use fuel_types::{bytes::WORD_SIZE, Address, MessageId};
 use fuel_vm::{

@@ -9,7 +9,7 @@ use fuels_core::{
     traits::{Parameterize, Tokenizable},
 };
 use fuels_signers::{provider::Provider, WalletUnlocked};
-use fuels_types::{bech32::Bech32ContractId, errors::Error};
+use fuels_types::{bech32::Bech32ContractId, errors::Error, script_transaction::ScriptTransaction};
 use itertools::chain;
 
 use crate::{
@@ -176,7 +176,7 @@ where
             outputs,
             vec![vec![0, 0].into()], //TODO:(iqdecay): figure out how to have the right witnesses
         );
-        self.wallet.add_fee_resources(&mut tx, 0, 0).await?;
+        self.wallet.add_fee_resources(&mut ScriptTransaction::new(tx.clone()), 0, 0).await?;
 
         let tx_execution = ExecutableFuelCall { tx };
 

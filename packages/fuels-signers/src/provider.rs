@@ -28,7 +28,7 @@ use fuels_types::{
     message_proof::MessageProof,
     node_info::NodeInfo,
     resource::Resource,
-    transaction_response::TransactionResponse,
+    transaction_response::TransactionResponse, script_transaction::ScriptTransaction,
 };
 use tai64::Tai64;
 use thiserror::Error;
@@ -434,13 +434,11 @@ impl Provider {
         })
     }
 
-    pub async fn estimate_transaction_cost<Tx>(
+    pub async fn estimate_transaction_cost(
         &self,
-        tx: &Tx,
+        tx: &ScriptTransaction,
         tolerance: Option<f64>,
     ) -> Result<TransactionCost, Error>
-    where
-        Tx: ExecutableTransaction + field::GasLimit + field::GasPrice,
     {
         let NodeInfo { min_gas_price, .. } = self.node_info().await?;
 
@@ -450,13 +448,13 @@ impl Provider {
         let gas_used = self
             .get_gas_used_with_tolerance(&dry_run_tx, tolerance)
             .await?;
-        let gas_price = std::cmp::max(*tx.gas_price(), min_gas_price);
+        let gas_price = std::cmp::max(tx.gas_price(), min_gas_price);
 
         // Update the dry_run_tx with estimated gas_used and correct gas price to calculate the total_fee
         *dry_run_tx.gas_price_mut() = gas_price;
         *dry_run_tx.gas_limit_mut() = gas_used;
 
-        let transaction_fee = TransactionFee::checked_from_tx(&consensus_parameters, &dry_run_tx)
+        let transaction_fee = dry_run_tx.fee_checked_from_tx(&consensus_parameters)
             .expect("Error calculating TransactionFee");
 
         Ok(TransactionCost {
@@ -469,7 +467,7 @@ impl Provider {
     }
 
     // Remove limits from an existing Transaction to get an accurate gas estimation
-    fn generate_dry_run_tx<Tx: field::GasPrice + field::GasLimit + Clone>(tx: &Tx) -> Tx {
+    fn generate_dry_run_tx(tx: &ScriptTransaction) -> &ScriptTransaction {
         let mut dry_run_tx = tx.clone();
         // Simulate the contract call with MAX_GAS_PER_TX to get the complete gas_used
         *dry_run_tx.gas_limit_mut() = MAX_GAS_PER_TX;
@@ -478,12 +476,12 @@ impl Provider {
     }
 
     // Increase estimated gas by the provided tolerance
-    async fn get_gas_used_with_tolerance<Tx: Into<Transaction> + Clone>(
+    async fn get_gas_used_with_tolerance(
         &self,
-        tx: &Tx,
+        tx: &ScriptTransaction,
         tolerance: f64,
     ) -> Result<u64, ProviderError> {
-        let gas_used = self.get_gas_used(&self.dry_run_no_validation(&tx.clone().into()).await?);
+        let gas_used = self.get_gas_used(&self.dry_run_no_validation((tx.clone()).into()).await?);
         Ok((gas_used as f64 * (1.0 + tolerance)) as u64)
     }
 

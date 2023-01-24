@@ -31,20 +31,21 @@ use fuel_tx::field::{
 /// out contract method calls or script calls
 #[derive(Debug)]
 pub struct ExecutableFuelCall {
-    pub(crate) tx: Script,
+    pub tx: ScriptTransaction,
 }
 
 impl ExecutableFuelCall {
-    pub fn new(tx: Script) -> Self {
+    pub fn new(tx: ScriptTransaction) -> Self {
         Self { tx }
     }
 
+    /* 
     pub fn gas_price(&self) -> u64 {
         *self.tx.gas_price()
     }
 
     pub fn gas_limit(&self) -> u64 {
-        *self.tx.gas_limit()
+        self.tx.gas_limit()
     }
 
     pub fn maturity(&self) -> u64 {
@@ -69,7 +70,7 @@ impl ExecutableFuelCall {
 
     pub fn witnesses(&self) -> &Vec<Witness> {
         self.tx.witnesses()
-    }
+    }*/
 
     /// Creates a [`ExecutableFuelCall`] from contract calls. The internal [Transaction] is
     /// initialized with the actual script instructions, script data needed to perform the call and
@@ -105,7 +106,7 @@ impl ExecutableFuelCall {
         let (inputs, outputs) =
             get_transaction_inputs_outputs(calls, wallet.address(), spendable_resources);
 
-        let mut tx = ScriptTransaction::script(
+        let mut tx = ScriptTransaction::new(Transaction::script(
             tx_parameters.gas_price,
             tx_parameters.gas_limit,
             tx_parameters.maturity,
@@ -114,7 +115,7 @@ impl ExecutableFuelCall {
             inputs,
             outputs,
             vec![],
-        );
+        ));
 
         let base_asset_amount = required_asset_amounts
             .iter()
@@ -140,7 +141,7 @@ impl ExecutableFuelCall {
             inputs.to_vec(),
             outputs.to_vec(),
             vec![],
-        );
+        ).into();
 
         Self { tx }
     }
@@ -189,7 +190,7 @@ impl ExecutableFuelCall {
             inputs.to_vec(),
             outputs.to_vec(),
             vec![],
-        );
+        ).into();
 
         Self { tx }
     }
