@@ -1,5 +1,5 @@
 pub(crate) use command::Command;
-use itertools::{chain, Itertools};
+use itertools::{chain, process_results, Itertools};
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
 use syn::{DataEnum, DataStruct, Error, Fields, GenericParam, Generics, TypeParam, Variant};
@@ -82,32 +82,6 @@ where
         .validate_no_errors()
 }
 
-pub(crate) fn extract_struct_members(fields: DataStruct) -> syn::Result<Members> {
-    let named_fields = match fields.fields {
-        Fields::Named(named_fields) => Ok(named_fields.named),
-        Fields::Unnamed(fields) => Err(Error::new_spanned(
-            fields.unnamed,
-            "Tokenizable cannot be derived on tuple-like structs!",
-        )),
-        _ => {
-            panic!("This cannot happen in valid Rust code. Fields::Unit only appears in enums")
-        }
-    }?;
-
-    let components = named_fields
-        .into_iter()
-        .map(|field| {
-            let name = field
-                .ident
-                .expect("FieldsNamed to only contain named fields!.");
-            let ty = field.ty.into_token_stream();
-            (name, ty)
-        })
-        .collect();
-
-    Ok(Members { components })
-}
-
 pub fn extract_generic_types(generics: &Generics) -> syn::Result<Vec<&TypeParam>> {
     generics
         .params
@@ -127,12 +101,13 @@ pub fn extract_generic_types(generics: &Generics) -> syn::Result<Vec<&TypeParam>
 }
 
 pub(crate) struct Members {
-    components: Vec<(Ident, TokenStream)>,
+    names: Vec<Ident>,
+    types: Vec<TokenStream>,
 }
 
 impl Members {
     pub(crate) fn names(&self) -> impl Iterator<Item = Ident> + '_ {
-        self.components.iter().map(|(name, _)| name).cloned()
+        self.names.iter().cloned()
     }
 
     pub(crate) fn names_as_strings(&self) -> impl Iterator<Item = TokenStream> + '_ {
@@ -142,35 +117,59 @@ impl Members {
         })
     }
     pub(crate) fn param_type_calls(&self) -> impl Iterator<Item = TokenStream> + '_ {
-        self.components.iter().map(|(_, ty)| {
+        self.types.iter().map(|ty| {
             quote! { <#ty as ::fuels::types::traits::Parameterize>::param_type() }
         })
     }
 }
 
-pub(crate) fn extract_enum_members(data: DataEnum) -> syn::Result<Members> {
-    let components = data
-        .variants
+pub(crate) fn extract_struct_members(fields: DataStruct) -> syn::Result<Members> {
+    let named_fields = match fields.fields {
+        Fields::Named(named_fields) => Ok(named_fields.named),
+        Fields::Unnamed(fields) => Err(Error::new_spanned(
+            fields.unnamed,
+            "Tokenizable cannot be derived on tuple-like structs!",
+        )),
+        _ => {
+            panic!("This cannot happen in valid Rust code. Fields::Unit only appears in enums")
+        }
+    }?;
+
+    let (names, types): (Vec<_>, Vec<_>) = named_fields
         .into_iter()
-        .map(|variant: Variant| {
-            let name = variant.ident;
-
-            let ty = match variant.fields {
-                Fields::Unnamed(fields_unnamed) => fields_unnamed.unnamed.into_iter().next(),
-                Fields::Unit => None,
-                Fields::Named(named_fields) => {
-                    return Err(Error::new_spanned(
-                        named_fields,
-                        "Named enum fields are not supported!",
-                    ))
-                }
-            }
-            .map(|field| field.ty.into_token_stream())
-            .unwrap_or_else(|| quote! {()});
-
-            Ok((name, ty))
+        .map(|field| {
+            let name = field
+                .ident
+                .expect("FieldsNamed to only contain named fields!.");
+            let ttype = field.ty.into_token_stream();
+            (name, ttype)
         })
-        .collect::<Result<Vec<_>, _>>()?;
+        .unzip();
 
-    Ok(Members { components })
+    Ok(Members { names, types })
+}
+
+pub(crate) fn extract_enum_members(data: DataEnum) -> syn::Result<Members> {
+    let components = data.variants.into_iter().map(|variant: Variant| {
+        let name = variant.ident;
+
+        let ttype = match variant.fields {
+            Fields::Unnamed(fields_unnamed) => fields_unnamed.unnamed.into_iter().next(),
+            Fields::Unit => None,
+            Fields::Named(named_fields) => {
+                return Err(Error::new_spanned(
+                    named_fields,
+                    "Named enum fields are not supported!",
+                ))
+            }
+        }
+        .map(|field| field.ty.into_token_stream())
+        .unwrap_or_else(|| quote! {()});
+
+        Ok((name, ttype))
+    });
+
+    let (names, types) = process_results(components, |iter| iter.unzip::<_, _, Vec<_>, Vec<_>>())?;
+
+    Ok(Members { names, types })
 }
