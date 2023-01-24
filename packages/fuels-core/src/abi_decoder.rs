@@ -218,7 +218,7 @@ impl ABIDecoder {
         let enum_content_bytes = skip(bytes, words_to_skip * WORD_SIZE)?;
         let result = Self::decode_token_in_enum(enum_content_bytes, variants, selected_variant)?;
 
-        let selector = Box::new((discriminant as u8, result.token, variants.clone()));
+        let selector = Box::new((discriminant, result.token, variants.clone()));
         Ok(DecodeResult {
             token: Token::Enum(selector),
             bytes_read: enum_width * WORD_SIZE,

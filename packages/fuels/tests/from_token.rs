@@ -95,7 +95,7 @@ async fn create_struct_from_decoded_tokens() -> Result<(), Error> {
     let encoded = format!(
         "{}{}",
         hex::encode(call_handler.contract_call.encoded_selector),
-        hex::encode(&encoded_args)
+        hex::encode(encoded_args)
     );
 
     assert_eq!("00000000cb0b2f05000000000000000a0000000000000001", encoded);
@@ -210,7 +210,7 @@ async fn create_nested_struct_from_decoded_tokens() -> Result<(), Error> {
     let encoded = format!(
         "{}{}",
         hex::encode(call_handler.contract_call.encoded_selector),
-        hex::encode(&encoded_args)
+        hex::encode(encoded_args)
     );
 
     assert_eq!("0000000088bf8a1b000000000000000a0000000000000001", encoded);
