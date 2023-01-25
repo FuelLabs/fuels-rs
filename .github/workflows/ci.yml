@@ -25,6 +25,8 @@ env:
 jobs:
   setup-test-projects:
     runs-on: ubuntu-latest
+    env:
+      RUSTFLAGS: "-D warnings"
     steps:
       - uses: actions/checkout@v3
       - name: Install toolchain
@@ -206,7 +208,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: run
-          args: --bin check-docs
+          args: --bin check-docs;doc
 
   publish:
     needs: cargo-verifications
