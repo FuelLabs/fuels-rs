@@ -1,5 +1,7 @@
 use fuels_types::{
-    core::{Bits256, Byte, EvmAddress, Identity, SizedAsciiString, StringToken, Token, B512},
+    core::{
+        Bits256, Byte, EvmAddress, Identity, RawSlice, SizedAsciiString, StringToken, Token, B512,
+    },
     errors::Error,
     param_types::ParamType,
     Address, AssetId, ContractId,
@@ -224,6 +226,24 @@ impl Tokenizable for u64 {
     }
     fn into_token(self) -> Token {
         Token::U64(self)
+    }
+}
+
+impl Tokenizable for RawSlice {
+    fn from_token(token: Token) -> Result<Self, Error>
+    where
+        Self: Sized,
+    {
+        match token {
+            Token::RawSlice(contents) => Ok(Self(contents)),
+            _ => Err(Error::InvalidData(format!(
+                "RawSlice::from_token expected a token of the variant Token::RawSlice, got: {token}"
+            ))),
+        }
+    }
+
+    fn into_token(self) -> Token {
+        Token::RawSlice(Vec::from(self))
     }
 }
 
@@ -558,6 +578,27 @@ mod tests {
     }
 
     #[test]
+    fn test_from_token_raw_slice() -> Result<(), Error> {
+        let data = vec![42; 11];
+        let token = Token::RawSlice(data.clone());
+
+        let slice = RawSlice::from_token(token)?;
+
+        assert_eq!(slice, data);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_into_token_raw_slice() {
+        let data = vec![13; 32];
+        let raw_slice_token = Token::RawSlice(data.clone());
+
+        let token = raw_slice_token.into_token();
+
+        assert_eq!(token, Token::RawSlice(data));
+    }
+    #[test]
     fn test_from_token_evm_addr() -> Result<(), Error> {
         let data = [1u8; 32];
         let token = Token::Struct(vec![Token::B256(data)]);
@@ -609,7 +650,7 @@ mod tests {
     }
 
     #[test]
-    fn sized_ascii_string_is_detokenized_correctly() -> anyhow::Result<()> {
+    fn sized_ascii_string_is_detokenized_correctly() -> Result<(), Error> {
         let token = Token::String(StringToken::new("abc".to_string(), 3));
 
         let sized_ascii_string =

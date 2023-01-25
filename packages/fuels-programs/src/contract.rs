@@ -249,11 +249,24 @@ impl Contract {
         storage_path: &Option<String>,
         salt: Salt,
     ) -> Result<CompiledContract, Error> {
-        let extension = Path::new(binary_filepath).extension().unwrap();
+        let extension = Path::new(binary_filepath)
+            .extension()
+            .expect("Could not extract extension from file path");
         if extension != "bin" {
-            return Err(Error::InvalidData(extension.to_str().unwrap().to_owned()));
+            return Err(Error::InvalidData(format!(
+                "The file extension '{}' is not recognized. Did you mean '.bin'?",
+                extension
+                    .to_str()
+                    .expect("Could not convert extension to &str")
+            )));
         }
-        let bin = std::fs::read(binary_filepath)?;
+
+        let bin = std::fs::read(binary_filepath).map_err(|_| {
+            Error::InvalidData(format!(
+                "Failed to read binary file with path '{}'",
+                &binary_filepath
+            ))
+        })?;
 
         let storage = match storage_path {
             Some(path) if Path::new(&path).exists() => Self::get_storage_vec(path),
@@ -906,7 +919,7 @@ mod test {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(expected = "called `Result::unwrap()` on an `Err` value: InvalidData(\"json\")")]
+    #[should_panic(expected = "The file extension 'json' is not recognized. Did you mean '.bin'?")]
     async fn deploy_panics_on_non_binary_file() {
         let wallet = launch_provider_and_get_wallet().await;
 
@@ -922,7 +935,7 @@ mod test {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "called `Result::unwrap()` on an `Err` value: InvalidData(\"json\")")]
+    #[should_panic(expected = "The file extension 'json' is not recognized. Did you mean '.bin'?")]
     async fn deploy_with_salt_panics_on_non_binary_file() {
         let wallet = launch_provider_and_get_wallet().await;
 

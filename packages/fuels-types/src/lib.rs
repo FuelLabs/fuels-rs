@@ -18,6 +18,5 @@ pub mod param_types;
 pub mod resource;
 pub mod script_transaction;
 pub mod transaction_response;
-pub mod utils;
 
 pub use fuel_tx::{Address, AssetId, ContractId};
