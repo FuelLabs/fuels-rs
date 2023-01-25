@@ -45,7 +45,7 @@ async fn compile_bindings_from_contract_file() {
 }
 
 #[tokio::test]
-async fn compile_bindings_from_inline_contract() -> Result<(), Error> {
+async fn compile_bindings_from_inline_contract() -> Result<()> {
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `SimpleContract`.
     abigen!(Contract(
@@ -812,7 +812,7 @@ async fn compile_bindings_enum_input() {
 }
 
 #[tokio::test]
-async fn shared_types() -> Result<(), Error> {
+async fn shared_types() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(

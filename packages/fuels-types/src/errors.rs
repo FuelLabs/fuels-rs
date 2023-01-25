@@ -29,6 +29,8 @@ pub enum Error {
     RevertTransactionError(String, Vec<Receipt>),
 }
 
+pub type Result<T> = std::result::Result<T, Error>;
+
 /// This macro can only be used for `Error` variants that have a `String` field.
 /// Those are: `InvalidData`, `InvalidType`, `InfrastructureError`,
 /// `InstantiationError`, `WalletError`, `ProviderError`

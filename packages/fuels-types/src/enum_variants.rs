@@ -1,6 +1,6 @@
 use crate::{
     constants::{ENUM_DISCRIMINANT_WORD_WIDTH, WORD_SIZE},
-    errors::{error, Error},
+    errors::{error, Error, Result},
     param_types::ParamType,
 };
 
@@ -10,7 +10,7 @@ pub struct EnumVariants {
 }
 
 impl EnumVariants {
-    pub fn new(variants: Vec<(String, ParamType)>) -> Result<EnumVariants, Error> {
+    pub fn new(variants: Vec<(String, ParamType)>) -> Result<EnumVariants> {
         if !variants.is_empty() {
             Ok(EnumVariants { variants })
         } else {
@@ -30,7 +30,7 @@ impl EnumVariants {
             .collect()
     }
 
-    pub fn select_variant(&self, discriminant: u8) -> Result<&(String, ParamType), Error> {
+    pub fn select_variant(&self, discriminant: u8) -> Result<&(String, ParamType)> {
         self.variants.get(discriminant as usize).ok_or_else(|| {
             error!(
                 InvalidData,

@@ -2,7 +2,7 @@ use fuels_types::{
     core::{
         Bits256, Byte, EvmAddress, Identity, RawSlice, SizedAsciiString, StringToken, Token, B512,
     },
-    errors::{error, Error},
+    errors::{error, Error, Result},
     param_types::ParamType,
     Address, AssetId, ContractId,
 };
@@ -11,7 +11,7 @@ use crate::traits::Parameterize;
 
 pub trait Tokenizable {
     /// Converts a `Token` into expected type.
-    fn from_token(token: Token) -> Result<Self, Error>
+    fn from_token(token: Token) -> Result<Self>
     where
         Self: Sized;
     /// Converts a specified type back into token.
@@ -19,7 +19,7 @@ pub trait Tokenizable {
 }
 
 impl Tokenizable for Token {
-    fn from_token(token: Token) -> Result<Self, Error> {
+    fn from_token(token: Token) -> Result<Self> {
         Ok(token)
     }
     fn into_token(self) -> Token {
@@ -28,7 +28,7 @@ impl Tokenizable for Token {
 }
 
 impl Tokenizable for Bits256 {
-    fn from_token(token: Token) -> Result<Self, Error>
+    fn from_token(token: Token) -> Result<Self>
     where
         Self: Sized,
     {
@@ -47,7 +47,7 @@ impl Tokenizable for Bits256 {
 }
 
 impl Tokenizable for B512 {
-    fn from_token(token: Token) -> Result<Self, Error>
+    fn from_token(token: Token) -> Result<Self>
     where
         Self: Sized,
     {
@@ -76,7 +76,7 @@ impl Tokenizable for B512 {
 }
 
 impl Tokenizable for EvmAddress {
-    fn from_token(token: Token) -> Result<Self, Error>
+    fn from_token(token: Token) -> Result<Self>
     where
         Self: Sized,
     {
@@ -103,7 +103,7 @@ impl Tokenizable for EvmAddress {
 }
 
 impl Tokenizable for Byte {
-    fn from_token(token: Token) -> Result<Self, Error>
+    fn from_token(token: Token) -> Result<Self>
     where
         Self: Sized,
     {
@@ -122,7 +122,7 @@ impl Tokenizable for Byte {
 }
 
 impl<T: Tokenizable> Tokenizable for Vec<T> {
-    fn from_token(token: Token) -> Result<Self, Error>
+    fn from_token(token: Token) -> Result<Self>
     where
         Self: Sized,
     {
@@ -143,7 +143,7 @@ impl<T: Tokenizable> Tokenizable for Vec<T> {
 }
 
 impl Tokenizable for bool {
-    fn from_token(token: Token) -> Result<Self, Error> {
+    fn from_token(token: Token) -> Result<Self> {
         match token {
             Token::Bool(data) => Ok(data),
             other => Err(error!(
@@ -158,7 +158,7 @@ impl Tokenizable for bool {
 }
 
 impl Tokenizable for () {
-    fn from_token(token: Token) -> Result<Self, Error>
+    fn from_token(token: Token) -> Result<Self>
     where
         Self: Sized,
     {
@@ -177,7 +177,7 @@ impl Tokenizable for () {
 }
 
 impl Tokenizable for u8 {
-    fn from_token(token: Token) -> Result<Self, Error> {
+    fn from_token(token: Token) -> Result<Self> {
         match token {
             Token::U8(data) => Ok(data),
             other => Err(error!(InstantiationError, "Expected `u8`, got {:?}", other)),
@@ -189,7 +189,7 @@ impl Tokenizable for u8 {
 }
 
 impl Tokenizable for u16 {
-    fn from_token(token: Token) -> Result<Self, Error> {
+    fn from_token(token: Token) -> Result<Self> {
         match token {
             Token::U16(data) => Ok(data),
             other => Err(error!(
@@ -204,7 +204,7 @@ impl Tokenizable for u16 {
 }
 
 impl Tokenizable for u32 {
-    fn from_token(token: Token) -> Result<Self, Error> {
+    fn from_token(token: Token) -> Result<Self> {
         match token {
             Token::U32(data) => Ok(data),
             other => Err(error!(
@@ -219,7 +219,7 @@ impl Tokenizable for u32 {
 }
 
 impl Tokenizable for u64 {
-    fn from_token(token: Token) -> Result<Self, Error> {
+    fn from_token(token: Token) -> Result<Self> {
         match token {
             Token::U64(data) => Ok(data),
             other => Err(error!(
@@ -234,7 +234,7 @@ impl Tokenizable for u64 {
 }
 
 impl Tokenizable for RawSlice {
-    fn from_token(token: Token) -> Result<Self, Error>
+    fn from_token(token: Token) -> Result<Self>
     where
         Self: Sized,
     {
@@ -262,7 +262,7 @@ macro_rules! impl_tokenizable_tuples {
                 $ty: Tokenizable,
             )+
         {
-            fn from_token(token: Token) -> Result<Self, Error> {
+            fn from_token(token: Token) -> Result<Self> {
                 match token {
                     Token::Tuple(tokens) => {
                         let mut it = tokens.into_iter();
@@ -312,7 +312,7 @@ impl_tokenizable_tuples!(15, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K
 impl_tokenizable_tuples!(16, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13, O:14, P:15, );
 
 impl Tokenizable for ContractId {
-    fn from_token(token: Token) -> Result<Self, Error>
+    fn from_token(token: Token) -> Result<Self>
     where
         Self: Sized,
     {
@@ -340,7 +340,7 @@ impl Tokenizable for ContractId {
 }
 
 impl Tokenizable for Address {
-    fn from_token(token: Token) -> Result<Self, Error>
+    fn from_token(token: Token) -> Result<Self>
     where
         Self: Sized,
     {
@@ -369,7 +369,7 @@ impl Tokenizable for Address {
 }
 
 impl Tokenizable for AssetId {
-    fn from_token(token: Token) -> Result<Self, Error>
+    fn from_token(token: Token) -> Result<Self>
     where
         Self: Sized,
     {
@@ -400,7 +400,7 @@ impl<T> Tokenizable for Option<T>
 where
     T: Tokenizable + Parameterize,
 {
-    fn from_token(token: Token) -> Result<Self, Error> {
+    fn from_token(token: Token) -> Result<Self> {
         if let Token::Enum(enum_selector) = token {
             match *enum_selector {
                 (0u8, _, _) => Ok(None),
@@ -431,16 +431,16 @@ where
     }
 }
 
-impl<T, E> Tokenizable for Result<T, E>
+impl<T, E> Tokenizable for std::result::Result<T, E>
 where
     T: Tokenizable + Parameterize,
     E: Tokenizable + Parameterize,
 {
-    fn from_token(token: Token) -> Result<Self, Error> {
+    fn from_token(token: Token) -> Result<Self> {
         if let Token::Enum(enum_selector) = token {
             match *enum_selector {
-                (0u8, token, _) => Ok(Result::<T, E>::Ok(T::from_token(token)?)),
-                (1u8, token, _) => Ok(Result::<T, E>::Err(E::from_token(token)?)),
+                (0u8, token, _) => Ok(std::result::Result::<T, E>::Ok(T::from_token(token)?)),
+                (1u8, token, _) => Ok(std::result::Result::<T, E>::Err(E::from_token(token)?)),
                 (_, _, _) => Err(error!(
                     InstantiationError,
                     "Could not construct Result from enum_selector. Received: {:?}", enum_selector
@@ -468,7 +468,7 @@ where
 }
 
 impl Tokenizable for Identity {
-    fn from_token(token: Token) -> Result<Self, Error> {
+    fn from_token(token: Token) -> Result<Self> {
         if let Token::Enum(enum_selector) = token {
             match *enum_selector {
                 (0u8, token, _) => Ok(Identity::Address(Address::from_token(token)?)),
@@ -501,7 +501,7 @@ impl Tokenizable for Identity {
 }
 
 impl<const SIZE: usize, T: Tokenizable> Tokenizable for [T; SIZE] {
-    fn from_token(token: Token) -> Result<Self, Error>
+    fn from_token(token: Token) -> Result<Self>
     where
         Self: Sized,
     {
@@ -524,7 +524,7 @@ impl<const SIZE: usize, T: Tokenizable> Tokenizable for [T; SIZE] {
                 let detokenized = elements
                     .into_iter()
                     .map(Tokenizable::from_token)
-                    .collect::<Result<Vec<T>, _>>()
+                    .collect::<Result<Vec<T>>>()
                     .map_err(|err| {
                         gen_error(format!(", not all elements could be detokenized: {err}"))
                     })?;
@@ -543,7 +543,7 @@ impl<const SIZE: usize, T: Tokenizable> Tokenizable for [T; SIZE] {
 }
 
 impl<const LEN: usize> Tokenizable for SizedAsciiString<LEN> {
-    fn from_token(token: Token) -> Result<Self, Error>
+    fn from_token(token: Token) -> Result<Self>
     where
         Self: Sized,
     {
@@ -571,7 +571,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_from_token_b256() -> Result<(), Error> {
+    fn test_from_token_b256() -> Result<()> {
         let data = [1u8; 32];
         let token = Token::B256(data);
 
@@ -593,7 +593,7 @@ mod tests {
     }
 
     #[test]
-    fn test_from_token_raw_slice() -> Result<(), Error> {
+    fn test_from_token_raw_slice() -> Result<()> {
         let data = vec![42; 11];
         let token = Token::RawSlice(data.clone());
 
@@ -614,7 +614,7 @@ mod tests {
         assert_eq!(token, Token::RawSlice(data));
     }
     #[test]
-    fn test_from_token_evm_addr() -> Result<(), Error> {
+    fn test_from_token_evm_addr() -> Result<()> {
         let data = [1u8; 32];
         let token = Token::Struct(vec![Token::B256(data)]);
 
@@ -646,7 +646,7 @@ mod tests {
     }
 
     #[test]
-    fn sized_ascii_string_is_tokenized_correctly() -> Result<(), Error> {
+    fn sized_ascii_string_is_tokenized_correctly() -> Result<()> {
         let sut = SizedAsciiString::<3>::new("abc".to_string())?;
 
         let token = sut.into_token();
@@ -665,7 +665,7 @@ mod tests {
     }
 
     #[test]
-    fn sized_ascii_string_is_detokenized_correctly() -> Result<(), Error> {
+    fn sized_ascii_string_is_detokenized_correctly() -> Result<()> {
         let token = Token::String(StringToken::new("abc".to_string(), 3));
 
         let sized_ascii_string =

@@ -5,7 +5,7 @@ use fuels::{
 };
 
 #[tokio::test]
-async fn test_parse_logged_varibles() -> Result<(), Error> {
+async fn test_parse_logged_varibles() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
@@ -43,7 +43,7 @@ async fn test_parse_logged_varibles() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_parse_logs_values() -> Result<(), Error> {
+async fn test_parse_logs_values() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
@@ -77,7 +77,7 @@ async fn test_parse_logs_values() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_parse_logs_custom_types() -> Result<(), Error> {
+async fn test_parse_logs_custom_types() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
@@ -115,7 +115,7 @@ async fn test_parse_logs_custom_types() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_parse_logs_generic_types() -> Result<(), Error> {
+async fn test_parse_logs_generic_types() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
@@ -167,7 +167,7 @@ async fn test_parse_logs_generic_types() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_get_logs() -> Result<(), Error> {
+async fn test_get_logs() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
@@ -221,7 +221,7 @@ async fn test_get_logs() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_get_logs_with_no_logs() -> Result<(), Error> {
+async fn test_get_logs_with_no_logs() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
@@ -248,7 +248,7 @@ async fn test_get_logs_with_no_logs() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_multi_call_log_single_contract() -> Result<(), Error> {
+async fn test_multi_call_log_single_contract() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
@@ -298,7 +298,7 @@ async fn test_multi_call_log_single_contract() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_multi_call_log_multiple_contracts() -> Result<(), Error> {
+async fn test_multi_call_log_multiple_contracts() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
@@ -351,7 +351,7 @@ async fn test_multi_call_log_multiple_contracts() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_multi_call_contract_with_contract_logs() -> Result<(), Error> {
+async fn test_multi_call_contract_with_contract_logs() -> Result<()> {
     let wallet = launch_provider_and_get_wallet().await;
 
     setup_contract_test!(
@@ -428,7 +428,7 @@ fn assert_is_revert_containing_msg(msg: &str, error: Error) {
 }
 
 #[tokio::test]
-async fn test_require_log() -> Result<(), Error> {
+async fn test_require_log() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
@@ -484,7 +484,7 @@ async fn test_require_log() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_multi_call_require_log_single_contract() -> Result<(), Error> {
+async fn test_multi_call_require_log_single_contract() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
@@ -541,7 +541,7 @@ async fn test_multi_call_require_log_single_contract() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_multi_call_require_log_multi_contract() -> Result<(), Error> {
+async fn test_multi_call_require_log_multi_contract() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
@@ -605,7 +605,7 @@ async fn test_multi_call_require_log_multi_contract() -> Result<(), Error> {
 
 #[tokio::test]
 #[allow(unused_variables)]
-async fn test_script_get_logs() -> Result<(), Error> {
+async fn test_script_get_logs() -> Result<()> {
     // ANCHOR: script_logs
     abigen!(Script(
         name = "log_script",
@@ -670,7 +670,7 @@ async fn test_script_get_logs() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_contract_with_contract_logs() -> Result<(), Error> {
+async fn test_contract_with_contract_logs() -> Result<()> {
     let wallet = launch_provider_and_get_wallet().await;
 
     setup_contract_test!(
@@ -722,7 +722,7 @@ async fn test_contract_with_contract_logs() -> Result<(), Error> {
 
 #[tokio::test]
 #[allow(unused_variables)]
-async fn test_script_logs_with_contract_logs() -> Result<(), Error> {
+async fn test_script_logs_with_contract_logs() -> Result<()> {
     let wallet = launch_provider_and_get_wallet().await;
 
     abigen!(
@@ -800,7 +800,7 @@ async fn test_script_logs_with_contract_logs() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_script_get_logs_with_type() -> Result<(), Error> {
+async fn test_script_get_logs_with_type() -> Result<()> {
     abigen!(Script(
         name = "log_script",
         abi = "packages/fuels/tests/logs/script_logs/out/debug/script_logs-abi.json"
@@ -873,7 +873,7 @@ async fn test_script_get_logs_with_type() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_script_require_log() -> Result<(), Error> {
+async fn test_script_require_log() -> Result<()> {
     abigen!(Script(
         name = "log_script",
         abi = "packages/fuels/tests/scripts/script_require/out/debug/script_require-abi.json"
@@ -926,7 +926,7 @@ async fn test_script_require_log() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_contract_require_from_contract() -> Result<(), Error> {
+async fn test_contract_require_from_contract() -> Result<()> {
     let wallet = launch_provider_and_get_wallet().await;
 
     setup_contract_test!(
@@ -970,7 +970,7 @@ async fn test_contract_require_from_contract() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_multi_call_contract_require_from_contract() -> Result<(), Error> {
+async fn test_multi_call_contract_require_from_contract() -> Result<()> {
     let wallet = launch_provider_and_get_wallet().await;
 
     setup_contract_test!(
@@ -1033,7 +1033,7 @@ async fn test_multi_call_contract_require_from_contract() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_script_require_from_contract() -> Result<(), Error> {
+async fn test_script_require_from_contract() -> Result<()> {
     let wallet = launch_provider_and_get_wallet().await;
 
     abigen!(Contract(name = "MyContract", abi = "packages/fuels/tests/contracts/lib_contract/out/debug/lib_contract-abi.json"),

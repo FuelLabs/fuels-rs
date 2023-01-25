@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use fuels_signers::provider::Provider;
-use fuels_types::errors::{error, Error};
+use fuels_types::errors::{error, Error, Result};
 
 use crate::utils::retry;
 
@@ -9,7 +9,7 @@ pub async fn confirm_blocks_created(
     provider: &Provider,
     previous_height: u64,
     n_blocks: u64,
-) -> Result<(), Error> {
+) -> Result<()> {
     let block_height_increased = || async {
         let current_block_height = provider.latest_block_height().await?;
         let diff = current_block_height - previous_height;

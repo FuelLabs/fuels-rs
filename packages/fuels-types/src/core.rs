@@ -5,7 +5,7 @@ use strum_macros::EnumString;
 
 use crate::{
     enum_variants::EnumVariants,
-    errors::{error, Error},
+    errors::{error, Error, Result},
     param_types::ParamType,
 };
 
@@ -33,7 +33,7 @@ impl StringToken {
         StringToken { data, expected_len }
     }
 
-    fn validate(&self) -> Result<(), Error> {
+    fn validate(&self) -> Result<()> {
         if !self.data.is_ascii() {
             return Err(error!(
                 InvalidData,
@@ -53,7 +53,7 @@ impl StringToken {
         Ok(())
     }
 
-    pub fn get_encodable_str(&self) -> Result<&str, Error> {
+    pub fn get_encodable_str(&self) -> Result<&str> {
         self.validate()?;
         Ok(self.data.as_str())
     }
@@ -61,7 +61,7 @@ impl StringToken {
 
 impl TryFrom<StringToken> for String {
     type Error = Error;
-    fn try_from(string_token: StringToken) -> Result<String, Self::Error> {
+    fn try_from(string_token: StringToken) -> Result<String> {
         string_token.validate()?;
         Ok(string_token.data)
     }

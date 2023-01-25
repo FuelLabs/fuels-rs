@@ -78,7 +78,7 @@ pub fn into_message_configs(messages: Vec<Message>) -> Vec<MessageConfig> {
 #[cfg(test)]
 mod tests {
     mod retry_until {
-        use fuels_types::errors::{error, Error};
+        use fuels_types::errors::{error, Error, Result};
         use std::time::{Duration, Instant};
 
         use tokio::sync::Mutex;
@@ -86,7 +86,7 @@ mod tests {
         use crate::utils::retry;
 
         #[tokio::test]
-        async fn gives_up_after_timeout() -> Result<(), Error> {
+        async fn gives_up_after_timeout() -> Result<()> {
             let timestamp_of_last_attempt = Mutex::new(Instant::now());
 
             let will_always_fail = || async {
@@ -111,9 +111,9 @@ mod tests {
         }
 
         #[tokio::test]
-        async fn returns_error_if_timeout_happened() -> Result<(), Error> {
+        async fn returns_error_if_timeout_happened() -> Result<()> {
             let will_always_fail = || async {
-                Err(error!(InfrastructureError, "I fail because I must.")) as Result<(), Error>
+                Err(error!(InfrastructureError, "I fail because I must.")) as Result<()>
             };
 
             let interval = Duration::from_millis(100);
@@ -135,8 +135,8 @@ mod tests {
         }
 
         #[tokio::test]
-        async fn returns_value_on_success() -> Result<(), Error> {
-            let successfully_generates_value = || async { Ok(12345u64) as Result<u64, Error> };
+        async fn returns_value_on_success() -> Result<()> {
+            let successfully_generates_value = || async { Ok(12345u64) as Result<u64> };
 
             let value = retry(
                 successfully_generates_value,
@@ -151,7 +151,7 @@ mod tests {
         }
 
         #[tokio::test]
-        async fn respects_delay_between_attempts() -> Result<(), Error> {
+        async fn respects_delay_between_attempts() -> Result<()> {
             let timestamps_predicate_was_called_at: Mutex<Vec<Instant>> = Mutex::new(vec![]);
 
             let will_fail = || async {

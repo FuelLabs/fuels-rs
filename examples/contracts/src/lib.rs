@@ -1,12 +1,12 @@
 #[cfg(test)]
 mod tests {
-    use fuels::{
-        prelude::Error,
-        types::{errors::error, Bits256},
+    use fuels::types::{
+        errors::{error, Error, Result},
+        Bits256,
     };
 
     #[tokio::test]
-    async fn instantiate_client() -> Result<(), Error> {
+    async fn instantiate_client() -> Result<()> {
         // ANCHOR: instantiate_client
         use fuels::{
             client::FuelClient,
@@ -26,7 +26,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn deploy_contract() -> Result<(), Error> {
+    async fn deploy_contract() -> Result<()> {
         use fuels::prelude::*;
 
         // ANCHOR: deploy_contract
@@ -86,7 +86,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn setup_contract_test_example() -> Result<(), Error> {
+    async fn setup_contract_test_example() -> Result<()> {
         use fuels::prelude::*;
 
         // ANCHOR: deploy_contract_setup_macro_short
@@ -116,7 +116,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn contract_call_cost_estimation() -> Result<(), Error> {
+    async fn contract_call_cost_estimation() -> Result<()> {
         use fuels::prelude::*;
 
         abigen!(Contract(
@@ -151,7 +151,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn deploy_with_parameters() -> Result<(), Error> {
+    async fn deploy_with_parameters() -> Result<()> {
         // ANCHOR: deploy_with_parameters
         use fuels::prelude::*;
         use rand::prelude::{Rng, SeedableRng, StdRng};
@@ -195,7 +195,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn deploy_with_multiple_wallets() -> Result<(), Error> {
+    async fn deploy_with_multiple_wallets() -> Result<()> {
         use fuels::prelude::*;
 
         abigen!(Contract(
@@ -250,7 +250,7 @@ mod tests {
 
     #[tokio::test]
     #[allow(unused_variables)]
-    async fn contract_tx_and_call_params() -> Result<(), Error> {
+    async fn contract_tx_and_call_params() -> Result<()> {
         use fuels::prelude::*;
         abigen!(Contract(
             name = "MyContract",
@@ -326,7 +326,7 @@ mod tests {
 
     #[tokio::test]
     #[allow(unused_variables)]
-    async fn token_ops_tests() -> Result<(), Error> {
+    async fn token_ops_tests() -> Result<()> {
         use fuels::prelude::*;
         abigen!(Contract(
             name = "MyContract",
@@ -364,7 +364,7 @@ mod tests {
 
     #[tokio::test]
     #[allow(unused_variables)]
-    async fn output_messages_test() -> Result<(), Error> {
+    async fn output_messages_test() -> Result<()> {
         use fuels::prelude::*;
         abigen!(Contract(
             name = "MyContract",
@@ -404,7 +404,7 @@ mod tests {
 
     #[tokio::test]
     #[allow(unused_variables)]
-    async fn dependency_estimation() -> Result<(), Error> {
+    async fn dependency_estimation() -> Result<()> {
         use fuels::prelude::*;
         abigen!(
             Contract(name="MyContract",
@@ -474,7 +474,7 @@ mod tests {
 
     #[tokio::test]
     #[allow(unused_variables)]
-    async fn get_contract_outputs() -> Result<(), Error> {
+    async fn get_contract_outputs() -> Result<()> {
         use fuels::{prelude::*, tx::Receipt};
         {
             abigen!(Contract(
@@ -553,7 +553,7 @@ mod tests {
 
     #[tokio::test]
     #[allow(unused_variables)]
-    async fn call_params_gas() -> Result<(), Error> {
+    async fn call_params_gas() -> Result<()> {
         use fuels::prelude::*;
         abigen!(Contract(
             name = "MyContract",
@@ -591,7 +591,7 @@ mod tests {
 
     #[tokio::test]
     #[allow(unused_variables)]
-    async fn multi_call_example() -> Result<(), Error> {
+    async fn multi_call_example() -> Result<()> {
         use fuels::prelude::*;
 
         abigen!(Contract(
@@ -640,7 +640,7 @@ mod tests {
 
     #[tokio::test]
     #[allow(unused_variables)]
-    async fn multi_call_cost_estimation() -> Result<(), Error> {
+    async fn multi_call_cost_estimation() -> Result<()> {
         use fuels::prelude::*;
 
         abigen!(Contract(
@@ -683,7 +683,7 @@ mod tests {
 
     #[tokio::test]
     #[allow(unused_variables)]
-    async fn connect_wallet() -> Result<(), Error> {
+    async fn connect_wallet() -> Result<()> {
         use fuels::prelude::*;
         abigen!(Contract(
             name = "MyContract",

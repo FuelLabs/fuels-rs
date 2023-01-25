@@ -1,6 +1,6 @@
 use std::fmt::{Debug, Display, Formatter};
 
-use crate::errors::{error, Error};
+use crate::errors::{error, Error, Result};
 
 // To be used when interacting with contracts which have strings in their ABI.
 // The length of a string is part of its type -- i.e. str[2] is a
@@ -11,7 +11,7 @@ pub struct SizedAsciiString<const LEN: usize> {
 }
 
 impl<const LEN: usize> SizedAsciiString<LEN> {
-    pub fn new(data: String) -> Result<Self, Error> {
+    pub fn new(data: String) -> Result<Self> {
         if !data.is_ascii() {
             return Err(error!(InvalidData,
                 "SizedAsciiString must be constructed from a string containing only ascii encodable characters. Got: {data}"
@@ -29,7 +29,7 @@ impl<const LEN: usize> SizedAsciiString<LEN> {
 impl<const LEN: usize> TryFrom<&str> for SizedAsciiString<LEN> {
     type Error = Error;
 
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
+    fn try_from(value: &str) -> Result<Self> {
         Self::new(value.to_owned())
     }
 }
@@ -37,7 +37,7 @@ impl<const LEN: usize> TryFrom<&str> for SizedAsciiString<LEN> {
 impl<const LEN: usize> TryFrom<String> for SizedAsciiString<LEN> {
     type Error = Error;
 
-    fn try_from(value: String) -> Result<Self, Self::Error> {
+    fn try_from(value: String) -> Result<Self> {
         Self::new(value)
     }
 }

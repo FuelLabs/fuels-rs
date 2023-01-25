@@ -1,4 +1,4 @@
-use crate::errors::{error, Error};
+use crate::errors::{error, Error, Result};
 
 // A simple wrapper around [u8; 32] representing the `b256` type. Exists
 // mainly so that we may differentiate `Parameterize` and `Tokenizable`
@@ -9,7 +9,7 @@ pub struct Bits256(pub [u8; 32]);
 impl Bits256 {
     /// Create a new `Bits256` from a string representation of a hex.
     /// Accepts both `0x` prefixed and non-prefixed hex strings.
-    pub fn from_hex_str(hex: &str) -> Result<Self, Error> {
+    pub fn from_hex_str(hex: &str) -> Result<Self> {
         let hex = if let Some(stripped_hex) = hex.strip_prefix("0x") {
             stripped_hex
         } else {
@@ -46,7 +46,7 @@ impl From<(Bits256, Bits256)> for B512 {
 impl TryFrom<&[u8]> for B512 {
     type Error = Error;
 
-    fn try_from(slice: &[u8]) -> Result<Self, Self::Error> {
+    fn try_from(slice: &[u8]) -> Result<Self> {
         Ok(B512 {
             bytes: [
                 Bits256(slice[0..32].try_into()?),
@@ -87,7 +87,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn from_hex_str_b256() -> Result<(), Error> {
+    fn from_hex_str_b256() -> Result<()> {
         // ANCHOR: from_hex_str
         let hex_str = "0101010101010101010101010101010101010101010101010101010101010101";
 

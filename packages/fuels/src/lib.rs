@@ -75,7 +75,7 @@ pub mod prelude {
         tx::Salt,
         types::{
             bech32::{Bech32Address, Bech32ContractId},
-            errors::Error,
+            errors::{Error, Result},
             Address, AssetId, ContractId, RawSlice,
         },
     };
