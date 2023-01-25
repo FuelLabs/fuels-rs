@@ -1,6 +1,8 @@
 use std::{fmt::Debug, vec};
 
-use fuel_tx::{AssetId, Receipt, Script, ScriptExecutionResult, Transaction};
+use fuel_tx::{
+    AssetId, Input, Output, Receipt, Script, ScriptExecutionResult, Transaction, Witness,
+};
 use fuels_core::{offsets::call_script_data_offset, parameters::TxParameters};
 use fuels_signers::{provider::Provider, Signer, WalletUnlocked};
 use fuels_types::{errors::Error, script_transaction::ScriptTransaction};
@@ -17,7 +19,7 @@ use crate::{
 /// out contract method calls or script calls
 #[derive(Debug)]
 pub struct ExecutableFuelCall {
-    pub tx: ScriptTransaction,
+    pub(crate) tx: ScriptTransaction,
 }
 
 impl ExecutableFuelCall {
@@ -25,9 +27,8 @@ impl ExecutableFuelCall {
         Self { tx }
     }
 
-    /*
     pub fn gas_price(&self) -> u64 {
-        *self.tx.gas_price()
+        self.tx.gas_price()
     }
 
     pub fn gas_limit(&self) -> u64 {
@@ -35,7 +36,7 @@ impl ExecutableFuelCall {
     }
 
     pub fn maturity(&self) -> u64 {
-        *self.tx.maturity()
+        self.tx.maturity()
     }
 
     pub fn script(&self) -> &Vec<u8> {
@@ -56,7 +57,7 @@ impl ExecutableFuelCall {
 
     pub fn witnesses(&self) -> &Vec<Witness> {
         self.tx.witnesses()
-    }*/
+    }
 
     /// Creates a [`ExecutableFuelCall`] from contract calls. The internal [Transaction] is
     /// initialized with the actual script instructions, script data needed to perform the call and

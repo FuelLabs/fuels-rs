@@ -625,10 +625,7 @@ impl WalletUnlocked {
         self.sign_transaction(&mut tx).await?;
 
         let tx_id = tx.id().to_string();
-        let receipts = self
-            .get_provider()?
-            .send_transaction(&tx)
-            .await?;
+        let receipts = self.get_provider()?.send_transaction(&tx).await?;
 
         Ok((tx_id, receipts))
     }
@@ -653,10 +650,7 @@ impl WalletUnlocked {
         self.sign_transaction(&mut tx).await?;
 
         let tx_id = tx.id().to_string();
-        let receipts = self
-            .get_provider()?
-            .send_transaction(&tx)
-            .await?;
+        let receipts = self.get_provider()?.send_transaction(&tx).await?;
 
         let message_id = WalletUnlocked::extract_message_id(&receipts)
             .expect("MessageId could not be retrieved from tx receipts.");
@@ -846,10 +840,7 @@ impl WalletUnlocked {
         self.sign_transaction(&mut tx).await?;
 
         let tx_id = tx.id();
-        let receipts = self
-            .get_provider()?
-            .send_transaction(&tx)
-            .await?;
+        let receipts = self.get_provider()?.send_transaction(&tx).await?;
 
         Ok((tx_id.to_string(), receipts))
     }
@@ -1163,7 +1154,8 @@ mod tests {
             BASE_ASSET_ID,
             base_amount,
         );
-        let mut tx: Script = Wallet::build_transfer_tx(&inputs, &outputs, TxParameters::default()).into();
+        let mut tx: Script =
+            Wallet::build_transfer_tx(&inputs, &outputs, TxParameters::default()).into();
 
         wallet.add_fee_resources(&mut tx, base_amount, 0).await?;
 
