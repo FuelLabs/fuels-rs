@@ -203,7 +203,7 @@ pub(crate) fn get_transaction_inputs_outputs(
 fn generate_custom_outputs(calls: &[ContractCall]) -> Vec<Output> {
     calls
         .iter()
-        .flat_map(|call| call.custom_assets.iter().collect::<Vec<_>>())
+        .flat_map(|call| &call.custom_assets)
         .group_by(|custom| (custom.0 .0, custom.0 .1.clone()))
         .into_iter()
         .filter_map(|(asset_id_address, groups_w_same_asset_id_address)| {
