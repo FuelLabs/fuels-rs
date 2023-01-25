@@ -38,7 +38,7 @@ async fn compile_bindings_from_contract_file() {
     let encoded = format!(
         "{}{}",
         hex::encode(call_handler.contract_call.encoded_selector),
-        hex::encode(&encoded_args)
+        hex::encode(encoded_args)
     );
 
     assert_eq!("000000009593586c000000000000002a", encoded);
@@ -97,7 +97,7 @@ async fn compile_bindings_from_inline_contract() -> Result<(), Error> {
     let encoded = format!(
         "{}{}",
         hex::encode(call_handler.contract_call.encoded_selector),
-        hex::encode(&encoded_args)
+        hex::encode(encoded_args)
     );
 
     assert_eq!("000000009593586c000000000000002a", encoded);
@@ -170,7 +170,7 @@ async fn compile_bindings_array_input() {
     let encoded = format!(
         "{}{}",
         hex::encode(call_handler.contract_call.encoded_selector),
-        hex::encode(&encoded_args)
+        hex::encode(encoded_args)
     );
 
     assert_eq!(
@@ -245,7 +245,7 @@ async fn compile_bindings_bool_array_input() {
     let encoded = format!(
         "{}{}",
         hex::encode(call_handler.contract_call.encoded_selector),
-        hex::encode(&encoded_args)
+        hex::encode(encoded_args)
     );
 
     assert_eq!(
@@ -307,7 +307,7 @@ async fn compile_bindings_byte_input() {
     let encoded = format!(
         "{}{}",
         hex::encode(call_handler.contract_call.encoded_selector),
-        hex::encode(&encoded_args)
+        hex::encode(encoded_args)
     );
 
     assert_eq!("00000000a4bd3861000000000000000a", encoded);
@@ -372,7 +372,7 @@ async fn compile_bindings_string_input() {
     let encoded = format!(
         "{}{}",
         hex::encode(call_handler.contract_call.encoded_selector),
-        hex::encode(&encoded_args)
+        hex::encode(encoded_args)
     );
 
     assert_eq!(
@@ -441,7 +441,7 @@ async fn compile_bindings_b256_input() {
     let encoded = format!(
         "{}{}",
         hex::encode(call_handler.contract_call.encoded_selector),
-        hex::encode(&encoded_args)
+        hex::encode(encoded_args)
     );
 
     assert_eq!(
@@ -509,7 +509,7 @@ async fn compile_bindings_evm_address_input() {
     let encoded = format!(
         "{}{}",
         hex::encode(call_handler.contract_call.encoded_selector),
-        hex::encode(&encoded_args)
+        hex::encode(encoded_args)
     );
 
     assert_eq!(
@@ -612,7 +612,7 @@ async fn compile_bindings_struct_input() {
     let encoded = format!(
         "{}{}",
         hex::encode(call_handler.contract_call.encoded_selector),
-        hex::encode(&encoded_args)
+        hex::encode(encoded_args)
     );
 
     assert_eq!(
@@ -720,7 +720,7 @@ async fn compile_bindings_nested_struct_input() {
     let encoded = format!(
         "{}{}",
         hex::encode(call_handler.contract_call.encoded_selector),
-        hex::encode(&encoded_args)
+        hex::encode(encoded_args)
     );
 
     assert_eq!("0000000088bf8a1b000000000000000a0000000000000001", encoded);
@@ -804,7 +804,7 @@ async fn compile_bindings_enum_input() {
     let encoded = format!(
         "{}{}",
         hex::encode(call_handler.contract_call.encoded_selector),
-        hex::encode(&encoded_args)
+        hex::encode(encoded_args)
     );
 
     let expected = "0000000021b2784f0000000000000000000000000000002a";

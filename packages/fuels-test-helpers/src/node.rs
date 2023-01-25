@@ -7,7 +7,7 @@ use std::{
 };
 
 use anyhow::{bail, Error as AnyError};
-use fuel_chain_config::{BlockProduction, ChainConfig, StateConfig};
+use fuel_chain_config::{ChainConfig, StateConfig};
 use fuel_core_interfaces::model::BlockHeight;
 use fuel_gql_client::client::FuelClient;
 use fuel_tx::ConsensusParameters;
@@ -169,31 +169,18 @@ pub fn get_node_config_json(
     let coin_configs = into_coin_configs(coins);
     let messages = into_message_configs(messages);
 
-    let chain_config = {
-        let chain_config = chain_config.unwrap_or_else(|| ChainConfig {
-            chain_name: "local_testnet".to_string(),
-            block_production: BlockProduction::ProofOfAuthority {
-                trigger: Default::default(),
-            },
-            block_gas_limit: 1000000000,
-            initial_state: Some(StateConfig {
-                coins: Some(coin_configs),
-                contracts: None,
-                messages: Some(messages),
-                height: None,
-            }),
-            ..ChainConfig::local_testnet()
-        });
+    let mut chain_config = chain_config.unwrap_or_else(|| ChainConfig::local_testnet());
 
-        if let Some(transaction_parameters) = consensus_parameters_config {
-            ChainConfig {
-                transaction_parameters,
-                ..chain_config
-            }
-        } else {
-            chain_config
-        }
-    };
+    chain_config.initial_state = Some(StateConfig {
+        coins: Some(coin_configs),
+        contracts: None,
+        messages: Some(messages),
+        height: None,
+    });
+
+    if let Some(transaction_parameters) = consensus_parameters_config {
+        chain_config.transaction_parameters = transaction_parameters;
+    }
 
     serde_json::to_value(&chain_config).expect("Failed to build `ChainConfig` JSON")
 }
