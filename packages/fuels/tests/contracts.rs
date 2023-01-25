@@ -1005,10 +1005,10 @@ async fn test_add_custom_assets() -> Result<(), Error> {
     assert_eq!(balance_asset_1, initial_amount - amount_1);
     assert_eq!(balance_asset_2, initial_amount - amount_2);
 
-    let balance_asset_1 = wallet_1.get_asset_balance(&asset_id_1).await?;
-    let balance_asset_2 = wallet_1.get_asset_balance(&asset_id_2).await?;
-    assert_eq!(balance_asset_1, initial_amount - amount_1);
-    assert_eq!(balance_asset_2, initial_amount - amount_2);
+    let balance_asset_1 = wallet_2.get_asset_balance(&asset_id_1).await?;
+    let balance_asset_2 = wallet_2.get_asset_balance(&asset_id_2).await?;
+    assert_eq!(balance_asset_1, initial_amount + amount_1);
+    assert_eq!(balance_asset_2, initial_amount + amount_2);
 
     Ok(())
 }
