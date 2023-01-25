@@ -124,7 +124,8 @@ impl ExecutableFuelCall {
             &chain_info.consensus_parameters,
         )?;
 
-        provider.send_transaction(&Script::from(self.tx)).await
+        let fuel_tx = Script::from(self.tx.clone());
+        provider.send_transaction(&fuel_tx).await
     }
 
     /// Execute the transaction in a simulated manner, not modifying blockchain state
