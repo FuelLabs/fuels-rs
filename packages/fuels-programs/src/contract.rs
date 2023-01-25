@@ -110,6 +110,7 @@ impl Contract {
         signature: Selector,
         args: &[Token],
         log_decoder: LogDecoder,
+        is_payable: bool,
     ) -> Result<ContractCallHandler<D>, Error> {
         let encoded_selector = signature;
 
@@ -129,6 +130,7 @@ impl Contract {
             message_outputs: None,
             external_contracts: vec![],
             output_param: D::param_type(),
+            is_payable,
         };
 
         Ok(ContractCallHandler {
@@ -360,6 +362,7 @@ pub struct ContractCall {
     pub message_outputs: Option<Vec<Output>>,
     pub external_contracts: Vec<Bech32ContractId>,
     pub output_param: ParamType,
+    pub is_payable: bool,
 }
 
 impl ContractCall {
@@ -560,6 +563,10 @@ where
         self
     }
 
+    pub fn is_payable(&self) -> bool {
+        self.contract_call.is_payable
+    }
+
     /// Sets the transaction parameters for a given transaction.
     /// Note that this is a builder method, i.e. use it as a chain:
 
@@ -579,9 +586,12 @@ where
     /// let params = CallParameters { amount: 1, asset_id: BASE_ASSET_ID };
     /// my_contract_instance.my_method(...).call_params(params).call()
     /// ```
-    pub fn call_params(mut self, params: CallParameters) -> Self {
+    pub fn call_params(mut self, params: CallParameters) -> Result<Self, Error> {
+        if !self.is_payable() && params.amount > 0 {
+            return Err(Error::InvalidCallParameters());
+        }
         self.contract_call.call_parameters = params;
-        self
+        Ok(self)
     }
 
     /// Appends `num` [`Output::Variable`]s to the transaction.
