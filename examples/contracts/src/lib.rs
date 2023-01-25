@@ -718,23 +718,20 @@ mod tests {
     async fn custom_assets_example() -> Result<(), Error> {
         use fuels::prelude::*;
 
-        abigen!(Contract(
-            name = "MyContract",
-            abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
-        ));
+        setup_contract_test!(
+            Wallets("wallet"),
+            Abigen(
+                name = "MyContract",
+                abi = "packages/fuels/tests/contracts/contract_test"
+            ),
+            Deploy(
+                name = "contract_instance",
+                contract = "MyContract",
+                wallet = "wallet"
+            )
+        );
 
-        let wallet = launch_provider_and_get_wallet().await;
         let other_wallet = WalletUnlocked::new_random(None);
-
-        let contract_id = Contract::deploy(
-            "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
-            &wallet,
-            TxParameters::default(),
-            StorageConfiguration::default(),
-        )
-        .await?;
-
-        let contract_instance = MyContract::new(contract_id, wallet);
 
         // ANCHOR: add_custom_assets
         let amount = 1000;
