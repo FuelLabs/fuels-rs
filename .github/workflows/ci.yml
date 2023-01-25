@@ -208,7 +208,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: run
-          args: --bin check-docs;doc
+          args: --bin check-docs && cargo doc
 
   publish:
     needs: cargo-verifications
