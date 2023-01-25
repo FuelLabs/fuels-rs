@@ -723,7 +723,7 @@ impl WalletUnlocked {
         self.add_fee_resources(&mut tx, 0, 0).await?;
         self.sign_transaction(&mut tx).await?;
 
-        predicate.send_transaction(&Script::from(tx)).await
+        predicate.send_transaction(&tx).await
     }
 
     fn create_coin_predicate(
