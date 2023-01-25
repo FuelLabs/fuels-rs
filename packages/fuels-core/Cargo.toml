@@ -9,27 +9,13 @@ repository = "https://github.com/FuelLabs/fuels-rs"
 description = "Fuel Rust SDK core."
 
 [dependencies]
-Inflector = "0.11"
-anyhow = "1"
 fuel-tx = "0.23"
 fuel-vm = "0.22"
 fuel-types = "0.5"
-fuel-abi-types = "0.1.0"
 fuels-types = { version = "0.34.0", path = "../fuels-types" }
 hex = { version = "0.4.3", features = ["std"] }
 itertools = "0.10"
-proc-macro2 = "1.0"
-lazy_static = "1.4.0"
-quote = "1.0"
-rand = { version = "0.8.4" }
-regex = "1.6.0"
-serde = { version = "1.0.124", features = ["derive"] }
-serde_json = { version = "1.0.64", default-features = true }
 sha2 = "0.9.5"
-strum = "0.21"
-strum_macros = "0.21"
-syn = "1.0.12"
-thiserror = "1.0.30"
 
 [dev-dependencies]
 fuels-test-helpers = { version = "0.34.0", path = "../fuels-test-helpers" }

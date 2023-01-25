@@ -1,3 +1,4 @@
+#[allow(unused_imports)]
 use std::future::Future;
 
 use fuels::prelude::*;
@@ -1009,6 +1010,34 @@ async fn test_add_custom_assets() -> Result<(), Error> {
     let balance_asset_2 = wallet_2.get_asset_balance(&asset_id_2).await?;
     assert_eq!(balance_asset_1, initial_amount + amount_1);
     assert_eq!(balance_asset_2, initial_amount + amount_2);
+
+    Ok(())
+}
+
+async fn test_contract_raw_slice() -> Result<(), Error> {
+    let num_wallets = 1;
+    let num_coins = 1;
+    let amount = 1000;
+    let config = WalletsConfig::new(Some(num_wallets), Some(num_coins), Some(amount));
+
+    let mut wallets = launch_custom_provider_and_get_wallets(config, None, None).await;
+    let wallet = wallets.pop().unwrap();
+    setup_contract_test!(
+        Abigen(
+            name = "RawSliceContract",
+            abi = "packages/fuels/tests/contracts/contract_raw_slice"
+        ),
+        Deploy(
+            name = "contract_instance",
+            contract = "RawSliceContract",
+            wallet = "wallet"
+        ),
+    );
+    let contract_methods = contract_instance.methods();
+    for length in 0..=10 {
+        let response = contract_methods.return_raw_slice(length).call().await?;
+        assert_eq!(response.value, (0..length).collect::<Vec<_>>());
+    }
 
     Ok(())
 }

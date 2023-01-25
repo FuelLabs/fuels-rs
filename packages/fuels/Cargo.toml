@@ -13,7 +13,7 @@ description = "Fuel Rust SDK."
 fuel-tx = "0.23"
 fuel-core = { version = "0.15", default-features = false, optional = true }
 fuel-gql-client = { version = "0.15", default-features = false }
-fuels-abigen-macro = { version = "0.34.0", path = "../fuels-abigen-macro" }
+fuels-macros = { version = "0.34.0", path = "../fuels-macros" }
 fuels-programs = { version = "0.34.0", path = "../fuels-programs" }
 fuels-core = { version = "0.34.0", path = "../fuels-core" }
 fuels-signers = { version = "0.34.0", path = "../fuels-signers" }
@@ -22,7 +22,6 @@ fuels-types = { version = "0.34.0", path = "../fuels-types" }
 
 [dev-dependencies]
 anyhow = "1.0.58"
-ctor = " 0.1"
 chrono = "0.4.2"
 fuel-core = { version = "0.15", default-features = false }
 fuel-core-interfaces = { version = "0.15", default-features = false }
