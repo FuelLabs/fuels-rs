@@ -11,7 +11,7 @@ mod tests {
         use fuels::{prelude::*, signers::fuel_crypto::SecretKey};
 
         // Create a provider pointing to the testnet.
-        let provider = Provider::connect("node-beta-1.fuel.network").await.unwrap();
+        let provider = Provider::connect("node-beta-2.fuel.network").await.unwrap();
 
         // Setup a private key
         let secret =
