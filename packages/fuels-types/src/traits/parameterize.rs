@@ -1,10 +1,11 @@
 use std::iter::zip;
 
-use crate::core::{Bits256, Byte};
+use fuel_types::{Address, AssetId, ContractId};
 
 use crate::{
-    core::SizedAsciiString, enum_variants::EnumVariants, param_types::ParamType, Address, AssetId,
-    ContractId,
+    core::{Bits256, Byte, EvmAddress, RawSlice, SizedAsciiString},
+    enum_variants::EnumVariants,
+    param_types::ParamType,
 };
 
 /// `abigen` requires `Parameterized` to construct nested types. It is also used by `try_from_bytes`
@@ -13,15 +14,21 @@ pub trait Parameterize {
     fn param_type() -> ParamType;
 }
 
-impl Parameterize for Byte {
-    fn param_type() -> ParamType {
-        ParamType::Byte
-    }
-}
-
 impl Parameterize for Bits256 {
     fn param_type() -> ParamType {
         ParamType::B256
+    }
+}
+
+impl Parameterize for RawSlice {
+    fn param_type() -> ParamType {
+        ParamType::RawSlice
+    }
+}
+
+impl Parameterize for Byte {
+    fn param_type() -> ParamType {
+        ParamType::Byte
     }
 }
 
@@ -204,5 +211,10 @@ mod tests {
     #[test]
     fn test_param_type_b256() {
         assert_eq!(Bits256::param_type(), ParamType::B256);
+    }
+
+    #[test]
+    fn test_param_type_raw_slice() {
+        assert_eq!(RawSlice::param_type(), ParamType::RawSlice);
     }
 }

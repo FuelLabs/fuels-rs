@@ -8,9 +8,10 @@ use crate::{enum_variants::EnumVariants, errors::CodecError, param_types::ParamT
 mod bits;
 mod byte;
 mod native;
+mod raw_slice;
 mod sized_ascii_string;
 
-pub use crate::core::{bits::*, byte::*, native::*, sized_ascii_string::*};
+pub use crate::core::{bits::*, byte::*, native::*, raw_slice::RawSlice, sized_ascii_string::*};
 
 pub type ByteArray = [u8; 8];
 pub type Selector = ByteArray;
@@ -79,6 +80,7 @@ pub enum Token {
     #[strum(disabled)]
     Enum(Box<EnumSelector>),
     Tuple(Vec<Token>),
+    RawSlice(Vec<u64>),
 }
 
 impl fmt::Display for Token {

@@ -1,9 +1,10 @@
+use fuel_types::{Address, AssetId, ContractId};
+
 use crate::{
-    core::{Bits256, Byte, EvmAddress, SizedAsciiString, StringToken, Token},
+    core::{Bits256, Byte, EvmAddress, RawSlice, SizedAsciiString, StringToken, Token},
     errors::Error,
     param_types::ParamType,
     traits::Parameterize,
-    Address, AssetId, ContractId,
 };
 
 pub trait Tokenizable {
@@ -196,6 +197,24 @@ impl Tokenizable for u64 {
     }
     fn into_token(self) -> Token {
         Token::U64(self)
+    }
+}
+
+impl Tokenizable for RawSlice {
+    fn from_token(token: Token) -> Result<Self, Error>
+    where
+        Self: Sized,
+    {
+        match token {
+            Token::RawSlice(contents) => Ok(Self(contents)),
+            _ => Err(Error::InvalidData(format!(
+                "RawSlice::from_token expected a token of the variant Token::RawSlice, got: {token}"
+            ))),
+        }
+    }
+
+    fn into_token(self) -> Token {
+        Token::RawSlice(Vec::from(self))
     }
 }
 
@@ -496,6 +515,59 @@ mod tests {
         let token = bits256.into_token();
 
         assert_eq!(token, Token::B256(bits));
+    }
+
+    #[test]
+    fn test_from_token_raw_slice() -> Result<(), Error> {
+        let data = vec![42; 11];
+        let token = Token::RawSlice(data.clone());
+
+        let slice = RawSlice::from_token(token)?;
+
+        assert_eq!(slice, data);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_into_token_raw_slice() {
+        let data = vec![13; 32];
+        let raw_slice_token = Token::RawSlice(data.clone());
+
+        let token = raw_slice_token.into_token();
+
+        assert_eq!(token, Token::RawSlice(data));
+    }
+    #[test]
+    fn test_from_token_evm_addr() -> Result<(), Error> {
+        let data = [1u8; 32];
+        let token = Token::Struct(vec![Token::B256(data)]);
+
+        let evm_address = EvmAddress::from_token(token)?;
+
+        let expected_data = [
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1,
+        ];
+
+        assert_eq!(evm_address.value.0, expected_data);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_into_token_evm_addr() {
+        let data = [1u8; 32];
+        let evm_address = EvmAddress::from(Bits256(data));
+
+        let token = evm_address.into_token();
+
+        let expected_data = [
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1,
+        ];
+
+        assert_eq!(token, Token::Struct(vec![Token::B256(expected_data)]));
     }
 
     #[test]

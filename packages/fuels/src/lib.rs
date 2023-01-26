@@ -76,7 +76,7 @@ pub mod prelude {
         types::{
             bech32::{Bech32Address, Bech32ContractId},
             errors::Error,
-            Address, AssetId, ContractId,
+            Address, AssetId, ContractId, RawSlice,
         },
     };
 }
