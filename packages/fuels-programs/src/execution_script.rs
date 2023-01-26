@@ -5,12 +5,10 @@ use fuels_core::{offsets::call_script_data_offset, parameters::TxParameters};
 use fuels_signers::{provider::Provider, Signer, WalletUnlocked};
 use fuels_types::errors::Error;
 
-use crate::{
-    contract_call::ContractCall,
-    contract_call_utils::{
-        build_script_data_from_contract_calls, calculate_required_asset_amounts, get_instructions,
-        get_single_call_instructions, get_transaction_inputs_outputs, CallOpcodeParamsOffset,
-    },
+use crate::calls::contract_call::ContractCall;
+use crate::calls::contract_call_utils::{
+    build_script_data_from_contract_calls, calculate_required_asset_amounts, get_instructions,
+    get_single_call_instructions, get_transaction_inputs_outputs, CallOpcodeParamsOffset,
 };
 
 /// [`ExecutableFuelCall`] provides methods to create and call/simulate a transaction that carries

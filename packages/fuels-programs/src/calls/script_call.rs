@@ -12,10 +12,12 @@ use fuels_signers::{provider::Provider, WalletUnlocked};
 use fuels_types::{bech32::Bech32ContractId, errors::Error};
 use itertools::chain;
 
+use crate::calls::call_utils::{
+    generate_contract_inputs, generate_contract_outputs, get_decoded_output,
+};
+use crate::calls::contract_call::SettableContract;
 use crate::{
-    call_response::FuelCallResponse,
-    call_utils::{generate_contract_inputs, generate_contract_outputs, get_decoded_output},
-    contract_call::SettableContract,
+    calls::call_response::FuelCallResponse,
     execution_script::ExecutableFuelCall,
     logs::{decode_revert_error, LogDecoder},
 };
