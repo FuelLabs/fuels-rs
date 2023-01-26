@@ -35,7 +35,7 @@ fn parameterize_for_struct(
     let members = extract_struct_members(contents, fuels_types_path.clone())?;
     let field_names = members.names_as_strings();
     let param_type_calls = members.param_type_calls();
-    let generic_param_types = parameterize_generic_params(&generics, fuels_types_path.clone())?;
+    let generic_param_types = parameterize_generic_params(&generics, &fuels_types_path)?;
 
     Ok(quote! {
         impl #impl_gen #fuels_types_path::traits::Parameterize for #name #type_gen #where_clause {
@@ -52,7 +52,7 @@ fn parameterize_for_struct(
 
 fn parameterize_generic_params(
     generics: &Generics,
-    fuels_types_path: TokenStream,
+    fuels_types_path: &TokenStream,
 ) -> syn::Result<Vec<TokenStream>> {
     let parameterize_calls = extract_generic_types(generics)?
         .into_iter()
@@ -73,10 +73,10 @@ fn parameterize_for_enum(
 ) -> Result<TokenStream, Error> {
     let (impl_gen, type_gen, where_clause) = generics.split_for_impl();
     let enum_name_str = name.to_string();
-    let declarations = extract_enum_members(contents, fuels_types_path.clone())?;
-    let variant_names = declarations.names_as_strings();
-    let variant_param_types = declarations.param_type_calls();
-    let generic_param_types = parameterize_generic_params(&generics, fuels_types_path.clone())?;
+    let members = extract_enum_members(contents, fuels_types_path.clone())?;
+    let variant_names = members.names_as_strings();
+    let variant_param_types = members.param_type_calls();
+    let generic_param_types = parameterize_generic_params(&generics, &fuels_types_path)?;
 
     Ok(quote! {
         impl #impl_gen #fuels_types_path::traits::Parameterize for #name #type_gen #where_clause {

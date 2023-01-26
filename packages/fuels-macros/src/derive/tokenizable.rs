@@ -2,7 +2,13 @@ use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 use syn::{Data, DataEnum, DataStruct, DeriveInput, Error, Fields, Generics, Type, Variant};
 
-use crate::{derive::utils::determine_fuels_types_path, parse_utils::extract_struct_members};
+use crate::{
+    derive::{
+        utils,
+        utils::{determine_fuels_types_path, ExtractedVariant},
+    },
+    parse_utils::extract_struct_members,
+};
 
 pub fn generate_tokenizable_impl(input: DeriveInput) -> syn::Result<TokenStream> {
     let fuels_types_path = determine_fuels_types_path(&input.attrs)?;
@@ -28,12 +34,7 @@ fn tokenizable_for_struct(
     fuels_types_path: TokenStream,
 ) -> Result<TokenStream, Error> {
     let (impl_gen, type_gen, where_clause) = generics.split_for_impl();
-
     let struct_name_str = name.to_string();
-
-    // TODO: The quote below references `field_names` twice.
-    // Check if it somehow collects it internally,
-    // otherwise the iterator would be exhausted for the first repetition in quote leaving no elements behind for the second. Collecting it here is a workaround.
     let field_names = extract_struct_members(contents, fuels_types_path.clone())?
         .names()
         .collect::<Vec<_>>();
@@ -67,86 +68,6 @@ fn tokenizable_for_struct(
     })
 }
 
-struct ExtractedVariant {
-    name: Ident,
-    discriminant: u8,
-    is_unit: bool,
-}
-
-struct ExtractedVariants {
-    fuels_types_path: TokenStream,
-    variants: Vec<ExtractedVariant>,
-}
-
-impl ExtractedVariants {
-    fn variant_into_discriminant_and_token(&self) -> TokenStream {
-        let match_branches = self.variants.iter().map(|variant| {
-            let discriminant = variant.discriminant;
-            let name = &variant.name;
-            let fuels_types_path = &self.fuels_types_path;
-            if variant.is_unit {
-                quote! { Self::#name => (#discriminant, #fuels_types_path::traits::Tokenizable::into_token(())) }
-            } else {
-                quote! { Self::#name(inner) => (#discriminant, #fuels_types_path::traits::Tokenizable::into_token(inner))}
-            }
-        });
-
-        quote! {
-            match self {
-                #(#match_branches),*
-            }
-        }
-    }
-    fn variant_from_discriminant_and_token(&self) -> TokenStream {
-        let match_discriminant = self.variants.iter().map(|variant| {
-            let name = &variant.name;
-            let discriminant = variant.discriminant;
-            let fuels_tyeps_path = &self.fuels_types_path;
-
-            let arg = if variant.is_unit {
-                quote! {}
-            } else {
-                quote! { (#fuels_tyeps_path::traits::Tokenizable::from_token(variant_token)?) }
-            };
-
-            quote! { #discriminant => ::std::result::Result::Ok(Self::#name #arg)}
-        });
-
-        quote! {
-            match discriminant {
-                #(#match_discriminant,)*
-                _ => ::std::result::Result::Err(format!(
-                    "Discriminant {} doesn't point to any of the enums variants.", discriminant
-                )),
-            }
-        }
-    }
-}
-
-fn extract_variants<'a>(
-    contents: impl IntoIterator<Item = &'a Variant>,
-    fuels_types_path: TokenStream,
-) -> Result<ExtractedVariants, Error> {
-    let variants = contents
-        .into_iter()
-        .enumerate()
-        .map(|(discriminant, variant)| -> syn::Result<_> {
-            let name = variant.ident.clone();
-            let ty = get_variant_type(variant)?;
-            Ok(ExtractedVariant {
-                name,
-                discriminant: discriminant as u8,
-                is_unit: ty.is_none(),
-            })
-        })
-        .collect::<Result<_, _>>()?;
-
-    Ok(ExtractedVariants {
-        variants,
-        fuels_types_path,
-    })
-}
-
 fn tokenizable_for_enum(
     name: Ident,
     generics: Generics,
@@ -154,10 +75,8 @@ fn tokenizable_for_enum(
     fuels_types_path: TokenStream,
 ) -> Result<TokenStream, Error> {
     let (impl_gen, type_gen, where_clause) = generics.split_for_impl();
-
     let name_stringified = name.to_string();
-
-    let variants = extract_variants(&contents.variants, fuels_types_path.clone())?;
+    let variants = utils::extract_variants(&contents.variants, fuels_types_path.clone())?;
     let discriminant_and_token = variants.variant_into_discriminant_and_token();
     let constructed_variant = variants.variant_from_discriminant_and_token();
 
@@ -188,26 +107,4 @@ fn tokenizable_for_enum(
             }
         }
     })
-}
-
-fn get_variant_type(variant: &Variant) -> syn::Result<Option<&Type>> {
-    match &variant.fields {
-        Fields::Named(named_fields) => Err(Error::new_spanned(
-            named_fields.clone(),
-            "Struct like enum variants are not supported".to_string(),
-        )),
-        Fields::Unnamed(unnamed_fields) => {
-            let fields = &unnamed_fields.unnamed;
-
-            if fields.len() == 1 {
-                Ok(fields.iter().next().map(|field| &field.ty))
-            } else {
-                Err(Error::new_spanned(
-                    unnamed_fields.clone(),
-                    "Tuple-like enum variants must contain exactly one element!".to_string(),
-                ))
-            }
-        }
-        Fields::Unit => Ok(None),
-    }
 }
