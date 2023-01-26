@@ -16,7 +16,7 @@ use fuels_types::{
     errors::Error,
 };
 
-use crate::contract_call::{ContractCall, ContractCallHandler};
+use crate::calls::contract_call::{ContractCall, ContractCallHandler};
 use crate::logs::LogDecoder;
 
 /// How many times to attempt to resolve missing tx dependencies.

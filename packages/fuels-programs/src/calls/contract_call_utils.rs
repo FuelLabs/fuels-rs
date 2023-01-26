@@ -7,12 +7,11 @@ use fuel_vm::{consts::REG_ONE, prelude::Opcode};
 use fuels_types::{bech32::Bech32Address, constants::WORD_SIZE, resource::Resource};
 use itertools::chain;
 
-use crate::call_utils::{
+use crate::calls::call_utils::{
     convert_to_signed_resources, extract_unique_asset_ids, generate_asset_change_outputs,
     generate_contract_inputs, generate_contract_outputs, sum_up_amounts_for_each_asset_id,
 };
-
-use crate::contract_call::ContractCall;
+use crate::calls::contract_call::ContractCall;
 
 #[derive(Default)]
 /// Specifies offsets of [`Opcode::CALL`] parameters stored in the script

@@ -66,13 +66,7 @@ pub mod prelude {
         core::{constants::*, parameters::*},
         fuel_node::*,
         macros::{abigen, setup_contract_test},
-        programs::{
-            contract::Contract,
-            contract_call::{
-                ContractCall, ContractCallHandler, MultiContractCallHandler, SettableContract,
-            },
-            logs::LogDecoder,
-        },
+        programs::{contract::Contract, logs::LogDecoder},
         signers::{provider::*, wallet::generate_mnemonic_phrase, Signer, Wallet, WalletUnlocked},
         test_helpers::*,
         tx::Salt,
@@ -81,5 +75,8 @@ pub mod prelude {
             errors::Error,
             Address, AssetId, ContractId, RawSlice,
         },
+    };
+    pub use fuels_programs::calls::contract_call::{
+        ContractCall, ContractCallHandler, MultiContractCallHandler, SettableContract,
     };
 }

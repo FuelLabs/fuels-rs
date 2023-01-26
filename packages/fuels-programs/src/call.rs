@@ -5,7 +5,7 @@ use fuel_vm::fuel_asm::PanicReason;
 use fuels_core::{constants::FAILED_TRANSFER_TO_ADDRESS_SIGNAL, parameters::CallParameters};
 use fuels_types::bech32::Bech32ContractId;
 
-use crate::{contract_call::ContractCall, script_call::ScriptCall};
+use crate::{calls::contract_call::ContractCall, calls::script_call::ScriptCall};
 
 pub(crate) trait ProgramCall {
     fn with_external_contracts(self, external_contracts: Vec<Bech32ContractId>) -> Self;

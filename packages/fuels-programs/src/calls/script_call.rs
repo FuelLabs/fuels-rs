@@ -15,9 +15,11 @@ use itertools::chain;
 
 use crate::{
     call::ProgramCall,
-    call_response::FuelCallResponse,
-    call_utils::{generate_contract_inputs, generate_contract_outputs, get_decoded_output},
-    contract_call::SettableContract,
+    calls::{
+        call_response::FuelCallResponse,
+        call_utils::{generate_contract_inputs, generate_contract_outputs, get_decoded_output},
+        contract_call::SettableContract,
+    },
     execution_script::ExecutableFuelCall,
     logs::{decode_revert_error, LogDecoder},
 };
