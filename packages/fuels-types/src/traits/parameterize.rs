@@ -3,7 +3,7 @@ use std::iter::zip;
 use fuel_types::{Address, AssetId, ContractId};
 
 use crate::{
-    core::{Bits256, Byte, EvmAddress, RawSlice, SizedAsciiString},
+    core::{Bits256, Byte, RawSlice, SizedAsciiString},
     enum_variants::EnumVariants,
     param_types::ParamType,
 };
