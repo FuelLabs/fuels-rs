@@ -129,6 +129,7 @@ mod tests {
         ]
         .into_iter()
         .collect::<HashMap<_, _>>();
+
         let actual = expand_custom_enum(
             &FullTypeDeclaration::from_counterpart(&p, &types),
             &HashSet::default(),
@@ -204,18 +205,7 @@ mod tests {
                 TypeDeclaration {
                     type_id: 1,
                     type_field: String::from("struct Building"),
-                    components: Some(vec![
-                        TypeApplication {
-                            name: String::from("Rooms"),
-                            type_id: 3,
-                            ..Default::default()
-                        },
-                        TypeApplication {
-                            name: String::from("Floors"),
-                            type_id: 4,
-                            ..Default::default()
-                        },
-                    ]),
+                    components: Some(vec![]),
                     ..Default::default()
                 },
             ),
@@ -227,25 +217,10 @@ mod tests {
                     ..Default::default()
                 },
             ),
-            (
-                3,
-                TypeDeclaration {
-                    type_id: 3,
-                    type_field: String::from("u8"),
-                    ..Default::default()
-                },
-            ),
-            (
-                4,
-                TypeDeclaration {
-                    type_id: 4,
-                    type_field: String::from("u16"),
-                    ..Default::default()
-                },
-            ),
         ]
         .into_iter()
         .collect::<HashMap<_, _>>();
+
         let actual = expand_custom_enum(
             &FullTypeDeclaration::from_counterpart(&p, &types),
             &HashSet::default(),
@@ -311,6 +286,7 @@ mod tests {
         ]
         .into_iter()
         .collect::<HashMap<_, _>>();
+
         let actual = expand_custom_enum(
             &FullTypeDeclaration::from_counterpart(&p, &types),
             &HashSet::default(),
@@ -388,6 +364,7 @@ mod tests {
         ]
         .into_iter()
         .collect::<HashMap<_, _>>();
+
         let actual = expand_custom_enum(
             &FullTypeDeclaration::from_counterpart(&p, &types),
             &HashSet::default(),
@@ -466,6 +443,7 @@ mod tests {
         ]
         .into_iter()
         .collect::<HashMap<_, _>>();
+
         let actual = expand_custom_struct(
             &FullTypeDeclaration::from_counterpart(&p, &types),
             &HashSet::default(),
@@ -541,7 +519,7 @@ mod tests {
                 },
                 TypeApplication {
                     name: String::from("mojito"),
-                    type_id: 4,
+                    type_id: 2,
                     ..Default::default()
                 },
             ]),
@@ -554,18 +532,7 @@ mod tests {
                 TypeDeclaration {
                     type_id: 1,
                     type_field: String::from("struct Shaker"),
-                    components: Some(vec![
-                        TypeApplication {
-                            name: String::from("cosmopolitan"),
-                            type_id: 2,
-                            ..Default::default()
-                        },
-                        TypeApplication {
-                            name: String::from("bimbap"),
-                            type_id: 3,
-                            ..Default::default()
-                        },
-                    ]),
+                    components: Some(vec![]),
                     ..Default::default()
                 },
             ),
@@ -573,22 +540,6 @@ mod tests {
                 2,
                 TypeDeclaration {
                     type_id: 2,
-                    type_field: String::from("bool"),
-                    ..Default::default()
-                },
-            ),
-            (
-                3,
-                TypeDeclaration {
-                    type_id: 3,
-                    type_field: String::from("u64"),
-                    ..Default::default()
-                },
-            ),
-            (
-                4,
-                TypeDeclaration {
-                    type_id: 4,
                     type_field: String::from("u32"),
                     ..Default::default()
                 },
@@ -596,6 +547,7 @@ mod tests {
         ]
         .into_iter()
         .collect::<HashMap<_, _>>();
+
         let actual = expand_custom_struct(
             &FullTypeDeclaration::from_counterpart(&p, &types),
             &HashSet::default(),
@@ -628,111 +580,53 @@ mod tests {
             {
                 "types": [
                   {
-                    "typeId": 6,
+                    "typeId": 0,
                     "type": "u64",
                     "components": null,
                     "typeParameters": null
                   },
                   {
-                    "typeId": 8,
-                    "type": "b256",
-                    "components": null,
-                    "typeParameters": null
-                  },
-                  {
-                    "typeId": 6,
-                    "type": "u64",
-                    "components": null,
-                    "typeParameters": null
-                  },
-                  {
-                    "typeId": 8,
-                    "type": "b256",
-                    "components": null,
-                    "typeParameters": null
-                  },
-                  {
-                    "typeId": 10,
-                    "type": "bool",
-                    "components": null,
-                    "typeParameters": null
-                  },
-                  {
-                    "typeId": 12,
-                    "type": "struct MyStruct1",
-                    "components": [
-                      {
-                        "name": "x",
-                        "type": 6,
-                        "typeArguments": null
-                      },
-                      {
-                        "name": "y",
-                        "type": 8,
-                        "typeArguments": null
-                      }
-                    ],
-                    "typeParameters": null
-                  },
-                  {
-                    "typeId": 6,
-                    "type": "u64",
-                    "components": null,
-                    "typeParameters": null
-                  },
-                  {
-                    "typeId": 8,
+                    "typeId": 1,
                     "type": "b256",
                     "components": null,
                     "typeParameters": null
                   },
                   {
                     "typeId": 2,
-                    "type": "struct MyStruct1",
-                    "components": [
-                      {
-                        "name": "x",
-                        "type": 6,
-                        "typeArguments": null
-                      },
-                      {
-                        "name": "y",
-                        "type": 8,
-                        "typeArguments": null
-                      }
-                    ],
+                    "type": "bool",
+                    "components": null,
                     "typeParameters": null
                   },
                   {
                     "typeId": 3,
-                    "type": "struct MyStruct2",
+                    "type": "struct MyStruct1",
                     "components": [
                       {
                         "name": "x",
-                        "type": 10,
+                        "type": 0,
                         "typeArguments": null
                       },
                       {
                         "name": "y",
-                        "type": 12,
-                        "typeArguments": []
+                        "type": 1,
+                        "typeArguments": null
                       }
                     ],
                     "typeParameters": null
                   },
                   {
-                    "typeId": 26,
-                    "type": "struct MyStruct1",
+                    "typeId": 4,
+                    "type": "struct MyStruct2",
                     "components": [
                       {
                         "name": "x",
-                        "type": 6,
+                        "type": 2,
                         "typeArguments": null
                       },
                       {
                         "name": "y",
-                        "type": 8,
-                        "typeArguments": null
+                        "type": 3,
+                        "typeArguments": []
                       }
                     ],
                     "typeParameters": null
@@ -741,28 +635,16 @@ mod tests {
                 "functions": [
                   {
                     "type": "function",
-                    "inputs": [
-                      {
-                        "name": "s1",
-                        "type": 2,
-                        "typeArguments": []
-                      },
-                      {
-                        "name": "s2",
-                        "type": 3,
-                        "typeArguments": []
-                      }
-                    ],
+                    "inputs": [],
                     "name": "some_abi_funct",
                     "output": {
                       "name": "",
-                      "type": 26,
+                      "type": 0,
                       "typeArguments": []
                     }
                   }
                 ]
-              }
-    "#;
+            }"#;
         let parsed_abi: ProgramABI = serde_json::from_str(s)?;
         let types = parsed_abi
             .types
@@ -770,7 +652,7 @@ mod tests {
             .map(|t| (t.type_id, t))
             .collect::<HashMap<usize, TypeDeclaration>>();
 
-        let s1 = types.get(&2).unwrap();
+        let s1 = types.get(&3).unwrap();
 
         let actual = expand_custom_struct(
             &FullTypeDeclaration::from_counterpart(s1, &types),
@@ -796,7 +678,7 @@ mod tests {
 
         assert_eq!(actual.to_string(), expected.to_string());
 
-        let s2 = types.get(&3).unwrap();
+        let s2 = types.get(&4).unwrap();
 
         let actual = expand_custom_struct(
             &FullTypeDeclaration::from_counterpart(s2, &types),
