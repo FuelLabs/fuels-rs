@@ -39,8 +39,8 @@ pub struct ScriptCall {
 
 impl ScriptCall {
     // This method is not present for contracts so not part of the `ProgramCall` trait
-    pub fn with_inputs(mut self, inputs: Vec<Input>) -> Self {
-        self.inputs = inputs;
+    pub fn with_inputs(mut self, inputs: &[Input]) -> Self {
+        self.inputs = inputs.to_vec();
         self
     }
 }
@@ -99,16 +99,16 @@ where
         self
     }
 
-    pub fn with_message_outputs(mut self, message_outputs: Vec<Output>) -> Self {
+    pub fn with_message_outputs(mut self, message_outputs: &[Output]) -> Self {
         self.script_call = self.script_call.with_message_outputs(message_outputs);
         self
     }
-    pub fn with_variable_outputs(mut self, variable_outputs: Vec<Output>) -> Self {
+    pub fn with_variable_outputs(mut self, variable_outputs: &[Output]) -> Self {
         self.script_call = self.script_call.with_variable_outputs(variable_outputs);
         self
     }
 
-    pub fn with_inputs(mut self, inputs: Vec<Input>) -> Self {
+    pub fn with_inputs(mut self, inputs: &[Input]) -> Self {
         self.script_call = self.script_call.with_inputs(inputs);
         self
     }
