@@ -1,7 +1,7 @@
 use fuel_types::{Address, AssetId, ContractId};
 
 use crate::{
-    core::{Bits256, Byte, EvmAddress, RawSlice, SizedAsciiString, StringToken, Token},
+    core::{Bits256, Byte, RawSlice, SizedAsciiString, StringToken, Token},
     errors::Error,
     param_types::ParamType,
     traits::Parameterize,
@@ -58,32 +58,6 @@ impl Tokenizable for Byte {
 
     fn into_token(self) -> Token {
         Token::Byte(self.0)
-    }
-}
-
-// TODO: make this derivable
-impl Tokenizable for EvmAddress {
-    fn from_token(token: Token) -> Result<Self, Error>
-    where
-        Self: Sized,
-    {
-        if let Token::Struct(tokens) = token {
-            if let [Token::B256(data)] = tokens.as_slice() {
-                Ok(EvmAddress::from(Bits256(*data)))
-            } else {
-                Err(Error::InstantiationError(format!(
-                    "EvmAddress expected one `Token::B256`, got {tokens:?}",
-                )))
-            }
-        } else {
-            Err(Error::InstantiationError(format!(
-                "EvmAddress expected `Token::Struct` got {token:?}",
-            )))
-        }
-    }
-
-    fn into_token(self) -> Token {
-        Token::Struct(vec![Bits256(self.value.0).into_token()])
     }
 }
 

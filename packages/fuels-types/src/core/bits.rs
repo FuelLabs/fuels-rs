@@ -56,16 +56,26 @@ impl TryFrom<&[u8]> for B512 {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Copy, Clone, Parameterize)]
+#[derive(Debug, PartialEq, Eq, Copy, Clone, Parameterize, Tokenizable)]
 #[FuelsTypesPath("crate")]
 // ANCHOR: evm_address
 pub struct EvmAddress {
     // An evm address is only 20 bytes, the first 12 bytes should be set to 0
-    pub value: Bits256,
+    value: Bits256,
 }
 // ANCHOR_END: evm_address
-
 impl EvmAddress {
+    fn new(b256: Bits256) -> Self {
+        Self {
+            value: Bits256(Self::clear_12_bytes(b256.0)),
+        }
+    }
+
+    #[allow(dead_code)]
+    fn value(&self) -> Bits256 {
+        self.value
+    }
+
     // sets the leftmost 12 bytes to zero
     fn clear_12_bytes(bytes: [u8; 32]) -> [u8; 32] {
         let mut bytes = bytes;
@@ -77,20 +87,19 @@ impl EvmAddress {
 
 impl From<Bits256> for EvmAddress {
     fn from(b256: Bits256) -> Self {
-        let value = Bits256(Self::clear_12_bytes(b256.0));
-
-        Self { value }
+        EvmAddress::new(b256)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::{
         param_types::ParamType,
         traits::{Parameterize, Tokenizable},
         Token,
     };
+
+    use super::*;
 
     #[test]
     fn from_hex_str_b256() -> Result<(), Error> {
@@ -125,18 +134,16 @@ mod tests {
     }
 
     #[test]
-    fn test_from_token_evm_addr() -> Result<(), Error> {
+    fn evm_address_clears_first_12_bytes() -> Result<(), Error> {
         let data = [1u8; 32];
-        let token = Token::Struct(vec![Token::B256(data)]);
+        let address = EvmAddress::new(Bits256(data));
 
-        let evm_address = EvmAddress::from_token(token)?;
-
-        let expected_data = [
+        let expected_data = Bits256([
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
             1, 1, 1,
-        ];
+        ]);
 
-        assert_eq!(evm_address.value.0, expected_data);
+        assert_eq!(address.value(), expected_data);
 
         Ok(())
     }
