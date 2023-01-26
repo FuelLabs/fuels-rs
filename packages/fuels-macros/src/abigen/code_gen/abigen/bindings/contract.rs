@@ -5,7 +5,7 @@ use proc_macro2::{Ident, TokenStream};
 use quote::{quote, TokenStreamExt};
 
 use crate::{
-    abigen_macro::code_gen::{
+    abigen::code_gen::{
         abi_types::{FullABIFunction, FullProgramABI, FullTypeDeclaration},
         abigen::{
             bindings::function_generator::FunctionGenerator, logs::logs_lookup_instantiation_code,

@@ -9,8 +9,8 @@ use rand::{prelude::StdRng, Rng, SeedableRng};
 use syn::LitStr;
 
 use crate::{
-    abigen_macro::{Abigen, AbigenTarget, ProgramType},
-    setup_contract_test_macro::parsing::{
+    abigen::{Abigen, AbigenTarget, ProgramType},
+    setup_contract_test::parsing::{
         DeployContract, GenerateContract, InitializeWallet, TestContractCommands,
     },
     utils::ident,

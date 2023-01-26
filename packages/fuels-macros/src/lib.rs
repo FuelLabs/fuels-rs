@@ -2,20 +2,19 @@ use proc_macro::TokenStream;
 use syn::{parse_macro_input, DeriveInput};
 
 use crate::{
-    abigen_macro::{Abigen, MacroAbigenTargets},
-    parameterize_macro::generate_parameterize_impl,
-    setup_contract_test_macro::{generate_setup_contract_test_code, TestContractCommands},
-    tokenizable_macro::generate_tokenizable_impl,
-    try_from_macro::generate_try_from_impl,
+    abigen::{Abigen, MacroAbigenTargets},
+    derive::{
+        parameterize::generate_parameterize_impl, tokenizable::generate_tokenizable_impl,
+        try_from::generate_try_from_impl,
+    },
+    setup_contract_test::{generate_setup_contract_test_code, TestContractCommands},
 };
 
-mod abigen_macro;
+mod abigen;
+mod derive;
 mod error;
-mod parameterize_macro;
 mod parse_utils;
-mod setup_contract_test_macro;
-mod tokenizable_macro;
-mod try_from_macro;
+mod setup_contract_test;
 mod utils;
 
 /// Used to generate bindings for Contracts, Scripts and Predicates. Accepts

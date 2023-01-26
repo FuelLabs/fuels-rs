@@ -4,7 +4,7 @@ use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 
 use crate::{
-    abigen_macro::code_gen::{
+    abigen::code_gen::{
         abi_types::{FullABIFunction, FullTypeApplication, FullTypeDeclaration},
         resolved_type::{resolve_type, ResolvedType},
         utils::{param_type_calls, Component},

@@ -5,7 +5,7 @@ use syn::{
 };
 
 use crate::{
-    abigen_macro::{AbigenTarget, ProgramType},
+    abigen::{AbigenTarget, ProgramType},
     parse_utils::{Command, UniqueNameValues},
 };
 

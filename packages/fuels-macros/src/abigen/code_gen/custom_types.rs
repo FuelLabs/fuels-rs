@@ -4,7 +4,7 @@ use fuel_abi_types::utils::extract_custom_type_name;
 use itertools::Itertools;
 
 use crate::{
-    abigen_macro::code_gen::{
+    abigen::code_gen::{
         abi_types::FullTypeDeclaration,
         custom_types::{enums::expand_custom_enum, structs::expand_custom_struct},
         generated_code::GeneratedCode,
@@ -87,7 +87,7 @@ mod tests {
     use quote::quote;
 
     use super::*;
-    use crate::abigen_macro::code_gen::{abi_types::FullTypeApplication, type_path::TypePath};
+    use crate::abigen::code_gen::{abi_types::FullTypeApplication, type_path::TypePath};
 
     #[test]
     fn test_expand_custom_enum() -> Result<()> {

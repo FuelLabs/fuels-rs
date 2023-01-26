@@ -6,7 +6,7 @@ use syn::{DataEnum, DataStruct, Error, Fields, GenericParam, Generics, TypeParam
 pub(crate) use unique_lit_strs::UniqueLitStrs;
 pub(crate) use unique_name_values::UniqueNameValues;
 
-use crate::abigen_macro::TypePath;
+use crate::abigen::TypePath;
 
 mod command;
 mod unique_lit_strs;

@@ -13,7 +13,7 @@ use quote::{quote, ToTokens};
 use regex::Regex;
 
 use crate::{
-    abigen_macro::code_gen::{
+    abigen::code_gen::{
         abi_types::{FullTypeApplication, FullTypeDeclaration},
         type_path::TypePath,
         utils::get_sdk_provided_types,

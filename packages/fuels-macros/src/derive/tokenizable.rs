@@ -3,7 +3,7 @@ use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 use syn::{Data, DataEnum, DataStruct, DeriveInput, Error, Fields, Generics, Type, Variant};
 
-use crate::{abigen_macro::TypePath, parameterize_macro::extract_fuels_types_path, parse_utils};
+use crate::{abigen::TypePath, derive::parameterize::extract_fuels_types_path, parse_utils};
 
 pub fn generate_tokenizable_impl(input: DeriveInput) -> syn::Result<TokenStream> {
     let fuels_types_path = extract_fuels_types_path(&input.attrs)?

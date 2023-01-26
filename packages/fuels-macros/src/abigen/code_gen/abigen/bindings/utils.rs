@@ -1,5 +1,5 @@
 use crate::{
-    abigen_macro::code_gen::abi_types::FullABIFunction,
+    abigen::code_gen::abi_types::FullABIFunction,
     error::{error, Result},
 };
 
@@ -26,7 +26,7 @@ pub(crate) fn extract_main_fn(abi: &[FullABIFunction]) -> Result<&FullABIFunctio
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::abigen_macro::code_gen::abi_types::{FullTypeApplication, FullTypeDeclaration};
+    use crate::abigen::code_gen::abi_types::{FullTypeApplication, FullTypeDeclaration};
 
     #[test]
     fn correctly_extracts_the_main_fn() {

@@ -3,7 +3,7 @@ use quote::{quote, ToTokens};
 use syn::{Attribute, Data, DataEnum, DataStruct, DeriveInput, Error, Generics, Path};
 
 use crate::{
-    abigen_macro::TypePath,
+    abigen::TypePath,
     parse_utils::{
         extract_enum_members, extract_generic_types, extract_struct_members, Command, UniqueLitStrs,
     },

@@ -7,7 +7,7 @@ use proc_macro2::TokenStream;
 use quote::quote;
 
 use crate::{
-    abigen_macro::code_gen::{
+    abigen::code_gen::{
         abi_types::FullTypeDeclaration,
         abigen::{abigen_target::ParsedAbigenTarget, bindings::generate_bindings},
         custom_types::generate_types,
