@@ -146,7 +146,6 @@ fn limited_std_prelude() -> GeneratedCode {
             };
             //TODO: move this
             use ::fuels::types::{
-                traits::{Parameterize, Tokenizable},
                 param_types::ParamType,
                 enum_variants::EnumVariants,
                 errors::Error,

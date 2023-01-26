@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use itertools::Itertools;
 use proc_macro2::{Ident, TokenStream};
-use quote::quote;
+use quote::{quote, ToTokens};
 
 use crate::abigen_macro::code_gen::type_path::TypePath;
 
@@ -47,10 +47,7 @@ impl GeneratedCode {
     }
 
     pub fn use_statements_for_uniquely_named_types(&self) -> TokenStream {
-        let type_paths = self
-            .types_with_unique_names()
-            .into_iter()
-            .map(TokenStream::from);
+        let type_paths = self.types_with_unique_names();
 
         quote! {
             #(pub use #type_paths;)*

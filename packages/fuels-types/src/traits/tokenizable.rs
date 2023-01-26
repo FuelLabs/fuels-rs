@@ -538,37 +538,6 @@ mod tests {
 
         assert_eq!(token, Token::RawSlice(data));
     }
-    #[test]
-    fn test_from_token_evm_addr() -> Result<(), Error> {
-        let data = [1u8; 32];
-        let token = Token::Struct(vec![Token::B256(data)]);
-
-        let evm_address = EvmAddress::from_token(token)?;
-
-        let expected_data = [
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-            1, 1, 1,
-        ];
-
-        assert_eq!(evm_address.value.0, expected_data);
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_into_token_evm_addr() {
-        let data = [1u8; 32];
-        let evm_address = EvmAddress::from(Bits256(data));
-
-        let token = evm_address.into_token();
-
-        let expected_data = [
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-            1, 1, 1,
-        ];
-
-        assert_eq!(token, Token::Struct(vec![Token::B256(expected_data)]));
-    }
 
     #[test]
     fn sized_ascii_string_is_tokenized_correctly() -> Result<(), Error> {

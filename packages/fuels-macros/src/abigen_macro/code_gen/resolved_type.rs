@@ -281,7 +281,7 @@ fn to_custom_type(
         });
 
     Some(ResolvedType {
-        type_name: type_path.into(),
+        type_name: type_path.into_token_stream(),
         generic_params: type_arguments_supplier(),
     })
 }
@@ -598,7 +598,7 @@ mod tests {
                 to_custom_type(&format!("struct {type_name}"), Vec::new, Vec::new, false)
                     .expect("Should have succeeded.");
 
-            let expected_type_name: TokenStream = expected_path.into();
+            let expected_type_name = expected_path.into_token_stream();
             assert_eq!(
                 resolved_type.type_name.to_string(),
                 expected_type_name.to_string()

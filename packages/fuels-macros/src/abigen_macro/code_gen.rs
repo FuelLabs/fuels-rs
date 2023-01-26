@@ -10,3 +10,4 @@ mod type_path;
 mod utils;
 
 pub(crate) use abigen::{Abigen, AbigenTarget, ProgramType};
+pub(crate) use type_path::TypePath;

@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use proc_macro2::TokenStream;
-use quote::quote;
+use quote::{quote, ToTokens};
 
 use crate::error::{error, Result};
 
@@ -43,6 +43,11 @@ impl TypePath {
         another
     }
 
+    pub fn append(mut self, mut another: TypePath) -> Self {
+        self.parts.extend(another.parts);
+        self
+    }
+
     pub fn type_name(&self) -> &str {
         self.parts
             .last()
@@ -51,20 +56,16 @@ impl TypePath {
     }
 }
 
-impl From<&TypePath> for TokenStream {
-    fn from(type_path: &TypePath) -> Self {
-        let parts = type_path
+impl ToTokens for TypePath {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let parts = self
             .parts
             .iter()
             .map(|part| TokenStream::from_str(part).unwrap());
-        quote! {
-            #(#parts)::*
-        }
-    }
-}
-impl From<TypePath> for TokenStream {
-    fn from(type_path: TypePath) -> Self {
-        (&type_path).into()
+
+        let tokenized_parts = quote! { #(#parts)::* };
+
+        tokens.extend(tokenized_parts);
     }
 }
 

@@ -3,15 +3,18 @@ use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 use syn::{Data, DataEnum, DataStruct, DeriveInput, Error, Fields, Generics, Type, Variant};
 
-use crate::parse_utils;
+use crate::{abigen_macro::TypePath, parameterize_macro::extract_traits_path, parse_utils};
 
 pub fn generate_tokenizable_impl(input: DeriveInput) -> syn::Result<TokenStream> {
+    let traits_path = extract_traits_path(&input.attrs)?
+        .unwrap_or_else(|| TypePath::new("::fuels::types::traits").expect("Known to be correct"));
+
     match input.data {
         Data::Struct(struct_contents) => {
-            tokenizable_for_struct(input.ident, input.generics, struct_contents)
+            tokenizable_for_struct(input.ident, input.generics, struct_contents, traits_path)
         }
         Data::Enum(enum_contents) => {
-            tokenizable_for_enum(input.ident, input.generics, enum_contents)
+            tokenizable_for_enum(input.ident, input.generics, enum_contents, traits_path)
         }
         _ => Err(Error::new_spanned(input, "Union type is not supported")),
     }
@@ -21,10 +24,15 @@ fn tokenizable_for_struct(
     name: Ident,
     generics: Generics,
     contents: DataStruct,
+    traits_path: TypePath,
 ) -> Result<TokenStream, Error> {
     let (impl_gen, type_gen, where_clause) = generics.split_for_impl();
 
     let struct_name_str = name.to_string();
+    let tokenizable = traits_path
+        .clone()
+        .append(TypePath::new("Tokenizable").unwrap());
+    let parameterize = traits_path.append(TypePath::new("Parameterize").unwrap());
 
     // TODO: The quote below references `field_names` twice.
     // Check if it somehow collects it internally,
@@ -34,9 +42,9 @@ fn tokenizable_for_struct(
         .collect::<Vec<_>>();
 
     Ok(quote! {
-        impl #impl_gen Tokenizable for #name #type_gen #where_clause {
+        impl #impl_gen #tokenizable for #name #type_gen #where_clause {
             fn into_token(self) -> Token {
-                let tokens = [#(Tokenizable::into_token(self.#field_names)),*].to_vec();
+                let tokens = [#(#tokenizable::into_token(self.#field_names)),*].to_vec();
                 Token::Struct(tokens)
             }
 
@@ -50,7 +58,7 @@ fn tokenizable_for_struct(
                         };
                         ::std::result::Result::Ok(Self {
                             #(
-                                #field_names: Tokenizable::from_token(next_token()?)?
+                                #field_names: #tokenizable::from_token(next_token()?)?
                              ),*
 
                         })
@@ -69,6 +77,7 @@ struct ExtractedVariant {
 }
 
 struct ExtractedVariants {
+    traits_path: TypePath,
     variants: Vec<ExtractedVariant>,
 }
 
@@ -77,10 +86,11 @@ impl ExtractedVariants {
         let match_branches = self.variants.iter().map(|variant| {
             let discriminant = variant.discriminant;
             let name = &variant.name;
+            let traits_path = &self.traits_path;
             if variant.is_unit {
-                quote! { Self::#name => (#discriminant, Tokenizable::into_token(())) }
+                quote! { Self::#name => (#discriminant, #traits_path::Tokenizable::into_token(())) }
             } else {
-                quote! { Self::#name(inner) => (#discriminant, Tokenizable::into_token(inner))}
+                quote! { Self::#name(inner) => (#discriminant, #traits_path::Tokenizable::into_token(inner))}
             }
         });
 
@@ -94,11 +104,12 @@ impl ExtractedVariants {
         let match_discriminant = self.variants.iter().map(|variant| {
             let name = &variant.name;
             let discriminant = variant.discriminant;
+            let traits_path = &self.traits_path;
 
             let arg = if variant.is_unit {
                 quote! {}
             } else {
-                quote! { (Tokenizable::from_token(variant_token)?) }
+                quote! { (#traits_path::Tokenizable::from_token(variant_token)?) }
             };
 
             quote! { #discriminant => ::std::result::Result::Ok(Self::#name #arg)}
@@ -117,6 +128,7 @@ impl ExtractedVariants {
 
 fn extract_variants<'a>(
     contents: impl IntoIterator<Item = &'a Variant>,
+    traits_path: TypePath,
 ) -> Result<ExtractedVariants, Error> {
     let variants = contents
         .into_iter()
@@ -132,28 +144,32 @@ fn extract_variants<'a>(
         })
         .collect::<Result<_, _>>()?;
 
-    Ok(ExtractedVariants { variants })
+    Ok(ExtractedVariants {
+        variants,
+        traits_path,
+    })
 }
 
 fn tokenizable_for_enum(
     name: Ident,
     generics: Generics,
     contents: DataEnum,
+    traits_path: TypePath,
 ) -> Result<TokenStream, Error> {
     let (impl_gen, type_gen, where_clause) = generics.split_for_impl();
 
     let name_stringified = name.to_string();
 
-    let variants = extract_variants(&contents.variants)?;
+    let variants = extract_variants(&contents.variants, traits_path.clone())?;
     let discriminant_and_token = variants.variant_into_discriminant_and_token();
     let constructed_variant = variants.variant_from_discriminant_and_token();
 
     Ok(quote! {
-        impl #impl_gen Tokenizable for #name #type_gen #where_clause {
+        impl #impl_gen #traits_path::Tokenizable for #name #type_gen #where_clause {
             fn into_token(self) -> Token {
                 let (discriminant, token) = #discriminant_and_token;
 
-                let variants = match <Self as Parameterize>::param_type() {
+                let variants = match <Self as #traits_path::Parameterize>::param_type() {
                     ParamType::Enum{variants, ..} => variants,
                     other => panic!("Calling {}::param_type() must return a ParamType::Enum but instead it returned: {:?}", #name_stringified, other)
                 };

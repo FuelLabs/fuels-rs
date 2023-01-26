@@ -11,6 +11,7 @@ use crate::{
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Parameterize, Tokenizable)]
+#[TraitsPath("crate::traits")]
 pub enum Identity {
     Address(Address),
     ContractId(ContractId),
