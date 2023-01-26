@@ -142,7 +142,7 @@
 <p>Rust SDK for Fuel. It can be used for a variety of things, including but not limited to:</p>
 <ul>
 <li>Compiling, deploying, and testing <a href="https://github.com/FuelLabs/sway">Sway</a> contracts;</li>
-<li>Use the <a href="../providers/external-node.html">Testnet</a> or run a local Fuel node;</li>
+<li>Use the <a href="providers/external-node.html">Testnet</a> or run a local Fuel node;</li>
 <li>Crafting and signing transactions with hand-crafted scripts or contract calls;</li>
 <li>Generating type-safe Rust bindings of contract ABI methods;</li>
 <li>And more. <code>fuels-rs</code> is still in active development.</li>
@@ -250,7 +250,7 @@ If <code>cargo generate</code> is not already installed, you can instal it with:
         use fuels::{prelude::*, signers::fuel_crypto::SecretKey};
 
         // Create a provider pointing to the testnet.
-        let provider = Provider::connect(&quot;node-beta-1.fuel.network&quot;).await.unwrap();
+        let provider = Provider::connect(&quot;node-beta-2.fuel.network&quot;).await.unwrap();
 
         // Setup a private key
         let secret =
@@ -266,7 +266,7 @@ If <code>cargo generate</code> is not already installed, you can instal it with:
 <p>In the code example, we connected a new provider to the Testnet node and created a new wallet from a private key.</p>
 <blockquote>
 <p><strong>Note:</strong> New wallets on the Testnet will not have any assets! They can be obtained by providing the wallet address to the faucet at</p>
-<p><a href="https://faucet-beta-1.fuel.network">faucet-beta-1.fuel.network</a></p>
+<p><a href="https://faucet-beta-2.fuel.network">faucet-beta-2.fuel.network</a></p>
 <p>Once the assets have been transferred to the wallet, you can reuse it in other tests by providing the private key!</p>
 <p>In addition to the faucet, there is a block explorer for the Tesnet at</p>
 <p><a href="https://fuellabs.github.io/block-explorer-v2">block-explorer</a></p>
