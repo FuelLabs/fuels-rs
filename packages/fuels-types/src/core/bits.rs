@@ -1,11 +1,6 @@
 use fuels_macros::{Parameterize, Tokenizable};
 
-use crate::{
-    core::Token,
-    errors::Error,
-    param_types::ParamType,
-    traits::{Parameterize, Tokenizable},
-};
+use crate::errors::Error;
 
 // A simple wrapper around [u8; 32] representing the `b256` type. Exists
 // mainly so that we may differentiate `Parameterize` and `Tokenizable`
@@ -91,6 +86,11 @@ impl From<Bits256> for EvmAddress {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{
+        param_types::ParamType,
+        traits::{Parameterize, Tokenizable},
+        Token,
+    };
 
     #[test]
     fn from_hex_str_b256() -> Result<(), Error> {

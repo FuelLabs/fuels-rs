@@ -6,8 +6,6 @@ use syn::{DataEnum, DataStruct, Error, Fields, GenericParam, Generics, TypeParam
 pub(crate) use unique_lit_strs::UniqueLitStrs;
 pub(crate) use unique_name_values::UniqueNameValues;
 
-use crate::abigen::TypePath;
-
 mod command;
 mod unique_lit_strs;
 mod unique_name_values;
@@ -105,7 +103,7 @@ pub fn extract_generic_types(generics: &Generics) -> syn::Result<Vec<&TypeParam>
 pub(crate) struct Members {
     names: Vec<Ident>,
     types: Vec<TokenStream>,
-    fuels_types_path: TypePath,
+    fuels_types_path: TokenStream,
 }
 
 impl Members {
@@ -129,7 +127,7 @@ impl Members {
 
 pub(crate) fn extract_struct_members(
     fields: DataStruct,
-    fuels_types_path: TypePath,
+    fuels_types_path: TokenStream,
 ) -> syn::Result<Members> {
     let named_fields = match fields.fields {
         Fields::Named(named_fields) => Ok(named_fields.named),
@@ -162,7 +160,7 @@ pub(crate) fn extract_struct_members(
 
 pub(crate) fn extract_enum_members(
     data: DataEnum,
-    fuels_types_path: TypePath,
+    fuels_types_path: TokenStream,
 ) -> syn::Result<Members> {
     let components = data.variants.into_iter().map(|variant: Variant| {
         let name = variant.ident;

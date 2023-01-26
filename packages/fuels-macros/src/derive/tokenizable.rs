@@ -1,13 +1,13 @@
-use parse_utils::extract_struct_members;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 use syn::{Data, DataEnum, DataStruct, DeriveInput, Error, Fields, Generics, Type, Variant};
 
-use crate::{abigen::TypePath, derive::parameterize::extract_fuels_types_path, parse_utils};
+use crate::{
+    derive::parameterize::determine_fuels_types_path, parse_utils::extract_struct_members,
+};
 
 pub fn generate_tokenizable_impl(input: DeriveInput) -> syn::Result<TokenStream> {
-    let fuels_types_path = extract_fuels_types_path(&input.attrs)?
-        .unwrap_or_else(|| TypePath::new("::fuels::types").expect("Known to be correct"));
+    let fuels_types_path = determine_fuels_types_path(&input.attrs)?;
 
     match input.data {
         Data::Struct(struct_contents) => tokenizable_for_struct(
@@ -27,7 +27,7 @@ fn tokenizable_for_struct(
     name: Ident,
     generics: Generics,
     contents: DataStruct,
-    fuels_types_path: TypePath,
+    fuels_types_path: TokenStream,
 ) -> Result<TokenStream, Error> {
     let (impl_gen, type_gen, where_clause) = generics.split_for_impl();
 
@@ -76,7 +76,7 @@ struct ExtractedVariant {
 }
 
 struct ExtractedVariants {
-    fuels_types_path: TypePath,
+    fuels_types_path: TokenStream,
     variants: Vec<ExtractedVariant>,
 }
 
@@ -127,7 +127,7 @@ impl ExtractedVariants {
 
 fn extract_variants<'a>(
     contents: impl IntoIterator<Item = &'a Variant>,
-    traits_path: TypePath,
+    fuels_types_path: TokenStream,
 ) -> Result<ExtractedVariants, Error> {
     let variants = contents
         .into_iter()
@@ -145,7 +145,7 @@ fn extract_variants<'a>(
 
     Ok(ExtractedVariants {
         variants,
-        fuels_types_path: traits_path,
+        fuels_types_path,
     })
 }
 
@@ -153,7 +153,7 @@ fn tokenizable_for_enum(
     name: Ident,
     generics: Generics,
     contents: DataEnum,
-    fuels_types_path: TypePath,
+    fuels_types_path: TokenStream,
 ) -> Result<TokenStream, Error> {
     let (impl_gen, type_gen, where_clause) = generics.split_for_impl();
 

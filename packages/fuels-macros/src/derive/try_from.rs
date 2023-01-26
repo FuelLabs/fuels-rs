@@ -5,11 +5,10 @@ use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{Data, DeriveInput, Error};
 
-use crate::{abigen::TypePath, derive::parameterize::extract_fuels_types_path};
+use crate::derive::parameterize::determine_fuels_types_path;
 
 pub fn generate_try_from_impl(input: DeriveInput) -> syn::Result<TokenStream> {
-    let fuels_types_path = extract_fuels_types_path(&input.attrs)?
-        .unwrap_or_else(|| TypePath::new("::fuels::types").expect("Known to be correct"));
+    let fuels_types_path = determine_fuels_types_path(&input.attrs)?;
 
     match input.data {
         Data::Struct(_) => impl_try_from(input, fuels_types_path),
@@ -20,7 +19,7 @@ pub fn generate_try_from_impl(input: DeriveInput) -> syn::Result<TokenStream> {
     }
 }
 
-fn impl_try_from(input: DeriveInput, fuels_types_path: TypePath) -> Result<TokenStream, Error> {
+fn impl_try_from(input: DeriveInput, fuels_types_path: TokenStream) -> Result<TokenStream, Error> {
     let name = &input.ident;
     let (impl_gen, type_gen, where_clause) = input.generics.split_for_impl();
 

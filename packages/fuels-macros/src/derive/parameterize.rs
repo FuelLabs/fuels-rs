@@ -1,6 +1,6 @@
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
-use syn::{Attribute, Data, DataEnum, DataStruct, DeriveInput, Error, Generics, Path};
+use syn::{Attribute, Data, DataEnum, DataStruct, DeriveInput, Error, Generics};
 
 use crate::{
     abigen::TypePath,
@@ -9,7 +9,13 @@ use crate::{
     },
 };
 
-pub(crate) fn extract_fuels_types_path(attrs: &[Attribute]) -> syn::Result<Option<TypePath>> {
+pub(crate) fn determine_fuels_types_path(attributes: &[Attribute]) -> syn::Result<TokenStream> {
+    Ok(extract_fuels_types_path(attributes)?
+        .map(|result| result.to_token_stream())
+        .unwrap_or_else(|| quote! {::fuels::types}))
+}
+
+fn extract_fuels_types_path(attrs: &[Attribute]) -> syn::Result<Option<TypePath>> {
     let maybe_command = attrs
         .iter()
         .find(|attr| {
@@ -44,8 +50,7 @@ pub(crate) fn extract_fuels_types_path(attrs: &[Attribute]) -> syn::Result<Optio
 }
 
 pub fn generate_parameterize_impl(input: DeriveInput) -> syn::Result<TokenStream> {
-    let fuels_types_path = extract_fuels_types_path(&input.attrs)?
-        .unwrap_or_else(|| TypePath::new("::fuels::types").expect("Known to be correct"));
+    let fuels_types_path = determine_fuels_types_path(&input.attrs)?;
 
     match input.data {
         Data::Struct(struct_contents) => parameterize_for_struct(
@@ -65,7 +70,7 @@ fn parameterize_for_struct(
     name: Ident,
     generics: Generics,
     contents: DataStruct,
-    fuels_types_path: TypePath,
+    fuels_types_path: TokenStream,
 ) -> Result<TokenStream, Error> {
     let (impl_gen, type_gen, where_clause) = generics.split_for_impl();
     let name_stringified = name.to_string();
@@ -89,7 +94,7 @@ fn parameterize_for_struct(
 
 fn parameterize_generic_params(
     generics: &Generics,
-    fuels_types_path: TypePath,
+    fuels_types_path: TokenStream,
 ) -> syn::Result<Vec<TokenStream>> {
     let parameterize_calls = extract_generic_types(generics)?
         .into_iter()
@@ -106,7 +111,7 @@ fn parameterize_for_enum(
     name: Ident,
     generics: Generics,
     contents: DataEnum,
-    fuels_types_path: TypePath,
+    fuels_types_path: TokenStream,
 ) -> Result<TokenStream, Error> {
     let (impl_gen, type_gen, where_clause) = generics.split_for_impl();
     let enum_name_str = name.to_string();

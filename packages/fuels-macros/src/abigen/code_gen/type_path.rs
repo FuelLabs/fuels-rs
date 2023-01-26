@@ -43,11 +43,6 @@ impl TypePath {
         another
     }
 
-    pub fn append(mut self, mut another: TypePath) -> Self {
-        self.parts.extend(another.parts);
-        self
-    }
-
     pub fn type_name(&self) -> &str {
         self.parts
             .last()
