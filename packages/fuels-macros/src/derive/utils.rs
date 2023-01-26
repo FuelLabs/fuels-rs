@@ -1,11 +1,8 @@
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
-use syn::{
-    parenthesized, parse::ParseStream, parse2, parse_macro_input::ParseMacroInput, Attribute,
-    AttributeArgs, Error, Fields, Lit, LitStr, NestedMeta, Type, Variant,
-};
+use syn::{parenthesized, parse::ParseStream, Attribute, Error, Fields, LitStr, Type, Variant};
 
-use crate::{abigen::TypePath, parse_utils::UniqueLitStrs};
+use crate::abigen::TypePath;
 
 pub(crate) fn determine_fuels_types_path(attrs: &[Attribute]) -> syn::Result<TokenStream> {
     let attr_tokens = if let Some(attr) = find_attr("FuelsTypesPath", attrs) {
@@ -26,10 +23,6 @@ pub(crate) fn determine_fuels_types_path(attrs: &[Attribute]) -> syn::Result<Tok
     TypePath::new(path_str.value())
         .map(|type_path| type_path.to_token_stream())
         .map_err(|_| Error::new_spanned(path_str, "Invalid path!"))
-}
-
-fn attr_tokens(attrs: &[Attribute]) -> Option<&TokenStream> {
-    find_attr("FuelsTypesPath", attrs).map(|attr| &attr.tokens)
 }
 
 fn find_attr<'a>(name: &str, attrs: &'a [Attribute]) -> Option<&'a Attribute> {

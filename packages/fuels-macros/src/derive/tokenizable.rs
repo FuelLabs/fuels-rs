@@ -1,12 +1,9 @@
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
-use syn::{Data, DataEnum, DataStruct, DeriveInput, Error, Fields, Generics, Type, Variant};
+use syn::{Data, DataEnum, DataStruct, DeriveInput, Error, Generics};
 
 use crate::{
-    derive::{
-        utils,
-        utils::{determine_fuels_types_path, ExtractedVariant},
-    },
+    derive::{utils, utils::determine_fuels_types_path},
     parse_utils::extract_struct_members,
 };
 
