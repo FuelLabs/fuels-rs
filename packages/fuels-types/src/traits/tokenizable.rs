@@ -61,6 +61,7 @@ impl Tokenizable for Byte {
     }
 }
 
+// TODO: make this derivable
 impl Tokenizable for EvmAddress {
     fn from_token(token: Token) -> Result<Self, Error>
     where
@@ -509,12 +510,12 @@ mod tests {
 
     #[test]
     fn test_into_token_b256() {
-        let bits = [1u8; 32];
-        let bits256 = Bits256(bits);
+        let bytes = [1u8; 32];
+        let bits256 = Bits256(bytes);
 
         let token = bits256.into_token();
 
-        assert_eq!(token, Token::B256(bits));
+        assert_eq!(token, Token::B256(bytes));
     }
 
     #[test]

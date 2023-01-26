@@ -88,13 +88,12 @@ pub fn extract_generic_types(generics: &Generics) -> syn::Result<Vec<&TypeParam>
         .iter()
         .map(|generic_param| match generic_param {
             GenericParam::Type(generic_type) => Ok(generic_type),
-            GenericParam::Lifetime(lifetime) => Err(Error::new_spanned(
-                lifetime,
-                "Deriving Parameterize doesn't support lifetimes",
-            )),
+            GenericParam::Lifetime(lifetime) => {
+                Err(Error::new_spanned(lifetime, "Lifetimes not supported"))
+            }
             GenericParam::Const(const_generic) => Err(Error::new_spanned(
                 const_generic,
-                "Deriving Parameterize doesn't support const generics",
+                "Const generics not supported",
             )),
         })
         .collect()
@@ -107,8 +106,8 @@ pub(crate) struct Members {
 }
 
 impl Members {
-    pub(crate) fn names(&self) -> impl Iterator<Item = Ident> + '_ {
-        self.names.iter().cloned()
+    pub(crate) fn names(&self) -> impl Iterator<Item = &Ident> + '_ {
+        self.names.iter()
     }
 
     pub(crate) fn names_as_strings(&self) -> impl Iterator<Item = TokenStream> + '_ {
@@ -133,21 +132,21 @@ pub(crate) fn extract_struct_members(
         Fields::Named(named_fields) => Ok(named_fields.named),
         Fields::Unnamed(fields) => Err(Error::new_spanned(
             fields.unnamed,
-            "Tokenizable cannot be derived on tuple-like structs!",
+            "Tuple-like structs not supported",
         )),
         _ => {
             panic!("This cannot happen in valid Rust code. Fields::Unit only appears in enums")
         }
     }?;
 
-    let (names, types): (Vec<_>, Vec<_>) = named_fields
+    let (names, types) = named_fields
         .into_iter()
         .map(|field| {
             let name = field
                 .ident
                 .expect("FieldsNamed to only contain named fields!.");
-            let ttype = field.ty.into_token_stream();
-            (name, ttype)
+            let ty = field.ty.into_token_stream();
+            (name, ty)
         })
         .unzip();
 
@@ -181,7 +180,7 @@ pub(crate) fn extract_enum_members(
         Ok((name, ttype))
     });
 
-    let (names, types) = process_results(components, |iter| iter.unzip::<_, _, Vec<_>, Vec<_>>())?;
+    let (names, types) = process_results(components, |iter| iter.unzip())?;
 
     Ok(Members {
         names,

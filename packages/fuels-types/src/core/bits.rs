@@ -18,11 +18,11 @@ impl Bits256 {
             hex
         };
 
-        let mut bits = [0u8; 32];
-        hex::decode_to_slice(hex, &mut bits as &mut [u8]).map_err(|e| {
+        let mut bytes = [0u8; 32];
+        hex::decode_to_slice(hex, &mut bytes as &mut [u8]).map_err(|e| {
             Error::InvalidData(format!("Could not convert hex str '{hex}' to Bits256! {e}"))
         })?;
-        Ok(Bits256(bits))
+        Ok(Bits256(bytes))
     }
 }
 

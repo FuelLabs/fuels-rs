@@ -93,8 +93,6 @@ pub fn parameterize(stream: TokenStream) -> TokenStream {
 
 #[proc_macro_derive(Tokenizable)]
 pub fn tokenizable(stream: TokenStream) -> TokenStream {
-    // TODOs:
-    // What is a Unit field in structs? Should we handle it?
     let input = parse_macro_input!(stream as DeriveInput);
 
     generate_tokenizable_impl(input)

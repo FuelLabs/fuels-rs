@@ -32,9 +32,8 @@ fn tokenizable_for_struct(
 ) -> Result<TokenStream, Error> {
     let (impl_gen, type_gen, where_clause) = generics.split_for_impl();
     let struct_name_str = name.to_string();
-    let field_names = extract_struct_members(contents, fuels_types_path.clone())?
-        .names()
-        .collect::<Vec<_>>();
+    let members = extract_struct_members(contents, fuels_types_path.clone())?;
+    let field_names = members.names().collect::<Vec<_>>();
 
     Ok(quote! {
         impl #impl_gen #fuels_types_path::traits::Tokenizable for #name #type_gen #where_clause {

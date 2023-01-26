@@ -12,7 +12,7 @@ pub(crate) fn determine_fuels_types_path(attrs: &[Attribute]) -> syn::Result<Tok
     };
 
     let path_str = syn::parse::Parser::parse2(
-        |parse_stream: ParseStream| -> syn::Result<_> {
+        |parse_stream: ParseStream| {
             let content;
             parenthesized!(content in parse_stream);
             content.parse::<LitStr>()
@@ -21,8 +21,8 @@ pub(crate) fn determine_fuels_types_path(attrs: &[Attribute]) -> syn::Result<Tok
     )?;
 
     TypePath::new(path_str.value())
-        .map(|type_path| type_path.to_token_stream())
         .map_err(|_| Error::new_spanned(path_str, "Invalid path!"))
+        .map(|type_path| type_path.to_token_stream())
 }
 
 fn find_attr<'a>(name: &str, attrs: &'a [Attribute]) -> Option<&'a Attribute> {

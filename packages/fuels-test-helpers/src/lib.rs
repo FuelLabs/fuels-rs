@@ -23,18 +23,12 @@ use fuels_types::{
     param_types::ParamType,
 };
 #[cfg(not(feature = "fuel-core-lib"))]
-pub use node::get_socket_address;
-#[cfg(not(feature = "fuel-core-lib"))]
-pub use node::new_fuel_node;
-#[cfg(not(feature = "fuel-core-lib"))]
-pub use node::Config;
+pub use node::{get_socket_address, new_fuel_node, Config};
 #[cfg(not(feature = "fuel-core-lib"))]
 use portpicker::is_free;
 use rand::Fill;
 #[cfg(feature = "fuel-core-lib")]
-pub use utils::into_coin_configs;
-#[cfg(feature = "fuel-core-lib")]
-pub use utils::into_message_configs;
+pub use utils::{into_coin_configs, into_message_configs};
 
 #[cfg(not(feature = "fuel-core-lib"))]
 pub mod node;

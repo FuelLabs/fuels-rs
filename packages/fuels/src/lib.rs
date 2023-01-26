@@ -46,13 +46,9 @@ pub mod test_helpers {
 
 pub mod fuel_node {
     #[cfg(feature = "fuel-core-lib")]
-    pub use fuel_core::service::Config;
-    #[cfg(feature = "fuel-core-lib")]
-    pub use fuel_core::service::FuelService;
+    pub use fuel_core::service::{Config, FuelService};
     #[cfg(not(feature = "fuel-core-lib"))]
-    pub use fuels_test_helpers::node::Config;
-    #[cfg(not(feature = "fuel-core-lib"))]
-    pub use fuels_test_helpers::node::FuelService;
+    pub use fuels_test_helpers::node::{Config, FuelService};
 }
 
 /// Easy imports of frequently used
