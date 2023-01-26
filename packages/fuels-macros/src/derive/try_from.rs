@@ -1,6 +1,3 @@
-// pub(crate) fn impl_try_from(ident: &Ident, generics: &[TokenStream]) -> TokenStream {
-// }
-
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{Data, DeriveInput, Error};
