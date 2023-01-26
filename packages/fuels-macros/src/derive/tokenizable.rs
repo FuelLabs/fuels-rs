@@ -2,9 +2,7 @@ use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 use syn::{Data, DataEnum, DataStruct, DeriveInput, Error, Fields, Generics, Type, Variant};
 
-use crate::{
-    derive::parameterize::determine_fuels_types_path, parse_utils::extract_struct_members,
-};
+use crate::{derive::utils::determine_fuels_types_path, parse_utils::extract_struct_members};
 
 pub fn generate_tokenizable_impl(input: DeriveInput) -> syn::Result<TokenStream> {
     let fuels_types_path = determine_fuels_types_path(&input.attrs)?;

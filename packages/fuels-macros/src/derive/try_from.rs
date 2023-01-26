@@ -5,7 +5,7 @@ use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{Data, DeriveInput, Error};
 
-use crate::derive::parameterize::determine_fuels_types_path;
+use crate::derive::utils::determine_fuels_types_path;
 
 pub fn generate_try_from_impl(input: DeriveInput) -> syn::Result<TokenStream> {
     let fuels_types_path = determine_fuels_types_path(&input.attrs)?;
