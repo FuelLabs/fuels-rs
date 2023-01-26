@@ -6,6 +6,8 @@ use syn::{DataEnum, DataStruct, Error, Fields, GenericParam, Generics, TypeParam
 pub(crate) use unique_lit_strs::UniqueLitStrs;
 pub(crate) use unique_name_values::UniqueNameValues;
 
+use crate::abigen_macro::TypePath;
+
 mod command;
 mod unique_lit_strs;
 mod unique_name_values;
@@ -103,6 +105,7 @@ pub fn extract_generic_types(generics: &Generics) -> syn::Result<Vec<&TypeParam>
 pub(crate) struct Members {
     names: Vec<Ident>,
     types: Vec<TokenStream>,
+    fuels_types_path: TypePath,
 }
 
 impl Members {
@@ -117,13 +120,17 @@ impl Members {
         })
     }
     pub(crate) fn param_type_calls(&self) -> impl Iterator<Item = TokenStream> + '_ {
-        self.types.iter().map(|ty| {
-            quote! { <#ty as Parameterize>::param_type() }
+        let fuels_types_path = self.fuels_types_path.to_token_stream();
+        self.types.iter().map(move |ty| {
+            quote! { <#ty as #fuels_types_path::traits::Parameterize>::param_type() }
         })
     }
 }
 
-pub(crate) fn extract_struct_members(fields: DataStruct) -> syn::Result<Members> {
+pub(crate) fn extract_struct_members(
+    fields: DataStruct,
+    fuels_types_path: TypePath,
+) -> syn::Result<Members> {
     let named_fields = match fields.fields {
         Fields::Named(named_fields) => Ok(named_fields.named),
         Fields::Unnamed(fields) => Err(Error::new_spanned(
@@ -146,10 +153,17 @@ pub(crate) fn extract_struct_members(fields: DataStruct) -> syn::Result<Members>
         })
         .unzip();
 
-    Ok(Members { names, types })
+    Ok(Members {
+        names,
+        types,
+        fuels_types_path,
+    })
 }
 
-pub(crate) fn extract_enum_members(data: DataEnum) -> syn::Result<Members> {
+pub(crate) fn extract_enum_members(
+    data: DataEnum,
+    fuels_types_path: TypePath,
+) -> syn::Result<Members> {
     let components = data.variants.into_iter().map(|variant: Variant| {
         let name = variant.ident;
 
@@ -171,5 +185,9 @@ pub(crate) fn extract_enum_members(data: DataEnum) -> syn::Result<Members> {
 
     let (names, types) = process_results(components, |iter| iter.unzip::<_, _, Vec<_>, Vec<_>>())?;
 
-    Ok(Members { names, types })
+    Ok(Members {
+        names,
+        types,
+        fuels_types_path,
+    })
 }

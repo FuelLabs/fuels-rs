@@ -3,18 +3,21 @@ use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 use syn::{Data, DataEnum, DataStruct, DeriveInput, Error, Fields, Generics, Type, Variant};
 
-use crate::{abigen_macro::TypePath, parameterize_macro::extract_traits_path, parse_utils};
+use crate::{abigen_macro::TypePath, parameterize_macro::extract_fuels_types_path, parse_utils};
 
 pub fn generate_tokenizable_impl(input: DeriveInput) -> syn::Result<TokenStream> {
-    let traits_path = extract_traits_path(&input.attrs)?
-        .unwrap_or_else(|| TypePath::new("::fuels::types::traits").expect("Known to be correct"));
+    let fuels_types_path = extract_fuels_types_path(&input.attrs)?
+        .unwrap_or_else(|| TypePath::new("::fuels::types").expect("Known to be correct"));
 
     match input.data {
-        Data::Struct(struct_contents) => {
-            tokenizable_for_struct(input.ident, input.generics, struct_contents, traits_path)
-        }
+        Data::Struct(struct_contents) => tokenizable_for_struct(
+            input.ident,
+            input.generics,
+            struct_contents,
+            fuels_types_path,
+        ),
         Data::Enum(enum_contents) => {
-            tokenizable_for_enum(input.ident, input.generics, enum_contents, traits_path)
+            tokenizable_for_enum(input.ident, input.generics, enum_contents, fuels_types_path)
         }
         _ => Err(Error::new_spanned(input, "Union type is not supported")),
     }
@@ -24,46 +27,42 @@ fn tokenizable_for_struct(
     name: Ident,
     generics: Generics,
     contents: DataStruct,
-    traits_path: TypePath,
+    fuels_types_path: TypePath,
 ) -> Result<TokenStream, Error> {
     let (impl_gen, type_gen, where_clause) = generics.split_for_impl();
 
     let struct_name_str = name.to_string();
-    let tokenizable = traits_path
-        .clone()
-        .append(TypePath::new("Tokenizable").unwrap());
-    let parameterize = traits_path.append(TypePath::new("Parameterize").unwrap());
 
     // TODO: The quote below references `field_names` twice.
     // Check if it somehow collects it internally,
     // otherwise the iterator would be exhausted for the first repetition in quote leaving no elements behind for the second. Collecting it here is a workaround.
-    let field_names = extract_struct_members(contents)?
+    let field_names = extract_struct_members(contents, fuels_types_path.clone())?
         .names()
         .collect::<Vec<_>>();
 
     Ok(quote! {
-        impl #impl_gen #tokenizable for #name #type_gen #where_clause {
-            fn into_token(self) -> Token {
-                let tokens = [#(#tokenizable::into_token(self.#field_names)),*].to_vec();
-                Token::Struct(tokens)
+        impl #impl_gen #fuels_types_path::traits::Tokenizable for #name #type_gen #where_clause {
+            fn into_token(self) -> #fuels_types_path::Token {
+                let tokens = [#(#fuels_types_path::traits::Tokenizable::into_token(self.#field_names)),*].to_vec();
+                #fuels_types_path::Token::Struct(tokens)
             }
 
-            fn from_token(token: Token)  -> ::std::result::Result<Self, Error> {
+            fn from_token(token: #fuels_types_path::Token)  -> ::std::result::Result<Self, #fuels_types_path::errors::Error> {
                 match token {
-                    Token::Struct(tokens) => {
+                    #fuels_types_path::Token::Struct(tokens) => {
                         let mut tokens_iter = tokens.into_iter();
                         let mut next_token = move || { tokens_iter
                             .next()
-                            .ok_or_else(|| { Error::InstantiationError(format!("Ran out of tokens before '{}' has finished construction!", #struct_name_str)) })
+                            .ok_or_else(|| { #fuels_types_path::errors::Error::InstantiationError(format!("Ran out of tokens before '{}' has finished construction!", #struct_name_str)) })
                         };
                         ::std::result::Result::Ok(Self {
                             #(
-                                #field_names: #tokenizable::from_token(next_token()?)?
+                                #field_names: #fuels_types_path::traits::Tokenizable::from_token(next_token()?)?
                              ),*
 
                         })
                     },
-                    other => ::std::result::Result::Err(Error::InstantiationError(format!("Error while constructing '{}'. Expected token of type Token::Struct, got {:?}", #struct_name_str, other))),
+                    other => ::std::result::Result::Err(#fuels_types_path::errors::Error::InstantiationError(format!("Error while constructing '{}'. Expected token of type Token::Struct, got {:?}", #struct_name_str, other))),
                 }
             }
         }
@@ -77,7 +76,7 @@ struct ExtractedVariant {
 }
 
 struct ExtractedVariants {
-    traits_path: TypePath,
+    fuels_types_path: TypePath,
     variants: Vec<ExtractedVariant>,
 }
 
@@ -86,11 +85,11 @@ impl ExtractedVariants {
         let match_branches = self.variants.iter().map(|variant| {
             let discriminant = variant.discriminant;
             let name = &variant.name;
-            let traits_path = &self.traits_path;
+            let fuels_types_path = &self.fuels_types_path;
             if variant.is_unit {
-                quote! { Self::#name => (#discriminant, #traits_path::Tokenizable::into_token(())) }
+                quote! { Self::#name => (#discriminant, #fuels_types_path::traits::Tokenizable::into_token(())) }
             } else {
-                quote! { Self::#name(inner) => (#discriminant, #traits_path::Tokenizable::into_token(inner))}
+                quote! { Self::#name(inner) => (#discriminant, #fuels_types_path::traits::Tokenizable::into_token(inner))}
             }
         });
 
@@ -104,12 +103,12 @@ impl ExtractedVariants {
         let match_discriminant = self.variants.iter().map(|variant| {
             let name = &variant.name;
             let discriminant = variant.discriminant;
-            let traits_path = &self.traits_path;
+            let fuels_tyeps_path = &self.fuels_types_path;
 
             let arg = if variant.is_unit {
                 quote! {}
             } else {
-                quote! { (#traits_path::Tokenizable::from_token(variant_token)?) }
+                quote! { (#fuels_tyeps_path::traits::Tokenizable::from_token(variant_token)?) }
             };
 
             quote! { #discriminant => ::std::result::Result::Ok(Self::#name #arg)}
@@ -146,7 +145,7 @@ fn extract_variants<'a>(
 
     Ok(ExtractedVariants {
         variants,
-        traits_path,
+        fuels_types_path: traits_path,
     })
 }
 
@@ -154,40 +153,40 @@ fn tokenizable_for_enum(
     name: Ident,
     generics: Generics,
     contents: DataEnum,
-    traits_path: TypePath,
+    fuels_types_path: TypePath,
 ) -> Result<TokenStream, Error> {
     let (impl_gen, type_gen, where_clause) = generics.split_for_impl();
 
     let name_stringified = name.to_string();
 
-    let variants = extract_variants(&contents.variants, traits_path.clone())?;
+    let variants = extract_variants(&contents.variants, fuels_types_path.clone())?;
     let discriminant_and_token = variants.variant_into_discriminant_and_token();
     let constructed_variant = variants.variant_from_discriminant_and_token();
 
     Ok(quote! {
-        impl #impl_gen #traits_path::Tokenizable for #name #type_gen #where_clause {
-            fn into_token(self) -> Token {
+        impl #impl_gen #fuels_types_path::traits::Tokenizable for #name #type_gen #where_clause {
+            fn into_token(self) -> #fuels_types_path::Token {
                 let (discriminant, token) = #discriminant_and_token;
 
-                let variants = match <Self as #traits_path::Parameterize>::param_type() {
-                    ParamType::Enum{variants, ..} => variants,
+                let variants = match <Self as #fuels_types_path::traits::Parameterize>::param_type() {
+                    #fuels_types_path::param_types::ParamType::Enum{variants, ..} => variants,
                     other => panic!("Calling {}::param_type() must return a ParamType::Enum but instead it returned: {:?}", #name_stringified, other)
                 };
 
-                Token::Enum(::std::boxed::Box::new((discriminant, token, variants)))
+                #fuels_types_path::Token::Enum(::std::boxed::Box::new((discriminant, token, variants)))
             }
 
-            fn from_token(token: Token) -> ::std::result::Result<Self, Error>
+            fn from_token(token: #fuels_types_path::Token) -> ::std::result::Result<Self, #fuels_types_path::errors::Error>
             where
                 Self: Sized,
             {
                 match token {
-                    Token::Enum(selector) => {
+                    #fuels_types_path::Token::Enum(selector) => {
                         let (discriminant, variant_token, _) = *selector;
                         #constructed_variant
                     }
                     _ => ::std::result::Result::Err(format!("Given token ({}) is not of the type Token::Enum!", token)),
-                }.map_err(|e| Error::InvalidData(format!("Error while instantiating {} from token! {}", #name_stringified, e)) )
+                }.map_err(|e| #fuels_types_path::errors::Error::InvalidData(format!("Error while instantiating {} from token! {}", #name_stringified, e)) )
             }
         }
     })

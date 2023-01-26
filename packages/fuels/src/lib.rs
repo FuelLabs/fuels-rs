@@ -37,7 +37,7 @@ pub mod signers {
 }
 
 pub mod types {
-    pub use fuels_types::{core::*, *};
+    pub use fuels_types::*;
 }
 
 pub mod test_helpers {
@@ -46,9 +46,13 @@ pub mod test_helpers {
 
 pub mod fuel_node {
     #[cfg(feature = "fuel-core-lib")]
-    pub use fuel_core::service::{Config, FuelService};
+    pub use fuel_core::service::Config;
+    #[cfg(feature = "fuel-core-lib")]
+    pub use fuel_core::service::FuelService;
     #[cfg(not(feature = "fuel-core-lib"))]
-    pub use fuels_test_helpers::node::{Config, FuelService};
+    pub use fuels_test_helpers::node::Config;
+    #[cfg(not(feature = "fuel-core-lib"))]
+    pub use fuels_test_helpers::node::FuelService;
 }
 
 /// Easy imports of frequently used

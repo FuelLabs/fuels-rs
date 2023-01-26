@@ -25,10 +25,10 @@ use fuels_signers::{
 };
 use fuels_types::{
     bech32::Bech32ContractId,
-    core::{Selector, Token},
     errors::Error,
     param_types::{ParamType, ReturnLocation},
     traits::{Parameterize, Tokenizable},
+    Selector, Token,
 };
 
 use crate::{

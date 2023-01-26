@@ -9,13 +9,13 @@ use crate::{
     },
 };
 
-pub(crate) fn extract_traits_path(attrs: &[Attribute]) -> syn::Result<Option<TypePath>> {
+pub(crate) fn extract_fuels_types_path(attrs: &[Attribute]) -> syn::Result<Option<TypePath>> {
     let maybe_command = attrs
         .iter()
         .find(|attr| {
             attr.path
                 .get_ident()
-                .map(|ident| ident == "TraitsPath")
+                .map(|ident| ident == "FuelsTypesPath")
                 .unwrap_or(false)
         })
         .map(|attr| attr.tokens.clone());
@@ -25,7 +25,7 @@ pub(crate) fn extract_traits_path(attrs: &[Attribute]) -> syn::Result<Option<Typ
     }
     let tokens = maybe_command.unwrap();
 
-    let code = quote! {TraitsPath #tokens};
+    let code = quote! {FuelsTypesPath #tokens};
 
     let command = Command::parse_single_from_token_stream(code)?;
 
@@ -44,15 +44,18 @@ pub(crate) fn extract_traits_path(attrs: &[Attribute]) -> syn::Result<Option<Typ
 }
 
 pub fn generate_parameterize_impl(input: DeriveInput) -> syn::Result<TokenStream> {
-    let traits_path = extract_traits_path(&input.attrs)?
-        .unwrap_or_else(|| TypePath::new("::fuels::types::traits").expect("Known to be correct"));
+    let fuels_types_path = extract_fuels_types_path(&input.attrs)?
+        .unwrap_or_else(|| TypePath::new("::fuels::types").expect("Known to be correct"));
 
     match input.data {
-        Data::Struct(struct_contents) => {
-            parameterize_for_struct(input.ident, input.generics, struct_contents, traits_path)
-        }
+        Data::Struct(struct_contents) => parameterize_for_struct(
+            input.ident,
+            input.generics,
+            struct_contents,
+            fuels_types_path,
+        ),
         Data::Enum(enum_contents) => {
-            parameterize_for_enum(input.ident, input.generics, enum_contents, traits_path)
+            parameterize_for_enum(input.ident, input.generics, enum_contents, fuels_types_path)
         }
         _ => Err(Error::new_spanned(input, "Union type is not supported")),
     }
@@ -62,19 +65,19 @@ fn parameterize_for_struct(
     name: Ident,
     generics: Generics,
     contents: DataStruct,
-    traits_path: TypePath,
+    fuels_types_path: TypePath,
 ) -> Result<TokenStream, Error> {
     let (impl_gen, type_gen, where_clause) = generics.split_for_impl();
     let name_stringified = name.to_string();
-    let members = extract_struct_members(contents)?;
+    let members = extract_struct_members(contents, fuels_types_path.clone())?;
     let field_names = members.names_as_strings();
     let param_type_calls = members.param_type_calls();
-    let generic_param_types = parameterize_generic_params(&generics)?;
+    let generic_param_types = parameterize_generic_params(&generics, fuels_types_path.clone())?;
 
     Ok(quote! {
-        impl #impl_gen #traits_path::Parameterize for #name #type_gen #where_clause {
-            fn param_type() -> ParamType {
-                ParamType::Struct{
+        impl #impl_gen #fuels_types_path::traits::Parameterize for #name #type_gen #where_clause {
+            fn param_type() -> #fuels_types_path::param_types::ParamType {
+                #fuels_types_path::param_types::ParamType::Struct{
                     name: #name_stringified.to_string(),
                     fields: vec![#((#field_names, #param_type_calls)),*],
                     generics: vec![#(#generic_param_types),*],
@@ -84,12 +87,15 @@ fn parameterize_for_struct(
     })
 }
 
-fn parameterize_generic_params(generics: &Generics) -> syn::Result<Vec<TokenStream>> {
+fn parameterize_generic_params(
+    generics: &Generics,
+    fuels_types_path: TypePath,
+) -> syn::Result<Vec<TokenStream>> {
     let parameterize_calls = extract_generic_types(generics)?
         .into_iter()
         .map(|type_param| {
             let ident = &type_param.ident;
-            quote! {<#ident as Parameterize>::param_type()}
+            quote! {<#ident as #fuels_types_path::traits::Parameterize>::param_type()}
         })
         .collect();
 
@@ -100,22 +106,22 @@ fn parameterize_for_enum(
     name: Ident,
     generics: Generics,
     contents: DataEnum,
-    traits_path: TypePath,
+    fuels_types_path: TypePath,
 ) -> Result<TokenStream, Error> {
     let (impl_gen, type_gen, where_clause) = generics.split_for_impl();
     let enum_name_str = name.to_string();
-    let declarations = extract_enum_members(contents)?;
+    let declarations = extract_enum_members(contents, fuels_types_path.clone())?;
     let variant_names = declarations.names_as_strings();
     let variant_param_types = declarations.param_type_calls();
-    let generic_param_types = parameterize_generic_params(&generics)?;
+    let generic_param_types = parameterize_generic_params(&generics, fuels_types_path.clone())?;
 
     Ok(quote! {
-        impl #impl_gen #traits_path::Parameterize for #name #type_gen #where_clause {
-            fn param_type() -> ParamType {
+        impl #impl_gen #fuels_types_path::traits::Parameterize for #name #type_gen #where_clause {
+            fn param_type() -> #fuels_types_path::param_types::ParamType {
                 let variants = vec![#((#variant_names, #variant_param_types)),*];
 
-                let variants = EnumVariants::new(variants).unwrap_or_else(|_| panic!("{} has no variants which isn't allowed!", #enum_name_str));
-                ParamType::Enum {
+                let variants = #fuels_types_path::enum_variants::EnumVariants::new(variants).unwrap_or_else(|_| panic!("{} has no variants which isn't allowed!", #enum_name_str));
+                #fuels_types_path::param_types::ParamType::Enum {
                     name: #enum_name_str.to_string(),
                     variants,
                     generics: [#(#generic_param_types),*].to_vec()

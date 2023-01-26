@@ -144,13 +144,6 @@ fn limited_std_prelude() -> GeneratedCode {
                 panic, vec,
                 string::ToString
             };
-            //TODO: move this
-            use ::fuels::types::{
-                param_types::ParamType,
-                enum_variants::EnumVariants,
-                errors::Error,
-                Token,
-            };
     };
 
     GeneratedCode {

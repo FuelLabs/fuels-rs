@@ -8,7 +8,7 @@ pub mod block;
 pub mod chain_info;
 pub mod coin;
 pub mod constants;
-pub mod core;
+mod core;
 pub mod enum_variants;
 pub mod errors;
 pub mod message;
@@ -20,3 +20,5 @@ pub mod traits;
 pub mod transaction_response;
 
 pub use fuel_tx::{Address, AssetId, ContractId};
+
+pub use crate::core::*;

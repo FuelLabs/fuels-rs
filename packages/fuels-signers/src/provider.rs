@@ -2,7 +2,9 @@ use std::{collections::HashMap, io};
 
 use chrono::{DateTime, Duration, Utc};
 #[cfg(feature = "fuel-core")]
-use fuel_core::service::{Config, FuelService};
+use fuel_core::service::Config;
+#[cfg(feature = "fuel-core")]
+use fuel_core::service::FuelService;
 use fuel_gql_client::{
     client::{
         schema::{
