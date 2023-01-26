@@ -16,13 +16,12 @@ fn main() -> anyhow::Result<(), Error> {
 
     let (include_errors, additional_warnings) = validate_includes(includes, valid_anchors);
 
-    report_warnings(&additional_warnings);
-
+    report_errors("warning", &additional_warnings);
     report_errors("include paths", &include_path_errors);
     report_errors("anchors", &anchor_errors);
     report_errors("includes", &include_errors);
 
-    if !anchor_errors.is_empty() || !include_errors.is_empty() || !include_path_errors.is_empty() {
+    if !anchor_errors.is_empty() || !include_errors.is_empty() || !include_path_errors.is_empty() || !additional_warnings.is_empty() {
         bail!("Finished with errors");
     }
 
