@@ -19,12 +19,12 @@ use fuels_types::{
     param_types::ParamType,
 };
 
+use crate::calls::call::ProgramCall;
 use crate::calls::contract_call_utils::{
     build_script_data_from_contract_calls, calculate_required_asset_amounts, get_instructions,
     get_single_call_instructions, get_transaction_inputs_outputs, CallOpcodeParamsOffset,
 };
 use crate::{
-    call::ProgramCall,
     calls::call_response::FuelCallResponse,
     calls::call_utils::get_decoded_output,
     execution_script::ExecutableFuelCall,

@@ -13,8 +13,8 @@ use fuels_signers::{provider::Provider, WalletUnlocked};
 use fuels_types::{bech32::Bech32ContractId, errors::Error};
 use itertools::chain;
 
+use crate::calls::call::ProgramCall;
 use crate::{
-    call::ProgramCall,
     calls::{
         call_response::FuelCallResponse,
         call_utils::{generate_contract_inputs, generate_contract_outputs, get_decoded_output},
@@ -38,6 +38,7 @@ pub struct ScriptCall {
 }
 
 impl ScriptCall {
+    // This method is not present for contracts so not part of the `ProgramCall` trait
     pub fn with_inputs(mut self, inputs: Vec<Input>) -> Self {
         self.inputs = inputs;
         self
