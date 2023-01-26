@@ -16,7 +16,9 @@ use fuel_gql_client::{
 };
 use fuel_tx::{
     field, AssetId, ConsensusParameters, Receipt, Transaction, TransactionFee, UniqueIdentifier,
+    UtxoId,
 };
+use fuel_types::MessageId;
 use fuels_core::constants::{DEFAULT_GAS_ESTIMATION_TOLERANCE, MAX_GAS_PER_TX};
 use fuels_types::{
     bech32::{Bech32Address, Bech32ContractId},
@@ -256,6 +258,59 @@ impl Provider {
                 &from.hash().to_string(),
                 vec![(format!("{:#x}", asset_id).as_str(), amount, None)],
                 None,
+            )
+            .await?
+            .into_iter()
+            .flatten()
+            .map(|resource| {
+                let resource: Result<Resource, _> = resource.try_into();
+
+                resource.map_err(ProviderError::ClientRequestError)
+            })
+            .try_collect()?;
+
+        Ok(res)
+    }
+
+    /// Same as `get_spendable_resources` but the coins and messages specified with `excluded`
+    /// will be ignored when searching for resources that fit the amount
+    pub async fn get_spendable_resources_with_exclusion(
+        &self,
+        from: &Bech32Address,
+        asset_id: AssetId,
+        amount: u64,
+        excluded_ids: (Vec<UtxoId>, Vec<MessageId>),
+    ) -> Result<Vec<Resource>, ProviderError> {
+        use itertools::Itertools;
+
+        let utxos_as_str = excluded_ids
+            .0
+            .iter()
+            .map(|utxo_id| format!("{:#x}", utxo_id))
+            .collect::<Vec<_>>();
+        let msg_ids_as_str = excluded_ids
+            .1
+            .iter()
+            .map(|msg_id| format!("{:#x}", msg_id))
+            .collect::<Vec<_>>();
+
+        let excluded_as_str = Some((
+            utxos_as_str
+                .iter()
+                .map(AsRef::as_ref)
+                .collect::<Vec<&str>>(),
+            msg_ids_as_str
+                .iter()
+                .map(AsRef::as_ref)
+                .collect::<Vec<&str>>(),
+        ));
+
+        let res = self
+            .client
+            .resources_to_spend(
+                &from.hash().to_string(),
+                vec![(format!("{:#x}", asset_id).as_str(), amount, None)],
+                excluded_as_str,
             )
             .await?
             .into_iter()

@@ -1,4 +1,4 @@
-use std::{iter, str::FromStr};
+use std::{iter, str::FromStr, vec};
 
 use chrono::Duration;
 use fuel_core::service::{Config as CoreConfig, FuelService};
@@ -9,6 +9,7 @@ use fuels::{
     tx::Receipt,
     types::{block::Block, message::Message},
 };
+use fuels_types::resource::Resource;
 
 #[tokio::test]
 async fn test_provider_launch_and_connect() -> Result<(), Error> {
@@ -634,6 +635,64 @@ async fn test_parse_block_time() -> Result<(), Error> {
         .await?
         .unwrap();
     assert!(block.header.time.is_some());
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_get_spendable_with_exclusion() -> Result<(), Error> {
+    let mut wallet = WalletUnlocked::new_random(None);
+
+    let c_amount_1 = 1000;
+    let c_amount_2 = 500;
+    let msg_amount = 200;
+    let requested_amount = c_amount_1;
+
+    let mut coins = setup_single_asset_coins(wallet.address(), BASE_ASSET_ID, 1, c_amount_1);
+    let coin_2 = setup_single_asset_coins(wallet.address(), BASE_ASSET_ID, 1, c_amount_2);
+    coins.extend(coin_2);
+
+    let messages = setup_single_message(
+        &Bech32Address {
+            hrp: "".to_string(),
+            hash: Default::default(),
+        },
+        wallet.address(),
+        msg_amount,
+        0,
+        vec![],
+    );
+
+    let coin_1_utxo_id = coins[0].utxo_id;
+    let coin_2_utxo_id = coins[1].utxo_id;
+    let message_id = messages[0].message_id();
+
+    let (provider, _) = setup_test_provider(coins, messages, None, None).await;
+    wallet.set_provider(provider);
+
+    // all resources will be included because `get_spendable_resources` tries to
+    // return 2x the requested amount due to its dusting countermeasures
+    {
+        let resources = wallet
+            .get_spendable_resources(BASE_ASSET_ID, requested_amount)
+            .await?;
+        assert_eq!(resources.len(), 3);
+    }
+
+    {
+        let excluded = (vec![coin_2_utxo_id], vec![message_id]);
+        let resources = wallet
+            .get_spendable_resources_with_exclusion(BASE_ASSET_ID, requested_amount, excluded)
+            .await?;
+
+        assert_eq!(resources.len(), 1);
+
+        let retrieved_utxo_id = match &resources[0] {
+            Resource::Coin(coin) => coin.utxo_id,
+            _ => panic!("This shouldn't happen!"),
+        };
+        assert_eq!(retrieved_utxo_id, coin_1_utxo_id);
+    }
 
     Ok(())
 }

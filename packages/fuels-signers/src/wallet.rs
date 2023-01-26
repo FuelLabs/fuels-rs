@@ -232,6 +232,20 @@ impl Wallet {
             .map_err(Into::into)
     }
 
+    /// Same as `get_spendable_resources` but the coins and messages specified with `excluded`
+    /// will be ignored when searching for resources that fit the amount
+    pub async fn get_spendable_resources_with_exclusion(
+        &self,
+        asset_id: AssetId,
+        amount: u64,
+        excluded: (Vec<UtxoId>, Vec<MessageId>),
+    ) -> Result<Vec<Resource>, Error> {
+        self.get_provider()?
+            .get_spendable_resources_with_exclusion(&self.address, asset_id, amount, excluded)
+            .await
+            .map_err(Into::into)
+    }
+
     /// Get the balance of all spendable coins `asset_id` for address `address`. This is different
     /// from getting coins because we are just returning a number (the sum of UTXOs amount) instead
     /// of the UTXOs.
