@@ -19,12 +19,12 @@ use fuels_types::{
     param_types::ParamType,
 };
 
-use crate::calls::call::ProgramCall;
 use crate::calls::contract_call_utils::{
     build_script_data_from_contract_calls, calculate_required_asset_amounts, get_instructions,
     get_single_call_instructions, get_transaction_inputs_outputs, CallOpcodeParamsOffset,
 };
 use crate::{
+    calls::call::{ProgramCall, SettableContract},
     calls::call_response::FuelCallResponse,
     calls::call_utils::get_decoded_output,
     execution_script::ExecutableFuelCall,
@@ -33,13 +33,6 @@ use crate::{
 
 /// How many times to attempt to resolve missing tx dependencies.
 pub const DEFAULT_TX_DEP_ESTIMATION_ATTEMPTS: u64 = 10;
-
-// Trait implemented by contract instances so that
-// they can be passed to the `set_contracts` method
-pub trait SettableContract {
-    fn id(&self) -> Bech32ContractId;
-    fn log_decoder(&self) -> LogDecoder;
-}
 
 #[derive(Debug)]
 /// Contains all data relevant to a single contract call

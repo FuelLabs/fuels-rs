@@ -76,7 +76,8 @@ pub mod prelude {
             Address, AssetId, ContractId, RawSlice,
         },
     };
-    pub use fuels_programs::calls::contract_call::{
-        ContractCall, ContractCallHandler, MultiContractCallHandler, SettableContract,
+    pub use fuels_programs::calls::{
+        call::SettableContract,
+        contract_call::{ContractCall, ContractCallHandler, MultiContractCallHandler},
     };
 }

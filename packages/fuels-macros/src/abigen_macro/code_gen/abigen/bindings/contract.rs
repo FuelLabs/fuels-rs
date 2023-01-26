@@ -89,7 +89,7 @@ pub(crate) fn contract_bindings(
             #contract_functions
         }
 
-        impl ::fuels::programs::calls::contract_call::SettableContract for #name {
+        impl ::fuels::programs::calls::call::SettableContract for #name {
             fn id(&self) -> ::fuels::types::bech32::Bech32ContractId {
                 self.contract_id.clone()
             }

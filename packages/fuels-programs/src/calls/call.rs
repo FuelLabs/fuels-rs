@@ -5,7 +5,15 @@ use fuel_vm::fuel_asm::PanicReason;
 use fuels_core::{constants::FAILED_TRANSFER_TO_ADDRESS_SIGNAL, parameters::CallParameters};
 use fuels_types::bech32::Bech32ContractId;
 
+use crate::logs::LogDecoder;
 use crate::{calls::contract_call::ContractCall, calls::script_call::ScriptCall};
+
+// Trait implemented by contract instances so that
+// they can be passed to the `set_contracts` method
+pub trait SettableContract {
+    fn id(&self) -> Bech32ContractId;
+    fn log_decoder(&self) -> LogDecoder;
+}
 
 pub(crate) trait ProgramCall {
     fn with_external_contracts(self, external_contracts: Vec<Bech32ContractId>) -> Self;
