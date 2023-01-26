@@ -71,8 +71,7 @@ impl EvmAddress {
         }
     }
 
-    #[allow(dead_code)]
-    fn value(&self) -> Bits256 {
+    pub fn value(&self) -> Bits256 {
         self.value
     }
 
