@@ -93,13 +93,12 @@ impl From<Bits256> for EvmAddress {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::{
         param_types::ParamType,
         traits::{Parameterize, Tokenizable},
         Token,
     };
-
-    use super::*;
 
     #[test]
     fn from_hex_str_b256() -> Result<(), Error> {

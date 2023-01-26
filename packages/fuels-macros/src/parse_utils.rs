@@ -82,7 +82,7 @@ where
         .validate_no_errors()
 }
 
-pub fn extract_generic_types(generics: &Generics) -> syn::Result<Vec<&TypeParam>> {
+pub fn validate_and_extract_generic_types(generics: &Generics) -> syn::Result<Vec<&TypeParam>> {
     generics
         .params
         .iter()
@@ -165,12 +165,20 @@ pub(crate) fn extract_enum_members(
         let name = variant.ident;
 
         let ttype = match variant.fields {
-            Fields::Unnamed(fields_unnamed) => fields_unnamed.unnamed.into_iter().next(),
+            Fields::Unnamed(fields_unnamed) => {
+                if fields_unnamed.unnamed.len() != 1 {
+                    return Err(Error::new(
+                        fields_unnamed.paren_token.span,
+                        "Must have exactly one element",
+                    ));
+                }
+                fields_unnamed.unnamed.into_iter().next()
+            }
             Fields::Unit => None,
             Fields::Named(named_fields) => {
                 return Err(Error::new_spanned(
                     named_fields,
-                    "Named enum fields are not supported!",
+                    "Struct-like enum variants are not supported!",
                 ))
             }
         }

@@ -1,0 +1,5 @@
+error: Only one variant-element is supported.
+ --> tests/ui/derive/parameterize/only_one_element_in_variant_is_supported.rs:5:7
+  |
+5 |     A(u64, u32),
+  |       ^^^^^^^^

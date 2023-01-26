@@ -4,7 +4,7 @@ use syn::{Data, DataEnum, DataStruct, DeriveInput, Error, Generics};
 
 use crate::{
     derive::{utils, utils::determine_fuels_types_path},
-    parse_utils::extract_struct_members,
+    parse_utils::{extract_struct_members, validate_and_extract_generic_types},
 };
 
 pub fn generate_tokenizable_impl(input: DeriveInput) -> syn::Result<TokenStream> {
@@ -34,6 +34,8 @@ fn tokenizable_for_struct(
     let struct_name_str = name.to_string();
     let members = extract_struct_members(contents, fuels_types_path.clone())?;
     let field_names = members.names().collect::<Vec<_>>();
+
+    validate_and_extract_generic_types(&generics)?;
 
     Ok(quote! {
         impl #impl_gen #fuels_types_path::traits::Tokenizable for #name #type_gen #where_clause {
@@ -75,6 +77,8 @@ fn tokenizable_for_enum(
     let variants = utils::extract_variants(&contents.variants, fuels_types_path.clone())?;
     let discriminant_and_token = variants.variant_into_discriminant_and_token();
     let constructed_variant = variants.variant_from_discriminant_and_token();
+
+    validate_and_extract_generic_types(&generics)?;
 
     Ok(quote! {
         impl #impl_gen #fuels_types_path::traits::Tokenizable for #name #type_gen #where_clause {

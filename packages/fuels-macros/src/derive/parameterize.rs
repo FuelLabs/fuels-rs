@@ -4,7 +4,9 @@ use syn::{Data, DataEnum, DataStruct, DeriveInput, Error, Generics};
 
 use crate::{
     derive::utils::determine_fuels_types_path,
-    parse_utils::{extract_enum_members, extract_generic_types, extract_struct_members},
+    parse_utils::{
+        extract_enum_members, extract_struct_members, validate_and_extract_generic_types,
+    },
 };
 
 pub fn generate_parameterize_impl(input: DeriveInput) -> syn::Result<TokenStream> {
@@ -54,7 +56,7 @@ fn parameterize_generic_params(
     generics: &Generics,
     fuels_types_path: &TokenStream,
 ) -> syn::Result<Vec<TokenStream>> {
-    let parameterize_calls = extract_generic_types(generics)?
+    let parameterize_calls = validate_and_extract_generic_types(generics)?
         .into_iter()
         .map(|type_param| {
             let ident = &type_param.ident;
@@ -74,6 +76,7 @@ fn parameterize_for_enum(
     let (impl_gen, type_gen, where_clause) = generics.split_for_impl();
     let enum_name_str = name.to_string();
     let members = extract_enum_members(contents, fuels_types_path.clone())?;
+
     let variant_names = members.names_as_strings();
     let variant_param_types = members.param_type_calls();
     let generic_param_types = parameterize_generic_params(&generics, &fuels_types_path)?;
