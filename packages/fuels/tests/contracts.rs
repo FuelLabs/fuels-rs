@@ -1014,6 +1014,7 @@ async fn test_add_custom_assets() -> Result<(), Error> {
     Ok(())
 }
 
+#[tokio::test]
 async fn test_contract_raw_slice() -> Result<(), Error> {
     let num_wallets = 1;
     let num_coins = 1;
