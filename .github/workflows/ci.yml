@@ -209,11 +209,8 @@ jobs:
           args: --bin check-docs
 
       - name: Check Docs. Warnings
-        run: |
-          cargo doc |& grep -q "broken_intra_doc_links"
-          if [ $? -eq 0 ]; then
-            echo "Broken links found" && exit 1
-          fi
+        run: | 
+          ! cargo doc |& grep -q "broken_intra_doc_links"
 
   publish:
     needs: cargo-verifications
