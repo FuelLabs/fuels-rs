@@ -212,9 +212,11 @@ jobs:
 
       - name: Check Docs. Warnings
         run: |
-          cargo doc |& grep -q "broken_intra_doc_links" && echo "Broken intra-doc links found" && exit 1;
-
-  publish:
+          cargo doc |& grep -q "broken_intra_doc_links"
+          if [ $? -eq 0 ]; then
+            echo "Broken links found" && exit 1
+          fi;
+publish:
     needs: cargo-verifications
     # Only do this job if publishing a release
     if: github.event_name == 'release' && github.event.action == 'published'
