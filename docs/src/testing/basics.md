@@ -4,7 +4,7 @@ If you're new to Rust, you'll want to review these important tools to help you b
 
 ## The `assert!` macro
 
-You can use the `assert!` macro to enforce certain outcomes in your test. This macro throws an error and fails the test if the expression inside evaluates to `false`.
+You can use the `assert!` macro to enforce certain outcomes in your test. This macro invokes `panic!()` and fails the test if the expression inside evaluates to `false`.
 
 ```rust, ignore
 assert!(value == 5);

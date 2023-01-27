@@ -38,7 +38,7 @@ In order to make the SDK for Fuel feel familiar with those coming from the [ethe
 
 ### How can I run the docs locally?
 
-Install mdbook by running:
+Install `mdbook` by running:
 
 ```shell
 cargo install mdbook
@@ -49,6 +49,8 @@ Next, navigate to the `docs` folder and run the command below to start a local s
 ```shell
 mdbook serve
 ```
+
+To view the docs, navigate to the localhost address outputted by `mdbook`.
 
 You can build the book by running:
 
