@@ -100,7 +100,7 @@ jobs:
 
   verify-rust-version:
     runs-on: ubuntu-latest
-    name:
+    steps:
       - uses: actions/checkout@v3
       # Ensure CI is using the same minimum toolchain specified in fuels Cargo.toml
       - run: |
