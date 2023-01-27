@@ -4,7 +4,7 @@ If you're new to Rust, you'll want to review these important tools to help you b
 
 ## The `assert!` macro
 
-You can use the `assert!` macro to enforce certain outcomes in your test. This macro invokes `panic!()` and fails the test if the expression inside evaluates to `false`.
+You can use the `assert!` macro to assert certain conditions in your test. This macro invokes `panic!()` and fails the test if the expression inside evaluates to `false`.
 
 ```rust, ignore
 assert!(value == 5);
@@ -12,7 +12,7 @@ assert!(value == 5);
 
 ## The `assert_eq!` macro
 
-The `assert_eq!` macro works a lot like the `assert` macro, however instead it accepts two values, and throws and error if those values are not equal.
+The `assert_eq!` macro works a lot like the `assert` macro, however instead it accepts two values, and panics if those values are not equal.
 
 ```rust, ignore
 assert_eq!(balance, 100);
@@ -20,7 +20,7 @@ assert_eq!(balance, 100);
 
 ## The `assert_ne!` macro
 
-The `assert_ne!` macro works just like the `assert_eq!` macro, but it will throw an error if the two values are equal.
+The `assert_ne!` macro works just like the `assert_eq!` macro, but it will panic if the two values are equal.
 
 ```rust, ignore
 assert_ne!(address, 0);
@@ -44,7 +44,7 @@ println!("WALLET 1 PROVIDER {:?}", wallet_1.get_provider().unwrap());
 dbg!("WALLET 1 PROVIDER {}", wallet_1.get_provider().unwrap());
 ```
 
-To print more complex types that don't have it already, you can implement your own formatted display method with the `fmt` library from the Rust standard library.
+To print more complex types that don't have it already, you can implement your own formatted display method with the `fmt` module from the Rust standard library.
 
 ```rust, ignore
 use std::fmt;
@@ -73,7 +73,7 @@ You can run your tests to see if they pass or fail with
 cargo test
 ```
 
-If you want to see anything printed to the console from your tests, use the `nocapture` flag.
+Outputs will be hidden if the test passes. If you want to see outputs printed from your tests regardless of whether they pass or fail, use the `nocapture` flag.
 
 ```
 cargo test -- --nocapture

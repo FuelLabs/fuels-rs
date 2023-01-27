@@ -50,7 +50,7 @@ Next, navigate to the `docs` folder and run the command below to start a local s
 mdbook serve
 ```
 
-To view the docs, navigate to the localhost address outputted by `mdbook`.
+To view the docs, navigate to the localhost address output by `mdbook`, which is http://localhost:3000/ by default.
 
 You can build the book by running:
 
