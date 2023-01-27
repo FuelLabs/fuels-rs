@@ -122,6 +122,7 @@ jobs:
       - setup-test-projects
       - verify-rust-version
       - get-workspace-members
+      - check-documentation-validity
     runs-on: ubuntu-latest
     strategy:
       matrix:
