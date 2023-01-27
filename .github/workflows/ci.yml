@@ -216,6 +216,7 @@ jobs:
           if [ $? -eq 0 ]; then
             echo "Broken links found" && exit 1
           fi;
+
 publish:
     needs: cargo-verifications
     # Only do this job if publishing a release
