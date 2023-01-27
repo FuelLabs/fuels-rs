@@ -211,6 +211,7 @@ jobs:
           args: --bin check-docs
 
       - name: Check Docs. Warnings
+        uses: actions-rs/cargo@v1
         script: |
           cargo doc |& grep -q "broken_intra_doc_links"
           if [ $? -eq 0 ]; then
