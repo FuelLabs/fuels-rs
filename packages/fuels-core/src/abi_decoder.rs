@@ -132,7 +132,7 @@ impl ABIDecoder {
             .into_iter()
             .map(u64::from_token)
             .collect::<Result<Vec<u64>>>()
-            .map_err(|e| Error::InvalidData(e.to_string()))?;
+            .map_err(|e| error!(InvalidData, "{e}"))?;
 
         Ok(DecodeResult {
             token: Token::RawSlice(elements),
