@@ -1,6 +1,6 @@
 use anyhow::{bail, Error};
 use check_docs::{
-    extract_starts_and_ends, filter_valid_anchors, parse_includes, report_errors, report_warnings,
+    extract_starts_and_ends, filter_valid_anchors, parse_includes, report_errors,
     search_for_patterns_in_project, validate_includes,
 };
 
@@ -21,7 +21,11 @@ fn main() -> anyhow::Result<(), Error> {
     report_errors("anchors", &anchor_errors);
     report_errors("includes", &include_errors);
 
-    if !anchor_errors.is_empty() || !include_errors.is_empty() || !include_path_errors.is_empty() || !additional_warnings.is_empty() {
+    if !anchor_errors.is_empty()
+        || !include_errors.is_empty()
+        || !include_path_errors.is_empty()
+        || !additional_warnings.is_empty()
+    {
         bail!("Finished with errors");
     }
 
