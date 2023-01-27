@@ -111,26 +111,11 @@ jobs:
           echo "Comparing minimum supported toolchain ($MIN_VERSION) with ci toolchain (RUST_VERSION)"
           test "$MIN_VERSION" == "$RUST_VERSION"
 
-  check-docs:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check Docs. Validity
-        uses: actions-rs/cargo@v1
-        with:
-          command: run
-          args: --bin check-docs
-      - name: Check Docs. Warnings
-        uses: actions-rs/cargo@v1
-        with:
-          command: doc
-          args: --frozen 2>&1 | grep -q "broken_intra_doc_links" && echo "Broken intra-doc links found" && exit 1;
-
   cargo-verifications:
     needs:
       - setup-test-projects
       - verify-rust-version
       - get-workspace-members
-      - check-docs
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -218,6 +203,16 @@ jobs:
         with:
           command: ${{ matrix.command }}
           args: -p ${{ matrix.package }} ${{ matrix.args }}
+
+      - name: Check Docs. Validity
+        uses: actions-rs/cargo@v1
+        with:
+          command: run
+          args: --bin check-docs
+
+      - name: Check Docs. Warnings
+        run: |
+          cargo doc --frozen 2>&1 | grep -q "broken_intra_doc_links" && echo "Broken intra-doc links found" && exit 1;
 
   publish:
     needs: cargo-verifications
