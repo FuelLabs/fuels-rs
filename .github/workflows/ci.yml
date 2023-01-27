@@ -113,6 +113,7 @@ jobs:
 
   check-documentation-validity:
     runs-on: ubuntu-latest
+    uses: actions/checkout@v3
     steps:
       run: |
         cargo run --bin check-docs || cargo doc --frozen 2>&1 | grep -q "broken_intra_doc_links" && echo "Broken intra-doc links found" && exit 1
