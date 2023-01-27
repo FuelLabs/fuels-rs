@@ -212,7 +212,7 @@ jobs:
 
       - name: Check Docs. Warnings
         run: |
-          cargo doc --frozen 2>&1 | grep -q "broken_intra_doc_links" && echo "Broken intra-doc links found" && exit 1;
+          cargo doc |& grep -q "broken_intra_doc_links" && echo "Broken intra-doc links found" && exit 1;
 
   publish:
     needs: cargo-verifications
