@@ -54,7 +54,7 @@ struct Point {
     y: u64,
 }
 
-// add print functionality with the fmt library 
+// add print functionality with the fmt module 
 impl fmt::Display for Point {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "value of x: {}, value of y: {}", self.x, self.y)
