@@ -115,9 +115,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check Docs. Validity
-        run: cargo run --bin check-docs
+        uses: actions-rs/cargo@v1
+        with:
+          command: run
+          args: --bin check-docs
       - name: Check Docs. Warnings
-        run: cargo doc --frozen 2>&1 | grep -q "broken_intra_doc_links" && echo "Broken intra-doc links found" && exit 1;
+        uses: actions-rs/cargo@v1
+        with:
+          command: doc
+          args: --frozen 2>&1 | grep -q "broken_intra_doc_links" && echo "Broken intra-doc links found" && exit 1;
 
   cargo-verifications:
     needs:
