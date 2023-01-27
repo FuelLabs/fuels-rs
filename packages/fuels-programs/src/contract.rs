@@ -512,7 +512,7 @@ where
     D: Tokenizable + Debug,
 {
     /// Sets external contracts as dependencies to this contract's call.
-    /// Effectively, this will be used to create [`Input::Contract`]/[`Output::Contract`]
+    /// Effectively, this will be used to create [`fuel_tx::Input::Contract`]/[`fuel_tx::Output::Contract`]
     /// pairs and set them into the transaction. Note that this is a builder
     /// method, i.e. use it as a chain:
     ///
@@ -529,7 +529,7 @@ where
 
     /// Sets external contract instances as dependencies to this contract's call.
     /// Effectively, this will be used to: merge `LogDecoder`s and create
-    /// [`Input::Contract`]/[`Output::Contract`] pairs and set them into the transaction.
+    /// [`fuel_tx::Input::Contract`]/[`fuel_tx::Output::Contract`] pairs and set them into the transaction.
     /// Note that this is a builder method, i.e. use it as a chain:
     ///
     /// ```ignore
@@ -545,7 +545,7 @@ where
 
     /// Appends additional external contracts as dependencies to this contract's
     /// call. Effectively, this will be used to create additional
-    /// [`Input::Contract`]/[`Output::Contract`]
+    /// [`fuel_tx::Input::Contract`]/[`fuel_tx::Output::Contract`]
     /// pairs and set them into the transaction. Note that this is a builder
     /// method, i.e. use it as a chain:
     ///
@@ -584,7 +584,7 @@ where
         self
     }
 
-    /// Appends `num` [`Output::Variable`]s to the transaction.
+    /// Appends `num` [`fuel_tx::Output::Variable`]s to the transaction.
     /// Note that this is a builder method, i.e. use it as a chain:
     ///
     /// ```ignore
@@ -597,7 +597,7 @@ where
         self
     }
 
-    /// Appends `num` [`Output::Message`]s to the transaction.
+    /// Appends `num` [`fuel_tx::Output::Message`]s to the transaction.
     /// Note that this is a builder method, i.e. use it as a chain:
     ///
     /// ```ignore
