@@ -100,7 +100,7 @@ jobs:
 
   verify-rust-version:
     runs-on: ubuntu-latest
-    steps:
+    name:
       - uses: actions/checkout@v3
       # Ensure CI is using the same minimum toolchain specified in fuels Cargo.toml
       - run: |
@@ -111,19 +111,21 @@ jobs:
           echo "Comparing minimum supported toolchain ($MIN_VERSION) with ci toolchain (RUST_VERSION)"
           test "$MIN_VERSION" == "$RUST_VERSION"
 
-  check-documentation-validity:
+  check-doc-validity:
     runs-on: ubuntu-latest
-    uses: actions/checkout@v3
     steps:
-      run: |
-        cargo run --bin check-docs || cargo doc --frozen 2>&1 | grep -q "broken_intra_doc_links" && echo "Broken intra-doc links found" && exit 1
+      - name: Checkout docs
+        uses: actions/checkout@v2
+      - name: Run cargo check-docs and check for broken intra-doc links
+        run: |
+          cargo run --bin check-docs || cargo doc --frozen 2>&1 | grep -q "broken_intra_doc_links" && echo "Broken intra-doc links found" && exit 1
 
   cargo-verifications:
     needs:
       - setup-test-projects
       - verify-rust-version
       - get-workspace-members
-      - check-documentation-validity
+      - check-doc-validity
     runs-on: ubuntu-latest
     strategy:
       matrix:
