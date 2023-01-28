@@ -1,3 +1,5 @@
+use std::fmt::Debug;
+
 use fuels::{
     prelude::*,
     tx::Receipt,
@@ -352,9 +354,8 @@ async fn test_multi_call_log_multiple_contracts() -> Result<()> {
 
 #[tokio::test]
 async fn test_multi_call_contract_with_contract_logs() -> Result<()> {
-    let wallet = launch_provider_and_get_wallet().await;
-
     setup_contract_test!(
+        Wallets("wallet"),
         Abigen(
             name = "MyContract",
             abi = "packages/fuels/tests/logs/contract_logs"
@@ -420,10 +421,10 @@ async fn test_multi_call_contract_with_contract_logs() -> Result<()> {
     Ok(())
 }
 
-fn assert_is_revert_containing_msg(msg: &str, error: Error) {
-    assert!(matches!(error, Error::RevertTransactionError(..)));
-    if let Error::RevertTransactionError(error_message, _) = error {
-        assert!(error_message.contains(msg));
+fn assert_revert_containing_msg(msg: &str, error: Error) {
+    assert!(matches!(error, Error::RevertTransactionError { .. }));
+    if let Error::RevertTransactionError { reason, .. } = error {
+        assert!(reason.contains(msg));
     }
 }
 
@@ -450,7 +451,7 @@ async fn test_require_log() -> Result<()> {
             .await
             .expect_err("Should return a revert error");
 
-        assert_is_revert_containing_msg("42", error);
+        assert_revert_containing_msg("42", error);
     }
     {
         let error = contract_methods
@@ -459,7 +460,7 @@ async fn test_require_log() -> Result<()> {
             .await
             .expect_err("Should return a revert error");
 
-        assert_is_revert_containing_msg("fuel", error);
+        assert_revert_containing_msg("fuel", error);
     }
     {
         let error = contract_methods
@@ -468,7 +469,7 @@ async fn test_require_log() -> Result<()> {
             .await
             .expect_err("Should return a revert error");
 
-        assert_is_revert_containing_msg("StructDeeplyNestedGeneric", error);
+        assert_revert_containing_msg("StructDeeplyNestedGeneric", error);
     }
     {
         let error = contract_methods
@@ -477,7 +478,7 @@ async fn test_require_log() -> Result<()> {
             .await
             .expect_err("Should return a revert error");
 
-        assert_is_revert_containing_msg("64", error);
+        assert_revert_containing_msg("64", error);
     }
 
     Ok(())
@@ -517,7 +518,7 @@ async fn test_multi_call_require_log_single_contract() -> Result<()> {
             .await
             .expect_err("Should return a revert error");
 
-        assert_is_revert_containing_msg("fuel", error);
+        assert_revert_containing_msg("fuel", error);
     }
     {
         let call_handler_1 = contract_methods.require_custom_generic();
@@ -534,7 +535,7 @@ async fn test_multi_call_require_log_single_contract() -> Result<()> {
             .await
             .expect_err("Should return a revert error");
 
-        assert_is_revert_containing_msg("StructDeeplyNestedGeneric", error);
+        assert_revert_containing_msg("StructDeeplyNestedGeneric", error);
     }
 
     Ok(())
@@ -580,7 +581,7 @@ async fn test_multi_call_require_log_multi_contract() -> Result<()> {
             .await
             .expect_err("Should return a revert error");
 
-        assert_is_revert_containing_msg("fuel", error);
+        assert_revert_containing_msg("fuel", error);
     }
     {
         let call_handler_1 = contract_methods2.require_custom_generic();
@@ -597,7 +598,7 @@ async fn test_multi_call_require_log_multi_contract() -> Result<()> {
             .await
             .expect_err("Should return a revert error");
 
-        assert_is_revert_containing_msg("StructDeeplyNestedGeneric", error);
+        assert_revert_containing_msg("StructDeeplyNestedGeneric", error);
     }
 
     Ok(())
@@ -671,9 +672,8 @@ async fn test_script_get_logs() -> Result<()> {
 
 #[tokio::test]
 async fn test_contract_with_contract_logs() -> Result<()> {
-    let wallet = launch_provider_and_get_wallet().await;
-
     setup_contract_test!(
+        Wallets("wallet"),
         Abigen(
             name = "MyContract",
             abi = "packages/fuels/tests/logs/contract_logs",
@@ -890,7 +890,7 @@ async fn test_script_require_log() -> Result<()> {
             .await
             .expect_err("Should return a revert error");
 
-        assert_is_revert_containing_msg("42", error);
+        assert_revert_containing_msg("42", error);
     }
     {
         let error = instance
@@ -899,7 +899,7 @@ async fn test_script_require_log() -> Result<()> {
             .await
             .expect_err("Should return a revert error");
 
-        assert_is_revert_containing_msg("fuel", error);
+        assert_revert_containing_msg("fuel", error);
     }
     {
         let instance = log_script::new(wallet.clone(), bin_path);
@@ -909,7 +909,7 @@ async fn test_script_require_log() -> Result<()> {
             .await
             .expect_err("Should return a revert error");
 
-        assert_is_revert_containing_msg("StructDeeplyNestedGeneric", error);
+        assert_revert_containing_msg("StructDeeplyNestedGeneric", error);
     }
     {
         let instance = log_script::new(wallet.clone(), bin_path);
@@ -919,7 +919,7 @@ async fn test_script_require_log() -> Result<()> {
             .await
             .expect_err("Should return a revert error");
 
-        assert_is_revert_containing_msg("64", error);
+        assert_revert_containing_msg("64", error);
     }
 
     Ok(())
@@ -927,9 +927,8 @@ async fn test_script_require_log() -> Result<()> {
 
 #[tokio::test]
 async fn test_contract_require_from_contract() -> Result<()> {
-    let wallet = launch_provider_and_get_wallet().await;
-
     setup_contract_test!(
+        Wallets("wallet"),
         Abigen(
             name = "MyContract",
             abi = "packages/fuels/tests/contracts/lib_contract",
@@ -964,16 +963,15 @@ async fn test_contract_require_from_contract() -> Result<()> {
         .await
         .expect_err("Should return a revert error");
 
-    assert_is_revert_containing_msg("require from contract", error);
+    assert_revert_containing_msg("require from contract", error);
 
     Ok(())
 }
 
 #[tokio::test]
 async fn test_multi_call_contract_require_from_contract() -> Result<()> {
-    let wallet = launch_provider_and_get_wallet().await;
-
     setup_contract_test!(
+        Wallets("wallet"),
         Abigen(
             name = "MyContract",
             abi = "packages/fuels/tests/contracts/lib_contract",
@@ -1027,7 +1025,7 @@ async fn test_multi_call_contract_require_from_contract() -> Result<()> {
         .await
         .expect_err("Should return a revert error");
 
-    assert_is_revert_containing_msg("require from contract", error);
+    assert_revert_containing_msg("require from contract", error);
 
     Ok(())
 }
@@ -1061,7 +1059,138 @@ async fn test_script_require_from_contract() -> Result<()> {
         .await
         .expect_err("Should return a revert error");
 
-    assert_is_revert_containing_msg("require from contract", error);
+    assert_revert_containing_msg("require from contract", error);
+
+    Ok(())
+}
+
+fn assert_assert_eq_containing_msg<T: Debug>(left: T, right: T, error: Error) {
+    let msg = format!("left: `\"{left:?}\"`\n right: `\"{right:?}\"`");
+    assert_revert_containing_msg(&msg, error)
+}
+
+#[tokio::test]
+async fn test_contract_assert_eq_log() -> Result<()> {
+    setup_contract_test!(
+        Wallets("wallet"),
+        Abigen(
+            name = "LogContract",
+            abi = "packages/fuels/tests/contracts/assert_eq"
+        ),
+        Deploy(
+            name = "contract_instance",
+            contract = "LogContract",
+            wallet = "wallet"
+        ),
+    );
+    let contract_methods = contract_instance.methods();
+    {
+        let a = 32;
+        let b = 64;
+
+        let error = contract_methods
+            .assert_eq_primitive(a, b)
+            .call()
+            .await
+            .expect_err("Should return a revert error");
+
+        assert_assert_eq_containing_msg(a, b, error);
+    }
+    {
+        let test_struct = TestStruct {
+            field_1: true,
+            field_2: 64,
+        };
+
+        let test_struct2 = TestStruct {
+            field_1: false,
+            field_2: 32,
+        };
+
+        let error = contract_methods
+            .assert_eq_struct(test_struct.clone(), test_struct2.clone())
+            .call()
+            .await
+            .expect_err("Should return a revert error");
+
+        assert_assert_eq_containing_msg(test_struct, test_struct2, error);
+    }
+    {
+        let test_enum = TestEnum::VariantOne;
+        let test_enum2 = TestEnum::VariantTwo;
+
+        let error = contract_methods
+            .assert_eq_enum(test_enum.clone(), test_enum2.clone())
+            .call()
+            .await
+            .expect_err("Should return a revert error");
+
+        assert_assert_eq_containing_msg(test_enum, test_enum2, error);
+    }
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_script_assert_eq_log() -> Result<()> {
+    abigen!(Script(
+        name = "log_script",
+        abi = "packages/fuels/tests/scripts/script_assert_eq/out/debug/script_assert_eq-abi.json"
+    ));
+
+    let wallet = launch_provider_and_get_wallet().await;
+    let bin_path = "../fuels/tests/scripts/script_assert_eq/out/debug/script_assert_eq.bin";
+    let instance = log_script::new(wallet.clone(), bin_path);
+
+    {
+        let a = 32;
+        let b = 64;
+
+        let error = instance
+            .main(MatchEnum::AssertEqPrimitive((a, b)))
+            .call()
+            .await
+            .expect_err("Should return a revert error");
+
+        assert_assert_eq_containing_msg(a, b, error);
+    }
+    {
+        let test_struct = TestStruct {
+            field_1: true,
+            field_2: 64,
+        };
+
+        let test_struct2 = TestStruct {
+            field_1: false,
+            field_2: 32,
+        };
+
+        let error = instance
+            .main(MatchEnum::AssertEqStruct((
+                test_struct.clone(),
+                test_struct2.clone(),
+            )))
+            .call()
+            .await
+            .expect_err("Should return a revert error");
+
+        assert_assert_eq_containing_msg(test_struct, test_struct2, error);
+    }
+    {
+        let test_enum = TestEnum::VariantOne;
+        let test_enum2 = TestEnum::VariantTwo;
+
+        let error = instance
+            .main(MatchEnum::AssertEqEnum((
+                test_enum.clone(),
+                test_enum2.clone(),
+            )))
+            .call()
+            .await
+            .expect_err("Should return a revert error");
+
+        assert_assert_eq_containing_msg(test_enum, test_enum2, error);
+    }
 
     Ok(())
 }

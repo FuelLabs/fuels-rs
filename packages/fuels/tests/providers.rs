@@ -507,7 +507,7 @@ async fn test_call_param_gas_errors() -> Result<()> {
         .await
         .expect_err("should error");
 
-    let expected = "Revert transaction error: OutOfGas, receipts:";
+    let expected = "Revert transaction error: OutOfGas";
     assert!(response.to_string().starts_with(expected));
 
     // Call params gas_forwarded exceeds transaction limit
