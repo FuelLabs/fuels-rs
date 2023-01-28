@@ -1,6 +1,6 @@
 use std::{collections::HashSet, iter, vec};
 
-use fuel_tx::{AssetId, Bytes32, ContractId, Input, Output, TxPointer, UtxoId};
+use fuel_tx::{AssetId, Bytes32, ContractId, Input, MessageId, Output, TxPointer, UtxoId};
 use fuel_types::{Immediate18, Word};
 use fuel_vm::{consts::REG_ONE, prelude::Opcode};
 use fuels_core::constants::BASE_ASSET_ID;
@@ -279,6 +279,26 @@ fn extract_unique_contract_ids(calls: &[ContractCall]) -> HashSet<ContractId> {
                 .chain(iter::once((&call.contract_id).into()))
         })
         .collect()
+}
+
+fn extract_input_ids(inputs: &[Input]) -> (Vec<UtxoId>, Vec<MessageId>) {
+    let utxos = inputs
+        .iter()
+        .filter_map(|input| match input {
+            Input::CoinSigned { utxo_id, .. } => Some(utxo_id.clone()),
+            _ => None,
+        })
+        .collect();
+
+    let message_ids = inputs
+        .iter()
+        .filter_map(|input| match input {
+            Input::MessageSigned { message_id, .. } => Some(message_id.clone()),
+            _ => None,
+        })
+        .collect();
+
+    (utxos, message_ids)
 }
 
 #[cfg(test)]
