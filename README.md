@@ -36,3 +36,24 @@ See [the `fuels-rs` book](https://fuellabs.github.io/fuels-rs/latest/)
 
 In order to make the SDK for Fuel feel familiar with those coming from the [ethers.js](https://github.com/ethers-io/ethers.js) ecosystem, this project opted for an `s` at the end. The `fuels-*` family of SDKs is inspired by The Ethers Project.
 
+### How can I run the docs locally?
+
+Install `mdbook` by running:
+
+```shell
+cargo install mdbook
+```
+
+Next, navigate to the `docs` folder and run the command below to start a local server.
+
+```shell
+mdbook serve
+```
+
+To view the docs, navigate to the localhost address output by `mdbook`, which is http://localhost:3000/ by default.
+
+You can build the book by running:
+
+```shell
+mdbook build
+```
