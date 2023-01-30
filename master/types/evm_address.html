@@ -141,7 +141,7 @@
 <p>In the Rust SDK, Ethereum Virtual Machine (EVM) addresses can be represented with the 'EvmAddress' type. Its definition matches with the Sway standard library type with the same name and will be converted accordingly when interacting with contracts:</p>
 <pre><code class="language-rust ignore">pub struct EvmAddress {
     // An evm address is only 20 bytes, the first 12 bytes should be set to 0
-    pub value: Bits256,
+    value: Bits256,
 }
 </code></pre>
 <p>Here's an example:</p>
