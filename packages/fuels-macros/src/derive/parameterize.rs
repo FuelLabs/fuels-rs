@@ -86,7 +86,7 @@ fn parameterize_for_enum(
             fn param_type() -> #fuels_types_path::param_types::ParamType {
                 let variants = vec![#((#variant_names, #variant_param_types)),*];
 
-                let variants = #fuels_types_path::enum_variants::EnumVariants::new(variants).unwrap_or_else(|_| panic!("{} has no variants which isn't allowed!", #enum_name_str));
+                let variants = #fuels_types_path::enum_variants::EnumVariants::new(variants).unwrap_or_else(|_| panic!("{} has no variants which isn't allowed.", #enum_name_str));
                 #fuels_types_path::param_types::ParamType::Enum {
                     name: #enum_name_str.to_string(),
                     variants,

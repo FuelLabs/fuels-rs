@@ -50,7 +50,7 @@ fn tokenizable_for_struct(
                         let mut tokens_iter = tokens.into_iter();
                         let mut next_token = move || { tokens_iter
                             .next()
-                            .ok_or_else(|| { #fuels_types_path::errors::Error::InstantiationError(format!("Ran out of tokens before '{}' has finished construction!", #struct_name_str)) })
+                            .ok_or_else(|| { #fuels_types_path::errors::Error::InstantiationError(format!("Ran out of tokens before '{}' has finished construction.", #struct_name_str)) })
                         };
                         ::std::result::Result::Ok(Self {
                             #(
@@ -102,7 +102,7 @@ fn tokenizable_for_enum(
                         let (discriminant, variant_token, _) = *selector;
                         #constructed_variant
                     }
-                    _ => ::std::result::Result::Err(format!("Given token ({}) is not of the type Token::Enum!", token)),
+                    _ => ::std::result::Result::Err(format!("Given token ({}) is not of the type Token::Enum.", token)),
                 }.map_err(|e| #fuels_types_path::errors::Error::InvalidData(format!("Error while instantiating {} from token! {}", #name_stringified, e)) )
             }
         }

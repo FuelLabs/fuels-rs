@@ -11,7 +11,7 @@ pub fn generate_try_from_impl(input: DeriveInput) -> syn::Result<TokenStream> {
         Data::Enum(_) | Data::Struct(_) => impl_try_from(input, fuels_types_path),
         Data::Union(union) => Err(Error::new_spanned(
             union.union_token,
-            "Unions are not supported!",
+            "Unions are not supported.",
         )),
     }
 }

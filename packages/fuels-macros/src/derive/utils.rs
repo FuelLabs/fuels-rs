@@ -21,7 +21,7 @@ pub(crate) fn determine_fuels_types_path(attrs: &[Attribute]) -> syn::Result<Tok
     )?;
 
     TypePath::new(path_str.value())
-        .map_err(|_| Error::new_spanned(path_str, "Invalid path!"))
+        .map_err(|_| Error::new_spanned(path_str, "Invalid path."))
         .map(|type_path| type_path.to_token_stream())
 }
 
@@ -128,7 +128,7 @@ fn get_variant_type(variant: &Variant) -> syn::Result<Option<&Type>> {
             } else {
                 Err(Error::new_spanned(
                     unnamed_fields.clone(),
-                    "Tuple-like enum variants must contain exactly one element!".to_string(),
+                    "Tuple-like enum variants must contain exactly one element.".to_string(),
                 ))
             }
         }

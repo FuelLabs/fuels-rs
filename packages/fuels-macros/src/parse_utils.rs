@@ -144,7 +144,7 @@ pub(crate) fn extract_struct_members(
         .map(|field| {
             let name = field
                 .ident
-                .expect("FieldsNamed to only contain named fields!.");
+                .expect("FieldsNamed to only contain named fields.");
             let ty = field.ty.into_token_stream();
             (name, ty)
         })
@@ -178,7 +178,7 @@ pub(crate) fn extract_enum_members(
             Fields::Named(named_fields) => {
                 return Err(Error::new_spanned(
                     named_fields,
-                    "Struct-like enum variants are not supported!",
+                    "Struct-like enum variants are not supported.",
                 ))
             }
         }
