@@ -25,7 +25,7 @@ use fuels_signers::{
     Signer, WalletUnlocked,
 };
 use fuels_types::{
-    bech32::Bech32ContractId,
+    bech32::{Bech32Address, Bech32ContractId},
     core::{Selector, Token},
     errors::Error,
     param_types::{ParamType, ReturnLocation},
@@ -131,6 +131,7 @@ impl Contract {
             external_contracts: vec![],
             output_param: D::param_type(),
             is_payable,
+            custom_assets: Default::default(),
         };
 
         Ok(ContractCallHandler {
@@ -363,6 +364,7 @@ pub struct ContractCall {
     pub external_contracts: Vec<Bech32ContractId>,
     pub output_param: ParamType,
     pub is_payable: bool,
+    pub custom_assets: HashMap<(AssetId, Option<Bech32Address>), u64>,
 }
 
 impl ContractCall {
@@ -450,6 +452,10 @@ impl ContractCall {
             |r| matches!(r, Receipt::Panic { reason, .. } if *reason.reason() == PanicReason::ContractNotInInputs ),
         )
     }
+
+    pub fn add_custom_asset(&mut self, asset_id: AssetId, amount: u64, to: Option<Bech32Address>) {
+        *self.custom_assets.entry((asset_id, to)).or_default() += amount;
+    }
 }
 
 /// Based on the receipts returned by the call, the contract ID (which is null in the case of a
@@ -515,7 +521,7 @@ where
     D: Tokenizable + Debug,
 {
     /// Sets external contracts as dependencies to this contract's call.
-    /// Effectively, this will be used to create [`Input::Contract`]/[`Output::Contract`]
+    /// Effectively, this will be used to create [`fuel_tx::Input::Contract`]/[`fuel_tx::Output::Contract`]
     /// pairs and set them into the transaction. Note that this is a builder
     /// method, i.e. use it as a chain:
     ///
@@ -532,7 +538,7 @@ where
 
     /// Sets external contract instances as dependencies to this contract's call.
     /// Effectively, this will be used to: merge `LogDecoder`s and create
-    /// [`Input::Contract`]/[`Output::Contract`] pairs and set them into the transaction.
+    /// [`fuel_tx::Input::Contract`]/[`fuel_tx::Output::Contract`] pairs and set them into the transaction.
     /// Note that this is a builder method, i.e. use it as a chain:
     ///
     /// ```ignore
@@ -546,9 +552,33 @@ where
         self
     }
 
+    /// Adds a custom `asset_id` with its `amount` and an optional `address` to be used for
+    /// generating outputs to this contract's call.
+    ///
+    /// # Parameters
+    /// - `asset_id`: The unique identifier of the asset being added.
+    /// - `amount`: The amount of the asset being added.
+    /// - `address`: The optional wallet address that the output amount will be sent to. If not provided, the asset will be sent to the users wallet address.
+    /// Note that this is a builder method, i.e. use it as a chain:
+    ///
+    /// ```ignore
+    /// let asset_id = AssetId::from([3u8; 32]);
+    /// let amount = 5000;
+    /// my_contract_instance.my_method(...).add_custom_asset(asset_id, amount, None).call()
+    /// ```
+    pub fn add_custom_asset(
+        mut self,
+        asset_id: AssetId,
+        amount: u64,
+        to: Option<Bech32Address>,
+    ) -> Self {
+        self.contract_call.add_custom_asset(asset_id, amount, to);
+        self
+    }
+
     /// Appends additional external contracts as dependencies to this contract's
     /// call. Effectively, this will be used to create additional
-    /// [`Input::Contract`]/[`Output::Contract`]
+    /// [`fuel_tx::Input::Contract`]/[`fuel_tx::Output::Contract`]
     /// pairs and set them into the transaction. Note that this is a builder
     /// method, i.e. use it as a chain:
     ///
@@ -594,7 +624,7 @@ where
         Ok(self)
     }
 
-    /// Appends `num` [`Output::Variable`]s to the transaction.
+    /// Appends `num` [`fuel_tx::Output::Variable`]s to the transaction.
     /// Note that this is a builder method, i.e. use it as a chain:
     ///
     /// ```ignore
@@ -607,7 +637,7 @@ where
         self
     }
 
-    /// Appends `num` [`Output::Message`]s to the transaction.
+    /// Appends `num` [`fuel_tx::Output::Message`]s to the transaction.
     /// Note that this is a builder method, i.e. use it as a chain:
     ///
     /// ```ignore

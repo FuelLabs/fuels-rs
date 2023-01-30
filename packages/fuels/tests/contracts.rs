@@ -947,6 +947,74 @@ async fn test_contract_call_with_non_default_max_input() -> Result<(), Error> {
 }
 
 #[tokio::test]
+async fn test_add_custom_assets() -> Result<(), Error> {
+    let initial_amount = 100_000;
+    let asset_base = AssetConfig {
+        id: BASE_ASSET_ID,
+        num_coins: 1,
+        coin_amount: initial_amount,
+    };
+
+    let asset_id_1 = AssetId::from([3u8; 32]);
+    let asset_1 = AssetConfig {
+        id: asset_id_1,
+        num_coins: 1,
+        coin_amount: initial_amount,
+    };
+
+    let asset_id_2 = AssetId::from([1u8; 32]);
+    let asset_2 = AssetConfig {
+        id: asset_id_2,
+        num_coins: 1,
+        coin_amount: initial_amount,
+    };
+
+    let assets = vec![asset_base, asset_1, asset_2];
+
+    let num_wallets = 2;
+    let wallet_config = WalletsConfig::new_multiple_assets(num_wallets, assets);
+    let mut wallets = launch_custom_provider_and_get_wallets(wallet_config, None, None).await;
+    let wallet_1 = wallets.pop().unwrap();
+    let wallet_2 = wallets.pop().unwrap();
+
+    setup_contract_test!(
+        Abigen(
+            name = "MyContract",
+            abi = "packages/fuels/tests/contracts/contract_test"
+        ),
+        Deploy(
+            name = "contract_instance",
+            contract = "MyContract",
+            wallet = "wallet_1"
+        ),
+    );
+
+    let amount_1 = 5000;
+    let amount_2 = 3000;
+    let response = contract_instance
+        .methods()
+        .get(5, 6)
+        .add_custom_asset(asset_id_1, amount_1, Some(wallet_2.address().clone()))
+        .add_custom_asset(asset_id_2, amount_2, Some(wallet_2.address().clone()))
+        .call()
+        .await?;
+
+    assert_eq!(response.value, 5);
+
+    let balance_asset_1 = wallet_1.get_asset_balance(&asset_id_1).await?;
+    let balance_asset_2 = wallet_1.get_asset_balance(&asset_id_2).await?;
+    assert_eq!(balance_asset_1, initial_amount - amount_1);
+    assert_eq!(balance_asset_2, initial_amount - amount_2);
+
+    let balance_asset_1 = wallet_2.get_asset_balance(&asset_id_1).await?;
+    let balance_asset_2 = wallet_2.get_asset_balance(&asset_id_2).await?;
+    assert_eq!(balance_asset_1, initial_amount + amount_1);
+    assert_eq!(balance_asset_2, initial_amount + amount_2);
+
+    Ok(())
+}
+
+#[tokio::test]
 async fn test_contract_raw_slice() -> Result<(), Error> {
     let num_wallets = 1;
     let num_coins = 1;
