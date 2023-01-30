@@ -21,11 +21,25 @@ pub(crate) struct CallOpcodeParamsOffset {
 
 /// Compute how much of each asset is required based on all `CallParameters` of the `ContractCalls`
 pub(crate) fn calculate_required_asset_amounts(calls: &[ContractCall]) -> Vec<(AssetId, u64)> {
-    let amounts_per_asset_id = calls
+    let call_param_assets = calls
         .iter()
         .map(|call| (call.call_parameters.asset_id, call.call_parameters.amount))
         .collect::<Vec<_>>();
-    sum_up_amounts_for_each_asset_id(amounts_per_asset_id)
+
+    let custom_assets = calls
+        .iter()
+        .flat_map(|call| call.custom_assets.iter().collect::<Vec<_>>())
+        .group_by(|custom| custom.0 .0)
+        .into_iter()
+        .map(|(asset_id, groups_w_same_asset_id)| {
+            let total_amount_in_group = groups_w_same_asset_id.map(|(_, amount)| amount).sum();
+            (asset_id, total_amount_in_group)
+        })
+        .collect::<Vec<_>>();
+
+    let merged_assets = chain!(call_param_assets, custom_assets).collect::<Vec<_>>();
+
+    sum_up_amounts_for_each_asset_id(merged_assets)
 }
 
 /// Sum up the amounts required in each call for each asset ID, so you can get a total for each
@@ -178,11 +192,34 @@ pub(crate) fn get_transaction_inputs_outputs(
     let outputs = chain!(
         generate_contract_outputs(num_of_contracts),
         generate_asset_change_outputs(wallet_address, asset_ids),
+        generate_custom_outputs(calls),
         extract_variable_outputs(calls),
         extract_message_outputs(calls)
     )
     .collect();
     (inputs, outputs)
+}
+
+fn generate_custom_outputs(calls: &[ContractCall]) -> Vec<Output> {
+    calls
+        .iter()
+        .flat_map(|call| &call.custom_assets)
+        .group_by(|custom| (custom.0 .0, custom.0 .1.clone()))
+        .into_iter()
+        .filter_map(|(asset_id_address, groups_w_same_asset_id_address)| {
+            let total_amount_in_group = groups_w_same_asset_id_address
+                .map(|(_, amount)| amount)
+                .sum::<u64>();
+            match asset_id_address.1 {
+                Some(address) => Some(Output::coin(
+                    address.into(),
+                    total_amount_in_group,
+                    asset_id_address.0,
+                )),
+                None => None,
+            }
+        })
+        .collect::<Vec<_>>()
 }
 
 fn extract_unique_asset_ids(spendable_coins: &[Resource]) -> HashSet<AssetId> {
@@ -308,6 +345,7 @@ mod test {
                 external_contracts: Default::default(),
                 output_param: ParamType::Unit,
                 message_outputs: None,
+                custom_assets: Default::default(),
             }
         }
     }
@@ -361,6 +399,7 @@ mod test {
                 message_outputs: None,
                 external_contracts: vec![],
                 output_param: ParamType::Unit,
+                custom_assets: Default::default(),
             })
             .collect();
 
