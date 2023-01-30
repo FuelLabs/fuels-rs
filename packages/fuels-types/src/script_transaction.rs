@@ -10,8 +10,6 @@ use fuel_tx::{
 
 use crate::errors::Error;
 
-/// [`ExecutableFuelCall`] provides methods to create and call/simulate a transaction that carries
-/// out contract method calls or script calls
 #[derive(Debug, Clone)]
 pub struct ScriptTransaction {
     tx: Script,
