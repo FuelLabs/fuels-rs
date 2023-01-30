@@ -1,6 +1,8 @@
 use fuel_tx::Receipt;
-use fuels_core::traits::{Parameterize, Tokenizable};
-use fuels_types::errors::Error;
+use fuels_types::{
+    errors::Error,
+    traits::{Parameterize, Tokenizable},
+};
 
 use crate::logs::LogDecoder;
 

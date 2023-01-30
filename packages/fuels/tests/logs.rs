@@ -106,7 +106,7 @@ async fn test_parse_logs_custom_types() -> Result<(), Error> {
         field_2: expected_bits256,
         field_3: 64,
     };
-    let expected_enum = TestEnum::VariantTwo();
+    let expected_enum = TestEnum::VariantTwo;
 
     assert_eq!(log_test_struct, vec![expected_struct]);
     assert_eq!(log_test_enum, vec![expected_enum]);
@@ -196,7 +196,7 @@ async fn test_get_logs() -> Result<(), Error> {
         field_2: expected_bits256,
         field_3: 64,
     };
-    let expected_enum = TestEnum::VariantTwo();
+    let expected_enum = TestEnum::VariantTwo;
     let expected_generic_struct = StructWithGeneric {
         field_1: expected_struct.clone(),
         field_2: 64,
@@ -632,7 +632,7 @@ async fn test_script_get_logs() -> Result<(), Error> {
         field_2: expected_bits256,
         field_3: 64,
     };
-    let expected_enum = TestEnum::VariantTwo();
+    let expected_enum = TestEnum::VariantTwo;
     let expected_generic_struct = StructWithGeneric {
         field_1: expected_struct.clone(),
         field_2: 64,
@@ -822,7 +822,7 @@ async fn test_script_get_logs_with_type() -> Result<(), Error> {
         field_2: expected_bits256,
         field_3: 64,
     };
-    let expected_enum = TestEnum::VariantTwo();
+    let expected_enum = TestEnum::VariantTwo;
     let expected_generic_struct = StructWithGeneric {
         field_1: expected_struct.clone(),
         field_2: 64,
@@ -885,7 +885,7 @@ async fn test_script_require_log() -> Result<(), Error> {
 
     {
         let error = instance
-            .main(MatchEnum::RequirePrimitive())
+            .main(MatchEnum::RequirePrimitive)
             .call()
             .await
             .expect_err("Should return a revert error");
@@ -894,7 +894,7 @@ async fn test_script_require_log() -> Result<(), Error> {
     }
     {
         let error = instance
-            .main(MatchEnum::RequireString())
+            .main(MatchEnum::RequireString)
             .call()
             .await
             .expect_err("Should return a revert error");
@@ -904,7 +904,7 @@ async fn test_script_require_log() -> Result<(), Error> {
     {
         let instance = log_script::new(wallet.clone(), bin_path);
         let error = instance
-            .main(MatchEnum::RequireCustomGeneric())
+            .main(MatchEnum::RequireCustomGeneric)
             .call()
             .await
             .expect_err("Should return a revert error");
@@ -914,7 +914,7 @@ async fn test_script_require_log() -> Result<(), Error> {
     {
         let instance = log_script::new(wallet.clone(), bin_path);
         let error = instance
-            .main(MatchEnum::RequireWithAdditionalLogs())
+            .main(MatchEnum::RequireWithAdditionalLogs)
             .call()
             .await
             .expect_err("Should return a revert error");

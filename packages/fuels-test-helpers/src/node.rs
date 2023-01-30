@@ -169,7 +169,7 @@ pub fn get_node_config_json(
     let coin_configs = into_coin_configs(coins);
     let messages = into_message_configs(messages);
 
-    let mut chain_config = chain_config.unwrap_or_else(|| ChainConfig::local_testnet());
+    let mut chain_config = chain_config.unwrap_or_else(ChainConfig::local_testnet);
 
     chain_config.initial_state = Some(StateConfig {
         coins: Some(coin_configs),
