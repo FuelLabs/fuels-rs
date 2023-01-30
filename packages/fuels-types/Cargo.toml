@@ -29,3 +29,4 @@ strum_macros = "0.21"
 itertools = "0.10.5"
 thiserror = { version = "1.0.26", default-features = false }
 tokio = "1.15"
+fuels-macros = { version = "0.34.0", path = "../fuels-macros" }

@@ -349,8 +349,8 @@ mod test {
     use fuels_types::{
         bech32::Bech32ContractId,
         coin::{Coin, CoinStatus},
-        core::Token,
         param_types::ParamType,
+        Token,
     };
     use rand::Rng;
 

@@ -18,7 +18,6 @@ use fuels_core::{
     abi_encoder::{ABIEncoder, UnresolvedBytes},
     constants::FAILED_TRANSFER_TO_ADDRESS_SIGNAL,
     parameters::{CallParameters, StorageConfiguration, TxParameters},
-    traits::{Parameterize, Tokenizable},
 };
 use fuels_signers::{
     provider::{Provider, TransactionCost},
@@ -26,9 +25,10 @@ use fuels_signers::{
 };
 use fuels_types::{
     bech32::{Bech32Address, Bech32ContractId},
-    core::{Selector, Token},
     errors::Error,
     param_types::{ParamType, ReturnLocation},
+    traits::{Parameterize, Tokenizable},
+    Selector, Token,
 };
 
 use crate::{
