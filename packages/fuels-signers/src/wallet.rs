@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt, ops, path::Path, result::Result as WalletResult};
+use std::{collections::HashMap, fmt, ops, path::Path};
 
 use async_trait::async_trait;
 use elliptic_curve::rand_core;
@@ -34,6 +34,8 @@ use thiserror::Error;
 use crate::{provider::Provider, Signer};
 
 pub const DEFAULT_DERIVATION_PATH_PREFIX: &str = "m/44'/1179993420'";
+
+type WalletResult<T> = std::result::Result<T, WalletError>;
 
 /// A FuelVM-compatible wallet that can be used to list assets, balances and more.
 ///
@@ -124,7 +126,7 @@ impl Wallet {
         Self { address, provider }
     }
 
-    pub fn get_provider(&self) -> WalletResult<&Provider, WalletError> {
+    pub fn get_provider(&self) -> WalletResult<&Provider> {
         self.provider.as_ref().ok_or(WalletError::NoProvider)
     }
 
@@ -409,7 +411,7 @@ impl WalletUnlocked {
     pub fn new_from_mnemonic_phrase(
         phrase: &str,
         provider: Option<Provider>,
-    ) -> WalletResult<Self, WalletError> {
+    ) -> WalletResult<Self> {
         let path = format!("{}/0'/0/0", DEFAULT_DERIVATION_PATH_PREFIX);
         Self::new_from_mnemonic_phrase_with_path(phrase, provider, &path)
     }
@@ -420,7 +422,7 @@ impl WalletUnlocked {
         phrase: &str,
         provider: Option<Provider>,
         path: &str,
-    ) -> WalletResult<Self, WalletError> {
+    ) -> WalletResult<Self> {
         let secret_key = SecretKey::new_from_mnemonic_phrase_with_path(phrase, path)?;
 
         Ok(Self::new_from_private_key(secret_key, provider))
@@ -432,7 +434,7 @@ impl WalletUnlocked {
         rng: &mut R,
         password: S,
         provider: Option<Provider>,
-    ) -> WalletResult<(Self, String), WalletError>
+    ) -> WalletResult<(Self, String)>
     where
         P: AsRef<Path>,
         R: Rng + CryptoRng + rand_core::CryptoRng,
@@ -449,7 +451,7 @@ impl WalletUnlocked {
 
     /// Encrypts the wallet's private key with the given password and saves it
     /// to the given path.
-    pub fn encrypt<P, S>(&self, dir: P, password: S) -> WalletResult<String, WalletError>
+    pub fn encrypt<P, S>(&self, dir: P, password: S) -> WalletResult<String>
     where
         P: AsRef<Path>,
         S: AsRef<[u8]>,
@@ -469,7 +471,7 @@ impl WalletUnlocked {
         keypath: P,
         password: S,
         provider: Option<Provider>,
-    ) -> WalletResult<Self, WalletError>
+    ) -> WalletResult<Self>
     where
         P: AsRef<Path>,
         S: AsRef<[u8]>,
@@ -843,7 +845,7 @@ impl Signer for WalletUnlocked {
     async fn sign_message<S: Send + Sync + AsRef<[u8]>>(
         &self,
         message: S,
-    ) -> WalletResult<Signature, Self::Error> {
+    ) -> WalletResult<Signature> {
         let message = Message::new(message);
         let sig = Signature::sign(&self.private_key, &message);
         Ok(sig)
@@ -852,7 +854,7 @@ impl Signer for WalletUnlocked {
     async fn sign_transaction<Tx: Cacheable + UniqueIdentifier + field::Witnesses + Send>(
         &self,
         tx: &mut Tx,
-    ) -> WalletResult<Signature, Self::Error> {
+    ) -> WalletResult<Signature> {
         let id = tx.id();
 
         // Safety: `Message::from_bytes_unchecked` is unsafe because
@@ -899,10 +901,7 @@ impl ops::Deref for WalletUnlocked {
 
 /// Generates a random mnemonic phrase given a random number generator and the number of words to
 /// generate, `count`.
-pub fn generate_mnemonic_phrase<R: Rng>(
-    rng: &mut R,
-    count: usize,
-) -> WalletResult<String, WalletError> {
+pub fn generate_mnemonic_phrase<R: Rng>(rng: &mut R, count: usize) -> WalletResult<String> {
     Ok(fuel_crypto::FuelMnemonic::generate_mnemonic_phrase(
         rng, count,
     )?)

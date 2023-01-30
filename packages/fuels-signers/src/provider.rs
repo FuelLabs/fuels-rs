@@ -1,4 +1,4 @@
-use std::{collections::HashMap, io, result::Result as ProviderResult};
+use std::{collections::HashMap, io};
 
 use chrono::{DateTime, Duration, Utc};
 #[cfg(feature = "fuel-core")]
@@ -32,6 +32,8 @@ use fuels_types::{
 };
 use tai64::Tai64;
 use thiserror::Error;
+
+type ProviderResult<T> = std::result::Result<T, ProviderError>;
 
 #[derive(Debug)]
 pub struct TransactionCost {
@@ -145,7 +147,7 @@ impl Provider {
     async fn submit_with_feedback(
         &self,
         tx: &Transaction,
-    ) -> ProviderResult<(TransactionStatus, Vec<Receipt>), ProviderError> {
+    ) -> ProviderResult<(TransactionStatus, Vec<Receipt>)> {
         let tx_id = tx.id().to_string();
         let status = self.client.submit_and_await_commit(tx).await?;
         let receipts = self.client.receipts(&tx_id).await?;
@@ -183,26 +185,23 @@ impl Provider {
         Ok(Provider::new(client))
     }
 
-    pub async fn chain_info(&self) -> ProviderResult<ChainInfo, ProviderError> {
+    pub async fn chain_info(&self) -> ProviderResult<ChainInfo> {
         Ok(self.client.chain_info().await?.into())
     }
 
-    pub async fn consensus_parameters(&self) -> ProviderResult<ConsensusParameters, ProviderError> {
+    pub async fn consensus_parameters(&self) -> ProviderResult<ConsensusParameters> {
         Ok(self.client.chain_info().await?.consensus_parameters.into())
     }
 
-    pub async fn node_info(&self) -> ProviderResult<NodeInfo, ProviderError> {
+    pub async fn node_info(&self) -> ProviderResult<NodeInfo> {
         Ok(self.client.node_info().await?.into())
     }
 
-    pub async fn dry_run(&self, tx: &Transaction) -> ProviderResult<Vec<Receipt>, ProviderError> {
+    pub async fn dry_run(&self, tx: &Transaction) -> ProviderResult<Vec<Receipt>> {
         Ok(self.client.dry_run(tx).await?)
     }
 
-    pub async fn dry_run_no_validation(
-        &self,
-        tx: &Transaction,
-    ) -> ProviderResult<Vec<Receipt>, ProviderError> {
+    pub async fn dry_run_no_validation(&self, tx: &Transaction) -> ProviderResult<Vec<Receipt>> {
         Ok(self.client.dry_run_opt(tx, Some(false)).await?)
     }
 
@@ -212,7 +211,7 @@ impl Provider {
         &self,
         from: &Bech32Address,
         asset_id: AssetId,
-    ) -> ProviderResult<Vec<Coin>, ProviderError> {
+    ) -> ProviderResult<Vec<Coin>> {
         let mut coins: Vec<Coin> = vec![];
 
         let mut cursor = None;
@@ -249,7 +248,7 @@ impl Provider {
         from: &Bech32Address,
         asset_id: AssetId,
         amount: u64,
-    ) -> ProviderResult<Vec<Resource>, ProviderError> {
+    ) -> ProviderResult<Vec<Resource>> {
         use itertools::Itertools;
 
         let res = self
@@ -263,9 +262,9 @@ impl Provider {
             .into_iter()
             .flatten()
             .map(|resource| {
-                let resource: ProviderResult<Resource, _> = resource.try_into();
-
-                resource.map_err(ProviderError::ClientRequestError)
+                resource
+                    .try_into()
+                    .map_err(ProviderError::ClientRequestError)
             })
             .try_collect()?;
 
@@ -279,7 +278,7 @@ impl Provider {
         &self,
         address: &Bech32Address,
         asset_id: AssetId,
-    ) -> ProviderResult<u64, ProviderError> {
+    ) -> ProviderResult<u64> {
         self.client
             .balance(&address.hash().to_string(), Some(&*asset_id.to_string()))
             .await
@@ -291,7 +290,7 @@ impl Provider {
         &self,
         contract_id: &Bech32ContractId,
         asset_id: AssetId,
-    ) -> ProviderResult<u64, ProviderError> {
+    ) -> ProviderResult<u64> {
         self.client
             .contract_balance(&contract_id.hash().to_string(), Some(&asset_id.to_string()))
             .await
@@ -304,7 +303,7 @@ impl Provider {
     pub async fn get_balances(
         &self,
         address: &Bech32Address,
-    ) -> ProviderResult<HashMap<String, u64>, ProviderError> {
+    ) -> ProviderResult<HashMap<String, u64>> {
         // We don't paginate results because there are likely at most ~100 different assets in one
         // wallet
         let pagination = PaginationRequest {
@@ -334,7 +333,7 @@ impl Provider {
     pub async fn get_contract_balances(
         &self,
         contract_id: &Bech32ContractId,
-    ) -> ProviderResult<HashMap<String, u64>, ProviderError> {
+    ) -> ProviderResult<HashMap<String, u64>> {
         // We don't paginate results because there are likely at most ~100 different assets in one
         // wallet
         let pagination = PaginationRequest {
@@ -364,7 +363,7 @@ impl Provider {
     pub async fn get_transaction_by_id(
         &self,
         tx_id: &str,
-    ) -> ProviderResult<Option<TransactionResponse>, ProviderError> {
+    ) -> ProviderResult<Option<TransactionResponse>> {
         Ok(self.client.transaction(tx_id).await?.map(Into::into))
     }
 
@@ -372,7 +371,7 @@ impl Provider {
     pub async fn get_transactions(
         &self,
         request: PaginationRequest<String>,
-    ) -> ProviderResult<PaginatedResult<TransactionResponse, String>, ProviderError> {
+    ) -> ProviderResult<PaginatedResult<TransactionResponse, String>> {
         let pr = self.client.transactions(request).await?;
 
         Ok(PaginatedResult {
@@ -388,7 +387,7 @@ impl Provider {
         &self,
         owner: &Bech32Address,
         request: PaginationRequest<String>,
-    ) -> ProviderResult<PaginatedResult<TransactionResponse, String>, ProviderError> {
+    ) -> ProviderResult<PaginatedResult<TransactionResponse, String>> {
         let pr = self
             .client
             .transactions_by_owner(&owner.hash().to_string(), request)
@@ -402,7 +401,7 @@ impl Provider {
         })
     }
 
-    pub async fn latest_block_height(&self) -> ProviderResult<u64, ProviderError> {
+    pub async fn latest_block_height(&self) -> ProviderResult<u64> {
         Ok(self.client.chain_info().await?.latest_block.header.height.0)
     }
 
@@ -416,7 +415,7 @@ impl Provider {
     }
 
     /// Get block by id.
-    pub async fn block(&self, block_id: &str) -> ProviderResult<Option<Block>, ProviderError> {
+    pub async fn block(&self, block_id: &str) -> ProviderResult<Option<Block>> {
         let block = self.client.block(block_id).await?.map(Into::into);
         Ok(block)
     }
@@ -425,7 +424,7 @@ impl Provider {
     pub async fn get_blocks(
         &self,
         request: PaginationRequest<String>,
-    ) -> ProviderResult<PaginatedResult<Block, String>, ProviderError> {
+    ) -> ProviderResult<PaginatedResult<Block, String>> {
         let pr = self.client.blocks(request).await?;
 
         Ok(PaginatedResult {
@@ -484,7 +483,7 @@ impl Provider {
         &self,
         tx: &Tx,
         tolerance: f64,
-    ) -> ProviderResult<u64, ProviderError> {
+    ) -> ProviderResult<u64> {
         let gas_used = self.get_gas_used(&self.dry_run_no_validation(&tx.clone().into()).await?);
         Ok((gas_used as f64 * (1.0 + tolerance)) as u64)
     }
@@ -501,10 +500,7 @@ impl Provider {
             .unwrap_or(0)
     }
 
-    pub async fn get_messages(
-        &self,
-        from: &Bech32Address,
-    ) -> ProviderResult<Vec<Message>, ProviderError> {
+    pub async fn get_messages(&self, from: &Bech32Address) -> ProviderResult<Vec<Message>> {
         let pagination = PaginationRequest {
             cursor: None,
             results: 100,
@@ -525,7 +521,7 @@ impl Provider {
         &self,
         tx_id: &str,
         message_id: &str,
-    ) -> ProviderResult<Option<MessageProof>, ProviderError> {
+    ) -> ProviderResult<Option<MessageProof>> {
         let proof = self
             .client
             .message_proof(tx_id, message_id)
