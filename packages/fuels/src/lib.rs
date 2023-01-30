@@ -37,7 +37,7 @@ pub mod signers {
 }
 
 pub mod types {
-    pub use fuels_types::{core::*, *};
+    pub use fuels_types::*;
 }
 
 pub mod test_helpers {

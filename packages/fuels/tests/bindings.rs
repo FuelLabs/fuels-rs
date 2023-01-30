@@ -1,9 +1,9 @@
 use std::{slice, str::FromStr};
 
 use fuels::{
-    core::{abi_encoder::ABIEncoder, traits::Tokenizable},
+    core::abi_encoder::ABIEncoder,
     prelude::*,
-    types::{Bits256, Byte, EvmAddress},
+    types::{traits::Tokenizable, Bits256, Byte, EvmAddress},
 };
 use sha2::{Digest, Sha256};
 

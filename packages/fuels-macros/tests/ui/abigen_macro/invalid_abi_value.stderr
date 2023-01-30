@@ -1,5 +1,0 @@
-error: Expected the attribute 'abi' to have a string value!
- --> tests/ui/abigen_macro/invalid_abi_value.rs:3:43
-  |
-3 | abigen!(Contract(name = "SomeName", abi = true,));
-  |                                           ^^^^
