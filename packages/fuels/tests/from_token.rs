@@ -1,6 +1,9 @@
 use std::str::FromStr;
 
-use fuels::{core::traits::Tokenizable, prelude::*, types::Token};
+use fuels::{
+    prelude::*,
+    types::{traits::Tokenizable, Token},
+};
 
 pub fn null_contract_id() -> Bech32ContractId {
     // a bech32 contract address that decodes to [0u8;32]

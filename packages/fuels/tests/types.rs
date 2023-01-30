@@ -324,7 +324,7 @@ async fn test_tuples() -> Result<()> {
     }
     {
         // Tuple with enum.
-        let my_enum_tuple: (u64, State) = (42, State::A());
+        let my_enum_tuple: (u64, State) = (42, State::A);
 
         let response = contract_methods
             .returns_enum_in_tuple(my_enum_tuple.clone())
@@ -485,7 +485,7 @@ async fn test_arrays_with_custom_types() -> Result<()> {
     assert_eq!("John", response.value[0].name);
     assert_eq!("Jane", response.value[1].name);
 
-    let states = [State::A(), State::B()];
+    let states = [State::A, State::B];
 
     let response = contract_methods
         .array_of_enums(states.clone())
@@ -675,7 +675,7 @@ async fn enum_coding_w_unit_enums() -> Result<()> {
     // If we had a regression on the issue of unit enum encoding width, then
     // we'll end up mangling arg_2
     let expected = UnitBundle {
-        arg_1: UnitEnum::var2(),
+        arg_1: UnitEnum::var2,
         arg_2: u64::MAX,
     };
 
@@ -726,7 +726,7 @@ async fn enum_as_input() -> Result<()> {
         "The FuelVM deems that we've not encoded the standard enum correctly. Investigate!"
     );
 
-    let expected = UnitEnum::Two();
+    let expected = UnitEnum::Two;
     let actual = contract_methods.get_unit_enum().call().await?.value;
     assert_eq!(actual, expected);
 

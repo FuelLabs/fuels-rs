@@ -1,9 +1,9 @@
 extern crate alloc;
 
 use fuels::{
-    core::{abi_decoder::ABIDecoder, traits::Tokenizable},
+    core::abi_decoder::ABIDecoder,
     macros::wasm_abigen,
-    types::param_types::ParamType,
+    types::{param_types::ParamType, traits::Tokenizable},
 };
 
 wasm_abigen!(Contract(

@@ -1,7 +1,6 @@
 use fuels_types::{
-    constants::WORD_SIZE,
-    core::{pad_string, pad_u16, pad_u32, pad_u8, EnumSelector, StringToken, Token},
-    errors::Result,
+    constants::WORD_SIZE, errors::Result, pad_string, pad_u16, pad_u32, pad_u8, EnumSelector,
+    StringToken, Token,
 };
 use itertools::Itertools;
 

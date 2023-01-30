@@ -1,15 +1,20 @@
 use proc_macro::TokenStream;
-use syn::parse_macro_input;
+use syn::{parse_macro_input, DeriveInput};
 
 use crate::{
-    abigen_macro::{Abigen, MacroAbigenTargets},
-    setup_contract_test_macro::{generate_setup_contract_test_code, TestContractCommands},
+    abigen::{Abigen, MacroAbigenTargets},
+    derive::{
+        parameterize::generate_parameterize_impl, tokenizable::generate_tokenizable_impl,
+        try_from::generate_try_from_impl,
+    },
+    setup_contract_test::{generate_setup_contract_test_code, TestContractCommands},
 };
 
-mod abigen_macro;
+mod abigen;
+mod derive;
 mod error;
 mod parse_utils;
-mod setup_contract_test_macro;
+mod setup_contract_test;
 mod utils;
 
 /// Used to generate bindings for Contracts, Scripts and Predicates. Accepts
@@ -73,6 +78,33 @@ pub fn setup_contract_test(input: TokenStream) -> TokenStream {
     let test_contract_commands = parse_macro_input!(input as TestContractCommands);
 
     generate_setup_contract_test_code(test_contract_commands)
+        .unwrap_or_else(|e| e.to_compile_error())
+        .into()
+}
+
+#[proc_macro_derive(Parameterize, attributes(FuelsTypesPath))]
+pub fn parameterize(stream: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(stream as DeriveInput);
+
+    generate_parameterize_impl(input)
+        .unwrap_or_else(|e| e.to_compile_error())
+        .into()
+}
+
+#[proc_macro_derive(Tokenizable)]
+pub fn tokenizable(stream: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(stream as DeriveInput);
+
+    generate_tokenizable_impl(input)
+        .unwrap_or_else(|e| e.to_compile_error())
+        .into()
+}
+
+#[proc_macro_derive(TryFrom)]
+pub fn try_from(stream: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(stream as DeriveInput);
+
+    generate_try_from_impl(input)
         .unwrap_or_else(|e| e.to_compile_error())
         .into()
 }
