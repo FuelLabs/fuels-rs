@@ -713,4 +713,36 @@ mod tests {
 
         Ok(())
     }
+
+    #[tokio::test]
+    async fn custom_assets_example() -> Result<(), Error> {
+        use fuels::prelude::*;
+
+        setup_contract_test!(
+            Wallets("wallet"),
+            Abigen(
+                name = "MyContract",
+                abi = "packages/fuels/tests/contracts/contract_test"
+            ),
+            Deploy(
+                name = "contract_instance",
+                contract = "MyContract",
+                wallet = "wallet"
+            )
+        );
+
+        let other_wallet = WalletUnlocked::new_random(None);
+
+        // ANCHOR: add_custom_assets
+        let amount = 1000;
+        let _ = contract_instance
+            .methods()
+            .initialize_counter(42)
+            .add_custom_asset(BASE_ASSET_ID, amount, Some(other_wallet.address().clone()))
+            .call()
+            .await?;
+        // ANCHOR_END: add_custom_assets
+
+        Ok(())
+    }
 }
