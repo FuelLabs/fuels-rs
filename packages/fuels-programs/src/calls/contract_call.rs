@@ -239,6 +239,8 @@ where
     /// ```ignore
     /// my_contract_instance.my_method(...).set_contracts(&[another_contract_instance]).call()
     /// ```
+    /// [`Input::Contract`]: fuel_tx::Input::Contract
+    /// [`Output::Contract`]: fuel_tx::Output::Contract
     pub fn set_contracts(mut self, contracts: &[&dyn SettableContract]) -> Self {
         self.contract_call.external_contracts = contracts.iter().map(|c| c.id()).collect();
         for c in contracts {
