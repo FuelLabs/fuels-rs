@@ -10,7 +10,11 @@ use fuel_abi_types::{
 use itertools::Itertools;
 use strum_macros::EnumString;
 
-use crate::{constants::WORD_SIZE, enum_variants::EnumVariants, errors::Error};
+use crate::{
+    constants::WORD_SIZE,
+    enum_variants::EnumVariants,
+    errors::{error, Error, Result},
+};
 
 #[derive(Debug, Clone, EnumString, PartialEq, Eq)]
 #[strum(ascii_case_insensitive)]
@@ -113,7 +117,7 @@ impl ParamType {
     pub fn try_from_type_application(
         type_application: &TypeApplication,
         type_lookup: &HashMap<usize, TypeDeclaration>,
-    ) -> Result<Self, Error> {
+    ) -> Result<Self> {
         Type::from(type_application, type_lookup).try_into()
     }
 }
@@ -240,7 +244,7 @@ impl Type {
 impl TryFrom<Type> for ParamType {
     type Error = Error;
 
-    fn try_from(value: Type) -> Result<Self, Self::Error> {
+    fn try_from(value: Type) -> Result<Self> {
         (&value).try_into()
     }
 }
@@ -248,7 +252,7 @@ impl TryFrom<Type> for ParamType {
 impl TryFrom<&Type> for ParamType {
     type Error = Error;
 
-    fn try_from(the_type: &Type) -> Result<Self, Self::Error> {
+    fn try_from(the_type: &Type) -> Result<Self> {
         let matched_param_type = [
             try_primitive,
             try_array,
@@ -264,21 +268,21 @@ impl TryFrom<&Type> for ParamType {
         .next();
 
         matched_param_type.map(Ok).unwrap_or_else(|| {
-            Err(Error::InvalidType(format!(
-                "Type {} couldn't be converted into a ParamType",
-                the_type.type_field
-            )))
+            Err(error!(
+                InvalidType,
+                "Type {} couldn't be converted into a ParamType", the_type.type_field
+            ))
         })
     }
 }
 
-fn named_param_types(coll: &[Type]) -> Result<Vec<(String, ParamType)>, Error> {
+fn named_param_types(coll: &[Type]) -> Result<Vec<(String, ParamType)>> {
     coll.iter()
         .map(|e| Ok(("unused".to_string(), e.try_into()?)))
         .collect()
 }
 
-fn try_struct(the_type: &Type) -> Result<Option<ParamType>, Error> {
+fn try_struct(the_type: &Type) -> Result<Option<ParamType>> {
     let result = if has_struct_format(&the_type.type_field) {
         let generics = param_types(&the_type.generic_params)?;
 
@@ -299,20 +303,22 @@ fn has_struct_format(field: &str) -> bool {
     field.starts_with("struct ")
 }
 
-fn try_vector(the_type: &Type) -> Result<Option<ParamType>, Error> {
+fn try_vector(the_type: &Type) -> Result<Option<ParamType>> {
     let type_field = &the_type.type_field;
     if has_struct_format(type_field)
         && extract_custom_type_name(type_field).ok_or_else(|| {
-            Error::InvalidType(format!(
+            error!(
+                InvalidType,
                 "Could not extract struct name from type_field {type_field}"
-            ))
+            )
         })? == "Vec"
     {
         if the_type.generic_params.len() != 1 {
-            return Err(Error::InvalidType(format!(
+            return Err(error!(
+                InvalidType,
                 "Vec must have exactly one generic argument for its type. Found: {:?}",
                 the_type.generic_params
-            )));
+            ));
         }
 
         let (_, vec_elem_type) = named_param_types(&the_type.generic_params)?.remove(0);
@@ -323,7 +329,7 @@ fn try_vector(the_type: &Type) -> Result<Option<ParamType>, Error> {
     Ok(None)
 }
 
-fn try_enum(the_type: &Type) -> Result<Option<ParamType>, Error> {
+fn try_enum(the_type: &Type) -> Result<Option<ParamType>> {
     let field = &the_type.type_field;
     let result = if field.starts_with("enum ") {
         let generics = param_types(&the_type.generic_params)?;
@@ -343,7 +349,7 @@ fn try_enum(the_type: &Type) -> Result<Option<ParamType>, Error> {
     Ok(result)
 }
 
-fn try_tuple(the_type: &Type) -> Result<Option<ParamType>, Error> {
+fn try_tuple(the_type: &Type) -> Result<Option<ParamType>> {
     let result = if has_tuple_format(&the_type.type_field) {
         let tuple_elements = param_types(&the_type.components)?;
         Some(ParamType::Tuple(tuple_elements))
@@ -354,15 +360,15 @@ fn try_tuple(the_type: &Type) -> Result<Option<ParamType>, Error> {
     Ok(result)
 }
 
-fn param_types(coll: &[Type]) -> Result<Vec<ParamType>, Error> {
+fn param_types(coll: &[Type]) -> Result<Vec<ParamType>> {
     coll.iter().map(|e| e.try_into()).collect()
 }
 
-fn try_str(the_type: &Type) -> Result<Option<ParamType>, Error> {
+fn try_str(the_type: &Type) -> Result<Option<ParamType>> {
     Ok(extract_str_len(&the_type.type_field).map(ParamType::String))
 }
 
-fn try_array(the_type: &Type) -> Result<Option<ParamType>, Error> {
+fn try_array(the_type: &Type) -> Result<Option<ParamType>> {
     if let Some(len) = extract_array_len(&the_type.type_field) {
         if the_type.components.len() != 1 {}
 
@@ -371,16 +377,17 @@ fn try_array(the_type: &Type) -> Result<Option<ParamType>, Error> {
                 let array_type = single_type.try_into()?;
                 Ok(Some(ParamType::Array(Box::new(array_type), len)))
             }
-            _ => Err(Error::InvalidType(format!(
+            _ => Err(error!(
+                InvalidType,
                 "An array must have elements of exactly one type. Array types: {:?}",
                 the_type.components
-            ))),
+            )),
         };
     }
     Ok(None)
 }
 
-fn try_primitive(the_type: &Type) -> Result<Option<ParamType>, Error> {
+fn try_primitive(the_type: &Type) -> Result<Option<ParamType>> {
     let result = match the_type.type_field.as_str() {
         "byte" => Some(ParamType::Byte),
         "bool" => Some(ParamType::Bool),
@@ -459,7 +466,7 @@ mod tests {
     }
 
     #[test]
-    fn enums_are_as_big_as_their_biggest_variant_plus_a_word() -> Result<(), Error> {
+    fn enums_are_as_big_as_their_biggest_variant_plus_a_word() -> Result<()> {
         let inner_struct = ParamType::Struct {
             name: "".to_string(),
             fields: generate_unused_field_names(vec![ParamType::B256]),
@@ -495,7 +502,7 @@ mod tests {
     }
 
     #[test]
-    fn handles_simple_types() -> Result<(), Error> {
+    fn handles_simple_types() -> Result<()> {
         let parse_param_type = |type_field: &str| {
             let type_application = TypeApplication {
                 name: "".to_string(),
@@ -532,7 +539,7 @@ mod tests {
     }
 
     #[test]
-    fn handles_arrays() -> Result<(), Error> {
+    fn handles_arrays() -> Result<()> {
         // given
         let type_application = TypeApplication {
             name: "".to_string(),
@@ -574,7 +581,7 @@ mod tests {
     }
 
     #[test]
-    fn handles_vectors() -> Result<(), Error> {
+    fn handles_vectors() -> Result<()> {
         // given
         let declarations = [
             TypeDeclaration {
@@ -666,7 +673,7 @@ mod tests {
     }
 
     #[test]
-    fn handles_structs() -> Result<(), Error> {
+    fn handles_structs() -> Result<()> {
         // given
         let declarations = [
             TypeDeclaration {
@@ -725,7 +732,7 @@ mod tests {
     }
 
     #[test]
-    fn handles_enums() -> Result<(), Error> {
+    fn handles_enums() -> Result<()> {
         // given
         let declarations = [
             TypeDeclaration {
@@ -784,7 +791,7 @@ mod tests {
     }
 
     #[test]
-    fn handles_tuples() -> Result<(), Error> {
+    fn handles_tuples() -> Result<()> {
         // given
         let declarations = [
             TypeDeclaration {
@@ -841,7 +848,7 @@ mod tests {
     }
 
     #[test]
-    fn ultimate_example() -> Result<(), Error> {
+    fn ultimate_example() -> Result<()> {
         // given
         let declarations = [
             TypeDeclaration {

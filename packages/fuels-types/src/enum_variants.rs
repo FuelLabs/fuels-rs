@@ -1,6 +1,6 @@
 use crate::{
     constants::{ENUM_DISCRIMINANT_WORD_WIDTH, WORD_SIZE},
-    errors::CodecError,
+    errors::{error, Error, Result},
     param_types::ParamType,
 };
 
@@ -10,13 +10,11 @@ pub struct EnumVariants {
 }
 
 impl EnumVariants {
-    pub fn new(variants: Vec<(String, ParamType)>) -> Result<EnumVariants, CodecError> {
+    pub fn new(variants: Vec<(String, ParamType)>) -> Result<EnumVariants> {
         if !variants.is_empty() {
             Ok(EnumVariants { variants })
         } else {
-            Err(CodecError::InvalidData(
-                "Enum variants can not be empty!".into(),
-            ))
+            Err(error!(InvalidData, "Enum variants can not be empty!"))
         }
     }
 
@@ -32,12 +30,13 @@ impl EnumVariants {
             .collect()
     }
 
-    pub fn select_variant(&self, discriminant: u8) -> Result<&(String, ParamType), CodecError> {
+    pub fn select_variant(&self, discriminant: u8) -> Result<&(String, ParamType)> {
         self.variants.get(discriminant as usize).ok_or_else(|| {
-            CodecError::InvalidData(format!(
+            error!(
+                InvalidData,
                 "Discriminant '{discriminant}' doesn't point to any variant: {:?}",
                 self.variants()
-            ))
+            )
         })
     }
 

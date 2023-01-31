@@ -21,7 +21,6 @@ fuels-test-helpers = { version = "0.34.0", path = "../fuels-test-helpers" }
 fuels-types = { version = "0.34.0", path = "../fuels-types" }
 
 [dev-dependencies]
-anyhow = "1.0.58"
 chrono = "0.4.2"
 fuel-core = { version = "0.15", default-features = false }
 fuel-core-interfaces = { version = "0.15", default-features = false }

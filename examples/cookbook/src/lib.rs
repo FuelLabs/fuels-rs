@@ -1,9 +1,9 @@
 #[cfg(test)]
 mod tests {
-    use fuels::{prelude::Error, tx::Script};
+    use fuels::prelude::{Result, tx::Script};
 
     #[tokio::test]
-    async fn liquidity() -> Result<(), Error> {
+    async fn liquidity() -> Result<()> {
         use fuels::{
             prelude::*,
             test_helpers::{AssetConfig, WalletsConfig},
@@ -78,7 +78,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn custom_chain() -> Result<(), Error> {
+    async fn custom_chain() -> Result<()> {
         use fuels::prelude::*;
         // ANCHOR: custom_chain_import
         use fuels::tx::ConsensusParameters;
@@ -117,7 +117,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn transfer_multiple() -> Result<(), Error> {
+    async fn transfer_multiple() -> Result<()> {
         use std::str::FromStr;
 
         use fuels::prelude::*;

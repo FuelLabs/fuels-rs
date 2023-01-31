@@ -23,7 +23,7 @@ use fuels_core::{
 use fuels_types::{
     bech32::{Bech32Address, Bech32ContractId, FUEL_BECH32_HRP},
     coin::Coin,
-    errors::Error,
+    errors::{error, Error, Result},
     message::Message as InputMessage,
     resource::Resource,
     script_transaction::ScriptTransaction,
@@ -35,6 +35,8 @@ use thiserror::Error;
 use crate::{provider::Provider, Signer};
 
 pub const DEFAULT_DERIVATION_PATH_PREFIX: &str = "m/44'/1179993420'";
+
+type WalletResult<T> = std::result::Result<T, WalletError>;
 
 /// A FuelVM-compatible wallet that can be used to list assets, balances and more.
 ///
@@ -65,7 +67,7 @@ pub struct Wallet {
 /// use fuel_crypto::Message;
 /// use fuels::prelude::*;
 ///
-/// async fn foo() -> Result<(), Error> {
+/// async fn foo() -> Result<()> {
 ///   // Setup local test node
 ///   let (provider, _) = setup_test_provider(vec![], vec![], None, None).await;
 ///
@@ -125,7 +127,7 @@ impl Wallet {
         Self { address, provider }
     }
 
-    pub fn get_provider(&self) -> Result<&Provider, WalletError> {
+    pub fn get_provider(&self) -> WalletResult<&Provider> {
         self.provider.as_ref().ok_or(WalletError::NoProvider)
     }
 
@@ -140,7 +142,7 @@ impl Wallet {
     pub async fn get_transactions(
         &self,
         request: PaginationRequest<String>,
-    ) -> Result<PaginatedResult<TransactionResponse, String>, Error> {
+    ) -> Result<PaginatedResult<TransactionResponse, String>> {
         Ok(self
             .get_provider()?
             .get_transactions_by_owner(&self.address, request)
@@ -158,7 +160,7 @@ impl Wallet {
         asset_id: AssetId,
         amount: u64,
         witness_index: u8,
-    ) -> Result<Vec<Input>, Error> {
+    ) -> Result<Vec<Input>> {
         Ok(self
             .get_spendable_resources(asset_id, amount)
             .await?
@@ -212,7 +214,7 @@ impl Wallet {
     /// Gets all coins of asset `asset_id` owned by the wallet, *even spent ones* (this is useful
     /// for some particular cases, but in general, you should use `get_spendable_coins`). This
     /// returns actual coins (UTXOs).
-    pub async fn get_coins(&self, asset_id: AssetId) -> Result<Vec<Coin>, Error> {
+    pub async fn get_coins(&self, asset_id: AssetId) -> Result<Vec<Coin>> {
         Ok(self
             .get_provider()?
             .get_coins(&self.address, asset_id)
@@ -226,7 +228,7 @@ impl Wallet {
         &self,
         asset_id: AssetId,
         amount: u64,
-    ) -> Result<Vec<Resource>, Error> {
+    ) -> Result<Vec<Resource>> {
         self.get_provider()?
             .get_spendable_resources(&self.address, asset_id, amount)
             .await
@@ -236,7 +238,7 @@ impl Wallet {
     /// Get the balance of all spendable coins `asset_id` for address `address`. This is different
     /// from getting coins because we are just returning a number (the sum of UTXOs amount) instead
     /// of the UTXOs.
-    pub async fn get_asset_balance(&self, asset_id: &AssetId) -> Result<u64, Error> {
+    pub async fn get_asset_balance(&self, asset_id: &AssetId) -> Result<u64> {
         self.get_provider()?
             .get_asset_balance(&self.address, *asset_id)
             .await
@@ -246,14 +248,14 @@ impl Wallet {
     /// Get all the spendable balances of all assets for the wallet. This is different from getting
     /// the coins because we are only returning the sum of UTXOs coins amount and not the UTXOs
     /// coins themselves.
-    pub async fn get_balances(&self) -> Result<HashMap<String, u64>, Error> {
+    pub async fn get_balances(&self) -> Result<HashMap<String, u64>> {
         self.get_provider()?
             .get_balances(&self.address)
             .await
             .map_err(Into::into)
     }
 
-    pub async fn get_messages(&self) -> Result<Vec<InputMessage>, Error> {
+    pub async fn get_messages(&self) -> Result<Vec<InputMessage>> {
         Ok(self.get_provider()?.get_messages(&self.address).await?)
     }
 
@@ -417,7 +419,7 @@ impl WalletUnlocked {
     pub fn new_from_mnemonic_phrase(
         phrase: &str,
         provider: Option<Provider>,
-    ) -> Result<Self, WalletError> {
+    ) -> WalletResult<Self> {
         let path = format!("{}/0'/0/0", DEFAULT_DERIVATION_PATH_PREFIX);
         Self::new_from_mnemonic_phrase_with_path(phrase, provider, &path)
     }
@@ -428,7 +430,7 @@ impl WalletUnlocked {
         phrase: &str,
         provider: Option<Provider>,
         path: &str,
-    ) -> Result<Self, WalletError> {
+    ) -> WalletResult<Self> {
         let secret_key = SecretKey::new_from_mnemonic_phrase_with_path(phrase, path)?;
 
         Ok(Self::new_from_private_key(secret_key, provider))
@@ -440,7 +442,7 @@ impl WalletUnlocked {
         rng: &mut R,
         password: S,
         provider: Option<Provider>,
-    ) -> Result<(Self, String), WalletError>
+    ) -> WalletResult<(Self, String)>
     where
         P: AsRef<Path>,
         R: Rng + CryptoRng + rand_core::CryptoRng,
@@ -457,7 +459,7 @@ impl WalletUnlocked {
 
     /// Encrypts the wallet's private key with the given password and saves it
     /// to the given path.
-    pub fn encrypt<P, S>(&self, dir: P, password: S) -> Result<String, WalletError>
+    pub fn encrypt<P, S>(&self, dir: P, password: S) -> WalletResult<String>
     where
         P: AsRef<Path>,
         S: AsRef<[u8]>,
@@ -477,7 +479,7 @@ impl WalletUnlocked {
         keypath: P,
         password: S,
         provider: Option<Provider>,
-    ) -> Result<Self, WalletError>
+    ) -> WalletResult<Self>
     where
         P: AsRef<Path>,
         S: AsRef<[u8]>,
@@ -499,7 +501,7 @@ impl WalletUnlocked {
         tx: &mut Tx,
         previous_base_amount: u64,
         witness_index: u8,
-    ) -> Result<(), Error> {
+    ) -> Result<()> {
         let consensus_parameters = self
             .get_provider()?
             .chain_info()
@@ -520,8 +522,9 @@ impl WalletUnlocked {
             .sum();
         // either the inputs were setup incorrectly, or the passed previous_base_amount is wrong
         if base_inputs_sum < previous_base_amount {
-            return Err(Error::WalletError(
-                "The provided base asset amount is less than the present input coins".to_string(),
+            return Err(error!(
+                WalletError,
+                "The provided base asset amount is less than the present input coins"
             ));
         }
 
@@ -572,7 +575,7 @@ impl WalletUnlocked {
     /// #[cfg(feature = "fuel-core-lib")]
     /// use fuels_test_helpers::Config;
     ///
-    /// async fn foo() -> Result<(), Box<dyn std::error::Error>> {
+    /// async fn foo() -> std::result::Result<(), Box<dyn std::error::Error>> {
     ///  // Create the actual wallets/signers
     ///  let mut wallet_1 = WalletUnlocked::new_random(None);
     ///  let mut wallet_2 = WalletUnlocked::new_random(None).lock();
@@ -608,7 +611,7 @@ impl WalletUnlocked {
         amount: u64,
         asset_id: AssetId,
         tx_parameters: TxParameters,
-    ) -> Result<(String, Vec<Receipt>), Error> {
+    ) -> Result<(String, Vec<Receipt>)> {
         let inputs = self
             .get_asset_inputs_for_amount(asset_id, amount, 0)
             .await?;
@@ -638,7 +641,7 @@ impl WalletUnlocked {
         to: &Bech32Address,
         amount: u64,
         tx_parameters: TxParameters,
-    ) -> Result<(String, String, Vec<Receipt>), Error> {
+    ) -> Result<(String, String, Vec<Receipt>)> {
         let inputs = self
             .get_asset_inputs_for_amount(BASE_ASSET_ID, amount, 0)
             .await?;
@@ -675,7 +678,7 @@ impl WalletUnlocked {
         to: &Bech32Address,
         predicate_data: UnresolvedBytes,
         tx_parameters: TxParameters,
-    ) -> Result<Vec<Receipt>, Error> {
+    ) -> Result<Vec<Receipt>> {
         let predicate = self.get_provider()?;
         let spendable_predicate_resources = predicate
             .get_spendable_resources(predicate_address, asset_id, amount)
@@ -771,7 +774,7 @@ impl WalletUnlocked {
         asset_id: AssetId,
         predicate_data: UnresolvedBytes,
         tx_parameters: TxParameters,
-    ) -> Result<Vec<Receipt>, Error> {
+    ) -> Result<Vec<Receipt>> {
         self.spend_predicate(
             predicate_address,
             predicate_code,
@@ -799,7 +802,7 @@ impl WalletUnlocked {
         balance: u64,
         asset_id: AssetId,
         tx_parameters: TxParameters,
-    ) -> Result<(String, Vec<Receipt>), Error> {
+    ) -> Result<(String, Vec<Receipt>)> {
         let zeroes = Bytes32::zeroed();
         let plain_contract_id: ContractId = to.into();
 
@@ -854,7 +857,7 @@ impl Signer for WalletUnlocked {
     async fn sign_message<S: Send + Sync + AsRef<[u8]>>(
         &self,
         message: S,
-    ) -> Result<Signature, Self::Error> {
+    ) -> WalletResult<Signature> {
         let message = Message::new(message);
         let sig = Signature::sign(&self.private_key, &message);
         Ok(sig)
@@ -863,7 +866,7 @@ impl Signer for WalletUnlocked {
     async fn sign_transaction<Tx: Cacheable + UniqueIdentifier + field::Witnesses + Send>(
         &self,
         tx: &mut Tx,
-    ) -> Result<Signature, Self::Error> {
+    ) -> WalletResult<Signature> {
         let id = tx.id();
 
         // Safety: `Message::from_bytes_unchecked` is unsafe because
@@ -910,7 +913,7 @@ impl ops::Deref for WalletUnlocked {
 
 /// Generates a random mnemonic phrase given a random number generator and the number of words to
 /// generate, `count`.
-pub fn generate_mnemonic_phrase<R: Rng>(rng: &mut R, count: usize) -> Result<String, WalletError> {
+pub fn generate_mnemonic_phrase<R: Rng>(rng: &mut R, count: usize) -> WalletResult<String> {
     Ok(fuel_crypto::FuelMnemonic::generate_mnemonic_phrase(
         rng, count,
     )?)
@@ -928,13 +931,12 @@ mod tests {
         Address,
     };
     use fuels_test_helpers::{launch_custom_provider_and_get_wallets, AssetConfig, WalletsConfig};
-    use fuels_types::errors::Error;
     use tempfile::tempdir;
 
     use super::*;
 
     #[tokio::test]
-    async fn encrypted_json_keystore() -> Result<(), Error> {
+    async fn encrypted_json_keystore() -> Result<()> {
         let dir = tempdir()?;
         let mut rng = rand::thread_rng();
 
@@ -963,7 +965,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn mnemonic_generation() -> Result<(), Error> {
+    async fn mnemonic_generation() -> Result<()> {
         let provider = setup().await;
 
         let mnemonic = generate_mnemonic_phrase(&mut rand::thread_rng(), 12)?;
@@ -973,7 +975,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn wallet_from_mnemonic_phrase() -> Result<(), Error> {
+    async fn wallet_from_mnemonic_phrase() -> Result<()> {
         let phrase =
             "oblige salon price punch saddle immune slogan rare snap desert retire surprise";
 
@@ -1015,7 +1017,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn encrypt_and_store_wallet_from_mnemonic() -> Result<(), Error> {
+    async fn encrypt_and_store_wallet_from_mnemonic() -> Result<()> {
         let dir = tempdir()?;
 
         let phrase =
@@ -1109,7 +1111,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn add_fee_resources_empty_transaction() -> Result<(), Error> {
+    async fn add_fee_resources_empty_transaction() -> Result<()> {
         let wallet_config = add_fee_resources_wallet_config(1);
         let wallet = launch_custom_provider_and_get_wallets(wallet_config, None, None)
             .await
@@ -1138,7 +1140,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn add_fee_resources_to_transfer_with_base_asset() -> Result<(), Error> {
+    async fn add_fee_resources_to_transfer_with_base_asset() -> Result<()> {
         let wallet_config = add_fee_resources_wallet_config(1);
         let wallet = launch_custom_provider_and_get_wallets(wallet_config, None, None)
             .await
