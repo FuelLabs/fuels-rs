@@ -5,7 +5,7 @@ mod tests {
     use fuel_abi_types::program_abi::ProgramABI;
     use fuels::{
         core::function_selector::resolve_fn_selector,
-        types::{param_types::ParamType, traits::Parameterize, SizedAsciiString},
+        types::{errors::Result, param_types::ParamType, traits::Parameterize, SizedAsciiString},
     };
 
     #[test]
@@ -22,7 +22,7 @@ mod tests {
     }
 
     #[test]
-    fn a_fn_selector_from_json_abi() -> anyhow::Result<()> {
+    fn a_fn_selector_from_json_abi() -> Result<()> {
         let json_abi_file =
             "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json";
         let abi_file_contents = std::fs::read_to_string(json_abi_file)?;
@@ -46,7 +46,7 @@ mod tests {
             .inputs
             .into_iter()
             .map(|type_appl| ParamType::try_from_type_application(&type_appl, &type_lookup))
-            .collect::<Result<Vec<_>, _>>()?;
+            .collect::<Result<Vec<_>>>()?;
 
         let selector = resolve_fn_selector(&a_fun.name, &inputs);
 

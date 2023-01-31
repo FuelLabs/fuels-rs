@@ -1,10 +1,12 @@
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
-use syn::{parenthesized, parse::ParseStream, Attribute, Error, Fields, LitStr, Type, Variant};
+use syn::{
+    parenthesized, parse::ParseStream, Attribute, Error, Fields, LitStr, Result, Type, Variant,
+};
 
 use crate::abigen::TypePath;
 
-pub(crate) fn determine_fuels_types_path(attrs: &[Attribute]) -> syn::Result<TokenStream> {
+pub(crate) fn determine_fuels_types_path(attrs: &[Attribute]) -> Result<TokenStream> {
     let attr_tokens = if let Some(attr) = find_attr("FuelsTypesPath", attrs) {
         attr.tokens.clone()
     } else {
@@ -43,11 +45,11 @@ pub(crate) struct ExtractedVariant {
 pub(crate) fn extract_variants<'a>(
     contents: impl IntoIterator<Item = &'a Variant>,
     fuels_types_path: TokenStream,
-) -> Result<ExtractedVariants, Error> {
+) -> Result<ExtractedVariants> {
     let variants = contents
         .into_iter()
         .enumerate()
-        .map(|(discriminant, variant)| -> syn::Result<_> {
+        .map(|(discriminant, variant)| -> Result<_> {
             let name = variant.ident.clone();
             let ty = get_variant_type(variant)?;
             Ok(ExtractedVariant {
@@ -56,7 +58,7 @@ pub(crate) fn extract_variants<'a>(
                 is_unit: ty.is_none(),
             })
         })
-        .collect::<Result<_, _>>()?;
+        .collect::<Result<_>>()?;
 
     Ok(ExtractedVariants {
         variants,
@@ -114,7 +116,7 @@ impl ExtractedVariants {
     }
 }
 
-fn get_variant_type(variant: &Variant) -> syn::Result<Option<&Type>> {
+fn get_variant_type(variant: &Variant) -> Result<Option<&Type>> {
     match &variant.fields {
         Fields::Named(named_fields) => Err(Error::new_spanned(
             named_fields.clone(),

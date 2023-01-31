@@ -2,12 +2,12 @@
 mod tests {
     use fuels::{
         core::try_from_bytes,
-        prelude::{AssetId, ContractId, Error},
+        prelude::{AssetId, ContractId, Result},
     };
 
     #[tokio::test]
     #[allow(unused_variables)]
-    async fn transform_json_to_bindings() -> Result<(), Error> {
+    async fn transform_json_to_bindings() -> Result<()> {
         use fuels::test_helpers::launch_provider_and_get_wallet;
         let wallet = launch_provider_and_get_wallet().await;
         {
@@ -77,7 +77,7 @@ mod tests {
     }
 
     #[test]
-    fn manual_decode_of_native_types() -> Result<(), Error> {
+    fn manual_decode_of_native_types() -> Result<()> {
         // ANCHOR: manual_decode_native
         let contract_id_bytes = [0xFF; 32];
         let contract_id = ContractId::new(contract_id_bytes);

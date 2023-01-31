@@ -143,7 +143,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn send_transfer_transactions() -> Result<(), fuels_types::errors::Error> {
+    async fn send_transfer_transactions() -> fuels_types::errors::Result<()> {
         // Setup two sets of coins, one for each wallet, each containing 1 coin with 1 amount.
         let mut wallet_1 = WalletUnlocked::new_random(None);
         let mut wallet_2 = WalletUnlocked::new_random(None).lock();
@@ -223,7 +223,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn transfer_coins_with_change() -> Result<(), fuels_types::errors::Error> {
+    async fn transfer_coins_with_change() -> fuels_types::errors::Result<()> {
         // Setup two sets of coins, one for each wallet, each containing 1 coin with 5 amounts each.
         let mut wallet_1 = WalletUnlocked::new_random(None);
         let mut wallet_2 = WalletUnlocked::new_random(None).lock();

@@ -12,4 +12,3 @@ description = "Fuel Rust SDK abigen examples."
 [dev-dependencies]
 fuels = { version = "0.34.0", path = "../../packages/fuels" }
 tokio = { version = "1.10", features = ["full"] }
-anyhow = "1.0.68"

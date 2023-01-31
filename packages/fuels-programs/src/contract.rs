@@ -25,7 +25,7 @@ use fuels_signers::{
 };
 use fuels_types::{
     bech32::{Bech32Address, Bech32ContractId},
-    errors::Error,
+    errors::{error, Error, Result},
     param_types::{ParamType, ReturnLocation},
     traits::{Parameterize, Tokenizable},
     Selector, Token,
@@ -110,7 +110,7 @@ impl Contract {
         signature: Selector,
         args: &[Token],
         log_decoder: LogDecoder,
-    ) -> Result<ContractCallHandler<D>, Error> {
+    ) -> Result<ContractCallHandler<D>> {
         let encoded_selector = signature;
 
         let tx_parameters = TxParameters::default();
@@ -168,7 +168,7 @@ impl Contract {
         wallet: &WalletUnlocked,
         params: TxParameters,
         storage_configuration: StorageConfiguration,
-    ) -> Result<Bech32ContractId, Error> {
+    ) -> Result<Bech32ContractId> {
         let mut compiled_contract =
             Contract::load_contract(binary_filepath, &storage_configuration.storage_path)?;
 
@@ -184,7 +184,7 @@ impl Contract {
         params: TxParameters,
         storage_configuration: StorageConfiguration,
         salt: Salt,
-    ) -> Result<Bech32ContractId, Error> {
+    ) -> Result<Bech32ContractId> {
         let mut compiled_contract = Contract::load_contract_with_parameters(
             binary_filepath,
             &storage_configuration.storage_path,
@@ -216,7 +216,7 @@ impl Contract {
         compiled_contract: &CompiledContract,
         wallet: &WalletUnlocked,
         params: TxParameters,
-    ) -> Result<Bech32ContractId, Error> {
+    ) -> Result<Bech32ContractId> {
         let (mut tx, contract_id) =
             Self::contract_deployment_transaction(compiled_contract, params).await?;
 
@@ -241,7 +241,7 @@ impl Contract {
     pub fn load_contract(
         binary_filepath: &str,
         storage_path: &Option<String>,
-    ) -> Result<CompiledContract, Error> {
+    ) -> Result<CompiledContract> {
         Self::load_contract_with_parameters(binary_filepath, storage_path, Salt::from([0u8; 32]))
     }
 
@@ -249,24 +249,25 @@ impl Contract {
         binary_filepath: &str,
         storage_path: &Option<String>,
         salt: Salt,
-    ) -> Result<CompiledContract, Error> {
+    ) -> Result<CompiledContract> {
         let extension = Path::new(binary_filepath)
             .extension()
             .expect("Could not extract extension from file path");
         if extension != "bin" {
-            return Err(Error::InvalidData(format!(
+            return Err(error!(
+                InvalidData,
                 "The file extension '{}' is not recognized. Did you mean '.bin'?",
                 extension
                     .to_str()
                     .expect("Could not convert extension to &str")
-            )));
+            ));
         }
 
         let bin = std::fs::read(binary_filepath).map_err(|_| {
-            Error::InvalidData(format!(
-                "Failed to read binary file with path '{}'",
-                &binary_filepath
-            ))
+            error!(
+                InvalidData,
+                "Failed to read binary file with path '{}'", &binary_filepath
+            )
         })?;
 
         let storage = match storage_path {
@@ -306,7 +307,7 @@ impl Contract {
     pub async fn contract_deployment_transaction(
         compiled_contract: &CompiledContract,
         params: TxParameters,
-    ) -> Result<(Create, Bech32ContractId), Error> {
+    ) -> Result<(Create, Bech32ContractId)> {
         let bytecode_witness_index = 0;
         let storage_slots: Vec<StorageSlot> = compiled_contract.storage_slots.clone();
         let witnesses = vec![compiled_contract.raw.clone().into()];
@@ -461,7 +462,7 @@ pub fn get_decoded_output(
     receipts: &[Receipt],
     contract_id: Option<&Bech32ContractId>,
     output_param: &ParamType,
-) -> Result<Token, Error> {
+) -> Result<Token> {
     // Multiple returns are handled as one `Tuple` (which has its own `ParamType`)
     let contract_id: ContractId = match contract_id {
         Some(contract_id) => contract_id.into(),
@@ -645,7 +646,7 @@ where
     /// value in its `value` field as an actual typed value `D` (if your method returns `bool`,
     /// it will be a bool, works also for structs thanks to the `abigen!()`).
     /// The other field of [`FuelCallResponse`], `receipts`, contains the receipts of the transaction.
-    async fn call_or_simulate(&self, simulate: bool) -> Result<FuelCallResponse<D>, Error> {
+    async fn call_or_simulate(&self, simulate: bool) -> Result<FuelCallResponse<D>> {
         let script = self.get_executable_call().await?;
 
         let receipts = if simulate {
@@ -658,7 +659,7 @@ where
     }
 
     /// Returns the script that executes the contract call
-    pub async fn get_executable_call(&self) -> Result<ExecutableFuelCall, Error> {
+    pub async fn get_executable_call(&self) -> Result<ExecutableFuelCall> {
         ExecutableFuelCall::from_contract_calls(
             std::slice::from_ref(&self.contract_call),
             &self.tx_parameters,
@@ -668,7 +669,7 @@ where
     }
 
     /// Call a contract's method on the node, in a state-modifying manner.
-    pub async fn call(self) -> Result<FuelCallResponse<D>, Error> {
+    pub async fn call(self) -> Result<FuelCallResponse<D>> {
         Self::call_or_simulate(&self, false)
             .await
             .map_err(|err| decode_revert_error(err, &self.log_decoder))
@@ -679,14 +680,14 @@ where
     /// It is the same as the [`call`] method because the API is more user-friendly this way.
     ///
     /// [`call`]: Self::call
-    pub async fn simulate(self) -> Result<FuelCallResponse<D>, Error> {
+    pub async fn simulate(self) -> Result<FuelCallResponse<D>> {
         Self::call_or_simulate(&self, true)
             .await
             .map_err(|err| decode_revert_error(err, &self.log_decoder))
     }
 
     /// Simulates a call without needing to resolve the generic for the return type
-    async fn simulate_without_decode(&self) -> Result<(), Error> {
+    async fn simulate_without_decode(&self) -> Result<()> {
         let script = self.get_executable_call().await?;
         let provider = self.wallet.get_provider()?;
 
@@ -697,10 +698,7 @@ where
 
     /// Simulates the call and attempts to resolve missing tx dependencies.
     /// Forwards the received error if it cannot be fixed.
-    pub async fn estimate_tx_dependencies(
-        mut self,
-        max_attempts: Option<u64>,
-    ) -> Result<Self, Error> {
+    pub async fn estimate_tx_dependencies(mut self, max_attempts: Option<u64>) -> Result<Self> {
         let attempts = max_attempts.unwrap_or(DEFAULT_TX_DEP_ESTIMATION_ATTEMPTS);
 
         for _ in 0..attempts {
@@ -738,7 +736,7 @@ where
     pub async fn estimate_transaction_cost(
         &self,
         tolerance: Option<f64>,
-    ) -> Result<TransactionCost, Error> {
+    ) -> Result<TransactionCost> {
         let script = self.get_executable_call().await?;
 
         let transaction_cost = self
@@ -750,7 +748,7 @@ where
     }
 
     /// Create a [`FuelCallResponse`] from call receipts
-    pub fn get_response(&self, receipts: Vec<Receipt>) -> Result<FuelCallResponse<D>, Error> {
+    pub fn get_response(&self, receipts: Vec<Receipt>) -> Result<FuelCallResponse<D>> {
         let token = get_decoded_output(
             &receipts,
             Some(&self.contract_call.contract_id),
@@ -802,7 +800,7 @@ impl MultiContractCallHandler {
     }
 
     /// Returns the script that executes the contract calls
-    pub async fn get_executable_call(&self) -> Result<ExecutableFuelCall, Error> {
+    pub async fn get_executable_call(&self) -> Result<ExecutableFuelCall> {
         if self.contract_calls.is_empty() {
             panic!("No calls added. Have you used '.add_calls()'?");
         }
@@ -816,7 +814,7 @@ impl MultiContractCallHandler {
     }
 
     /// Call contract methods on the node, in a state-modifying manner.
-    pub async fn call<D: Tokenizable + Debug>(&self) -> Result<FuelCallResponse<D>, Error> {
+    pub async fn call<D: Tokenizable + Debug>(&self) -> Result<FuelCallResponse<D>> {
         Self::call_or_simulate(self, false)
             .await
             .map_err(|err| decode_revert_error(err, &self.log_decoder))
@@ -827,7 +825,7 @@ impl MultiContractCallHandler {
     /// It is the same as the [call] method because the API is more user-friendly this way.
     ///
     /// [call]: Self::call
-    pub async fn simulate<D: Tokenizable + Debug>(&self) -> Result<FuelCallResponse<D>, Error> {
+    pub async fn simulate<D: Tokenizable + Debug>(&self) -> Result<FuelCallResponse<D>> {
         Self::call_or_simulate(self, true)
             .await
             .map_err(|err| decode_revert_error(err, &self.log_decoder))
@@ -836,7 +834,7 @@ impl MultiContractCallHandler {
     async fn call_or_simulate<D: Tokenizable + Debug>(
         &self,
         simulate: bool,
-    ) -> Result<FuelCallResponse<D>, Error> {
+    ) -> Result<FuelCallResponse<D>> {
         let script = self.get_executable_call().await?;
 
         let provider = self.wallet.get_provider()?;
@@ -851,7 +849,7 @@ impl MultiContractCallHandler {
     }
 
     /// Simulates a call without needing to resolve the generic for the return type
-    async fn simulate_without_decode(&self) -> Result<(), Error> {
+    async fn simulate_without_decode(&self) -> Result<()> {
         let script = self.get_executable_call().await?;
         let provider = self.wallet.get_provider()?;
 
@@ -862,10 +860,7 @@ impl MultiContractCallHandler {
 
     /// Simulates the call and attempts to resolve missing tx dependencies.
     /// Forwards the received error if it cannot be fixed.
-    pub async fn estimate_tx_dependencies(
-        mut self,
-        max_attempts: Option<u64>,
-    ) -> Result<Self, Error> {
+    pub async fn estimate_tx_dependencies(mut self, max_attempts: Option<u64>) -> Result<Self> {
         let attempts = max_attempts.unwrap_or(DEFAULT_TX_DEP_ESTIMATION_ATTEMPTS);
 
         for _ in 0..attempts {
@@ -905,7 +900,7 @@ impl MultiContractCallHandler {
     pub async fn estimate_transaction_cost(
         &self,
         tolerance: Option<f64>,
-    ) -> Result<TransactionCost, Error> {
+    ) -> Result<TransactionCost> {
         let script = self.get_executable_call().await?;
 
         let transaction_cost = self
@@ -921,7 +916,7 @@ impl MultiContractCallHandler {
     pub fn get_response<D: Tokenizable + Debug>(
         &self,
         receipts: Vec<Receipt>,
-    ) -> Result<FuelCallResponse<D>, Error> {
+    ) -> Result<FuelCallResponse<D>> {
         let mut final_tokens = vec![];
 
         for call in self.contract_calls.iter() {

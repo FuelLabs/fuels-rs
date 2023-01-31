@@ -1,6 +1,6 @@
 use fuels_macros::{Parameterize, Tokenizable};
 
-use crate::errors::Error;
+use crate::errors::{error, Error, Result};
 
 // A simple wrapper around [u8; 32] representing the `b256` type. Exists
 // mainly so that we may differentiate `Parameterize` and `Tokenizable`
@@ -11,7 +11,7 @@ pub struct Bits256(pub [u8; 32]);
 impl Bits256 {
     /// Create a new `Bits256` from a string representation of a hex.
     /// Accepts both `0x` prefixed and non-prefixed hex strings.
-    pub fn from_hex_str(hex: &str) -> Result<Self, Error> {
+    pub fn from_hex_str(hex: &str) -> Result<Self> {
         let hex = if let Some(stripped_hex) = hex.strip_prefix("0x") {
             stripped_hex
         } else {
@@ -20,7 +20,10 @@ impl Bits256 {
 
         let mut bytes = [0u8; 32];
         hex::decode_to_slice(hex, &mut bytes as &mut [u8]).map_err(|e| {
-            Error::InvalidData(format!("Could not convert hex str '{hex}' to Bits256! {e}"))
+            error!(
+                InvalidData,
+                "Could not convert hex str '{hex}' to Bits256! {e}"
+            )
         })?;
         Ok(Bits256(bytes))
     }
@@ -46,7 +49,7 @@ impl From<(Bits256, Bits256)> for B512 {
 impl TryFrom<&[u8]> for B512 {
     type Error = Error;
 
-    fn try_from(slice: &[u8]) -> Result<Self, Self::Error> {
+    fn try_from(slice: &[u8]) -> Result<Self> {
         Ok(B512 {
             bytes: [
                 Bits256(slice[0..32].try_into()?),
@@ -100,7 +103,7 @@ mod tests {
     };
 
     #[test]
-    fn from_hex_str_b256() -> Result<(), Error> {
+    fn from_hex_str_b256() -> Result<()> {
         // ANCHOR: from_hex_str
         let hex_str = "0101010101010101010101010101010101010101010101010101010101010101";
 
@@ -132,7 +135,7 @@ mod tests {
     }
 
     #[test]
-    fn evm_address_clears_first_12_bytes() -> Result<(), Error> {
+    fn evm_address_clears_first_12_bytes() -> Result<()> {
         let data = [1u8; 32];
         let address = EvmAddress::new(Bits256(data));
 

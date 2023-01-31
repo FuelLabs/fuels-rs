@@ -1,13 +1,13 @@
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
-use syn::{Data, DataEnum, DataStruct, DeriveInput, Error, Generics};
+use syn::{Data, DataEnum, DataStruct, DeriveInput, Error, Generics, Result};
 
 use crate::{
     derive::{utils, utils::determine_fuels_types_path},
     parse_utils::{extract_struct_members, validate_and_extract_generic_types},
 };
 
-pub fn generate_tokenizable_impl(input: DeriveInput) -> syn::Result<TokenStream> {
+pub fn generate_tokenizable_impl(input: DeriveInput) -> Result<TokenStream> {
     let fuels_types_path = determine_fuels_types_path(&input.attrs)?;
 
     match input.data {
@@ -29,7 +29,7 @@ fn tokenizable_for_struct(
     generics: Generics,
     contents: DataStruct,
     fuels_types_path: TokenStream,
-) -> Result<TokenStream, Error> {
+) -> Result<TokenStream> {
     let (impl_gen, type_gen, where_clause) = generics.split_for_impl();
     let struct_name_str = name.to_string();
     let members = extract_struct_members(contents, fuels_types_path.clone())?;
@@ -44,7 +44,7 @@ fn tokenizable_for_struct(
                 #fuels_types_path::Token::Struct(tokens)
             }
 
-            fn from_token(token: #fuels_types_path::Token)  -> ::std::result::Result<Self, #fuels_types_path::errors::Error> {
+            fn from_token(token: #fuels_types_path::Token)  -> #fuels_types_path::errors::Result<Self> {
                 match token {
                     #fuels_types_path::Token::Struct(tokens) => {
                         let mut tokens_iter = tokens.into_iter();
@@ -71,7 +71,7 @@ fn tokenizable_for_enum(
     generics: Generics,
     contents: DataEnum,
     fuels_types_path: TokenStream,
-) -> Result<TokenStream, Error> {
+) -> Result<TokenStream> {
     let (impl_gen, type_gen, where_clause) = generics.split_for_impl();
     let name_stringified = name.to_string();
     let variants = utils::extract_variants(&contents.variants, fuels_types_path.clone())?;
@@ -93,7 +93,7 @@ fn tokenizable_for_enum(
                 #fuels_types_path::Token::Enum(::std::boxed::Box::new((discriminant, token, variants)))
             }
 
-            fn from_token(token: #fuels_types_path::Token) -> ::std::result::Result<Self, #fuels_types_path::errors::Error>
+            fn from_token(token: #fuels_types_path::Token) -> #fuels_types_path::errors::Result<Self>
             where
                 Self: Sized,
             {
