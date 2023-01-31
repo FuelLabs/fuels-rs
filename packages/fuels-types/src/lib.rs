@@ -16,6 +16,9 @@ pub mod message_proof;
 pub mod node_info;
 pub mod param_types;
 pub mod resource;
+pub mod traits;
 pub mod transaction_response;
 
 pub use fuel_tx::{Address, AssetId, ContractId};
+
+pub use crate::core::*;

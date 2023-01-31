@@ -37,7 +37,7 @@ pub mod signers {
 }
 
 pub mod types {
-    pub use fuels_types::{core::*, *};
+    pub use fuels_types::*;
 }
 
 pub mod test_helpers {
@@ -72,7 +72,7 @@ pub mod prelude {
         tx::Salt,
         types::{
             bech32::{Bech32Address, Bech32ContractId},
-            errors::Error,
+            errors::{Error, Result},
             Address, AssetId, ContractId, RawSlice,
         },
     };

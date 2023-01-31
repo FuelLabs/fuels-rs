@@ -2,7 +2,7 @@ use std::fmt::Debug;
 
 use fuel_tx::{Checkable, Receipt, Script, ScriptExecutionResult};
 use fuels_signers::provider::Provider;
-use fuels_types::errors::Error;
+use fuels_types::errors::{Error, Result};
 
 /// [`ExecutableFuelCall`] provides methods to create and call/simulate a transaction that carries
 /// out contract method calls or script calls
@@ -17,7 +17,7 @@ impl ExecutableFuelCall {
     }
 
     /// Execute the transaction in a state-modifying manner.
-    pub async fn execute(&self, provider: &Provider) -> Result<Vec<Receipt>, Error> {
+    pub async fn execute(&self, provider: &Provider) -> Result<Vec<Receipt>> {
         let chain_info = provider.chain_info().await?;
 
         self.tx.check_without_signatures(
@@ -29,7 +29,7 @@ impl ExecutableFuelCall {
     }
 
     /// Execute the transaction in a simulated manner, not modifying blockchain state
-    pub async fn simulate(&self, provider: &Provider) -> Result<Vec<Receipt>, Error> {
+    pub async fn simulate(&self, provider: &Provider) -> Result<Vec<Receipt>> {
         let chain_info = provider.chain_info().await?;
 
         self.tx.check_without_signatures(

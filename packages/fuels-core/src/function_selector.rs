@@ -1,7 +1,4 @@
-use fuels_types::{
-    core::{unzip_param_types, ByteArray},
-    param_types::ParamType,
-};
+use fuels_types::{param_types::ParamType, unzip_param_types, ByteArray};
 
 use crate::utils::first_four_bytes_of_sha256_hash;
 

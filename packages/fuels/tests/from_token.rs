@@ -1,6 +1,9 @@
 use std::str::FromStr;
 
-use fuels::{core::traits::Tokenizable, prelude::*, types::Token};
+use fuels::{
+    prelude::*,
+    types::{traits::Tokenizable, Token},
+};
 
 pub fn null_contract_id() -> Bech32ContractId {
     // a bech32 contract address that decodes to [0u8;32]
@@ -9,7 +12,7 @@ pub fn null_contract_id() -> Bech32ContractId {
 }
 
 #[tokio::test]
-async fn create_struct_from_decoded_tokens() -> Result<(), Error> {
+async fn create_struct_from_decoded_tokens() -> Result<()> {
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `SimpleContract`.
     abigen!(Contract(
@@ -103,7 +106,7 @@ async fn create_struct_from_decoded_tokens() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn create_nested_struct_from_decoded_tokens() -> Result<(), Error> {
+async fn create_nested_struct_from_decoded_tokens() -> Result<()> {
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `SimpleContract`.
     abigen!(Contract(

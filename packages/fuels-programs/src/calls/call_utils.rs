@@ -6,7 +6,7 @@ use fuels_core::abi_decoder::ABIDecoder;
 use fuels_core::constants::BASE_ASSET_ID;
 use fuels_types::bech32::Bech32ContractId;
 use fuels_types::core::Token;
-use fuels_types::errors::Error;
+use fuels_types::errors::Result;
 use fuels_types::param_types::{ParamType, ReturnLocation};
 use fuels_types::{bech32::Bech32Address, resource::Resource};
 use itertools::Itertools;
@@ -17,7 +17,7 @@ pub fn get_decoded_output(
     receipts: &[Receipt],
     contract_id: Option<&Bech32ContractId>,
     output_param: &ParamType,
-) -> Result<Token, Error> {
+) -> Result<Token> {
     // Multiple returns are handled as one `Tuple` (which has its own `ParamType`)
     let contract_id: ContractId = match contract_id {
         Some(contract_id) => contract_id.into(),
