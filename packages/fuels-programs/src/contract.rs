@@ -617,7 +617,7 @@ where
     /// let params = CallParameters { amount: 1, asset_id: BASE_ASSET_ID };
     /// my_contract_instance.my_method(...).call_params(params).call()
     /// ```
-    pub fn call_params(mut self, params: CallParameters) -> Result<Self, Error> {
+    pub fn call_params(mut self, params: CallParameters) -> Result<Self> {
         if !self.is_payable() && params.amount > 0 {
             return Err(Error::AssetsForwardedToNonPayableMethod());
         }

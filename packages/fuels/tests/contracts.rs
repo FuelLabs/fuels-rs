@@ -1074,7 +1074,7 @@ async fn test_deploy_error_messages() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_payable_annotation() -> Result<(), Error> {
+async fn test_payable_annotation() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
