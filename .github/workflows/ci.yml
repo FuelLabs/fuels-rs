@@ -208,6 +208,10 @@ jobs:
           command: run
           args: --bin check-docs
 
+      - name: Check Docs. Warnings
+        run: | 
+          ! cargo doc |& grep -q "broken_intra_doc_links"
+
   publish:
     needs: cargo-verifications
     # Only do this job if publishing a release

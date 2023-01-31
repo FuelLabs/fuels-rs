@@ -7,13 +7,13 @@ use fuel_tx::{
 use fuels_core::{
     abi_encoder::ABIEncoder,
     parameters::{CallParameters, StorageConfiguration, TxParameters},
-    traits::{Parameterize, Tokenizable},
 };
 use fuels_signers::{provider::Provider, Signer, WalletUnlocked};
 use fuels_types::{
     bech32::Bech32ContractId,
     core::{Selector, Token},
-    errors::Error,
+    errors::{error, Error, Result},
+    traits::{Parameterize, Tokenizable},
 };
 
 use crate::calls::contract_call::{ContractCall, ContractCallHandler};
@@ -85,7 +85,7 @@ impl Contract {
         signature: Selector,
         args: &[Token],
         log_decoder: LogDecoder,
-    ) -> Result<ContractCallHandler<D>, Error> {
+    ) -> Result<ContractCallHandler<D>> {
         let encoded_selector = signature;
 
         let tx_parameters = TxParameters::default();
@@ -104,6 +104,7 @@ impl Contract {
             message_outputs: vec![],
             external_contracts: vec![],
             output_param: D::param_type(),
+            custom_assets: Default::default(),
         };
 
         Ok(ContractCallHandler {
@@ -142,7 +143,7 @@ impl Contract {
         wallet: &WalletUnlocked,
         params: TxParameters,
         storage_configuration: StorageConfiguration,
-    ) -> Result<Bech32ContractId, Error> {
+    ) -> Result<Bech32ContractId> {
         let mut compiled_contract =
             Contract::load_contract(binary_filepath, &storage_configuration.storage_path)?;
 
@@ -158,7 +159,7 @@ impl Contract {
         params: TxParameters,
         storage_configuration: StorageConfiguration,
         salt: Salt,
-    ) -> Result<Bech32ContractId, Error> {
+    ) -> Result<Bech32ContractId> {
         let mut compiled_contract = Contract::load_contract_with_parameters(
             binary_filepath,
             &storage_configuration.storage_path,
@@ -190,7 +191,7 @@ impl Contract {
         compiled_contract: &CompiledContract,
         wallet: &WalletUnlocked,
         params: TxParameters,
-    ) -> Result<Bech32ContractId, Error> {
+    ) -> Result<Bech32ContractId> {
         let (mut tx, contract_id) =
             Self::contract_deployment_transaction(compiled_contract, params).await?;
 
@@ -215,7 +216,7 @@ impl Contract {
     pub fn load_contract(
         binary_filepath: &str,
         storage_path: &Option<String>,
-    ) -> Result<CompiledContract, Error> {
+    ) -> Result<CompiledContract> {
         Self::load_contract_with_parameters(binary_filepath, storage_path, Salt::from([0u8; 32]))
     }
 
@@ -223,24 +224,25 @@ impl Contract {
         binary_filepath: &str,
         storage_path: &Option<String>,
         salt: Salt,
-    ) -> Result<CompiledContract, Error> {
+    ) -> Result<CompiledContract> {
         let extension = Path::new(binary_filepath)
             .extension()
             .expect("Could not extract extension from file path");
         if extension != "bin" {
-            return Err(Error::InvalidData(format!(
+            return Err(error!(
+                InvalidData,
                 "The file extension '{}' is not recognized. Did you mean '.bin'?",
                 extension
                     .to_str()
                     .expect("Could not convert extension to &str")
-            )));
+            ));
         }
 
         let bin = std::fs::read(binary_filepath).map_err(|_| {
-            Error::InvalidData(format!(
-                "Failed to read binary file with path '{}'",
-                &binary_filepath
-            ))
+            error!(
+                InvalidData,
+                "Failed to read binary file with path '{}'", &binary_filepath
+            )
         })?;
 
         let storage = match storage_path {
@@ -280,7 +282,7 @@ impl Contract {
     pub async fn contract_deployment_transaction(
         compiled_contract: &CompiledContract,
         params: TxParameters,
-    ) -> Result<(Create, Bech32ContractId), Error> {
+    ) -> Result<(Create, Bech32ContractId)> {
         let bytecode_witness_index = 0;
         let storage_slots: Vec<StorageSlot> = compiled_contract.storage_slots.clone();
         let witnesses = vec![compiled_contract.raw.clone().into()];

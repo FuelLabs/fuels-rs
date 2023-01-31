@@ -6,16 +6,19 @@ use std::{
     time::Duration,
 };
 
-use anyhow::{bail, Error as AnyError};
 use fuel_chain_config::{ChainConfig, StateConfig};
 use fuel_core_interfaces::model::BlockHeight;
 use fuel_gql_client::client::FuelClient;
 use fuel_tx::ConsensusParameters;
 use fuel_types::Word;
 use fuel_vm::consts::WORD_SIZE;
-use fuels_types::{coin::Coin, message::Message};
+use fuels_types::{
+    coin::Coin,
+    errors::{error, Error},
+    message::Message,
+};
 use portpicker::{is_free, pick_unused_port};
-use serde::{de::Error, Deserializer, Serializer};
+use serde::{de::Error as SerdeError, Deserializer, Serializer};
 use serde_json::Value;
 use serde_with::{DeserializeAs, SerializeAs};
 use tempfile::NamedTempFile;
@@ -300,7 +303,7 @@ pub struct FuelService {
 }
 
 impl FuelService {
-    pub async fn new_node(config: Config) -> Result<Self, AnyError> {
+    pub async fn new_node(config: Config) -> Result<Self, Error> {
         let requested_port = config.addr.port();
 
         let bound_address = if requested_port == 0 {
@@ -308,7 +311,7 @@ impl FuelService {
         } else if is_free(requested_port) {
             config.addr
         } else {
-            bail!("Error: Address already in use");
+            return Err(error!(InfrastructureError, "Error: Address already in use"));
         };
 
         new_fuel_node(

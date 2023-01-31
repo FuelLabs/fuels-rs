@@ -1,0 +1,5 @@
+error: Missing attribute 'abi'.
+ --> tests/ui/abigen/missing_abi_attribute.rs:3:18
+  |
+3 | abigen!(Contract(name = "SomeName"));
+  |                  ^^^^

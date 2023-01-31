@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
 
-    use fuels::prelude::Error;
+    use fuels::prelude::Result;
 
     #[tokio::test]
     async fn connect_to_fuel_node() {
@@ -31,7 +31,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn query_the_blockchain() -> Result<(), Error> {
+    async fn query_the_blockchain() -> Result<()> {
         // ANCHOR: setup_test_blockchain
         use fuels::prelude::*;
 
