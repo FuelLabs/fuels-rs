@@ -62,7 +62,7 @@ mod tests {
                 },
                 type_arguments: vec![],
             },
-            None,
+            vec![],
         )
         .expect("hand-crafted, should not fail!")
     }

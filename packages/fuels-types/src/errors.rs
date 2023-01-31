@@ -57,7 +57,7 @@ pub enum Error {
     #[error("Revert transaction error: {}, receipts: {:?}", .0, .1)]
     RevertTransactionError(String, Vec<Receipt>),
     #[error("Tried to forward assets to a contract method that is not payable.")]
-    InvalidCallParameters(),
+    AssetsForwardedToNonPayableMethod(),
 }
 
 impl From<CodecError> for Error {

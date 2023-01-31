@@ -63,7 +63,7 @@ pub(crate) struct FullABIFunction {
     name: String,
     inputs: Vec<FullTypeApplication>,
     output: FullTypeApplication,
-    attributes: Option<Vec<Attribute>>,
+    attributes: Vec<Attribute>,
 }
 
 impl FullABIFunction {
@@ -71,7 +71,7 @@ impl FullABIFunction {
         name: String,
         inputs: Vec<FullTypeApplication>,
         output: FullTypeApplication,
-        attributes: Option<Vec<Attribute>>,
+        attributes: Vec<Attribute>,
     ) -> Result<Self> {
         if name.is_empty() {
             Err(error!("FullABIFunction's name cannot be empty!"))
@@ -98,10 +98,7 @@ impl FullABIFunction {
     }
 
     pub(crate) fn is_payable(&self) -> bool {
-        self.attributes
-            .iter()
-            .flatten()
-            .any(|attr| attr.name == "payable")
+        self.attributes.iter().any(|attr| attr.name == "payable")
     }
 
     pub(crate) fn from_counterpart(
@@ -118,7 +115,10 @@ impl FullABIFunction {
             abi_function.name.clone(),
             inputs,
             FullTypeApplication::from_counterpart(&abi_function.output, types),
-            abi_function.attributes.clone(),
+            abi_function
+                .attributes
+                .as_ref()
+                .map_or(vec![], Clone::clone),
         )
     }
 }
@@ -238,7 +238,7 @@ mod tests {
             type_arguments: vec![],
         };
 
-        let err = FullABIFunction::new("".to_string(), vec![], fn_output, None)
+        let err = FullABIFunction::new("".to_string(), vec![], fn_output, vec![])
             .expect_err("Should have failed.");
 
         assert_eq!(err.to_string(), "FullABIFunction's name cannot be empty!");
