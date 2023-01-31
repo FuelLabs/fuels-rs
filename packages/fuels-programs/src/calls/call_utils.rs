@@ -13,7 +13,7 @@ use itertools::Itertools;
 
 /// Based on the receipts returned by the call, the contract ID (which is null in the case of a
 /// script), and the output param, decode the values and return them.
-pub fn get_decoded_output(
+pub(crate) fn get_decoded_output(
     receipts: &[Receipt],
     contract_id: Option<&Bech32ContractId>,
     output_param: &ParamType,

@@ -19,9 +19,6 @@ use fuels_types::{
 use crate::calls::contract_call::{ContractCall, ContractCallHandler};
 use crate::logs::LogDecoder;
 
-/// How many times to attempt to resolve missing tx dependencies.
-pub const DEFAULT_TX_DEP_ESTIMATION_ATTEMPTS: u64 = 10;
-
 /// A compiled representation of a contract.
 #[derive(Debug, Clone, Default)]
 pub struct CompiledContract {
