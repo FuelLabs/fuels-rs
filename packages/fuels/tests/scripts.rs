@@ -322,3 +322,29 @@ async fn test_script_raw_slice() -> Result<(), Error> {
     }
     Ok(())
 }
+
+#[tokio::test]
+async fn test_script_signing() -> Result<(), Error> {
+    abigen!(Script(
+        name = "bimbam_script",
+        abi = "packages/fuels/tests/scripts/basic_script/out/debug/basic_script-abi.json"
+    ));
+
+    let config = WalletsConfig::new(Some(1), None, None);
+    let mut provider_config = Config::local_node();
+    provider_config.utxo_validation = true;
+
+    let mut wallets =
+        launch_custom_provider_and_get_wallets(config, Some(provider_config), None).await;
+    let wallet = wallets.pop().unwrap();
+
+    let bin_path = "../fuels/tests/scripts/basic_script/out/debug/basic_script.bin";
+    let instance = bimbam_script::new(wallet.clone(), bin_path);
+
+    let a = 1000u64;
+    let b = 2000u32;
+    let result = instance.main(a, b).call().await?;
+    assert_eq!(result.value, "hello");
+
+    Ok(())
+}
