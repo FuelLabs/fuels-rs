@@ -26,10 +26,7 @@ use fuels_signers::{
 use fuels_types::{
     bech32::{Bech32Address, Bech32ContractId},
     errors::{error, Error, Result},
-    errors::{error, Error, Result},
     param_types::{ParamType, ReturnLocation},
-    traits::{Parameterize, Tokenizable},
-    Selector, Token,
     traits::{Parameterize, Tokenizable},
     Selector, Token,
 };

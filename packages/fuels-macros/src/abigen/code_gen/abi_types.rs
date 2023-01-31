@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use fuel_abi_types::program_abi::{
-    ABIFunction, Attribute, LoggedType, ProgramABI, TypeApplication, TypeDeclaration,
+    ABIFunction, LoggedType, ProgramABI, TypeApplication, TypeDeclaration,
 };
 
 use crate::error::{error, Result};
