@@ -1,7 +1,7 @@
 use fuels::prelude::*;
 
 #[tokio::test]
-async fn test_wallet_balance_api_multi_asset() -> Result<(), Error> {
+async fn test_wallet_balance_api_multi_asset() -> Result<()> {
     let mut wallet = WalletUnlocked::new_random(None);
     let number_of_assets = 7;
     let coins_per_asset = 21;
@@ -33,7 +33,7 @@ async fn test_wallet_balance_api_multi_asset() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_wallet_balance_api_single_asset() -> Result<(), Error> {
+async fn test_wallet_balance_api_single_asset() -> Result<()> {
     let mut wallet = WalletUnlocked::new_random(None);
     let number_of_coins = 21;
     let amount_per_coin = 11;

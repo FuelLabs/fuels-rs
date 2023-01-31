@@ -112,13 +112,13 @@ pub async fn setup_test_provider(
 mod tests {
     use fuels_core::constants::BASE_ASSET_ID;
     use fuels_signers::fuel_crypto::fuel_types::AssetId;
-    use fuels_types::{errors::Error, resource::Resource};
+    use fuels_types::{errors::Result, resource::Resource};
     use rand::Fill;
 
     use crate::{launch_custom_provider_and_get_wallets, AssetConfig, WalletsConfig};
 
     #[tokio::test]
-    async fn test_wallet_config() -> Result<(), Error> {
+    async fn test_wallet_config() -> Result<()> {
         let num_wallets = 2;
         let num_coins = 3;
         let amount = 100;
@@ -141,7 +141,8 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_wallet_config_multiple_assets() -> Result<(), Box<dyn std::error::Error>> {
+    async fn test_wallet_config_multiple_assets(
+    ) -> std::result::Result<(), Box<dyn std::error::Error>> {
         let mut rng = rand::thread_rng();
         let num_wallets = 3;
 
@@ -195,7 +196,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn generated_wallets_are_deterministic() -> Result<(), Error> {
+    async fn generated_wallets_are_deterministic() -> Result<()> {
         let num_wallets = 32;
         let num_coins = 1;
         let amount = 100;
@@ -211,7 +212,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn generated_wallets_with_custom_chain_config() -> Result<(), Error> {
+    async fn generated_wallets_with_custom_chain_config() -> Result<()> {
         use fuel_chain_config::ChainConfig;
         use fuel_tx::ConsensusParameters;
 

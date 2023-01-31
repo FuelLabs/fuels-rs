@@ -7,11 +7,11 @@ use fuels::{
     prelude::*,
     signers::fuel_crypto::SecretKey,
     tx::Receipt,
-    types::{block::Block, message::Message},
+    types::{block::Block, errors::error, message::Message},
 };
 
 #[tokio::test]
-async fn test_provider_launch_and_connect() -> Result<(), Error> {
+async fn test_provider_launch_and_connect() -> Result<()> {
     abigen!(Contract(
         name = "MyContract",
         abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
@@ -60,7 +60,7 @@ async fn test_provider_launch_and_connect() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_network_error() -> Result<(), anyhow::Error> {
+async fn test_network_error() -> Result<()> {
     abigen!(Contract(
         name = "MyContract",
         abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
@@ -69,7 +69,9 @@ async fn test_network_error() -> Result<(), anyhow::Error> {
     let mut wallet = WalletUnlocked::new_random(None);
 
     let config = CoreConfig::local_node();
-    let service = FuelService::new_node(config).await?;
+    let service = FuelService::new_node(config)
+        .await
+        .map_err(|err| error!(InfrastructureError, "{err}"))?;
     let provider = Provider::connect(service.bound_address.to_string()).await?;
 
     wallet.set_provider(provider);
@@ -90,7 +92,7 @@ async fn test_network_error() -> Result<(), anyhow::Error> {
 }
 
 #[tokio::test]
-async fn test_input_message() -> Result<(), Error> {
+async fn test_input_message() -> Result<()> {
     let compare_messages =
         |messages_from_provider: Vec<Message>, used_messages: Vec<Message>| -> bool {
             iter::zip(&used_messages, &messages_from_provider).all(|(a, b)| {
@@ -144,7 +146,7 @@ async fn test_input_message() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_input_message_pays_fee() -> Result<(), Error> {
+async fn test_input_message_pays_fee() -> Result<()> {
     let mut wallet = WalletUnlocked::new_random(None);
 
     let messages = setup_single_message(
@@ -192,7 +194,7 @@ async fn test_input_message_pays_fee() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn can_increase_block_height() -> Result<(), Error> {
+async fn can_increase_block_height() -> Result<()> {
     // ANCHOR: use_produce_blocks_to_increase_block_height
     let config = Config {
         manual_blocks_enabled: true, // Necessary so the `produce_blocks` API can be used locally
@@ -213,7 +215,7 @@ async fn can_increase_block_height() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn can_set_custom_block_time() -> Result<(), Error> {
+async fn can_set_custom_block_time() -> Result<()> {
     use chrono::{TimeZone, Utc};
 
     // ANCHOR: use_produce_blocks_custom_time
@@ -251,7 +253,7 @@ async fn can_set_custom_block_time() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn contract_deployment_respects_maturity() -> Result<(), Error> {
+async fn contract_deployment_respects_maturity() -> Result<()> {
     abigen!(Contract(name="MyContract", abi="packages/fuels/tests/contracts/transaction_block_height/out/debug/transaction_block_height-abi.json"));
 
     let config = Config {
@@ -290,7 +292,7 @@ async fn contract_deployment_respects_maturity() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<(), Error> {
+async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
@@ -326,7 +328,7 @@ async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_amount_and_asset_forwarding() -> Result<(), Error> {
+async fn test_amount_and_asset_forwarding() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
@@ -418,7 +420,7 @@ async fn test_amount_and_asset_forwarding() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_gas_errors() -> Result<(), Error> {
+async fn test_gas_errors() -> Result<()> {
     let mut wallet = WalletUnlocked::new_random(None);
     let number_of_coins = 1;
     let amount_per_coin = 1_000_000;
@@ -481,7 +483,7 @@ async fn test_gas_errors() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_call_param_gas_errors() -> Result<(), Error> {
+async fn test_call_param_gas_errors() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
@@ -523,7 +525,7 @@ async fn test_call_param_gas_errors() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_get_gas_used() -> Result<(), Error> {
+async fn test_get_gas_used() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
@@ -553,7 +555,7 @@ async fn test_get_gas_used() -> Result<(), Error> {
 // the latest version of fuel-core. Once the testnet is updated, this test
 // should be re-enabled.
 #[ignore]
-async fn testnet_hello_world() -> Result<(), Error> {
+async fn testnet_hello_world() -> Result<()> {
     // Note that this test might become flaky.
     // This test depends on:
     // 1. The testnet being up and running;
@@ -608,7 +610,7 @@ async fn testnet_hello_world() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_parse_block_time() -> Result<(), Error> {
+async fn test_parse_block_time() -> Result<()> {
     let mut wallet = WalletUnlocked::new_random(None);
     let coins = setup_single_asset_coins(wallet.address(), AssetId::BASE, 1, DEFAULT_COIN_AMOUNT);
     let (provider, _) = setup_test_provider(coins.clone(), vec![], None, None).await;

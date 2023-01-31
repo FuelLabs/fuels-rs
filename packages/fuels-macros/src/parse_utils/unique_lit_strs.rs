@@ -3,7 +3,7 @@ use std::vec::IntoIter;
 use itertools::{chain, Itertools};
 use proc_macro2::Span;
 use quote::ToTokens;
-use syn::{punctuated::Punctuated, spanned::Spanned, Error, Lit, LitStr, NestedMeta};
+use syn::{punctuated::Punctuated, spanned::Spanned, Error, Lit, LitStr, NestedMeta, Result};
 
 use crate::parse_utils::{validate_no_duplicates, ErrorsExt};
 
@@ -14,7 +14,7 @@ pub struct UniqueLitStrs {
 }
 
 impl UniqueLitStrs {
-    pub fn new<T: ToTokens>(nested_metas: Punctuated<NestedMeta, T>) -> Result<Self, Error> {
+    pub fn new<T: ToTokens>(nested_metas: Punctuated<NestedMeta, T>) -> Result<Self> {
         let span = nested_metas.span();
 
         let (lit_strs, errors): (Vec<_>, Vec<_>) = nested_metas
@@ -64,7 +64,7 @@ mod tests {
     use crate::parse_utils::Command;
 
     #[test]
-    fn correctly_reads_lit_strs() -> syn::Result<()> {
+    fn correctly_reads_lit_strs() -> Result<()> {
         // given
         let stream = quote! {SomeCommand("lit1", "lit2")};
 
@@ -104,7 +104,7 @@ mod tests {
         assert_eq!(err.to_string(), "Expected a string!");
     }
 
-    fn parse_unique_lit_strs(stream: TokenStream) -> syn::Result<UniqueLitStrs> {
+    fn parse_unique_lit_strs(stream: TokenStream) -> Result<UniqueLitStrs> {
         let command = Command::parse_single_from_token_stream(stream)?;
 
         UniqueLitStrs::new(command.contents)

@@ -47,7 +47,7 @@ async fn setup_predicate_test(
     num_coins: u64,
     num_messages: u64,
     amount: u64,
-) -> Result<(Provider, u64, WalletUnlocked, u64, AssetId), Error> {
+) -> Result<(Provider, u64, WalletUnlocked, u64, AssetId)> {
     let receiver_num_coins = 1;
     let receiver_amount = 1;
     let receiver_balance = receiver_num_coins * receiver_amount;
@@ -78,7 +78,7 @@ async fn setup_predicate_test(
 }
 
 #[tokio::test]
-async fn transfer_coins_and_messages_to_predicate() -> Result<(), Error> {
+async fn transfer_coins_and_messages_to_predicate() -> Result<()> {
     let num_coins = 16;
     let num_messages = 32;
     let amount = 64;
@@ -112,7 +112,7 @@ async fn transfer_coins_and_messages_to_predicate() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn spend_predicate_coins_messages_single_u64() -> Result<(), Error> {
+async fn spend_predicate_coins_messages_single_u64() -> Result<()> {
     abigen!(Predicate(
         name = "MyPredicate",
         abi = "packages/fuels/tests/predicates/predicate_u64/out/debug/predicate_u64-abi.json"
@@ -158,7 +158,7 @@ async fn spend_predicate_coins_messages_single_u64() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn spend_predicate_coins_messages_basic() -> Result<(), Error> {
+async fn spend_predicate_coins_messages_basic() -> Result<()> {
     abigen!(Predicate(
         name = "MyPredicate",
         abi = "packages/fuels/tests/predicates/predicate_basic/out/debug/predicate_basic-abi.json"
@@ -204,7 +204,7 @@ async fn spend_predicate_coins_messages_basic() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn spend_predicate_coins_messages_address() -> Result<(), Error> {
+async fn spend_predicate_coins_messages_address() -> Result<()> {
     abigen!(Predicate(name="MyPredicate", abi="packages/fuels/tests/predicates/predicate_address/out/debug/predicate_address-abi.json"));
 
     let predicate = MyPredicate::load_from(
@@ -256,7 +256,7 @@ async fn spend_predicate_coins_messages_address() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn spend_predicate_coins_messages_enums() -> Result<(), Error> {
+async fn spend_predicate_coins_messages_enums() -> Result<()> {
     abigen!(Predicate(
         name = "MyPredicate",
         abi = "packages/fuels/tests/predicates/predicate_enums/out/debug/predicate_enums-abi.json"
@@ -302,7 +302,7 @@ async fn spend_predicate_coins_messages_enums() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn spend_predicate_coins_messages_structs() -> Result<(), Error> {
+async fn spend_predicate_coins_messages_structs() -> Result<()> {
     abigen!(Predicate(name="MyPredicate", abi="packages/fuels/tests/predicates/predicate_structs/out/debug/predicate_structs-abi.json"));
 
     let predicate = MyPredicate::load_from(
@@ -358,7 +358,7 @@ async fn spend_predicate_coins_messages_structs() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn spend_predicate_coins_messages_tuple() -> Result<(), Error> {
+async fn spend_predicate_coins_messages_tuple() -> Result<()> {
     abigen!(Predicate(
         name = "MyPredicate",
         abi = "packages/fuels/tests/predicates/predicate_tuple/out/debug/predicate_tuple-abi.json"
@@ -404,7 +404,7 @@ async fn spend_predicate_coins_messages_tuple() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn spend_predicate_coins_messages_vector() -> Result<(), Error> {
+async fn spend_predicate_coins_messages_vector() -> Result<()> {
     abigen!(Predicate(
         name = "MyPredicate",
         abi =
@@ -451,7 +451,7 @@ async fn spend_predicate_coins_messages_vector() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn spend_predicate_coins_messages_vectors() -> Result<(), Error> {
+async fn spend_predicate_coins_messages_vectors() -> Result<()> {
     abigen!(Predicate(name="MyPredicate", abi="packages/fuels/tests/predicates/predicate_vectors/out/debug/predicate_vectors-abi.json"));
 
     let predicate = MyPredicate::load_from(
@@ -540,7 +540,7 @@ async fn spend_predicate_coins_messages_vectors() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn spend_predicate_coins_messages_generics() -> Result<(), Error> {
+async fn spend_predicate_coins_messages_generics() -> Result<()> {
     abigen!(Predicate(name="MyPredicate", abi="packages/fuels/tests/predicates/predicate_generics/out/debug/predicate_generics-abi.json"));
 
     let predicate = MyPredicate::load_from(
