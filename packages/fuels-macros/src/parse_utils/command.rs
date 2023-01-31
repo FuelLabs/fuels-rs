@@ -41,6 +41,7 @@ impl Command {
     ) -> syn::Result<Vec<Self>> {
         syn::parse::Parser::parse2(Command::parse_multiple, stream)
     }
+
     #[cfg(test)]
     pub(crate) fn parse_single_from_token_stream(
         stream: proc_macro2::TokenStream,

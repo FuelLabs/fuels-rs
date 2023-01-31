@@ -3,7 +3,7 @@ mod tests {
     use fuels::prelude::*;
 
     #[tokio::test]
-    async fn example_of_abigen_usage() -> Result<(), Error> {
+    async fn example_of_abigen_usage() -> Result<()> {
         // ANCHOR: multiple_abigen_program_types
         abigen!(
             Contract(name="ContractA", abi="packages/fuels/tests/bindings/sharing_types/contract_a/out/debug/contract_a-abi.json"),
