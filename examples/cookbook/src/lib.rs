@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use fuels::prelude::{Result, tx::Script};
+    use fuels::{prelude::Result, tx::Script};
 
     #[tokio::test]
     async fn liquidity() -> Result<()> {

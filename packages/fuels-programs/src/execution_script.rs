@@ -5,7 +5,10 @@ use fuel_tx::{
 };
 use fuels_core::{offsets::call_script_data_offset, parameters::TxParameters};
 use fuels_signers::{provider::Provider, Signer, WalletUnlocked};
-use fuels_types::errors::{Error, Result, script_transaction::ScriptTransaction};
+use fuels_types::{
+    errors::{Error, Result},
+    script_transaction::ScriptTransaction,
+};
 
 use crate::{
     call_utils::{
