@@ -1,12 +1,12 @@
 use std::{collections::HashSet, fmt::Debug, marker::PhantomData};
 
-use fuel_tx::{ContractId, Input, Output, Receipt, Transaction};
+use fuel_tx::{ContractId, Input, Output, Receipt, Transaction, field::Inputs};
 use fuel_types::bytes::padded_len_usize;
 use fuels_core::{
     abi_encoder::UnresolvedBytes,
     offsets::base_offset,
     parameters::{CallParameters, TxParameters},
-    traits::{Parameterize, Tokenizable},
+    traits::{Parameterize, Tokenizable}, constants::BASE_ASSET_ID,
 };
 use fuels_signers::{provider::Provider, WalletUnlocked};
 use fuels_types::{bech32::Bech32ContractId, errors::Error};
@@ -14,7 +14,7 @@ use itertools::chain;
 
 use crate::{
     call_response::FuelCallResponse,
-    call_utils::{generate_contract_inputs, generate_contract_outputs},
+    call_utils::{generate_contract_inputs, generate_contract_outputs, extract_input_ids},
     contract::{get_decoded_output, SettableContract},
     execution_script::ExecutableFuelCall,
     logs::{decode_revert_error, LogDecoder},
@@ -176,6 +176,14 @@ where
             outputs,
             vec![vec![0, 0].into()], //TODO:(iqdecay): figure out how to have the right witnesses
         );
+
+        let base_inputs =
+        tx.inputs().iter().filter(|input| {
+            matches!(input, Input::MessageSigned { .. })
+            || matches!(input, Input::CoinSigned { asset_id, .. } if asset_id == &BASE_ASSET_ID)
+        });
+        let excluded_ids = extract_input_ids(&base_inputs);
+
         self.wallet.add_fee_resources(&mut tx, 0, 0).await?;
 
         let tx_execution = ExecutableFuelCall { tx };

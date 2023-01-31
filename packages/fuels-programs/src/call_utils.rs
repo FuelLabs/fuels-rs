@@ -281,9 +281,8 @@ fn extract_unique_contract_ids(calls: &[ContractCall]) -> HashSet<ContractId> {
         .collect()
 }
 
-fn extract_input_ids(inputs: &[Input]) -> (Vec<UtxoId>, Vec<MessageId>) {
+pub(crate) fn extract_input_ids(&inputs: Iterator<Item = Input>) -> (Vec<UtxoId>, Vec<MessageId>) {
     let utxos = inputs
-        .iter()
         .filter_map(|input| match input {
             Input::CoinSigned { utxo_id, .. } => Some(utxo_id.clone()),
             _ => None,
