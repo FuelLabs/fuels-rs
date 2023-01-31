@@ -282,7 +282,9 @@ If <code>cargo generate</code> is not already installed, you can instal it with:
         };
 
         // Run the fuel node.
-        let server = FuelService::new_node(Config::local_node()).await?;
+        let server = FuelService::new_node(Config::local_node())
+            .await
+            .map_err(|err| error!(InfrastructureError, &quot;{err}&quot;))?;
 
         // Create a client that will talk to the node created above.
         let client = FuelClient::from(server.bound_address);
@@ -2781,7 +2783,7 @@ selector, but you have to jump through an extra hoop to get the ParamTypes:</p>
             .inputs
             .into_iter()
             .map(|type_appl| ParamType::try_from_type_application(&amp;type_appl, &amp;type_lookup))
-            .collect::&lt;Result&lt;Vec&lt;_&gt;, _&gt;&gt;()?;
+            .collect::&lt;Result&lt;Vec&lt;_&gt;&gt;&gt;()?;
 
         let selector = resolve_fn_selector(&amp;a_fun.name, &amp;inputs);
 

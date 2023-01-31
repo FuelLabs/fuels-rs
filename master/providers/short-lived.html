@@ -145,7 +145,9 @@
         };
 
         // Run the fuel node.
-        let server = FuelService::new_node(Config::local_node()).await?;
+        let server = FuelService::new_node(Config::local_node())
+            .await
+            .map_err(|err| error!(InfrastructureError, &quot;{err}&quot;))?;
 
         // Create a client that will talk to the node created above.
         let client = FuelClient::from(server.bound_address);

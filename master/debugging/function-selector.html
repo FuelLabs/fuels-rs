@@ -170,7 +170,7 @@ selector, but you have to jump through an extra hoop to get the ParamTypes:</p>
             .inputs
             .into_iter()
             .map(|type_appl| ParamType::try_from_type_application(&amp;type_appl, &amp;type_lookup))
-            .collect::&lt;Result&lt;Vec&lt;_&gt;, _&gt;&gt;()?;
+            .collect::&lt;Result&lt;Vec&lt;_&gt;&gt;&gt;()?;
 
         let selector = resolve_fn_selector(&amp;a_fun.name, &amp;inputs);
 
