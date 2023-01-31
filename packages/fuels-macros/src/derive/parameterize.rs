@@ -1,6 +1,6 @@
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
-use syn::{Data, DataEnum, DataStruct, DeriveInput, Error, Generics};
+use syn::{Data, DataEnum, DataStruct, DeriveInput, Error, Generics, Result};
 
 use crate::{
     derive::utils::determine_fuels_types_path,
@@ -9,7 +9,7 @@ use crate::{
     },
 };
 
-pub fn generate_parameterize_impl(input: DeriveInput) -> syn::Result<TokenStream> {
+pub fn generate_parameterize_impl(input: DeriveInput) -> Result<TokenStream> {
     let fuels_types_path = determine_fuels_types_path(&input.attrs)?;
 
     match input.data {
@@ -31,7 +31,7 @@ fn parameterize_for_struct(
     generics: Generics,
     contents: DataStruct,
     fuels_types_path: TokenStream,
-) -> Result<TokenStream, Error> {
+) -> Result<TokenStream> {
     let (impl_gen, type_gen, where_clause) = generics.split_for_impl();
     let name_stringified = name.to_string();
     let members = extract_struct_members(contents, fuels_types_path.clone())?;
@@ -55,7 +55,7 @@ fn parameterize_for_struct(
 fn parameterize_generic_params(
     generics: &Generics,
     fuels_types_path: &TokenStream,
-) -> syn::Result<Vec<TokenStream>> {
+) -> Result<Vec<TokenStream>> {
     let parameterize_calls = validate_and_extract_generic_types(generics)?
         .into_iter()
         .map(|type_param| {
@@ -72,7 +72,7 @@ fn parameterize_for_enum(
     generics: Generics,
     contents: DataEnum,
     fuels_types_path: TokenStream,
-) -> Result<TokenStream, Error> {
+) -> Result<TokenStream> {
     let (impl_gen, type_gen, where_clause) = generics.split_for_impl();
     let enum_name_str = name.to_string();
     let members = extract_enum_members(contents, fuels_types_path.clone())?;

@@ -3,7 +3,11 @@ use std::fmt;
 use fuel_types::bytes::padded_len;
 use strum_macros::EnumString;
 
-use crate::{enum_variants::EnumVariants, errors::CodecError, param_types::ParamType};
+use crate::{
+    enum_variants::EnumVariants,
+    errors::{error, Error, Result},
+    param_types::ParamType,
+};
 
 mod bits;
 mod byte;
@@ -28,33 +32,35 @@ impl StringToken {
         StringToken { data, expected_len }
     }
 
-    fn validate(&self) -> Result<(), CodecError> {
+    fn validate(&self) -> Result<()> {
         if !self.data.is_ascii() {
-            return Err(CodecError::InvalidData(
-                "String data can only have ascii values".into(),
+            return Err(error!(
+                InvalidData,
+                "String data can only have ascii values"
             ));
         }
 
         if self.data.len() != self.expected_len {
-            return Err(CodecError::InvalidData(format!(
+            return Err(error!(
+                InvalidData,
                 "String data has len {}, but the expected len is {}",
                 self.data.len(),
                 self.expected_len
-            )));
+            ));
         }
 
         Ok(())
     }
 
-    pub fn get_encodable_str(&self) -> Result<&str, CodecError> {
+    pub fn get_encodable_str(&self) -> Result<&str> {
         self.validate()?;
         Ok(self.data.as_str())
     }
 }
 
 impl TryFrom<StringToken> for String {
-    type Error = CodecError;
-    fn try_from(string_token: StringToken) -> Result<String, Self::Error> {
+    type Error = Error;
+    fn try_from(string_token: StringToken) -> Result<String> {
         string_token.validate()?;
         Ok(string_token.data)
     }

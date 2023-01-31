@@ -58,14 +58,14 @@ pub(crate) fn contract_bindings(
                 self.wallet.clone()
             }
 
-            pub fn with_wallet(&self, mut wallet: ::fuels::signers::wallet::WalletUnlocked) -> ::std::result::Result<Self, ::fuels::types::errors::Error> {
+            pub fn with_wallet(&self, mut wallet: ::fuels::signers::wallet::WalletUnlocked) -> ::fuels::types::errors::Result<Self> {
                let provider = self.wallet.get_provider()?;
                wallet.set_provider(provider.clone());
 
                ::std::result::Result::Ok(Self { contract_id: self.contract_id.clone(), wallet: wallet, log_decoder: self.log_decoder.clone()})
             }
 
-            pub async fn get_balances(&self) -> ::std::result::Result<::std::collections::HashMap<::std::string::String, u64>, ::fuels::types::errors::Error> {
+            pub async fn get_balances(&self) -> ::fuels::types::errors::Result<::std::collections::HashMap<::std::string::String, u64>> {
                 self.wallet.get_provider()?.get_contract_balances(&self.contract_id).await.map_err(Into::into)
             }
 

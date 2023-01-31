@@ -7,7 +7,7 @@ use fuel_tx::Receipt;
 use fuels_core::{traits::DecodableLog, try_from_bytes};
 use fuels_types::{
     bech32::Bech32ContractId,
-    errors::Error,
+    errors::{Error, Result},
     param_types::ParamType,
     traits::{Parameterize, Tokenizable},
 };
@@ -21,7 +21,7 @@ pub struct LogDecoder {
 
 impl LogDecoder {
     /// Get all decoded logs from the given receipts as `String`
-    pub fn get_logs(&self, receipts: &[Receipt]) -> Result<Vec<String>, Error> {
+    pub fn get_logs(&self, receipts: &[Receipt]) -> Result<Vec<String>> {
         let ids_with_data = receipts.iter().filter_map(|r| match r {
             Receipt::LogData { rb, data, id, .. } => {
                 Some(((Bech32ContractId::from(*id), *rb), data.clone()))
@@ -48,7 +48,7 @@ impl LogDecoder {
     pub fn get_logs_with_type<T: Tokenizable + Parameterize>(
         &self,
         receipts: &[Receipt],
-    ) -> Result<Vec<T>, Error> {
+    ) -> Result<Vec<T>> {
         let target_param_type = T::param_type();
 
         let target_ids: HashSet<(Bech32ContractId, u64)> = self

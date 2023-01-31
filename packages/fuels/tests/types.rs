@@ -1,3 +1,4 @@
+use std::result::Result as StdResult;
 use std::str::FromStr;
 
 use fuels::{
@@ -12,7 +13,7 @@ pub fn null_contract_id() -> Bech32ContractId {
 }
 
 #[tokio::test]
-async fn test_methods_typeless_argument() -> Result<(), Error> {
+async fn test_methods_typeless_argument() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
@@ -37,7 +38,7 @@ async fn test_methods_typeless_argument() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn call_with_empty_return() -> Result<(), Error> {
+async fn call_with_empty_return() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
@@ -60,7 +61,7 @@ async fn call_with_empty_return() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn type_safe_output_values() -> Result<(), Error> {
+async fn type_safe_output_values() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
@@ -97,7 +98,7 @@ async fn type_safe_output_values() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn call_with_structs() -> Result<(), Error> {
+async fn call_with_structs() -> Result<()> {
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `MyContract`.
     // ANCHOR: struct_generation
@@ -137,7 +138,7 @@ async fn call_with_structs() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn abigen_different_structs_same_arg_name() -> Result<(), Error> {
+async fn abigen_different_structs_same_arg_name() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
@@ -166,7 +167,7 @@ async fn abigen_different_structs_same_arg_name() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn nested_structs() -> Result<(), Error> {
+async fn nested_structs() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
@@ -223,7 +224,7 @@ async fn nested_structs() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn calls_with_empty_struct() -> Result<(), Error> {
+async fn calls_with_empty_struct() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
@@ -256,7 +257,7 @@ async fn calls_with_empty_struct() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn can_use_try_into_to_construct_struct_from_bytes() -> Result<(), Error> {
+async fn can_use_try_into_to_construct_struct_from_bytes() -> Result<()> {
     abigen!(Contract(
         name = "MyContract",
         abi = "packages/fuels/tests/types/enum_inside_struct/out/debug\
@@ -286,7 +287,7 @@ async fn can_use_try_into_to_construct_struct_from_bytes() -> Result<(), Error> 
 }
 
 #[tokio::test]
-async fn test_tuples() -> Result<(), Error> {
+async fn test_tuples() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
@@ -360,7 +361,7 @@ async fn test_tuples() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_evm_address() -> Result<(), Error> {
+async fn test_evm_address() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
@@ -428,7 +429,7 @@ async fn test_evm_address() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_array() -> Result<(), Error> {
+async fn test_array() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
@@ -455,7 +456,7 @@ async fn test_array() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_arrays_with_custom_types() -> Result<(), Error> {
+async fn test_arrays_with_custom_types() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
@@ -497,7 +498,7 @@ async fn test_arrays_with_custom_types() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn str_in_array() -> Result<(), Error> {
+async fn str_in_array() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
@@ -537,7 +538,7 @@ async fn str_in_array() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_enum_inside_struct() -> Result<(), Error> {
+async fn test_enum_inside_struct() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
@@ -579,7 +580,7 @@ async fn test_enum_inside_struct() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn native_types_support() -> Result<(), Box<dyn std::error::Error>> {
+async fn native_types_support() -> StdResult<(), Box<dyn std::error::Error>> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
@@ -616,7 +617,7 @@ async fn native_types_support() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 #[tokio::test]
-async fn enum_coding_w_variable_width_variants() -> Result<(), Error> {
+async fn enum_coding_w_variable_width_variants() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
@@ -657,7 +658,7 @@ async fn enum_coding_w_variable_width_variants() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn enum_coding_w_unit_enums() -> Result<(), Error> {
+async fn enum_coding_w_unit_enums() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
@@ -696,7 +697,7 @@ async fn enum_coding_w_unit_enums() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn enum_as_input() -> Result<(), Error> {
+async fn enum_as_input() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
@@ -742,7 +743,7 @@ async fn enum_as_input() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn can_use_try_into_to_construct_enum_from_bytes() -> Result<(), Error> {
+async fn can_use_try_into_to_construct_enum_from_bytes() -> Result<()> {
     abigen!(Contract(
         name = "MyContract",
         abi = "packages/fuels/tests/types/enum_inside_struct/out/debug\
@@ -769,7 +770,7 @@ async fn can_use_try_into_to_construct_enum_from_bytes() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn type_inside_enum() -> Result<(), Error> {
+async fn type_inside_enum() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
@@ -1111,7 +1112,7 @@ async fn strings_must_have_all_ascii_chars_custom_types() {
 }
 
 #[tokio::test]
-async fn test_rust_option_can_be_decoded() -> Result<(), Box<dyn std::error::Error>> {
+async fn test_rust_option_can_be_decoded() -> StdResult<(), Box<dyn std::error::Error>> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
@@ -1163,7 +1164,7 @@ async fn test_rust_option_can_be_decoded() -> Result<(), Box<dyn std::error::Err
 }
 
 #[tokio::test]
-async fn test_rust_option_can_be_encoded() -> Result<(), Box<dyn std::error::Error>> {
+async fn test_rust_option_can_be_encoded() -> StdResult<(), Box<dyn std::error::Error>> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
@@ -1217,7 +1218,7 @@ async fn test_rust_option_can_be_encoded() -> Result<(), Box<dyn std::error::Err
 }
 
 #[tokio::test]
-async fn test_rust_result_can_be_decoded() -> Result<(), Box<dyn std::error::Error>> {
+async fn test_rust_result_can_be_decoded() -> StdResult<(), Box<dyn std::error::Error>> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
@@ -1269,7 +1270,7 @@ async fn test_rust_result_can_be_decoded() -> Result<(), Box<dyn std::error::Err
 }
 
 #[tokio::test]
-async fn test_rust_result_can_be_encoded() -> Result<(), Box<dyn std::error::Error>> {
+async fn test_rust_result_can_be_encoded() -> StdResult<(), Box<dyn std::error::Error>> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
@@ -1304,7 +1305,7 @@ async fn test_rust_result_can_be_encoded() -> Result<(), Box<dyn std::error::Err
 }
 
 #[tokio::test]
-async fn test_identity_can_be_decoded() -> Result<(), Box<dyn std::error::Error>> {
+async fn test_identity_can_be_decoded() -> StdResult<(), Box<dyn std::error::Error>> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
@@ -1349,7 +1350,7 @@ async fn test_identity_can_be_decoded() -> Result<(), Box<dyn std::error::Error>
 }
 
 #[tokio::test]
-async fn test_identity_can_be_encoded() -> Result<(), Box<dyn std::error::Error>> {
+async fn test_identity_can_be_encoded() -> StdResult<(), Box<dyn std::error::Error>> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
@@ -1397,7 +1398,7 @@ async fn test_identity_can_be_encoded() -> Result<(), Box<dyn std::error::Error>
 }
 
 #[tokio::test]
-async fn test_identity_with_two_contracts() -> Result<(), Box<dyn std::error::Error>> {
+async fn test_identity_with_two_contracts() -> StdResult<(), Box<dyn std::error::Error>> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
@@ -1442,7 +1443,7 @@ async fn test_identity_with_two_contracts() -> Result<(), Box<dyn std::error::Er
 }
 
 #[tokio::test]
-async fn generics_test() -> anyhow::Result<()> {
+async fn generics_test() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
@@ -1552,7 +1553,7 @@ async fn generics_test() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-async fn test_vector() -> Result<(), Error> {
+async fn test_vector() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
@@ -1639,7 +1640,7 @@ async fn test_vector() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_b512() -> Result<(), Error> {
+async fn test_b512() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(

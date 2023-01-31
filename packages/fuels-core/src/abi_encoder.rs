@@ -1,5 +1,5 @@
 use fuels_types::{
-    constants::WORD_SIZE, errors::CodecError, pad_string, pad_u16, pad_u32, pad_u8, EnumSelector,
+    constants::WORD_SIZE, errors::Result, pad_string, pad_u16, pad_u32, pad_u8, EnumSelector,
     StringToken, Token,
 };
 use itertools::Itertools;
@@ -92,21 +92,21 @@ impl UnresolvedBytes {
 impl ABIEncoder {
     /// Encodes `Token`s in `args` following the ABI specs defined
     /// [here](https://github.com/FuelLabs/fuel-specs/blob/master/specs/protocol/abi.md)
-    pub fn encode(args: &[Token]) -> Result<UnresolvedBytes, CodecError> {
+    pub fn encode(args: &[Token]) -> Result<UnresolvedBytes> {
         let data = Self::encode_tokens(args)?;
 
         Ok(UnresolvedBytes { data })
     }
 
-    fn encode_tokens(tokens: &[Token]) -> Result<Vec<Data>, CodecError> {
+    fn encode_tokens(tokens: &[Token]) -> Result<Vec<Data>> {
         tokens
             .iter()
             .map(Self::encode_token)
             .flatten_ok()
-            .collect::<Result<Vec<_>, _>>()
+            .collect::<Result<Vec<_>>>()
     }
 
-    fn encode_token(arg: &Token) -> Result<Vec<Data>, CodecError> {
+    fn encode_token(arg: &Token) -> Result<Vec<Data>> {
         let encoded_token = match arg {
             Token::U8(arg_u8) => vec![Self::encode_u8(*arg_u8)],
             Token::U16(arg_u16) => vec![Self::encode_u16(*arg_u16)],
@@ -134,19 +134,19 @@ impl ABIEncoder {
         Data::Inline(vec![0; WORD_SIZE])
     }
 
-    fn encode_tuple(arg_tuple: &[Token]) -> Result<Vec<Data>, CodecError> {
+    fn encode_tuple(arg_tuple: &[Token]) -> Result<Vec<Data>> {
         Self::encode_tokens(arg_tuple)
     }
 
-    fn encode_struct(subcomponents: &[Token]) -> Result<Vec<Data>, CodecError> {
+    fn encode_struct(subcomponents: &[Token]) -> Result<Vec<Data>> {
         Self::encode_tokens(subcomponents)
     }
 
-    fn encode_array(arg_array: &[Token]) -> Result<Vec<Data>, CodecError> {
+    fn encode_array(arg_array: &[Token]) -> Result<Vec<Data>> {
         Self::encode_tokens(arg_array)
     }
 
-    fn encode_string(arg_string: &StringToken) -> Result<Data, CodecError> {
+    fn encode_string(arg_string: &StringToken) -> Result<Data> {
         Ok(Data::Inline(pad_string(arg_string.get_encodable_str()?)))
     }
 
@@ -178,7 +178,7 @@ impl ABIEncoder {
         Data::Inline(pad_u8(arg_u8).to_vec())
     }
 
-    fn encode_enum(selector: &EnumSelector) -> Result<Vec<Data>, CodecError> {
+    fn encode_enum(selector: &EnumSelector) -> Result<Vec<Data>> {
         let (discriminant, token_within_enum, variants) = selector;
 
         let mut encoded_enum = vec![Self::encode_discriminant(*discriminant)];
@@ -201,7 +201,7 @@ impl ABIEncoder {
         Self::encode_u8(discriminant)
     }
 
-    fn encode_vector(data: &[Token]) -> Result<Vec<Data>, CodecError> {
+    fn encode_vector(data: &[Token]) -> Result<Vec<Data>> {
         let encoded_data = Self::encode_tokens(data)?;
         let cap = data.len() as u64;
         let len = data.len() as u64;
@@ -224,7 +224,7 @@ mod tests {
     use std::slice;
 
     use fuels_test_helpers::generate_unused_field_names;
-    use fuels_types::{enum_variants::EnumVariants, errors::Error, param_types::ParamType};
+    use fuels_types::{enum_variants::EnumVariants, errors::Result, param_types::ParamType};
     use itertools::chain;
     use sha2::{Digest, Sha256};
 
@@ -249,7 +249,7 @@ mod tests {
     }
 
     #[test]
-    fn encode_function_with_u32_type() -> Result<(), Error> {
+    fn encode_function_with_u32_type() -> Result<()> {
         // @todo eventually we must update the json abi examples in here.
         // They're in the old format.
         //
@@ -286,7 +286,7 @@ mod tests {
     }
 
     #[test]
-    fn encode_function_with_u32_type_multiple_args() -> Result<(), Error> {
+    fn encode_function_with_u32_type_multiple_args() -> Result<()> {
         // let json_abi =
         // r#"
         // [
@@ -322,7 +322,7 @@ mod tests {
     }
 
     #[test]
-    fn encode_function_with_u64_type() -> Result<(), Error> {
+    fn encode_function_with_u64_type() -> Result<()> {
         // let json_abi =
         // r#"
         // [
@@ -356,7 +356,7 @@ mod tests {
     }
 
     #[test]
-    fn encode_function_with_bool_type() -> Result<(), Error> {
+    fn encode_function_with_bool_type() -> Result<()> {
         // let json_abi =
         // r#"
         // [
@@ -390,7 +390,7 @@ mod tests {
     }
 
     #[test]
-    fn encode_function_with_two_different_type() -> Result<(), Error> {
+    fn encode_function_with_two_different_type() -> Result<()> {
         // let json_abi =
         // r#"
         // [
@@ -427,7 +427,7 @@ mod tests {
     }
 
     #[test]
-    fn encode_function_with_byte_type() -> Result<(), Error> {
+    fn encode_function_with_byte_type() -> Result<()> {
         // let json_abi =
         // r#"
         // [
@@ -461,7 +461,7 @@ mod tests {
     }
 
     #[test]
-    fn encode_function_with_bits256_type() -> Result<(), Error> {
+    fn encode_function_with_bits256_type() -> Result<()> {
         // let json_abi =
         // r#"
         // [
@@ -505,7 +505,7 @@ mod tests {
     }
 
     #[test]
-    fn encode_function_with_array_type() -> Result<(), Error> {
+    fn encode_function_with_array_type() -> Result<()> {
         // let json_abi =
         // r#"
         // [
@@ -549,7 +549,7 @@ mod tests {
     }
 
     #[test]
-    fn encode_function_with_string_type() -> Result<(), Error> {
+    fn encode_function_with_string_type() -> Result<()> {
         // let json_abi =
         // r#"
         // [
@@ -588,7 +588,7 @@ mod tests {
     }
 
     #[test]
-    fn encode_function_with_struct() -> Result<(), Error> {
+    fn encode_function_with_struct() -> Result<()> {
         // let json_abi =
         // r#"
         // [
@@ -636,7 +636,7 @@ mod tests {
     }
 
     #[test]
-    fn encode_function_with_enum() -> Result<(), Error> {
+    fn encode_function_with_enum() -> Result<()> {
         // let json_abi =
         // r#"
         // [
@@ -687,7 +687,7 @@ mod tests {
 
     // The encoding follows the ABI specs defined  [here](https://github.com/FuelLabs/fuel-specs/blob/master/specs/protocol/abi.md)
     #[test]
-    fn enums_are_sized_to_fit_the_biggest_variant() -> Result<(), Error> {
+    fn enums_are_sized_to_fit_the_biggest_variant() -> Result<()> {
         // Our enum has two variants: B256, and U64. So the enum will set aside
         // 256b of space or 4 WORDS because that is the space needed to fit the
         // largest variant(B256).
@@ -715,7 +715,7 @@ mod tests {
     }
 
     #[test]
-    fn encoding_enums_with_deeply_nested_types() -> Result<(), Error> {
+    fn encoding_enums_with_deeply_nested_types() -> Result<()> {
         /*
         enum DeeperEnum {
             v1: bool,
@@ -794,7 +794,7 @@ mod tests {
     }
 
     #[test]
-    fn encode_function_with_nested_structs() -> Result<(), Error> {
+    fn encode_function_with_nested_structs() -> Result<()> {
         // let json_abi =
         // r#"
         // [
@@ -846,7 +846,7 @@ mod tests {
     }
 
     #[test]
-    fn encode_comprehensive_function() -> Result<(), Error> {
+    fn encode_comprehensive_function() -> Result<()> {
         // let json_abi =
         // r#"
         // [
@@ -935,7 +935,7 @@ mod tests {
     }
 
     #[test]
-    fn enums_with_only_unit_variants_are_encoded_in_one_word() -> Result<(), Error> {
+    fn enums_with_only_unit_variants_are_encoded_in_one_word() -> Result<()> {
         let expected = [0, 0, 0, 0, 0, 0, 0, 1];
 
         let enum_selector = Box::new((
@@ -954,7 +954,7 @@ mod tests {
     }
 
     #[test]
-    fn units_in_composite_types_are_encoded_in_one_word() -> Result<(), Error> {
+    fn units_in_composite_types_are_encoded_in_one_word() -> Result<()> {
         let expected = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5];
 
         let actual =
@@ -965,7 +965,7 @@ mod tests {
     }
 
     #[test]
-    fn enums_with_units_are_correctly_padded() -> Result<(), Error> {
+    fn enums_with_units_are_correctly_padded() -> Result<()> {
         let discriminant = vec![0, 0, 0, 0, 0, 0, 0, 1];
         let padding = vec![0; 32];
         let expected: Vec<u8> = [discriminant, padding].into_iter().flatten().collect();
@@ -986,7 +986,7 @@ mod tests {
     }
 
     #[test]
-    fn vector_has_ptr_cap_len_and_then_data() -> Result<(), Error> {
+    fn vector_has_ptr_cap_len_and_then_data() -> Result<()> {
         // arrange
         let offset: u8 = 150;
         let token = Token::Vector(vec![Token::U64(5)]);
@@ -1008,7 +1008,7 @@ mod tests {
     }
 
     #[test]
-    fn data_from_two_vectors_aggregated_at_the_end() -> Result<(), Error> {
+    fn data_from_two_vectors_aggregated_at_the_end() -> Result<()> {
         // arrange
         let offset: u8 = 40;
         let vec_1 = Token::Vector(vec![Token::U64(5)]);
@@ -1041,7 +1041,7 @@ mod tests {
     }
 
     #[test]
-    fn a_vec_in_an_enum() -> Result<(), Error> {
+    fn a_vec_in_an_enum() -> Result<()> {
         // arrange
         let offset = 40;
         let variants = EnumVariants::new(generate_unused_field_names(vec![
@@ -1082,7 +1082,7 @@ mod tests {
     }
 
     #[test]
-    fn an_enum_in_a_vec() -> Result<(), Error> {
+    fn an_enum_in_a_vec() -> Result<()> {
         // arrange
         let offset = 40;
         let variants = EnumVariants::new(generate_unused_field_names(vec![
@@ -1114,7 +1114,7 @@ mod tests {
     }
 
     #[test]
-    fn a_vec_in_a_struct() -> Result<(), Error> {
+    fn a_vec_in_a_struct() -> Result<()> {
         // arrange
         let offset = 40;
         let token = Token::Struct(vec![Token::Vector(vec![Token::U64(5)]), Token::U8(9)]);
@@ -1144,7 +1144,7 @@ mod tests {
         Ok(())
     }
     #[test]
-    fn a_vec_in_a_vec() -> Result<(), Error> {
+    fn a_vec_in_a_vec() -> Result<()> {
         // arrange
         let offset = 40;
         let token = Token::Vector(vec![Token::Vector(vec![Token::U8(5), Token::U8(6)])]);
