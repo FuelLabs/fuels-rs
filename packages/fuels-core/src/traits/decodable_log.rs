@@ -1,35 +1,35 @@
 use std::iter::zip;
 
-use fuels_types::{errors::Error, param_types::ParamType, Token};
+use fuels_types::{
+    errors::{error, Error, Result},
+    param_types::ParamType,
+    Token,
+};
 
 use crate::abi_decoder::ABIDecoder;
 
 pub trait DecodableLog {
-    fn decode_log(&self, data: &[u8]) -> Result<String, Error>;
+    fn decode_log(&self, data: &[u8]) -> Result<String>;
 }
 
 impl DecodableLog for ParamType {
-    fn decode_log(&self, data: &[u8]) -> Result<String, Error> {
+    fn decode_log(&self, data: &[u8]) -> Result<String> {
         let token = ABIDecoder::decode_single(self, data)?;
         paramtype_decode_log(self, &token)
     }
 }
 
-fn inner_types_log(
-    tokens: &[Token],
-    inner_type: &ParamType,
-    join_str: &str,
-) -> Result<String, Error> {
+fn inner_types_log(tokens: &[Token], inner_type: &ParamType, join_str: &str) -> Result<String> {
     let inner_types_log = tokens
         .iter()
         .map(|token| paramtype_decode_log(inner_type, token))
-        .collect::<Result<Vec<_>, _>>()?
+        .collect::<Result<Vec<_>>>()?
         .join(join_str);
 
     Ok(inner_types_log)
 }
 
-fn paramtype_decode_log(param_type: &ParamType, token: &Token) -> Result<String, Error> {
+fn paramtype_decode_log(param_type: &ParamType, token: &Token) -> Result<String> {
     let result = match (param_type, token) {
         (ParamType::U8, Token::U8(val)) => val.to_string(),
         (ParamType::U16, Token::U16(val)) => val.to_string(),
@@ -57,11 +57,11 @@ fn paramtype_decode_log(param_type: &ParamType, token: &Token) -> Result<String,
         }
         (ParamType::Struct { name, fields, .. }, Token::Struct(field_tokens)) => {
             let fields = zip(fields, field_tokens)
-                .map(|((field_name, param_type), token)| -> Result<_, Error> {
+                .map(|((field_name, param_type), token)| -> Result<_> {
                     let field_stringified = paramtype_decode_log(param_type, token)?;
                     Ok(format!("{field_name}: {}", field_stringified))
                 })
-                .collect::<Result<Vec<_>, _>>()?
+                .collect::<Result<Vec<_>>>()?
                 .join(", ");
             format!("{name} {{ {fields} }}")
         }
@@ -81,15 +81,16 @@ fn paramtype_decode_log(param_type: &ParamType, token: &Token) -> Result<String,
         (ParamType::Tuple(types), Token::Tuple(tokens)) => {
             let elements = zip(types, tokens)
                 .map(|(ptype, token)| paramtype_decode_log(ptype, token))
-                .collect::<Result<Vec<_>, _>>()?
+                .collect::<Result<Vec<_>>>()?
                 .join(", ");
 
             format!("({elements})")
         }
         _ => {
-            return Err(Error::InvalidData(format!(
+            return Err(error!(
+                InvalidData,
                 "Could not decode log with param type: `{param_type:?}` and token: `{token:?}`"
-            )))
+            ))
         }
     };
     Ok(result)
@@ -97,12 +98,12 @@ fn paramtype_decode_log(param_type: &ParamType, token: &Token) -> Result<String,
 
 #[cfg(test)]
 mod tests {
-    use fuels_types::{errors::Error, Bits256, EvmAddress, SizedAsciiString};
+    use fuels_types::{errors::Result, Bits256, EvmAddress, SizedAsciiString};
 
     use crate::{traits::DecodableLog, Parameterize};
 
     #[test]
-    fn test_param_type_decode_log() -> Result<(), Error> {
+    fn test_param_type_decode_log() -> Result<()> {
         {
             assert_eq!(
                 format!("{:?}", true),
@@ -156,7 +157,7 @@ mod tests {
 
             assert_eq!(
                 format!("{:?}", Err::<u64, u64>(42u64)),
-                <Result<u64, u64>>::param_type()
+                <std::result::Result<u64, u64>>::param_type()
                     .decode_log(&[0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 42])?
             );
 

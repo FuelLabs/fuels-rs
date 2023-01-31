@@ -43,7 +43,7 @@ pub(crate) fn predicate_bindings(
                 }
             }
 
-            pub fn load_from(file_path: &str) -> ::std::result::Result<Self, ::fuels::types::errors::Error> {
+            pub fn load_from(file_path: &str) -> ::fuels::types::errors::Result<Self> {
                 ::std::result::Result::Ok(Self::new(::std::fs::read(file_path)?))
             }
 
@@ -63,7 +63,7 @@ pub(crate) fn predicate_bindings(
                                  amount: u64,
                                  asset_id: ::fuels::types::AssetId,
                                  tx_parameters: ::std::option::Option<::fuels::core::parameters::TxParameters>
-            ) -> ::std::result::Result<(::std::string::String, ::std::vec::Vec<::fuels::tx::Receipt>), ::fuels::types::errors::Error> {
+            ) -> ::fuels::types::errors::Result<(::std::string::String, ::std::vec::Vec<::fuels::tx::Receipt>)> {
                 let tx_parameters = tx_parameters.unwrap_or_default();
                 from
                     .transfer(
@@ -79,7 +79,7 @@ pub(crate) fn predicate_bindings(
                                 amount: u64,
                                 asset_id: ::fuels::types::AssetId,
                                 tx_parameters: ::std::option::Option<::fuels::core::parameters::TxParameters>
-            ) -> ::std::result::Result<::std::vec::Vec<::fuels::tx::Receipt>, ::fuels::types::errors::Error> {
+            ) -> ::fuels::types::errors::Result<::std::vec::Vec<::fuels::tx::Receipt>> {
                 let tx_parameters = tx_parameters.unwrap_or_default();
                 to
                     .receive_from_predicate(

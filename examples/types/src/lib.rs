@@ -4,10 +4,10 @@ mod tests {
 
     #[cfg(feature = "fuel-core-lib")]
     use fuels::prelude::Config;
-    use fuels::prelude::Error;
+    use fuels::prelude::Result;
 
     #[tokio::test]
-    async fn bytes32() -> Result<(), Error> {
+    async fn bytes32() -> Result<()> {
         // ANCHOR: bytes32
         use std::str::FromStr;
 
@@ -42,7 +42,7 @@ mod tests {
         Ok(())
     }
     #[tokio::test]
-    async fn address() -> Result<(), Error> {
+    async fn address() -> Result<()> {
         // ANCHOR: address
         use std::str::FromStr;
 
@@ -68,7 +68,7 @@ mod tests {
         Ok(())
     }
     #[tokio::test]
-    async fn bech32() -> Result<(), Error> {
+    async fn bech32() -> Result<()> {
         // ANCHOR: bech32
         use fuels::{
             prelude::Bech32Address,
@@ -103,7 +103,7 @@ mod tests {
         Ok(())
     }
     #[tokio::test]
-    async fn asset_id() -> Result<(), Error> {
+    async fn asset_id() -> Result<()> {
         // ANCHOR: asset_id
         use std::str::FromStr;
 
@@ -129,7 +129,7 @@ mod tests {
         Ok(())
     }
     #[tokio::test]
-    async fn contract_id() -> Result<(), Error> {
+    async fn contract_id() -> Result<()> {
         // ANCHOR: contract_id
         use std::str::FromStr;
 
@@ -157,7 +157,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn type_conversion() -> Result<(), Error> {
+    async fn type_conversion() -> Result<()> {
         // ANCHOR: type_conversion
         use fuels::tx::{AssetId, ContractId};
 

@@ -33,13 +33,11 @@ pub use utils::{into_coin_configs, into_message_configs};
 #[cfg(not(feature = "fuel-core-lib"))]
 pub mod node;
 
-mod chains;
 #[cfg(feature = "fuels-signers")]
 mod signers;
 mod utils;
 mod wallets_config;
 
-pub use chains::*;
 use fuels_types::bech32::Bech32Address;
 #[cfg(not(feature = "fuel-core-lib"))]
 pub use node::*;

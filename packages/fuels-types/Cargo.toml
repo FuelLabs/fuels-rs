@@ -11,7 +11,6 @@ description = "Serializable type representation for working with the Fuel VM ABI
 [dependencies]
 regex = "1.6.0"
 lazy_static = "1.4.0"
-anyhow = "1"
 bech32 = "0.9.0"
 chrono = "0.4.2"
 fuel-tx = "0.23"

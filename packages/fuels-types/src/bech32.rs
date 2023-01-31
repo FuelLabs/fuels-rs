@@ -6,7 +6,7 @@ use std::{
 use bech32::{FromBase32, ToBase32, Variant::Bech32m};
 use fuel_tx::{Address, Bytes32, ContractId};
 
-use crate::errors::Error;
+use crate::errors::{Error, Result};
 
 // Fuel Network human-readable part for bech32 encoding
 pub const FUEL_BECH32_HRP: &str = "fuel";
@@ -50,7 +50,7 @@ macro_rules! bech32type {
         impl FromStr for $i {
             type Err = Error;
 
-            fn from_str(s: &str) -> Result<Self, Self::Err> {
+            fn from_str(s: &str) -> Result<Self> {
                 let (hrp, pubkey_hash_base32, _) = bech32::decode(s)?;
 
                 let pubkey_hash: [u8; Address::LEN] = Vec::<u8>::from_base32(&pubkey_hash_base32)?

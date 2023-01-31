@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use fuels::prelude::Error;
+    use fuels::prelude::Result;
 
     #[tokio::test]
     async fn create_random_wallet() {
@@ -16,7 +16,8 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn create_wallet_from_secret_key() -> Result<(), Box<dyn std::error::Error>> {
+    async fn create_wallet_from_secret_key() -> std::result::Result<(), Box<dyn std::error::Error>>
+    {
         // ANCHOR: create_wallet_from_secret_key
         use std::str::FromStr;
 
@@ -37,7 +38,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn create_wallet_from_mnemonic() -> Result<(), Error> {
+    async fn create_wallet_from_mnemonic() -> Result<()> {
         // ANCHOR: create_wallet_from_mnemonic
         use fuels::prelude::*;
 
@@ -65,7 +66,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn create_and_restore_json_wallet() -> Result<(), Error> {
+    async fn create_and_restore_json_wallet() -> Result<()> {
         // ANCHOR: create_and_restore_json_wallet
         use fuels::prelude::*;
 
@@ -89,7 +90,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn create_and_store_mnemonic_wallet() -> Result<(), Error> {
+    async fn create_and_store_mnemonic_wallet() -> Result<()> {
         // ANCHOR: create_and_store_mnemonic_wallet
         use fuels::prelude::*;
 
@@ -113,7 +114,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn wallet_transfer() -> Result<(), Error> {
+    async fn wallet_transfer() -> Result<()> {
         // ANCHOR: wallet_transfer
         use fuels::prelude::*;
 
@@ -145,7 +146,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn wallet_contract_transfer() -> Result<(), Error> {
+    async fn wallet_contract_transfer() -> Result<()> {
         use fuels::prelude::*;
         use rand::Fill;
 
@@ -211,7 +212,7 @@ mod tests {
 
     #[tokio::test]
     #[allow(unused_variables)]
-    async fn setup_multiple_wallets() -> Result<(), Error> {
+    async fn setup_multiple_wallets() -> Result<()> {
         // ANCHOR: multiple_wallets_helper
         use fuels::prelude::*;
         // This helper will launch a local node and provide 10 test wallets linked to it.
@@ -237,7 +238,7 @@ mod tests {
 
     #[tokio::test]
     #[allow(unused_variables)]
-    async fn setup_wallet_multiple_assets() -> Result<(), Error> {
+    async fn setup_wallet_multiple_assets() -> Result<()> {
         // ANCHOR: multiple_assets_wallet
         // ANCHOR: multiple_assets_coins
         use fuels::prelude::*;
@@ -261,7 +262,7 @@ mod tests {
 
     #[tokio::test]
     #[allow(unused_variables)]
-    async fn setup_wallet_custom_assets() -> Result<(), rand::Error> {
+    async fn setup_wallet_custom_assets() -> std::result::Result<(), rand::Error> {
         // ANCHOR: custom_assets_wallet
         use fuels::prelude::*;
         use rand::Fill;
@@ -307,7 +308,7 @@ mod tests {
 
     #[tokio::test]
     #[allow(unused_variables)]
-    async fn get_balances() -> Result<(), Error> {
+    async fn get_balances() -> Result<()> {
         use std::collections::HashMap;
 
         use fuels::{
@@ -338,7 +339,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn wallet_transfer_to_base_layer() -> Result<(), Error> {
+    async fn wallet_transfer_to_base_layer() -> Result<()> {
         // ANCHOR: wallet_withdraw_to_base
         use std::str::FromStr;
 
