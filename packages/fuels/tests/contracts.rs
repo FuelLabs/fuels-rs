@@ -1016,13 +1016,7 @@ async fn test_add_custom_assets() -> Result<()> {
 
 #[tokio::test]
 async fn test_contract_raw_slice() -> Result<()> {
-    let num_wallets = 1;
-    let num_coins = 1;
-    let amount = 1000;
-    let config = WalletsConfig::new(Some(num_wallets), Some(num_coins), Some(amount));
-
-    let mut wallets = launch_custom_provider_and_get_wallets(config, None, None).await;
-    let wallet = wallets.pop().unwrap();
+    let wallet = launch_provider_and_get_wallet().await;
     setup_contract_test!(
         Abigen(
             name = "RawSliceContract",
@@ -1034,7 +1028,9 @@ async fn test_contract_raw_slice() -> Result<()> {
             wallet = "wallet"
         ),
     );
+
     let contract_methods = contract_instance.methods();
+
     for length in 0..=10 {
         let response = contract_methods.return_raw_slice(length).call().await?;
         assert_eq!(response.value, (0..length).collect::<Vec<_>>());
