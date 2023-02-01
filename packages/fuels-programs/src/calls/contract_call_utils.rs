@@ -591,57 +591,6 @@ mod test {
     }
 
     #[test]
-    fn variable_outputs_appended_to_outputs() {
-        // given
-        let variable_outputs = [100, 200].map(|amount| {
-            Output::variable(random_bech32_addr().into(), amount, Default::default())
-        });
-
-        let calls = variable_outputs
-            .iter()
-            .cloned()
-            .map(|variable_output| {
-                ContractCall::new_with_random_id().with_variable_outputs(&[variable_output])
-            })
-            .collect::<Vec<_>>();
-
-        // when
-        let (_, outputs) =
-            get_transaction_inputs_outputs(&calls, &random_bech32_addr(), Default::default());
-
-        // then
-        let actual_variable_outputs: HashSet<Output> = outputs[2..].iter().cloned().collect();
-        let expected_outputs: HashSet<Output> = variable_outputs.into();
-
-        assert_eq!(expected_outputs, actual_variable_outputs);
-    }
-
-    #[test]
-    fn message_outputs_appended_to_outputs() {
-        // given
-        let message_outputs =
-            [100, 200].map(|amount| Output::message(random_bech32_addr().into(), amount));
-
-        let calls = message_outputs
-            .iter()
-            .cloned()
-            .map(|message_output| {
-                ContractCall::new_with_random_id().with_message_outputs(&[message_output])
-            })
-            .collect::<Vec<_>>();
-
-        // when
-        let (_, outputs) =
-            get_transaction_inputs_outputs(&calls, &random_bech32_addr(), Default::default());
-
-        // then
-        let actual_message_outputs: HashSet<Output> = outputs[2..].iter().cloned().collect();
-        let expected_outputs: HashSet<Output> = message_outputs.into();
-
-        assert_eq!(expected_outputs, actual_message_outputs);
-    }
-
-    #[test]
     fn will_collate_same_asset_ids() {
         let asset_id_1 = AssetId::from([1; 32]);
         let asset_id_2 = AssetId::from([2; 32]);

@@ -16,7 +16,6 @@ use fuels_types::{
 };
 use itertools::chain;
 
-use crate::calls::call::ProgramCall;
 use crate::{
     calls::{
         call::SettableContract,
@@ -98,15 +97,6 @@ where
     /// ```
     pub fn tx_params(mut self, params: TxParameters) -> Self {
         self.tx_parameters = params;
-        self
-    }
-
-    pub fn with_message_outputs(mut self, message_outputs: &[Output]) -> Self {
-        self.script_call = self.script_call.with_message_outputs(message_outputs);
-        self
-    }
-    pub fn with_variable_outputs(mut self, variable_outputs: &[Output]) -> Self {
-        self.script_call = self.script_call.with_variable_outputs(variable_outputs);
         self
     }
 

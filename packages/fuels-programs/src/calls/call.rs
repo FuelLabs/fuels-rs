@@ -2,7 +2,7 @@ use fuel_tx::{Output, Receipt};
 use fuel_types::{Address, AssetId};
 use fuel_vm::fuel_asm::PanicReason;
 
-use fuels_core::{constants::FAILED_TRANSFER_TO_ADDRESS_SIGNAL, parameters::CallParameters};
+use fuels_core::constants::FAILED_TRANSFER_TO_ADDRESS_SIGNAL;
 use fuels_types::bech32::Bech32ContractId;
 
 use crate::logs::LogDecoder;
@@ -17,8 +17,6 @@ pub trait SettableContract {
 
 pub(crate) trait ProgramCall {
     fn with_external_contracts(self, external_contracts: &[Bech32ContractId]) -> Self;
-    fn with_variable_outputs(self, variable_outputs: &[Output]) -> Self;
-    fn with_message_outputs(self, message_outputs: &[Output]) -> Self;
     fn append_variable_outputs(&mut self, num: u64);
     fn append_external_contracts(&mut self, contract_id: Bech32ContractId);
     fn append_message_outputs(&mut self, num: u64);
@@ -40,21 +38,6 @@ macro_rules! impl_programcall_trait_methods {
             fn with_external_contracts(self, external_contracts: &[Bech32ContractId]) -> Self {
                 Self {
                     external_contracts: external_contracts.to_vec(),
-                    ..self
-                }
-            }
-
-
-            fn with_variable_outputs(self, variable_outputs: &[Output]) -> Self {
-                Self {
-                    variable_outputs: variable_outputs.to_vec(),
-                    ..self
-                }
-            }
-
-            fn with_message_outputs(self, message_outputs: &[Output]) -> Self {
-                Self {
-                    message_outputs: message_outputs.to_vec(),
                     ..self
                 }
             }
