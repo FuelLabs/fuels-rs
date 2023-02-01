@@ -51,8 +51,15 @@ pub struct ContractCall {
 
 impl ContractCall {
     pub fn with_contract_id(self, contract_id: Bech32ContractId) -> Self {
-        ContractCall {
+        Self {
             contract_id,
+            ..self
+        }
+    }
+
+    pub fn with_call_parameters(self, call_parameters: CallParameters) -> Self {
+        Self {
+            call_parameters,
             ..self
         }
     }
