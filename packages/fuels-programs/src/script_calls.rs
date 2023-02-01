@@ -7,7 +7,7 @@ use fuels_core::{
     offsets::base_offset,
     parameters::{CallParameters, TxParameters},
 };
-use fuels_signers::{provider::Provider, WalletUnlocked};
+use fuels_signers::{provider::Provider, Signer, WalletUnlocked};
 use fuels_types::{
     bech32::Bech32ContractId,
     errors::Result,
@@ -177,9 +177,10 @@ where
             self.compute_script_data().await?,
             inputs,
             outputs,
-            vec![vec![0, 0].into()], //TODO:(iqdecay): figure out how to have the right witnesses
+            vec![],
         );
         self.wallet.add_fee_resources(&mut tx, 0, 0).await?;
+        self.wallet.sign_transaction(&mut tx).await?;
 
         let tx_execution = ExecutableFuelCall { tx };
 
