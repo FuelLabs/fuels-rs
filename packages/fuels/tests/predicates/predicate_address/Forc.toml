@@ -5,5 +5,5 @@ license = "Apache-2.0"
 name = "predicate_address"
 
 [dependencies]
-core = { git = "https://github.com/FuelLabs/sway", rev = "e06a1cb6c3f9f013a46ce92e42b32954d37cd4fc"}
 std = { git = "https://github.com/FuelLabs/sway", rev = "e06a1cb6c3f9f013a46ce92e42b32954d37cd4fc"}
+# std = { path = "../../../../../../sway/sway-lib-std" }
