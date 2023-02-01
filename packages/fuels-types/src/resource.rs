@@ -1,4 +1,4 @@
-use fuel_gql_client::client::schema::resource::Resource as ClientResource;
+use fuel_core_client::client::schema::resource::Resource as ClientResource;
 
 use crate::{coin::Coin, message::Message};
 

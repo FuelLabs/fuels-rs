@@ -26,3 +26,16 @@ members = [
     "scripts/test-projects",
     "scripts/check-docs",
 ]
+
+[workspace.dependencies]
+fuel-asm = "0.25.2"
+fuel-crypto = "0.25.2"
+fuel-merkle = "0.25.2"
+fuel-storage = "0.25.2"
+fuel-tx = "0.25.2"
+fuel-types = "0.25.2"
+fuel-core = { path = "../fuel-core/crates/fuel-core", default-features = false }
+fuel-core-client = "0.16"
+fuel-core-chain-config = { path = "../fuel-core/crates/chain-config" }
+fuel-core-types = { path = "../fuel-core/crates/types" }
+fuel-vm = "0.25"
