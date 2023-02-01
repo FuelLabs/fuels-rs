@@ -41,7 +41,6 @@ pub struct ScriptCall {
 }
 
 impl ScriptCall {
-    // This method is not present for contracts so not part of the `ProgramCall` trait
     pub fn with_inputs(mut self, inputs: &[Input]) -> Self {
         self.inputs = inputs.to_vec();
         self
