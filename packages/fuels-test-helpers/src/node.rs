@@ -7,8 +7,8 @@ use std::{
 };
 
 use fuel_core_chain_config::{ChainConfig, StateConfig};
-use fuel_core_types::blockchain::primitives::BlockHeight;
 use fuel_core_client::client::FuelClient;
+use fuel_core_types::blockchain::primitives::BlockHeight;
 use fuel_tx::ConsensusParameters;
 use fuel_types::Word;
 use fuel_vm::consts::WORD_SIZE;

@@ -9,8 +9,8 @@ repository = "https://github.com/FuelLabs/fuels-rs"
 description = "Fuel Rust SDK test helpers."
 
 [dependencies]
-fuel-vm = "0.25"
-fuel-tx = "0.25"
+fuel-vm = { workspace = true }
+fuel-tx = { workspace = true }
 fuel-core = { workspace = true, default-features = false, optional = true }
 fuel-core-chain-config = { workspace = true, default-features = false }
 fuel-core-types = { workspace = true, default-features = false }

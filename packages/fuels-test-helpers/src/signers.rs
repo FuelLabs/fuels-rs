@@ -1,8 +1,8 @@
 use std::{mem::size_of, net::SocketAddr};
 
-use fuel_core_chain_config::ChainConfig;
 #[cfg(feature = "fuel-core-lib")]
 use fuel_core::service::Config;
+use fuel_core_chain_config::ChainConfig;
 use fuels_signers::{fuel_crypto::SecretKey, provider::Provider, WalletUnlocked};
 use fuels_types::{coin::Coin, message::Message};
 

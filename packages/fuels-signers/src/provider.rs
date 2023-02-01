@@ -3,15 +3,12 @@ use std::{collections::HashMap, io};
 use chrono::{DateTime, Duration, Utc};
 #[cfg(feature = "fuel-core")]
 use fuel_core::service::{Config, FuelService};
-use fuel_core_client::{
-    client::{
-        schema::{
-            balance::Balance, block::TimeParameters as FuelTimeParameters,
-            contract::ContractBalance,
-        },
-        types::TransactionStatus,
-        FuelClient, PageDirection, PaginatedResult, PaginationRequest,
+use fuel_core_client::client::{
+    schema::{
+        balance::Balance, block::TimeParameters as FuelTimeParameters, contract::ContractBalance,
     },
+    types::TransactionStatus,
+    FuelClient, PageDirection, PaginatedResult, PaginationRequest,
 };
 use fuel_tx::{
     field, AssetId, ConsensusParameters, Receipt, Transaction, TransactionFee, UniqueIdentifier,

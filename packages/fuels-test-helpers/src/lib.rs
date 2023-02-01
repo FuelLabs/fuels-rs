@@ -6,13 +6,13 @@ use std::{
     net::SocketAddr,
 };
 
-use fuel_core_chain_config::ChainConfig;
-#[cfg(feature = "fuel-core-lib")]
-use fuel_core_chain_config::StateConfig;
 #[cfg(feature = "fuel-core-lib")]
 pub use fuel_core::service::Config;
 #[cfg(feature = "fuel-core-lib")]
 use fuel_core::service::FuelService;
+use fuel_core_chain_config::ChainConfig;
+#[cfg(feature = "fuel-core-lib")]
+use fuel_core_chain_config::StateConfig;
 use fuel_core_client::client::FuelClient;
 use fuel_tx::{Bytes32, ConsensusParameters, UtxoId};
 use fuels_core::constants::BASE_ASSET_ID;
