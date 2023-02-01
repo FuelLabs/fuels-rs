@@ -14,4 +14,5 @@ cargo clippy --all-targets --all-features &&
 cargo test --all-targets --all-features &&
 cargo test --all-targets &&
 cargo test --all-targets &&
+# May fail after `cargo doc`
 cargo run --bin check-docs

@@ -5,6 +5,3 @@ license = "Apache-2.0"
 name = "predicate_address"
 
 [dependencies]
-std = { git = "https://github.com/FuelLabs/sway", branch = "Voxelot/update-predicate-metadata-0.33.1" }
-# TODO: Return back when https://github.com/FuelLabs/sway/pull/3961 is merged
-# std = { path = "../../../../../../sway/sway-lib-std" }
