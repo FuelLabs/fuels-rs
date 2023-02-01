@@ -1,6 +1,8 @@
 use fuel_tx::Receipt;
-use fuels_core::traits::{Parameterize, Tokenizable};
-use fuels_types::errors::Error;
+use fuels_types::{
+    errors::Result,
+    traits::{Parameterize, Tokenizable},
+};
 
 use crate::logs::LogDecoder;
 
@@ -39,11 +41,11 @@ impl<D> FuelCallResponse<D> {
         }
     }
 
-    pub fn get_logs(&self) -> Result<Vec<String>, Error> {
+    pub fn get_logs(&self) -> Result<Vec<String>> {
         self.log_decoder.get_logs(&self.receipts)
     }
 
-    pub fn get_logs_with_type<T: Tokenizable + Parameterize>(&self) -> Result<Vec<T>, Error> {
+    pub fn get_logs_with_type<T: Tokenizable + Parameterize>(&self) -> Result<Vec<T>> {
         self.log_decoder.get_logs_with_type::<T>(&self.receipts)
     }
 }

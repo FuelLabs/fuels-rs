@@ -3,7 +3,7 @@ use std::{fmt::Debug, vec};
 use fuel_tx::{AssetId, Checkable, Receipt, Script, ScriptExecutionResult, Transaction};
 use fuels_core::{offsets::call_script_data_offset, parameters::TxParameters};
 use fuels_signers::{provider::Provider, Signer, WalletUnlocked};
-use fuels_types::errors::Error;
+use fuels_types::errors::{Error, Result};
 
 use crate::{
     call_utils::{
@@ -13,7 +13,7 @@ use crate::{
     contract::ContractCall,
 };
 
-/// [`ExecutableFuelCall`] provides methods to create and call/simulate a transaction that carries
+/// [`TransactionExecution`] provides methods to create and call/simulate a transaction that carries
 /// out contract method calls or script calls
 #[derive(Debug)]
 pub struct ExecutableFuelCall {
@@ -32,7 +32,7 @@ impl ExecutableFuelCall {
         calls: &[ContractCall],
         tx_parameters: &TxParameters,
         wallet: &WalletUnlocked,
-    ) -> Result<Self, Error> {
+    ) -> Result<Self> {
         let consensus_parameters = wallet.get_provider()?.consensus_parameters().await?;
 
         // Calculate instructions length for call instructions
@@ -83,7 +83,7 @@ impl ExecutableFuelCall {
     }
 
     /// Execute the transaction in a state-modifying manner.
-    pub async fn execute(&self, provider: &Provider) -> Result<Vec<Receipt>, Error> {
+    pub async fn execute(&self, provider: &Provider) -> Result<Vec<Receipt>> {
         let chain_info = provider.chain_info().await?;
 
         self.tx.check_without_signatures(
@@ -95,7 +95,7 @@ impl ExecutableFuelCall {
     }
 
     /// Execute the transaction in a simulated manner, not modifying blockchain state
-    pub async fn simulate(&self, provider: &Provider) -> Result<Vec<Receipt>, Error> {
+    pub async fn simulate(&self, provider: &Provider) -> Result<Vec<Receipt>> {
         let chain_info = provider.chain_info().await?;
 
         self.tx.check_without_signatures(

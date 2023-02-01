@@ -1,5 +1,7 @@
 # `fuels-rs` Testing
 
-**Note** This page is still a work in progress
+> **note** This section is still a work in progress.
 
-- [Tweaking the blockchain](./chains.md)
+- [Testing Basics](./basics.md)
+- [`setup_contract_test!` Macro](./the-setup-contract-test-macro.md)
+- [Tweaking the Blockchain](./chains.md)

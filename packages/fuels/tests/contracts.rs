@@ -4,7 +4,7 @@ use std::future::Future;
 use fuels::prelude::*;
 
 #[tokio::test]
-async fn test_multiple_args() -> Result<(), Error> {
+async fn test_multiple_args() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
@@ -34,7 +34,7 @@ async fn test_multiple_args() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_contract_calling_contract() -> Result<(), Error> {
+async fn test_contract_calling_contract() -> Result<()> {
     // Tests a contract call that calls another contract (FooCaller calls FooContract underneath)
     setup_contract_test!(
         Wallets("wallet"),
@@ -105,7 +105,7 @@ async fn test_contract_calling_contract() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_reverting_transaction() -> Result<(), Error> {
+async fn test_reverting_transaction() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
@@ -130,7 +130,7 @@ async fn test_reverting_transaction() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_multiple_read_calls() -> Result<(), Error> {
+async fn test_multiple_read_calls() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
@@ -161,7 +161,7 @@ async fn test_multiple_read_calls() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_multi_call() -> Result<(), Error> {
+async fn test_multi_call() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
@@ -193,7 +193,7 @@ async fn test_multi_call() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_contract_call_fee_estimation() -> Result<(), Error> {
+async fn test_contract_call_fee_estimation() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
@@ -238,7 +238,7 @@ async fn test_contract_call_fee_estimation() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn contract_call_has_same_estimated_and_used_gas() -> Result<(), Error> {
+async fn contract_call_has_same_estimated_and_used_gas() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
@@ -271,7 +271,7 @@ async fn contract_call_has_same_estimated_and_used_gas() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn mutl_call_has_same_estimated_and_used_gas() -> Result<(), Error> {
+async fn mutl_call_has_same_estimated_and_used_gas() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
@@ -308,7 +308,7 @@ async fn mutl_call_has_same_estimated_and_used_gas() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn contract_method_call_respects_maturity() -> Result<(), Error> {
+async fn contract_method_call_respects_maturity() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
@@ -337,7 +337,7 @@ async fn contract_method_call_respects_maturity() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_auth_msg_sender_from_sdk() -> Result<(), Error> {
+async fn test_auth_msg_sender_from_sdk() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
@@ -363,7 +363,7 @@ async fn test_auth_msg_sender_from_sdk() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_large_return_data() -> Result<(), Error> {
+async fn test_large_return_data() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
@@ -420,7 +420,7 @@ async fn test_large_return_data() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn can_handle_function_called_new() -> anyhow::Result<()> {
+async fn can_handle_function_called_new() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
@@ -441,7 +441,7 @@ async fn can_handle_function_called_new() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-async fn test_contract_setup_macro_deploy_with_salt() -> Result<(), Error> {
+async fn test_contract_setup_macro_deploy_with_salt() -> Result<()> {
     // ANCHOR: contract_setup_macro_multi
     setup_contract_test!(
         Wallets("wallet"),
@@ -502,7 +502,7 @@ async fn test_contract_setup_macro_deploy_with_salt() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_wallet_getter() -> Result<(), Error> {
+async fn test_wallet_getter() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
@@ -518,12 +518,12 @@ async fn test_wallet_getter() -> Result<(), Error> {
 
     assert_eq!(contract_instance.wallet().address(), wallet.address());
     //`contract_id()` is tested in
-    // async fn test_contract_calling_contract() -> Result<(), Error> {
+    // async fn test_contract_calling_contract() -> Result<()> {
     Ok(())
 }
 
 #[tokio::test]
-async fn test_connect_wallet() -> anyhow::Result<()> {
+async fn test_connect_wallet() -> Result<()> {
     // ANCHOR: contract_setup_macro_manual_wallet
     let config = WalletsConfig::new(Some(2), Some(1), Some(DEFAULT_COIN_AMOUNT));
 
@@ -575,7 +575,7 @@ async fn test_connect_wallet() -> anyhow::Result<()> {
 }
 
 async fn setup_output_variable_estimation_test(
-) -> Result<(Vec<WalletUnlocked>, [Address; 3], AssetId, Bech32ContractId), Error> {
+) -> Result<(Vec<WalletUnlocked>, [Address; 3], AssetId, Bech32ContractId)> {
     let wallet_config = WalletsConfig::new(Some(3), None, None);
     let wallets = launch_custom_provider_and_get_wallets(wallet_config, None, None).await;
 
@@ -599,7 +599,7 @@ async fn setup_output_variable_estimation_test(
 }
 
 #[tokio::test]
-async fn test_output_variable_estimation() -> Result<(), Error> {
+async fn test_output_variable_estimation() -> Result<()> {
     abigen!(Contract(
         name = "MyContract",
         abi = "packages/fuels/tests/contracts/token_ops/out/debug/token_ops-abi.json"
@@ -651,7 +651,7 @@ async fn test_output_variable_estimation() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_output_variable_estimation_default_attempts() -> Result<(), Error> {
+async fn test_output_variable_estimation_default_attempts() -> Result<()> {
     abigen!(Contract(
         name = "MyContract",
         abi = "packages/fuels/tests/contracts/token_ops/out/debug/token_ops-abi.json"
@@ -680,7 +680,7 @@ async fn test_output_variable_estimation_default_attempts() -> Result<(), Error>
 }
 
 #[tokio::test]
-async fn test_output_variable_estimation_multicall() -> Result<(), Error> {
+async fn test_output_variable_estimation_multicall() -> Result<()> {
     abigen!(Contract(
         name = "MyContract",
         abi = "packages/fuels/tests/contracts/token_ops/out/debug/token_ops-abi.json"
@@ -714,7 +714,7 @@ async fn test_output_variable_estimation_multicall() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_contract_instance_get_balances() -> Result<(), Error> {
+async fn test_contract_instance_get_balances() -> Result<()> {
     let mut wallet = WalletUnlocked::new_random(None);
     let (coins, asset_ids) = setup_multiple_assets_coins(wallet.address(), 2, 4, 8);
     let random_asset_id = &asset_ids[1];
@@ -762,7 +762,7 @@ async fn test_contract_instance_get_balances() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn contract_call_futures_implement_send() -> Result<(), Error> {
+async fn contract_call_futures_implement_send() -> Result<()> {
     fn tokio_spawn_imitation<T>(_: T)
     where
         T: Future + Send + 'static,
@@ -794,7 +794,7 @@ async fn contract_call_futures_implement_send() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_contract_set_estimation() -> Result<(), Error> {
+async fn test_contract_set_estimation() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
@@ -844,7 +844,7 @@ async fn test_contract_set_estimation() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_output_variable_contract_id_estimation_multicall() -> Result<(), Error> {
+async fn test_output_variable_contract_id_estimation_multicall() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
@@ -906,7 +906,7 @@ async fn test_output_variable_contract_id_estimation_multicall() -> Result<(), E
 }
 
 #[tokio::test]
-async fn test_contract_call_with_non_default_max_input() -> Result<(), Error> {
+async fn test_contract_call_with_non_default_max_input() -> Result<()> {
     use fuels::tx::ConsensusParameters;
     use fuels_types::coin::Coin;
 
@@ -947,14 +947,76 @@ async fn test_contract_call_with_non_default_max_input() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_contract_raw_slice() -> Result<(), Error> {
-    let num_wallets = 1;
-    let num_coins = 1;
-    let amount = 1000;
-    let config = WalletsConfig::new(Some(num_wallets), Some(num_coins), Some(amount));
+async fn test_add_custom_assets() -> Result<()> {
+    let initial_amount = 100_000;
+    let asset_base = AssetConfig {
+        id: BASE_ASSET_ID,
+        num_coins: 1,
+        coin_amount: initial_amount,
+    };
 
-    let mut wallets = launch_custom_provider_and_get_wallets(config, None, None).await;
-    let wallet = wallets.pop().unwrap();
+    let asset_id_1 = AssetId::from([3u8; 32]);
+    let asset_1 = AssetConfig {
+        id: asset_id_1,
+        num_coins: 1,
+        coin_amount: initial_amount,
+    };
+
+    let asset_id_2 = AssetId::from([1u8; 32]);
+    let asset_2 = AssetConfig {
+        id: asset_id_2,
+        num_coins: 1,
+        coin_amount: initial_amount,
+    };
+
+    let assets = vec![asset_base, asset_1, asset_2];
+
+    let num_wallets = 2;
+    let wallet_config = WalletsConfig::new_multiple_assets(num_wallets, assets);
+    let mut wallets = launch_custom_provider_and_get_wallets(wallet_config, None, None).await;
+    let wallet_1 = wallets.pop().unwrap();
+    let wallet_2 = wallets.pop().unwrap();
+
+    setup_contract_test!(
+        Abigen(
+            name = "MyContract",
+            abi = "packages/fuels/tests/contracts/contract_test"
+        ),
+        Deploy(
+            name = "contract_instance",
+            contract = "MyContract",
+            wallet = "wallet_1"
+        ),
+    );
+
+    let amount_1 = 5000;
+    let amount_2 = 3000;
+    let response = contract_instance
+        .methods()
+        .get(5, 6)
+        .add_custom_asset(asset_id_1, amount_1, Some(wallet_2.address().clone()))
+        .add_custom_asset(asset_id_2, amount_2, Some(wallet_2.address().clone()))
+        .call()
+        .await?;
+
+    assert_eq!(response.value, 5);
+
+    let balance_asset_1 = wallet_1.get_asset_balance(&asset_id_1).await?;
+    let balance_asset_2 = wallet_1.get_asset_balance(&asset_id_2).await?;
+    assert_eq!(balance_asset_1, initial_amount - amount_1);
+    assert_eq!(balance_asset_2, initial_amount - amount_2);
+
+    let balance_asset_1 = wallet_2.get_asset_balance(&asset_id_1).await?;
+    let balance_asset_2 = wallet_2.get_asset_balance(&asset_id_2).await?;
+    assert_eq!(balance_asset_1, initial_amount + amount_1);
+    assert_eq!(balance_asset_2, initial_amount + amount_2);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_contract_raw_slice() -> Result<()> {
+    let wallet = launch_provider_and_get_wallet().await;
     setup_contract_test!(
         Abigen(
             name = "RawSliceContract",
@@ -966,7 +1028,9 @@ async fn test_contract_raw_slice() -> Result<(), Error> {
             wallet = "wallet"
         ),
     );
+
     let contract_methods = contract_instance.methods();
+
     for length in 0..=10 {
         let response = contract_methods.return_raw_slice(length).call().await?;
         assert_eq!(response.value, (0..length).collect::<Vec<_>>());
@@ -976,7 +1040,7 @@ async fn test_contract_raw_slice() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_deploy_error_messages() -> Result<(), Error> {
+async fn test_deploy_error_messages() -> Result<()> {
     let wallet = launch_provider_and_get_wallet().await;
     let mut response = Contract::deploy(
         "../../packages/fuels/tests/contracts/contract_test/out/debug/no_file_on_path.bin",

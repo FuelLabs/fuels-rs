@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use fuels_types::{bech32::Bech32ContractId, core::ByteArray, param_types::ParamType, ContractId};
+use fuels_types::{bech32::Bech32ContractId, param_types::ParamType, ByteArray, ContractId};
 use sha2::{Digest, Sha256};
 
 /// Hashes an encoded function selector using SHA256 and returns the first 4 bytes.

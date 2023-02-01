@@ -6,10 +6,13 @@ use fuels_core::{
     abi_encoder::UnresolvedBytes,
     offsets::base_offset,
     parameters::{CallParameters, TxParameters},
+};
+use fuels_signers::{provider::Provider, Signer, WalletUnlocked};
+use fuels_types::{
+    bech32::Bech32ContractId,
+    errors::Result,
     traits::{Parameterize, Tokenizable},
 };
-use fuels_signers::{provider::Provider, WalletUnlocked};
-use fuels_types::{bech32::Bech32ContractId, errors::Error};
 use itertools::chain;
 
 use crate::{
@@ -128,7 +131,7 @@ where
     }
 
     /// Compute the script data by calculating the script offset and resolving the encoded arguments
-    async fn compute_script_data(&self) -> Result<Vec<u8>, Error> {
+    async fn compute_script_data(&self) -> Result<Vec<u8>> {
         let consensus_parameters = self.provider.consensus_parameters().await?;
         let script_offset = base_offset(&consensus_parameters)
             + padded_len_usize(self.script_call.script_binary.len());
@@ -141,7 +144,7 @@ where
     /// in its `value` field as an actual typed value `D` (if your method returns `bool`,
     /// it will be a bool, works also for structs thanks to the `abigen!()`).
     /// The other field of [`FuelCallResponse`], `receipts`, contains the receipts of the transaction.
-    async fn call_or_simulate(&self, simulate: bool) -> Result<FuelCallResponse<D>, Error> {
+    async fn call_or_simulate(&self, simulate: bool) -> Result<FuelCallResponse<D>> {
         let contract_ids: HashSet<ContractId> = self
             .script_call
             .external_contracts
@@ -174,9 +177,10 @@ where
             self.compute_script_data().await?,
             inputs,
             outputs,
-            vec![vec![0, 0].into()], //TODO:(iqdecay): figure out how to have the right witnesses
+            vec![],
         );
         self.wallet.add_fee_resources(&mut tx, 0, 0).await?;
+        self.wallet.sign_transaction(&mut tx).await?;
 
         let tx_execution = ExecutableFuelCall { tx };
 
@@ -190,7 +194,7 @@ where
     }
 
     /// Call a script on the node, in a state-modifying manner.
-    pub async fn call(self) -> Result<FuelCallResponse<D>, Error> {
+    pub async fn call(self) -> Result<FuelCallResponse<D>> {
         Self::call_or_simulate(&self, false)
             .await
             .map_err(|err| decode_revert_error(err, &self.log_decoder))
@@ -201,14 +205,14 @@ where
     /// It is the same as the [`call`] method because the API is more user-friendly this way.
     ///
     /// [`call`]: Self::call
-    pub async fn simulate(self) -> Result<FuelCallResponse<D>, Error> {
+    pub async fn simulate(self) -> Result<FuelCallResponse<D>> {
         Self::call_or_simulate(&self, true)
             .await
             .map_err(|err| decode_revert_error(err, &self.log_decoder))
     }
 
     /// Create a [`FuelCallResponse`] from call receipts
-    pub fn get_response(&self, receipts: Vec<Receipt>) -> Result<FuelCallResponse<D>, Error> {
+    pub fn get_response(&self, receipts: Vec<Receipt>) -> Result<FuelCallResponse<D>> {
         let token = get_decoded_output(&receipts, None, &D::param_type())?;
         Ok(FuelCallResponse::new(
             D::from_token(token)?,

@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
 
-    use fuels::prelude::Error;
+    use fuels::prelude::Result;
 
     #[tokio::test]
     async fn connect_to_fuel_node() {
@@ -11,7 +11,7 @@ mod tests {
         use fuels::{prelude::*, signers::fuel_crypto::SecretKey};
 
         // Create a provider pointing to the testnet.
-        let provider = Provider::connect("node-beta-1.fuel.network").await.unwrap();
+        let provider = Provider::connect("node-beta-2.fuel.network").await.unwrap();
 
         // Setup a private key
         let secret =
@@ -31,7 +31,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn query_the_blockchain() -> Result<(), Error> {
+    async fn query_the_blockchain() -> Result<()> {
         // ANCHOR: setup_test_blockchain
         use fuels::prelude::*;
 

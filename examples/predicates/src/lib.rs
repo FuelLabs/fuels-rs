@@ -3,7 +3,7 @@ mod tests {
     use fuels::{prelude::*, types::B512};
 
     #[tokio::test]
-    async fn predicate_example() -> Result<(), Error> {
+    async fn predicate_example() -> Result<()> {
         use fuels::signers::fuel_crypto::SecretKey;
 
         // ANCHOR: predicate_wallets
@@ -113,7 +113,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn predicate_data_example() -> Result<(), Error> {
+    async fn predicate_data_example() -> Result<()> {
         // ANCHOR: predicate_data_setup
         let asset_id = AssetId::default();
         let wallets_config = WalletsConfig::new_multiple_assets(

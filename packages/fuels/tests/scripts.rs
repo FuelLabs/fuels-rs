@@ -1,7 +1,7 @@
 use fuels::prelude::*;
 
 #[tokio::test]
-async fn test_transaction_script_workflow() -> Result<(), Error> {
+async fn test_transaction_script_workflow() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
@@ -28,7 +28,7 @@ async fn test_transaction_script_workflow() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_multi_call_script_workflow() -> Result<(), Error> {
+async fn test_multi_call_script_workflow() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
@@ -65,7 +65,7 @@ async fn test_multi_call_script_workflow() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn main_function_arguments() -> Result<(), Error> {
+async fn main_function_arguments() -> Result<()> {
     // ANCHOR: script_with_arguments
     // The abigen is used for the same purpose as with contracts (Rust bindings)
     abigen!(Script(name="MyScript", abi="packages/fuels/tests/scripts/script_with_arguments/out/debug/script_with_arguments-abi.json"));
@@ -87,7 +87,7 @@ async fn main_function_arguments() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn main_function_generic_arguments() -> Result<(), Error> {
+async fn main_function_generic_arguments() -> Result<()> {
     abigen!(Script(name="MyScript", abi="packages/fuels/tests/scripts/script_generic_types/out/debug/script_generic_types-abi.json"));
     let wallet = launch_provider_and_get_wallet().await;
     let bin_path = "../fuels/tests/scripts/script_generic_types/out/debug/script_generic_types.bin";
@@ -114,7 +114,7 @@ async fn main_function_generic_arguments() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn main_function_option_result() -> Result<(), Error> {
+async fn main_function_option_result() -> Result<()> {
     abigen!(Script(
         name = "MyScript",
         abi = "packages/fuels/tests/scripts/script_option_result_types/out/debug\
@@ -136,7 +136,7 @@ async fn main_function_option_result() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn main_function_tuple_types() -> Result<(), Error> {
+async fn main_function_tuple_types() -> Result<()> {
     abigen!(Script(
         name = "MyScript",
         abi =
@@ -176,7 +176,7 @@ async fn main_function_tuple_types() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn main_function_vector_arguments() -> Result<(), Error> {
+async fn main_function_vector_arguments() -> Result<()> {
     abigen!(Script(
         name = "MyScript",
         abi = "packages/fuels/tests/scripts/script_vectors/out/debug/script_vectors-abi.json"
@@ -228,18 +228,13 @@ async fn main_function_vector_arguments() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_basic_script_with_tx_parameters() -> Result<(), Error> {
+async fn test_basic_script_with_tx_parameters() -> Result<()> {
     abigen!(Script(
         name = "bimbam_script",
         abi = "packages/fuels/tests/scripts/basic_script/out/debug/basic_script-abi.json"
     ));
-    let num_wallets = 1;
-    let num_coins = 1;
-    let amount = 1000;
-    let config = WalletsConfig::new(Some(num_wallets), Some(num_coins), Some(amount));
 
-    let mut wallets = launch_custom_provider_and_get_wallets(config, None, None).await;
-    let wallet = wallets.pop().unwrap();
+    let wallet = launch_provider_and_get_wallet().await;
     let bin_path = "../fuels/tests/scripts/basic_script/out/debug/basic_script.bin";
     let instance = bimbam_script::new(wallet.clone(), bin_path);
 
@@ -261,7 +256,7 @@ async fn test_basic_script_with_tx_parameters() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_script_call_with_non_default_max_input() -> Result<(), Error> {
+async fn test_script_call_with_non_default_max_input() -> Result<()> {
     use fuels::tx::ConsensusParameters;
     use fuels_types::coin::Coin;
 
@@ -301,18 +296,13 @@ async fn test_script_call_with_non_default_max_input() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_script_raw_slice() -> Result<(), Error> {
+async fn test_script_raw_slice() -> Result<()> {
     abigen!(Script(
         name = "BimBamScript",
         abi = "packages/fuels/tests/scripts/script_raw_slice/out/debug/script_raw_slice-abi.json",
     ));
-    let num_wallets = 1;
-    let num_coins = 1;
-    let amount = 1000;
-    let config = WalletsConfig::new(Some(num_wallets), Some(num_coins), Some(amount));
 
-    let mut wallets = launch_custom_provider_and_get_wallets(config, None, None).await;
-    let wallet = wallets.pop().unwrap();
+    let wallet = launch_provider_and_get_wallet().await;
     let bin_path = "../fuels/tests/scripts/script_raw_slice/out/debug/script_raw_slice.bin";
     let instance = BimBamScript::new(wallet.clone(), bin_path);
 
@@ -320,5 +310,35 @@ async fn test_script_raw_slice() -> Result<(), Error> {
         let response = instance.main(length).call().await?;
         assert_eq!(response.value, (0..length).collect::<Vec<_>>());
     }
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_script_signing() -> Result<()> {
+    abigen!(Script(
+        name = "bimbam_script",
+        abi = "packages/fuels/tests/scripts/basic_script/out/debug/basic_script-abi.json"
+    ));
+
+    let wallet_config = WalletsConfig::new(Some(1), None, None);
+    let provider_config = Config {
+        utxo_validation: true,
+        ..Config::local_node()
+    };
+
+    let wallets =
+        launch_custom_provider_and_get_wallets(wallet_config, Some(provider_config), None).await;
+    let wallet = wallets.first().unwrap();
+
+    let bin_path = "../fuels/tests/scripts/basic_script/out/debug/basic_script.bin";
+    let instance = bimbam_script::new(wallet.clone(), bin_path);
+
+    let a = 1000u64;
+    let b = 2000u32;
+
+    let result = instance.main(a, b).call().await?;
+
+    assert_eq!(result.value, "hello");
+
     Ok(())
 }
