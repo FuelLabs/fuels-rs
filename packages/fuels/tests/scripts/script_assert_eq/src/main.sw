@@ -1,9 +1,7 @@
 script;
 
+use core::ops::*;
 use std::assert::assert_eq;
-use std::logging::log;
-
-const ASSERT_EQ_SIGNAL = 0xffff_ffff_ffff_0003;
 
 struct TestStruct {
     field_1: bool,
@@ -15,6 +13,22 @@ enum TestEnum {
     VariantTwo: (),
 }
 
+impl Eq for TestStruct {
+    fn eq(self, other: Self) -> bool {
+        self.field_1 == other.field_1 && self.field_2 == other.field_2
+    }
+}
+
+impl Eq for TestEnum {
+    fn eq(self, other: Self) -> bool {
+        match (self, other) {
+            (TestEnum::VariantOne, TestEnum::VariantOne) => true,
+            (TestEnum::VariantTwo, TestEnum::VariantTwo) => true,
+            _ => false,
+        }
+    }
+}
+
 enum MatchEnum {
     AssertEqPrimitive: (u64, u64),
     AssertEqStruct: (TestStruct, TestStruct),
@@ -23,18 +37,12 @@ enum MatchEnum {
 
 fn main(match_enum: MatchEnum) {
     if let MatchEnum::AssertEqPrimitive((a, b)) = match_enum {
-        log(a);
-        log(b);
-        revert(ASSERT_EQ_SIGNAL);
+        assert_eq(a, b);
     } else if let MatchEnum::AssertEqStruct((test_struct, test_struct2)) = match_enum
     {
-        log(test_struct);
-        log(test_struct2);
-        revert(ASSERT_EQ_SIGNAL);
+        assert_eq(test_struct, test_struct2);
     } else if let MatchEnum::AssertEqEnum((test_enum, test_enum2)) = match_enum
     {
-        log(test_enum);
-        log(test_enum2);
-        revert(ASSERT_EQ_SIGNAL);
+        assert_eq(test_enum, test_enum2);
     }
 }
