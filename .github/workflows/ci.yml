@@ -58,6 +58,8 @@ jobs:
       - name: Build Sway test projects
         run: forc build
         working-directory: packages/fuels/tests
+        env:
+          FORC_MEMORY: 2048
 
       - name: Check format of Sway test projects
         run: forc fmt
