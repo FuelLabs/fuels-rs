@@ -154,7 +154,7 @@ impl Provider {
                     ProgramState::Revert(revert_id) => Some(revert_id),
                     _ => None,
                 })
-                .unwrap_or(0);
+                .expect("Transaction failed without a `revert_id`");
 
             return Err(Error::RevertTransactionError {
                 reason: reason.to_string(),

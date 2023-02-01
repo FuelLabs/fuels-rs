@@ -4,10 +4,9 @@ use std::{
     iter::FilterMap,
 };
 
-use fuel_tx::Receipt;
+use fuel_tx::{ContractId, Receipt};
 use fuels_core::{traits::DecodableLog, try_from_bytes};
 use fuels_types::{
-    bech32::Bech32ContractId,
     errors::{Error, Result},
     param_types::ParamType,
     traits::{Parameterize, Tokenizable},
@@ -16,11 +15,15 @@ use fuels_types::{
 const REQUIRE_ID: u64 = 0xffff_ffff_ffff_0000;
 const ASSERT_EQ_ID: u64 = 0xffff_ffff_ffff_0003;
 
+/// Holds a unique log ID
+#[derive(Debug, Clone, Default, PartialEq, Eq, Hash)]
+pub struct LogId(ContractId, u64);
+
 /// Struct used to pass the log mappings from the Abigen
 #[derive(Debug, Clone, Default)]
 pub struct LogDecoder {
-    /// A mapping of (contract-id, log-id) and param-type
-    pub type_lookup: HashMap<(Bech32ContractId, u64), ParamType>,
+    /// A mapping of LogId and param-type
+    pub type_lookup: HashMap<LogId, ParamType>,
 }
 
 impl LogDecoder {
@@ -28,10 +31,10 @@ impl LogDecoder {
     pub fn get_logs(&self, receipts: &[Receipt]) -> Result<Vec<String>> {
         receipts
             .iter()
-            .filter_map_log_receipts()
-            .filter_map(|((c_id, log_id), data)| {
+            .extract_log_id_with_data()
+            .filter_map(|(log_id, data)| {
                 self.type_lookup
-                    .get(&(c_id, log_id))
+                    .get(&log_id)
                     .map(|param_type| param_type.decode_log(&data))
             })
             .collect()
@@ -45,7 +48,7 @@ impl LogDecoder {
     ) -> Result<Vec<T>> {
         let target_param_type = T::param_type();
 
-        let target_ids: HashSet<(Bech32ContractId, u64)> = self
+        let target_ids: HashSet<LogId> = self
             .type_lookup
             .iter()
             .filter_map(|(log_id, param_type)| {
@@ -55,7 +58,7 @@ impl LogDecoder {
 
         receipts
             .iter()
-            .filter_map_log_receipts()
+            .extract_log_id_with_data()
             .filter_map(|(log_id, data)| {
                 target_ids
                     .contains(&log_id)
@@ -69,22 +72,17 @@ impl LogDecoder {
     }
 }
 
-trait FilterMapLogReceipts {
-    type Output: Iterator<Item = ((Bech32ContractId, u64), Vec<u8>)>;
-    fn filter_map_log_receipts(self) -> Self::Output;
+trait ExtractLogIdData {
+    type Output: Iterator<Item = (LogId, Vec<u8>)>;
+    fn extract_log_id_with_data(self) -> Self::Output;
 }
 
-impl<'a, I: Iterator<Item = &'a Receipt>> FilterMapLogReceipts for I {
-    type Output = FilterMap<Self, fn(&Receipt) -> Option<((Bech32ContractId, u64), Vec<u8>)>>;
-    fn filter_map_log_receipts(self) -> Self::Output {
+impl<'a, I: Iterator<Item = &'a Receipt>> ExtractLogIdData for I {
+    type Output = FilterMap<Self, fn(&Receipt) -> Option<(LogId, Vec<u8>)>>;
+    fn extract_log_id_with_data(self) -> Self::Output {
         self.filter_map(|r| match r {
-            Receipt::LogData { rb, data, id, .. } => {
-                Some(((Bech32ContractId::from(*id), *rb), data.clone()))
-            }
-            Receipt::Log { ra, rb, id, .. } => Some((
-                (Bech32ContractId::from(*id), *rb),
-                ra.to_be_bytes().to_vec(),
-            )),
+            Receipt::LogData { rb, data, id, .. } => Some((LogId(*id, *rb), data.clone())),
+            Receipt::Log { ra, rb, id, .. } => Some((LogId(*id, *rb), ra.to_be_bytes().to_vec())),
             _ => None,
         })
     }
@@ -112,7 +110,7 @@ fn decode_require_revert(log_decoder: &LogDecoder, receipts: &[Receipt]) -> Erro
         .get_logs(receipts)
         .ok()
         .and_then(|logs| logs.last().cloned())
-        .unwrap_or_else(|| "Filed to decode log from require revert".to_string());
+        .unwrap_or_else(|| "Failed to decode log from require revert".to_string());
 
     Error::RevertTransactionError {
         reason,
@@ -128,16 +126,27 @@ fn decode_assert_eq_revert(log_decoder: &LogDecoder, receipts: &[Receipt]) -> Er
         .and_then(|logs| {
             if let [.., lhs, rhs] = logs.as_slice() {
                 return Some(format!(
-                    "assertion filed: `(left == right)`\n left: `{lhs:?}`\n right: `{rhs:?}`"
+                    "assertion failed: `(left == right)`\n left: `{lhs:?}`\n right: `{rhs:?}`"
                 ));
             }
             None
         })
-        .unwrap_or_else(|| "Filed to decode logs from assert_eq revert".to_string());
+        .unwrap_or_else(|| "Failed to decode logs from assert_eq revert".to_string());
 
     Error::RevertTransactionError {
         reason,
         revert_id: ASSERT_EQ_ID,
         receipts: receipts.to_owned(),
     }
+}
+
+pub fn log_type_lookup(
+    id_param_pairs: &[(u64, ParamType)],
+    contract_id: Option<ContractId>,
+) -> HashMap<LogId, ParamType> {
+    let contract_id = contract_id.unwrap_or_else(|| ContractId::zeroed());
+    id_param_pairs
+        .iter()
+        .map(|(id, param_type)| (LogId(contract_id.clone(), *id), param_type.to_owned()))
+        .collect()
 }

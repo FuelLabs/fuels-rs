@@ -104,12 +104,12 @@ impl ExecutableFuelCall {
         )?;
 
         let receipts = provider.dry_run(&self.tx.clone().into()).await?;
-        Self::if_failure_generate_error(&receipts)?;
+        Self::validate_script_succedded(&receipts)?;
 
         Ok(receipts)
     }
 
-    fn if_failure_generate_error(receipts: &[Receipt]) -> Result<()> {
+    fn validate_script_succedded(receipts: &[Receipt]) -> Result<()> {
         receipts
             .iter()
             .find_map(|receipt| match receipt {

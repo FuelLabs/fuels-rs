@@ -68,7 +68,7 @@ pub mod prelude {
         macros::{abigen, setup_contract_test},
         programs::{
             contract::{Contract, MultiContractCallHandler, SettableContract},
-            logs::LogDecoder,
+            logs::{LogDecoder, LogId},
         },
         signers::{provider::*, wallet::generate_mnemonic_phrase, Signer, Wallet, WalletUnlocked},
         test_helpers::*,
