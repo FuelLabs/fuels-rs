@@ -59,9 +59,8 @@ jobs:
         run: forc build
         working-directory: packages/fuels/tests
         env:
-          FORC_MEMORY: 2048
-        timeout-minutes: 10
-
+          FORC_MEMORY: 3072
+        timeout-minutes: 20
 
       - name: Check format of Sway test projects
         run: forc fmt
