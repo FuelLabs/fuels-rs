@@ -56,14 +56,13 @@ jobs:
           fi
 
       - name: Build Sway test projects
-        run: forc build
+        run: |
+          forc build
         working-directory: packages/fuels/tests
-        env:
-          FORC_MEMORY: 3072
-        timeout-minutes: 20
 
       - name: Check format of Sway test projects
-        run: forc fmt
+        run: |
+          forc fmt
         working-directory: packages/fuels/tests
 
       - uses: actions/upload-artifact@v2
