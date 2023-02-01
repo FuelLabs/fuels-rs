@@ -56,16 +56,12 @@ jobs:
           fi
 
       - name: Build Sway test projects
-        uses: actions-rs/cargo@v1
-        with:
-          command: run
-          args: --bin test-projects -- build
+        command: forc build
+        working-directory: packages/fuels/tests
 
       - name: Check format of Sway test projects
-        uses: actions-rs/cargo@v1
-        with:
-          command: run
-          args: --bin test-projects -- format --check
+        command: forc fmt
+        working-directory: packages/fuels/tests
 
       - uses: actions/upload-artifact@v2
         with:
@@ -209,7 +205,7 @@ jobs:
           args: --bin check-docs
 
       - name: Check Docs. Warnings
-        run: | 
+        run: |
           ! cargo doc |& grep -q "broken_intra_doc_links"
 
   publish:
