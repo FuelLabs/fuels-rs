@@ -56,7 +56,7 @@ impl EnumTesting for Contract {
 
     fn get_unit_bundle() -> UnitBundle {
         UnitBundle {
-            arg_1: UnitEnum::var2(),
+            arg_1: UnitEnum::var2,
             arg_2: 18_446_744_073_709_551_615u64,
         }
     }

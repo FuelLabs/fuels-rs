@@ -36,7 +36,7 @@ impl EnumTesting for Contract {
     }
 
     fn get_unit_enum() -> UnitEnum {
-        UnitEnum::Two()
+        UnitEnum::Two
     }
     fn check_unit_enum_integrity(arg: UnitEnum) -> bool {
         match arg {

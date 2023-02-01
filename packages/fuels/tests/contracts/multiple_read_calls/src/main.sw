@@ -20,6 +20,6 @@ impl MyContract for Contract {
     #[storage(read)]
     fn read(input: u64) -> u64 {
         let v = get::<u64>(COUNTER_KEY);
-        v
+        v.unwrap()
     }
 }
