@@ -31,7 +31,7 @@ impl LogDecoder {
     pub fn get_logs(&self, receipts: &[Receipt]) -> Result<Vec<String>> {
         receipts
             .iter()
-            .extract_log_id_add_data()
+            .extract_log_id_and_data()
             .filter_map(|(log_id, data)| {
                 self.type_lookup
                     .get(&log_id)
