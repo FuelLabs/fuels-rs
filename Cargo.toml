@@ -24,5 +24,4 @@ members = [
     "packages/fuels-types",
     "packages/wasm-tests",
     "scripts/check-docs",
-    "scripts/test-projects",
 ]
