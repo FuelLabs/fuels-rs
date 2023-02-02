@@ -213,7 +213,7 @@ async fn spend_predicate_coins_messages_address() -> Result<()> {
 
     let num_coins = 4;
     let num_messages = 8;
-    let amount = 16;
+    let amount = 100_000;
     let (provider, predicate_balance, receiver, receiver_balance, asset_id) =
         setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
