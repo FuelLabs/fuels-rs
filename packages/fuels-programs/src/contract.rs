@@ -9,8 +9,8 @@ use std::{
 };
 
 use fuel_tx::{
-    Address, AssetId, Bytes32, Checkable, Contract as FuelContract, ContractId, Create, Output,
-    Receipt, Salt, StorageSlot, Transaction,
+    Address, AssetId, Bytes32, Contract as FuelContract, ContractId, Create, FormatValidityChecks,
+    Output, Receipt, Salt, StorageSlot, Transaction,
 };
 use fuel_vm::fuel_asm::PanicReason;
 use fuels_core::{

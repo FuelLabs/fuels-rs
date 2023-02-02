@@ -6,13 +6,13 @@ edition = "2021"
 homepage = "https://fuel.network/"
 license = "Apache-2.0"
 repository = "https://github.com/FuelLabs/fuels-rs"
-rust-version = "1.64.0"
+rust-version = "1.65.0"
 description = "Fuel Rust SDK."
 
 [dependencies]
-fuel-tx = "0.23"
-fuel-core = { version = "0.15", default-features = false, optional = true }
-fuel-gql-client = { version = "0.15", default-features = false }
+fuel-tx = { workspace = true }
+fuel-core = { workspace = true, default-features = false, optional = true }
+fuel-core-client = { workspace = true, default-features = false }
 fuels-macros = { version = "0.34.0", path = "../fuels-macros" }
 fuels-programs = { version = "0.34.0", path = "../fuels-programs" }
 fuels-core = { version = "0.34.0", path = "../fuels-core" }
@@ -22,8 +22,8 @@ fuels-types = { version = "0.34.0", path = "../fuels-types" }
 
 [dev-dependencies]
 chrono = "0.4.2"
-fuel-core = { version = "0.15", default-features = false }
-fuel-core-interfaces = { version = "0.15", default-features = false }
+fuel-core = { workspace = true, default-features = false }
+fuel-core-types = { workspace = true, default-features = false }
 hex = { version = "0.4.3", default-features = false }
 sha2 = "0.9.5"
 tokio = "1.15.0"
