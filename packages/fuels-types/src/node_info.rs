@@ -1,4 +1,4 @@
-use fuel_gql_client::client::schema::node_info::NodeInfo as ClientNodeInfo;
+use fuel_core_client::client::schema::node_info::NodeInfo as ClientNodeInfo;
 
 #[derive(Debug)]
 pub struct NodeInfo {

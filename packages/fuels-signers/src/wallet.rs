@@ -3,8 +3,8 @@ use std::{collections::HashMap, fmt, ops, path::Path};
 use async_trait::async_trait;
 use elliptic_curve::rand_core;
 use eth_keystore::KeystoreError;
+use fuel_core_client::client::{PaginatedResult, PaginationRequest};
 use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
-use fuel_gql_client::client::{PaginatedResult, PaginationRequest};
 use fuel_tx::{
     field, AssetId, Bytes32, Cacheable, Chargeable, ContractId, Input, Output, Receipt, Script,
     Transaction, TransactionFee, TxPointer, UniqueIdentifier, UtxoId, Witness,
@@ -913,7 +913,7 @@ mod tests {
     use std::iter::repeat;
 
     use fuel_core::service::{Config, FuelService};
-    use fuel_gql_client::client::FuelClient;
+    use fuel_core_client::client::FuelClient;
     use fuel_tx::{
         field::{Inputs, Outputs},
         Address,

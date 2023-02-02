@@ -26,3 +26,16 @@ members = [
     "scripts/test-projects",
     "scripts/check-docs",
 ]
+
+[workspace.dependencies]
+fuel-asm = "0.25"
+fuel-crypto = "0.25"
+fuel-merkle = "0.25"
+fuel-storage = "0.25"
+fuel-tx = "0.25"
+fuel-types = "0.25"
+fuel-core = { version = "0.16", default-features = false }
+fuel-core-client = "0.16"
+fuel-core-chain-config = "0.16"
+fuel-core-types = "0.16"
+fuel-vm = "0.25"

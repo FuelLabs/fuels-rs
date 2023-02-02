@@ -16,10 +16,10 @@ env:
   CARGO_TERM_COLOR: always
   DASEL_VERSION: https://github.com/TomWright/dasel/releases/download/v1.24.3/dasel_linux_amd64
   RUSTFLAGS: "-D warnings"
-  FUEL_CORE_VERSION: 0.15.1
-  RUST_VERSION: 1.64.0
-  FORC_VERSION: 0.33.1
-  FORC_PATCH_BRANCH: ""
+  FUEL_CORE_VERSION: 0.16.1
+  RUST_VERSION: 1.65.0
+  FORC_VERSION: 0.34.0
+  FORC_PATCH_BRANCH: "Voxelot/update-predicate-metadata-0.33.1"
   FORC_PATCH_REVISION: ""
 
 jobs:
@@ -44,9 +44,9 @@ jobs:
       - name: Install forc and forc-fmt
         run: |
           if [[ -n $FORC_PATCH_BRANCH ]]; then
-            cargo install forc forc-fmt --git https://github.com/FuelLabs/sway --branch $FORC_PATCH_BRANCH
+            cargo install --locked forc forc-fmt --git https://github.com/FuelLabs/sway --branch $FORC_PATCH_BRANCH
           elif [[ -n $FORC_PATCH_BRANCH ]]; then
-            cargo install forc forc-fmt --git https://github.com/FuelLabs/sway --rev $FORC_PATCH_REVISION
+            cargo install --locked forc forc-fmt --git https://github.com/FuelLabs/sway --rev $FORC_PATCH_REVISION
           else
             curl -sSLf https://github.com/FuelLabs/sway/releases/download/v${{ env.FORC_VERSION }}/forc-binaries-linux_amd64.tar.gz -L -o forc.tar.gz
             tar -xvf forc.tar.gz
@@ -239,7 +239,7 @@ jobs:
           ./.github/workflows/scripts/verify_tag.sh ${{ github.ref_name }} packages/fuels-types/Cargo.toml
           ./.github/workflows/scripts/verify_tag.sh ${{ github.ref_name }} packages/fuels-test-helpers/Cargo.toml
       - name: Publish crate
-        uses: katyo/publish-crates@v1
+        uses: katyo/publish-crates@v2
         with:
           publish-delay: 30000
           no-verify: true

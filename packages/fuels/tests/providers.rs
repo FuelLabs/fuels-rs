@@ -1,7 +1,7 @@
 use std::{iter, str::FromStr};
 
 use chrono::Duration;
-use fuel_core::service::{Config as CoreConfig, FuelService};
+use fuel_core::service::{Config as CoreConfig, FuelService, ServiceTrait};
 use fuels::{
     client::{PageDirection, PaginationRequest},
     prelude::*,
@@ -77,7 +77,7 @@ async fn test_network_error() -> Result<()> {
     wallet.set_provider(provider);
 
     // Simulate an unreachable node
-    service.stop().await;
+    service.stop_and_await().await.unwrap();
 
     let response = Contract::deploy(
         "tests/contracts/contract_test/out/debug/contract_test.bin",
@@ -281,7 +281,7 @@ async fn contract_deployment_respects_maturity() -> Result<()> {
     let err = deploy_w_maturity(1).await.expect_err("Should not have been able to deploy the contract since the block height (0) is less than the requested maturity (1)");
     assert!(matches!(
         err,
-        Error::ValidationError(fuel_gql_client::fuel_tx::CheckError::TransactionMaturity)
+        Error::ValidationError(fuel_tx::CheckError::TransactionMaturity)
     ));
 
     provider.produce_blocks(1, None).await?;

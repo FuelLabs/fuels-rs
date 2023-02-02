@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use chrono::{DateTime, NaiveDateTime, Utc};
-use fuel_gql_client::client::types::{
+use fuel_core_client::client::types::{
     TransactionResponse as ClientTransactionResponse, TransactionStatus as ClientTransactionStatus,
 };
 use fuel_tx::{Bytes32, Transaction};
