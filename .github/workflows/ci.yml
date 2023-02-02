@@ -56,13 +56,11 @@ jobs:
           fi
 
       - name: Build Sway test projects
-        run: |
-          forc build
+        run: forc build
         working-directory: packages/fuels/tests
 
       - name: Check format of Sway test projects
-        run: |
-          forc fmt
+        run: forc fmt --check
         working-directory: packages/fuels/tests
 
       - uses: actions/upload-artifact@v2
@@ -208,7 +206,8 @@ jobs:
 
       - name: Check Docs. Warnings
         run: |
-          ! cargo doc |& grep -q "broken_intra_doc_links"
+          ! cargo doc |& grep -A 6  "warning: unresolved link to"
+
 
   publish:
     needs: cargo-verifications

@@ -22,7 +22,6 @@ fuels-types = { version = "0.34.0", path = "../fuels-types" }
 
 [dev-dependencies]
 chrono = "0.4.2"
-ctor = " 0.1"
 fuel-core = { version = "0.15", default-features = false }
 fuel-core-interfaces = { version = "0.15", default-features = false }
 hex = { version = "0.4.3", default-features = false }
