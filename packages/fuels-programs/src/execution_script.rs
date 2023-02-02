@@ -1,6 +1,6 @@
 use std::{fmt::Debug, vec};
 
-use fuel_tx::{AssetId, Checkable, Receipt, Script, ScriptExecutionResult, Transaction};
+use fuel_tx::{AssetId, FormatValidityChecks, Receipt, Script, ScriptExecutionResult, Transaction};
 use fuels_core::{offsets::call_script_data_offset, parameters::TxParameters};
 use fuels_signers::{provider::Provider, Signer, WalletUnlocked};
 use fuels_types::errors::{Error, Result};

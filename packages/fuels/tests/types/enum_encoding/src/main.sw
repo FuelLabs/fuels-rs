@@ -56,13 +56,13 @@ impl EnumTesting for Contract {
 
     fn get_unit_bundle() -> UnitBundle {
         UnitBundle {
-            arg_1: UnitEnum::var2(),
+            arg_1: UnitEnum::var2,
             arg_2: 18_446_744_073_709_551_615u64,
         }
     }
     fn check_unit_bundle_integrity(arg: UnitBundle) -> bool {
         let arg_1_is_correct = match arg.arg_1 {
-            UnitEnum::var2(_) => true,
+            UnitEnum::var2 => true,
             _ => false,
         };
 

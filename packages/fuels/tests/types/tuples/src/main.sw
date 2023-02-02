@@ -39,7 +39,7 @@ impl MyContract for Contract {
     }
 
     fn returns_enum_in_tuple(input: (u64, State)) -> (u64, State) {
-        let expected = (42, State::A());
+        let expected = (42, State::A);
 
         assert(input.0 == expected.0);
 

@@ -31,7 +31,7 @@ impl LogDecoder {
     pub fn get_logs(&self, receipts: &[Receipt]) -> Result<Vec<String>> {
         receipts
             .iter()
-            .extract_log_id_with_data()
+            .extract_log_id_add_data()
             .filter_map(|(log_id, data)| {
                 self.type_lookup
                     .get(&log_id)
@@ -58,7 +58,7 @@ impl LogDecoder {
 
         receipts
             .iter()
-            .extract_log_id_with_data()
+            .extract_log_id_and_data()
             .filter_map(|(log_id, data)| {
                 target_ids
                     .contains(&log_id)
@@ -74,12 +74,12 @@ impl LogDecoder {
 
 trait ExtractLogIdData {
     type Output: Iterator<Item = (LogId, Vec<u8>)>;
-    fn extract_log_id_with_data(self) -> Self::Output;
+    fn extract_log_id_and_data(self) -> Self::Output;
 }
 
 impl<'a, I: Iterator<Item = &'a Receipt>> ExtractLogIdData for I {
     type Output = FilterMap<Self, fn(&Receipt) -> Option<(LogId, Vec<u8>)>>;
-    fn extract_log_id_with_data(self) -> Self::Output {
+    fn extract_log_id_and_data(self) -> Self::Output {
         self.filter_map(|r| match r {
             Receipt::LogData { rb, data, id, .. } => Some((LogId(*id, *rb), data.clone())),
             Receipt::Log { ra, rb, id, .. } => Some((LogId(*id, *rb), ra.to_be_bytes().to_vec())),

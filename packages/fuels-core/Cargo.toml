@@ -9,9 +9,9 @@ repository = "https://github.com/FuelLabs/fuels-rs"
 description = "Fuel Rust SDK core."
 
 [dependencies]
-fuel-tx = "0.23"
-fuel-vm = "0.22"
-fuel-types = "0.5"
+fuel-tx = { workspace = true }
+fuel-vm = { workspace = true }
+fuel-types = { workspace = true }
 fuels-types = { version = "0.34.0", path = "../fuels-types" }
 hex = { version = "0.4.3", features = ["std"] }
 itertools = "0.10"

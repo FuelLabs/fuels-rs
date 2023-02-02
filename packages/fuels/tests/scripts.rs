@@ -233,13 +233,8 @@ async fn test_basic_script_with_tx_parameters() -> Result<()> {
         name = "bimbam_script",
         abi = "packages/fuels/tests/scripts/basic_script/out/debug/basic_script-abi.json"
     ));
-    let num_wallets = 1;
-    let num_coins = 1;
-    let amount = 1000;
-    let config = WalletsConfig::new(Some(num_wallets), Some(num_coins), Some(amount));
 
-    let mut wallets = launch_custom_provider_and_get_wallets(config, None, None).await;
-    let wallet = wallets.pop().unwrap();
+    let wallet = launch_provider_and_get_wallet().await;
     let bin_path = "../fuels/tests/scripts/basic_script/out/debug/basic_script.bin";
     let instance = bimbam_script::new(wallet.clone(), bin_path);
 
@@ -306,13 +301,8 @@ async fn test_script_raw_slice() -> Result<()> {
         name = "BimBamScript",
         abi = "packages/fuels/tests/scripts/script_raw_slice/out/debug/script_raw_slice-abi.json",
     ));
-    let num_wallets = 1;
-    let num_coins = 1;
-    let amount = 1000;
-    let config = WalletsConfig::new(Some(num_wallets), Some(num_coins), Some(amount));
 
-    let mut wallets = launch_custom_provider_and_get_wallets(config, None, None).await;
-    let wallet = wallets.pop().unwrap();
+    let wallet = launch_provider_and_get_wallet().await;
     let bin_path = "../fuels/tests/scripts/script_raw_slice/out/debug/script_raw_slice.bin";
     let instance = BimBamScript::new(wallet.clone(), bin_path);
 
@@ -320,5 +310,35 @@ async fn test_script_raw_slice() -> Result<()> {
         let response = instance.main(length).call().await?;
         assert_eq!(response.value, (0..length).collect::<Vec<_>>());
     }
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_script_signing() -> Result<()> {
+    abigen!(Script(
+        name = "bimbam_script",
+        abi = "packages/fuels/tests/scripts/basic_script/out/debug/basic_script-abi.json"
+    ));
+
+    let wallet_config = WalletsConfig::new(Some(1), None, None);
+    let provider_config = Config {
+        utxo_validation: true,
+        ..Config::local_node()
+    };
+
+    let wallets =
+        launch_custom_provider_and_get_wallets(wallet_config, Some(provider_config), None).await;
+    let wallet = wallets.first().unwrap();
+
+    let bin_path = "../fuels/tests/scripts/basic_script/out/debug/basic_script.bin";
+    let instance = bimbam_script::new(wallet.clone(), bin_path);
+
+    let a = 1000u64;
+    let b = 2000u32;
+
+    let result = instance.main(a, b).call().await?;
+
+    assert_eq!(result.value, "hello");
+
     Ok(())
 }

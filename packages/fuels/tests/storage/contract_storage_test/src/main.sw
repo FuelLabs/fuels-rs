@@ -17,11 +17,11 @@ abi MyContract {
 impl MyContract for Contract {
     #[storage(read)]
     fn get_value_b256(key: b256) -> b256 {
-        get::<b256>(key)
+        get::<b256>(key).unwrap()
     }
 
     #[storage(read)]
     fn get_value_u64(key: b256) -> u64 {
-        get::<u64>(key)
+        get::<u64>(key).unwrap()
     }
 }
