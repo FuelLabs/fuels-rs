@@ -145,7 +145,7 @@ mod tests {
             .await?;
         // ANCHOR_END: contract_call_cost_estimation
 
-        assert_eq!(transaction_cost.gas_used, 9826);
+        assert_eq!(transaction_cost.gas_used, 430);
 
         Ok(())
     }
@@ -206,11 +206,13 @@ mod tests {
         let wallets =
             launch_custom_provider_and_get_wallets(WalletsConfig::default(), None, None).await;
 
-        let contract_id_1 = Contract::deploy(
+        let salt = [0; 32].into();
+        let contract_id_1 = Contract::deploy_with_parameters(
             "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
             &wallets[0],
             TxParameters::default(),
             StorageConfiguration::default(),
+            salt,
         )
         .await?;
 
@@ -226,11 +228,13 @@ mod tests {
 
         assert_eq!(42, response.value);
 
-        let contract_id_2 = Contract::deploy(
+        let salt = [1; 32].into();
+        let contract_id_2 = Contract::deploy_with_parameters(
             "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
             &wallets[1],
             TxParameters::default(),
             StorageConfiguration::default(),
+            salt,
         )
         .await?;
 
@@ -676,7 +680,7 @@ mod tests {
             .await?;
         // ANCHOR_END: multi_call_cost_estimation
 
-        assert_eq!(transaction_cost.gas_used, 16181);
+        assert_eq!(transaction_cost.gas_used, 700);
 
         Ok(())
     }

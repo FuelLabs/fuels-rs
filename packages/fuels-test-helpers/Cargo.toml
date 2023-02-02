@@ -9,13 +9,13 @@ repository = "https://github.com/FuelLabs/fuels-rs"
 description = "Fuel Rust SDK test helpers."
 
 [dependencies]
-fuel-vm = "0.22"
-fuel-tx = "0.23"
-fuel-core = { version = "0.15", default-features = false, optional = true }
-fuel-chain-config = { version = "0.15", default-features = false }
-fuel-core-interfaces = { version = "0.15", default-features = false }
-fuel-gql-client = { version = "0.15", default-features = false }
-fuel-types = { version = "0.5", default-features = false, features = ["random"] }
+fuel-vm = { workspace = true }
+fuel-tx = { workspace = true }
+fuel-core = { workspace = true, default-features = false, optional = true }
+fuel-core-chain-config = { workspace = true, default-features = false }
+fuel-core-types = { workspace = true, default-features = false }
+fuel-core-client = { workspace = true, default-features = false }
+fuel-types = { workspace = true, default-features = false, features = ["random"] }
 fuels-programs = { version = "0.34.0", path = "../fuels-programs" }
 fuels-core = { version = "0.34.0", path = "../fuels-core" }
 fuels-signers = { version = "0.34.0", path = "../fuels-signers", optional = true }

@@ -13,12 +13,12 @@ regex = "1.6.0"
 lazy_static = "1.4.0"
 bech32 = "0.9.0"
 chrono = "0.4.2"
-fuel-tx = "0.23"
-fuel-types = "0.5"
+fuel-tx = { workspace = true }
+fuel-types = { workspace = true }
 fuel-abi-types = "0.2.0"
-fuel-core = { version = "0.15", default-features = false, optional = true }
-fuel-chain-config = { version = "0.15", default-features = false }
-fuel-gql-client = { version = "0.15", default-features = false }
+fuel-core = { workspace = true, default-features = false, optional = true }
+fuel-core-chain-config = { workspace = true, default-features = false }
+fuel-core-client = { workspace = true, default-features = false }
 hex = { version = "0.4.3", features = ["std"] }
 proc-macro2 = "1.0"
 serde = { version = "1.0", features = ["derive"] }

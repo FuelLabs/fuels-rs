@@ -30,7 +30,7 @@ impl TestContract for Contract {
 
     #[storage(read, write)]
     fn increment_counter(amount: u64) -> u64 {
-        let value = get::<u64>(COUNTER_KEY) + amount;
+        let value = get::<u64>(COUNTER_KEY).unwrap_or(0) + amount;
         store(COUNTER_KEY, value);
         value
     }
