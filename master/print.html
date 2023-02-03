@@ -518,7 +518,7 @@ vulnerabilities in downstream libraries and applications.</p>
 <pre><code class="language-rust ignore">        let balances: HashMap&lt;String, u64&gt; = wallet.get_balances().await?;
 </code></pre>
 <p>The return type is a <code>HashMap</code>, where the key is the <em>asset ID's</em> hex string, and the value is the corresponding balance. For example, we can get the base asset balance with:</p>
-<pre><code class="language-rust ignore">        let asset_id_key = format!(&quot;{:#x}&quot;, asset_id);
+<pre><code class="language-rust ignore">        let asset_id_key = format!(&quot;{asset_id:#x}&quot;);
         let asset_balance = balances.get(&amp;asset_id_key).unwrap();
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="setting-up-test-wallets"><a class="header" href="#setting-up-test-wallets">Setting up test wallets</a></h1>
@@ -785,7 +785,7 @@ coins and coin amount</p>
             .await?;
         assert_eq!(contract_balances.len(), 1);
 
-        let random_asset_id_key = format!(&quot;{:#x}&quot;, random_asset_id);
+        let random_asset_id_key = format!(&quot;{random_asset_id:#x}&quot;);
         let random_asset_balance = contract_balances.get(&amp;random_asset_id_key).unwrap();
         assert_eq!(*random_asset_balance, 300);
 </code></pre>
@@ -1986,7 +1986,7 @@ fn main(signatures: [B512; 3]) -&gt; bool {
 </code></pre>
 <p><code>Bytes32</code> also implements <em>fmt's</em> <code>Debug</code>, <code>Display</code>, <code>LowerHex</code> and <code>UpperHex</code> traits. For example, you can get the display and hex representations with:</p>
 <pre><code class="language-rust ignore">        let b256_string = b256.to_string();
-        let b256_hex_string = format!(&quot;{:#x}&quot;, b256);
+        let b256_hex_string = format!(&quot;{b256:#x}&quot;);
 </code></pre>
 <p>For a full list of implemented methods and traits, see the <a href="https://docs.rs/fuel-types/latest/fuel_types/struct.Bytes32.html">fuel-types documentation</a>.</p>
 <blockquote>

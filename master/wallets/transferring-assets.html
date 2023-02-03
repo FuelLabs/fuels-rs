@@ -187,7 +187,7 @@
             .await?;
         assert_eq!(contract_balances.len(), 1);
 
-        let random_asset_id_key = format!(&quot;{:#x}&quot;, random_asset_id);
+        let random_asset_id_key = format!(&quot;{random_asset_id:#x}&quot;);
         let random_asset_balance = contract_balances.get(&amp;random_asset_id_key).unwrap();
         assert_eq!(*random_asset_balance, 300);
 </code></pre>

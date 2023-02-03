@@ -163,7 +163,7 @@
 </code></pre>
 <p><code>Bytes32</code> also implements <em>fmt's</em> <code>Debug</code>, <code>Display</code>, <code>LowerHex</code> and <code>UpperHex</code> traits. For example, you can get the display and hex representations with:</p>
 <pre><code class="language-rust ignore">        let b256_string = b256.to_string();
-        let b256_hex_string = format!(&quot;{:#x}&quot;, b256);
+        let b256_hex_string = format!(&quot;{b256:#x}&quot;);
 </code></pre>
 <p>For a full list of implemented methods and traits, see the <a href="https://docs.rs/fuel-types/latest/fuel_types/struct.Bytes32.html">fuel-types documentation</a>.</p>
 <blockquote>
