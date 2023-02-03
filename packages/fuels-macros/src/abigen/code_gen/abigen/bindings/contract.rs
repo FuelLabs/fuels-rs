@@ -33,7 +33,7 @@ pub(crate) fn contract_bindings(
         shared_types,
     );
 
-    let methods_name = ident(&format!("{}Methods", name));
+    let methods_name = ident(&format!("{name}Methods"));
 
     let contract_functions = expand_functions(&abi.functions, shared_types)?;
 

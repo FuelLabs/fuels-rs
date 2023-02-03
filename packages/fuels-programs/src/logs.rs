@@ -144,9 +144,9 @@ pub fn log_type_lookup(
     id_param_pairs: &[(u64, ParamType)],
     contract_id: Option<ContractId>,
 ) -> HashMap<LogId, ParamType> {
-    let contract_id = contract_id.unwrap_or_else(|| ContractId::zeroed());
+    let contract_id = contract_id.unwrap_or_else(ContractId::zeroed);
     id_param_pairs
         .iter()
-        .map(|(id, param_type)| (LogId(contract_id.clone(), *id), param_type.to_owned()))
+        .map(|(id, param_type)| (LogId(contract_id, *id), param_type.to_owned()))
         .collect()
 }

@@ -59,7 +59,7 @@ fn paramtype_decode_log(param_type: &ParamType, token: &Token) -> Result<String>
             let fields = zip(fields, field_tokens)
                 .map(|((field_name, param_type), token)| -> Result<_> {
                     let field_stringified = paramtype_decode_log(param_type, token)?;
-                    Ok(format!("{field_name}: {}", field_stringified))
+                    Ok(format!("{field_name}: {field_stringified}"))
                 })
                 .collect::<Result<Vec<_>>>()?
                 .join(", ");
@@ -167,7 +167,7 @@ mod tests {
             ]);
 
             assert_eq!(
-                format!("{:?}", bits256),
+                format!("{bits256:?}"),
                 Bits256::param_type().decode_log(&[
                     239, 134, 175, 169, 105, 108, 240, 220, 99, 133, 226, 196, 7, 166, 225, 89,
                     161, 16, 60, 239, 183, 226, 174, 6, 54, 251, 51, 211, 203, 42, 158, 74

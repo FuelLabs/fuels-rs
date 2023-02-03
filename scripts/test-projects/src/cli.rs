@@ -61,15 +61,14 @@ pub fn parse_cli() -> RunConfig {
     let project_path = project_path.canonicalize().unwrap_or_else(|_| {
         panic!(
             "project path
-            {:?} could not be canonicalized",
-            project_path
+            {project_path:?} could not be canonicalized"
         )
     });
 
     let bin_path = if let Some(bin_path) = cli.bin_path {
         bin_path
             .canonicalize()
-            .unwrap_or_else(|_| panic!("bin path {:?} could not be canonicalized", bin_path))
+            .unwrap_or_else(|_| panic!("bin path {bin_path:?} could not be canonicalized"))
     } else {
         PathBuf::from("")
     };

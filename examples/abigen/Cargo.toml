@@ -10,5 +10,5 @@ repository = "https://github.com/FuelLabs/fuels-rs"
 description = "Fuel Rust SDK abigen examples."
 
 [dev-dependencies]
-fuels = { version = "0.34.0", path = "../../packages/fuels" }
+fuels = { workspace = true }
 tokio = { version = "1.10", features = ["full"] }
