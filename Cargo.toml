@@ -55,4 +55,3 @@ fuels-programs = { version = "0.35.0", path = "./packages/fuels-programs" }
 fuels-signers = { version = "0.35.0", path = "./packages/fuels-signers" }
 fuels-test-helpers = { version = "0.35.0", path = "./packages/fuels-test-helpers" }
 fuels-types = { version = "0.35.0", path = "./packages/fuels-types" }
-

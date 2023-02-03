@@ -28,11 +28,9 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Install toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@master
         with:
-          profile: minimal
           toolchain: ${{ env.RUST_VERSION }}
-          override: true
         # selecting a toolchain either by action or manual `rustup` calls should happen
         # before the cache plugin, as it uses the current rustc version as its cache key
       - uses: Swatinem/rust-cache@v1
@@ -134,11 +132,11 @@ jobs:
         uses: actions/checkout@v3
         with:
           ref: ${{ github.event.pull_request.head.sha }}
-      - name: Install toolchain
-        uses: actions-rs/toolchain@v1
+      - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ env.RUST_VERSION }}
-          override: true
+          components: clippy,rustfmt
+          
         # selecting a toolchain either by action or manual `rustup` calls should happen
         # before the cache plugin, as it uses the current rustc version as its cache key
       - uses: Swatinem/rust-cache@v2.0.1
@@ -173,14 +171,6 @@ jobs:
           chmod +x fuel-core-${{ env.FUEL_CORE_VERSION }}-x86_64-unknown-linux-gnu/fuel-core
           mv fuel-core-${{ env.FUEL_CORE_VERSION }}-x86_64-unknown-linux-gnu/fuel-core /usr/local/bin/fuel-core
 
-      - name: Install rustfmt
-        if: ${{ matrix.command == 'fmt' }}
-        run: rustup component add rustfmt
-
-      - name: Install clippy
-        if: ${{ matrix.command == 'clippy' }}
-        run: rustup component add clippy
-
       - name: Download sway example artifacts
         if: ${{ matrix.command == 'test' || matrix.command == 'clippy' }}
         uses: actions/download-artifact@v3
@@ -190,17 +180,11 @@ jobs:
 
       - name: Cargo (workspace-level)
         if: ${{ !matrix.package }}
-        uses: actions-rs/cargo@v1
-        with:
-          command: ${{ matrix.command }}
-          args: ${{ matrix.args }}
+        run: cargo ${{ matrix.command }} ${{ matrix.args }}
 
       - name: Cargo (package-level)
         if: ${{ matrix.package }}
-        uses: actions-rs/cargo@v1
-        with:
-          command: ${{ matrix.command }}
-          args: -p ${{ matrix.package }} ${{ matrix.args }}
+        run: cargo ${{ matrix.command }} -p ${{ matrix.package }} ${{ matrix.args }}
 
       - name: Check Docs. Validity
         uses: actions-rs/cargo@v1
@@ -212,8 +196,28 @@ jobs:
         run: | 
           ! cargo doc |& grep -q "broken_intra_doc_links"
 
+  # Ensure workspace is publishable
+  publish-crates-check:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+
+      - name: Publish crate check
+        uses: katyo/publish-crates@v2
+        with:
+          dry-run: true
+          no-verify: true
+
   publish:
-    needs: cargo-verifications
+    needs: 
+      - cargo-verifications
+      - publish-crates-check
     # Only do this job if publishing a release
     if: github.event_name == 'release' && github.event.action == 'published'
     runs-on: ubuntu-latest
@@ -222,22 +226,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Install toolchain
-        uses: actions-rs/toolchain@v1
+      - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: stable
-          override: true
+          toolchain: ${{ env.RUST_VERSION }}
 
       - name: Verify tag version
         run: |
           curl -sSLf "$DASEL_VERSION" -L -o dasel && chmod +x dasel
           mv ./dasel /usr/local/bin/dasel
-          ./.github/workflows/scripts/verify_tag.sh ${{ github.ref_name }} packages/fuels-programs/Cargo.toml
-          ./.github/workflows/scripts/verify_tag.sh ${{ github.ref_name }} packages/fuels-core/Cargo.toml
-          ./.github/workflows/scripts/verify_tag.sh ${{ github.ref_name }} packages/fuels-macros/Cargo.toml
-          ./.github/workflows/scripts/verify_tag.sh ${{ github.ref_name }} packages/fuels/Cargo.toml
-          ./.github/workflows/scripts/verify_tag.sh ${{ github.ref_name }} packages/fuels-types/Cargo.toml
-          ./.github/workflows/scripts/verify_tag.sh ${{ github.ref_name }} packages/fuels-test-helpers/Cargo.toml
+          ./.github/workflows/scripts/verify_tag.sh ${{ github.ref_name }} Cargo.toml
       - name: Publish crate
         uses: katyo/publish-crates@v2
         with:
