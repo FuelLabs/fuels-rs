@@ -34,7 +34,7 @@ homepage = "https://fuel.network/"
 license = "Apache-2.0"
 repository = "https://github.com/FuelLabs/fuels-rs"
 rust-version = "1.67.0"
-version = "0.34.0"
+version = "0.35.0"
 
 [workspace.dependencies]
 fuel-asm = "0.25"
@@ -48,11 +48,10 @@ fuel-core-client = "0.16"
 fuel-core-chain-config = "0.16"
 fuel-core-types = "0.16"
 fuel-vm = "0.25"
-fuels = { version = "0.34.0", path = "./packages/fuels" }
-fuels-core = { version = "0.34.0", path = "./packages/fuels-core" }
-fuels-macros = { version = "0.34.0", path = "./packages/fuels-macros" }
-fuels-programs = { version = "0.34.0", path = "./packages/fuels-programs" }
-fuels-signers = { version = "0.34.0", path = "./packages/fuels-signers" }
-fuels-test-helpers = { version = "0.34.0", path = "./packages/fuels-test-helpers" }
-fuels-types = { version = "0.34.0", path = "./packages/fuels-types" }
-
+fuels = { version = "0.35.0", path = "./packages/fuels" }
+fuels-core = { version = "0.35.0", path = "./packages/fuels-core" }
+fuels-macros = { version = "0.35.0", path = "./packages/fuels-macros" }
+fuels-programs = { version = "0.35.0", path = "./packages/fuels-programs" }
+fuels-signers = { version = "0.35.0", path = "./packages/fuels-signers" }
+fuels-test-helpers = { version = "0.35.0", path = "./packages/fuels-test-helpers" }
+fuels-types = { version = "0.35.0", path = "./packages/fuels-types" }
