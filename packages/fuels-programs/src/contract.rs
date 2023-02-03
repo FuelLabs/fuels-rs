@@ -214,13 +214,13 @@ impl Contract {
     /// wallet will also receive the change.
     pub async fn deploy_loaded<T: fuels_signers::Account>(
         compiled_contract: &CompiledContract,
-        wallet: &T,
+        account: &T,
         params: TxParameters,
     ) -> Result<Bech32ContractId> {
         let (mut tx, contract_id) =
             Self::contract_deployment_transaction(compiled_contract, params).await?;
 
-        wallet
+        account
             .pay_fee_resources(&mut tx, 0, 1)
             .await
             .map_err(|_| error!(ProviderError, "Failed to add_fee_resources"))?;
@@ -238,7 +238,7 @@ impl Contract {
         //     .await
         //     .map_err(|_| error!(ProviderError, "Failed to sign_transaction"))?;
 
-        let provider = wallet
+        let provider = account
             .get_provider()
             .map_err(|_| error!(ProviderError, "Failed to get_provider"))?;
         let chain_info = provider.chain_info().await?;
