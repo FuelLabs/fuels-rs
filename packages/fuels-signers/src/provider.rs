@@ -252,7 +252,7 @@ impl Provider {
             .client
             .resources_to_spend(
                 &from.hash().to_string(),
-                vec![(format!("{:#x}", asset_id).as_str(), amount, None)],
+                vec![(format!("{asset_id:#x}").as_str(), amount, None)],
                 None,
             )
             .await?
