@@ -628,7 +628,8 @@ impl WalletUnlocked {
         self.sign_transaction(&mut tx).await?;
 
         let tx_id = tx.id().to_string();
-        let receipts = self.get_provider()?.send_transaction(&tx).await?;
+        let txw: ScriptTransaction = tx.into();
+        let receipts = self.get_provider()?.send_transaction(&txw).await?;
 
         Ok((tx_id, receipts))
     }
@@ -653,7 +654,8 @@ impl WalletUnlocked {
         self.sign_transaction(&mut tx).await?;
 
         let tx_id = tx.id().to_string();
-        let receipts = self.get_provider()?.send_transaction(&tx).await?;
+        let txw: ScriptTransaction = tx.into();
+        let receipts = self.get_provider()?.send_transaction(&txw).await?;
 
         let message_id = WalletUnlocked::extract_message_id(&receipts)
             .expect("MessageId could not be retrieved from tx receipts.");
@@ -726,7 +728,8 @@ impl WalletUnlocked {
         self.add_fee_resources(&mut tx, 0, 0).await?;
         self.sign_transaction(&mut tx).await?;
 
-        predicate.send_transaction(&tx).await
+        let txw: ScriptTransaction = tx.into();
+        predicate.send_transaction(&txw).await
     }
 
     fn create_coin_predicate(
@@ -843,7 +846,8 @@ impl WalletUnlocked {
         self.sign_transaction(&mut tx).await?;
 
         let tx_id = tx.id();
-        let receipts = self.get_provider()?.send_transaction(&tx).await?;
+        let txw: ScriptTransaction = tx.into();
+        let receipts = self.get_provider()?.send_transaction(&txw).await?;
 
         Ok((tx_id.to_string(), receipts))
     }

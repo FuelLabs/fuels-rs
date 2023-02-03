@@ -737,7 +737,7 @@ where
         &self,
         tolerance: Option<f64>,
     ) -> Result<TransactionCost> {
-        let script: Script = self.get_executable_call().await?.tx.into();
+        let script = self.get_executable_call().await?.tx;
 
         let transaction_cost = self
             .provider
@@ -901,7 +901,7 @@ impl MultiContractCallHandler {
         &self,
         tolerance: Option<f64>,
     ) -> Result<TransactionCost> {
-        let script: Script = self.get_executable_call().await?.tx.into();
+        let script = self.get_executable_call().await?.tx;
 
         let transaction_cost = self
             .wallet

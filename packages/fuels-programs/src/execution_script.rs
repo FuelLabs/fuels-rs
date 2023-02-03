@@ -1,13 +1,14 @@
 use std::{fmt::Debug, vec};
 
 use fuel_tx::{
-    AssetId, Input, Output, Receipt, Script, ScriptExecutionResult, Transaction, Witness,
+    AssetId, Input, Output, Receipt, Script, ScriptExecutionResult, Transaction as FuelTransaction,
+    Witness,
 };
 use fuels_core::{offsets::call_script_data_offset, parameters::TxParameters};
 use fuels_signers::{provider::Provider, Signer, WalletUnlocked};
 use fuels_types::{
     errors::{Error, Result},
-    script_transaction::ScriptTransaction,
+    script_transaction::{ScriptTransaction, Transaction},
 };
 
 use crate::{
@@ -96,7 +97,7 @@ impl ExecutableFuelCall {
         let (inputs, outputs) =
             get_transaction_inputs_outputs(calls, wallet.address(), spendable_resources);
 
-        let mut tx = Transaction::script(
+        let mut tx = FuelTransaction::script(
             tx_parameters.gas_price,
             tx_parameters.gas_limit,
             tx_parameters.maturity,
@@ -129,7 +130,8 @@ impl ExecutableFuelCall {
         )?;
 
         let fuel_tx = Script::from(self.tx.clone());
-        provider.send_transaction(&fuel_tx).await
+        let txw: ScriptTransaction = fuel_tx.into();
+        provider.send_transaction(&txw).await
     }
 
     /// Execute the transaction in a simulated manner, not modifying blockchain state

@@ -15,7 +15,8 @@ use fuel_gql_client::{
     interpreter::ExecutableTransaction,
 };
 use fuel_tx::{
-    field, AssetId, ConsensusParameters, Receipt, Transaction, TransactionFee, UniqueIdentifier,
+    field, AssetId, Chargeable, ConsensusParameters, Receipt, Transaction as FuelTransaction,
+    TransactionFee, UniqueIdentifier,
 };
 use fuels_core::constants::{DEFAULT_GAS_ESTIMATION_TOLERANCE, MAX_GAS_PER_TX};
 use fuels_types::{
@@ -28,6 +29,7 @@ use fuels_types::{
     message_proof::MessageProof,
     node_info::NodeInfo,
     resource::Resource,
+    script_transaction::{ScriptTransaction, Transaction},
     transaction_response::TransactionResponse,
 };
 use tai64::Tai64;
@@ -108,10 +110,7 @@ impl Provider {
     ///   Ok(())
     /// }
     /// ```
-    pub async fn send_transaction<Tx>(&self, tx: &Tx) -> Result<Vec<Receipt>>
-    where
-        Tx: ExecutableTransaction + field::GasLimit + field::GasPrice + Into<Transaction>,
-    {
+    pub async fn send_transaction<T: Transaction + Clone>(&self, tx: &T) -> Result<Vec<Receipt>> {
         let tolerance = 0.0;
         let TransactionCost {
             gas_used,
@@ -119,14 +118,14 @@ impl Provider {
             ..
         } = self.estimate_transaction_cost(tx, Some(tolerance)).await?;
 
-        if gas_used > *tx.gas_limit() {
+        if gas_used > tx.gas_limit() {
             return Err(error!(
                 ProviderError,
                 "gas_limit({}) is lower than the estimated gas_used({})",
                 tx.gas_limit(),
                 gas_used
             ));
-        } else if min_gas_price > *tx.gas_price() {
+        } else if min_gas_price > tx.gas_price() {
             return Err(error!(
                 ProviderError,
                 "gas_price({}) is lower than the required min_gas_price({})",
@@ -135,7 +134,7 @@ impl Provider {
             ));
         }
 
-        let (status, receipts) = self.submit_with_feedback(&tx.clone().into()).await?;
+        let (status, receipts) = self.submit_with_feedback(tx.clone()).await?;
 
         if let TransactionStatus::Failure { reason, .. } = status {
             Err(Error::RevertTransactionError(reason, receipts))
@@ -144,12 +143,12 @@ impl Provider {
         }
     }
 
-    async fn submit_with_feedback(
+    async fn submit_with_feedback<T: Transaction>(
         &self,
-        tx: &Transaction,
+        tx: T,
     ) -> ProviderResult<(TransactionStatus, Vec<Receipt>)> {
         let tx_id = tx.id().to_string();
-        let status = self.client.submit_and_await_commit(tx).await?;
+        let status = self.client.submit_and_await_commit(&tx.into()).await?;
         let receipts = self.client.receipts(&tx_id).await?;
 
         Ok((status, receipts))
@@ -197,11 +196,14 @@ impl Provider {
         Ok(self.client.node_info().await?.into())
     }
 
-    pub async fn dry_run(&self, tx: &Transaction) -> ProviderResult<Vec<Receipt>> {
+    pub async fn dry_run(&self, tx: &FuelTransaction) -> ProviderResult<Vec<Receipt>> {
         Ok(self.client.dry_run(tx).await?)
     }
 
-    pub async fn dry_run_no_validation(&self, tx: &Transaction) -> ProviderResult<Vec<Receipt>> {
+    pub async fn dry_run_no_validation(
+        &self,
+        tx: &FuelTransaction,
+    ) -> ProviderResult<Vec<Receipt>> {
         Ok(self.client.dry_run_opt(tx, Some(false)).await?)
     }
 
@@ -435,14 +437,11 @@ impl Provider {
         })
     }
 
-    pub async fn estimate_transaction_cost<Tx>(
+    pub async fn estimate_transaction_cost<T: Transaction + Clone>(
         &self,
-        tx: &Tx,
+        tx: &T,
         tolerance: Option<f64>,
-    ) -> Result<TransactionCost>
-    where
-        Tx: ExecutableTransaction + field::GasLimit + field::GasPrice,
-    {
+    ) -> Result<TransactionCost> {
         let NodeInfo { min_gas_price, .. } = self.node_info().await?;
 
         let tolerance = tolerance.unwrap_or(DEFAULT_GAS_ESTIMATION_TOLERANCE);
@@ -451,13 +450,14 @@ impl Provider {
         let gas_used = self
             .get_gas_used_with_tolerance(&dry_run_tx, tolerance)
             .await?;
-        let gas_price = std::cmp::max(*tx.gas_price(), min_gas_price);
+        let gas_price = std::cmp::max(tx.gas_price(), min_gas_price);
 
         // Update the dry_run_tx with estimated gas_used and correct gas price to calculate the total_fee
         *dry_run_tx.gas_price_mut() = gas_price;
         *dry_run_tx.gas_limit_mut() = gas_used;
 
-        let transaction_fee = TransactionFee::checked_from_tx(&consensus_parameters, &dry_run_tx)
+        let transaction_fee = tx
+            .fee_checked_from_tx(&consensus_parameters)
             .expect("Error calculating TransactionFee");
 
         Ok(TransactionCost {
@@ -470,7 +470,7 @@ impl Provider {
     }
 
     // Remove limits from an existing Transaction to get an accurate gas estimation
-    fn generate_dry_run_tx<Tx: field::GasPrice + field::GasLimit + Clone>(tx: &Tx) -> Tx {
+    fn generate_dry_run_tx<T: Transaction + Clone>(tx: &T) -> T {
         let mut dry_run_tx = tx.clone();
         // Simulate the contract call with MAX_GAS_PER_TX to get the complete gas_used
         *dry_run_tx.gas_limit_mut() = MAX_GAS_PER_TX;
@@ -479,7 +479,7 @@ impl Provider {
     }
 
     // Increase estimated gas by the provided tolerance
-    async fn get_gas_used_with_tolerance<Tx: Into<Transaction> + Clone>(
+    async fn get_gas_used_with_tolerance<Tx: Into<FuelTransaction> + Clone>(
         &self,
         tx: &Tx,
         tolerance: f64,
