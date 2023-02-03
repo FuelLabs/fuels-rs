@@ -3,10 +3,10 @@ use std::{
     io,
 };
 
-pub struct Error(pub(crate) String);
+pub struct Error(pub String);
 
 impl Error {
-    pub(crate) fn combine<T: Into<Self>>(self, err: T) -> Self {
+    pub fn combine<T: Into<Self>>(self, err: T) -> Self {
         error!("{} {}", self.0, err.into().0)
     }
 }
