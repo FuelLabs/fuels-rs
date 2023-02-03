@@ -1,4 +1,4 @@
-use fuels_code_gen::utils::type_path::TypePath;
+use fuels_code_gen::utils::TypePath;
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
 use syn::{

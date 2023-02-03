@@ -4,7 +4,6 @@ use itertools::Itertools;
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, TokenStreamExt};
 
-use crate::utils::type_path::TypePath;
 use crate::{
     error::Result,
     program_bindings::{
@@ -14,7 +13,7 @@ use crate::{
         },
         generated_code::GeneratedCode,
     },
-    utils::ident,
+    utils::{ident, TypePath},
 };
 
 pub(crate) fn contract_bindings(

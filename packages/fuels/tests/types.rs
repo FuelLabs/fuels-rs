@@ -1,5 +1,4 @@
-use std::result::Result as StdResult;
-use std::str::FromStr;
+use std::{result::Result as StdResult, str::FromStr};
 
 use fuels::{
     prelude::*,

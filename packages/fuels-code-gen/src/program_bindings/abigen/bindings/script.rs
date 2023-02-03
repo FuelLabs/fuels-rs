@@ -3,7 +3,6 @@ use std::collections::HashSet;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
-use crate::utils::type_path::TypePath;
 use crate::{
     error::Result,
     program_bindings::{
@@ -14,6 +13,7 @@ use crate::{
         },
         generated_code::GeneratedCode,
     },
+    utils::TypePath,
 };
 
 pub(crate) fn script_bindings(

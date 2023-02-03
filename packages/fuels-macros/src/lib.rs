@@ -1,6 +1,5 @@
-use proc_macro::TokenStream;
-
 use fuels_code_gen::Abigen;
+use proc_macro::TokenStream;
 use syn::{parse_macro_input, DeriveInput};
 
 use crate::{

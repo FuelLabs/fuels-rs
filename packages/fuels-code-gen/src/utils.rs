@@ -1,4 +1,5 @@
-mod ident;
-pub mod type_path;
+pub use ident::{ident, safe_ident};
+pub use type_path::TypePath;
 
-pub use ident::*;
+mod ident;
+mod type_path;

@@ -3,8 +3,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use fuels_code_gen::utils::ident;
-use fuels_code_gen::{Abigen, AbigenTarget, ProgramType};
+use fuels_code_gen::{utils::ident, Abigen, AbigenTarget, ProgramType};
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 use rand::{prelude::StdRng, Rng, SeedableRng};

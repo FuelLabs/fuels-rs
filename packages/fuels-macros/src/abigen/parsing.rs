@@ -1,10 +1,9 @@
+use fuels_code_gen::{AbigenTarget, ProgramType};
 use proc_macro2::Ident;
 use syn::{
     parse::{Parse, ParseStream},
     Error, Result as ParseResult,
 };
-
-use fuels_code_gen::{AbigenTarget, ProgramType};
 
 use crate::parse_utils::{Command, UniqueNameValues};
 

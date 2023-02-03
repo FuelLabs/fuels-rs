@@ -4,14 +4,13 @@ use inflector::Inflector;
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
 
-use crate::error::Result;
-use crate::utils::type_path::TypePath;
 use crate::{
+    error::Result,
     program_bindings::{
         abi_types::{FullTypeApplication, FullTypeDeclaration},
         resolved_type::{resolve_type, ResolvedType},
     },
-    utils::safe_ident,
+    utils::{safe_ident, TypePath},
 };
 
 // Represents a component of either a struct(field name) or an enum(variant

@@ -1,6 +1,5 @@
 use std::collections::HashSet;
 
-use crate::error::Result;
 pub use abigen_target::{AbigenTarget, ProgramType};
 use inflector::Inflector;
 use itertools::Itertools;
@@ -8,6 +7,7 @@ use proc_macro2::TokenStream;
 use quote::quote;
 
 use crate::{
+    error::Result,
     program_bindings::{
         abi_types::FullTypeDeclaration,
         abigen::{abigen_target::ParsedAbigenTarget, bindings::generate_bindings},
