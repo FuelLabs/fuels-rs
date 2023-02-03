@@ -12,7 +12,7 @@ description = "Fuel Rust SDK examples for Rust-native bindings"
 
 [dependencies]
 fuels = { workspace = true }
-fuels-macros = { version = "0.34.0", path = "../../packages/fuels-macros" }
+fuels-macros = { workspace = true }
 proc-macro2 = "1.0"
 rand = "0.8"
 tokio = { version = "1.10", features = ["full"] }
