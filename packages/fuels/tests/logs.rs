@@ -207,12 +207,12 @@ async fn test_get_logs() -> Result<()> {
         format!("{:?}", 16u16),
         format!("{:?}", 8u8),
         format!("{:?}", 64u64),
-        format!("{:?}", expected_bits256),
+        format!("{expected_bits256:?}"),
         format!("{:?}", SizedAsciiString::<4>::new("Fuel".to_string())?),
         format!("{:?}", [1, 2, 3]),
-        format!("{:?}", expected_struct),
-        format!("{:?}", expected_enum),
-        format!("{:?}", expected_generic_struct),
+        format!("{expected_struct:?}"),
+        format!("{expected_enum:?}"),
+        format!("{expected_generic_struct:?}"),
     ];
 
     assert_eq!(logs, expected_logs);
@@ -653,15 +653,15 @@ async fn test_script_get_logs() -> Result<()> {
         format!("{:?}", 16u16),
         format!("{:?}", 8u8),
         format!("{:?}", 64u64),
-        format!("{:?}", expected_bits256),
+        format!("{expected_bits256:?}"),
         format!("{:?}", SizedAsciiString::<4>::new("Fuel".to_string())?),
         format!("{:?}", [1, 2, 3]),
-        format!("{:?}", expected_struct),
-        format!("{:?}", expected_enum),
-        format!("{:?}", expected_generic_struct),
-        format!("{:?}", expected_generic_enum),
-        format!("{:?}", expected_nested_struct),
-        format!("{:?}", expected_deeply_nested_struct),
+        format!("{expected_struct:?}"),
+        format!("{expected_enum:?}"),
+        format!("{expected_generic_struct:?}"),
+        format!("{expected_generic_enum:?}"),
+        format!("{expected_nested_struct:?}"),
+        format!("{expected_deeply_nested_struct:?}"),
     ];
 
     assert_eq!(logs, expected_logs);

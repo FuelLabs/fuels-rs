@@ -80,7 +80,7 @@ fn get_local_contract(path: &Path) -> Result<String> {
                 "unable to canonicalize file from working dir {} with path {}",
                 env::current_dir()
                     .map(|cwd| cwd.display().to_string())
-                    .unwrap_or_else(|err| format!("??? ({})", err)),
+                    .unwrap_or_else(|err| format!("??? ({err})")),
                 path.display()
             )
             .combine(e)
