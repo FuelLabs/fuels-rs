@@ -1,8 +1,10 @@
 use proc_macro::TokenStream;
+
+use fuels_code_gen::Abigen;
 use syn::{parse_macro_input, DeriveInput};
 
 use crate::{
-    abigen::{Abigen, MacroAbigenTargets},
+    abigen::MacroAbigenTargets,
     derive::{
         parameterize::generate_parameterize_impl, tokenizable::generate_tokenizable_impl,
         try_from::generate_try_from_impl,
@@ -12,7 +14,6 @@ use crate::{
 
 mod abigen;
 mod derive;
-mod error;
 mod parse_utils;
 mod setup_contract_test;
 mod utils;

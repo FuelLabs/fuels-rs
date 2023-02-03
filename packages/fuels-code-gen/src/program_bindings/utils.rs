@@ -4,13 +4,13 @@ use inflector::Inflector;
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
 
+use crate::error::Result;
+use crate::utils::type_path::TypePath;
 use crate::{
-    abigen::code_gen::{
+    program_bindings::{
         abi_types::{FullTypeApplication, FullTypeDeclaration},
         resolved_type::{resolve_type, ResolvedType},
-        type_path::TypePath,
     },
-    error::Result,
     utils::safe_ident,
 };
 

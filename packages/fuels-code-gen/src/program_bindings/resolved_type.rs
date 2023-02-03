@@ -12,13 +12,13 @@ use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 use regex::Regex;
 
+use crate::utils::type_path::TypePath;
 use crate::{
-    abigen::code_gen::{
+    error::{error, Result},
+    program_bindings::{
         abi_types::{FullTypeApplication, FullTypeDeclaration},
-        type_path::TypePath,
         utils::get_sdk_provided_types,
     },
-    error::{error, Result},
     utils::{ident, safe_ident},
 };
 

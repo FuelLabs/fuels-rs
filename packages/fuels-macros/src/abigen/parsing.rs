@@ -4,10 +4,9 @@ use syn::{
     Error, Result as ParseResult,
 };
 
-use crate::{
-    abigen::{AbigenTarget, ProgramType},
-    parse_utils::{Command, UniqueNameValues},
-};
+use fuels_code_gen::{AbigenTarget, ProgramType};
+
+use crate::parse_utils::{Command, UniqueNameValues};
 
 impl From<MacroAbigenTargets> for Vec<AbigenTarget> {
     fn from(targets: MacroAbigenTargets) -> Self {

@@ -4,16 +4,16 @@ use itertools::Itertools;
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, TokenStreamExt};
 
+use crate::utils::type_path::TypePath;
 use crate::{
-    abigen::code_gen::{
+    error::Result,
+    program_bindings::{
         abi_types::{FullABIFunction, FullProgramABI, FullTypeDeclaration},
         abigen::{
             bindings::function_generator::FunctionGenerator, logs::logs_lookup_instantiation_code,
         },
         generated_code::GeneratedCode,
-        type_path::TypePath,
     },
-    error::Result,
     utils::ident,
 };
 
