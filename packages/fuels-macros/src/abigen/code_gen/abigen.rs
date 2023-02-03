@@ -142,7 +142,7 @@ fn limited_std_prelude() -> GeneratedCode {
                 iter::Iterator,
                 marker::Sized,
                 panic, vec,
-                string::ToString
+                string::ToString,
             };
     };
 

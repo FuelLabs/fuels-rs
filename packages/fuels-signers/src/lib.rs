@@ -5,11 +5,13 @@ pub mod wallet;
 
 use std::error::Error;
 
+use crate::provider::Provider;
 use async_trait::async_trait;
 #[doc(no_inline)]
 pub use fuel_crypto;
 use fuel_crypto::Signature;
-use fuel_tx::{field, Cacheable, UniqueIdentifier};
+use fuel_tx::field::{Inputs, Outputs};
+use fuel_tx::{field, Cacheable, Chargeable, UniqueIdentifier};
 use fuels_types::bech32::Bech32Address;
 pub use wallet::{Wallet, WalletUnlocked};
 
@@ -27,13 +29,78 @@ pub trait Signer: std::fmt::Debug + Send + Sync {
     ) -> Result<Signature, Self::Error>;
 
     /// Signs the transaction
-    async fn sign_transaction<Tx: Cacheable + UniqueIdentifier + field::Witnesses + Send>(
-        &self,
-        message: &mut Tx,
+    async fn sign_transaction<'a_t, Tx: Cacheable + UniqueIdentifier + field::Witnesses + Send>(
+        &'a_t self,
+        message: &'a_t mut Tx,
     ) -> Result<Signature, Self::Error>;
 
     /// Returns the signer's Fuel Address
     fn address(&self) -> &Bech32Address;
+
+    async fn add_fee_resources<
+        'a_t,
+        Tx: fuel_tx::Chargeable + field::Inputs + field::Outputs + std::marker::Send,
+    >(
+        &'a_t self,
+        tx: &'a_t mut Tx,
+        previous_base_amount: u64,
+        witness_index: u8,
+    ) -> Result<(), Self::Error>;
+
+    fn get_provider(&self) -> Result<&Provider, Self::Error>;
+}
+
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+pub trait Account: std::fmt::Debug + Send + Sync {
+    type Error: Error + Send + Sync;
+
+    fn address(&self) -> &Bech32Address;
+
+    async fn pay_fee_resources<
+        'a_t,
+        Tx: fuel_tx::Chargeable
+            + field::Inputs
+            + field::Outputs
+            + std::marker::Send
+            + Cacheable
+            + UniqueIdentifier
+            + field::Witnesses,
+    >(
+        &'a_t self,
+        tx: &'a_t mut Tx,
+        previous_base_amount: u64,
+        witness_index: u8,
+    ) -> Result<(), Self::Error>;
+
+    fn get_provider(&self) -> Result<&Provider, Self::Error>;
+}
+
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+impl<T: Signer> Account for T {
+    type Error = T::Error;
+
+    fn address(&self) -> &Bech32Address {
+        self.address()
+    }
+
+    async fn pay_fee_resources<
+        'a_t,
+        Tx: Chargeable + Inputs + Outputs + Send + Cacheable + UniqueIdentifier + field::Witnesses,
+    >(
+        &'a_t self,
+        tx: &'a_t mut Tx,
+        previous_base_amount: u64,
+        witness_index: u8,
+    ) -> Result<(), Self::Error> {
+        self.add_fee_resources(tx, previous_base_amount, witness_index)
+            .await?;
+        self.sign_transaction(tx).await?;
+        Ok(())
+    }
+
+    fn get_provider(&self) -> Result<&Provider, Self::Error> {
+        self.get_provider()
+    }
 }
 
 #[cfg(test)]

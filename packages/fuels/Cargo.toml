@@ -19,6 +19,7 @@ fuels-core = { version = "0.34.0", path = "../fuels-core" }
 fuels-signers = { version = "0.34.0", path = "../fuels-signers" }
 fuels-test-helpers = { version = "0.34.0", path = "../fuels-test-helpers" }
 fuels-types = { version = "0.34.0", path = "../fuels-types" }
+async-trait = { version = "0.1.50", default-features = false }
 
 [dev-dependencies]
 chrono = "0.4.2"

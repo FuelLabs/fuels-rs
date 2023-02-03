@@ -26,20 +26,59 @@ pub(crate) fn predicate_bindings(
     let encode_function = expand_fn(&abi, shared_types)?;
 
     let code = quote! {
+
+        use ::std::boxed::Box;
+
+        #[cfg_attr(not(target_arch = "wasm32"), ::async_trait::async_trait)]
+        impl ::fuels::signers::Account for #name {
+            type Error = ::fuels::types::errors::Error;
+
+            fn address(&self) -> &::fuels::prelude::Bech32Address {
+                &self.address
+            }
+
+            async fn pay_fee_resources<
+                'a_t,
+                Tx: ::fuels::tx::Chargeable
+                    + ::fuels::tx::field::Inputs
+                    + ::fuels::tx::field::Outputs
+                    + ::std::marker::Send
+                    + ::fuels::tx::Cacheable
+                    + ::fuels::tx::UniqueIdentifier
+                    + ::fuels::tx::field::Witnesses,
+            >(
+                &'a_t self,
+                tx: &'a_t mut Tx,
+                previous_base_amount: u64,
+                witness_index: u8,
+            ) -> ::fuels::types::errors::Result<()> {
+               ::std::boxed::Box::pin(async move
+                                           {
+                                               ::std::result::Result::Ok(())
+                                           }).await
+            }
+
+            fn get_provider(&self) -> ::fuels::types::errors::Result<&::fuels::signers::provider::Provider> {
+                ::std::result::Result::Ok(self.provider.as_ref().ok_or_else(|| Self::Error::from(::fuels::signers::wallet::WalletError::NoProvider))?)
+            }
+        }
+
         #[derive(Debug)]
         pub struct #name {
             address: ::fuels::types::bech32::Bech32Address,
             code: ::std::vec::Vec<u8>,
-            data: ::fuels::core::abi_encoder::UnresolvedBytes
+            data: ::fuels::core::abi_encoder::UnresolvedBytes,
+            provider: ::std::option::Option<::fuels::prelude::Provider>
         }
 
         impl #name {
             pub fn new(code: ::std::vec::Vec<u8>) -> Self {
                 let address: ::fuels::types::Address = (*::fuels::tx::Contract::root_from_code(&code)).into();
                 Self {
-                    address: address.into(),
+                    address: address.clone().into(),
                     code,
-                    data: ::fuels::core::abi_encoder::UnresolvedBytes::new()
+                    data: ::fuels::core::abi_encoder::UnresolvedBytes::new(),
+                    provider: ::std::option::Option::None
                 }
             }
 
@@ -53,6 +92,14 @@ pub(crate) fn predicate_bindings(
 
             pub fn code(&self) -> ::std::vec::Vec<u8> {
                 self.code.clone()
+            }
+
+            pub fn provider(&self) -> ::std::option::Option<::fuels::prelude::Provider> {
+                self.provider.clone()
+            }
+
+            pub fn set_provider(&mut self, provider: ::std::option::Option<::fuels::prelude::Provider>) {
+                self.provider = provider
             }
 
             pub fn data(&self) -> ::fuels::core::abi_encoder::UnresolvedBytes {
@@ -93,10 +140,9 @@ pub(crate) fn predicate_bindings(
                     .await
             }
 
-            #encode_function
+           #encode_function
         }
     };
-
     // All publicly available types generated above should be listed here.
     let type_paths = [TypePath::new(name).expect("We know name is not empty.")].into();
 
@@ -114,13 +160,15 @@ fn expand_fn(
     let mut generator = FunctionGenerator::new(fun, shared_types)?;
 
     let arg_tokens = generator.tokenized_args();
+
     let body = quote! {
         let data = ::fuels::core::abi_encoder::ABIEncoder::encode(&#arg_tokens).expect("Cannot encode predicate data");
 
         Self {
             address: self.address.clone(),
             code: self.code.clone(),
-            data
+            data,
+            provider: self.provider.clone()
         }
     };
 

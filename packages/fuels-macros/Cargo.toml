@@ -22,6 +22,7 @@ rand = "0.8"
 syn = { version = "1.0.107", features = ["extra-traits"] }
 itertools = "0.10.5"
 serde_json = "1.0.91"
+async-trait = { version = "0.1.50", default-features = false }
 
 [dev-dependencies]
 trybuild = "1.0.73"

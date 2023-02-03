@@ -1,10 +1,9 @@
-use std::{collections::HashMap, fmt, ops, path::Path};
-
 use async_trait::async_trait;
 use elliptic_curve::rand_core;
 use eth_keystore::KeystoreError;
 use fuel_core_client::client::{PaginatedResult, PaginationRequest};
 use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
+use fuel_tx::field::{Inputs, Outputs};
 use fuel_tx::{
     field, AssetId, Bytes32, Cacheable, Chargeable, ContractId, Input, Output, Receipt, Script,
     Transaction, TransactionFee, TxPointer, UniqueIdentifier, UtxoId, Witness,
@@ -29,9 +28,11 @@ use fuels_types::{
     transaction_response::TransactionResponse,
 };
 use rand::{CryptoRng, Rng};
+use std::{collections::HashMap, fmt, ops, path::Path};
 use thiserror::Error;
 
-use crate::{provider::Provider, Signer};
+use crate::wallet::WalletError::LowAmount;
+use crate::{provider, provider::Provider, Signer};
 
 pub const DEFAULT_DERIVATION_PATH_PREFIX: &str = "m/44'/1179993420'";
 
@@ -112,6 +113,10 @@ pub enum WalletError {
     KeystoreError(#[from] KeystoreError),
     #[error(transparent)]
     FuelCrypto(#[from] fuel_crypto::Error),
+    #[error(transparent)]
+    LowAmount(#[from] fuels_types::errors::Error),
+    #[error(transparent)]
+    ProviderError(#[from] provider::ProviderError),
 }
 
 impl From<WalletError> for Error {
@@ -488,12 +493,14 @@ impl WalletUnlocked {
     ///
     /// Requires contract inputs to be at the start of the transactions inputs vec
     /// so that their indexes are retained
-    pub async fn add_fee_resources<Tx: Chargeable + field::Inputs + field::Outputs>(
+    pub async fn add_fee_resources<
+        Tx: Chargeable + field::Inputs + field::Outputs + std::marker::Send,
+    >(
         &self,
         tx: &mut Tx,
         previous_base_amount: u64,
         witness_index: u8,
-    ) -> Result<()> {
+    ) -> WalletResult<()> {
         let consensus_parameters = self
             .get_provider()?
             .chain_info()
@@ -514,10 +521,10 @@ impl WalletUnlocked {
             .sum();
         // either the inputs were setup incorrectly, or the passed previous_base_amount is wrong
         if base_inputs_sum < previous_base_amount {
-            return Err(error!(
+            return Err(LowAmount(error!(
                 WalletError,
                 "The provided base asset amount is less than the present input coins"
-            ));
+            )));
         }
 
         let mut new_base_amount = transaction_fee.total() + previous_base_amount;
@@ -851,9 +858,9 @@ impl Signer for WalletUnlocked {
         Ok(sig)
     }
 
-    async fn sign_transaction<Tx: Cacheable + UniqueIdentifier + field::Witnesses + Send>(
-        &self,
-        tx: &mut Tx,
+    async fn sign_transaction<'a_t, Tx: Cacheable + UniqueIdentifier + field::Witnesses + Send>(
+        &'a_t self,
+        tx: &'a_t mut Tx,
     ) -> WalletResult<Signature> {
         let id = tx.id();
 
@@ -881,6 +888,20 @@ impl Signer for WalletUnlocked {
 
     fn address(&self) -> &Bech32Address {
         &self.address
+    }
+
+    async fn add_fee_resources<'a_t, Tx: Chargeable + Inputs + Outputs + std::marker::Send>(
+        &'a_t self,
+        tx: &'a_t mut Tx,
+        previous_base_amount: u64,
+        witness_index: u8,
+    ) -> WalletResult<()> {
+        Box::pin(self.add_fee_resources(tx, previous_base_amount, witness_index)).await?;
+        Ok(())
+    }
+
+    fn get_provider(&self) -> WalletResult<&Provider> {
+        self.provider.as_ref().ok_or(WalletError::NoProvider)
     }
 }
 
