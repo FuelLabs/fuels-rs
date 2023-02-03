@@ -13,12 +13,12 @@ description = "Fuel Rust SDK."
 fuel-tx = { workspace = true }
 fuel-core = { workspace = true, default-features = false, optional = true }
 fuel-core-client = { workspace = true, default-features = false }
-fuels-macros = { version = "0.34.0", path = "../fuels-macros" }
-fuels-programs = { version = "0.34.0", path = "../fuels-programs" }
-fuels-core = { version = "0.34.0", path = "../fuels-core" }
-fuels-signers = { version = "0.34.0", path = "../fuels-signers" }
-fuels-test-helpers = { version = "0.34.0", path = "../fuels-test-helpers" }
-fuels-types = { version = "0.34.0", path = "../fuels-types" }
+fuels-macros = { workspace = true }
+fuels-programs = { workspace = true }
+fuels-core = { workspace = true }
+fuels-signers = { workspace = true }
+fuels-test-helpers = { workspace = true }
+fuels-types = { workspace = true }
 
 [dev-dependencies]
 chrono = "0.4.2"

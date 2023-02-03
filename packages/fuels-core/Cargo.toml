@@ -13,10 +13,10 @@ description = "Fuel Rust SDK core."
 fuel-tx = { workspace = true }
 fuel-vm = { workspace = true }
 fuel-types = { workspace = true }
-fuels-types = { version = "0.34.0", path = "../fuels-types" }
+fuels-types = { workspace = true }
 hex = { version = "0.4.3", features = ["std"] }
 itertools = "0.10"
 sha2 = "0.9.5"
 
 [dev-dependencies]
-fuels-test-helpers = { version = "0.34.0", path = "../fuels-test-helpers" }
+fuels-test-helpers = { workspace = true }

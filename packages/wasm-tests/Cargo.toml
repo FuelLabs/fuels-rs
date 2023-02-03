@@ -8,7 +8,7 @@ publish = false
 crate-type = ['cdylib']
 
 [dependencies]
-fuels = { path = "../fuels" }
+fuels = { workspace = true }
 getrandom = { version = "0.2", features = ["js"] }
 
 [dev-dependencies]

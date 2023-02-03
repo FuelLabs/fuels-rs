@@ -21,8 +21,8 @@ fuel-vm = { workspace = true }
 fuel-crypto = { workspace = true, features = ["random"] }
 fuel-core-client = { workspace = true, default-features = false }
 fuel-types = { workspace = true, default-features = false, features = ["random"] }
-fuels-core = { version = "0.34.0", path = "../fuels-core" }
-fuels-types = { version = "0.34.0", path = "../fuels-types" }
+fuels-core = { workspace = true }
+fuels-types = { workspace = true }
 hex = { version = "0.4.3", default-features = false, features = ["std"] }
 itertools = "0.10"
 rand = { version = "0.8.4", default-features = false }

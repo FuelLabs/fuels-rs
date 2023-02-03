@@ -11,7 +11,7 @@ description = "Fuel Rust SDK examples for Rust-native bindings"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-fuels = { version = "0.34.0", path = "../../packages/fuels" }
+fuels = { workspace = true }
 fuels-macros = { version = "0.34.0", path = "../../packages/fuels-macros" }
 proc-macro2 = "1.0"
 rand = "0.8"

@@ -48,3 +48,11 @@ fuel-core-client = "0.16"
 fuel-core-chain-config = "0.16"
 fuel-core-types = "0.16"
 fuel-vm = "0.25"
+fuels = { version = "0.34.0", path = "./packages/fuels" }
+fuels-core = { version = "0.34.0", path = "./packages/fuels-core" }
+fuels-macros = { version = "0.34.0", path = "./packages/fuels-macros" }
+fuels-programs = { version = "0.34.0", path = "./packages/fuels-programs" }
+fuels-signers = { version = "0.34.0", path = "./packages/fuels-signers" }
+fuels-test-helpers = { version = "0.34.0", path = "./packages/fuels-test-helpers" }
+fuels-types = { version = "0.34.0", path = "./packages/fuels-types" }
+

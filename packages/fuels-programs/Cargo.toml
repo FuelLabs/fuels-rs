@@ -14,9 +14,9 @@ bytes = { version = "1.0.1", features = ["serde"] }
 fuel-vm = { workspace = true }
 fuel-types = { workspace = true }
 fuel-tx = { workspace = true }
-fuels-core = { version = "0.34.0", path = "../fuels-core" }
-fuels-signers = { version = "0.34.0", path = "../fuels-signers" }
-fuels-types = { version = "0.34.0", path = "../fuels-types" }
+fuels-core = { workspace = true }
+fuels-signers = { workspace = true }
+fuels-types = { workspace = true }
 futures = "0.3.21"
 hex = { version = "0.4.3", default-features = false, features = ["std"] }
 itertools = "0.10.3"
