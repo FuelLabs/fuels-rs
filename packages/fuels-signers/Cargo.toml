@@ -1,11 +1,12 @@
 [package]
 name = "fuels-signers"
-version = "0.34.0"
-authors = ["Fuel Labs <contact@fuel.sh>"]
-edition = "2021"
-homepage = "https://fuel.network/"
-license = "Apache-2.0"
-repository = "https://github.com/FuelLabs/fuels-rs"
+version = { workspace = true }
+authors = { workspace = true }
+edition = { workspace = true }
+homepage = { workspace = true }
+license = { workspace = true }
+repository = { workspace = true }
+rust-version = { workspace = true }
 description = "Fuel Rust SDK signers."
 
 [dependencies]
@@ -20,8 +21,8 @@ fuel-vm = { workspace = true }
 fuel-crypto = { workspace = true, features = ["random"] }
 fuel-core-client = { workspace = true, default-features = false }
 fuel-types = { workspace = true, default-features = false, features = ["random"] }
-fuels-core = { version = "0.34.0", path = "../fuels-core" }
-fuels-types = { version = "0.34.0", path = "../fuels-types" }
+fuels-core = { workspace = true }
+fuels-types = { workspace = true }
 hex = { version = "0.4.3", default-features = false, features = ["std"] }
 itertools = "0.10"
 rand = { version = "0.8.4", default-features = false }
