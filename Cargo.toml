@@ -16,9 +16,10 @@ members = [
     "examples/types",
     "examples/wallets",
     "packages/fuels",
+    "packages/fuels-code-gen",
+    "packages/fuels-core",
     "packages/fuels-macros",
     "packages/fuels-programs",
-    "packages/fuels-core",
     "packages/fuels-signers",
     "packages/fuels-test-helpers",
     "packages/fuels-types",
@@ -49,6 +50,7 @@ fuel-core-chain-config = "0.16"
 fuel-core-types = "0.16"
 fuel-vm = "0.25"
 fuels = { version = "0.35.0", path = "./packages/fuels" }
+fuels-code-gen = { version = "0.35.0", path = "./packages/fuels-code-gen" }
 fuels-core = { version = "0.35.0", path = "./packages/fuels-core" }
 fuels-macros = { version = "0.35.0", path = "./packages/fuels-macros" }
 fuels-programs = { version = "0.35.0", path = "./packages/fuels-programs" }
