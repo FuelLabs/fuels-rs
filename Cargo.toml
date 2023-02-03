@@ -27,6 +27,15 @@ members = [
     "scripts/check-docs",
 ]
 
+[workspace.package]
+authors = ["Fuel Labs <contact@fuel.sh>"]
+edition = "2021"
+homepage = "https://fuel.network/"
+license = "Apache-2.0"
+repository = "https://github.com/FuelLabs/fuels-rs"
+rust-version = "1.65.0"
+version = "0.34.0"
+
 [workspace.dependencies]
 fuel-asm = "0.25"
 fuel-crypto = "0.25"
