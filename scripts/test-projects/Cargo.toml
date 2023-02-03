@@ -2,8 +2,8 @@
 name = "test-projects"
 description = "Build or format all projects under the main test suite with `forc`/`forc-fmt`"
 version = "0.1.0"
-authors = ["Fuel Labs <contact@fuel.sh>"]
-edition = "2021"
+authors = { workspace = true }
+edition = { workspace = true }
 publish = false
 
 [dependencies]

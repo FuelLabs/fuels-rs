@@ -1,11 +1,12 @@
 [package]
 name = "fuels-test-helpers"
-version = "0.34.0"
-authors = ["Fuel Labs <contact@fuel.sh>"]
-edition = "2021"
-homepage = "https://fuel.network/"
-license = "Apache-2.0"
-repository = "https://github.com/FuelLabs/fuels-rs"
+version = { workspace = true }
+authors = { workspace = true }
+edition = { workspace = true }
+homepage = { workspace = true }
+license = { workspace = true }
+repository = { workspace = true }
+rust-version = { workspace = true }
 description = "Fuel Rust SDK test helpers."
 
 [dependencies]
@@ -16,10 +17,10 @@ fuel-core-chain-config = { workspace = true, default-features = false }
 fuel-core-types = { workspace = true, default-features = false }
 fuel-core-client = { workspace = true, default-features = false }
 fuel-types = { workspace = true, default-features = false, features = ["random"] }
-fuels-programs = { version = "0.34.0", path = "../fuels-programs" }
-fuels-core = { version = "0.34.0", path = "../fuels-core" }
-fuels-signers = { version = "0.34.0", path = "../fuels-signers", optional = true }
-fuels-types = { version = "0.34.0", path = "../fuels-types" }
+fuels-programs = { workspace = true }
+fuels-core = { workspace = true }
+fuels-signers = { workspace = true, optional = true }
+fuels-types = { workspace = true }
 hex = { version = "0.4.3", default-features = false, features = ["std", "serde"] }
 portpicker = { version = "0.1.1" }
 rand = { version = "0.8.4", default-features = false }
