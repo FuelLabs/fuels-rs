@@ -507,16 +507,16 @@ mod tests {
                 }
                 // The transaction is malformed
                 Err(Error::ValidationError(e)) => {
-                    println!("Transaction is malformed (ValidationError): {}", e);
+                    println!("Transaction is malformed (ValidationError): {e}");
                 }
                 // Failed request to provider
                 Err(Error::ProviderError(reason)) => {
-                    println!("Provider request failed with reason: {}", reason);
+                    println!("Provider request failed with reason: {reason}");
                 }
                 // The transaction is valid but reverts
                 Err(Error::RevertTransactionError(reason, receipts)) => {
-                    println!("ContractCall failed with reason: {}", reason);
-                    println!("Transaction receipts are: {:?}", receipts);
+                    println!("ContractCall failed with reason: {reason}");
+                    println!("Transaction receipts are: {receipts:?}");
                 }
                 Err(_) => {}
             }

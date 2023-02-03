@@ -6,5 +6,5 @@ pub(crate) fn ident(name: &str) -> Ident {
 }
 
 pub(crate) fn safe_ident(name: &str) -> Ident {
-    syn::parse_str::<Ident>(name).unwrap_or_else(|_| ident(&format!("{}_", name)))
+    syn::parse_str::<Ident>(name).unwrap_or_else(|_| ident(&format!("{name}_")))
 }
