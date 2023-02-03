@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use proc_macro2::TokenStream;
 use quote::quote;
 
-use crate::abigen::code_gen::{
+use crate::program_bindings::{
     abi_types::{FullLoggedType, FullTypeDeclaration},
     resolved_type::resolve_type,
     utils::single_param_type_call,

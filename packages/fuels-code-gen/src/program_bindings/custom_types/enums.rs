@@ -5,15 +5,14 @@ use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
 use crate::{
-    abigen::code_gen::{
+    error::{error, Result},
+    program_bindings::{
         abi_types::FullTypeDeclaration,
         custom_types::utils::{extract_components, extract_generic_parameters},
         generated_code::GeneratedCode,
-        type_path::TypePath,
         utils::Component,
     },
-    error::{error, Result},
-    utils::ident,
+    utils::{ident, TypePath},
 };
 
 /// Returns a TokenStream containing the declaration, `Parameterize`,

@@ -5,16 +5,15 @@ use proc_macro2::{Ident, TokenStream};
 use quote::{quote, TokenStreamExt};
 
 use crate::{
-    abigen::code_gen::{
+    error::Result,
+    program_bindings::{
         abi_types::{FullABIFunction, FullProgramABI, FullTypeDeclaration},
         abigen::{
             bindings::function_generator::FunctionGenerator, logs::logs_lookup_instantiation_code,
         },
         generated_code::GeneratedCode,
-        type_path::TypePath,
     },
-    error::Result,
-    utils::ident,
+    utils::{ident, TypePath},
 };
 
 pub(crate) fn contract_bindings(
