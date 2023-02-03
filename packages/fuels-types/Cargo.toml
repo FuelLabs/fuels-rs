@@ -1,11 +1,12 @@
 [package]
 name = "fuels-types"
-version = "0.34.0"
-authors = ["Fuel Labs <contact@fuel.sh>"]
-edition = "2021"
-homepage = "https://fuel.network/"
-license = "Apache-2.0"
-repository = "https://github.com/FuelLabs/fuels-rs"
+version = { workspace = true }
+authors = { workspace = true }
+edition = { workspace = true }
+homepage = { workspace = true }
+license = { workspace = true }
+repository = { workspace = true }
+rust-version = { workspace = true }
 description = "Serializable type representation for working with the Fuel VM ABI."
 
 [dependencies]
@@ -28,4 +29,4 @@ strum_macros = "0.21"
 itertools = "0.10.5"
 thiserror = { version = "1.0.26", default-features = false }
 tokio = "1.15"
-fuels-macros = { version = "0.34.0", path = "../fuels-macros" }
+fuels-macros = { workspace = true }

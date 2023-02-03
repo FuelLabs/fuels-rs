@@ -1,11 +1,12 @@
 [package]
 name = "fuels-programs"
-version = "0.34.0"
-authors = ["Fuel Labs <contact@fuel.sh>"]
-edition = "2021"
-homepage = "https://fuel.network/"
-license = "Apache-2.0"
-repository = "https://github.com/FuelLabs/fuels-rs"
+version = { workspace = true }
+authors = { workspace = true }
+edition = { workspace = true }
+homepage = { workspace = true }
+license = { workspace = true }
+repository = { workspace = true }
+rust-version = { workspace = true }
 description = "Fuel Rust SDK contracts."
 
 [dependencies]
@@ -13,9 +14,9 @@ bytes = { version = "1.0.1", features = ["serde"] }
 fuel-vm = { workspace = true }
 fuel-types = { workspace = true }
 fuel-tx = { workspace = true }
-fuels-core = { version = "0.34.0", path = "../fuels-core" }
-fuels-signers = { version = "0.34.0", path = "../fuels-signers" }
-fuels-types = { version = "0.34.0", path = "../fuels-types" }
+fuels-core = { workspace = true }
+fuels-signers = { workspace = true }
+fuels-types = { workspace = true }
 futures = "0.3.21"
 hex = { version = "0.4.3", default-features = false, features = ["std"] }
 itertools = "0.10.3"
