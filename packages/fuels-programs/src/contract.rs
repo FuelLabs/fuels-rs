@@ -7,6 +7,7 @@ use std::{
     path::Path,
     str::FromStr,
 };
+use std::any::Any;
 
 use fuel_tx::{
     Address, AssetId, Bytes32, Contract as FuelContract, ContractId, Create, FormatValidityChecks,
@@ -30,6 +31,7 @@ use fuels_types::{
     traits::{Parameterize, Tokenizable},
     Selector, Token,
 };
+use fuels_types::errors::Error::WalletError;
 
 use crate::{
     call_response::FuelCallResponse,
@@ -209,6 +211,7 @@ impl Contract {
         }
     }
 
+
     /// Deploys a compiled contract to a running node
     /// To deploy a contract, you need a wallet with enough assets to pay for deployment. This
     /// wallet will also receive the change.
@@ -221,27 +224,16 @@ impl Contract {
             Self::contract_deployment_transaction(compiled_contract, params).await?;
 
         account
-            .pay_fee_resources(&mut tx, 0, 1)
+            .pay_fee_resources(&mut tx, 0)
             .await
-            .map_err(|_| error!(ProviderError, "Failed to add_fee_resources"))?;
-
-        // The first witness is the bytecode we're deploying.
-        // The signature will be appended at position 1 of
-        // the witness list
-        // wallet
-        //     .add_fee_resources(&mut tx, 0, 1)
-        //     .await
-        //     .map_err(|_| error!(ProviderError, "Failed to add_fee_resources"))?;
-        //
-        // wallet
-        //     .sign_transaction(&mut tx)
-        //     .await
-        //     .map_err(|_| error!(ProviderError, "Failed to sign_transaction"))?;
+            .map_err(|err| WalletError(format!("{}", err)))?;
 
         let provider = account
             .get_provider()
             .map_err(|_| error!(ProviderError, "Failed to get_provider"))?;
         let chain_info = provider.chain_info().await?;
+
+        dbg!("asdfghjklö");
 
         tx.check_without_signatures(
             chain_info.latest_block.header.height,

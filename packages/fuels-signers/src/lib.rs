@@ -69,7 +69,6 @@ pub trait Account: std::fmt::Debug + Send + Sync {
         &'a_t self,
         tx: &'a_t mut Tx,
         previous_base_amount: u64,
-        witness_index: u8,
     ) -> Result<(), Self::Error>;
 
     fn get_provider(&self) -> Result<&Provider, Self::Error>;
@@ -90,9 +89,8 @@ impl<T: Signer> Account for T {
         &'a_t self,
         tx: &'a_t mut Tx,
         previous_base_amount: u64,
-        witness_index: u8,
     ) -> Result<(), Self::Error> {
-        self.add_fee_resources(tx, previous_base_amount, witness_index)
+        self.add_fee_resources(tx, previous_base_amount, 1)
             .await?;
         self.sign_transaction(tx).await?;
         Ok(())

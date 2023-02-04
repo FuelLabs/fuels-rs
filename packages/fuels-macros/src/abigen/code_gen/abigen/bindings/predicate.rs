@@ -50,10 +50,10 @@ pub(crate) fn predicate_bindings(
                 &'a_t self,
                 tx: &'a_t mut Tx,
                 previous_base_amount: u64,
-                witness_index: u8,
+                // witness_index: u8, in predicat witnes is 0
             ) -> ::fuels::types::errors::Result<()> {
 
-                ::std::boxed::Box::pin(async move {
+                // ::std::boxed::Box::pin(async move {
 
                     let consensus_parameters = self
                         .get_provider()?
@@ -93,7 +93,7 @@ pub(crate) fn predicate_bindings(
                     }
 
                     let new_base_inputs = self
-                    .get_asset_inputs_for_amount(::fuels::core::constants::BASE_ASSET_ID, new_base_amount, witness_index)
+                    .get_asset_inputs_for_amount(::fuels::core::constants::BASE_ASSET_ID, new_base_amount, 0) // i set this to 0
                     .await?;
                     let adjusted_inputs: ::std::vec::Vec<_> = remaining_inputs
                         .into_iter()
@@ -112,7 +112,7 @@ pub(crate) fn predicate_bindings(
 
                     ::std::result::Result::Ok(())
 
-               }).await
+               // }).await
             }
 
             fn get_provider(&self) -> ::fuels::types::errors::Result<&::fuels::signers::provider::Provider> {
