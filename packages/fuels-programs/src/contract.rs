@@ -165,7 +165,7 @@ impl Contract {
     }
 
     /// Loads a compiled contract and deploys it to a running node
-    pub async fn deploy<T: fuels_signers::Account>(
+    pub async fn deploy<T: fuels_signers::PayFee>(
         binary_filepath: &str,
         wallet: &T,
         params: TxParameters,
@@ -215,7 +215,7 @@ impl Contract {
     /// Deploys a compiled contract to a running node
     /// To deploy a contract, you need a wallet with enough assets to pay for deployment. This
     /// wallet will also receive the change.
-    pub async fn deploy_loaded<T: fuels_signers::Account>(
+    pub async fn deploy_loaded<T: fuels_signers::PayFee>(
         compiled_contract: &CompiledContract,
         account: &T,
         params: TxParameters,

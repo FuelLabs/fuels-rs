@@ -689,8 +689,9 @@ pub mod my_predicate_mod {
         vec,
     };
 
+
     #[cfg_attr(not(target_arch = "wasm32"), ::async_trait::async_trait)]
-    impl ::fuels::signers::Account for myPredicate {
+    impl ::fuels::signers::PayFee for myPredicate {
         type Error = ::fuels::types::errors::Error;
         fn address(&self) -> &::fuels::prelude::Bech32Address {
             &self.address
@@ -733,6 +734,24 @@ pub mod my_predicate_mod {
             self.provider()
         }
     }
+
+    #[cfg_attr(not(target_arch = "wasm32"), ::async_trait::async_trait)]
+    impl ::fuels::signers::Account for myPredicate {
+        type Error = ::fuels::types::errors::Error;
+
+        fn address(&self) -> &::fuels::types::bech32::Bech32Address {
+            &self.address
+        }
+
+        fn get_provider(&self) -> ::fuels::types::errors::Result<&::fuels::signers::provider::Provider> {
+            self.get_provider()
+        }
+
+        fn set_provider(&mut self, provider: ::fuels::signers::provider::Provider) {
+            self.set_provider(::std::option::Option::Some(provider))
+        }
+    }
+
 
     #[derive(Debug)]
     pub struct myPredicate {

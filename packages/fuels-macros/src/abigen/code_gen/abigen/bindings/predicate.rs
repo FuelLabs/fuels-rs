@@ -33,6 +33,24 @@ pub(crate) fn predicate_bindings(
         impl ::fuels::signers::Account for #name {
             type Error = ::fuels::types::errors::Error;
 
+            fn address(&self) -> &::fuels::types::bech32::Bech32Address {
+                &self.address
+            }
+
+            fn get_provider(&self) -> ::fuels::types::errors::Result<&::fuels::signers::provider::Provider> {
+                self.get_provider()
+            }
+
+            fn set_provider(&mut self, provider: ::fuels::signers::provider::Provider) {
+                self.set_provider(::std::option::Option::Some(provider))
+            }
+        }
+
+
+        #[cfg_attr(not(target_arch = "wasm32"), ::async_trait::async_trait)]
+        impl ::fuels::signers::PayFee for #name {
+            type Error = ::fuels::types::errors::Error;
+
             fn address(&self) -> &::fuels::prelude::Bech32Address {
                 &self.address
             }

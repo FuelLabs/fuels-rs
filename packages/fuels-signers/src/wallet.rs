@@ -32,7 +32,7 @@ use std::{collections::HashMap, fmt, ops, path::Path};
 use thiserror::Error;
 
 use crate::wallet::WalletError::LowAmount;
-use crate::{provider, provider::Provider, Signer};
+use crate::{Account, provider, provider::Provider, Signer};
 
 pub const DEFAULT_DERIVATION_PATH_PREFIX: &str = "m/44'/1179993420'";
 
@@ -501,8 +501,8 @@ impl WalletUnlocked {
         previous_base_amount: u64,
         witness_index: u8,
     ) -> WalletResult<()> {
-        let consensus_parameters = self
-            .get_provider()?
+        let consensus_parameters =
+            Signer::get_provider(self)?
             .chain_info()
             .await?
             .consensus_parameters;
@@ -555,7 +555,7 @@ impl WalletUnlocked {
         // add a change output for the base asset if it doesn't exist and there are base inputs
         if !is_base_change_present && new_base_amount != 0 {
             tx.outputs_mut()
-                .push(Output::change(self.address().into(), 0, BASE_ASSET_ID));
+                .push(Output::change(Signer::address(self).into(), 0, BASE_ASSET_ID));
         }
 
         Ok(())
@@ -626,7 +626,7 @@ impl WalletUnlocked {
         };
         self.sign_transaction(&mut tx).await?;
 
-        let receipts = self.get_provider()?.send_transaction(&tx).await?;
+        let receipts = Signer::get_provider(self)?.send_transaction(&tx).await?;
 
         Ok((tx.id().to_string(), receipts))
     }
@@ -649,7 +649,7 @@ impl WalletUnlocked {
         self.add_fee_resources(&mut tx, amount, 0).await?;
         self.sign_transaction(&mut tx).await?;
 
-        let receipts = self.get_provider()?.send_transaction(&tx).await?;
+        let receipts = Signer::get_provider(self)?.send_transaction(&tx).await?;
 
         let message_id = WalletUnlocked::extract_message_id(&receipts)
             .expect("MessageId could not be retrieved from tx receipts.");
@@ -675,7 +675,7 @@ impl WalletUnlocked {
         predicate_data: UnresolvedBytes,
         tx_parameters: TxParameters,
     ) -> Result<Vec<Receipt>> {
-        let predicate = self.get_provider()?;
+        let predicate = Signer::get_provider(self)?;
         let spendable_predicate_resources = predicate
             .get_spendable_resources(predicate_address, asset_id, amount)
             .await?;
@@ -776,7 +776,7 @@ impl WalletUnlocked {
             predicate_code,
             amount,
             asset_id,
-            self.address(),
+            Signer::address(self),
             predicate_data,
             tx_parameters,
         )
@@ -838,11 +838,28 @@ impl WalletUnlocked {
         self.sign_transaction(&mut tx).await?;
 
         let tx_id = tx.id();
-        let receipts = self.get_provider()?.send_transaction(&tx).await?;
+        let receipts = Signer::get_provider(self)?.send_transaction(&tx).await?;
 
         Ok((tx_id.to_string(), receipts))
     }
 }
+
+impl Account for WalletUnlocked {
+    type Error = WalletError;
+
+    fn address(&self) -> &Bech32Address {
+        &self.address
+    }
+
+    fn get_provider(&self) -> std::result::Result<&Provider, Self::Error> {
+        self.provider.as_ref().ok_or(WalletError::NoProvider)
+    }
+
+    fn set_provider(&mut self, provider: Provider) {
+        self.wallet.set_provider(provider)
+    }
+}
+
 
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
@@ -896,8 +913,8 @@ impl Signer for WalletUnlocked {
         previous_base_amount: u64,
         witness_index: u8,
     ) -> WalletResult<()> {
-        Box::pin(self.add_fee_resources(tx, previous_base_amount, witness_index)).await?;
-        Ok(())
+        // Box::pin(self.add_fee_resources(tx, previous_base_amount, witness_index)).await?;
+        self.add_fee_resources(tx, previous_base_amount, witness_index).await
     }
 
     fn get_provider(&self) -> WalletResult<&Provider> {

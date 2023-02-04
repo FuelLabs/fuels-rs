@@ -51,7 +51,7 @@ pub trait Signer: std::fmt::Debug + Send + Sync {
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
-pub trait Account: std::fmt::Debug + Send + Sync {
+pub trait PayFee: std::fmt::Debug + Send + Sync {
     type Error: Error + Send + Sync;
 
     fn address(&self) -> &Bech32Address;
@@ -75,7 +75,17 @@ pub trait Account: std::fmt::Debug + Send + Sync {
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
-impl<T: Signer> Account for T {
+pub trait Account: std::fmt::Debug + Send + Sync {
+    type Error: Error + Send + Sync;
+
+    fn address(&self) -> &Bech32Address;
+    fn get_provider(&self) -> Result<&Provider, Self::Error>;
+    fn set_provider(&mut self, provider: Provider);
+
+}
+
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+impl<T: Signer> PayFee for T {
     type Error = T::Error;
 
     fn address(&self) -> &Bech32Address {
