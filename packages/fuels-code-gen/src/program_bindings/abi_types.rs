@@ -119,10 +119,7 @@ impl FullABIFunction {
             abi_function.name.clone(),
             inputs,
             FullTypeApplication::from_counterpart(&abi_function.output, types),
-            abi_function
-                .attributes
-                .as_ref()
-                .map_or(vec![], Clone::clone),
+            attributes,
         )
     }
 }
