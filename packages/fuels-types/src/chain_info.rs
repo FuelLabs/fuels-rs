@@ -1,4 +1,4 @@
-use fuel_gql_client::client::schema::chain::ChainInfo as ClientChainInfo;
+use fuel_core_client::client::schema::chain::ChainInfo as ClientChainInfo;
 use fuel_tx::ConsensusParameters;
 
 use crate::block::Block;

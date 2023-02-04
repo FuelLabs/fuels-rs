@@ -1,8 +1,8 @@
 use std::convert::TryFrom;
 
 use crate::{
-    abigen::code_gen::{abi_types::FullProgramABI, source::Source},
     error::{Error, Result},
+    program_bindings::{abi_types::FullProgramABI, source::Source},
 };
 
 #[derive(Debug, Clone)]

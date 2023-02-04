@@ -5,8 +5,8 @@ use proc_macro2::TokenStream;
 use quote::quote;
 
 use crate::{
-    abigen::code_gen::{abi_types::FullTypeDeclaration, utils::Component},
     error::Result,
+    program_bindings::{abi_types::FullTypeDeclaration, utils::Component},
     utils::ident,
 };
 
@@ -47,7 +47,7 @@ mod tests {
     use fuel_abi_types::{program_abi::TypeDeclaration, utils::extract_custom_type_name};
 
     use super::*;
-    use crate::abigen::code_gen::{resolved_type::ResolvedType, utils::param_type_calls};
+    use crate::program_bindings::{resolved_type::ResolvedType, utils::param_type_calls};
 
     #[test]
     fn extracts_generic_types() -> Result<()> {

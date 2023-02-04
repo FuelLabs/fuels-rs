@@ -3,21 +3,18 @@ use std::{collections::HashMap, io};
 use chrono::{DateTime, Duration, Utc};
 #[cfg(feature = "fuel-core")]
 use fuel_core::service::{Config, FuelService};
-use fuel_gql_client::{
-    client::{
-        schema::{
-            balance::Balance, block::TimeParameters as FuelTimeParameters,
-            contract::ContractBalance,
-        },
-        types::TransactionStatus,
-        FuelClient, PageDirection, PaginatedResult, PaginationRequest,
+use fuel_core_client::client::{
+    schema::{
+        balance::Balance, block::TimeParameters as FuelTimeParameters, contract::ContractBalance,
     },
-    interpreter::ExecutableTransaction,
+    types::TransactionStatus,
+    FuelClient, PageDirection, PaginatedResult, PaginationRequest,
 };
 use fuel_tx::{
     field, AssetId, Chargeable, ConsensusParameters, Receipt, Transaction as FuelTransaction,
     TransactionFee, UniqueIdentifier,
 };
+use fuel_vm::prelude::ExecutableTransaction;
 use fuels_core::constants::{DEFAULT_GAS_ESTIMATION_TOLERANCE, MAX_GAS_PER_TX};
 use fuels_types::{
     bech32::{Bech32Address, Bech32ContractId},
@@ -257,7 +254,7 @@ impl Provider {
             .client
             .resources_to_spend(
                 &from.hash().to_string(),
-                vec![(format!("{:#x}", asset_id).as_str(), amount, None)],
+                vec![(format!("{asset_id:#x}").as_str(), amount, None)],
                 None,
             )
             .await?

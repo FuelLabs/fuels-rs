@@ -1,4 +1,4 @@
-use fuel_chain_config::{CoinConfig, MessageConfig};
+use fuel_core_chain_config::{CoinConfig, MessageConfig};
 use fuels_types::{coin::Coin, message::Message};
 
 pub fn into_coin_configs(coins: Vec<Coin>) -> Vec<CoinConfig> {
