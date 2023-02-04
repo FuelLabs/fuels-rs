@@ -1,10 +1,9 @@
+use fuels_code_gen::utils::TypePath;
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
 use syn::{
     parenthesized, parse::ParseStream, Attribute, Error, Fields, LitStr, Result, Type, Variant,
 };
-
-use crate::abigen::TypePath;
 
 pub(crate) fn determine_fuels_types_path(attrs: &[Attribute]) -> Result<TokenStream> {
     let attr_tokens = if let Some(attr) = find_attr("FuelsTypesPath", attrs) {

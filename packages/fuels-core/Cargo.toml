@@ -1,21 +1,22 @@
 [package]
 name = "fuels-core"
-version = "0.34.0"
-authors = ["Fuel Labs <contact@fuel.sh>"]
-edition = "2021"
-homepage = "https://fuel.network/"
-license = "Apache-2.0"
-repository = "https://github.com/FuelLabs/fuels-rs"
+version = { workspace = true }
+authors = { workspace = true }
+edition = { workspace = true }
+homepage = { workspace = true }
+license = { workspace = true }
+repository = { workspace = true }
+rust-version = { workspace = true }
 description = "Fuel Rust SDK core."
 
 [dependencies]
 fuel-tx = { workspace = true }
 fuel-vm = { workspace = true }
 fuel-types = { workspace = true }
-fuels-types = { version = "0.34.0", path = "../fuels-types" }
+fuels-types = { workspace = true }
 hex = { version = "0.4.3", features = ["std"] }
 itertools = "0.10"
 sha2 = "0.9.5"
 
 [dev-dependencies]
-fuels-test-helpers = { version = "0.34.0", path = "../fuels-test-helpers" }
+fuels-test-helpers = { workspace = true }

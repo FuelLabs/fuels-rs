@@ -33,7 +33,7 @@ mod tests {
 
         // ANCHOR: bytes32_format
         let b256_string = b256.to_string();
-        let b256_hex_string = format!("{:#x}", b256);
+        let b256_hex_string = format!("{b256:#x}");
         // ANCHOR_END: bytes32_format
 
         assert_eq!(hex_str[2..], b256_string);

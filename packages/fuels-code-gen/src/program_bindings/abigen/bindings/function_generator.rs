@@ -4,12 +4,12 @@ use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 
 use crate::{
-    abigen::code_gen::{
+    error::{error, Result},
+    program_bindings::{
         abi_types::{FullABIFunction, FullTypeApplication, FullTypeDeclaration},
         resolved_type::{resolve_type, ResolvedType},
         utils::{param_type_calls, Component},
     },
-    error::{error, Result},
     utils::safe_ident,
 };
 

@@ -412,7 +412,7 @@ impl WalletUnlocked {
         phrase: &str,
         provider: Option<Provider>,
     ) -> WalletResult<Self> {
-        let path = format!("{}/0'/0/0", DEFAULT_DERIVATION_PATH_PREFIX);
+        let path = format!("{DEFAULT_DERIVATION_PATH_PREFIX}/0'/0/0");
         Self::new_from_mnemonic_phrase_with_path(phrase, provider, &path)
     }
 
