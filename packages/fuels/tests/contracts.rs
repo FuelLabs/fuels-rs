@@ -1100,7 +1100,7 @@ async fn test_payable_annotation() -> Result<()> {
         .call_params(CallParameters::new(Some(100), None, None))
         .expect_err("Should return call params error.");
 
-    assert!(matches!(err, Error::AssetsForwardedToNonPayableMethod()));
+    assert!(matches!(err, Error::AssetsForwardedToNonPayableMethod));
     // ANCHOR_END: non_payable_params */
     let response = contract_methods
         .non_payable()

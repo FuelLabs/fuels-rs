@@ -619,7 +619,7 @@ where
     /// ```
     pub fn call_params(mut self, params: CallParameters) -> Result<Self> {
         if !self.is_payable() && params.amount > 0 {
-            return Err(Error::AssetsForwardedToNonPayableMethod());
+            return Err(Error::AssetsForwardedToNonPayableMethod);
         }
         self.contract_call.call_parameters = params;
         Ok(self)

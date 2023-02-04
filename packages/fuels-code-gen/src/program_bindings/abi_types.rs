@@ -111,6 +111,10 @@ impl FullABIFunction {
             .map(|input| FullTypeApplication::from_counterpart(input, types))
             .collect();
 
+        let attributes = abi_function
+            .attributes
+            .as_ref()
+            .map_or(vec![], Clone::clone);
         FullABIFunction::new(
             abi_function.name.clone(),
             inputs,
