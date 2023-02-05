@@ -11,6 +11,7 @@ use fuels_signers::{provider::Provider, Signer, WalletUnlocked};
 use fuels_types::{
     bech32::Bech32ContractId,
     errors::Result,
+    script_transaction::ScriptTransaction,
     traits::{Parameterize, Tokenizable},
 };
 use itertools::chain;
@@ -169,7 +170,7 @@ where
         )
         .collect();
 
-        let mut tx = Transaction::script(
+        let mut tx: ScriptTransaction = Transaction::script(
             self.tx_parameters.gas_price,
             self.tx_parameters.gas_limit,
             self.tx_parameters.maturity,
@@ -178,11 +179,12 @@ where
             inputs,
             outputs,
             vec![],
-        );
+        )
+        .into();
         self.wallet.add_fee_resources(&mut tx, 0, 0).await?;
         self.wallet.sign_transaction(&mut tx).await?;
 
-        let tx_execution = ExecutableFuelCall::new(tx.into());
+        let tx_execution = ExecutableFuelCall::new(tx);
 
         let receipts = if simulate {
             tx_execution.simulate(&self.provider).await?

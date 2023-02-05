@@ -97,7 +97,7 @@ impl ExecutableFuelCall {
         let (inputs, outputs) =
             get_transaction_inputs_outputs(calls, wallet.address(), spendable_resources);
 
-        let mut tx = FuelTransaction::script(
+        let mut tx: ScriptTransaction = FuelTransaction::script(
             tx_parameters.gas_price,
             tx_parameters.gas_limit,
             tx_parameters.maturity,
@@ -106,7 +106,8 @@ impl ExecutableFuelCall {
             inputs,
             outputs,
             vec![],
-        );
+        )
+        .into();
 
         let base_asset_amount = required_asset_amounts
             .iter()
@@ -117,7 +118,7 @@ impl ExecutableFuelCall {
         }
         wallet.sign_transaction(&mut tx).await.unwrap();
 
-        Ok(ExecutableFuelCall::new(tx.into()))
+        Ok(ExecutableFuelCall::new(tx))
     }
 
     /// Execute the transaction in a state-modifying manner.

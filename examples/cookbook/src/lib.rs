@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use fuels::{prelude::Result, tx::Script};
+    use fuels::prelude::Result;
 
     #[tokio::test]
     async fn liquidity() -> Result<()> {
@@ -159,8 +159,7 @@ mod tests {
         // ANCHOR_END: transfer_multiple_inout
 
         // ANCHOR: transfer_multiple_transaction
-        let mut tx: Script =
-            Wallet::build_transfer_tx(&inputs, &outputs, TxParameters::default()).into();
+        let mut tx = Wallet::build_transfer_tx(&inputs, &outputs, TxParameters::default());
         wallet_1.sign_transaction(&mut tx).await?;
 
         let _receipts = provider.send_transaction(&tx).await?;

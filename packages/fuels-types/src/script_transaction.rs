@@ -4,7 +4,7 @@ use fuel_tx::field::{
     GasLimit, GasPrice, Inputs, Maturity, Outputs, Script as ScriptField, ScriptData, Witnesses,
 };
 use fuel_tx::{
-    Bytes32, Chargeable, Checkable, ConsensusParameters, Create, Input, Output, Script,
+    Bytes32, Chargeable, ConsensusParameters, Create, FormatValidityChecks, Input, Output, Script,
     Transaction as FuelTransaction, TransactionFee, UniqueIdentifier, Witness,
 };
 
@@ -143,10 +143,6 @@ impl_tx_wrapper!(ScriptTransaction, Script);
 impl_tx_wrapper!(CreateTransaction, Create);
 
 impl ScriptTransaction {
-    fn new(tx: Script) -> ScriptTransaction {
-        Self { tx }
-    }
-
     pub fn script(&self) -> &Vec<u8> {
         self.tx.script()
     }

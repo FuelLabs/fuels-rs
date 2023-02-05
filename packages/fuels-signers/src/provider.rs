@@ -10,11 +10,7 @@ use fuel_core_client::client::{
     types::TransactionStatus,
     FuelClient, PageDirection, PaginatedResult, PaginationRequest,
 };
-use fuel_tx::{
-    field, AssetId, Chargeable, ConsensusParameters, Receipt, Transaction as FuelTransaction,
-    TransactionFee, UniqueIdentifier,
-};
-use fuel_vm::prelude::ExecutableTransaction;
+use fuel_tx::{AssetId, ConsensusParameters, Receipt, Transaction as FuelTransaction};
 use fuels_core::constants::{DEFAULT_GAS_ESTIMATION_TOLERANCE, MAX_GAS_PER_TX};
 use fuels_types::{
     bech32::{Bech32Address, Bech32ContractId},
@@ -26,7 +22,7 @@ use fuels_types::{
     message_proof::MessageProof,
     node_info::NodeInfo,
     resource::Resource,
-    script_transaction::{ScriptTransaction, Transaction},
+    script_transaction::Transaction,
     transaction_response::TransactionResponse,
 };
 use tai64::Tai64;

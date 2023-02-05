@@ -6,8 +6,8 @@ use eth_keystore::KeystoreError;
 use fuel_core_client::client::{PaginatedResult, PaginationRequest};
 use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
 use fuel_tx::{
-    field, AssetId, Bytes32, Cacheable, Chargeable, ContractId, Input, Output, Receipt, Script,
-    Transaction, TransactionFee, TxPointer, UniqueIdentifier, UtxoId, Witness,
+    AssetId, Bytes32, ContractId, Input, Output, Receipt, Transaction as FuelTransaction,
+    TxPointer, UtxoId, Witness,
 };
 use fuel_types::{bytes::WORD_SIZE, Address, MessageId};
 use fuel_vm::{
@@ -27,6 +27,7 @@ use fuels_types::{
     message::Message as InputMessage,
     resource::Resource,
     script_transaction::ScriptTransaction,
+    script_transaction::Transaction,
     transaction_response::TransactionResponse,
 };
 use rand::{CryptoRng, Rng};
@@ -277,7 +278,7 @@ impl Wallet {
         params: TxParameters,
     ) -> ScriptTransaction {
         // This script is empty, since all this transaction does is move Inputs and Outputs around.
-        Transaction::script(
+        FuelTransaction::script(
             params.gas_price,
             params.gas_limit,
             params.maturity,
@@ -325,7 +326,7 @@ impl Wallet {
         .into_iter()
         .collect();
 
-        Transaction::script(
+        FuelTransaction::script(
             params.gas_price,
             params.gas_limit,
             params.maturity,
@@ -371,7 +372,7 @@ impl Wallet {
             Output::change(to, 0, BASE_ASSET_ID),
         ];
 
-        Transaction::script(
+        FuelTransaction::script(
             params.gas_price,
             params.gas_limit,
             params.maturity,
@@ -496,9 +497,9 @@ impl WalletUnlocked {
     ///
     /// Requires contract inputs to be at the start of the transactions inputs vec
     /// so that their indexes are retained
-    pub async fn add_fee_resources<Tx: Chargeable + field::Inputs + field::Outputs>(
+    pub async fn add_fee_resources<T: Transaction>(
         &self,
-        tx: &mut Tx,
+        tx: &mut T,
         previous_base_amount: u64,
         witness_index: u8,
     ) -> Result<()> {
@@ -507,7 +508,8 @@ impl WalletUnlocked {
             .chain_info()
             .await?
             .consensus_parameters;
-        let transaction_fee = TransactionFee::checked_from_tx(&consensus_parameters, tx)
+        let transaction_fee = tx
+            .fee_checked_from_tx(&consensus_parameters)
             .expect("Error calculating TransactionFee");
 
         let (base_asset_inputs, remaining_inputs): (Vec<_>, Vec<_>) =
@@ -617,7 +619,7 @@ impl WalletUnlocked {
             .await?;
         let outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
 
-        let mut tx: Script = Wallet::build_transfer_tx(&inputs, &outputs, tx_parameters).into();
+        let mut tx = Wallet::build_transfer_tx(&inputs, &outputs, tx_parameters);
 
         // if we are not transferring the base asset, previous base amount is 0
         if asset_id == AssetId::default() {
@@ -628,8 +630,7 @@ impl WalletUnlocked {
         self.sign_transaction(&mut tx).await?;
 
         let tx_id = tx.id().to_string();
-        let txw: ScriptTransaction = tx.into();
-        let receipts = self.get_provider()?.send_transaction(&txw).await?;
+        let receipts = self.get_provider()?.send_transaction(&tx).await?;
 
         Ok((tx_id, receipts))
     }
@@ -647,15 +648,13 @@ impl WalletUnlocked {
             .get_asset_inputs_for_amount(BASE_ASSET_ID, amount, 0)
             .await?;
 
-        let mut tx: Script =
-            Wallet::build_message_to_output_tx(to.into(), amount, &inputs, tx_parameters).into();
+        let mut tx = Wallet::build_message_to_output_tx(to.into(), amount, &inputs, tx_parameters);
 
         self.add_fee_resources(&mut tx, amount, 0).await?;
         self.sign_transaction(&mut tx).await?;
 
         let tx_id = tx.id().to_string();
-        let txw: ScriptTransaction = tx.into();
-        let receipts = self.get_provider()?.send_transaction(&txw).await?;
+        let receipts = self.get_provider()?.send_transaction(&tx).await?;
 
         let message_id = WalletUnlocked::extract_message_id(&receipts)
             .expect("MessageId could not be retrieved from tx receipts.");
@@ -723,13 +722,12 @@ impl WalletUnlocked {
             Output::coin(predicate_address.into(), input_amount - amount, asset_id),
         ];
 
-        let mut tx: Script = Wallet::build_transfer_tx(&inputs, &outputs, tx_parameters).into();
+        let mut tx = Wallet::build_transfer_tx(&inputs, &outputs, tx_parameters);
         // we set previous base amount to 0 because it only applies to signed coins, not predicate coins
         self.add_fee_resources(&mut tx, 0, 0).await?;
         self.sign_transaction(&mut tx).await?;
 
-        let txw: ScriptTransaction = tx.into();
-        predicate.send_transaction(&txw).await
+        predicate.send_transaction(&tx).await
     }
 
     fn create_coin_predicate(
@@ -827,15 +825,14 @@ impl WalletUnlocked {
         ];
 
         // Build transaction and sign it
-        let mut tx: Script = Wallet::build_contract_transfer_tx(
+        let mut tx = Wallet::build_contract_transfer_tx(
             plain_contract_id,
             balance,
             asset_id,
             &inputs,
             &outputs,
             tx_parameters,
-        )
-        .into();
+        );
         // if we are not transferring the base asset, previous base amount is 0
         let base_amount = if asset_id == AssetId::default() {
             balance
@@ -846,8 +843,7 @@ impl WalletUnlocked {
         self.sign_transaction(&mut tx).await?;
 
         let tx_id = tx.id();
-        let txw: ScriptTransaction = tx.into();
-        let receipts = self.get_provider()?.send_transaction(&txw).await?;
+        let receipts = self.get_provider()?.send_transaction(&tx).await?;
 
         Ok((tx_id.to_string(), receipts))
     }
@@ -867,10 +863,7 @@ impl Signer for WalletUnlocked {
         Ok(sig)
     }
 
-    async fn sign_transaction<Tx: Cacheable + UniqueIdentifier + field::Witnesses + Send>(
-        &self,
-        tx: &mut Tx,
-    ) -> WalletResult<Signature> {
+    async fn sign_transaction<T: Transaction + Send>(&self, tx: &mut T) -> WalletResult<Signature> {
         let id = tx.id();
 
         // Safety: `Message::from_bytes_unchecked` is unsafe because
@@ -930,10 +923,7 @@ mod tests {
 
     use fuel_core::service::{Config, FuelService};
     use fuel_core_client::client::FuelClient;
-    use fuel_tx::{
-        field::{Inputs, Outputs},
-        Address,
-    };
+    use fuel_tx::Address;
     use fuels_test_helpers::{launch_custom_provider_and_get_wallets, AssetConfig, WalletsConfig};
     use tempfile::tempdir;
 
@@ -1121,7 +1111,7 @@ mod tests {
             .await
             .pop()
             .unwrap();
-        let mut tx: Script = Wallet::build_transfer_tx(&[], &[], TxParameters::default()).into();
+        let mut tx = Wallet::build_transfer_tx(&[], &[], TxParameters::default());
 
         wallet.add_fee_resources(&mut tx, 0, 0).await?;
 
@@ -1160,8 +1150,7 @@ mod tests {
             BASE_ASSET_ID,
             base_amount,
         );
-        let mut tx: Script =
-            Wallet::build_transfer_tx(&inputs, &outputs, TxParameters::default()).into();
+        let mut tx = Wallet::build_transfer_tx(&inputs, &outputs, TxParameters::default());
 
         wallet.add_fee_resources(&mut tx, base_amount, 0).await?;
 
