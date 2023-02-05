@@ -31,8 +31,7 @@ pub struct ScriptCall {
     pub script_binary: Vec<u8>,
     pub encoded_args: UnresolvedBytes,
     pub inputs: Vec<Input>,
-    pub variable_outputs: Vec<Output>,
-    pub message_outputs: Vec<Output>,
+    pub outputs: Vec<Output>,
     pub external_contracts: Vec<Bech32ContractId>,
     // This field is not currently used but it will be in the future.
     pub call_parameters: CallParameters,
@@ -79,8 +78,7 @@ where
             script_binary,
             encoded_args,
             inputs: vec![],
-            message_outputs: vec![],
-            variable_outputs: vec![],
+            outputs: vec![],
             external_contracts: vec![],
             call_parameters: Default::default(),
         };
@@ -159,8 +157,7 @@ where
         // `inputs` array we've sent over.
         let outputs = chain!(
             generate_contract_outputs(num_of_contracts),
-            self.script_call.variable_outputs.clone(),
-            self.script_call.message_outputs.clone(),
+            self.script_call.outputs.clone(),
         )
         .collect();
 

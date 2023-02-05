@@ -181,8 +181,7 @@ pub(crate) fn get_transaction_inputs_outputs(
         generate_contract_outputs(num_of_contracts),
         generate_asset_change_outputs(wallet_address, asset_ids),
         generate_custom_outputs(calls),
-        extract_variable_outputs(calls),
-        extract_message_outputs(calls)
+        extract_call_outputs(calls)
     )
     .collect();
     (inputs, outputs)
@@ -210,18 +209,10 @@ fn generate_custom_outputs(calls: &[ContractCall]) -> Vec<Output> {
         .collect::<Vec<_>>()
 }
 
-fn extract_variable_outputs(calls: &[ContractCall]) -> Vec<Output> {
+fn extract_call_outputs(calls: &[ContractCall]) -> Vec<Output> {
     calls
         .iter()
-        .flat_map(|call| &call.variable_outputs)
-        .cloned()
-        .collect()
-}
-
-fn extract_message_outputs(calls: &[ContractCall]) -> Vec<Output> {
-    calls
-        .iter()
-        .flat_map(|call| &call.message_outputs)
+        .flat_map(|call| &call.outputs)
         .cloned()
         .collect()
 }
@@ -262,10 +253,9 @@ mod test {
                 encoded_selector: [0; 8],
                 call_parameters: Default::default(),
                 compute_custom_input_offset: false,
-                variable_outputs: vec![],
+                outputs: vec![],
                 external_contracts: Default::default(),
                 output_param: ParamType::Unit,
-                message_outputs: vec![],
                 custom_assets: Default::default(),
             }
         }
@@ -316,8 +306,7 @@ mod test {
                     Some(i as u64),
                 ),
                 compute_custom_input_offset: i == 1,
-                variable_outputs: vec![],
-                message_outputs: vec![],
+                outputs: vec![],
                 external_contracts: vec![],
                 output_param: ParamType::Unit,
                 custom_assets: Default::default(),

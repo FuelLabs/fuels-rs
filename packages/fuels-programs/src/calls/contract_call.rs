@@ -50,8 +50,7 @@ pub struct ContractCall {
     pub encoded_selector: Selector,
     pub call_parameters: CallParameters,
     pub compute_custom_input_offset: bool,
-    pub variable_outputs: Vec<Output>,
-    pub message_outputs: Vec<Output>,
+    pub outputs: Vec<Output>,
     pub external_contracts: Vec<Bech32ContractId>,
     pub output_param: ParamType,
     pub custom_assets: HashMap<(AssetId, Option<Bech32Address>), u64>,
@@ -91,7 +90,7 @@ impl ContractCall {
             };
             num as usize
         ];
-        self.variable_outputs.extend(new_variable_outputs)
+        self.outputs.extend(new_variable_outputs)
     }
 
     pub fn append_external_contracts(&mut self, contract_id: Bech32ContractId) {
@@ -106,7 +105,7 @@ impl ContractCall {
             };
             num as usize
         ];
-        self.message_outputs.extend(new_message_outputs)
+        self.outputs.extend(new_message_outputs)
     }
 
     fn is_missing_output_variables(receipts: &[Receipt]) -> bool {
