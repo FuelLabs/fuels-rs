@@ -17,7 +17,7 @@ chrono = "0.4.2"
 fuel-tx = { workspace = true }
 fuel-types = { workspace = true }
 fuel-abi-types = "0.2.0"
-fuel-core = { workspace = true, default-features = false, optional = true }
+fuel-vm = { workspace = true, default-features = false }
 fuel-core-chain-config = { workspace = true, default-features = false }
 fuel-core-client = { workspace = true, default-features = false }
 hex = { version = "0.4.3", features = ["std"] }

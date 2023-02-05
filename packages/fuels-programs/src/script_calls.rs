@@ -2,15 +2,12 @@ use std::{collections::HashSet, fmt::Debug, marker::PhantomData};
 
 use fuel_tx::{ContractId, Input, Output, Receipt, Transaction};
 use fuel_types::bytes::padded_len_usize;
-use fuels_core::{
-    abi_encoder::UnresolvedBytes,
-    offsets::base_offset,
-    parameters::{CallParameters, TxParameters},
-};
+use fuels_core::{abi_encoder::UnresolvedBytes, offsets::base_offset};
 use fuels_signers::{provider::Provider, Signer, WalletUnlocked};
 use fuels_types::{
     bech32::Bech32ContractId,
     errors::Result,
+    parameters::{CallParameters, TxParameters},
     script_transaction::ScriptTransaction,
     traits::{Parameterize, Tokenizable},
 };

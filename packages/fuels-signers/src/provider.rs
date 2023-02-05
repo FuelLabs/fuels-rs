@@ -11,12 +11,12 @@ use fuel_core_client::client::{
     FuelClient, PageDirection, PaginatedResult, PaginationRequest,
 };
 use fuel_tx::{AssetId, ConsensusParameters, Receipt, Transaction as FuelTransaction};
-use fuels_core::constants::{DEFAULT_GAS_ESTIMATION_TOLERANCE, MAX_GAS_PER_TX};
 use fuels_types::{
     bech32::{Bech32Address, Bech32ContractId},
     block::Block,
     chain_info::ChainInfo,
     coin::Coin,
+    constants::{DEFAULT_GAS_ESTIMATION_TOLERANCE, MAX_GAS_PER_TX},
     errors::{error, Error, Result},
     message::Message,
     message_proof::MessageProof,

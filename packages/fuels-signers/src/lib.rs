@@ -45,9 +45,12 @@ mod tests {
         field::Maturity, Address, AssetId, Bytes32, Chargeable, Input, Output,
         Transaction as FuelTransaction, TxPointer, UtxoId,
     };
-    use fuels_core::{constants::BASE_ASSET_ID, parameters::TxParameters};
     use fuels_test_helpers::{setup_single_asset_coins, setup_test_client};
-    use fuels_types::script_transaction::{ScriptTransaction, Transaction};
+    use fuels_types::{
+        constants::BASE_ASSET_ID,
+        parameters::TxParameters,
+        script_transaction::{ScriptTransaction, Transaction},
+    };
     use rand::{rngs::StdRng, RngCore, SeedableRng};
 
     use super::*;

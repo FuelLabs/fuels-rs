@@ -16,8 +16,6 @@ use fuel_vm::fuel_asm::PanicReason;
 use fuels_core::{
     abi_decoder::ABIDecoder,
     abi_encoder::{ABIEncoder, UnresolvedBytes},
-    constants::FAILED_TRANSFER_TO_ADDRESS_SIGNAL,
-    parameters::{CallParameters, StorageConfiguration, TxParameters},
 };
 use fuels_signers::{
     provider::{Provider, TransactionCost},
@@ -25,8 +23,10 @@ use fuels_signers::{
 };
 use fuels_types::{
     bech32::{Bech32Address, Bech32ContractId},
+    constants::FAILED_TRANSFER_TO_ADDRESS_SIGNAL,
     errors::{error, Error, Result},
     param_types::{ParamType, ReturnLocation},
+    parameters::{CallParameters, StorageConfiguration, TxParameters},
     script_transaction::{CreateTransaction, Transaction},
     traits::{Parameterize, Tokenizable},
     Selector, Token,

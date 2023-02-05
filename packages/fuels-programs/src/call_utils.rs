@@ -3,8 +3,9 @@ use std::{collections::HashSet, iter, vec};
 use fuel_tx::{AssetId, Bytes32, ContractId, Input, Output, TxPointer, UtxoId};
 use fuel_types::{Immediate18, Word};
 use fuel_vm::{consts::REG_ONE, prelude::Opcode};
-use fuels_core::constants::BASE_ASSET_ID;
-use fuels_types::{bech32::Bech32Address, constants::WORD_SIZE, resource::Resource};
+use fuels_types::{
+    bech32::Bech32Address, constants::BASE_ASSET_ID, constants::WORD_SIZE, resource::Resource,
+};
 use itertools::{chain, Itertools};
 
 use crate::contract::ContractCall;
@@ -322,11 +323,12 @@ fn extract_unique_contract_ids(calls: &[ContractCall]) -> HashSet<ContractId> {
 mod test {
     use std::slice;
 
-    use fuels_core::{abi_encoder::ABIEncoder, parameters::CallParameters};
+    use fuels_core::abi_encoder::ABIEncoder;
     use fuels_types::{
         bech32::Bech32ContractId,
         coin::{Coin, CoinStatus},
         param_types::ParamType,
+        parameters::CallParameters,
         Token,
     };
     use rand::Rng;

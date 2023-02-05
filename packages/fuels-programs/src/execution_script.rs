@@ -4,10 +4,11 @@ use fuel_tx::{
     AssetId, Input, Output, Receipt, Script, ScriptExecutionResult, Transaction as FuelTransaction,
     Witness,
 };
-use fuels_core::{offsets::call_script_data_offset, parameters::TxParameters};
+use fuels_core::offsets::call_script_data_offset;
 use fuels_signers::{provider::Provider, Signer, WalletUnlocked};
 use fuels_types::{
     errors::{Error, Result},
+    parameters::TxParameters,
     script_transaction::{ScriptTransaction, Transaction},
 };
 

@@ -15,6 +15,7 @@ pub mod message;
 pub mod message_proof;
 pub mod node_info;
 pub mod param_types;
+pub mod parameters;
 pub mod resource;
 pub mod script_transaction;
 pub mod traits;

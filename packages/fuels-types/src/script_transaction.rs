@@ -4,11 +4,16 @@ use fuel_tx::field::{
     GasLimit, GasPrice, Inputs, Maturity, Outputs, Script as ScriptField, ScriptData, Witnesses,
 };
 use fuel_tx::{
-    Bytes32, Chargeable, ConsensusParameters, Create, FormatValidityChecks, Input, Output, Script,
-    Transaction as FuelTransaction, TransactionFee, UniqueIdentifier, Witness,
+    Address, AssetId, Bytes32, Chargeable, ConsensusParameters, ContractId, Create,
+    FormatValidityChecks, Input, Output, Script, Transaction as FuelTransaction, TransactionFee,
+    UniqueIdentifier, Witness,
 };
+use fuel_vm::consts::REG_ONE;
+use fuel_vm::prelude::{GTFArgs, Opcode};
 
+use crate::constants::{BASE_ASSET_ID, WORD_SIZE};
 use crate::errors::Error;
+use crate::parameters::TxParameters;
 
 pub trait Transaction: Into<FuelTransaction> {
     fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Option<TransactionFee>;
@@ -149,5 +154,119 @@ impl ScriptTransaction {
 
     pub fn script_data(&self) -> &Vec<u8> {
         self.tx.script_data()
+    }
+
+    /// Craft a transaction used to transfer funds between two addresses.
+    pub fn build_transfer_tx(
+        inputs: &[Input],
+        outputs: &[Output],
+        params: TxParameters,
+    ) -> ScriptTransaction {
+        // This script is empty, since all this transaction does is move Inputs and Outputs around.
+        FuelTransaction::script(
+            params.gas_price,
+            params.gas_limit,
+            params.maturity,
+            vec![],
+            vec![],
+            inputs.to_vec(),
+            outputs.to_vec(),
+            vec![],
+        )
+        .into()
+    }
+
+    /// Craft a transaction used to transfer funds to a contract.
+    pub fn build_contract_transfer_tx(
+        to: ContractId,
+        amount: u64,
+        asset_id: AssetId,
+        inputs: &[Input],
+        outputs: &[Output],
+        params: TxParameters,
+    ) -> ScriptTransaction {
+        let script_data: Vec<u8> = [
+            to.to_vec(),
+            amount.to_be_bytes().to_vec(),
+            asset_id.to_vec(),
+        ]
+        .into_iter()
+        .flatten()
+        .collect();
+
+        // This script loads:
+        //  - a pointer to the contract id,
+        //  - the actual amount
+        //  - a pointer to the asset id
+        // into the registers 0x10, 0x12, 0x13
+        // and calls the TR instruction
+        let script = vec![
+            Opcode::gtf(0x10, 0x00, GTFArgs::ScriptData),
+            Opcode::ADDI(0x11, 0x10, ContractId::LEN as u16),
+            Opcode::LW(0x12, 0x11, 0),
+            Opcode::ADDI(0x13, 0x11, WORD_SIZE as u16),
+            Opcode::TR(0x10, 0x12, 0x13),
+            Opcode::RET(REG_ONE),
+        ]
+        .into_iter()
+        .collect();
+
+        FuelTransaction::script(
+            params.gas_price,
+            params.gas_limit,
+            params.maturity,
+            script,
+            script_data,
+            inputs.to_vec(),
+            outputs.to_vec(),
+            vec![],
+        )
+        .into()
+    }
+
+    /// Craft a transaction used to transfer funds to the base chain.
+    pub fn build_message_to_output_tx(
+        to: Address,
+        amount: u64,
+        inputs: &[Input],
+        params: TxParameters,
+    ) -> ScriptTransaction {
+        let script_data: Vec<u8> = [to.to_vec(), amount.to_be_bytes().to_vec()]
+            .into_iter()
+            .flatten()
+            .collect();
+
+        // This script loads:
+        //  - a pointer to the recipient address,
+        //  - the amount
+        // into the registers 0x10, 0x11
+        // and calls the SMO instruction
+        let script = vec![
+            Opcode::gtf(0x10, 0x00, GTFArgs::ScriptData),
+            Opcode::ADDI(0x11, 0x10, Bytes32::LEN as u16),
+            Opcode::LW(0x11, 0x11, 0),
+            Opcode::SMO(0x10, 0x00, 0x00, 0x11),
+            Opcode::RET(REG_ONE),
+        ]
+        .into_iter()
+        .collect();
+
+        let outputs = vec![
+            // when signing a transaction, recipient and amount are set to zero
+            Output::message(Address::zeroed(), 0),
+            Output::change(to, 0, BASE_ASSET_ID),
+        ];
+
+        FuelTransaction::script(
+            params.gas_price,
+            params.gas_limit,
+            params.maturity,
+            script,
+            script_data,
+            inputs.to_vec(),
+            outputs.to_vec(),
+            vec![],
+        )
+        .into()
     }
 }
