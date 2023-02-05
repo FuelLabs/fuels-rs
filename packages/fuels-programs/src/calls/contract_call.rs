@@ -15,10 +15,10 @@ use fuels_signers::{
 };
 use fuels_types::{
     bech32::{Bech32Address, Bech32ContractId},
-    core::{Selector, Token},
     errors::{Error, Result},
     param_types::ParamType,
     traits::Tokenizable,
+    Selector, Token,
 };
 
 use crate::calls::contract_call_utils::{

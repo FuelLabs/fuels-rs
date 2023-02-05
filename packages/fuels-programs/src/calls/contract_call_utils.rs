@@ -213,14 +213,16 @@ fn generate_custom_outputs(calls: &[ContractCall]) -> Vec<Output> {
 fn extract_variable_outputs(calls: &[ContractCall]) -> Vec<Output> {
     calls
         .iter()
-        .flat_map(|call| call.variable_outputs.clone())
+        .flat_map(|call| &call.variable_outputs)
+        .cloned()
         .collect()
 }
 
 fn extract_message_outputs(calls: &[ContractCall]) -> Vec<Output> {
     calls
         .iter()
-        .flat_map(|call| call.message_outputs.clone())
+        .flat_map(|call| &call.message_outputs)
+        .cloned()
         .collect()
 }
 

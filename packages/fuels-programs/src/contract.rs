@@ -11,9 +11,9 @@ use fuels_core::{
 use fuels_signers::{provider::Provider, Signer, WalletUnlocked};
 use fuels_types::{
     bech32::Bech32ContractId,
-    core::{Selector, Token},
     errors::{error, Error, Result},
     traits::{Parameterize, Tokenizable},
+    Selector, Token,
 };
 
 use crate::calls::contract_call::{ContractCall, ContractCallHandler};
