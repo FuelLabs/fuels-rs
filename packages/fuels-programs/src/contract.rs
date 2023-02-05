@@ -1,8 +1,8 @@
 use std::{collections::HashSet, fmt::Debug, fs, marker::PhantomData, path::Path, str::FromStr};
 
 use fuel_tx::{
-    Bytes32, Contract as FuelContract, ContractId, Create, FormatValidityChecks,
-    Output, Salt, StorageSlot, Transaction,
+    Bytes32, Contract as FuelContract, ContractId, Create, FormatValidityChecks, Output, Salt,
+    StorageSlot, Transaction,
 };
 use fuels_core::{
     abi_encoder::ABIEncoder,
