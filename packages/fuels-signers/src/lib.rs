@@ -148,8 +148,9 @@ mod tests {
         let mut wallet_1 = WalletUnlocked::new_random(None);
         let mut wallet_2 = WalletUnlocked::new_random(None).lock();
 
-        let mut coins_1 = setup_single_asset_coins(wallet_1.address(), BASE_ASSET_ID, 1, 1000000);
-        let coins_2 = setup_single_asset_coins(wallet_2.address(), BASE_ASSET_ID, 1, 1000000);
+        let amount = 1000000;
+        let mut coins_1 = setup_single_asset_coins(wallet_1.address(), BASE_ASSET_ID, 1, amount);
+        let coins_2 = setup_single_asset_coins(wallet_2.address(), BASE_ASSET_ID, 1, amount);
 
         coins_1.extend(coins_2);
 
@@ -180,7 +181,7 @@ mod tests {
 
         // Transfer 1 from wallet 1 to wallet 2.
         let (tx_id, _receipts) = wallet_1
-            .transfer(wallet_2.address(), 1, Default::default(), tx_params)
+            .transfer(wallet_2.address(), 1, BASE_ASSET_ID, tx_params)
             .await?;
 
         // Assert that the transaction was properly configured.
@@ -196,13 +197,17 @@ mod tests {
         assert_eq!(*script.maturity(), maturity);
 
         let wallet_1_spendable_resources =
-            wallet_1.get_spendable_resources(BASE_ASSET_ID, 0).await?;
+            wallet_1.get_spendable_resources(BASE_ASSET_ID, 1).await?;
+        let wallet_2_spendable_resources = wallet_2
+            .get_spendable_resources(BASE_ASSET_ID, amount + 1)
+            .await?;
         let wallet_1_all_coins = wallet_1.get_coins(BASE_ASSET_ID).await?;
         let wallet_2_all_coins = wallet_2.get_coins(BASE_ASSET_ID).await?;
 
-        // wallet_1 has now only 1 spent coin (so 0 spendable)
-        assert_eq!(wallet_1_spendable_resources.len(), 0);
-        assert_eq!(wallet_1_all_coins.len(), 1);
+        // wallet_1 has now only one spent coin and one not spent(the remaining not sent coins)
+        assert_eq!(wallet_1_spendable_resources.len(), 1);
+        assert_eq!(wallet_1_all_coins.len(), 2);
+        assert_eq!(wallet_2_spendable_resources.len(), 2);
         // Check that wallet two now has two coins.
         assert_eq!(wallet_2_all_coins.len(), 2);
 
@@ -250,16 +255,16 @@ mod tests {
             .transfer(
                 wallet_2.address(),
                 2,
-                Default::default(),
+                BASE_ASSET_ID,
                 TxParameters::default(),
             )
             .await?;
 
-        let wallet_1_final_coins = wallet_1.get_coins(BASE_ASSET_ID).await?;
+        let wallet_1_final_coins = wallet_1.get_spendable_resources(BASE_ASSET_ID, 1).await?;
 
         // Assert that we've sent 2 from wallet 1, resulting in an amount of 3 in wallet 1.
         let resulting_amount = wallet_1_final_coins.first().unwrap();
-        assert_eq!(resulting_amount.amount, 3);
+        assert_eq!(resulting_amount.amount(), 3);
 
         let wallet_2_final_coins = wallet_2.get_coins(BASE_ASSET_ID).await?;
         assert_eq!(wallet_2_final_coins.len(), 2);

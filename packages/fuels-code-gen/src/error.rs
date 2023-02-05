@@ -3,21 +3,22 @@ use std::{
     io,
 };
 
-pub(crate) struct Error(pub(crate) String);
+pub struct Error(pub String);
 
 impl Error {
-    pub(crate) fn combine<T: Into<Self>>(self, err: T) -> Self {
+    pub fn combine<T: Into<Self>>(self, err: T) -> Self {
         error!("{} {}", self.0, err.into().0)
     }
 }
 
+#[macro_export]
 macro_rules! error {
-   ($fmt_str: literal $(,$arg: expr)*) => {crate::error::Error(format!($fmt_str,$($arg),*))}
+   ($fmt_str: literal $(,$arg: expr)*) => {$crate::error::Error(format!($fmt_str,$($arg),*))}
 }
 
-pub(crate) use error;
+pub use error;
 
-pub(crate) type Result<T> = std::result::Result<T, Error>;
+pub type Result<T> = std::result::Result<T, Error>;
 
 impl Debug for Error {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {

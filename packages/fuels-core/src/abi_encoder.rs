@@ -240,10 +240,7 @@ mod tests {
 
         let result = first_four_bytes_of_sha256_hash(fn_signature);
 
-        println!(
-            "Encoded function selector for ({}): {:#0x?}",
-            fn_signature, result
-        );
+        println!("Encoded function selector for ({fn_signature}): {result:#0x?}");
 
         assert_eq!(result, [0x0, 0x0, 0x0, 0x0, 0x0c, 0x36, 0xcb, 0x9c]);
     }
@@ -278,7 +275,7 @@ mod tests {
 
         let encoded = ABIEncoder::encode(&args)?.resolve(0);
 
-        println!("Encoded ABI for ({}): {:#0x?}", fn_signature, encoded);
+        println!("Encoded ABI for ({fn_signature}): {encoded:#0x?}");
 
         assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
         assert_eq!(encoded_function_selector, expected_function_selector);
@@ -314,7 +311,7 @@ mod tests {
         let encoded_function_selector = first_four_bytes_of_sha256_hash(fn_signature);
         let encoded = ABIEncoder::encode(&args)?.resolve(0);
 
-        println!("Encoded ABI for ({}): {:#0x?}", fn_signature, encoded);
+        println!("Encoded ABI for ({fn_signature}): {encoded:#0x?}");
 
         assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
         assert_eq!(encoded_function_selector, expected_fn_selector);
@@ -348,7 +345,7 @@ mod tests {
 
         let encoded = ABIEncoder::encode(&args)?.resolve(0);
 
-        println!("Encoded ABI for ({}): {:#0x?}", fn_signature, encoded);
+        println!("Encoded ABI for ({fn_signature}): {encoded:#0x?}");
 
         assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
         assert_eq!(encoded_function_selector, expected_function_selector);
@@ -382,7 +379,7 @@ mod tests {
 
         let encoded = ABIEncoder::encode(&args)?.resolve(0);
 
-        println!("Encoded ABI for ({}): {:#0x?}", fn_signature, encoded);
+        println!("Encoded ABI for ({fn_signature}): {encoded:#0x?}");
 
         assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
         assert_eq!(encoded_function_selector, expected_function_selector);
@@ -419,7 +416,7 @@ mod tests {
 
         let encoded = ABIEncoder::encode(&args)?.resolve(0);
 
-        println!("Encoded ABI for ({}) {:#0x?}", fn_signature, encoded);
+        println!("Encoded ABI for ({fn_signature}): {encoded:#0x?}");
 
         assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
         assert_eq!(encoded_function_selector, expected_function_selector);
@@ -453,7 +450,7 @@ mod tests {
 
         let encoded = ABIEncoder::encode(&args)?.resolve(0);
 
-        println!("Encoded ABI for ({}): {:#0x?}", fn_signature, encoded);
+        println!("Encoded ABI for ({fn_signature}): {encoded:#0x?}");
 
         assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
         assert_eq!(encoded_function_selector, expected_function_selector);
@@ -497,7 +494,7 @@ mod tests {
 
         let encoded = ABIEncoder::encode(&args)?.resolve(0);
 
-        println!("Encoded ABI for ({}): {:#0x?}", fn_signature, encoded);
+        println!("Encoded ABI for ({fn_signature}): {encoded:#0x?}");
 
         assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
         assert_eq!(encoded_function_selector, expected_function_selector);
@@ -541,7 +538,7 @@ mod tests {
 
         let encoded = ABIEncoder::encode(&args)?.resolve(0);
 
-        println!("Encoded ABI for ({}): {:#0x?}", fn_signature, encoded);
+        println!("Encoded ABI for ({fn_signature}): {encoded:#0x?}");
 
         assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
         assert_eq!(encoded_function_selector, expected_function_selector);
@@ -580,7 +577,7 @@ mod tests {
 
         let encoded = ABIEncoder::encode(&args)?.resolve(0);
 
-        println!("Encoded ABI for ({}): {:#0x?}", fn_signature, encoded);
+        println!("Encoded ABI for ({fn_signature}): {encoded:#0x?}");
 
         assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
         assert_eq!(encoded_function_selector, expected_function_selector);
@@ -626,9 +623,7 @@ mod tests {
 
         let encoded = ABIEncoder::encode(&args)?.resolve(0);
 
-        println!("Encoded ABI for ({}): {:#0x?}", fn_signature, encoded);
-
-        println!("Encoded ABI for ({}): {:#0x?}", fn_signature, encoded);
+        println!("Encoded ABI for ({fn_signature}): {encoded:#0x?}");
 
         assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
         assert_eq!(encoded_function_selector, expected_function_selector);
@@ -838,7 +833,7 @@ mod tests {
 
         let encoded = ABIEncoder::encode(&args)?.resolve(0);
 
-        println!("Encoded ABI for ({}): {:#0x?}", fn_signature, encoded);
+        println!("Encoded ABI for ({fn_signature}): {encoded:#0x?}");
 
         assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
         assert_eq!(encoded_function_selector, expected_function_selector);

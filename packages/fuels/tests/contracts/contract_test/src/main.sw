@@ -51,14 +51,14 @@ impl TestContract for Contract {
 
     #[storage(read, write)]
     fn increment_counter(value: u64) -> u64 {
-        let new_value = get::<u64>(COUNTER_KEY) + value;
+        let new_value = get::<u64>(COUNTER_KEY).unwrap_or(0) + value;
         store(COUNTER_KEY, new_value);
         new_value
     }
 
     #[storage(read)]
     fn get_counter() -> u64 {
-        get::<u64>(COUNTER_KEY)
+        get::<u64>(COUNTER_KEY).unwrap_or(0)
     }
 
     fn get(x: u64, y: u64) -> u64 {
