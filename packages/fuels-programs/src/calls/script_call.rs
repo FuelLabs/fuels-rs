@@ -39,19 +39,6 @@ pub struct ScriptCall {
 }
 
 impl ScriptCall {
-    pub fn with_variable_outputs(self, variable_outputs: Vec<Output>) -> Self {
-        Self {
-            variable_outputs,
-            ..self
-        }
-    }
-
-    pub fn with_message_outputs(self, message_outputs: Vec<Output>) -> Self {
-        Self {
-            message_outputs,
-            ..self
-        }
-    }
     pub fn with_inputs(mut self, inputs: Vec<Input>) -> Self {
         self.inputs = inputs;
         self
@@ -116,15 +103,6 @@ where
     /// ```
     pub fn tx_params(mut self, params: TxParameters) -> Self {
         self.tx_parameters = params;
-        self
-    }
-
-    pub fn with_message_outputs(mut self, message_outputs: Vec<Output>) -> Self {
-        self.script_call = self.script_call.with_message_outputs(message_outputs);
-        self
-    }
-    pub fn with_variable_outputs(mut self, variable_outputs: Vec<Output>) -> Self {
-        self.script_call = self.script_call.with_variable_outputs(variable_outputs);
         self
     }
 

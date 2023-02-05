@@ -75,20 +75,6 @@ impl ContractCall {
         }
     }
 
-    pub fn with_variable_outputs(self, variable_outputs: Vec<Output>) -> ContractCall {
-        Self {
-            variable_outputs,
-            ..self
-        }
-    }
-
-    pub fn with_message_outputs(self, message_outputs: Vec<Output>) -> ContractCall {
-        Self {
-            message_outputs,
-            ..self
-        }
-    }
-
     pub fn with_call_parameters(self, call_parameters: CallParameters) -> ContractCall {
         ContractCall {
             call_parameters,
