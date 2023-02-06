@@ -13,13 +13,12 @@ use quote::{quote, ToTokens};
 use regex::Regex;
 
 use crate::{
-    abigen::code_gen::{
+    error::{error, Result},
+    program_bindings::{
         abi_types::{FullTypeApplication, FullTypeDeclaration},
-        type_path::TypePath,
         utils::get_sdk_provided_types,
     },
-    error::{error, Result},
-    utils::{ident, safe_ident},
+    utils::{ident, safe_ident, TypePath},
 };
 
 // Represents a type alongside its generic parameters. Can be converted into a

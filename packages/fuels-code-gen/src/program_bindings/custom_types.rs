@@ -4,13 +4,13 @@ use fuel_abi_types::utils::extract_custom_type_name;
 use itertools::Itertools;
 
 use crate::{
-    abigen::code_gen::{
+    error::Result,
+    program_bindings::{
         abi_types::FullTypeDeclaration,
         custom_types::{enums::expand_custom_enum, structs::expand_custom_struct},
         generated_code::GeneratedCode,
         utils::get_sdk_provided_types,
     },
-    error::Result,
 };
 
 mod enums;
@@ -87,7 +87,7 @@ mod tests {
     use quote::quote;
 
     use super::*;
-    use crate::abigen::code_gen::{abi_types::FullTypeApplication, type_path::TypePath};
+    use crate::{program_bindings::abi_types::FullTypeApplication, utils::TypePath};
 
     #[test]
     fn test_expand_custom_enum() -> Result<()> {

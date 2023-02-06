@@ -6,7 +6,7 @@ use quote::{quote, ToTokens};
 use crate::error::{error, Result};
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
-pub(crate) struct TypePath {
+pub struct TypePath {
     parts: Vec<String>,
 }
 

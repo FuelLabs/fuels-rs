@@ -7,13 +7,13 @@ use proc_macro2::TokenStream;
 use quote::quote;
 
 use crate::{
-    abigen::code_gen::{
+    error::Result,
+    program_bindings::{
         abi_types::FullTypeDeclaration,
         abigen::{abigen_target::ParsedAbigenTarget, bindings::generate_bindings},
         custom_types::generate_types,
         generated_code::GeneratedCode,
     },
-    error::Result,
     utils::ident,
 };
 
@@ -32,7 +32,7 @@ impl Abigen {
     /// * `targets`: `AbigenTargets` detailing which ABI to generate bindings
     /// for, and of what nature (Contract, Script or Predicate).
     /// * `no_std`: don't use the Rust std library.
-    pub(crate) fn generate(targets: Vec<AbigenTarget>, no_std: bool) -> Result<TokenStream> {
+    pub fn generate(targets: Vec<AbigenTarget>, no_std: bool) -> Result<TokenStream> {
         let parsed_targets = Self::parse_targets(targets)?;
 
         let generated_code = Self::generate_code(no_std, parsed_targets)?;
