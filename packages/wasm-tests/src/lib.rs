@@ -1,4 +1,9 @@
+#![no_std]
+
 extern crate alloc;
+
+use alloc::string::ToString;
+use alloc::*;
 
 use fuels_core::abi_decoder::ABIDecoder;
 use fuels_macros::wasm_abigen;

@@ -30,7 +30,7 @@ pub(crate) fn get_path_from_attr_or(
         .map(|type_path| type_path.to_token_stream())
 }
 
-fn find_attr<'a>(name: &str, attrs: &'a [Attribute]) -> Option<&'a Attribute> {
+pub(crate) fn find_attr<'a>(name: &str, attrs: &'a [Attribute]) -> Option<&'a Attribute> {
     attrs.iter().find(|attr| {
         attr.path
             .get_ident()
@@ -93,25 +93,26 @@ impl ExtractedVariants {
             }
         }
     }
-    pub(crate) fn variant_from_discriminant_and_token(&self) -> TokenStream {
+    pub(crate) fn variant_from_discriminant_and_token(&self, no_std: bool) -> TokenStream {
         let match_discriminant = self.variants.iter().map(|variant| {
             let name = &variant.name;
             let discriminant = variant.discriminant;
-            let fuels_tyeps_path = &self.fuels_types_path;
+            let fuels_types_path = &self.fuels_types_path;
 
             let variant_value = if variant.is_unit {
                 quote! {}
             } else {
-                quote! { (#fuels_tyeps_path::traits::Tokenizable::from_token(variant_token)?) }
+                quote! { (#fuels_types_path::traits::Tokenizable::from_token(variant_token)?) }
             };
 
-            quote! { #discriminant => ::std::result::Result::Ok(Self::#name #variant_value)}
+            quote! { #discriminant => ::core::result::Result::Ok(Self::#name #variant_value)}
         });
 
+        let std_lib = std_lib_path(no_std);
         quote! {
             match discriminant {
                 #(#match_discriminant,)*
-                _ => ::std::result::Result::Err(format!(
+                _ => ::core::result::Result::Err(#std_lib::format!(
                     "Discriminant {} doesn't point to any of the enums variants.", discriminant
                 )),
             }
@@ -138,5 +139,13 @@ fn get_variant_type(variant: &Variant) -> Result<Option<&Type>> {
             }
         }
         Fields::Unit => Ok(None),
+    }
+}
+
+pub(crate) fn std_lib_path(no_std: bool) -> TokenStream {
+    if no_std {
+        quote! {::alloc}
+    } else {
+        quote! {::std}
     }
 }
