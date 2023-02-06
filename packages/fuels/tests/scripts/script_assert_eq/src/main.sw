@@ -1,7 +1,13 @@
 script;
 
-use core::ops::*;
-use std::assert::assert_eq;
+fn assert_eq<T>(v1: T, v2: T) where T: Eq {
+    let FAILED_ASSERT_EQ_SIGNAL = 0xffff_ffff_ffff_0003;
+    if (v1 != v2) {
+        log(v1);
+        log(v2);
+        revert(FAILED_ASSERT_EQ_SIGNAL);
+    }
+}
 
 struct TestStruct {
     field_1: bool,
