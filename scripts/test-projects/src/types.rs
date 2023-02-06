@@ -41,24 +41,24 @@ impl ResultWriter {
     }
 
     fn write(&mut self, text: &str) -> Result<(), std::io::Error> {
-        write!(&mut self.stdout, "{}", text)
+        write!(&mut self.stdout, "{text}")
     }
 
     fn write_success(&mut self, text: &str) -> Result<(), std::io::Error> {
         self.stdout.set_color(&self.green)?;
-        write!(&mut self.stdout, "{}", text)?;
+        write!(&mut self.stdout, "{text}")?;
         self.stdout.reset()
     }
 
     fn write_success_bold(&mut self, text: &str) -> Result<(), std::io::Error> {
         self.stdout.set_color(self.green.clone().set_bold(true))?;
-        write!(&mut self.stdout, "{}", text)?;
+        write!(&mut self.stdout, "{text}")?;
         self.stdout.reset()
     }
 
     fn write_error(&mut self, text: &str) -> Result<(), std::io::Error> {
         self.stdout.set_color(&self.red)?;
-        write!(&mut self.stdout, "{}", text)?;
+        write!(&mut self.stdout, "{text}")?;
         self.stdout.reset()
     }
 
@@ -165,10 +165,7 @@ impl ResultWriter {
             self.write_success("ok")?;
         };
 
-        self.write(&format!(
-            ". {} passed, {} failed\n",
-            num_succeeded, num_failed
-        ))
+        self.write(&format!(". {num_succeeded} passed, {num_failed} failed\n"))
     }
 }
 

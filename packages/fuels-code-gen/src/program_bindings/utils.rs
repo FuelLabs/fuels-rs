@@ -5,13 +5,12 @@ use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
 
 use crate::{
-    abigen::code_gen::{
+    error::Result,
+    program_bindings::{
         abi_types::{FullTypeApplication, FullTypeDeclaration},
         resolved_type::{resolve_type, ResolvedType},
-        type_path::TypePath,
     },
-    error::Result,
-    utils::safe_ident,
+    utils::{safe_ident, TypePath},
 };
 
 // Represents a component of either a struct(field name) or an enum(variant

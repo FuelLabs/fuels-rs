@@ -1,8 +1,8 @@
 use std::{collections::HashSet, fmt::Debug, fs, marker::PhantomData, path::Path, str::FromStr};
 
 use fuel_tx::{
-    Bytes32, Checkable, Contract as FuelContract, ContractId, Create, Output, Salt, StorageSlot,
-    Transaction,
+    Bytes32, Contract as FuelContract, ContractId, Create, FormatValidityChecks, Output, Salt,
+    StorageSlot, Transaction,
 };
 use fuels_core::{
     abi_encoder::ABIEncoder,
@@ -11,9 +11,9 @@ use fuels_core::{
 use fuels_signers::{provider::Provider, Signer, WalletUnlocked};
 use fuels_types::{
     bech32::Bech32ContractId,
-    core::{Selector, Token},
     errors::{error, Error, Result},
     traits::{Parameterize, Tokenizable},
+    Selector, Token,
 };
 
 use crate::calls::contract_call::{ContractCall, ContractCallHandler};
@@ -97,8 +97,7 @@ impl Contract {
             encoded_args: unresolved_bytes,
             call_parameters,
             compute_custom_input_offset,
-            variable_outputs: vec![],
-            message_outputs: vec![],
+            outputs: vec![],
             external_contracts: vec![],
             output_param: D::param_type(),
             custom_assets: Default::default(),

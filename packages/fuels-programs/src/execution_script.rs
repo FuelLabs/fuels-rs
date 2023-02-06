@@ -1,6 +1,7 @@
 use std::fmt::Debug;
 
-use fuel_tx::{Checkable, Receipt, Script, ScriptExecutionResult};
+use fuel_tx::{FormatValidityChecks, Receipt, Script, ScriptExecutionResult};
+
 use fuels_signers::provider::Provider;
 use fuels_types::errors::{Error, Result};
 

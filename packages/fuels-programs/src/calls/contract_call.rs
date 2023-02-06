@@ -13,10 +13,10 @@ use fuels_signers::{
 };
 use fuels_types::{
     bech32::{Bech32Address, Bech32ContractId},
-    core::{Selector, Token},
     errors::{Error, Result},
     param_types::ParamType,
     traits::Tokenizable,
+    Selector, Token,
 };
 
 use crate::calls::contract_call_utils::{
@@ -42,8 +42,7 @@ pub struct ContractCall {
     pub encoded_selector: Selector,
     pub call_parameters: CallParameters,
     pub compute_custom_input_offset: bool,
-    pub variable_outputs: Vec<Output>,
-    pub message_outputs: Vec<Output>,
+    pub outputs: Vec<Output>,
     pub external_contracts: Vec<Bech32ContractId>,
     pub output_param: ParamType,
     pub custom_assets: HashMap<(AssetId, Option<Bech32Address>), u64>,
@@ -60,6 +59,16 @@ impl ContractCall {
     pub fn with_call_parameters(self, call_parameters: CallParameters) -> Self {
         Self {
             call_parameters,
+            ..self
+        }
+    }
+
+    pub fn with_external_contracts(
+        self,
+        external_contracts: Vec<Bech32ContractId>,
+    ) -> ContractCall {
+        ContractCall {
+            external_contracts,
             ..self
         }
     }

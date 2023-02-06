@@ -17,7 +17,7 @@ pub mod tx {
 }
 
 pub mod client {
-    pub use fuel_gql_client::client::*;
+    pub use fuel_core_client::client::*;
 }
 
 pub mod macros {
