@@ -52,7 +52,7 @@ impl Abigen {
         })
     }
     fn wasm_paths_hotfix(code: TokenStream) -> TokenStream {
-        let new_code = [
+        [
             (r#"::\s*fuels\s*::\s*core"#, "::fuels_core"),
             (r#"::\s*fuels\s*::\s*macros"#, "::fuels_macros"),
             (r#"::\s*fuels\s*::\s*programs"#, "::fuels_programs"),
@@ -68,10 +68,9 @@ impl Abigen {
         .into_iter()
         .fold(code.to_string(), |code, (regex, wasm_include)| {
             regex.replace_all(&code, wasm_include).to_string()
-        });
-        eprintln!("{new_code}");
-
-        new_code.parse().expect("Wasm hotfix failed!")
+        })
+        .parse()
+        .expect("Wasm hotfix failed!")
     }
 
     fn generate_code(

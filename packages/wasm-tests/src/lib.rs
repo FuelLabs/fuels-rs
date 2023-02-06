@@ -2,8 +2,7 @@
 
 extern crate alloc;
 
-use alloc::string::ToString;
-use alloc::*;
+use alloc::{string::ToString, vec};
 
 use fuels_core::abi_decoder::ABIDecoder;
 use fuels_macros::wasm_abigen;
