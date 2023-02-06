@@ -28,11 +28,13 @@ pub trait Transaction: Into<FuelTransaction> {
 
     fn maturity(&self) -> u64;
 
+    fn maturity_mut(&mut self) -> &mut u64;
+
+    fn gas_price_mut(&mut self) -> &mut u64;
+
     fn gas_price(&self) -> u64;
 
     fn gas_limit(&self) -> u64;
-
-    fn gas_price_mut(&mut self) -> &mut u64;
 
     fn gas_limit_mut(&mut self) -> &mut u64;
 
@@ -40,9 +42,9 @@ pub trait Transaction: Into<FuelTransaction> {
 
     fn inputs(&self) -> &Vec<Input>;
 
-    fn outputs(&self) -> &Vec<Output>;
-
     fn inputs_mut(&mut self) -> &mut Vec<Input>;
+
+    fn outputs(&self) -> &Vec<Output>;
 
     fn outputs_mut(&mut self) -> &mut Vec<Output>;
 
@@ -97,16 +99,20 @@ macro_rules! impl_tx_wrapper {
                 *self.tx.maturity()
             }
 
+            fn maturity_mut(&mut self) -> &mut u64 {
+                &mut *self.tx.maturity_mut()
+            }
+
             fn gas_price(&self) -> u64 {
                 *self.tx.gas_price()
             }
 
-            fn gas_limit(&self) -> u64 {
-                *self.tx.gas_limit()
-            }
-
             fn gas_price_mut(&mut self) -> &mut u64 {
                 self.tx.gas_price_mut()
+            }
+
+            fn gas_limit(&self) -> u64 {
+                *self.tx.gas_limit()
             }
 
             fn gas_limit_mut(&mut self) -> &mut u64 {
@@ -121,12 +127,12 @@ macro_rules! impl_tx_wrapper {
                 self.tx.inputs()
             }
 
-            fn outputs(&self) -> &Vec<Output> {
-                self.tx.outputs()
-            }
-
             fn inputs_mut(&mut self) -> &mut Vec<Input> {
                 self.tx.inputs_mut()
+            }
+
+            fn outputs(&self) -> &Vec<Output> {
+                self.tx.outputs()
             }
 
             fn outputs_mut(&mut self) -> &mut Vec<Output> {
@@ -152,8 +158,16 @@ impl ScriptTransaction {
         self.tx.script()
     }
 
+    pub fn script_mut(&mut self) -> &mut Vec<u8> {
+        self.tx.script_mut()
+    }
+
     pub fn script_data(&self) -> &Vec<u8> {
         self.tx.script_data()
+    }
+
+    pub fn script_data_mut(&mut self) -> &mut Vec<u8> {
+        self.tx.script_data_mut()
     }
 
     /// Craft a transaction used to transfer funds between two addresses.
