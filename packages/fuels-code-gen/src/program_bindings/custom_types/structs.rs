@@ -64,6 +64,8 @@ fn struct_decl(
             ::fuels::macros::Tokenizable,
             ::fuels::macros::TryFrom
         )]
+        #[FuelsTypesPath("::fuels::types")]
+        #[FuelsCorePath("::fuels::core")]
         pub struct #struct_ident <#(#generic_parameters: ::fuels::types::traits::Tokenizable + ::fuels::types::traits::Parameterize, )*> {
             #(#fields),*
         }

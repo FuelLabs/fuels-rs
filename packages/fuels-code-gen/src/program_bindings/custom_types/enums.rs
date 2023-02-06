@@ -76,6 +76,8 @@ fn enum_decl(
             ::fuels::macros::Tokenizable,
             ::fuels::macros::TryFrom
         )]
+        #[FuelsTypesPath("::fuels::types")]
+        #[FuelsCorePath("::fuels::core")]
         pub enum #enum_ident <#(#generics: ::fuels::types::traits::Tokenizable + ::fuels::types::traits::Parameterize),*> {
             #(#enum_variants),*
         }

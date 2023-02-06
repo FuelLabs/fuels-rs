@@ -1,10 +1,8 @@
 extern crate alloc;
 
-use fuels::{
-    core::abi_decoder::ABIDecoder,
-    macros::wasm_abigen,
-    types::{param_types::ParamType, traits::Tokenizable},
-};
+use fuels_core::abi_decoder::ABIDecoder;
+use fuels_macros::wasm_abigen;
+use fuels_types::param_types::ParamType;
 
 wasm_abigen!(Contract(
     name = "no_name",
@@ -103,6 +101,7 @@ wasm_abigen!(Contract(
 ));
 
 pub fn the_fn() {
+    use fuels_types::traits::Tokenizable;
     let data = vec![
         0, 0, 0, 0, 0, 0, 3, 252, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175,
         175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175,

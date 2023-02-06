@@ -3,14 +3,15 @@ use quote::quote;
 use syn::{Data, DataEnum, DataStruct, DeriveInput, Error, Generics, Result};
 
 use crate::{
-    derive::utils::determine_fuels_types_path,
+    derive::utils::get_path_from_attr_or,
     parse_utils::{
         extract_enum_members, extract_struct_members, validate_and_extract_generic_types,
     },
 };
 
 pub fn generate_parameterize_impl(input: DeriveInput) -> Result<TokenStream> {
-    let fuels_types_path = determine_fuels_types_path(&input.attrs)?;
+    let fuels_types_path =
+        get_path_from_attr_or("FuelsTypesPath", &input.attrs, quote! {::fuels::types})?;
 
     match input.data {
         Data::Struct(struct_contents) => parameterize_for_struct(

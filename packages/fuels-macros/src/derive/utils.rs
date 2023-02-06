@@ -5,11 +5,15 @@ use syn::{
     parenthesized, parse::ParseStream, Attribute, Error, Fields, LitStr, Result, Type, Variant,
 };
 
-pub(crate) fn determine_fuels_types_path(attrs: &[Attribute]) -> Result<TokenStream> {
-    let attr_tokens = if let Some(attr) = find_attr("FuelsTypesPath", attrs) {
+pub(crate) fn get_path_from_attr_or(
+    attr_name: &str,
+    attrs: &[Attribute],
+    default: TokenStream,
+) -> Result<TokenStream> {
+    let attr_tokens = if let Some(attr) = find_attr(attr_name, attrs) {
         attr.tokens.clone()
     } else {
-        return Ok(quote! {::fuels::types});
+        return Ok(default);
     };
 
     let path_str = syn::parse::Parser::parse2(

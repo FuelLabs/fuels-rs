@@ -100,7 +100,7 @@ pub fn tokenizable(stream: TokenStream) -> TokenStream {
         .into()
 }
 
-#[proc_macro_derive(TryFrom)]
+#[proc_macro_derive(TryFrom, attributes(FuelsCorePath))]
 pub fn try_from(stream: TokenStream) -> TokenStream {
     let input = parse_macro_input!(stream as DeriveInput);
 

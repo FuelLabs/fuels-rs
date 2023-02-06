@@ -5,6 +5,7 @@ use inflector::Inflector;
 use itertools::Itertools;
 use proc_macro2::TokenStream;
 use quote::quote;
+use regex::Regex;
 
 use crate::{
     error::Result,
@@ -38,12 +39,35 @@ impl Abigen {
         let generated_code = Self::generate_code(no_std, parsed_targets)?;
 
         let use_statements = generated_code.use_statements_for_uniquely_named_types();
-        let code = generated_code.code;
+
+        let code = if no_std {
+            Self::wasm_paths_hotfix(generated_code.code)
+        } else {
+            generated_code.code
+        };
 
         Ok(quote! {
             #code
             #use_statements
         })
+    }
+    fn wasm_paths_hotfix(code: TokenStream) -> TokenStream {
+        let new_code = [
+            (r#"::\s*fuels\s*::\s*core"#, "::fuels_core"),
+            (r#"::\s*fuels\s*::\s*macros"#, "::fuels_macros"),
+            (r#"::\s*fuels\s*::\s*programs"#, "::fuels_programs"),
+            (r#"::\s*fuels\s*::\s*signers"#, "::fuels_signers"),
+            (r#"::\s*fuels\s*::\s*tx"#, "::fuel_tx"),
+            (r#"::\s*fuels\s*::\s*types"#, "::fuels_types"),
+        ]
+        .map(|(reg_expr_str, substitute)| (Regex::new(reg_expr_str).unwrap(), substitute))
+        .into_iter()
+        .fold(code.to_string(), |code, (regex, wasm_include)| {
+            regex.replace_all(&code, wasm_include).to_string()
+        });
+        eprintln!("{new_code}");
+
+        new_code.parse().expect("Wasm hotfix failed!")
     }
 
     fn generate_code(

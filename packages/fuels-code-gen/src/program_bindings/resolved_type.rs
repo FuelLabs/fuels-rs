@@ -69,7 +69,7 @@ impl Display for ResolvedType {
 /// Given a type, will recursively proceed to resolve it until it results in a
 /// `ResolvedType` which can be then be converted into a `TokenStream`. As such
 /// it can be used whenever you need the Rust type of the given
-/// `TypeApplication`.
+/// `FullTypeApplication`.
 pub(crate) fn resolve_type(
     type_application: &FullTypeApplication,
     shared_types: &HashSet<FullTypeDeclaration>,

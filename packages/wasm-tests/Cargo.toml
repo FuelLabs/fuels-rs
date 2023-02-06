@@ -8,8 +8,10 @@ publish = false
 crate-type = ['cdylib']
 
 [dependencies]
-fuels = { workspace = true }
 getrandom = { version = "0.2", features = ["js"] }
+fuels-types = { workspace = true }
+fuels-macros = { workspace = true }
+fuels-core = { workspace = true }
 
 [dev-dependencies]
 webassembly-test = "0.1"
