@@ -139,7 +139,7 @@ pub(crate) fn predicate_bindings(
 
         }
 
-        #[derive(Debug)]
+        #[derive(Debug, Clone)]
         pub struct #name {
             address: ::fuels::types::bech32::Bech32Address,
             code: ::std::vec::Vec<u8>,

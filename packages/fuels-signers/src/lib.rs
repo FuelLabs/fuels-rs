@@ -79,30 +79,6 @@ pub trait PayFee: std::fmt::Debug + Send + Sync {
 
     fn get_provider(&self) -> Result<&Provider, Self::Error>;
 }
-//todo: Implement generic
-// #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
-// impl<T: Signer> PayFee for T {
-//     type Error = T::Error;
-//     fn address(&self) -> &Bech32Address {
-//         self.address()
-//     }
-//     async fn pay_fee_resources<
-//         'a_t,
-//         Tx: Chargeable + Inputs + Outputs + Send + Cacheable + UniqueIdentifier + field::Witnesses,
-//     >(
-//         &'a_t self,
-//         tx: &'a_t mut Tx,
-//         previous_base_amount: u64,
-//     ) -> Result<(), Self::Error> {
-//         self.add_fee_resources(tx, previous_base_amount, 1)
-//             .await?;
-//         self.sign_transaction(tx).await?;
-//         Ok(())
-//     }
-//     fn get_provider(&self) -> Result<&Provider, Self::Error> {
-//         self.get_provider()
-//     }
-// }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 pub trait Account: std::fmt::Debug + Send + Sync {
