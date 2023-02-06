@@ -1,19 +1,25 @@
 extern crate core;
 
-pub mod provider;
-pub mod wallet;
-
 use std::error::Error;
+use std::fmt::{Debug, Formatter};
 
-use crate::provider::Provider;
 use async_trait::async_trait;
 #[doc(no_inline)]
 pub use fuel_crypto;
 use fuel_crypto::Signature;
 use fuel_tx::field::{Inputs, Outputs};
 use fuel_tx::{field, Cacheable, Chargeable, UniqueIdentifier};
+use fuel_types::AssetId;
+
 use fuels_types::bech32::Bech32Address;
+use fuels_types::resource::Resource;
 pub use wallet::{Wallet, WalletUnlocked};
+
+use crate::provider::Provider;
+use crate::wallet::WalletError;
+
+pub mod provider;
+pub mod wallet;
 
 /// Trait for signing transactions and messages
 ///
@@ -73,42 +79,43 @@ pub trait PayFee: std::fmt::Debug + Send + Sync {
 
     fn get_provider(&self) -> Result<&Provider, Self::Error>;
 }
+//todo: Implement generic
+// #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+// impl<T: Signer> PayFee for T {
+//     type Error = T::Error;
+//     fn address(&self) -> &Bech32Address {
+//         self.address()
+//     }
+//     async fn pay_fee_resources<
+//         'a_t,
+//         Tx: Chargeable + Inputs + Outputs + Send + Cacheable + UniqueIdentifier + field::Witnesses,
+//     >(
+//         &'a_t self,
+//         tx: &'a_t mut Tx,
+//         previous_base_amount: u64,
+//     ) -> Result<(), Self::Error> {
+//         self.add_fee_resources(tx, previous_base_amount, 1)
+//             .await?;
+//         self.sign_transaction(tx).await?;
+//         Ok(())
+//     }
+//     fn get_provider(&self) -> Result<&Provider, Self::Error> {
+//         self.get_provider()
+//     }
+// }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 pub trait Account: std::fmt::Debug + Send + Sync {
-    type Error: Error + Send + Sync;
+    type Error: Debug;
 
     fn address(&self) -> &Bech32Address;
     fn get_provider(&self) -> Result<&Provider, Self::Error>;
     fn set_provider(&mut self, provider: Provider);
-
-}
-
-#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
-impl<T: Signer> PayFee for T {
-    type Error = T::Error;
-
-    fn address(&self) -> &Bech32Address {
-        self.address()
-    }
-
-    async fn pay_fee_resources<
-        'a_t,
-        Tx: Chargeable + Inputs + Outputs + Send + Cacheable + UniqueIdentifier + field::Witnesses,
-    >(
-        &'a_t self,
-        tx: &'a_t mut Tx,
-        previous_base_amount: u64,
-    ) -> Result<(), Self::Error> {
-        self.add_fee_resources(tx, previous_base_amount, 1)
-            .await?;
-        self.sign_transaction(tx).await?;
-        Ok(())
-    }
-
-    fn get_provider(&self) -> Result<&Provider, Self::Error> {
-        self.get_provider()
-    }
+    async fn get_spendable_resources(
+        &self,
+        asset_id: AssetId,
+        amount: u64,
+    ) -> Result<Vec<Resource>, Self::Error>;
 }
 
 #[cfg(test)]
@@ -121,12 +128,14 @@ mod tests {
         field::Maturity, Address, AssetId, Bytes32, Chargeable, Input, Output, Transaction,
         TxPointer, UtxoId,
     };
-    use fuels_core::{constants::BASE_ASSET_ID, parameters::TxParameters};
-    use fuels_test_helpers::{setup_single_asset_coins, setup_test_client};
     use rand::{rngs::StdRng, RngCore, SeedableRng};
 
-    use super::*;
+    use fuels_core::{constants::BASE_ASSET_ID, parameters::TxParameters};
+    use fuels_test_helpers::{setup_single_asset_coins, setup_test_client};
+
     use crate::{provider::Provider, wallet::WalletUnlocked};
+
+    use super::*;
 
     #[tokio::test]
     async fn sign_and_verify() -> Result<(), Box<dyn Error>> {
@@ -261,7 +270,7 @@ mod tests {
 
         // Assert that the transaction was properly configured.
         let res = wallet_1
-            .get_provider()?
+            .provider()?
             .get_transaction_by_id(&tx_id)
             .await?
             .unwrap();

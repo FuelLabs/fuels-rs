@@ -1,3 +1,4 @@
+use std::marker::PhantomData;
 use std::{fmt::Debug, vec};
 
 use fuel_tx::{AssetId, FormatValidityChecks, Receipt, Script, ScriptExecutionResult, Transaction};
@@ -16,13 +17,20 @@ use crate::{
 /// [`ExecutableFuelCall`] provides methods to create and call/simulate a transaction that carries
 /// out contract method calls or script calls
 #[derive(Debug)]
-pub struct ExecutableFuelCall {
+pub struct ExecutableFuelCall<T> {
     pub tx: Script,
+    pub phantom_account: PhantomData<T>,
 }
 
-impl ExecutableFuelCall {
+impl<T: fuels_signers::Account + fuels_signers::PayFee> ExecutableFuelCall<T>
+where
+    fuels_types::errors::Error: From<<T as fuels_signers::Account>::Error>,
+{
     pub fn new(tx: Script) -> Self {
-        Self { tx }
+        Self {
+            tx,
+            phantom_account: PhantomData,
+        }
     }
 
     /// Creates a [`ExecutableFuelCall`] from contract calls. The internal [Transaction] is
@@ -31,9 +39,12 @@ impl ExecutableFuelCall {
     pub async fn from_contract_calls(
         calls: &[ContractCall],
         tx_parameters: &TxParameters,
-        wallet: &WalletUnlocked,
+        account: &T,
     ) -> Result<Self> {
-        let consensus_parameters = wallet.get_provider()?.consensus_parameters().await?;
+        // let consensus_parameters = account.get_provider()?.consensus_parameters().await?;
+        let consensus_parameters = fuels_signers::Account::get_provider(account)?
+            .consensus_parameters()
+            .await?;
 
         // Calculate instructions length for call instructions
         // Use placeholder for call param offsets, we only care about the length
@@ -52,12 +63,17 @@ impl ExecutableFuelCall {
 
         // Find the spendable resources required for those calls
         for (asset_id, amount) in &required_asset_amounts {
-            let resources = wallet.get_spendable_resources(*asset_id, *amount).await?;
+            let resources =
+                fuels_signers::Account::get_spendable_resources(account, *asset_id, *amount)
+                    .await?;
             spendable_resources.extend(resources);
         }
 
-        let (inputs, outputs) =
-            get_transaction_inputs_outputs(calls, wallet.address(), spendable_resources);
+        let (inputs, outputs) = get_transaction_inputs_outputs(
+            calls,
+            fuels_signers::Account::address(account),
+            spendable_resources,
+        );
 
         let mut tx = Transaction::script(
             tx_parameters.gas_price,
@@ -69,15 +85,15 @@ impl ExecutableFuelCall {
             outputs,
             vec![],
         );
-
-        let base_asset_amount = required_asset_amounts
-            .iter()
-            .find(|(asset_id, _)| *asset_id == AssetId::default());
-        match base_asset_amount {
-            Some((_, base_amount)) => wallet.add_fee_resources(&mut tx, *base_amount, 0).await?,
-            None => wallet.add_fee_resources(&mut tx, 0, 0).await?,
-        }
-        wallet.sign_transaction(&mut tx).await.unwrap();
+        // Todo: Fix this EMIR
+        // let base_asset_amount = required_asset_amounts
+        //     .iter()
+        //     .find(|(asset_id, _)| *asset_id == AssetId::default());
+        // match base_asset_amount {
+        //     Some((_, base_amount)) => account.add_fee_resources(&mut tx, *base_amount, 0).await?,
+        //     None => account.add_fee_resources(&mut tx, 0, 0).await?,
+        // }
+        // account.sign_transaction(&mut tx).await.unwrap();
 
         Ok(ExecutableFuelCall::new(tx))
     }

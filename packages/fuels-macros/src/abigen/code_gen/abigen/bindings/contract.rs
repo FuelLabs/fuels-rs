@@ -38,58 +38,66 @@ pub(crate) fn contract_bindings(
     let contract_functions = expand_functions(&abi.functions, shared_types)?;
 
     let code = quote! {
-        pub struct #name {
+        pub struct #name<T> {
             contract_id: ::fuels::types::bech32::Bech32ContractId,
-            wallet: ::fuels::signers::wallet::WalletUnlocked,
+            account: T,
             log_decoder: ::fuels::programs::logs::LogDecoder
         }
 
-        impl #name {
-            pub fn new(contract_id: ::fuels::types::bech32::Bech32ContractId, wallet: ::fuels::signers::wallet::WalletUnlocked) -> Self {
+        impl<T: ::fuels::signers::Account + ::fuels::signers::PayFee + ::std::clone::Clone> #name<T>
+        where
+            ::fuels::types::errors::Error: From<<T as ::fuels::signers::Account>::Error>,
+        {
+            pub fn new(contract_id: ::fuels::types::bech32::Bech32ContractId, account: T) -> Self {
                 let log_decoder = ::fuels::programs::logs::LogDecoder { type_lookup: #log_type_lookup };
-                Self { contract_id, wallet, log_decoder }
+                Self { contract_id, account, log_decoder }
             }
 
             pub fn contract_id(&self) -> &::fuels::types::bech32::Bech32ContractId {
                 &self.contract_id
             }
 
-            pub fn wallet(&self) -> ::fuels::signers::wallet::WalletUnlocked {
-                self.wallet.clone()
+            pub fn account(&self) -> T {
+                self.account.clone()
             }
 
-            pub fn with_wallet(&self, mut wallet: ::fuels::signers::wallet::WalletUnlocked) -> ::fuels::types::errors::Result<Self> {
-               let provider = self.wallet.get_provider()?;
-               wallet.set_provider(provider.clone());
+            pub fn with_account(&self, mut account: T) -> ::fuels::types::errors::Result<Self> {
+                let provider = ::fuels::signers::Account::get_provider(&self.account)?;
+                account.set_provider(provider.clone());
 
-               ::std::result::Result::Ok(Self { contract_id: self.contract_id.clone(), wallet: wallet, log_decoder: self.log_decoder.clone()})
+               ::std::result::Result::Ok(Self { contract_id: self.contract_id.clone(), account, log_decoder: self.log_decoder.clone()})
             }
 
             pub async fn get_balances(&self) -> ::fuels::types::errors::Result<::std::collections::HashMap<::std::string::String, u64>> {
-                self.wallet.get_provider()?.get_contract_balances(&self.contract_id).await.map_err(Into::into)
+                ::fuels::signers::Account::get_provider(&self.account)?
+                                  .get_contract_balances(&self.contract_id)
+                                  .await
+                                  .map_err(::std::convert::Into::into)
             }
 
-            pub fn methods(&self) -> #methods_name {
+            pub fn methods(&self) -> #methods_name<T> {
                 #methods_name {
                     contract_id: self.contract_id.clone(),
-                    wallet: self.wallet.clone(),
+                    account: self.account.clone(),
                     log_decoder: self.log_decoder.clone()
                 }
             }
         }
 
         // Implement struct that holds the contract methods
-        pub struct #methods_name {
+        pub struct #methods_name<T> {
             contract_id: ::fuels::types::bech32::Bech32ContractId,
-            wallet: ::fuels::signers::wallet::WalletUnlocked,
+            account: T,
             log_decoder: ::fuels::programs::logs::LogDecoder
         }
 
-        impl #methods_name {
+        impl<T: ::fuels::signers::Account + ::fuels::signers::PayFee + ::std::clone::Clone> #methods_name<T> {
             #contract_functions
         }
 
-        impl ::fuels::programs::contract::SettableContract for #name {
+        impl<T: ::fuels::signers::Account + ::fuels::signers::PayFee>
+            ::fuels::programs::contract::SettableContract for #name<T>
+        {
             fn id(&self) -> ::fuels::types::bech32::Bech32ContractId {
                 self.contract_id.clone()
             }
@@ -143,17 +151,17 @@ pub(crate) fn expand_fn(
 
     let original_output = generator.output_type();
     generator.set_output_type(
-        quote! {::fuels::programs::contract::ContractCallHandler<#original_output> },
+        quote! {::fuels::programs::contract::ContractCallHandler<T, #original_output> },
     );
 
     let fn_selector = generator.fn_selector();
     let arg_tokens = generator.tokenized_args();
     let body = quote! {
-            let provider = self.wallet.get_provider().expect("Provider not set up");
-            ::fuels::programs::contract::Contract::method_hash(
+            let provider = ::fuels::signers::Account::get_provider(&self.account).expect("Provider not set up");
+            ::fuels::programs::contract::Contract::<T>::method_hash(
                 &provider,
                 self.contract_id.clone(),
-                &self.wallet,
+                &self.account,
                 #fn_selector,
                 &#arg_tokens,
                 self.log_decoder.clone()

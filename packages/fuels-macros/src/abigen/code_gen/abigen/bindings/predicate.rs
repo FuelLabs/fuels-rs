@@ -38,7 +38,7 @@ pub(crate) fn predicate_bindings(
             }
 
             fn get_provider(&self) -> ::fuels::types::errors::Result<&::fuels::signers::provider::Provider> {
-                self.get_provider()
+                self.provider()
             }
 
             fn set_provider(&mut self, provider: ::fuels::signers::provider::Provider) {

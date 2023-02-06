@@ -1,3 +1,4 @@
+use std::any::Any;
 use std::{
     collections::{HashMap, HashSet},
     fmt::Debug,
@@ -7,7 +8,6 @@ use std::{
     path::Path,
     str::FromStr,
 };
-use std::any::Any;
 
 use fuel_tx::{
     Address, AssetId, Bytes32, Contract as FuelContract, ContractId, Create, FormatValidityChecks,
@@ -22,8 +22,9 @@ use fuels_core::{
 };
 use fuels_signers::{
     provider::{Provider, TransactionCost},
-    Signer, WalletUnlocked,
+    Account, PayFee, Signer, WalletUnlocked,
 };
+use fuels_types::errors::Error::WalletError;
 use fuels_types::{
     bech32::{Bech32Address, Bech32ContractId},
     errors::{error, Error, Result},
@@ -31,7 +32,6 @@ use fuels_types::{
     traits::{Parameterize, Tokenizable},
     Selector, Token,
 };
-use fuels_types::errors::Error::WalletError;
 
 use crate::{
     call_response::FuelCallResponse,
@@ -61,16 +61,16 @@ pub struct CompiledContract {
 /// compiling, deploying, and running transactions against a contract.
 /// The contract has a wallet attribute, used to pay for transactions and sign them.
 /// It allows doing calls without passing a wallet/signer each time.
-pub struct Contract {
+pub struct Contract<T> {
     pub compiled_contract: CompiledContract,
-    pub wallet: WalletUnlocked,
+    pub account: T,
 }
 
-impl Contract {
-    pub fn new(compiled_contract: CompiledContract, wallet: WalletUnlocked) -> Self {
+impl<T: Account + PayFee + Clone> Contract<T> {
+    pub fn new(compiled_contract: CompiledContract, account: T) -> Self {
         Self {
             compiled_contract,
-            wallet,
+            account,
         }
     }
 
@@ -108,17 +108,17 @@ impl Contract {
     pub fn method_hash<D: Tokenizable + Parameterize + Debug>(
         provider: &Provider,
         contract_id: Bech32ContractId,
-        wallet: &WalletUnlocked,
+        account: &T,
         signature: Selector,
         args: &[Token],
         log_decoder: LogDecoder,
-    ) -> Result<ContractCallHandler<D>> {
+    ) -> Result<ContractCallHandler<T, D>> {
         let encoded_selector = signature;
 
         let tx_parameters = TxParameters::default();
         let call_parameters = CallParameters::default();
 
-        let compute_custom_input_offset = Contract::should_compute_custom_input_offset(args);
+        let compute_custom_input_offset = Contract::<T>::should_compute_custom_input_offset(args);
 
         let unresolved_bytes = ABIEncoder::encode(args)?;
         let contract_call = ContractCall {
@@ -137,7 +137,7 @@ impl Contract {
         Ok(ContractCallHandler {
             contract_call,
             tx_parameters,
-            wallet: wallet.clone(),
+            account: account.clone(),
             provider: provider.clone(),
             datatype: PhantomData,
             log_decoder,
@@ -165,14 +165,14 @@ impl Contract {
     }
 
     /// Loads a compiled contract and deploys it to a running node
-    pub async fn deploy<T: fuels_signers::PayFee>(
+    pub async fn deploy(
         binary_filepath: &str,
         wallet: &T,
         params: TxParameters,
         storage_configuration: StorageConfiguration,
     ) -> Result<Bech32ContractId> {
         let mut compiled_contract =
-            Contract::load_contract(binary_filepath, &storage_configuration.storage_path)?;
+            Contract::<T>::load_contract(binary_filepath, &storage_configuration.storage_path)?;
 
         Self::merge_storage_vectors(&storage_configuration, &mut compiled_contract);
 
@@ -182,12 +182,12 @@ impl Contract {
     /// Loads a compiled contract with salt and deploys it to a running node
     pub async fn deploy_with_parameters(
         binary_filepath: &str,
-        wallet: &WalletUnlocked,
+        wallet: &T,
         params: TxParameters,
         storage_configuration: StorageConfiguration,
         salt: Salt,
     ) -> Result<Bech32ContractId> {
-        let mut compiled_contract = Contract::load_contract_with_parameters(
+        let mut compiled_contract = Contract::<T>::load_contract_with_parameters(
             binary_filepath,
             &storage_configuration.storage_path,
             salt,
@@ -211,11 +211,10 @@ impl Contract {
         }
     }
 
-
     /// Deploys a compiled contract to a running node
     /// To deploy a contract, you need a wallet with enough assets to pay for deployment. This
     /// wallet will also receive the change.
-    pub async fn deploy_loaded<T: fuels_signers::PayFee>(
+    pub async fn deploy_loaded(
         compiled_contract: &CompiledContract,
         account: &T,
         params: TxParameters,
@@ -228,8 +227,7 @@ impl Contract {
             .await
             .map_err(|err| WalletError(format!("{}", err)))?;
 
-        let provider = account
-            .get_provider()
+        let provider = Account::get_provider(account)
             .map_err(|_| error!(ProviderError, "Failed to get_provider"))?;
         let chain_info = provider.chain_info().await?;
 
@@ -511,17 +509,19 @@ pub fn get_decoded_output(
 #[derive(Debug)]
 #[must_use = "contract calls do nothing unless you `call` them"]
 /// Helper that handles submitting a call to a client and formatting the response
-pub struct ContractCallHandler<D> {
+pub struct ContractCallHandler<T, D> {
     pub contract_call: ContractCall,
     pub tx_parameters: TxParameters,
-    pub wallet: WalletUnlocked,
+    pub account: T,
     pub provider: Provider,
     pub datatype: PhantomData<D>,
     pub log_decoder: LogDecoder,
 }
 
-impl<D> ContractCallHandler<D>
+impl<T, D> ContractCallHandler<T, D>
 where
+    T: fuels_signers::Account + fuels_signers::PayFee,
+    fuels_types::errors::Error: From<<T as Account>::Error>,
     D: Tokenizable + Debug,
 {
     /// Sets external contracts as dependencies to this contract's call.
@@ -665,11 +665,11 @@ where
     }
 
     /// Returns the script that executes the contract call
-    pub async fn get_executable_call(&self) -> Result<ExecutableFuelCall> {
+    pub async fn get_executable_call(&self) -> Result<ExecutableFuelCall<T>> {
         ExecutableFuelCall::from_contract_calls(
             std::slice::from_ref(&self.contract_call),
             &self.tx_parameters,
-            &self.wallet,
+            &self.account,
         )
         .await
     }
@@ -695,7 +695,7 @@ where
     /// Simulates a call without needing to resolve the generic for the return type
     async fn simulate_without_decode(&self) -> Result<()> {
         let script = self.get_executable_call().await?;
-        let provider = self.wallet.get_provider()?;
+        let provider = Account::get_provider(&self.account)?;
 
         script.simulate(provider).await?;
 
@@ -771,19 +771,22 @@ where
 #[derive(Debug)]
 #[must_use = "contract calls do nothing unless you `call` them"]
 /// Helper that handles bundling multiple calls into a single transaction
-pub struct MultiContractCallHandler {
+pub struct MultiContractCallHandler<T> {
     pub contract_calls: Vec<ContractCall>,
     pub log_decoder: LogDecoder,
     pub tx_parameters: TxParameters,
-    pub wallet: WalletUnlocked,
+    pub account: T,
 }
 
-impl MultiContractCallHandler {
-    pub fn new(wallet: WalletUnlocked) -> Self {
+impl<T: fuels_signers::Account + fuels_signers::PayFee> MultiContractCallHandler<T>
+where
+    fuels_types::errors::Error: From<<T as Account>::Error>,
+{
+    pub fn new(wallet: T) -> Self {
         Self {
             contract_calls: vec![],
             tx_parameters: TxParameters::default(),
-            wallet,
+            account: wallet,
             log_decoder: LogDecoder {
                 type_lookup: HashMap::new(),
             },
@@ -792,7 +795,11 @@ impl MultiContractCallHandler {
 
     /// Adds a contract call to be bundled in the transaction
     /// Note that this is a builder method
-    pub fn add_call<D: Tokenizable>(&mut self, call_handler: ContractCallHandler<D>) -> &mut Self {
+    pub fn add_call<D: Tokenizable>(
+        &mut self,
+        call_handler: ContractCallHandler<T, D>,
+    ) -> &mut Self {
+        // Todo: Emir added D instead T for first
         self.log_decoder.merge(call_handler.log_decoder);
         self.contract_calls.push(call_handler.contract_call);
         self
@@ -806,7 +813,7 @@ impl MultiContractCallHandler {
     }
 
     /// Returns the script that executes the contract calls
-    pub async fn get_executable_call(&self) -> Result<ExecutableFuelCall> {
+    pub async fn get_executable_call(&self) -> Result<ExecutableFuelCall<T>> {
         if self.contract_calls.is_empty() {
             panic!("No calls added. Have you used '.add_calls()'?");
         }
@@ -814,7 +821,7 @@ impl MultiContractCallHandler {
         ExecutableFuelCall::from_contract_calls(
             &self.contract_calls,
             &self.tx_parameters,
-            &self.wallet,
+            &self.account,
         )
         .await
     }
@@ -843,7 +850,7 @@ impl MultiContractCallHandler {
     ) -> Result<FuelCallResponse<D>> {
         let script = self.get_executable_call().await?;
 
-        let provider = self.wallet.get_provider()?;
+        let provider = Account::get_provider(&self.account)?;
 
         let receipts = if simulate {
             script.simulate(provider).await?
@@ -857,7 +864,7 @@ impl MultiContractCallHandler {
     /// Simulates a call without needing to resolve the generic for the return type
     async fn simulate_without_decode(&self) -> Result<()> {
         let script = self.get_executable_call().await?;
-        let provider = self.wallet.get_provider()?;
+        let provider = Account::get_provider(&self.account)?;
 
         script.simulate(provider).await?;
 
@@ -909,9 +916,7 @@ impl MultiContractCallHandler {
     ) -> Result<TransactionCost> {
         let script = self.get_executable_call().await?;
 
-        let transaction_cost = self
-            .wallet
-            .get_provider()?
+        let transaction_cost = Account::get_provider(&self.account)?
             .estimate_transaction_cost(&script.tx, tolerance)
             .await?;
 

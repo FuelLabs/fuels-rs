@@ -144,7 +144,13 @@ where
     /// in its `value` field as an actual typed value `D` (if your method returns `bool`,
     /// it will be a bool, works also for structs thanks to the `abigen!()`).
     /// The other field of [`FuelCallResponse`], `receipts`, contains the receipts of the transaction.
-    async fn call_or_simulate(&self, simulate: bool) -> Result<FuelCallResponse<D>> {
+    async fn call_or_simulate<T: fuels_signers::Account + fuels_signers::PayFee>(
+        &self,
+        simulate: bool,
+    ) -> Result<FuelCallResponse<D>>
+    where
+        fuels_types::errors::Error: From<<T as fuels_signers::Account>::Error>,
+    {
         let contract_ids: HashSet<ContractId> = self
             .script_call
             .external_contracts
@@ -182,7 +188,8 @@ where
         self.wallet.add_fee_resources(&mut tx, 0, 0).await?;
         self.wallet.sign_transaction(&mut tx).await?;
 
-        let tx_execution = ExecutableFuelCall { tx };
+        // let tx_execution = ExecutableFuelCall{ tx, PhantomData<> };
+        let tx_execution = ExecutableFuelCall::<T>::new(tx);
 
         let receipts = if simulate {
             tx_execution.simulate(&self.provider).await?
@@ -194,8 +201,13 @@ where
     }
 
     /// Call a script on the node, in a state-modifying manner.
-    pub async fn call(self) -> Result<FuelCallResponse<D>> {
-        Self::call_or_simulate(&self, false)
+    pub async fn call<T: fuels_signers::Account + fuels_signers::PayFee>(
+        self,
+    ) -> Result<FuelCallResponse<D>>
+    where
+        fuels_types::errors::Error: From<<T as fuels_signers::Account>::Error>,
+    {
+        Self::call_or_simulate::<T>(&self, false)
             .await
             .map_err(|err| decode_revert_error(err, &self.log_decoder))
     }
@@ -205,8 +217,13 @@ where
     /// It is the same as the [`call`] method because the API is more user-friendly this way.
     ///
     /// [`call`]: Self::call
-    pub async fn simulate(self) -> Result<FuelCallResponse<D>> {
-        Self::call_or_simulate(&self, true)
+    pub async fn simulate<T: fuels_signers::Account + fuels_signers::PayFee>(
+        self,
+    ) -> Result<FuelCallResponse<D>>
+    where
+        fuels_types::errors::Error: From<<T as fuels_signers::Account>::Error>,
+    {
+        Self::call_or_simulate::<T>(&self, true)
             .await
             .map_err(|err| decode_revert_error(err, &self.log_decoder))
     }

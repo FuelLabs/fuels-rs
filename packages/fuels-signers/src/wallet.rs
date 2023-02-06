@@ -31,8 +31,8 @@ use rand::{CryptoRng, Rng};
 use std::{collections::HashMap, fmt, ops, path::Path};
 use thiserror::Error;
 
-use crate::wallet::WalletError::LowAmount;
-use crate::{Account, provider, provider::Provider, Signer};
+use crate::wallet::WalletError::{AccountError, LowAmount};
+use crate::{provider, provider::Provider, Account, PayFee, Signer};
 
 pub const DEFAULT_DERIVATION_PATH_PREFIX: &str = "m/44'/1179993420'";
 
@@ -117,6 +117,8 @@ pub enum WalletError {
     LowAmount(#[from] fuels_types::errors::Error),
     #[error(transparent)]
     ProviderError(#[from] provider::ProviderError),
+    #[error("Account Error!")]
+    AccountError,
 }
 
 impl From<WalletError> for Error {
@@ -131,7 +133,7 @@ impl Wallet {
         Self { address, provider }
     }
 
-    pub fn get_provider(&self) -> WalletResult<&Provider> {
+    pub fn provider(&self) -> WalletResult<&Provider> {
         self.provider.as_ref().ok_or(WalletError::NoProvider)
     }
 
@@ -148,7 +150,7 @@ impl Wallet {
         request: PaginationRequest<String>,
     ) -> Result<PaginatedResult<TransactionResponse, String>> {
         Ok(self
-            .get_provider()?
+            .provider()?
             .get_transactions_by_owner(&self.address, request)
             .await?)
     }
@@ -219,10 +221,7 @@ impl Wallet {
     /// for some particular cases, but in general, you should use `get_spendable_coins`). This
     /// returns actual coins (UTXOs).
     pub async fn get_coins(&self, asset_id: AssetId) -> Result<Vec<Coin>> {
-        Ok(self
-            .get_provider()?
-            .get_coins(&self.address, asset_id)
-            .await?)
+        Ok(self.provider()?.get_coins(&self.address, asset_id).await?)
     }
 
     /// Get some spendable resources (coins and messages) of asset `asset_id` owned by the wallet
@@ -233,7 +232,7 @@ impl Wallet {
         asset_id: AssetId,
         amount: u64,
     ) -> Result<Vec<Resource>> {
-        self.get_provider()?
+        self.provider()?
             .get_spendable_resources(&self.address, asset_id, amount)
             .await
             .map_err(Into::into)
@@ -243,7 +242,7 @@ impl Wallet {
     /// from getting coins because we are just returning a number (the sum of UTXOs amount) instead
     /// of the UTXOs.
     pub async fn get_asset_balance(&self, asset_id: &AssetId) -> Result<u64> {
-        self.get_provider()?
+        self.provider()?
             .get_asset_balance(&self.address, *asset_id)
             .await
             .map_err(Into::into)
@@ -253,14 +252,14 @@ impl Wallet {
     /// the coins because we are only returning the sum of UTXOs coins amount and not the UTXOs
     /// coins themselves.
     pub async fn get_balances(&self) -> Result<HashMap<String, u64>> {
-        self.get_provider()?
+        self.provider()?
             .get_balances(&self.address)
             .await
             .map_err(Into::into)
     }
 
     pub async fn get_messages(&self) -> Result<Vec<InputMessage>> {
-        Ok(self.get_provider()?.get_messages(&self.address).await?)
+        Ok(self.provider()?.get_messages(&self.address).await?)
     }
 
     /// Unlock the wallet with the given `private_key`.
@@ -501,8 +500,7 @@ impl WalletUnlocked {
         previous_base_amount: u64,
         witness_index: u8,
     ) -> WalletResult<()> {
-        let consensus_parameters =
-            Signer::get_provider(self)?
+        let consensus_parameters = Signer::get_provider(self)?
             .chain_info()
             .await?
             .consensus_parameters;
@@ -512,7 +510,7 @@ impl WalletUnlocked {
         let (base_asset_inputs, remaining_inputs): (Vec<_>, Vec<_>) =
             tx.inputs().iter().cloned().partition(|input| {
                 matches!(input, Input::MessageSigned { .. })
-                || matches!(input, Input::CoinSigned { asset_id, .. } if asset_id == &BASE_ASSET_ID)
+                    || matches!(input, Input::CoinSigned { asset_id, .. } if asset_id == &BASE_ASSET_ID)
             });
 
         let base_inputs_sum: u64 = base_asset_inputs
@@ -554,8 +552,11 @@ impl WalletUnlocked {
         });
         // add a change output for the base asset if it doesn't exist and there are base inputs
         if !is_base_change_present && new_base_amount != 0 {
-            tx.outputs_mut()
-                .push(Output::change(Signer::address(self).into(), 0, BASE_ASSET_ID));
+            tx.outputs_mut().push(Output::change(
+                Signer::address(self).into(),
+                0,
+                BASE_ASSET_ID,
+            ));
         }
 
         Ok(())
@@ -843,7 +844,7 @@ impl WalletUnlocked {
         Ok((tx_id.to_string(), receipts))
     }
 }
-
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl Account for WalletUnlocked {
     type Error = WalletError;
 
@@ -858,10 +859,46 @@ impl Account for WalletUnlocked {
     fn set_provider(&mut self, provider: Provider) {
         self.wallet.set_provider(provider)
     }
+
+    async fn get_spendable_resources(
+        &self,
+        asset_id: AssetId,
+        amount: u64,
+    ) -> std::result::Result<Vec<Resource>, Self::Error> {
+        self.provider()?
+            .get_spendable_resources(&self.address, asset_id, amount)
+            .await
+            .map_err(Into::into)
+    }
 }
 
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+impl PayFee for WalletUnlocked {
+    type Error = WalletError;
 
-#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
+    fn address(&self) -> &Bech32Address {
+        &self.address
+    }
+
+    async fn pay_fee_resources<
+        'a_t,
+        Tx: Chargeable + Inputs + Outputs + Send + Cacheable + UniqueIdentifier + field::Witnesses,
+    >(
+        &'a_t self,
+        tx: &'a_t mut Tx,
+        previous_base_amount: u64,
+    ) -> WalletResult<()> {
+        self.add_fee_resources(tx, previous_base_amount, 1).await?;
+        self.sign_transaction(tx).await?;
+        Ok(())
+    }
+
+    fn get_provider(&self) -> WalletResult<&Provider> {
+        self.provider.as_ref().ok_or(WalletError::NoProvider)
+    }
+}
+
+#[cfg_attr(target_arch = "wasm32", async_trait(? Send))]
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl Signer for WalletUnlocked {
     type Error = WalletError;
@@ -914,7 +951,8 @@ impl Signer for WalletUnlocked {
         witness_index: u8,
     ) -> WalletResult<()> {
         // Box::pin(self.add_fee_resources(tx, previous_base_amount, witness_index)).await?;
-        self.add_fee_resources(tx, previous_base_amount, witness_index).await
+        self.add_fee_resources(tx, previous_base_amount, witness_index)
+            .await
     }
 
     fn get_provider(&self) -> WalletResult<&Provider> {

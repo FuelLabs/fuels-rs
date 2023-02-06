@@ -170,15 +170,30 @@ mod tests {
     }
 
     #[test]
-    fn test_for_creating_struct() {
+    fn test_for_creating_predicate_struct() {
         let stream = Abigen::generate(vec![AbigenTarget {
-            name: "myPredicate".to_string(),
+            name: "MyPredicateTest".to_string(),
             abi: "/home/salka1988/Documents/Git/fuels-rs/packages/fuels/tests/predicates/predicate_u64/out/debug/predicate_u64-abi.json".to_string(),
             program_type: ProgramType::Predicate,
         }], false).unwrap().to_string();
 
         std::fs::write(
-            "/home/salka1988/Documents/Git/fuels-rs/packages/fuels/tests/myPredicate.rs",
+            "/home/salka1988/Documents/Git/fuels-rs/packages/fuels/tests/MyPredicateTest.rs",
+            stream,
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn test_for_creating_contract_struct() {
+        let stream = Abigen::generate(vec![AbigenTarget {
+            name: "MyContractTest".to_string(),
+            abi: "/home/salka1988/Documents/Git/fuels-rs/packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json".to_string(),
+            program_type: ProgramType::Contract,
+        }], false).unwrap().to_string();
+
+        std::fs::write(
+            "/home/salka1988/Documents/Git/fuels-rs/packages/fuels/tests/MyContractTest.rs",
             stream,
         )
         .unwrap();

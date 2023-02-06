@@ -235,7 +235,7 @@ mod tests {
         for wallet in wallets.into_iter() {
             assert_eq!(
                 wallet
-                    .get_provider()?
+                    .provider()?
                     .client
                     .chain_info()
                     .await?
