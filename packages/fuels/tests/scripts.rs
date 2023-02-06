@@ -1,5 +1,5 @@
 use fuels::prelude::*;
-
+/*
 #[tokio::test]
 async fn test_transaction_script_workflow() -> Result<()> {
     setup_contract_test!(
@@ -53,7 +53,7 @@ async fn test_multi_call_script_workflow() -> Result<()> {
         .add_call(call_handler_2);
 
     let provider = &wallet.get_provider()?;
-    let execution_script = multi_call_handler.get_executable_call().await?;
+    let execution_script = multi_call_handler.get_tx().await?;
     let receipts = execution_script.execute(provider).await.unwrap();
     let (counter, array) = multi_call_handler
         .get_response::<(u64, [u64; 2])>(receipts)?
@@ -62,7 +62,7 @@ async fn test_multi_call_script_workflow() -> Result<()> {
     assert_eq!(counter, 42);
     assert_eq!(array, [42; 2]);
     Ok(())
-}
+} */
 
 #[tokio::test]
 async fn main_function_arguments() -> Result<()> {

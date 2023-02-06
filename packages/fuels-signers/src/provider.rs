@@ -10,7 +10,7 @@ use fuel_core_client::client::{
     types::TransactionStatus,
     FuelClient, PageDirection, PaginatedResult, PaginationRequest,
 };
-use fuel_tx::{AssetId, ConsensusParameters, Receipt, Transaction as FuelTransaction};
+use fuel_tx::{AssetId, ConsensusParameters, Receipt};
 use fuels_types::{
     bech32::{Bech32Address, Bech32ContractId},
     block::Block,
@@ -189,15 +189,18 @@ impl Provider {
         Ok(self.client.node_info().await?.into())
     }
 
-    pub async fn dry_run(&self, tx: &FuelTransaction) -> ProviderResult<Vec<Receipt>> {
-        Ok(self.client.dry_run(tx).await?)
+    pub async fn dry_run<T: Transaction + Clone>(&self, tx: &T) -> ProviderResult<Vec<Receipt>> {
+        Ok(self.client.dry_run(&tx.clone().into()).await?)
     }
 
-    pub async fn dry_run_no_validation(
+    pub async fn dry_run_no_validation<T: Transaction + Clone>(
         &self,
-        tx: &FuelTransaction,
+        tx: &T,
     ) -> ProviderResult<Vec<Receipt>> {
-        Ok(self.client.dry_run_opt(tx, Some(false)).await?)
+        Ok(self
+            .client
+            .dry_run_opt(&tx.clone().into(), Some(false))
+            .await?)
     }
 
     /// Gets all coins owned by address `from`, with asset ID `asset_id`, *even spent ones*. This
@@ -472,12 +475,12 @@ impl Provider {
     }
 
     // Increase estimated gas by the provided tolerance
-    async fn get_gas_used_with_tolerance<Tx: Into<FuelTransaction> + Clone>(
+    async fn get_gas_used_with_tolerance<T: Transaction + Clone>(
         &self,
-        tx: &Tx,
+        tx: &T,
         tolerance: f64,
     ) -> ProviderResult<u64> {
-        let gas_used = self.get_gas_used(&self.dry_run_no_validation(&tx.clone().into()).await?);
+        let gas_used = self.get_gas_used(&self.dry_run_no_validation(tx).await?);
         Ok((gas_used as f64 * (1.0 + tolerance)) as u64)
     }
 
