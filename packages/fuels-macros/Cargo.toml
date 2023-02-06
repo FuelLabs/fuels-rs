@@ -23,6 +23,7 @@ rand = "0.8"
 syn = { version = "1.0.107", features = ["extra-traits"] }
 itertools = "0.10.5"
 serde_json = "1.0.91"
+fuels-code-gen = { workspace = true }
 
 [dev-dependencies]
 trybuild = "1.0.73"

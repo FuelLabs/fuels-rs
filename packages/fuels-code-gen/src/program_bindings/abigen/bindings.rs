@@ -1,7 +1,8 @@
 use std::collections::HashSet;
 
 use crate::{
-    abigen::code_gen::{
+    error::Result,
+    program_bindings::{
         abi_types::FullTypeDeclaration,
         abigen::{
             abigen_target::ParsedAbigenTarget,
@@ -12,7 +13,6 @@ use crate::{
         },
         generated_code::GeneratedCode,
     },
-    error::Result,
     utils::ident,
 };
 
