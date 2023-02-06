@@ -44,6 +44,17 @@ pub(crate) fn predicate_bindings(
             fn set_provider(&mut self, provider: ::fuels::signers::provider::Provider) {
                 self.set_provider(::std::option::Option::Some(provider))
             }
+
+            async fn get_spendable_resources(
+                &self,
+                asset_id: ::fuels::tx::AssetId,
+                amount: u64,
+            ) -> ::fuels::types::errors::Result<::std::vec::Vec<::fuels::types::resource::Resource>> {
+                    self.provider()?
+                        .get_spendable_resources(&self.address, asset_id, amount)
+                        .await
+                        .map_err(::std::convert::Into::into)
+            }
         }
 
 

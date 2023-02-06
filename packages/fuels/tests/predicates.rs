@@ -600,13 +600,12 @@ async fn pay_with_predicate() -> Result<()> {
             name = "MyContract",
             abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
         ),
-        // Predicate(
-        //     name = "MyPredicate",
-        //     abi = "packages/fuels/tests/predicates/predicate_u64/out/debug/predicate_u64-abi.json"
-        // )
+        Predicate(
+            name = "MyPredicate",
+            abi = "packages/fuels/tests/predicates/predicate_u64/out/debug/predicate_u64-abi.json"
+        )
     );
 
-    use my_predicate_mod::MyPredicate;
 
     let mut predicate =
         MyPredicate::load_from("tests/predicates/predicate_u64/out/debug/predicate_u64.bin")?;
@@ -673,7 +672,7 @@ async fn pay_with_predicate() -> Result<()> {
 
     Ok(())
 }
-
+/*
 #[allow(clippy::too_many_arguments)]
 #[no_implicit_prelude]
 pub mod my_predicate_mod {
@@ -960,3 +959,4 @@ pub mod my_predicate_mod {
         }
     }
 }
+*/
