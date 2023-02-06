@@ -41,12 +41,17 @@ impl Eq for TestEnum {
 }
 
 abi TestContract {
+    fn assert_primitive(a: u64, b: u64);
     fn assert_eq_primitive(a: u64, b: u64);
     fn assert_eq_struct(test_struct: TestStruct, test_struct2: TestStruct);
     fn assert_eq_enum(test_enum: TestEnum, test_enum2: TestEnum);
 }
 
 impl TestContract for Contract {
+    fn assert_primitive(a: u64, b: u64) {
+        assert(a == b);
+    }
+
     fn assert_eq_primitive(a: u64, b: u64) {
         assert_eq(a, b);
     }

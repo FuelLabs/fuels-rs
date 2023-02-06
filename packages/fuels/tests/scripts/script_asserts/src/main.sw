@@ -41,13 +41,16 @@ impl Eq for TestEnum {
 }
 
 enum MatchEnum {
+    AssertPrimitive: (u64, u64),
     AssertEqPrimitive: (u64, u64),
     AssertEqStruct: (TestStruct, TestStruct),
     AssertEqEnum: (TestEnum, TestEnum),
 }
 
 fn main(match_enum: MatchEnum) {
-    if let MatchEnum::AssertEqPrimitive((a, b)) = match_enum {
+    if let MatchEnum::AssertPrimitive((a, b)) = match_enum {
+        assert(a == b);
+    } else if let MatchEnum::AssertEqPrimitive((a, b)) = match_enum {
         assert_eq(a, b);
     } else if let MatchEnum::AssertEqStruct((test_struct, test_struct2)) = match_enum
     {
