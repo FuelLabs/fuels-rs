@@ -198,4 +198,19 @@ mod tests {
         )
         .unwrap();
     }
+
+    #[test]
+    fn test_for_creating_contract_script() {
+        let stream = Abigen::generate(vec![AbigenTarget {
+            name: "MyScriptTest".to_string(),
+            abi: "/home/salka1988/Documents/Git/fuels-rs/packages/fuels/tests/scripts/script_with_arguments/out/debug/script_with_arguments-abi.json".to_string(),
+            program_type: ProgramType::Script,
+        }], false).unwrap().to_string();
+
+        std::fs::write(
+            "/home/salka1988/Documents/Git/fuels-rs/packages/fuels/tests/MyScriptTest.rs",
+            stream,
+        )
+        .unwrap();
+    }
 }

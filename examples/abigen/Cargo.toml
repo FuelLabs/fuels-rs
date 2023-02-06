@@ -12,3 +12,4 @@ description = "Fuel Rust SDK abigen examples."
 [dev-dependencies]
 fuels = { workspace = true }
 tokio = { version = "1.10", features = ["full"] }
+async-trait = { version = "0.1.50", default-features = false }

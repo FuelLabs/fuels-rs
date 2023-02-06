@@ -606,7 +606,6 @@ async fn pay_with_predicate() -> Result<()> {
         )
     );
 
-
     let mut predicate =
         MyPredicate::load_from("tests/predicates/predicate_u64/out/debug/predicate_u64.bin")?;
 
@@ -624,7 +623,7 @@ async fn pay_with_predicate() -> Result<()> {
         TxParameters::default(),
         StorageConfiguration::default(),
     )
-        .await?;
+    .await?;
 
     let contract_instance_connected = MyContract::new(contract_id.clone(), predicate.clone());
 
@@ -654,7 +653,7 @@ async fn pay_with_predicate() -> Result<()> {
         TxParameters::default(),
         StorageConfiguration::default(),
     )
-        .await?;
+    .await?;
 
     let contract_instance_connected = MyContract::new(contract_id.clone(), wallet.clone());
 
