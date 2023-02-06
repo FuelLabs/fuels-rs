@@ -51,7 +51,7 @@ macro_rules! impl_programcall_trait_methods {
                     };
                     num as usize
                 ];
-                self.variable_outputs.extend(new_variable_outputs)
+                self.outputs.extend(new_variable_outputs)
             }
 
             fn append_external_contracts(&mut self, contract_id: Bech32ContractId) {
@@ -66,7 +66,7 @@ macro_rules! impl_programcall_trait_methods {
                     };
                     num as usize
                 ];
-                self.message_outputs.extend(new_message_outputs)
+                self.outputs.extend(new_message_outputs)
             }
         }
     };

@@ -63,16 +63,6 @@ impl ContractCall {
         }
     }
 
-    pub fn with_external_contracts(
-        self,
-        external_contracts: Vec<Bech32ContractId>,
-    ) -> ContractCall {
-        ContractCall {
-            external_contracts,
-            ..self
-        }
-    }
-
     pub fn add_custom_asset(&mut self, asset_id: AssetId, amount: u64, to: Option<Bech32Address>) {
         *self.custom_assets.entry((asset_id, to)).or_default() += amount;
     }
