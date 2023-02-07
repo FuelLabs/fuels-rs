@@ -1092,6 +1092,7 @@ It is <strong>highly</strong> encouraged that you generate all your bindings in 
                     ),
                     &amp;[Tokenizable::into_token(value)],
                     log_decoder,
+                    false,
                 )
                 .expect(&quot;method not found (this should never happen)&quot;)
             }
@@ -1111,6 +1112,7 @@ It is <strong>highly</strong> encouraged that you generate all your bindings in 
                     ),
                     &amp;[Tokenizable::into_token(value)],
                     log_decoder,
+                    false,
                 )
                 .expect(&quot;method not found (this should never happen)&quot;)
             }
@@ -1410,7 +1412,8 @@ pub const DEFAULT_MATURITY: u64 = 0;
 </ol>
 <p>You can use these to forward coins to a contract. You can configure these parameters by creating an instance of <a href="https://docs.rs/fuels/latest/fuels/core/parameters/struct.CallParameters.html#"><code>CallParameters</code></a> and passing it to a chain method called <code>call_params</code>.</p>
 <p>For instance, suppose the following contract that uses Sway's <code>msg_amount()</code> to return the amount sent in that transaction.</p>
-<pre><code class="language-rust ignore">    fn get_msg_amount() -&gt; u64 {
+<pre><code class="language-rust ignore">    #[payable]
+    fn get_msg_amount() -&gt; u64 {
         msg_amount()
     }
 </code></pre>
@@ -1426,10 +1429,21 @@ pub const DEFAULT_MATURITY: u64 = 0;
         let response = contract_methods
             .get_msg_amount() // Our contract method.
             .tx_params(tx_params) // Chain the tx params setting method.
-            .call_params(call_params) // Chain the call params setting method.
+            .call_params(call_params)? // Chain the call params setting method.
             .call() // Perform the contract call.
             .await?;
 </code></pre>
+<p><code>call_params</code> returns a result to ensure you don't forward assets to a contract method that isn't payable. In the following example, we try to forward an amount of 100 of the base asset to <code>non_payable</code>. As its name suggests, <code>non_payable</code> isn't annotated with <code>#[payable]</code> in the contract code. Passing <code>CallParameters</code> with an amount other than 0 leads to an <code>InvalidCallParameters</code> error:</p>
+<pre><code class="language-rust ignore">    let err = contract_methods
+        .non_payable()
+        .call_params(CallParameters::new(Some(100), None, None))
+        .expect_err(&quot;Should return call params error.&quot;);
+
+    assert!(matches!(err, Error::AssetsForwardedToNonPayableMethod));
+</code></pre>
+<blockquote>
+<p><strong>Note:</strong> forwarding gas to a contract call is always possible, regardless of the contract method being non-payable.</p>
+</blockquote>
 <p>You can also use <code>CallParameters::default()</code> to use the default values:</p>
 <pre><code class="language-rust ignore">pub const DEFAULT_CALL_PARAMS_AMOUNT: u64 = 0;
 // Bytes representation of the asset ID of the &quot;base&quot; asset used for gas fees.
@@ -1438,7 +1452,7 @@ pub const BASE_ASSET_ID: AssetId = AssetId::BASE;
 <p>This way:</p>
 <pre><code class="language-rust ignore">        let response = contract_methods
             .initialize_counter(42)
-            .call_params(CallParameters::default())
+            .call_params(CallParameters::default())?
             .call()
             .await?;
 
@@ -1453,7 +1467,7 @@ pub const BASE_ASSET_ID: AssetId = AssetId::BASE;
         let response = contract_methods
             .get_msg_amount() // Our contract method.
             .tx_params(tx_params) // Chain the tx params setting method.
-            .call_params(call_params) // Chain the call params setting method.
+            .call_params(call_params)? // Chain the call params setting method.
             .call() // Perform the contract call.
             .await?;
 </code></pre>
@@ -2611,13 +2625,16 @@ use std::{
 };
 
 abi LiquidityPool {
+    #[payable]
     fn deposit(recipient: Address);
+    #[payable]
     fn withdraw(recipient: Address);
 }
 
 const BASE_TOKEN: b256 = 0x9ae5b658754e096e4d681c548daf46354495a437cc61492599e33fc64dcdc30c;
 
 impl LiquidityPool for Contract {
+    #[payable]
     fn deposit(recipient: Address) {
         assert(ContractId::from(BASE_TOKEN) == msg_asset_id());
         assert(0 &lt; msg_amount());
@@ -2629,6 +2646,7 @@ impl LiquidityPool for Contract {
         mint_to_address(amount_to_mint, recipient);
     }
 
+    #[payable]
     fn withdraw(recipient: Address) {
         assert(contract_id() == msg_asset_id());
         assert(0 &lt; msg_amount());
@@ -2683,7 +2701,7 @@ impl LiquidityPool for Contract {
         let call_params = CallParameters::new(Some(deposit_amount), Some(base_asset_id), None);
         contract_methods
             .deposit(wallet.address().into())
-            .call_params(call_params)
+            .call_params(call_params)?
             .append_variable_outputs(1)
             .call()
             .await?;
@@ -2695,7 +2713,7 @@ impl LiquidityPool for Contract {
         let call_params = CallParameters::new(Some(lp_token_balance), Some(lp_asset_id), None);
         contract_methods
             .withdraw(wallet.address().into())
-            .call_params(call_params)
+            .call_params(call_params)?
             .append_variable_outputs(1)
             .call()
             .await?;
