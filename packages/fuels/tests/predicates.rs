@@ -656,7 +656,7 @@ async fn pay_with_predicate() -> Result<()> {
 
     let tx_params = TxParameters::new(Some(10), Some(10000), None);
 
-    let contract_instance_connected = MyContractTest::new(contract_id.clone(), wallet.clone());
+    let contract_instance_connected = MyContract::new(contract_id.clone(), wallet.clone());
 
     dbg!(&wallet.clone().get_balances().await?);
 

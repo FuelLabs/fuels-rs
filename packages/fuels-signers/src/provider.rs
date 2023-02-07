@@ -1,5 +1,5 @@
-use std::{collections::HashMap, io};
 use std::fmt::Debug;
+use std::{collections::HashMap, io};
 
 use chrono::{DateTime, Duration, Utc};
 #[cfg(feature = "fuel-core")]
