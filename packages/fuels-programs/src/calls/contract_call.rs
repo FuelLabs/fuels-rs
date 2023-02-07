@@ -24,7 +24,7 @@ use crate::calls::contract_call_utils::{
     get_single_call_instructions, get_transaction_inputs_outputs, CallOpcodeParamsOffset,
 };
 use crate::{
-    calls::call::{ProgramCall, SettableContract},
+    calls::call::SettableContract,
     calls::call_response::FuelCallResponse,
     calls::call_utils::get_decoded_output,
     execution_script::ExecutableFuelCall,

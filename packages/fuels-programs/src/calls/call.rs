@@ -15,34 +15,17 @@ pub trait SettableContract {
     fn log_decoder(&self) -> LogDecoder;
 }
 
-pub(crate) trait ProgramCall {
-    fn with_external_contracts(self, external_contracts: &[Bech32ContractId]) -> Self;
-    fn append_variable_outputs(&mut self, num: u64);
-    fn append_external_contracts(&mut self, contract_id: Bech32ContractId);
-    fn append_message_outputs(&mut self, num: u64);
-    fn is_missing_output_variables(receipts: &[Receipt]) -> bool {
-        receipts.iter().any(
-            |r| matches!(r, Receipt::Revert { ra, .. } if *ra == FAILED_TRANSFER_TO_ADDRESS_SIGNAL),
-        )
-    }
-    fn find_contract_not_in_inputs(receipts: &[Receipt]) -> Option<&Receipt> {
-        receipts.iter().find(
-            |r| matches!(r, Receipt::Panic { reason, .. } if *reason.reason() == PanicReason::ContractNotInInputs ),
-        )
-    }
-}
-
-macro_rules! impl_programcall_trait_methods {
+macro_rules! implement_shared_call_methods {
     ($target:ty) => {
-        impl ProgramCall for $target {
-            fn with_external_contracts(self, external_contracts: &[Bech32ContractId]) -> Self {
+        impl $target {
+            pub fn with_external_contracts(self, external_contracts: &[Bech32ContractId]) -> Self {
                 Self {
                     external_contracts: external_contracts.to_vec(),
                     ..self
                 }
             }
 
-            fn append_variable_outputs(&mut self, num: u64) {
+            pub fn append_variable_outputs(&mut self, num: u64) {
                 let new_variable_outputs = vec![
                     Output::Variable {
                         amount: 0,
@@ -54,11 +37,11 @@ macro_rules! impl_programcall_trait_methods {
                 self.outputs.extend(new_variable_outputs)
             }
 
-            fn append_external_contracts(&mut self, contract_id: Bech32ContractId) {
+            pub fn append_external_contracts(&mut self, contract_id: Bech32ContractId) {
                 self.external_contracts.push(contract_id)
             }
 
-            fn append_message_outputs(&mut self, num: u64) {
+            pub fn append_message_outputs(&mut self, num: u64) {
                 let new_message_outputs = vec![
                     Output::Message {
                         recipient: Address::zeroed(),
@@ -68,9 +51,22 @@ macro_rules! impl_programcall_trait_methods {
                 ];
                 self.outputs.extend(new_message_outputs)
             }
+
+            pub fn is_missing_output_variables(receipts: &[Receipt]) -> bool {
+                receipts.iter().any(
+                    |r| matches!(r, Receipt::Revert { ra, .. } if *ra == FAILED_TRANSFER_TO_ADDRESS_SIGNAL),
+                )
+            }
+
+            pub fn find_contract_not_in_inputs(receipts: &[Receipt]) -> Option<&Receipt> {
+                receipts.iter().find(
+                    |r| matches!(r, Receipt::Panic { reason, .. } if *reason.reason() == PanicReason::ContractNotInInputs ),
+                )
+            }
         }
+
     };
 }
 
-impl_programcall_trait_methods!(ContractCall);
-impl_programcall_trait_methods!(ScriptCall);
+implement_shared_call_methods!(ScriptCall);
+implement_shared_call_methods!(ContractCall);
