@@ -53,7 +53,7 @@ mod tests {
         let call_params = CallParameters::new(Some(deposit_amount), Some(base_asset_id), None);
         contract_methods
             .deposit(wallet.address().into())
-            .call_params(call_params)
+            .call_params(call_params)?
             .append_variable_outputs(1)
             .call()
             .await?;
@@ -66,7 +66,7 @@ mod tests {
         let call_params = CallParameters::new(Some(lp_token_balance), Some(lp_asset_id), None);
         contract_methods
             .withdraw(wallet.address().into())
-            .call_params(call_params)
+            .call_params(call_params)?
             .append_variable_outputs(1)
             .call()
             .await?;
