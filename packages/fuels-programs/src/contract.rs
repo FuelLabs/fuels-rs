@@ -664,14 +664,18 @@ where
 
     /// Call a contract's method on the node, in a state-modifying manner.
     pub async fn call(self) -> Result<FuelCallResponse<D>> {
-        self.call_or_simulate(false).await
+        self.call_or_simulate(false)
+            .await
+            .map_err(|err| decode_revert_error(err, &self.log_decoder))
     }
 
     /// Call a contract's method on the node, in a simulated manner, meaning the state of the
     /// blockchain is *not* modified but simulated.
     ///
     pub async fn simulate(&self) -> Result<FuelCallResponse<D>> {
-        self.call_or_simulate(true).await
+        self.call_or_simulate(true)
+            .await
+            .map_err(|err| decode_revert_error(err, &self.log_decoder))
     }
 
     async fn call_or_simulate(&self, simulate: bool) -> Result<FuelCallResponse<D>> {
@@ -684,7 +688,6 @@ where
         };
 
         self.get_response(receipts)
-            .map_err(|err| decode_revert_error(err, &self.log_decoder))
     }
 
     /// Simulates the call and attempts to resolve missing tx dependencies.
@@ -801,7 +804,9 @@ impl MultiContractCallHandler {
 
     /// Call contract methods on the node, in a state-modifying manner.
     pub async fn call<D: Tokenizable + Debug>(&self) -> Result<FuelCallResponse<D>> {
-        self.call_or_simulate(false).await
+        self.call_or_simulate(false)
+            .await
+            .map_err(|err| decode_revert_error(err, &self.log_decoder))
     }
 
     /// Call contract methods on the node, in a simulated manner, meaning the state of the
@@ -810,10 +815,15 @@ impl MultiContractCallHandler {
     ///
     /// [call]: Self::call
     pub async fn simulate<D: Tokenizable + Debug>(&self) -> Result<FuelCallResponse<D>> {
-        self.call_or_simulate(true).await
+        self.call_or_simulate(true)
+            .await
+            .map_err(|err| decode_revert_error(err, &self.log_decoder))
     }
 
-    async fn call_or_simulate<D: Tokenizable + Debug>(&self, simulate: bool) -> Result<FuelCallResponse<D>> {
+    async fn call_or_simulate<D: Tokenizable + Debug>(
+        &self,
+        simulate: bool,
+    ) -> Result<FuelCallResponse<D>> {
         let provider = self.wallet.get_provider()?;
         let tx = self.get_tx().await?;
 
@@ -824,7 +834,6 @@ impl MultiContractCallHandler {
         };
 
         self.get_response(receipts)
-            .map_err(|err| decode_revert_error(err, &self.log_decoder))
     }
 
     /// Simulates a call without needing to resolve the generic for the return type
@@ -848,7 +857,7 @@ impl MultiContractCallHandler {
             match result {
                 Err(Error::RevertTransactionError(_, receipts))
                     if ContractCall::is_missing_output_variables(&receipts) =>
-                {                    
+                {
                     self.contract_calls
                         .iter_mut()
                         .take(1)
@@ -856,7 +865,6 @@ impl MultiContractCallHandler {
                 }
 
                 Err(Error::RevertTransactionError(_, ref receipts)) => {
-
                     if let Some(receipt) = ContractCall::find_contract_not_in_inputs(receipts) {
                         let contract_id = Bech32ContractId::from(*receipt.contract_id().unwrap());
                         self.contract_calls

@@ -209,7 +209,7 @@ impl Provider {
             .client
             .dry_run_opt(&tx.clone().into(), Some(false))
             .await?;
-        
+
         Self::check_tx_success_from_receipts(receipts)
     }
 
@@ -221,7 +221,7 @@ impl Provider {
             ) {
                 return Err(Error::RevertTransactionError(Default::default(), receipts));
             }
-            
+
         Ok(receipts)
     }
 

@@ -1,12 +1,12 @@
 use std::{collections::HashSet, fmt::Debug, marker::PhantomData};
 
-use fuel_tx::{ContractId, Input, Output, Receipt, ScriptExecutionResult};
+use fuel_tx::{ContractId, Input, Output, Receipt};
 use fuel_types::bytes::padded_len_usize;
 use fuels_core::{abi_encoder::UnresolvedBytes, offsets::base_offset};
 use fuels_signers::{provider::Provider, Signer, WalletUnlocked};
 use fuels_types::{
     bech32::Bech32ContractId,
-    errors::{Error, Result},
+    errors::Result,
     parameters::{CallParameters, TxParameters},
     script_transaction::{ScriptTransaction, Transaction},
     traits::{Parameterize, Tokenizable},
@@ -176,7 +176,7 @@ where
     /// in its `value` field as an actual typed value `D` (if your method returns `bool`,
     /// it will be a bool, works also for structs thanks to the `abigen!()`).
     /// The other field of [`FuelCallResponse`], `receipts`, contains the receipts of the transaction.
-    async fn call_or_simulate(&self, simulate: bool) -> Result<Vec<Receipt>> {
+    async fn call_or_simulate(&self, simulate: bool) -> Result<FuelCallResponse<D>> {
         let chain_info = self.provider.chain_info().await?;
         let tx = self.get_tx().await?;
 
@@ -185,17 +185,19 @@ where
             &chain_info.consensus_parameters,
         )?;
 
-        if simulate {
-            Ok(self.provider.dry_run(&tx).await?)
+        let receipts = if simulate {
+            self.provider.dry_run(&tx).await?
         } else {
-            Ok(self.provider.send_transaction(&tx).await?)
-        }
+            self.provider.send_transaction(&tx).await?
+        };
+
+        self.get_response(receipts)
     }
 
     /// Call a script on the node, in a state-modifying manner.
     pub async fn call(self) -> Result<FuelCallResponse<D>> {
-        let receipts = self.call_or_simulate(false).await?;
-        self.get_response(receipts)
+        self.call_or_simulate(false)
+            .await
             .map_err(|err| decode_revert_error(err, &self.log_decoder))
     }
 
@@ -205,16 +207,8 @@ where
     ///
     /// [`call`]: Self::call
     pub async fn simulate(self) -> Result<FuelCallResponse<D>> {
-        let receipts = self.call_or_simulate(true).await?;
-        if receipts
-                .iter()
-                .any(|r|
-                    matches!(r, Receipt::ScriptResult { result, .. } if *result != ScriptExecutionResult::Success)
-            ) {
-                return Err(Error::RevertTransactionError(Default::default(), receipts));
-            }
-
-        self.get_response(receipts)
+        self.call_or_simulate(true)
+            .await
             .map_err(|err| decode_revert_error(err, &self.log_decoder))
     }
 
