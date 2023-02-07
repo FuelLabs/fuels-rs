@@ -10,7 +10,7 @@ use std::{
 
 use fuel_tx::{
     Address, AssetId, Bytes32, Contract as FuelContract, ContractId, Output, Receipt, Salt,
-    ScriptExecutionResult, StorageSlot, Transaction as FuelTransaction,
+    StorageSlot, Transaction as FuelTransaction,
 };
 use fuel_vm::fuel_asm::PanicReason;
 use fuels_core::{
@@ -664,26 +664,24 @@ where
 
     /// Call a contract's method on the node, in a state-modifying manner.
     pub async fn call(self) -> Result<FuelCallResponse<D>> {
-        let tx = self.get_tx().await?;
-
-        let receipts = self.provider.send_transaction(&tx).await?;
-        self.get_response(receipts)
-            .map_err(|err| decode_revert_error(err, &self.log_decoder))
+        self.call_or_simulate(false).await
     }
 
     /// Call a contract's method on the node, in a simulated manner, meaning the state of the
     /// blockchain is *not* modified but simulated.
     ///
     pub async fn simulate(&self) -> Result<FuelCallResponse<D>> {
+        self.call_or_simulate(true).await
+    }
+
+    async fn call_or_simulate(&self, simulate: bool) -> Result<FuelCallResponse<D>> {
         let tx = self.get_tx().await?;
-        let receipts = self.provider.dry_run(&tx).await?;
-        if receipts
-            .iter()
-            .any(|r|
-                matches!(r, Receipt::ScriptResult { result, .. } if *result != ScriptExecutionResult::Success)
-        ) {
-            return Err(Error::RevertTransactionError(Default::default(), receipts));
-        }
+
+        let receipts = if simulate {
+            self.provider.dry_run(&tx).await?
+        } else {
+            self.provider.send_transaction(&tx).await?
+        };
 
         self.get_response(receipts)
             .map_err(|err| decode_revert_error(err, &self.log_decoder))
@@ -803,12 +801,7 @@ impl MultiContractCallHandler {
 
     /// Call contract methods on the node, in a state-modifying manner.
     pub async fn call<D: Tokenizable + Debug>(&self) -> Result<FuelCallResponse<D>> {
-        let provider = self.wallet.get_provider()?;
-        let tx = self.get_tx().await?;
-        let receipts = provider.send_transaction(&tx).await?;
-
-        self.get_response(receipts)
-            .map_err(|err| decode_revert_error(err, &self.log_decoder))
+        self.call_or_simulate(false).await
     }
 
     /// Call contract methods on the node, in a simulated manner, meaning the state of the
@@ -817,17 +810,18 @@ impl MultiContractCallHandler {
     ///
     /// [call]: Self::call
     pub async fn simulate<D: Tokenizable + Debug>(&self) -> Result<FuelCallResponse<D>> {
+        self.call_or_simulate(true).await
+    }
+
+    async fn call_or_simulate<D: Tokenizable + Debug>(&self, simulate: bool) -> Result<FuelCallResponse<D>> {
         let provider = self.wallet.get_provider()?;
         let tx = self.get_tx().await?;
-        let receipts = provider.dry_run(&tx).await?;
 
-        if receipts
-                .iter()
-                .any(|r|
-                    matches!(r, Receipt::ScriptResult { result, .. } if *result != ScriptExecutionResult::Success)
-            ) {
-                return Err(Error::RevertTransactionError(Default::default(), receipts));
-            }
+        let receipts = if simulate {
+            provider.dry_run(&tx).await?
+        } else {
+            provider.send_transaction(&tx).await?
+        };
 
         self.get_response(receipts)
             .map_err(|err| decode_revert_error(err, &self.log_decoder))
@@ -835,8 +829,8 @@ impl MultiContractCallHandler {
 
     /// Simulates a call without needing to resolve the generic for the return type
     async fn simulate_without_decode(&self) -> Result<()> {
-        let tx = self.get_tx().await?;
         let provider = self.wallet.get_provider()?;
+        let tx = self.get_tx().await?;
 
         provider.dry_run(&tx).await?;
 
@@ -854,7 +848,7 @@ impl MultiContractCallHandler {
             match result {
                 Err(Error::RevertTransactionError(_, receipts))
                     if ContractCall::is_missing_output_variables(&receipts) =>
-                {
+                {                    
                     self.contract_calls
                         .iter_mut()
                         .take(1)
@@ -862,6 +856,7 @@ impl MultiContractCallHandler {
                 }
 
                 Err(Error::RevertTransactionError(_, ref receipts)) => {
+
                     if let Some(receipt) = ContractCall::find_contract_not_in_inputs(receipts) {
                         let contract_id = Bech32ContractId::from(*receipt.contract_id().unwrap());
                         self.contract_calls

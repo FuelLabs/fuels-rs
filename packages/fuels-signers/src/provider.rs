@@ -10,7 +10,7 @@ use fuel_core_client::client::{
     types::TransactionStatus,
     FuelClient, PageDirection, PaginatedResult, PaginationRequest,
 };
-use fuel_tx::{AssetId, ConsensusParameters, Receipt};
+use fuel_tx::{AssetId, ConsensusParameters, Receipt, ScriptExecutionResult};
 use fuels_types::{
     bech32::{Bech32Address, Bech32ContractId},
     block::Block,
@@ -195,18 +195,34 @@ impl Provider {
         Ok(self.client.node_info().await?.into())
     }
 
-    pub async fn dry_run<T: Transaction + Clone>(&self, tx: &T) -> ProviderResult<Vec<Receipt>> {
-        Ok(self.client.dry_run(&tx.clone().into()).await?)
+    pub async fn dry_run<T: Transaction + Clone>(&self, tx: &T) -> Result<Vec<Receipt>> {
+        let receipts = self.client.dry_run(&tx.clone().into()).await?;
+
+        Self::check_tx_success_from_receipts(receipts)
     }
 
     pub async fn dry_run_no_validation<T: Transaction + Clone>(
         &self,
         tx: &T,
-    ) -> ProviderResult<Vec<Receipt>> {
-        Ok(self
+    ) -> Result<Vec<Receipt>> {
+        let receipts = self
             .client
             .dry_run_opt(&tx.clone().into(), Some(false))
-            .await?)
+            .await?;
+        
+        Self::check_tx_success_from_receipts(receipts)
+    }
+
+    pub(crate) fn check_tx_success_from_receipts(receipts: Vec<Receipt>) -> Result<Vec<Receipt>> {
+        if receipts
+                .iter()
+                .any(|r|
+                    matches!(r, Receipt::ScriptResult { result, .. } if *result != ScriptExecutionResult::Success)
+            ) {
+                return Err(Error::RevertTransactionError(Default::default(), receipts));
+            }
+            
+        Ok(receipts)
     }
 
     /// Gets all coins owned by address `from`, with asset ID `asset_id`, *even spent ones*. This
@@ -485,7 +501,7 @@ impl Provider {
         &self,
         tx: &T,
         tolerance: f64,
-    ) -> ProviderResult<u64> {
+    ) -> Result<u64> {
         let gas_used = self.get_gas_used(&self.dry_run_no_validation(tx).await?);
         Ok((gas_used as f64 * (1.0 + tolerance)) as u64)
     }
