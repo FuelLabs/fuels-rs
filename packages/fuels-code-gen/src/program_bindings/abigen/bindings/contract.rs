@@ -147,6 +147,7 @@ pub(crate) fn expand_fn(
 
     let fn_selector = generator.fn_selector();
     let arg_tokens = generator.tokenized_args();
+    let is_payable = abi_fun.is_payable();
     let body = quote! {
             let provider = self.wallet.get_provider().expect("Provider not set up");
             ::fuels::programs::contract::Contract::method_hash(
@@ -155,7 +156,8 @@ pub(crate) fn expand_fn(
                 &self.wallet,
                 #fn_selector,
                 &#arg_tokens,
-                self.log_decoder.clone()
+                self.log_decoder.clone(),
+                #is_payable,
             )
             .expect("method not found (this should never happen)")
     };
@@ -349,7 +351,8 @@ mod tests {
                         ::fuels::types::traits::Tokenizable::into_token(s_1),
                         ::fuels::types::traits::Tokenizable::into_token(s_2)
                     ],
-                    self.log_decoder.clone()
+                    self.log_decoder.clone(),
+                    false,
                 )
                 .expect("method not found (this should never happen)")
             }
@@ -409,7 +412,8 @@ mod tests {
                         &[<bool as ::fuels::types::traits::Parameterize>::param_type()]
                     ),
                     &[::fuels::types::traits::Tokenizable::into_token(bimbam)],
-                    self.log_decoder.clone()
+                    self.log_decoder.clone(),
+                    false,
                 )
                 .expect("method not found (this should never happen)")
             }
@@ -525,7 +529,8 @@ mod tests {
                     &[::fuels::types::traits::Tokenizable::into_token(
                         the_only_allowed_input
                     )],
-                    self.log_decoder.clone()
+                    self.log_decoder.clone(),
+                    false,
                 )
                 .expect("method not found (this should never happen)")
             }

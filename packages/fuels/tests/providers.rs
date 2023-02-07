@@ -367,7 +367,7 @@ async fn test_amount_and_asset_forwarding() -> Result<()> {
     let response = contract_methods
         .get_msg_amount()
         .tx_params(tx_params)
-        .call_params(call_params)
+        .call_params(call_params)?
         .call()
         .await?;
 
@@ -399,7 +399,7 @@ async fn test_amount_and_asset_forwarding() -> Result<()> {
     let response = contract_methods
         .get_msg_amount()
         .tx_params(tx_params)
-        .call_params(call_params)
+        .call_params(call_params)?
         .call()
         .await?;
 
@@ -503,7 +503,7 @@ async fn test_call_param_gas_errors() -> Result<()> {
     let response = contract_methods
         .initialize_counter(42)
         .tx_params(TxParameters::new(None, Some(3000), None))
-        .call_params(CallParameters::new(None, None, Some(1)))
+        .call_params(CallParameters::new(None, None, Some(1)))?
         .call()
         .await
         .expect_err("should error");
@@ -515,7 +515,7 @@ async fn test_call_param_gas_errors() -> Result<()> {
     let response = contract_methods
         .initialize_counter(42)
         .tx_params(TxParameters::new(None, Some(1), None))
-        .call_params(CallParameters::new(None, None, Some(1000)))
+        .call_params(CallParameters::new(None, None, Some(1000)))?
         .call()
         .await
         .expect_err("should error");
