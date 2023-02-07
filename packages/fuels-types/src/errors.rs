@@ -25,6 +25,8 @@ pub enum Error {
     ProviderError(String),
     #[error("Validation error: {0}")]
     ValidationError(#[from] CheckError),
+    #[error("Tried to forward assets to a contract method that is not payable.")]
+    AssetsForwardedToNonPayableMethod,
     #[error("Revert transaction error: {reason},\n receipts: {receipts:?}")]
     RevertTransactionError {
         reason: String,
