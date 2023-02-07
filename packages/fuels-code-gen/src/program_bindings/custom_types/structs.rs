@@ -2,10 +2,8 @@ use std::collections::HashSet;
 
 use fuel_abi_types::utils::extract_custom_type_name;
 use proc_macro2::{Ident, TokenStream};
-use quote::{quote, ToTokens};
+use quote::quote;
 
-use crate::program_bindings::utils;
-use crate::utils::type_path_lookup;
 use crate::{
     error::{error, Result},
     program_bindings::{
@@ -14,7 +12,11 @@ use crate::{
         generated_code::GeneratedCode,
         utils::Component,
     },
-    utils::{ident, TypePath},
+    utils::{
+        ident,
+        type_path_lookup::{fuels_core_path, fuels_macros_path, fuels_types_path},
+        TypePath,
+    },
 };
 
 /// Returns a TokenStream containing the declaration, `Parameterize`,
@@ -53,9 +55,9 @@ fn struct_decl(
         .iter()
         .map(|component| component.as_struct_member());
 
-    let fuels_types = type_path_lookup::fuels_types_path(no_std);
-    let fuels_macros = type_path_lookup::fuels_macros_path(no_std);
-    let fuels_core = type_path_lookup::fuels_core_path(no_std);
+    let fuels_types = fuels_types_path(no_std);
+    let fuels_macros = fuels_macros_path(no_std);
+    let fuels_core = fuels_core_path(no_std);
 
     let path_redirects = no_std.then(|| {
         let fuels_types = fuels_types.to_string();

@@ -12,14 +12,13 @@ use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 use regex::Regex;
 
-use crate::utils::type_path_lookup::fuels_types_path;
 use crate::{
     error::{error, Result},
     program_bindings::{
         abi_types::{FullTypeApplication, FullTypeDeclaration},
         utils::get_sdk_provided_types,
     },
-    utils::{ident, safe_ident, TypePath},
+    utils::{ident, safe_ident, type_path_lookup::fuels_types_path, TypePath},
 };
 
 // Represents a type alongside its generic parameters. Can be converted into a

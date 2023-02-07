@@ -3,17 +3,18 @@ use std::collections::HashSet;
 use inflector::Inflector;
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
-use type_path_lookup::fuels_types_path;
 
-use crate::utils::type_path_lookup;
-use crate::utils::type_path_lookup::std_lib_path;
 use crate::{
     error::Result,
     program_bindings::{
         abi_types::{FullTypeApplication, FullTypeDeclaration},
         resolved_type::{resolve_type, ResolvedType},
     },
-    utils::{safe_ident, TypePath},
+    utils::{
+        safe_ident,
+        type_path_lookup::{fuels_types_path, std_lib_path},
+        TypePath,
+    },
 };
 
 // Represents a component of either a struct(field name) or an enum(variant
