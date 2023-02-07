@@ -100,8 +100,8 @@ pub fn map_revert_error(mut err: Error, log_decoder: &LogDecoder) -> Error {
     } = err
     {
         match revert_id {
-            FAILED_REQUIRE_SIGNAL => *reason = decode_require_revert(log_decoder, &receipts),
-            FAILED_ASSERT_EQ_SIGNAL => *reason = decode_assert_eq_revert(log_decoder, &receipts),
+            FAILED_REQUIRE_SIGNAL => *reason = decode_require_revert(log_decoder, receipts),
+            FAILED_ASSERT_EQ_SIGNAL => *reason = decode_assert_eq_revert(log_decoder, receipts),
             FAILED_ASSERT_SIGNAL => *reason = "assertion failed.".into(),
             FAILED_SEND_MESSAGE_SIGNAL => *reason = "failed to send message.".into(),
             FAILED_TRANSFER_TO_ADDRESS_SIGNAL => *reason = "failed transfer to address.".into(),
