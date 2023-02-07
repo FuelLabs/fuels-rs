@@ -1,7 +1,7 @@
 use std::{collections::HashSet, iter, vec};
 
 use fuel_tx::{AssetId, Bytes32, ContractId, Input, Output, TxPointer, UtxoId};
-use fuel_types::{Immediate18, Word};
+use fuel_types::Word;
 use fuel_vm::fuel_asm::{op, RegId};
 use fuels_core::constants::BASE_ASSET_ID;
 use fuels_types::{bech32::Bech32Address, constants::WORD_SIZE, resource::Resource};
@@ -154,13 +154,29 @@ pub(crate) fn build_script_data_from_contract_calls(
 /// Note that these are soft rules as we're picking this addresses simply because they
 /// non-reserved register.
 pub(crate) fn get_single_call_instructions(offsets: &CallOpcodeParamsOffset) -> Vec<u8> {
+    let call_data_offset = offsets
+        .call_data_offset
+        .try_into()
+        .expect("call_data_offset out of range");
+    let gas_forwarded_offset = offsets
+        .gas_forwarded_offset
+        .try_into()
+        .expect("gas_forwarded_offset out of range");
+    let amount_offset = offsets
+        .amount_offset
+        .try_into()
+        .expect("amount_offset out of range");
+    let asset_id_offset = offsets
+        .asset_id_offset
+        .try_into()
+        .expect("asset_id_offset out of range");
     let instructions = [
-        op::movi(0x10, offsets.call_data_offset as Immediate18),
-        op::movi(0x11, offsets.gas_forwarded_offset as Immediate18),
+        op::movi(0x10, call_data_offset),
+        op::movi(0x11, gas_forwarded_offset),
         op::lw(0x11, 0x11, 0),
-        op::movi(0x12, offsets.amount_offset as Immediate18),
+        op::movi(0x12, amount_offset),
         op::lw(0x12, 0x12, 0),
-        op::movi(0x13, offsets.asset_id_offset as Immediate18),
+        op::movi(0x13, asset_id_offset),
         op::call(0x10, 0x12, 0x13, 0x11),
     ];
 
