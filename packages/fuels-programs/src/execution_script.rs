@@ -46,7 +46,6 @@ where
         let consensus_parameters = fuels_signers::Account::get_provider(account)?
             .consensus_parameters()
             .await?;
-        dbg!(&consensus_parameters);
         // Calculate instructions length for call instructions
         // Use placeholder for call param offsets, we only care about the length
         let calls_instructions_len =

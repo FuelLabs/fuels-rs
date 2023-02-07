@@ -9,7 +9,6 @@ use fuels::{
     tx::Receipt,
     types::{block::Block, errors::error, message::Message},
 };
-use fuels_types::errors::Error::WalletError;
 
 #[tokio::test]
 async fn test_provider_launch_and_connect() -> Result<()> {
