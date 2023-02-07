@@ -652,41 +652,21 @@ where
         .await
     }
 
-    /// Call a contract's method on the node. If `simulate == true`, then the call is done in a
-    /// read-only manner, using a `dry-run`. The [`FuelCallResponse`] struct contains the method's
-    /// value in its `value` field as an actual typed value `D` (if your method returns `bool`,
-    /// it will be a bool, works also for structs thanks to the `abigen!()`).
-    /// The other field of [`FuelCallResponse`], `receipts`, contains the receipts of the transaction.
-    async fn call_or_simulate(&self, simulate: bool) -> Result<Vec<Receipt>> {
-        let chain_info = self.provider.chain_info().await?;
-        let tx = self.get_tx().await?;
-
-        tx.check_without_signatures(
-            chain_info.latest_block.header.height,
-            &chain_info.consensus_parameters,
-        )?;
-
-        if simulate {
-            Ok(self.provider.dry_run(&tx).await?)
-        } else {
-            Ok(self.provider.send_transaction(&tx).await?)
-        }
-    }
-
     /// Call a contract's method on the node, in a state-modifying manner.
     pub async fn call(self) -> Result<FuelCallResponse<D>> {
-        let receipts = self.call_or_simulate(false).await?;
+        let tx = self.get_tx().await?;
+
+        let receipts = self.provider.send_transaction(&tx).await?;
         self.get_response(receipts)
             .map_err(|err| decode_revert_error(err, &self.log_decoder))
     }
 
     /// Call a contract's method on the node, in a simulated manner, meaning the state of the
     /// blockchain is *not* modified but simulated.
-    /// It is the same as the [`call`] method because the API is more user-friendly this way.
     ///
-    /// [`call`]: Self::call
-    pub async fn simulate(self) -> Result<FuelCallResponse<D>> {
-        let receipts = self.call_or_simulate(true).await?;
+    pub async fn simulate(&self) -> Result<FuelCallResponse<D>> {
+        let tx = self.get_tx().await?;
+        let receipts = self.provider.dry_run(&tx).await?;
         if receipts
             .iter()
             .any(|r|
@@ -705,7 +685,7 @@ where
         let attempts = max_attempts.unwrap_or(DEFAULT_TX_DEP_ESTIMATION_ATTEMPTS);
 
         for _ in 0..attempts {
-            let result = self.call_or_simulate(true).await;
+            let result = self.simulate().await;
 
             match result {
                 Err(Error::RevertTransactionError(_, receipts))
@@ -729,7 +709,7 @@ where
         }
 
         // confirm if successful or propagate error
-        match self.call_or_simulate(true).await {
+        match self.simulate().await {
             Ok(_) => Ok(self),
             Err(e) => Err(e),
         }
@@ -813,7 +793,10 @@ impl MultiContractCallHandler {
 
     /// Call contract methods on the node, in a state-modifying manner.
     pub async fn call<D: Tokenizable + Debug>(&self) -> Result<FuelCallResponse<D>> {
-        let receipts = self.call_or_simulate::<D>(false).await?;
+        let provider = self.wallet.get_provider()?;
+        let tx = self.get_tx().await?;
+        let receipts = provider.send_transaction(&tx).await?;
+
         self.get_response(receipts)
             .map_err(|err| decode_revert_error(err, &self.log_decoder))
     }
@@ -824,7 +807,10 @@ impl MultiContractCallHandler {
     ///
     /// [call]: Self::call
     pub async fn simulate<D: Tokenizable + Debug>(&self) -> Result<FuelCallResponse<D>> {
-        let receipts = self.call_or_simulate::<D>(true).await?;
+        let provider = self.wallet.get_provider()?;
+        let tx = self.get_tx().await?;
+        let receipts = provider.dry_run(&tx).await?;
+
         if receipts
                 .iter()
                 .any(|r|
@@ -835,26 +821,6 @@ impl MultiContractCallHandler {
 
         self.get_response(receipts)
             .map_err(|err| decode_revert_error(err, &self.log_decoder))
-    }
-
-    async fn call_or_simulate<D: Tokenizable + Debug>(
-        &self,
-        simulate: bool,
-    ) -> Result<Vec<Receipt>> {
-        let provider = self.wallet.get_provider()?;
-        let chain_info = provider.chain_info().await?;
-        let tx = self.get_tx().await?;
-
-        tx.check_without_signatures(
-            chain_info.latest_block.header.height,
-            &chain_info.consensus_parameters,
-        )?;
-
-        if simulate {
-            Ok(provider.dry_run(&tx).await?)
-        } else {
-            Ok(provider.send_transaction(&tx).await?)
-        }
     }
 
     /// Simulates a call without needing to resolve the generic for the return type

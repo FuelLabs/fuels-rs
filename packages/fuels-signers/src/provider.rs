@@ -127,6 +127,12 @@ impl Provider {
             ));
         }
 
+        let chain_info = self.chain_info().await?;
+        tx.check_without_signatures(
+            chain_info.latest_block.header.height,
+            &chain_info.consensus_parameters,
+        )?;
+
         let (status, receipts) = self.submit_with_feedback(tx.clone()).await?;
 
         if let TransactionStatus::Failure { reason, .. } = status {
