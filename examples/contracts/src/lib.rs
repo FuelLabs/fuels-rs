@@ -313,14 +313,14 @@ mod tests {
         let response = contract_methods
             .get_msg_amount() // Our contract method.
             .tx_params(tx_params) // Chain the tx params setting method.
-            .call_params(call_params) // Chain the call params setting method.
+            .call_params(call_params)? // Chain the call params setting method.
             .call() // Perform the contract call.
             .await?;
         // ANCHOR_END: call_parameters
         // ANCHOR: call_parameters_default
         let response = contract_methods
             .initialize_counter(42)
-            .call_params(CallParameters::default())
+            .call_params(CallParameters::default())?
             .call()
             .await?;
 
@@ -586,7 +586,7 @@ mod tests {
         let response = contract_methods
             .get_msg_amount() // Our contract method.
             .tx_params(tx_params) // Chain the tx params setting method.
-            .call_params(call_params) // Chain the call params setting method.
+            .call_params(call_params)? // Chain the call params setting method.
             .call() // Perform the contract call.
             .await?;
         // ANCHOR_END: call_params_gas
