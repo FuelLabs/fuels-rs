@@ -2,8 +2,10 @@ use std::collections::HashSet;
 
 use fuel_abi_types::utils::extract_custom_type_name;
 use proc_macro2::{Ident, TokenStream};
-use quote::quote;
+use quote::{quote, ToTokens};
 
+use crate::program_bindings::utils;
+use crate::utils::type_path_lookup;
 use crate::{
     error::{error, Result},
     program_bindings::{
@@ -28,7 +30,7 @@ pub(crate) fn expand_custom_struct(
         .ok_or_else(|| error!("Couldn't parse struct name from type field {type_field}"))?;
     let struct_ident = ident(&struct_name);
 
-    let components = extract_components(type_decl, true, shared_types)?;
+    let components = extract_components(type_decl, true, shared_types, no_std)?;
     let generic_parameters = extract_generic_parameters(type_decl)?;
 
     let code = struct_decl(&struct_ident, &components, &generic_parameters, no_std);
@@ -47,15 +49,24 @@ fn struct_decl(
     generic_parameters: &Vec<TokenStream>,
     no_std: bool,
 ) -> TokenStream {
-    let fields = components.iter().map(
-        |Component {
-             field_name,
-             field_type,
-         }| {
-            quote! { pub #field_name: #field_type }
-        },
-    );
-    let maybe_disable_std = no_std.then(|| quote! {#[NoStd]});
+    let fields = components
+        .iter()
+        .map(|component| component.as_struct_member());
+
+    let fuels_types = type_path_lookup::fuels_types_path(no_std);
+    let fuels_macros = type_path_lookup::fuels_macros_path(no_std);
+    let fuels_core = type_path_lookup::fuels_core_path(no_std);
+
+    let path_redirects = no_std.then(|| {
+        let fuels_types = fuels_types.to_string();
+        let fuels_core = fuels_core.to_string();
+        quote! {
+            #[FuelsTypesPath(#fuels_types)]
+            #[FuelsCorePath(#fuels_core)]
+        }
+    });
+
+    let std_disable_switch = no_std.then(|| quote! {#[NoStd]});
 
     quote! {
         #[derive(
@@ -63,14 +74,13 @@ fn struct_decl(
             Debug,
             Eq,
             PartialEq,
-            ::fuels::macros::Parameterize,
-            ::fuels::macros::Tokenizable,
-            ::fuels::macros::TryFrom
+            #fuels_macros::Parameterize,
+            #fuels_macros::Tokenizable,
+            #fuels_macros::TryFrom
         )]
-        #[FuelsTypesPath("::fuels::types")]
-        #[FuelsCorePath("::fuels::core")]
-        #maybe_disable_std
-        pub struct #struct_ident <#(#generic_parameters: ::fuels::types::traits::Tokenizable + ::fuels::types::traits::Parameterize, )*> {
+        #path_redirects
+        #std_disable_switch
+        pub struct #struct_ident <#(#generic_parameters: #fuels_types::traits::Tokenizable + #fuels_types::traits::Parameterize, )*> {
             #(#fields),*
         }
     }

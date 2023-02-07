@@ -26,9 +26,10 @@ pub(crate) fn script_bindings(
         return Ok(GeneratedCode::default());
     }
 
-    let main_function = expand_fn(&abi, shared_types)?;
+    let main_function = expand_fn(&abi, shared_types, no_std)?;
 
-    let log_type_lookup = logs_lookup_instantiation_code(None, &abi.logged_types, shared_types);
+    let log_type_lookup =
+        logs_lookup_instantiation_code(None, &abi.logged_types, shared_types, no_std);
 
     let code = quote! {
         #[derive(Debug)]
@@ -63,9 +64,10 @@ pub(crate) fn script_bindings(
 fn expand_fn(
     abi: &FullProgramABI,
     shared_types: &HashSet<FullTypeDeclaration>,
+    no_std: bool,
 ) -> Result<TokenStream> {
     let fun = extract_main_fn(&abi.functions)?;
-    let mut generator = FunctionGenerator::new(fun, shared_types)?;
+    let mut generator = FunctionGenerator::new(fun, shared_types, no_std)?;
 
     let arg_tokens = generator.tokenized_args();
     let body = quote! {

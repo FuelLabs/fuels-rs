@@ -32,7 +32,7 @@ pub(crate) fn expand_custom_enum(
     })?;
     let enum_ident = ident(&enum_name);
 
-    let components = extract_components(type_decl, false, shared_types)?;
+    let components = extract_components(type_decl, false, shared_types, no_std)?;
     if components.is_empty() {
         return Err(error!("Enum must have at least one component!"));
     }

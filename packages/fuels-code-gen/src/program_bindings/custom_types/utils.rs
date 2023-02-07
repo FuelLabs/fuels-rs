@@ -16,11 +16,12 @@ pub(crate) fn extract_components(
     type_decl: &FullTypeDeclaration,
     snake_case: bool,
     shared_types: &HashSet<FullTypeDeclaration>,
+    no_std: bool,
 ) -> Result<Vec<Component>> {
     type_decl
         .components
         .iter()
-        .map(|component| Component::new(component, snake_case, shared_types))
+        .map(|component| Component::new(component, snake_case, shared_types, no_std))
         .collect()
 }
 

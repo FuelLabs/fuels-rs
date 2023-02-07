@@ -3,7 +3,10 @@ use std::collections::HashSet;
 use inflector::Inflector;
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
+use type_path_lookup::fuels_types_path;
 
+use crate::utils::type_path_lookup;
+use crate::utils::type_path_lookup::std_lib_path;
 use crate::{
     error::Result,
     program_bindings::{
@@ -26,6 +29,7 @@ impl Component {
         component: &FullTypeApplication,
         snake_case: bool,
         shared_types: &HashSet<FullTypeDeclaration>,
+        no_std: bool,
     ) -> Result<Component> {
         let field_name = if snake_case {
             component.name.to_snake_case()
@@ -35,8 +39,17 @@ impl Component {
 
         Ok(Component {
             field_name: safe_ident(&field_name),
-            field_type: resolve_type(component, shared_types)?,
+            field_type: resolve_type(component, shared_types, no_std)?,
         })
+    }
+
+    pub(crate) fn as_struct_member(&self) -> TokenStream {
+        let field_name = &self.field_name;
+        let field_type = &self.field_type;
+
+        quote! {
+            pub #field_name: #field_type
+        }
     }
 }
 
@@ -76,7 +89,7 @@ mod tests {
     fn respects_snake_case_flag() -> Result<()> {
         let type_application = type_application_named("WasNotSnakeCased");
 
-        let sut = Component::new(&type_application, true, &Default::default())?;
+        let sut = Component::new(&type_application, true, &Default::default(), false)?;
 
         assert_eq!(sut.field_name, "was_not_snake_cased");
 
@@ -88,7 +101,7 @@ mod tests {
         {
             let type_application = type_application_named("if");
 
-            let sut = Component::new(&type_application, false, &Default::default())?;
+            let sut = Component::new(&type_application, false, &Default::default(), false)?;
 
             assert_eq!(sut.field_name, "if_");
         }
@@ -96,7 +109,7 @@ mod tests {
         {
             let type_application = type_application_named("let");
 
-            let sut = Component::new(&type_application, false, &Default::default())?;
+            let sut = Component::new(&type_application, false, &Default::default(), false)?;
 
             assert_eq!(sut.field_name, "let_");
         }
@@ -117,18 +130,20 @@ mod tests {
     }
 }
 
-pub(crate) fn get_sdk_provided_types() -> Vec<TypePath> {
+pub(crate) fn get_sdk_provided_types(no_std: bool) -> Vec<TypePath> {
+    let fuels_types = fuels_types_path(no_std).to_string();
+    let std_lib = std_lib_path(no_std).to_string();
     [
-        "::fuels::types::ContractId",
-        "::fuels::types::AssetId",
-        "::fuels::types::Address",
-        "::fuels::types::Identity",
-        "::fuels::types::EvmAddress",
-        "::fuels::types::B512",
-        "::fuels::types::RawSlice",
-        "::std::vec::Vec",
-        "::core::result::Result",
-        "::core::option::Option",
+        format!("{fuels_types}::ContractId"),
+        format!("{fuels_types}::AssetId"),
+        format!("{fuels_types}::Address"),
+        format!("{fuels_types}::Identity"),
+        format!("{fuels_types}::EvmAddress"),
+        format!("{fuels_types}::B512"),
+        format!("{fuels_types}::RawSlice"),
+        format!("{std_lib}::vec::Vec"),
+        "::core::result::Result".to_string(),
+        "::core::option::Option".to_string(),
     ]
     .map(|type_path_str| {
         TypePath::new(type_path_str).expect("known at compile time to be correctly formed")

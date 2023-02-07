@@ -64,7 +64,7 @@ fn should_skip_codegen(type_field: &str) -> bool {
 }
 
 fn is_type_sdk_provided(name: &str) -> bool {
-    get_sdk_provided_types()
+    get_sdk_provided_types(false)
         .iter()
         .any(|type_path| type_path.type_name() == name)
 }

@@ -12,6 +12,7 @@ use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 use regex::Regex;
 
+use crate::utils::type_path_lookup::fuels_types_path;
 use crate::{
     error::{error, Result},
     program_bindings::{
@@ -73,11 +74,12 @@ impl Display for ResolvedType {
 pub(crate) fn resolve_type(
     type_application: &FullTypeApplication,
     shared_types: &HashSet<FullTypeDeclaration>,
+    no_std: bool,
 ) -> Result<ResolvedType> {
     let recursively_resolve = |type_applications: &Vec<FullTypeApplication>| {
         type_applications
             .iter()
-            .map(|type_application| resolve_type(type_application, shared_types))
+            .map(|type_application| resolve_type(type_application, shared_types, no_std))
             .collect::<Result<Vec<_>>>()
             .expect("Failed to resolve types")
     };
@@ -105,6 +107,7 @@ pub(crate) fn resolve_type(
             move || recursively_resolve(&base_type.components),
             move || recursively_resolve(&type_application.type_arguments),
             is_shared,
+            no_std,
         )
     })
     .ok_or_else(|| error!("Could not resolve {type_field} to any known type"))
@@ -112,9 +115,10 @@ pub(crate) fn resolve_type(
 
 fn to_generic(
     type_field: &str,
-    _: impl Fn() -> Vec<ResolvedType>,
-    _: impl Fn() -> Vec<ResolvedType>,
-    _: bool,
+    _components_supplier: impl Fn() -> Vec<ResolvedType>,
+    _type_arguments_supplier: impl Fn() -> Vec<ResolvedType>,
+    _is_shared: bool,
+    _no_std: bool,
 ) -> Option<ResolvedType> {
     let name = extract_generic_name(type_field)?;
 
@@ -128,8 +132,9 @@ fn to_generic(
 fn to_array(
     type_field: &str,
     components_supplier: impl Fn() -> Vec<ResolvedType>,
-    _: impl Fn() -> Vec<ResolvedType>,
-    _: bool,
+    _type_arguments_supplier: impl Fn() -> Vec<ResolvedType>,
+    _is_shared: bool,
+    _no_std: bool,
 ) -> Option<ResolvedType> {
     let len = extract_array_len(type_field)?;
 
@@ -150,9 +155,10 @@ fn to_array(
 
 fn to_sized_ascii_string(
     type_field: &str,
-    _: impl Fn() -> Vec<ResolvedType>,
-    _: impl Fn() -> Vec<ResolvedType>,
-    _: bool,
+    _components_supplier: impl Fn() -> Vec<ResolvedType>,
+    _type_arguments_supplier: impl Fn() -> Vec<ResolvedType>,
+    _is_shared: bool,
+    no_std: bool,
 ) -> Option<ResolvedType> {
     let len = extract_str_len(type_field)?;
 
@@ -161,8 +167,9 @@ fn to_sized_ascii_string(
         generic_params: vec![],
     }];
 
+    let fuels_types = fuels_types_path(no_std);
     Some(ResolvedType {
-        type_name: quote! { ::fuels::types::SizedAsciiString },
+        type_name: quote! { #fuels_types::SizedAsciiString },
         generic_params,
     })
 }
@@ -170,8 +177,9 @@ fn to_sized_ascii_string(
 fn to_tuple(
     type_field: &str,
     components_supplier: impl Fn() -> Vec<ResolvedType>,
-    _: impl Fn() -> Vec<ResolvedType>,
-    _: bool,
+    _type_arguments_supplier: impl Fn() -> Vec<ResolvedType>,
+    _is_shared: bool,
+    _no_std: bool,
 ) -> Option<ResolvedType> {
     if has_tuple_format(type_field) {
         let inner_types = components_supplier();
@@ -190,9 +198,10 @@ fn to_tuple(
 
 fn to_simple_type(
     type_field: &str,
-    _: impl Fn() -> Vec<ResolvedType>,
-    _: impl Fn() -> Vec<ResolvedType>,
-    _: bool,
+    _components_supplier: impl Fn() -> Vec<ResolvedType>,
+    _type_arguments_supplier: impl Fn() -> Vec<ResolvedType>,
+    _is_shared: bool,
+    _no_std: bool,
 ) -> Option<ResolvedType> {
     match type_field {
         "u8" | "u16" | "u32" | "u64" | "bool" | "()" => {
@@ -211,13 +220,15 @@ fn to_simple_type(
 
 fn to_byte(
     type_field: &str,
-    _: impl Fn() -> Vec<ResolvedType>,
-    _: impl Fn() -> Vec<ResolvedType>,
-    _: bool,
+    _components_supplier: impl Fn() -> Vec<ResolvedType>,
+    _type_arguments_supplier: impl Fn() -> Vec<ResolvedType>,
+    _is_shared: bool,
+    no_std: bool,
 ) -> Option<ResolvedType> {
     if type_field == "byte" {
+        let fuels_types = fuels_types_path(no_std);
         Some(ResolvedType {
-            type_name: quote! {::fuels::types::Byte},
+            type_name: quote! {#fuels_types::Byte},
             generic_params: vec![],
         })
     } else {
@@ -227,13 +238,15 @@ fn to_byte(
 
 fn to_bits256(
     type_field: &str,
-    _: impl Fn() -> Vec<ResolvedType>,
-    _: impl Fn() -> Vec<ResolvedType>,
-    _: bool,
+    _components_supplier: impl Fn() -> Vec<ResolvedType>,
+    _type_arguments_supplier: impl Fn() -> Vec<ResolvedType>,
+    _is_shared: bool,
+    no_std: bool,
 ) -> Option<ResolvedType> {
     if type_field == "b256" {
+        let fuels_types = fuels_types_path(no_std);
         Some(ResolvedType {
-            type_name: quote! {::fuels::types::Bits256},
+            type_name: quote! {#fuels_types::Bits256},
             generic_params: vec![],
         })
     } else {
@@ -243,12 +256,14 @@ fn to_bits256(
 
 fn to_raw_slice(
     type_field: &str,
-    _: impl Fn() -> Vec<ResolvedType>,
-    _: impl Fn() -> Vec<ResolvedType>,
-    _: bool,
+    _components_supplier: impl Fn() -> Vec<ResolvedType>,
+    _type_arguments_supplier: impl Fn() -> Vec<ResolvedType>,
+    _is_shared: bool,
+    no_std: bool,
 ) -> Option<ResolvedType> {
     if type_field == "raw untyped slice" {
-        let type_name = quote! {::fuels::types::RawSlice};
+        let fuels_types = fuels_types_path(no_std);
+        let type_name = quote! {#fuels_types::RawSlice};
         Some(ResolvedType {
             type_name,
             generic_params: vec![],
@@ -260,13 +275,14 @@ fn to_raw_slice(
 
 fn to_custom_type(
     type_field: &str,
-    _: impl Fn() -> Vec<ResolvedType>,
+    _components_supplier: impl Fn() -> Vec<ResolvedType>,
     type_arguments_supplier: impl Fn() -> Vec<ResolvedType>,
     is_shared: bool,
+    no_std: bool,
 ) -> Option<ResolvedType> {
     let type_name = extract_custom_type_name(type_field)?;
 
-    let type_path = get_sdk_provided_types()
+    let type_path = get_sdk_provided_types(no_std)
         .into_iter()
         .find(|provided_type| provided_type.type_name() == type_name)
         .unwrap_or_else(|| {
@@ -307,7 +323,7 @@ mod tests {
         };
 
         let application = FullTypeApplication::from_counterpart(&type_application, &types);
-        let resolved_type = resolve_type(&application, &HashSet::default())
+        let resolved_type = resolve_type(&application, &HashSet::default(), false)
             .map_err(|e| e.combine(error!("failed to resolve {:?}", type_application)))?;
         let actual = resolved_type.to_token_stream().to_string();
 
@@ -587,15 +603,20 @@ mod tests {
 
     #[test]
     fn custom_types_uses_correct_path_for_sdk_provided_types() {
-        let provided_type_names = get_sdk_provided_types()
+        let provided_type_names = get_sdk_provided_types(false)
             .into_iter()
             .map(|type_path| (type_path.type_name().to_string(), type_path))
             .collect::<HashMap<_, _>>();
 
         for (type_name, expected_path) in provided_type_names {
-            let resolved_type =
-                to_custom_type(&format!("struct {type_name}"), Vec::new, Vec::new, false)
-                    .expect("Should have succeeded.");
+            let resolved_type = to_custom_type(
+                &format!("struct {type_name}"),
+                Vec::new,
+                Vec::new,
+                false,
+                false,
+            )
+            .expect("Should have succeeded.");
 
             let expected_type_name = expected_path.into_token_stream();
             assert_eq!(
@@ -606,8 +627,8 @@ mod tests {
     }
     #[test]
     fn handles_shared_types() {
-        let resolved_type =
-            to_custom_type("struct SomeStruct", Vec::new, Vec::new, true).expect("should succeed");
+        let resolved_type = to_custom_type("struct SomeStruct", Vec::new, Vec::new, true, false)
+            .expect("should succeed");
 
         assert_eq!(
             resolved_type.type_name.to_string(),

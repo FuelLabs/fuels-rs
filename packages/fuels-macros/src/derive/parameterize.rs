@@ -1,9 +1,10 @@
+use fuels_code_gen::utils::type_path_lookup::std_lib_path;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 use syn::{Data, DataEnum, DataStruct, DeriveInput, Error, Generics, Result};
 
 use crate::{
-    derive::utils::{find_attr, get_path_from_attr_or, std_lib_path},
+    derive::utils::{find_attr, get_path_from_attr_or},
     parse_utils::{
         extract_enum_members, extract_struct_members, validate_and_extract_generic_types,
     },

@@ -1,8 +1,9 @@
+use fuels_code_gen::utils::type_path_lookup::std_lib_path;
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{Data, DeriveInput, Error, Result};
 
-use crate::derive::utils::{find_attr, get_path_from_attr_or, std_lib_path};
+use crate::derive::utils::{find_attr, get_path_from_attr_or};
 
 pub fn generate_try_from_impl(input: DeriveInput) -> Result<TokenStream> {
     let fuels_types_path =

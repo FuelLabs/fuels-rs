@@ -23,10 +23,14 @@ pub(crate) struct FunctionGenerator {
 }
 
 impl FunctionGenerator {
-    pub fn new(fun: &FullABIFunction, shared_types: &HashSet<FullTypeDeclaration>) -> Result<Self> {
-        let args = function_arguments(fun.inputs(), shared_types)?;
+    pub fn new(
+        fun: &FullABIFunction,
+        shared_types: &HashSet<FullTypeDeclaration>,
+        no_std: bool,
+    ) -> Result<Self> {
+        let args = function_arguments(fun.inputs(), shared_types, no_std)?;
 
-        let output_type = resolve_fn_output_type(fun, shared_types)?;
+        let output_type = resolve_fn_output_type(fun, shared_types, no_std)?;
 
         Ok(Self {
             name: fun.name().to_string(),
@@ -76,18 +80,20 @@ impl FunctionGenerator {
 fn function_arguments(
     inputs: &[FullTypeApplication],
     shared_types: &HashSet<FullTypeDeclaration>,
+    no_std: bool,
 ) -> Result<Vec<Component>> {
     inputs
         .iter()
-        .map(|input| Component::new(input, true, shared_types))
+        .map(|input| Component::new(input, true, shared_types, no_std))
         .collect::<Result<_>>()
 }
 
 fn resolve_fn_output_type(
     function: &FullABIFunction,
     shared_types: &HashSet<FullTypeDeclaration>,
+    no_std: bool,
 ) -> Result<ResolvedType> {
-    let output_type = resolve_type(function.output(), shared_types)?;
+    let output_type = resolve_type(function.output(), shared_types, no_std)?;
     if output_type.uses_vectors() {
         Err(error!(
             "function '{}' contains a vector in its return type. This currently isn't supported.",
@@ -169,6 +175,7 @@ mod tests {
         let result = function_arguments(
             FullABIFunction::from_counterpart(&the_function, &types)?.inputs(),
             &HashSet::default(),
+            false,
         )?;
         let component = &result[0];
 
@@ -213,6 +220,7 @@ mod tests {
         let result = function_arguments(
             FullABIFunction::from_counterpart(&the_function, &types)?.inputs(),
             &HashSet::default(),
+            false,
         )?;
         let component = &result[0];
 
@@ -283,6 +291,7 @@ mod tests {
         let result = function_arguments(
             FullABIFunction::from_counterpart(&function, &types)?.inputs(),
             &HashSet::default(),
+            false,
         )?;
 
         assert_eq!(&result[0].field_name.to_string(), "bim_bam");
@@ -292,6 +301,7 @@ mod tests {
         let result = function_arguments(
             FullABIFunction::from_counterpart(&function, &types)?.inputs(),
             &HashSet::default(),
+            false,
         )?;
 
         assert_eq!(&result[0].field_name.to_string(), "bim_bam");
@@ -303,7 +313,7 @@ mod tests {
     #[test]
     fn correct_output_type() -> Result<()> {
         let function = given_a_fun();
-        let sut = FunctionGenerator::new(&function, &HashSet::default())?;
+        let sut = FunctionGenerator::new(&function, &HashSet::default(), false)?;
 
         let output_type = sut.output_type();
 
@@ -315,7 +325,7 @@ mod tests {
     #[test]
     fn correct_fn_selector_resolving_code() -> Result<()> {
         let function = given_a_fun();
-        let sut = FunctionGenerator::new(&function, &HashSet::default())?;
+        let sut = FunctionGenerator::new(&function, &HashSet::default(), false)?;
 
         let fn_selector_code = sut.fn_selector();
 
@@ -330,7 +340,7 @@ mod tests {
     #[test]
     fn correct_tokenized_args() -> Result<()> {
         let function = given_a_fun();
-        let sut = FunctionGenerator::new(&function, &HashSet::default())?;
+        let sut = FunctionGenerator::new(&function, &HashSet::default(), false)?;
 
         let tokenized_args = sut.tokenized_args();
 
@@ -346,7 +356,7 @@ mod tests {
     fn tokenizes_correctly() -> Result<()> {
         // given
         let function = given_a_fun();
-        let mut sut = FunctionGenerator::new(&function, &HashSet::default())?;
+        let mut sut = FunctionGenerator::new(&function, &HashSet::default(), false)?;
 
         sut.set_doc("This is a doc".to_string())
             .set_body(quote! {this is ze body});

@@ -1,4 +1,5 @@
-use fuels_code_gen::utils::TypePath;
+use fuels_code_gen::utils;
+use fuels_code_gen::utils::{type_path_lookup, TypePath};
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
 use syn::{
@@ -108,7 +109,7 @@ impl ExtractedVariants {
             quote! { #discriminant => ::core::result::Result::Ok(Self::#name #variant_value)}
         });
 
-        let std_lib = std_lib_path(no_std);
+        let std_lib = type_path_lookup::std_lib_path(no_std);
         quote! {
             match discriminant {
                 #(#match_discriminant,)*
@@ -139,13 +140,5 @@ fn get_variant_type(variant: &Variant) -> Result<Option<&Type>> {
             }
         }
         Fields::Unit => Ok(None),
-    }
-}
-
-pub(crate) fn std_lib_path(no_std: bool) -> TokenStream {
-    if no_std {
-        quote! {::alloc}
-    } else {
-        quote! {::std}
     }
 }

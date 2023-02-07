@@ -30,11 +30,12 @@ pub(crate) fn contract_bindings(
         Some(quote! {contract_id.clone()}),
         &abi.logged_types,
         shared_types,
+        no_std,
     );
 
     let methods_name = ident(&format!("{name}Methods"));
 
-    let contract_functions = expand_functions(&abi.functions, shared_types)?;
+    let contract_functions = expand_functions(&abi.functions, shared_types, no_std)?;
 
     let code = quote! {
         pub struct #name {
@@ -113,10 +114,11 @@ pub(crate) fn contract_bindings(
 fn expand_functions(
     functions: &[FullABIFunction],
     shared_types: &HashSet<FullTypeDeclaration>,
+    no_std: bool,
 ) -> Result<TokenStream> {
     functions
         .iter()
-        .map(|fun| expand_fn(fun, shared_types))
+        .map(|fun| expand_fn(fun, shared_types, no_std))
         .fold_ok(TokenStream::default(), |mut all_code, code| {
             all_code.append_all(code);
             all_code
@@ -132,8 +134,9 @@ fn expand_functions(
 pub(crate) fn expand_fn(
     abi_fun: &FullABIFunction,
     shared_types: &HashSet<FullTypeDeclaration>,
+    no_std: bool,
 ) -> Result<TokenStream> {
-    let mut generator = FunctionGenerator::new(abi_fun, shared_types)?;
+    let mut generator = FunctionGenerator::new(abi_fun, shared_types, no_std)?;
 
     generator.set_doc(format!(
         "Calls the contract's `{}` function",
@@ -326,6 +329,7 @@ mod tests {
         let result = expand_fn(
             &FullABIFunction::from_counterpart(&parsed_abi.functions[0], &types)?,
             &HashSet::default(),
+            false,
         )?;
 
         let expected = quote! {
@@ -397,6 +401,7 @@ mod tests {
         let result = expand_fn(
             &FullABIFunction::from_counterpart(&the_function, &types)?,
             &HashSet::default(),
+            false,
         );
 
         let expected = quote! {
@@ -506,6 +511,7 @@ mod tests {
         let result = expand_fn(
             &FullABIFunction::from_counterpart(&the_function, &types)?,
             &HashSet::default(),
+            false,
         );
 
         //then

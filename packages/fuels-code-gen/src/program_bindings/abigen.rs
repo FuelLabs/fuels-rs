@@ -111,7 +111,7 @@ impl Abigen {
         let types = generate_types(target.source.types.clone(), shared_types, no_std)?;
         let bindings = generate_bindings(target, no_std, shared_types)?;
 
-        Ok(limited_std_prelude(no_std)
+        Ok(prelude(no_std)
             .append(types)
             .append(bindings)
             .wrap_in_mod(&mod_name))
@@ -133,7 +133,7 @@ impl Abigen {
         if types.is_empty() {
             Ok(Default::default())
         } else {
-            Ok(limited_std_prelude(no_std)
+            Ok(prelude(no_std)
                 .append(types)
                 .wrap_in_mod(&ident("shared_types")))
         }
@@ -162,8 +162,8 @@ impl Abigen {
     }
 }
 
-fn limited_std_prelude(no_std: bool) -> GeneratedCode {
-    let lib = if no_std {
+fn prelude(no_std: bool) -> GeneratedCode {
+    let std_lib = if no_std {
         quote! {::alloc}
     } else {
         quote! {::std}
@@ -179,7 +179,7 @@ fn limited_std_prelude(no_std: bool) -> GeneratedCode {
                 panic,
             };
 
-            use #lib::{string::ToString, format, vec};
+            use #std_lib::{string::ToString, format, vec};
 
     };
 

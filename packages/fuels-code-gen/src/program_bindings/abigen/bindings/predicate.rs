@@ -23,7 +23,7 @@ pub(crate) fn predicate_bindings(
         return Ok(GeneratedCode::default());
     }
 
-    let encode_function = expand_fn(&abi, shared_types)?;
+    let encode_function = expand_fn(&abi, shared_types, no_std)?;
 
     let code = quote! {
         #[derive(Debug)]
@@ -109,9 +109,10 @@ pub(crate) fn predicate_bindings(
 fn expand_fn(
     abi: &FullProgramABI,
     shared_types: &HashSet<FullTypeDeclaration>,
+    no_std: bool,
 ) -> Result<TokenStream> {
     let fun = extract_main_fn(&abi.functions)?;
-    let mut generator = FunctionGenerator::new(fun, shared_types)?;
+    let mut generator = FunctionGenerator::new(fun, shared_types, no_std)?;
 
     let arg_tokens = generator.tokenized_args();
     let body = quote! {
