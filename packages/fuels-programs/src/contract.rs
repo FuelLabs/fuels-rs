@@ -14,6 +14,7 @@ use fuel_tx::{
     Output, Receipt, Salt, StorageSlot, Transaction,
 };
 use fuel_vm::fuel_asm::PanicReason;
+
 use fuels_core::{
     abi_decoder::ABIDecoder,
     abi_encoder::{ABIEncoder, UnresolvedBytes},
@@ -21,17 +22,17 @@ use fuels_core::{
     parameters::{CallParameters, StorageConfiguration, TxParameters},
 };
 use fuels_signers::{
-    provider::{Provider, TransactionCost},
-    Account, PayFee, Signer, WalletUnlocked,
+    Account,
+    PayFee, provider::{Provider, TransactionCost}, Signer, WalletUnlocked,
 };
-use fuels_types::errors::Error::{ProviderError, WalletError};
 use fuels_types::{
     bech32::{Bech32Address, Bech32ContractId},
     errors::{error, Error, Result},
     param_types::{ParamType, ReturnLocation},
-    traits::{Parameterize, Tokenizable},
-    Selector, Token,
+    Selector,
+    Token, traits::{Parameterize, Tokenizable},
 };
+use fuels_types::errors::Error::{ProviderError, WalletError};
 
 use crate::{
     call_response::FuelCallResponse,
@@ -112,6 +113,7 @@ impl<T: Account + PayFee + Clone> Contract<T> {
         signature: Selector,
         args: &[Token],
         log_decoder: LogDecoder,
+        is_payable: bool,
     ) -> Result<ContractCallHandler<T, D>> {
         let encoded_selector = signature;
 
@@ -121,7 +123,6 @@ impl<T: Account + PayFee + Clone> Contract<T> {
         let compute_custom_input_offset = Contract::<T>::should_compute_custom_input_offset(args);
 
         let unresolved_bytes = ABIEncoder::encode(args)?;
-
         let contract_call = ContractCall {
             contract_id,
             encoded_selector,
@@ -132,6 +133,7 @@ impl<T: Account + PayFee + Clone> Contract<T> {
             message_outputs: None,
             external_contracts: vec![],
             output_param: D::param_type(),
+            is_payable,
             custom_assets: Default::default(),
         };
 
@@ -151,7 +153,7 @@ impl<T: Account + PayFee + Clone> Contract<T> {
     fn should_compute_custom_input_offset(args: &[Token]) -> bool {
         args.len() > 1
             || args.iter().any(|t| {
-                matches!(
+            matches!(
                     t,
                     Token::String(_)
                         | Token::Struct(_)
@@ -162,7 +164,7 @@ impl<T: Account + PayFee + Clone> Contract<T> {
                         | Token::Byte(_)
                         | Token::Vector(_)
                 )
-            })
+        })
     }
 
     /// Loads a compiled contract and deploys it to a running node
@@ -237,6 +239,7 @@ impl<T: Account + PayFee + Clone> Contract<T> {
             &chain_info.consensus_parameters,
         )?;
         provider.send_transaction(&tx).await?;
+
         Ok(contract_id)
     }
 
@@ -364,6 +367,7 @@ pub struct ContractCall {
     pub message_outputs: Option<Vec<Output>>,
     pub external_contracts: Vec<Bech32ContractId>,
     pub output_param: ParamType,
+    pub is_payable: bool,
     pub custom_assets: HashMap<(AssetId, Option<Bech32Address>), u64>,
 }
 
@@ -413,7 +417,7 @@ impl ContractCall {
                 to: Address::zeroed(),
                 asset_id: AssetId::default(),
             };
-            num as usize
+            num as usize,
         ];
 
         match self.variable_outputs {
@@ -432,7 +436,7 @@ impl ContractCall {
                 recipient: Address::zeroed(),
                 amount: 0,
             };
-            num as usize
+            num as usize,
         ];
 
         match self.message_outputs {
@@ -498,7 +502,7 @@ pub fn get_decoded_output(
                     .to_vec()
             }),
     }
-    .unwrap_or_default();
+        .unwrap_or_default();
 
     let decoded_value = ABIDecoder::decode_single(output_param, &encoded_value)?;
     Ok(decoded_value)
@@ -517,10 +521,10 @@ pub struct ContractCallHandler<T, D> {
 }
 
 impl<T, D> ContractCallHandler<T, D>
-where
-    T: fuels_signers::Account + fuels_signers::PayFee,
-    fuels_types::errors::Error: From<<T as PayFee>::Error>,
-    D: Tokenizable + Debug,
+    where
+        T: fuels_signers::Account + fuels_signers::PayFee,
+        fuels_types::errors::Error: From<<T as PayFee>::Error>,
+        D: Tokenizable + Debug,
 {
     /// Sets external contracts as dependencies to this contract's call.
     /// Effectively, this will be used to create [`fuel_tx::Input::Contract`]/[`fuel_tx::Output::Contract`]
@@ -595,6 +599,10 @@ where
         self
     }
 
+    pub fn is_payable(&self) -> bool {
+        self.contract_call.is_payable
+    }
+
     /// Sets the transaction parameters for a given transaction.
     /// Note that this is a builder method, i.e. use it as a chain:
 
@@ -614,9 +622,12 @@ where
     /// let params = CallParameters { amount: 1, asset_id: BASE_ASSET_ID };
     /// my_contract_instance.my_method(...).call_params(params).call()
     /// ```
-    pub fn call_params(mut self, params: CallParameters) -> Self {
+    pub fn call_params(mut self, params: CallParameters) -> Result<Self> {
+        if !self.is_payable() && params.amount > 0 {
+            return Err(Error::AssetsForwardedToNonPayableMethod);
+        }
         self.contract_call.call_parameters = params;
-        self
+        Ok(self)
     }
 
     /// Appends `num` [`fuel_tx::Output::Variable`]s to the transaction.
@@ -669,7 +680,7 @@ where
             &self.tx_parameters,
             &self.account,
         )
-        .await
+            .await
     }
 
     /// Call a contract's method on the node, in a state-modifying manner.
@@ -710,10 +721,10 @@ where
 
             match result {
                 Err(Error::RevertTransactionError(_, receipts))
-                    if ContractCall::is_missing_output_variables(&receipts) =>
-                {
-                    self = self.append_variable_outputs(1);
-                }
+                if ContractCall::is_missing_output_variables(&receipts) =>
+                    {
+                        self = self.append_variable_outputs(1);
+                    }
 
                 Err(Error::RevertTransactionError(_, ref receipts)) => {
                     if let Some(receipt) = ContractCall::find_contract_not_in_inputs(receipts) {
@@ -777,9 +788,9 @@ pub struct MultiContractCallHandler<T> {
 }
 
 impl<T: fuels_signers::Account + fuels_signers::PayFee> MultiContractCallHandler<T>
-where
+    where
     // fuels_types::errors::Error: From<<T as Account>::Error>,
-    fuels_types::errors::Error: From<<T as PayFee>::Error>,
+        fuels_types::errors::Error: From<<T as PayFee>::Error>,
 {
     pub fn new(account: T) -> Self {
         Self {
@@ -798,7 +809,6 @@ where
         &mut self,
         call_handler: ContractCallHandler<T, D>,
     ) -> &mut Self {
-        // Todo: Emir added D instead T for first
         self.log_decoder.merge(call_handler.log_decoder);
         self.contract_calls.push(call_handler.contract_call);
         self
@@ -822,7 +832,7 @@ where
             &self.tx_parameters,
             &self.account,
         )
-        .await
+            .await
     }
 
     /// Call contract methods on the node, in a state-modifying manner.
@@ -880,13 +890,13 @@ where
 
             match result {
                 Err(Error::RevertTransactionError(_, receipts))
-                    if ContractCall::is_missing_output_variables(&receipts) =>
-                {
-                    self.contract_calls
-                        .iter_mut()
-                        .take(1)
-                        .for_each(|call| call.append_variable_outputs(1));
-                }
+                if ContractCall::is_missing_output_variables(&receipts) =>
+                    {
+                        self.contract_calls
+                            .iter_mut()
+                            .take(1)
+                            .for_each(|call| call.append_variable_outputs(1));
+                    }
 
                 Err(Error::RevertTransactionError(_, ref receipts)) => {
                     if let Some(receipt) = ContractCall::find_contract_not_in_inputs(receipts) {
@@ -965,8 +975,8 @@ mod test {
             TxParameters::default(),
             StorageConfiguration::default(),
         )
-        .await
-        .unwrap();
+            .await
+            .unwrap();
     }
 
     #[tokio::test]
@@ -982,7 +992,7 @@ mod test {
             StorageConfiguration::default(),
             Salt::default(),
         )
-        .await
-        .unwrap();
+            .await
+            .unwrap();
     }
 }
