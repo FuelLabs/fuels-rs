@@ -9,6 +9,7 @@ abi TestFuelCoin {
     fn force_transfer_coins(coins: u64, asset_id: ContractId, target: ContractId);
     fn transfer_coins_to_output(coins: u64, asset_id: ContractId, recipient: Address);
     fn get_balance(target: ContractId, asset_id: ContractId) -> u64;
+    #[payable]
     fn get_msg_amount() -> u64;
     fn send_message(recipient: b256, coins: u64);
 }
@@ -42,6 +43,7 @@ impl TestFuelCoin for Contract {
         balance_of(target, asset_id)
     }
 
+    #[payable]
     fn get_msg_amount() -> u64 {
         msg_amount()
     }
