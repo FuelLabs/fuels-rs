@@ -16,9 +16,10 @@ use crate::{
     errors::{error, Error, Result},
 };
 
-#[derive(Debug, Clone, EnumString, PartialEq, Eq)]
+#[derive(Debug, Clone, EnumString, PartialEq, Eq, Default)]
 #[strum(ascii_case_insensitive)]
 pub enum ParamType {
+    #[default]
     U8,
     U16,
     U32,
@@ -49,11 +50,11 @@ pub enum ParamType {
     RawSlice,
 }
 
-impl Default for ParamType {
-    fn default() -> Self {
-        ParamType::U8
-    }
-}
+// impl Default for ParamType {
+//     fn default() -> Self {
+//         ParamType::U8
+//     }
+// }
 
 pub enum ReturnLocation {
     Return,

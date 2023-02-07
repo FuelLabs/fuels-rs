@@ -24,7 +24,6 @@ members = [
     "packages/fuels-test-helpers",
     "packages/fuels-types",
     "packages/wasm-tests",
-    "scripts/test-projects",
     "scripts/check-docs",
 ]
 
