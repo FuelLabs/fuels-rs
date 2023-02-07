@@ -431,7 +431,7 @@ mod test {
         // given
         let external_contract_id = random_bech32_contract_id();
         let call = ContractCall::new_with_random_id()
-            .with_external_contracts(&[external_contract_id.clone()]);
+            .with_external_contracts([external_contract_id.clone()].to_vec());
 
         // when
         let (inputs, _) = get_transaction_inputs_outputs(
@@ -471,8 +471,8 @@ mod test {
     fn external_contract_output_present() {
         // given
         let external_contract_id = random_bech32_contract_id();
-        let call =
-            ContractCall::new_with_random_id().with_external_contracts(&[external_contract_id]);
+        let call = ContractCall::new_with_random_id()
+            .with_external_contracts([external_contract_id].to_vec());
 
         // when
         let (_, outputs) =

@@ -18,9 +18,10 @@ pub trait SettableContract {
 macro_rules! implement_shared_call_methods {
     ($target:ty) => {
         impl $target {
-            pub fn with_external_contracts(self, external_contracts: &[Bech32ContractId]) -> Self {
+            pub fn with_external_contracts(self, external_contracts: Vec<Bech32ContractId>) ->
+            Self {
                 Self {
-                    external_contracts: external_contracts.to_vec(),
+                    external_contracts: external_contracts,
                     ..self
                 }
             }
