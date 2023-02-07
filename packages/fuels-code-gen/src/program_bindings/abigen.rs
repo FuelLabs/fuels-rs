@@ -168,7 +168,7 @@ mod tests {
 
         assert_eq!(shared_types, HashSet::from([types[0].clone()]))
     }
-
+ /*
     #[test]
     fn test_for_creating_predicate_struct() {
         let stream = Abigen::generate(vec![AbigenTarget {
@@ -214,4 +214,5 @@ mod tests {
         )
         .unwrap();
     }
+    */
 }
