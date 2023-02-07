@@ -423,7 +423,6 @@ async fn test_multi_call_contract_with_contract_logs() -> Result<()> {
 fn assert_is_revert_containing_msg(msg: &str, error: Error) {
     assert!(matches!(error, Error::RevertTransactionError(..)));
     if let Error::RevertTransactionError(error_message, _) = error {
-        dbg!(&error_message);
         assert!(error_message.contains(msg));
     }
 }
