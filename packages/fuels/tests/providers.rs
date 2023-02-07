@@ -1,7 +1,7 @@
 use std::{iter, str::FromStr};
 
 use chrono::Duration;
-use fuel_core::service::{Config as CoreConfig, FuelService};
+use fuel_core::service::{Config as CoreConfig, FuelService, ServiceTrait};
 use fuels::{
     client::{PageDirection, PaginationRequest},
     prelude::*,
@@ -77,7 +77,7 @@ async fn test_network_error() -> Result<()> {
     wallet.set_provider(provider);
 
     // Simulate an unreachable node
-    service.stop().await;
+    service.stop_and_await().await.unwrap();
 
     let response = Contract::deploy(
         "tests/contracts/contract_test/out/debug/contract_test.bin",
@@ -281,7 +281,7 @@ async fn contract_deployment_respects_maturity() -> Result<()> {
     let err = deploy_w_maturity(1).await.expect_err("Should not have been able to deploy the contract since the block height (0) is less than the requested maturity (1)");
     assert!(matches!(
         err,
-        Error::ValidationError(fuel_gql_client::fuel_tx::CheckError::TransactionMaturity)
+        Error::ValidationError(fuel_tx::CheckError::TransactionMaturity)
     ));
 
     provider.produce_blocks(1, None).await?;
@@ -366,7 +366,7 @@ async fn test_amount_and_asset_forwarding() -> Result<()> {
     let response = contract_methods
         .get_msg_amount()
         .tx_params(tx_params)
-        .call_params(call_params)
+        .call_params(call_params)?
         .call()
         .await?;
 
@@ -398,7 +398,7 @@ async fn test_amount_and_asset_forwarding() -> Result<()> {
     let response = contract_methods
         .get_msg_amount()
         .tx_params(tx_params)
-        .call_params(call_params)
+        .call_params(call_params)?
         .call()
         .await?;
 
@@ -502,7 +502,7 @@ async fn test_call_param_gas_errors() -> Result<()> {
     let response = contract_methods
         .initialize_counter(42)
         .tx_params(TxParameters::new(None, Some(3000), None))
-        .call_params(CallParameters::new(None, None, Some(1)))
+        .call_params(CallParameters::new(None, None, Some(1)))?
         .call()
         .await
         .expect_err("should error");
@@ -514,7 +514,7 @@ async fn test_call_param_gas_errors() -> Result<()> {
     let response = contract_methods
         .initialize_counter(42)
         .tx_params(TxParameters::new(None, Some(1), None))
-        .call_params(CallParameters::new(None, None, Some(1000)))
+        .call_params(CallParameters::new(None, None, Some(1000)))?
         .call()
         .await
         .expect_err("should error");

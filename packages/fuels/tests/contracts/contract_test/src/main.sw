@@ -31,6 +31,7 @@ abi TestContract {
     fn array_of_structs(p: [Person; 2]) -> [Person; 2];
     fn array_of_enums(p: [State; 2]) -> [State; 2];
     fn get_array(p: [u64; 2]) -> [u64; 2];
+    #[payable]
     fn get_msg_amount() -> u64;
     fn new() -> u64;
 }
@@ -39,6 +40,7 @@ const COUNTER_KEY = 0x0000000000000000000000000000000000000000000000000000000000
 
 impl TestContract for Contract {
     // ANCHOR: msg_amount
+    #[payable]
     fn get_msg_amount() -> u64 {
         msg_amount()
     }
@@ -51,14 +53,14 @@ impl TestContract for Contract {
 
     #[storage(read, write)]
     fn increment_counter(value: u64) -> u64 {
-        let new_value = get::<u64>(COUNTER_KEY).unwrap() + value;
+        let new_value = get::<u64>(COUNTER_KEY).unwrap_or(0) + value;
         store(COUNTER_KEY, new_value);
         new_value
     }
 
     #[storage(read)]
     fn get_counter() -> u64 {
-        get::<u64>(COUNTER_KEY).unwrap()
+        get::<u64>(COUNTER_KEY).unwrap_or(0)
     }
 
     fn get(x: u64, y: u64) -> u64 {

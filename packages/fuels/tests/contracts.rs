@@ -212,9 +212,9 @@ async fn test_contract_call_fee_estimation() -> Result<()> {
     let tolerance = 0.2;
 
     let expected_min_gas_price = 0; // This is the default min_gas_price from the ConsensusParameters
-    let expected_gas_used = 3474;
+    let expected_gas_used = 516;
     let expected_metered_bytes_size = 720;
-    let expected_total_fee = 636;
+    let expected_total_fee = 340;
 
     let estimated_transaction_cost = contract_instance
         .methods()
@@ -754,7 +754,7 @@ async fn test_contract_instance_get_balances() -> Result<()> {
     let contract_balances = contract_instance.get_balances().await?;
     assert_eq!(contract_balances.len(), 1);
 
-    let random_asset_id_key = format!("{:#x}", random_asset_id);
+    let random_asset_id_key = format!("{random_asset_id:#x}");
     let random_asset_balance = contract_balances.get(&random_asset_id_key).unwrap();
     assert_eq!(*random_asset_balance, amount);
 
@@ -1065,6 +1065,50 @@ async fn test_deploy_error_messages() -> Result<()> {
 
     let expected = "Invalid data: The file extension 'biz' is not recognized. Did you mean '.bin'?";
     assert!(response.to_string().starts_with(expected));
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_payable_annotation() -> Result<()> {
+    setup_contract_test!(
+        Wallets("wallet"),
+        Abigen(
+            name = "TestContract",
+            abi = "packages/fuels/tests/contracts/payable_annotation"
+        ),
+        Deploy(
+            name = "contract_instance",
+            contract = "TestContract",
+            wallet = "wallet"
+        ),
+    );
+
+    let contract_methods = contract_instance.methods();
+
+    let response = contract_methods
+        .payable()
+        .call_params(CallParameters::new(Some(100), None, Some(20000)))?
+        .call()
+        .await?;
+
+    assert_eq!(response.value, 42);
+
+    // ANCHOR: non_payable_params
+    let err = contract_methods
+        .non_payable()
+        .call_params(CallParameters::new(Some(100), None, None))
+        .expect_err("Should return call params error.");
+
+    assert!(matches!(err, Error::AssetsForwardedToNonPayableMethod));
+    // ANCHOR_END: non_payable_params */
+    let response = contract_methods
+        .non_payable()
+        .call_params(CallParameters::new(None, None, Some(20000)))?
+        .call()
+        .await?;
+
+    assert_eq!(response.value, 42);
 
     Ok(())
 }

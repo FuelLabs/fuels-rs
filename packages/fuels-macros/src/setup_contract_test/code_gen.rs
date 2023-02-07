@@ -3,17 +3,14 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use fuels_code_gen::{utils::ident, Abigen, AbigenTarget, ProgramType};
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 use rand::{prelude::StdRng, Rng, SeedableRng};
 use syn::LitStr;
 
-use crate::{
-    abigen::{Abigen, AbigenTarget, ProgramType},
-    setup_contract_test::parsing::{
-        DeployContract, GenerateContract, InitializeWallet, TestContractCommands,
-    },
-    utils::ident,
+use crate::setup_contract_test::parsing::{
+    DeployContract, GenerateContract, InitializeWallet, TestContractCommands,
 };
 
 pub(crate) fn generate_setup_contract_test_code(

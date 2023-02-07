@@ -1,4 +1,4 @@
-use fuel_gql_client::client::schema::message::MessageProof as ClientMessageProof;
+use fuel_core_client::client::schema::message::MessageProof as ClientMessageProof;
 use fuel_tx::{Bytes32, Bytes64};
 
 use crate::{bech32::Bech32Address, block::Header};

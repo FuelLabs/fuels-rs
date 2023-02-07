@@ -62,7 +62,7 @@ impl EnumTesting for Contract {
     }
     fn check_unit_bundle_integrity(arg: UnitBundle) -> bool {
         let arg_1_is_correct = match arg.arg_1 {
-            UnitEnum::var2(_) => true,
+            UnitEnum::var2 => true,
             _ => false,
         };
 

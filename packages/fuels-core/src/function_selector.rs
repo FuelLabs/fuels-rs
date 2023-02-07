@@ -13,7 +13,7 @@ pub fn resolve_fn_selector(name: &str, inputs: &[ParamType]) -> ByteArray {
 fn resolve_fn_signature(name: &str, inputs: &[ParamType]) -> String {
     let fn_args = resolve_args(inputs);
 
-    format!("{}({})", name, fn_args)
+    format!("{name}({fn_args})")
 }
 
 fn resolve_args(arg: &[ParamType]) -> String {
@@ -88,7 +88,7 @@ mod tests {
         let check_selector_for_type = |primitive_type: ParamType, expected_selector: &str| {
             let selector = resolve_fn_signature("some_fun", &[primitive_type]);
 
-            assert_eq!(selector, format!("some_fun({})", expected_selector));
+            assert_eq!(selector, format!("some_fun({expected_selector})"));
         };
 
         for (param_type, expected_signature) in [

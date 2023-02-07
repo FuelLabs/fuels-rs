@@ -145,7 +145,7 @@ mod tests {
             .await?;
         // ANCHOR_END: contract_call_cost_estimation
 
-        assert_eq!(transaction_cost.gas_used, 9826);
+        assert_eq!(transaction_cost.gas_used, 430);
 
         Ok(())
     }
@@ -206,11 +206,13 @@ mod tests {
         let wallets =
             launch_custom_provider_and_get_wallets(WalletsConfig::default(), None, None).await;
 
-        let contract_id_1 = Contract::deploy(
+        let salt = [0; 32].into();
+        let contract_id_1 = Contract::deploy_with_parameters(
             "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
             &wallets[0],
             TxParameters::default(),
             StorageConfiguration::default(),
+            salt,
         )
         .await?;
 
@@ -226,11 +228,13 @@ mod tests {
 
         assert_eq!(42, response.value);
 
-        let contract_id_2 = Contract::deploy(
+        let salt = [1; 32].into();
+        let contract_id_2 = Contract::deploy_with_parameters(
             "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
             &wallets[1],
             TxParameters::default(),
             StorageConfiguration::default(),
+            salt,
         )
         .await?;
 
@@ -309,14 +313,14 @@ mod tests {
         let response = contract_methods
             .get_msg_amount() // Our contract method.
             .tx_params(tx_params) // Chain the tx params setting method.
-            .call_params(call_params) // Chain the call params setting method.
+            .call_params(call_params)? // Chain the call params setting method.
             .call() // Perform the contract call.
             .await?;
         // ANCHOR_END: call_parameters
         // ANCHOR: call_parameters_default
         let response = contract_methods
             .initialize_counter(42)
-            .call_params(CallParameters::default())
+            .call_params(CallParameters::default())?
             .call()
             .await?;
 
@@ -503,16 +507,16 @@ mod tests {
                 }
                 // The transaction is malformed
                 Err(Error::ValidationError(e)) => {
-                    println!("Transaction is malformed (ValidationError): {}", e);
+                    println!("Transaction is malformed (ValidationError): {e}");
                 }
                 // Failed request to provider
                 Err(Error::ProviderError(reason)) => {
-                    println!("Provider request failed with reason: {}", reason);
+                    println!("Provider request failed with reason: {reason}");
                 }
                 // The transaction is valid but reverts
                 Err(Error::RevertTransactionError(reason, receipts)) => {
-                    println!("ContractCall failed with reason: {}", reason);
-                    println!("Transaction receipts are: {:?}", receipts);
+                    println!("ContractCall failed with reason: {reason}");
+                    println!("Transaction receipts are: {receipts:?}");
                 }
                 Err(_) => {}
             }
@@ -582,7 +586,7 @@ mod tests {
         let response = contract_methods
             .get_msg_amount() // Our contract method.
             .tx_params(tx_params) // Chain the tx params setting method.
-            .call_params(call_params) // Chain the call params setting method.
+            .call_params(call_params)? // Chain the call params setting method.
             .call() // Perform the contract call.
             .await?;
         // ANCHOR_END: call_params_gas
@@ -676,7 +680,7 @@ mod tests {
             .await?;
         // ANCHOR_END: multi_call_cost_estimation
 
-        assert_eq!(transaction_cost.gas_used, 16181);
+        assert_eq!(transaction_cost.gas_used, 700);
 
         Ok(())
     }
