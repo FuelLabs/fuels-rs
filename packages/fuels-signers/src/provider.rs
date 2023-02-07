@@ -1,4 +1,5 @@
 use std::{collections::HashMap, io};
+use std::fmt::Debug;
 
 use chrono::{DateTime, Duration, Utc};
 #[cfg(feature = "fuel-core")]
@@ -107,7 +108,7 @@ impl Provider {
     /// ```
     pub async fn send_transaction<Tx>(&self, tx: &Tx) -> Result<Vec<Receipt>>
     where
-        Tx: ExecutableTransaction + field::GasLimit + field::GasPrice + Into<Transaction>,
+        Tx: ExecutableTransaction + field::GasLimit + field::GasPrice + Into<Transaction> + Debug,
     {
         let tolerance = 0.0;
         let TransactionCost {

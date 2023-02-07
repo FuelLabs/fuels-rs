@@ -504,6 +504,7 @@ impl WalletUnlocked {
             .chain_info()
             .await?
             .consensus_parameters;
+
         let transaction_fee = TransactionFee::checked_from_tx(&consensus_parameters, tx)
             .expect("Error calculating TransactionFee");
 
@@ -558,7 +559,6 @@ impl WalletUnlocked {
                 BASE_ASSET_ID,
             ));
         }
-
         Ok(())
     }
 
@@ -846,13 +846,11 @@ impl WalletUnlocked {
 }
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl Account for WalletUnlocked {
-    type Error = WalletError;
-
     fn address(&self) -> &Bech32Address {
         &self.address
     }
 
-    fn get_provider(&self) -> std::result::Result<&Provider, Self::Error> {
+    fn get_provider(&self) -> std::result::Result<&Provider, <Self as PayFee>::Error> {
         self.provider.as_ref().ok_or(WalletError::NoProvider)
     }
 
@@ -864,7 +862,7 @@ impl Account for WalletUnlocked {
         &self,
         asset_id: AssetId,
         amount: u64,
-    ) -> std::result::Result<Vec<Resource>, Self::Error> {
+    ) -> std::result::Result<Vec<Resource>, <Self as PayFee>::Error> {
         self.provider()?
             .get_spendable_resources(&self.address, asset_id, amount)
             .await
@@ -887,8 +885,10 @@ impl PayFee for WalletUnlocked {
         &'a_t self,
         tx: &'a_t mut Tx,
         previous_base_amount: u64,
+        witness_index: u8,
     ) -> WalletResult<()> {
-        self.add_fee_resources(tx, previous_base_amount, 1).await?;
+        self.add_fee_resources(tx, previous_base_amount, witness_index)
+            .await?;
         self.sign_transaction(tx).await?;
         Ok(())
     }
@@ -950,13 +950,12 @@ impl Signer for WalletUnlocked {
         previous_base_amount: u64,
         witness_index: u8,
     ) -> WalletResult<()> {
-        // Box::pin(self.add_fee_resources(tx, previous_base_amount, witness_index)).await?;
         self.add_fee_resources(tx, previous_base_amount, witness_index)
             .await
     }
 
     fn get_provider(&self) -> WalletResult<&Provider> {
-        self.provider.as_ref().ok_or(WalletError::NoProvider)
+        self.provider.as_ref().ok_or(WalletError::AccountError)
     }
 }
 

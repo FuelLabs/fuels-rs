@@ -9,6 +9,7 @@ use fuels::{
     tx::Receipt,
     types::{block::Block, errors::error, message::Message},
 };
+use fuels_types::errors::Error::WalletError;
 
 #[tokio::test]
 async fn test_provider_launch_and_connect() -> Result<()> {
@@ -477,7 +478,8 @@ async fn test_gas_errors() -> Result<()> {
         .await
         .expect_err("should error");
 
-    let expected = "Provider error: Response errors; not enough resources to fit the target";
+    let expected =
+        "Wallet error: Provider error: Response errors; not enough resources to fit the target";
     assert!(response.to_string().starts_with(expected));
     Ok(())
 }

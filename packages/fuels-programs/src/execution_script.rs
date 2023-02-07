@@ -24,7 +24,8 @@ pub struct ExecutableFuelCall<T> {
 
 impl<T: fuels_signers::Account + fuels_signers::PayFee> ExecutableFuelCall<T>
 where
-    fuels_types::errors::Error: From<<T as fuels_signers::Account>::Error>,
+    // fuels_types::errors::Error: From<<T as fuels_signers::Account>::Error>,
+    fuels_types::errors::Error: From<<T as fuels_signers::PayFee>::Error>,
 {
     pub fn new(tx: Script) -> Self {
         Self {
@@ -45,7 +46,7 @@ where
         let consensus_parameters = fuels_signers::Account::get_provider(account)?
             .consensus_parameters()
             .await?;
-
+        dbg!(&consensus_parameters);
         // Calculate instructions length for call instructions
         // Use placeholder for call param offsets, we only care about the length
         let calls_instructions_len =
@@ -85,15 +86,14 @@ where
             outputs,
             vec![],
         );
-        // Todo: Fix this EMIR
-        // let base_asset_amount = required_asset_amounts
-        //     .iter()
-        //     .find(|(asset_id, _)| *asset_id == AssetId::default());
-        // match base_asset_amount {
-        //     Some((_, base_amount)) => account.add_fee_resources(&mut tx, *base_amount, 0).await?,
-        //     None => account.add_fee_resources(&mut tx, 0, 0).await?,
-        // }
-        // account.sign_transaction(&mut tx).await.unwrap();
+
+        let base_asset_amount = required_asset_amounts
+            .iter()
+            .find(|(asset_id, _)| *asset_id == AssetId::default());
+        match base_asset_amount {
+            Some((_, base_amount)) => account.pay_fee_resources(&mut tx, *base_amount, 0).await?,
+            None => account.pay_fee_resources(&mut tx, 0, 0).await?,
+        }
 
         Ok(ExecutableFuelCall::new(tx))
     }
@@ -124,7 +124,7 @@ where
             .iter()
             .any(|r|
                 matches!(r, Receipt::ScriptResult { result, .. } if *result != ScriptExecutionResult::Success)
-        ) {
+            ) {
             return Err(Error::RevertTransactionError(Default::default(), receipts));
         }
 

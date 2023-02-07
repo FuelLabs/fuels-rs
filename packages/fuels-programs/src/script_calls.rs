@@ -7,7 +7,7 @@ use fuels_core::{
     offsets::base_offset,
     parameters::{CallParameters, TxParameters},
 };
-use fuels_signers::{Account, provider::Provider, Signer, WalletUnlocked};
+use fuels_signers::{provider::Provider, Account, PayFee, Signer, WalletUnlocked};
 use fuels_types::{
     bech32::Bech32ContractId,
     errors::Result,
@@ -68,7 +68,8 @@ pub struct ScriptCallHandler<T, D> {
 
 impl<T: fuels_signers::Account + fuels_signers::PayFee + Clone, D> ScriptCallHandler<T, D>
 where
-    D: Parameterize + Tokenizable + Debug, fuels_types::errors::Error: From<<T as Account>::Error>
+    D: Parameterize + Tokenizable + Debug,
+    fuels_types::errors::Error: From<<T as PayFee>::Error>,
 {
     pub fn new(
         script_binary: Vec<u8>,
@@ -144,12 +145,10 @@ where
     /// in its `value` field as an actual typed value `D` (if your method returns `bool`,
     /// it will be a bool, works also for structs thanks to the `abigen!()`).
     /// The other field of [`FuelCallResponse`], `receipts`, contains the receipts of the transaction.
-    async fn call_or_simulate(
-        &self,
-        simulate: bool,
-    ) -> Result<FuelCallResponse<D>>
-    where
-        fuels_types::errors::Error: From<<T as fuels_signers::Account>::Error>
+    async fn call_or_simulate(&self, simulate: bool) -> Result<FuelCallResponse<D>>
+where
+        // fuels_types::errors::Error: From<<T as fuels_signers::Account>::Error>,
+        // fuels_types::errors::Error: From<<T as fuels_signers::Account>::Error>,
     {
         let contract_ids: HashSet<ContractId> = self
             .script_call
@@ -185,11 +184,9 @@ where
             outputs,
             vec![],
         );
-        //Todo FIX THIS EMIr
-        // self.wallet.add_fee_resources(&mut tx, 0, 0).await?;
-        // self.wallet.sign_transaction(&mut tx).await?;
 
-        // let tx_execution = ExecutableFuelCall{ tx, PhantomData<> };
+        self.account.pay_fee_resources(&mut tx, 0, 0).await?;
+
         let tx_execution = ExecutableFuelCall::<T>::new(tx);
 
         let receipts = if simulate {
@@ -202,9 +199,7 @@ where
     }
 
     /// Call a script on the node, in a state-modifying manner.
-    pub async fn call(
-        self,
-    ) -> Result<FuelCallResponse<D>> {
+    pub async fn call(self) -> Result<FuelCallResponse<D>> {
         Self::call_or_simulate(&self, false)
             .await
             .map_err(|err| decode_revert_error(err, &self.log_decoder))
@@ -215,9 +210,7 @@ where
     /// It is the same as the [`call`] method because the API is more user-friendly this way.
     ///
     /// [`call`]: Self::call
-    pub async fn simulate(
-        self,
-    ) -> Result<FuelCallResponse<D>> {
+    pub async fn simulate(self) -> Result<FuelCallResponse<D>> {
         Self::call_or_simulate(&self, true)
             .await
             .map_err(|err| decode_revert_error(err, &self.log_decoder))

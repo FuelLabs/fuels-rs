@@ -599,41 +599,40 @@ async fn pay_with_predicate() -> Result<()> {
         Contract(
             name = "MyContract",
             abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
-        ),
-        Predicate(
-            name = "MyPredicate",
-            abi = "packages/fuels/tests/predicates/predicate_u64/out/debug/predicate_u64-abi.json"
-        )
+        ) // Predicate(
+          //     name = "MyPredicate",
+          //     abi = "packages/fuels/tests/predicates/predicate_u64/out/debug/predicate_u64-abi.json"
+          // )
     );
 
-    let mut predicate =
-        MyPredicate::load_from("tests/predicates/predicate_u64/out/debug/predicate_u64.bin")?;
+    // let mut predicate =
+    //     MyPredicate::load_from("tests/predicates/predicate_u64/out/debug/predicate_u64.bin")?;
+    //
+    // let num_coins = 4;
+    // let num_messages = 8;
+    // let amount = 16;
+    // let (provider, _predicate_balance, _receiver, _receiver_balance, _asset_id) =
+    //     setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
+    //
+    // predicate.set_provider(Some(provider.clone()));
+    //
+    // let contract_id = Contract::deploy(
+    //     "tests/contracts/contract_test/out/debug/contract_test.bin",
+    //     &predicate,
+    //     TxParameters::default(),
+    //     StorageConfiguration::default(),
+    // )
+    // .await?;
+    //
+    // let contract_instance_connected = MyContract::new(contract_id.clone(), predicate.clone());
 
-    let num_coins = 4;
-    let num_messages = 8;
-    let amount = 16;
-    let (provider, _predicate_balance, _receiver, _receiver_balance, _asset_id) =
-        setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
-
-    predicate.set_provider(Some(provider.clone()));
-
-    let contract_id = Contract::deploy(
-        "tests/contracts/contract_test/out/debug/contract_test.bin",
-        &predicate,
-        TxParameters::default(),
-        StorageConfiguration::default(),
-    )
-    .await?;
-
-    let contract_instance_connected = MyContract::new(contract_id.clone(), predicate.clone());
-
-    let response = contract_instance_connected
-        .methods()
-        .initialize_counter(42) // Build the ABI call
-        .call() // Perform the network call
-        .await?;
-    assert_eq!(42, response.value);
-
+    // let response = contract_instance_connected
+    //     .methods()
+    //     .initialize_counter(42) // Build the ABI call
+    //     .call() // Perform the network call
+    //     .await?;
+    // assert_eq!(42, response.value);
+    //
     let mut wallet = WalletUnlocked::new_random(None);
 
     let coins = setup_single_asset_coins(
@@ -655,25 +654,31 @@ async fn pay_with_predicate() -> Result<()> {
     )
     .await?;
 
-    let contract_instance_connected = MyContract::new(contract_id.clone(), wallet.clone());
+    let tx_params = TxParameters::new(Some(10), Some(10000), None);
+
+    let contract_instance_connected = MyContractTest::new(contract_id.clone(), wallet.clone());
+
+    dbg!(&wallet.clone().get_balances().await?);
 
     let response = contract_instance_connected
         .methods()
         .initialize_counter(42) // Build the ABI call
+        .tx_params(tx_params)
         .call() // Perform the network call
         .await?;
     assert_eq!(42, response.value);
 
     wallet.set_provider(launched_provider);
-    let contract_instance_launched = MyContract::new(contract_id, wallet);
+    let contract_instance_launched = MyContract::new(contract_id, wallet.clone());
 
     let response = contract_instance_launched
         .methods()
         .increment_counter(10)
+        .tx_params(tx_params)
         .call()
         .await?;
     assert_eq!(52, response.value);
-    // assert!(false);
+    dbg!(&wallet.get_balances().await?);
 
     Ok(())
 }

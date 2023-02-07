@@ -45,7 +45,7 @@ pub(crate) fn contract_bindings(
 
         impl<T: ::fuels::signers::Account + ::fuels::signers::PayFee + ::std::clone::Clone> #name<T>
         where
-            ::fuels::types::errors::Error: From<<T as ::fuels::signers::Account>::Error>,
+            ::fuels::types::errors::Error: From<<T as ::fuels::signers::PayFee>::Error>,
         {
             pub fn new(contract_id: ::fuels::types::bech32::Bech32ContractId, account: T) -> Self {
                 let log_decoder = ::fuels::programs::logs::LogDecoder { type_lookup: #log_type_lookup };
@@ -340,12 +340,12 @@ mod tests {
                 &self,
                 s_1: self::MyStruct1,
                 s_2: self::MyStruct2
-            ) -> ::fuels::programs::contract::ContractCallHandler<self::MyStruct1> {
-                let provider = self.wallet.get_provider().expect("Provider not set up");
-                ::fuels::programs::contract::Contract::method_hash(
+            ) -> ::fuels::programs::contract::ContractCallHandler<T, self::MyStruct1> {
+                let provider = ::fuels::signers::Account::get_provider(&self.account).expect("Provider not set up");
+                ::fuels::programs::contract::Contract::<T>::method_hash(
                     &provider,
                     self.contract_id.clone(),
-                    &self.wallet,
+                    &self.account,
                     ::fuels::core::function_selector::resolve_fn_selector(
                         "some_abi_funct",
                         &[
@@ -406,12 +406,12 @@ mod tests {
 
         let expected = quote! {
             #[doc = "Calls the contract's `HelloWorld` function"]
-            pub fn HelloWorld(&self, bimbam: bool) -> ::fuels::programs::contract::ContractCallHandler<()> {
-                let provider = self.wallet.get_provider().expect("Provider not set up");
-                ::fuels::programs::contract::Contract::method_hash(
+            pub fn HelloWorld(&self, bimbam: bool) -> ::fuels::programs::contract::ContractCallHandler<T, ()> {
+                let provider = ::fuels::signers::Account::get_provider(&self.account).expect("Provider not set up");
+                ::fuels::programs::contract::Contract::<T>::method_hash(
                     &provider,
                     self.contract_id.clone(),
-                    &self.wallet,
+                    &self.account,
                     ::fuels::core::function_selector::resolve_fn_selector(
                         "HelloWorld",
                         &[<bool as ::fuels::types::traits::Parameterize>::param_type()]
@@ -520,12 +520,12 @@ mod tests {
             pub fn hello_world(
                 &self,
                 the_only_allowed_input: self::SomeWeirdFrenchCuisine
-            ) -> ::fuels::programs::contract::ContractCallHandler<self::EntropyCirclesEnum> {
-                let provider = self.wallet.get_provider().expect("Provider not set up");
-                ::fuels::programs::contract::Contract::method_hash(
+            ) -> ::fuels::programs::contract::ContractCallHandler<T, self::EntropyCirclesEnum> {
+                let provider = ::fuels::signers::Account::get_provider(&self.account).expect("Provider not set up");
+                ::fuels::programs::contract::Contract::<T>::method_hash(
                     &provider,
                     self.contract_id.clone(),
-                    &self.wallet,
+                    &self.account,
                     ::fuels::core::function_selector::resolve_fn_selector(
                         "hello_world",
                         &[<self::SomeWeirdFrenchCuisine as ::fuels::types::traits::Parameterize>::param_type()]

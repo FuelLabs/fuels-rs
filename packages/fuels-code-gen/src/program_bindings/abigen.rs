@@ -173,7 +173,8 @@ mod tests {
     fn test_for_creating_predicate_struct() {
         let stream = Abigen::generate(vec![AbigenTarget {
             name: "MyPredicateTest".to_string(),
-            abi: "/home/salka1988/Documents/Git/fuels-rs/packages/fuels/tests/predicates/predicate_u64/out/debug/predicate_u64-abi.json".to_string(),
+            // abi: "/home/salka1988/Documents/Git/fuels-rs/packages/fuels/tests/predicates/predicate_u64/out/debug/predicate_u64-abi.json".to_string(),
+            abi: "/home/salka1988/Documents/Git/fuels-rs/packages/fuels/tests/predicates/predicate_signatures/out/debug/predicate_signatures-abi.json".to_string(),
             program_type: ProgramType::Predicate,
         }], false).unwrap().to_string();
 

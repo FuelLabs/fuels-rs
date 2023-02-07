@@ -39,7 +39,7 @@ pub(crate) fn script_bindings(
         }
 
         impl<T: ::fuels::signers::Account + ::fuels::signers::PayFee + ::std::clone::Clone> #name<T>
-            where ::fuels::types::errors::Error: From<<T as ::fuels::signers::Account>::Error>
+            where ::fuels::types::errors::Error: From<<T as ::fuels::signers::PayFee>::Error>
         {
             pub fn new(account: T, binary_filepath: &str) -> Self {
                 Self {

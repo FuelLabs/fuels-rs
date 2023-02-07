@@ -31,7 +31,6 @@ pub(crate) fn predicate_bindings(
 
         #[cfg_attr(not(target_arch = "wasm32"), ::async_trait::async_trait)]
         impl ::fuels::signers::Account for #name {
-            type Error = ::fuels::types::errors::Error;
 
             fn address(&self) -> &::fuels::types::bech32::Bech32Address {
                 &self.address
@@ -79,7 +78,7 @@ pub(crate) fn predicate_bindings(
                 &'a_t self,
                 tx: &'a_t mut Tx,
                 previous_base_amount: u64,
-                // witness_index: u8, in predicat witnes is 0
+                witness_index: u8
             ) -> ::fuels::types::errors::Result<()> {
 
                 // ::std::boxed::Box::pin(async move {
@@ -122,7 +121,7 @@ pub(crate) fn predicate_bindings(
                     }
 
                     let new_base_inputs = self
-                    .get_asset_inputs_for_amount(::fuels::core::constants::BASE_ASSET_ID, new_base_amount, 0) // i set this to 0
+                    .get_asset_inputs_for_amount(::fuels::core::constants::BASE_ASSET_ID, new_base_amount, witness_index) // i set this to 0
                     .await?;
                     let adjusted_inputs: ::std::vec::Vec<_> = remaining_inputs
                         .into_iter()

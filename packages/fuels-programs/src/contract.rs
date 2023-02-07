@@ -24,7 +24,7 @@ use fuels_signers::{
     provider::{Provider, TransactionCost},
     Account, PayFee, Signer, WalletUnlocked,
 };
-use fuels_types::errors::Error::WalletError;
+use fuels_types::errors::Error::{ProviderError, WalletError};
 use fuels_types::{
     bech32::{Bech32Address, Bech32ContractId},
     errors::{error, Error, Result},
@@ -121,6 +121,7 @@ impl<T: Account + PayFee + Clone> Contract<T> {
         let compute_custom_input_offset = Contract::<T>::should_compute_custom_input_offset(args);
 
         let unresolved_bytes = ABIEncoder::encode(args)?;
+
         let contract_call = ContractCall {
             contract_id,
             encoded_selector,
@@ -223,22 +224,19 @@ impl<T: Account + PayFee + Clone> Contract<T> {
             Self::contract_deployment_transaction(compiled_contract, params).await?;
 
         account
-            .pay_fee_resources(&mut tx, 0)
+            .pay_fee_resources(&mut tx, 0, 1)
             .await
-            .map_err(|err| WalletError(format!("{}", err)))?;
+            .map_err(|err| ProviderError(format!("{}", err)))?;
 
         let provider = Account::get_provider(account)
             .map_err(|_| error!(ProviderError, "Failed to get_provider"))?;
         let chain_info = provider.chain_info().await?;
-
-        dbg!("asdfghjklö");
 
         tx.check_without_signatures(
             chain_info.latest_block.header.height,
             &chain_info.consensus_parameters,
         )?;
         provider.send_transaction(&tx).await?;
-
         Ok(contract_id)
     }
 
@@ -521,7 +519,7 @@ pub struct ContractCallHandler<T, D> {
 impl<T, D> ContractCallHandler<T, D>
 where
     T: fuels_signers::Account + fuels_signers::PayFee,
-    fuels_types::errors::Error: From<<T as Account>::Error>,
+    fuels_types::errors::Error: From<<T as PayFee>::Error>,
     D: Tokenizable + Debug,
 {
     /// Sets external contracts as dependencies to this contract's call.
@@ -780,13 +778,14 @@ pub struct MultiContractCallHandler<T> {
 
 impl<T: fuels_signers::Account + fuels_signers::PayFee> MultiContractCallHandler<T>
 where
-    fuels_types::errors::Error: From<<T as Account>::Error>,
+    // fuels_types::errors::Error: From<<T as Account>::Error>,
+    fuels_types::errors::Error: From<<T as PayFee>::Error>,
 {
-    pub fn new(wallet: T) -> Self {
+    pub fn new(account: T) -> Self {
         Self {
             contract_calls: vec![],
             tx_parameters: TxParameters::default(),
-            account: wallet,
+            account,
             log_decoder: LogDecoder {
                 type_lookup: HashMap::new(),
             },

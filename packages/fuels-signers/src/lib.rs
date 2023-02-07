@@ -4,6 +4,7 @@ use std::error::Error;
 use std::fmt::{Debug, Formatter};
 
 use async_trait::async_trait;
+use fuel_core_client::client::schema::schema::__fields::InputCoin::witnessIndex;
 #[doc(no_inline)]
 pub use fuel_crypto;
 use fuel_crypto::Signature;
@@ -75,23 +76,22 @@ pub trait PayFee: std::fmt::Debug + Send + Sync {
         &'a_t self,
         tx: &'a_t mut Tx,
         previous_base_amount: u64,
+        witness_index: u8,
     ) -> Result<(), Self::Error>;
 
     fn get_provider(&self) -> Result<&Provider, Self::Error>;
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
-pub trait Account: std::fmt::Debug + Send + Sync {
-    type Error: Debug;
-
+pub trait Account: PayFee + std::fmt::Debug + Send + Sync {
     fn address(&self) -> &Bech32Address;
-    fn get_provider(&self) -> Result<&Provider, Self::Error>;
+    fn get_provider(&self) -> Result<&Provider, <Self as PayFee>::Error>;
     fn set_provider(&mut self, provider: Provider);
     async fn get_spendable_resources(
         &self,
         asset_id: AssetId,
         amount: u64,
-    ) -> Result<Vec<Resource>, Self::Error>;
+    ) -> Result<Vec<Resource>, <Self as PayFee>::Error>;
 }
 
 #[cfg(test)]
