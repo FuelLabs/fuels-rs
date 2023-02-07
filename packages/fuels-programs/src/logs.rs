@@ -92,43 +92,35 @@ impl<'a, I: Iterator<Item = &'a Receipt>> ExtractLogIdData for I {
 
 /// Map the provided `RevertTransactionError` based on the `revert_id`.
 /// If applicable, decode the logged types from the receipt.
-pub fn map_revert_error(err: Error, log_decoder: &LogDecoder) -> Error {
+pub fn map_revert_error(mut err: Error, log_decoder: &LogDecoder) -> Error {
     if let Error::RevertTransactionError {
         revert_id,
         ref receipts,
-        ..
+        ref mut reason,
     } = err
     {
         match revert_id {
-            FAILED_ASSERT_EQ_SIGNAL => return decode_assert_eq_revert(log_decoder, &receipts),
-            FAILED_REQUIRE_SIGNAL => return decode_require_revert(log_decoder, &receipts),
-            FAILED_ASSERT_SIGNAL => {
-                return new_revert_error("assertion failed.".into(), revert_id, &receipts)
-            }
-            FAILED_SEND_MESSAGE_SIGNAL => {
-                return new_revert_error("failed to send message.".into(), revert_id, &receipts)
-            }
-            FAILED_TRANSFER_TO_ADDRESS_SIGNAL => {
-                return new_revert_error("failed transfer to address.".into(), revert_id, &receipts)
-            }
+            FAILED_REQUIRE_SIGNAL => *reason = decode_require_revert(log_decoder, &receipts),
+            FAILED_ASSERT_EQ_SIGNAL => *reason = decode_assert_eq_revert(log_decoder, &receipts),
+            FAILED_ASSERT_SIGNAL => *reason = "assertion failed.".into(),
+            FAILED_SEND_MESSAGE_SIGNAL => *reason = "failed to send message.".into(),
+            FAILED_TRANSFER_TO_ADDRESS_SIGNAL => *reason = "failed transfer to address.".into(),
             _ => {}
         }
     }
     err
 }
 
-fn decode_require_revert(log_decoder: &LogDecoder, receipts: &[Receipt]) -> Error {
-    let reason = log_decoder
+fn decode_require_revert(log_decoder: &LogDecoder, receipts: &[Receipt]) -> String {
+    log_decoder
         .get_logs(receipts)
         .ok()
         .and_then(|logs| logs.last().cloned())
-        .unwrap_or_else(|| "failed to decode log from require revert".to_string());
-
-    new_revert_error(reason, FAILED_REQUIRE_SIGNAL, receipts)
+        .unwrap_or_else(|| "failed to decode log from require revert".to_string())
 }
 
-fn decode_assert_eq_revert(log_decoder: &LogDecoder, receipts: &[Receipt]) -> Error {
-    let reason = log_decoder
+fn decode_assert_eq_revert(log_decoder: &LogDecoder, receipts: &[Receipt]) -> String {
+    log_decoder
         .get_logs(receipts)
         .ok()
         .and_then(|logs| {
@@ -139,17 +131,7 @@ fn decode_assert_eq_revert(log_decoder: &LogDecoder, receipts: &[Receipt]) -> Er
             }
             None
         })
-        .unwrap_or_else(|| "failed to decode logs from assert_eq revert".to_string());
-
-    new_revert_error(reason, FAILED_ASSERT_EQ_SIGNAL, receipts)
-}
-
-fn new_revert_error(reason: String, revert_id: u64, receipts: &[Receipt]) -> Error {
-    Error::RevertTransactionError {
-        reason,
-        revert_id,
-        receipts: receipts.to_owned(),
-    }
+        .unwrap_or_else(|| "failed to decode logs from assert_eq revert".to_string())
 }
 
 pub fn log_type_lookup(
