@@ -123,7 +123,7 @@ impl<'de> DeserializeAs<'de, Word> for HexNumber {
         match bytes.len() {
             len if len > WORD_SIZE => {
                 return Err(D::Error::custom(format!(
-                    "value cant exceed {WORD_SIZE} bytes",
+                    "value can't exceed {WORD_SIZE} bytes",
                 )));
             }
             len if len < WORD_SIZE => {
