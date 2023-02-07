@@ -298,13 +298,13 @@ async fn test_script_call_with_non_default_max_input() -> Result<()> {
 #[tokio::test]
 async fn test_script_raw_slice() -> Result<()> {
     abigen!(Script(
-        name = "BimBamScript",
+        name = "bimbam_script",
         abi = "packages/fuels/tests/scripts/script_raw_slice/out/debug/script_raw_slice-abi.json",
     ));
 
     let wallet = launch_provider_and_get_wallet().await;
     let bin_path = "../fuels/tests/scripts/script_raw_slice/out/debug/script_raw_slice.bin";
-    let instance = BimBamScript::new(wallet.clone(), bin_path);
+    let instance = bimbam_script::new(wallet.clone(), bin_path);
 
     for length in 0..=10 {
         let response = instance.main(length).call().await?;

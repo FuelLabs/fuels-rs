@@ -45,6 +45,7 @@ members = [
   'scripts/script_vector',
   'scripts/script_vectors',
   'scripts/script_with_arguments',
+  'scripts/script_raw_slice',
   'storage/contract_storage_test',
   'types/b512',
   'types/call_empty_return',

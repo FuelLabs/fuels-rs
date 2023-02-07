@@ -1,8 +1,8 @@
 contract;
 
 use std::logging::log;
-
 use contract_logs::ContractLogs;
+
 struct TestStruct {
     field_1: bool,
     field_2: b256,
