@@ -148,7 +148,10 @@
             .call()
             .await;
 
-        assert!(matches!(response, Err(Error::RevertTransactionError(..))));
+        assert!(matches!(
+            response,
+            Err(Error::RevertTransactionError { .. })
+        ));
 </code></pre>
 <p>As mentioned in previous chapters, you can specify the external contract with <code>.set_contracts()</code> and add an output variable with <code>append_variable_outputs()</code> to resolve this:</p>
 <pre><code class="language-rust ignore">        let response = contract_methods
