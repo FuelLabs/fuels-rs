@@ -1,8 +1,8 @@
 use std::{collections::HashSet, iter, vec};
 
 use fuel_tx::{AssetId, Bytes32, ContractId, Input, Output, TxPointer, UtxoId};
-use fuel_types::{Immediate18, Word};
-use fuel_vm::{consts::REG_ONE, prelude::Opcode};
+use fuel_types::Word;
+use fuel_vm::fuel_asm::{op, RegId};
 use fuels_core::constants::BASE_ASSET_ID;
 use fuels_types::{bech32::Bech32Address, constants::WORD_SIZE, resource::Resource};
 use itertools::{chain, Itertools};
@@ -10,7 +10,7 @@ use itertools::{chain, Itertools};
 use crate::contract::ContractCall;
 
 #[derive(Default)]
-/// Specifies offsets of [`Opcode::CALL`] parameters stored in the script
+/// Specifies offsets of [`Instruction::CALL`] parameters stored in the script
 /// data from which they can be loaded into registers
 pub(crate) struct CallOpcodeParamsOffset {
     pub asset_id_offset: usize,
@@ -71,7 +71,7 @@ pub(crate) fn get_instructions(
         instructions.extend(get_single_call_instructions(call_offsets));
     }
 
-    instructions.extend(Opcode::RET(REG_ONE).to_bytes());
+    instructions.extend(op::ret(RegId::ONE).to_bytes());
 
     instructions
 }
@@ -154,18 +154,34 @@ pub(crate) fn build_script_data_from_contract_calls(
 /// Note that these are soft rules as we're picking this addresses simply because they
 /// non-reserved register.
 pub(crate) fn get_single_call_instructions(offsets: &CallOpcodeParamsOffset) -> Vec<u8> {
-    let instructions = vec![
-        Opcode::MOVI(0x10, offsets.call_data_offset as Immediate18),
-        Opcode::MOVI(0x11, offsets.gas_forwarded_offset as Immediate18),
-        Opcode::LW(0x11, 0x11, 0),
-        Opcode::MOVI(0x12, offsets.amount_offset as Immediate18),
-        Opcode::LW(0x12, 0x12, 0),
-        Opcode::MOVI(0x13, offsets.asset_id_offset as Immediate18),
-        Opcode::CALL(0x10, 0x12, 0x13, 0x11),
+    let call_data_offset = offsets
+        .call_data_offset
+        .try_into()
+        .expect("call_data_offset out of range");
+    let gas_forwarded_offset = offsets
+        .gas_forwarded_offset
+        .try_into()
+        .expect("gas_forwarded_offset out of range");
+    let amount_offset = offsets
+        .amount_offset
+        .try_into()
+        .expect("amount_offset out of range");
+    let asset_id_offset = offsets
+        .asset_id_offset
+        .try_into()
+        .expect("asset_id_offset out of range");
+    let instructions = [
+        op::movi(0x10, call_data_offset),
+        op::movi(0x11, gas_forwarded_offset),
+        op::lw(0x11, 0x11, 0),
+        op::movi(0x12, amount_offset),
+        op::lw(0x12, 0x12, 0),
+        op::movi(0x13, asset_id_offset),
+        op::call(0x10, 0x12, 0x13, 0x11),
     ];
 
     #[allow(clippy::iter_cloned_collect)]
-    instructions.iter().copied().collect::<Vec<u8>>()
+    instructions.into_iter().collect::<Vec<u8>>()
 }
 
 /// Returns the assets and contracts that will be consumed ([`Input`]s)
