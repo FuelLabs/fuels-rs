@@ -45,6 +45,7 @@ pub struct ContractCall {
     pub outputs: Vec<Output>,
     pub external_contracts: Vec<Bech32ContractId>,
     pub output_param: ParamType,
+    pub is_payable: bool,
     pub custom_assets: HashMap<(AssetId, Option<Bech32Address>), u64>,
 }
 
@@ -218,6 +219,10 @@ where
         self
     }
 
+    pub fn is_payable(&self) -> bool {
+        self.contract_call.is_payable
+    }
+
     /// Sets the transaction parameters for a given transaction.
     /// Note that this is a builder method, i.e. use it as a chain:
 
@@ -230,16 +235,20 @@ where
         self
     }
 
-    /// Sets the call parameters for a given contract call.
+    /// Sets the call parameters for a given contract call. Will fail if the call params forward
+    /// some non-zero amount to a non-payable method.
     /// Note that this is a builder method, i.e. use it as a chain:
     ///
     /// ```ignore
     /// let params = CallParameters { amount: 1, asset_id: BASE_ASSET_ID };
     /// my_contract_instance.my_method(...).call_params(params).call()
     /// ```
-    pub fn call_params(mut self, params: CallParameters) -> Self {
+    pub fn call_params(mut self, params: CallParameters) -> Result<Self> {
+        if !self.is_payable() && params.amount > 0 {
+            return Err(Error::AssetsForwardedToNonPayableMethod);
+        }
         self.contract_call.call_parameters = params;
-        self
+        Ok(self)
     }
 
     /// Appends `num` [`Output::Variable`]s to the transaction.
@@ -332,13 +341,13 @@ where
             let result = self.simulate_without_decode().await;
 
             match result {
-                Err(Error::RevertTransactionError(_, receipts))
+                Err(Error::RevertTransactionError { receipts, .. })
                     if ContractCall::is_missing_output_variables(&receipts) =>
                 {
                     self = self.append_variable_outputs(1);
                 }
 
-                Err(Error::RevertTransactionError(_, ref receipts)) => {
+                Err(Error::RevertTransactionError { ref receipts, .. }) => {
                     if let Some(receipt) = ContractCall::find_contract_not_in_inputs(receipts) {
                         let contract_id = Bech32ContractId::from(*receipt.contract_id().unwrap());
                         self = self.append_contract(contract_id);
@@ -494,7 +503,7 @@ impl MultiContractCallHandler {
             let result = self.simulate_without_decode().await;
 
             match result {
-                Err(Error::RevertTransactionError(_, receipts))
+                Err(Error::RevertTransactionError { receipts, .. })
                     if ContractCall::is_missing_output_variables(&receipts) =>
                 {
                     self.contract_calls
@@ -503,7 +512,7 @@ impl MultiContractCallHandler {
                         .for_each(|call| call.append_variable_outputs(1));
                 }
 
-                Err(Error::RevertTransactionError(_, ref receipts)) => {
+                Err(Error::RevertTransactionError { ref receipts, .. }) => {
                     if let Some(receipt) = ContractCall::find_contract_not_in_inputs(receipts) {
                         let contract_id = Bech32ContractId::from(*receipt.contract_id().unwrap());
                         self.contract_calls

@@ -13,7 +13,7 @@ use fuel_core_client::client::{
 use fuel_tx::{
     field, AssetId, ConsensusParameters, Receipt, Transaction, TransactionFee, UniqueIdentifier,
 };
-use fuel_vm::prelude::ExecutableTransaction;
+use fuel_vm::{interpreter::ExecutableTransaction, state::ProgramState};
 use fuels_core::constants::{DEFAULT_GAS_ESTIMATION_TOLERANCE, MAX_GAS_PER_TX};
 use fuels_types::{
     bech32::{Bech32Address, Bech32ContractId},
@@ -133,12 +133,33 @@ impl Provider {
         }
 
         let (status, receipts) = self.submit_with_feedback(&tx.clone().into()).await?;
+        Self::if_failure_generate_error(&status, &receipts)?;
 
-        if let TransactionStatus::Failure { reason, .. } = status {
-            Err(Error::RevertTransactionError(reason, receipts))
-        } else {
-            Ok(receipts)
+        Ok(receipts)
+    }
+
+    fn if_failure_generate_error(status: &TransactionStatus, receipts: &[Receipt]) -> Result<()> {
+        if let TransactionStatus::Failure {
+            reason,
+            program_state,
+            ..
+        } = status
+        {
+            let revert_id = program_state
+                .and_then(|state| match state {
+                    ProgramState::Revert(revert_id) => Some(revert_id),
+                    _ => None,
+                })
+                .expect("Transaction failed without a `revert_id`");
+
+            return Err(Error::RevertTransactionError {
+                reason: reason.to_string(),
+                revert_id,
+                receipts: receipts.to_owned(),
+            });
         }
+
+        Ok(())
     }
 
     async fn submit_with_feedback(

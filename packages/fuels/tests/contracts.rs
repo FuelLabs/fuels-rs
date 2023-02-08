@@ -125,7 +125,10 @@ async fn test_reverting_transaction() -> Result<()> {
         .call()
         .await;
 
-    assert!(matches!(response, Err(Error::RevertTransactionError(..))));
+    assert!(matches!(
+        response,
+        Err(Error::RevertTransactionError { .. })
+    ));
     Ok(())
 }
 
@@ -619,7 +622,10 @@ async fn test_output_variable_estimation() -> Result<()> {
             .call()
             .await;
 
-        assert!(matches!(response, Err(Error::RevertTransactionError(..))));
+        assert!(matches!(
+            response,
+            Err(Error::RevertTransactionError { .. })
+        ));
     }
 
     {
@@ -629,7 +635,10 @@ async fn test_output_variable_estimation() -> Result<()> {
             .estimate_tx_dependencies(Some(2))
             .await;
 
-        assert!(matches!(response, Err(Error::RevertTransactionError(..))));
+        assert!(matches!(
+            response,
+            Err(Error::RevertTransactionError { .. })
+        ));
     }
 
     {
@@ -722,7 +731,6 @@ async fn test_contract_instance_get_balances() -> Result<()> {
     wallet.set_provider(provider.clone());
 
     setup_contract_test!(
-        Wallets("wallet"),
         Abigen(
             name = "TestContract",
             abi = "packages/fuels/tests/contracts/contract_test"
@@ -828,7 +836,8 @@ async fn test_contract_set_estimation() -> Result<()> {
             .increment_from_contract(lib_contract_id.into(), 42)
             .call()
             .await;
-        assert!(matches!(res, Err(Error::RevertTransactionError(..))));
+
+        assert!(matches!(res, Err(Error::RevertTransactionError { .. })));
     }
 
     let res = contract_caller_instance
@@ -927,7 +936,6 @@ async fn test_contract_call_with_non_default_max_input() -> Result<()> {
     wallet.set_provider(provider.clone());
 
     setup_contract_test!(
-        Wallets("wallet"),
         Abigen(
             name = "TestContract",
             abi = "packages/fuels/tests/contracts/contract_test"
@@ -1065,6 +1073,50 @@ async fn test_deploy_error_messages() -> Result<()> {
 
     let expected = "Invalid data: The file extension 'biz' is not recognized. Did you mean '.bin'?";
     assert!(response.to_string().starts_with(expected));
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_payable_annotation() -> Result<()> {
+    setup_contract_test!(
+        Wallets("wallet"),
+        Abigen(
+            name = "TestContract",
+            abi = "packages/fuels/tests/contracts/payable_annotation"
+        ),
+        Deploy(
+            name = "contract_instance",
+            contract = "TestContract",
+            wallet = "wallet"
+        ),
+    );
+
+    let contract_methods = contract_instance.methods();
+
+    let response = contract_methods
+        .payable()
+        .call_params(CallParameters::new(Some(100), None, Some(20000)))?
+        .call()
+        .await?;
+
+    assert_eq!(response.value, 42);
+
+    // ANCHOR: non_payable_params
+    let err = contract_methods
+        .non_payable()
+        .call_params(CallParameters::new(Some(100), None, None))
+        .expect_err("Should return call params error.");
+
+    assert!(matches!(err, Error::AssetsForwardedToNonPayableMethod));
+    // ANCHOR_END: non_payable_params */
+    let response = contract_methods
+        .non_payable()
+        .call_params(CallParameters::new(None, None, Some(20000)))?
+        .call()
+        .await?;
+
+    assert_eq!(response.value, 42);
 
     Ok(())
 }

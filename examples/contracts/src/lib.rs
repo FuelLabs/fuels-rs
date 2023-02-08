@@ -313,14 +313,14 @@ mod tests {
         let response = contract_methods
             .get_msg_amount() // Our contract method.
             .tx_params(tx_params) // Chain the tx params setting method.
-            .call_params(call_params) // Chain the call params setting method.
+            .call_params(call_params)? // Chain the call params setting method.
             .call() // Perform the contract call.
             .await?;
         // ANCHOR_END: call_parameters
         // ANCHOR: call_parameters_default
         let response = contract_methods
             .initialize_counter(42)
-            .call_params(CallParameters::default())
+            .call_params(CallParameters::default())?
             .call()
             .await?;
 
@@ -401,7 +401,11 @@ mod tests {
             .send_message(base_layer_address, amount)
             .call()
             .await;
-        assert!(matches!(response, Err(Error::RevertTransactionError(..))));
+
+        assert!(matches!(
+            response,
+            Err(Error::RevertTransactionError { .. })
+        ));
 
         Ok(())
     }
@@ -445,7 +449,10 @@ mod tests {
             .call()
             .await;
 
-        assert!(matches!(response, Err(Error::RevertTransactionError(..))));
+        assert!(matches!(
+            response,
+            Err(Error::RevertTransactionError { .. })
+        ));
         // ANCHOR_END: dependency_estimation_fail
 
         // ANCHOR: dependency_estimation_manual
@@ -514,7 +521,9 @@ mod tests {
                     println!("Provider request failed with reason: {reason}");
                 }
                 // The transaction is valid but reverts
-                Err(Error::RevertTransactionError(reason, receipts)) => {
+                Err(Error::RevertTransactionError {
+                    reason, receipts, ..
+                }) => {
                     println!("ContractCall failed with reason: {reason}");
                     println!("Transaction receipts are: {receipts:?}");
                 }
@@ -586,7 +595,7 @@ mod tests {
         let response = contract_methods
             .get_msg_amount() // Our contract method.
             .tx_params(tx_params) // Chain the tx params setting method.
-            .call_params(call_params) // Chain the call params setting method.
+            .call_params(call_params)? // Chain the call params setting method.
             .call() // Perform the contract call.
             .await?;
         // ANCHOR_END: call_params_gas

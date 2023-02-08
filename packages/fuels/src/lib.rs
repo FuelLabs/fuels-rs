@@ -66,7 +66,10 @@ pub mod prelude {
         core::{constants::*, parameters::*},
         fuel_node::*,
         macros::{abigen, setup_contract_test},
-        programs::{contract::Contract, logs::LogDecoder},
+        programs::{
+            contract::Contract,
+            logs::{LogDecoder, LogId},
+        },
         signers::{provider::*, wallet::generate_mnemonic_phrase, Signer, Wallet, WalletUnlocked},
         test_helpers::*,
         tx::Salt,
