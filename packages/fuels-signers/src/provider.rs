@@ -10,11 +10,8 @@ use fuel_core_client::client::{
     types::TransactionStatus,
     FuelClient, PageDirection, PaginatedResult, PaginationRequest,
 };
-use fuel_tx::{
-    field, AssetId, ConsensusParameters, Receipt, Transaction, TransactionFee, UniqueIdentifier,
-};
-use fuel_vm::{interpreter::ExecutableTransaction, state::ProgramState};
-use fuels_core::constants::{DEFAULT_GAS_ESTIMATION_TOLERANCE, MAX_GAS_PER_TX};
+use fuel_tx::{AssetId, ConsensusParameters, Receipt, ScriptExecutionResult};
+use fuel_vm::state::ProgramState;
 use fuels_types::{
     bech32::{Bech32Address, Bech32ContractId},
     block::Block,
@@ -223,7 +220,8 @@ impl Provider {
     pub async fn dry_run<T: Transaction + Clone>(&self, tx: &T) -> Result<Vec<Receipt>> {
         let receipts = self.client.dry_run(&tx.clone().into()).await?;
 
-        Self::check_tx_success_from_receipts(receipts)
+        Self::validate_script_succedded(&receipts)?;
+        Ok(receipts)
     }
 
     pub async fn dry_run_no_validation<T: Transaction + Clone>(
@@ -235,19 +233,29 @@ impl Provider {
             .dry_run_opt(&tx.clone().into(), Some(false))
             .await?;
 
-        Self::check_tx_success_from_receipts(receipts)
+        Self::validate_script_succedded(&receipts)?;
+        Ok(receipts)
     }
 
-    pub(crate) fn check_tx_success_from_receipts(receipts: Vec<Receipt>) -> Result<Vec<Receipt>> {
-        if receipts
-                .iter()
-                .any(|r|
-                    matches!(r, Receipt::ScriptResult { result, .. } if *result != ScriptExecutionResult::Success)
-            ) {
-                return Err(Error::RevertTransactionError(Default::default(), receipts));
-            }
-
-        Ok(receipts)
+    fn validate_script_succedded(receipts: &[Receipt]) -> Result<()> {
+        receipts
+            .iter()
+            .find_map(|receipt| match receipt {
+                Receipt::ScriptResult { result, .. }
+                    if *result != ScriptExecutionResult::Success =>
+                {
+                    Some(format!("{result:?}"))
+                }
+                _ => None,
+            })
+            .map(|error_message| {
+                Err(Error::RevertTransactionError {
+                    reason: error_message,
+                    revert_id: 0,
+                    receipts: receipts.to_owned(),
+                })
+            })
+            .unwrap_or(Ok(()))
     }
 
     /// Gets all coins owned by address `from`, with asset ID `asset_id`, *even spent ones*. This

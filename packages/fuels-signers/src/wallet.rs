@@ -5,15 +5,8 @@ use elliptic_curve::rand_core;
 use eth_keystore::KeystoreError;
 use fuel_core_client::client::{PaginatedResult, PaginationRequest};
 use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
-use fuel_tx::{
-    field, AssetId, Bytes32, Cacheable, Chargeable, ContractId, Input, Output, Receipt, Script,
-    Transaction, TransactionFee, TxPointer, UniqueIdentifier, UtxoId, Witness,
-};
-use fuel_types::{bytes::WORD_SIZE, Address, MessageId};
-use fuel_vm::{
-    fuel_asm::{op, RegId},
-    prelude::GTFArgs,
-};
+use fuel_tx::{AssetId, Bytes32, ContractId, Input, Output, Receipt, TxPointer, UtxoId, Witness};
+use fuel_types::MessageId;
 use fuels_core::{
     abi_encoder::UnresolvedBytes,
     offsets::{base_offset, coin_predicate_data_offset, message_predicate_data_offset},
