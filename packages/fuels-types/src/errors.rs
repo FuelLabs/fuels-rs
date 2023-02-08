@@ -25,10 +25,14 @@ pub enum Error {
     ProviderError(String),
     #[error("Validation error: {0}")]
     ValidationError(#[from] CheckError),
-    #[error("Revert transaction error: {}, receipts: {:?}", .0, .1)]
-    RevertTransactionError(String, Vec<Receipt>),
     #[error("Tried to forward assets to a contract method that is not payable.")]
     AssetsForwardedToNonPayableMethod,
+    #[error("Revert transaction error: {reason},\n receipts: {receipts:?}")]
+    RevertTransactionError {
+        reason: String,
+        revert_id: u64,
+        receipts: Vec<Receipt>,
+    },
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
