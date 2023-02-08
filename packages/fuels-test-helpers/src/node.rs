@@ -123,8 +123,7 @@ impl<'de> DeserializeAs<'de, Word> for HexNumber {
         match bytes.len() {
             len if len > WORD_SIZE => {
                 return Err(D::Error::custom(format!(
-                    "value cant exceed {} bytes",
-                    WORD_SIZE
+                    "value can't exceed {WORD_SIZE} bytes",
                 )));
             }
             len if len < WORD_SIZE => {
@@ -243,11 +242,11 @@ pub async fn new_fuel_node(
         // Warn if there is more than one binary in PATH.
         let binary_name = "fuel-core";
         let paths = which::which_all(binary_name)
-            .unwrap_or_else(|_| panic!("failed to list '{}' binaries", binary_name))
+            .unwrap_or_else(|_| panic!("failed to list '{binary_name}' binaries"))
             .collect::<Vec<_>>();
         let path = paths
             .first()
-            .unwrap_or_else(|| panic!("no '{}' in PATH", binary_name));
+            .unwrap_or_else(|| panic!("no '{binary_name}' in PATH"));
         if paths.len() > 1 {
             eprintln!(
                 "found more than one '{}' binary in PATH, using '{}'",

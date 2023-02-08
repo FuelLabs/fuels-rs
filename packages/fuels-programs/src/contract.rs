@@ -699,13 +699,13 @@ where
             let result = self.simulate().await;
 
             match result {
-                Err(Error::RevertTransactionError(_, receipts))
+                Err(Error::RevertTransactionError { receipts, .. })
                     if ContractCall::is_missing_output_variables(&receipts) =>
                 {
                     self = self.append_variable_outputs(1);
                 }
 
-                Err(Error::RevertTransactionError(_, ref receipts)) => {
+                Err(Error::RevertTransactionError { ref receipts, .. }) => {
                     if let Some(receipt) = ContractCall::find_contract_not_in_inputs(receipts) {
                         let contract_id = Bech32ContractId::from(*receipt.contract_id().unwrap());
                         self = self.append_contract(contract_id);
@@ -855,7 +855,7 @@ impl MultiContractCallHandler {
             let result = self.simulate_without_decode().await;
 
             match result {
-                Err(Error::RevertTransactionError(_, receipts))
+                Err(Error::RevertTransactionError { receipts, .. })
                     if ContractCall::is_missing_output_variables(&receipts) =>
                 {
                     self.contract_calls
@@ -864,7 +864,7 @@ impl MultiContractCallHandler {
                         .for_each(|call| call.append_variable_outputs(1));
                 }
 
-                Err(Error::RevertTransactionError(_, ref receipts)) => {
+                Err(Error::RevertTransactionError { ref receipts, .. }) => {
                     if let Some(receipt) = ContractCall::find_contract_not_in_inputs(receipts) {
                         let contract_id = Bech32ContractId::from(*receipt.contract_id().unwrap());
                         self.contract_calls

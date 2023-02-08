@@ -1,6 +1,4 @@
-use std::collections::HashMap;
-
-use fuels_types::{bech32::Bech32ContractId, param_types::ParamType, ByteArray, ContractId};
+use fuels_types::ByteArray;
 use sha2::{Digest, Sha256};
 
 /// Hashes an encoded function selector using SHA256 and returns the first 4 bytes.
@@ -14,15 +12,4 @@ pub fn first_four_bytes_of_sha256_hash(string: &str) -> ByteArray {
     let mut output = ByteArray::default();
     output[4..].copy_from_slice(&result[..4]);
     output
-}
-
-pub fn log_type_lookup(
-    id_param_pairs: &[(u64, ParamType)],
-    contract_id: Option<Bech32ContractId>,
-) -> HashMap<(Bech32ContractId, u64), ParamType> {
-    let contract_id = contract_id.unwrap_or_else(|| Bech32ContractId::from(ContractId::zeroed()));
-    id_param_pairs
-        .iter()
-        .map(|(id, param_type)| ((contract_id.clone(), *id), param_type.to_owned()))
-        .collect()
 }
