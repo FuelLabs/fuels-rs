@@ -13,7 +13,7 @@ where
         revert(FAILED_ASSERT_EQ_SIGNAL);
     }
 }
-// link: https://github.com/FuelLabs/sway/issues/3946
+// issue link: https://github.com/FuelLabs/fuels-rs/issues/829
 struct TestStruct {
     field_1: bool,
     field_2: u64,
