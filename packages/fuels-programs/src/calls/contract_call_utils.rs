@@ -256,6 +256,7 @@ mod test {
                 outputs: vec![],
                 external_contracts: Default::default(),
                 output_param: ParamType::Unit,
+                is_payable: false,
                 custom_assets: Default::default(),
             }
         }
@@ -309,6 +310,7 @@ mod test {
                 outputs: vec![],
                 external_contracts: vec![],
                 output_param: ParamType::Unit,
+                is_payable: false,
                 custom_assets: Default::default(),
             })
             .collect();

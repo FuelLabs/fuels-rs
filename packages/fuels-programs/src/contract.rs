@@ -82,6 +82,7 @@ impl Contract {
         signature: Selector,
         args: &[Token],
         log_decoder: LogDecoder,
+        is_payable: bool,
     ) -> Result<ContractCallHandler<D>> {
         let encoded_selector = signature;
 
@@ -100,6 +101,7 @@ impl Contract {
             outputs: vec![],
             external_contracts: vec![],
             output_param: D::param_type(),
+            is_payable,
             custom_assets: Default::default(),
         };
 
