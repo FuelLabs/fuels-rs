@@ -1,6 +1,6 @@
 use fuel_tx::{field::Script, ConsensusParameters, InputRepr};
 use fuel_types::bytes::padded_len_usize;
-use fuel_vm::prelude::Opcode;
+use fuel_vm::prelude::Instruction;
 
 /// Gets the base offset for a script or a predicate. The offset depends on the `max_inputs`
 /// field of the `ConsensusParameters` and the static offset.
@@ -14,9 +14,9 @@ pub fn call_script_data_offset(
     consensus_parameters: &ConsensusParameters,
     calls_instructions_len: usize,
 ) -> usize {
-    // Opcode::LEN is a placeholder for the RET instruction which is added later for returning
+    // Instruction::SIZE is a placeholder for the RET instruction which is added later for returning
     // from the script. This doesn't happen in the predicate.
-    let opcode_len = Opcode::LEN;
+    let opcode_len = Instruction::SIZE;
 
     base_offset(consensus_parameters) + padded_len_usize(calls_instructions_len + opcode_len)
 }
