@@ -1,5 +1,7 @@
 use fuel_core_chain_config::MessageConfig;
-use fuel_core_client::client::schema::message::Message as ClientMessage;
+use fuel_core_client::client::schema::message::{
+    Message as ClientMessage, MessageStatus as ClientMessageStatus,
+};
 use fuel_tx::{Input, MessageId};
 
 use crate::bech32::Bech32Address;
@@ -12,7 +14,13 @@ pub struct Message {
     pub nonce: u64,
     pub data: Vec<u8>,
     pub da_height: u64,
-    pub fuel_block_spend: Option<u64>,
+    pub status: MessageStatus,
+}
+
+#[derive(Debug, Clone)]
+pub enum MessageStatus {
+    Unspent,
+    Spent,
 }
 
 impl Message {
@@ -36,7 +44,16 @@ impl From<ClientMessage> for Message {
             nonce: message.nonce.0,
             data: message.data.0 .0,
             da_height: message.da_height.0,
-            fuel_block_spend: message.fuel_block_spend.map(|bs| bs.0),
+            status: MessageStatus::from(message.status),
+        }
+    }
+}
+
+impl From<ClientMessageStatus> for MessageStatus {
+    fn from(status: ClientMessageStatus) -> Self {
+        match status {
+            ClientMessageStatus::Unspent => MessageStatus::Unspent,
+            ClientMessageStatus::Spent => MessageStatus::Spent,
         }
     }
 }

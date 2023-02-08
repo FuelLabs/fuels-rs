@@ -38,17 +38,17 @@ rust-version = "1.67.0"
 version = "0.35.1"
 
 [workspace.dependencies]
-fuel-asm = "0.25"
-fuel-crypto = "0.25"
-fuel-merkle = "0.25"
-fuel-storage = "0.25"
-fuel-tx = "0.25"
-fuel-types = "0.25"
-fuel-core = { version = "0.16", default-features = false }
-fuel-core-client = "0.16"
-fuel-core-chain-config = "0.16"
-fuel-core-types = "0.16"
-fuel-vm = "0.25"
+fuel-asm = "0.26"
+fuel-crypto = "0.26"
+fuel-merkle = "0.26"
+fuel-storage = "0.26"
+fuel-tx = "0.26"
+fuel-types = "0.26"
+fuel-core = { version = "0.17", default-features = false }
+fuel-core-client = "0.17"
+fuel-core-chain-config = "0.17"
+fuel-core-types = "0.17"
+fuel-vm = "0.26"
 fuels = { version = "0.35.1", path = "./packages/fuels" }
 fuels-code-gen = { version = "0.35.1", path = "./packages/fuels-code-gen" }
 fuels-core = { version = "0.35.1", path = "./packages/fuels-core" }
