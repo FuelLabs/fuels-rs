@@ -55,6 +55,8 @@ jobs:
             ./forc-binaries/forc --version
             mv forc-binaries/forc /usr/local/bin/forc
             mv forc-binaries/forc-fmt /usr/local/bin/forc-fmt
+            which forc
+            whereis forc
           fi
 
       - name: Build Sway test projects
