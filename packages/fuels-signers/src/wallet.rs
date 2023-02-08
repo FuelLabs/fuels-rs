@@ -11,8 +11,8 @@ use fuel_tx::{
 };
 use fuel_types::{bytes::WORD_SIZE, Address, MessageId};
 use fuel_vm::{
-    consts::REG_ONE,
-    prelude::{GTFArgs, Opcode},
+    fuel_asm::{op, RegId},
+    prelude::GTFArgs,
 };
 use fuels_core::{
     abi_encoder::UnresolvedBytes,
@@ -308,13 +308,13 @@ impl Wallet {
         //  - a pointer to the asset id
         // into the registers 0x10, 0x12, 0x13
         // and calls the TR instruction
-        let script = vec![
-            Opcode::gtf(0x10, 0x00, GTFArgs::ScriptData),
-            Opcode::ADDI(0x11, 0x10, ContractId::LEN as u16),
-            Opcode::LW(0x12, 0x11, 0),
-            Opcode::ADDI(0x13, 0x11, WORD_SIZE as u16),
-            Opcode::TR(0x10, 0x12, 0x13),
-            Opcode::RET(REG_ONE),
+        let script = [
+            op::gtf_args(0x10, 0x00, GTFArgs::ScriptData),
+            op::addi(0x11, 0x10, ContractId::LEN as u16),
+            op::lw(0x12, 0x11, 0),
+            op::addi(0x13, 0x11, WORD_SIZE as u16),
+            op::tr(0x10, 0x12, 0x13),
+            op::ret(RegId::ONE),
         ]
         .into_iter()
         .collect();
@@ -348,12 +348,12 @@ impl Wallet {
         //  - the amount
         // into the registers 0x10, 0x11
         // and calls the SMO instruction
-        let script = vec![
-            Opcode::gtf(0x10, 0x00, GTFArgs::ScriptData),
-            Opcode::ADDI(0x11, 0x10, Bytes32::LEN as u16),
-            Opcode::LW(0x11, 0x11, 0),
-            Opcode::SMO(0x10, 0x00, 0x00, 0x11),
-            Opcode::RET(REG_ONE),
+        let script = [
+            op::gtf_args(0x10, 0x00, GTFArgs::ScriptData),
+            op::addi(0x11, 0x10, Bytes32::LEN as u16),
+            op::lw(0x11, 0x11, 0),
+            op::smo(0x10, 0x00, 0x00, 0x11),
+            op::ret(RegId::ONE),
         ]
         .into_iter()
         .collect();
