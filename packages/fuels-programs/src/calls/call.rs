@@ -21,7 +21,7 @@ macro_rules! implement_shared_call_methods {
             pub fn with_external_contracts(self, external_contracts: Vec<Bech32ContractId>) ->
             Self {
                 Self {
-                    external_contracts: external_contracts,
+                    external_contracts,
                     ..self
                 }
             }
