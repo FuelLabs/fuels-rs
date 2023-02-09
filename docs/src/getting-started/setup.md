@@ -86,7 +86,7 @@ Another way to experience the SDK is to look at the source code. The `packages/f
 > To build these tests, navigate to the packages/fuels/tests/ folder and run the following command:
 
 ```
-forc build
+forc build --path packages/fuels
 ```
 > The `forc` can also be used to clean and format the test projects. Check the `help` output for more info.
 
