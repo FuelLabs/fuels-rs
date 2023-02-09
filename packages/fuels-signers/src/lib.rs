@@ -9,7 +9,7 @@ use async_trait::async_trait;
 #[doc(no_inline)]
 pub use fuel_crypto;
 use fuel_crypto::Signature;
-use fuels_types::{bech32::Bech32Address, script_transaction::Transaction};
+use fuels_types::{bech32::Bech32Address, transaction::Transaction};
 pub use wallet::{Wallet, WalletUnlocked};
 
 /// Trait for signing transactions and messages
@@ -49,7 +49,7 @@ mod tests {
     use fuels_types::{
         constants::BASE_ASSET_ID,
         parameters::TxParameters,
-        script_transaction::{ScriptTransaction, Transaction},
+        transaction::{ScriptTransaction, Transaction},
     };
     use rand::{rngs::StdRng, RngCore, SeedableRng};
 

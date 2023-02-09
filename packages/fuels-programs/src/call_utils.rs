@@ -14,7 +14,7 @@ use fuels_types::{
     errors::{Error, Result},
     parameters::TxParameters,
     resource::Resource,
-    script_transaction::{ScriptTransaction, Transaction},
+    transaction::{ScriptTransaction, Transaction},
 };
 use itertools::{chain, Itertools};
 
@@ -65,9 +65,9 @@ pub async fn build_tx_from_contract_calls(
         get_transaction_inputs_outputs(calls, wallet.address(), spendable_resources);
 
     let mut tx: ScriptTransaction =
-        ScriptTransaction::build_transfer_tx(&inputs, &outputs, *tx_parameters);
-    *tx.script_mut() = script;
-    *tx.script_data_mut() = script_data;
+        ScriptTransaction::build_transfer_tx(&inputs, &outputs, *tx_parameters)
+    .with_script(script)
+    .with_script_data(script_data);
 
     let base_asset_amount = required_asset_amounts
         .iter()

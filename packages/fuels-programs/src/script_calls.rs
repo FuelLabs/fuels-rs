@@ -8,7 +8,7 @@ use fuels_types::{
     bech32::Bech32ContractId,
     errors::Result,
     parameters::TxParameters,
-    script_transaction::{ScriptTransaction, Transaction},
+    transaction::{ScriptTransaction, Transaction},
     traits::{Parameterize, Tokenizable},
 };
 use itertools::chain;
@@ -159,9 +159,10 @@ where
         .collect();
 
         let mut tx: ScriptTransaction =
-            ScriptTransaction::build_transfer_tx(&inputs, &outputs, self.tx_parameters);
-        *tx.script_mut() = self.script_call.script_binary.clone();
-        *tx.script_data_mut() = self.compute_script_data().await?;
+            ScriptTransaction::build_transfer_tx(&inputs, &outputs, self.tx_parameters)
+            .with_script(self.script_call.script_binary.clone())
+            .with_script_data(self.compute_script_data().await?);
+        
         self.wallet.add_fee_resources(&mut tx, 0, 0).await?;
         self.wallet.sign_transaction(&mut tx).await?;
 

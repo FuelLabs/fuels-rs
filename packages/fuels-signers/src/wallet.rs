@@ -19,7 +19,7 @@ use fuels_types::{
     message::Message as InputMessage,
     parameters::TxParameters,
     resource::Resource,
-    script_transaction::{ScriptTransaction, Transaction},
+    transaction::{ScriptTransaction, Transaction},
     transaction_response::TransactionResponse,
 };
 use rand::{CryptoRng, Rng};

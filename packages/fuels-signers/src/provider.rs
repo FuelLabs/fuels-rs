@@ -23,7 +23,7 @@ use fuels_types::{
     message_proof::MessageProof,
     node_info::NodeInfo,
     resource::Resource,
-    script_transaction::Transaction,
+    transaction::Transaction,
     transaction_response::TransactionResponse,
 };
 use tai64::Tai64;
@@ -473,7 +473,7 @@ impl Provider {
         let NodeInfo { min_gas_price, .. } = self.node_info().await?;
 
         let tolerance = tolerance.unwrap_or(DEFAULT_GAS_ESTIMATION_TOLERANCE);
-        let mut dry_run_tx = Self::generate_dry_run_tx(tx);
+        let dry_run_tx = Self::generate_dry_run_tx(tx);
         let consensus_parameters = self.chain_info().await?.consensus_parameters;
         let gas_used = self
             .get_gas_used_with_tolerance(&dry_run_tx, tolerance)
@@ -481,8 +481,7 @@ impl Provider {
         let gas_price = std::cmp::max(tx.gas_price(), min_gas_price);
 
         // Update the dry_run_tx with estimated gas_used and correct gas price to calculate the total_fee
-        *dry_run_tx.gas_price_mut() = gas_price;
-        *dry_run_tx.gas_limit_mut() = gas_used;
+        dry_run_tx.with_gas_price(gas_price).with_gas_limit(gas_used);
 
         let transaction_fee = tx
             .fee_checked_from_tx(&consensus_parameters)
@@ -499,11 +498,10 @@ impl Provider {
 
     // Remove limits from an existing Transaction to get an accurate gas estimation
     fn generate_dry_run_tx<T: Transaction + Clone>(tx: &T) -> T {
-        let mut dry_run_tx = tx.clone();
         // Simulate the contract call with MAX_GAS_PER_TX to get the complete gas_used
-        *dry_run_tx.gas_limit_mut() = MAX_GAS_PER_TX;
-        *dry_run_tx.gas_price_mut() = 0;
-        dry_run_tx
+        tx.clone()
+        .with_gas_limit(MAX_GAS_PER_TX)
+        .with_gas_price(0)
     }
 
     // Increase estimated gas by the provided tolerance

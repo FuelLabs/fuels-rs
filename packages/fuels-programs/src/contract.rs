@@ -27,7 +27,7 @@ use fuels_types::{
     errors::{error, Error, Result},
     param_types::{ParamType, ReturnLocation},
     parameters::{CallParameters, StorageConfiguration, TxParameters},
-    script_transaction::{CreateTransaction, ScriptTransaction, Transaction},
+    transaction::{CreateTransaction, ScriptTransaction, Transaction},
     traits::{Parameterize, Tokenizable},
     Selector, Token,
 };
