@@ -19,7 +19,7 @@ pub(crate) fn logs_lookup_instantiation_code(
     let contract_id = contract_id
         .map(|id| quote! { ::std::option::Option::Some(#id) })
         .unwrap_or_else(|| quote! {::std::option::Option::None});
-    quote! {::fuels::core::utils::log_type_lookup(&[#(#log_id_param_type_pairs),*], #contract_id)}
+    quote! {::fuels::programs::logs::log_type_lookup(&[#(#log_id_param_type_pairs),*], #contract_id)}
 }
 
 #[derive(Debug)]
