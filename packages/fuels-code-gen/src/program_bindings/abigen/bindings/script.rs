@@ -101,7 +101,7 @@ fn expand_fn(
 
     generator
         .set_output_type(
-            quote! {::fuels::programs::script_calls::ScriptCallHandler<#original_output_type> },
+            quote! {#fuels_programs::script_calls::ScriptCallHandler<#original_output_type> },
         )
         .set_doc("Run the script's `main` function with the provided arguments".to_string())
         .set_body(body);

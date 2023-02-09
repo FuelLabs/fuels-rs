@@ -13,7 +13,11 @@ use crate::{
         },
         generated_code::GeneratedCode,
     },
-    utils::{ident, type_path_lookup::fuels_types_path, TypePath},
+    utils::{
+        ident,
+        type_path_lookup::{fuels_programs_path, fuels_types_path},
+        TypePath,
+    },
 };
 
 pub(crate) fn contract_bindings(
@@ -38,17 +42,18 @@ pub(crate) fn contract_bindings(
     let contract_functions = expand_functions(&abi.functions, shared_types, no_std)?;
 
     let fuels_types = fuels_types_path(no_std);
+    let fuels_programs = fuels_programs_path(no_std);
 
     let code = quote! {
         pub struct #name {
             contract_id: #fuels_types::bech32::Bech32ContractId,
             wallet: ::fuels::signers::wallet::WalletUnlocked,
-            log_decoder: ::fuels::programs::logs::LogDecoder
+            log_decoder: #fuels_programs::logs::LogDecoder
         }
 
         impl #name {
             pub fn new(contract_id: #fuels_types::bech32::Bech32ContractId, wallet: ::fuels::signers::wallet::WalletUnlocked) -> Self {
-                let log_decoder = ::fuels::programs::logs::LogDecoder { type_lookup: #log_type_lookup };
+                let log_decoder = #fuels_programs::logs::LogDecoder { type_lookup: #log_type_lookup };
                 Self { contract_id, wallet, log_decoder }
             }
 
@@ -84,18 +89,18 @@ pub(crate) fn contract_bindings(
         pub struct #methods_name {
             contract_id: #fuels_types::bech32::Bech32ContractId,
             wallet: ::fuels::signers::wallet::WalletUnlocked,
-            log_decoder: ::fuels::programs::logs::LogDecoder
+            log_decoder: #fuels_programs::logs::LogDecoder
         }
 
         impl #methods_name {
             #contract_functions
         }
 
-        impl ::fuels::programs::contract::SettableContract for #name {
+        impl #fuels_programs::contract::SettableContract for #name {
             fn id(&self) -> #fuels_types::bech32::Bech32ContractId {
                 self.contract_id.clone()
             }
-            fn log_decoder(&self) -> ::fuels::programs::logs::LogDecoder {
+            fn log_decoder(&self) -> #fuels_programs::logs::LogDecoder {
                 self.log_decoder.clone()
             }
         }
@@ -146,8 +151,11 @@ pub(crate) fn expand_fn(
     ));
 
     let original_output = generator.output_type();
+
+    let fuels_programs = fuels_programs_path(no_std);
+
     generator.set_output_type(
-        quote! {::fuels::programs::contract::ContractCallHandler<#original_output> },
+        quote! {#fuels_programs::contract::ContractCallHandler<#original_output> },
     );
 
     let fn_selector = generator.fn_selector();
@@ -155,7 +163,7 @@ pub(crate) fn expand_fn(
     let is_payable = abi_fun.is_payable();
     let body = quote! {
             let provider = self.wallet.get_provider().expect("Provider not set up");
-            ::fuels::programs::contract::Contract::method_hash(
+            #fuels_programs::contract::Contract::method_hash(
                 &provider,
                 self.contract_id.clone(),
                 &self.wallet,
