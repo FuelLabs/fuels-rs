@@ -28,14 +28,14 @@ pub(crate) fn predicate_bindings(
     let code = quote! {
         #[derive(Debug)]
         pub struct #name {
-            address: ::fuels::types::bech32::Bech32Address,
+            address: #fuels_types::bech32::Bech32Address,
             code: ::std::vec::Vec<u8>,
             data: ::fuels::core::abi_encoder::UnresolvedBytes
         }
 
         impl #name {
             pub fn new(code: ::std::vec::Vec<u8>) -> Self {
-                let address: ::fuels::types::Address = (*::fuels::tx::Contract::root_from_code(&code)).into();
+                let address: #fuels_types::Address = (*::fuels::tx::Contract::root_from_code(&code)).into();
                 Self {
                     address: address.into(),
                     code,
@@ -43,11 +43,11 @@ pub(crate) fn predicate_bindings(
                 }
             }
 
-            pub fn load_from(file_path: &str) -> ::fuels::types::errors::Result<Self> {
+            pub fn load_from(file_path: &str) -> #fuels_types::errors::Result<Self> {
                 ::core::result::Result::Ok(Self::new(::std::fs::read(file_path)?))
             }
 
-            pub fn address(&self) -> &::fuels::types::bech32::Bech32Address {
+            pub fn address(&self) -> &#fuels_types::bech32::Bech32Address {
                 &self.address
             }
 
@@ -61,9 +61,9 @@ pub(crate) fn predicate_bindings(
 
             pub async fn receive(&self, from: &::fuels::signers::wallet::WalletUnlocked,
                                  amount: u64,
-                                 asset_id: ::fuels::types::AssetId,
+                                 asset_id: #fuels_types::AssetId,
                                  tx_parameters: ::core::option::Option<::fuels::core::parameters::TxParameters>
-            ) -> ::fuels::types::errors::Result<(::std::string::String, ::std::vec::Vec<::fuels::tx::Receipt>)> {
+            ) -> #fuels_types::errors::Result<(::std::string::String, ::std::vec::Vec<::fuels::tx::Receipt>)> {
                 let tx_parameters = tx_parameters.unwrap_or_default();
                 from
                     .transfer(
@@ -77,9 +77,9 @@ pub(crate) fn predicate_bindings(
 
             pub async fn spend(&self, to: &::fuels::signers::wallet::WalletUnlocked,
                                 amount: u64,
-                                asset_id: ::fuels::types::AssetId,
+                                asset_id: #fuels_types::AssetId,
                                 tx_parameters: ::core::option::Option<::fuels::core::parameters::TxParameters>
-            ) -> ::fuels::types::errors::Result<::std::vec::Vec<::fuels::tx::Receipt>> {
+            ) -> #fuels_types::errors::Result<::std::vec::Vec<::fuels::tx::Receipt>> {
                 let tx_parameters = tx_parameters.unwrap_or_default();
                 to
                     .receive_from_predicate(

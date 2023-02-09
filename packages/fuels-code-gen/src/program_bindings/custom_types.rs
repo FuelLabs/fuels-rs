@@ -145,9 +145,9 @@ mod tests {
                 Debug,
                 Eq,
                 PartialEq,
-                ::fuels::macros::Parameterize,
-                ::fuels::macros::Tokenizable,
-                ::fuels::macros::TryFrom
+                #fuels_macros::Parameterize,
+                #fuels_macros::Tokenizable,
+                #fuels_macros::TryFrom
             )]
             #[FuelsTypesPath("::fuels::types")]
             #[FuelsCorePath("::fuels::core")]
@@ -240,9 +240,9 @@ mod tests {
                 Debug,
                 Eq,
                 PartialEq,
-                ::fuels::macros::Parameterize,
-                ::fuels::macros::Tokenizable,
-                ::fuels::macros::TryFrom
+                #fuels_macros::Parameterize,
+                #fuels_macros::Tokenizable,
+                #fuels_macros::TryFrom
             )]
             #[FuelsTypesPath("::fuels::types")]
             #[FuelsCorePath("::fuels::core")]
@@ -309,9 +309,9 @@ mod tests {
                 Debug,
                 Eq,
                 PartialEq,
-                ::fuels::macros::Parameterize,
-                ::fuels::macros::Tokenizable,
-                ::fuels::macros::TryFrom
+                #fuels_macros::Parameterize,
+                #fuels_macros::Tokenizable,
+                #fuels_macros::TryFrom
             )]
             #[FuelsTypesPath("::fuels::types")]
             #[FuelsCorePath("::fuels::core")]
@@ -390,9 +390,9 @@ mod tests {
                 Debug,
                 Eq,
                 PartialEq,
-                ::fuels::macros::Parameterize,
-                ::fuels::macros::Tokenizable,
-                ::fuels::macros::TryFrom
+                #fuels_macros::Parameterize,
+                #fuels_macros::Tokenizable,
+                #fuels_macros::TryFrom
             )]
             #[FuelsTypesPath("::fuels::types")]
             #[FuelsCorePath("::fuels::core")]
@@ -471,9 +471,9 @@ mod tests {
                 Debug,
                 Eq,
                 PartialEq,
-                ::fuels::macros::Parameterize,
-                ::fuels::macros::Tokenizable,
-                ::fuels::macros::TryFrom
+                #fuels_macros::Parameterize,
+                #fuels_macros::Tokenizable,
+                #fuels_macros::TryFrom
             )]
             #[FuelsTypesPath("::fuels::types")]
             #[FuelsCorePath("::fuels::core")]
@@ -512,9 +512,9 @@ mod tests {
                 Debug,
                 Eq,
                 PartialEq,
-                ::fuels::macros::Parameterize,
-                ::fuels::macros::Tokenizable,
-                ::fuels::macros::TryFrom
+                #fuels_macros::Parameterize,
+                #fuels_macros::Tokenizable,
+                #fuels_macros::TryFrom
             )]
             #[FuelsTypesPath("::fuels::types")]
             #[FuelsCorePath("::fuels::core")]
@@ -581,9 +581,9 @@ mod tests {
                 Debug,
                 Eq,
                 PartialEq,
-                ::fuels::macros::Parameterize,
-                ::fuels::macros::Tokenizable,
-                ::fuels::macros::TryFrom
+                #fuels_macros::Parameterize,
+                #fuels_macros::Tokenizable,
+                #fuels_macros::TryFrom
             )]
             #[FuelsTypesPath("::fuels::types")]
             #[FuelsCorePath("::fuels::core")]
@@ -690,15 +690,15 @@ mod tests {
                 Debug,
                 Eq,
                 PartialEq,
-                ::fuels::macros::Parameterize,
-                ::fuels::macros::Tokenizable,
-                ::fuels::macros::TryFrom
+                #fuels_macros::Parameterize,
+                #fuels_macros::Tokenizable,
+                #fuels_macros::TryFrom
             )]
             #[FuelsTypesPath("::fuels::types")]
             #[FuelsCorePath("::fuels::core")]
             pub struct MyStruct1 < > {
                 pub x: u64,
-                pub y: ::fuels::types::Bits256
+                pub y: #fuels_types::Bits256
             }
         };
 
@@ -719,9 +719,9 @@ mod tests {
                 Debug,
                 Eq,
                 PartialEq,
-                ::fuels::macros::Parameterize,
-                ::fuels::macros::Tokenizable,
-                ::fuels::macros::TryFrom
+                #fuels_macros::Parameterize,
+                #fuels_macros::Tokenizable,
+                #fuels_macros::TryFrom
             )]
             #[FuelsTypesPath("::fuels::types")]
             #[FuelsCorePath("::fuels::core")]

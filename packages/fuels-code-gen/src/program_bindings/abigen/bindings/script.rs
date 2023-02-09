@@ -3,6 +3,9 @@ use std::collections::HashSet;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
+use crate::utils::type_path_lookup::{
+    fuels_core_path, fuels_programs_path, fuels_signers_path, std_lib_path,
+};
 use crate::{
     error::Result,
     program_bindings::{
@@ -31,20 +34,24 @@ pub(crate) fn script_bindings(
     let log_type_lookup =
         logs_lookup_instantiation_code(None, &abi.logged_types, shared_types, no_std);
 
+    let fuels_signers = fuels_signers_path(no_std);
+    let fuels_programs = fuels_programs_path(no_std);
+    let std_lib = std_lib_path(no_std);
+
     let code = quote! {
         #[derive(Debug)]
         pub struct #name{
-            wallet: ::fuels::signers::wallet::WalletUnlocked,
-            binary_filepath: ::std::string::String,
-            log_decoder: ::fuels::programs::logs::LogDecoder
+            wallet: #fuels_signers::wallet::WalletUnlocked,
+            binary_filepath: #std_lib::string::String,
+            log_decoder: #fuels_programs::logs::LogDecoder
         }
 
         impl #name {
-            pub fn new(wallet: ::fuels::signers::wallet::WalletUnlocked, binary_filepath: &str) -> Self {
+            pub fn new(wallet: #fuels_signers::wallet::WalletUnlocked, binary_filepath: &::core::str) -> Self {
                 Self {
                     wallet,
                     binary_filepath: binary_filepath.to_string(),
-                    log_decoder: ::fuels::programs::logs::LogDecoder {type_lookup: #log_type_lookup}
+                    log_decoder: #fuels_programs::logs::LogDecoder {type_lookup: #log_type_lookup}
                 }
             }
 
@@ -67,16 +74,19 @@ fn expand_fn(
     no_std: bool,
 ) -> Result<TokenStream> {
     let fun = extract_main_fn(&abi.functions)?;
+
+    let fuels_core = fuels_core_path(no_std);
+    let fuels_programs = fuels_programs_path(no_std);
     let mut generator = FunctionGenerator::new(fun, shared_types, no_std)?;
 
     let arg_tokens = generator.tokenized_args();
     let body = quote! {
             let script_binary = ::std::fs::read(&self.binary_filepath)
                                         .expect("Could not read from binary filepath");
-            let encoded_args = ::fuels::core::abi_encoder::ABIEncoder::encode(&#arg_tokens).expect("Cannot encode script arguments");
+            let encoded_args = #fuels_core::abi_encoder::ABIEncoder::encode(&#arg_tokens).expect("Cannot encode script arguments");
             let provider = self.wallet.get_provider().expect("Provider not set up").clone();
 
-            ::fuels::programs::script_calls::ScriptCallHandler::new(
+            #fuels_programs::script_calls::ScriptCallHandler::new(
                 script_binary,
                 encoded_args,
                 self.wallet.clone(),

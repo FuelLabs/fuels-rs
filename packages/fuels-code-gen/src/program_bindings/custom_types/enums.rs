@@ -4,6 +4,7 @@ use fuel_abi_types::utils::extract_custom_type_name;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
+use crate::utils::type_path_lookup::{fuels_core_path, fuels_macros_path, fuels_types_path};
 use crate::{
     error::{error, Result},
     program_bindings::{
@@ -66,7 +67,19 @@ fn enum_decl(
             }
         },
     );
-    let maybe_disable_std = no_std.then(|| quote! {#[NoStd]});
+    let std_disable_switch = no_std.then(|| quote! {#[NoStd]});
+    let fuels_types = fuels_types_path(no_std);
+    let fuels_macros = fuels_macros_path(no_std);
+    let fuels_core = fuels_core_path(no_std);
+
+    let path_redirects = no_std.then(|| {
+        let fuels_types = fuels_types.to_string();
+        let fuels_core = fuels_core.to_string();
+        quote! {
+            #[FuelsTypesPath(#fuels_types)]
+            #[FuelsCorePath(#fuels_core)]
+        }
+    });
 
     quote! {
         #[allow(clippy::enum_variant_names)]
@@ -75,14 +88,13 @@ fn enum_decl(
             Debug,
             Eq,
             PartialEq,
-            ::fuels::macros::Parameterize,
-            ::fuels::macros::Tokenizable,
-            ::fuels::macros::TryFrom
+            #fuels_macros::Parameterize,
+            #fuels_macros::Tokenizable,
+            #fuels_macros::TryFrom
         )]
-        #[FuelsTypesPath("::fuels::types")]
-        #[FuelsCorePath("::fuels::core")]
-        #maybe_disable_std
-        pub enum #enum_ident <#(#generics: ::fuels::types::traits::Tokenizable + ::fuels::types::traits::Parameterize),*> {
+        #path_redirects
+        #std_disable_switch
+        pub enum #enum_ident <#(#generics: #fuels_types::traits::Tokenizable + #fuels_types::traits::Parameterize),*> {
             #(#enum_variants),*
         }
     }

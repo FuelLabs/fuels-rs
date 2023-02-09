@@ -32,3 +32,18 @@ pub fn fuels_types_path(no_std: bool) -> TokenStream {
         quote! {::fuels::types}
     }
 }
+
+pub fn fuels_signers_path(no_std: bool) -> TokenStream {
+    if no_std {
+        quote! {::fuels_signers}
+    } else {
+        quote! {::fuels::signers}
+    }
+}
+pub fn fuels_programs_path(no_std: bool) -> TokenStream {
+    if no_std {
+        quote! {::fuels_programs}
+    } else {
+        quote! {::fuels::programs}
+    }
+}

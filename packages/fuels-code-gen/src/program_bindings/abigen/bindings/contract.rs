@@ -4,6 +4,7 @@ use itertools::Itertools;
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, TokenStreamExt};
 
+use crate::utils::type_path_lookup::fuels_types_path;
 use crate::{
     error::Result,
     program_bindings::{
@@ -37,20 +38,22 @@ pub(crate) fn contract_bindings(
 
     let contract_functions = expand_functions(&abi.functions, shared_types, no_std)?;
 
+    let fuels_types = fuels_types_path(no_std);
+
     let code = quote! {
         pub struct #name {
-            contract_id: ::fuels::types::bech32::Bech32ContractId,
+            contract_id: #fuels_types::bech32::Bech32ContractId,
             wallet: ::fuels::signers::wallet::WalletUnlocked,
             log_decoder: ::fuels::programs::logs::LogDecoder
         }
 
         impl #name {
-            pub fn new(contract_id: ::fuels::types::bech32::Bech32ContractId, wallet: ::fuels::signers::wallet::WalletUnlocked) -> Self {
+            pub fn new(contract_id: #fuels_types::bech32::Bech32ContractId, wallet: ::fuels::signers::wallet::WalletUnlocked) -> Self {
                 let log_decoder = ::fuels::programs::logs::LogDecoder { type_lookup: #log_type_lookup };
                 Self { contract_id, wallet, log_decoder }
             }
 
-            pub fn contract_id(&self) -> &::fuels::types::bech32::Bech32ContractId {
+            pub fn contract_id(&self) -> &#fuels_types::bech32::Bech32ContractId {
                 &self.contract_id
             }
 
@@ -58,14 +61,14 @@ pub(crate) fn contract_bindings(
                 self.wallet.clone()
             }
 
-            pub fn with_wallet(&self, mut wallet: ::fuels::signers::wallet::WalletUnlocked) -> ::fuels::types::errors::Result<Self> {
+            pub fn with_wallet(&self, mut wallet: ::fuels::signers::wallet::WalletUnlocked) -> #fuels_types::errors::Result<Self> {
                let provider = self.wallet.get_provider()?;
                wallet.set_provider(provider.clone());
 
                ::core::result::Result::Ok(Self { contract_id: self.contract_id.clone(), wallet: wallet, log_decoder: self.log_decoder.clone()})
             }
 
-            pub async fn get_balances(&self) -> ::fuels::types::errors::Result<::std::collections::HashMap<::std::string::String, u64>> {
+            pub async fn get_balances(&self) -> #fuels_types::errors::Result<::std::collections::HashMap<::std::string::String, u64>> {
                 self.wallet.get_provider()?.get_contract_balances(&self.contract_id).await.map_err(Into::into)
             }
 
@@ -80,7 +83,7 @@ pub(crate) fn contract_bindings(
 
         // Implement struct that holds the contract methods
         pub struct #methods_name {
-            contract_id: ::fuels::types::bech32::Bech32ContractId,
+            contract_id: #fuels_types::bech32::Bech32ContractId,
             wallet: ::fuels::signers::wallet::WalletUnlocked,
             log_decoder: ::fuels::programs::logs::LogDecoder
         }
@@ -90,7 +93,7 @@ pub(crate) fn contract_bindings(
         }
 
         impl ::fuels::programs::contract::SettableContract for #name {
-            fn id(&self) -> ::fuels::types::bech32::Bech32ContractId {
+            fn id(&self) -> #fuels_types::bech32::Bech32ContractId {
                 self.contract_id.clone()
             }
             fn log_decoder(&self) -> ::fuels::programs::logs::LogDecoder {
@@ -347,13 +350,13 @@ mod tests {
                     ::fuels::core::function_selector::resolve_fn_selector(
                         "some_abi_funct",
                         &[
-                            <self::MyStruct1 as ::fuels::types::traits::Parameterize>::param_type(),
-                            <self::MyStruct2 as ::fuels::types::traits::Parameterize>::param_type()
+                            <self::MyStruct1 as #fuels_types::traits::Parameterize>::param_type(),
+                            <self::MyStruct2 as #fuels_types::traits::Parameterize>::param_type()
                         ]
                     ),
                     &[
-                        ::fuels::types::traits::Tokenizable::into_token(s_1),
-                        ::fuels::types::traits::Tokenizable::into_token(s_2)
+                        #fuels_types::traits::Tokenizable::into_token(s_1),
+                        #fuels_types::traits::Tokenizable::into_token(s_2)
                     ],
                     self.log_decoder.clone(),
                     false,
@@ -414,9 +417,9 @@ mod tests {
                     &self.wallet,
                     ::fuels::core::function_selector::resolve_fn_selector(
                         "HelloWorld",
-                        &[<bool as ::fuels::types::traits::Parameterize>::param_type()]
+                        &[<bool as #fuels_types::traits::Parameterize>::param_type()]
                     ),
-                    &[::fuels::types::traits::Tokenizable::into_token(bimbam)],
+                    &[#fuels_types::traits::Tokenizable::into_token(bimbam)],
                     self.log_decoder.clone(),
                     false,
                 )
@@ -530,9 +533,9 @@ mod tests {
                     &self.wallet,
                     ::fuels::core::function_selector::resolve_fn_selector(
                         "hello_world",
-                        &[<self::SomeWeirdFrenchCuisine as ::fuels::types::traits::Parameterize>::param_type()]
+                        &[<self::SomeWeirdFrenchCuisine as #fuels_types::traits::Parameterize>::param_type()]
                     ),
-                    &[::fuels::types::traits::Tokenizable::into_token(
+                    &[#fuels_types::traits::Tokenizable::into_token(
                         the_only_allowed_input
                     )],
                     self.log_decoder.clone(),
