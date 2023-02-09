@@ -17,7 +17,6 @@ use crate::{
     call_response::FuelCallResponse,
     call_utils::{generate_contract_inputs, generate_contract_outputs},
     contract::{get_decoded_output, SettableContract},
-    execution_script::ExecutableFuelCall,
     logs::{map_revert_error, LogDecoder},
 };
 

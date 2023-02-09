@@ -34,7 +34,6 @@ use fuels_types::{
 
 use crate::{
     call_response::FuelCallResponse,
-    constants::FAILED_TRANSFER_TO_ADDRESS_SIGNAL,
     call_utils::build_tx_contract_calls,
     logs::{map_revert_error, LogDecoder},
 };

@@ -1,7 +1,5 @@
 use std::fmt::Debug;
 
-use std::fmt::Debug;
-
 use fuels::{
     prelude::*,
     tx::Receipt,
