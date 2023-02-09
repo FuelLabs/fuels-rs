@@ -10,7 +10,10 @@ use crate::{
         resolved_type::{resolve_type, ResolvedType},
         utils::{param_type_calls, Component},
     },
-    utils::{safe_ident, type_path_lookup::fuels_types_path},
+    utils::{
+        safe_ident,
+        type_path_lookup::{fuels_core_path, fuels_types_path},
+    },
 };
 
 #[derive(Debug)]
@@ -60,8 +63,9 @@ impl FunctionGenerator {
     pub fn fn_selector(&self) -> TokenStream {
         let param_type_calls = param_type_calls(&self.args, self.no_std);
 
+        let fuels_core = fuels_core_path(self.no_std);
         let name = &self.name;
-        quote! {::fuels::core::function_selector::resolve_fn_selector(#name, &[#(#param_type_calls),*])}
+        quote! {#fuels_core::function_selector::resolve_fn_selector(#name, &[#(#param_type_calls),*])}
     }
 
     pub fn tokenized_args(&self) -> TokenStream {

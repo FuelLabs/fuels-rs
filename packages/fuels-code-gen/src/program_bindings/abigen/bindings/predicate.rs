@@ -10,7 +10,10 @@ use crate::{
         abigen::bindings::{function_generator::FunctionGenerator, utils::extract_main_fn},
         generated_code::GeneratedCode,
     },
-    utils::{type_path_lookup::fuels_types_path, TypePath},
+    utils::{
+        type_path_lookup::{fuels_core_path, fuels_types_path},
+        TypePath,
+    },
 };
 
 pub(crate) fn predicate_bindings(
@@ -26,12 +29,14 @@ pub(crate) fn predicate_bindings(
     let encode_function = expand_fn(&abi, shared_types, no_std)?;
 
     let fuels_types = fuels_types_path(no_std);
+    let fuels_core = fuels_core_path(no_std);
+
     let code = quote! {
         #[derive(Debug)]
         pub struct #name {
             address: #fuels_types::bech32::Bech32Address,
             code: ::std::vec::Vec<u8>,
-            data: ::fuels::core::abi_encoder::UnresolvedBytes
+            data: #fuels_core::abi_encoder::UnresolvedBytes
         }
 
         impl #name {
@@ -40,7 +45,7 @@ pub(crate) fn predicate_bindings(
                 Self {
                     address: address.into(),
                     code,
-                    data: ::fuels::core::abi_encoder::UnresolvedBytes::new()
+                    data: #fuels_core::abi_encoder::UnresolvedBytes::new()
                 }
             }
 
@@ -56,14 +61,14 @@ pub(crate) fn predicate_bindings(
                 self.code.clone()
             }
 
-            pub fn data(&self) -> ::fuels::core::abi_encoder::UnresolvedBytes {
+            pub fn data(&self) -> #fuels_core::abi_encoder::UnresolvedBytes {
                 self.data.clone()
             }
 
             pub async fn receive(&self, from: &::fuels::signers::wallet::WalletUnlocked,
                                  amount: u64,
                                  asset_id: #fuels_types::AssetId,
-                                 tx_parameters: ::core::option::Option<::fuels::core::parameters::TxParameters>
+                                 tx_parameters: ::core::option::Option<#fuels_core::parameters::TxParameters>
             ) -> #fuels_types::errors::Result<(::std::string::String, ::std::vec::Vec<::fuels::tx::Receipt>)> {
                 let tx_parameters = tx_parameters.unwrap_or_default();
                 from
@@ -79,7 +84,7 @@ pub(crate) fn predicate_bindings(
             pub async fn spend(&self, to: &::fuels::signers::wallet::WalletUnlocked,
                                 amount: u64,
                                 asset_id: #fuels_types::AssetId,
-                                tx_parameters: ::core::option::Option<::fuels::core::parameters::TxParameters>
+                                tx_parameters: ::core::option::Option<#fuels_core::parameters::TxParameters>
             ) -> #fuels_types::errors::Result<::std::vec::Vec<::fuels::tx::Receipt>> {
                 let tx_parameters = tx_parameters.unwrap_or_default();
                 to
@@ -116,8 +121,10 @@ fn expand_fn(
     let mut generator = FunctionGenerator::new(fun, shared_types, no_std)?;
 
     let arg_tokens = generator.tokenized_args();
+
+    let fuels_core = fuels_core_path(no_std);
     let body = quote! {
-        let data = ::fuels::core::abi_encoder::ABIEncoder::encode(&#arg_tokens).expect("Cannot encode predicate data");
+        let data = #fuels_core::abi_encoder::ABIEncoder::encode(&#arg_tokens).expect("Cannot encode predicate data");
 
         Self {
             address: self.address.clone(),
