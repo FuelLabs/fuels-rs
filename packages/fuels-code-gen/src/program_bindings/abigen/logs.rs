@@ -8,7 +8,7 @@ use crate::program_bindings::{
     resolved_type::resolve_type,
     utils::single_param_type_call,
 };
-use crate::utils::type_path_lookup::fuels_core_path;
+use crate::utils::type_path_lookup::{fuels_core_path, fuels_programs_path};
 
 pub(crate) fn logs_lookup_instantiation_code(
     contract_id: Option<TokenStream>,
@@ -21,8 +21,8 @@ pub(crate) fn logs_lookup_instantiation_code(
     let contract_id = contract_id
         .map(|id| quote! { ::core::option::Option::Some(#id) })
         .unwrap_or_else(|| quote! {::core::option::Option::None});
-    let fuels_core = fuels_core_path(no_std);
-    quote! {#fuels_core::utils::log_type_lookup(&[#(#log_id_param_type_pairs),*], #contract_id)}
+    let fuels_programs = fuels_programs_path(no_std);
+    quote! {#fuels_programs::logs::log_type_lookup(&[#(#log_id_param_type_pairs),*], #contract_id)}
 }
 
 #[derive(Debug)]
